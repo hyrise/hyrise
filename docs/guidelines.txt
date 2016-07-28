@@ -1,0 +1,8 @@
+Guidelines
+- Fail early, fail loud
+
+Coding Style
+- no new
+- const
+- no nested namespaces
+- _name für member
