@@ -10,7 +10,7 @@ namespace opossum {
 template<typename T>
 class raw_attribute_vector : public base_attribute_vector {
 public:
-	raw_attribute_vector() {}
+	raw_attribute_vector() {std::cout << typeid(T).name() << std::endl;}
 
 	virtual all_type_variant operator[](const size_t i) const {
 		return _values[i];

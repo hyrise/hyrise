@@ -16,7 +16,7 @@ public:
 	size_t row_count() const;
 	size_t chunk_count() const;
 
-	void add_column(std::string &&name, column_type type);
+	void add_column(std::string &&name, std::string type);
 	void append(std::initializer_list<all_type_variant> values) DEV_ONLY;
 	std::vector<int> column_string_widths(int max = 0) const;
 	void print(std::ostream &out = std::cout) const;
@@ -25,7 +25,7 @@ protected:
 	const size_t _chunk_size;
 	std::vector<chunk> _chunks;
 	std::vector<std::string> _column_names;
-	std::vector<column_type> _column_types;
+	std::vector<std::string> _column_types;
 };
 
 }

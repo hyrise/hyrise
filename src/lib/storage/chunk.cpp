@@ -10,22 +10,8 @@ chunk::chunk() {
 
 }
 
-void chunk::add_column(column_type type) {
-	// FIXME replace with boost::hana
-
-	switch(type) {
-		case int_type:
-			_columns.emplace_back(std::make_shared<raw_attribute_vector<int>>());
-			break;
-		case float_type:
-			_columns.emplace_back(std::make_shared<raw_attribute_vector<float>>());
-			break;
-		case string_type:
-			_columns.emplace_back(std::make_shared<raw_attribute_vector<std::string>>());
-			break;
-		default:
-			std::cout << "keine Lust auf andere Typen" << std::endl;
-	}
+void chunk::add_column(std::string type) {
+	_columns.emplace_back(create_templated<base_attribute_vector, raw_attribute_vector>(type));
 }
 
 void chunk::append(std::initializer_list<all_type_variant> values) {

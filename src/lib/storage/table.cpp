@@ -8,7 +8,7 @@ table::table(const size_t chunk_size) : _chunk_size(chunk_size) {
 	_chunks.push_back(chunk());
 }
 
-void table::add_column(std::string &&name, column_type type) {
+void table::add_column(std::string &&name, std::string type) {
 	_column_names.push_back(name);
 	_column_types.push_back(type);
 	for(auto &chunk : _chunks) {
@@ -48,7 +48,7 @@ void table::print(std::ostream &out) const {
 	auto widths = column_string_widths(20);
 
 	for(size_t col = 0; col < col_count(); ++col) {
-		out << std::setw(widths[col]) << _column_names[col] << std::setw(0) << "|";
+		out << "|" << std::setw(widths[col]) << _column_names[col] << std::setw(0) << "|";
 	}
 	out << std::endl;
 

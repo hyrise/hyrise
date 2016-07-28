@@ -1,15 +1,16 @@
 #include "storage/table.hpp"
 
 int main() {
-	opossum::table t(2);
+	opossum::table t;
 
-	t.add_column("a", opossum::column_type::int_type);
-	t.add_column("langer spaltenname", opossum::column_type::float_type);
-	t.add_column("c", opossum::column_type::string_type);
+	t.add_column("a", "int");
+	t.add_column("langer spaltenname", "float");
+	t.add_column("c", "string");
+	t.add_column("d", "double");
 
-	t.append({123, 456.7, "test"});
-	t.append({12345, 456.7, "test"});
-	t.append({12345, 456.7, "testabc"});
+	t.append({123, 456.7f, "test", 51});
+	t.append({12345, 456.7f, "test", 516.2});
+	t.append({12345, 456.7f, "testabc", 62});
 
 	t.print();
 }
