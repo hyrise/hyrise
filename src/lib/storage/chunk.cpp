@@ -54,13 +54,13 @@ std::vector<int> chunk::column_string_widths(int max) const {
 			}
 		}
 	}
-	for(auto w : widths) std::cout << "!!! " << w << std::endl;
 	return widths;
 }
 
 void chunk::print(std::ostream &out, const std::vector<int> &widths_in) const {
 	auto widths = widths_in.size() > 0 ? widths_in : column_string_widths(20);
 	for(size_t row = 0; row < size(); ++row) {
+		out << "|";
 		for(size_t col = 0; col < _columns.size(); ++col) {
 			out << std::setw(widths[col]) << (*_columns[col])[row] << "|" << std::setw(0);			
 		}

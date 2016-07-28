@@ -1,5 +1,7 @@
 #include "table.hpp"
 
+#include <iomanip>
+
 namespace opossum {
 
 table::table(const size_t chunk_size) : _chunk_size(chunk_size) {
@@ -18,7 +20,7 @@ void table::append(std::initializer_list<all_type_variant> values) {
 	if(_chunk_size > 0 && _chunks.back().size() == _chunk_size) {
 		_chunks.emplace_back();
 
-		// TODO add columns to new chunk
+		// TODO add columns to new chunk - only once we know how to deal with different types (HANA?)
 	}
 
 	_chunks.back().append(values);
@@ -30,6 +32,9 @@ size_t table::col_count() const {
 
 std::vector<int> table::column_string_widths(int max) const {
 	std::vector<int> widths(col_count());
+	for(size_t col = 0; col < col_count(); ++col) {
+		widths[col] = to_string(_column_names[col]).size();
+	}
 	for(auto &&chunk : _chunks) {
 		auto widths2 = chunk.column_string_widths(max);
 		for(size_t col = 0; col < col_count(); ++col) {
@@ -40,10 +45,17 @@ std::vector<int> table::column_string_widths(int max) const {
 }
 
 void table::print(std::ostream &out) const {
-	size_t chunk_id = 0;
 	auto widths = column_string_widths(20);
+
+	for(size_t col = 0; col < col_count(); ++col) {
+		out << std::setw(widths[col]) << _column_names[col] << std::setw(0) << "|";
+	}
+	out << std::endl;
+
+	size_t chunk_id = 0;
 	for(auto &&chunk : _chunks) {
-		std::cout << "=== chunk " << chunk_id << " ===" << std::endl;
+		out << "=== chunk " << chunk_id << " === " << std::endl;
+		chunk_id++;
 		chunk.print(out, widths);
 	}
 }
