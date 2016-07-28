@@ -2,7 +2,9 @@ Guidelines
 - Fail early, fail loud
 
 Coding Style
-- no new
+- avoid new / have clear ownership
+	- problem: what about vector.push_back(new xy)
 - const
 - no nested namespaces
 - _name für member
+- no namespace imports (std::)

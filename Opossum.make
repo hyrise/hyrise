@@ -64,6 +64,7 @@ ifeq ($(config),release64)
 endif
 
 OBJECTS := \
+	$(OBJDIR)/types.o \
 	$(OBJDIR)/chunk.o \
 	$(OBJDIR)/table.o \
 	$(OBJDIR)/test1.o \
@@ -126,6 +127,10 @@ $(GCH): $(PCH)
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) -x c++-header $(ALL_CXXFLAGS) -MMD -MP $(DEFINES) $(INCLUDES) -o "$@" -MF "$(@:%.gch=%.d)" -c "$<"
 endif
+
+$(OBJDIR)/types.o: src/lib/types.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF $(@:%.o=%.d) -c "$<"
 
 $(OBJDIR)/chunk.o: src/lib/storage/chunk.cpp
 	@echo $(notdir $<)

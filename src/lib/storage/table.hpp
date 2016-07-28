@@ -18,6 +18,7 @@ public:
 
 	void add_column(std::string &&name, column_type type);
 	void append(std::initializer_list<all_type_variant> values) DEV_ONLY;
+	std::vector<int> column_string_widths(int max = 0) const;
 	void print(std::ostream &out = std::cout) const;
 
 protected:

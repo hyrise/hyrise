@@ -1,29 +1,35 @@
+#pragma once
+
 #include "base_attribute_vector.hpp"
+
+#include <vector>
+#include <iostream>
 
 namespace opossum {
 
 template<typename T>
 class raw_attribute_vector : public base_attribute_vector {
-	std::vector<T> _values;
+public:
+	raw_attribute_vector() {}
 
-	virtual void insert(all_type_variant val) {
+	virtual all_type_variant operator[](const size_t i) const {
+		return _values[i];
+	}	
+
+	virtual void append(const all_type_variant &val) {
 		_values.push_back(type_cast<T>(val));
 	}
 
-	virtual void print(long row) {
+	virtual void print(const long row) const {
 		std::cout << _values[row];
 	}
 
-	virtual std::string type_name() {
-		return typeid(T).name();
+	virtual size_t size() const {
+		return _values.size();
 	}
 
-	virtual void print_all_positions(all_type_variant param) {
-		T real_param = type_cast<T>(param);
-		for(size_t i = 0; i < _values.size(); ++i) {
-			if(_values[i] == real_param) std::cout << "pos " << i << std::endl;
-		}
-	}
+protected:
+	std::vector<T> _values;
 };
 
 }

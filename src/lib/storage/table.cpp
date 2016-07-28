@@ -24,11 +24,27 @@ void table::append(std::initializer_list<all_type_variant> values) {
 	_chunks.back().append(values);
 }
 
+size_t table::col_count() const {
+	return _column_types.size();
+}
+
+std::vector<int> table::column_string_widths(int max) const {
+	std::vector<int> widths(col_count());
+	for(auto &&chunk : _chunks) {
+		auto widths2 = chunk.column_string_widths(max);
+		for(size_t col = 0; col < col_count(); ++col) {
+			widths[col] = std::max(widths[col], widths2[col]);
+		}
+	}
+	return widths;
+}
+
 void table::print(std::ostream &out) const {
 	size_t chunk_id = 0;
+	auto widths = column_string_widths(20);
 	for(auto &&chunk : _chunks) {
 		std::cout << "=== chunk " << chunk_id << " ===" << std::endl;
-		chunk.print(out);
+		chunk.print(out, widths);
 	}
 }
 

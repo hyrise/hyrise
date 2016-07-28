@@ -30,7 +30,7 @@ void chunk::add_column(column_type type) {
 
 void chunk::append(std::initializer_list<all_type_variant> values) {
 	if(_columns.size() != values.size()) {
-		throw std::runtime_error("append: number of columns (" + std::to_string(_columns.size()) + ") does not match value list (" + std::to_string(values.size()) + ")");
+		throw std::runtime_error("append: number of columns (" + to_string(_columns.size()) + ") does not match value list (" + to_string(values.size()) + ")");
 	}
 
 	auto column_it = _columns.begin();
@@ -40,11 +40,29 @@ void chunk::append(std::initializer_list<all_type_variant> values) {
 	}
 }
 
-void chunk::print(std::ostream &out, std::vector<int> &&column_string_widths) const {
-	if(column_string_widths.size() == 0) {} // TODO use/calculate column widths
-	for(size_t i = 0; i < size(); ++i) {
-		for(auto &&column : _columns) {
-			out << std::setw(5) << (*column)[i] << "|" << std::setw(0);			
+std::vector<int> chunk::column_string_widths(int max) const {
+	std::vector<int> widths(_columns.size());
+	for(size_t col = 0; col < _columns.size(); ++col) {
+		for(size_t row = 0; row < size(); ++row) {
+			int width = to_string((*_columns[col])[row]).size();
+			if(width > widths[col]) {
+				if(width >= max) {
+					widths[col] = max;
+					break;
+				}
+				widths[col] = width;
+			}
+		}
+	}
+	for(auto w : widths) std::cout << "!!! " << w << std::endl;
+	return widths;
+}
+
+void chunk::print(std::ostream &out, const std::vector<int> &widths_in) const {
+	auto widths = widths_in.size() > 0 ? widths_in : column_string_widths(20);
+	for(size_t row = 0; row < size(); ++row) {
+		for(size_t col = 0; col < _columns.size(); ++col) {
+			out << std::setw(widths[col]) << (*_columns[col])[row] << "|" << std::setw(0);			
 		}
 		out << std::endl;
 	}
