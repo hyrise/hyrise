@@ -15,13 +15,13 @@ void chunk::add_column(std::string type) {
 }
 
 void chunk::append(std::initializer_list<all_type_variant> values) {
-	if(_columns.size() != values.size()) {
+	if(DEBUG && _columns.size() != values.size()) {
 		throw std::runtime_error("append: number of columns (" + to_string(_columns.size()) + ") does not match value list (" + to_string(values.size()) + ")");
 	}
 
 	auto column_it = _columns.begin();
 	auto value_it = values.begin();
-	for(; column_it != _columns.end(), value_it != values.end(); column_it++, value_it++) {
+	for(; column_it != _columns.end(); column_it++, value_it++) {
 		(*column_it)->append(*value_it);
 	}
 }
