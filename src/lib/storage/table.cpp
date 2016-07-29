@@ -14,6 +14,7 @@ void table::add_column(std::string &&name, std::string type) {
 	for(auto &chunk : _chunks) {
 		chunk.add_column(type);
 	}
+	// TODO default values for existing rows?
 }
 
 void table::append(std::initializer_list<all_type_variant> values) {

@@ -9,3 +9,4 @@ Coding Style
 - _name für member
 - no namespace imports (std::)
 - comments above code
+- int vs. uint(32...)_t

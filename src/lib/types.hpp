@@ -63,11 +63,11 @@ type_cast(all_type_variant value) {
 
 std::string to_string(const all_type_variant& x);
 
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wreturn-type"
 template<class base, template <typename> class impl>
 base* create_templated(std::string type) {
 // todo return shared_ptr
+// TODO can we leave out the base argument?
+// TODO add varargs
     base *ret = nullptr;
     hana::for_each(column_types, [&](auto x) {
         if(std::string(hana::first(x)) == type) {
@@ -76,9 +76,8 @@ base* create_templated(std::string type) {
         	return;
         }
     });
-    if(!ret) throw std::runtime_error("unknown type " + type);
+    if(DEBUG && !ret) throw std::runtime_error("unknown type " + type);
     return ret;
 }
-#pragma GCC diagnostic pop
 
 }
