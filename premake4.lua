@@ -15,7 +15,7 @@ project "Opossum"
    language "C++"
    targetdir "build/"
 
-   buildoptions "-std=c++1z"
+   buildoptions { "-std=c++1z", "-I/usr/local/include" }
 
    files { "**.hpp", "**.cpp" }
    includedirs { "src/lib/" }
