@@ -1,8 +1,17 @@
 #!lua
 
-if os.execute("gcc-6 -v") == 0 then
+-- clang || gcc
+compiler = "gcc"
+
+if compiler == "clang" then
+  toolset = "clang"
+else
+  if os.execute("gcc-6 -v") == 0 then
     premake.gcc.cc  = 'gcc-6'
     premake.gcc.cxx = 'g++-6'
+  else
+    error("gcc version 6 required. Aborting.")
+  end
 end
 
 solution "Opossum"
