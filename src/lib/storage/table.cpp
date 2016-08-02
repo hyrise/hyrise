@@ -31,6 +31,14 @@ size_t table::col_count() const {
 	return _column_types.size();
 }
 
+size_t table::row_count() const {
+	size_t ret = 0;
+	for (auto &&chunk : _chunks) {
+		ret += chunk.size();
+	}
+	return ret;
+}
+
 std::vector<int> table::column_string_widths(int max) const {
 	std::vector<int> widths(col_count());
 	for(size_t col = 0; col < col_count(); ++col) {
@@ -49,9 +57,9 @@ void table::print(std::ostream &out) const {
 	auto widths = column_string_widths(20);
 
 	for(size_t col = 0; col < col_count(); ++col) {
-		out << "|" << std::setw(widths[col]) << _column_names[col] << std::setw(0) << "|";
+		out << "|" << std::setw(widths[col]) << _column_names[col] << std::setw(0);
 	}
-	out << std::endl;
+	out << "|" << std::endl;
 
 	size_t chunk_id = 0;
 	for(auto &&chunk : _chunks) {
