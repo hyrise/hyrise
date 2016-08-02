@@ -7,13 +7,15 @@ void storage_manager::add_table(std::string name, std::shared_ptr<table> tp) {
 }
 
 void storage_manager::print(std::ostream &out) const {
-	out << "===== Tables " << std::endl;
+	out << "==================" << std::endl;
+	out << "===== Tables =====" << std::endl << std::endl;
 
 	auto cnt = 0;
 	for(auto const &tab : _tables) {
-		out << "\t table #" << cnt << ": \t" << tab.first;
-		// out << "(" << tab.second->col_count() << "columns, " << tab.second->row_count() << " rows)" << std::endl;
-		out << std::endl;
+		out << "==== table >> " << tab.first << " <<";
+		out << " (" << tab.second->col_count() << " columns, " << tab.second->row_count() << " rows)";
+		out << std::endl << std::endl;
+		tab.second->print();
 		cnt++;
 	}
 }
