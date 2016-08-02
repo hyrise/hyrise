@@ -2,7 +2,7 @@
 #include "storage/storage_manager.hpp"
 
 int main() {
-	std::unique_ptr<opossum::table> t(new opossum::table(2));
+	std::shared_ptr<opossum::table> t(new opossum::table(2));
 	// auto t = std::make_unique(opossum::table(2));
 
 	t->add_column("a", opossum::column_type::int_type);
