@@ -10,3 +10,8 @@ Coding Style
 - no namespace imports (std::)
 - comments above code
 - int vs. uint(32...)_t
+- capitalization for class names?
+
+
+Todo
+- simple performance tool to profile the impact of changes
