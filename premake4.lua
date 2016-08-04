@@ -1,12 +1,18 @@
 #!lua
 
 -- clang || gcc
-compiler = "gcc"
+-- compiler = "clang"
 
-if compiler == "clang" then
+if not _OPTIONS["compiler"] then
+   _OPTIONS["compiler"] = "gcc"
+end
+
+if _OPTIONS["compiler"] == "clang" then
+  print("clang")
   toolset = "clang"
 else
   if os.execute("gcc-6 -v") == 0 then
+    print("gcc")
     premake.gcc.cc  = 'gcc-6'
     premake.gcc.cxx = 'g++-6'
   else
@@ -24,10 +30,10 @@ project "Opossum"
    language "C++"
    targetdir "build/"
 
-   buildoptions { "-std=c++1z", "-I/usr/local/include" }
+   buildoptions { "-std=c++1z" }
 
    files { "**.hpp", "**.cpp" }
-   includedirs { "src/lib/" }
+   includedirs { "src/lib/", "/usr/local/include" }
 
    configuration "Debug"
       defines { "DEBUG" }
@@ -36,3 +42,13 @@ project "Opossum"
    configuration "Release"
       defines { "NDEBUG" }
       flags { "OptimizeSpeed" }
+
+   newoption {
+      trigger     = "compiler",
+      value       = "clang||gcc",
+      description = "Choose a compiler",
+      allowed = {
+         { "gcc",    "gcc of version 6 or higher" },
+         { "clang",  "clang llvm frontend" }
+      }
+   }
