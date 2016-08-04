@@ -37,6 +37,10 @@ size_t table::row_count() const {
 	return ret;
 }
 
+size_t table::chunk_count() const {
+	return _chunks.size();
+}
+
 std::vector<int> table::column_string_widths(int max) const {
 	std::vector<int> widths(col_count());
 	for(size_t col = 0; col < col_count(); ++col) {

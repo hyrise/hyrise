@@ -11,7 +11,7 @@ Coding Style
 - comments above code
 - int vs. uint(32...)_t
 - capitalization for class names?
-
+- include stdlib before 3rdparty before own
 
 Todo
 - simple performance tool to profile the impact of changes
