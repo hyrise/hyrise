@@ -19,9 +19,7 @@ void table::add_column(std::string &&name, std::string type) {
 
 void table::append(std::initializer_list<all_type_variant> values) {
 	if(_chunk_size > 0 && _chunks.back().size() == _chunk_size) {
-		_chunks.emplace_back();
-
-		// TODO add columns to new chunk - only once we know how to deal with different types (HANA?)
+		_chunks.emplace_back(_column_types);
 	}
 
 	_chunks.back().append(values);

@@ -10,6 +10,12 @@ chunk::chunk() {
 
 }
 
+chunk::chunk(std::vector<std::string>& column_types) {
+	for (auto &column_type : column_types) {
+		add_column(column_type);
+	}
+}
+
 void chunk::add_column(std::string type) {
 	_columns.emplace_back(create_templated<base_attribute_vector, raw_attribute_vector>(type));
 }

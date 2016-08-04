@@ -8,6 +8,7 @@ namespace opossum {
 class chunk {
 public:
 	chunk();
+    chunk(std::vector<std::string>& column_types);
 	chunk(const chunk&) = delete;
 	chunk(chunk&&) = default;
 

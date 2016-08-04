@@ -1,9 +1,10 @@
+#include <memory>
+
 #include "storage/table.hpp"
 #include "storage/storage_manager.hpp"
 
 int main() {
-	std::shared_ptr<opossum::table> t(new opossum::table(100));
-	// auto t = std::make_unique(opossum::table(2));
+    auto t = std::make_shared<opossum::table>(opossum::table(2));
 
 	t->add_column("a", "int");
 	t->add_column("langer spaltenname", "float");
