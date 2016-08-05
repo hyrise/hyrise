@@ -80,6 +80,7 @@ base* create_templated(std::string type) {
     return ret;
 }
 
+// TODO unnecessary if other method has varargs
 template<class base, template <typename> class impl>
 base* create_templated_2(std::string type, all_type_variant value) {
 // todo return shared_ptr

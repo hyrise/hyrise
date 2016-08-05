@@ -4,6 +4,7 @@ Guidelines
 Coding Style
 - avoid new / have clear ownership
 	- problem: what about vector.push_back(new xy)
+    - das geht doch irgendwie mit emplace oder so?
 - const
 - no nested namespaces
 - _name für member
@@ -13,6 +14,7 @@ Coding Style
 - capitalization for class names?
 - include stdlib before 3rdparty before own
 - tabs or spaces? currently there is a mix
+- shared_ptr
 
 Todo
 - simple performance tool to profile the impact of changes

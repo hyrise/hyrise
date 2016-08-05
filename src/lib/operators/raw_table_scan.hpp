@@ -11,14 +11,14 @@ public:
         _filter_value = type_cast<T>(value);
     };
 
-    virtual record_id_list_t execute(record_id_list_t record_id_list, size_t column_id) const {
-        auto r = record_id_list_t(record_id_list._table);
-        for (auto const& record_id : record_id_list._record_ids) {
-            std::vector<chunk_row_id_t> chunk_results;
-            chunk_id_t chunk_id = record_id.first;
-            chunk_row_id_list_t chunk_row_id_list = record_id.second;
+    virtual pos_list_t execute(pos_list_t pos_list, size_t column_id) const {
+        auto result = pos_list_t(pos_list._table);
+        for (auto const& record_id : pos_list._record_ids) {
+            chunk_row_id_list_t chunk_results;
+            auto chunk_id = record_id.first;
+            auto chunk_row_id_list = record_id.second;
 
-            auto& chunk = record_id_list._table->get_chunk(chunk_id);
+            auto& chunk = pos_list._table->get_chunk(chunk_id);
 
             auto chunk_column = std::dynamic_pointer_cast<raw_attribute_vector<T>>(chunk.get_column(column_id));
             auto values = chunk_column->get_values();
@@ -29,11 +29,11 @@ public:
                 }
             }
             if (chunk_results.size()) {
-                r.add_chunk(chunk_id, std::move(chunk_results));
+                result.add_chunk(chunk_id, std::move(chunk_results));
             }
         }
 
-        return r;
+        return result;
 
     }
 protected:

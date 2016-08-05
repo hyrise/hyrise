@@ -51,8 +51,8 @@ const chunk& table::get_chunk(chunk_id_t chunk_id) const {
 	return _chunks[chunk_id];
 }
 
-record_id_list_t table::get_positions() const {
-	auto r = record_id_list_t(this);
+pos_list_t table::get_positions() const {
+	auto r = pos_list_t(this);
 	for (chunk_id_t chunk_id = 0; chunk_id < chunk_count(); ++chunk_id) {
 		std::vector<chunk_row_id_t> positions(_chunks[chunk_id].size());
 		std::iota(positions.begin(), positions.end(), 0);
