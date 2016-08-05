@@ -51,6 +51,7 @@ const chunk& table::get_chunk(chunk_id_t chunk_id) const {
 	return _chunks[chunk_id];
 }
 
+// TODO this shouldn't be here, but somewhere else. It could also be more efficient
 pos_list_t table::get_positions() const {
 	auto r = pos_list_t(this);
 	for (chunk_id_t chunk_id = 0; chunk_id < chunk_count(); ++chunk_id) {

@@ -5,10 +5,18 @@ namespace opossum {
 
 class table;
 
+
+// A chunk has an chunk_id
+// Items in a chunk have a chunk_row_id (starting at 0 for every chunk)
+// Both combined are called recordID
+
+// A pos_list_t holds a pointer to the corresponding table and maps chunk_ids to (qualifying) chunk_row_ids
+
 class pos_list_t {
 public:
     pos_list_t(const table* table) : _table(table) {};
 
+    // unnecessary
     void add_chunk(chunk_id_t chunk_id, chunk_row_id_list_t&& chunk_row_id_list) {
         _record_ids.emplace(chunk_id, chunk_row_id_list);
     }
