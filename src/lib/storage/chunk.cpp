@@ -49,6 +49,10 @@ std::vector<int> chunk::column_string_widths(int max) const {
 	return widths;
 }
 
+std::shared_ptr<base_attribute_vector> chunk::get_column(size_t column_id) const {
+	return _columns[column_id];
+}
+
 void chunk::print(std::ostream &out, const std::vector<int> &widths_in) const {
 	auto widths = widths_in.size() > 0 ? widths_in : column_string_widths(20);
 	for(size_t row = 0; row < size(); ++row) {

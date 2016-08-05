@@ -14,6 +14,7 @@ public:
 
 	void add_column(std::string type);
 	void append(std::initializer_list<all_type_variant> values) DEV_ONLY;
+	std::shared_ptr<base_attribute_vector> get_column(size_t column_id) const;
 	std::vector<int> column_string_widths(int max = 0) const;
 	void print(std::ostream &out = std::cout, const std::vector<int> &column_string_widths = std::vector<int>()) const;
 	size_t size() const;

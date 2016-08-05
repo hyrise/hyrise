@@ -80,4 +80,21 @@ base* create_templated(std::string type) {
     return ret;
 }
 
+template<class base, template <typename> class impl>
+base* create_templated_2(std::string type, all_type_variant value) {
+// todo return shared_ptr
+// TODO can we leave out the base argument?
+// TODO add ***varargs***
+    base *ret = nullptr;
+    hana::for_each(column_types, [&](auto x) {
+        if(std::string(hana::first(x)) == type) {
+            typename std::remove_reference<decltype(hana::second(x))>::type prototype;
+            ret = new impl<decltype(prototype)>(value);
+            return;
+        }
+    });
+    if(DEBUG && !ret) throw std::runtime_error("unknown type " + type);
+    return ret;
+}
+
 }

@@ -1,6 +1,7 @@
-#include "table.hpp"
-
 #include <iomanip>
+#include <numeric>
+
+#include "table.hpp"
 
 namespace opossum {
 
@@ -18,6 +19,7 @@ void table::add_column(std::string &&name, std::string type) {
 }
 
 void table::append(std::initializer_list<all_type_variant> values) {
+	// TODO Chunks should be preallocated for chunk size
 	if(_chunk_size > 0 && _chunks.back().size() == _chunk_size) {
 		_chunks.emplace_back(_column_types);
 	}
@@ -39,6 +41,25 @@ size_t table::row_count() const {
 
 size_t table::chunk_count() const {
 	return _chunks.size();
+}
+
+const std::string& table::get_column_type(size_t column_id) const {
+	return _column_types[column_id];
+}
+
+const chunk& table::get_chunk(chunk_id_t chunk_id) const {
+	return _chunks[chunk_id];
+}
+
+record_id_list_t table::get_positions() const {
+	auto r = record_id_list_t(this);
+	for (chunk_id_t chunk_id = 0; chunk_id < chunk_count(); ++chunk_id) {
+		std::vector<chunk_row_id_t> positions(_chunks[chunk_id].size());
+		std::iota(positions.begin(), positions.end(), 0);
+		r.add_chunk(chunk_id, std::move(positions));
+	}
+
+	return r;
 }
 
 std::vector<int> table::column_string_widths(int max) const {

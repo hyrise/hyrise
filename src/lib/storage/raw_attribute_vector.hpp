@@ -20,6 +20,10 @@ public:
 		_values.push_back(type_cast<T>(val));
 	}
 
+	virtual const std::vector<T>& get_values() const {
+		return _values;
+	}
+
 	virtual size_t size() const {
 		return _values.size();
 	}
