@@ -8,11 +8,9 @@ if not _OPTIONS["compiler"] then
 end
 
 if _OPTIONS["compiler"] == "clang" then
-  print("clang")
   toolset = "clang"
 else
   if os.execute("gcc-6 -v") == 0 then
-    print("gcc")
     premake.gcc.cc  = 'gcc-6'
     premake.gcc.cxx = 'g++-6'
   else
