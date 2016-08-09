@@ -1,9 +1,9 @@
+#pragma once
+
 #include <vector>
 
 #include "../common.hpp"
 #include "../storage/table.hpp"
-
-#pragma once
 
 namespace opossum {
 

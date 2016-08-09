@@ -1,5 +1,5 @@
-#include "common.hpp"
 #include "chunk.hpp"
+#include "common.hpp"
 #include "raw_attribute_vector.hpp"
 
 #include <iomanip>

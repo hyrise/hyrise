@@ -1,7 +1,7 @@
+#include "table.hpp"
+
 #include <iomanip>
 #include <numeric>
-
-#include "table.hpp"
 
 namespace opossum {
 
