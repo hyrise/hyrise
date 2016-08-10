@@ -6,7 +6,13 @@ storage_manager &storage_manager::get() {
 	static storage_manager instance;
 	return instance;
 }
+
+void storage_manager::add_table(const std::string &name, std::shared_ptr<table> tp) {
 	_tables.insert(std::make_pair(name, std::move(tp)));
+}
+
+std::shared_ptr<table> storage_manager::get_table(const std::string &name) const {
+	return _tables.at(name);
 }
 
 void storage_manager::print(std::ostream &out) const {
