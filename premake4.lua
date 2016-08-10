@@ -3,6 +3,8 @@
 -- clang || gcc
 -- compiler = "clang"
 
+-- TODO try LTO/whole program
+
 if not _OPTIONS["compiler"] then
    _OPTIONS["compiler"] = "gcc"
 end
