@@ -3,6 +3,7 @@
 #include <cstddef>
 #include <string>
 #include <vector>
+#include <iostream>
 
 #define DEV_ONLY
 // #define DEV_ONLY __attribute__ ((deprecated))
