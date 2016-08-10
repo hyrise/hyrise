@@ -1,7 +1,9 @@
 #include <memory>
 
 #include "operators/abstract_operator.hpp"
-#include "operators/raw_table_scan.hpp"
+#include "operators/table_scan.hpp"
+#include "operators/get_table.hpp"
+#include "operators/print.hpp"
 #include "storage/table.hpp"
 #include "storage/storage_manager.hpp"
 
@@ -17,23 +19,19 @@ int main() {
 	t->append({1234, 457.7, "testb", 516.2});
 	t->append({12345, 458.7, "testc", 62});
 
-	auto raw_table_scan = opossum::create_raw_table_scan(t, 0, 12345);
-	auto res = raw_table_scan->execute(t->get_positions(), 0);
-	res.print();
+	opossum::storage_manager::get().add_table("meine_erste_tabelle", std::move(t));
 
-	std::cout << "!!!!!!!!!!!!!!!!!!" << std::endl;
+	auto gt = std::make_shared<opossum::get_table>("meine_erste_tabelle");
+	gt->execute();
 
-	auto raw_table_scan2 = opossum::create_raw_table_scan(t, 3, 63);
-	auto res2 = raw_table_scan2->execute(res, 3);
-	res2.print();
+	auto s = std::make_shared<opossum::table_scan>(gt, "a",/* "=",*/ 1234);
+	s->execute();
 
-	std::cout << "-----------------" << std::endl;
-	std::cout << "-----------------" << std::endl;
-	std::cout << "-----------------" << std::endl;
+	auto p = std::make_shared<opossum::print>(s);
+	p->execute();
 
-	opossum::storage_manager s;
+	// omg - we can even SELECT INTO:
+	opossum::storage_manager::get().add_table("meine_zweite_tabelle", std::move(p->get_output()));
 
-	s.add_table("tab", std::move(t));
-
-	s.print();
+	opossum::storage_manager::get().print();
 }
