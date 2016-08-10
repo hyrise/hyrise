@@ -14,11 +14,14 @@
 #include <boost/hana/ext/boost/mpl/vector.hpp>
 #include <string>
 #include <iostream>
+#include <vector>
 // TODO remove unused imports
 
 namespace opossum {
 
 namespace hana = boost::hana;
+
+using pos_list = std::vector<size_t>;
 
 // This holds all possible data types. The left side of the pairs are the names, the right side are prototypes ("examples").
 // These examples are later used with decltype() in the template magic below.
