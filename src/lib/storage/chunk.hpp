@@ -13,6 +13,7 @@ public:
 	chunk(chunk&&) = default;
 
 	void add_column(std::string type);
+	void add_column(std::shared_ptr<base_column> column);
 	void append(std::initializer_list<all_type_variant> values) DEV_ONLY;
 	std::shared_ptr<base_column> get_column(size_t column_id) const;
 	std::vector<int> column_string_widths(int max = 0) const;

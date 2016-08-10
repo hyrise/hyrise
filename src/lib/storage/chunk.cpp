@@ -21,6 +21,10 @@ void chunk::add_column(std::string type) {
 	_columns.emplace_back(make_shared_templated<base_column, value_column>(type));
 }
 
+void chunk::add_column(std::shared_ptr<base_column> column) {
+	_columns.emplace_back(column);
+}
+
 void chunk::append(std::initializer_list<all_type_variant> values) {
 	if(DEBUG && _columns.size() != values.size()) {
 		throw std::runtime_error("append: number of columns (" + to_string(_columns.size()) + ") does not match value list (" + to_string(values.size()) + ")");
