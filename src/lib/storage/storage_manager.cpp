@@ -2,7 +2,10 @@
 
 namespace opossum {
 
-void storage_manager::add_table(std::string name, std::shared_ptr<table> tp) {
+storage_manager &storage_manager::get() {
+	static storage_manager instance;
+	return instance;
+}
 	_tables.insert(std::make_pair(name, std::move(tp)));
 }
 
