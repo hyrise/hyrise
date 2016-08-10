@@ -1,6 +1,6 @@
 #include "common.hpp"
 #include "chunk.hpp"
-#include "raw_attribute_vector.hpp"
+#include "value_column.hpp"
 
 #include <iomanip>
 
@@ -50,7 +50,7 @@ std::vector<int> chunk::column_string_widths(int max) const {
 	return widths;
 }
 
-std::shared_ptr<base_attribute_vector> chunk::get_column(size_t column_id) const {
+std::shared_ptr<base_column> chunk::get_column(size_t column_id) const {
 	return _columns[column_id];
 }
 

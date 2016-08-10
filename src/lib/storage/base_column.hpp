@@ -5,11 +5,11 @@
 
 namespace opossum {
 
-class base_attribute_vector {
+class base_column {
 public:
-	base_attribute_vector() {}
-	base_attribute_vector(base_attribute_vector const&) = delete;
-	base_attribute_vector(base_attribute_vector&&) = default;
+	base_column() {}
+	base_column(base_column const&) = delete;
+	base_column(base_column&&) = default;
 
 	virtual all_type_variant operator[](const size_t i) DEV_ONLY const = 0;
 
