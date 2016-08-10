@@ -17,7 +17,8 @@ chunk::chunk(std::vector<std::string>& column_types) {
 }
 
 void chunk::add_column(std::string type) {
-	_columns.emplace_back(create_templated<base_attribute_vector, raw_attribute_vector>(type));
+	if(DEBUG && _columns.size() > 0 && size() > 0) throw std::runtime_error("Cannot add a column to a non-empty chunk");
+	_columns.emplace_back(make_shared_templated<base_column, value_column>(type));
 }
 
 void chunk::append(std::initializer_list<all_type_variant> values) {

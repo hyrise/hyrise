@@ -63,39 +63,24 @@ type_cast(all_type_variant value) {
 
 std::string to_string(const all_type_variant& x);
 
-template<class base, template <typename> class impl>
-base* create_templated(std::string type) {
-// todo return shared_ptr
+template<class base, template <typename> class impl, class... Args>
+std::unique_ptr<base> make_unique_templated(const std::string &type, Args&&... args) {
 // TODO can we leave out the base argument?
-// TODO add varargs
     base *ret = nullptr;
     hana::for_each(column_types, [&](auto x) {
         if(std::string(hana::first(x)) == type) {
         	typename std::remove_reference<decltype(hana::second(x))>::type prototype;
-        	ret = new impl<decltype(prototype)>();
+        	ret = new impl<decltype(prototype)>(args...);
         	return;
         }
     });
     if(DEBUG && !ret) throw std::runtime_error("unknown type " + type);
-    return ret;
+    return std::unique_ptr<base>(ret);
 }
 
-// TODO unnecessary if other method has varargs
-template<class base, template <typename> class impl>
-base* create_templated_2(std::string type, all_type_variant value) {
-// todo return shared_ptr
-// TODO can we leave out the base argument?
-// TODO add ***varargs***
-    base *ret = nullptr;
-    hana::for_each(column_types, [&](auto x) {
-        if(std::string(hana::first(x)) == type) {
-            typename std::remove_reference<decltype(hana::second(x))>::type prototype;
-            ret = new impl<decltype(prototype)>(value);
-            return;
-        }
-    });
-    if(DEBUG && !ret) throw std::runtime_error("unknown type " + type);
-    return ret;
+template<class base, template <typename> class impl, class... Args>
+std::shared_ptr<base> make_shared_templated(const std::string &type, Args&&... args) {
+    return std::move(make_unique_templated<base, impl>(type, args...));
 }
 
 }
