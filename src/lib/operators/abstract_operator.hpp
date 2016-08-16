@@ -3,6 +3,8 @@
 #include "../common.hpp"
 #include "../storage/table.hpp"
 
+#include <vector>
+
 namespace opossum {
 
 class abstract_operator {

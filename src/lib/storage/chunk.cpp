@@ -1,6 +1,6 @@
 #include "chunk.hpp"
 #include "value_column.hpp"
-#include "common.hpp"
+#include "raw_attribute_vector.hpp"
 
 #include <iomanip>
 
