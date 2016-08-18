@@ -68,18 +68,6 @@ chunk& table::get_chunk(chunk_id_t chunk_id) {
 	return _chunks[chunk_id];
 }
 
-// TODO this shouldn't be here, but somewhere else. It could also be more efficient
-pos_list_t table::get_positions() const {
-	auto r = pos_list_t(this);
-	for (chunk_id_t chunk_id = 0; chunk_id < chunk_count(); ++chunk_id) {
-		std::vector<chunk_row_id_t> positions(_chunks[chunk_id].size());
-		std::iota(positions.begin(), positions.end(), 0);
-		r.add_chunk(chunk_id, std::move(positions));
-	}
-
-	return r;
-}
-
 std::vector<int> table::column_string_widths(int max) const {
 	std::vector<int> widths(col_count());
 	for(size_t col = 0; col < col_count(); ++col) {

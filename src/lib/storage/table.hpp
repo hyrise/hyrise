@@ -29,7 +29,6 @@ public:
 	void append(std::initializer_list<all_type_variant> values) DEV_ONLY;
 	std::vector<int> column_string_widths(int max = 0) const;
 	void print(std::ostream &out = std::cout) const;
-	pos_list_t get_positions() const;
 
 protected:
 	const size_t _chunk_size;
