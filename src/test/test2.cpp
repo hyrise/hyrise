@@ -31,7 +31,7 @@ int main() {
 	p->execute();
 
 	// omg - we can even SELECT INTO:
-	opossum::storage_manager::get().add_table("meine_zweite_tabelle", std::move(p->get_output()));
+	opossum::storage_manager::get().add_table("meine_zweite_tabelle", p->get_output());
 
 	opossum::storage_manager::get().print();
 }

@@ -44,18 +44,42 @@ public:
 		size_t first_pos_in_current_chunk = 0;
 		for(size_t chunk_id = 0; chunk_id < _table->chunk_count(); ++chunk_id) {
 			auto &chunk = _table->get_chunk(chunk_id);
-
 			auto base_column = chunk.get_column(_filter_column_id);
 
-			for(size_t pos_in_column = 0; pos_in_column < chunk.size(); ++pos_in_column) {
-				if(type_cast<T>((*base_column)[pos_in_column]) == _filter_value) {
-					// TODO optimize. base_column::operator[] is DEV_ONLY. We should cast base_column to the actual type for performance reasons
-					// remember that it could be a reference_column itself...
-					_pos_list->emplace_back(first_pos_in_current_chunk + pos_in_column);
+			if (auto val_col = std::dynamic_pointer_cast<value_column<T>>(base_column) ) {
+				// value_column
+				const std::vector<T> &values = val_col->get_values();
+				for(size_t pos_in_column = 0; pos_in_column < chunk.size(); ++pos_in_column) {
+					if (values[pos_in_column] == _filter_value) {
+						_pos_list->emplace_back(first_pos_in_current_chunk + pos_in_column);
+					}
 				}
+			} else {
+				// reference_column
+				auto ref_col = std::dynamic_pointer_cast<reference_column>(base_column);
+				auto pos_list = ref_col->get_pos_list();
+
+				// TODO: improve when chunk can be derived from position
+				for(size_t pos_in_poslist = 0; pos_in_poslist < ref_col->size(); ++pos_in_poslist) {
+					if (type_cast<T>((*ref_col)[(*pos_list)[pos_in_poslist]]) == _filter_value) {
+						_pos_list->emplace_back((*pos_list)[pos_in_poslist]);
+					}
+				}
+
 			}
 
 			first_pos_in_current_chunk += chunk.size();
+
+			// // OLD
+			// for(size_t pos_in_column = 0; pos_in_column < chunk.size(); ++pos_in_column) {
+			// 	if(type_cast<T>((*base_column)[pos_in_column]) == _filter_value) {
+			// 		// TODO optimize. base_column::operator[] is DEV_ONLY. We should cast base_column to the actual type for performance reasons
+			// 		// remember that it could be a reference_column itself...
+			// 		_pos_list->emplace_back(first_pos_in_current_chunk + pos_in_column);
+			// 	}
+			// }
+
+			// first_pos_in_current_chunk += chunk.size();
 		}
 	}
 
