@@ -1,4 +1,5 @@
 #include <memory>
+#include <cassert>
 
 #include "operators/abstract_operator.hpp"
 #include "operators/table_scan.hpp"
@@ -7,7 +8,24 @@
 #include "storage/table.hpp"
 #include "storage/storage_manager.hpp"
 
+
+void test_row_id() {
+	opossum::ChunkID c_id = 17;
+	opossum::ChunkOffset c_offset = 2;
+	opossum::RowID r_id = opossum::get_row_id_from_chunk_id_and_chunk_offset(c_id, c_offset);
+	assert(r_id == 73014444032 + 2);
+
+	r_id =  73014444032 + 2;
+	assert(opossum::get_chunk_id_from_row_id(r_id) == 17);
+	assert(opossum::get_chunk_offset_from_row_id(r_id) == 2);
+}
+
+
+
 int main() {
+	test_row_id();
+
+
 	auto t = std::make_shared<opossum::table>(opossum::table(2));
 
 	t->add_column("a", "int");

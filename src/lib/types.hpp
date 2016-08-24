@@ -21,7 +21,18 @@ namespace opossum {
 
 namespace hana = boost::hana;
 
-using pos_list = std::vector<size_t>;
+
+using RowID = uint64_t;    // first 32 bit for chunk_id  second 32 bit for chunk_offset
+const uint32_t MAX_CHUNK_SIZE = 32;
+using ChunkID = uint32_t;
+using ChunkOffset = uint32_t;
+
+ChunkID get_chunk_id_from_row_id(RowID r_id);
+ChunkOffset get_chunk_offset_from_row_id(RowID r_id);
+RowID get_row_id_from_chunk_id_and_chunk_offset(ChunkID c_id, ChunkOffset c_offset);
+
+
+using pos_list = std::vector<RowID>;
 
 // This holds all possible data types. The left side of the pairs are the names, the right side are prototypes ("examples").
 // These examples are later used with decltype() in the template magic below.

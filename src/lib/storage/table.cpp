@@ -64,7 +64,7 @@ const std::string& table::get_column_type(size_t column_id) const {
 	return _column_types[column_id];
 }
 
-chunk& table::get_chunk(chunk_id_t chunk_id) {
+chunk& table::get_chunk(ChunkID chunk_id) {
 	return _chunks[chunk_id];
 }
 

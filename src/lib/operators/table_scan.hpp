@@ -2,6 +2,7 @@
 
 #include "abstract_operator.hpp"
 #include "storage/reference_column.hpp"
+#include "types.hpp"
 
 namespace opossum {
 
@@ -41,17 +42,16 @@ public:
 		}
 
 	void execute() {
-		size_t first_pos_in_current_chunk = 0;
-		for(size_t chunk_id = 0; chunk_id < _table->chunk_count(); ++chunk_id) {
+		for(ChunkID chunk_id = 0; chunk_id < _table->chunk_count(); ++chunk_id) {
 			auto &chunk = _table->get_chunk(chunk_id);
 			auto base_column = chunk.get_column(_filter_column_id);
 
 			if (auto val_col = std::dynamic_pointer_cast<value_column<T>>(base_column) ) {
 				// value_column
 				const std::vector<T> &values = val_col->get_values();
-				for(size_t pos_in_column = 0; pos_in_column < chunk.size(); ++pos_in_column) {
-					if (values[pos_in_column] == _filter_value) {
-						_pos_list->emplace_back(first_pos_in_current_chunk + pos_in_column);
+				for(ChunkOffset chunk_offset = 0; chunk_offset < chunk.size(); ++chunk_offset) {
+					if (values[chunk_offset] == _filter_value) {
+						_pos_list->emplace_back(get_row_id_from_chunk_id_and_chunk_offset(chunk_id ,chunk_offset));
 					}
 				}
 			} else {
@@ -61,25 +61,12 @@ public:
 
 				// TODO: improve when chunk can be derived from position
 				for(size_t pos_in_poslist = 0; pos_in_poslist < ref_col->size(); ++pos_in_poslist) {
-					if (type_cast<T>((*ref_col)[(*pos_list)[pos_in_poslist]]) == _filter_value) {
-						_pos_list->emplace_back((*pos_list)[pos_in_poslist]);
+					RowID row_id = (*pos_list)[pos_in_poslist];
+					if (type_cast<T>((*ref_col)[row_id]) == _filter_value) {
+						_pos_list->emplace_back(row_id);
 					}
 				}
-
 			}
-
-			first_pos_in_current_chunk += chunk.size();
-
-			// // OLD
-			// for(size_t pos_in_column = 0; pos_in_column < chunk.size(); ++pos_in_column) {
-			// 	if(type_cast<T>((*base_column)[pos_in_column]) == _filter_value) {
-			// 		// TODO optimize. base_column::operator[] is DEV_ONLY. We should cast base_column to the actual type for performance reasons
-			// 		// remember that it could be a reference_column itself...
-			// 		_pos_list->emplace_back(first_pos_in_current_chunk + pos_in_column);
-			// 	}
-			// }
-
-			// first_pos_in_current_chunk += chunk.size();
 		}
 	}
 

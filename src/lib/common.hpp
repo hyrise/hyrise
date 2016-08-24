@@ -12,7 +12,4 @@
 namespace opossum {
 	using std::to_string;
 
-    typedef size_t chunk_row_id_t;
-    typedef size_t chunk_id_t;
-    typedef std::vector<chunk_row_id_t> chunk_row_id_list_t;
 }
