@@ -1,8 +1,5 @@
 #!lua
 
--- clang || gcc
--- compiler = "clang"
-
 -- TODO try LTO/whole program
 
 if not _OPTIONS["compiler"] then
@@ -38,6 +35,7 @@ project "Opossum"
    configuration "Debug"
       defines { "DEBUG" }
       flags { "Symbols" }
+      prebuildcommands { "find src -iname \"*.cpp\" -o -iname \"*.hpp\" | xargs -I{} sh -c \"clang-format -style=file '{}' > '{}.out' && mv '{}.out' '{}'\"" }
 
    configuration "Release"
       defines { "NDEBUG" }

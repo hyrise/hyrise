@@ -12,3 +12,6 @@ install recent versions of compilers (clang >= 3.5.0, gcc >= 6.1), required by h
 
 ## boost hana
 build from source: http://www.boost.org/doc/libs/1_61_0/libs/hana/doc/html/index.html
+
+## clang-format
+install via homebrew / packet manager
