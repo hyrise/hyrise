@@ -1,6 +1,15 @@
 # opossum
 
+*Have a look at docs/guidelines*
+
+## build
 premake4 gmake -&& make -j && clear && ./build/Opossum
+
+## lint (is also automatically triggerd before git commit)
+premake4 lint
+
+## format (is also automatically triggered before make)
+premake4 format
 
 # dependencies
 

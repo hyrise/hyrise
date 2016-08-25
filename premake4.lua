@@ -1,5 +1,13 @@
 #!lua
 
+-- Install pre-commit hook for linting
+if os.execute("test -x .git/hooks/pre-commit") ~= 0 then
+  os.execute("touch .git/hooks/pre-commit")
+  os.execute("echo '#!/bin/sh\necho \"Linting all code, this may take a while...\"\n\nfind src -iname *.cpp -o -iname *.hpp | while read line;\ndo\n    if ! python cpplint.py --verbose=0 --extensions=hpp,cpp --counting=detailed --filter=-legal/copyright --linelength=120 $line >/dev/null 2>/dev/null\n    then\n        echo ERROR: Linting error occured. Execute \\\"premake4 lint\\\" for details\n        exit 1\n    fi\ndone\n\nif [ $? != 0 ]\nthen\n    exit 1\nfi\n\necho \"Success, no linting errors found!\"' >> .git/hooks/pre-commit")
+  os.execute("chmod +x .git/hooks/pre-commit")
+  os.execute("echo Successfully installed pre-commit hook.")
+end
+
 -- TODO try LTO/whole program
 
 if not _OPTIONS["compiler"] then
@@ -50,3 +58,21 @@ project "Opossum"
          { "clang",  "clang llvm frontend" }
       }
    }
+
+-- Registering linting and formatting as actions for premake is not optimal, make targets would be the preferable option, but impossible to generate or really hacky
+
+newaction {
+   trigger     = "lint",
+   description = "Lint the code",
+   execute = function ()
+      os.execute("find src -iname \"*.cpp\" -o -iname \"*.hpp\" | xargs -I{} python cpplint.py --verbose=0 --extensions=hpp,cpp --counting=detailed --filter=-legal/copyright --linelength=120 {}")
+   end
+}
+
+newaction {
+   trigger     = "format",
+   description = "Format the code",
+   execute = function ()
+      os.execute("find src -iname \"*.cpp\" -o -iname \"*.hpp\" | xargs -I{} sh -c \"clang-format -style=file '{}' > '{}.out' && mv '{}.out' '{}'\"")
+   end
+}

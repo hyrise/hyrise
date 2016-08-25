@@ -17,6 +17,7 @@
 - no nested namespaces
 - no namespace imports (std::)
 - use uint(32...)_t instead of int, long, etc.
+- include order: header for implementation file, c system, c++ system, other
 - include stdlib before 3rdparty before own
 - use shared_ptr
 - use "if(debug)" for non-essential checks
