@@ -8,7 +8,7 @@ premake4 gmake -&& make -j && clear && ./build/Opossum
 ## lint (is also automatically triggerd before git commit)
 premake4 lint
 
-## format (is also automatically triggered before make)
+## format (is also automatically triggered with make)
 premake4 format
 
 # dependencies
