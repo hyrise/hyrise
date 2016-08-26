@@ -4,7 +4,7 @@
 # Coding Style
 
 ## Formatting
-- 4 spaces for indentation
+- 2 spaces for indentation
 - 120 columns
 - comments above code
 - clang_format (executed with each make) should do most of the job for you
