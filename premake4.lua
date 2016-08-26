@@ -43,11 +43,12 @@ project "Opossum"
    configuration "Debug"
       defines { "DEBUG" }
       flags { "Symbols" }
-      prebuildcommands { "find src -iname \"*.cpp\" -o -iname \"*.hpp\" | xargs -I{} sh -c \"clang-format -style=file '{}' > '{}.out' && mv '{}.out' '{}'\"" }
+      prebuildcommands { "find src -iname \"*.cpp\" -o -iname \"*.hpp\" | xargs -I{} sh -c \"clang-format -i -style=file '{}'\"" }
 
    configuration "Release"
       defines { "NDEBUG" }
       flags { "OptimizeSpeed" }
+      prebuildcommands { "find src -iname \"*.cpp\" -o -iname \"*.hpp\" | xargs -I{} sh -c \"clang-format -i -style=file '{}'\"" }
 
    newoption {
       trigger     = "compiler",
@@ -73,6 +74,6 @@ newaction {
    trigger     = "format",
    description = "Format the code",
    execute = function ()
-      os.execute("find src -iname \"*.cpp\" -o -iname \"*.hpp\" | xargs -I{} sh -c \"clang-format -style=file '{}' > '{}.out' && mv '{}.out' '{}'\"")
+      os.execute("find src -iname \"*.cpp\" -o -iname \"*.hpp\" | xargs -I{} sh -c \"clang-format -i -style=file '{}'\"")
    end
 }
