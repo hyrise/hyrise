@@ -6,18 +6,18 @@
 
 namespace opossum {
 
-storage_manager &storage_manager::get() {
-  static storage_manager instance;
+StorageManager &StorageManager::get() {
+  static StorageManager instance;
   return instance;
 }
 
-void storage_manager::add_table(const std::string &name, std::shared_ptr<table> tp) {
+void StorageManager::add_table(const std::string &name, std::shared_ptr<Table> tp) {
   _tables.insert(std::make_pair(name, std::move(tp)));
 }
 
-std::shared_ptr<table> storage_manager::get_table(const std::string &name) const { return _tables.at(name); }
+std::shared_ptr<Table> StorageManager::get_table(const std::string &name) const { return _tables.at(name); }
 
-void storage_manager::print(std::ostream &out) const {
+void StorageManager::print(std::ostream &out) const {
   out << "==================" << std::endl;
   out << "===== Tables =====" << std::endl << std::endl;
 

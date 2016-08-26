@@ -23,7 +23,7 @@ void test_row_id() {
 int main() {
   test_row_id();
 
-  auto t = std::make_shared<opossum::table>(opossum::table(2));
+  auto t = std::make_shared<opossum::Table>(opossum::Table(2));
 
   t->add_column("a", "int");
   t->add_column("langer spaltenname", "float");
@@ -34,19 +34,19 @@ int main() {
   t->append({1234, 457.7, "testb", 516.2});
   t->append({12345, 458.7, "testc", 62});
 
-  opossum::storage_manager::get().add_table("meine_erste_tabelle", std::move(t));
+  opossum::StorageManager::get().add_table("meine_erste_tabelle", std::move(t));
 
-  auto gt = std::make_shared<opossum::get_table>("meine_erste_tabelle");
+  auto gt = std::make_shared<opossum::GetTable>("meine_erste_tabelle");
   gt->execute();
 
-  auto s = std::make_shared<opossum::table_scan>(gt, "a", /* "=",*/ 1234);
+  auto s = std::make_shared<opossum::TableScan>(gt, "a", /* "=",*/ 1234);
   s->execute();
 
-  auto p = std::make_shared<opossum::print>(s);
+  auto p = std::make_shared<opossum::Print>(s);
   p->execute();
 
   // omg - we can even SELECT INTO:
-  opossum::storage_manager::get().add_table("meine_zweite_tabelle", p->get_output());
+  opossum::StorageManager::get().add_table("meine_zweite_tabelle", p->get_output());
 
-  opossum::storage_manager::get().print();
+  opossum::StorageManager::get().print();
 }

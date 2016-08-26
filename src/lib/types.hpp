@@ -35,7 +35,7 @@ ChunkID get_chunk_id_from_row_id(RowID r_id);
 ChunkOffset get_chunk_offset_from_row_id(RowID r_id);
 RowID get_row_id_from_chunk_id_and_chunk_offset(ChunkID c_id, ChunkOffset c_offset);
 
-using pos_list = std::vector<RowID>;
+using PosList = std::vector<RowID>;
 
 // This holds all possible data types. The left side of the pairs are the names, the right side are prototypes
 // ("examples").
@@ -47,13 +47,13 @@ static auto column_types =
 // convert tuple of all types to sequence by first extracting the prototypes only and then applying decltype_
 static auto types_as_hana_sequence = hana::transform(hana::transform(column_types, hana::second), hana::decltype_);
 // convert hana sequence to mpl vector
-using types_as_mpl_vector = decltype(hana::to<hana::ext::boost::mpl::vector_tag>(types_as_hana_sequence));
+using TypesAsMplVector = decltype(hana::to<hana::ext::boost::mpl::vector_tag>(types_as_hana_sequence));
 // create boost::variant from mpl vector
-using all_type_variant = typename boost::make_variant_over<types_as_mpl_vector>::type;
+using AllTypeVariant = typename boost::make_variant_over<TypesAsMplVector>::type;
 
 // cast methods - from variant to specific type
 template <typename T>
-typename std::enable_if<std::is_integral<T>::value, T>::type type_cast(all_type_variant value) {
+typename std::enable_if<std::is_integral<T>::value, T>::type type_cast(AllTypeVariant value) {
   try {
     return boost::lexical_cast<T>(value);
   } catch (...) {
@@ -62,17 +62,17 @@ typename std::enable_if<std::is_integral<T>::value, T>::type type_cast(all_type_
 }
 
 template <typename T>
-typename std::enable_if<std::is_floating_point<T>::value, T>::type type_cast(all_type_variant value) {
+typename std::enable_if<std::is_floating_point<T>::value, T>::type type_cast(AllTypeVariant value) {
   // TODO(MD): is lexical_cast always necessary?
   return boost::lexical_cast<T>(value);
 }
 
 template <typename T>
-typename std::enable_if<std::is_same<T, std::string>::value, T>::type type_cast(all_type_variant value) {
+typename std::enable_if<std::is_same<T, std::string>::value, T>::type type_cast(AllTypeVariant value) {
   return boost::lexical_cast<T>(value);
 }
 
-std::string to_string(const all_type_variant &x);
+std::string to_string(const AllTypeVariant &x);
 
 template <class base, template <typename> class impl, class... Args>
 std::unique_ptr<base> make_unique_templated(const std::string &type, Args &&... args) {

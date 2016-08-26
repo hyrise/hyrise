@@ -4,7 +4,7 @@
 
 namespace opossum {
 
-std::string to_string(const all_type_variant& x) { return boost::lexical_cast<std::string>(x); }
+std::string to_string(const AllTypeVariant& x) { return boost::lexical_cast<std::string>(x); }
 
 ChunkID get_chunk_id_from_row_id(RowID r_id) { return r_id >> MAX_CHUNK_SIZE; }
 

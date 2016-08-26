@@ -11,35 +11,35 @@
 namespace opossum {
 
 template <typename T>
-class table_scan_impl;
+class TableScanImpl;
 
-class table_scan : public abstract_operator {
+class TableScan : public AbstractOperator {
  public:
-  table_scan(const std::shared_ptr<abstract_operator> in, const std::string &filter_column_name,
-             /* const std::string &op,*/ const all_type_variant value);
+  TableScan(const std::shared_ptr<AbstractOperator> in, const std::string &filter_column_name,
+            /* const std::string &op,*/ const AllTypeVariant value);
   virtual void execute();
-  virtual std::shared_ptr<table> get_output() const;
+  virtual std::shared_ptr<Table> get_output() const;
 
  protected:
   virtual const std::string get_name() const;
   virtual uint8_t get_num_in_tables() const;
   virtual uint8_t get_num_out_tables() const;
 
-  const std::unique_ptr<abstract_operator_impl> _impl;
+  const std::unique_ptr<AbstractOperatorImpl> _impl;
 };
 
 template <typename T>
-class table_scan_impl : public abstract_operator_impl {
+class TableScanImpl : public AbstractOperatorImpl {
  public:
-  table_scan_impl(const std::shared_ptr<abstract_operator> in, const std::string &filter_column_name,
-                  /*const std::string &op,*/ const all_type_variant value)
+  TableScanImpl(const std::shared_ptr<AbstractOperator> in, const std::string &filter_column_name,
+                /*const std::string &op,*/ const AllTypeVariant value)
       : _filter_value(type_cast<T>(value)),
         _table(in->get_output()),
         _filter_column_id(_table->get_column_id_by_name(filter_column_name)),
-        _output(new table),
-        _pos_list(new pos_list) {
+        _output(new Table),
+        _pos_list(new PosList) {
     for (size_t column_id = 0; column_id < _table->col_count(); ++column_id) {
-      auto ref = std::make_shared<reference_column>(_table, column_id, _pos_list);
+      auto ref = std::make_shared<ReferenceColumn>(_table, column_id, _pos_list);
       _output->add_column(_table->get_column_name(column_id), _table->get_column_type(column_id), false);
       _output->get_chunk(0).add_column(ref);
       // TODO(Anyone): do we want to distinguish between chunk tables and "reference tables"?
@@ -51,8 +51,8 @@ class table_scan_impl : public abstract_operator_impl {
       auto &chunk = _table->get_chunk(chunk_id);
       auto base_column = chunk.get_column(_filter_column_id);
 
-      if (auto val_col = std::dynamic_pointer_cast<value_column<T>>(base_column)) {
-        // value_column
+      if (auto val_col = std::dynamic_pointer_cast<ValueColumn<T>>(base_column)) {
+        // ValueColumn
         const std::vector<T> &values = val_col->get_values();
         for (ChunkOffset chunk_offset = 0; chunk_offset < chunk.size(); ++chunk_offset) {
           if (values[chunk_offset] == _filter_value) {
@@ -60,8 +60,8 @@ class table_scan_impl : public abstract_operator_impl {
           }
         }
       } else {
-        // reference_column
-        auto ref_col = std::dynamic_pointer_cast<reference_column>(base_column);
+        // ReferenceColumn
+        auto ref_col = std::dynamic_pointer_cast<ReferenceColumn>(base_column);
         auto pos_list = ref_col->get_pos_list();
 
         // TODO(Anyone): improve when chunk can be derived from position
@@ -75,12 +75,12 @@ class table_scan_impl : public abstract_operator_impl {
     }
   }
 
-  virtual std::shared_ptr<table> get_output() const { return _output; }
+  virtual std::shared_ptr<Table> get_output() const { return _output; }
 
   const T _filter_value;
-  const std::shared_ptr<table> _table;
+  const std::shared_ptr<Table> _table;
   const size_t _filter_column_id;
-  std::shared_ptr<table> _output;
-  std::shared_ptr<pos_list> _pos_list;
+  std::shared_ptr<Table> _output;
+  std::shared_ptr<PosList> _pos_list;
 };
 }  // namespace opossum

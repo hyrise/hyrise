@@ -7,11 +7,11 @@
 
 namespace opossum {
 
-class print : public abstract_operator {
+class Print : public AbstractOperator {
  public:
-  explicit print(const std::shared_ptr<abstract_operator> in);
+  explicit Print(const std::shared_ptr<AbstractOperator> in);
   virtual void execute();
-  virtual std::shared_ptr<table> get_output() const;
+  virtual std::shared_ptr<Table> get_output() const;
 
  protected:
   virtual const std::string get_name() const;

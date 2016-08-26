@@ -7,11 +7,11 @@
 
 namespace opossum {
 
-class get_table : public abstract_operator {
+class GetTable : public AbstractOperator {
  public:
-  explicit get_table(const std::string &name);
+  explicit GetTable(const std::string &name);
   virtual void execute();
-  virtual std::shared_ptr<table> get_output() const;
+  virtual std::shared_ptr<Table> get_output() const;
 
  protected:
   virtual const std::string get_name() const;

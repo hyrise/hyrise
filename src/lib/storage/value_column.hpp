@@ -8,13 +8,13 @@
 namespace opossum {
 
 template <typename T>
-class value_column : public base_column {
+class ValueColumn : public BaseColumn {
  public:
-  value_column() {}
+  ValueColumn() {}
 
-  virtual all_type_variant operator[](const size_t i) const { return _values[i]; }
+  virtual AllTypeVariant operator[](const size_t i) const { return _values[i]; }
 
-  virtual void append(const all_type_variant& val) { _values.push_back(type_cast<T>(val)); }
+  virtual void append(const AllTypeVariant& val) { _values.push_back(type_cast<T>(val)); }
 
   const std::vector<T>& get_values() const { return _values; }
 
