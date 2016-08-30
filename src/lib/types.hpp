@@ -75,7 +75,7 @@ typename std::enable_if<std::is_same<T, std::string>::value, T>::type type_cast(
 std::string to_string(const AllTypeVariant &x);
 
 template <class base, template <typename...> class impl, class... TemplateArgs, typename... ConstructorArgs>
-std::unique_ptr<base> make_unique_templated(const std::string &type, ConstructorArgs &&... args) {
+std::unique_ptr<base> make_unique_by_column_type(const std::string &type, ConstructorArgs &&... args) {
   base *ret = nullptr;
   hana::for_each(column_types, [&](auto x) {
     if (std::string(hana::first(x)) == type) {
@@ -89,7 +89,7 @@ std::unique_ptr<base> make_unique_templated(const std::string &type, Constructor
 }
 
 template <class base, template <typename> class impl, class... TemplateArgs, class... ConstructorArgs>
-std::shared_ptr<base> make_shared_templated(const std::string &type, ConstructorArgs &&... args) {
-  return std::move(make_unique_templated<base, impl, TemplateArgs...>(type, args...));
+std::shared_ptr<base> make_shared_by_column_type(const std::string &type, ConstructorArgs &&... args) {
+  return std::move(make_unique_by_column_type<base, impl, TemplateArgs...>(type, args...));
 }
 }  // namespace opossum

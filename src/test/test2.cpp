@@ -39,7 +39,7 @@ int main() {
   auto gt = std::make_shared<opossum::GetTable>("meine_erste_tabelle");
   gt->execute();
 
-  auto s = std::make_shared<opossum::TableScan>(gt, "a", /* "=",*/ 1234);
+  auto s = std::make_shared<opossum::TableScan>(gt, "a", ">=", 1234);
   s->execute();
 
   auto p = std::make_shared<opossum::Print>(s);

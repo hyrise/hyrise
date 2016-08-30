@@ -5,12 +5,11 @@
 
 namespace opossum {
 
-TableScan::TableScan(const std::shared_ptr<AbstractOperator> in, const std::string &column_name,
-                     /* const std::string &op*/ const AllTypeVariant value)
+TableScan::TableScan(const std::shared_ptr<AbstractOperator> in, const std::string &column_name, const std::string &op,
+                     const AllTypeVariant value)
     : AbstractOperator(in),
-      _impl(make_unique_templated<AbstractOperatorImpl, TableScanImpl>(
-          _input_left->get_column_type(_input_left->get_column_id_by_name(column_name)), in, column_name,
-          /*op,*/ value)) {}
+      _impl(make_unique_by_column_type<AbstractOperatorImpl, TableScanImpl>(
+          _input_left->get_column_type(_input_left->get_column_id_by_name(column_name)), in, column_name, op, value)) {}
 
 const std::string TableScan::get_name() const { return "TableScan"; }
 
