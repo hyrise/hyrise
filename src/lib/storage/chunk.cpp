@@ -1,10 +1,9 @@
-#include "chunk.hpp"
-
 #include <iomanip>
 #include <memory>
 #include <string>
 #include <vector>
 
+#include "chunk.hpp"
 #include "value_column.hpp"
 
 namespace opossum {
