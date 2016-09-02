@@ -6,7 +6,7 @@
 #include "../../lib/storage/storage_manager.hpp"
 #include "../../lib/storage/table.hpp"
 
-TEST(get_table, get_output_returns_correct_table) {
+TEST(operators_get_table, get_output_returns_correct_table) {
   auto t = std::make_shared<opossum::Table>(opossum::Table(2));
   opossum::StorageManager::get().add_table("aNiceTestTable", t);
 
@@ -16,7 +16,7 @@ TEST(get_table, get_output_returns_correct_table) {
   EXPECT_EQ(gt->get_output(), t);
 }
 
-TEST(get_table, get_output_throwns_on_unknown_table_name) {
+TEST(operators_get_table, get_output_throwns_on_unknown_table_name) {
   auto t = std::make_shared<opossum::Table>(opossum::Table(2));
   opossum::StorageManager::get().add_table("aNiceTestTable", t);
 
