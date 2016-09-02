@@ -1,4 +1,5 @@
 obj/*
 .DS_STORE
 build/*
-Opossum.make
+*.make
+Makefile
