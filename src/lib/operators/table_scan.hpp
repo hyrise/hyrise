@@ -1,9 +1,9 @@
 #pragma once
 
+#include <functional>
 #include <memory>
 #include <string>
 #include <vector>
-#include <functional>
 
 #include "abstract_operator.hpp"
 #include "storage/reference_column.hpp"
