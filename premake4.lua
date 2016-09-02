@@ -30,14 +30,24 @@ solution "Opossum"
    platforms "x64"
    flags { "FatalWarnings", "ExtraWarnings" }
 
-project "Opossum"
-   kind "ConsoleApp"
+project "googletest"
+   kind "StaticLib"
    language "C++"
-   targetdir "build/"
+   targetdir "build"
+   location "third_party/googletest/googletest/build"
+
+   files { "third_party/googletest/googletest/src/gtest-all.cc" }
+   includedirs { "third_party/googletest/googletest", "third_party/googletest/googletest/include" }
+   buildoptions { "-g -Wall -Wextra -pthread" }
+
+project "Opossum"
+   kind "StaticLib"
+   language "C++"
+   targetdir "build"
 
    buildoptions { "-std=c++1z" }
 
-   files { "**.hpp", "**.cpp" }
+   files { "src/lib/**.hpp", "src/lib/**.cpp" }
    includedirs { "src/lib/", "/usr/local/include" }
 
    configuration "Debug"
@@ -50,15 +60,51 @@ project "Opossum"
       flags { "OptimizeSpeed" }
       prebuildcommands { "find src -iname \"*.cpp\" -o -iname \"*.hpp\" | xargs -I{} sh -c \"clang-format -i -style=file '{}'\"" }
 
-   newoption {
-      trigger     = "compiler",
-      value       = "clang||gcc",
-      description = "Choose a compiler",
-      allowed = {
-         { "gcc",    "gcc of version 6 or higher" },
-         { "clang",  "clang llvm frontend" }
-      }
+project "BinOpossum"
+   kind "ConsoleApp"
+   language "C++"
+   targetdir "build"
+   location "build"
+
+   buildoptions { "-std=c++1z" }
+
+   links { "Opossum" }
+   files { "src/test/test2.cpp" }
+   includedirs { "src/lib/", "/usr/local/include" }
+
+   configuration "Debug"
+      defines { "DEBUG" }
+      flags { "Symbols" }
+
+   configuration "Release"
+      defines { "NDEBUG" }
+      flags { "OptimizeSpeed" }
+
+project "TestOpossum"
+   kind "ConsoleApp"
+   language "C++"
+   targetdir "build"
+
+   buildoptions { "-std=c++1z" }
+   defines { "DEBUG" }
+   prebuildcommands { "find src -iname \"*.cpp\" -o -iname \"*.hpp\" | xargs -I{} sh -c \"clang-format -i -style=file '{}'\"" }
+
+   links { "googletest", "Opossum" }
+   files { "src/test/**.hpp", "src/test/**.cpp" }
+   excludes { "src/test/test2.cpp" }
+
+   includedirs { "src/lib/", "/usr/local/include", "third_party/googletest/googletest/include" }
+
+
+newoption {
+   trigger     = "compiler",
+   value       = "clang||gcc",
+   description = "Choose a compiler",
+   allowed = {
+      { "gcc",    "gcc of version 6 or higher" },
+      { "clang",  "clang llvm frontend" }
    }
+}
 
 -- Registering linting and formatting as actions for premake is not optimal, make targets would be the preferable option, but impossible to generate or really hacky
 
@@ -75,5 +121,13 @@ newaction {
    description = "Format the code",
    execute = function ()
       os.execute("find src -iname \"*.cpp\" -o -iname \"*.hpp\" | xargs -I{} sh -c \"clang-format -i -style=file '{}'\"")
+   end
+}
+
+newaction {
+   trigger     = "test",
+   description = "Test the code",
+   execute = function ()
+      os.execute("make TestOpossum -j && ./build/TestOpossum")
    end
 }
