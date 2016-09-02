@@ -35,3 +35,6 @@ build from source: http://www.boost.org/doc/libs/1_61_0/libs/hana/doc/html/index
 
 ## clang-format
 install via homebrew / packet manager
+
+## googletest
+get via git submodule update --init
