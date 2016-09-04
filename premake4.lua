@@ -34,7 +34,7 @@ project "googletest"
    kind "StaticLib"
    language "C++"
    targetdir "build"
-   location "third_party/googletest/googletest"
+   location "build"
 
    files { "third_party/googletest/googletest/src/gtest-all.cc" }
    includedirs { "third_party/googletest/googletest", "third_party/googletest/googletest/include" }
