@@ -12,20 +12,20 @@ end
 -- TODO try LTO/whole program
 
 function default(osName, actionName)
-   if osName ~= nil and os.is(osName) == false then
-      return
-   end
+  if osName ~= nil and os.is(osName) == false then
+    return
+  end
 
-   if _ACTION == nil then
-      _ACTION = actionName
-   end
+  if _ACTION == nil then
+    _ACTION = actionName
+  end
 end
  
 default("linux", "gmake")
 default("macosx", "gmake")
 
 if not _OPTIONS["compiler"] then
-   _OPTIONS["compiler"] = "gcc"
+  _OPTIONS["compiler"] = "gcc"
 end
 
 if _OPTIONS["compiler"] == "clang" then
@@ -40,98 +40,98 @@ else
 end
 
 solution "opossum"
-   configurations { "Debug", "Release" }
-   platforms "x64"
-   flags { "FatalWarnings", "ExtraWarnings" }
-   language "C++"
-   targetdir "build"
-   buildoptions { "-std=c++1z -pthread" }
-   includedirs { "src/lib/", "/usr/local/include" }
+  configurations { "Debug", "Release" }
+  platforms "x64"
+  flags { "FatalWarnings", "ExtraWarnings" }
+  language "C++"
+  targetdir "build"
+  buildoptions { "-std=c++1z -pthread" }
+  includedirs { "src/lib/", "/usr/local/include" }
 
-   configuration "Debug"
-      defines { "IS_DEBUG=1" }
-      flags { "Symbols" }
-      prebuildcommands { "find src -iname \"*.cpp\" -o -iname \"*.hpp\" | xargs -I{} sh -c \"clang-format -i -style=file '{}'\"" }
-        -- TODO Shouldn't this be part of the pre-commit hook? "make" should never touch the code
+  configuration "Debug"
+    defines { "IS_DEBUG=1" }
+    flags { "Symbols" }
+    prebuildcommands { "find src -iname \"*.cpp\" -o -iname \"*.hpp\" | xargs -I{} sh -c \"clang-format -i -style=file '{}'\"" }
+      -- TODO Shouldn't this be part of the pre-commit hook? "make" should never touch the code
 
-   configuration "Release"
-      defines { "IS_DEBUG=0" }
-      flags { "OptimizeSpeed" }
-      prebuildcommands { "find src -iname \"*.cpp\" -o -iname \"*.hpp\" | xargs -I{} sh -c \"clang-format -i -style=file '{}'\"" }
+  configuration "Release"
+    defines { "IS_DEBUG=0" }
+    flags { "OptimizeSpeed" }
+    prebuildcommands { "find src -iname \"*.cpp\" -o -iname \"*.hpp\" | xargs -I{} sh -c \"clang-format -i -style=file '{}'\"" }
 
 project "googletest"
-   kind "StaticLib"
-   files { "third_party/googletest/googletest/src/gtest-all.cc" }
-   includedirs { "third_party/googletest/googletest", "third_party/googletest/googletest/include" }
+  kind "StaticLib"
+  files { "third_party/googletest/googletest/src/gtest-all.cc" }
+  includedirs { "third_party/googletest/googletest", "third_party/googletest/googletest/include" }
 
 project "opossum"
-   kind "StaticLib"
-   files { "src/lib/**.hpp", "src/lib/**.cpp", "src/bin/server.cpp" }
+  kind "StaticLib"
+  files { "src/lib/**.hpp", "src/lib/**.cpp", "src/bin/server.cpp" }
 
 project "server"
-   kind "ConsoleApp"
-   links { "opossum" }
-   files { "src/bin/server.cpp" }
+  kind "ConsoleApp"
+  links { "opossum" }
+  files { "src/bin/server.cpp" }
 
 project "playground"
-   kind "ConsoleApp"
-   links { "opossum" }
-   files { "src/bin/playground.cpp" }
+  kind "ConsoleApp"
+  links { "opossum" }
+  files { "src/bin/playground.cpp" }
 
 project "test"
-   kind "ConsoleApp"
+  kind "ConsoleApp"
 
-   defines { "IS_DEBUG=1" }
+  defines { "IS_DEBUG=1" }
 
-   links { "opossum", "googletest" }
-   files { "src/test/**.hpp", "src/test/**.cpp" }
-   includedirs { "third_party/googletest/googletest/include" }
-   postbuildcommands { "./build/test" }
+  links { "opossum", "googletest" }
+  files { "src/test/**.hpp", "src/test/**.cpp" }
+  includedirs { "third_party/googletest/googletest/include" }
+  postbuildcommands { "./build/test" }
 
 newoption {
-   trigger     = "compiler",
-   value       = "clang||gcc",
-   description = "Choose a compiler",
-   allowed = {
-      { "gcc",    "gcc of version 6 or higher" },
-      { "clang",  "clang llvm frontend" }
-   }
+  trigger     = "compiler",
+  value       = "clang||gcc",
+  description = "Choose a compiler",
+  allowed = {
+    { "gcc",    "gcc of version 6 or higher" },
+    { "clang",  "clang llvm frontend" }
+  }
 }
 
 -- Registering linting and formatting as actions for premake is not optimal, make targets would be the preferable option, but impossible to generate or really hacky
 
 newaction {
-   trigger     = "lint",
-   description = "Lint the code",
-   execute = function ()
-      os.execute("find src -iname \"*.cpp\" -o -iname \"*.hpp\" | xargs -I{} python cpplint.py --verbose=0 --extensions=hpp,cpp --counting=detailed --filter=-legal/copyright --linelength=120 {}")
-   end
+  trigger     = "lint",
+  description = "Lint the code",
+  execute = function ()
+    os.execute("find src -iname \"*.cpp\" -o -iname \"*.hpp\" | xargs -I{} python cpplint.py --verbose=0 --extensions=hpp,cpp --counting=detailed --filter=-legal/copyright --linelength=120 {}")
+  end
 }
 
 newaction {
-   trigger     = "format",
-   description = "Format the code",
-   execute = function ()
-      os.execute("find src -iname \"*.cpp\" -o -iname \"*.hpp\" | xargs -I{} sh -c \"clang-format -i -style=file '{}'\"")
-   end
+  trigger     = "format",
+  description = "Format the code",
+  execute = function ()
+    os.execute("find src -iname \"*.cpp\" -o -iname \"*.hpp\" | xargs -I{} sh -c \"clang-format -i -style=file '{}'\"")
+  end
 }
 
 premake.old_generate = premake.generate
 
 function premake.generate(obj, filename, callback)
-    premake.old_generate(obj, filename, callback)
+  premake.old_generate(obj, filename, callback)
 
-    if filename == "Makefile" then
-       -- make some changes to Makefile that premake4 does not support
+  if filename == "Makefile" then
+    -- make some changes to Makefile that premake4 does not support
 
-       -- "make all" should only build opossum
-       os.execute("sed -i'' .bak 's/^all: .*\$/all: opossum server/' Makefile")
+    -- "make all" should only build opossum
+    os.execute("sed -i'' .bak 's/^all: .*\$/all: opossum server/' Makefile")
 
-       -- "make clean" should also call "premake4 clean"
-       os.execute("awk '\\\
-       /help:/ {\\\
-       print \"\tpremake4 clean\"\\\
-       }\\\
-       { print }' Makefile > Makefile.awk && mv Makefile.awk Makefile")
-    end
+    -- "make clean" should also call "premake4 clean"
+    os.execute("awk '\\\
+    /help:/ {\\\
+    print \"\tpremake4 clean\"\\\
+    }\\\
+    { print }' Makefile > Makefile.awk && mv Makefile.awk Makefile")
+  end
 end
