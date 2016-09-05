@@ -111,10 +111,22 @@ newaction {
    end
 }
 
-newaction {
-   trigger     = "test",
-   description = "Test the code",
-   execute = function ()
-      os.execute("make TestOpossum -j && ./build/TestOpossum")
-   end
-}
+premake.old_generate = premake.generate
+
+function premake.generate(obj, filename, callback)
+    premake.old_generate(obj, filename, callback)
+
+    if filename == "Makefile" then
+       -- make some changes to Makefile that premake4 does not support
+
+       -- "make all" should only build opossum
+       os.execute("sed -i'' .bak 's/^all: .*\$/all: opossum/' Makefile")
+
+       -- "make clean" should also call "premake4 clean"
+       os.execute("awk '\\\
+       /help:/ {\\\
+       print \"\tpremake4 clean\"\\\
+       }\\\
+       { print }' Makefile > Makefile.awk && mv Makefile.awk Makefile")
+    end
+end
