@@ -21,7 +21,7 @@ class ReferenceColumn : public BaseColumn {
   ReferenceColumn(const std::shared_ptr<Table> referenced_table, const size_t referenced_column_id,
                   const std::shared_ptr<PosList> pos)
       : _referenced_table(referenced_table), _referenced_column_id(referenced_column_id), _pos_list(pos) {
-    if (DEBUG) {
+    if (IS_DEBUG) {
       auto referenced_column = _referenced_table->get_chunk(0).get_column(referenced_column_id);
       auto reference_col = std::dynamic_pointer_cast<ReferenceColumn>(referenced_column);
       if (reference_col != NULL) {

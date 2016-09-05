@@ -4,7 +4,7 @@
 -- TODO: This should be part of the setup script, not the (pre)make file
 if os.execute("test -x .git/hooks/pre-commit") ~= 0 or os.execute("md5 -q .git/hooks/pre-commit | grep cb1e4086756ddacb54ec87f775abd82b >/dev/null 2>/dev/null") ~= 0 then
   os.execute("touch .git/hooks/pre-commit")
-  os.execute("echo '#!/bin/sh\necho \"Linting all code, this may take a while...\"\n\nfind src -iname *.cpp -o -iname *.hpp | while read line;\ndo\n    if ! python cpplint.py --verbose=0 --extensions=hpp,cpp --counting=detailed --filter=-legal/copyright --linelength=120 $line >/dev/null 2>/dev/null\n    then\n        echo \"ERROR: Linting error occured. Execute \\\"premake4 lint\\\" for details!\n(What kind of ***** would consider a commit without linting?)\"\n        exit 1\n    fi\ndone\n\nif [ $? != 0 ]\nthen\n    exit 1\nfi\n\necho \"Success, no linting errors found!\"\n\necho \"Testing the Opossum, grrrrr...\"\nmake TestOpossum -j >/dev/null 2>/dev/null\nif ! ./build/TestOpossum >/dev/null 2>/dev/null\nthen\n    echo \"ERROR: Testing error occured. Execute \\\"premake4 test\\\" for details!\n(What kind of ***** would consider a commit without testing?)\"\n    exit 1\nfi\n\necho \"Success, no testing errors found!\"' > .git/hooks/pre-commit")
+  os.execute("echo '#!/bin/sh\necho \"Linting all code, this may take a while...\"\n\nfind src -iname *.cpp -o -iname *.hpp | while read line;\ndo\n    if ! python cpplint.py --verbose=0 --extensions=hpp,cpp --counting=detailed --filter=-legal/copyright --linelength=120 $line >/dev/null 2>/dev/null\n    then\n        echo \"ERROR: Linting error occured. Execute \\\"premake4 lint\\\" for details!\n(What kind of ***** would consider a commit without linting?)\"\n        exit 1\n    fi\ndone\n\nif [ $? != 0 ]\nthen\n    exit 1\nfi\n\necho \"Success, no linting errors found!\"\n\necho \"Testing the Opossum, grrrrr...\"\nmake -j test >/dev/null 2>/dev/null\nif ! ./build/test >/dev/null 2>/dev/null\nthen\n    echo \"ERROR: Testing error occured. Execute \\\"make test\\\" for details!\n(What kind of ***** would consider a commit without testing?)\"\n    exit 1\nfi\n\necho \"Success, no testing errors found!\"' > .git/hooks/pre-commit")
   os.execute("chmod +x .git/hooks/pre-commit")
   os.execute("echo Successfully installed pre-commit hook.")
 end
@@ -39,77 +39,49 @@ else
   end
 end
 
-solution "Opossum"
+solution "opossum"
    configurations { "Debug", "Release" }
    platforms "x64"
    flags { "FatalWarnings", "ExtraWarnings" }
-
-project "googletest"
-   kind "StaticLib"
    language "C++"
    targetdir "build"
-   location "build"
-
-   files { "third_party/googletest/googletest/src/gtest-all.cc" }
-   includedirs { "third_party/googletest/googletest", "third_party/googletest/googletest/include" }
-   buildoptions { "-g -Wall -Wextra -pthread" }
-
-project "Opossum"
-   kind "StaticLib"
-   language "C++"
-   targetdir "build"
-
-   buildoptions { "-std=c++1z" }
-
-   files { "src/lib/**.hpp", "src/lib/**.cpp" }
+   buildoptions { "-std=c++1z -pthread" }
    includedirs { "src/lib/", "/usr/local/include" }
 
    configuration "Debug"
-      defines { "DEBUG" }
+      defines { "IS_DEBUG=1" }
       flags { "Symbols" }
       prebuildcommands { "find src -iname \"*.cpp\" -o -iname \"*.hpp\" | xargs -I{} sh -c \"clang-format -i -style=file '{}'\"" }
         -- TODO Shouldn't this be part of the pre-commit hook? "make" should never touch the code
 
    configuration "Release"
-      defines { "NDEBUG" }
+      defines { "IS_DEBUG=0" }
       flags { "OptimizeSpeed" }
       prebuildcommands { "find src -iname \"*.cpp\" -o -iname \"*.hpp\" | xargs -I{} sh -c \"clang-format -i -style=file '{}'\"" }
 
-project "BinOpossum"
+project "googletest"
+   kind "StaticLib"
+   files { "third_party/googletest/googletest/src/gtest-all.cc" }
+   includedirs { "third_party/googletest/googletest", "third_party/googletest/googletest/include" }
+
+project "opossum"
+   kind "StaticLib"
+   files { "src/lib/**.hpp", "src/lib/**.cpp", "src/bin/server.cpp" }
+
+project "playground"
    kind "ConsoleApp"
-   language "C++"
-   targetdir "build"
-   location "build"
+   links { "opossum" }
+   files { "src/bin/playground.cpp" }
 
-   buildoptions { "-std=c++1z" }
-
-   links { "Opossum" }
-   files { "src/test/test2.cpp" }
-   includedirs { "src/lib/", "/usr/local/include" }
-
-   configuration "Debug"
-      defines { "DEBUG" }
-      flags { "Symbols" }
-
-   configuration "Release"
-      defines { "NDEBUG" }
-      flags { "OptimizeSpeed" }
-
-project "TestOpossum"
+project "test"
    kind "ConsoleApp"
-   language "C++"
-   targetdir "build"
 
-   buildoptions { "-std=c++1z" }
-   defines { "DEBUG" }
-   prebuildcommands { "find src -iname \"*.cpp\" -o -iname \"*.hpp\" | xargs -I{} sh -c \"clang-format -i -style=file '{}'\"" }
+   defines { "IS_DEBUG=1" }
 
-   links { "googletest", "Opossum" }
+   links { "opossum", "googletest" }
    files { "src/test/**.hpp", "src/test/**.cpp" }
-   excludes { "src/test/test2.cpp" }
-
-   includedirs { "src/lib/", "/usr/local/include", "third_party/googletest/googletest/include" }
-
+   includedirs { "third_party/googletest/googletest/include" }
+   postbuildcommands { "./build/test" }
 
 newoption {
    trigger     = "compiler",
