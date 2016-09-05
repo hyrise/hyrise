@@ -11,6 +11,19 @@ end
 
 -- TODO try LTO/whole program
 
+function default(osName, actionName)
+   if osName ~= nil and os.is(osName) == false then
+      return
+   end
+
+   if _ACTION == nil then
+      _ACTION = actionName
+   end
+end
+ 
+default("linux", "gmake")
+default("macosx", "gmake")
+
 if not _OPTIONS["compiler"] then
    _OPTIONS["compiler"] = "gcc"
 end
