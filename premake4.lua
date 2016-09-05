@@ -86,6 +86,7 @@ project "TestOpossum"
    targetdir "build"
 
    buildoptions { "-std=c++1z" }
+   linkoptions {"-pthread"}
    defines { "DEBUG" }
    prebuildcommands { "find src -iname \"*.cpp\" -o -iname \"*.hpp\" | xargs -I{} sh -c \"clang-format -i -style=file '{}'\"" }
 
