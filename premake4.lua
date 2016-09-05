@@ -68,6 +68,11 @@ project "opossum"
    kind "StaticLib"
    files { "src/lib/**.hpp", "src/lib/**.cpp", "src/bin/server.cpp" }
 
+project "server"
+   kind "ConsoleApp"
+   links { "opossum" }
+   files { "src/bin/server.cpp" }
+
 project "playground"
    kind "ConsoleApp"
    links { "opossum" }
@@ -120,7 +125,7 @@ function premake.generate(obj, filename, callback)
        -- make some changes to Makefile that premake4 does not support
 
        -- "make all" should only build opossum
-       os.execute("sed -i'' .bak 's/^all: .*\$/all: opossum/' Makefile")
+       os.execute("sed -i'' .bak 's/^all: .*\$/all: opossum server/' Makefile")
 
        -- "make clean" should also call "premake4 clean"
        os.execute("awk '\\\
