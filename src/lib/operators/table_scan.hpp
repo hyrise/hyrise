@@ -41,7 +41,12 @@ class TableScanImpl : public AbstractOperatorImpl {
         _output(new Table),
         _pos_list(new PosList) {
     for (size_t column_id = 0; column_id < _table->col_count(); ++column_id) {
-      auto ref = std::make_shared<ReferenceColumn>(_table, column_id, _pos_list);
+      std::shared_ptr<ReferenceColumn> ref;
+      if (auto ref_col = std::dynamic_pointer_cast<ReferenceColumn>(_table->get_chunk(0).get_column(column_id))) {
+        ref = std::make_shared<ReferenceColumn>(ref_col->get_referenced_table(), column_id, _pos_list);
+      } else {
+        ref = std::make_shared<ReferenceColumn>(_table, column_id, _pos_list);
+      }
       _output->add_column(_table->get_column_name(column_id), _table->get_column_type(column_id), false);
       _output->get_chunk(0).add_column(ref);
       // TODO(Anyone): do we want to distinguish between chunk tables and "reference tables"?
@@ -51,28 +56,30 @@ class TableScanImpl : public AbstractOperatorImpl {
   template <typename Comp>
   void execute_with_operator() {
     Comp comp;
-    for (ChunkID chunk_id = 0; chunk_id < _table->chunk_count(); ++chunk_id) {
-      auto &chunk = _table->get_chunk(chunk_id);
-      auto base_column = chunk.get_column(_filter_column_id);
-
-      if (auto val_col = std::dynamic_pointer_cast<ValueColumn<T>>(base_column)) {
-        // ValueColumn
-        const std::vector<T> &values = val_col->get_values();
-        for (ChunkOffset chunk_offset = 0; chunk_offset < chunk.size(); ++chunk_offset) {
+    if (auto ref_col = std::dynamic_pointer_cast<ReferenceColumn>(_table->get_chunk(0).get_column(_filter_column_id))) {
+      auto in_pos_list = ref_col->get_pos_list();
+      auto val_table = ref_col->get_referenced_table();
+      size_t pos = 0;
+      while (pos < ref_col->size()) {
+        auto chunk_id = get_chunk_id_from_row_id((*in_pos_list)[pos]);
+        auto &chunk = val_table->get_chunk(chunk_id);
+        auto &values = std::dynamic_pointer_cast<ValueColumn<T>>(chunk.get_column(_filter_column_id))->get_values();
+        do {
+          auto chunk_offset = get_chunk_offset_from_row_id((*in_pos_list)[pos]);
           if (comp(values[chunk_offset], _filter_value)) {
             _pos_list->emplace_back(get_row_id_from_chunk_id_and_chunk_offset(chunk_id, chunk_offset));
           }
-        }
-      } else {
-        // ReferenceColumn
-        auto ref_col = std::dynamic_pointer_cast<ReferenceColumn>(base_column);
-        auto pos_list = ref_col->get_pos_list();
-
-        // TODO(Anyone): improve when chunk can be derived from position
-        for (size_t pos_in_poslist = 0; pos_in_poslist < ref_col->size(); ++pos_in_poslist) {
-          RowID row_id = (*pos_list)[pos_in_poslist];
-          if (comp(type_cast<T>((*ref_col)[row_id]), _filter_value)) {
-            _pos_list->emplace_back(row_id);
+          ++pos;
+        } while (get_chunk_id_from_row_id((*in_pos_list)[pos]) == chunk_id);
+      }
+    } else {
+      for (ChunkID chunk_id = 0; chunk_id < _table->chunk_count(); ++chunk_id) {
+        auto &chunk = _table->get_chunk(chunk_id);
+        auto base_column = chunk.get_column(_filter_column_id);
+        auto &values = std::dynamic_pointer_cast<ValueColumn<T>>(base_column)->get_values();
+        for (ChunkOffset chunk_offset = 0; chunk_offset < chunk.size(); ++chunk_offset) {
+          if (comp(values[chunk_offset], _filter_value)) {
+            _pos_list->emplace_back(get_row_id_from_chunk_id_and_chunk_offset(chunk_id, chunk_offset));
           }
         }
       }
