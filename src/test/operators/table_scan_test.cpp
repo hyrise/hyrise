@@ -11,7 +11,7 @@
 #include "../../lib/types.hpp"
 
 namespace opossum {
-class TestOperatorsTableScanImpl : public ::testing::Test {
+class operators_table_scan_impl : public ::testing::Test {
   virtual void SetUp() {
     test_table = std::make_shared<opossum::Table>(opossum::Table(2));
 
@@ -32,7 +32,7 @@ class TestOperatorsTableScanImpl : public ::testing::Test {
   std::shared_ptr<opossum::GetTable> gt;
 };
 
-TEST_F(TestOperatorsTableScanImpl, single_scan_returns_correct_row_count) {
+TEST_F(operators_table_scan_impl, single_scan_returns_correct_row_count) {
   std::unique_ptr<AbstractOperatorImpl> scan(
       make_unique_by_column_type<AbstractOperatorImpl, TableScanImpl>("int", gt, "a", ">=", 1234));
   scan->execute();
