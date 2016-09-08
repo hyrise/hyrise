@@ -40,7 +40,7 @@ TEST_F(operators_projection_scan, scan_single_column) {
   projection_scan->execute();
 
   EXPECT_EQ(projection_scan->get_output()->col_count(), (u_int)1);
-  // EXPECT_EQ(projection_scan->get_output()->row_count(), test_table->row_count());
+  EXPECT_EQ(projection_scan->get_output()->row_count(), gt->get_output()->row_count());
   EXPECT_THROW(projection_scan->get_output()->get_column_id_by_name("b"), std::exception);
 }
 
@@ -49,8 +49,8 @@ TEST_F(operators_projection_scan, scan_all_columns) {
   auto projection_scan = std::make_shared<ProjectionScan>(gt, column_filter);
   projection_scan->execute();
 
-  EXPECT_EQ(projection_scan->get_output()->col_count(), (u_int)2);  // test_table->col_count());
-  // EXPECT_EQ(projection_scan->get_output()->row_count(), test_table->row_count());
+  EXPECT_EQ(projection_scan->get_output()->col_count(), gt->get_output()->col_count());
+  EXPECT_EQ(projection_scan->get_output()->row_count(), gt->get_output()->row_count());
   EXPECT_EQ(projection_scan->get_output()->get_column_id_by_name("b"), (u_int)1);
 }
 }
