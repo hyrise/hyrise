@@ -32,8 +32,14 @@ class ReferenceColumn : public BaseColumn {
   }
 
   virtual AllTypeVariant operator[](const size_t i) const DEV_ONLY {
-    auto &chunk = _referenced_table->get_chunk(get_chunk_id_from_row_id((*_pos_list)[i]));
-    return (*chunk.get_column(_referenced_column_id))[get_chunk_offset_from_row_id((*_pos_list)[i])];
+    if (_pos_list) {
+      auto &chunk = _referenced_table->get_chunk(get_chunk_id_from_row_id((*_pos_list)[i]));
+      return (*chunk.get_column(_referenced_column_id))[get_chunk_offset_from_row_id((*_pos_list)[i])];
+    } else {
+      auto chunk_size = _referenced_table->get_chunk_size();
+      auto &chunk = _referenced_table->get_chunk(i / chunk_size);
+      return (*chunk.get_column(_referenced_column_id))[i % chunk_size];
+    }
   }
 
   virtual void append(const AllTypeVariant &) { throw std::logic_error("ReferenceColumn is immutable"); }
