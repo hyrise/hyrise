@@ -38,7 +38,13 @@ class ReferenceColumn : public BaseColumn {
 
   virtual void append(const AllTypeVariant &) { throw std::logic_error("ReferenceColumn is immutable"); }
 
-  virtual size_t size() const { return _pos_list->size(); }
+  virtual size_t size() const {
+    if (_pos_list) {
+      return _pos_list->size();
+    } else {
+      return _referenced_table->row_count();
+    }
+  }
 
   const std::shared_ptr<PosList> get_pos_list() const { return _pos_list; }
 };
