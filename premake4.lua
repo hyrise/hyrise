@@ -41,7 +41,6 @@ end
 
 solution "opossum"
   configurations { "Debug", "Release" }
-  platforms "x64"
   flags { "FatalWarnings", "ExtraWarnings" }
   language "C++"
   targetdir "build"
