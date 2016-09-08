@@ -84,6 +84,7 @@ project "test"
   defines { "IS_DEBUG=1" }
 
   links { "opossum", "googletest" }
+  linkoptions {"-pthread"}
   files { "src/test/**.hpp", "src/test/**.cpp" }
   includedirs { "third_party/googletest/googletest/include" }
   postbuildcommands { "./build/test" }
