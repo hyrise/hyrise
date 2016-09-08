@@ -9,9 +9,9 @@
 
 namespace opossum {
 
-class ProjectionScan : public AbstractOperator {
+class Projection : public AbstractOperator {
  public:
-  ProjectionScan(const std::shared_ptr<AbstractOperator> in, const std::vector<std::string> &columns);
+  Projection(const std::shared_ptr<AbstractOperator> in, const std::vector<std::string> &columns);
   virtual void execute();
   virtual std::shared_ptr<Table> get_output() const;
 

@@ -7,13 +7,13 @@
 #include "../../lib/operators/abstract_operator.hpp"
 #include "../../lib/operators/get_table.hpp"
 #include "../../lib/operators/print.hpp"
-#include "../../lib/operators/projection_scan.hpp"
+#include "../../lib/operators/projection.hpp"
 #include "../../lib/storage/storage_manager.hpp"
 #include "../../lib/storage/table.hpp"
 #include "../../lib/types.hpp"
 
 namespace opossum {
-class operators_projection_scan : public ::testing::Test {
+class operators_projection : public ::testing::Test {
   virtual void SetUp() {
     test_table = std::make_shared<Table>(opossum::Table(2));
 
@@ -34,23 +34,23 @@ class operators_projection_scan : public ::testing::Test {
   std::shared_ptr<opossum::GetTable> gt;
 };
 
-TEST_F(operators_projection_scan, scan_single_column) {
+TEST_F(operators_projection, scan_single_column) {
   std::vector<std::string> column_filter = {"a"};
-  auto projection_scan = std::make_shared<ProjectionScan>(gt, column_filter);
-  projection_scan->execute();
+  auto projection = std::make_shared<Projection>(gt, column_filter);
+  projection->execute();
 
-  EXPECT_EQ(projection_scan->get_output()->col_count(), (u_int)1);
-  EXPECT_EQ(projection_scan->get_output()->row_count(), gt->get_output()->row_count());
-  EXPECT_THROW(projection_scan->get_output()->get_column_id_by_name("b"), std::exception);
+  EXPECT_EQ(projection->get_output()->col_count(), (u_int)1);
+  EXPECT_EQ(projection->get_output()->row_count(), gt->get_output()->row_count());
+  EXPECT_THROW(projection->get_output()->get_column_id_by_name("b"), std::exception);
 }
 
-TEST_F(operators_projection_scan, scan_all_columns) {
+TEST_F(operators_projection, scan_all_columns) {
   std::vector<std::string> column_filter = {"a", "b"};
-  auto projection_scan = std::make_shared<ProjectionScan>(gt, column_filter);
-  projection_scan->execute();
+  auto projection = std::make_shared<Projection>(gt, column_filter);
+  projection->execute();
 
-  EXPECT_EQ(projection_scan->get_output()->col_count(), gt->get_output()->col_count());
-  EXPECT_EQ(projection_scan->get_output()->row_count(), gt->get_output()->row_count());
-  EXPECT_EQ(projection_scan->get_output()->get_column_id_by_name("b"), (u_int)1);
+  EXPECT_EQ(projection->get_output()->col_count(), gt->get_output()->col_count());
+  EXPECT_EQ(projection->get_output()->row_count(), gt->get_output()->row_count());
+  EXPECT_EQ(projection->get_output()->get_column_id_by_name("b"), (u_int)1);
 }
 }
