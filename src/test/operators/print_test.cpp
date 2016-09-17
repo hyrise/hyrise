@@ -1,5 +1,6 @@
 #include <memory>
 #include <string>
+#include <vector>
 
 #include "gtest/gtest.h"
 
@@ -28,6 +29,16 @@ class PrintOperatorTest : public ::testing::Test {
 
   std::shared_ptr<opossum::GetTable>(gt);
   std::shared_ptr<opossum::Table> t = nullptr;
+};
+
+// class used to make protected methods visible without
+// modifying the base class with testing code.
+class PrintWrapper : public opossum::Print {
+ public:
+  explicit PrintWrapper(const std::shared_ptr<AbstractOperator> in) : opossum::Print(in) {}
+  std::vector<uint16_t> test_column_string_widths(uint16_t min, uint16_t max, std::shared_ptr<opossum::Table> t) {
+    return column_string_widths(min, max, t);
+  }
 };
 
 TEST_F(PrintOperatorTest, check_print_output_empty_table) {
@@ -75,4 +86,28 @@ TEST_F(PrintOperatorTest, check_print_output_filled_table) {
   EXPECT_TRUE(output_str.find("|10|a|") == std::string::npos);
 
   // EXPECT_TRUE(output_str.find("Empty chunk.") != std::string::npos);
+}
+
+TEST_F(PrintOperatorTest, get_column_widths) {
+  uint16_t min = 8;
+  uint16_t max = 20;
+
+  auto tab = opossum::StorageManager::get().get_table(table_name);
+
+  auto pr_wrap = std::make_shared<PrintWrapper>(gt);
+  auto print_lengths = pr_wrap->test_column_string_widths(min, max, tab);
+
+  // we have two columns, thus two 'lengths'
+  ASSERT_EQ(print_lengths.size(), static_cast<size_t>(2));
+  // with empty columns and short col names, we should see the minimal lengths
+  EXPECT_EQ(print_lengths.at(0), static_cast<size_t>(min));
+  EXPECT_EQ(print_lengths.at(1), static_cast<size_t>(min));
+
+  int ten_digits_ints = 1234567890;
+
+  tab->append({ten_digits_ints, "quite a long string with more than $max chars"});
+
+  print_lengths = pr_wrap->test_column_string_widths(min, max, tab);
+  EXPECT_EQ(print_lengths.at(0), static_cast<size_t>(10));
+  EXPECT_EQ(print_lengths.at(1), static_cast<size_t>(max));
 }
