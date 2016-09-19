@@ -57,20 +57,21 @@ class TableScanImpl : public AbstractOperatorImpl {
   void execute_with_operator() {
     Comp comp;
     if (auto ref_col = std::dynamic_pointer_cast<ReferenceColumn>(_table->get_chunk(0).get_column(_filter_column_id))) {
-      auto in_pos_list = ref_col->get_pos_list();
       auto val_table = ref_col->get_referenced_table();
-      size_t pos = 0;
-      while (pos < ref_col->size()) {
+      std::vector<std::vector<T>> values = {};
+      for (size_t chunk = 0; chunk < val_table->chunk_count(); chunk++) {
+        values.emplace_back(
+            std::dynamic_pointer_cast<ValueColumn<T>>(val_table->get_chunk(chunk).get_column(_filter_column_id))
+                ->get_values());
+      }
+      auto in_pos_list = ref_col->get_pos_list();
+
+      for (size_t pos = 0; pos < in_pos_list->size(); pos++) {
         auto chunk_id = get_chunk_id_from_row_id((*in_pos_list)[pos]);
-        auto &chunk = val_table->get_chunk(chunk_id);
-        auto &values = std::dynamic_pointer_cast<ValueColumn<T>>(chunk.get_column(_filter_column_id))->get_values();
-        do {
-          auto chunk_offset = get_chunk_offset_from_row_id((*in_pos_list)[pos]);
-          if (comp(values[chunk_offset], _filter_value)) {
-            _pos_list->emplace_back(get_row_id_from_chunk_id_and_chunk_offset(chunk_id, chunk_offset));
-          }
-          ++pos;
-        } while (get_chunk_id_from_row_id((*in_pos_list)[pos]) == chunk_id);
+        auto chunk_offset = get_chunk_offset_from_row_id((*in_pos_list)[pos]);
+        if (comp(values[chunk_id][chunk_offset], _filter_value)) {
+          _pos_list->emplace_back(get_row_id_from_chunk_id_and_chunk_offset(chunk_id, chunk_offset));
+        }
       }
     } else {
       for (ChunkID chunk_id = 0; chunk_id < _table->chunk_count(); ++chunk_id) {
