@@ -60,9 +60,12 @@ class TableScanImpl : public AbstractOperatorImpl {
       auto val_table = ref_col->get_referenced_table();
       std::vector<std::vector<T>> values = {};
       for (size_t chunk = 0; chunk < val_table->chunk_count(); chunk++) {
-        values.emplace_back(
-            std::dynamic_pointer_cast<ValueColumn<T>>(val_table->get_chunk(chunk).get_column(_filter_column_id))
-                ->get_values());
+        if (auto val_col =
+                std::dynamic_pointer_cast<ValueColumn<T>>(val_table->get_chunk(chunk).get_column(_filter_column_id))) {
+          values.emplace_back(val_col->get_values());
+        } else {
+          throw std::logic_error("Referenced table must only contain value columns");
+        }
       }
       auto in_pos_list = ref_col->get_pos_list();
 
