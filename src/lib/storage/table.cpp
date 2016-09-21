@@ -55,7 +55,7 @@ size_t Table::get_column_id_by_name(const std::string &column_name) const {
   throw std::runtime_error("column " + column_name + " not found");
 }
 
-const size_t Table::get_chunk_size() const { return _chunk_size; }
+size_t Table::get_chunk_size() const { return _chunk_size; }
 
 const std::string &Table::get_column_name(size_t column_id) const { return _column_names[column_id]; }
 

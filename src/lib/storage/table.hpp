@@ -23,7 +23,7 @@ class Table {
   const std::string &get_column_name(size_t column_id) const;
   const std::string &get_column_type(size_t column_id) const;
   size_t get_column_id_by_name(const std::string &column_name) const;
-  const size_t get_chunk_size() const;
+  size_t get_chunk_size() const;
 
   void add_column(const std::string &name, const std::string &type, bool as_value_column = true);
   void append(std::initializer_list<AllTypeVariant> values) DEV_ONLY;
