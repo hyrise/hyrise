@@ -32,4 +32,34 @@ class operators_sort : public ::testing::Test {
   std::shared_ptr<opossum::Table> _test_table;
   std::shared_ptr<opossum::GetTable> _gt;
 };
+
+TEST_F(operators_sort, test_ascending_sort_of_one_column) {
+  auto sort = std::make_shared<Sort>(_gt, "a");
+  sort->execute();
+
+  EXPECT_EQ(type_cast<int>((*(sort->get_output()->get_chunk(0).get_column(0)))[0]), 123);
+  EXPECT_EQ(type_cast<int>((*(sort->get_output()->get_chunk(0).get_column(0)))[1]), 1234);
+  EXPECT_EQ(type_cast<int>((*(sort->get_output()->get_chunk(0).get_column(0)))[2]), 12345);
+}
+
+TEST_F(operators_sort, test_double_sort_of_one_column) {
+  auto sort1 = std::make_shared<Sort>(_gt, "a", false);
+  sort1->execute();
+
+  auto sort2 = std::make_shared<Sort>(_gt, "a");
+  sort2->execute();
+
+  EXPECT_EQ(type_cast<int>((*(sort2->get_output()->get_chunk(0).get_column(0)))[0]), 123);
+  EXPECT_EQ(type_cast<int>((*(sort2->get_output()->get_chunk(0).get_column(0)))[1]), 1234);
+  EXPECT_EQ(type_cast<int>((*(sort2->get_output()->get_chunk(0).get_column(0)))[2]), 12345);
+}
+
+TEST_F(operators_sort, test_descending_sort_of_one_column) {
+  auto sort = std::make_shared<Sort>(_gt, "a", false);
+  sort->execute();
+
+  EXPECT_EQ(type_cast<int>((*(sort->get_output()->get_chunk(0).get_column(0)))[0]), 12345);
+  EXPECT_EQ(type_cast<int>((*(sort->get_output()->get_chunk(0).get_column(0)))[1]), 1234);
+  EXPECT_EQ(type_cast<int>((*(sort->get_output()->get_chunk(0).get_column(0)))[2]), 123);
+}
 }
