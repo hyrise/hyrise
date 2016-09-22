@@ -1,0 +1,8 @@
+Things we should explain in the seminar:
+
+Environment
+	- `make` only compiles files that premake knew about. Run `make clean; premake4` to regenerate Makefile
+	- `make` is slow - use `make -j` and only rerun without `-j` if you find errors
+
+Coding
+	- the whole types.hpp thing, at least how it's used

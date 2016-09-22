@@ -31,4 +31,5 @@ TEST_F(operators_get_table, get_output_throwns_on_unknown_table_name) {
 
   EXPECT_THROW(gt->get_output(), std::exception) << "Should throw unkown table name exception";
 }
-}
+
+}  // namespace opossum

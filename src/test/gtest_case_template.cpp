@@ -35,4 +35,5 @@ class OpossumTestTemplate : public ::testing::Test {
 /**
  * Write tests for fixtures with TEST_F instead of TEST
  */
-}
+
+}  // namespace opossum

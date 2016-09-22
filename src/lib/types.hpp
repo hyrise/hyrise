@@ -84,7 +84,7 @@ std::unique_ptr<base> make_unique_by_column_type(const std::string &type, Constr
       return;
     }
   });
-  if (DEBUG && !ret) throw std::runtime_error("unknown type " + type);
+  if (IS_DEBUG && !ret) throw std::runtime_error("unknown type " + type);
   return std::unique_ptr<base>(ret);
 }
 

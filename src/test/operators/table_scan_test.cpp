@@ -1,5 +1,6 @@
 #include <iostream>
 #include <memory>
+#include <utility>
 
 #include "gtest/gtest.h"
 
@@ -82,7 +83,7 @@ TEST_F(operators_table_scan_impl, unknown_operator_throws_exception) {
   std::unique_ptr<AbstractOperatorImpl> scan(
       make_unique_by_column_type<AbstractOperatorImpl, TableScanImpl>("int", _gt, "a", "xor", 10));
 
-  EXPECT_THROW(scan->execute();, std::exception);
+  EXPECT_THROW(scan->execute(), std::exception);
 }
 
 TEST_F(operators_table_scan_impl, unsorted_pos_list_in_reference_column) {
@@ -114,4 +115,5 @@ TEST_F(operators_table_scan_impl, unsorted_pos_list_in_reference_column) {
 
   EXPECT_EQ(scan->get_output()->row_count(), (uint32_t)2);
 }
-}
+
+}  // namespace opossum
