@@ -24,4 +24,4 @@ class Projection : public AbstractOperator {
   const std::vector<std::string> _column_filter;
   std::shared_ptr<Table> _output;
 };
-}
+}  // namespace opossum
