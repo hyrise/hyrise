@@ -37,35 +37,7 @@ void Chunk::append(std::initializer_list<AllTypeVariant> values) {
   }
 }
 
-std::vector<int> Chunk::column_string_widths(int max) const {
-  std::vector<int> widths(_columns.size());
-  for (size_t col = 0; col < _columns.size(); ++col) {
-    for (size_t row = 0; row < size(); ++row) {
-      int width = to_string((*_columns[col])[row]).size();
-      if (width > widths[col]) {
-        if (width >= max) {
-          widths[col] = max;
-          break;
-        }
-        widths[col] = width;
-      }
-    }
-  }
-  return widths;
-}
-
 std::shared_ptr<BaseColumn> Chunk::get_column(size_t column_id) const { return _columns[column_id]; }
-
-void Chunk::print(std::ostream &out, const std::vector<int> &widths_in) const {
-  auto widths = widths_in.size() > 0 ? widths_in : column_string_widths(20);
-  for (size_t row = 0; row < size(); ++row) {
-    out << "|";
-    for (size_t col = 0; col < _columns.size(); ++col) {
-      out << std::setw(widths[col]) << (*_columns[col])[row] << "|" << std::setw(0);
-    }
-    out << std::endl;
-  }
-}
 
 size_t Chunk::size() const {
   if (IS_DEBUG && _columns.size() == 0) {

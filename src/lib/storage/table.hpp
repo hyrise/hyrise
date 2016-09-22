@@ -9,7 +9,7 @@
 #include "types.hpp"
 
 namespace opossum {
-
+class Print;
 class Table {
  public:
   explicit Table(const size_t chunk_size = 0);
@@ -26,8 +26,8 @@ class Table {
 
   void add_column(const std::string &name, const std::string &type, bool as_value_column = true);
   void append(std::initializer_list<AllTypeVariant> values) DEV_ONLY;
-  std::vector<int> column_string_widths(int max = 0) const;
-  void print(std::ostream &out = std::cout) const;
+
+  friend class Print;
 
  protected:
   const size_t _chunk_size;

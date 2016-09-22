@@ -8,7 +8,7 @@
 #include "value_column.hpp"
 
 namespace opossum {
-
+class Print;
 class Chunk {
  public:
   // creates an empty chunk
@@ -39,12 +39,7 @@ class Chunk {
   // returns the column at a given position
   std::shared_ptr<BaseColumn> get_column(size_t column_id) const;
 
-  // TODO(mb) move to print
-  std::vector<int> column_string_widths(int max = 0) const;
-
-  // TODO(mb) move to print
-  void print(std::ostream &out = std::cout, const std::vector<int> &column_string_widths = std::vector<int>()) const;
-
+  friend class Print;
 
  protected:
   std::vector<std::shared_ptr<BaseColumn>> _columns;
