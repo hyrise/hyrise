@@ -24,12 +24,11 @@ void Print::execute() {
 
   _out << "=== Columns" << std::endl;
   for (size_t col = 0; col < _input_left->col_count(); ++col) {
-    _out << "length:" << widths[col] << std::endl;
     _out << "|" << std::setw(widths[col]) << _input_left->_column_names[col] << std::setw(0);
   }
   _out << "|" << std::endl;
   for (size_t col = 0; col < _input_left->col_count(); ++col) {
-    _out << "|" << std::setw(widths[col]) << " [" << _input_left->_column_types[col] << "]" << std::setw(0);
+    _out << "|" << std::setw(widths[col]) << _input_left->_column_types[col] << std::setw(0);
   }
   _out << "|" << std::endl;
 

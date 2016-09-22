@@ -1,5 +1,8 @@
-#include "projection.hpp"
+#include <memory>
+#include <string>
+#include <vector>
 
+#include "projection.hpp"
 #include "storage/reference_column.hpp"
 
 namespace opossum {
@@ -28,4 +31,4 @@ void Projection::execute() {
 }
 
 std::shared_ptr<Table> Projection::get_output() const { return _output; }
-}
+}  // namespace opossum

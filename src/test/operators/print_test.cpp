@@ -53,8 +53,8 @@ TEST_F(PrintOperatorTest, check_print_output_empty_table) {
   // rather hard-coded tests
   EXPECT_TRUE(output_str.find("col_1") != std::string::npos);
   EXPECT_TRUE(output_str.find("col_2") != std::string::npos);
-  EXPECT_TRUE(output_str.find("[int]") != std::string::npos);
-  EXPECT_TRUE(output_str.find("[string]") != std::string::npos);
+  EXPECT_TRUE(output_str.find("int") != std::string::npos);
+  EXPECT_TRUE(output_str.find("string") != std::string::npos);
 
   EXPECT_TRUE(output_str.find("Empty chunk.") != std::string::npos);
 }

@@ -1,5 +1,6 @@
 #include <memory>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "gtest/gtest.h"
@@ -66,4 +67,4 @@ TEST_F(operators_projection, project_all_columns) {
   EXPECT_EQ(projection->get_output()->row_count(), gt->get_output()->row_count());
   EXPECT_EQ(projection->get_output()->get_column_id_by_name("b"), (u_int)1);
 }
-}
+}  // namespace opossum
