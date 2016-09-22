@@ -1,5 +1,6 @@
 #include <iostream>
 #include <memory>
+#include <utility>
 
 #include "gtest/gtest.h"
 
@@ -62,4 +63,4 @@ TEST_F(operators_sort, test_descending_sort_of_one_column) {
   EXPECT_EQ(type_cast<int>((*(sort->get_output()->get_chunk(0).get_column(0)))[1]), 1234);
   EXPECT_EQ(type_cast<int>((*(sort->get_output()->get_chunk(0).get_column(0)))[2]), 123);
 }
-}
+}  // namespace opossum

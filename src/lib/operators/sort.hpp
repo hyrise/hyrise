@@ -3,6 +3,9 @@
 #include <algorithm>
 #include <functional>
 #include <memory>
+#include <string>
+#include <utility>
+#include <vector>
 
 #include "abstract_operator.hpp"
 #include "storage/reference_column.hpp"
@@ -107,4 +110,4 @@ class SortImpl : public AbstractOperatorImpl {
   std::shared_ptr<PosList> _pos_list;
   std::shared_ptr<std::vector<std::pair<RowID, T>>> _row_id_value_vector;
 };
-}
+}  // namespace opossum

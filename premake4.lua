@@ -103,7 +103,8 @@ newaction {
   trigger     = "lint",
   description = "Lint the code",
   execute = function ()
-    os.execute("find src -iname \"*.cpp\" -o -iname \"*.hpp\" | xargs -I{} python cpplint.py --verbose=0 --extensions=hpp,cpp --counting=detailed --filter=-legal/copyright --linelength=120 {}")
+    os.execute("find src -iname \"*.cpp\" -o -iname \"*.hpp\" | xargs -I{} python cpplint.py --verbose=0 --extensions=hpp,cpp --counting=detailed --filter=-legal/copyright,-whitespace/newline --linelength=120 {}")
+      -- whitespace/newline is broken with lambda expressions
   end
 }
 

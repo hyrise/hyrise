@@ -1,5 +1,8 @@
 #include "sort.hpp"
 
+#include <memory>
+#include <string>
+
 namespace opossum {
 Sort::Sort(const std::shared_ptr<AbstractOperator> in, const std::string &sort_column_name, const bool ascending)
     : AbstractOperator(in),
@@ -15,4 +18,5 @@ uint8_t Sort::get_num_out_tables() const { return 1; }
 void Sort::execute() { _impl->execute(); }
 
 std::shared_ptr<Table> Sort::get_output() const { return _impl->get_output(); }
-}
+
+}  // namespace opossum
