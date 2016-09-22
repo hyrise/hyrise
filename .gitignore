@@ -2,4 +2,4 @@ obj/*
 .DS_STORE
 build/*
 *.make
-Makefile
+Makefile*

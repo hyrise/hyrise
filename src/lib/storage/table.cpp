@@ -8,10 +8,7 @@
 
 namespace opossum {
 
-Table::Table(const size_t chunk_size) : _chunk_size(chunk_size) {
-  // TODO(Anyone): Sicherstellen, dass chunk_size Zweierpotenz ist
-  _chunks.push_back(Chunk());
-}
+Table::Table(const size_t chunk_size) : _chunk_size(chunk_size) { _chunks.push_back(Chunk()); }
 
 void Table::add_column(const std::string &name, const std::string &type, bool as_value_column) {
   _column_names.push_back(name);
@@ -63,33 +60,4 @@ const std::string &Table::get_column_type(size_t column_id) const { return _colu
 
 Chunk &Table::get_chunk(ChunkID chunk_id) { return _chunks[chunk_id]; }
 
-std::vector<int> Table::column_string_widths(int max) const {
-  std::vector<int> widths(col_count());
-  for (size_t col = 0; col < col_count(); ++col) {
-    widths[col] = to_string(_column_names[col]).size();
-  }
-  for (auto &&chunk : _chunks) {
-    auto widths2 = chunk.column_string_widths(max);
-    for (size_t col = 0; col < col_count(); ++col) {
-      widths[col] = std::max(widths[col], widths2[col]);
-    }
-  }
-  return widths;
-}
-
-void Table::print(std::ostream &out) const {
-  auto widths = column_string_widths(20);
-
-  for (size_t col = 0; col < col_count(); ++col) {
-    out << "|" << std::setw(widths[col]) << _column_names[col] << std::setw(0);
-  }
-  out << "|" << std::endl;
-
-  size_t chunk_id = 0;
-  for (auto &&chunk : _chunks) {
-    out << "=== chunk " << chunk_id << " === " << std::endl;
-    chunk_id++;
-    chunk.print(out, widths);
-  }
-}
 }  // namespace opossum

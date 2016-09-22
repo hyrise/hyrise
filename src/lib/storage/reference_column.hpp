@@ -53,7 +53,6 @@ class ReferenceColumn : public BaseColumn {
   }
 
   const std::shared_ptr<PosList> get_pos_list() const { return _pos_list; }
-
   const std::shared_ptr<Table> get_referenced_table() const { return _referenced_table; }
 };
 

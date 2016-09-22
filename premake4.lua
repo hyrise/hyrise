@@ -2,9 +2,9 @@
 
 -- Install pre-commit hook for linting if not installed yet or outdated
 -- TODO: This should be part of the setup script, not the (pre)make file
-if os.execute("test -x .git/hooks/pre-commit") ~= 0 or os.execute("md5 -q .git/hooks/pre-commit | grep cb1e4086756ddacb54ec87f775abd82b >/dev/null 2>/dev/null") ~= 0 then
+if os.execute("test -x .git/hooks/pre-commit") ~= 0 or os.execute("md5 -q .git/hooks/pre-commit | grep 59922e72c6fd4b805a6bc2344e869a0b >/dev/null 2>/dev/null") ~= 0 then
   os.execute("touch .git/hooks/pre-commit")
-  os.execute("echo '#!/bin/sh\necho \"Linting all code, this may take a while...\"\n\nfind src -iname *.cpp -o -iname *.hpp | while read line;\ndo\n    if ! python cpplint.py --verbose=0 --extensions=hpp,cpp --counting=detailed --filter=-legal/copyright --linelength=120 $line >/dev/null 2>/dev/null\n    then\n        echo \"ERROR: Linting error occured. Execute \\\"premake4 lint\\\" for details!\n(What kind of ***** would consider a commit without linting?)\"\n        exit 1\n    fi\ndone\n\nif [ $? != 0 ]\nthen\n    exit 1\nfi\n\necho \"Success, no linting errors found!\"\n\necho \"Testing the Opossum, grrrrr...\"\nmake -j test >/dev/null 2>/dev/null\nif ! ./build/test >/dev/null 2>/dev/null\nthen\n    echo \"ERROR: Testing error occured. Execute \\\"make test\\\" for details!\n(What kind of ***** would consider a commit without testing?)\"\n    exit 1\nfi\n\necho \"Success, no testing errors found!\"' > .git/hooks/pre-commit")
+  os.execute("echo '#!/bin/sh\necho \"Linting all code, this may take a while...\"\n\nfind src -iname *.cpp -o -iname *.hpp | while read line;\ndo\n    if ! python cpplint.py --verbose=0 --extensions=hpp,cpp --counting=detailed --filter=-legal/copyright,-whitespace/newline --linelength=120 $line >/dev/null 2>/dev/null\n    then\n        echo \"ERROR: Linting error occured. Execute \\\"premake4 lint\\\" for details!\n(What kind of ***** would consider a commit without linting?)\"\n        exit 1\n    fi\ndone\n\nif [ $? != 0 ]\nthen\n    exit 1\nfi\n\necho \"Success, no linting errors found!\"\n\necho \"Testing the Opossum, grrrrr...\"\nmake -j test >/dev/null 2>/dev/null\nif ! ./build/test >/dev/null 2>/dev/null\nthen\n    echo \"ERROR: Testing error occured. Execute \\\"make test\\\" for details!\n(What kind of ***** would consider a commit without testing?)\"\n    exit 1\nfi\n\necho \"Success, no testing errors found!\"' > .git/hooks/pre-commit")
   os.execute("chmod +x .git/hooks/pre-commit")
   os.execute("echo Successfully installed pre-commit hook.")
 end
@@ -41,7 +41,6 @@ end
 
 solution "opossum"
   configurations { "Debug", "Release" }
-  platforms "x64"
   flags { "FatalWarnings", "ExtraWarnings" }
   language "C++"
   targetdir "build"
@@ -105,7 +104,8 @@ newaction {
   trigger     = "lint",
   description = "Lint the code",
   execute = function ()
-    os.execute("find src -iname \"*.cpp\" -o -iname \"*.hpp\" | xargs -I{} python cpplint.py --verbose=0 --extensions=hpp,cpp --counting=detailed --filter=-legal/copyright --linelength=120 {}")
+    os.execute("find src -iname \"*.cpp\" -o -iname \"*.hpp\" | xargs -I{} python cpplint.py --verbose=0 --extensions=hpp,cpp --counting=detailed --filter=-legal/copyright,-whitespace/newline --linelength=120 {}")
+      -- whitespace/newline is broken with lambda expressions and the way clang-format works
   end
 }
 

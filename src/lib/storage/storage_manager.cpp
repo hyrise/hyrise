@@ -30,7 +30,6 @@ void StorageManager::print(std::ostream &out) const {
     out << " (" << tab.second->col_count() << " columns, " << tab.second->row_count() << " rows in "
         << tab.second->chunk_count() << " chunks)";
     out << std::endl << std::endl;
-    tab.second->print();
     cnt++;
   }
 }
