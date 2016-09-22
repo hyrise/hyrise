@@ -41,6 +41,7 @@ class ReferenceColumn : public BaseColumn {
   virtual size_t size() const { return _pos_list->size(); }
 
   const std::shared_ptr<PosList> get_pos_list() const { return _pos_list; }
+  const std::shared_ptr<Table> get_referenced_table() const { return _referenced_table; }
 };
 
 // TODO(Anyone): Dokumentieren, dass nicht alle Chunks einer Tabelle gleich groß sind.
