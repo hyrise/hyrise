@@ -1,13 +1,20 @@
 #!lua
 
 -- Install pre-commit hook for linting if not installed yet or outdated
--- TODO: This should be part of the setup script, not the (pre)make file
 if os.execute("test -x .git/hooks/pre-commit") ~= 0 or os.execute("md5 -q .git/hooks/pre-commit | grep c763841d73c9191d6630e64b8e07d8dd >/dev/null 2>/dev/null") ~= 0 then
   os.execute("touch .git/hooks/pre-commit")
   os.execute("echo '#!/bin/sh\necho \"Linting all code, this may take a while...\"\n\nfind src -iname *.cpp -o -iname *.hpp | while read line;\ndo\n    if ! python cpplint.py --verbose=0 --extensions=hpp,cpp --counting=detailed --filter=-legal/copyright,-whitespace/newline --linelength=120 $line >/dev/null 2>/dev/null\n    then\n        echo \"ERROR: Linting error occured. Execute \\\"premake4 lint\\\" for details!\"\n        exit 1\n    fi\ndone\n\nif [ $? != 0 ]\nthen\n    exit 1\nfi\n\necho \"Success, no linting errors found!\"\n\necho \"Testing the Opossum, grrrrr...\"\nmake -j test >/dev/null 2>/dev/null\nif ! ./build/test >/dev/null 2>/dev/null\nthen\n    echo \"ERROR: Testing error occured. Execute \\\"make test\\\" for details!\"\n    exit 1\nfi\n\necho \"Success, no testing errors found!\"' > .git/hooks/pre-commit")
   os.execute("chmod +x .git/hooks/pre-commit")
   os.execute("echo Successfully installed pre-commit hook.")
 end
+
+if os.execute("test -x .git/hooks/pre-push") ~= 0 or os.execute("md5 -q .git/hooks/pre-push | grep 1ab787b835edad24a8cac25e9a6d4925 >/dev/null 2>/dev/null") ~= 0 then
+  os.execute("touch .git/hooks/pre-push")
+  os.execute("echo \"#!/bin/bash\n\nprotected_branch='master'\ncurrent_branch=\\$(git symbolic-ref HEAD | sed -e 's,.*/\\(.*\\),\\1,')\n\nif [ \\$protected_branch = \\$current_branch ] && [ \\$2 = 'git@gitlab.hpi.de:OpossumDB/OpossumDB.git' ]\nthen\n    echo\n    echo 'You are about to push to master. Opossum style dictates that you create a merge request from a different branch.'\n    read -p 'Is pushing to master really what you intended? [y|n] ' -n 1 -r < /dev/tty\n    echo\n    if echo \\$REPLY | grep -E '^[Yy]\\$' > /dev/null\n    then\n        exit 0 # push will execute\n    fi\n    exit 1 # push will not execute\nelse\n    exit 0 # push will execute\nfi\" > .git/hooks/pre-push")
+  os.execute("chmod +x .git/hooks/pre-push")
+  os.execute("echo Successfully installed pre-push hook.")
+end
+
 
 -- TODO try LTO/whole program
 
