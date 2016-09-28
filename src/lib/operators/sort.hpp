@@ -62,23 +62,33 @@ class SortImpl : public AbstractOperatorImpl {
         }
       } else if (auto referenced_column = std::dynamic_pointer_cast<ReferenceColumn>(
                      _in_table->get_chunk(chunk).get_column(_sort_column_id))) {
+        std::shared_ptr<PosList> in_pos_list;
+        bool not_full_table = (in_pos_list = referenced_column->get_pos_list());
         auto val_table = referenced_column->get_referenced_table();
-        std::vector<std::vector<T>> values = {};
+        std::vector<std::vector<T>> ref_values = {};
         for (size_t chunk = 0; chunk < val_table->chunk_count(); chunk++) {
           if (auto val_col =
                   std::dynamic_pointer_cast<ValueColumn<T>>(val_table->get_chunk(chunk).get_column(_sort_column_id))) {
-            values.emplace_back(val_col->get_values());
+            if (not_full_table) {
+              ref_values.emplace_back(val_col->get_values());
+            } else {
+              auto &values = val_col->get_values();
+              for (size_t offset = 0; offset < values.size(); offset++) {
+                _row_id_value_vector->emplace_back(get_row_id_from_chunk_id_and_chunk_offset(chunk, offset),
+                                                   values[offset]);
+              }
+            }
           } else {
             throw std::logic_error("Referenced table must only contain value columns");
           }
         }
-        auto in_pos_list = referenced_column->get_pos_list();
-
-        for (size_t pos = 0; pos < in_pos_list->size(); pos++) {
-          auto row_id = (*in_pos_list)[pos];
-          auto chunk_id = get_chunk_id_from_row_id(row_id);
-          auto chunk_offset = get_chunk_offset_from_row_id(row_id);
-          _row_id_value_vector->emplace_back(row_id, values[chunk_id][chunk_offset]);
+        if (not_full_table) {
+          for (size_t pos = 0; pos < in_pos_list->size(); pos++) {
+            auto row_id = (*in_pos_list)[pos];
+            auto chunk_id = get_chunk_id_from_row_id(row_id);
+            auto chunk_offset = get_chunk_offset_from_row_id(row_id);
+            _row_id_value_vector->emplace_back(row_id, ref_values[chunk_id][chunk_offset]);
+          }
         }
       } else {
         throw std::logic_error("Column must either be a value or reference column");
