@@ -116,4 +116,29 @@ TEST_F(operators_table_scan_impl, unsorted_pos_list_in_reference_column) {
   EXPECT_EQ(scan->get_output()->row_count(), (uint32_t)2);
 }
 
+TEST_F(operators_table_scan_impl, nullptr_pos_list_in_reference_column) {
+  std::shared_ptr<opossum::Table> test_ref_table = std::make_shared<opossum::Table>(opossum::Table(2));
+
+  for (size_t column_id = 0; column_id < _gt->get_output()->col_count(); ++column_id) {
+    auto ref = std::make_shared<ReferenceColumn>(_gt->get_output(), column_id, nullptr);
+
+    test_ref_table->add_column(_gt->get_output()->get_column_name(column_id),
+                               _gt->get_output()->get_column_type(column_id), false);
+
+    test_ref_table->get_chunk(0).add_column(ref);
+  }
+
+  opossum::StorageManager::get().add_table("table_ref", std::move(test_ref_table));
+
+  std::shared_ptr<opossum::GetTable> gt_ref = std::make_shared<opossum::GetTable>("table_ref");
+  std::unique_ptr<AbstractOperatorImpl> scan(
+      make_unique_by_column_type<AbstractOperatorImpl, TableScanImpl>("int", gt_ref, "a", "!=", 1234));
+  scan->execute();
+
+  EXPECT_NE(type_cast<int>((*(scan->get_output()->get_chunk(0).get_column(0)))[0]), 1234);
+  EXPECT_NE(type_cast<int>((*(scan->get_output()->get_chunk(0).get_column(0)))[1]), 1234);
+
+  EXPECT_EQ(scan->get_output()->row_count(), (uint32_t)2);
+}
+
 }  // namespace opossum
