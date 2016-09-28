@@ -29,6 +29,8 @@ class operators_sort : public ::testing::Test {
     _gt = std::make_shared<opossum::GetTable>("table_a");
   }
 
+  virtual void TearDown() { opossum::StorageManager::get().drop_table("table_a"); }
+
  public:
   std::shared_ptr<opossum::Table> _test_table;
   std::shared_ptr<opossum::GetTable> _gt;

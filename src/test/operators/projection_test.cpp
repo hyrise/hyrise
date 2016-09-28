@@ -30,6 +30,8 @@ class operators_projection : public ::testing::Test {
     gt = std::make_shared<GetTable>("table_a");
   }
 
+  virtual void TearDown() { opossum::StorageManager::get().drop_table("table_a"); }
+
  public:
   std::shared_ptr<opossum::Table> test_table;
   std::shared_ptr<opossum::GetTable> gt;

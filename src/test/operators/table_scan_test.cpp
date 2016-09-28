@@ -30,6 +30,8 @@ class operators_table_scan : public ::testing::Test {
     _gt = std::make_shared<opossum::GetTable>("table_a");
   }
 
+  virtual void TearDown() { opossum::StorageManager::get().drop_table("table_a"); }
+
  public:
   std::shared_ptr<opossum::Table> _test_table;
   std::shared_ptr<opossum::GetTable> _gt;
@@ -63,6 +65,8 @@ class operators_table_scan_impl : public ::testing::Test {
     _gt = std::make_shared<opossum::GetTable>("table_a");
   }
 
+  virtual void TearDown() { opossum::StorageManager::get().drop_table("table_a"); }
+
  public:
   std::shared_ptr<opossum::Table> _test_table;
   std::shared_ptr<opossum::GetTable> _gt;
@@ -72,7 +76,7 @@ TEST_F(operators_table_scan_impl, single_scan_returns_correct_row_count) {
   std::unique_ptr<AbstractOperatorImpl> scan(
       make_unique_by_column_type<AbstractOperatorImpl, TableScanImpl>("int", _gt, "a", ">=", 1234));
   scan->execute();
-
+  EXPECT_EQ(type_cast<int>((*(scan->get_output()->get_chunk(0).get_column(0)))[1]), 12345);
   EXPECT_NE(type_cast<int>((*(scan->get_output()->get_chunk(0).get_column(0)))[0]), 123);
   EXPECT_NE(type_cast<int>((*(scan->get_output()->get_chunk(0).get_column(0)))[1]), 123);
 
@@ -114,6 +118,7 @@ TEST_F(operators_table_scan_impl, unsorted_pos_list_in_reference_column) {
   EXPECT_NE(type_cast<int>((*(scan->get_output()->get_chunk(0).get_column(0)))[1]), 1234);
 
   EXPECT_EQ(scan->get_output()->row_count(), (uint32_t)2);
+  opossum::StorageManager::get().drop_table("table_ref");
 }
 
 }  // namespace opossum
