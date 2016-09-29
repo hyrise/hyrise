@@ -14,18 +14,12 @@ class Chunk {
   // creates an empty chunk
   Chunk();
 
-  // TODO(discuss) we should probably remove this, as it assumes that we use a ValueColumn
-  explicit Chunk(const std::vector<std::string> &column_types);
-
   // copying a chunk is not allowed
   Chunk(const Chunk &) = delete;
 
   // we need to explicitly set the move constructor to default when
   // we overwrite the copy constructor
   Chunk(Chunk &&) = default;
-
-  // TODO(discuss) we should probably remove this, as it assumes that we use a ValueColumn
-  void add_column(std::string type);
 
   // adds a column to the "right" of the chunk
   void add_column(std::shared_ptr<BaseColumn> column);

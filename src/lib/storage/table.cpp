@@ -10,21 +10,26 @@ namespace opossum {
 
 Table::Table(const size_t chunk_size) : _chunk_size(chunk_size) { _chunks.push_back(Chunk()); }
 
-void Table::add_column(const std::string &name, const std::string &type, bool as_value_column) {
+void Table::add_column(const std::string &name, const std::string &type, bool create_value_column) {
   _column_names.push_back(name);
   _column_types.push_back(type);
-  if (as_value_column) {
+  if (create_value_column) {
     for (auto &chunk : _chunks) {
-      chunk.add_column(type);
+      chunk.add_column(make_shared_by_column_type<BaseColumn, ValueColumn>(type));
+      // TODO(Anyone): default values for existing rows? Currently, adding a column to a non-empty chunk is prevented in
+      // chunk.cpp
     }
   }
-  // TODO(Anyone): default values for existing rows?
 }
 
 void Table::append(std::initializer_list<AllTypeVariant> values) {
   // TODO(Anyone): Chunks should be preallocated for chunk size
   if (_chunk_size > 0 && _chunks.back().size() == _chunk_size) {
-    _chunks.emplace_back(_column_types);
+    Chunk newChunk;
+    for (auto &&type : _column_types) {
+      newChunk.add_column(make_shared_by_column_type<BaseColumn, ValueColumn>(type));
+    }
+    _chunks.push_back(std::move(newChunk));
   }
 
   _chunks.back().append(values);
