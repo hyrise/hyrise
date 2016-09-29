@@ -16,6 +16,7 @@ class Table {
   Table(Table const &) = delete;
   Table(Table &&) = default;
 
+  // TODO(anyone): getters should have common name - either with or without get. I prefer without.
   size_t col_count() const;
   size_t row_count() const;
   size_t chunk_count() const;
