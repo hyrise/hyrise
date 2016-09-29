@@ -11,7 +11,7 @@ class BaseColumn {
   BaseColumn(BaseColumn const &) = delete;
   BaseColumn(BaseColumn &&) = default;
 
-  virtual AllTypeVariant operator[](const size_t i) DEV_ONLY const = 0;
+  virtual const AllTypeVariant operator[](const size_t i) DEV_ONLY const = 0;
 
   virtual void append(const AllTypeVariant &val) DEV_ONLY = 0;
   virtual size_t size() const = 0;
