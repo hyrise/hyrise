@@ -33,9 +33,7 @@ void Chunk::append(std::initializer_list<AllTypeVariant> values) {
 std::shared_ptr<BaseColumn> Chunk::get_column(size_t column_id) const { return _columns[column_id]; }
 
 size_t Chunk::size() const {
-  if (IS_DEBUG && _columns.size() == 0) {
-    throw std::runtime_error("Can't calculate size on table without columns");
-  }
+  if (_columns.size() == 0) return 0;
   return _columns.front()->size();
 }
 }  // namespace opossum
