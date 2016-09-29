@@ -13,8 +13,6 @@ class ValueColumn : public BaseColumn {
   // default constructor
   ValueColumn() {}
 
-  // TODO(anyone) remove copy constructor
-
   // return the value at a certain position
   virtual AllTypeVariant operator[](const size_t i) const { return _values[i]; }
 
