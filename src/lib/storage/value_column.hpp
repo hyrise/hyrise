@@ -14,7 +14,7 @@ class ValueColumn : public BaseColumn {
   ValueColumn() {}
 
   // return the value at a certain position
-  virtual AllTypeVariant operator[](const size_t i) const { return _values[i]; }
+  virtual const AllTypeVariant operator[](const size_t i) const { return _values[i]; }
 
   // add a value to the end
   virtual void append(const AllTypeVariant& val) { _values.push_back(type_cast<T>(val)); }
