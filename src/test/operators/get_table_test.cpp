@@ -13,6 +13,7 @@ class operators_get_table : public ::testing::Test {
     test_table = std::make_shared<opossum::Table>(opossum::Table(2));
     opossum::StorageManager::get().add_table("aNiceTestTable", test_table);
   }
+  virtual void TearDown() { opossum::StorageManager::get().drop_table("aNiceTestTable"); }
 
  public:
   std::shared_ptr<opossum::Table> test_table;
