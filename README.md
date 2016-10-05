@@ -6,7 +6,7 @@
 `premake4 gmake -&& make -j && clear && ./build/BinOpossum`
 
 ## lint (is also automatically triggerd before git commit)
-`premake4 lint`
+`premake4 lint` (Google's cpplint is used which needs python 2.7)
 
 ## format (is also automatically triggered with make)
 `premake4 format`

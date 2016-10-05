@@ -1,14 +1,22 @@
 #!lua
 
+-- Determining exact tool names
+md5Command = ""
+if os.is("macosx") == true then
+  md5Command = "md5 -q"
+else
+  md5Command = "md5sum"
+end
+
 -- Install pre-commit hook for linting if not installed yet or outdated
-if os.execute("test -x .git/hooks/pre-commit") ~= 0 or os.execute("md5 -q .git/hooks/pre-commit | grep c763841d73c9191d6630e64b8e07d8dd >/dev/null 2>/dev/null") ~= 0 then
+if os.execute("test -x .git/hooks/pre-commit") ~= 0 or os.execute(md5Command .. " .git/hooks/pre-commit | grep e4f26c2d7aa59af9efc42675ac8b12cd >/dev/null 2>/dev/null") ~= 0 then
   os.execute("touch .git/hooks/pre-commit")
-  os.execute("echo '#!/bin/sh\necho \"Linting all code, this may take a while...\"\n\nfind src -iname *.cpp -o -iname *.hpp | while read line;\ndo\n    if ! python cpplint.py --verbose=0 --extensions=hpp,cpp --counting=detailed --filter=-legal/copyright,-whitespace/newline --linelength=120 $line >/dev/null 2>/dev/null\n    then\n        echo \"ERROR: Linting error occured. Execute \\\"premake4 lint\\\" for details!\"\n        exit 1\n    fi\ndone\n\nif [ $? != 0 ]\nthen\n    exit 1\nfi\n\necho \"Success, no linting errors found!\"\n\necho \"Testing the Opossum, grrrrr...\"\nmake -j test >/dev/null 2>/dev/null\nif ! ./build/test >/dev/null 2>/dev/null\nthen\n    echo \"ERROR: Testing error occured. Execute \\\"make test\\\" for details!\"\n    exit 1\nfi\n\necho \"Success, no testing errors found!\"' > .git/hooks/pre-commit")
+  os.execute("echo '#!/bin/sh\necho \"Linting all code, this may take a while...\"\n\nfind src -iname *.cpp -o -iname *.hpp | while read line;\ndo\n    if ! python2.7 cpplint.py --verbose=0 --extensions=hpp,cpp --counting=detailed --filter=-legal/copyright,-whitespace/newline --linelength=120 $line >/dev/null 2>/dev/null\n    then\n        echo \"ERROR: Linting error occured. Execute \\\"premake4 lint\\\" for details!\"\n        exit 1\n    fi\ndone\n\nif [ $? != 0 ]\nthen\n    exit 1\nfi\n\necho \"Success, no linting errors found!\"\n\necho \"Testing the Opossum, grrrrr...\"\nmake -j test >/dev/null 2>/dev/null\nif ! ./build/test >/dev/null 2>/dev/null\nthen\n    echo \"ERROR: Testing error occured. Execute \\\"make test\\\" for details!\"\n    exit 1\nfi\n\necho \"Success, no testing errors found!\"' > .git/hooks/pre-commit")
   os.execute("chmod +x .git/hooks/pre-commit")
   os.execute("echo Successfully installed pre-commit hook.")
 end
 
-if os.execute("test -x .git/hooks/pre-push") ~= 0 or os.execute("md5 -q .git/hooks/pre-push | grep 1ab787b835edad24a8cac25e9a6d4925 >/dev/null 2>/dev/null") ~= 0 then
+if os.execute("test -x .git/hooks/pre-push") ~= 0 or os.execute(md5Command .. " .git/hooks/pre-push | grep 1ab787b835edad24a8cac25e9a6d4925 >/dev/null 2>/dev/null") ~= 0 then
   os.execute("touch .git/hooks/pre-push")
   os.execute("echo \"#!/bin/bash\n\nprotected_branch='master'\ncurrent_branch=\\$(git symbolic-ref HEAD | sed -e 's,.*/\\(.*\\),\\1,')\n\nif [ \\$protected_branch = \\$current_branch ] && [ \\$2 = 'git@gitlab.hpi.de:OpossumDB/OpossumDB.git' ]\nthen\n    echo\n    echo 'You are about to push to master. Opossum style dictates that you create a merge request from a different branch.'\n    read -p 'Is pushing to master really what you intended? [y|n] ' -n 1 -r < /dev/tty\n    echo\n    if echo \\$REPLY | grep -E '^[Yy]\\$' > /dev/null\n    then\n        exit 0 # push will execute\n    fi\n    exit 1 # push will not execute\nelse\n    exit 0 # push will execute\nfi\" > .git/hooks/pre-push")
   os.execute("chmod +x .git/hooks/pre-push")
@@ -32,17 +40,26 @@ default("linux", "gmake")
 default("macosx", "gmake")
 
 if not _OPTIONS["compiler"] then
+  print "No compiler specified. Automatically selected gcc."
   _OPTIONS["compiler"] = "gcc"
 end
 
 if _OPTIONS["compiler"] == "clang" then
-  toolset = "clang"
+  premake.gcc.cc  = 'clang++'
+  premake.gcc.cxx = 'clang++'
 else
-  if os.execute("gcc-6 -v") == 0 then
+  if os.execute("gcc-6 -v 2>/dev/null") == 0 then
     premake.gcc.cc  = 'gcc-6'
     premake.gcc.cxx = 'g++-6'
   else
-    error("gcc version 6 required. Aborting.")
+    if os.execute("gcc --version 2>/dev/null | grep \" 6\.\" >/dev/null") == 0 then
+      premake.gcc.cc  = 'gcc'
+      premake.gcc.cxx = 'g++'
+    else
+      if _ACTION ~= "clean" then
+        error("gcc version 6 required. Aborting.")
+      end
+    end
   end
 end
 
@@ -111,7 +128,7 @@ newaction {
   trigger     = "lint",
   description = "Lint the code",
   execute = function ()
-    os.execute("find src -iname \"*.cpp\" -o -iname \"*.hpp\" | xargs -I{} python cpplint.py --verbose=0 --extensions=hpp,cpp --counting=detailed --filter=-legal/copyright,-whitespace/newline --linelength=120 {}")
+    os.execute("find src -iname \"*.cpp\" -o -iname \"*.hpp\" | xargs -I{} python2.7 cpplint.py --verbose=0 --extensions=hpp,cpp --counting=detailed --filter=-legal/copyright,-whitespace/newline --linelength=120 {}")
       -- whitespace/newline is broken with lambda expressions and the way clang-format works
   end
 }
@@ -133,7 +150,7 @@ function premake.generate(obj, filename, callback)
     -- make some changes to Makefile that premake4 does not support
 
     -- "make all" should only build opossum
-    os.execute("sed -i'' .bak 's/^all: .*\$/all: opossum server/' Makefile")
+    os.execute("sed -i''.bak 's/^all: .*\$/all: opossum server/' Makefile")
     os.execute("rm Makefile.bak")
 
     -- "make clean" should also call "premake4 clean"
