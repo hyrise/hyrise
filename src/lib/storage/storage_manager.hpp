@@ -21,6 +21,7 @@ class StorageManager {
   StorageManager() {}
   StorageManager(StorageManager const &) = delete;
   StorageManager(StorageManager &&) = delete;
+  // TODO(anyone): deleted/default ctors/dtors should be under consistent visibility rules everywhere
 
   std::map<std::string, std::shared_ptr<Table>> _tables;
 };
