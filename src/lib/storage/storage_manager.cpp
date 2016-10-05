@@ -15,6 +15,8 @@ void StorageManager::add_table(const std::string &name, std::shared_ptr<Table> t
   _tables.insert(std::make_pair(name, std::move(tp)));
 }
 
+void StorageManager::drop_table(const std::string &name) { _tables.erase(name); }
+
 std::shared_ptr<Table> StorageManager::get_table(const std::string &name) const {
   // TODO(MB): Should the StorageManager catch exceptions for get_table executed with unknown name?
   return _tables.at(name);
