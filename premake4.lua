@@ -51,7 +51,7 @@ solution "opossum"
   flags { "FatalWarnings", "ExtraWarnings" }
   language "C++"
   targetdir "build"
-  buildoptions { "-std=c++1z -pthread" }
+  buildoptions { "-std=c++1z -pthread -Wno-error=unused-parameter" }
   includedirs { "src/lib/", "/usr/local/include" }
 
   configuration "Debug"
