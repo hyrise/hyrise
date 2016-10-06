@@ -12,7 +12,7 @@ class StorageManager {
  public:
   static StorageManager &get();
 
-  void add_table(const std::string &name, std::shared_ptr<Table> tp);
+  void add_table(const std::string &name, std::shared_ptr<Table> table);
   void drop_table(const std::string &name);
   std::shared_ptr<Table> get_table(const std::string &name) const;
   void print(std::ostream &out = std::cout) const;
