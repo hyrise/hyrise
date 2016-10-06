@@ -71,6 +71,8 @@ class SortImpl : public AbstractOperatorImpl {
             if (referenced_column->get_pos_list()) {
               reference_values.emplace_back(val_col->get_values());
             } else {
+              // If referenced_column->get_pos_list() is a nullptr the reference column contains all values of the
+              // referenced column. Thus all rows must be saved.
               auto &values = val_col->get_values();
               for (size_t offset = 0; offset < values.size(); offset++) {
                 _row_id_value_vector->emplace_back(get_row_id_from_chunk_id_and_chunk_offset(chunk, offset),

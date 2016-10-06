@@ -15,7 +15,7 @@ class ReferenceColumn : public BaseColumn {
  protected:
   const std::shared_ptr<Table> _referenced_table;
   const size_t _referenced_column_id;
-  const std::shared_ptr<PosList> _pos_list;
+  const std::shared_ptr<PosList> _pos_list; 
 
  public:
   ReferenceColumn(const std::shared_ptr<Table> referenced_table, const size_t referenced_column_id,
@@ -35,7 +35,7 @@ class ReferenceColumn : public BaseColumn {
     if (_pos_list) {
       auto &chunk = _referenced_table->get_chunk(get_chunk_id_from_row_id((*_pos_list)[i]));
       return (*chunk.get_column(_referenced_column_id))[get_chunk_offset_from_row_id((*_pos_list)[i])];
-    } else {
+    } else { //A nullptr indicates all values are contained
       auto chunk_size = _referenced_table->get_chunk_size();
       auto &chunk = _referenced_table->get_chunk(i / chunk_size);
       return (*chunk.get_column(_referenced_column_id))[i % chunk_size];
@@ -47,7 +47,7 @@ class ReferenceColumn : public BaseColumn {
   virtual size_t size() const {
     if (_pos_list) {
       return _pos_list->size();
-    } else {
+    } else { //A nullptr indicates all values are contained
       return _referenced_table->row_count();
     }
   }
