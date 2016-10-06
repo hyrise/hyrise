@@ -21,6 +21,8 @@ class Chunk {
   // we overwrite the copy constructor
   Chunk(Chunk &&) = default;
 
+  // TODO(anyone) Do we need to remove the copy assignment op as well?
+
   // adds a column to the "right" of the chunk
   void add_column(std::shared_ptr<BaseColumn> column);
 
