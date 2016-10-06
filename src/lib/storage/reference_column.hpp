@@ -36,6 +36,7 @@ class ReferenceColumn : public BaseColumn {
       auto &chunk = _referenced_table->get_chunk(get_chunk_id_from_row_id((*_pos_list)[i]));
       return (*chunk.get_column(_referenced_column_id))[get_chunk_offset_from_row_id((*_pos_list)[i])];
     } else {
+      // A nullptr indicates all values are contained
       auto chunk_size = _referenced_table->get_chunk_size();
       auto &chunk = _referenced_table->get_chunk(i / chunk_size);
       return (*chunk.get_column(_referenced_column_id))[i % chunk_size];
@@ -48,6 +49,7 @@ class ReferenceColumn : public BaseColumn {
     if (_pos_list) {
       return _pos_list->size();
     } else {
+      // A nullptr indicates all values are contained
       return _referenced_table->row_count();
     }
   }

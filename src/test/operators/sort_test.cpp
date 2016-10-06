@@ -65,4 +65,27 @@ TEST_F(operators_sort, test_descending_sort_of_one_column) {
   EXPECT_EQ(type_cast<int>((*(sort->get_output()->get_chunk(0).get_column(0)))[1]), 1234);
   EXPECT_EQ(type_cast<int>((*(sort->get_output()->get_chunk(0).get_column(0)))[2]), 123);
 }
+
+TEST_F(operators_sort, nullptr_pos_list_in_reference_column) {
+  std::shared_ptr<opossum::Table> test_ref_table = std::make_shared<opossum::Table>(opossum::Table(2));
+
+  for (size_t column_id = 0; column_id < _gt->get_output()->col_count(); ++column_id) {
+    auto ref = std::make_shared<ReferenceColumn>(_gt->get_output(), column_id, nullptr);
+
+    test_ref_table->add_column(_gt->get_output()->get_column_name(column_id),
+                               _gt->get_output()->get_column_type(column_id), false);
+
+    test_ref_table->get_chunk(0).add_column(ref);
+  }
+
+  opossum::StorageManager::get().add_table("table_ref", std::move(test_ref_table));
+
+  std::shared_ptr<opossum::GetTable> gt_ref = std::make_shared<opossum::GetTable>("table_ref");
+  auto sort = std::make_shared<Sort>(gt_ref, "a");
+  sort->execute();
+
+  EXPECT_EQ(type_cast<int>((*(sort->get_output()->get_chunk(0).get_column(0)))[0]), 123);
+  EXPECT_EQ(type_cast<int>((*(sort->get_output()->get_chunk(0).get_column(0)))[1]), 1234);
+  EXPECT_EQ(type_cast<int>((*(sort->get_output()->get_chunk(0).get_column(0)))[2]), 12345);
+}
 }  // namespace opossum

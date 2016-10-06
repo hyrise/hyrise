@@ -67,13 +67,27 @@ class TableScanImpl : public AbstractOperatorImpl {
           throw std::logic_error("Referenced table must only contain value columns");
         }
       }
-      auto in_pos_list = ref_col->get_pos_list();
-
-      for (size_t pos = 0; pos < in_pos_list->size(); pos++) {
-        auto chunk_id = get_chunk_id_from_row_id((*in_pos_list)[pos]);
-        auto chunk_offset = get_chunk_offset_from_row_id((*in_pos_list)[pos]);
-        if (comp(values[chunk_id][chunk_offset], _filter_value)) {
-          _pos_list->emplace_back(get_row_id_from_chunk_id_and_chunk_offset(chunk_id, chunk_offset));
+      if (auto pos_list_in = ref_col->get_pos_list()) {
+        for (size_t pos = 0; pos < pos_list_in->size(); pos++) {
+          auto chunk_id = get_chunk_id_from_row_id((*pos_list_in)[pos]);
+          auto chunk_offset = get_chunk_offset_from_row_id((*pos_list_in)[pos]);
+          if (comp(values[chunk_id][chunk_offset], _filter_value)) {
+            _pos_list->emplace_back(get_row_id_from_chunk_id_and_chunk_offset(chunk_id, chunk_offset));
+          }
+        }
+      } else {
+        // If pos_list_in is a nullptr the reference column contains all values of the referenced column. Thus all
+        // chunks
+        // and rows must be scaned.
+        for (ChunkID chunk_id = 0; chunk_id < val_table->chunk_count(); ++chunk_id) {
+          auto &chunk = val_table->get_chunk(chunk_id);
+          auto base_column = chunk.get_column(_filter_column_id);
+          auto &values = std::dynamic_pointer_cast<ValueColumn<T>>(base_column)->get_values();
+          for (ChunkOffset chunk_offset = 0; chunk_offset < chunk.size(); ++chunk_offset) {
+            if (comp(values[chunk_offset], _filter_value)) {
+              _pos_list->emplace_back(get_row_id_from_chunk_id_and_chunk_offset(chunk_id, chunk_offset));
+            }
+          }
         }
       }
     } else {
