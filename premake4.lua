@@ -134,6 +134,7 @@ function premake.generate(obj, filename, callback)
 
     -- "make all" should only build opossum
     os.execute("sed -i'' .bak 's/^all: .*\$/all: opossum server/' Makefile")
+    os.execute("rm Makefile.bak")
 
     -- "make clean" should also call "premake4 clean"
     os.execute("awk '\\\
