@@ -1,3 +1,5 @@
+#include <memory>
+
 #include "gtest/gtest.h"
 
 #include "../../lib/common.hpp"

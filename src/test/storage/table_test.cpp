@@ -41,7 +41,7 @@ TEST_F(TableTest, Getters) {
   EXPECT_EQ(t.get_column_name(1), "col_2");
   EXPECT_EQ(t.get_column_type(1), "string");
 
-  // TODO: Do we want checks here?
+  // TODO(anyone): Do we want checks here?
   // EXPECT_THROW(t.get_column_name(2), std::exception);
   // EXPECT_THROW(t.get_column_type(2), std::exception);
 
