@@ -8,7 +8,7 @@
 
 namespace opossum {
 // The fixture for testing class GetTable.
-class operators_get_table : public ::testing::Test {
+class OperatorsGetTableTest : public ::testing::Test {
   virtual void SetUp() {
     test_table = std::make_shared<opossum::Table>(opossum::Table(2));
     opossum::StorageManager::get().add_table("aNiceTestTable", test_table);
@@ -19,14 +19,14 @@ class operators_get_table : public ::testing::Test {
   std::shared_ptr<opossum::Table> test_table;
 };
 
-TEST_F(operators_get_table, get_output_returns_correct_table) {
+TEST_F(OperatorsGetTableTest, GetOutput) {
   auto gt = std::make_shared<opossum::GetTable>("aNiceTestTable");
   gt->execute();
 
   EXPECT_EQ(gt->get_output(), test_table);
 }
 
-TEST_F(operators_get_table, get_output_throwns_on_unknown_table_name) {
+TEST_F(OperatorsGetTableTest, ThrowsUnknownTableName) {
   auto gt = std::make_shared<opossum::GetTable>("anUglyTestTable");
   gt->execute();
 

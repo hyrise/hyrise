@@ -7,7 +7,7 @@
 #include "../../lib/storage/chunk.hpp"
 #include "../../lib/types.hpp"
 
-class ChunkTest : public ::testing::Test {
+class StorageChunkTest : public ::testing::Test {
  protected:
   virtual void SetUp() {
     vc_int = opossum::make_shared_by_column_type<opossum::BaseColumn, opossum::ValueColumn>("int");
@@ -26,14 +26,14 @@ class ChunkTest : public ::testing::Test {
   std::shared_ptr<opossum::BaseColumn> vc_str = nullptr;
 };
 
-TEST_F(ChunkTest, AddColumnToChunk) {
+TEST_F(StorageChunkTest, AddColumnToChunk) {
   EXPECT_EQ(c.size(), 0u);
   c.add_column(vc_int);
   c.add_column(vc_str);
   EXPECT_EQ(c.size(), 3u);
 }
 
-TEST_F(ChunkTest, AddValuesToChunk) {
+TEST_F(StorageChunkTest, AddValuesToChunk) {
   c.add_column(vc_int);
   c.add_column(vc_str);
   c.append({2, "two"});
@@ -44,7 +44,7 @@ TEST_F(ChunkTest, AddValuesToChunk) {
   EXPECT_EQ(c.size(), 4u);
 }
 
-TEST_F(ChunkTest, RetrieveColumn) {
+TEST_F(StorageChunkTest, RetrieveColumn) {
   c.add_column(vc_int);
   c.add_column(vc_str);
   c.append({2, "two"});

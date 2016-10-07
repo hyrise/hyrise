@@ -4,7 +4,7 @@
 
 #include "../../lib/storage/value_column.hpp"
 
-TEST(ValueColumnTest, CreateColumn) {
+TEST(StorageValueColumnTest, CreateColumn) {
   // create column of different types
   opossum::ValueColumn<int> vc_int;
   EXPECT_EQ(vc_int.size(), 0u);

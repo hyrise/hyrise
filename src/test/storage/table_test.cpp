@@ -2,7 +2,7 @@
 
 #include "../../lib/storage/table.hpp"
 
-class TableTest : public ::testing::Test {
+class StorageTableTest : public ::testing::Test {
  protected:
   virtual void SetUp() {
     t.add_column("col_1", "int");
@@ -12,15 +12,15 @@ class TableTest : public ::testing::Test {
   opossum::Table t{2};
 };
 
-TEST_F(TableTest, HasOneChunkAfterCreation) { EXPECT_EQ(t.chunk_count(), 1u); }
+TEST_F(StorageTableTest, HasOneChunkAfterCreation) { EXPECT_EQ(t.chunk_count(), 1u); }
 
-TEST_F(TableTest, AppendToTable) {
+TEST_F(StorageTableTest, AppendToTable) {
   t.append({4, "Hello,"});
   t.append({6, "world"});
   t.append({3, "!"});
 }
 
-TEST_F(TableTest, Getters) {
+TEST_F(StorageTableTest, Getters) {
   // test col count
   EXPECT_EQ(t.col_count(), 2u);
 
