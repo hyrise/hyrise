@@ -22,6 +22,7 @@ void Projection::execute() {
     if (auto referenced_col =
             std::dynamic_pointer_cast<ReferenceColumn>(_input_left->get_chunk(0).get_column(column_id))) {
       ref_col = std::make_shared<ReferenceColumn>(referenced_col->get_referenced_table(), column_id, nullptr);
+      // A nullptr indicates all values are contained
     } else {
       ref_col = std::make_shared<ReferenceColumn>(_input_left, column_id, nullptr);
     }
