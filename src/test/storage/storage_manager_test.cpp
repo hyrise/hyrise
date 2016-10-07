@@ -15,6 +15,12 @@ class StorageStorageManagerTest : public ::testing::Test {
     sm.add_table("first_table", t1);
     sm.add_table("second_table", t2);
   }
+
+  virtual void TearDown() {
+    auto &sm = opossum::StorageManager::get();
+    sm.drop_table("first_table");
+    sm.drop_table("second_table");
+  }
 };
 
 TEST_F(StorageStorageManagerTest, GetTable) {
