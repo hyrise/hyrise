@@ -14,6 +14,10 @@
 ## testing (is also automatically triggered before git commit)
 `premake4 test` executes all available tests
 
+## coverage
+`make -j coverage` will print a summary to the command line and create detailed html reports at ./coverage/index.html
+*Supports only clang on MacOS and only gcc on linux*
+
 Naming convention for gtest macros:
 
 TEST(module_name_class_name, test_case_description), e.g., TEST(operators_get_table, get_output_returns_correct_table)

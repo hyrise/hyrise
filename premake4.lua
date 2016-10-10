@@ -91,6 +91,12 @@ project "opossum"
   kind "StaticLib"
   files { "src/lib/**.hpp", "src/lib/**.cpp", "src/bin/server.cpp" }
 
+project "opossumCoverage"
+  kind "StaticLib"
+  buildoptions { "-fprofile-arcs -ftest-coverage" }
+  linkoptions { "-lgcov --coverage" }
+  files { "src/lib/**.hpp", "src/lib/**.cpp" }
+
 project "server"
   kind "ConsoleApp"
   links { "opossum" }
@@ -111,6 +117,21 @@ project "test"
   files { "src/test/**.hpp", "src/test/**.cpp" }
   includedirs { "third_party/googletest/googletest/include" }
   postbuildcommands { "./build/test" }
+
+project "coverage"
+  kind "ConsoleApp"
+
+  defines { "IS_DEBUG=1" }
+
+  links { "opossumCoverage", "googletest" }
+  if os.is("macosx") then
+    linkoptions {"--coverage"}
+  else
+    linkoptions {"-pthread --coverage"}
+  end
+  files { "src/test/**.hpp", "src/test/**.cpp" }
+  includedirs { "third_party/googletest/googletest/include" }
+  postbuildcommands { "./build/coverage && rm -fr coverage; mkdir coverage && gcovr -s -r . --exclude=\".*types*.\" --html --html-details -o coverage/index.html" }
 
 newoption {
   trigger     = "compiler",
