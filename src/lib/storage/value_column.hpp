@@ -10,6 +10,9 @@ namespace opossum {
 template <typename T>
 class ValueColumn : public BaseColumn {
  public:
+  // default constructor
+  ValueColumn() {}
+
   // return the value at a certain position
   virtual const AllTypeVariant operator[](const size_t i) const { return _values[i]; }
 

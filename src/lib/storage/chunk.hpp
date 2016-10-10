@@ -11,6 +11,9 @@ namespace opossum {
 class Print;
 class Chunk {
  public:
+  // creates an empty chunk
+  Chunk();
+
   // copying a chunk is not allowed
   Chunk(const Chunk &) = delete;
 
