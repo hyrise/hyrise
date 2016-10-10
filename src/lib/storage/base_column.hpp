@@ -7,7 +7,7 @@ namespace opossum {
 
 class BaseColumn {
  public:
-  BaseColumn() {}
+  BaseColumn() = default;
   BaseColumn(BaseColumn const &) = delete;
   BaseColumn(BaseColumn &&) = default;
 

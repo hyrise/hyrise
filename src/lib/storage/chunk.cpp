@@ -8,8 +8,6 @@
 
 namespace opossum {
 
-Chunk::Chunk() {}
-
 void Chunk::add_column(std::shared_ptr<BaseColumn> column) {
   if (IS_DEBUG && _columns.size() > 0 && size() != column->size()) {
     throw std::runtime_error("Trying to add column with mismatching size to chunk");
