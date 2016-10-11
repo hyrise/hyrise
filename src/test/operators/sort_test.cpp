@@ -72,8 +72,8 @@ TEST_F(OperatorsSortTest, nullptr_pos_list_in_reference_column) {
   for (size_t column_id = 0; column_id < _gt->get_output()->col_count(); ++column_id) {
     auto ref = std::make_shared<ReferenceColumn>(_gt->get_output(), column_id, nullptr);
 
-    test_ref_table->add_column(_gt->get_output()->get_column_name(column_id),
-                               _gt->get_output()->get_column_type(column_id), false);
+    test_ref_table->add_column(_gt->get_output()->column_name(column_id), _gt->get_output()->column_type(column_id),
+                               false);
 
     test_ref_table->get_chunk(0).add_column(ref);
   }

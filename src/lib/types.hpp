@@ -31,9 +31,9 @@ const uint32_t MAX_CHUNK_SIZE = 32;
 using ChunkID = uint32_t;
 using ChunkOffset = uint32_t;
 
-ChunkID get_chunk_id_from_row_id(RowID r_id);
-ChunkOffset get_chunk_offset_from_row_id(RowID r_id);
-RowID get_row_id_from_chunk_id_and_chunk_offset(ChunkID c_id, ChunkOffset c_offset);
+ChunkID chunk_id_from_row_id(RowID r_id);
+ChunkOffset chunk_offset_from_row_id(RowID r_id);
+RowID row_id_from_chunk_id_and_chunk_offset(ChunkID c_id, ChunkOffset c_offset);
 
 using PosList = std::vector<RowID>;
 

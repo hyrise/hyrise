@@ -16,9 +16,9 @@ class Print : public AbstractOperator {
   virtual std::shared_ptr<Table> get_output() const;
 
  protected:
-  virtual const std::string get_name() const;
-  virtual uint8_t get_num_in_tables() const;
-  virtual uint8_t get_num_out_tables() const;
+  virtual const std::string name() const;
+  virtual uint8_t num_in_tables() const;
+  virtual uint8_t num_out_tables() const;
   std::vector<uint16_t> column_string_widths(uint16_t min, uint16_t max, std::shared_ptr<Table> t) const;
 
  private:

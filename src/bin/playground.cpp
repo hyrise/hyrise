@@ -12,12 +12,12 @@
 void test_row_id() {
   opossum::ChunkID c_id = 17;
   opossum::ChunkOffset c_offset = 2;
-  opossum::RowID r_id = opossum::get_row_id_from_chunk_id_and_chunk_offset(c_id, c_offset);
+  opossum::RowID r_id = opossum::row_id_from_chunk_id_and_chunk_offset(c_id, c_offset);
   assert(r_id == 73014444032 + 2);
 
   r_id = 73014444032 + 2;
-  assert(opossum::get_chunk_id_from_row_id(r_id) == 17);
-  assert(opossum::get_chunk_offset_from_row_id(r_id) == 2);
+  assert(opossum::chunk_id_from_row_id(r_id) == 17);
+  assert(opossum::chunk_offset_from_row_id(r_id) == 2);
 }
 
 int main() {

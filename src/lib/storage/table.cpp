@@ -49,7 +49,7 @@ size_t Table::row_count() const {
 
 size_t Table::chunk_count() const { return _chunks.size(); }
 
-size_t Table::get_column_id_by_name(const std::string &column_name) const {
+size_t Table::column_id_by_name(const std::string &column_name) const {
   for (size_t column_id = 0; column_id < col_count(); ++column_id) {
     // TODO(Anyone): make more efficient
     if (_column_names[column_id] == column_name) {
@@ -59,11 +59,11 @@ size_t Table::get_column_id_by_name(const std::string &column_name) const {
   throw std::runtime_error("column " + column_name + " not found");
 }
 
-size_t Table::get_chunk_size() const { return _chunk_size; }
+size_t Table::chunk_size() const { return _chunk_size; }
 
-const std::string &Table::get_column_name(size_t column_id) const { return _column_names[column_id]; }
+const std::string &Table::column_name(size_t column_id) const { return _column_names[column_id]; }
 
-const std::string &Table::get_column_type(size_t column_id) const { return _column_types[column_id]; }
+const std::string &Table::column_type(size_t column_id) const { return _column_types[column_id]; }
 
 Chunk &Table::get_chunk(ChunkID chunk_id) { return _chunks[chunk_id]; }
 

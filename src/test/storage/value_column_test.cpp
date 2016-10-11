@@ -45,11 +45,11 @@ TEST_F(StorageValueColumnTest, AddValueOfDifferentType) {
 
 TEST_F(StorageValueColumnTest, RetrieveValue) {
   vc_int.append(3);
-  EXPECT_EQ(vc_int.get_values()[0], 3);
+  EXPECT_EQ(vc_int.values()[0], 3);
 
   vc_str.append("Hello");
-  EXPECT_EQ(vc_str.get_values()[0], "Hello");
+  EXPECT_EQ(vc_str.values()[0], "Hello");
 
   vc_double.append(3.14);
-  EXPECT_EQ(vc_double.get_values()[0], 3.14);
+  EXPECT_EQ(vc_double.values()[0], 3.14);
 }

@@ -94,15 +94,15 @@ TEST_F(OperatorsTableScanImplTest, UnsortedPosListInReferenceColumn) {
   std::shared_ptr<opossum::Table> test_ref_table = std::make_shared<opossum::Table>(opossum::Table(2));
 
   std::shared_ptr<PosList> pos_list = std::make_shared<PosList>();
-  pos_list->emplace_back(get_row_id_from_chunk_id_and_chunk_offset(0, 1));
-  pos_list->emplace_back(get_row_id_from_chunk_id_and_chunk_offset(1, 0));
-  pos_list->emplace_back(get_row_id_from_chunk_id_and_chunk_offset(0, 0));
+  pos_list->emplace_back(row_id_from_chunk_id_and_chunk_offset(0, 1));
+  pos_list->emplace_back(row_id_from_chunk_id_and_chunk_offset(1, 0));
+  pos_list->emplace_back(row_id_from_chunk_id_and_chunk_offset(0, 0));
 
   for (size_t column_id = 0; column_id < _gt->get_output()->col_count(); ++column_id) {
     auto ref = std::make_shared<ReferenceColumn>(_gt->get_output(), column_id, pos_list);
 
-    test_ref_table->add_column(_gt->get_output()->get_column_name(column_id),
-                               _gt->get_output()->get_column_type(column_id), false);
+    test_ref_table->add_column(_gt->get_output()->column_name(column_id), _gt->get_output()->column_type(column_id),
+                               false);
 
     test_ref_table->get_chunk(0).add_column(ref);
   }
@@ -127,8 +127,8 @@ TEST_F(OperatorsTableScanImplTest, nullptr_pos_list_in_reference_column) {
   for (size_t column_id = 0; column_id < _gt->get_output()->col_count(); ++column_id) {
     auto ref = std::make_shared<ReferenceColumn>(_gt->get_output(), column_id, nullptr);
 
-    test_ref_table->add_column(_gt->get_output()->get_column_name(column_id),
-                               _gt->get_output()->get_column_type(column_id), false);
+    test_ref_table->add_column(_gt->get_output()->column_name(column_id), _gt->get_output()->column_type(column_id),
+                               false);
 
     test_ref_table->get_chunk(0).add_column(ref);
   }

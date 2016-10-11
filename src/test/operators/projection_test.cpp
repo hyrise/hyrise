@@ -44,7 +44,7 @@ TEST_F(OperatorsProjectionTest, SingleColumn) {
 
   EXPECT_EQ(projection->get_output()->col_count(), (u_int)1);
   EXPECT_EQ(projection->get_output()->row_count(), gt->get_output()->row_count());
-  EXPECT_THROW(projection->get_output()->get_column_id_by_name("b"), std::exception);
+  EXPECT_THROW(projection->get_output()->column_id_by_name("b"), std::exception);
 }
 
 TEST_F(OperatorsProjectionTest, DoubleProject) {
@@ -57,7 +57,7 @@ TEST_F(OperatorsProjectionTest, DoubleProject) {
 
   EXPECT_EQ(projection2->get_output()->col_count(), (u_int)1);
   EXPECT_EQ(projection2->get_output()->row_count(), gt->get_output()->row_count());
-  EXPECT_THROW(projection2->get_output()->get_column_id_by_name("b"), std::exception);
+  EXPECT_THROW(projection2->get_output()->column_id_by_name("b"), std::exception);
 }
 
 TEST_F(OperatorsProjectionTest, AllColumns) {
@@ -67,6 +67,6 @@ TEST_F(OperatorsProjectionTest, AllColumns) {
 
   EXPECT_EQ(projection->get_output()->col_count(), gt->get_output()->col_count());
   EXPECT_EQ(projection->get_output()->row_count(), gt->get_output()->row_count());
-  EXPECT_EQ(projection->get_output()->get_column_id_by_name("b"), (u_int)1);
+  EXPECT_EQ(projection->get_output()->column_id_by_name("b"), (u_int)1);
 }
 }  // namespace opossum

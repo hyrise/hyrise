@@ -13,11 +13,11 @@ Print::Print(const std::shared_ptr<AbstractOperator> in) : AbstractOperator(in) 
 
 Print::Print(const std::shared_ptr<AbstractOperator> in, std::ostream& out) : AbstractOperator(in), _out(out) {}
 
-const std::string Print::get_name() const { return "Print"; }
+const std::string Print::name() const { return "Print"; }
 
-uint8_t Print::get_num_in_tables() const { return 1; }
+uint8_t Print::num_in_tables() const { return 1; }
 
-uint8_t Print::get_num_out_tables() const { return 1; }
+uint8_t Print::num_out_tables() const { return 1; }
 
 void Print::execute() {
   auto widths = column_string_widths(8, 20, _input_left);

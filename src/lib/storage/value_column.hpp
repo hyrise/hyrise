@@ -21,7 +21,7 @@ class ValueColumn : public BaseColumn {
   virtual void append(const AllTypeVariant& val) { _values.push_back(type_cast<T>(val)); }
 
   // returns all values
-  const std::vector<T>& get_values() const { return _values; }
+  const std::vector<T>& values() const { return _values; }
 
   // return the number of entries
   virtual size_t size() const { return _values.size(); }

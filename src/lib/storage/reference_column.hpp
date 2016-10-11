@@ -39,11 +39,11 @@ class ReferenceColumn : public BaseColumn {
 
   virtual const AllTypeVariant operator[](const size_t i) const DEV_ONLY {
     if (_pos_list) {
-      auto &chunk = _referenced_table->get_chunk(get_chunk_id_from_row_id((*_pos_list)[i]));
-      return (*chunk.get_column(_referenced_column_id))[get_chunk_offset_from_row_id((*_pos_list)[i])];
+      auto &chunk = _referenced_table->get_chunk(chunk_id_from_row_id((*_pos_list)[i]));
+      return (*chunk.get_column(_referenced_column_id))[chunk_offset_from_row_id((*_pos_list)[i])];
     } else {
       // handle the special case that all positions are referenced, i.e., _pos_list == nullptr)
-      auto chunk_size = _referenced_table->get_chunk_size();
+      auto chunk_size = _referenced_table->chunk_size();
       auto &chunk = _referenced_table->get_chunk(i / chunk_size);
       return (*chunk.get_column(_referenced_column_id))[i % chunk_size];
     }
@@ -60,8 +60,8 @@ class ReferenceColumn : public BaseColumn {
     }
   }
 
-  const std::shared_ptr<PosList> get_pos_list() const { return _pos_list; }
-  const std::shared_ptr<Table> get_referenced_table() const { return _referenced_table; }
+  const std::shared_ptr<PosList> pos_list() const { return _pos_list; }
+  const std::shared_ptr<Table> referenced_table() const { return _referenced_table; }
 };
 
 // TODO(Anyone): Dokumentieren, dass nicht alle Chunks einer Tabelle gleich groß sind.

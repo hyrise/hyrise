@@ -9,13 +9,13 @@ TableScan::TableScan(const std::shared_ptr<AbstractOperator> in, const std::stri
                      const AllTypeVariant value)
     : AbstractOperator(in),
       _impl(make_unique_by_column_type<AbstractOperatorImpl, TableScanImpl>(
-          _input_left->get_column_type(_input_left->get_column_id_by_name(column_name)), in, column_name, op, value)) {}
+          _input_left->column_type(_input_left->column_id_by_name(column_name)), in, column_name, op, value)) {}
 
-const std::string TableScan::get_name() const { return "TableScan"; }
+const std::string TableScan::name() const { return "TableScan"; }
 
-uint8_t TableScan::get_num_in_tables() const { return 1; }
+uint8_t TableScan::num_in_tables() const { return 1; }
 
-uint8_t TableScan::get_num_out_tables() const { return 1; }
+uint8_t TableScan::num_out_tables() const { return 1; }
 
 void TableScan::execute() { _impl->execute(); }
 

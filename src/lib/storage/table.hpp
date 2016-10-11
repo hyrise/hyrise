@@ -39,16 +39,16 @@ class Table {
   Chunk &get_chunk(ChunkID chunk_id);
 
   // returns the column name of the nth column
-  const std::string &get_column_name(size_t column_id) const;
+  const std::string &column_name(size_t column_id) const;
 
   // returns the column type of the nth column
-  const std::string &get_column_type(size_t column_id) const;
+  const std::string &column_type(size_t column_id) const;
 
   // returns the column with the given name
-  size_t get_column_id_by_name(const std::string &column_name) const;
+  size_t column_id_by_name(const std::string &column_name) const;
 
   // return the maximum chunk size
-  size_t get_chunk_size() const;
+  size_t chunk_size() const;
 
   // adds a column to the end, i.e., right, of the table
   void add_column(const std::string &name, const std::string &type, bool create_value_column = true);

@@ -32,15 +32,15 @@ class AbstractOperator {
   virtual std::shared_ptr<Table> get_output() const = 0;
 
  protected:
-  virtual const std::string get_name() const = 0;
+  virtual const std::string name() const = 0;
 
   // returns the number of input tables
   // range of values is [0, 2]
-  virtual uint8_t get_num_in_tables() const = 0;
+  virtual uint8_t num_in_tables() const = 0;
 
   // returns the number of output tables
   // range of values is [0, 1]
-  virtual uint8_t get_num_out_tables() const = 0;
+  virtual uint8_t num_out_tables() const = 0;
 
   const std::shared_ptr<Table> _input_left, _input_right;
 };
