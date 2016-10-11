@@ -7,6 +7,7 @@
 
 namespace opossum {
 
+// ValueColumn is a specific column type that stores all its values in a vector
 template <typename T>
 class ValueColumn : public BaseColumn {
  public:

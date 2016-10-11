@@ -9,6 +9,8 @@
 
 namespace opossum {
 class Print;
+// A chunk is a horizontal partition of a table.
+// It stores the data column by column.
 class Chunk {
  public:
   // creates an empty chunk
@@ -26,7 +28,7 @@ class Chunk {
   // adds a column to the "right" of the chunk
   void add_column(std::shared_ptr<BaseColumn> column);
 
-  // returns the size (i.e., the number of rows)
+  // returns the number of rows
   size_t size() const;
 
   // adds a new row, given as a list of values, to the chunk

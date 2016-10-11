@@ -9,6 +9,7 @@
 
 namespace opossum {
 
+// operator to select a subset of the set of all columns found in the table
 class Projection : public AbstractOperator {
  public:
   Projection(const std::shared_ptr<AbstractOperator> in, const std::vector<std::string> &columns);
@@ -21,6 +22,8 @@ class Projection : public AbstractOperator {
   virtual uint8_t get_num_out_tables() const;
 
   const std::shared_ptr<Table> _table;
+
+  // list of all column names to select
   const std::vector<std::string> _column_filter;
   std::shared_ptr<Table> _output;
 };

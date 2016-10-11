@@ -9,6 +9,7 @@
 namespace opossum {
 
 void Chunk::add_column(std::shared_ptr<BaseColumn> column) {
+  // The added column must have the same size as the chunk.
   if (IS_DEBUG && _columns.size() > 0 && size() != column->size()) {
     throw std::runtime_error("Trying to add column with mismatching size to chunk");
   }
@@ -16,6 +17,7 @@ void Chunk::add_column(std::shared_ptr<BaseColumn> column) {
 }
 
 void Chunk::append(std::initializer_list<AllTypeVariant> values) {
+  // The added values, i.e., a new row, must have the same number of attribues as the table.
   if (IS_DEBUG && _columns.size() != values.size()) {
     throw std::runtime_error("append: number of columns (" + to_string(_columns.size()) +
                              ") does not match value list (" + to_string(values.size()) + ")");

@@ -9,15 +9,21 @@
 
 namespace opossum {
 
+// ReferencColumn is a specific column type that stores all its values as position list of a referenced column
 class ReferenceColumn : public BaseColumn {
   // TODO(Anyone): move implementation to CPP
 
  protected:
   const std::shared_ptr<Table> _referenced_table;
   const size_t _referenced_column_id;
+
+  // nullptr in _pos_list means all positions of the referenced column
   const std::shared_ptr<PosList> _pos_list;
 
  public:
+  // creates a reference column
+  // the parameters specify the positions and the referenced column
+  // _pos_list == nullptr means all positions
   ReferenceColumn(const std::shared_ptr<Table> referenced_table, const size_t referenced_column_id,
                   const std::shared_ptr<PosList> pos)
       : _referenced_table(referenced_table), _referenced_column_id(referenced_column_id), _pos_list(pos) {
@@ -36,7 +42,7 @@ class ReferenceColumn : public BaseColumn {
       auto &chunk = _referenced_table->get_chunk(get_chunk_id_from_row_id((*_pos_list)[i]));
       return (*chunk.get_column(_referenced_column_id))[get_chunk_offset_from_row_id((*_pos_list)[i])];
     } else {
-      // A nullptr indicates all values are contained
+      // handle the special case that all positions are referenced, i.e., _pos_list == nullptr)
       auto chunk_size = _referenced_table->get_chunk_size();
       auto &chunk = _referenced_table->get_chunk(i / chunk_size);
       return (*chunk.get_column(_referenced_column_id))[i % chunk_size];
@@ -49,7 +55,7 @@ class ReferenceColumn : public BaseColumn {
     if (_pos_list) {
       return _pos_list->size();
     } else {
-      // A nullptr indicates all values are contained
+      // handle the special case that all positions are referenced, i.e., _pos_list == nullptr)
       return _referenced_table->row_count();
     }
   }

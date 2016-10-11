@@ -6,6 +6,7 @@
 
 namespace opossum {
 
+// singleton
 StorageManager &StorageManager::get() {
   static StorageManager instance;
   return instance;

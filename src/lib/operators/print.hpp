@@ -7,6 +7,7 @@
 #include "abstract_operator.hpp"
 
 namespace opossum {
+// operator to print the table with its data
 class Print : public AbstractOperator {
  public:
   explicit Print(const std::shared_ptr<AbstractOperator> in);
@@ -21,6 +22,7 @@ class Print : public AbstractOperator {
   std::vector<uint16_t> column_string_widths(uint16_t min, uint16_t max, std::shared_ptr<Table> t) const;
 
  private:
+  // stream to print the result
   std::ostream& _out = std::cout;
 };
 }  // namespace opossum

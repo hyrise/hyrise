@@ -14,6 +14,9 @@ namespace opossum {
 template <typename T>
 class TableScanImpl;
 
+// operator to filter a table by a single attribute
+// output is an table with only reference columns
+// to filter by multiple criteria, you can chain the operator
 class TableScan : public AbstractOperator {
  public:
   TableScan(const std::shared_ptr<AbstractOperator> in, const std::string &filter_column_name, const std::string &op,
@@ -29,9 +32,12 @@ class TableScan : public AbstractOperator {
   const std::unique_ptr<AbstractOperatorImpl> _impl;
 };
 
+// we need to use the impl pattern because the scan operator of the sort depends on the type of the column
 template <typename T>
 class TableScanImpl : public AbstractOperatorImpl {
  public:
+  // supported values for op are {"=", "!=", "<", "<=", ">", ">="}
+  // creates a new table with reference columns
   TableScanImpl(const std::shared_ptr<AbstractOperator> in, const std::string &filter_column_name,
                 const std::string &op, const AllTypeVariant value)
       : _filter_value(type_cast<T>(value)),
@@ -40,6 +46,7 @@ class TableScanImpl : public AbstractOperatorImpl {
         _op(op),
         _output(new Table),
         _pos_list(new PosList) {
+    // create structure for output table
     for (size_t column_id = 0; column_id < _table->col_count(); ++column_id) {
       std::shared_ptr<ReferenceColumn> ref;
       if (auto ref_col = std::dynamic_pointer_cast<ReferenceColumn>(_table->get_chunk(0).get_column(column_id))) {
@@ -55,8 +62,10 @@ class TableScanImpl : public AbstractOperatorImpl {
 
   template <typename Comp>
   void execute_with_operator() {
+    // distinguishes the cases how the filter attribute is stored, i.e., as reference or value column
     Comp comp;
     if (auto ref_col = std::dynamic_pointer_cast<ReferenceColumn>(_table->get_chunk(0).get_column(_filter_column_id))) {
+      // case: filter attribute is stored in a reference column
       auto val_table = ref_col->get_referenced_table();
       std::vector<std::vector<T>> values = {};
       for (size_t chunk = 0; chunk < val_table->chunk_count(); chunk++) {
@@ -91,6 +100,7 @@ class TableScanImpl : public AbstractOperatorImpl {
         }
       }
     } else {
+      // filter attribute is stored in a value column
       for (ChunkID chunk_id = 0; chunk_id < _table->chunk_count(); ++chunk_id) {
         auto &chunk = _table->get_chunk(chunk_id);
         auto base_column = chunk.get_column(_filter_column_id);
@@ -131,7 +141,11 @@ class TableScanImpl : public AbstractOperatorImpl {
 
   const T _filter_value;
   const std::shared_ptr<Table> _table;
+
+  // column to filter by
   const size_t _filter_column_id;
+
+  // string representation of comparison operator
   const std::string _op;
   std::shared_ptr<Table> _output;
   std::shared_ptr<PosList> _pos_list;
