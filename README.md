@@ -62,7 +62,8 @@ On linux you have to utilize make's `-R` flag if your choice does not equal your
 
 ## Naming convention for gtest macros:
 
-TEST[_F](ModuleNameClassNameTest, TestName), e.g., TEST[_F](OperatorsGetTableTest, RowCount)
+TEST(ModuleNameClassNameTest, TestName), e.g., TEST(OperatorsGetTableTest, RowCount)
+same for fixtures Test_F()
 
 If you want to test a single module, class or test you have to execute the test binary and use the `gtest_filter` option:
 
