@@ -121,7 +121,7 @@ TEST_F(OperatorsTableScanImplTest, UnsortedPosListInReferenceColumn) {
   opossum::StorageManager::get().drop_table("table_ref");
 }
 
-TEST_F(operators_table_scan_impl, nullptr_pos_list_in_reference_column) {
+TEST_F(OperatorsTableScanImplTest, nullptr_pos_list_in_reference_column) {
   std::shared_ptr<opossum::Table> test_ref_table = std::make_shared<opossum::Table>(opossum::Table(2));
 
   for (size_t column_id = 0; column_id < _gt->get_output()->col_count(); ++column_id) {
