@@ -62,10 +62,10 @@ On linux you have to utilize make's `-R` flag if your choice does not equal your
 
 ## Naming convention for gtest macros:
 
-TEST(module_name_class_name, test_case_description), e.g., TEST(operators_get_table, get_output_returns_correct_table)
+TEST[_F](ModuleNameClassNameTest, TestName), e.g., TEST[_F](OperatorsGetTableTest, RowCount)
 
-If you want to test a single module, class or test case you have to execute the test binary and use the `gtest_filter` option:
+If you want to test a single module, class or test you have to execute the test binary and use the `gtest_filter` option:
 
-- Testing the storage module: `./build/TestOpossum --gtest_filter="storage*"`
-- Testing the table class: `./build/TestOpossum --gtest_filter="storage_table*"`
-- Testing the has_one_chunk_after_creation case: `./build/TestOpossum --gtest_filter="storage_table.has_one_chunk_after_creation"`
+- Testing the storage module: `./build/test --gtest_filter="Storage*"`
+- Testing the table class: `./build/test --gtest_filter="StorageTableTest*"`
+- Testing the RowCount test: `./build/test --gtest_filter="StorageTableTest.RowCount"`
