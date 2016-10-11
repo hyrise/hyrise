@@ -13,7 +13,7 @@
 
 namespace opossum {
 
-class operators_sort : public ::testing::Test {
+class OperatorsSortTest : public ::testing::Test {
   virtual void SetUp() {
     _test_table = std::make_shared<opossum::Table>(opossum::Table(2));
 
@@ -36,7 +36,7 @@ class operators_sort : public ::testing::Test {
   std::shared_ptr<opossum::GetTable> _gt;
 };
 
-TEST_F(operators_sort, test_ascending_sort_of_one_column) {
+TEST_F(OperatorsSortTest, AscendingSortOfOneColumn) {
   auto sort = std::make_shared<Sort>(_gt, "a");
   sort->execute();
 
@@ -45,7 +45,7 @@ TEST_F(operators_sort, test_ascending_sort_of_one_column) {
   EXPECT_EQ(type_cast<int>((*(sort->get_output()->get_chunk(0).get_column(0)))[2]), 12345);
 }
 
-TEST_F(operators_sort, test_double_sort_of_one_column) {
+TEST_F(OperatorsSortTest, DoubleSortOfOneColumn) {
   auto sort1 = std::make_shared<Sort>(_gt, "a", false);
   sort1->execute();
 
@@ -57,7 +57,7 @@ TEST_F(operators_sort, test_double_sort_of_one_column) {
   EXPECT_EQ(type_cast<int>((*(sort2->get_output()->get_chunk(0).get_column(0)))[2]), 12345);
 }
 
-TEST_F(operators_sort, test_descending_sort_of_one_column) {
+TEST_F(OperatorsSortTest, DescendingSortOfOneColumn) {
   auto sort = std::make_shared<Sort>(_gt, "a", false);
   sort->execute();
 

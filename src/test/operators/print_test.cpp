@@ -9,7 +9,7 @@
 #include "../../lib/storage/storage_manager.hpp"
 #include "../../lib/storage/table.hpp"
 
-class PrintOperatorTest : public ::testing::Test {
+class OperatorsPrintTest : public ::testing::Test {
  protected:
   virtual void SetUp() {
     t = std::make_shared<opossum::Table>(opossum::Table(chunk_size));
@@ -41,7 +41,7 @@ class PrintWrapper : public opossum::Print {
   }
 };
 
-TEST_F(PrintOperatorTest, check_print_output_empty_table) {
+TEST_F(OperatorsPrintTest, EmptyTable) {
   auto pr = std::make_shared<opossum::Print>(gt, output);
   pr->execute();
 
@@ -59,7 +59,7 @@ TEST_F(PrintOperatorTest, check_print_output_empty_table) {
   EXPECT_TRUE(output_str.find("Empty chunk.") != std::string::npos);
 }
 
-TEST_F(PrintOperatorTest, check_print_output_filled_table) {
+TEST_F(OperatorsPrintTest, FilledTable) {
   auto tab = opossum::StorageManager::get().get_table(table_name);
   for (size_t i = 0; i < chunk_size * 2; i++) {
     // char 97 is an 'a'
@@ -88,7 +88,7 @@ TEST_F(PrintOperatorTest, check_print_output_filled_table) {
   // EXPECT_TRUE(output_str.find("Empty chunk.") != std::string::npos);
 }
 
-TEST_F(PrintOperatorTest, get_column_widths) {
+TEST_F(OperatorsPrintTest, GetColumnWidths) {
   uint16_t min = 8;
   uint16_t max = 20;
 

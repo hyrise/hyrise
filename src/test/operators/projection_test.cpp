@@ -14,7 +14,7 @@
 #include "../../lib/types.hpp"
 
 namespace opossum {
-class operators_projection : public ::testing::Test {
+class OperatorsProjectionTest : public ::testing::Test {
   virtual void SetUp() {
     test_table = std::make_shared<Table>(opossum::Table(2));
 
@@ -37,7 +37,7 @@ class operators_projection : public ::testing::Test {
   std::shared_ptr<opossum::GetTable> gt;
 };
 
-TEST_F(operators_projection, project_single_column) {
+TEST_F(OperatorsProjectionTest, SingleColumn) {
   std::vector<std::string> column_filter = {"a"};
   auto projection = std::make_shared<Projection>(gt, column_filter);
   projection->execute();
@@ -47,7 +47,7 @@ TEST_F(operators_projection, project_single_column) {
   EXPECT_THROW(projection->get_output()->get_column_id_by_name("b"), std::exception);
 }
 
-TEST_F(operators_projection, double_project_single_column) {
+TEST_F(OperatorsProjectionTest, DoubleProject) {
   std::vector<std::string> column_filter = {"a"};
   auto projection1 = std::make_shared<Projection>(gt, column_filter);
   projection1->execute();
@@ -60,7 +60,7 @@ TEST_F(operators_projection, double_project_single_column) {
   EXPECT_THROW(projection2->get_output()->get_column_id_by_name("b"), std::exception);
 }
 
-TEST_F(operators_projection, project_all_columns) {
+TEST_F(OperatorsProjectionTest, AllColumns) {
   std::vector<std::string> column_filter = {"a", "b"};
   auto projection = std::make_shared<Projection>(gt, column_filter);
   projection->execute();
