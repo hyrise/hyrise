@@ -57,6 +57,7 @@ On linux you have to utilize make's `-R` flag if your choice does not equal your
 
 ### coverage
 `make -j coverage` will print a summary to the command line and create detailed html reports at ./coverage/index.html
+
 *Supports only clang on MacOS and only gcc on linux*
 
 ## Naming convention for gtest macros:
