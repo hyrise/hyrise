@@ -30,6 +30,7 @@ void Chunk::append(std::initializer_list<AllTypeVariant> values) {
   }
 }
 
+// TODO(MD): boundary check
 std::shared_ptr<BaseColumn> Chunk::get_column(size_t column_id) const { return _columns[column_id]; }
 
 size_t Chunk::size() const {
