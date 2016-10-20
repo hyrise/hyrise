@@ -12,14 +12,19 @@ StorageManager &StorageManager::get() {
   return instance;
 }
 
+bool StorageManager::table_exists(const std::string &name) { return _tables.find(name) != _tables.end(); }
+
 void StorageManager::add_table(const std::string &name, std::shared_ptr<Table> table) {
   _tables.insert(std::make_pair(name, std::move(table)));
 }
 
-void StorageManager::drop_table(const std::string &name) { _tables.erase(name); }
+void StorageManager::drop_table(const std::string &name) {
+  if (!_tables.erase(name)) {
+    throw std::out_of_range("table " + name + " does not exist");
+  }
+}
 
 std::shared_ptr<Table> StorageManager::get_table(const std::string &name) const {
-  // TODO(MB): Should the StorageManager catch exceptions for get_table executed with unknown name?
   return _tables.at(name);
 }
 

@@ -14,6 +14,8 @@ class StorageManager {
  public:
   static StorageManager &get();
 
+  bool table_exists(const std::string &name);
+
   // adds a table to the storage manager
   void add_table(const std::string &name, std::shared_ptr<Table> table);
 

@@ -18,8 +18,8 @@ class StorageStorageManagerTest : public ::testing::Test {
 
   virtual void TearDown() {
     auto &sm = opossum::StorageManager::get();
-    sm.drop_table("first_table");
-    sm.drop_table("second_table");
+    if (sm.table_exists("first_table")) sm.drop_table("first_table");
+    if (sm.table_exists("second_table")) sm.drop_table("second_table");
   }
 };
 
@@ -34,6 +34,5 @@ TEST_F(StorageStorageManagerTest, DropTable) {
   auto &sm = opossum::StorageManager::get();
   sm.drop_table("first_table");
   EXPECT_THROW(sm.get_table("first_table"), std::exception);
-  // TODO(MB): Should the StorageManager catch exceptions for get_table executed with unknown name?
-  // EXPECT_THROW(sm.drop_table("first_table"), std::exception);
+  EXPECT_THROW(sm.drop_table("first_table"), std::exception);
 }
