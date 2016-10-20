@@ -13,13 +13,6 @@ install via homebrew / packet manager
 ### boost (version: >= 1.61.0)
 install via homebrew / packet manager
 
-### boost hana
-this is part of boost since version 1.61.0
-
-In case you are using an older boost version, you have to build it from source:
-
-http://www.boost.org/doc/libs/1_61_0/libs/hana/doc/html/index.html
-
 ### compiler
 install recent versions of compilers (clang >= 3.5.0 and/or gcc >= 6.1) via homebrew / packet manager
 
@@ -44,7 +37,7 @@ You can specify the compiler via `premake4 --compiler=clang||gcc`
 On linux you have to utilize make's `-R` flag if your choice does not equal your default compiler
 
 ### build
-`premake4 && make -j && clear && ./build/BinOpossum`
+`premake4 && make -j`
 
 ### lint (is also automatically triggerd before git commit)
 `premake4 lint` (Google's cpplint is used which needs python 2.7)
@@ -53,7 +46,7 @@ On linux you have to utilize make's `-R` flag if your choice does not equal your
 `premake4 format`
 
 ### testing (is also automatically triggered before git commit)
-`premake4 test` executes all available tests
+`make test` executes all available tests
 
 ### coverage
 `make -j coverage` will print a summary to the command line and create detailed html reports at ./coverage/index.html
