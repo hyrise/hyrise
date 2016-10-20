@@ -69,6 +69,9 @@ solution "opossum"
   language "C++"
   targetdir "build"
   buildoptions { "-std=c++1z -pthread -Wno-error=unused-parameter" }
+  if os.is("linux") then
+    linkoptions {"-pthread"}
+  end
   includedirs { "src/lib/", "/usr/local/include" }
 
   configuration "Debug"
@@ -113,7 +116,6 @@ project "test"
   defines { "IS_DEBUG=1" }
 
   links { "opossum", "googletest" }
-  linkoptions {"-pthread"}
   files { "src/test/**.hpp", "src/test/**.cpp" }
   includedirs { "third_party/googletest/googletest/include" }
   postbuildcommands { "./build/test" }
@@ -124,11 +126,7 @@ project "coverage"
   defines { "IS_DEBUG=1" }
 
   links { "opossumCoverage", "googletest" }
-  if os.is("macosx") then
-    linkoptions {"--coverage"}
-  else
-    linkoptions {"-pthread --coverage"}
-  end
+  linkoptions {"--coverage"}
   files { "src/test/**.hpp", "src/test/**.cpp" }
   includedirs { "third_party/googletest/googletest/include" }
   postbuildcommands { "./build/coverage && rm -fr coverage; mkdir coverage && gcovr -s -r . --exclude=\".*types*.\" --html --html-details -o coverage/index.html" }
