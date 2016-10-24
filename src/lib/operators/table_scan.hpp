@@ -78,10 +78,12 @@ class TableScanImpl : public AbstractOperatorImpl {
       }
       if (auto pos_list_in = ref_col->pos_list()) {
         for (size_t pos = 0; pos < pos_list_in->size(); pos++) {
-          auto chunk_id = chunk_id_from_row_id((*pos_list_in)[pos]);
-          auto chunk_offset = chunk_offset_from_row_id((*pos_list_in)[pos]);
+          auto chunk_info = val_table->locate_row((*pos_list_in)[pos]);
+          // TODO(md) explode
+          auto chunk_id = chunk_info.first;
+          auto chunk_offset = chunk_info.second;
           if (comp(values[chunk_id][chunk_offset], _filter_value)) {
-            _pos_list->emplace_back(row_id_from_chunk_id_and_chunk_offset(chunk_id, chunk_offset));
+            _pos_list->emplace_back((*pos_list_in)[pos]);
           }
         }
       } else {
@@ -94,7 +96,7 @@ class TableScanImpl : public AbstractOperatorImpl {
           auto &values = std::dynamic_pointer_cast<ValueColumn<T>>(base_column)->values();
           for (ChunkOffset chunk_offset = 0; chunk_offset < chunk.size(); ++chunk_offset) {
             if (comp(values[chunk_offset], _filter_value)) {
-              _pos_list->emplace_back(row_id_from_chunk_id_and_chunk_offset(chunk_id, chunk_offset));
+              _pos_list->emplace_back(val_table->calculate_row_id(chunk_id, chunk_offset));
             }
           }
         }
@@ -107,7 +109,7 @@ class TableScanImpl : public AbstractOperatorImpl {
         auto &values = std::dynamic_pointer_cast<ValueColumn<T>>(base_column)->values();
         for (ChunkOffset chunk_offset = 0; chunk_offset < chunk.size(); ++chunk_offset) {
           if (comp(values[chunk_offset], _filter_value)) {
-            _pos_list->emplace_back(row_id_from_chunk_id_and_chunk_offset(chunk_id, chunk_offset));
+            _pos_list->emplace_back(_table->calculate_row_id(chunk_id, chunk_offset));
           }
         }
       }

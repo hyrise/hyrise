@@ -65,4 +65,29 @@ const std::string &Table::column_type(size_t column_id) const { return _column_t
 
 Chunk &Table::get_chunk(ChunkID chunk_id) { return _chunks[chunk_id]; }
 
+std::pair<ChunkID, ChunkOffset> Table::locate_row(RowID row) {
+  // This method is probably very inefficent and needs to be optimized at some point,
+  // for example using binary search on a lookup table
+
+  RowID lookupPos = 0;
+  ChunkID in_chunk;
+  for (in_chunk = 0; in_chunk < chunk_count(); ++in_chunk) {
+    size_t this_chunk_size = get_chunk(in_chunk).size();
+    if (row < lookupPos + this_chunk_size) break;
+    lookupPos += this_chunk_size;
+  }
+  return {in_chunk, row - lookupPos};
+}
+
+RowID Table::calculate_row_id(ChunkID chunk, ChunkOffset offset) {
+  // see locate_row above. We can use the same lookup table.
+
+  RowID row_id = 0;
+  for (size_t c = 0; c < chunk; ++c) {
+    row_id += get_chunk(c).size();
+  }
+  row_id += offset;
+  return row_id;
+}
+
 }  // namespace opossum
