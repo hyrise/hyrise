@@ -18,8 +18,6 @@ void Table::add_column(const std::string &name, const std::string &type, bool cr
   if (create_value_column) {
     for (auto &chunk : _chunks) {
       chunk.add_column(make_shared_by_column_type<BaseColumn, ValueColumn>(type));
-      // TODO(Anyone): default values for existing rows? Currently, adding a column to a non-empty chunk is prevented in
-      // chunk.cpp
     }
   }
 }
