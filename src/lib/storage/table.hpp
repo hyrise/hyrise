@@ -25,7 +25,6 @@ class Table {
   // we overwrite the copy constructor
   Table(Table &&) = default;
 
-  // TODO(anyone): getters should have common name - either with or without get. I prefer without.
   // returns the number of columns
   size_t col_count() const;
 
