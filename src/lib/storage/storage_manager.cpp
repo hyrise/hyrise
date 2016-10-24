@@ -24,9 +24,7 @@ void StorageManager::drop_table(const std::string &name) {
   }
 }
 
-std::shared_ptr<Table> StorageManager::get_table(const std::string &name) const {
-  return _tables.at(name);
-}
+std::shared_ptr<Table> StorageManager::get_table(const std::string &name) const { return _tables.at(name); }
 
 void StorageManager::print(std::ostream &out) const {
   out << "==================" << std::endl;

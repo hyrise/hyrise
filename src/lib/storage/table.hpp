@@ -62,7 +62,10 @@ class Table {
   // 0 means that the chunk has an unlimited size.
   const size_t _chunk_size;
   std::vector<Chunk> _chunks;
-  std::vector<const std::string> _column_names;
-  std::vector<const std::string> _column_types;
+  
+  // these should be const strings, but having a vector of const values is a C++17 feature
+  // that is not yet completely implemented in all compilers
+  std::vector<std::string> _column_names;
+  std::vector<std::string> _column_types;
 };
 }  // namespace opossum

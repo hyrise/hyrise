@@ -88,4 +88,32 @@ TEST_F(OperatorsSortTest, nullptr_pos_list_in_reference_column) {
   EXPECT_EQ(type_cast<int>((*(sort->get_output()->get_chunk(0).get_column(0)))[1]), 1234);
   EXPECT_EQ(type_cast<int>((*(sort->get_output()->get_chunk(0).get_column(0)))[2]), 12345);
 }
+
+TEST_F(OperatorsSortTest, multiple_column_sort) {
+  auto test_table_b = std::make_shared<opossum::Table>(opossum::Table(2));
+
+  test_table_b->add_column("a", "int");
+  test_table_b->add_column("b", "float");
+
+  test_table_b->append({12345, 456.7f});
+  test_table_b->append({12345, 457.7f});
+  test_table_b->append({123, 458.7f});
+
+  opossum::StorageManager::get().add_table("test_table_sort_b", std::move(test_table_b));
+
+  auto gt = std::make_shared<GetTable>("test_table_sort_b");
+
+  // we want the output to be sorted after column a and in second place after column b. So first we sort after column b
+  // and then after column a.
+
+  auto sort_after_b = std::make_shared<Sort>(gt, "b");
+  sort_after_b->execute();
+
+  auto sort_after_a = std::make_shared<Sort>(sort_after_b, "a");
+  sort_after_a->execute();
+
+  EXPECT_EQ(type_cast<float>((*(sort_after_a->get_output()->get_chunk(0).get_column(1)))[0]), 458.7f);
+  EXPECT_EQ(type_cast<float>((*(sort_after_a->get_output()->get_chunk(0).get_column(1)))[1]), 456.7f);
+  EXPECT_EQ(type_cast<float>((*(sort_after_a->get_output()->get_chunk(0).get_column(1)))[2]), 457.7f);
+}
 }  // namespace opossum

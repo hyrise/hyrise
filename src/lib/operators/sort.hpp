@@ -129,8 +129,8 @@ class SortImpl : public AbstractOperatorImpl {
   template <typename Comp>
   void sort_with_operator() {
     Comp comp;
-    std::sort(_row_id_value_vector->begin(), _row_id_value_vector->end(),
-              [comp](std::pair<RowID, T> a, std::pair<RowID, T> b) { return comp(a.second, b.second); });
+    std::stable_sort(_row_id_value_vector->begin(), _row_id_value_vector->end(),
+                     [comp](std::pair<RowID, T> a, std::pair<RowID, T> b) { return comp(a.second, b.second); });
   }
 
   virtual std::shared_ptr<Table> get_output() const { return _output; }
