@@ -40,7 +40,6 @@ class ReferenceColumn : public BaseColumn {
   virtual const AllTypeVariant operator[](const size_t i) const DEV_ONLY {
     if (_pos_list) {
       auto chunk_info = _referenced_table->locate_row((*_pos_list)[i]);
-      // TODO(md): use C++ explosion here
       auto &chunk = _referenced_table->get_chunk(chunk_info.first);
 
       return (*chunk.get_column(_referenced_column_id))[chunk_info.second];

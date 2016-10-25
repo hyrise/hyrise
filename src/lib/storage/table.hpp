@@ -57,6 +57,7 @@ class Table {
   void append(std::initializer_list<AllTypeVariant> values) DEV_ONLY;
 
   // returns the number of the chunk and the position in the chunk for a given row
+  // TODO(md): this would be a nice place to use structured bindings once they are supported by the compilers
   std::pair<ChunkID, ChunkOffset> locate_row(RowID row);
 
   // calculates the row id from a given chunk and the chunk offset
