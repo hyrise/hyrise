@@ -47,6 +47,7 @@ On linux you have to utilize make's `-R` flag if your choice does not equal your
 
 ### testing (is also automatically triggered before git commit)
 `make test` executes all available tests
+The binary can be executed with `./build/test`
 
 ### coverage
 `make -j coverage` will print a summary to the command line and create detailed html reports at ./coverage/index.html

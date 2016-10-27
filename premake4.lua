@@ -113,8 +113,6 @@ project "playground"
 project "test"
   kind "ConsoleApp"
 
-  defines { "IS_DEBUG=1" }
-
   links { "opossum", "googletest" }
   files { "src/test/**.hpp", "src/test/**.cpp" }
   includedirs { "third_party/googletest/googletest/include" }
@@ -123,8 +121,6 @@ project "test"
 
 project "coverage"
   kind "ConsoleApp"
-
-  defines { "IS_DEBUG=1" }
 
   links { "opossumCoverage", "googletest" }
   linkoptions {"--coverage"}
