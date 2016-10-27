@@ -39,9 +39,11 @@ TEST_F(StorageChunkTest, AddValuesToChunk) {
   c.append({2, "two"});
   EXPECT_EQ(c.size(), 4u);
 
-  EXPECT_THROW(c.append({}), std::exception);
-  EXPECT_THROW(c.append({4, "val", 3}), std::exception);
-  EXPECT_EQ(c.size(), 4u);
+  if (IS_DEBUG) {
+    EXPECT_THROW(c.append({}), std::exception);
+    EXPECT_THROW(c.append({4, "val", 3}), std::exception);
+    EXPECT_EQ(c.size(), 4u);
+  }
 }
 
 TEST_F(StorageChunkTest, RetrieveColumn) {
