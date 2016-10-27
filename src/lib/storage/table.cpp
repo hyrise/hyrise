@@ -66,7 +66,7 @@ const std::string &Table::column_type(size_t column_id) const { return _column_t
 Chunk &Table::get_chunk(ChunkID chunk_id) { return _chunks[chunk_id]; }
 
 std::pair<ChunkID, ChunkOffset> Table::locate_row(RowID row) {
-  // This method is probably very inefficent and needs to be optimized at some point,
+  // This method is probably very inefficient and needs to be optimized at some point,
   // for example using binary search on a lookup table
 
   RowID lookupPos = 0;
