@@ -39,8 +39,10 @@ class ReferenceColumn : public BaseColumn {
 
   virtual const AllTypeVariant operator[](const size_t i) const DEV_ONLY {
     if (_pos_list) {
-      auto &chunk = _referenced_table->get_chunk(chunk_id_from_row_id((*_pos_list)[i]));
-      return (*chunk.get_column(_referenced_column_id))[chunk_offset_from_row_id((*_pos_list)[i])];
+      auto chunk_info = _referenced_table->locate_row((*_pos_list)[i]);
+      auto &chunk = _referenced_table->get_chunk(chunk_info.first);
+
+      return (*chunk.get_column(_referenced_column_id))[chunk_info.second];
     } else {
       // handle the special case that all positions are referenced, i.e., _pos_list == nullptr)
       auto chunk_size = _referenced_table->chunk_size();

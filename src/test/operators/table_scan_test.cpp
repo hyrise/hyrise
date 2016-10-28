@@ -94,9 +94,9 @@ TEST_F(OperatorsTableScanImplTest, UnsortedPosListInReferenceColumn) {
   std::shared_ptr<opossum::Table> test_ref_table = std::make_shared<opossum::Table>(opossum::Table(2));
 
   std::shared_ptr<PosList> pos_list = std::make_shared<PosList>();
-  pos_list->emplace_back(row_id_from_chunk_id_and_chunk_offset(0, 1));
-  pos_list->emplace_back(row_id_from_chunk_id_and_chunk_offset(1, 0));
-  pos_list->emplace_back(row_id_from_chunk_id_and_chunk_offset(0, 0));
+  pos_list->emplace_back(test_ref_table->calculate_row_id(0, 1));
+  pos_list->emplace_back(test_ref_table->calculate_row_id(1, 0));
+  pos_list->emplace_back(test_ref_table->calculate_row_id(0, 0));
 
   for (size_t column_id = 0; column_id < _gt->get_output()->col_count(); ++column_id) {
     auto ref = std::make_shared<ReferenceColumn>(_gt->get_output(), column_id, pos_list);

@@ -72,7 +72,7 @@ class SortImpl : public AbstractOperatorImpl {
         // case: sort attribute is in a value column
         auto &values = value_column->values();
         for (size_t offset = 0; offset < values.size(); offset++) {
-          _row_id_value_vector->emplace_back(row_id_from_chunk_id_and_chunk_offset(chunk, offset), values[offset]);
+          _row_id_value_vector->emplace_back(_in_table->calculate_row_id(chunk, offset), values[offset]);
         }
       } else if (auto referenced_column = std::dynamic_pointer_cast<ReferenceColumn>(
                      _in_table->get_chunk(chunk).get_column(_sort_column_id))) {
@@ -89,8 +89,7 @@ class SortImpl : public AbstractOperatorImpl {
               // referenced column. Thus all rows must be saved.
               auto &values = val_col->values();
               for (size_t offset = 0; offset < values.size(); offset++) {
-                _row_id_value_vector->emplace_back(row_id_from_chunk_id_and_chunk_offset(chunk, offset),
-                                                   values[offset]);
+                _row_id_value_vector->emplace_back(val_table->calculate_row_id(chunk, offset), values[offset]);
               }
             }
           } else {
@@ -101,8 +100,10 @@ class SortImpl : public AbstractOperatorImpl {
           auto pos_list_in = referenced_column->pos_list();
           for (size_t pos = 0; pos < pos_list_in->size(); pos++) {
             auto row_id = (*pos_list_in)[pos];
-            auto chunk_id = chunk_id_from_row_id(row_id);
-            auto chunk_offset = chunk_offset_from_row_id(row_id);
+            auto chunk_info = _in_table->locate_row(row_id);
+            auto chunk_id = chunk_info.first;
+            auto chunk_offset = chunk_info.second;
+            // TODO(md) use c++ explode
             _row_id_value_vector->emplace_back(row_id, reference_values[chunk_id][chunk_offset]);
           }
         }
