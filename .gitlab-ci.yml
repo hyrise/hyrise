@@ -1,0 +1,27 @@
+image: dukeharris/opossum:16.10
+
+before_script:
+  - git submodule update --init
+  - premake4
+
+stages:
+  - build
+  - test
+
+compile:
+  stage: build
+  script:
+    -  make -j
+
+test:
+  stage: test
+  script:
+    - make test
+
+coverage:
+  stage: test
+  script:
+    - make -j coverage
+  artifacts:
+    paths:
+    - coverage/index.html
