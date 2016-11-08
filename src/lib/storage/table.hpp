@@ -17,6 +17,7 @@ class Table {
   // creates a table
   // the parameter specifies the maximum chunk size, i.e., partition size
   // default (0) is an unlimited size
+  // a table holds always at least one chunk
   explicit Table(const size_t chunk_size = 0);
 
   // copying a table is not allowed

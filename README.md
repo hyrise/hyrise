@@ -39,6 +39,8 @@ On linux you have to utilize make's `-R` flag if your choice does not equal your
 ### build
 `premake4 && make -j`
 
+Usually debug binaries are created. To activate release builds use `make config=release`
+
 ### lint (is also automatically triggerd before git commit)
 `premake4 lint` (Google's cpplint is used which needs python 2.7)
 
