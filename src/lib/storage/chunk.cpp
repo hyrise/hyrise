@@ -23,7 +23,7 @@ void Chunk::append(std::initializer_list<AllTypeVariant> values) {
                              ") does not match value list (" + to_string(values.size()) + ")");
   }
 
-  auto column_it = _columns.begin();
+  auto column_it = _columns.cbegin();
   auto value_it = values.begin();
   for (; column_it != _columns.end(); column_it++, value_it++) {
     (*column_it)->append(*value_it);
