@@ -48,6 +48,7 @@ clang_debug:
 coverage:
   stage: coverage
   script:
+    - premake4
     - make -j coverage
   artifacts:
     paths:
