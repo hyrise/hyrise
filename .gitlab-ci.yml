@@ -13,7 +13,7 @@ compile_gcc:
   stage: build
   script:
     - premake4 --compiler=gcc
-    - make -j -R --compiler=gcc
+    - make -j -R
 
 compile_clang:
   stage: build
