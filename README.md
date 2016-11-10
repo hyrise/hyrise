@@ -1,3 +1,5 @@
+[![build status](https://gitlab.hpi.de/OpossumDB/OpossumDB/badges/master/build.svg)](https://gitlab.hpi.de/OpossumDB/OpossumDB/commits/master)
+[![coverage report](https://gitlab.hpi.de/OpossumDB/OpossumDB/badges/master/coverage.svg)](https://gitlab.hpi.de/OpossumDB/OpossumDB/commits/master)
 # opossum
 
 *Have a look at docs/guidelines*
