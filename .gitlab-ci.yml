@@ -1,0 +1,55 @@
+image: dukeharris/opossum:16.10
+
+before_script:
+  - git submodule update --init
+
+stages:
+  - build
+  - test_gcc
+  - test_clang
+  - coverage
+
+compile_gcc:
+  stage: build
+  script:
+    - premake4 --compiler=gcc
+    - make -j -R
+
+compile_clang:
+  stage: build
+  script:
+    - premake4 --compiler=clang
+    - make -j -R
+
+gcc_release:
+  stage: test_gcc
+  script:
+    - premake4 --compiler=gcc
+    - RESULT="$(make -j -R config=release test)"; echo "${RESULT}"; if [[ "${RESULT}" =~ "FAILED" ]]; then exit 1; else exit 0; fi
+
+gcc_debug:
+  stage: test_gcc
+  script:
+    - premake4 --compiler=gcc
+    - RESULT="$(make -j -R config=debug test)"; echo "${RESULT}"; if [[ "${RESULT}" =~ "FAILED" ]]; then exit 1; else exit 0; fi
+
+clang_release:
+  stage: test_clang
+  script:
+    - premake4 --compiler=clang
+    - RESULT="$(make -j -R config=release test)"; echo "${RESULT}"; if [[ "${RESULT}" =~ "FAILED" ]]; then exit 1; else exit 0; fi
+
+clang_debug:
+  stage: test_clang
+  script:
+    - premake4 --compiler=clang
+    - RESULT="$(make -j -R config=debug test)"; echo "${RESULT}"; if [[ "${RESULT}" =~ "FAILED" ]]; then exit 1; else exit 0; fi
+
+coverage:
+  stage: coverage
+  script:
+    - premake4
+    - make -j coverage
+  artifacts:
+    paths:
+    - coverage/index.html
