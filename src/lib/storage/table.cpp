@@ -8,9 +8,14 @@
 #include <utility>
 #include <vector>
 
+#include "dictionary_column.hpp"
+
 namespace opossum {
 
-Table::Table(const size_t chunk_size) : _chunk_size(chunk_size) { _chunks.push_back(Chunk()); }
+Table::Table(const size_t chunk_size, const bool auto_compress)
+    : _chunk_size(chunk_size), _auto_compress(auto_compress) {
+  _chunks.push_back(Chunk());
+}
 
 void Table::add_column(const std::string &name, const std::string &type, bool create_value_column) {
   _column_names.push_back(name);
@@ -25,6 +30,8 @@ void Table::add_column(const std::string &name, const std::string &type, bool cr
 void Table::append(std::initializer_list<AllTypeVariant> values) {
   // TODO(Anyone): Chunks should be preallocated for chunk size
   if (_chunk_size > 0 && _chunks.back().size() == _chunk_size) {
+    if (_auto_compress) compress_chunk(chunk_count() - 1);
+
     Chunk newChunk;
     for (auto &&type : _column_types) {
       newChunk.add_column(make_shared_by_column_type<BaseColumn, ValueColumn>(type));
@@ -55,6 +62,17 @@ size_t Table::column_id_by_name(const std::string &column_name) const {
     }
   }
   throw std::runtime_error("column " + column_name + " not found");
+}
+
+void Table::compress_chunk(ChunkID chunk_id) {
+  Chunk newChunk;
+  for (size_t column_id = 0; column_id < col_count(); ++column_id) {
+    auto dict_col = make_shared_by_column_type<BaseColumn, DictionaryColumn>(column_type(column_id),
+                                                                             _chunks[chunk_id].get_column(column_id));
+    newChunk.add_column(std::move(dict_col));
+  }
+
+  _chunks[chunk_id] = std::move(newChunk);
 }
 
 size_t Table::chunk_size() const { return _chunk_size; }

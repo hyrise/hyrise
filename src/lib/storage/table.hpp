@@ -16,9 +16,8 @@ class Table {
  public:
   // creates a table
   // the parameter specifies the maximum chunk size, i.e., partition size
-  // default (0) is an unlimited size
-  // a table holds always at least one chunk
-  explicit Table(const size_t chunk_size = 0);
+  // default (0) is an unlimited size. A table holds always at least one chunk
+  explicit Table(const size_t chunk_size = 0, const bool auto_compress = false);
 
   // copying a table is not allowed
   Table(Table const &) = delete;
@@ -64,11 +63,15 @@ class Table {
   // calculates the row id from a given chunk and the chunk offset
   RowID calculate_row_id(ChunkID chunk, ChunkOffset offset);
 
+  // enforces dictionary compression on a certain chunk
+  void compress_chunk(ChunkID chunk_id);
+
   friend class Print;
 
  protected:
   // 0 means that the chunk has an unlimited size.
   const size_t _chunk_size;
+  const bool _auto_compress;
   std::vector<Chunk> _chunks;
 
   // these should be const strings, but having a vector of const values is a C++17 feature

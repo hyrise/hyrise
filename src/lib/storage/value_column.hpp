@@ -14,7 +14,7 @@ class ValueColumn : public BaseColumn {
   // default constructor
   ValueColumn() = default;
 
-  // return the value at a certain position
+  // return the value at a certain position. If you want to write efficient operators, back off!
   virtual const AllTypeVariant operator[](const size_t i) const { return _values[i]; }
 
   // add a value to the end
