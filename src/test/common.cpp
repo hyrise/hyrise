@@ -93,6 +93,7 @@ std::shared_ptr<opossum::Table> loadTable(std::string file_name, size_t chunk_si
 
   std::getline(infile, line);
   std::vector<std::string> col_names = split<std::string>(line, '|');
+  std::getline(infile, line);
   std::vector<std::string> col_types = split<std::string>(line, '|');
 
   for (size_t i = 0; i < col_names.size(); i++) {
