@@ -33,6 +33,7 @@ namespace opossum {
   right.resize(tright.row_count(), std::vector<opossum::AllTypeVariant>(tright.col_count()));
 
   // initialize table values
+  unsigned row_offset = 0;
   for (opossum::ChunkID chunk_id = 0; chunk_id < tleft.chunk_count(); chunk_id++) {
     const opossum::Chunk &chunk = tleft.get_chunk(chunk_id);
 
@@ -40,21 +41,24 @@ namespace opossum {
       std::shared_ptr<opossum::BaseColumn> column = chunk.get_column(col_id);
 
       for (size_t row = 0; row < chunk.size(); ++row) {
-        left[row][col_id] = (*column)[row];
+        left[row_offset + row][col_id] = (*column)[row];
       }
     }
+    row_offset += chunk.size();
   }
 
-  for (size_t chunk_id = 0; chunk_id < tright.chunk_count(); chunk_id++) {
+  row_offset = 0;
+  for (opossum::ChunkID chunk_id = 0; chunk_id < tright.chunk_count(); chunk_id++) {
     const opossum::Chunk &chunk = tright.get_chunk(chunk_id);
 
     for (size_t col_id = 0; col_id < tright.col_count(); ++col_id) {
       std::shared_ptr<opossum::BaseColumn> column = chunk.get_column(col_id);
 
       for (size_t row = 0; row < chunk.size(); ++row) {
-        right[row][col_id] = (*column)[row];
+        right[row_offset + row][col_id] = (*column)[row];
       }
     }
+    row_offset += chunk.size();
   }
 
   // sort if order matters
