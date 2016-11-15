@@ -20,12 +20,7 @@ namespace opossum {
 
 class OperatorsTableScanTest : public ::testing::Test {
   virtual void SetUp() {
-    _test_table = std::make_shared<opossum::Table>(opossum::Table(2));
-    _test_table->add_column("a", "int");
-    _test_table->add_column("b", "float");
-    _test_table->append({123, 456.7f});
-    _test_table->append({1234, 457.7f});
-    _test_table->append({12345, 458.7f});
+    _test_table = opossum::loadTable("src/test/int_float.tbl", 2);
     opossum::StorageManager::get().add_table("table_a", std::move(_test_table));
     _gt = std::make_shared<opossum::GetTable>("table_a");
 
@@ -55,22 +50,16 @@ TEST_F(OperatorsTableScanTest, DoubleScan) {
   auto scan_2 = std::make_shared<opossum::TableScan>(scan_1, "b", "<", 457.9);
   scan_2->execute();
 
-  EXPECT_EQ(type_cast<int>((*(scan_2->get_output()->get_chunk(0).get_column(0)))[0]), 1234);
-
-  EXPECT_EQ(scan_2->get_output()->row_count(), (u_int)1);
-  EXPECT_TRUE(compareTables(*(scan_2->get_output()), *test_result));
+  EXPECT_TRUE(tablesEqual(*(scan_2->get_output()), *test_result));
 }
 
 TEST_F(OperatorsTableScanTest, SingleScanReturnsCorrectRowCount) {
+  std::shared_ptr<opossum::Table> test_result = opossum::loadTable("src/test/int_float_f2.tbl", 1);
+
   auto scan = std::make_shared<opossum::TableScan>(_gt, "a", ">=", 1234);
   scan->execute();
 
-  EXPECT_EQ(type_cast<int>((*(scan->get_output()->get_chunk(0).get_column(0)))[0]), 1234);
-  EXPECT_EQ(type_cast<int>((*(scan->get_output()->get_chunk(1).get_column(0)))[0]), 12345);
-  EXPECT_NE(type_cast<int>((*(scan->get_output()->get_chunk(0).get_column(0)))[0]), 123);
-  EXPECT_NE(type_cast<int>((*(scan->get_output()->get_chunk(1).get_column(0)))[0]), 123);
-
-  EXPECT_EQ(scan->get_output()->row_count(), (size_t)2);
+  EXPECT_TRUE(tablesEqual(*(scan->get_output()), *test_result));
 }
 
 TEST_F(OperatorsTableScanTest, UnknownOperatorThrowsException) {
