@@ -14,6 +14,7 @@
 #include "../../lib/storage/storage_manager.hpp"
 #include "../../lib/storage/table.hpp"
 #include "../../lib/types.hpp"
+#include "../common.hpp"
 
 namespace opossum {
 
@@ -46,6 +47,8 @@ class OperatorsTableScanTest : public ::testing::Test {
 };
 
 TEST_F(OperatorsTableScanTest, DoubleScan) {
+  std::shared_ptr<opossum::Table> test_result = opossum::loadTable("src/test/int_float_f.tbl", 2);
+
   auto scan_1 = std::make_shared<opossum::TableScan>(_gt, "a", ">=", 1234);
   scan_1->execute();
 
@@ -55,6 +58,7 @@ TEST_F(OperatorsTableScanTest, DoubleScan) {
   EXPECT_EQ(type_cast<int>((*(scan_2->get_output()->get_chunk(0).get_column(0)))[0]), 1234);
 
   EXPECT_EQ(scan_2->get_output()->row_count(), (u_int)1);
+  EXPECT_TRUE(compareTables(*(scan_2->get_output()), *test_result));
 }
 
 TEST_F(OperatorsTableScanTest, SingleScanReturnsCorrectRowCount) {
