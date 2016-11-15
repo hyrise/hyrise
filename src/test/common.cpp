@@ -11,10 +11,54 @@
 #include "../lib/types.hpp"
 
 namespace opossum {
-::testing::AssertionResult compareTables(const opossum::Table &tleft, const opossum::Table &tright, bool sorted) {
+
+std::vector<std::vector<opossum::AllTypeVariant>> tableToMatrix(const opossum::Table &t) {
+  std::vector<std::vector<opossum::AllTypeVariant>> matrix;
+
+  // initialize matrix with table sizes
+  matrix.resize(t.row_count(), std::vector<opossum::AllTypeVariant>(t.col_count()));
+
+  // set values
+  unsigned row_offset = 0;
+  for (opossum::ChunkID chunk_id = 0; chunk_id < t.chunk_count(); chunk_id++) {
+    const opossum::Chunk &chunk = t.get_chunk(chunk_id);
+
+    for (size_t col_id = 0; col_id < t.col_count(); ++col_id) {
+      std::shared_ptr<opossum::BaseColumn> column = chunk.get_column(col_id);
+
+      for (size_t row = 0; row < chunk.size(); ++row) {
+        matrix[row_offset + row][col_id] = (*column)[row];
+      }
+    }
+    row_offset += chunk.size();
+  }
+
+  return matrix;
+}
+
+void printMatrix(const std::vector<std::vector<opossum::AllTypeVariant>> &m) {
+  std::cout << "-------------" << std::endl;
+  for (unsigned row = 0; row < m.size(); row++) {
+    for (unsigned col = 0; col < m[row].size(); col++) {
+      std::cout << m[row][col] << " ";
+    }
+    std::cout << std::endl;
+  }
+  std::cout << "-------------" << std::endl;
+}
+
+::testing::AssertionResult tablesEqual(const opossum::Table &tleft, const opossum::Table &tright,
+                                       bool order_sensitive) {
+  std::vector<std::vector<opossum::AllTypeVariant>> left = tableToMatrix(tleft);
+  std::vector<std::vector<opossum::AllTypeVariant>> right = tableToMatrix(tright);
+  // compare schema of tables
+  //  - column count
   if (tleft.col_count() != tright.col_count()) {
+    printMatrix(left);
+    printMatrix(right);
     return ::testing::AssertionFailure() << "Number of columns is different.";
   }
+  //  - column names and types
   for (size_t col_id = 0; col_id < tright.col_count(); ++col_id) {
     if (tleft.column_type(col_id) != tright.column_type(col_id) ||
         tleft.column_name(col_id) != tright.column_name(col_id)) {
@@ -22,47 +66,16 @@ namespace opossum {
     }
   }
 
+  // compare content of tables
+  //  - row count for fast failure
   if (tleft.row_count() != tright.row_count()) {
+    printMatrix(left);
+    printMatrix(right);
     return ::testing::AssertionFailure() << "Number of rows is different.";
   }
-  // initialize tables with sizes
-  std::vector<std::vector<opossum::AllTypeVariant>> left;
-  std::vector<std::vector<opossum::AllTypeVariant>> right;
 
-  left.resize(tleft.row_count(), std::vector<opossum::AllTypeVariant>(tleft.col_count()));
-  right.resize(tright.row_count(), std::vector<opossum::AllTypeVariant>(tright.col_count()));
-
-  // initialize table values
-  unsigned row_offset = 0;
-  for (opossum::ChunkID chunk_id = 0; chunk_id < tleft.chunk_count(); chunk_id++) {
-    const opossum::Chunk &chunk = tleft.get_chunk(chunk_id);
-
-    for (size_t col_id = 0; col_id < tleft.col_count(); ++col_id) {
-      std::shared_ptr<opossum::BaseColumn> column = chunk.get_column(col_id);
-
-      for (size_t row = 0; row < chunk.size(); ++row) {
-        left[row_offset + row][col_id] = (*column)[row];
-      }
-    }
-    row_offset += chunk.size();
-  }
-
-  row_offset = 0;
-  for (opossum::ChunkID chunk_id = 0; chunk_id < tright.chunk_count(); chunk_id++) {
-    const opossum::Chunk &chunk = tright.get_chunk(chunk_id);
-
-    for (size_t col_id = 0; col_id < tright.col_count(); ++col_id) {
-      std::shared_ptr<opossum::BaseColumn> column = chunk.get_column(col_id);
-
-      for (size_t row = 0; row < chunk.size(); ++row) {
-        right[row_offset + row][col_id] = (*column)[row];
-      }
-    }
-    row_offset += chunk.size();
-  }
-
-  // sort if order matters
-  if (!sorted) {
+  // sort if order does not matter
+  if (!order_sensitive) {
     std::sort(left.begin(), left.end());
     std::sort(right.begin(), right.end());
   }
@@ -70,6 +83,8 @@ namespace opossum {
   if (left == right) {
     return ::testing::AssertionSuccess();
   } else {
+    printMatrix(left);
+    printMatrix(right);
     return ::testing::AssertionFailure() << "Table content is different.";
   }
 }
@@ -106,21 +121,6 @@ std::shared_ptr<opossum::Table> loadTable(std::string file_name, size_t chunk_si
 
   while (std::getline(infile, line)) {
     token = split<opossum::AllTypeVariant>(line, '|');
-    // for (size_t j = 0; j < col_types.size(); j++) {
-    //   if (col_types[j] == "int") {
-    //     token_a.push_back(std::stoi(token[j]));
-    //   } else if (col_types[j] == "long") {
-    //     token_a.push_back(std::stol(token[j]));
-    //   } else if (col_types[j] == "float") {
-    //     token_a.push_back(std::stof(token[j]));
-    //   } else if (col_types[j] == "double") {
-    //     token_a.push_back(std::stod(token[j]));
-    //   } else if (col_types[j] == "string") {
-    //     token_a.push_back(token[j]);
-    //   } else {
-    //     return nullptr;
-    //   }
-    // }
     test_table->append(token);
   }
   return test_table;
