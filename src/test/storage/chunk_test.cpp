@@ -54,3 +54,13 @@ TEST_F(StorageChunkTest, RetrieveColumn) {
   auto base_col = c.get_column(0);
   EXPECT_EQ(base_col->size(), 4u);
 }
+
+TEST_F(StorageChunkTest, UnknownColumnType) {
+  // Exception will only be thrown in debug builds
+  if (IS_DEBUG) {
+    auto wrapper = []() {
+      opossum::make_shared_by_column_type<opossum::BaseColumn, opossum::ValueColumn>("weird_type");
+    };
+    EXPECT_THROW(wrapper(), std::runtime_error);
+  }
+}
