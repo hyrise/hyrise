@@ -10,6 +10,7 @@
 #include "../lib/storage/table.hpp"
 #include "../lib/types.hpp"
 
+namespace opossum {
 ::testing::AssertionResult compareTables(const opossum::Table &tleft, const opossum::Table &tright, bool sorted) {
   if (tleft.col_count() != tright.col_count()) {
     return ::testing::AssertionFailure() << "Number of columns is different.";
@@ -119,3 +120,5 @@ std::shared_ptr<opossum::Table> loadTable(std::string file_name, size_t chunk_si
   }
   return test_table;
 }
+
+}  // namespace opossum
