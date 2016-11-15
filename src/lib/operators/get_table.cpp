@@ -19,5 +19,5 @@ void GetTable::execute() {
   // no expensive execution to be done here
 }
 
-std::shared_ptr<Table> GetTable::get_output() const { return StorageManager::get().get_table(_name); }
+std::shared_ptr<const Table> GetTable::get_output() const { return StorageManager::get().get_table(_name); }
 }  // namespace opossum

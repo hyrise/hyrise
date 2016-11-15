@@ -12,37 +12,39 @@
 
 namespace opossum {
 
-template <typename T>
-class SortImpl;
-
 // operator to sort a table by a single column
 // Multi-column sort is not supported yet. For now, you will have to sort by the secondary criterion, then by the first
 class Sort : public AbstractOperator {
  public:
-  Sort(const std::shared_ptr<AbstractOperator> in, const std::string &sort_column_name, const bool ascending = true);
+  Sort(const std::shared_ptr<const AbstractOperator> in, const std::string &sort_column_name,
+       const bool ascending = true);
   virtual void execute();
-  virtual std::shared_ptr<Table> get_output() const;
+  virtual std::shared_ptr<const Table> get_output() const;
 
  protected:
   virtual const std::string name() const;
   virtual uint8_t num_in_tables() const;
   virtual uint8_t num_out_tables() const;
 
+  template <typename T>
+  class SortImpl;
+
   const std::unique_ptr<AbstractOperatorImpl> _impl;
 };
 
 // we need to use the impl pattern because the comparator of the sort depends on the type of the column
 template <typename T>
-class SortImpl : public AbstractOperatorImpl {
+class Sort::SortImpl : public AbstractOperatorImpl {
  public:
   // creates a new table with reference columns
-  SortImpl(const std::shared_ptr<AbstractOperator> in, const std::string &sort_column_name, const bool ascending = true)
+  SortImpl(const std::shared_ptr<const AbstractOperator> in, const std::string &sort_column_name,
+           const bool ascending = true)
       : _in_table(in->get_output()),
         _sort_column_id(_in_table->column_id_by_name(sort_column_name)),
         _ascending(ascending),
-        _output(new Table),
-        _pos_list(new PosList),
-        _row_id_value_vector(new std::vector<std::pair<RowID, T>>()) {
+        _output(std::make_shared<Table>()),
+        _pos_list(std::make_shared<PosList>()),
+        _row_id_value_vector(std::make_shared<std::vector<std::pair<RowID, T>>>()) {
     // copy the structure of the input table, creating ReferenceColumns where needed
     for (size_t column_id = 0; column_id < _in_table->col_count(); ++column_id) {
       std::shared_ptr<ReferenceColumn> ref;
@@ -82,16 +84,7 @@ class SortImpl : public AbstractOperatorImpl {
         for (size_t chunk = 0; chunk < val_table->chunk_count(); chunk++) {
           if (auto val_col =
                   std::dynamic_pointer_cast<ValueColumn<T>>(val_table->get_chunk(chunk).get_column(_sort_column_id))) {
-            if (referenced_column->pos_list()) {
-              reference_values.emplace_back(val_col->values());
-            } else {
-              // If referenced_column->pos_list() is a nullptr the reference column contains all values of the
-              // referenced column. Thus all rows must be saved.
-              auto &values = val_col->values();
-              for (size_t offset = 0; offset < values.size(); offset++) {
-                _row_id_value_vector->emplace_back(val_table->calculate_row_id(chunk, offset), values[offset]);
-              }
-            }
+            reference_values.emplace_back(val_col->values());
           } else {
             throw std::logic_error("Referenced table must only contain value columns");
           }
@@ -136,7 +129,7 @@ class SortImpl : public AbstractOperatorImpl {
 
   virtual std::shared_ptr<Table> get_output() const { return _output; }
 
-  const std::shared_ptr<Table> _in_table;
+  const std::shared_ptr<const Table> _in_table;
 
   // column to sort by
   const size_t _sort_column_id;

@@ -8,9 +8,14 @@
 #include <utility>
 #include <vector>
 
+#include "dictionary_column.hpp"
+
 namespace opossum {
 
-Table::Table(const size_t chunk_size) : _chunk_size(chunk_size) { _chunks.push_back(Chunk()); }
+Table::Table(const size_t chunk_size, const bool auto_compress)
+    : _chunk_size(chunk_size), _auto_compress(auto_compress) {
+  _chunks.push_back(Chunk());
+}
 
 void Table::add_column(const std::string &name, const std::string &type, bool create_value_column) {
   _column_names.push_back(name);
@@ -25,6 +30,8 @@ void Table::add_column(const std::string &name, const std::string &type, bool cr
 void Table::append(std::vector<AllTypeVariant> values) {
   // TODO(Anyone): Chunks should be preallocated for chunk size
   if (_chunk_size > 0 && _chunks.back().size() == _chunk_size) {
+    if (_auto_compress) compress_chunk(chunk_count() - 1);
+
     Chunk newChunk;
     for (auto &&type : _column_types) {
       newChunk.add_column(make_shared_by_column_type<BaseColumn, ValueColumn>(type));
@@ -57,6 +64,17 @@ size_t Table::column_id_by_name(const std::string &column_name) const {
   throw std::runtime_error("column " + column_name + " not found");
 }
 
+void Table::compress_chunk(ChunkID chunk_id) {
+  Chunk newChunk;
+  for (size_t column_id = 0; column_id < col_count(); ++column_id) {
+    auto dict_col = make_shared_by_column_type<BaseColumn, DictionaryColumn>(
+        column_type(column_id), _chunks.at(chunk_id).get_column(column_id));
+    newChunk.add_column(std::move(dict_col));
+  }
+
+  _chunks[chunk_id] = std::move(newChunk);
+}
+
 size_t Table::chunk_size() const { return _chunk_size; }
 
 const std::string &Table::column_name(size_t column_id) const { return _column_names[column_id]; }
@@ -66,7 +84,18 @@ const std::string &Table::column_type(size_t column_id) const { return _column_t
 Chunk &Table::get_chunk(ChunkID chunk_id) { return _chunks[chunk_id]; }
 const Chunk &Table::get_chunk(ChunkID chunk_id) const { return _chunks[chunk_id]; }
 
-std::pair<ChunkID, ChunkOffset> Table::locate_row(RowID row) {
+void Table::add_chunk(Chunk chunk) {
+  if (IS_DEBUG && chunk.col_count() != col_count()) {
+    throw std::runtime_error("unequal number of columns when adding chunk");
+  }
+  if (_chunks.size() == 1 && _chunks.back().col_count() == 0) {
+    // the initial chunk was not used yet
+    _chunks.clear();
+  }
+  _chunks.emplace_back(std::move(chunk));
+}
+
+std::pair<ChunkID, ChunkOffset> Table::locate_row(RowID row) const {
   // This method is probably very inefficient and needs to be optimized at some point,
   // for example using binary search on a lookup table
 
@@ -80,7 +109,7 @@ std::pair<ChunkID, ChunkOffset> Table::locate_row(RowID row) {
   return {in_chunk, row - lookupPos};
 }
 
-RowID Table::calculate_row_id(ChunkID chunk, ChunkOffset offset) {
+RowID Table::calculate_row_id(ChunkID chunk, ChunkOffset offset) const {
   // see locate_row above. We can use the same lookup table.
 
   RowID row_id = 0;

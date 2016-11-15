@@ -18,21 +18,24 @@ class Chunk {
 
   // copying a chunk is not allowed
   Chunk(const Chunk &) = delete;
+  Chunk &operator=(const Chunk &) = delete;
 
   // we need to explicitly set the move constructor to default when
   // we overwrite the copy constructor
   Chunk(Chunk &&) = default;
-
-  // TODO(anyone) Do we need to remove the copy assignment op as well?
+  Chunk &operator=(Chunk &&) = default;
 
   // adds a column to the "right" of the chunk
   void add_column(std::shared_ptr<BaseColumn> column);
+
+  // returns the number of columns
+  size_t col_count() const;
 
   // returns the number of rows
   size_t size() const;
 
   // adds a new row, given as a list of values, to the chunk
-  void append(std::vector<AllTypeVariant> values) DEV_ONLY;
+  void append(std::vector<AllTypeVariant> values);
 
   // returns the column at a given position
   std::shared_ptr<BaseColumn> get_column(size_t column_id) const;

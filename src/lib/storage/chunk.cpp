@@ -32,6 +32,8 @@ void Chunk::append(std::vector<AllTypeVariant> values) {
 
 std::shared_ptr<BaseColumn> Chunk::get_column(size_t column_id) const { return _columns.at(column_id); }
 
+size_t Chunk::col_count() const { return _columns.size(); }
+
 size_t Chunk::size() const {
   if (_columns.size() == 0) return 0;
   return _columns.front()->size();

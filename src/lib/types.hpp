@@ -1,34 +1,29 @@
 #pragma once
 
-#include <boost/hana/assert.hpp>
-#include <boost/hana/core/make.hpp>
 #include <boost/hana/ext/boost/mpl/vector.hpp>
 #include <boost/hana/for_each.hpp>
 #include <boost/hana/integral_constant.hpp>
 #include <boost/hana/map.hpp>
 #include <boost/hana/pair.hpp>
-#include <boost/hana/string.hpp>
 #include <boost/hana/tuple.hpp>
-#include <boost/hana/type.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/variant.hpp>
 
 #include <algorithm>
-#include <iostream>
 #include <memory>
 #include <string>
 #include <utility>
 #include <vector>
 
-// TODO(MD): remove unused imports
-
 namespace opossum {
 
 namespace hana = boost::hana;
 
-using RowID = uint64_t;  // first 32 bit for chunk_id  second 32 bit for chunk_offset
+using RowID = uint64_t;  // first 32 bit for chunk_id second 32 bit for chunk_offset
 using ChunkID = uint32_t;
 using ChunkOffset = uint32_t;
+
+using ValueID = uint32_t;  // Cannot be larger than ChunkOffset
 
 using PosList = std::vector<RowID>;
 
@@ -71,20 +66,21 @@ std::string to_string(const AllTypeVariant &x);
 
 template <class base, template <typename...> class impl, class... TemplateArgs, typename... ConstructorArgs>
 std::unique_ptr<base> make_unique_by_column_type(const std::string &type, ConstructorArgs &&... args) {
-  base *ret = nullptr;
+  std::unique_ptr<base> ret = nullptr;
   hana::for_each(column_types, [&](auto x) {
     if (std::string(hana::first(x)) == type) {
       typename std::remove_reference<decltype(hana::second(x))>::type prototype;
-      ret = new impl<decltype(prototype), TemplateArgs...>(args...);
+      ret = std::make_unique<impl<decltype(prototype), TemplateArgs...>>(std::forward<ConstructorArgs>(args)...);
       return;
     }
   });
   if (IS_DEBUG && !ret) throw std::runtime_error("unknown type " + type);
-  return std::unique_ptr<base>(ret);
+  return ret;
 }
 
-template <class base, template <typename> class impl, class... TemplateArgs, class... ConstructorArgs>
+template <class base, template <typename...> class impl, class... TemplateArgs, class... ConstructorArgs>
 std::shared_ptr<base> make_shared_by_column_type(const std::string &type, ConstructorArgs &&... args) {
-  return std::move(make_unique_by_column_type<base, impl, TemplateArgs...>(type, args...));
+  return std::move(
+      make_unique_by_column_type<base, impl, TemplateArgs...>(type, std::forward<ConstructorArgs>(args)...));
 }
 }  // namespace opossum
