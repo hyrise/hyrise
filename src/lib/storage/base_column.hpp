@@ -1,7 +1,10 @@
 #pragma once
 
-#include "../common.hpp"
-#include "../types.hpp"
+#include <memory>
+
+#include "column_visitable.hpp"
+#include "common.hpp"
+#include "types.hpp"
 
 namespace opossum {
 
@@ -27,5 +30,8 @@ class BaseColumn {
 
   // returns the number of values
   virtual size_t size() const = 0;
+
+  // calls the column-specific handler in an operator (visitor pattern)
+  virtual void visit(ColumnVisitable &visitable, std::shared_ptr<ColumnVisitableContext> context = nullptr) = 0;
 };
 }  // namespace opossum

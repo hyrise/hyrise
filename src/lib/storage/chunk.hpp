@@ -30,6 +30,9 @@ class Chunk {
   // adds a column to the "right" of the chunk
   void add_column(std::shared_ptr<BaseColumn> column);
 
+  // returns the number of columns
+  size_t col_count() const;
+
   // returns the number of rows
   size_t size() const;
 

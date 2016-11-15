@@ -9,9 +9,9 @@
 
 namespace opossum {
 
-Print::Print(const std::shared_ptr<AbstractOperator> in) : AbstractOperator(in) {}
+Print::Print(const std::shared_ptr<const AbstractOperator> in) : AbstractOperator(in) {}
 
-Print::Print(const std::shared_ptr<AbstractOperator> in, std::ostream& out) : AbstractOperator(in), _out(out) {}
+Print::Print(const std::shared_ptr<const AbstractOperator> in, std::ostream& out) : AbstractOperator(in), _out(out) {}
 
 const std::string Print::name() const { return "Print"; }
 
@@ -49,6 +49,8 @@ void Print::execute() {
     for (size_t row = 0; row < chunk.size(); ++row) {
       _out << "|";
       for (size_t col = 0; col < chunk._columns.size(); ++col) {
+        // well yes, we use BaseColumn::operator[] here, but since Print is not an operation that should
+        // be part of a regular query plan, let's keep things simple here
         _out << std::setw(widths[col]) << (*columns[col])[row] << "|" << std::setw(0);
       }
       _out << std::endl;
@@ -58,7 +60,7 @@ void Print::execute() {
 
 // In order to print the table as an actual table, with columns being aligned, we need to calculate the
 // number of characters in the printed representation of each column
-std::vector<uint16_t> Print::column_string_widths(uint16_t min, uint16_t max, std::shared_ptr<Table> t) const {
+std::vector<uint16_t> Print::column_string_widths(uint16_t min, uint16_t max, std::shared_ptr<const Table> t) const {
   std::vector<uint16_t> widths(t->col_count());
   // calculate the length of the column name
   for (size_t col = 0; col < t->col_count(); ++col) {
@@ -80,5 +82,5 @@ std::vector<uint16_t> Print::column_string_widths(uint16_t min, uint16_t max, st
 }
 
 // To allow for easier debugging, the Print operator can also be added in between two operators
-std::shared_ptr<Table> Print::get_output() const { return _input_left; }
+std::shared_ptr<const Table> Print::get_output() const { return _input_left; }
 }  // namespace opossum

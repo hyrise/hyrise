@@ -8,37 +8,91 @@
 #include <vector>
 
 #include "abstract_operator.hpp"
+#include "storage/column_visitable.hpp"
 #include "storage/reference_column.hpp"
 
 namespace opossum {
 
 // operator to sort a table by a single column
 // Multi-column sort is not supported yet. For now, you will have to sort by the secondary criterion, then by the first
+// If you want to do so, you will have to use stable_sort.
+
 class Sort : public AbstractOperator {
  public:
-  Sort(const std::shared_ptr<const AbstractOperator> in, const std::string &sort_column_name,
-       const bool ascending = true);
+  Sort(const std::shared_ptr<AbstractOperator> in, const std::string &sort_column_name, const bool ascending = true);
   virtual void execute();
-  virtual std::shared_ptr<const Table> get_output() const;
+  virtual std::shared_ptr<Table> get_output() const;
+
+  static virtual const std::string name() const;
+  static virtual uint8_t num_in_tables() const;
+  static virtual uint8_t num_out_tables() const;
 
  protected:
-  virtual const std::string name() const;
-  virtual uint8_t num_in_tables() const;
-  virtual uint8_t num_out_tables() const;
-
   template <typename T>
   class SortImpl;
 
   const std::unique_ptr<AbstractOperatorImpl> _impl;
 };
 
+// // we need to use the impl pattern because the comparator of the sort depends on the type of the column
+// template <typename T>
+// class Sort::SortImpl : public AbstractOperatorImpl, public ColumnVisitable {
+//  public:
+//   SortImpl(const std::shared_ptr<AbstractOperator> in, const std::string &sort_column_name, const bool ascending =
+//   true,
+//            const bool stable_sort = false)
+//       : _in_table(in->get_output()),
+//         _sort_column_id(_in_table->column_id_by_name(sort_column_name)),
+//         _ascending(ascending),
+//         _stable_sort(stable_sort),
+//         _output(new Table),
+//         _sort_buffer(_in_table->row_count()) {}
+
+//   virtual void execute() {
+//     // We use a quite trivial sort approach here.
+//     // 1. From each chunk of the input table, get the column that we want to sort by (this happens in the handlers)
+//     // 2. For each row in that column, copy a pair {Value, RowID} to a vector
+//     // 3. Sort that vector
+//     // 4. Extract RowIDs and use them as a PosList
+//     // 5. TODO
+
+//     // Let's go...
+
+//     // 1. From each chunk of the input table, get the column that we want to sort by (this happens in the handlers)
+//     for (ChunkID chunk_id = 0; chunk_id < _in_table->row_count(), chunk_id++) {
+//       Chunk &chunk = _in_table->get_chunk(chunk_id);
+//       auto base_column = chunk.get_column(_sort_column_id);
+//       base_column.visit(this);
+//       // we now receive the visits in the handler methods below...
+//     }
+//   }
+
+//   void handle_value_column(BaseColumn &base_column) {
+//     ValueColumn<T> column = std::static_cast<ValueColumn<T>>(base_column);
+
+//     RowID row = _sort_buffer.back().second;
+//     for (const T &value : column.get_values()) {
+//       _sort_buffer.emplace_back(value, row++);
+//     }
+//   }
+
+//   void handle_reference_column(ReferenceColumn &column) {}
+
+//   virtual std::shared_ptr<Table> get_output() const { return _output; }
+
+//   const std::shared_ptr<Table> _in_table;
+//   const size_t _sort_column_id;
+//   const bool _ascending, _stable_sort;
+//   std::shared_ptr<Table> _output;
+//   std::vector<std::pair<T, RowID>> _sort_buffer;
+// }
+
 // we need to use the impl pattern because the comparator of the sort depends on the type of the column
 template <typename T>
 class Sort::SortImpl : public AbstractOperatorImpl {
  public:
   // creates a new table with reference columns
-  SortImpl(const std::shared_ptr<const AbstractOperator> in, const std::string &sort_column_name,
-           const bool ascending = true)
+  SortImpl(const std::shared_ptr<AbstractOperator> in, const std::string &sort_column_name, const bool ascending = true)
       : _in_table(in->get_output()),
         _sort_column_id(_in_table->column_id_by_name(sort_column_name)),
         _ascending(ascending),
@@ -129,7 +183,7 @@ class Sort::SortImpl : public AbstractOperatorImpl {
 
   virtual std::shared_ptr<Table> get_output() const { return _output; }
 
-  const std::shared_ptr<const Table> _in_table;
+  const std::shared_ptr<Table> _in_table;
 
   // column to sort by
   const size_t _sort_column_id;

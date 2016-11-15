@@ -37,6 +37,10 @@ class Table {
 
   // returns the chunk with the given id
   Chunk &get_chunk(ChunkID chunk_id);
+  const Chunk &get_chunk(ChunkID chunk_id) const;
+
+  // adds a chunk to the table
+  void add_chunk(Chunk chunk);
 
   // returns the column name of the nth column
   const std::string &column_name(size_t column_id) const;
@@ -58,10 +62,10 @@ class Table {
 
   // returns the number of the chunk and the position in the chunk for a given row
   // TODO(md): this would be a nice place to use structured bindings once they are supported by the compilers
-  std::pair<ChunkID, ChunkOffset> locate_row(RowID row);
+  std::pair<ChunkID, ChunkOffset> locate_row(RowID row) const;
 
   // calculates the row id from a given chunk and the chunk offset
-  RowID calculate_row_id(ChunkID chunk, ChunkOffset offset);
+  RowID calculate_row_id(ChunkID chunk, ChunkOffset offset) const;
 
   // enforces dictionary compression on a certain chunk
   void compress_chunk(ChunkID chunk_id);

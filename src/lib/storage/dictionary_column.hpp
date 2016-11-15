@@ -59,27 +59,31 @@ class DictionaryColumn : public BaseColumn {
   // returns an underlying data structure
   std::shared_ptr<const BaseAttributeVector> attribute_vector() const { return _attribute_vector; }
 
-  // returns the corresponding value_id for a value.
-  ValueID get_value_id(T value) const {
-    auto pos = std::lower_bound(_dictionary.cbegin(), _dictionary.cend(), value);
-    if (pos == _dictionary.cend() || *pos != value) {
-      return INVALID_VALUE_ID;
-    }
-    return std::distance(_dictionary.cbegin(), pos);
+  // return the value represented by a given ValueID
+  template <typename Q = T>
+  typename std::enable_if<std::is_trivially_copyable<Q>::value, T>::type value_by_value_id(ValueID value_id) const {
+    return _dictionary.at(value_id);
+  }
+  template <typename Q = T>
+  typename std::enable_if<!std::is_trivially_copyable<Q>::value, const T&>::type value_by_value_id(
+      ValueID value_id) const {
+    return _dictionary.at(value_id);
   }
 
-  // returns the smallest and largest (output order: smallest, largest. input order: parameter order not specified)
-  // ValueIDs that qualify for the including interval [smaller, larger]. If smaller is not part of the dictionary, the
-  // function will return the ValueID of the first value which appears to be larger. If larger is not part of the
-  // dictionary, the function will return the ValueID of the first value which appears to be smaller.
-  std::pair<ValueID, ValueID> get_value_id_range(T value1, T value2) const {
-    T smaller = std::min(value1, value2);
-    T larger = std::max(value1, value2);
-    auto pos_min = std::lower_bound(_dictionary.cbegin(), _dictionary.cend(), smaller);
-    // We do not need to search in the complete dictionary. max cannot have a position < pos_min
-    auto pos_max = std::upper_bound(pos_min, _dictionary.cend(), larger);
+  // returns the first value ID that refers to a value >= the search value
+  // returns INVALID_VALUE_ID if all values are smaller than the search value
+  ValueID lower_bound(T value) const {
+    auto it = std::lower_bound(_dictionary.cbegin(), _dictionary.cend(), value);
+    if (it == _dictionary.cend()) return INVALID_VALUE_ID;
+    return std::distance(_dictionary.cbegin(), it);
+  }
 
-    return {std::distance(_dictionary.cbegin(), pos_min), std::distance(_dictionary.cbegin(), pos_max) - 1};
+  // returns the first value ID that refers to a value > the search value
+  // returns INVALID_VALUE_ID if all values are smaller than or equal to the search value
+  ValueID upper_bound(T value) const {
+    auto it = std::upper_bound(_dictionary.cbegin(), _dictionary.cend(), value);
+    if (it == _dictionary.cend()) return INVALID_VALUE_ID;
+    return std::distance(_dictionary.cbegin(), it);
   }
 
   // return the number of unique_values (dictionary entries)
@@ -87,6 +91,11 @@ class DictionaryColumn : public BaseColumn {
 
   // return the number of entries
   virtual size_t size() const { return _attribute_vector->size(); }
+
+  // visitor pattern, see base_column.hpp
+  virtual void visit(ColumnVisitable& visitable, std::shared_ptr<ColumnVisitableContext> context = nullptr) {
+    visitable.handle_dictionary_column(*this, std::move(context));
+  }
 
  protected:
   std::vector<T> _dictionary;

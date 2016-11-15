@@ -12,13 +12,13 @@ class GetTable : public AbstractOperator {
  public:
   explicit GetTable(const std::string &name);
   virtual void execute();
-  virtual std::shared_ptr<Table> get_output() const;
+  virtual std::shared_ptr<const Table> get_output() const;
 
- protected:
   virtual const std::string name() const;
   virtual uint8_t num_in_tables() const;
   virtual uint8_t num_out_tables() const;
 
+ protected:
   // name of the table to retrieve
   const std::string _name;
 };

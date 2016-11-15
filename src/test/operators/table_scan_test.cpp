@@ -1,5 +1,8 @@
 #include <iostream>
+#include <map>
 #include <memory>
+#include <set>
+#include <string>
 #include <utility>
 
 #include "gtest/gtest.h"
@@ -17,24 +20,29 @@ namespace opossum {
 class OperatorsTableScanTest : public ::testing::Test {
   virtual void SetUp() {
     _test_table = std::make_shared<opossum::Table>(opossum::Table(2));
-
     _test_table->add_column("a", "int");
     _test_table->add_column("b", "float");
-
     _test_table->append({123, 456.7f});
     _test_table->append({1234, 457.7f});
     _test_table->append({12345, 458.7f});
-
     opossum::StorageManager::get().add_table("table_a", std::move(_test_table));
-
     _gt = std::make_shared<opossum::GetTable>("table_a");
+
+    _test_table_dict = std::make_shared<opossum::Table>(5);
+    _test_table_dict->add_column("a", "int");
+    _test_table_dict->add_column("b", "int");
+    for (int i = 0; i <= 24; i += 2) _test_table_dict->append({i, 100 + i});
+    _test_table_dict->compress_chunk(0);
+    _test_table_dict->compress_chunk(1);
+    opossum::StorageManager::get().add_table("table_dict", std::move(_test_table_dict));
+    _gt_dict = std::make_shared<opossum::GetTable>("table_dict");
   }
 
   virtual void TearDown() { opossum::StorageManager::get().drop_table("table_a"); }
 
  public:
-  std::shared_ptr<opossum::Table> _test_table;
-  std::shared_ptr<opossum::GetTable> _gt;
+  std::shared_ptr<opossum::Table> _test_table, _test_table_dict;
+  std::shared_ptr<opossum::GetTable> _gt, _gt_dict;
 };
 
 TEST_F(OperatorsTableScanTest, DoubleScan) {
@@ -49,101 +57,75 @@ TEST_F(OperatorsTableScanTest, DoubleScan) {
   EXPECT_EQ(scan_2->get_output()->row_count(), (u_int)1);
 }
 
-class OperatorsTableScanImplTest : public ::testing::Test {
-  virtual void SetUp() {
-    _test_table = std::make_shared<opossum::Table>(opossum::Table(2));
-
-    _test_table->add_column("a", "int");
-    _test_table->add_column("b", "float");
-
-    _test_table->append({123, 456.7f});
-    _test_table->append({1234, 457.7f});
-    _test_table->append({12345, 458.7f});
-
-    opossum::StorageManager::get().add_table("table_a", std::move(_test_table));
-
-    _gt = std::make_shared<opossum::GetTable>("table_a");
-  }
-
-  virtual void TearDown() { opossum::StorageManager::get().drop_table("table_a"); }
-
- public:
-  std::shared_ptr<opossum::Table> _test_table;
-  std::shared_ptr<opossum::GetTable> _gt;
-};
-
-TEST_F(OperatorsTableScanImplTest, SingleScanReturnsCorrectRowCount) {
-  std::unique_ptr<AbstractOperatorImpl> scan(
-      make_unique_by_column_type<AbstractOperatorImpl, TableScanImpl>("int", _gt, "a", ">=", 1234));
+TEST_F(OperatorsTableScanTest, SingleScanReturnsCorrectRowCount) {
+  auto scan = std::make_shared<opossum::TableScan>(_gt, "a", ">=", 1234);
   scan->execute();
-  EXPECT_EQ(type_cast<int>((*(scan->get_output()->get_chunk(0).get_column(0)))[1]), 12345);
+
+  EXPECT_EQ(type_cast<int>((*(scan->get_output()->get_chunk(0).get_column(0)))[0]), 1234);
+  EXPECT_EQ(type_cast<int>((*(scan->get_output()->get_chunk(1).get_column(0)))[0]), 12345);
   EXPECT_NE(type_cast<int>((*(scan->get_output()->get_chunk(0).get_column(0)))[0]), 123);
-  EXPECT_NE(type_cast<int>((*(scan->get_output()->get_chunk(0).get_column(0)))[1]), 123);
+  EXPECT_NE(type_cast<int>((*(scan->get_output()->get_chunk(1).get_column(0)))[0]), 123);
 
-  EXPECT_EQ(scan->get_output()->row_count(), (uint32_t)2);
+  EXPECT_EQ(scan->get_output()->row_count(), (size_t)2);
 }
 
-TEST_F(OperatorsTableScanImplTest, UnknownOperatorThrowsException) {
-  std::unique_ptr<AbstractOperatorImpl> scan(
-      make_unique_by_column_type<AbstractOperatorImpl, TableScanImpl>("int", _gt, "a", "xor", 10));
-
-  EXPECT_THROW(scan->execute(), std::exception);
+TEST_F(OperatorsTableScanTest, UnknownOperatorThrowsException) {
+  EXPECT_THROW(std::make_shared<opossum::TableScan>(_gt, "a", "?!?", 1234), std::runtime_error);
 }
 
-TEST_F(OperatorsTableScanImplTest, UnsortedPosListInReferenceColumn) {
-  std::shared_ptr<opossum::Table> test_ref_table = std::make_shared<opossum::Table>(opossum::Table(2));
+TEST_F(OperatorsTableScanTest, ScanOnDictColumn) {
+  // we do not need to check for a non existing value, because that happens automatically when we scan the second chunk
 
-  std::shared_ptr<PosList> pos_list = std::make_shared<PosList>();
-  pos_list->emplace_back(test_ref_table->calculate_row_id(0, 1));
-  pos_list->emplace_back(test_ref_table->calculate_row_id(1, 0));
-  pos_list->emplace_back(test_ref_table->calculate_row_id(0, 0));
+  std::map<std::string, std::set<int>> tests;
+  tests["="] = {104};
+  tests["!="] = {100, 102, 106, 108, 110, 112, 114, 116, 118, 120, 122, 124};
+  tests["<"] = {100, 102};
+  tests["<="] = {100, 102, 104};
+  tests[">"] = {106, 108, 110, 112, 114, 116, 118, 120, 122, 124};
+  tests[">="] = {104, 106, 108, 110, 112, 114, 116, 118, 120, 122, 124};
+  tests["BETWEEN"] = {104, 106, 108};
+  for (const auto& test : tests) {
+    auto scan = std::make_shared<opossum::TableScan>(_gt_dict, "a", test.first, 4, optional<AllTypeVariant>(9));
+    scan->execute();
 
-  for (size_t column_id = 0; column_id < _gt->get_output()->col_count(); ++column_id) {
-    auto ref = std::make_shared<ReferenceColumn>(_gt->get_output(), column_id, pos_list);
-
-    test_ref_table->add_column(_gt->get_output()->column_name(column_id), _gt->get_output()->column_type(column_id),
-                               false);
-
-    test_ref_table->get_chunk(0).add_column(ref);
+    auto expected_copy = test.second;
+    for (ChunkID chunk_id = 0; chunk_id < scan->get_output()->chunk_count(); ++chunk_id) {
+      auto& chunk = scan->get_output()->get_chunk(chunk_id);
+      for (ChunkOffset chunk_offset = 0; chunk_offset < chunk.size(); ++chunk_offset) {
+        EXPECT_EQ(expected_copy.erase(type_cast<int>((*chunk.get_column(1))[chunk_offset])), (size_t)1);
+      }
+    }
+    EXPECT_EQ(expected_copy.size(), (size_t)0);
   }
-
-  opossum::StorageManager::get().add_table("table_ref", std::move(test_ref_table));
-
-  std::shared_ptr<opossum::GetTable> gt_ref = std::make_shared<opossum::GetTable>("table_ref");
-  std::unique_ptr<AbstractOperatorImpl> scan(
-      make_unique_by_column_type<AbstractOperatorImpl, TableScanImpl>("int", gt_ref, "a", "!=", 1234));
-  scan->execute();
-
-  EXPECT_NE(type_cast<int>((*(scan->get_output()->get_chunk(0).get_column(0)))[0]), 1234);
-  EXPECT_NE(type_cast<int>((*(scan->get_output()->get_chunk(0).get_column(0)))[1]), 1234);
-
-  EXPECT_EQ(scan->get_output()->row_count(), (uint32_t)2);
-  opossum::StorageManager::get().drop_table("table_ref");
 }
 
-TEST_F(OperatorsTableScanImplTest, nullptr_pos_list_in_reference_column) {
-  std::shared_ptr<opossum::Table> test_ref_table = std::make_shared<opossum::Table>(opossum::Table(2));
+TEST_F(OperatorsTableScanTest, ScanOnReferencedDictColumn) {
+  // we do not need to check for a non existing value, because that happens automatically when we scan the second chunk
 
-  for (size_t column_id = 0; column_id < _gt->get_output()->col_count(); ++column_id) {
-    auto ref = std::make_shared<ReferenceColumn>(_gt->get_output(), column_id, nullptr);
+  std::map<std::string, std::set<int>> tests;
+  tests["="] = {104};
+  tests["!="] = {100, 102, 106};
+  tests["<"] = {100, 102};
+  tests["<="] = {100, 102, 104};
+  tests[">"] = {106};
+  tests[">="] = {104, 106};
+  tests["BETWEEN"] = {104, 106};
+  for (const auto& test : tests) {
+    auto scan1 = std::make_shared<opossum::TableScan>(_gt_dict, "b", "<", 108);
+    scan1->execute();
 
-    test_ref_table->add_column(_gt->get_output()->column_name(column_id), _gt->get_output()->column_type(column_id),
-                               false);
+    auto scan2 = std::make_shared<opossum::TableScan>(scan1, "a", test.first, 4, opossum::optional<AllTypeVariant>(9));
+    scan2->execute();
 
-    test_ref_table->get_chunk(0).add_column(ref);
+    auto expected_copy = test.second;
+    for (ChunkID chunk_id = 0; chunk_id < scan2->get_output()->chunk_count(); ++chunk_id) {
+      auto& chunk = scan2->get_output()->get_chunk(chunk_id);
+      for (ChunkOffset chunk_offset = 0; chunk_offset < chunk.size(); ++chunk_offset) {
+        EXPECT_EQ(expected_copy.erase(type_cast<int>((*chunk.get_column(1))[chunk_offset])), (size_t)1);
+      }
+    }
+    EXPECT_EQ(expected_copy.size(), (size_t)0);
   }
-
-  opossum::StorageManager::get().add_table("table_ref", std::move(test_ref_table));
-
-  std::shared_ptr<opossum::GetTable> gt_ref = std::make_shared<opossum::GetTable>("table_ref");
-  std::unique_ptr<AbstractOperatorImpl> scan(
-      make_unique_by_column_type<AbstractOperatorImpl, TableScanImpl>("int", gt_ref, "a", "!=", 1234));
-  scan->execute();
-
-  EXPECT_NE(type_cast<int>((*(scan->get_output()->get_chunk(0).get_column(0)))[0]), 1234);
-  EXPECT_NE(type_cast<int>((*(scan->get_output()->get_chunk(0).get_column(0)))[1]), 1234);
-
-  EXPECT_EQ(scan->get_output()->row_count(), (uint32_t)2);
 }
 
 }  // namespace opossum

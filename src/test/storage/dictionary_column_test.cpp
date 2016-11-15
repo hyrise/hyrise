@@ -88,85 +88,19 @@ TEST_F(StorageDictionaryColumnTest, CompressColumnDouble) {
   EXPECT_EQ((*dict)[2], 1.1);
 }
 
-TEST_F(StorageDictionaryColumnTest, GetValueId) {
-  vc_int->append(4);
-  vc_int->append(4);
-  vc_int->append(3);
-  vc_int->append(4);
-  vc_int->append(5);
-  vc_int->append(3);
-
+TEST_F(StorageDictionaryColumnTest, LowerUpperBound) {
+  for (int i = 0; i <= 10; i += 2) vc_int->append(i);
   auto col = opossum::make_shared_by_column_type<opossum::BaseColumn, opossum::DictionaryColumn>("int", vc_int);
   auto dict_col = std::dynamic_pointer_cast<opossum::DictionaryColumn<int>>(col);
 
-  EXPECT_EQ(dict_col->get_value_id(2), opossum::INVALID_VALUE_ID);
-  EXPECT_EQ(dict_col->get_value_id(3), 0u);
-  EXPECT_EQ(dict_col->get_value_id(4), 1u);
-  EXPECT_EQ(dict_col->get_value_id(5), 2u);
-  EXPECT_EQ(dict_col->get_value_id(6), opossum::INVALID_VALUE_ID);
-}
+  EXPECT_EQ(dict_col->lower_bound(4), (opossum::ValueID)2);
+  EXPECT_EQ(dict_col->upper_bound(4), (opossum::ValueID)3);
 
-TEST_F(StorageDictionaryColumnTest, GetValueIdRange) {
-  vc_int->append(2);
-  vc_int->append(4);
-  vc_int->append(5);
-  vc_int->append(6);
-  vc_int->append(8);
+  EXPECT_EQ(dict_col->lower_bound(5), (opossum::ValueID)3);
+  EXPECT_EQ(dict_col->upper_bound(5), (opossum::ValueID)3);
 
-  auto col = opossum::make_shared_by_column_type<opossum::BaseColumn, opossum::DictionaryColumn>("int", vc_int);
-  auto dict_col = std::dynamic_pointer_cast<opossum::DictionaryColumn<int>>(col);
-
-  // Both in dict
-  std::pair<opossum::ValueID, opossum::ValueID> expected_result = {0, 4};
-  auto result = dict_col->get_value_id_range(2, 8);
-  EXPECT_EQ(result, expected_result);
-
-  expected_result = {0, 4};
-  result = dict_col->get_value_id_range(8, 2);
-  EXPECT_EQ(result, expected_result);
-
-  // Smaller not in dict 1)
-  expected_result = {0, 4};
-  result = dict_col->get_value_id_range(1, 8);
-  EXPECT_EQ(result, expected_result);
-
-  expected_result = {0, 4};
-  result = dict_col->get_value_id_range(8, 1);
-  EXPECT_EQ(result, expected_result);
-
-  // Smaller not in dict 2)
-  expected_result = {1, 4};
-  result = dict_col->get_value_id_range(3, 8);
-  EXPECT_EQ(result, expected_result);
-
-  // Larger not in dict 1)
-  expected_result = {0, 3};
-  result = dict_col->get_value_id_range(2, 7);
-  EXPECT_EQ(result, expected_result);
-
-  // Larger not in dict 2)
-  expected_result = {0, 4};
-  result = dict_col->get_value_id_range(2, 9);
-  EXPECT_EQ(result, expected_result);
-
-  // Both not in dict
-  expected_result = {1, 3};
-  result = dict_col->get_value_id_range(3, 7);
-  EXPECT_EQ(result, expected_result);
-
-  expected_result = {1, 3};
-  result = dict_col->get_value_id_range(7, 3);
-  EXPECT_EQ(result, expected_result);
-
-  // Equal, both in dict
-  expected_result = {2, 2};
-  result = dict_col->get_value_id_range(5, 5);
-  EXPECT_EQ(result, expected_result);
-
-  // Equal, both not in dict
-  expected_result = {4, 3};
-  result = dict_col->get_value_id_range(7, 7);
-  EXPECT_EQ(result, expected_result);
+  EXPECT_EQ(dict_col->lower_bound(15), opossum::INVALID_VALUE_ID);
+  EXPECT_EQ(dict_col->upper_bound(15), opossum::INVALID_VALUE_ID);
 }
 
 TEST_F(StorageDictionaryColumnTest, FittedAttributeVectorSize) {
