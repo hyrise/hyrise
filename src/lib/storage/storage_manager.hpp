@@ -29,7 +29,9 @@ class StorageManager {
   void print(std::ostream &out = std::cout) const;
 
   StorageManager(StorageManager const &) = delete;
+  StorageManager &operator=(const StorageManager &) = delete;
   StorageManager(StorageManager &&) = delete;
+  StorageManager &operator=(StorageManager &&) = default;
 
  protected:
   StorageManager() {}

@@ -72,7 +72,6 @@ std::vector<uint16_t> Print::column_string_widths(uint16_t min, uint16_t max, st
     for (size_t col = 0; col < chunk._columns.size(); ++col) {
       auto columns = chunk._columns;
       for (size_t row = 0; row < chunk.size(); ++row) {
-        // TODO(unknown): iterating table twice (better only scan 1st&last chunk for max length?)
         auto cell_length = static_cast<uint16_t>(to_string((*columns[col])[row]).size());
         widths[col] = std::min(max, std::max({min, widths[col], cell_length}));
       }

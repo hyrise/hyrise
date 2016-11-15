@@ -17,10 +17,12 @@ class BaseColumn {
   // copying a column is not allowed
   // copying whole columns is expensive
   BaseColumn(BaseColumn const &) = delete;
+  BaseColumn &operator=(const BaseColumn &) = delete;
 
   // we need to explicitly set the move constructor to default when
   // we overwrite the copy constructor
   BaseColumn(BaseColumn &&) = default;
+  BaseColumn &operator=(BaseColumn &&) = default;
 
   // returns the value at a given position
   virtual const AllTypeVariant operator[](const size_t i) DEV_ONLY const = 0;

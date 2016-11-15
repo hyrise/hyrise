@@ -16,14 +16,6 @@ class FittedAttributeVector : public BaseAttributeVector {
  public:
   explicit FittedAttributeVector(size_t size) : _attributes(size) {}
 
-  // copying an attribute vector is not allowed
-  // copying whole attribute vectors is expensive
-  FittedAttributeVector(FittedAttributeVector const &) = delete;
-
-  // we need to explicitly set the move constructor to default when
-  // we overwrite the copy constructor
-  FittedAttributeVector(FittedAttributeVector &&) = default;
-
   ValueID get(const size_t i) const final { return _attributes[i]; }
 
   // inserts the value_id at a given position

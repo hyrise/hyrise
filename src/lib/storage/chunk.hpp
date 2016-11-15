@@ -18,12 +18,12 @@ class Chunk {
 
   // copying a chunk is not allowed
   Chunk(const Chunk &) = delete;
+  Chunk &operator=(const Chunk &) = delete;
 
   // we need to explicitly set the move constructor to default when
   // we overwrite the copy constructor
   Chunk(Chunk &&) = default;
-
-  Chunk &operator=(const Chunk &) = default;
+  Chunk &operator=(Chunk &&) = default;
 
   // TODO(anyone) Do we need to remove the copy assignment op as well?
 

@@ -21,6 +21,7 @@ class Table {
 
   // copying a table is not allowed
   Table(Table const &) = delete;
+  Table &operator=(const Table &) = delete;
 
   // we need to explicitly set the move constructor to default when
   // we overwrite the copy constructor
@@ -28,6 +29,7 @@ class Table {
 
   // returns the number of columns
   size_t col_count() const;
+  Table &operator=(Table &&) = default;
 
   // returns the number of rows
   size_t row_count() const;

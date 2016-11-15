@@ -17,11 +17,13 @@ class AbstractOperator {
                    const std::shared_ptr<const AbstractOperator> right = nullptr);
 
   // copying a operator is not allowed
-  AbstractOperator(AbstractOperator const&) = delete;
+  AbstractOperator(AbstractOperator const &) = delete;
+  AbstractOperator &operator=(const AbstractOperator &) = delete;
 
   // we need to explicitly set the move constructor to default when
   // we overwrite the copy constructor
-  AbstractOperator(AbstractOperator&&) = default;
+  AbstractOperator(AbstractOperator &&) = default;
+  AbstractOperator &operator=(AbstractOperator &&) = default;
 
   // abstract method to actually execute the operator
   // execute and get_output are split into two methods to allow for easier
