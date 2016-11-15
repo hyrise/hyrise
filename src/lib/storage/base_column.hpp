@@ -25,10 +25,10 @@ class BaseColumn {
   BaseColumn &operator=(BaseColumn &&) = default;
 
   // returns the value at a given position
-  virtual const AllTypeVariant operator[](const size_t i) DEV_ONLY const = 0;
+  virtual const AllTypeVariant operator[](const size_t i) const = 0;
 
   // appends the value at the end of the column
-  virtual void append(const AllTypeVariant &val) DEV_ONLY = 0;
+  virtual void append(const AllTypeVariant &val) = 0;
 
   // returns the number of values
   virtual size_t size() const = 0;

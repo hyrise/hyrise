@@ -60,7 +60,7 @@ class Table {
   void add_column(const std::string &name, const std::string &type, bool create_value_column = true);
 
   // inserts a row at the end of the table
-  void append(std::initializer_list<AllTypeVariant> values) DEV_ONLY;
+  void append(std::initializer_list<AllTypeVariant> values);
 
   // returns the number of the chunk and the position in the chunk for a given row
   // TODO(md): this would be a nice place to use structured bindings once they are supported by the compilers

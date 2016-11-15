@@ -40,7 +40,7 @@ class ReferenceColumn : public BaseColumn {
     }
   }
 
-  virtual const AllTypeVariant operator[](const size_t i) const DEV_ONLY {
+  virtual const AllTypeVariant operator[](const size_t i) const {
     auto chunk_info = _referenced_table->locate_row((*_pos_list).at(i));
     auto &chunk = _referenced_table->get_chunk(chunk_info.first);
 
