@@ -83,7 +83,7 @@ std::unique_ptr<base> make_unique_by_column_type(const std::string &type, Constr
   return std::unique_ptr<base>(ret);
 }
 
-template <class base, template <typename> class impl, class... TemplateArgs, class... ConstructorArgs>
+template <class base, template <typename...> class impl, class... TemplateArgs, class... ConstructorArgs>
 std::shared_ptr<base> make_shared_by_column_type(const std::string &type, ConstructorArgs &&... args) {
   return std::move(make_unique_by_column_type<base, impl, TemplateArgs...>(type, args...));
 }
