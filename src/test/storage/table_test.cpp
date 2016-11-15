@@ -1,5 +1,8 @@
+#include <string>
+
 #include "gtest/gtest.h"
 
+#include "../../lib/storage/dictionary_column.hpp"
 #include "../../lib/storage/table.hpp"
 
 class StorageTableTest : public ::testing::Test {
@@ -18,6 +21,32 @@ TEST_F(StorageTableTest, ChunkCount) {
   t.append({6, "world"});
   t.append({3, "!"});
   EXPECT_EQ(t.chunk_count(), 2u);
+}
+
+TEST_F(StorageTableTest, ChunkCompression) {
+  opossum::Table t2{6, true};
+  t2.add_column("col_1", "int");
+  t2.add_column("col_2", "string");
+  t2.append({4, "Bill"});
+  t2.append({4, "Steve"});
+  t2.append({3, "Alexander"});
+  t2.append({4, "Steve"});
+  t2.append({5, "Hasso"});
+  t2.append({3, "Alexander"});
+  t2.append({1, "Bill"});
+
+  EXPECT_EQ(t2.chunk_count(), 2u);
+  // Test attribute vectors
+  EXPECT_EQ(t2.get_chunk(0).get_column(0)->size(), 6u);
+  EXPECT_EQ(t2.get_chunk(0).get_column(1)->size(), 6u);
+
+  // Test dictionary size
+  auto col_1 = std::dynamic_pointer_cast<opossum::DictionaryColumn<int>>(t2.get_chunk(0).get_column(0));
+  auto col_2 = std::dynamic_pointer_cast<opossum::DictionaryColumn<std::string>>(t2.get_chunk(0).get_column(1));
+
+  // Test if ValueColumn has been transformed to DictionaryColumn
+  EXPECT_NE(col_1, nullptr);
+  EXPECT_NE(col_2, nullptr);
 }
 
 TEST_F(StorageTableTest, GetChunk) {

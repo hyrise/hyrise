@@ -23,6 +23,8 @@ class Chunk {
   // we overwrite the copy constructor
   Chunk(Chunk &&) = default;
 
+  Chunk &operator=(const Chunk &) = default;
+
   // TODO(anyone) Do we need to remove the copy assignment op as well?
 
   // adds a column to the "right" of the chunk

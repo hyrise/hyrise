@@ -26,9 +26,11 @@ namespace opossum {
 
 namespace hana = boost::hana;
 
-using RowID = uint64_t;  // first 32 bit for chunk_id  second 32 bit for chunk_offset
+using RowID = uint64_t;  // first 32 bit for chunk_id second 32 bit for chunk_offset
 using ChunkID = uint32_t;
 using ChunkOffset = uint32_t;
+
+using ValueID = uint32_t;  // Cannot be larger than ChunkOffset
 
 using PosList = std::vector<RowID>;
 

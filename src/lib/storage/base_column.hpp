@@ -1,7 +1,7 @@
 #pragma once
 
-#include "common.hpp"
-#include "types.hpp"
+#include "../common.hpp"
+#include "../types.hpp"
 
 namespace opossum {
 
