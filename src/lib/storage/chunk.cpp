@@ -16,7 +16,7 @@ void Chunk::add_column(std::shared_ptr<BaseColumn> column) {
   _columns.emplace_back(column);
 }
 
-void Chunk::append(std::initializer_list<AllTypeVariant> values) {
+void Chunk::append(std::vector<AllTypeVariant> values) {
   // The added values, i.e., a new row, must have the same number of attribues as the table.
   if (IS_DEBUG && _columns.size() != values.size()) {
     throw std::runtime_error("append: number of columns (" + to_string(_columns.size()) +

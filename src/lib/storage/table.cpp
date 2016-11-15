@@ -22,7 +22,7 @@ void Table::add_column(const std::string &name, const std::string &type, bool cr
   }
 }
 
-void Table::append(std::initializer_list<AllTypeVariant> values) {
+void Table::append(std::vector<AllTypeVariant> values) {
   // TODO(Anyone): Chunks should be preallocated for chunk size
   if (_chunk_size > 0 && _chunks.back().size() == _chunk_size) {
     Chunk newChunk;
@@ -64,6 +64,7 @@ const std::string &Table::column_name(size_t column_id) const { return _column_n
 const std::string &Table::column_type(size_t column_id) const { return _column_types[column_id]; }
 
 Chunk &Table::get_chunk(ChunkID chunk_id) { return _chunks[chunk_id]; }
+const Chunk &Table::get_chunk(ChunkID chunk_id) const { return _chunks[chunk_id]; }
 
 std::pair<ChunkID, ChunkOffset> Table::locate_row(RowID row) {
   // This method is probably very inefficient and needs to be optimized at some point,
