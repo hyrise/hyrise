@@ -1,26 +1,19 @@
 #pragma once
 
-#include <boost/hana/assert.hpp>
-#include <boost/hana/core/make.hpp>
 #include <boost/hana/ext/boost/mpl/vector.hpp>
 #include <boost/hana/for_each.hpp>
 #include <boost/hana/integral_constant.hpp>
 #include <boost/hana/map.hpp>
 #include <boost/hana/pair.hpp>
-#include <boost/hana/string.hpp>
 #include <boost/hana/tuple.hpp>
-#include <boost/hana/type.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/variant.hpp>
 
 #include <algorithm>
-#include <iostream>
 #include <memory>
 #include <string>
 #include <utility>
 #include <vector>
-
-// TODO(MD): remove unused imports
 
 namespace opossum {
 
@@ -77,7 +70,7 @@ std::unique_ptr<base> make_unique_by_column_type(const std::string &type, Constr
   hana::for_each(column_types, [&](auto x) {
     if (std::string(hana::first(x)) == type) {
       typename std::remove_reference<decltype(hana::second(x))>::type prototype;
-      ret = std::make_unique<impl<decltype(prototype), TemplateArgs...>>(args...);
+      ret = std::make_unique<impl<decltype(prototype), TemplateArgs...>>(std::forward<ConstructorArgs>(args)...);
       return;
     }
   });
@@ -87,6 +80,7 @@ std::unique_ptr<base> make_unique_by_column_type(const std::string &type, Constr
 
 template <class base, template <typename...> class impl, class... TemplateArgs, class... ConstructorArgs>
 std::shared_ptr<base> make_shared_by_column_type(const std::string &type, ConstructorArgs &&... args) {
-  return std::move(make_unique_by_column_type<base, impl, TemplateArgs...>(type, args...));
+  return std::move(
+      make_unique_by_column_type<base, impl, TemplateArgs...>(type, std::forward<ConstructorArgs>(args)...));
 }
 }  // namespace opossum
