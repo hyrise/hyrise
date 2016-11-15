@@ -52,7 +52,7 @@ class TableScan::TableScanImpl : public AbstractOperatorImpl, public ColumnVisit
                 const std::string &op, const AllTypeVariant value, const optional<AllTypeVariant> value2)
       : _in_table(in->get_output()),
         _filter_column_id(_in_table->column_id_by_name(filter_column_name)),
-        _output(new Table),
+        _output(std::make_shared<Table>()),
         _casted_value(type_cast<T>(value)),
         _casted_value2(value2 ? optional<T>(type_cast<T>(*value2)) : optional<T>(nullopt)) {
     for (size_t column_id = 0; column_id < _in_table->col_count(); ++column_id) {

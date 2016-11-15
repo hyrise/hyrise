@@ -9,7 +9,7 @@
 
 namespace opossum {
 Projection::Projection(const std::shared_ptr<const AbstractOperator> in, const std::vector<std::string>& columns)
-    : AbstractOperator(in), _column_filter(columns), _output(new Table) {}
+    : AbstractOperator(in), _column_filter(columns), _output(std::make_shared<Table>()) {}
 
 const std::string Projection::name() const { return "Projection"; }
 

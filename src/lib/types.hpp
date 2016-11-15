@@ -73,16 +73,16 @@ std::string to_string(const AllTypeVariant &x);
 
 template <class base, template <typename...> class impl, class... TemplateArgs, typename... ConstructorArgs>
 std::unique_ptr<base> make_unique_by_column_type(const std::string &type, ConstructorArgs &&... args) {
-  base *ret = nullptr;
+  std::unique_ptr<base> ret = nullptr;
   hana::for_each(column_types, [&](auto x) {
     if (std::string(hana::first(x)) == type) {
       typename std::remove_reference<decltype(hana::second(x))>::type prototype;
-      ret = new impl<decltype(prototype), TemplateArgs...>(args...);
+      ret = std::make_unique<impl<decltype(prototype), TemplateArgs...>>(args...);
       return;
     }
   });
   if (IS_DEBUG && !ret) throw std::runtime_error("unknown type " + type);
-  return std::unique_ptr<base>(ret);
+  return ret;
 }
 
 template <class base, template <typename...> class impl, class... TemplateArgs, class... ConstructorArgs>

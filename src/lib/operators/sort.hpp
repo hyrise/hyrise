@@ -42,9 +42,9 @@ class Sort::SortImpl : public AbstractOperatorImpl {
       : _in_table(in->get_output()),
         _sort_column_id(_in_table->column_id_by_name(sort_column_name)),
         _ascending(ascending),
-        _output(new Table),
-        _pos_list(new PosList),
-        _row_id_value_vector(new std::vector<std::pair<RowID, T>>()) {
+        _output(std::make_shared<Table>()),
+        _pos_list(std::make_shared<PosList>()),
+        _row_id_value_vector(std::make_shared<std::vector<std::pair<RowID, T>>>()) {
     // copy the structure of the input table, creating ReferenceColumns where needed
     for (size_t column_id = 0; column_id < _in_table->col_count(); ++column_id) {
       std::shared_ptr<ReferenceColumn> ref;
