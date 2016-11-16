@@ -20,29 +20,31 @@ namespace opossum {
 
 class OperatorsTableScanTest : public ::testing::Test {
   virtual void SetUp() {
-    _test_table = opossum::loadTable("src/test/tables/int_float.tbl", 2);
-    opossum::StorageManager::get().add_table("table_a", std::move(_test_table));
+    std::shared_ptr<opossum::Table> test_table = opossum::loadTable("src/test/tables/int_float.tbl", 2);
+    opossum::StorageManager::get().add_table("table_a", std::move(test_table));
     _gt = std::make_shared<opossum::GetTable>("table_a");
 
-    _test_table_dict = std::make_shared<opossum::Table>(5);
-    _test_table_dict->add_column("a", "int");
-    _test_table_dict->add_column("b", "int");
-    for (int i = 0; i <= 24; i += 2) _test_table_dict->append({i, 100 + i});
-    _test_table_dict->compress_chunk(0);
-    _test_table_dict->compress_chunk(1);
-    opossum::StorageManager::get().add_table("table_dict", std::move(_test_table_dict));
+    std::shared_ptr<opossum::Table> test_table_dict = std::make_shared<opossum::Table>(5);
+    test_table_dict->add_column("a", "int");
+    test_table_dict->add_column("b", "int");
+    for (int i = 0; i <= 24; i += 2) test_table_dict->append({i, 100 + i});
+    test_table_dict->compress_chunk(0);
+    test_table_dict->compress_chunk(1);
+    opossum::StorageManager::get().add_table("table_dict", std::move(test_table_dict));
     _gt_dict = std::make_shared<opossum::GetTable>("table_dict");
   }
 
-  virtual void TearDown() { opossum::StorageManager::get().drop_table("table_a"); }
+  virtual void TearDown() {
+    opossum::StorageManager::get().drop_table("table_a");
+    opossum::StorageManager::get().drop_table("table_dict");
+  }
 
  public:
-  std::shared_ptr<opossum::Table> _test_table, _test_table_dict;
   std::shared_ptr<opossum::GetTable> _gt, _gt_dict;
 };
 
 TEST_F(OperatorsTableScanTest, DoubleScan) {
-  std::shared_ptr<opossum::Table> test_result = opossum::loadTable("src/test/tables/int_float_filtered.tbl", 2);
+  std::shared_ptr<opossum::Table> expected_result = opossum::loadTable("src/test/tables/int_float_filtered.tbl", 2);
 
   auto scan_1 = std::make_shared<opossum::TableScan>(_gt, "a", ">=", 1234);
   scan_1->execute();
@@ -50,16 +52,16 @@ TEST_F(OperatorsTableScanTest, DoubleScan) {
   auto scan_2 = std::make_shared<opossum::TableScan>(scan_1, "b", "<", 457.9);
   scan_2->execute();
 
-  EXPECT_TRUE(tablesEqual(*(scan_2->get_output()), *test_result));
+  EXPECT_TRUE(tablesEqual(*(scan_2->get_output()), *expected_result));
 }
 
 TEST_F(OperatorsTableScanTest, SingleScanReturnsCorrectRowCount) {
-  std::shared_ptr<opossum::Table> test_result = opossum::loadTable("src/test/tables/int_float_filtered2.tbl", 1);
+  std::shared_ptr<opossum::Table> expected_result = opossum::loadTable("src/test/tables/int_float_filtered2.tbl", 1);
 
   auto scan = std::make_shared<opossum::TableScan>(_gt, "a", ">=", 1234);
   scan->execute();
 
-  EXPECT_TRUE(tablesEqual(*(scan->get_output()), *test_result));
+  EXPECT_TRUE(tablesEqual(*(scan->get_output()), *expected_result));
 }
 
 TEST_F(OperatorsTableScanTest, UnknownOperatorThrowsException) {
