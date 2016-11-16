@@ -20,7 +20,7 @@ namespace opossum {
 
 class OperatorsTableScanTest : public ::testing::Test {
   virtual void SetUp() {
-    _test_table = opossum::loadTable("src/test/int_float.tbl", 2);
+    _test_table = opossum::loadTable("src/test/tables/int_float.tbl", 2);
     opossum::StorageManager::get().add_table("table_a", std::move(_test_table));
     _gt = std::make_shared<opossum::GetTable>("table_a");
 
@@ -42,7 +42,7 @@ class OperatorsTableScanTest : public ::testing::Test {
 };
 
 TEST_F(OperatorsTableScanTest, DoubleScan) {
-  std::shared_ptr<opossum::Table> test_result = opossum::loadTable("src/test/int_float_f.tbl", 2);
+  std::shared_ptr<opossum::Table> test_result = opossum::loadTable("src/test/tables/int_float_filtered.tbl", 2);
 
   auto scan_1 = std::make_shared<opossum::TableScan>(_gt, "a", ">=", 1234);
   scan_1->execute();
@@ -54,7 +54,7 @@ TEST_F(OperatorsTableScanTest, DoubleScan) {
 }
 
 TEST_F(OperatorsTableScanTest, SingleScanReturnsCorrectRowCount) {
-  std::shared_ptr<opossum::Table> test_result = opossum::loadTable("src/test/int_float_f2.tbl", 1);
+  std::shared_ptr<opossum::Table> test_result = opossum::loadTable("src/test/tables/int_float_filtered2.tbl", 1);
 
   auto scan = std::make_shared<opossum::TableScan>(_gt, "a", ">=", 1234);
   scan->execute();

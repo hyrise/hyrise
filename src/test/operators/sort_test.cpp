@@ -17,7 +17,7 @@ namespace opossum {
 
 class OperatorsSortTest : public ::testing::Test {
   virtual void SetUp() {
-    _test_table = opossum::loadTable("src/test/int_float_unsorted.tbl", 2);
+    _test_table = opossum::loadTable("src/test/tables/int_float.tbl", 2);
     opossum::StorageManager::get().add_table("table_a", std::move(_test_table));
     _gt = std::make_shared<opossum::GetTable>("table_a");
   }
@@ -30,7 +30,7 @@ class OperatorsSortTest : public ::testing::Test {
 };
 
 TEST_F(OperatorsSortTest, AscendingSortOfOneColumn) {
-  std::shared_ptr<opossum::Table> test_result = opossum::loadTable("src/test/int_float.tbl", 2);
+  std::shared_ptr<opossum::Table> test_result = opossum::loadTable("src/test/tables/int_float_sorted.tbl", 2);
 
   auto sort = std::make_shared<opossum::Sort>(_gt, "a");
   sort->execute();
@@ -39,7 +39,7 @@ TEST_F(OperatorsSortTest, AscendingSortOfOneColumn) {
 }
 
 TEST_F(OperatorsSortTest, DoubleSortOfOneColumn) {
-  std::shared_ptr<opossum::Table> test_result = opossum::loadTable("src/test/int_float.tbl", 2);
+  std::shared_ptr<opossum::Table> test_result = opossum::loadTable("src/test/tables/int_float_sorted.tbl", 2);
 
   auto sort1 = std::make_shared<opossum::Sort>(_gt, "a", false);
   sort1->execute();
@@ -51,7 +51,7 @@ TEST_F(OperatorsSortTest, DoubleSortOfOneColumn) {
 }
 
 TEST_F(OperatorsSortTest, DescendingSortOfOneColumn) {
-  std::shared_ptr<opossum::Table> test_result = opossum::loadTable("src/test/int_float_reverse.tbl", 2);
+  std::shared_ptr<opossum::Table> test_result = opossum::loadTable("src/test/tables/int_float_reverse.tbl", 2);
 
   auto sort = std::make_shared<opossum::Sort>(_gt, "a", false);
   sort->execute();
@@ -60,11 +60,11 @@ TEST_F(OperatorsSortTest, DescendingSortOfOneColumn) {
 }
 
 TEST_F(OperatorsSortTest, multiple_column_sort) {
-  std::shared_ptr<opossum::Table> test_table = opossum::loadTable("src/test/int_float2.tbl", 2);
+  std::shared_ptr<opossum::Table> test_table = opossum::loadTable("src/test/tables/int_float2.tbl", 2);
   opossum::StorageManager::get().add_table("test_table_sort_b", std::move(test_table));
   auto gt = std::make_shared<opossum::GetTable>("test_table_sort_b");
 
-  std::shared_ptr<opossum::Table> test_result = opossum::loadTable("src/test/int_float2_sorted.tbl", 2);
+  std::shared_ptr<opossum::Table> test_result = opossum::loadTable("src/test/tables/int_float2_sorted.tbl", 2);
 
   // we want the output to be sorted after column a and in second place after column b.
   // So first we sort after column b and then after column a.

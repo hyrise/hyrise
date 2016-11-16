@@ -18,7 +18,7 @@ namespace opossum {
 
 class OperatorsProjectionTest : public ::testing::Test {
   virtual void SetUp() {
-    _test_table = opossum::loadTable("src/test/int_float.tbl", 2);
+    _test_table = opossum::loadTable("src/test/tables/int_float.tbl", 2);
     opossum::StorageManager::get().add_table("table_a", std::move(_test_table));
     _gt = std::make_shared<opossum::GetTable>("table_a");
   }
@@ -31,7 +31,7 @@ class OperatorsProjectionTest : public ::testing::Test {
 };
 
 TEST_F(OperatorsProjectionTest, SingleColumn) {
-  std::shared_ptr<opossum::Table> test_result = opossum::loadTable("src/test/int.tbl", 1);
+  std::shared_ptr<opossum::Table> test_result = opossum::loadTable("src/test/tables/int.tbl", 1);
 
   std::vector<std::string> column_filter = {"a"};
   auto projection = std::make_shared<opossum::Projection>(_gt, column_filter);
@@ -41,7 +41,7 @@ TEST_F(OperatorsProjectionTest, SingleColumn) {
 }
 
 TEST_F(OperatorsProjectionTest, DoubleProject) {
-  std::shared_ptr<opossum::Table> test_result = opossum::loadTable("src/test/int.tbl", 3);
+  std::shared_ptr<opossum::Table> test_result = opossum::loadTable("src/test/tables/int.tbl", 3);
 
   std::vector<std::string> column_filter = {"a"};
   auto projection1 = std::make_shared<opossum::Projection>(_gt, column_filter);
@@ -54,7 +54,7 @@ TEST_F(OperatorsProjectionTest, DoubleProject) {
 }
 
 TEST_F(OperatorsProjectionTest, AllColumns) {
-  std::shared_ptr<opossum::Table> test_result = opossum::loadTable("src/test/int_float.tbl", 2);
+  std::shared_ptr<opossum::Table> test_result = opossum::loadTable("src/test/tables/int_float.tbl", 2);
 
   std::vector<std::string> column_filter = {"a", "b"};
   auto projection = std::make_shared<opossum::Projection>(_gt, column_filter);
