@@ -34,10 +34,12 @@ class OperatorsPrintTest : public ::testing::Test {
 // class used to make protected methods visible without
 // modifying the base class with testing code.
 class PrintWrapper : public opossum::Print {
+  std::shared_ptr<const opossum::Table> tab;
+
  public:
-  explicit PrintWrapper(const std::shared_ptr<AbstractOperator> in) : opossum::Print(in) {}
-  std::vector<uint16_t> test_column_string_widths(uint16_t min, uint16_t max, std::shared_ptr<opossum::Table> t) {
-    return column_string_widths(min, max, t);
+  explicit PrintWrapper(const std::shared_ptr<AbstractOperator> in) : opossum::Print(in), tab(in->get_output()) {}
+  std::vector<uint16_t> test_column_string_widths(uint16_t min, uint16_t max) {
+    return column_string_widths(min, max, tab);
   }
 };
 
@@ -95,7 +97,7 @@ TEST_F(OperatorsPrintTest, GetColumnWidths) {
   auto tab = opossum::StorageManager::get().get_table(table_name);
 
   auto pr_wrap = std::make_shared<PrintWrapper>(gt);
-  auto print_lengths = pr_wrap->test_column_string_widths(min, max, tab);
+  auto print_lengths = pr_wrap->test_column_string_widths(min, max);
 
   // we have two columns, thus two 'lengths'
   ASSERT_EQ(print_lengths.size(), static_cast<size_t>(2));
@@ -107,7 +109,28 @@ TEST_F(OperatorsPrintTest, GetColumnWidths) {
 
   tab->append({ten_digits_ints, "quite a long string with more than $max chars"});
 
-  print_lengths = pr_wrap->test_column_string_widths(min, max, tab);
+  print_lengths = pr_wrap->test_column_string_widths(min, max);
   EXPECT_EQ(print_lengths.at(0), static_cast<size_t>(10));
   EXPECT_EQ(print_lengths.at(1), static_cast<size_t>(max));
+}
+
+TEST_F(OperatorsPrintTest, EmptyTableWidths) {
+  uint16_t min = 8;
+  uint16_t max = 20;
+
+  auto t2 = std::make_shared<opossum::Table>(opossum::Table(chunk_size));
+  t2->add_column("col_1", "int");
+  t2->add_column("col_2", "string");
+  opossum::StorageManager::get().add_table("empty_table", t2);
+
+  auto get_empty_table = std::make_shared<opossum::GetTable>("empty_table");
+
+  auto pr_wrap = std::make_shared<PrintWrapper>(get_empty_table);
+  auto print_lengths = pr_wrap->test_column_string_widths(min, max);
+
+  // we have two columns, thus two 'lengths'
+  ASSERT_EQ(print_lengths.size(), static_cast<size_t>(2));
+  // with empty columns and short col names, we should see the minimal lengths
+  EXPECT_EQ(print_lengths.at(0), static_cast<size_t>(min));
+  EXPECT_EQ(print_lengths.at(1), static_cast<size_t>(min));
 }
