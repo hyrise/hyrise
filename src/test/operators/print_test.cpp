@@ -113,24 +113,3 @@ TEST_F(OperatorsPrintTest, GetColumnWidths) {
   EXPECT_EQ(print_lengths.at(0), static_cast<size_t>(10));
   EXPECT_EQ(print_lengths.at(1), static_cast<size_t>(max));
 }
-
-TEST_F(OperatorsPrintTest, EmptyTableWidths) {
-  uint16_t min = 8;
-  uint16_t max = 20;
-
-  auto t2 = std::make_shared<opossum::Table>(opossum::Table(chunk_size));
-  t2->add_column("col_1", "int");
-  t2->add_column("col_2", "string");
-  opossum::StorageManager::get().add_table("empty_table", t2);
-
-  auto get_empty_table = std::make_shared<opossum::GetTable>("empty_table");
-
-  auto pr_wrap = std::make_shared<PrintWrapper>(get_empty_table);
-  auto print_lengths = pr_wrap->test_column_string_widths(min, max);
-
-  // we have two columns, thus two 'lengths'
-  ASSERT_EQ(print_lengths.size(), static_cast<size_t>(2));
-  // with empty columns and short col names, we should see the minimal lengths
-  EXPECT_EQ(print_lengths.at(0), static_cast<size_t>(min));
-  EXPECT_EQ(print_lengths.at(1), static_cast<size_t>(min));
-}
