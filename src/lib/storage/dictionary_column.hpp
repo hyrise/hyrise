@@ -60,15 +60,7 @@ class DictionaryColumn : public BaseColumn {
   std::shared_ptr<const BaseAttributeVector> attribute_vector() const { return _attribute_vector; }
 
   // return the value represented by a given ValueID
-  template <typename Q = T>
-  typename std::enable_if<std::is_trivially_copyable<Q>::value, T>::type value_by_value_id(ValueID value_id) const {
-    return _dictionary.at(value_id);
-  }
-  template <typename Q = T>
-  typename std::enable_if<!std::is_trivially_copyable<Q>::value, const T&>::type value_by_value_id(
-      ValueID value_id) const {
-    return _dictionary.at(value_id);
-  }
+  const T& value_by_value_id(ValueID value_id) const { return _dictionary.at(value_id); }
 
   // returns the first value ID that refers to a value >= the search value
   // returns INVALID_VALUE_ID if all values are smaller than the search value
