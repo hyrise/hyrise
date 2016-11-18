@@ -10,7 +10,6 @@
 #include "types.hpp"
 
 namespace opossum {
-class Print;
 // A table is partitioned horizontally into a number of chunks
 class Table {
  public:
@@ -71,8 +70,6 @@ class Table {
 
   // enforces dictionary compression on a certain chunk
   void compress_chunk(ChunkID chunk_id);
-
-  friend class Print;
 
  protected:
   // 0 means that the chunk has an unlimited size.
