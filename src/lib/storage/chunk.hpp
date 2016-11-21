@@ -8,7 +8,6 @@
 #include "value_column.hpp"
 
 namespace opossum {
-class Print;
 // A chunk is a horizontal partition of a table.
 // It stores the data column by column.
 class Chunk {
@@ -39,8 +38,6 @@ class Chunk {
 
   // returns the column at a given position
   std::shared_ptr<BaseColumn> get_column(size_t column_id) const;
-
-  friend class Print;
 
  protected:
   std::vector<std::shared_ptr<BaseColumn>> _columns;

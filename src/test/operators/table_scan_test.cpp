@@ -31,6 +31,7 @@ class OperatorsTableScanTest : public ::testing::Test {
     test_table_dict->compress_chunk(0);
     test_table_dict->compress_chunk(1);
     opossum::StorageManager::get().add_table("table_dict", std::move(test_table_dict));
+
     _gt_dict = std::make_shared<opossum::GetTable>("table_dict");
   }
 
