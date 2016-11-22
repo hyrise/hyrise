@@ -1,29 +1,32 @@
 #include <memory>
 
+#include "../base_test.hpp"
 #include "gtest/gtest.h"
 
-#include "../../lib/common.hpp"
-#include "../../lib/storage/base_column.hpp"
-#include "../../lib/storage/chunk.hpp"
-#include "../../lib/types.hpp"
+#include "../lib/common.hpp"
+#include "../lib/storage/base_column.hpp"
+#include "../lib/storage/chunk.hpp"
+#include "../lib/types.hpp"
 
-class StorageChunkTest : public ::testing::Test {
+namespace opossum {
+
+class StorageChunkTest : public BaseTest {
  protected:
   virtual void SetUp() {
-    vc_int = opossum::make_shared_by_column_type<opossum::BaseColumn, opossum::ValueColumn>("int");
+    vc_int = make_shared_by_column_type<BaseColumn, ValueColumn>("int");
     vc_int->append(4);
     vc_int->append(6);
     vc_int->append(3);
 
-    vc_str = opossum::make_shared_by_column_type<opossum::BaseColumn, opossum::ValueColumn>("string");
+    vc_str = make_shared_by_column_type<BaseColumn, ValueColumn>("string");
     vc_str->append("Hello,");
     vc_str->append("world");
     vc_str->append("!");
   }
 
-  opossum::Chunk c;
-  std::shared_ptr<opossum::BaseColumn> vc_int = nullptr;
-  std::shared_ptr<opossum::BaseColumn> vc_str = nullptr;
+  Chunk c;
+  std::shared_ptr<BaseColumn> vc_int = nullptr;
+  std::shared_ptr<BaseColumn> vc_str = nullptr;
 };
 
 TEST_F(StorageChunkTest, AddColumnToChunk) {
@@ -58,9 +61,9 @@ TEST_F(StorageChunkTest, RetrieveColumn) {
 TEST_F(StorageChunkTest, UnknownColumnType) {
   // Exception will only be thrown in debug builds
   if (IS_DEBUG) {
-    auto wrapper = []() {
-      opossum::make_shared_by_column_type<opossum::BaseColumn, opossum::ValueColumn>("weird_type");
-    };
+    auto wrapper = []() { make_shared_by_column_type<BaseColumn, ValueColumn>("weird_type"); };
     EXPECT_THROW(wrapper(), std::runtime_error);
   }
 }
+
+}  // namespace opossum

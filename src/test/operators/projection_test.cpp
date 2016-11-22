@@ -3,6 +3,7 @@
 #include <utility>
 #include <vector>
 
+#include "../base_test.hpp"
 #include "gtest/gtest.h"
 
 #include "../../lib/operators/abstract_operator.hpp"
@@ -16,47 +17,47 @@
 
 namespace opossum {
 
-class OperatorsProjectionTest : public ::testing::Test {
+class OperatorsProjectionTest : public BaseTest {
   virtual void SetUp() {
-    std::shared_ptr<opossum::Table> test_table = opossum::loadTable("src/test/tables/int_float.tbl", 2);
-    opossum::StorageManager::get().add_table("table_a", std::move(test_table));
-    _gt = std::make_shared<opossum::GetTable>("table_a");
+    std::shared_ptr<Table> test_table = loadTable("src/test/tables/int_float.tbl", 2);
+    StorageManager::get().add_table("table_a", std::move(test_table));
+    _gt = std::make_shared<GetTable>("table_a");
   }
 
-  virtual void TearDown() { opossum::StorageManager::get().drop_table("table_a"); }
+  virtual void TearDown() { StorageManager::get().drop_table("table_a"); }
 
  public:
-  std::shared_ptr<opossum::GetTable> _gt;
+  std::shared_ptr<GetTable> _gt;
 };
 
 TEST_F(OperatorsProjectionTest, SingleColumn) {
-  std::shared_ptr<opossum::Table> expected_result = opossum::loadTable("src/test/tables/int.tbl", 1);
+  std::shared_ptr<Table> expected_result = loadTable("src/test/tables/int.tbl", 1);
 
   std::vector<std::string> column_filter = {"a"};
-  auto projection = std::make_shared<opossum::Projection>(_gt, column_filter);
+  auto projection = std::make_shared<Projection>(_gt, column_filter);
   projection->execute();
 
   EXPECT_TRUE(tablesEqual(*(projection->get_output()), *expected_result));
 }
 
 TEST_F(OperatorsProjectionTest, DoubleProject) {
-  std::shared_ptr<opossum::Table> expected_result = opossum::loadTable("src/test/tables/int.tbl", 3);
+  std::shared_ptr<Table> expected_result = loadTable("src/test/tables/int.tbl", 3);
 
   std::vector<std::string> column_filter = {"a"};
-  auto projection1 = std::make_shared<opossum::Projection>(_gt, column_filter);
+  auto projection1 = std::make_shared<Projection>(_gt, column_filter);
   projection1->execute();
 
-  auto projection2 = std::make_shared<opossum::Projection>(projection1, column_filter);
+  auto projection2 = std::make_shared<Projection>(projection1, column_filter);
   projection2->execute();
 
   EXPECT_TRUE(tablesEqual(*(projection2->get_output()), *expected_result));
 }
 
 TEST_F(OperatorsProjectionTest, AllColumns) {
-  std::shared_ptr<opossum::Table> expected_result = opossum::loadTable("src/test/tables/int_float.tbl", 2);
+  std::shared_ptr<Table> expected_result = loadTable("src/test/tables/int_float.tbl", 2);
 
   std::vector<std::string> column_filter = {"a", "b"};
-  auto projection = std::make_shared<opossum::Projection>(_gt, column_filter);
+  auto projection = std::make_shared<Projection>(_gt, column_filter);
   projection->execute();
 
   EXPECT_TRUE(tablesEqual(*(projection->get_output()), *expected_result));

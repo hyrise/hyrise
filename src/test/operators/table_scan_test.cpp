@@ -5,6 +5,7 @@
 #include <string>
 #include <utility>
 
+#include "../base_test.hpp"
 #include "gtest/gtest.h"
 
 #include "../../lib/operators/abstract_operator.hpp"
@@ -18,55 +19,55 @@
 
 namespace opossum {
 
-class OperatorsTableScanTest : public ::testing::Test {
+class OperatorsTableScanTest : public BaseTest {
   virtual void SetUp() {
-    std::shared_ptr<opossum::Table> test_table = opossum::loadTable("src/test/tables/int_float.tbl", 2);
-    opossum::StorageManager::get().add_table("table_a", std::move(test_table));
-    _gt = std::make_shared<opossum::GetTable>("table_a");
+    std::shared_ptr<Table> test_table = loadTable("src/test/tables/int_float.tbl", 2);
+    StorageManager::get().add_table("table_a", std::move(test_table));
+    _gt = std::make_shared<GetTable>("table_a");
 
-    std::shared_ptr<opossum::Table> test_table_dict = std::make_shared<opossum::Table>(5);
+    std::shared_ptr<Table> test_table_dict = std::make_shared<Table>(5);
     test_table_dict->add_column("a", "int");
     test_table_dict->add_column("b", "int");
     for (int i = 0; i <= 24; i += 2) test_table_dict->append({i, 100 + i});
     test_table_dict->compress_chunk(0);
     test_table_dict->compress_chunk(1);
-    opossum::StorageManager::get().add_table("table_dict", std::move(test_table_dict));
+    StorageManager::get().add_table("table_dict", std::move(test_table_dict));
 
-    _gt_dict = std::make_shared<opossum::GetTable>("table_dict");
+    _gt_dict = std::make_shared<GetTable>("table_dict");
   }
 
   virtual void TearDown() {
-    opossum::StorageManager::get().drop_table("table_a");
-    opossum::StorageManager::get().drop_table("table_dict");
+    StorageManager::get().drop_table("table_a");
+    StorageManager::get().drop_table("table_dict");
   }
 
  public:
-  std::shared_ptr<opossum::GetTable> _gt, _gt_dict;
+  std::shared_ptr<GetTable> _gt, _gt_dict;
 };
 
 TEST_F(OperatorsTableScanTest, DoubleScan) {
-  std::shared_ptr<opossum::Table> expected_result = opossum::loadTable("src/test/tables/int_float_filtered.tbl", 2);
+  std::shared_ptr<Table> expected_result = loadTable("src/test/tables/int_float_filtered.tbl", 2);
 
-  auto scan_1 = std::make_shared<opossum::TableScan>(_gt, "a", ">=", 1234);
+  auto scan_1 = std::make_shared<TableScan>(_gt, "a", ">=", 1234);
   scan_1->execute();
 
-  auto scan_2 = std::make_shared<opossum::TableScan>(scan_1, "b", "<", 457.9);
+  auto scan_2 = std::make_shared<TableScan>(scan_1, "b", "<", 457.9);
   scan_2->execute();
 
   EXPECT_TRUE(tablesEqual(*(scan_2->get_output()), *expected_result));
 }
 
 TEST_F(OperatorsTableScanTest, SingleScanReturnsCorrectRowCount) {
-  std::shared_ptr<opossum::Table> expected_result = opossum::loadTable("src/test/tables/int_float_filtered2.tbl", 1);
+  std::shared_ptr<Table> expected_result = loadTable("src/test/tables/int_float_filtered2.tbl", 1);
 
-  auto scan = std::make_shared<opossum::TableScan>(_gt, "a", ">=", 1234);
+  auto scan = std::make_shared<TableScan>(_gt, "a", ">=", 1234);
   scan->execute();
 
   EXPECT_TRUE(tablesEqual(*(scan->get_output()), *expected_result));
 }
 
 TEST_F(OperatorsTableScanTest, UnknownOperatorThrowsException) {
-  EXPECT_THROW(std::make_shared<opossum::TableScan>(_gt, "a", "?!?", 1234), std::runtime_error);
+  EXPECT_THROW(std::make_shared<TableScan>(_gt, "a", "?!?", 1234), std::runtime_error);
 }
 
 TEST_F(OperatorsTableScanTest, ScanOnDictColumn) {
@@ -81,7 +82,7 @@ TEST_F(OperatorsTableScanTest, ScanOnDictColumn) {
   tests[">="] = {104, 106, 108, 110, 112, 114, 116, 118, 120, 122, 124};
   tests["BETWEEN"] = {104, 106, 108};
   for (const auto& test : tests) {
-    auto scan = std::make_shared<opossum::TableScan>(_gt_dict, "a", test.first, 4, optional<AllTypeVariant>(9));
+    auto scan = std::make_shared<TableScan>(_gt_dict, "a", test.first, 4, optional<AllTypeVariant>(9));
     scan->execute();
 
     auto expected_copy = test.second;
@@ -107,10 +108,10 @@ TEST_F(OperatorsTableScanTest, ScanOnReferencedDictColumn) {
   tests[">="] = {104, 106};
   tests["BETWEEN"] = {104, 106};
   for (const auto& test : tests) {
-    auto scan1 = std::make_shared<opossum::TableScan>(_gt_dict, "b", "<", 108);
+    auto scan1 = std::make_shared<TableScan>(_gt_dict, "b", "<", 108);
     scan1->execute();
 
-    auto scan2 = std::make_shared<opossum::TableScan>(scan1, "a", test.first, 4, opossum::optional<AllTypeVariant>(9));
+    auto scan2 = std::make_shared<TableScan>(scan1, "a", test.first, 4, optional<AllTypeVariant>(9));
     scan2->execute();
 
     auto expected_copy = test.second;
