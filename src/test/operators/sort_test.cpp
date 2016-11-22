@@ -12,7 +12,6 @@
 #include "../../lib/storage/storage_manager.hpp"
 #include "../../lib/storage/table.hpp"
 #include "../../lib/types.hpp"
-#include "../common.hpp"
 
 namespace opossum {
 
