@@ -12,8 +12,10 @@
 
 namespace opossum {
 
-std::vector<std::vector<opossum::AllTypeVariant>> tableToMatrix(const opossum::Table &t) {
-  std::vector<std::vector<opossum::AllTypeVariant>> matrix;
+using Matrix = std::vector<std::vector<opossum::AllTypeVariant>>;
+
+Matrix tableToMatrix(const opossum::Table &t) {
+  Matrix matrix;
 
   // initialize matrix with table sizes
   matrix.resize(t.row_count(), std::vector<opossum::AllTypeVariant>(t.col_count()));
@@ -26,8 +28,8 @@ std::vector<std::vector<opossum::AllTypeVariant>> tableToMatrix(const opossum::T
     for (size_t col_id = 0; col_id < t.col_count(); ++col_id) {
       std::shared_ptr<opossum::BaseColumn> column = chunk.get_column(col_id);
 
-      for (size_t row = 0; row < chunk.size(); ++row) {
-        matrix[row_offset + row][col_id] = (*column)[row];
+      for (ChunkOffset chunk_offset = 0; chunk_offset < chunk.size(); ++chunk_offset) {
+        matrix[row_offset + chunk_offset][col_id] = (*column)[chunk_offset];
       }
     }
     row_offset += chunk.size();
@@ -40,7 +42,7 @@ void printMatrix(const std::vector<std::vector<opossum::AllTypeVariant>> &m) {
   std::cout << "-------------" << std::endl;
   for (unsigned row = 0; row < m.size(); row++) {
     for (unsigned col = 0; col < m[row].size(); col++) {
-      std::cout << m[row][col] << " ";
+      std::cout << std::setw(8) << m[row][col] << " ";
     }
     std::cout << std::endl;
   }
@@ -49,8 +51,8 @@ void printMatrix(const std::vector<std::vector<opossum::AllTypeVariant>> &m) {
 
 ::testing::AssertionResult tablesEqual(const opossum::Table &tleft, const opossum::Table &tright,
                                        bool order_sensitive) {
-  std::vector<std::vector<opossum::AllTypeVariant>> left = tableToMatrix(tleft);
-  std::vector<std::vector<opossum::AllTypeVariant>> right = tableToMatrix(tright);
+  Matrix left = tableToMatrix(tleft);
+  Matrix right = tableToMatrix(tright);
   // compare schema of tables
   //  - column count
   if (tleft.col_count() != tright.col_count()) {
@@ -106,9 +108,7 @@ std::shared_ptr<opossum::Table> loadTable(std::string file_name, size_t chunk_si
   std::shared_ptr<opossum::Table> test_table = std::make_shared<opossum::Table>(opossum::Table(chunk_size));
 
   std::ifstream infile(file_name);
-
   std::string line;
-  std::vector<opossum::AllTypeVariant> token;
 
   std::getline(infile, line);
   std::vector<std::string> col_names = split<std::string>(line, '|');
@@ -120,7 +120,7 @@ std::shared_ptr<opossum::Table> loadTable(std::string file_name, size_t chunk_si
   }
 
   while (std::getline(infile, line)) {
-    token = split<opossum::AllTypeVariant>(line, '|');
+    std::vector<opossum::AllTypeVariant> token = split<opossum::AllTypeVariant>(line, '|');
     test_table->append(token);
   }
   return test_table;
