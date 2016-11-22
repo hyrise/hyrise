@@ -34,7 +34,7 @@ class Chunk {
   size_t size() const;
 
   // adds a new row, given as a list of values, to the chunk
-  void append(std::vector<AllTypeVariant> values);
+  void append(std::initializer_list<AllTypeVariant> values);
 
   // returns the column at a given position
   std::shared_ptr<BaseColumn> get_column(size_t column_id) const;
