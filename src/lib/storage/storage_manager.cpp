@@ -40,6 +40,6 @@ void StorageManager::print(std::ostream &out) const {
   }
 }
 
-void StorageManager::reset() { get() = std::move(StorageManager()); }
+void StorageManager::reset() { get() = StorageManager(); }
 
 }  // namespace opossum
