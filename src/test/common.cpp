@@ -12,21 +12,21 @@
 
 namespace opossum {
 
-using Matrix = std::vector<std::vector<opossum::AllTypeVariant>>;
+using Matrix = std::vector<std::vector<AllTypeVariant>>;
 
-Matrix tableToMatrix(const opossum::Table &t) {
+Matrix tableToMatrix(const Table &t) {
   Matrix matrix;
 
   // initialize matrix with table sizes
-  matrix.resize(t.row_count(), std::vector<opossum::AllTypeVariant>(t.col_count()));
+  matrix.resize(t.row_count(), std::vector<AllTypeVariant>(t.col_count()));
 
   // set values
   unsigned row_offset = 0;
-  for (opossum::ChunkID chunk_id = 0; chunk_id < t.chunk_count(); chunk_id++) {
-    const opossum::Chunk &chunk = t.get_chunk(chunk_id);
+  for (ChunkID chunk_id = 0; chunk_id < t.chunk_count(); chunk_id++) {
+    const Chunk &chunk = t.get_chunk(chunk_id);
 
     for (size_t col_id = 0; col_id < t.col_count(); ++col_id) {
-      std::shared_ptr<opossum::BaseColumn> column = chunk.get_column(col_id);
+      std::shared_ptr<BaseColumn> column = chunk.get_column(col_id);
 
       for (ChunkOffset chunk_offset = 0; chunk_offset < chunk.size(); ++chunk_offset) {
         matrix[row_offset + chunk_offset][col_id] = (*column)[chunk_offset];
@@ -38,7 +38,7 @@ Matrix tableToMatrix(const opossum::Table &t) {
   return matrix;
 }
 
-void printMatrix(const std::vector<std::vector<opossum::AllTypeVariant>> &m) {
+void printMatrix(const std::vector<std::vector<AllTypeVariant>> &m) {
   std::cout << "-------------" << std::endl;
   for (unsigned row = 0; row < m.size(); row++) {
     for (unsigned col = 0; col < m[row].size(); col++) {
@@ -49,8 +49,7 @@ void printMatrix(const std::vector<std::vector<opossum::AllTypeVariant>> &m) {
   std::cout << "-------------" << std::endl;
 }
 
-::testing::AssertionResult tablesEqual(const opossum::Table &tleft, const opossum::Table &tright,
-                                       bool order_sensitive) {
+::testing::AssertionResult tablesEqual(const Table &tleft, const Table &tright, bool order_sensitive) {
   Matrix left = tableToMatrix(tleft);
   Matrix right = tableToMatrix(tright);
   // compare schema of tables
@@ -104,8 +103,8 @@ std::vector<T> split(std::string str, char delimiter) {
   return internal;
 }
 
-std::shared_ptr<opossum::Table> loadTable(std::string file_name, size_t chunk_size) {
-  std::shared_ptr<opossum::Table> test_table = std::make_shared<opossum::Table>(opossum::Table(chunk_size));
+std::shared_ptr<Table> loadTable(std::string file_name, size_t chunk_size) {
+  std::shared_ptr<Table> test_table = std::make_shared<Table>(Table(chunk_size));
 
   std::ifstream infile(file_name);
   std::string line;
@@ -120,7 +119,7 @@ std::shared_ptr<opossum::Table> loadTable(std::string file_name, size_t chunk_si
   }
 
   while (std::getline(infile, line)) {
-    std::vector<opossum::AllTypeVariant> token = split<opossum::AllTypeVariant>(line, '|');
+    std::vector<AllTypeVariant> token = split<AllTypeVariant>(line, '|');
     test_table->append(token);
   }
   return test_table;
