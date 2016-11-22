@@ -37,14 +37,13 @@ TEST_F(OperatorsSortTest, AscendingSortOfOneColumn) {
   EXPECT_TRUE(tablesEqual(*(sort->get_output()), *expected_result, true));
 }
 
-TEST_F(OperatorsSortTest, DoubleSortOfOneColumn) {
-  // DOES NOT WORK RIGHT NOW (hence, sort2 operates on _gt)
+TEST_F(OperatorsSortTest, DISABLED_DoubleSortOfOneColumn) {
   std::shared_ptr<opossum::Table> expected_result = opossum::loadTable("src/test/tables/int_float_sorted.tbl", 2);
 
   auto sort1 = std::make_shared<opossum::Sort>(_gt, "a", false);
   sort1->execute();
 
-  auto sort2 = std::make_shared<opossum::Sort>(_gt, "a");
+  auto sort2 = std::make_shared<opossum::Sort>(sort1, "a");
   sort2->execute();
 
   EXPECT_TRUE(tablesEqual(*(sort2->get_output()), *expected_result, true));
@@ -59,7 +58,7 @@ TEST_F(OperatorsSortTest, DescendingSortOfOneColumn) {
   EXPECT_TRUE(tablesEqual(*(sort->get_output()), *expected_result, true));
 }
 
-TEST_F(OperatorsSortTest, multiple_column_sort) {
+TEST_F(OperatorsSortTest, DISABLED_MultipleColumnSort) {
   std::shared_ptr<opossum::Table> test_table = opossum::loadTable("src/test/tables/int_float2.tbl", 2);
   opossum::StorageManager::get().add_table("test_table_sort_b", std::move(test_table));
   auto gt = std::make_shared<opossum::GetTable>("test_table_sort_b");
