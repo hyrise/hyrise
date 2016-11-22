@@ -2,6 +2,7 @@
 #include <string>
 #include <vector>
 
+#include "../base_test.hpp"
 #include "gtest/gtest.h"
 
 #include "../../lib/operators/get_table.hpp"
@@ -9,15 +10,17 @@
 #include "../../lib/storage/storage_manager.hpp"
 #include "../../lib/storage/table.hpp"
 
-class OperatorsPrintTest : public ::testing::Test {
+namespace opossum {
+
+class OperatorsPrintTest : public BaseTest {
  protected:
   virtual void SetUp() {
-    t = std::make_shared<opossum::Table>(opossum::Table(chunk_size));
+    t = std::make_shared<Table>(Table(chunk_size));
     t->add_column("col_1", "int");
     t->add_column("col_2", "string");
-    opossum::StorageManager::get().add_table(table_name, t);
+    StorageManager::get().add_table(table_name, t);
 
-    gt = std::make_shared<opossum::GetTable>(table_name);
+    gt = std::make_shared<GetTable>(table_name);
     gt->execute();
   }
 
@@ -27,24 +30,24 @@ class OperatorsPrintTest : public ::testing::Test {
 
   uint32_t chunk_size = 10;
 
-  std::shared_ptr<opossum::GetTable>(gt);
-  std::shared_ptr<opossum::Table> t = nullptr;
+  std::shared_ptr<GetTable>(gt);
+  std::shared_ptr<Table> t = nullptr;
 };
 
 // class used to make protected methods visible without
 // modifying the base class with testing code.
-class PrintWrapper : public opossum::Print {
-  std::shared_ptr<const opossum::Table> tab;
+class PrintWrapper : public Print {
+  std::shared_ptr<const Table> tab;
 
  public:
-  explicit PrintWrapper(const std::shared_ptr<AbstractOperator> in) : opossum::Print(in), tab(in->get_output()) {}
+  explicit PrintWrapper(const std::shared_ptr<AbstractOperator> in) : Print(in), tab(in->get_output()) {}
   std::vector<uint16_t> test_column_string_widths(uint16_t min, uint16_t max) {
     return column_string_widths(min, max, tab);
   }
 };
 
 TEST_F(OperatorsPrintTest, EmptyTable) {
-  auto pr = std::make_shared<opossum::Print>(gt, output);
+  auto pr = std::make_shared<Print>(gt, output);
   pr->execute();
 
   // check if table is correctly passed
@@ -62,13 +65,13 @@ TEST_F(OperatorsPrintTest, EmptyTable) {
 }
 
 TEST_F(OperatorsPrintTest, FilledTable) {
-  auto tab = opossum::StorageManager::get().get_table(table_name);
+  auto tab = StorageManager::get().get_table(table_name);
   for (size_t i = 0; i < chunk_size * 2; i++) {
     // char 97 is an 'a'
     tab->append({static_cast<int>(i % chunk_size), std::string(1, 97 + static_cast<int>(i / chunk_size))});
   }
 
-  auto pr = std::make_shared<opossum::Print>(gt, output);
+  auto pr = std::make_shared<Print>(gt, output);
   pr->execute();
 
   // check if table is correctly passed
@@ -94,7 +97,7 @@ TEST_F(OperatorsPrintTest, GetColumnWidths) {
   uint16_t min = 8;
   uint16_t max = 20;
 
-  auto tab = opossum::StorageManager::get().get_table(table_name);
+  auto tab = StorageManager::get().get_table(table_name);
 
   auto pr_wrap = std::make_shared<PrintWrapper>(gt);
   auto print_lengths = pr_wrap->test_column_string_widths(min, max);
@@ -113,3 +116,5 @@ TEST_F(OperatorsPrintTest, GetColumnWidths) {
   EXPECT_EQ(print_lengths.at(0), static_cast<size_t>(10));
   EXPECT_EQ(print_lengths.at(1), static_cast<size_t>(max));
 }
+
+}  // namespace opossum

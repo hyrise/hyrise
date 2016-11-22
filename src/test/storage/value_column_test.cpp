@@ -1,15 +1,18 @@
 #include <string>
 #include <vector>
 
+#include "../base_test.hpp"
 #include "gtest/gtest.h"
 
-#include "../../lib/storage/value_column.hpp"
+#include "../lib/storage/value_column.hpp"
 
-class StorageValueColumnTest : public ::testing::Test {
+namespace opossum {
+
+class StorageValueColumnTest : public BaseTest {
  protected:
-  opossum::ValueColumn<int> vc_int;
-  opossum::ValueColumn<std::string> vc_str;
-  opossum::ValueColumn<double> vc_double;
+  ValueColumn<int> vc_int;
+  ValueColumn<std::string> vc_str;
+  ValueColumn<double> vc_double;
 };
 
 TEST_F(StorageValueColumnTest, GetSize) {
@@ -53,3 +56,5 @@ TEST_F(StorageValueColumnTest, RetrieveValue) {
   vc_double.append(3.14);
   EXPECT_EQ(vc_double.values()[0], 3.14);
 }
+
+}  // namespace opossum

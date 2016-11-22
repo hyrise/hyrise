@@ -2,6 +2,7 @@
 #include <memory>
 #include <utility>
 
+#include "../base_test.hpp"
 #include "gtest/gtest.h"
 
 #include "../../lib/operators/abstract_operator.hpp"
@@ -13,9 +14,9 @@
 
 namespace opossum {
 
-class OperatorsSortTest : public ::testing::Test {
+class OperatorsSortTest : public BaseTest {
   virtual void SetUp() {
-    _test_table = std::make_shared<opossum::Table>(opossum::Table(2));
+    _test_table = std::make_shared<Table>(Table(2));
 
     _test_table->add_column("a", "int");
     _test_table->add_column("b", "float");
@@ -24,16 +25,16 @@ class OperatorsSortTest : public ::testing::Test {
     _test_table->append({123, 456.7f});
     _test_table->append({1234, 457.7f});
 
-    opossum::StorageManager::get().add_table("table_a", std::move(_test_table));
+    StorageManager::get().add_table("table_a", std::move(_test_table));
 
-    _gt = std::make_shared<opossum::GetTable>("table_a");
+    _gt = std::make_shared<GetTable>("table_a");
   }
 
-  virtual void TearDown() { opossum::StorageManager::get().drop_table("table_a"); }
+  virtual void TearDown() { StorageManager::get().drop_table("table_a"); }
 
  public:
-  std::shared_ptr<opossum::Table> _test_table;
-  std::shared_ptr<opossum::GetTable> _gt;
+  std::shared_ptr<Table> _test_table;
+  std::shared_ptr<GetTable> _gt;
 };
 
 TEST_F(OperatorsSortTest, AscendingSortOfOneColumn) {
@@ -67,7 +68,7 @@ TEST_F(OperatorsSortTest, DescendingSortOfOneColumn) {
 }
 
 TEST_F(OperatorsSortTest, multiple_column_sort) {
-  auto test_table_b = std::make_shared<opossum::Table>(opossum::Table(2));
+  auto test_table_b = std::make_shared<Table>(Table(2));
 
   test_table_b->add_column("a", "int");
   test_table_b->add_column("b", "float");
@@ -76,7 +77,7 @@ TEST_F(OperatorsSortTest, multiple_column_sort) {
   test_table_b->append({12345, 457.7f});
   test_table_b->append({123, 458.7f});
 
-  opossum::StorageManager::get().add_table("test_table_sort_b", std::move(test_table_b));
+  StorageManager::get().add_table("test_table_sort_b", std::move(test_table_b));
 
   auto gt = std::make_shared<GetTable>("test_table_sort_b");
 

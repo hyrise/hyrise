@@ -3,6 +3,7 @@
 #include <utility>
 #include <vector>
 
+#include "../base_test.hpp"
 #include "gtest/gtest.h"
 
 #include "../../lib/operators/abstract_operator.hpp"
@@ -14,9 +15,9 @@
 #include "../../lib/types.hpp"
 
 namespace opossum {
-class OperatorsProjectionTest : public ::testing::Test {
+class OperatorsProjectionTest : public BaseTest {
   virtual void SetUp() {
-    test_table = std::make_shared<Table>(opossum::Table(2));
+    test_table = std::make_shared<Table>(Table(2));
 
     test_table->add_column("a", "int");
     test_table->add_column("b", "float");
@@ -25,16 +26,16 @@ class OperatorsProjectionTest : public ::testing::Test {
     test_table->append({1234, 457.7f});
     test_table->append({12345, 458.7f});
 
-    opossum::StorageManager::get().add_table("table_a", std::move(test_table));
+    StorageManager::get().add_table("table_a", std::move(test_table));
 
     gt = std::make_shared<GetTable>("table_a");
   }
 
-  virtual void TearDown() { opossum::StorageManager::get().drop_table("table_a"); }
+  virtual void TearDown() { StorageManager::get().drop_table("table_a"); }
 
  public:
-  std::shared_ptr<opossum::Table> test_table;
-  std::shared_ptr<opossum::GetTable> gt;
+  std::shared_ptr<Table> test_table;
+  std::shared_ptr<GetTable> gt;
 };
 
 TEST_F(OperatorsProjectionTest, SingleColumn) {
