@@ -9,6 +9,8 @@
 #include "../../lib/storage/storage_manager.hpp"
 #include "../../lib/storage/table.hpp"
 
+namespace opossum {
+
 class OperatorsPrintTest : public ::testing::Test {
  protected:
   virtual void SetUp() {
@@ -113,3 +115,5 @@ TEST_F(OperatorsPrintTest, GetColumnWidths) {
   EXPECT_EQ(print_lengths.at(0), static_cast<size_t>(10));
   EXPECT_EQ(print_lengths.at(1), static_cast<size_t>(max));
 }
+
+}  // namespace opossum
