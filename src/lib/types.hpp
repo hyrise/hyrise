@@ -30,9 +30,9 @@ using PosList = std::vector<RowID>;
 // This holds all possible data types. The left side of the pairs are the names, the right side are prototypes
 // ("examples").
 // These examples are later used with decltype() in the template magic below.
-static auto column_types =
-    hana::make_tuple(hana::make_pair("int", 123), hana::make_pair("long", 123456789l), hana::make_pair("float", 123.4f),
-                     hana::make_pair("double", 123.4), hana::make_pair("string", std::string("hi")));
+static auto column_types = hana::make_tuple(
+    hana::make_pair("int", (int32_t)123), hana::make_pair("long", (int64_t)123456789l),
+    hana::make_pair("float", 123.4f), hana::make_pair("double", 123.4), hana::make_pair("string", std::string("hi")));
 
 // convert tuple of all types to sequence by first extracting the prototypes only and then applying decltype_
 static auto types_as_hana_sequence = hana::transform(hana::transform(column_types, hana::second), hana::decltype_);
