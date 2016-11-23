@@ -13,8 +13,6 @@ namespace opossum {
 using Matrix = std::vector<std::vector<AllTypeVariant>>;
 
 class BaseTest : public ::testing::Test {
-  virtual void TearDown();
-
   // helper functions for tablesEqual
   static Matrix tableToMatrix(const Table &t);
   static void printMatrix(const std::vector<std::vector<AllTypeVariant>> &m);
@@ -30,6 +28,9 @@ class BaseTest : public ::testing::Test {
 
   // creates a opossum table based from a file
   static std::shared_ptr<Table> loadTable(std::string file_name, size_t chunk_size);
+
+ public:
+  virtual ~BaseTest();
 };
 
 }  // namespace opossum

@@ -61,6 +61,7 @@ TEST_F(OperatorsSortTest, DescendingSortOfOneColumn) {
 TEST_F(OperatorsSortTest, DISABLED_MultipleColumnSort) {
   std::shared_ptr<Table> test_table = loadTable("src/test/tables/int_float2.tbl", 2);
   StorageManager::get().add_table("test_table_sort_b", std::move(test_table));
+
   auto gt = std::make_shared<GetTable>("test_table_sort_b");
 
   std::shared_ptr<Table> expected_result = loadTable("src/test/tables/int_float2_sorted.tbl", 2);

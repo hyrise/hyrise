@@ -11,8 +11,6 @@
 
 namespace opossum {
 
-void BaseTest::TearDown() { StorageManager::reset(); }
-
 Matrix BaseTest::tableToMatrix(const Table &t) {
   Matrix matrix;
 
@@ -123,5 +121,7 @@ std::shared_ptr<Table> BaseTest::loadTable(std::string file_name, size_t chunk_s
   }
   return test_table;
 }
+
+BaseTest::~BaseTest() { StorageManager::reset(); }
 
 }  // namespace opossum
