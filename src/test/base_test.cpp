@@ -4,6 +4,8 @@
 
 namespace opossum {
 
-void BaseTest::TearDown() { StorageManager::reset(); }
+BaseTest::~BaseTest() {
+  StorageManager::reset();
+}
 
 }  // namespace opossum

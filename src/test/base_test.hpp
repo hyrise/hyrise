@@ -5,7 +5,8 @@
 namespace opossum {
 
 class BaseTest : public ::testing::Test {
-  virtual void TearDown();
+ public:
+  virtual ~BaseTest();
 };
 
 }  // namespace opossum
