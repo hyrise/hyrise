@@ -113,7 +113,11 @@ TEST_F(OperatorsTableScanTest, ScanOnReferencedDictColumn) {
     auto scan1 = std::make_shared<TableScan>(_gt_dict, "b", "<", 108);
     scan1->execute();
 
+<<<<<<< Updated upstream
     auto scan2 = std::make_shared<TableScan>(scan1, "a", test.first, 4, optional<AllTypeVariant>(9));
+=======
+    auto scan2 = std::make_shared<opossum::TableScan>(scan1, "a", test.first, 4, opossum::optional<AllTypeVariant>(9));
+>>>>>>> Stashed changes
     scan2->execute();
 
     auto expected_copy = test.second;
