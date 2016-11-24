@@ -14,7 +14,7 @@ namespace opossum {
 
 class OperatorsPrintTest : public BaseTest {
  protected:
-  virtual void SetUp() {
+  void SetUp() override {
     t = std::make_shared<Table>(Table(chunk_size));
     t->add_column("col_1", "int");
     t->add_column("col_2", "string");

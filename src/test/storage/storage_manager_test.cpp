@@ -10,19 +10,13 @@ namespace opossum {
 
 class StorageStorageManagerTest : public BaseTest {
  protected:
-  virtual void SetUp() {
+  void SetUp() override {
     auto &sm = StorageManager::get();
     auto t1 = std::make_shared<Table>();
     auto t2 = std::make_shared<Table>(4);
 
     sm.add_table("first_table", t1);
     sm.add_table("second_table", t2);
-  }
-
-  virtual void TearDown() {
-    auto &sm = StorageManager::get();
-    if (sm.table_exists("first_table")) sm.drop_table("first_table");
-    if (sm.table_exists("second_table")) sm.drop_table("second_table");
   }
 };
 

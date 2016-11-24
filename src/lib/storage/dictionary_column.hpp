@@ -48,10 +48,10 @@ class DictionaryColumn : public BaseColumn {
   }
 
   // return the value at a certain position. If you want to write efficient operators, back off!
-  virtual const AllTypeVariant operator[](const size_t i) const { return _dictionary[_attribute_vector->get(i)]; }
+  const AllTypeVariant operator[](const size_t i) const override { return _dictionary[_attribute_vector->get(i)]; }
 
   // dictionary columns are immutable
-  virtual void append(const AllTypeVariant&) { throw std::logic_error("DictionaryColumn is immutable"); }
+  void append(const AllTypeVariant&) override { throw std::logic_error("DictionaryColumn is immutable"); }
 
   // returns an underlying dictionary
   std::shared_ptr<const std::vector<T>> dictionary() const { return std::make_shared<std::vector<T>>(_dictionary); }
@@ -82,10 +82,10 @@ class DictionaryColumn : public BaseColumn {
   size_t unique_values_count() const { return _dictionary.size(); }
 
   // return the number of entries
-  virtual size_t size() const { return _attribute_vector->size(); }
+  size_t size() const override { return _attribute_vector->size(); }
 
   // visitor pattern, see base_column.hpp
-  virtual void visit(ColumnVisitable& visitable, std::shared_ptr<ColumnVisitableContext> context = nullptr) {
+  void visit(ColumnVisitable& visitable, std::shared_ptr<ColumnVisitableContext> context = nullptr) override {
     visitable.handle_dictionary_column(*this, std::move(context));
   }
 

@@ -28,18 +28,18 @@ class ReferenceColumn : public BaseColumn {
   ReferenceColumn(const std::shared_ptr<const Table> referenced_table, const size_t referenced_column_id,
                   const std::shared_ptr<const PosList> pos);
 
-  virtual const AllTypeVariant operator[](const size_t i) const;
+  const AllTypeVariant operator[](const size_t i) const override;
 
-  virtual void append(const AllTypeVariant &);
+  void append(const AllTypeVariant &) override;
 
-  virtual size_t size() const { return _pos_list->size(); }
+  size_t size() const override { return _pos_list->size(); }
 
   const std::shared_ptr<const PosList> pos_list() const;
   const std::shared_ptr<const Table> referenced_table() const;
   size_t referenced_column_id() const;
 
   // visitor pattern, see base_column.hpp
-  virtual void visit(ColumnVisitable &visitable, std::shared_ptr<ColumnVisitableContext> context = nullptr);
+  void visit(ColumnVisitable &visitable, std::shared_ptr<ColumnVisitableContext> context = nullptr) override;
 };
 
 }  // namespace opossum

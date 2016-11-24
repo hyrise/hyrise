@@ -12,7 +12,7 @@ namespace opossum {
 
 class StorageChunkTest : public BaseTest {
  protected:
-  virtual void SetUp() {
+  void SetUp() override {
     vc_int = make_shared_by_column_type<BaseColumn, ValueColumn>("int");
     vc_int->append(4);
     vc_int->append(6);

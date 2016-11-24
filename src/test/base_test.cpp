@@ -4,8 +4,6 @@
 
 namespace opossum {
 
-BaseTest::~BaseTest() {
-  StorageManager::reset();
-}
+BaseTest::~BaseTest() { StorageManager::reset(); }
 
 }  // namespace opossum

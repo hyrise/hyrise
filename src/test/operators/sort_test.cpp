@@ -15,7 +15,7 @@
 namespace opossum {
 
 class OperatorsSortTest : public BaseTest {
-  virtual void SetUp() {
+  void SetUp() override {
     _test_table = std::make_shared<Table>(Table(2));
 
     _test_table->add_column("a", "int");
@@ -29,8 +29,6 @@ class OperatorsSortTest : public BaseTest {
 
     _gt = std::make_shared<GetTable>("table_a");
   }
-
-  virtual void TearDown() { StorageManager::get().drop_table("table_a"); }
 
  public:
   std::shared_ptr<Table> _test_table;
