@@ -9,11 +9,11 @@
 namespace opossum {
 // The fixture for testing class GetTable.
 class OperatorsGetTableTest : public ::testing::Test {
-  virtual void SetUp() {
+  void SetUp() override {
     test_table = std::make_shared<opossum::Table>(opossum::Table(2));
     opossum::StorageManager::get().add_table("aNiceTestTable", test_table);
   }
-  virtual void TearDown() { opossum::StorageManager::get().drop_table("aNiceTestTable"); }
+  void TearDown() override { opossum::StorageManager::get().drop_table("aNiceTestTable"); }
 
  public:
   std::shared_ptr<opossum::Table> test_table;

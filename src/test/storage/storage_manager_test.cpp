@@ -7,7 +7,7 @@
 
 class StorageStorageManagerTest : public ::testing::Test {
  protected:
-  virtual void SetUp() {
+  void SetUp() override {
     auto &sm = opossum::StorageManager::get();
     auto t1 = std::make_shared<opossum::Table>();
     auto t2 = std::make_shared<opossum::Table>(4);
@@ -16,7 +16,7 @@ class StorageStorageManagerTest : public ::testing::Test {
     sm.add_table("second_table", t2);
   }
 
-  virtual void TearDown() {
+  void TearDown() override {
     auto &sm = opossum::StorageManager::get();
     if (sm.table_exists("first_table")) sm.drop_table("first_table");
     if (sm.table_exists("second_table")) sm.drop_table("second_table");

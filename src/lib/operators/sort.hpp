@@ -18,13 +18,13 @@ class Sort : public AbstractOperator {
  public:
   Sort(const std::shared_ptr<const AbstractOperator> in, const std::string &sort_column_name,
        const bool ascending = true);
-  virtual void execute();
-  virtual std::shared_ptr<const Table> get_output() const;
+  void execute() override;
+  std::shared_ptr<const Table> get_output() const override;
 
  protected:
-  virtual const std::string name() const;
-  virtual uint8_t num_in_tables() const;
-  virtual uint8_t num_out_tables() const;
+  const std::string name() const override;
+  uint8_t num_in_tables() const override;
+  uint8_t num_out_tables() const override;
 
   template <typename T>
   class SortImpl;
@@ -60,7 +60,7 @@ class Sort::SortImpl : public AbstractOperatorImpl {
     }
   }
 
-  virtual void execute() {
+  void execute() override {
     // We sort by copying all values and their RowIds into _row_id_value_vector which is then sorted by
     // sort_with_operator. Afterwards, we extract the RowIds and write them to the position list shared by all of our
     // ReferenceColumns
@@ -127,7 +127,7 @@ class Sort::SortImpl : public AbstractOperatorImpl {
                      [comp](std::pair<RowID, T> a, std::pair<RowID, T> b) { return comp(a.second, b.second); });
   }
 
-  virtual std::shared_ptr<Table> get_output() const { return _output; }
+  std::shared_ptr<Table> get_output() const override { return _output; }
 
   const std::shared_ptr<const Table> _in_table;
 

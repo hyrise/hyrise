@@ -15,7 +15,7 @@
 
 namespace opossum {
 class OperatorsProjectionTest : public ::testing::Test {
-  virtual void SetUp() {
+  void SetUp() override {
     test_table = std::make_shared<Table>(opossum::Table(2));
 
     test_table->add_column("a", "int");
@@ -30,7 +30,7 @@ class OperatorsProjectionTest : public ::testing::Test {
     gt = std::make_shared<GetTable>("table_a");
   }
 
-  virtual void TearDown() { opossum::StorageManager::get().drop_table("table_a"); }
+  void TearDown() override { opossum::StorageManager::get().drop_table("table_a"); }
 
  public:
   std::shared_ptr<opossum::Table> test_table;

@@ -18,7 +18,7 @@
 namespace opossum {
 
 class OperatorsTableScanTest : public ::testing::Test {
-  virtual void SetUp() {
+  void SetUp() override {
     _test_table = std::make_shared<opossum::Table>(opossum::Table(2));
     _test_table->add_column("a", "int");
     _test_table->add_column("b", "float");
@@ -38,7 +38,7 @@ class OperatorsTableScanTest : public ::testing::Test {
     _gt_dict = std::make_shared<opossum::GetTable>("table_dict");
   }
 
-  virtual void TearDown() { opossum::StorageManager::get().drop_table("table_a"); }
+  void TearDown() override { opossum::StorageManager::get().drop_table("table_a"); }
 
  public:
   std::shared_ptr<opossum::Table> _test_table, _test_table_dict;

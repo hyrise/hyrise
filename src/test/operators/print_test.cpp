@@ -11,7 +11,7 @@
 
 class OperatorsPrintTest : public ::testing::Test {
  protected:
-  virtual void SetUp() {
+  void SetUp() override {
     t = std::make_shared<opossum::Table>(opossum::Table(chunk_size));
     t->add_column("col_1", "int");
     t->add_column("col_2", "string");

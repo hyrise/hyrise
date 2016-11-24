@@ -26,12 +26,12 @@ class TableScan : public AbstractOperator {
  public:
   TableScan(const std::shared_ptr<AbstractOperator> in, const std::string &filter_column_name, const std::string &op,
             const AllTypeVariant value, const optional<AllTypeVariant> value2 = nullopt);
-  virtual void execute();
-  virtual std::shared_ptr<const Table> get_output() const;
+  void execute() override;
+  std::shared_ptr<const Table> get_output() const override;
 
-  virtual const std::string name() const;
-  virtual uint8_t num_in_tables() const;
-  virtual uint8_t num_out_tables() const;
+  const std::string name() const override;
+  uint8_t num_in_tables() const override;
+  uint8_t num_out_tables() const override;
 
  protected:
   template <typename T>
@@ -116,7 +116,7 @@ class TableScan::TableScanImpl : public AbstractOperatorImpl, public ColumnVisit
     std::shared_ptr<std::vector<ChunkOffset>> chunk_offsets_in;
   };
 
-  void execute() {
+  void execute() override {
     for (ChunkID chunk_id = 0; chunk_id < _in_table->chunk_count(); ++chunk_id) {
       const Chunk &chunk_in = _in_table->get_chunk(chunk_id);
       Chunk chunk_out;
@@ -177,7 +177,7 @@ class TableScan::TableScanImpl : public AbstractOperatorImpl, public ColumnVisit
     }
   }
 
-  virtual void handle_value_column(BaseColumn &base_column, std::shared_ptr<ColumnVisitableContext> base_context) {
+  void handle_value_column(BaseColumn &base_column, std::shared_ptr<ColumnVisitableContext> base_context) override {
     auto context = std::static_pointer_cast<ScanContext>(base_context);
     const auto &column = static_cast<ValueColumn<T> &>(base_column);
     const auto &values = column.values();
@@ -203,7 +203,7 @@ class TableScan::TableScanImpl : public AbstractOperatorImpl, public ColumnVisit
     }
   }
 
-  virtual void handle_reference_column(ReferenceColumn &column, std::shared_ptr<ColumnVisitableContext> base_context) {
+  void handle_reference_column(ReferenceColumn &column, std::shared_ptr<ColumnVisitableContext> base_context) override {
     auto context = std::static_pointer_cast<ScanContext>(base_context);
     const auto referenced_table = column.referenced_table();
 
@@ -233,7 +233,8 @@ class TableScan::TableScanImpl : public AbstractOperatorImpl, public ColumnVisit
     }
   }
 
-  virtual void handle_dictionary_column(BaseColumn &base_column, std::shared_ptr<ColumnVisitableContext> base_context) {
+  void handle_dictionary_column(BaseColumn &base_column,
+                                std::shared_ptr<ColumnVisitableContext> base_context) override {
     /*
     ValueID x;
     T A;
@@ -310,7 +311,7 @@ class TableScan::TableScanImpl : public AbstractOperatorImpl, public ColumnVisit
     }
   }
 
-  virtual std::shared_ptr<Table> get_output() const { return _output; }
+  std::shared_ptr<Table> get_output() const override { return _output; }
 
   const std::shared_ptr<const Table> _in_table;
 

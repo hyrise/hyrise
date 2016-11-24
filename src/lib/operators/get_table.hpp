@@ -11,12 +11,12 @@ namespace opossum {
 class GetTable : public AbstractOperator {
  public:
   explicit GetTable(const std::string &name);
-  virtual void execute();
-  virtual std::shared_ptr<const Table> get_output() const;
+  void execute() override;
+  std::shared_ptr<const Table> get_output() const override;
 
-  virtual const std::string name() const;
-  virtual uint8_t num_in_tables() const;
-  virtual uint8_t num_out_tables() const;
+  const std::string name() const override;
+  uint8_t num_in_tables() const override;
+  uint8_t num_out_tables() const override;
 
  protected:
   // name of the table to retrieve
