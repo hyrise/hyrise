@@ -39,4 +39,7 @@ void StorageManager::print(std::ostream &out) const {
     cnt++;
   }
 }
+
+void StorageManager::reset() { get() = StorageManager(); }
+
 }  // namespace opossum

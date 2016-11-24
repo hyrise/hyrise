@@ -2,17 +2,20 @@
 #include <string>
 #include <utility>
 
+#include "../base_test.hpp"
 #include "gtest/gtest.h"
 
-#include "../../lib/storage/base_column.hpp"
-#include "../../lib/storage/dictionary_column.hpp"
-#include "../../lib/storage/value_column.hpp"
+#include "../lib/storage/base_column.hpp"
+#include "../lib/storage/dictionary_column.hpp"
+#include "../lib/storage/value_column.hpp"
 
-class StorageDictionaryColumnTest : public ::testing::Test {
+namespace opossum {
+
+class StorageDictionaryColumnTest : public BaseTest {
  protected:
-  std::shared_ptr<opossum::ValueColumn<int>> vc_int = std::make_shared<opossum::ValueColumn<int>>();
-  std::shared_ptr<opossum::ValueColumn<std::string>> vc_str = std::make_shared<opossum::ValueColumn<std::string>>();
-  std::shared_ptr<opossum::ValueColumn<double>> vc_double = std::make_shared<opossum::ValueColumn<double>>();
+  std::shared_ptr<ValueColumn<int>> vc_int = std::make_shared<ValueColumn<int>>();
+  std::shared_ptr<ValueColumn<std::string>> vc_str = std::make_shared<ValueColumn<std::string>>();
+  std::shared_ptr<ValueColumn<double>> vc_double = std::make_shared<ValueColumn<double>>();
 };
 
 TEST_F(StorageDictionaryColumnTest, CompressColumnInt) {
@@ -23,8 +26,8 @@ TEST_F(StorageDictionaryColumnTest, CompressColumnInt) {
   vc_int->append(5);
   vc_int->append(3);
 
-  auto col = opossum::make_shared_by_column_type<opossum::BaseColumn, opossum::DictionaryColumn>("int", vc_int);
-  auto dict_col = std::dynamic_pointer_cast<opossum::DictionaryColumn<int>>(col);
+  auto col = make_shared_by_column_type<BaseColumn, DictionaryColumn>("int", vc_int);
+  auto dict_col = std::dynamic_pointer_cast<DictionaryColumn<int>>(col);
 
   // Test attribute_vector size
   EXPECT_EQ(dict_col->size(), 6u);
@@ -47,8 +50,8 @@ TEST_F(StorageDictionaryColumnTest, CompressColumnString) {
   vc_str->append("Hasso");
   vc_str->append("Bill");
 
-  auto col = opossum::make_shared_by_column_type<opossum::BaseColumn, opossum::DictionaryColumn>("string", vc_str);
-  auto dict_col = std::dynamic_pointer_cast<opossum::DictionaryColumn<std::string>>(col);
+  auto col = make_shared_by_column_type<BaseColumn, DictionaryColumn>("string", vc_str);
+  auto dict_col = std::dynamic_pointer_cast<DictionaryColumn<std::string>>(col);
 
   // Test attribute_vector size
   EXPECT_EQ(dict_col->size(), 6u);
@@ -72,8 +75,8 @@ TEST_F(StorageDictionaryColumnTest, CompressColumnDouble) {
   vc_double->append(0.9);
   vc_double->append(1.1);
 
-  auto col = opossum::make_shared_by_column_type<opossum::BaseColumn, opossum::DictionaryColumn>("double", vc_double);
-  auto dict_col = std::dynamic_pointer_cast<opossum::DictionaryColumn<double>>(col);
+  auto col = make_shared_by_column_type<BaseColumn, DictionaryColumn>("double", vc_double);
+  auto dict_col = std::dynamic_pointer_cast<DictionaryColumn<double>>(col);
 
   // Test attribute_vector size
   EXPECT_EQ(dict_col->size(), 6u);
@@ -90,17 +93,17 @@ TEST_F(StorageDictionaryColumnTest, CompressColumnDouble) {
 
 TEST_F(StorageDictionaryColumnTest, LowerUpperBound) {
   for (int i = 0; i <= 10; i += 2) vc_int->append(i);
-  auto col = opossum::make_shared_by_column_type<opossum::BaseColumn, opossum::DictionaryColumn>("int", vc_int);
-  auto dict_col = std::dynamic_pointer_cast<opossum::DictionaryColumn<int>>(col);
+  auto col = make_shared_by_column_type<BaseColumn, DictionaryColumn>("int", vc_int);
+  auto dict_col = std::dynamic_pointer_cast<DictionaryColumn<int>>(col);
 
-  EXPECT_EQ(dict_col->lower_bound(4), (opossum::ValueID)2);
-  EXPECT_EQ(dict_col->upper_bound(4), (opossum::ValueID)3);
+  EXPECT_EQ(dict_col->lower_bound(4), (ValueID)2);
+  EXPECT_EQ(dict_col->upper_bound(4), (ValueID)3);
 
-  EXPECT_EQ(dict_col->lower_bound(5), (opossum::ValueID)3);
-  EXPECT_EQ(dict_col->upper_bound(5), (opossum::ValueID)3);
+  EXPECT_EQ(dict_col->lower_bound(5), (ValueID)3);
+  EXPECT_EQ(dict_col->upper_bound(5), (ValueID)3);
 
-  EXPECT_EQ(dict_col->lower_bound(15), opossum::INVALID_VALUE_ID);
-  EXPECT_EQ(dict_col->upper_bound(15), opossum::INVALID_VALUE_ID);
+  EXPECT_EQ(dict_col->lower_bound(15), INVALID_VALUE_ID);
+  EXPECT_EQ(dict_col->upper_bound(15), INVALID_VALUE_ID);
 }
 
 TEST_F(StorageDictionaryColumnTest, FittedAttributeVectorSize) {
@@ -108,12 +111,12 @@ TEST_F(StorageDictionaryColumnTest, FittedAttributeVectorSize) {
   vc_int->append(1);
   vc_int->append(2);
 
-  auto col = opossum::make_shared_by_column_type<opossum::BaseColumn, opossum::DictionaryColumn>("int", vc_int);
-  auto dict_col = std::dynamic_pointer_cast<opossum::DictionaryColumn<int>>(col);
+  auto col = make_shared_by_column_type<BaseColumn, DictionaryColumn>("int", vc_int);
+  auto dict_col = std::dynamic_pointer_cast<DictionaryColumn<int>>(col);
   auto attribute_vector_uint8_t =
-      std::dynamic_pointer_cast<const opossum::FittedAttributeVector<uint8_t>>(dict_col->attribute_vector());
+      std::dynamic_pointer_cast<const FittedAttributeVector<uint8_t>>(dict_col->attribute_vector());
   auto attribute_vector_uint16_t =
-      std::dynamic_pointer_cast<const opossum::FittedAttributeVector<uint16_t>>(dict_col->attribute_vector());
+      std::dynamic_pointer_cast<const FittedAttributeVector<uint16_t>>(dict_col->attribute_vector());
 
   EXPECT_NE(attribute_vector_uint8_t, nullptr);
   EXPECT_EQ(attribute_vector_uint16_t, nullptr);
@@ -122,13 +125,15 @@ TEST_F(StorageDictionaryColumnTest, FittedAttributeVectorSize) {
     vc_int->append(i);
   }
 
-  col = opossum::make_shared_by_column_type<opossum::BaseColumn, opossum::DictionaryColumn>("int", vc_int);
-  dict_col = std::dynamic_pointer_cast<opossum::DictionaryColumn<int>>(col);
+  col = make_shared_by_column_type<BaseColumn, DictionaryColumn>("int", vc_int);
+  dict_col = std::dynamic_pointer_cast<DictionaryColumn<int>>(col);
   attribute_vector_uint8_t =
-      std::dynamic_pointer_cast<const opossum::FittedAttributeVector<uint8_t>>(dict_col->attribute_vector());
+      std::dynamic_pointer_cast<const FittedAttributeVector<uint8_t>>(dict_col->attribute_vector());
   attribute_vector_uint16_t =
-      std::dynamic_pointer_cast<const opossum::FittedAttributeVector<uint16_t>>(dict_col->attribute_vector());
+      std::dynamic_pointer_cast<const FittedAttributeVector<uint16_t>>(dict_col->attribute_vector());
 
   EXPECT_EQ(attribute_vector_uint8_t, nullptr);
   EXPECT_NE(attribute_vector_uint16_t, nullptr);
 }
+
+}  // namespace opossum

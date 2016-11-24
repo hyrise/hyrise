@@ -1,9 +1,10 @@
 #include <gtest/gtest.h>
+#include "base_test.hpp"
 
 namespace opossum {
 
 // The fixture for testing class Foo.
-class OpossumTestTemplate : public ::testing::Test {
+class OpossumTestTemplate : public BaseTest {
  protected:
   // You can remove any or all of the following functions if its body
   // is empty.

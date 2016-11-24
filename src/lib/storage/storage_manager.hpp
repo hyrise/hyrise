@@ -28,13 +28,16 @@ class StorageManager {
   // prints the table on the given stream
   void print(std::ostream &out = std::cout) const;
 
+  // deletes the entire StorageManager and creates a new one, used especially in tests
+  static void reset();
+
   StorageManager(StorageManager const &) = delete;
   StorageManager &operator=(const StorageManager &) = delete;
   StorageManager(StorageManager &&) = delete;
-  StorageManager &operator=(StorageManager &&) = default;
 
  protected:
   StorageManager() {}
+  StorageManager &operator=(StorageManager &&) = default;
 
   std::map<std::string, std::shared_ptr<Table>> _tables;
 };

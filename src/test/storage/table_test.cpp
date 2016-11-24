@@ -1,18 +1,21 @@
 #include <string>
 
+#include "../base_test.hpp"
 #include "gtest/gtest.h"
 
-#include "../../lib/storage/dictionary_column.hpp"
-#include "../../lib/storage/table.hpp"
+#include "../lib/storage/dictionary_column.hpp"
+#include "../lib/storage/table.hpp"
 
-class StorageTableTest : public ::testing::Test {
+namespace opossum {
+
+class StorageTableTest : public BaseTest {
  protected:
   void SetUp() override {
     t.add_column("col_1", "int");
     t.add_column("col_2", "string");
   }
 
-  opossum::Table t{2};
+  Table t{2};
 };
 
 TEST_F(StorageTableTest, ChunkCount) {
@@ -24,7 +27,7 @@ TEST_F(StorageTableTest, ChunkCount) {
 }
 
 TEST_F(StorageTableTest, ChunkCompression) {
-  opossum::Table t2{6, true};
+  Table t2{6, true};
   t2.add_column("col_1", "int");
   t2.add_column("col_2", "string");
   t2.append({4, "Bill"});
@@ -41,8 +44,8 @@ TEST_F(StorageTableTest, ChunkCompression) {
   EXPECT_EQ(t2.get_chunk(0).get_column(1)->size(), 6u);
 
   // Test dictionary size
-  auto col_1 = std::dynamic_pointer_cast<opossum::DictionaryColumn<int>>(t2.get_chunk(0).get_column(0));
-  auto col_2 = std::dynamic_pointer_cast<opossum::DictionaryColumn<std::string>>(t2.get_chunk(0).get_column(1));
+  auto col_1 = std::dynamic_pointer_cast<DictionaryColumn<int>>(t2.get_chunk(0).get_column(0));
+  auto col_2 = std::dynamic_pointer_cast<DictionaryColumn<std::string>>(t2.get_chunk(0).get_column(1));
 
   // Test if ValueColumn has been transformed to DictionaryColumn
   EXPECT_NE(col_1, nullptr);
@@ -89,3 +92,5 @@ TEST_F(StorageTableTest, GetColumnIdByName) {
 }
 
 TEST_F(StorageTableTest, GetChunkSize) { EXPECT_EQ(t.chunk_size(), 2u); }
+
+}  // namespace opossum
