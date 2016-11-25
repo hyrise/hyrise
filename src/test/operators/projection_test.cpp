@@ -17,15 +17,13 @@
 namespace opossum {
 
 class OperatorsProjectionTest : public BaseTest {
-  virtual void SetUp() {
+ protected:
+  void SetUp() override {
     std::shared_ptr<Table> test_table = loadTable("src/test/tables/int_float.tbl", 2);
     StorageManager::get().add_table("table_a", std::move(test_table));
     _gt = std::make_shared<GetTable>("table_a");
   }
 
-  virtual void TearDown() { StorageManager::get().drop_table("table_a"); }
-
- public:
   std::shared_ptr<GetTable> _gt;
 };
 
@@ -36,7 +34,7 @@ TEST_F(OperatorsProjectionTest, SingleColumn) {
   auto projection = std::make_shared<Projection>(_gt, column_filter);
   projection->execute();
 
-  EXPECT_TRUE(tablesEqual(*(projection->get_output()), *expected_result));
+  EXPECT_TABLE_EQ(*(projection->get_output()), *expected_result);
 }
 
 TEST_F(OperatorsProjectionTest, DoubleProject) {
@@ -49,7 +47,7 @@ TEST_F(OperatorsProjectionTest, DoubleProject) {
   auto projection2 = std::make_shared<Projection>(projection1, column_filter);
   projection2->execute();
 
-  EXPECT_TRUE(tablesEqual(*(projection2->get_output()), *expected_result));
+  EXPECT_TABLE_EQ(*(projection2->get_output()), *expected_result);
 }
 
 TEST_F(OperatorsProjectionTest, AllColumns) {
@@ -59,7 +57,7 @@ TEST_F(OperatorsProjectionTest, AllColumns) {
   auto projection = std::make_shared<Projection>(_gt, column_filter);
   projection->execute();
 
-  EXPECT_TRUE(tablesEqual(*(projection->get_output()), *expected_result));
+  EXPECT_TABLE_EQ(*(projection->get_output()), *expected_result);
 }
 
 }  // namespace opossum

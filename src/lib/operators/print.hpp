@@ -11,12 +11,12 @@ namespace opossum {
 class Print : public AbstractOperator {
  public:
   explicit Print(const std::shared_ptr<const AbstractOperator> in, std::ostream& out = std::cout);
-  virtual void execute();
-  virtual std::shared_ptr<const Table> get_output() const;
+  void execute() override;
+  std::shared_ptr<const Table> get_output() const override;
 
-  virtual const std::string name() const;
-  virtual uint8_t num_in_tables() const;
-  virtual uint8_t num_out_tables() const;
+  const std::string name() const override;
+  uint8_t num_in_tables() const override;
+  uint8_t num_out_tables() const override;
 
  protected:
   std::vector<uint16_t> column_string_widths(uint16_t min, uint16_t max, std::shared_ptr<const Table> t) const;

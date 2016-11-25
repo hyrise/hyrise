@@ -49,7 +49,7 @@ coverage:
   stage: coverage
   script:
     - premake4
-    - make -j coverage
+    - make coverage
   artifacts:
     paths:
     - coverage/index.html

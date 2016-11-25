@@ -10,7 +10,7 @@ namespace opossum {
 
 class StorageTableTest : public BaseTest {
  protected:
-  virtual void SetUp() {
+  void SetUp() override {
     t.add_column("col_1", "int");
     t.add_column("col_2", "string");
   }

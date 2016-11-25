@@ -19,7 +19,8 @@
 namespace opossum {
 
 class OperatorsTableScanTest : public BaseTest {
-  virtual void SetUp() {
+ protected:
+  void SetUp() override {
     std::shared_ptr<Table> test_table = loadTable("src/test/tables/int_float.tbl", 2);
     StorageManager::get().add_table("table_a", std::move(test_table));
     _gt = std::make_shared<GetTable>("table_a");
@@ -35,12 +36,6 @@ class OperatorsTableScanTest : public BaseTest {
     _gt_dict = std::make_shared<GetTable>("table_dict");
   }
 
-  virtual void TearDown() {
-    StorageManager::get().drop_table("table_a");
-    StorageManager::get().drop_table("table_dict");
-  }
-
- public:
   std::shared_ptr<GetTable> _gt, _gt_dict;
 };
 
@@ -53,7 +48,7 @@ TEST_F(OperatorsTableScanTest, DoubleScan) {
   auto scan_2 = std::make_shared<TableScan>(scan_1, "b", "<", 457.9);
   scan_2->execute();
 
-  EXPECT_TRUE(tablesEqual(*(scan_2->get_output()), *expected_result));
+  EXPECT_TABLE_EQ(*(scan_2->get_output()), *expected_result);
 }
 
 TEST_F(OperatorsTableScanTest, SingleScanReturnsCorrectRowCount) {
@@ -62,7 +57,7 @@ TEST_F(OperatorsTableScanTest, SingleScanReturnsCorrectRowCount) {
   auto scan = std::make_shared<TableScan>(_gt, "a", ">=", 1234);
   scan->execute();
 
-  EXPECT_TRUE(tablesEqual(*(scan->get_output()), *expected_result));
+  EXPECT_TABLE_EQ(*(scan->get_output()), *expected_result);
 }
 
 TEST_F(OperatorsTableScanTest, UnknownOperatorThrowsException) {
