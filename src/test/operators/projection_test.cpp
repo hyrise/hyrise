@@ -19,7 +19,7 @@ namespace opossum {
 class OperatorsProjectionTest : public BaseTest {
  protected:
   void SetUp() override {
-    std::shared_ptr<Table> test_table = loadTable("src/test/tables/int_float.tbl", 2);
+    std::shared_ptr<Table> test_table = load_table("src/test/tables/int_float.tbl", 2);
     StorageManager::get().add_table("table_a", std::move(test_table));
     _gt = std::make_shared<GetTable>("table_a");
   }
@@ -28,7 +28,7 @@ class OperatorsProjectionTest : public BaseTest {
 };
 
 TEST_F(OperatorsProjectionTest, SingleColumn) {
-  std::shared_ptr<Table> expected_result = loadTable("src/test/tables/int.tbl", 1);
+  std::shared_ptr<Table> expected_result = load_table("src/test/tables/int.tbl", 1);
 
   std::vector<std::string> column_filter = {"a"};
   auto projection = std::make_shared<Projection>(_gt, column_filter);
@@ -38,7 +38,7 @@ TEST_F(OperatorsProjectionTest, SingleColumn) {
 }
 
 TEST_F(OperatorsProjectionTest, DoubleProject) {
-  std::shared_ptr<Table> expected_result = loadTable("src/test/tables/int.tbl", 3);
+  std::shared_ptr<Table> expected_result = load_table("src/test/tables/int.tbl", 3);
 
   std::vector<std::string> column_filter = {"a"};
   auto projection1 = std::make_shared<Projection>(_gt, column_filter);
@@ -51,7 +51,7 @@ TEST_F(OperatorsProjectionTest, DoubleProject) {
 }
 
 TEST_F(OperatorsProjectionTest, AllColumns) {
-  std::shared_ptr<Table> expected_result = loadTable("src/test/tables/int_float.tbl", 2);
+  std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_float.tbl", 2);
 
   std::vector<std::string> column_filter = {"a", "b"};
   auto projection = std::make_shared<Projection>(_gt, column_filter);

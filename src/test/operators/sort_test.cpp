@@ -17,7 +17,7 @@ namespace opossum {
 class OperatorsSortTest : public BaseTest {
  protected:
   void SetUp() override {
-    std::shared_ptr<Table> test_table = loadTable("src/test/tables/int_float.tbl", 2);
+    std::shared_ptr<Table> test_table = load_table("src/test/tables/int_float.tbl", 2);
     StorageManager::get().add_table("table_a", std::move(test_table));
     _gt = std::make_shared<GetTable>("table_a");
   }
@@ -26,7 +26,7 @@ class OperatorsSortTest : public BaseTest {
 };
 
 TEST_F(OperatorsSortTest, AscendingSortOfOneColumn) {
-  std::shared_ptr<Table> expected_result = loadTable("src/test/tables/int_float_sorted.tbl", 2);
+  std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_float_sorted.tbl", 2);
 
   auto sort = std::make_shared<Sort>(_gt, "a");
   sort->execute();
@@ -35,7 +35,7 @@ TEST_F(OperatorsSortTest, AscendingSortOfOneColumn) {
 }
 
 TEST_F(OperatorsSortTest, DISABLED_DoubleSortOfOneColumn) {
-  std::shared_ptr<Table> expected_result = loadTable("src/test/tables/int_float_sorted.tbl", 2);
+  std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_float_sorted.tbl", 2);
 
   auto sort1 = std::make_shared<Sort>(_gt, "a", false);
   sort1->execute();
@@ -47,7 +47,7 @@ TEST_F(OperatorsSortTest, DISABLED_DoubleSortOfOneColumn) {
 }
 
 TEST_F(OperatorsSortTest, DescendingSortOfOneColumn) {
-  std::shared_ptr<Table> expected_result = loadTable("src/test/tables/int_float_reverse.tbl", 2);
+  std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_float_reverse.tbl", 2);
 
   auto sort = std::make_shared<Sort>(_gt, "a", false);
   sort->execute();
@@ -56,12 +56,12 @@ TEST_F(OperatorsSortTest, DescendingSortOfOneColumn) {
 }
 
 TEST_F(OperatorsSortTest, DISABLED_MultipleColumnSort) {
-  std::shared_ptr<Table> test_table = loadTable("src/test/tables/int_float2.tbl", 2);
+  std::shared_ptr<Table> test_table = load_table("src/test/tables/int_float2.tbl", 2);
   StorageManager::get().add_table("test_table_sort_b", std::move(test_table));
 
   auto gt2 = std::make_shared<GetTable>("test_table_sort_b");
 
-  std::shared_ptr<Table> expected_result = loadTable("src/test/tables/int_float2_sorted.tbl", 2);
+  std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_float2_sorted.tbl", 2);
 
   // we want the output to be sorted after column a and in second place after column b.
   // So first we sort after column b and then after column a.

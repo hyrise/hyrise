@@ -12,14 +12,14 @@
 namespace opossum {
 
 void BaseTest::EXPECT_TABLE_EQ(const Table &tleft, const Table &tright, bool order_sensitive) {
-  EXPECT_TRUE(tablesEqual(tleft, tright, order_sensitive));
+  EXPECT_TRUE(_table_equal(tleft, tright, order_sensitive));
 }
 
 void BaseTest::ASSERT_TABLE_EQ(const Table &tleft, const Table &tright, bool order_sensitive) {
-  ASSERT_TRUE(tablesEqual(tleft, tright, order_sensitive));
+  ASSERT_TRUE(_table_equal(tleft, tright, order_sensitive));
 }
 
-Matrix BaseTest::tableToMatrix(const Table &t) {
+Matrix BaseTest::_table_to_matrix(const Table &t) {
   Matrix matrix;
 
   // initialize matrix with table sizes
@@ -43,7 +43,7 @@ Matrix BaseTest::tableToMatrix(const Table &t) {
   return matrix;
 }
 
-void BaseTest::printMatrix(const std::vector<std::vector<AllTypeVariant>> &m) {
+void BaseTest::_print_matrix(const std::vector<std::vector<AllTypeVariant>> &m) {
   std::cout << "-------------" << std::endl;
   for (unsigned row = 0; row < m.size(); row++) {
     for (unsigned col = 0; col < m[row].size(); col++) {
@@ -54,14 +54,14 @@ void BaseTest::printMatrix(const std::vector<std::vector<AllTypeVariant>> &m) {
   std::cout << "-------------" << std::endl;
 }
 
-::testing::AssertionResult BaseTest::tablesEqual(const Table &tleft, const Table &tright, bool order_sensitive) {
-  Matrix left = tableToMatrix(tleft);
-  Matrix right = tableToMatrix(tright);
+::testing::AssertionResult BaseTest::_table_equal(const Table &tleft, const Table &tright, bool order_sensitive) {
+  Matrix left = _table_to_matrix(tleft);
+  Matrix right = _table_to_matrix(tright);
   // compare schema of tables
   //  - column count
   if (tleft.col_count() != tright.col_count()) {
-    printMatrix(left);
-    printMatrix(right);
+    _print_matrix(left);
+    _print_matrix(right);
     return ::testing::AssertionFailure() << "Number of columns is different.";
   }
   //  - column names and types
@@ -75,8 +75,8 @@ void BaseTest::printMatrix(const std::vector<std::vector<AllTypeVariant>> &m) {
   // compare content of tables
   //  - row count for fast failure
   if (tleft.row_count() != tright.row_count()) {
-    printMatrix(left);
-    printMatrix(right);
+    _print_matrix(left);
+    _print_matrix(right);
     return ::testing::AssertionFailure() << "Number of rows is different.";
   }
 
@@ -89,14 +89,14 @@ void BaseTest::printMatrix(const std::vector<std::vector<AllTypeVariant>> &m) {
   if (left == right) {
     return ::testing::AssertionSuccess();
   } else {
-    printMatrix(left);
-    printMatrix(right);
+    _print_matrix(left);
+    _print_matrix(right);
     return ::testing::AssertionFailure() << "Table content is different.";
   }
 }
 
 template <typename T>
-std::vector<T> BaseTest::split(std::string str, char delimiter) {
+std::vector<T> BaseTest::_split(std::string str, char delimiter) {
   std::vector<T> internal;
   std::stringstream ss(str);
   std::string tok;
@@ -108,23 +108,23 @@ std::vector<T> BaseTest::split(std::string str, char delimiter) {
   return internal;
 }
 
-std::shared_ptr<Table> BaseTest::loadTable(std::string file_name, size_t chunk_size) {
+std::shared_ptr<Table> BaseTest::load_table(std::string file_name, size_t chunk_size) {
   std::shared_ptr<Table> test_table = std::make_shared<Table>(Table(chunk_size));
 
   std::ifstream infile(file_name);
   std::string line;
 
   std::getline(infile, line);
-  std::vector<std::string> col_names = split<std::string>(line, '|');
+  std::vector<std::string> col_names = _split<std::string>(line, '|');
   std::getline(infile, line);
-  std::vector<std::string> col_types = split<std::string>(line, '|');
+  std::vector<std::string> col_types = _split<std::string>(line, '|');
 
   for (size_t i = 0; i < col_names.size(); i++) {
     test_table->add_column(col_names[i], col_types[i]);
   }
 
   while (std::getline(infile, line)) {
-    std::vector<AllTypeVariant> token = split<AllTypeVariant>(line, '|');
+    std::vector<AllTypeVariant> token = _split<AllTypeVariant>(line, '|');
     test_table->append(token);
   }
   return test_table;
