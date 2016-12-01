@@ -83,10 +83,10 @@ TEST_F(OperatorsTableScanTest, ScanOnDictColumn) {
     for (ChunkID chunk_id = 0; chunk_id < scan->get_output()->chunk_count(); ++chunk_id) {
       auto& chunk = scan->get_output()->get_chunk(chunk_id);
       for (ChunkOffset chunk_offset = 0; chunk_offset < chunk.size(); ++chunk_offset) {
-        EXPECT_EQ(expected_copy.erase(type_cast<int>((*chunk.get_column(1))[chunk_offset])), (size_t)1);
+        EXPECT_EQ(expected_copy.erase(type_cast<int>((*chunk.get_column(1))[chunk_offset])), 1ull);
       }
     }
-    EXPECT_EQ(expected_copy.size(), (size_t)0);
+    EXPECT_EQ(expected_copy.size(), 0ull);
   }
 }
 
@@ -112,7 +112,7 @@ TEST_F(OperatorsTableScanTest, ScanOnReferencedDictColumn) {
     for (ChunkID chunk_id = 0; chunk_id < scan2->get_output()->chunk_count(); ++chunk_id) {
       auto& chunk = scan2->get_output()->get_chunk(chunk_id);
       for (ChunkOffset chunk_offset = 0; chunk_offset < chunk.size(); ++chunk_offset) {
-        EXPECT_EQ(expected_copy.erase(type_cast<int>((*chunk.get_column(1))[chunk_offset])), (size_t)1);
+        EXPECT_EQ(expected_copy.erase(type_cast<int>((*chunk.get_column(1))[chunk_offset])), 1ull);
       }
     }
     EXPECT_EQ(expected_copy.size(), (size_t)0);
