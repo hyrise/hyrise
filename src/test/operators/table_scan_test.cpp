@@ -19,53 +19,45 @@
 namespace opossum {
 
 class OperatorsTableScanTest : public BaseTest {
+ protected:
   void SetUp() override {
-    _test_table = std::make_shared<Table>(Table(2));
-    _test_table->add_column("a", "int");
-    _test_table->add_column("b", "float");
-    _test_table->append({123, 456.7f});
-    _test_table->append({1234, 457.7f});
-    _test_table->append({12345, 458.7f});
-    StorageManager::get().add_table("table_a", std::move(_test_table));
+    std::shared_ptr<Table> test_table = load_table("src/test/tables/int_float.tbl", 2);
+    StorageManager::get().add_table("table_a", std::move(test_table));
     _gt = std::make_shared<GetTable>("table_a");
 
-    _test_table_dict = std::make_shared<Table>(5);
-    _test_table_dict->add_column("a", "int");
-    _test_table_dict->add_column("b", "int");
-    for (int i = 0; i <= 24; i += 2) _test_table_dict->append({i, 100 + i});
-    _test_table_dict->compress_chunk(0);
-    _test_table_dict->compress_chunk(1);
-    StorageManager::get().add_table("table_dict", std::move(_test_table_dict));
+    std::shared_ptr<Table> test_table_dict = std::make_shared<Table>(5);
+    test_table_dict->add_column("a", "int");
+    test_table_dict->add_column("b", "int");
+    for (int i = 0; i <= 24; i += 2) test_table_dict->append({i, 100 + i});
+    test_table_dict->compress_chunk(0);
+    test_table_dict->compress_chunk(1);
+    StorageManager::get().add_table("table_dict", std::move(test_table_dict));
+
     _gt_dict = std::make_shared<GetTable>("table_dict");
   }
 
- public:
-  std::shared_ptr<Table> _test_table, _test_table_dict;
   std::shared_ptr<GetTable> _gt, _gt_dict;
 };
 
 TEST_F(OperatorsTableScanTest, DoubleScan) {
+  std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_float_filtered.tbl", 2);
+
   auto scan_1 = std::make_shared<TableScan>(_gt, "a", ">=", 1234);
   scan_1->execute();
 
   auto scan_2 = std::make_shared<TableScan>(scan_1, "b", "<", 457.9);
   scan_2->execute();
 
-  EXPECT_EQ(type_cast<int>((*(scan_2->get_output()->get_chunk(0).get_column(0)))[0]), 1234);
-
-  EXPECT_EQ(scan_2->get_output()->row_count(), (u_int)1);
+  EXPECT_TABLE_EQ(*(scan_2->get_output()), *expected_result);
 }
 
 TEST_F(OperatorsTableScanTest, SingleScanReturnsCorrectRowCount) {
+  std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_float_filtered2.tbl", 1);
+
   auto scan = std::make_shared<TableScan>(_gt, "a", ">=", 1234);
   scan->execute();
 
-  EXPECT_EQ(type_cast<int>((*(scan->get_output()->get_chunk(0).get_column(0)))[0]), 1234);
-  EXPECT_EQ(type_cast<int>((*(scan->get_output()->get_chunk(1).get_column(0)))[0]), 12345);
-  EXPECT_NE(type_cast<int>((*(scan->get_output()->get_chunk(0).get_column(0)))[0]), 123);
-  EXPECT_NE(type_cast<int>((*(scan->get_output()->get_chunk(1).get_column(0)))[0]), 123);
-
-  EXPECT_EQ(scan->get_output()->row_count(), 2ull);
+  EXPECT_TABLE_EQ(*(scan->get_output()), *expected_result);
 }
 
 TEST_F(OperatorsTableScanTest, UnknownOperatorThrowsException) {
