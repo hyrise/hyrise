@@ -10,6 +10,8 @@
 
 namespace opossum {
 
+using Matrix = std::vector<std::vector<AllTypeVariant>>;
+
 class BaseTest : public ::testing::Test {
   using Matrix = std::vector<std::vector<AllTypeVariant>>;
 
