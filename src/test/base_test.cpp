@@ -19,11 +19,19 @@ void BaseTest::ASSERT_TABLE_EQ(const Table &tleft, const Table &tright, bool ord
   ASSERT_TRUE(_table_equal(tleft, tright, order_sensitive));
 }
 
-Matrix BaseTest::_table_to_matrix(const Table &t) {
-  Matrix matrix;
+void BaseTest::EXPECT_TABLE_EQ(std::shared_ptr<const Table> tleft, std::shared_ptr<const Table> tright,
+                               bool order_sensitive) {
+  EXPECT_TABLE_EQ(*tleft, *tright, order_sensitive);
+}
 
+void BaseTest::ASSERT_TABLE_EQ(std::shared_ptr<const Table> tleft, std::shared_ptr<const Table> tright,
+                               bool order_sensitive) {
+  ASSERT_TABLE_EQ(*tleft, *tright, order_sensitive);
+}
+
+BaseTest::Matrix BaseTest::_table_to_matrix(const Table &t) {
   // initialize matrix with table sizes
-  matrix.resize(t.row_count(), std::vector<AllTypeVariant>(t.col_count()));
+  Matrix matrix(t.row_count(), std::vector<AllTypeVariant>(t.col_count()));
 
   // set values
   unsigned row_offset = 0;
@@ -43,7 +51,7 @@ Matrix BaseTest::_table_to_matrix(const Table &t) {
   return matrix;
 }
 
-void BaseTest::_print_matrix(const std::vector<std::vector<AllTypeVariant>> &m) {
+void BaseTest::_print_matrix(const BaseTest::Matrix &m) {
   std::cout << "-------------" << std::endl;
   for (unsigned row = 0; row < m.size(); row++) {
     for (unsigned col = 0; col < m[row].size(); col++) {
@@ -68,6 +76,9 @@ void BaseTest::_print_matrix(const std::vector<std::vector<AllTypeVariant>> &m) 
   for (size_t col_id = 0; col_id < tright.col_count(); ++col_id) {
     if (tleft.column_type(col_id) != tright.column_type(col_id) ||
         tleft.column_name(col_id) != tright.column_name(col_id)) {
+      std::cout << "Column with ID " << col_id << " is different" << std::endl;
+      std::cout << "Got: " << tleft.column_name(col_id) << " (" << tleft.column_type(col_id) << ")" << std::endl;
+      std::cout << "Expected: " << tright.column_name(col_id) << " (" << tright.column_type(col_id) << ")" << std::endl;
       return ::testing::AssertionFailure() << "Table schema is different.";
     }
   }
@@ -96,7 +107,7 @@ void BaseTest::_print_matrix(const std::vector<std::vector<AllTypeVariant>> &m) 
 }
 
 template <typename T>
-std::vector<T> BaseTest::_split(std::string str, char delimiter) {
+std::vector<T> BaseTest::_split(const std::string &str, char delimiter) {
   std::vector<T> internal;
   std::stringstream ss(str);
   std::string tok;
@@ -108,8 +119,8 @@ std::vector<T> BaseTest::_split(std::string str, char delimiter) {
   return internal;
 }
 
-std::shared_ptr<Table> BaseTest::load_table(std::string file_name, size_t chunk_size) {
-  std::shared_ptr<Table> test_table = std::make_shared<Table>(Table(chunk_size));
+std::shared_ptr<Table> BaseTest::load_table(const std::string &file_name, size_t chunk_size) {
+  std::shared_ptr<Table> test_table = std::make_shared<Table>(chunk_size);
 
   std::ifstream infile(file_name);
   std::string line;
@@ -124,8 +135,8 @@ std::shared_ptr<Table> BaseTest::load_table(std::string file_name, size_t chunk_
   }
 
   while (std::getline(infile, line)) {
-    std::vector<AllTypeVariant> token = _split<AllTypeVariant>(line, '|');
-    test_table->append(token);
+    std::vector<AllTypeVariant> values = _split<AllTypeVariant>(line, '|');
+    test_table->append(values);
   }
   return test_table;
 }

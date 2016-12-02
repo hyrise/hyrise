@@ -48,7 +48,7 @@ TEST_F(OperatorsTableScanTest, DoubleScan) {
   auto scan_2 = std::make_shared<TableScan>(scan_1, "b", "<", 457.9);
   scan_2->execute();
 
-  EXPECT_TABLE_EQ(*(scan_2->get_output()), *expected_result);
+  EXPECT_TABLE_EQ(scan_2->get_output(), expected_result);
 }
 
 TEST_F(OperatorsTableScanTest, SingleScanReturnsCorrectRowCount) {
@@ -57,7 +57,7 @@ TEST_F(OperatorsTableScanTest, SingleScanReturnsCorrectRowCount) {
   auto scan = std::make_shared<TableScan>(_gt, "a", ">=", 1234);
   scan->execute();
 
-  EXPECT_TABLE_EQ(*(scan->get_output()), *expected_result);
+  EXPECT_TABLE_EQ(scan->get_output(), expected_result);
 }
 
 TEST_F(OperatorsTableScanTest, UnknownOperatorThrowsException) {

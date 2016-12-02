@@ -31,7 +31,7 @@ TEST_F(OperatorsSortTest, AscendingSortOfOneColumn) {
   auto sort = std::make_shared<Sort>(_gt, "a");
   sort->execute();
 
-  EXPECT_TABLE_EQ(*(sort->get_output()), *expected_result, true);
+  EXPECT_TABLE_EQ(sort->get_output(), expected_result, true);
 }
 
 TEST_F(OperatorsSortTest, DISABLED_DoubleSortOfOneColumn) {
@@ -43,7 +43,7 @@ TEST_F(OperatorsSortTest, DISABLED_DoubleSortOfOneColumn) {
   auto sort2 = std::make_shared<Sort>(sort1, "a");
   sort2->execute();
 
-  EXPECT_TABLE_EQ(*(sort2->get_output()), *expected_result, true);
+  EXPECT_TABLE_EQ(sort2->get_output(), expected_result, true);
 }
 
 TEST_F(OperatorsSortTest, DescendingSortOfOneColumn) {
@@ -52,7 +52,7 @@ TEST_F(OperatorsSortTest, DescendingSortOfOneColumn) {
   auto sort = std::make_shared<Sort>(_gt, "a", false);
   sort->execute();
 
-  EXPECT_TABLE_EQ(*(sort->get_output()), *expected_result, true);
+  EXPECT_TABLE_EQ(sort->get_output(), expected_result, true);
 }
 
 TEST_F(OperatorsSortTest, DISABLED_MultipleColumnSort) {
@@ -72,7 +72,7 @@ TEST_F(OperatorsSortTest, DISABLED_MultipleColumnSort) {
   auto sort_after_a = std::make_shared<Sort>(sort_after_b, "a");
   sort_after_a->execute();
 
-  EXPECT_TABLE_EQ(*(sort_after_a->get_output()), *expected_result, true);
+  EXPECT_TABLE_EQ(sort_after_a->get_output(), expected_result, true);
 }
 
 }  // namespace opossum
