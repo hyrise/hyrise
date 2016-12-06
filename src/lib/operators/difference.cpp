@@ -94,8 +94,6 @@ void Difference::execute() {
       out_chunk.add_column(out_reference_column);
     }
 
-    RowID first_row_id_in_chunk = _input_left->calculate_row_id(chunk_id, 0);
-
     // for all offsets check if the row can be added to the output
     for (ChunkOffset chunk_offset = 0; chunk_offset < in_chunk.size(); chunk_offset++) {
       // creating string represantation off the row at chunk_offset
@@ -112,7 +110,7 @@ void Difference::execute() {
           if (pos_list_pair.first) {
             pos_list_pair.second->emplace_back(pos_list_pair.first->at(chunk_offset));
           } else {
-            pos_list_pair.second->emplace_back(first_row_id_in_chunk + chunk_offset);
+            pos_list_pair.second->emplace_back(RowID{chunk_id, chunk_offset});
           }
         }
       }
