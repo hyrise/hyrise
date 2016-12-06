@@ -163,9 +163,8 @@ class TableScan::TableScanImpl : public AbstractOperatorImpl, public ColumnVisit
             }
           } else {
             // Create a PosList by transposing the matching positions
-            RowID first_row_id_in_chunk = _in_table->calculate_row_id(chunk_id, 0);
             for (const auto chunk_offset : matches_in_this_chunk) {
-              pos_list_out->emplace_back(first_row_id_in_chunk + chunk_offset);
+              pos_list_out->emplace_back(RowID{chunk_id, chunk_offset});
             }
           }
         }
