@@ -26,6 +26,7 @@ using ChunkOffset = uint32_t;
 using ValueID = uint32_t;  // Cannot be larger than ChunkOffset
 
 using PosList = std::vector<RowID>;
+using StringVector = std::vector<std::string>;
 
 // This holds all possible data types. The left side of the pairs are the names, the right side are prototypes
 // ("examples").

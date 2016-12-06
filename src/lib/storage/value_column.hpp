@@ -2,6 +2,7 @@
 
 #include <iostream>
 #include <memory>
+#include <string>
 #include <utility>
 #include <vector>
 
@@ -28,6 +29,19 @@ class ValueColumn : public BaseColumn {
   // visitor pattern, see base_column.hpp
   void visit(ColumnVisitable& visitable, std::shared_ptr<ColumnVisitableContext> context = nullptr) override {
     visitable.handle_value_column(*this, std::move(context));
+  }
+
+  // writes the length and value at the chunk_offset to the end off row_string
+  void write_string_representation(std::string& row_string, const ChunkOffset chunk_offset) const override {
+    std::stringstream buffer;
+    // buffering value at chunk_offset
+    buffer << _values[chunk_offset];
+    uint32_t length = buffer.str().length();
+    // writing byte representation of length
+    buffer.write(reinterpret_cast<const char*>(&length), sizeof(length));
+
+    // appending the new string to the already present string
+    row_string += buffer.str();
   }
 
  protected:

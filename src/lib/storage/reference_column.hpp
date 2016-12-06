@@ -2,6 +2,7 @@
 
 #include <iostream>
 #include <memory>
+#include <string>
 #include <utility>
 #include <vector>
 
@@ -32,14 +33,18 @@ class ReferenceColumn : public BaseColumn {
 
   void append(const AllTypeVariant &) override;
 
-  size_t size() const override { return _pos_list->size(); }
+  size_t size() const override;
 
   const std::shared_ptr<const PosList> pos_list() const;
   const std::shared_ptr<const Table> referenced_table() const;
+
   size_t referenced_column_id() const;
 
   // visitor pattern, see base_column.hpp
   void visit(ColumnVisitable &visitable, std::shared_ptr<ColumnVisitableContext> context = nullptr) override;
+
+  // writes the length and value at the chunk_offset to the end off row_string
+  void write_string_representation(std::string &row_string, const ChunkOffset chunk_offset) const override;
 };
 
 }  // namespace opossum
