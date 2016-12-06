@@ -25,10 +25,10 @@ class Table {
   // we need to explicitly set the move constructor to default when
   // we overwrite the copy constructor
   Table(Table &&) = default;
+  Table &operator=(Table &&) = default;
 
   // returns the number of columns
   size_t col_count() const;
-  Table &operator=(Table &&) = default;
 
   // returns the number of rows
   size_t row_count() const;
