@@ -51,9 +51,9 @@ TEST_F(OperatorsProjectionTest, DoubleProject) {
 }
 
 TEST_F(OperatorsProjectionTest, AllColumns) {
-  std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_float.tbl", 2);
+  std::shared_ptr<Table> expected_result = load_table("src/test/tables/float_int.tbl", 2);
 
-  std::vector<std::string> column_filter = {"a", "b"};
+  std::vector<std::string> column_filter = {"b", "a"};
   auto projection = std::make_shared<Projection>(_gt, column_filter);
   projection->execute();
 
