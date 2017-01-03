@@ -84,19 +84,20 @@ std::shared_ptr<Table> NestedLoopJoin::NestedLoopJoinImpl<T>::get_output() const
 template <typename T>
 void NestedLoopJoin::NestedLoopJoinImpl<T>::join_value_value(ValueColumn<T>& left, ValueColumn<T>& right,
                                                              std::shared_ptr<JoinContext> context, bool reverse_order) {
-  auto& values_left = reverse_order ? right.values() : left.values();
-  auto& values_right = reverse_order ? left.values() : right.values();
+  auto& values_left = left.values();
+  auto& values_right = right.values();
 
   for (ChunkOffset left_chunk_offset = 0; left_chunk_offset < values_left.size(); left_chunk_offset++) {
-    auto& value_left = values_left[left_chunk_offset];
+    const auto& value_left = values_left[left_chunk_offset];
 
     for (ChunkOffset right_chunk_offset = 0; right_chunk_offset < values_right.size(); right_chunk_offset++) {
-      auto& value_right = values_right[right_chunk_offset];
+      const auto& value_right = values_right[right_chunk_offset];
 
-      if (_compare(value_left, value_right)) {
-        RowID left_row_id = _nested_loop_join._input_left->calculate_row_id(context->_left_chunk_id, left_chunk_offset);
-        RowID right_row_id =
-            _nested_loop_join._input_left->calculate_row_id(context->_right_chunk_id, right_chunk_offset);
+      if (reverse_order ? _compare(value_right, value_left) : _compare(value_left, value_right)) {
+        RowID left_row_id = _nested_loop_join._input_left->calculate_row_id(
+            context->_left_chunk_id, reverse_order ? right_chunk_offset : left_chunk_offset);
+        RowID right_row_id = _nested_loop_join._input_left->calculate_row_id(
+            context->_right_chunk_id, reverse_order ? left_chunk_offset : right_chunk_offset);
         _nested_loop_join._pos_list_left->push_back(left_row_id);
         _nested_loop_join._pos_list_right->push_back(right_row_id);
       }
@@ -112,15 +113,16 @@ void NestedLoopJoin::NestedLoopJoinImpl<T>::join_value_dictionary(ValueColumn<T>
   const auto& att = right.attribute_vector();
 
   for (ChunkOffset left_chunk_offset = 0; left_chunk_offset < values.size(); left_chunk_offset++) {
-    auto& value_left = values[left_chunk_offset];
+    const auto& value_left = values[left_chunk_offset];
 
     for (ChunkOffset right_chunk_offset = 0; right_chunk_offset < att->size(); right_chunk_offset++) {
-      auto& value_right = right.value_by_value_id(att->get(right_chunk_offset));
+      const auto& value_right = right.value_by_value_id(att->get(right_chunk_offset));
 
       if (reverse_order ? _compare(value_right, value_left) : _compare(value_left, value_right)) {
-        RowID left_row_id = _nested_loop_join._input_left->calculate_row_id(context->_left_chunk_id, left_chunk_offset);
-        RowID right_row_id =
-            _nested_loop_join._input_left->calculate_row_id(context->_right_chunk_id, right_chunk_offset);
+        RowID left_row_id = _nested_loop_join._input_left->calculate_row_id(
+            context->_left_chunk_id, reverse_order ? right_chunk_offset : left_chunk_offset);
+        RowID right_row_id = _nested_loop_join._input_left->calculate_row_id(
+            context->_right_chunk_id, reverse_order ? left_chunk_offset : right_chunk_offset);
         _nested_loop_join._pos_list_left->push_back(left_row_id);
         _nested_loop_join._pos_list_right->push_back(right_row_id);
       }
@@ -131,22 +133,175 @@ void NestedLoopJoin::NestedLoopJoinImpl<T>::join_value_dictionary(ValueColumn<T>
 template <typename T>
 void NestedLoopJoin::NestedLoopJoinImpl<T>::join_value_reference(ValueColumn<T>& left, ReferenceColumn& right,
                                                                  std::shared_ptr<JoinContext> context,
-                                                                 bool reverse_order) {}
+                                                                 bool reverse_order) {
+  auto& values = left.values();
+  auto& ref_table = right.referenced_table();
+  auto& pos_list = right.pos_list();
+
+  for (ChunkOffset left_chunk_offset = 0; left_chunk_offset < values.size(); left_chunk_offset++) {
+    const auto& value_left = values[left_chunk_offset];
+
+    for (ChunkOffset right_chunk_offset = 0; right_chunk_offset < pos_list->size(); right_chunk_offset++) {
+      const auto& row_location = ref_table->locate_row(pos_list->at(right_chunk_offset));
+      const auto& referenced_chunk_id = row_location.first;
+      const auto& referenced_chunk_offset = row_location.second;
+      const auto& referenced_chunk = ref_table->get_chunk(referenced_chunk_id);
+      const auto& referenced_column = referenced_chunk.get_column(right.referenced_column_id());
+
+      // TODO(fabian dumke): cant do this every time (performance)
+      const auto& d_column = std::dynamic_pointer_cast<DictionaryColumn<T>>(referenced_column);
+      const auto& v_column = std::dynamic_pointer_cast<ValueColumn<T>>(referenced_column);
+      T value_right;
+      if (d_column) {
+        value_right = d_column->value_by_value_id(d_column->attribute_vector()->get(referenced_chunk_offset));
+      } else if (v_column) {
+        value_right = v_column->values()[referenced_chunk_offset];
+      } else {
+        throw std::exception(
+            std::runtime_error("NestedLoopJoinImpl::join_value_reference: can't figure out referenced column type"));
+      }
+
+      if (reverse_order ? _compare(value_right, value_left) : _compare(value_left, value_right)) {
+        RowID left_row_id = _nested_loop_join._input_left->calculate_row_id(
+            context->_left_chunk_id, reverse_order ? right_chunk_offset : left_chunk_offset);
+        RowID right_row_id = _nested_loop_join._input_left->calculate_row_id(
+            context->_right_chunk_id, reverse_order ? left_chunk_offset : right_chunk_offset);
+        _nested_loop_join._pos_list_left->push_back(left_row_id);
+        _nested_loop_join._pos_list_right->push_back(right_row_id);
+      }
+    }
+  }
+}
+
 template <typename T>
 void NestedLoopJoin::NestedLoopJoinImpl<T>::join_dictionary_dictionary(DictionaryColumn<T>& left,
                                                                        DictionaryColumn<T>& right,
                                                                        std::shared_ptr<JoinContext> context,
-                                                                       bool reverse_order) {}
+                                                                       bool reverse_order) {
+  const auto& att_left = left.attribute_vector();
+  const auto& att_right = right.attribute_vector();
+
+  for (ChunkOffset left_chunk_offset = 0; left_chunk_offset < att_left->size(); left_chunk_offset++) {
+    const auto& value_left = left.value_by_value_id(att_left->get(left_chunk_offset));
+
+    for (ChunkOffset right_chunk_offset = 0; right_chunk_offset < att_right->size(); right_chunk_offset++) {
+      const auto& value_right = right.value_by_value_id(att_right->get(right_chunk_offset));
+
+      if (reverse_order ? _compare(value_right, value_left) : _compare(value_left, value_right)) {
+        RowID left_row_id = _nested_loop_join._input_left->calculate_row_id(
+            context->_left_chunk_id, reverse_order ? right_chunk_offset : left_chunk_offset);
+        RowID right_row_id = _nested_loop_join._input_left->calculate_row_id(
+            context->_right_chunk_id, reverse_order ? left_chunk_offset : right_chunk_offset);
+        _nested_loop_join._pos_list_left->push_back(left_row_id);
+        _nested_loop_join._pos_list_right->push_back(right_row_id);
+      }
+    }
+  }
+}
 
 template <typename T>
 void NestedLoopJoin::NestedLoopJoinImpl<T>::join_dictionary_reference(DictionaryColumn<T>& left, ReferenceColumn& right,
                                                                       std::shared_ptr<JoinContext> context,
-                                                                      bool reverse_order) {}
+                                                                      bool reverse_order) {
+  const auto& att_left = left.attribute_vector();
+  auto& ref_table = right.referenced_table();
+  auto& pos_list = right.pos_list();
+
+  for (ChunkOffset left_chunk_offset = 0; left_chunk_offset < att_left->size(); left_chunk_offset++) {
+    const auto& value_left = left.value_by_value_id(att_left->get(left_chunk_offset));
+
+    for (ChunkOffset right_chunk_offset = 0; right_chunk_offset < pos_list->size(); right_chunk_offset++) {
+      const auto& row_location = ref_table->locate_row(pos_list->at(right_chunk_offset));
+      const auto& referenced_chunk_id = row_location.first;
+      const auto& referenced_chunk_offset = row_location.second;
+      const auto& referenced_chunk = ref_table->get_chunk(referenced_chunk_id);
+      const auto& referenced_column = referenced_chunk.get_column(right.referenced_column_id());
+
+      // TODO(fabian dumke): cant do this every time (performance)
+      const auto& d_column = std::dynamic_pointer_cast<DictionaryColumn<T>>(referenced_column);
+      const auto& v_column = std::dynamic_pointer_cast<ValueColumn<T>>(referenced_column);
+      T value_right;
+      if (d_column) {
+        value_right = d_column->value_by_value_id(d_column->attribute_vector()->get(referenced_chunk_offset));
+      } else if (v_column) {
+        value_right = v_column->values()[referenced_chunk_offset];
+      } else {
+        throw std::exception(
+            std::runtime_error("NestedLoopJoinImpl::join_value_reference: can't figure out referenced column type"));
+      }
+
+      if (reverse_order ? _compare(value_right, value_left) : _compare(value_left, value_right)) {
+        RowID left_row_id = _nested_loop_join._input_left->calculate_row_id(
+            context->_left_chunk_id, reverse_order ? right_chunk_offset : left_chunk_offset);
+        RowID right_row_id = _nested_loop_join._input_left->calculate_row_id(
+            context->_right_chunk_id, reverse_order ? left_chunk_offset : right_chunk_offset);
+        _nested_loop_join._pos_list_left->push_back(left_row_id);
+        _nested_loop_join._pos_list_right->push_back(right_row_id);
+      }
+    }
+  }
+}
 
 template <typename T>
 void NestedLoopJoin::NestedLoopJoinImpl<T>::join_reference_reference(ReferenceColumn& left, ReferenceColumn& right,
                                                                      std::shared_ptr<JoinContext> context,
-                                                                     bool reverse_order) {}
+                                                                     bool reverse_order) {
+  auto& ref_table_left = left.referenced_table();
+  auto& pos_list_left = left.pos_list();
+  auto& ref_table_right = right.referenced_table();
+  auto& pos_list_right = right.pos_list();
+
+  for (ChunkOffset left_chunk_offset = 0; left_chunk_offset < pos_list_left->size(); left_chunk_offset++) {
+    const auto& row_location = ref_table_left->locate_row(pos_list_left->at(left_chunk_offset));
+    const auto& referenced_chunk_id = row_location.first;
+    const auto& referenced_chunk_offset = row_location.second;
+    const auto& referenced_chunk = ref_table_left->get_chunk(referenced_chunk_id);
+    const auto& referenced_column = referenced_chunk.get_column(left.referenced_column_id());
+
+    // TODO(fabian dumke): cant do this every time (performance)
+    const auto& d_column = std::dynamic_pointer_cast<DictionaryColumn<T>>(referenced_column);
+    const auto& v_column = std::dynamic_pointer_cast<ValueColumn<T>>(referenced_column);
+    T value_left;
+    if (d_column) {
+      value_left = d_column->value_by_value_id(d_column->attribute_vector()->get(referenced_chunk_offset));
+    } else if (v_column) {
+      value_left = v_column->values()[referenced_chunk_offset];
+    } else {
+      throw std::exception(
+          std::runtime_error("NestedLoopJoinImpl::join_value_reference: can't figure out referenced column type"));
+    }
+
+    for (ChunkOffset right_chunk_offset = 0; right_chunk_offset < pos_list_right->size(); right_chunk_offset++) {
+      const auto& row_location_r = ref_table_right->locate_row(pos_list_right->at(right_chunk_offset));
+      const auto& referenced_chunk_id_r = row_location_r.first;
+      const auto& referenced_chunk_offset_r = row_location_r.second;
+      const auto& referenced_chunk_r = ref_table_right->get_chunk(referenced_chunk_id_r);
+      const auto& referenced_column_r = referenced_chunk_r.get_column(right.referenced_column_id());
+
+      // TODO(fabian dumke): cant do this every time (performance)
+      const auto& d_column = std::dynamic_pointer_cast<DictionaryColumn<T>>(referenced_column_r);
+      const auto& v_column = std::dynamic_pointer_cast<ValueColumn<T>>(referenced_column_r);
+      T value_right;
+      if (d_column) {
+        value_right = d_column->value_by_value_id(d_column->attribute_vector()->get(referenced_chunk_offset_r));
+      } else if (v_column) {
+        value_right = v_column->values()[referenced_chunk_offset_r];
+      } else {
+        throw std::exception(
+            std::runtime_error("NestedLoopJoinImpl::join_value_reference: can't figure out referenced column type"));
+      }
+
+      if (reverse_order ? _compare(value_right, value_left) : _compare(value_left, value_right)) {
+        RowID left_row_id = _nested_loop_join._input_left->calculate_row_id(
+            context->_left_chunk_id, reverse_order ? right_chunk_offset : left_chunk_offset);
+        RowID right_row_id = _nested_loop_join._input_left->calculate_row_id(
+            context->_right_chunk_id, reverse_order ? left_chunk_offset : right_chunk_offset);
+        _nested_loop_join._pos_list_left->push_back(left_row_id);
+        _nested_loop_join._pos_list_right->push_back(right_row_id);
+      }
+    }
+  }
+}
 
 template <typename T>
 void NestedLoopJoin::NestedLoopJoinImpl<T>::handle_value_column(BaseColumn& column,
