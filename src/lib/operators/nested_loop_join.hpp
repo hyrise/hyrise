@@ -67,7 +67,7 @@ class NestedLoopJoin : public AbstractOperator {
 
    private:
     NestedLoopJoin& _nested_loop_join;
-    std::function<bool(T&, T&)> _compare;
+    std::function<bool(const T&, const T&)> _compare;
   };
 
   std::string& _left_column_name;

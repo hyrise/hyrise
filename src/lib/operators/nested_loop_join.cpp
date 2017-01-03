@@ -56,17 +56,17 @@ template <typename T>
 NestedLoopJoin::NestedLoopJoinImpl<T>::NestedLoopJoinImpl(NestedLoopJoin& nested_loop_join)
     : _nested_loop_join{nested_loop_join} {
   if (_nested_loop_join._op == "=") {
-    _compare = [](T& value_left, T& value_right) -> bool { return value_left == value_right; };
+    _compare = [](const T& value_left, const T& value_right) -> bool { return value_left == value_right; };
   } else if (_nested_loop_join._op == "<") {
-    _compare = [](T& value_left, T& value_right) -> bool { return value_left < value_right; };
+    _compare = [](const T& value_left, const T& value_right) -> bool { return value_left < value_right; };
   } else if (_nested_loop_join._op == ">") {
-    _compare = [](T& value_left, T& value_right) -> bool { return value_left < value_right; };
+    _compare = [](const T& value_left, const T& value_right) -> bool { return value_left < value_right; };
   } else if (_nested_loop_join._op == ">=") {
-    _compare = [](T& value_left, T& value_right) -> bool { return value_left >= value_right; };
+    _compare = [](const T& value_left, const T& value_right) -> bool { return value_left >= value_right; };
   } else if (_nested_loop_join._op == "<=") {
-    _compare = [](T& value_left, T& value_right) -> bool { return value_left <= value_right; };
+    _compare = [](const T& value_left, const T& value_right) -> bool { return value_left <= value_right; };
   } else if (_nested_loop_join._op == "!=") {
-    _compare = [](T& value_left, T& value_right) -> bool { return value_left != value_right; };
+    _compare = [](const T& value_left, const T& value_right) -> bool { return value_left != value_right; };
   } else {
     throw std::exception(
         std::runtime_error("NestedLoopJoinImpl::NestedLoopJoinImpl: Unknown operator " + _nested_loop_join._op));
@@ -84,14 +84,14 @@ std::shared_ptr<Table> NestedLoopJoin::NestedLoopJoinImpl<T>::get_output() const
 template <typename T>
 void NestedLoopJoin::NestedLoopJoinImpl<T>::join_value_value(ValueColumn<T>& left, ValueColumn<T>& right,
                                                              std::shared_ptr<JoinContext> context, bool reverse_order) {
-  auto values_left = reverse_order ? right.values() : left.values();
-  auto values_right = reverse_order ? left.values() : right.values();
+  auto& values_left = reverse_order ? right.values() : left.values();
+  auto& values_right = reverse_order ? left.values() : right.values();
 
   for (ChunkOffset left_chunk_offset = 0; left_chunk_offset < values_left.size(); left_chunk_offset++) {
-    auto value_left = values_left[left_chunk_offset];
+    auto& value_left = values_left[left_chunk_offset];
 
     for (ChunkOffset right_chunk_offset = 0; right_chunk_offset < values_right.size(); right_chunk_offset++) {
-      auto value_right = values_right[right_chunk_offset];
+      auto& value_right = values_right[right_chunk_offset];
 
       if (_compare(value_left, value_right)) {
         RowID left_row_id = _nested_loop_join._input_left->calculate_row_id(context->_left_chunk_id, left_chunk_offset);
@@ -107,7 +107,26 @@ void NestedLoopJoin::NestedLoopJoinImpl<T>::join_value_value(ValueColumn<T>& lef
 template <typename T>
 void NestedLoopJoin::NestedLoopJoinImpl<T>::join_value_dictionary(ValueColumn<T>& left, DictionaryColumn<T>& right,
                                                                   std::shared_ptr<JoinContext> context,
-                                                                  bool reverse_order) {}
+                                                                  bool reverse_order) {
+  auto& values = left.values();
+  const auto& att = right.attribute_vector();
+
+  for (ChunkOffset left_chunk_offset = 0; left_chunk_offset < values.size(); left_chunk_offset++) {
+    auto& value_left = values[left_chunk_offset];
+
+    for (ChunkOffset right_chunk_offset = 0; right_chunk_offset < att->size(); right_chunk_offset++) {
+      auto& value_right = right.value_by_value_id(att->get(right_chunk_offset));
+
+      if (reverse_order ? _compare(value_right, value_left) : _compare(value_left, value_right)) {
+        RowID left_row_id = _nested_loop_join._input_left->calculate_row_id(context->_left_chunk_id, left_chunk_offset);
+        RowID right_row_id =
+            _nested_loop_join._input_left->calculate_row_id(context->_right_chunk_id, right_chunk_offset);
+        _nested_loop_join._pos_list_left->push_back(left_row_id);
+        _nested_loop_join._pos_list_right->push_back(right_row_id);
+      }
+    }
+  }
+}
 
 template <typename T>
 void NestedLoopJoin::NestedLoopJoinImpl<T>::join_value_reference(ValueColumn<T>& left, ReferenceColumn& right,
