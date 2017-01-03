@@ -83,9 +83,9 @@ std::shared_ptr<Table> NestedLoopJoin::NestedLoopJoinImpl<T>::get_output() const
 
 template <typename T>
 void NestedLoopJoin::NestedLoopJoinImpl<T>::join_value_value(ValueColumn<T>& left, ValueColumn<T>& right,
-                                                             std::shared_ptr<JoinContext> context) {
-  auto values_left = left.values();
-  auto values_right = right.values();
+                                                             std::shared_ptr<JoinContext> context, bool reverse_order) {
+  auto values_left = reverse_order ? right.values() : left.values();
+  auto values_right = reverse_order ? left.values() : right.values();
 
   for (ChunkOffset left_chunk_offset = 0; left_chunk_offset < values_left.size(); left_chunk_offset++) {
     auto value_left = values_left[left_chunk_offset];
@@ -106,23 +106,28 @@ void NestedLoopJoin::NestedLoopJoinImpl<T>::join_value_value(ValueColumn<T>& lef
 
 template <typename T>
 void NestedLoopJoin::NestedLoopJoinImpl<T>::join_value_dictionary(ValueColumn<T>& left, DictionaryColumn<T>& right,
-                                                                  std::shared_ptr<JoinContext> context) {}
+                                                                  std::shared_ptr<JoinContext> context,
+                                                                  bool reverse_order) {}
 
 template <typename T>
 void NestedLoopJoin::NestedLoopJoinImpl<T>::join_value_reference(ValueColumn<T>& left, ReferenceColumn& right,
-                                                                 std::shared_ptr<JoinContext> context) {}
+                                                                 std::shared_ptr<JoinContext> context,
+                                                                 bool reverse_order) {}
 template <typename T>
 void NestedLoopJoin::NestedLoopJoinImpl<T>::join_dictionary_dictionary(DictionaryColumn<T>& left,
                                                                        DictionaryColumn<T>& right,
-                                                                       std::shared_ptr<JoinContext> context) {}
+                                                                       std::shared_ptr<JoinContext> context,
+                                                                       bool reverse_order) {}
 
 template <typename T>
 void NestedLoopJoin::NestedLoopJoinImpl<T>::join_dictionary_reference(DictionaryColumn<T>& left, ReferenceColumn& right,
-                                                                      std::shared_ptr<JoinContext> context) {}
+                                                                      std::shared_ptr<JoinContext> context,
+                                                                      bool reverse_order) {}
 
 template <typename T>
 void NestedLoopJoin::NestedLoopJoinImpl<T>::join_reference_reference(ReferenceColumn& left, ReferenceColumn& right,
-                                                                     std::shared_ptr<JoinContext> context) {}
+                                                                     std::shared_ptr<JoinContext> context,
+                                                                     bool reverse_order) {}
 
 template <typename T>
 void NestedLoopJoin::NestedLoopJoinImpl<T>::handle_value_column(BaseColumn& column,
@@ -148,7 +153,26 @@ void NestedLoopJoin::NestedLoopJoinImpl<T>::handle_value_column(BaseColumn& colu
 
 template <typename T>
 void NestedLoopJoin::NestedLoopJoinImpl<T>::handle_dictionary_column(BaseColumn& column,
-                                                                     std::shared_ptr<ColumnVisitableContext> context) {}
+                                                                     std::shared_ptr<ColumnVisitableContext> context) {
+  auto join_context = std::static_pointer_cast<JoinContext>(context);
+  auto& dictionary_column_left = dynamic_cast<DictionaryColumn<T>&>(column);
+
+  auto value_column_right = std::dynamic_pointer_cast<ValueColumn<T>>(join_context->_column_right);
+  if (value_column_right) {
+    join_value_dictionary(*value_column_right, dictionary_column_left, join_context, true);
+    return;
+  }
+  auto dictionary_column_right = std::dynamic_pointer_cast<DictionaryColumn<T>>(join_context->_column_right);
+  if (dictionary_column_right) {
+    join_dictionary_dictionary(dictionary_column_left, *dictionary_column_right, join_context);
+    return;
+  }
+  auto reference_column_right = std::dynamic_pointer_cast<ReferenceColumn>(join_context->_column_right);
+  if (reference_column_right) {
+    join_dictionary_reference(dictionary_column_left, *reference_column_right, join_context);
+    return;
+  }
+}
 
 template <typename T>
 void NestedLoopJoin::NestedLoopJoinImpl<T>::handle_reference_column(ReferenceColumn& column,
