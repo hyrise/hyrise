@@ -24,6 +24,20 @@ class NestedLoopJoin : public AbstractOperator {
   uint8_t num_out_tables() const override;
 
  private:
+  struct JoinContext : ColumnVisitableContext {
+    JoinContext(std::shared_ptr<BaseColumn> column_left, std::shared_ptr<BaseColumn> column_right,
+                ChunkID left_chunk_id, ChunkID right_chunk_id)
+        : _column_left{column_left},
+          _column_right{column_right},
+          _left_chunk_id{left_chunk_id},
+          _right_chunk_id{right_chunk_id} {};
+
+    std::shared_ptr<BaseColumn> _column_left;
+    std::shared_ptr<BaseColumn> _column_right;
+    ChunkID _left_chunk_id;
+    ChunkID _right_chunk_id;
+  };
+
   template <typename T>
   class NestedLoopJoinImpl : public AbstractOperatorImpl, public ColumnVisitable {
    public:
@@ -38,6 +52,13 @@ class NestedLoopJoin : public AbstractOperator {
     virtual void handle_dictionary_column(BaseColumn& column, std::shared_ptr<ColumnVisitableContext> context);
     virtual void handle_reference_column(ReferenceColumn& column, std::shared_ptr<ColumnVisitableContext> context);
 
+    void join_value_value(ValueColumn<T>& left, std::shared_ptr<ValueColumn<T>> right,
+                          std::shared_ptr<JoinContext> context);
+    void join_value_dictionary(ValueColumn<T>& left, std::shared_ptr<DictionaryColumn<T>> right,
+                               std::shared_ptr<JoinContext> context);
+    void join_value_reference(ValueColumn<T>& left, std::shared_ptr<ReferenceColumn> right,
+                              std::shared_ptr<JoinContext> context);
+
    private:
     NestedLoopJoin& _nested_loop_join;
     std::function<bool(T&, T&)> _compare;
@@ -47,6 +68,8 @@ class NestedLoopJoin : public AbstractOperator {
   std::string& _right_column_name;
   std::string& _op;
 
+  std::shared_ptr<PosList> _pos_list_left;
+  std::shared_ptr<PosList> _pos_list_right;
   std::shared_ptr<Table> _output;
 };
 }  // namespace opossum

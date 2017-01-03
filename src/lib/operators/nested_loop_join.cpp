@@ -1,6 +1,8 @@
 #include "nested_loop_join.hpp"
 
+#include <exception>
 #include <memory>
+#include <stdexcept>
 #include <string>
 
 namespace opossum {
@@ -10,13 +12,36 @@ NestedLoopJoin::NestedLoopJoin(std::shared_ptr<AbstractOperator> left, std::shar
     : AbstractOperator(left, right),
       _left_column_name{left_column_name},
       _right_column_name{right_column_name},
-      _op{op} {}
+      _op{op} {
+  _pos_list_left = std::make_shared<PosList>();
+  _pos_list_right = std::make_shared<PosList>();
+}
 
 void NestedLoopJoin::execute() {
   auto left_column_id = _input_left->column_id_by_name(_left_column_name);
   auto right_column_id = _input_right->column_id_by_name(_right_column_name);
+  auto left_column_type = _input_left->column_type(left_column_id);
+  auto right_column_type = _input_right->column_type(right_column_id);
 
-  std::cout << left_column_id << right_column_id << std::endl;
+  if (left_column_type != right_column_type) {
+    throw std::exception(
+        std::runtime_error("NestedLoopJoin::execute: left column type does not match right column type!"));
+  }
+
+  for (ChunkID chunk_id_left = 0; chunk_id_left < _input_left->chunk_count(); ++chunk_id_left) {
+    for (ChunkID chunk_id_right = 0; chunk_id_right < _input_right->chunk_count(); ++chunk_id_right) {
+      auto& chunk_left = _input_left->get_chunk(chunk_id_left);
+      auto column_left = chunk_left.get_column(left_column_id);
+      auto& chunk_right = _input_right->get_chunk(chunk_id_right);
+      auto column_right = chunk_right.get_column(right_column_id);
+
+      auto impl = make_shared_by_column_type<ColumnVisitable, NestedLoopJoinImpl>(left_column_type, *this);
+      auto context = std::make_shared<JoinContext>(column_left, column_right, chunk_id_left, chunk_id_right);
+      column_left->visit(*impl, context);
+    }
+  }
+
+  // std::cout << left_column_id << right_column_id << std::endl;
 }
 
 std::shared_ptr<const Table> NestedLoopJoin::get_output() const { return _output; }
@@ -57,8 +82,60 @@ std::shared_ptr<Table> NestedLoopJoin::NestedLoopJoinImpl<T>::get_output() const
 }
 
 template <typename T>
+void NestedLoopJoin::NestedLoopJoinImpl<T>::join_value_value(ValueColumn<T>& left,
+                                                             std::shared_ptr<ValueColumn<T>> right,
+                                                             std::shared_ptr<JoinContext> context) {
+  auto values_left = left.values();
+  auto values_right = right->values();
+
+  for (ChunkOffset left_chunk_offset = 0; left_chunk_offset < values_left.size(); left_chunk_offset++) {
+    auto value_left = values_left[left_chunk_offset];
+
+    for (ChunkOffset right_chunk_offset = 0; right_chunk_offset < values_right.size(); right_chunk_offset++) {
+      auto value_right = values_right[right_chunk_offset];
+
+      if (_compare(value_left, value_right)) {
+        RowID left_row_id = _nested_loop_join._input_left->calculate_row_id(context->_left_chunk_id, left_chunk_offset);
+        RowID right_row_id =
+            _nested_loop_join._input_left->calculate_row_id(context->_right_chunk_id, right_chunk_offset);
+        _nested_loop_join._pos_list_left->push_back(left_row_id);
+        _nested_loop_join._pos_list_right->push_back(right_row_id);
+      }
+    }
+  }
+}
+
+template <typename T>
+void NestedLoopJoin::NestedLoopJoinImpl<T>::join_value_dictionary(ValueColumn<T>& left,
+                                                                  std::shared_ptr<DictionaryColumn<T>> right,
+                                                                  std::shared_ptr<JoinContext> context) {}
+
+template <typename T>
+void NestedLoopJoin::NestedLoopJoinImpl<T>::join_value_reference(ValueColumn<T>& left,
+                                                                 std::shared_ptr<ReferenceColumn> right,
+                                                                 std::shared_ptr<JoinContext> context) {}
+
+template <typename T>
 void NestedLoopJoin::NestedLoopJoinImpl<T>::handle_value_column(BaseColumn& column,
-                                                                std::shared_ptr<ColumnVisitableContext> context) {}
+                                                                std::shared_ptr<ColumnVisitableContext> context) {
+  auto join_context = std::static_pointer_cast<JoinContext>(context);
+  auto& value_column_left = dynamic_cast<ValueColumn<T>&>(column);
+  auto value_column_right = std::dynamic_pointer_cast<ValueColumn<T>>(join_context->_column_right);
+  if (value_column_right) {
+    join_value_value(value_column_left, value_column_right, join_context);
+    return;
+  }
+  auto dictionary_column_right = std::dynamic_pointer_cast<DictionaryColumn<T>>(join_context->_column_right);
+  if (dictionary_column_right) {
+    join_value_dictionary(value_column_left, dictionary_column_right, join_context);
+    return;
+  }
+  auto reference_column_right = std::dynamic_pointer_cast<ReferenceColumn>(join_context->_column_right);
+  if (reference_column_right) {
+    join_value_reference(value_column_left, reference_column_right, join_context);
+    return;
+  }
+}
 
 template <typename T>
 void NestedLoopJoin::NestedLoopJoinImpl<T>::handle_dictionary_column(BaseColumn& column,
