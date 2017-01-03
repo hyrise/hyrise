@@ -41,7 +41,37 @@ void NestedLoopJoin::execute() {
     }
   }
 
-  // std::cout << left_column_id << right_column_id << std::endl;
+  _output = std::make_shared<Table>(0, false);
+  for (size_t column_id = 0; column_id < _input_left->col_count(); column_id++) {
+    const auto& first_chunk_column = _input_left->get_chunk(0).get_column(column_id);
+    const auto& r_column = std::dynamic_pointer_cast<ReferenceColumn>(first_chunk_column);
+
+    // TODO(student) handle reference on reference
+
+    /*
+    if(r_column)
+    {
+      auto & referenced_table = r_column->referenced_table();
+      auto & original_pos_list = r_column->pos_list();
+      auto new_pos_list = std::make_shared<PosList>();
+
+      std::shared_ptr ref_column = std::make_shared<ReferenceColumn>(referenced_table, column_id, _pos_list_left);
+      _output->get_chunk(0)->add_column(ref_column);
+    }
+    else {
+    */
+    auto ref_column = std::make_shared<ReferenceColumn>(_input_left, column_id, _pos_list_left);
+    _output->get_chunk(0).add_column(ref_column);
+    //}
+  }
+
+  for (size_t column_id = 0; column_id < _input_right->col_count(); column_id++) {
+    // We already added this from the left side
+    if (_input_right->column_name(column_id) == _right_column_name) continue;
+
+    auto ref_column = std::make_shared<ReferenceColumn>(_input_right, column_id, _pos_list_right);
+    _output->get_chunk(0).add_column(ref_column);
+  }
 }
 
 std::shared_ptr<const Table> NestedLoopJoin::get_output() const { return _output; }
@@ -73,13 +103,14 @@ NestedLoopJoin::NestedLoopJoinImpl<T>::NestedLoopJoinImpl(NestedLoopJoin& nested
   }
 }
 
+/*
 template <typename T>
 void NestedLoopJoin::NestedLoopJoinImpl<T>::execute() {}
 
 template <typename T>
 std::shared_ptr<Table> NestedLoopJoin::NestedLoopJoinImpl<T>::get_output() const {
   return nullptr;
-}
+}*/
 
 template <typename T>
 void NestedLoopJoin::NestedLoopJoinImpl<T>::join_value_value(ValueColumn<T>& left, ValueColumn<T>& right,
