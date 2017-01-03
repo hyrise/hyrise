@@ -36,6 +36,8 @@ class Chunk {
   // adds a new row, given as a list of values, to the chunk
   void append(std::vector<AllTypeVariant> values);
 
+  void remove(const size_t i);
+
   // returns the column at a given position
   std::shared_ptr<BaseColumn> get_column(size_t column_id) const;
 

@@ -4,3 +4,4 @@ build/*
 *.make
 Makefile*
 coverage
+*.sublime-*
