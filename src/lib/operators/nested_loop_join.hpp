@@ -52,12 +52,14 @@ class NestedLoopJoin : public AbstractOperator {
     virtual void handle_dictionary_column(BaseColumn& column, std::shared_ptr<ColumnVisitableContext> context);
     virtual void handle_reference_column(ReferenceColumn& column, std::shared_ptr<ColumnVisitableContext> context);
 
-    void join_value_value(ValueColumn<T>& left, std::shared_ptr<ValueColumn<T>> right,
-                          std::shared_ptr<JoinContext> context);
-    void join_value_dictionary(ValueColumn<T>& left, std::shared_ptr<DictionaryColumn<T>> right,
-                               std::shared_ptr<JoinContext> context);
-    void join_value_reference(ValueColumn<T>& left, std::shared_ptr<ReferenceColumn> right,
-                              std::shared_ptr<JoinContext> context);
+    void join_value_value(ValueColumn<T>& left, ValueColumn<T>& right, std::shared_ptr<JoinContext> context);
+    void join_value_dictionary(ValueColumn<T>& left, DictionaryColumn<T>& right, std::shared_ptr<JoinContext> context);
+    void join_value_reference(ValueColumn<T>& left, ReferenceColumn& right, std::shared_ptr<JoinContext> context);
+    void join_dictionary_dictionary(DictionaryColumn<T>& left, DictionaryColumn<T>& right,
+                                    std::shared_ptr<JoinContext> context);
+    void join_dictionary_reference(DictionaryColumn<T>& left, ReferenceColumn& right,
+                                   std::shared_ptr<JoinContext> context);
+    void join_reference_reference(ReferenceColumn& left, ReferenceColumn& right, std::shared_ptr<JoinContext> context);
 
    private:
     NestedLoopJoin& _nested_loop_join;
