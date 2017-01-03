@@ -350,5 +350,24 @@ void NestedLoopJoin::NestedLoopJoinImpl<T>::handle_dictionary_column(BaseColumn&
 
 template <typename T>
 void NestedLoopJoin::NestedLoopJoinImpl<T>::handle_reference_column(ReferenceColumn& column,
-                                                                    std::shared_ptr<ColumnVisitableContext> context) {}
+                                                                    std::shared_ptr<ColumnVisitableContext> context) {
+  auto join_context = std::static_pointer_cast<JoinContext>(context);
+  auto& reference_column_left = dynamic_cast<ReferenceColumn&>(column);
+
+  auto value_column_right = std::dynamic_pointer_cast<ValueColumn<T>>(join_context->_column_right);
+  if (value_column_right) {
+    join_value_reference(*value_column_right, reference_column_left, join_context, true);
+    return;
+  }
+  auto dictionary_column_right = std::dynamic_pointer_cast<DictionaryColumn<T>>(join_context->_column_right);
+  if (dictionary_column_right) {
+    join_dictionary_reference(*dictionary_column_right, reference_column_left, join_context, true);
+    return;
+  }
+  auto reference_column_right = std::dynamic_pointer_cast<ReferenceColumn>(join_context->_column_right);
+  if (reference_column_right) {
+    join_reference_reference(reference_column_left, *reference_column_right, join_context);
+    return;
+  }
+}
 }  // namespace opossum
