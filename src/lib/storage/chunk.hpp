@@ -39,6 +39,14 @@ class Chunk {
   // returns the column at a given position
   std::shared_ptr<BaseColumn> get_column(size_t column_id) const;
 
+  // mvcc columns
+  std::vector<uint32_t> _TIDs;
+  std::vector<uint32_t> _begin_CIDs;
+  std::vector<uint32_t> _end_CIDs;
+
+ protected:
+  void set_mvcc_column_size(size_t new_size);
+
  protected:
   std::vector<std::shared_ptr<BaseColumn>> _columns;
 };

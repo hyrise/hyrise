@@ -13,10 +13,15 @@ void Chunk::add_column(std::shared_ptr<BaseColumn> column) {
   if (IS_DEBUG && _columns.size() > 0 && size() != column->size()) {
     throw std::runtime_error("Trying to add column with mismatching size to chunk");
   }
+  if (_columns.size() == 1) set_mvcc_column_size(column->size());
+
   _columns.emplace_back(column);
 }
 
 void Chunk::append(std::vector<AllTypeVariant> values) {
+  // Do this first to ensure that the first thing to exist in a row are the MVCC columns.
+  set_mvcc_column_size(size() + 1);
+
   // The added values, i.e., a new row, must have the same number of attribues as the table.
   if (IS_DEBUG && _columns.size() != values.size()) {
     throw std::runtime_error("append: number of columns (" + to_string(_columns.size()) +
@@ -37,5 +42,11 @@ size_t Chunk::col_count() const { return _columns.size(); }
 size_t Chunk::size() const {
   if (_columns.size() == 0) return 0;
   return _columns.front()->size();
+}
+
+void Chunk::set_mvcc_column_size(size_t new_size) {
+  _TIDs.resize(new_size);
+  _begin_CIDs.resize(new_size);
+  _end_CIDs.resize(new_size);
 }
 }  // namespace opossum
