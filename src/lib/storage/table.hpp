@@ -1,6 +1,7 @@
 #pragma once
 
 #include <map>
+#include <mutex>
 #include <string>
 #include <utility>
 #include <vector>
@@ -70,6 +71,8 @@ class Table {
 
   // enforces dictionary compression on a certain chunk
   void compress_chunk(ChunkID chunk_id);
+
+  std::unique_ptr<std::mutex> append_mtx;
 
  protected:
   // 0 means that the chunk has an unlimited size.
