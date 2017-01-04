@@ -12,31 +12,40 @@ uint32_t Transaction::lcid() const { return _lcid; }
 
 TransactionPhase Transaction::phase() const { return _phase; }
 
+void Transaction::add_operator(const std::shared_ptr<AbstractModifyingOperator>& op) {
+  if (_phase != TransactionPhase::Active) {
+    std::logic_error("Operators can only be added when transaction is active.");
+  }
+
+  _operators.push_back(op);
+}
+
 void Transaction::abort() {
-  // assert(_phase == TransactionPhase::Active)
+  if (_phase != TransactionPhase::Active) {
+    std::logic_error("Transaction can only be aborted when active.");
+  }
+
+  _phase = TransactionPhase::Aborting;
+
+  for (auto& op : _operators) op->abort();
+
   _phase = TransactionPhase::Aborted;
 }
 
-void Transaction::prepareCommit() {
-  // assert(_phase == TransactionPhase::Active)
-
-  _commit_context = TransactionManager::get().new_commit_context();
-  _phase = TransactionPhase::Committing;
-}
-
 void Transaction::commit() {
-  // assert(_phase == TransactionPhase::Committing)
+  if (_phase != TransactionPhase::Active) {
+    std::logic_error("Transaction can only be committed when active.");
+  }
 
-  // for (const auto& row : _inserted_rows) {
-  // write commit id
-  // }
+  auto& manager = TransactionManager::get();
 
-  // for (const auto& row : _deleted_rows) {
-  // write commit id
-  // }
+  _commit_context = manager.new_commit_context();
+  _phase = TransactionPhase::Committing;
 
-  auto commit_context_copy = _commit_context;
-  TransactionManager::get().commit(commit_context_copy);
+  for (auto& op : _operators) op->commit(_commit_context->cid());
+
+  manager.commit(_commit_context);
+
   _phase = TransactionPhase::Done;
 }
 

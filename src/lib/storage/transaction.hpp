@@ -1,14 +1,16 @@
 #pragma once
 
 #include <atomic>
+#include <functional>
 #include <memory>
+#include <vector>
 
 #include "commit_context.hpp"
-#include "types.hpp"
+#include "operators/abstract_modifying_operator.hpp"
 
 namespace opossum {
 
-enum class TransactionPhase { Active, Aborted, Committing, Done };
+enum class TransactionPhase { Active, Aborting, Aborted, Committing, Done };
 
 class Transaction {
  public:
@@ -20,8 +22,7 @@ class Transaction {
 
   TransactionPhase phase() const;
 
-  void append_inserted_row(const std::string& table, const RowID row_id);
-  void append_deleted_row(const std::string& table, const RowID row_id);
+  void add_operator(const std::shared_ptr<AbstractModifyingOperator>& op);
 
   void abort();
   void prepareCommit();
@@ -33,9 +34,7 @@ class Transaction {
 
   TransactionPhase _phase;
 
-  std::vector<std::pair<std::string, RowID>> _inserted_rows;
-  std::vector<std::pair<std::string, RowID>> _deleted_rows;
-
+  std::vector<std::shared_ptr<AbstractModifyingOperator>> _operators;
   std::shared_ptr<CommitContext> _commit_context;
 };
 }  // namespace opossum
