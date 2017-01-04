@@ -25,6 +25,8 @@ class Transaction {
   void add_operator(const std::shared_ptr<AbstractModifyingOperator>& op);
 
   void abort();
+
+  // TODO: rename to prepare_commit ?
   void commit();
 
  private:

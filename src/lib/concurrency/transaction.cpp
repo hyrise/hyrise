@@ -46,6 +46,7 @@ void Transaction::commit() {
 
   manager.commit(_commit_context);
 
+  // TODO: update _phase when transaction actually committed?
   _phase = TransactionPhase::Done;
 }
 
