@@ -11,7 +11,7 @@ namespace opossum {
 // operator to retrieve a table from the StorageManager by specifying its name
 class Delete : public AbstractOperator {
  public:
-  explicit Delete(const std::shared_ptr<const TableScane>& table_scan);
+  explicit Delete(const std::shared_ptr<const TableScan>& table_scan);
   void execute() override;
   std::shared_ptr<const Table> get_output() const override;
 
