@@ -25,7 +25,6 @@ class Transaction {
   void add_operator(const std::shared_ptr<AbstractModifyingOperator>& op);
 
   void abort();
-  void prepareCommit();
   void commit();
 
  private:
@@ -33,7 +32,6 @@ class Transaction {
   const uint32_t _lcid;
 
   TransactionPhase _phase;
-
   std::vector<std::shared_ptr<AbstractModifyingOperator>> _operators;
   std::shared_ptr<CommitContext> _commit_context;
 };

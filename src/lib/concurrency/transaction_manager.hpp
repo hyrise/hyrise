@@ -2,14 +2,13 @@
 
 #include <atomic>
 #include <memory>
-#include <mutex>
 
 #include "commit_context.hpp"
 #include "transaction.hpp"
 
 namespace opossum {
 
-// The TransactionManager is a singleton
+// thread-safe
 class TransactionManager {
  public:
   static TransactionManager &get();
@@ -32,6 +31,5 @@ class TransactionManager {
   std::atomic<std::uint32_t> _lcid;
 
   std::shared_ptr<CommitContext> _lcc;
-  std::mutex _lcc_mutex;
 };
 }  // namespace opossum
