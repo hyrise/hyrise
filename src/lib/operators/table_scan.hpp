@@ -32,7 +32,7 @@ class TableScan : public AbstractOperator {
   uint8_t num_out_tables() const override;
 
  protected:
-  virtual std::shared_ptr<const Table> on_execute() override;
+  std::shared_ptr<const Table> on_execute() override;
 
   template <typename T>
   class TableScanImpl;
@@ -70,7 +70,7 @@ class TableScan::TableScanImpl : public AbstractOperatorImpl, public ColumnVisit
     std::shared_ptr<std::vector<ChunkOffset>> chunk_offsets_in;
   };
 
-  virtual std::shared_ptr<const Table> on_execute() override {
+  std::shared_ptr<const Table> on_execute() override {
     auto output = std::make_shared<Table>();
 
     auto in_table = _in_operator->get_output();

@@ -24,7 +24,7 @@ class Sort : public AbstractOperator {
   uint8_t num_out_tables() const override;
 
  protected:
-  virtual std::shared_ptr<const Table> on_execute() override;
+  std::shared_ptr<const Table> on_execute() override;
 
   template <typename T>
   class SortImpl;
@@ -47,7 +47,7 @@ class Sort::SortImpl : public AbstractOperatorImpl {
         _pos_list(std::make_shared<PosList>()),
         _row_id_value_vector(std::make_shared<std::vector<std::pair<RowID, T>>>()) {}
 
-  virtual std::shared_ptr<const Table> on_execute() override {
+  std::shared_ptr<const Table> on_execute() override {
     auto output = std::make_shared<Table>();
 
     auto in_table = _in_op->get_output();

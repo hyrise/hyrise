@@ -19,7 +19,7 @@ class Projection : public AbstractOperator {
   uint8_t num_out_tables() const override;
 
  protected:
-  virtual std::shared_ptr<const Table> on_execute() override;
+  std::shared_ptr<const Table> on_execute() override;
 
   // list of all column names to select
   const std::vector<std::string> _column_filter;
