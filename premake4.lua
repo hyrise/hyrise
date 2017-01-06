@@ -96,7 +96,7 @@ project "opossum"
 
 project "opossumCoverage"
   kind "StaticLib"
-  buildoptions { "-fprofile-arcs -ftest-coverage" }
+  buildoptions { "-fno-elide-constructors -O0 -fprofile-arcs -ftest-coverage -fno-inline  -fno-inline-small-functions  -fno-default-inline " }
   linkoptions { "-lgcov --coverage" }
   files { "src/lib/**.hpp", "src/lib/**.cpp" }
 
@@ -125,8 +125,9 @@ project "coverage"
   links { "opossumCoverage", "googletest" }
   linkoptions {"--coverage"}
   files { "src/test/**.hpp", "src/test/**.cpp" }
+  buildoptions { "-fno-elide-constructors -O0 -fprofile-arcs -ftest-coverage -fno-inline  -fno-inline-small-functions  -fno-default-inline " }
   includedirs { "third_party/googletest/googletest/include" }
-  postbuildcommands { "./build/coverage && rm -fr coverage; mkdir coverage && gcovr -s -r . --exclude=\".*types*.\" --html --html-details -o coverage/index.html" }
+  postbuildcommands { "./build/coverage && rm -fr coverage; mkdir coverage && gcovr -s -r . --exclude=\"(.*types*.|.*test*.)\" --html --html-details -o coverage/index.html" }
 
 newoption {
   trigger     = "compiler",
