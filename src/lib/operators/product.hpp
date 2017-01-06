@@ -17,12 +17,12 @@ class Product : public AbstractOperator {
  public:
   Product(const std::shared_ptr<const AbstractOperator> left, const std::shared_ptr<const AbstractOperator> right,
           const std::string prefix_left = "", const std::string prefix_right = "");
-  virtual void execute();
-  virtual std::shared_ptr<const Table> get_output() const;
+  void execute() override;
+  std::shared_ptr<const Table> get_output() const override;
 
-  virtual const std::string name() const;
-  virtual uint8_t num_in_tables() const;
-  virtual uint8_t num_out_tables() const;
+  const std::string name() const override;
+  uint8_t num_in_tables() const override;
+  uint8_t num_out_tables() const override;
 
  protected:
   void add_product_of_two_chunks(ChunkID chunk_id_left, ChunkID chunk_id_right);
