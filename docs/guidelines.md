@@ -12,6 +12,7 @@ Avoid exception handling. Because Opossum is not a product, we do not have to re
 - do not nest namespaces
 - do not import namespaces (`std::`)
 
+- when overriding a `virtual` method, avoid repeating `virtual` and always use `override` or `final`
 - use const (including cbegin() and cend()) whenever possible
 - use [u]int(8|16|32|64)_t instead of `int`, long, uint` etc.
 - include in this order: header for implementation file, c system, c++ system, other
