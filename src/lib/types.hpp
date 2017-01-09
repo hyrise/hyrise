@@ -19,6 +19,14 @@ namespace opossum {
 
 namespace hana = boost::hana;
 
+enum class JoinMode {
+  Cross,
+  Inner,
+  Left_outer,
+  Right_outer,
+  Full_outer
+};
+
 using ChunkID = uint32_t;
 using ChunkOffset = uint32_t;
 struct RowID {
