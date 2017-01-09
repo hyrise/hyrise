@@ -61,7 +61,7 @@ class AbstractOperator {
   std::shared_ptr<const AbstractOperator> _input_right;
 
   // Is nullptr until the operator is executed
-  std::shared_ptr<const Table> _ouput;
+  std::shared_ptr<const Table> _output;
 
   // Some operators need an internal implementation class, mostly in cases where
   // their execute method depends on a template parameter. An example for this is
