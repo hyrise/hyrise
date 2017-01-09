@@ -44,6 +44,7 @@ void Transaction::commit() {
 
   for (auto& op : _operators) op->commit(_commit_context->cid());
 
+  _commit_context->make_pending();
   manager.commit(_commit_context);
 
   // TODO: update _phase when transaction actually committed?
