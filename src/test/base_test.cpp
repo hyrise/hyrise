@@ -38,6 +38,9 @@ BaseTest::Matrix BaseTest::_table_to_matrix(const Table &t) {
   for (ChunkID chunk_id = 0; chunk_id < t.chunk_count(); chunk_id++) {
     const Chunk &chunk = t.get_chunk(chunk_id);
 
+    // an empty table's chunk might be missing actual columns
+    if (chunk.size() == 0) continue;
+
     for (size_t col_id = 0; col_id < t.col_count(); ++col_id) {
       std::shared_ptr<BaseColumn> column = chunk.get_column(col_id);
 
