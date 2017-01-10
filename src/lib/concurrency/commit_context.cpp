@@ -19,8 +19,10 @@ bool CommitContext::has_next() const {
   return _next != nullptr;
 }
 
+std::shared_ptr<CommitContext> CommitContext::next() { return std::atomic_load(&_next); }
+
 std::shared_ptr<CommitContext> CommitContext::get_or_create_next() {
-  if (has_next()) return std::atomic_load(&_next);
+  if (has_next()) return next();
 
   auto new_next = std::make_shared<CommitContext>(_cid + 1);
 

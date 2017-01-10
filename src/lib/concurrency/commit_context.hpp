@@ -8,8 +8,10 @@ namespace opossum {
 // thread-safe
 class CommitContext {
  public:
+  // creates initial last commit context with cid 0
   CommitContext();
   CommitContext(const uint32_t cid);
+
   ~CommitContext();
 
   uint32_t cid() const;
@@ -18,6 +20,10 @@ class CommitContext {
   void make_pending();
 
   bool has_next() const;
+
+  std::shared_ptr<CommitContext> next();
+
+  // constructs the next context with cid + 1
   std::shared_ptr<CommitContext> get_or_create_next();
 
  private:
