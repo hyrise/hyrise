@@ -13,7 +13,7 @@ class TransactionManager {
  public:
   static TransactionManager &get();
 
-  std::unique_ptr<TransactionContext> new_transaction();
+  std::unique_ptr<TransactionContext> new_transaction_context();
   std::shared_ptr<CommitContext> new_commit_context();
 
   void commit(std::shared_ptr<CommitContext> context);

@@ -9,7 +9,7 @@ TransactionManager &TransactionManager::get() {
 
 TransactionManager::TransactionManager() : _ntid{1u}, _lcid{0u} {}
 
-std::unique_ptr<TransactionContext> TransactionManager::new_transaction() {
+std::unique_ptr<TransactionContext> TransactionManager::new_transaction_context() {
   return std::make_unique<TransactionContext>(_ntid++, _lcid);
 }
 
