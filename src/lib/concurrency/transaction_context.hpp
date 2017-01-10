@@ -12,10 +12,10 @@ namespace opossum {
 
 enum class TransactionPhase { Active, Aborting, Aborted, Committing, Done };
 
-class Transaction {
+class TransactionContext {
  public:
-  Transaction(const uint32_t tid, const uint32_t lcid);
-  ~Transaction();
+  TransactionContext(const uint32_t tid, const uint32_t lcid);
+  ~TransactionContext();
 
   uint32_t tid() const;
   uint32_t lcid() const;

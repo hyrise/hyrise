@@ -4,7 +4,7 @@
 #include <memory>
 
 #include "commit_context.hpp"
-#include "transaction.hpp"
+#include "transaction_context.hpp"
 
 namespace opossum {
 
@@ -13,7 +13,7 @@ class TransactionManager {
  public:
   static TransactionManager &get();
 
-  std::unique_ptr<Transaction> new_transaction();
+  std::unique_ptr<TransactionContext> new_transaction();
   std::shared_ptr<CommitContext> new_commit_context();
 
   void commit(std::shared_ptr<CommitContext> context);
