@@ -53,7 +53,6 @@ size_t Chunk::size() const {
 }
 
 void Chunk::set_mvcc_column_size(size_t new_size, uint32_t begin_CID) {
-  // TODO: thread safety, this breaks!
   _TIDs.resize(new_size, 0);
   _begin_CIDs.resize(new_size, begin_CID);
   _end_CIDs.resize(new_size, std::numeric_limits<uint32_t>::max());

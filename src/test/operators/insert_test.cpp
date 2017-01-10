@@ -36,7 +36,7 @@ class InsertTest : public BaseTest {
 
 TEST_F(InsertTest, EmptyTable) {
   auto ins = std::make_shared<Insert>(gt, std::vector<AllTypeVariant>{1, "brah"});
-  ins->execute();
+  ins->execute(1u);
 
   // check that row has been unserted
   EXPECT_EQ((*t->get_chunk(0).get_column(0))[0], AllTypeVariant(1));

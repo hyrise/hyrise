@@ -1,5 +1,6 @@
 #pragma once
 
+#include <atomic>
 #include <memory>
 #include <string>
 #include <vector>
@@ -42,7 +43,7 @@ class Chunk {
   std::shared_ptr<BaseColumn> get_column(size_t column_id) const;
 
   // mvcc columns
-  std::vector<uint32_t> _TIDs;
+  std::vector<std::atomic<uint32_t>> _TIDs;
   std::vector<uint32_t> _begin_CIDs;
   std::vector<uint32_t> _end_CIDs;
 

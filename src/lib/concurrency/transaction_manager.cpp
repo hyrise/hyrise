@@ -7,7 +7,7 @@ TransactionManager &TransactionManager::get() {
   return instance;
 }
 
-TransactionManager::TransactionManager() : _ntid{0u}, _lcid{0u} {}
+TransactionManager::TransactionManager() : _ntid{1u}, _lcid{0u} {}
 
 std::unique_ptr<Transaction> TransactionManager::new_transaction() {
   return std::make_unique<Transaction>(_ntid++, _lcid);
