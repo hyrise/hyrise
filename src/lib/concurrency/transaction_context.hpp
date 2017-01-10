@@ -1,16 +1,13 @@
 #pragma once
 
-#include <atomic>
-#include <functional>
+#include <cstdint>
 #include <memory>
-#include <vector>
 
 #include "commit_context.hpp"
-#include "operators/abstract_modifying_operator.hpp"
 
 namespace opossum {
 
-enum class TransactionPhase { Active, Aborting, Aborted, Committing, Done };
+enum class TransactionPhase { Active, Aborted, Committing, Committed };
 
 class TransactionContext {
  public:
@@ -20,13 +17,18 @@ class TransactionContext {
   uint32_t tid() const;
   uint32_t lcid() const;
 
+  // only available after prepareCommit has been called.
+  uint32_t cid() const;
+
   TransactionPhase phase() const;
 
-  void add_operator(const std::shared_ptr<AbstractModifyingOperator>& op);
-
+  // sets phase to Aborted
   void abort();
 
-  // TODO: rename to prepare_commit ?
+  // creates commit context sets phase to Committing
+  void prepareCommit();
+
+  // tries to commit transaction and sets phase to Committed
   void commit();
 
  private:
@@ -34,7 +36,6 @@ class TransactionContext {
   const uint32_t _lcid;
 
   TransactionPhase _phase;
-  std::vector<std::shared_ptr<AbstractModifyingOperator>> _operators;
   std::shared_ptr<CommitContext> _commit_context;
 };
 }  // namespace opossum
