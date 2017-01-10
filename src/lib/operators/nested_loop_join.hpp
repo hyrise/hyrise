@@ -15,7 +15,7 @@ namespace opossum {
 class NestedLoopJoin : public AbstractOperator {
  public:
   NestedLoopJoin(std::shared_ptr<AbstractOperator> left, std::shared_ptr<AbstractOperator> right,
-                 std::string left_column_name, std::string right_column_name, std::string op, JoinMode mode);
+                 std::string left_coumn_name, std::string right_column_name, std::string op, JoinMode mode);
 
   void execute() override;
   std::shared_ptr<const Table> get_output() const override;
