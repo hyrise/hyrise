@@ -8,7 +8,7 @@
 namespace opossum {
 
 NestedLoopJoin::NestedLoopJoin(std::shared_ptr<AbstractOperator> left, std::shared_ptr<AbstractOperator> right,
-                               std::string& left_column_name, std::string& right_column_name, std::string& op)
+                               std::string left_column_name, std::string right_column_name, std::string op)
     : AbstractOperator(left, right),
       _left_column_name{left_column_name},
       _right_column_name{right_column_name},
@@ -103,14 +103,14 @@ NestedLoopJoin::NestedLoopJoinImpl<T>::NestedLoopJoinImpl(NestedLoopJoin& nested
   }
 }
 
-/*
 template <typename T>
 void NestedLoopJoin::NestedLoopJoinImpl<T>::execute() {}
 
 template <typename T>
 std::shared_ptr<Table> NestedLoopJoin::NestedLoopJoinImpl<T>::get_output() const {
+  throw std::exception(std::runtime_error("NestedLoopJoinImpl::get_output() not implemented"));
   return nullptr;
-}*/
+}
 
 template <typename T>
 void NestedLoopJoin::NestedLoopJoinImpl<T>::join_value_value(ValueColumn<T>& left, ValueColumn<T>& right,
