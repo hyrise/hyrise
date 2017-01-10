@@ -37,10 +37,10 @@ class TableScan : public AbstractOperator {
   template <typename T>
   class TableScanImpl;
 
-  std::string _column_name;
-  std::string _op;
-  AllTypeVariant _value;
-  optional<AllTypeVariant> _value2;
+  const std::string _column_name;
+  const std::string _op;
+  const AllTypeVariant _value;
+  const optional<AllTypeVariant> _value2;
 
   std::unique_ptr<AbstractOperatorImpl> _impl;
 
