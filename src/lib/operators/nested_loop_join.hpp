@@ -15,7 +15,7 @@ namespace opossum {
 class NestedLoopJoin : public AbstractOperator {
  public:
   NestedLoopJoin(std::shared_ptr<AbstractOperator> left, std::shared_ptr<AbstractOperator> right,
-                 std::string left_column_name, std::string right_column_name, std::string op);
+                 std::string left_column_name, std::string right_column_name, std::string op, JoinMode mode);
 
   void execute() override;
   std::shared_ptr<const Table> get_output() const override;
@@ -26,16 +26,18 @@ class NestedLoopJoin : public AbstractOperator {
  private:
   struct JoinContext : ColumnVisitableContext {
     JoinContext(std::shared_ptr<BaseColumn> column_left, std::shared_ptr<BaseColumn> column_right,
-                ChunkID left_chunk_id, ChunkID right_chunk_id)
+                ChunkID left_chunk_id, ChunkID right_chunk_id, JoinMode mode)
         : _column_left{column_left},
           _column_right{column_right},
           _left_chunk_id{left_chunk_id},
-          _right_chunk_id{right_chunk_id} {};
+          _right_chunk_id{right_chunk_id},
+          _mode{mode} {};
 
     std::shared_ptr<BaseColumn> _column_left;
     std::shared_ptr<BaseColumn> _column_right;
     ChunkID _left_chunk_id;
     ChunkID _right_chunk_id;
+    JoinMode _mode;
   };
 
   template <typename T>
@@ -73,6 +75,7 @@ class NestedLoopJoin : public AbstractOperator {
   std::string& _left_column_name;
   std::string& _right_column_name;
   std::string& _op;
+  JoinMode _mode;
 
   std::shared_ptr<PosList> _pos_list_left;
   std::shared_ptr<PosList> _pos_list_right;
