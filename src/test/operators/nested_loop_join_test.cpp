@@ -1,3 +1,4 @@
+#include <iostream>
 #include <memory>
 #include <string>
 #include <utility>
@@ -29,14 +30,15 @@ class OperatorsNestedLoopJoinTest : public BaseTest {
 /*
 TEST_F(OperatorsNestedLoopJoinTest, ValueJoinValue) {
   auto gt_left = std::make_shared<GetTable>("table_left");
+  gt_left->execute();
   auto gt_right = std::make_shared<GetTable>("table_right");
+  gt_right->execute();
   std::shared_ptr<Table> expected_result = load_table("src/test/tables/nlj_result.tbl", 1);
-
-  auto join_operator = std::make_shared<NestedLoopJoin>(gt_left, gt_right, "left_c3", "right_c2", "=");
+  auto join_operator = std::make_shared<NestedLoopJoin>(gt_left, gt_right, "left_c3", "right_c3", "=", JoinMode::Inner);
   join_operator->execute();
 
   EXPECT_TABLE_EQ(join_operator->get_output(), expected_result);
+  std::cout << join_operator->get_output() << std::endl;
 }
 */
-
 }  // namespace opossum

@@ -15,20 +15,42 @@ NestedLoopJoin::NestedLoopJoin(std::shared_ptr<AbstractOperator> left, std::shar
       _right_column_name{right_column_name},
       _op{op},
       _mode{mode} {
+  if (left == nullptr) {
+    std::string message = "NestedLoopJoin::NestedLoopJoin: left input operator is null";
+    std::cout << message << std::endl;
+    throw std::exception(std::runtime_error(message));
+  }
+
+  if (right == nullptr) {
+    std::string message = "NestedLoopJoin::NestedLoopJoin: right input operator is null";
+    std::cout << message << std::endl;
+    throw std::exception(std::runtime_error(message));
+  }
+
   _pos_list_left = std::make_shared<PosList>();
   _pos_list_right = std::make_shared<PosList>();
 }
 
 void NestedLoopJoin::execute() {
+  std::cout << "marker 1" << std::endl;
   auto left_column_id = _input_left->column_id_by_name(_left_column_name);
+  std::cout << "marker 1.1" << std::endl;
   auto right_column_id = _input_right->column_id_by_name(_right_column_name);
+  std::cout << "marker 1.2" << std::endl;
   auto left_column_type = _input_left->column_type(left_column_id);
+  std::cout << "marker 1.3" << std::endl;
   auto right_column_type = _input_right->column_type(right_column_id);
+  std::cout << "marker 1.4" << std::endl;
 
   if (left_column_type != right_column_type) {
-    throw std::exception(
-        std::runtime_error("NestedLoopJoin::execute: left column type does not match right column type!"));
+    std::string message = "NestedLoopJoin::execute: column type \"" + left_column_type + "\" of left column \"" +
+                          _left_column_name + "\" does not match colum type \"" + right_column_type +
+                          "\" of right column \"" + _right_column_name + "\"!";
+    std::cout << message << std::endl;
+    throw std::exception(std::runtime_error(message));
   }
+
+  std::cout << "marker 1.5" << std::endl;
 
   for (ChunkID chunk_id_left = 0; chunk_id_left < _input_left->chunk_count(); ++chunk_id_left) {
     for (ChunkID chunk_id_right = 0; chunk_id_right < _input_right->chunk_count(); ++chunk_id_right) {
@@ -43,10 +65,12 @@ void NestedLoopJoin::execute() {
     }
   }
 
+  std::cout << "marker 3" << std::endl;
+
   _output = std::make_shared<Table>(0, false);
   for (size_t column_id = 0; column_id < _input_left->col_count(); column_id++) {
-    const auto& first_chunk_column = _input_left->get_chunk(0).get_column(column_id);
-    const auto& r_column = std::dynamic_pointer_cast<ReferenceColumn>(first_chunk_column);
+    const std::shared_ptr<BaseColumn> first_chunk_column = _input_left->get_chunk(0).get_column(column_id);
+    const std::shared_ptr<ReferenceColumn> r_column = std::dynamic_pointer_cast<ReferenceColumn>(first_chunk_column);
 
     if (r_column) {
       auto& referenced_table = r_column->referenced_table();
@@ -61,6 +85,8 @@ void NestedLoopJoin::execute() {
       _output->get_chunk(0).add_column(ref_column);
     }
   }
+
+  std::cout << "marker 4" << std::endl;
 
   for (size_t column_id = 0; column_id < _input_right->col_count(); column_id++) {
     // We already added this from the left side
@@ -81,6 +107,8 @@ void NestedLoopJoin::execute() {
       _output->get_chunk(0).add_column(ref_column);
     }
   }
+
+  std::cout << "marker 5" << std::endl;
 }
 
 std::shared_ptr<const Table> NestedLoopJoin::get_output() const { return _output; }
