@@ -125,8 +125,9 @@ project "coverage"
   links { "opossumCoverage", "googletest" }
   linkoptions {"--coverage"}
   files { "src/test/**.hpp", "src/test/**.cpp" }
+  buildoptions { "-fprofile-arcs -ftest-coverage" }
   includedirs { "third_party/googletest/googletest/include" }
-  postbuildcommands { "./build/coverage && rm -fr coverage; mkdir coverage && gcovr -s -r . --exclude=\".*types*.\" --html --html-details -o coverage/index.html" }
+  postbuildcommands { "./build/coverage && rm -fr coverage; mkdir coverage && gcovr -s -r . --exclude=\"(.*types*.|.*test*.)\" --html --html-details -o coverage/index.html" }
 
 newoption {
   trigger     = "compiler",

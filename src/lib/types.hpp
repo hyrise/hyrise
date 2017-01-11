@@ -84,7 +84,6 @@ std::unique_ptr<base> make_unique_by_column_type(const std::string &type, Constr
 
 template <class base, template <typename...> class impl, class... TemplateArgs, class... ConstructorArgs>
 std::shared_ptr<base> make_shared_by_column_type(const std::string &type, ConstructorArgs &&... args) {
-  return std::move(
-      make_unique_by_column_type<base, impl, TemplateArgs...>(type, std::forward<ConstructorArgs>(args)...));
+  return make_unique_by_column_type<base, impl, TemplateArgs...>(type, std::forward<ConstructorArgs>(args)...);
 }
 }  // namespace opossum
