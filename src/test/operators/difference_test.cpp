@@ -24,6 +24,9 @@ class OperatorsDifferenceTest : public BaseTest {
     std::shared_ptr<Table> test_table_b = load_table("src/test/tables/int_float3.tbl", 2);
     StorageManager::get().add_table("difference_test_table_b", std::move(test_table_b));
     _gt_b = std::make_shared<GetTable>("difference_test_table_b");
+
+    _gt_a->execute();
+    _gt_b->execute();
   }
 
   std::shared_ptr<GetTable> _gt_a;
@@ -59,6 +62,7 @@ TEST_F(OperatorsDifferenceTest, ThrowWrongColumnNumberException) {
   std::shared_ptr<Table> test_table_c = load_table("src/test/tables/int.tbl", 2);
   StorageManager::get().add_table("difference_test_table_c", std::move(test_table_c));
   auto gt_c = std::make_shared<GetTable>("difference_test_table_c");
+  gt_c->execute();
 
   auto difference = std::make_shared<Difference>(_gt_a, gt_c);
 
@@ -66,9 +70,12 @@ TEST_F(OperatorsDifferenceTest, ThrowWrongColumnNumberException) {
 }
 
 TEST_F(OperatorsDifferenceTest, ThrowWrongColumnOrderException) {
+  _gt_a->execute();
+
   std::shared_ptr<Table> test_table_d = load_table("src/test/tables/float_int.tbl", 2);
   StorageManager::get().add_table("difference_test_table_d", std::move(test_table_d));
   auto gt_d = std::make_shared<GetTable>("difference_test_table_d");
+  gt_d->execute();
 
   auto difference = std::make_shared<Difference>(_gt_a, gt_d);
 

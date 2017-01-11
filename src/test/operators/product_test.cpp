@@ -27,6 +27,9 @@ class OperatorsProductTest : public BaseTest {
     std::shared_ptr<Table> test_table_b = load_table("src/test/tables/float.tbl", 2);
     StorageManager::get().add_table("table_b", std::move(test_table_b));
     _gt_b = std::make_shared<GetTable>("table_b");
+
+    _gt_a->execute();
+    _gt_b->execute();
   }
 };
 
