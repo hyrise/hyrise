@@ -1,3 +1,6 @@
+# Contribution Guidelines
+Do not commit/push directly to the master or develop branch. Instead, create a feature branch and file a merge request.
+
 # Coding Style
 Avoid exception handling. Because Opossum is not a product, we do not have to recover from errors. Instead, fail loud (i.e., terminate the program) so that developers immediately notice that something is wrong and can fix the problem at its root.
 
