@@ -11,8 +11,6 @@ namespace opossum {
 class Print : public AbstractOperator {
  public:
   explicit Print(const std::shared_ptr<const AbstractOperator> in, std::ostream& out = std::cout);
-  void execute() override;
-  std::shared_ptr<const Table> get_output() const override;
 
   const std::string name() const override;
   uint8_t num_in_tables() const override;
@@ -20,6 +18,7 @@ class Print : public AbstractOperator {
 
  protected:
   std::vector<uint16_t> column_string_widths(uint16_t min, uint16_t max, std::shared_ptr<const Table> t) const;
+  std::shared_ptr<const Table> on_execute() override;
 
   // stream to print the result
   std::ostream& _out;
