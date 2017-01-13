@@ -26,18 +26,23 @@ class TableScan : public AbstractOperator {
  public:
   TableScan(const std::shared_ptr<AbstractOperator> in, const std::string &filter_column_name, const std::string &op,
             const AllTypeVariant value, const optional<AllTypeVariant> value2 = nullopt);
-  void execute() override;
-  std::shared_ptr<const Table> get_output() const override;
 
   const std::string name() const override;
   uint8_t num_in_tables() const override;
   uint8_t num_out_tables() const override;
 
  protected:
+  std::shared_ptr<const Table> on_execute() override;
+
   template <typename T>
   class TableScanImpl;
 
-  const std::unique_ptr<AbstractOperatorImpl> _impl;
+  const std::string _column_name;
+  const std::string _op;
+  const AllTypeVariant _value;
+  const optional<AllTypeVariant> _value2;
+
+  std::unique_ptr<AbstractOperatorImpl> _impl;
 
   enum ScanType { OpEquals, OpNotEquals, OpLessThan, OpLessThanEquals, OpGreaterThan, OpGreaterThanEquals, OpBetween };
 };
@@ -50,13 +55,29 @@ class TableScan::TableScanImpl : public AbstractOperatorImpl, public ColumnVisit
   // creates a new table with reference columns
   TableScanImpl(const std::shared_ptr<const AbstractOperator> in, const std::string &filter_column_name,
                 const std::string &op, const AllTypeVariant value, const optional<AllTypeVariant> value2)
-      : _in_table(in->get_output()),
-        _filter_column_id(_in_table->column_id_by_name(filter_column_name)),
-        _output(std::make_shared<Table>()),
+      : _in_operator(in),
+        _filter_column_name(filter_column_name),
+        _op(op),
         _casted_value(type_cast<T>(value)),
-        _casted_value2(value2 ? optional<T>(type_cast<T>(*value2)) : optional<T>(nullopt)) {
-    for (size_t column_id = 0; column_id < _in_table->col_count(); ++column_id) {
-      _output->add_column(_in_table->column_name(column_id), _in_table->column_type(column_id), false);
+        _casted_value2(value2 ? optional<T>(type_cast<T>(*value2)) : optional<T>(nullopt)) {}
+
+  struct ScanContext : ColumnVisitableContext {
+    ScanContext(std::shared_ptr<const Table> t, std::vector<ChunkOffset> &mo,
+                std::shared_ptr<std::vector<ChunkOffset>> co = nullptr)
+        : table_in(t), matches_out(mo), chunk_offsets_in(std::move(co)) {}
+    std::shared_ptr<const Table> table_in;
+    std::vector<ChunkOffset> &matches_out;
+    std::shared_ptr<std::vector<ChunkOffset>> chunk_offsets_in;
+  };
+
+  std::shared_ptr<const Table> on_execute() override {
+    auto output = std::make_shared<Table>();
+
+    auto in_table = _in_operator->get_output();
+    auto filter_column_id = in_table->column_id_by_name(_filter_column_name);
+
+    for (size_t column_id = 0; column_id < in_table->col_count(); ++column_id) {
+      output->add_column(in_table->column_name(column_id), in_table->column_type(column_id), false);
     }
 
     // Definining all possible operators here might appear odd. Chances are, however, that we will not
@@ -68,61 +89,50 @@ class TableScan::TableScanImpl : public AbstractOperatorImpl, public ColumnVisit
     // we need these copies so that they can be captured by the lambdas below
     T casted_value = _casted_value;
 
-    if (op == "=") {
+    if (_op == "=") {
       _type = OpEquals;
       _value_comparator = [casted_value](T val) { return val == casted_value; };
       _value_id_comparator = [](ValueID found_vid, ValueID search_vid, ValueID) { return found_vid == search_vid; };
-    } else if (op == "!=") {
+    } else if (_op == "!=") {
       _type = OpNotEquals;
       _value_comparator = [casted_value](T val) { return val != casted_value; };
       _value_id_comparator = [](ValueID found_vid, ValueID search_vid, ValueID) { return found_vid != search_vid; };
-    } else if (op == "<") {
+    } else if (_op == "<") {
       _type = OpLessThan;
       _value_comparator = [casted_value](T val) { return val < casted_value; };
       _value_id_comparator = [](ValueID found_vid, ValueID search_vid, ValueID) { return found_vid < search_vid; };
-    } else if (op == "<=") {
+    } else if (_op == "<=") {
       _type = OpLessThanEquals;
       _value_comparator = [casted_value](T val) { return val <= casted_value; };
       _value_id_comparator = [](ValueID found_vid, ValueID search_vid, ValueID) { return found_vid < search_vid; };
       //                                                                                           ^
       //                                                               sic! see handle_dictionary_column for details
-    } else if (op == ">") {
+    } else if (_op == ">") {
       _type = OpGreaterThan;
       _value_comparator = [casted_value](T val) { return val > casted_value; };
       _value_id_comparator = [](ValueID found_vid, ValueID search_vid, ValueID) { return found_vid >= search_vid; };
-    } else if (op == ">=") {
+    } else if (_op == ">=") {
       _type = OpGreaterThanEquals;
       _value_comparator = [casted_value](T val) { return val >= casted_value; };
       _value_id_comparator = [](ValueID found_vid, ValueID search_vid, ValueID) { return found_vid >= search_vid; };
-    } else if (op == "BETWEEN") {
+    } else if (_op == "BETWEEN") {
       _type = OpBetween;
-      if (IS_DEBUG && !value2) throw std::runtime_error("No second value for BETWEEN comparison given");
+      if (IS_DEBUG && !_casted_value2) throw std::runtime_error("No second value for BETWEEN comparison given");
       T casted_value2 = _casted_value2.value_or(T());
       _value_comparator = [casted_value, casted_value2](T val) { return casted_value <= val && val <= casted_value2; };
       _value_id_comparator = [](ValueID found_vid, ValueID search_vid, ValueID search_vid2) {
         return search_vid <= found_vid && found_vid < search_vid2;
       };
     } else {
-      throw std::runtime_error(std::string("unknown operator ") + op);
+      throw std::runtime_error(std::string("unknown operator ") + _op);
     }
-  }
 
-  struct ScanContext : ColumnVisitableContext {
-    ScanContext(std::shared_ptr<const Table> t, std::vector<ChunkOffset> &mo,
-                std::shared_ptr<std::vector<ChunkOffset>> co = nullptr)
-        : table_in(t), matches_out(mo), chunk_offsets_in(std::move(co)) {}
-    std::shared_ptr<const Table> table_in;
-    std::vector<ChunkOffset> &matches_out;
-    std::shared_ptr<std::vector<ChunkOffset>> chunk_offsets_in;
-  };
-
-  void execute() override {
-    for (ChunkID chunk_id = 0; chunk_id < _in_table->chunk_count(); ++chunk_id) {
-      const Chunk &chunk_in = _in_table->get_chunk(chunk_id);
+    for (ChunkID chunk_id = 0; chunk_id < in_table->chunk_count(); ++chunk_id) {
+      const Chunk &chunk_in = in_table->get_chunk(chunk_id);
       Chunk chunk_out;
-      auto base_column = chunk_in.get_column(_filter_column_id);
+      auto base_column = chunk_in.get_column(filter_column_id);
       std::vector<ChunkOffset> matches_in_this_chunk;
-      base_column->visit(*this, std::make_shared<ScanContext>(_in_table, matches_in_this_chunk));
+      base_column->visit(*this, std::make_shared<ScanContext>(in_table, matches_in_this_chunk));
       // We now receive the visits in the handler methods below...
       if (matches_in_this_chunk.size() == 0) continue;
 
@@ -135,7 +145,7 @@ class TableScan::TableScanImpl : public AbstractOperatorImpl, public ColumnVisit
       // _filtered_pos_lists will hold a mapping from incoming PosList to outgoing PosList. Because
       // Value/DictionaryColumns do not have an incoming PosList, they are represented with nullptr.
       std::map<std::shared_ptr<const PosList>, std::shared_ptr<PosList>> filtered_pos_lists;
-      for (size_t column_id = 0; column_id < _in_table->col_count(); ++column_id) {
+      for (size_t column_id = 0; column_id < in_table->col_count(); ++column_id) {
         auto ref_col_in = std::dynamic_pointer_cast<ReferenceColumn>(chunk_in.get_column(column_id));
         std::shared_ptr<const PosList> pos_list_in;
         std::shared_ptr<const Table> referenced_table_out;
@@ -145,7 +155,7 @@ class TableScan::TableScanImpl : public AbstractOperatorImpl, public ColumnVisit
           referenced_table_out = ref_col_in->referenced_table();
           referenced_column_id = ref_col_in->referenced_column_id();
         } else {
-          referenced_table_out = _in_table;
+          referenced_table_out = in_table;
           referenced_column_id = column_id;
         }
 
@@ -172,8 +182,10 @@ class TableScan::TableScanImpl : public AbstractOperatorImpl, public ColumnVisit
         auto ref_col_out = std::make_shared<ReferenceColumn>(referenced_table_out, referenced_column_id, pos_list_out);
         chunk_out.add_column(ref_col_out);
       }
-      _output->add_chunk(std::move(chunk_out));
+      output->add_chunk(std::move(chunk_out));
     }
+
+    return output;
   }
 
   void handle_value_column(BaseColumn &base_column, std::shared_ptr<ColumnVisitableContext> base_context) override {
@@ -310,14 +322,9 @@ class TableScan::TableScanImpl : public AbstractOperatorImpl, public ColumnVisit
     }
   }
 
-  std::shared_ptr<Table> get_output() const override { return _output; }
-
-  const std::shared_ptr<const Table> _in_table;
-
-  // column to filter by
-  const size_t _filter_column_id;
-
-  std::shared_ptr<Table> _output;
+  const std::shared_ptr<const AbstractOperator> _in_operator;
+  std::string _filter_column_name;
+  std::string _op;
   std::function<bool(T)> _value_comparator;
   std::function<bool(ValueID, ValueID, ValueID)> _value_id_comparator;
   const T _casted_value;

@@ -4,6 +4,8 @@
 
 *Have a look at docs/guidelines*
 
+The [course material](https://hpi.de//plattner/teaching/winter-term-201617/build-your-own-database.html) is a good starting point to get to know Opossum
+
 ## Dependencies
 You can install the dependencies on your own or use the install.sh script which installs most of the following packages.
 

@@ -22,6 +22,8 @@ class OperatorsProjectionTest : public BaseTest {
     std::shared_ptr<Table> test_table = load_table("src/test/tables/int_float.tbl", 2);
     StorageManager::get().add_table("table_a", std::move(test_table));
     _gt = std::make_shared<GetTable>("table_a");
+
+    _gt->execute();
   }
 
   std::shared_ptr<GetTable> _gt;
