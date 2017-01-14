@@ -5,6 +5,8 @@
 #include <string>
 #include <vector>
 
+#include "tbb/concurrent_vector.h"
+
 #include "base_column.hpp"
 #include "value_column.hpp"
 
@@ -41,9 +43,9 @@ class Chunk {
   std::shared_ptr<BaseColumn> get_column(size_t column_id) const;
 
   // mvcc columns
-  std::vector<uint32_t> _TIDs;
-  std::vector<uint32_t> _begin_CIDs;
-  std::vector<uint32_t> _end_CIDs;
+  tbb::concurrent_vector<uint32_t> _TIDs;
+  tbb::concurrent_vector<uint32_t> _begin_CIDs;
+  tbb::concurrent_vector<uint32_t> _end_CIDs;
 
  protected:
   void set_mvcc_column_size(size_t new_size, uint32_t begin_CID);
