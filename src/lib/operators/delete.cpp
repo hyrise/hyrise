@@ -1,5 +1,8 @@
 #include "delete.hpp"
 
+#include <memory>
+#include <string>
+
 #include "concurrency/transaction_context.hpp"
 
 namespace opossum {

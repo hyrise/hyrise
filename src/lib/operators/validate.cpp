@@ -2,6 +2,7 @@
 
 #include <memory>
 #include <string>
+#include <utility>
 
 #include "../concurrency/transaction_context.hpp"
 #include "../storage/reference_column.hpp"
@@ -10,10 +11,7 @@ namespace opossum {
 
 Validate::Validate(const std::shared_ptr<AbstractOperator> in)
     : AbstractNonModifyingOperator(in), _in_table(in->get_output()), _output(std::make_shared<Table>()) {
-  // TODO remove _in_table
-  for (size_t column_id = 0; column_id < _in_table->col_count(); ++column_id) {
-    _output->add_column(_in_table->column_name(column_id), _in_table->column_type(column_id), false);
-  }
+  // TODO(EVERYONE): remove _in_table
 }
 
 const std::string Validate::name() const { return "Validate"; }
@@ -29,11 +27,14 @@ bool is_row_visible(const TransactionContext *context, const Chunk &chunk, uint3
   auto beginCID = chunk._begin_CIDs[chunk_offset];
   auto endCID = chunk._end_CIDs[chunk_offset];
 
+  // Taken from: https://github.com/hyrise/hyrise/blob/master/docs/documentation/queryexecution/tx.rst
   bool own_insert = ourTID == rowTID && !(ourLCID >= beginCID) && !(ourLCID >= endCID);
   bool past_insert = ourTID != rowTID && (ourLCID >= beginCID) && !(ourLCID >= endCID);
 
   return own_insert || past_insert;
 }
+
+std::shared_ptr<const Table> Validate::on_execute() { return nullptr; }
 
 std::shared_ptr<const Table> Validate::on_execute(const TransactionContext *transactionContext) {
   auto output = std::make_shared<Table>();
@@ -65,12 +66,13 @@ std::shared_ptr<const Table> Validate::on_execute(const TransactionContext *tran
 
     Chunk chunk_out;
     for (size_t column_id = 0; column_id < _in_table->col_count(); ++column_id) {
-      // TODO because of projection, column_id might be wrong. need to look it up in case of referencing tables.
+      // TODO(everyone): because of projection, column_id might be wrong. need to look it up in case of referencing
+      // tables.
       auto ref_col_out = std::make_shared<ReferenceColumn>(referenced_table, column_id, pos_list_out);
       chunk_out.add_column(ref_col_out);
     }
 
-    _output->add_chunk(std::move(chunk_out));
+    output->add_chunk(std::move(chunk_out));
   }
   return output;
 }

@@ -40,7 +40,7 @@ TEST_F(InsertTest, EmptyTable) {
   auto context = TransactionContext(1, 1);
   ins->execute(&context);
 
-  // check that row has been unserted
+  // Check that row has been inserted.
   EXPECT_EQ((*t->get_chunk(0).get_column(0))[0], AllTypeVariant(1));
   EXPECT_EQ((*t->get_chunk(0).get_column(1))[0], AllTypeVariant("brah"));
 
