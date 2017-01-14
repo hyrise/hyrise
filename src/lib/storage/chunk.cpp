@@ -36,14 +36,6 @@ void Chunk::append(std::vector<AllTypeVariant> values) {
   }
 }
 
-void Chunk::remove(const size_t i) {
-  if (i >= size()) {
-    throw std::runtime_error("remove: index out of bounds");
-  }
-
-  // mark row as deleted
-}
-
 std::shared_ptr<BaseColumn> Chunk::get_column(size_t column_id) const { return _columns.at(column_id); }
 
 size_t Chunk::col_count() const { return _columns.size(); }
