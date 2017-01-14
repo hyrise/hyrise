@@ -8,12 +8,14 @@
 
 namespace opossum {
 
+class TransactionContext;
+
 // operator to retrieve a table from the StorageManager by specifying its name
 class Insert : public AbstractModifyingOperator {
  public:
   explicit Insert(std::shared_ptr<GetTable> get_table, std::vector<AllTypeVariant>&& values);
 
-  void execute(const uint32_t tid) override;
+  std::shared_ptr<const Table> on_execute(const TransactionContext* context) override;
   void commit(const uint32_t cid) override;
   void abort() override;
 

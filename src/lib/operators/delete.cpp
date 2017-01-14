@@ -3,10 +3,10 @@
 
 namespace opossum {
 
-Delete::Delete(const std::shared_ptr<const TableScan>& table_scan) : AbstractOperator{table_scan} {}
+Delete::Delete(const std::shared_ptr<const TableScan>& table_scan) : AbstractModifyingOperator{table_scan} {}
 
-void Delete::execute() {
-  const auto reference_table = std::const_pointer_cast<Table>(_input_left);
+std::shared_ptr<const Table> Delete::on_execute(const TransactionContext* context) {
+  const auto reference_table = std::const_pointer_cast<Table>(_input_left->get_output());
 
   // assumption: table contains only referenced columns that only reference one table
   // assert(col_count > 0)
@@ -22,9 +22,9 @@ void Delete::execute() {
     const auto chunk = &table->get_chunk(row_id.chunk_id);
     chunk->remove(row_id.chunk_offset);
   }
-}
 
-std::shared_ptr<const Table> Delete::get_output() const { return nullptr; }
+  return nullptr;
+}
 
 const std::string Delete::name() const { return "Delete"; }
 

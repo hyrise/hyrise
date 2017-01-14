@@ -3,12 +3,12 @@
 #include <memory>
 #include <string>
 
-#include "abstract_operator.hpp"
+#include "abstract_non_modifying_operator.hpp"
 #include "types.hpp"
 
 namespace opossum {
 
-class Difference : public AbstractOperator {
+class Difference : public AbstractNonModifyingOperator {
  public:
   Difference(const std::shared_ptr<const AbstractOperator> left_in,
              const std::shared_ptr<const AbstractOperator> right_in);

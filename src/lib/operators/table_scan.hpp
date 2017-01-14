@@ -7,7 +7,7 @@
 #include <utility>
 #include <vector>
 
-#include "abstract_operator.hpp"
+#include "abstract_non_modifying_operator.hpp"
 #include "storage/dictionary_column.hpp"
 #include "storage/reference_column.hpp"
 #include "storage/value_column.hpp"
@@ -22,7 +22,7 @@ namespace opossum {
 // As with most operators, we do not guarantee a stable operation with regards to positions - i.e., your sorting order
 // might be disturbed
 
-class TableScan : public AbstractOperator {
+class TableScan : public AbstractNonModifyingOperator {
  public:
   TableScan(const std::shared_ptr<AbstractOperator> in, const std::string &filter_column_name, const std::string &op,
             const AllTypeVariant value, const optional<AllTypeVariant> value2 = nullopt);
@@ -42,14 +42,14 @@ class TableScan : public AbstractOperator {
   const AllTypeVariant _value;
   const optional<AllTypeVariant> _value2;
 
-  std::unique_ptr<AbstractOperatorImpl> _impl;
+  std::unique_ptr<AbstractNonModifyingOperatorImpl> _impl;
 
   enum ScanType { OpEquals, OpNotEquals, OpLessThan, OpLessThanEquals, OpGreaterThan, OpGreaterThanEquals, OpBetween };
 };
 
 // we need to use the impl pattern because the scan operator of the sort depends on the type of the column
 template <typename T>
-class TableScan::TableScanImpl : public AbstractOperatorImpl, public ColumnVisitable {
+class TableScan::TableScanImpl : public AbstractNonModifyingOperatorImpl, public ColumnVisitable {
  public:
   // supported values for op are {"=", "!=", "<", "<=", ">", ">=", "BETWEEN"}
   // creates a new table with reference columns

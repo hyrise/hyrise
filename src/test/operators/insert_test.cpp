@@ -5,6 +5,7 @@
 #include "../base_test.hpp"
 #include "gtest/gtest.h"
 
+#include "../../lib/concurrency/transaction_context.hpp"
 #include "../../lib/operators/get_table.hpp"
 #include "../../lib/operators/insert.hpp"
 #include "../../lib/storage/storage_manager.hpp"
@@ -36,7 +37,8 @@ class InsertTest : public BaseTest {
 
 TEST_F(InsertTest, EmptyTable) {
   auto ins = std::make_shared<Insert>(gt, std::vector<AllTypeVariant>{1, "brah"});
-  ins->execute(1u);
+  auto context = TransactionContext(1, 1);
+  ins->execute(&context);
 
   // check that row has been unserted
   EXPECT_EQ((*t->get_chunk(0).get_column(0))[0], AllTypeVariant(1));

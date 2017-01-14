@@ -12,7 +12,7 @@ enum class TransactionPhase { Active, Aborted, Committing, Committed };
 class TransactionContext {
  public:
   TransactionContext(const uint32_t tid, const uint32_t lcid);
-  ~TransactionContext();
+  ~TransactionContext() = default;
 
   uint32_t tid() const;
   uint32_t lcid() const;

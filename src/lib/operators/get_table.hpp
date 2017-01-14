@@ -3,12 +3,12 @@
 #include <memory>
 #include <string>
 
-#include "abstract_operator.hpp"
+#include "abstract_non_modifying_operator.hpp"
 
 namespace opossum {
 
 // operator to retrieve a table from the StorageManager by specifying its name
-class GetTable : public AbstractOperator {
+class GetTable : public AbstractNonModifyingOperator {
  public:
   explicit GetTable(const std::string &name);
 

@@ -4,11 +4,11 @@
 #include <string>
 #include <vector>
 
-#include "abstract_operator.hpp"
+#include "abstract_non_modifying_operator.hpp"
 
 namespace opossum {
 // operator to print the table with its data
-class Print : public AbstractOperator {
+class Print : public AbstractNonModifyingOperator {
  public:
   explicit Print(const std::shared_ptr<const AbstractOperator> in, std::ostream& out = std::cout);
 
