@@ -12,9 +12,9 @@ class AbstractNonModifyingOperator : public AbstractOperator {
  public:
   AbstractNonModifyingOperator(const std::shared_ptr<const AbstractOperator> left = nullptr,
                                const std::shared_ptr<const AbstractOperator> right = nullptr)
-      : AbstractOperator(left, right){};
+      : AbstractOperator(left, right) {}
 
-  virtual std::shared_ptr<const Table> on_execute(const TransactionContext *context) override { return on_execute(); };
+  std::shared_ptr<const Table> on_execute(const TransactionContext* /* context */) override { return on_execute(); }
 
   virtual std::shared_ptr<const Table> on_execute() = 0;
 

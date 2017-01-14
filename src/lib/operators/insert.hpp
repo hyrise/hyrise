@@ -2,6 +2,7 @@
 
 #include <memory>
 #include <string>
+#include <vector>
 
 #include "abstract_modifying_operator.hpp"
 #include "get_table.hpp"

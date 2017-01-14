@@ -1,5 +1,7 @@
-
 #include "delete.hpp"
+
+#include <memory>
+#include <string>
 
 namespace opossum {
 

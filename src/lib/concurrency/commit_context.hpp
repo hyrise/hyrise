@@ -10,7 +10,7 @@ class CommitContext {
  public:
   // creates initial last commit context with cid 0
   CommitContext();
-  CommitContext(const uint32_t cid);
+  explicit CommitContext(const uint32_t cid);
 
   ~CommitContext();
 

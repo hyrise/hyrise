@@ -51,7 +51,7 @@ void TransactionContext::commit() {
   _commit_context->make_pending();
   manager.commit(_commit_context);
 
-  // TODO: update _phase when transaction actually committed?
+  // TODO(EVERYONE): update _phase when transaction actually committed?
   _phase = TransactionPhase::Committed;
 }
 

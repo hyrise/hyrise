@@ -1,5 +1,7 @@
 #include "commit_context.hpp"
 
+#include <memory>
+
 namespace opossum {
 
 CommitContext::CommitContext() : _cid{0u}, _pending{false} {}

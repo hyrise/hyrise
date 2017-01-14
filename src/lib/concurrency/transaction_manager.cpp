@@ -1,5 +1,7 @@
 #include "transaction_manager.hpp"
 
+#include <memory>
+
 namespace opossum {
 
 TransactionManager &TransactionManager::get() {
@@ -38,7 +40,7 @@ void TransactionManager::commit(std::shared_ptr<CommitContext> context) {
 
     if (!_lcid.compare_exchange_strong(expected_lcid, current_context->cid())) return;
 
-    // TODO: send response to client
+    // TODO(EVERYONE): send response to client
 
     if (!current_context->has_next()) return;
 
