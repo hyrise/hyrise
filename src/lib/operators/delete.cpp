@@ -1,7 +1,6 @@
 #include "delete.hpp"
 
-#include <memory>
-#include <string>
+#include "concurrency/transaction_context.hpp"
 
 namespace opossum {
 
@@ -18,19 +17,50 @@ std::shared_ptr<const Table> Delete::on_execute(const TransactionContext* contex
 
   const auto first_column = std::static_pointer_cast<ReferenceColumn>(chunk->get_column(0));
 
-  auto table = std::const_pointer_cast<Table>(first_column->referenced_table());
+  _pos_list = first_column->pos_list();
+  _referenced_table = std::const_pointer_cast<Table>(first_column->referenced_table());
+  _tid = context->tid();
 
-  for (const auto& row_id : *first_column->pos_list()) {
-    const auto chunk = &table->get_chunk(row_id.chunk_id);
-    chunk->remove(row_id.chunk_offset);
+  for (const auto& row_id : *_pos_list) {
+    auto& chunk = _referenced_table->get_chunk(row_id.chunk_id);
+
+    // _succeeded = chunk._TIDs[row_id.chunk_offset].compare_exchange_strong(0u, _tid);
+    // fallback until replaced by concurrent vector
+
+    auto& row_tid = chunk._TIDs[row_id.chunk_offset];
+
+    if (row_tid != 0u) {
+      _succeeded = false;
+      return nullptr;
+    }
+
+    row_tid = _tid;
   }
 
   return nullptr;
+}
+
+void Delete::commit(const uint32_t cid) {
+  for (const auto& row_id : *_pos_list) {
+    auto& chunk = _referenced_table->get_chunk(row_id.chunk_id);
+
+    chunk._end_CIDs[row_id.chunk_offset] = cid;
+  }
+}
+
+void Delete::abort() {
+  for (const auto& row_id : *_pos_list) {
+    auto& chunk = _referenced_table->get_chunk(row_id.chunk_id);
+    auto& row_tid = chunk._TIDs[row_id.chunk_offset];
+
+    if (row_tid != _tid) return;
+
+    row_tid = 0u;
+  }
 }
 
 const std::string Delete::name() const { return "Delete"; }
 
 uint8_t Delete::num_in_tables() const { return 1u; }
 
-uint8_t Delete::num_out_tables() const { return 0u; }
 }  // namespace opossum

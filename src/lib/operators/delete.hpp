@@ -12,10 +12,18 @@ namespace opossum {
 class Delete : public AbstractModifyingOperator {
  public:
   explicit Delete(const std::shared_ptr<const TableScan>& table_scan);
+
   std::shared_ptr<const Table> on_execute(const TransactionContext* context) override;
+
+  void commit(const uint32_t cid) override;
+  void abort() override;
 
   const std::string name() const override;
   uint8_t num_in_tables() const override;
-  uint8_t num_out_tables() const override;
+
+ private:
+  std::shared_ptr<const PosList> _pos_list;
+  std::shared_ptr<Table> _referenced_table;
+  uint32_t _tid;
 };
 }  // namespace opossum
