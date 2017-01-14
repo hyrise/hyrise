@@ -59,4 +59,31 @@ TEST_F(DeleteTest, ExecuteAndCommit) {
   EXPECT_EQ(_table->get_chunk(0u)._TIDs.at(2u), 0u);
 }
 
+TEST_F(DeleteTest, ExecuteAndAbort) {
+  const auto transaction_context = TransactionContext{1u, 1u};
+  const auto max_cid = std::numeric_limits<uint32_t>::max();
+
+  auto table_scan = std::make_shared<TableScan>(_gt, "b", ">", "456.7");
+
+  table_scan->execute();
+
+  auto delete_op = std::make_shared<Delete>(table_scan);
+
+  delete_op->execute(&transaction_context);
+
+  EXPECT_EQ(_table->get_chunk(0u)._TIDs.at(0u), transaction_context.tid());
+  EXPECT_EQ(_table->get_chunk(0u)._TIDs.at(1u), 0u);
+  EXPECT_EQ(_table->get_chunk(0u)._TIDs.at(2u), transaction_context.tid());
+
+  delete_op->abort();
+
+  EXPECT_EQ(_table->get_chunk(0u)._end_CIDs.at(0u), max_cid);
+  EXPECT_EQ(_table->get_chunk(0u)._end_CIDs.at(1u), max_cid);
+  EXPECT_EQ(_table->get_chunk(0u)._end_CIDs.at(2u), max_cid);
+
+  EXPECT_EQ(_table->get_chunk(0u)._TIDs.at(0u), 0u);
+  EXPECT_EQ(_table->get_chunk(0u)._TIDs.at(1u), 0u);
+  EXPECT_EQ(_table->get_chunk(0u)._TIDs.at(2u), 0u);
+}
+
 }  // namespace opossum
