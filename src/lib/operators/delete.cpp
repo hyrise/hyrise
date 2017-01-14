@@ -7,7 +7,7 @@
 
 namespace opossum {
 
-Delete::Delete(const std::shared_ptr<const TableScan>& table_scan) : AbstractModifyingOperator{table_scan} {}
+Delete::Delete(const std::shared_ptr<const AbstractOperator>& op) : AbstractModifyingOperator{op} {}
 
 std::shared_ptr<const Table> Delete::on_execute(const TransactionContext* context) {
   const auto reference_table = std::const_pointer_cast<Table>(_input_left->get_output());
@@ -15,6 +15,7 @@ std::shared_ptr<const Table> Delete::on_execute(const TransactionContext* contex
   // assumption: table contains only referenced columns that only reference one table
   // assert(col_count > 0)
   // assert(chunk_size == 0)
+  // assert(context != nullptr)
 
   const auto chunk = &reference_table->get_chunk(0);
 
@@ -48,6 +49,7 @@ void Delete::commit(const uint32_t cid) {
     auto& chunk = _referenced_table->get_chunk(row_id.chunk_id);
 
     chunk._end_CIDs[row_id.chunk_offset] = cid;
+    chunk._TIDs[row_id.chunk_offset] = 0u;
   }
 }
 
