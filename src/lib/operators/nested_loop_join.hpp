@@ -5,6 +5,7 @@
 #include <string>
 
 #include "abstract_operator.hpp"
+#include "storage/column_visitable.hpp"
 #include "storage/dictionary_column.hpp"
 #include "storage/reference_column.hpp"
 #include "storage/value_column.hpp"
@@ -72,9 +73,9 @@ class NestedLoopJoin : public AbstractOperator {
     std::function<bool(const T&, const T&)> _compare;
   };
 
-  std::string& _left_column_name;
-  std::string& _right_column_name;
-  std::string& _op;
+  std::string _left_column_name;
+  std::string _right_column_name;
+  std::string _op;
   JoinMode _mode;
 
   std::shared_ptr<PosList> _pos_list_left;

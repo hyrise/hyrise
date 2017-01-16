@@ -27,6 +27,8 @@ NestedLoopJoin::NestedLoopJoin(std::shared_ptr<AbstractOperator> left, std::shar
     throw std::exception(std::runtime_error(message));
   }
 
+  std::cout << "operator " << op << std::endl;
+
   _pos_list_left = std::make_shared<PosList>();
   _pos_list_right = std::make_shared<PosList>();
 }
@@ -54,14 +56,19 @@ void NestedLoopJoin::execute() {
 
   for (ChunkID chunk_id_left = 0; chunk_id_left < _input_left->chunk_count(); ++chunk_id_left) {
     for (ChunkID chunk_id_right = 0; chunk_id_right < _input_right->chunk_count(); ++chunk_id_right) {
+      std::cout << "marker 4.1" << std::endl;
       auto& chunk_left = _input_left->get_chunk(chunk_id_left);
       auto column_left = chunk_left.get_column(left_column_id);
       auto& chunk_right = _input_right->get_chunk(chunk_id_right);
       auto column_right = chunk_right.get_column(right_column_id);
+      std::cout << "marker 4.2" << std::endl;
 
       auto impl = make_shared_by_column_type<ColumnVisitable, NestedLoopJoinImpl>(left_column_type, *this);
+      std::cout << "marker 4.3" << std::endl;
       auto context = std::make_shared<JoinContext>(column_left, column_right, chunk_id_left, chunk_id_right, _mode);
+      std::cout << "marker 4.4" << std::endl;
       column_left->visit(*impl, context);
+      std::cout << "marker 4.5" << std::endl;
     }
   }
 
@@ -122,6 +129,7 @@ uint8_t NestedLoopJoin::num_out_tables() const { return 1u; }
 template <typename T>
 NestedLoopJoin::NestedLoopJoinImpl<T>::NestedLoopJoinImpl(NestedLoopJoin& nested_loop_join)
     : _nested_loop_join{nested_loop_join} {
+  std::cout << "impl constructor" << std::endl;
   // TODO(student) : ignore op for cross join?
   if (_nested_loop_join._op == "=") {
     _compare = [](const T& value_left, const T& value_right) -> bool { return value_left == value_right; };
@@ -136,9 +144,11 @@ NestedLoopJoin::NestedLoopJoinImpl<T>::NestedLoopJoinImpl(NestedLoopJoin& nested
   } else if (_nested_loop_join._op == "!=") {
     _compare = [](const T& value_left, const T& value_right) -> bool { return value_left != value_right; };
   } else {
-    throw std::exception(
-        std::runtime_error("NestedLoopJoinImpl::NestedLoopJoinImpl: Unknown operator " + _nested_loop_join._op));
+    std::string message = "NestedLoopJoinImpl::NestedLoopJoinImpl: Unknown operator " + _nested_loop_join._op;
+    std::cout << message << std::endl;
+    throw std::exception(std::runtime_error(message));
   }
+  std::cout << "impl constructor end" << std::endl;
 }
 
 template <typename T>
@@ -146,7 +156,9 @@ void NestedLoopJoin::NestedLoopJoinImpl<T>::execute() {}
 
 template <typename T>
 std::shared_ptr<Table> NestedLoopJoin::NestedLoopJoinImpl<T>::get_output() const {
-  throw std::exception(std::runtime_error("NestedLoopJoinImpl::get_output() not implemented"));
+  std::string message = "NestedLoopJoinImpl::get_output() not implemented";
+  std::cout << message << std::endl;
+  throw std::exception(std::runtime_error(message));
   return nullptr;
 }
 
@@ -428,10 +440,9 @@ void NestedLoopJoin::NestedLoopJoinImpl<T>::handle_dictionary_column(BaseColumn&
 }
 
 template <typename T>
-void NestedLoopJoin::NestedLoopJoinImpl<T>::handle_reference_column(ReferenceColumn& column,
+void NestedLoopJoin::NestedLoopJoinImpl<T>::handle_reference_column(ReferenceColumn& reference_column_left,
                                                                     std::shared_ptr<ColumnVisitableContext> context) {
   auto join_context = std::static_pointer_cast<JoinContext>(context);
-  auto& reference_column_left = dynamic_cast<ReferenceColumn&>(column);
 
   auto value_column_right = std::dynamic_pointer_cast<ValueColumn<T>>(join_context->_column_right);
   if (value_column_right) {

@@ -41,4 +41,5 @@ TEST_F(OperatorsNestedLoopJoinTest, ValueJoinValue) {
   std::cout << join_operator->get_output() << std::endl;
 }
 */
+
 }  // namespace opossum
