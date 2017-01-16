@@ -4,8 +4,10 @@
 #include <memory>
 #include <stdexcept>
 #include <string>
+#include <vector>
 
 namespace opossum {
+  // TODO(Fabian): Comment everything!!
 
 NestedLoopJoin::NestedLoopJoin(std::shared_ptr<AbstractOperator> left, std::shared_ptr<AbstractOperator> right,
                                std::string left_column_name, std::string right_column_name, std::string op,
@@ -28,7 +30,9 @@ NestedLoopJoin::NestedLoopJoin(std::shared_ptr<AbstractOperator> left, std::shar
   }
 
   _pos_list_left = std::make_shared<PosList>();
+  _left_match = std::vector<bool>(_input_left->row_count());
   _pos_list_right = std::make_shared<PosList>();
+  _left_match = std::vector<bool>(_input_right->row_count());
 }
 
 void NestedLoopJoin::execute() {
@@ -60,6 +64,29 @@ void NestedLoopJoin::execute() {
   }
 
   _output = std::make_shared<Table>(0, false);
+  if (_mode != JoinMode::Inner) {
+    for (size_t i = 0; i < _input_left->row_count(); i++) {
+      if (_mode == JoinMode::Left_outer || _mode == JoinMode::Full_outer) {
+        if (!_left_match.at(i)) {
+          RowID row_id =
+              RowID{static_cast<ChunkID>(i / _input_left->chunk_size()),
+                static_cast<ChunkOffset>(i % _input_left->chunk_size())};
+          _pos_list_left->push_back(row_id);
+          _pos_list_right->push_back(NULL_ROW);
+        }
+      }
+      if (_mode == JoinMode::Right_outer || _mode == JoinMode::Full_outer) {
+        if (!_right_match.at(i)) {
+          RowID row_id =
+              RowID{static_cast<ChunkID>(i / _input_right->chunk_size()),
+                static_cast<ChunkOffset>(i % _input_right->chunk_size())};
+          _pos_list_right->push_back(row_id);
+          _pos_list_left->push_back(NULL_ROW);
+        }
+      }
+    }
+  }
+
   for (size_t column_id = 0; column_id < _input_left->col_count(); column_id++) {
     const std::shared_ptr<BaseColumn> first_chunk_column = _input_left->get_chunk(0).get_column(column_id);
     const std::shared_ptr<ReferenceColumn> r_column = std::dynamic_pointer_cast<ReferenceColumn>(first_chunk_column);
@@ -162,18 +189,16 @@ void NestedLoopJoin::NestedLoopJoinImpl<T>::join_value_value(ValueColumn<T>& lef
             context->_left_chunk_id, reverse_order ? right_chunk_offset : left_chunk_offset);
         RowID right_row_id = _nested_loop_join._input_right->calculate_row_id(
             context->_right_chunk_id, reverse_order ? left_chunk_offset : right_chunk_offset);
+        if (context->_mode == JoinMode::Left_outer) {
+          _nested_loop_join._left_match.at(left_row_id.chunk_id * left_row_id.chunk_offset) = true;
+        } else if (context->_mode == JoinMode::Right_outer) {
+          _nested_loop_join._right_match.at(right_row_id.chunk_id * right_row_id.chunk_offset) = true;
+        } else if (context->_mode == JoinMode::Full_outer) {
+          _nested_loop_join._left_match.at(left_row_id.chunk_id * left_row_id.chunk_offset) = true;
+          _nested_loop_join._right_match.at(right_row_id.chunk_id * right_row_id.chunk_offset) = true;
+        }
         _nested_loop_join._pos_list_left->push_back(left_row_id);
         _nested_loop_join._pos_list_right->push_back(right_row_id);
-        // else only applies to modes != Inner
-      } else {
-        if (context->_mode == JoinMode::Left_outer) {
-          /*RowID left_row_id = _nested_loop_join._input_left->calculate_row_id(
-            context->_left_chunk_id, reverse_order ? right_chunk_offset : left_chunk_offset);
-          _nested_loop_join._pos_list_left->push_back(left_row_id);
-          _nested_loop_join._pos_list_right->push_back();*/
-        } else if (context->_mode == JoinMode::Right_outer) {
-        } else if (context->_mode == JoinMode::Full_outer) {
-        }
       }
     }
   }

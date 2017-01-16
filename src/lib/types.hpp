@@ -10,6 +10,7 @@
 #include <boost/variant.hpp>
 
 #include <algorithm>
+#include <limits>
 #include <memory>
 #include <string>
 #include <utility>
@@ -27,6 +28,7 @@ struct RowID {
   ChunkID chunk_id;
   ChunkOffset chunk_offset;
 };
+constexpr RowID NULL_ROW = RowID{std::numeric_limits<uint32_t>::max(), std::numeric_limits<uint32_t>::max()};
 
 using ValueID = uint32_t;  // Cannot be larger than ChunkOffset
 

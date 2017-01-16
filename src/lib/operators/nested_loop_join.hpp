@@ -3,6 +3,7 @@
 #include <iostream>
 #include <memory>
 #include <string>
+#include <vector>
 
 #include "abstract_operator.hpp"
 #include "storage/column_visitable.hpp"
@@ -79,7 +80,9 @@ class NestedLoopJoin : public AbstractOperator {
   JoinMode _mode;
 
   std::shared_ptr<PosList> _pos_list_left;
+  std::vector<bool> _left_match;
   std::shared_ptr<PosList> _pos_list_right;
+  std::vector<bool> _right_match;
   std::shared_ptr<Table> _output;
 };
 }  // namespace opossum
