@@ -35,7 +35,7 @@ function default(osName, actionName)
     _ACTION = actionName
   end
 end
- 
+
 default("linux", "gmake")
 default("macosx", "gmake")
 
@@ -94,6 +94,12 @@ project "opossum"
   kind "StaticLib"
   files { "src/lib/**.hpp", "src/lib/**.cpp", "src/bin/server.cpp" }
 
+project "opossum-asan"
+  kind "StaticLib"
+  buildoptions {"-fsanitize=address -fno-omit-frame-pointer"}
+  linkoptions {"-fsanitize=address"}
+  files { "src/lib/**.hpp", "src/lib/**.cpp", "src/bin/server.cpp" }
+
 project "opossumCoverage"
   kind "StaticLib"
   buildoptions { "-fprofile-arcs -ftest-coverage" }
@@ -116,8 +122,18 @@ project "test"
   links { "opossum", "googletest" }
   files { "src/test/**.hpp", "src/test/**.cpp" }
   includedirs { "third_party/googletest/googletest/include" }
-  -- We need to add something that always returns 0 (the echo) because otherwise the build is considered failed and gets deleted
-  postbuildcommands { "./build/test || echo Test failed" }
+  postbuildcommands { "./build/test" }
+
+
+project "asan"
+  kind "ConsoleApp"
+
+  links { "opossum-asan", "googletest" }
+  files { "src/test/**.hpp", "src/test/**.cpp" }
+  includedirs { "third_party/googletest/googletest/include" }
+  buildoptions {"-fsanitize=address -fno-omit-frame-pointer"}
+  linkoptions { "-fsanitize=address" }
+  postbuildcommands { "./build/asan" }
 
 project "coverage"
   kind "ConsoleApp"

@@ -25,6 +25,8 @@ class AbstractOperator {
   AbstractOperator(const std::shared_ptr<const AbstractOperator> left = nullptr,
                    const std::shared_ptr<const AbstractOperator> right = nullptr);
 
+  virtual ~AbstractOperator() = default;
+
   // copying a operator is not allowed
   AbstractOperator(AbstractOperator const &) = delete;
   AbstractOperator &operator=(const AbstractOperator &) = delete;
@@ -68,6 +70,7 @@ class AbstractOperator {
   // found in table_scan.hpp.
   class AbstractOperatorImpl {
    public:
+    virtual ~AbstractOperatorImpl() = default;
     virtual std::shared_ptr<const Table> on_execute() = 0;
   };
 };

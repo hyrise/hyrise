@@ -14,6 +14,7 @@ namespace opossum {
 class BaseColumn {
  public:
   BaseColumn() = default;
+  virtual ~BaseColumn() = default;
 
   // copying a column is not allowed
   // copying whole columns is expensive
