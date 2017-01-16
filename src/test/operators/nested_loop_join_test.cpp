@@ -27,7 +27,6 @@ class OperatorsNestedLoopJoinTest : public BaseTest {
   }
 };
 
-/*
 TEST_F(OperatorsNestedLoopJoinTest, ValueJoinValue) {
   auto gt_left = std::make_shared<GetTable>("table_left");
   gt_left->execute();
@@ -38,8 +37,6 @@ TEST_F(OperatorsNestedLoopJoinTest, ValueJoinValue) {
   join_operator->execute();
 
   EXPECT_TABLE_EQ(join_operator->get_output(), expected_result);
-  std::cout << join_operator->get_output() << std::endl;
 }
-*/
 
 }  // namespace opossum

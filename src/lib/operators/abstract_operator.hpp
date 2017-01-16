@@ -34,6 +34,8 @@ class AbstractOperator {
   AbstractOperator(AbstractOperator &&) = default;
   AbstractOperator &operator=(AbstractOperator &&) = default;
 
+  virtual ~AbstractOperator() = default;
+
   // abstract method to actually execute the operator
   // execute and get_output are split into two methods to allow for easier
   // asynchronous execution
@@ -62,6 +64,7 @@ class AbstractOperator {
    public:
     virtual void execute() = 0;
     virtual std::shared_ptr<Table> get_output() const = 0;
+    virtual ~AbstractOperatorImpl() = default;
   };
 };
 

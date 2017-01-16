@@ -27,22 +27,15 @@ NestedLoopJoin::NestedLoopJoin(std::shared_ptr<AbstractOperator> left, std::shar
     throw std::exception(std::runtime_error(message));
   }
 
-  std::cout << "operator " << op << std::endl;
-
   _pos_list_left = std::make_shared<PosList>();
   _pos_list_right = std::make_shared<PosList>();
 }
 
 void NestedLoopJoin::execute() {
-  std::cout << "marker 1" << std::endl;
   auto left_column_id = _input_left->column_id_by_name(_left_column_name);
-  std::cout << "marker 1.1" << std::endl;
   auto right_column_id = _input_right->column_id_by_name(_right_column_name);
-  std::cout << "marker 1.2" << std::endl;
   auto left_column_type = _input_left->column_type(left_column_id);
-  std::cout << "marker 1.3" << std::endl;
   auto right_column_type = _input_right->column_type(right_column_id);
-  std::cout << "marker 1.4" << std::endl;
 
   if (left_column_type != right_column_type) {
     std::string message = "NestedLoopJoin::execute: column type \"" + left_column_type + "\" of left column \"" +
@@ -52,32 +45,26 @@ void NestedLoopJoin::execute() {
     throw std::exception(std::runtime_error(message));
   }
 
-  std::cout << "marker 1.5" << std::endl;
+  auto impl = make_shared_by_column_type<ColumnVisitable, NestedLoopJoinImpl>(left_column_type, *this);
 
   for (ChunkID chunk_id_left = 0; chunk_id_left < _input_left->chunk_count(); ++chunk_id_left) {
     for (ChunkID chunk_id_right = 0; chunk_id_right < _input_right->chunk_count(); ++chunk_id_right) {
-      std::cout << "marker 4.1" << std::endl;
       auto& chunk_left = _input_left->get_chunk(chunk_id_left);
       auto column_left = chunk_left.get_column(left_column_id);
       auto& chunk_right = _input_right->get_chunk(chunk_id_right);
       auto column_right = chunk_right.get_column(right_column_id);
-      std::cout << "marker 4.2" << std::endl;
 
-      auto impl = make_shared_by_column_type<ColumnVisitable, NestedLoopJoinImpl>(left_column_type, *this);
-      std::cout << "marker 4.3" << std::endl;
       auto context = std::make_shared<JoinContext>(column_left, column_right, chunk_id_left, chunk_id_right, _mode);
-      std::cout << "marker 4.4" << std::endl;
       column_left->visit(*impl, context);
-      std::cout << "marker 4.5" << std::endl;
     }
   }
-
-  std::cout << "marker 3" << std::endl;
 
   _output = std::make_shared<Table>(0, false);
   for (size_t column_id = 0; column_id < _input_left->col_count(); column_id++) {
     const std::shared_ptr<BaseColumn> first_chunk_column = _input_left->get_chunk(0).get_column(column_id);
     const std::shared_ptr<ReferenceColumn> r_column = std::dynamic_pointer_cast<ReferenceColumn>(first_chunk_column);
+
+    _output->add_column(_input_left->column_name(column_id), _input_left->column_type(column_id), false);
 
     if (r_column) {
       auto& referenced_table = r_column->referenced_table();
@@ -93,13 +80,13 @@ void NestedLoopJoin::execute() {
     }
   }
 
-  std::cout << "marker 4" << std::endl;
-
   for (size_t column_id = 0; column_id < _input_right->col_count(); column_id++) {
     // We already added this from the left side
     if (_input_right->column_name(column_id) == _right_column_name) continue;
     const auto& first_chunk_column = _input_left->get_chunk(0).get_column(column_id);
     const auto& r_column = std::dynamic_pointer_cast<ReferenceColumn>(first_chunk_column);
+
+    _output->add_column(_input_right->column_name(column_id), _input_right->column_type(column_id), false);
 
     if (r_column) {
       auto& referenced_table = r_column->referenced_table();
@@ -114,8 +101,6 @@ void NestedLoopJoin::execute() {
       _output->get_chunk(0).add_column(ref_column);
     }
   }
-
-  std::cout << "marker 5" << std::endl;
 }
 
 std::shared_ptr<const Table> NestedLoopJoin::get_output() const { return _output; }
@@ -129,7 +114,6 @@ uint8_t NestedLoopJoin::num_out_tables() const { return 1u; }
 template <typename T>
 NestedLoopJoin::NestedLoopJoinImpl<T>::NestedLoopJoinImpl(NestedLoopJoin& nested_loop_join)
     : _nested_loop_join{nested_loop_join} {
-  std::cout << "impl constructor" << std::endl;
   // TODO(student) : ignore op for cross join?
   if (_nested_loop_join._op == "=") {
     _compare = [](const T& value_left, const T& value_right) -> bool { return value_left == value_right; };
@@ -148,7 +132,6 @@ NestedLoopJoin::NestedLoopJoinImpl<T>::NestedLoopJoinImpl(NestedLoopJoin& nested
     std::cout << message << std::endl;
     throw std::exception(std::runtime_error(message));
   }
-  std::cout << "impl constructor end" << std::endl;
 }
 
 template <typename T>
@@ -248,8 +231,8 @@ void NestedLoopJoin::NestedLoopJoinImpl<T>::join_value_reference(ValueColumn<T>&
       } else if (v_column) {
         value_right = v_column->values()[referenced_chunk_offset];
       } else {
-        throw std::exception(
-            std::runtime_error("NestedLoopJoinImpl::join_value_reference: can't figure out referenced column type"));
+        std::string message = "NestedLoopJoinImpl::join_value_reference: can't figure out referenced column type";
+        throw std::exception(std::runtime_error(message));
       }
 
       if (reverse_order ? _compare(value_right, value_left) : _compare(value_left, value_right)) {

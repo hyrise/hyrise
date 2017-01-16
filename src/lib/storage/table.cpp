@@ -56,13 +56,13 @@ size_t Table::chunk_count() const { return _chunks.size(); }
 
 size_t Table::column_id_by_name(const std::string &column_name) const {
   for (size_t column_id = 0; column_id < col_count(); ++column_id) {
-    std::cout << "column_id " << column_id << std::endl;
     // TODO(Anyone): make more efficient
     if (_column_names[column_id] == column_name) {
       return column_id;
     }
   }
-  throw std::runtime_error("column " + column_name + " not found");
+  std::string message = "column " + column_name + " not found";
+  throw std::runtime_error(message);
 }
 
 void Table::compress_chunk(ChunkID chunk_id) {
