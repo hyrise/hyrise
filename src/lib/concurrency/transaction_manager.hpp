@@ -18,9 +18,10 @@ class TransactionManager {
   uint32_t lcid() const;
 
   std::unique_ptr<TransactionContext> new_transaction_context();
-  std::shared_ptr<CommitContext> new_commit_context();
 
-  void commit(std::shared_ptr<CommitContext> context);
+  void abort(TransactionContext &context);
+  void prepare_commit(TransactionContext &context);
+  void commit(TransactionContext &context);
 
  private:
   TransactionManager();
@@ -29,6 +30,9 @@ class TransactionManager {
   TransactionManager(TransactionManager &&) = delete;
   TransactionManager &operator=(const TransactionManager &) = delete;
   TransactionManager &operator=(TransactionManager &&) = delete;
+
+  std::shared_ptr<CommitContext> new_commit_context();
+  void commit(std::shared_ptr<CommitContext> context);
 
  private:
   std::atomic<std::uint32_t> _ntid;

@@ -10,6 +10,8 @@ namespace opossum {
 enum class TransactionPhase { Active, Aborted, Committing, Committed };
 
 class TransactionContext {
+  friend class TransactionManager;
+
  public:
   TransactionContext(const uint32_t tid, const uint32_t lcid);
   ~TransactionContext() = default;
@@ -17,19 +19,14 @@ class TransactionContext {
   uint32_t tid() const;
   uint32_t lcid() const;
 
-  // only available after prepare_commit has been called.
+  // only available after TransactionManager::prepare_commit has been called
   uint32_t cid() const;
 
   TransactionPhase phase() const;
 
-  // sets phase to Aborted
-  void abort();
+  std::shared_ptr<CommitContext> commit_context();
 
-  // creates commit context sets phase to Committing
-  void prepare_commit();
-
-  // tries to commit transaction and sets phase to Committed
-  void commit();
+  friend class TransactionManager;
 
  private:
   const uint32_t _tid;

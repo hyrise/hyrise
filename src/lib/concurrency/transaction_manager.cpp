@@ -1,6 +1,7 @@
 #include "transaction_manager.hpp"
 
 #include <memory>
+#include <stdexcept>
 
 namespace opossum {
 
@@ -26,6 +27,34 @@ std::unique_ptr<TransactionContext> TransactionManager::new_transaction_context(
   return std::make_unique<TransactionContext>(_ntid++, _lcid);
 }
 
+void TransactionManager::abort(TransactionContext& context) {
+  if (context._phase != TransactionPhase::Active) {
+    throw std::logic_error("TransactionContext can only be aborted when active.");
+  }
+
+  context._phase = TransactionPhase::Aborted;
+}
+
+void TransactionManager::prepare_commit(TransactionContext& context) {
+  if (context._phase != TransactionPhase::Active) {
+    throw std::logic_error("TransactionContext can only be prepared for committing when active.");
+  }
+
+  context._commit_context = new_commit_context();
+  context._phase = TransactionPhase::Committing;
+}
+
+void TransactionManager::commit(TransactionContext& context) {
+  if (context._phase != TransactionPhase::Committing) {
+    throw std::logic_error("TransactionContext can only be committed when active.");
+  }
+
+  commit(context._commit_context);
+
+  // TODO(EVERYONE): update _phase when transaction actually committed?
+  context._phase = TransactionPhase::Committed;
+}
+
 std::shared_ptr<CommitContext> TransactionManager::new_commit_context() {
   auto current_context = std::atomic_load(&_lcc);
   auto next_context = std::shared_ptr<CommitContext>();
@@ -45,6 +74,8 @@ std::shared_ptr<CommitContext> TransactionManager::new_commit_context() {
 
 void TransactionManager::commit(std::shared_ptr<CommitContext> context) {
   auto current_context = context;
+
+  current_context->make_pending();
 
   while (current_context->is_pending()) {
     auto expected_lcid = current_context->cid() - 1;

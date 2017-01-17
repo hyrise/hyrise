@@ -1,8 +1,7 @@
 #include "transaction_context.hpp"
 
 #include <stdexcept>
-
-#include "transaction_manager.hpp"
+#include <memory>
 
 namespace opossum {
 
@@ -22,37 +21,6 @@ uint32_t TransactionContext::cid() const {
 
 TransactionPhase TransactionContext::phase() const { return _phase; }
 
-void TransactionContext::abort() {
-  if (_phase != TransactionPhase::Active) {
-    throw std::logic_error("TransactionContext can only be aborted when active.");
-  }
-
-  _phase = TransactionPhase::Aborted;
-}
-
-void TransactionContext::prepare_commit() {
-  if (_phase != TransactionPhase::Active) {
-    throw std::logic_error("TransactionContext can only be prepared for committing when active.");
-  }
-
-  auto& manager = TransactionManager::get();
-
-  _commit_context = manager.new_commit_context();
-  _phase = TransactionPhase::Committing;
-}
-
-void TransactionContext::commit() {
-  if (_phase != TransactionPhase::Committing) {
-    throw std::logic_error("TransactionContext can only be committed when active.");
-  }
-
-  auto& manager = TransactionManager::get();
-
-  _commit_context->make_pending();
-  manager.commit(_commit_context);
-
-  // TODO(EVERYONE): update _phase when transaction actually committed?
-  _phase = TransactionPhase::Committed;
-}
+std::shared_ptr<CommitContext> TransactionContext::commit_context() { return _commit_context; }
 
 }  // namespace opossum
