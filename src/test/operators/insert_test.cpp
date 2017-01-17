@@ -48,11 +48,11 @@ TEST_F(InsertTest, SelfInsert) {
   ins->execute(&context);
 
   // Check that row has been inserted.
-  EXPECT_EQ(t->get_chunk(0).size(), 2u);
+  EXPECT_EQ(t->get_chunk(0).size(), 6u);
   EXPECT_EQ((*t->get_chunk(0).get_column(1))[0], AllTypeVariant(12345));
-  EXPECT_EQ((*t->get_chunk(0).get_column(0))[1], AllTypeVariant(458.7));
+  EXPECT_EQ((*t->get_chunk(0).get_column(0))[0], AllTypeVariant(458.7f));
   EXPECT_EQ((*t->get_chunk(0).get_column(1))[3], AllTypeVariant(12345));
-  EXPECT_EQ((*t->get_chunk(0).get_column(0))[4], AllTypeVariant(458.7));
+  EXPECT_EQ((*t->get_chunk(0).get_column(0))[3], AllTypeVariant(458.7f));
 
   auto output_str = output.str();
 }

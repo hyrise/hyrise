@@ -37,13 +37,12 @@ class ValidateTest : public BaseTest {
 
   std::shared_ptr<GetTable>(gt);
   std::shared_ptr<Table> t = nullptr;
-  std::shared_ptr<validate>;
+  std::shared_ptr<Validate> validate;
 };
 
 // Legend:
 // our_TID == row_TID, our_CID >= beg_CID, our_CID >= end_CID
 // taken from: https://github.com/hyrise/hyrise/blob/master/docs/documentation/queryexecution/tx.rst
-
 
 // yes, yes, yes
 TEST_F(ValidateTest, Impossible) {
