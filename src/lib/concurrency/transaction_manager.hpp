@@ -12,6 +12,10 @@ namespace opossum {
 class TransactionManager {
  public:
   static TransactionManager &get();
+  static void reset();
+
+  uint32_t ntid() const;
+  uint32_t lcid() const;
 
   std::unique_ptr<TransactionContext> new_transaction_context();
   std::shared_ptr<CommitContext> new_commit_context();

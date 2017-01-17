@@ -13,8 +13,8 @@ uint32_t TransactionContext::tid() const { return _tid; }
 uint32_t TransactionContext::lcid() const { return _lcid; }
 
 uint32_t TransactionContext::cid() const {
-  if (!_commit_context) {
-    std::logic_error("TransactionContext cid only available after commit context has been created.");
+  if (_commit_context == nullptr) {
+    throw std::logic_error("TransactionContext cid only available after commit context has been created.");
   }
 
   return _commit_context->cid();
@@ -24,7 +24,7 @@ TransactionPhase TransactionContext::phase() const { return _phase; }
 
 void TransactionContext::abort() {
   if (_phase != TransactionPhase::Active) {
-    std::logic_error("TransactionContext can only be aborted when active.");
+    throw std::logic_error("TransactionContext can only be aborted when active.");
   }
 
   _phase = TransactionPhase::Aborted;
@@ -32,7 +32,7 @@ void TransactionContext::abort() {
 
 void TransactionContext::prepare_commit() {
   if (_phase != TransactionPhase::Active) {
-    std::logic_error("TransactionContext can only be prepared for committing when active.");
+    throw std::logic_error("TransactionContext can only be prepared for committing when active.");
   }
 
   auto& manager = TransactionManager::get();
@@ -43,7 +43,7 @@ void TransactionContext::prepare_commit() {
 
 void TransactionContext::commit() {
   if (_phase != TransactionPhase::Committing) {
-    std::logic_error("TransactionContext can only be committed when active.");
+    throw std::logic_error("TransactionContext can only be committed when active.");
   }
 
   auto& manager = TransactionManager::get();

@@ -4,12 +4,23 @@
 
 namespace opossum {
 
-TransactionManager &TransactionManager::get() {
+TransactionManager& TransactionManager::get() {
   static TransactionManager instance;
   return instance;
 }
 
+void TransactionManager::reset() {
+  auto& manager = get();
+  manager._ntid = 0u;
+  manager._lcid = 0u;
+  manager._lcc = std::make_shared<CommitContext>();
+}
+
 TransactionManager::TransactionManager() : _ntid{1u}, _lcid{0u}, _lcc{std::make_shared<CommitContext>()} {}
+
+uint32_t TransactionManager::ntid() const { return _ntid; }
+
+uint32_t TransactionManager::lcid() const { return _lcid; }
 
 std::unique_ptr<TransactionContext> TransactionManager::new_transaction_context() {
   return std::make_unique<TransactionContext>(_ntid++, _lcid);
