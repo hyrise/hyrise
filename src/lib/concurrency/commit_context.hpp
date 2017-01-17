@@ -12,6 +12,9 @@ class CommitContext {
   CommitContext();
   explicit CommitContext(const uint32_t cid);
 
+  CommitContext(const CommitContext& rhs) = delete;
+  CommitContext& operator=(const CommitContext& rhs) = delete;
+
   ~CommitContext();
 
   uint32_t cid() const;
