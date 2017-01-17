@@ -17,24 +17,24 @@ uint8_t Print::num_in_tables() const { return 1; }
 
 uint8_t Print::num_out_tables() const { return 1; }
 
-void Print::execute() {
-  auto widths = column_string_widths(8, 20, _input_left);
+std::shared_ptr<const Table> Print::on_execute() {
+  auto widths = column_string_widths(8, 20, input_table_left());
 
   // print column headers
   _out << "=== Columns" << std::endl;
-  for (size_t col = 0; col < _input_left->col_count(); ++col) {
-    _out << "|" << std::setw(widths[col]) << _input_left->column_name(col) << std::setw(0);
+  for (size_t col = 0; col < input_table_left()->col_count(); ++col) {
+    _out << "|" << std::setw(widths[col]) << input_table_left()->column_name(col) << std::setw(0);
   }
   _out << "|" << std::endl;
-  for (size_t col = 0; col < _input_left->col_count(); ++col) {
-    _out << "|" << std::setw(widths[col]) << _input_left->column_type(col) << std::setw(0);
+  for (size_t col = 0; col < input_table_left()->col_count(); ++col) {
+    _out << "|" << std::setw(widths[col]) << input_table_left()->column_type(col) << std::setw(0);
   }
   _out << "|" << std::endl;
 
   // print each chunk
-  for (size_t chunk_id = 0; chunk_id < _input_left->chunk_count(); ++chunk_id) {
+  for (size_t chunk_id = 0; chunk_id < input_table_left()->chunk_count(); ++chunk_id) {
     _out << "=== Chunk " << chunk_id << " === " << std::endl;
-    auto& chunk = _input_left->get_chunk(chunk_id);
+    auto& chunk = input_table_left()->get_chunk(chunk_id);
 
     if (chunk.size() == 0) {
       _out << "Empty chunk." << std::endl;
@@ -52,6 +52,8 @@ void Print::execute() {
       _out << std::endl;
     }
   }
+
+  return input_table_left();
 }
 
 // In order to print the table as an actual table, with columns being aligned, we need to calculate the
@@ -65,8 +67,8 @@ std::vector<uint16_t> Print::column_string_widths(uint16_t min, uint16_t max, st
   }
 
   // go over all rows and find the maximum length of the printed representation of a value, up to max
-  for (size_t chunk_id = 0; chunk_id < _input_left->chunk_count(); ++chunk_id) {
-    auto& chunk = _input_left->get_chunk(chunk_id);
+  for (size_t chunk_id = 0; chunk_id < input_table_left()->chunk_count(); ++chunk_id) {
+    auto& chunk = input_table_left()->get_chunk(chunk_id);
 
     for (size_t col = 0; col < chunk.col_count(); ++col) {
       for (size_t row = 0; row < chunk.size(); ++row) {
@@ -78,6 +80,4 @@ std::vector<uint16_t> Print::column_string_widths(uint16_t min, uint16_t max, st
   return widths;
 }
 
-// To allow for easier debugging, the Print operator can also be added in between two operators
-std::shared_ptr<const Table> Print::get_output() const { return _input_left; }
 }  // namespace opossum

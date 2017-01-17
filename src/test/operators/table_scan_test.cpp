@@ -34,6 +34,9 @@ class OperatorsTableScanTest : public BaseTest {
     StorageManager::get().add_table("table_dict", std::move(test_table_dict));
 
     _gt_dict = std::make_shared<GetTable>("table_dict");
+
+    _gt->execute();
+    _gt_dict->execute();
   }
 
   std::shared_ptr<GetTable> _gt, _gt_dict;
@@ -61,7 +64,8 @@ TEST_F(OperatorsTableScanTest, SingleScanReturnsCorrectRowCount) {
 }
 
 TEST_F(OperatorsTableScanTest, UnknownOperatorThrowsException) {
-  EXPECT_THROW(std::make_shared<TableScan>(_gt, "a", "?!?", 1234), std::runtime_error);
+  auto table_scan = std::make_shared<TableScan>(_gt, "a", "?!?", 1234);
+  EXPECT_THROW(table_scan->execute(), std::runtime_error);
 }
 
 TEST_F(OperatorsTableScanTest, ScanOnDictColumn) {

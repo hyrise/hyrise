@@ -11,14 +11,14 @@ namespace opossum {
 class GetTable : public AbstractOperator {
  public:
   explicit GetTable(const std::string &name);
-  void execute() override;
-  std::shared_ptr<const Table> get_output() const override;
 
   const std::string name() const override;
   uint8_t num_in_tables() const override;
   uint8_t num_out_tables() const override;
 
  protected:
+  std::shared_ptr<const Table> on_execute() override;
+
   // name of the table to retrieve
   const std::string _name;
 };

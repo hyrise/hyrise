@@ -24,6 +24,9 @@ class OperatorsUnionAllTest : public BaseTest {
     std::shared_ptr<Table> test_table_b = load_table("src/test/tables/int_float2.tbl", 2);
     StorageManager::get().add_table("union_test_table_b", std::move(test_table_b));
     _gt_b = std::make_shared<GetTable>("union_test_table_b");
+
+    _gt_a->execute();
+    _gt_b->execute();
   }
 
   std::shared_ptr<GetTable> _gt_a;
@@ -56,6 +59,7 @@ TEST_F(OperatorsUnionAllTest, ThrowWrongColumnNumberException) {
   std::shared_ptr<Table> test_table_c = load_table("src/test/tables/int.tbl", 2);
   StorageManager::get().add_table("union_test_table_c", std::move(test_table_c));
   auto gt_c = std::make_shared<GetTable>("union_test_table_c");
+  gt_c->execute();
 
   auto union_all = std::make_shared<UnionAll>(_gt_a, gt_c);
 
@@ -66,6 +70,7 @@ TEST_F(OperatorsUnionAllTest, ThrowWrongColumnOrderException) {
   std::shared_ptr<Table> test_table_d = load_table("src/test/tables/float_int.tbl", 2);
   StorageManager::get().add_table("union_all_test_table_d", std::move(test_table_d));
   auto gt_d = std::make_shared<GetTable>("union_all_test_table_d");
+  gt_d->execute();
 
   auto union_all = std::make_shared<UnionAll>(_gt_a, gt_d);
 

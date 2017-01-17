@@ -17,20 +17,15 @@ class Product : public AbstractOperator {
  public:
   Product(const std::shared_ptr<const AbstractOperator> left, const std::shared_ptr<const AbstractOperator> right,
           const std::string prefix_left = "", const std::string prefix_right = "");
-  void execute() override;
-  std::shared_ptr<const Table> get_output() const override;
 
   const std::string name() const override;
   uint8_t num_in_tables() const override;
   uint8_t num_out_tables() const override;
 
  protected:
-  void add_product_of_two_chunks(ChunkID chunk_id_left, ChunkID chunk_id_right);
-
-  const std::shared_ptr<Table> _table;
+  void add_product_of_two_chunks(std::shared_ptr<Table> output, ChunkID chunk_id_left, ChunkID chunk_id_right);
+  std::shared_ptr<const Table> on_execute() override;
 
   const std::string _prefix_left, _prefix_right;
-
-  std::shared_ptr<Table> _output;
 };
 }  // namespace opossum
