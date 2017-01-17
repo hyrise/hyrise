@@ -5,7 +5,7 @@
 
 namespace opossum {
 Sort::Sort(const std::shared_ptr<const AbstractOperator> in, const std::string &sort_column_name, const bool ascending)
-    : AbstractNonModifyingOperator(in), _sort_column_name(sort_column_name), _ascending(ascending) {}
+    : AbstractReadOnlyOperator(in), _sort_column_name(sort_column_name), _ascending(ascending) {}
 
 const std::string Sort::name() const { return "Sort"; }
 

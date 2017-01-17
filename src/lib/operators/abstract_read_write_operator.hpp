@@ -9,9 +9,9 @@
 
 namespace opossum {
 
-class AbstractModifyingOperator : public AbstractOperator {
+class AbstractReadWriteOperator : public AbstractOperator {
  public:
-  explicit AbstractModifyingOperator(const std::shared_ptr<const AbstractOperator> op,
+  explicit AbstractReadWriteOperator(const std::shared_ptr<const AbstractOperator> op,
                                      const std::shared_ptr<const AbstractOperator> op2 = nullptr)
       : AbstractOperator(op, op2), _succeeded{true} {}
 

@@ -7,14 +7,14 @@
 #include <utility>
 #include <vector>
 
-#include "abstract_non_modifying_operator.hpp"
+#include "abstract_read_only_operator.hpp"
 #include "storage/reference_column.hpp"
 
 namespace opossum {
 
 // operator to sort a table by a single column
 // Multi-column sort is not supported yet. For now, you will have to sort by the secondary criterion, then by the first
-class Sort : public AbstractNonModifyingOperator {
+class Sort : public AbstractReadOnlyOperator {
  public:
   Sort(const std::shared_ptr<const AbstractOperator> in, const std::string &sort_column_name,
        const bool ascending = true);

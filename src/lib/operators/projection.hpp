@@ -4,13 +4,13 @@
 #include <string>
 #include <vector>
 
-#include "abstract_non_modifying_operator.hpp"
+#include "abstract_read_only_operator.hpp"
 #include "types.hpp"
 
 namespace opossum {
 
 // operator to select a subset of the set of all columns found in the table
-class Projection : public AbstractNonModifyingOperator {
+class Projection : public AbstractReadOnlyOperator {
  public:
   Projection(const std::shared_ptr<const AbstractOperator> in, const std::vector<std::string> &columns);
 

@@ -4,12 +4,12 @@
 #include <string>
 #include <vector>
 
-#include "abstract_non_modifying_operator.hpp"
+#include "abstract_read_only_operator.hpp"
 #include "types.hpp"
 
 namespace opossum {
 
-class Validate : public AbstractNonModifyingOperator {
+class Validate : public AbstractReadOnlyOperator {
  public:
   explicit Validate(const std::shared_ptr<AbstractOperator> in);
   std::shared_ptr<const Table> on_execute(const TransactionContext *transactionContext) override;

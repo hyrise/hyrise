@@ -3,13 +3,13 @@
 #include <memory>
 #include <string>
 
-#include "abstract_modifying_operator.hpp"
+#include "abstract_read_write_operator.hpp"
 #include "table_scan.hpp"
 
 namespace opossum {
 
 // operator to retrieve a table from the StorageManager by specifying its name
-class Delete : public AbstractModifyingOperator {
+class Delete : public AbstractReadWriteOperator {
  public:
   explicit Delete(const std::shared_ptr<const AbstractOperator>& op);
 

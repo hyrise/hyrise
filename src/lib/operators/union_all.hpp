@@ -3,12 +3,12 @@
 #include <memory>
 #include <string>
 
-#include "abstract_non_modifying_operator.hpp"
+#include "abstract_read_only_operator.hpp"
 #include "types.hpp"
 
 namespace opossum {
 
-class UnionAll : public AbstractNonModifyingOperator {
+class UnionAll : public AbstractReadOnlyOperator {
  public:
   UnionAll(const std::shared_ptr<const AbstractOperator> left_in,
            const std::shared_ptr<const AbstractOperator> right_in);

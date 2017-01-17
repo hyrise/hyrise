@@ -1,16 +1,16 @@
 #include "insert.hpp"
 
+#include <limits>
 #include <memory>
 #include <string>
 #include <vector>
-#include <limits>
 
 #include "concurrency/transaction_context.hpp"
 
 namespace opossum {
 
 Insert::Insert(std::shared_ptr<GetTable> get_table, std::shared_ptr<AbstractOperator> values_to_insert)
-    : AbstractModifyingOperator(get_table, values_to_insert) {}
+    : AbstractReadWriteOperator(get_table, values_to_insert) {}
 
 const std::string Insert::name() const { return "Insert"; }
 

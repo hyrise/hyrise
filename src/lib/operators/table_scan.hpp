@@ -7,7 +7,7 @@
 #include <utility>
 #include <vector>
 
-#include "abstract_non_modifying_operator.hpp"
+#include "abstract_read_only_operator.hpp"
 #include "storage/dictionary_column.hpp"
 #include "storage/reference_column.hpp"
 #include "storage/value_column.hpp"
@@ -22,7 +22,7 @@ namespace opossum {
 // As with most operators, we do not guarantee a stable operation with regards to positions - i.e., your sorting order
 // might be disturbed
 
-class TableScan : public AbstractNonModifyingOperator {
+class TableScan : public AbstractReadOnlyOperator {
  public:
   TableScan(const std::shared_ptr<AbstractOperator> in, const std::string &filter_column_name, const std::string &op,
             const AllTypeVariant value, const optional<AllTypeVariant> value2 = nullopt);

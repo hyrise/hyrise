@@ -4,7 +4,7 @@
 #include <string>
 #include <vector>
 
-#include "abstract_modifying_operator.hpp"
+#include "abstract_read_write_operator.hpp"
 #include "get_table.hpp"
 
 namespace opossum {
@@ -12,7 +12,7 @@ namespace opossum {
 class TransactionContext;
 
 // operator to retrieve a table from the StorageManager by specifying its name
-class Insert : public AbstractModifyingOperator {
+class Insert : public AbstractReadWriteOperator {
  public:
   explicit Insert(std::shared_ptr<GetTable> get_table, std::shared_ptr<AbstractOperator> values_to_insert);
 

@@ -2,8 +2,8 @@
 
 #include <memory>
 #include <string>
-#include <vector>
 #include <utility>
+#include <vector>
 
 #include "concurrency/transaction_context.hpp"
 #include "storage/reference_column.hpp"
@@ -11,7 +11,7 @@
 namespace opossum {
 
 Update::Update(std::shared_ptr<AbstractOperator> input_table, std::shared_ptr<AbstractOperator> update_values)
-    : AbstractModifyingOperator(input_table, update_values) {}
+    : AbstractReadWriteOperator(input_table, update_values) {}
 
 const std::string Update::name() const { return "Update"; }
 

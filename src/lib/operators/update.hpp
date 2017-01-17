@@ -4,7 +4,7 @@
 #include <string>
 #include <vector>
 
-#include "abstract_modifying_operator.hpp"
+#include "abstract_read_write_operator.hpp"
 #include "delete.hpp"
 #include "get_table.hpp"
 #include "insert.hpp"
@@ -14,7 +14,7 @@ namespace opossum {
 class TransactionContext;
 
 // operator to retrieve a table from the StorageManager by specifying its name
-class Update : public AbstractModifyingOperator {
+class Update : public AbstractReadWriteOperator {
  public:
   explicit Update(std::shared_ptr<AbstractOperator> table_to_update, std::shared_ptr<AbstractOperator> update_values);
 

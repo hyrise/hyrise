@@ -8,10 +8,10 @@
 
 namespace opossum {
 
-class AbstractNonModifyingOperator : public AbstractOperator {
+class AbstractReadOnlyOperator : public AbstractOperator {
  public:
-  AbstractNonModifyingOperator(const std::shared_ptr<const AbstractOperator> left = nullptr,
-                               const std::shared_ptr<const AbstractOperator> right = nullptr)
+  AbstractReadOnlyOperator(const std::shared_ptr<const AbstractOperator> left = nullptr,
+                           const std::shared_ptr<const AbstractOperator> right = nullptr)
       : AbstractOperator(left, right) {}
 
   std::shared_ptr<const Table> on_execute(const TransactionContext* /* context */) override { return on_execute(); }

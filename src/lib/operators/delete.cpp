@@ -7,7 +7,7 @@
 
 namespace opossum {
 
-Delete::Delete(const std::shared_ptr<const AbstractOperator>& op) : AbstractModifyingOperator{op} {}
+Delete::Delete(const std::shared_ptr<const AbstractOperator>& op) : AbstractReadWriteOperator{op} {}
 
 std::shared_ptr<const Table> Delete::on_execute(const TransactionContext* context) {
   const auto reference_table = std::const_pointer_cast<Table>(_input_left->get_output());

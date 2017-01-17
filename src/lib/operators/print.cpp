@@ -10,7 +10,7 @@
 namespace opossum {
 
 Print::Print(const std::shared_ptr<const AbstractOperator> in, std::ostream& out)
-    : AbstractNonModifyingOperator(in), _out(out) {}
+    : AbstractReadOnlyOperator(in), _out(out) {}
 
 const std::string Print::name() const { return "Print"; }
 

@@ -7,7 +7,7 @@ namespace opossum {
 
 TableScan::TableScan(const std::shared_ptr<AbstractOperator> in, const std::string &column_name, const std::string &op,
                      const AllTypeVariant value, const optional<AllTypeVariant> value2)
-    : AbstractNonModifyingOperator(in), _column_name(column_name), _op(op), _value(value), _value2(value2) {}
+    : AbstractReadOnlyOperator(in), _column_name(column_name), _op(op), _value(value), _value2(value2) {}
 
 const std::string TableScan::name() const { return "TableScan"; }
 

@@ -10,7 +10,7 @@
 namespace opossum {
 
 Validate::Validate(const std::shared_ptr<AbstractOperator> in)
-    : AbstractNonModifyingOperator(in), _in_table(in->get_output()), _output(std::make_shared<Table>()) {
+    : AbstractReadOnlyOperator(in), _in_table(in->get_output()), _output(std::make_shared<Table>()) {
   // TODO(EVERYONE): remove _in_table
 }
 
