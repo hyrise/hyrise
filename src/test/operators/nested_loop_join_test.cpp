@@ -56,7 +56,6 @@ TEST_F(OperatorsNestedLoopJoinTest, ValueJoinDict) {
   EXPECT_TABLE_EQ(join_operator->get_output(), expected_result);
 }
 
-/*
 TEST_F(OperatorsNestedLoopJoinTest, ValueJoinRef) {
   auto gt_left = std::make_shared<GetTable>("table_left");
   gt_left->execute();
@@ -71,5 +70,4 @@ TEST_F(OperatorsNestedLoopJoinTest, ValueJoinRef) {
 
   EXPECT_TABLE_EQ(join_operator->get_output(), expected_result);
 }
-*/
 }  // namespace opossum

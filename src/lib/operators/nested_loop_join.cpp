@@ -35,6 +35,28 @@ NestedLoopJoin::NestedLoopJoin(std::shared_ptr<AbstractOperator> left, std::shar
   _right_match = std::vector<bool>(_input_right->row_count());
 }
 
+std::shared_ptr<PosList> dereferenced_pos_list(std::shared_ptr<const Table> input_table, size_t column_id,
+                                               std::shared_ptr<const PosList> pos_list) {
+  std::cout << "ijoo1" << std::endl;
+  // Get all the input pos lists so that we only have to pointer cast the columns once
+  auto input_pos_lists = std::vector<std::shared_ptr<const PosList>>();
+  for (ChunkID chunk_id = 0; chunk_id < input_table->chunk_count(); chunk_id++) {
+    auto b_column = input_table->get_chunk(chunk_id).get_column(column_id);
+    auto r_column = std::dynamic_pointer_cast<ReferenceColumn>(b_column);
+    input_pos_lists.push_back(r_column->pos_list());
+  }
+
+  std::cout << "ijoo2" << std::endl;
+
+  // Get the row ids that are referenced
+  auto new_pos_list = std::make_shared<PosList>();
+  for (const auto& row : *pos_list) {
+    new_pos_list->push_back(input_pos_lists.at(row.chunk_id)->at(row.chunk_offset));
+  }
+  std::cout << "ijoo3" << std::endl;
+  return new_pos_list;
+}
+
 void NestedLoopJoin::execute() {
   auto left_column_id = _input_left->column_id_by_name(_left_column_name);
   auto right_column_id = _input_right->column_id_by_name(_right_column_name);
@@ -94,27 +116,18 @@ void NestedLoopJoin::execute() {
 
     if (r_column) {
       auto& referenced_table = r_column->referenced_table();
-      /*auto & original_pos_list = r_column->pos_list();
-      auto new_pos_list = std::make_shared<PosList>();*/
-
-      // TODO(arne): _pos_list_left is not correct! Dereference references!
-      std::cout << "102" << std::endl;
+      auto new_pos_list = dereferenced_pos_list(_input_left, column_id, _pos_list_left);
       auto ref_column =
-          std::make_shared<ReferenceColumn>(referenced_table, r_column->referenced_column_id(), _pos_list_left);
-      std::cout << "104" << std::endl;
+          std::make_shared<ReferenceColumn>(referenced_table, r_column->referenced_column_id(), new_pos_list);
       _output->get_chunk(0).add_column(ref_column);
     } else {
-      std::cout << "107" << std::endl;
       auto ref_column = std::make_shared<ReferenceColumn>(_input_left, column_id, _pos_list_left);
-      std::cout << "109" << std::endl;
       _output->get_chunk(0).add_column(ref_column);
     }
   }
 
   // Append columns of the right input table
   for (size_t column_id = 0; column_id < _input_right->col_count(); column_id++) {
-    // We already added this from the left side
-    if (_input_right->column_name(column_id) == _right_column_name) continue;
     const auto& first_chunk_column = _input_right->get_chunk(0).get_column(column_id);
     const auto& r_column = std::dynamic_pointer_cast<ReferenceColumn>(first_chunk_column);
 
@@ -122,12 +135,9 @@ void NestedLoopJoin::execute() {
 
     if (r_column) {
       auto& referenced_table = r_column->referenced_table();
-      /*auto & original_pos_list = r_column->pos_list();
-      auto new_pos_list = std::make_shared<PosList>();*/
-
-      // TODO(arne): _pos_list_left is not correct! Dereference references!
+      auto new_pos_list = dereferenced_pos_list(_input_right, column_id, _pos_list_right);
       auto ref_column =
-          std::make_shared<ReferenceColumn>(referenced_table, r_column->referenced_column_id(), _pos_list_right);
+          std::make_shared<ReferenceColumn>(referenced_table, r_column->referenced_column_id(), new_pos_list);
       _output->get_chunk(0).add_column(ref_column);
     } else {
       auto ref_column = std::make_shared<ReferenceColumn>(_input_right, column_id, _pos_list_right);
