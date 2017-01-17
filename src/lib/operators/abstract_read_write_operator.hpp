@@ -11,9 +11,9 @@ namespace opossum {
 
 class AbstractReadWriteOperator : public AbstractOperator {
  public:
-  explicit AbstractReadWriteOperator(const std::shared_ptr<const AbstractOperator> op,
-                                     const std::shared_ptr<const AbstractOperator> op2 = nullptr)
-      : AbstractOperator(op, op2), _succeeded{true} {}
+  explicit AbstractReadWriteOperator(const std::shared_ptr<const AbstractOperator> left,
+                                     const std::shared_ptr<const AbstractOperator> right = nullptr)
+      : AbstractOperator(left, right), _succeeded{true} {}
 
   std::shared_ptr<const Table> on_execute(const TransactionContext* context) override = 0;
   virtual void commit(const uint32_t cid) = 0;
@@ -24,7 +24,7 @@ class AbstractReadWriteOperator : public AbstractOperator {
   uint8_t num_out_tables() const override { return 0; };
 
  protected:
-  bool _succeeded;  // false if transaction needs to be aborted
+  bool _succeeded;
 };
 
 }  // namespace opossum

@@ -22,9 +22,9 @@ class AbstractReadOnlyOperator : public AbstractOperator {
   // Some operators need an internal implementation class, mostly in cases where
   // their execute method depends on a template parameter. An example for this is
   // found in table_scan.hpp.
-  class AbstractNonModifyingOperatorImpl {
+  class AbstractReadOnlyOperatorImpl {
    public:
-    virtual ~AbstractNonModifyingOperatorImpl() = default;
+    virtual ~AbstractReadOnlyOperatorImpl() = default;
     virtual std::shared_ptr<const Table> on_execute() = 0;
   };
 };

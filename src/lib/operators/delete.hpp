@@ -8,7 +8,6 @@
 
 namespace opossum {
 
-// operator to retrieve a table from the StorageManager by specifying its name
 class Delete : public AbstractReadWriteOperator {
  public:
   explicit Delete(const std::shared_ptr<const AbstractOperator>& op);

@@ -17,7 +17,7 @@ class TransactionContext {
   uint32_t tid() const;
   uint32_t lcid() const;
 
-  // only available after prepareCommit has been called.
+  // only available after prepare_commit has been called.
   uint32_t cid() const;
 
   TransactionPhase phase() const;
@@ -26,7 +26,7 @@ class TransactionContext {
   void abort();
 
   // creates commit context sets phase to Committing
-  void prepareCommit();
+  void prepare_commit();
 
   // tries to commit transaction and sets phase to Committed
   void commit();

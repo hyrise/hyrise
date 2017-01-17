@@ -42,14 +42,14 @@ class TableScan : public AbstractReadOnlyOperator {
   const AllTypeVariant _value;
   const optional<AllTypeVariant> _value2;
 
-  std::unique_ptr<AbstractNonModifyingOperatorImpl> _impl;
+  std::unique_ptr<AbstractReadOnlyOperatorImpl> _impl;
 
   enum ScanType { OpEquals, OpNotEquals, OpLessThan, OpLessThanEquals, OpGreaterThan, OpGreaterThanEquals, OpBetween };
 };
 
 // we need to use the impl pattern because the scan operator of the sort depends on the type of the column
 template <typename T>
-class TableScan::TableScanImpl : public AbstractNonModifyingOperatorImpl, public ColumnVisitable {
+class TableScan::TableScanImpl : public AbstractReadOnlyOperatorImpl, public ColumnVisitable {
  public:
   // supported values for op are {"=", "!=", "<", "<=", ">", ">=", "BETWEEN"}
   // creates a new table with reference columns

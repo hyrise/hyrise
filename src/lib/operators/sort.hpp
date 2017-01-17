@@ -29,14 +29,14 @@ class Sort : public AbstractReadOnlyOperator {
   template <typename T>
   class SortImpl;
 
-  std::unique_ptr<AbstractNonModifyingOperatorImpl> _impl;
+  std::unique_ptr<AbstractReadOnlyOperatorImpl> _impl;
   std::string _sort_column_name;
   bool _ascending;
 };
 
 // we need to use the impl pattern because the comparator of the sort depends on the type of the column
 template <typename T>
-class Sort::SortImpl : public AbstractNonModifyingOperatorImpl {
+class Sort::SortImpl : public AbstractReadOnlyOperatorImpl {
  public:
   // creates a new table with reference columns
   SortImpl(const std::shared_ptr<const AbstractOperator> in, const std::string &sort_column_name,

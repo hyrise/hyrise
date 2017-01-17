@@ -30,7 +30,7 @@ void TransactionContext::abort() {
   _phase = TransactionPhase::Aborted;
 }
 
-void TransactionContext::prepareCommit() {
+void TransactionContext::prepare_commit() {
   if (_phase != TransactionPhase::Active) {
     std::logic_error("TransactionContext can only be prepared for committing when active.");
   }
