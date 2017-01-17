@@ -51,7 +51,7 @@ std::shared_ptr<const Table> Insert::on_execute(const TransactionContext* contex
   }
 
   for (auto i = 0u; i < chunk_to_insert.size(); i++) {
-    last_chunk._TIDs[new_rows_offset + i] = context->tid();
+    last_chunk.mvcc_columns().tids[new_rows_offset + i] = context->tid();
     _inserted_rows.emplace_back(_table->calculate_row_id(last_chunk_id, new_rows_offset + i));
   }
 
@@ -61,15 +61,18 @@ std::shared_ptr<const Table> Insert::on_execute(const TransactionContext* contex
 void Insert::commit(const uint32_t cid) {
   auto _table = std::const_pointer_cast<Table>(input_table_left());
   for (auto row_id : _inserted_rows) {
-    _table->get_chunk(row_id.chunk_id)._begin_CIDs[row_id.chunk_offset] = cid;
-    _table->get_chunk(row_id.chunk_id)._TIDs[row_id.chunk_offset] = 0;
+    auto& chunk = _table->get_chunk(row_id.chunk_id);
+
+    chunk.mvcc_columns().begin_cids[row_id.chunk_offset] = cid;
+    chunk.mvcc_columns().tids[row_id.chunk_offset] = 0u;
   }
 }
 
 void Insert::abort() {
   auto _table = std::const_pointer_cast<Table>(input_table_left());
   for (auto row_id : _inserted_rows) {
-    _table->get_chunk(row_id.chunk_id)._TIDs[row_id.chunk_offset] = 0;
+    auto& chunk = _table->get_chunk(row_id.chunk_id);
+    chunk.mvcc_columns().tids[row_id.chunk_offset] = 0u;
   }
 }
 

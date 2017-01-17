@@ -44,19 +44,19 @@ TEST_F(DeleteTest, ExecuteAndCommit) {
 
   delete_op->execute(&transaction_context);
 
-  EXPECT_EQ(_table->get_chunk(0u)._TIDs.at(0u), transaction_context.tid());
-  EXPECT_EQ(_table->get_chunk(0u)._TIDs.at(1u), 0u);
-  EXPECT_EQ(_table->get_chunk(0u)._TIDs.at(2u), transaction_context.tid());
+  EXPECT_EQ(_table->get_chunk(0u).mvcc_columns().tids.at(0u), transaction_context.tid());
+  EXPECT_EQ(_table->get_chunk(0u).mvcc_columns().tids.at(1u), 0u);
+  EXPECT_EQ(_table->get_chunk(0u).mvcc_columns().tids.at(2u), transaction_context.tid());
 
   delete_op->commit(cid);
 
-  EXPECT_EQ(_table->get_chunk(0u)._end_CIDs.at(0u), cid);
-  EXPECT_EQ(_table->get_chunk(0u)._end_CIDs.at(1u), max_cid);
-  EXPECT_EQ(_table->get_chunk(0u)._end_CIDs.at(2u), cid);
+  EXPECT_EQ(_table->get_chunk(0u).mvcc_columns().end_cids.at(0u), cid);
+  EXPECT_EQ(_table->get_chunk(0u).mvcc_columns().end_cids.at(1u), max_cid);
+  EXPECT_EQ(_table->get_chunk(0u).mvcc_columns().end_cids.at(2u), cid);
 
-  EXPECT_EQ(_table->get_chunk(0u)._TIDs.at(0u), 0u);
-  EXPECT_EQ(_table->get_chunk(0u)._TIDs.at(1u), 0u);
-  EXPECT_EQ(_table->get_chunk(0u)._TIDs.at(2u), 0u);
+  EXPECT_EQ(_table->get_chunk(0u).mvcc_columns().tids.at(0u), 0u);
+  EXPECT_EQ(_table->get_chunk(0u).mvcc_columns().tids.at(1u), 0u);
+  EXPECT_EQ(_table->get_chunk(0u).mvcc_columns().tids.at(2u), 0u);
 }
 
 TEST_F(DeleteTest, ExecuteAndAbort) {
@@ -71,19 +71,19 @@ TEST_F(DeleteTest, ExecuteAndAbort) {
 
   delete_op->execute(&transaction_context);
 
-  EXPECT_EQ(_table->get_chunk(0u)._TIDs.at(0u), transaction_context.tid());
-  EXPECT_EQ(_table->get_chunk(0u)._TIDs.at(1u), 0u);
-  EXPECT_EQ(_table->get_chunk(0u)._TIDs.at(2u), transaction_context.tid());
+  EXPECT_EQ(_table->get_chunk(0u).mvcc_columns().tids.at(0u), transaction_context.tid());
+  EXPECT_EQ(_table->get_chunk(0u).mvcc_columns().tids.at(1u), 0u);
+  EXPECT_EQ(_table->get_chunk(0u).mvcc_columns().tids.at(2u), transaction_context.tid());
 
   delete_op->abort();
 
-  EXPECT_EQ(_table->get_chunk(0u)._end_CIDs.at(0u), max_cid);
-  EXPECT_EQ(_table->get_chunk(0u)._end_CIDs.at(1u), max_cid);
-  EXPECT_EQ(_table->get_chunk(0u)._end_CIDs.at(2u), max_cid);
+  EXPECT_EQ(_table->get_chunk(0u).mvcc_columns().end_cids.at(0u), max_cid);
+  EXPECT_EQ(_table->get_chunk(0u).mvcc_columns().end_cids.at(1u), max_cid);
+  EXPECT_EQ(_table->get_chunk(0u).mvcc_columns().end_cids.at(2u), max_cid);
 
-  EXPECT_EQ(_table->get_chunk(0u)._TIDs.at(0u), 0u);
-  EXPECT_EQ(_table->get_chunk(0u)._TIDs.at(1u), 0u);
-  EXPECT_EQ(_table->get_chunk(0u)._TIDs.at(2u), 0u);
+  EXPECT_EQ(_table->get_chunk(0u).mvcc_columns().tids.at(0u), 0u);
+  EXPECT_EQ(_table->get_chunk(0u).mvcc_columns().tids.at(1u), 0u);
+  EXPECT_EQ(_table->get_chunk(0u).mvcc_columns().tids.at(2u), 0u);
 }
 
 }  // namespace opossum

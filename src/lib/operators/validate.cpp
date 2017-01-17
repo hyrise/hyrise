@@ -21,15 +21,15 @@ uint8_t Validate::num_in_tables() const { return 1; }
 uint8_t Validate::num_out_tables() const { return 1; }
 
 bool is_row_visible(const TransactionContext *context, const Chunk &chunk, uint32_t chunk_offset) {
-  auto ourTID = context->tid();
-  auto ourLCID = context->lcid();
-  auto rowTID = chunk._TIDs[chunk_offset];
-  auto beginCID = chunk._begin_CIDs[chunk_offset];
-  auto endCID = chunk._end_CIDs[chunk_offset];
+  const auto our_tid = context->tid();
+  const auto our_lcid = context->lcid();
+  const auto row_tid = chunk.mvcc_columns().tids[chunk_offset].load();
+  const auto begin_cid = chunk.mvcc_columns().begin_cids[chunk_offset];
+  const auto end_cid = chunk.mvcc_columns().end_cids[chunk_offset];
 
   // Taken from: https://github.com/hyrise/hyrise/blob/master/docs/documentation/queryexecution/tx.rst
-  bool own_insert = ourTID == rowTID && !(ourLCID >= beginCID) && !(ourLCID >= endCID);
-  bool past_insert = ourTID != rowTID && (ourLCID >= beginCID) && !(ourLCID >= endCID);
+  const auto own_insert = (our_tid == row_tid) && !(our_lcid >= begin_cid) && !(our_lcid >= end_cid);
+  const auto past_insert = (our_tid != row_tid) && (our_lcid >= begin_cid) && !(our_lcid >= end_cid);
 
   return own_insert || past_insert;
 }

@@ -15,8 +15,16 @@ namespace opossum {
 // It stores the data column by column.
 class Chunk {
  public:
-  // creates an empty chunk
-  Chunk() = default;
+  struct mvcc_columns_t {
+    tbb::concurrent_vector<std::atomic<uint32_t>> tids;
+    tbb::concurrent_vector<uint32_t> begin_cids;
+    tbb::concurrent_vector<uint32_t> end_cids;
+  };
+
+ public:
+  // creates an empty chunk without mvcc columns
+  Chunk();
+  Chunk(const bool has_mvcc_columns);
 
   // copying a chunk is not allowed
   Chunk(const Chunk &) = delete;
@@ -26,7 +34,6 @@ class Chunk {
   // we overwrite the copy constructor
   Chunk(Chunk &&) = default;
   Chunk &operator=(Chunk &&) = default;
-
   // adds a column to the "right" of the chunk
   void add_column(std::shared_ptr<BaseColumn> column);
 
@@ -42,14 +49,15 @@ class Chunk {
   // returns the column at a given position
   std::shared_ptr<BaseColumn> get_column(size_t column_id) const;
 
-  // mvcc columns
-  tbb::concurrent_vector<uint32_t> _TIDs;
-  tbb::concurrent_vector<uint32_t> _begin_CIDs;
-  tbb::concurrent_vector<uint32_t> _end_CIDs;
+  bool has_mvcc_columns() const;
+
+  mvcc_columns_t &mvcc_columns();
+  const mvcc_columns_t &mvcc_columns() const;
 
   void set_mvcc_column_size(size_t new_size, uint32_t begin_CID);
 
  protected:
   std::vector<std::shared_ptr<BaseColumn>> _columns;
+  std::unique_ptr<mvcc_columns_t> _mvcc_columns;
 };
 }  // namespace opossum

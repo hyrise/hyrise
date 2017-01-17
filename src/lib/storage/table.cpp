@@ -14,7 +14,7 @@ namespace opossum {
 
 Table::Table(const size_t chunk_size, const bool auto_compress)
     : append_mtx(std::make_unique<std::mutex>()), _chunk_size(chunk_size), _auto_compress(auto_compress) {
-  _chunks.push_back(Chunk());
+  _chunks.push_back(Chunk{true});
 }
 
 void Table::add_column(const std::string &name, const std::string &type, bool create_value_column) {
@@ -32,7 +32,8 @@ void Table::append(std::vector<AllTypeVariant> values) {
   if (_chunk_size > 0 && _chunks.back().size() == _chunk_size) {
     if (_auto_compress) compress_chunk(chunk_count() - 1);
 
-    Chunk newChunk;
+    // creates chunk with mvcc columns
+    Chunk newChunk{true};
     for (auto &&type : _column_types) {
       newChunk.add_column(make_shared_by_column_type<BaseColumn, ValueColumn>(type));
     }

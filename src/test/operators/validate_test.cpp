@@ -5,11 +5,11 @@
 #include "../base_test.hpp"
 #include "gtest/gtest.h"
 
-#include "../../lib/concurrency/transaction_context.hpp"
-#include "../../lib/operators/get_table.hpp"
-#include "../../lib/operators/validate.hpp"
-#include "../../lib/storage/storage_manager.hpp"
-#include "../../lib/storage/table.hpp"
+#include "concurrency/transaction_context.hpp"
+#include "operators/get_table.hpp"
+#include "operators/validate.hpp"
+#include "storage/storage_manager.hpp"
+#include "storage/table.hpp"
 
 namespace opossum {
 
@@ -46,9 +46,9 @@ TEST_F(ValidateTest, Impossible) {
   auto vali = std::make_shared<Validate>(gt);
   auto context = TransactionContext(2, 2);
 
-  t->get_chunk(0)._TIDs[0] = 2;
-  t->get_chunk(0)._begin_CIDs[0] = 2;
-  t->get_chunk(0)._end_CIDs[0] = 2;
+  t->get_chunk(0).mvcc_columns().tids[0] = 2;
+  t->get_chunk(0).mvcc_columns().begin_cids[0] = 2;
+  t->get_chunk(0).mvcc_columns().end_cids[0] = 2;
 
   EXPECT_EQ(t->row_count(), 1u);
 
@@ -63,9 +63,9 @@ TEST_F(ValidateTest, PastDelete) {
   auto vali = std::make_shared<Validate>(gt);
   auto context = TransactionContext(2, 2);
 
-  t->get_chunk(0)._TIDs[0] = 42;
-  t->get_chunk(0)._begin_CIDs[0] = 2;
-  t->get_chunk(0)._end_CIDs[0] = 2;
+  t->get_chunk(0).mvcc_columns().tids[0] = 42;
+  t->get_chunk(0).mvcc_columns().begin_cids[0] = 2;
+  t->get_chunk(0).mvcc_columns().end_cids[0] = 2;
 
   EXPECT_EQ(t->row_count(), 1u);
 
@@ -80,9 +80,9 @@ TEST_F(ValidateTest, Impossible2) {
   auto vali = std::make_shared<Validate>(gt);
   auto context = TransactionContext(2, 2);
 
-  t->get_chunk(0)._TIDs[0] = 2;
-  t->get_chunk(0)._begin_CIDs[0] = 4;
-  t->get_chunk(0)._end_CIDs[0] = 1;
+  t->get_chunk(0).mvcc_columns().tids[0] = 2;
+  t->get_chunk(0).mvcc_columns().begin_cids[0] = 4;
+  t->get_chunk(0).mvcc_columns().end_cids[0] = 1;
 
   EXPECT_EQ(t->row_count(), 1u);
 
@@ -97,9 +97,9 @@ TEST_F(ValidateTest, OwnDeleteUncommitted) {
   auto vali = std::make_shared<Validate>(gt);
   auto context = TransactionContext(2, 2);
 
-  t->get_chunk(0)._TIDs[0] = 2;
-  t->get_chunk(0)._begin_CIDs[0] = 1;
-  t->get_chunk(0)._end_CIDs[0] = 6;
+  t->get_chunk(0).mvcc_columns().tids[0] = 2;
+  t->get_chunk(0).mvcc_columns().begin_cids[0] = 1;
+  t->get_chunk(0).mvcc_columns().end_cids[0] = 6;
 
   EXPECT_EQ(t->row_count(), 1u);
 
@@ -114,9 +114,9 @@ TEST_F(ValidateTest, Impossible3) {
   auto vali = std::make_shared<Validate>(gt);
   auto context = TransactionContext(2, 2);
 
-  t->get_chunk(0)._TIDs[0] = 50;
-  t->get_chunk(0)._begin_CIDs[0] = 3;
-  t->get_chunk(0)._end_CIDs[0] = 1;
+  t->get_chunk(0).mvcc_columns().tids[0] = 50;
+  t->get_chunk(0).mvcc_columns().begin_cids[0] = 3;
+  t->get_chunk(0).mvcc_columns().end_cids[0] = 1;
 
   EXPECT_EQ(t->row_count(), 1u);
 
@@ -131,9 +131,9 @@ TEST_F(ValidateTest, OwnInsert) {
   auto vali = std::make_shared<Validate>(gt);
   auto context = TransactionContext(2, 2);
 
-  t->get_chunk(0)._TIDs[0] = 2;
-  t->get_chunk(0)._begin_CIDs[0] = 3;
-  t->get_chunk(0)._end_CIDs[0] = 3;
+  t->get_chunk(0).mvcc_columns().tids[0] = 2;
+  t->get_chunk(0).mvcc_columns().begin_cids[0] = 3;
+  t->get_chunk(0).mvcc_columns().end_cids[0] = 3;
 
   EXPECT_EQ(t->row_count(), 1u);
 
@@ -148,9 +148,9 @@ TEST_F(ValidateTest, PastInsertOrFutureDelete) {
   auto vali = std::make_shared<Validate>(gt);
   auto context = TransactionContext(2, 2);
 
-  t->get_chunk(0)._TIDs[0] = 99;
-  t->get_chunk(0)._begin_CIDs[0] = 2;
-  t->get_chunk(0)._end_CIDs[0] = 3;
+  t->get_chunk(0).mvcc_columns().tids[0] = 99;
+  t->get_chunk(0).mvcc_columns().begin_cids[0] = 2;
+  t->get_chunk(0).mvcc_columns().end_cids[0] = 3;
 
   EXPECT_EQ(t->row_count(), 1u);
 
@@ -165,9 +165,9 @@ TEST_F(ValidateTest, UncommittedInsertOrFutureInsert) {
   auto vali = std::make_shared<Validate>(gt);
   auto context = TransactionContext(2, 2);
 
-  t->get_chunk(0)._TIDs[0] = 99;
-  t->get_chunk(0)._begin_CIDs[0] = 3;
-  t->get_chunk(0)._end_CIDs[0] = 3;
+  t->get_chunk(0).mvcc_columns().tids[0] = 99;
+  t->get_chunk(0).mvcc_columns().begin_cids[0] = 3;
+  t->get_chunk(0).mvcc_columns().end_cids[0] = 3;
 
   EXPECT_EQ(t->row_count(), 1u);
 

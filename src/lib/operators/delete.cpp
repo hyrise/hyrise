@@ -28,17 +28,10 @@ std::shared_ptr<const Table> Delete::on_execute(const TransactionContext* contex
   for (const auto& row_id : *_pos_list) {
     auto& chunk = _referenced_table->get_chunk(row_id.chunk_id);
 
-    // _succeeded = chunk._TIDs[row_id.chunk_offset].compare_exchange_strong(0u, _tid);
-    // fallback until replaced by concurrent vector
+    auto expected = 0u;
+    _succeeded = chunk.mvcc_columns().tids[row_id.chunk_offset].compare_exchange_strong(expected, _tid);
 
-    auto& row_tid = chunk._TIDs[row_id.chunk_offset];
-
-    if (row_tid != 0u) {
-      _succeeded = false;
-      return nullptr;
-    }
-
-    row_tid = _tid;
+    if (!_succeeded) return nullptr;
   }
 
   return nullptr;
@@ -48,19 +41,19 @@ void Delete::commit(const uint32_t cid) {
   for (const auto& row_id : *_pos_list) {
     auto& chunk = _referenced_table->get_chunk(row_id.chunk_id);
 
-    chunk._end_CIDs[row_id.chunk_offset] = cid;
-    chunk._TIDs[row_id.chunk_offset] = 0u;
+    chunk.mvcc_columns().end_cids[row_id.chunk_offset] = cid;
+    chunk.mvcc_columns().tids[row_id.chunk_offset] = 0u;
   }
 }
 
 void Delete::abort() {
   for (const auto& row_id : *_pos_list) {
     auto& chunk = _referenced_table->get_chunk(row_id.chunk_id);
-    auto& row_tid = chunk._TIDs[row_id.chunk_offset];
 
-    if (row_tid != _tid) return;
+    auto expected = _tid;
+    const auto result = chunk.mvcc_columns().tids[row_id.chunk_offset].compare_exchange_strong(expected, 0u);
 
-    row_tid = 0u;
+    if (!result) return;
   }
 }
 
