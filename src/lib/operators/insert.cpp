@@ -3,6 +3,7 @@
 #include <memory>
 #include <string>
 #include <vector>
+#include <limits>
 
 #include "concurrency/transaction_context.hpp"
 

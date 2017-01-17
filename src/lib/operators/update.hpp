@@ -5,7 +5,9 @@
 #include <vector>
 
 #include "abstract_modifying_operator.hpp"
+#include "delete.hpp"
 #include "get_table.hpp"
+#include "insert.hpp"
 
 namespace opossum {
 
@@ -14,7 +16,7 @@ class TransactionContext;
 // operator to retrieve a table from the StorageManager by specifying its name
 class Update : public AbstractModifyingOperator {
  public:
-  explicit Insert(std::shared_ptr<AbstractOperator> table_to_update, std::shared_ptr<AbstractOperator> update_values);
+  explicit Update(std::shared_ptr<AbstractOperator> table_to_update, std::shared_ptr<AbstractOperator> update_values);
 
   std::shared_ptr<const Table> on_execute(const TransactionContext* context) override;
   void commit(const uint32_t cid) override;
@@ -25,6 +27,8 @@ class Update : public AbstractModifyingOperator {
   uint8_t num_in_tables() const override;
 
  protected:
-  PosList _inserted_rows;
+  PosList _updated_rows;
+  std::unique_ptr<Delete> _delete_op = nullptr;
+  std::unique_ptr<Insert> _insert_op = nullptr;
 };
 }  // namespace opossum

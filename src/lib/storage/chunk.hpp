@@ -24,7 +24,7 @@ class Chunk {
  public:
   // creates an empty chunk without mvcc columns
   Chunk();
-  Chunk(const bool has_mvcc_columns);
+  explicit Chunk(const bool has_mvcc_columns);
 
   // copying a chunk is not allowed
   Chunk(const Chunk &) = delete;
