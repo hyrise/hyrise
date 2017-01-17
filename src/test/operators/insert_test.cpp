@@ -16,19 +16,13 @@ namespace opossum {
 class InsertTest : public BaseTest {
  protected:
   void SetUp() override {
-    t = std::make_shared<Table>(Table(chunk_size));
-    t->add_column("col_1", "int");
-    t->add_column("col_2", "string");
-    t->append({123, " bro"});
+    t = load_table("src/test/tables/float_int.tbl", 0u);
     StorageManager::get().add_table(table_name, t);
 
     gt = std::make_shared<GetTable>(table_name);
     gt->execute();
 
-    t2 = std::make_shared<Table>(Table(chunk_size));
-    t2->add_column("col_1", "int");
-    t2->add_column("col_2", "string");
-    t2->append({123, " bro"});
+    t2 = load_table("src/test/tables/float_int.tbl", 0u);
     StorageManager::get().add_table(table_name2, t2);
 
     gt2 = std::make_shared<GetTable>(table_name2);
@@ -55,10 +49,10 @@ TEST_F(InsertTest, SelfInsert) {
 
   // Check that row has been inserted.
   EXPECT_EQ(t->get_chunk(0).size(), 2u);
-  EXPECT_EQ((*t->get_chunk(0).get_column(0))[0], AllTypeVariant(123));
-  EXPECT_EQ((*t->get_chunk(0).get_column(1))[0], AllTypeVariant(" bro"));
-  EXPECT_EQ((*t->get_chunk(0).get_column(0))[1], AllTypeVariant(123));
-  EXPECT_EQ((*t->get_chunk(0).get_column(1))[1], AllTypeVariant(" bro"));
+  EXPECT_EQ((*t->get_chunk(0).get_column(1))[0], AllTypeVariant(12345));
+  EXPECT_EQ((*t->get_chunk(0).get_column(0))[1], AllTypeVariant(458.7));
+  EXPECT_EQ((*t->get_chunk(0).get_column(1))[3], AllTypeVariant(12345));
+  EXPECT_EQ((*t->get_chunk(0).get_column(0))[4], AllTypeVariant(458.7));
 
   auto output_str = output.str();
 }

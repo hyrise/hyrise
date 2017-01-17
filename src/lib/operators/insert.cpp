@@ -26,7 +26,7 @@ std::shared_ptr<const Table> Insert::on_execute(const TransactionContext* contex
 
   // TODO(ALL): RACE CONDITION CAN HAPPEN HERE!!!!!! last chunk could be compressed
 
-  auto typed_column_processors = std::vector<std::unique_ptr<TypedColumnProcessor>>();
+  auto typed_column_processors = std::vector<std::unique_ptr<AbstractTypedColumnProcessor>>();
   for (size_t column_id = 0; column_id < last_chunk.col_count(); ++column_id) {
     typed_column_processors.emplace_back(make_unique_by_column_type<AbstractTypedColumnProcessor, TypedColumnProcessor>(
         input_table_left()->column_type(column_id)));
