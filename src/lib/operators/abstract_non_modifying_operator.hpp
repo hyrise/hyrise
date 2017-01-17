@@ -24,6 +24,7 @@ class AbstractNonModifyingOperator : public AbstractOperator {
   // found in table_scan.hpp.
   class AbstractNonModifyingOperatorImpl {
    public:
+    virtual ~AbstractNonModifyingOperatorImpl() = default;
     virtual std::shared_ptr<const Table> on_execute() = 0;
   };
 };

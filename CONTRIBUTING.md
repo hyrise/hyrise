@@ -30,3 +30,11 @@ Avoid exception handling. Because Opossum is not a product, we do not have to re
 - Variables: lowercase separated by underscores, e.g., `chunk_size`
 - Functions: lowercase separated by underscores, e.g., `get_num_in_tables()`
 - Private / proctected members / methods: like variables / functions with leading underscore, e.g., `_get_chunks()`
+
+## Review
+
+- Things to look for:
+	- Guidelines (see above)
+	- Is the copy constructor deleted where it makes sense?
+	- Is the destructor virtual for base classes?
+	- Are unnecessary copies of heavy elements made? (prefer vector& over vector, but not int& over int)

@@ -32,6 +32,10 @@ install via homebrew / packet manager
 ### googletest
 get via `git submodule update --init`
 
+### llvm (optional)
+install via homebrew / packet manager
+used for AddressSanitizer
+
 
 ## Building and Tooling
 
@@ -59,6 +63,9 @@ The binary can be executed with `./build/test`
 `make -j coverage` will print a summary to the command line and create detailed html reports at ./coverage/index.html
 
 *Supports only clang on MacOS and only gcc on linux*
+
+### AddressSanitizer
+`make -j asan` will build OpossumDB with enabled AddressSanitizer options and execute all available tests. It will fail on the first detected memory error and will print a summary. To convert addresses to actual source code locations, make sure llvm-symbolizer is installed (included in llvm package) and is available in `$PATH`. To specify a custom location for the symbolizer, set `$ASAN_SYMBOLIZER_PATH` to the path of the executable. This seems to work out of the box on macOS - If not, make sure to have llvm installed.
 
 ## Naming convention for gtest macros:
 
