@@ -26,6 +26,12 @@ std::shared_ptr<const Table> Insert::on_execute(const TransactionContext* contex
 
   // TODO(ALL): RACE CONDITION CAN HAPPEN HERE!!!!!! last chunk could be compressed
 
+  auto typed_column_processors = std::vector<std::unique_ptr<TypedColumnProcessor>>();
+  for (size_t column_id = 0; column_id < last_chunk.col_count(); ++column_id) {
+    typed_column_processors.emplace_back(make_unique_by_column_type<AbstractTypedColumnProcessor, TypedColumnProcessor>(
+        input_table_left()->column_type(column_id)));
+  }
+
   // Lock to get lock.
   size_t new_rows_offset;
   {
@@ -35,20 +41,14 @@ std::shared_ptr<const Table> Insert::on_execute(const TransactionContext* contex
 
     last_chunk.set_mvcc_column_size(last_chunk.size() + chunk_to_insert.size(), std::numeric_limits<uint32_t>::max());
 
-    for (size_t column_id = 0; column_id < last_chunk.col_count(); ++column_id) {
-      auto _impl = make_unique_by_column_type<AbstractInsertForLoopImpl, InsertForLoopImpl>(
-          input_table_left()->column_type(column_id));
-
+    for (size_t i = 0; i < last_chunk.col_count(); ++i) {
       // TODO(ALL): what happens if other threads access columns that havent been resized yet.
-      _impl->resize_vector(last_chunk.get_column(column_id), chunk_to_insert.get_column(column_id));
+      typed_column_processors[i]->resize_vector(last_chunk.get_column(i), chunk_to_insert.get_column(i));
     }
   }
 
-  for (size_t column_id = 0; column_id < last_chunk.col_count(); ++column_id) {
-    auto _impl = make_unique_by_column_type<AbstractInsertForLoopImpl, InsertForLoopImpl>(
-        input_table_left()->column_type(column_id));
-
-    _impl->move_data(last_chunk.get_column(column_id), chunk_to_insert.get_column(column_id), new_rows_offset);
+  for (size_t i = 0; i < last_chunk.col_count(); ++i) {
+    typed_column_processors[i]->move_data(last_chunk.get_column(i), chunk_to_insert.get_column(i), new_rows_offset);
   }
 
   for (auto i = 0u; i < chunk_to_insert.size(); i++) {

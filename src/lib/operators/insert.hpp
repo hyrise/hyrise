@@ -24,15 +24,12 @@ class Insert : public AbstractReadWriteOperator {
   const std::string name() const override;
   uint8_t num_in_tables() const override;
 
-  template <typename T>
-  class InsertForLoopImpl;
-
  protected:
   PosList _inserted_rows;
 };
 
 // We need these classes to perform the dynamic cast into a templated ValueColumn
-class AbstractInsertForLoopImpl {
+class AbstractTypedColumnProcessor {
  public:
   virtual void resize_vector(std::shared_ptr<BaseColumn> column1, std::shared_ptr<BaseColumn> values_to_insert) = 0;
   virtual void move_data(std::shared_ptr<BaseColumn> column1, std::shared_ptr<BaseColumn> values_to_insert,
@@ -40,7 +37,7 @@ class AbstractInsertForLoopImpl {
 };
 
 template <typename T>
-class Insert::InsertForLoopImpl : public AbstractInsertForLoopImpl {
+class TypedColumnProcessor : public AbstractTypedColumnProcessor {
  public:
   void resize_vector(std::shared_ptr<BaseColumn> column1, std::shared_ptr<BaseColumn> values_to_insert) override {
     auto casted_col1 = std::dynamic_pointer_cast<ValueColumn<T>>(column1);
