@@ -9,6 +9,7 @@ namespace opossum {
 class BaseAttributeVector {
  public:
   BaseAttributeVector() = default;
+  virtual ~BaseAttributeVector() = default;
 
   // copying an attribute vector is not allowed
   // copying whole attribute vectors is expensive
