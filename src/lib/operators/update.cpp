@@ -6,63 +6,69 @@
 #include <vector>
 
 #include "concurrency/transaction_context.hpp"
+#include "fake_operator.hpp"
 #include "storage/reference_column.hpp"
 
 namespace opossum {
 
-Update::Update(std::shared_ptr<AbstractOperator> input_table, std::shared_ptr<AbstractOperator> update_values)
-    : AbstractReadWriteOperator(input_table, update_values) {}
+Update::Update(std::shared_ptr<AbstractOperator> table_to_update_op, std::shared_ptr<AbstractOperator> update_values_op)
+    : AbstractReadWriteOperator(table_to_update_op, update_values_op) {}
 
 const std::string Update::name() const { return "Update"; }
 
 uint8_t Update::num_in_tables() const { return 1; }
 
 std::shared_ptr<const Table> Update::on_execute(const TransactionContext* context) {
-  // Create table to use for insert operator.
+  // The table to update should always be referenced. Updating all values of all rows is not allowed (TODO(all):
+  // discuss)
   auto casted_ref_col = std::dynamic_pointer_cast<ReferenceColumn>(input_table_left()->get_chunk(0).get_column(0));
+  auto original_table = casted_ref_col->referenced_table();
+
+  // 1. Create insert_table with ReferenceColumns that contain all rows that should be updated
   auto pos_list = casted_ref_col->pos_list();
   auto insert_table = std::make_shared<Table>();
+  Chunk& chunk_out = insert_table->get_chunk(0);
 
-  for (size_t column_id = 0; column_id < input_table_left()->col_count(); ++column_id) {
-    insert_table->add_column(input_table_left()->column_name(column_id), input_table_left()->column_type(column_id),
-                             false);
+  for (size_t column_id = 0; column_id < original_table->col_count(); ++column_id) {
+    insert_table->add_column(original_table->column_name(column_id), original_table->column_type(column_id), false);
+    chunk_out.add_column(std::make_shared<ReferenceColumn>(original_table, column_id, pos_list));
   }
 
-  Chunk chunk_out;
+  // 2. Replace the columns to update in insert_table with the updated data from input_table_right
+  // TODO(all): here we assume that both left and right table have only one chunk
+  auto& columns = insert_table->get_chunk(0).columns();
   for (size_t column_id = 0; column_id < input_table_left()->col_count(); ++column_id) {
-    // TODO(everyone): because of projection, column_id might be wrong. need to look it up in case of referencing
-    // tables.
-    auto ref_col_out = std::make_shared<ReferenceColumn>(casted_ref_col->referenced_table(), column_id, pos_list);
-    chunk_out.add_column(ref_col_out);
+    auto left_col = std::dynamic_pointer_cast<ReferenceColumn>(input_table_left()->get_chunk(0).get_column(column_id));
+    auto right_col = input_table_right()->get_chunk(0).get_column(column_id);
+
+    columns[left_col->referenced_column_id()] = right_col;
   }
 
-  insert_table->add_chunk(std::move(chunk_out));
+  // 3. call delete on old data.
+  _delete = std::make_unique<Delete>(_input_left);
 
-  // TODO(david): implement UPDATE:
-  // 1. move unchanged data into input table
-  // 2. move data to update into input table
-  // 3. call delete on table.
-  // 4. call insert on table. (moves happen twice??)
+  _delete->execute(context);
+
+  // 4. call insert on insert_table. (moves might happen twice??)
+  auto get_table = std::make_shared<GetTable>(original_table->name());
+  auto fake_op = std::make_shared<FakeOperator>(insert_table);
+  get_table->execute();
+  fake_op->execute();
+  _insert = std::make_unique<Insert>(get_table, fake_op);
+
+  _insert->execute(context);
 
   return nullptr;
 }
 
 void Update::commit(const uint32_t cid) {
-  auto _table = std::const_pointer_cast<Table>(input_table_left());
-  for (auto row_id : _updated_rows) {
-    auto& chunk = _table->get_chunk(row_id.chunk_id);
-
-    chunk.mvcc_columns().begin_cids[row_id.chunk_offset] = cid;
-    chunk.mvcc_columns().tids[row_id.chunk_offset] = 0u;
-  }
+  _delete->commit(cid);
+  _insert->commit(cid);
 }
 
 void Update::abort() {
-  auto _table = std::const_pointer_cast<Table>(input_table_left());
-  for (auto row_id : _updated_rows) {
-    auto& chunk = _table->get_chunk(row_id.chunk_id);
-    chunk.mvcc_columns().tids[row_id.chunk_offset] = 0u;
-  }
+  _delete->abort();
+  _insert->abort();
 }
 
 }  // namespace opossum

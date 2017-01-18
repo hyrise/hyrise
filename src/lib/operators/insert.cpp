@@ -23,6 +23,7 @@ std::shared_ptr<const Table> Insert::on_execute(const TransactionContext* contex
   auto last_chunk_id = _table->chunk_count() - 1;
   auto& last_chunk = _table->get_chunk(last_chunk_id);
   auto& chunk_to_insert = input_table_right()->get_chunk(0);
+  auto num_rows_to_insert = chunk_to_insert.size();
 
   // TODO(ALL): RACE CONDITION CAN HAPPEN HERE!!!!!! last chunk could be compressed
 
@@ -39,19 +40,20 @@ std::shared_ptr<const Table> Insert::on_execute(const TransactionContext* contex
 
     new_rows_offset = last_chunk.size();
 
-    last_chunk.set_mvcc_column_size(last_chunk.size() + chunk_to_insert.size(), std::numeric_limits<uint32_t>::max());
+    last_chunk.set_mvcc_column_size(last_chunk.size() + num_rows_to_insert, std::numeric_limits<uint32_t>::max());
 
     for (size_t i = 0; i < last_chunk.col_count(); ++i) {
       // TODO(ALL): what happens if other threads access columns that havent been resized yet.
-      typed_column_processors[i]->resize_vector(last_chunk.get_column(i), chunk_to_insert.get_column(i));
+      typed_column_processors[i]->resize_vector(last_chunk.get_column(i), num_rows_to_insert);
     }
   }
 
   for (size_t i = 0; i < last_chunk.col_count(); ++i) {
-    typed_column_processors[i]->move_data(last_chunk.get_column(i), chunk_to_insert.get_column(i), new_rows_offset);
+    typed_column_processors[i]->move_data(last_chunk.get_column(i), chunk_to_insert.get_column(i), num_rows_to_insert,
+                                          new_rows_offset);
   }
 
-  for (auto i = 0u; i < chunk_to_insert.size(); i++) {
+  for (auto i = 0u; i < num_rows_to_insert; i++) {
     last_chunk.mvcc_columns().tids[new_rows_offset + i] = context->transaction_id();
     _inserted_rows.emplace_back(_table->calculate_row_id(last_chunk_id, new_rows_offset + i));
   }

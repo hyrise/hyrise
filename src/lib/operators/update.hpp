@@ -27,8 +27,7 @@ class Update : public AbstractReadWriteOperator {
   uint8_t num_in_tables() const override;
 
  protected:
-  PosList _updated_rows;
-  std::unique_ptr<Delete> _delete_op = nullptr;
-  std::unique_ptr<Insert> _insert_op = nullptr;
+  std::unique_ptr<Delete> _delete = nullptr;
+  std::unique_ptr<Insert> _insert = nullptr;
 };
 }  // namespace opossum

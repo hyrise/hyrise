@@ -15,6 +15,7 @@ StorageManager &StorageManager::get() {
 bool StorageManager::table_exists(const std::string &name) { return _tables.find(name) != _tables.end(); }
 
 void StorageManager::add_table(const std::string &name, std::shared_ptr<Table> table) {
+  table->set_name(name);
   _tables.insert(std::make_pair(name, std::move(table)));
 }
 

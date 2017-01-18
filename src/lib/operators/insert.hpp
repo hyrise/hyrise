@@ -31,28 +31,27 @@ class Insert : public AbstractReadWriteOperator {
 // We need these classes to perform the dynamic cast into a templated ValueColumn
 class AbstractTypedColumnProcessor {
  public:
-  virtual void resize_vector(std::shared_ptr<BaseColumn> column1, std::shared_ptr<BaseColumn> values_to_insert) = 0;
+  virtual void resize_vector(std::shared_ptr<BaseColumn> column1, size_t num_values_to_insert) = 0;
   virtual void move_data(std::shared_ptr<BaseColumn> column1, std::shared_ptr<BaseColumn> values_to_insert,
-                         size_t start_index) = 0;
+                         size_t num_values_to_insert, size_t start_index) = 0;
 };
 
 template <typename T>
 class TypedColumnProcessor : public AbstractTypedColumnProcessor {
  public:
-  void resize_vector(std::shared_ptr<BaseColumn> column1, std::shared_ptr<BaseColumn> values_to_insert) override {
+  void resize_vector(std::shared_ptr<BaseColumn> column1, size_t num_values_to_insert) override {
     auto casted_col1 = std::dynamic_pointer_cast<ValueColumn<T>>(column1);
     auto& vect = casted_col1->values();
 
-    auto additional_rows = values_to_insert->size();
-    vect.resize(vect.size() + additional_rows);
+    vect.resize(vect.size() + num_values_to_insert);
   }
 
   void move_data(std::shared_ptr<BaseColumn> column1, std::shared_ptr<BaseColumn> values_to_insert,
-                 size_t start_index) override {
+                 size_t num_values_to_insert, size_t start_index) override {
     auto casted_col1 = std::dynamic_pointer_cast<ValueColumn<T>>(column1);
     auto& vect = casted_col1->values();
 
-    for (auto i = 0u; i < values_to_insert->size(); i++) {
+    for (auto i = 0u; i < num_values_to_insert; i++) {
       // TODO(all): dont use [], be smart (maybe discern between value, dict or reference col)
       vect[start_index + i] = type_cast<T>((*values_to_insert)[i]);
     }

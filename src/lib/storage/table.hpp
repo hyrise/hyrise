@@ -70,12 +70,17 @@ class Table {
   // calculates the row id from a given chunk and the chunk offset
   RowID calculate_row_id(ChunkID chunk, ChunkOffset offset) const { return RowID{chunk, offset}; }
 
+  std::string name() const { return _name; }
+  void set_name(std::string name) { _name = name; }
+
   // enforces dictionary compression on a certain chunk
   void compress_chunk(ChunkID chunk_id);
 
   std::unique_ptr<std::mutex> append_mtx;
 
  protected:
+  std::string _name;
+
   // 0 means that the chunk has an unlimited size.
   const size_t _chunk_size;
   const bool _auto_compress;

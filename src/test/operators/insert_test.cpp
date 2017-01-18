@@ -36,9 +36,9 @@ class InsertTest : public BaseTest {
 
   uint32_t chunk_size = 10;
 
-  std::shared_ptr<GetTable>(gt);
+  std::shared_ptr<GetTable> gt;
   std::shared_ptr<Table> t = nullptr;
-  std::shared_ptr<GetTable>(gt2);
+  std::shared_ptr<GetTable> gt2;
   std::shared_ptr<Table> t2 = nullptr;
 };
 
