@@ -1,9 +1,7 @@
 #pragma once
 
-#include <iostream>
 #include <memory>
 #include <string>
-#include <vector>
 
 #include "abstract_operator.hpp"
 #include "storage/column_visitable.hpp"
@@ -14,10 +12,10 @@
 
 namespace opossum {
 
-class NestedLoopJoin : public AbstractOperator {
+class SortMergeJoin : public AbstractOperator {
  public:
-  NestedLoopJoin(std::shared_ptr<AbstractOperator> left, std::shared_ptr<AbstractOperator> right,
-                 std::string left_coumn_name, std::string right_column_name, std::string op, JoinMode mode);
+  SortMergeJoin(std::shared_ptr<AbstractOperator> left, std::shared_ptr<AbstractOperator> right,
+                std::string left_coumn_name, std::string right_column_name, std::string op, JoinMode mode);
 
   void execute() override;
   std::shared_ptr<const Table> get_output() const override;
@@ -43,9 +41,9 @@ class NestedLoopJoin : public AbstractOperator {
   };
 
   template <typename T>
-  class NestedLoopJoinImpl : public AbstractOperatorImpl, public ColumnVisitable {
+  class SortMergeJoinImpl : public AbstractOperatorImpl, public ColumnVisitable {
    public:
-    NestedLoopJoinImpl<T>(NestedLoopJoin& nested_loop_join);
+    SortMergeJoinImpl<T>(SortMergeJoin& nested_loop_join);
 
     // AbstractOperatorImpl implementation
     void execute() override;
@@ -70,12 +68,9 @@ class NestedLoopJoin : public AbstractOperator {
                                   bool reverse_order = false);
 
    private:
-    NestedLoopJoin& _nested_loop_join;
+    SortMergeJoin& _nested_loop_join;
     std::function<bool(const T&, const T&)> _compare;
   };
-
-  std::shared_ptr<PosList> dereference_pos_list(std::shared_ptr<const Table> input_table, size_t column_id,
-                                                std::shared_ptr<const PosList> pos_list);
 
   std::string _left_column_name;
   std::string _right_column_name;
@@ -83,9 +78,7 @@ class NestedLoopJoin : public AbstractOperator {
   JoinMode _mode;
 
   std::shared_ptr<PosList> _pos_list_left;
-  std::vector<bool> _left_match;
   std::shared_ptr<PosList> _pos_list_right;
-  std::vector<bool> _right_match;
   std::shared_ptr<Table> _output;
 };
 }  // namespace opossum
