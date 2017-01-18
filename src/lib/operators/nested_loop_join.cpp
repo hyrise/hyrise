@@ -78,22 +78,10 @@ void NestedLoopJoin::append_columns_to_output(std::shared_ptr<const Table> input
   }
 }
 
-void NestedLoopJoin::execute() {
-  auto left_column_id = _input_left->column_id_by_name(_left_column_name);
-  auto right_column_id = _input_right->column_id_by_name(_right_column_name);
-  auto left_column_type = _input_left->column_type(left_column_id);
-  auto right_column_type = _input_right->column_type(right_column_id);
-
-  if (left_column_type != right_column_type) {
-    std::string message = "NestedLoopJoin::execute: column type \"" + left_column_type + "\" of left column \"" +
-                          _left_column_name + "\" does not match colum type \"" + right_column_type +
-                          "\" of right column \"" + _right_column_name + "\"!";
-    std::cout << message << std::endl;
-    throw std::exception(std::runtime_error(message));
-  }
-
+// Join two columns of the input tables
+void NestedLoopJoin::join_columns(size_t left_column_id, size_t right_column_id, std::string left_column_type) {
+  // Join all the combinations of chunks
   auto impl = make_shared_by_column_type<ColumnVisitable, NestedLoopJoinImpl>(left_column_type, *this);
-
   for (ChunkID chunk_id_left = 0; chunk_id_left < _input_left->chunk_count(); ++chunk_id_left) {
     for (ChunkID chunk_id_right = 0; chunk_id_right < _input_right->chunk_count(); ++chunk_id_right) {
       auto& chunk_left = _input_left->get_chunk(chunk_id_left);
@@ -105,6 +93,26 @@ void NestedLoopJoin::execute() {
       column_left->visit(*impl, context);
     }
   }
+}
+
+void NestedLoopJoin::execute() {
+  // Get types and ids of the input columns
+  auto left_column_id = _input_left->column_id_by_name(_left_column_name);
+  auto right_column_id = _input_right->column_id_by_name(_right_column_name);
+  auto left_column_type = _input_left->column_type(left_column_id);
+  auto right_column_type = _input_right->column_type(right_column_id);
+
+  // Ensure matching column types
+  if (left_column_type != right_column_type) {
+    std::string message = "NestedLoopJoin::execute: column type \"" + left_column_type + "\" of left column \"" +
+                          _left_column_name + "\" does not match colum type \"" + right_column_type +
+                          "\" of right column \"" + _right_column_name + "\"!";
+    std::cout << message << std::endl;
+    throw std::exception(std::runtime_error(message));
+  }
+
+  // Create pos lists for joining
+  join_columns(left_column_id, right_column_id, left_column_type);
 
   _output = std::make_shared<Table>(0, false);
   if (_mode != JoinMode::Inner) {

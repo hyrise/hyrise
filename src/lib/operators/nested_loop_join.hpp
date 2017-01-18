@@ -74,15 +74,18 @@ class NestedLoopJoin : public AbstractOperator {
     std::function<bool(const T&, const T&)> _compare;
   };
 
+  void join_columns(size_t left_column_id, size_t right_column_id, std::string left_column_type);
   std::shared_ptr<PosList> dereference_pos_list(std::shared_ptr<const Table> input_table, size_t column_id,
                                                 std::shared_ptr<const PosList> pos_list);
   void append_columns_to_output(std::shared_ptr<const Table> input_table, std::shared_ptr<PosList> pos_list);
 
+  // Input fields
   std::string _left_column_name;
   std::string _right_column_name;
   std::string _op;
   JoinMode _mode;
 
+  // Output fields
   std::shared_ptr<PosList> _pos_list_left;
   std::vector<bool> _left_match;
   std::shared_ptr<PosList> _pos_list_right;
