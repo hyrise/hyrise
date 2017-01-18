@@ -76,6 +76,7 @@ class NestedLoopJoin : public AbstractOperator {
 
   std::shared_ptr<PosList> dereference_pos_list(std::shared_ptr<const Table> input_table, size_t column_id,
                                                 std::shared_ptr<const PosList> pos_list);
+  void append_columns_to_output(std::shared_ptr<const Table> input_table, std::shared_ptr<PosList> pos_list);
 
   std::string _left_column_name;
   std::string _right_column_name;

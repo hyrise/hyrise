@@ -56,6 +56,28 @@ std::shared_ptr<PosList> NestedLoopJoin::dereference_pos_list(std::shared_ptr<co
   return new_pos_list;
 }
 
+void NestedLoopJoin::append_columns_to_output(std::shared_ptr<const Table> input_table,
+                                              std::shared_ptr<PosList> pos_list) {
+  // Append each column of the input column to the output
+  for (size_t column_id = 0; column_id < input_table->col_count(); column_id++) {
+    // Add the column meta data
+    _output->add_column(input_table->column_name(column_id), input_table->column_type(column_id), false);
+
+    // Check whether the column consists of reference columns
+    const auto r_column = std::dynamic_pointer_cast<ReferenceColumn>(input_table->get_chunk(0).get_column(column_id));
+    if (r_column) {
+      // Create a pos_list referencing the original column
+      auto new_pos_list = dereference_pos_list(input_table, column_id, pos_list);
+      auto ref_column = std::make_shared<ReferenceColumn>(r_column->referenced_table(),
+                                                          r_column->referenced_column_id(), new_pos_list);
+      _output->get_chunk(0).add_column(ref_column);
+    } else {
+      auto ref_column = std::make_shared<ReferenceColumn>(input_table, column_id, pos_list);
+      _output->get_chunk(0).add_column(ref_column);
+    }
+  }
+}
+
 void NestedLoopJoin::execute() {
   auto left_column_id = _input_left->column_id_by_name(_left_column_name);
   auto right_column_id = _input_right->column_id_by_name(_right_column_name);
@@ -106,43 +128,9 @@ void NestedLoopJoin::execute() {
     }
   }
 
-  // Append columns of the left input table
-  for (size_t column_id = 0; column_id < _input_left->col_count(); column_id++) {
-    const std::shared_ptr<BaseColumn> first_chunk_column = _input_left->get_chunk(0).get_column(column_id);
-    const auto r_column = std::dynamic_pointer_cast<ReferenceColumn>(first_chunk_column);
-
-    _output->add_column(_input_left->column_name(column_id), _input_left->column_type(column_id), false);
-
-    if (r_column) {
-      auto& referenced_table = r_column->referenced_table();
-      auto new_pos_list = dereference_pos_list(_input_left, column_id, _pos_list_left);
-      auto ref_column =
-          std::make_shared<ReferenceColumn>(referenced_table, r_column->referenced_column_id(), new_pos_list);
-      _output->get_chunk(0).add_column(ref_column);
-    } else {
-      auto ref_column = std::make_shared<ReferenceColumn>(_input_left, column_id, _pos_list_left);
-      _output->get_chunk(0).add_column(ref_column);
-    }
-  }
-
-  // Append columns of the right input table
-  for (size_t column_id = 0; column_id < _input_right->col_count(); column_id++) {
-    const auto& first_chunk_column = _input_right->get_chunk(0).get_column(column_id);
-    const auto& r_column = std::dynamic_pointer_cast<ReferenceColumn>(first_chunk_column);
-
-    _output->add_column(_input_right->column_name(column_id), _input_right->column_type(column_id), false);
-
-    if (r_column) {
-      auto& referenced_table = r_column->referenced_table();
-      auto new_pos_list = dereference_pos_list(_input_right, column_id, _pos_list_right);
-      auto ref_column =
-          std::make_shared<ReferenceColumn>(referenced_table, r_column->referenced_column_id(), new_pos_list);
-      _output->get_chunk(0).add_column(ref_column);
-    } else {
-      auto ref_column = std::make_shared<ReferenceColumn>(_input_right, column_id, _pos_list_right);
-      _output->get_chunk(0).add_column(ref_column);
-    }
-  }
+  // Append the columns of the input tables
+  append_columns_to_output(_input_left, _pos_list_left);
+  append_columns_to_output(_input_right, _pos_list_right);
 }
 
 std::shared_ptr<const Table> NestedLoopJoin::get_output() const { return _output; }
