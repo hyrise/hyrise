@@ -35,9 +35,10 @@ NestedLoopJoin::NestedLoopJoin(std::shared_ptr<AbstractOperator> left, std::shar
   _right_match = std::vector<bool>(_input_right->row_count());
 }
 
-std::shared_ptr<PosList> dereferenced_pos_list(std::shared_ptr<const Table> input_table, size_t column_id,
-                                               std::shared_ptr<const PosList> pos_list) {
-  std::cout << "ijoo1" << std::endl;
+//
+std::shared_ptr<PosList> NestedLoopJoin::dereference_pos_list(std::shared_ptr<const Table> input_table,
+                                                              size_t column_id,
+                                                              std::shared_ptr<const PosList> pos_list) {
   // Get all the input pos lists so that we only have to pointer cast the columns once
   auto input_pos_lists = std::vector<std::shared_ptr<const PosList>>();
   for (ChunkID chunk_id = 0; chunk_id < input_table->chunk_count(); chunk_id++) {
@@ -46,14 +47,12 @@ std::shared_ptr<PosList> dereferenced_pos_list(std::shared_ptr<const Table> inpu
     input_pos_lists.push_back(r_column->pos_list());
   }
 
-  std::cout << "ijoo2" << std::endl;
-
   // Get the row ids that are referenced
   auto new_pos_list = std::make_shared<PosList>();
   for (const auto& row : *pos_list) {
     new_pos_list->push_back(input_pos_lists.at(row.chunk_id)->at(row.chunk_offset));
   }
-  std::cout << "ijoo3" << std::endl;
+
   return new_pos_list;
 }
 
@@ -116,7 +115,7 @@ void NestedLoopJoin::execute() {
 
     if (r_column) {
       auto& referenced_table = r_column->referenced_table();
-      auto new_pos_list = dereferenced_pos_list(_input_left, column_id, _pos_list_left);
+      auto new_pos_list = dereference_pos_list(_input_left, column_id, _pos_list_left);
       auto ref_column =
           std::make_shared<ReferenceColumn>(referenced_table, r_column->referenced_column_id(), new_pos_list);
       _output->get_chunk(0).add_column(ref_column);
@@ -135,7 +134,7 @@ void NestedLoopJoin::execute() {
 
     if (r_column) {
       auto& referenced_table = r_column->referenced_table();
-      auto new_pos_list = dereferenced_pos_list(_input_right, column_id, _pos_list_right);
+      auto new_pos_list = dereference_pos_list(_input_right, column_id, _pos_list_right);
       auto ref_column =
           std::make_shared<ReferenceColumn>(referenced_table, r_column->referenced_column_id(), new_pos_list);
       _output->get_chunk(0).add_column(ref_column);
