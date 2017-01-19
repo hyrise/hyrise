@@ -58,7 +58,14 @@ class Chunk {
   MvccColumns &mvcc_columns();
   const MvccColumns &mvcc_columns() const;
 
+  void compress_mvcc_columns();
+
   void set_mvcc_column_size(size_t new_size, uint32_t begin_cid);
+
+  std::unique_ptr<MvccColumns> retrieve_mvcc_columns();
+
+  // moves the mvcc columns from chunk to this instance
+  void retrieve_mvcc_columns(Chunk &chunk);
 
  protected:
   std::vector<std::shared_ptr<BaseColumn>> _columns;
