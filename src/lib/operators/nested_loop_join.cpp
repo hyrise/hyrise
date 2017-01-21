@@ -28,7 +28,11 @@ NestedLoopJoin::NestedLoopJoin(std::shared_ptr<AbstractOperator> left, std::shar
     std::cout << message << std::endl;
     throw std::exception(std::runtime_error(message));
   }
+  if (_mode == JoinMode::Cross) {
+    _product = std::make_shared<Product>(left, right);
+  }
 
+  _output = std::make_shared<Table>(0, false);
   _pos_list_left = std::make_shared<PosList>();
   _left_match = std::vector<bool>(_input_left->row_count());
   _pos_list_right = std::make_shared<PosList>();
@@ -95,26 +99,8 @@ void NestedLoopJoin::join_columns(size_t left_column_id, size_t right_column_id,
   }
 }
 
-void NestedLoopJoin::execute() {
-  // Get types and ids of the input columns
-  auto left_column_id = _input_left->column_id_by_name(_left_column_name);
-  auto right_column_id = _input_right->column_id_by_name(_right_column_name);
-  auto left_column_type = _input_left->column_type(left_column_id);
-  auto right_column_type = _input_right->column_type(right_column_id);
-
-  // Ensure matching column types
-  if (left_column_type != right_column_type) {
-    std::string message = "NestedLoopJoin::execute: column type \"" + left_column_type + "\" of left column \"" +
-                          _left_column_name + "\" does not match colum type \"" + right_column_type +
-                          "\" of right column \"" + _right_column_name + "\"!";
-    std::cout << message << std::endl;
-    throw std::exception(std::runtime_error(message));
-  }
-
-  // Create pos lists for joining
-  join_columns(left_column_id, right_column_id, left_column_type);
-
-  _output = std::make_shared<Table>(0, false);
+void NestedLoopJoin::add_outer_join_rows() {
+  //  Fill the table with non matching rows for outer join modes
   if (_mode != JoinMode::Inner) {
     for (size_t i = 0; i < _input_left->row_count(); i++) {
       if (_mode == JoinMode::Left_outer || _mode == JoinMode::Full_outer) {
@@ -135,13 +121,42 @@ void NestedLoopJoin::execute() {
       }
     }
   }
+}
 
-  // Append the columns of the input tables
+void NestedLoopJoin::execute() {
+  if (_mode == JoinMode::Cross) {
+    _product->execute();
+    return;
+  }
+
+  // Get types and ids of the input columns
+  auto left_column_id = _input_left->column_id_by_name(_left_column_name);
+  auto right_column_id = _input_right->column_id_by_name(_right_column_name);
+  auto left_column_type = _input_left->column_type(left_column_id);
+  auto right_column_type = _input_right->column_type(right_column_id);
+
+  // Ensure matching column types
+  if (left_column_type != right_column_type) {
+    std::string message = "NestedLoopJoin::execute: column type \"" + left_column_type + "\" of left column \"" +
+                          _left_column_name + "\" does not match colum type \"" + right_column_type +
+                          "\" of right column \"" + _right_column_name + "\"!";
+    std::cout << message << std::endl;
+    throw std::exception(std::runtime_error(message));
+  }
+
+  join_columns(left_column_id, right_column_id, left_column_type);
+  add_outer_join_rows();
   append_columns_to_output(_input_left, _pos_list_left);
   append_columns_to_output(_input_right, _pos_list_right);
 }
 
-std::shared_ptr<const Table> NestedLoopJoin::get_output() const { return _output; }
+std::shared_ptr<const Table> NestedLoopJoin::get_output() const {
+  if (_mode == JoinMode::Cross) {
+    return _product->get_output();
+  } else {
+    return _output;
+  }
+}
 
 const std::string NestedLoopJoin::name() const { return "NestedLoopJoin"; }
 
@@ -152,7 +167,11 @@ uint8_t NestedLoopJoin::num_out_tables() const { return 1u; }
 template <typename T>
 NestedLoopJoin::NestedLoopJoinImpl<T>::NestedLoopJoinImpl(NestedLoopJoin& nested_loop_join)
     : _nested_loop_join{nested_loop_join} {
-  // TODO(student) : ignore op for cross join?
+  // No compare function is necessary for the cross join
+  if (_nested_loop_join._mode == JoinMode::Cross) {
+    return;
+  }
+
   if (_nested_loop_join._op == "=") {
     _compare = [](const T& value_left, const T& value_right) -> bool { return value_left == value_right; };
   } else if (_nested_loop_join._op == "<") {
