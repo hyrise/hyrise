@@ -53,9 +53,9 @@ class NestedLoopJoin : public AbstractOperator {
     std::shared_ptr<Table> get_output() const override;
 
     // ColumnVisitable implementation
-    virtual void handle_value_column(BaseColumn& column, std::shared_ptr<ColumnVisitableContext> context);
-    virtual void handle_dictionary_column(BaseColumn& column, std::shared_ptr<ColumnVisitableContext> context);
-    virtual void handle_reference_column(ReferenceColumn& column, std::shared_ptr<ColumnVisitableContext> context);
+    void handle_value_column(BaseColumn& column, std::shared_ptr<ColumnVisitableContext> context) override;
+    void handle_dictionary_column(BaseColumn& column, std::shared_ptr<ColumnVisitableContext> context) override;
+    void handle_reference_column(ReferenceColumn& column, std::shared_ptr<ColumnVisitableContext> context) override;
 
     void join_value_value(ValueColumn<T>& left, ValueColumn<T>& right, std::shared_ptr<JoinContext> context,
                           bool reverse_order = false);
