@@ -5,18 +5,20 @@
 #include <stdexcept>
 #include <string>
 #include <vector>
+#include <utility>
 
 namespace opossum {
 // TODO(Fabian): Comment everything!!
 
-NestedLoopJoin::NestedLoopJoin(std::shared_ptr<AbstractOperator> left, std::shared_ptr<AbstractOperator> right,
-                               std::string left_column_name, std::string right_column_name, std::string op,
-                               JoinMode mode)
-    : AbstractOperator(left, right),
-      _left_column_name{left_column_name},
-      _right_column_name{right_column_name},
-      _op{op},
-      _mode{mode} {
+NestedLoopJoin::NestedLoopJoin(const std::shared_ptr<AbstractOperator> left,
+                               const std::shared_ptr<AbstractOperator> right,
+                               optional<std::pair<const std::string&, const std::string&>> column_names,
+                               const std::string& op, const JoinMode mode)
+    : AbstractOperator(left, right), _op{op}, _mode{mode} {
+  if (column_names) {
+    _left_column_name = column_names->first;
+    _right_column_name = column_names->second;
+  }
   if (left == nullptr) {
     std::string message = "NestedLoopJoin::NestedLoopJoin: left input operator is null";
     std::cout << message << std::endl;

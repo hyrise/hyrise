@@ -4,6 +4,7 @@
 #include <memory>
 #include <string>
 #include <vector>
+#include <utility>
 
 #include "abstract_operator.hpp"
 #include "product.hpp"
@@ -17,8 +18,9 @@ namespace opossum {
 
 class NestedLoopJoin : public AbstractOperator {
  public:
-  NestedLoopJoin(std::shared_ptr<AbstractOperator> left, std::shared_ptr<AbstractOperator> right,
-                 std::string left_coumn_name, std::string right_column_name, std::string op, JoinMode mode);
+  NestedLoopJoin(const std::shared_ptr<AbstractOperator> left, const std::shared_ptr<AbstractOperator> right,
+                 optional<std::pair<const std::string&, const std::string&>> column_names, const std::string& op,
+                 const JoinMode mode);
 
   void execute() override;
   std::shared_ptr<const Table> get_output() const override;
