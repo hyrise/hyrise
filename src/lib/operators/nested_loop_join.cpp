@@ -4,8 +4,8 @@
 #include <memory>
 #include <stdexcept>
 #include <string>
-#include <vector>
 #include <utility>
+#include <vector>
 
 namespace opossum {
 // TODO(Fabian): Comment everything!!

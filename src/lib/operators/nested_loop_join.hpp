@@ -3,8 +3,8 @@
 #include <iostream>
 #include <memory>
 #include <string>
-#include <vector>
 #include <utility>
+#include <vector>
 
 #include "abstract_operator.hpp"
 #include "product.hpp"
