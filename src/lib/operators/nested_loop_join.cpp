@@ -15,9 +15,18 @@ NestedLoopJoin::NestedLoopJoin(const std::shared_ptr<AbstractOperator> left,
                                optional<std::pair<const std::string&, const std::string&>> column_names,
                                const std::string& op, const JoinMode mode)
     : AbstractOperator(left, right), _op{op}, _mode{mode} {
+  // Check optional column names
+  // Per definition either two names are specified or none
   if (column_names) {
     _left_column_name = column_names->first;
     _right_column_name = column_names->second;
+  } else {
+    // No names specified --> this is only valid if we want to cross-join
+    if (_mode != JoinMode::Cross) {
+      std::string message = "NestedLoopJoin::NestedLoopJoin: No columns specified for join operator";
+      std::cout << message << std::endl;
+      throw std::exception(std::runtime_error(message));
+    }
   }
   if (left == nullptr) {
     std::string message = "NestedLoopJoin::NestedLoopJoin: left input operator is null";
@@ -30,6 +39,7 @@ NestedLoopJoin::NestedLoopJoin(const std::shared_ptr<AbstractOperator> left,
     std::cout << message << std::endl;
     throw std::exception(std::runtime_error(message));
   }
+  // If cross-join, we use the functionality already provided by product to compute the result
   if (_mode == JoinMode::Cross) {
     _product = std::make_shared<Product>(left, right);
   }
@@ -86,8 +96,8 @@ void NestedLoopJoin::append_columns_to_output(std::shared_ptr<const Table> input
 
 // Join two columns of the input tables
 void NestedLoopJoin::join_columns(size_t left_column_id, size_t right_column_id, std::string left_column_type) {
-  // Join all the combinations of chunks
   auto impl = make_shared_by_column_type<ColumnVisitable, NestedLoopJoinImpl>(left_column_type, *this);
+  // For each combination of chunks from both input tables call visitor pattern to actually perform the join.
   for (ChunkID chunk_id_left = 0; chunk_id_left < _input_left->chunk_count(); ++chunk_id_left) {
     for (ChunkID chunk_id_right = 0; chunk_id_right < _input_right->chunk_count(); ++chunk_id_right) {
       auto& chunk_left = _input_left->get_chunk(chunk_id_left);
@@ -126,6 +136,7 @@ void NestedLoopJoin::add_outer_join_rows() {
 }
 
 void NestedLoopJoin::execute() {
+  // output is equal to result of product in case of croos-join
   if (_mode == JoinMode::Cross) {
     _product->execute();
     return;
@@ -138,6 +149,9 @@ void NestedLoopJoin::execute() {
   auto right_column_type = _input_right->column_type(right_column_id);
 
   // Ensure matching column types
+  // We suggest to only join matching types, as for different types there exists no basic/standard rules to provide a
+  // valid result.
+  // This can be later extended if we have those.
   if (left_column_type != right_column_type) {
     std::string message = "NestedLoopJoin::execute: column type \"" + left_column_type + "\" of left column \"" +
                           _left_column_name + "\" does not match colum type \"" + right_column_type +
@@ -153,11 +167,7 @@ void NestedLoopJoin::execute() {
 }
 
 std::shared_ptr<const Table> NestedLoopJoin::get_output() const {
-  if (_mode == JoinMode::Cross) {
-    return _product->get_output();
-  } else {
-    return _output;
-  }
+  return (_mode == JoinMode::Cross) ? _product->get_output() : _output;
 }
 
 const std::string NestedLoopJoin::name() const { return "NestedLoopJoin"; }
@@ -203,6 +213,12 @@ std::shared_ptr<Table> NestedLoopJoin::NestedLoopJoinImpl<T>::get_output() const
   throw std::exception(std::runtime_error(message));
   return nullptr;
 }
+
+/*
+** All join functions only consider the combination of types of columns that can be joined.
+** The ordering is mostly not important (equi-join, etc.) but for other compare function like "<" we use
+** an adiditional flag 'reverse_order' to compute the right result.
+*/
 
 template <typename T>
 void NestedLoopJoin::NestedLoopJoinImpl<T>::join_value_value(ValueColumn<T>& left, ValueColumn<T>& right,
@@ -433,6 +449,12 @@ void NestedLoopJoin::NestedLoopJoinImpl<T>::join_reference_reference(ReferenceCo
     }
   }
 }
+
+/*
+** This functions get called by the visitor and check for the type of the second column to actually call the
+** join function.
+** May be later replaced by left_builder/right_builder pattern.
+*/
 
 template <typename T>
 void NestedLoopJoin::NestedLoopJoinImpl<T>::handle_value_column(BaseColumn& column,
