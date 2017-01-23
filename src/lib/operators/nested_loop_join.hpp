@@ -3,9 +3,11 @@
 #include <iostream>
 #include <memory>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "abstract_operator.hpp"
+#include "product.hpp"
 #include "storage/column_visitable.hpp"
 #include "storage/dictionary_column.hpp"
 #include "storage/reference_column.hpp"
@@ -16,8 +18,9 @@ namespace opossum {
 
 class NestedLoopJoin : public AbstractOperator {
  public:
-  NestedLoopJoin(std::shared_ptr<AbstractOperator> left, std::shared_ptr<AbstractOperator> right,
-                 std::string left_coumn_name, std::string right_column_name, std::string op, JoinMode mode);
+  NestedLoopJoin(const std::shared_ptr<AbstractOperator> left, const std::shared_ptr<AbstractOperator> right,
+                 optional<std::pair<const std::string&, const std::string&>> column_names, const std::string& op,
+                 const JoinMode mode);
 
   void execute() override;
   std::shared_ptr<const Table> get_output() const override;
@@ -52,9 +55,9 @@ class NestedLoopJoin : public AbstractOperator {
     std::shared_ptr<Table> get_output() const override;
 
     // ColumnVisitable implementation
-    virtual void handle_value_column(BaseColumn& column, std::shared_ptr<ColumnVisitableContext> context);
-    virtual void handle_dictionary_column(BaseColumn& column, std::shared_ptr<ColumnVisitableContext> context);
-    virtual void handle_reference_column(ReferenceColumn& column, std::shared_ptr<ColumnVisitableContext> context);
+    void handle_value_column(BaseColumn& column, std::shared_ptr<ColumnVisitableContext> context) override;
+    void handle_dictionary_column(BaseColumn& column, std::shared_ptr<ColumnVisitableContext> context) override;
+    void handle_reference_column(ReferenceColumn& column, std::shared_ptr<ColumnVisitableContext> context) override;
 
     void join_value_value(ValueColumn<T>& left, ValueColumn<T>& right, std::shared_ptr<JoinContext> context,
                           bool reverse_order = false);
@@ -74,6 +77,7 @@ class NestedLoopJoin : public AbstractOperator {
     std::function<bool(const T&, const T&)> _compare;
   };
 
+  void add_outer_join_rows();
   void join_columns(size_t left_column_id, size_t right_column_id, std::string left_column_type);
   std::shared_ptr<PosList> dereference_pos_list(std::shared_ptr<const Table> input_table, size_t column_id,
                                                 std::shared_ptr<const PosList> pos_list);
@@ -86,6 +90,7 @@ class NestedLoopJoin : public AbstractOperator {
   JoinMode _mode;
 
   // Output fields
+  std::shared_ptr<Product> _product;
   std::shared_ptr<PosList> _pos_list_left;
   std::vector<bool> _left_match;
   std::shared_ptr<PosList> _pos_list_right;
