@@ -84,4 +84,5 @@ TEST_F(OperatorsNestedLoopJoinTest, ValueJoinRef) {
 
   EXPECT_TABLE_EQ(join_operator->get_output(), expected_result);
 }
+
 }  // namespace opossum
