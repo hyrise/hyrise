@@ -26,6 +26,7 @@ struct RowID {
   ChunkOffset chunk_offset;
 };
 
+using ColumnID = uint16_t;
 using ValueID = uint32_t;  // Cannot be larger than ChunkOffset
 
 using PosList = std::vector<RowID>;
