@@ -60,8 +60,8 @@ double random_double() {
 float random_float() { return static_cast<float>(random_double()); }
 
 int main() {
-  auto t1 = std::make_shared<opossum::Table>(opossum::Table(2));
-  auto t2 = std::make_shared<opossum::Table>(opossum::Table(2));
+  auto t1 = std::make_shared<opossum::Table>(opossum::Table(100));
+  auto t2 = std::make_shared<opossum::Table>(opossum::Table(100));
 
   t1->add_column("a", "int");
   t1->add_column("b", "float");
