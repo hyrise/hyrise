@@ -18,6 +18,12 @@ NestedLoopJoin::NestedLoopJoin(const std::shared_ptr<AbstractOperator> left,
   if (column_names) {
     _left_column_name = column_names->first;
     _right_column_name = column_names->second;
+  } else {
+    if (_mode != JoinMode::Cross) {
+      std::string message = "NestedLoopJoin::NestedLoopJoin: No columns specified for join operator";
+      std::cout << message << std::endl;
+      throw std::exception(std::runtime_error(message));
+    }
   }
   if (left == nullptr) {
     std::string message = "NestedLoopJoin::NestedLoopJoin: left input operator is null";
