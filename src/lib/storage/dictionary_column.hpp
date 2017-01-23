@@ -49,7 +49,14 @@ class DictionaryColumn : public BaseColumn {
   }
 
   // return the value at a certain position. If you want to write efficient operators, back off!
-  const AllTypeVariant operator[](const size_t i) const override { return _dictionary[_attribute_vector->get(i)]; }
+  const AllTypeVariant operator[](const size_t i) const override {
+    if (i == NULL_VALUE) {
+      // doesn't work with string values'
+      return {0};
+    }
+
+    return _dictionary[_attribute_vector->get(i)];
+  }
 
   // dictionary columns are immutable
   void append(const AllTypeVariant&) override { throw std::logic_error("DictionaryColumn is immutable"); }
