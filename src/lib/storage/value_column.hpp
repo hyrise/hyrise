@@ -18,7 +18,7 @@ class ValueColumn : public BaseColumn {
   const AllTypeVariant operator[](const size_t i) const override {
     if (i == NULL_VALUE) {
       // doesn't work with string values
-      return {0};
+      return T{0};
     }
 
     return _values.at(i);

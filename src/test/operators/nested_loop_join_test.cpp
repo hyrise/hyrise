@@ -86,18 +86,22 @@ TEST_F(OperatorsNestedLoopJoinTest, ValueJoinRef) {
 
   EXPECT_TABLE_EQ(join_operator->get_output(), expected_result);
 }
-/*
+
 TEST_F(OperatorsNestedLoopJoinTest, ValueOuterJoinValue) {
+  const std::string left_c3 = "left_c3";
+  const std::string right_c3 = "right_c3";
+  const std::string equal = "=";
   auto gt_left = std::make_shared<GetTable>("table_left");
   gt_left->execute();
   auto gt_right = std::make_shared<GetTable>("table_right_outer");
   gt_right->execute();
-  std::shared_ptr<Table> expected_result = load_table("src/test/tables/nlj_result_right_outer.tbl", 1);
-  auto join_operator =
-      std::make_shared<NestedLoopJoin>(gt_left, gt_right, "left_c3", "right_c3", "=", JoinMode::Right_outer);
+  std::shared_ptr<Table> expected_result = load_table("src/test/tables/nlj_result_right_outer.tbl", 3);
+  auto join_operator = std::make_shared<NestedLoopJoin>(
+      gt_left, gt_right, std::pair<const std::string &, const std::string &>(left_c3, right_c3), equal,
+      JoinMode::Right_outer);
   join_operator->execute();
 
   EXPECT_TABLE_EQ(join_operator->get_output(), expected_result);
 }
-*/
+
 }  // namespace opossum

@@ -51,8 +51,8 @@ class DictionaryColumn : public BaseColumn {
   // return the value at a certain position. If you want to write efficient operators, back off!
   const AllTypeVariant operator[](const size_t i) const override {
     if (i == NULL_VALUE) {
-      // doesn't work with string values'
-      return {0};
+      // doesn't work with string values
+      return T{0};
     }
 
     return _dictionary[_attribute_vector->get(i)];

@@ -28,7 +28,7 @@ struct RowID {
   ChunkID chunk_id;
   ChunkOffset chunk_offset;
 };
-constexpr RowID NULL_ROW = RowID{std::numeric_limits<ChunkID>::max(), std::numeric_limits<ChunkOffset>::max()};
+constexpr RowID NULL_ROW = RowID{0u, std::numeric_limits<ChunkOffset>::max()};
 constexpr ChunkOffset NULL_VALUE = std::numeric_limits<ChunkOffset>::max();
 
 using ValueID = uint32_t;  // Cannot be larger than ChunkOffset
