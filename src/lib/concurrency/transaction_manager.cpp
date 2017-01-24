@@ -12,19 +12,20 @@ TransactionManager& TransactionManager::get() {
 
 void TransactionManager::reset() {
   auto& manager = get();
-  manager._ntid = 0u;
-  manager._lcid = 0u;
-  manager._lcc = std::make_shared<CommitContext>();
+  manager._next_transaction_id = 0u;
+  manager._last_commit_id = 0u;
+  manager._last_commit_context = std::make_shared<CommitContext>();
 }
 
-TransactionManager::TransactionManager() : _ntid{1u}, _lcid{0u}, _lcc{std::make_shared<CommitContext>()} {}
+TransactionManager::TransactionManager()
+    : _next_transaction_id{1u}, _last_commit_id{0u}, _last_commit_context{std::make_shared<CommitContext>()} {}
 
-uint32_t TransactionManager::ntid() const { return _ntid; }
+TransactionID TransactionManager::next_transaction_id() const { return _next_transaction_id; }
 
-uint32_t TransactionManager::lcid() const { return _lcid; }
+CommitID TransactionManager::last_commit_id() const { return _last_commit_id; }
 
 std::unique_ptr<TransactionContext> TransactionManager::new_transaction_context() {
-  return std::make_unique<TransactionContext>(_ntid++, _lcid);
+  return std::make_unique<TransactionContext>(_next_transaction_id++, _last_commit_id);
 }
 
 void TransactionManager::abort(TransactionContext& context) {
@@ -58,7 +59,7 @@ void TransactionManager::commit(TransactionContext& context) {
 }
 
 std::shared_ptr<CommitContext> TransactionManager::new_commit_context() {
-  auto current_context = std::atomic_load(&_lcc);
+  auto current_context = std::atomic_load(&_last_commit_context);
   auto next_context = std::shared_ptr<CommitContext>();
 
   auto success = false;
@@ -68,7 +69,7 @@ std::shared_ptr<CommitContext> TransactionManager::new_commit_context() {
     }
 
     next_context = current_context->get_or_create_next();
-    success = std::atomic_compare_exchange_strong(&_lcc, &current_context, next_context);
+    success = std::atomic_compare_exchange_strong(&_last_commit_context, &current_context, next_context);
   }
 
   return next_context;
@@ -80,9 +81,9 @@ void TransactionManager::commit(std::shared_ptr<CommitContext> context) {
   current_context->make_pending();
 
   while (current_context->is_pending()) {
-    auto expected_lcid = current_context->cid() - 1;
+    auto expected_last_commit_id = current_context->commit_id() - 1;
 
-    if (!_lcid.compare_exchange_strong(expected_lcid, current_context->cid())) return;
+    if (!_last_commit_id.compare_exchange_strong(expected_last_commit_id, current_context->commit_id())) return;
 
     // TODO(EVERYONE): send response to client
 

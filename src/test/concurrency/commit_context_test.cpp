@@ -36,7 +36,7 @@ TEST_F(CommitContextTest, CidOfNextIncrementedByOne) {
 
   auto next = context->get_or_create_next();
 
-  EXPECT_EQ(context->cid() + 1u, next->cid());
+  EXPECT_EQ(context->commit_id() + 1u, next->commit_id());
 }
 
 }  // namespace opossum

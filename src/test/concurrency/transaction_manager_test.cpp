@@ -38,18 +38,18 @@ TEST_F(TransactionManagerTest, CommitShouldCommitAllFollowingPendingTransactions
   manager().prepare_commit(*context_1);
   manager().prepare_commit(*context_2);
 
-  const auto prev_lcid = manager().lcid();
+  const auto prev_last_commit_id = manager().last_commit_id();
 
   manager().commit(*context_2);
 
-  EXPECT_EQ(prev_lcid, manager().lcid());
+  EXPECT_EQ(prev_last_commit_id, manager().last_commit_id());
 
   manager().commit(*context_1);
 
-  EXPECT_EQ(context_2->cid(), manager().lcid());
+  EXPECT_EQ(context_2->commit_id(), manager().last_commit_id());
 }
 
-// Until the commit context is committed and the lcid (last commit id) incremented,
+// Until the commit context is committed and the last commit id incremented,
 // the commit context is held in a single linked list of shared_ptrs and hence not deleted.
 TEST_F(TransactionManagerTest, CommitContextGetsOnlyDeletedAfterCommitting) {
   auto context_1 = manager().new_transaction_context();

@@ -28,6 +28,9 @@ struct RowID {
 
 using ValueID = uint32_t;  // Cannot be larger than ChunkOffset
 
+using CommitID = uint32_t;
+using TransactionID = uint32_t;
+
 using PosList = std::vector<RowID>;
 
 // This holds all possible data types. The left side of the pairs are the names, the right side are prototypes

@@ -5,18 +5,18 @@
 
 namespace opossum {
 
-TransactionContext::TransactionContext(const uint32_t tid, const uint32_t lcid)
-    : _tid{tid}, _lcid{lcid}, _phase{TransactionPhase::Active} {}
+TransactionContext::TransactionContext(const TransactionID transaction_id, const CommitID last_commit_id)
+    : _transaction_id{transaction_id}, _last_commit_id{last_commit_id}, _phase{TransactionPhase::Active} {}
 
-uint32_t TransactionContext::tid() const { return _tid; }
-uint32_t TransactionContext::lcid() const { return _lcid; }
+TransactionID TransactionContext::transaction_id() const { return _transaction_id; }
+CommitID TransactionContext::last_commit_id() const { return _last_commit_id; }
 
-uint32_t TransactionContext::cid() const {
+CommitID TransactionContext::commit_id() const {
   if (_commit_context == nullptr) {
     throw std::logic_error("TransactionContext cid only available after commit context has been created.");
   }
 
-  return _commit_context->cid();
+  return _commit_context->commit_id();
 }
 
 TransactionPhase TransactionContext::phase() const { return _phase; }

@@ -4,13 +4,13 @@
 
 namespace opossum {
 
-CommitContext::CommitContext() : _cid{0u}, _pending{false} {}
+CommitContext::CommitContext() : CommitContext{0u} {}
 
-CommitContext::CommitContext(const uint32_t cid) : _cid{cid}, _pending{false} {}
+CommitContext::CommitContext(const CommitID commit_id) : _commit_id{commit_id}, _pending{false} {}
 
 CommitContext::~CommitContext() = default;
 
-uint32_t CommitContext::cid() const { return _cid; }
+CommitID CommitContext::commit_id() const { return _commit_id; }
 
 bool CommitContext::is_pending() const { return _pending; }
 
@@ -26,7 +26,7 @@ std::shared_ptr<CommitContext> CommitContext::next() { return std::atomic_load(&
 std::shared_ptr<CommitContext> CommitContext::get_or_create_next() {
   if (has_next()) return next();
 
-  auto new_next = std::make_shared<CommitContext>(_cid + 1);
+  auto new_next = std::make_shared<CommitContext>(_commit_id + 1);
 
   auto context_nullptr = std::shared_ptr<CommitContext>();
   std::atomic_compare_exchange_strong(&_next, &context_nullptr, new_next);

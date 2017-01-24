@@ -6,6 +6,8 @@
 #include "commit_context.hpp"
 #include "transaction_context.hpp"
 
+#include "types.hpp"
+
 namespace opossum {
 
 // thread-safe
@@ -14,8 +16,8 @@ class TransactionManager {
   static TransactionManager &get();
   static void reset();
 
-  uint32_t ntid() const;
-  uint32_t lcid() const;
+  TransactionID next_transaction_id() const;
+  CommitID last_commit_id() const;
 
   std::unique_ptr<TransactionContext> new_transaction_context();
 
@@ -35,9 +37,9 @@ class TransactionManager {
   void commit(std::shared_ptr<CommitContext> context);
 
  private:
-  std::atomic<uint32_t> _ntid;
-  std::atomic<uint32_t> _lcid;
+  std::atomic<TransactionID> _next_transaction_id;
+  std::atomic<CommitID> _last_commit_id;
 
-  std::shared_ptr<CommitContext> _lcc;
+  std::shared_ptr<CommitContext> _last_commit_context;
 };
 }  // namespace opossum
