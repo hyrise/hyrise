@@ -54,7 +54,7 @@ class Chunk {
   mvcc_columns_t &mvcc_columns();
   const mvcc_columns_t &mvcc_columns() const;
 
-  void set_mvcc_column_size(size_t new_size, uint32_t begin_CID);
+  void set_mvcc_column_size(size_t new_size, uint32_t begin_cid);
 
  protected:
   std::vector<std::shared_ptr<BaseColumn>> _columns;

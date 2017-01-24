@@ -34,7 +34,7 @@ void TransactionManager::abort(TransactionContext& context) {
   }
 
   // last commit id needs to be incremented even though transaction has been aborted.
-  commit(context._commit_context);
+  _commit(context._commit_context);
   context._phase = TransactionPhase::Aborted;
 }
 
@@ -43,7 +43,7 @@ void TransactionManager::prepare_commit(TransactionContext& context) {
     throw std::logic_error("TransactionContext can only be prepared for committing when active.");
   }
 
-  context._commit_context = new_commit_context();
+  context._commit_context = _new_commit_context();
   context._phase = TransactionPhase::Committing;
 }
 
@@ -52,13 +52,13 @@ void TransactionManager::commit(TransactionContext& context) {
     throw std::logic_error("TransactionContext can only be committed when active.");
   }
 
-  commit(context._commit_context);
+  _commit(context._commit_context);
 
   // TODO(EVERYONE): update _phase when transaction actually committed?
   context._phase = TransactionPhase::Committed;
 }
 
-std::shared_ptr<CommitContext> TransactionManager::new_commit_context() {
+std::shared_ptr<CommitContext> TransactionManager::_new_commit_context() {
   auto current_context = std::atomic_load(&_last_commit_context);
   auto next_context = std::shared_ptr<CommitContext>();
 
@@ -75,7 +75,7 @@ std::shared_ptr<CommitContext> TransactionManager::new_commit_context() {
   return next_context;
 }
 
-void TransactionManager::commit(std::shared_ptr<CommitContext> context) {
+void TransactionManager::_commit(std::shared_ptr<CommitContext> context) {
   auto current_context = context;
 
   current_context->make_pending();

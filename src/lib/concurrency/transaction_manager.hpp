@@ -33,8 +33,8 @@ class TransactionManager {
   TransactionManager &operator=(const TransactionManager &) = delete;
   TransactionManager &operator=(TransactionManager &&) = delete;
 
-  std::shared_ptr<CommitContext> new_commit_context();
-  void commit(std::shared_ptr<CommitContext> context);
+  std::shared_ptr<CommitContext> _new_commit_context();
+  void _commit(std::shared_ptr<CommitContext> context);
 
  private:
   std::atomic<TransactionID> _next_transaction_id;
