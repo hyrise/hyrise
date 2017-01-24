@@ -72,6 +72,7 @@ solution "opossum"
   if os.is("linux") then
     linkoptions {"-pthread"}
   end
+  links { "tbb" }
   includedirs { "src/lib/", "/usr/local/include" }
 
   configuration "Debug"
@@ -93,7 +94,6 @@ project "googletest"
 project "opossum"
   kind "StaticLib"
   files { "src/lib/**.hpp", "src/lib/**.cpp", "src/bin/server.cpp" }
-  links { "tbb" }
 
 project "opossum-asan"
   kind "StaticLib"
@@ -114,7 +114,7 @@ project "server"
 
 project "playground"
   kind "ConsoleApp"
-  links { "opossum", "tbb" }
+  links { "opossum"}
   files { "src/bin/playground.cpp" }
 
 project "test"
@@ -125,7 +125,6 @@ project "test"
   includedirs { "third_party/googletest/googletest/include" }
   -- We need to add something that always returns 0 (the echo) because otherwise the build is considered failed and gets deleted
   postbuildcommands { "./build/test || echo Test failed" }
-  links { "tbb" }
 
 project "asan"
   kind "ConsoleApp"
