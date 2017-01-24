@@ -18,7 +18,7 @@ void CommitContext::make_pending() { _pending = true; }
 
 bool CommitContext::has_next() const {
   const auto next_copy = std::atomic_load(&_next);
-  return _next != nullptr;
+  return next_copy != nullptr;
 }
 
 std::shared_ptr<CommitContext> CommitContext::next() { return std::atomic_load(&_next); }
