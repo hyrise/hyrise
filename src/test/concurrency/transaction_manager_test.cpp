@@ -49,6 +49,8 @@ TEST_F(TransactionManagerTest, CommitShouldCommitAllFollowingPendingTransactions
   EXPECT_EQ(context_2->cid(), manager().lcid());
 }
 
+// Until the commit context is committed and the lcid (last commit id) incremented,
+// the commit context is held in a single linked list of shared_ptrs and hence not deleted.
 TEST_F(TransactionManagerTest, CommitContextGetsOnlyDeletedAfterCommitting) {
   auto context_1 = manager().new_transaction_context();
   auto context_2 = manager().new_transaction_context();
