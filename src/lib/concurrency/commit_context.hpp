@@ -31,7 +31,7 @@ class CommitContext {
 
  private:
   const uint32_t _cid;
-  std::atomic<bool> _pending;
+  std::atomic<bool> _pending;  // true if context is waiting to be committed
   std::shared_ptr<CommitContext> _next;
 };
 }  // namespace opossum
