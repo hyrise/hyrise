@@ -26,8 +26,6 @@ class TransactionContext {
 
   std::shared_ptr<CommitContext> commit_context();
 
-  friend class TransactionManager;
-
  private:
   const uint32_t _tid;
   const uint32_t _lcid;
