@@ -35,8 +35,8 @@ class TransactionManager {
   void commit(std::shared_ptr<CommitContext> context);
 
  private:
-  std::atomic<std::uint32_t> _ntid;
-  std::atomic<std::uint32_t> _lcid;
+  std::atomic<uint32_t> _ntid;
+  std::atomic<uint32_t> _lcid;
 
   std::shared_ptr<CommitContext> _lcc;
 };
