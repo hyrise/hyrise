@@ -14,6 +14,8 @@ namespace opossum {
 template <typename T>
 class ValueColumn : public BaseColumn {
  public:
+  ValueColumn() = default;
+
   // return the value at a certain position. If you want to write efficient operators, back off!
   const AllTypeVariant operator[](const size_t i) const override { return _values.at(i); }
 
