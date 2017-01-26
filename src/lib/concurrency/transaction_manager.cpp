@@ -33,8 +33,6 @@ void TransactionManager::abort(TransactionContext& context) {
     throw std::logic_error("TransactionContext can only be aborted when active.");
   }
 
-  // last commit id needs to be incremented even though transaction has been aborted.
-  _commit(context._commit_context);
   context._phase = TransactionPhase::Aborted;
 }
 
@@ -49,7 +47,7 @@ void TransactionManager::prepare_commit(TransactionContext& context) {
 
 void TransactionManager::commit(TransactionContext& context) {
   if (context._phase != TransactionPhase::Committing) {
-    throw std::logic_error("TransactionContext can only be committed when active.");
+    throw std::logic_error("TransactionContext can only be committed after prepare_commit has been called.");
   }
 
   _commit(context._commit_context);

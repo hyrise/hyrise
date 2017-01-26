@@ -10,7 +10,12 @@
 
 namespace opossum {
 
-// thread-safe
+/**
+ * The TransactionManager is responsible for a consistent assignment of
+ * transaction and commit ids. It also keeps track of the last commit id
+ * which represents the current global visibility of records.
+ * The TransactionManager is thread-safe.
+ */
 class TransactionManager {
  public:
   static TransactionManager &get();
@@ -19,11 +24,38 @@ class TransactionManager {
   TransactionID next_transaction_id() const;
   CommitID last_commit_id() const;
 
+  /**
+   * Creates a new transaction context
+   */
   std::unique_ptr<TransactionContext> new_transaction_context();
 
+  /**
+   * @defgroup Lifetime management of transactions
+   * @{
+   */
+
+  /**
+   * Sets transaction phase to “aborted”
+   */
   void abort(TransactionContext &context);
+
+  /**
+   * Creates new commit context and assigns commit id
+   * Sets transaction phase to “committing”
+   * After calling this function, transaction cannot be
+   * aborted anymore.
+   */
   void prepare_commit(TransactionContext &context);
+
+  /**
+   * Tries to commit transaction and all following
+   * transactions marked as “pending”. Marks transaction
+   * as pending if there are uncommitted transaction with
+   * a smaller commit id.
+   */
   void commit(TransactionContext &context);
+
+  /** @} */
 
  private:
   TransactionManager();
