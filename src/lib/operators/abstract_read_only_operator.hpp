@@ -8,6 +8,9 @@
 
 namespace opossum {
 
+/**
+ * AbstractReadOnlyOperator is the superclass for all operators that not need write access to their input tables.
+ */
 class AbstractReadOnlyOperator : public AbstractOperator {
  public:
   AbstractReadOnlyOperator(const std::shared_ptr<const AbstractOperator> left = nullptr,
