@@ -28,7 +28,7 @@ TEST_F(TransactionManagerTest, NonActiveTransactionCannotBeAborted) {
   manager().prepare_commit(*context);
 
   EXPECT_EQ(context->phase(), TransactionPhase::Committing);
-  EXPECT_ANY_THROW(manager().abort(*context));
+  EXPECT_THROW(manager().abort(*context), std::logic_error);
 }
 
 TEST_F(TransactionManagerTest, CommitShouldCommitAllFollowingPendingTransactions) {
