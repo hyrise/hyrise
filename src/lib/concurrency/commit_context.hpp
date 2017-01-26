@@ -11,6 +11,7 @@ namespace opossum {
 /**
  * Data structure that ensures transaction are committed in an orderly manner.
  * Its main purpose is to manage commit ids.
+ * It is effectively part of the TransactionContext
  *
  * Should not be used outside the concurrency module!
  */
@@ -31,9 +32,16 @@ class CommitContext {
 
   /**
    * Marks the commit context as “pending”, i.e. ready to be committed
-   * as soon as all previous pending have been committed
+   * as soon as all previous pending have been committed.
+   *
+   * @param callback called when transaction is committed
    */
-  void make_pending();
+  void make_pending(const TransactionID transaction_id, std::function<void(TransactionID)> callback = nullptr);
+
+  /**
+   * Calls the callback of make_pending
+   */
+  void fire_callback();
 
   bool has_next() const;
 

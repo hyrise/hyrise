@@ -80,4 +80,27 @@ TEST_F(TransactionManagerTest, CommitContextGetsOnlyDeletedAfterCommitting) {
   EXPECT_TRUE(commit_context_2.expired());
 }
 
+TEST_F(TransactionManagerTest, CallbackFiresWhenCommitted) {
+  auto context_1 = manager().new_transaction_context();
+  auto context_2 = manager().new_transaction_context();
+
+  manager().prepare_commit(*context_1);
+  manager().prepare_commit(*context_2);
+
+  auto context_1_committed = false;
+  auto callback_1 = [&context_1_committed](TransactionID) { context_1_committed = true; };
+
+  auto context_2_committed = false;
+  auto callback_2 = [&context_2_committed](TransactionID) { context_2_committed = true; };
+
+  manager().commit(*context_2, callback_2);
+
+  EXPECT_FALSE(context_2_committed);
+
+  manager().commit(*context_1, callback_1);
+
+  EXPECT_TRUE(context_1_committed);
+  EXPECT_TRUE(context_2_committed);
+}
+
 }  // namespace opossum

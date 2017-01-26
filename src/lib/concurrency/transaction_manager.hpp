@@ -1,6 +1,7 @@
 #pragma once
 
 #include <atomic>
+#include <functional>
 #include <memory>
 
 #include "commit_context.hpp"
@@ -52,8 +53,10 @@ class TransactionManager {
    * transactions marked as “pending”. Marks transaction
    * as pending if there are uncommitted transaction with
    * a smaller commit id.
+   *
+   * @param callback called when transaction is committed
    */
-  void commit(TransactionContext &context);
+  void commit(TransactionContext &context, std::function<void(TransactionID)> callback = nullptr);
 
   /** @} */
 
@@ -66,7 +69,7 @@ class TransactionManager {
   TransactionManager &operator=(TransactionManager &&) = delete;
 
   std::shared_ptr<CommitContext> _new_commit_context();
-  void _commit(std::shared_ptr<CommitContext> context);
+  void _increment_last_commit_id(std::shared_ptr<CommitContext> context);
 
  private:
   std::atomic<TransactionID> _next_transaction_id;

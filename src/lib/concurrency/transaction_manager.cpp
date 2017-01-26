@@ -45,12 +45,15 @@ void TransactionManager::prepare_commit(TransactionContext& context) {
   context._phase = TransactionPhase::Committing;
 }
 
-void TransactionManager::commit(TransactionContext& context) {
+void TransactionManager::commit(TransactionContext& context, std::function<void(TransactionID)> callback) {
   if (context._phase != TransactionPhase::Committing) {
     throw std::logic_error("TransactionContext can only be committed after prepare_commit has been called.");
   }
 
-  _commit(context._commit_context);
+  auto commit_context = context._commit_context;
+
+  commit_context->make_pending(context.transaction_id(), callback);
+  _increment_last_commit_id(commit_context);
 
   // TODO(EVERYONE): update _phase when transaction actually committed?
   context._phase = TransactionPhase::Committed;
@@ -73,17 +76,15 @@ std::shared_ptr<CommitContext> TransactionManager::_new_commit_context() {
   return next_context;
 }
 
-void TransactionManager::_commit(std::shared_ptr<CommitContext> context) {
+void TransactionManager::_increment_last_commit_id(std::shared_ptr<CommitContext> context) {
   auto current_context = context;
-
-  current_context->make_pending();
 
   while (current_context->is_pending()) {
     auto expected_last_commit_id = current_context->commit_id() - 1;
 
     if (!_last_commit_id.compare_exchange_strong(expected_last_commit_id, current_context->commit_id())) return;
 
-    // TODO(EVERYONE): send response to client
+    current_context->fire_callback();
 
     if (!current_context->has_next()) return;
 

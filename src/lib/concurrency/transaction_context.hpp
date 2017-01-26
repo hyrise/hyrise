@@ -34,7 +34,7 @@ class TransactionContext {
 
   /**
    * Only available after TransactionManager::prepare_commit has been called
-   */ 
+   */
   CommitID commit_id() const;
 
   /**
