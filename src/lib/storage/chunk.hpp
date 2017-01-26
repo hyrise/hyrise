@@ -15,7 +15,7 @@ namespace opossum {
 // It stores the data column by column.
 class Chunk {
  public:
-  struct mvcc_columns_t {
+  struct MvccColumns {
     tbb::concurrent_vector<std::atomic<uint32_t>> tids;
     tbb::concurrent_vector<uint32_t> begin_cids;
     tbb::concurrent_vector<uint32_t> end_cids;
@@ -51,13 +51,13 @@ class Chunk {
 
   bool has_mvcc_columns() const;
 
-  mvcc_columns_t &mvcc_columns();
-  const mvcc_columns_t &mvcc_columns() const;
+  MvccColumns &mvcc_columns();
+  const MvccColumns &mvcc_columns() const;
 
   void set_mvcc_column_size(size_t new_size, uint32_t begin_cid);
 
  protected:
   std::vector<std::shared_ptr<BaseColumn>> _columns;
-  std::unique_ptr<mvcc_columns_t> _mvcc_columns;
+  std::unique_ptr<MvccColumns> _mvcc_columns;
 };
 }  // namespace opossum

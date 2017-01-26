@@ -12,7 +12,7 @@ namespace opossum {
 Chunk::Chunk() : Chunk{false} {}
 
 Chunk::Chunk(const bool has_mvcc_columns) {
-  if (has_mvcc_columns) _mvcc_columns = std::make_unique<mvcc_columns_t>();
+  if (has_mvcc_columns) _mvcc_columns = std::make_unique<MvccColumns>();
 }
 
 void Chunk::add_column(std::shared_ptr<BaseColumn> column) {
@@ -59,7 +59,7 @@ void Chunk::set_mvcc_column_size(size_t new_size, uint32_t begin_cid) {
 
 bool Chunk::has_mvcc_columns() const { return _mvcc_columns != nullptr; }
 
-Chunk::mvcc_columns_t& Chunk::mvcc_columns() {
+Chunk::MvccColumns& Chunk::mvcc_columns() {
 #ifdef IS_DEBUG
   if (!has_mvcc_columns()) {
     std::logic_error("Chunk does not have mvcc columns");
@@ -68,7 +68,7 @@ Chunk::mvcc_columns_t& Chunk::mvcc_columns() {
 
   return *_mvcc_columns;
 }
-const Chunk::mvcc_columns_t& Chunk::mvcc_columns() const {
+const Chunk::MvccColumns& Chunk::mvcc_columns() const {
 #ifdef IS_DEBUG
   if (!has_mvcc_columns()) {
     std::logic_error("Chunk does not have mvcc columns");
