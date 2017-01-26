@@ -15,7 +15,14 @@ template <typename T>
 class ValueColumn : public BaseColumn {
  public:
   // return the value at a certain position. If you want to write efficient operators, back off!
-  const AllTypeVariant operator[](const size_t i) const override { return _values.at(i); }
+  const AllTypeVariant operator[](const size_t i) const override {
+    if (i == NULL_VALUE) {
+      // doesn't work with string values
+      return T{0};
+    }
+
+    return _values.at(i);
+  }
 
   // add a value to the end
   void append(const AllTypeVariant& val) override { _values.push_back(type_cast<T>(val)); }
