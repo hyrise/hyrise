@@ -114,7 +114,7 @@ project "server"
 
 project "playground"
   kind "ConsoleApp"
-  links { "opossum"}
+  links { "opossum" }
   files { "src/bin/playground.cpp" }
 
 project "test"

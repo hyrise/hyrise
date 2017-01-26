@@ -15,7 +15,7 @@ namespace opossum {
  * Since tables are generally passed around as const variables and changing that would propagate all over the place,
  * implementations of this interface need to use const_casts or work around this by other means. const_cast should not
  * result in undefined behaviour since creating a Table that is const at creation time is not useful and should not
- *  happen at all.
+ * happen at all.
  */
 class AbstractReadWriteOperator : public AbstractOperator {
  public:
@@ -48,7 +48,7 @@ class AbstractReadWriteOperator : public AbstractOperator {
   virtual void abort() = 0;
 
   /**
-   * Returns true iff a previous call to on_execute produced an error.
+   * Returns true if a previous call to on_execute produced an error.
    */
   bool execute_failed() const { return _execute_failed; }
 
