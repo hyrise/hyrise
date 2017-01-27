@@ -55,6 +55,8 @@ std::shared_ptr<const Table> Insert::on_execute(TransactionContext* context) {
   }
 
   for (auto i = 0u; i < num_rows_to_insert; i++) {
+    // we do not need to check whether other operators have locked the rows, we have just created them
+    // and they are not visible for other operators
     last_chunk.mvcc_columns().tids[new_rows_offset + i] = context->transaction_id();
     _inserted_rows.emplace_back(_table->calculate_row_id(last_chunk_id, new_rows_offset + i));
   }
