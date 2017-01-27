@@ -23,15 +23,15 @@ std::shared_ptr<const Table> Delete::on_execute(const TransactionContext* contex
 
   _pos_list = first_column->pos_list();
   _referenced_table = std::const_pointer_cast<Table>(first_column->referenced_table());
-  _tid = context->tid();
+  _tid = context->transaction_id();
 
   for (const auto& row_id : *_pos_list) {
     auto& chunk = _referenced_table->get_chunk(row_id.chunk_id);
 
     auto expected = 0u;
-    _succeeded = chunk.mvcc_columns().tids[row_id.chunk_offset].compare_exchange_strong(expected, _tid);
+    _execute_failed = !chunk.mvcc_columns().tids[row_id.chunk_offset].compare_exchange_strong(expected, _tid);
 
-    if (!_succeeded) return nullptr;
+    if (_execute_failed) return nullptr;
   }
 
   return nullptr;

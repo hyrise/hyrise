@@ -21,8 +21,8 @@ uint8_t Validate::num_in_tables() const { return 1; }
 uint8_t Validate::num_out_tables() const { return 1; }
 
 bool is_row_visible(const TransactionContext *context, const Chunk &chunk, uint32_t chunk_offset) {
-  const auto our_tid = context->tid();
-  const auto our_lcid = context->lcid();
+  const auto our_tid = context->transaction_id();
+  const auto our_lcid = context->last_commit_id();
   const auto row_tid = chunk.mvcc_columns().tids[chunk_offset].load();
   const auto begin_cid = chunk.mvcc_columns().begin_cids[chunk_offset];
   const auto end_cid = chunk.mvcc_columns().end_cids[chunk_offset];

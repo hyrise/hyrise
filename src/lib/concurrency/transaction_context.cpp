@@ -1,7 +1,7 @@
 #include "transaction_context.hpp"
 
-#include <stdexcept>
 #include <memory>
+#include <stdexcept>
 
 namespace opossum {
 

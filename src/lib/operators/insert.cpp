@@ -52,7 +52,7 @@ std::shared_ptr<const Table> Insert::on_execute(const TransactionContext* contex
   }
 
   for (auto i = 0u; i < chunk_to_insert.size(); i++) {
-    last_chunk.mvcc_columns().tids[new_rows_offset + i] = context->tid();
+    last_chunk.mvcc_columns().tids[new_rows_offset + i] = context->transaction_id();
     _inserted_rows.emplace_back(_table->calculate_row_id(last_chunk_id, new_rows_offset + i));
   }
 

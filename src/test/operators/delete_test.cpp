@@ -44,9 +44,9 @@ TEST_F(DeleteTest, ExecuteAndCommit) {
 
   delete_op->execute(&transaction_context);
 
-  EXPECT_EQ(_table->get_chunk(0u).mvcc_columns().tids.at(0u), transaction_context.tid());
+  EXPECT_EQ(_table->get_chunk(0u).mvcc_columns().tids.at(0u), transaction_context.transaction_id());
   EXPECT_EQ(_table->get_chunk(0u).mvcc_columns().tids.at(1u), 0u);
-  EXPECT_EQ(_table->get_chunk(0u).mvcc_columns().tids.at(2u), transaction_context.tid());
+  EXPECT_EQ(_table->get_chunk(0u).mvcc_columns().tids.at(2u), transaction_context.transaction_id());
 
   delete_op->commit(cid);
 
@@ -71,9 +71,9 @@ TEST_F(DeleteTest, ExecuteAndAbort) {
 
   delete_op->execute(&transaction_context);
 
-  EXPECT_EQ(_table->get_chunk(0u).mvcc_columns().tids.at(0u), transaction_context.tid());
+  EXPECT_EQ(_table->get_chunk(0u).mvcc_columns().tids.at(0u), transaction_context.transaction_id());
   EXPECT_EQ(_table->get_chunk(0u).mvcc_columns().tids.at(1u), 0u);
-  EXPECT_EQ(_table->get_chunk(0u).mvcc_columns().tids.at(2u), transaction_context.tid());
+  EXPECT_EQ(_table->get_chunk(0u).mvcc_columns().tids.at(2u), transaction_context.transaction_id());
 
   delete_op->abort();
 
