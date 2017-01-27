@@ -31,7 +31,7 @@ class UpdateTest : public BaseTest {
     gt2->execute();
   }
 
-  TransactionManager& manager() { return TransactionManager::get(); }
+  void helper(std::shared_ptr<GetTable> source_table, std::shared_ptr<Table> expected_result);
 
   std::ostringstream output;
 
@@ -47,10 +47,8 @@ class UpdateTest : public BaseTest {
   std::shared_ptr<Table> t2 = nullptr;
 };
 
-TEST_F(UpdateTest, SelfUpdate) {
-  auto t_context = manager().new_transaction_context();
-
-  std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_int_same.tbl", 1);
+void UpdateTest::helper(std::shared_ptr<GetTable> source_table, std::shared_ptr<Table> expected_result) {
+  auto t_context = TransactionManager::get().new_transaction_context();
 
   std::vector<std::string> column_filter_left = {"a"};
   std::vector<std::string> column_filter_right = {"b"};
@@ -61,7 +59,7 @@ TEST_F(UpdateTest, SelfUpdate) {
   ref_table->execute(t_context.get());
 
   auto projection1 = std::make_shared<Projection>(ref_table, column_filter_left);
-  auto projection2 = std::make_shared<Projection>(gt, column_filter_right);
+  auto projection2 = std::make_shared<Projection>(source_table, column_filter_right);
   projection1->execute(t_context.get());
   projection2->execute(t_context.get());
 
@@ -69,49 +67,25 @@ TEST_F(UpdateTest, SelfUpdate) {
   update->execute(t_context.get());
 
   // MVCC commit.
-  manager().prepare_commit(*t_context);
+  TransactionManager::get().prepare_commit(*t_context);
   update->commit(t_context->commit_id());
-  manager().commit(*t_context);
+  TransactionManager::get().commit(*t_context);
 
   // Get validated table which should have the same row twice.
-  t_context = manager().new_transaction_context();
+  t_context = TransactionManager::get().new_transaction_context();
   auto validate = std::make_shared<Validate>(gt);
   validate->execute(t_context.get());
 
   EXPECT_TABLE_EQ(validate->get_output(), expected_result);
 }
 
-TEST_F(UpdateTest, NormalUpdate) {
-  auto t_context = manager().new_transaction_context();
-
+TEST_F(UpdateTest, SelfUpdate) {
   std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_int_same.tbl", 1);
+  helper(gt, expected_result);
+}
 
-  std::vector<std::string> column_filter_left = {"a"};
-  std::vector<std::string> column_filter_right = {"b"};
-
-  // make input left actually referenced. Projection does NOT generate ReferenceColumns
-  // TODO(all): rethink update which handles non-refcols.
-  auto ref_table = std::make_shared<TableScan>(gt, "a", ">", 0);
-  ref_table->execute(t_context.get());
-
-  auto projection1 = std::make_shared<Projection>(ref_table, column_filter_left);
-  auto projection2 = std::make_shared<Projection>(gt2, column_filter_right);
-  projection1->execute(t_context.get());
-  projection2->execute(t_context.get());
-
-  auto update = std::make_shared<Update>(projection1, projection2);
-  update->execute(t_context.get());
-
-  // MVCC commit.
-  manager().prepare_commit(*t_context);
-  update->commit(t_context->commit_id());
-  manager().commit(*t_context);
-
-  // Get validated table which should have the same row twice.
-  t_context = manager().new_transaction_context();
-  auto validate = std::make_shared<Validate>(gt);
-  validate->execute(t_context.get());
-
-  EXPECT_TABLE_EQ(validate->get_output(), expected_result);
+TEST_F(UpdateTest, NormalUpdate) {
+  std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_int_same.tbl", 1);
+  helper(gt2, expected_result);
 }
 }  // namespace opossum
