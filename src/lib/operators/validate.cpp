@@ -26,10 +26,12 @@ bool is_row_visible(const TransactionContext *context, const Chunk &chunk, uint3
   const auto end_cid = chunk.mvcc_columns().end_cids[chunk_offset];
 
   // Taken from: https://github.com/hyrise/hyrise/blob/master/docs/documentation/queryexecution/tx.rst
-  const auto own_insert = (our_tid == row_tid) && !(our_lcid >= begin_cid) && !(our_lcid >= end_cid);
-  const auto past_insert = (our_tid != row_tid) && (our_lcid >= begin_cid) && !(our_lcid >= end_cid);
+  // const auto own_insert = (our_tid == row_tid) && !(our_lcid >= begin_cid) && !(our_lcid >= end_cid);
+  // const auto past_insert = (our_tid != row_tid) && (our_lcid >= begin_cid) && !(our_lcid >= end_cid);
+  // return own_insert || past_insert;
 
-  return own_insert || past_insert;
+  // since gcc and clang are surprisingly bad at optimizing the above boolean expression, lets do that ourselves
+  return our_lcid < end_cid && ((our_lcid >= begin_cid) != (row_tid == our_tid));
 }
 
 std::shared_ptr<const Table> Validate::on_execute() {
