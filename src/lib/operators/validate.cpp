@@ -36,7 +36,7 @@ bool is_row_visible(const TransactionContext *context, const Chunk &chunk, uint3
 
 std::shared_ptr<const Table> Validate::on_execute() { return nullptr; }
 
-std::shared_ptr<const Table> Validate::on_execute(const TransactionContext *transactionContext) {
+std::shared_ptr<const Table> Validate::on_execute(TransactionContext *transactionContext) {
   auto output = std::make_shared<Table>();
 
   for (size_t column_id = 0; column_id < _in_table->col_count(); ++column_id) {

@@ -12,7 +12,7 @@ namespace opossum {
 class Validate : public AbstractReadOnlyOperator {
  public:
   explicit Validate(const std::shared_ptr<AbstractOperator> in);
-  std::shared_ptr<const Table> on_execute(const TransactionContext *transactionContext) override;
+  std::shared_ptr<const Table> on_execute(TransactionContext *transactionContext) override;
   std::shared_ptr<const Table> on_execute() override;
 
   const std::string name() const override;

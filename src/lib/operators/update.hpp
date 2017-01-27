@@ -18,7 +18,7 @@ class Update : public AbstractReadWriteOperator {
  public:
   explicit Update(std::shared_ptr<AbstractOperator> table_to_update, std::shared_ptr<AbstractOperator> update_values);
 
-  std::shared_ptr<const Table> on_execute(const TransactionContext* context) override;
+  std::shared_ptr<const Table> on_execute(TransactionContext* context) override;
   void commit(const uint32_t cid) override;
   static void static_abort(const std::shared_ptr<Table> table, const PosList& pos_list);
   void abort() override;

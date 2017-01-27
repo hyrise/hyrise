@@ -32,7 +32,7 @@ class DeleteTest : public BaseTest {
 };
 
 TEST_F(DeleteTest, ExecuteAndCommit) {
-  const auto transaction_context = TransactionContext{1u, 1u};
+  auto transaction_context = TransactionContext{1u, 1u};
   const auto cid = 1u;
   const auto max_cid = std::numeric_limits<uint32_t>::max();
 
@@ -60,7 +60,7 @@ TEST_F(DeleteTest, ExecuteAndCommit) {
 }
 
 TEST_F(DeleteTest, ExecuteAndAbort) {
-  const auto transaction_context = TransactionContext{1u, 1u};
+  auto transaction_context = TransactionContext{1u, 1u};
   const auto max_cid = std::numeric_limits<uint32_t>::max();
 
   auto table_scan = std::make_shared<TableScan>(_gt, "b", ">", "456.7");

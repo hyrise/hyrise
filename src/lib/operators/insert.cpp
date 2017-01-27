@@ -16,7 +16,7 @@ const std::string Insert::name() const { return "Insert"; }
 
 uint8_t Insert::num_in_tables() const { return 1; }
 
-std::shared_ptr<const Table> Insert::on_execute(const TransactionContext* context) {
+std::shared_ptr<const Table> Insert::on_execute(TransactionContext* context) {
   auto _table = std::const_pointer_cast<Table>(input_table_left());
 
   // TODO(all): respect chunk size maybe?

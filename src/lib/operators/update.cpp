@@ -18,7 +18,7 @@ const std::string Update::name() const { return "Update"; }
 
 uint8_t Update::num_in_tables() const { return 1; }
 
-std::shared_ptr<const Table> Update::on_execute(const TransactionContext* context) {
+std::shared_ptr<const Table> Update::on_execute(TransactionContext* context) {
   // The table to update should always be referenced. Updating all values of all rows is not allowed (TODO(all):
   // discuss)
   auto casted_ref_col = std::dynamic_pointer_cast<ReferenceColumn>(input_table_left()->get_chunk(0).get_column(0));

@@ -7,7 +7,7 @@
 
 namespace opossum {
 
-// operator to retrieve a table from the StorageManager by specifying its name
+// operator to wrap a table in an operator.
 class FakeOperator : public AbstractReadOnlyOperator {
  public:
   explicit FakeOperator(const std::shared_ptr<Table> table);

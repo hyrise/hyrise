@@ -6,6 +6,7 @@
 #include "gtest/gtest.h"
 
 #include "../../lib/concurrency/transaction_manager.hpp"
+#include "../../lib/operators/commit.hpp"
 #include "../../lib/operators/get_table.hpp"
 #include "../../lib/operators/projection.hpp"
 #include "../../lib/operators/update.hpp"
@@ -68,7 +69,10 @@ void UpdateTest::helper(std::shared_ptr<GetTable> source_table, std::shared_ptr<
 
   // MVCC commit.
   TransactionManager::get().prepare_commit(*t_context);
-  update->commit(t_context->commit_id());
+
+  auto commit_op = std::make_shared<Commit>();
+  commit_op->execute(t_context.get());
+
   TransactionManager::get().commit(*t_context);
 
   // Get validated table which should have the same row twice.
