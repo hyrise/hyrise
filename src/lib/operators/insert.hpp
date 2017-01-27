@@ -5,7 +5,6 @@
 #include <vector>
 
 #include "abstract_read_write_operator.hpp"
-#include "get_table.hpp"
 
 namespace opossum {
 
@@ -14,7 +13,7 @@ class TransactionContext;
 // operator to retrieve a table from the StorageManager by specifying its name
 class Insert : public AbstractReadWriteOperator {
  public:
-  explicit Insert(std::shared_ptr<GetTable> get_table, std::shared_ptr<AbstractOperator> values_to_insert);
+  explicit Insert(std::string table_name, std::shared_ptr<AbstractOperator> values_to_insert);
 
   std::shared_ptr<const Table> on_execute(TransactionContext* context) override;
   void commit(const uint32_t cid) override;
@@ -26,6 +25,10 @@ class Insert : public AbstractReadWriteOperator {
 
  protected:
   PosList _inserted_rows;
+
+ private:
+  const std::string _table_name;
+  std::shared_ptr<Table> _table;
 };
 
 // We need these classes to perform the dynamic cast into a templated ValueColumn

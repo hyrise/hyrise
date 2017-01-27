@@ -6,31 +6,32 @@
 #include <vector>
 
 #include "concurrency/transaction_context.hpp"
+#include "storage/storage_manager.hpp"
 
 namespace opossum {
 
-Insert::Insert(std::shared_ptr<GetTable> get_table, std::shared_ptr<AbstractOperator> values_to_insert)
-    : AbstractReadWriteOperator(get_table, values_to_insert) {}
+Insert::Insert(std::string table_name, std::shared_ptr<AbstractOperator> values_to_insert)
+    : AbstractReadWriteOperator(values_to_insert), _table_name(table_name) {}
 
 const std::string Insert::name() const { return "Insert"; }
 
 uint8_t Insert::num_in_tables() const { return 1; }
 
 std::shared_ptr<const Table> Insert::on_execute(TransactionContext* context) {
-  auto _table = std::const_pointer_cast<Table>(input_table_left());
+  _table = StorageManager::get().get_table(_table_name);
 
   // TODO(all): respect chunk size maybe?
   auto last_chunk_id = _table->chunk_count() - 1;
   auto& last_chunk = _table->get_chunk(last_chunk_id);
-  auto& chunk_to_insert = input_table_right()->get_chunk(0);
+  auto& chunk_to_insert = input_table_left()->get_chunk(0);
   auto num_rows_to_insert = chunk_to_insert.size();
 
   // TODO(ALL): RACE CONDITION CAN HAPPEN HERE!!!!!! last chunk could be compressed
 
   auto typed_column_processors = std::vector<std::unique_ptr<AbstractTypedColumnProcessor>>();
   for (size_t column_id = 0; column_id < last_chunk.col_count(); ++column_id) {
-    typed_column_processors.emplace_back(make_unique_by_column_type<AbstractTypedColumnProcessor, TypedColumnProcessor>(
-        input_table_left()->column_type(column_id)));
+    typed_column_processors.emplace_back(
+        make_unique_by_column_type<AbstractTypedColumnProcessor, TypedColumnProcessor>(_table->column_type(column_id)));
   }
 
   // Lock to get lock.
@@ -62,7 +63,6 @@ std::shared_ptr<const Table> Insert::on_execute(TransactionContext* context) {
 }
 
 void Insert::commit(const uint32_t cid) {
-  auto _table = std::const_pointer_cast<Table>(input_table_left());
   for (auto row_id : _inserted_rows) {
     auto& chunk = _table->get_chunk(row_id.chunk_id);
 
@@ -72,7 +72,6 @@ void Insert::commit(const uint32_t cid) {
 }
 
 void Insert::abort() {
-  auto _table = std::const_pointer_cast<Table>(input_table_left());
   for (auto row_id : _inserted_rows) {
     auto& chunk = _table->get_chunk(row_id.chunk_id);
     chunk.mvcc_columns().tids[row_id.chunk_offset] = 0u;

@@ -19,6 +19,9 @@ class Commit : public AbstractReadWriteOperator {
   void abort() override;
 
  protected:
+  /**
+   * Calls commit on all read-write operators. Needs to have prepare_commit calle first.
+   */
   std::shared_ptr<const Table> on_execute(TransactionContext* context) override;
 };
 }  // namespace opossum

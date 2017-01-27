@@ -6,7 +6,6 @@
 
 #include "abstract_read_write_operator.hpp"
 #include "delete.hpp"
-#include "get_table.hpp"
 #include "insert.hpp"
 
 namespace opossum {

@@ -49,12 +49,10 @@ std::shared_ptr<const Table> Update::on_execute(TransactionContext* context) {
 
   _delete->execute(context);
 
-  // 4. call insert on insert_table. (moves might happen twice??)
-  auto get_table = std::make_shared<GetTable>(original_table->name());
+  // 4. call insert using insert_table. (moves might happen twice??)
   auto fake_op = std::make_shared<FakeOperator>(insert_table);
-  get_table->execute();
   fake_op->execute();
-  _insert = std::make_unique<Insert>(get_table, fake_op);
+  _insert = std::make_unique<Insert>(original_table->name(), fake_op);
 
   _insert->execute(context);
 

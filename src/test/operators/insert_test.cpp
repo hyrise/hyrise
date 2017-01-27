@@ -19,9 +19,6 @@ class InsertTest : public BaseTest {
     t = load_table("src/test/tables/float_int.tbl", 0u);
     StorageManager::get().add_table(table_name, t);
 
-    gt = std::make_shared<GetTable>(table_name);
-    gt->execute();
-
     t2 = load_table("src/test/tables/float_int.tbl", 0u);
     StorageManager::get().add_table(table_name2, t2);
 
@@ -36,14 +33,13 @@ class InsertTest : public BaseTest {
 
   uint32_t chunk_size = 10;
 
-  std::shared_ptr<GetTable> gt;
   std::shared_ptr<Table> t = nullptr;
   std::shared_ptr<GetTable> gt2;
   std::shared_ptr<Table> t2 = nullptr;
 };
 
 TEST_F(InsertTest, SelfInsert) {
-  auto ins = std::make_shared<Insert>(gt, gt2);
+  auto ins = std::make_shared<Insert>(table_name, gt2);
   auto context = TransactionContext(1, 1);
   ins->execute(&context);
 
