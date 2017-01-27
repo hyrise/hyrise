@@ -46,11 +46,15 @@ void Delete::commit(const uint32_t cid) {
   }
 }
 
+
 void Delete::abort() {
   for (const auto& row_id : *_pos_list) {
     auto& chunk = _referenced_table->get_chunk(row_id.chunk_id);
 
     auto expected = _tid;
+
+    // only resets records that have been locked by this operator
+    // we don't want to unlock records locked by other transactions
     const auto result = chunk.mvcc_columns().tids[row_id.chunk_offset].compare_exchange_strong(expected, 0u);
 
     if (!result) return;
