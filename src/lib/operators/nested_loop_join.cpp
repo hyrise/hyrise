@@ -8,7 +8,6 @@
 #include <vector>
 
 namespace opossum {
-// TODO(Fabian): Comment everything!!
 
 NestedLoopJoin::NestedLoopJoin(const std::shared_ptr<AbstractOperator> left,
                                const std::shared_ptr<AbstractOperator> right,
@@ -296,6 +295,8 @@ void NestedLoopJoin::NestedLoopJoinImpl<T>::join_value_reference(ValueColumn<T>&
   for (ChunkOffset left_chunk_offset = 0; left_chunk_offset < values.size(); left_chunk_offset++) {
     const auto& value_left = values[left_chunk_offset];
 
+    // Since it isn't ensured that the poslist isn't ordered according to the chunk distribution,
+    // we have to check the column type for each row
     for (ChunkOffset right_chunk_offset = 0; right_chunk_offset < pos_list->size(); right_chunk_offset++) {
       const auto& row_location = ref_table->locate_row(pos_list->at(right_chunk_offset));
       const auto& referenced_chunk_id = row_location.first;
@@ -303,7 +304,6 @@ void NestedLoopJoin::NestedLoopJoinImpl<T>::join_value_reference(ValueColumn<T>&
       const auto& referenced_chunk = ref_table->get_chunk(referenced_chunk_id);
       const auto& referenced_column = referenced_chunk.get_column(right.referenced_column_id());
 
-      // TODO(arne): cant do this every time (performance)
       const auto& d_column = std::dynamic_pointer_cast<DictionaryColumn<T>>(referenced_column);
       const auto& v_column = std::dynamic_pointer_cast<ValueColumn<T>>(referenced_column);
       T value_right;
@@ -365,6 +365,8 @@ void NestedLoopJoin::NestedLoopJoinImpl<T>::join_dictionary_reference(Dictionary
   for (ChunkOffset left_chunk_offset = 0; left_chunk_offset < att_left->size(); left_chunk_offset++) {
     const auto& value_left = left.value_by_value_id(att_left->get(left_chunk_offset));
 
+    // Since it isn't ensured that the poslist isn't ordered according to the chunk distribution,
+    // we have to check the column type for each row
     for (ChunkOffset right_chunk_offset = 0; right_chunk_offset < pos_list->size(); right_chunk_offset++) {
       const auto& row_location = ref_table->locate_row(pos_list->at(right_chunk_offset));
       const auto& referenced_chunk_id = row_location.first;
@@ -372,7 +374,6 @@ void NestedLoopJoin::NestedLoopJoinImpl<T>::join_dictionary_reference(Dictionary
       const auto& referenced_chunk = ref_table->get_chunk(referenced_chunk_id);
       const auto& referenced_column = referenced_chunk.get_column(right.referenced_column_id());
 
-      // TODO(fabian dumke): cant do this every time (performance)
       const auto& d_column = std::dynamic_pointer_cast<DictionaryColumn<T>>(referenced_column);
       const auto& v_column = std::dynamic_pointer_cast<ValueColumn<T>>(referenced_column);
       T value_right;
@@ -406,6 +407,8 @@ void NestedLoopJoin::NestedLoopJoinImpl<T>::join_reference_reference(ReferenceCo
   auto& ref_table_right = right.referenced_table();
   auto& pos_list_right = right.pos_list();
 
+  // Since it isn't ensured that the poslist isn't ordered according to the chunk distribution,
+  // we have to check the column type for each row
   for (ChunkOffset left_chunk_offset = 0; left_chunk_offset < pos_list_left->size(); left_chunk_offset++) {
     const auto& row_location = ref_table_left->locate_row(pos_list_left->at(left_chunk_offset));
     const auto& referenced_chunk_id = row_location.first;
@@ -413,7 +416,6 @@ void NestedLoopJoin::NestedLoopJoinImpl<T>::join_reference_reference(ReferenceCo
     const auto& referenced_chunk = ref_table_left->get_chunk(referenced_chunk_id);
     const auto& referenced_column = referenced_chunk.get_column(left.referenced_column_id());
 
-    // TODO(fabian dumke): cant do this every time (performance)
     const auto& d_column = std::dynamic_pointer_cast<DictionaryColumn<T>>(referenced_column);
     const auto& v_column = std::dynamic_pointer_cast<ValueColumn<T>>(referenced_column);
     T value_left;
@@ -433,7 +435,6 @@ void NestedLoopJoin::NestedLoopJoinImpl<T>::join_reference_reference(ReferenceCo
       const auto& referenced_chunk_r = ref_table_right->get_chunk(referenced_chunk_id_r);
       const auto& referenced_column_r = referenced_chunk_r.get_column(right.referenced_column_id());
 
-      // TODO(fabian dumke): cant do this every time (performance)
       const auto& d_column = std::dynamic_pointer_cast<DictionaryColumn<T>>(referenced_column_r);
       const auto& v_column = std::dynamic_pointer_cast<ValueColumn<T>>(referenced_column_r);
       T value_right;
