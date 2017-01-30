@@ -33,84 +33,70 @@ class SortMergeJoin : public AbstractOperator {
   std::shared_ptr<Table> sort_right_table(ColumnVisitable& impl);
   void sort_merge_join(std::shared_ptr<Table> table_left, std::shared_ptr<Table> table_right);
 
-  struct JoinContext : ColumnVisitableContext {
-    JoinContext(std::shared_ptr<BaseColumn> column_left, std::shared_ptr<BaseColumn> column_right,
-                ChunkID left_chunk_id, ChunkID right_chunk_id, JoinMode mode)
-        : _column_left{column_left},
-          _column_right{column_right},
-          _left_chunk_id{left_chunk_id},
-          _right_chunk_id{right_chunk_id},
-          _mode{mode} {};
+  struct SortContext : ColumnVisitableContext {
+    explicit SortContext(ChunkID chunk_id) : _chunk_id{chunk_id} {}
 
-    std::shared_ptr<BaseColumn> _column_left;
-    std::shared_ptr<BaseColumn> _column_right;
-    ChunkID _left_chunk_id;
-    ChunkID _right_chunk_id;
-    JoinMode _mode;
+    ChunkID _chunk_id;
   };
 
   template <typename T>
   class SortMergeJoinImpl : public AbstractOperatorImpl, public ColumnVisitable {
+   protected:
+    size_t _partition_count = 1;
+
    public:
-    SortMergeJoinImpl<T>(SortMergeJoin& nested_loop_join);
+    SortMergeJoinImpl<T>(SortMergeJoin& sort_merge_join);
 
     // AbstractOperatorImpl implementation
     void execute() override;
     std::shared_ptr<Table> get_output() const override;
 
     // struct used for materialized sorted Chunk
-    class SortedChunk {
-     public:
+    struct SortedChunk {
       SortedChunk() {}
       std::vector<T> _values;
       std::shared_ptr<PosList> _original_positions;
-      std::map<T, int> _chunk_index;
-      std::map<T, int> _histogram;
-      std::map<T, int> _prefix;
+      std::map<T, uint32_t> _chunk_index;
+      std::map<T, uint32_t> _histogram;
+      std::map<T, uint32_t> _prefix;
     };
 
     // struct used for materialized sorted Table
-    class SortedTable {
-     public:
+    struct SortedTable {
       SortedTable() {}
       std::vector<SortedChunk> _chunks;
-      std::map<T, int> _histogram;
-      std::map<T, int> _prefix;
-    };
-
-    // Context for sorting tables
-    struct SortContext : ColumnVisitableContext {
-      SortContext() {}
-
-      std::map<T, int> _histogram;
-      std::map<T, int> _prefix;
+      std::map<T, uint32_t> _histogram;
+      std::map<T, uint64_t> _prefix;
     };
 
     // Sort functions
-    SortedTable sort_left_table();
-    SortedTable sort_right_table();
-    void perform_join(SortedTable& left, SortedTable& right);
+    void sort_left_table();
+    void sort_right_table();
+    // Looks for matches and possibly calls helper function to add match to _sort_merge_join._output
+    void perform_join();
 
     // ColumnVisitable implementation
     virtual void handle_value_column(BaseColumn& column, std::shared_ptr<ColumnVisitableContext> context);
     virtual void handle_dictionary_column(BaseColumn& column, std::shared_ptr<ColumnVisitableContext> context);
     virtual void handle_reference_column(ReferenceColumn& column, std::shared_ptr<ColumnVisitableContext> context);
 
-    void join_value_value(ValueColumn<T>& left, ValueColumn<T>& right, std::shared_ptr<JoinContext> context,
+    void join_value_value(ValueColumn<T>& left, ValueColumn<T>& right, std::shared_ptr<SortContext> context,
                           bool reverse_order = false);
-    void join_value_dictionary(ValueColumn<T>& left, DictionaryColumn<T>& right, std::shared_ptr<JoinContext> context,
+    void join_value_dictionary(ValueColumn<T>& left, DictionaryColumn<T>& right, std::shared_ptr<SortContext> context,
                                bool reverse_order = false);
-    void join_value_reference(ValueColumn<T>& left, ReferenceColumn& right, std::shared_ptr<JoinContext> context,
+    void join_value_reference(ValueColumn<T>& left, ReferenceColumn& right, std::shared_ptr<SortContext> context,
                               bool reverse_order = false);
     void join_dictionary_dictionary(DictionaryColumn<T>& left, DictionaryColumn<T>& right,
-                                    std::shared_ptr<JoinContext> context, bool reverse_order = false);
+                                    std::shared_ptr<SortContext> context, bool reverse_order = false);
     void join_dictionary_reference(DictionaryColumn<T>& left, ReferenceColumn& right,
-                                   std::shared_ptr<JoinContext> context, bool reverse_order = false);
-    void join_reference_reference(ReferenceColumn& left, ReferenceColumn& right, std::shared_ptr<JoinContext> context,
+                                   std::shared_ptr<SortContext> context, bool reverse_order = false);
+    void join_reference_reference(ReferenceColumn& left, ReferenceColumn& right, std::shared_ptr<SortContext> context,
                                   bool reverse_order = false);
 
    private:
-    SortMergeJoin& _nested_loop_join;
+    SortMergeJoin& _sort_merge_join;
+    std::shared_ptr<SortedTable> _sorted_left_table;
+    std::shared_ptr<SortedTable> _sorted_right_table;
     std::function<bool(const T&, const T&)> _compare;
     SortedTable _left_table;
     SortedTable _right_table;

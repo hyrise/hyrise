@@ -90,12 +90,12 @@ uint8_t SortMergeJoin::num_out_tables() const { return 1u; }
 **/
 
 template <typename T>
-SortMergeJoin::SortMergeJoinImpl<T>::SortMergeJoinImpl(SortMergeJoin& nested_loop_join)
-    : _nested_loop_join{nested_loop_join} {
-  if (_nested_loop_join._op == "=") {
+SortMergeJoin::SortMergeJoinImpl<T>::SortMergeJoinImpl(SortMergeJoin& sort_merge_join)
+    : _sort_merge_join{sort_merge_join} {
+  if (_sort_merge_join._op == "=") {
     _compare = [](const T& value_left, const T& value_right) -> bool { return value_left == value_right; };
   } else {
-    std::string message = "SortMergeJoinImpl::SortMergeJoinImpl: Unknown operator " + _nested_loop_join._op;
+    std::string message = "SortMergeJoinImpl::SortMergeJoinImpl: Unknown operator " + _sort_merge_join._op;
     std::cout << message << std::endl;
     throw std::exception(std::runtime_error(message));
   }
@@ -120,28 +120,31 @@ SortMergeJoin::SortMergeJoinImpl<T>::SortMergeJoinImpl(SortMergeJoin& nested_loo
 }
 
 template <typename T>
-typename SortMergeJoin::SortMergeJoinImpl<T>::SortedTable SortMergeJoin::SortMergeJoinImpl<T>::sort_left_table() {
-  auto sorted_left_table = SortMergeJoin::SortMergeJoinImpl<T>::SortedTable();
-  return sorted_left_table;
+void SortMergeJoin::SortMergeJoinImpl<T>::sort_left_table() {
+  _sorted_left_table = std::make_shared<SortMergeJoin::SortMergeJoinImpl<T>::SortedTable>();
+  for (ChunkID chunk_id = 0; chunk_id < _sort_merge_join._input_left->chunk_count(); ++chunk_id) {
+    auto& chunk = _sort_merge_join._input_left->get_chunk(chunk_id);
+    auto column = chunk.get_column(_sort_merge_join._input_left->column_id_by_name(_sort_merge_join._left_column_name));
+    auto context = std::make_shared<SortContext>(chunk_id);
+    column->visit(*this, context);
+  }
 }
 
 template <typename T>
-typename SortMergeJoin::SortMergeJoinImpl<T>::SortedTable SortMergeJoin::SortMergeJoinImpl<T>::sort_right_table() {
-  auto sorted_right_table = SortMergeJoin::SortMergeJoinImpl<T>::SortedTable();
-  return sorted_right_table;
+void SortMergeJoin::SortMergeJoinImpl<T>::sort_right_table() {
+  _sorted_right_table = std::make_shared<SortMergeJoin::SortMergeJoinImpl<T>::SortedTable>();
 }
 
 template <typename T>
-void perform_join(typename SortMergeJoin::SortMergeJoinImpl<T>::SortedTable& left,
-                  typename SortMergeJoin::SortMergeJoinImpl<T>::SortedTable& right) {
+void perform_join() {
   // do join
 }
 
 template <typename T>
 void SortMergeJoin::SortMergeJoinImpl<T>::execute() {
-  auto sorted_left_table = sort_left_table();
-  auto sorted_right_table = sort_right_table();
-  perform_join(sorted_left_table, sorted_right_table);
+  sort_left_table();
+  sort_right_table();
+  perform_join();
 }
 
 /*
@@ -155,32 +158,32 @@ std::shared_ptr<Table> SortMergeJoin::SortMergeJoinImpl<T>::get_output() const {
 
 template <typename T>
 void SortMergeJoin::SortMergeJoinImpl<T>::join_value_value(ValueColumn<T>& left, ValueColumn<T>& right,
-                                                           std::shared_ptr<JoinContext> context, bool reverse_order) {}
+                                                           std::shared_ptr<SortContext> context, bool reverse_order) {}
 
 template <typename T>
 void SortMergeJoin::SortMergeJoinImpl<T>::join_value_dictionary(ValueColumn<T>& left, DictionaryColumn<T>& right,
-                                                                std::shared_ptr<JoinContext> context,
+                                                                std::shared_ptr<SortContext> context,
                                                                 bool reverse_order) {}
 
 template <typename T>
 void SortMergeJoin::SortMergeJoinImpl<T>::join_value_reference(ValueColumn<T>& left, ReferenceColumn& right,
-                                                               std::shared_ptr<JoinContext> context,
+                                                               std::shared_ptr<SortContext> context,
                                                                bool reverse_order) {}
 
 template <typename T>
 void SortMergeJoin::SortMergeJoinImpl<T>::join_dictionary_dictionary(DictionaryColumn<T>& left,
                                                                      DictionaryColumn<T>& right,
-                                                                     std::shared_ptr<JoinContext> context,
+                                                                     std::shared_ptr<SortContext> context,
                                                                      bool reverse_order) {}
 
 template <typename T>
 void SortMergeJoin::SortMergeJoinImpl<T>::join_dictionary_reference(DictionaryColumn<T>& left, ReferenceColumn& right,
-                                                                    std::shared_ptr<JoinContext> context,
+                                                                    std::shared_ptr<SortContext> context,
                                                                     bool reverse_order) {}
 
 template <typename T>
 void SortMergeJoin::SortMergeJoinImpl<T>::join_reference_reference(ReferenceColumn& left, ReferenceColumn& right,
-                                                                   std::shared_ptr<JoinContext> context,
+                                                                   std::shared_ptr<SortContext> context,
                                                                    bool reverse_order) {}
 
 template <typename T>
