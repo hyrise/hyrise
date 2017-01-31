@@ -44,6 +44,7 @@ class CommitContext {
   bool has_next() const;
 
   std::shared_ptr<CommitContext> next();
+  std::shared_ptr<const CommitContext> next() const;
 
   /**
    * constructs the next context with cid + 1 or

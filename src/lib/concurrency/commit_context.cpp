@@ -14,7 +14,7 @@ bool CommitContext::is_pending() const { return _pending; }
 
 void CommitContext::make_pending(const TransactionID transaction_id, std::function<void(TransactionID)> callback) {
   _pending = true;
-  
+
   if (callback) {
     _callback = [callback, transaction_id]() { callback(transaction_id); };
   }
@@ -24,12 +24,11 @@ void CommitContext::fire_callback() {
   if (_callback) _callback();
 }
 
-bool CommitContext::has_next() const {
-  const auto next_copy = std::atomic_load(&_next);
-  return next_copy != nullptr;
-}
+bool CommitContext::has_next() const { return next() != nullptr; }
 
 std::shared_ptr<CommitContext> CommitContext::next() { return std::atomic_load(&_next); }
+
+std::shared_ptr<const CommitContext> CommitContext::next() const { return std::atomic_load(&_next); }
 
 std::shared_ptr<CommitContext> CommitContext::get_or_create_next() {
   if (has_next()) return next();

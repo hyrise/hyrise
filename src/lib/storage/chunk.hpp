@@ -21,8 +21,8 @@ class Chunk {
    */
   struct MvccColumns {
     tbb::concurrent_vector<std::atomic<uint32_t>> tids;  ///< 0 unless locked by a transaction
-    tbb::concurrent_vector<uint32_t> begin_cids;  ///< commit id when record was added
-    tbb::concurrent_vector<uint32_t> end_cids;  ///< commit id when record was deleted
+    tbb::concurrent_vector<uint32_t> begin_cids;         ///< commit id when record was added
+    tbb::concurrent_vector<uint32_t> end_cids;           ///< commit id when record was deleted
   };
 
  public:
@@ -48,6 +48,7 @@ class Chunk {
   size_t size() const;
 
   // adds a new row, given as a list of values, to the chunk
+  // note this is slow and not thread-safe and should be used for testing purposes only
   void append(std::vector<AllTypeVariant> values);
 
   // returns the column at a given position
