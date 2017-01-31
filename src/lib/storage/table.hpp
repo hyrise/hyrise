@@ -63,6 +63,9 @@ class Table {
   // inserts a row at the end of the table
   void append(std::vector<AllTypeVariant> values);
 
+  // creates a new chunk and appends it
+  void create_new_chunk();
+
   // returns the number of the chunk and the position in the chunk for a given row
   // TODO(md): this would be a nice place to use structured bindings once they are supported by the compilers
   std::pair<ChunkID, ChunkOffset> locate_row(RowID row) const { return {row.chunk_id, row.chunk_offset}; }

@@ -32,15 +32,18 @@ void Table::append(std::vector<AllTypeVariant> values) {
   if (_chunk_size > 0 && _chunks.back().size() == _chunk_size) {
     if (_auto_compress) compress_chunk(chunk_count() - 1);
 
-    // creates chunk with mvcc columns
-    Chunk newChunk{true};
-    for (auto &&type : _column_types) {
-      newChunk.add_column(make_shared_by_column_type<BaseColumn, ValueColumn>(type));
-    }
-    _chunks.push_back(std::move(newChunk));
+    create_new_chunk();
   }
 
   _chunks.back().append(values);
+}
+
+void Table::create_new_chunk() {
+  Chunk newChunk{true};
+  for (auto &&type : _column_types) {
+    newChunk.add_column(make_shared_by_column_type<BaseColumn, ValueColumn>(type));
+  }
+  _chunks.push_back(std::move(newChunk));
 }
 
 size_t Table::col_count() const { return _column_types.size(); }
