@@ -189,6 +189,10 @@ void SortMergeJoin::SortMergeJoinImpl<T>::join_reference_reference(ReferenceColu
 template <typename T>
 void SortMergeJoin::SortMergeJoinImpl<T>::handle_value_column(BaseColumn& column,
                                                               std::shared_ptr<ColumnVisitableContext> context) {
+  // auto& value_column = dynamic_cast<ValueColumn<T>&>(column);
+
+
+
   /*
 auto join_context = std::static_pointer_cast<JoinContext>(context);
 auto& value_column_left = dynamic_cast<ValueColumn<T>&>(column);

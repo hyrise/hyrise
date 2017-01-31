@@ -54,8 +54,9 @@ class SortMergeJoin : public AbstractOperator {
     // struct used for materialized sorted Chunk
     struct SortedChunk {
       SortedChunk() {}
-      std::vector<T> _values;
-      std::shared_ptr<PosList> _original_positions;
+      // std::vector<T> _values;
+      // std::shared_ptr<PosList> _original_positions;
+      std::vector<std::pair<T, RowID>> _values;
       std::map<T, uint32_t> _chunk_index;
       std::map<T, uint32_t> _histogram;
       std::map<T, uint32_t> _prefix;
