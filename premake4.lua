@@ -123,8 +123,7 @@ project "test"
   links { "opossum", "googletest" }
   files { "src/test/**.hpp", "src/test/**.cpp" }
   includedirs { "third_party/googletest/googletest/include" }
-  -- We need to add something that always returns 0 (the echo) because otherwise the build is considered failed and gets deleted
-  postbuildcommands { "./build/test || echo Test failed" }
+  postbuildcommands { "./build/test" }
 
 project "asan"
   kind "ConsoleApp"
