@@ -18,13 +18,13 @@ class CommitContextTest : public BaseTest {
 };
 
 TEST_F(CommitContextTest, HasNextReturnsFalse) {
-  auto context = std::make_unique<CommitContext>();
+  auto context = std::make_unique<CommitContext>(0u);
 
   EXPECT_EQ(context->has_next(), false);
 }
 
 TEST_F(CommitContextTest, HasNextReturnsTrueAfterCallingGetOrCreateNext) {
-  auto context = std::make_unique<CommitContext>();
+  auto context = std::make_unique<CommitContext>(0u);
 
   context->get_or_create_next();
 
@@ -32,7 +32,7 @@ TEST_F(CommitContextTest, HasNextReturnsTrueAfterCallingGetOrCreateNext) {
 }
 
 TEST_F(CommitContextTest, CidOfNextIncrementedByOne) {
-  auto context = std::make_unique<CommitContext>();
+  auto context = std::make_unique<CommitContext>(0u);
 
   auto next = context->get_or_create_next();
 

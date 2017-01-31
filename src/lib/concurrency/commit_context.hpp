@@ -17,8 +17,6 @@ namespace opossum {
  */
 class CommitContext {
  public:
-  // creates initial last commit context with cid 0
-  CommitContext();
   explicit CommitContext(const CommitID commit_id);
 
   CommitContext(const CommitContext& rhs) = delete;

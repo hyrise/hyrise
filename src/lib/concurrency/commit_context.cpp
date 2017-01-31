@@ -4,8 +4,6 @@
 
 namespace opossum {
 
-CommitContext::CommitContext() : CommitContext{0u} {}
-
 CommitContext::CommitContext(const CommitID commit_id) : _commit_id{commit_id}, _pending{false} {}
 
 CommitContext::~CommitContext() = default;
