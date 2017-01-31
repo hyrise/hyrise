@@ -13,7 +13,7 @@
 
 namespace opossum {
 
-class InsertTest : public BaseTest {
+class OperatorsInsertTest : public BaseTest {
  protected:
   void SetUp() override {
     t = load_table("src/test/tables/float_int.tbl", 0u);
@@ -38,7 +38,7 @@ class InsertTest : public BaseTest {
   std::shared_ptr<Table> t2 = nullptr;
 };
 
-TEST_F(InsertTest, SelfInsert) {
+TEST_F(OperatorsInsertTest, SelfInsert) {
   auto ins = std::make_shared<Insert>(table_name, gt2);
   auto context = TransactionContext(1, 1);
   ins->execute(&context);

@@ -13,7 +13,7 @@
 
 namespace opossum {
 
-class ValidateTest : public BaseTest {
+class OperatorsValidateTest : public BaseTest {
  protected:
   void SetUp() override {
     t = std::make_shared<Table>(Table(chunk_size));
@@ -45,7 +45,7 @@ class ValidateTest : public BaseTest {
 // taken from: https://github.com/hyrise/hyrise/blob/master/docs/documentation/queryexecution/tx.rst
 
 // yes, yes, yes
-TEST_F(ValidateTest, Impossible) {
+TEST_F(OperatorsValidateTest, Impossible) {
   auto context = TransactionContext(2, 2);
 
   t->get_chunk(0).mvcc_columns().tids[0] = 2;
@@ -58,7 +58,7 @@ TEST_F(ValidateTest, Impossible) {
 }
 
 // no, yes, yes
-TEST_F(ValidateTest, PastDelete) {
+TEST_F(OperatorsValidateTest, PastDelete) {
   auto context = TransactionContext(2, 2);
 
   t->get_chunk(0).mvcc_columns().tids[0] = 42;
@@ -71,7 +71,7 @@ TEST_F(ValidateTest, PastDelete) {
 }
 
 // yes, no, yes
-TEST_F(ValidateTest, Impossible2) {
+TEST_F(OperatorsValidateTest, Impossible2) {
   auto context = TransactionContext(2, 2);
 
   t->get_chunk(0).mvcc_columns().tids[0] = 2;
@@ -84,7 +84,7 @@ TEST_F(ValidateTest, Impossible2) {
 }
 
 // yes, yes, no
-TEST_F(ValidateTest, OwnDeleteUncommitted) {
+TEST_F(OperatorsValidateTest, OwnDeleteUncommitted) {
   auto context = TransactionContext(2, 2);
 
   t->get_chunk(0).mvcc_columns().tids[0] = 2;
@@ -97,7 +97,7 @@ TEST_F(ValidateTest, OwnDeleteUncommitted) {
 }
 
 // no, no, yes
-TEST_F(ValidateTest, Impossible3) {
+TEST_F(OperatorsValidateTest, Impossible3) {
   auto context = TransactionContext(2, 2);
 
   t->get_chunk(0).mvcc_columns().tids[0] = 50;
@@ -110,7 +110,7 @@ TEST_F(ValidateTest, Impossible3) {
 }
 
 // yes, no, no
-TEST_F(ValidateTest, OwnInsert) {
+TEST_F(OperatorsValidateTest, OwnInsert) {
   auto context = TransactionContext(2, 2);
 
   t->get_chunk(0).mvcc_columns().tids[0] = 2;
@@ -123,7 +123,7 @@ TEST_F(ValidateTest, OwnInsert) {
 }
 
 // no, yes, no
-TEST_F(ValidateTest, PastInsertOrFutureDelete) {
+TEST_F(OperatorsValidateTest, PastInsertOrFutureDelete) {
   auto context = TransactionContext(2, 2);
 
   t->get_chunk(0).mvcc_columns().tids[0] = 99;
@@ -136,7 +136,7 @@ TEST_F(ValidateTest, PastInsertOrFutureDelete) {
 }
 
 // no, no, no
-TEST_F(ValidateTest, UncommittedInsertOrFutureInsert) {
+TEST_F(OperatorsValidateTest, UncommittedInsertOrFutureInsert) {
   auto context = TransactionContext(2, 2);
 
   t->get_chunk(0).mvcc_columns().tids[0] = 99;

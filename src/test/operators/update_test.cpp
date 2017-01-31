@@ -16,7 +16,7 @@
 
 namespace opossum {
 
-class UpdateTest : public BaseTest {
+class OperatorsUpdateTest : public BaseTest {
  protected:
   void SetUp() override {
     t = load_table("src/test/tables/int_int.tbl", 0u);
@@ -48,7 +48,7 @@ class UpdateTest : public BaseTest {
   std::shared_ptr<Table> t2 = nullptr;
 };
 
-void UpdateTest::helper(std::shared_ptr<GetTable> source_table, std::shared_ptr<Table> expected_result) {
+void OperatorsUpdateTest::helper(std::shared_ptr<GetTable> source_table, std::shared_ptr<Table> expected_result) {
   auto t_context = TransactionManager::get().new_transaction_context();
 
   std::vector<std::string> column_filter_left = {"a"};
@@ -83,12 +83,12 @@ void UpdateTest::helper(std::shared_ptr<GetTable> source_table, std::shared_ptr<
   EXPECT_TABLE_EQ(validate->get_output(), expected_result);
 }
 
-TEST_F(UpdateTest, SelfUpdate) {
+TEST_F(OperatorsUpdateTest, SelfUpdate) {
   std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_int_same.tbl", 1);
   helper(gt, expected_result);
 }
 
-TEST_F(UpdateTest, NormalUpdate) {
+TEST_F(OperatorsUpdateTest, NormalUpdate) {
   std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_int_same.tbl", 1);
   helper(gt2, expected_result);
 }

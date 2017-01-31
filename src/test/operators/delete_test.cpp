@@ -17,7 +17,7 @@
 
 namespace opossum {
 
-class DeleteTest : public BaseTest {
+class OperatorsDeleteTest : public BaseTest {
  protected:
   void SetUp() override {
     _table = load_table("src/test/tables/float_int.tbl", 0u);
@@ -31,7 +31,7 @@ class DeleteTest : public BaseTest {
   std::shared_ptr<Table> _table;
 };
 
-TEST_F(DeleteTest, ExecuteAndCommit) {
+TEST_F(OperatorsDeleteTest, ExecuteAndCommit) {
   auto transaction_context = TransactionContext{1u, 1u};
   const auto cid = 1u;
   const auto max_cid = std::numeric_limits<uint32_t>::max();
@@ -59,7 +59,7 @@ TEST_F(DeleteTest, ExecuteAndCommit) {
   EXPECT_EQ(_table->get_chunk(0u).mvcc_columns().tids.at(2u), 0u);
 }
 
-TEST_F(DeleteTest, ExecuteAndAbort) {
+TEST_F(OperatorsDeleteTest, ExecuteAndAbort) {
   auto transaction_context = TransactionContext{1u, 1u};
   const auto max_cid = std::numeric_limits<uint32_t>::max();
 
