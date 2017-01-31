@@ -8,6 +8,7 @@
 #include "gtest/gtest.h"
 
 #include "../../lib/concurrency/transaction_context.hpp"
+#include "../../lib/concurrency/transaction_manager.hpp"
 #include "../../lib/operators/delete.hpp"
 #include "../../lib/operators/get_table.hpp"
 #include "../../lib/operators/table_scan.hpp"
@@ -84,6 +85,30 @@ TEST_F(OperatorsDeleteTest, ExecuteAndAbort) {
   EXPECT_EQ(_table->get_chunk(0u).mvcc_columns().tids.at(0u), 0u);
   EXPECT_EQ(_table->get_chunk(0u).mvcc_columns().tids.at(1u), 0u);
   EXPECT_EQ(_table->get_chunk(0u).mvcc_columns().tids.at(2u), 0u);
+}
+
+TEST_F(OperatorsDeleteTest, DetectDirtyWrite) {
+  auto t1_context = TransactionManager::get().new_transaction_context();
+  auto t2_context = TransactionManager::get().new_transaction_context();
+
+  auto table_scan1 = std::make_shared<TableScan>(_gt, "b", "=", "123");
+  auto table_scan2 = std::make_shared<TableScan>(_gt, "b", "<=", "1234");
+
+  table_scan1->execute();
+  table_scan2->execute();
+
+  auto delete_op1 = std::make_shared<Delete>(table_scan1);
+  auto delete_op2 = std::make_shared<Delete>(table_scan2);
+
+  // delete_op1->execute(t1_context.get());
+  // delete_op2->execute(t2_context.get());
+
+  // // MVCC commit.
+  // TransactionManager::get().prepare_commit(*t1_context);
+  // TransactionManager::get().prepare_commit(*t2_context);
+
+  // delete_op1->commit(t1_context->commit_id());
+  // delete_op2->commit(t2_context->commit_id());
 }
 
 }  // namespace opossum
