@@ -23,6 +23,8 @@ if os.execute("test -x .git/hooks/pre-push") ~= 0 or os.execute(md5Command .. " 
   os.execute("echo Successfully installed pre-push hook.")
 end
 
+-- Check for numa availability
+numa_supported = os.findlib("numa") ~= nil
 
 -- TODO try LTO/whole program
 
@@ -74,6 +76,13 @@ solution "opossum"
   end
   links { "tbb" }
   includedirs { "src/lib/", "/usr/local/include" }
+
+  if numa_supported then
+    links { "numa" }
+    defines { "OPOSSUM_NUMA_SUPPORT=1" }
+  else
+    defines { "OPOSSUM_NUMA_SUPPORT=0" }
+  end
 
   configuration "Debug"
     defines { "IS_DEBUG=1" }

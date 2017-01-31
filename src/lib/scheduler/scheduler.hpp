@@ -1,0 +1,92 @@
+#pragma once
+
+#include <memory>
+#include <thread>
+#include <vector>
+
+#include "abstract_scheduler.hpp"
+#include "task_queue.hpp"
+#include "worker.hpp"
+
+namespace opossum {
+
+/*
+ * GENERAL SCHEDULING CONCEPT
+ *
+ * Everything that needs to be processed is encapsulated in tasks. For example, in the context of the database
+ * the OperatorTasks encapsulates database operators (here, it only encapsulates the execute function).
+ * A task will then be pushed by a Scheduler into a TaskQueue and pulled out by a Worker to be processed.
+ *
+ *
+ * TASK DEPENDENCIES
+ *
+ * Tasks can be dependent of each other. For example, in the context of the database, a table scan operation can be
+ * dependent on a GetTable operation and so do the tasks that encapsulates these operations.
+ * Therefore, not every task that is on top of the TaskQueue is ready to be processed. Pulling this unready task and
+ * pushing it back to the queue could result in high latency for this task and in the context of databases in a
+ * high latency for queries. Not pulling this unready task and waiting until it is ready would block the queue.
+ * To avoid these situations, a TaskQueue is implemented as vector and will be iterated until a ready task is found.
+ * This preserves the desired order and will not block the queue.
+ * To determine if a task is ready, it checks its parent tasks if they are done. A task will be set done after it
+ * was processed successfully.
+ *
+ *
+ * SCHEDULER AND TOPOLOGY
+ *
+ * The Scheduler is the main entry point and (currently) there is only one Scheduler.
+ * For setting up a Scheduler a topology is used. A topology encapsulates the machine's architecture, e.g. number
+ * of CPUs and the number of nodes, where a node is a cluster of CPUs.
+ * In general, each node owns a TaskQueue. Furthermore, one Worker is assigned to one CPU. Therefore, the Worker
+ * running on CPUs of one node are just pulling from the single TaskQueue of this node.
+ *
+ * For now, there are two topologies:
+ *  1) NumaTopology: Representing a NUMA system with multiple nodes and multiple CPUs per node.
+ *      - As there are multiple nodes, there will also be multiple queues (still: one queue per node).
+ *  2) FakeNumaTopology: Simulates a NUMA system on a single node machine (e.g. development machine).
+ *      - As there is only one single node, each CPU of this machine is treated as a node and therefore gets its own
+ *        queue and a worker. This simulates a NUMA system with multiple nodes (queues) and worker and should mainly
+ *        be used for testing NUMA-concepts on non-NUMA development machines.
+ *
+ *
+ * WORK STEALING
+ *
+ * Currently, a simple work stealing is implemented. Work stealing is useful to avoid idle workers (and therefore
+ * idle CPUs) while there are still tasks in the system that need to be processed. A worker gets idle if it can not
+ * pull a ready task. This occurs in two cases:
+ *  1) all tasks in the queue are not ready
+ *  2) the queue is empty
+ * In both cases the current worker is checking another queue for a ready task. Checking another queue means accessing
+ * another node (remote node). As of the physical distance of nodes, accessing a remote nodes is ~1.6 times slower than
+ * accessing a local node. [1]
+ * Therefore, the current worker fetches a task from a remote queue (without removing it). Then, the current worker
+ * is sleeping some milliseconds to give any local worker of the remote node the chance to pull that task. If no local
+ * worker of the remote node pulled the task, the current worker is pulling the task and therefore steals it.
+ * Afterwards, the current worker is checking its local queue gain.
+ *
+ * [1] http://frankdenneman.nl/2016/07/13/numa-deep-dive-4-local-memory-optimization/
+ */
+
+class AbstractTopology;
+
+/**
+ * Schedules Tasks
+ */
+class Scheduler : public AbstractScheduler {
+ public:
+  explicit Scheduler(std::shared_ptr<AbstractTopology> setup);
+  ~Scheduler();
+
+  void finish() override;
+
+  /**
+   * @param task
+   * @param preferred_node_id The Task will be initially added to this node, but might get stolen by other Nodes later
+   */
+  void schedule(std::shared_ptr<AbstractTask> task, uint32_t preferred_node_id) override;
+
+ private:
+  TaskID _task_id_incrementor = 0;
+  std::vector<std::thread> _threads;
+};
+
+}  // namespace opossum
