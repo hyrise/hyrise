@@ -3,6 +3,7 @@
 #include <memory>
 #include <string>
 #include <utility>
+#include <algorithm>
 
 namespace opossum {
 // TODO(Fabian): Comment everything!!
@@ -189,29 +190,20 @@ void SortMergeJoin::SortMergeJoinImpl<T>::join_reference_reference(ReferenceColu
 template <typename T>
 void SortMergeJoin::SortMergeJoinImpl<T>::handle_value_column(BaseColumn& column,
                                                               std::shared_ptr<ColumnVisitableContext> context) {
-  // auto& value_column = dynamic_cast<ValueColumn<T>&>(column);
+  auto& value_column = dynamic_cast<ValueColumn<T>&>(column);
+  auto sort_context = std::static_pointer_cast<SortContext>(context);
+  SortedChunk chunk;
 
+  for (ChunkOffset chunk_offset = 0; chunk_offset < value_column.values().size(); chunk_offset++) {
+    RowID row_id{sort_context->_chunk_id, chunk_offset};
+    chunk._values.push_back(std::pair<T, RowID>(value_column.values()[chunk_offset], row_id));
+  }
 
+  auto& sorted_table = sort_context->_write_to_sorted_left_table ? _sorted_left_table : _sorted_right_table;
 
-  /*
-auto join_context = std::static_pointer_cast<JoinContext>(context);
-auto& value_column_left = dynamic_cast<ValueColumn<T>&>(column);
-auto value_column_right = std::dynamic_pointer_cast<ValueColumn<T>>(join_context->_column_right);
-if (value_column_right) {
-join_value_value(value_column_left, *value_column_right, join_context);
-return;
-}
-auto dictionary_column_right = std::dynamic_pointer_cast<DictionaryColumn<T>>(join_context->_column_right);
-if (dictionary_column_right) {
-join_value_dictionary(value_column_left, *dictionary_column_right, join_context);
-return;
-}
-auto reference_column_right = std::dynamic_pointer_cast<ReferenceColumn>(join_context->_column_right);
-if (reference_column_right) {
-join_value_reference(value_column_left, *reference_column_right, join_context);
-return;
-}
-*/
+  std::sort(chunk._values.begin(), chunk._values.end(),
+            [](auto& value_left, auto& value_right) { return value_left.first < value_right.first; });
+  sorted_table->_chunks[sort_context->_chunk_id] = std::move(chunk);
 }
 
 template <typename T>

@@ -37,6 +37,7 @@ class SortMergeJoin : public AbstractOperator {
     explicit SortContext(ChunkID chunk_id) : _chunk_id{chunk_id} {}
 
     ChunkID _chunk_id;
+    bool _write_to_sorted_left_table;
   };
 
   template <typename T>
