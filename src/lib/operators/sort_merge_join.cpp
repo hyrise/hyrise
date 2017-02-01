@@ -3,6 +3,7 @@
 #include <memory>
 #include <string>
 #include <utility>
+#include <vector>
 
 namespace opossum {
 // TODO(Fabian): Comment everything!!
@@ -122,17 +123,54 @@ SortMergeJoin::SortMergeJoinImpl<T>::SortMergeJoinImpl(SortMergeJoin& sort_merge
 template <typename T>
 void SortMergeJoin::SortMergeJoinImpl<T>::sort_left_table() {
   _sorted_left_table = std::make_shared<SortMergeJoin::SortMergeJoinImpl<T>::SortedTable>();
+  _sorted_left_table->_chunks.resize(_sort_merge_join._input_left->chunk_count());
   for (ChunkID chunk_id = 0; chunk_id < _sort_merge_join._input_left->chunk_count(); ++chunk_id) {
     auto& chunk = _sort_merge_join._input_left->get_chunk(chunk_id);
     auto column = chunk.get_column(_sort_merge_join._input_left->column_id_by_name(_sort_merge_join._left_column_name));
     auto context = std::make_shared<SortContext>(chunk_id);
     column->visit(*this, context);
   }
+  if (_partition_count == 1) {
+    std::vector<std::pair<T, RowID>> partition_values;
+    for (auto& s_chunk : _sorted_left_table->_chunks) {
+      for (auto entry : s_chunk._values) {
+        partition_values.push_back(entry);
+      }
+    }
+    _sorted_left_table->_chunks.clear();
+    for (auto entry : partition_values) {
+      _sorted_left_table->_chunks[0]._values.push_back(entry);
+    }
+  } else {
+    // Do radix-partitioning here for _partition_count partitions
+  }
 }
 
 template <typename T>
 void SortMergeJoin::SortMergeJoinImpl<T>::sort_right_table() {
   _sorted_right_table = std::make_shared<SortMergeJoin::SortMergeJoinImpl<T>::SortedTable>();
+  _sorted_right_table->_chunks.resize(_sort_merge_join._input_right->chunk_count());
+  for (ChunkID chunk_id = 0; chunk_id < _sort_merge_join._input_right->chunk_count(); ++chunk_id) {
+    auto& chunk = _sort_merge_join._input_right->get_chunk(chunk_id);
+    auto column =
+        chunk.get_column(_sort_merge_join._input_right->column_id_by_name(_sort_merge_join._right_column_name));
+    auto context = std::make_shared<SortContext>(chunk_id);
+    column->visit(*this, context);
+  }
+  if (_partition_count == 1) {
+    std::vector<std::pair<T, RowID>> partition_values;
+    for (auto& s_chunk : _sorted_right_table->_chunks) {
+      for (auto entry : s_chunk._values) {
+        partition_values.push_back(entry);
+      }
+    }
+    _sorted_right_table->_chunks.clear();
+    for (auto entry : partition_values) {
+      _sorted_right_table->_chunks[0]._values.push_back(entry);
+    }
+  } else {
+    // Do radix-partitioning here for _partition_count>1 partitions
+  }
 }
 
 template <typename T>
@@ -190,8 +228,6 @@ template <typename T>
 void SortMergeJoin::SortMergeJoinImpl<T>::handle_value_column(BaseColumn& column,
                                                               std::shared_ptr<ColumnVisitableContext> context) {
   // auto& value_column = dynamic_cast<ValueColumn<T>&>(column);
-
-
 
   /*
 auto join_context = std::static_pointer_cast<JoinContext>(context);
