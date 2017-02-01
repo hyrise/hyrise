@@ -124,17 +124,66 @@ SortMergeJoin::SortMergeJoinImpl<T>::SortMergeJoinImpl(SortMergeJoin& sort_merge
 template <typename T>
 void SortMergeJoin::SortMergeJoinImpl<T>::sort_left_table() {
   _sorted_left_table = std::make_shared<SortMergeJoin::SortMergeJoinImpl<T>::SortedTable>();
+  _sorted_left_table->_chunks.resize(_sort_merge_join._input_left->chunk_count());
   for (ChunkID chunk_id = 0; chunk_id < _sort_merge_join._input_left->chunk_count(); ++chunk_id) {
     auto& chunk = _sort_merge_join._input_left->get_chunk(chunk_id);
     auto column = chunk.get_column(_sort_merge_join._input_left->column_id_by_name(_sort_merge_join._left_column_name));
-    auto context = std::make_shared<SortContext>(chunk_id);
+    auto context = std::make_shared<SortContext>(chunk_id, true);
     column->visit(*this, context);
+  }
+  if (_partition_count == 1) {
+    std::vector<std::pair<T, RowID>> partition_values;
+    for (auto& s_chunk : _sorted_left_table->_chunks) {
+      for (auto entry : s_chunk._values) {
+        partition_values.push_back(entry);
+      }
+    }
+    _sorted_left_table->_chunks.clear();
+    for (auto entry : partition_values) {
+      _sorted_left_table->_chunks[0]._values.push_back(entry);
+    }
+  } else {
+    // Do radix-partitioning here for _partition_count partitions
+  }
+  // Sort partitions (right now std:sort -> but maybe can be replaced with
+  // an algorithm that is more efficient, if subparts are already sorted [InsertionSort?])
+  for (auto& partition : _sorted_left_table->_chunks) {
+    std::sort(partition._values.begin(), partition._values.end(),
+              [](auto& value_left, auto& value_right) { return value_left.first < value_right.first; });
   }
 }
 
 template <typename T>
 void SortMergeJoin::SortMergeJoinImpl<T>::sort_right_table() {
-  _sorted_right_table = std::make_shared<SortMergeJoin::SortMergeJoinImpl<T>::SortedTable>();
+  _sorted_right_table = std::make_shared<SortedTable>();
+  _sorted_right_table->_chunks.resize(_sort_merge_join._input_right->chunk_count());
+  for (ChunkID chunk_id = 0; chunk_id < _sort_merge_join._input_right->chunk_count(); ++chunk_id) {
+    auto& chunk = _sort_merge_join._input_right->get_chunk(chunk_id);
+    auto column =
+        chunk.get_column(_sort_merge_join._input_right->column_id_by_name(_sort_merge_join._right_column_name));
+    auto context = std::make_shared<SortContext>(chunk_id, false);
+    column->visit(*this, context);
+  }
+  if (_partition_count == 1) {
+    std::vector<std::pair<T, RowID>> partition_values;
+    for (auto& s_chunk : _sorted_right_table->_chunks) {
+      for (auto entry : s_chunk._values) {
+        partition_values.push_back(entry);
+      }
+    }
+    _sorted_right_table->_chunks.clear();
+    for (auto entry : partition_values) {
+      _sorted_right_table->_chunks[0]._values.push_back(entry);
+    }
+  } else {
+    // Do radix-partitioning here for _partition_count>1 partitions
+  }
+  // Sort partitions (right now std:sort -> but maybe can be replaced with
+  // an algorithm more efficient, if subparts are already sorted [InsertionSort?])
+  for (auto& partition : _sorted_left_table->_chunks) {
+    std::sort(partition._values.begin(), partition._values.end(),
+              [](auto& value_left, auto& value_right) { return value_left.first < value_right.first; });
+  }
 }
 
 template <typename T>
