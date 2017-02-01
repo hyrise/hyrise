@@ -187,8 +187,29 @@ void SortMergeJoin::SortMergeJoinImpl<T>::sort_right_table() {
 }
 
 template <typename T>
-void perform_join() {
-  // do join
+void SortMergeJoin::SortMergeJoinImpl<T>::perform_join() {
+  // For now only equi-join is implemented
+  // That means we only have to join partitions who are the same from both sides
+  for (uint32_t partition_number = 0; partition_number < _sorted_left_table->_chunks.size(); ++partition_number) {
+    // join partition
+    uint32_t left_index = 0;
+    uint32_t right_index = 0;
+    while (left_index < _sorted_left_table->_chunks[partition_number]._values.size() &&
+           right_index < _sorted_right_table->_chunks[partition_number]._values.size()) {
+      T left_value = _sorted_left_table->_chunks[partition_number]._values[left_index].first;
+      T right_value = _sorted_right_table->_chunks[partition_number]._values[right_index].first;
+      if (left_value != right_value) {
+        if (left_value < right_value) {
+          ++left_index;
+        } else {
+          ++right_index;
+        }
+      } else /* match found */ {
+        // find all same values in each table then add product to _output
+        // afterwards set index for both tables to next new value
+      }
+    }
+  }
 }
 
 template <typename T>
@@ -198,14 +219,10 @@ void SortMergeJoin::SortMergeJoinImpl<T>::execute() {
   perform_join();
 }
 
-/*
 template <typename T>
 std::shared_ptr<Table> SortMergeJoin::SortMergeJoinImpl<T>::get_output() const {
-  std::string message = "SortMergeJoinImpl::get_output() not implemented";
-  std::cout << message << std::endl;
-  throw std::exception(std::runtime_error(message));
-  return nullptr;
-}*/
+  return _sort_merge_join._output;
+}
 
 template <typename T>
 void SortMergeJoin::SortMergeJoinImpl<T>::join_value_value(ValueColumn<T>& left, ValueColumn<T>& right,
