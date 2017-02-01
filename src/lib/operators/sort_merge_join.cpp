@@ -134,12 +134,12 @@ void SortMergeJoin::SortMergeJoinImpl<T>::sort_left_table() {
   if (_partition_count == 1) {
     std::vector<std::pair<T, RowID>> partition_values;
     for (auto& s_chunk : _sorted_left_table->_chunks) {
-      for (auto entry : s_chunk._values) {
+      for (auto& entry : s_chunk._values) {
         partition_values.push_back(entry);
       }
     }
     _sorted_left_table->_chunks.clear();
-    for (auto entry : partition_values) {
+    for (auto& entry : partition_values) {
       _sorted_left_table->_chunks[0]._values.push_back(entry);
     }
   } else {
@@ -167,12 +167,12 @@ void SortMergeJoin::SortMergeJoinImpl<T>::sort_right_table() {
   if (_partition_count == 1) {
     std::vector<std::pair<T, RowID>> partition_values;
     for (auto& s_chunk : _sorted_right_table->_chunks) {
-      for (auto entry : s_chunk._values) {
+      for (auto& entry : s_chunk._values) {
         partition_values.push_back(entry);
       }
     }
     _sorted_right_table->_chunks.clear();
-    for (auto entry : partition_values) {
+    for (auto& entry : partition_values) {
       _sorted_right_table->_chunks[0]._values.push_back(entry);
     }
   } else {
