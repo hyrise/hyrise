@@ -34,9 +34,10 @@ class SortMergeJoin : public AbstractOperator {
   void sort_merge_join(std::shared_ptr<Table> table_left, std::shared_ptr<Table> table_right);
 
   struct SortContext : ColumnVisitableContext {
-    explicit SortContext(ChunkID chunk_id) : _chunk_id{chunk_id} {}
+    SortContext(ChunkID chunk_id, bool left) : _chunk_id{chunk_id}, _write_to_sorted_left_table{left} {}
 
     ChunkID _chunk_id;
+    bool _write_to_sorted_left_table;
   };
 
   template <typename T>
