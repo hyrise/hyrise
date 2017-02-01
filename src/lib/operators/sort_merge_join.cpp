@@ -145,11 +145,17 @@ void SortMergeJoin::SortMergeJoinImpl<T>::sort_left_table() {
   } else {
     // Do radix-partitioning here for _partition_count partitions
   }
+  // Sort partitions (right now std:sort -> but maybe can be replaced with
+  // an algorithm that is more efficient, if subparts are already sorted [InsertionSort?])
+  for (auto& partition : _sorted_left_table->_chunks) {
+    std::sort(partition._values.begin(), partition._values.end(),
+              [](auto& value_left, auto& value_right) { return value_left.first < value_right.first; });
+  }
 }
 
 template <typename T>
 void SortMergeJoin::SortMergeJoinImpl<T>::sort_right_table() {
-  _sorted_right_table = std::make_shared<SortMergeJoin::SortMergeJoinImpl<T>::SortedTable>();
+  _sorted_right_table = std::make_shared<SortedTable>();
   _sorted_right_table->_chunks.resize(_sort_merge_join._input_right->chunk_count());
   for (ChunkID chunk_id = 0; chunk_id < _sort_merge_join._input_right->chunk_count(); ++chunk_id) {
     auto& chunk = _sort_merge_join._input_right->get_chunk(chunk_id);
@@ -171,6 +177,12 @@ void SortMergeJoin::SortMergeJoinImpl<T>::sort_right_table() {
     }
   } else {
     // Do radix-partitioning here for _partition_count>1 partitions
+  }
+  // Sort partitions (right now std:sort -> but maybe can be replaced with
+  // an algorithm more efficient, if subparts are already sorted [InsertionSort?])
+  for (auto& partition : _sorted_left_table->_chunks) {
+    std::sort(partition._values.begin(), partition._values.end(),
+              [](auto& value_left, auto& value_right) { return value_left.first < value_right.first; });
   }
 }
 
