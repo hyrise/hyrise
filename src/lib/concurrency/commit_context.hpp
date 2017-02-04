@@ -22,8 +22,6 @@ class CommitContext {
   CommitContext(const CommitContext& rhs) = delete;
   CommitContext& operator=(const CommitContext& rhs) = delete;
 
-  ~CommitContext();
-
   CommitID commit_id() const;
 
   bool is_pending() const;
