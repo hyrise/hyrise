@@ -41,6 +41,9 @@ end
 default("linux", "gmake")
 default("macosx", "gmake")
 
+-- Collect all libs to be linked against, to order them correctly
+libs = {}
+
 if not _OPTIONS["compiler"] then
   print "No compiler specified. Automatically selected gcc."
   _OPTIONS["compiler"] = "gcc"
@@ -78,7 +81,7 @@ solution "opossum"
   includedirs { "src/lib/", "/usr/local/include" }
 
   if numa_supported then
-    links { "numa" }
+    libs[#libs+1] = "numa"
     defines { "OPOSSUM_NUMA_SUPPORT=1" }
   else
     defines { "OPOSSUM_NUMA_SUPPORT=0" }
@@ -119,17 +122,20 @@ project "opossumCoverage"
 project "server"
   kind "ConsoleApp"
   links { "opossum" }
+  links(libs)
   files { "src/bin/server.cpp" }
 
 project "playground"
   kind "ConsoleApp"
   links { "opossum" }
+  links(libs)
   files { "src/bin/playground.cpp" }
 
 project "test"
   kind "ConsoleApp"
 
   links { "opossum", "googletest" }
+  links(libs)
   files { "src/test/**.hpp", "src/test/**.cpp" }
   includedirs { "third_party/googletest/googletest/include" }
   postbuildcommands { "./build/test" }
@@ -138,6 +144,7 @@ project "asan"
   kind "ConsoleApp"
 
   links { "opossum-asan", "googletest" }
+  links(libs)
   files { "src/test/**.hpp", "src/test/**.cpp" }
   includedirs { "third_party/googletest/googletest/include" }
   buildoptions {"-fsanitize=address -fno-omit-frame-pointer"}
@@ -148,6 +155,7 @@ project "coverage"
   kind "ConsoleApp"
 
   links { "opossumCoverage", "googletest" }
+  links(libs)
   linkoptions {"--coverage"}
   files { "src/test/**.hpp", "src/test/**.cpp" }
   buildoptions { "-fprofile-arcs -ftest-coverage" }

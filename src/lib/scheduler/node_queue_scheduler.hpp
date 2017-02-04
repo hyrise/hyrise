@@ -6,6 +6,7 @@
 
 #include "abstract_scheduler.hpp"
 #include "task_queue.hpp"
+#include "uid_allocator.hpp"
 #include "worker.hpp"
 
 namespace opossum {
@@ -31,6 +32,17 @@ namespace opossum {
  * was processed successfully.
  *
  *
+ * JOBTASKS
+ *
+ * JobTasks can be used from anywhere to parallelize parts of their work.
+ * If a task spawns jobs to be executed, the worker executing the main task waits for the jobs to complete.
+ * Since the CPU to which the worker is pinned shall not be blocked, a new worker is (re-)activated temporarily.
+ * The worker executing the main task is hibernated and will be re-activated once the jobs have completed.
+ * There is only one active worker per CPU, which is allowed to pull new tasks from the queue.
+ * Thus, while it is possible that two workers are executing a task at the same time, this is only until the non-active
+ * worker finished its task. It will then be hibernated.
+ *
+ *
  * SCHEDULER AND TOPOLOGY
  *
  * The Scheduler is the main entry point and (currently) there is only one Scheduler.
@@ -39,13 +51,9 @@ namespace opossum {
  * In general, each node owns a TaskQueue. Furthermore, one Worker is assigned to one CPU. Therefore, the Worker
  * running on CPUs of one node are just pulling from the single TaskQueue of this node.
  *
- * For now, there are two topologies:
- *  1) NumaTopology: Representing a NUMA system with multiple nodes and multiple CPUs per node.
- *      - As there are multiple nodes, there will also be multiple queues (still: one queue per node).
- *  2) FakeNumaTopology: Simulates a NUMA system on a single node machine (e.g. development machine).
- *      - As there is only one single node, each CPU of this machine is treated as a node and therefore gets its own
- *        queue and a worker. This simulates a NUMA system with multiple nodes (queues) and worker and should mainly
- *        be used for testing NUMA-concepts on non-NUMA development machines.
+ * A topology can also be created with Topology::create_fake_numa_topology() to simulate a NUMA system
+ * with multiple nodes (queues) and worker and should mainly be used for testing NUMA-concepts
+ * on non-NUMA development machines.
  *
  *
  * WORK STEALING
@@ -66,27 +74,41 @@ namespace opossum {
  * [1] http://frankdenneman.nl/2016/07/13/numa-deep-dive-4-local-memory-optimization/
  */
 
-class AbstractTopology;
+class Topology;
+class ProcessingUnit;
 
 /**
  * Schedules Tasks
  */
-class Scheduler : public AbstractScheduler {
+class NodeQueueScheduler : public AbstractScheduler {
  public:
-  explicit Scheduler(std::shared_ptr<AbstractTopology> setup);
-  ~Scheduler();
+  explicit NodeQueueScheduler(std::shared_ptr<Topology> setup);
+  ~NodeQueueScheduler();
+
+  /**
+   * Create a queue on every node and a processing unit for every core.
+   * Start a single worker for each processing unit.
+   */
+  void begin() override;
 
   void finish() override;
+
+  const std::vector<std::shared_ptr<TaskQueue>>& queues() const override;
 
   /**
    * @param task
    * @param preferred_node_id The Task will be initially added to this node, but might get stolen by other Nodes later
+   * @param priority Determines whether tasks are inserted at the beginning or end of the queue.
    */
-  void schedule(std::shared_ptr<AbstractTask> task, uint32_t preferred_node_id) override;
+  void schedule(std::shared_ptr<AbstractTask> task, NodeID preferred_node_id = CURRENT_NODE_ID,
+                SchedulePriority priority = SchedulePriority::Normal) override;
 
  private:
-  TaskID _task_id_incrementor = 0;
-  std::vector<std::thread> _threads;
+  std::atomic<TaskID> _task_counter{0};
+  std::shared_ptr<UidAllocator> _worker_id_allocator;
+  std::vector<std::shared_ptr<TaskQueue>> _queues;
+  std::vector<std::shared_ptr<ProcessingUnit>> _processing_units;
+  std::atomic_bool _shut_down{false};
 };
 
 }  // namespace opossum

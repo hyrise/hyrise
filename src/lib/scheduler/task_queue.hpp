@@ -22,7 +22,8 @@ class TaskQueue {
 
   NodeID node_id() const;
 
-  void push(std::shared_ptr<AbstractTask> task);
+  void push_back(std::shared_ptr<AbstractTask> task);
+  void push_front(std::shared_ptr<AbstractTask> task);
 
   /**
    * Returns a Tasks that is ready to be executed and removes it from the queue

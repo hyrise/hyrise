@@ -3,11 +3,15 @@
 #include <functional>
 #include <map>
 #include <memory>
+#include <mutex>
 #include <string>
 #include <utility>
 #include <vector>
 
 #include "abstract_read_only_operator.hpp"
+#include "scheduler/abstract_task.hpp"
+#include "scheduler/current_scheduler.hpp"
+#include "scheduler/job_task.hpp"
 #include "storage/dictionary_column.hpp"
 #include "storage/reference_column.hpp"
 #include "storage/value_column.hpp"
@@ -127,63 +131,83 @@ class TableScan::TableScanImpl : public AbstractReadOnlyOperatorImpl, public Col
       throw std::runtime_error(std::string("unknown operator ") + _op);
     }
 
+    // We can easily distribute the table scanning work on individual chunks to multiple sub tasks,
+    // we just need to synchronize access to the output table
+    std::mutex output_mutex;
+    std::vector<std::shared_ptr<AbstractTask>> jobs;
+    jobs.reserve(in_table->chunk_count());
+
     for (ChunkID chunk_id = 0; chunk_id < in_table->chunk_count(); ++chunk_id) {
-      const Chunk &chunk_in = in_table->get_chunk(chunk_id);
-      Chunk chunk_out;
-      auto base_column = chunk_in.get_column(filter_column_id);
-      std::vector<ChunkOffset> matches_in_this_chunk;
-      base_column->visit(*this, std::make_shared<ScanContext>(in_table, matches_in_this_chunk));
-      // We now receive the visits in the handler methods below...
-      if (matches_in_this_chunk.size() == 0) continue;
+      jobs.emplace_back(
+          std::make_shared<JobTask>([&in_table, chunk_id, &output_mutex, &output, &filter_column_id, this]() {
+            const Chunk &chunk_in = in_table->get_chunk(chunk_id);
+            Chunk chunk_out;
+            auto base_column = chunk_in.get_column(filter_column_id);
+            std::vector<ChunkOffset> matches_in_this_chunk;
+            base_column->visit(*this, std::make_shared<ScanContext>(in_table, matches_in_this_chunk));
+            // We now receive the visits in the handler methods below...
+            if (matches_in_this_chunk.size() == 0) return;
 
-      // Ok, now we have a list of the matching positions relative to this chunk (ChunkOffsets). Next, we have to
-      // transform them into absolute row ids. To save time and space, we want to share PosLists between columns as much
-      // as possible. All ValueColumns and DictionaryColumns can share the same PosLists because they use no further
-      // redirection. For ReferenceColumns, PosLists can be shared between two columns iff (a) they point to the same
-      // table and (b) the incoming ReferenceColumns point to the same positions in the same order. To make this check
-      // easier, we share PosLists between two ReferenceColumns iff they shared PosLists in the incoming table as well.
-      // _filtered_pos_lists will hold a mapping from incoming PosList to outgoing PosList. Because
-      // Value/DictionaryColumns do not have an incoming PosList, they are represented with nullptr.
-      std::map<std::shared_ptr<const PosList>, std::shared_ptr<PosList>> filtered_pos_lists;
-      for (size_t column_id = 0; column_id < in_table->col_count(); ++column_id) {
-        auto ref_col_in = std::dynamic_pointer_cast<ReferenceColumn>(chunk_in.get_column(column_id));
-        std::shared_ptr<const PosList> pos_list_in;
-        std::shared_ptr<const Table> referenced_table_out;
-        size_t referenced_column_id;
-        if (ref_col_in) {
-          pos_list_in = ref_col_in->pos_list();
-          referenced_table_out = ref_col_in->referenced_table();
-          referenced_column_id = ref_col_in->referenced_column_id();
-        } else {
-          referenced_table_out = in_table;
-          referenced_column_id = column_id;
-        }
+            // Ok, now we have a list of the matching positions relative to this chunk (ChunkOffsets). Next, we have to
+            // transform them into absolute row ids. To save time and space, we want to share PosLists between columns
+            // as much as possible. All ValueColumns and DictionaryColumns can share the same PosLists because they use
+            // no
+            // further  redirection. For ReferenceColumns, PosLists can be shared between two columns iff (a) they point
+            // to the same table and (b) the incoming ReferenceColumns point to the same positions in the same order.
+            // To make this check easier, we share PosLists between two ReferenceColumns iff they shared PosLists in
+            // the incoming table as well. _filtered_pos_lists will hold a mapping from incoming PosList to outgoing
+            // PosList. Because Value/DictionaryColumns do not have an incoming PosList, they are represented with
+            // nullptr.
+            std::map<std::shared_ptr<const PosList>, std::shared_ptr<PosList>> filtered_pos_lists;
+            for (size_t column_id = 0; column_id < in_table->col_count(); ++column_id) {
+              auto ref_col_in = std::dynamic_pointer_cast<ReferenceColumn>(chunk_in.get_column(column_id));
+              std::shared_ptr<const PosList> pos_list_in;
+              std::shared_ptr<const Table> referenced_table_out;
+              size_t referenced_column_id;
+              if (ref_col_in) {
+                pos_list_in = ref_col_in->pos_list();
+                referenced_table_out = ref_col_in->referenced_table();
+                referenced_column_id = ref_col_in->referenced_column_id();
+              } else {
+                referenced_table_out = in_table;
+                referenced_column_id = column_id;
+              }
 
-        // automatically creates the entry if it does not exist
-        std::shared_ptr<PosList> &pos_list_out = filtered_pos_lists[pos_list_in];
+              // automatically creates the entry if it does not exist
+              std::shared_ptr<PosList> &pos_list_out = filtered_pos_lists[pos_list_in];
 
-        if (!pos_list_out) {
-          pos_list_out = std::make_shared<PosList>();
-          pos_list_out->reserve(matches_in_this_chunk.size());
-          if (ref_col_in) {
-            // Create a PosList for a ReferenceColumn. We do this by filtering the matching positions from the incoming
-            // PosList
-            for (const auto chunk_offset : matches_in_this_chunk) {
-              pos_list_out->emplace_back((*pos_list_in)[chunk_offset]);
+              if (!pos_list_out) {
+                pos_list_out = std::make_shared<PosList>();
+                pos_list_out->reserve(matches_in_this_chunk.size());
+                if (ref_col_in) {
+                  // Create a PosList for a ReferenceColumn. We do this by filtering the matching positions from the
+                  // incoming
+                  // PosList
+                  for (const auto chunk_offset : matches_in_this_chunk) {
+                    pos_list_out->emplace_back((*pos_list_in)[chunk_offset]);
+                  }
+                } else {
+                  // Create a PosList by transposing the matching positions
+                  for (const auto chunk_offset : matches_in_this_chunk) {
+                    pos_list_out->emplace_back(RowID{chunk_id, chunk_offset});
+                  }
+                }
+              }
+
+              auto ref_col_out =
+                  std::make_shared<ReferenceColumn>(referenced_table_out, referenced_column_id, pos_list_out);
+              chunk_out.add_column(ref_col_out);
             }
-          } else {
-            // Create a PosList by transposing the matching positions
-            for (const auto chunk_offset : matches_in_this_chunk) {
-              pos_list_out->emplace_back(RowID{chunk_id, chunk_offset});
-            }
-          }
-        }
 
-        auto ref_col_out = std::make_shared<ReferenceColumn>(referenced_table_out, referenced_column_id, pos_list_out);
-        chunk_out.add_column(ref_col_out);
-      }
-      output->add_chunk(std::move(chunk_out));
+            {
+              std::lock_guard<std::mutex> lock(output_mutex);
+              output->add_chunk(std::move(chunk_out));
+            }
+          }));
+      jobs.back()->schedule();
     }
+
+    CurrentScheduler::wait_for_tasks(jobs);
 
     return output;
   }

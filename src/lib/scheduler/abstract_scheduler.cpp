@@ -1,11 +1,12 @@
+#include "abstract_scheduler.hpp"
+
 #include <memory>
 
-#include "abstract_scheduler.hpp"
-#include "abstract_topology.hpp"
+#include "topology.hpp"
 
 namespace opossum {
 
-AbstractScheduler::AbstractScheduler(std::shared_ptr<AbstractTopology> topology) : _topology(topology) {}
+AbstractScheduler::AbstractScheduler(std::shared_ptr<Topology> topology) : _topology(topology) {}
 
-const std::shared_ptr<AbstractTopology>& AbstractScheduler::topology() const { return _topology; }
-}
+const std::shared_ptr<Topology>& AbstractScheduler::topology() const { return _topology; }
+}  // namespace opossum

@@ -15,11 +15,18 @@ bool TaskQueue::empty() const {
 
 NodeID TaskQueue::node_id() const { return _node_id; }
 
-void TaskQueue::push(std::shared_ptr<AbstractTask> task) {
+void TaskQueue::push_back(std::shared_ptr<AbstractTask> task) {
   std::lock_guard<std::mutex> lock(_mutex);
 
   task->set_node_id(_node_id);
   _queue.emplace_back(std::move(task));
+}
+
+void TaskQueue::push_front(std::shared_ptr<AbstractTask> task) {
+  std::lock_guard<std::mutex> lock(_mutex);
+
+  task->set_node_id(_node_id);
+  _queue.insert(_queue.begin(), std::move(task));
 }
 
 std::shared_ptr<AbstractTask> TaskQueue::pull() {
