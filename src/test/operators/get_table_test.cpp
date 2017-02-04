@@ -12,7 +12,7 @@ namespace opossum {
 class OperatorsGetTableTest : public BaseTest {
  protected:
   void SetUp() override {
-    _test_table = std::make_shared<Table>(Table(2));
+    _test_table = std::make_shared<Table>(2);
     StorageManager::get().add_table("aNiceTestTable", _test_table);
   }
 

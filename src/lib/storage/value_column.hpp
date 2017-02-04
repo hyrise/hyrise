@@ -6,6 +6,8 @@
 #include <utility>
 #include <vector>
 
+#include "tbb/concurrent_vector.h"
+
 #include "base_column.hpp"
 
 namespace opossum {
@@ -24,6 +26,7 @@ class ValueColumn : public BaseColumn {
 
   // returns all values
   const std::vector<T>& values() const { return _values; }
+  std::vector<T>& values() { return _values; }
 
   // return the number of entries
   size_t size() const override { return _values.size(); }

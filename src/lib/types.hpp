@@ -29,12 +29,14 @@ struct RowID {
 
 using ColumnID = uint16_t;
 using ValueID = uint32_t;  // Cannot be larger than ChunkOffset
-
 using WorkerID = uint32_t;
 using NodeID = uint32_t;
 using TaskID = uint32_t;
 
 using CpuID = uint32_t;
+
+using CommitID = uint32_t;
+using TransactionID = uint32_t;
 
 using PosList = std::vector<RowID>;
 

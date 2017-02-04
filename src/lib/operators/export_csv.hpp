@@ -3,7 +3,7 @@
 #include <memory>
 #include <string>
 
-#include "abstract_operator.hpp"
+#include "abstract_read_only_operator.hpp"
 
 namespace opossum {
 /*
@@ -15,7 +15,7 @@ namespace opossum {
  * a meta file is generated. This meta file contains further information,
  * such as the types of the columns in the table.
  */
-class ExportCsv : public AbstractOperator {
+class ExportCsv : public AbstractReadOnlyOperator {
  public:
   /*
    * Generates a new ExportCsv operator.

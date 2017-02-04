@@ -9,7 +9,8 @@
 
 namespace opossum {
 
-Print::Print(const std::shared_ptr<const AbstractOperator> in, std::ostream& out) : AbstractOperator(in), _out(out) {}
+Print::Print(const std::shared_ptr<const AbstractOperator> in, std::ostream& out)
+    : AbstractReadOnlyOperator(in), _out(out) {}
 
 const std::string Print::name() const { return "Print"; }
 

@@ -9,6 +9,8 @@
 
 namespace opossum {
 
+class TransactionContext;
+
 // AbstractOperator is the abstract super class for all operators.
 // All operators have up to two input tables and one output table.
 // Their lifecycle has three phases:
@@ -36,7 +38,7 @@ class AbstractOperator {
   AbstractOperator(AbstractOperator &&) = default;
   AbstractOperator &operator=(AbstractOperator &&) = default;
 
-  void execute();
+  void execute(const TransactionContext *context = nullptr);
 
   // returns the result of the operator
   std::shared_ptr<const Table> get_output() const;
@@ -53,7 +55,7 @@ class AbstractOperator {
   // abstract method to actually execute the operator
   // execute and get_output are split into two methods to allow for easier
   // asynchronous execution
-  virtual std::shared_ptr<const Table> on_execute() = 0;
+  virtual std::shared_ptr<const Table> on_execute(const TransactionContext *context) = 0;
 
   std::shared_ptr<const Table> input_table_left() const;
   std::shared_ptr<const Table> input_table_right() const;
@@ -64,15 +66,6 @@ class AbstractOperator {
 
   // Is nullptr until the operator is executed
   std::shared_ptr<const Table> _output;
-
-  // Some operators need an internal implementation class, mostly in cases where
-  // their execute method depends on a template parameter. An example for this is
-  // found in table_scan.hpp.
-  class AbstractOperatorImpl {
-   public:
-    virtual ~AbstractOperatorImpl() = default;
-    virtual std::shared_ptr<const Table> on_execute() = 0;
-  };
 };
 
 }  // namespace opossum

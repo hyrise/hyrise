@@ -74,6 +74,7 @@ solution "opossum"
   if os.is("linux") then
     linkoptions {"-pthread"}
   end
+  links { "tbb" }
   includedirs { "src/lib/", "/usr/local/include" }
 
   if numa_supported then
@@ -132,7 +133,6 @@ project "test"
   files { "src/test/**.hpp", "src/test/**.cpp" }
   includedirs { "third_party/googletest/googletest/include" }
   postbuildcommands { "./build/test" }
-
 
 project "asan"
   kind "ConsoleApp"

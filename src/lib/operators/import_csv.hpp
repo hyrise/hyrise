@@ -4,7 +4,7 @@
 #include <string>
 #include <vector>
 
-#include "abstract_operator.hpp"
+#include "abstract_read_only_operator.hpp"
 
 namespace opossum {
 
@@ -14,7 +14,7 @@ namespace opossum {
  * The files are parsed according to RFC 4180.
  * For the structure of the meta csv file see export_csv.hpp
  */
-class ImportCsv : public AbstractOperator {
+class ImportCsv : public AbstractReadOnlyOperator {
  public:
   /*
    * @param directory   The directory where the csv files are located in.

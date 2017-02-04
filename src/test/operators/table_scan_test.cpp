@@ -8,7 +8,7 @@
 #include "../base_test.hpp"
 #include "gtest/gtest.h"
 
-#include "../../lib/operators/abstract_operator.hpp"
+#include "../../lib/operators/abstract_read_only_operator.hpp"
 #include "../../lib/operators/get_table.hpp"
 #include "../../lib/operators/print.hpp"
 #include "../../lib/operators/table_scan.hpp"

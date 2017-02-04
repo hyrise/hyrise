@@ -10,7 +10,7 @@ namespace opossum {
 
 ExportCsv::ExportCsv(const std::shared_ptr<const AbstractOperator> in, const std::string &directory,
                      const std::string &filename)
-    : AbstractOperator(in), _directory(directory), _filename(filename) {}
+    : AbstractReadOnlyOperator(in), _directory(directory), _filename(filename) {}
 
 const std::string ExportCsv::name() const { return "ExportCSV"; }
 uint8_t ExportCsv::num_in_tables() const { return 1; }
