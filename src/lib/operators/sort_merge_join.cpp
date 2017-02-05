@@ -139,7 +139,8 @@ void SortMergeJoin::SortMergeJoinImpl<T>::sort_left_table() {
       }
     }
     _sorted_left_table->_chunks.clear();
-    for (auto& entry : partition_values) {
+    _sorted_left_table->_chunks.resize(1);
+    for (auto entry : partition_values) {
       _sorted_left_table->_chunks[0]._values.push_back(entry);
     }
   } else {
@@ -172,7 +173,8 @@ void SortMergeJoin::SortMergeJoinImpl<T>::sort_right_table() {
       }
     }
     _sorted_right_table->_chunks.clear();
-    for (auto& entry : partition_values) {
+    _sorted_right_table->_chunks.resize(1);
+    for (auto entry : partition_values) {
       _sorted_right_table->_chunks[0]._values.push_back(entry);
     }
   } else {
@@ -188,6 +190,8 @@ void SortMergeJoin::SortMergeJoinImpl<T>::sort_right_table() {
 
 template <typename T>
 void SortMergeJoin::SortMergeJoinImpl<T>::perform_join() {
+  _sort_merge_join._pos_list_left = std::make_shared<PosList>();
+  _sort_merge_join._pos_list_right = std::make_shared<PosList>();
   // For now only equi-join is implemented
   // That means we only have to join partitions who are the same from both sides
   for (uint32_t partition_number = 0; partition_number < _sorted_left_table->_chunks.size(); ++partition_number) {
@@ -236,6 +240,7 @@ void SortMergeJoin::SortMergeJoinImpl<T>::perform_join() {
 
 template <typename T>
 void SortMergeJoin::SortMergeJoinImpl<T>::build_output() {
+  _sort_merge_join._output = std::make_shared<Table>(0, false);
   // left output
   for (size_t column_id = 0; column_id < _sort_merge_join._input_left->col_count(); column_id++) {
     // Add the column meta data

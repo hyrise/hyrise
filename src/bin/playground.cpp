@@ -10,13 +10,14 @@
 #include "operators/get_table.hpp"
 #include "operators/nested_loop_join.hpp"
 #include "operators/print.hpp"
+#include "operators/sort_merge_join.hpp"
 #include "operators/table_scan.hpp"
 #include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
 
 std::random_device rd;
 std::mt19937 eng(rd());
-std::uniform_int_distribution<> distr(0, 99);
+std::uniform_int_distribution<> distr(0, 999);
 
 int random_int() { return distr(eng); }
 
@@ -40,7 +41,7 @@ int main() {
   t2->add_column("b", "float");
   t2->add_column("d", "double");
 
-  for (int i = 0; i < 10000; i++) {
+  for (int i = 0; i < 1000000; i++) {
     t1->append({random_int(), random_float(), random_double()});
     t2->append({random_int(), random_float(), random_double()});
   }
@@ -54,8 +55,8 @@ int main() {
   auto gt2 = std::make_shared<opossum::GetTable>("table2");
   gt2->execute();
 
-  auto s = std::make_shared<opossum::NestedLoopJoin>(gt1, gt2, std::pair<std::string, std::string>("a", "a"), "=",
-                                                     opossum::JoinMode::Inner);
+  auto s = std::make_shared<opossum::SortMergeJoin>(gt1, gt2, std::pair<std::string, std::string>("a", "a"), "=",
+                                                    opossum::JoinMode::Inner);
   auto start = std::chrono::steady_clock::now();
   s->execute();
   auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start);
