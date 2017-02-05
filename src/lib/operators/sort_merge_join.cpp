@@ -302,26 +302,48 @@ void SortMergeJoin::SortMergeJoinImpl<T>::handle_dictionary_column(BaseColumn& c
 }
 
 template <typename T>
-void SortMergeJoin::SortMergeJoinImpl<T>::handle_reference_column(ReferenceColumn& reference_column_left,
+void SortMergeJoin::SortMergeJoinImpl<T>::handle_reference_column(ReferenceColumn& ref_column,
                                                                   std::shared_ptr<ColumnVisitableContext> context) {
-  /*
-auto join_context = std::static_pointer_cast<JoinContext>(context);
+  auto referenced_table = ref_column.referenced_table();
+  auto referenced_column_id = ref_column.referenced_column_id();
+  auto sort_context = std::static_pointer_cast<SortContext>(context);
+  auto sorted_table = sort_context->_write_to_sorted_left_table ? _sorted_left_table : _sorted_right_table;
+  auto pos_list = ref_column.pos_list();
+  SortedChunk chunk;
 
-auto value_column_right = std::dynamic_pointer_cast<ValueColumn<T>>(join_context->_column_right);
-if (value_column_right) {
-join_value_reference(*value_column_right, reference_column_left, join_context, true);
-return;
-}
-auto dictionary_column_right = std::dynamic_pointer_cast<DictionaryColumn<T>>(join_context->_column_right);
-if (dictionary_column_right) {
-join_dictionary_reference(*dictionary_column_right, reference_column_left, join_context, true);
-return;
-}
-auto reference_column_right = std::dynamic_pointer_cast<ReferenceColumn>(join_context->_column_right);
-if (reference_column_right) {
-join_reference_reference(reference_column_left, *reference_column_right, join_context);
-return;
-} */
+  // Retrieve the columns from the referenced table so they only have to be casted once
+  auto v_columns = std::vector<std::shared_ptr<ValueColumn<T>>>(referenced_table->chunk_count());
+  auto d_columns = std::vector<std::shared_ptr<DictionaryColumn<T>>>(referenced_table->chunk_count());
+  for (ChunkID chunk_id = 0; chunk_id < referenced_table->chunk_count(); chunk_id++) {
+    v_columns[chunk_id] = std::dynamic_pointer_cast<ValueColumn<T>>(
+        referenced_table->get_chunk(chunk_id).get_column(referenced_column_id));
+    d_columns[chunk_id] = std::dynamic_pointer_cast<DictionaryColumn<T>>(
+        referenced_table->get_chunk(chunk_id).get_column(referenced_column_id));
+  }
+
+  // Retrieve the values from the referenced columns
+  for (ChunkOffset chunk_offset = 0; chunk_offset < pos_list->size(); chunk_offset++) {
+    const auto& row_id = pos_list->at(chunk_offset);
+
+    // Dereference the value
+    T value;
+    if (v_columns[chunk_offset]) {
+      value = v_columns[row_id.chunk_id]->values()[row_id.chunk_offset];
+    } else if (d_columns[chunk_offset]) {
+      ValueID value_id = d_columns[row_id.chunk_id]->attribute_vector()->get(row_id.chunk_offset);
+      value = d_columns[row_id.chunk_id]->dictionary()->at(value_id);
+    } else {
+      throw std::runtime_error(
+          "SortMergeJoinImpl::handle_reference_column: referenced column is neither value nor dictionary column!");
+    }
+
+    chunk._values.push_back(std::pair<T, RowID>(value, RowID{sort_context->_chunk_id, chunk_offset}));
+  }
+
+  // Sort the values and append the chunk to the sorted table
+  std::sort(chunk._values.begin(), chunk._values.end(),
+            [](auto& value_left, auto& value_right) { return value_left.first < value_right.first; });
+  sorted_table->_chunks[sort_context->_chunk_id] = std::move(chunk);
 }
 
 }  // namespace opossum
