@@ -73,7 +73,9 @@ class SortMergeJoin : public AbstractOperator {
 
     // Sort functions
     void sort_left_table();
+    void sort_left_chunks(ChunkID chunk_id);
     void sort_right_table();
+    void sort_right_chunks(ChunkID chunk_id);
     // Looks for matches and possibly calls helper function to add match to _sort_merge_join._output
     void perform_join();
     // builds output based on pos_list_left/-_right
@@ -83,19 +85,6 @@ class SortMergeJoin : public AbstractOperator {
     virtual void handle_value_column(BaseColumn& column, std::shared_ptr<ColumnVisitableContext> context);
     virtual void handle_dictionary_column(BaseColumn& column, std::shared_ptr<ColumnVisitableContext> context);
     virtual void handle_reference_column(ReferenceColumn& column, std::shared_ptr<ColumnVisitableContext> context);
-
-    void join_value_value(ValueColumn<T>& left, ValueColumn<T>& right, std::shared_ptr<SortContext> context,
-                          bool reverse_order = false);
-    void join_value_dictionary(ValueColumn<T>& left, DictionaryColumn<T>& right, std::shared_ptr<SortContext> context,
-                               bool reverse_order = false);
-    void join_value_reference(ValueColumn<T>& left, ReferenceColumn& right, std::shared_ptr<SortContext> context,
-                              bool reverse_order = false);
-    void join_dictionary_dictionary(DictionaryColumn<T>& left, DictionaryColumn<T>& right,
-                                    std::shared_ptr<SortContext> context, bool reverse_order = false);
-    void join_dictionary_reference(DictionaryColumn<T>& left, ReferenceColumn& right,
-                                   std::shared_ptr<SortContext> context, bool reverse_order = false);
-    void join_reference_reference(ReferenceColumn& left, ReferenceColumn& right, std::shared_ptr<SortContext> context,
-                                  bool reverse_order = false);
 
    private:
     SortMergeJoin& _sort_merge_join;
