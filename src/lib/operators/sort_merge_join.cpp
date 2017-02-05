@@ -198,17 +198,87 @@ void SortMergeJoin::SortMergeJoinImpl<T>::perform_join() {
            right_index < _sorted_right_table->_chunks[partition_number]._values.size()) {
       T left_value = _sorted_left_table->_chunks[partition_number]._values[left_index].first;
       T right_value = _sorted_right_table->_chunks[partition_number]._values[right_index].first;
+      uint32_t left_index_offset = 0;
+      uint32_t right_index_offset = 0;
+      for (; left_index_offset < _sorted_left_table->_chunks[partition_number]._values.size(); ++left_index_offset) {
+        if (left_value != _sorted_left_table->_chunks[partition_number]._values[left_index_offset].first) {
+          break;
+        }
+      }
+      for (; right_index_offset < _sorted_right_table->_chunks[partition_number]._values.size(); ++right_index_offset) {
+        if (right_value != _sorted_right_table->_chunks[partition_number]._values[right_index_offset].first) {
+          break;
+        }
+      }
       if (left_value != right_value) {
         if (left_value < right_value) {
-          ++left_index;
+          left_index += left_index_offset + 1;
         } else {
-          ++right_index;
+          right_index += right_index_offset + 1;
         }
       } else /* match found */ {
         // find all same values in each table then add product to _output
         // afterwards set index for both tables to next new value
+        for (uint32_t l_index = left_index; l_index < left_index + left_index_offset; ++l_index) {
+          RowID left_row_id = _sorted_left_table->_chunks[partition_number]._values[l_index].second;
+          for (uint32_t r_index = right_index_offset; r_index < right_index_offset + right_index; ++r_index) {
+            RowID right_row_id = _sorted_right_table->_chunks[partition_number]._values[r_index].second;
+            _sort_merge_join._pos_list_left->push_back(left_row_id);
+            _sort_merge_join._pos_list_right->push_back(right_row_id);
+          }
+        }
+        left_index += left_index_offset + 1;
+        right_index += right_index_offset + 1;
       }
     }
+  }
+}
+
+template <typename T>
+void SortMergeJoin::SortMergeJoinImpl<T>::build_output() {
+  // left output
+  for (size_t column_id = 0; column_id < _sort_merge_join._input_left->col_count(); column_id++) {
+    // Add the column meta data
+    _sort_merge_join._output->add_column(_sort_merge_join._input_left->column_name(column_id),
+                                         _sort_merge_join._input_left->column_type(column_id), false);
+
+    // Check whether the column consists of reference columns
+    /* const auto r_column =
+    std::dynamic_pointer_cast<ReferenceColumn>(input_table->get_chunk(0).get_column(column_id));
+    if (r_column) {
+      // Create a pos_list referencing the original column
+      auto new_pos_list = dereference_pos_list(input_table, column_id, pos_list);
+      auto ref_column = std::make_shared<ReferenceColumn>(r_column->referenced_table(),
+                                                          r_column->referenced_column_id(), new_pos_list);
+      _output->get_chunk(0).add_column(ref_column);
+    } else {
+    */
+    auto ref_column =
+        std::make_shared<ReferenceColumn>(_sort_merge_join._input_left, column_id, _sort_merge_join._pos_list_left);
+    _sort_merge_join._output->get_chunk(0).add_column(ref_column);
+    // }
+  }
+  // right_output
+  for (size_t column_id = 0; column_id < _sort_merge_join._input_right->col_count(); column_id++) {
+    // Add the column meta data
+    _sort_merge_join._output->add_column(_sort_merge_join._input_right->column_name(column_id),
+                                         _sort_merge_join._input_right->column_type(column_id), false);
+
+    // Check whether the column consists of reference columns
+    /* const auto r_column =
+    std::dynamic_pointer_cast<ReferenceColumn>(_sort_merge_join->_input_right->get_chunk(0).get_column(column_id));
+    if (r_column) {
+      // Create a pos_list referencing the original column
+      auto new_pos_list = dereference_pos_list(input_table, column_id, pos_list);
+      auto ref_column = std::make_shared<ReferenceColumn>(r_column->referenced_table(),
+                                                          r_column->referenced_column_id(), new_pos_list);
+      _output->get_chunk(0).add_column(ref_column);
+    } else {
+    */
+    auto ref_column =
+        std::make_shared<ReferenceColumn>(_sort_merge_join._input_right, column_id, _sort_merge_join._pos_list_right);
+    _sort_merge_join._output->get_chunk(0).add_column(ref_column);
+    // }
   }
 }
 
@@ -217,6 +287,7 @@ void SortMergeJoin::SortMergeJoinImpl<T>::execute() {
   sort_left_table();
   sort_right_table();
   perform_join();
+  build_output();
 }
 
 template <typename T>

@@ -76,6 +76,8 @@ class SortMergeJoin : public AbstractOperator {
     void sort_right_table();
     // Looks for matches and possibly calls helper function to add match to _sort_merge_join._output
     void perform_join();
+    // builds output based on pos_list_left/-_right
+    void build_output();
 
     // ColumnVisitable implementation
     virtual void handle_value_column(BaseColumn& column, std::shared_ptr<ColumnVisitableContext> context);
