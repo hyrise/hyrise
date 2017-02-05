@@ -8,7 +8,7 @@
 #include <vector>
 
 namespace opossum {
-// TODO(Fabian): Comment everything!!
+// TODO(Fabian): Add Numa-realted comments/information!
 
 SortMergeJoin::SortMergeJoin(const std::shared_ptr<AbstractOperator> left,
                              const std::shared_ptr<AbstractOperator> right,
