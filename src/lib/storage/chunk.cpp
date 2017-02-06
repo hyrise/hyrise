@@ -1,10 +1,12 @@
 #include <iomanip>
+#include <iterator>
 #include <limits>
 #include <memory>
 #include <string>
 #include <vector>
 
 #include "chunk.hpp"
+#include "group_key_index.hpp"
 #include "value_column.hpp"
 
 namespace opossum {
@@ -47,7 +49,7 @@ std::shared_ptr<BaseColumn> Chunk::get_column(size_t column_id) const { return _
 size_t Chunk::col_count() const { return _columns.size(); }
 
 size_t Chunk::size() const {
-  if (_columns.size() == 0) return 0;
+  if (_columns.empty()) return 0;
   return _columns.front()->size();
 }
 
@@ -68,6 +70,7 @@ Chunk::MvccColumns& Chunk::mvcc_columns() {
 
   return *_mvcc_columns;
 }
+
 const Chunk::MvccColumns& Chunk::mvcc_columns() const {
 #ifdef IS_DEBUG
   if (!has_mvcc_columns()) {
@@ -76,5 +79,20 @@ const Chunk::MvccColumns& Chunk::mvcc_columns() const {
 #endif
 
   return *_mvcc_columns;
+}
+
+std::shared_ptr<BaseIndex> Chunk::create_index(std::shared_ptr<BaseColumn> index_column,
+                                               const std::string& column_type) {
+  auto index = make_shared_by_column_type<BaseIndex, GroupKeyIndex>(column_type, index_column);
+  _indices.emplace_back(index);
+  return index;
+}
+
+std::vector<std::shared_ptr<BaseIndex>> Chunk::get_indices_for(
+    const std::vector<std::shared_ptr<BaseColumn>>& columns) const {
+  auto result = std::vector<std::shared_ptr<BaseIndex>>();
+  std::copy_if(_indices.cbegin(), _indices.cend(), std::back_inserter(result),
+               [&columns](const std::shared_ptr<BaseIndex>& index) { return index->is_index_for(columns); });
+  return result;
 }
 }  // namespace opossum

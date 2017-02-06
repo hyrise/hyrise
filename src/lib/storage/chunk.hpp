@@ -8,6 +8,7 @@
 #include "tbb/concurrent_vector.h"
 
 #include "base_column.hpp"
+#include "base_index.hpp"
 #include "value_column.hpp"
 
 namespace opossum {
@@ -61,8 +62,14 @@ class Chunk {
 
   void set_mvcc_column_size(size_t new_size, uint32_t begin_cid);
 
+  std::shared_ptr<BaseIndex> create_index(std::shared_ptr<BaseColumn> index_column, const std::string &column_type);
+
+  std::vector<std::shared_ptr<BaseIndex>> get_indices_for(
+      const std::vector<std::shared_ptr<BaseColumn>> &columns) const;
+
  protected:
   std::vector<std::shared_ptr<BaseColumn>> _columns;
   std::unique_ptr<MvccColumns> _mvcc_columns;
+  std::vector<std::shared_ptr<BaseIndex>> _indices;
 };
 }  // namespace opossum
