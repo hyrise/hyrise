@@ -29,9 +29,12 @@ double random_double() {
 
 float random_float() { return static_cast<float>(random_double()); }
 
-int main() {
-  auto t1 = std::make_shared<opossum::Table>(opossum::Table(10000));
-  auto t2 = std::make_shared<opossum::Table>(opossum::Table(10000));
+template <typename JoinType>
+int join_performance_test(int number_of_rows, int distinct_values, int chunk_size) {
+  distr = std::uniform_int_distribution<>(0, distinct_values - 1);
+
+  auto t1 = std::make_shared<opossum::Table>(opossum::Table(chunk_size));
+  auto t2 = std::make_shared<opossum::Table>(opossum::Table(chunk_size));
 
   t1->add_column("a", "int");
   t1->add_column("b", "float");
@@ -41,7 +44,7 @@ int main() {
   t2->add_column("b", "float");
   t2->add_column("d", "double");
 
-  for (int i = 0; i < 1000000; i++) {
+  for (int i = 0; i < number_of_rows; i++) {
     t1->append({random_int(), random_float(), random_double()});
     t2->append({random_int(), random_float(), random_double()});
   }
@@ -55,12 +58,18 @@ int main() {
   auto gt2 = std::make_shared<opossum::GetTable>("table2");
   gt2->execute();
 
-  auto s = std::make_shared<opossum::SortMergeJoin>(gt1, gt2, std::pair<std::string, std::string>("a", "a"), "=",
-                                                    opossum::JoinMode::Inner);
+  auto s = std::make_shared<JoinType>(gt1, gt2, std::pair<std::string, std::string>("a", "a"), "=",
+                                      opossum::JoinMode::Inner);
   auto start = std::chrono::steady_clock::now();
   s->execute();
   auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start);
-  std::cout << "duration: " << duration.count() << "ms" << std::endl;
-  std::cout << s->get_output()->col_count() << std::endl;
-  std::cout << s->get_output()->row_count() << std::endl;
+  opossum::StorageManager::get().reset();
+  return duration.count();
+}
+
+int main() {
+  for (int n = 10000; n < 1000000; n += 10000) {
+    int duration = join_performance_test<opossum::SortMergeJoin>(n, 1000, 1000);
+    std::cout << n << ", " << duration << "" << std::endl;
+  }
 }
