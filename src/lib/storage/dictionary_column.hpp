@@ -51,7 +51,9 @@ class DictionaryColumn : public BaseColumn {
   // return the value at a certain position. If you want to write efficient operators, back off!
   const AllTypeVariant operator[](const size_t i) const override {
     if (i == NULL_VALUE) {
-      // doesn't work with string values
+      if (std::is_same<T, std::string>::value) {
+        return "0";
+      }
       return T{0};
     }
 
