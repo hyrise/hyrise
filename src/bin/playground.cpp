@@ -61,4 +61,6 @@ int main() {
   s->execute();
   auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start);
   std::cout << "duration: " << duration.count() << "ms" << std::endl;
+  std::cout << s->get_output()->col_count() << std::endl;
+  std::cout << s->get_output()->row_count() << std::endl;
 }
