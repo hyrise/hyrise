@@ -1,6 +1,5 @@
 #include "nested_loop_join.hpp"
 
-#include <exception>
 #include <memory>
 #include <stdexcept>
 #include <string>
@@ -24,19 +23,19 @@ NestedLoopJoin::NestedLoopJoin(const std::shared_ptr<AbstractOperator> left,
     if (_mode != JoinMode::Cross) {
       std::string message = "NestedLoopJoin::NestedLoopJoin: No columns specified for join operator";
       std::cout << message << std::endl;
-      throw std::exception(std::runtime_error(message));
+      throw std::runtime_error(message);
     }
   }
   if (left == nullptr) {
     std::string message = "NestedLoopJoin::NestedLoopJoin: left input operator is null";
     std::cout << message << std::endl;
-    throw std::exception(std::runtime_error(message));
+    throw std::runtime_error(message);
   }
 
   if (right == nullptr) {
     std::string message = "NestedLoopJoin::NestedLoopJoin: right input operator is null";
     std::cout << message << std::endl;
-    throw std::exception(std::runtime_error(message));
+    throw std::runtime_error(message);
   }
   // If cross-join, we use the functionality already provided by product to compute the result
   if (_mode == JoinMode::Cross) {
@@ -156,7 +155,7 @@ void NestedLoopJoin::execute() {
                           _left_column_name + "\" does not match colum type \"" + right_column_type +
                           "\" of right column \"" + _right_column_name + "\"!";
     std::cout << message << std::endl;
-    throw std::exception(std::runtime_error(message));
+    throw std::runtime_error(message);
   }
 
   join_columns(left_column_id, right_column_id, left_column_type);
@@ -192,7 +191,7 @@ NestedLoopJoin::NestedLoopJoinImpl<T>::NestedLoopJoinImpl(NestedLoopJoin& nested
   } else if (_nested_loop_join._op == "<") {
     _compare = [](const T& value_left, const T& value_right) -> bool { return value_left < value_right; };
   } else if (_nested_loop_join._op == ">") {
-    _compare = [](const T& value_left, const T& value_right) -> bool { return value_left < value_right; };
+    _compare = [](const T& value_left, const T& value_right) -> bool { return value_left > value_right; };
   } else if (_nested_loop_join._op == ">=") {
     _compare = [](const T& value_left, const T& value_right) -> bool { return value_left >= value_right; };
   } else if (_nested_loop_join._op == "<=") {
@@ -202,7 +201,7 @@ NestedLoopJoin::NestedLoopJoinImpl<T>::NestedLoopJoinImpl(NestedLoopJoin& nested
   } else {
     std::string message = "NestedLoopJoinImpl::NestedLoopJoinImpl: Unknown operator " + _nested_loop_join._op;
     std::cout << message << std::endl;
-    throw std::exception(std::runtime_error(message));
+    throw std::runtime_error(message);
   }
 }
 
@@ -213,7 +212,7 @@ template <typename T>
 std::shared_ptr<Table> NestedLoopJoin::NestedLoopJoinImpl<T>::get_output() const {
   std::string message = "NestedLoopJoinImpl::get_output() not implemented";
   std::cout << message << std::endl;
-  throw std::exception(std::runtime_error(message));
+  throw std::runtime_error(message);
   return nullptr;
 }
 
@@ -313,7 +312,7 @@ void NestedLoopJoin::NestedLoopJoinImpl<T>::join_value_reference(ValueColumn<T>&
         value_right = v_column->values()[referenced_chunk_offset];
       } else {
         std::string message = "NestedLoopJoinImpl::join_value_reference: can't figure out referenced column type";
-        throw std::exception(std::runtime_error(message));
+        throw std::runtime_error(message);
       }
 
       if (reverse_order ? _compare(value_right, value_left) : _compare(value_left, value_right)) {
