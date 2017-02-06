@@ -1,5 +1,6 @@
 #pragma once
 
+#include <algorithm>
 #include <functional>
 #include <map>
 #include <memory>
@@ -66,11 +67,12 @@ class TableScan::TableScanImpl : public AbstractReadOnlyOperatorImpl, public Col
         _casted_value2(value2 ? optional<T>(type_cast<T>(*value2)) : optional<T>(nullopt)) {}
 
   struct ScanContext : ColumnVisitableContext {
-    ScanContext(std::shared_ptr<const Table> t, std::vector<ChunkOffset> &mo,
+    ScanContext(std::shared_ptr<const Table> t, ChunkID c, std::vector<RowID> &mo,
                 std::shared_ptr<std::vector<ChunkOffset>> co = nullptr)
-        : table_in(t), matches_out(mo), chunk_offsets_in(std::move(co)) {}
+        : table_in(t), chunk_id(c), matches_out(mo), chunk_offsets_in(std::move(co)) {}
     std::shared_ptr<const Table> table_in;
-    std::vector<ChunkOffset> &matches_out;
+    const ChunkID chunk_id;
+    std::vector<RowID> &matches_out;
     std::shared_ptr<std::vector<ChunkOffset>> chunk_offsets_in;
   };
 
@@ -138,72 +140,60 @@ class TableScan::TableScanImpl : public AbstractReadOnlyOperatorImpl, public Col
     jobs.reserve(in_table->chunk_count());
 
     for (ChunkID chunk_id = 0; chunk_id < in_table->chunk_count(); ++chunk_id) {
-      jobs.emplace_back(
-          std::make_shared<JobTask>([&in_table, chunk_id, &output_mutex, &output, &filter_column_id, this]() {
-            const Chunk &chunk_in = in_table->get_chunk(chunk_id);
-            Chunk chunk_out;
-            auto base_column = chunk_in.get_column(filter_column_id);
-            std::vector<ChunkOffset> matches_in_this_chunk;
-            base_column->visit(*this, std::make_shared<ScanContext>(in_table, matches_in_this_chunk));
-            // We now receive the visits in the handler methods below...
-            if (matches_in_this_chunk.size() == 0) return;
+      jobs.emplace_back(std::make_shared<JobTask>([&in_table, chunk_id, &output_mutex, &output, &filter_column_id,
+                                                   this]() {
+        const Chunk &chunk_in = in_table->get_chunk(chunk_id);
+        Chunk chunk_out;
+        auto base_column = chunk_in.get_column(filter_column_id);
+        std::vector<RowID> matches_in_this_chunk;
+        base_column->visit(*this, std::make_shared<ScanContext>(in_table, chunk_id, matches_in_this_chunk));
+        // We now receive the visits in the handler methods below...
+        if (matches_in_this_chunk.size() == 0) return;
 
-            // Ok, now we have a list of the matching positions relative to this chunk (ChunkOffsets). Next, we have to
-            // transform them into absolute row ids. To save time and space, we want to share PosLists between columns
-            // as much as possible. All ValueColumns and DictionaryColumns can share the same PosLists because they use
-            // no
-            // further  redirection. For ReferenceColumns, PosLists can be shared between two columns iff (a) they point
-            // to the same table and (b) the incoming ReferenceColumns point to the same positions in the same order.
-            // To make this check easier, we share PosLists between two ReferenceColumns iff they shared PosLists in
-            // the incoming table as well. _filtered_pos_lists will hold a mapping from incoming PosList to outgoing
-            // PosList. Because Value/DictionaryColumns do not have an incoming PosList, they are represented with
-            // nullptr.
-            std::map<std::shared_ptr<const PosList>, std::shared_ptr<PosList>> filtered_pos_lists;
-            for (size_t column_id = 0; column_id < in_table->col_count(); ++column_id) {
-              auto ref_col_in = std::dynamic_pointer_cast<ReferenceColumn>(chunk_in.get_column(column_id));
-              std::shared_ptr<const PosList> pos_list_in;
-              std::shared_ptr<const Table> referenced_table_out;
-              size_t referenced_column_id;
-              if (ref_col_in) {
-                pos_list_in = ref_col_in->pos_list();
-                referenced_table_out = ref_col_in->referenced_table();
-                referenced_column_id = ref_col_in->referenced_column_id();
-              } else {
-                referenced_table_out = in_table;
-                referenced_column_id = column_id;
-              }
+        // Ok, now we have a list of the matching positions relative to this chunk (ChunkOffsets). Next, we have to
+        // transform them into absolute row ids. To save time and space, we want to share PosLists between columns
+        // as much as possible. All ValueColumns and DictionaryColumns can share the same PosLists because they use
+        // no
+        // further  redirection. For ReferenceColumns, PosLists can be shared between two columns iff (a) they point
+        // to the same table and (b) the incoming ReferenceColumns point to the same positions in the same order.
+        // To make this check easier, we share PosLists between two ReferenceColumns iff they shared PosLists in
+        // the incoming table as well. _filtered_pos_lists will hold a mapping from incoming PosList to outgoing
+        // PosList. Because Value/DictionaryColumns do not have an incoming PosList, they are represented with
+        // nullptr.
+        std::map<std::shared_ptr<const PosList>, std::shared_ptr<PosList>> filtered_pos_lists;
+        for (size_t column_id = 0; column_id < in_table->col_count(); ++column_id) {
+          auto ref_col_in = std::dynamic_pointer_cast<ReferenceColumn>(chunk_in.get_column(column_id));
+          std::shared_ptr<const PosList> pos_list_in;
+          std::shared_ptr<const Table> referenced_table_out;
+          size_t referenced_column_id;
+          if (ref_col_in) {
+            pos_list_in = ref_col_in->pos_list();
+            referenced_table_out = ref_col_in->referenced_table();
+            referenced_column_id = ref_col_in->referenced_column_id();
+          } else {
+            referenced_table_out = in_table;
+            referenced_column_id = column_id;
+          }
 
-              // automatically creates the entry if it does not exist
-              std::shared_ptr<PosList> &pos_list_out = filtered_pos_lists[pos_list_in];
+          // automatically creates the entry if it does not exist
+          std::shared_ptr<PosList> &pos_list_out = filtered_pos_lists[pos_list_in];
 
-              if (!pos_list_out) {
-                pos_list_out = std::make_shared<PosList>();
-                pos_list_out->reserve(matches_in_this_chunk.size());
-                if (ref_col_in) {
-                  // Create a PosList for a ReferenceColumn. We do this by filtering the matching positions from the
-                  // incoming
-                  // PosList
-                  for (const auto chunk_offset : matches_in_this_chunk) {
-                    pos_list_out->emplace_back((*pos_list_in)[chunk_offset]);
-                  }
-                } else {
-                  // Create a PosList by transposing the matching positions
-                  for (const auto chunk_offset : matches_in_this_chunk) {
-                    pos_list_out->emplace_back(RowID{chunk_id, chunk_offset});
-                  }
-                }
-              }
+          if (!pos_list_out) {
+            pos_list_out = std::make_shared<PosList>();
+            pos_list_out->reserve(matches_in_this_chunk.size());
+            std::copy(matches_in_this_chunk.begin(), matches_in_this_chunk.end(), std::back_inserter(*pos_list_out));
+          }
 
-              auto ref_col_out =
-                  std::make_shared<ReferenceColumn>(referenced_table_out, referenced_column_id, pos_list_out);
-              chunk_out.add_column(ref_col_out);
-            }
+          auto ref_col_out =
+              std::make_shared<ReferenceColumn>(referenced_table_out, referenced_column_id, pos_list_out);
+          chunk_out.add_column(ref_col_out);
+        }
 
-            {
-              std::lock_guard<std::mutex> lock(output_mutex);
-              output->add_chunk(std::move(chunk_out));
-            }
-          }));
+        {
+          std::lock_guard<std::mutex> lock(output_mutex);
+          output->add_chunk(std::move(chunk_out));
+        }
+      }));
       jobs.back()->schedule();
     }
 
@@ -221,18 +211,16 @@ class TableScan::TableScanImpl : public AbstractReadOnlyOperatorImpl, public Col
     if (context->chunk_offsets_in) {
       // This ValueColumn is referenced by a ReferenceColumn (i.e., is probably filtered). We only return the matching
       // rows within the filtered column, together with their original position
-      ChunkOffset offset_in_reference_column = 0;
       for (const ChunkOffset &offset_in_value_column : *(context->chunk_offsets_in)) {
         if (_value_comparator(values[offset_in_value_column])) {
-          matches_out.emplace_back(offset_in_reference_column);
+          matches_out.emplace_back(RowID{context->chunk_id, offset_in_value_column});
         }
-        offset_in_reference_column++;
       }
     } else {
       // This ValueColumn has to be scanned in full. We directly insert the results into the list of matching rows.
       ChunkOffset chunk_offset = 0;
       for (const auto &value : values) {
-        if (_value_comparator(value)) matches_out.emplace_back(chunk_offset);
+        if (_value_comparator(value)) matches_out.emplace_back(RowID{context->chunk_id, chunk_offset});
         chunk_offset++;
       }
     }
@@ -263,8 +251,8 @@ class TableScan::TableScanImpl : public AbstractReadOnlyOperatorImpl, public Col
       auto &chunk = referenced_table->get_chunk(chunk_id);
       auto referenced_column = chunk.get_column(column.referenced_column_id());
 
-      referenced_column->visit(
-          *this, std::make_shared<ScanContext>(referenced_table, context->matches_out, all_chunk_offsets[chunk_id]));
+      referenced_column->visit(*this, std::make_shared<ScanContext>(referenced_table, chunk_id, context->matches_out,
+                                                                    all_chunk_offsets[chunk_id]));
     }
   }
 
@@ -329,18 +317,16 @@ class TableScan::TableScanImpl : public AbstractReadOnlyOperatorImpl, public Col
     const BaseAttributeVector &attribute_vector = *(column.attribute_vector());
 
     if (context->chunk_offsets_in) {
-      ChunkOffset offset_in_reference_column = 0;
       for (const ChunkOffset &offset_in_dictionary_column : *(context->chunk_offsets_in)) {
         if (_value_id_comparator(attribute_vector.get(offset_in_dictionary_column), search_vid, search_vid2)) {
-          matches_out.emplace_back(offset_in_reference_column);
+          matches_out.emplace_back(RowID{context->chunk_id, offset_in_dictionary_column});
         }
-        offset_in_reference_column++;
       }
     } else {
       // This DictionaryColumn has to be scanned in full. We directly insert the results into the list of matching rows.
       for (ChunkOffset chunk_offset = 0; chunk_offset < column.size(); ++chunk_offset) {
         if (_value_id_comparator(attribute_vector.get(chunk_offset), search_vid, search_vid2)) {
-          matches_out.emplace_back(chunk_offset);
+          matches_out.emplace_back(RowID{context->chunk_id, chunk_offset});
         }
       }
     }
