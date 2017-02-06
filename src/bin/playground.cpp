@@ -63,6 +63,7 @@ int join_performance_test(int number_of_rows, int distinct_values, int chunk_siz
   auto start = std::chrono::steady_clock::now();
   s->execute();
   auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start);
+
   opossum::StorageManager::get().reset();
   return duration.count();
 }
