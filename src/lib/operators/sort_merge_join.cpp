@@ -3,11 +3,12 @@
 #include <algorithm>
 #include <memory>
 #include <string>
+#include <thread>
 #include <utility>
 #include <vector>
 
 namespace opossum {
-// TODO(Fabian): Comment everything!!
+// TODO(Fabian): Add Numa-realted comments/information!
 
 SortMergeJoin::SortMergeJoin(const std::shared_ptr<AbstractOperator> left,
                              const std::shared_ptr<AbstractOperator> right,
@@ -122,14 +123,33 @@ SortMergeJoin::SortMergeJoinImpl<T>::SortMergeJoinImpl(SortMergeJoin& sort_merge
 }
 
 template <typename T>
+void SortMergeJoin::SortMergeJoinImpl<T>::sort_left_chunks(ChunkID chunk_id) {
+  auto& chunk = _sort_merge_join._input_left->get_chunk(chunk_id);
+  auto column = chunk.get_column(_sort_merge_join._input_left->column_id_by_name(_sort_merge_join._left_column_name));
+  auto context = std::make_shared<SortContext>(chunk_id, true);
+  column->visit(*this, context);
+}
+
+template <typename T>
 void SortMergeJoin::SortMergeJoinImpl<T>::sort_left_table() {
   _sorted_left_table = std::make_shared<SortMergeJoin::SortMergeJoinImpl<T>::SortedTable>();
   _sorted_left_table->_chunks.resize(_sort_merge_join._input_left->chunk_count());
   for (ChunkID chunk_id = 0; chunk_id < _sort_merge_join._input_left->chunk_count(); ++chunk_id) {
+    _sorted_left_table->_chunks[chunk_id]._values.resize(_sort_merge_join._input_left->chunk_size());
+  }
+  const uint32_t kThread_num = _sort_merge_join._input_left->chunk_count();
+  std::thread threads[kThread_num];
+  for (ChunkID chunk_id = 0; chunk_id < _sort_merge_join._input_left->chunk_count(); ++chunk_id) {
+    /*
     auto& chunk = _sort_merge_join._input_left->get_chunk(chunk_id);
     auto column = chunk.get_column(_sort_merge_join._input_left->column_id_by_name(_sort_merge_join._left_column_name));
     auto context = std::make_shared<SortContext>(chunk_id, true);
     column->visit(*this, context);
+    */
+    threads[chunk_id] = std::thread(&SortMergeJoin::SortMergeJoinImpl<T>::sort_left_chunks, *this, chunk_id);
+  }
+  for (ChunkID chunk_id = 0; chunk_id < _sort_merge_join._input_left->chunk_count(); ++chunk_id) {
+    threads[chunk_id].join();
   }
   if (_partition_count == 1) {
     std::vector<std::pair<T, RowID>> partition_values;
@@ -139,7 +159,8 @@ void SortMergeJoin::SortMergeJoinImpl<T>::sort_left_table() {
       }
     }
     _sorted_left_table->_chunks.clear();
-    for (auto& entry : partition_values) {
+    _sorted_left_table->_chunks.resize(1);
+    for (auto entry : partition_values) {
       _sorted_left_table->_chunks[0]._values.push_back(entry);
     }
   } else {
@@ -154,15 +175,34 @@ void SortMergeJoin::SortMergeJoinImpl<T>::sort_left_table() {
 }
 
 template <typename T>
+void SortMergeJoin::SortMergeJoinImpl<T>::sort_right_chunks(ChunkID chunk_id) {
+  auto& chunk = _sort_merge_join._input_right->get_chunk(chunk_id);
+  auto column = chunk.get_column(_sort_merge_join._input_right->column_id_by_name(_sort_merge_join._right_column_name));
+  auto context = std::make_shared<SortContext>(chunk_id, false);
+  column->visit(*this, context);
+}
+
+template <typename T>
 void SortMergeJoin::SortMergeJoinImpl<T>::sort_right_table() {
   _sorted_right_table = std::make_shared<SortedTable>();
   _sorted_right_table->_chunks.resize(_sort_merge_join._input_right->chunk_count());
+  for (ChunkID chunk_id = 0; chunk_id < _sort_merge_join._input_left->chunk_count(); ++chunk_id) {
+    _sorted_right_table->_chunks[chunk_id]._values.resize(_sort_merge_join._input_right->chunk_size());
+  }
+  const uint32_t kThread_num = _sort_merge_join._input_right->chunk_count();
+  std::thread threads[kThread_num];
   for (ChunkID chunk_id = 0; chunk_id < _sort_merge_join._input_right->chunk_count(); ++chunk_id) {
+    /*
     auto& chunk = _sort_merge_join._input_right->get_chunk(chunk_id);
     auto column =
         chunk.get_column(_sort_merge_join._input_right->column_id_by_name(_sort_merge_join._right_column_name));
     auto context = std::make_shared<SortContext>(chunk_id, false);
     column->visit(*this, context);
+    */
+    threads[chunk_id] = std::thread(&SortMergeJoin::SortMergeJoinImpl<T>::sort_right_chunks, *this, chunk_id);
+  }
+  for (ChunkID chunk_id = 0; chunk_id < _sort_merge_join._input_right->chunk_count(); ++chunk_id) {
+    threads[chunk_id].join();
   }
   if (_partition_count == 1) {
     std::vector<std::pair<T, RowID>> partition_values;
@@ -172,7 +212,8 @@ void SortMergeJoin::SortMergeJoinImpl<T>::sort_right_table() {
       }
     }
     _sorted_right_table->_chunks.clear();
-    for (auto& entry : partition_values) {
+    _sorted_right_table->_chunks.resize(1);
+    for (auto entry : partition_values) {
       _sorted_right_table->_chunks[0]._values.push_back(entry);
     }
   } else {
@@ -188,6 +229,8 @@ void SortMergeJoin::SortMergeJoinImpl<T>::sort_right_table() {
 
 template <typename T>
 void SortMergeJoin::SortMergeJoinImpl<T>::perform_join() {
+  _sort_merge_join._pos_list_left = std::make_shared<PosList>();
+  _sort_merge_join._pos_list_right = std::make_shared<PosList>();
   // For now only equi-join is implemented
   // That means we only have to join partitions who are the same from both sides
   for (uint32_t partition_number = 0; partition_number < _sorted_left_table->_chunks.size(); ++partition_number) {
@@ -198,17 +241,88 @@ void SortMergeJoin::SortMergeJoinImpl<T>::perform_join() {
            right_index < _sorted_right_table->_chunks[partition_number]._values.size()) {
       T left_value = _sorted_left_table->_chunks[partition_number]._values[left_index].first;
       T right_value = _sorted_right_table->_chunks[partition_number]._values[right_index].first;
+      uint32_t left_index_offset = 0;
+      uint32_t right_index_offset = 0;
+      for (; left_index_offset < _sorted_left_table->_chunks[partition_number]._values.size(); ++left_index_offset) {
+        if (left_value != _sorted_left_table->_chunks[partition_number]._values[left_index_offset].first) {
+          break;
+        }
+      }
+      for (; right_index_offset < _sorted_right_table->_chunks[partition_number]._values.size(); ++right_index_offset) {
+        if (right_value != _sorted_right_table->_chunks[partition_number]._values[right_index_offset].first) {
+          break;
+        }
+      }
       if (left_value != right_value) {
         if (left_value < right_value) {
-          ++left_index;
+          left_index += left_index_offset + 1;
         } else {
-          ++right_index;
+          right_index += right_index_offset + 1;
         }
       } else /* match found */ {
         // find all same values in each table then add product to _output
         // afterwards set index for both tables to next new value
+        for (uint32_t l_index = left_index; l_index < left_index + left_index_offset; ++l_index) {
+          RowID left_row_id = _sorted_left_table->_chunks[partition_number]._values[l_index].second;
+          for (uint32_t r_index = right_index_offset; r_index < right_index_offset + right_index; ++r_index) {
+            RowID right_row_id = _sorted_right_table->_chunks[partition_number]._values[r_index].second;
+            _sort_merge_join._pos_list_left->push_back(left_row_id);
+            _sort_merge_join._pos_list_right->push_back(right_row_id);
+          }
+        }
+        left_index += left_index_offset + 1;
+        right_index += right_index_offset + 1;
       }
     }
+  }
+}
+
+template <typename T>
+void SortMergeJoin::SortMergeJoinImpl<T>::build_output() {
+  _sort_merge_join._output = std::make_shared<Table>(0, false);
+  // left output
+  for (size_t column_id = 0; column_id < _sort_merge_join._input_left->col_count(); column_id++) {
+    // Add the column meta data
+    _sort_merge_join._output->add_column(_sort_merge_join._input_left->column_name(column_id),
+                                         _sort_merge_join._input_left->column_type(column_id), false);
+
+    // Check whether the column consists of reference columns
+    /* const auto r_column =
+    std::dynamic_pointer_cast<ReferenceColumn>(input_table->get_chunk(0).get_column(column_id));
+    if (r_column) {
+      // Create a pos_list referencing the original column
+      auto new_pos_list = dereference_pos_list(input_table, column_id, pos_list);
+      auto ref_column = std::make_shared<ReferenceColumn>(r_column->referenced_table(),
+                                                          r_column->referenced_column_id(), new_pos_list);
+      _output->get_chunk(0).add_column(ref_column);
+    } else {
+    */
+    auto ref_column =
+        std::make_shared<ReferenceColumn>(_sort_merge_join._input_left, column_id, _sort_merge_join._pos_list_left);
+    _sort_merge_join._output->get_chunk(0).add_column(ref_column);
+    // }
+  }
+  // right_output
+  for (size_t column_id = 0; column_id < _sort_merge_join._input_right->col_count(); column_id++) {
+    // Add the column meta data
+    _sort_merge_join._output->add_column(_sort_merge_join._input_right->column_name(column_id),
+                                         _sort_merge_join._input_right->column_type(column_id), false);
+
+    // Check whether the column consists of reference columns
+    /* const auto r_column =
+    std::dynamic_pointer_cast<ReferenceColumn>(_sort_merge_join->_input_right->get_chunk(0).get_column(column_id));
+    if (r_column) {
+      // Create a pos_list referencing the original column
+      auto new_pos_list = dereference_pos_list(input_table, column_id, pos_list);
+      auto ref_column = std::make_shared<ReferenceColumn>(r_column->referenced_table(),
+                                                          r_column->referenced_column_id(), new_pos_list);
+      _output->get_chunk(0).add_column(ref_column);
+    } else {
+    */
+    auto ref_column =
+        std::make_shared<ReferenceColumn>(_sort_merge_join._input_right, column_id, _sort_merge_join._pos_list_right);
+    _sort_merge_join._output->get_chunk(0).add_column(ref_column);
+    // }
   }
 }
 
@@ -217,6 +331,7 @@ void SortMergeJoin::SortMergeJoinImpl<T>::execute() {
   sort_left_table();
   sort_right_table();
   perform_join();
+  build_output();
 }
 
 template <typename T>
@@ -225,53 +340,24 @@ std::shared_ptr<Table> SortMergeJoin::SortMergeJoinImpl<T>::get_output() const {
 }
 
 template <typename T>
-void SortMergeJoin::SortMergeJoinImpl<T>::join_value_value(ValueColumn<T>& left, ValueColumn<T>& right,
-                                                           std::shared_ptr<SortContext> context, bool reverse_order) {}
-
-template <typename T>
-void SortMergeJoin::SortMergeJoinImpl<T>::join_value_dictionary(ValueColumn<T>& left, DictionaryColumn<T>& right,
-                                                                std::shared_ptr<SortContext> context,
-                                                                bool reverse_order) {}
-
-template <typename T>
-void SortMergeJoin::SortMergeJoinImpl<T>::join_value_reference(ValueColumn<T>& left, ReferenceColumn& right,
-                                                               std::shared_ptr<SortContext> context,
-                                                               bool reverse_order) {}
-
-template <typename T>
-void SortMergeJoin::SortMergeJoinImpl<T>::join_dictionary_dictionary(DictionaryColumn<T>& left,
-                                                                     DictionaryColumn<T>& right,
-                                                                     std::shared_ptr<SortContext> context,
-                                                                     bool reverse_order) {}
-
-template <typename T>
-void SortMergeJoin::SortMergeJoinImpl<T>::join_dictionary_reference(DictionaryColumn<T>& left, ReferenceColumn& right,
-                                                                    std::shared_ptr<SortContext> context,
-                                                                    bool reverse_order) {}
-
-template <typename T>
-void SortMergeJoin::SortMergeJoinImpl<T>::join_reference_reference(ReferenceColumn& left, ReferenceColumn& right,
-                                                                   std::shared_ptr<SortContext> context,
-                                                                   bool reverse_order) {}
-
-template <typename T>
 void SortMergeJoin::SortMergeJoinImpl<T>::handle_value_column(BaseColumn& column,
                                                               std::shared_ptr<ColumnVisitableContext> context) {
   auto& value_column = dynamic_cast<ValueColumn<T>&>(column);
   auto sort_context = std::static_pointer_cast<SortContext>(context);
   auto& sorted_table = sort_context->_write_to_sorted_left_table ? _sorted_left_table : _sorted_right_table;
-  SortedChunk chunk;
+  // SortedChunk chunk;
 
   // Collect the values and their row ids
   for (ChunkOffset chunk_offset = 0; chunk_offset < value_column.values().size(); chunk_offset++) {
     RowID row_id{sort_context->_chunk_id, chunk_offset};
-    chunk._values.push_back(std::pair<T, RowID>(value_column.values()[chunk_offset], row_id));
+    sorted_table->_chunks[sort_context->_chunk_id]._values[chunk_offset] =
+        std::pair<T, RowID>(value_column.values()[chunk_offset], row_id);
   }
 
-  // Sort the values
-  std::sort(chunk._values.begin(), chunk._values.end(),
+  std::sort(sorted_table->_chunks[sort_context->_chunk_id]._values.begin(),
+            sorted_table->_chunks[sort_context->_chunk_id]._values.end(),
             [](auto& value_left, auto& value_right) { return value_left.first < value_right.first; });
-  sorted_table->_chunks[sort_context->_chunk_id] = std::move(chunk);
+  // sorted_table->_chunks[sort_context->_chunk_id] = std::move(chunk);
 }
 
 template <typename T>
