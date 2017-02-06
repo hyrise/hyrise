@@ -262,11 +262,13 @@ void SortMergeJoin::SortMergeJoinImpl<T>::handle_value_column(BaseColumn& column
   auto& sorted_table = sort_context->_write_to_sorted_left_table ? _sorted_left_table : _sorted_right_table;
   SortedChunk chunk;
 
+  // Collect the values and their row ids
   for (ChunkOffset chunk_offset = 0; chunk_offset < value_column.values().size(); chunk_offset++) {
     RowID row_id{sort_context->_chunk_id, chunk_offset};
     chunk._values.push_back(std::pair<T, RowID>(value_column.values()[chunk_offset], row_id));
   }
 
+  // Sort the values
   std::sort(chunk._values.begin(), chunk._values.end(),
             [](auto& value_left, auto& value_right) { return value_left.first < value_right.first; });
   sorted_table->_chunks[sort_context->_chunk_id] = std::move(chunk);
