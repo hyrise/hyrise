@@ -124,12 +124,14 @@ SortMergeJoin::SortMergeJoinImpl<T>::SortMergeJoinImpl(SortMergeJoin& sort_merge
 
 // TODO(SvenFabian) one method to sort them all
 template <typename T>
-void SortMergeJoin::SortMergeJoinImpl<T>::sort_left_partition(ChunkID chunk_id) {
-  auto& chunk = _sort_merge_join._input_left->get_chunk(chunk_id);
-  auto column = chunk.get_column(_sort_merge_join._input_left->column_id_by_name(_sort_merge_join._left_column_name));
-  // TODO(Fabian->Sven) context can be a unique_ptr right? Does it have to be a pointer at all?
-  auto context = std::make_shared<SortContext>(chunk_id, true);
-  column->visit(*this, context);
+void SortMergeJoin::SortMergeJoinImpl<T>::sort_left_partition(const std::vector<ChunkID> chunk_ids) {
+  for (auto chunk_id : chunk_ids) {
+    auto& chunk = _sort_merge_join._input_left->get_chunk(chunk_id);
+    auto column = chunk.get_column(_sort_merge_join._input_left->column_id_by_name(_sort_merge_join._left_column_name));
+    // TODO(Fabian->Sven) context can be a unique_ptr right? Does it have to be a pointer at all?
+    auto context = std::make_shared<SortContext>(chunk_id, true);
+    column->visit(*this, context);
+  }
 }
 
 template <typename T>
@@ -140,7 +142,10 @@ void SortMergeJoin::SortMergeJoinImpl<T>::sort_left_table() {
     _sorted_left_table->_partition[chunk_id]._values.resize(_sort_merge_join._input_left->chunk_size());
   }
 
-  std::vector<std::thread> threads(_sort_merge_join._input_left->chunk_count());
+  const uint32_t threshold = 100000;
+  std::vector<std::thread> threads;
+  uint32_t size = 0;
+  std::vector<ChunkID> chunk_ids;
   for (ChunkID chunk_id = 0; chunk_id < _sort_merge_join._input_left->chunk_count(); ++chunk_id) {
     /*
     auto& chunk = _sort_merge_join._input_left->get_chunk(chunk_id);
@@ -148,11 +153,18 @@ void SortMergeJoin::SortMergeJoinImpl<T>::sort_left_table() {
     auto context = std::make_shared<SortContext>(chunk_id, true);
     column->visit(*this, context);
     */
-    threads.at(chunk_id) = std::thread(&SortMergeJoin::SortMergeJoinImpl<T>::sort_left_partition, *this, chunk_id);
+    size += _sort_merge_join._input_left->chunk_size();
+    chunk_ids.push_back(chunk_id);
+    if (size > threshold || chunk_id == _sort_merge_join._input_left->chunk_count() - 1) {
+      threads.push_back(std::thread(&SortMergeJoin::SortMergeJoinImpl<T>::sort_left_partition, *this, chunk_ids));
+      chunk_ids.clear();
+      size = 0;
+    }
+    // threads.at(chunk_id) = std::thread(&SortMergeJoin::SortMergeJoinImpl<T>::sort_left_partition, *this, chunk_id);
   }
 
-  for (ChunkID chunk_id = 0; chunk_id < _sort_merge_join._input_left->chunk_count(); ++chunk_id) {
-    threads.at(chunk_id).join();
+  for (auto& thread : threads) {
+    thread.join();
   }
 
   if (_partition_count == 1) {
@@ -181,11 +193,14 @@ void SortMergeJoin::SortMergeJoinImpl<T>::sort_left_table() {
 }
 
 template <typename T>
-void SortMergeJoin::SortMergeJoinImpl<T>::sort_right_partition(ChunkID chunk_id) {
-  auto& chunk = _sort_merge_join._input_right->get_chunk(chunk_id);
-  auto column = chunk.get_column(_sort_merge_join._input_right->column_id_by_name(_sort_merge_join._right_column_name));
-  auto context = std::make_shared<SortContext>(chunk_id, false);
-  column->visit(*this, context);
+void SortMergeJoin::SortMergeJoinImpl<T>::sort_right_partition(const std::vector<ChunkID> chunk_ids) {
+  for (auto chunk_id : chunk_ids) {
+    auto& chunk = _sort_merge_join._input_right->get_chunk(chunk_id);
+    auto column =
+        chunk.get_column(_sort_merge_join._input_right->column_id_by_name(_sort_merge_join._right_column_name));
+    auto context = std::make_shared<SortContext>(chunk_id, false);
+    column->visit(*this, context);
+  }
 }
 
 template <typename T>
@@ -196,7 +211,10 @@ void SortMergeJoin::SortMergeJoinImpl<T>::sort_right_table() {
     _sorted_right_table->_partition[chunk_id]._values.resize(_sort_merge_join._input_right->chunk_size());
   }
 
-  std::vector<std::thread> threads(_sort_merge_join._input_left->chunk_count());
+  const uint32_t threshold = 100000;
+  std::vector<std::thread> threads;
+  uint32_t size = 0;
+  std::vector<ChunkID> chunk_ids;
   for (ChunkID chunk_id = 0; chunk_id < _sort_merge_join._input_right->chunk_count(); ++chunk_id) {
     /*
     auto& chunk = _sort_merge_join._input_right->get_chunk(chunk_id);
@@ -205,11 +223,18 @@ void SortMergeJoin::SortMergeJoinImpl<T>::sort_right_table() {
     auto context = std::make_shared<SortContext>(chunk_id, false);
     column->visit(*this, context);
     */
-    threads.at(chunk_id) = std::thread(&SortMergeJoin::SortMergeJoinImpl<T>::sort_right_partition, *this, chunk_id);
+    size += _sort_merge_join._input_right->chunk_size();
+    chunk_ids.push_back(chunk_id);
+    if (size > threshold || chunk_id == _sort_merge_join._input_right->chunk_count() - 1) {
+      threads.push_back(std::thread(&SortMergeJoin::SortMergeJoinImpl<T>::sort_right_partition, *this, chunk_ids));
+      size = 0;
+      chunk_ids.clear();
+    }
+    // threads.at(chunk_id) = std::thread(&SortMergeJoin::SortMergeJoinImpl<T>::sort_right_partition, *this, chunk_id);
   }
 
-  for (ChunkID chunk_id = 0; chunk_id < _sort_merge_join._input_right->chunk_count(); ++chunk_id) {
-    threads.at(chunk_id).join();
+  for (auto& thread : threads) {
+    thread.join();
   }
 
   if (_partition_count == 1) {
