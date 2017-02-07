@@ -73,9 +73,9 @@ class SortMergeJoin : public AbstractOperator {
 
     // Sort functions
     void sort_left_table();
-    void sort_left_partition(ChunkID chunk_id);
+    void sort_left_partition(const std::vector<ChunkID> chunk_ids);
     void sort_right_table();
-    void sort_right_partition(ChunkID chunk_id);
+    void sort_right_partition(const std::vector<ChunkID> chunk_ids);
     // Looks for matches and possibly calls helper function to add match to _sort_merge_join._output
     void perform_join();
     // builds output based on pos_list_left/-_right
