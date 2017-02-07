@@ -66,25 +66,25 @@ class SortMergeJoin : public AbstractOperator {
     // struct used for materialized sorted Table
     struct SortedTable {
       SortedTable() {}
-      std::vector<SortedChunk> _chunks;
+      std::vector<SortedChunk> _partition;
       std::map<T, uint32_t> _histogram;
       std::map<T, uint64_t> _prefix;
     };
 
     // Sort functions
     void sort_left_table();
-    void sort_left_chunks(ChunkID chunk_id);
+    void sort_left_partition(ChunkID chunk_id);
     void sort_right_table();
-    void sort_right_chunks(ChunkID chunk_id);
+    void sort_right_partition(ChunkID chunk_id);
     // Looks for matches and possibly calls helper function to add match to _sort_merge_join._output
     void perform_join();
     // builds output based on pos_list_left/-_right
     void build_output();
 
     // ColumnVisitable implementation
-    virtual void handle_value_column(BaseColumn& column, std::shared_ptr<ColumnVisitableContext> context);
-    virtual void handle_dictionary_column(BaseColumn& column, std::shared_ptr<ColumnVisitableContext> context);
-    virtual void handle_reference_column(ReferenceColumn& column, std::shared_ptr<ColumnVisitableContext> context);
+    void handle_value_column(BaseColumn& column, std::shared_ptr<ColumnVisitableContext> context) override;
+    void handle_dictionary_column(BaseColumn& column, std::shared_ptr<ColumnVisitableContext> context) override;
+    void handle_reference_column(ReferenceColumn& column, std::shared_ptr<ColumnVisitableContext> context) override;
 
    private:
     SortMergeJoin& _sort_merge_join;
