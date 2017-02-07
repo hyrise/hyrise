@@ -65,12 +65,14 @@ int join_performance_test(int number_of_rows, int distinct_values, int chunk_siz
   auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start);
 
   opossum::StorageManager::get().reset();
+
+  // std::cout << s->get_output()->row_count() << std::endl;
   return duration.count();
 }
 
 int main() {
   for (int n = 10000; n < 1000000; n += 10000) {
-    int duration = join_performance_test<opossum::SortMergeJoin>(n, 1000, 1000);
+    int duration = join_performance_test<opossum::NestedLoopJoin>(n, 1000, 1000);
     std::cout << n << ", " << duration << "" << std::endl;
   }
 }
