@@ -39,7 +39,7 @@ SortMergeJoin::SortMergeJoin(const std::shared_ptr<AbstractOperator> left,
     auto right_column_type = _input_right->column_type(right_column_id);
 
     if (left_column_type != right_column_type) {
-      std::string message = "SortMergeJoin::execute: column type \"" + left_column_type + "\" of left column \"" +
+      std::string message = "SortMergeJoin::SortMergeJoin: column type \"" + left_column_type + "\" of left column \"" +
                             _left_column_name + "\" does not match colum type \"" + right_column_type +
                             "\" of right column \"" + _right_column_name + "\"!";
       std::cout << message << std::endl;
@@ -54,7 +54,7 @@ SortMergeJoin::SortMergeJoin(const std::shared_ptr<AbstractOperator> left,
   } else {
     // No names specified --> this is only valid if we want to cross-join
     if (_mode != JoinMode::Cross) {
-      std::string message = "NestedLoopJoin::NestedLoopJoin: No columns specified for join operator";
+      std::string message = "SortMergeJoin::SortMergeJoin: No columns specified for join operator";
       std::cout << message << std::endl;
       throw std::exception(std::runtime_error(message));
     } else {
