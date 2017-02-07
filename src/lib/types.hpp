@@ -39,6 +39,16 @@ using TransactionID = uint32_t;
 
 using PosList = std::vector<RowID>;
 
+class ColumnName {
+ public:
+  explicit ColumnName(const std::string &name) : _name(name) {}
+
+  operator std::string() const { return _name; }
+
+ protected:
+  const std::string _name;
+};
+
 constexpr NodeID INVALID_NODE_ID = std::numeric_limits<NodeID>::max();
 constexpr TaskID INVALID_TASK_ID = std::numeric_limits<TaskID>::max();
 constexpr CpuID INVALID_CPU_ID = std::numeric_limits<CpuID>::max();
@@ -65,6 +75,22 @@ static auto types_as_hana_sequence = hana::transform(hana::transform(column_type
 using TypesAsMplVector = decltype(hana::to<hana::ext::boost::mpl::vector_tag>(types_as_hana_sequence));
 // create boost::variant from mpl vector
 using AllTypeVariant = typename boost::make_variant_over<TypesAsMplVector>::type;
+
+/**
+ * AllParameterVariant holds either an AllTypeVariant or a ColumnName.
+ * It should be used to generalize Opossum operator calls.
+ */
+static auto parameter_types = hana::make_tuple(hana::make_pair("AllTypeVariant", AllTypeVariant(123)),
+                                               hana::make_pair("ColumnName", ColumnName("column_name")));
+
+// convert tuple of all types to sequence by first extracting the prototypes only and then applying decltype_
+static auto parameter_types_as_hana_sequence =
+    hana::transform(hana::transform(parameter_types, hana::second), hana::decltype_);
+// convert hana sequence to mpl vector
+using ParameterTypesAsMplVector =
+    decltype(hana::to<hana::ext::boost::mpl::vector_tag>(parameter_types_as_hana_sequence));
+// create boost::variant from mpl vector
+using AllParameterVariant = typename boost::make_variant_over<ParameterTypesAsMplVector>::type;
 
 // cast methods - from variant to specific type
 template <typename T>
