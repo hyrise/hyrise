@@ -127,6 +127,7 @@ template <typename T>
 void SortMergeJoin::SortMergeJoinImpl<T>::sort_left_partition(ChunkID chunk_id) {
   auto& chunk = _sort_merge_join._input_left->get_chunk(chunk_id);
   auto column = chunk.get_column(_sort_merge_join._input_left->column_id_by_name(_sort_merge_join._left_column_name));
+  // TODO(Fabian->Sven) context can be a unique_ptr right? Does it have to be a pointer at all?
   auto context = std::make_shared<SortContext>(chunk_id, true);
   column->visit(*this, context);
 }
@@ -138,8 +139,8 @@ void SortMergeJoin::SortMergeJoinImpl<T>::sort_left_table() {
   for (ChunkID chunk_id = 0; chunk_id < _sort_merge_join._input_left->chunk_count(); ++chunk_id) {
     _sorted_left_table->_partition[chunk_id]._values.resize(_sort_merge_join._input_left->chunk_size());
   }
-  const uint32_t kThread_num = _sort_merge_join._input_left->chunk_count();
-  std::thread threads[kThread_num];
+
+  std::vector<std::thread> threads(_sort_merge_join._input_left->chunk_count());
   for (ChunkID chunk_id = 0; chunk_id < _sort_merge_join._input_left->chunk_count(); ++chunk_id) {
     /*
     auto& chunk = _sort_merge_join._input_left->get_chunk(chunk_id);
@@ -147,11 +148,13 @@ void SortMergeJoin::SortMergeJoinImpl<T>::sort_left_table() {
     auto context = std::make_shared<SortContext>(chunk_id, true);
     column->visit(*this, context);
     */
-    threads[chunk_id] = std::thread(&SortMergeJoin::SortMergeJoinImpl<T>::sort_left_partition, *this, chunk_id);
+    threads.at(chunk_id) = std::thread(&SortMergeJoin::SortMergeJoinImpl<T>::sort_left_partition, *this, chunk_id);
   }
+
   for (ChunkID chunk_id = 0; chunk_id < _sort_merge_join._input_left->chunk_count(); ++chunk_id) {
-    threads[chunk_id].join();
+    threads.at(chunk_id).join();
   }
+
   if (_partition_count == 1) {
     std::vector<std::pair<T, RowID>> partition_values;
     for (auto& s_chunk : _sorted_left_table->_partition) {
@@ -159,9 +162,11 @@ void SortMergeJoin::SortMergeJoinImpl<T>::sort_left_table() {
         partition_values.push_back(entry);
       }
     }
+
     _sorted_left_table->_partition.clear();
     _sorted_left_table->_partition.resize(1);
-    for (auto entry : partition_values) {
+
+    for (auto& entry : partition_values) {
       _sorted_left_table->_partition[0]._values.push_back(entry);
     }
   } else {
@@ -190,8 +195,8 @@ void SortMergeJoin::SortMergeJoinImpl<T>::sort_right_table() {
   for (ChunkID chunk_id = 0; chunk_id < _sort_merge_join._input_left->chunk_count(); ++chunk_id) {
     _sorted_right_table->_partition[chunk_id]._values.resize(_sort_merge_join._input_right->chunk_size());
   }
-  const uint32_t kThread_num = _sort_merge_join._input_right->chunk_count();
-  std::thread threads[kThread_num];
+
+  std::vector<std::thread> threads(_sort_merge_join._input_left->chunk_count());
   for (ChunkID chunk_id = 0; chunk_id < _sort_merge_join._input_right->chunk_count(); ++chunk_id) {
     /*
     auto& chunk = _sort_merge_join._input_right->get_chunk(chunk_id);
@@ -200,11 +205,13 @@ void SortMergeJoin::SortMergeJoinImpl<T>::sort_right_table() {
     auto context = std::make_shared<SortContext>(chunk_id, false);
     column->visit(*this, context);
     */
-    threads[chunk_id] = std::thread(&SortMergeJoin::SortMergeJoinImpl<T>::sort_right_partition, *this, chunk_id);
+    threads.at(chunk_id) = std::thread(&SortMergeJoin::SortMergeJoinImpl<T>::sort_right_partition, *this, chunk_id);
   }
+
   for (ChunkID chunk_id = 0; chunk_id < _sort_merge_join._input_right->chunk_count(); ++chunk_id) {
-    threads[chunk_id].join();
+    threads.at(chunk_id).join();
   }
+
   if (_partition_count == 1) {
     std::vector<std::pair<T, RowID>> partition_values;
     for (auto& s_chunk : _sorted_right_table->_partition) {
@@ -212,9 +219,11 @@ void SortMergeJoin::SortMergeJoinImpl<T>::sort_right_table() {
         partition_values.push_back(entry);
       }
     }
+
     _sorted_right_table->_partition.clear();
     _sorted_right_table->_partition.resize(1);
-    for (auto entry : partition_values) {
+
+    for (auto& entry : partition_values) {
       _sorted_right_table->_partition[0]._values.push_back(entry);
     }
   } else {

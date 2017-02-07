@@ -82,9 +82,9 @@ class SortMergeJoin : public AbstractOperator {
     void build_output();
 
     // ColumnVisitable implementation
-    virtual void handle_value_column(BaseColumn& column, std::shared_ptr<ColumnVisitableContext> context);
-    virtual void handle_dictionary_column(BaseColumn& column, std::shared_ptr<ColumnVisitableContext> context);
-    virtual void handle_reference_column(ReferenceColumn& column, std::shared_ptr<ColumnVisitableContext> context);
+    void handle_value_column(BaseColumn& column, std::shared_ptr<ColumnVisitableContext> context) override;
+    void handle_dictionary_column(BaseColumn& column, std::shared_ptr<ColumnVisitableContext> context) override;
+    void handle_reference_column(ReferenceColumn& column, std::shared_ptr<ColumnVisitableContext> context) override;
 
    private:
     SortMergeJoin& _sort_merge_join;
