@@ -66,16 +66,16 @@ class SortMergeJoin : public AbstractOperator {
     // struct used for materialized sorted Table
     struct SortedTable {
       SortedTable() {}
-      std::vector<SortedChunk> _chunks;
+      std::vector<SortedChunk> _partition;
       std::map<T, uint32_t> _histogram;
       std::map<T, uint64_t> _prefix;
     };
 
     // Sort functions
     void sort_left_table();
-    void sort_left_chunks(ChunkID chunk_id);
+    void sort_left_partition(ChunkID chunk_id);
     void sort_right_table();
-    void sort_right_chunks(ChunkID chunk_id);
+    void sort_right_partition(ChunkID chunk_id);
     // Looks for matches and possibly calls helper function to add match to _sort_merge_join._output
     void perform_join();
     // builds output based on pos_list_left/-_right
