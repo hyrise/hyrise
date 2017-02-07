@@ -79,7 +79,7 @@ class OperatorsSortMergeJoinTest : public BaseTest {
   std::shared_ptr<GetTable> _gt_a, _gt_b, _gt_c, _gt_d, _gt_a_dict, _gt_b_dict, _gt_c_dict;
 };
 
-TEST_F(OperatorsSortMergeJoinTest, ValueJoinValue) {
+TEST_F(OperatorsSortMergeJoinTest, SortMergeJoin_ValueJoinValue) {
   const std::string left_c3 = "left_c3";
   const std::string right_c3 = "right_c3";
   auto gt_left = std::make_shared<GetTable>("table_left");
@@ -91,18 +91,10 @@ TEST_F(OperatorsSortMergeJoinTest, ValueJoinValue) {
       gt_left, gt_right, std::pair<const std::string &, const std::string &>(left_c3, right_c3), "=", JoinMode::Inner);
   join_operator->execute();
 
-  std::cout << join_operator->get_output()->col_count() << std::endl;
-  std::cout << join_operator->get_output()->chunk_count() << std::endl;
-  std::cout << join_operator->get_output()->get_chunk(0).size() << std::endl;
-  std::cout << join_operator->get_output()->get_chunk(0).col_count() << std::endl;
-  std::cout << (*(join_operator->get_output()->get_chunk(0).get_column(0))).size() << std::endl;
-  std::cout << join_operator->get_output()->column_name(0) << std::endl;
-  std::cout << join_operator->get_output()->column_type(0) << std::endl;
-
   EXPECT_TABLE_EQ(join_operator->get_output(), expected_result);
 }
-/*
-TEST_F(OperatorsNestedLoopJoinTest, ValueJoinDict) {
+
+TEST_F(OperatorsSortMergeJoinTest, SortMergeJoin_ValueJoinDict) {
   const std::string left_c3 = "left_c3";
   const std::string right_c3 = "right_c3";
   auto gt_left = std::make_shared<GetTable>("table_left");
@@ -110,14 +102,14 @@ TEST_F(OperatorsNestedLoopJoinTest, ValueJoinDict) {
   auto gt_right = std::make_shared<GetTable>("dict_table_right");
   gt_right->execute();
   std::shared_ptr<Table> expected_result = load_table("src/test/tables/nlj_result.tbl", 1);
-  auto join_operator = std::make_shared<NestedLoopJoin>(
+  auto join_operator = std::make_shared<SortMergeJoin>(
       gt_left, gt_right, std::pair<const std::string &, const std::string &>(left_c3, right_c3), "=", JoinMode::Inner);
   join_operator->execute();
 
   EXPECT_TABLE_EQ(join_operator->get_output(), expected_result);
 }
-
-TEST_F(OperatorsNestedLoopJoinTest, ValueJoinRef) {
+/*
+TEST_F(OperatorsSortMergeJoinTest, ValueJoinRef) {
   const std::string left_c3 = "left_c3";
   const std::string right_c3 = "right_c3";
   auto gt_left = std::make_shared<GetTable>("table_left");
@@ -127,7 +119,7 @@ TEST_F(OperatorsNestedLoopJoinTest, ValueJoinRef) {
   auto scan_right = std::make_shared<TableScan>(gt_right, "right_c2", ">", 300.0);
   scan_right->execute();
   std::shared_ptr<Table> expected_result = load_table("src/test/tables/nlj_vjr_result.tbl", 1);
-  auto join_operator = std::make_shared<NestedLoopJoin>(
+  auto join_operator = std::make_shared<SortMergeJoin>(
       gt_left, scan_right, std::pair<const std::string &, const std::string &>(left_c3, right_c3), "=",
       JoinMode::Inner);
   join_operator->execute();
@@ -135,7 +127,7 @@ TEST_F(OperatorsNestedLoopJoinTest, ValueJoinRef) {
   EXPECT_TABLE_EQ(join_operator->get_output(), expected_result);
 }
 
-TEST_F(OperatorsNestedLoopJoinTest, ValueOuterJoinValue) {
+TEST_F(OperatorsSortMergeJoinTest, ValueOuterJoinValue) {
   const std::string left_c3 = "left_c3";
   const std::string right_c3 = "right_c3";
   auto gt_left = std::make_shared<GetTable>("table_left");
@@ -143,7 +135,7 @@ TEST_F(OperatorsNestedLoopJoinTest, ValueOuterJoinValue) {
   auto gt_right = std::make_shared<GetTable>("table_right_outer");
   gt_right->execute();
   std::shared_ptr<Table> expected_result = load_table("src/test/tables/nlj_result_right_outer.tbl", 3);
-  auto join_operator = std::make_shared<NestedLoopJoin>(
+  auto join_operator = std::make_shared<SortMergeJoin>(
       gt_left, gt_right, std::pair<const std::string &, const std::string &>(left_c3, right_c3), "=",
       JoinMode::Right_outer);
   join_operator->execute();
@@ -151,62 +143,62 @@ TEST_F(OperatorsNestedLoopJoinTest, ValueOuterJoinValue) {
   EXPECT_TABLE_EQ(join_operator->get_output(), expected_result);
 }
 
-TEST_F(OperatorsNestedLoopJoinTest, CrossJoin) {
+TEST_F(OperatorsSortMergeJoinTest, CrossJoin) {
   std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_cross_join.tbl", 1);
   auto column_names = std::make_pair(std::string("left_c1"), std::string("right_c1"));
   auto join_columns = optional<std::pair<const std::string &, const std::string &>>(column_names);
-  auto join = std::make_shared<NestedLoopJoin>(_gt_a, _gt_b, join_columns, "=", JoinMode::Cross);
+  auto join = std::make_shared<SortMergeJoin>(_gt_a, _gt_b, join_columns, "=", JoinMode::Cross);
   join->execute();
   EXPECT_TABLE_EQ(join->get_output(), expected_result);
 }
-TEST_F(OperatorsNestedLoopJoinTest, MissingJoinColumns) {
+TEST_F(OperatorsSortMergeJoinTest, MissingJoinColumns) {
   std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_left_join.tbl", 1);
   EXPECT_THROW(
-      std::make_shared<NestedLoopJoin>(_gt_a, _gt_b, optional<std::pair<const std::string &, const std::string &>>(),
+      std::make_shared<SortMergeJoin>(_gt_a, _gt_b, optional<std::pair<const std::string &, const std::string &>>(),
                                        "=", JoinMode::Left_outer),
       std::runtime_error);
 }
-TEST_F(OperatorsNestedLoopJoinTest, LeftJoin) {
+TEST_F(OperatorsSortMergeJoinTest, LeftJoin) {
   std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_left_join.tbl", 1);
   auto column_names = std::make_pair(std::string("left_c1"), std::string("right_c1"));
   auto join_columns = optional<std::pair<const std::string &, const std::string &>>(column_names);
-  auto join = std::make_shared<NestedLoopJoin>(_gt_a, _gt_b, join_columns, "=", JoinMode::Left_outer);
+  auto join = std::make_shared<SortMergeJoin>(_gt_a, _gt_b, join_columns, "=", JoinMode::Left_outer);
   join->execute();
   EXPECT_TABLE_EQ(join->get_output(), expected_result);
 }
-TEST_F(OperatorsNestedLoopJoinTest, LeftJoinOnString) {
+TEST_F(OperatorsSortMergeJoinTest, LeftJoinOnString) {
   std::shared_ptr<Table> expected_result = load_table("src/test/tables/string_left_join.tbl", 1);
   auto column_names = std::make_pair(std::string("left_c2"), std::string("right_c2"));
   auto join_columns = optional<std::pair<const std::string &, const std::string &>>(column_names);
-  auto join = std::make_shared<NestedLoopJoin>(_gt_c, _gt_d, join_columns, "=", JoinMode::Left_outer);
+  auto join = std::make_shared<SortMergeJoin>(_gt_c, _gt_d, join_columns, "=", JoinMode::Left_outer);
   join->execute();
   EXPECT_TABLE_EQ(join->get_output(), expected_result);
 }
-TEST_F(OperatorsNestedLoopJoinTest, RightJoin) {
+TEST_F(OperatorsSortMergeJoinTest, RightJoin) {
   std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_right_join.tbl", 1);
   auto column_names = std::make_pair(std::string("left_c1"), std::string("right_c1"));
   auto join_columns = optional<std::pair<const std::string &, const std::string &>>(column_names);
-  auto join = std::make_shared<NestedLoopJoin>(_gt_a, _gt_b, join_columns, "=", JoinMode::Right_outer);
+  auto join = std::make_shared<SortMergeJoin>(_gt_a, _gt_b, join_columns, "=", JoinMode::Right_outer);
   join->execute();
   EXPECT_TABLE_EQ(join->get_output(), expected_result);
 }
-TEST_F(OperatorsNestedLoopJoinTest, InnerJoin) {
+TEST_F(OperatorsSortMergeJoinTest, InnerJoin) {
   std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_inner_join.tbl", 1);
   auto column_names = std::make_pair(std::string("left_c1"), std::string("right_c1"));
   auto join_columns = optional<std::pair<const std::string &, const std::string &>>(column_names);
-  auto join = std::make_shared<NestedLoopJoin>(_gt_a, _gt_b, join_columns, "=", JoinMode::Inner);
+  auto join = std::make_shared<SortMergeJoin>(_gt_a, _gt_b, join_columns, "=", JoinMode::Inner);
   join->execute();
   EXPECT_TABLE_EQ(join->get_output(), expected_result);
 }
-TEST_F(OperatorsNestedLoopJoinTest, InnerJoinOnString) {
+TEST_F(OperatorsSortMergeJoinTest, InnerJoinOnString) {
   std::shared_ptr<Table> expected_result = load_table("src/test/tables/string_inner_join.tbl", 1);
   auto column_names = std::make_pair(std::string("left_c2"), std::string("right_c2"));
   auto join_columns = optional<std::pair<const std::string &, const std::string &>>(column_names);
-  auto join = std::make_shared<NestedLoopJoin>(_gt_c, _gt_d, join_columns, "=", JoinMode::Inner);
+  auto join = std::make_shared<SortMergeJoin>(_gt_c, _gt_d, join_columns, "=", JoinMode::Inner);
   join->execute();
   EXPECT_TABLE_EQ(join->get_output(), expected_result);
 }
-TEST_F(OperatorsNestedLoopJoinTest, InnerRefJoin) {
+TEST_F(OperatorsSortMergeJoinTest, InnerRefJoin) {
   _gt_a->execute();
   _gt_b->execute();
 
@@ -218,31 +210,31 @@ TEST_F(OperatorsNestedLoopJoinTest, InnerRefJoin) {
   std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_inner_join.tbl", 1);
   auto column_names = std::make_pair(std::string("left_c1"), std::string("right_c1"));
   auto join_columns = optional<std::pair<const std::string &, const std::string &>>(column_names);
-  auto join = std::make_shared<NestedLoopJoin>(scan_a, scan_b, join_columns, "=", JoinMode::Inner);
+  auto join = std::make_shared<SortMergeJoin>(scan_a, scan_b, join_columns, "=", JoinMode::Inner);
   join->execute();
   EXPECT_TABLE_EQ(join->get_output(), expected_result);
 }
-TEST_F(OperatorsNestedLoopJoinTest, InnerValueDictJoin) {
+TEST_F(OperatorsSortMergeJoinTest, InnerValueDictJoin) {
   _gt_a->execute();
   _gt_b_dict->execute();
   std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_inner_join.tbl", 1);
   auto column_names = std::make_pair(std::string("left_c1"), std::string("right_c1"));
   auto join_columns = optional<std::pair<const std::string &, const std::string &>>(column_names);
-  auto join = std::make_shared<NestedLoopJoin>(_gt_a, _gt_b_dict, join_columns, "=", JoinMode::Inner);
+  auto join = std::make_shared<SortMergeJoin>(_gt_a, _gt_b_dict, join_columns, "=", JoinMode::Inner);
   join->execute();
   EXPECT_TABLE_EQ(join->get_output(), expected_result);
 }
-TEST_F(OperatorsNestedLoopJoinTest, InnerDictValueJoin) {
+TEST_F(OperatorsSortMergeJoinTest, InnerDictValueJoin) {
   _gt_a_dict->execute();
   _gt_b->execute();
   std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_inner_join.tbl", 1);
   auto column_names = std::make_pair(std::string("left_c1"), std::string("right_c1"));
   auto join_columns = optional<std::pair<const std::string &, const std::string &>>(column_names);
-  auto join = std::make_shared<NestedLoopJoin>(_gt_a_dict, _gt_b, join_columns, "=", JoinMode::Inner);
+  auto join = std::make_shared<SortMergeJoin>(_gt_a_dict, _gt_b, join_columns, "=", JoinMode::Inner);
   join->execute();
   EXPECT_TABLE_EQ(join->get_output(), expected_result);
 }
-TEST_F(OperatorsNestedLoopJoinTest, InnerValueDictRefJoin) {
+TEST_F(OperatorsSortMergeJoinTest, InnerValueDictRefJoin) {
   _gt_a->execute();
   _gt_b_dict->execute();
 
@@ -254,11 +246,11 @@ TEST_F(OperatorsNestedLoopJoinTest, InnerValueDictRefJoin) {
   std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_inner_join.tbl", 1);
   auto column_names = std::make_pair(std::string("left_c1"), std::string("right_c1"));
   auto join_columns = optional<std::pair<const std::string &, const std::string &>>(column_names);
-  auto join = std::make_shared<NestedLoopJoin>(scan_a, scan_b, join_columns, "=", JoinMode::Inner);
+  auto join = std::make_shared<SortMergeJoin>(scan_a, scan_b, join_columns, "=", JoinMode::Inner);
   join->execute();
   EXPECT_TABLE_EQ(join->get_output(), expected_result);
 }
-TEST_F(OperatorsNestedLoopJoinTest, InnerDictValueRefJoin) {
+TEST_F(OperatorsSortMergeJoinTest, InnerDictValueRefJoin) {
   _gt_a_dict->execute();
   _gt_b->execute();
 
@@ -270,11 +262,11 @@ TEST_F(OperatorsNestedLoopJoinTest, InnerDictValueRefJoin) {
   std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_inner_join.tbl", 1);
   auto column_names = std::make_pair(std::string("left_c1"), std::string("right_c1"));
   auto join_columns = optional<std::pair<const std::string &, const std::string &>>(column_names);
-  auto join = std::make_shared<NestedLoopJoin>(scan_a, scan_b, join_columns, "=", JoinMode::Inner);
+  auto join = std::make_shared<SortMergeJoin>(scan_a, scan_b, join_columns, "=", JoinMode::Inner);
   join->execute();
   EXPECT_TABLE_EQ(join->get_output(), expected_result);
 }
-TEST_F(OperatorsNestedLoopJoinTest, InnerRefJoinFiltered) {
+TEST_F(OperatorsSortMergeJoinTest, InnerRefJoinFiltered) {
   _gt_a->execute();
   _gt_b->execute();
   auto scan_a = std::make_shared<TableScan>(_gt_a, "left_c1", ">", 1000);
@@ -284,21 +276,21 @@ TEST_F(OperatorsNestedLoopJoinTest, InnerRefJoinFiltered) {
   std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_inner_join_filtered.tbl", 1);
   auto column_names = std::make_pair(std::string("left_c1"), std::string("right_c1"));
   auto join_columns = optional<std::pair<const std::string &, const std::string &>>(column_names);
-  auto join = std::make_shared<NestedLoopJoin>(scan_a, scan_b, join_columns, "=", JoinMode::Inner);
+  auto join = std::make_shared<SortMergeJoin>(scan_a, scan_b, join_columns, "=", JoinMode::Inner);
   join->execute();
   EXPECT_TABLE_EQ(join->get_output(), expected_result);
 }
-TEST_F(OperatorsNestedLoopJoinTest, InnerDictJoin) {
+TEST_F(OperatorsSortMergeJoinTest, InnerDictJoin) {
   _gt_a_dict->execute();
   _gt_b_dict->execute();
   std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_inner_join.tbl", 1);
   auto column_names = std::make_pair(std::string("left_c1"), std::string("right_c1"));
   auto join_columns = optional<std::pair<const std::string &, const std::string &>>(column_names);
-  auto join = std::make_shared<NestedLoopJoin>(_gt_a_dict, _gt_b_dict, join_columns, "=", JoinMode::Inner);
+  auto join = std::make_shared<SortMergeJoin>(_gt_a_dict, _gt_b_dict, join_columns, "=", JoinMode::Inner);
   join->execute();
   EXPECT_TABLE_EQ(join->get_output(), expected_result);
 }
-TEST_F(OperatorsNestedLoopJoinTest, InnerRefDictJoin) {
+TEST_F(OperatorsSortMergeJoinTest, InnerRefDictJoin) {
   _gt_a_dict->execute();
   _gt_b_dict->execute();
 
@@ -310,11 +302,11 @@ TEST_F(OperatorsNestedLoopJoinTest, InnerRefDictJoin) {
   std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_inner_join.tbl", 1);
   auto column_names = std::make_pair(std::string("left_c1"), std::string("right_c1"));
   auto join_columns = optional<std::pair<const std::string &, const std::string &>>(column_names);
-  auto join = std::make_shared<NestedLoopJoin>(scan_a, scan_b, join_columns, "=", JoinMode::Inner);
+  auto join = std::make_shared<SortMergeJoin>(scan_a, scan_b, join_columns, "=", JoinMode::Inner);
   join->execute();
   EXPECT_TABLE_EQ(join->get_output(), expected_result);
 }
-TEST_F(OperatorsNestedLoopJoinTest, InnerRefDictJoinFiltered) {
+TEST_F(OperatorsSortMergeJoinTest, InnerRefDictJoinFiltered) {
   _gt_a_dict->execute();
   _gt_b_dict->execute();
   auto scan_a = std::make_shared<TableScan>(_gt_a_dict, "left_c1", ">", 1000);
@@ -324,21 +316,21 @@ TEST_F(OperatorsNestedLoopJoinTest, InnerRefDictJoinFiltered) {
   std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_inner_join_filtered.tbl", 1);
   auto column_names = std::make_pair(std::string("left_c1"), std::string("right_c1"));
   auto join_columns = optional<std::pair<const std::string &, const std::string &>>(column_names);
-  auto join = std::make_shared<NestedLoopJoin>(scan_a, scan_b, join_columns, "=", JoinMode::Inner);
+  auto join = std::make_shared<SortMergeJoin>(scan_a, scan_b, join_columns, "=", JoinMode::Inner);
   join->execute();
   EXPECT_TABLE_EQ(join->get_output(), expected_result);
 }
-TEST_F(OperatorsNestedLoopJoinTest, InnerJoinBig) {
+TEST_F(OperatorsSortMergeJoinTest, InnerJoinBig) {
   _gt_c->execute();
   _gt_d->execute();
   std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_string_inner_join.tbl", 1);
   auto column_names = std::make_pair(std::string("left_c1"), std::string("right_c1"));
   auto join_columns = optional<std::pair<const std::string &, const std::string &>>(column_names);
-  auto join = std::make_shared<NestedLoopJoin>(_gt_c, _gt_d, join_columns, "=", JoinMode::Inner);
+  auto join = std::make_shared<SortMergeJoin>(_gt_c, _gt_d, join_columns, "=", JoinMode::Inner);
   join->execute();
   EXPECT_TABLE_EQ(join->get_output(), expected_result);
 }
-TEST_F(OperatorsNestedLoopJoinTest, InnerRefJoinFilteredBig) {
+TEST_F(OperatorsSortMergeJoinTest, InnerRefJoinFilteredBig) {
   _gt_c->execute();
   _gt_d->execute();
   auto scan_c = std::make_shared<TableScan>(_gt_c, "left_c1", ">=", 0);
@@ -348,44 +340,44 @@ TEST_F(OperatorsNestedLoopJoinTest, InnerRefJoinFilteredBig) {
   std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_string_inner_join_filtered.tbl", 1);
   auto column_names = std::make_pair(std::string("left_c1"), std::string("right_c1"));
   auto join_columns = optional<std::pair<const std::string &, const std::string &>>(column_names);
-  auto join = std::make_shared<NestedLoopJoin>(scan_c, scan_d, join_columns, "=", JoinMode::Inner);
+  auto join = std::make_shared<SortMergeJoin>(scan_c, scan_d, join_columns, "=", JoinMode::Inner);
   join->execute();
   EXPECT_TABLE_EQ(join->get_output(), expected_result);
 }
 
-TEST_F(OperatorsNestedLoopJoinTest, DISABLED_OuterJoin) {
+TEST_F(OperatorsSortMergeJoinTest, DISABLED_OuterJoin) {
   std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_outer_join.tbl", 1);
   auto column_names = std::make_pair(std::string("left_c1"), std::string("right_c1"));
   auto join_columns = optional<std::pair<const std::string &, const std::string &>>(column_names);
-  auto join = std::make_shared<NestedLoopJoin>(_gt_a, _gt_b, join_columns, "=", JoinMode::Full_outer);
+  auto join = std::make_shared<SortMergeJoin>(_gt_a, _gt_b, join_columns, "=", JoinMode::Full_outer);
   join->execute();
   EXPECT_TABLE_EQ(join->get_output(), expected_result);
 }
 
 
 // This is not implemented yet.
-TEST_F(OperatorsNestedLoopJoinTest, DISABLED_NaturalJoin) {
+TEST_F(OperatorsSortMergeJoinTest, DISABLED_NaturalJoin) {
   _gt_a->execute();
   _gt_b->execute();
   std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_natural_join.tbl", 1);
   auto column_names = std::make_pair(std::string("left_c1"), std::string("right_c1"));
   auto join_columns = optional<std::pair<const std::string &, const std::string &>>(column_names);
-  auto join = std::make_shared<NestedLoopJoin>(_gt_a, _gt_b, join_columns, "=", Natural);
+  auto join = std::make_shared<SortMergeJoin>(_gt_a, _gt_b, join_columns, "=", Natural);
   join->execute();
   EXPECT_TABLE_EQ(join->get_output(), expected_result);
 }
-TEST_F(OperatorsNestedLoopJoinTest, SelfJoin) {
+TEST_F(OperatorsSortMergeJoinTest, SelfJoin) {
   std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_self_join.tbl", 1);
   auto column_names = std::make_pair(std::string("left_c1"), std::string("right_c1"));
   auto join_columns = optional<std::pair<const std::string &, const std::string &>>(column_names);
-  auto join = std::make_shared<NestedLoopJoin>(_gt_a, _gt_a, join_columns, "=", Self);
+  auto join = std::make_shared<SortMergeJoin>(_gt_a, _gt_a, join_columns, "=", Self);
   join->execute();
   EXPECT_TABLE_EQ(join->get_output(), expected_result);
 }
 */
 
 /*
-TEST_F(OperatorsNestedLoopJoinTest, SmallerInnerJoin) {
+TEST_F(OperatorsSortMergeJoinTest, SmallerInnerJoin) {
   std::shared_ptr<Table> expected_int_result =
       load_table("src/test/tables/joinoperators/int_smaller_inner_join.tbl", 1);
   std::shared_ptr<Table> expected_float_result =
@@ -394,18 +386,18 @@ TEST_F(OperatorsNestedLoopJoinTest, SmallerInnerJoin) {
   auto join_columns = optional<std::pair<const std::string &, const std::string &>>(column_names);
 
   // Joining two Integer Columns
-  auto join = std::make_shared<NestedLoopJoin>(_gt_a, _gt_b, join_columns, "<", JoinMode::Inner);
+  auto join = std::make_shared<SortMergeJoin>(_gt_a, _gt_b, join_columns, "<", JoinMode::Inner);
   join->execute();
   EXPECT_TABLE_EQ(join->get_output(), expected_int_result);
   auto column_names2 = std::make_pair(std::string("left_c2"), std::string("right_c2"));
   auto join_columns2 = optional<std::pair<const std::string &, const std::string &>>(column_names2);
 
   // Joining two Float Columns
-  join = std::make_shared<NestedLoopJoin>(_gt_a, _gt_b, join_columns2, "<", JoinMode::Inner);
+  join = std::make_shared<SortMergeJoin>(_gt_a, _gt_b, join_columns2, "<", JoinMode::Inner);
   join->execute();
   EXPECT_TABLE_EQ(join->get_output(), expected_float_result);
 }
-TEST_F(OperatorsNestedLoopJoinTest, SmallerEqualInnerJoin) {
+TEST_F(OperatorsSortMergeJoinTest, SmallerEqualInnerJoin) {
   std::shared_ptr<Table> expected_int_result =
       load_table("src/test/tables/joinoperators/int_smallerequal_inner_join.tbl", 1);
   std::shared_ptr<Table> expected_float_result =
@@ -414,18 +406,18 @@ TEST_F(OperatorsNestedLoopJoinTest, SmallerEqualInnerJoin) {
   auto join_columns = optional<std::pair<const std::string &, const std::string &>>(column_names);
 
   // Joining two Integer Columns
-  auto join = std::make_shared<NestedLoopJoin>(_gt_a, _gt_b, join_columns, "<=", JoinMode::Inner);
+  auto join = std::make_shared<SortMergeJoin>(_gt_a, _gt_b, join_columns, "<=", JoinMode::Inner);
   join->execute();
   EXPECT_TABLE_EQ(join->get_output(), expected_int_result);
   auto column_names2 = std::make_pair(std::string("left_c2"), std::string("right_c2"));
   auto join_columns2 = optional<std::pair<const std::string &, const std::string &>>(column_names2);
 
   // Joining two Float Columns
-  join = std::make_shared<NestedLoopJoin>(_gt_a, _gt_b, join_columns2, "<=", JoinMode::Inner);
+  join = std::make_shared<SortMergeJoin>(_gt_a, _gt_b, join_columns2, "<=", JoinMode::Inner);
   join->execute();
   EXPECT_TABLE_EQ(join->get_output(), expected_float_result);
 }
-TEST_F(OperatorsNestedLoopJoinTest, GreaterInnerJoin) {
+TEST_F(OperatorsSortMergeJoinTest, GreaterInnerJoin) {
   std::shared_ptr<Table> expected_int_result =
       load_table("src/test/tables/joinoperators/int_greater_inner_join.tbl", 1);
   std::shared_ptr<Table> expected_float_result =
@@ -434,7 +426,7 @@ TEST_F(OperatorsNestedLoopJoinTest, GreaterInnerJoin) {
   auto join_columns = optional<std::pair<const std::string &, const std::string &>>(column_names);
 
   // Joining two Integer Column
-  auto join = std::make_shared<NestedLoopJoin>(_gt_a, _gt_b, join_columns, ">", JoinMode::Inner);
+  auto join = std::make_shared<SortMergeJoin>(_gt_a, _gt_b, join_columns, ">", JoinMode::Inner);
   join->execute();
   EXPECT_TABLE_EQ(join->get_output(), expected_int_result);
 
@@ -442,11 +434,11 @@ TEST_F(OperatorsNestedLoopJoinTest, GreaterInnerJoin) {
   auto join_columns2 = optional<std::pair<const std::string &, const std::string &>>(column_names2);
 
   // Joining two Float Columns
-  join = std::make_shared<NestedLoopJoin>(_gt_a, _gt_b, join_columns2, ">", JoinMode::Inner);
+  join = std::make_shared<SortMergeJoin>(_gt_a, _gt_b, join_columns2, ">", JoinMode::Inner);
   join->execute();
   EXPECT_TABLE_EQ(join->get_output(), expected_float_result);
 }
-TEST_F(OperatorsNestedLoopJoinTest, GreaterEqualInnerJoin) {
+TEST_F(OperatorsSortMergeJoinTest, GreaterEqualInnerJoin) {
   std::shared_ptr<Table> expected_int_result =
       load_table("src/test/tables/joinoperators/int_greaterequal_inner_join.tbl", 1);
   std::shared_ptr<Table> expected_float_result =
@@ -455,18 +447,18 @@ TEST_F(OperatorsNestedLoopJoinTest, GreaterEqualInnerJoin) {
   auto join_columns = optional<std::pair<const std::string &, const std::string &>>(column_names);
 
   // Joining two Integer Columns
-  auto join = std::make_shared<NestedLoopJoin>(_gt_a, _gt_b, join_columns, ">=", JoinMode::Inner);
+  auto join = std::make_shared<SortMergeJoin>(_gt_a, _gt_b, join_columns, ">=", JoinMode::Inner);
   join->execute();
   EXPECT_TABLE_EQ(join->get_output(), expected_int_result);
   auto column_names2 = std::make_pair(std::string("left_c2"), std::string("right_c2"));
   auto join_columns2 = optional<std::pair<const std::string &, const std::string &>>(column_names2);
 
   // Joining two Float Columns
-  join = std::make_shared<NestedLoopJoin>(_gt_a, _gt_b, join_columns2, ">=", JoinMode::Inner);
+  join = std::make_shared<SortMergeJoin>(_gt_a, _gt_b, join_columns2, ">=", JoinMode::Inner);
   join->execute();
   EXPECT_TABLE_EQ(join->get_output(), expected_float_result);
 }
-TEST_F(OperatorsNestedLoopJoinTest, NotEqualInnerJoin) {
+TEST_F(OperatorsSortMergeJoinTest, NotEqualInnerJoin) {
   std::shared_ptr<Table> expected_int_result =
       load_table("src/test/tables/joinoperators/int_notequal_inner_join.tbl", 1);
   std::shared_ptr<Table> expected_float_result =
@@ -475,26 +467,26 @@ TEST_F(OperatorsNestedLoopJoinTest, NotEqualInnerJoin) {
   auto join_columns = optional<std::pair<const std::string &, const std::string &>>(column_names);
 
   // Joining two Integer Columns
-  auto join = std::make_shared<NestedLoopJoin>(_gt_a, _gt_b, join_columns, "!=", JoinMode::Inner);
+  auto join = std::make_shared<SortMergeJoin>(_gt_a, _gt_b, join_columns, "!=", JoinMode::Inner);
   join->execute();
   EXPECT_TABLE_EQ(join->get_output(), expected_int_result);
   auto column_names2 = std::make_pair(std::string("left_c2"), std::string("right_c2"));
   auto join_columns2 = optional<std::pair<const std::string &, const std::string &>>(column_names2);
 
   // Joining two Float Columns
-  join = std::make_shared<NestedLoopJoin>(_gt_a, _gt_b, join_columns2, "!=", JoinMode::Inner);
+  join = std::make_shared<SortMergeJoin>(_gt_a, _gt_b, join_columns2, "!=", JoinMode::Inner);
   join->execute();
   EXPECT_TABLE_EQ(join->get_output(), expected_float_result);
 }
-TEST_F(OperatorsNestedLoopJoinTest, JoinOnMixedValueAndDictionaryColumns) {
+TEST_F(OperatorsSortMergeJoinTest, JoinOnMixedValueAndDictionaryColumns) {
   std::shared_ptr<Table> expected_int_result = load_table("src/test/tables/int_inner_join.tbl", 1);
   auto column_names = std::make_pair(std::string("left_c1"), std::string("right_c1"));
   auto join_columns = optional<std::pair<const std::string &, const std::string &>>(column_names);
-  auto join = std::make_shared<NestedLoopJoin>(_gt_c_dict, _gt_b, join_columns, "=", JoinMode::Inner);
+  auto join = std::make_shared<SortMergeJoin>(_gt_c_dict, _gt_b, join_columns, "=", JoinMode::Inner);
   join->execute();
   EXPECT_TABLE_EQ(join->get_output(), expected_int_result);
 }
-TEST_F(OperatorsNestedLoopJoinTest, JoinOnMixedValueAndReferenceColumns) {
+TEST_F(OperatorsSortMergeJoinTest, JoinOnMixedValueAndReferenceColumns) {
   std::shared_ptr<Table> expected_int_result = load_table("src/test/tables/int_inner_join.tbl", 1);
 
   // scan that returns all rows
@@ -502,7 +494,7 @@ TEST_F(OperatorsNestedLoopJoinTest, JoinOnMixedValueAndReferenceColumns) {
   scan_a->execute();
   auto column_names = std::make_pair(std::string("left_c1"), std::string("right_c1"));
   auto join_columns = optional<std::pair<const std::string &, const std::string &>>(column_names);
-  auto join = std::make_shared<NestedLoopJoin>(scan_a, _gt_b, join_columns, "=", JoinMode::Inner);
+  auto join = std::make_shared<SortMergeJoin>(scan_a, _gt_b, join_columns, "=", JoinMode::Inner);
   join->execute();
   EXPECT_TABLE_EQ(join->get_output(), expected_int_result);
 }
