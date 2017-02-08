@@ -96,6 +96,7 @@ solution "opossum"
   configuration "Release"
     defines { "IS_DEBUG=0" }
     flags { "OptimizeSpeed" }
+    buildoptions { "-march=native" }
     prebuildcommands { "find src -iname \"*.cpp\" -o -iname \"*.hpp\" | xargs -I{} sh -c \"clang-format -i -style=file '{}'\"" }
 
 project "googletest"
