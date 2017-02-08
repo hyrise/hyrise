@@ -1,6 +1,7 @@
-image: dukeharris/opossum:16.10
+image: hyrise/opossum-ci:16.10
 
 before_script:
+  - ./install.sh
   - git submodule update --init
 
 stages:
