@@ -32,6 +32,10 @@ install via homebrew / packet manager
 ### googletest
 get via `git submodule update --init`
 
+### tbb
+install via homebrew: brew install tbb
+install via apt: apt-get install libtbb-dev
+
 ### llvm (optional)
 install via homebrew / packet manager
 used for AddressSanitizer
