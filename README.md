@@ -82,3 +82,26 @@ If you want to test a single module, class or test you have to execute the test 
 - Testing the table class: `./build/test --gtest_filter="StorageTableTest*"`
 - Testing the RowCount test: `./build/test --gtest_filter="StorageTableTest.RowCount"`
 
+## Maintainers
+
+Jan Kossmann
+Markus Dreseler
+Martin Boissier
+Stefan Klauck
+
+Contact: firstname.lastname@hpi.de
+
+## Contributors
+
+Arne Mayer
+Carsten Walther
+Daniel Stolpe
+David Schumann
+Fabian Wiebe
+Marvin Killing
+Max Jendruk
+Moritz Eyssen
+Nils Thamm
+Sven Lehmann
+Tim Zimmermann
+Torben Meyer
