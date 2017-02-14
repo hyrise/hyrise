@@ -304,12 +304,13 @@ class TableScan::TableScanImpl : public AbstractReadOnlyOperatorImpl, public Col
         throw std::logic_error("Unknown comparison type encountered");
     }
 
-    if (_type == OpEquals && column.value_by_value_id(search_vid) != _casted_value) {
+    if (_type == OpEquals && search_vid != INVALID_VALUE_ID && column.value_by_value_id(search_vid) != _casted_value) {
       // the value is not in the dictionary and cannot be in the table
       return;
     }
 
-    if (_type == OpNotEquals && column.value_by_value_id(search_vid) != _casted_value) {
+    if (_type == OpNotEquals && search_vid != INVALID_VALUE_ID &&
+        column.value_by_value_id(search_vid) != _casted_value) {
       // the value is not in the dictionary and cannot be in the table
       search_vid = INVALID_VALUE_ID;
     }

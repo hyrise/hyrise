@@ -174,4 +174,29 @@ TEST_F(OperatorsTableScanTest, ScanWeirdPosList) {
   EXPECT_TABLE_EQ(scan_1->get_output(), expected_result);
 }
 
+TEST_F(OperatorsTableScanTest, ScanOnDictColumnValueGreaterMaxDictionaryValue) {
+  // We compare column values with 30 which is greater than the greatest dictionary entry.
+  std::map<std::string, std::set<int>> tests;
+  tests["="] = {};
+  tests["!="] = {100, 102, 104, 106, 108, 110, 112, 114, 116, 118, 120, 122, 124};
+  tests["<"] = {100, 102, 104, 106, 108, 110, 112, 114, 116, 118, 120, 122, 124};
+  tests["<="] = {100, 102, 104, 106, 108, 110, 112, 114, 116, 118, 120, 122, 124};
+  tests[">"] = {};
+  tests[">="] = {};
+  tests["BETWEEN"] = {};
+  for (const auto& test : tests) {
+    auto scan = std::make_shared<TableScan>(_gt_even_dict, "a", test.first, 30, optional<AllTypeVariant>(34));
+    scan->execute();
+
+    auto expected_copy = test.second;
+    for (ChunkID chunk_id = 0; chunk_id < scan->get_output()->chunk_count(); ++chunk_id) {
+      auto& chunk = scan->get_output()->get_chunk(chunk_id);
+      for (ChunkOffset chunk_offset = 0; chunk_offset < chunk.size(); ++chunk_offset) {
+        EXPECT_EQ(expected_copy.erase(type_cast<int>((*chunk.get_column(1))[chunk_offset])), 1ull);
+      }
+    }
+    EXPECT_EQ(expected_copy.size(), 0ull);
+  }
+}
+
 }  // namespace opossum
