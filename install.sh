@@ -13,7 +13,7 @@ if echo $REPLY | grep -E '^[Yy]$' > /dev/null; then
         echo "Installing dependencies (this may take a while)..."
         if brew update >/dev/null; then
             # python2.7 is preinstalled on macOS
-            if brew install premake boost gcc clang-format gcovr; then
+            if brew install premake boost gcc clang-format gcovr tbb; then
                 if git submodule update --init; then
                     echo "Installation successful"
                 else
