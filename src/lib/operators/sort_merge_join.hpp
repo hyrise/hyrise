@@ -77,17 +77,16 @@ class SortMergeJoin : public AbstractOperator {
     void sort_left_partition(const std::vector<ChunkID> chunk_ids);
     void sort_right_table();
     void sort_right_partition(const std::vector<ChunkID> chunk_ids);
+
     template <typename T2>
     typename std::enable_if<std::is_arithmetic<T2>::value, size_t>::type get_radix(T2 value, size_t radix_bits) {
-      auto result = *reinterpret_cast<size_t*>(&value);
-      result = result & radix_bits;
-      return result;
+      auto result = reinterpret_cast<size_t*>(&value);
+      return *result & radix_bits;
     }
     template <typename T2>
     typename std::enable_if<!std::is_arithmetic<T2>::value, size_t>::type get_radix(T2 value, size_t radix_bits) {
-      auto result = *reinterpret_cast<size_t*>(const_cast<char*>(value.c_str()));
-      result = result & radix_bits;
-      return result;
+      auto result = reinterpret_cast<const size_t*>(value.c_str());
+      return *result & radix_bits;
     }
     // Looks for matches and possibly calls helper function to add match to _sort_merge_join._output
     void perform_join();
