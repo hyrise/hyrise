@@ -26,6 +26,9 @@ class OperatorsSortMergeJoinTest : public BaseTest {
     auto test_table_right = load_table("src/test/tables/nlj_right.tbl", 2);
     StorageManager::get().add_table("table_right", std::move(test_table_right));
 
+    auto test_table_right_small = load_table("src/test/tables/nlj_right_small.tbl", 8);
+    StorageManager::get().add_table("table_right_small", std::move(test_table_right_small));
+
     auto test_dict_table_right = load_table("src/test/tables/nlj_right.tbl", 2);
     test_dict_table_right->compress_chunk(0);
     test_dict_table_right->compress_chunk(1);
@@ -102,6 +105,21 @@ TEST_F(OperatorsSortMergeJoinTest, SortMergeJoin_ValueJoinDict) {
   auto gt_right = std::make_shared<GetTable>("dict_table_right");
   gt_right->execute();
   std::shared_ptr<Table> expected_result = load_table("src/test/tables/nlj_result.tbl", 1);
+  auto join_operator = std::make_shared<SortMergeJoin>(
+      gt_left, gt_right, std::pair<const std::string &, const std::string &>(left_c3, right_c3), "=", JoinMode::Inner);
+  join_operator->execute();
+
+  EXPECT_TABLE_EQ(join_operator->get_output(), expected_result);
+}
+
+TEST_F(OperatorsSortMergeJoinTest, SortMergeJoin_UnevenSize) {
+  const std::string left_c3 = "left_c3";
+  const std::string right_c3 = "right_c3";
+  auto gt_left = std::make_shared<GetTable>("table_left");
+  gt_left->execute();
+  auto gt_right = std::make_shared<GetTable>("table_right_small");
+  gt_right->execute();
+  std::shared_ptr<Table> expected_result = load_table("src/test/tables/nlj_result_uneven.tbl", 8);
   auto join_operator = std::make_shared<SortMergeJoin>(
       gt_left, gt_right, std::pair<const std::string &, const std::string &>(left_c3, right_c3), "=", JoinMode::Inner);
   join_operator->execute();
