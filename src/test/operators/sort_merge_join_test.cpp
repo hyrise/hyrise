@@ -126,7 +126,7 @@ TEST_F(OperatorsSortMergeJoinTest, SortMergeJoin_UnevenSize) {
 
   EXPECT_TABLE_EQ(join_operator->get_output(), expected_result);
 }
-/*
+
 TEST_F(OperatorsSortMergeJoinTest, ValueJoinRef) {
   const std::string left_c3 = "left_c3";
   const std::string right_c3 = "right_c3";
@@ -144,6 +144,8 @@ TEST_F(OperatorsSortMergeJoinTest, ValueJoinRef) {
 
   EXPECT_TABLE_EQ(join_operator->get_output(), expected_result);
 }
+
+/*
 
 TEST_F(OperatorsSortMergeJoinTest, ValueOuterJoinValue) {
   const std::string left_c3 = "left_c3";

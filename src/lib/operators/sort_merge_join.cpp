@@ -344,20 +344,20 @@ void SortMergeJoin::SortMergeJoinImpl<T>::build_output() {
                                          _sort_merge_join._input_left->column_type(column_id), false);
 
     // Check whether the column consists of reference columns
-    /* const auto r_column =
-    std::dynamic_pointer_cast<ReferenceColumn>(input_table->get_chunk(0).get_column(column_id));
+    const auto r_column =
+        std::dynamic_pointer_cast<ReferenceColumn>(_sort_merge_join._input_left->get_chunk(0).get_column(column_id));
     if (r_column) {
       // Create a pos_list referencing the original column
-      auto new_pos_list = dereference_pos_list(input_table, column_id, pos_list);
+      auto new_pos_list =
+          dereference_pos_list(_sort_merge_join._input_left, column_id, _sort_merge_join._pos_list_left);
       auto ref_column = std::make_shared<ReferenceColumn>(r_column->referenced_table(),
                                                           r_column->referenced_column_id(), new_pos_list);
-      _output->get_chunk(0).add_column(ref_column);
+      _sort_merge_join._output->get_chunk(0).add_column(ref_column);
     } else {
-    */
-    auto ref_column =
-        std::make_shared<ReferenceColumn>(_sort_merge_join._input_left, column_id, _sort_merge_join._pos_list_left);
-    _sort_merge_join._output->get_chunk(0).add_column(ref_column);
-    // }
+      auto ref_column =
+          std::make_shared<ReferenceColumn>(_sort_merge_join._input_left, column_id, _sort_merge_join._pos_list_left);
+      _sort_merge_join._output->get_chunk(0).add_column(ref_column);
+    }
   }
   // right_output
   for (size_t column_id = 0; column_id < _sort_merge_join._input_right->col_count(); column_id++) {
@@ -366,20 +366,20 @@ void SortMergeJoin::SortMergeJoinImpl<T>::build_output() {
                                          _sort_merge_join._input_right->column_type(column_id), false);
 
     // Check whether the column consists of reference columns
-    /* const auto r_column =
-    std::dynamic_pointer_cast<ReferenceColumn>(_sort_merge_join->_input_right->get_chunk(0).get_column(column_id));
+    const auto r_column =
+        std::dynamic_pointer_cast<ReferenceColumn>(_sort_merge_join._input_right->get_chunk(0).get_column(column_id));
     if (r_column) {
       // Create a pos_list referencing the original column
-      auto new_pos_list = dereference_pos_list(input_table, column_id, pos_list);
+      auto new_pos_list =
+          dereference_pos_list(_sort_merge_join._input_right, column_id, _sort_merge_join._pos_list_right);
       auto ref_column = std::make_shared<ReferenceColumn>(r_column->referenced_table(),
                                                           r_column->referenced_column_id(), new_pos_list);
-      _output->get_chunk(0).add_column(ref_column);
+      _sort_merge_join._output->get_chunk(0).add_column(ref_column);
     } else {
-    */
-    auto ref_column =
-        std::make_shared<ReferenceColumn>(_sort_merge_join._input_right, column_id, _sort_merge_join._pos_list_right);
-    _sort_merge_join._output->get_chunk(0).add_column(ref_column);
-    // }
+      auto ref_column =
+          std::make_shared<ReferenceColumn>(_sort_merge_join._input_right, column_id, _sort_merge_join._pos_list_right);
+      _sort_merge_join._output->get_chunk(0).add_column(ref_column);
+    }
   }
 }
 
@@ -394,6 +394,26 @@ void SortMergeJoin::SortMergeJoinImpl<T>::execute() {
 template <typename T>
 std::shared_ptr<Table> SortMergeJoin::SortMergeJoinImpl<T>::get_output() const {
   return _sort_merge_join._output;
+}
+
+template <typename T>
+std::shared_ptr<PosList> SortMergeJoin::SortMergeJoinImpl<T>::dereference_pos_list(
+    std::shared_ptr<const Table> input_table, size_t column_id, std::shared_ptr<const PosList> pos_list) {
+  // Get all the input pos lists so that we only have to pointer cast the columns once
+  auto input_pos_lists = std::vector<std::shared_ptr<const PosList>>();
+  for (ChunkID chunk_id = 0; chunk_id < input_table->chunk_count(); chunk_id++) {
+    auto b_column = input_table->get_chunk(chunk_id).get_column(column_id);
+    auto r_column = std::dynamic_pointer_cast<ReferenceColumn>(b_column);
+    input_pos_lists.push_back(r_column->pos_list());
+  }
+
+  // Get the row ids that are referenced
+  auto new_pos_list = std::make_shared<PosList>();
+  for (const auto& row : *pos_list) {
+    new_pos_list->push_back(input_pos_lists.at(row.chunk_id)->at(row.chunk_offset));
+  }
+
+  return new_pos_list;
 }
 
 template <typename T>
@@ -458,6 +478,7 @@ void SortMergeJoin::SortMergeJoinImpl<T>::handle_reference_column(ReferenceColum
   // Retrieve the columns from the referenced table so they only have to be casted once
   auto v_columns = std::vector<std::shared_ptr<ValueColumn<T>>>(referenced_table->chunk_count());
   auto d_columns = std::vector<std::shared_ptr<DictionaryColumn<T>>>(referenced_table->chunk_count());
+  std::cout << referenced_table->chunk_count() << std::endl;
   for (ChunkID chunk_id = 0; chunk_id < referenced_table->chunk_count(); chunk_id++) {
     v_columns[chunk_id] = std::dynamic_pointer_cast<ValueColumn<T>>(
         referenced_table->get_chunk(chunk_id).get_column(referenced_column_id));
@@ -471,9 +492,9 @@ void SortMergeJoin::SortMergeJoinImpl<T>::handle_reference_column(ReferenceColum
 
     // Dereference the value
     T value;
-    if (v_columns[chunk_offset]) {
+    if (v_columns[row_id.chunk_id]) {
       value = v_columns[row_id.chunk_id]->values()[row_id.chunk_offset];
-    } else if (d_columns[chunk_offset]) {
+    } else if (d_columns[row_id.chunk_id]) {
       ValueID value_id = d_columns[row_id.chunk_id]->attribute_vector()->get(row_id.chunk_offset);
       value = d_columns[row_id.chunk_id]->dictionary()->at(value_id);
     } else {

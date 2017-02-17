@@ -81,6 +81,9 @@ class SortMergeJoin : public AbstractOperator {
     // builds output based on pos_list_left/-_right
     void build_output();
 
+    std::shared_ptr<PosList> dereference_pos_list(std::shared_ptr<const Table> input_table, size_t column_id,
+                                                  std::shared_ptr<const PosList> pos_list);
+
     // ColumnVisitable implementation
     void handle_value_column(BaseColumn& column, std::shared_ptr<ColumnVisitableContext> context) override;
     void handle_dictionary_column(BaseColumn& column, std::shared_ptr<ColumnVisitableContext> context) override;
