@@ -140,7 +140,7 @@ void SortMergeJoin::SortMergeJoinImpl<T>::sort_left_table() {
   _sorted_left_table = std::make_shared<SortMergeJoin::SortMergeJoinImpl<T>::SortedTable>();
   _sorted_left_table->_partition.resize(_sort_merge_join._input_left->chunk_count());
   for (ChunkID chunk_id = 0; chunk_id < _sort_merge_join._input_left->chunk_count(); ++chunk_id) {
-    _sorted_left_table->_partition[chunk_id]._values.resize(_sort_merge_join._input_left->chunk_size());
+    _sorted_left_table->_partition[chunk_id]._values.resize(_sort_merge_join._input_left->get_chunk(chunk_id).size());
   }
 
   const uint32_t threshold = 100000;
@@ -209,7 +209,7 @@ void SortMergeJoin::SortMergeJoinImpl<T>::sort_right_table() {
   _sorted_right_table = std::make_shared<SortedTable>();
   _sorted_right_table->_partition.resize(_sort_merge_join._input_right->chunk_count());
   for (ChunkID chunk_id = 0; chunk_id < _sort_merge_join._input_right->chunk_count(); ++chunk_id) {
-    _sorted_right_table->_partition[chunk_id]._values.resize(_sort_merge_join._input_right->chunk_size());
+    _sorted_right_table->_partition[chunk_id]._values.resize(_sort_merge_join._input_right->get_chunk(chunk_id).size());
   }
 
   const uint32_t threshold = 100000;

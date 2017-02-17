@@ -1,0 +1,5 @@
+left_c1|left_c2|left_c3|right_c1|right_c2|right_c3
+int|float|int|int|float|int
+1|10.0|10|6|600.0|10
+5|50.0|50|2|200.0|50
+6|60.0|60|1|100.0|60
