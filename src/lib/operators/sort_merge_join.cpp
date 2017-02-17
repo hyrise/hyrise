@@ -4,6 +4,7 @@
 #include <memory>
 #include <string>
 #include <thread>
+#include <type_traits>
 #include <utility>
 #include <vector>
 
@@ -253,6 +254,49 @@ void SortMergeJoin::SortMergeJoinImpl<T>::sort_right_table() {
     }
   } else {
     // Do radix-partitioning here for _partition_count>1 partitions
+
+    std::vector<std::vector<std::pair<T, RowID>>> partitions;
+    partitions.resize(_partition_count);
+    // for prefix computation we need to table-wide know how many entries there are for each partition
+    for (uint8_t i = 0; i < _partition_count; ++i) {
+      _sorted_right_table->_histogram.insert(std::pair<uint8_t, uint32_t>(i, 0));
+    }
+
+    // Each chunk should prepare additional data to enable partitioning
+    for (auto& s_chunk : _sorted_right_table->_partition) {
+      for (uint8_t i = 0; i < _partition_count; ++i) {
+        s_chunk._histogram.insert(std::pair<uint8_t, uint32_t>(i, 0));
+        s_chunk._prefix.insert(std::pair<uint8_t, uint32_t>(i, 0));
+      }
+      // fill histogram
+      for (auto& entry : s_chunk._values) {
+        auto radix = get_radix<T>(entry.first, _partition_count - 1);
+        ++(s_chunk._histogram[radix]);
+      }
+    }
+
+    // Each chunk need to sequentially fill _prefix map to actually fill partition of tables in parallel
+    for (auto& s_chunk : _sorted_right_table->_partition) {
+      for (size_t radix = 0; radix < _partition_count; ++radix) {
+        s_chunk._prefix[radix] = _sorted_right_table->_histogram[radix];
+        _sorted_right_table->_histogram[radix] += s_chunk._histogram[radix];
+      }
+    }
+
+    // Each chunk fills (parallel) partition
+    for (auto& s_chunk : _sorted_right_table->_partition) {
+      for (auto& entry : s_chunk._values) {
+        auto radix = get_radix<T>(entry.first, _partition_count - 1);
+        partitions[radix].at(s_chunk._prefix[radix]++) = entry;
+      }
+    }
+
+    // move result to table
+    _sorted_right_table->_partition.clear();
+    _sorted_right_table->_partition.resize(partitions.size());
+    for (size_t index = 0; index < partitions.size(); ++index) {
+      _sorted_right_table->_partition[index]._values = partitions[index];
+    }
   }
   // Sort partitions (right now std:sort -> but maybe can be replaced with
   // an algorithm more efficient, if subparts are already sorted [InsertionSort?])
