@@ -46,7 +46,6 @@ void Delete::commit(const uint32_t cid) {
   }
 }
 
-
 void Delete::abort() {
   for (const auto& row_id : *_pos_list) {
     auto& chunk = _referenced_table->get_chunk(row_id.chunk_id);
