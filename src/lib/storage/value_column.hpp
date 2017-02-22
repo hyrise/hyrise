@@ -18,6 +18,11 @@ class ValueColumn : public BaseColumn {
  public:
   ValueColumn() = default;
 
+  /**
+   * This constructor shall only be used for testing purposes.
+   */
+  explicit ValueColumn(std::vector<T>&& values) : _values(std::move(values)) {}
+
   // return the value at a certain position. If you want to write efficient operators, back off!
   const AllTypeVariant operator[](const size_t i) const override { return _values.at(i); }
 

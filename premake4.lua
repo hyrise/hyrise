@@ -90,19 +90,29 @@ solution "opossum"
   configuration "Debug"
     defines { "IS_DEBUG=1" }
     flags { "Symbols" }
-    prebuildcommands { "find src -iname \"*.cpp\" -o -iname \"*.hpp\" | xargs -I{} sh -c \"clang-format -i -style=file '{}'\"" }
-      -- TODO Shouldn't this be part of the pre-commit hook? "make" should never touch the code
 
   configuration "Release"
     defines { "IS_DEBUG=0" }
     flags { "OptimizeSpeed" }
     buildoptions { "-march=native" }
+    
+  configuration "Debug or Release"
     prebuildcommands { "find src -iname \"*.cpp\" -o -iname \"*.hpp\" | xargs -I{} sh -c \"clang-format -i -style=file '{}'\"" }
+      -- TODO Shouldn't this be part of the pre-commit hook? "make" should never touch the code
 
 project "googletest"
   kind "StaticLib"
   files { "third_party/googletest/googletest/src/gtest-all.cc" }
   includedirs { "third_party/googletest/googletest", "third_party/googletest/googletest/include" }
+
+project "googlebenchmark"
+  kind "StaticLib"
+  buildoptions {"-O3"}
+  files { "third_party/benchmark/src/**.cc", "third_party/benchmark_fix/dummy.cc" }
+  includedirs { "third_party/benchmark/src", "third_party/benchmark/include" }
+
+  configuration "Debug or Release"
+    defines {"NDEBUG", "HAVE_STD_REGEX"}
 
 project "opossum"
   kind "StaticLib"
@@ -151,6 +161,14 @@ project "asan"
   buildoptions {"-fsanitize=address -fno-omit-frame-pointer"}
   linkoptions { "-fsanitize=address" }
   postbuildcommands { "./build/asan" }
+
+project "benchmark"
+  kind "ConsoleApp"
+
+  links { "opossum", "googlebenchmark" }
+  files { "src/benchmark/**.hpp", "src/benchmark/**.cpp" }
+  includedirs { "third_party/benchmark/include" }
+  --postbuildcommands { "./build/benchmark --benchmark_format=json > benchmark.json" }
 
 project "coverage"
   kind "ConsoleApp"
