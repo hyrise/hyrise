@@ -37,7 +37,6 @@ class GroupKeyIndexTest;
  *    | 7 |         5 |            |         |  |-------->  7 |  ie "inbox" can be found at i = 7 in the AV
  *    +---+-----------+------------+---------+----------------+
  */
-template <typename ColumnType>
 class GroupKeyIndex : public BaseIndex {
   friend class GroupKeyIndexTest;
 
@@ -50,9 +49,10 @@ class GroupKeyIndex : public BaseIndex {
   GroupKeyIndex(GroupKeyIndex &&) = default;
   GroupKeyIndex &operator=(GroupKeyIndex &&) = default;
 
-  explicit GroupKeyIndex(std::shared_ptr<BaseColumn> column)
-      : BaseIndex({column}), _index_column(std::dynamic_pointer_cast<DictionaryColumn<ColumnType>>(column)) {
+  explicit GroupKeyIndex(const std::vector<std::shared_ptr<BaseColumn>> index_columns)
+      : BaseIndex(index_columns), _index_column(std::dynamic_pointer_cast<UntypedDictionaryColumn>(_index_columns[0])) {
     if (!_index_column) throw std::runtime_error("GroupKeyIndex only works with DictionaryColumns");
+    if (_index_columns.size() != 1) throw std::runtime_error("GroupKeyIndex only works with a single column");
 
     // 1) Initialize the index structures
     // 1a) Set the index_offset to size of the dictionary + 1 (plus one to mark the ending position) and set all offsets
@@ -62,7 +62,7 @@ class GroupKeyIndex : public BaseIndex {
     _index_postings = std::vector<ChunkOffset>(_index_column->size());
 
     // 2) Count the occurrences of value-ids: Iterate once over the attribute vector (ie value ids) and count the
-    // occurrences of each value id at their respective position in the dictionary ie the position in the
+    // occurrences of each value id at their respective position in the dictionary, ie the position in the
     // _index_offsets
     for (ChunkOffset offset = 0; offset < _index_column->size(); ++offset) {
       auto value_id = _index_column->attribute_vector()->get(offset);
@@ -91,14 +91,14 @@ class GroupKeyIndex : public BaseIndex {
   Iterator _lower_bound(const std::vector<AllTypeVariant> &values) const final {
     if (values.size() != 1) throw std::runtime_error("Group Key Index expects only one input value");
 
-    ValueID value_id = _index_column->lower_bound(type_cast<ColumnType>(*values.begin()));
+    ValueID value_id = _index_column->lower_bound(*values.begin());
     return _get_postings_iterator_at(value_id);
   };
 
   Iterator _upper_bound(const std::vector<AllTypeVariant> &values) const final {
     if (values.size() != 1) throw std::runtime_error("Group Key Index expects only one input value");
 
-    ValueID value_id = _index_column->upper_bound(type_cast<ColumnType>(*values.begin()));
+    ValueID value_id = _index_column->upper_bound(*values.begin());
     return _get_postings_iterator_at(value_id);
   };
 
@@ -124,7 +124,7 @@ class GroupKeyIndex : public BaseIndex {
   }
 
  private:
-  const std::shared_ptr<DictionaryColumn<ColumnType>> _index_column;
+  const std::shared_ptr<UntypedDictionaryColumn> _index_column;
   std::vector<std::size_t> _index_offsets;   // maps value-ids to offsets in _index_postings
   std::vector<ChunkOffset> _index_postings;  // records positions in the attribute vector
 };

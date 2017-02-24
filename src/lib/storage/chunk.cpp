@@ -81,13 +81,6 @@ const Chunk::MvccColumns& Chunk::mvcc_columns() const {
   return *_mvcc_columns;
 }
 
-std::shared_ptr<BaseIndex> Chunk::create_index(std::shared_ptr<BaseColumn> index_column,
-                                               const std::string& column_type) {
-  auto index = make_shared_by_column_type<BaseIndex, GroupKeyIndex>(column_type, index_column);
-  _indices.emplace_back(index);
-  return index;
-}
-
 std::vector<std::shared_ptr<BaseIndex>> Chunk::get_indices_for(
     const std::vector<std::shared_ptr<BaseColumn>>& columns) const {
   auto result = std::vector<std::shared_ptr<BaseIndex>>();

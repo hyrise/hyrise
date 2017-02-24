@@ -16,15 +16,16 @@
 
 namespace opossum {
 
+template <typename DerivedIndex>
 class IndexTest : public BaseTest {
  protected:
   void SetUp() override {
     dict_col_int = BaseTest::create_dict_column_by_type<int>("int", {3, 4, 0, 4, 2, 7, 8, 1, 4, 9});
-    index_int = make_shared_by_column_type<BaseIndex, GroupKeyIndex>("int", dict_col_int);
+    index_int = std::make_shared<DerivedIndex>(std::vector<std::shared_ptr<BaseColumn>>({dict_col_int}));
 
     dict_col_str =
         BaseTest::create_dict_column_by_type<std::string>("string", {"hello", "world", "test", "foo", "bar", "foo"});
-    index_str = make_shared_by_column_type<BaseIndex, GroupKeyIndex>("string", dict_col_str);
+    index_str = std::make_shared<DerivedIndex>(std::vector<std::shared_ptr<BaseColumn>>({dict_col_str}));
   }
 
   template <class Iterator>
@@ -42,23 +43,27 @@ class IndexTest : public BaseTest {
   std::shared_ptr<BaseColumn> dict_col_str = nullptr;
 };
 
-TEST_F(IndexTest, FullRange) {
-  auto begin_int = index_int->begin();
-  auto end_int = index_int->end();
-  auto result_values_int = result_as_vector(dict_col_int, begin_int, end_int);
+// List of indices to test
+typedef ::testing::Types<GroupKeyIndex /* add further indices */> DerivedIndices;
+TYPED_TEST_CASE(IndexTest, DerivedIndices);
+
+TYPED_TEST(IndexTest, FullRange) {
+  auto begin_int = this->index_int->begin();
+  auto end_int = this->index_int->end();
+  auto result_values_int = this->result_as_vector(this->dict_col_int, begin_int, end_int);
   auto expected_values_int = std::vector<AllTypeVariant>{0, 1, 2, 3, 4, 4, 4, 7, 8, 9};
   EXPECT_EQ(expected_values_int, result_values_int);
 
-  auto begin_str = index_str->begin();
-  auto end_str = index_str->end();
-  auto result_values_str = result_as_vector(dict_col_str, begin_str, end_str);
+  auto begin_str = this->index_str->begin();
+  auto end_str = this->index_str->end();
+  auto result_values_str = this->result_as_vector(this->dict_col_str, begin_str, end_str);
   auto expected_values_str = std::vector<AllTypeVariant>{"bar", "foo", "foo", "hello", "test", "world"};
   EXPECT_EQ(expected_values_str, result_values_str);
 }
 
-TEST_F(IndexTest, PointQueryWithSingleReturnValue) {
-  auto begin = index_int->lower_bound({3});
-  auto end = index_int->upper_bound({3});
+TYPED_TEST(IndexTest, PointQueryWithSingleReturnValue) {
+  auto begin = this->index_int->lower_bound({3});
+  auto end = this->index_int->upper_bound({3});
 
   auto result = std::set<std::size_t>(begin, end);
   auto expected = std::set<std::size_t>{0};
@@ -66,30 +71,30 @@ TEST_F(IndexTest, PointQueryWithSingleReturnValue) {
   EXPECT_EQ(expected, result);
 }
 
-TEST_F(IndexTest, PointQueryWithNoReturnValue) {
-  auto begin = index_int->lower_bound({5});
-  auto end = index_int->upper_bound({5});
+TYPED_TEST(IndexTest, PointQueryWithNoReturnValue) {
+  auto begin = this->index_int->lower_bound({5});
+  auto end = this->index_int->upper_bound({5});
 
   auto result = std::set<std::size_t>(begin, end);
   auto expected = std::set<std::size_t>{};
   EXPECT_EQ(expected, result);
 }
 
-TEST_F(IndexTest, PointQueryWithMultipleReturnValues) {
-  auto begin = index_int->lower_bound({4});
-  auto end = index_int->upper_bound({4});
+TYPED_TEST(IndexTest, PointQueryWithMultipleReturnValues) {
+  auto begin = this->index_int->lower_bound({4});
+  auto end = this->index_int->upper_bound({4});
 
   auto result = std::set<std::size_t>(begin, end);
   auto expected = std::set<std::size_t>{1, 3, 8};
   EXPECT_EQ(expected, result);
 }
 
-TEST_F(IndexTest, RangeQuery) {
-  auto begin = index_int->lower_bound({1});
-  auto end = index_int->upper_bound({3});
+TYPED_TEST(IndexTest, RangeQuery) {
+  auto begin = this->index_int->lower_bound({1});
+  auto end = this->index_int->upper_bound({3});
 
   auto result_positions = std::set<std::size_t>(begin, end);
-  auto result_values = result_as_vector(dict_col_int, begin, end);
+  auto result_values = this->result_as_vector(this->dict_col_int, begin, end);
 
   auto expected_positions = std::set<std::size_t>{0, 4, 7};
   auto expected_values = std::vector<AllTypeVariant>{1, 2, 3};
@@ -98,68 +103,68 @@ TEST_F(IndexTest, RangeQuery) {
   EXPECT_EQ(expected_values, result_values);
 }
 
-TEST_F(IndexTest, RangeQueryBelow) {
-  auto begin = index_int->lower_bound({-3});
-  auto end = index_int->upper_bound({-1});
+TYPED_TEST(IndexTest, RangeQueryBelow) {
+  auto begin = this->index_int->lower_bound({-3});
+  auto end = this->index_int->upper_bound({-1});
 
   auto result = std::set<std::size_t>(begin, end);
   auto expected = std::set<std::size_t>{};
   EXPECT_EQ(expected, result);
 }
 
-TEST_F(IndexTest, RangeQueryPartiallyBelow) {
-  auto begin = index_int->lower_bound({-3});
-  auto end = index_int->upper_bound({1});
+TYPED_TEST(IndexTest, RangeQueryPartiallyBelow) {
+  auto begin = this->index_int->lower_bound({-3});
+  auto end = this->index_int->upper_bound({1});
 
   auto result = std::set<std::size_t>(begin, end);
   auto expected = std::set<std::size_t>{2, 7};
   EXPECT_EQ(expected, result);
 }
 
-TEST_F(IndexTest, RangeQueryAbove) {
-  auto begin = index_int->lower_bound({10});
-  auto end = index_int->upper_bound({13});
+TYPED_TEST(IndexTest, RangeQueryAbove) {
+  auto begin = this->index_int->lower_bound({10});
+  auto end = this->index_int->upper_bound({13});
 
   auto result = std::set<std::size_t>(begin, end);
   auto expected = std::set<std::size_t>{};
   EXPECT_EQ(expected, result);
 }
 
-TEST_F(IndexTest, RangeQueryPartiallyAbove) {
-  auto begin = index_int->lower_bound({8});
-  auto end = index_int->upper_bound({13});
+TYPED_TEST(IndexTest, RangeQueryPartiallyAbove) {
+  auto begin = this->index_int->lower_bound({8});
+  auto end = this->index_int->upper_bound({13});
 
   auto result = std::set<std::size_t>(begin, end);
   auto expected = std::set<std::size_t>{6, 9};
   EXPECT_EQ(expected, result);
 }
 
-TEST_F(IndexTest, RangeQueryOpenEnd) {
-  auto begin = index_int->lower_bound({8});
-  auto end = index_int->end();
+TYPED_TEST(IndexTest, RangeQueryOpenEnd) {
+  auto begin = this->index_int->lower_bound({8});
+  auto end = this->index_int->end();
 
   auto result = std::set<std::size_t>(begin, end);
   auto expected = std::set<std::size_t>{6, 9};
   EXPECT_EQ(expected, result);
 }
 
-TEST_F(IndexTest, RangeQueryOpenBegin) {
-  auto begin = index_int->begin();
-  auto end = index_int->upper_bound({1});
+TYPED_TEST(IndexTest, RangeQueryOpenBegin) {
+  auto begin = this->index_int->begin();
+  auto end = this->index_int->upper_bound({1});
 
   auto result = std::set<std::size_t>(begin, end);
   auto expected = std::set<std::size_t>{2, 7};
   EXPECT_EQ(expected, result);
 }
 
-TEST_F(IndexTest, IsIndexForTest) {
-  EXPECT_TRUE(index_int->is_index_for({dict_col_int}));
-  EXPECT_TRUE(index_str->is_index_for({dict_col_str}));
+TYPED_TEST(IndexTest, IsIndexForTest) {
+  EXPECT_TRUE(this->index_int->is_index_for({this->dict_col_int}));
+  EXPECT_TRUE(this->index_str->is_index_for({this->dict_col_str}));
 
-  EXPECT_FALSE(index_int->is_index_for({dict_col_str}));
-  EXPECT_FALSE(index_str->is_index_for({dict_col_int}));
-  EXPECT_FALSE(index_str->is_index_for({dict_col_str, dict_col_int}));
-  EXPECT_FALSE(index_str->is_index_for({}));
+  EXPECT_FALSE(this->index_int->is_index_for({this->dict_col_str}));
+  EXPECT_FALSE(this->index_str->is_index_for({this->dict_col_int}));
+  EXPECT_FALSE(this->index_str->is_index_for({this->dict_col_str, this->dict_col_int}));
+  EXPECT_FALSE(this->index_str->is_index_for({}));
 }
 
 }  // namespace opossum

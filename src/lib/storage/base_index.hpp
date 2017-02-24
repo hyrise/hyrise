@@ -2,7 +2,6 @@
 
 #include <algorithm>
 #include <memory>
-#include <tuple>
 #include <vector>
 
 #include "../types.hpp"
@@ -119,7 +118,6 @@ class BaseIndex {
   virtual Iterator _begin() const = 0;
   virtual Iterator _end() const = 0;
 
- private:
   std::vector<std::shared_ptr<BaseColumn>> _index_columns;
 };
 }  // namespace opossum

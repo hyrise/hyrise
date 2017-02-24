@@ -12,12 +12,14 @@
 #include "../../lib/operators/get_table.hpp"
 #include "../../lib/operators/index_column_scan.hpp"
 #include "../../lib/operators/print.hpp"
+#include "../../lib/storage/group_key_index.hpp"
 #include "../../lib/storage/storage_manager.hpp"
 #include "../../lib/storage/table.hpp"
 #include "../../lib/types.hpp"
 
 namespace opossum {
 
+template <typename DerivedIndex>
 class OperatorsIndexColumnScanTest : public BaseTest {
  protected:
   void SetUp() override {
@@ -30,7 +32,7 @@ class OperatorsIndexColumnScanTest : public BaseTest {
     test_table_dict->add_column("b", "int");
     for (int i = 0; i <= 24; i += 2) test_table_dict->append({i, 100 + i});
     test_table_dict->compress_chunk(0);
-    test_table_dict->get_chunk(0).create_index(test_table_dict->get_chunk(0).get_column(0), "int");
+    test_table_dict->get_chunk(0).create_index<DerivedIndex>(test_table_dict->get_chunk(0).get_column(0));
     test_table_dict->compress_chunk(1);
     StorageManager::get().add_table("table_dict", std::move(test_table_dict));
 
@@ -43,33 +45,37 @@ class OperatorsIndexColumnScanTest : public BaseTest {
   std::shared_ptr<GetTable> _gt, _gt_dict;
 };
 
-TEST_F(OperatorsIndexColumnScanTest, DoubleScan) {
-  std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_float_filtered.tbl", 2);
+// List of indices to test
+typedef ::testing::Types<GroupKeyIndex /* add further indices */> DerivedIndices;
+TYPED_TEST_CASE(OperatorsIndexColumnScanTest, DerivedIndices);
 
-  auto scan_1 = std::make_shared<IndexColumnScan>(_gt, "a", ">=", 1234);
+TYPED_TEST(OperatorsIndexColumnScanTest, DoubleScan) {
+  std::shared_ptr<Table> expected_result = this->load_table("src/test/tables/int_float_filtered.tbl", 2);
+
+  auto scan_1 = std::make_shared<IndexColumnScan>(this->_gt, "a", ">=", 1234);
   scan_1->execute();
 
   auto scan_2 = std::make_shared<IndexColumnScan>(scan_1, "b", "<", 457.9);
   scan_2->execute();
 
-  EXPECT_TABLE_EQ(scan_2->get_output(), expected_result);
+  this->EXPECT_TABLE_EQ(scan_2->get_output(), expected_result);
 }
 
-TEST_F(OperatorsIndexColumnScanTest, SingleScan) {
-  std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_float_filtered2.tbl", 1);
+TYPED_TEST(OperatorsIndexColumnScanTest, SingleScan) {
+  std::shared_ptr<Table> expected_result = this->load_table("src/test/tables/int_float_filtered2.tbl", 1);
 
-  auto scan = std::make_shared<IndexColumnScan>(_gt, "a", ">=", 1234);
+  auto scan = std::make_shared<IndexColumnScan>(this->_gt, "a", ">=", 1234);
   scan->execute();
 
-  EXPECT_TABLE_EQ(scan->get_output(), expected_result);
+  this->EXPECT_TABLE_EQ(scan->get_output(), expected_result);
 }
 
-TEST_F(OperatorsIndexColumnScanTest, UnknownOperatorThrowsException) {
-  auto table_scan = std::make_shared<IndexColumnScan>(_gt, "a", "?!?", 1234);
+TYPED_TEST(OperatorsIndexColumnScanTest, UnknownOperatorThrowsException) {
+  auto table_scan = std::make_shared<IndexColumnScan>(this->_gt, "a", "?!?", 1234);
   EXPECT_THROW(table_scan->execute(), std::runtime_error);
 }
 
-TEST_F(OperatorsIndexColumnScanTest, ScanOnDictColumn) {
+TYPED_TEST(OperatorsIndexColumnScanTest, ScanOnDictColumn) {
   // we do not need to check for a non existing value, because that happens automatically when we scan the second chunk
 
   std::map<std::string, std::set<int>> tests;
@@ -81,7 +87,7 @@ TEST_F(OperatorsIndexColumnScanTest, ScanOnDictColumn) {
   tests[">="] = {104, 106, 108, 110, 112, 114, 116, 118, 120, 122, 124};
   tests["BETWEEN"] = {104, 106, 108};
   for (const auto& test : tests) {
-    auto scan = std::make_shared<IndexColumnScan>(_gt_dict, "a", test.first, 4, optional<AllTypeVariant>(9));
+    auto scan = std::make_shared<IndexColumnScan>(this->_gt_dict, "a", test.first, 4, optional<AllTypeVariant>(9));
     scan->execute();
 
     auto expected_copy = test.second;
@@ -95,7 +101,7 @@ TEST_F(OperatorsIndexColumnScanTest, ScanOnDictColumn) {
   }
 }
 
-TEST_F(OperatorsIndexColumnScanTest, ScanOnReferencedDictColumn) {
+TYPED_TEST(OperatorsIndexColumnScanTest, ScanOnReferencedDictColumn) {
   // we do not need to check for a non existing value, because that happens automatically when we scan the second chunk
 
   std::map<std::string, std::set<int>> tests;
@@ -107,7 +113,7 @@ TEST_F(OperatorsIndexColumnScanTest, ScanOnReferencedDictColumn) {
   tests[">="] = {104, 106};
   tests["BETWEEN"] = {104, 106};
   for (const auto& test : tests) {
-    auto scan1 = std::make_shared<IndexColumnScan>(_gt_dict, "b", "<", 108);
+    auto scan1 = std::make_shared<IndexColumnScan>(this->_gt_dict, "b", "<", 108);
     scan1->execute();
 
     auto scan2 = std::make_shared<IndexColumnScan>(scan1, "a", test.first, 4, optional<AllTypeVariant>(9));

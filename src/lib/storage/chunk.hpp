@@ -62,10 +62,15 @@ class Chunk {
 
   void set_mvcc_column_size(size_t new_size, uint32_t begin_cid);
 
-  std::shared_ptr<BaseIndex> create_index(std::shared_ptr<BaseColumn> index_column, const std::string &column_type);
-
   std::vector<std::shared_ptr<BaseIndex>> get_indices_for(
       const std::vector<std::shared_ptr<BaseColumn>> &columns) const;
+
+  template <typename Index>
+  std::shared_ptr<BaseIndex> create_index(std::shared_ptr<BaseColumn> index_column) {
+    auto index = std::make_shared<Index>(std::vector<std::shared_ptr<BaseColumn>>({index_column}));
+    _indices.emplace_back(index);
+    return index;
+  }
 
  protected:
   std::vector<std::shared_ptr<BaseColumn>> _columns;
