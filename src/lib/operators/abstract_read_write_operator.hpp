@@ -31,7 +31,7 @@ class AbstractReadWriteOperator : public AbstractOperator {
    * The execution may fail if the operator attempts to lock rows that have been locked by other operators.
    * In that case, execute_failed returns true after on_execute has returned.
    *
-   * @returns nullptr
+   * @returns nullptr, since these operators do not create new intermediate results but modify existing tables
    */
   std::shared_ptr<const Table> on_execute(const TransactionContext* context) override = 0;
 
