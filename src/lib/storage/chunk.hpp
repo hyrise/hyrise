@@ -65,7 +65,7 @@ class Chunk {
 
   // moves the mvcc columns from chunk to this instance
   // not thread-safe
-  void retrieve_mvcc_columns(Chunk &chunk);
+  void move_mvcc_columns(Chunk &chunk);
 
  protected:
   std::vector<std::shared_ptr<BaseColumn>> _columns;

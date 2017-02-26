@@ -74,7 +74,7 @@ void Table::compress_chunk(ChunkID chunk_id) {
     new_chunk.add_column(std::move(dict_col));
   }
 
-  new_chunk.retrieve_mvcc_columns(old_chunk);
+  new_chunk.move_mvcc_columns(old_chunk);
   new_chunk.compress_mvcc_columns();
   _chunks[chunk_id] = std::move(new_chunk);
 }
