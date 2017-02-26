@@ -103,7 +103,6 @@ void Chunk::compress_mvcc_columns() {
 
 void Chunk::move_mvcc_columns_from(Chunk& chunk) {
   _mvcc_columns = std::move(chunk._mvcc_columns);
-  chunk._mvcc_columns = nullptr;
 }
 
 }  // namespace opossum
