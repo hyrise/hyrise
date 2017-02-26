@@ -29,7 +29,7 @@ class Delete : public AbstractReadWriteOperator {
   /**
    * Validates the context and the input table
    */
-  bool execution_input_valid(const TransactionContext* context) const;
+  bool _execution_input_valid(const TransactionContext* context) const;
 
  private:
   std::shared_ptr<const PosList> _pos_list;
