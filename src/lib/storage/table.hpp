@@ -71,6 +71,7 @@ class Table {
   RowID calculate_row_id(ChunkID chunk, ChunkOffset offset) const { return RowID{chunk, offset}; }
 
   // enforces dictionary compression on a certain chunk
+  // not thread-safe
   void compress_chunk(ChunkID chunk_id);
 
   std::unique_ptr<std::mutex> append_mtx;

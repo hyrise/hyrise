@@ -82,17 +82,15 @@ const Chunk::MvccColumns& Chunk::mvcc_columns() const {
 void Chunk::compress_mvcc_columns() {
 #ifdef IS_DEBUG
   if (!has_mvcc_columns()) {
-    std::logic_error("Chunk does not have mvcc columns");
+    std::logic_error("Chunk does not have mvcc columns.");
   }
 #endif
 
   auto new_columns = std::make_unique<MvccColumns>();
 
-  new_columns->tids.resize(_mvcc_columns->tids.size());
-
-  for (auto i = 0u; i < _mvcc_columns->tids.size(); ++i) {
-    new_columns->tids[i] = _mvcc_columns->tids[i].load();
-  }
+  // since this method should only be called if nobody else
+  // is accessing the chunk, all tids must 0 and don't need to be copied
+  new_columns->tids.grow_by(_mvcc_columns->tids.size());
 
   _mvcc_columns->begin_cids.shrink_to_fit();
   _mvcc_columns->end_cids.shrink_to_fit();
