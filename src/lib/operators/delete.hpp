@@ -21,6 +21,9 @@ class Delete : public AbstractReadWriteOperator {
   uint8_t num_in_tables() const override;
 
  private:
+  bool execution_input_valid(const TransactionContext* context) const;
+
+ private:
   std::shared_ptr<const PosList> _pos_list;
   std::shared_ptr<Table> _referenced_table;
   uint32_t _tid;
