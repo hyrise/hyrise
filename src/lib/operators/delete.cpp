@@ -31,6 +31,7 @@ std::shared_ptr<const Table> Delete::on_execute(const TransactionContext* contex
     _execute_failed =
         !referenced_chunk.mvcc_columns().tids[row_id.chunk_offset].compare_exchange_strong(expected, _transaction_id);
 
+    // the row is already locked and the transaction needs to be aborted
     if (_execute_failed) return nullptr;
   }
 
@@ -52,8 +53,8 @@ void Delete::abort() {
 
     auto expected = _transaction_id;
 
-    // only resets records that have been locked by this operator
-    // we don't want to unlock records locked by other transactions
+    // unlocks all rows locked in on_execute until the operator encountered
+    // a row that had already been locked by another transaction
     const auto result = chunk.mvcc_columns().tids[row_id.chunk_offset].compare_exchange_strong(expected, 0u);
 
     if (!result) return;
