@@ -35,9 +35,11 @@ bool CommitContext::has_next() const {
 std::shared_ptr<CommitContext> CommitContext::next() { return std::atomic_load(&_next); }
 
 bool CommitContext::try_set_next(const std::shared_ptr<CommitContext>& next) {
+#ifdef IS_DEBUG
   if (next->commit_id() != commit_id() + 1u) {
     throw std::logic_error("Next commit context's commit id needs to be incremented by 1.");
   }
+#endif
 
   if (has_next()) return false;
 
