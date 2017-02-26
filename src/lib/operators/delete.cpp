@@ -22,14 +22,14 @@ std::shared_ptr<const Table> Delete::on_execute(const TransactionContext* contex
 
   _pos_list = first_column->pos_list();
   _referenced_table = std::const_pointer_cast<Table>(first_column->referenced_table());
-  _tid = context->transaction_id();
+  _transaction_id = context->transaction_id();
 
   for (const auto& row_id : *_pos_list) {
     auto& referenced_chunk = _referenced_table->get_chunk(row_id.chunk_id);
 
     auto expected = 0u;
     _execute_failed =
-        !referenced_chunk.mvcc_columns().tids[row_id.chunk_offset].compare_exchange_strong(expected, _tid);
+        !referenced_chunk.mvcc_columns().tids[row_id.chunk_offset].compare_exchange_strong(expected, _transaction_id);
 
     if (_execute_failed) return nullptr;
   }
@@ -50,7 +50,7 @@ void Delete::abort() {
   for (const auto& row_id : *_pos_list) {
     auto& chunk = _referenced_table->get_chunk(row_id.chunk_id);
 
-    auto expected = _tid;
+    auto expected = _transaction_id;
 
     // only resets records that have been locked by this operator
     // we don't want to unlock records locked by other transactions

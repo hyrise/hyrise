@@ -8,6 +8,11 @@
 
 namespace opossum {
 
+/**
+ * Operator that deletes a number of rows from one table.
+ * Expects a table with one chunk referencing only one table which
+ * is passed via the AbstractOperator in the constructor.
+ */
 class Delete : public AbstractReadWriteOperator {
  public:
   explicit Delete(const std::shared_ptr<const AbstractOperator>& op);
@@ -21,11 +26,14 @@ class Delete : public AbstractReadWriteOperator {
   uint8_t num_in_tables() const override;
 
  private:
+  /**
+   * Validates the context and the input table
+   */
   bool execution_input_valid(const TransactionContext* context) const;
 
  private:
   std::shared_ptr<const PosList> _pos_list;
   std::shared_ptr<Table> _referenced_table;
-  uint32_t _tid;
+  uint32_t _transaction_id;
 };
 }  // namespace opossum
