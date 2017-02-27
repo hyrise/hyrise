@@ -44,7 +44,7 @@ class SortMergeJoin : public AbstractOperator {
   template <typename T>
   class SortMergeJoinImpl : public AbstractOperatorImpl, public ColumnVisitable {
    protected:
-    size_t _partition_count = 1;
+    size_t _partition_count = 4;
 
    public:
     SortMergeJoinImpl<T>(SortMergeJoin& sort_merge_join);
@@ -73,6 +73,8 @@ class SortMergeJoin : public AbstractOperator {
     };
 
     // Sort functions
+    void sort_table(bool left);
+    void sort_partition(const std::vector<ChunkID> chunk_ids, bool left);
     void sort_left_table();
     void sort_left_partition(const std::vector<ChunkID> chunk_ids);
     void sort_right_table();

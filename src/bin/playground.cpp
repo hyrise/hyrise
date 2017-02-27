@@ -30,7 +30,7 @@ void compress_table(std::shared_ptr<opossum::Table> table);
 int main(int argc, char *argv[]) {
   // Configuration
   size_t chunk_size = 1000;
-  size_t number_of_rows = 10000000;
+  size_t number_of_rows = 10000;
   size_t ratio = 16;
 
   if (argc >= 2) {
