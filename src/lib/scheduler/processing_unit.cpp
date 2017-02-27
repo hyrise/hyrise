@@ -47,7 +47,7 @@ void ProcessingUnit::hibernate_calling_worker() {
   _num_hibernated_workers--;
 }
 
-void ProcessingUnit::kick_off_worker() {
+void ProcessingUnit::wake_or_create_worker() {
   if (_num_hibernated_workers == 0) {
     std::lock_guard<std::mutex> lock(_mutex);
 

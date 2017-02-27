@@ -80,6 +80,8 @@ solution "opossum"
   links { "tbb" }
   includedirs { "src/lib/", "/usr/local/include" }
 
+  libs[#libs+1] = "tbb"
+
   if numa_supported then
     libs[#libs+1] = "numa"
     defines { "OPOSSUM_NUMA_SUPPORT=1" }

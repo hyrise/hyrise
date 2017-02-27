@@ -10,7 +10,6 @@
 #include <thread>
 #include <vector>
 
-#include "abstract_scheduler.hpp"
 #include "current_scheduler.hpp"
 #include "processing_unit.hpp"
 #include "topology.hpp"
@@ -47,7 +46,7 @@ void Worker::_wait_for_tasks(const std::vector<std::shared_ptr<AbstractTask>>& t
   }
 
   processing_unit->yield_active_worker_token(_id);
-  processing_unit->kick_off_worker();
+  processing_unit->wake_or_create_worker();
 
   for (auto& task : tasks) {
     task->_join_without_replacement_worker();
@@ -85,6 +84,9 @@ void Worker::operator()() {
     }
 
     auto task = _queue->pull();
+
+    // TODO(all): this might shutdown the worker and leave non-ready tasks in the queue.
+    // Figure out how we want to deal with that later.
     if (!task) {
       // Simple work stealing without explicitly transferring data between nodes.
       auto work_stealing_successful = false;
@@ -93,18 +95,11 @@ void Worker::operator()() {
           continue;
         }
 
-        auto ready_task = queue->get_ready_task();
-        if (ready_task) {
-          // Give the owning node a chance to execute the task itself.
-          std::this_thread::sleep_for(std::chrono::milliseconds(10));
-
-          // Steal the task. If the owning node (or somebody else) already started it, steal_task will return a nullptr.
-          task = queue->steal_task(ready_task);
-          if (task) {
-            task->set_node_id(_queue->node_id());
-            work_stealing_successful = true;
-            break;
-          }
+        task = queue->pull();
+        if (task) {
+          task->set_node_id(_queue->node_id());
+          work_stealing_successful = true;
+          break;
         }
       }
 

@@ -5,7 +5,6 @@
 #include <utility>
 #include <vector>
 
-#include "abstract_scheduler.hpp"
 #include "current_scheduler.hpp"
 #include "worker.hpp"
 
@@ -15,21 +14,11 @@ TaskID AbstractTask::id() const { return _id; }
 
 NodeID AbstractTask::node_id() const { return _node_id; }
 
-bool AbstractTask::is_ready() const {
-  if (_ready) return true;
-
-  for (auto& dependency : _dependencies) {
-    if (!dependency->is_done()) {
-      return false;
-    }
-  }
-
-  // Cache that tasks have been completed.
-  _ready = true;
-  return true;
-}
+bool AbstractTask::is_ready() const { return _predecessor_counter == 0; }
 
 bool AbstractTask::is_done() const { return _done; }
+
+bool AbstractTask::is_scheduled() const { return _is_scheduled; }
 
 std::string AbstractTask::description() const {
   return _description.empty() ? "{Task with id: " + std::to_string(_id) + "}" : _description;
@@ -45,8 +34,12 @@ void AbstractTask::set_description(const std::string& description) {
 
 void AbstractTask::set_id(TaskID id) { _id = id; }
 
-void AbstractTask::set_dependencies(std::vector<std::shared_ptr<AbstractTask>>&& dependencies) {
-  _dependencies = std::move(dependencies);
+void AbstractTask::set_as_predecessor_of(std::shared_ptr<AbstractTask> successor) {
+  if (IS_DEBUG && _is_scheduled) {
+    throw std::logic_error("Possible race: Don't set dependencies after the Task was scheduled");
+  }
+  successor->_on_predecessor_added();
+  _successors.emplace_back(successor);
 }
 
 void AbstractTask::set_node_id(NodeID node_id) { _node_id = node_id; }
@@ -58,6 +51,8 @@ void AbstractTask::mark_as_scheduled() {
     throw std::logic_error("Task was already scheduled!");
   }
 }
+
+bool AbstractTask::try_mark_as_enqueued() { return !_is_enqueued.exchange(true); }
 
 void AbstractTask::set_done_callback(const std::function<void()>& done_callback) {
   if (IS_DEBUG && _is_scheduled) {
@@ -73,7 +68,8 @@ void AbstractTask::schedule(NodeID preferred_node_id, SchedulePriority priority)
   if (CurrentScheduler::is_set()) {
     CurrentScheduler::get()->schedule(shared_from_this(), preferred_node_id, priority);
   } else {
-    execute();
+    // If the Task isn't ready, it will execute() once its dependency counter reaches 0
+    if (is_ready()) execute();
   }
 }
 
@@ -86,8 +82,8 @@ void AbstractTask::join() {
    * When join() is called from a Task, i.e. from a Worker Thread, let the worker handle the join()-ing (via
    * _wait_for_tasks()), otherwise just join right here
    */
-  auto worker = Worker::get_this_thread_worker();
-  if (worker) {
+  if (CurrentScheduler::is_set()) {
+    auto worker = Worker::get_this_thread_worker();
     worker->_wait_for_tasks({shared_from_this()});
   } else {
     _join_without_replacement_worker();
@@ -113,6 +109,10 @@ void AbstractTask::execute() {
 
   on_execute();
 
+  for (auto& successor : _successors) {
+    successor->_on_predecessor_done();
+  }
+
   if (_done_callback) _done_callback();
 
   {
@@ -120,6 +120,33 @@ void AbstractTask::execute() {
     _done = true;
   }
   _done_condition_variable.notify_all();
+}
+
+void AbstractTask::_on_predecessor_added() { _predecessor_counter++; }
+
+void AbstractTask::_on_predecessor_done() {
+  auto new_predecessor_count = --_predecessor_counter;  // atomically decrement
+  if (new_predecessor_count == 0) {
+    if (CurrentScheduler::is_set()) {
+      auto worker = Worker::get_this_thread_worker();
+      if (IS_DEBUG && !worker) {
+        throw std::logic_error("No worker");
+      }
+
+      worker->queue()->push(shared_from_this(), static_cast<uint32_t>(SchedulePriority::High));
+    } else {
+      if (_is_scheduled) execute();
+      // Otherwise it will get execute()d once it is scheduled. It is entirely possible for Tasks to "become ready"
+      // before they are being scheduled in a no-Scheduler context. Think:
+      //
+      // task1->set_as_predecessor_of(task2);
+      // task2->set_as_predecessor_of(task3);
+      //
+      // task3->schedule(); <-- Does nothing
+      // task1->schedule(); <-- Executes Task1, Task2 becomes ready but is not executed, since it is not yet scheduled
+      // task2->schedule(); <-- Executes Task2, Task3 becomes ready, executes Task3
+    }
+  }
 }
 
 }  // namespace opossum

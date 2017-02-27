@@ -8,7 +8,6 @@
 
 namespace opossum {
 
-class AbstractScheduler;
 class ProcessingUnit;
 
 /**
@@ -18,6 +17,7 @@ class ProcessingUnit;
 class Worker : public std::enable_shared_from_this<Worker> {
   friend class AbstractTask;
   friend class CurrentScheduler;
+  friend class NodeQueueScheduler;
 
  public:
   static std::shared_ptr<Worker> get_this_thread_worker();

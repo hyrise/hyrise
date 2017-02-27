@@ -6,6 +6,7 @@
 #include <utility>
 #include <vector>
 
+#include "current_scheduler.hpp"
 #include "processing_unit.hpp"
 #include "topology.hpp"
 
@@ -37,10 +38,10 @@ void NodeQueueScheduler::begin() {
     for (auto& topology_cpu : topology_node.cpus) {
       _processing_units.emplace_back(std::make_shared<ProcessingUnit>(queue, _worker_id_allocator, topology_cpu.cpuID));
     }
+  }
 
-    for (auto& processing_unit : _processing_units) {
-      processing_unit->kick_off_worker();
-    }
+  for (auto& processing_unit : _processing_units) {
+    processing_unit->wake_or_create_worker();
   }
 }
 
@@ -95,17 +96,18 @@ void NodeQueueScheduler::schedule(std::shared_ptr<AbstractTask> task, NodeID pre
     }
   }
 
+  const auto task_counter = _task_counter++;  // Atomically take snapshot of counter
+  task->set_id(task_counter);
+
+  if (!task->is_ready()) return;
+
   // Lookup node id for current worker.
   if (preferred_node_id == CURRENT_NODE_ID) {
     auto worker = Worker::get_this_thread_worker();
-
-    /**
-     * If schedule() was called in a Task, i.e. in a Worker-Thread, schedule the task on the same node
-     * TODO(all): Not called from a worker? Figure out which node this method was called from, schedule the Task there
-     */
     if (worker) {
       preferred_node_id = worker->queue()->node_id();
     } else {
+      // TODO(all): Actually, this should be ANY_NODE_ID, LIGHT_LOAD_NODE or something
       preferred_node_id = 0;
     }
   }
@@ -114,18 +116,7 @@ void NodeQueueScheduler::schedule(std::shared_ptr<AbstractTask> task, NodeID pre
     throw std::logic_error("preferred_node_id is not within range of available nodes");
   }
 
-  task->set_id(_task_counter);
-  _task_counter++;
-
   auto queue = _queues[preferred_node_id];
-
-  switch (priority) {
-    case SchedulePriority::Normal: {
-      queue->push_back(std::move(task));
-    } break;
-    case SchedulePriority::High: {
-      queue->push_front(std::move(task));
-    } break;
-  }
+  queue->push(std::move(task), static_cast<uint32_t>(priority));
 }
 }  // namespace opossum

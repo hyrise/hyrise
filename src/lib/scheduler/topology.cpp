@@ -47,36 +47,43 @@ std::shared_ptr<Topology> Topology::create_fake_numa_topology(uint32_t max_num_w
   return std::make_shared<Topology>(std::move(nodes), num_workers);
 }
 
-std::shared_ptr<Topology> Topology::create_numa_topology() {
+std::shared_ptr<Topology> Topology::create_numa_topology(uint32_t max_num_cores) {
 #if !OPOSSUM_NUMA_SUPPORT
-  return create_fake_numa_topology();
+  return create_fake_numa_topology(max_num_cores);
 #else
+
   if (numa_available() < 0) {
-    return create_fake_numa_topology();
+    return create_fake_numa_topology(max_num_cores);
   }
 
   auto max_node = numa_max_node();
   auto num_configured_cpus = numa_num_configured_cpus();
-  auto cpu_bitmask = numa_bitmask_alloc(num_configured_cpus);
+  auto cpu_bitmask = numa_allocate_cpumask();
+  uint32_t core_count = 0;
 
   std::vector<TopologyNode> nodes;
-  nodes.reserve(max_node);
 
   for (int n = 0; n <= max_node; n++) {
-    std::vector<TopologyCpu> cpus;
+    if (max_num_cores == 0 || core_count < max_num_cores) {
+      std::vector<TopologyCpu> cpus;
 
-    numa_node_to_cpus(n, cpu_bitmask);
+      numa_node_to_cpus(n, cpu_bitmask);
 
-    for (int c = 0; c < num_configured_cpus; c++) {
-      if (numa_bitmask_isbitset(cpu_bitmask, c)) {
-        cpus.emplace_back(TopologyCpu(c));
+      for (int c = 0; c < num_configured_cpus; c++) {
+        if (numa_bitmask_isbitset(cpu_bitmask, c)) {
+          if (max_num_cores == 0 || core_count < max_num_cores) {
+            cpus.emplace_back(TopologyCpu(c));
+          }
+          core_count++;
+        }
       }
-    }
 
-    TopologyNode node(std::move(cpus));
-    nodes.emplace_back(std::move(node));
+      TopologyNode node(std::move(cpus));
+      nodes.emplace_back(std::move(node));
+    }
   }
 
+  numa_free_cpumask(cpu_bitmask);
   return std::make_shared<Topology>(std::move(nodes), num_configured_cpus);
 #endif
 }

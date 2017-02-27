@@ -32,7 +32,7 @@ if echo $REPLY | grep -E '^[Yy]$' > /dev/null; then
         if cat /etc/lsb-release | grep DISTRIB_ID | grep Ubuntu >/dev/null; then
             echo "Installing dependencies (this may take a while)..."
             if sudo apt-get update >/dev/null; then
-                if sudo apt-get install -y premake4 libboost-all-dev clang-format gcovr python2.7 gcc-6 clang llvm libtbb-dev; then
+                if sudo apt-get install -y premake4 libboost-all-dev clang-format gcovr python2.7 gcc-6 clang llvm libnuma-dev libnuma1 libtbb-dev; then
                     if git submodule update --init; then
                         echo "Installation successful."
                     else

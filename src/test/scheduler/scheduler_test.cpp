@@ -12,23 +12,94 @@ namespace opossum {
 
 class SchedulerTest : public BaseTest {
  protected:
+  void stress_linear_dependencies(std::atomic_uint& counter) {
+    auto task1 = std::make_shared<JobTask>([&]() {
+      auto current_value = 0u;
+      auto successful = counter.compare_exchange_strong(current_value, 1u);
+      ASSERT_TRUE(successful);
+    });
+    auto task2 = std::make_shared<JobTask>([&]() {
+      auto current_value = 1u;
+      auto successful = counter.compare_exchange_strong(current_value, 2u);
+      ASSERT_TRUE(successful);
+    });
+    auto task3 = std::make_shared<JobTask>([&]() {
+      auto current_value = 2u;
+      auto successful = counter.compare_exchange_strong(current_value, 3u);
+      ASSERT_TRUE(successful);
+    });
+
+    task1->set_as_predecessor_of(task2);
+    task2->set_as_predecessor_of(task3);
+
+    task3->schedule();
+    task1->schedule();
+    task2->schedule();
+  }
+
+  void stress_multiple_dependencies(std::atomic_uint& counter) {
+    auto task1 = std::make_shared<JobTask>([&]() { counter += 1u; });
+    auto task2 = std::make_shared<JobTask>([&]() { counter += 2u; });
+    auto task3 = std::make_shared<JobTask>([&]() {
+      auto current_value = 3u;
+      auto successful = counter.compare_exchange_strong(current_value, 4u);
+      ASSERT_TRUE(successful);
+    });
+
+    task1->set_as_predecessor_of(task3);
+    task2->set_as_predecessor_of(task3);
+
+    task3->schedule();
+    task1->schedule();
+    task2->schedule();
+  }
+
+  void stress_diamond_dependencies(std::atomic_uint& counter) {
+    auto task1 = std::make_shared<JobTask>([&]() {
+      auto current_value = 0u;
+      auto successful = counter.compare_exchange_strong(current_value, 1u);
+      ASSERT_TRUE(successful);
+    });
+    auto task2 = std::make_shared<JobTask>([&]() { counter += 2u; });
+    auto task3 = std::make_shared<JobTask>([&]() { counter += 3u; });
+    auto task4 = std::make_shared<JobTask>([&]() {
+      auto current_value = 6u;
+      auto successful = counter.compare_exchange_strong(current_value, 7u);
+      ASSERT_TRUE(successful);
+    });
+
+    task1->set_as_predecessor_of(task2);
+    task1->set_as_predecessor_of(task3);
+    task2->set_as_predecessor_of(task4);
+    task3->set_as_predecessor_of(task4);
+
+    task4->schedule();
+    task3->schedule();
+    task1->schedule();
+    task2->schedule();
+  }
+
   void increment_counter_in_subtasks(std::atomic_uint& counter) {
-    std::vector<std::shared_ptr<opossum::AbstractTask>> tasks;
+    std::vector<std::shared_ptr<AbstractTask>> tasks;
     for (size_t i = 0; i < 10; i++) {
-      auto task = std::make_shared<opossum::JobTask>([&]() {
-        std::vector<std::shared_ptr<opossum::AbstractTask>> jobs;
+      auto task = std::make_shared<JobTask>([&]() {
+        std::vector<std::shared_ptr<AbstractTask>> jobs;
         for (size_t j = 0; j < 3; j++) {
-          auto job = std::make_shared<opossum::JobTask>([&]() { counter++; });
+          auto job = std::make_shared<JobTask>([&]() { counter++; });
 
           job->schedule();
           jobs.emplace_back(job);
         }
 
-        opossum::CurrentScheduler::wait_for_tasks(jobs);
+        CurrentScheduler::wait_for_tasks(jobs);
       });
       task->schedule();
       tasks.emplace_back(task);
     }
+  }
+
+  void TearDown() override {
+    CurrentScheduler::set(nullptr);  // Make sure there is no Scheduler anymore
   }
 };
 
@@ -36,14 +107,13 @@ class SchedulerTest : public BaseTest {
  * Schedule some tasks with subtasks, make sure all of them finish
  */
 TEST_F(SchedulerTest, BasicTest) {
-  opossum::CurrentScheduler::set(
-      std::make_shared<opossum::NodeQueueScheduler>(opossum::Topology::create_fake_numa_topology(8, 4)));
+  CurrentScheduler::set(std::make_shared<NodeQueueScheduler>(Topology::create_fake_numa_topology(8, 4)));
 
   std::atomic_uint counter{0};
 
   increment_counter_in_subtasks(counter);
 
-  opossum::CurrentScheduler::get()->finish();
+  CurrentScheduler::get()->finish();
 
   ASSERT_EQ(counter, 30u);
 
@@ -55,4 +125,59 @@ TEST_F(SchedulerTest, BasicTestWithoutScheduler) {
   increment_counter_in_subtasks(counter);
   ASSERT_EQ(counter, 30u);
 }
+
+TEST_F(SchedulerTest, LinearDependenciesWithScheduler) {
+  CurrentScheduler::set(std::make_shared<NodeQueueScheduler>(Topology::create_fake_numa_topology(8, 4)));
+
+  std::atomic_uint counter{0u};
+
+  stress_linear_dependencies(counter);
+
+  CurrentScheduler::get()->finish();
+
+  ASSERT_EQ(counter, 3u);
+}
+
+TEST_F(SchedulerTest, MultipleDependenciesWithScheduler) {
+  CurrentScheduler::set(std::make_shared<NodeQueueScheduler>(Topology::create_fake_numa_topology(8, 4)));
+
+  std::atomic_uint counter{0u};
+
+  stress_multiple_dependencies(counter);
+
+  CurrentScheduler::get()->finish();
+
+  ASSERT_EQ(counter, 4u);
+}
+
+TEST_F(SchedulerTest, DiamondDependenciesWithScheduler) {
+  CurrentScheduler::set(std::make_shared<NodeQueueScheduler>(Topology::create_fake_numa_topology(8, 4)));
+
+  std::atomic_uint counter{0};
+
+  stress_diamond_dependencies(counter);
+
+  CurrentScheduler::get()->finish();
+
+  ASSERT_EQ(counter, 7u);
+}
+
+TEST_F(SchedulerTest, LinearDependenciesWithoutScheduler) {
+  std::atomic_uint counter{0u};
+  stress_linear_dependencies(counter);
+  ASSERT_EQ(counter, 3u);
+}
+
+TEST_F(SchedulerTest, MultipleDependenciesWithoutScheduler) {
+  std::atomic_uint counter{0u};
+  stress_multiple_dependencies(counter);
+  ASSERT_EQ(counter, 4u);
+}
+
+TEST_F(SchedulerTest, DiamondDependenciesWithoutScheduler) {
+  std::atomic_uint counter{0};
+  stress_diamond_dependencies(counter);
+  ASSERT_EQ(counter, 7u);
+}
+
 }  // namespace opossum

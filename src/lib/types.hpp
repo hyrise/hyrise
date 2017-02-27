@@ -58,8 +58,8 @@ constexpr NodeID CURRENT_NODE_ID = std::numeric_limits<NodeID>::max() - 1;
 
 // The Scheduler currently supports just these 2 priorities, subject to change.
 enum class SchedulePriority {
-  Normal,  // Schedule task at the end of the queue
-  High     // Schedule task at the beginning of the queue
+  Normal = 1,  // Schedule task at the end of the queue
+  High = 0     // Schedule task at the beginning of the queue
 };
 
 // This holds all possible data types. The left side of the pairs are the names, the right side are prototypes

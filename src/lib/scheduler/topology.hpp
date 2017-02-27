@@ -36,7 +36,7 @@ class Topology final {
    */
   static std::shared_ptr<Topology> create_fake_numa_topology(uint32_t max_num_workers = 0,
                                                              uint32_t workers_per_node = 1);
-  static std::shared_ptr<Topology> create_numa_topology();
+  static std::shared_ptr<Topology> create_numa_topology(uint32_t max_num_cores = 0);
 
   Topology(std::vector<TopologyNode>&& nodes, size_t numCpus) : _nodes(std::move(nodes)), _numCpus(numCpus) {}
 

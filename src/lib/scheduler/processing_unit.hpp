@@ -47,7 +47,7 @@ class ProcessingUnit final : public std::enable_shared_from_this<ProcessingUnit>
   /**
    * When hibernated workers are available, wake one of them up. Otherwise create a new worker.
    */
-  void kick_off_worker();
+  void wake_or_create_worker();
 
   /**
    * Increments the local counter of finished tasks to allow the Scheduler to determine whether all tasks finished.

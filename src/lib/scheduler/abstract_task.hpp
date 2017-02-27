@@ -53,9 +53,10 @@ class AbstractTask : public std::enable_shared_from_this<AbstractTask> {
   void set_id(TaskID id);
 
   /**
-   * @param A set of Tasks that need to finish before this task can be executed
+   * Make this Task the dependency of another
+   * @param successor Task that will be executed after this
    */
-  void set_dependencies(std::vector<std::shared_ptr<AbstractTask>>&& dependencies);
+  void set_as_predecessor_of(std::shared_ptr<AbstractTask> successor);
 
   /**
    * Node ids are changed when moving the Task between nodes (e.g. during work stealing)
@@ -80,11 +81,18 @@ class AbstractTask : public std::enable_shared_from_this<AbstractTask> {
    */
   void join();
 
-  /*
+  /**
    * Atomically marks the Task as scheduled, thus making sure this happens only once
    */
   void mark_as_scheduled();
-  bool is_scheduled() const { return _is_scheduled; }
+  bool is_scheduled() const;
+
+  /**
+   * returns true whether the caller is atomically the first to try to enqueue this task into a TaskQueue,
+   * false otherwise.
+   * Makes sure a task only gets put into a TaskQueue once
+   */
+  bool try_mark_as_enqueued();
 
   /**
    * Executes the task in the current Thread, blocks until all operations are finished
@@ -100,14 +108,29 @@ class AbstractTask : public std::enable_shared_from_this<AbstractTask> {
    */
   void _join_without_replacement_worker();
 
+  /**
+   * Called when a dependency is initialized (by set_as_predecessor_of)
+   */
+  void _on_predecessor_added();
+
+  /**
+   * Called by a dependency when it finished execution
+   */
+  void _on_predecessor_done();
+
   TaskID _id = INVALID_TASK_ID;
   NodeID _node_id = INVALID_NODE_ID;
   bool _done = false;
-  mutable bool _ready = false;
-  std::vector<std::shared_ptr<AbstractTask>> _dependencies;
   std::function<void()> _done_callback;
 
-  // For making sure a task gets only scheduled once
+  // For dependencies
+  std::atomic_uint _predecessor_counter{0};
+  std::vector<std::shared_ptr<AbstractTask>> _successors;
+
+  // For making sure a task gets only scheduled and enqueued once, respectively
+  // A Task is scheduled once schedule() is called and enqueued, which is an internal process, once it has been added
+  // to a TaskQueue
+  std::atomic_bool _is_enqueued{false};
   std::atomic_bool _is_scheduled{false};
 
   // For making Tasks join()-able
