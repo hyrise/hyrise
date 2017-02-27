@@ -23,8 +23,8 @@ class ValueColumn : public BaseColumn {
   void append(const AllTypeVariant& val) override { _values.push_back(type_cast<T>(val)); }
 
   // returns all values
-  const std::vector<T>& values() const { return _values; }
-  std::vector<T>& values() { return _values; }
+  const tbb::concurrent_vector<T>& values() const { return _values; }
+  tbb::concurrent_vector<T>& values() { return _values; }
 
   // return the number of entries
   size_t size() const override { return _values.size(); }
@@ -48,6 +48,6 @@ class ValueColumn : public BaseColumn {
   }
 
  protected:
-  std::vector<T> _values;
+  tbb::concurrent_vector<T> _values;
 };
 }  // namespace opossum

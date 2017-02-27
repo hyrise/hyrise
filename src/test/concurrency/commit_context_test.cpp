@@ -23,20 +23,26 @@ TEST_F(CommitContextTest, HasNextReturnsFalse) {
   EXPECT_EQ(context->has_next(), false);
 }
 
-TEST_F(CommitContextTest, HasNextReturnsTrueAfterCallingGetOrCreateNext) {
-  auto context = std::make_unique<CommitContext>();
+TEST_F(CommitContextTest, HasNextReturnsTrueAfterNextHasBeenSet) {
+  auto context = std::make_shared<CommitContext>();
 
-  context->get_or_create_next();
+  auto next_context = std::make_shared<CommitContext>(context->commit_id() + 1u);
+
+  EXPECT_TRUE(context->try_set_next(next_context));
 
   EXPECT_EQ(context->has_next(), true);
 }
 
-TEST_F(CommitContextTest, CidOfNextIncrementedByOne) {
-  auto context = std::make_unique<CommitContext>();
+TEST_F(CommitContextTest, TrySetNextFailsIfNotNullptr) {
+  auto context = std::make_shared<CommitContext>();
 
-  auto next = context->get_or_create_next();
+  auto next_context = std::make_shared<CommitContext>(context->commit_id() + 1u);
 
-  EXPECT_EQ(context->commit_id() + 1u, next->commit_id());
+  EXPECT_TRUE(context->try_set_next(next_context));
+
+  next_context = std::make_shared<CommitContext>(context->commit_id() + 1u);
+
+  EXPECT_FALSE(context->try_set_next(next_context));
 }
 
 }  // namespace opossum
