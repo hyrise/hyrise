@@ -1,10 +1,10 @@
 #include "insert.hpp"
 
+#include <algorithm>
 #include <limits>
 #include <memory>
 #include <string>
 #include <vector>
-#include <algorithm>
 
 #include "concurrency/transaction_context.hpp"
 #include "storage/storage_manager.hpp"
