@@ -19,6 +19,9 @@ const std::string Insert::name() const { return "Insert"; }
 uint8_t Insert::num_in_tables() const { return 1; }
 
 std::shared_ptr<const Table> Insert::on_execute(TransactionContext* context) {
+#ifdef IS_DEBUG
+  if (input_table_left()->chunk_count() != 1) throw std::runtime_error("Input to Delete isn't valid");
+#endif
   _table = StorageManager::get().get_table(_table_name);
 
   // these TypedColumnProcessors kind of retrieve the template parameter of the columns.
@@ -28,7 +31,6 @@ std::shared_ptr<const Table> Insert::on_execute(TransactionContext* context) {
         make_unique_by_column_type<AbstractTypedColumnProcessor, TypedColumnProcessor>(_table->column_type(column_id)));
   }
 
-  // TODO(all): we assume that we get only one input chunk
   auto& chunk_to_insert = input_table_left()->get_chunk(0);
   auto num_rows_to_insert = chunk_to_insert.size();
 
