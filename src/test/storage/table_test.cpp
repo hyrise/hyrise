@@ -1,3 +1,4 @@
+#include <limits>
 #include <string>
 
 #include "../base_test.hpp"
@@ -92,5 +93,10 @@ TEST_F(StorageTableTest, GetColumnIdByName) {
 }
 
 TEST_F(StorageTableTest, GetChunkSize) { EXPECT_EQ(t.chunk_size(), 2u); }
+
+TEST_F(StorageTableTest, ColumnNameTooLong) {
+  EXPECT_THROW(t.add_column(std::string(std::numeric_limits<ColumnNameLength>::max() + 1ul, 'A'), "int");
+               , std::exception);
+}
 
 }  // namespace opossum

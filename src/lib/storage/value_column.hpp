@@ -1,6 +1,7 @@
 #pragma once
 
 #include <iostream>
+#include <limits>
 #include <memory>
 #include <string>
 #include <utility>
@@ -18,9 +19,7 @@ class ValueColumn : public BaseColumn {
  public:
   ValueColumn() = default;
 
-  /**
-   * This constructor shall only be used for testing purposes.
-   */
+  // Create a ValueColumn with the given values
   explicit ValueColumn(std::vector<T>&& values) : _values(std::move(values)) {}
 
   // return the value at a certain position. If you want to write efficient operators, back off!
@@ -45,7 +44,7 @@ class ValueColumn : public BaseColumn {
   }
 
   // add a value to the end
-  void append(const AllTypeVariant& val) override { _values.push_back(type_cast<T>(val)); }
+  void append(const AllTypeVariant& val) override;
 
   // returns all values
   const std::vector<T>& values() const { return _values; }
@@ -75,4 +74,22 @@ class ValueColumn : public BaseColumn {
  protected:
   std::vector<T> _values;
 };
+
+// generic implementation for append
+template <typename T>
+void ValueColumn<T>::append(const AllTypeVariant& val) {
+  _values.push_back(type_cast<T>(val));
+}
+
+// specialized implementation for String ValueColumns
+// includes a length check
+template <>
+inline void ValueColumn<std::string>::append(const AllTypeVariant& val) {
+  auto typed_val = type_cast<std::string>(val);
+  if (typed_val.length() > std::numeric_limits<StringLength>::max()) {
+    throw std::runtime_error("String value is too long to append!");
+  }
+  _values.push_back(typed_val);
+}
+
 }  // namespace opossum

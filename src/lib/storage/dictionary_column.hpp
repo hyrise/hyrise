@@ -46,6 +46,11 @@ class DictionaryColumn : public UntypedDictionaryColumn {
     _dictionary_ptr = std::make_shared<std::vector<T>>(_dictionary);
   }
 
+  // Creates a Dictionary column from a given dictionary and attribute vector.
+  explicit DictionaryColumn(const std::vector<T>&& dictionary,
+                            const std::shared_ptr<BaseAttributeVector>& attribute_vector)
+      : _dictionary(dictionary), _attribute_vector(attribute_vector) {}
+
   // return the value at a certain position. If you want to write efficient operators, back off!
   const AllTypeVariant operator[](const size_t i) const override {
     /*
