@@ -42,16 +42,36 @@ class DictionaryColumn : public UntypedDictionaryColumn {
         _attribute_vector->set(offset, value_id);
       }
     }
+
+    _dictionary_ptr = std::make_shared<std::vector<T>>(_dictionary);
   }
 
   // return the value at a certain position. If you want to write efficient operators, back off!
-  const AllTypeVariant operator[](const size_t i) const override { return _dictionary[_attribute_vector->get(i)]; }
+  const AllTypeVariant operator[](const size_t i) const override {
+    /*
+    Handle null values, this is only used for testing the results of joins so far.
+    In order to be able to define an expected output table, we need to replace INVALID_CHUNK_OFFSET
+    with some printable character, in our case 0, resp. "0".
+    Since there is no constructor for String, which takes a numeric 0, we have to differentiate between numbers and
+    strings.
+
+    This should be replaced as soon as we have proper NULL values in Opossum.
+    Similar code is in value_column.hpp
+    */
+    if (i == INVALID_CHUNK_OFFSET) {
+      if (std::is_same<T, std::string>::value) {
+        return "0";
+      }
+      return T(0);
+    }
+    return _dictionary[_attribute_vector->get(i)];
+  }
 
   // dictionary columns are immutable
   void append(const AllTypeVariant&) override { throw std::logic_error("DictionaryColumn is immutable"); }
 
   // returns an underlying dictionary
-  std::shared_ptr<const std::vector<T>> dictionary() const { return std::make_shared<std::vector<T>>(_dictionary); }
+  std::shared_ptr<const std::vector<T>> dictionary() const { return _dictionary_ptr; }
 
   // returns an underlying data structure
   std::shared_ptr<const BaseAttributeVector> attribute_vector() const final { return _attribute_vector; }
@@ -115,6 +135,7 @@ class DictionaryColumn : public UntypedDictionaryColumn {
  protected:
   std::vector<T> _dictionary;
   std::shared_ptr<BaseAttributeVector> _attribute_vector;
+  std::shared_ptr<std::vector<T>> _dictionary_ptr;
 
   static std::shared_ptr<BaseAttributeVector> _create_fitted_attribute_vector(size_t unique_values_count, size_t size) {
     if (unique_values_count <= std::numeric_limits<uint8_t>::max()) {

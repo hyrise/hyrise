@@ -70,6 +70,16 @@ class TableScan::TableScanImpl : public AbstractReadOnlyOperatorImpl, public Col
     ScanContext(std::shared_ptr<const Table> t, ChunkID c, std::vector<RowID> &mo,
                 std::shared_ptr<std::vector<ChunkOffset>> co = nullptr)
         : table_in(t), chunk_id(c), matches_out(mo), chunk_offsets_in(std::move(co)) {}
+
+    // constructor for use in ReferenceColumn::visit_dereferenced
+    ScanContext(std::shared_ptr<BaseColumn>, const std::shared_ptr<const Table> referenced_table,
+                std::shared_ptr<ColumnVisitableContext> base_context, ChunkID chunk_id,
+                std::shared_ptr<std::vector<ChunkOffset>> chunk_offsets)
+        : table_in(referenced_table),
+          chunk_id(chunk_id),
+          matches_out(std::static_pointer_cast<ScanContext>(base_context)->matches_out),
+          chunk_offsets_in(chunk_offsets) {}
+
     std::shared_ptr<const Table> table_in;
     const ChunkID chunk_id;
     std::vector<RowID> &matches_out;
@@ -147,8 +157,12 @@ class TableScan::TableScanImpl : public AbstractReadOnlyOperatorImpl, public Col
         auto base_column = chunk_in.get_column(filter_column_id);
         std::vector<RowID> matches_in_this_chunk;
         base_column->visit(*this, std::make_shared<ScanContext>(in_table, chunk_id, matches_in_this_chunk));
+
         // We now receive the visits in the handler methods below...
-        if (matches_in_this_chunk.size() == 0) return;
+
+        // Even if we don't have any matches in this chunk, we need to correctly set the output columns.
+        // If we would just return here, we would end up with a Chunk without Columns,
+        // which makes the output unusable for further operations (-> OperatorsTableScanTest::ScanWithEmptyInput)
 
         // Ok, now we have a list of the matching positions relative to this chunk (ChunkOffsets). Next, we have to
         // transform them into absolute row ids. To save time and space, we want to share PosLists between columns
@@ -227,33 +241,7 @@ class TableScan::TableScanImpl : public AbstractReadOnlyOperatorImpl, public Col
   }
 
   void handle_reference_column(ReferenceColumn &column, std::shared_ptr<ColumnVisitableContext> base_context) override {
-    auto context = std::static_pointer_cast<ScanContext>(base_context);
-    const auto referenced_table = column.referenced_table();
-
-    // The pos_list might be unsorted. In that case, we would have to jump around from chunk to chunk.
-    // One-chunk-at-a-time processing should be faster. For this, we place a pair {chunk_offset, original_position} into
-    // a vector for each chunk. A potential optimization would be to only do this if the pos_list is really unsorted.
-    std::vector<std::shared_ptr<std::vector<ChunkOffset>>> all_chunk_offsets(referenced_table->chunk_count());
-
-    for (ChunkID chunk_id = 0; chunk_id < referenced_table->chunk_count(); ++chunk_id) {
-      all_chunk_offsets[chunk_id] = std::make_shared<std::vector<ChunkOffset>>();
-    }
-
-    for (auto pos : *(column.pos_list())) {
-      auto chunk_info = referenced_table->locate_row(pos);
-      all_chunk_offsets[chunk_info.first]->emplace_back(chunk_info.second);
-    }
-
-    for (ChunkID chunk_id = 0; chunk_id < referenced_table->chunk_count(); ++chunk_id) {
-      if (all_chunk_offsets[chunk_id]->empty()) {
-        continue;
-      }
-      auto &chunk = referenced_table->get_chunk(chunk_id);
-      auto referenced_column = chunk.get_column(column.referenced_column_id());
-
-      referenced_column->visit(*this, std::make_shared<ScanContext>(referenced_table, chunk_id, context->matches_out,
-                                                                    all_chunk_offsets[chunk_id]));
-    }
+    column.visit_dereferenced<ScanContext>(*this, base_context);
   }
 
   void handle_dictionary_column(BaseColumn &base_column,

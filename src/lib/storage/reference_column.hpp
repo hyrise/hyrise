@@ -45,6 +45,38 @@ class ReferenceColumn : public BaseColumn {
 
   // writes the length and value at the chunk_offset to the end off row_string
   void write_string_representation(std::string &row_string, const ChunkOffset chunk_offset) const override;
+
+  template <typename ContextClass>
+  void visit_dereferenced(ColumnVisitable &visitable, std::shared_ptr<ColumnVisitableContext> ctx) {
+    /*
+    The pos_list might be unsorted. In that case, we would have to jump around from chunk to chunk.
+    One-chunk-at-a-time processing should be faster. For this, we place a pair {chunk_offset, original_position}
+    into a vector for each chunk. A potential optimization would be to only do this if the pos_list is really
+    unsorted.
+    */
+    std::vector<std::shared_ptr<std::vector<ChunkOffset>>> all_chunk_offsets(_referenced_table->chunk_count());
+
+    for (ChunkID chunk_id = 0; chunk_id < _referenced_table->chunk_count(); ++chunk_id) {
+      all_chunk_offsets[chunk_id] = std::make_shared<std::vector<ChunkOffset>>();
+    }
+
+    for (auto pos : *(_pos_list)) {
+      auto chunk_info = _referenced_table->locate_row(pos);
+      all_chunk_offsets[chunk_info.first]->emplace_back(chunk_info.second);
+    }
+
+    for (ChunkID chunk_id = 0; chunk_id < _referenced_table->chunk_count(); ++chunk_id) {
+      if (all_chunk_offsets[chunk_id]->empty()) {
+        continue;
+      }
+      auto &chunk = _referenced_table->get_chunk(chunk_id);
+      auto referenced_column = chunk.get_column(_referenced_column_id);
+
+      auto c = std::make_shared<ContextClass>(referenced_column, _referenced_table, ctx, chunk_id,
+                                              all_chunk_offsets[chunk_id]);
+      referenced_column->visit(visitable, c);
+    }
+  }
 };
 
 }  // namespace opossum

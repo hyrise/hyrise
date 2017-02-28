@@ -34,8 +34,28 @@ class OperatorsTableScanTest : public BaseTest {
 
     _gt_even_dict = std::make_shared<GetTable>("table_even_dict");
 
+    // Set up dictionary encoded table with a dictionary width of 16 bit
+    auto _test_table_dict_16 = std::make_shared<opossum::Table>(0);
+    _test_table_dict_16->add_column("a", "int");
+    _test_table_dict_16->add_column("b", "float");
+    for (int i = 0; i <= 257; i += 1) _test_table_dict_16->append({i, 100.0f + i});
+    _test_table_dict_16->compress_chunk(0);
+    opossum::StorageManager::get().add_table("table_dict_16", std::move(_test_table_dict_16));
+    _gt_dict_16 = std::make_shared<opossum::GetTable>("table_dict_16");
+
+    // Set up dictionary encoded table with a dictionary width of 32 bit
+    auto _test_table_dict_32 = std::make_shared<opossum::Table>(0);
+    _test_table_dict_32->add_column("a", "int");
+    _test_table_dict_32->add_column("b", "float");
+    for (int i = 0; i <= 65537; i += 1) _test_table_dict_32->append({i, 100.0f + i});
+    _test_table_dict_32->compress_chunk(0);
+    opossum::StorageManager::get().add_table("table_dict_32", std::move(_test_table_dict_32));
+    _gt_dict_32 = std::make_shared<opossum::GetTable>("table_dict_32");
+
     _gt->execute();
     _gt_even_dict->execute();
+    _gt_dict_16->execute();
+    _gt_dict_32->execute();
 
     std::shared_ptr<Table> test_table_dict = std::make_shared<Table>(5);
     test_table_dict->add_column("a", "int");
@@ -72,7 +92,7 @@ class OperatorsTableScanTest : public BaseTest {
     _gt_filtered->execute();
   }
 
-  std::shared_ptr<GetTable> _gt, _gt_even_dict, _gt_part_dict, _gt_filtered;
+  std::shared_ptr<GetTable> _gt, _gt_even_dict, _gt_part_dict, _gt_filtered, _gt_dict_16, _gt_dict_32;
 };
 
 TEST_F(OperatorsTableScanTest, DoubleScan) {
@@ -154,6 +174,103 @@ TEST_F(OperatorsTableScanTest, ScanOnReferencedDictColumn) {
     }
     EXPECT_EQ(expected_copy.size(), (size_t)0);
   }
+}
+
+TEST_F(OperatorsTableScanTest, ScanOnDictColumnUnkownValue) {
+  // scanning for a value that is not in the dictionary (3)
+
+  std::map<std::string, std::set<int>> tests;
+  tests["="] = {};
+  tests["<"] = {100, 102};
+  tests["<="] = {100, 102};
+  tests[">"] = {104, 106, 108, 110, 112, 114, 116, 118, 120, 122, 124};
+  tests[">="] = {104, 106, 108, 110, 112, 114, 116, 118, 120, 122, 124};
+  tests["!="] = {100, 102, 104, 106, 108, 110, 112, 114, 116, 118, 120, 122, 124};
+  tests["BETWEEN"] = {104, 106, 108};
+
+  for (const auto& test : tests) {
+    auto scan = std::make_shared<opossum::TableScan>(_gt_even_dict, "a", test.first, 3, optional<AllTypeVariant>(9));
+    scan->execute();
+
+    auto expected_copy = test.second;
+    for (ChunkID chunk_id = 0; chunk_id < scan->get_output()->chunk_count(); ++chunk_id) {
+      auto& chunk = scan->get_output()->get_chunk(chunk_id);
+      for (ChunkOffset chunk_offset = 0; chunk_offset < chunk.size(); ++chunk_offset) {
+        EXPECT_EQ(expected_copy.erase(type_cast<int>((*chunk.get_column(1))[chunk_offset])), static_cast<size_t>(1));
+      }
+    }
+    EXPECT_EQ(expected_copy.size(), 0ull);
+  }
+}
+
+TEST_F(OperatorsTableScanTest, ScanOnDictColumnAroundBounds) {
+  // scanning for a value that is around the dictionary's bounds
+
+  std::map<std::string, std::set<int>> tests;
+  tests["="] = {100};
+  tests["<"] = {};
+  tests["<="] = {100};
+  tests[">"] = {102, 104, 106, 108, 110, 112, 114, 116, 118, 120, 122, 124};
+  tests[">="] = {100, 102, 104, 106, 108, 110, 112, 114, 116, 118, 120, 122, 124};
+  tests["!="] = {102, 104, 106, 108, 110, 112, 114, 116, 118, 120, 122, 124};
+  tests["BETWEEN"] = {100, 102, 104, 106, 108, 110};
+
+  for (const auto& test : tests) {
+    auto scan = std::make_shared<opossum::TableScan>(_gt_even_dict, "a", test.first, 0, optional<AllTypeVariant>(10));
+    scan->execute();
+
+    auto expected_copy = test.second;
+    for (ChunkID chunk_id = 0; chunk_id < scan->get_output()->chunk_count(); ++chunk_id) {
+      auto& chunk = scan->get_output()->get_chunk(chunk_id);
+      for (ChunkOffset chunk_offset = 0; chunk_offset < chunk.size(); ++chunk_offset) {
+        EXPECT_EQ(expected_copy.erase(type_cast<int>((*chunk.get_column(1))[chunk_offset])), static_cast<size_t>(1));
+      }
+    }
+    EXPECT_EQ(expected_copy.size(), 0ull);
+  }
+}
+
+TEST_F(OperatorsTableScanTest, ScanWithEmptyInput) {
+  auto scan_1 = std::make_shared<opossum::TableScan>(_gt, "a", ">", 12345);
+  scan_1->execute();
+  EXPECT_EQ(scan_1->get_output()->row_count(), static_cast<size_t>(0));
+
+  // scan_1 produced an empty result
+  auto scan_2 = std::make_shared<opossum::TableScan>(scan_1, "b", "=", 456.7);
+  scan_2->execute();
+
+  EXPECT_EQ(scan_2->get_output()->row_count(), static_cast<size_t>(0));
+}
+
+TEST_F(OperatorsTableScanTest, ScanOnWideDictionaryColumn) {
+  auto scan_1 = std::make_shared<opossum::TableScan>(_gt_dict_16, "a", ">", 200);
+  scan_1->execute();
+
+  EXPECT_EQ(scan_1->get_output()->row_count(), static_cast<size_t>(57));
+
+  auto scan_2 = std::make_shared<opossum::TableScan>(_gt_dict_32, "a", ">", 65500);
+  scan_2->execute();
+
+  EXPECT_EQ(scan_2->get_output()->row_count(), static_cast<size_t>(37));
+}
+
+TEST_F(OperatorsTableScanTest, NumInputTables) {
+  auto scan_1 = std::make_shared<opossum::TableScan>(_gt, "a", ">=", 1234);
+  scan_1->execute();
+
+  EXPECT_EQ(scan_1->num_in_tables(), 1);
+}
+
+TEST_F(OperatorsTableScanTest, NumOutputTables) {
+  auto scan_1 = std::make_shared<opossum::TableScan>(_gt, "a", ">=", 1234);
+
+  EXPECT_EQ(scan_1->num_out_tables(), 1);
+}
+
+TEST_F(OperatorsTableScanTest, OperatorName) {
+  auto scan_1 = std::make_shared<opossum::TableScan>(_gt, "a", ">=", 1234);
+
+  EXPECT_EQ(scan_1->name(), "TableScan");
 }
 
 TEST_F(OperatorsTableScanTest, ScanPartiallyCompressed) {

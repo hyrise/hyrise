@@ -24,7 +24,25 @@ class ValueColumn : public BaseColumn {
   explicit ValueColumn(std::vector<T>&& values) : _values(std::move(values)) {}
 
   // return the value at a certain position. If you want to write efficient operators, back off!
-  const AllTypeVariant operator[](const size_t i) const override { return _values.at(i); }
+  const AllTypeVariant operator[](const size_t i) const override {
+    /*
+    Handle null values, this is only used for testing the results of joins so far.
+    In order to be able to define an expected output table, we need to replace INVALID_CHUNK_OFFSET
+    with some printable character, in our case 0, resp. "0".
+    Since there is no constructor for String, which takes a numeric 0, we have to differentiate between numbers and
+    strings.
+
+    This should be replaced as soon as we have proper NULL values in Opossum.
+    Similar code is in dictionary_column.hpp
+    */
+    if (i == INVALID_CHUNK_OFFSET) {
+      if (std::is_same<T, std::string>::value) {
+        return "0";
+      }
+      return T(0);
+    }
+    return _values.at(i);
+  }
 
   // add a value to the end
   void append(const AllTypeVariant& val) override { _values.push_back(type_cast<T>(val)); }
