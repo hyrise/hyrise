@@ -58,10 +58,10 @@ class TypedColumnProcessor : public AbstractTypedColumnProcessor {
 
     if (auto column = std::dynamic_pointer_cast<ValueColumn<T>>(values_to_insert)) {
       std::copy_n(column->values().begin() + input_offset, num_values_to_insert, vect.begin() + start_index);
-    // } else if(auto ref_col = std::dynamic_pointer_cast<ReferenceColumn>(values_to_insert)){
-    // since we have no guarantee that a referenceColumn references only a single other column,
-    // this would require us to find out the referenced column's type for each single row.
-    // instead, we just use the slow path below.
+      // } else if(auto ref_col = std::dynamic_pointer_cast<ReferenceColumn>(values_to_insert)){
+      // since we have no guarantee that a referenceColumn references only a single other column,
+      // this would require us to find out the referenced column's type for each single row.
+      // instead, we just use the slow path below.
     } else {
       for (auto i = 0u; i < num_values_to_insert; i++) {
         vect[start_index + i] = type_cast<T>((*values_to_insert)[input_offset + i]);
