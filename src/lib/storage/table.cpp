@@ -69,14 +69,17 @@ size_t Table::column_id_by_name(const std::string &column_name) const {
 }
 
 void Table::compress_chunk(ChunkID chunk_id) {
-  Chunk newChunk;
+  auto &old_chunk = _chunks.at(chunk_id);
+  Chunk new_chunk{true};
   for (size_t column_id = 0; column_id < col_count(); ++column_id) {
-    auto dict_col = make_shared_by_column_type<BaseColumn, DictionaryColumn>(
-        column_type(column_id), _chunks.at(chunk_id).get_column(column_id));
-    newChunk.add_column(std::move(dict_col));
+    auto dict_col = make_shared_by_column_type<BaseColumn, DictionaryColumn>(column_type(column_id),
+                                                                             old_chunk.get_column(column_id));
+    new_chunk.add_column(std::move(dict_col));
   }
 
-  _chunks[chunk_id] = std::move(newChunk);
+  new_chunk.move_mvcc_columns_from(old_chunk);
+  new_chunk.compress_mvcc_columns();
+  _chunks[chunk_id] = std::move(new_chunk);
 }
 
 size_t Table::chunk_size() const { return _chunk_size; }

@@ -66,11 +66,18 @@ std::shared_ptr<CommitContext> TransactionManager::_new_commit_context() {
   auto success = false;
   while (!success) {
     while (current_context->has_next()) {
-      current_context = current_context->next();
+      current_context = std::atomic_load(&_last_commit_context);
     }
 
-    next_context = current_context->get_or_create_next();
+    next_context = std::make_shared<CommitContext>(current_context->commit_id() + 1u);
+
+    success = current_context->try_set_next(next_context);
+
+    if (!success) continue;
+
+    // Only one thread at a time can ever reach this code.
     success = std::atomic_compare_exchange_strong(&_last_commit_context, &current_context, next_context);
+    assert(success);
   }
 
   return next_context;

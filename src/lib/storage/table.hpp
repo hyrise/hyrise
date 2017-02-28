@@ -77,6 +77,7 @@ class Table {
   void set_name(std::string name) { _name = name; }
 
   // enforces dictionary compression on a certain chunk
+  // not thread-safe
   void compress_chunk(ChunkID chunk_id);
 
   std::unique_ptr<std::mutex> append_mtx;
