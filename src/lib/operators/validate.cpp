@@ -10,9 +10,7 @@
 namespace opossum {
 
 Validate::Validate(const std::shared_ptr<AbstractOperator> in)
-    : AbstractReadOnlyOperator(in), _in_table(in->get_output()), _output(std::make_shared<Table>()) {
-  // TODO(EVERYONE): remove _in_table
-}
+    : AbstractReadOnlyOperator(in), _in_table(in->get_output()), _output(std::make_shared<Table>()) {}
 
 const std::string Validate::name() const { return "Validate"; }
 
@@ -34,7 +32,9 @@ bool is_row_visible(const TransactionContext *context, const Chunk &chunk, uint3
   return own_insert || past_insert;
 }
 
-std::shared_ptr<const Table> Validate::on_execute() { return nullptr; }
+std::shared_ptr<const Table> Validate::on_execute() {
+  throw std::runtime_error("Validate can't be called without a transaction context.");
+}
 
 std::shared_ptr<const Table> Validate::on_execute(TransactionContext *transactionContext) {
   auto output = std::make_shared<Table>();
@@ -55,12 +55,16 @@ std::shared_ptr<const Table> Validate::on_execute(TransactionContext *transactio
       // assumption: validation happens before joins. all columns reference same table.
       referenced_table = ref_col_in->referenced_table();
       for (auto row_id : *ref_col_in->pos_list()) {
-        if (is_row_visible(transactionContext, chunk_in, row_id.chunk_offset)) pos_list_out->emplace_back(row_id);
+        if (is_row_visible(transactionContext, chunk_in, row_id.chunk_offset)) {
+          pos_list_out->emplace_back(row_id);
+        }
       }
     } else {
       referenced_table = _in_table;
       for (auto i = 0u; i < chunk_in.size(); i++) {
-        if (is_row_visible(transactionContext, chunk_in, i)) pos_list_out->emplace_back(RowID{chunk_id, i});
+        if (is_row_visible(transactionContext, chunk_in, i)) {
+          pos_list_out->emplace_back(RowID{chunk_id, i});
+        }
       }
     }
 

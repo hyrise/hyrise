@@ -11,7 +11,7 @@
 
 namespace opossum {
 
-Insert::Insert(std::string table_name, std::shared_ptr<AbstractOperator> values_to_insert)
+Insert::Insert(const std::string& table_name, const std::shared_ptr<AbstractOperator>& values_to_insert)
     : AbstractReadWriteOperator(values_to_insert), _table_name(table_name) {}
 
 const std::string Insert::name() const { return "Insert"; }
@@ -20,7 +20,9 @@ uint8_t Insert::num_in_tables() const { return 1; }
 
 std::shared_ptr<const Table> Insert::on_execute(TransactionContext* context) {
 #ifdef IS_DEBUG
-  if (input_table_left()->chunk_count() != 1) throw std::runtime_error("Input to Delete isn't valid");
+  if (input_table_left()->chunk_count() != 1) {
+    throw std::runtime_error("Input to Delete isn't valid");
+  }
 #endif
   _table = StorageManager::get().get_table(_table_name);
 

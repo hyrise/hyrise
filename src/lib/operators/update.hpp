@@ -10,8 +10,6 @@
 
 namespace opossum {
 
-class TransactionContext;
-
 // operator to retrieve a table from the StorageManager by specifying its name
 class Update : public AbstractReadWriteOperator {
  public:
@@ -26,7 +24,7 @@ class Update : public AbstractReadWriteOperator {
   uint8_t num_in_tables() const override;
 
  protected:
-  std::unique_ptr<Delete> _delete = nullptr;
-  std::unique_ptr<Insert> _insert = nullptr;
+  std::unique_ptr<Delete> _delete;
+  std::unique_ptr<Insert> _insert;
 };
 }  // namespace opossum

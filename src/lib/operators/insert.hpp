@@ -14,7 +14,7 @@ class TransactionContext;
 // operator to retrieve a table from the StorageManager by specifying its name
 class Insert : public AbstractReadWriteOperator {
  public:
-  explicit Insert(std::string table_name, std::shared_ptr<AbstractOperator> values_to_insert);
+  explicit Insert(const std::string& table_name, const std::shared_ptr<AbstractOperator>& values_to_insert);
 
   std::shared_ptr<const Table> on_execute(TransactionContext* context) override;
   void commit(const uint32_t cid) override;
