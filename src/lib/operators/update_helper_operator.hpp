@@ -8,9 +8,9 @@
 namespace opossum {
 
 // operator to wrap a table in an operator.
-class FakeOperator : public AbstractReadOnlyOperator {
+class UpdateHelperOperator : public AbstractReadOnlyOperator {
  public:
-  explicit FakeOperator(const std::shared_ptr<Table> table);
+  explicit UpdateHelperOperator(const std::shared_ptr<Table> table);
 
   const std::string name() const override;
   uint8_t num_in_tables() const override;

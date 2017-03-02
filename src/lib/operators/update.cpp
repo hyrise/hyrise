@@ -53,7 +53,7 @@ std::shared_ptr<const Table> Update::on_execute(TransactionContext* context) {
   if (_execute_failed) return nullptr;
 
   // 4. call insert using insert_table. (moves might happen twice??)
-  auto fake_op = std::make_shared<FakeOperator>(insert_table);
+  auto fake_op = std::make_shared<UpdateHelperOperator>(insert_table);
   fake_op->execute();
   _insert = std::make_unique<Insert>(original_table->name(), fake_op);
 
