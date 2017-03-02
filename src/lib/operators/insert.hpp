@@ -18,7 +18,6 @@ class Insert : public AbstractReadWriteOperator {
 
   std::shared_ptr<const Table> on_execute(TransactionContext* context) override;
   void commit(const uint32_t cid) override;
-  static void static_abort(const std::shared_ptr<Table> table, const PosList& pos_list);
   void abort() override;
 
   const std::string name() const override;

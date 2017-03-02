@@ -28,7 +28,7 @@ std::shared_ptr<const Table> Insert::on_execute(TransactionContext* context) {
 
   // these TypedColumnProcessors kind of retrieve the template parameter of the columns.
   auto typed_column_processors = std::vector<std::unique_ptr<AbstractTypedColumnProcessor>>();
-  for (size_t column_id = 0; column_id < _table->get_chunk(0).col_count(); ++column_id) {
+  for (auto column_id = 0u; column_id < _table->get_chunk(0).col_count(); ++column_id) {
     typed_column_processors.emplace_back(
         make_unique_by_column_type<AbstractTypedColumnProcessor, TypedColumnProcessor>(_table->column_type(column_id)));
   }
@@ -38,10 +38,11 @@ std::shared_ptr<const Table> Insert::on_execute(TransactionContext* context) {
 
   // First, allocate space for all the rows to insert. Do so while locking the table
   // to prevent multiple threads modifying the table's size simultaneously.
-  size_t start_index, start_chunk_id;
-  auto total_chunks_inserted = 0;
+  auto start_index = 0u;
+  auto start_chunk_id = 0u;
+  auto total_chunks_inserted = 0u;
   {
-    std::lock_guard<std::mutex> lock(*_table->append_mtx);
+    auto lock = _table->acquire_append_mutex();
 
     start_chunk_id = _table->chunk_count() - 1;
     auto& last_chunk = _table->get_chunk(start_chunk_id);
@@ -53,11 +54,10 @@ std::shared_ptr<const Table> Insert::on_execute(TransactionContext* context) {
       auto rows_to_insert_this_loop = std::min(_table->chunk_size() - current_chunk.size(), remaining_rows);
 
       // Resize MVCC vectors.
-      current_chunk.set_mvcc_column_size(current_chunk.size() + rows_to_insert_this_loop,
-                                         std::numeric_limits<uint32_t>::max());
+      current_chunk.set_mvcc_column_size(current_chunk.size() + rows_to_insert_this_loop, Chunk::MAX_COMMIT_ID);
 
       // Resize current chunk to full size.
-      for (size_t i = 0; i < current_chunk.col_count(); ++i) {
+      for (auto i = 0u; i < current_chunk.col_count(); ++i) {
         typed_column_processors[i]->resize_vector(current_chunk.get_column(i),
                                                   current_chunk.size() + rows_to_insert_this_loop);
       }
@@ -80,7 +80,7 @@ std::shared_ptr<const Table> Insert::on_execute(TransactionContext* context) {
     auto end_index = std::min(_table->get_chunk(chunk_id).size(), start_index + (num_rows_to_insert - input_offset));
 
     auto& current_chunk = _table->get_chunk(chunk_id);
-    for (size_t i = 0; i < current_chunk.col_count(); ++i) {
+    for (auto i = 0u; i < current_chunk.col_count(); ++i) {
       typed_column_processors[i]->move_data(current_chunk.get_column(i), chunk_to_insert.get_column(i), start_index,
                                             end_index, input_offset);
     }

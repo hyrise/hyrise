@@ -80,7 +80,7 @@ class Table {
   // not thread-safe
   void compress_chunk(ChunkID chunk_id);
 
-  std::unique_ptr<std::mutex> append_mtx;
+  std::unique_lock<std::mutex> acquire_append_mutex();
 
  protected:
   std::string _name;
@@ -94,5 +94,7 @@ class Table {
   // that is not yet completely implemented in all compilers
   std::vector<std::string> _column_names;
   std::vector<std::string> _column_types;
+
+  std::unique_ptr<std::mutex> append_mutex;
 };
 }  // namespace opossum

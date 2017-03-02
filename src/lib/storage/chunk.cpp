@@ -10,6 +10,8 @@
 
 namespace opossum {
 
+const uint32_t Chunk::MAX_COMMIT_ID = std::numeric_limits<uint32_t>::max();
+
 Chunk::Chunk() : Chunk{false} {}
 
 Chunk::Chunk(const bool has_mvcc_columns) {
@@ -28,7 +30,7 @@ void Chunk::add_column(std::shared_ptr<BaseColumn> column) {
 
 void Chunk::append(std::vector<AllTypeVariant> values) {
   // Do this first to ensure that the first thing to exist in a row are the MVCC columns.
-  if (has_mvcc_columns()) set_mvcc_column_size(size() + 1u, std::numeric_limits<uint32_t>::max());
+  if (has_mvcc_columns()) set_mvcc_column_size(size() + 1u, Chunk::MAX_COMMIT_ID);
 
   // The added values, i.e., a new row, must have the same number of attribues as the table.
   if (IS_DEBUG && _columns.size() != values.size()) {
@@ -55,7 +57,7 @@ size_t Chunk::size() const {
 void Chunk::set_mvcc_column_size(size_t new_size, uint32_t begin_cid) {
   _mvcc_columns->tids.grow_to_at_least(new_size);
   _mvcc_columns->begin_cids.grow_to_at_least(new_size, begin_cid);
-  _mvcc_columns->end_cids.grow_to_at_least(new_size, std::numeric_limits<uint32_t>::max());
+  _mvcc_columns->end_cids.grow_to_at_least(new_size, MAX_COMMIT_ID);
 }
 
 bool Chunk::has_mvcc_columns() const { return _mvcc_columns != nullptr; }

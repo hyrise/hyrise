@@ -13,7 +13,7 @@
 namespace opossum {
 
 Table::Table(const size_t chunk_size, const bool auto_compress)
-    : append_mtx(std::make_unique<std::mutex>()), _chunk_size(chunk_size), _auto_compress(auto_compress) {
+    : _chunk_size(chunk_size), _auto_compress(auto_compress), append_mutex(std::make_unique<std::mutex>()) {
   _chunks.push_back(Chunk{true});
 }
 
@@ -102,5 +102,7 @@ void Table::add_chunk(Chunk chunk) {
   }
   _chunks.emplace_back(std::move(chunk));
 }
+
+std::unique_lock<std::mutex> Table::acquire_append_mutex() { return std::unique_lock<std::mutex>(*append_mutex); }
 
 }  // namespace opossum

@@ -6,8 +6,8 @@
 #include <vector>
 
 #include "concurrency/transaction_context.hpp"
-#include "fake_operator.hpp"
 #include "storage/reference_column.hpp"
+#include "update_helper_operator.hpp"
 
 namespace opossum {
 
@@ -19,8 +19,12 @@ const std::string Update::name() const { return "Update"; }
 uint8_t Update::num_in_tables() const { return 1; }
 
 std::shared_ptr<const Table> Update::on_execute(TransactionContext* context) {
-  // The table to update should always be referenced. Updating all values of all rows is not allowed (TODO(all):
-  // discuss)
+#ifdef IS_DEBUG
+  if (!_execution_input_valid(context)) {
+    throw std::runtime_error("Input to Update isn't valid");
+  }
+#endif
+
   auto casted_ref_col = std::dynamic_pointer_cast<ReferenceColumn>(input_table_left()->get_chunk(0).get_column(0));
   auto original_table = casted_ref_col->referenced_table();
 
@@ -35,7 +39,6 @@ std::shared_ptr<const Table> Update::on_execute(TransactionContext* context) {
   }
 
   // 2. Replace the columns to update in insert_table with the updated data from input_table_right
-  // TODO(all): here we assume that both left and right table have only one chunk
   auto& columns = insert_table->get_chunk(0).columns();
   for (size_t column_id = 0; column_id < input_table_left()->col_count(); ++column_id) {
     auto left_col = std::dynamic_pointer_cast<ReferenceColumn>(input_table_left()->get_chunk(0).get_column(column_id));
@@ -70,6 +73,17 @@ void Update::commit(const uint32_t cid) {
 void Update::abort() {
   _delete->abort();
   _insert->abort();
+}
+
+bool Update::_execution_input_valid(const TransactionContext* context) const {
+  if (context == nullptr) return false;
+
+  if (input_table_left()->chunk_count() != 1 || input_table_right()->chunk_count() != 1) return false;
+
+  for (const auto& column : input_table_left()->get_chunk(0).columns())
+    if (std::dynamic_pointer_cast<ReferenceColumn>(column) == nullptr) return false;
+
+  return true;
 }
 
 }  // namespace opossum

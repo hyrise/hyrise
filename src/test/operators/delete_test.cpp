@@ -36,7 +36,6 @@ class OperatorsDeleteTest : public BaseTest {
 TEST_F(OperatorsDeleteTest, ExecuteAndCommit) {
   auto transaction_context = TransactionContext{1u, 1u};
   const auto cid = 1u;
-  const auto max_cid = std::numeric_limits<uint32_t>::max();
 
   auto table_scan = std::make_shared<TableScan>(_gt, "b", ">", "456.7");
 
@@ -53,7 +52,7 @@ TEST_F(OperatorsDeleteTest, ExecuteAndCommit) {
   delete_op->commit(cid);
 
   EXPECT_EQ(_table->get_chunk(0u).mvcc_columns().end_cids.at(0u), cid);
-  EXPECT_EQ(_table->get_chunk(0u).mvcc_columns().end_cids.at(1u), max_cid);
+  EXPECT_EQ(_table->get_chunk(0u).mvcc_columns().end_cids.at(1u), Chunk::MAX_COMMIT_ID);
   EXPECT_EQ(_table->get_chunk(0u).mvcc_columns().end_cids.at(2u), cid);
 
   EXPECT_EQ(_table->get_chunk(0u).mvcc_columns().tids.at(0u), 0u);
@@ -63,7 +62,6 @@ TEST_F(OperatorsDeleteTest, ExecuteAndCommit) {
 
 TEST_F(OperatorsDeleteTest, ExecuteAndAbort) {
   auto transaction_context = TransactionContext{1u, 1u};
-  const auto max_cid = std::numeric_limits<uint32_t>::max();
 
   auto table_scan = std::make_shared<TableScan>(_gt, "b", ">", "456.7");
 
@@ -79,9 +77,9 @@ TEST_F(OperatorsDeleteTest, ExecuteAndAbort) {
 
   delete_op->abort();
 
-  EXPECT_EQ(_table->get_chunk(0u).mvcc_columns().end_cids.at(0u), max_cid);
-  EXPECT_EQ(_table->get_chunk(0u).mvcc_columns().end_cids.at(1u), max_cid);
-  EXPECT_EQ(_table->get_chunk(0u).mvcc_columns().end_cids.at(2u), max_cid);
+  EXPECT_EQ(_table->get_chunk(0u).mvcc_columns().end_cids.at(0u), Chunk::MAX_COMMIT_ID);
+  EXPECT_EQ(_table->get_chunk(0u).mvcc_columns().end_cids.at(1u), Chunk::MAX_COMMIT_ID);
+  EXPECT_EQ(_table->get_chunk(0u).mvcc_columns().end_cids.at(2u), Chunk::MAX_COMMIT_ID);
 
   EXPECT_EQ(_table->get_chunk(0u).mvcc_columns().tids.at(0u), 0u);
   EXPECT_EQ(_table->get_chunk(0u).mvcc_columns().tids.at(1u), 0u);
