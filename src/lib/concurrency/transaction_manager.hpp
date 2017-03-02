@@ -9,6 +9,35 @@
 
 #include "types.hpp"
 
+/**
+ * MVCC overview
+ *
+ * A good description of MVCC which we used as basis for our implementation is given here:
+ * http://15721.courses.cs.cmu.edu/spring2016/papers/schwalb-imdm2014.pdf
+ *
+ * Conceptually, the idea is that each row has additional columns which are used to mark rows as locked for a
+ * transaction, and to describe when the row was created and deleted to ensure correct visibility. These vectors are
+ * written to by AbstractReadWriteOperators, of which there are mainly Insert, Update and Delete,
+ * as well as Commit and Abort.
+ *
+ * Rows invisible for the current transaction are filtered by the Validate operator.
+
+ * The Commit operator must be run at the end of each transaction. To complete the process of making changes visible,
+ * TransactionManager::commit must be called.
+ *
+ * ReadWriteOperators can fail if they detect conflicting writes by other operators. In that case, the transaction must
+ * be aborted by running the Abort operator.
+ *
+ * The TransactionManager is a thread-safe singleton that hands out TransactionContexts with monotonically increasing
+ * IDs and ensures all transactions are committed in the correct order. It also holds a global _last_commit_id, which is
+ * the commit id of the last transaction that has been committed. When creating a new TransactionContext, it will get
+ * get the current _last_commit_id and thus "see" all inserts and deletes that happened up until that commit ID.
+ *
+ * TransactionContext contains data used by a transaction, mainly its ID, the last commit ID explained above, and,
+ * when it enters the commit phase, the TransactionManager gives it a CommitContext, which contains
+ * a new commit ID that the Commit operator uses to make its changes visible to others.
+ */
+
 namespace opossum {
 
 /**

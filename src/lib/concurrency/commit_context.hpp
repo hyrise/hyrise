@@ -17,8 +17,6 @@ namespace opossum {
  */
 class CommitContext {
  public:
-  // creates initial last commit context with cid 0
-  CommitContext();
   explicit CommitContext(const CommitID commit_id);
 
   CommitContext(const CommitContext& rhs) = delete;
@@ -46,6 +44,7 @@ class CommitContext {
   bool has_next() const;
 
   std::shared_ptr<CommitContext> next();
+  std::shared_ptr<const CommitContext> next() const;
 
   /**
    * Tries to set the next context. Returns false if it has already

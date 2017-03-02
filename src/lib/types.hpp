@@ -10,6 +10,7 @@
 #include <boost/variant.hpp>
 
 #include <algorithm>
+#include <limits>
 #include <memory>
 #include <string>
 #include <utility>
@@ -26,12 +27,21 @@ struct RowID {
   ChunkOffset chunk_offset;
 };
 
+using ColumnID = uint16_t;
 using ValueID = uint32_t;  // Cannot be larger than ChunkOffset
+using WorkerID = uint32_t;
+using NodeID = uint32_t;
+using TaskID = uint32_t;
+
+using CpuID = uint32_t;
 
 using CommitID = uint32_t;
 using TransactionID = uint32_t;
 
 using PosList = std::vector<RowID>;
+
+constexpr NodeID INVALID_NODE_ID = std::numeric_limits<NodeID>::max();
+constexpr TaskID INVALID_TASK_ID = std::numeric_limits<TaskID>::max();
 
 // This holds all possible data types. The left side of the pairs are the names, the right side are prototypes
 // ("examples").

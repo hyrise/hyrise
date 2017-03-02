@@ -23,6 +23,8 @@ if os.execute("test -x .git/hooks/pre-push") ~= 0 or os.execute(md5Command .. " 
   os.execute("echo Successfully installed pre-push hook.")
 end
 
+-- Check for numa availability
+numa_supported = os.findlib("numa") ~= nil
 
 -- TODO try LTO/whole program
 
@@ -75,6 +77,13 @@ solution "opossum"
   links { "tbb" }
   includedirs { "src/lib/", "/usr/local/include" }
 
+  if numa_supported then
+    links { "numa" }
+    defines { "OPOSSUM_NUMA_SUPPORT=1" }
+  else
+    defines { "OPOSSUM_NUMA_SUPPORT=0" }
+  end
+
   configuration "Debug"
     defines { "IS_DEBUG=1" }
     flags { "Symbols" }
@@ -114,7 +123,7 @@ project "server"
 
 project "playground"
   kind "ConsoleApp"
-  links { "opossum"}
+  links { "opossum" }
   files { "src/bin/playground.cpp" }
 
 project "test"
@@ -123,8 +132,7 @@ project "test"
   links { "opossum", "googletest" }
   files { "src/test/**.hpp", "src/test/**.cpp" }
   includedirs { "third_party/googletest/googletest/include" }
-  -- We need to add something that always returns 0 (the echo) because otherwise the build is considered failed and gets deleted
-  postbuildcommands { "./build/test || echo Test failed" }
+  postbuildcommands { "./build/test" }
 
 project "asan"
   kind "ConsoleApp"

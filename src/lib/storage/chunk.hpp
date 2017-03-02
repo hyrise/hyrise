@@ -54,6 +54,7 @@ class Chunk {
   const std::vector<std::shared_ptr<BaseColumn>> &columns() const { return _columns; }
 
   // adds a new row, given as a list of values, to the chunk
+  // note this is slow and not thread-safe and should be used for testing purposes only
   void append(std::vector<AllTypeVariant> values);
 
   // returns the column at a given position

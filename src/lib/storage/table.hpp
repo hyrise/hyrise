@@ -61,6 +61,7 @@ class Table {
   void add_column(const std::string &name, const std::string &type, bool create_value_column = true);
 
   // inserts a row at the end of the table
+  // note this is slow and not thread-safe and should be used for testing purposes only
   void append(std::vector<AllTypeVariant> values);
 
   // creates a new chunk and appends it

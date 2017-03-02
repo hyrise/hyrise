@@ -18,13 +18,13 @@ class CommitContextTest : public BaseTest {
 };
 
 TEST_F(CommitContextTest, HasNextReturnsFalse) {
-  auto context = std::make_unique<CommitContext>();
+  auto context = std::make_unique<CommitContext>(0u);
 
   EXPECT_EQ(context->has_next(), false);
 }
 
 TEST_F(CommitContextTest, HasNextReturnsTrueAfterNextHasBeenSet) {
-  auto context = std::make_shared<CommitContext>();
+  auto context = std::make_unique<CommitContext>(0u);
 
   auto next_context = std::make_shared<CommitContext>(context->commit_id() + 1u);
 
@@ -34,7 +34,7 @@ TEST_F(CommitContextTest, HasNextReturnsTrueAfterNextHasBeenSet) {
 }
 
 TEST_F(CommitContextTest, TrySetNextFailsIfNotNullptr) {
-  auto context = std::make_shared<CommitContext>();
+  auto context = std::make_unique<CommitContext>(0u);
 
   auto next_context = std::make_shared<CommitContext>(context->commit_id() + 1u);
 

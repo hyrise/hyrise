@@ -1,0 +1,4 @@
+PropertyType,Key,Value
+ChunkSize,,2
+ColumnType,b,float
+ColumnType,a,int
