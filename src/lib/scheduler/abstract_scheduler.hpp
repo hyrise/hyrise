@@ -1,32 +1,43 @@
 #pragma once
 
 #include <memory>
+#include <vector>
 
-#include "abstract_task.hpp"
+#include "types.hpp"
 
 namespace opossum {
 
-class AbstractTopology;
+class AbstractTask;
+class CurrentScheduler;
+class JobTask;
+class TaskQueue;
+class Topology;
+class Worker;
 
-/**
- * Defines the interface for a Scheduler, allows for multiple (possibly experimental) Scheduler implementations
- */
 class AbstractScheduler {
+  friend class CurrentScheduler;
+
  public:
-  explicit AbstractScheduler(std::shared_ptr<AbstractTopology> topology);
+  explicit AbstractScheduler(std::shared_ptr<Topology> topology);
   virtual ~AbstractScheduler() = default;
 
-  const std::shared_ptr<AbstractTopology>& topology() const;
+  const std::shared_ptr<Topology>& topology() const;
 
   /**
-   * Blocks until all queues are empty and all Tasks are finished
+   * Begin the schedulers lifecycle as the global Scheduler instance. In this method do work that can't be done before
+   * the Scheduler isn't registered as the global instance
    */
+  virtual void begin() = 0;
+
   virtual void finish() = 0;
 
-  virtual void schedule(std::shared_ptr<AbstractTask> task, uint32_t preferred_node_id) = 0;
+  virtual const std::vector<std::shared_ptr<TaskQueue>>& queues() const = 0;
+
+  virtual void schedule(std::shared_ptr<AbstractTask> task, uint32_t preferred_node_id = CURRENT_NODE_ID,
+                        SchedulePriority priority = SchedulePriority::Normal) = 0;
 
  protected:
-  std::shared_ptr<AbstractTopology> _topology;
+  std::shared_ptr<Topology> _topology;
 };
 
 }  // namespace opossum

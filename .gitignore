@@ -4,4 +4,6 @@ build/*
 *.make
 Makefile*
 coverage
+benchmark.json
 *.sublime-*
+.idea

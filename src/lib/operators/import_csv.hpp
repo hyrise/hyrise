@@ -13,14 +13,18 @@ namespace opossum {
  * <filename>.meta.csv
  * The files are parsed according to RFC 4180.
  * For the structure of the meta csv file see export_csv.hpp
+ * If parameter tablename provided, the imported table is stored in the StorageManager. If a table with this name
+ * already exists, it is returned and no import is performed.
  */
 class ImportCsv : public AbstractReadOnlyOperator {
  public:
   /*
    * @param directory   The directory where the csv files are located in.
    * @param filename    Name of the input file. The operator opens the files <filename>.csv and <filename>.meta.csv
+   * @param tablename   Optional. Name of the table to store/look up in the StorageManager.
    */
-  explicit ImportCsv(const std::string& directory, const std::string& filename);
+  explicit ImportCsv(const std::string& directory, const std::string& filename,
+                     const std::string& tablename = std::string());
 
   // cannot move-assign because of const members
   ImportCsv& operator=(ImportCsv&&) = delete;
@@ -42,8 +46,9 @@ class ImportCsv : public AbstractReadOnlyOperator {
   const std::string _directory;
   // Name of the csv file without file extension
   const std::string _filename;
+  // Name for adding the table to the StorageManager
+  const optional<std::string> _tablename;
 
- protected:
   /* Creates the table structure from the meta file.
   *  The following is the content an example meta file:
   *

@@ -96,6 +96,7 @@ TEST_F(StorageDictionaryColumnTest, LowerUpperBound) {
   auto col = make_shared_by_column_type<BaseColumn, DictionaryColumn>("int", vc_int);
   auto dict_col = std::dynamic_pointer_cast<DictionaryColumn<int>>(col);
 
+  // Test for template-type as parameter
   EXPECT_EQ(dict_col->lower_bound(4), (ValueID)2);
   EXPECT_EQ(dict_col->upper_bound(4), (ValueID)3);
 
@@ -104,6 +105,16 @@ TEST_F(StorageDictionaryColumnTest, LowerUpperBound) {
 
   EXPECT_EQ(dict_col->lower_bound(15), INVALID_VALUE_ID);
   EXPECT_EQ(dict_col->upper_bound(15), INVALID_VALUE_ID);
+
+  // Test for AllTypeVariant as parameter
+  EXPECT_EQ(dict_col->lower_bound(AllTypeVariant(4)), (ValueID)2);
+  EXPECT_EQ(dict_col->upper_bound(AllTypeVariant(4)), (ValueID)3);
+
+  EXPECT_EQ(dict_col->lower_bound(AllTypeVariant(5)), (ValueID)3);
+  EXPECT_EQ(dict_col->upper_bound(AllTypeVariant(5)), (ValueID)3);
+
+  EXPECT_EQ(dict_col->lower_bound(AllTypeVariant(15)), INVALID_VALUE_ID);
+  EXPECT_EQ(dict_col->upper_bound(AllTypeVariant(15)), INVALID_VALUE_ID);
 }
 
 TEST_F(StorageDictionaryColumnTest, FittedAttributeVectorSize) {

@@ -2,12 +2,14 @@
 
 #include <algorithm>
 #include <iomanip>
+#include <limits>
 #include <memory>
 #include <numeric>
 #include <string>
 #include <utility>
 #include <vector>
 
+#include "../types.hpp"
 #include "dictionary_column.hpp"
 
 namespace opossum {
@@ -18,6 +20,9 @@ Table::Table(const size_t chunk_size, const bool auto_compress)
 }
 
 void Table::add_column(const std::string &name, const std::string &type, bool create_value_column) {
+  if (name.size() > std::numeric_limits<ColumnNameLength>::max()) {
+    throw std::runtime_error("Cannot add column. Column name is too long.");
+  }
   _column_names.push_back(name);
   _column_types.push_back(type);
   if (create_value_column) {

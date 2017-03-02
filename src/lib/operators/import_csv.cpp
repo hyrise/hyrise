@@ -10,8 +10,10 @@
 
 namespace opossum {
 
-ImportCsv::ImportCsv(const std::string& directory, const std::string& filename)
-    : _directory(directory), _filename(filename) {}
+ImportCsv::ImportCsv(const std::string& directory, const std::string& filename, const std::string& tablename)
+    : _directory(directory),
+      _filename(filename),
+      _tablename(tablename.empty() ? nullopt : optional<std::string>(tablename)) {}
 
 const std::string ImportCsv::name() const { return "ImportCSV"; }
 
@@ -20,6 +22,12 @@ uint8_t ImportCsv::num_in_tables() const { return 0; }
 uint8_t ImportCsv::num_out_tables() const { return 1; }
 
 std::shared_ptr<const Table> ImportCsv::on_execute() {
+  if (_tablename) {
+    if (StorageManager::get().has_table(_tablename.value_or(""))) {
+      return StorageManager::get().get_table(_tablename.value_or(""));
+    }
+  }
+
   auto table = _process_meta_file(_directory + '/' + _filename + csv::meta_file_extension);
 
   std::ifstream file;
@@ -42,6 +50,11 @@ std::shared_ptr<const Table> ImportCsv::on_execute() {
     }
     table->append(values);
   }
+
+  if (_tablename) {
+    StorageManager::get().add_table(_tablename.value_or(""), table);
+  }
+
   return table;
 }
 

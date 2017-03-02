@@ -1,3 +1,4 @@
+#include <limits>
 #include <string>
 #include <vector>
 
@@ -55,6 +56,10 @@ TEST_F(StorageValueColumnTest, RetrieveValue) {
 
   vc_double.append(3.14);
   EXPECT_EQ(vc_double.values()[0], 3.14);
+}
+
+TEST_F(StorageValueColumnTest, StringTooLong) {
+  EXPECT_THROW(vc_str.append(std::string(std::numeric_limits<StringLength>::max() + 1ul, 'A')), std::exception);
 }
 
 }  // namespace opossum

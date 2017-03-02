@@ -9,8 +9,8 @@
 
 namespace opossum {
 Product::Product(const std::shared_ptr<const AbstractOperator> left,
-                 const std::shared_ptr<const AbstractOperator> right, const std::string prefix_left,
-                 const std::string prefix_right)
+                 const std::shared_ptr<const AbstractOperator> right, const std::string& prefix_left,
+                 const std::string& prefix_right)
     : AbstractReadOnlyOperator(left, right), _prefix_left(prefix_left), _prefix_right(prefix_right) {}
 
 const std::string Product::name() const { return "Product"; }
