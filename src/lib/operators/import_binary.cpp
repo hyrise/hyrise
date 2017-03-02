@@ -114,12 +114,12 @@ Chunk ImportBinary::_import_chunk(std::ifstream& file, std::shared_ptr<Table>& t
 std::shared_ptr<BaseColumn> ImportBinary::_import_column(std::ifstream& file, ChunkOffset row_count,
                                                          const std::string& data_type) {
   std::shared_ptr<BaseColumn> result;
-  hana::for_each(column_types, [&](auto x) {
-    if (std::string(hana::first(x)) == data_type) {
-      typename std::remove_reference<decltype(hana::second(x))>::type prototype;
-      result = _import_column<decltype(prototype)>(file, row_count);
-    }
-  });
+  // hana::for_each(column_types, [&](auto x) {
+  //   if (std::string(hana::first(x)) == data_type) {
+  //     typename std::remove_reference<decltype(hana::second(x))>::type prototype;
+  //     result = _import_column<decltype(prototype)>(file, row_count);
+  //   }
+  // });
   if (IS_DEBUG && !result) throw std::runtime_error("unknown type " + data_type);
   return result;
 }

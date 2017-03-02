@@ -59,6 +59,17 @@ void _export_values(std::ofstream& ofstream, const std::vector<std::string>& val
   _export_string_values(ofstream, values);
 }
 
+template <typename T>
+void _export_values(std::ofstream& ofstream, const tbb::concurrent_vector<T>& values) {
+  // TODO(all): this is here to make it compile!
+}
+
+// specialized implementation for string values
+template <>
+void _export_values(std::ofstream& ofstream, const tbb::concurrent_vector<std::string>& values) {
+  // TODO(all): this is here to make it compile!
+}
+
 // Writes a shallow copy of the given value to the ofstream
 template <typename T>
 void _export_value(std::ofstream& ofstream, const T& value) {
