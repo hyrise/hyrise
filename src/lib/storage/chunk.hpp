@@ -71,12 +71,12 @@ class Chunk {
 
   void set_mvcc_column_size(size_t new_size, uint32_t begin_cid);
 
-  std::vector<std::shared_ptr<BaseIndex>> get_indices_for(
-      const std::vector<std::shared_ptr<BaseColumn>> &columns) const;
-
   // moves the mvcc columns from chunk to this instance
   // not thread-safe
   void move_mvcc_columns_from(Chunk &chunk);
+
+  std::vector<std::shared_ptr<BaseIndex>> get_indices_for(
+      const std::vector<std::shared_ptr<BaseColumn>> &columns) const;
 
   template <typename Index>
   std::shared_ptr<BaseIndex> create_index(std::shared_ptr<BaseColumn> index_column) {

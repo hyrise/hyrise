@@ -84,41 +84,6 @@ const Chunk::MvccColumns& Chunk::mvcc_columns() const {
   return *_mvcc_columns;
 }
 
-std::vector<std::shared_ptr<BaseIndex>> Chunk::get_indices_for(
-    const std::vector<std::shared_ptr<BaseColumn>>& columns) const {
-  auto result = std::vector<std::shared_ptr<BaseIndex>>();
-  std::copy_if(_indices.cbegin(), _indices.cend(), std::back_inserter(result),
-               [&columns](const std::shared_ptr<BaseIndex>& index) { return index->is_index_for(columns); });
-  return result;
-}
-
-void Chunk::set_mvcc_column_size(size_t new_size, uint32_t begin_cid) {
-  _mvcc_columns->tids.grow_to_at_least(new_size);
-  _mvcc_columns->begin_cids.grow_to_at_least(new_size, begin_cid);
-  _mvcc_columns->end_cids.grow_to_at_least(new_size, MAX_COMMIT_ID);
-}
-
-bool Chunk::has_mvcc_columns() const { return _mvcc_columns != nullptr; }
-
-Chunk::MvccColumns& Chunk::mvcc_columns() {
-#ifdef IS_DEBUG
-  if (!has_mvcc_columns()) {
-    std::logic_error("Chunk does not have mvcc columns");
-  }
-#endif
-
-  return *_mvcc_columns;
-}
-const Chunk::MvccColumns& Chunk::mvcc_columns() const {
-#ifdef IS_DEBUG
-  if (!has_mvcc_columns()) {
-    std::logic_error("Chunk does not have mvcc columns");
-  }
-#endif
-
-  return *_mvcc_columns;
-}
-
 void Chunk::compress_mvcc_columns() {
 #ifdef IS_DEBUG
   if (!has_mvcc_columns()) {
@@ -142,5 +107,13 @@ void Chunk::compress_mvcc_columns() {
 }
 
 void Chunk::move_mvcc_columns_from(Chunk& chunk) { _mvcc_columns = std::move(chunk._mvcc_columns); }
+
+std::vector<std::shared_ptr<BaseIndex>> Chunk::get_indices_for(
+    const std::vector<std::shared_ptr<BaseColumn>>& columns) const {
+  auto result = std::vector<std::shared_ptr<BaseIndex>>();
+  std::copy_if(_indices.cbegin(), _indices.cend(), std::back_inserter(result),
+               [&columns](const std::shared_ptr<BaseIndex>& index) { return index->is_index_for(columns); });
+  return result;
+}
 
 }  // namespace opossum
