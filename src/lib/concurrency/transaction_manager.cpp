@@ -12,7 +12,7 @@ TransactionManager& TransactionManager::get() {
 
 void TransactionManager::reset() {
   auto& manager = get();
-  manager._next_transaction_id = 0u;
+  manager._next_transaction_id = 1u;
   manager._last_commit_id = 0u;
   manager._last_commit_context = std::make_shared<CommitContext>();
 }

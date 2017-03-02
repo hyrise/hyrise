@@ -5,7 +5,6 @@
 #include <vector>
 
 #include "projection.hpp"
-#include "storage/reference_column.hpp"
 
 namespace opossum {
 Projection::Projection(const std::shared_ptr<const AbstractOperator> in, const std::vector<std::string>& columns)

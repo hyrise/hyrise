@@ -63,6 +63,9 @@ class Table {
   // inserts a row at the end of the table
   void append(std::vector<AllTypeVariant> values);
 
+  // creates a new chunk and appends it
+  void create_new_chunk();
+
   // returns the number of the chunk and the position in the chunk for a given row
   // TODO(md): this would be a nice place to use structured bindings once they are supported by the compilers
   std::pair<ChunkID, ChunkOffset> locate_row(RowID row) const { return {row.chunk_id, row.chunk_offset}; }
@@ -70,13 +73,18 @@ class Table {
   // calculates the row id from a given chunk and the chunk offset
   RowID calculate_row_id(ChunkID chunk, ChunkOffset offset) const { return RowID{chunk, offset}; }
 
+  std::string name() const { return _name; }
+  void set_name(std::string name) { _name = name; }
+
   // enforces dictionary compression on a certain chunk
   // not thread-safe
   void compress_chunk(ChunkID chunk_id);
 
-  std::unique_ptr<std::mutex> append_mtx;
+  std::unique_lock<std::mutex> acquire_append_mutex();
 
  protected:
+  std::string _name;
+
   // 0 means that the chunk has an unlimited size.
   const size_t _chunk_size;
   const bool _auto_compress;
@@ -86,5 +94,7 @@ class Table {
   // that is not yet completely implemented in all compilers
   std::vector<std::string> _column_names;
   std::vector<std::string> _column_types;
+
+  std::unique_ptr<std::mutex> append_mutex;
 };
 }  // namespace opossum

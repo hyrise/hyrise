@@ -15,6 +15,8 @@ namespace opossum {
 // It stores the data column by column.
 class Chunk {
  public:
+  static const uint32_t MAX_COMMIT_ID;
+
   /**
    * Columns storing visibility information
    * for multiversion concurrency control
@@ -47,6 +49,10 @@ class Chunk {
   // returns the number of rows
   size_t size() const;
 
+  // returns the columns vector for direct manipulation.
+  std::vector<std::shared_ptr<BaseColumn>> &columns() { return _columns; }
+  const std::vector<std::shared_ptr<BaseColumn>> &columns() const { return _columns; }
+
   // adds a new row, given as a list of values, to the chunk
   void append(std::vector<AllTypeVariant> values);
 
@@ -71,4 +77,5 @@ class Chunk {
   std::vector<std::shared_ptr<BaseColumn>> _columns;
   std::unique_ptr<MvccColumns> _mvcc_columns;
 };
+
 }  // namespace opossum

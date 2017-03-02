@@ -9,7 +9,7 @@ namespace opossum {
 
 Delete::Delete(const std::shared_ptr<const AbstractOperator>& op) : AbstractReadWriteOperator{op} {}
 
-std::shared_ptr<const Table> Delete::on_execute(const TransactionContext* context) {
+std::shared_ptr<const Table> Delete::on_execute(TransactionContext* context) {
 #ifdef IS_DEBUG
   if (!_execution_input_valid(context)) {
     throw std::runtime_error("Input to Delete isn't valid");

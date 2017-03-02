@@ -17,7 +17,7 @@ class Delete : public AbstractReadWriteOperator {
  public:
   explicit Delete(const std::shared_ptr<const AbstractOperator>& op);
 
-  std::shared_ptr<const Table> on_execute(const TransactionContext* context) override;
+  std::shared_ptr<const Table> on_execute(TransactionContext* context) override;
 
   void commit(const uint32_t cid) override;
   void abort() override;

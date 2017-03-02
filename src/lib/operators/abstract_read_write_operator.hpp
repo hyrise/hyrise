@@ -4,6 +4,7 @@
 #include <memory>
 #include <vector>
 
+#include "concurrency/transaction_context.hpp"
 #include "operators/abstract_operator.hpp"
 #include "storage/table.hpp"
 
@@ -19,9 +20,14 @@ namespace opossum {
  */
 class AbstractReadWriteOperator : public AbstractOperator {
  public:
-  explicit AbstractReadWriteOperator(const std::shared_ptr<const AbstractOperator> left,
+  explicit AbstractReadWriteOperator(const std::shared_ptr<const AbstractOperator> left = nullptr,
                                      const std::shared_ptr<const AbstractOperator> right = nullptr)
       : AbstractOperator(left, right), _execute_failed{false} {}
+
+  void execute(TransactionContext* context) override {
+    context->register_rw_operator(this);
+    _output = on_execute(context);
+  }
 
   /**
    * Executes the operator. The context parameter is used to lock the rows that should be modified.
@@ -33,7 +39,7 @@ class AbstractReadWriteOperator : public AbstractOperator {
    *
    * @returns nullptr, since these operators do not create new intermediate results but modify existing tables
    */
-  std::shared_ptr<const Table> on_execute(const TransactionContext* context) override = 0;
+  std::shared_ptr<const Table> on_execute(TransactionContext* context) override = 0;
 
   /**
    * Commits the operator by applying the cid to the mvcc columns for all modified rows and unlocking them. The

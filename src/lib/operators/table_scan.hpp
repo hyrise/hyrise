@@ -127,6 +127,8 @@ class TableScan::TableScanImpl : public AbstractReadOnlyOperatorImpl, public Col
       throw std::runtime_error(std::string("unknown operator ") + _op);
     }
 
+    bool empty_table = true;
+
     for (ChunkID chunk_id = 0; chunk_id < in_table->chunk_count(); ++chunk_id) {
       const Chunk &chunk_in = in_table->get_chunk(chunk_id);
       Chunk chunk_out;
@@ -135,6 +137,7 @@ class TableScan::TableScanImpl : public AbstractReadOnlyOperatorImpl, public Col
       base_column->visit(*this, std::make_shared<ScanContext>(in_table, matches_in_this_chunk));
       // We now receive the visits in the handler methods below...
       if (matches_in_this_chunk.size() == 0) continue;
+      empty_table = false;
 
       // Ok, now we have a list of the matching positions relative to this chunk (ChunkOffsets). Next, we have to
       // transform them into absolute row ids. To save time and space, we want to share PosLists between columns as much
@@ -182,6 +185,17 @@ class TableScan::TableScanImpl : public AbstractReadOnlyOperatorImpl, public Col
         auto ref_col_out = std::make_shared<ReferenceColumn>(referenced_table_out, referenced_column_id, pos_list_out);
         chunk_out.add_column(ref_col_out);
       }
+      output->add_chunk(std::move(chunk_out));
+    }
+
+    if (empty_table) {
+      Chunk chunk_out;
+
+      for (size_t column_id = 0; column_id < in_table->col_count(); ++column_id) {
+        auto ref_col_out = std::make_shared<ReferenceColumn>(in_table, column_id, std::make_shared<PosList>());
+        chunk_out.add_column(ref_col_out);
+      }
+
       output->add_chunk(std::move(chunk_out));
     }
 

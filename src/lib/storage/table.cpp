@@ -13,7 +13,7 @@
 namespace opossum {
 
 Table::Table(const size_t chunk_size, const bool auto_compress)
-    : append_mtx(std::make_unique<std::mutex>()), _chunk_size(chunk_size), _auto_compress(auto_compress) {
+    : _chunk_size(chunk_size), _auto_compress(auto_compress), append_mutex(std::make_unique<std::mutex>()) {
   _chunks.push_back(Chunk{true});
 }
 
@@ -32,15 +32,18 @@ void Table::append(std::vector<AllTypeVariant> values) {
   if (_chunk_size > 0 && _chunks.back().size() == _chunk_size) {
     if (_auto_compress) compress_chunk(chunk_count() - 1);
 
-    // creates chunk with mvcc columns
-    Chunk newChunk{true};
-    for (auto &&type : _column_types) {
-      newChunk.add_column(make_shared_by_column_type<BaseColumn, ValueColumn>(type));
-    }
-    _chunks.push_back(std::move(newChunk));
+    create_new_chunk();
   }
 
   _chunks.back().append(values);
+}
+
+void Table::create_new_chunk() {
+  Chunk newChunk{true};
+  for (auto &&type : _column_types) {
+    newChunk.add_column(make_shared_by_column_type<BaseColumn, ValueColumn>(type));
+  }
+  _chunks.push_back(std::move(newChunk));
 }
 
 size_t Table::col_count() const { return _column_types.size(); }
@@ -99,5 +102,7 @@ void Table::add_chunk(Chunk chunk) {
   }
   _chunks.emplace_back(std::move(chunk));
 }
+
+std::unique_lock<std::mutex> Table::acquire_append_mutex() { return std::unique_lock<std::mutex>(*append_mutex); }
 
 }  // namespace opossum
