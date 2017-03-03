@@ -61,13 +61,17 @@ void _export_values(std::ofstream& ofstream, const std::vector<std::string>& val
 
 template <typename T>
 void _export_values(std::ofstream& ofstream, const tbb::concurrent_vector<T>& values) {
-  // TODO(all): this is here to make it compile!
+  // TODO(all): could be faster if we directly write the values into the stream without prior conversion
+  const auto value_block = std::vector<T>{values.begin(), values.end()};
+  ofstream.write(reinterpret_cast<const char*>(value_block.data()), value_block.size() * sizeof(T));
 }
 
 // specialized implementation for string values
 template <>
 void _export_values(std::ofstream& ofstream, const tbb::concurrent_vector<std::string>& values) {
-  // TODO(all): this is here to make it compile!
+  // TODO(all): could be faster if we directly write the values into the stream without prior conversion
+  const auto value_block = std::vector<std::string>{values.begin(), values.end()};
+  _export_string_values(ofstream, value_block);
 }
 
 // Writes a shallow copy of the given value to the ofstream
