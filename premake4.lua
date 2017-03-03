@@ -170,7 +170,7 @@ project "benchmark"
   links { "opossum", "googlebenchmark" }
   files { "src/benchmark/**.hpp", "src/benchmark/**.cpp" }
   includedirs { "third_party/benchmark/include" }
-  --postbuildcommands { "./build/benchmark --benchmark_format=json > benchmark.json" }
+  postbuildcommands { "./build/benchmark --benchmark_format=json > benchmark.json" }
 
 project "coverage"
   kind "ConsoleApp"
