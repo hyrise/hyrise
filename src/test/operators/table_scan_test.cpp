@@ -108,13 +108,11 @@ TEST_F(OperatorsTableScanTest, DoubleScan) {
 }
 
 TEST_F(OperatorsTableScanTest, EmptyResultScan) {
-  std::shared_ptr<Table> expected_result = load_table("src/test/tables/float_int.tbl", 2);
-
-  auto scan_1 = std::make_shared<TableScan>(_gt, "b", ">", 9000);
+  auto scan_1 = std::make_shared<TableScan>(_gt, "a", ">", 90000);
   scan_1->execute();
 
-  EXPECT_EQ(scan_1->get_output()->chunk_count(), 1u);
-  EXPECT_EQ(scan_1->get_output()->get_chunk(0).col_count(), 2u);
+  for (auto i = 0u; i < scan_1->get_output()->chunk_count(); i++)
+    EXPECT_EQ(scan_1->get_output()->get_chunk(i).col_count(), 2u);
 }
 
 TEST_F(OperatorsTableScanTest, SingleScanReturnsCorrectRowCount) {
