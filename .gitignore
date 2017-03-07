@@ -7,3 +7,5 @@ coverage
 benchmark.json
 *.sublime-*
 .idea
+*.xcodeproj
+*.xcworkspace
