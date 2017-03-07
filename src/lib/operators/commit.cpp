@@ -11,7 +11,7 @@ uint8_t Commit::num_in_tables() const { return 0; }
 
 uint8_t Commit::num_out_tables() const { return 0; }
 
-void Commit::commit(const uint32_t /*cid*/) {}
+void Commit::commit(const CommitID /*cid*/) {}
 void Commit::abort() {}
 
 std::shared_ptr<const Table> Commit::on_execute(TransactionContext* context) {

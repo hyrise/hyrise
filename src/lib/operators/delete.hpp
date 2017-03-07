@@ -19,7 +19,7 @@ class Delete : public AbstractReadWriteOperator {
 
   std::shared_ptr<const Table> on_execute(TransactionContext* context) override;
 
-  void commit(const uint32_t cid) override;
+  void commit(const CommitID cid) override;
   void abort() override;
 
   const std::string name() const override;
@@ -34,6 +34,6 @@ class Delete : public AbstractReadWriteOperator {
  private:
   std::shared_ptr<const PosList> _pos_list;
   std::shared_ptr<Table> _referenced_table;
-  uint32_t _transaction_id;
+  TransactionID _transaction_id;
 };
 }  // namespace opossum

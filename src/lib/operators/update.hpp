@@ -10,13 +10,17 @@
 
 namespace opossum {
 
-// operator to retrieve a table from the StorageManager by specifying its name
+/**
+ * Operator that updates a number of rows from one table with values supplied in another.
+ * Expects both tables to have the exact same layout and number of rows.
+ * Expects both tables to only have one chunk.
+ */
 class Update : public AbstractReadWriteOperator {
  public:
   explicit Update(std::shared_ptr<AbstractOperator> table_to_update, std::shared_ptr<AbstractOperator> update_values);
 
   std::shared_ptr<const Table> on_execute(TransactionContext* context) override;
-  void commit(const uint32_t cid) override;
+  void commit(const CommitID cid) override;
   void abort() override;
 
   const std::string name() const override;

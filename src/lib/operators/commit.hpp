@@ -7,7 +7,10 @@
 
 namespace opossum {
 
-// operator to commit all operators in the current commit context.
+/**
+ * Operator to set all MVCC values correctly to prepare a commit
+ * of all operators in the current commit context.
+ */
 class Commit : public AbstractReadWriteOperator {
  public:
   Commit();
@@ -15,12 +18,12 @@ class Commit : public AbstractReadWriteOperator {
   uint8_t num_in_tables() const override;
   uint8_t num_out_tables() const override;
 
-  void commit(const uint32_t cid) override;
+  void commit(const CommitID cid) override;
   void abort() override;
 
  protected:
   /**
-   * Calls commit on all read-write operators. Needs to have prepare_commit calle first.
+   * Calls commit on all read-write operators. Needs to have prepare_commit called first.
    */
   std::shared_ptr<const Table> on_execute(TransactionContext* context) override;
 };

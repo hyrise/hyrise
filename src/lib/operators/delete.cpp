@@ -38,7 +38,7 @@ std::shared_ptr<const Table> Delete::on_execute(TransactionContext* context) {
   return nullptr;
 }
 
-void Delete::commit(const uint32_t cid) {
+void Delete::commit(const CommitID cid) {
   for (const auto& row_id : *_pos_list) {
     auto& chunk = _referenced_table->get_chunk(row_id.chunk_id);
 

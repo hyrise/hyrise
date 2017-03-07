@@ -11,7 +11,7 @@ uint8_t Abort::num_in_tables() const { return 0; }
 
 uint8_t Abort::num_out_tables() const { return 0; }
 
-void Abort::commit(const uint32_t /*cid*/) {}
+void Abort::commit(const CommitID /*cid*/) {}
 void Abort::abort() {}
 
 std::shared_ptr<const Table> Abort::on_execute(TransactionContext* context) {

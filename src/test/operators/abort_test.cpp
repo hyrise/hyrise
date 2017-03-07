@@ -13,7 +13,6 @@
 #include "../../lib/storage/table.hpp"
 
 namespace opossum {
-// The fixture for testing class GetTable.
 class OperatorsAbortTest : public BaseTest {
  protected:
   void SetUp() override {

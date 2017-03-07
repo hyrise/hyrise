@@ -14,7 +14,7 @@ class Abort : public AbstractReadWriteOperator {
   uint8_t num_in_tables() const override;
   uint8_t num_out_tables() const override;
 
-  void commit(const uint32_t cid) override;
+  void commit(const CommitID cid) override;
   void abort() override;
 
  protected:

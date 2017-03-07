@@ -55,17 +55,17 @@ std::shared_ptr<const Table> Update::on_execute(TransactionContext* context) {
   _execute_failed |= _delete->execute_failed();
   if (_execute_failed) return nullptr;
 
-  // 4. call insert using insert_table. (moves might happen twice??)
-  auto fake_op = std::make_shared<UpdateHelperOperator>(insert_table);
-  fake_op->execute();
-  _insert = std::make_unique<Insert>(original_table->name(), fake_op);
+  // 4. call insert using insert_table.
+  auto helper_op = std::make_shared<UpdateHelperOperator>(insert_table);
+  helper_op->execute();
+  _insert = std::make_unique<Insert>(original_table->name(), helper_op);
 
   _insert->execute(context);
 
   return nullptr;
 }
 
-void Update::commit(const uint32_t cid) {
+void Update::commit(const CommitID cid) {
   _delete->commit(cid);
   _insert->commit(cid);
 }

@@ -21,7 +21,7 @@ uint8_t Insert::num_in_tables() const { return 1; }
 std::shared_ptr<const Table> Insert::on_execute(TransactionContext* context) {
 #ifdef IS_DEBUG
   if (input_table_left()->chunk_count() != 1) {
-    throw std::runtime_error("Input to Delete isn't valid");
+    throw std::runtime_error("Input to Insert isn't valid: Number of chunks is not 1.");
   }
 #endif
   _table = StorageManager::get().get_table(_table_name);
@@ -81,7 +81,7 @@ std::shared_ptr<const Table> Insert::on_execute(TransactionContext* context) {
 
     auto& current_chunk = _table->get_chunk(chunk_id);
     for (auto i = 0u; i < current_chunk.col_count(); ++i) {
-      typed_column_processors[i]->move_data(current_chunk.get_column(i), chunk_to_insert.get_column(i), start_index,
+      typed_column_processors[i]->copy_data(current_chunk.get_column(i), chunk_to_insert.get_column(i), start_index,
                                             end_index, input_offset);
     }
 
@@ -99,7 +99,7 @@ std::shared_ptr<const Table> Insert::on_execute(TransactionContext* context) {
   return nullptr;
 }
 
-void Insert::commit(const uint32_t cid) {
+void Insert::commit(const CommitID cid) {
   for (auto row_id : _inserted_rows) {
     auto& chunk = _table->get_chunk(row_id.chunk_id);
 

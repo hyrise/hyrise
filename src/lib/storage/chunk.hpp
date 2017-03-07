@@ -16,16 +16,16 @@ namespace opossum {
 // It stores the data column by column.
 class Chunk {
  public:
-  static const uint32_t MAX_COMMIT_ID;
+  static const CommitID MAX_COMMIT_ID;
 
   /**
    * Columns storing visibility information
    * for multiversion concurrency control
    */
   struct MvccColumns {
-    tbb::concurrent_vector<std::atomic<uint32_t>> tids;  ///< 0 unless locked by a transaction
-    tbb::concurrent_vector<uint32_t> begin_cids;         ///< commit id when record was added
-    tbb::concurrent_vector<uint32_t> end_cids;           ///< commit id when record was deleted
+    tbb::concurrent_vector<std::atomic<TransactionID>> tids;  ///< 0 unless locked by a transaction
+    tbb::concurrent_vector<CommitID> begin_cids;              ///< commit id when record was added
+    tbb::concurrent_vector<CommitID> end_cids;                ///< commit id when record was deleted
   };
 
  public:
@@ -69,7 +69,7 @@ class Chunk {
   // not thread-safe
   void compress_mvcc_columns();
 
-  void set_mvcc_column_size(size_t new_size, uint32_t begin_cid);
+  void set_mvcc_column_size(size_t new_size, CommitID begin_cid);
 
   // moves the mvcc columns from chunk to this instance
   // not thread-safe

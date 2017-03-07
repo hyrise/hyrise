@@ -11,13 +11,17 @@ namespace opossum {
 
 class TransactionContext;
 
-// operator to retrieve a table from the StorageManager by specifying its name
+/**
+ * Operator that inserts a number of rows from one table into another.
+ * Expects the table name of the table to insert into as a string and
+ * the values to insert in a separate table using the same column layout.
+ */
 class Insert : public AbstractReadWriteOperator {
  public:
   explicit Insert(const std::string& table_name, const std::shared_ptr<AbstractOperator>& values_to_insert);
 
   std::shared_ptr<const Table> on_execute(TransactionContext* context) override;
-  void commit(const uint32_t cid) override;
+  void commit(const CommitID cid) override;
   void abort() override;
 
   const std::string name() const override;
@@ -34,25 +38,25 @@ class Insert : public AbstractReadWriteOperator {
 // We need these classes to perform the dynamic cast into a templated ValueColumn
 class AbstractTypedColumnProcessor {
  public:
-  virtual void resize_vector(std::shared_ptr<BaseColumn> column1, size_t new_size) = 0;
-  virtual void move_data(std::shared_ptr<BaseColumn> column1, std::shared_ptr<BaseColumn> values_to_insert,
+  virtual void resize_vector(std::shared_ptr<BaseColumn> column, size_t new_size) = 0;
+  virtual void copy_data(std::shared_ptr<BaseColumn> column, std::shared_ptr<BaseColumn> values_to_insert,
                          size_t start_index, size_t end_index, size_t input_offset) = 0;
 };
 
 template <typename T>
 class TypedColumnProcessor : public AbstractTypedColumnProcessor {
  public:
-  void resize_vector(std::shared_ptr<BaseColumn> column1, size_t new_size) override {
-    auto casted_col1 = std::dynamic_pointer_cast<ValueColumn<T>>(column1);
+  void resize_vector(std::shared_ptr<BaseColumn> column, size_t new_size) override {
+    auto casted_col1 = std::dynamic_pointer_cast<ValueColumn<T>>(column);
     auto& vect = casted_col1->values();
 
     vect.resize(new_size);
   }
 
-  void move_data(std::shared_ptr<BaseColumn> column1, std::shared_ptr<BaseColumn> values_to_insert, size_t start_index,
+  void copy_data(std::shared_ptr<BaseColumn> column, std::shared_ptr<BaseColumn> values_to_insert, size_t start_index,
                  size_t end_index, size_t input_offset) override {
     auto num_values_to_insert = end_index - start_index;
-    auto casted_col1 = std::dynamic_pointer_cast<ValueColumn<T>>(column1);
+    auto casted_col1 = std::dynamic_pointer_cast<ValueColumn<T>>(column);
     auto& vect = casted_col1->values();
 
     if (auto column = std::dynamic_pointer_cast<ValueColumn<T>>(values_to_insert)) {

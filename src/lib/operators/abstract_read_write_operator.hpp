@@ -46,7 +46,7 @@ class AbstractReadWriteOperator : public AbstractOperator {
    * modifications will be visible as soon as the TransactionManager has completed the commit for this cid.
    * Unlike on_execute, where failures are expected, the commit operation cannot fail.
    */
-  virtual void commit(const uint32_t cid) = 0;
+  virtual void commit(const CommitID cid) = 0;
 
   /**
    * Aborts the operator by unlocking all modified rows. No other action is necessary since commit should have never

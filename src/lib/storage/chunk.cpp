@@ -12,7 +12,7 @@
 
 namespace opossum {
 
-const uint32_t Chunk::MAX_COMMIT_ID = std::numeric_limits<uint32_t>::max();
+const CommitID Chunk::MAX_COMMIT_ID = std::numeric_limits<CommitID>::max();
 
 Chunk::Chunk() : Chunk{false} {}
 
@@ -56,7 +56,7 @@ size_t Chunk::size() const {
   return _columns.front()->size();
 }
 
-void Chunk::set_mvcc_column_size(size_t new_size, uint32_t begin_cid) {
+void Chunk::set_mvcc_column_size(size_t new_size, CommitID begin_cid) {
   _mvcc_columns->tids.grow_to_at_least(new_size);
   _mvcc_columns->begin_cids.grow_to_at_least(new_size, begin_cid);
   _mvcc_columns->end_cids.grow_to_at_least(new_size, std::numeric_limits<uint32_t>::max());
@@ -94,7 +94,7 @@ void Chunk::compress_mvcc_columns() {
   auto new_columns = std::make_unique<MvccColumns>();
 
   // since this method should only be called if nobody else
-  // is accessing the chunk, all tids must 0 and don't need to be copied
+  // is accessing the chunk, all tids must be 0 and don't need to be copied.
   new_columns->tids.grow_by(_mvcc_columns->tids.size());
 
   _mvcc_columns->begin_cids.shrink_to_fit();

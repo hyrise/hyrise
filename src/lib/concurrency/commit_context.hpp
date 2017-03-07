@@ -48,7 +48,7 @@ class CommitContext {
 
   /**
    * Tries to set the next context. Returns false if it has already
-   * been set. Throws error if its commit id isn't equal this context's
+   * been set. Throws error if its commit id isn't equal to this context's
    * commit id + 1.
    */
   bool try_set_next(const std::shared_ptr<CommitContext>& next);
