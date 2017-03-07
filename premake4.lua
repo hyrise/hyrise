@@ -78,7 +78,9 @@ solution "opossum"
     linkoptions {"-pthread"}
   end
   links { "tbb" }
+  
   includedirs { "src/lib/", "/usr/local/include" }
+  libdirs { "/usr/local/lib" }
 
   libs[#libs+1] = "tbb"
 
