@@ -73,7 +73,12 @@ class Chunk {
    */
   void shrink_mvcc_columns();
 
-  void set_mvcc_column_size(size_t new_size, CommitID begin_cid);
+  /**
+   * Grows all mvcc columns by the given delta
+   *
+   * @param begin_cid value all new begin_cids will be set to
+   */
+  void grow_mvcc_column_size_by(size_t delta, CommitID begin_cid);
 
   /**
    * Moves the mvcc columns from chunk to this instance

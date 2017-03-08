@@ -25,14 +25,14 @@ void Chunk::add_column(std::shared_ptr<BaseColumn> column) {
   if (IS_DEBUG && _columns.size() > 0 && size() != column->size()) {
     throw std::runtime_error("Trying to add column with mismatching size to chunk");
   }
-  if (_columns.size() == 0 && has_mvcc_columns()) set_mvcc_column_size(column->size(), 0);
+  if (_columns.size() == 0 && has_mvcc_columns()) grow_mvcc_column_size_by(column->size(), 0);
 
   _columns.emplace_back(column);
 }
 
 void Chunk::append(std::vector<AllTypeVariant> values) {
   // Do this first to ensure that the first thing to exist in a row are the MVCC columns.
-  if (has_mvcc_columns()) set_mvcc_column_size(size() + 1u, Chunk::MAX_COMMIT_ID);
+  if (has_mvcc_columns()) grow_mvcc_column_size_by(1u, Chunk::MAX_COMMIT_ID);
 
   // The added values, i.e., a new row, must have the same number of attribues as the table.
   if (IS_DEBUG && _columns.size() != values.size()) {
@@ -56,10 +56,10 @@ size_t Chunk::size() const {
   return _columns.front()->size();
 }
 
-void Chunk::set_mvcc_column_size(size_t new_size, CommitID begin_cid) {
-  _mvcc_columns->tids.grow_to_at_least(new_size);
-  _mvcc_columns->begin_cids.grow_to_at_least(new_size, begin_cid);
-  _mvcc_columns->end_cids.grow_to_at_least(new_size, std::numeric_limits<uint32_t>::max());
+void Chunk::grow_mvcc_column_size_by(size_t delta, CommitID begin_cid) {
+  _mvcc_columns->tids.grow_to_at_least(size() + delta);
+  _mvcc_columns->begin_cids.grow_to_at_least(size() + delta, begin_cid);
+  _mvcc_columns->end_cids.grow_to_at_least(size() + delta, std::numeric_limits<uint32_t>::max());
 }
 
 bool Chunk::has_mvcc_columns() const { return _mvcc_columns != nullptr; }
