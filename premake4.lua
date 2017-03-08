@@ -78,7 +78,9 @@ solution "opossum"
     linkoptions {"-pthread"}
   end
   links { "tbb" }
+  
   includedirs { "src/lib/", "/usr/local/include" }
+  libdirs { "/usr/local/lib" }
 
   libs[#libs+1] = "tbb"
 
@@ -170,7 +172,7 @@ project "benchmark"
   links { "opossum", "googlebenchmark" }
   files { "src/benchmark/**.hpp", "src/benchmark/**.cpp" }
   includedirs { "third_party/benchmark/include" }
-  --postbuildcommands { "./build/benchmark --benchmark_format=json > benchmark.json" }
+  postbuildcommands { "./build/benchmark --benchmark_format=json > benchmark.json" }
 
 project "coverage"
   kind "ConsoleApp"
