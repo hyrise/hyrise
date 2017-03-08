@@ -4,6 +4,7 @@
 #include <string>
 
 #include "concurrency/transaction_context.hpp"
+#include "util.hpp"
 
 namespace opossum {
 
@@ -74,19 +75,7 @@ bool Delete::_execution_input_valid(const TransactionContext* context) const {
 
   if (chunk.col_count() == 0u) return false;
 
-  // assumption: table contains only referenced columns which only reference one table
-  auto prev_referenced_table = std::shared_ptr<const Table>{};
-  for (auto i = 0u; i < chunk.col_count(); ++i) {
-    const auto column = std::dynamic_pointer_cast<ReferenceColumn>(chunk.get_column(i));
-
-    if (column == nullptr) return false;
-
-    if (prev_referenced_table != nullptr && prev_referenced_table != column->referenced_table()) {
-      return false;
-    }
-
-    prev_referenced_table = column->referenced_table();
-  }
+  if (!chunk_references_only_one_table(chunk)) return false;
 
   return true;
 }

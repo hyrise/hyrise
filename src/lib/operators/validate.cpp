@@ -6,6 +6,7 @@
 
 #include "../concurrency/transaction_context.hpp"
 #include "../storage/reference_column.hpp"
+#include "util.hpp"
 
 namespace opossum {
 
@@ -49,7 +50,6 @@ std::shared_ptr<const Table> Validate::on_execute(TransactionContext *transactio
 
   for (ChunkID chunk_id = 0; chunk_id < _in_table->chunk_count(); ++chunk_id) {
     const auto &chunk_in = _in_table->get_chunk(chunk_id);
-
     const auto our_tid = transactionContext->transaction_id();
     const auto our_lcid = transactionContext->last_commit_id();
     const auto &mvcc_columns = chunk_in.mvcc_columns();
@@ -60,7 +60,7 @@ std::shared_ptr<const Table> Validate::on_execute(TransactionContext *transactio
     const auto ref_col_in = std::dynamic_pointer_cast<ReferenceColumn>(chunk_in.get_column(0));
 
     if (ref_col_in) {
-      // assumption: validation happens before joins. all columns reference same table.
+      if (!chunk_references_only_one_table(chunk_in)) throw std::logic_error("Malformed input");
       referenced_table = ref_col_in->referenced_table();
       for (auto row_id : *ref_col_in->pos_list()) {
         if (is_row_visible(our_tid, our_lcid, row_id.chunk_offset, mvcc_columns)) {
