@@ -39,8 +39,8 @@ class Insert : public AbstractReadWriteOperator {
 class AbstractTypedColumnProcessor {
  public:
   virtual void resize_vector(std::shared_ptr<BaseColumn> column, size_t new_size) = 0;
-  virtual void copy_data(std::shared_ptr<BaseColumn> column, std::shared_ptr<BaseColumn> values_to_insert,
-                         size_t start_index, size_t end_index, size_t input_offset) = 0;
+  virtual void copy_data(std::shared_ptr<BaseColumn> column, size_t start_index, size_t end_index,
+                         std::shared_ptr<BaseColumn> values_to_insert, size_t input_offset) = 0;
 };
 
 template <typename T>
@@ -53,10 +53,11 @@ class TypedColumnProcessor : public AbstractTypedColumnProcessor {
     vect.resize(new_size);
   }
 
-  void copy_data(std::shared_ptr<BaseColumn> column, std::shared_ptr<BaseColumn> values_to_insert, size_t start_index,
-                 size_t end_index, size_t input_offset) override {
+  void copy_data(std::shared_ptr<BaseColumn> column, size_t start_index, size_t end_index,
+                 std::shared_ptr<BaseColumn> values_to_insert, size_t input_offset) override {
     auto num_values_to_insert = end_index - start_index;
     auto casted_col1 = std::dynamic_pointer_cast<ValueColumn<T>>(column);
+    if (!casted_col1) throw std::logic_error("Type mismatch");
     auto& vect = casted_col1->values();
 
     if (auto column = std::dynamic_pointer_cast<ValueColumn<T>>(values_to_insert)) {

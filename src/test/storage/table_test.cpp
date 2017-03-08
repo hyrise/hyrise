@@ -106,7 +106,7 @@ TEST_F(StorageTableTest, CompressedChunkHasSameCidColumns) {
 
   auto& chunk = t.get_chunk(0u);
 
-  const auto values = std::vector<uint32_t>{1u, 2u};
+  const auto values = std::vector<CommitID>{1u, 2u};
 
   auto& mvcc_columns = chunk.mvcc_columns();
 

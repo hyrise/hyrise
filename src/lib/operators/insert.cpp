@@ -81,8 +81,8 @@ std::shared_ptr<const Table> Insert::on_execute(TransactionContext* context) {
 
     auto& current_chunk = _table->get_chunk(chunk_id);
     for (auto i = 0u; i < current_chunk.col_count(); ++i) {
-      typed_column_processors[i]->copy_data(current_chunk.get_column(i), chunk_to_insert.get_column(i), start_index,
-                                            end_index, input_offset);
+      typed_column_processors[i]->copy_data(current_chunk.get_column(i), start_index, end_index,
+                                            chunk_to_insert.get_column(i), input_offset);
     }
 
     for (auto i = start_index; i < end_index; i++) {

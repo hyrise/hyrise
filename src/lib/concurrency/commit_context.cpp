@@ -6,8 +6,6 @@ namespace opossum {
 
 CommitContext::CommitContext(const CommitID commit_id) : _commit_id{commit_id}, _pending{false} {}
 
-CommitContext::~CommitContext() = default;
-
 CommitID CommitContext::commit_id() const { return _commit_id; }
 
 bool CommitContext::is_pending() const { return _pending; }
