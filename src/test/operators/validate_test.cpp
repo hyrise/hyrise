@@ -1,151 +1,83 @@
 #include <memory>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "../base_test.hpp"
 #include "gtest/gtest.h"
 
 #include "concurrency/transaction_context.hpp"
+#include "operators/abstract_read_only_operator.hpp"
 #include "operators/get_table.hpp"
+#include "operators/print.hpp"
+#include "operators/projection.hpp"
+#include "operators/table_scan.hpp"
 #include "operators/validate.hpp"
 #include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
+#include "types.hpp"
 
 namespace opossum {
 
 class OperatorsValidateTest : public BaseTest {
  protected:
   void SetUp() override {
-    t = std::make_shared<Table>(Table(chunk_size));
-    t->add_column("col_1", "int");
-    t->add_column("col_1", "int");
-    t->append({123, 456});
+    std::shared_ptr<Table> test_table = load_table("src/test/tables/validate_input.tbl", 2u);
+    set_all_records_visible(*test_table);
+    set_record_invisible_for(*test_table, RowID{1u, 0u}, 2u);
 
-    StorageManager::get().add_table(table_name, t);
+    StorageManager::get().add_table("table_a", std::move(test_table));
+    _gt = std::make_shared<GetTable>("table_a");
 
-    gt = std::make_shared<GetTable>(table_name);
-    gt->execute();
-
-    validate = std::make_shared<Validate>(gt);
+    _gt->execute();
   }
 
-  std::ostringstream output;
+  void set_all_records_visible(Table& table);
+  void set_record_invisible_for(Table& table, RowID row, CommitID end_cid);
 
-  std::string table_name = "validateTestTable";
-
-  uint32_t chunk_size = 10;
-
-  std::shared_ptr<GetTable>(gt);
-  std::shared_ptr<Table> t = nullptr;
-  std::shared_ptr<Validate> validate;
+  std::shared_ptr<GetTable> _gt;
 };
 
-// Legend:
-// our_TID == row_TID, our_CID >= beg_CID, our_CID >= end_CID
-// taken from: https://github.com/hyrise/hyrise/blob/master/docs/documentation/queryexecution/tx.rst
+void OperatorsValidateTest::set_all_records_visible(Table& table) {
+  for (auto chunk_id = 0u; chunk_id < table.chunk_count(); ++chunk_id) {
+    auto& chunk = table.get_chunk(chunk_id);
+    auto& mvcc_columns = chunk.mvcc_columns();
 
-// yes, yes, yes
-TEST_F(OperatorsValidateTest, Impossible) {
-  auto context = TransactionContext(2, 2);
-
-  t->get_chunk(0).mvcc_columns().tids[0] = 2;
-  t->get_chunk(0).mvcc_columns().begin_cids[0] = 2;
-  t->get_chunk(0).mvcc_columns().end_cids[0] = 2;
-
-  validate->execute(&context);
-
-  EXPECT_EQ(validate->get_output()->row_count(), 0u);
+    for (auto i = 0u; i < chunk.size(); ++i) {
+      mvcc_columns.begin_cids[i] = 0u;
+      mvcc_columns.end_cids[i] = Chunk::MAX_COMMIT_ID;
+    }
+  }
 }
 
-// no, yes, yes
-TEST_F(OperatorsValidateTest, PastDelete) {
-  auto context = TransactionContext(2, 2);
-
-  t->get_chunk(0).mvcc_columns().tids[0] = 42;
-  t->get_chunk(0).mvcc_columns().begin_cids[0] = 2;
-  t->get_chunk(0).mvcc_columns().end_cids[0] = 2;
-
-  validate->execute(&context);
-
-  EXPECT_EQ(validate->get_output()->row_count(), 0u);
+void OperatorsValidateTest::set_record_invisible_for(Table& table, RowID row, CommitID end_cid) {
+  table.get_chunk(row.chunk_id).mvcc_columns().end_cids[row.chunk_offset] = end_cid;
 }
 
-// yes, no, yes
-TEST_F(OperatorsValidateTest, Impossible2) {
-  auto context = TransactionContext(2, 2);
+TEST_F(OperatorsValidateTest, SimpleValidate) {
+  auto context = TransactionContext(1u, 3u);
 
-  t->get_chunk(0).mvcc_columns().tids[0] = 2;
-  t->get_chunk(0).mvcc_columns().begin_cids[0] = 4;
-  t->get_chunk(0).mvcc_columns().end_cids[0] = 1;
+  std::shared_ptr<Table> expected_result = load_table("src/test/tables/validate_output_validated.tbl", 2u);
 
+  auto validate = std::make_shared<Validate>(_gt);
   validate->execute(&context);
 
-  EXPECT_EQ(validate->get_output()->row_count(), 0u);
+  EXPECT_TABLE_EQ(validate->get_output(), expected_result);
 }
 
-// yes, yes, no
-TEST_F(OperatorsValidateTest, OwnDeleteUncommitted) {
-  auto context = TransactionContext(2, 2);
+TEST_F(OperatorsValidateTest, DISABLED_ProjectedValidate) {
+  auto context = TransactionContext(1u, 3u);
 
-  t->get_chunk(0).mvcc_columns().tids[0] = 2;
-  t->get_chunk(0).mvcc_columns().begin_cids[0] = 1;
-  t->get_chunk(0).mvcc_columns().end_cids[0] = 6;
+  std::shared_ptr<Table> expected_result = load_table("src/test/tables/validate_output_validated_projected.tbl", 2u);
 
+  std::vector<std::string> column_filter = {"c", "a"};
+  auto projection = std::make_shared<Projection>(_gt, column_filter);
+  projection->execute(&context);
+
+  auto validate = std::make_shared<Validate>(projection);
   validate->execute(&context);
 
-  EXPECT_EQ(validate->get_output()->row_count(), 0u);
-}
-
-// no, no, yes
-TEST_F(OperatorsValidateTest, Impossible3) {
-  auto context = TransactionContext(2, 2);
-
-  t->get_chunk(0).mvcc_columns().tids[0] = 50;
-  t->get_chunk(0).mvcc_columns().begin_cids[0] = 3;
-  t->get_chunk(0).mvcc_columns().end_cids[0] = 1;
-
-  validate->execute(&context);
-
-  EXPECT_EQ(validate->get_output()->row_count(), 0u);
-}
-
-// yes, no, no
-TEST_F(OperatorsValidateTest, OwnInsert) {
-  auto context = TransactionContext(2, 2);
-
-  t->get_chunk(0).mvcc_columns().tids[0] = 2;
-  t->get_chunk(0).mvcc_columns().begin_cids[0] = 3;
-  t->get_chunk(0).mvcc_columns().end_cids[0] = 3;
-
-  validate->execute(&context);
-
-  EXPECT_EQ(validate->get_output()->row_count(), 1u);
-}
-
-// no, yes, no
-TEST_F(OperatorsValidateTest, PastInsertOrFutureDelete) {
-  auto context = TransactionContext(2, 2);
-
-  t->get_chunk(0).mvcc_columns().tids[0] = 99;
-  t->get_chunk(0).mvcc_columns().begin_cids[0] = 2;
-  t->get_chunk(0).mvcc_columns().end_cids[0] = 3;
-
-  validate->execute(&context);
-
-  EXPECT_EQ(validate->get_output()->row_count(), 1u);
-}
-
-// no, no, no
-TEST_F(OperatorsValidateTest, UncommittedInsertOrFutureInsert) {
-  auto context = TransactionContext(2, 2);
-
-  t->get_chunk(0).mvcc_columns().tids[0] = 99;
-  t->get_chunk(0).mvcc_columns().begin_cids[0] = 3;
-  t->get_chunk(0).mvcc_columns().end_cids[0] = 3;
-
-  validate->execute(&context);
-
-  EXPECT_EQ(validate->get_output()->row_count(), 0u);
+  EXPECT_TABLE_EQ(validate->get_output(), expected_result);
 }
 
 }  // namespace opossum

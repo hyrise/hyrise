@@ -34,18 +34,14 @@ class OperatorsUpdateTest : public BaseTest {
 
   void helper(std::shared_ptr<GetTable> source_table, std::shared_ptr<Table> expected_result);
 
-  std::ostringstream output;
-
-  std::string table_name = "updateTestTable";
-  std::string table_name2 = "updateTestTable2";
-
-  uint32_t chunk_size = 10;
+  const std::string table_name = "updateTestTable";
+  const std::string table_name2 = "updateTestTable2";
 
   std::shared_ptr<GetTable> gt;
-  std::shared_ptr<Table> t = nullptr;
+  std::shared_ptr<Table> t;
 
   std::shared_ptr<GetTable> gt2;
-  std::shared_ptr<Table> t2 = nullptr;
+  std::shared_ptr<Table> t2;
 };
 
 void OperatorsUpdateTest::helper(std::shared_ptr<GetTable> source_table, std::shared_ptr<Table> expected_result) {
