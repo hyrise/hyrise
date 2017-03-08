@@ -17,13 +17,14 @@ class Delete : public AbstractReadWriteOperator {
  public:
   explicit Delete(const std::shared_ptr<const AbstractOperator>& op);
 
-  std::shared_ptr<const Table> on_execute(TransactionContext* context) override;
-
   void commit(const CommitID cid) override;
   void abort() override;
 
   const std::string name() const override;
   uint8_t num_in_tables() const override;
+
+ protected:
+  std::shared_ptr<const Table> on_execute(TransactionContext* context) override;
 
  private:
   /**

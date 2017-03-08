@@ -17,11 +17,11 @@ class AbstractReadOnlyOperator : public AbstractOperator {
                            const std::shared_ptr<const AbstractOperator> right = nullptr)
       : AbstractOperator(left, right) {}
 
+ protected:
   std::shared_ptr<const Table> on_execute(TransactionContext* /* context */) override { return on_execute(); }
 
   virtual std::shared_ptr<const Table> on_execute() = 0;
 
- protected:
   // Some operators need an internal implementation class, mostly in cases where
   // their execute method depends on a template parameter. An example for this is
   // found in table_scan.hpp.
