@@ -7,7 +7,7 @@
 
 #include "concurrency/transaction_context.hpp"
 #include "storage/reference_column.hpp"
-#include "update_helper_operator.hpp"
+#include "table_wrapper.hpp"
 
 namespace opossum {
 
@@ -56,7 +56,7 @@ std::shared_ptr<const Table> Update::on_execute(TransactionContext* context) {
   if (_execute_failed) return nullptr;
 
   // 4. call insert using insert_table.
-  auto helper_op = std::make_shared<UpdateHelperOperator>(insert_table);
+  auto helper_op = std::make_shared<TableWrapper>(insert_table);
   helper_op->execute();
   _insert = std::make_unique<Insert>(original_table->name(), helper_op);
 

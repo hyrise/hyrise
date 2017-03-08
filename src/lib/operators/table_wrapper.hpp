@@ -7,10 +7,12 @@
 
 namespace opossum {
 
-// Operator to wrap a table in an operator.
-class UpdateHelperOperator : public AbstractReadOnlyOperator {
+/**
+ * Operator that wraps a table.
+ */
+class TableWrapper : public AbstractReadOnlyOperator {
  public:
-  explicit UpdateHelperOperator(const std::shared_ptr<Table> table);
+  explicit TableWrapper(const std::shared_ptr<Table> table);
 
   const std::string name() const override;
   uint8_t num_in_tables() const override;
