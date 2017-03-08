@@ -22,12 +22,14 @@ class Insert : public AbstractReadWriteOperator {
  public:
   explicit Insert(const std::string& table_name, const std::shared_ptr<AbstractOperator>& values_to_insert);
 
-  std::shared_ptr<const Table> on_execute(TransactionContext* context) override;
   void commit(const CommitID cid) override;
   void abort() override;
 
   const std::string name() const override;
   uint8_t num_in_tables() const override;
+
+ protected:
+  std::shared_ptr<const Table> on_execute(TransactionContext* context) override;
 
  protected:
   PosList _inserted_rows;

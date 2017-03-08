@@ -30,18 +30,6 @@ class AbstractReadWriteOperator : public AbstractOperator {
   }
 
   /**
-   * Executes the operator. The context parameter is used to lock the rows that should be modified.
-   * Any modifications are not visible to other operators (that is, if the Validate operator has been applied properly)
-   * until commit has been called on this operator and the transaction manager has finished committing the respective
-   * transaction.
-   * The execution may fail if the operator attempts to lock rows that have been locked by other operators.
-   * In that case, execute_failed returns true after on_execute has returned.
-   *
-   * @returns nullptr, since these operators do not create new intermediate results but modify existing tables
-   */
-  std::shared_ptr<const Table> on_execute(TransactionContext* context) override = 0;
-
-  /**
    * Commits the operator by applying the cid to the mvcc columns for all modified rows and unlocking them. The
    * modifications will be visible as soon as the TransactionManager has completed the commit for this cid.
    * Unlike on_execute, where failures are expected, the commit operation cannot fail.
@@ -61,6 +49,19 @@ class AbstractReadWriteOperator : public AbstractOperator {
   bool execute_failed() const { return _execute_failed; }
 
   uint8_t num_out_tables() const override { return 0; };
+
+ protected:
+  /**
+   * Executes the operator. The context parameter is used to lock the rows that should be modified.
+   * Any modifications are not visible to other operators (that is, if the Validate operator has been applied properly)
+   * until commit has been called on this operator and the transaction manager has finished committing the respective
+   * transaction.
+   * The execution may fail if the operator attempts to lock rows that have been locked by other operators.
+   * In that case, execute_failed returns true after on_execute has returned.
+   *
+   * @returns nullptr, since these operators do not create new intermediate results but modify existing tables
+   */
+  std::shared_ptr<const Table> on_execute(TransactionContext* context) override = 0;
 
  protected:
   bool _execute_failed;

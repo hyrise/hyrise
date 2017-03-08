@@ -8,6 +8,7 @@
 #include "concurrency/transaction_context.hpp"
 #include "storage/reference_column.hpp"
 #include "table_wrapper.hpp"
+#include "util.hpp"
 
 namespace opossum {
 
@@ -80,8 +81,7 @@ bool Update::_execution_input_valid(const TransactionContext* context) const {
 
   if (input_table_left()->chunk_count() != 1 || input_table_right()->chunk_count() != 1) return false;
 
-  for (const auto& column : input_table_left()->get_chunk(0).columns())
-    if (std::dynamic_pointer_cast<ReferenceColumn>(column) == nullptr) return false;
+  if (!chunk_references_only_one_table(input_table_left()->get_chunk(0))) return false;
 
   return true;
 }
