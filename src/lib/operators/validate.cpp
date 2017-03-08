@@ -9,21 +9,12 @@
 
 namespace opossum {
 
-Validate::Validate(const std::shared_ptr<AbstractOperator> in)
-    : AbstractReadOnlyOperator(in), _in_table(in->get_output()), _output(std::make_shared<Table>()) {}
+namespace {
 
-const std::string Validate::name() const { return "Validate"; }
-
-uint8_t Validate::num_in_tables() const { return 1; }
-
-uint8_t Validate::num_out_tables() const { return 1; }
-
-bool is_row_visible(const TransactionContext *context, const Chunk &chunk, ChunkOffset chunk_offset) {
-  const auto our_tid = context->transaction_id();
-  const auto our_lcid = context->last_commit_id();
-  const auto row_tid = chunk.mvcc_columns().tids[chunk_offset].load();
-  const auto begin_cid = chunk.mvcc_columns().begin_cids[chunk_offset];
-  const auto end_cid = chunk.mvcc_columns().end_cids[chunk_offset];
+bool is_row_visible(CommitID our_tid, CommitID our_lcid, ChunkOffset chunk_offset, const Chunk::MvccColumns &columns) {
+  const auto row_tid = columns.tids[chunk_offset].load();
+  const auto begin_cid = columns.begin_cids[chunk_offset];
+  const auto end_cid = columns.end_cids[chunk_offset];
 
   // Taken from: https://github.com/hyrise/hyrise/blob/master/docs/documentation/queryexecution/tx.rst
   // const auto own_insert = (our_tid == row_tid) && !(our_lcid >= begin_cid) && !(our_lcid >= end_cid);
@@ -33,6 +24,17 @@ bool is_row_visible(const TransactionContext *context, const Chunk &chunk, Chunk
   // since gcc and clang are surprisingly bad at optimizing the above boolean expression, lets do that ourselves
   return our_lcid < end_cid && ((our_lcid >= begin_cid) != (row_tid == our_tid));
 }
+
+}  // namespace
+
+Validate::Validate(const std::shared_ptr<AbstractOperator> in)
+    : AbstractReadOnlyOperator(in), _in_table(in->get_output()), _output(std::make_shared<Table>()) {}
+
+const std::string Validate::name() const { return "Validate"; }
+
+uint8_t Validate::num_in_tables() const { return 1; }
+
+uint8_t Validate::num_out_tables() const { return 1; }
 
 std::shared_ptr<const Table> Validate::on_execute() {
   throw std::runtime_error("Validate can't be called without a transaction context.");
@@ -53,18 +55,22 @@ std::shared_ptr<const Table> Validate::on_execute(TransactionContext *transactio
 
     auto ref_col_in = std::dynamic_pointer_cast<ReferenceColumn>(chunk_in.get_column(0));
 
+    const auto our_tid = transactionContext->transaction_id();
+    const auto our_lcid = transactionContext->last_commit_id();
+    const auto &mvcc_columns = chunk_in.mvcc_columns();
+
     if (ref_col_in) {
       // assumption: validation happens before joins. all columns reference same table.
       referenced_table = ref_col_in->referenced_table();
       for (auto row_id : *ref_col_in->pos_list()) {
-        if (is_row_visible(transactionContext, chunk_in, row_id.chunk_offset)) {
+        if (is_row_visible(our_tid, our_lcid, row_id.chunk_offset, mvcc_columns)) {
           pos_list_out->emplace_back(row_id);
         }
       }
     } else {
       referenced_table = _in_table;
       for (auto i = 0u; i < chunk_in.size(); i++) {
-        if (is_row_visible(transactionContext, chunk_in, i)) {
+        if (is_row_visible(our_tid, our_lcid, i, mvcc_columns)) {
           pos_list_out->emplace_back(RowID{chunk_id, i});
         }
       }
