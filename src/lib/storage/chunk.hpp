@@ -71,8 +71,11 @@ class Chunk {
 
   void set_mvcc_column_size(size_t new_size, CommitID begin_cid);
 
-  // moves the mvcc columns from chunk to this instance
-  // not thread-safe
+  /**
+   * Moves the mvcc columns from chunk to this instance
+   * Used to transfer the mvcc columns to the new chunk after chunk compression
+   * Note: not thread-safe
+   */
   void move_mvcc_columns_from(Chunk &chunk);
 
   std::vector<std::shared_ptr<BaseIndex>> get_indices_for(
