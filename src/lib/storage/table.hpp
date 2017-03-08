@@ -96,6 +96,6 @@ class Table {
   std::vector<std::string> _column_names;
   std::vector<std::string> _column_types;
 
-  std::unique_ptr<std::mutex> append_mutex;
+  std::unique_ptr<std::mutex> _append_mutex;
 };
 }  // namespace opossum
