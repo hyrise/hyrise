@@ -48,16 +48,16 @@ std::shared_ptr<const Table> Validate::on_execute(TransactionContext *transactio
   }
 
   for (ChunkID chunk_id = 0; chunk_id < _in_table->chunk_count(); ++chunk_id) {
-    const Chunk &chunk_in = _in_table->get_chunk(chunk_id);
-    auto pos_list_out = std::make_shared<PosList>();
-
-    std::shared_ptr<const Table> referenced_table;
-
-    auto ref_col_in = std::dynamic_pointer_cast<ReferenceColumn>(chunk_in.get_column(0));
+    const auto &chunk_in = _in_table->get_chunk(chunk_id);
 
     const auto our_tid = transactionContext->transaction_id();
     const auto our_lcid = transactionContext->last_commit_id();
     const auto &mvcc_columns = chunk_in.mvcc_columns();
+
+    auto chunk_out = Chunk{};
+    auto pos_list_out = std::make_shared<PosList>();
+    auto referenced_table = std::shared_ptr<const Table>();
+    const auto ref_col_in = std::dynamic_pointer_cast<ReferenceColumn>(chunk_in.get_column(0));
 
     if (ref_col_in) {
       // assumption: validation happens before joins. all columns reference same table.
@@ -67,6 +67,14 @@ std::shared_ptr<const Table> Validate::on_execute(TransactionContext *transactio
           pos_list_out->emplace_back(row_id);
         }
       }
+
+      for (size_t column_id = 0; column_id < chunk_in.col_count(); ++column_id) {
+        const auto column = std::static_pointer_cast<ReferenceColumn>(chunk_in.get_column(column_id));
+        const auto referenced_column_id = column->referenced_column_id();
+        auto ref_col_out = std::make_shared<ReferenceColumn>(referenced_table, referenced_column_id, pos_list_out);
+        chunk_out.add_column(ref_col_out);
+      }
+
     } else {
       referenced_table = _in_table;
       for (auto i = 0u; i < chunk_in.size(); i++) {
@@ -74,14 +82,11 @@ std::shared_ptr<const Table> Validate::on_execute(TransactionContext *transactio
           pos_list_out->emplace_back(RowID{chunk_id, i});
         }
       }
-    }
 
-    Chunk chunk_out;
-    for (size_t column_id = 0; column_id < _in_table->col_count(); ++column_id) {
-      // TODO(everyone): because of projection, column_id might be wrong. need to look it up in case of referencing
-      // tables.
-      auto ref_col_out = std::make_shared<ReferenceColumn>(referenced_table, column_id, pos_list_out);
-      chunk_out.add_column(ref_col_out);
+      for (size_t column_id = 0; column_id < chunk_in.col_count(); ++column_id) {
+        auto ref_col_out = std::make_shared<ReferenceColumn>(referenced_table, column_id, pos_list_out);
+        chunk_out.add_column(ref_col_out);
+      }
     }
 
     output->add_chunk(std::move(chunk_out));

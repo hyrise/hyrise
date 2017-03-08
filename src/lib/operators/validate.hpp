@@ -9,6 +9,12 @@
 
 namespace opossum {
 
+/**
+ * Validates visibility of records of a table
+ * within the context of a given transaction
+ *
+ * Assumption: Validate happens before joins.
+ */
 class Validate : public AbstractReadOnlyOperator {
  public:
   explicit Validate(const std::shared_ptr<AbstractOperator> in);
