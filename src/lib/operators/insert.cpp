@@ -34,7 +34,7 @@ std::shared_ptr<const Table> Insert::on_execute(TransactionContext* context) {
   }
 
   auto& chunk_to_insert = input_table_left()->get_chunk(0);
-  auto num_rows_to_insert = chunk_to_insert.size();
+  auto total_rows_to_insert = chunk_to_insert.size();
 
   // First, allocate space for all the rows to insert. Do so while locking the table
   // to prevent multiple threads modifying the table's size simultaneously.
@@ -48,7 +48,7 @@ std::shared_ptr<const Table> Insert::on_execute(TransactionContext* context) {
     auto& last_chunk = _table->get_chunk(start_chunk_id);
     start_index = last_chunk.size();
 
-    auto remaining_rows = num_rows_to_insert;
+    auto remaining_rows = total_rows_to_insert;
     while (remaining_rows > 0) {
       auto& current_chunk = _table->get_chunk(_table->chunk_count() - 1);
       auto rows_to_insert_this_loop = std::min(_table->chunk_size() - current_chunk.size(), remaining_rows);
@@ -77,22 +77,23 @@ std::shared_ptr<const Table> Insert::on_execute(TransactionContext* context) {
   auto input_offset = 0u;
 
   for (auto chunk_id = start_chunk_id; chunk_id <= start_chunk_id + total_chunks_inserted; chunk_id++) {
-    auto end_index = std::min(_table->get_chunk(chunk_id).size(), start_index + (num_rows_to_insert - input_offset));
+    auto curr_num_rows_to_insert =
+        std::min(_table->get_chunk(chunk_id).size() - start_index, total_rows_to_insert - input_offset);
 
     auto& current_chunk = _table->get_chunk(chunk_id);
     for (auto i = 0u; i < current_chunk.col_count(); ++i) {
-      typed_column_processors[i]->copy_data(current_chunk.get_column(i), start_index, end_index,
-                                            chunk_to_insert.get_column(i), input_offset);
+      typed_column_processors[i]->copy_data(chunk_to_insert.get_column(i), input_offset, current_chunk.get_column(i),
+                                            start_index, curr_num_rows_to_insert);
     }
 
-    for (auto i = start_index; i < end_index; i++) {
+    for (auto i = start_index; i < start_index + curr_num_rows_to_insert; i++) {
       // we do not need to check whether other operators have locked the rows, we have just created them
       // and they are not visible for other operators
       current_chunk.mvcc_columns().tids[i] = context->transaction_id();
       _inserted_rows.emplace_back(_table->calculate_row_id(chunk_id, i));
     }
 
-    input_offset += end_index - start_index;
+    input_offset += curr_num_rows_to_insert;
     start_index = 0u;
   }
 

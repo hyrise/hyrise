@@ -39,36 +39,36 @@ class Insert : public AbstractReadWriteOperator {
 class AbstractTypedColumnProcessor {
  public:
   virtual void resize_vector(std::shared_ptr<BaseColumn> column, size_t new_size) = 0;
-  virtual void copy_data(std::shared_ptr<BaseColumn> column, size_t start_index, size_t end_index,
-                         std::shared_ptr<BaseColumn> values_to_insert, size_t input_offset) = 0;
+  virtual void copy_data(std::shared_ptr<BaseColumn> source, size_t source_start_index,
+                         std::shared_ptr<BaseColumn> target, size_t target_start_index, size_t n) = 0;
 };
 
 template <typename T>
 class TypedColumnProcessor : public AbstractTypedColumnProcessor {
  public:
   void resize_vector(std::shared_ptr<BaseColumn> column, size_t new_size) override {
-    auto casted_col1 = std::dynamic_pointer_cast<ValueColumn<T>>(column);
-    auto& vect = casted_col1->values();
+    auto casted_col = std::dynamic_pointer_cast<ValueColumn<T>>(column);
+    auto& vect = casted_col->values();
 
     vect.resize(new_size);
   }
 
-  void copy_data(std::shared_ptr<BaseColumn> column, size_t start_index, size_t end_index,
-                 std::shared_ptr<BaseColumn> values_to_insert, size_t input_offset) override {
-    auto num_values_to_insert = end_index - start_index;
-    auto casted_col1 = std::dynamic_pointer_cast<ValueColumn<T>>(column);
-    if (!casted_col1) throw std::logic_error("Type mismatch");
-    auto& vect = casted_col1->values();
+  // this copies
+  void copy_data(std::shared_ptr<BaseColumn> source, size_t source_start_index, std::shared_ptr<BaseColumn> target,
+                 size_t target_start_index, size_t n) override {
+    auto casted_target = std::dynamic_pointer_cast<ValueColumn<T>>(target);
+    if (!casted_target) throw std::logic_error("Type mismatch");
+    auto& vect = casted_target->values();
 
-    if (auto column = std::dynamic_pointer_cast<ValueColumn<T>>(values_to_insert)) {
-      std::copy_n(column->values().begin() + input_offset, num_values_to_insert, vect.begin() + start_index);
-      // } else if(auto ref_col = std::dynamic_pointer_cast<ReferenceColumn>(values_to_insert)){
+    if (auto casted_source = std::dynamic_pointer_cast<ValueColumn<T>>(source)) {
+      std::copy_n(casted_source->values().begin() + source_start_index, n, vect.begin() + target_start_index);
+      // } else if(auto casted_source = std::dynamic_pointer_cast<ReferenceColumn>(source)){
       // since we have no guarantee that a referenceColumn references only a single other column,
       // this would require us to find out the referenced column's type for each single row.
       // instead, we just use the slow path below.
     } else {
-      for (auto i = 0u; i < num_values_to_insert; i++) {
-        vect[start_index + i] = type_cast<T>((*values_to_insert)[input_offset + i]);
+      for (auto i = 0u; i < n; i++) {
+        vect[target_start_index + i] = type_cast<T>((*source)[source_start_index + i]);
       }
     }
   }
