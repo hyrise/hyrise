@@ -12,6 +12,8 @@ namespace opossum {
  * Operator that deletes a number of rows from one table.
  * Expects a table with one chunk referencing only one table which
  * is passed via the AbstractOperator in the constructor.
+ *
+ * Assumption: The input has been validated before.
  */
 class Delete : public AbstractReadWriteOperator {
  public:

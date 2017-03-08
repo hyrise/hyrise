@@ -15,6 +15,8 @@ class TransactionContext;
  * Operator that inserts a number of rows from one table into another.
  * Expects the table name of the table to insert into as a string and
  * the values to insert in a separate table using the same column layout.
+ *
+ * Assumption: The input has been validated before.
  */
 class Insert : public AbstractReadWriteOperator {
  public:
