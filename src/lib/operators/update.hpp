@@ -11,9 +11,12 @@
 namespace opossum {
 
 /**
- * Operator that updates a number of rows from one table with values supplied in another.
- * Expects both tables to have the exact same layout and number of rows.
- * Expects both tables to only have one chunk.
+ * Operator that updates a subset of columns of a number of rows and from one table with values supplied in another.
+ * The first input table must consist of Reference Columns and specifies which rows and columns of the referenced table
+ * should be updated.
+ * The second input table must have the exact same column layout and number of rows as the first table and contains the
+ * data that is used to update the rows specified by the first table.
+ * Expects both input tables to only have one chunk.
  */
 class Update : public AbstractReadWriteOperator {
  public:
