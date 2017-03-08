@@ -66,8 +66,12 @@ class Chunk {
   MvccColumns &mvcc_columns();
   const MvccColumns &mvcc_columns() const;
 
-  // not thread-safe
-  void compress_mvcc_columns();
+  /**
+   * Compacts the internal represantion of
+   * the mvcc columns in order to reduce fragmentation
+   * Note: not thread-safe
+   */
+  void shrink_mvcc_columns();
 
   void set_mvcc_column_size(size_t new_size, CommitID begin_cid);
 

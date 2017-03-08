@@ -84,13 +84,15 @@ const Chunk::MvccColumns& Chunk::mvcc_columns() const {
   return *_mvcc_columns;
 }
 
-void Chunk::compress_mvcc_columns() {
+void Chunk::shrink_mvcc_columns() {
 #ifdef IS_DEBUG
   if (!has_mvcc_columns()) {
     std::logic_error("Chunk does not have mvcc columns.");
   }
 #endif
 
+  // the mvcc columns need to be replaced because
+  // std::atomic<> is neither copyable nor moveable
   auto new_columns = std::make_unique<MvccColumns>();
 
   // since this method should only be called if nobody else
