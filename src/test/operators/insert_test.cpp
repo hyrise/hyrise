@@ -72,9 +72,33 @@ TEST_F(OperatorsInsertTest, InsertRespectChunkSize) {
   auto context = TransactionContext(1, 1);
   ins->execute(&context);
 
-  // Check that we now have 4 chunks with the last one containing one row
   EXPECT_EQ(t3->chunk_count(), 4u);
   EXPECT_EQ(t3->get_chunk(3).size(), 1u);
+  EXPECT_EQ(t3->row_count(), 13u);
+}
+
+TEST_F(OperatorsInsertTest, MultipleChunks) {
+  auto t_name = "test1";
+  auto t_name2 = "test2";
+
+  // 3 Rows
+  auto t3 = load_table("src/test/tables/int.tbl", 2u);
+  StorageManager::get().add_table(t_name, t3);
+
+  // 10 Rows
+  auto t4 = load_table("src/test/tables/10_ints.tbl", 3u);
+  StorageManager::get().add_table(t_name2, t4);
+
+  auto gt2 = std::make_shared<GetTable>(t_name2);
+  gt2->execute();
+
+  auto ins = std::make_shared<Insert>(t_name, gt2);
+  auto context = TransactionContext(1, 1);
+  ins->execute(&context);
+
+  EXPECT_EQ(t3->chunk_count(), 7u);
+  EXPECT_EQ(t3->get_chunk(6).size(), 1u);
+  EXPECT_EQ(t3->row_count(), 13u);
 }
 
 }  // namespace opossum
