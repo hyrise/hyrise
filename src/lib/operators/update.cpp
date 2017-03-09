@@ -49,7 +49,7 @@ std::shared_ptr<const Table> Update::on_execute(TransactionContext* context) {
   }
 
   // 3. call delete on old data.
-  _delete = std::make_unique<Delete>(_input_left);
+  _delete = std::make_unique<Delete>(original_table->name(), _input_left);
 
   _delete->execute(context);
 

@@ -22,13 +22,15 @@ namespace opossum {
 class OperatorsDeleteTest : public BaseTest {
  protected:
   void SetUp() override {
+    _table_name = "table_a";
     _table = load_table("src/test/tables/float_int.tbl", 0u);
-    StorageManager::get().add_table("table_a", _table);
-    _gt = std::make_shared<GetTable>("table_a");
+    StorageManager::get().add_table(_table_name, _table);
+    _gt = std::make_shared<GetTable>(_table_name);
 
     _gt->execute();
   }
 
+  std::string _table_name;
   std::shared_ptr<GetTable> _gt;
   std::shared_ptr<Table> _table;
 };
@@ -41,7 +43,7 @@ TEST_F(OperatorsDeleteTest, ExecuteAndCommit) {
 
   table_scan->execute();
 
-  auto delete_op = std::make_shared<Delete>(table_scan);
+  auto delete_op = std::make_shared<Delete>(_table_name, table_scan);
 
   delete_op->execute(&transaction_context);
 
@@ -67,7 +69,7 @@ TEST_F(OperatorsDeleteTest, ExecuteAndAbort) {
 
   table_scan->execute();
 
-  auto delete_op = std::make_shared<Delete>(table_scan);
+  auto delete_op = std::make_shared<Delete>(_table_name, table_scan);
 
   delete_op->execute(&transaction_context);
 
@@ -101,8 +103,8 @@ TEST_F(OperatorsDeleteTest, DetectDirtyWrite) {
   EXPECT_EQ(table_scan1->get_output()->chunk_count(), 1u);
   EXPECT_EQ(table_scan1->get_output()->get_chunk(0).col_count(), 2u);
 
-  auto delete_op1 = std::make_shared<Delete>(table_scan1);
-  auto delete_op2 = std::make_shared<Delete>(table_scan2);
+  auto delete_op1 = std::make_shared<Delete>(_table_name, table_scan1);
+  auto delete_op2 = std::make_shared<Delete>(_table_name, table_scan2);
 
   delete_op1->execute(t1_context.get());
   delete_op2->execute(t2_context.get());

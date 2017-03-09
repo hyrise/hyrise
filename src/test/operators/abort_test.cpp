@@ -36,7 +36,7 @@ TEST_F(OperatorsAbortTest, AbortDelete) {
   auto table_scan = std::make_shared<TableScan>(gt, "a", ">=", "0");
   table_scan->execute();
 
-  auto delete_op = std::make_shared<Delete>(table_scan);
+  auto delete_op = std::make_shared<Delete>(table_name, table_scan);
   delete_op->execute(t_context.get());
 
   auto abort_op = std::make_shared<Abort>();

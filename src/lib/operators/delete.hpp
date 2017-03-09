@@ -2,6 +2,7 @@
 
 #include <memory>
 #include <string>
+#include <vector>
 
 #include "abstract_read_write_operator.hpp"
 #include "table_scan.hpp"
@@ -17,7 +18,7 @@ namespace opossum {
  */
 class Delete : public AbstractReadWriteOperator {
  public:
-  explicit Delete(const std::shared_ptr<const AbstractOperator>& op);
+  explicit Delete(const std::string& table_name, const std::shared_ptr<const AbstractOperator>& values_to_delete);
 
   void commit(const CommitID cid) override;
   void abort() override;
@@ -35,8 +36,9 @@ class Delete : public AbstractReadWriteOperator {
   bool _execution_input_valid(const TransactionContext* context) const;
 
  private:
-  std::shared_ptr<const PosList> _pos_list;
-  std::shared_ptr<Table> _referenced_table;
+  const std::string _table_name;
+  std::shared_ptr<Table> _table;
   TransactionID _transaction_id;
+  std::vector<std::shared_ptr<const PosList>> _pos_lists;
 };
 }  // namespace opossum
