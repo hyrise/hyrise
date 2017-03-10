@@ -5,7 +5,10 @@
 #include <boost/hana/integral_constant.hpp>
 #include <boost/hana/map.hpp>
 #include <boost/hana/pair.hpp>
+#include <boost/hana/second.hpp>
+#include <boost/hana/transform.hpp>
 #include <boost/hana/tuple.hpp>
+#include <boost/hana/zip.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/variant.hpp>
 
@@ -71,20 +74,22 @@ enum class SchedulePriority {
   High = 0     // Schedule task at the beginning of the queue
 };
 
-// This holds all possible data types. The left side of the pairs are the names, the right side are prototypes
-// ("examples").
-// These examples are later used with decltype() in the template magic below.
-static auto column_types = hana::make_tuple(
-    hana::make_pair("int", static_cast<int32_t>(123)), hana::make_pair("long", static_cast<int64_t>(123456789l)),
-    hana::make_pair("float", 123.4f), hana::make_pair("double", 123.4), hana::make_pair("string", std::string("hi")));
+/**
+ * Only the following three lines are needed wherever AllTypeVariant is used.
+ * This could be one header file.
+ * @{
+ */
 
-// convert tuple of all types to sequence by first extracting the prototypes
-// only and then applying decltype_
-static auto types_as_hana_sequence = hana::transform(hana::transform(column_types, hana::second), hana::decltype_);
-// convert hana sequence to mpl vector
-using TypesAsMplVector = decltype(hana::to<hana::ext::boost::mpl::vector_tag>(types_as_hana_sequence));
-// create boost::variant from mpl vector
+// This holds all possible data types.
+static constexpr auto types = hana::tuple_t<int32_t, int64_t, float, double, std::string>;
+
+// Convert tuple to mpl vector
+using TypesAsMplVector = decltype(hana::to<hana::ext::boost::mpl::vector_tag>(types));
+
+// Create boost::variant from mpl vector
 using AllTypeVariant = typename boost::make_variant_over<TypesAsMplVector>::type;
+
+/** @} */
 
 /**
  * AllParameterVariant holds either an AllTypeVariant or a ColumnName.
@@ -134,13 +139,37 @@ typename std::enable_if<std::is_same<T, std::string>::value, T>::type type_cast(
 
 std::string to_string(const AllTypeVariant &x);
 
+/**
+ * This is everything needed for make_*_by_column_type to work.
+ * It needs to include the AllVariantType header and could also
+ * be moved into a separate header.
+ * @{
+ */
+
+static constexpr auto type_strings = hana::make_tuple("int", "long", "float", "double", "string");
+
+// Functor that converts tuples with size two into pairs
+struct to_pair_t {
+  template <typename Tuple>
+  constexpr decltype(auto) operator()(Tuple &&tuple) const {
+    return hana::make_pair(hana::at_c<0>(tuple), hana::at_c<1>(tuple));
+  }
+};
+
+constexpr to_pair_t to_pair{};
+
+// “Zips” the types and type_strings tuples creating a tuple of string-type pairs
+static constexpr auto column_types = hana::transform(hana::zip(type_strings, types), to_pair);
+
 template <class base, template <typename...> class impl, class... TemplateArgs, typename... ConstructorArgs>
 std::unique_ptr<base> make_unique_by_column_type(const std::string &type, ConstructorArgs &&... args) {
   std::unique_ptr<base> ret = nullptr;
   hana::for_each(column_types, [&](auto x) {
     if (std::string(hana::first(x)) == type) {
-      typename std::remove_reference<decltype(hana::second(x))>::type prototype;
-      ret = std::make_unique<impl<decltype(prototype), TemplateArgs...>>(std::forward<ConstructorArgs>(args)...);
+      // The + before hana::second - which returns a reference - converts its return value
+      // into a value so that we can access ::type
+      using column_type = typename decltype(+hana::second(x))::type;
+      ret = std::make_unique<impl<column_type, TemplateArgs...>>(std::forward<ConstructorArgs>(args)...);
       return;
     }
   });
@@ -148,10 +177,10 @@ std::unique_ptr<base> make_unique_by_column_type(const std::string &type, Constr
   return ret;
 }
 
-/*
-We need to pass parameter packs explicitly for GCC due to the following bug:
-http://stackoverflow.com/questions/41769851/gcc-causes-segfault-for-lambda-captured-parameter-pack
-*/
+/**
+ * We need to pass parameter packs explicitly for GCC due to the following bug:
+ * http://stackoverflow.com/questions/41769851/gcc-causes-segfault-for-lambda-captured-parameter-pack
+ */
 template <class base, template <typename...> class impl, class... TemplateArgs, typename... ConstructorArgs>
 std::unique_ptr<base> make_unique_by_column_types(const std::string &type1, const std::string &type2,
                                                   ConstructorArgs &&... args) {
@@ -160,9 +189,9 @@ std::unique_ptr<base> make_unique_by_column_types(const std::string &type1, cons
     if (std::string(hana::first(x)) == type1) {
       hana::for_each(column_types, [&ret, &type1, &type2, &args...](auto y) {
         if (std::string(hana::first(y)) == type2) {
-          typename std::remove_reference<decltype(hana::second(x))>::type prototype1;
-          typename std::remove_reference<decltype(hana::second(y))>::type prototype2;
-          ret = std::make_unique<impl<decltype(prototype1), decltype(prototype2), TemplateArgs...>>(
+          using column_type1 = typename decltype(+hana::second(x))::type;
+          using column_type2 = typename decltype(+hana::second(y))::type;
+          ret = std::make_unique<impl<column_type1, column_type2, TemplateArgs...>>(
               std::forward<ConstructorArgs>(args)...);
           return;
         }
@@ -178,4 +207,7 @@ template <class base, template <typename...> class impl, class... TemplateArgs, 
 std::shared_ptr<base> make_shared_by_column_type(const std::string &type, ConstructorArgs &&... args) {
   return make_unique_by_column_type<base, impl, TemplateArgs...>(type, std::forward<ConstructorArgs>(args)...);
 }
+
+/** @} */
+
 }  // namespace opossum
