@@ -28,12 +28,12 @@ std::unique_ptr<TransactionContext> TransactionManager::new_transaction_context(
   return std::make_unique<TransactionContext>(_next_transaction_id++, _last_commit_id);
 }
 
-void TransactionManager::abort(TransactionContext& context) {
+void TransactionManager::rollback(TransactionContext& context) {
   if (context._phase != TransactionPhase::Active) {
-    throw std::logic_error("TransactionContext can only be aborted when active.");
+    throw std::logic_error("TransactionContext can only be rolled back when active.");
   }
 
-  context._phase = TransactionPhase::Aborted;
+  context._phase = TransactionPhase::RolledBack;
 }
 
 void TransactionManager::prepare_commit(TransactionContext& context) {

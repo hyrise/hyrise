@@ -40,7 +40,7 @@ std::shared_ptr<const Table> Delete::on_execute(TransactionContext* context) {
       _execute_failed =
           !referenced_chunk.mvcc_columns().tids[row_id.chunk_offset].compare_exchange_strong(expected, _transaction_id);
 
-      // the row is already locked and the transaction needs to be aborted
+      // the row is already locked and the transaction needs to be rolled back
       if (_execute_failed) return nullptr;
     }
   }

@@ -27,7 +27,7 @@
  * TransactionManager::commit must be called.
  *
  * ReadWriteOperators can fail if they detect conflicting writes by other operators. In that case, the transaction must
- * be aborted by running the RollbackRecords operator.
+ * be rolled back by running the RollbackRecords operator.
  *
  * The TransactionManager is a thread-safe singleton that hands out TransactionContexts with monotonically increasing
  * IDs and ensures all transactions are committed in the correct order. It also holds a global _last_commit_id, which is
@@ -66,15 +66,15 @@ class TransactionManager {
    */
 
   /**
-   * Sets transaction phase to “aborted”
+   * Sets transaction phase to "rolled back"
    */
-  void abort(TransactionContext &context);
+  void rollback(TransactionContext &context);
 
   /**
    * Creates new commit context and assigns commit id
    * Sets transaction phase to “committing”
    * After calling this function, transaction cannot be
-   * aborted anymore.
+   * rolled back anymore.
    */
   void prepare_commit(TransactionContext &context);
 
