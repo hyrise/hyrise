@@ -102,6 +102,15 @@ using ParameterTypesAsMplVector =
 // create boost::variant from mpl vector
 using AllParameterVariant = typename boost::make_variant_over<ParameterTypesAsMplVector>::type;
 
+/**
+ * Retrieves the value stored in an AllTypeVariant without conversion
+ */
+template <typename T>
+const T &get(const AllTypeVariant &value) {
+  static_assert(hana::contains(types, hana::type_c<T>), "Type not in AllTypeVariant");
+  return boost::get<T>(value);
+}
+
 // cast methods - from variant to specific type
 template <typename T>
 typename std::enable_if<std::is_integral<T>::value, T>::type type_cast(AllTypeVariant value) {
