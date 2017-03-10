@@ -19,7 +19,6 @@ namespace opossum {
 class OperatorsUpdateTest : public BaseTest {
  protected:
   void SetUp() override {}
-
   void helper(std::shared_ptr<GetTable> table_to_update, std::shared_ptr<GetTable> update_values,
               std::shared_ptr<Table> expected_result);
 };
