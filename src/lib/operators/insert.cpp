@@ -19,22 +19,20 @@ const std::string Insert::name() const { return "Insert"; }
 uint8_t Insert::num_in_tables() const { return 1; }
 
 std::shared_ptr<const Table> Insert::on_execute(TransactionContext* context) {
-#ifdef IS_DEBUG
-  if (input_table_left()->chunk_count() != 1) {
-    throw std::runtime_error("Input to Insert isn't valid: Number of chunks is not 1.");
-  }
-#endif
   _table = StorageManager::get().get_table(_table_name);
 
-  // these TypedColumnProcessors kind of retrieve the template parameter of the columns.
+  // These TypedColumnProcessors kind of retrieve the template parameter of the columns.
   auto typed_column_processors = std::vector<std::unique_ptr<AbstractTypedColumnProcessor>>();
   for (auto column_id = 0u; column_id < _table->get_chunk(0).col_count(); ++column_id) {
     typed_column_processors.emplace_back(
         make_unique_by_column_type<AbstractTypedColumnProcessor, TypedColumnProcessor>(_table->column_type(column_id)));
   }
 
-  auto& chunk_to_insert = input_table_left()->get_chunk(0);
-  auto total_rows_to_insert = chunk_to_insert.size();
+  auto total_rows_to_insert = size_t(0u);
+  for (auto i = 0u; i < input_table_left()->chunk_count(); i++) {
+    const auto& chunk = input_table_left()->get_chunk(i);
+    total_rows_to_insert += chunk.size();
+  }
 
   // First, allocate space for all the rows to insert. Do so while locking the table
   // to prevent multiple threads modifying the table's size simultaneously.
@@ -75,24 +73,48 @@ std::shared_ptr<const Table> Insert::on_execute(TransactionContext* context) {
 
   // Then, actually insert the data.
   auto input_offset = 0u;
+  auto source_chunk_id = 0u;
+  auto source_chunk_start_index = 0u;
 
-  for (auto chunk_id = start_chunk_id; chunk_id <= start_chunk_id + total_chunks_inserted; chunk_id++) {
-    auto curr_num_rows_to_insert =
-        std::min(_table->get_chunk(chunk_id).size() - start_index, total_rows_to_insert - input_offset);
+  for (auto target_chunk_id = start_chunk_id; target_chunk_id <= start_chunk_id + total_chunks_inserted;
+       target_chunk_id++) {
+    const auto curr_num_rows_to_insert =
+        std::min(_table->get_chunk(target_chunk_id).size() - start_index, total_rows_to_insert - input_offset);
 
-    auto& current_chunk = _table->get_chunk(chunk_id);
-    for (auto i = 0u; i < current_chunk.col_count(); ++i) {
-      typed_column_processors[i]->copy_data(chunk_to_insert.get_column(i), input_offset, current_chunk.get_column(i),
-                                            start_index, curr_num_rows_to_insert);
+    auto& target_chunk = _table->get_chunk(target_chunk_id);
+
+    auto target_start_index = start_index;
+    auto n = curr_num_rows_to_insert;
+
+    // while target chunk is not full
+    while (target_start_index != target_chunk.size()) {
+      const auto& source_chunk = input_table_left()->get_chunk(source_chunk_id);
+      auto num_to_insert = std::min(source_chunk.size() - source_chunk_start_index, n);
+      for (auto i = 0u; i < target_chunk.col_count(); ++i) {
+        auto source_column = source_chunk.get_column(i);
+        typed_column_processors[i]->copy_data(source_column, source_chunk_start_index, target_chunk.get_column(i),
+                                              target_start_index, num_to_insert);
+      }
+      n -= num_to_insert;
+      target_start_index += num_to_insert;
+
+      source_chunk_start_index += num_to_insert;
+
+      bool source_chunk_depleted = source_chunk_start_index == source_chunk.size();
+      if (source_chunk_depleted) {
+        source_chunk_id++;
+        source_chunk_start_index = 0u;
+      }
     }
 
     for (auto i = start_index; i < start_index + curr_num_rows_to_insert; i++) {
       // we do not need to check whether other operators have locked the rows, we have just created them
       // and they are not visible for other operators
-      // the transaction IDs are set here and not during the resize, because 
-      // tbb::concurrent_vector::grow_to_at_least(n, t)" does not work with atomics, since their copy constructor is deleted.
-      current_chunk.mvcc_columns().tids[i] = context->transaction_id();
-      _inserted_rows.emplace_back(_table->calculate_row_id(chunk_id, i));
+      // the transaction IDs are set here and not during the resize, because
+      // tbb::concurrent_vector::grow_to_at_least(n, t)" does not work with atomics, since their copy constructor is
+      // deleted.
+      target_chunk.mvcc_columns().tids[i] = context->transaction_id();
+      _inserted_rows.emplace_back(_table->calculate_row_id(target_chunk_id, i));
     }
 
     input_offset += curr_num_rows_to_insert;

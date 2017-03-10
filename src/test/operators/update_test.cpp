@@ -18,45 +18,25 @@ namespace opossum {
 
 class OperatorsUpdateTest : public BaseTest {
  protected:
-  void SetUp() override {
-    t = load_table("src/test/tables/int_int.tbl", 0u);
-    StorageManager::get().add_table(table_name, t);
+  void SetUp() override {}
 
-    gt = std::make_shared<GetTable>(table_name);
-    gt->execute();
-
-    t2 = load_table("src/test/tables/int_int.tbl", 0u);
-    StorageManager::get().add_table(table_name2, t2);
-
-    gt2 = std::make_shared<GetTable>(table_name2);
-    gt2->execute();
-  }
-
-  void helper(std::shared_ptr<GetTable> source_table, std::shared_ptr<Table> expected_result);
-
-  const std::string table_name = "updateTestTable";
-  const std::string table_name2 = "updateTestTable2";
-
-  std::shared_ptr<GetTable> gt;
-  std::shared_ptr<Table> t;
-
-  std::shared_ptr<GetTable> gt2;
-  std::shared_ptr<Table> t2;
+  void helper(std::shared_ptr<GetTable> table_to_update, std::shared_ptr<GetTable> update_values,
+              std::shared_ptr<Table> expected_result);
 };
 
-void OperatorsUpdateTest::helper(std::shared_ptr<GetTable> source_table, std::shared_ptr<Table> expected_result) {
+void OperatorsUpdateTest::helper(std::shared_ptr<GetTable> table_to_update, std::shared_ptr<GetTable> update_values,
+                                 std::shared_ptr<Table> expected_result) {
   auto t_context = TransactionManager::get().new_transaction_context();
+
+  // Make input left actually referenced. Projection does NOT generate ReferenceColumns.
+  auto ref_table = std::make_shared<TableScan>(table_to_update, "a", ">", 0);
+  ref_table->execute(t_context.get());
 
   std::vector<std::string> column_filter_left = {"a"};
   std::vector<std::string> column_filter_right = {"b"};
 
-  // make input left actually referenced. Projection does NOT generate ReferenceColumns
-  // TODO(all): rethink update which handles non-refcols.
-  auto ref_table = std::make_shared<TableScan>(gt, "a", ">", 0);
-  ref_table->execute(t_context.get());
-
   auto projection1 = std::make_shared<Projection>(ref_table, column_filter_left);
-  auto projection2 = std::make_shared<Projection>(source_table, column_filter_right);
+  auto projection2 = std::make_shared<Projection>(update_values, column_filter_right);
   projection1->execute(t_context.get());
   projection2->execute(t_context.get());
 
@@ -73,19 +53,87 @@ void OperatorsUpdateTest::helper(std::shared_ptr<GetTable> source_table, std::sh
 
   // Get validated table which should have the same row twice.
   t_context = TransactionManager::get().new_transaction_context();
-  auto validate = std::make_shared<Validate>(gt);
+  auto validate = std::make_shared<Validate>(table_to_update);
   validate->execute(t_context.get());
 
   EXPECT_TABLE_EQ(validate->get_output(), expected_result);
 }
 
 TEST_F(OperatorsUpdateTest, SelfUpdate) {
+  auto t = load_table("src/test/tables/int_int.tbl", 0u);
+  StorageManager::get().add_table("updateTestTable", t);
+
+  auto gt = std::make_shared<GetTable>("updateTestTable");
+  gt->execute();
   std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_int_same.tbl", 1);
-  helper(gt, expected_result);
+  helper(gt, gt, expected_result);
 }
 
 TEST_F(OperatorsUpdateTest, NormalUpdate) {
+  auto t = load_table("src/test/tables/int_int.tbl", 0u);
+  StorageManager::get().add_table("updateTestTable", t);
+
+  auto gt = std::make_shared<GetTable>("updateTestTable");
+  gt->execute();
+
+  auto t2 = load_table("src/test/tables/int_int.tbl", 0u);
+  StorageManager::get().add_table("updateTestTable2", t2);
+
+  auto gt2 = std::make_shared<GetTable>("updateTestTable2");
+  gt2->execute();
+
   std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_int_same.tbl", 1);
-  helper(gt2, expected_result);
+  helper(gt, gt2, expected_result);
+}
+
+TEST_F(OperatorsUpdateTest, MultipleChunksLeft) {
+  auto t = load_table("src/test/tables/int_int.tbl", 2u);
+  StorageManager::get().add_table("updateTestTable", t);
+
+  auto gt = std::make_shared<GetTable>("updateTestTable");
+  gt->execute();
+
+  auto t2 = load_table("src/test/tables/int_int.tbl", 0u);
+  StorageManager::get().add_table("updateTestTable2", t2);
+
+  auto gt2 = std::make_shared<GetTable>("updateTestTable2");
+  gt2->execute();
+
+  std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_int_same.tbl", 1);
+  helper(gt, gt2, expected_result);
+}
+
+TEST_F(OperatorsUpdateTest, MultipleChunksRight) {
+  auto t = load_table("src/test/tables/int_int.tbl", 0u);
+  StorageManager::get().add_table("updateTestTable", t);
+
+  auto gt = std::make_shared<GetTable>("updateTestTable");
+  gt->execute();
+
+  auto t2 = load_table("src/test/tables/int_int.tbl", 2u);
+  StorageManager::get().add_table("updateTestTable2", t2);
+
+  auto gt2 = std::make_shared<GetTable>("updateTestTable2");
+  gt2->execute();
+
+  std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_int_same.tbl", 1);
+  helper(gt, gt2, expected_result);
+}
+
+TEST_F(OperatorsUpdateTest, MultipleChunks) {
+  auto t = load_table("src/test/tables/int_int.tbl", 2u);
+  StorageManager::get().add_table("updateTestTable", t);
+
+  auto gt = std::make_shared<GetTable>("updateTestTable");
+  gt->execute();
+
+  auto t2 = load_table("src/test/tables/int_int.tbl", 1u);
+  StorageManager::get().add_table("updateTestTable2", t2);
+
+  auto gt2 = std::make_shared<GetTable>("updateTestTable2");
+  gt2->execute();
+
+  std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_int_same.tbl", 1);
+  helper(gt, gt2, expected_result);
 }
 }  // namespace opossum
