@@ -48,11 +48,11 @@ std::shared_ptr<const Table> Validate::on_execute(TransactionContext *transactio
     output->add_column(_in_table->column_name(column_id), _in_table->column_type(column_id), false);
   }
 
+  const auto our_tid = transactionContext->transaction_id();
+  const auto our_lcid = transactionContext->last_commit_id();
+
   for (ChunkID chunk_id = 0; chunk_id < _in_table->chunk_count(); ++chunk_id) {
     const auto &chunk_in = _in_table->get_chunk(chunk_id);
-    const auto our_tid = transactionContext->transaction_id();
-    const auto our_lcid = transactionContext->last_commit_id();
-    const auto &mvcc_columns = chunk_in.mvcc_columns();
 
     auto chunk_out = Chunk{};
     auto pos_list_out = std::make_shared<PosList>();
@@ -63,7 +63,8 @@ std::shared_ptr<const Table> Validate::on_execute(TransactionContext *transactio
       if (!chunk_references_only_one_table(chunk_in)) throw std::logic_error("Malformed input");
       referenced_table = ref_col_in->referenced_table();
       for (auto row_id : *ref_col_in->pos_list()) {
-        if (is_row_visible(our_tid, our_lcid, row_id.chunk_offset, mvcc_columns)) {
+        const auto &referenced_chunk = referenced_table->get_chunk(row_id.chunk_id);
+        if (is_row_visible(our_tid, our_lcid, row_id.chunk_offset, referenced_chunk.mvcc_columns())) {
           pos_list_out->emplace_back(row_id);
         }
       }
@@ -77,6 +78,8 @@ std::shared_ptr<const Table> Validate::on_execute(TransactionContext *transactio
 
     } else {
       referenced_table = _in_table;
+      const auto &mvcc_columns = chunk_in.mvcc_columns();
+
       for (auto i = 0u; i < chunk_in.size(); i++) {
         if (is_row_visible(our_tid, our_lcid, i, mvcc_columns)) {
           pos_list_out->emplace_back(RowID{chunk_id, i});
