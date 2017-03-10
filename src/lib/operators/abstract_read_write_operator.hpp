@@ -13,10 +13,6 @@ namespace opossum {
 /**
  * AbstractReadWriteOperator is the superclass for all operators that need write access to tables.
  * It mainly provides the commit and abort methods, which are used by the commit and abort operators, respectively.
- * Since tables are generally passed around as const variables and changing that would propagate all over the place,
- * implementations of this interface need to use const_casts or work around this by other means. const_cast should not
- * result in undefined behaviour since creating a Table that is const at creation time is not useful and should not
- * happen at all.
  */
 class AbstractReadWriteOperator : public AbstractOperator {
  public:

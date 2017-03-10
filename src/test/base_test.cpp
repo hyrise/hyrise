@@ -103,11 +103,11 @@ void BaseTest::_print_matrix(const BaseTest::Matrix &m) {
   for (unsigned row = 0; row < left.size(); row++)
     for (unsigned col = 0; col < left[row].size(); col++) {
       if (tleft.column_type(col) == "float") {
-        EXPECT_FLOAT_EQ(type_cast<float>(left[row][col]), type_cast<float>(right[row][col])) << "Row/Col:" << row << "/"
-                                                                                             << col;
+        EXPECT_FLOAT_EQ(type_cast<float>(left[row][col]), type_cast<float>(right[row][col]))
+            << "Row/Col:" << row << "/" << col;
       } else if (tleft.column_type(col) == "double") {
-        EXPECT_DOUBLE_EQ(type_cast<double>(left[row][col]), type_cast<double>(right[row][col])) << "Row/Col:" << row
-                                                                                                << "/" << col;
+        EXPECT_DOUBLE_EQ(type_cast<double>(left[row][col]), type_cast<double>(right[row][col]))
+            << "Row/Col:" << row << "/" << col;
       } else {
         EXPECT_EQ(left[row][col], right[row][col]) << "Row:" << row + 1 << " Col:" << col + 1;
       }
