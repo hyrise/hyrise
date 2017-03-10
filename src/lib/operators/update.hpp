@@ -24,8 +24,8 @@ class Update : public AbstractReadWriteOperator {
  public:
   explicit Update(std::shared_ptr<AbstractOperator> table_to_update, std::shared_ptr<AbstractOperator> update_values);
 
-  void commit(const CommitID cid) override;
-  void abort() override;
+  void commit_records(const CommitID cid) override;
+  void rollback_records() override;
 
   const std::string name() const override;
   uint8_t num_in_tables() const override;

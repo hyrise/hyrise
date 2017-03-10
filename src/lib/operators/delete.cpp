@@ -48,7 +48,7 @@ std::shared_ptr<const Table> Delete::on_execute(TransactionContext* context) {
   return nullptr;
 }
 
-void Delete::commit(const CommitID cid) {
+void Delete::commit_records(const CommitID cid) {
   for (const auto& pos_list : _pos_lists) {
     for (const auto& row_id : *pos_list) {
       auto& chunk = _table->get_chunk(row_id.chunk_id);
@@ -59,7 +59,7 @@ void Delete::commit(const CommitID cid) {
   }
 }
 
-void Delete::abort() {
+void Delete::rollback_records() {
   for (const auto& pos_list : _pos_lists) {
     for (const auto& row_id : *pos_list) {
       auto& chunk = _table->get_chunk(row_id.chunk_id);

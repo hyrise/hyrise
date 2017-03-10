@@ -20,8 +20,8 @@ class Delete : public AbstractReadWriteOperator {
  public:
   explicit Delete(const std::string& table_name, const std::shared_ptr<const AbstractOperator>& values_to_delete);
 
-  void commit(const CommitID cid) override;
-  void abort() override;
+  void commit_records(const CommitID cid) override;
+  void rollback_records() override;
 
   const std::string name() const override;
   uint8_t num_in_tables() const override;

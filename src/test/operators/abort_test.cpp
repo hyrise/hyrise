@@ -5,15 +5,15 @@
 #include "gtest/gtest.h"
 
 #include "../../lib/concurrency/transaction_manager.hpp"
-#include "../../lib/operators/abort.hpp"
 #include "../../lib/operators/delete.hpp"
 #include "../../lib/operators/get_table.hpp"
+#include "../../lib/operators/rollback_records.hpp"
 #include "../../lib/operators/validate.hpp"
 #include "../../lib/storage/storage_manager.hpp"
 #include "../../lib/storage/table.hpp"
 
 namespace opossum {
-class OperatorsAbortTest : public BaseTest {
+class OperatorsRollbackTest : public BaseTest {
  protected:
   void SetUp() override {
     auto t = load_table("src/test/tables/int_int.tbl", 0u);
@@ -25,7 +25,7 @@ class OperatorsAbortTest : public BaseTest {
   std::string table_name;
 };
 
-TEST_F(OperatorsAbortTest, AbortDelete) {
+TEST_F(OperatorsRollbackTest, RollbackDelete) {
   auto expected_result = load_table("src/test/tables/int_int.tbl", 1);
 
   auto t_context = TransactionManager::get().new_transaction_context();
@@ -39,8 +39,8 @@ TEST_F(OperatorsAbortTest, AbortDelete) {
   auto delete_op = std::make_shared<Delete>(table_name, table_scan);
   delete_op->execute(t_context.get());
 
-  auto abort_op = std::make_shared<Abort>();
-  abort_op->execute(t_context.get());
+  auto rollback_op = std::make_shared<RollbackRecords>();
+  rollback_op->execute(t_context.get());
 
   // Get validated table which should not have any deleted rows.
   t_context = TransactionManager::get().new_transaction_context();

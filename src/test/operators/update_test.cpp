@@ -6,7 +6,7 @@
 #include "gtest/gtest.h"
 
 #include "../../lib/concurrency/transaction_manager.hpp"
-#include "../../lib/operators/commit.hpp"
+#include "../../lib/operators/commit_records.hpp"
 #include "../../lib/operators/get_table.hpp"
 #include "../../lib/operators/projection.hpp"
 #include "../../lib/operators/update.hpp"
@@ -45,7 +45,7 @@ void OperatorsUpdateTest::helper(std::shared_ptr<GetTable> table_to_update, std:
   // MVCC commit.
   TransactionManager::get().prepare_commit(*t_context);
 
-  auto commit_op = std::make_shared<Commit>();
+  auto commit_op = std::make_shared<CommitRecords>();
   commit_op->execute(t_context.get());
 
   TransactionManager::get().commit(*t_context);

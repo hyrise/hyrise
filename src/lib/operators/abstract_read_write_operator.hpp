@@ -12,7 +12,8 @@ namespace opossum {
 
 /**
  * AbstractReadWriteOperator is the superclass for all operators that need write access to tables.
- * It mainly provides the commit and abort methods, which are used by the commit and abort operators, respectively.
+ * It mainly provides the commit_records and rollback_records methods, which are used by the CommitRecords
+ * and RollbackRecords operators, respectively.
  */
 class AbstractReadWriteOperator : public AbstractOperator {
  public:
@@ -30,14 +31,14 @@ class AbstractReadWriteOperator : public AbstractOperator {
    * modifications will be visible as soon as the TransactionManager has completed the commit for this cid.
    * Unlike on_execute, where failures are expected, the commit operation cannot fail.
    */
-  virtual void commit(const CommitID cid) = 0;
+  virtual void commit_records(const CommitID cid) = 0;
 
   /**
-   * Aborts the operator by unlocking all modified rows. No other action is necessary since commit should have never
-   * been called and the modifications were not made visible in the first place.
-   * Like commit, the abort operation cannot fail.
+   * Rolls back the operator by unlocking all modified rows. No other action is necessary since commit_records should
+   * have never been called and the modifications were not made visible in the first place.
+   * Like commit, the rollback operation cannot fail.
    */
-  virtual void abort() = 0;
+  virtual void rollback_records() = 0;
 
   /**
    * Returns true if a previous call to on_execute produced an error.
@@ -50,8 +51,8 @@ class AbstractReadWriteOperator : public AbstractOperator {
   /**
    * Executes the operator. The context parameter is used to lock the rows that should be modified.
    * Any modifications are not visible to other operators (that is, if the Validate operator has been applied properly)
-   * until commit has been called on this operator and the transaction manager has finished committing the respective
-   * transaction.
+   * until commit_records has been called on this operator and the transaction manager has finished committing the
+   * respective transaction.
    * The execution may fail if the operator attempts to lock rows that have been locked by other operators.
    * In that case, execute_failed returns true after on_execute has returned.
    *

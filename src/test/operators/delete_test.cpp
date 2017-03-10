@@ -55,9 +55,9 @@ void OperatorsDeleteTest::helper(bool commit) {
 
   auto expected_end_cid = cid;
   if (commit) {
-    delete_op->commit(cid);
+    delete_op->commit_records(cid);
   } else {
-    delete_op->abort();
+    delete_op->rollback_records();
     expected_end_cid = Chunk::MAX_COMMIT_ID;
   }
 
@@ -101,7 +101,7 @@ TEST_F(OperatorsDeleteTest, DetectDirtyWrite) {
   // MVCC commit.
   TransactionManager::get().prepare_commit(*t1_context);
 
-  delete_op1->commit(t1_context->commit_id());
+  delete_op1->commit_records(t1_context->commit_id());
 
   TransactionManager::get().commit(*t1_context);
 
