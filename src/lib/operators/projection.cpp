@@ -48,7 +48,7 @@ std::shared_ptr<const Table> Projection::on_execute() {
         // If necessary, create reference column because we otherwise lose access
         // to the MVCC columns of the original table and therefore can’t validate
         // the visibility of its rows in a subsequent operator.
-        if (!pos_list) pos_list = create_pos_list(chunk_id, chunk_in.size());
+        if (!pos_list) pos_list = _create_pos_list(chunk_id, chunk_in.size());
 
         chunk_out.add_column(std::make_shared<ReferenceColumn>(input_table_left(), column_id, pos_list));
       }
@@ -60,15 +60,12 @@ std::shared_ptr<const Table> Projection::on_execute() {
   return output;
 }
 
-std::shared_ptr<const PosList> Projection::create_pos_list(const ChunkID chunk_id, const size_t chunk_size) {
+std::shared_ptr<const PosList> Projection::_create_pos_list(const ChunkID chunk_id, const size_t chunk_size) {
   auto pos_list = std::make_shared<PosList>(chunk_size);
 
-  auto i = RowID{chunk_id, 0u};
-  std::generate(pos_list->begin(), pos_list->end(), [&i] {
-    const auto val = i;
-    ++(i.chunk_offset);
-    return val;
-  });
+  for (auto i = 0u; i < chunk_size; ++i) {
+    (*pos_list)[i] = {chunk_id, i};
+  }
 
   return pos_list;
 }
