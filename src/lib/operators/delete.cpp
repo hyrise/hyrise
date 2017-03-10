@@ -37,6 +37,7 @@ std::shared_ptr<const Table> Delete::on_execute(TransactionContext* context) {
       auto& referenced_chunk = _table->get_chunk(row_id.chunk_id);
 
       auto expected = 0u;
+      // Actual row lock for delete happens here
       _execute_failed =
           !referenced_chunk.mvcc_columns().tids[row_id.chunk_offset].compare_exchange_strong(expected, _transaction_id);
 
@@ -79,6 +80,10 @@ const std::string Delete::name() const { return "Delete"; }
 
 uint8_t Delete::num_in_tables() const { return 1u; }
 
+/**
+* A valid Input needs to be: An existing table with at least one chunk.
+* Those chunks need to contain at least one column and each chunk can only reference one table.
+*/
 bool Delete::_execution_input_valid(const TransactionContext* context) const {
   if (context == nullptr) return false;
 
@@ -95,7 +100,7 @@ bool Delete::_execution_input_valid(const TransactionContext* context) const {
 
     if (chunk.col_count() == 0u) return false;
 
-    if (!chunk_references_only_one_table(chunk)) return false;
+    if (!chunk.references_only_one_table()) return false;
 
     const auto first_column = std::static_pointer_cast<ReferenceColumn>(chunk.get_column(0u));
 

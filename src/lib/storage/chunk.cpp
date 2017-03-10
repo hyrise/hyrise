@@ -8,6 +8,7 @@
 
 #include "chunk.hpp"
 #include "group_key_index.hpp"
+#include "reference_column.hpp"
 #include "value_column.hpp"
 
 namespace opossum {
@@ -116,6 +117,25 @@ std::vector<std::shared_ptr<BaseIndex>> Chunk::get_indices_for(
   std::copy_if(_indices.cbegin(), _indices.cend(), std::back_inserter(result),
                [&columns](const std::shared_ptr<BaseIndex>& index) { return index->is_index_for(columns); });
   return result;
+}
+bool Chunk::references_only_one_table() const {
+  if (this->col_count() == 0) return false;
+
+  auto first_column = std::dynamic_pointer_cast<ReferenceColumn>(this->get_column(0));
+  auto first_referenced_table = first_column->referenced_table();
+  auto first_pos_list = first_column->pos_list();
+
+  for (auto i = 1u; i < this->col_count(); ++i) {
+    const auto column = std::dynamic_pointer_cast<ReferenceColumn>(this->get_column(i));
+
+    if (column == nullptr) return false;
+
+    if (first_referenced_table != column->referenced_table()) return false;
+
+    if (first_pos_list != column->pos_list()) return false;
+  }
+
+  return true;
 }
 
 }  // namespace opossum

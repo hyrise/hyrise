@@ -114,7 +114,7 @@ bool Update::_execution_input_valid(const TransactionContext* context) const {
   if (input_table_left()->col_count() != input_table_right()->col_count()) return false;
 
   for (auto chunk_id = 0u; chunk_id < input_table_left()->chunk_count(); ++chunk_id)
-    if (!chunk_references_only_one_table(input_table_left()->get_chunk(chunk_id))) return false;
+    if (!input_table_left()->get_chunk(chunk_id).references_only_one_table()) return false;
 
   return true;
 }
