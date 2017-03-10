@@ -5,7 +5,6 @@
 
 #include "concurrency/transaction_context.hpp"
 #include "storage/storage_manager.hpp"
-#include "util.hpp"
 
 namespace opossum {
 

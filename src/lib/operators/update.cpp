@@ -8,7 +8,6 @@
 #include "concurrency/transaction_context.hpp"
 #include "storage/reference_column.hpp"
 #include "table_wrapper.hpp"
-#include "util.hpp"
 
 namespace opossum {
 

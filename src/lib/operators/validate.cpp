@@ -6,7 +6,6 @@
 
 #include "../concurrency/transaction_context.hpp"
 #include "../storage/reference_column.hpp"
-#include "util.hpp"
 
 namespace opossum {
 
@@ -82,7 +81,7 @@ std::shared_ptr<const Table> Validate::on_execute(TransactionContext *transactio
         chunk_out.add_column(ref_col_out);
       }
 
-    // Otherwise we have a Value- or DictionaryColumn and simply iterate over all rows to build a poslist.
+      // Otherwise we have a Value- or DictionaryColumn and simply iterate over all rows to build a poslist.
     } else {
       referenced_table = _in_table;
       const auto &mvcc_columns = chunk_in.mvcc_columns();
