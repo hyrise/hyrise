@@ -15,9 +15,8 @@ void RollbackRecords::commit_records(const CommitID /*cid*/) {
   throw std::logic_error("RollbackRecords cannot be committed");
 }
 
-void RollbackRecords::rollback_records() { /* RollbackRecords calls this method on itself, so we do nothing instead of
-                                              throwing exceptions */
-}
+// RollbackRecords calls this method on itself, so we do nothing instead of throwing exceptions.
+void RollbackRecords::rollback_records() {}
 
 std::shared_ptr<const Table> RollbackRecords::on_execute(TransactionContext* context) {
   for (const auto op : context->get_rw_operators()) {

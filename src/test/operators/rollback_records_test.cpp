@@ -13,7 +13,7 @@
 #include "../../lib/storage/table.hpp"
 
 namespace opossum {
-class OperatorsRollbackTest : public BaseTest {
+class OperatorsRollbackRecordsTest : public BaseTest {
  protected:
   void SetUp() override {
     auto t = load_table("src/test/tables/int_int.tbl", 0u);
@@ -25,8 +25,8 @@ class OperatorsRollbackTest : public BaseTest {
   std::string table_name;
 };
 
-TEST_F(OperatorsRollbackTest, RollbackDelete) {
-  auto expected_result = load_table("src/test/tables/int_int.tbl", 1);
+TEST_F(OperatorsRollbackRecordsTest, RollbackDelete) {
+  auto expected_result = load_table("src/test/tables/int_int.tbl", 0u);
 
   auto t_context = TransactionManager::get().new_transaction_context();
 
@@ -39,8 +39,13 @@ TEST_F(OperatorsRollbackTest, RollbackDelete) {
   auto delete_op = std::make_shared<Delete>(table_name, table_scan);
   delete_op->execute(t_context.get());
 
+  for (int i = 0; i < 3; i++)
+    EXPECT_EQ(gt->get_output()->get_chunk(0).mvcc_columns().tids[i], t_context->transaction_id());
+
   auto rollback_op = std::make_shared<RollbackRecords>();
   rollback_op->execute(t_context.get());
+
+  for (int i = 0; i < 3; i++) EXPECT_EQ(gt->get_output()->get_chunk(0).mvcc_columns().tids[i], 0u);
 
   // Get validated table which should not have any deleted rows.
   t_context = TransactionManager::get().new_transaction_context();
