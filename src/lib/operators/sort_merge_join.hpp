@@ -44,7 +44,7 @@ class SortMergeJoin : public AbstractOperator {
   template <typename T>
   class SortMergeJoinImpl : public AbstractOperatorImpl, public ColumnVisitable {
    protected:
-    size_t _partition_count = 4;
+    size_t _partition_count = 8;
 
    public:
     SortMergeJoinImpl<T>(SortMergeJoin& sort_merge_join);
@@ -73,13 +73,10 @@ class SortMergeJoin : public AbstractOperator {
     };
 
     // Sort functions
-    void sort_table(bool left);
-    void sort_partition(const std::vector<ChunkID> chunk_ids, bool left);
-    void sort_left_table();
-    void sort_left_partition(const std::vector<ChunkID> chunk_ids);
-    void sort_right_table();
-    void sort_right_partition(const std::vector<ChunkID> chunk_ids);
-
+    void sort_table(std::shared_ptr<SortedTable> sort_table, std::shared_ptr<const Table> input,
+                    const std::string& column_name, bool left);
+    void sort_partition(const std::vector<ChunkID> chunk_ids, std::shared_ptr<const Table> input,
+                        const std::string& column_name, bool left);
     template <typename T2>
     typename std::enable_if<std::is_arithmetic<T2>::value, size_t>::type get_radix(T2 value, size_t radix_bits) {
       auto result = reinterpret_cast<size_t*>(&value);
