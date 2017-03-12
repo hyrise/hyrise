@@ -59,7 +59,6 @@ class SortMergeJoin : public AbstractOperator {
       // std::vector<T> _values;
       // std::shared_ptr<PosList> _original_positions;
       std::vector<std::pair<T, RowID>> _values;
-      std::map<T, uint32_t> _chunk_index;
       std::map<uint8_t, uint32_t> _histogram;
       std::map<uint8_t, uint32_t> _prefix;
     };
@@ -69,12 +68,13 @@ class SortMergeJoin : public AbstractOperator {
       SortedTable() {}
       std::vector<SortedChunk> _partition;
       std::map<uint8_t, uint32_t> _histogram;
-      std::map<T, uint64_t> _prefix;
     };
 
     // Sort functions
     void sort_table(std::shared_ptr<SortedTable> sort_table, std::shared_ptr<const Table> input,
                     const std::string& column_name, bool left);
+    void partition_join(uint32_t partition_number, std::vector<PosList>& pos_lists_left,
+                        std::vector<PosList>& pos_lists_right);
     void sort_partition(const std::vector<ChunkID> chunk_ids, std::shared_ptr<const Table> input,
                         const std::string& column_name, bool left);
     template <typename T2>

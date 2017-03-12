@@ -98,12 +98,18 @@ SortMergeJoin::SortMergeJoinImpl<T>::SortMergeJoinImpl(SortMergeJoin& sort_merge
     : _sort_merge_join{sort_merge_join} {
   if (_sort_merge_join._op == "=") {
     _compare = [](const T& value_left, const T& value_right) -> bool { return value_left == value_right; };
+  } else if (_sort_merge_join._op == "<") {
+    _compare = [](const T& value_left, const T& value_right) -> bool { return value_left < value_right; };
   } else {
     std::string message = "SortMergeJoinImpl::SortMergeJoinImpl: Unknown operator " + _sort_merge_join._op;
     std::cout << message << std::endl;
     throw std::exception(std::runtime_error(message));
   }
   /* right now only equi-joins supported
+  * (and test wise "<")
+  * but for other join ops it is recommended to use another join, as we do not gain any benfit
+  * as the output is in O(n²) for all Non-Equi Joins
+
   if (_nested_loop_join._op == "=") {
   _compare = [](const T& value_left, const T& value_right) -> bool { return value_left == value_right; };
   } else if (_nested_loop_join._op == "<") {
@@ -245,6 +251,75 @@ void SortMergeJoin::SortMergeJoinImpl<T>::sort_table(std::shared_ptr<SortedTable
 }
 
 template <typename T>
+void SortMergeJoin::SortMergeJoinImpl<T>::partition_join(uint32_t partition_number,
+                                                         std::vector<PosList>& pos_lists_left,
+                                                         std::vector<PosList>& pos_lists_right) {
+  uint32_t left_index = 0;
+  uint32_t right_index = 0;
+
+  auto& left_current_partition = _sorted_left_table->_partition[partition_number];
+  auto& right_current_partition = _sorted_right_table->_partition[partition_number];
+
+  const size_t left_size = left_current_partition._values.size();
+  const size_t right_size = right_current_partition._values.size();
+
+  while (left_index < left_size && right_index < right_size) {
+    T left_value = left_current_partition._values[left_index].first;
+    T right_value = right_current_partition._values[right_index].first;
+    uint32_t left_index_offset = 0;
+    uint32_t right_index_offset = 0;
+
+    // determine offset up to which all values are the same
+    // left side
+    for (; left_index_offset < left_size - left_index; ++left_index_offset) {
+      if (left_index + left_index_offset + 1 == left_size ||
+          left_value != left_current_partition._values[left_index + left_index_offset + 1].first) {
+        break;
+      }
+    }
+    // right side
+    for (; right_index_offset < right_size - right_index; ++right_index_offset) {
+      if (right_index_offset + right_index + 1 == right_size ||
+          right_value != right_current_partition._values[right_index + right_index_offset + 1].first) {
+        break;
+      }
+    }
+
+    // search for matching values of both partitions
+    if (left_value == right_value) {
+      /* match found */
+      // find all same values in each table then add product to _output
+      uint32_t max_index_left = left_index + left_index_offset;
+      uint32_t max_index_right = right_index_offset + right_index;
+      RowID left_row_id;
+      RowID right_row_id;
+
+      for (uint32_t l_index = left_index; l_index <= max_index_left; ++l_index) {
+        left_row_id = left_current_partition._values[l_index].second;
+
+        for (uint32_t r_index = right_index; r_index <= max_index_right; ++r_index) {
+          right_row_id = right_current_partition._values[r_index].second;
+          // _sort_merge_join._pos_list_left->push_back(left_row_id);
+          // _sort_merge_join._pos_list_right->push_back(right_row_id);
+          pos_lists_left[partition_number].push_back(left_row_id);
+          pos_lists_right[partition_number].push_back(right_row_id);
+        }
+      }
+
+      // afterwards set index for both tables to next new value
+      left_index += left_index_offset + 1u;
+      right_index += right_index_offset + 1u;
+    } else {
+      if (left_value < right_value) {
+        left_index += left_index_offset + 1u;
+      } else {
+        right_index += right_index_offset + 1u;
+      }
+    }
+  }
+}
+
+template <typename T>
 void SortMergeJoin::SortMergeJoinImpl<T>::perform_join() {
   _sort_merge_join._pos_list_left = std::make_shared<PosList>();
   _sort_merge_join._pos_list_right = std::make_shared<PosList>();
@@ -253,77 +328,25 @@ void SortMergeJoin::SortMergeJoinImpl<T>::perform_join() {
   std::vector<PosList> pos_lists_left(_sorted_left_table->_partition.size());
   std::vector<PosList> pos_lists_right(_sorted_left_table->_partition.size());
 
+  std::vector<std::thread> threads;
+
+  // parallel join for each partition (Equi-Join Case)
   for (uint32_t partition_number = 0; partition_number < _sorted_left_table->_partition.size(); ++partition_number) {
-    uint32_t left_index = 0;
-    uint32_t right_index = 0;
-
-    auto& left_current_partition = _sorted_left_table->_partition[partition_number];
-    auto& right_current_partition = _sorted_right_table->_partition[partition_number];
-
-    const size_t left_size = left_current_partition._values.size();
-    const size_t right_size = right_current_partition._values.size();
-
-    while (left_index < left_size && right_index < right_size) {
-      T left_value = left_current_partition._values[left_index].first;
-      T right_value = right_current_partition._values[right_index].first;
-      uint32_t left_index_offset = 0;
-      uint32_t right_index_offset = 0;
-
-      // determine offset up to which all values are the same
-      // left side
-      for (; left_index_offset < left_size - left_index; ++left_index_offset) {
-        if (left_index + left_index_offset + 1 == left_size ||
-            left_value != left_current_partition._values[left_index + left_index_offset + 1].first) {
-          break;
-        }
-      }
-      // right side
-      for (; right_index_offset < right_size - right_index; ++right_index_offset) {
-        if (right_index_offset + right_index + 1 == right_size ||
-            right_value != right_current_partition._values[right_index + right_index_offset + 1].first) {
-          break;
-        }
-      }
-
-      // search for matching values of both partitions
-      if (left_value == right_value) {
-        /* match found */
-        // find all same values in each table then add product to _output
-        uint32_t max_index_left = left_index + left_index_offset;
-        uint32_t max_index_right = right_index_offset + right_index;
-        RowID left_row_id;
-        RowID right_row_id;
-
-        for (uint32_t l_index = left_index; l_index <= max_index_left; ++l_index) {
-          left_row_id = left_current_partition._values[l_index].second;
-
-          for (uint32_t r_index = right_index; r_index <= max_index_right; ++r_index) {
-            right_row_id = right_current_partition._values[r_index].second;
-            // _sort_merge_join._pos_list_left->push_back(left_row_id);
-            // _sort_merge_join._pos_list_right->push_back(right_row_id);
-            pos_lists_left[partition_number].push_back(left_row_id);
-            pos_lists_right[partition_number].push_back(right_row_id);
-          }
-        }
-
-        // afterwards set index for both tables to next new value
-        left_index += left_index_offset + 1u;
-        right_index += right_index_offset + 1u;
-      } else {
-        if (left_value < right_value) {
-          left_index += left_index_offset + 1u;
-        } else {
-          right_index += right_index_offset + 1u;
-        }
-      }
-    }
+    threads.push_back(std::thread(&SortMergeJoin::SortMergeJoinImpl<T>::partition_join, *this, partition_number,
+                                  std::ref(pos_lists_left), std::ref(pos_lists_right)));
   }
 
+  for (auto& thread : threads) {
+    thread.join();
+  }
+
+  // Merge pos_lists_left of partitions together
   for (auto& p_list : pos_lists_left) {
     _sort_merge_join._pos_list_left->reserve(_sort_merge_join._pos_list_left->size() + p_list.size());
     _sort_merge_join._pos_list_left->insert(_sort_merge_join._pos_list_left->end(), p_list.begin(), p_list.end());
   }
 
+  // Merge pos_lists_right of partitions together
   for (auto& p_list : pos_lists_right) {
     _sort_merge_join._pos_list_right->reserve(_sort_merge_join._pos_list_right->size() + p_list.size());
     _sort_merge_join._pos_list_right->insert(_sort_merge_join._pos_list_right->end(), p_list.begin(), p_list.end());
@@ -381,14 +404,13 @@ void SortMergeJoin::SortMergeJoinImpl<T>::build_output() {
 
 template <typename T>
 void SortMergeJoin::SortMergeJoinImpl<T>::execute() {
-  // sort_left_table();
-  // sort_right_table();
+  // sort left table
   _sorted_left_table = std::make_shared<SortedTable>();
-  auto l_input = _sort_merge_join._input_left;
-  sort_table(_sorted_left_table, l_input, _sort_merge_join._left_column_name, true);
+  sort_table(_sorted_left_table, _sort_merge_join._input_left, _sort_merge_join._left_column_name, true);
+  // sort right table
   _sorted_right_table = std::make_shared<SortedTable>();
-  auto r_input = _sort_merge_join._input_right;
-  sort_table(_sorted_right_table, r_input, _sort_merge_join._right_column_name, false);
+  sort_table(_sorted_right_table, _sort_merge_join._input_right, _sort_merge_join._right_column_name, false);
+
   perform_join();
   build_output();
 }
