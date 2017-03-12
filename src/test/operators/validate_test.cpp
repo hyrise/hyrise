@@ -65,7 +65,7 @@ TEST_F(OperatorsValidateTest, SimpleValidate) {
   EXPECT_TABLE_EQ(validate->get_output(), expected_result);
 }
 
-TEST_F(OperatorsValidateTest, DISABLED_ProjectedValidate) {
+TEST_F(OperatorsValidateTest, ProjectedValidate) {
   auto context = TransactionContext(1u, 3u);
 
   std::shared_ptr<Table> expected_result = load_table("src/test/tables/validate_output_validated_projected.tbl", 2u);
