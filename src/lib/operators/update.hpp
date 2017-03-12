@@ -2,13 +2,13 @@
 
 #include <memory>
 #include <string>
-#include <vector>
 
 #include "abstract_read_write_operator.hpp"
-#include "delete.hpp"
-#include "insert.hpp"
 
 namespace opossum {
+
+class Delete;
+class Insert;
 
 /**
  * Operator that updates a subset of columns of a number of rows and from one table with values supplied in another.
@@ -22,7 +22,10 @@ namespace opossum {
  */
 class Update : public AbstractReadWriteOperator {
  public:
-  explicit Update(std::shared_ptr<AbstractOperator> table_to_update, std::shared_ptr<AbstractOperator> update_values);
+  explicit Update(const std::string& table_name, std::shared_ptr<AbstractOperator> table_to_update,
+                  std::shared_ptr<AbstractOperator> update_values);
+
+  ~Update();
 
   void commit_records(const CommitID cid) override;
   void rollback_records() override;
@@ -35,6 +38,7 @@ class Update : public AbstractReadWriteOperator {
   bool _execution_input_valid(const TransactionContext* context) const;
 
  protected:
+  const std::string _table_name;
   std::unique_ptr<Delete> _delete;
   std::unique_ptr<Insert> _insert;
 };

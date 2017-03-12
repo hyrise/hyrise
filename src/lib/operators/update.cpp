@@ -6,13 +6,18 @@
 #include <vector>
 
 #include "concurrency/transaction_context.hpp"
+#include "delete.hpp"
+#include "insert.hpp"
 #include "storage/reference_column.hpp"
 #include "table_wrapper.hpp"
 
 namespace opossum {
 
-Update::Update(std::shared_ptr<AbstractOperator> table_to_update_op, std::shared_ptr<AbstractOperator> update_values_op)
-    : AbstractReadWriteOperator(table_to_update_op, update_values_op) {}
+Update::Update(const std::string& table_name, std::shared_ptr<AbstractOperator> table_to_update_op,
+               std::shared_ptr<AbstractOperator> update_values_op)
+    : AbstractReadWriteOperator(table_to_update_op, update_values_op), _table_name{table_name} {}
+
+Update::~Update() = default;
 
 const std::string Update::name() const { return "Update"; }
 
@@ -80,7 +85,7 @@ std::shared_ptr<const Table> Update::on_execute(TransactionContext* context) {
   }
 
   // 3. call delete on old data.
-  _delete = std::make_unique<Delete>(original_table->name(), _input_left);
+  _delete = std::make_unique<Delete>(_table_name, _input_left);
 
   _delete->execute(context);
 
@@ -90,7 +95,7 @@ std::shared_ptr<const Table> Update::on_execute(TransactionContext* context) {
   // 4. call insert using insert_table.
   auto helper_op = std::make_shared<TableWrapper>(insert_table);
   helper_op->execute();
-  _insert = std::make_unique<Insert>(original_table->name(), helper_op);
+  _insert = std::make_unique<Insert>(_table_name, helper_op);
 
   _insert->execute(context);
 

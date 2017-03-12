@@ -9,6 +9,7 @@
 #include "../../lib/operators/commit_records.hpp"
 #include "../../lib/operators/get_table.hpp"
 #include "../../lib/operators/projection.hpp"
+#include "../../lib/operators/table_scan.hpp"
 #include "../../lib/operators/update.hpp"
 #include "../../lib/operators/validate.hpp"
 #include "../../lib/storage/storage_manager.hpp"
@@ -39,7 +40,7 @@ void OperatorsUpdateTest::helper(std::shared_ptr<GetTable> table_to_update, std:
   projection1->execute(t_context.get());
   projection2->execute(t_context.get());
 
-  auto update = std::make_shared<Update>(projection1, projection2);
+  auto update = std::make_shared<Update>("updateTestTable", projection1, projection2);
   update->execute(t_context.get());
 
   // MVCC commit.
