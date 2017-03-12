@@ -13,7 +13,6 @@ StorageManager &StorageManager::get() {
 }
 
 void StorageManager::add_table(const std::string &name, std::shared_ptr<Table> table) {
-  table->set_name(name);
   _tables.insert(std::make_pair(name, std::move(table)));
 }
 
