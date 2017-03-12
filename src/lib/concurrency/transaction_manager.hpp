@@ -18,15 +18,16 @@
  * Conceptually, the idea is that each row has additional columns which are used to mark rows as locked for a
  * transaction, and to describe when the row was created and deleted to ensure correct visibility. These vectors are
  * written to by AbstractReadWriteOperators, of which there are mainly Insert, Update and Delete,
- * as well as Commit and Abort.
+ * as well as CommitRecords and RollbackRecords.
  *
  * Rows invisible for the current transaction are filtered by the Validate operator.
 
- * The Commit operator must be run at the end of each transaction. To complete the process of making changes visible,
+ * The CommitRecords operator must be run at the end of each transaction. To complete the process of making changes
+ visible,
  * TransactionManager::commit must be called.
  *
  * ReadWriteOperators can fail if they detect conflicting writes by other operators. In that case, the transaction must
- * be aborted by running the Abort operator.
+ * be rolled back by running the RollbackRecords operator.
  *
  * The TransactionManager is a thread-safe singleton that hands out TransactionContexts with monotonically increasing
  * IDs and ensures all transactions are committed in the correct order. It also holds a global _last_commit_id, which is
@@ -35,7 +36,7 @@
  *
  * TransactionContext contains data used by a transaction, mainly its ID, the last commit ID explained above, and,
  * when it enters the commit phase, the TransactionManager gives it a CommitContext, which contains
- * a new commit ID that the Commit operator uses to make its changes visible to others.
+ * a new commit ID that the CommitRecords operator uses to make its changes visible to others.
  */
 
 namespace opossum {
@@ -65,15 +66,15 @@ class TransactionManager {
    */
 
   /**
-   * Sets transaction phase to “aborted”
+   * Sets transaction phase to "rolled back"
    */
-  void abort(TransactionContext &context);
+  void rollback(TransactionContext &context);
 
   /**
    * Creates new commit context and assigns commit id
    * Sets transaction phase to “committing”
    * After calling this function, transaction cannot be
-   * aborted anymore.
+   * rolled back anymore.
    */
   void prepare_commit(TransactionContext &context);
 

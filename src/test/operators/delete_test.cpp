@@ -33,9 +33,11 @@ class OperatorsDeleteTest : public BaseTest {
   std::string _table_name;
   std::shared_ptr<GetTable> _gt;
   std::shared_ptr<Table> _table;
+
+  void helper(bool commit);
 };
 
-TEST_F(OperatorsDeleteTest, ExecuteAndCommit) {
+void OperatorsDeleteTest::helper(bool commit) {
   auto transaction_context = TransactionContext{1u, 1u};
   const auto cid = 1u;
 
@@ -51,42 +53,26 @@ TEST_F(OperatorsDeleteTest, ExecuteAndCommit) {
   EXPECT_EQ(_table->get_chunk(0u).mvcc_columns().tids.at(1u), 0u);
   EXPECT_EQ(_table->get_chunk(0u).mvcc_columns().tids.at(2u), transaction_context.transaction_id());
 
-  delete_op->commit(cid);
+  auto expected_end_cid = cid;
+  if (commit) {
+    delete_op->commit_records(cid);
+  } else {
+    delete_op->rollback_records();
+    expected_end_cid = Chunk::MAX_COMMIT_ID;
+  }
 
-  EXPECT_EQ(_table->get_chunk(0u).mvcc_columns().end_cids.at(0u), cid);
+  EXPECT_EQ(_table->get_chunk(0u).mvcc_columns().end_cids.at(0u), expected_end_cid);
   EXPECT_EQ(_table->get_chunk(0u).mvcc_columns().end_cids.at(1u), Chunk::MAX_COMMIT_ID);
-  EXPECT_EQ(_table->get_chunk(0u).mvcc_columns().end_cids.at(2u), cid);
+  EXPECT_EQ(_table->get_chunk(0u).mvcc_columns().end_cids.at(2u), expected_end_cid);
 
   EXPECT_EQ(_table->get_chunk(0u).mvcc_columns().tids.at(0u), 0u);
   EXPECT_EQ(_table->get_chunk(0u).mvcc_columns().tids.at(1u), 0u);
   EXPECT_EQ(_table->get_chunk(0u).mvcc_columns().tids.at(2u), 0u);
 }
 
-TEST_F(OperatorsDeleteTest, ExecuteAndAbort) {
-  auto transaction_context = TransactionContext{1u, 1u};
+TEST_F(OperatorsDeleteTest, ExecuteAndCommit) { helper(true); }
 
-  auto table_scan = std::make_shared<TableScan>(_gt, "b", ">", "456.7");
-
-  table_scan->execute();
-
-  auto delete_op = std::make_shared<Delete>(_table_name, table_scan);
-
-  delete_op->execute(&transaction_context);
-
-  EXPECT_EQ(_table->get_chunk(0u).mvcc_columns().tids.at(0u), transaction_context.transaction_id());
-  EXPECT_EQ(_table->get_chunk(0u).mvcc_columns().tids.at(1u), 0u);
-  EXPECT_EQ(_table->get_chunk(0u).mvcc_columns().tids.at(2u), transaction_context.transaction_id());
-
-  delete_op->abort();
-
-  EXPECT_EQ(_table->get_chunk(0u).mvcc_columns().end_cids.at(0u), Chunk::MAX_COMMIT_ID);
-  EXPECT_EQ(_table->get_chunk(0u).mvcc_columns().end_cids.at(1u), Chunk::MAX_COMMIT_ID);
-  EXPECT_EQ(_table->get_chunk(0u).mvcc_columns().end_cids.at(2u), Chunk::MAX_COMMIT_ID);
-
-  EXPECT_EQ(_table->get_chunk(0u).mvcc_columns().tids.at(0u), 0u);
-  EXPECT_EQ(_table->get_chunk(0u).mvcc_columns().tids.at(1u), 0u);
-  EXPECT_EQ(_table->get_chunk(0u).mvcc_columns().tids.at(2u), 0u);
-}
+TEST_F(OperatorsDeleteTest, ExecuteAndAbort) { helper(false); }
 
 TEST_F(OperatorsDeleteTest, DetectDirtyWrite) {
   auto t1_context = TransactionManager::get().new_transaction_context();
@@ -115,7 +101,7 @@ TEST_F(OperatorsDeleteTest, DetectDirtyWrite) {
   // MVCC commit.
   TransactionManager::get().prepare_commit(*t1_context);
 
-  delete_op1->commit(t1_context->commit_id());
+  delete_op1->commit_records(t1_context->commit_id());
 
   TransactionManager::get().commit(*t1_context);
 

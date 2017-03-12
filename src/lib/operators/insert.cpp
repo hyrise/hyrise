@@ -124,7 +124,7 @@ std::shared_ptr<const Table> Insert::on_execute(TransactionContext* context) {
   return nullptr;
 }
 
-void Insert::commit(const CommitID cid) {
+void Insert::commit_records(const CommitID cid) {
   for (auto row_id : _inserted_rows) {
     auto& chunk = _table->get_chunk(row_id.chunk_id);
 
@@ -133,7 +133,7 @@ void Insert::commit(const CommitID cid) {
   }
 }
 
-void Insert::abort() {
+void Insert::rollback_records() {
   for (auto row_id : _inserted_rows) {
     auto& chunk = _table->get_chunk(row_id.chunk_id);
     chunk.mvcc_columns().tids[row_id.chunk_offset] = 0u;

@@ -22,13 +22,13 @@ class TransactionManagerTest : public BaseTest {
   TransactionManager& manager() { return TransactionManager::get(); }
 };
 
-TEST_F(TransactionManagerTest, NonActiveTransactionCannotBeAborted) {
+TEST_F(TransactionManagerTest, NonActiveTransactionCannotBeRolledBack) {
   auto context = manager().new_transaction_context();
 
   manager().prepare_commit(*context);
 
   EXPECT_EQ(context->phase(), TransactionPhase::Committing);
-  EXPECT_THROW(manager().abort(*context), std::logic_error);
+  EXPECT_THROW(manager().rollback(*context), std::logic_error);
 }
 
 TEST_F(TransactionManagerTest, CommitShouldCommitAllFollowingPendingTransactions) {

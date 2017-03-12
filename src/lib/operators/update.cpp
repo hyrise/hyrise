@@ -8,7 +8,6 @@
 #include "concurrency/transaction_context.hpp"
 #include "storage/reference_column.hpp"
 #include "table_wrapper.hpp"
-#include "util.hpp"
 
 namespace opossum {
 
@@ -98,14 +97,14 @@ std::shared_ptr<const Table> Update::on_execute(TransactionContext* context) {
   return nullptr;
 }
 
-void Update::commit(const CommitID cid) {
-  _delete->commit(cid);
-  _insert->commit(cid);
+void Update::commit_records(const CommitID cid) {
+  _delete->commit_records(cid);
+  _insert->commit_records(cid);
 }
 
-void Update::abort() {
-  _delete->abort();
-  _insert->abort();
+void Update::rollback_records() {
+  _delete->rollback_records();
+  _insert->rollback_records();
 }
 
 bool Update::_execution_input_valid(const TransactionContext* context) const {
@@ -114,7 +113,7 @@ bool Update::_execution_input_valid(const TransactionContext* context) const {
   if (input_table_left()->col_count() != input_table_right()->col_count()) return false;
 
   for (auto chunk_id = 0u; chunk_id < input_table_left()->chunk_count(); ++chunk_id)
-    if (!chunk_references_only_one_table(input_table_left()->get_chunk(chunk_id))) return false;
+    if (!input_table_left()->get_chunk(chunk_id).references_only_one_table()) return false;
 
   return true;
 }

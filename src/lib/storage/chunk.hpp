@@ -97,6 +97,8 @@ class Chunk {
     return index;
   }
 
+  bool references_only_one_table() const;
+
  protected:
   std::vector<std::shared_ptr<BaseColumn>> _columns;
   std::unique_ptr<MvccColumns> _mvcc_columns;

@@ -5,7 +5,6 @@
 
 #include "concurrency/transaction_context.hpp"
 #include "storage/storage_manager.hpp"
-#include "util.hpp"
 
 namespace opossum {
 
@@ -37,10 +36,11 @@ std::shared_ptr<const Table> Delete::on_execute(TransactionContext* context) {
       auto& referenced_chunk = _table->get_chunk(row_id.chunk_id);
 
       auto expected = 0u;
+      // Actual row lock for delete happens here
       _execute_failed =
           !referenced_chunk.mvcc_columns().tids[row_id.chunk_offset].compare_exchange_strong(expected, _transaction_id);
 
-      // the row is already locked and the transaction needs to be aborted
+      // the row is already locked and the transaction needs to be rolled back
       if (_execute_failed) return nullptr;
     }
   }
@@ -48,7 +48,7 @@ std::shared_ptr<const Table> Delete::on_execute(TransactionContext* context) {
   return nullptr;
 }
 
-void Delete::commit(const CommitID cid) {
+void Delete::commit_records(const CommitID cid) {
   for (const auto& pos_list : _pos_lists) {
     for (const auto& row_id : *pos_list) {
       auto& chunk = _table->get_chunk(row_id.chunk_id);
@@ -59,7 +59,7 @@ void Delete::commit(const CommitID cid) {
   }
 }
 
-void Delete::abort() {
+void Delete::rollback_records() {
   for (const auto& pos_list : _pos_lists) {
     for (const auto& row_id : *pos_list) {
       auto& chunk = _table->get_chunk(row_id.chunk_id);
@@ -79,6 +79,10 @@ const std::string Delete::name() const { return "Delete"; }
 
 uint8_t Delete::num_in_tables() const { return 1u; }
 
+/**
+* A valid Input needs to be: An existing table with at least one chunk.
+* Those chunks need to contain at least one column and each chunk can only reference one table.
+*/
 bool Delete::_execution_input_valid(const TransactionContext* context) const {
   if (context == nullptr) return false;
 
@@ -95,7 +99,7 @@ bool Delete::_execution_input_valid(const TransactionContext* context) const {
 
     if (chunk.col_count() == 0u) return false;
 
-    if (!chunk_references_only_one_table(chunk)) return false;
+    if (!chunk.references_only_one_table()) return false;
 
     const auto first_column = std::static_pointer_cast<ReferenceColumn>(chunk.get_column(0u));
 

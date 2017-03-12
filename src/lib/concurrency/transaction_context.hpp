@@ -12,7 +12,7 @@ namespace opossum {
 
 class AbstractReadWriteOperator;
 
-enum class TransactionPhase { Active, Aborted, Committing, Committed };
+enum class TransactionPhase { Active, RolledBack, Committing, Committed };
 
 /**
  * @brief Representation of a transaction

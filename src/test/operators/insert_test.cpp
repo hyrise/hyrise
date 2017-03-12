@@ -15,30 +15,17 @@ namespace opossum {
 
 class OperatorsInsertTest : public BaseTest {
  protected:
-  void SetUp() override {
-    t = load_table("src/test/tables/float_int.tbl", 0u);
-    StorageManager::get().add_table(table_name, t);
-
-    t2 = load_table("src/test/tables/float_int.tbl", 0u);
-    StorageManager::get().add_table(table_name2, t2);
-
-    gt = std::make_shared<GetTable>(table_name2);
-    gt->execute();
-  }
-
-  std::ostringstream output;
-
-  std::string table_name = "insertTestTable";
-  std::string table_name2 = "insertTestTable2";
-
-  uint32_t chunk_size = 10;
-
-  std::shared_ptr<Table> t = nullptr;
-  std::shared_ptr<GetTable> gt;
-  std::shared_ptr<Table> t2 = nullptr;
+  void SetUp() override {}
 };
 
 TEST_F(OperatorsInsertTest, SelfInsert) {
+  auto table_name = "test_table";
+  auto t = load_table("src/test/tables/float_int.tbl", 0u);
+  StorageManager::get().add_table(table_name, t);
+
+  auto gt = std::make_shared<GetTable>(table_name);
+  gt->execute();
+
   auto ins = std::make_shared<Insert>(table_name, gt);
   auto context = TransactionContext(1, 1);
   ins->execute(&context);
@@ -49,8 +36,6 @@ TEST_F(OperatorsInsertTest, SelfInsert) {
   EXPECT_EQ((*t->get_chunk(0).get_column(0))[0], AllTypeVariant(458.7f));
   EXPECT_EQ((*t->get_chunk(0).get_column(1))[3], AllTypeVariant(12345));
   EXPECT_EQ((*t->get_chunk(0).get_column(0))[3], AllTypeVariant(458.7f));
-
-  auto output_str = output.str();
 }
 
 TEST_F(OperatorsInsertTest, InsertRespectChunkSize) {
@@ -58,12 +43,12 @@ TEST_F(OperatorsInsertTest, InsertRespectChunkSize) {
   auto t_name2 = "test2";
 
   // 3 Rows, column_size = 4
-  auto t3 = load_table("src/test/tables/int.tbl", 4u);
-  StorageManager::get().add_table(t_name, t3);
+  auto t = load_table("src/test/tables/int.tbl", 4u);
+  StorageManager::get().add_table(t_name, t);
 
   // 10 Rows
-  auto t4 = load_table("src/test/tables/10_ints.tbl", 0u);
-  StorageManager::get().add_table(t_name2, t4);
+  auto t2 = load_table("src/test/tables/10_ints.tbl", 0u);
+  StorageManager::get().add_table(t_name2, t2);
 
   auto gt2 = std::make_shared<GetTable>(t_name2);
   gt2->execute();
@@ -72,9 +57,9 @@ TEST_F(OperatorsInsertTest, InsertRespectChunkSize) {
   auto context = TransactionContext(1, 1);
   ins->execute(&context);
 
-  EXPECT_EQ(t3->chunk_count(), 4u);
-  EXPECT_EQ(t3->get_chunk(3).size(), 1u);
-  EXPECT_EQ(t3->row_count(), 13u);
+  EXPECT_EQ(t->chunk_count(), 4u);
+  EXPECT_EQ(t->get_chunk(3).size(), 1u);
+  EXPECT_EQ(t->row_count(), 13u);
 }
 
 TEST_F(OperatorsInsertTest, MultipleChunks) {
@@ -82,12 +67,12 @@ TEST_F(OperatorsInsertTest, MultipleChunks) {
   auto t_name2 = "test2";
 
   // 3 Rows
-  auto t3 = load_table("src/test/tables/int.tbl", 2u);
-  StorageManager::get().add_table(t_name, t3);
+  auto t = load_table("src/test/tables/int.tbl", 2u);
+  StorageManager::get().add_table(t_name, t);
 
   // 10 Rows
-  auto t4 = load_table("src/test/tables/10_ints.tbl", 3u);
-  StorageManager::get().add_table(t_name2, t4);
+  auto t2 = load_table("src/test/tables/10_ints.tbl", 3u);
+  StorageManager::get().add_table(t_name2, t2);
 
   auto gt2 = std::make_shared<GetTable>(t_name2);
   gt2->execute();
@@ -96,9 +81,9 @@ TEST_F(OperatorsInsertTest, MultipleChunks) {
   auto context = TransactionContext(1, 1);
   ins->execute(&context);
 
-  EXPECT_EQ(t3->chunk_count(), 7u);
-  EXPECT_EQ(t3->get_chunk(6).size(), 1u);
-  EXPECT_EQ(t3->row_count(), 13u);
+  EXPECT_EQ(t->chunk_count(), 7u);
+  EXPECT_EQ(t->get_chunk(6).size(), 1u);
+  EXPECT_EQ(t->row_count(), 13u);
 }
 
 }  // namespace opossum
