@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <memory>
 #include <numeric>
 #include <string>
@@ -35,8 +36,21 @@ std::shared_ptr<const Table> Projection::on_execute() {
     const Chunk& chunk_in = input_table_left()->get_chunk(chunk_id);
     Chunk chunk_out;
 
+    auto pos_list = std::shared_ptr<const PosList>();
+
     for (auto column_id : column_ids) {
-      chunk_out.add_column(chunk_in.get_column(column_id));
+      const auto& column_in = chunk_in.get_column(column_id);
+
+      if (std::dynamic_pointer_cast<ReferenceColumn>(column_in)) {
+        chunk_out.add_column(column_in);
+      } else {
+        // If necessary, create reference column because we otherwise lose access
+        // to the MVCC columns of the original table and therefore can’t validate
+        // the visibility of its rows in a subsequent operator.
+        if (!pos_list) pos_list = _create_complete_pos_list(chunk_id, chunk_in.size());
+
+        chunk_out.add_column(std::make_shared<ReferenceColumn>(input_table_left(), column_id, pos_list));
+      }
     }
 
     output->add_chunk(std::move(chunk_out));
@@ -44,4 +58,15 @@ std::shared_ptr<const Table> Projection::on_execute() {
 
   return output;
 }
+
+std::shared_ptr<const PosList> Projection::_create_complete_pos_list(const ChunkID chunk_id, const size_t chunk_size) {
+  auto pos_list = std::make_shared<PosList>(chunk_size);
+
+  for (auto i = 0u; i < chunk_size; ++i) {
+    (*pos_list)[i] = {chunk_id, i};
+  }
+
+  return pos_list;
+}
+
 }  // namespace opossum
