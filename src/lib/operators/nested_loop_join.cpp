@@ -21,21 +21,15 @@ NestedLoopJoin::NestedLoopJoin(const std::shared_ptr<AbstractOperator> left,
   } else {
     // No names specified --> this is only valid if we want to cross-join
     if (_mode != JoinMode::Cross) {
-      std::string message = "NestedLoopJoin::NestedLoopJoin: No columns specified for join operator";
-      std::cout << message << std::endl;
-      throw std::runtime_error(message);
+      throw std::runtime_error("NestedLoopJoin::NestedLoopJoin: No columns specified for join operator");
     }
   }
   if (left == nullptr) {
-    std::string message = "NestedLoopJoin::NestedLoopJoin: left input operator is null";
-    std::cout << message << std::endl;
-    throw std::runtime_error(message);
+    throw std::runtime_error("NestedLoopJoin::NestedLoopJoin: left input operator is null");
   }
 
   if (right == nullptr) {
-    std::string message = "NestedLoopJoin::NestedLoopJoin: right input operator is null";
-    std::cout << message << std::endl;
-    throw std::runtime_error(message);
+    throw std::runtime_error("NestedLoopJoin::NestedLoopJoin: right input operator is null");
   }
   // If cross-join, we use the functionality already provided by product to compute the result
   if (_mode == JoinMode::Cross) {
@@ -49,6 +43,8 @@ NestedLoopJoin::NestedLoopJoin(const std::shared_ptr<AbstractOperator> left,
   _right_match = std::vector<bool>(_input_right->row_count());
 }
 
+// Creates a new poslist pointing to the original columns by following references. This is done to avoid references
+// on references in the output
 std::shared_ptr<PosList> NestedLoopJoin::dereference_pos_list(std::shared_ptr<const Table> input_table,
                                                               size_t column_id,
                                                               std::shared_ptr<const PosList> pos_list) {
@@ -69,6 +65,7 @@ std::shared_ptr<PosList> NestedLoopJoin::dereference_pos_list(std::shared_ptr<co
   return new_pos_list;
 }
 
+// Creates the output columns for the given input table
 void NestedLoopJoin::append_columns_to_output(std::shared_ptr<const Table> input_table,
                                               std::shared_ptr<PosList> pos_list) {
   // Append each column of the input column to the output
@@ -91,7 +88,8 @@ void NestedLoopJoin::append_columns_to_output(std::shared_ptr<const Table> input
   }
 }
 
-// Join two columns of the input tables
+// Join two columns of the input tables. Performs the join using the specified join columns. This function
+// implements the overall join algorithm
 void NestedLoopJoin::join_columns(size_t left_column_id, size_t right_column_id, std::string left_column_type) {
   auto impl = make_shared_by_column_type<ColumnVisitable, NestedLoopJoinImpl>(left_column_type, *this);
   // For each combination of chunks from both input tables call visitor pattern to actually perform the join.
@@ -134,7 +132,7 @@ void NestedLoopJoin::add_outer_join_rows() {
 }
 
 void NestedLoopJoin::execute() {
-  // output is equal to result of product in case of croos-join
+  // output is equal to result of product in case of cross-join
   if (_mode == JoinMode::Cross) {
     _product->execute();
     return;
@@ -154,7 +152,6 @@ void NestedLoopJoin::execute() {
     std::string message = "NestedLoopJoin::execute: column type \"" + left_column_type + "\" of left column \"" +
                           _left_column_name + "\" does not match colum type \"" + right_column_type +
                           "\" of right column \"" + _right_column_name + "\"!";
-    std::cout << message << std::endl;
     throw std::runtime_error(message);
   }
 
@@ -199,9 +196,7 @@ NestedLoopJoin::NestedLoopJoinImpl<T>::NestedLoopJoinImpl(NestedLoopJoin& nested
   } else if (_nested_loop_join._op == "!=") {
     _compare = [](const T& value_left, const T& value_right) -> bool { return value_left != value_right; };
   } else {
-    std::string message = "NestedLoopJoinImpl::NestedLoopJoinImpl: Unknown operator " + _nested_loop_join._op;
-    std::cout << message << std::endl;
-    throw std::runtime_error(message);
+    throw std::runtime_error("NestedLoopJoinImpl::NestedLoopJoinImpl: Unknown operator " + _nested_loop_join._op);
   }
 }
 
@@ -210,9 +205,7 @@ void NestedLoopJoin::NestedLoopJoinImpl<T>::execute() {}
 
 template <typename T>
 std::shared_ptr<Table> NestedLoopJoin::NestedLoopJoinImpl<T>::get_output() const {
-  std::string message = "NestedLoopJoinImpl::get_output() not implemented";
-  std::cout << message << std::endl;
-  throw std::runtime_error(message);
+  throw std::runtime_error("NestedLoopJoinImpl::get_output() not implemented");
   return nullptr;
 }
 
@@ -311,8 +304,7 @@ void NestedLoopJoin::NestedLoopJoinImpl<T>::join_value_reference(ValueColumn<T>&
       } else if (v_column) {
         value_right = v_column->values()[referenced_chunk_offset];
       } else {
-        std::string message = "NestedLoopJoinImpl::join_value_reference: can't figure out referenced column type";
-        throw std::runtime_error(message);
+        throw std::runtime_error("NestedLoopJoinImpl::join_value_reference: can't figure out referenced column type");
       }
 
       if (reverse_order ? _compare(value_right, value_left) : _compare(value_left, value_right)) {
@@ -417,6 +409,7 @@ void NestedLoopJoin::NestedLoopJoinImpl<T>::join_reference_reference(ReferenceCo
 
     const auto& d_column = std::dynamic_pointer_cast<DictionaryColumn<T>>(referenced_column);
     const auto& v_column = std::dynamic_pointer_cast<ValueColumn<T>>(referenced_column);
+
     T value_left;
     if (d_column) {
       value_left = d_column->value_by_value_id(d_column->attribute_vector()->get(referenced_chunk_offset));
@@ -436,6 +429,7 @@ void NestedLoopJoin::NestedLoopJoinImpl<T>::join_reference_reference(ReferenceCo
 
       const auto& d_column = std::dynamic_pointer_cast<DictionaryColumn<T>>(referenced_column_r);
       const auto& v_column = std::dynamic_pointer_cast<ValueColumn<T>>(referenced_column_r);
+
       T value_right;
       if (d_column) {
         value_right = d_column->value_by_value_id(d_column->attribute_vector()->get(referenced_chunk_offset_r));

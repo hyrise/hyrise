@@ -23,15 +23,11 @@ SortMergeJoin::SortMergeJoin(const std::shared_ptr<AbstractOperator> left,
     _right_column_name = column_names->second;
 
     if (left == nullptr) {
-      std::string message = "SortMergeJoin::SortMergeJoin: left input operator is null";
-      std::cout << message << std::endl;
-      throw std::exception(std::runtime_error(message));
+      throw std::exception(std::runtime_error("SortMergeJoin::SortMergeJoin: left input operator is null"));
     }
 
     if (right == nullptr) {
-      std::string message = "SortMergeJoin::SortMergeJoin: right input operator is null";
-      std::cout << message << std::endl;
-      throw std::exception(std::runtime_error(message));
+      throw std::exception(std::runtime_error("SortMergeJoin::SortMergeJoin: right input operator is null"));
     }
     // Check column_type
     auto left_column_id = _input_left->column_id_by_name(_left_column_name);
@@ -43,7 +39,6 @@ SortMergeJoin::SortMergeJoin(const std::shared_ptr<AbstractOperator> left,
       std::string message = "SortMergeJoin::SortMergeJoin: column type \"" + left_column_type + "\" of left column \"" +
                             _left_column_name + "\" does not match colum type \"" + right_column_type +
                             "\" of right column \"" + _right_column_name + "\"!";
-      std::cout << message << std::endl;
       throw std::exception(std::runtime_error(message));
     }
     // Create implementation to compute join result
@@ -55,9 +50,7 @@ SortMergeJoin::SortMergeJoin(const std::shared_ptr<AbstractOperator> left,
   } else {
     // No names specified --> this is only valid if we want to cross-join
     if (_mode != JoinMode::Cross) {
-      std::string message = "SortMergeJoin::SortMergeJoin: No columns specified for join operator";
-      std::cout << message << std::endl;
-      throw std::exception(std::runtime_error(message));
+      throw std::exception(std::runtime_error("SortMergeJoin::SortMergeJoin: No columns specified for join operator"));
     } else {
       _product = std::make_shared<Product>(left, right, "left", "right");
     }
@@ -98,9 +91,8 @@ SortMergeJoin::SortMergeJoinImpl<T>::SortMergeJoinImpl(SortMergeJoin& sort_merge
   } else if (_sort_merge_join._op == ">") {
     _compare = [](const T& value_left, const T& value_right) -> bool { return value_left > value_right; };
   } else {
-    std::string message = "SortMergeJoinImpl::SortMergeJoinImpl: Unknown operator " + _sort_merge_join._op;
-    std::cout << message << std::endl;
-    throw std::exception(std::runtime_error(message));
+    throw std::exception(
+        std::runtime_error("SortMergeJoinImpl::SortMergeJoinImpl: Unknown operator " + _sort_merge_join._op));
   }
   /* right now only equi-joins supported
   * (and test wise "<")
