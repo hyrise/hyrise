@@ -8,6 +8,7 @@
 #include <boost/hana/second.hpp>
 #include <boost/hana/transform.hpp>
 #include <boost/hana/tuple.hpp>
+#include <boost/hana/type.hpp>
 #include <boost/hana/zip.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/variant.hpp>
@@ -81,7 +82,8 @@ enum class SchedulePriority {
  */
 
 // This holds all possible data types.
-static constexpr auto types = hana::tuple_t<int32_t, int64_t, float, double, std::string>;
+static constexpr auto types = hana::make_tuple(hana::type_c<int32_t>, hana::type_c<int64_t>, hana::type_c<float>,
+                                               hana::type_c<double>, hana::type_c<std::string>);
 
 // Convert tuple to mpl vector
 using TypesAsMplVector = decltype(hana::to<hana::ext::boost::mpl::vector_tag>(types));
