@@ -4,8 +4,11 @@
 #include <boost/hana/for_each.hpp>
 #include <boost/hana/integral_constant.hpp>
 #include <boost/hana/map.hpp>
+#include <boost/hana/not_equal.hpp>
 #include <boost/hana/pair.hpp>
 #include <boost/hana/second.hpp>
+#include <boost/hana/size.hpp>
+#include <boost/hana/take_while.hpp>
 #include <boost/hana/transform.hpp>
 #include <boost/hana/tuple.hpp>
 #include <boost/hana/type.hpp>
@@ -110,8 +113,36 @@ using ParameterTypesAsMplVector =
 using AllParameterVariant = typename boost::make_variant_over<ParameterTypesAsMplVector>::type;
 
 /**
- * Retrieves the value stored in an AllTypeVariant without conversion
+ * This is everything needed for type_cast
+ * @{
  */
+
+namespace {
+
+// Returns the index of type T in an Iterable
+template <typename Sequence, typename T>
+constexpr auto index_of(Sequence const &sequence, T const &element) {
+  constexpr auto size = decltype(hana::size(hana::take_while(sequence, hana::not_equal.to(element)))){};
+  return decltype(size)::value;
+}
+
+// Negates a type trait
+template <bool Condition>
+struct _neg : public std::true_type {};
+
+template <>
+struct _neg<true> : public std::false_type {};
+
+template <typename Condition>
+struct neg : public _neg<Condition::value> {};
+
+// Wrapper that makes std::enable_if a bit more readable
+template <typename Condition, typename Type = void>
+using enable_if = typename std::enable_if<Condition::value, Type>::type;
+
+}  // namespace
+
+// Retrieves the value stored in an AllTypeVariant without conversion
 template <typename T>
 const T &get(const AllTypeVariant &value) {
   static_assert(hana::contains(types, hana::type_c<T>), "Type not in AllTypeVariant");
@@ -119,8 +150,20 @@ const T &get(const AllTypeVariant &value) {
 }
 
 // cast methods - from variant to specific type
+
+// Template specialization for everything but integral types
 template <typename T>
-typename std::enable_if<std::is_integral<T>::value, T>::type type_cast(AllTypeVariant value) {
+enable_if<neg<std::is_integral<T>>, T> type_cast(const AllTypeVariant &value) {
+  if (value.which() == index_of(types, hana::type_c<T>)) return get<T>(value);
+
+  return boost::lexical_cast<T>(value);
+}
+
+// Template specialization for integral types
+template <typename T>
+enable_if<std::is_integral<T>, T> type_cast(const AllTypeVariant &value) {
+  if (value.which() == index_of(types, hana::type_c<T>)) return get<T>(value);
+
   try {
     return boost::lexical_cast<T>(value);
   } catch (...) {
@@ -128,18 +171,9 @@ typename std::enable_if<std::is_integral<T>::value, T>::type type_cast(AllTypeVa
   }
 }
 
-template <typename T>
-typename std::enable_if<std::is_floating_point<T>::value, T>::type type_cast(AllTypeVariant value) {
-  // TODO(MD): is lexical_cast always necessary?
-  return boost::lexical_cast<T>(value);
-}
-
-template <typename T>
-typename std::enable_if<std::is_same<T, std::string>::value, T>::type type_cast(AllTypeVariant value) {
-  return boost::lexical_cast<T>(value);
-}
-
 std::string to_string(const AllTypeVariant &x);
+
+/** @} */
 
 /**
  * This is everything needed for make_*_by_column_type to work.
@@ -148,7 +182,7 @@ std::string to_string(const AllTypeVariant &x);
  * @{
  */
 
-static constexpr auto type_strings = hana::make_tuple("int", "long", "float", "double", "string");
+namespace {
 
 // Functor that converts tuples with size two into pairs
 struct to_pair_t {
@@ -159,6 +193,10 @@ struct to_pair_t {
 };
 
 constexpr to_pair_t to_pair{};
+
+}  // namespace
+
+static constexpr auto type_strings = hana::make_tuple("int", "long", "float", "double", "string");
 
 // “Zips” the types and type_strings tuples creating a tuple of string-type pairs
 static constexpr auto column_types = hana::transform(hana::zip(type_strings, types), to_pair);
