@@ -48,9 +48,9 @@ void Table::append(std::vector<AllTypeVariant> values) {
   _chunks.back().append(values);
 }
 
-size_t Table::col_count() const { return _column_types.size(); }
+uint16_t Table::col_count() const { return _column_types.size(); }
 
-size_t Table::row_count() const {
+uint32_t Table::row_count() const {
   size_t ret = 0;
   for (auto &&chunk : _chunks) {
     ret += chunk.size();
@@ -58,10 +58,10 @@ size_t Table::row_count() const {
   return ret;
 }
 
-size_t Table::chunk_count() const { return _chunks.size(); }
+uint32_t Table::chunk_count() const { return _chunks.size(); }
 
-size_t Table::column_id_by_name(const std::string &column_name) const {
-  for (size_t column_id = 0; column_id < col_count(); ++column_id) {
+ColumnID Table::column_id_by_name(const std::string &column_name) const {
+  for (ColumnID column_id = 0; column_id < col_count(); ++column_id) {
     // TODO(Anyone): make more efficient
     if (_column_names[column_id] == column_name) {
       return column_id;
@@ -83,9 +83,9 @@ void Table::compress_chunk(ChunkID chunk_id) {
 
 size_t Table::chunk_size() const { return _chunk_size; }
 
-const std::string &Table::column_name(size_t column_id) const { return _column_names[column_id]; }
+const std::string &Table::column_name(ColumnID column_id) const { return _column_names[column_id]; }
 
-const std::string &Table::column_type(size_t column_id) const { return _column_types[column_id]; }
+const std::string &Table::column_type(ColumnID column_id) const { return _column_types[column_id]; }
 
 Chunk &Table::get_chunk(ChunkID chunk_id) { return _chunks[chunk_id]; }
 const Chunk &Table::get_chunk(ChunkID chunk_id) const { return _chunks[chunk_id]; }
