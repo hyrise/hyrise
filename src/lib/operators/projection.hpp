@@ -21,6 +21,10 @@ class Projection : public AbstractReadOnlyOperator {
  protected:
   std::shared_ptr<const Table> on_execute() override;
 
+  // Creates a PosList that includes all records of a chunk from 0 to chunk_size
+  static std::shared_ptr<const PosList> _create_complete_pos_list(const ChunkID chunk_id, const size_t chunk_size);
+
+ protected:
   // list of all column names to select
   const std::vector<std::string> _column_filter;
 };
