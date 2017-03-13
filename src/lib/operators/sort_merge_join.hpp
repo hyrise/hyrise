@@ -44,7 +44,7 @@ class SortMergeJoin : public AbstractOperator {
   class SortMergeJoinImpl : public AbstractOperatorImpl, public ColumnVisitable {
    protected:
     // should be 2^x
-    size_t _partition_count = 8;
+    size_t _partition_count = 1;
 
    public:
     SortMergeJoinImpl<T>(SortMergeJoin& sort_merge_join);

@@ -95,8 +95,8 @@ SortMergeJoin::SortMergeJoinImpl<T>::SortMergeJoinImpl(SortMergeJoin& sort_merge
     : _sort_merge_join{sort_merge_join} {
   if (_sort_merge_join._op == "=") {
     _compare = [](const T& value_left, const T& value_right) -> bool { return value_left == value_right; };
-  } else if (_sort_merge_join._op == "<") {
-    _compare = [](const T& value_left, const T& value_right) -> bool { return value_left < value_right; };
+  } else if (_sort_merge_join._op == ">") {
+    _compare = [](const T& value_left, const T& value_right) -> bool { return value_left > value_right; };
   } else {
     std::string message = "SortMergeJoinImpl::SortMergeJoinImpl: Unknown operator " + _sort_merge_join._op;
     std::cout << message << std::endl;
@@ -217,12 +217,12 @@ void SortMergeJoin::SortMergeJoinImpl<T>::sort_table(std::shared_ptr<SortedTable
         sort_table->_partition[index]._values = partitions[index];
       }
     }
-    // Sort partitions (right now std:sort -> but maybe can be replaced with
-    // an algorithm more efficient, if subparts are already sorted [InsertionSort?!])
-    for (auto& partition : sort_table->_partition) {
-      std::sort(partition._values.begin(), partition._values.end(),
-                [](auto& value_left, auto& value_right) { return value_left.first < value_right.first; });
-    }
+  }
+  // Sort partitions (right now std:sort -> but maybe can be replaced with
+  // an algorithm more efficient, if subparts are already sorted [InsertionSort?!])
+  for (auto& partition : sort_table->_partition) {
+    std::sort(partition._values.begin(), partition._values.end(),
+              [](auto& value_left, auto& value_right) { return value_left.first < value_right.first; });
   }
 }
 
@@ -235,7 +235,7 @@ void SortMergeJoin::SortMergeJoinImpl<T>::value_based_table_partitioning(std::sh
                                                                          uint64_t min, uint64_t max) {
   std::vector<std::vector<std::pair<T, RowID>>> partitions;
   partitions.resize(_partition_count);
-  uint64_t dif = std::ceil((max - min) / (_partition_count - 1));
+  uint64_t dif = std::ceil((max - min) / (_partition_count - 1.0));
   std::vector<uint64_t> p_values(_partition_count);
 
   // for prefix computation we need to table-wide know how many entries there are for each partition
@@ -394,7 +394,7 @@ void SortMergeJoin::SortMergeJoinImpl<T>::partition_join(uint32_t partition_numb
         left_index += left_index_offset + 1u;
         right_index += right_index_offset + 1u;
       } else {
-        // only the case for "<" right now
+        // only the case for ">" right now
         // moreover each operator needs own logic here to get result
         uint32_t max_index_left = left_index + left_index_offset;
         RowID left_row_id;
@@ -448,7 +448,7 @@ void SortMergeJoin::SortMergeJoinImpl<T>::partition_join(uint32_t partition_numb
     } else {
       if (left_value < right_value) {
         // extra behavior for non-equi join
-        // only implemented for "<"
+        // only implemented for ">"
         // every operator needs own behavior
         if (_sort_merge_join._op != "=") {
           uint32_t max_index_left = left_index + left_index_offset;
