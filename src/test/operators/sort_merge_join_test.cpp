@@ -96,7 +96,22 @@ TEST_F(OperatorsSortMergeJoinTest, SortMergeJoin_ValueJoinValue) {
 
   EXPECT_TABLE_EQ(join_operator->get_output(), expected_result);
 }
+/*
+TEST_F(OperatorsSortMergeJoinTest, SortMergeJoin_ValueJoinValue_Smaller) {
+  const std::string left_c3 = "left_c1";
+  const std::string right_c3 = "right_c3";
+  auto gt_left = std::make_shared<GetTable>("table_left_smaller");
+  gt_left->execute();
+  auto gt_right = std::make_shared<GetTable>("table_right");
+  gt_right->execute();
+  std::shared_ptr<Table> expected_result = load_table("src/test/tables/nlj_result_smaller.tbl", 3);
+  auto join_operator = std::make_shared<SortMergeJoin>(
+      gt_left, gt_right, std::pair<const std::string &, const std::string &>(left_c3, right_c3), "<", JoinMode::Inner);
+  join_operator->execute();
 
+  EXPECT_TABLE_EQ(join_operator->get_output(), expected_result);
+}
+*/
 TEST_F(OperatorsSortMergeJoinTest, SortMergeJoin_ValueJoinDict) {
   const std::string left_c3 = "left_c3";
   const std::string right_c3 = "right_c3";

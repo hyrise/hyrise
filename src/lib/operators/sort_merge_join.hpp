@@ -32,7 +32,6 @@ class SortMergeJoin : public AbstractOperator {
  private:
   std::shared_ptr<Table> sort_left_table(ColumnVisitable& impl);
   std::shared_ptr<Table> sort_right_table(ColumnVisitable& impl);
-  void sort_merge_join(std::shared_ptr<Table> table_left, std::shared_ptr<Table> table_right);
 
   struct SortContext : ColumnVisitableContext {
     SortContext(ChunkID chunk_id, bool left) : _chunk_id{chunk_id}, _write_to_sorted_left_table{left} {}
@@ -44,6 +43,7 @@ class SortMergeJoin : public AbstractOperator {
   template <typename T>
   class SortMergeJoinImpl : public AbstractOperatorImpl, public ColumnVisitable {
    protected:
+    // should be 2^x
     size_t _partition_count = 8;
 
    public:
@@ -56,8 +56,6 @@ class SortMergeJoin : public AbstractOperator {
     // struct used for materialized sorted Chunk
     struct SortedChunk {
       SortedChunk() {}
-      // std::vector<T> _values;
-      // std::shared_ptr<PosList> _original_positions;
       std::vector<std::pair<T, RowID>> _values;
       std::map<uint64_t, uint32_t> _histogram;
       std::map<uint64_t, uint32_t> _prefix;

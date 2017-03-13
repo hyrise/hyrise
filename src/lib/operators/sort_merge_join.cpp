@@ -397,11 +397,9 @@ void SortMergeJoin::SortMergeJoinImpl<T>::partition_join(uint32_t partition_numb
         // only the case for "<" right now
         // moreover each operator needs own logic here to get result
         uint32_t max_index_left = left_index + left_index_offset;
-        uint32_t max_index_right = right_index_offset + right_index;
         RowID left_row_id;
         RowID right_row_id;
 
-        // match both sides with all entries before (case: "<")
         // left side
         for (uint32_t l_index = left_index; l_index <= max_index_left; ++l_index) {
           left_row_id = left_current_partition._values[l_index].second;
@@ -423,7 +421,7 @@ void SortMergeJoin::SortMergeJoinImpl<T>::partition_join(uint32_t partition_numb
           }
         }
         // right side
-        for (uint32_t r_index = right_index; r_index <= max_index_right; ++r_index) {
+        /* for (uint32_t r_index = right_index; r_index <= max_index_right; ++r_index) {
           right_row_id = right_current_partition._values[r_index].second;
           for (uint32_t p_number = 0; p_number <= partition_number; ++p_number) {
             if (p_number != partition_number) {
@@ -442,7 +440,7 @@ void SortMergeJoin::SortMergeJoinImpl<T>::partition_join(uint32_t partition_numb
             }
           }
         }
-
+*/
         // afterwards set index for both tables to next new value
         left_index += left_index_offset + 1u;
         right_index += right_index_offset + 1u;
@@ -480,34 +478,6 @@ void SortMergeJoin::SortMergeJoinImpl<T>::partition_join(uint32_t partition_numb
         // set the smaller side to next new value
         left_index += left_index_offset + 1u;
       } else {
-        // extra behavior for non-equi join
-        // only implemented for "<"
-        // every operator needs own behavior
-        if (_sort_merge_join._op != "=") {
-          uint32_t max_index_right = right_index_offset + right_index;
-          RowID left_row_id;
-          RowID right_row_id;
-          // right side needs to be matched with all entries before
-          for (uint32_t r_index = right_index; r_index <= max_index_right; ++r_index) {
-            right_row_id = right_current_partition._values[r_index].second;
-            for (uint32_t p_number = 0; p_number <= partition_number; ++p_number) {
-              if (p_number != partition_number) {
-                auto& l_current_partition = _sorted_left_table->_partition[p_number];
-                for (auto& values : l_current_partition._values) {
-                  left_row_id = values.second;
-                  pos_lists_left[partition_number].push_back(left_row_id);
-                  pos_lists_right[partition_number].push_back(right_row_id);
-                }
-              } else {
-                for (uint32_t l_index = 0; l_index < left_index; ++l_index) {
-                  left_row_id = left_current_partition._values[l_index].second;
-                  pos_lists_left[partition_number].push_back(left_row_id);
-                  pos_lists_right[partition_number].push_back(right_row_id);
-                }
-              }
-            }
-          }
-        }
         // set the smaller side to next new value
         right_index += right_index_offset + 1u;
       }
