@@ -95,7 +95,7 @@ SortMergeJoin::SortMergeJoinImpl<T>::SortMergeJoinImpl(SortMergeJoin& sort_merge
         std::runtime_error("SortMergeJoinImpl::SortMergeJoinImpl: Unknown operator " + _sort_merge_join._op));
   }
   /* right now only equi-joins supported
-  * (and test wise "<")
+  * (and test wise ">")
   * but for other join ops it is recommended to use another join, as we do not gain any benfit
   * as the output is in O(n²) for all Non-Equi Joins
 
@@ -412,27 +412,7 @@ void SortMergeJoin::SortMergeJoinImpl<T>::partition_join(uint32_t partition_numb
             }
           }
         }
-        // right side
-        /* for (uint32_t r_index = right_index; r_index <= max_index_right; ++r_index) {
-          right_row_id = right_current_partition._values[r_index].second;
-          for (uint32_t p_number = 0; p_number <= partition_number; ++p_number) {
-            if (p_number != partition_number) {
-              auto& l_current_partition = _sorted_left_table->_partition[p_number];
-              for (auto& values : l_current_partition._values) {
-                left_row_id = values.second;
-                pos_lists_left[partition_number].push_back(left_row_id);
-                pos_lists_right[partition_number].push_back(right_row_id);
-              }
-            } else {
-              for (uint32_t l_index = 0; l_index < left_index; ++l_index) {
-                left_row_id = left_current_partition._values[l_index].second;
-                pos_lists_left[partition_number].push_back(left_row_id);
-                pos_lists_right[partition_number].push_back(right_row_id);
-              }
-            }
-          }
-        }
-*/
+
         // afterwards set index for both tables to next new value
         left_index += left_index_offset + 1u;
         right_index += right_index_offset + 1u;
@@ -565,6 +545,7 @@ void SortMergeJoin::SortMergeJoinImpl<T>::execute() {
   // sort left table
   _sorted_left_table = std::make_shared<SortedTable>();
   sort_table(_sorted_left_table, _sort_merge_join._input_left, _sort_merge_join._left_column_name, true);
+
   // sort right table
   _sorted_right_table = std::make_shared<SortedTable>();
   sort_table(_sorted_right_table, _sort_merge_join._input_right, _sort_merge_join._right_column_name, false);
@@ -619,7 +600,6 @@ void SortMergeJoin::SortMergeJoinImpl<T>::handle_value_column(BaseColumn& column
   std::sort(sorted_table->_partition[sort_context->_chunk_id]._values.begin(),
             sorted_table->_partition[sort_context->_chunk_id]._values.end(),
             [](auto& value_left, auto& value_right) { return value_left.first < value_right.first; });
-  // sorted_table->_partition[sort_context->_chunk_id] = std::move(chunk);
 }
 
 template <typename T>
