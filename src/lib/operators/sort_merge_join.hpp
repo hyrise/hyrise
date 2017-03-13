@@ -59,24 +59,38 @@ class SortMergeJoin : public AbstractOperator {
       // std::vector<T> _values;
       // std::shared_ptr<PosList> _original_positions;
       std::vector<std::pair<T, RowID>> _values;
-      std::map<uint8_t, uint32_t> _histogram;
-      std::map<uint8_t, uint32_t> _prefix;
+      std::map<uint64_t, uint32_t> _histogram;
+      std::map<uint64_t, uint32_t> _prefix;
     };
 
     // struct used for materialized sorted Table
     struct SortedTable {
       SortedTable() {}
       std::vector<SortedChunk> _partition;
-      std::map<uint8_t, uint32_t> _histogram;
+      std::map<uint64_t, uint32_t> _histogram;
     };
 
     // Sort functions
     void sort_table(std::shared_ptr<SortedTable> sort_table, std::shared_ptr<const Table> input,
                     const std::string& column_name, bool left);
-    void partition_join(uint32_t partition_number, std::vector<PosList>& pos_lists_left,
-                        std::vector<PosList>& pos_lists_right);
     void sort_partition(const std::vector<ChunkID> chunk_ids, std::shared_ptr<const Table> input,
                         const std::string& column_name, bool left);
+    // Partitioning in case of Non-Equi-Join
+    void value_based_table_partitioning(std::shared_ptr<SortedTable> sort_table, uint64_t min, uint64_t max);
+    void value_based_partitioning();
+
+    // helper functions to turn T2 into bits (uint)
+    template <typename T2>
+    typename std::enable_if<std::is_arithmetic<T2>::value, size_t>::type get_bits(T2 value) {
+      auto result = reinterpret_cast<size_t*>(&value);
+      return *result;
+    }
+    template <typename T2>
+    typename std::enable_if<!std::is_arithmetic<T2>::value, size_t>::type get_bits(T2 value) {
+      auto result = reinterpret_cast<const size_t*>(value.c_str());
+      return *result;
+    }
+
     template <typename T2>
     typename std::enable_if<std::is_arithmetic<T2>::value, size_t>::type get_radix(T2 value, size_t radix_bits) {
       auto result = reinterpret_cast<size_t*>(&value);
@@ -88,6 +102,8 @@ class SortMergeJoin : public AbstractOperator {
       return *result & radix_bits;
     }
     // Looks for matches and possibly calls helper function to add match to _sort_merge_join._output
+    void partition_join(uint32_t partition_number, std::vector<PosList>& pos_lists_left,
+                        std::vector<PosList>& pos_lists_right);
     void perform_join();
     // builds output based on pos_list_left/-_right
     void build_output();
