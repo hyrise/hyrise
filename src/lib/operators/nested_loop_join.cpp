@@ -22,19 +22,16 @@ NestedLoopJoin::NestedLoopJoin(const std::shared_ptr<AbstractOperator> left,
     // No names specified --> this is only valid if we want to cross-join
     if (_mode != JoinMode::Cross) {
       std::string message = "NestedLoopJoin::NestedLoopJoin: No columns specified for join operator";
-      std::cout << message << std::endl;
       throw std::runtime_error(message);
     }
   }
   if (left == nullptr) {
     std::string message = "NestedLoopJoin::NestedLoopJoin: left input operator is null";
-    std::cout << message << std::endl;
     throw std::runtime_error(message);
   }
 
   if (right == nullptr) {
     std::string message = "NestedLoopJoin::NestedLoopJoin: right input operator is null";
-    std::cout << message << std::endl;
     throw std::runtime_error(message);
   }
   // If cross-join, we use the functionality already provided by product to compute the result
@@ -154,7 +151,6 @@ void NestedLoopJoin::execute() {
     std::string message = "NestedLoopJoin::execute: column type \"" + left_column_type + "\" of left column \"" +
                           _left_column_name + "\" does not match colum type \"" + right_column_type +
                           "\" of right column \"" + _right_column_name + "\"!";
-    std::cout << message << std::endl;
     throw std::runtime_error(message);
   }
 
@@ -200,7 +196,6 @@ NestedLoopJoin::NestedLoopJoinImpl<T>::NestedLoopJoinImpl(NestedLoopJoin& nested
     _compare = [](const T& value_left, const T& value_right) -> bool { return value_left != value_right; };
   } else {
     std::string message = "NestedLoopJoinImpl::NestedLoopJoinImpl: Unknown operator " + _nested_loop_join._op;
-    std::cout << message << std::endl;
     throw std::runtime_error(message);
   }
 }
@@ -211,7 +206,6 @@ void NestedLoopJoin::NestedLoopJoinImpl<T>::execute() {}
 template <typename T>
 std::shared_ptr<Table> NestedLoopJoin::NestedLoopJoinImpl<T>::get_output() const {
   std::string message = "NestedLoopJoinImpl::get_output() not implemented";
-  std::cout << message << std::endl;
   throw std::runtime_error(message);
   return nullptr;
 }
