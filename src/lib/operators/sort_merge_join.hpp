@@ -59,6 +59,9 @@ class SortMergeJoin : public AbstractOperator {
       std::vector<std::pair<T, RowID>> _values;
       std::map<uint64_t, uint32_t> _histogram;
       std::map<uint64_t, uint32_t> _prefix;
+
+      std::map<T, uint32_t> _histogram_v;
+      std::map<T, uint32_t> _prefix_v;
     };
 
     // struct used for materialized sorted Table
@@ -66,6 +69,8 @@ class SortMergeJoin : public AbstractOperator {
       SortedTable() {}
       std::vector<SortedChunk> _partition;
       std::map<uint64_t, uint32_t> _histogram;
+
+      std::map<T, uint32_t> _histogram_v;
     };
 
     // Sort functions
@@ -74,20 +79,8 @@ class SortMergeJoin : public AbstractOperator {
     void sort_partition(const std::vector<ChunkID> chunk_ids, std::shared_ptr<const Table> input,
                         const std::string& column_name, bool left);
     // Partitioning in case of Non-Equi-Join
-    void value_based_table_partitioning(std::shared_ptr<SortedTable> sort_table, uint64_t min, uint64_t max);
+    void value_based_table_partitioning(std::shared_ptr<SortedTable> sort_table, std::vector<T>& p_values);
     void value_based_partitioning();
-
-    // helper functions to turn T2 into bits (uint)
-    template <typename T2>
-    typename std::enable_if<std::is_arithmetic<T2>::value, size_t>::type get_bits(T2 value) {
-      auto result = reinterpret_cast<size_t*>(&value);
-      return *result;
-    }
-    template <typename T2>
-    typename std::enable_if<!std::is_arithmetic<T2>::value, size_t>::type get_bits(T2 value) {
-      auto result = reinterpret_cast<const size_t*>(value.c_str());
-      return *result;
-    }
 
     template <typename T2>
     typename std::enable_if<std::is_arithmetic<T2>::value, size_t>::type get_radix(T2 value, size_t radix_bits) {

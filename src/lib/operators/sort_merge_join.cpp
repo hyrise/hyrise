@@ -1,6 +1,7 @@
 #include "sort_merge_join.hpp"
 
 #include <algorithm>
+#include <map>
 #include <memory>
 #include <string>
 #include <thread>
@@ -223,30 +224,27 @@ void SortMergeJoin::SortMergeJoinImpl<T>::sort_table(std::shared_ptr<SortedTable
 
 template <typename T>
 void SortMergeJoin::SortMergeJoinImpl<T>::value_based_table_partitioning(std::shared_ptr<SortedTable> sort_table,
-                                                                         uint64_t min, uint64_t max) {
+                                                                         std::vector<T>& p_values) {
   std::vector<std::vector<std::pair<T, RowID>>> partitions;
   partitions.resize(_partition_count);
-  uint64_t dif = std::ceil((max - min) / (_partition_count - 1.0));
-  std::vector<uint64_t> p_values(_partition_count);
 
   // for prefix computation we need to table-wide know how many entries there are for each partition
   // right now we expect an equally randomized entryset
-  for (uint64_t i = 1; i <= _partition_count; ++i) {
-    sort_table->_histogram.insert(std::pair<uint64_t, uint32_t>(min + dif * i, 0));
-    p_values[i - 1] = min + dif * i;
+  for (auto& i : p_values) {
+    sort_table->_histogram_v.insert(std::pair<T, uint32_t>(i, 0));
   }
 
   // Each chunk should prepare additional data to enable partitioning
   for (auto& s_chunk : sort_table->_partition) {
-    for (auto i : p_values) {
-      s_chunk._histogram.insert(std::pair<uint64_t, uint32_t>(i, 0));
-      s_chunk._prefix.insert(std::pair<uint64_t, uint32_t>(i, 0));
+    for (auto& i : p_values) {
+      s_chunk._histogram_v.insert(std::pair<T, uint32_t>(i, 0));
+      s_chunk._prefix_v.insert(std::pair<T, uint32_t>(i, 0));
     }
     // fill histogram
     for (auto& entry : s_chunk._values) {
-      for (auto i : p_values) {
-        if (get_bits<T>(entry.first) <= i) {
-          ++(s_chunk._histogram[i]);
+      for (auto& i : p_values) {
+        if (entry.first <= i) {
+          ++(s_chunk._histogram_v[i]);
           break;
         }
       }
@@ -255,23 +253,27 @@ void SortMergeJoin::SortMergeJoinImpl<T>::value_based_table_partitioning(std::sh
 
   // Each chunk need to sequentially fill _prefix map to actually fill partition of tables in parallel
   for (auto& s_chunk : sort_table->_partition) {
-    for (auto radix : p_values) {
-      s_chunk._prefix[radix] = sort_table->_histogram[radix];
-      sort_table->_histogram[radix] += s_chunk._histogram[radix];
+    for (auto& radix : p_values) {
+      s_chunk._prefix_v[radix] = sort_table->_histogram_v[radix];
+      sort_table->_histogram_v[radix] += s_chunk._histogram_v[radix];
     }
   }
 
   // prepare for parallel access later on
-  for (auto radix : p_values) {
-    partitions[radix].resize(sort_table->_histogram[radix]);
+  uint64_t i = 0;
+  for (auto& radix : p_values) {
+    partitions[i].resize(sort_table->_histogram_v[radix]);
+    ++i;
   }
 
   // Each chunk fills (parallel) partition
   for (auto& s_chunk : sort_table->_partition) {
     for (auto& entry : s_chunk._values) {
-      for (auto radix : p_values) {
-        if (get_bits<T>(entry.first) <= radix) {
-          partitions[radix].at(s_chunk._prefix[radix]++) = entry;
+      uint64_t i = 0;
+      for (auto& radix : p_values) {
+        if (entry.first <= radix) {
+          partitions[i].at(s_chunk._prefix_v[radix]++) = entry;
+          ++i;
         }
       }
     }
@@ -295,31 +297,67 @@ void SortMergeJoin::SortMergeJoinImpl<T>::value_based_table_partitioning(std::sh
 template <typename T>
 void SortMergeJoin::SortMergeJoinImpl<T>::value_based_partitioning() {
   // get minimum and maximum values for tables to have a somewhat reliable partitioning
-  T min_value = _sorted_left_table->_partition[0]._values[0].first;
-  T max_value = min_value;
+  T max_value = _sorted_left_table->_partition[0]._values[0].first;
+  std::vector<T> p_values(_partition_count);
+  std::vector<std::map<T, uint32_t>> sample_values(_partition_count);
 
   for (uint64_t partition_number = 0; partition_number < _sorted_left_table->_partition.size(); ++partition_number) {
     // left side
-    if (min_value > _sorted_left_table->_partition[partition_number]._values[0].first) {
-      min_value = _sorted_left_table->_partition[partition_number]._values[0].first;
-    }
     if (max_value < _sorted_left_table->_partition[partition_number]._values.back().first) {
       max_value = _sorted_left_table->_partition[partition_number]._values.back().first;
+    }
+    // get samples
+    uint32_t step_size = (_sorted_left_table->_partition[partition_number]._values.size() - 1) / _partition_count;
+    uint32_t i = 0;
+    for (uint32_t pos = step_size; pos < _sorted_left_table->_partition[partition_number]._values.size() - 1;
+         pos += step_size) {
+      if (sample_values[i].count(_sorted_left_table->_partition[partition_number]._values[pos].first) == 0) {
+        sample_values[i].insert(
+            std::pair<T, uint32_t>(_sorted_left_table->_partition[partition_number]._values[pos].first, 1));
+      } else {
+        ++(sample_values[i].at(_sorted_left_table->_partition[partition_number]._values[pos].first));
+      }
+      ++i;
     }
   }
 
   for (uint64_t partition_number = 0; partition_number < _sorted_right_table->_partition.size(); ++partition_number) {
     // right side
-    if (min_value > _sorted_right_table->_partition[partition_number]._values[0].first) {
-      min_value = _sorted_right_table->_partition[partition_number]._values[0].first;
-    }
     if (max_value < _sorted_right_table->_partition[partition_number]._values.back().first) {
       max_value = _sorted_right_table->_partition[partition_number]._values.back().first;
     }
+    // get samples
+    uint32_t step_size = (_sorted_right_table->_partition[partition_number]._values.size() - 1) / _partition_count;
+    uint32_t i = 0;
+    for (uint32_t pos = step_size; pos < _sorted_right_table->_partition[partition_number]._values.size() - 1;
+         pos += step_size) {
+      if (sample_values[i].count(_sorted_right_table->_partition[partition_number]._values[pos].first) == 0) {
+        sample_values[i].insert(
+            std::pair<T, uint32_t>(_sorted_right_table->_partition[partition_number]._values[pos].first, 1));
+      } else {
+        ++(sample_values[i].at(_sorted_right_table->_partition[partition_number]._values[pos].first));
+      }
+      ++i;
+    }
   }
 
-  value_based_table_partitioning(_sorted_left_table, get_bits<T>(min_value), get_bits<T>(max_value));
-  value_based_table_partitioning(_sorted_right_table, get_bits<T>(min_value), get_bits<T>(max_value));
+  // Pick from sample values most common split values
+  for (uint64_t i = 0; i < _partition_count - 1; ++i) {
+    T value;
+    uint32_t count = 0;
+    for (auto& v : sample_values[i]) {
+      if (v.second > count) {
+        value = v.first;
+        count = v.second;
+      }
+    }
+
+    p_values[i] = value;
+  }
+  p_values.back() = max_value;
+
+  value_based_table_partitioning(_sorted_left_table, p_values);
+  value_based_table_partitioning(_sorted_right_table, p_values);
 }
 
 /*
@@ -385,7 +423,7 @@ void SortMergeJoin::SortMergeJoinImpl<T>::partition_join(uint32_t partition_numb
         left_index += left_index_offset + 1u;
         right_index += right_index_offset + 1u;
       } else {
-        // only the case for ">" right now
+        // only the case for ">" & ">=" right now
         // moreover each operator needs own logic here to get result
         uint32_t max_index_left = left_index + left_index_offset;
         RowID left_row_id;
