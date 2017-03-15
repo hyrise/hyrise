@@ -28,28 +28,28 @@ class DictionaryColumn : public UntypedDictionaryColumn {
       // See: https://goo.gl/MCM5rr
       // Create dictionary (enforce unqiueness and sorting)
       const auto& values = val_col->values();
-      _dictionary = std::vector<T>{values.cbegin(), values.cend()};
+      auto dictionary = std::vector<T>{values.cbegin(), values.cend()};
 
-      std::sort(_dictionary.begin(), _dictionary.end());
-      _dictionary.erase(std::unique(_dictionary.begin(), _dictionary.end()), _dictionary.end());
-      _dictionary.shrink_to_fit();
+      std::sort(dictionary.begin(), dictionary.end());
+      dictionary.erase(std::unique(dictionary.begin(), dictionary.end()), dictionary.end());
+      dictionary.shrink_to_fit();
+
+      _dictionary = std::make_shared<std::vector<T>>(std::move(dictionary));
 
       _attribute_vector = _create_fitted_attribute_vector(unique_values_count(), values.size());
 
       for (ChunkOffset offset = 0; offset < values.size(); ++offset) {
-        ValueID value_id = std::distance(_dictionary.cbegin(),
-                                         std::lower_bound(_dictionary.cbegin(), _dictionary.cend(), values[offset]));
+        ValueID value_id = std::distance(_dictionary->cbegin(),
+                                         std::lower_bound(_dictionary->cbegin(), _dictionary->cend(), values[offset]));
         _attribute_vector->set(offset, value_id);
       }
     }
-
-    _dictionary_ptr = std::make_shared<std::vector<T>>(_dictionary);
   }
 
   // Creates a Dictionary column from a given dictionary and attribute vector.
   explicit DictionaryColumn(const std::vector<T>&& dictionary,
                             const std::shared_ptr<BaseAttributeVector>& attribute_vector)
-      : _dictionary(dictionary), _attribute_vector(attribute_vector) {}
+      : _dictionary(std::make_shared<std::vector<T>>(std::move(dictionary))), _attribute_vector(attribute_vector) {}
 
   // return the value at a certain position. If you want to write efficient operators, back off!
   const AllTypeVariant operator[](const size_t i) const override {
@@ -69,27 +69,27 @@ class DictionaryColumn : public UntypedDictionaryColumn {
       }
       return T(0);
     }
-    return _dictionary[_attribute_vector->get(i)];
+    return (*_dictionary)[_attribute_vector->get(i)];
   }
 
   // dictionary columns are immutable
   void append(const AllTypeVariant&) override { throw std::logic_error("DictionaryColumn is immutable"); }
 
   // returns an underlying dictionary
-  std::shared_ptr<const std::vector<T>> dictionary() const { return _dictionary_ptr; }
+  std::shared_ptr<const std::vector<T>> dictionary() const { return _dictionary; }
 
   // returns an underlying data structure
   std::shared_ptr<const BaseAttributeVector> attribute_vector() const final { return _attribute_vector; }
 
   // return the value represented by a given ValueID
-  const T& value_by_value_id(ValueID value_id) const { return _dictionary.at(value_id); }
+  const T& value_by_value_id(ValueID value_id) const { return _dictionary->at(value_id); }
 
   // returns the first value ID that refers to a value >= the search value
   // returns INVALID_VALUE_ID if all values are smaller than the search value
   ValueID lower_bound(T value) const {
-    auto it = std::lower_bound(_dictionary.cbegin(), _dictionary.cend(), value);
-    if (it == _dictionary.cend()) return INVALID_VALUE_ID;
-    return std::distance(_dictionary.cbegin(), it);
+    auto it = std::lower_bound(_dictionary->cbegin(), _dictionary->cend(), value);
+    if (it == _dictionary->cend()) return INVALID_VALUE_ID;
+    return std::distance(_dictionary->cbegin(), it);
   }
 
   // same as lower_bound(T), but accepts an AllTypeVariant
@@ -101,9 +101,9 @@ class DictionaryColumn : public UntypedDictionaryColumn {
   // returns the first value ID that refers to a value > the search value
   // returns INVALID_VALUE_ID if all values are smaller than or equal to the search value
   ValueID upper_bound(T value) const {
-    auto it = std::upper_bound(_dictionary.cbegin(), _dictionary.cend(), value);
-    if (it == _dictionary.cend()) return INVALID_VALUE_ID;
-    return std::distance(_dictionary.cbegin(), it);
+    auto it = std::upper_bound(_dictionary->cbegin(), _dictionary->cend(), value);
+    if (it == _dictionary->cend()) return INVALID_VALUE_ID;
+    return std::distance(_dictionary->cbegin(), it);
   }
 
   // same as upper_bound(T), but accepts an AllTypeVariant
@@ -113,7 +113,7 @@ class DictionaryColumn : public UntypedDictionaryColumn {
   }
 
   // return the number of unique_values (dictionary entries)
-  size_t unique_values_count() const final { return _dictionary.size(); }
+  size_t unique_values_count() const final { return _dictionary->size(); }
 
   // return the number of entries
   size_t size() const override { return _attribute_vector->size(); }
@@ -127,7 +127,7 @@ class DictionaryColumn : public UntypedDictionaryColumn {
   void write_string_representation(std::string& row_string, const ChunkOffset chunk_offset) const override {
     std::stringstream buffer;
     // buffering value at chunk_offset
-    T value = _dictionary.at(_attribute_vector->get(chunk_offset));
+    T value = _dictionary->at(_attribute_vector->get(chunk_offset));
     buffer << value;
     uint32_t length = buffer.str().length();
     // writing byte representation of length
@@ -138,9 +138,8 @@ class DictionaryColumn : public UntypedDictionaryColumn {
   }
 
  protected:
-  std::vector<T> _dictionary;
+  std::shared_ptr<std::vector<T>> _dictionary;
   std::shared_ptr<BaseAttributeVector> _attribute_vector;
-  std::shared_ptr<std::vector<T>> _dictionary_ptr;
 
   static std::shared_ptr<BaseAttributeVector> _create_fitted_attribute_vector(size_t unique_values_count, size_t size) {
     if (unique_values_count <= std::numeric_limits<uint8_t>::max()) {
