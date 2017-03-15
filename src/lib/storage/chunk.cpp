@@ -28,7 +28,12 @@ void Chunk::add_column(std::shared_ptr<BaseColumn> column) {
   }
   if (_columns.size() == 0 && has_mvcc_columns()) grow_mvcc_column_size_by(column->size(), 0);
 
-  _columns.emplace_back(column);
+  // TODO(MJ): Validate that we in fact do not have to perform an atomic operation here
+  _columns.push_back(column);
+}
+
+void Chunk::set_column(size_t column_id, std::shared_ptr<BaseColumn> column) {
+  std::atomic_store(&_columns.at(column_id), column);
 }
 
 void Chunk::append(std::vector<AllTypeVariant> values) {
@@ -48,13 +53,16 @@ void Chunk::append(std::vector<AllTypeVariant> values) {
   }
 }
 
-std::shared_ptr<BaseColumn> Chunk::get_column(size_t column_id) const { return _columns.at(column_id); }
+std::shared_ptr<BaseColumn> Chunk::get_column(size_t column_id) const {
+  return std::atomic_load(&_columns.at(column_id));
+}
 
 size_t Chunk::col_count() const { return _columns.size(); }
 
 size_t Chunk::size() const {
   if (_columns.empty()) return 0;
-  return _columns.front()->size();
+  auto first_column = get_column(0u);
+  return first_column->size();
 }
 
 void Chunk::grow_mvcc_column_size_by(size_t delta, CommitID begin_cid) {

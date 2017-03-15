@@ -41,18 +41,18 @@ class Chunk {
   // we overwrite the copy constructor
   Chunk(Chunk &&) = default;
   Chunk &operator=(Chunk &&) = default;
+
   // adds a column to the "right" of the chunk
   void add_column(std::shared_ptr<BaseColumn> column);
+
+  // replaces the current column at column_id with the passed column
+  void set_column(size_t column_id, std::shared_ptr<BaseColumn> column);
 
   // returns the number of columns
   size_t col_count() const;
 
   // returns the number of rows
   size_t size() const;
-
-  // returns the columns vector for direct manipulation.
-  std::vector<std::shared_ptr<BaseColumn>> &columns() { return _columns; }
-  const std::vector<std::shared_ptr<BaseColumn>> &columns() const { return _columns; }
 
   // adds a new row, given as a list of values, to the chunk
   // note this is slow and not thread-safe and should be used for testing purposes only
@@ -100,7 +100,7 @@ class Chunk {
   bool references_only_one_table() const;
 
  protected:
-  std::vector<std::shared_ptr<BaseColumn>> _columns;
+  tbb::concurrent_vector<std::shared_ptr<BaseColumn>> _columns;
   std::unique_ptr<MvccColumns> _mvcc_columns;
   std::vector<std::shared_ptr<BaseIndex>> _indices;
 };

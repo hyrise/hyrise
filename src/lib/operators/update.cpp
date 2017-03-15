@@ -80,7 +80,7 @@ std::shared_ptr<const Table> Update::on_execute(TransactionContext* context) {
       auto right_col = right_chunk.get_column(column_id);
 
       auto left_col = std::dynamic_pointer_cast<ReferenceColumn>(left_chunk.get_column(column_id));
-      insert_chunk.columns()[left_col->referenced_column_id()] = right_col;
+      insert_chunk.set_column(left_col->referenced_column_id(), right_col);
     }
   }
 
