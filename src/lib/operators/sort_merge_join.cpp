@@ -90,6 +90,8 @@ SortMergeJoin::SortMergeJoinImpl<T>::SortMergeJoinImpl(SortMergeJoin& sort_merge
     _compare = [](const T& value_left, const T& value_right) -> bool { return value_left == value_right; };
   } else if (_sort_merge_join._op == ">") {
     _compare = [](const T& value_left, const T& value_right) -> bool { return value_left > value_right; };
+  } else if (_sort_merge_join._op == ">=") {
+    _compare = [](const T& value_left, const T& value_right) -> bool { return value_left >= value_right; };
   } else {
     throw std::exception(
         std::runtime_error("SortMergeJoinImpl::SortMergeJoinImpl: Unknown operator " + _sort_merge_join._op));
@@ -441,7 +443,8 @@ void SortMergeJoin::SortMergeJoinImpl<T>::partition_join(uint32_t partition_numb
                 pos_lists_right[partition_number].push_back(right_row_id);
               }
             } else {
-              for (uint32_t r_index = 0; r_index < right_index; ++r_index) {
+              auto max_index = (_sort_merge_join._op == ">=") ? right_index_offset + right_index + 1 : right_index;
+              for (uint32_t r_index = 0; r_index < max_index; ++r_index) {
                 right_row_id = right_current_partition._values[r_index].second;
                 pos_lists_left[partition_number].push_back(left_row_id);
                 pos_lists_right[partition_number].push_back(right_row_id);
@@ -457,7 +460,7 @@ void SortMergeJoin::SortMergeJoinImpl<T>::partition_join(uint32_t partition_numb
     } else {
       if (left_value < right_value) {
         // extra behavior for non-equi join
-        // only implemented for ">"
+        // only implemented for ">" & ">="
         // every operator needs own behavior
         if (_sort_merge_join._op != "=") {
           uint32_t max_index_left = left_index + left_index_offset;
@@ -498,8 +501,7 @@ template <typename T>
 void SortMergeJoin::SortMergeJoinImpl<T>::perform_join() {
   _sort_merge_join._pos_list_left = std::make_shared<PosList>();
   _sort_merge_join._pos_list_right = std::make_shared<PosList>();
-  // For now only equi-join is implemented
-  // That means we only have to join partitions who are the same from both sides
+
   std::vector<PosList> pos_lists_left(_sorted_left_table->_partition.size());
   std::vector<PosList> pos_lists_right(_sorted_left_table->_partition.size());
 
