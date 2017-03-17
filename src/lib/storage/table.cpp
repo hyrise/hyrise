@@ -34,11 +34,7 @@ void Table::add_column(const std::string &name, const std::string &type, bool cr
 
 void Table::append(std::vector<AllTypeVariant> values) {
   // TODO(Anyone): Chunks should be preallocated for chunk size
-  if (_chunk_size > 0 && _chunks.back().size() == _chunk_size) {
-    if (_auto_compress) compress_chunk(chunk_count() - 1);
-
-    create_new_chunk();
-  }
+  if (_chunk_size > 0 && _chunks.back().size() == _chunk_size) create_new_chunk();
 
   _chunks.back().append(values);
 }
@@ -71,20 +67,6 @@ size_t Table::column_id_by_name(const std::string &column_name) const {
     }
   }
   throw std::runtime_error("column " + column_name + " not found");
-}
-
-void Table::compress_chunk(ChunkID chunk_id) {
-  auto &old_chunk = _chunks.at(chunk_id);
-  Chunk new_chunk{true};
-  for (size_t column_id = 0; column_id < col_count(); ++column_id) {
-    auto dict_col = make_shared_by_column_type<BaseColumn, DictionaryColumn>(column_type(column_id),
-                                                                             old_chunk.get_column(column_id));
-    new_chunk.add_column(std::move(dict_col));
-  }
-
-  new_chunk.move_mvcc_columns_from(old_chunk);
-  new_chunk.shrink_mvcc_columns();
-  _chunks[chunk_id] = std::move(new_chunk);
 }
 
 size_t Table::chunk_size() const { return _chunk_size; }

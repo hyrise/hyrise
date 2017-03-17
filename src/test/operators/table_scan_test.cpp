@@ -4,11 +4,13 @@
 #include <set>
 #include <string>
 #include <utility>
+#include <vector>
 
 #include "../base_test.hpp"
 #include "gtest/gtest.h"
 
 #include "../../lib/operators/abstract_read_only_operator.hpp"
+#include "../../lib/operators/chunk_compression.hpp"
 #include "../../lib/operators/get_table.hpp"
 #include "../../lib/operators/table_scan.hpp"
 #include "../../lib/storage/storage_manager.hpp"
@@ -28,9 +30,12 @@ class OperatorsTableScanTest : public BaseTest {
     test_even_dict->add_column("a", "int");
     test_even_dict->add_column("b", "int");
     for (int i = 0; i <= 24; i += 2) test_even_dict->append({i, 100 + i});
-    test_even_dict->compress_chunk(0);
-    test_even_dict->compress_chunk(1);
     StorageManager::get().add_table("table_even_dict", std::move(test_even_dict));
+
+    {
+      auto compression = std::make_unique<ChunkCompression>("table_even_dict", std::vector<ChunkID>{0u, 1u});
+      compression->execute();
+    }
 
     _gt_even_dict = std::make_shared<GetTable>("table_even_dict");
 
@@ -39,8 +44,13 @@ class OperatorsTableScanTest : public BaseTest {
     _test_table_dict_16->add_column("a", "int");
     _test_table_dict_16->add_column("b", "float");
     for (int i = 0; i <= 257; i += 1) _test_table_dict_16->append({i, 100.0f + i});
-    _test_table_dict_16->compress_chunk(0);
     opossum::StorageManager::get().add_table("table_dict_16", std::move(_test_table_dict_16));
+
+    {
+      auto compression = std::make_unique<ChunkCompression>("table_dict_16", 0u);
+      compression->execute();
+    }
+
     _gt_dict_16 = std::make_shared<opossum::GetTable>("table_dict_16");
 
     // Set up dictionary encoded table with a dictionary width of 32 bit
@@ -48,8 +58,13 @@ class OperatorsTableScanTest : public BaseTest {
     _test_table_dict_32->add_column("a", "int");
     _test_table_dict_32->add_column("b", "float");
     for (int i = 0; i <= 65537; i += 1) _test_table_dict_32->append({i, 100.0f + i});
-    _test_table_dict_32->compress_chunk(0);
     opossum::StorageManager::get().add_table("table_dict_32", std::move(_test_table_dict_32));
+
+    {
+      auto compression = std::make_unique<ChunkCompression>("table_dict_32", 0u);
+      compression->execute();
+    }
+
     _gt_dict_32 = std::make_shared<opossum::GetTable>("table_dict_32");
 
     _gt->execute();
@@ -61,9 +76,13 @@ class OperatorsTableScanTest : public BaseTest {
     test_table_dict->add_column("a", "int");
     test_table_dict->add_column("b", "float");
     for (int i = 1; i < 20; ++i) test_table_dict->append({i, 100.1 + i});
-    test_table_dict->compress_chunk(0);
-    test_table_dict->compress_chunk(2);
     StorageManager::get().add_table("table_part_dict", test_table_dict);
+
+    {
+      auto compression = std::make_unique<ChunkCompression>("table_part_dict", std::vector<ChunkID>{0u, 2u});
+      compression->execute();
+    }
+
     _gt_part_dict = std::make_shared<GetTable>("table_part_dict");
     _gt_part_dict->execute();
 

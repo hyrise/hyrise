@@ -7,11 +7,12 @@
 #include "../base_test.hpp"
 #include "gtest/gtest.h"
 
+#include "../../lib/operators/chunk_compression.hpp"
+#include "../../lib/operators/csv.hpp"
 #include "../../lib/operators/export_csv.hpp"
 #include "../../lib/operators/get_table.hpp"
 #include "../../lib/storage/storage_manager.hpp"
 #include "../../lib/storage/table.hpp"
-#include "operators/csv.hpp"
 
 namespace opossum {
 
@@ -113,11 +114,14 @@ TEST_F(OperatorsExportCsvTest, DictionaryColumn) {
   table->append({1, "Hallo", 3.5f});
   table->append({1, "Hallo3", 3.55f});
 
-  table->compress_chunk(0);
-
   StorageManager::get().add_table("table_a", std::move(table));
+
+  auto compression = std::make_unique<ChunkCompression>("table_a", 0u);
+  compression->execute();
+
   auto gt = std::make_shared<GetTable>("table_a");
   gt->execute();
+
   auto ex = std::make_shared<opossum::ExportCsv>(gt, directory, filename);
   ex->execute();
 

@@ -4,11 +4,13 @@
 #include <set>
 #include <string>
 #include <utility>
+#include <vector>
 
 #include "../base_test.hpp"
 #include "gtest/gtest.h"
 
 #include "../../lib/operators/abstract_operator.hpp"
+#include "../../lib/operators/chunk_compression.hpp"
 #include "../../lib/operators/get_table.hpp"
 #include "../../lib/operators/index_column_scan.hpp"
 #include "../../lib/operators/print.hpp"
@@ -30,11 +32,15 @@ class OperatorsIndexColumnScanTest : public BaseTest {
     std::shared_ptr<Table> test_table_dict = std::make_shared<Table>(5);
     test_table_dict->add_column("a", "int");
     test_table_dict->add_column("b", "int");
+
     for (int i = 0; i <= 24; i += 2) test_table_dict->append({i, 100 + i});
-    test_table_dict->compress_chunk(0);
+
+    StorageManager::get().add_table("table_dict", test_table_dict);
+
+    auto compression = std::make_unique<ChunkCompression>("table_dict", std::vector<ChunkID>{0u, 1u});
+    compression->execute();
+
     test_table_dict->get_chunk(0).create_index<DerivedIndex>(test_table_dict->get_chunk(0).get_column(0));
-    test_table_dict->compress_chunk(1);
-    StorageManager::get().add_table("table_dict", std::move(test_table_dict));
 
     _gt_dict = std::make_shared<GetTable>("table_dict");
 

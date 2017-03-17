@@ -1,21 +1,15 @@
 #pragma once
 
-#include <algorithm>
-#include <iostream>
-#include <limits>
+#include <fstream>
 #include <memory>
 #include <string>
 #include <utility>
 #include <vector>
 
-#include <fstream>
-#include <iterator>
-
-#include "../types.hpp"
 #include "base_attribute_vector.hpp"
-#include "fitted_attribute_vector.hpp"
 #include "untyped_dictionary_column.hpp"
-#include "value_column.hpp"
+
+#include "types.hpp"
 
 namespace opossum {
 
@@ -23,29 +17,6 @@ namespace opossum {
 template <typename T>
 class DictionaryColumn : public UntypedDictionaryColumn {
  public:
-  explicit DictionaryColumn(std::shared_ptr<BaseColumn> base_column) {
-    if (auto val_col = std::dynamic_pointer_cast<ValueColumn<T>>(base_column)) {
-      // See: https://goo.gl/MCM5rr
-      // Create dictionary (enforce unqiueness and sorting)
-      const auto& values = val_col->values();
-      auto dictionary = std::vector<T>{values.cbegin(), values.cend()};
-
-      std::sort(dictionary.begin(), dictionary.end());
-      dictionary.erase(std::unique(dictionary.begin(), dictionary.end()), dictionary.end());
-      dictionary.shrink_to_fit();
-
-      _dictionary = std::make_shared<std::vector<T>>(std::move(dictionary));
-
-      _attribute_vector = _create_fitted_attribute_vector(unique_values_count(), values.size());
-
-      for (ChunkOffset offset = 0; offset < values.size(); ++offset) {
-        ValueID value_id = std::distance(_dictionary->cbegin(),
-                                         std::lower_bound(_dictionary->cbegin(), _dictionary->cend(), values[offset]));
-        _attribute_vector->set(offset, value_id);
-      }
-    }
-  }
-
   // Creates a Dictionary column from a given dictionary and attribute vector.
   explicit DictionaryColumn(const std::vector<T>&& dictionary,
                             const std::shared_ptr<BaseAttributeVector>& attribute_vector)
@@ -140,15 +111,5 @@ class DictionaryColumn : public UntypedDictionaryColumn {
  protected:
   std::shared_ptr<std::vector<T>> _dictionary;
   std::shared_ptr<BaseAttributeVector> _attribute_vector;
-
-  static std::shared_ptr<BaseAttributeVector> _create_fitted_attribute_vector(size_t unique_values_count, size_t size) {
-    if (unique_values_count <= std::numeric_limits<uint8_t>::max()) {
-      return std::make_shared<FittedAttributeVector<uint8_t>>(size);
-    } else if (unique_values_count <= std::numeric_limits<uint16_t>::max()) {
-      return std::make_shared<FittedAttributeVector<uint16_t>>(size);
-    } else {
-      return std::make_shared<FittedAttributeVector<uint32_t>>(size);
-    }
-  }
 };
 }  // namespace opossum

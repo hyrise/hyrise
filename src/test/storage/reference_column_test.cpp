@@ -4,10 +4,12 @@
 #include <set>
 #include <string>
 #include <utility>
+#include <vector>
 
 #include "gtest/gtest.h"
 
 #include "../../lib/operators/abstract_operator.hpp"
+#include "../../lib/operators/chunk_compression.hpp"
 #include "../../lib/operators/get_table.hpp"
 #include "../../lib/operators/print.hpp"
 #include "../../lib/operators/table_scan.hpp"
@@ -32,11 +34,14 @@ class ReferenceColumnTest : public ::testing::Test {
     _test_table_dict->add_column("a", "int");
     _test_table_dict->add_column("b", "int");
     for (int i = 0; i <= 24; i += 2) _test_table_dict->append({i, 100 + i});
-    _test_table_dict->compress_chunk(0);
-    _test_table_dict->compress_chunk(1);
+
+    StorageManager::get().add_table("test_table_dict", _test_table_dict);
+
+    auto compression = std::make_unique<ChunkCompression>("test_table_dict", std::vector<ChunkID>{0u, 1u});
+    compression->execute();
   }
 
-  virtual void TearDown() {}
+  virtual void TearDown() { StorageManager::get().reset(); }
 
  public:
   std::shared_ptr<opossum::Table> _test_table, _test_table_dict;

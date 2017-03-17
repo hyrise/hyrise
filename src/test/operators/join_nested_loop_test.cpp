@@ -4,11 +4,13 @@
 #include <set>
 #include <string>
 #include <utility>
+#include <vector>
 
 #include "../base_test.hpp"
 #include "gtest/gtest.h"
 
 // #include "../../lib/operators/abstract_join_operator.hpp"
+#include "../../lib/operators/chunk_compression.hpp"
 #include "../../lib/operators/get_table.hpp"
 #include "../../lib/operators/join_nested_loop.hpp"
 #include "../../lib/operators/print.hpp"
@@ -38,21 +40,34 @@ class OperatorsJoinNestedLoopTest : public BaseTest {
     StorageManager::get().add_table("table_d", std::move(test_table_2));
     _gt_d = std::make_shared<GetTable>("table_d");
 
-    std::shared_ptr<Table> test_table_dict = load_table("src/test/tables/int_float.tbl", 2);
-    test_table_dict->compress_chunk(0);
-    test_table_dict->compress_chunk(1);
-    StorageManager::get().add_table("table_a_dict", std::move(test_table_dict));
+    {
+      auto test_table_dict = load_table("src/test/tables/int_float.tbl", 2);
+      StorageManager::get().add_table("table_a_dict", std::move(test_table_dict));
+
+      auto compression = std::make_unique<ChunkCompression>("table_a_dict", std::vector<ChunkID>{0u, 1u});
+      compression->execute();
+    }
+
     _gt_a_dict = std::make_shared<GetTable>("table_a_dict");
 
-    std::shared_ptr<Table> test_table_2_dict = load_table("src/test/tables/int_float2.tbl", 2);
-    test_table_2_dict->compress_chunk(0);
-    test_table_2_dict->compress_chunk(1);
-    StorageManager::get().add_table("table_b_dict", std::move(test_table_2_dict));
+    {
+      auto test_table_dict = load_table("src/test/tables/int_float2.tbl", 2);
+      StorageManager::get().add_table("table_b_dict", std::move(test_table_dict));
+
+      auto compression = std::make_unique<ChunkCompression>("table_b_dict", std::vector<ChunkID>{0u, 1u});
+      compression->execute();
+    }
+
     _gt_b_dict = std::make_shared<GetTable>("table_b_dict");
 
-    std::shared_ptr<Table> test_table_3_dict = load_table("src/test/tables/int_float.tbl", 2);
-    test_table_3_dict->compress_chunk(0);
-    StorageManager::get().add_table("table_c_dict", std::move(test_table_3_dict));
+    {
+      auto test_table_dict = load_table("src/test/tables/int_float.tbl", 2);
+      StorageManager::get().add_table("table_c_dict", std::move(test_table_dict));
+
+      auto compression = std::make_unique<ChunkCompression>("table_c_dict", 0u);
+      compression->execute();
+    }
+
     _gt_c_dict = std::make_shared<GetTable>("table_c_dict");
 
     _gt_a->execute();

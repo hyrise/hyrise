@@ -28,7 +28,7 @@ TEST_F(StorageTableTest, ChunkCount) {
   EXPECT_EQ(t.chunk_count(), 2u);
 }
 
-TEST_F(StorageTableTest, ChunkCompression) {
+TEST_F(StorageTableTest, DISABLED_ChunkCompression) {
   Table t2{6, true};
   t2.add_column("col_1", "int");
   t2.add_column("col_2", "string");
@@ -100,7 +100,7 @@ TEST_F(StorageTableTest, ColumnNameTooLong) {
                , std::exception);
 }
 
-TEST_F(StorageTableTest, CompressedChunkHasSameCidColumns) {
+TEST_F(StorageTableTest, ShrinkingMvccColumnsHasNoSideEffects) {
   t.append({4, "Hello,"});
   t.append({6, "world"});
 
@@ -120,14 +120,12 @@ TEST_F(StorageTableTest, CompressedChunkHasSameCidColumns) {
 
   const auto previous_size = chunk.size();
 
-  t.compress_chunk(0u);
+  chunk.shrink_mvcc_columns();
 
-  auto& compressed_chunk = t.get_chunk(0u);
+  ASSERT_EQ(previous_size, chunk.size());
+  ASSERT_TRUE(chunk.has_mvcc_columns());
 
-  ASSERT_EQ(previous_size, compressed_chunk.size());
-  ASSERT_TRUE(compressed_chunk.has_mvcc_columns());
-
-  const auto& new_mvcc_columns = compressed_chunk.mvcc_columns();
+  const auto& new_mvcc_columns = chunk.mvcc_columns();
 
   for (auto i = 0u; i < chunk.size(); ++i) {
     EXPECT_EQ(new_mvcc_columns.begin_cids[i], values[i]);

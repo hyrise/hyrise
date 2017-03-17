@@ -3,11 +3,13 @@
 #include <memory>
 #include <string>
 #include <utility>
+#include <vector>
 
 #include "../base_test.hpp"
 #include "gtest/gtest.h"
 
 #include "../../lib/import_export/binary.hpp"
+#include "../../lib/operators/chunk_compression.hpp"
 #include "../../lib/operators/export_binary.hpp"
 #include "../../lib/operators/get_table.hpp"
 #include "../../lib/operators/table_scan.hpp"
@@ -119,9 +121,12 @@ TEST_F(OperatorsExportBinaryTest, StringDictionaryColumn) {
   table->append({"is"});
   table->append({"a"});
   table->append({"test"});
-  table->compress_chunk(0);
 
   StorageManager::get().add_table("table", std::move(table));
+
+  auto compression = std::make_unique<ChunkCompression>("table", 0u);
+  compression->execute();
+
   auto gt = std::make_shared<GetTable>("table");
   gt->execute();
   auto ex = std::make_shared<opossum::ExportBinary>(gt, filename);
@@ -163,10 +168,12 @@ TEST_F(OperatorsExportBinaryTest, AllTypesDictionaryColumn) {
   table->append({"BBBBBBBBBB", 2, static_cast<int64_t>(200), 2.2f, 22.2});
   table->append({"CCCCCCCCCCCCCCC", 3, static_cast<int64_t>(300), 3.3f, 33.3});
   table->append({"DDDDDDDDDDDDDDDDDDDD", 4, static_cast<int64_t>(400), 4.4f, 44.4});
-  table->compress_chunk(0);
-  table->compress_chunk(1);
 
   StorageManager::get().add_table("table", std::move(table));
+
+  auto compression = std::make_unique<ChunkCompression>("table", std::vector<ChunkID>{0u, 1u});
+  compression->execute();
+
   auto gt = std::make_shared<GetTable>("table");
   gt->execute();
 
@@ -187,11 +194,15 @@ TEST_F(OperatorsExportBinaryTest, AllTypesMixColumn) {
   table->append({"BBBBBBBBBB", 2, static_cast<int64_t>(200), 2.2f, 22.2});
   table->append({"CCCCCCCCCCCCCCC", 3, static_cast<int64_t>(300), 3.3f, 33.3});
   table->append({"DDDDDDDDDDDDDDDDDDDD", 4, static_cast<int64_t>(400), 4.4f, 44.4});
-  table->compress_chunk(0);
 
-  StorageManager::get().add_table("table", std::move(table));
+  StorageManager::get().add_table("table", table);
+
+  auto compression = std::make_unique<ChunkCompression>("table", 0u);
+  compression->execute();
+
   auto gt = std::make_shared<GetTable>("table");
   gt->execute();
+
   auto ex = std::make_shared<opossum::ExportBinary>(gt, filename);
   ex->execute();
 
@@ -256,9 +267,12 @@ TEST_F(OperatorsExportBinaryTest, EmptyStringsDictionaryColumn) {
   table->append({""});
   table->append({""});
   table->append({""});
-  table->compress_chunk(0);
 
-  StorageManager::get().add_table("table", std::move(table));
+  StorageManager::get().add_table("table", table);
+
+  auto compression = std::make_unique<ChunkCompression>("table", 0u);
+  compression->execute();
+
   auto gt = std::make_shared<GetTable>("table");
   gt->execute();
 
