@@ -10,6 +10,7 @@
 
 #include "base_column.hpp"
 #include "base_index.hpp"
+#include "locking_ptr.hpp"
 #include "movable_atomic.hpp"
 #include "value_column.hpp"
 
@@ -67,8 +68,11 @@ class Chunk {
 
   bool has_mvcc_columns() const;
 
-  MvccColumns &mvcc_columns();
-  const MvccColumns &mvcc_columns() const;
+  /**
+   * @return a locking ptr to the mvcc columns
+   */
+  SharedLockLockingPtr<MvccColumns> mvcc_columns();
+  SharedLockLockingPtr<const MvccColumns> mvcc_columns() const;
 
   /**
    * Compacts the internal represantion of

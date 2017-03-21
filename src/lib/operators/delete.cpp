@@ -37,8 +37,8 @@ std::shared_ptr<const Table> Delete::on_execute(TransactionContext* context) {
 
       auto expected = 0u;
       // Actual row lock for delete happens here
-      _execute_failed =
-          !referenced_chunk.mvcc_columns().tids[row_id.chunk_offset].compare_exchange_strong(expected, _transaction_id);
+      _execute_failed = !referenced_chunk.mvcc_columns()->tids[row_id.chunk_offset].compare_exchange_strong(
+          expected, _transaction_id);
 
       // the row is already locked and the transaction needs to be rolled back
       if (_execute_failed) return nullptr;
@@ -53,8 +53,10 @@ void Delete::commit_records(const CommitID cid) {
     for (const auto& row_id : *pos_list) {
       auto& chunk = _table->get_chunk(row_id.chunk_id);
 
-      chunk.mvcc_columns().end_cids[row_id.chunk_offset] = cid;
-      chunk.mvcc_columns().tids[row_id.chunk_offset] = 0u;
+      auto mvcc_columns = chunk.mvcc_columns();
+
+      mvcc_columns->end_cids[row_id.chunk_offset] = cid;
+      mvcc_columns->tids[row_id.chunk_offset] = 0u;
     }
   }
 }
@@ -68,7 +70,7 @@ void Delete::rollback_records() {
 
       // unlocks all rows locked in on_execute until the operator encountered
       // a row that had already been locked by another transaction
-      const auto result = chunk.mvcc_columns().tids[row_id.chunk_offset].compare_exchange_strong(expected, 0u);
+      const auto result = chunk.mvcc_columns()->tids[row_id.chunk_offset].compare_exchange_strong(expected, 0u);
 
       if (!result) return;
     }

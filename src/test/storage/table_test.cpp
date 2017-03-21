@@ -108,15 +108,19 @@ TEST_F(StorageTableTest, ShrinkingMvccColumnsHasNoSideEffects) {
 
   const auto values = std::vector<CommitID>{1u, 2u};
 
-  auto& mvcc_columns = chunk.mvcc_columns();
+  {
+    // acquiring mvcc_columns locks them
+    auto mvcc_columns = chunk.mvcc_columns();
 
-  // tids are not copied because they must be 0, since
-  // otherwise someone else would be trying to
-  // simultaneously change the records
-  mvcc_columns.begin_cids[0u] = values[0u];
-  mvcc_columns.begin_cids[1u] = values[1u];
-  mvcc_columns.end_cids[0u] = values[0u];
-  mvcc_columns.end_cids[1u] = values[1u];
+    // tids are not copied because they must be 0, since
+    // otherwise someone else would be trying to
+    // simultaneously change the records
+    // TODO(MJ): they are now!
+    mvcc_columns->begin_cids[0u] = values[0u];
+    mvcc_columns->begin_cids[1u] = values[1u];
+    mvcc_columns->end_cids[0u] = values[0u];
+    mvcc_columns->end_cids[1u] = values[1u];
+  }
 
   const auto previous_size = chunk.size();
 
@@ -125,11 +129,11 @@ TEST_F(StorageTableTest, ShrinkingMvccColumnsHasNoSideEffects) {
   ASSERT_EQ(previous_size, chunk.size());
   ASSERT_TRUE(chunk.has_mvcc_columns());
 
-  const auto& new_mvcc_columns = chunk.mvcc_columns();
+  auto new_mvcc_columns = chunk.mvcc_columns();
 
   for (auto i = 0u; i < chunk.size(); ++i) {
-    EXPECT_EQ(new_mvcc_columns.begin_cids[i], values[i]);
-    EXPECT_EQ(new_mvcc_columns.end_cids[i], values[i]);
+    EXPECT_EQ(new_mvcc_columns->begin_cids[i], values[i]);
+    EXPECT_EQ(new_mvcc_columns->end_cids[i], values[i]);
   }
 }
 

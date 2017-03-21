@@ -68,7 +68,8 @@ std::shared_ptr<const Table> Validate::on_execute(TransactionContext *transactio
       referenced_table = ref_col_in->referenced_table();
       for (auto row_id : *ref_col_in->pos_list()) {
         const auto &referenced_chunk = referenced_table->get_chunk(row_id.chunk_id);
-        if (is_row_visible(our_tid, our_lcid, row_id.chunk_offset, referenced_chunk.mvcc_columns())) {
+        auto mvcc_columns = referenced_chunk.mvcc_columns();
+        if (is_row_visible(our_tid, our_lcid, row_id.chunk_offset, *mvcc_columns)) {
           pos_list_out->emplace_back(row_id);
         }
       }
@@ -84,11 +85,11 @@ std::shared_ptr<const Table> Validate::on_execute(TransactionContext *transactio
       // Otherwise we have a Value- or DictionaryColumn and simply iterate over all rows to build a poslist.
     } else {
       referenced_table = _in_table;
-      const auto &mvcc_columns = chunk_in.mvcc_columns();
+      const auto mvcc_columns = chunk_in.mvcc_columns();
 
       // Generate pos_list_out.
       for (auto i = 0u; i < chunk_in.size(); i++) {
-        if (is_row_visible(our_tid, our_lcid, i, mvcc_columns)) {
+        if (is_row_visible(our_tid, our_lcid, i, *mvcc_columns)) {
           pos_list_out->emplace_back(RowID{chunk_id, i});
         }
       }

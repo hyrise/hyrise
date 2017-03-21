@@ -74,24 +74,24 @@ void Chunk::grow_mvcc_column_size_by(size_t delta, CommitID begin_cid) {
 
 bool Chunk::has_mvcc_columns() const { return _mvcc_columns != nullptr; }
 
-Chunk::MvccColumns& Chunk::mvcc_columns() {
+SharedLockLockingPtr<Chunk::MvccColumns> Chunk::mvcc_columns() {
 #ifdef IS_DEBUG
   if (!has_mvcc_columns()) {
     std::logic_error("Chunk does not have mvcc columns");
   }
 #endif
 
-  return *_mvcc_columns;
+  return {*_mvcc_columns, _mvcc_columns->_mutex};
 }
 
-const Chunk::MvccColumns& Chunk::mvcc_columns() const {
+SharedLockLockingPtr<const Chunk::MvccColumns> Chunk::mvcc_columns() const {
 #ifdef IS_DEBUG
   if (!has_mvcc_columns()) {
     std::logic_error("Chunk does not have mvcc columns");
   }
 #endif
 
-  return *_mvcc_columns;
+  return {*_mvcc_columns, _mvcc_columns->_mutex};
 }
 
 void Chunk::shrink_mvcc_columns() {

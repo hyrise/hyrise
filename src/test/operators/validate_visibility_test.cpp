@@ -46,9 +46,9 @@ class OperatorsValidateVisibilityTest : public BaseTest {
 TEST_F(OperatorsValidateVisibilityTest, Impossible) {
   auto context = TransactionContext(2, 2);
 
-  t->get_chunk(0).mvcc_columns().tids[0] = 2;
-  t->get_chunk(0).mvcc_columns().begin_cids[0] = 2;
-  t->get_chunk(0).mvcc_columns().end_cids[0] = 2;
+  t->get_chunk(0).mvcc_columns()->tids[0] = 2;
+  t->get_chunk(0).mvcc_columns()->begin_cids[0] = 2;
+  t->get_chunk(0).mvcc_columns()->end_cids[0] = 2;
 
   validate->execute(&context);
 
@@ -59,9 +59,9 @@ TEST_F(OperatorsValidateVisibilityTest, Impossible) {
 TEST_F(OperatorsValidateVisibilityTest, PastDelete) {
   auto context = TransactionContext(2, 2);
 
-  t->get_chunk(0).mvcc_columns().tids[0] = 42;
-  t->get_chunk(0).mvcc_columns().begin_cids[0] = 2;
-  t->get_chunk(0).mvcc_columns().end_cids[0] = 2;
+  t->get_chunk(0).mvcc_columns()->tids[0] = 42;
+  t->get_chunk(0).mvcc_columns()->begin_cids[0] = 2;
+  t->get_chunk(0).mvcc_columns()->end_cids[0] = 2;
 
   validate->execute(&context);
 
@@ -72,9 +72,9 @@ TEST_F(OperatorsValidateVisibilityTest, PastDelete) {
 TEST_F(OperatorsValidateVisibilityTest, Impossible2) {
   auto context = TransactionContext(2, 2);
 
-  t->get_chunk(0).mvcc_columns().tids[0] = 2;
-  t->get_chunk(0).mvcc_columns().begin_cids[0] = 4;
-  t->get_chunk(0).mvcc_columns().end_cids[0] = 1;
+  t->get_chunk(0).mvcc_columns()->tids[0] = 2;
+  t->get_chunk(0).mvcc_columns()->begin_cids[0] = 4;
+  t->get_chunk(0).mvcc_columns()->end_cids[0] = 1;
 
   validate->execute(&context);
 
@@ -85,9 +85,9 @@ TEST_F(OperatorsValidateVisibilityTest, Impossible2) {
 TEST_F(OperatorsValidateVisibilityTest, OwnDeleteUncommitted) {
   auto context = TransactionContext(2, 2);
 
-  t->get_chunk(0).mvcc_columns().tids[0] = 2;
-  t->get_chunk(0).mvcc_columns().begin_cids[0] = 1;
-  t->get_chunk(0).mvcc_columns().end_cids[0] = 6;
+  t->get_chunk(0).mvcc_columns()->tids[0] = 2;
+  t->get_chunk(0).mvcc_columns()->begin_cids[0] = 1;
+  t->get_chunk(0).mvcc_columns()->end_cids[0] = 6;
 
   validate->execute(&context);
 
@@ -98,9 +98,9 @@ TEST_F(OperatorsValidateVisibilityTest, OwnDeleteUncommitted) {
 TEST_F(OperatorsValidateVisibilityTest, Impossible3) {
   auto context = TransactionContext(2, 2);
 
-  t->get_chunk(0).mvcc_columns().tids[0] = 50;
-  t->get_chunk(0).mvcc_columns().begin_cids[0] = 3;
-  t->get_chunk(0).mvcc_columns().end_cids[0] = 1;
+  t->get_chunk(0).mvcc_columns()->tids[0] = 50;
+  t->get_chunk(0).mvcc_columns()->begin_cids[0] = 3;
+  t->get_chunk(0).mvcc_columns()->end_cids[0] = 1;
 
   validate->execute(&context);
 
@@ -111,9 +111,9 @@ TEST_F(OperatorsValidateVisibilityTest, Impossible3) {
 TEST_F(OperatorsValidateVisibilityTest, OwnInsert) {
   auto context = TransactionContext(2, 2);
 
-  t->get_chunk(0).mvcc_columns().tids[0] = 2;
-  t->get_chunk(0).mvcc_columns().begin_cids[0] = 3;
-  t->get_chunk(0).mvcc_columns().end_cids[0] = 3;
+  t->get_chunk(0).mvcc_columns()->tids[0] = 2;
+  t->get_chunk(0).mvcc_columns()->begin_cids[0] = 3;
+  t->get_chunk(0).mvcc_columns()->end_cids[0] = 3;
 
   validate->execute(&context);
 
@@ -124,9 +124,9 @@ TEST_F(OperatorsValidateVisibilityTest, OwnInsert) {
 TEST_F(OperatorsValidateVisibilityTest, PastInsertOrFutureDelete) {
   auto context = TransactionContext(2, 2);
 
-  t->get_chunk(0).mvcc_columns().tids[0] = 99;
-  t->get_chunk(0).mvcc_columns().begin_cids[0] = 2;
-  t->get_chunk(0).mvcc_columns().end_cids[0] = 3;
+  t->get_chunk(0).mvcc_columns()->tids[0] = 99;
+  t->get_chunk(0).mvcc_columns()->begin_cids[0] = 2;
+  t->get_chunk(0).mvcc_columns()->end_cids[0] = 3;
 
   validate->execute(&context);
 
@@ -137,9 +137,9 @@ TEST_F(OperatorsValidateVisibilityTest, PastInsertOrFutureDelete) {
 TEST_F(OperatorsValidateVisibilityTest, UncommittedInsertOrFutureInsert) {
   auto context = TransactionContext(2, 2);
 
-  t->get_chunk(0).mvcc_columns().tids[0] = 99;
-  t->get_chunk(0).mvcc_columns().begin_cids[0] = 3;
-  t->get_chunk(0).mvcc_columns().end_cids[0] = 3;
+  t->get_chunk(0).mvcc_columns()->tids[0] = 99;
+  t->get_chunk(0).mvcc_columns()->begin_cids[0] = 3;
+  t->get_chunk(0).mvcc_columns()->end_cids[0] = 3;
 
   validate->execute(&context);
 

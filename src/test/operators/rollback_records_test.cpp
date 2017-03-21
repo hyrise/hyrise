@@ -40,12 +40,12 @@ TEST_F(OperatorsRollbackRecordsTest, RollbackDelete) {
   delete_op->execute(t_context.get());
 
   for (int i = 0; i < 3; i++)
-    EXPECT_EQ(gt->get_output()->get_chunk(0).mvcc_columns().tids[i], t_context->transaction_id());
+    EXPECT_EQ(gt->get_output()->get_chunk(0).mvcc_columns()->tids[i], t_context->transaction_id());
 
   auto rollback_op = std::make_shared<RollbackRecords>();
   rollback_op->execute(t_context.get());
 
-  for (int i = 0; i < 3; i++) EXPECT_EQ(gt->get_output()->get_chunk(0).mvcc_columns().tids[i], 0u);
+  for (int i = 0; i < 3; i++) EXPECT_EQ(gt->get_output()->get_chunk(0).mvcc_columns()->tids[i], 0u);
 
   // Get validated table which should not have any deleted rows.
   t_context = TransactionManager::get().new_transaction_context();
