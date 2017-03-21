@@ -2,6 +2,7 @@
 #include <iterator>
 #include <limits>
 #include <memory>
+#include <mutex>
 #include <string>
 #include <utility>
 #include <vector>
@@ -100,21 +101,11 @@ void Chunk::shrink_mvcc_columns() {
   }
 #endif
 
-  // the mvcc columns need to be replaced because
-  // std::atomic<> is neither copyable nor moveable
-  auto new_columns = std::make_unique<MvccColumns>();
+  std::unique_lock<std::shared_mutex> lock(_mvcc_columns->_mutex);
 
-  // since this method should only be called if nobody else
-  // is accessing the chunk, all tids must be 0 and don't need to be copied.
-  new_columns->tids.grow_by(_mvcc_columns->tids.size());
-
+  _mvcc_columns->tids.shrink_to_fit();
   _mvcc_columns->begin_cids.shrink_to_fit();
   _mvcc_columns->end_cids.shrink_to_fit();
-
-  new_columns->begin_cids = std::move(_mvcc_columns->begin_cids);
-  new_columns->end_cids = std::move(_mvcc_columns->end_cids);
-
-  _mvcc_columns = std::move(new_columns);
 }
 
 void Chunk::move_mvcc_columns_from(Chunk& chunk) { _mvcc_columns = std::move(chunk._mvcc_columns); }

@@ -2,6 +2,7 @@
 
 #include <atomic>
 #include <memory>
+#include <shared_mutex>
 #include <string>
 #include <vector>
 
@@ -9,9 +10,11 @@
 
 #include "base_column.hpp"
 #include "base_index.hpp"
+#include "movable_atomic.hpp"
 #include "value_column.hpp"
 
 namespace opossum {
+
 // A chunk is a horizontal partition of a table.
 // It stores the data column by column.
 class Chunk {
@@ -23,9 +26,10 @@ class Chunk {
    * for multiversion concurrency control
    */
   struct MvccColumns {
-    tbb::concurrent_vector<std::atomic<TransactionID>> tids;  ///< 0 unless locked by a transaction
-    tbb::concurrent_vector<CommitID> begin_cids;              ///< commit id when record was added
-    tbb::concurrent_vector<CommitID> end_cids;                ///< commit id when record was deleted
+    tbb::concurrent_vector<movable_atomic<TransactionID>> tids;  ///< 0 unless locked by a transaction
+    tbb::concurrent_vector<CommitID> begin_cids;                 ///< commit id when record was added
+    tbb::concurrent_vector<CommitID> end_cids;                   ///< commit id when record was deleted
+    mutable std::shared_mutex _mutex;
   };
 
  public:
