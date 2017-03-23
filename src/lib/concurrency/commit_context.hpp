@@ -45,10 +45,11 @@ class CommitContext {
   std::shared_ptr<const CommitContext> next() const;
 
   /**
-   * constructs the next context with cid + 1 or
-   * returns already existing next commit context
+   * Tries to set the next context. Returns false if it has already
+   * been set. Throws error if its commit id isn't equal to this context's
+   * commit id + 1.
    */
-  std::shared_ptr<CommitContext> get_or_create_next();
+  bool try_set_next(const std::shared_ptr<CommitContext>& next);
 
  private:
   const CommitID _commit_id;

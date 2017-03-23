@@ -28,15 +28,17 @@ std::shared_ptr<CommitContext> CommitContext::next() { return std::atomic_load(&
 
 std::shared_ptr<const CommitContext> CommitContext::next() const { return std::atomic_load(&_next); }
 
-std::shared_ptr<CommitContext> CommitContext::get_or_create_next() {
-  if (has_next()) return next();
+bool CommitContext::try_set_next(const std::shared_ptr<CommitContext>& next) {
+#ifdef IS_DEBUG
+  if (next->commit_id() != commit_id() + 1u) {
+    throw std::logic_error("Next commit context's commit id needs to be incremented by 1.");
+  }
+#endif
 
-  auto new_next = std::make_shared<CommitContext>(_commit_id + 1);
+  if (has_next()) return false;
 
   auto context_nullptr = std::shared_ptr<CommitContext>();
-  std::atomic_compare_exchange_strong(&_next, &context_nullptr, new_next);
-
-  return std::atomic_load(&_next);
+  return std::atomic_compare_exchange_strong(&_next, &context_nullptr, next);
 }
 
 }  // namespace opossum

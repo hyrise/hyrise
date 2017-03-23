@@ -1,5 +1,6 @@
 #include <limits>
 #include <string>
+#include <vector>
 
 #include "../base_test.hpp"
 #include "gtest/gtest.h"
@@ -97,6 +98,41 @@ TEST_F(StorageTableTest, GetChunkSize) { EXPECT_EQ(t.chunk_size(), 2u); }
 TEST_F(StorageTableTest, ColumnNameTooLong) {
   EXPECT_THROW(t.add_column(std::string(std::numeric_limits<ColumnNameLength>::max() + 1ul, 'A'), "int");
                , std::exception);
+}
+
+TEST_F(StorageTableTest, CompressedChunkHasSameCidColumns) {
+  t.append({4, "Hello,"});
+  t.append({6, "world"});
+
+  auto& chunk = t.get_chunk(0u);
+
+  const auto values = std::vector<CommitID>{1u, 2u};
+
+  auto& mvcc_columns = chunk.mvcc_columns();
+
+  // tids are not copied because they must be 0, since
+  // otherwise someone else would be trying to
+  // simultaneously change the records
+  mvcc_columns.begin_cids[0u] = values[0u];
+  mvcc_columns.begin_cids[1u] = values[1u];
+  mvcc_columns.end_cids[0u] = values[0u];
+  mvcc_columns.end_cids[1u] = values[1u];
+
+  const auto previous_size = chunk.size();
+
+  t.compress_chunk(0u);
+
+  auto& compressed_chunk = t.get_chunk(0u);
+
+  ASSERT_EQ(previous_size, compressed_chunk.size());
+  ASSERT_TRUE(compressed_chunk.has_mvcc_columns());
+
+  const auto& new_mvcc_columns = compressed_chunk.mvcc_columns();
+
+  for (auto i = 0u; i < chunk.size(); ++i) {
+    EXPECT_EQ(new_mvcc_columns.begin_cids[i], values[i]);
+    EXPECT_EQ(new_mvcc_columns.end_cids[i], values[i]);
+  }
 }
 
 }  // namespace opossum

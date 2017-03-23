@@ -1,7 +1,7 @@
 #pragma once
 
-#include <cstdint>
 #include <memory>
+#include <vector>
 
 #include "commit_context.hpp"
 
@@ -9,7 +9,9 @@
 
 namespace opossum {
 
-enum class TransactionPhase { Active, Aborted, Committing, Committed };
+class AbstractReadWriteOperator;
+
+enum class TransactionPhase { Active, RolledBack, Committing, Committed };
 
 /**
  * @brief Representation of a transaction
@@ -47,9 +49,14 @@ class TransactionContext {
    */
   std::shared_ptr<CommitContext> commit_context();
 
+  void register_rw_operator(AbstractReadWriteOperator* op) { _rw_operators.emplace_back(op); }
+
+  std::vector<AbstractReadWriteOperator*> get_rw_operators() const { return _rw_operators; }
+
  private:
   const TransactionID _transaction_id;
   const CommitID _last_commit_id;
+  std::vector<AbstractReadWriteOperator*> _rw_operators;
 
   TransactionPhase _phase;
   std::shared_ptr<CommitContext> _commit_context;
