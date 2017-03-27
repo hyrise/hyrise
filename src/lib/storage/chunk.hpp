@@ -91,8 +91,8 @@ class Chunk {
       const std::vector<std::shared_ptr<BaseColumn>> &columns) const;
 
   template <typename Index>
-  std::shared_ptr<BaseIndex> create_index(std::shared_ptr<BaseColumn> index_column) {
-    auto index = std::make_shared<Index>(std::vector<std::shared_ptr<BaseColumn>>({index_column}));
+  std::shared_ptr<BaseIndex> create_index(const std::vector<std::shared_ptr<BaseColumn>> &index_columns) {
+    auto index = std::make_shared<Index>(index_columns);
     _indices.emplace_back(index);
     return index;
   }

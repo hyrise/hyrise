@@ -12,6 +12,7 @@
 #include "../../lib/operators/get_table.hpp"
 #include "../../lib/operators/index_column_scan.hpp"
 #include "../../lib/operators/print.hpp"
+#include "../../lib/storage/composite_group_key_index.hpp"
 #include "../../lib/storage/group_key_index.hpp"
 #include "../../lib/storage/storage_manager.hpp"
 #include "../../lib/storage/table.hpp"
@@ -32,7 +33,7 @@ class OperatorsIndexColumnScanTest : public BaseTest {
     test_table_dict->add_column("b", "int");
     for (int i = 0; i <= 24; i += 2) test_table_dict->append({i, 100 + i});
     test_table_dict->compress_chunk(0);
-    test_table_dict->get_chunk(0).create_index<DerivedIndex>(test_table_dict->get_chunk(0).get_column(0));
+    test_table_dict->get_chunk(0).create_index<DerivedIndex>({test_table_dict->get_chunk(0).get_column(0)});
     test_table_dict->compress_chunk(1);
     StorageManager::get().add_table("table_dict", std::move(test_table_dict));
 
@@ -46,7 +47,7 @@ class OperatorsIndexColumnScanTest : public BaseTest {
 };
 
 // List of indices to test
-typedef ::testing::Types<GroupKeyIndex /* add further indices */> DerivedIndices;
+typedef ::testing::Types<GroupKeyIndex, CompositeGroupKeyIndex /* add further indices */> DerivedIndices;
 TYPED_TEST_CASE(OperatorsIndexColumnScanTest, DerivedIndices);
 
 TYPED_TEST(OperatorsIndexColumnScanTest, DoubleScan) {

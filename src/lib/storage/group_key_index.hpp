@@ -102,9 +102,9 @@ class GroupKeyIndex : public BaseIndex {
     return _get_postings_iterator_at(value_id);
   };
 
-  Iterator _begin() const final { return _index_postings.cbegin(); }
+  Iterator _cbegin() const final { return _index_postings.cbegin(); }
 
-  Iterator _end() const final { return _index_postings.cend(); }
+  Iterator _cend() const final { return _index_postings.cend(); }
 
   /**
     *
