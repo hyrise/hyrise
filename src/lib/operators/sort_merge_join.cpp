@@ -345,7 +345,7 @@ void SortMergeJoin::SortMergeJoinImpl<T>::value_based_partitioning() {
 
   // Pick from sample values most common split values
   for (uint64_t i = 0; i < _partition_count - 1; ++i) {
-    T value;
+    T value{0};
     uint32_t count = 0;
     for (auto& v : sample_values[i]) {
       if (v.second > count) {
