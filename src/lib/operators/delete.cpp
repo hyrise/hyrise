@@ -53,10 +53,8 @@ void Delete::commit_records(const CommitID cid) {
     for (const auto& row_id : *pos_list) {
       auto& chunk = _table->get_chunk(row_id.chunk_id);
 
-      auto mvcc_columns = chunk.mvcc_columns();
-
-      mvcc_columns->end_cids[row_id.chunk_offset] = cid;
-      mvcc_columns->tids[row_id.chunk_offset] = 0u;
+      chunk.mvcc_columns()->end_cids[row_id.chunk_offset] = cid;
+      // We do not unlock the rows so subsequent transactions properly fail when attempting to update these rows.
     }
   }
 }
@@ -68,10 +66,12 @@ void Delete::rollback_records() {
 
       auto expected = _transaction_id;
 
-      // unlocks all rows locked in on_execute until the operator encountered
-      // a row that had already been locked by another transaction
+      // unlock all rows locked in on_execute
       const auto result = chunk.mvcc_columns()->tids[row_id.chunk_offset].compare_exchange_strong(expected, 0u);
 
+      // If the above operation fails, it means the row is locked by another transaction. This must have been
+      // the reason why the rollback was initiated. Since on_execute stopped at this row, we can stop
+      // unlocking rows here as well.
       if (!result) return;
     }
   }
@@ -82,9 +82,9 @@ const std::string Delete::name() const { return "Delete"; }
 uint8_t Delete::num_in_tables() const { return 1u; }
 
 /**
-* A valid Input needs to be: An existing table with at least one chunk.
-* Those chunks need to contain at least one column and each chunk can only reference one table.
-*/
+ * values_to_delete must be a table with at least one chunk, containing at least one ReferenceColumn
+ * that all reference the table specified by table_name.
+ */
 bool Delete::_execution_input_valid(const TransactionContext* context) const {
   if (context == nullptr) return false;
 
@@ -97,7 +97,7 @@ bool Delete::_execution_input_valid(const TransactionContext* context) const {
   if (values_to_delete->chunk_count() == 0u) return false;
 
   for (auto chunk_id = 0u; chunk_id < values_to_delete->chunk_count(); ++chunk_id) {
-    const auto& chunk = input_table_left()->get_chunk(chunk_id);
+    const auto& chunk = values_to_delete->get_chunk(chunk_id);
 
     if (chunk.col_count() == 0u) return false;
 

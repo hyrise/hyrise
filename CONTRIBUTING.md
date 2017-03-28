@@ -7,21 +7,21 @@ Avoid exception handling. Because Opossum is not a product, we do not have to re
 ## Formatting
 - 2 spaces for indentation
 - 120 columns
-- comments above code
+- Comments above code
 - clang_format (executed with each make) enforces these rules automatically
 
 ## C++ guidelines
-- do not use `new` or `malloc`
-- do not nest namespaces
-- do not import namespaces (`std::`)
+- Do not use `new` or `malloc`
+- Do not nest namespaces
+- Do not import namespaces (`std::`)
 
-- when overriding a `virtual` method, avoid repeating `virtual` and always use `override` or `final`
-- use const (including cbegin() and cend()) whenever possible
-- use [u]int(8|16|32|64)_t instead of `int`, long, uint` etc.
-- include in this order: header for implementation file, c system, c++ system, other
-- use smart pointers over c-style pointers
-- use `IS_DEBUG` macro for non-essential checks
-- be specific: `double a = 3.0;` but `float a = 3.0f;`
+- When overriding a `virtual` method, avoid repeating `virtual` and always use `override` or `final`
+- Use const (including cbegin() and cend()) whenever possible
+- Use [u]int(8|16|32|64)_t instead of `int`, long, uint` etc.
+- Include in this order: header for implementation file, c system, c++ system, other
+- Use smart pointers over c-style pointers
+- Use `IS_DEBUG` macro for non-essential checks
+- Be specific: `double a = 3.0;` but `float a = 3.0f;`
 
 ## Naming
 
@@ -30,6 +30,8 @@ Avoid exception handling. Because Opossum is not a product, we do not have to re
 - Variables: lowercase separated by underscores, e.g., `chunk_size`
 - Functions: lowercase separated by underscores, e.g., `get_num_in_tables()`
 - Private / proctected members / methods: like variables / functions with leading underscore, e.g., `_get_chunks()`
+
+- Choose descriptive names. Avoid `i`, `j`, etc. in loops.
 
 ## Review
 

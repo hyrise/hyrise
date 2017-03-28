@@ -12,17 +12,17 @@ class Insert;
 
 /**
  * Operator that updates a subset of columns of a number of rows and from one table with values supplied in another.
- * The first input table must consist of Reference Columns and specifies which rows and columns of the referenced table
- * should be updated.
+ * The first input table must consist of ReferenceColumns and specifies which rows and columns of the referenced table
+ * should be updated. This operator uses bag semantics, that is, exactly the referenced cells are updated, and not all
+ * rows with similar data.
  * The second input table must have the exact same column layout and number of rows as the first table and contains the
  * data that is used to update the rows specified by the first table.
- * Expects both input tables to only have one chunk.
  *
  * Assumption: The input has been validated before.
  */
 class Update : public AbstractReadWriteOperator {
  public:
-  explicit Update(const std::string& table_name, std::shared_ptr<AbstractOperator> table_to_update,
+  explicit Update(const std::string& table_to_update_name, std::shared_ptr<AbstractOperator> fields_to_update,
                   std::shared_ptr<AbstractOperator> update_values);
 
   ~Update();
@@ -38,7 +38,7 @@ class Update : public AbstractReadWriteOperator {
   bool _execution_input_valid(const TransactionContext* context) const;
 
  protected:
-  const std::string _table_name;
+  const std::string _table_to_update_name;
   std::unique_ptr<Delete> _delete;
   std::unique_ptr<Insert> _insert;
 };

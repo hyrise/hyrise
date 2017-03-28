@@ -14,6 +14,7 @@
 #include "../../lib/operators/get_table.hpp"
 #include "../../lib/operators/index_column_scan.hpp"
 #include "../../lib/operators/print.hpp"
+#include "../../lib/storage/composite_group_key_index.hpp"
 #include "../../lib/storage/group_key_index.hpp"
 #include "../../lib/storage/storage_manager.hpp"
 #include "../../lib/storage/table.hpp"
@@ -40,7 +41,7 @@ class OperatorsIndexColumnScanTest : public BaseTest {
     auto compression = std::make_unique<ChunkCompression>("table_dict", std::vector<ChunkID>{0u, 1u});
     compression->execute();
 
-    test_table_dict->get_chunk(0).create_index<DerivedIndex>(test_table_dict->get_chunk(0).get_column(0));
+    test_table_dict->get_chunk(0).create_index<DerivedIndex>({test_table_dict->get_chunk(0).get_column(0)});
 
     _gt_dict = std::make_shared<GetTable>("table_dict");
 
@@ -52,7 +53,7 @@ class OperatorsIndexColumnScanTest : public BaseTest {
 };
 
 // List of indices to test
-typedef ::testing::Types<GroupKeyIndex /* add further indices */> DerivedIndices;
+typedef ::testing::Types<GroupKeyIndex, CompositeGroupKeyIndex /* add further indices */> DerivedIndices;
 TYPED_TEST_CASE(OperatorsIndexColumnScanTest, DerivedIndices);
 
 TYPED_TEST(OperatorsIndexColumnScanTest, DoubleScan) {

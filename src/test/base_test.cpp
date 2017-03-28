@@ -7,6 +7,7 @@
 #include <string>
 #include <vector>
 
+#include "../lib/concurrency/transaction_manager.hpp"
 #include "../lib/storage/storage_manager.hpp"
 
 namespace opossum {
@@ -155,6 +156,9 @@ std::shared_ptr<Table> BaseTest::load_table(const std::string &file_name, size_t
   return test_table;
 }
 
-BaseTest::~BaseTest() { StorageManager::reset(); }
+BaseTest::~BaseTest() {
+  StorageManager::reset();
+  TransactionManager::reset();
+}
 
 }  // namespace opossum

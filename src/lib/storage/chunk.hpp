@@ -55,21 +55,21 @@ class Chunk {
   // adds a column to the "right" of the chunk
   void add_column(std::shared_ptr<BaseColumn> column);
 
-  // replaces the current column at column_id with the passed column
+  // Atomically replaces the current column at column_id with the passed column
   void set_column(size_t column_id, std::shared_ptr<BaseColumn> column);
 
-  // returns the number of columns
-  size_t col_count() const;
+  // returns the number of columns (cannot exceed ColumnID (uint16_t))
+  uint16_t col_count() const;
 
-  // returns the number of rows
-  size_t size() const;
+  // returns the number of rows (cannot exceed ChunkOffset (uint32_t))
+  uint32_t size() const;
 
   // adds a new row, given as a list of values, to the chunk
   // note this is slow and not thread-safe and should be used for testing purposes only
   void append(std::vector<AllTypeVariant> values);
 
-  // returns the column at a given position
-  std::shared_ptr<BaseColumn> get_column(size_t column_id) const;
+  // Atomically accesses and returns the column at a given position
+  std::shared_ptr<BaseColumn> get_column(ColumnID column_id) const;
 
   bool has_mvcc_columns() const;
 
@@ -100,8 +100,8 @@ class Chunk {
       const std::vector<std::shared_ptr<BaseColumn>> &columns) const;
 
   template <typename Index>
-  std::shared_ptr<BaseIndex> create_index(std::shared_ptr<BaseColumn> index_column) {
-    auto index = std::make_shared<Index>(std::vector<std::shared_ptr<BaseColumn>>({index_column}));
+  std::shared_ptr<BaseIndex> create_index(const std::vector<std::shared_ptr<BaseColumn>> &index_columns) {
+    auto index = std::make_shared<Index>(index_columns);
     _indices.emplace_back(index);
     return index;
   }

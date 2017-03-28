@@ -68,6 +68,7 @@ std::shared_ptr<const Table> Validate::on_execute(TransactionContext *transactio
       referenced_table = ref_col_in->referenced_table();
       for (auto row_id : *ref_col_in->pos_list()) {
         const auto &referenced_chunk = referenced_table->get_chunk(row_id.chunk_id);
+
         auto mvcc_columns = referenced_chunk.mvcc_columns();
         if (is_row_visible(our_tid, our_lcid, row_id.chunk_offset, *mvcc_columns)) {
           pos_list_out->emplace_back(row_id);

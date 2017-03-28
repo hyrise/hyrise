@@ -49,24 +49,25 @@ class TypedColumnProcessor : public AbstractTypedColumnProcessor {
   }
 };
 
-Insert::Insert(const std::string& table_name, const std::shared_ptr<AbstractOperator>& values_to_insert)
-    : AbstractReadWriteOperator(values_to_insert), _table_name(table_name) {}
+Insert::Insert(const std::string& target_table_name, const std::shared_ptr<AbstractOperator>& values_to_insert)
+    : AbstractReadWriteOperator(values_to_insert), _target_table_name(target_table_name) {}
 
 const std::string Insert::name() const { return "Insert"; }
 
 uint8_t Insert::num_in_tables() const { return 1; }
 
 std::shared_ptr<const Table> Insert::on_execute(TransactionContext* context) {
-  _table = StorageManager::get().get_table(_table_name);
+  _target_table = StorageManager::get().get_table(_target_table_name);
 
   // These TypedColumnProcessors kind of retrieve the template parameter of the columns.
   auto typed_column_processors = std::vector<std::unique_ptr<AbstractTypedColumnProcessor>>();
-  for (auto column_id = 0u; column_id < _table->get_chunk(0).col_count(); ++column_id) {
-    typed_column_processors.emplace_back(
-        make_unique_by_column_type<AbstractTypedColumnProcessor, TypedColumnProcessor>(_table->column_type(column_id)));
+  for (auto column_id = 0u; column_id < _target_table->get_chunk(0).col_count(); ++column_id) {
+    typed_column_processors.emplace_back(make_unique_by_column_type<AbstractTypedColumnProcessor, TypedColumnProcessor>(
+        _target_table->column_type(column_id)));
   }
 
-  auto total_rows_to_insert = size_t(0u);
+  auto total_rows_to_insert = 0u;
+
   for (auto i = 0u; i < input_table_left()->chunk_count(); i++) {
     const auto& chunk = input_table_left()->get_chunk(i);
     total_rows_to_insert += chunk.size();
@@ -78,16 +79,16 @@ std::shared_ptr<const Table> Insert::on_execute(TransactionContext* context) {
   auto start_chunk_id = 0u;
   auto total_chunks_inserted = 0u;
   {
-    auto lock = _table->acquire_append_mutex();
+    auto scoped_lock = _target_table->acquire_append_mutex();
 
-    start_chunk_id = _table->chunk_count() - 1;
-    auto& last_chunk = _table->get_chunk(start_chunk_id);
+    start_chunk_id = _target_table->chunk_count() - 1;
+    auto& last_chunk = _target_table->get_chunk(start_chunk_id);
     start_index = last_chunk.size();
 
     auto remaining_rows = total_rows_to_insert;
     while (remaining_rows > 0) {
-      auto& current_chunk = _table->get_chunk(_table->chunk_count() - 1);
-      auto rows_to_insert_this_loop = std::min(_table->chunk_size() - current_chunk.size(), remaining_rows);
+      auto& current_chunk = _target_table->get_chunk(_target_table->chunk_count() - 1);
+      auto rows_to_insert_this_loop = std::min(_target_table->chunk_size() - current_chunk.size(), remaining_rows);
 
       // Resize MVCC vectors.
       current_chunk.grow_mvcc_column_size_by(rows_to_insert_this_loop, Chunk::MAX_COMMIT_ID);
@@ -102,7 +103,7 @@ std::shared_ptr<const Table> Insert::on_execute(TransactionContext* context) {
 
       // Create new chunk if necessary.
       if (remaining_rows > 0) {
-        _table->create_new_chunk();
+        _target_table->create_new_chunk();
         total_chunks_inserted++;
       }
     }
@@ -117,9 +118,9 @@ std::shared_ptr<const Table> Insert::on_execute(TransactionContext* context) {
   for (auto target_chunk_id = start_chunk_id; target_chunk_id <= start_chunk_id + total_chunks_inserted;
        target_chunk_id++) {
     const auto curr_num_rows_to_insert =
-        std::min(_table->get_chunk(target_chunk_id).size() - start_index, total_rows_to_insert - input_offset);
+        std::min(_target_table->get_chunk(target_chunk_id).size() - start_index, total_rows_to_insert - input_offset);
 
-    auto& target_chunk = _table->get_chunk(target_chunk_id);
+    auto& target_chunk = _target_table->get_chunk(target_chunk_id);
 
     auto target_start_index = start_index;
     auto n = curr_num_rows_to_insert;
@@ -145,16 +146,14 @@ std::shared_ptr<const Table> Insert::on_execute(TransactionContext* context) {
       }
     }
 
-    auto target_chunk_mvcc_columns = target_chunk.mvcc_columns();
-
     for (auto i = start_index; i < start_index + curr_num_rows_to_insert; i++) {
       // we do not need to check whether other operators have locked the rows, we have just created them
-      // and they are not visible for other operators
+      // and they are not visible for other operators.
       // the transaction IDs are set here and not during the resize, because
       // tbb::concurrent_vector::grow_to_at_least(n, t)" does not work with atomics, since their copy constructor is
       // deleted.
-      target_chunk_mvcc_columns->tids[i] = context->transaction_id();
-      _inserted_rows.emplace_back(_table->calculate_row_id(target_chunk_id, i));
+      target_chunk.mvcc_columns()->tids[i] = context->transaction_id();
+      _inserted_rows.emplace_back(_target_table->calculate_row_id(target_chunk_id, i));
     }
 
     input_offset += curr_num_rows_to_insert;
@@ -166,7 +165,7 @@ std::shared_ptr<const Table> Insert::on_execute(TransactionContext* context) {
 
 void Insert::commit_records(const CommitID cid) {
   for (auto row_id : _inserted_rows) {
-    auto& chunk = _table->get_chunk(row_id.chunk_id);
+    auto& chunk = _target_table->get_chunk(row_id.chunk_id);
 
     auto mvcc_columns = chunk.mvcc_columns();
     mvcc_columns->begin_cids[row_id.chunk_offset] = cid;
@@ -176,7 +175,7 @@ void Insert::commit_records(const CommitID cid) {
 
 void Insert::rollback_records() {
   for (auto row_id : _inserted_rows) {
-    auto& chunk = _table->get_chunk(row_id.chunk_id);
+    auto& chunk = _target_table->get_chunk(row_id.chunk_id);
     chunk.mvcc_columns()->tids[row_id.chunk_offset] = 0u;
   }
 }

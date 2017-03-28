@@ -1,6 +1,7 @@
 #pragma once
 
 #include <algorithm>
+#include <exception>
 #include <memory>
 #include <vector>
 
@@ -69,44 +70,58 @@ class BaseIndex {
   /**
    * Searches for the first entry within the chunk that is equal or greater than the given values.
    * The number of given values has to be less or equal to number of indexed columns. Additionally
-   * the order of values and columns has to match. If less values are provided the missing values
-   * are filled with values less or equal to the smallest value of the column.
+   * the order of values and columns has to match. If less values are provided the search is performed
+   * as if all entries of the table are truncated to the columns, that got reference values.
+   *
    * Calls _lower_bound() of the most derived class.
    * See also upper_bound()
    * @param values are used to query the index.
    * @return An Iterator on the position of the first element equal or greater then provided values.
    */
-  Iterator lower_bound(const std::vector<AllTypeVariant> &values) const { return _lower_bound(values); }
+  Iterator lower_bound(const std::vector<AllTypeVariant> &values) const {
+    if (_index_columns.size() < values.size()) {
+      throw std::runtime_error(
+          "BaseIndex: The amount of queried columns has to be less or equal to the number of indexed columns.");
+    }
+    return _lower_bound(values);
+  }
 
   /**
    * Searches for the first entry within the chunk that is greater than the given values.
    * The number of given values has to be less or equal to number of indexed columns. Additionally
-   * the order of values and columns has to match. If less values are provided the missing values
-   * are filled with values greater or equal to the largest value of the column.
+   * the order of values and columns has to match. If less values are provided the search is performed
+   * as if all entries of the table are truncated to the columns, that got reference values.
+   *
    * Calls _upper_bound() of the most derived class.
    * See also lower_bound()
    * @param values are used to query the index.
    * @return An Iterator on the position of the first element greater then provided values.
    */
-  Iterator upper_bound(const std::vector<AllTypeVariant> &values) const { return _upper_bound(values); }
+  Iterator upper_bound(const std::vector<AllTypeVariant> &values) const {
+    if (_index_columns.size() < values.size()) {
+      throw std::runtime_error(
+          "BaseIndex: The amount of queried columns has to be less or equal to the number of indexed columns.");
+    }
+    return _upper_bound(values);
+  }
 
   /**
    * Returns an Iterator to the position of the smallest indexed element. This is useful for range queries
    * with no specified begin.
-   * Iterating from begin() to end() will result in a position list with ordered values.
-   * Calls _begin() of the most derived class.
+   * Iterating from cbegin() to cend() will result in a position list with ordered values.
+   * Calls _cbegin() of the most derived class.
    * @return an Iterator on the position of first element of the Index.
    */
-  Iterator begin() const { return _begin(); }
+  Iterator cbegin() const { return _cbegin(); }
 
   /**
    * Returns an Iterator past the position of the greatest indexed element. This is useful for open
    * end range queries.
-   * Iterating from begin() to end() will result in a position list with ordered values.
-   * Calls _end() of the most derived class.
+   * Iterating from cbegin() to cend() will result in a position list with ordered values.
+   * Calls _cend() of the most derived class.
    * @return an Iterator on the end of the index (one after the last element).
    */
-  Iterator end() const { return _end(); }
+  Iterator cend() const { return _cend(); }
 
  protected:
   /**
@@ -115,8 +130,8 @@ class BaseIndex {
    */
   virtual Iterator _lower_bound(const std::vector<AllTypeVariant> &) const = 0;
   virtual Iterator _upper_bound(const std::vector<AllTypeVariant> &) const = 0;
-  virtual Iterator _begin() const = 0;
-  virtual Iterator _end() const = 0;
+  virtual Iterator _cbegin() const = 0;
+  virtual Iterator _cend() const = 0;
 
   std::vector<std::shared_ptr<BaseColumn>> _index_columns;
 };
