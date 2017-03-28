@@ -27,14 +27,14 @@ class DictionaryColumn : public UntypedDictionaryColumn {
     if (auto val_col = std::dynamic_pointer_cast<ValueColumn<T>>(base_column)) {
       // See: https://goo.gl/MCM5rr
       // Create dictionary (enforce unqiueness and sorting)
-      _dictionary = val_col->values();
+      const auto& values = val_col->values();
+      _dictionary = std::vector<T>{values.cbegin(), values.cend()};
 
       std::sort(_dictionary.begin(), _dictionary.end());
       _dictionary.erase(std::unique(_dictionary.begin(), _dictionary.end()), _dictionary.end());
       _dictionary.shrink_to_fit();
 
-      _attribute_vector = _create_fitted_attribute_vector(unique_values_count(), val_col->values().size());
-      auto& values = val_col->values();
+      _attribute_vector = _create_fitted_attribute_vector(unique_values_count(), values.size());
 
       for (ChunkOffset offset = 0; offset < values.size(); ++offset) {
         ValueID value_id = std::distance(_dictionary.cbegin(),

@@ -15,7 +15,7 @@
 namespace opossum {
 
 Table::Table(const size_t chunk_size, const bool auto_compress)
-    : _chunk_size(chunk_size), _auto_compress(auto_compress) {
+    : _chunk_size(chunk_size), _auto_compress(auto_compress), _append_mutex(std::make_unique<std::mutex>()) {
   _chunks.push_back(Chunk{true});
 }
 
@@ -37,20 +37,23 @@ void Table::append(std::vector<AllTypeVariant> values) {
   if (_chunk_size > 0 && _chunks.back().size() == _chunk_size) {
     if (_auto_compress) compress_chunk(chunk_count() - 1);
 
-    // creates chunk with mvcc columns
-    Chunk newChunk{true};
-    for (auto &&type : _column_types) {
-      newChunk.add_column(make_shared_by_column_type<BaseColumn, ValueColumn>(type));
-    }
-    _chunks.push_back(std::move(newChunk));
+    create_new_chunk();
   }
 
   _chunks.back().append(values);
 }
 
-size_t Table::col_count() const { return _column_types.size(); }
+void Table::create_new_chunk() {
+  Chunk newChunk{true};
+  for (auto &&type : _column_types) {
+    newChunk.add_column(make_shared_by_column_type<BaseColumn, ValueColumn>(type));
+  }
+  _chunks.push_back(std::move(newChunk));
+}
 
-size_t Table::row_count() const {
+uint16_t Table::col_count() const { return _column_types.size(); }
+
+uint32_t Table::row_count() const {
   size_t ret = 0;
   for (auto &&chunk : _chunks) {
     ret += chunk.size();
@@ -58,10 +61,10 @@ size_t Table::row_count() const {
   return ret;
 }
 
-size_t Table::chunk_count() const { return _chunks.size(); }
+uint32_t Table::chunk_count() const { return _chunks.size(); }
 
-size_t Table::column_id_by_name(const std::string &column_name) const {
-  for (size_t column_id = 0; column_id < col_count(); ++column_id) {
+ColumnID Table::column_id_by_name(const std::string &column_name) const {
+  for (ColumnID column_id = 0; column_id < col_count(); ++column_id) {
     // TODO(Anyone): make more efficient
     if (_column_names[column_id] == column_name) {
       return column_id;
@@ -71,21 +74,24 @@ size_t Table::column_id_by_name(const std::string &column_name) const {
 }
 
 void Table::compress_chunk(ChunkID chunk_id) {
-  Chunk newChunk;
+  auto &old_chunk = _chunks.at(chunk_id);
+  Chunk new_chunk{true};
   for (size_t column_id = 0; column_id < col_count(); ++column_id) {
-    auto dict_col = make_shared_by_column_type<BaseColumn, DictionaryColumn>(
-        column_type(column_id), _chunks.at(chunk_id).get_column(column_id));
-    newChunk.add_column(std::move(dict_col));
+    auto dict_col = make_shared_by_column_type<BaseColumn, DictionaryColumn>(column_type(column_id),
+                                                                             old_chunk.get_column(column_id));
+    new_chunk.add_column(std::move(dict_col));
   }
 
-  _chunks[chunk_id] = std::move(newChunk);
+  new_chunk.move_mvcc_columns_from(old_chunk);
+  new_chunk.shrink_mvcc_columns();
+  _chunks[chunk_id] = std::move(new_chunk);
 }
 
-size_t Table::chunk_size() const { return _chunk_size; }
+uint32_t Table::chunk_size() const { return _chunk_size; }
 
-const std::string &Table::column_name(size_t column_id) const { return _column_names[column_id]; }
+const std::string &Table::column_name(ColumnID column_id) const { return _column_names[column_id]; }
 
-const std::string &Table::column_type(size_t column_id) const { return _column_types[column_id]; }
+const std::string &Table::column_type(ColumnID column_id) const { return _column_types[column_id]; }
 
 Chunk &Table::get_chunk(ChunkID chunk_id) { return _chunks[chunk_id]; }
 const Chunk &Table::get_chunk(ChunkID chunk_id) const { return _chunks[chunk_id]; }
@@ -101,5 +107,7 @@ void Table::add_chunk(Chunk chunk) {
   }
   _chunks.emplace_back(std::move(chunk));
 }
+
+std::unique_lock<std::mutex> Table::acquire_append_mutex() { return std::unique_lock<std::mutex>(*_append_mutex); }
 
 }  // namespace opossum

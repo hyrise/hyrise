@@ -46,6 +46,8 @@ using NodeID = uint32_t;
 using TaskID = uint32_t;
 using CpuID = uint32_t;
 
+// When changing these to 64-bit types, reading and writing to them might not be atomic anymore.
+// Among others, the validate operator might break when another operator is simultaneously writing begin or end CIDs.
 using CommitID = uint32_t;
 using TransactionID = uint32_t;
 

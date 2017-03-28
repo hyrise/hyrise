@@ -38,7 +38,7 @@ class AbstractOperator {
   AbstractOperator(AbstractOperator &&) = default;
   AbstractOperator &operator=(AbstractOperator &&) = default;
 
-  void execute(const TransactionContext *context = nullptr);
+  virtual void execute(TransactionContext *context = nullptr);
 
   // returns the result of the operator
   std::shared_ptr<const Table> get_output() const;
@@ -55,7 +55,7 @@ class AbstractOperator {
   // abstract method to actually execute the operator
   // execute and get_output are split into two methods to allow for easier
   // asynchronous execution
-  virtual std::shared_ptr<const Table> on_execute(const TransactionContext *context) = 0;
+  virtual std::shared_ptr<const Table> on_execute(TransactionContext *context) = 0;
 
   std::shared_ptr<const Table> input_table_left() const;
   std::shared_ptr<const Table> input_table_right() const;

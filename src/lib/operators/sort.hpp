@@ -90,7 +90,8 @@ class Sort::SortImpl : public AbstractReadOnlyOperatorImpl {
         for (size_t chunk = 0; chunk < val_table->chunk_count(); chunk++) {
           if (auto val_col =
                   std::dynamic_pointer_cast<ValueColumn<T>>(val_table->get_chunk(chunk).get_column(sort_column_id))) {
-            reference_values.emplace_back(val_col->values());
+            const auto &values = val_col->values();
+            reference_values.emplace_back(values.cbegin(), values.cend());
           } else {
             throw std::logic_error("Referenced table must only contain value columns");
           }

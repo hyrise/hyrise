@@ -375,29 +375,29 @@ class IndexColumnScan::IndexColumnScanImpl : public AbstractReadOnlyOperatorImpl
         break;
       case OpNotEquals:
         // first, get all values less than the search value
-        lower_bound = index->begin();
+        lower_bound = index->cbegin();
         upper_bound = index->lower_bound({search_value});
         result.insert(result.end(), lower_bound, upper_bound);
 
         // set range for second half to all values greater than the search value
         lower_bound = index->upper_bound({search_value});
-        upper_bound = index->end();
+        upper_bound = index->cend();
         break;
       case OpLessThan:
-        lower_bound = index->begin();
+        lower_bound = index->cbegin();
         upper_bound = index->lower_bound({search_value});
         break;
       case OpGreaterThanEquals:
         lower_bound = index->lower_bound({search_value});
-        upper_bound = index->end();
+        upper_bound = index->cend();
         break;
       case OpLessThanEquals:
-        lower_bound = index->begin();
+        lower_bound = index->cbegin();
         upper_bound = index->upper_bound({search_value});
         break;
       case OpGreaterThan:
         lower_bound = index->upper_bound({search_value});
-        upper_bound = index->end();
+        upper_bound = index->cend();
         break;
       case OpBetween:
         lower_bound = index->lower_bound({search_value});
