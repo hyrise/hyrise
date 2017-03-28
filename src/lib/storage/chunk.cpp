@@ -101,14 +101,12 @@ void Chunk::shrink_mvcc_columns() {
   }
 #endif
 
-  std::unique_lock<std::shared_mutex> lock(_mvcc_columns->_mutex);
+  std::unique_lock<std::shared_mutex> lock{_mvcc_columns->_mutex};
 
   _mvcc_columns->tids.shrink_to_fit();
   _mvcc_columns->begin_cids.shrink_to_fit();
   _mvcc_columns->end_cids.shrink_to_fit();
 }
-
-void Chunk::move_mvcc_columns_from(Chunk& chunk) { _mvcc_columns = std::move(chunk._mvcc_columns); }
 
 std::vector<std::shared_ptr<BaseIndex>> Chunk::get_indices_for(
     const std::vector<std::shared_ptr<BaseColumn>>& columns) const {

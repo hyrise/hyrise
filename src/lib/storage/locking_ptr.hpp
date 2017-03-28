@@ -4,6 +4,10 @@
 
 namespace opossum {
 
+/**
+ * Smart pointer that locks a given mutex on construction and
+ * unlocks it on desctruction mimicking the RAII idiom
+ */
 template <typename Type, typename LockType>
 class LockingPtr {
  public:
@@ -31,5 +35,8 @@ class LockingPtr {
 
 template <typename Type>
 using SharedLockLockingPtr = LockingPtr<Type, std::shared_lock<std::shared_mutex>>;
+
+template <typename Type>
+using UniqueLockLockingPtr = LockingPtr<Type, std::unique_lock<std::shared_mutex>>;
 
 }  // namespace

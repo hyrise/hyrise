@@ -27,10 +27,15 @@ class Chunk {
    * for multiversion concurrency control
    */
   struct MvccColumns {
+    friend class Chunk;
+
+   public:
     tbb::concurrent_vector<movable_atomic<TransactionID>> tids;  ///< 0 unless locked by a transaction
     tbb::concurrent_vector<CommitID> begin_cids;                 ///< commit id when record was added
     tbb::concurrent_vector<CommitID> end_cids;                   ///< commit id when record was deleted
-    mutable std::shared_mutex _mutex;
+
+   private:
+    std::shared_mutex _mutex;
   };
 
  public:
@@ -69,6 +74,9 @@ class Chunk {
   bool has_mvcc_columns() const;
 
   /**
+   * The locking pointer locks the columns non-exclusively
+   * and unlocks them on destruction
+   *
    * @return a locking ptr to the mvcc columns
    */
   SharedLockLockingPtr<MvccColumns> mvcc_columns();
@@ -77,7 +85,7 @@ class Chunk {
   /**
    * Compacts the internal represantion of
    * the mvcc columns in order to reduce fragmentation
-   * Note: not thread-safe
+   * Locks mvcc columns exclusively in order to do so
    */
   void shrink_mvcc_columns();
 
@@ -87,13 +95,6 @@ class Chunk {
    * @param begin_cid value all new begin_cids will be set to
    */
   void grow_mvcc_column_size_by(size_t delta, CommitID begin_cid);
-
-  /**
-   * Moves the mvcc columns from chunk to this instance
-   * Used to transfer the mvcc columns to the new chunk after chunk compression
-   * Note: not thread-safe
-   */
-  void move_mvcc_columns_from(Chunk &chunk);
 
   std::vector<std::shared_ptr<BaseIndex>> get_indices_for(
       const std::vector<std::shared_ptr<BaseColumn>> &columns) const;
