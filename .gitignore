@@ -4,6 +4,7 @@ build/*
 *.make
 Makefile*
 coverage
+.vscode
 benchmark.json
 *.sublime-*
 .idea

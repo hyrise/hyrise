@@ -71,6 +71,28 @@ class ValueColumn : public BaseColumn {
     row_string += buffer.str();
   }
 
+  const std::shared_ptr<std::vector<std::pair<RowID, T>>> materialize(
+      ChunkID chunk_id, std::shared_ptr<std::vector<ChunkOffset>> offsets = nullptr) {
+    auto materialized_vector = std::make_shared<std::vector<std::pair<RowID, T>>>();
+
+    // we may want to sort offsets first?
+    if (offsets) {
+      materialized_vector->reserve(offsets->size());
+      for (auto& offset : *offsets) {
+        auto materialized_row = std::make_pair(RowID{chunk_id, offset}, _values[offset]);
+        materialized_vector->push_back(materialized_row);
+      }
+    } else {
+      materialized_vector->reserve(_values.size());
+      for (ChunkOffset offset = 0; offset < _values.size(); offset++) {
+        auto materialized_row = std::make_pair(RowID{chunk_id, offset}, _values[offset]);
+        materialized_vector->push_back(materialized_row);
+      }
+    }
+
+    return materialized_vector;
+  }
+
  protected:
   tbb::concurrent_vector<T> _values;
 };
