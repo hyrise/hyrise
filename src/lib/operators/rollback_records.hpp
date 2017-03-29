@@ -21,6 +21,6 @@ class RollbackRecords : public AbstractReadWriteOperator {
   /**
    * Calls rollback_records on all read-write operators.
    */
-  std::shared_ptr<const Table> on_execute(TransactionContext* context) override;
+  std::shared_ptr<const Table> on_execute(std::shared_ptr<TransactionContext> context) override;
 };
 }  // namespace opossum

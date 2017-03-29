@@ -1,5 +1,7 @@
 #pragma once
 
+#include <atomic>
+#include <condition_variable>
 #include <memory>
 #include <vector>
 
@@ -11,7 +13,7 @@ namespace opossum {
 
 class AbstractReadWriteOperator;
 
-enum class TransactionPhase { Active, RolledBack, Committing, Committed };
+enum class TransactionPhase { Active, Failed, RolledBack, Committing, Committed };
 
 /**
  * @brief Representation of a transaction
@@ -53,12 +55,25 @@ class TransactionContext {
 
   std::vector<AbstractReadWriteOperator*> get_rw_operators() const { return _rw_operators; }
 
+  /**
+   * Update the counter of active operators
+   */
+  void on_operator_started();
+  void on_operator_finished();
+
+  void wait_for_active_operators_to_finish() const;
+
  private:
   const TransactionID _transaction_id;
   const CommitID _last_commit_id;
   std::vector<AbstractReadWriteOperator*> _rw_operators;
 
-  TransactionPhase _phase;
+  std::atomic<TransactionPhase> _phase;
   std::shared_ptr<CommitContext> _commit_context;
+
+  std::atomic_size_t _num_active_operators;
+
+  mutable std::condition_variable _active_operators_cv;
+  mutable std::mutex _active_operators_mutex;
 };
 }  // namespace opossum

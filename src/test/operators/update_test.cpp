@@ -30,31 +30,37 @@ void OperatorsUpdateTest::helper(std::shared_ptr<GetTable> table_to_update, std:
 
   // Make input left actually referenced. Projection does NOT generate ReferenceColumns.
   auto ref_table = std::make_shared<TableScan>(table_to_update, "a", ">", 0);
-  ref_table->execute(t_context.get());
+  ref_table->set_transaction_context(t_context);
+  ref_table->execute();
 
   std::vector<std::string> column_filter_left = {"a"};
   std::vector<std::string> column_filter_right = {"b"};
 
   auto projection1 = std::make_shared<Projection>(ref_table, column_filter_left);
   auto projection2 = std::make_shared<Projection>(update_values, column_filter_right);
-  projection1->execute(t_context.get());
-  projection2->execute(t_context.get());
+  projection1->set_transaction_context(t_context);
+  projection2->set_transaction_context(t_context);
+  projection1->execute();
+  projection2->execute();
 
   auto update = std::make_shared<Update>("updateTestTable", projection1, projection2);
-  update->execute(t_context.get());
+  update->set_transaction_context(t_context);
+  update->execute();
 
   // MVCC commit.
   TransactionManager::get().prepare_commit(*t_context);
 
   auto commit_op = std::make_shared<CommitRecords>();
-  commit_op->execute(t_context.get());
+  commit_op->set_transaction_context(t_context);
+  commit_op->execute();
 
   TransactionManager::get().commit(*t_context);
 
   // Get validated table which should have the same row twice.
   t_context = TransactionManager::get().new_transaction_context();
   auto validate = std::make_shared<Validate>(table_to_update);
-  validate->execute(t_context.get());
+  validate->set_transaction_context(t_context);
+  validate->execute();
 
   EXPECT_TABLE_EQ(validate->get_output(), expected_result);
 }

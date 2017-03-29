@@ -27,13 +27,13 @@ class Delete : public AbstractReadWriteOperator {
   uint8_t num_in_tables() const override;
 
  protected:
-  std::shared_ptr<const Table> on_execute(TransactionContext* context) override;
+  std::shared_ptr<const Table> on_execute(std::shared_ptr<TransactionContext> context) override;
 
  private:
   /**
    * Validates the context and the input table
    */
-  bool _execution_input_valid(const TransactionContext* context) const;
+  bool _execution_input_valid(const std::shared_ptr<TransactionContext> context) const;
 
  private:
   const std::string _table_name;

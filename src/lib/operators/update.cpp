@@ -24,7 +24,7 @@ const std::string Update::name() const { return "Update"; }
 
 uint8_t Update::num_in_tables() const { return 1; }
 
-std::shared_ptr<const Table> Update::on_execute(TransactionContext* context) {
+std::shared_ptr<const Table> Update::on_execute(std::shared_ptr<TransactionContext> context) {
 #ifdef IS_DEBUG
   if (!_execution_input_valid(context)) {
     throw std::runtime_error("Input to Update isn't valid");
@@ -85,8 +85,9 @@ std::shared_ptr<const Table> Update::on_execute(TransactionContext* context) {
 
   // 3. call delete on old data.
   _delete = std::make_unique<Delete>(_table_to_update_name, _input_left);
+  _delete->set_transaction_context(context);
 
-  _delete->execute(context);
+  _delete->execute();
 
   _execute_failed |= _delete->execute_failed();
   if (_execute_failed) return nullptr;
@@ -95,8 +96,9 @@ std::shared_ptr<const Table> Update::on_execute(TransactionContext* context) {
   auto helper_op = std::make_shared<TableWrapper>(insert_table);
   helper_op->execute();
   _insert = std::make_unique<Insert>(_table_to_update_name, helper_op);
+  _insert->set_transaction_context(context);
 
-  _insert->execute(context);
+  _insert->execute();
 
   return nullptr;
 }
@@ -116,7 +118,7 @@ void Update::rollback_records() {
 * that all reference the table specified by table_to_update_name. The column count and types in input_table_left
 * must match the count and types in input_table_right.
 */
-bool Update::_execution_input_valid(const TransactionContext* context) const {
+bool Update::_execution_input_valid(const std::shared_ptr<TransactionContext> context) const {
   if (context == nullptr) return false;
 
   if (input_table_left()->col_count() != input_table_right()->col_count()) return false;

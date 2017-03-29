@@ -55,27 +55,30 @@ void OperatorsValidateTest::set_record_invisible_for(Table& table, RowID row, Co
 }
 
 TEST_F(OperatorsValidateTest, SimpleValidate) {
-  auto context = TransactionContext(1u, 3u);
+  auto context = std::make_shared<TransactionContext>(1u, 3u);
 
   std::shared_ptr<Table> expected_result = load_table("src/test/tables/validate_output_validated.tbl", 2u);
 
   auto validate = std::make_shared<Validate>(_gt);
-  validate->execute(&context);
+  validate->set_transaction_context(context);
+  validate->execute();
 
   EXPECT_TABLE_EQ(validate->get_output(), expected_result);
 }
 
 TEST_F(OperatorsValidateTest, ProjectedValidate) {
-  auto context = TransactionContext(1u, 3u);
+  auto context = std::make_shared<TransactionContext>(1u, 3u);
 
   std::shared_ptr<Table> expected_result = load_table("src/test/tables/validate_output_validated_projected.tbl", 2u);
 
   std::vector<std::string> column_filter = {"c", "a"};
   auto projection = std::make_shared<Projection>(_gt, column_filter);
-  projection->execute(&context);
+  projection->set_transaction_context(context);
+  projection->execute();
 
   auto validate = std::make_shared<Validate>(projection);
-  validate->execute(&context);
+  validate->set_transaction_context(context);
+  validate->execute();
 
   EXPECT_TABLE_EQ(validate->get_output(), expected_result);
 }

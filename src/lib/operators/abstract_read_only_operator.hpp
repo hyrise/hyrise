@@ -18,7 +18,9 @@ class AbstractReadOnlyOperator : public AbstractOperator {
       : AbstractOperator(left, right) {}
 
  protected:
-  std::shared_ptr<const Table> on_execute(TransactionContext* /* context */) override { return on_execute(); }
+  std::shared_ptr<const Table> on_execute(std::shared_ptr<TransactionContext> /*context*/) override {
+    return on_execute();
+  }
 
   virtual std::shared_ptr<const Table> on_execute() = 0;
 

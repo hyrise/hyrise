@@ -44,104 +44,112 @@ class OperatorsValidateVisibilityTest : public BaseTest {
 
 // yes, yes, yes
 TEST_F(OperatorsValidateVisibilityTest, Impossible) {
-  auto context = TransactionContext(2, 2);
+  auto context = std::make_shared<TransactionContext>(2, 2);
 
   t->get_chunk(0).mvcc_columns().tids[0] = 2;
   t->get_chunk(0).mvcc_columns().begin_cids[0] = 2;
   t->get_chunk(0).mvcc_columns().end_cids[0] = 2;
 
-  validate->execute(&context);
+  validate->set_transaction_context(context);
+  validate->execute();
 
   EXPECT_EQ(validate->get_output()->row_count(), 0u);
 }
 
 // no, yes, yes
 TEST_F(OperatorsValidateVisibilityTest, PastDelete) {
-  auto context = TransactionContext(2, 2);
+  auto context = std::make_shared<TransactionContext>(2, 2);
 
   t->get_chunk(0).mvcc_columns().tids[0] = 42;
   t->get_chunk(0).mvcc_columns().begin_cids[0] = 2;
   t->get_chunk(0).mvcc_columns().end_cids[0] = 2;
 
-  validate->execute(&context);
+  validate->set_transaction_context(context);
+  validate->execute();
 
   EXPECT_EQ(validate->get_output()->row_count(), 0u);
 }
 
 // yes, no, yes
 TEST_F(OperatorsValidateVisibilityTest, Impossible2) {
-  auto context = TransactionContext(2, 2);
+  auto context = std::make_shared<TransactionContext>(2, 2);
 
   t->get_chunk(0).mvcc_columns().tids[0] = 2;
   t->get_chunk(0).mvcc_columns().begin_cids[0] = 4;
   t->get_chunk(0).mvcc_columns().end_cids[0] = 1;
 
-  validate->execute(&context);
+  validate->set_transaction_context(context);
+  validate->execute();
 
   EXPECT_EQ(validate->get_output()->row_count(), 0u);
 }
 
 // yes, yes, no
 TEST_F(OperatorsValidateVisibilityTest, OwnDeleteUncommitted) {
-  auto context = TransactionContext(2, 2);
+  auto context = std::make_shared<TransactionContext>(2, 2);
 
   t->get_chunk(0).mvcc_columns().tids[0] = 2;
   t->get_chunk(0).mvcc_columns().begin_cids[0] = 1;
   t->get_chunk(0).mvcc_columns().end_cids[0] = 6;
 
-  validate->execute(&context);
+  validate->set_transaction_context(context);
+  validate->execute();
 
   EXPECT_EQ(validate->get_output()->row_count(), 0u);
 }
 
 // no, no, yes
 TEST_F(OperatorsValidateVisibilityTest, Impossible3) {
-  auto context = TransactionContext(2, 2);
+  auto context = std::make_shared<TransactionContext>(2, 2);
 
   t->get_chunk(0).mvcc_columns().tids[0] = 50;
   t->get_chunk(0).mvcc_columns().begin_cids[0] = 3;
   t->get_chunk(0).mvcc_columns().end_cids[0] = 1;
 
-  validate->execute(&context);
+  validate->set_transaction_context(context);
+  validate->execute();
 
   EXPECT_EQ(validate->get_output()->row_count(), 0u);
 }
 
 // yes, no, no
 TEST_F(OperatorsValidateVisibilityTest, OwnInsert) {
-  auto context = TransactionContext(2, 2);
+  auto context = std::make_shared<TransactionContext>(2, 2);
 
   t->get_chunk(0).mvcc_columns().tids[0] = 2;
   t->get_chunk(0).mvcc_columns().begin_cids[0] = 3;
   t->get_chunk(0).mvcc_columns().end_cids[0] = 3;
 
-  validate->execute(&context);
+  validate->set_transaction_context(context);
+  validate->execute();
 
   EXPECT_EQ(validate->get_output()->row_count(), 1u);
 }
 
 // no, yes, no
 TEST_F(OperatorsValidateVisibilityTest, PastInsertOrFutureDelete) {
-  auto context = TransactionContext(2, 2);
+  auto context = std::make_shared<TransactionContext>(2, 2);
 
   t->get_chunk(0).mvcc_columns().tids[0] = 99;
   t->get_chunk(0).mvcc_columns().begin_cids[0] = 2;
   t->get_chunk(0).mvcc_columns().end_cids[0] = 3;
 
-  validate->execute(&context);
+  validate->set_transaction_context(context);
+  validate->execute();
 
   EXPECT_EQ(validate->get_output()->row_count(), 1u);
 }
 
 // no, no, no
 TEST_F(OperatorsValidateVisibilityTest, UncommittedInsertOrFutureInsert) {
-  auto context = TransactionContext(2, 2);
+  auto context = std::make_shared<TransactionContext>(2, 2);
 
   t->get_chunk(0).mvcc_columns().tids[0] = 99;
   t->get_chunk(0).mvcc_columns().begin_cids[0] = 3;
   t->get_chunk(0).mvcc_columns().end_cids[0] = 3;
 
-  validate->execute(&context);
+  validate->set_transaction_context(context);
+  validate->execute();
 
   EXPECT_EQ(validate->get_output()->row_count(), 0u);
 }

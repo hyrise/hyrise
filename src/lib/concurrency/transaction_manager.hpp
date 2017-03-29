@@ -58,7 +58,7 @@ class TransactionManager {
   /**
    * Creates a new transaction context
    */
-  std::unique_ptr<TransactionContext> new_transaction_context();
+  std::shared_ptr<TransactionContext> new_transaction_context();
 
   /**
    * @defgroup Lifetime management of transactions
@@ -69,6 +69,11 @@ class TransactionManager {
    * Sets transaction phase to "rolled back"
    */
   void rollback(TransactionContext &context);
+
+  /**
+   * Sets transaction phase to "failed"
+   */
+  void fail(TransactionContext &context);
 
   /**
    * Creates new commit context and assigns commit id
