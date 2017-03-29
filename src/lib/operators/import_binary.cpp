@@ -116,8 +116,8 @@ std::shared_ptr<BaseColumn> ImportBinary::_import_column(std::ifstream& file, Ch
   std::shared_ptr<BaseColumn> result;
   hana::for_each(column_types, [&](auto x) {
     if (std::string(hana::first(x)) == data_type) {
-      using column_t = typename std::remove_reference<decltype(hana::second(x))>::type;
-      result = _import_column<column_t>(file, row_count);
+      using column_type = typename decltype(+hana::second(x))::type;
+      result = _import_column<column_type>(file, row_count);
     }
   });
   if (IS_DEBUG && !result) throw std::runtime_error("unknown type " + data_type);
