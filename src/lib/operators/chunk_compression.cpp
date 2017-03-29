@@ -77,7 +77,7 @@ std::shared_ptr<BaseColumn> ChunkCompression::compress_column(const std::string&
   return compressor->compress_column(column);
 }
 
-std::shared_ptr<const Table> ChunkCompression::on_execute(TransactionContext* context) {
+std::shared_ptr<const Table> ChunkCompression::on_execute(TransactionContext* /* context */) {
   auto table = StorageManager::get().get_table(_table_name);
 
   if (!table) {
