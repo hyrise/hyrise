@@ -107,7 +107,7 @@ TEST_F(OperatorsAggregateTest, NumInputTables) {
   EXPECT_EQ(aggregate->num_in_tables(), 1);
 }
 
-TEST_F(OperatorsAggregateTest, DISABLED_NumOutputTables) {
+TEST_F(OperatorsAggregateTest, NumOutputTables) {
   auto aggregate = std::make_shared<Aggregate>(
       _gt_1_1, std::vector<std::pair<std::string, AggregateFunction>>{std::make_pair(std::string("b"), Max)},
       std::vector<std::string>{std::string("a")});
@@ -161,7 +161,7 @@ TEST_F(OperatorsAggregateTest, StringSingleAggregateMin) {
                     "src/test/tables/aggregateoperator/groupby_string_1gb_1agg/min.tbl", 1);
 }
 
-TEST_F(OperatorsAggregateTest, DISABLED_StringSingleAggregateSum) {
+TEST_F(OperatorsAggregateTest, StringSingleAggregateSum) {
   this->test_output(_gt_1_1_string, {std::make_pair(std::string("b"), Sum)}, {std::string("a")},
                     "src/test/tables/aggregateoperator/groupby_string_1gb_1agg/sum.tbl", 1);
 }
