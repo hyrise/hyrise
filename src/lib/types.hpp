@@ -4,8 +4,15 @@
 #include <boost/hana/for_each.hpp>
 #include <boost/hana/integral_constant.hpp>
 #include <boost/hana/map.hpp>
+#include <boost/hana/not_equal.hpp>
 #include <boost/hana/pair.hpp>
+#include <boost/hana/second.hpp>
+#include <boost/hana/size.hpp>
+#include <boost/hana/take_while.hpp>
+#include <boost/hana/transform.hpp>
 #include <boost/hana/tuple.hpp>
+#include <boost/hana/type.hpp>
+#include <boost/hana/zip.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/variant.hpp>
 
@@ -74,20 +81,28 @@ enum class SchedulePriority {
   High = 0     // Schedule task at the beginning of the queue
 };
 
-// This holds all possible data types. The left side of the pairs are the names, the right side are prototypes
-// ("examples").
-// These examples are later used with decltype() in the template magic below.
-static auto column_types = hana::make_tuple(
-    hana::make_pair("int", static_cast<int32_t>(123)), hana::make_pair("long", static_cast<int64_t>(123456789l)),
-    hana::make_pair("float", 123.4f), hana::make_pair("double", 123.4), hana::make_pair("string", std::string("hi")));
+/**
+ * Only the following lines are needed wherever AllTypeVariant is used.
+ * This could be one header file.
+ * @{
+ */
 
-// convert tuple of all types to sequence by first extracting the prototypes
-// only and then applying decltype_
-static auto types_as_hana_sequence = hana::transform(hana::transform(column_types, hana::second), hana::decltype_);
-// convert hana sequence to mpl vector
-using TypesAsMplVector = decltype(hana::to<hana::ext::boost::mpl::vector_tag>(types_as_hana_sequence));
-// create boost::variant from mpl vector
+// This holds pairs of all types and their respective string representation
+static constexpr auto column_types =
+    hana::make_tuple(hana::make_pair("int", hana::type_c<int32_t>), hana::make_pair("long", hana::type_c<int64_t>),
+                     hana::make_pair("float", hana::type_c<float>), hana::make_pair("double", hana::type_c<double>),
+                     hana::make_pair("string", hana::type_c<std::string>));
+
+// This holds only the possible data types.
+static constexpr auto types = hana::transform(column_types, hana::second);
+
+// Convert tuple to mpl vector
+using TypesAsMplVector = decltype(hana::to<hana::ext::boost::mpl::vector_tag>(types));
+
+// Create boost::variant from mpl vector
 using AllTypeVariant = typename boost::make_variant_over<TypesAsMplVector>::type;
+
+/** @} */
 
 /**
  * AllParameterVariant holds either an AllTypeVariant or a ColumnName.
@@ -105,9 +120,58 @@ using ParameterTypesAsMplVector =
 // create boost::variant from mpl vector
 using AllParameterVariant = typename boost::make_variant_over<ParameterTypesAsMplVector>::type;
 
-// cast methods - from variant to specific type
+/**
+ * This is everything needed for type_cast
+ * @{
+ */
+
+namespace {
+
+// Returns the index of type T in an Iterable
+template <typename Sequence, typename T>
+constexpr auto index_of(Sequence const &sequence, T const &element) {
+  constexpr auto size = decltype(hana::size(hana::take_while(sequence, hana::not_equal.to(element)))){};
+  return decltype(size)::value;
+}
+
+// Negates a type trait
+template <bool Condition>
+struct _neg : public std::true_type {};
+
+template <>
+struct _neg<true> : public std::false_type {};
+
+template <typename Condition>
+struct neg : public _neg<Condition::value> {};
+
+// Wrapper that makes std::enable_if a bit more readable
+template <typename Condition, typename Type = void>
+using enable_if = typename std::enable_if<Condition::value, Type>::type;
+
+}  // namespace
+
+// Retrieves the value stored in an AllTypeVariant without conversion
 template <typename T>
-typename std::enable_if<std::is_integral<T>::value, T>::type type_cast(AllTypeVariant value) {
+const T &get(const AllTypeVariant &value) {
+  static_assert(hana::contains(types, hana::type_c<T>), "Type not in AllTypeVariant");
+  return boost::get<T>(value);
+}
+
+// cast methods - from variant to specific type
+
+// Template specialization for everything but integral types
+template <typename T>
+enable_if<neg<std::is_integral<T>>, T> type_cast(const AllTypeVariant &value) {
+  if (value.which() == index_of(types, hana::type_c<T>)) return get<T>(value);
+
+  return boost::lexical_cast<T>(value);
+}
+
+// Template specialization for integral types
+template <typename T>
+enable_if<std::is_integral<T>, T> type_cast(const AllTypeVariant &value) {
+  if (value.which() == index_of(types, hana::type_c<T>)) return get<T>(value);
+
   try {
     return boost::lexical_cast<T>(value);
   } catch (...) {
@@ -115,26 +179,26 @@ typename std::enable_if<std::is_integral<T>::value, T>::type type_cast(AllTypeVa
   }
 }
 
-template <typename T>
-typename std::enable_if<std::is_floating_point<T>::value, T>::type type_cast(AllTypeVariant value) {
-  // TODO(MD): is lexical_cast always necessary?
-  return boost::lexical_cast<T>(value);
-}
-
-template <typename T>
-typename std::enable_if<std::is_same<T, std::string>::value, T>::type type_cast(AllTypeVariant value) {
-  return boost::lexical_cast<T>(value);
-}
-
 std::string to_string(const AllTypeVariant &x);
+
+/** @} */
+
+/**
+ * This is everything needed for make_*_by_column_type to work.
+ * It needs to include the AllVariantType header and could also
+ * be moved into a separate header.
+ * @{
+ */
 
 template <class base, template <typename...> class impl, class... TemplateArgs, typename... ConstructorArgs>
 std::unique_ptr<base> make_unique_by_column_type(const std::string &type, ConstructorArgs &&... args) {
   std::unique_ptr<base> ret = nullptr;
   hana::for_each(column_types, [&](auto x) {
     if (std::string(hana::first(x)) == type) {
-      typename std::remove_reference<decltype(hana::second(x))>::type prototype;
-      ret = std::make_unique<impl<decltype(prototype), TemplateArgs...>>(std::forward<ConstructorArgs>(args)...);
+      // The + before hana::second - which returns a reference - converts its return value
+      // into a value so that we can access ::type
+      using column_type = typename decltype(+hana::second(x))::type;
+      ret = std::make_unique<impl<column_type, TemplateArgs...>>(std::forward<ConstructorArgs>(args)...);
       return;
     }
   });
@@ -142,10 +206,10 @@ std::unique_ptr<base> make_unique_by_column_type(const std::string &type, Constr
   return ret;
 }
 
-/*
-We need to pass parameter packs explicitly for GCC due to the following bug:
-http://stackoverflow.com/questions/41769851/gcc-causes-segfault-for-lambda-captured-parameter-pack
-*/
+/**
+ * We need to pass parameter packs explicitly for GCC due to the following bug:
+ * http://stackoverflow.com/questions/41769851/gcc-causes-segfault-for-lambda-captured-parameter-pack
+ */
 template <class base, template <typename...> class impl, class... TemplateArgs, typename... ConstructorArgs>
 std::unique_ptr<base> make_unique_by_column_types(const std::string &type1, const std::string &type2,
                                                   ConstructorArgs &&... args) {
@@ -154,9 +218,9 @@ std::unique_ptr<base> make_unique_by_column_types(const std::string &type1, cons
     if (std::string(hana::first(x)) == type1) {
       hana::for_each(column_types, [&ret, &type1, &type2, &args...](auto y) {
         if (std::string(hana::first(y)) == type2) {
-          typename std::remove_reference<decltype(hana::second(x))>::type prototype1;
-          typename std::remove_reference<decltype(hana::second(y))>::type prototype2;
-          ret = std::make_unique<impl<decltype(prototype1), decltype(prototype2), TemplateArgs...>>(
+          using column_type1 = typename decltype(+hana::second(x))::type;
+          using column_type2 = typename decltype(+hana::second(y))::type;
+          ret = std::make_unique<impl<column_type1, column_type2, TemplateArgs...>>(
               std::forward<ConstructorArgs>(args)...);
           return;
         }
@@ -172,4 +236,7 @@ template <class base, template <typename...> class impl, class... TemplateArgs, 
 std::shared_ptr<base> make_shared_by_column_type(const std::string &type, ConstructorArgs &&... args) {
   return make_unique_by_column_type<base, impl, TemplateArgs...>(type, std::forward<ConstructorArgs>(args)...);
 }
+
+/** @} */
+
 }  // namespace opossum
