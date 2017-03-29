@@ -36,7 +36,7 @@ class ChunkCompression : public AbstractOperator {
   std::shared_ptr<const Table> on_execute(TransactionContext* context) override;
 
  private:
-  const std::string& _table_name;
+  const std::string _table_name;
   const std::vector<ChunkID> _chunk_ids;
 };
 }  // namespace opossum
