@@ -14,53 +14,40 @@ namespace opossum {
 SortMergeJoin::SortMergeJoin(const std::shared_ptr<AbstractOperator> left,
                              const std::shared_ptr<AbstractOperator> right,
                              optional<std::pair<const std::string&, const std::string&>> column_names,
-                             const std::string& op, const JoinMode mode)
-    : AbstractJoinOperator(left, right, column_names, op, mode, "", "" /*, prefix_left, prefix_right*/) {
-  if (_mode == Cross) {
+                             const std::string& op, const JoinMode mode, std::string& prefix_left,
+                             std::string& prefix_right)
+    : AbstractJoinOperator(left, right, column_names, op, mode, prefix_left, prefix_right) {
+  if (_mode == Cross || !column_names) {
     throw std::runtime_error(
         "SortMergeJoin: this operator does not support Cross Joins, the optimizer should use Product operator "
         "instead.");
   }
 
-  // Check optional column names
-  // Per definition either two names are specified or none
-  if (column_names) {
-    _left_column_name = column_names->first;
-    _right_column_name = column_names->second;
+  _left_column_name = column_names->first;
+  _right_column_name = column_names->second;
 
-    if (left == nullptr) {
-      throw std::exception(std::runtime_error("SortMergeJoin::SortMergeJoin: left input operator is null"));
-    }
-
-    if (right == nullptr) {
-      throw std::exception(std::runtime_error("SortMergeJoin::SortMergeJoin: right input operator is null"));
-    }
-    // Check column_type
-    auto left_column_id = input_table_left()->column_id_by_name(_left_column_name);
-    auto right_column_id = input_table_right()->column_id_by_name(_right_column_name);
-    auto left_column_type = input_table_left()->column_type(left_column_id);
-    auto right_column_type = input_table_right()->column_type(right_column_id);
-
-    if (left_column_type != right_column_type) {
-      std::string message = "SortMergeJoin::SortMergeJoin: column type \"" + left_column_type + "\" of left column \"" +
-                            _left_column_name + "\" does not match colum type \"" + right_column_type +
-                            "\" of right column \"" + _right_column_name + "\"!";
-      throw std::exception(std::runtime_error(message));
-    }
-    // Create implementation to compute join result
-    if (_mode != JoinMode::Cross) {
-      _impl = make_unique_by_column_type<AbstractJoinOperatorImpl, SortMergeJoinImpl>(left_column_type, *this);
-    } else {
-      _product = std::make_shared<Product>(left, right, "left", "right");
-    }
-  } else {
-    // No names specified --> this is only valid if we want to cross-join
-    if (_mode != JoinMode::Cross) {
-      throw std::exception(std::runtime_error("SortMergeJoin::SortMergeJoin: No columns specified for join operator"));
-    } else {
-      _product = std::make_shared<Product>(left, right, "left", "right");
-    }
+  if (left == nullptr) {
+    throw std::runtime_error("SortMergeJoin::SortMergeJoin: left input operator is null");
   }
+
+  if (right == nullptr) {
+    throw std::runtime_error("SortMergeJoin::SortMergeJoin: right input operator is null");
+  }
+
+  // Check column_type
+  const auto& left_column_id = input_table_left()->column_id_by_name(_left_column_name);
+  const auto& right_column_id = input_table_right()->column_id_by_name(_right_column_name);
+  const auto& left_column_type = input_table_left()->column_type(left_column_id);
+  const auto& right_column_type = input_table_right()->column_type(right_column_id);
+
+  if (left_column_type != right_column_type) {
+    throw std::runtime_error("SortMergeJoin::SortMergeJoin: column type \"" + left_column_type +
+                             "\" of left column \"" + _left_column_name + "\" does not match colum type \"" +
+                             right_column_type + "\" of right column \"" + _right_column_name + "\"!");
+  }
+
+  // Create implementation to compute join result
+  _impl = make_unique_by_column_type<AbstractJoinOperatorImpl, SortMergeJoinImpl>(left_column_type, *this);
 }
 
 std::shared_ptr<const Table> SortMergeJoin::on_execute(const TransactionContext* context) {
@@ -85,8 +72,7 @@ SortMergeJoin::SortMergeJoinImpl<T>::SortMergeJoinImpl(SortMergeJoin& sort_merge
   } else if (_sort_merge_join._op == ">") {
     _compare = [](const T& value_left, const T& value_right) -> bool { return value_left > value_right; };
   } else {
-    throw std::exception(
-        std::runtime_error("SortMergeJoinImpl::SortMergeJoinImpl: Unknown operator " + _sort_merge_join._op));
+    throw std::runtime_error("SortMergeJoinImpl::SortMergeJoinImpl: Unknown operator " + _sort_merge_join._op);
   }
   /* right now only equi-joins supported
   * (and test wise ">")
@@ -527,7 +513,7 @@ void SortMergeJoin::SortMergeJoinImpl<T>::build_output(std::shared_ptr<Table>& o
   // left output
   for (size_t column_id = 0; column_id < _sort_merge_join.input_table_left()->col_count(); column_id++) {
     // Add the column meta data
-    output->add_column(_sort_merge_join.input_table_left()->column_name(column_id),
+    output->add_column(_sort_merge_join._prefix_left + _sort_merge_join.input_table_left()->column_name(column_id),
                        _sort_merge_join.input_table_left()->column_type(column_id), false);
 
     // Check whether the column consists of reference columns
@@ -549,7 +535,7 @@ void SortMergeJoin::SortMergeJoinImpl<T>::build_output(std::shared_ptr<Table>& o
   // right_output
   for (size_t column_id = 0; column_id < _sort_merge_join.input_table_right()->col_count(); column_id++) {
     // Add the column meta data
-    output->add_column(_sort_merge_join.input_table_right()->column_name(column_id),
+    output->add_column(_sort_merge_join._prefix_right + _sort_merge_join.input_table_right()->column_name(column_id),
                        _sort_merge_join.input_table_right()->column_type(column_id), false);
 
     // Check whether the column consists of reference columns
