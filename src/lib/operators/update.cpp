@@ -114,10 +114,10 @@ void Update::rollback_records() {
 }
 
 /**
-* input_table_left must be a table with at least one chunk, containing at least one ReferenceColumn
-* that all reference the table specified by table_to_update_name. The column count and types in input_table_left
-* must match the count and types in input_table_right.
-*/
+ * input_table_left must be a table with at least one chunk, containing at least one ReferenceColumn
+ * that all reference the table specified by table_to_update_name. The column count and types in input_table_left
+ * must match the count and types in input_table_right.
+ */
 bool Update::_execution_input_valid(const std::shared_ptr<TransactionContext> context) const {
   if (context == nullptr) return false;
 

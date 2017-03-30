@@ -83,10 +83,10 @@ class CompositeGroupKeyIndexTest : public BaseTest {
   std::shared_ptr<BaseColumn> _column_str;
 
   /**
-    * Use pointers to inner data structures of CompositeGroupKeyIndex in order to bypass the
-    * private scope. In order to minimize the friend classes of CompositeGroupKeyIndex the fixture
-    * is used as proxy. Since the variables are set in setup(), references are not possible.
-    */
+   * Use pointers to inner data structures of CompositeGroupKeyIndex in order to bypass the
+   * private scope. In order to minimize the friend classes of CompositeGroupKeyIndex the fixture
+   * is used as proxy. Since the variables are set in setup(), references are not possible.
+   */
   VariableLengthKeyStore *_keys_int_str;
   VariableLengthKeyStore *_keys_str_int;
 

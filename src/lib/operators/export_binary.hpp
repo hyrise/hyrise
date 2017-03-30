@@ -113,24 +113,24 @@ class ExportBinary::ExportBinaryVisitor : public ColumnVisitable {
   void handle_value_column(BaseColumn& base_column, std::shared_ptr<ColumnVisitableContext> base_context) final;
 
   /**
-  * Reference Columns are dumped with the following layout, which is similar to value columns:
-  *
-  * Description           | Type                                  | Size in bytes
-  * -----------------------------------------------------------------------------------------
-  * Column Type           | ColumnType                            |   1
-  * Values°               | T (int, float, double, long)          |   rows * sizeof(T)
-  * Length of Strings^    | vector<StringLength>                  |   rows * 2
-  * Values^               | std::string                           |   rows * string.length()
-  *
-  * Please note that the number of rows are written in the header of the chunk.
-  * The type of the column can be found in the global header of the file.
-  *
-  * ^: These fields are only written if the type of the column IS a string.
-  * °: This field is writen if the type of the column is NOT a string
-  *
-  * @param base_column The Column to export
-  * @param base_context A context in the form of an ExportContext. Contains a reference to the ofstream.
-  */
+   * Reference Columns are dumped with the following layout, which is similar to value columns:
+   *
+   * Description           | Type                                  | Size in bytes
+   * -----------------------------------------------------------------------------------------
+   * Column Type           | ColumnType                            |   1
+   * Values°               | T (int, float, double, long)          |   rows * sizeof(T)
+   * Length of Strings^    | vector<StringLength>                  |   rows * 2
+   * Values^               | std::string                           |   rows * string.length()
+   *
+   * Please note that the number of rows are written in the header of the chunk.
+   * The type of the column can be found in the global header of the file.
+   *
+   * ^: These fields are only written if the type of the column IS a string.
+   * °: This field is writen if the type of the column is NOT a string
+   *
+   * @param base_column The Column to export
+   * @param base_context A context in the form of an ExportContext. Contains a reference to the ofstream.
+   */
   void handle_reference_column(ReferenceColumn& ref_column,
                                std::shared_ptr<ColumnVisitableContext> base_context) override;
   /**

@@ -56,6 +56,7 @@ class CompositeGroupKeyIndex : public BaseIndex {
   Iterator _upper_bound(const std::vector<AllTypeVariant> &values) const final;
   Iterator _cbegin() const final;
   Iterator _cend() const final;
+  std::vector<std::shared_ptr<BaseColumn>> _get_index_columns() const final;
 
   /**
    * Creates a VariableLengthKey using the values given as parameters.

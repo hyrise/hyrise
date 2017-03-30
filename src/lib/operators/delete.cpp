@@ -82,9 +82,9 @@ const std::string Delete::name() const { return "Delete"; }
 uint8_t Delete::num_in_tables() const { return 1u; }
 
 /**
-* values_to_delete must be a table with at least one chunk, containing at least one ReferenceColumn
-* that all reference the table specified by table_name.
-*/
+ * values_to_delete must be a table with at least one chunk, containing at least one ReferenceColumn
+ * that all reference the table specified by table_name.
+ */
 bool Delete::_execution_input_valid(const std::shared_ptr<TransactionContext> context) const {
   if (context == nullptr) return false;
 

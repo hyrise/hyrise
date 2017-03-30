@@ -5,4 +5,4 @@
 namespace opossum {
 
 void JobTask::on_execute() { _fn(); }
-}
+}  // namespace opossum

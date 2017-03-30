@@ -50,9 +50,9 @@ class GroupKeyIndex : public BaseIndex {
   GroupKeyIndex &operator=(GroupKeyIndex &&) = default;
 
   explicit GroupKeyIndex(const std::vector<std::shared_ptr<BaseColumn>> index_columns)
-      : BaseIndex(index_columns), _index_column(std::dynamic_pointer_cast<UntypedDictionaryColumn>(_index_columns[0])) {
+      : _index_column(std::dynamic_pointer_cast<UntypedDictionaryColumn>(index_columns[0])) {
     if (!_index_column) throw std::runtime_error("GroupKeyIndex only works with DictionaryColumns");
-    if (_index_columns.size() != 1) throw std::runtime_error("GroupKeyIndex only works with a single column");
+    if (index_columns.size() != 1) throw std::runtime_error("GroupKeyIndex only works with a single column");
 
     // 1) Initialize the index structures
     // 1a) Set the index_offset to size of the dictionary + 1 (plus one to mark the ending position) and set all offsets
@@ -107,10 +107,10 @@ class GroupKeyIndex : public BaseIndex {
   Iterator _cend() const final { return _index_postings.cend(); }
 
   /**
-    *
-    * @returns an iterator pointing to the the first ChunkOffset in the postings-vector
-    * that belongs to a given value-id.
-    */
+   *
+   * @returns an iterator pointing to the the first ChunkOffset in the postings-vector
+   * that belongs to a given value-id.
+   */
   Iterator _get_postings_iterator_at(ValueID value_id) const {
     if (value_id == INVALID_VALUE_ID) return _index_postings.cend();
 
@@ -121,6 +121,11 @@ class GroupKeyIndex : public BaseIndex {
     auto iter = _index_postings.cbegin();
     std::advance(iter, start_pos);
     return iter;
+  }
+
+  std::vector<std::shared_ptr<BaseColumn>> _get_index_columns() const {
+    std::vector<std::shared_ptr<BaseColumn>> v = {_index_column};
+    return v;
   }
 
  private:

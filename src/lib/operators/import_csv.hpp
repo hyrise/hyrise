@@ -50,14 +50,14 @@ class ImportCsv : public AbstractReadOnlyOperator {
   const optional<std::string> _tablename;
 
   /* Creates the table structure from the meta file.
-  *  The following is the content an example meta file:
-  *
-  *  PropertyType,Key,Value
-  *  Chunk Size,,100
-  *  Column Type,a,int
-  *  Column Type,b,string
-  *  Column Type,c,float
-  */
+   *  The following is the content an example meta file:
+   *
+   *  PropertyType,Key,Value
+   *  Chunk Size,,100
+   *  Column Type,a,int
+   *  Column Type,b,string
+   *  Column Type,c,float
+   */
   static const std::shared_ptr<Table> _process_meta_file(const std::string& meta_file);
   // Converts given string value to given type
   static AllTypeVariant _convert(const std::string& value, const std::string& type);

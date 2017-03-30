@@ -39,8 +39,8 @@ class BaseIndex {
    * the provided columns matters. Creating two indices with the same columns, but in different orders
    * leads to very different indices.
    */
-  explicit BaseIndex(const std::vector<std::shared_ptr<BaseColumn>> &index_columns) : _index_columns(index_columns) {}
 
+  BaseIndex() = default;
   BaseIndex(const BaseIndex &) = delete;
   BaseIndex &operator=(const BaseIndex &) = delete;
   BaseIndex(BaseIndex &&) = default;
@@ -58,11 +58,12 @@ class BaseIndex {
    * @return true if the given columns are covered by the index.
    */
   bool is_index_for(const std::vector<std::shared_ptr<BaseColumn>> &columns) const {
-    if (columns.size() > _index_columns.size()) return false;
+    auto index_columns = _get_index_columns();
+    if (columns.size() > index_columns.size()) return false;
     if (columns.empty()) return false;
 
     for (size_t i = 0; i < columns.size(); ++i) {
-      if (columns[i] != _index_columns[i]) return false;
+      if (columns[i] != index_columns[i]) return false;
     }
     return true;
   }
@@ -79,7 +80,7 @@ class BaseIndex {
    * @return An Iterator on the position of the first element equal or greater then provided values.
    */
   Iterator lower_bound(const std::vector<AllTypeVariant> &values) const {
-    if (_index_columns.size() < values.size()) {
+    if (_get_index_columns().size() < values.size()) {
       throw std::runtime_error(
           "BaseIndex: The amount of queried columns has to be less or equal to the number of indexed columns.");
     }
@@ -98,7 +99,7 @@ class BaseIndex {
    * @return An Iterator on the position of the first element greater then provided values.
    */
   Iterator upper_bound(const std::vector<AllTypeVariant> &values) const {
-    if (_index_columns.size() < values.size()) {
+    if (_get_index_columns().size() < values.size()) {
       throw std::runtime_error(
           "BaseIndex: The amount of queried columns has to be less or equal to the number of indexed columns.");
     }
@@ -132,7 +133,6 @@ class BaseIndex {
   virtual Iterator _upper_bound(const std::vector<AllTypeVariant> &) const = 0;
   virtual Iterator _cbegin() const = 0;
   virtual Iterator _cend() const = 0;
-
-  std::vector<std::shared_ptr<BaseColumn>> _index_columns;
+  virtual std::vector<std::shared_ptr<BaseColumn>> _get_index_columns() const = 0;
 };
 }  // namespace opossum
