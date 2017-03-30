@@ -23,7 +23,7 @@ class SortMergeJoin : public AbstractJoinOperator {
                 optional<std::pair<const std::string&, const std::string&>> column_names, const std::string& op,
                 const JoinMode mode);
 
-  std::shared_ptr<const Table> on_execute(const TransactionContext* context);
+  std::shared_ptr<const Table> on_execute(const TransactionContext* context) override;
 
   const std::string name() const override;
   uint8_t num_in_tables() const override;
@@ -116,12 +116,8 @@ class SortMergeJoin : public AbstractJoinOperator {
   };
 
   std::unique_ptr<AbstractJoinOperatorImpl> _impl;
-  std::shared_ptr<Product> _product;
-  // TODO(remove)
   std::string _left_column_name;
   std::string _right_column_name;
-  // std::string _op;
-  // JoinMode _mode;
 
   // std::shared_ptr<Table> _output;
   std::shared_ptr<PosList> _pos_list_left;
