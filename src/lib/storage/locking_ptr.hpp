@@ -39,4 +39,4 @@ using SharedLockLockingPtr = LockingPtr<Type, std::shared_lock<std::shared_mutex
 template <typename Type>
 using UniqueLockLockingPtr = LockingPtr<Type, std::unique_lock<std::shared_mutex>>;
 
-}  // namespace
+}  // namespace opossum

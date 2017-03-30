@@ -1,8 +1,10 @@
 #pragma once
 
+// the linter wants this to be above everything else
+#include <shared_mutex>
+
 #include <atomic>
 #include <memory>
-#include <shared_mutex>
 #include <string>
 #include <vector>
 
@@ -10,8 +12,8 @@
 
 #include "base_column.hpp"
 #include "base_index.hpp"
+#include "copyable_atomic.hpp"
 #include "locking_ptr.hpp"
-#include "movable_atomic.hpp"
 #include "value_column.hpp"
 
 namespace opossum {
@@ -30,9 +32,9 @@ class Chunk {
     friend class Chunk;
 
    public:
-    tbb::concurrent_vector<movable_atomic<TransactionID>> tids;  ///< 0 unless locked by a transaction
-    tbb::concurrent_vector<CommitID> begin_cids;                 ///< commit id when record was added
-    tbb::concurrent_vector<CommitID> end_cids;                   ///< commit id when record was deleted
+    tbb::concurrent_vector<copyable_atomic<TransactionID>> tids;  ///< 0 unless locked by a transaction
+    tbb::concurrent_vector<CommitID> begin_cids;                  ///< commit id when record was added
+    tbb::concurrent_vector<CommitID> end_cids;                    ///< commit id when record was deleted
 
    private:
     std::shared_mutex _mutex;

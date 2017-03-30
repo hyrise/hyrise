@@ -2,6 +2,7 @@
 
 #include <atomic>
 #include <type_traits>
+#include <utility>
 
 namespace opossum {
 
@@ -10,25 +11,25 @@ namespace opossum {
  *
  * Wrapper that implements the move constructor and assignment operator
  * Makes handling atomics in containers easier
+ *
+ * Attention: The following is not an atomic operation
+ *   copyable_atomic<int> a = 3, b = 4;
+ *   a = b; // not atomic!
  */
 template <typename T>
-class movable_atomic {
+class copyable_atomic {
   static_assert(std::is_trivially_copyable<T>::value, "T must be trivially copyable.");
 
  public:
-  movable_atomic() noexcept = default;
+  copyable_atomic() noexcept = default;
 
-  movable_atomic(const movable_atomic<T>&) = delete;
+  copyable_atomic(const copyable_atomic<T>& rhs) { _atomic.store(rhs._atomic.load()); }
 
-  movable_atomic(movable_atomic<T>&& rhs) noexcept { _atomic.store(rhs._atomic.load()); }
-
-  constexpr movable_atomic(T desired) noexcept : _atomic{desired} {}
+  constexpr copyable_atomic(T desired) noexcept : _atomic{desired} {}
 
   T operator=(T desired) noexcept { return _atomic.operator=(desired); }
 
-  movable_atomic& operator=(const movable_atomic<T>&) = delete;
-
-  movable_atomic& operator=(movable_atomic<T>&& rhs) noexcept {
+  copyable_atomic& operator=(const copyable_atomic<T>& rhs) {
     _atomic.store(rhs._atomic.load());
     return *this;
   }
