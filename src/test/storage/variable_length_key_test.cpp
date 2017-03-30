@@ -1,7 +1,7 @@
 #include "../base_test.hpp"
 #include "gtest/gtest.h"
 
-#include "../lib/storage/variable_length_key.hpp"
+#include "../lib/storage/index/group_key/variable_length_key.hpp"
 
 namespace opossum {
 

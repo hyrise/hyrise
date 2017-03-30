@@ -7,7 +7,7 @@
 #include <vector>
 
 #include "chunk.hpp"
-#include "group_key_index.hpp"
+#include "index/group_key/group_key_index.hpp"
 #include "reference_column.hpp"
 #include "value_column.hpp"
 

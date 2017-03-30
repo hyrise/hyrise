@@ -5,9 +5,8 @@
 #include <memory>
 #include <vector>
 
-#include "../types.hpp"
-#include "base_column.hpp"
-#include "types.hpp"
+#include "../../types.hpp"
+#include "../base_column.hpp"
 
 namespace opossum {
 

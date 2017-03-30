@@ -9,9 +9,9 @@
 #include "../base_test.hpp"
 #include "gtest/gtest.h"
 
-#include "../../lib/storage/adaptive_radix_tree_index.hpp"
-#include "../../lib/storage/adaptive_radix_tree_nodes.hpp"
 #include "../../lib/storage/dictionary_column.hpp"
+#include "../../lib/storage/index/adaptive_radix_tree/adaptive_radix_tree_index.hpp"
+#include "../../lib/storage/index/adaptive_radix_tree/adaptive_radix_tree_nodes.hpp"
 
 namespace opossum {
 

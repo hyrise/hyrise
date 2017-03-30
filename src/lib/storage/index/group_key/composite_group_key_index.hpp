@@ -6,9 +6,9 @@
 #include <utility>
 #include <vector>
 
-#include "../types.hpp"
-#include "base_index.hpp"
-#include "untyped_dictionary_column.hpp"
+#include "../../../types.hpp"
+#include "../../untyped_dictionary_column.hpp"
+#include "../base_index.hpp"
 #include "variable_length_key_store.hpp"
 
 namespace opossum {

@@ -8,7 +8,7 @@
 #include "tbb/concurrent_vector.h"
 
 #include "base_column.hpp"
-#include "base_index.hpp"
+#include "index/base_index.hpp"
 #include "value_column.hpp"
 
 namespace opossum {

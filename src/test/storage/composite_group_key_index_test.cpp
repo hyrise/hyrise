@@ -11,8 +11,8 @@
 #include "../lib/common.hpp"
 #include "../lib/storage/base_column.hpp"
 #include "../lib/storage/chunk.hpp"
-#include "../lib/storage/composite_group_key_index.hpp"
 #include "../lib/storage/dictionary_column.hpp"
+#include "../lib/storage/index/group_key/composite_group_key_index.hpp"
 #include "../lib/types.hpp"
 
 namespace {

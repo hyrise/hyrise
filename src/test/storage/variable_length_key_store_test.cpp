@@ -10,7 +10,7 @@
 #include "gtest/gtest.h"
 
 #include "../lib/common.hpp"
-#include "../lib/storage/variable_length_key_store.hpp"
+#include "../lib/storage/index/group_key/variable_length_key_store.hpp"
 #include "../lib/types.hpp"
 
 namespace opossum {

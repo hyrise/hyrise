@@ -3,7 +3,7 @@
 #include <memory>
 #include <ostream>
 
-#include "types.hpp"
+#include "../../../types.hpp"
 #include "variable_length_key_base.hpp"
 
 namespace opossum {

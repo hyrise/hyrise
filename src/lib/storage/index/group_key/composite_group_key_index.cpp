@@ -13,8 +13,8 @@
 
 #include <iostream>
 
-#include "base_attribute_vector.hpp"
-#include "dictionary_column.hpp"
+#include "../../base_attribute_vector.hpp"
+#include "../../dictionary_column.hpp"
 
 namespace opossum {
 

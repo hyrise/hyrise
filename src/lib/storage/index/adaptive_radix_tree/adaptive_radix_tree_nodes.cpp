@@ -7,10 +7,10 @@
 #include <utility>
 #include <vector>
 
-#include "../types.hpp"
-#include "base_column.hpp"
-#include "base_index.hpp"
-#include "untyped_dictionary_column.hpp"
+#include "../../../types.hpp"
+#include "../../base_column.hpp"
+#include "../../untyped_dictionary_column.hpp"
+#include "../base_index.hpp"
 
 namespace opossum {
 

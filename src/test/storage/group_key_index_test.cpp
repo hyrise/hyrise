@@ -12,7 +12,7 @@
 #include "../lib/storage/base_column.hpp"
 #include "../lib/storage/chunk.hpp"
 #include "../lib/storage/dictionary_column.hpp"
-#include "../lib/storage/group_key_index.hpp"
+#include "../lib/storage/index/group_key/group_key_index.hpp"
 #include "../lib/types.hpp"
 
 namespace opossum {
