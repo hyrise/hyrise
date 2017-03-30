@@ -9,6 +9,7 @@ namespace opossum {
 class BaseAttributeVector {
  public:
   BaseAttributeVector() = default;
+  virtual ~BaseAttributeVector() = default;
 
   // copying an attribute vector is not allowed
   // copying whole attribute vectors is expensive
@@ -27,5 +28,8 @@ class BaseAttributeVector {
 
   // returns the number of values
   virtual size_t size() const = 0;
+
+  // returns the width of the values in bytes
+  virtual AttributeVectorWidth width() const = 0;
 };
 }  // namespace opossum

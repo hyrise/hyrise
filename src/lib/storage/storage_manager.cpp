@@ -12,8 +12,6 @@ StorageManager &StorageManager::get() {
   return instance;
 }
 
-bool StorageManager::table_exists(const std::string &name) { return _tables.find(name) != _tables.end(); }
-
 void StorageManager::add_table(const std::string &name, std::shared_ptr<Table> table) {
   _tables.insert(std::make_pair(name, std::move(table)));
 }
@@ -25,6 +23,8 @@ void StorageManager::drop_table(const std::string &name) {
 }
 
 std::shared_ptr<Table> StorageManager::get_table(const std::string &name) const { return _tables.at(name); }
+
+bool StorageManager::has_table(const std::string &name) const { return _tables.count(name); }
 
 void StorageManager::print(std::ostream &out) const {
   out << "==================" << std::endl;

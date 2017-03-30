@@ -40,4 +40,14 @@ TEST_F(StorageStorageManagerTest, ResetTable) {
   EXPECT_THROW(sm.get_table("first_table"), std::exception);
 }
 
+TEST_F(StorageStorageManagerTest, DoesNotHaveTable) {
+  auto &sm = StorageManager::get();
+  EXPECT_EQ(sm.has_table("third_table"), false);
+}
+
+TEST_F(StorageStorageManagerTest, HasTable) {
+  auto &sm = StorageManager::get();
+  EXPECT_EQ(sm.has_table("first_table"), true);
+}
+
 }  // namespace opossum

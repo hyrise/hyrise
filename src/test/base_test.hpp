@@ -4,6 +4,7 @@
 #include <string>
 #include <vector>
 
+#include "../lib/storage/dictionary_column.hpp"
 #include "../lib/storage/table.hpp"
 #include "../lib/types.hpp"
 #include "gtest/gtest.h"
@@ -37,6 +38,16 @@ class BaseTest : public ::testing::Test {
                               bool order_sensitive = false);
   static void ASSERT_TABLE_EQ(std::shared_ptr<const Table> tleft, std::shared_ptr<const Table> tright,
                               bool order_sensitive = false);
+
+  // creates a dictionary column with the given type and values
+  template <class T>
+  static std::shared_ptr<BaseColumn> create_dict_column_by_type(const std::string &type, const std::vector<T> &values) {
+    auto value_column = make_shared_by_column_type<BaseColumn, ValueColumn>(type);
+    for (const auto &value : values) {
+      value_column->append(value);
+    }
+    return make_shared_by_column_type<BaseColumn, DictionaryColumn>(type, value_column);
+  }
 
  public:
   virtual ~BaseTest();

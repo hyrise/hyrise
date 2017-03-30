@@ -1,10 +1,13 @@
 #pragma once
 
 #include <iostream>
+#include <limits>
 #include <memory>
 #include <string>
 #include <utility>
 #include <vector>
+
+#include "tbb/concurrent_vector.h"
 
 #include "base_column.hpp"
 
@@ -14,23 +17,38 @@ namespace opossum {
 template <typename T>
 class ValueColumn : public BaseColumn {
  public:
+  ValueColumn() = default;
+
+  // Create a ValueColumn with the given values
+  explicit ValueColumn(std::vector<T>&& values) : _values(std::move(values)) {}
+
   // return the value at a certain position. If you want to write efficient operators, back off!
   const AllTypeVariant operator[](const size_t i) const override {
-    if (i == NULL_VALUE) {
+    /*
+    Handle null values, this is only used for testing the results of joins so far.
+    In order to be able to define an expected output table, we need to replace INVALID_CHUNK_OFFSET
+    with some printable character, in our case 0, resp. "0".
+    Since there is no constructor for String, which takes a numeric 0, we have to differentiate between numbers and
+    strings.
+
+    This should be replaced as soon as we have proper NULL values in Opossum.
+    Similar code is in dictionary_column.hpp
+    */
+    if (i == INVALID_CHUNK_OFFSET) {
       if (std::is_same<T, std::string>::value) {
         return "0";
       }
-      return T{0};
+      return T(0);
     }
-
     return _values.at(i);
   }
 
   // add a value to the end
-  void append(const AllTypeVariant& val) override { _values.push_back(type_cast<T>(val)); }
+  void append(const AllTypeVariant& val) override;
 
   // returns all values
   const std::vector<T>& values() const { return _values; }
+  std::vector<T>& values() { return _values; }
 
   // return the number of entries
   size_t size() const override { return _values.size(); }
@@ -56,4 +74,22 @@ class ValueColumn : public BaseColumn {
  protected:
   std::vector<T> _values;
 };
+
+// generic implementation for append
+template <typename T>
+void ValueColumn<T>::append(const AllTypeVariant& val) {
+  _values.push_back(type_cast<T>(val));
+}
+
+// specialized implementation for String ValueColumns
+// includes a length check
+template <>
+inline void ValueColumn<std::string>::append(const AllTypeVariant& val) {
+  auto typed_val = type_cast<std::string>(val);
+  if (typed_val.length() > std::numeric_limits<StringLength>::max()) {
+    throw std::runtime_error("String value is too long to append!");
+  }
+  _values.push_back(typed_val);
+}
+
 }  // namespace opossum

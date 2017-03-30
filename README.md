@@ -4,6 +4,8 @@
 
 *Have a look at docs/guidelines*
 
+The [course material](https://hpi.de//plattner/teaching/winter-term-201617/build-your-own-database.html) is a good starting point to get to know Opossum
+
 ## Dependencies
 You can install the dependencies on your own or use the install.sh script which installs most of the following packages.
 
@@ -29,6 +31,14 @@ install via homebrew / packet manager
 
 ### googletest
 get via `git submodule update --init`
+
+### tbb
+install via homebrew: brew install tbb
+install via apt: apt-get install libtbb-dev
+
+### llvm (optional)
+install via homebrew / packet manager
+used for AddressSanitizer
 
 
 ## Building and Tooling
@@ -58,6 +68,9 @@ The binary can be executed with `./build/test`
 
 *Supports only clang on MacOS and only gcc on linux*
 
+### AddressSanitizer
+`make -j asan` will build OpossumDB with enabled AddressSanitizer options and execute all available tests. It will fail on the first detected memory error and will print a summary. To convert addresses to actual source code locations, make sure llvm-symbolizer is installed (included in llvm package) and is available in `$PATH`. To specify a custom location for the symbolizer, set `$ASAN_SYMBOLIZER_PATH` to the path of the executable. This seems to work out of the box on macOS - If not, make sure to have llvm installed.
+
 ## Naming convention for gtest macros:
 
 TEST(ModuleNameClassNameTest, TestName), e.g., TEST(OperatorsGetTableTest, RowCount)
@@ -68,3 +81,28 @@ If you want to test a single module, class or test you have to execute the test 
 - Testing the storage module: `./build/test --gtest_filter="Storage*"`
 - Testing the table class: `./build/test --gtest_filter="StorageTableTest*"`
 - Testing the RowCount test: `./build/test --gtest_filter="StorageTableTest.RowCount"`
+
+## Maintainers
+
+- Jan Kossmann
+- Markus Dreseler
+- Martin Boissier
+- Stefan Klauck
+
+
+Contact: firstname.lastname@hpi.de
+
+## Contributors
+
+- Arne Mayer
+- Carsten Walther
+- Daniel Stolpe
+- David Schumann
+- Fabian Wiebe
+- Marvin Keller
+- Max Jendruk
+- Moritz Eyssen
+- Nils Thamm
+- Sven Lehmann
+- Tim Zimmermann
+- Torben Meyer

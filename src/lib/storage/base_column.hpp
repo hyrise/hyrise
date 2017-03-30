@@ -14,6 +14,7 @@ namespace opossum {
 class BaseColumn {
  public:
   BaseColumn() = default;
+  virtual ~BaseColumn() = default;
 
   // copying a column is not allowed
   // copying whole columns is expensive
@@ -24,8 +25,6 @@ class BaseColumn {
   // we overwrite the copy constructor
   BaseColumn(BaseColumn &&) = default;
   BaseColumn &operator=(BaseColumn &&) = default;
-
-  virtual ~BaseColumn() = default;
 
   // returns the value at a given position
   virtual const AllTypeVariant operator[](const size_t i) const = 0;

@@ -38,6 +38,9 @@ BaseTest::Matrix BaseTest::_table_to_matrix(const Table &t) {
   for (ChunkID chunk_id = 0; chunk_id < t.chunk_count(); chunk_id++) {
     const Chunk &chunk = t.get_chunk(chunk_id);
 
+    // an empty table's chunk might be missing actual columns
+    if (chunk.size() == 0) continue;
+
     for (size_t col_id = 0; col_id < t.col_count(); ++col_id) {
       std::shared_ptr<BaseColumn> column = chunk.get_column(col_id);
 
@@ -97,13 +100,20 @@ void BaseTest::_print_matrix(const BaseTest::Matrix &m) {
     std::sort(right.begin(), right.end());
   }
 
-  if (left == right) {
-    return ::testing::AssertionSuccess();
-  } else {
-    _print_matrix(left);
-    _print_matrix(right);
-    return ::testing::AssertionFailure() << "Table content is different.";
-  }
+  for (unsigned row = 0; row < left.size(); row++)
+    for (unsigned col = 0; col < left[row].size(); col++) {
+      if (tleft.column_type(col) == "float") {
+        EXPECT_FLOAT_EQ(type_cast<float>(left[row][col]), type_cast<float>(right[row][col])) << "Row/Col:" << row << "/"
+                                                                                             << col;
+      } else if (tleft.column_type(col) == "double") {
+        EXPECT_DOUBLE_EQ(type_cast<double>(left[row][col]), type_cast<double>(right[row][col])) << "Row/Col:" << row
+                                                                                                << "/" << col;
+      } else {
+        EXPECT_EQ(left[row][col], right[row][col]) << "Row:" << row + 1 << " Col:" << col + 1;
+      }
+    }
+
+  return ::testing::AssertionSuccess();
 }
 
 template <typename T>
@@ -137,6 +147,10 @@ std::shared_ptr<Table> BaseTest::load_table(const std::string &file_name, size_t
   while (std::getline(infile, line)) {
     std::vector<AllTypeVariant> values = _split<AllTypeVariant>(line, '|');
     test_table->append(values);
+
+    auto &chunk = test_table->get_chunk(test_table->chunk_count() - 1);
+    auto &mvcc_cols = chunk.mvcc_columns();
+    mvcc_cols.begin_cids.back() = 0;
   }
   return test_table;
 }

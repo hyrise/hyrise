@@ -1,0 +1,14 @@
+left.a|left.b|right.b|right.a
+int|string|string|int
+2|test2|test2|2
+4|test4|test4|4
+6|test6|test6|6
+8|test8|0|0
+10|test10|0|0
+12|test12|0|0
+14|test14|test14|14
+16|test16|test16|16
+18|test18|test18|18
+19|test19|0|0
+20|test20|0|0
+21|test21|0|0

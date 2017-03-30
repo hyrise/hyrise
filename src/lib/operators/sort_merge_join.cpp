@@ -15,7 +15,13 @@ SortMergeJoin::SortMergeJoin(const std::shared_ptr<AbstractOperator> left,
                              const std::shared_ptr<AbstractOperator> right,
                              optional<std::pair<const std::string&, const std::string&>> column_names,
                              const std::string& op, const JoinMode mode)
-    : AbstractOperator(left, right), _op{op}, _mode{mode} {
+    : AbstractJoinOperator(left, right, column_names, op, mode, "", "" /*, prefix_left, prefix_right*/) {
+  if (_mode == Cross) {
+    throw std::runtime_error(
+        "SortMergeJoin: this operator does not support Cross Joins, the optimizer should use Product operator "
+        "instead.");
+  }
+
   // Check optional column names
   // Per definition either two names are specified or none
   if (column_names) {
@@ -30,10 +36,10 @@ SortMergeJoin::SortMergeJoin(const std::shared_ptr<AbstractOperator> left,
       throw std::exception(std::runtime_error("SortMergeJoin::SortMergeJoin: right input operator is null"));
     }
     // Check column_type
-    auto left_column_id = _input_left->column_id_by_name(_left_column_name);
-    auto right_column_id = _input_right->column_id_by_name(_right_column_name);
-    auto left_column_type = _input_left->column_type(left_column_id);
-    auto right_column_type = _input_right->column_type(right_column_id);
+    auto left_column_id = input_table_left()->column_id_by_name(_left_column_name);
+    auto right_column_id = input_table_right()->column_id_by_name(_right_column_name);
+    auto left_column_type = input_table_left()->column_type(left_column_id);
+    auto right_column_type = input_table_right()->column_type(right_column_id);
 
     if (left_column_type != right_column_type) {
       std::string message = "SortMergeJoin::SortMergeJoin: column type \"" + left_column_type + "\" of left column \"" +
@@ -43,7 +49,7 @@ SortMergeJoin::SortMergeJoin(const std::shared_ptr<AbstractOperator> left,
     }
     // Create implementation to compute join result
     if (_mode != JoinMode::Cross) {
-      _impl = make_unique_by_column_type<AbstractOperatorImpl, SortMergeJoinImpl>(left_column_type, *this);
+      _impl = make_unique_by_column_type<AbstractJoinOperatorImpl, SortMergeJoinImpl>(left_column_type, *this);
     } else {
       _product = std::make_shared<Product>(left, right, "left", "right");
     }
@@ -57,20 +63,8 @@ SortMergeJoin::SortMergeJoin(const std::shared_ptr<AbstractOperator> left,
   }
 }
 
-void SortMergeJoin::execute() {
-  if (_mode != JoinMode::Cross) {
-    _impl->execute();
-  } else {
-    _product->execute();
-  }
-}
-
-std::shared_ptr<const Table> SortMergeJoin::get_output() const {
-  if (_mode != JoinMode::Cross) {
-    return _impl->get_output();
-  } else {
-    return _product->get_output();
-  }
+std::shared_ptr<const Table> SortMergeJoin::on_execute(const TransactionContext* context) {
+  return _impl->on_execute();
 }
 
 const std::string SortMergeJoin::name() const { return "SortMergeJoin"; }
@@ -529,75 +523,72 @@ void SortMergeJoin::SortMergeJoinImpl<T>::perform_join() {
 }
 
 template <typename T>
-void SortMergeJoin::SortMergeJoinImpl<T>::build_output() {
-  _sort_merge_join._output = std::make_shared<Table>(0, false);
+void SortMergeJoin::SortMergeJoinImpl<T>::build_output(std::shared_ptr<Table>& output) {
   // left output
-  for (size_t column_id = 0; column_id < _sort_merge_join._input_left->col_count(); column_id++) {
+  for (size_t column_id = 0; column_id < _sort_merge_join.input_table_left()->col_count(); column_id++) {
     // Add the column meta data
-    _sort_merge_join._output->add_column(_sort_merge_join._input_left->column_name(column_id),
-                                         _sort_merge_join._input_left->column_type(column_id), false);
+    output->add_column(_sort_merge_join.input_table_left()->column_name(column_id),
+                       _sort_merge_join.input_table_left()->column_type(column_id), false);
 
     // Check whether the column consists of reference columns
-    const auto r_column =
-        std::dynamic_pointer_cast<ReferenceColumn>(_sort_merge_join._input_left->get_chunk(0).get_column(column_id));
+    const auto r_column = std::dynamic_pointer_cast<ReferenceColumn>(
+        _sort_merge_join.input_table_left()->get_chunk(0).get_column(column_id));
     if (r_column) {
       // Create a pos_list referencing the original column
       auto new_pos_list =
-          dereference_pos_list(_sort_merge_join._input_left, column_id, _sort_merge_join._pos_list_left);
+          dereference_pos_list(_sort_merge_join.input_table_left(), column_id, _sort_merge_join._pos_list_left);
       auto ref_column = std::make_shared<ReferenceColumn>(r_column->referenced_table(),
                                                           r_column->referenced_column_id(), new_pos_list);
-      _sort_merge_join._output->get_chunk(0).add_column(ref_column);
+      output->get_chunk(0).add_column(ref_column);
     } else {
-      auto ref_column =
-          std::make_shared<ReferenceColumn>(_sort_merge_join._input_left, column_id, _sort_merge_join._pos_list_left);
-      _sort_merge_join._output->get_chunk(0).add_column(ref_column);
+      auto ref_column = std::make_shared<ReferenceColumn>(_sort_merge_join.input_table_left(), column_id,
+                                                          _sort_merge_join._pos_list_left);
+      output->get_chunk(0).add_column(ref_column);
     }
   }
   // right_output
-  for (size_t column_id = 0; column_id < _sort_merge_join._input_right->col_count(); column_id++) {
+  for (size_t column_id = 0; column_id < _sort_merge_join.input_table_right()->col_count(); column_id++) {
     // Add the column meta data
-    _sort_merge_join._output->add_column(_sort_merge_join._input_right->column_name(column_id),
-                                         _sort_merge_join._input_right->column_type(column_id), false);
+    output->add_column(_sort_merge_join.input_table_right()->column_name(column_id),
+                       _sort_merge_join.input_table_right()->column_type(column_id), false);
 
     // Check whether the column consists of reference columns
-    const auto r_column =
-        std::dynamic_pointer_cast<ReferenceColumn>(_sort_merge_join._input_right->get_chunk(0).get_column(column_id));
+    const auto r_column = std::dynamic_pointer_cast<ReferenceColumn>(
+        _sort_merge_join.input_table_right()->get_chunk(0).get_column(column_id));
     if (r_column) {
       // Create a pos_list referencing the original column
       auto new_pos_list =
-          dereference_pos_list(_sort_merge_join._input_right, column_id, _sort_merge_join._pos_list_right);
+          dereference_pos_list(_sort_merge_join.input_table_right(), column_id, _sort_merge_join._pos_list_right);
       auto ref_column = std::make_shared<ReferenceColumn>(r_column->referenced_table(),
                                                           r_column->referenced_column_id(), new_pos_list);
-      _sort_merge_join._output->get_chunk(0).add_column(ref_column);
+      output->get_chunk(0).add_column(ref_column);
     } else {
-      auto ref_column =
-          std::make_shared<ReferenceColumn>(_sort_merge_join._input_right, column_id, _sort_merge_join._pos_list_right);
-      _sort_merge_join._output->get_chunk(0).add_column(ref_column);
+      auto ref_column = std::make_shared<ReferenceColumn>(_sort_merge_join.input_table_right(), column_id,
+                                                          _sort_merge_join._pos_list_right);
+      output->get_chunk(0).add_column(ref_column);
     }
   }
 }
 
 template <typename T>
-void SortMergeJoin::SortMergeJoinImpl<T>::execute() {
+std::shared_ptr<const Table> SortMergeJoin::SortMergeJoinImpl<T>::on_execute() {
   // sort left table
   _sorted_left_table = std::make_shared<SortedTable>();
-  sort_table(_sorted_left_table, _sort_merge_join._input_left, _sort_merge_join._left_column_name, true);
+  sort_table(_sorted_left_table, _sort_merge_join.input_table_left(), _sort_merge_join._left_column_name, true);
 
   // sort right table
   _sorted_right_table = std::make_shared<SortedTable>();
-  sort_table(_sorted_right_table, _sort_merge_join._input_right, _sort_merge_join._right_column_name, false);
+  sort_table(_sorted_right_table, _sort_merge_join.input_table_right(), _sort_merge_join._right_column_name, false);
 
   if (_sort_merge_join._op != "=" && _partition_count > 1) {
     value_based_partitioning();
   }
 
   perform_join();
-  build_output();
-}
 
-template <typename T>
-std::shared_ptr<Table> SortMergeJoin::SortMergeJoinImpl<T>::get_output() const {
-  return _sort_merge_join._output;
+  auto output = std::make_shared<Table>();
+  build_output(output);
+  return output;
 }
 
 template <typename T>

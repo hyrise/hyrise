@@ -7,7 +7,7 @@
 #include <utility>
 #include <vector>
 
-#include "abstract_operator.hpp"
+#include "abstract_join_operator.hpp"
 #include "product.hpp"
 #include "storage/column_visitable.hpp"
 #include "storage/dictionary_column.hpp"
@@ -17,14 +17,14 @@
 
 namespace opossum {
 
-class SortMergeJoin : public AbstractOperator {
+class SortMergeJoin : public AbstractJoinOperator {
  public:
   SortMergeJoin(const std::shared_ptr<AbstractOperator> left, const std::shared_ptr<AbstractOperator> right,
                 optional<std::pair<const std::string&, const std::string&>> column_names, const std::string& op,
                 const JoinMode mode);
 
-  void execute() override;
-  std::shared_ptr<const Table> get_output() const override;
+  std::shared_ptr<const Table> on_execute(const TransactionContext* context);
+
   const std::string name() const override;
   uint8_t num_in_tables() const override;
   uint8_t num_out_tables() const override;
@@ -41,7 +41,7 @@ class SortMergeJoin : public AbstractOperator {
   };
 
   template <typename T>
-  class SortMergeJoinImpl : public AbstractOperatorImpl, public ColumnVisitable {
+  class SortMergeJoinImpl : public AbstractJoinOperatorImpl, public ColumnVisitable {
    protected:
     // should be 2^x
     size_t _partition_count = 1;
@@ -49,9 +49,8 @@ class SortMergeJoin : public AbstractOperator {
    public:
     SortMergeJoinImpl<T>(SortMergeJoin& sort_merge_join);
 
-    // AbstractOperatorImpl implementation
-    void execute() override;
-    std::shared_ptr<Table> get_output() const override;
+    // AbstractJoinOperatorImpl implementation
+    std::shared_ptr<const Table> on_execute() override;
 
     // struct used for materialized sorted Chunk
     struct SortedChunk {
@@ -97,7 +96,7 @@ class SortMergeJoin : public AbstractOperator {
                         std::vector<PosList>& pos_lists_right);
     void perform_join();
     // builds output based on pos_list_left/-_right
-    void build_output();
+    void build_output(std::shared_ptr<Table>& output);
 
     std::shared_ptr<PosList> dereference_pos_list(std::shared_ptr<const Table> input_table, size_t column_id,
                                                   std::shared_ptr<const PosList> pos_list);
@@ -116,15 +115,16 @@ class SortMergeJoin : public AbstractOperator {
     SortedTable _right_table;
   };
 
-  std::unique_ptr<AbstractOperatorImpl> _impl;
+  std::unique_ptr<AbstractJoinOperatorImpl> _impl;
   std::shared_ptr<Product> _product;
+  // TODO(remove)
   std::string _left_column_name;
   std::string _right_column_name;
-  std::string _op;
-  JoinMode _mode;
+  // std::string _op;
+  // JoinMode _mode;
 
+  // std::shared_ptr<Table> _output;
   std::shared_ptr<PosList> _pos_list_left;
   std::shared_ptr<PosList> _pos_list_right;
-  std::shared_ptr<Table> _output;
 };
 }  // namespace opossum

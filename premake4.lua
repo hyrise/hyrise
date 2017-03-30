@@ -9,9 +9,9 @@ else
 end
 
 -- Install pre-commit hook for linting if not installed yet or outdated
-if os.execute("test -x .git/hooks/pre-commit") ~= 0 or os.execute(md5Command .. " .git/hooks/pre-commit | grep 624d54ca09e8def372e43ef0df4fd79a >/dev/null 2>/dev/null") ~= 0 then
+if os.execute("test -x .git/hooks/pre-commit") ~= 0 or os.execute(md5Command .. " .git/hooks/pre-commit | grep 8e8df7ddf91f5256604ecf2510958c91 >/dev/null 2>/dev/null") ~= 0 then
   os.execute("touch .git/hooks/pre-commit")
-  os.execute("echo '#!/bin/bash\nfunction finish {\n    git stash pop>/dev/null\n}\ngit stash --keep-index >/dev/null && trap finish EXIT\necho \"Linting all code, this may take a while...\"\n\nfind src -iname *.cpp -o -iname *.hpp | while read line;\ndo\n    if ! python2.7 cpplint.py --verbose=0 --extensions=hpp,cpp --counting=detailed --filter=-legal/copyright,-whitespace/newline,-runtime/references,-build/c++11 --linelength=120 $line >/dev/null 2>/dev/null\n    then\n        echo \"ERROR: Linting error occured. Execute \\\"premake4 lint\\\" for details!\"\n        exit 1\n    fi\ndone\n\nif [ $? != 0 ]\nthen\n    exit 1\nfi\n\necho \"Success, no linting errors found!\"\n\necho \"Testing the Opossum, grrrrr...\"\nmake -j test >/dev/null 2>/dev/null\nif ! ./build/test >/dev/null 2>/dev/null\nthen\n    echo \"ERROR: Testing error occured. Execute \\\"make test\\\" for details!\"\n    exit 1\nfi\n\necho \"Success, no testing errors found!\"' > .git/hooks/pre-commit")
+  os.execute("echo '#!/bin/bash\nif [ -f ./git/MERGE_HEAD ];\nthen\n    exit 0\nfi\n\nfunction finish {\n    git stash pop>/dev/null\n}\ngit stash --keep-index >/dev/null && trap finish EXIT\necho \"Linting all code, this may take a while...\"\n\nfind src -iname *.cpp -o -iname *.hpp | while read line;\ndo\n    if ! python2.7 cpplint.py --verbose=0 --extensions=hpp,cpp --counting=detailed --filter=-legal/copyright,-whitespace/newline,-runtime/references,-build/c++11 --linelength=120 $line >/dev/null 2>/dev/null\n    then\n        echo \"ERROR: Linting error occured. Execute \\\"premake4 lint\\\" for details!\"\n        exit 1\n    fi\ndone\n\nif [ $? != 0 ]\nthen\n    exit 1\nfi\n\necho \"Success, no linting errors found!\"\n\necho \"Testing the Opossum, grrrrr...\"\nmake -j test >/dev/null 2>/dev/null\nif ! ./build/test >/dev/null 2>/dev/null\nthen\n    echo \"ERROR: Testing error occured. Execute \\\"make test\\\" for details!\"\n    exit 1\nfi\n\necho \"Success, no testing errors found!\"' > .git/hooks/pre-commit")
   os.execute("chmod +x .git/hooks/pre-commit")
   os.execute("echo Successfully installed pre-commit hook.")
 end
@@ -23,6 +23,8 @@ if os.execute("test -x .git/hooks/pre-push") ~= 0 or os.execute(md5Command .. " 
   os.execute("echo Successfully installed pre-push hook.")
 end
 
+-- Check for numa availability
+numa_supported = os.findlib("numa") ~= nil
 
 -- TODO try LTO/whole program
 
@@ -35,9 +37,12 @@ function default(osName, actionName)
     _ACTION = actionName
   end
 end
- 
+
 default("linux", "gmake")
 default("macosx", "gmake")
+
+-- Collect all libs to be linked against, to order them correctly
+libs = {}
 
 if not _OPTIONS["compiler"] then
   print "No compiler specified. Automatically selected gcc."
@@ -72,26 +77,55 @@ solution "opossum"
   if os.is("linux") then
     linkoptions {"-pthread"}
   end
+  links { "tbb" }
+  
   includedirs { "src/lib/", "/usr/local/include" }
+  libdirs { "/usr/local/lib" }
+
+  libs[#libs+1] = "tbb"
+
+  if numa_supported then
+    libs[#libs+1] = "numa"
+    defines { "OPOSSUM_NUMA_SUPPORT=1" }
+  else
+    defines { "OPOSSUM_NUMA_SUPPORT=0" }
+  end
 
   configuration "Debug"
     defines { "IS_DEBUG=1" }
     flags { "Symbols" }
-    prebuildcommands { "find src -iname \"*.cpp\" -o -iname \"*.hpp\" | xargs -I{} sh -c \"clang-format -i -style=file '{}'\"" }
-      -- TODO Shouldn't this be part of the pre-commit hook? "make" should never touch the code
 
   configuration "Release"
     defines { "IS_DEBUG=0" }
     flags { "OptimizeSpeed" }
+    buildoptions { "-march=native" }
+    
+  configuration "Debug or Release"
     prebuildcommands { "find src -iname \"*.cpp\" -o -iname \"*.hpp\" | xargs -I{} sh -c \"clang-format -i -style=file '{}'\"" }
+      -- TODO Shouldn't this be part of the pre-commit hook? "make" should never touch the code
 
 project "googletest"
   kind "StaticLib"
   files { "third_party/googletest/googletest/src/gtest-all.cc" }
   includedirs { "third_party/googletest/googletest", "third_party/googletest/googletest/include" }
 
+project "googlebenchmark"
+  kind "StaticLib"
+  buildoptions {"-O3"}
+  files { "third_party/benchmark/src/**.cc", "third_party/benchmark_fix/dummy.cc" }
+  includedirs { "third_party/benchmark/src", "third_party/benchmark/include" }
+
+  configuration "Debug or Release"
+    defines {"NDEBUG", "HAVE_STD_REGEX"}
+
 project "opossum"
   kind "StaticLib"
+  files { "src/lib/**.hpp", "src/lib/**.cpp", "src/bin/server.cpp" }
+
+project "opossum-asan"
+  kind "StaticLib"
+  buildoptions {"-fsanitize=address -fno-omit-frame-pointer"}
+  linkoptions {"-fsanitize=address"}
   files { "src/lib/**.hpp", "src/lib/**.cpp", "src/bin/server.cpp" }
 
 project "opossumCoverage"
@@ -103,30 +137,53 @@ project "opossumCoverage"
 project "server"
   kind "ConsoleApp"
   links { "opossum" }
+  links(libs)
   files { "src/bin/server.cpp" }
 
 project "playground"
   kind "ConsoleApp"
   links { "opossum" }
+  links(libs)
   files { "src/bin/playground.cpp" }
 
 project "test"
   kind "ConsoleApp"
 
   links { "opossum", "googletest" }
+  links(libs)
   files { "src/test/**.hpp", "src/test/**.cpp" }
   includedirs { "third_party/googletest/googletest/include" }
-  -- We need to add something that always returns 0 (the echo) because otherwise the build is considered failed and gets deleted
-  postbuildcommands { "./build/test || echo Test failed" }
+  postbuildcommands { "./build/test" }
+
+project "asan"
+  kind "ConsoleApp"
+
+  links { "opossum-asan", "googletest" }
+  links(libs)
+  files { "src/test/**.hpp", "src/test/**.cpp" }
+  includedirs { "third_party/googletest/googletest/include" }
+  buildoptions {"-fsanitize=address -fno-omit-frame-pointer"}
+  linkoptions { "-fsanitize=address" }
+  postbuildcommands { "./build/asan" }
+
+project "benchmark"
+  kind "ConsoleApp"
+
+  links { "opossum", "googlebenchmark" }
+  files { "src/benchmark/**.hpp", "src/benchmark/**.cpp" }
+  includedirs { "third_party/benchmark/include" }
+  postbuildcommands { "./build/benchmark --benchmark_format=json > benchmark.json" }
 
 project "coverage"
   kind "ConsoleApp"
 
   links { "opossumCoverage", "googletest" }
+  links(libs)
   linkoptions {"--coverage"}
   files { "src/test/**.hpp", "src/test/**.cpp" }
+  buildoptions { "-fprofile-arcs -ftest-coverage" }
   includedirs { "third_party/googletest/googletest/include" }
-  postbuildcommands { "./build/coverage && rm -fr coverage; mkdir coverage && gcovr -s -r . --exclude=\".*types*.\" --html --html-details -o coverage/index.html" }
+  postbuildcommands { "./build/coverage && rm -fr coverage; mkdir coverage && gcovr -s -r . --exclude=\"(.*types*.|.*test*.)\" --html --html-details -o coverage/index.html" }
 
 newoption {
   trigger     = "compiler",
