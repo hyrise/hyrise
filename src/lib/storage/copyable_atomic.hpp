@@ -7,7 +7,7 @@
 namespace opossum {
 
 /**
- * @brief Movable atomic wrapper
+ * @brief Copyable atomic wrapper
  *
  * Wrapper that implements the move constructor and assignment operator
  * Makes handling atomics in containers easier
