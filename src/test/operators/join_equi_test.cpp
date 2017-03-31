@@ -11,7 +11,8 @@
 
 #include "../../lib/operators/get_table.hpp"
 #include "../../lib/operators/join_hash.hpp"
-#include "../../lib/operators/join_nested_loop.hpp"
+#include "../../lib/operators/join_nested_loop_a.hpp"
+#include "../../lib/operators/join_nested_loop_b.hpp"
 #include "../../lib/operators/print.hpp"
 #include "../../lib/operators/table_scan.hpp"
 #include "../../lib/operators/union_all.hpp"
@@ -29,7 +30,7 @@ template <typename T>
 class JoinEquiTest : public JoinTest {};
 
 // here we define all Join types
-typedef ::testing::Types<JoinNestedLoop, JoinHash /* , SortMergeJoin */> JoinEquiTypes;
+typedef ::testing::Types<JoinNestedLoopA, JoinNestedLoopB, JoinHash /* , SortMergeJoin */> JoinEquiTypes;
 TYPED_TEST_CASE(JoinEquiTest, JoinEquiTypes);
 
 TYPED_TEST(JoinEquiTest, WrongJoinOperator) {
@@ -38,12 +39,6 @@ TYPED_TEST(JoinEquiTest, WrongJoinOperator) {
                std::runtime_error);
 }
 
-// Is not implemented for Joins. The Optimizer should pick the Product Operator
-TYPED_TEST(JoinEquiTest, DISABLED_CrossJoin) {
-  this->template test_join_output<TypeParam>(this->_gt_a, this->_gt_b, std::pair<std::string, std::string>("a", "a"),
-                                             "=", Cross, std::string("left"), std::string("right"),
-                                             "src/test/tables/joinoperators/int_cross_join.tbl", 1);
-}
 
 TYPED_TEST(JoinEquiTest, LeftJoin) {
   this->template test_join_output<TypeParam>(this->_gt_a, this->_gt_b, std::pair<std::string, std::string>("a", "a"),
@@ -284,8 +279,8 @@ TYPED_TEST(JoinEquiTest, MultiJoinOnRefOuter) {
 }
 
 TYPED_TEST(JoinEquiTest, MixNestedLoopAndHash) {
-  auto join = std::make_shared<JoinNestedLoop>(this->_gt_f, this->_gt_g, std::pair<std::string, std::string>("a", "a"),
-                                               "=", Left, std::string("left"), std::string("right"));
+  auto join = std::make_shared<JoinNestedLoopA>(this->_gt_f, this->_gt_g, std::pair<std::string, std::string>("a", "a"),
+                                                "=", Left, std::string("left"), std::string("right"));
   join->execute();
 
   this->template test_join_output<TypeParam>(join, this->_gt_h, std::pair<std::string, std::string>("left.a", "a"), "=",

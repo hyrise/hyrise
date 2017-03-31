@@ -1,4 +1,4 @@
-#include "nested_loop_join.hpp"
+#include "join_nested_loop_b.hpp"
 
 #include <exception>
 #include <memory>
@@ -10,34 +10,30 @@
 
 namespace opossum {
 
-NestedLoopJoin::NestedLoopJoin(const std::shared_ptr<AbstractOperator> left,
-                               const std::shared_ptr<AbstractOperator> right,
-                               optional<std::pair<const std::string&, const std::string&>> column_names,
-                               const std::string& op, const JoinMode mode, const std::string& prefix_left,
-                               const std::string& prefix_right)
+JoinNestedLoopB::JoinNestedLoopB(const std::shared_ptr<const AbstractOperator> left,
+                                 const std::shared_ptr<const AbstractOperator> right,
+                                 optional<std::pair<std::string, std::string>> column_names, const std::string& op,
+                                 const JoinMode mode, const std::string& prefix_left, const std::string& prefix_right)
     : AbstractJoinOperator(left, right, column_names, op, mode, prefix_left, prefix_right), _op{op}, _mode{mode} {
+  if (mode == Cross) {
+    throw std::runtime_error(
+        "JoinNestedLoopA: this operator does not support Cross Joins, the optimizer should use Product operator.");
+  }
+
   // Check optional column names
   // Per definition either two names are specified or none
   if (column_names) {
     _left_column_name = column_names->first;
     _right_column_name = column_names->second;
   } else {
-    // No names specified --> this is only valid if we want to cross-join
-    if (_mode != Cross) {
-      throw std::runtime_error("NestedLoopJoin::NestedLoopJoin: No columns specified for join operator");
-    }
+    throw std::runtime_error("JoinNestedLoopB::JoinNestedLoopB: No columns specified for join operator");
   }
 
   if (left == nullptr) {
-    throw std::runtime_error("NestedLoopJoin::NestedLoopJoin: left input operator is null");
+    throw std::runtime_error("JoinNestedLoopB::JoinNestedLoopB: left input operator is null");
   }
   if (right == nullptr) {
-    throw std::runtime_error("NestedLoopJoin::NestedLoopJoin: right input operator is null");
-  }
-  // If cross-join, we use the functionality already provided by product to compute the result
-  if (_mode == Cross) {
-    _product = std::make_unique<Product>(left, right, prefix_left, prefix_right);
-    return;
+    throw std::runtime_error("JoinNestedLoopB::JoinNestedLoopB: right input operator is null");
   }
 
   _output = std::make_shared<Table>(0, false);
@@ -48,9 +44,9 @@ NestedLoopJoin::NestedLoopJoin(const std::shared_ptr<AbstractOperator> left,
 // This funtion turns a pos list with references to a reference column into a pos list with references
 // to the original columns.
 // It is assumed that either non or all chunks of a table contain reference columns.
-std::shared_ptr<PosList> NestedLoopJoin::_dereference_pos_list(std::shared_ptr<const Table> input_table,
-                                                               size_t column_id,
-                                                               std::shared_ptr<const PosList> pos_list) {
+std::shared_ptr<PosList> JoinNestedLoopB::_dereference_pos_list(std::shared_ptr<const Table> input_table,
+                                                                size_t column_id,
+                                                                std::shared_ptr<const PosList> pos_list) {
   // Get all the input pos lists so that we only have to pointer cast the columns once
   auto input_pos_lists = std::vector<std::shared_ptr<const PosList>>();
   for (ChunkID chunk_id = 0; chunk_id < input_table->chunk_count(); chunk_id++) {
@@ -68,8 +64,8 @@ std::shared_ptr<PosList> NestedLoopJoin::_dereference_pos_list(std::shared_ptr<c
   return new_pos_list;
 }
 
-void NestedLoopJoin::_append_columns_to_output(std::shared_ptr<const Table> input_table,
-                                               std::shared_ptr<PosList> pos_list, std::string prefix) {
+void JoinNestedLoopB::_append_columns_to_output(std::shared_ptr<const Table> input_table,
+                                                std::shared_ptr<PosList> pos_list, std::string prefix) {
   // Append each column of the input column to the output
   for (size_t column_id = 0; column_id < input_table->col_count(); column_id++) {
     // Add the column meta data
@@ -92,8 +88,8 @@ void NestedLoopJoin::_append_columns_to_output(std::shared_ptr<const Table> inpu
 }
 
 // Join two columns of the input tables
-void NestedLoopJoin::_join_columns(size_t left_column_id, size_t right_column_id, std::string left_column_type) {
-  auto impl = make_shared_by_column_type<ColumnVisitable, NestedLoopJoinImpl>(left_column_type, *this);
+void JoinNestedLoopB::_join_columns(size_t left_column_id, size_t right_column_id, std::string left_column_type) {
+  auto impl = make_shared_by_column_type<ColumnVisitable, JoinNestedLoopBImpl>(left_column_type, *this);
   // For each combination of chunks from both input tables call visitor pattern to actually perform the join.
   for (ChunkID chunk_id_left = 0; chunk_id_left < input_table_left()->chunk_count(); ++chunk_id_left) {
     for (ChunkID chunk_id_right = 0; chunk_id_right < input_table_right()->chunk_count(); ++chunk_id_right) {
@@ -110,10 +106,10 @@ void NestedLoopJoin::_join_columns(size_t left_column_id, size_t right_column_id
 
 // Adds the rows to the output that didn't match to any other rows in the join phase and
 // fills those rows with null values
-void NestedLoopJoin::_add_outer_join_rows(std::shared_ptr<const Table> outer_side_table,
-                                          std::shared_ptr<PosList> outer_side_pos_list,
-                                          std::set<RowID>& outer_side_matches,
-                                          std::shared_ptr<PosList> null_side_pos_list) {
+void JoinNestedLoopB::_add_outer_join_rows(std::shared_ptr<const Table> outer_side_table,
+                                           std::shared_ptr<PosList> outer_side_pos_list,
+                                           std::set<RowID>& outer_side_matches,
+                                           std::shared_ptr<PosList> null_side_pos_list) {
   for (ChunkID chunk_id = 0; chunk_id < outer_side_table->chunk_count(); chunk_id++) {
     for (ChunkOffset chunk_offset = 0; chunk_offset < outer_side_table->get_chunk(chunk_id).size(); chunk_offset++) {
       RowID row_id = RowID{chunk_id, chunk_offset};
@@ -127,13 +123,7 @@ void NestedLoopJoin::_add_outer_join_rows(std::shared_ptr<const Table> outer_sid
   }
 }
 
-std::shared_ptr<const Table> NestedLoopJoin::on_execute() {
-  // output is equal to result of product in case of cross-join
-  if (_mode == Cross) {
-    _product->execute();
-    return _product->get_output();
-  }
-
+std::shared_ptr<const Table> JoinNestedLoopB::on_execute() {
   // Get types and ids of the input columns
   auto left_column_id = input_table_left()->column_id_by_name(_left_column_name);
   auto right_column_id = input_table_right()->column_id_by_name(_right_column_name);
@@ -143,7 +133,7 @@ std::shared_ptr<const Table> NestedLoopJoin::on_execute() {
   // Ensure matching column types for simplicity
   // Joins on non-matching types can be added later.
   if (left_column_type != right_column_type) {
-    std::string message = "NestedLoopJoin::execute: column type \"" + left_column_type + "\" of left column \"" +
+    std::string message = "JoinNestedLoopB::execute: column type \"" + left_column_type + "\" of left column \"" +
                           _left_column_name + "\" does not match colum type \"" + right_column_type +
                           "\" of right column \"" + _right_column_name + "\"!";
     throw std::runtime_error(message);
@@ -165,40 +155,40 @@ std::shared_ptr<const Table> NestedLoopJoin::on_execute() {
   return _output;
 }
 
-const std::string NestedLoopJoin::name() const { return "NestedLoopJoin"; }
+const std::string JoinNestedLoopB::name() const { return "JoinNestedLoopB"; }
 
-uint8_t NestedLoopJoin::num_in_tables() const { return 2u; }
+uint8_t JoinNestedLoopB::num_in_tables() const { return 2u; }
 
-uint8_t NestedLoopJoin::num_out_tables() const { return 1u; }
+uint8_t JoinNestedLoopB::num_out_tables() const { return 1u; }
 
 template <typename T>
-NestedLoopJoin::NestedLoopJoinImpl<T>::NestedLoopJoinImpl(NestedLoopJoin& nested_loop_join)
-    : _nested_loop_join{nested_loop_join} {
+JoinNestedLoopB::JoinNestedLoopBImpl<T>::JoinNestedLoopBImpl(JoinNestedLoopB& join_nested_loop_b)
+    : _join_nested_loop_b{join_nested_loop_b} {
   // No compare function is necessary for the cross join
-  if (_nested_loop_join._mode == Cross) {
+  if (_join_nested_loop_b._mode == Cross) {
     return;
   }
 
-  if (_nested_loop_join._op == "=") {
+  if (_join_nested_loop_b._op == "=") {
     _compare = [](const T& value_left, const T& value_right) -> bool { return value_left == value_right; };
-  } else if (_nested_loop_join._op == "<") {
+  } else if (_join_nested_loop_b._op == "<") {
     _compare = [](const T& value_left, const T& value_right) -> bool { return value_left < value_right; };
-  } else if (_nested_loop_join._op == ">") {
+  } else if (_join_nested_loop_b._op == ">") {
     _compare = [](const T& value_left, const T& value_right) -> bool { return value_left > value_right; };
-  } else if (_nested_loop_join._op == ">=") {
+  } else if (_join_nested_loop_b._op == ">=") {
     _compare = [](const T& value_left, const T& value_right) -> bool { return value_left >= value_right; };
-  } else if (_nested_loop_join._op == "<=") {
+  } else if (_join_nested_loop_b._op == "<=") {
     _compare = [](const T& value_left, const T& value_right) -> bool { return value_left <= value_right; };
-  } else if (_nested_loop_join._op == "!=") {
+  } else if (_join_nested_loop_b._op == "!=") {
     _compare = [](const T& value_left, const T& value_right) -> bool { return value_left != value_right; };
   } else {
-    throw std::runtime_error("NestedLoopJoinImpl::NestedLoopJoinImpl: Unknown operator " + _nested_loop_join._op);
+    throw std::runtime_error("JoinNestedLoopBImpl::JoinNestedLoopBImpl: Unknown operator " + _join_nested_loop_b._op);
   }
 }
 
 template <typename T>
-std::shared_ptr<const Table> NestedLoopJoin::NestedLoopJoinImpl<T>::on_execute() {
-  return _nested_loop_join._output;
+std::shared_ptr<const Table> JoinNestedLoopB::JoinNestedLoopBImpl<T>::on_execute() {
+  return _join_nested_loop_b._output;
 }
 
 /*
@@ -208,33 +198,34 @@ std::shared_ptr<const Table> NestedLoopJoin::NestedLoopJoinImpl<T>::on_execute()
 */
 
 template <typename T>
-void NestedLoopJoin::NestedLoopJoinImpl<T>::_match_values(const T& value_left, ChunkOffset left_chunk_offset,
-                                                          const T& value_right, ChunkOffset right_chunk_offset,
-                                                          std::shared_ptr<JoinContext> context, bool reverse_order) {
+void JoinNestedLoopB::JoinNestedLoopBImpl<T>::_match_values(const T& value_left, ChunkOffset left_chunk_offset,
+                                                            const T& value_right, ChunkOffset right_chunk_offset,
+                                                            std::shared_ptr<JoinContext> context, bool reverse_order) {
   bool values_match = reverse_order ? _compare(value_right, value_left) : _compare(value_left, value_right);
   if (values_match) {
-    RowID left_row_id = _nested_loop_join.input_table_left()->calculate_row_id(
+    RowID left_row_id = _join_nested_loop_b.input_table_left()->calculate_row_id(
         context->_left_chunk_id, reverse_order ? right_chunk_offset : left_chunk_offset);
-    RowID right_row_id = _nested_loop_join.input_table_right()->calculate_row_id(
+    RowID right_row_id = _join_nested_loop_b.input_table_right()->calculate_row_id(
         context->_right_chunk_id, reverse_order ? left_chunk_offset : right_chunk_offset);
 
     if (context->_mode == Left || context->_mode == Outer) {
       // For inner joins, the list of matched values is not needed and is not maintained
-      _nested_loop_join._left_match.insert(left_row_id);
+      _join_nested_loop_b._left_match.insert(left_row_id);
     }
 
     if (context->_mode == Right || context->_mode == Outer) {
-      _nested_loop_join._right_match.insert(right_row_id);
+      _join_nested_loop_b._right_match.insert(right_row_id);
     }
 
-    _nested_loop_join._pos_list_left->push_back(left_row_id);
-    _nested_loop_join._pos_list_right->push_back(right_row_id);
+    _join_nested_loop_b._pos_list_left->push_back(left_row_id);
+    _join_nested_loop_b._pos_list_right->push_back(right_row_id);
   }
 }
 
 template <typename T>
-void NestedLoopJoin::NestedLoopJoinImpl<T>::join_value_value(ValueColumn<T>& left, ValueColumn<T>& right,
-                                                             std::shared_ptr<JoinContext> context, bool reverse_order) {
+void JoinNestedLoopB::JoinNestedLoopBImpl<T>::join_value_value(ValueColumn<T>& left, ValueColumn<T>& right,
+                                                               std::shared_ptr<JoinContext> context,
+                                                               bool reverse_order) {
   const auto& values_left = left.values();
   const auto& values_right = right.values();
 
@@ -249,9 +240,9 @@ void NestedLoopJoin::NestedLoopJoinImpl<T>::join_value_value(ValueColumn<T>& lef
 }
 
 template <typename T>
-void NestedLoopJoin::NestedLoopJoinImpl<T>::join_value_dictionary(ValueColumn<T>& left, DictionaryColumn<T>& right,
-                                                                  std::shared_ptr<JoinContext> context,
-                                                                  bool reverse_order) {
+void JoinNestedLoopB::JoinNestedLoopBImpl<T>::join_value_dictionary(ValueColumn<T>& left, DictionaryColumn<T>& right,
+                                                                    std::shared_ptr<JoinContext> context,
+                                                                    bool reverse_order) {
   const auto& values = left.values();
   const auto& att = right.attribute_vector();
 
@@ -267,8 +258,8 @@ void NestedLoopJoin::NestedLoopJoinImpl<T>::join_value_dictionary(ValueColumn<T>
 
 // Resolves a reference in a reference column and returns the original value
 template <typename T>
-const T& NestedLoopJoin::NestedLoopJoinImpl<T>::_resolve_reference(ReferenceColumn& ref_column,
-                                                                   ChunkOffset chunk_offset) {
+const T& JoinNestedLoopB::JoinNestedLoopBImpl<T>::_resolve_reference(ReferenceColumn& ref_column,
+                                                                     ChunkOffset chunk_offset) {
   // TODO(anyone): This can be replaced by operator[] once gcc optimizes properly
   auto& ref_table = ref_column.referenced_table();
   auto& pos_list = ref_column.pos_list();
@@ -288,14 +279,14 @@ const T& NestedLoopJoin::NestedLoopJoinImpl<T>::_resolve_reference(ReferenceColu
   } else if (v_column) {
     return v_column->values()[referenced_chunk_offset];
   } else {
-    throw std::runtime_error("NestedLoopJoinImpl::_resolve_reference: can't figure out referenced column type");
+    throw std::runtime_error("JoinNestedLoopBImpl::_resolve_reference: can't figure out referenced column type");
   }
 }
 
 template <typename T>
-void NestedLoopJoin::NestedLoopJoinImpl<T>::join_value_reference(ValueColumn<T>& left, ReferenceColumn& right,
-                                                                 std::shared_ptr<JoinContext> context,
-                                                                 bool reverse_order) {
+void JoinNestedLoopB::JoinNestedLoopBImpl<T>::join_value_reference(ValueColumn<T>& left, ReferenceColumn& right,
+                                                                   std::shared_ptr<JoinContext> context,
+                                                                   bool reverse_order) {
   auto& values = left.values();
   auto& pos_list = right.pos_list();
 
@@ -310,10 +301,10 @@ void NestedLoopJoin::NestedLoopJoinImpl<T>::join_value_reference(ValueColumn<T>&
 }
 
 template <typename T>
-void NestedLoopJoin::NestedLoopJoinImpl<T>::join_dictionary_dictionary(DictionaryColumn<T>& left,
-                                                                       DictionaryColumn<T>& right,
-                                                                       std::shared_ptr<JoinContext> context,
-                                                                       bool reverse_order) {
+void JoinNestedLoopB::JoinNestedLoopBImpl<T>::join_dictionary_dictionary(DictionaryColumn<T>& left,
+                                                                         DictionaryColumn<T>& right,
+                                                                         std::shared_ptr<JoinContext> context,
+                                                                         bool reverse_order) {
   const auto& att_left = left.attribute_vector();
   const auto& att_right = right.attribute_vector();
 
@@ -328,9 +319,10 @@ void NestedLoopJoin::NestedLoopJoinImpl<T>::join_dictionary_dictionary(Dictionar
 }
 
 template <typename T>
-void NestedLoopJoin::NestedLoopJoinImpl<T>::join_dictionary_reference(DictionaryColumn<T>& left, ReferenceColumn& right,
-                                                                      std::shared_ptr<JoinContext> context,
-                                                                      bool reverse_order) {
+void JoinNestedLoopB::JoinNestedLoopBImpl<T>::join_dictionary_reference(DictionaryColumn<T>& left,
+                                                                        ReferenceColumn& right,
+                                                                        std::shared_ptr<JoinContext> context,
+                                                                        bool reverse_order) {
   const auto& att_left = left.attribute_vector();
   auto& pos_list = right.pos_list();
 
@@ -345,9 +337,9 @@ void NestedLoopJoin::NestedLoopJoinImpl<T>::join_dictionary_reference(Dictionary
 }
 
 template <typename T>
-void NestedLoopJoin::NestedLoopJoinImpl<T>::join_reference_reference(ReferenceColumn& left, ReferenceColumn& right,
-                                                                     std::shared_ptr<JoinContext> context,
-                                                                     bool reverse_order) {
+void JoinNestedLoopB::JoinNestedLoopBImpl<T>::join_reference_reference(ReferenceColumn& left, ReferenceColumn& right,
+                                                                       std::shared_ptr<JoinContext> context,
+                                                                       bool reverse_order) {
   auto& pos_list_left = left.pos_list();
   auto& pos_list_right = right.pos_list();
 
@@ -368,8 +360,8 @@ void NestedLoopJoin::NestedLoopJoinImpl<T>::join_reference_reference(ReferenceCo
 */
 
 template <typename T>
-void NestedLoopJoin::NestedLoopJoinImpl<T>::handle_value_column(BaseColumn& column,
-                                                                std::shared_ptr<ColumnVisitableContext> context) {
+void JoinNestedLoopB::JoinNestedLoopBImpl<T>::handle_value_column(BaseColumn& column,
+                                                                  std::shared_ptr<ColumnVisitableContext> context) {
   auto join_context = std::static_pointer_cast<JoinContext>(context);
   auto& value_column_left = dynamic_cast<ValueColumn<T>&>(column);
   auto value_column_right = std::dynamic_pointer_cast<ValueColumn<T>>(join_context->_column_right);
@@ -390,8 +382,8 @@ void NestedLoopJoin::NestedLoopJoinImpl<T>::handle_value_column(BaseColumn& colu
 }
 
 template <typename T>
-void NestedLoopJoin::NestedLoopJoinImpl<T>::handle_dictionary_column(BaseColumn& column,
-                                                                     std::shared_ptr<ColumnVisitableContext> context) {
+void JoinNestedLoopB::JoinNestedLoopBImpl<T>::handle_dictionary_column(
+    BaseColumn& column, std::shared_ptr<ColumnVisitableContext> context) {
   auto join_context = std::static_pointer_cast<JoinContext>(context);
   auto& dictionary_column_left = dynamic_cast<DictionaryColumn<T>&>(column);
 
@@ -413,8 +405,8 @@ void NestedLoopJoin::NestedLoopJoinImpl<T>::handle_dictionary_column(BaseColumn&
 }
 
 template <typename T>
-void NestedLoopJoin::NestedLoopJoinImpl<T>::handle_reference_column(ReferenceColumn& reference_column_left,
-                                                                    std::shared_ptr<ColumnVisitableContext> context) {
+void JoinNestedLoopB::JoinNestedLoopBImpl<T>::handle_reference_column(ReferenceColumn& reference_column_left,
+                                                                      std::shared_ptr<ColumnVisitableContext> context) {
   auto join_context = std::static_pointer_cast<JoinContext>(context);
 
   auto value_column_right = std::dynamic_pointer_cast<ValueColumn<T>>(join_context->_column_right);

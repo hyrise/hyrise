@@ -18,11 +18,14 @@
 
 namespace opossum {
 
-class NestedLoopJoin : public AbstractJoinOperator {
+class JoinNestedLoopB : public AbstractJoinOperator {
+  // There are two nested loop joins, implemented by two groups: JoinNestedLoopA and B. They should be functionally
+  // identical.
  public:
-  NestedLoopJoin(const std::shared_ptr<AbstractOperator> left, const std::shared_ptr<AbstractOperator> right,
-                 optional<std::pair<const std::string&, const std::string&>> column_names, const std::string& op,
-                 const JoinMode mode, const std::string& prefix_left, const std::string& prefix_right);
+  JoinNestedLoopB(const std::shared_ptr<const AbstractOperator> left,
+                  const std::shared_ptr<const AbstractOperator> right,
+                  optional<std::pair<std::string, std::string>> column_names, const std::string& op,
+                  const JoinMode mode, const std::string& prefix_left, const std::string& prefix_right);
 
   const std::string name() const override;
   uint8_t num_in_tables() const override;
@@ -48,9 +51,9 @@ class NestedLoopJoin : public AbstractJoinOperator {
   };
 
   template <typename T>
-  class NestedLoopJoinImpl : public AbstractJoinOperatorImpl, public ColumnVisitable {
+  class JoinNestedLoopBImpl : public AbstractJoinOperatorImpl, public ColumnVisitable {
    public:
-    NestedLoopJoinImpl<T>(NestedLoopJoin& nested_loop_join);
+    JoinNestedLoopBImpl<T>(JoinNestedLoopB& join_nested_loop_b);
 
     // AbstractOperatorImpl implementation
     std::shared_ptr<const Table> on_execute() override;
@@ -74,7 +77,7 @@ class NestedLoopJoin : public AbstractJoinOperator {
                                   bool reverse_order = false);
 
    protected:
-    NestedLoopJoin& _nested_loop_join;
+    JoinNestedLoopB& _join_nested_loop_b;
     std::function<bool(const T&, const T&)> _compare;
     void _match_values(const T& value_left, ChunkOffset left_chunk_offset, const T& value_right,
                        ChunkOffset right_chunk_offset, std::shared_ptr<JoinContext> context, bool reverse_order);
@@ -96,7 +99,6 @@ class NestedLoopJoin : public AbstractJoinOperator {
   JoinMode _mode;
 
   // Output fields
-  std::unique_ptr<Product> _product;
   std::shared_ptr<PosList> _pos_list_left;
   std::set<RowID> _left_match;
   std::shared_ptr<PosList> _pos_list_right;
