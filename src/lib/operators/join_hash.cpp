@@ -21,6 +21,14 @@ JoinHash::JoinHash(const std::shared_ptr<const AbstractOperator> left,
     throw std::runtime_error(
         "JoinHash: this operator does not support Cross Joins, the optimizer should use Product operator.");
   }
+
+  if (_mode == Natural) {
+    throw std::runtime_error("JoinHash: this operator currently does not support Natural Joins.");
+  }
+
+  if (!column_names) {
+    throw std::runtime_error("JoinHash: optional column names are only supported for Cross and Natural Joins.");
+  }
 }
 
 const std::string JoinHash::name() const { return "JoinHash"; }
@@ -66,7 +74,7 @@ std::shared_ptr<const Table> JoinHash::on_execute() {
   _impl = make_unique_by_column_types<AbstractReadOnlyOperatorImpl, JoinHashImpl>(
       build_input->column_type(build_input->column_id_by_name(build_column_name)),
       probe_input->column_type(probe_input->column_id_by_name(probe_column_name)), build_operator, probe_operator,
-      adjusted_column_names, _op, _mode, inputs_swapped);
+      adjusted_column_names, _op, _mode, _prefix_left, _prefix_right, inputs_swapped);
   return _impl->on_execute();
 }
 

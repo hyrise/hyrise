@@ -35,45 +35,44 @@ TYPED_TEST_CASE(JoinEquiTest, JoinEquiTypes);
 
 TYPED_TEST(JoinEquiTest, WrongJoinOperator) {
   EXPECT_THROW(std::make_shared<JoinHash>(this->_gt_a, this->_gt_b, std::pair<std::string, std::string>("a", "a"), ">",
-                                          Left, std::string("left"), std::string("right")),
+                                          Left, std::string("left."), std::string("right.")),
                std::runtime_error);
 }
 
-
 TYPED_TEST(JoinEquiTest, LeftJoin) {
   this->template test_join_output<TypeParam>(this->_gt_a, this->_gt_b, std::pair<std::string, std::string>("a", "a"),
-                                             "=", Left, std::string("left"), std::string("right"),
+                                             "=", Left, std::string("left."), std::string("right."),
                                              "src/test/tables/joinoperators/int_left_join.tbl", 1);
 }
 
 TYPED_TEST(JoinEquiTest, LeftJoinOnString) {
   this->template test_join_output<TypeParam>(this->_gt_c, this->_gt_d, std::pair<std::string, std::string>("b", "b"),
-                                             "=", Left, std::string("left"), std::string("right"),
+                                             "=", Left, std::string("left."), std::string("right."),
                                              "src/test/tables/joinoperators/string_left_join.tbl", 1);
 }
 
 TYPED_TEST(JoinEquiTest, RightJoin) {
   this->template test_join_output<TypeParam>(this->_gt_a, this->_gt_b, std::pair<std::string, std::string>("a", "a"),
-                                             "=", Right, std::string("left"), std::string("right"),
+                                             "=", Right, std::string("left."), std::string("right."),
                                              "src/test/tables/joinoperators/int_right_join.tbl", 1);
 }
 
 // Currently not implemented for Hash Join, thus disabled
 TYPED_TEST(JoinEquiTest, DISABLED_OuterJoin) {
   this->template test_join_output<TypeParam>(this->_gt_a, this->_gt_b, std::pair<std::string, std::string>("a", "a"),
-                                             "=", Outer, std::string("left"), std::string("right"),
+                                             "=", Outer, std::string("left."), std::string("right."),
                                              "src/test/tables/joinoperators/int_outer_join.tbl", 1);
 }
 
 TYPED_TEST(JoinEquiTest, InnerJoin) {
   this->template test_join_output<TypeParam>(this->_gt_a, this->_gt_b, std::pair<std::string, std::string>("a", "a"),
-                                             "=", Inner, std::string("left"), std::string("right"),
+                                             "=", Inner, std::string("left."), std::string("right."),
                                              "src/test/tables/joinoperators/int_inner_join.tbl", 1);
 }
 
 TYPED_TEST(JoinEquiTest, InnerJoinOnString) {
   this->template test_join_output<TypeParam>(this->_gt_c, this->_gt_d, std::pair<std::string, std::string>("b", "b"),
-                                             "=", Inner, std::string("left"), std::string("right"),
+                                             "=", Inner, std::string("left."), std::string("right."),
                                              "src/test/tables/joinoperators/string_inner_join.tbl", 1);
 }
 
@@ -85,20 +84,20 @@ TYPED_TEST(JoinEquiTest, InnerRefJoin) {
   scan_b->execute();
 
   this->template test_join_output<TypeParam>(scan_a, scan_b, std::pair<std::string, std::string>("a", "a"), "=", Inner,
-                                             std::string("left"), std::string("right"),
+                                             std::string("left."), std::string("right."),
                                              "src/test/tables/joinoperators/int_inner_join.tbl", 1);
 }
 
 TYPED_TEST(JoinEquiTest, InnerValueDictJoin) {
   this->template test_join_output<TypeParam>(
-      this->_gt_a, this->_gt_b_dict, std::pair<std::string, std::string>("a", "a"), "=", Inner, std::string("left"),
-      std::string("right"), "src/test/tables/joinoperators/int_inner_join.tbl", 1);
+      this->_gt_a, this->_gt_b_dict, std::pair<std::string, std::string>("a", "a"), "=", Inner, std::string("left."),
+      std::string("right."), "src/test/tables/joinoperators/int_inner_join.tbl", 1);
 }
 
 TYPED_TEST(JoinEquiTest, InnerDictValueJoin) {
   this->template test_join_output<TypeParam>(
-      this->_gt_a_dict, this->_gt_b, std::pair<std::string, std::string>("a", "a"), "=", Inner, std::string("left"),
-      std::string("right"), "src/test/tables/joinoperators/int_inner_join.tbl", 1);
+      this->_gt_a_dict, this->_gt_b, std::pair<std::string, std::string>("a", "a"), "=", Inner, std::string("left."),
+      std::string("right."), "src/test/tables/joinoperators/int_inner_join.tbl", 1);
 }
 
 TYPED_TEST(JoinEquiTest, InnerValueDictRefJoin) {
@@ -109,7 +108,7 @@ TYPED_TEST(JoinEquiTest, InnerValueDictRefJoin) {
   scan_b->execute();
 
   this->template test_join_output<TypeParam>(scan_a, scan_b, std::pair<std::string, std::string>("a", "a"), "=", Inner,
-                                             std::string("left"), std::string("right"),
+                                             std::string("left."), std::string("right."),
                                              "src/test/tables/joinoperators/int_inner_join.tbl", 1);
 }
 
@@ -121,7 +120,7 @@ TYPED_TEST(JoinEquiTest, InnerDictValueRefJoin) {
   scan_b->execute();
 
   this->template test_join_output<TypeParam>(scan_a, scan_b, std::pair<std::string, std::string>("a", "a"), "=", Inner,
-                                             std::string("left"), std::string("right"),
+                                             std::string("left."), std::string("right."),
                                              "src/test/tables/joinoperators/int_inner_join.tbl", 1);
 }
 
@@ -132,14 +131,14 @@ TYPED_TEST(JoinEquiTest, InnerRefJoinFiltered) {
   scan_b->execute();
 
   this->template test_join_output<TypeParam>(scan_a, scan_b, std::pair<std::string, std::string>("a", "a"), "=", Inner,
-                                             std::string("left"), std::string("right"),
+                                             std::string("left."), std::string("right."),
                                              "src/test/tables/joinoperators/int_inner_join_filtered.tbl", 1);
 }
 
 TYPED_TEST(JoinEquiTest, InnerDictJoin) {
   this->template test_join_output<TypeParam>(
       this->_gt_a_dict, this->_gt_b_dict, std::pair<std::string, std::string>("a", "a"), "=", Inner,
-      std::string("left"), std::string("right"), "src/test/tables/joinoperators/int_inner_join.tbl", 1);
+      std::string("left."), std::string("right."), "src/test/tables/joinoperators/int_inner_join.tbl", 1);
 }
 
 TYPED_TEST(JoinEquiTest, InnerRefDictJoin) {
@@ -150,7 +149,7 @@ TYPED_TEST(JoinEquiTest, InnerRefDictJoin) {
   scan_b->execute();
 
   this->template test_join_output<TypeParam>(scan_a, scan_b, std::pair<std::string, std::string>("a", "a"), "=", Inner,
-                                             std::string("left"), std::string("right"),
+                                             std::string("left."), std::string("right."),
                                              "src/test/tables/joinoperators/int_inner_join.tbl", 1);
 }
 
@@ -161,13 +160,13 @@ TYPED_TEST(JoinEquiTest, InnerRefDictJoinFiltered) {
   scan_b->execute();
 
   this->template test_join_output<TypeParam>(scan_a, scan_b, std::pair<std::string, std::string>("a", "a"), "=", Inner,
-                                             std::string("left"), std::string("right"),
+                                             std::string("left."), std::string("right."),
                                              "src/test/tables/joinoperators/int_inner_join_filtered.tbl", 1);
 }
 
 TYPED_TEST(JoinEquiTest, InnerJoinBig) {
   this->template test_join_output<TypeParam>(this->_gt_c, this->_gt_d, std::pair<std::string, std::string>("a", "a"),
-                                             "=", Inner, std::string("left"), std::string("right"),
+                                             "=", Inner, std::string("left."), std::string("right."),
                                              "src/test/tables/joinoperators/int_string_inner_join.tbl", 1);
 }
 
@@ -178,20 +177,20 @@ TYPED_TEST(JoinEquiTest, InnerRefJoinFilteredBig) {
   scan_d->execute();
 
   this->template test_join_output<TypeParam>(scan_c, scan_d, std::pair<std::string, std::string>("a", "a"), "=", Inner,
-                                             std::string("left"), std::string("right"),
+                                             std::string("left."), std::string("right."),
                                              "src/test/tables/joinoperators/int_string_inner_join_filtered.tbl", 1);
 }
 
 TYPED_TEST(JoinEquiTest, SelfJoin) {
   this->template test_join_output<TypeParam>(this->_gt_a, this->_gt_a, std::pair<std::string, std::string>("a", "a"),
-                                             "=", Self, std::string("left"), std::string("right"),
+                                             "=", Self, std::string("left."), std::string("right."),
                                              "src/test/tables/joinoperators/int_self_join.tbl", 1);
 }
 
 TYPED_TEST(JoinEquiTest, JoinOnMixedValueAndDictionaryColumns) {
   this->template test_join_output<TypeParam>(
-      this->_gt_c_dict, this->_gt_b, std::pair<std::string, std::string>("a", "a"), "=", Inner, std::string("left"),
-      std::string("right"), "src/test/tables/joinoperators/int_inner_join.tbl", 1);
+      this->_gt_c_dict, this->_gt_b, std::pair<std::string, std::string>("a", "a"), "=", Inner, std::string("left."),
+      std::string("right."), "src/test/tables/joinoperators/int_inner_join.tbl", 1);
 }
 
 TYPED_TEST(JoinEquiTest, JoinOnMixedValueAndReferenceColumns) {
@@ -200,7 +199,7 @@ TYPED_TEST(JoinEquiTest, JoinOnMixedValueAndReferenceColumns) {
   scan_a->execute();
 
   this->template test_join_output<TypeParam>(scan_a, this->_gt_b, std::pair<std::string, std::string>("a", "a"), "=",
-                                             Inner, std::string("left"), std::string("right"),
+                                             Inner, std::string("left."), std::string("right."),
                                              "src/test/tables/joinoperators/int_inner_join.tbl", 1);
 }
 
@@ -214,12 +213,12 @@ TYPED_TEST(JoinEquiTest, MultiJoinOnReferenceLeft) {
   scan_c->execute();
 
   auto join = std::make_shared<TypeParam>(scan_a, scan_b, std::pair<std::string, std::string>("a", "a"), "=", Inner,
-                                          std::string("left"), std::string("right"));
+                                          std::string("left."), std::string("right."));
   join->execute();
 
   this->template test_join_output<TypeParam>(
-      join, scan_c, std::pair<std::string, std::string>("left.a", "a"), "=", Inner, std::string("left"),
-      std::string("right"), "src/test/tables/joinoperators/int_inner_multijoin_ref_ref_ref_left.tbl", 1);
+      join, scan_c, std::pair<std::string, std::string>("left.a", "a"), "=", Inner, std::string("left."),
+      std::string("right."), "src/test/tables/joinoperators/int_inner_multijoin_ref_ref_ref_left.tbl", 1);
 }
 
 TYPED_TEST(JoinEquiTest, MultiJoinOnReferenceRight) {
@@ -232,12 +231,12 @@ TYPED_TEST(JoinEquiTest, MultiJoinOnReferenceRight) {
   scan_c->execute();
 
   auto join = std::make_shared<TypeParam>(scan_a, scan_b, std::pair<std::string, std::string>("a", "a"), "=", Inner,
-                                          std::string("left"), std::string("right"));
+                                          std::string("left."), std::string("right."));
   join->execute();
 
   this->template test_join_output<TypeParam>(
-      scan_c, join, std::pair<std::string, std::string>("a", "left.a"), "=", Inner, std::string("left"),
-      std::string("right"), "src/test/tables/joinoperators/int_inner_multijoin_ref_ref_ref_right.tbl", 1);
+      scan_c, join, std::pair<std::string, std::string>("a", "left.a"), "=", Inner, std::string("left."),
+      std::string("right."), "src/test/tables/joinoperators/int_inner_multijoin_ref_ref_ref_right.tbl", 1);
 }
 
 TYPED_TEST(JoinEquiTest, MultiJoinOnReferenceLeftFiltered) {
@@ -250,52 +249,79 @@ TYPED_TEST(JoinEquiTest, MultiJoinOnReferenceLeftFiltered) {
   scan_c->execute();
 
   auto join = std::make_shared<TypeParam>(scan_a, scan_b, std::pair<std::string, std::string>("a", "a"), "=", Inner,
-                                          std::string("left"), std::string("right"));
+                                          std::string("left."), std::string("right."));
   join->execute();
 
   this->template test_join_output<TypeParam>(
-      join, scan_c, std::pair<std::string, std::string>("left.a", "a"), "=", Inner, std::string("left"),
-      std::string("right"), "src/test/tables/joinoperators/int_inner_multijoin_ref_ref_ref_left_filtered.tbl", 1);
+      join, scan_c, std::pair<std::string, std::string>("left.a", "a"), "=", Inner, std::string("left."),
+      std::string("right."), "src/test/tables/joinoperators/int_inner_multijoin_ref_ref_ref_left_filtered.tbl", 1);
 }
 
 TYPED_TEST(JoinEquiTest, MultiJoinOnValue) {
   auto join = std::make_shared<TypeParam>(this->_gt_f, this->_gt_g, std::pair<std::string, std::string>("a", "a"), "=",
-                                          Inner, std::string("left"), std::string("right"));
+                                          Inner, std::string("left."), std::string("right."));
   join->execute();
 
   this->template test_join_output<TypeParam>(
-      join, this->_gt_h, std::pair<std::string, std::string>("left.a", "a"), "=", Inner, std::string("left"),
-      std::string("right"), "src/test/tables/joinoperators/int_inner_multijoin_val_val_val_left.tbl", 1);
+      join, this->_gt_h, std::pair<std::string, std::string>("left.a", "a"), "=", Inner, std::string("left."),
+      std::string("right."), "src/test/tables/joinoperators/int_inner_multijoin_val_val_val_left.tbl", 1);
 }
 
 TYPED_TEST(JoinEquiTest, MultiJoinOnRefOuter) {
   auto join = std::make_shared<TypeParam>(this->_gt_f, this->_gt_g, std::pair<std::string, std::string>("a", "a"), "=",
-                                          Left, std::string("left"), std::string("right"));
+                                          Left, std::string("left."), std::string("right."));
   join->execute();
 
   this->template test_join_output<TypeParam>(
-      join, this->_gt_h, std::pair<std::string, std::string>("left.a", "a"), "=", Inner, std::string("left"),
-      std::string("right"), "src/test/tables/joinoperators/int_inner_multijoin_val_val_val_leftouter.tbl", 1);
+      join, this->_gt_h, std::pair<std::string, std::string>("left.a", "a"), "=", Inner, std::string("left."),
+      std::string("right."), "src/test/tables/joinoperators/int_inner_multijoin_val_val_val_leftouter.tbl", 1);
 }
 
-TYPED_TEST(JoinEquiTest, MixNestedLoopAndHash) {
+TYPED_TEST(JoinEquiTest, MixNestedLoopAAndHash) {
   auto join = std::make_shared<JoinNestedLoopA>(this->_gt_f, this->_gt_g, std::pair<std::string, std::string>("a", "a"),
-                                                "=", Left, std::string("left"), std::string("right"));
+                                                "=", Left, std::string("left."), std::string("right."));
   join->execute();
 
   this->template test_join_output<TypeParam>(join, this->_gt_h, std::pair<std::string, std::string>("left.a", "a"), "=",
-                                             Inner, std::string("left"), std::string("right"),
+                                             Inner, std::string("left."), std::string("right."),
+                                             "src/test/tables/joinoperators/int_inner_multijoin_nlj_hash.tbl", 1);
+}
+
+TYPED_TEST(JoinEquiTest, MixNestedLoopBAndHash) {
+  auto join = std::make_shared<JoinNestedLoopB>(this->_gt_f, this->_gt_g, std::pair<std::string, std::string>("a", "a"),
+                                                "=", Left, std::string("left."), std::string("right."));
+  join->execute();
+
+  this->template test_join_output<TypeParam>(join, this->_gt_h, std::pair<std::string, std::string>("left.a", "a"), "=",
+                                             Inner, std::string("left."), std::string("right."),
                                              "src/test/tables/joinoperators/int_inner_multijoin_nlj_hash.tbl", 1);
 }
 
 TYPED_TEST(JoinEquiTest, MixHashAndNestedLoop) {
   auto join = std::make_shared<JoinHash>(this->_gt_f, this->_gt_g, std::pair<std::string, std::string>("a", "a"), "=",
-                                         Left, std::string("left"), std::string("right"));
+                                         Left, std::string("left."), std::string("right."));
   join->execute();
 
   this->template test_join_output<TypeParam>(join, this->_gt_h, std::pair<std::string, std::string>("left.a", "a"), "=",
-                                             Inner, std::string("left"), std::string("right"),
+                                             Inner, std::string("left."), std::string("right."),
                                              "src/test/tables/joinoperators/int_inner_multijoin_nlj_hash.tbl", 1);
+}
+
+TYPED_TEST(JoinEquiTest, AppliesPrefixes) {
+  auto join = std::make_shared<TypeParam>(this->_gt_f, this->_gt_g, std::pair<std::string, std::string>("a", "a"), "=",
+                                          Left, std::string("pref1."), std::string("pref2."));
+  join->execute();
+
+  ASSERT_EQ(join->get_output()->column_name(0), "pref1.a");
+  ASSERT_EQ(join->get_output()->column_name(1), "pref1.b");
+  ASSERT_EQ(join->get_output()->column_name(2), "pref2.a");
+  ASSERT_EQ(join->get_output()->column_name(3), "pref2.b");
+}
+
+TYPED_TEST(JoinEquiTest, ColumnsNotOptional) {
+  EXPECT_THROW(std::make_shared<TypeParam>(this->_gt_f, this->_gt_g, nullopt, "=", Left, std::string("left."),
+                                           std::string("right.")),
+               std::runtime_error);
 }
 
 // Does not work yet due to problems with RowID implementation (RowIDs need to reference a table)
@@ -317,7 +343,7 @@ TYPED_TEST(JoinEquiTest, DISABLED_JoinOnRefColumns) {
   union_right->execute();
 
   this->template test_join_output<TypeParam>(union_left, union_right, std::pair<std::string, std::string>("a", "a"),
-                                             "=", Inner, std::string("left"), std::string("right"),
+                                             "=", Inner, std::string("left."), std::string("right."),
                                              "src/test/tables/joinoperators/expected_join_result_1.tbl", 1);
 }
 

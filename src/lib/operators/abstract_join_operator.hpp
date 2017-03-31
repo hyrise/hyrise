@@ -48,8 +48,6 @@ class AbstractJoinOperator : public AbstractReadOnlyOperator {
   const std::string _prefix_right;
   optional<std::pair<std::string, std::string>> _column_names;
 
-  std::shared_ptr<Table> _output_table;
-
   // Some operators need an internal implementation class, mostly in cases where
   // their execute method depends on a template parameter. An example for this is
   // found in join_nested_loop_a.hpp.
