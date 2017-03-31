@@ -1,0 +1,106 @@
+#pragma once
+
+#include <iostream>
+#include <memory>
+#include <set>
+#include <string>
+#include <utility>
+#include <vector>
+
+#include "abstract_join_operator.hpp"
+#include "abstract_operator.hpp"
+#include "product.hpp"
+#include "storage/column_visitable.hpp"
+#include "storage/dictionary_column.hpp"
+#include "storage/reference_column.hpp"
+#include "storage/value_column.hpp"
+#include "types.hpp"
+
+namespace opossum {
+
+class NestedLoopJoin : public AbstractJoinOperator {
+ public:
+  NestedLoopJoin(const std::shared_ptr<AbstractOperator> left, const std::shared_ptr<AbstractOperator> right,
+                 optional<std::pair<const std::string&, const std::string&>> column_names, const std::string& op,
+                 const JoinMode mode, const std::string& prefix_left, const std::string& prefix_right);
+
+  const std::string name() const override;
+  uint8_t num_in_tables() const override;
+  uint8_t num_out_tables() const override;
+
+ protected:
+  std::shared_ptr<const Table> on_execute() override;
+
+  struct JoinContext : ColumnVisitableContext {
+    JoinContext(std::shared_ptr<BaseColumn> column_left, std::shared_ptr<BaseColumn> column_right,
+                ChunkID left_chunk_id, ChunkID right_chunk_id, JoinMode mode)
+        : _column_left{column_left},
+          _column_right{column_right},
+          _left_chunk_id{left_chunk_id},
+          _right_chunk_id{right_chunk_id},
+          _mode{mode} {};
+
+    std::shared_ptr<BaseColumn> _column_left;
+    std::shared_ptr<BaseColumn> _column_right;
+    ChunkID _left_chunk_id;
+    ChunkID _right_chunk_id;
+    JoinMode _mode;
+  };
+
+  template <typename T>
+  class NestedLoopJoinImpl : public AbstractJoinOperatorImpl, public ColumnVisitable {
+   public:
+    NestedLoopJoinImpl<T>(NestedLoopJoin& nested_loop_join);
+
+    // AbstractOperatorImpl implementation
+    std::shared_ptr<const Table> on_execute() override;
+
+    // ColumnVisitable implementation
+    void handle_value_column(BaseColumn& column, std::shared_ptr<ColumnVisitableContext> context) override;
+    void handle_dictionary_column(BaseColumn& column, std::shared_ptr<ColumnVisitableContext> context) override;
+    void handle_reference_column(ReferenceColumn& column, std::shared_ptr<ColumnVisitableContext> context) override;
+
+    void join_value_value(ValueColumn<T>& left, ValueColumn<T>& right, std::shared_ptr<JoinContext> context,
+                          bool reverse_order = false);
+    void join_value_dictionary(ValueColumn<T>& left, DictionaryColumn<T>& right, std::shared_ptr<JoinContext> context,
+                               bool reverse_order = false);
+    void join_value_reference(ValueColumn<T>& left, ReferenceColumn& right, std::shared_ptr<JoinContext> context,
+                              bool reverse_order = false);
+    void join_dictionary_dictionary(DictionaryColumn<T>& left, DictionaryColumn<T>& right,
+                                    std::shared_ptr<JoinContext> context, bool reverse_order = false);
+    void join_dictionary_reference(DictionaryColumn<T>& left, ReferenceColumn& right,
+                                   std::shared_ptr<JoinContext> context, bool reverse_order = false);
+    void join_reference_reference(ReferenceColumn& left, ReferenceColumn& right, std::shared_ptr<JoinContext> context,
+                                  bool reverse_order = false);
+
+   protected:
+    NestedLoopJoin& _nested_loop_join;
+    std::function<bool(const T&, const T&)> _compare;
+    void _match_values(const T& value_left, ChunkOffset left_chunk_offset, const T& value_right,
+                       ChunkOffset right_chunk_offset, std::shared_ptr<JoinContext> context, bool reverse_order);
+    const T& _resolve_reference(ReferenceColumn& ref_column, ChunkOffset chunk_offset);
+  };
+
+  void _add_outer_join_rows(std::shared_ptr<const Table> outer_side_table, std::shared_ptr<PosList> outer_side_pos_list,
+                            std::set<RowID>& outer_side_matches, std::shared_ptr<PosList> null_side_pos_list);
+  void _join_columns(size_t left_column_id, size_t right_column_id, std::string left_column_type);
+  std::shared_ptr<PosList> _dereference_pos_list(std::shared_ptr<const Table> input_table, size_t column_id,
+                                                 std::shared_ptr<const PosList> pos_list);
+  void _append_columns_to_output(std::shared_ptr<const Table> input_table, std::shared_ptr<PosList> pos_list,
+                                 std::string prefix);
+
+  // Input fields
+  std::string _left_column_name;
+  std::string _right_column_name;
+  std::string _op;
+  JoinMode _mode;
+
+  // Output fields
+  std::unique_ptr<Product> _product;
+  std::shared_ptr<PosList> _pos_list_left;
+  std::set<RowID> _left_match;
+  std::shared_ptr<PosList> _pos_list_right;
+  std::set<RowID> _right_match;
+  std::shared_ptr<Table> _output;
+};
+}  // namespace opossum
