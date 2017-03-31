@@ -15,49 +15,49 @@ compile_gcc:
   stage: build
   script:
     - premake4 --compiler=gcc
-    - make -j -R
+    - make -j $(cat /proc/cpuinfo | grep processor | wc -l) -R
 
 compile_clang:
   stage: build
   script:
     - premake4 --compiler=clang
-    - make -j -R
+    - make -j $(cat /proc/cpuinfo | grep processor | wc -l) -R
 
 gcc_release:
   stage: test_gcc
   script:
     - premake4 --compiler=gcc
-    - make -j -R config=release test
+    - make -j $(cat /proc/cpuinfo | grep processor | wc -l) -R config=release test
 
 gcc_debug:
   stage: test_gcc
   script:
     - premake4 --compiler=gcc
-    - make -j -R config=debug test
+    - make -j $(cat /proc/cpuinfo | grep processor | wc -l) -R config=debug test
 
 clang_release:
   stage: test_clang
   script:
     - premake4 --compiler=clang
-    - make -j -R config=release test
+    - make -j $(cat /proc/cpuinfo | grep processor | wc -l) -R config=release test
 
 clang_debug:
   stage: test_clang
   script:
     - premake4 --compiler=clang
-    - make -j -R config=debug test
+    - make -j $(cat /proc/cpuinfo | grep processor | wc -l) -R config=debug test
 
 asan_release:
   stage: asan
   script:
     - premake4 --compiler=clang
-    - make -j -R config=release asan
+    - make -j $(cat /proc/cpuinfo | grep processor | wc -l) -R config=release asan
 
 asan_debug:
   stage: asan
   script:
     - premake4 --compiler=clang
-    - make -j -R config=debug asan
+    - make -j $(cat /proc/cpuinfo | grep processor | wc -l) -R config=debug asan
 
 coverage:
   stage: coverage

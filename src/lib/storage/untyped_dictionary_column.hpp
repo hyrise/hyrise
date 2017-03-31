@@ -3,9 +3,13 @@
 #include <limits>
 #include <memory>
 
+#include "base_attribute_vector.hpp"
 #include "base_column.hpp"
 
 namespace opossum {
+
+class BaseAttributeVector;
+
 // Even though ValueIDs do not have to use the full width of ValueID (uint32_t), this will also work for smaller ValueID
 // types (uint8_t, uint16_t) since after a down-cast INVALID_VALUE_ID will look like their numeric_limit::max()
 constexpr ValueID INVALID_VALUE_ID = std::numeric_limits<ValueID>::max();

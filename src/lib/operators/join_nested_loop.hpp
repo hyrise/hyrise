@@ -29,9 +29,10 @@ i.e., your sorting order might be disturbed.
 
 class JoinNestedLoop : public AbstractJoinOperator {
  public:
-  JoinNestedLoop(const std::shared_ptr<AbstractOperator> left, const std::shared_ptr<AbstractOperator> right,
-                 optional<std::pair<const std::string &, const std::string &>> column_names, const std::string &op,
-                 const JoinMode mode, const std::string &prefix_left, const std::string &prefix_right);
+  JoinNestedLoop(const std::shared_ptr<const AbstractOperator> left,
+                 const std::shared_ptr<const AbstractOperator> right,
+                 optional<std::pair<std::string, std::string>> column_names, const std::string &op, const JoinMode mode,
+                 const std::string &prefix_left, const std::string &prefix_right);
 
   std::shared_ptr<const Table> on_execute() override;
 
@@ -50,8 +51,9 @@ class JoinNestedLoop : public AbstractJoinOperator {
 template <typename LeftType, typename RightType>
 class JoinNestedLoop::JoinNestedLoopImpl : public AbstractJoinOperatorImpl {
  public:
-  JoinNestedLoopImpl(const std::shared_ptr<AbstractOperator> left, const std::shared_ptr<AbstractOperator> right,
-                     std::pair<const std::string &, const std::string &> column_names, const std::string &op,
+  JoinNestedLoopImpl(const std::shared_ptr<const AbstractOperator> left,
+                     const std::shared_ptr<const AbstractOperator> right,
+                     const std::pair<const std::string, const std::string> &column_names, const std::string &op,
                      const JoinMode mode, const std::string &prefix_left, const std::string &prefix_right)
       : _left_in_table(left->get_output()),
         _right_in_table(right->get_output()),
@@ -80,6 +82,7 @@ class JoinNestedLoop::JoinNestedLoopImpl : public AbstractJoinOperatorImpl {
     }
   }
 
+  virtual ~JoinNestedLoopImpl() = default;
   /*
   We need to use the Visitor Pattern to identify column types. We therefor store information about the join in this
   context. Below we have two childs of NestedLoopJoinContext for BuilderLeft and BuilderRight.
@@ -273,13 +276,15 @@ class JoinNestedLoop::JoinNestedLoopImpl : public AbstractJoinOperatorImpl {
         std::iota(chunk_offsets_in_right->begin(), chunk_offsets_in_right->end(), 0);
       }
 
+      ChunkOffset row_left = 0;
       for (const ChunkOffset &offset_in_left_value_column : *(chunk_offsets_in_left)) {
+        ChunkOffset row_right = 0;
         for (const ChunkOffset &offset_in_right_value_column : *(chunk_offsets_in_right)) {
           auto is_match = context->compare_func(get_left_column_value(offset_in_left_value_column),
                                                 get_right_column_value(offset_in_right_value_column));
 
-          auto current_right = RowID{context->chunk_id_right, offset_in_right_value_column};
-          auto current_left = RowID{context->chunk_id_left, offset_in_left_value_column};
+          auto current_right = RowID{context->chunk_id_right, row_right};
+          auto current_left = RowID{context->chunk_id_left, row_left};
           if (is_match) {
             // For outer joins we need to mark these rows, since they don't need to be added later on.
             if (context->join_mode == Right) {
@@ -287,7 +292,7 @@ class JoinNestedLoop::JoinNestedLoopImpl : public AbstractJoinOperatorImpl {
             } else {
               (*unmatched_rows_map)[current_left] = false;
             }
-            write_poslists(context, offset_in_left_value_column, offset_in_right_value_column);
+            write_poslists(context, row_left, row_right);
           } else {
             // If this row combination has been joined previously, don't do anything.
             // If they are not in the unmatched_rows_map, add them here.
@@ -301,7 +306,10 @@ class JoinNestedLoop::JoinNestedLoopImpl : public AbstractJoinOperatorImpl {
               }
             }
           }
+
+          row_right++;
         }
+        row_left++;
       }
     } else {
       for (ChunkOffset row_left = 0; row_left < size_left; ++row_left) {
@@ -469,8 +477,15 @@ class JoinNestedLoop::JoinNestedLoopImpl : public AbstractJoinOperatorImpl {
       } else {
         if (auto ref_col_left =
                 std::dynamic_pointer_cast<ReferenceColumn>(input_table->get_chunk(chunk_id).get_column(column_id))) {
+          auto new_pos_list = std::make_shared<PosList>();
+
+          // de-reference to the correct RowID so the output can be used in a Multi Join
+          for (const auto &row : *pos_list) {
+            new_pos_list->push_back(ref_col_left->pos_list()->at(row.chunk_offset));
+          }
+
           column = std::make_shared<ReferenceColumn>(ref_col_left->referenced_table(),
-                                                     ref_col_left->referenced_column_id(), pos_list);
+                                                     ref_col_left->referenced_column_id(), new_pos_list);
         } else {
           column = std::make_shared<ReferenceColumn>(input_table, column_id, pos_list);
         }

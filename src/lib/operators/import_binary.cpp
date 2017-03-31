@@ -116,8 +116,8 @@ std::shared_ptr<BaseColumn> ImportBinary::_import_column(std::ifstream& file, Ch
   std::shared_ptr<BaseColumn> result;
   hana::for_each(column_types, [&](auto x) {
     if (std::string(hana::first(x)) == data_type) {
-      typename std::remove_reference<decltype(hana::second(x))>::type prototype;
-      result = _import_column<decltype(prototype)>(file, row_count);
+      using column_type = typename decltype(+hana::second(x))::type;
+      result = _import_column<column_type>(file, row_count);
     }
   });
   if (IS_DEBUG && !result) throw std::runtime_error("unknown type " + data_type);
@@ -155,7 +155,10 @@ std::shared_ptr<BaseAttributeVector> ImportBinary::_import_attribute_vector(
 
 template <typename T>
 std::shared_ptr<ValueColumn<T>> ImportBinary::_import_value_column(std::ifstream& file, ChunkOffset row_count) {
-  return std::make_shared<ValueColumn<T>>(_read_values<T>(file, row_count));
+  // TODO(unknown): Ideally _read_values would directly write into a tbb::concurrent_vector so that no conversion is
+  // needed
+  const auto values = _read_values<T>(file, row_count);
+  return std::make_shared<ValueColumn<T>>(tbb::concurrent_vector<T>{values.begin(), values.end()});
 }
 
 template <typename T>

@@ -106,3 +106,4 @@ Contact: firstname.lastname@hpi.de
 - Sven Lehmann
 - Tim Zimmermann
 - Torben Meyer
+- Yannick Bäumer

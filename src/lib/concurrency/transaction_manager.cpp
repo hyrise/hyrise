@@ -24,16 +24,24 @@ TransactionID TransactionManager::next_transaction_id() const { return _next_tra
 
 CommitID TransactionManager::last_commit_id() const { return _last_commit_id; }
 
-std::unique_ptr<TransactionContext> TransactionManager::new_transaction_context() {
-  return std::make_unique<TransactionContext>(_next_transaction_id++, _last_commit_id);
+std::shared_ptr<TransactionContext> TransactionManager::new_transaction_context() {
+  return std::make_shared<TransactionContext>(_next_transaction_id++, _last_commit_id);
 }
 
-void TransactionManager::abort(TransactionContext& context) {
+void TransactionManager::rollback(TransactionContext& context) {
   if (context._phase != TransactionPhase::Active) {
-    throw std::logic_error("TransactionContext can only be aborted when active.");
+    throw std::logic_error("TransactionContext can only be rolled back when active.");
   }
 
-  context._phase = TransactionPhase::Aborted;
+  context._phase = TransactionPhase::RolledBack;
+}
+
+void TransactionManager::fail(TransactionContext& context) {
+  if (context._phase != TransactionPhase::Active) {
+    throw std::logic_error("TransactionContext can only fail when active.");
+  }
+
+  context._phase = TransactionPhase::Failed;
 }
 
 void TransactionManager::prepare_commit(TransactionContext& context) {
@@ -59,6 +67,18 @@ void TransactionManager::commit(TransactionContext& context, std::function<void(
   context._phase = TransactionPhase::Committed;
 }
 
+/**
+ * Logic of the lock-free algorithm
+ *
+ * Let’s say n threads call this method simultaneously. They all enter the main while-loop.
+ * Eventually they reach the point where they try to set the successor of _last_commit_context
+ * (pointed to by current_context). Only one of them will succeed and will be able to pass the
+ * following if statement. The rest continues with the loop and will now try to get the latest
+ * context, which does not have a successor. As long as the thread that succeeded setting
+ * the next commit context has not finished updating _last_commit_context, they are stuck in
+ * the small while-loop. As soon as it is done, _last_commit_context will point to a commit
+ * context with no successor and they will be able to leave this loop.
+ */
 std::shared_ptr<CommitContext> TransactionManager::_new_commit_context() {
   auto current_context = std::atomic_load(&_last_commit_context);
   auto next_context = std::shared_ptr<CommitContext>();
@@ -66,11 +86,22 @@ std::shared_ptr<CommitContext> TransactionManager::_new_commit_context() {
   auto success = false;
   while (!success) {
     while (current_context->has_next()) {
-      current_context = current_context->next();
+      current_context = std::atomic_load(&_last_commit_context);
     }
 
-    next_context = current_context->get_or_create_next();
+    next_context = std::make_shared<CommitContext>(current_context->commit_id() + 1u);
+
+    success = current_context->try_set_next(next_context);
+
+    if (!success) continue;
+
+    /**
+     * Only one thread at a time can ever reach this code since only one thread
+     * succeeds to set _last_commit_context’s successor.
+     */
     success = std::atomic_compare_exchange_strong(&_last_commit_context, &current_context, next_context);
+
+    if (!success) throw std::logic_error("Invariant violated.");
   }
 
   return next_context;

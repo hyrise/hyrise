@@ -54,8 +54,8 @@ class Table {
   // returns the column with the given name
   ColumnID column_id_by_name(const std::string &column_name) const;
 
-  // return the maximum chunk size
-  size_t chunk_size() const;
+  // return the maximum chunk size (cannot exceed ChunkOffset (uint32_t))
+  uint32_t chunk_size() const;
 
   // adds a column to the end, i.e., right, of the table
   void add_column(const std::string &name, const std::string &type, bool create_value_column = true);
@@ -63,6 +63,9 @@ class Table {
   // inserts a row at the end of the table
   // note this is slow and not thread-safe and should be used for testing purposes only
   void append(std::vector<AllTypeVariant> values);
+
+  // creates a new chunk and appends it
+  void create_new_chunk();
 
   // returns the number of the chunk and the position in the chunk for a given row
   // TODO(md): this would be a nice place to use structured bindings once they are supported by the compilers
@@ -72,11 +75,14 @@ class Table {
   RowID calculate_row_id(ChunkID chunk, ChunkOffset offset) const { return RowID{chunk, offset}; }
 
   // enforces dictionary compression on a certain chunk
+  // not thread-safe
   void compress_chunk(ChunkID chunk_id);
+
+  std::unique_lock<std::mutex> acquire_append_mutex();
 
  protected:
   // 0 means that the chunk has an unlimited size.
-  const size_t _chunk_size;
+  const uint32_t _chunk_size;
   const bool _auto_compress;
   std::vector<Chunk> _chunks;
 
@@ -84,5 +90,7 @@ class Table {
   // that is not yet completely implemented in all compilers
   std::vector<std::string> _column_names;
   std::vector<std::string> _column_types;
+
+  std::unique_ptr<std::mutex> _append_mutex;
 };
 }  // namespace opossum

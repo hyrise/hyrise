@@ -27,14 +27,14 @@ class DictionaryColumn : public UntypedDictionaryColumn {
     if (auto val_col = std::dynamic_pointer_cast<ValueColumn<T>>(base_column)) {
       // See: https://goo.gl/MCM5rr
       // Create dictionary (enforce unqiueness and sorting)
-      _dictionary = val_col->values();
+      const auto& values = val_col->values();
+      _dictionary = std::vector<T>{values.cbegin(), values.cend()};
 
       std::sort(_dictionary.begin(), _dictionary.end());
       _dictionary.erase(std::unique(_dictionary.begin(), _dictionary.end()), _dictionary.end());
       _dictionary.shrink_to_fit();
 
-      _attribute_vector = _create_fitted_attribute_vector(unique_values_count(), val_col->values().size());
-      auto& values = val_col->values();
+      _attribute_vector = _create_fitted_attribute_vector(unique_values_count(), values.size());
 
       for (ChunkOffset offset = 0; offset < values.size(); ++offset) {
         ValueID value_id = std::distance(_dictionary.cbegin(),
@@ -135,6 +135,34 @@ class DictionaryColumn : public UntypedDictionaryColumn {
 
     // appending the new string to the already present string
     row_string += buffer.str();
+  }
+
+  // TODO(anyone): Move this to base column once final optimization is supported by gcc
+  const std::shared_ptr<std::vector<std::pair<RowID, T>>> materialize(
+      ChunkID chunk_id, std::shared_ptr<std::vector<ChunkOffset>> offsets = nullptr) {
+    auto materialized_vector = std::make_shared<std::vector<std::pair<RowID, T>>>();
+
+    /*
+    We only offsets if this ValueColumn was referenced by a ReferenceColumn. Thus it might actually be filtered.
+    */
+    if (offsets) {
+      materialized_vector->reserve(offsets->size());
+      for (auto& offset : *offsets) {
+        T value = _dictionary[_attribute_vector->get(offset)];
+        auto materialized_row = std::make_pair(RowID{chunk_id, offset}, value);
+        materialized_vector->push_back(materialized_row);
+      }
+
+    } else {
+      materialized_vector->reserve(_attribute_vector->size());
+      for (ChunkOffset offset = 0; offset < _attribute_vector->size(); offset++) {
+        T value = _dictionary[_attribute_vector->get(offset)];
+        auto materialized_row = std::make_pair(RowID{chunk_id, offset}, value);
+        materialized_vector->push_back(materialized_row);
+      }
+    }
+
+    return materialized_vector;
   }
 
  protected:

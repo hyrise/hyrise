@@ -8,6 +8,7 @@
 #include <vector>
 
 #include "abstract_read_only_operator.hpp"
+#include "storage/reference_column.hpp"
 
 namespace opossum {
 
@@ -24,10 +25,10 @@ enum JoinMode { Inner, Left, Right, Outer, Cross, Natural, Self };
 
 class AbstractJoinOperator : public AbstractReadOnlyOperator {
  public:
-  AbstractJoinOperator(const std::shared_ptr<AbstractOperator> left, const std::shared_ptr<AbstractOperator> right,
-                       optional<std::pair<const std::string &, const std::string &>> column_names,
-                       const std::string &op, const JoinMode mode, const std::string prefix_left,
-                       const std::string prefix_right);
+  AbstractJoinOperator(const std::shared_ptr<const AbstractOperator> left,
+                       const std::shared_ptr<const AbstractOperator> right,
+                       optional<std::pair<std::string, std::string>> column_names, const std::string &op,
+                       const JoinMode mode, const std::string &prefix_left, const std::string &prefix_right);
 
   virtual ~AbstractJoinOperator() = default;
 
@@ -45,7 +46,7 @@ class AbstractJoinOperator : public AbstractReadOnlyOperator {
   const JoinMode _mode;
   const std::string _prefix_left;
   const std::string _prefix_right;
-  optional<std::pair<const std::string &, const std::string &>> _column_names;
+  optional<std::pair<std::string, std::string>> _column_names;
 
   std::shared_ptr<Table> _output_table;
 

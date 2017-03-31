@@ -46,7 +46,7 @@ void ExportCsv::_generate_content_file(const std::shared_ptr<const Table> &table
    * it makes is very easy to load this data into a different database.
    * The disadvantage is that it can be quite slow if the data has been compressed before.
    * Also, it does not involve the column-oriented style used in OpossumDB.
-  */
+   */
 
   // Open file for writing
   CsvWriter writer(csv_file);

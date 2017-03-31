@@ -38,7 +38,8 @@ class AbstractOperator {
   AbstractOperator(AbstractOperator &&) = default;
   AbstractOperator &operator=(AbstractOperator &&) = default;
 
-  void execute(const TransactionContext *context = nullptr);
+  // Overriding implementations need to call on_operator_started/finished() on the _transaction_context as well
+  virtual void execute();
 
   // returns the result of the operator
   std::shared_ptr<const Table> get_output() const;
@@ -51,11 +52,14 @@ class AbstractOperator {
   // returns the number of output tables, range of values is [0, 1]
   virtual uint8_t num_out_tables() const = 0;
 
+  std::shared_ptr<TransactionContext> transaction_context() const;
+  void set_transaction_context(std::shared_ptr<TransactionContext> transaction_context);
+
  protected:
   // abstract method to actually execute the operator
   // execute and get_output are split into two methods to allow for easier
   // asynchronous execution
-  virtual std::shared_ptr<const Table> on_execute(const TransactionContext *context) = 0;
+  virtual std::shared_ptr<const Table> on_execute(std::shared_ptr<TransactionContext> context) = 0;
 
   std::shared_ptr<const Table> input_table_left() const;
   std::shared_ptr<const Table> input_table_right() const;
@@ -66,6 +70,8 @@ class AbstractOperator {
 
   // Is nullptr until the operator is executed
   std::shared_ptr<const Table> _output;
+
+  std::shared_ptr<TransactionContext> _transaction_context;
 };
 
 }  // namespace opossum
