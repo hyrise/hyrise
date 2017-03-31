@@ -37,7 +37,7 @@ class ReferenceColumnTest : public ::testing::Test {
 
     StorageManager::get().add_table("test_table_dict", _test_table_dict);
 
-    auto compression = std::make_unique<ChunkCompression>("test_table_dict", std::vector<ChunkID>{0u, 1u});
+    auto compression = std::make_unique<ChunkCompression>("test_table_dict", std::vector<ChunkID>{0u, 1u}, false);
     compression->execute();
   }
 

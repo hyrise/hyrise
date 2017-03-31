@@ -65,7 +65,7 @@ TEST_F(OperatorsImportBinaryTest, StringDictionaryColumn) {
 
   StorageManager::get().add_table("table_a", expected_table);
 
-  auto compression = std::make_unique<ChunkCompression>("table_a", 0u);
+  auto compression = std::make_unique<ChunkCompression>("table_a", 0u, false);
   compression->execute();
 
   auto importer = std::make_shared<opossum::ImportBinary>("src/test/binary/StringDictionaryColumn.bin");
@@ -106,7 +106,7 @@ TEST_F(OperatorsImportBinaryTest, AllTypesDictionaryColumn) {
 
   StorageManager::get().add_table("expected_table", expected_table);
 
-  auto compression = std::make_unique<ChunkCompression>("expected_table", std::vector<ChunkID>{0u, 1u});
+  auto compression = std::make_unique<ChunkCompression>("expected_table", std::vector<ChunkID>{0u, 1u}, false);
   compression->execute();
 
   auto importer = std::make_shared<opossum::ImportBinary>("src/test/binary/AllTypesDictionaryColumn.bin");
@@ -129,7 +129,7 @@ TEST_F(OperatorsImportBinaryTest, AllTypesMixColumn) {
 
   StorageManager::get().add_table("expected_table", expected_table);
 
-  auto compression = std::make_unique<ChunkCompression>("expected_table", 0u);
+  auto compression = std::make_unique<ChunkCompression>("expected_table", 0u, false);
   compression->execute();
 
   auto importer = std::make_shared<opossum::ImportBinary>("src/test/binary/AllTypesMixColumn.bin");

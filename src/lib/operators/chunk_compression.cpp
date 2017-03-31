@@ -61,11 +61,12 @@ class ColumnCompressor : public AbstractColumnCompressor {
   }
 };
 
-ChunkCompression::ChunkCompression(const std::string& table_name, const ChunkID chunk_id)
-    : ChunkCompression{table_name, std::vector<ChunkID>{chunk_id}} {}
+ChunkCompression::ChunkCompression(const std::string& table_name, const ChunkID chunk_id, bool check_completion)
+    : ChunkCompression{table_name, std::vector<ChunkID>{chunk_id}, check_completion} {}
 
-ChunkCompression::ChunkCompression(const std::string& table_name, const std::vector<ChunkID>& chunk_ids)
-    : _table_name{table_name}, _chunk_ids{chunk_ids} {}
+ChunkCompression::ChunkCompression(const std::string& table_name, const std::vector<ChunkID>& chunk_ids,
+                                   bool check_completion)
+    : _check_completion{check_completion}, _table_name{table_name}, _chunk_ids{chunk_ids} {}
 
 const std::string ChunkCompression::name() const { return "ChunkCompression"; }
 uint8_t ChunkCompression::num_in_tables() const { return 0u; }
@@ -91,6 +92,10 @@ std::shared_ptr<const Table> ChunkCompression::on_execute(TransactionContext* /*
 
     auto& chunk = table->get_chunk(chunk_id);
 
+    if (_check_completion && !chunk_is_completed(chunk, table->chunk_size())) {
+      throw std::logic_error("Chunk is not completed and thus can’t be compressed.");
+    }
+
     for (auto column_id = 0u; column_id < chunk.col_count(); ++column_id) {
       auto value_column = chunk.get_column(column_id);
       auto dict_column = compress_column(table->column_type(column_id), value_column);
@@ -101,6 +106,18 @@ std::shared_ptr<const Table> ChunkCompression::on_execute(TransactionContext* /*
   }
 
   return nullptr;
+}
+
+bool ChunkCompression::chunk_is_completed(const Chunk& chunk, const uint32_t max_chunk_size) {
+  if (chunk.size() != max_chunk_size) return false;
+
+  auto mvcc_columns = chunk.mvcc_columns();
+
+  for (const auto begin_cid : mvcc_columns->begin_cids) {
+    if (begin_cid == Chunk::MAX_COMMIT_ID) return false;
+  }
+
+  return true;
 }
 
 }  // namespace opossum

@@ -37,6 +37,13 @@ class Chunk {
     tbb::concurrent_vector<CommitID> end_cids;                    ///< commit id when record was deleted
 
    private:
+    /**
+     * @brief Mutex used to manage access to MVCC columns
+     *
+     * Exclusively locked in shrink_to_fit()
+     * Locked for shared ownership when MVCC columns are accessed
+     * via the mvcc_columns() getters
+     */
     std::shared_mutex _mutex;
   };
 

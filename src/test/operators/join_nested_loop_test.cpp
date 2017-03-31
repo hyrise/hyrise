@@ -44,7 +44,7 @@ class OperatorsJoinNestedLoopTest : public BaseTest {
       auto test_table_dict = load_table("src/test/tables/int_float.tbl", 2);
       StorageManager::get().add_table("table_a_dict", std::move(test_table_dict));
 
-      auto compression = std::make_unique<ChunkCompression>("table_a_dict", std::vector<ChunkID>{0u, 1u});
+      auto compression = std::make_unique<ChunkCompression>("table_a_dict", std::vector<ChunkID>{0u, 1u}, false);
       compression->execute();
     }
 

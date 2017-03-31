@@ -38,7 +38,7 @@ class OperatorsIndexColumnScanTest : public BaseTest {
 
     StorageManager::get().add_table("table_dict", test_table_dict);
 
-    auto compression = std::make_unique<ChunkCompression>("table_dict", std::vector<ChunkID>{0u, 1u});
+    auto compression = std::make_unique<ChunkCompression>("table_dict", std::vector<ChunkID>{0u, 1u}, false);
     compression->execute();
 
     test_table_dict->get_chunk(0).create_index<DerivedIndex>({test_table_dict->get_chunk(0).get_column(0)});

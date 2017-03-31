@@ -9,7 +9,7 @@ namespace opossum {
 /**
  * @brief Copyable atomic wrapper
  *
- * Wrapper that implements the move constructor and assignment operator
+ * Wrapper that implements the move constructor and assignment operator for std::atomic<>
  * Makes handling atomics in containers easier
  *
  * Attention: The following is not an atomic operation

@@ -124,7 +124,7 @@ TEST_F(OperatorsExportBinaryTest, StringDictionaryColumn) {
 
   StorageManager::get().add_table("table", std::move(table));
 
-  auto compression = std::make_unique<ChunkCompression>("table", 0u);
+  auto compression = std::make_unique<ChunkCompression>("table", 0u, false);
   compression->execute();
 
   auto gt = std::make_shared<GetTable>("table");
@@ -171,7 +171,7 @@ TEST_F(OperatorsExportBinaryTest, AllTypesDictionaryColumn) {
 
   StorageManager::get().add_table("table", std::move(table));
 
-  auto compression = std::make_unique<ChunkCompression>("table", std::vector<ChunkID>{0u, 1u});
+  auto compression = std::make_unique<ChunkCompression>("table", std::vector<ChunkID>{0u, 1u}, false);
   compression->execute();
 
   auto gt = std::make_shared<GetTable>("table");
@@ -197,7 +197,7 @@ TEST_F(OperatorsExportBinaryTest, AllTypesMixColumn) {
 
   StorageManager::get().add_table("table", table);
 
-  auto compression = std::make_unique<ChunkCompression>("table", 0u);
+  auto compression = std::make_unique<ChunkCompression>("table", 0u, false);
   compression->execute();
 
   auto gt = std::make_shared<GetTable>("table");
@@ -270,7 +270,7 @@ TEST_F(OperatorsExportBinaryTest, EmptyStringsDictionaryColumn) {
 
   StorageManager::get().add_table("table", table);
 
-  auto compression = std::make_unique<ChunkCompression>("table", 0u);
+  auto compression = std::make_unique<ChunkCompression>("table", 0u, false);
   compression->execute();
 
   auto gt = std::make_shared<GetTable>("table");

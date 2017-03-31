@@ -33,7 +33,7 @@ class OperatorsTableScanTest : public BaseTest {
     StorageManager::get().add_table("table_even_dict", std::move(test_even_dict));
 
     {
-      auto compression = std::make_unique<ChunkCompression>("table_even_dict", std::vector<ChunkID>{0u, 1u});
+      auto compression = std::make_unique<ChunkCompression>("table_even_dict", std::vector<ChunkID>{0u, 1u}, false);
       compression->execute();
     }
 
@@ -47,7 +47,7 @@ class OperatorsTableScanTest : public BaseTest {
     opossum::StorageManager::get().add_table("table_dict_16", std::move(_test_table_dict_16));
 
     {
-      auto compression = std::make_unique<ChunkCompression>("table_dict_16", 0u);
+      auto compression = std::make_unique<ChunkCompression>("table_dict_16", 0u, false);
       compression->execute();
     }
 
@@ -61,7 +61,7 @@ class OperatorsTableScanTest : public BaseTest {
     opossum::StorageManager::get().add_table("table_dict_32", std::move(_test_table_dict_32));
 
     {
-      auto compression = std::make_unique<ChunkCompression>("table_dict_32", 0u);
+      auto compression = std::make_unique<ChunkCompression>("table_dict_32", 0u, false);
       compression->execute();
     }
 
@@ -79,7 +79,7 @@ class OperatorsTableScanTest : public BaseTest {
     StorageManager::get().add_table("table_part_dict", test_table_dict);
 
     {
-      auto compression = std::make_unique<ChunkCompression>("table_part_dict", std::vector<ChunkID>{0u, 2u});
+      auto compression = std::make_unique<ChunkCompression>("table_part_dict", std::vector<ChunkID>{0u, 2u}, false);
       compression->execute();
     }
 

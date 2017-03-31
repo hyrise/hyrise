@@ -29,7 +29,6 @@ void Chunk::add_column(std::shared_ptr<BaseColumn> column) {
   }
   if (_columns.size() == 0 && has_mvcc_columns()) grow_mvcc_column_size_by(column->size(), 0);
 
-  // TODO(MJ): Validate that we in fact do not have to perform an atomic operation here
   _columns.push_back(column);
 }
 
@@ -69,7 +68,7 @@ uint32_t Chunk::size() const {
 void Chunk::grow_mvcc_column_size_by(size_t delta, CommitID begin_cid) {
   _mvcc_columns->tids.grow_to_at_least(size() + delta);
   _mvcc_columns->begin_cids.grow_to_at_least(size() + delta, begin_cid);
-  _mvcc_columns->end_cids.grow_to_at_least(size() + delta, std::numeric_limits<uint32_t>::max());
+  _mvcc_columns->end_cids.grow_to_at_least(size() + delta, MAX_COMMIT_ID);
 }
 
 bool Chunk::has_mvcc_columns() const { return _mvcc_columns != nullptr; }

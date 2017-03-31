@@ -7,6 +7,7 @@ namespace opossum {
 /**
  * Smart pointer that locks a given mutex on construction and
  * unlocks it on desctruction mimicking the RAII idiom
+ * Stores a reference to the wrapped value and therefore can’t be null
  */
 template <typename Type, typename LockType>
 class LockingPtr {

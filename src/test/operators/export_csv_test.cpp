@@ -116,7 +116,7 @@ TEST_F(OperatorsExportCsvTest, DictionaryColumn) {
 
   StorageManager::get().add_table("table_a", std::move(table));
 
-  auto compression = std::make_unique<ChunkCompression>("table_a", 0u);
+  auto compression = std::make_unique<ChunkCompression>("table_a", 0u, false);
   compression->execute();
 
   auto gt = std::make_shared<GetTable>("table_a");
