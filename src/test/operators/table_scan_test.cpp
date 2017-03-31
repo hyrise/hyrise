@@ -79,7 +79,7 @@ class OperatorsTableScanTest : public BaseTest {
     StorageManager::get().add_table("table_part_dict", test_table_dict);
 
     {
-      auto compression = std::make_unique<ChunkCompression>("table_part_dict", std::vector<ChunkID>{0u, 2u}, false);
+      auto compression = std::make_unique<ChunkCompression>("table_part_dict", std::vector<ChunkID>{0u, 1u}, false);
       compression->execute();
     }
 

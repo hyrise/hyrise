@@ -112,10 +112,8 @@ TEST_F(StorageTableTest, ShrinkingMvccColumnsHasNoSideEffects) {
     // acquiring mvcc_columns locks them
     auto mvcc_columns = chunk.mvcc_columns();
 
-    // tids are not copied because they must be 0, since
-    // otherwise someone else would be trying to
-    // simultaneously change the records
-    // TODO(MJ): they are now!
+    mvcc_columns->tids[0u] = values[0u];
+    mvcc_columns->tids[1u] = values[1u];
     mvcc_columns->begin_cids[0u] = values[0u];
     mvcc_columns->begin_cids[1u] = values[1u];
     mvcc_columns->end_cids[0u] = values[0u];
@@ -132,6 +130,7 @@ TEST_F(StorageTableTest, ShrinkingMvccColumnsHasNoSideEffects) {
   auto new_mvcc_columns = chunk.mvcc_columns();
 
   for (auto i = 0u; i < chunk.size(); ++i) {
+    EXPECT_EQ(new_mvcc_columns->tids[i], values[i]);
     EXPECT_EQ(new_mvcc_columns->begin_cids[i], values[i]);
     EXPECT_EQ(new_mvcc_columns->end_cids[i], values[i]);
   }
