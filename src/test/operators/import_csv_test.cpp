@@ -62,6 +62,11 @@ TEST_F(OperatorsImportCsvTest, TrailingNewline) {
 }
 
 TEST_F(OperatorsImportCsvTest, FileDoesNotExist) {
+#ifdef __SANITIZE_ADDRESS__
+  // seems to cause stack corruption with gcc+asan+osx, see OperatorsImportBinaryTest for details
+  return;
+#endif
+
   auto importer = std::make_shared<ImportCsv>("src/test/csv", "not_existing_file");
   EXPECT_THROW(importer->execute(), std::exception);
 }

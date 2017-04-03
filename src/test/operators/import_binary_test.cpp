@@ -124,6 +124,14 @@ TEST_F(OperatorsImportBinaryTest, AllTypesMixColumn) {
 }
 
 TEST_F(OperatorsImportBinaryTest, FileDoesNotExist) {
+#ifdef __SANITIZE_ADDRESS__
+  // This test appears to cause stack corruption when the following come together:
+  // gtest, gcc 6.3.0, asan, osx
+  // This appears to be related to throwing exceptions with ifstream::exceptions and can be reproduced
+  // even outside of the Opossum code.
+  return;
+#endif
+
   auto importer = std::make_shared<opossum::ImportBinary>("not_existing_file");
   EXPECT_THROW(importer->execute(), std::exception);
 }
