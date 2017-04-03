@@ -16,6 +16,10 @@
 
 namespace {
 
+/**
+ * On worker threads, this references the Worker running on this thread, on all other threads, this is empty.
+ * Uses a weak_ptr, because otherwise the ref-count of it would not reach zero within the main() scope of the program.
+ */
 thread_local std::weak_ptr<opossum::Worker> this_thread_worker;
 }
 
@@ -68,14 +72,14 @@ void Worker::operator()() {
     throw std::logic_error("No scheduler");
   }
 
-  while (!_processing_unit.lock()->shutdown_flag()) {
+  auto processing_unit = _processing_unit.lock();
+  if (IS_DEBUG && !processing_unit) {
+    throw std::logic_error("No processing unit");
+  }
+
+  while (!processing_unit->shutdown_flag()) {
     // Hibernate if this is not the active worker.
     {
-      auto processing_unit = _processing_unit.lock();
-      if (IS_DEBUG && !processing_unit) {
-        throw std::logic_error("No processing unit");
-      }
-
       auto this_worker_is_active = processing_unit->try_acquire_active_worker_token(_id);
       if (!this_worker_is_active) {
         processing_unit->hibernate_calling_worker();
@@ -114,10 +118,10 @@ void Worker::operator()() {
 
     // This is part of the Scheduler shutdown system. Count the number of tasks a ProcessingUnit executed to allow the
     // Scheduler to determine whether all tasks finished
-    _processing_unit.lock()->on_worker_finished_task();
+    processing_unit->on_worker_finished_task();
   }
 
-  _processing_unit.lock()->yield_active_worker_token(_id);
+  processing_unit->yield_active_worker_token(_id);
 }
 
 void Worker::_set_affinity() {

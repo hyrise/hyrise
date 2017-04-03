@@ -67,12 +67,14 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
  public:
   JoinHashImpl(const std::shared_ptr<const AbstractOperator> left, const std::shared_ptr<const AbstractOperator> right,
                const std::pair<std::string, std::string> &column_names, const std::string &op, const JoinMode mode,
-               const bool inputs_swapped)
+               const std::string &prefix_left, const std::string &prefix_right, const bool inputs_swapped)
       : _left(left),
         _right(right),
         _column_names(column_names),
         _op(op),
         _mode(mode),
+        _prefix_left(prefix_left),
+        _prefix_right(prefix_right),
         _inputs_swapped(inputs_swapped),
         _output_table(std::make_shared<Table>()) {
     // Setting comparator to Equal Comparison -> That is the only supported comparison type for Hash Joins
@@ -86,6 +88,8 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
   const std::pair<std::string, std::string> _column_names;
   const std::string _op;
   const JoinMode _mode;
+  const std::string _prefix_left;
+  const std::string _prefix_right;
 
   const bool _inputs_swapped;
   const std::shared_ptr<Table> _output_table;
@@ -526,11 +530,11 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
     auto _right_column_id = _right_in_table->column_id_by_name(_column_names.second);
 
     if (_inputs_swapped) {
-      _copy_table_metadata(_right_in_table, _output_table, "left.");
-      _copy_table_metadata(_left_in_table, _output_table, "right.");
+      _copy_table_metadata(_right_in_table, _output_table, _prefix_left);
+      _copy_table_metadata(_left_in_table, _output_table, _prefix_right);
     } else {
-      _copy_table_metadata(_left_in_table, _output_table, "left.");
-      _copy_table_metadata(_right_in_table, _output_table, "right.");
+      _copy_table_metadata(_left_in_table, _output_table, _prefix_left);
+      _copy_table_metadata(_right_in_table, _output_table, _prefix_right);
     }
 
     // Pre-partitioning
