@@ -50,9 +50,7 @@ SortMergeJoin::SortMergeJoin(const std::shared_ptr<AbstractOperator> left,
   _impl = make_unique_by_column_type<AbstractJoinOperatorImpl, SortMergeJoinImpl>(left_column_type, *this);
 }
 
-std::shared_ptr<const Table> SortMergeJoin::on_execute(const TransactionContext* context) {
-  return _impl->on_execute();
-}
+std::shared_ptr<const Table> SortMergeJoin::on_execute() { return _impl->on_execute(); }
 
 const std::string SortMergeJoin::name() const { return "SortMergeJoin"; }
 

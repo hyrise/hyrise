@@ -165,18 +165,16 @@ BaseIndex::Iterator Node16::_delegate_to_child(
 
 BaseIndex::Iterator Node16::lower_bound(const AdaptiveRadixTreeIndex::BinaryComparable &key, size_t depth) const {
   return _delegate_to_child(
-      key, depth,
-      [this](std::iterator_traits<std::array<uint8_t, 16>::iterator>::difference_type partial_key_pos,
-             AdaptiveRadixTreeIndex::BinaryComparable key,
-             size_t depth) { return _children[partial_key_pos]->lower_bound(key, depth); });
+      key, depth, [this](std::iterator_traits<std::array<uint8_t, 16>::iterator>::difference_type partial_key_pos,
+                         AdaptiveRadixTreeIndex::BinaryComparable key,
+                         size_t depth) { return _children[partial_key_pos]->lower_bound(key, depth); });
 }
 
 BaseIndex::Iterator Node16::upper_bound(const AdaptiveRadixTreeIndex::BinaryComparable &key, size_t depth) const {
   return _delegate_to_child(
-      key, depth,
-      [this](std::iterator_traits<std::array<uint8_t, 16>::iterator>::difference_type partial_key_pos,
-             AdaptiveRadixTreeIndex::BinaryComparable key,
-             size_t depth) { return _children[partial_key_pos]->upper_bound(key, depth); });
+      key, depth, [this](std::iterator_traits<std::array<uint8_t, 16>::iterator>::difference_type partial_key_pos,
+                         AdaptiveRadixTreeIndex::BinaryComparable key,
+                         size_t depth) { return _children[partial_key_pos]->upper_bound(key, depth); });
 }
 
 BaseIndex::Iterator Node16::begin() const { return _children[0]->begin(); }

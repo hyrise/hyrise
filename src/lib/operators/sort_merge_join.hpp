@@ -23,16 +23,13 @@ class SortMergeJoin : public AbstractJoinOperator {
                 optional<std::pair<const std::string&, const std::string&>> column_names, const std::string& op,
                 const JoinMode mode, std::string& prefix_left, std::string& prefix_right);
 
-  std::shared_ptr<const Table> on_execute(const TransactionContext* context) override;
+  std::shared_ptr<const Table> on_execute() override;
 
   const std::string name() const override;
   uint8_t num_in_tables() const override;
   uint8_t num_out_tables() const override;
 
- private:
-  std::shared_ptr<Table> sort_left_table(ColumnVisitable& impl);
-  std::shared_ptr<Table> sort_right_table(ColumnVisitable& impl);
-
+ protected:
   struct SortContext : ColumnVisitableContext {
     SortContext(ChunkID chunk_id, bool left) : _chunk_id{chunk_id}, _write_to_sorted_left_table{left} {}
 
@@ -106,7 +103,7 @@ class SortMergeJoin : public AbstractJoinOperator {
     void handle_dictionary_column(BaseColumn& column, std::shared_ptr<ColumnVisitableContext> context) override;
     void handle_reference_column(ReferenceColumn& column, std::shared_ptr<ColumnVisitableContext> context) override;
 
-   private:
+   protected:
     SortMergeJoin& _sort_merge_join;
     std::shared_ptr<SortedTable> _sorted_left_table;
     std::shared_ptr<SortedTable> _sorted_right_table;
