@@ -319,6 +319,7 @@ TYPED_TEST(JoinEquiTest, AppliesPrefixes) {
 }
 
 TYPED_TEST(JoinEquiTest, ColumnsNotOptional) {
+  if (!IS_DEBUG) return;
   EXPECT_THROW(std::make_shared<TypeParam>(this->_gt_f, this->_gt_g, nullopt, "=", Left, std::string("left."),
                                            std::string("right.")),
                std::runtime_error);

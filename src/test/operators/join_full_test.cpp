@@ -34,6 +34,7 @@ typedef ::testing::Types<JoinNestedLoopA, JoinNestedLoopB /* , SortMergeJoin */>
 TYPED_TEST_CASE(JoinFullTest, JoinFullTypes);
 
 TYPED_TEST(JoinFullTest, CrossJoin) {
+  if (!IS_DEBUG) return;
   // this->template test_join_output<TypeParam>(this->_gt_a, this->_gt_b, std::pair<std::string, std::string>("a", "a"),
   //                                            "=", Cross, "src/test/tables/joinoperators/int_cross_join.tbl", 1);
 
