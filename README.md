@@ -36,6 +36,25 @@ get via `git submodule update --init`
 install via homebrew: brew install tbb
 install via apt: apt-get install libtbb-dev
 
+### development command line tools
+install via `xcode-select --install` / `apt install build-essential`
+
+### autoconf
+install via homebrew / packet manager
+
+### automake
+install via homebrew / packet manager (installed as default by Ubuntu)
+
+### libtool
+install via homebrew / packet manager
+
+### pkg-config
+install via homebrew / packet manager (installed as default by Ubuntu)
+
+### get and compile protoc and gRPC
+get via `submodule update --init --recursive`
+installation guide on github
+
 ### llvm (optional)
 install via homebrew / packet manager
 used for AddressSanitizer

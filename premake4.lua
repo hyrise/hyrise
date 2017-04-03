@@ -68,6 +68,12 @@ else
   end
 end
 
+-- Generate C++ source files from protobuf grammar files
+os.execute("echo \"Generating protobuf and grpc files...\"")
+os.execute("[ -d src/lib/network/generated ] || mkdir src/lib/network/generated")
+os.execute("./third_party/grpc/bins/opt/protobuf/protoc --cpp_out=./src/lib/network/generated -I=\"./src/lib/network/protos/\" ./src/lib/network/protos/opossum.proto")
+os.execute("./third_party/grpc/bins/opt/protobuf/protoc --grpc_out=./src/lib/network/generated --plugin=protoc-gen-grpc=./third_party/grpc/bins/opt/grpc_cpp_plugin -I=\"./src/lib/network/protos/\" ./src/lib/network/protos/opossum.proto")
+
 solution "opossum"
   configurations { "Debug", "Release" }
   flags { "FatalWarnings", "ExtraWarnings" }
@@ -106,8 +112,8 @@ solution "opossum"
 
 project "googletest"
   kind "StaticLib"
-  files { "third_party/googletest/googletest/src/gtest-all.cc" }
   includedirs { "third_party/googletest/googletest", "third_party/googletest/googletest/include" }
+  files { "third_party/googletest/googletest/src/gtest-all.cc" }
 
 project "googlebenchmark"
   kind "StaticLib"
@@ -120,25 +126,45 @@ project "googlebenchmark"
 
 project "opossum"
   kind "StaticLib"
-  files { "src/lib/**.hpp", "src/lib/**.cpp", "src/bin/server.cpp" }
+  includedirs { "third_party/grpc/include/", "third_party/grpc/third_party/protobuf/src/" }
+  files { "src/lib/**.hpp", "src/lib/**.cpp" }
 
 project "opossum-asan"
   kind "StaticLib"
   buildoptions {"-fsanitize=address -fno-omit-frame-pointer"}
   linkoptions {"-fsanitize=address"}
-  files { "src/lib/**.hpp", "src/lib/**.cpp", "src/bin/server.cpp" }
+  includedirs { "third_party/grpc/include/", "third_party/grpc/third_party/protobuf/src/" }
+  files { "src/lib/**.hpp", "src/lib/**.cpp", "src/bin/server_main.cpp" }
 
 project "opossumCoverage"
   kind "StaticLib"
   buildoptions { "-fprofile-arcs -ftest-coverage" }
   linkoptions { "-lgcov --coverage" }
+  includedirs { "third_party/grpc/include/", "third_party/grpc/third_party/protobuf/src/" }
   files { "src/lib/**.hpp", "src/lib/**.cpp" }
+
+-- Static lib for the opossum protobuf and grpc code generated from opossum.proto (see action 'protoc' below)
+project "opossumProtobuf"
+  kind "StaticLib"
+  buildoptions ("-Wno-unused-parameter -Wno-deprecated-declarations")
+  includedirs { "third_party/grpc/include/", "third_party/grpc/third_party/protobuf/src/" }
+  files { "src/lib/network/generated/**.pb.cc" }
+
+-- Exemplary opossum client, showing how to use grpc and protobuf at client-side
+project "client"
+  kind "ConsoleApp"
+  links { "opossumProtobuf", "protobuf", "grpc++", "grpc", "z", "boost_program_options" }
+  includedirs { "third_party/grpc/include/", "third_party/grpc/third_party/protobuf/src/" }
+  libdirs { "third_party/grpc/libs/opt/", "third_party/grpc/libs/opt/protobuf" }
+  files { "src/bin/client.cpp" }
 
 project "server"
   kind "ConsoleApp"
-  links { "opossum" }
+  links { "opossum", "opossumProtobuf", "protobuf", "grpc++", "grpc", "z", "boost_program_options" } -- z is needed on macos to link grpc
+  includedirs { "third_party/grpc/include/", "third_party/grpc/third_party/protobuf/src/" }
+  libdirs { "third_party/grpc/libs/opt/", "third_party/grpc/libs/opt/protobuf" }
   links(libs)
-  files { "src/bin/server.cpp" }
+  files { "src/bin/server_main.cpp" }
 
 project "playground"
   kind "ConsoleApp"
@@ -149,19 +175,21 @@ project "playground"
 project "test"
   kind "ConsoleApp"
 
-  links { "opossum", "googletest" }
+  links { "opossum", "googletest", "opossumProtobuf", "protobuf", "grpc++", "grpc", "z" }
+  includedirs { "third_party/googletest/googletest/include", "third_party/grpc/include/", "third_party/grpc/third_party/protobuf/src/" }
+  libdirs { "third_party/grpc/libs/opt/", "third_party/grpc/libs/opt/protobuf" }
   links(libs)
   files { "src/test/**.hpp", "src/test/**.cpp" }
-  includedirs { "third_party/googletest/googletest/include" }
   postbuildcommands { "./build/test" }
 
 project "asan"
   kind "ConsoleApp"
 
-  links { "opossum-asan", "googletest" }
+  links { "opossum-asan", "googletest", "opossumProtobuf", "protobuf", "grpc++", "grpc", "z" }
   links(libs)
   files { "src/test/**.hpp", "src/test/**.cpp" }
-  includedirs { "third_party/googletest/googletest/include" }
+  includedirs { "third_party/googletest/googletest/include", "third_party/grpc/include/", "third_party/grpc/third_party/protobuf/src/" }
+  libdirs { "third_party/grpc/libs/opt/", "third_party/grpc/libs/opt/protobuf" }
   buildoptions {"-fsanitize=address -fno-omit-frame-pointer"}
   linkoptions { "-fsanitize=address" }
   postbuildcommands { "./build/asan" }
@@ -177,13 +205,14 @@ project "benchmark"
 project "coverage"
   kind "ConsoleApp"
 
-  links { "opossumCoverage", "googletest" }
+  links { "opossumCoverage", "googletest", "opossumProtobuf", "protobuf", "grpc++", "grpc", "z" }
   links(libs)
   linkoptions {"--coverage"}
   files { "src/test/**.hpp", "src/test/**.cpp" }
   buildoptions { "-fprofile-arcs -ftest-coverage" }
-  includedirs { "third_party/googletest/googletest/include" }
-  postbuildcommands { "./build/coverage && rm -fr coverage; mkdir coverage && gcovr -s -r . --exclude=\"(.*types*.|.*test*.)\" --html --html-details -o coverage/index.html" }
+  includedirs { "third_party/googletest/googletest/include", "third_party/grpc/include/", "third_party/grpc/third_party/protobuf/src/" }
+  libdirs { "third_party/grpc/libs/opt/", "third_party/grpc/libs/opt/protobuf" }
+  postbuildcommands { "./build/coverage && rm -fr coverage; mkdir coverage && gcovr -s -r . --exclude=\"(.*types*.|.*test*.|.*\.pb\.|third_party)\" --html --html-details -o coverage/index.html" }
 
 newoption {
   trigger     = "compiler",
@@ -229,7 +258,7 @@ function premake.generate(obj, filename, callback)
     -- "make clean" should also call "premake4 clean"
     os.execute("awk '\\\
     /help:/ {\\\
-    print \"\tpremake4 clean\"\\\
+    print \"\tpremake4 clean\\n\trm -r src/lib/network/generated\"\\\
     }\\\
     { print }' Makefile > Makefile.awk && mv Makefile.awk Makefile")
   end

@@ -21,7 +21,7 @@ namespace {
  * Uses a weak_ptr, because otherwise the ref-count of it would not reach zero within the main() scope of the program.
  */
 thread_local std::weak_ptr<opossum::Worker> this_thread_worker;
-}
+}  // namespace
 
 namespace opossum {
 
