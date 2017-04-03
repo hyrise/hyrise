@@ -19,9 +19,9 @@ namespace opossum {
 
 class SortMergeJoin : public AbstractJoinOperator {
  public:
-  SortMergeJoin(const std::shared_ptr<AbstractOperator> left, const std::shared_ptr<AbstractOperator> right,
-                optional<std::pair<const std::string&, const std::string&>> column_names, const std::string& op,
-                const JoinMode mode, std::string& prefix_left, std::string& prefix_right);
+  SortMergeJoin(const std::shared_ptr<const AbstractOperator> left, const std::shared_ptr<const AbstractOperator> right,
+                optional<std::pair<std::string, std::string>> column_names, const std::string& op, const JoinMode mode,
+                const std::string& prefix_left, const std::string& prefix_right);
 
   std::shared_ptr<const Table> on_execute() override;
 

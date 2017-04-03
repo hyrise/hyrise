@@ -13,6 +13,7 @@
 #include "../../lib/operators/join_hash.hpp"
 #include "../../lib/operators/join_nested_loop.hpp"
 #include "../../lib/operators/print.hpp"
+#include "../../lib/operators/sort_merge_join.hpp"
 #include "../../lib/operators/table_scan.hpp"
 #include "../../lib/operators/union_all.hpp"
 #include "../../lib/storage/storage_manager.hpp"
@@ -29,7 +30,7 @@ template <typename T>
 class JoinEquiTest : public JoinTest {};
 
 // here we define all Join types
-typedef ::testing::Types<JoinNestedLoop, JoinHash /* , SortMergeJoin */> JoinEquiTypes;
+typedef ::testing::Types<JoinNestedLoop, JoinHash, SortMergeJoin> JoinEquiTypes;
 TYPED_TEST_CASE(JoinEquiTest, JoinEquiTypes);
 
 TYPED_TEST(JoinEquiTest, WrongJoinOperator) {
