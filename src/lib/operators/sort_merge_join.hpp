@@ -31,10 +31,10 @@ class SortMergeJoin : public AbstractJoinOperator {
 
  protected:
   struct SortContext : ColumnVisitableContext {
-    SortContext(ChunkID chunk_id, bool left) : _chunk_id{chunk_id}, _write_to_sorted_left_table{left} {}
+    SortContext(ChunkID chunk_id, bool left) : chunk_id(chunk_id), write_to_sorted_left_table(left) {}
 
-    ChunkID _chunk_id;
-    bool _write_to_sorted_left_table;
+    ChunkID chunk_id;
+    bool write_to_sorted_left_table;
   };
 
   template <typename T>
@@ -52,21 +52,23 @@ class SortMergeJoin : public AbstractJoinOperator {
     // struct used for materialized sorted Chunk
     struct SortedChunk {
       SortedChunk() {}
-      std::vector<std::pair<T, RowID>> _values;
-      std::map<uint64_t, uint32_t> _histogram;
-      std::map<uint64_t, uint32_t> _prefix;
 
-      std::map<T, uint32_t> _histogram_v;
-      std::map<T, uint32_t> _prefix_v;
+      std::vector<std::pair<T, RowID>> values;
+      std::map<uint64_t, uint32_t> histogram;
+      std::map<uint64_t, uint32_t> prefix;
+
+      std::map<T, uint32_t> histogram_v;
+      std::map<T, uint32_t> prefix_v;
     };
 
     // struct used for materialized sorted Table
     struct SortedTable {
       SortedTable() {}
-      std::vector<SortedChunk> _partition;
-      std::map<uint64_t, uint32_t> _histogram;
 
-      std::map<T, uint32_t> _histogram_v;
+      std::vector<SortedChunk> partition;
+      std::map<uint64_t, uint32_t> histogram;
+
+      std::map<T, uint32_t> histogram_v;
     };
 
     // Sort functions
@@ -74,6 +76,7 @@ class SortMergeJoin : public AbstractJoinOperator {
                     const std::string& column_name, bool left);
     void sort_partition(const std::vector<ChunkID> chunk_ids, std::shared_ptr<const Table> input,
                         const std::string& column_name, bool left);
+
     // Partitioning in case of Non-Equi-Join
     void value_based_table_partitioning(std::shared_ptr<SortedTable> sort_table, std::vector<T>& p_values);
     void value_based_partitioning();
@@ -88,10 +91,12 @@ class SortMergeJoin : public AbstractJoinOperator {
       auto result = reinterpret_cast<const size_t*>(value.c_str());
       return *result & radix_bits;
     }
+
     // Looks for matches and possibly calls helper function to add match to _sort_merge_join._output
     void partition_join(uint32_t partition_number, std::vector<PosList>& pos_lists_left,
                         std::vector<PosList>& pos_lists_right);
     void perform_join();
+
     // builds output based on pos_list_left/-_right
     void build_output(std::shared_ptr<Table>& output);
 
