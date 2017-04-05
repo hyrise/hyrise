@@ -10,4 +10,5 @@ benchmark.json
 .idea
 *.xcodeproj
 *.xcworkspace
+src/lib/network/generated
 .vscode

@@ -1,0 +1,154 @@
+syntax = "proto3";
+
+package opossum.proto;
+
+// gRPC service definition
+service OpossumService {
+  rpc Query (Request) returns (Response) {}
+}
+
+// AllTypeVariant "union"
+message Variant {
+  oneof variant {
+    int32 value_int = 1;
+    float value_float = 2;
+    string value_string = 3;
+    double value_double = 4;
+    int64 value_long = 5;
+  };
+}
+
+
+// Request and Operators
+
+message Request {
+  OperatorVariant root_operator = 1;
+}
+
+// Add new operators to this "union"
+message OperatorVariant {
+  oneof operator {
+    GetTableOperator get_table = 1;
+    ProjectionOperator projection = 2;
+    TableScanOperator table_scan = 3;
+    ProductOperator product = 4;
+    SortOperator sort = 5;
+    UnionAllOperator union_all = 6;
+    ImportCsvOperator import_csv = 7;
+    PrintOperator print = 8;
+    DifferenceOperator difference = 9;
+    ExportCsvOperator export_csv = 10;
+    ExportBinaryOperator export_binary = 11;
+    IndexColumnScanOperator index_column_scan = 12;
+    NestedLoopJoinOperator nested_loop_join = 13;
+  }
+}
+
+message GetTableOperator {
+  string table_name = 1;
+}
+
+message ProjectionOperator {
+  OperatorVariant input_operator = 1;
+  repeated string column_name = 2;
+}
+
+message TableScanOperator {
+  OperatorVariant input_operator = 1;
+  string column_name = 2;
+  string filter_operator = 3;
+  Variant value = 4;
+  Variant value2 = 5; // not explicitly specified as optional as everything is optional
+}
+
+message IndexColumnScanOperator {
+  OperatorVariant input_operator = 1;
+  string column_name = 2;
+  string filter_operator = 3;
+  Variant value = 4;
+  Variant value2 = 5; // not explicitly specified as optional as everything is optional
+}
+
+message NestedLoopJoinOperator {
+  OperatorVariant left_operator = 1;
+  OperatorVariant right_operator = 2;
+  string left_column_name = 3;
+  string right_column_name = 4;
+  string op = 5;
+  enum JoinMode {
+    Inner = 0;
+    Left = 1;
+    Right = 2;
+    Outer = 3;
+    Cross = 4;
+    Natural = 5;
+    Self = 6;
+  }
+  JoinMode mode = 6;
+  string prefix_left = 7;
+  string prefix_right = 8;
+}
+
+message ProductOperator { // 2 inputs
+  OperatorVariant left_operator = 1;
+  OperatorVariant right_operator = 2;
+  string prefix_left = 3;
+  string prefix_right = 4;
+}
+
+message SortOperator {
+  OperatorVariant input_operator = 1;
+  string column_name = 2;
+  bool ascending = 3;
+}
+
+message UnionAllOperator { // 2 inputs
+  OperatorVariant input_operator1 = 1;
+  OperatorVariant input_operator2 = 2;
+}
+
+message ImportCsvOperator {
+  OperatorVariant input_operator = 1;
+  string directory = 2;
+  string filename = 3;
+}
+
+message ExportCsvOperator {
+  OperatorVariant input_operator = 1;
+  string directory = 2;
+  string filename = 3;
+}
+
+message ExportBinaryOperator {
+  OperatorVariant input_operator = 1;
+  string filename = 3;
+}
+
+message PrintOperator {
+  OperatorVariant input_operator = 1;
+}
+
+message DifferenceOperator {
+  OperatorVariant left_operator = 1;
+  OperatorVariant right_operator = 2;
+}
+
+
+// Response
+
+message Response {
+  oneof result {
+    Table response_table = 1;
+    string error = 2;
+  }
+}
+
+message Table {
+  repeated string column_type = 1;
+  repeated string column_name = 2;
+  repeated Row row = 3;
+}
+
+message Row {
+  repeated Variant value = 1;
+}
