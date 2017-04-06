@@ -7,10 +7,15 @@
 
 #include "projection.hpp"
 #include "storage/reference_column.hpp"
+#include "termfactory.hpp"
 
 namespace opossum {
+
+Projection::Projection(const std::shared_ptr<const AbstractOperator> in, const ProjectionDefinitions& columns)
+    : AbstractReadOnlyOperator(in), _projection_definitions(columns) {}
+
 Projection::Projection(const std::shared_ptr<const AbstractOperator> in, const std::vector<std::string>& columns)
-    : AbstractReadOnlyOperator(in), _column_filter(columns) {}
+    : AbstractReadOnlyOperator(in), _simple_projection(columns) {}
 
 const std::string Projection::name() const { return "Projection"; }
 
@@ -19,55 +24,34 @@ uint8_t Projection::num_in_tables() const { return 1; }
 uint8_t Projection::num_out_tables() const { return 1; }
 
 std::shared_ptr<const Table> Projection::on_execute() {
+  if (!_simple_projection.empty()) {
+    for (auto& column : _simple_projection) {
+      auto column_id = input_table_left()->column_id_by_name(column);
+      _projection_definitions.push_back({"$" + column, input_table_left()->column_type(column_id), column});
+    }
+  }
+
   auto output = std::make_shared<Table>();
 
-  // stores the ids of the columns that are part of the result table (in the correct order)
-  std::vector<size_t> column_ids;
-  column_ids.reserve(_column_filter.size());
-
-  // fill column_ids vector and add columns to table schema
-  for (const auto& column_name : _column_filter) {
-    auto column_id = input_table_left()->column_id_by_name(column_name);
-    column_ids.push_back(column_id);
-    output->add_column(column_name, input_table_left()->column_type(column_id), false);
+  // Prepare terms and output table for each column to project
+  for (auto& definition : _projection_definitions) {
+    output->add_column(std::get<2>(definition), std::get<1>(definition), false);
   }
 
-  // for each chunk, copy shared_ptr to column in input table
-  for (ChunkID chunk_id = 0; chunk_id < input_table_left()->chunk_count(); chunk_id++) {
-    const Chunk& chunk_in = input_table_left()->get_chunk(chunk_id);
+  for (ChunkID chunk_id = 0; chunk_id < input_table_left()->chunk_count(); ++chunk_id) {
+    // fill the new table
     Chunk chunk_out;
-
-    auto pos_list = std::shared_ptr<const PosList>();
-
-    for (auto column_id : column_ids) {
-      const auto& column_in = chunk_in.get_column(column_id);
-
-      if (std::dynamic_pointer_cast<ReferenceColumn>(column_in)) {
-        chunk_out.add_column(column_in);
-      } else {
-        // If necessary, create reference column because we otherwise lose access
-        // to the MVCC columns of the original table and therefore can’t validate
-        // the visibility of its rows in a subsequent operator.
-        if (!pos_list) pos_list = _create_complete_pos_list(chunk_id, chunk_in.size());
-
-        chunk_out.add_column(std::make_shared<ReferenceColumn>(input_table_left(), column_id, pos_list));
-      }
+    // if there is mvcc information, we have to link it
+    if (input_table_left()->get_chunk(chunk_id).has_mvcc_columns()) {
+      chunk_out.use_mvcc_columns_from(input_table_left()->get_chunk(chunk_id));
     }
-
+    for (auto definition : _projection_definitions) {
+      call_functor_by_column_type<ColumnCreator>(std::get<1>(definition), chunk_out, chunk_id, std::get<0>(definition),
+                                                 input_table_left());
+    }
     output->add_chunk(std::move(chunk_out));
   }
-
   return output;
-}
-
-std::shared_ptr<const PosList> Projection::_create_complete_pos_list(const ChunkID chunk_id, const size_t chunk_size) {
-  auto pos_list = std::make_shared<PosList>(chunk_size);
-
-  for (auto i = 0u; i < chunk_size; ++i) {
-    (*pos_list)[i] = {chunk_id, i};
-  }
-
-  return pos_list;
 }
 
 }  // namespace opossum

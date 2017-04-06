@@ -4,6 +4,7 @@
 #include <iostream>
 #include <limits>
 #include <memory>
+#include <regex>
 #include <string>
 #include <utility>
 #include <vector>
@@ -72,6 +73,9 @@ class DictionaryColumn : public UntypedDictionaryColumn {
     return _dictionary[_attribute_vector->get(i)];
   }
 
+  // return the value at a certain position.
+  const T get(const size_t i) const { return _dictionary[_attribute_vector->get(i)]; }
+
   // dictionary columns are immutable
   void append(const AllTypeVariant&) override { throw std::logic_error("DictionaryColumn is immutable"); }
 
@@ -80,6 +84,17 @@ class DictionaryColumn : public UntypedDictionaryColumn {
 
   // returns an underlying data structure
   std::shared_ptr<const BaseAttributeVector> attribute_vector() const final { return _attribute_vector; }
+
+  // return a generated vector of all values
+  const tbb::concurrent_vector<T> materialize_values() const {
+    tbb::concurrent_vector<T> values(_attribute_vector->size());
+
+    for (ChunkOffset chunk_offset = 0; chunk_offset < _attribute_vector->size(); ++chunk_offset) {
+      values[chunk_offset] = _dictionary[_attribute_vector->get(chunk_offset)];
+    }
+
+    return values;
+  }
 
   // return the value represented by a given ValueID
   const T& value_by_value_id(ValueID value_id) const { return _dictionary.at(value_id); }

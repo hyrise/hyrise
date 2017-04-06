@@ -43,6 +43,8 @@ class ValueColumn : public BaseColumn {
     return _values.at(i);
   }
 
+  const T get(const size_t i) const { return _values.at(i); }
+
   // add a value to the end
   void append(const AllTypeVariant& val) override;
 

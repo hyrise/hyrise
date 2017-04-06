@@ -111,6 +111,13 @@ void Chunk::shrink_mvcc_columns() {
 
 void Chunk::move_mvcc_columns_from(Chunk& chunk) { _mvcc_columns = std::move(chunk._mvcc_columns); }
 
+void Chunk::use_mvcc_columns_from(const Chunk& chunk) {
+  _mvcc_columns = std::make_unique<MvccColumns>();
+  _mvcc_columns->begin_cids = chunk.mvcc_columns().begin_cids;
+  _mvcc_columns->end_cids = chunk.mvcc_columns().end_cids;
+  _mvcc_columns->tids.grow_by(_mvcc_columns->tids.size());
+}
+
 std::vector<std::shared_ptr<BaseIndex>> Chunk::get_indices_for(
     const std::vector<std::shared_ptr<BaseColumn>>& columns) const {
   auto result = std::vector<std::shared_ptr<BaseIndex>>();

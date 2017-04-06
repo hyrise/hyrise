@@ -87,6 +87,11 @@ class Chunk {
    */
   void move_mvcc_columns_from(Chunk &chunk);
 
+  /**
+   * reuse mvcc from other chunk
+   */
+  void use_mvcc_columns_from(const Chunk &chunk);
+
   std::vector<std::shared_ptr<BaseIndex>> get_indices_for(
       const std::vector<std::shared_ptr<BaseColumn>> &columns) const;
 

@@ -113,16 +113,19 @@ Contact: firstname.lastname@hpi.de
 
 ## Contributors
 
-- Arne Mayer
-- Carsten Walther
-- Daniel Stolpe
-- David Schumann
-- Fabian Wiebe
-- Marvin Keller
-- Max Jendruk
-- Moritz Eyssen
-- Nils Thamm
-- Sven Lehmann
-- Tim Zimmermann
-- Torben Meyer
-- Yannick Bäumer
+-	Yannick	Bäumer
+-	Moritz	Eyssen
+-	Martin	Fischer
+-	Michael	Janke
+-	Max	Jendruk
+-	Marvin	Keller
+-	Sven	Lehmann
+-	Jan	Mattfeld
+-	Arne	Mayer
+-	Torben	Meyer
+-	David	Schumann
+-	Daniel	Stolpe
+-	Nils	Thamm
+-	Carsten	Walther
+-	Fabian	Wiebe
+-	Tim	Zimmermann

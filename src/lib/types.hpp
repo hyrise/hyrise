@@ -239,6 +239,32 @@ std::shared_ptr<base> make_shared_by_column_type(const std::string &type, Constr
   return make_unique_by_column_type<base, impl, TemplateArgs...>(type, std::forward<ConstructorArgs>(args)...);
 }
 
+template <typename Functor, typename... Args>
+void call_functor_by_column_type(const std::string &type, Args &&... args) {
+  // In some cases, we want to call a function depending on the type of a column. Here we do not want to create an
+  // object that would require an untemplated base class. Instead, we can create a functor class and have a templated
+  // "run" method. E.g.:
+
+  // class MyFunctor {
+  // public:
+  //   template <typename T>
+  //   static void run(int some_arg, int other_arg) {
+  //     std::cout << "Column type is " << typeid(T).name() << ", args are " << some_arg << " and " << other_arg <<
+  //     std::endl;
+  //   }
+  // };
+  //
+  // std::string column_type = "int";
+  // call_functor_by_column_type<MyFunctor>(column_type, 2, 3);
+
+  hana::for_each(column_types, [&](auto x) {
+    if (std::string(hana::first(x)) == type) {
+      using column_type = typename decltype(+hana::second(x))::type;
+      Functor::template run<column_type>(std::forward<Args>(args)...);
+    }
+  });
+}
+
 /** @} */
 
 }  // namespace opossum
