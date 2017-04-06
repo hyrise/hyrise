@@ -97,6 +97,8 @@ solution "opossum"
     defines { "OPOSSUM_NUMA_SUPPORT=0" }
   end
 
+  libs[#libs+1] = "sqlparser"
+
   configuration "Debug"
     defines { "IS_DEBUG=1" }
     flags { "Symbols" }
@@ -124,9 +126,15 @@ project "googlebenchmark"
   configuration "Debug or Release"
     defines {"NDEBUG", "HAVE_STD_REGEX"}
 
+project "sqlparser"
+  kind "StaticLib"
+  buildoptions { "-Wno-error=sign-compare" }
+  files { "third_party/sql-parser/src/**.cpp" }
+
+
 project "opossum"
   kind "StaticLib"
-  includedirs { "third_party/grpc/include/", "third_party/grpc/third_party/protobuf/src/" }
+  includedirs { "third_party/grpc/include/", "third_party/grpc/third_party/protobuf/src/", "third_party/sql-parser/src/" }
   files { "src/lib/**.hpp", "src/lib/**.cpp" }
 
 project "opossum-asan"
@@ -176,7 +184,7 @@ project "test"
   kind "ConsoleApp"
 
   links { "opossum", "googletest", "opossumProtobuf", "protobuf", "grpc++", "grpc", "z" }
-  includedirs { "third_party/googletest/googletest/include", "third_party/grpc/include/", "third_party/grpc/third_party/protobuf/src/" }
+  includedirs { "third_party/googletest/googletest/include", "third_party/grpc/include/", "third_party/grpc/third_party/protobuf/src/", "third_party/sql-parser/src/" }
   libdirs { "third_party/grpc/libs/opt/", "third_party/grpc/libs/opt/protobuf" }
   links(libs)
   files { "src/test/**.hpp", "src/test/**.cpp" }
@@ -197,9 +205,9 @@ project "asan"
 project "benchmark"
   kind "ConsoleApp"
 
-  links { "opossum", "googlebenchmark" }
+  links { "opossum", "googlebenchmark", "sqlparser" }
   files { "src/benchmark/**.hpp", "src/benchmark/**.cpp" }
-  includedirs { "third_party/benchmark/include" }
+  includedirs { "third_party/benchmark/include", "third_party/sql-parser/src/" }
   postbuildcommands { "./build/benchmark --benchmark_format=json > benchmark.json" }
 
 project "coverage"
