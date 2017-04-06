@@ -95,6 +95,11 @@ class SortMergeJoin : public AbstractJoinOperator {
     // Looks for matches and possibly calls helper function to add match to _sort_merge_join._output
     void partition_join(uint32_t partition_number, std::vector<PosList>& pos_lists_left,
                         std::vector<PosList>& pos_lists_right);
+
+    void addSmallerValuesToOutput(uint32_t partition_number, std::shared_ptr<SortedTable>& table_smaller_values,
+                                  std::vector<PosList>& pos_list_smaller, std::vector<PosList>& pos_list_greater,
+                                  RowID greaterId);
+
     void perform_join();
 
     // builds output based on pos_list_left/-_right
