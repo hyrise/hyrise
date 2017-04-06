@@ -20,7 +20,7 @@ class ValueColumn : public BaseColumn {
   ValueColumn() = default;
 
   // Create a ValueColumn with the given values
-  explicit ValueColumn(const std::vector<T>& values) : _values(values.begin(), values.end()) {}
+  explicit ValueColumn(tbb::concurrent_vector<T>&& values) : _values(std::move(values)) {}
 
   // return the value at a certain position. If you want to write efficient operators, back off!
   const AllTypeVariant operator[](const size_t i) const override {
