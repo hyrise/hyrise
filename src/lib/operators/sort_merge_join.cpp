@@ -358,14 +358,18 @@ void SortMergeJoin::SortMergeJoinImpl<T>::partition_join(uint32_t partition_numb
   const size_t left_size = left_current_partition.values.size();
   const size_t right_size = right_current_partition.values.size();
 
+  uint32_t left_index_offset = 0u;
+  uint32_t right_index_offset = 0u;
+
   while (left_index < left_size && right_index < right_size) {
     T left_value = left_current_partition.values[left_index].first;
     T right_value = right_current_partition.values[right_index].first;
-    uint32_t left_index_offset = 0;
-    uint32_t right_index_offset = 0;
 
-    // determine offset up to which all values are the same
-    // left side
+    left_index_offset = 0u;
+    right_index_offset = 0u;
+
+    // Determine offset up to which all values are the same
+    // Left side
     for (; left_index_offset < left_size - left_index; ++left_index_offset) {
       if (left_index + left_index_offset + 1 == left_size ||
           left_value != left_current_partition.values[left_index + left_index_offset + 1].first) {
@@ -373,7 +377,7 @@ void SortMergeJoin::SortMergeJoinImpl<T>::partition_join(uint32_t partition_numb
       }
     }
 
-    // right side
+    // Right side
     for (; right_index_offset < right_size - right_index; ++right_index_offset) {
       if (right_index_offset + right_index + 1 == right_size ||
           right_value != right_current_partition.values[right_index + right_index_offset + 1].first) {
@@ -381,11 +385,11 @@ void SortMergeJoin::SortMergeJoinImpl<T>::partition_join(uint32_t partition_numb
       }
     }
 
-    // search for matching values of both partitions
+    // Search for matching values of both partitions
     if (left_value == right_value) {
       if (_sort_merge_join._op == "=") {
-        // match found
-        // find all same values in each table then add product to _output
+        // Match found
+        // Find all same values in each table then add product to _output
         uint32_t max_index_left = left_index + left_index_offset;
         uint32_t max_index_right = right_index_offset + right_index;
         RowID left_row_id;
@@ -401,17 +405,17 @@ void SortMergeJoin::SortMergeJoinImpl<T>::partition_join(uint32_t partition_numb
           }
         }
 
-        // afterwards set index for both tables to next new value
+        // Afterwards set index for both tables to next new value
         left_index += left_index_offset + 1u;
         right_index += right_index_offset + 1u;
       } else {
-        // only the case for ">" & ">=" right now
-        // moreover each operator needs own logic here to get result
+        // Only the case for ">" & ">=" right now
+        // Moreover each operator needs own logic here to get result
         uint32_t max_index_left = left_index + left_index_offset;
         RowID left_row_id;
         RowID right_row_id;
 
-        // left side
+        // Left side
         for (uint32_t l_index = left_index; l_index <= max_index_left; ++l_index) {
           left_row_id = left_current_partition.values[l_index].second;
           for (uint32_t p_number = 0; p_number <= partition_number; ++p_number) {
@@ -433,16 +437,43 @@ void SortMergeJoin::SortMergeJoinImpl<T>::partition_join(uint32_t partition_numb
           }
         }
 
-        // afterwards set index for both tables to next new value
+        // Afterwards set index for both tables to next new value
         left_index += left_index_offset + 1u;
         right_index += right_index_offset + 1u;
       }
     } else {
+      // Add null values when appropriate
       if (left_value < right_value) {
+        if (_sort_merge_join._mode == Left || _sort_merge_join._mode == Outer) {
+          uint32_t max_index_left = left_index + left_index_offset;
+          RowID left_row_id;
+
+          for (uint32_t l_index = left_index; l_index <= max_index_left; ++l_index) {
+            left_row_id = left_current_partition.values[l_index].second;
+
+            pos_lists_left[partition_number].push_back(left_row_id);
+            pos_lists_right[partition_number].push_back(RowID{0u, INVALID_CHUNK_OFFSET});
+          }
+        }
+      } else {
+        if (_sort_merge_join._mode == Right || _sort_merge_join._mode == Outer) {
+          uint32_t max_index_right = right_index_offset + right_index;
+          RowID right_row_id;
+
+          for (uint32_t r_index = right_index; r_index <= max_index_right; ++r_index) {
+            right_row_id = right_current_partition.values[r_index].second;
+
+            pos_lists_left[partition_number].push_back(RowID{0u, INVALID_CHUNK_OFFSET});
+            pos_lists_right[partition_number].push_back(right_row_id);
+          }
+        }
+      }
+
+      if (_sort_merge_join._op != "=") {
         // extra behavior for non-equi join
         // only implemented for ">" & ">="
         // every operator needs own behavior
-        if (_sort_merge_join._op != "=") {
+        if (left_value < right_value) {
           uint32_t max_index_left = left_index + left_index_offset;
           RowID left_row_id;
           RowID right_row_id;
@@ -468,12 +499,48 @@ void SortMergeJoin::SortMergeJoinImpl<T>::partition_join(uint32_t partition_numb
             }
           }
         }
+      }
 
-        // set the smaller side to next new value
+      // Determine which index has to get incremented
+      // Set the smaller side to next new value
+      if (left_value < right_value) {
         left_index += left_index_offset + 1u;
       } else {
-        // set the smaller side to next new value
         right_index += right_index_offset + 1u;
+      }
+    }
+  }
+
+  // The while loop may have ended, but the last element gets skipped in certain cases.
+  // But it is important for "Outer-Joins" to include this element of course.
+  // The first if-condition is mandatory: Putting this whole part into the while loop in the "not equal part" both
+  // indexis reaching their maximum size is not possible. So one could think to put it there instead, to safe up this
+  // additional if-condition. But there is an edge case in which the last loop run was a "equi hit" and one index
+  // reaching its maximum size, but one element potentially is still present on the other side.
+  if (!(left_index == left_size && right_index == right_size)) {
+    // The left side has finished -> add the remaining ones on the right side
+    if (left_index == left_size) {
+      if (_sort_merge_join._mode == Right || _sort_merge_join._mode == Outer) {
+        RowID right_row_id;
+
+        for (; right_index < right_size; ++right_index) {
+          right_row_id = right_current_partition.values[right_index].second;
+          pos_lists_left[partition_number].push_back(RowID{0u, INVALID_CHUNK_OFFSET});
+          pos_lists_right[partition_number].push_back(right_row_id);
+        }
+      }
+    }
+
+    // The right side has finished -> add the remaining ones on the left side
+    if (right_index == right_size) {
+      if (_sort_merge_join._mode == Left || _sort_merge_join._mode == Outer) {
+        RowID left_row_id;
+
+        for (; left_index < left_size; ++left_index) {
+          left_row_id = left_current_partition.values[left_index].second;
+          pos_lists_left[partition_number].push_back(left_row_id);
+          pos_lists_right[partition_number].push_back(RowID{0u, INVALID_CHUNK_OFFSET});
+        }
       }
     }
   }
@@ -489,7 +556,7 @@ void SortMergeJoin::SortMergeJoinImpl<T>::perform_join() {
 
   std::vector<std::thread> threads;
 
-  // parallel join for each partition
+  // Parallel join for each partition
   for (uint32_t partition_number = 0; partition_number < _sorted_left_table->partition.size(); ++partition_number) {
     threads.push_back(std::thread(&SortMergeJoin::SortMergeJoinImpl<T>::partition_join, *this, partition_number,
                                   std::ref(pos_lists_left), std::ref(pos_lists_right)));
@@ -514,7 +581,7 @@ void SortMergeJoin::SortMergeJoinImpl<T>::perform_join() {
 
 template <typename T>
 void SortMergeJoin::SortMergeJoinImpl<T>::build_output(std::shared_ptr<Table>& output) {
-  // left output
+  // Left output
   for (size_t column_id = 0; column_id < _sort_merge_join.input_table_left()->col_count(); column_id++) {
     // Add the column meta data
     output->add_column(_sort_merge_join._prefix_left + _sort_merge_join.input_table_left()->column_name(column_id),
@@ -537,13 +604,13 @@ void SortMergeJoin::SortMergeJoinImpl<T>::build_output(std::shared_ptr<Table>& o
     }
   }
 
-  // right_output
+  // Right_output
   for (size_t column_id = 0; column_id < _sort_merge_join.input_table_right()->col_count(); column_id++) {
     // Add the column meta data
     output->add_column(_sort_merge_join._prefix_right + _sort_merge_join.input_table_right()->column_name(column_id),
                        _sort_merge_join.input_table_right()->column_type(column_id), false);
 
-    // Check whether the column consists of reference columns
+    // Check whether the column is a reference column
     const auto r_column = std::dynamic_pointer_cast<ReferenceColumn>(
         _sort_merge_join.input_table_right()->get_chunk(0).get_column(column_id));
     if (r_column) {
@@ -563,11 +630,11 @@ void SortMergeJoin::SortMergeJoinImpl<T>::build_output(std::shared_ptr<Table>& o
 
 template <typename T>
 std::shared_ptr<const Table> SortMergeJoin::SortMergeJoinImpl<T>::on_execute() {
-  // sort left table
+  // Sort left table
   _sorted_left_table = std::make_shared<SortedTable>();
   sort_table(_sorted_left_table, _sort_merge_join.input_table_left(), _sort_merge_join._left_column_name, true);
 
-  // sort right table
+  // Sort right table
   _sorted_right_table = std::make_shared<SortedTable>();
   sort_table(_sorted_right_table, _sort_merge_join.input_table_right(), _sort_merge_join._right_column_name, false);
 
@@ -662,7 +729,6 @@ void SortMergeJoin::SortMergeJoinImpl<T>::handle_reference_column(ReferenceColum
   // Retrieve the columns from the referenced table so they only have to be casted once
   auto v_columns = std::vector<std::shared_ptr<ValueColumn<T>>>(referenced_table->chunk_count());
   auto d_columns = std::vector<std::shared_ptr<DictionaryColumn<T>>>(referenced_table->chunk_count());
-  std::cout << referenced_table->chunk_count() << std::endl;
   for (ChunkID chunk_id = 0; chunk_id < referenced_table->chunk_count(); chunk_id++) {
     v_columns[chunk_id] = std::dynamic_pointer_cast<ValueColumn<T>>(
         referenced_table->get_chunk(chunk_id).get_column(referenced_column_id));
