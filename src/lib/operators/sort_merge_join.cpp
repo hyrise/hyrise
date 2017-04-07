@@ -71,10 +71,12 @@ SortMergeJoin::SortMergeJoinImpl<T>::SortMergeJoinImpl(SortMergeJoin& sort_merge
     _compare = [](const T& value_left, const T& value_right) -> bool { return value_left > value_right; };
   } else if (_sort_merge_join._op == ">=") {
     _compare = [](const T& value_left, const T& value_right) -> bool { return value_left >= value_right; };
-  } else if (_sort_merge_join._op == "<") {
-    _compare = [](const T& value_left, const T& value_right) -> bool { return value_left < value_right; };
-  } else if (_sort_merge_join._op == "<=") {
-    _compare = [](const T& value_left, const T& value_right) -> bool { return value_left <= value_right; };
+    /*
+    } else if (_sort_merge_join._op == "<") {
+      _compare = [](const T& value_left, const T& value_right) -> bool { return value_left < value_right; };
+    } else if (_sort_merge_join._op == "<=") {
+      _compare = [](const T& value_left, const T& value_right) -> bool { return value_left <= value_right; };
+    */
   } else {
     throw std::runtime_error("SortMergeJoinImpl::SortMergeJoinImpl: Unknown operator " + _sort_merge_join._op);
   }
@@ -366,6 +368,12 @@ void SortMergeJoin::SortMergeJoinImpl<T>::partition_join(uint32_t partition_numb
   uint32_t left_index_offset = 0u;
   uint32_t right_index_offset = 0u;
 
+  uint32_t max_index_left;
+  uint32_t max_index_right;
+
+  RowID left_row_id;
+  RowID right_row_id;
+
   while (left_index < left_size && right_index < right_size) {
     T left_value = left_current_partition.values[left_index].first;
     T right_value = right_current_partition.values[right_index].first;
@@ -390,16 +398,14 @@ void SortMergeJoin::SortMergeJoinImpl<T>::partition_join(uint32_t partition_numb
       }
     }
 
-    // Search for matching values of both partitions
-    if (left_value == right_value) {
-      if (_sort_merge_join._op == "=") {
-        // Match found
-        // Find all same values in each table then add product to _output
-        uint32_t max_index_left = left_index + left_index_offset;
-        uint32_t max_index_right = right_index_offset + right_index;
-        RowID left_row_id;
-        RowID right_row_id;
+    max_index_left = left_index + left_index_offset;
+    max_index_right = right_index + right_index_offset;
 
+    if (_sort_merge_join._op == "=" /* || _sort_merge_join._op == ">=" || _sort_merge_join._op == "<="*/) {
+      // Search for matching values of both partitions
+      if (left_value == right_value) {
+        // Match found
+        // Find all same values in each table then add cross product to _output
         for (uint32_t l_index = left_index; l_index <= max_index_left; ++l_index) {
           left_row_id = left_current_partition.values[l_index].second;
 
@@ -415,164 +421,99 @@ void SortMergeJoin::SortMergeJoinImpl<T>::partition_join(uint32_t partition_numb
         right_index += right_index_offset + 1u;
 
       } else {
-        // It is not EQUAL -> test for non equal operators:
-        // Each operator needs own logic here to get result
-        uint32_t max_index_left = left_index + left_index_offset;
-        uint32_t max_index_right = right_index_offset + right_index;
-        RowID left_row_id;
-        RowID right_row_id;
+        // No Match found
+        // Add null values when appropriate on the side which index gets increased at the end of one loop run
+        if (left_value < right_value) {
+          if (_sort_merge_join._mode == Left || _sort_merge_join._mode == Outer) {
+            uint32_t max_index_left = left_index + left_index_offset;
+            RowID left_row_id;
 
-        if (_sort_merge_join._op == ">" || _sort_merge_join._op == ">=") {
-          // Left side
-          for (uint32_t l_index = left_index; l_index <= max_index_left; ++l_index) {
-            left_row_id = left_current_partition.values[l_index].second;
-            addSmallerValuesToOutput(partition_number, _sorted_right_table, pos_lists_right, pos_lists_left,
-                                     left_row_id);
-          }
+            for (uint32_t l_index = left_index; l_index <= max_index_left; ++l_index) {
+              left_row_id = left_current_partition.values[l_index].second;
 
-          if (_sort_merge_join._op == ">=") {
-            auto right_max_index = right_index_offset + right_index + 1;
-            for (uint32_t r_index = 0; r_index < right_max_index; ++r_index) {
-              right_row_id = right_current_partition.values[r_index].second;
               pos_lists_left[partition_number].push_back(left_row_id);
+              pos_lists_right[partition_number].push_back(RowID{0u, INVALID_CHUNK_OFFSET});
+            }
+          }
+        } else {
+          if (_sort_merge_join._mode == Right || _sort_merge_join._mode == Outer) {
+            uint32_t max_index_right = right_index_offset + right_index;
+            RowID right_row_id;
+
+            for (uint32_t r_index = right_index; r_index <= max_index_right; ++r_index) {
+              right_row_id = right_current_partition.values[r_index].second;
+
+              pos_lists_left[partition_number].push_back(RowID{0u, INVALID_CHUNK_OFFSET});
               pos_lists_right[partition_number].push_back(right_row_id);
             }
           }
+        }
 
+        // Determine which index has to get incremented
+        // Set the smaller side to next new value
+        if (left_value < right_value) {
+          left_index += left_index_offset + 1u;
         } else {
-          // Right side
+          right_index += right_index_offset + 1u;
+        }
+      }
+    }
+
+    if (_sort_merge_join._op == ">" || _sort_merge_join._op == ">=") {
+      if (left_value == right_value) {
+        for (uint32_t l_index = left_index; l_index <= max_index_left; ++l_index) {
+          left_row_id = left_current_partition.values[l_index].second;
+          addSmallerValues(partition_number, _sorted_right_table, pos_lists_right, pos_lists_left, max_index_right,
+                           left_row_id);
+        }
+
+        // Afterwards set index for both tables to next new value
+        left_index += left_index_offset + 1u;
+        right_index += right_index_offset + 1u;
+
+      } else {
+        for (uint32_t l_index = left_index; l_index <= max_index_left; ++l_index) {
+          left_row_id = left_current_partition.values[l_index].second;
+          addSmallerValues(partition_number, _sorted_right_table, pos_lists_right, pos_lists_left, right_index,
+                           left_row_id);
+        }
+
+        // Determine which index has to get incremented
+        // Set the smaller side to next new value
+        if (left_value < right_value) {
+          left_index += left_index_offset + 1u;
+        } else {
+          right_index += right_index_offset + 1u;
+        }
+      }
+    }
+
+    /*
+        if (_sort_merge_join._op == "<" || _sort_merge_join._op == "<=") {
           for (uint32_t r_index = right_index; r_index <= max_index_right; ++r_index) {
             right_row_id = right_current_partition.values[r_index].second;
-            addSmallerValuesToOutput(partition_number, _sorted_left_table, pos_lists_left, pos_lists_right,
-                                     right_row_id);
+            addSmallerValues(partition_number, _sorted_left_table, pos_lists_left, pos_lists_right,
+       max_index_left
+       right_row_id);
           }
 
           if (_sort_merge_join._op == "<=") {
-            auto left_max_index = left_index_offset + left_index + 1;
-            for (uint32_t l_index = 0; l_index < left_max_index; ++l_index) {
+            for (uint32_t l_index = 0; l_index <= max_index_left; ++l_index) {
               left_row_id = left_current_partition.values[l_index].second;
               pos_lists_left[partition_number].push_back(left_row_id);
               pos_lists_right[partition_number].push_back(right_row_id);
             }
           }
-        }
 
-        // Afterwards set index for both tables to next new value
-        left_index += left_index_offset + 1u;
-        right_index += right_index_offset + 1u;
-      }
-    } else {
-      // Add null values when appropriate on the side which index gets increased at the end of one loop run
-      if (left_value < right_value) {
-        if (_sort_merge_join._mode == Left || _sort_merge_join._mode == Outer) {
-          uint32_t max_index_left = left_index + left_index_offset;
-          RowID left_row_id;
-
-          for (uint32_t l_index = left_index; l_index <= max_index_left; ++l_index) {
-            left_row_id = left_current_partition.values[l_index].second;
-
-            pos_lists_left[partition_number].push_back(left_row_id);
-            pos_lists_right[partition_number].push_back(RowID{0u, INVALID_CHUNK_OFFSET});
+          // Determine which index has to get incremented
+          // Set the smaller side to next new value
+          if (left_value < right_value) {
+            left_index += left_index_offset + 1u;
+          } else {
+            right_index += right_index_offset + 1u;
           }
         }
-      } else {
-        if (_sort_merge_join._mode == Right || _sort_merge_join._mode == Outer) {
-          uint32_t max_index_right = right_index_offset + right_index;
-          RowID right_row_id;
-
-          for (uint32_t r_index = right_index; r_index <= max_index_right; ++r_index) {
-            right_row_id = right_current_partition.values[r_index].second;
-
-            pos_lists_left[partition_number].push_back(RowID{0u, INVALID_CHUNK_OFFSET});
-            pos_lists_right[partition_number].push_back(right_row_id);
-          }
-        }
-      }
-      /*
-            // Extra behavior for non-equi join
-            if (_sort_merge_join._op != "=") {
-
-              // Only implemented for ">" & ">="
-              // Every operator needs own behavior
-              if (left_value < right_value) {
-                uint32_t max_index_left = left_index + left_index_offset;
-                RowID left_row_id;
-                RowID right_row_id;
-
-                // Left side needs to be matched with all right entries before
-                for (uint32_t l_index = left_index; l_index <= max_index_left; ++l_index) {
-                  left_row_id = left_current_partition.values[l_index].second;
-                  for (uint32_t p_number = 0; p_number <= partition_number; ++p_number) {
-                    if (p_number != partition_number) {
-                      auto& r_current_partition = _sorted_right_table->partition[p_number];
-                      for (auto& values : r_current_partition.values) {
-                        right_row_id = values.second;
-                        pos_lists_left[partition_number].push_back(left_row_id);
-                        pos_lists_right[partition_number].push_back(right_row_id);
-                      }
-                    } else {
-                      for (uint32_t r_index = 0; r_index < right_index; ++r_index) {
-                        right_row_id = right_current_partition.values[r_index].second;
-                        pos_lists_left[partition_number].push_back(left_row_id);
-                        pos_lists_right[partition_number].push_back(right_row_id);
-                      }
-                    }
-                  }
-                }
-              }
-            }
-            */
-
-      // It is not EQUAL -> test for non equal operators:
-      // Each operator needs own logic here to get result
-      uint32_t max_index_left = left_index + left_index_offset;
-      uint32_t max_index_right = right_index + right_index_offset;
-      RowID left_row_id;
-      RowID right_row_id;
-
-      if (_sort_merge_join._op == ">" || _sort_merge_join._op == ">=") {
-        // Left side
-        for (uint32_t l_index = left_index; l_index <= max_index_left; ++l_index) {
-          left_row_id = left_current_partition.values[l_index].second;
-          addSmallerValuesToOutput(partition_number, _sorted_right_table, pos_lists_right, pos_lists_left, left_row_id);
-        }
-
-        if (_sort_merge_join._op == ">=") {
-          auto right_max_index = right_index_offset + right_index + 1;
-          for (uint32_t r_index = 0; r_index < right_max_index; ++r_index) {
-            right_row_id = right_current_partition.values[r_index].second;
-            pos_lists_left[partition_number].push_back(left_row_id);
-            pos_lists_right[partition_number].push_back(right_row_id);
-          }
-        }
-
-      } else {
-        // Right side
-        for (uint32_t r_index = right_index; r_index <= max_index_right; ++r_index) {
-          right_row_id = right_current_partition.values[r_index].second;
-          addSmallerValuesToOutput(partition_number, _sorted_left_table, pos_lists_left, pos_lists_right, right_row_id);
-        }
-
-        if (_sort_merge_join._op == "<=") {
-          auto left_max_index = left_index_offset + left_index + 1;
-          for (uint32_t l_index = 0; l_index < left_max_index; ++l_index) {
-            left_row_id = left_current_partition.values[l_index].second;
-            pos_lists_left[partition_number].push_back(left_row_id);
-            pos_lists_right[partition_number].push_back(right_row_id);
-          }
-        }
-      }
-
-      //############################################################################
-
-      // Determine which index has to get incremented
-      // Set the smaller side to next new value
-      if (left_value < right_value) {
-        left_index += left_index_offset + 1u;
-      } else {
-        right_index += right_index_offset + 1u;
-      }
-    }
+    */
   }
 
   // The while loop may have ended, but the last element gets skipped in certain cases.
@@ -611,15 +552,24 @@ void SortMergeJoin::SortMergeJoinImpl<T>::partition_join(uint32_t partition_numb
 }
 
 template <typename T>
-void SortMergeJoin::SortMergeJoinImpl<T>::addSmallerValuesToOutput(
+void SortMergeJoin::SortMergeJoinImpl<T>::addSmallerValues(
     uint32_t partition_number, std::shared_ptr<SortMergeJoinImpl::SortedTable>& table_smaller_values,
-    std::vector<PosList>& pos_list_smaller, std::vector<PosList>& pos_list_greater, RowID greaterId) {
+    std::vector<PosList>& pos_list_smaller, std::vector<PosList>& pos_list_greater, uint32_t max_index_smaller_values,
+    RowID greaterId) {
   RowID smaller_value_row_id;
   for (uint32_t p_number = 0; p_number <= partition_number; ++p_number) {
     if (p_number != partition_number) {
+      // Add values from previous partitions
       auto& partition_smaller_values = table_smaller_values->partition[p_number];
       for (auto& values : partition_smaller_values.values) {
         smaller_value_row_id = values.second;
+        pos_list_smaller[partition_number].push_back(smaller_value_row_id);
+        pos_list_greater[partition_number].push_back(greaterId);
+      }
+    } else {
+      // Add values from current partition
+      for (uint32_t index = 0; index <= max_index_smaller_values; ++index) {
+        smaller_value_row_id = table_smaller_values->partition[partition_number].values[index].second;
         pos_list_smaller[partition_number].push_back(smaller_value_row_id);
         pos_list_greater[partition_number].push_back(greaterId);
       }

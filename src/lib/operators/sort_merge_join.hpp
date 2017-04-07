@@ -96,9 +96,9 @@ class SortMergeJoin : public AbstractJoinOperator {
     void partition_join(uint32_t partition_number, std::vector<PosList>& pos_lists_left,
                         std::vector<PosList>& pos_lists_right);
 
-    void addSmallerValuesToOutput(uint32_t partition_number, std::shared_ptr<SortedTable>& table_smaller_values,
-                                  std::vector<PosList>& pos_list_smaller, std::vector<PosList>& pos_list_greater,
-                                  RowID greaterId);
+    void addSmallerValues(uint32_t partition_number, std::shared_ptr<SortedTable>& table_smaller_values,
+                          std::vector<PosList>& pos_list_smaller, std::vector<PosList>& pos_list_greater,
+                          uint32_t max_index_smaller_values, RowID greaterId);
 
     void perform_join();
 
