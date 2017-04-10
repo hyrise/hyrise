@@ -1,12 +1,17 @@
 #include <memory>
+#include <utility>
 #include <vector>
 
 #include "../base_test.hpp"
 
+#include "operators/get_table.hpp"
+#include "operators/table_scan.hpp"
 #include "scheduler/current_scheduler.hpp"
 #include "scheduler/job_task.hpp"
 #include "scheduler/node_queue_scheduler.hpp"
+#include "scheduler/operator_task.hpp"
 #include "scheduler/topology.hpp"
+#include "storage/storage_manager.hpp"
 
 namespace opossum {
 
@@ -178,6 +183,28 @@ TEST_F(SchedulerTest, DiamondDependenciesWithoutScheduler) {
   std::atomic_uint counter{0};
   stress_diamond_dependencies(counter);
   ASSERT_EQ(counter, 7u);
+}
+
+TEST_F(SchedulerTest, MultipleOperators) {
+  CurrentScheduler::set(std::make_shared<NodeQueueScheduler>(Topology::create_fake_numa_topology(8, 4)));
+
+  auto test_table = load_table("src/test/tables/int_float.tbl", 2);
+  StorageManager::get().add_table("table", std::move(test_table));
+
+  auto gt = std::make_shared<GetTable>("table");
+  auto ts = std::make_shared<TableScan>(gt, "a", ">=", 1234);
+
+  auto gt_task = std::make_shared<OperatorTask>(gt);
+  auto ts_task = std::make_shared<OperatorTask>(ts);
+  gt_task->set_as_predecessor_of(ts_task);
+
+  gt_task->schedule();
+  ts_task->schedule();
+
+  CurrentScheduler::get()->finish();
+
+  auto expected_result = load_table("src/test/tables/int_float_filtered2.tbl", 1);
+  EXPECT_TABLE_EQ(ts->get_output(), expected_result);
 }
 
 }  // namespace opossum
