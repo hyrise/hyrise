@@ -29,6 +29,8 @@ class SortMergeJoin : public AbstractJoinOperator {
   uint8_t num_in_tables() const override;
   uint8_t num_out_tables() const override;
 
+  void set_partition_count(uint32_t number);
+
  protected:
   struct SortContext : ColumnVisitableContext {
     SortContext(ChunkID chunk_id, bool left) : chunk_id(chunk_id), write_to_sorted_left_table(left) {}
@@ -39,10 +41,6 @@ class SortMergeJoin : public AbstractJoinOperator {
 
   template <typename T>
   class SortMergeJoinImpl : public AbstractJoinOperatorImpl, public ColumnVisitable {
-   protected:
-    // should be 2^x
-    size_t _partition_count = 1;
-
    public:
     SortMergeJoinImpl<T>(SortMergeJoin& sort_merge_join);
 
@@ -71,6 +69,7 @@ class SortMergeJoin : public AbstractJoinOperator {
       std::map<T, uint32_t> histogram_v;
     };
 
+   protected:
     // Sort functions
     void sort_table(std::shared_ptr<SortedTable> sort_table, std::shared_ptr<const Table> input,
                     const std::string& column_name, bool left);
@@ -129,6 +128,10 @@ class SortMergeJoin : public AbstractJoinOperator {
   std::unique_ptr<AbstractJoinOperatorImpl> _impl;
   std::string _left_column_name;
   std::string _right_column_name;
+
+  // should be 2^x
+  // Constant value which can not be set via constructor argument, so this is simply "hard coded" for now
+  uint32_t _partition_count;
 
   // std::shared_ptr<Table> _output;
   std::shared_ptr<PosList> _pos_list_left;
