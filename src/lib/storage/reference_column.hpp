@@ -123,6 +123,10 @@ class ReferenceColumn : public BaseColumn {
       referenced_column->visit(visitable, c);
     }
   }
+
+  // copies one of its own values to a different ValueColumn - mainly used for materialization
+  // we cannot always use the materialize method below because sort results might come from different BaseColumns
+  void copy_value_to_value_column(BaseColumn &, ChunkOffset) const override;
 };
 
 }  // namespace opossum

@@ -374,7 +374,7 @@ BaseIndex::Iterator Node256::begin() const {
 }
 
 BaseIndex::Iterator Node256::end() const {
-  for (uint8_t i = _children.size() - 1; i >= 0; --i) {
+  for (int16_t i = _children.size() - 1; i >= 0; --i) {
     if (_children[i] != nullptr) {
       return _children[i]->begin();
     }

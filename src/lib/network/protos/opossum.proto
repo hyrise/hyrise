@@ -100,6 +100,7 @@ message SortOperator {
   OperatorVariant input_operator = 1;
   string column_name = 2;
   bool ascending = 3;
+  int32 output_chunk_size = 4;
 }
 
 message UnionAllOperator { // 2 inputs
