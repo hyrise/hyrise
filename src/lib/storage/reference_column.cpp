@@ -47,4 +47,10 @@ void ReferenceColumn::write_string_representation(std::string &row_string, const
       ->write_string_representation(row_string, chunk_offset);
 }
 
+// copies one of its own values to a different ValueColumn - mainly used for materialization
+// we cannot always use the materialize method below because sort results might come from different BaseColumns
+void ReferenceColumn::copy_value_to_value_column(BaseColumn &, ChunkOffset) const {
+  throw std::logic_error("It is not allowed to copy directly from a reference column");
+}
+
 }  // namespace opossum

@@ -19,6 +19,8 @@
 #include "value_column.hpp"
 
 namespace opossum {
+template <typename T>
+class ValueColumn;
 
 // Dictionary is a specific column type that stores all its values in a vector
 template <typename T>
@@ -150,6 +152,16 @@ class DictionaryColumn : public UntypedDictionaryColumn {
 
     // appending the new string to the already present string
     row_string += buffer.str();
+  }
+
+  // copies one of its own values to a different ValueColumn - mainly used for materialization
+  // we cannot always use the materialize method below because sort results might come from different BaseColumns
+  void copy_value_to_value_column(BaseColumn& value_column, ChunkOffset chunk_offset) const override {
+    auto& output_column = static_cast<ValueColumn<T>&>(value_column);
+    auto& values_out = output_column.values();
+
+    auto value = value_by_value_id(_attribute_vector->get(chunk_offset));
+    values_out.push_back(value);
   }
 
   // TODO(anyone): Move this to base column once final optimization is supported by gcc
