@@ -61,22 +61,12 @@ uint8_t SortMergeJoin::num_out_tables() const { return 1u; }
 ** Start of implementation
 **/
 
-// TODO( einbauen oder rausschmeisen ): einbaun oder rausschmeisen
 template <typename T>
 SortMergeJoin::SortMergeJoinImpl<T>::SortMergeJoinImpl(SortMergeJoin& sort_merge_join)
     : _sort_merge_join{sort_merge_join} {
-  if (_sort_merge_join._op == "=") {
-    _compare = [](const T& value_left, const T& value_right) -> bool { return value_left == value_right; };
-  } else if (_sort_merge_join._op == ">") {
-    _compare = [](const T& value_left, const T& value_right) -> bool { return value_left > value_right; };
-  } else if (_sort_merge_join._op == ">=") {
-    _compare = [](const T& value_left, const T& value_right) -> bool { return value_left >= value_right; };
-    /*
-    } else if (_sort_merge_join._op == "<") {
-      _compare = [](const T& value_left, const T& value_right) -> bool { return value_left < value_right; };
-    } else if (_sort_merge_join._op == "<=") {
-      _compare = [](const T& value_left, const T& value_right) -> bool { return value_left <= value_right; };
-    */
+  // Chack for valid operators "=", "<", ">", "<=", ">="
+  if (_sort_merge_join._op == "=" || _sort_merge_join._op == "<" || _sort_merge_join._op == ">" ||
+      _sort_merge_join._op == "<=" || _sort_merge_join._op == ">=") {
   } else {
     throw std::runtime_error("SortMergeJoinImpl::SortMergeJoinImpl: Unknown operator " + _sort_merge_join._op);
   }
@@ -368,8 +358,9 @@ void SortMergeJoin::SortMergeJoinImpl<T>::partition_join(uint32_t partition_numb
   uint32_t left_index_offset = 0u;
   uint32_t right_index_offset = 0u;
 
-  uint32_t max_index_left;
-  uint32_t max_index_right;
+  uint32_t max_left_index;
+  uint32_t max_right_index;
+  uint32_t dependend_max_index;
 
   RowID left_row_id;
   RowID right_row_id;
@@ -398,18 +389,18 @@ void SortMergeJoin::SortMergeJoinImpl<T>::partition_join(uint32_t partition_numb
       }
     }
 
-    max_index_left = left_index + left_index_offset;
-    max_index_right = right_index + right_index_offset;
+    max_left_index = left_index + left_index_offset;
+    max_right_index = right_index + right_index_offset;
 
-    if (_sort_merge_join._op == "=" /* || _sort_merge_join._op == ">=" || _sort_merge_join._op == "<="*/) {
+    if (_sort_merge_join._op == "=") {
       // Search for matching values of both partitions
       if (left_value == right_value) {
         // Match found
         // Find all same values in each table then add cross product to _output
-        for (uint32_t l_index = left_index; l_index <= max_index_left; ++l_index) {
+        for (uint32_t l_index = left_index; l_index <= max_left_index; ++l_index) {
           left_row_id = left_current_partition.values[l_index].second;
 
-          for (uint32_t r_index = right_index; r_index <= max_index_right; ++r_index) {
+          for (uint32_t r_index = right_index; r_index <= max_right_index; ++r_index) {
             right_row_id = right_current_partition.values[r_index].second;
             pos_lists_left[partition_number].push_back(left_row_id);
             pos_lists_right[partition_number].push_back(right_row_id);
@@ -424,11 +415,12 @@ void SortMergeJoin::SortMergeJoinImpl<T>::partition_join(uint32_t partition_numb
         // No Match found
         // Add null values when appropriate on the side which index gets increased at the end of one loop run
         if (left_value < right_value) {
+          // Check for correct mode
           if (_sort_merge_join._mode == Left || _sort_merge_join._mode == Outer) {
-            uint32_t max_index_left = left_index + left_index_offset;
+            uint32_t max_left_index = left_index + left_index_offset;
             RowID left_row_id;
 
-            for (uint32_t l_index = left_index; l_index <= max_index_left; ++l_index) {
+            for (uint32_t l_index = left_index; l_index <= max_left_index; ++l_index) {
               left_row_id = left_current_partition.values[l_index].second;
 
               pos_lists_left[partition_number].push_back(left_row_id);
@@ -436,11 +428,12 @@ void SortMergeJoin::SortMergeJoinImpl<T>::partition_join(uint32_t partition_numb
             }
           }
         } else {
+          // Check for correct mode
           if (_sort_merge_join._mode == Right || _sort_merge_join._mode == Outer) {
-            uint32_t max_index_right = right_index_offset + right_index;
+            uint32_t max_right_index = right_index_offset + right_index;
             RowID right_row_id;
 
-            for (uint32_t r_index = right_index; r_index <= max_index_right; ++r_index) {
+            for (uint32_t r_index = right_index; r_index <= max_right_index; ++r_index) {
               right_row_id = right_current_partition.values[r_index].second;
 
               pos_lists_left[partition_number].push_back(RowID{0u, INVALID_CHUNK_OFFSET});
@@ -459,11 +452,18 @@ void SortMergeJoin::SortMergeJoinImpl<T>::partition_join(uint32_t partition_numb
       }
     }
 
+    // Logic for ">" and ">=" operators
     if (_sort_merge_join._op == ">" || _sort_merge_join._op == ">=") {
       if (left_value == right_value) {
-        for (uint32_t l_index = left_index; l_index <= max_index_left; ++l_index) {
+        // Viewer values have to be added in the ">" case, so traversal will end at "right_index"
+        // In the ">=" case the value at "max_right_index" has still to be added, so "dependend_max_index" has to be of
+        // one greater value
+        dependend_max_index = (_sort_merge_join._op == ">") ? right_index : max_right_index + 1;
+
+        // Add all smaller values of the right side (addSmallerValues method) to each left side representant (for loop)
+        for (uint32_t l_index = left_index; l_index <= max_left_index; ++l_index) {
           left_row_id = left_current_partition.values[l_index].second;
-          addSmallerValues(partition_number, _sorted_right_table, pos_lists_right, pos_lists_left, max_index_right,
+          addSmallerValues(partition_number, _sorted_right_table, pos_lists_right, pos_lists_left, dependend_max_index,
                            left_row_id);
         }
 
@@ -472,10 +472,13 @@ void SortMergeJoin::SortMergeJoinImpl<T>::partition_join(uint32_t partition_numb
         right_index += right_index_offset + 1u;
 
       } else {
-        for (uint32_t l_index = left_index; l_index <= max_index_left; ++l_index) {
-          left_row_id = left_current_partition.values[l_index].second;
-          addSmallerValues(partition_number, _sorted_right_table, pos_lists_right, pos_lists_left, right_index,
-                           left_row_id);
+        // Found right_value that is greater than left_value. That means all potantial right_values before are smaller
+        if (left_value < right_value) {
+          for (uint32_t l_index = left_index; l_index <= max_left_index; ++l_index) {
+            left_row_id = left_current_partition.values[l_index].second;
+            addSmallerValues(partition_number, _sorted_right_table, pos_lists_right, pos_lists_left, right_index,
+                             left_row_id);
+          }
         }
 
         // Determine which index has to get incremented
@@ -488,32 +491,44 @@ void SortMergeJoin::SortMergeJoinImpl<T>::partition_join(uint32_t partition_numb
       }
     }
 
-    /*
-        if (_sort_merge_join._op == "<" || _sort_merge_join._op == "<=") {
-          for (uint32_t r_index = right_index; r_index <= max_index_right; ++r_index) {
-            right_row_id = right_current_partition.values[r_index].second;
-            addSmallerValues(partition_number, _sorted_left_table, pos_lists_left, pos_lists_right,
-       max_index_left
-       right_row_id);
-          }
+    // Turn around the logic of ">" and ">=" operators
+    if (_sort_merge_join._op == "<" || _sort_merge_join._op == "<=") {
+      if (left_value == right_value) {
+        // Viewer values have to be added in the "<" case, so traversal will begin at "max_left_index + 1"
+        // In the "<=" case the traversal has to start at "left_index"
+        dependend_max_index = (_sort_merge_join._op == "<") ? max_left_index + 1 : left_index;
+        dependend_max_index = (_sort_merge_join._op == "<") ? max_right_index + 1 : right_index;
 
-          if (_sort_merge_join._op == "<=") {
-            for (uint32_t l_index = 0; l_index <= max_index_left; ++l_index) {
-              left_row_id = left_current_partition.values[l_index].second;
-              pos_lists_left[partition_number].push_back(left_row_id);
-              pos_lists_right[partition_number].push_back(right_row_id);
-            }
-          }
+        for (uint32_t l_index = left_index; l_index <= max_left_index; ++l_index) {
+          left_row_id = left_current_partition.values[l_index].second;
+          addGreaterValues(partition_number, _sorted_right_table, pos_lists_left, pos_lists_right, dependend_max_index,
+                           left_row_id);
+        }
 
-          // Determine which index has to get incremented
-          // Set the smaller side to next new value
-          if (left_value < right_value) {
-            left_index += left_index_offset + 1u;
-          } else {
-            right_index += right_index_offset + 1u;
+        // Afterwards set index for both tables to next new value
+        left_index += left_index_offset + 1u;
+        right_index += right_index_offset + 1u;
+
+      } else {
+        // Found right_value that is greater than left_value. That means all potantial right_values following are
+        // greater too
+        if (left_value < right_value) {
+          for (uint32_t l_index = left_index; l_index <= max_left_index; ++l_index) {
+            left_row_id = left_current_partition.values[l_index].second;
+            addGreaterValues(partition_number, _sorted_right_table, pos_lists_left, pos_lists_right, right_index,
+                             left_row_id);
           }
         }
-    */
+
+        // Determine which index has to get incremented
+        // Set the smaller side to next new value
+        if (left_value < right_value) {
+          left_index += left_index_offset + 1u;
+        } else {
+          right_index += right_index_offset + 1u;
+        }
+      }
+    }
   }
 
   // The while loop may have ended, but the last element gets skipped in certain cases.
@@ -557,10 +572,12 @@ void SortMergeJoin::SortMergeJoinImpl<T>::addSmallerValues(
     std::vector<PosList>& pos_list_smaller, std::vector<PosList>& pos_list_greater, uint32_t max_index_smaller_values,
     RowID greaterId) {
   RowID smaller_value_row_id;
+
   for (uint32_t p_number = 0; p_number <= partition_number; ++p_number) {
     if (p_number != partition_number) {
       // Add values from previous partitions
       auto& partition_smaller_values = table_smaller_values->partition[p_number];
+
       for (auto& values : partition_smaller_values.values) {
         smaller_value_row_id = values.second;
         pos_list_smaller[partition_number].push_back(smaller_value_row_id);
@@ -568,10 +585,39 @@ void SortMergeJoin::SortMergeJoinImpl<T>::addSmallerValues(
       }
     } else {
       // Add values from current partition
-      for (uint32_t index = 0; index <= max_index_smaller_values; ++index) {
+      for (uint32_t index = 0; index < max_index_smaller_values; ++index) {
         smaller_value_row_id = table_smaller_values->partition[partition_number].values[index].second;
         pos_list_smaller[partition_number].push_back(smaller_value_row_id);
         pos_list_greater[partition_number].push_back(greaterId);
+      }
+    }
+  }
+}
+
+template <typename T>
+void SortMergeJoin::SortMergeJoinImpl<T>::addGreaterValues(
+    uint32_t partition_number, std::shared_ptr<SortMergeJoinImpl::SortedTable>& table_greater_values,
+    std::vector<PosList>& pos_list_smaller, std::vector<PosList>& pos_list_greater, uint32_t start_index_greater_values,
+    RowID smallerId) {
+  RowID greater_value_row_id;
+  size_t partition_size = table_greater_values->partition[partition_number].values.size();
+
+  for (uint32_t p_number = partition_number; p_number < _partition_count; ++p_number) {
+    if (p_number != partition_number) {
+      // Add values from previous partitions
+      auto& partition_greater_values = table_greater_values->partition[p_number];
+
+      for (auto& values : partition_greater_values.values) {
+        greater_value_row_id = values.second;
+        pos_list_smaller[partition_number].push_back(smallerId);
+        pos_list_greater[partition_number].push_back(greater_value_row_id);
+      }
+    } else {
+      // Add values from current partition
+      for (uint32_t index = start_index_greater_values; index < partition_size; ++index) {
+        greater_value_row_id = table_greater_values->partition[partition_number].values[index].second;
+        pos_list_smaller[partition_number].push_back(smallerId);
+        pos_list_greater[partition_number].push_back(greater_value_row_id);
       }
     }
   }
@@ -582,13 +628,13 @@ void SortMergeJoin::SortMergeJoinImpl<T>::perform_join() {
   _sort_merge_join._pos_list_left = std::make_shared<PosList>();
   _sort_merge_join._pos_list_right = std::make_shared<PosList>();
 
-  std::vector<PosList> pos_lists_left(_sorted_left_table->partition.size());
-  std::vector<PosList> pos_lists_right(_sorted_left_table->partition.size());
+  std::vector<PosList> pos_lists_left(_partition_count);
+  std::vector<PosList> pos_lists_right(_partition_count);
 
   std::vector<std::thread> threads;
 
   // Parallel join for each partition
-  for (uint32_t partition_number = 0; partition_number < _sorted_left_table->partition.size(); ++partition_number) {
+  for (uint32_t partition_number = 0; partition_number < _partition_count; ++partition_number) {
     threads.push_back(std::thread(&SortMergeJoin::SortMergeJoinImpl<T>::partition_join, *this, partition_number,
                                   std::ref(pos_lists_left), std::ref(pos_lists_right)));
   }

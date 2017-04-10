@@ -100,6 +100,11 @@ class SortMergeJoin : public AbstractJoinOperator {
                           std::vector<PosList>& pos_list_smaller, std::vector<PosList>& pos_list_greater,
                           uint32_t max_index_smaller_values, RowID greaterId);
 
+    void addGreaterValues(uint32_t partition_number,
+                          std::shared_ptr<SortMergeJoinImpl::SortedTable>& table_greater_values,
+                          std::vector<PosList>& pos_list_smaller, std::vector<PosList>& pos_list_greater,
+                          uint32_t max_index_greater_values, RowID smallerId);
+
     void perform_join();
 
     // builds output based on pos_list_left/-_right
@@ -117,7 +122,6 @@ class SortMergeJoin : public AbstractJoinOperator {
     SortMergeJoin& _sort_merge_join;
     std::shared_ptr<SortedTable> _sorted_left_table;
     std::shared_ptr<SortedTable> _sorted_right_table;
-    std::function<bool(const T&, const T&)> _compare;
     SortedTable _left_table;
     SortedTable _right_table;
   };
