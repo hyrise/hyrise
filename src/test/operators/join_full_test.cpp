@@ -281,7 +281,7 @@ TYPED_TEST(JoinFullTest, GreaterEqualInnerJoin) {
                                              "src/test/tables/joinoperators/float_greaterequal_inner_join.tbl", 1);
 }
 
-// This operator was not suppoesed to get implemented in SortMergeJoin
+// This operator is not supported for the SortMergeJoin
 TYPED_TEST(JoinFullTest, DISABLED_NotEqualInnerJoin) {
   // Joining two Integer Columns
   this->template test_join_output<TypeParam>(this->_gt_a, this->_gt_b, std::pair<std::string, std::string>("a", "a"),

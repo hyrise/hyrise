@@ -288,7 +288,7 @@ TYPED_TEST(JoinEquiTest, MixNestedLoopAAndHash) {
                                              "src/test/tables/joinoperators/int_inner_multijoin_nlj_hash.tbl", 1);
 }
 
-TYPED_TEST(JoinEquiTest, MixNestedLoopBAndHash) {
+TYPED_TEST(JoinEquiTest, MixJoinsWithNestedLoopB) {
   auto join = std::make_shared<JoinNestedLoopB>(this->_gt_f, this->_gt_g, std::pair<std::string, std::string>("a", "a"),
                                                 "=", Left, std::string("left."), std::string("right."));
   join->execute();
@@ -298,7 +298,7 @@ TYPED_TEST(JoinEquiTest, MixNestedLoopBAndHash) {
                                              "src/test/tables/joinoperators/int_inner_multijoin_nlj_hash.tbl", 1);
 }
 
-TYPED_TEST(JoinEquiTest, MixHashAndNestedLoop) {
+TYPED_TEST(JoinEquiTest, MixJoinsWithHashJoin) {
   auto join = std::make_shared<JoinHash>(this->_gt_f, this->_gt_g, std::pair<std::string, std::string>("a", "a"), "=",
                                          Left, std::string("left."), std::string("right."));
   join->execute();
