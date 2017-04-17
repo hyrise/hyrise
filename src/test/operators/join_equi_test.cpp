@@ -278,14 +278,14 @@ TYPED_TEST(JoinEquiTest, MultiJoinOnRefOuter) {
       std::string("right."), "src/test/tables/joinoperators/int_inner_multijoin_val_val_val_leftouter.tbl", 1);
 }
 
-TYPED_TEST(JoinEquiTest, MixNestedLoopAAndHash) {
+TYPED_TEST(JoinEquiTest, MixJoinsWithNestedLoopA) {
   auto join = std::make_shared<JoinNestedLoopA>(this->_gt_f, this->_gt_g, std::pair<std::string, std::string>("a", "a"),
                                                 "=", Left, std::string("left."), std::string("right."));
   join->execute();
 
   this->template test_join_output<TypeParam>(join, this->_gt_h, std::pair<std::string, std::string>("left.a", "a"), "=",
                                              Inner, std::string("left."), std::string("right."),
-                                             "src/test/tables/joinoperators/int_inner_multijoin_nlj_hash.tbl", 1);
+                                             "src/test/tables/joinoperators/int_inner_multijoin.tbl", 1);
 }
 
 TYPED_TEST(JoinEquiTest, MixJoinsWithNestedLoopB) {
@@ -295,7 +295,7 @@ TYPED_TEST(JoinEquiTest, MixJoinsWithNestedLoopB) {
 
   this->template test_join_output<TypeParam>(join, this->_gt_h, std::pair<std::string, std::string>("left.a", "a"), "=",
                                              Inner, std::string("left."), std::string("right."),
-                                             "src/test/tables/joinoperators/int_inner_multijoin_nlj_hash.tbl", 1);
+                                             "src/test/tables/joinoperators/int_inner_multijoin.tbl", 1);
 }
 
 TYPED_TEST(JoinEquiTest, MixJoinsWithHashJoin) {
@@ -305,7 +305,17 @@ TYPED_TEST(JoinEquiTest, MixJoinsWithHashJoin) {
 
   this->template test_join_output<TypeParam>(join, this->_gt_h, std::pair<std::string, std::string>("left.a", "a"), "=",
                                              Inner, std::string("left."), std::string("right."),
-                                             "src/test/tables/joinoperators/int_inner_multijoin_nlj_hash.tbl", 1);
+                                             "src/test/tables/joinoperators/int_inner_multijoin.tbl", 1);
+}
+
+TYPED_TEST(JoinEquiTest, MixJoinsWithSortJoin) {
+  auto join = std::make_shared<SortMergeJoin>(this->_gt_f, this->_gt_g, std::pair<std::string, std::string>("a", "a"),
+                                              "=", Left, std::string("left."), std::string("right."));
+  join->execute();
+
+  this->template test_join_output<TypeParam>(join, this->_gt_h, std::pair<std::string, std::string>("left.a", "a"), "=",
+                                             Inner, std::string("left."), std::string("right."),
+                                             "src/test/tables/joinoperators/int_inner_multijoin.tbl", 1);
 }
 
 TYPED_TEST(JoinEquiTest, AppliesPrefixes) {
@@ -323,6 +333,30 @@ TYPED_TEST(JoinEquiTest, ColumnsNotOptional) {
   EXPECT_THROW(std::make_shared<TypeParam>(this->_gt_f, this->_gt_g, nullopt, "=", Left, std::string("left."),
                                            std::string("right.")),
                std::runtime_error);
+}
+
+// Only SortMergeJoin can set the partition count, it is hard coded anythere alse.
+TYPED_TEST(JoinEquiTest, InnerJoinOnDifferentPartitionCounts) {
+  // auto join = std::make_shared<TypeParam>(this->_gt_c, this->_gt_d, std::pair<std::string, std::string>("a", "a"),
+  // "=", Inner, std::string("left."), std::string("right."));
+
+  auto join = std::make_shared<SortMergeJoin>(this->_gt_c, this->_gt_d, std::pair<std::string, std::string>("a", "a"),
+                                              "=", Inner, std::string("left."), std::string("right."));
+
+  std::shared_ptr<Table> expected_result =
+      this->load_table("src/test/tables/joinoperators/int_string_inner_join.tbl", 3);
+
+  join->set_partition_count(4);
+  join->execute();
+  this->EXPECT_TABLE_EQ(join->get_output(), expected_result);
+
+  join->set_partition_count(8);
+  join->execute();
+  this->EXPECT_TABLE_EQ(join->get_output(), expected_result);
+
+  join->set_partition_count(16);
+  join->execute();
+  this->EXPECT_TABLE_EQ(join->get_output(), expected_result);
 }
 
 // Does not work yet due to problems with RowID implementation (RowIDs need to reference a table)

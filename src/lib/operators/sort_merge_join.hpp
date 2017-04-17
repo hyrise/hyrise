@@ -130,7 +130,6 @@ class SortMergeJoin : public AbstractJoinOperator {
   std::string _right_column_name;
 
   // should be 2^x
-  // Constant value which can not be set via constructor argument, so this is simply "hard coded" for now
   uint32_t _partition_count;
 
   // std::shared_ptr<Table> _output;

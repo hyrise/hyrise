@@ -20,6 +20,10 @@ JoinNestedLoopB::JoinNestedLoopB(const std::shared_ptr<const AbstractOperator> l
         "JoinNestedLoopA: this operator does not support Cross Joins, the optimizer should use Product operator.");
   }
 
+  if (_mode == Natural) {
+    throw std::runtime_error("NestedLoopJoin: this operator currently does not support Natural Joins.");
+  }
+
   // Check optional column names
   // Per definition either two names are specified or none
   if (column_names) {
