@@ -14,12 +14,22 @@
 
 namespace opossum {
 
-BENCHMARK_F(BenchmarkFixture, BM_TableScan)(benchmark::State& state) {
+BENCHMARK_F(BenchmarkFixture, BM_TableScanConstant)(benchmark::State& state) {
   clear_cache();
-  auto warm_up = std::make_shared<TableScan>(_gt_a, "a", ">=", 7);
+  auto warm_up = std::make_shared<TableScan>(_gt_a, ColumnName("a"), ">=", 7);
   warm_up->execute();
   while (state.KeepRunning()) {
-    auto table_scan = std::make_shared<TableScan>(_gt_a, "a", ">=", 7);
+    auto table_scan = std::make_shared<TableScan>(_gt_a, ColumnName("a"), ">=", 7);
+    table_scan->execute();
+  }
+}
+
+BENCHMARK_F(BenchmarkFixture, BM_TableScanVariable)(benchmark::State& state) {
+  clear_cache();
+  auto warm_up = std::make_shared<TableScan>(_gt_a, ColumnName("a"), ">=", ColumnName("b"));
+  warm_up->execute();
+  while (state.KeepRunning()) {
+    auto table_scan = std::make_shared<TableScan>(_gt_a, ColumnName("a"), ">=", ColumnName("b"));
     table_scan->execute();
   }
 }
