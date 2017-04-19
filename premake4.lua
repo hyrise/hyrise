@@ -175,8 +175,9 @@ project "playground"
 project "test"
   kind "ConsoleApp"
 
-  links { "opossum", "googletest" }
-  includedirs { "third_party/googletest/googletest/include" }
+  links { "opossum", "googletest", "opossumProtobuf", "protobuf", "grpc++", "grpc", "z" }
+  includedirs { "third_party/googletest/googletest/include", "third_party/grpc/include/", "third_party/grpc/third_party/protobuf/src/" }
+  libdirs { "third_party/grpc/libs/opt/", "third_party/grpc/libs/opt/protobuf" }
   links(libs)
   files { "src/test/**.hpp", "src/test/**.cpp" }
   postbuildcommands { "./build/test" }
