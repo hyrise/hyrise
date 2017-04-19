@@ -244,7 +244,6 @@ TEST_F(OperatorTranslatorTest, AscendingSort) {
   sort_operation->mutable_input_operator()->mutable_get_table()->set_table_name("table_int_float");
   sort_operation->set_column_name("a");
   sort_operation->set_ascending(true);
-  sort_operation->set_output_chunk_size(0);
 
   OperatorTranslator translator;
   auto& tasks = translator.build_tasks_from_proto(msg);
@@ -273,7 +272,6 @@ TEST_F(OperatorTranslatorTest, DescendingSort) {
   sort_operation->mutable_input_operator()->mutable_get_table()->set_table_name("table_int_float");
   sort_operation->set_column_name("a");
   sort_operation->set_ascending(false);
-  sort_operation->set_output_chunk_size(0);
 
   OperatorTranslator translator;
   auto& tasks = translator.build_tasks_from_proto(msg);

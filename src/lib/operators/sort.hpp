@@ -263,9 +263,15 @@ class Sort::SortImplMaterializeOutput {
     // copied column by column for each output row. For each column in a row we visit the input column with a reference
     // to the output column. This enables for the SortImplMaterializeOutput class to ignore the column types during the
     // copying of the values.
-    auto chunk_count_out = _row_id_value_vector->size() % _output_chunk_size
-                               ? (_row_id_value_vector->size() / _output_chunk_size) + 1
-                               : _row_id_value_vector->size() / _output_chunk_size;
+    ChunkID chunk_count_out;
+    if (_output_chunk_size) {
+      chunk_count_out = _row_id_value_vector->size() % _output_chunk_size
+                            ? (_row_id_value_vector->size() / _output_chunk_size) + 1
+                            : _row_id_value_vector->size() / _output_chunk_size;
+    } else {
+      chunk_count_out = 1;
+      _output_chunk_size = _row_id_value_vector->size();
+    }
     auto row_index = 0u;
     for (ChunkID chunk_id_out = 0; chunk_id_out < chunk_count_out; chunk_id_out++) {
       // Because we want to add the values row wise we have to save all columns temporarily before we can add them to
@@ -309,7 +315,7 @@ class Sort::SortImplMaterializeOutput {
   }
 
   std::shared_ptr<const Table> _table_in;
-  const size_t _output_chunk_size;
+  size_t _output_chunk_size;
   std::shared_ptr<std::vector<std::pair<RowID, SortColumnType>>> _row_id_value_vector;
 };
 
