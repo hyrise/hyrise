@@ -15,8 +15,6 @@
 #include "../../lib/storage/table.hpp"
 #include "../../lib/types.hpp"
 
-using std::string_literals::operator""s;
-
 namespace opossum {
 
 class OperatorsProjectionTest : public BaseTest {
@@ -46,7 +44,7 @@ class OperatorsProjectionTest : public BaseTest {
 TEST_F(OperatorsProjectionTest, SingleColumn) {
   std::shared_ptr<Table> expected_result = load_table("src/test/tables/int.tbl", 1);
 
-  Projection::ProjectionDefinitions definitions({Projection::ProjectionDefinition{"$a"s, "int"s, "a"s}});
+  Projection::ProjectionDefinitions definitions({Projection::ProjectionDefinition{"$a", "int", "a"}});
   auto projection = std::make_shared<Projection>(_gt, definitions);
   projection->execute();
   auto out = projection->get_output();
