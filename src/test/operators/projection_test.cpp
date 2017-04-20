@@ -15,7 +15,7 @@
 #include "../../lib/storage/table.hpp"
 #include "../../lib/types.hpp"
 
-using std::string std::string_literals::operator""s(const char *str, std::size_t len);
+using std::string_literals::operator""s;
 
 namespace opossum {
 
