@@ -27,7 +27,8 @@ std::shared_ptr<const Table> Projection::on_execute() {
   if (!_simple_projection.empty()) {
     for (auto& column : _simple_projection) {
       auto column_id = input_table_left()->column_id_by_name(column);
-      _projection_definitions.push_back({"$" + column, input_table_left()->column_type(column_id), column});
+      _projection_definitions.emplace_back(std::string("$") + column, input_table_left()->column_type(column_id),
+                                           column);
     }
   }
 

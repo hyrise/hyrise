@@ -218,7 +218,7 @@ std::unique_ptr<base> make_unique_by_column_types(const std::string &type1, cons
   std::unique_ptr<base> ret = nullptr;
   hana::for_each(column_types, [&ret, &type1, &type2, &args...](auto x) {
     if (std::string(hana::first(x)) == type1) {
-      hana::for_each(column_types, [&ret, &type1, &type2, &args...](auto y) {
+      hana::for_each(column_types, [&ret, &type2, &args...](auto y) {
         if (std::string(hana::first(y)) == type2) {
           using column_type1 = typename decltype(+hana::second(x))::type;
           using column_type2 = typename decltype(+hana::second(y))::type;
