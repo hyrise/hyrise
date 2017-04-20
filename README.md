@@ -52,8 +52,11 @@ install via homebrew / packet manager
 install via homebrew / packet manager (installed as default by Ubuntu)
 
 ### get and compile protoc and gRPC
-get via `submodule update --init --recursive`
-installation guide on github
+get via `git submodule update --init --recursive`.
+
+Compile via `CPPFLAGS="-Wno-deprecated-declarations" CFLAGS="-Wno-deprecated-declarations -Wno-implicit-function-declaration -Wno-shift-negative-value" make static --directory=third_party/grpc REQUIRE_CUSTOM_LIBRARIES_opt=true`.
+
+installation guide on [github](https://github.com/grpc/grpc/blob/master/INSTALL.md#build-from-source)
 
 ### llvm (optional)
 install via homebrew / packet manager
