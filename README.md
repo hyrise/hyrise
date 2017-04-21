@@ -2,7 +2,7 @@
 [![coverage report](https://gitlab.hpi.de/OpossumDB/OpossumDB/badges/master/coverage.svg)](https://gitlab.hpi.de/OpossumDB/OpossumDB/commits/master)
 # opossum
 
-*Have a look at docs/guidelines*
+*Have a look at our [contributor guidelines](https://github.com/hyrise/zweirise/blob/master/CONTRIBUTING.md)*
 
 The [course material](https://hpi.de//plattner/teaching/winter-term-201617/build-your-own-database.html) is a good starting point to get to know Opossum
 
