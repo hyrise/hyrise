@@ -58,11 +58,22 @@ set(
 # Both opossumTest and opossumAsan link against these
 set(
     LIBRARIES
-    opossum
     gtest
 )
 
 # Configure opossumTest
 add_executable(opossumTest ${SOURCES})
-target_link_libraries(opossumTest ${LIBRARIES})
+target_link_libraries(opossumTest opossum ${LIBRARIES})
+
+# Configure opossumCoverageApp
+add_executable(opossumCoverageApp ${SOURCES})
+target_link_libraries(opossumCoverageApp opossumCoverage ${LIBRARIES} --coverage)
+set_target_properties(opossumCoverageApp PROPERTIES COMPILE_FLAGS "-fprofile-arcs -ftest-coverage")
+
+# Configure opossumAsanApp
+add_executable(opossumAsanApp ${SOURCES})
+target_link_libraries(opossumAsanApp opossumAsan ${LIBRARIES} -fsanitize=address)
+set_target_properties(opossumAsanApp PROPERTIES COMPILE_FLAGS "-fsanitize=address -fno-omit-frame-pointer")
+
+
 

@@ -1,3 +1,57 @@
+# Configure protobuf and grpc
+add_custom_command(
+    OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/network/generated
+    COMMAND [ -d ${CMAKE_CURRENT_SOURCE_DIR}/network/generated ] || mkdir ${CMAKE_CURRENT_SOURCE_DIR}/network/generated
+)
+
+add_custom_command(
+    OUTPUT
+        ${CMAKE_CURRENT_SOURCE_DIR}/network/generated/opossum.grpc.pb.cc
+        ${CMAKE_CURRENT_SOURCE_DIR}/network/generated/opossum.grpc.pb.h
+    COMMAND
+        ${PROJECT_SOURCE_DIR}/third_party/grpc/bins/opt/protobuf/protoc
+            --grpc_out=./network/generated
+            --plugin=protoc-gen-grpc=${PROJECT_SOURCE_DIR}/third_party/grpc/bins/opt/grpc_cpp_plugin
+            -I=\"./network/protos/\"
+            ./network/protos/opossum.proto
+    DEPENDS
+        ${CMAKE_CURRENT_SOURCE_DIR}/network/generated
+        ./network/protos/opossum.proto
+    WORKING_DIRECTORY
+        ${CMAKE_CURRENT_SOURCE_DIR}
+)
+
+add_custom_command(
+    OUTPUT
+        ${CMAKE_CURRENT_SOURCE_DIR}/network/generated/opossum.pb.cc
+        ${CMAKE_CURRENT_SOURCE_DIR}/network/generated/opossum.pb.h
+    COMMAND
+        ${PROJECT_SOURCE_DIR}/third_party/grpc/bins/opt/protobuf/protoc
+            --cpp_out=./network/generated
+            -I=\"./network/protos/\"
+            ./network/protos/opossum.proto
+    DEPENDS
+        ${CMAKE_CURRENT_SOURCE_DIR}/network/generated
+        ./network/protos/opossum.proto
+    WORKING_DIRECTORY
+        ${CMAKE_CURRENT_SOURCE_DIR}
+)
+
+# https://cmake.org/cmake/help/v3.0/command/add_custom_command.html:
+#   Do not list the output in more than one independent target that may build in parallel or the two instances of the
+#   rule may conflict (instead use add_custom_target to drive the command and make the other targets depend on that one).
+# This implements the solution proposed by
+#    http://cmake.3232098.n2.nabble.com/How-to-have-generated-source-compiled-multiple-ways-td7585202.html
+add_custom_target(
+    serialize_protobuf_and_grpc_generation
+    DEPENDS
+        ${CMAKE_CURRENT_SOURCE_DIR}/network/generated/opossum.grpc.pb.cc
+        ${CMAKE_CURRENT_SOURCE_DIR}/network/generated/opossum.grpc.pb.h
+        ${CMAKE_CURRENT_SOURCE_DIR}/network/generated/opossum.pb.cc
+        ${CMAKE_CURRENT_SOURCE_DIR}/network/generated/opossum.pb.h
+)
+
+# Sources and libraries shared among the different builds of the lib
 set(
     SOURCES
     operators/validate.cpp
@@ -137,9 +191,8 @@ set(
     type_comparison.hpp
 )
 
-add_library(opossum STATIC ${SOURCES})
-
-target_link_libraries(opossum
+set(
+    LIBRARIES
     protobuf
     grpc++
     grpc
@@ -147,3 +200,30 @@ target_link_libraries(opossum
     tbb
 )
 
+
+# Configure the regular opossum library used for tests/server/playground...
+add_library(opossum STATIC ${SOURCES})
+target_link_libraries(opossum ${LIBRARIES})
+add_dependencies(opossum serialize_protobuf_and_grpc_generation)
+
+# Configure the lib used for asan
+add_library(opossumAsan STATIC ${SOURCES})
+target_link_libraries(
+    opossumAsan
+    ${LIBRARIES}
+    -lgcov
+    -fsanitize=address
+)
+set_target_properties(opossumAsan PROPERTIES COMPILE_FLAGS "-fsanitize=address -fno-omit-frame-pointer")
+add_dependencies(opossumAsan serialize_protobuf_and_grpc_generation)
+
+# Configure the lib used for coverage
+add_library(opossumCoverage STATIC ${SOURCES})
+target_link_libraries(
+    opossumCoverage
+    ${LIBRARIES}
+    -lgcov
+    --coverage
+)
+set_target_properties(opossumCoverage PROPERTIES COMPILE_FLAGS "-fprofile-arcs -ftest-coverage")
+add_dependencies(opossumCoverage serialize_protobuf_and_grpc_generation)

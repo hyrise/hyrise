@@ -36,7 +36,7 @@ class OperatorsProjectionBenchmark : public BenchmarkFixture {
 
 BENCHMARK_DEFINE_F(OperatorsProjectionBenchmark, BM_ProjectionSimple)(benchmark::State& state) {
   clear_cache();
-  Projection::ProjectionDefinitions definitions = {{"$a", "int", "sum"}};
+  Projection::ProjectionDefinitions definitions = {Projection::ProjectionDefinition{"$a", "int", "sum"}};
   auto warm_up = std::make_shared<Projection>(_tables[state.range(0)], definitions);
   warm_up->execute();
   while (state.KeepRunning()) {
@@ -47,7 +47,7 @@ BENCHMARK_DEFINE_F(OperatorsProjectionBenchmark, BM_ProjectionSimple)(benchmark:
 
 BENCHMARK_DEFINE_F(OperatorsProjectionBenchmark, BM_ProjectionVariableTerm)(benchmark::State& state) {
   clear_cache();
-  Projection::ProjectionDefinitions definitions = {{"$a+$b", "int", "sum"}};
+  Projection::ProjectionDefinitions definitions = {Projection::ProjectionDefinition{"$a+$b", "int", "sum"}};
   auto warm_up = std::make_shared<Projection>(_tables[state.range(0)], definitions);
   warm_up->execute();
   while (state.KeepRunning()) {
@@ -58,11 +58,11 @@ BENCHMARK_DEFINE_F(OperatorsProjectionBenchmark, BM_ProjectionVariableTerm)(benc
 
 BENCHMARK_DEFINE_F(OperatorsProjectionBenchmark, BM_ProjectionConstantTerm)(benchmark::State& state) {
   clear_cache();
-  Projection::ProjectionDefinitions definitions = {{"$a+5", "int", "sum"}};
+  Projection::ProjectionDefinitions definitions = {Projection::ProjectionDefinition{"$a+5", "int", "sum"}};
   auto warm_up = std::make_shared<Projection>(_tables[state.range(0)], definitions);
   warm_up->execute();
   while (state.KeepRunning()) {
-    Projection::ProjectionDefinitions definitions = {{"$a+5", "int", "sum"}};
+    Projection::ProjectionDefinitions definitions = {Projection::ProjectionDefinition{"$a+5", "int", "sum"}};
     auto projection = std::make_shared<Projection>(_tables[state.range(0)], definitions);
     projection->execute();
   }

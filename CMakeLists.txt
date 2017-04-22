@@ -25,6 +25,7 @@ link_directories(
 )
 
 add_subdirectory(src/benchmark)
+add_subdirectory(src/bin)
 add_subdirectory(src/lib)
 add_subdirectory(src/test)
 add_subdirectory(third_party/benchmark)
