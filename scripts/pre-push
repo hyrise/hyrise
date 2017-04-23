@@ -1,0 +1,38 @@
+#!/bin/bash
+
+protected_branch='master'
+current_branch=\\$(git symbolic-ref HEAD | sed -e 's,.*/\\(.*\\),\\1,')
+
+if [ \\$protected_branch = \\$current_branch ] && [ \\$2 = 'git@gitlab.hpi.de:OpossumDB/OpossumDB.git' ]
+then
+    echo
+    echo 'You are about to push to master. Opossum style dictates that you create a merge request from a different branch.'
+    read -p 'Is pushing to master really what you intended? [y|n] ' -n 1 -r < /dev/tty
+    echo
+    if echo \\$REPLY | grep -E '^[Yy]\\$' > /dev/null
+    then
+        exit 0 # push will execute
+    fi
+    exit 1 # push will not execute
+else
+    exit 0 # push will execute
+fi 
+#!/bin/bash
+
+protected_branch='master'
+current_branch=\\$(git symbolic-ref HEAD | sed -e 's,.*/\\(.*\\),\\1,')
+
+if [ \\$protected_branch = \\$current_branch ] && [ \\$2 = 'git@gitlab.hpi.de:OpossumDB/OpossumDB.git' ]
+then
+    echo
+    echo 'You are about to push to master. Opossum style dictates that you create a merge request from a different branch.'
+    read -p 'Is pushing to master really what you intended? [y|n] ' -n 1 -r < /dev/tty
+    echo
+    if echo \\$REPLY | grep -E '^[Yy]\\$' > /dev/null
+    then
+        exit 0 # push will execute
+    fi
+    exit 1 # push will not execute
+else
+    exit 0 # push will execute
+fi
