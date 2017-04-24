@@ -3,6 +3,7 @@ node {
   docker.image('hyrise/opossum-ci:16.10').inside("-u 0:0") {
 
     stage("Setup") {
+      step([$class: 'WsCleanup'])
       checkout scm
       sh "./install.sh"
       sh "git submodule update --init"
@@ -10,7 +11,6 @@ node {
 
     stage("Test gcc") {
       stage("gcc Release") {
-        sh "make clean"
         sh "premake4 --compiler=gcc"
         sh "make -j \$(cat /proc/cpuinfo | grep processor | wc -l) -R config=release test"
       }
@@ -48,22 +48,26 @@ node {
     }
 
     stage("Coverage") {
-        sh "make clean"
-        sh "premake4"
-        sh "make -j \$(cat /proc/cpuinfo | grep processor | wc -l) coverage"
-        publishHTML (target: [
-          allowMissing: false,
-          alwaysLinkToLastBuild: false,
-          keepAll: true,
-          reportDir: 'coverage',
-          reportFiles: 'index.html',
-          reportName: "RCov Report"
-        ])
-      }
+      sh "make clean"
+      sh "premake4"
+      sh "make -j \$(cat /proc/cpuinfo | grep processor | wc -l) coverage"
+      publishHTML (target: [
+        allowMissing: false,
+        alwaysLinkToLastBuild: false,
+        keepAll: true,
+        reportDir: 'coverage',
+        reportFiles: 'index.html',
+        reportName: "RCov Report"
+      ])
+    }
+
+    stage("Cleanup") {
+      // Clean up workspace
+      step([$class: 'WsCleanup'])
+    }
 
   }
 
-  // Clean up workspace
-  step([$class: 'WsCleanup'])
+
 
 }
