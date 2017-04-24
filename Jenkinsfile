@@ -3,7 +3,6 @@ node {
   docker.image('hyrise/opossum-ci:16.10').inside("-u 0:0") {
 
     stage("Setup") {
-      step([$class: 'WsCleanup'])
       checkout scm
       sh "./install.sh"
       sh "git submodule update --init"
