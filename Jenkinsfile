@@ -13,12 +13,12 @@ node {
       stage("gcc Release") {
         sh "make clean"
         sh "premake4 --compiler=gcc"
-        sh "make -j $(cat /proc/cpuinfo | grep processor | wc -l) -R config=release test"
+        sh "make -j \$(cat /proc/cpuinfo | grep processor | wc -l) -R config=release test"
       }
       stage("gc Debug") {
         sh "make clean"
         sh "premake4 --compiler=gcc"
-        sh "make -j $(cat /proc/cpuinfo | grep processor | wc -l) -R config=debug test"
+        sh "make -j \$(cat /proc/cpuinfo | grep processor | wc -l) -R config=debug test"
       }
     }
 
@@ -26,12 +26,12 @@ node {
       stage("clang Release") {
         sh "make clean"
         sh "premake4 --compiler=clang"
-        sh "make -j $(cat /proc/cpuinfo | grep processor | wc -l) -R config=release test"
+        sh "make -j \$(cat /proc/cpuinfo | grep processor | wc -l) -R config=release test"
       }
       stage("clang Debug") {
         sh "make clean"
         sh "premake4 --compiler=clang"
-        sh "make -j $(cat /proc/cpuinfo | grep processor | wc -l) -R config=debug test"
+        sh "make -j \$(cat /proc/cpuinfo | grep processor | wc -l) -R config=debug test"
       }
     }
 
@@ -39,19 +39,19 @@ node {
       stage("asan Release") {
         sh "make clean"
         sh "premake4 --compiler=clang"
-        sh "make -j $(cat /proc/cpuinfo | grep processor | wc -l) -R config=release asan"
+        sh "make -j \$(cat /proc/cpuinfo | grep processor | wc -l) -R config=release asan"
       }
       stage("asan Debug") {
         sh "make clean"
         sh "premake4 --compiler=clang"
-        sh "make -j $(cat /proc/cpuinfo | grep processor | wc -l) -R config=debug asan"
+        sh "make -j \$(cat /proc/cpuinfo | grep processor | wc -l) -R config=debug asan"
       }
     }
 
     stage("Coverage") {
         sh "make clean"
         sh "premake4"
-        sh "make -j $(cat /proc/cpuinfo | grep processor | wc -l) coverage"
+        sh "make -j \$(cat /proc/cpuinfo | grep processor | wc -l) coverage"
         publishHTML (target: [
           allowMissing: false,
           alwaysLinkToLastBuild: false,
