@@ -6,7 +6,6 @@ node {
       checkout scm
       sh "./install.sh"
       sh "git submodule update --init"
-      stash includes: 'third_party/*', name: 'third_party'
     }
 
     stage("Test gcc") {
