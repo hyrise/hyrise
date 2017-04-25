@@ -170,4 +170,11 @@ TYPED_TEST(SingleColumnIndexTest, IsIndexForTest) {
   EXPECT_FALSE(this->index_str->is_index_for({}));
 }
 
+TYPED_TEST(SingleColumnIndexTest, IndexOnNonDictionaryThrows) {
+  auto vc_int = make_shared_by_column_type<BaseColumn, ValueColumn>("int");
+  vc_int->append(4);
+
+  EXPECT_THROW(std::make_shared<TypeParam>(std::vector<std::shared_ptr<BaseColumn>>({vc_int})), std::runtime_error);
+}
+
 }  // namespace opossum
