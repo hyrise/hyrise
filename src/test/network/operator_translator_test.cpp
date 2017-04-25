@@ -366,7 +366,7 @@ TEST_F(OperatorTranslatorTest, ImportCsv) {
   auto msg = proto::OperatorVariant();
   proto::ImportCsvOperator* import_csv_operator = msg.mutable_import_csv();
   import_csv_operator->set_directory("src/test/csv");
-  import_csv_operator->set_filename("float");
+  import_csv_operator->set_filename("float.csv");
 
   OperatorTranslator translator;
   auto& tasks = translator.build_tasks_from_proto(msg);
