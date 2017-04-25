@@ -8,6 +8,7 @@ if(NOT CMAKE_BUILD_TYPE)
 endif()
 
 # CMake settings
+set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake ${CMAKE_MODULE_PATH})
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 
@@ -16,6 +17,9 @@ if (${CMAKE_BUILD_TYPE} STREQUAL "Debug")
 else()
     add_definitions(-DIS_DEBUG=0)
 endif()
+
+# Dependencies
+find_package(Numa)
 
 # Global flags and include directories
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++1z -pthread -Wno-error=unused-parameter -Wall -Werror")
@@ -33,6 +37,12 @@ link_directories(
     third_party/grpc/libs/opt/
     third_party/grpc/libs/opt/protobuf
 )
+
+if (${NUMA_FOUND})
+    add_definitions(-DOPOSSUM_NUMA_SUPPORT=1)
+else()
+    add_definitions(-DOPOSSUM_NUMA_SUPPORT=0)
+endif()
 
 # Include sub-CMakeLists.txt
 add_subdirectory(src/benchmark)

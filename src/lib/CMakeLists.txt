@@ -51,8 +51,6 @@ add_custom_target(
         ${CMAKE_CURRENT_SOURCE_DIR}/network/generated/opossum.pb.h
 )
 
-message("CXX Flags: ${CMAKE_CXX_FLAGS}")
-
 # Sources and libraries shared among the different builds of the lib
 set(
     SOURCES
