@@ -8,8 +8,6 @@ fi
 
 echo
 if echo $REPLY | grep -E '^[Yy]$' > /dev/null; then
-    make -f script/install_git_hooks
-
     unamestr=$(uname)
     if [[ "$unamestr" == 'Darwin' ]]; then
         echo "Installing dependencies (this may take a while)..."
@@ -61,6 +59,9 @@ if echo $REPLY | grep -E '^[Yy]$' > /dev/null; then
             fi
         fi
     fi
+    
+    make -f script/install_git_hooks
+    (mkdir build; cd build; cmake ..)
 fi
 
 exit 0
