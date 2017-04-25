@@ -8,7 +8,7 @@ fi
 
 echo
 if echo $REPLY | grep -E '^[Yy]$' > /dev/null; then
-    make -f script/install_git_hooks
+    make -s -f scripts/install_git_hooks.mk all
 
     unamestr=$(uname)
     if [[ "$unamestr" == 'Darwin' ]]; then
