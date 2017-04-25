@@ -7,6 +7,10 @@ if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE "Debug")
 endif()
 
+# CMake settings
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
+
 if (${CMAKE_BUILD_TYPE} STREQUAL "Debug")
     add_definitions(-DIS_DEBUG=1)
 else()
@@ -14,7 +18,7 @@ else()
 endif()
 
 # Global flags and include directories
-set(${CMAKE_CXX_FLAGS} "${CMAKE_CXX_FLAGS} -std=c++1z -pthread -Wno-error=unused-parameter -Wall -Werror")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++1z -pthread -Wno-error=unused-parameter -Wall -Werror")
 
 include_directories(
     third_party/benchmark/include

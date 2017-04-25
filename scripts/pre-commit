@@ -1,4 +1,5 @@
 #!/bin/bash
+
 if [ -f ./git/MERGE_HEAD ];
 then
     exit 0
@@ -27,10 +28,14 @@ fi
 echo Success, no linting errors found!
 
 echo Testing the Opossum, grrrrr...
-make -f build/Makefile -j test >/dev/null 2>/dev/null
-if ! ./build/test >/dev/null 2>/dev/null
+
+pushd build >/dev/null
+make -j opossumTest >/dev/null 2>/dev/null
+popd >/dev/null
+
+if ! ./build/opossumTest >/dev/null 2>/dev/null
 then
-    echo ERROR: Testing error occured. Execute \"make test\" for details!
+    echo ERROR: Testing error occured. Execute tests for details!
     exit 1
 fi
 
