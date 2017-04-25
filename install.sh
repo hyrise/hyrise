@@ -60,7 +60,7 @@ if echo $REPLY | grep -E '^[Yy]$' > /dev/null; then
         fi
     fi
     
-    make -f script/install_git_hooks
+    make -s -f scripts/install_git_hooks.mk all
     (mkdir build; cd build; cmake ..)
 fi
 
