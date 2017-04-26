@@ -80,9 +80,10 @@ class Chunk {
   /**
    * Atomically accesses and returns the column at a given position
    *
-   * Note: ValueColumns might be exchanged with DictionaryColumns concurrently
-   *       with the execution of operators. Therefore the column type needs
-   *       to be reevaluated if a column is retrieved a second time.
+   * Note: Concurrently with the execution of operators,
+   *       ValueColumns might be exchanged with DictionaryColumns.
+   *       Therefore the column class needs to be reevaluated
+   *       if a column is retrieved a second time.
    */
   std::shared_ptr<BaseColumn> get_column(ColumnID column_id) const;
 
@@ -91,6 +92,9 @@ class Chunk {
   /**
    * The locking pointer locks the columns non-exclusively
    * and unlocks them on destruction
+   *
+   * For improved performance, it is best to call this function
+   * once and retain the reference as long as needed.
    *
    * @return a locking ptr to the mvcc columns
    */
