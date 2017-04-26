@@ -207,8 +207,11 @@ set(
     grpc
     z
     tbb
-    ${NUMA_LIBRARY}
 )
+
+if(${NUMA_FOUND})
+    set(LIBRARIES ${LIBRARIES} ${NUMA_LIBRARY})
+endif()
 
 
 # Configure the regular opossum library used for tests/server/playground...
