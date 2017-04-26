@@ -77,7 +77,13 @@ class Chunk {
   // note this is slow and not thread-safe and should be used for testing purposes only
   void append(std::vector<AllTypeVariant> values);
 
-  // Atomically accesses and returns the column at a given position
+  /**
+   * Atomically accesses and returns the column at a given position
+   *
+   * Note: ValueColumns might be exchanged with DictionaryColumns concurrently
+   *       with the execution of operators. Therefore the column type needs
+   *       to be reevaluated if a column is retrieved a second time.
+   */
   std::shared_ptr<BaseColumn> get_column(ColumnID column_id) const;
 
   bool has_mvcc_columns() const;
