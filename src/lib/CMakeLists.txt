@@ -51,6 +51,20 @@ add_custom_target(
         ${CMAKE_CURRENT_SOURCE_DIR}/network/generated/opossum.pb.h
 )
 
+# Protobuf library with overridden deprecated warning
+add_library(
+    opossumProtobuf
+    STATIC
+    network/generated/opossum.pb.cc
+    network/generated/opossum.grpc.pb.cc
+)
+
+target_compile_options(
+    opossumProtobuf
+    PRIVATE
+    -Wno-unused-parameter -Wno-deprecated-declarations
+)
+
 # Sources and libraries shared among the different builds of the lib
 set(
     SOURCES
@@ -144,8 +158,6 @@ set(
     network/request_handler.hpp
     network/operator_translator.hpp
     network/operator_translator.cpp
-    network/generated/opossum.pb.cc
-    network/generated/opossum.grpc.pb.cc
     common.hpp
     uid_allocator.hpp
     concurrency/transaction_context.cpp
@@ -193,6 +205,7 @@ set(
 
 set(
     LIBRARIES
+    opossumProtobuf
     protobuf
     grpc++
     grpc

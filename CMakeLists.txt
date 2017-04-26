@@ -21,23 +21,6 @@ endif()
 # Dependencies
 find_package(Numa)
 
-# Global flags and include directories
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++1z -pthread -Wno-error=unused-parameter -Wall -Werror")
-
-include_directories(
-    third_party/benchmark/include
-    third_party/googletest/googletest/include
-    third_party/grpc/include
-    third_party/grpc/third_party/protobuf/src
-
-    src/lib/
-)
-
-link_directories(
-    third_party/grpc/libs/opt/
-    third_party/grpc/libs/opt/protobuf
-)
-
 if (${NUMA_FOUND})
     add_definitions(-DOPOSSUM_NUMA_SUPPORT=1)
 else()
@@ -45,10 +28,7 @@ else()
 endif()
 
 # Include sub-CMakeLists.txt
-add_subdirectory(src/benchmark)
-add_subdirectory(src/bin)
-add_subdirectory(src/lib)
-add_subdirectory(src/test)
+add_subdirectory(src)
 add_subdirectory(third_party/benchmark)
 add_subdirectory(third_party/googletest)
 
