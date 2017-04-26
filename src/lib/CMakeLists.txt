@@ -59,11 +59,7 @@ add_library(
     network/generated/opossum.grpc.pb.cc
 )
 
-target_compile_options(
-    opossumProtobuf
-    PRIVATE
-    -Wno-unused-parameter -Wno-deprecated-declarations
-)
+target_compile_options(opossumProtobuf PRIVATE -Wno-unused-parameter -Wno-deprecated-declarations)
 
 # Sources and libraries shared among the different builds of the lib
 set(
@@ -211,6 +207,7 @@ set(
     grpc
     z
     tbb
+    ${NUMA_LIBRARY}
 )
 
 

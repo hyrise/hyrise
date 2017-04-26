@@ -1,3 +1,15 @@
+if (${CMAKE_BUILD_TYPE} STREQUAL "Debug")
+    add_definitions(-DIS_DEBUG=1)
+else()
+    add_definitions(-DIS_DEBUG=0)
+endif()
+
+if (${NUMA_FOUND})
+    add_definitions(-DOPOSSUM_NUMA_SUPPORT=1)
+else()
+    add_definitions(-DOPOSSUM_NUMA_SUPPORT=0)
+endif()
+
 # Global flags and include directories
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++1z -pthread -Wno-error=unused-parameter -Wall -Werror")
 
