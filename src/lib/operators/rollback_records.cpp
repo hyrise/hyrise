@@ -18,7 +18,7 @@ void RollbackRecords::commit_records(const CommitID /*cid*/) {
 // RollbackRecords calls this method on itself, so we do nothing instead of throwing exceptions.
 void RollbackRecords::rollback_records() {}
 
-std::shared_ptr<const Table> RollbackRecords::on_execute(TransactionContext* context) {
+std::shared_ptr<const Table> RollbackRecords::on_execute(std::shared_ptr<TransactionContext> context) {
   for (const auto op : context->get_rw_operators()) {
     op->rollback_records();
   }

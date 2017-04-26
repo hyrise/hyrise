@@ -30,19 +30,28 @@ class OperatorsSortTest : public BaseTest {
 TEST_F(OperatorsSortTest, AscendingSortOfOneColumn) {
   std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_float_sorted.tbl", 2);
 
-  auto sort = std::make_shared<Sort>(_gt, "a");
+  auto sort = std::make_shared<Sort>(_gt, "a", true, 2u);
   sort->execute();
 
   EXPECT_TABLE_EQ(sort->get_output(), expected_result, true);
 }
 
-TEST_F(OperatorsSortTest, DISABLED_DoubleSortOfOneColumn) {
+TEST_F(OperatorsSortTest, AscendingSortOfOneColumnWithoutChunkSize) {
   std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_float_sorted.tbl", 2);
 
-  auto sort1 = std::make_shared<Sort>(_gt, "a", false);
+  auto sort = std::make_shared<Sort>(_gt, "a", true);
+  sort->execute();
+
+  EXPECT_TABLE_EQ(sort->get_output(), expected_result, true);
+}
+
+TEST_F(OperatorsSortTest, DoubleSortOfOneColumn) {
+  std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_float_sorted.tbl", 2);
+
+  auto sort1 = std::make_shared<Sort>(_gt, "a", false, 2u);
   sort1->execute();
 
-  auto sort2 = std::make_shared<Sort>(sort1, "a");
+  auto sort2 = std::make_shared<Sort>(sort1, "a", true, 2u);
   sort2->execute();
 
   EXPECT_TABLE_EQ(sort2->get_output(), expected_result, true);
@@ -51,7 +60,7 @@ TEST_F(OperatorsSortTest, DISABLED_DoubleSortOfOneColumn) {
 TEST_F(OperatorsSortTest, DescendingSortOfOneColumn) {
   std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_float_reverse.tbl", 2);
 
-  auto sort = std::make_shared<Sort>(_gt, "a", false);
+  auto sort = std::make_shared<Sort>(_gt, "a", false, 2u);
   sort->execute();
 
   EXPECT_TABLE_EQ(sort->get_output(), expected_result, true);
@@ -68,10 +77,10 @@ TEST_F(OperatorsSortTest, DISABLED_MultipleColumnSort) {
   // we want the output to be sorted after column a and in second place after column b.
   // So first we sort after column b and then after column a.
 
-  auto sort_after_b = std::make_shared<Sort>(gt2, "b");
+  auto sort_after_b = std::make_shared<Sort>(gt2, "b", true, 2u);
   sort_after_b->execute();
 
-  auto sort_after_a = std::make_shared<Sort>(sort_after_b, "a");
+  auto sort_after_a = std::make_shared<Sort>(sort_after_b, "a", true, 2u);
   sort_after_a->execute();
 
   EXPECT_TABLE_EQ(sort_after_a->get_output(), expected_result, true);

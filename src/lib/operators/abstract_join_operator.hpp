@@ -8,6 +8,7 @@
 #include <vector>
 
 #include "abstract_read_only_operator.hpp"
+#include "storage/reference_column.hpp"
 
 namespace opossum {
 
@@ -24,10 +25,10 @@ enum JoinMode { Inner, Left, Right, Outer, Cross, Natural, Self };
 
 class AbstractJoinOperator : public AbstractReadOnlyOperator {
  public:
-  AbstractJoinOperator(const std::shared_ptr<AbstractOperator> left, const std::shared_ptr<AbstractOperator> right,
-                       optional<std::pair<const std::string &, const std::string &>> column_names,
-                       const std::string &op, const JoinMode mode, const std::string prefix_left,
-                       const std::string prefix_right);
+  AbstractJoinOperator(const std::shared_ptr<const AbstractOperator> left,
+                       const std::shared_ptr<const AbstractOperator> right,
+                       optional<std::pair<std::string, std::string>> column_names, const std::string &op,
+                       const JoinMode mode, const std::string &prefix_left, const std::string &prefix_right);
 
   virtual ~AbstractJoinOperator() = default;
 
@@ -45,13 +46,11 @@ class AbstractJoinOperator : public AbstractReadOnlyOperator {
   const JoinMode _mode;
   const std::string _prefix_left;
   const std::string _prefix_right;
-  optional<std::pair<const std::string &, const std::string &>> _column_names;
-
-  std::shared_ptr<Table> _output_table;
+  optional<std::pair<std::string, std::string>> _column_names;
 
   // Some operators need an internal implementation class, mostly in cases where
   // their execute method depends on a template parameter. An example for this is
-  // found in join_nested_loop.hpp.
+  // found in join_nested_loop_a.hpp.
   class AbstractJoinOperatorImpl : public AbstractReadOnlyOperatorImpl {
    public:
     virtual ~AbstractJoinOperatorImpl() = default;

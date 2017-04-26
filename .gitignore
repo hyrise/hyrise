@@ -4,9 +4,11 @@ build/*
 *.make
 Makefile*
 coverage
+.vscode
 benchmark.json
 *.sublime-*
 .idea
 *.xcodeproj
 *.xcworkspace
+src/lib/network/generated
 .vscode

@@ -1,0 +1,5 @@
+./delete_xcode_files
+
+premake4 xcode4 --compiler=clang
+
+open opossum.xcworkspace/

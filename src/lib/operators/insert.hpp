@@ -27,7 +27,7 @@ class Insert : public AbstractReadWriteOperator {
   uint8_t num_in_tables() const override;
 
  protected:
-  std::shared_ptr<const Table> on_execute(TransactionContext* context) override;
+  std::shared_ptr<const Table> on_execute(std::shared_ptr<TransactionContext> context) override;
 
  protected:
   PosList _inserted_rows;

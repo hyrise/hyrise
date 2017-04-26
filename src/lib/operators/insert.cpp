@@ -56,7 +56,7 @@ const std::string Insert::name() const { return "Insert"; }
 
 uint8_t Insert::num_in_tables() const { return 1; }
 
-std::shared_ptr<const Table> Insert::on_execute(TransactionContext* context) {
+std::shared_ptr<const Table> Insert::on_execute(std::shared_ptr<TransactionContext> context) {
   _target_table = StorageManager::get().get_table(_target_table_name);
 
   // These TypedColumnProcessors kind of retrieve the template parameter of the columns.

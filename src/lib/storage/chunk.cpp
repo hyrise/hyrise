@@ -8,7 +8,7 @@
 #include <vector>
 
 #include "chunk.hpp"
-#include "group_key_index.hpp"
+#include "index/group_key/group_key_index.hpp"
 #include "reference_column.hpp"
 #include "value_column.hpp"
 
@@ -71,6 +71,15 @@ void Chunk::grow_mvcc_column_size_by(size_t delta, CommitID begin_cid) {
   _mvcc_columns->end_cids.grow_to_at_least(size() + delta, MAX_COMMIT_ID);
 }
 
+void Chunk::use_mvcc_columns_from(const Chunk& chunk) {
+  _mvcc_columns = std::make_unique<MvccColumns>();
+
+  auto mvcc_columns = chunk.mvcc_columns();
+  _mvcc_columns->begin_cids = mvcc_columns->begin_cids;
+  _mvcc_columns->end_cids = mvcc_columns->end_cids;
+  _mvcc_columns->tids.grow_by(_mvcc_columns->tids.size());
+}
+
 bool Chunk::has_mvcc_columns() const { return _mvcc_columns != nullptr; }
 
 SharedLockLockingPtr<Chunk::MvccColumns> Chunk::mvcc_columns() {
@@ -114,6 +123,7 @@ std::vector<std::shared_ptr<BaseIndex>> Chunk::get_indices_for(
                [&columns](const std::shared_ptr<BaseIndex>& index) { return index->is_index_for(columns); });
   return result;
 }
+
 bool Chunk::references_only_one_table() const {
   if (this->col_count() == 0) return false;
 

@@ -36,6 +36,28 @@ get via `git submodule update --init`
 install via homebrew: brew install tbb
 install via apt: apt-get install libtbb-dev
 
+### development command line tools
+install via `xcode-select --install` / `apt install build-essential`
+
+### autoconf
+install via homebrew / packet manager
+
+### automake
+install via homebrew / packet manager (installed as default by Ubuntu)
+
+### libtool
+install via homebrew / packet manager
+
+### pkg-config
+install via homebrew / packet manager (installed as default by Ubuntu)
+
+### get and compile protoc and gRPC
+get via `git submodule update --init --recursive`.
+
+Compile via `CPPFLAGS="-Wno-deprecated-declarations" CFLAGS="-Wno-deprecated-declarations -Wno-implicit-function-declaration -Wno-shift-negative-value" make static --directory=third_party/grpc REQUIRE_CUSTOM_LIBRARIES_opt=true`.
+
+installation guide on [github](https://github.com/grpc/grpc/blob/master/INSTALL.md#build-from-source)
+
 ### llvm (optional)
 install via homebrew / packet manager
 used for AddressSanitizer
@@ -94,16 +116,19 @@ Contact: firstname.lastname@hpi.de
 
 ## Contributors
 
-- Arne Mayer
-- Carsten Walther
-- Daniel Stolpe
-- David Schumann
-- Fabian Wiebe
-- Marvin Keller
-- Max Jendruk
-- Moritz Eyssen
-- Nils Thamm
-- Sven Lehmann
-- Tim Zimmermann
-- Torben Meyer
-- Yannick Bäumer
+-	Yannick	Bäumer
+-	Moritz	Eyssen
+-	Martin	Fischer
+-	Michael	Janke
+-	Max	Jendruk
+-	Marvin	Keller
+-	Sven	Lehmann
+-	Jan	Mattfeld
+-	Arne	Mayer
+-	Torben	Meyer
+-	David	Schumann
+-	Daniel	Stolpe
+-	Nils	Thamm
+-	Carsten	Walther
+-	Fabian	Wiebe
+-	Tim	Zimmermann

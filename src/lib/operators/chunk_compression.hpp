@@ -55,7 +55,7 @@ class ChunkCompression : public AbstractOperator {
                                                      const std::shared_ptr<BaseColumn>& column);
 
  protected:
-  std::shared_ptr<const Table> on_execute(TransactionContext* context) override;
+  std::shared_ptr<const Table> on_execute(std::shared_ptr<TransactionContext> context) override;
 
  private:
   /**

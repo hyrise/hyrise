@@ -1,0 +1,4 @@
+rm -rf *.xcodeproj
+rm -rf *.xcworkspace
+rm -rf build
+rm -rf obj

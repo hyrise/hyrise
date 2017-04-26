@@ -24,8 +24,8 @@ TransactionID TransactionManager::next_transaction_id() const { return _next_tra
 
 CommitID TransactionManager::last_commit_id() const { return _last_commit_id; }
 
-std::unique_ptr<TransactionContext> TransactionManager::new_transaction_context() {
-  return std::make_unique<TransactionContext>(_next_transaction_id++, _last_commit_id);
+std::shared_ptr<TransactionContext> TransactionManager::new_transaction_context() {
+  return std::make_shared<TransactionContext>(_next_transaction_id++, _last_commit_id);
 }
 
 void TransactionManager::rollback(TransactionContext& context) {
@@ -34,6 +34,14 @@ void TransactionManager::rollback(TransactionContext& context) {
   }
 
   context._phase = TransactionPhase::RolledBack;
+}
+
+void TransactionManager::fail(TransactionContext& context) {
+  if (context._phase != TransactionPhase::Active) {
+    throw std::logic_error("TransactionContext can only fail when active.");
+  }
+
+  context._phase = TransactionPhase::Failed;
 }
 
 void TransactionManager::prepare_commit(TransactionContext& context) {
@@ -88,7 +96,7 @@ std::shared_ptr<CommitContext> TransactionManager::_new_commit_context() {
     if (!success) continue;
 
     /**
-     * Only one thread at a time can ever reach this code since only one thead
+     * Only one thread at a time can ever reach this code since only one thread
      * succeeds to set _last_commit_context’s successor.
      */
     success = std::atomic_compare_exchange_strong(&_last_commit_context, &current_context, next_context);

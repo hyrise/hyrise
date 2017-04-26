@@ -11,7 +11,7 @@ namespace opossum {
 Delete::Delete(const std::string& table_name, const std::shared_ptr<const AbstractOperator>& values_to_delete)
     : AbstractReadWriteOperator{values_to_delete}, _table_name{table_name} {}
 
-std::shared_ptr<const Table> Delete::on_execute(TransactionContext* context) {
+std::shared_ptr<const Table> Delete::on_execute(std::shared_ptr<TransactionContext> context) {
 #ifdef IS_DEBUG
   if (!_execution_input_valid(context)) {
     throw std::runtime_error("Input to Delete isn't valid");
@@ -85,7 +85,7 @@ uint8_t Delete::num_in_tables() const { return 1u; }
  * values_to_delete must be a table with at least one chunk, containing at least one ReferenceColumn
  * that all reference the table specified by table_name.
  */
-bool Delete::_execution_input_valid(const TransactionContext* context) const {
+bool Delete::_execution_input_valid(const std::shared_ptr<TransactionContext>& context) const {
   if (context == nullptr) return false;
 
   const auto values_to_delete = input_table_left();

@@ -13,9 +13,9 @@
 #include "../../lib/operators/chunk_compression.hpp"
 #include "../../lib/operators/get_table.hpp"
 #include "../../lib/operators/index_column_scan.hpp"
-#include "../../lib/operators/print.hpp"
-#include "../../lib/storage/composite_group_key_index.hpp"
-#include "../../lib/storage/group_key_index.hpp"
+#include "../../lib/storage/index/adaptive_radix_tree/adaptive_radix_tree_index.hpp"
+#include "../../lib/storage/index/group_key/composite_group_key_index.hpp"
+#include "../../lib/storage/index/group_key/group_key_index.hpp"
 #include "../../lib/storage/storage_manager.hpp"
 #include "../../lib/storage/table.hpp"
 #include "../../lib/types.hpp"
@@ -42,6 +42,7 @@ class OperatorsIndexColumnScanTest : public BaseTest {
     compression->execute();
 
     test_table_dict->get_chunk(0).create_index<DerivedIndex>({test_table_dict->get_chunk(0).get_column(0)});
+    test_table_dict->get_chunk(0).create_index<DerivedIndex>({test_table_dict->get_chunk(0).get_column(1)});
 
     _gt_dict = std::make_shared<GetTable>("table_dict");
 
@@ -53,7 +54,8 @@ class OperatorsIndexColumnScanTest : public BaseTest {
 };
 
 // List of indices to test
-typedef ::testing::Types<GroupKeyIndex, CompositeGroupKeyIndex /* add further indices */> DerivedIndices;
+typedef ::testing::Types<GroupKeyIndex, AdaptiveRadixTreeIndex, CompositeGroupKeyIndex /* add further indices */>
+    DerivedIndices;
 TYPED_TEST_CASE(OperatorsIndexColumnScanTest, DerivedIndices);
 
 TYPED_TEST(OperatorsIndexColumnScanTest, DoubleScan) {
@@ -66,6 +68,17 @@ TYPED_TEST(OperatorsIndexColumnScanTest, DoubleScan) {
   scan_2->execute();
 
   this->EXPECT_TABLE_EQ(scan_2->get_output(), expected_result);
+}
+
+TYPED_TEST(OperatorsIndexColumnScanTest, DoubleScanOffsetPosition) {
+  auto scan1 = std::make_shared<IndexColumnScan>(this->_gt_dict, "a", ">", 10);
+  scan1->execute();
+  auto scan2 = std::make_shared<IndexColumnScan>(scan1, "b", "=", 118);
+  scan2->execute();
+
+  auto& chunk = scan2->get_output()->get_chunk(1);
+  EXPECT_EQ(type_cast<int>((*chunk.get_column(0))[0]), 18);
+  EXPECT_EQ(type_cast<int>((*chunk.get_column(1))[0]), 118);
 }
 
 TYPED_TEST(OperatorsIndexColumnScanTest, SingleScan) {

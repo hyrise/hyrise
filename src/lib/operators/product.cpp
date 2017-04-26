@@ -24,13 +24,13 @@ std::shared_ptr<const Table> Product::on_execute() {
 
   // add columns from left table to output
   for (size_t col_id = 0; col_id < input_table_left()->col_count(); ++col_id) {
-    output->add_column((_prefix_left.size() ? _prefix_left + "." : "") + input_table_left()->column_name(col_id),
-                       input_table_left()->column_type(col_id), false);
+    output->add_column(_prefix_left + input_table_left()->column_name(col_id), input_table_left()->column_type(col_id),
+                       false);
   }
 
   // add columns from right table to output
   for (size_t col_id = 0; col_id < input_table_right()->col_count(); ++col_id) {
-    output->add_column((_prefix_right.size() ? _prefix_right + "." : "") + input_table_right()->column_name(col_id),
+    output->add_column(_prefix_right + input_table_right()->column_name(col_id),
                        input_table_right()->column_type(col_id), false);
   }
 

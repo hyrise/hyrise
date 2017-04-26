@@ -2,9 +2,12 @@
 
 #include <fstream>
 #include <memory>
+#include <regex>
 #include <string>
 #include <utility>
 #include <vector>
+
+#include "tbb/concurrent_vector.h"
 
 #include "base_attribute_vector.hpp"
 #include "untyped_dictionary_column.hpp"
@@ -12,6 +15,8 @@
 #include "types.hpp"
 
 namespace opossum {
+template <typename T>
+class ValueColumn;
 
 // Dictionary is a specific column type that stores all its values in a vector
 template <typename T>
@@ -43,6 +48,9 @@ class DictionaryColumn : public UntypedDictionaryColumn {
     return (*_dictionary)[_attribute_vector->get(i)];
   }
 
+  // return the value at a certain position.
+  const T get(const size_t i) const { return (*_dictionary)[_attribute_vector->get(i)]; }
+
   // dictionary columns are immutable
   void append(const AllTypeVariant&) override { throw std::logic_error("DictionaryColumn is immutable"); }
 
@@ -51,6 +59,17 @@ class DictionaryColumn : public UntypedDictionaryColumn {
 
   // returns an underlying data structure
   std::shared_ptr<const BaseAttributeVector> attribute_vector() const final { return _attribute_vector; }
+
+  // return a generated vector of all values
+  const tbb::concurrent_vector<T> materialize_values() const {
+    tbb::concurrent_vector<T> values(_attribute_vector->size());
+
+    for (ChunkOffset chunk_offset = 0; chunk_offset < _attribute_vector->size(); ++chunk_offset) {
+      values[chunk_offset] = (*_dictionary)[_attribute_vector->get(chunk_offset)];
+    }
+
+    return values;
+  }
 
   // return the value represented by a given ValueID
   const T& value_by_value_id(ValueID value_id) const { return _dictionary->at(value_id); }
@@ -106,6 +125,44 @@ class DictionaryColumn : public UntypedDictionaryColumn {
 
     // appending the new string to the already present string
     row_string += buffer.str();
+  }
+
+  // copies one of its own values to a different ValueColumn - mainly used for materialization
+  // we cannot always use the materialize method below because sort results might come from different BaseColumns
+  void copy_value_to_value_column(BaseColumn& value_column, ChunkOffset chunk_offset) const override {
+    auto& output_column = static_cast<ValueColumn<T>&>(value_column);
+    auto& values_out = output_column.values();
+
+    auto value = value_by_value_id(_attribute_vector->get(chunk_offset));
+    values_out.push_back(value);
+  }
+
+  // TODO(anyone): Move this to base column once final optimization is supported by gcc
+  const std::shared_ptr<std::vector<std::pair<RowID, T>>> materialize(
+      ChunkID chunk_id, std::shared_ptr<std::vector<ChunkOffset>> offsets = nullptr) {
+    auto materialized_vector = std::make_shared<std::vector<std::pair<RowID, T>>>();
+
+    /*
+    We only offset if this ValueColumn was referenced by a ReferenceColumn. Thus it might actually be filtered.
+    */
+    if (offsets) {
+      materialized_vector->reserve(offsets->size());
+      for (auto& offset : *offsets) {
+        T value = (*_dictionary)[_attribute_vector->get(offset)];
+        auto materialized_row = std::make_pair(RowID{chunk_id, offset}, value);
+        materialized_vector->push_back(materialized_row);
+      }
+
+    } else {
+      materialized_vector->reserve(_attribute_vector->size());
+      for (ChunkOffset offset = 0; offset < _attribute_vector->size(); offset++) {
+        T value = (*_dictionary)[_attribute_vector->get(offset)];
+        auto materialized_row = std::make_pair(RowID{chunk_id, offset}, value);
+        materialized_vector->push_back(materialized_row);
+      }
+    }
+
+    return materialized_vector;
   }
 
  protected:

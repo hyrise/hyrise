@@ -11,8 +11,8 @@
 #include "tbb/concurrent_vector.h"
 
 #include "base_column.hpp"
-#include "base_index.hpp"
 #include "copyable_atomic.hpp"
+#include "index/base_index.hpp"
 #include "locking_ptr.hpp"
 #include "value_column.hpp"
 
@@ -104,6 +104,11 @@ class Chunk {
    * @param begin_cid value all new begin_cids will be set to
    */
   void grow_mvcc_column_size_by(size_t delta, CommitID begin_cid);
+
+  /**
+   * Reuse mvcc from other chunk
+   */
+  void use_mvcc_columns_from(const Chunk &chunk);
 
   std::vector<std::shared_ptr<BaseIndex>> get_indices_for(
       const std::vector<std::shared_ptr<BaseColumn>> &columns) const;

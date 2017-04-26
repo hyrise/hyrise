@@ -1,5 +1,6 @@
 #include <memory>
 #include <vector>
+#include <string>
 
 #include "../base_test.hpp"
 #include "gtest/gtest.h"
@@ -139,6 +140,14 @@ TEST_F(OperatorsImportBinaryTest, AllTypesMixColumn) {
 }
 
 TEST_F(OperatorsImportBinaryTest, FileDoesNotExist) {
+#ifdef __SANITIZE_ADDRESS__
+  // This test appears to cause stack corruption when the following come together:
+  // gtest, gcc 6.3.0, asan, osx
+  // This appears to be related to throwing exceptions with ifstream::exceptions and can be reproduced
+  // even outside of the Opossum code.
+  return;
+#endif
+
   auto importer = std::make_shared<opossum::ImportBinary>("not_existing_file");
   EXPECT_THROW(importer->execute(), std::exception);
 }
@@ -185,7 +194,7 @@ TEST_F(OperatorsImportBinaryTest, EmptyStringsDictionaryColumn) {
 }
 
 TEST_F(OperatorsImportBinaryTest, SaveToStorageManager) {
-  auto importer = std::make_shared<opossum::ImportBinary>("src/test/binary/float.bin", "float_table");
+  auto importer = std::make_shared<opossum::ImportBinary>("src/test/binary/float.bin", std::string("float_table"));
   importer->execute();
   std::shared_ptr<Table> expected_table = load_table("src/test/tables/float.tbl", 5);
   EXPECT_TABLE_EQ(importer->get_output(), expected_table, true);
@@ -193,9 +202,10 @@ TEST_F(OperatorsImportBinaryTest, SaveToStorageManager) {
 }
 
 TEST_F(OperatorsImportBinaryTest, FallbackToRetrieveFromStorageManager) {
-  auto importer = std::make_shared<opossum::ImportBinary>("src/test/binary/float.bin", "float_table");
+  auto importer = std::make_shared<opossum::ImportBinary>("src/test/binary/float.bin", std::string("float_table"));
   importer->execute();
-  auto retriever = std::make_shared<opossum::ImportBinary>("src/test/binary/AllTypesMixColumn.bin", "float_table");
+  auto retriever =
+      std::make_shared<opossum::ImportBinary>("src/test/binary/AllTypesMixColumn.bin", std::string("float_table"));
   retriever->execute();
   std::shared_ptr<Table> expected_table = load_table("src/test/tables/float.tbl", 5);
   EXPECT_TABLE_EQ(importer->get_output(), retriever->get_output(), true);
@@ -203,13 +213,14 @@ TEST_F(OperatorsImportBinaryTest, FallbackToRetrieveFromStorageManager) {
 }
 
 TEST_F(OperatorsImportBinaryTest, InvalidColumnType) {
-  auto importer = std::make_shared<opossum::ImportBinary>("src/test/binary/InvalidColumnType.bin", "float_table");
+  auto importer =
+      std::make_shared<opossum::ImportBinary>("src/test/binary/InvalidColumnType.bin", std::string("float_table"));
   EXPECT_THROW(importer->execute(), std::exception);
 }
 
 TEST_F(OperatorsImportBinaryTest, InvalidAttributeVectorWidth) {
-  auto importer =
-      std::make_shared<opossum::ImportBinary>("src/test/binary/InvalidAttributeVectorWidth.bin", "float_table");
+  auto importer = std::make_shared<opossum::ImportBinary>("src/test/binary/InvalidAttributeVectorWidth.bin",
+                                                          std::string("float_table"));
   EXPECT_THROW(importer->execute(), std::exception);
 }
 

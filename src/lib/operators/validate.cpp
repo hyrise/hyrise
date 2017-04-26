@@ -40,7 +40,7 @@ std::shared_ptr<const Table> Validate::on_execute() {
   throw std::runtime_error("Validate can't be called without a transaction context.");
 }
 
-std::shared_ptr<const Table> Validate::on_execute(TransactionContext *transactionContext) {
+std::shared_ptr<const Table> Validate::on_execute(std::shared_ptr<TransactionContext> transactionContext) {
   auto output = std::make_shared<Table>();
 
   // Save column structure.

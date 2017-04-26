@@ -24,7 +24,7 @@ class Validate : public AbstractReadOnlyOperator {
   uint8_t num_out_tables() const override;
 
  protected:
-  std::shared_ptr<const Table> on_execute(TransactionContext *transactionContext) override;
+  std::shared_ptr<const Table> on_execute(std::shared_ptr<TransactionContext> transactionContext) override;
   std::shared_ptr<const Table> on_execute() override;
 
  protected:

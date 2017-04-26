@@ -21,9 +21,11 @@ class AbstractReadWriteOperator : public AbstractOperator {
                                      const std::shared_ptr<const AbstractOperator> right = nullptr)
       : AbstractOperator(left, right), _execute_failed{false} {}
 
-  void execute(TransactionContext* context) override {
-    context->register_rw_operator(this);
-    _output = on_execute(context);
+  void execute() override {
+    _transaction_context->on_operator_started();
+    _transaction_context->register_rw_operator(this);
+    _output = on_execute(_transaction_context);
+    _transaction_context->on_operator_finished();
   }
 
   /**
@@ -58,7 +60,7 @@ class AbstractReadWriteOperator : public AbstractOperator {
    *
    * @returns nullptr, since these operators do not create new intermediate results but modify existing tables
    */
-  std::shared_ptr<const Table> on_execute(TransactionContext* context) override = 0;
+  std::shared_ptr<const Table> on_execute(std::shared_ptr<TransactionContext> context) override = 0;
 
  protected:
   bool _execute_failed;

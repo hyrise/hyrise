@@ -10,9 +10,10 @@
 #include "../lib/common.hpp"
 #include "../lib/storage/base_column.hpp"
 #include "../lib/storage/chunk.hpp"
-#include "../lib/storage/composite_group_key_index.hpp"
 #include "../lib/storage/dictionary_column.hpp"
-#include "../lib/storage/group_key_index.hpp"
+#include "../lib/storage/index/adaptive_radix_tree/adaptive_radix_tree_index.hpp"
+#include "../lib/storage/index/group_key/composite_group_key_index.hpp"
+#include "../lib/storage/index/group_key/group_key_index.hpp"
 #include "../lib/types.hpp"
 
 namespace opossum {
@@ -45,7 +46,8 @@ class SingleColumnIndexTest : public BaseTest {
 };
 
 // List of indices to test
-typedef ::testing::Types<GroupKeyIndex, CompositeGroupKeyIndex /* add further indices */> DerivedIndices;
+typedef ::testing::Types<GroupKeyIndex, CompositeGroupKeyIndex, AdaptiveRadixTreeIndex /* add further indices */>
+    DerivedIndices;
 TYPED_TEST_CASE(SingleColumnIndexTest, DerivedIndices);
 
 TYPED_TEST(SingleColumnIndexTest, FullRange) {
@@ -166,6 +168,13 @@ TYPED_TEST(SingleColumnIndexTest, IsIndexForTest) {
   EXPECT_FALSE(this->index_str->is_index_for({this->dict_col_int}));
   EXPECT_FALSE(this->index_str->is_index_for({this->dict_col_str, this->dict_col_int}));
   EXPECT_FALSE(this->index_str->is_index_for({}));
+}
+
+TYPED_TEST(SingleColumnIndexTest, IndexOnNonDictionaryThrows) {
+  auto vc_int = make_shared_by_column_type<BaseColumn, ValueColumn>("int");
+  vc_int->append(4);
+
+  EXPECT_THROW(std::make_shared<TypeParam>(std::vector<std::shared_ptr<BaseColumn>>({vc_int})), std::runtime_error);
 }
 
 }  // namespace opossum

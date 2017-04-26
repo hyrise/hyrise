@@ -10,8 +10,11 @@
 #include "tbb/concurrent_vector.h"
 
 #include "base_column.hpp"
+#include "dictionary_column.hpp"
 
 namespace opossum {
+template <typename T>
+class DictionaryColumn;
 
 // ValueColumn is a specific column type that stores all its values in a vector
 template <typename T>
@@ -43,6 +46,8 @@ class ValueColumn : public BaseColumn {
     return _values.at(i);
   }
 
+  const T get(const size_t i) const { return _values.at(i); }
+
   // add a value to the end
   void append(const AllTypeVariant& val) override;
 
@@ -69,6 +74,37 @@ class ValueColumn : public BaseColumn {
 
     // appending the new string to the already present string
     row_string += buffer.str();
+  }
+
+  // copies one of its own values to a different ValueColumn - mainly used for materialization
+  // we cannot always use the materialize method below because sort results might come from different BaseColumns
+  void copy_value_to_value_column(BaseColumn& value_column, ChunkOffset chunk_offset) const override {
+    auto& output_column = static_cast<ValueColumn<T>&>(value_column);
+    auto& values_out = output_column.values();
+
+    values_out.push_back(_values[chunk_offset]);
+  }
+
+  const std::shared_ptr<std::vector<std::pair<RowID, T>>> materialize(
+      ChunkID chunk_id, std::shared_ptr<std::vector<ChunkOffset>> offsets = nullptr) {
+    auto materialized_vector = std::make_shared<std::vector<std::pair<RowID, T>>>();
+
+    // we may want to sort offsets first?
+    if (offsets) {
+      materialized_vector->reserve(offsets->size());
+      for (auto& offset : *offsets) {
+        auto materialized_row = std::make_pair(RowID{chunk_id, offset}, _values[offset]);
+        materialized_vector->push_back(materialized_row);
+      }
+    } else {
+      materialized_vector->reserve(_values.size());
+      for (ChunkOffset offset = 0; offset < _values.size(); offset++) {
+        auto materialized_row = std::make_pair(RowID{chunk_id, offset}, _values[offset]);
+        materialized_vector->push_back(materialized_row);
+      }
+    }
+
+    return materialized_vector;
   }
 
  protected:
