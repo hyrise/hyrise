@@ -1,3 +1,4 @@
+# Build google benchmark
 add_library(
     benchmark
     STATIC

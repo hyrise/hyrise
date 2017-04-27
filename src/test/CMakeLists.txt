@@ -66,14 +66,14 @@ add_executable(opossumTest ${SOURCES})
 target_link_libraries(opossumTest opossum ${LIBRARIES})
 
 # Configure opossumCoverageApp
-add_executable(opossumCoverageApp ${SOURCES})
-target_link_libraries(opossumCoverageApp opossumCoverage ${LIBRARIES} --coverage)
-set_target_properties(opossumCoverageApp PROPERTIES COMPILE_FLAGS "-fprofile-arcs -ftest-coverage")
+add_executable(opossumCoverage ${SOURCES})
+target_link_libraries(opossumCoverage opossumCoverageLib ${LIBRARIES} --coverage)
+set_target_properties(opossumCoverage PROPERTIES COMPILE_FLAGS "-fprofile-arcs -ftest-coverage")
 
 # Configure opossumAsanApp
-add_executable(opossumAsanApp ${SOURCES})
-target_link_libraries(opossumAsanApp opossumAsan ${LIBRARIES} -fsanitize=address)
-set_target_properties(opossumAsanApp PROPERTIES COMPILE_FLAGS "-fsanitize=address -fno-omit-frame-pointer")
+add_executable(opossumAsan ${SOURCES})
+target_link_libraries(opossumAsan opossumAsanLib ${LIBRARIES} -fsanitize=address)
+set_target_properties(opossumAsan PROPERTIES COMPILE_FLAGS "-fsanitize=address -fno-omit-frame-pointer")
 
 
 

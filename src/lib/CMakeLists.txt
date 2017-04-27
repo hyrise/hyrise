@@ -205,6 +205,7 @@ set(
     protobuf
     grpc++
     grpc
+    pthread
     z
     tbb
 )
@@ -220,23 +221,23 @@ target_link_libraries(opossum ${LIBRARIES})
 add_dependencies(opossum serialize_protobuf_and_grpc_generation)
 
 # Configure the lib used for asan
-add_library(opossumAsan STATIC ${SOURCES})
+add_library(opossumAsanLib STATIC ${SOURCES})
 target_link_libraries(
-    opossumAsan
+    opossumAsanLib
     ${LIBRARIES}
     -lgcov
     -fsanitize=address
 )
-set_target_properties(opossumAsan PROPERTIES COMPILE_FLAGS "-fsanitize=address -fno-omit-frame-pointer")
-add_dependencies(opossumAsan serialize_protobuf_and_grpc_generation)
+set_target_properties(opossumAsanLib PROPERTIES COMPILE_FLAGS "-fsanitize=address -fno-omit-frame-pointer")
+add_dependencies(opossumAsanLib serialize_protobuf_and_grpc_generation)
 
 # Configure the lib used for coverage
-add_library(opossumCoverage STATIC ${SOURCES})
+add_library(opossumCoverageLib STATIC ${SOURCES})
 target_link_libraries(
-    opossumCoverage
+    opossumCoverageLib
     ${LIBRARIES}
     -lgcov
     --coverage
 )
-set_target_properties(opossumCoverage PROPERTIES COMPILE_FLAGS "-fprofile-arcs -ftest-coverage")
-add_dependencies(opossumCoverage serialize_protobuf_and_grpc_generation)
+set_target_properties(opossumCoverageLib PROPERTIES COMPILE_FLAGS "-fprofile-arcs -ftest-coverage")
+add_dependencies(opossumCoverageLib serialize_protobuf_and_grpc_generation)
