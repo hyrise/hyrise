@@ -11,7 +11,7 @@ else()
 endif()
 
 # Global flags and include directories
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++1z -pthread -Wno-error=unused-parameter -Wall -Werror")
+add_compile_options(-std=c++1z -pthread -Wno-error=unused-parameter -Wall -Werror)
 
 include_directories(
     ${PROJECT_SOURCE_DIR}/third_party/benchmark/include
