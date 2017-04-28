@@ -3,9 +3,9 @@
 #include <memory>
 #include <set>
 #include <sstream>
-#include <vector>
 #include <string>
 #include <utility>
+#include <vector>
 
 #include "../base_test.hpp"
 #include "gtest/gtest.h"

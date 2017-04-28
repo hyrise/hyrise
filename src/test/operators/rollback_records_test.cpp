@@ -38,7 +38,6 @@ TEST_F(OperatorsRollbackRecordsTest, RollbackDelete) {
 
   auto delete_op = std::make_shared<Delete>(table_name, table_scan);
   delete_op->set_transaction_context(t_context);
-
   delete_op->execute();
 
   for (int i = 0; i < 3; i++) {

@@ -152,7 +152,6 @@ class DictionaryColumn : public UntypedDictionaryColumn {
         auto materialized_row = std::make_pair(RowID{chunk_id, offset}, value);
         materialized_vector->push_back(materialized_row);
       }
-
     } else {
       materialized_vector->reserve(_attribute_vector->size());
       for (ChunkOffset offset = 0; offset < _attribute_vector->size(); offset++) {
