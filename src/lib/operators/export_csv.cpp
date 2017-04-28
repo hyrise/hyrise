@@ -10,6 +10,8 @@
 #include "storage/dictionary_column.hpp"
 #include "storage/reference_column.hpp"
 
+#include "resolve_type.hpp"
+
 namespace opossum {
 
 ExportCsv::ExportCsv(const std::shared_ptr<const AbstractOperator> in, const std::string &filename)

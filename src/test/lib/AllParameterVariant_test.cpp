@@ -3,6 +3,7 @@
 #include "../base_test.hpp"
 #include "gtest/gtest.h"
 
+#include "../lib/all_parameter_variant.hpp"
 #include "../lib/types.hpp"
 
 namespace opossum {

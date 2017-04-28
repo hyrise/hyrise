@@ -1,8 +1,8 @@
 #pragma once
 
-#include <iostream>
 #include <limits>
 #include <memory>
+#include <sstream>
 #include <string>
 #include <utility>
 #include <vector>
@@ -10,11 +10,10 @@
 #include "tbb/concurrent_vector.h"
 
 #include "base_column.hpp"
-#include "dictionary_column.hpp"
+
+#include "type_cast.hpp"
 
 namespace opossum {
-template <typename T>
-class DictionaryColumn;
 
 // ValueColumn is a specific column type that stores all its values in a vector
 template <typename T>

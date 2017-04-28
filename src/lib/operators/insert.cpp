@@ -8,6 +8,8 @@
 #include "concurrency/transaction_context.hpp"
 #include "storage/storage_manager.hpp"
 
+#include "resolve_type.hpp"
+
 namespace opossum {
 
 // We need these classes to perform the dynamic cast into a templated ValueColumn

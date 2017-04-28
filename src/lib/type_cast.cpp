@@ -1,6 +1,4 @@
-#include "types.hpp"
-
-#include <string>
+#include "type_cast.hpp"
 
 namespace opossum {
 

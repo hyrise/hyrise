@@ -8,6 +8,8 @@
 #include "import_export/csv.hpp"
 #include "import_export/csv_converter.hpp"
 
+#include "resolve_type.hpp"
+
 namespace opossum {
 
 template <typename CharT, typename TraitsT = std::char_traits<CharT>>

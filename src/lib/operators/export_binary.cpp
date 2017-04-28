@@ -5,9 +5,11 @@
 #include <vector>
 
 #include "../import_export/binary.hpp"
-#include "../types.hpp"
 #include "export_binary.hpp"
 #include "storage/reference_column.hpp"
+
+#include "resolve_type.hpp"
+#include "types.hpp"
 
 namespace {
 

@@ -1,8 +1,7 @@
 #pragma once
 
-#include <fstream>
 #include <memory>
-#include <regex>
+#include <sstream>
 #include <string>
 #include <utility>
 #include <vector>
@@ -12,6 +11,7 @@
 #include "base_attribute_vector.hpp"
 #include "untyped_dictionary_column.hpp"
 
+#include "type_cast.hpp"
 #include "types.hpp"
 
 namespace opossum {

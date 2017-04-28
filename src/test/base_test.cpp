@@ -9,6 +9,7 @@
 
 #include "../lib/concurrency/transaction_manager.hpp"
 #include "../lib/storage/storage_manager.hpp"
+#include "../lib/storage/table.hpp"
 
 namespace opossum {
 

@@ -6,6 +6,7 @@
 #include <grpc/support/log.h>
 #include <chrono>
 #include <csignal>
+#include <fstream>
 #include <memory>
 #include <string>
 #include <utility>
