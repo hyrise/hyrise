@@ -23,7 +23,7 @@
  *     case 0: //...
  *     case 3: //...
  *     case 17: //...
- *     default: Fail("Illegal paramemeter");
+ *     default: DebugFail("Illegal paramemeter");
  * }
  *
  * --> Use ReleaseAssert() whenever an invariant should be checked even in release builds, either because testing it is
@@ -57,5 +57,7 @@ inline void DebugFail(const std::string& msg) {}
 #endif
 
 inline void ReleaseAssert(bool expr, const std::string& msg) { internal::AssertImpl(expr, msg); }
+
+inline void ReleaseFail(const std::string& msg) { throw std::logic_error(msg); }
 
 }  // namespace opossum

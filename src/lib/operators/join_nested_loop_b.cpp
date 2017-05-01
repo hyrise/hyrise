@@ -127,12 +127,10 @@ std::shared_ptr<const Table> JoinNestedLoopB::on_execute() {
 
   // Ensure matching column types for simplicity
   // Joins on non-matching types can be added later.
-  if (left_column_type != right_column_type) {
-    std::string message = "JoinNestedLoopB::execute: column type \"" + left_column_type + "\" of left column \"" +
-                          _left_column_name + "\" does not match colum type \"" + right_column_type +
-                          "\" of right column \"" + _right_column_name + "\"!";
-    throw std::runtime_error(message);
-  }
+  DebugAssert((left_column_type == right_column_type), "JoinNestedLoopB::execute: column type \"" + left_column_type +
+                                                           "\" of left column \"" + _left_column_name +
+                                                           "\" does not match colum type \"" + right_column_type +
+                                                           "\" of right column \"" + _right_column_name + "\"!");
 
   _join_columns(left_column_id, right_column_id, left_column_type);
 
@@ -177,7 +175,7 @@ JoinNestedLoopB::JoinNestedLoopBImpl<T>::JoinNestedLoopBImpl(JoinNestedLoopB& jo
   } else if (_join_nested_loop_b._op == "!=") {
     _compare = [](const T& value_left, const T& value_right) -> bool { return value_left != value_right; };
   } else {
-    throw std::runtime_error("JoinNestedLoopBImpl::JoinNestedLoopBImpl: Unknown operator " + _join_nested_loop_b._op);
+    DebugFail("JoinNestedLoopBImpl::JoinNestedLoopBImpl: Unknown operator " + _join_nested_loop_b._op);
   }
 }
 

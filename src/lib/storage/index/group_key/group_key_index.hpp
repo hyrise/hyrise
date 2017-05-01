@@ -6,10 +6,11 @@
 #include <utility>
 #include <vector>
 
-#include "../../../types.hpp"
-#include "../../base_column.hpp"
-#include "../../dictionary_column.hpp"
-#include "../base_index.hpp"
+#include "storage/base_column.hpp"
+#include "storage/dictionary_column.hpp"
+#include "storage/index/base_index.hpp"
+#include "types.hpp"
+#include "utils/assert.hpp"
 
 namespace opossum {
 
@@ -51,8 +52,8 @@ class GroupKeyIndex : public BaseIndex {
 
   explicit GroupKeyIndex(const std::vector<std::shared_ptr<BaseColumn>> index_columns)
       : _index_column(std::dynamic_pointer_cast<UntypedDictionaryColumn>(index_columns[0])) {
-    if (!_index_column) throw std::runtime_error("GroupKeyIndex only works with DictionaryColumns");
-    if (index_columns.size() != 1) throw std::runtime_error("GroupKeyIndex only works with a single column");
+    DebugAssert(static_cast<bool>(_index_column), "GroupKeyIndex only works with DictionaryColumns");
+    DebugAssert((index_columns.size() == 1), "GroupKeyIndex only works with a single column");
 
     // 1) Initialize the index structures
     // 1a) Set the index_offset to size of the dictionary + 1 (plus one to mark the ending position) and set all offsets
@@ -89,14 +90,14 @@ class GroupKeyIndex : public BaseIndex {
 
  private:
   Iterator _lower_bound(const std::vector<AllTypeVariant> &values) const final {
-    if (values.size() != 1) throw std::runtime_error("Group Key Index expects only one input value");
+    DebugAssert((values.size() == 1), "Group Key Index expects only one input value");
 
     ValueID value_id = _index_column->lower_bound(*values.begin());
     return _get_postings_iterator_at(value_id);
   };
 
   Iterator _upper_bound(const std::vector<AllTypeVariant> &values) const final {
-    if (values.size() != 1) throw std::runtime_error("Group Key Index expects only one input value");
+    DebugAssert((values.size() == 1), "Group Key Index expects only one input value");
 
     ValueID value_id = _index_column->upper_bound(*values.begin());
     return _get_postings_iterator_at(value_id);

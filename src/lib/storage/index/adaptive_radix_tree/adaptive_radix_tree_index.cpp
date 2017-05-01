@@ -9,17 +9,18 @@
 #include <utility>
 #include <vector>
 
-#include "../../../types.hpp"
-#include "../../base_column.hpp"
-#include "../../untyped_dictionary_column.hpp"
-#include "../base_index.hpp"
+#include "storage/base_column.hpp"
+#include "storage/index/base_index.hpp"
+#include "storage/untyped_dictionary_column.hpp"
+#include "types.hpp"
+#include "utils/assert.hpp"
 
 namespace opossum {
 
 AdaptiveRadixTreeIndex::AdaptiveRadixTreeIndex(const std::vector<std::shared_ptr<BaseColumn>> &index_columns)
     : _index_column(std::dynamic_pointer_cast<UntypedDictionaryColumn>(index_columns.front())) {
-  if (!_index_column) throw std::runtime_error("AdaptiveRadixTree only works with DictionaryColumns for now");
-  if (index_columns.size() != 1) throw std::runtime_error("AdaptiveRadixTree only works with a single column");
+  DebugAssert(static_cast<bool>(_index_column), "AdaptiveRadixTree only works with DictionaryColumns for now");
+  DebugAssert((index_columns.size() == 1), "AdaptiveRadixTree only works with a single column");
 
   // for each valueID in the attribute vector, create a pair consisting of a BinaryComparable of this valueID and its
   // ChunkOffset (needed for bulk-inserting)
@@ -57,7 +58,7 @@ BaseIndex::Iterator AdaptiveRadixTreeIndex::_cend() const { return _chunk_offset
 
 std::shared_ptr<Node> AdaptiveRadixTreeIndex::_bulk_insert(
     const std::vector<std::pair<BinaryComparable, ChunkOffset>> &values) {
-  if (values.empty()) throw std::runtime_error("Index on empty column is not defined");
+  DebugAssert(!(values.empty()), "Index on empty column is not defined");
   _chunk_offsets.reserve(values.size());
   Iterator begin = _chunk_offsets.cbegin();
   return _bulk_insert(values, static_cast<size_t>(0u), begin);

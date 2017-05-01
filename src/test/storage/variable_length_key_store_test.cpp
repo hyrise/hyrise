@@ -191,10 +191,10 @@ TEST_F(VariableLengthKeyStoreTest, WriteNonFittingKeys) {
   auto short_key = VariableLengthKey(sizeof(uint16_t));
   auto long_key = VariableLengthKey(sizeof(uint64_t));
 
-  EXPECT_THROW(_store[0] = short_key, std::runtime_error);
-  EXPECT_THROW(_store[0] = long_key, std::runtime_error);
-  EXPECT_THROW(*_store.begin() = short_key, std::runtime_error);
-  EXPECT_THROW(*_store.begin() = long_key, std::runtime_error);
+  EXPECT_THROW(_store[0] = short_key, std::logic_error);
+  EXPECT_THROW(_store[0] = long_key, std::logic_error);
+  EXPECT_THROW(*_store.begin() = short_key, std::logic_error);
+  EXPECT_THROW(*_store.begin() = long_key, std::logic_error);
 }
 
 }  // namespace opossum

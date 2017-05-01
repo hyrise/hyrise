@@ -7,12 +7,14 @@
 #include <utility>
 #include <vector>
 
+#include "utils/assert.hpp"
+
 namespace opossum {
 
 // disable string columns for aggregate functions
 template <>
 AggregateBuilder<std::string>::AggregateBuilder(const AggregateFunction) {
-  throw std::runtime_error("Cannot use string columns in aggregates");
+  ReleaseFail("Cannot use string columns in aggregates");
 }
 
 Aggregate::Aggregate(const std::shared_ptr<AbstractOperator> in,
@@ -120,7 +122,7 @@ std::shared_ptr<const Table> Aggregate::on_execute() {
         break;
 
       default:
-        throw std::runtime_error("Aggregate: invalid aggregate function");
+        DebugFail("Aggregate: invalid aggregate function");
     }
   }
 

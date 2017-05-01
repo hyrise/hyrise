@@ -4,6 +4,7 @@
 #include <vector>
 
 #include "abstract_task.hpp"
+#include "utils/assert.hpp"
 #include "worker.hpp"
 
 namespace opossum {
@@ -23,7 +24,7 @@ void CurrentScheduler::wait_for_tasks(const std::vector<std::shared_ptr<Abstract
 #if IS_DEBUG
   for (auto& task : tasks) {
     if (!task->is_scheduled()) {
-      throw std::runtime_error("Schedule tasks before joining them");
+      DebugFail("Schedule tasks before joining them");
     }
   }
 #endif

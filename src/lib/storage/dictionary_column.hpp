@@ -16,6 +16,7 @@
 #include "base_attribute_vector.hpp"
 #include "fitted_attribute_vector.hpp"
 #include "untyped_dictionary_column.hpp"
+#include "utils/assert.hpp"
 #include "value_column.hpp"
 
 namespace opossum {
@@ -79,7 +80,7 @@ class DictionaryColumn : public UntypedDictionaryColumn {
   const T get(const size_t i) const { return _dictionary[_attribute_vector->get(i)]; }
 
   // dictionary columns are immutable
-  void append(const AllTypeVariant&) override { throw std::logic_error("DictionaryColumn is immutable"); }
+  void append(const AllTypeVariant&) override { ReleaseFail("DictionaryColumn is immutable"); }
 
   // returns an underlying dictionary
   std::shared_ptr<const std::vector<T>> dictionary() const { return _dictionary_ptr; }

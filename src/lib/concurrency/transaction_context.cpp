@@ -3,6 +3,8 @@
 #include <memory>
 #include <stdexcept>
 
+#include "utils/assert.hpp"
+
 namespace opossum {
 
 TransactionContext::TransactionContext(const TransactionID transaction_id, const CommitID last_commit_id)
@@ -15,9 +17,8 @@ TransactionID TransactionContext::transaction_id() const { return _transaction_i
 CommitID TransactionContext::last_commit_id() const { return _last_commit_id; }
 
 CommitID TransactionContext::commit_id() const {
-  if (_commit_context == nullptr) {
-    throw std::logic_error("TransactionContext cid only available after commit context has been created.");
-  }
+  ReleaseAssert((_commit_context != nullptr),
+                "TransactionContext cid only available after commit context has been created.");
 
   return _commit_context->commit_id();
 }
@@ -29,10 +30,8 @@ std::shared_ptr<CommitContext> TransactionContext::commit_context() { return _co
 void TransactionContext::on_operator_started() { ++_num_active_operators; }
 
 void TransactionContext::on_operator_finished() {
+  DebugAssert((_num_active_operators > 0), "Bug detected");
   const auto num_before = _num_active_operators--;
-  if (num_before == 0) {
-    throw std::logic_error("Bug detected");
-  }
 
   if (num_before == 1) {
     _active_operators_cv.notify_all();

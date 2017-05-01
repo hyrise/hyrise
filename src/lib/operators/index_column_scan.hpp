@@ -147,7 +147,7 @@ class IndexColumnScan::IndexColumnScanImpl : public AbstractReadOnlyOperatorImpl
         return search_vid <= found_vid && found_vid < search_vid2;
       };
     } else {
-      throw std::runtime_error(std::string("unknown operator ") + _op);
+      DebugFail(std::string("unknown operator ") + _op);
     }
 
     // We can easily distribute the table scanning work on individual chunks to multiple sub tasks,
@@ -335,7 +335,7 @@ class IndexColumnScan::IndexColumnScanImpl : public AbstractReadOnlyOperatorImpl
           break;
 
         default:
-          throw std::logic_error("Unknown comparison type encountered");
+          DebugFail("Unknown comparison type encountered");
       }
 
       if (_type == OpEquals && search_vid != INVALID_VALUE_ID &&
@@ -412,7 +412,7 @@ class IndexColumnScan::IndexColumnScanImpl : public AbstractReadOnlyOperatorImpl
         upper_bound = index->upper_bound({*search_value_2});
         break;
       default:
-        throw std::logic_error("Unknown comparison type encountered");
+        DebugFail("Unknown comparison type encountered");
     }
 
     result.insert(result.end(), lower_bound, upper_bound);

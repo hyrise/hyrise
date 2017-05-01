@@ -592,7 +592,7 @@ TEST_F(OperatorTranslatorTest, ProjectionMissingInput) {
   projection_operator->add_column_name("a");
 
   OperatorTranslator translator;
-  EXPECT_THROW(translator.build_tasks_from_proto(msg), std::runtime_error);
+  EXPECT_THROW(translator.build_tasks_from_proto(msg), std::logic_error);
 }
 
 TEST_F(OperatorTranslatorTest, ProjectionIncompleteInput) {

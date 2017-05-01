@@ -20,8 +20,7 @@
 namespace opossum {
 
 CompositeGroupKeyIndex::CompositeGroupKeyIndex(const std::vector<std::shared_ptr<BaseColumn>> &indexed_columns) {
-  if (indexed_columns.empty())
-    throw std::runtime_error("CompositeGroupKeyIndex requires at least one column to be indexed.");
+  DebugAssert(!indexed_columns.empty(), "CompositeGroupKeyIndex requires at least one column to be indexed.");
 
 #ifdef IS_DEBUG
   auto firstSize = indexed_columns.front()->size();
@@ -35,7 +34,7 @@ CompositeGroupKeyIndex::CompositeGroupKeyIndex(const std::vector<std::shared_ptr
   _indexed_columns.reserve(indexed_columns.size());
   for (const auto &column : indexed_columns) {
     auto dict_column = std::dynamic_pointer_cast<UntypedDictionaryColumn>(column);
-    if (!dict_column) throw std::runtime_error("CompositeGroupKeyIndex only works with DictionaryColumns");
+    DebugAssert(static_cast<bool>(dict_column), "CompositeGroupKeyIndex only works with DictionaryColumns");
     _indexed_columns.emplace_back(dict_column);
   }
 

@@ -125,7 +125,7 @@ TEST_F(OperatorsAggregateTest, CannotAggregateStringColumns) {
       _gt_1_1_string, std::vector<std::pair<std::string, AggregateFunction>>{std::make_pair(std::string("a"), Min)},
       std::vector<std::string>{std::string("a")});
 
-  EXPECT_THROW(aggregate->execute(), std::runtime_error);
+  EXPECT_THROW(aggregate->execute(), std::logic_error);
 }
 
 TEST_F(OperatorsAggregateTest, SingleAggregateMax) {

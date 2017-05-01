@@ -11,6 +11,7 @@
 
 #include "base_column.hpp"
 #include "dictionary_column.hpp"
+#include "utils/assert.hpp"
 
 namespace opossum {
 template <typename T>
@@ -122,9 +123,8 @@ void ValueColumn<T>::append(const AllTypeVariant& val) {
 template <>
 inline void ValueColumn<std::string>::append(const AllTypeVariant& val) {
   auto typed_val = type_cast<std::string>(val);
-  if (typed_val.length() > std::numeric_limits<StringLength>::max()) {
-    throw std::runtime_error("String value is too long to append!");
-  }
+  ReleaseAssert((typed_val.length() < std::numeric_limits<StringLength>::max()), "String value is too long to append!");
+
   _values.push_back(typed_val);
 }
 

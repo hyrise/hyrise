@@ -25,7 +25,7 @@ const AllTypeVariant ReferenceColumn::operator[](const size_t i) const {
   return (*chunk.get_column(_referenced_column_id))[chunk_info.second];
 }
 
-void ReferenceColumn::append(const AllTypeVariant &) { throw std::logic_error("ReferenceColumn is immutable"); }
+void ReferenceColumn::append(const AllTypeVariant &) { ReleaseFail("ReferenceColumn is immutable"); }
 
 const std::shared_ptr<const PosList> ReferenceColumn::pos_list() const { return _pos_list; }
 const std::shared_ptr<const Table> ReferenceColumn::referenced_table() const { return _referenced_table; }
