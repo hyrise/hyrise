@@ -9,6 +9,7 @@
 #include "chunk.hpp"
 #include "index/group_key/group_key_index.hpp"
 #include "reference_column.hpp"
+#include "utils/assert.hpp"
 #include "value_column.hpp"
 
 namespace opossum {
@@ -23,9 +24,9 @@ Chunk::Chunk(const bool has_mvcc_columns) {
 
 void Chunk::add_column(std::shared_ptr<BaseColumn> column) {
   // The added column must have the same size as the chunk.
-  if (IS_DEBUG && _columns.size() > 0 && size() != column->size()) {
-    throw std::runtime_error("Trying to add column with mismatching size to chunk");
-  }
+  DebugAssert((_columns.size() <= 0 || size() == column->size()),
+              "Trying to add column with mismatching size to chunk");
+
   if (_columns.size() == 0 && has_mvcc_columns()) grow_mvcc_column_size_by(column->size(), 0);
 
   _columns.emplace_back(column);
@@ -36,10 +37,8 @@ void Chunk::append(std::vector<AllTypeVariant> values) {
   if (has_mvcc_columns()) grow_mvcc_column_size_by(1u, Chunk::MAX_COMMIT_ID);
 
   // The added values, i.e., a new row, must have the same number of attribues as the table.
-  if (IS_DEBUG && _columns.size() != values.size()) {
-    throw std::runtime_error("append: number of columns (" + to_string(_columns.size()) +
-                             ") does not match value list (" + to_string(values.size()) + ")");
-  }
+  DebugAssert((_columns.size() == values.size()), ("append: number of columns (" + to_string(_columns.size()) +
+                                                   ") does not match value list (" + to_string(values.size()) + ")"));
 
   auto column_it = _columns.cbegin();
   auto value_it = values.begin();
@@ -66,31 +65,19 @@ void Chunk::grow_mvcc_column_size_by(size_t delta, CommitID begin_cid) {
 bool Chunk::has_mvcc_columns() const { return _mvcc_columns != nullptr; }
 
 Chunk::MvccColumns& Chunk::mvcc_columns() {
-#ifdef IS_DEBUG
-  if (!has_mvcc_columns()) {
-    std::logic_error("Chunk does not have mvcc columns");
-  }
-#endif
+  DebugAssert((has_mvcc_columns()), "Chunk does not have mvcc columns");
 
   return *_mvcc_columns;
 }
 
 const Chunk::MvccColumns& Chunk::mvcc_columns() const {
-#ifdef IS_DEBUG
-  if (!has_mvcc_columns()) {
-    std::logic_error("Chunk does not have mvcc columns");
-  }
-#endif
+  DebugAssert((has_mvcc_columns()), "Chunk does not have mvcc columns");
 
   return *_mvcc_columns;
 }
 
 void Chunk::shrink_mvcc_columns() {
-#ifdef IS_DEBUG
-  if (!has_mvcc_columns()) {
-    std::logic_error("Chunk does not have mvcc columns.");
-  }
-#endif
+  DebugAssert((has_mvcc_columns()), "Chunk does not have mvcc columns");
 
   // the mvcc columns need to be replaced because
   // std::atomic<> is neither copyable nor moveable

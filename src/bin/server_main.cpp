@@ -84,12 +84,12 @@ int main(int argc, char** argv) {
   options("fake_numa_max_workers", po::value<uint32_t>()->default_value(0),
           "Number of max workers used - zero indicates no limit");
   options("fake_numa_workers_per_node", po::value<uint32_t>()->default_value(1), "Number of max workers per node");
-  if (IS_DEBUG) {
-    options("csv_import_dir", po::value<std::string>()->default_value("src/test/csv"), "CSV import folder");
-    options("csv_import_filename", po::value<std::string>()->default_value("float_int"),
-            "Filename (without .csv) - file is imported once at server start");
-    options("csv_import_table_name", po::value<std::string>()->default_value("table1"), "Import target table name");
-  }
+#ifdef IS_DEBUG
+  options("csv_import_dir", po::value<std::string>()->default_value("src/test/csv"), "CSV import folder");
+  options("csv_import_filename", po::value<std::string>()->default_value("float_int"),
+          "Filename (without .csv) - file is imported once at server start");
+  options("csv_import_table_name", po::value<std::string>()->default_value("table1"), "Import target table name");
+#endif
 
   po::variables_map variables;
   po::store(po::parse_command_line(argc, argv, desc), variables);
@@ -111,19 +111,18 @@ int main(int argc, char** argv) {
     config.topology = opossum::Topology::create_numa_topology(variables["numa_max_cores"].as<uint32_t>());
   }
 
-  if (IS_DEBUG) {
-    try {
-      // Provide some dummy data during development - can be removed when persistance is implemented
-      import_dummy_data(variables["csv_import_dir"].as<std::string>(),
-                        variables["csv_import_filename"].as<std::string>(),
-                        variables["csv_import_table_name"].as<std::string>());
-    } catch (const std::ios_base::failure e) {
-      std::cerr << "Unable to import CSV: " << variables["csv_import_dir"].as<std::string>() << "/"
-                << variables["csv_import_filename"].as<std::string>() << std::endl;
-      std::cerr << "Error: " << e.what() << std::endl;
-      std::cerr << "Dummy data import skipped" << std::endl;
-    }
+#ifdef IS_DEBUG
+  try {
+    // Provide some dummy data during development - can be removed when persistance is implemented
+    import_dummy_data(variables["csv_import_dir"].as<std::string>(), variables["csv_import_filename"].as<std::string>(),
+                      variables["csv_import_table_name"].as<std::string>());
+  } catch (const std::ios_base::failure e) {
+    std::cerr << "Unable to import CSV: " << variables["csv_import_dir"].as<std::string>() << "/"
+              << variables["csv_import_filename"].as<std::string>() << std::endl;
+    std::cerr << "Error: " << e.what() << std::endl;
+    std::cerr << "Dummy data import skipped" << std::endl;
   }
+#endif
 
   server.start(config);
 

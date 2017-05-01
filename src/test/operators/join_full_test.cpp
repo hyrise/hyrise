@@ -40,7 +40,7 @@ TYPED_TEST(JoinFullTest, CrossJoin) {
 
   EXPECT_THROW(std::make_shared<TypeParam>(this->_gt_a, this->_gt_b, std::pair<std::string, std::string>("a", "a"), "=",
                                            Cross, std::string("left."), std::string("right.")),
-               std::runtime_error);
+               std::logic_error);
 }
 
 TYPED_TEST(JoinFullTest, LeftJoin) {

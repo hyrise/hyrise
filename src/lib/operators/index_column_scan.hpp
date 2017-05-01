@@ -17,6 +17,7 @@
 #include "storage/reference_column.hpp"
 #include "storage/value_column.hpp"
 #include "types.hpp"
+#include "utils/assert.hpp"
 
 namespace opossum {
 
@@ -137,8 +138,9 @@ class IndexColumnScan::IndexColumnScanImpl : public AbstractReadOnlyOperatorImpl
       _value_comparator = [casted_value](T val) { return val >= casted_value; };
       _value_id_comparator = [](ValueID found_vid, ValueID search_vid, ValueID) { return found_vid >= search_vid; };
     } else if (_op == "BETWEEN") {
+      DebugAssert(static_cast<bool>(_casted_value2), "No second value for BETWEEN comparison given");
+
       _type = OpBetween;
-      if (IS_DEBUG && !_casted_value2) throw std::runtime_error("No second value for BETWEEN comparison given");
       T casted_value2 = _casted_value2.value_or(T());
       _value_comparator = [casted_value, casted_value2](T val) { return casted_value <= val && val <= casted_value2; };
       _value_id_comparator = [](ValueID found_vid, ValueID search_vid, ValueID search_vid2) {

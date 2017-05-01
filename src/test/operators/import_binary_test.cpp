@@ -1,4 +1,5 @@
 #include <memory>
+#include <string>
 
 #include "../base_test.hpp"
 #include "gtest/gtest.h"

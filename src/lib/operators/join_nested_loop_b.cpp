@@ -8,6 +8,8 @@
 #include <utility>
 #include <vector>
 
+#include "utils/assert.hpp"
+
 namespace opossum {
 
 JoinNestedLoopB::JoinNestedLoopB(const std::shared_ptr<const AbstractOperator> left,
@@ -15,10 +17,11 @@ JoinNestedLoopB::JoinNestedLoopB(const std::shared_ptr<const AbstractOperator> l
                                  optional<std::pair<std::string, std::string>> column_names, const std::string& op,
                                  const JoinMode mode, const std::string& prefix_left, const std::string& prefix_right)
     : AbstractJoinOperator(left, right, column_names, op, mode, prefix_left, prefix_right), _op{op}, _mode{mode} {
-  if (mode == Cross) {
-    throw std::runtime_error(
-        "JoinNestedLoopA: this operator does not support Cross Joins, the optimizer should use Product operator.");
-  }
+  DebugAssert(
+      (mode != Cross),
+      "JoinNestedLoopA: this operator does not support Cross Joins, the optimizer should use Product operator.");
+  DebugAssert(left != nullptr, "JoinNestedLoopB::JoinNestedLoopB: left input operator is null");
+  DebugAssert(right != nullptr, "JoinNestedLoopB::JoinNestedLoopB: right input operator is null");
 
   // Check optional column names
   // Per definition either two names are specified or none
@@ -26,14 +29,7 @@ JoinNestedLoopB::JoinNestedLoopB(const std::shared_ptr<const AbstractOperator> l
     _left_column_name = column_names->first;
     _right_column_name = column_names->second;
   } else {
-    throw std::runtime_error("JoinNestedLoopB::JoinNestedLoopB: No columns specified for join operator");
-  }
-
-  if (left == nullptr) {
-    throw std::runtime_error("JoinNestedLoopB::JoinNestedLoopB: left input operator is null");
-  }
-  if (right == nullptr) {
-    throw std::runtime_error("JoinNestedLoopB::JoinNestedLoopB: right input operator is null");
+    DebugFail("JoinNestedLoopB::JoinNestedLoopB: No columns specified for join operator");
   }
 
   _output = std::make_shared<Table>(0, false);

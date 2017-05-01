@@ -9,8 +9,9 @@
 #include <utility>
 #include <vector>
 
-#include "../types.hpp"
 #include "dictionary_column.hpp"
+#include "types.hpp"
+#include "utils/assert.hpp"
 
 namespace opossum {
 
@@ -101,10 +102,9 @@ void Table::add_chunk(Chunk chunk) {
     // the initial chunk was not used yet
     _chunks.clear();
   }
-  if (IS_DEBUG && _chunks.size() > 0 && chunk.col_count() != col_count()) {
-    throw std::runtime_error(std::string("adding chunk with ") + std::to_string(chunk.col_count()) +
-                             " columns to table with " + std::to_string(col_count()) + " columns");
-  }
+  DebugAssert((_chunks.size() == 0 || chunk.col_count() == col_count()),
+              std::string("adding chunk with ") + std::to_string(chunk.col_count()) + " columns to table with " +
+                  std::to_string(col_count()) + " columns");
   _chunks.emplace_back(std::move(chunk));
 }
 

@@ -151,7 +151,7 @@ TEST_F(OperatorsTableScanTest, SingleScanReturnsCorrectRowCount) {
 
 TEST_F(OperatorsTableScanTest, UnknownOperatorThrowsException) {
   auto table_scan = std::make_shared<TableScan>(_gt, ColumnName("a"), "?!?", 1234);
-  EXPECT_THROW(table_scan->execute(), std::runtime_error);
+  EXPECT_THROW(table_scan->execute(), std::logic_error);
 }
 
 TEST_F(OperatorsTableScanTest, ScanOnDictColumn) {

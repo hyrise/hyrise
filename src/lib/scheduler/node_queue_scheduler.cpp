@@ -9,6 +9,7 @@
 #include "current_scheduler.hpp"
 #include "processing_unit.hpp"
 #include "topology.hpp"
+#include "utils/assert.hpp"
 
 namespace opossum {
 
@@ -17,11 +18,13 @@ NodeQueueScheduler::NodeQueueScheduler(std::shared_ptr<Topology> topology) : Abs
 }
 
 NodeQueueScheduler::~NodeQueueScheduler() {
-  if (IS_DEBUG && !_shut_down) {
+#ifdef IS_DEBUG
+  if (!_shut_down) {
     // We cannot throw an exception because destructors are noexcept by default.
     std::cerr << "NodeQueueScheduler::finish() wasn't called prior to destroying it" << std::endl;
     std::exit(EXIT_FAILURE);
   }
+#endif
 }
 
 void NodeQueueScheduler::begin() {
@@ -63,9 +66,7 @@ void NodeQueueScheduler::finish() {
 
   // All queues SHOULD be empty by now
   for (auto& queue : _queues) {
-    if (IS_DEBUG && !queue->empty()) {
-      throw std::logic_error("NodeQueueScheduler bug: Queue wasn't empty even though all tasks finished");
-    }
+    DebugAssert(queue->empty(), "NodeQueueScheduler bug: Queue wasn't empty even though all tasks finished");
   }
 
   for (auto& processing_unit : _processing_units) {
@@ -86,15 +87,8 @@ void NodeQueueScheduler::schedule(std::shared_ptr<AbstractTask> task, NodeID pre
   /**
    * Add task to the queue of the preferred node.
    */
-  if (IS_DEBUG) {
-    if (_shut_down) {
-      throw std::logic_error("Can't schedule more tasks after the NodeQueueScheduler was shut down");
-    }
-
-    if (!task->is_scheduled()) {
-      throw std::logic_error("Don't call NodeQueueScheduler::schedule(), call schedule() on the Task");
-    }
-  }
+  DebugAssert((!_shut_down), "Can't schedule more tasks after the NodeQueueScheduler was shut down");
+  DebugAssert((task->is_scheduled()), "Don't call NodeQueueScheduler::schedule(), call schedule() on the Task");
 
   const auto task_counter = _task_counter++;  // Atomically take snapshot of counter
   task->set_id(task_counter);
@@ -112,9 +106,7 @@ void NodeQueueScheduler::schedule(std::shared_ptr<AbstractTask> task, NodeID pre
     }
   }
 
-  if (IS_DEBUG && preferred_node_id >= _queues.size()) {
-    throw std::logic_error("preferred_node_id is not within range of available nodes");
-  }
+  DebugAssert(!(preferred_node_id >= _queues.size()), "preferred_node_id is not within range of available nodes");
 
   auto queue = _queues[preferred_node_id];
   queue->push(std::move(task), static_cast<uint32_t>(priority));

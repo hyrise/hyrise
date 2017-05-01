@@ -6,6 +6,7 @@
 
 #include "join_hash.hpp"
 #include "product.hpp"
+#include "utils/assert.hpp"
 
 namespace opossum {
 JoinHash::JoinHash(const std::shared_ptr<const AbstractOperator> left,
@@ -13,22 +14,12 @@ JoinHash::JoinHash(const std::shared_ptr<const AbstractOperator> left,
                    optional<std::pair<std::string, std::string>> column_names, const std::string &op,
                    const JoinMode mode, const std::string &prefix_left, const std::string &prefix_right)
     : AbstractJoinOperator(left, right, column_names, op, mode, prefix_left, prefix_right) {
-  if (op != "=") {
-    throw std::runtime_error(std::string("Operator not supported by Hash Join: ") + op);
-  }
-
-  if (_mode == Cross) {
-    throw std::runtime_error(
-        "JoinHash: this operator does not support Cross Joins, the optimizer should use Product operator.");
-  }
-
-  if (_mode == Natural) {
-    throw std::runtime_error("JoinHash: this operator currently does not support Natural Joins.");
-  }
-
-  if (!column_names) {
-    throw std::runtime_error("JoinHash: optional column names are only supported for Cross and Natural Joins.");
-  }
+  DebugAssert((op == "="), (std::string("Operator not supported by Hash Join: ") + op));
+  DebugAssert((_mode != Cross),
+              "JoinHash: this operator does not support Cross Joins, the optimizer should use Product operator.");
+  DebugAssert((_mode != Natural), "JoinHash: this operator currently does not support Natural Joins.");
+  DebugAssert(static_cast<bool>(column_names),
+              "JoinHash: optional column names are only supported for Cross and Natural Joins.");
 }
 
 const std::string JoinHash::name() const { return "JoinHash"; }

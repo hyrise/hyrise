@@ -36,7 +36,7 @@ TYPED_TEST_CASE(JoinEquiTest, JoinEquiTypes);
 TYPED_TEST(JoinEquiTest, WrongJoinOperator) {
   EXPECT_THROW(std::make_shared<JoinHash>(this->_gt_a, this->_gt_b, std::pair<std::string, std::string>("a", "a"), ">",
                                           Left, std::string("left."), std::string("right.")),
-               std::runtime_error);
+               std::logic_error);
 }
 
 TYPED_TEST(JoinEquiTest, LeftJoin) {
@@ -322,7 +322,7 @@ TYPED_TEST(JoinEquiTest, ColumnsNotOptional) {
   if (!IS_DEBUG) return;
   EXPECT_THROW(std::make_shared<TypeParam>(this->_gt_f, this->_gt_g, nullopt, "=", Left, std::string("left."),
                                            std::string("right.")),
-               std::runtime_error);
+               std::logic_error);
 }
 
 // Does not work yet due to problems with RowID implementation (RowIDs need to reference a table)

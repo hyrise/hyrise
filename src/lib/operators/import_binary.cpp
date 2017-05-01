@@ -10,6 +10,7 @@
 #include "import_export/binary.hpp"
 #include "storage/chunk.hpp"
 #include "storage/storage_manager.hpp"
+#include "utils/assert.hpp"
 
 namespace opossum {
 
@@ -118,7 +119,7 @@ std::shared_ptr<BaseColumn> ImportBinary::_import_column(std::ifstream& file, Ch
       result = _import_column<column_type>(file, row_count);
     }
   });
-  if (IS_DEBUG && !result) throw std::runtime_error("unknown type " + data_type);
+  DebugAssert(static_cast<bool>(result), ("unknown type " + data_type));
   return result;
 }
 
