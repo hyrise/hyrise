@@ -187,6 +187,7 @@ TEST_F(VariableLengthKeyStoreTest, WriteAccessViaBracketsOperator) {
 }
 
 TEST_F(VariableLengthKeyStoreTest, WriteNonFittingKeys) {
+  if (!IS_DEBUG) return;
   // _store is created with 4 bytes per entry
   auto short_key = VariableLengthKey(sizeof(uint16_t));
   auto long_key = VariableLengthKey(sizeof(uint64_t));

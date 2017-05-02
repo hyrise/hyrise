@@ -168,6 +168,7 @@ TYPED_TEST(MultiColumnIndexTest, RangeQueryOpenBegin) {
 }
 
 TYPED_TEST(MultiColumnIndexTest, TooManyReferenceValues) {
+  if (!IS_DEBUG) return;
   EXPECT_THROW(this->index_int_str->lower_bound({1, "baz", 3.0f}), std::logic_error);
   EXPECT_THROW(this->index_int_str->upper_bound({1, "baz", 3.0f}), std::logic_error);
 }

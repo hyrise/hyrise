@@ -85,6 +85,7 @@ TYPED_TEST(OperatorsIndexColumnScanTest, SingleScan) {
 }
 
 TYPED_TEST(OperatorsIndexColumnScanTest, UnknownOperatorThrowsException) {
+  if (!IS_DEBUG) return;
   auto table_scan = std::make_shared<IndexColumnScan>(this->_gt, "a", "?!?", 1234);
   EXPECT_THROW(table_scan->execute(), std::logic_error);
 }

@@ -171,6 +171,7 @@ TYPED_TEST(SingleColumnIndexTest, IsIndexForTest) {
 }
 
 TYPED_TEST(SingleColumnIndexTest, IndexOnNonDictionaryThrows) {
+  if (!IS_DEBUG) return;
   auto vc_int = make_shared_by_column_type<BaseColumn, ValueColumn>("int");
   vc_int->append(4);
 

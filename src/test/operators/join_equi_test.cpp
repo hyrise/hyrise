@@ -34,6 +34,7 @@ typedef ::testing::Types<JoinNestedLoopA, JoinNestedLoopB, JoinHash /* , SortMer
 TYPED_TEST_CASE(JoinEquiTest, JoinEquiTypes);
 
 TYPED_TEST(JoinEquiTest, WrongJoinOperator) {
+  if (!IS_DEBUG) return;
   EXPECT_THROW(std::make_shared<JoinHash>(this->_gt_a, this->_gt_b, std::pair<std::string, std::string>("a", "a"), ">",
                                           Left, std::string("left."), std::string("right.")),
                std::logic_error);

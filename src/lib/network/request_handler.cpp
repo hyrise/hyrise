@@ -61,7 +61,7 @@ void RequestHandler::parse_and_schedule(const bool skip_scheduler) {
     }
     materialize_job->schedule();
   } catch (const std::exception& e) {
-#ifdef IS_DEBUG
+#if IS_DEBUG
     std::cerr << "Exception: " << e.what() << std::endl;
 #endif
     _response.set_error(e.what());

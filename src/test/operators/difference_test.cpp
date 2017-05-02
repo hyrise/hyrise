@@ -59,6 +59,7 @@ TEST_F(OperatorsDifferenceTest, DifferneceOnReferenceTables) {
 }
 
 TEST_F(OperatorsDifferenceTest, ThrowWrongColumnNumberException) {
+  if (!IS_DEBUG) return;
   std::shared_ptr<Table> test_table_c = load_table("src/test/tables/int.tbl", 2);
   StorageManager::get().add_table("difference_test_table_c", std::move(test_table_c));
   auto gt_c = std::make_shared<GetTable>("difference_test_table_c");
@@ -70,6 +71,7 @@ TEST_F(OperatorsDifferenceTest, ThrowWrongColumnNumberException) {
 }
 
 TEST_F(OperatorsDifferenceTest, ThrowWrongColumnOrderException) {
+  if (!IS_DEBUG) return;
   _gt_a->execute();
 
   std::shared_ptr<Table> test_table_d = load_table("src/test/tables/float_int.tbl", 2);

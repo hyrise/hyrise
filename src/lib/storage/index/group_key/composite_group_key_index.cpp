@@ -22,7 +22,7 @@ namespace opossum {
 CompositeGroupKeyIndex::CompositeGroupKeyIndex(const std::vector<std::shared_ptr<BaseColumn>> &indexed_columns) {
   DebugAssert(!indexed_columns.empty(), "CompositeGroupKeyIndex requires at least one column to be indexed.");
 
-#ifdef IS_DEBUG
+#if IS_DEBUG
   auto firstSize = indexed_columns.front()->size();
   auto haveAllColumnsSameSize = std::all_of(indexed_columns.cbegin(), indexed_columns.cend(),
                                             [firstSize](const auto &column) { return column->size() == firstSize; });
