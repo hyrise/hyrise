@@ -1,3 +1,3 @@
 #!/bin/sh
 
-./build/benchmark --benchmark_format=json > benchmark.json
+./build/opossumBenchmark --benchmark_format=json > benchmark.json
