@@ -3,6 +3,7 @@ node {
   docker.image('hyrise/opossum-ci:16.10').inside("-u 0:0") {
 
     try {
+
       stage("Setup") {
         checkout scm
         sh "./install.sh"
@@ -83,12 +84,14 @@ node {
         // Clean up workspace
         step([$class: 'WsCleanup'])
       }
+
+    } catch (error) {
+      stage "Cleanup after fail"
+      throw error
+    } finally {
+      deleteDir()
     }
-  } catch (error) {
-    stage "Cleanup after fail"
-    throw error
-  } finally {
-    deleteDir()
+
   }
 
 }
