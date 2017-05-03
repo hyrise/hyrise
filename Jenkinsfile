@@ -89,6 +89,7 @@ node {
       stage "Cleanup after fail"
       throw error
     } finally {
+      sh "rm -Rf ./*"
       deleteDir()
     }
 
