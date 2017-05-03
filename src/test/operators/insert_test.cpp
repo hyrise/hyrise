@@ -21,6 +21,7 @@ class OperatorsInsertTest : public BaseTest {
 TEST_F(OperatorsInsertTest, SelfInsert) {
   auto table_name = "test_table";
   auto t = load_table("src/test/tables/float_int.tbl", 0u);
+  // Insert Operator works with the Storage Manager, so the test table must also be known to the StorageManager
   StorageManager::get().add_table(table_name, t);
 
   auto gt = std::make_shared<GetTable>(table_name);
