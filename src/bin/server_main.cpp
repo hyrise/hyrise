@@ -42,6 +42,7 @@ void sighandler(int signum) {
   }
 }
 
+#if IS_DEBUG
 void import_dummy_data(const std::string& directory, const std::string& filename, const std::string& table_name) {
   auto importer = std::make_shared<opossum::ImportCsv>(directory, filename);
   importer->execute();
@@ -64,6 +65,7 @@ void import_dummy_data(const std::string& directory, const std::string& filename
   }
   opossum::StorageManager::get().add_table(table_name, table);
 }
+#endif
 }  // namespace
 
 int main(int argc, char** argv) {
