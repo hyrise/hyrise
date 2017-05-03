@@ -1,6 +1,6 @@
 node {
 
-  docker.image('hyrise/opossum-ci:16.10').inside("-v /etc/passwd:/etc/passwd") {
+  docker.image('hyrise/opossum-ci:16.10').inside("-u 0:0") {
 
     stage("Setup") {
       checkout scm
@@ -83,8 +83,11 @@ node {
       step([$class: 'WsCleanup'])
     }
 
+    post {
+      always {
+        deleteDir()
+    }
+
   }
-
-
 
 }
