@@ -26,23 +26,12 @@ node {
       '''
     }
 
-    stage("Format") {
-      sh '''
-        find src -iname "*.cpp" -o -iname "*.hpp" | xargs -I{} sh -c "clang-format -output-replacements-xml -i -style=file '{}'" | grep -c "<replacement "
-        if [ $? -ne 1 ]
-        then
-            echo "ERROR: Files are not formatted!"
-            exit 1;
-        fi
-      '''
-    }
-
     stage("Test gcc") {
       stage("gcc Release") {
         sh "premake4 --compiler=gcc"
         sh "make -j \$(cat /proc/cpuinfo | grep processor | wc -l) -R config=release test"
       }
-      stage("gcc Debug") {
+      stage("gc Debug") {
         sh "make clean"
         sh "premake4 --compiler=gcc"
         sh "make -j \$(cat /proc/cpuinfo | grep processor | wc -l) -R config=debug test"
