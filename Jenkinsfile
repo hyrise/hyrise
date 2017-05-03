@@ -8,6 +8,24 @@ node {
       sh "git submodule update --init"
     }
 
+    stage("Linting") {
+      sh '''
+        find src -iname *.cpp -o -iname *.hpp | while read line;
+          do
+              if ! python2.7 cpplint.py --verbose=0 --extensions=hpp,cpp --counting=detailed --filter=-legal/copyright,-whitespace/newline,-runtime/references,-build/c++11 --linelength=120 $line >/dev/null 2>/dev/null
+              then
+                  echo "ERROR: Linting error occured. Execute \"premake4 lint\" for details!"
+                  exit 1
+              fi
+          done
+
+          if [ $? != 0 ]
+          then
+              exit 1
+          fi
+      '''
+    }
+
     stage("Test gcc") {
       stage("gcc Release") {
         sh "premake4 --compiler=gcc"
