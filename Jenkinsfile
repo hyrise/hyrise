@@ -86,6 +86,7 @@ node {
     post {
       always {
         deleteDir()
+      }
     }
 
   }
