@@ -93,8 +93,8 @@ class HashTable {
     hash table will have a maximum load of 33%, which should be less enough to avoid cycles at all. In theory there
     shouldn't be any cycles up to a load of 91%, comp. http://www.ru.is/faculty/ulfar/CuckooHash.pdf
     */
-    ReleaseAssert((iterations != _input_table_size),
-                  "There is a cycle in Cuckoo. Need to rehash with different hash functions");
+    Assert((iterations != _input_table_size),
+           "There is a cycle in Cuckoo. Need to rehash with different hash functions");
 
     /*
     Check if another element is already present at the position.

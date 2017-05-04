@@ -18,13 +18,11 @@ NodeQueueScheduler::NodeQueueScheduler(std::shared_ptr<Topology> topology) : Abs
 }
 
 NodeQueueScheduler::~NodeQueueScheduler() {
-#if IS_DEBUG
-  if (!_shut_down) {
+  if (IS_DEBUG && !_shut_down) {
     // We cannot throw an exception because destructors are noexcept by default.
     std::cerr << "NodeQueueScheduler::finish() wasn't called prior to destroying it" << std::endl;
     std::exit(EXIT_FAILURE);
   }
-#endif
 }
 
 void NodeQueueScheduler::begin() {

@@ -21,8 +21,7 @@ Table::Table(const size_t chunk_size, const bool auto_compress)
 }
 
 void Table::add_column(const std::string &name, const std::string &type, bool create_value_column) {
-  ReleaseAssert((name.size() < std::numeric_limits<ColumnNameLength>::max()),
-                "Cannot add column. Column name is too long.");
+  Assert((name.size() < std::numeric_limits<ColumnNameLength>::max()), "Cannot add column. Column name is too long.");
 
   _column_names.push_back(name);
   _column_types.push_back(type);

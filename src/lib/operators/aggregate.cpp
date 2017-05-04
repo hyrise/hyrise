@@ -14,7 +14,7 @@ namespace opossum {
 // disable string columns for aggregate functions
 template <>
 AggregateBuilder<std::string>::AggregateBuilder(const AggregateFunction) {
-  ReleaseFail("Cannot use string columns in aggregates");
+  Fail("Cannot use string columns in aggregates");
 }
 
 Aggregate::Aggregate(const std::shared_ptr<AbstractOperator> in,

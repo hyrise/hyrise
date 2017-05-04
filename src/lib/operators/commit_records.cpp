@@ -17,7 +17,7 @@ void CommitRecords::commit_records(const CommitID /*cid*/) {
   /* CommitRecords calls this method on itself, so we do nothing instead of throwing exceptions */
 }
 
-void CommitRecords::rollback_records() { ReleaseFail("CommitRecords cannot be rolled back"); }
+void CommitRecords::rollback_records() { Fail("CommitRecords cannot be rolled back"); }
 
 std::shared_ptr<const Table> CommitRecords::on_execute(std::shared_ptr<TransactionContext> context) {
   for (const auto op : context->get_rw_operators()) {

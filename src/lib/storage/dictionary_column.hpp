@@ -80,7 +80,7 @@ class DictionaryColumn : public UntypedDictionaryColumn {
   const T get(const size_t i) const { return _dictionary[_attribute_vector->get(i)]; }
 
   // dictionary columns are immutable
-  void append(const AllTypeVariant&) override { ReleaseFail("DictionaryColumn is immutable"); }
+  void append(const AllTypeVariant&) override { Fail("DictionaryColumn is immutable"); }
 
   // returns an underlying dictionary
   std::shared_ptr<const std::vector<T>> dictionary() const { return _dictionary_ptr; }

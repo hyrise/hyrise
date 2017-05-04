@@ -22,13 +22,14 @@ namespace opossum {
 CompositeGroupKeyIndex::CompositeGroupKeyIndex(const std::vector<std::shared_ptr<BaseColumn>> &indexed_columns) {
   DebugAssert(!indexed_columns.empty(), "CompositeGroupKeyIndex requires at least one column to be indexed.");
 
-#if IS_DEBUG
-  auto firstSize = indexed_columns.front()->size();
-  auto haveAllColumnsSameSize = std::all_of(indexed_columns.cbegin(), indexed_columns.cend(),
-                                            [firstSize](const auto &column) { return column->size() == firstSize; });
+  if (IS_DEBUG) {
+    auto firstSize = indexed_columns.front()->size();
+    auto haveAllColumnsSameSize = std::all_of(indexed_columns.cbegin(), indexed_columns.cend(),
+                                              [firstSize](const auto &column) { return column->size() == firstSize; });
 
-  DebugAssert(haveAllColumnsSameSize, "CompositeGroupKey requires same length of all columns that should be indexed.");
-#endif
+    DebugAssert(haveAllColumnsSameSize,
+                "CompositeGroupKey requires same length of all columns that should be indexed.");
+  }
 
   // cast and check columns
   _indexed_columns.reserve(indexed_columns.size());

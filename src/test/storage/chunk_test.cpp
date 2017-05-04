@@ -42,11 +42,11 @@ TEST_F(StorageChunkTest, AddValuesToChunk) {
   c.append({2, "two"});
   EXPECT_EQ(c.size(), 4u);
 
-#if IS_DEBUG
-  EXPECT_THROW(c.append({}), std::exception);
-  EXPECT_THROW(c.append({4, "val", 3}), std::exception);
-  EXPECT_EQ(c.size(), 4u);
-#endif
+  if (IS_DEBUG) {
+    EXPECT_THROW(c.append({}), std::exception);
+    EXPECT_THROW(c.append({4, "val", 3}), std::exception);
+    EXPECT_EQ(c.size(), 4u);
+  }
 }
 
 TEST_F(StorageChunkTest, RetrieveColumn) {
@@ -59,11 +59,11 @@ TEST_F(StorageChunkTest, RetrieveColumn) {
 }
 
 TEST_F(StorageChunkTest, UnknownColumnType) {
-// Exception will only be thrown in debug builds
-#if IS_DEBUG
-  auto wrapper = []() { make_shared_by_column_type<BaseColumn, ValueColumn>("weird_type"); };
-  EXPECT_THROW(wrapper(), std::logic_error);
-#endif
+  // Exception will only be thrown in debug builds
+  if (IS_DEBUG) {
+    auto wrapper = []() { make_shared_by_column_type<BaseColumn, ValueColumn>("weird_type"); };
+    EXPECT_THROW(wrapper(), std::logic_error);
+  }
 }
 
 }  // namespace opossum

@@ -88,9 +88,7 @@ void AbstractTask::_join_without_replacement_worker() {
 }
 
 void AbstractTask::execute() {
-#if IS_DEBUG
   DebugAssert(!(_started.exchange(true)), "Possible bug: Trying to execute the same task twice");
-#endif
   DebugAssert(is_ready(), "Task must not be executed before its dependencies are done");
 
   on_execute();

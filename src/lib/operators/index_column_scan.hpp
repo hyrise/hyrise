@@ -335,7 +335,7 @@ class IndexColumnScan::IndexColumnScanImpl : public AbstractReadOnlyOperatorImpl
           break;
 
         default:
-          ReleaseFail("Unknown comparison type encountered");
+          Fail("Unknown comparison type encountered");
       }
 
       if (_type == OpEquals && search_vid != INVALID_VALUE_ID &&

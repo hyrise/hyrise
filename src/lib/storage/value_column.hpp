@@ -123,7 +123,7 @@ void ValueColumn<T>::append(const AllTypeVariant& val) {
 template <>
 inline void ValueColumn<std::string>::append(const AllTypeVariant& val) {
   auto typed_val = type_cast<std::string>(val);
-  ReleaseAssert((typed_val.length() < std::numeric_limits<StringLength>::max()), "String value is too long to append!");
+  Assert((typed_val.length() < std::numeric_limits<StringLength>::max()), "String value is too long to append!");
 
   _values.push_back(typed_val);
 }

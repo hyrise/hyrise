@@ -97,7 +97,7 @@ std::shared_ptr<CommitContext> TransactionManager::_new_commit_context() {
      */
     success = std::atomic_compare_exchange_strong(&_last_commit_context, &current_context, next_context);
 
-    ReleaseAssert(success, "Invariant violated.");
+    Assert(success, "Invariant violated.");
   }
 
   return next_context;

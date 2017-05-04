@@ -79,15 +79,15 @@ TEST_F(TermTest, Arithmetic_StringOperator) {
     ASSERT_EQ("Dampfschifffahrtsgesellschaftskapitäntest_string", arithmetic_term.get_values(_t, 1)[1]);
   }
 
-#if IS_DEBUG
-  {
-    // Unimplemented
-    EXPECT_THROW(ArithmeticTerm<std::string>(variable_term, constant_term, "-"), std::exception);
-    EXPECT_THROW(ArithmeticTerm<std::string>(variable_term, constant_term, "*"), std::exception);
-    EXPECT_THROW(ArithmeticTerm<std::string>(variable_term, constant_term, "/"), std::exception);
-    EXPECT_THROW(ArithmeticTerm<std::string>(variable_term, constant_term, "%"), std::exception);
+  if (IS_DEBUG) {
+    {
+      // Unimplemented
+      EXPECT_THROW(ArithmeticTerm<std::string>(variable_term, constant_term, "-"), std::exception);
+      EXPECT_THROW(ArithmeticTerm<std::string>(variable_term, constant_term, "*"), std::exception);
+      EXPECT_THROW(ArithmeticTerm<std::string>(variable_term, constant_term, "/"), std::exception);
+      EXPECT_THROW(ArithmeticTerm<std::string>(variable_term, constant_term, "%"), std::exception);
+    }
   }
-#endif
 }
 
 }  // namespace opossum

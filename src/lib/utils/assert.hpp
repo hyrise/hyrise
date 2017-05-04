@@ -26,27 +26,26 @@
  *     default: DebugFail("Illegal paramemeter");
  * }
  *
- * --> Use ReleaseAssert() whenever an invariant should be checked even in release builds, either because testing it is
+ * --> Use Assert() whenever an invariant should be checked even in release builds, either because testing it is
  *     very cheap or the invariant is considered very important
  */
 
 namespace opossum {
 
-namespace internal {
-
-inline void AssertImpl(bool expr, const std::string& msg) {
+inline void Assert(bool expr, const std::string& msg) {
   if (expr) {
     return;
   }
   throw std::logic_error(msg);
 }
-}
+
+inline void Fail(const std::string& msg) { throw std::logic_error(msg); }
 
 #if IS_DEBUG
 
-inline void DebugAssert(bool expr, const std::string& msg) { internal::AssertImpl(expr, msg); }
+inline void DebugAssert(bool expr, const std::string& msg) { Assert(expr, msg); }
 
-inline void DebugFail(const std::string& msg) { throw std::logic_error(msg); }
+inline void DebugFail(const std::string& msg) { Fail(msg); }
 
 #else
 
@@ -55,9 +54,5 @@ inline void DebugAssert(bool expr, const std::string& msg) {}
 inline void DebugFail(const std::string& msg) {}
 
 #endif
-
-inline void ReleaseAssert(bool expr, const std::string& msg) { internal::AssertImpl(expr, msg); }
-
-inline void ReleaseFail(const std::string& msg) { throw std::logic_error(msg); }
 
 }  // namespace opossum

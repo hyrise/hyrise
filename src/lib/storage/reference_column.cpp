@@ -10,12 +10,12 @@ namespace opossum {
 ReferenceColumn::ReferenceColumn(const std::shared_ptr<const Table> referenced_table, const size_t referenced_column_id,
                                  const std::shared_ptr<const PosList> pos)
     : _referenced_table(referenced_table), _referenced_column_id(referenced_column_id), _pos_list(pos) {
-#if IS_DEBUG
-  auto referenced_column = _referenced_table->get_chunk(0).get_column(referenced_column_id);
-  auto reference_col = std::dynamic_pointer_cast<ReferenceColumn>(referenced_column);
+  if (IS_DEBUG) {
+    auto referenced_column = _referenced_table->get_chunk(0).get_column(referenced_column_id);
+    auto reference_col = std::dynamic_pointer_cast<ReferenceColumn>(referenced_column);
 
-  DebugAssert(!(reference_col), "referenced_column must not be a ReferenceColumn");
-#endif
+    DebugAssert(!(reference_col), "referenced_column must not be a ReferenceColumn");
+  }
 }
 
 const AllTypeVariant ReferenceColumn::operator[](const size_t i) const {
@@ -25,7 +25,7 @@ const AllTypeVariant ReferenceColumn::operator[](const size_t i) const {
   return (*chunk.get_column(_referenced_column_id))[chunk_info.second];
 }
 
-void ReferenceColumn::append(const AllTypeVariant &) { ReleaseFail("ReferenceColumn is immutable"); }
+void ReferenceColumn::append(const AllTypeVariant &) { Fail("ReferenceColumn is immutable"); }
 
 const std::shared_ptr<const PosList> ReferenceColumn::pos_list() const { return _pos_list; }
 const std::shared_ptr<const Table> ReferenceColumn::referenced_table() const { return _referenced_table; }
@@ -49,7 +49,7 @@ void ReferenceColumn::write_string_representation(std::string &row_string, const
 // copies one of its own values to a different ValueColumn - mainly used for materialization
 // we cannot always use the materialize method below because sort results might come from different BaseColumns
 void ReferenceColumn::copy_value_to_value_column(BaseColumn &, ChunkOffset) const {
-  throw std::logic_error("It is not allowed to copy directly from a reference column");
+  Fail("It is not allowed to copy directly from a reference column");
 }
 
 }  // namespace opossum

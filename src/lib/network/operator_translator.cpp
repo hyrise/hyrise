@@ -54,7 +54,7 @@ inline std::shared_ptr<OperatorTask> OperatorTranslator::translate(
     const proto::ProjectionOperator& projection_operator) {
   const auto column_names_field = projection_operator.column_name();
   auto column_names = std::vector<std::string>(std::begin(column_names_field), std::end(column_names_field));
-  ReleaseAssert((projection_operator.has_input_operator()), "Missing Input Operator in Projection.");
+  Assert((projection_operator.has_input_operator()), "Missing Input Operator in Projection.");
 
   auto input_task = translate_proto(projection_operator.input_operator());
 
@@ -69,8 +69,8 @@ inline std::shared_ptr<OperatorTask> OperatorTranslator::translate(
 inline std::shared_ptr<OperatorTask> OperatorTranslator::translate(const proto::ProductOperator& product_operator) {
   auto& prefix_left = product_operator.prefix_left();
   auto& prefix_right = product_operator.prefix_right();
-  ReleaseAssert((product_operator.has_left_operator()), "Missing left Operator in Product.");
-  ReleaseAssert((product_operator.has_right_operator()), "Missing right Operator in Product.");
+  Assert((product_operator.has_left_operator()), "Missing left Operator in Product.");
+  Assert((product_operator.has_right_operator()), "Missing right Operator in Product.");
 
   auto input_left_task = translate_proto(product_operator.left_operator());
   auto input_right_task = translate_proto(product_operator.right_operator());
@@ -89,8 +89,8 @@ inline std::shared_ptr<OperatorTask> OperatorTranslator::translate(
     const proto::NestedLoopJoinOperator& nested_loop_join_operator) {
   auto& prefix_left = nested_loop_join_operator.prefix_left();
   auto& prefix_right = nested_loop_join_operator.prefix_right();
-  ReleaseAssert((nested_loop_join_operator.has_left_operator()), "Missing left Operator in Nested Loop Join.");
-  ReleaseAssert((nested_loop_join_operator.has_right_operator()), "Missing right Operator in Nested Loop Join.");
+  Assert((nested_loop_join_operator.has_left_operator()), "Missing left Operator in Nested Loop Join.");
+  Assert((nested_loop_join_operator.has_right_operator()), "Missing right Operator in Nested Loop Join.");
 
   auto input_left_task = translate_proto(nested_loop_join_operator.left_operator());
   auto input_right_task = translate_proto(nested_loop_join_operator.right_operator());
@@ -150,7 +150,7 @@ inline std::shared_ptr<OperatorTask> OperatorTranslator::translate(
     const proto::TableScanOperator& table_scan_operator) {
   const auto& column_name = table_scan_operator.column_name();
   const auto& filter_op = table_scan_operator.filter_operator();
-  ReleaseAssert((table_scan_operator.has_input_operator()), "Missing Input Operator in Table Scan.");
+  Assert((table_scan_operator.has_input_operator()), "Missing Input Operator in Table Scan.");
 
   auto input_task = translate_proto(table_scan_operator.input_operator());
 
@@ -169,7 +169,7 @@ inline std::shared_ptr<OperatorTask> OperatorTranslator::translate(
     const proto::IndexColumnScanOperator& index_column_scan_operator) {
   const auto& column_name = index_column_scan_operator.column_name();
   const auto& filter_operator = index_column_scan_operator.filter_operator();
-  ReleaseAssert((index_column_scan_operator.has_input_operator()), "Missing Input Operator in Index Column Scan.");
+  Assert((index_column_scan_operator.has_input_operator()), "Missing Input Operator in Index Column Scan.");
 
   auto input_task = translate_proto(index_column_scan_operator.input_operator());
 
@@ -197,7 +197,7 @@ inline std::shared_ptr<OperatorTask> OperatorTranslator::translate(const proto::
   const auto& column_name = sort_operator.column_name();
   const auto ascending = sort_operator.ascending();
   const auto output_chunk_size = sort_operator.output_chunk_size();
-  ReleaseAssert((sort_operator.has_input_operator()), "Missing Input Operator in Sort.");
+  Assert((sort_operator.has_input_operator()), "Missing Input Operator in Sort.");
 
   auto input_task = translate_proto(sort_operator.input_operator());
 
@@ -210,8 +210,8 @@ inline std::shared_ptr<OperatorTask> OperatorTranslator::translate(const proto::
 }
 
 inline std::shared_ptr<OperatorTask> OperatorTranslator::translate(const proto::UnionAllOperator& union_all_operator) {
-  ReleaseAssert((union_all_operator.has_input_operator1()), "Missing Input Operator 1 in Union All.");
-  ReleaseAssert((union_all_operator.has_input_operator2()), "Missing Input Operator 2 in Union All.");
+  Assert((union_all_operator.has_input_operator1()), "Missing Input Operator 1 in Union All.");
+  Assert((union_all_operator.has_input_operator2()), "Missing Input Operator 2 in Union All.");
 
   auto input_task1 = translate_proto(union_all_operator.input_operator1());
   auto input_task2 = translate_proto(union_all_operator.input_operator2());
@@ -227,8 +227,8 @@ inline std::shared_ptr<OperatorTask> OperatorTranslator::translate(const proto::
 
 inline std::shared_ptr<OperatorTask> OperatorTranslator::translate(
     const proto::DifferenceOperator& difference_operator) {
-  ReleaseAssert((difference_operator.has_left_operator()), "Missing left Operator in Difference.");
-  ReleaseAssert((difference_operator.has_right_operator()), "Missing right Operator in Difference.");
+  Assert((difference_operator.has_left_operator()), "Missing left Operator in Difference.");
+  Assert((difference_operator.has_right_operator()), "Missing right Operator in Difference.");
 
   auto input_left_task = translate_proto(difference_operator.left_operator());
   auto input_right_task = translate_proto(difference_operator.right_operator());
@@ -260,7 +260,7 @@ inline std::shared_ptr<OperatorTask> OperatorTranslator::translate(
   const auto& directory = export_csv_operator.directory();
   const auto& filename = export_csv_operator.filename();
   const auto& full_filename = directory + "/" + filename;
-  ReleaseAssert((export_csv_operator.has_input_operator()), "Missing Input Operator in Export CSV.");
+  Assert((export_csv_operator.has_input_operator()), "Missing Input Operator in Export CSV.");
 
   auto input_task = translate_proto(export_csv_operator.input_operator());
   auto export_csv = std::make_shared<ExportCsv>(input_task->get_operator(), full_filename);
@@ -275,7 +275,7 @@ inline std::shared_ptr<OperatorTask> OperatorTranslator::translate(
 inline std::shared_ptr<OperatorTask> OperatorTranslator::translate(
     const proto::ExportBinaryOperator& export_binary_operator) {
   const auto& filename = export_binary_operator.filename();
-  ReleaseAssert((export_binary_operator.has_input_operator()), "Missing Input Operator in Export Binary.");
+  Assert((export_binary_operator.has_input_operator()), "Missing Input Operator in Export Binary.");
 
   auto input_task = translate_proto(export_binary_operator.input_operator());
   auto export_binary = std::make_shared<ExportBinary>(input_task->get_operator(), filename);
@@ -288,7 +288,7 @@ inline std::shared_ptr<OperatorTask> OperatorTranslator::translate(
 }
 
 inline std::shared_ptr<OperatorTask> OperatorTranslator::translate(const proto::PrintOperator& print_operator) {
-  ReleaseAssert((print_operator.has_input_operator()), "Missing Input Operator in Print.");
+  Assert((print_operator.has_input_operator()), "Missing Input Operator in Print.");
 
   auto input_task = translate_proto(print_operator.input_operator());
   auto print = std::make_shared<Print>(input_task->get_operator());
