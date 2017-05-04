@@ -15,13 +15,14 @@ if echo $REPLY | grep -E '^[Yy]$' > /dev/null; then
             # python2.7 is preinstalled on macOS
             # check, for each programme individually with brew, whether it is already installed
             # due to brew issues on MacOS after system upgrade
-            for programme_name in premake boost gcc clang-format gcovr tbb autoconf automake libtool pkg-config; do
-                # if programme is not installed
-                if ! brew ls --versions $programme_name > /dev/null; then
-                    if ! brew install $programme_name; then
-                        echo "Error during brew $programme_name installation."
-                        exit 1
-                    fi
+            for formula in premake boost gcc clang-format gcovr tbb autoconf automake libtool pkg-config; do
+                # if brew formula is installed
+                if brew ls --versions $formula > /dev/null; then
+                    continue
+                fi
+                if ! brew install $formula; then
+                    echo "Error during brew formula $formula installation."
+                    exit 1
                 fi
             done
             if git submodule update --init --recursive; then
