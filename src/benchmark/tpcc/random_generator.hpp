@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cassert>
 #include <random>
 #include <set>
 #include <string>
@@ -8,13 +9,14 @@ namespace opossum {
 
 class RandomGenerator {
  public:
-  static size_t number(size_t lower, size_t upper) {
-    std::default_random_engine engine(std::random_device {}());
+  RandomGenerator() : engine(std::random_device {}()) {}
+
+  size_t number(size_t lower, size_t upper) {
     std::uniform_int_distribution<size_t> dist(lower, upper);
     return dist(engine);
   }
 
-  static std::string generate_last_name() {
+  std::string generate_last_name() {
     //            static const std::string syllables[] = {
     //                    "BAR", "OUGHT", "ABLE", "PRI", "PRES", "ESE", "ANTI", "CALLY", "ATION", "EING",};
     //            static const int LENGTHS[] = {3, 5, 4, 3, 4, 3, 4, 5, 5, 4,};
@@ -22,13 +24,7 @@ class RandomGenerator {
     return "";
   }
 
-  static std::string generateString(size_t lower_length, size_t upper_length, char base_character, int num_characters) {
-    //            static const char alphanum[] =
-    //                "abcdefghijklmnopqrstuvwxyz"
-    //                "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-    //                "0123456789";
-    //            int stringLength = sizeof(alphanum) - 1;
-
+  std::string generateString(size_t lower_length, size_t upper_length, char base_character, int num_characters) {
     size_t length = number(lower_length, upper_length);
     std::string s;
     for (size_t i = 0; i < length; i++) {
@@ -38,15 +34,15 @@ class RandomGenerator {
     return s;
   }
 
-  static std::string astring(size_t lower_length, size_t upper_length) {
+  std::string astring(size_t lower_length, size_t upper_length) {
     return RandomGenerator::generateString(lower_length, upper_length, 'a', 26);
   }
 
-  static std::string nstring(size_t lower_length, size_t upper_length) {
+  std::string nstring(size_t lower_length, size_t upper_length) {
     return RandomGenerator::generateString(lower_length, upper_length, '0', 10);
   }
 
-  static std::set<size_t> select_unique_ids(size_t num_unique, size_t lower_id, size_t upper_id) {
+  std::set<size_t> select_unique_ids(size_t num_unique, size_t lower_id, size_t upper_id) {
     std::set<size_t> rows;
 
     //    std::cout << num_unique << " - " << lower_id << " - " << upper_id << std::endl;
@@ -63,5 +59,8 @@ class RandomGenerator {
     assert(rows.size() == num_unique);
     return rows;
   }
+
+ protected:
+  std::default_random_engine engine;
 };
 }  // namespace opossum

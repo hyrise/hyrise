@@ -2,6 +2,7 @@
 
 #include <memory>
 #include <string>
+#include "random_generator.hpp"
 #include "storage/table.hpp"
 
 namespace opossum {
@@ -23,8 +24,11 @@ class TPCCTableGenerator {
   std::shared_ptr<Item> generate_item(size_t id, bool is_original);
   std::shared_ptr<Table> generate_items_table();
 
+  std::shared_ptr<Table> generate_warehouse_table();
+
  protected:
   const size_t _chunk_size = 100;
   const size_t _item_cardinality = 100000;
+  RandomGenerator _random_generator;
 };
 }  // namespace opossum

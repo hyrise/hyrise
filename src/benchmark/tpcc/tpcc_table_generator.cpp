@@ -4,24 +4,23 @@
 #include <string>
 #include <utility>
 
-#include "random_generator.hpp"
 #include "storage/storage_manager.hpp"
 #include "storage/value_column.hpp"
 
 namespace opossum {
 
-TPCCTableGenerator::TPCCTableGenerator() {}
+TPCCTableGenerator::TPCCTableGenerator() : _random_generator(RandomGenerator()) {}
 
 std::shared_ptr<Item> TPCCTableGenerator::generate_item(size_t id, bool is_original) {
   auto item = std::make_shared<Item>();
   item->i_id = id;
-  item->i_im_id = RandomGenerator::number(1, 10000);
-  item->i_name = RandomGenerator::astring(14, 24);
-  item->i_price = RandomGenerator::number(100, 10000) / 100;
-  auto dataString = RandomGenerator::astring(26, 50);
+  item->i_im_id = _random_generator.number(1, 10000);
+  item->i_name = _random_generator.astring(14, 24);
+  item->i_price = _random_generator.number(100, 10000) / 100;
+  auto dataString = _random_generator.astring(26, 50);
   if (is_original) {
     std::string originalString("ORIGINAL");
-    size_t start_pos = 0;
+    size_t start_pos = _random_generator.number(0, dataString.length() - originalString.length());
     dataString.replace(start_pos, originalString.length(), originalString);
   }
   item->i_data = dataString;
@@ -32,8 +31,6 @@ std::shared_ptr<Item> TPCCTableGenerator::generate_item(size_t id, bool is_origi
 std::shared_ptr<Table> TPCCTableGenerator::generate_items_table() {
   auto item_table = std::make_shared<Table>(_chunk_size);
 
-  //  std::vector<std::vector<AllTypeVariant>> value_vectors(5, std::vector<AllTypeVariant>(_item_cardinality));
-  //        auto vector_size = _chunk_size > 0 ? _chunk_size : _item_cardinality;
   auto vector_size = _item_cardinality;
 
   // setup columns
@@ -49,7 +46,7 @@ std::shared_ptr<Table> TPCCTableGenerator::generate_items_table() {
   tbb::concurrent_vector<float> i_price_column(vector_size);
   tbb::concurrent_vector<std::string> i_data_column(vector_size);
 
-  auto original_ids = RandomGenerator::select_unique_ids(_item_cardinality / 10, 1, _item_cardinality);
+  auto original_ids = _random_generator.select_unique_ids(_item_cardinality / 10, 1, _item_cardinality);
 
   auto chunk = Chunk();
   for (size_t i = 0; i < _item_cardinality; i++) {
@@ -76,5 +73,10 @@ std::shared_ptr<Table> TPCCTableGenerator::generate_items_table() {
   item_table->add_chunk(std::move(chunk));
 
   return item_table;
+}
+
+std::shared_ptr<Table> TPCCTableGenerator::generate_warehouse_table() {
+  auto warehouse_table = std::make_shared<Table>(_chunk_size);
+  return warehouse_table;
 }
 }  // namespace opossum
