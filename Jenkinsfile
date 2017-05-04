@@ -90,7 +90,7 @@ node {
       throw error
     } finally {
       sh "rm -Rf ./*"
-      sh "rm -r .git"
+      sh "rm -rf .*"
       deleteDir()
     }
 
