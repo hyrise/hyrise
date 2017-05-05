@@ -119,6 +119,7 @@ Contact: firstname.lastname@hpi.de
 -	Yannick	Bäumer
 -	Moritz	Eyssen
 -	Martin	Fischer
+-	Pedro	Flemming
 -	Michael	Janke
 -	Max	Jendruk
 -	Marvin	Keller

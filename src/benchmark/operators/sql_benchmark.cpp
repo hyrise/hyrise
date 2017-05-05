@@ -17,9 +17,10 @@ class SQLBenchmark : public BenchmarkFixture {
   virtual void TearDown(const ::benchmark::State& state) {}
 };
 
+// Same query as BM_TableScanConstant.
 BENCHMARK_F(SQLBenchmark, BM_SQLFullQueryExecution)(benchmark::State& state) {
   clear_cache();
-  const std::string query = "SELECT * FROM benchmark_table_one ORDER BY a DESC;";
+  const std::string query = "SELECT * FROM benchmark_table_one WHERE a >= 7;";
 
   while (state.KeepRunning()) {
     SQLQueryTranslator translator;
@@ -34,7 +35,7 @@ BENCHMARK_F(SQLBenchmark, BM_SQLFullQueryExecution)(benchmark::State& state) {
 
 BENCHMARK_F(SQLBenchmark, BM_SQLTranslationTotal)(benchmark::State& state) {
   clear_cache();
-  const std::string query = "SELECT * FROM benchmark_table_one ORDER BY a DESC;";
+  const std::string query = "SELECT * FROM benchmark_table_one WHERE a >= 7;";
 
   while (state.KeepRunning()) {
     SQLQueryTranslator translator;
@@ -42,9 +43,19 @@ BENCHMARK_F(SQLBenchmark, BM_SQLTranslationTotal)(benchmark::State& state) {
   }
 }
 
-BENCHMARK_F(SQLBenchmark, BM_SQLTranslationWithoutParsing)(benchmark::State& state) {
+BENCHMARK_F(SQLBenchmark, BM_SQLTranslationOnlyParsing)(benchmark::State& state) {
   clear_cache();
-  const std::string query = "SELECT * FROM benchmark_table_one ORDER BY a DESC;";
+  const std::string query = "SELECT * FROM benchmark_table_one WHERE a >= 7;";
+
+  while (state.KeepRunning()) {
+    hsql::SQLParserResult result;
+    hsql::SQLParser::parseSQLString(query, &result);
+  }
+}
+
+BENCHMARK_F(SQLBenchmark, BM_SQLTranslationOnlyTransation)(benchmark::State& state) {
+  clear_cache();
+  const std::string query = "SELECT * FROM benchmark_table_one WHERE a >= 7;";
   hsql::SQLParserResult result;
   hsql::SQLParser::parseSQLString(query, &result);
 

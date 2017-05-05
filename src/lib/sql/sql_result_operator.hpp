@@ -25,6 +25,8 @@ class SQLResultOperator : public AbstractReadOnlyOperator {
 
   std::shared_ptr<const Table> on_execute() override;
 
+  // Called by SQLQueryOperator to dynamically set the input operator.
+  // Most common operators require the input to be given at construction.
   void set_input_operator(const std::shared_ptr<const AbstractOperator> input);
 
  protected:

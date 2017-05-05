@@ -26,35 +26,45 @@ class SQLQueryTranslator {
   // Destroy the currently stored execution plan and state.
   void reset();
 
+  // Parses the given query into a C++ object representation.
   bool parse_query(const std::string& query, hsql::SQLParserResult* result);
 
-  bool translate_query(const std::string& query);
-
+  // Translates the give SQL result. Adds the generated execution plan to _tasks.
   bool translate_parse_result(const hsql::SQLParserResult& result);
 
+  // Translates the give SQL query. Adds the generated execution plan to _tasks.
+  // Calls parse_query and translate_parse_result to get the result.
+  bool translate_query(const std::string& query);
+
+  // Translates the single given SQL statement. Adds the generated execution plan to _tasks.
   bool translate_statement(const hsql::SQLStatement& statement);
 
- private:
-  bool translate_select(const hsql::SelectStatement& select);
+ protected:
+  bool _translate_select(const hsql::SelectStatement& select);
 
   // Evaluates the expression and pushes one or more TableScans onto
   // the tasks list. AND expressions are chained TableScans.
   // OR expressions are not supported yet.
-  bool translate_filter_expr(const hsql::Expr& expr, const std::shared_ptr<OperatorTask>& input_task);
+  bool _translate_filter_expr(const hsql::Expr& expr, const std::shared_ptr<OperatorTask>& input_task);
 
-  bool translate_projection(const std::vector<hsql::Expr*>& expr_list, const std::shared_ptr<OperatorTask>& input_task);
+  bool _translate_projection(const std::vector<hsql::Expr*>& expr_list,
+                             const std::shared_ptr<OperatorTask>& input_task);
 
-  bool translate_literal(const hsql::Expr& expr, AllTypeVariant* output);
+  bool _translate_order_by(const std::vector<hsql::OrderDescription*> order_list,
+                           const std::shared_ptr<OperatorTask>& input_task);
 
-  bool translate_order_by(const std::vector<hsql::OrderDescription*> order_list,
-                          const std::shared_ptr<OperatorTask>& input_task);
+  bool _translate_table_ref(const hsql::TableRef& table);
 
-  bool translate_table_ref(const hsql::TableRef& table);
+  static bool _translate_literal(const hsql::Expr& expr, AllTypeVariant* output);
 
-  bool translate_filter_op(const hsql::Expr& expr, std::string* output);
+  static bool _translate_filter_op(const hsql::Expr& expr, std::string* output);
 
+  static std::string _get_column_name(const hsql::Expr& expr);
+
+  // Generated execution plan.
   std::vector<std::shared_ptr<OperatorTask>> _tasks;
 
+  // Details about the error, if one occurred.
   std::string _error_msg;
 };
 

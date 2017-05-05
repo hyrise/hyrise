@@ -29,14 +29,13 @@ class SQLQueryOperator : public AbstractOperator {
  protected:
   std::shared_ptr<const Table> on_execute(std::shared_ptr<TransactionContext> context) override;
 
-  // name of the table to retrieve
+  // Raw SQL query string.
   const std::string _query;
 
+  // Result operator, which will be dependent on the full execution of the exec plan.
   std::shared_ptr<SQLResultOperator> _result_op;
 
   std::shared_ptr<OperatorTask> _result_task;
-
-  optional<std::shared_ptr<OperatorTask>> _next_task;
 };
 
 }  // namespace opossum
