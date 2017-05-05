@@ -222,7 +222,7 @@ std::shared_ptr<Table> TPCCTableGenerator::generate_customer_table() {
       chunk.add_column(add_column<std::string>(_customer_size, [&](size_t) { return _random_gen.astring(2, 2); }));
       chunk.add_column(add_column<std::string>(_customer_size, [&](size_t) { return _random_gen.zipCode(); }));
       chunk.add_column(add_column<std::string>(_customer_size, [&](size_t) { return _random_gen.nstring(16, 16); }));
-      chunk.add_column(add_column<int>(_customer_size, [](size_t) { return 0; }));  // TODO(anyone): Add time now
+      chunk.add_column(add_column<int>(_customer_size, [&](size_t) { return _current_date; }));
       chunk.add_column(add_column<std::string>(_customer_size, [&](size_t i) {
         bool is_original = original_ids.find(i) != original_ids.end();
         return is_original ? "BC" : "GC";
@@ -241,6 +241,174 @@ std::shared_ptr<Table> TPCCTableGenerator::generate_customer_table() {
   }
 
   return table;
+}
+
+std::shared_ptr<Table> TPCCTableGenerator::generate_history_table() {
+  auto table = std::make_shared<Table>(_chunk_size);
+
+  // setup columns
+  table->add_column("H_C_ID", "int", false);
+  table->add_column("H_C_D_ID", "int", false);
+  table->add_column("H_C_W_ID", "int", false);
+  table->add_column("H_DATE", "int", false);
+  table->add_column("H_AMOUNT", "float", false);
+  table->add_column("H_DATA", "string", false);
+
+  auto _history_size_per_district = _history_size * _customer_size;
+
+  for (size_t warehouse_id = 0; warehouse_id < _warehouse_size; warehouse_id++) {
+    for (size_t district_id = 0; district_id < _district_size; district_id++) {
+      auto chunk = Chunk();
+      chunk.add_column(add_column<int>(_history_size_per_district, [&](size_t i) { return i / _history_size; }));
+      chunk.add_column(add_column<int>(_history_size_per_district, [&](size_t) { return district_id; }));
+      chunk.add_column(add_column<int>(_history_size_per_district, [&](size_t) { return warehouse_id; }));
+      chunk.add_column(add_column<int>(_history_size_per_district, [&](size_t) { return _current_date; }));
+      chunk.add_column(add_column<float>(_history_size_per_district, [](size_t) { return 10.f; }));
+      chunk.add_column(
+          add_column<std::string>(_history_size_per_district, [&](size_t) { return _random_gen.astring(12, 24); }));
+      table->add_chunk(std::move(chunk));
+    }
+  }
+
+  return table;
+}
+
+TPCCTableGenerator::order_line_counts_type TPCCTableGenerator::generate_order_line_counts() {
+  order_line_counts_type v(_warehouse_size);
+  for (auto &v_per_warehouse : v) {
+    v_per_warehouse.resize(_district_size);
+    for (auto &v_per_district : v_per_warehouse) {
+      v_per_district.resize(_order_size);
+      for (auto &v_per_order : v_per_district) {
+        v_per_order = _random_gen.number(5, 15);
+      }
+    }
+  }
+  return v;
+}
+
+std::shared_ptr<Table> TPCCTableGenerator::generate_order_table(
+    TPCCTableGenerator::order_line_counts_type order_line_counts) {
+  auto table = std::make_shared<Table>(_chunk_size);
+
+  // setup columns
+  table->add_column("O_ID", "int", false);
+  table->add_column("O_C_ID", "int", false);
+  table->add_column("O_D_ID", "int", false);
+  table->add_column("O_W_ID", "int", false);
+  table->add_column("O_ENTRY_D", "int", false);
+  table->add_column("O_CARRIER_ID", "int", false);
+  table->add_column("O_OL_CNT", "int", false);
+  table->add_column("O_ALL_LOCAL", "int", false);
+
+  for (size_t warehouse_id = 0; warehouse_id < _warehouse_size; warehouse_id++) {
+    for (size_t district_id = 0; district_id < _district_size; district_id++) {
+      auto customer_permutation = _random_gen.permutation(0, _customer_size);
+      auto chunk = Chunk();
+      chunk.add_column(add_column<int>(_order_size, [](size_t i) { return i; }));
+      chunk.add_column(add_column<int>(_order_size, [&](size_t i) { return customer_permutation[i]; }));
+      chunk.add_column(add_column<int>(_order_size, [&](size_t) { return district_id; }));
+      chunk.add_column(add_column<int>(_order_size, [&](size_t) { return warehouse_id; }));
+      chunk.add_column(add_column<int>(_order_size, [&](size_t) { return _current_date; }));
+      // TODO(anybody) -1 should be null
+      chunk.add_column(add_column<int>(
+          _order_size, [&](size_t i) { return i <= _order_size - _new_order_size ? _random_gen.number(1, 10) : -1; }));
+      chunk.add_column(
+          add_column<int>(_order_size, [&](size_t i) { return order_line_counts[warehouse_id][district_id][i]; }));
+      chunk.add_column(add_column<int>(_order_size, [](size_t) { return 1; }));
+      table->add_chunk(std::move(chunk));
+    }
+  }
+
+  return table;
+}
+
+std::shared_ptr<Table> TPCCTableGenerator::generate_order_line_table(
+    TPCCTableGenerator::order_line_counts_type order_line_counts) {
+  auto table = std::make_shared<Table>(_chunk_size);
+
+  // setup columns
+  table->add_column("OL_O_ID", "int", false);
+  table->add_column("OL_D_ID", "int", false);
+  table->add_column("OL_W_ID", "int", false);
+  table->add_column("OL_NUMBER", "int", false);
+  table->add_column("OL_I_ID", "int", false);
+  table->add_column("OL_SUPPLY_W_ID", "int", false);
+  table->add_column("OL_DELIVERY_D", "int", false);
+  table->add_column("OL_QUANTITY", "int", false);
+  table->add_column("OL_AMOUNT", "float", false);
+  table->add_column("OL_DIST_INFO", "string", false);
+
+  for (size_t warehouse_id = 0; warehouse_id < _warehouse_size; warehouse_id++) {
+    for (size_t district_id = 0; district_id < _district_size; district_id++) {
+      for (size_t order_id = 0; order_id < _order_size; order_id++) {
+        auto chunk = Chunk();
+        auto order_line_size = order_line_counts[warehouse_id][district_id][order_id];
+        chunk.add_column(add_column<int>(order_line_size, [&](size_t) { return order_id; }));
+        chunk.add_column(add_column<int>(order_line_size, [&](size_t) { return district_id; }));
+        chunk.add_column(add_column<int>(order_line_size, [&](size_t) { return warehouse_id; }));
+        chunk.add_column(add_column<int>(order_line_size, [](size_t i) { return i; }));
+        chunk.add_column(add_column<int>(order_line_size, [&](size_t) { return _random_gen.number(1, _item_size); }));
+        chunk.add_column(add_column<int>(order_line_size, [&](size_t) { return warehouse_id; }));
+        // TODO(anybody) -1 should be null
+        chunk.add_column(add_column<int>(
+            order_line_size, [&](size_t) { return order_id <= _order_size - _new_order_size ? _current_date : -1; }));
+        chunk.add_column(add_column<int>(order_line_size, [](size_t) { return 5; }));
+        chunk.add_column(add_column<float>(order_line_size, [&](size_t) {
+          return order_id <= _order_size - _new_order_size ? 0.f : _random_gen.real(0.01f, 9999.99f);
+        }));
+        chunk.add_column(add_column<std::string>(order_line_size, [&](size_t) { return _random_gen.astring(24, 24); }));
+        table->add_chunk(std::move(chunk));
+      }
+    }
+  }
+
+  return table;
+}
+
+std::shared_ptr<Table> TPCCTableGenerator::generate_new_order_table() {
+  auto table = std::make_shared<Table>(_chunk_size);
+
+  // setup columns
+  table->add_column("NO_O_ID", "int", false);
+  table->add_column("NO_D_ID", "int", false);
+  table->add_column("NO_W_ID", "int", false);
+
+  for (size_t warehouse_id = 0; warehouse_id < _warehouse_size; warehouse_id++) {
+    for (size_t district_id = 0; district_id < _district_size; district_id++) {
+      auto chunk = Chunk();
+      chunk.add_column(
+          add_column<int>(_new_order_size, [&](size_t i) { return i + _order_size + 1 - _new_order_size; }));
+      chunk.add_column(add_column<int>(_new_order_size, [&](size_t) { return district_id; }));
+      chunk.add_column(add_column<int>(_new_order_size, [&](size_t) { return warehouse_id; }));
+      table->add_chunk(std::move(chunk));
+    }
+  }
+
+  return table;
+}
+
+void TPCCTableGenerator::add_all_tables(StorageManager &manager) {
+  auto item_table = generate_items_table();
+  auto warehouse_table = generate_warehouse_table();
+  auto stock_table = generate_stock_table();
+  auto district_table = generate_district_table();
+  auto customer_table = generate_customer_table();
+  auto history_table = generate_history_table();
+  auto order_line_counts = generate_order_line_counts();
+  auto order_table = generate_order_table(order_line_counts);
+  auto order_line_table = generate_order_line_table(order_line_counts);
+  auto new_order_table = generate_new_order_table();
+
+  manager.add_table("ITEM", std::move(item_table));
+  manager.add_table("WAREHOUSE", std::move(warehouse_table));
+  manager.add_table("STOCK", std::move(stock_table));
+  manager.add_table("DISTRICT", std::move(district_table));
+  manager.add_table("CUSTOMER", std::move(customer_table));
+  manager.add_table("HISTORY", std::move(history_table));
+  manager.add_table("ORDER", std::move(order_table));
+  manager.add_table("ORDER-LINE", std::move(order_line_table));
+  manager.add_table("NEW-ORDER", std::move(new_order_table));
 }
 
 }  // namespace opossum

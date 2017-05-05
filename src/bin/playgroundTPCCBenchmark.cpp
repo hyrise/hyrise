@@ -11,40 +11,50 @@
 int main() {
   opossum::TPCCTableGenerator generator;
 
-  auto item_table = generator.generate_items_table();
-  auto warehouse_table = generator.generate_warehouse_table();
-  auto stock_table = generator.generate_stock_table();
-  auto district_table = generator.generate_district_table();
-  auto customer_table = generator.generate_customer_table();
+  generator.add_all_tables(opossum::StorageManager::get());
 
-  opossum::StorageManager::get().add_table("ITEM", std::move(item_table));
-  opossum::StorageManager::get().add_table("WAREHOUSE", std::move(warehouse_table));
-  opossum::StorageManager::get().add_table("STOCK", std::move(stock_table));
-  opossum::StorageManager::get().add_table("DISTRICT", std::move(district_table));
-  opossum::StorageManager::get().add_table("CUSTOMER", std::move(customer_table));
-
-  //  auto item = std::make_shared<opossum::GetTable>("ITEM");
-  //  item->execute();
-  //  auto print = std::make_shared<opossum::Print>(item);
-  //  print->execute();
+  // auto item = std::make_shared<opossum::GetTable>("ITEM");
+  // item->execute();
+  // auto print = std::make_shared<opossum::Print>(item);
+  // print->execute();
   //
-  //  auto warehouse = std::make_shared<opossum::GetTable>("WAREHOUSE");
-  //  warehouse->execute();
-  //  auto print2 = std::make_shared<opossum::Print>(warehouse);
-  //  print2->execute();
+  // auto warehouse = std::make_shared<opossum::GetTable>("WAREHOUSE");
+  // warehouse->execute();
+  // auto print2 = std::make_shared<opossum::Print>(warehouse);
+  // print2->execute();
   //
-  //  auto stock = std::make_shared<opossum::GetTable>("STOCK");
-  //  stock->execute();
-  //  auto print3 = std::make_shared<opossum::Print>(stock);
-  //  print3->execute();
+  // auto stock = std::make_shared<opossum::GetTable>("STOCK");
+  // stock->execute();
+  // auto print3 = std::make_shared<opossum::Print>(stock);
+  // print3->execute();
   //
-  //  auto district = std::make_shared<opossum::GetTable>("DISTRICT");
-  //  district->execute();
-  //  auto print4 = std::make_shared<opossum::Print>(district);
-  //  print4->execute();
+  // auto district = std::make_shared<opossum::GetTable>("DISTRICT");
+  // district->execute();
+  // auto print4 = std::make_shared<opossum::Print>(district);
+  // print4->execute();
   //
-  //  auto customer = std::make_shared<opossum::GetTable>("CUSTOMER");
-  //  customer->execute();
-  //  auto print5 = std::make_shared<opossum::Print>(customer);
-  //  print5->execute();
+  // auto customer = std::make_shared<opossum::GetTable>("CUSTOMER");
+  // customer->execute();
+  // auto print5 = std::make_shared<opossum::Print>(customer);
+  // print5->execute();
+  //
+  // auto history = std::make_shared<opossum::GetTable>("HISTORY");
+  // history->execute();
+  // auto print6 = std::make_shared<opossum::Print>(history);
+  // print6->execute();
+  //
+  // auto order = std::make_shared<opossum::GetTable>("ORDER");
+  // order->execute();
+  // auto print7 = std::make_shared<opossum::Print>(order);
+  // print7->execute();
+  //
+  // auto order_line = std::make_shared<opossum::GetTable>("ORDER-LINE");
+  // order_line->execute();
+  // auto print8 = std::make_shared<opossum::Print>(order_line);
+  // print8->execute();
+  //
+  // auto new_order = std::make_shared<opossum::GetTable>("NEW-ORDER");
+  // new_order->execute();
+  // auto print9 = std::make_shared<opossum::Print>(new_order);
+  // print9->execute();
 }

@@ -1,9 +1,12 @@
 #pragma once
 
+#include <algorithm>
 #include <cassert>
+#include <numeric>
 #include <random>
 #include <set>
 #include <string>
+#include <vector>
 
 namespace opossum {
 
@@ -16,9 +19,15 @@ class RandomGenerator {
     return dist(engine);
   }
 
+  float real(float lower, float upper) {
+    std::uniform_real_distribution<float> dist(lower, upper);
+    return dist(engine);
+  }
+
   std::string zipCode() { return nstring(4, 4) + "11111"; }
 
   std::string last_name() {
+    // TODO(anybody)
     //            static const std::string syllables[] = {
     //                    "BAR", "OUGHT", "ABLE", "PRI", "PRES", "ESE", "ANTI", "CALLY", "ATION", "EING",};
     //            static const int LENGTHS[] = {3, 5, 4, 3, 4, 3, 4, 5, 5, 4,};
@@ -56,6 +65,13 @@ class RandomGenerator {
     }
     assert(rows.size() == num_unique);
     return rows;
+  }
+
+  std::vector<size_t> permutation(size_t lower, size_t upper) {
+    std::vector<size_t> v(1 + upper - lower);
+    std::iota(v.begin(), v.end(), lower);
+    std::shuffle(v.begin(), v.end(), engine);
+    return v;
   }
 
  protected:
