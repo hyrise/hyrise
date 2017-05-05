@@ -141,7 +141,7 @@ class AbstractTask : public std::enable_shared_from_this<AbstractTask> {
   std::string _description;
 
   // To make sure a task is never executed twice
-  std::atomic_bool _started {false};
+  std::atomic_bool _started{false};
 };
 
 }  // namespace opossum
