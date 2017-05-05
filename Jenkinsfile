@@ -89,8 +89,7 @@ node {
       stage "Cleanup after fail"
       throw error
     } finally {
-      sh "rm -Rf ./*"
-      sh "rm -rf .*"
+      sh "ls -A1 | xargs rm -rf"
       deleteDir()
     }
 
