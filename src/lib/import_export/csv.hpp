@@ -11,9 +11,9 @@ constexpr char delimiter = '\n';
 constexpr char separator = ',';
 constexpr char quote = '"';
 constexpr char escape = '"';
+constexpr char delimiter_escape = '\\';
 
-constexpr auto file_extension = ".csv";
-constexpr auto meta_file_extension = ".meta.csv";
+constexpr auto meta_file_extension = ".meta";
 
 }  // namespace csv
 }  // namespace opossum

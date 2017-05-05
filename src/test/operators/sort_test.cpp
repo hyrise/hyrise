@@ -6,8 +6,8 @@
 #include "gtest/gtest.h"
 
 #include "../../lib/operators/abstract_read_only_operator.hpp"
-#include "../../lib/operators/get_table.hpp"
 #include "../../lib/operators/sort.hpp"
+#include "../../lib/operators/table_wrapper.hpp"
 #include "../../lib/storage/storage_manager.hpp"
 #include "../../lib/storage/table.hpp"
 #include "../../lib/types.hpp"
@@ -17,20 +17,18 @@ namespace opossum {
 class OperatorsSortTest : public BaseTest {
  protected:
   void SetUp() override {
-    std::shared_ptr<Table> test_table = load_table("src/test/tables/int_float.tbl", 2);
-    StorageManager::get().add_table("table_a", std::move(test_table));
-    _gt = std::make_shared<GetTable>("table_a");
+    _table_wrapper = std::make_shared<TableWrapper>(load_table("src/test/tables/int_float.tbl", 2));
 
-    _gt->execute();
+    _table_wrapper->execute();
   }
 
-  std::shared_ptr<GetTable> _gt;
+  std::shared_ptr<TableWrapper> _table_wrapper;
 };
 
 TEST_F(OperatorsSortTest, AscendingSortOfOneColumn) {
   std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_float_sorted.tbl", 2);
 
-  auto sort = std::make_shared<Sort>(_gt, "a", true, 2u);
+  auto sort = std::make_shared<Sort>(_table_wrapper, "a", true, 2u);
   sort->execute();
 
   EXPECT_TABLE_EQ(sort->get_output(), expected_result, true);
@@ -39,7 +37,7 @@ TEST_F(OperatorsSortTest, AscendingSortOfOneColumn) {
 TEST_F(OperatorsSortTest, AscendingSortOfOneColumnWithoutChunkSize) {
   std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_float_sorted.tbl", 2);
 
-  auto sort = std::make_shared<Sort>(_gt, "a", true);
+  auto sort = std::make_shared<Sort>(_table_wrapper, "a", true);
   sort->execute();
 
   EXPECT_TABLE_EQ(sort->get_output(), expected_result, true);
@@ -48,7 +46,7 @@ TEST_F(OperatorsSortTest, AscendingSortOfOneColumnWithoutChunkSize) {
 TEST_F(OperatorsSortTest, DoubleSortOfOneColumn) {
   std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_float_sorted.tbl", 2);
 
-  auto sort1 = std::make_shared<Sort>(_gt, "a", false, 2u);
+  auto sort1 = std::make_shared<Sort>(_table_wrapper, "a", false, 2u);
   sort1->execute();
 
   auto sort2 = std::make_shared<Sort>(sort1, "a", true, 2u);
@@ -60,24 +58,22 @@ TEST_F(OperatorsSortTest, DoubleSortOfOneColumn) {
 TEST_F(OperatorsSortTest, DescendingSortOfOneColumn) {
   std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_float_reverse.tbl", 2);
 
-  auto sort = std::make_shared<Sort>(_gt, "a", false, 2u);
+  auto sort = std::make_shared<Sort>(_table_wrapper, "a", false, 2u);
   sort->execute();
 
   EXPECT_TABLE_EQ(sort->get_output(), expected_result, true);
 }
 
-TEST_F(OperatorsSortTest, DISABLED_MultipleColumnSort) {
-  std::shared_ptr<Table> test_table = load_table("src/test/tables/int_float2.tbl", 2);
-  StorageManager::get().add_table("test_table_sort_b", std::move(test_table));
-
-  auto gt2 = std::make_shared<GetTable>("test_table_sort_b");
+TEST_F(OperatorsSortTest, MultipleColumnSort) {
+  auto table_wrapper2 = std::make_shared<TableWrapper>(load_table("src/test/tables/int_float2.tbl", 2));
+  table_wrapper2->execute();
 
   std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_float2_sorted.tbl", 2);
 
   // we want the output to be sorted after column a and in second place after column b.
   // So first we sort after column b and then after column a.
 
-  auto sort_after_b = std::make_shared<Sort>(gt2, "b", true, 2u);
+  auto sort_after_b = std::make_shared<Sort>(table_wrapper2, "b", true, 2u);
   sort_after_b->execute();
 
   auto sort_after_a = std::make_shared<Sort>(sort_after_b, "a", true, 2u);

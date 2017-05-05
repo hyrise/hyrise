@@ -7,6 +7,7 @@
 #include "../import_export/binary.hpp"
 #include "../types.hpp"
 #include "export_binary.hpp"
+#include "storage/reference_column.hpp"
 
 namespace {
 

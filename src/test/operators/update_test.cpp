@@ -67,6 +67,7 @@ void OperatorsUpdateTest::helper(std::shared_ptr<GetTable> table_to_update, std:
 
 TEST_F(OperatorsUpdateTest, SelfUpdate) {
   auto t = load_table("src/test/tables/int_int.tbl", 0u);
+  // Update operator works on the StorageManager
   StorageManager::get().add_table("updateTestTable", t);
 
   auto gt = std::make_shared<GetTable>("updateTestTable");
