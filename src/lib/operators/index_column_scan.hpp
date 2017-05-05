@@ -14,6 +14,7 @@
 #include "scheduler/current_scheduler.hpp"
 #include "scheduler/job_task.hpp"
 #include "storage/dictionary_column.hpp"
+#include "storage/index/base_index.hpp"
 #include "storage/reference_column.hpp"
 #include "storage/value_column.hpp"
 #include "types.hpp"

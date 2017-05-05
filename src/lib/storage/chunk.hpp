@@ -10,13 +10,15 @@
 
 #include "tbb/concurrent_vector.h"
 
-#include "base_column.hpp"
+#include "all_type_variant.hpp"
 #include "copyable_atomic.hpp"
-#include "index/base_index.hpp"
 #include "locking_ptr.hpp"
-#include "value_column.hpp"
+#include "types.hpp"
 
 namespace opossum {
+
+class BaseIndex;
+class BaseColumn;
 
 // A chunk is a horizontal partition of a table.
 // It stores the data column by column.

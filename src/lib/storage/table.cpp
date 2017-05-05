@@ -10,6 +10,7 @@
 #include <vector>
 
 #include "dictionary_column.hpp"
+#include "value_column.hpp"
 
 #include "resolve_type.hpp"
 #include "types.hpp"

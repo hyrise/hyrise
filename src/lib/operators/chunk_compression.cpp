@@ -10,9 +10,9 @@
 #include "storage/dictionary_column.hpp"
 #include "storage/fitted_attribute_vector.hpp"
 #include "storage/storage_manager.hpp"
+#include "storage/value_column.hpp"
 
 #include "resolve_type.hpp"
-#include "types.hpp"
 
 namespace opossum {
 
