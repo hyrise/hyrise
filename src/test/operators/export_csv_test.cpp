@@ -8,7 +8,7 @@
 #include "gtest/gtest.h"
 
 #include "../../lib/operators/export_csv.hpp"
-#include "../../lib/operators/get_table.hpp"
+#include "../../lib/operators/table_wrapper.hpp"
 #include "../../lib/storage/storage_manager.hpp"
 #include "../../lib/storage/table.hpp"
 #include "import_export/csv.hpp"
@@ -59,10 +59,9 @@ class OperatorsExportCsvTest : public BaseTest {
 
 TEST_F(OperatorsExportCsvTest, SingleChunkAndMetaInfo) {
   table->append({1, "Hallo", 3.5f});
-  StorageManager::get().add_table("table_a", std::move(table));
-  auto gt = std::make_shared<GetTable>("table_a");
-  gt->execute();
-  auto ex = std::make_shared<opossum::ExportCsv>(gt, filename);
+  auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
+  table_wrapper->execute();
+  auto ex = std::make_shared<opossum::ExportCsv>(table_wrapper, filename);
   ex->execute();
 
   EXPECT_TRUE(fileExists(filename));
@@ -72,10 +71,9 @@ TEST_F(OperatorsExportCsvTest, SingleChunkAndMetaInfo) {
 
 TEST_F(OperatorsExportCsvTest, EscapeString) {
   table->append({1, "Sie sagte: \"Mir geht's gut, und dir?\"", 3.5f});
-  StorageManager::get().add_table("table_a", std::move(table));
-  auto gt = std::make_shared<GetTable>("table_a");
-  gt->execute();
-  auto ex = std::make_shared<opossum::ExportCsv>(gt, filename);
+  auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
+  table_wrapper->execute();
+  auto ex = std::make_shared<opossum::ExportCsv>(table_wrapper, filename);
   ex->execute();
 
   EXPECT_TRUE(fileExists(filename));
@@ -90,10 +88,9 @@ TEST_F(OperatorsExportCsvTest, MultipleChunks) {
   table->append({4, "Nacht", 7.5f});
   table->append({5, "Guten", 8.33f});
   table->append({6, "Tag", 3.5f});
-  StorageManager::get().add_table("table_a", std::move(table));
-  auto gt = std::make_shared<GetTable>("table_a");
-  gt->execute();
-  auto ex = std::make_shared<opossum::ExportCsv>(gt, filename);
+  auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
+  table_wrapper->execute();
+  auto ex = std::make_shared<opossum::ExportCsv>(table_wrapper, filename);
   ex->execute();
 
   EXPECT_TRUE(fileExists(filename));
@@ -114,10 +111,9 @@ TEST_F(OperatorsExportCsvTest, DictionaryColumn) {
 
   table->compress_chunk(0);
 
-  StorageManager::get().add_table("table_a", std::move(table));
-  auto gt = std::make_shared<GetTable>("table_a");
-  gt->execute();
-  auto ex = std::make_shared<opossum::ExportCsv>(gt, filename);
+  auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
+  table_wrapper->execute();
+  auto ex = std::make_shared<opossum::ExportCsv>(table_wrapper, filename);
   ex->execute();
 
   EXPECT_TRUE(fileExists(filename));
@@ -133,10 +129,9 @@ TEST_F(OperatorsExportCsvTest, ReferenceColumn) {
   table->append({2, "asdf", 2.2f});
   table->append({3, "hello", 3.3f});
 
-  StorageManager::get().add_table("table_a", std::move(table));
-  auto gt = std::make_shared<GetTable>("table_a");
-  gt->execute();
-  auto scan = std::make_shared<TableScan>(gt, "a", "<", 5);
+  auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
+  table_wrapper->execute();
+  auto scan = std::make_shared<TableScan>(table_wrapper, "a", "<", 5);
   scan->execute();
   auto ex = std::make_shared<opossum::ExportCsv>(scan, filename);
   ex->execute();
@@ -158,10 +153,9 @@ TEST_F(OperatorsExportCsvTest, ExportAllTypes) {
   newTable->add_column("e", "double");
   newTable->append({1, "Hallo", 3.5f, static_cast<int64_t>(12), 2.333});
 
-  StorageManager::get().add_table("table_b", std::move(newTable));
-  auto gt = std::make_shared<GetTable>("table_b");
-  gt->execute();
-  auto ex = std::make_shared<opossum::ExportCsv>(gt, filename);
+  auto table_wrapper = std::make_shared<TableWrapper>(std::move(newTable));
+  table_wrapper->execute();
+  auto ex = std::make_shared<opossum::ExportCsv>(table_wrapper, filename);
   ex->execute();
 
   EXPECT_TRUE(fileExists(filename));
@@ -171,10 +165,9 @@ TEST_F(OperatorsExportCsvTest, ExportAllTypes) {
 
 TEST_F(OperatorsExportCsvTest, NonsensePath) {
   table->append({1, "hello", 3.5f});
-  StorageManager::get().add_table("table_a", std::move(table));
-  auto gt = std::make_shared<GetTable>("table_a");
-  gt->execute();
-  auto ex = std::make_shared<opossum::ExportCsv>(gt, "this/path/does/not/exist");
+  auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
+  table_wrapper->execute();
+  auto ex = std::make_shared<opossum::ExportCsv>(table_wrapper, "this/path/does/not/exist");
   EXPECT_THROW(ex->execute(), std::exception);
 }
 

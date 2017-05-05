@@ -7,8 +7,8 @@
 #include "gtest/gtest.h"
 
 #include "../../lib/operators/difference.hpp"
-#include "../../lib/operators/get_table.hpp"
 #include "../../lib/operators/projection.hpp"
+#include "../../lib/operators/table_wrapper.hpp"
 #include "../../lib/storage/storage_manager.hpp"
 #include "../../lib/storage/table.hpp"
 #include "../../lib/types.hpp"
@@ -17,26 +17,22 @@ namespace opossum {
 class OperatorsDifferenceTest : public BaseTest {
  protected:
   virtual void SetUp() {
-    std::shared_ptr<Table> test_table_a = load_table("src/test/tables/int_float.tbl", 2);
-    StorageManager::get().add_table("difference_test_table_a", std::move(test_table_a));
-    _gt_a = std::make_shared<GetTable>("difference_test_table_a");
+    _table_wrapper_a = std::make_shared<TableWrapper>(load_table("src/test/tables/int_float.tbl", 2));
 
-    std::shared_ptr<Table> test_table_b = load_table("src/test/tables/int_float3.tbl", 2);
-    StorageManager::get().add_table("difference_test_table_b", std::move(test_table_b));
-    _gt_b = std::make_shared<GetTable>("difference_test_table_b");
+    _table_wrapper_b = std::make_shared<TableWrapper>(load_table("src/test/tables/int_float3.tbl", 2));
 
-    _gt_a->execute();
-    _gt_b->execute();
+    _table_wrapper_a->execute();
+    _table_wrapper_b->execute();
   }
 
-  std::shared_ptr<GetTable> _gt_a;
-  std::shared_ptr<GetTable> _gt_b;
+  std::shared_ptr<TableWrapper> _table_wrapper_a;
+  std::shared_ptr<TableWrapper> _table_wrapper_b;
 };
 
 TEST_F(OperatorsDifferenceTest, DifferenceOnValueTables) {
   std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_float_filtered2.tbl", 2);
 
-  auto difference = std::make_shared<Difference>(_gt_a, _gt_b);
+  auto difference = std::make_shared<Difference>(_table_wrapper_a, _table_wrapper_b);
   difference->execute();
 
   EXPECT_TABLE_EQ(difference->get_output(), expected_result);
@@ -46,10 +42,10 @@ TEST_F(OperatorsDifferenceTest, DifferneceOnReferenceTables) {
   std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_float_filtered2.tbl", 2);
 
   std::vector<std::string> column_filter = {"a", "b"};
-  auto projection1 = std::make_shared<Projection>(_gt_a, column_filter);
+  auto projection1 = std::make_shared<Projection>(_table_wrapper_a, column_filter);
   projection1->execute();
 
-  auto projection2 = std::make_shared<Projection>(_gt_b, column_filter);
+  auto projection2 = std::make_shared<Projection>(_table_wrapper_b, column_filter);
   projection2->execute();
 
   auto difference = std::make_shared<Difference>(projection1, projection2);
@@ -60,26 +56,22 @@ TEST_F(OperatorsDifferenceTest, DifferneceOnReferenceTables) {
 
 TEST_F(OperatorsDifferenceTest, ThrowWrongColumnNumberException) {
   if (!IS_DEBUG) return;
-  std::shared_ptr<Table> test_table_c = load_table("src/test/tables/int.tbl", 2);
-  StorageManager::get().add_table("difference_test_table_c", std::move(test_table_c));
-  auto gt_c = std::make_shared<GetTable>("difference_test_table_c");
-  gt_c->execute();
+  auto table_wrapper_c = std::make_shared<TableWrapper>(load_table("src/test/tables/int.tbl", 2));
+  table_wrapper_c->execute();
 
-  auto difference = std::make_shared<Difference>(_gt_a, gt_c);
+  auto difference = std::make_shared<Difference>(_table_wrapper_a, table_wrapper_c);
 
   EXPECT_THROW(difference->execute(), std::exception);
 }
 
 TEST_F(OperatorsDifferenceTest, ThrowWrongColumnOrderException) {
   if (!IS_DEBUG) return;
-  _gt_a->execute();
+  _table_wrapper_a->execute();
 
-  std::shared_ptr<Table> test_table_d = load_table("src/test/tables/float_int.tbl", 2);
-  StorageManager::get().add_table("difference_test_table_d", std::move(test_table_d));
-  auto gt_d = std::make_shared<GetTable>("difference_test_table_d");
-  gt_d->execute();
+  auto table_wrapper_d = std::make_shared<TableWrapper>(load_table("src/test/tables/float_int.tbl", 2));
+  table_wrapper_d->execute();
 
-  auto difference = std::make_shared<Difference>(_gt_a, gt_d);
+  auto difference = std::make_shared<Difference>(_table_wrapper_a, table_wrapper_d);
 
   EXPECT_THROW(difference->execute(), std::exception);
 }

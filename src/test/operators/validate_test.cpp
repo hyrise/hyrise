@@ -8,10 +8,10 @@
 
 #include "concurrency/transaction_context.hpp"
 #include "operators/abstract_read_only_operator.hpp"
-#include "operators/get_table.hpp"
 #include "operators/print.hpp"
 #include "operators/projection.hpp"
 #include "operators/table_scan.hpp"
+#include "operators/table_wrapper.hpp"
 #include "operators/validate.hpp"
 #include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
@@ -26,16 +26,15 @@ class OperatorsValidateTest : public BaseTest {
     set_all_records_visible(*test_table);
     set_record_invisible_for(*test_table, RowID{1u, 0u}, 2u);
 
-    StorageManager::get().add_table("table_a", std::move(test_table));
-    _gt = std::make_shared<GetTable>("table_a");
+    _table_wrapper = std::make_shared<TableWrapper>(std::move(test_table));
 
-    _gt->execute();
+    _table_wrapper->execute();
   }
 
   void set_all_records_visible(Table& table);
   void set_record_invisible_for(Table& table, RowID row, CommitID end_cid);
 
-  std::shared_ptr<GetTable> _gt;
+  std::shared_ptr<TableWrapper> _table_wrapper;
 };
 
 void OperatorsValidateTest::set_all_records_visible(Table& table) {
@@ -59,7 +58,7 @@ TEST_F(OperatorsValidateTest, SimpleValidate) {
 
   std::shared_ptr<Table> expected_result = load_table("src/test/tables/validate_output_validated.tbl", 2u);
 
-  auto validate = std::make_shared<Validate>(_gt);
+  auto validate = std::make_shared<Validate>(_table_wrapper);
   validate->set_transaction_context(context);
   validate->execute();
 
@@ -72,7 +71,7 @@ TEST_F(OperatorsValidateTest, ProjectedValidate) {
   std::shared_ptr<Table> expected_result = load_table("src/test/tables/validate_output_validated_projected.tbl", 2u);
 
   std::vector<std::string> column_filter = {"c", "a"};
-  auto projection = std::make_shared<Projection>(_gt, column_filter);
+  auto projection = std::make_shared<Projection>(_table_wrapper, column_filter);
   projection->set_transaction_context(context);
   projection->execute();
 
