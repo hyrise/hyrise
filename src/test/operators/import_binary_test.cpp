@@ -1,3 +1,4 @@
+#include <string>
 #include <memory>
 
 #include "../base_test.hpp"
@@ -178,7 +179,7 @@ TEST_F(OperatorsImportBinaryTest, EmptyStringsDictionaryColumn) {
 }
 
 TEST_F(OperatorsImportBinaryTest, SaveToStorageManager) {
-  auto importer = std::make_shared<opossum::ImportBinary>("src/test/binary/float.bin", "float_table");
+  auto importer = std::make_shared<opossum::ImportBinary>("src/test/binary/float.bin", std::string("float_table"));
   importer->execute();
   std::shared_ptr<Table> expected_table = load_table("src/test/tables/float.tbl", 5);
   EXPECT_TABLE_EQ(importer->get_output(), expected_table, true);
@@ -186,9 +187,10 @@ TEST_F(OperatorsImportBinaryTest, SaveToStorageManager) {
 }
 
 TEST_F(OperatorsImportBinaryTest, FallbackToRetrieveFromStorageManager) {
-  auto importer = std::make_shared<opossum::ImportBinary>("src/test/binary/float.bin", "float_table");
+  auto importer = std::make_shared<opossum::ImportBinary>("src/test/binary/float.bin", std::string("float_table"));
   importer->execute();
-  auto retriever = std::make_shared<opossum::ImportBinary>("src/test/binary/AllTypesMixColumn.bin", "float_table");
+  auto retriever =
+      std::make_shared<opossum::ImportBinary>("src/test/binary/AllTypesMixColumn.bin", std::string("float_table"));
   retriever->execute();
   std::shared_ptr<Table> expected_table = load_table("src/test/tables/float.tbl", 5);
   EXPECT_TABLE_EQ(importer->get_output(), retriever->get_output(), true);
@@ -196,13 +198,14 @@ TEST_F(OperatorsImportBinaryTest, FallbackToRetrieveFromStorageManager) {
 }
 
 TEST_F(OperatorsImportBinaryTest, InvalidColumnType) {
-  auto importer = std::make_shared<opossum::ImportBinary>("src/test/binary/InvalidColumnType.bin", "float_table");
+  auto importer =
+      std::make_shared<opossum::ImportBinary>("src/test/binary/InvalidColumnType.bin", std::string("float_table"));
   EXPECT_THROW(importer->execute(), std::exception);
 }
 
 TEST_F(OperatorsImportBinaryTest, InvalidAttributeVectorWidth) {
-  auto importer =
-      std::make_shared<opossum::ImportBinary>("src/test/binary/InvalidAttributeVectorWidth.bin", "float_table");
+  auto importer = std::make_shared<opossum::ImportBinary>("src/test/binary/InvalidAttributeVectorWidth.bin",
+                                                          std::string("float_table"));
   EXPECT_THROW(importer->execute(), std::exception);
 }
 

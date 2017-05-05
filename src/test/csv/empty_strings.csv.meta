@@ -1,0 +1,5 @@
+PropertyType,Key,Value
+ChunkSize,,5
+ColumnType,a,string
+ColumnType,b,string
+ColumnType,c,string
