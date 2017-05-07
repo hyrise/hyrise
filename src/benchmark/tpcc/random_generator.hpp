@@ -27,12 +27,15 @@ class RandomGenerator {
   std::string zipCode() { return nstring(4, 4) + "11111"; }
 
   std::string last_name() {
-    // TODO(anybody)
-    //            static const std::string syllables[] = {
-    //                    "BAR", "OUGHT", "ABLE", "PRI", "PRES", "ESE", "ANTI", "CALLY", "ATION", "EING",};
-    //            static const int LENGTHS[] = {3, 5, 4, 3, 4, 3, 4, 5, 5, 4,};
+    const std::string syllables[] = {
+        "BAR", "OUGHT", "ABLE", "PRI", "PRES", "ESE", "ANTI", "CALLY", "ATION", "EING",
+    };
+    std::string last_name("");
+    for (int i = 0; i < 3; i++) {
+      last_name += syllables[number(0, 9)];
+    }
 
-    return "";
+    return last_name;
   }
 
   std::string generateString(size_t lower_length, size_t upper_length, char base_character, int num_characters) {
