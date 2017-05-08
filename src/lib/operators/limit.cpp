@@ -10,7 +10,7 @@
 
 namespace opossum {
 
-Limit::Limit(const std::shared_ptr<const AbstractOperator> in, size_t num_rows)
+Limit::Limit(const std::shared_ptr<const AbstractOperator> in, const size_t num_rows)
     : AbstractReadOnlyOperator(in), _num_rows(num_rows) {}
 
 const std::string Limit::name() const { return "Limit"; }
@@ -23,9 +23,9 @@ std::shared_ptr<const Table> Limit::on_execute() {
   const auto input_table = input_table_left();
 
   // Create output table and column layout.
-  auto output_table = std::make_shared<Table>(input_table->chunk_size());
-  for (ColumnID c = 0; c < input_table->col_count(); c++) {
-    output_table->add_column(input_table->column_name(c), input_table->column_type(c), false);
+  auto output_table = std::make_shared<Table>();
+  for (ColumnID column_id = 0; column_id < input_table->col_count(); column_id++) {
+    output_table->add_column(input_table->column_name(column_id), input_table->column_type(column_id), false);
   }
 
   ChunkID chunk_id = 0;
@@ -35,8 +35,8 @@ std::shared_ptr<const Table> Limit::on_execute() {
 
     size_t output_chunk_row_count = std::min<size_t>(input_chunk.size(), _num_rows - i);
 
-    for (ColumnID c = 0; c < input_table->col_count(); c++) {
-      const auto input_base_column = input_chunk.get_column(c);
+    for (ColumnID column_id = 0; column_id < input_table->col_count(); column_id++) {
+      const auto input_base_column = input_chunk.get_column(column_id);
       auto output_pos_list = std::make_shared<PosList>(output_chunk_row_count);
       std::shared_ptr<const Table> referenced_table;
 
@@ -47,12 +47,12 @@ std::shared_ptr<const Table> Limit::on_execute() {
         std::copy(begin, begin + output_chunk_row_count, output_pos_list->begin());
       } else {
         referenced_table = input_table;
-        for (ChunkOffset r = 0; r < output_chunk_row_count; r++) {
-          (*output_pos_list)[r] = RowID{chunk_id, r};
+        for (ChunkOffset chunk_offset = 0; chunk_offset < output_chunk_row_count; chunk_offset++) {
+          (*output_pos_list)[chunk_offset] = RowID{chunk_id, chunk_offset};
         }
       }
 
-      output_chunk.add_column(std::make_shared<ReferenceColumn>(referenced_table, c, output_pos_list));
+      output_chunk.add_column(std::make_shared<ReferenceColumn>(referenced_table, column_id, output_pos_list));
     }
 
     i += output_chunk_row_count;
