@@ -34,47 +34,40 @@ node {
 
       stage("Test gcc") {
         stage("gcc Release") {
-          sh "cd gcc-release"
-          sh "make -j \$(cat /proc/cpuinfo | grep processor | wc -l) opossumTest"
-          sh "./opossumTest"
+          sh "cd gcc-release && make -j \$(cat /proc/cpuinfo | grep processor | wc -l) opossumTest"
+          sh "cd .. && ./gcc-release/opossumTest"
         }
         stage("gcc Debug") {
-          sh "cd gcc-debug"
-          sh "make -j \$(cat /proc/cpuinfo | grep processor | wc -l) opossumTest"
-          sh "./opossumTest"
+          sh "cd gcc-debug && make -j \$(cat /proc/cpuinfo | grep processor | wc -l) opossumTest"
+          sh "cd .. && ./gcc-debug/opossumTest"
         }
       }
 
       stage("Test clang") {
         stage("clang Release") {
-          sh "cd clang-release"
-          sh "make -j \$(cat /proc/cpuinfo | grep processor | wc -l) opossumTest"
-          sh "./opossumTest"
+          sh "cd clang-release && make -j \$(cat /proc/cpuinfo | grep processor | wc -l) opossumTest"
+          sh "cd .. && ./clang-release/opossumTest"
         }
         stage("clang Debug") {
-          sh "cd clang-debug"
-          sh "make -j \$(cat /proc/cpuinfo | grep processor | wc -l) opossumTest"
-          sh "./opossumTest"
+          sh "cd clang-debug && make -j \$(cat /proc/cpuinfo | grep processor | wc -l) opossumTest"
+          sh "cd .. && ./clang-debug/opossumTest"
         }
       }
 
       stage("ASAN") {
         stage("asan Release") {
-          sh "cd clang-release"
-          sh "make -j \$(cat /proc/cpuinfo | grep processor | wc -l) opossumAsan"
-          sh "./opossumAsan"
+          sh "cd clang-release && make -j \$(cat /proc/cpuinfo | grep processor | wc -l) opossumAsan"
+          sh "cd .. && ./clang-release/opossumAsan"
         }
         stage("asan Debug") {
-          sh "cd clang-debug"
-          sh "make -j \$(cat /proc/cpuinfo | grep processor | wc -l) opossumAsan"
-          sh "./opossumAsan"
+          sh "cd clang-debug && make -j \$(cat /proc/cpuinfo | grep processor | wc -l) opossumAsan"
+          sh "cd .. && ./clang-debug/opossumAsan"
         }
       }
 
       stage("Coverage") {
-        sh "cd clang-debug"
-        sh "make -j \$(cat /proc/cpuinfo | grep processor | wc -l) opossumCoverage"
-        sh "./opossumCoverage"
+        sh "cd clang-debug && make -j \$(cat /proc/cpuinfo | grep processor | wc -l) opossumCoverage"
+        sh "cd .. && ./clang-debug/opossumCoverage"
         publishHTML (target: [
           allowMissing: false,
           alwaysLinkToLastBuild: false,
