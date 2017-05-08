@@ -8,8 +8,10 @@ node {
         checkout scm
         sh "./install.sh"
         sh "git submodule update --init --recursive"
-        sh "mkdir cmake-build-clang && cd cmake-build-clang && cmake .."
-        sh "mkdir cmake-build-gcc"
+        sh "mkdir clang-debug && cd clang-debug && cmake -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ .."
+        sh "mkdir clang-release && cd clang-release && cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ .."
+        sh "mkdir gcc-debug && cd gcc-debug && cmake -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++ .."
+        sh "mkdir gcc-release && cd gcc-release && cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++ .."
       }
 
       stage("Linting") {
@@ -18,7 +20,7 @@ node {
             do
                 if ! python2.7 cpplint.py --verbose=0 --extensions=hpp,cpp --counting=detailed --filter=-legal/copyright,-whitespace/newline,-runtime/references,-build/c++11 --linelength=120 $line >/dev/null 2>/dev/null
                 then
-                    echo "ERROR: Linting error occured. Execute \"premake4 lint\" for details!"
+                    echo "ERROR: Linting error occured. Execute \"tools/lint.sh\" for details!"
                     exit 1
                 fi
             done
@@ -32,46 +34,47 @@ node {
 
       stage("Test gcc") {
         stage("gcc Release") {
-          sh "premake4 --compiler=gcc"
-          sh "make -j \$(cat /proc/cpuinfo | grep processor | wc -l) -R config=release test"
+          sh "cd gcc-release"
+          sh "make -j \$(cat /proc/cpuinfo | grep processor | wc -l) opossumTest"
+          sh "./opossumTest"
         }
-        stage("gc Debug") {
-          sh "make clean"
-          sh "premake4 --compiler=gcc"
-          sh "make -j \$(cat /proc/cpuinfo | grep processor | wc -l) -R config=debug test"
+        stage("gcc Debug") {
+          sh "cd gcc-debug"
+          sh "make -j \$(cat /proc/cpuinfo | grep processor | wc -l) opossumTest"
+          sh "./opossumTest"
         }
       }
 
       stage("Test clang") {
         stage("clang Release") {
-          sh "make clean"
-          sh "premake4 --compiler=clang"
-          sh "make -j \$(cat /proc/cpuinfo | grep processor | wc -l) -R config=release test"
+          sh "cd clang-release"
+          sh "make -j \$(cat /proc/cpuinfo | grep processor | wc -l) opossumTest"
+          sh "./opossumTest"
         }
         stage("clang Debug") {
-          sh "make clean"
-          sh "premake4 --compiler=clang"
-          sh "make -j \$(cat /proc/cpuinfo | grep processor | wc -l) -R config=debug test"
+          sh "cd clang-debug"
+          sh "make -j \$(cat /proc/cpuinfo | grep processor | wc -l) opossumTest"
+          sh "./opossumTest"
         }
       }
 
       stage("ASAN") {
         stage("asan Release") {
-          sh "make clean"
-          sh "premake4 --compiler=clang"
-          sh "make -j \$(cat /proc/cpuinfo | grep processor | wc -l) -R config=release asan"
+          sh "cd clang-release"
+          sh "make -j \$(cat /proc/cpuinfo | grep processor | wc -l) opossumAsan"
+          sh "./opossumAsan"
         }
         stage("asan Debug") {
-          sh "make clean"
-          sh "premake4 --compiler=clang"
-          sh "make -j \$(cat /proc/cpuinfo | grep processor | wc -l) -R config=debug asan"
+          sh "cd clang-debug"
+          sh "make -j \$(cat /proc/cpuinfo | grep processor | wc -l) opossumAsan"
+          sh "./opossumAsan"
         }
       }
 
       stage("Coverage") {
-        sh "make clean"
-        sh "premake4"
-        sh "make -j \$(cat /proc/cpuinfo | grep processor | wc -l) coverage"
+        sh "cd clang-debug"
+        sh "make -j \$(cat /proc/cpuinfo | grep processor | wc -l) opossumCoverage"
+        sh "./opossumCoverage"
         publishHTML (target: [
           allowMissing: false,
           alwaysLinkToLastBuild: false,
