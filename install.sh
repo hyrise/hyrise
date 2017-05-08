@@ -48,8 +48,6 @@ if echo $REPLY | grep -E '^[Yy]$' > /dev/null; then
             fi
         fi
     fi
-
-    make -s -f scripts/install_git_hooks.mk all
 fi
 
 exit 0

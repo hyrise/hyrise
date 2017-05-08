@@ -7,7 +7,9 @@ node {
       stage("Setup") {
         checkout scm
         sh "./install.sh"
-        sh "git submodule update --init"
+        sh "git submodule update --init --recursive"
+        sh "mkdir cmake-build-clang && cd cmake-build-clang && cmake .."
+        sh "mkdir cmake-build-gcc"
       }
 
       stage("Linting") {
