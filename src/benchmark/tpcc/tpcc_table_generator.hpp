@@ -40,10 +40,6 @@ class TPCCTableGenerator {
 
   void add_all_tables(StorageManager &manager);
 
- protected:
-  template <typename T>
-  std::shared_ptr<ValueColumn<T>> add_column(size_t cardinality, const std::function<T(size_t)> &generator_function);
-
   const size_t _chunk_size = 1000;
   const time_t _current_date = std::time(0);
 
@@ -55,6 +51,10 @@ class TPCCTableGenerator {
   const size_t _history_size = 1;      // per customer
   const size_t _order_size = 3000;     // per district
   const size_t _new_order_size = 900;  // per district
+
+ protected:
+  template <typename T>
+  std::shared_ptr<ValueColumn<T>> add_column(size_t cardinality, const std::function<T(size_t)> &generator_function);
 
   RandomGenerator _random_gen;
 };
