@@ -12,3 +12,4 @@ benchmark.json
 *.xcworkspace
 src/lib/network/generated
 .vscode
+cmake-build-debug/
