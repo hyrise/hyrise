@@ -111,6 +111,8 @@ class ServerTest : public BaseTest {
 
   void SetUp() override {
     auto test_table = load_table("src/test/tables/float.tbl", 2);
+    // At this point it would be too complicated to replace the test tables with TableWrapper. Because the TableWrapper
+    // operator would have to be translated by the network module.
     StorageManager::get().add_table(table_name, std::move(test_table));
 
     config.address = address;

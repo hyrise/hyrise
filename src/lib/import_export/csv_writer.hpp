@@ -1,0 +1,79 @@
+#pragma once
+
+#include <fstream>
+#include <string>
+#include <vector>
+
+#include "csv.hpp"
+#include "types.hpp"
+
+namespace opossum {
+
+class CsvWriter {
+ public:
+  /*
+   * Creates a new CsvWriter with the given file as output file.
+   * @param file The file to output the csv to.
+   */
+  explicit CsvWriter(const std::string& file);
+
+  template <typename T>
+  void write(const T& value) {
+    if (_current_col_count > 0) {
+      _stream << csv::separator;
+    }
+    _write_value(value);
+    ++this->_current_col_count;
+  }
+
+  /*
+   * Ends a row of entries in the csv file.
+   */
+  void end_line();
+
+  /*
+   * Writes a full line of AllTypeVariants as a row.
+   * Also calls end_line() to finish the row.
+   */
+  void write_line(const std::vector<AllTypeVariant>& values);
+
+ protected:
+  std::string escape(const std::string& string);
+
+  template <typename T>
+  void _write_value(const T& value);
+
+  std::ofstream _stream;
+  ColumnID _current_col_count = 0;
+};
+
+template <typename T>
+void CsvWriter::_write_value(const T& value) {
+  _stream << value;
+}
+
+template <>
+inline void CsvWriter::_write_value<std::string>(const std::string& value) {
+  /* We put an the quotechars around any string value by default
+   * as this is the only time when a comma (,) might be inside a value.
+   * This might consume more space, however it speeds the program as it
+   * does not require additional checks.
+   * If we start allowing more characters as delimiter, we should change
+   * this behaviour to either general quoting or checking for "illegal"
+   * characters.
+   */
+  _stream << csv::quote;
+  _stream << escape(value);
+  _stream << csv::quote;
+}
+
+template <>
+inline void CsvWriter::_write_value<AllTypeVariant>(const AllTypeVariant& value) {
+  if (value.type() == typeid(std::string)) {
+    _write_value(type_cast<std::string>(value));
+  } else {
+    _stream << value;
+  }
+}
+
+}  // namespace opossum

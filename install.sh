@@ -13,22 +13,18 @@ if echo $REPLY | grep -E '^[Yy]$' > /dev/null; then
         echo "Installing dependencies (this may take a while)..."
         if brew update >/dev/null; then
             # python2.7 is preinstalled on macOS
-            if brew install premake boost gcc clang-format gcovr tbb autoconf automake libtool pkg-config cmake; then
-                if git submodule update --init --recursive; then
-                    if CPPFLAGS="-Wno-deprecated-declarations" CFLAGS="-Wno-deprecated-declarations -Wno-implicit-function-declaration -Wno-shift-negative-value" make static -j $(sysctl -n hw.ncpu) --directory=third_party/grpc REQUIRE_CUSTOM_LIBRARIES_opt=true; then
-                        echo "Installation successful"
-                    else
-                        echo "Error during gRPC installation."
-                        exit 1
-                    fi
-                else
-                    echo "Error during installation."
+            # check, for each programme individually with brew, whether it is already installed
+            # due to brew issues on MacOS after system upgrade
+            for formula in premake boost gcc clang-format gcovr tbb autoconf automake libtool pkg-config; do
+                # if brew formula is installed
+                if brew ls --versions $formula > /dev/null; then
+                    continue
+                fi
+                if ! brew install $formula; then
+                    echo "Error during brew formula $formula installation."
                     exit 1
                 fi
-            else
-                echo "Error during installation."
-                exit 1
-            fi
+            done
         else
             echo "Error during installation."
             exit 1
@@ -38,14 +34,7 @@ if echo $REPLY | grep -E '^[Yy]$' > /dev/null; then
             echo "Installing dependencies (this may take a while)..."
             if sudo apt-get update >/dev/null; then
                 if sudo apt-get install -y premake4 libboost-all-dev clang-format gcovr python2.7 gcc-6 clang llvm libnuma-dev libnuma1 libtbb-dev build-essential autoconf libtool cmake; then
-                    if git submodule update --init --recursive; then
-                        if CPPFLAGS="-Wno-deprecated-declarations" CFLAGS="-Wno-deprecated-declarations -Wno-implicit-function-declaration -Wno-shift-negative-value" make static -j $(cat /proc/cpuinfo | grep processor | wc -l) --directory=third_party/grpc REQUIRE_CUSTOM_LIBRARIES_opt=true; then
-                            echo "Installation successful"
-                        else
-                            echo "Error during gRPC installation."
-                            exit 1
-                        fi
-                    else
+                    if ! git submodule update --init --recursive; then
                         echo "Error during installation."
                         exit 1
                     fi
@@ -61,12 +50,6 @@ if echo $REPLY | grep -E '^[Yy]$' > /dev/null; then
     fi
 
     make -s -f scripts/install_git_hooks.mk all
-
-
-    mkdir build
-    pushd build
-    cmake ..
-    popd
 fi
 
 exit 0
