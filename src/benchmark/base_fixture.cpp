@@ -14,9 +14,9 @@
 namespace opossum {
 
 // Defining the base fixture class
-class BenchmarkFixture : public benchmark::Fixture {
+class BenchmarkBasicFixture : public benchmark::Fixture {
  public:
-  BenchmarkFixture() {
+  BenchmarkBasicFixture() {
     // Generating a test table with generate_table function from table_generator.cpp
 
     auto table_generator = std::make_shared<TableGenerator>();

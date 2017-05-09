@@ -5,18 +5,14 @@
 
 #include "benchmark/benchmark.h"
 
-#include "../../lib/operators/get_table.hpp"
-#include "../../lib/operators/projection.hpp"
-#include "../../lib/operators/table_scan.hpp"
-#include "../../lib/storage/storage_manager.hpp"
-#include "../../lib/storage/table.hpp"
-#include "../../lib/types.hpp"
 #include "../base_fixture.cpp"
 #include "../table_generator.hpp"
+#include "operators/projection.hpp"
+#include "operators/table_scan.hpp"
 
 namespace opossum {
 
-class OperatorsProjectionBenchmark : public BenchmarkFixture {
+class OperatorsProjectionBenchmark : public BenchmarkBasicFixture {
  public:
   virtual void SetUp(const ::benchmark::State& state) {
     _table_ref = std::make_shared<TableScan>(_table_wrapper_a, "a", ">=", 0);  // all
