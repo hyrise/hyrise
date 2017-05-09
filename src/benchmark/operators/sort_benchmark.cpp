@@ -16,10 +16,10 @@ namespace opossum {
 
 BENCHMARK_F(BenchmarkFixture, BM_Sort)(benchmark::State& state) {
   clear_cache();
-  auto warm_up = std::make_shared<Sort>(_gt_a, "a");
+  auto warm_up = std::make_shared<Sort>(_table_wrapper_a, "a");
   warm_up->execute();
   while (state.KeepRunning()) {
-    auto sort = std::make_shared<Sort>(_gt_a, "a");
+    auto sort = std::make_shared<Sort>(_table_wrapper_a, "a");
     sort->execute();
   }
 }
