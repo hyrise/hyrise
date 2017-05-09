@@ -19,6 +19,6 @@ class Limit : public AbstractReadOnlyOperator {
   std::shared_ptr<const Table> on_execute() override;
 
  private:
-  size_t _num_rows;
+  const size_t _num_rows;
 };
 }  // namespace opossum
