@@ -9,6 +9,7 @@
 #include "storage/reference_column.hpp"
 
 #include "resolve_type.hpp"
+#include "type_cast.hpp"
 #include "types.hpp"
 
 namespace {

@@ -17,6 +17,7 @@
 #include "storage/index/base_index.hpp"
 #include "storage/reference_column.hpp"
 #include "storage/value_column.hpp"
+#include "type_cast.hpp"
 #include "types.hpp"
 
 namespace opossum {

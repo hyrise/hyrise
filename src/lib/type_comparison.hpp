@@ -2,6 +2,8 @@
 
 #include <type_traits>
 
+#include <boost/lexical_cast.hpp>
+
 namespace opossum {
 
 // source: http://stackoverflow.com/questions/16893992/check-if-type-can-be-explicitly-converted

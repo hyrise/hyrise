@@ -9,6 +9,7 @@
 #include "import_export/csv_converter.hpp"
 
 #include "resolve_type.hpp"
+#include "type_cast.hpp"
 
 namespace opossum {
 
