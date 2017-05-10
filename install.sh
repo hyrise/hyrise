@@ -37,6 +37,13 @@ if echo $REPLY | grep -E '^[Yy]$' > /dev/null; then
                     if ! git submodule update --init --recursive; then
                         echo "Error during installation."
                         exit 1
+                    else
+                        if CPPFLAGS="-Wno-deprecated-declarations" CFLAGS="-Wno-deprecated-declarations -Wno-implicit-function-declaration -Wno-shift-negative-value" make static -j $(sysctl -n hw.ncpu) --directory=third_party/grpc REQUIRE_CUSTOM_LIBRARIES_opt=true; then
+                            echo "Installation successful"
+                        else
+                            echo "Error during gRPC installation."
+                            exit 1
+                        fi
                     fi
                 else
                     echo "Error during installation."

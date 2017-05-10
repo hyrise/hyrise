@@ -15,7 +15,6 @@ add_custom_command(
             -I=\"./network/protos/\"
             ./network/protos/opossum.proto
     DEPENDS
-        protoc
         ${CMAKE_CURRENT_SOURCE_DIR}/network/generated
         ./network/protos/opossum.proto
     WORKING_DIRECTORY
@@ -32,7 +31,6 @@ add_custom_command(
             -I=\"./network/protos/\"
             ./network/protos/opossum.proto
     DEPENDS
-        protoc
         ${CMAKE_CURRENT_SOURCE_DIR}/network/generated
         ./network/protos/opossum.proto
     WORKING_DIRECTORY

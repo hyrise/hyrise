@@ -29,15 +29,3 @@ target_include_directories(
     PRIVATE
     benchmark/include
 )
-
-set(FOO "Hello \"Wrld\"")
-
-message(${FOO})
-
-# Build grpc
-add_custom_target(
-    protoc
-    COMMAND $(MAKE) static --directory=${CMAKE_CURRENT_SOURCE_DIR}/grpc REQUIRE_CUSTOM_LIBRARIES_opt=true
-    COMMENT "Building protoc"
-    VERBATIM
-)
