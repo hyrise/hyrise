@@ -17,8 +17,7 @@
 
 namespace opossum {
 
-Table::Table(const size_t chunk_size, const bool auto_compress)
-    : _chunk_size(chunk_size), _auto_compress(auto_compress), _append_mutex(std::make_unique<std::mutex>()) {
+Table::Table(const size_t chunk_size) : _chunk_size(chunk_size), _append_mutex(std::make_unique<std::mutex>()) {
   _chunks.push_back(Chunk{true});
 }
 
@@ -77,6 +76,8 @@ uint32_t Table::chunk_size() const { return _chunk_size; }
 const std::string &Table::column_name(ColumnID column_id) const { return _column_names[column_id]; }
 
 const std::string &Table::column_type(ColumnID column_id) const { return _column_types[column_id]; }
+
+const std::vector<std::string> &Table::column_types() const { return _column_types; }
 
 Chunk &Table::get_chunk(ChunkID chunk_id) { return _chunks[chunk_id]; }
 const Chunk &Table::get_chunk(ChunkID chunk_id) const { return _chunks[chunk_id]; }

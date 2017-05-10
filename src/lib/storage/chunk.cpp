@@ -32,7 +32,7 @@ void Chunk::add_column(std::shared_ptr<BaseColumn> column) {
   _columns.push_back(column);
 }
 
-void Chunk::set_column(size_t column_id, std::shared_ptr<BaseColumn> column) {
+void Chunk::replace_column(size_t column_id, std::shared_ptr<BaseColumn> column) {
   std::atomic_store(&_columns.at(column_id), column);
 }
 
@@ -82,7 +82,7 @@ void Chunk::use_mvcc_columns_from(const Chunk& chunk) {
 
 bool Chunk::has_mvcc_columns() const { return _mvcc_columns != nullptr; }
 
-SharedLockLockingPtr<Chunk::MvccColumns> Chunk::mvcc_columns() {
+SharedScopedLockingPtr<Chunk::MvccColumns> Chunk::mvcc_columns() {
 #ifdef IS_DEBUG
   if (!has_mvcc_columns()) {
     std::logic_error("Chunk does not have mvcc columns");
@@ -92,7 +92,7 @@ SharedLockLockingPtr<Chunk::MvccColumns> Chunk::mvcc_columns() {
   return {*_mvcc_columns, _mvcc_columns->_mutex};
 }
 
-SharedLockLockingPtr<const Chunk::MvccColumns> Chunk::mvcc_columns() const {
+SharedScopedLockingPtr<const Chunk::MvccColumns> Chunk::mvcc_columns() const {
 #ifdef IS_DEBUG
   if (!has_mvcc_columns()) {
     std::logic_error("Chunk does not have mvcc columns");

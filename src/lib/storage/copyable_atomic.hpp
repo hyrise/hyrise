@@ -15,6 +15,11 @@ namespace opossum {
  * Attention: The following is not an atomic operation
  *   copyable_atomic<int> a = 3, b = 4;
  *   a = b; // not atomic!
+ *
+ *   // internally this happens
+ *   auto tmp = b.load();
+ *   // execution might be interrupted here
+ *   a.store(tmp);
  */
 template <typename T>
 class copyable_atomic {

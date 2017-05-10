@@ -4,7 +4,8 @@
 #include <string>
 #include <vector>
 
-#include "../lib/operators/chunk_compression.hpp"
+#include "../lib/storage/dictionary_compression.hpp"
+#include "../lib/storage/table.hpp"
 #include "../lib/types.hpp"
 
 #include "gtest/gtest.h"
@@ -46,7 +47,7 @@ class BaseTest : public ::testing::Test {
   static std::shared_ptr<BaseColumn> create_dict_column_by_type(const std::string &type, const std::vector<T> &values) {
     auto vector_values = tbb::concurrent_vector<T>(values.begin(), values.end());
     auto value_column = std::make_shared<ValueColumn<T>>(std::move(vector_values));
-    return ChunkCompression::compress_column(type, value_column);
+    return DictionaryCompression::compress_column(type, value_column);
   }
 
  public:

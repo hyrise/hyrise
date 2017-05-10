@@ -39,6 +39,8 @@ class OperatorTranslatorTest : public BaseTest {
  protected:
   void SetUp() override {
     _test_table = load_table("src/test/tables/int_string2.tbl", 2);
+    // At this point it would be too complicated to replace the test tables with TableWrapper. Because the TableWrapper
+    // operator would have to be translated by the network module.
     StorageManager::get().add_table("TestTable", _test_table);
 
     std::shared_ptr<Table> test_table_int_float = load_table("src/test/tables/int_float.tbl", 5);

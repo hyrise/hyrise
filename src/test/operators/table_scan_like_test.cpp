@@ -9,9 +9,9 @@
 #include "gtest/gtest.h"
 
 #include "../../lib/operators/abstract_read_only_operator.hpp"
-#include "../../lib/operators/chunk_compression.hpp"
 #include "../../lib/operators/get_table.hpp"
 #include "../../lib/operators/table_scan.hpp"
+#include "../../lib/storage/dictionary_compression.hpp"
 #include "../../lib/storage/storage_manager.hpp"
 #include "../../lib/storage/table.hpp"
 #include "../../lib/types.hpp"
@@ -33,15 +33,15 @@ class OperatorsTableScanLikeTest : public BaseTest {
     _gt_string->execute();
 
     // load and compress string table
-    std::shared_ptr<Table> test_table_string_dict = load_table("src/test/tables/int_string_like.tbl", 5);
+    auto test_table_string_dict = load_table("src/test/tables/int_string_like.tbl", 5);
+    DictionaryCompression::compress_chunks(*test_table_string_dict, {0u});
+
     StorageManager::get().add_table("table_string_dict", test_table_string_dict);
-    {
-      auto compression = std::make_unique<ChunkCompression>("table_string_dict", 0u, false);
-      compression->execute();
-    }
+
     _gt_string_dict = std::make_shared<GetTable>("table_string_dict");
     _gt_string_dict->execute();
   }
+
   std::shared_ptr<GetTable> _gt, _gt_string, _gt_string_dict;
 };
 

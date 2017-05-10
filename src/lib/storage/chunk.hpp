@@ -12,8 +12,10 @@
 
 #include "all_type_variant.hpp"
 #include "copyable_atomic.hpp"
-#include "locking_ptr.hpp"
+#include "index/base_index.hpp"
+#include "scoped_locking_ptr.hpp"
 #include "types.hpp"
+#include "value_column.hpp"
 
 namespace opossum {
 
@@ -67,7 +69,7 @@ class Chunk {
   void add_column(std::shared_ptr<BaseColumn> column);
 
   // Atomically replaces the current column at column_id with the passed column
-  void set_column(size_t column_id, std::shared_ptr<BaseColumn> column);
+  void replace_column(size_t column_id, std::shared_ptr<BaseColumn> column);
 
   // returns the number of columns (cannot exceed ColumnID (uint16_t))
   uint16_t col_count() const;
@@ -84,8 +86,10 @@ class Chunk {
    *
    * Note: Concurrently with the execution of operators,
    *       ValueColumns might be exchanged with DictionaryColumns.
-   *       Therefore the column class needs to be reevaluated
-   *       if a column is retrieved a second time.
+   *       Therefore, if you hold a pointer to a column, you can
+   *       continue to use it without any inconsistencies.
+   *       However, if you call get_column again, be aware that
+   *       the return type might have changed.
    */
   std::shared_ptr<BaseColumn> get_column(ColumnID column_id) const;
 
@@ -100,8 +104,8 @@ class Chunk {
    *
    * @return a locking ptr to the mvcc columns
    */
-  SharedLockLockingPtr<MvccColumns> mvcc_columns();
-  SharedLockLockingPtr<const MvccColumns> mvcc_columns() const;
+  SharedScopedLockingPtr<MvccColumns> mvcc_columns();
+  SharedScopedLockingPtr<const MvccColumns> mvcc_columns() const;
 
   /**
    * Compacts the internal represantion of

@@ -5,8 +5,8 @@
 #include "../base_test.hpp"
 #include "gtest/gtest.h"
 
-#include "../../lib/operators/chunk_compression.hpp"
 #include "../../lib/operators/import_binary.hpp"
+#include "../../lib/storage/dictionary_compression.hpp"
 #include "../../lib/storage/storage_manager.hpp"
 
 namespace opossum {
@@ -64,10 +64,9 @@ TEST_F(OperatorsImportBinaryTest, StringDictionaryColumn) {
   expected_table->append({"a"});
   expected_table->append({"test"});
 
-  StorageManager::get().add_table("table_a", expected_table);
+  DictionaryCompression::compress_table(*expected_table);
 
-  auto compression = std::make_unique<ChunkCompression>("table_a", 0u, false);
-  compression->execute();
+  StorageManager::get().add_table("table_a", expected_table);
 
   auto importer = std::make_shared<opossum::ImportBinary>("src/test/binary/StringDictionaryColumn.bin");
   importer->execute();
@@ -105,10 +104,9 @@ TEST_F(OperatorsImportBinaryTest, AllTypesDictionaryColumn) {
   expected_table->append({"CCCCCCCCCCCCCCC", 3, static_cast<int64_t>(300), 3.3f, 33.3});
   expected_table->append({"DDDDDDDDDDDDDDDDDDDD", 4, static_cast<int64_t>(400), 4.4f, 44.4});
 
-  StorageManager::get().add_table("expected_table", expected_table);
+  DictionaryCompression::compress_table(*expected_table);
 
-  auto compression = std::make_unique<ChunkCompression>("expected_table", std::vector<ChunkID>{0u, 1u}, false);
-  compression->execute();
+  StorageManager::get().add_table("expected_table", expected_table);
 
   auto importer = std::make_shared<opossum::ImportBinary>("src/test/binary/AllTypesDictionaryColumn.bin");
   importer->execute();
@@ -128,10 +126,9 @@ TEST_F(OperatorsImportBinaryTest, AllTypesMixColumn) {
   expected_table->append({"CCCCCCCCCCCCCCC", 3, static_cast<int64_t>(300), 3.3f, 33.3});
   expected_table->append({"DDDDDDDDDDDDDDDDDDDD", 4, static_cast<int64_t>(400), 4.4f, 44.4});
 
-  StorageManager::get().add_table("expected_table", expected_table);
+  DictionaryCompression::compress_chunks(*expected_table, {0u});
 
-  auto compression = std::make_unique<ChunkCompression>("expected_table", 0u, false);
-  compression->execute();
+  StorageManager::get().add_table("expected_table", expected_table);
 
   auto importer = std::make_shared<opossum::ImportBinary>("src/test/binary/AllTypesMixColumn.bin");
   importer->execute();

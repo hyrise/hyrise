@@ -6,37 +6,37 @@
 #include "../base_test.hpp"
 #include "gtest/gtest.h"
 
-#include "../../lib/operators/chunk_compression.hpp"
 #include "../../lib/storage/storage_manager.hpp"
 #include "../../lib/storage/untyped_dictionary_column.hpp"
+#include "../../lib/tasks/chunk_compression_task.hpp"
 
 namespace opossum {
 
-class OperatorsChunkCompressionTest : public BaseTest {
+class ChunkCompressionTaskTest : public BaseTest {
  protected:
   void SetUp() override {}
 
  private:
 };
 
-TEST_F(OperatorsChunkCompressionTest, CompressionPreservesTableContent) {
+TEST_F(ChunkCompressionTaskTest, CompressionPreservesTableContent) {
   auto table = load_table("src/test/tables/compression_input.tbl", 6u);
   StorageManager::get().add_table("table", table);
 
   auto table_dict = load_table("src/test/tables/compression_input.tbl", 6u);
   StorageManager::get().add_table("table_dict", table_dict);
 
-  auto compression = std::make_unique<ChunkCompression>("table_dict", std::vector<ChunkID>{0u, 1u}, false);
+  auto compression = std::make_unique<ChunkCompressionTask>("table_dict", std::vector<ChunkID>{0u, 1u}, false);
   compression->execute();
 
   ASSERT_TABLE_EQ(table, table_dict);
 }
 
-TEST_F(OperatorsChunkCompressionTest, DictionarySize) {
+TEST_F(ChunkCompressionTaskTest, DictionarySize) {
   auto table_dict = load_table("src/test/tables/compression_input.tbl", 6u);
   StorageManager::get().add_table("table_dict", table_dict);
 
-  auto compression = std::make_unique<ChunkCompression>("table_dict", std::vector<ChunkID>{0u, 1u}, false);
+  auto compression = std::make_unique<ChunkCompressionTask>("table_dict", std::vector<ChunkID>{0u, 1u}, false);
   compression->execute();
 
   constexpr auto chunk_count = 2u;

@@ -9,10 +9,10 @@
 #include "gtest/gtest.h"
 
 #include "../../lib/import_export/binary.hpp"
-#include "../../lib/operators/chunk_compression.hpp"
 #include "../../lib/operators/export_binary.hpp"
-#include "../../lib/operators/get_table.hpp"
 #include "../../lib/operators/table_scan.hpp"
+#include "../../lib/operators/table_wrapper.hpp"
+#include "../../lib/storage/dictionary_compression.hpp"
 #include "../../lib/storage/storage_manager.hpp"
 #include "../../lib/storage/table.hpp"
 
@@ -53,10 +53,9 @@ TEST_F(OperatorsExportBinaryTest, TwoColumnsNoValues) {
   table = std::make_shared<Table>(30000);
   table->add_column("FirstColumn", "int");
   table->add_column("SecondColumn", "string");
-  StorageManager::get().add_table("table", std::move(table));
-  auto gt = std::make_shared<GetTable>("table");
-  gt->execute();
-  auto ex = std::make_shared<opossum::ExportBinary>(gt, filename);
+  auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
+  table_wrapper->execute();
+  auto ex = std::make_shared<opossum::ExportBinary>(table_wrapper, filename);
   ex->execute();
 
   EXPECT_TRUE(fileExists(filename));
@@ -70,10 +69,9 @@ TEST_F(OperatorsExportBinaryTest, SingleChunkSingleFloatColumn) {
   table->append({13.0f});
   table->append({16.2f});
 
-  StorageManager::get().add_table("table", std::move(table));
-  auto gt = std::make_shared<GetTable>("table");
-  gt->execute();
-  auto ex = std::make_shared<opossum::ExportBinary>(gt, filename);
+  auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
+  table_wrapper->execute();
+  auto ex = std::make_shared<opossum::ExportBinary>(table_wrapper, filename);
   ex->execute();
 
   EXPECT_TRUE(fileExists(filename));
@@ -86,10 +84,9 @@ TEST_F(OperatorsExportBinaryTest, MultipleChunkSingleFloatColumn) {
   table->append({13.0f});
   table->append({16.2f});
 
-  StorageManager::get().add_table("table", std::move(table));
-  auto gt = std::make_shared<GetTable>("table");
-  gt->execute();
-  auto ex = std::make_shared<opossum::ExportBinary>(gt, filename);
+  auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
+  table_wrapper->execute();
+  auto ex = std::make_shared<opossum::ExportBinary>(table_wrapper, filename);
   ex->execute();
 
   EXPECT_TRUE(fileExists(filename));
@@ -104,10 +101,9 @@ TEST_F(OperatorsExportBinaryTest, StringValueColumn) {
   table->append({"a"});
   table->append({"test"});
 
-  StorageManager::get().add_table("table", std::move(table));
-  auto gt = std::make_shared<GetTable>("table");
-  gt->execute();
-  auto ex = std::make_shared<opossum::ExportBinary>(gt, filename);
+  auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
+  table_wrapper->execute();
+  auto ex = std::make_shared<opossum::ExportBinary>(table_wrapper, filename);
   ex->execute();
 
   EXPECT_TRUE(fileExists(filename));
@@ -122,14 +118,11 @@ TEST_F(OperatorsExportBinaryTest, StringDictionaryColumn) {
   table->append({"a"});
   table->append({"test"});
 
-  StorageManager::get().add_table("table", std::move(table));
+  DictionaryCompression::compress_table(*table);
 
-  auto compression = std::make_unique<ChunkCompression>("table", 0u, false);
-  compression->execute();
-
-  auto gt = std::make_shared<GetTable>("table");
-  gt->execute();
-  auto ex = std::make_shared<opossum::ExportBinary>(gt, filename);
+  auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
+  table_wrapper->execute();
+  auto ex = std::make_shared<opossum::ExportBinary>(table_wrapper, filename);
   ex->execute();
 
   EXPECT_TRUE(fileExists(filename));
@@ -148,10 +141,9 @@ TEST_F(OperatorsExportBinaryTest, AllTypesValueColumn) {
   table->append({"CCCCCCCCCCCCCCC", 3, static_cast<int64_t>(300), 3.3f, 33.3});
   table->append({"DDDDDDDDDDDDDDDDDDDD", 4, static_cast<int64_t>(400), 4.4f, 44.4});
 
-  StorageManager::get().add_table("table", std::move(table));
-  auto gt = std::make_shared<GetTable>("table");
-  gt->execute();
-  auto ex = std::make_shared<opossum::ExportBinary>(gt, filename);
+  auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
+  table_wrapper->execute();
+  auto ex = std::make_shared<opossum::ExportBinary>(table_wrapper, filename);
   ex->execute();
 
   EXPECT_TRUE(fileExists(filename));
@@ -169,15 +161,12 @@ TEST_F(OperatorsExportBinaryTest, AllTypesDictionaryColumn) {
   table->append({"CCCCCCCCCCCCCCC", 3, static_cast<int64_t>(300), 3.3f, 33.3});
   table->append({"DDDDDDDDDDDDDDDDDDDD", 4, static_cast<int64_t>(400), 4.4f, 44.4});
 
-  StorageManager::get().add_table("table", std::move(table));
+  DictionaryCompression::compress_table(*table);
 
-  auto compression = std::make_unique<ChunkCompression>("table", std::vector<ChunkID>{0u, 1u}, false);
-  compression->execute();
+  auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
+  table_wrapper->execute();
 
-  auto gt = std::make_shared<GetTable>("table");
-  gt->execute();
-
-  auto ex = std::make_shared<opossum::ExportBinary>(gt, filename);
+  auto ex = std::make_shared<opossum::ExportBinary>(table_wrapper, filename);
   ex->execute();
 
   EXPECT_TRUE(fileExists(filename));
@@ -195,15 +184,11 @@ TEST_F(OperatorsExportBinaryTest, AllTypesMixColumn) {
   table->append({"CCCCCCCCCCCCCCC", 3, static_cast<int64_t>(300), 3.3f, 33.3});
   table->append({"DDDDDDDDDDDDDDDDDDDD", 4, static_cast<int64_t>(400), 4.4f, 44.4});
 
-  StorageManager::get().add_table("table", table);
+  DictionaryCompression::compress_chunks(*table, {0u});
 
-  auto compression = std::make_unique<ChunkCompression>("table", 0u, false);
-  compression->execute();
-
-  auto gt = std::make_shared<GetTable>("table");
-  gt->execute();
-
-  auto ex = std::make_shared<opossum::ExportBinary>(gt, filename);
+  auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
+  table_wrapper->execute();
+  auto ex = std::make_shared<opossum::ExportBinary>(table_wrapper, filename);
   ex->execute();
 
   EXPECT_TRUE(fileExists(filename));
@@ -225,11 +210,10 @@ TEST_F(OperatorsExportBinaryTest, AllTypesReferenceColumn) {
   table->append({"CCCCCCCCCCCCCCC", 3, static_cast<int64_t>(300), 3.3f, 33.3});
   table->append({"DDDDDDDDDDDDDDDDDDDD", 4, static_cast<int64_t>(400), 4.4f, 44.4});
 
-  StorageManager::get().add_table("table", std::move(table));
-  auto gt = std::make_shared<GetTable>("table");
-  gt->execute();
+  auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
+  table_wrapper->execute();
 
-  auto scan = std::make_shared<TableScan>(gt, "b", "!=", 5);
+  auto scan = std::make_shared<TableScan>(table_wrapper, "b", "!=", 5);
   scan->execute();
 
   auto ex = std::make_shared<opossum::ExportBinary>(scan, filename);
@@ -248,11 +232,10 @@ TEST_F(OperatorsExportBinaryTest, EmptyStringsValueColumn) {
   table->append({""});
   table->append({""});
 
-  StorageManager::get().add_table("table", std::move(table));
-  auto gt = std::make_shared<GetTable>("table");
-  gt->execute();
+  auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
+  table_wrapper->execute();
 
-  auto ex = std::make_shared<opossum::ExportBinary>(gt, filename);
+  auto ex = std::make_shared<opossum::ExportBinary>(table_wrapper, filename);
   ex->execute();
 
   EXPECT_TRUE(fileExists(filename));
@@ -268,15 +251,12 @@ TEST_F(OperatorsExportBinaryTest, EmptyStringsDictionaryColumn) {
   table->append({""});
   table->append({""});
 
-  StorageManager::get().add_table("table", table);
+  DictionaryCompression::compress_table(*table);
 
-  auto compression = std::make_unique<ChunkCompression>("table", 0u, false);
-  compression->execute();
+  auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
+  table_wrapper->execute();
 
-  auto gt = std::make_shared<GetTable>("table");
-  gt->execute();
-
-  auto ex = std::make_shared<opossum::ExportBinary>(gt, filename);
+  auto ex = std::make_shared<opossum::ExportBinary>(table_wrapper, filename);
   ex->execute();
 
   EXPECT_TRUE(fileExists(filename));
