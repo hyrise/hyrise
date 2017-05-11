@@ -199,7 +199,7 @@ std::shared_ptr<const Table> Aggregate::on_execute() {
   }
 
   /*
-  Write group-by columns, even if they are not actually added to the output
+  Write group-by columns, even if they might not be actually added to the output
   */
   for (auto &map : *results_per_column[0]) {
     for (size_t group_column_index = 0; group_column_index < map.first.size(); ++group_column_index) {
