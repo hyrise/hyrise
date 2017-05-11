@@ -224,7 +224,7 @@ std::shared_ptr<const Table> Aggregate::on_execute() {
    * 'results_per_column' always contains at least one element, since there are either GroupBy or Aggregate columns.
    * However, we need to look only at the first element, because the keys for all columns are the same.
    *
-   * The following loop is used for both, actual GroupBy columns and the DISTINCT columns.
+   * The following loop is used for both, actual GroupBy columns and DISTINCT columns.
   **/
   for (auto &map : *results_per_column[0]) {
     for (size_t group_column_index = 0; group_column_index < map.first.size(); ++group_column_index) {
