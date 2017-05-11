@@ -135,7 +135,27 @@ std::shared_ptr<const Table> Aggregate::on_execute() {
     auto hash_keys = keys_per_chunk[chunk_id];
 
     if (aggregate_column_ids.empty()) {
-      // implementation for distinct (group by without aggregation)
+      /**
+       * DISTINCT implementation
+       *
+       * In Opossum we handle the SQL keyword DISTINCT by grouping without aggregation.
+       *
+       * For a query like "SELECT DISTINCT * FROM A;"
+       * we would assume that all columns from A are part of 'groupby_columns',
+       * respectively any columns that were specified in the projection.
+       * The optimizer is responsible to take care of passing in the correct columns.
+       *
+       * How does this operation work?
+       * Distinct rows are retrieved by grouping by vectors of values. Similar as for the usual aggregation
+       * these vectors are used as keys in the 'column_results' map.
+       *
+       * At this point we've got all the different keys from the chunks and accumulate them in 'column_results'.
+       * In order to reuse the aggregation implementation, we add a dummy AggregateResult.
+       * One could optimize here in the future.
+       *
+       * Obviously this implementation is also used for plain GroupBy's.
+       */
+
       std::map<AggregateKey, AggregateResult> column_results;
       for (auto &chunk : keys_per_chunk) {
         for (auto &keys : *chunk) {
@@ -198,9 +218,14 @@ std::shared_ptr<const Table> Aggregate::on_execute() {
     }
   }
 
-  /*
-  Write group-by columns, even if they might not be actually added to the output
-  */
+  /**
+   * Write group-by columns.
+   *
+   * 'results_per_column' always contains at least one element, since there are either GroupBy or Aggregate columns.
+   * However, we need to look only at the first element, because the keys for all columns are the same.
+   *
+   * The following loop is used for both, actual GroupBy columns and the DISTINCT columns.
+  **/
   for (auto &map : *results_per_column[0]) {
     for (size_t group_column_index = 0; group_column_index < map.first.size(); ++group_column_index) {
       group_columns[group_column_index]->append(map.first[group_column_index]);
