@@ -10,7 +10,6 @@ namespace opossum {
 template <typename T>
 ValueColumn<T>::ValueColumn(tbb::concurrent_vector<T>&& values) : _values(std::move(values)) {}
 
-// return the value at a certain position. If you want to write efficient operators, back off!
 template <typename T>
 const AllTypeVariant ValueColumn<T>::operator[](const size_t i) const {
   /*
@@ -37,14 +36,11 @@ const T ValueColumn<T>::get(const size_t i) const {
   return _values.at(i);
 }
 
-// generic implementation for append
 template <typename T>
 void ValueColumn<T>::append(const AllTypeVariant& val) {
   _values.push_back(type_cast<T>(val));
 }
 
-// specialized implementation for String ValueColumns
-// includes a length check
 template <>
 void ValueColumn<std::string>::append(const AllTypeVariant& val) {
   auto typed_val = type_cast<std::string>(val);
@@ -54,7 +50,6 @@ void ValueColumn<std::string>::append(const AllTypeVariant& val) {
   _values.push_back(typed_val);
 }
 
-// returns all values
 template <typename T>
 const tbb::concurrent_vector<T>& ValueColumn<T>::values() const {
   return _values;
@@ -65,19 +60,16 @@ tbb::concurrent_vector<T>& ValueColumn<T>::values() {
   return _values;
 }
 
-// return the number of entries
 template <typename T>
 size_t ValueColumn<T>::size() const {
   return _values.size();
 }
 
-// visitor pattern, see base_column.hpp
 template <typename T>
 void ValueColumn<T>::visit(ColumnVisitable& visitable, std::shared_ptr<ColumnVisitableContext> context) {
   visitable.handle_value_column(*this, std::move(context));
 }
 
-// writes the length and value at the chunk_offset to the end off row_string
 template <typename T>
 void ValueColumn<T>::write_string_representation(std::string& row_string, const ChunkOffset chunk_offset) const {
   std::stringstream buffer;
@@ -91,8 +83,6 @@ void ValueColumn<T>::write_string_representation(std::string& row_string, const 
   row_string += buffer.str();
 }
 
-// copies one of its own values to a different ValueColumn - mainly used for materialization
-// we cannot always use the materialize method below because sort results might come from different BaseColumns
 template <typename T>
 void ValueColumn<T>::copy_value_to_value_column(BaseColumn& value_column, ChunkOffset chunk_offset) const {
   auto& output_column = static_cast<ValueColumn<T>&>(value_column);

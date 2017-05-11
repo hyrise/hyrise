@@ -7,13 +7,11 @@
 
 namespace opossum {
 
-// Creates a Dictionary column from a given dictionary and attribute vector.
 template <typename T>
 DictionaryColumn<T>::DictionaryColumn(const std::vector<T>&& dictionary,
                                       const std::shared_ptr<BaseAttributeVector>& attribute_vector)
     : _dictionary(std::make_shared<std::vector<T>>(std::move(dictionary))), _attribute_vector(attribute_vector) {}
 
-// return the value at a certain position. If you want to write efficient operators, back off!
 template <typename T>
 const AllTypeVariant DictionaryColumn<T>::operator[](const size_t i) const {
   /*
@@ -35,31 +33,26 @@ const AllTypeVariant DictionaryColumn<T>::operator[](const size_t i) const {
   return (*_dictionary)[_attribute_vector->get(i)];
 }
 
-// return the value at a certain position.
 template <typename T>
 const T DictionaryColumn<T>::get(const size_t i) const {
   return (*_dictionary)[_attribute_vector->get(i)];
 }
 
-// dictionary columns are immutable
 template <typename T>
 void DictionaryColumn<T>::append(const AllTypeVariant&) {
   throw std::logic_error("DictionaryColumn is immutable");
 }
 
-// returns an underlying dictionary
 template <typename T>
 std::shared_ptr<const std::vector<T>> DictionaryColumn<T>::dictionary() const {
   return _dictionary;
 }
 
-// returns an underlying data structure
 template <typename T>
 std::shared_ptr<const BaseAttributeVector> DictionaryColumn<T>::attribute_vector() const {
   return _attribute_vector;
 }
 
-// return a generated vector of all values
 template <typename T>
 const tbb::concurrent_vector<T> DictionaryColumn<T>::materialize_values() const {
   tbb::concurrent_vector<T> values(_attribute_vector->size());
@@ -71,14 +64,11 @@ const tbb::concurrent_vector<T> DictionaryColumn<T>::materialize_values() const 
   return values;
 }
 
-// return the value represented by a given ValueID
 template <typename T>
 const T& DictionaryColumn<T>::value_by_value_id(ValueID value_id) const {
   return _dictionary->at(value_id);
 }
 
-// returns the first value ID that refers to a value >= the search value
-// returns INVALID_VALUE_ID if all values are smaller than the search value
 template <typename T>
 ValueID DictionaryColumn<T>::lower_bound(T value) const {
   auto it = std::lower_bound(_dictionary->cbegin(), _dictionary->cend(), value);
@@ -86,15 +76,12 @@ ValueID DictionaryColumn<T>::lower_bound(T value) const {
   return std::distance(_dictionary->cbegin(), it);
 }
 
-// same as lower_bound(T), but accepts an AllTypeVariant
 template <typename T>
 ValueID DictionaryColumn<T>::lower_bound(const AllTypeVariant& value) const {
   auto typed_value = type_cast<T>(value);
   return lower_bound(typed_value);
 }
 
-// returns the first value ID that refers to a value > the search value
-// returns INVALID_VALUE_ID if all values are smaller than or equal to the search value
 template <typename T>
 ValueID DictionaryColumn<T>::upper_bound(T value) const {
   auto it = std::upper_bound(_dictionary->cbegin(), _dictionary->cend(), value);
@@ -102,32 +89,27 @@ ValueID DictionaryColumn<T>::upper_bound(T value) const {
   return std::distance(_dictionary->cbegin(), it);
 }
 
-// same as upper_bound(T), but accepts an AllTypeVariant
 template <typename T>
 ValueID DictionaryColumn<T>::upper_bound(const AllTypeVariant& value) const {
   auto typed_value = type_cast<T>(value);
   return upper_bound(typed_value);
 }
 
-// return the number of unique_values (dictionary entries)
 template <typename T>
 size_t DictionaryColumn<T>::unique_values_count() const {
   return _dictionary->size();
 }
 
-// return the number of entries
 template <typename T>
 size_t DictionaryColumn<T>::size() const {
   return _attribute_vector->size();
 }
 
-// visitor pattern, see base_column.hpp
 template <typename T>
 void DictionaryColumn<T>::visit(ColumnVisitable& visitable, std::shared_ptr<ColumnVisitableContext> context) {
   visitable.handle_dictionary_column(*this, std::move(context));
 }
 
-// writes the length and value at the chunk_offset to the end off row_string
 template <typename T>
 void DictionaryColumn<T>::write_string_representation(std::string& row_string, const ChunkOffset chunk_offset) const {
   std::stringstream buffer;
@@ -142,8 +124,6 @@ void DictionaryColumn<T>::write_string_representation(std::string& row_string, c
   row_string += buffer.str();
 }
 
-// copies one of its own values to a different ValueColumn - mainly used for materialization
-// we cannot always use the materialize method below because sort results might come from different BaseColumns
 template <typename T>
 void DictionaryColumn<T>::copy_value_to_value_column(BaseColumn& value_column, ChunkOffset chunk_offset) const {
   auto& output_column = static_cast<ValueColumn<T>&>(value_column);
@@ -153,7 +133,6 @@ void DictionaryColumn<T>::copy_value_to_value_column(BaseColumn& value_column, C
   values_out.push_back(value);
 }
 
-// TODO(anyone): Move this to base column once final optimization is supported by gcc
 template <typename T>
 const std::shared_ptr<std::vector<std::pair<RowID, T>>> DictionaryColumn<T>::materialize(
     ChunkID chunk_id, std::shared_ptr<std::vector<ChunkOffset>> offsets) {
