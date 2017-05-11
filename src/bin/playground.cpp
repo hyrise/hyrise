@@ -22,5 +22,5 @@ int main() {
   save_as_csv(generator.generate_items_table(), "tpcc-items.csv");
 
 
-
+  return 0;
 }
