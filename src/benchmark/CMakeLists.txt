@@ -6,6 +6,9 @@ add_executable(
     operators/table_scan_benchmark.cpp
     operators/product_benchmark.cpp
     operators/difference_benchmark.cpp
+    tpcc/delivery_benchmark.cpp
+    tpcc/order_status_benchmark.cpp
+    tpcc/tpcc_table_generator.cpp
     benchmark_main.cpp
     base_fixture.cpp
     table_generator.cpp
