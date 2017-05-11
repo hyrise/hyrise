@@ -51,6 +51,7 @@ class TPCCTableGenerator {
   const size_t _history_size = 1;      // per customer
   const size_t _order_size = 3000;     // per district
   const size_t _new_order_size = 900;  // per district
+  const float _customer_ytd = 10.f;
 
  protected:
   template <typename T>

@@ -11,6 +11,8 @@ namespace opossum {
 
 TPCCTableGenerator::TPCCTableGenerator() : _random_gen(RandomGenerator()) {}
 
+// TODO(anybody) chunk sizes and number of chunks might be tuned in generate_XYZ_table
+
 template <typename T>
 std::shared_ptr<ValueColumn<T>> TPCCTableGenerator::add_column(size_t cardinality,
                                                                const std::function<T(size_t)> &generator_function) {
@@ -37,7 +39,7 @@ std::shared_ptr<Table> TPCCTableGenerator::generate_items_table() {
   chunk.add_column(add_column<int>(_item_size, [](size_t i) { return i; }));
   chunk.add_column(add_column<int>(_item_size, [&](size_t) { return _random_gen.number(1, 10000); }));
   chunk.add_column(add_column<std::string>(_item_size, [&](size_t) { return _random_gen.astring(14, 24); }));
-  chunk.add_column(add_column<float>(_item_size, [&](size_t) { return _random_gen.number(100, 10000) / 100.0; }));
+  chunk.add_column(add_column<float>(_item_size, [&](size_t) { return _random_gen.number(100, 10000) / 100.f; }));
   chunk.add_column(add_column<std::string>(_item_size, [&](size_t i) {
     std::string data = _random_gen.astring(26, 50);
     bool is_original = original_ids.find(i) != original_ids.end();
@@ -76,8 +78,9 @@ std::shared_ptr<Table> TPCCTableGenerator::generate_warehouse_table() {
   chunk.add_column(add_column<std::string>(_warehouse_size, [&](size_t) { return _random_gen.astring(10, 20); }));
   chunk.add_column(add_column<std::string>(_warehouse_size, [&](size_t) { return _random_gen.astring(2, 2); }));
   chunk.add_column(add_column<std::string>(_warehouse_size, [&](size_t) { return _random_gen.zipCode(); }));
-  chunk.add_column(add_column<float>(_warehouse_size, [&](size_t) { return _random_gen.number(0, 2000) / 10000.0; }));
-  chunk.add_column(add_column<float>(_warehouse_size, [&](size_t) { return 30000.0; }));
+  chunk.add_column(add_column<float>(_warehouse_size, [&](size_t) { return _random_gen.number(0, 2000) / 10000.f; }));
+  chunk.add_column(
+      add_column<float>(_warehouse_size, [&](size_t) { return _customer_ytd * _customer_size * _district_size; }));
 
   table->add_chunk(std::move(chunk));
 
@@ -106,12 +109,12 @@ std::shared_ptr<Table> TPCCTableGenerator::generate_stock_table() {
   table->add_column("S_REMOTE_CNT", "int", false);
   table->add_column("S_DATA", "string", false);
 
-  for (size_t t = 0; t < _warehouse_size; t++) {
+  for (size_t warehouse_id = 0; warehouse_id < _warehouse_size; warehouse_id++) {
     auto original_ids = _random_gen.select_unique_ids(_item_size / 10, 1, _item_size);
 
     auto chunk = Chunk();
     chunk.add_column(add_column<int>(_stock_size, [](size_t i) { return i; }));
-    chunk.add_column(add_column<int>(_stock_size, [&](size_t) { return t; }));
+    chunk.add_column(add_column<int>(_stock_size, [&](size_t) { return warehouse_id; }));
     chunk.add_column(add_column<int>(_stock_size, [&](size_t) { return _random_gen.number(10, 100); }));
     chunk.add_column(add_column<std::string>(_stock_size, [&](size_t) { return _random_gen.astring(24, 24); }));
     chunk.add_column(add_column<std::string>(_stock_size, [&](size_t) { return _random_gen.astring(24, 24); }));
@@ -159,19 +162,19 @@ std::shared_ptr<Table> TPCCTableGenerator::generate_district_table() {
   table->add_column("D_YTD", "float", false);
   table->add_column("D_NEXT_O_ID", "int", false);
 
-  for (size_t t = 0; t < _warehouse_size; t++) {
+  for (size_t warehouse_id = 0; warehouse_id < _warehouse_size; warehouse_id++) {
     auto chunk = Chunk();
     chunk.add_column(add_column<int>(_district_size, [](size_t i) { return i; }));
-    chunk.add_column(add_column<int>(_district_size, [&](size_t) { return t; }));
+    chunk.add_column(add_column<int>(_district_size, [&](size_t) { return warehouse_id; }));
     chunk.add_column(add_column<std::string>(_district_size, [&](size_t) { return _random_gen.astring(6, 10); }));
     chunk.add_column(add_column<std::string>(_district_size, [&](size_t) { return _random_gen.astring(10, 20); }));
     chunk.add_column(add_column<std::string>(_district_size, [&](size_t) { return _random_gen.astring(10, 20); }));
     chunk.add_column(add_column<std::string>(_district_size, [&](size_t) { return _random_gen.astring(10, 20); }));
     chunk.add_column(add_column<std::string>(_district_size, [&](size_t) { return _random_gen.astring(2, 2); }));
     chunk.add_column(add_column<std::string>(_district_size, [&](size_t) { return _random_gen.zipCode(); }));
-    chunk.add_column(add_column<float>(_district_size, [&](size_t) { return _random_gen.number(0, 2000) / 10000.0; }));
-    chunk.add_column(add_column<float>(_district_size, [&](size_t) { return 30000.0; }));
-    chunk.add_column(add_column<int>(_district_size, [&](size_t) { return 3001; }));
+    chunk.add_column(add_column<float>(_district_size, [&](size_t) { return _random_gen.number(0, 2000) / 10000.f; }));
+    chunk.add_column(add_column<float>(_district_size, [&](size_t) { return _customer_ytd * _customer_size; }));
+    chunk.add_column(add_column<int>(_district_size, [&](size_t) { return _order_size + 1; }));
 
     table->add_chunk(std::move(chunk));
   }
@@ -205,15 +208,15 @@ std::shared_ptr<Table> TPCCTableGenerator::generate_customer_table() {
   table->add_column("C_DELIVERY_CNT", "int", false);
   table->add_column("C_DATA", "string", false);
 
-  for (size_t s = 0; s < _warehouse_size; s++) {
-    for (size_t t = 0; t < _district_size; t++) {
+  for (size_t warehouse_id = 0; warehouse_id < _warehouse_size; warehouse_id++) {
+    for (size_t district_id = 0; district_id < _district_size; district_id++) {
       auto original_ids = _random_gen.select_unique_ids(_item_size / 10, 1, _item_size);
 
       auto chunk = Chunk();
       chunk.add_column(add_column<int>(_customer_size, [](size_t i) { return i; }));
-      chunk.add_column(add_column<int>(_customer_size, [&](size_t) { return t; }));
-      chunk.add_column(add_column<int>(_customer_size, [&](size_t) { return s; }));
-      chunk.add_column(add_column<std::string>(_customer_size, [&](size_t) { return _random_gen.last_name(); }));
+      chunk.add_column(add_column<int>(_customer_size, [&](size_t) { return district_id; }));
+      chunk.add_column(add_column<int>(_customer_size, [&](size_t) { return warehouse_id; }));
+      chunk.add_column(add_column<std::string>(_customer_size, [&](size_t i) { return _random_gen.last_name(i); }));
       chunk.add_column(add_column<std::string>(_customer_size, [](size_t) { return "OE"; }));
       chunk.add_column(add_column<std::string>(_customer_size, [&](size_t) { return _random_gen.astring(8, 16); }));
       chunk.add_column(add_column<std::string>(_customer_size, [&](size_t) { return _random_gen.astring(10, 20); }));
@@ -229,9 +232,9 @@ std::shared_ptr<Table> TPCCTableGenerator::generate_customer_table() {
       }));
       chunk.add_column(add_column<int>(_customer_size, [](size_t) { return 50000; }));
       chunk.add_column(
-          add_column<float>(_customer_size, [&](size_t) { return _random_gen.number(0, 5000) / 10000.0; }));
-      chunk.add_column(add_column<float>(_customer_size, [](size_t) { return -10.00; }));
-      chunk.add_column(add_column<float>(_customer_size, [](size_t) { return 10.00; }));
+          add_column<float>(_customer_size, [&](size_t) { return _random_gen.number(0, 5000) / 10000.f; }));
+      chunk.add_column(add_column<float>(_customer_size, [&](size_t) { return -_customer_ytd; }));
+      chunk.add_column(add_column<float>(_customer_size, [&](size_t) { return _customer_ytd; }));
       chunk.add_column(add_column<int>(_customer_size, [](size_t) { return 1; }));
       chunk.add_column(add_column<int>(_customer_size, [](size_t) { return 0; }));
       chunk.add_column(add_column<std::string>(_customer_size, [&](size_t) { return _random_gen.astring(300, 500); }));
@@ -355,7 +358,7 @@ std::shared_ptr<Table> TPCCTableGenerator::generate_order_line_table(
             order_line_size, [&](size_t) { return order_id <= _order_size - _new_order_size ? _current_date : -1; }));
         chunk.add_column(add_column<int>(order_line_size, [](size_t) { return 5; }));
         chunk.add_column(add_column<float>(order_line_size, [&](size_t) {
-          return order_id <= _order_size - _new_order_size ? 0.f : _random_gen.real(0.01f, 9999.99f);
+          return order_id <= _order_size - _new_order_size ? 0.f : _random_gen.number(1, 999999) / 100.f;
         }));
         chunk.add_column(add_column<std::string>(order_line_size, [&](size_t) { return _random_gen.astring(24, 24); }));
         table->add_chunk(std::move(chunk));

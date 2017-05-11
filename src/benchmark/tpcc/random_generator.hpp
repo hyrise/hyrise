@@ -19,21 +19,26 @@ class RandomGenerator {
     return dist(engine);
   }
 
-  float real(float lower, float upper) {
-    std::uniform_real_distribution<float> dist(lower, upper);
-    return dist(engine);
-  }
-
   std::string zipCode() { return nstring(4, 4) + "11111"; }
 
-  std::string last_name() {
+  size_t nurand(size_t a, size_t x, size_t y) {
+    assert(0 <= _c && _c <= a);
+    return (((number(0, a) | number(x, y)) + _c) % (y - x + 1)) + x;
+  }
+
+  std::string last_name(size_t i) {
     const std::string syllables[] = {
         "BAR", "OUGHT", "ABLE", "PRI", "PRES", "ESE", "ANTI", "CALLY", "ATION", "EING",
     };
-    std::string last_name("");
-    for (int i = 0; i < 3; i++) {
-      last_name += syllables[number(0, 9)];
+
+    if (i >= 1000) {
+      i = nurand(255, 0, 999);
     }
+
+    std::string last_name("");
+    last_name += syllables[(i / 100) % 10];
+    last_name += syllables[(i / 10) % 10];
+    last_name += syllables[i % 10];
 
     return last_name;
   }
@@ -79,5 +84,6 @@ class RandomGenerator {
 
  protected:
   std::default_random_engine engine;
+  const size_t _c = number(0, 255);
 };
 }  // namespace opossum
