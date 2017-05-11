@@ -10,6 +10,7 @@
 #include "../../lib/operators/print.hpp"
 #include "../../lib/operators/table_scan.hpp"
 #include "../../lib/scheduler/operator_task.hpp"
+#include "../../tpcc/random_generator.hpp"
 
 #include "tpcc_base_fixture.cpp"
 
@@ -26,9 +27,13 @@ BENCHMARK_F(TPCCBenchmarkFixture, BM_OrderStatus)(benchmark::State& state) {
      * WHERE c_last=:c_last AND c_d_id=:d_id AND c_w_id=:w_id;
      */
 
-    auto c_last = 1;
-    auto c_d_id = 1;
-    auto c_w_id = 1;
+    RandomGenerator randomGenerator;
+    auto y = randomGenerator.number(0, 99);
+    bool byLastname = y < 60;
+
+    auto c_last = randomGenerator.last_name();
+    auto c_d_id = randomGenerator.number(1, 10);
+    auto c_w_id = 1;  // there is only one warehouse
 
     auto gt = std::make_shared<GetTable>("CUSTOMER");
     auto first_filter = std::make_shared<TableScan>(gt, "C_LAST", "=", c_last);
@@ -67,6 +72,16 @@ BENCHMARK_F(TPCCBenchmarkFixture, BM_OrderStatus)(benchmark::State& state) {
      * WHERE c_last=:c_last AND c_d_id=:d_id AND c_w_id=:w_id
      * ORDER BY c_first;
      * EXEC SQL OPEN c_name;
+     */
+
+    /**
+     * if (namecnt%2) namecnt++; / / Locate midpoint customer
+     * for (n=0; n<namecnt/ 2; n++)
+     * {
+     * EXEC SQL FETCH c_name
+     * INTO :c_balance, :c_first, :c_middle, :c_id;
+     * }
+     * EXEC SQL CLOSE c_name;
      */
   }
 }

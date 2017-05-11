@@ -4,9 +4,9 @@
 #include <memory>
 #include <string>
 #include <vector>
-#include "random_generator.hpp"
 #include "../lib/storage/storage_manager.hpp"
 #include "../lib/storage/table.hpp"
+#include "random_generator.hpp"
 
 namespace tpcc {
 
@@ -55,7 +55,8 @@ class TableGenerator {
 
  protected:
   template <typename T>
-  std::shared_ptr<opossum::ValueColumn<T>> add_column(size_t cardinality, const std::function<T(size_t)> &generator_function);
+  std::shared_ptr<opossum::ValueColumn<T>> add_column(size_t cardinality,
+                                                      const std::function<T(size_t)> &generator_function);
 
   RandomGenerator _random_gen;
 };

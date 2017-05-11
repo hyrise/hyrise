@@ -202,6 +202,14 @@ project "benchmark"
   includedirs { "third_party/benchmark/include" }
   postbuildcommands { "./build/benchmark --benchmark_format=json > benchmark.json" }
 
+project "benchmarkTPCC"
+  kind "ConsoleApp"
+
+  links { "opossum", "googlebenchmark" }
+  files { "src/benchmark/*.hpp", "src/benchmark/*.cpp", "src/benchmark/tpcc/*.hpp", "src/benchmark/tpcc/*.cpp" }
+  includedirs { "third_party/benchmark/include" }
+  postbuildcommands { "./build/benchmarkTPCC --benchmark_format=json > benchmark.json" }
+
 project "playgroundTpccBenchmark"
   kind "ConsoleApp"
   links { "opossum", "googlebenchmark" }

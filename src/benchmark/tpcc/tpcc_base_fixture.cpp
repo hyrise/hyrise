@@ -13,7 +13,6 @@
 #include "../../lib/storage/storage_manager.hpp"
 #include "../../lib/storage/table.hpp"
 #include "../../lib/types.hpp"
-#include "../../tpcc/random_generator.hpp"
 #include "../../tpcc/table_generator.hpp"
 
 namespace opossum {
@@ -21,7 +20,7 @@ namespace opossum {
 // Defining the base fixture class
 class TPCCBenchmarkFixture : public benchmark::Fixture {
  public:
-  TPCCBenchmarkFixture() : _gen(tpcc::TableGenerator()), _random_gen(tpcc::RandomGenerator()) {
+  TPCCBenchmarkFixture() : _gen(tpcc::TableGenerator()) {
     // Generating TPCC tables
     _gen.add_all_tables(opossum::StorageManager::get());
     //    CurrentScheduler::set(std::make_shared<NodeQueueScheduler>(Topology::create_fake_numa_topology(8, 4)));
@@ -46,7 +45,6 @@ class TPCCBenchmarkFixture : public benchmark::Fixture {
 
  protected:
   tpcc::TableGenerator _gen;
-  tpcc::RandomGenerator _random_gen;
 
   void clear_cache() {
     std::vector<int> clear = std::vector<int>();

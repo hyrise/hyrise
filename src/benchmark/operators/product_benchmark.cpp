@@ -14,14 +14,14 @@
 
 namespace opossum {
 
-// BENCHMARK_F(BenchmarkFixture, BM_Product)(benchmark::State& state) {
-//  clear_cache();
-//  auto warm_up = std::make_shared<Product>(_gt_a, _gt_b);
-//  warm_up->execute();
-//  while (state.KeepRunning()) {
-//    auto product = std::make_shared<Product>(_gt_a, _gt_b);
-//    product->execute();
-//  }
-//}
+BENCHMARK_F(BenchmarkFixture, BM_Product)(benchmark::State& state) {
+  clear_cache();
+  auto warm_up = std::make_shared<Product>(_gt_a, _gt_b);
+  warm_up->execute();
+  while (state.KeepRunning()) {
+    auto product = std::make_shared<Product>(_gt_a, _gt_b);
+    product->execute();
+  }
+}
 
 }  // namespace opossum

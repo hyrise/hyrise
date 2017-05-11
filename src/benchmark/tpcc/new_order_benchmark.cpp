@@ -8,7 +8,7 @@
 #include "../../lib/concurrency/transaction_manager.hpp"
 #include "../../lib/operators/commit_records.hpp"
 #include "../../lib/operators/get_table.hpp"
-//#include "../../lib/operators/print.hpp"
+// #include "../../lib/operators/print.hpp"
 #include "../../lib/operators/projection.hpp"
 #include "../../lib/operators/table_scan.hpp"
 #include "../../lib/operators/update.hpp"
@@ -20,9 +20,9 @@ namespace opossum {
 
 class TPCCNewOrderBenchmark : public TPCCBenchmarkFixture {
  public:
-  //  TODO(tim): clarify query since it is different in A. Pavlo's repo.
-  //  std::vector<std::shared_ptr<OperatorTask>> get_warehouse_tax_rate_tasks() {
-  //  }
+  // TODO(tim): clarify query since it is different in A. Pavlo's repo.
+  // std::vector<std::shared_ptr<OperatorTask>> get_warehouse_tax_rate_tasks() {
+  // }
 
   std::vector<std::shared_ptr<OperatorTask>> get_get_district_tasks(const std::shared_ptr<TransactionContext> t_context,
                                                                     const int d_id, const int d_w_id) {
