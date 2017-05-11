@@ -6,6 +6,7 @@
 
 #include "../lib/storage/dictionary_compression.hpp"
 #include "../lib/storage/table.hpp"
+#include "../lib/storage/value_column.hpp"
 #include "../lib/types.hpp"
 
 #include "gtest/gtest.h"

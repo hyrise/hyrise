@@ -15,7 +15,6 @@
 #include "index/base_index.hpp"
 #include "scoped_locking_ptr.hpp"
 #include "types.hpp"
-#include "value_column.hpp"
 
 namespace opossum {
 
