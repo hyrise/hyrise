@@ -23,7 +23,6 @@ class TPCCBenchmarkFixture : public benchmark::Fixture {
     // Generating TPCC tables
     CurrentScheduler::set(std::make_shared<NodeQueueScheduler>(Topology::create_fake_numa_topology(8, 4)));
     _gen.add_all_tables(opossum::StorageManager::get());
-
     _gt_item = std::make_shared<GetTable>("ITEM");
     _gt_warehouse = std::make_shared<GetTable>("WAREHOUSE");
     _gt_stock = std::make_shared<GetTable>("STOCK");
