@@ -181,4 +181,10 @@ const std::shared_ptr<std::vector<std::pair<RowID, T>>> DictionaryColumn<T>::mat
   return materialized_vector;
 }
 
+template class DictionaryColumn<int32_t>;
+template class DictionaryColumn<int64_t>;
+template class DictionaryColumn<float>;
+template class DictionaryColumn<double>;
+template class DictionaryColumn<std::string>;
+
 }  // namespace opossum

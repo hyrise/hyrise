@@ -86,10 +86,4 @@ class DictionaryColumn : public UntypedDictionaryColumn {
   std::shared_ptr<BaseAttributeVector> _attribute_vector;
 };
 
-template class DictionaryColumn<int32_t>;
-template class DictionaryColumn<int64_t>;
-template class DictionaryColumn<float>;
-template class DictionaryColumn<double>;
-template class DictionaryColumn<std::string>;
-
 }  // namespace opossum

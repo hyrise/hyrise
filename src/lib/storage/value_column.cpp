@@ -8,10 +8,6 @@
 namespace opossum {
 
 template <typename T>
-ValueColumn<T>::ValueColumn() = default;
-
-// Create a ValueColumn with the given values
-template <typename T>
 ValueColumn<T>::ValueColumn(tbb::concurrent_vector<T>&& values) : _values(std::move(values)) {}
 
 // return the value at a certain position. If you want to write efficient operators, back off!
@@ -127,5 +123,11 @@ const std::shared_ptr<std::vector<std::pair<RowID, T>>> ValueColumn<T>::material
 
   return materialized_vector;
 }
+
+template class ValueColumn<int32_t>;
+template class ValueColumn<int64_t>;
+template class ValueColumn<float>;
+template class ValueColumn<double>;
+template class ValueColumn<std::string>;
 
 }  // namespace opossum

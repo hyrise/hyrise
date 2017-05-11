@@ -4,6 +4,7 @@
 #include "gtest/gtest.h"
 
 #include "../lib/all_parameter_variant.hpp"
+#include "../lib/type_cast.hpp"
 #include "../lib/types.hpp"
 
 namespace opossum {

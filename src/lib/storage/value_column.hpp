@@ -15,7 +15,7 @@ namespace opossum {
 template <typename T>
 class ValueColumn : public BaseColumn {
  public:
-  ValueColumn();
+  ValueColumn() = default;
 
   // Create a ValueColumn with the given values
   explicit ValueColumn(tbb::concurrent_vector<T>&& values);
@@ -51,11 +51,5 @@ class ValueColumn : public BaseColumn {
  protected:
   tbb::concurrent_vector<T> _values;
 };
-
-template class ValueColumn<int32_t>;
-template class ValueColumn<int64_t>;
-template class ValueColumn<float>;
-template class ValueColumn<double>;
-template class ValueColumn<std::string>;
 
 }  // namespace opossum
