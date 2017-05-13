@@ -67,7 +67,7 @@ node {
 
       stage("Coverage") {
         sh "cd clang-debug && make -j \$(cat /proc/cpuinfo | grep processor | wc -l) opossumCoverage"
-        sh "./scripts/coverage.sh"
+        sh "./scripts/coverage.sh clang-debug"
         publishHTML (target: [
           allowMissing: false,
           alwaysLinkToLastBuild: false,
