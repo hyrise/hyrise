@@ -49,7 +49,7 @@ struct TableInfo {
  * ", 1234,"ebef"\n
  *
  * If there was no additional escape in buffer 1, the parse wouldn't have jnown whether to treat the
- * linebreak as a csv::delimiter or not.
+ * linebreak as a csvDelimiter or not.
  * The CsvRfcParse does a whole filescan before splitting up the buffers to avoid this scenario.
  */
 class CsvNonRfcParser {

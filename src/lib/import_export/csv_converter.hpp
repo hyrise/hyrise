@@ -38,20 +38,20 @@ class AbstractCsvConverter {
    */
   static void unescape(std::string &field) {
     // String does not contain escaping if it is not surrounded with quotes
-    if (field.empty() || field.front() != csv::quote) return;
+    if (field.empty() || field.front() != csvQuote) return;
 
     std::string unescaped_string;
     unescaped_string.reserve(field.size());
 
-    // last_char holds the value that the last lambda call visited. It can have any start value except for csv::escape
+    // last_char holds the value that the last lambda call visited. It can have any start value except for csvEscape
     char last_char = 0;
     // The start and end ranges leave out the surrounding quotes.
-    // Since csv::escape and csv::quote are the same characters, we can remove the quote instead of the escape
+    // Since csvEscape and csvQuote are the same characters, we can remove the quote instead of the escape
     // character.
     std::copy_if(field.begin() + 1, field.end() - 1, std::back_inserter(unescaped_string), [&last_char](const char c) {
-      bool do_copy = last_char != csv::escape || c != csv::quote;
+      bool do_copy = last_char != csvEscape || c != csvQuote;
       // Set last_char to zero if the current character should not be copied
-      // This is necessary because csv::escape and csv::quote are the same characters and therefore a sequence of three
+      // This is necessary because csvEscape and csvQuote are the same characters and therefore a sequence of three
       // quotes would trigger the condition above twice.
       last_char = do_copy ? c : 0;
       return do_copy;
