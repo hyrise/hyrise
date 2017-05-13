@@ -67,7 +67,7 @@ node {
 
       stage("Coverage") {
         sh "cd clang-debug && make -j \$(cat /proc/cpuinfo | grep processor | wc -l) opossumCoverage"
-        sh "./clang-debug/opossumCoverage"
+        sh "./build/opossumCoverage && rm -fr coverage; mkdir coverage && gcovr -s -r . --exclude=\"(.*types*.|.*test*.|.*\.pb\.|third_party)\" --html --html-details -o coverage/index.html"
         publishHTML (target: [
           allowMissing: false,
           alwaysLinkToLastBuild: false,
