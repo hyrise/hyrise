@@ -5,6 +5,8 @@
 
 #include "benchmark/benchmark.h"
 
+#include "../../benchmark-libs/tpcc/random_generator.hpp"
+#include "../../benchmark-libs/tpcc/table_generator.hpp"
 #include "../../lib/operators/get_table.hpp"
 #include "../../lib/scheduler/current_scheduler.hpp"
 #include "../../lib/scheduler/node_queue_scheduler.hpp"
@@ -13,14 +15,13 @@
 #include "../../lib/storage/storage_manager.hpp"
 #include "../../lib/storage/table.hpp"
 #include "../../lib/types.hpp"
-#include "../../benchmark-libs/tpcc/table_generator.hpp"
 
 namespace opossum {
 
 // Defining the base fixture class
 class TPCCBenchmarkFixture : public benchmark::Fixture {
  public:
-  TPCCBenchmarkFixture() {
+  TPCCBenchmarkFixture() : _gen(tpcc::TableGenerator()), _random_gen(tpcc::RandomGenerator()) {
     // Generating TPCC tables
     _gen.add_all_tables(opossum::StorageManager::get());
     //    CurrentScheduler::set(std::make_shared<NodeQueueScheduler>(Topology::create_fake_numa_topology(8, 4)));
@@ -45,6 +46,7 @@ class TPCCBenchmarkFixture : public benchmark::Fixture {
 
  protected:
   tpcc::TableGenerator _gen;
+  tpcc::RandomGenerator _random_gen;
 
   void clear_cache() {
     std::vector<int> clear = std::vector<int>();
