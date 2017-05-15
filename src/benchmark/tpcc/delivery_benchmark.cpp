@@ -18,7 +18,7 @@
 
 namespace opossum {
 
-inline std::vector<std::shared_ptr<OperatorTask>> getNewOrder_getDId(const int d_id, const int w_id) {
+inline std::vector<std::shared_ptr<OperatorTask>> delivery_getDId(const int d_id, const int w_id) {
   /**
    * EXEC SQL DECLARE c_no CURSOR FOR
    * SELECT no_o_id
@@ -46,7 +46,7 @@ inline std::vector<std::shared_ptr<OperatorTask>> getNewOrder_getDId(const int d
   return {std::move(t_gt), std::move(t_ts1), std::move(t_ts2), std::move(t_ts3), std::move(t_proj)};
 }
 
-inline std::vector<std::shared_ptr<OperatorTask>> getNewOrder_del(const int no_o_id) {
+inline std::vector<std::shared_ptr<OperatorTask>> delivery_del(const int no_o_id) {
   /**
    * EXEC SQL DELETE
    * FROM new_order
@@ -66,7 +66,7 @@ inline std::vector<std::shared_ptr<OperatorTask>> getNewOrder_del(const int no_o
   return {std::move(t_gt), std::move(t_ts1)};
 }
 
-inline std::vector<std::shared_ptr<OperatorTask>> getNewOrder_selOrder(const int d_id, const int w_id,
+inline std::vector<std::shared_ptr<OperatorTask>> delivery_selOrder(const int d_id, const int w_id,
                                                                        const int no_o_id) {
   /**
    * EXEC SQL SELECT o_c_id INTO :c_id
@@ -93,7 +93,7 @@ inline std::vector<std::shared_ptr<OperatorTask>> getNewOrder_selOrder(const int
   return {std::move(t_gt), std::move(t_ts1), std::move(t_ts2), std::move(t_ts3), std::move(t_proj)};
 }
 
-inline std::vector<std::shared_ptr<OperatorTask>> getNewOrder_updateOrder(const int d_id, const int w_id,
+inline std::vector<std::shared_ptr<OperatorTask>> delivery_updateOrder(const int d_id, const int w_id,
                                                                           const int no_o_id) {
   /**
    * EXEC SQL UPDATE orders
@@ -120,7 +120,7 @@ inline std::vector<std::shared_ptr<OperatorTask>> getNewOrder_updateOrder(const 
   return {std::move(t_gt), std::move(t_ts1), std::move(t_ts2), std::move(t_ts3), std::move(t_proj)};
 }
 
-inline std::vector<std::shared_ptr<OperatorTask>> getNewOrder_updateOrderLine(const int d_id, const int w_id,
+inline std::vector<std::shared_ptr<OperatorTask>> delivery_updateOrderLine(const int d_id, const int w_id,
                                                                               const int no_o_id) {
   /**
    * EXEC SQL UPDATE order_line
@@ -131,7 +131,7 @@ inline std::vector<std::shared_ptr<OperatorTask>> getNewOrder_updateOrderLine(co
   auto ts1 = std::make_shared<TableScan>(gt, ColumnName("OL_O_ID"), "=", no_o_id);
   auto ts2 = std::make_shared<TableScan>(ts1, ColumnName("OL_D_ID"), "=", d_id);
   auto ts3 = std::make_shared<TableScan>(ts2, ColumnName("OL_W_ID"), "=", w_id);
-  auto proj = std::make_shared<Projection>(ts3, std::vector<std::string>{"OL_DELIVERY_ID"});
+  auto proj = std::make_shared<Projection>(ts3, std::vector<std::string>{"OL_DELIVERY_D"});
 
   auto t_gt = std::make_shared<OperatorTask>(std::move(gt));
   auto t_ts1 = std::make_shared<OperatorTask>(std::move(ts1));
@@ -147,7 +147,7 @@ inline std::vector<std::shared_ptr<OperatorTask>> getNewOrder_updateOrderLine(co
   return {std::move(t_gt), std::move(t_ts1), std::move(t_ts2), std::move(t_ts3), std::move(t_proj)};
 }
 
-inline std::vector<std::shared_ptr<OperatorTask>> getNewOrder_sumOrderLine(const int d_id, const int w_id,
+inline std::vector<std::shared_ptr<OperatorTask>> delivery_sumOrderLine(const int d_id, const int w_id,
                                                                            const int no_o_id) {
   /**
    * EXEC SQL SELECT SUM(ol_amount) INTO :ol_total
@@ -158,9 +158,10 @@ inline std::vector<std::shared_ptr<OperatorTask>> getNewOrder_sumOrderLine(const
   auto ts1 = std::make_shared<TableScan>(gt, ColumnName("OL_O_ID"), "=", no_o_id);
   auto ts2 = std::make_shared<TableScan>(ts1, ColumnName("OL_D_ID"), "=", d_id);
   auto ts3 = std::make_shared<TableScan>(ts2, ColumnName("OL_W_ID"), "=", w_id);
-  auto sum = std::make_shared<Aggregate>(
-      ts3, std::vector<std::pair<std::string, AggregateFunction>>{std::make_pair(std::string("OL_TOTAL"), Sum)},
-      std::vector<std::string>{});
+//  auto sum = std::make_shared<Aggregate>(
+//      ts3, std::vector<std::pair<std::string, AggregateFunction>>{std::make_pair(std::string("OL_AMOUNT"), Sum)},
+//      std::vector<std::string>{});
+  auto sum = std::make_shared<Projection>(ts3, std::vector<std::string>{"OL_AMOUNT"});
 
   auto t_gt = std::make_shared<OperatorTask>(std::move(gt));
   auto t_ts1 = std::make_shared<OperatorTask>(std::move(ts1));
@@ -171,12 +172,12 @@ inline std::vector<std::shared_ptr<OperatorTask>> getNewOrder_sumOrderLine(const
   t_gt->set_as_predecessor_of(t_ts1);
   t_ts1->set_as_predecessor_of(t_ts2);
   t_ts2->set_as_predecessor_of(t_ts3);
-  t_sum->set_as_predecessor_of(t_sum);
+  t_ts3->set_as_predecessor_of(t_sum);
 
   return {std::move(t_gt), std::move(t_ts1), std::move(t_ts2), std::move(t_ts3), std::move(t_sum)};
 }
 
-inline std::vector<std::shared_ptr<OperatorTask>> getNewOrder_updateCustomer(
+inline std::vector<std::shared_ptr<OperatorTask>> delivery_updateCustomer(
     Projection::ProjectionDefinitions& definitions, const int d_id, const int w_id, const int c_id) {
   /**
    * EXEC SQL UPDATE customer
@@ -243,34 +244,34 @@ BENCHMARK_F(TPCCBenchmarkFixture, BM_getNetOrder)(benchmark::State& state) {
   while (state.KeepRunning()) {
     int w_id = _random_gen.number(0, _gen._warehouse_size - 1);
     int d_id = _random_gen.number(0, _gen._district_size - 1);
-    auto tasks = getNewOrder_getDId(d_id, w_id);
+    auto tasks = delivery_getDId(d_id, w_id);
     execute_tasks(tasks);
 
     assert(tasks.back()->get_operator()->get_output()->row_count() > 0);
     auto no_o_id = get_value_from_table<int>(tasks.back());
-    tasks = getNewOrder_del(no_o_id);
+    tasks = delivery_del(no_o_id);
     execute_tasks(tasks);
 
-    tasks = getNewOrder_selOrder(d_id, w_id, no_o_id);
+    tasks = delivery_selOrder(d_id, w_id, no_o_id);
     execute_tasks(tasks);
 
     assert(tasks.back()->get_operator()->get_output()->row_count() > 0);
     auto c_id = get_value_from_table<int>(tasks.back());
 
-    tasks = getNewOrder_updateOrder(d_id, w_id, no_o_id);
+    tasks = delivery_updateOrder(d_id, w_id, no_o_id);
     execute_tasks(tasks);
 
-    tasks = getNewOrder_updateOrderLine(d_id, w_id, no_o_id);
+    tasks = delivery_updateOrderLine(d_id, w_id, no_o_id);
     execute_tasks(tasks);
 
-    tasks = getNewOrder_sumOrderLine(d_id, w_id, no_o_id);
+    tasks = delivery_sumOrderLine(d_id, w_id, no_o_id);
     execute_tasks(tasks);
 
     assert(tasks.back()->get_operator()->get_output()->row_count() > 0);
     auto ol_total = get_value_from_table<float>(tasks.back());
     Projection::ProjectionDefinitions definitions{
         Projection::ProjectionDefinition{"$C_BALANCE+" + std::to_string(ol_total), "float", "C_BALANCE"}};
-    tasks = getNewOrder_updateCustomer(definitions, d_id, w_id, c_id);
+    tasks = delivery_updateCustomer(definitions, d_id, w_id, c_id);
     execute_tasks(tasks);
   }
 }
