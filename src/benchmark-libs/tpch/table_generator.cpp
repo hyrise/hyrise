@@ -40,17 +40,17 @@ std::shared_ptr<opossum::Table> TableGenerator::generate_suppliers_table() {
   // S_SUPPKEY
   chunk.add_column(add_column<int>(table_size, [](size_t i) { return i; }));
   // S_NAME
-  chunk.add_column(add_column<std::string>(table_size, [](size_t) { return ""; }));  // TODO(anybody)
+  chunk.add_column(add_column<std::string>(table_size, [](size_t) { return ""; }));  // TODO(anybody):
   // S_ADDRESS
-  chunk.add_column(add_column<std::string>(table_size, [](size_t) { return ""; }));  // TODO(anybody)
+  chunk.add_column(add_column<std::string>(table_size, [](size_t) { return ""; }));  // TODO(anybody):
   // S_NATIONKEY
   chunk.add_column(add_column<int>(table_size, [&](size_t) { return _random_gen.number(0, 24); }));
   // S_PHONE
-  chunk.add_column(add_column<std::string>(table_size, [](size_t) { return ""; }));  // TODO(anybody)
+  chunk.add_column(add_column<std::string>(table_size, [](size_t) { return ""; }));  // TODO(anybody):
   // S_ACCTBAL
   chunk.add_column(add_column<float>(table_size, [&](size_t) { return _random_gen.number(-99999, 999999) / 100.f; }));
   // S_COMMENT
-  chunk.add_column(add_column<std::string>(table_size, [](size_t) { return ""; }));  // TODO(anybody)
+  chunk.add_column(add_column<std::string>(table_size, [](size_t) { return ""; }));  // TODO(anybody):
 
   table->add_chunk(std::move(chunk));
 
