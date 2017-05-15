@@ -1,12 +1,6 @@
 import json
 import random
-
-NUM_DISTRICTS = 10
-NUM_CUSTOMERS_PER_DISTRICT = 3000
-MIN_ORDER_LINE_COUNT = 5
-MAX_ORDER_LINE_COUNT = 15
-NUM_ITEMS = 100000
-MAX_ORDER_LINE_QUANTITY = 10
+from tpcc_constants import *
 
 def generate_new_order(input_dict):
     new_order = {

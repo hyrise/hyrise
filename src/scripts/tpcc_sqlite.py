@@ -2,13 +2,14 @@ import sqlite3
 import csv
 import json
 import sqlitedriver.TXN_QUERIES as tpcc_queries
+from tpcc_constants import *
 
-def execute_sql(cur, statement):
-    print statement
-    cur.execute(statement)
+def execute_sql(cur, statement, params=None):
+    print(statement)
+    cur.execute(statement, params)
 
 def executemany_sql(cur, statement, params):
-    print statement
+    print(statement)
     cur.executemany(statement, params)
 
 
@@ -69,26 +70,69 @@ def process_new_orders(cur, new_orders_results, new_orders):
         ol_cnt = len(new_order["OrderLines"])
         all_local = True # TODO once/if we support multiple warehouses
 
-        cur.execute(new_order_queries["getWarehouseTaxRate"], [w_id])
+        execute_sql(cur, new_order_queries["getWarehouseTaxRate"], [w_id])
         w_tax_rate = cur.fetchone()[0]
 
-        cur.execute(new_order_queries["getDistrict"], [w_id, d_id])
+        execute_sql(cur, new_order_queries["getDistrict"], [w_id, d_id])
         district = cur.fetchone()
         d_tax_rate = district[0]
         d_next_o_id = district[1]
 
-        cur.execute(new_order_queries["getCustomer"], [w_id, d_id, c_id])
-        c_discount = cur.fetchone()[0]
+        execute_sql(cur, new_order_queries["getCustomer"], [w_id, d_id, c_id])
+        costumer = cur.fetchone()
+        c_discount = costumer[0]
+        c_last = costumer[1]
+        c_credit = costumer[2]
 
-        cur(new_order_queries["incrementNextOrderId"], [d_next_o_id + 1, d_id, w_id])
-        cur(new_order_queries["createOrder"], [d_next_o_id, d_id, w_id, c_id, o_entry_d, o_carrier_id, ol_cnt, all_local])
-        cur(new_order_queries["createNewOrder"], [d_next_o_id, d_id, w_id])
+        execute_sql(cur, new_order_queries["incrementNextOrderId"], [d_next_o_id + 1, d_id, w_id])
+        execute_sql(cur, new_order_queries["createOrder"], [d_next_o_id, d_id, w_id, c_id, o_entry_d, o_carrier_id, ol_cnt, all_local])
+        execute_sql(cur, new_order_queries["createNewOrder"], [d_next_o_id, d_id, w_id])
 
         stock_infos = []
 
-        for order_line in new_order["OrderLines"]:
-            cur(new_order_queries["getStockInfo"])
+        total = 0
 
+        for ol_idx, order_line in enumerate(new_order["OrderLines"]):
+            ol_i_id = order_line[0]
+            ol_i_w_id = order_line[1]
+            ol_i_qty = order_line[2]
+
+            execute_sql(cur, new_order_queries["getItemInfo"], [i_id])
+            item = cur.fetchone()
+            i_price = item[0]
+            i_name = item[1]
+            i_data = item[2]
+
+            execute_sql(cur, new_order_queries["getStockInfo"] % d_id, [ol_i_id, ol_i_w_id])
+            stock_info = cur.fetchone()
+            s_qty = stock_info[0]
+            s_data = stock_info[1]
+            s_ytd = stock_info[2]
+            s_order_cnt = stock_info[3]
+            s_remote_cnt = stock_info[4]
+            s_dist_xx = stock_info[5]
+
+            # Dec stock, stock up
+            s_ytd += ol_i_qty
+            if s_qty >= ol_i_qty + 10:
+                s_qty -= ol_i_qty
+            else:
+                s_qty += 91 - ol_i_qty
+            s_order_cnt += 1
+
+            execute_sql(cur, new_order_queries["updateStock"], [s_qty, s_order_cnt, s_remote_cnt, ol_i_id, ol_i_w_id])
+
+            if i_data.find(ORIGINAL_STRING) != -1 and s_data.find(ORIGINAL_STRING) != -1:
+                brand_generic = 'B'
+            else:
+                brand_generic = 'G'
+
+            ol_amount = ol_i_qty * i_price
+            total += ol_amount
+
+            execute_sql(cur, new_order_queries["createOrderLine"],
+                                [d_next_o_id, d_id, w_id, ol_idx, ol_i_id, ol_i_w_id, o_entry_d, ol_i_qty,
+                                 ol_amount, s_dist_xx])
 
         transaction_result = {
             "WarehouseTaxRate": w_tax_rate,
@@ -98,27 +142,21 @@ def process_new_orders(cur, new_orders_results, new_orders):
         }
 
 
+if __name__ == "__main__":
+    conn = sqlite3.connect(':memory:')
+    cur = conn.cursor()
+
+    tpcc_input_path = "/home/moritz/Coding/zweirise/src/scripts/tpcc_input.json"
+
+    query_results = {
+        "NewOrders": []
+    }
+
+    with open(tpcc_input_path) as tpcc_input_file:
+        tpcc_input = json.load(tpcc_input_file)
 
 
-
-
-
-
-conn = sqlite3.connect(':memory:')
-cur = conn.cursor()
-
-tpcc_input_path = "/home/moritz/Coding/zweirise/src/scripts/tpcc_input.json"
-
-query_results = {
-    "NewOrders": []
-}
-
-with open(tpcc_input_path) as tpcc_input_file:
-    tpcc_input = json.load(tpcc_input_file)
-
-cur = init_db()
-
-process_new_orders(init_db(), query_results["NewOrders"], tpcc_input["NewOrders"])
+    process_new_orders(init_db(), query_results["NewOrders"], tpcc_input["NewOrders"])
 
 
 
