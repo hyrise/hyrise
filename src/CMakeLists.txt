@@ -28,7 +28,7 @@ link_directories(
 )
 
 add_subdirectory(benchmark)
+add_subdirectory(benchmark-libs)
 add_subdirectory(bin)
 add_subdirectory(lib)
 add_subdirectory(test)
-add_subdirectory(tpcc)

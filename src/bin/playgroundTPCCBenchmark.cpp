@@ -2,7 +2,7 @@
 #include <memory>
 #include <utility>
 
-#include "../tpcc/table_generator.hpp"
+#include "../benchmark-libs/tpcc/table_generator.hpp"
 #include "operators/aggregate.hpp"
 #include "operators/get_table.hpp"
 #include "operators/print.hpp"

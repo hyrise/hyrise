@@ -1,12 +1,13 @@
 #pragma once
 
 #include <time.h>
+#include <map>
 #include <memory>
 #include <string>
 #include <vector>
-#include "random_generator.hpp"
 #include "../lib/storage/storage_manager.hpp"
 #include "../lib/storage/table.hpp"
+#include "random_generator.hpp"
 
 namespace tpcc {
 
@@ -38,7 +39,7 @@ class TableGenerator {
 
   std::shared_ptr<opossum::Table> generate_new_order_table();
 
-  void add_all_tables(opossum::StorageManager &manager);
+  std::shared_ptr<std::map<std::string, std::shared_ptr<opossum::Table>>> generate_all_tables();
 
   const size_t _chunk_size = 1000;
   const time_t _current_date = std::time(0);
@@ -55,7 +56,8 @@ class TableGenerator {
 
  protected:
   template <typename T>
-  std::shared_ptr<opossum::ValueColumn<T>> add_column(size_t cardinality, const std::function<T(size_t)> &generator_function);
+  std::shared_ptr<opossum::ValueColumn<T>> add_column(size_t cardinality,
+                                                      const std::function<T(size_t)> &generator_function);
 
   RandomGenerator _random_gen;
 };

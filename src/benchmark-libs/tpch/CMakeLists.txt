@@ -2,7 +2,6 @@
 set(
     SOURCES
     table_generator.cpp
-    table_generator.hpp
 )
 
 set(
@@ -10,6 +9,6 @@ set(
     opossum
 )
 
-# Configure the tpcc library
-add_library(tpcc STATIC ${SOURCES})
-target_link_libraries(tpcc ${LIBRARIES})
+# Configure the tpch library
+add_library(tpch STATIC ${SOURCES})
+target_link_libraries(tpch ${LIBRARIES})
