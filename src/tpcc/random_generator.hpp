@@ -8,7 +8,7 @@
 #include <string>
 #include <vector>
 
-namespace opossum {
+namespace tpcc {
 
 class RandomGenerator {
  public:
@@ -86,4 +86,4 @@ class RandomGenerator {
   std::default_random_engine engine;
   const size_t _c = number(0, 255);
 };
-}  // namespace opossum
+}  // namespace tpcc

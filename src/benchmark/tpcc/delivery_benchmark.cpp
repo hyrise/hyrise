@@ -1,9 +1,9 @@
 #include <cassert>
 #include <iostream>
-#include <vector>
+#include <memory>
 #include <string>
 #include <utility>
-#include <memory>
+#include <vector>
 
 #include "benchmark/benchmark.h"
 
@@ -18,13 +18,13 @@
 
 namespace opossum {
 
-/*
- * EXEC SQL DECLARE c_no CURSOR FOR
- * SELECT no_o_id
- * FROM new_order
- * WHERE no_d_id = :d_id AND no_w_id = :w_id ORDER BY no_o_id ASC;
- */
 inline std::vector<std::shared_ptr<OperatorTask>> getNewOrder_getDId(const int d_id, const int w_id) {
+  /**
+   * EXEC SQL DECLARE c_no CURSOR FOR
+   * SELECT no_o_id
+   * FROM new_order
+   * WHERE no_d_id = :d_id AND no_w_id = :w_id ORDER BY no_o_id ASC;
+   */
   auto gt = std::make_shared<GetTable>("NEW-ORDER");
   auto ts1 = std::make_shared<TableScan>(gt, ColumnName("NO_D_ID"), "=", d_id);
   auto ts2 = std::make_shared<TableScan>(ts1, ColumnName("NO_W_ID"), "=", w_id);
@@ -46,12 +46,12 @@ inline std::vector<std::shared_ptr<OperatorTask>> getNewOrder_getDId(const int d
   return {std::move(t_gt), std::move(t_ts1), std::move(t_ts2), std::move(t_ts3), std::move(t_proj)};
 }
 
-/*
- * EXEC SQL DELETE
- * FROM new_order
- * WHERE CURRENT OF c_no;
- */
 inline std::vector<std::shared_ptr<OperatorTask>> getNewOrder_del(const int no_o_id) {
+  /**
+   * EXEC SQL DELETE
+   * FROM new_order
+   * WHERE CURRENT OF c_no;
+   */
   auto gt = std::make_shared<GetTable>("NEW-ORDER");
   auto ts1 = std::make_shared<TableScan>(gt, ColumnName("NO_O_ID"), "=", no_o_id);
   // auto delete_op = std::make_shared<Delete>("NEW-ORDER", ts1);
@@ -66,13 +66,13 @@ inline std::vector<std::shared_ptr<OperatorTask>> getNewOrder_del(const int no_o
   return {std::move(t_gt), std::move(t_ts1)};
 }
 
-/*
- * EXEC SQL SELECT o_c_id INTO :c_id
- * FROM orders
- * WHERE o_id = :no_o_id AND o_d_id = :d_id AND o_w_id = :w_id;
- */
 inline std::vector<std::shared_ptr<OperatorTask>> getNewOrder_selOrder(const int d_id, const int w_id,
                                                                        const int no_o_id) {
+  /**
+   * EXEC SQL SELECT o_c_id INTO :c_id
+   * FROM orders
+   * WHERE o_id = :no_o_id AND o_d_id = :d_id AND o_w_id = :w_id;
+   */
   auto gt = std::make_shared<GetTable>("ORDER");
   auto ts1 = std::make_shared<TableScan>(gt, ColumnName("O_ID"), "=", no_o_id);
   auto ts2 = std::make_shared<TableScan>(ts1, ColumnName("O_D_ID"), "=", d_id);
@@ -93,13 +93,13 @@ inline std::vector<std::shared_ptr<OperatorTask>> getNewOrder_selOrder(const int
   return {std::move(t_gt), std::move(t_ts1), std::move(t_ts2), std::move(t_ts3), std::move(t_proj)};
 }
 
-/*
- * EXEC SQL UPDATE orders
- * SET o_carrier_id = :o_carrier_id
- * WHERE o_id = :no_o_id AND o_d_id = :d_id AND o_w_id = :w_id;
- */
 inline std::vector<std::shared_ptr<OperatorTask>> getNewOrder_updateOrder(const int d_id, const int w_id,
                                                                           const int no_o_id) {
+  /**
+   * EXEC SQL UPDATE orders
+   * SET o_carrier_id = :o_carrier_id
+   * WHERE o_id = :no_o_id AND o_d_id = :d_id AND o_w_id = :w_id;
+   */
   auto gt = std::make_shared<GetTable>("ORDER");
   auto ts1 = std::make_shared<TableScan>(gt, ColumnName("O_ID"), "=", no_o_id);
   auto ts2 = std::make_shared<TableScan>(ts1, ColumnName("O_D_ID"), "=", d_id);
@@ -120,13 +120,13 @@ inline std::vector<std::shared_ptr<OperatorTask>> getNewOrder_updateOrder(const 
   return {std::move(t_gt), std::move(t_ts1), std::move(t_ts2), std::move(t_ts3), std::move(t_proj)};
 }
 
-/*
- * EXEC SQL UPDATE order_line
- * SET ol_delivery_d = :datetime
- * WHERE ol_o_id = :no_o_id AND ol_d_id = :d_id AND ol_w_id = :w_id;
- */
 inline std::vector<std::shared_ptr<OperatorTask>> getNewOrder_updateOrderLine(const int d_id, const int w_id,
                                                                               const int no_o_id) {
+  /**
+   * EXEC SQL UPDATE order_line
+   * SET ol_delivery_d = :datetime
+   * WHERE ol_o_id = :no_o_id AND ol_d_id = :d_id AND ol_w_id = :w_id;
+   */
   auto gt = std::make_shared<GetTable>("ORDER-LINE");
   auto ts1 = std::make_shared<TableScan>(gt, ColumnName("OL_O_ID"), "=", no_o_id);
   auto ts2 = std::make_shared<TableScan>(ts1, ColumnName("OL_D_ID"), "=", d_id);
@@ -147,13 +147,13 @@ inline std::vector<std::shared_ptr<OperatorTask>> getNewOrder_updateOrderLine(co
   return {std::move(t_gt), std::move(t_ts1), std::move(t_ts2), std::move(t_ts3), std::move(t_proj)};
 }
 
-/*
- * EXEC SQL SELECT SUM(ol_amount) INTO :ol_total
- * FROM order_line
- * WHERE ol_o_id = :no_o_id AND ol_d_id = :d_id AND ol_w_id = :w_id;
- */
 inline std::vector<std::shared_ptr<OperatorTask>> getNewOrder_sumOrderLine(const int d_id, const int w_id,
                                                                            const int no_o_id) {
+  /**
+   * EXEC SQL SELECT SUM(ol_amount) INTO :ol_total
+   * FROM order_line
+   * WHERE ol_o_id = :no_o_id AND ol_d_id = :d_id AND ol_w_id = :w_id;
+   */
   auto gt = std::make_shared<GetTable>("ORDER-LINE");
   auto ts1 = std::make_shared<TableScan>(gt, ColumnName("OL_O_ID"), "=", no_o_id);
   auto ts2 = std::make_shared<TableScan>(ts1, ColumnName("OL_D_ID"), "=", d_id);
@@ -176,13 +176,13 @@ inline std::vector<std::shared_ptr<OperatorTask>> getNewOrder_sumOrderLine(const
   return {std::move(t_gt), std::move(t_ts1), std::move(t_ts2), std::move(t_ts3), std::move(t_sum)};
 }
 
-/*
- * EXEC SQL UPDATE customer
- * SET c_balance = c_balance + :ol_total
- * WHERE c_id = :c_id AND c_d_id = :d_id AND c_w_id = :w_id;
- */
 inline std::vector<std::shared_ptr<OperatorTask>> getNewOrder_updateCustomer(
     Projection::ProjectionDefinitions& definitions, const int d_id, const int w_id, const int c_id) {
+  /**
+   * EXEC SQL UPDATE customer
+   * SET c_balance = c_balance + :ol_total
+   * WHERE c_id = :c_id AND c_d_id = :d_id AND c_w_id = :w_id;
+   */
   auto gt = std::make_shared<GetTable>("CUSTOMER");
   auto ts1 = std::make_shared<TableScan>(gt, ColumnName("C_ID"), "=", c_id);
   auto ts2 = std::make_shared<TableScan>(ts1, ColumnName("C_D_ID"), "=", d_id);
