@@ -92,7 +92,7 @@ std::shared_ptr<opossum::Table> TableGenerator::generate_stock_table() {
   auto table = std::make_shared<opossum::Table>(_chunk_size);
 
   // setup columns
-  table->add_column("S_ID", "int", false);
+  table->add_column("S_I_ID", "int", false);
   table->add_column("S_W_ID", "int", false);
   table->add_column("S_QUANTITY", "int", false);
   table->add_column("S_DIST_01", "string", false);

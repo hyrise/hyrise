@@ -52,6 +52,11 @@ class TPCCBenchmarkFixture : public benchmark::Fixture {
     }
   }
 
+  void schedule_tasks_and_wait(const std::vector<std::shared_ptr<OperatorTask>> tasks) {
+    schedule_tasks(tasks);
+    tasks.back()->join();
+  }
+
  protected:
   tpcc::TableGenerator _gen;
   tpcc::RandomGenerator _random_gen;
