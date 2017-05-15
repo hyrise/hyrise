@@ -6,10 +6,6 @@ add_executable(
     operators/table_scan_benchmark.cpp
     operators/product_benchmark.cpp
     operators/difference_benchmark.cpp
-        tpcc/delivery_benchmark.cpp
-        tpcc/order_status_benchmark.cpp
-        tpcc/new_order_benchmark.cpp
-        tpcc/tpcc_base_fixture.cpp
     benchmark_main.cpp
     base_fixture.cpp
     table_generator.cpp
@@ -21,5 +17,21 @@ target_link_libraries(
     opossumBenchmark
     opossum
     benchmark
-    tpcc
+)
+
+add_executable(
+        opossumBenchmarkTPCC
+        tpcc/delivery_benchmark.cpp
+        tpcc/order_status_benchmark.cpp
+        tpcc/new_order_benchmark.cpp
+        tpcc/tpcc_base_fixture.cpp
+        benchmark_main.cpp
+        benchmark_template.cpp
+)
+
+target_link_libraries(
+        opossumBenchmarkTPCC
+        opossum
+        benchmark
+        tpcc
 )

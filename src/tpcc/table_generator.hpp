@@ -1,6 +1,7 @@
 #pragma once
 
 #include <time.h>
+#include <map>
 #include <memory>
 #include <string>
 #include <vector>
@@ -38,7 +39,7 @@ class TableGenerator {
 
   std::shared_ptr<opossum::Table> generate_new_order_table();
 
-  void add_all_tables(opossum::StorageManager &manager);
+  std::shared_ptr<std::map<std::string, std::shared_ptr<opossum::Table>>> generate_all_tables();
 
   const size_t _chunk_size = 1000;
   const time_t _current_date = std::time(0);

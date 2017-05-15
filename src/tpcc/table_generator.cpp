@@ -1,6 +1,7 @@
 #include "table_generator.hpp"
 
 #include <functional>
+#include <map>
 #include <memory>
 #include <string>
 #include <utility>
@@ -391,7 +392,7 @@ std::shared_ptr<opossum::Table> TableGenerator::generate_new_order_table() {
   return table;
 }
 
-void TableGenerator::add_all_tables(opossum::StorageManager &manager) {
+std::shared_ptr<std::map<std::string, std::shared_ptr<opossum::Table>>> TableGenerator::generate_all_tables() {
   auto item_table = generate_items_table();
   auto warehouse_table = generate_warehouse_table();
   auto stock_table = generate_stock_table();
@@ -403,15 +404,17 @@ void TableGenerator::add_all_tables(opossum::StorageManager &manager) {
   auto order_line_table = generate_order_line_table(order_line_counts);
   auto new_order_table = generate_new_order_table();
 
-  manager.add_table("ITEM", std::move(item_table));
-  manager.add_table("WAREHOUSE", std::move(warehouse_table));
-  manager.add_table("STOCK", std::move(stock_table));
-  manager.add_table("DISTRICT", std::move(district_table));
-  manager.add_table("CUSTOMER", std::move(customer_table));
-  manager.add_table("HISTORY", std::move(history_table));
-  manager.add_table("ORDER", std::move(order_table));
-  manager.add_table("ORDER-LINE", std::move(order_line_table));
-  manager.add_table("NEW-ORDER", std::move(new_order_table));
+  return std::make_shared<std::map<std::string, std::shared_ptr<opossum::Table>>>(
+      std::initializer_list<std::map<std::string, std::shared_ptr<opossum::Table>>::value_type>{
+          {"ITEM", std::move(item_table)},
+          {"WAREHOUSE", std::move(warehouse_table)},
+          {"STOCK", std::move(stock_table)},
+          {"DISTRICT", std::move(district_table)},
+          {"CUSTOMER", std::move(customer_table)},
+          {"HISTORY", std::move(history_table)},
+          {"ORDER", std::move(order_table)},
+          {"ORDER-LINE", std::move(order_line_table)},
+          {"NEW-ORDER", std::move(new_order_table)}});
 }
 
 }  // namespace tpcc

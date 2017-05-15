@@ -1,3 +1,4 @@
+#include <map>
 #include <memory>
 #include <string>
 #include <utility>
@@ -13,6 +14,7 @@
 #include "../../lib/storage/storage_manager.hpp"
 #include "../../lib/storage/table.hpp"
 #include "../../lib/types.hpp"
+#include "../../tpcc/random_generator.hpp"
 #include "../../tpcc/table_generator.hpp"
 
 namespace opossum {
@@ -20,14 +22,21 @@ namespace opossum {
 // Defining the base fixture class
 class TPCCBenchmarkFixture : public benchmark::Fixture {
  public:
-  TPCCBenchmarkFixture() : _gen(tpcc::TableGenerator()) {
+  TPCCBenchmarkFixture() : _gen(tpcc::TableGenerator()), _random_gen(tpcc::RandomGenerator()) {
     // Generating TPCC tables
-    _gen.add_all_tables(opossum::StorageManager::get());
+    _tpcc_tables = _gen.generate_all_tables();
     //    CurrentScheduler::set(std::make_shared<NodeQueueScheduler>(Topology::create_fake_numa_topology(8, 4)));
   }
 
   virtual void TearDown(const ::benchmark::State&) {
-    //    CurrentScheduler::set(nullptr);
+    opossum::StorageManager::get().reset();
+    // CurrentScheduler::set(nullptr);
+  }
+
+  virtual void SetUp(const ::benchmark::State&) {
+    for (auto it = _tpcc_tables->begin(); it != _tpcc_tables->end(); ++it) {
+      opossum::StorageManager::get().add_table(it->first, it->second);
+    }
   }
 
   void set_transaction_context_for_operators(const std::shared_ptr<TransactionContext> t_context,
@@ -45,6 +54,8 @@ class TPCCBenchmarkFixture : public benchmark::Fixture {
 
  protected:
   tpcc::TableGenerator _gen;
+  tpcc::RandomGenerator _random_gen;
+  std::shared_ptr<std::map<std::string, std::shared_ptr<Table>>> _tpcc_tables;
 
   void clear_cache() {
     std::vector<int> clear = std::vector<int>();
