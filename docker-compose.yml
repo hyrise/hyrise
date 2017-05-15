@@ -8,3 +8,5 @@ services:
     working_dir: /opossum
     volumes:
       - ".:/opossum"
+      - "~/.ssh/:/root/.ssh/"
+      - "~/.gitconfig:/root/.gitconfig"
