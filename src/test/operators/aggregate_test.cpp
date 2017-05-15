@@ -344,4 +344,50 @@ TEST_F(OperatorsAggregateTest, NoGroupbyAndNoAggregate) {
       std::runtime_error);
 }
 
+/**
+ * Tests for ReferenceColumns
+ */
+
+TEST_F(OperatorsAggregateTest, SingleAggregateMaxOnRef) {
+  auto filtered = std::make_shared<TableScan>(_table_wrapper_1_1, "a", "<", "100");
+  filtered->execute();
+
+  this->test_output(filtered, {std::make_pair(std::string("b"), Max)}, {std::string("a")},
+                    "src/test/tables/aggregateoperator/groupby_int_1gb_1agg/max_filtered.tbl", 1);
+}
+
+TEST_F(OperatorsAggregateTest, TwoGroupbyAndTwoAggregateMinAvgOnRef) {
+  auto filtered = std::make_shared<TableScan>(_table_wrapper_2_2, "a", "<", "100");
+  filtered->execute();
+
+  this->test_output(filtered, {std::make_pair(std::string("c"), Min), std::make_pair(std::string("d"), Avg)},
+                    {std::string("a"), std::string("b")},
+                    "src/test/tables/aggregateoperator/groupby_int_2gb_2agg/min_avg_filtered.tbl", 1);
+}
+
+TEST_F(OperatorsAggregateTest, TwoGroupbySumOnRef) {
+  auto filtered = std::make_shared<TableScan>(_table_wrapper_2_1, "a", "<", "100");
+  filtered->execute();
+
+  this->test_output(filtered, {std::make_pair(std::string("c"), Sum)}, {std::string("a"), std::string("b")},
+                    "src/test/tables/aggregateoperator/groupby_int_2gb_1agg/sum_filtered.tbl", 1);
+}
+
+TEST_F(OperatorsAggregateTest, TwoAggregateSumAvgOnRef) {
+  auto filtered = std::make_shared<TableScan>(_table_wrapper_1_2, "a", "<", "100");
+  filtered->execute();
+
+  this->test_output(filtered, {std::make_pair(std::string("b"), Sum), std::make_pair(std::string("c"), Avg)},
+                    {std::string("a")}, "src/test/tables/aggregateoperator/groupby_int_1gb_2agg/sum_avg_filtered.tbl",
+                    1);
+}
+
+TEST_F(OperatorsAggregateTest, DictionarySingleAggregateMinOnRef) {
+  auto filtered = std::make_shared<TableScan>(_table_wrapper_1_1_dict, "a", "<", "100");
+  filtered->execute();
+
+  this->test_output(filtered, {std::make_pair(std::string("b"), Min)}, {std::string("a")},
+                    "src/test/tables/aggregateoperator/groupby_int_1gb_1agg/min_filtered.tbl", 1);
+}
+
 }  // namespace opossum

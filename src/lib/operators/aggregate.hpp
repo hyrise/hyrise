@@ -123,8 +123,10 @@ struct PartitionBuilder : public ColumnVisitable {
     if (context->chunk_offsets_in) {
       // This ValueColumn is referenced by a ReferenceColumn (i.e., is probably filtered). We only return the matching
       // rows within the filtered column, together with their original position
+      ChunkOffset chunk_offset = 0;
       for (const ChunkOffset &offset_in_value_column : *(context->chunk_offsets_in)) {
-        (*context->hash_keys)[offset_in_value_column].emplace_back(values[offset_in_value_column]);
+        (*context->hash_keys)[chunk_offset].emplace_back(values[offset_in_value_column]);
+        chunk_offset++;
       }
     } else {
       ChunkOffset chunk_offset = 0;
@@ -146,9 +148,10 @@ struct PartitionBuilder : public ColumnVisitable {
     const std::vector<T> &dictionary = *(column.dictionary());
 
     if (context->chunk_offsets_in) {
+      ChunkOffset chunk_offset = 0;
       for (const ChunkOffset &offset_in_dictionary_column : *(context->chunk_offsets_in)) {
-        (*context->hash_keys)[offset_in_dictionary_column].emplace_back(
-            dictionary[attribute_vector.get(offset_in_dictionary_column)]);
+        (*context->hash_keys)[chunk_offset].emplace_back(dictionary[attribute_vector.get(offset_in_dictionary_column)]);
+        chunk_offset++;
       }
     } else {
       // This DictionaryColumn has to be scanned in full. We directly insert the results into the list of matching
@@ -206,12 +209,14 @@ struct AggregateBuilder : public ColumnVisitable {
     if (context->chunk_offsets_in) {
       // This ValueColumn is referenced by a ReferenceColumn (i.e., is probably filtered). We only return the matching
       // rows within the filtered column, together with their original position
+      ChunkOffset chunk_offset = 0;
       for (const ChunkOffset &offset_in_value_column : *(context->chunk_offsets_in)) {
-        results[hash_keys[offset_in_value_column]].first =
-            aggregate_func(values[offset_in_value_column], results[hash_keys[offset_in_value_column]].first);
+        results[hash_keys[chunk_offset]].first =
+            aggregate_func(values[offset_in_value_column], results[hash_keys[chunk_offset]].first);
 
         // increase value counter
-        results[hash_keys[offset_in_value_column]].second++;
+        results[hash_keys[chunk_offset]].second++;
+        chunk_offset++;
       }
     } else {
       ChunkOffset chunk_offset = 0;
@@ -239,13 +244,14 @@ struct AggregateBuilder : public ColumnVisitable {
     auto &results = static_cast<std::map<AggregateKey, AggregateResult> &>(*context->results);
 
     if (context->chunk_offsets_in) {
+      ChunkOffset chunk_offset = 0;
       for (const ChunkOffset &offset_in_dictionary_column : *(context->chunk_offsets_in)) {
-        results[hash_keys[offset_in_dictionary_column]].first =
-            aggregate_func(dictionary[attribute_vector.get(offset_in_dictionary_column)],
-                           results[hash_keys[offset_in_dictionary_column]].first);
+        results[hash_keys[chunk_offset]].first = aggregate_func(
+            dictionary[attribute_vector.get(offset_in_dictionary_column)], results[hash_keys[chunk_offset]].first);
 
         // increase value counter
-        results[hash_keys[offset_in_dictionary_column]].second++;
+        results[hash_keys[chunk_offset]].second++;
+        chunk_offset++;
       }
     } else {
       // This DictionaryColumn has to be scanned in full. We directly insert the results into the list of matching
