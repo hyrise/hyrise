@@ -12,7 +12,7 @@
 #include "../../lib/storage/storage_manager.hpp"
 #include "../../lib/storage/table.hpp"
 #include "../../lib/types.hpp"
-#include "tpcc_table_generator.hpp"
+#include "../../tpcc/table_generator.hpp"
 
 namespace opossum {
 
@@ -58,7 +58,7 @@ class TPCCBenchmarkFixture : public benchmark::Fixture {
   std::shared_ptr<GetTable> _gt_order;
   std::shared_ptr<GetTable> _gt_order_line;
   std::shared_ptr<GetTable> _gt_new_order;
-  TPCCTableGenerator _gen;
+  tpcc::TableGenerator _gen;
 
   void clear_cache() {
     std::vector<int> clear = std::vector<int>();

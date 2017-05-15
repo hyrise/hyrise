@@ -1,30 +1,30 @@
-#include "tpcc_table_generator.hpp"
+#include "table_generator.hpp"
 
 #include <functional>
 #include <memory>
 #include <string>
 #include <utility>
 
-#include "storage/value_column.hpp"
+#include "../lib/storage/value_column.hpp"
 
-namespace opossum {
+namespace tpcc {
 
-TPCCTableGenerator::TPCCTableGenerator() : _random_gen(RandomGenerator()) {}
+TableGenerator::TableGenerator() : _random_gen(RandomGenerator()) {}
 
 // TODO(anybody) chunk sizes and number of chunks might be tuned in generate_XYZ_table
 
 template <typename T>
-std::shared_ptr<ValueColumn<T>> TPCCTableGenerator::add_column(size_t cardinality,
+std::shared_ptr<opossum::ValueColumn<T>> TableGenerator::add_column(size_t cardinality,
                                                                const std::function<T(size_t)> &generator_function) {
   tbb::concurrent_vector<T> column(cardinality);
   for (size_t i = 0; i < column.size(); i++) {
     column[i] = generator_function(i);
   }
-  return std::make_shared<ValueColumn<T>>(std::move(column));
+  return std::make_shared<opossum::ValueColumn<T>>(std::move(column));
 }
 
-std::shared_ptr<Table> TPCCTableGenerator::generate_items_table() {
-  auto table = std::make_shared<Table>(_chunk_size);
+std::shared_ptr<opossum::Table> TableGenerator::generate_items_table() {
+  auto table = std::make_shared<opossum::Table>(_chunk_size);
 
   // setup columns
   table->add_column("I_ID", "int", false);
@@ -35,7 +35,7 @@ std::shared_ptr<Table> TPCCTableGenerator::generate_items_table() {
 
   auto original_ids = _random_gen.select_unique_ids(_item_size / 10, 1, _item_size);
 
-  auto chunk = Chunk();
+  auto chunk = opossum::Chunk();
   chunk.add_column(add_column<int>(_item_size, [](size_t i) { return i; }));
   chunk.add_column(add_column<int>(_item_size, [&](size_t) { return _random_gen.number(1, 10000); }));
   chunk.add_column(add_column<std::string>(_item_size, [&](size_t) { return _random_gen.astring(14, 24); }));
@@ -56,8 +56,8 @@ std::shared_ptr<Table> TPCCTableGenerator::generate_items_table() {
   return table;
 }
 
-std::shared_ptr<Table> TPCCTableGenerator::generate_warehouse_table() {
-  auto table = std::make_shared<Table>(_chunk_size);
+std::shared_ptr<opossum::Table> TableGenerator::generate_warehouse_table() {
+  auto table = std::make_shared<opossum::Table>(_chunk_size);
 
   // setup columns
   table->add_column("W_ID", "int", false);
@@ -70,7 +70,7 @@ std::shared_ptr<Table> TPCCTableGenerator::generate_warehouse_table() {
   table->add_column("W_TAX", "float", false);
   table->add_column("W_YTD", "float", false);
 
-  auto chunk = Chunk();
+  auto chunk = opossum::Chunk();
   chunk.add_column(add_column<int>(_warehouse_size, [](size_t i) { return i; }));
   chunk.add_column(add_column<std::string>(_warehouse_size, [&](size_t) { return _random_gen.astring(6, 10); }));
   chunk.add_column(add_column<std::string>(_warehouse_size, [&](size_t) { return _random_gen.astring(10, 20); }));
@@ -87,8 +87,8 @@ std::shared_ptr<Table> TPCCTableGenerator::generate_warehouse_table() {
   return table;
 }
 
-std::shared_ptr<Table> TPCCTableGenerator::generate_stock_table() {
-  auto table = std::make_shared<Table>(_chunk_size);
+std::shared_ptr<opossum::Table> TableGenerator::generate_stock_table() {
+  auto table = std::make_shared<opossum::Table>(_chunk_size);
 
   // setup columns
   table->add_column("S_ID", "int", false);
@@ -112,7 +112,7 @@ std::shared_ptr<Table> TPCCTableGenerator::generate_stock_table() {
   for (size_t warehouse_id = 0; warehouse_id < _warehouse_size; warehouse_id++) {
     auto original_ids = _random_gen.select_unique_ids(_item_size / 10, 1, _item_size);
 
-    auto chunk = Chunk();
+    auto chunk = opossum::Chunk();
     chunk.add_column(add_column<int>(_stock_size, [](size_t i) { return i; }));
     chunk.add_column(add_column<int>(_stock_size, [&](size_t) { return warehouse_id; }));
     chunk.add_column(add_column<int>(_stock_size, [&](size_t) { return _random_gen.number(10, 100); }));
@@ -146,8 +146,8 @@ std::shared_ptr<Table> TPCCTableGenerator::generate_stock_table() {
   return table;
 }
 
-std::shared_ptr<Table> TPCCTableGenerator::generate_district_table() {
-  auto table = std::make_shared<Table>(_chunk_size);
+std::shared_ptr<opossum::Table> TableGenerator::generate_district_table() {
+  auto table = std::make_shared<opossum::Table>(_chunk_size);
 
   // setup columns
   table->add_column("D_ID", "int", false);
@@ -163,7 +163,7 @@ std::shared_ptr<Table> TPCCTableGenerator::generate_district_table() {
   table->add_column("D_NEXT_O_ID", "int", false);
 
   for (size_t warehouse_id = 0; warehouse_id < _warehouse_size; warehouse_id++) {
-    auto chunk = Chunk();
+    auto chunk = opossum::Chunk();
     chunk.add_column(add_column<int>(_district_size, [](size_t i) { return i; }));
     chunk.add_column(add_column<int>(_district_size, [&](size_t) { return warehouse_id; }));
     chunk.add_column(add_column<std::string>(_district_size, [&](size_t) { return _random_gen.astring(6, 10); }));
@@ -182,8 +182,8 @@ std::shared_ptr<Table> TPCCTableGenerator::generate_district_table() {
   return table;
 }
 
-std::shared_ptr<Table> TPCCTableGenerator::generate_customer_table() {
-  auto table = std::make_shared<Table>(_chunk_size);
+std::shared_ptr<opossum::Table> TableGenerator::generate_customer_table() {
+  auto table = std::make_shared<opossum::Table>(_chunk_size);
 
   // setup columns
   table->add_column("C_ID", "int", false);
@@ -212,7 +212,7 @@ std::shared_ptr<Table> TPCCTableGenerator::generate_customer_table() {
     for (size_t district_id = 0; district_id < _district_size; district_id++) {
       auto original_ids = _random_gen.select_unique_ids(_item_size / 10, 1, _item_size);
 
-      auto chunk = Chunk();
+      auto chunk = opossum::Chunk();
       chunk.add_column(add_column<int>(_customer_size, [](size_t i) { return i; }));
       chunk.add_column(add_column<int>(_customer_size, [&](size_t) { return district_id; }));
       chunk.add_column(add_column<int>(_customer_size, [&](size_t) { return warehouse_id; }));
@@ -246,8 +246,8 @@ std::shared_ptr<Table> TPCCTableGenerator::generate_customer_table() {
   return table;
 }
 
-std::shared_ptr<Table> TPCCTableGenerator::generate_history_table() {
-  auto table = std::make_shared<Table>(_chunk_size);
+std::shared_ptr<opossum::Table> TableGenerator::generate_history_table() {
+  auto table = std::make_shared<opossum::Table>(_chunk_size);
 
   // setup columns
   table->add_column("H_C_ID", "int", false);
@@ -261,7 +261,7 @@ std::shared_ptr<Table> TPCCTableGenerator::generate_history_table() {
 
   for (size_t warehouse_id = 0; warehouse_id < _warehouse_size; warehouse_id++) {
     for (size_t district_id = 0; district_id < _district_size; district_id++) {
-      auto chunk = Chunk();
+      auto chunk = opossum::Chunk();
       chunk.add_column(add_column<int>(_history_size_per_district, [&](size_t i) { return i / _history_size; }));
       chunk.add_column(add_column<int>(_history_size_per_district, [&](size_t) { return district_id; }));
       chunk.add_column(add_column<int>(_history_size_per_district, [&](size_t) { return warehouse_id; }));
@@ -276,7 +276,7 @@ std::shared_ptr<Table> TPCCTableGenerator::generate_history_table() {
   return table;
 }
 
-TPCCTableGenerator::order_line_counts_type TPCCTableGenerator::generate_order_line_counts() {
+TableGenerator::order_line_counts_type TableGenerator::generate_order_line_counts() {
   order_line_counts_type v(_warehouse_size);
   for (auto &v_per_warehouse : v) {
     v_per_warehouse.resize(_district_size);
@@ -290,9 +290,9 @@ TPCCTableGenerator::order_line_counts_type TPCCTableGenerator::generate_order_li
   return v;
 }
 
-std::shared_ptr<Table> TPCCTableGenerator::generate_order_table(
-    TPCCTableGenerator::order_line_counts_type order_line_counts) {
-  auto table = std::make_shared<Table>(_chunk_size);
+std::shared_ptr<opossum::Table> TableGenerator::generate_order_table(
+    TableGenerator::order_line_counts_type order_line_counts) {
+  auto table = std::make_shared<opossum::Table>(_chunk_size);
 
   // setup columns
   table->add_column("O_ID", "int", false);
@@ -307,7 +307,7 @@ std::shared_ptr<Table> TPCCTableGenerator::generate_order_table(
   for (size_t warehouse_id = 0; warehouse_id < _warehouse_size; warehouse_id++) {
     for (size_t district_id = 0; district_id < _district_size; district_id++) {
       auto customer_permutation = _random_gen.permutation(0, _customer_size);
-      auto chunk = Chunk();
+      auto chunk = opossum::Chunk();
       chunk.add_column(add_column<int>(_order_size, [](size_t i) { return i; }));
       chunk.add_column(add_column<int>(_order_size, [&](size_t i) { return customer_permutation[i]; }));
       chunk.add_column(add_column<int>(_order_size, [&](size_t) { return district_id; }));
@@ -326,9 +326,9 @@ std::shared_ptr<Table> TPCCTableGenerator::generate_order_table(
   return table;
 }
 
-std::shared_ptr<Table> TPCCTableGenerator::generate_order_line_table(
-    TPCCTableGenerator::order_line_counts_type order_line_counts) {
-  auto table = std::make_shared<Table>(_chunk_size);
+std::shared_ptr<opossum::Table> TableGenerator::generate_order_line_table(
+    TableGenerator::order_line_counts_type order_line_counts) {
+  auto table = std::make_shared<opossum::Table>(_chunk_size);
 
   // setup columns
   table->add_column("OL_O_ID", "int", false);
@@ -345,7 +345,7 @@ std::shared_ptr<Table> TPCCTableGenerator::generate_order_line_table(
   for (size_t warehouse_id = 0; warehouse_id < _warehouse_size; warehouse_id++) {
     for (size_t district_id = 0; district_id < _district_size; district_id++) {
       for (size_t order_id = 0; order_id < _order_size; order_id++) {
-        auto chunk = Chunk();
+        auto chunk = opossum::Chunk();
         auto order_line_size = order_line_counts[warehouse_id][district_id][order_id];
         chunk.add_column(add_column<int>(order_line_size, [&](size_t) { return order_id; }));
         chunk.add_column(add_column<int>(order_line_size, [&](size_t) { return district_id; }));
@@ -369,8 +369,8 @@ std::shared_ptr<Table> TPCCTableGenerator::generate_order_line_table(
   return table;
 }
 
-std::shared_ptr<Table> TPCCTableGenerator::generate_new_order_table() {
-  auto table = std::make_shared<Table>(_chunk_size);
+std::shared_ptr<opossum::Table> TableGenerator::generate_new_order_table() {
+  auto table = std::make_shared<opossum::Table>(_chunk_size);
 
   // setup columns
   table->add_column("NO_O_ID", "int", false);
@@ -379,7 +379,7 @@ std::shared_ptr<Table> TPCCTableGenerator::generate_new_order_table() {
 
   for (size_t warehouse_id = 0; warehouse_id < _warehouse_size; warehouse_id++) {
     for (size_t district_id = 0; district_id < _district_size; district_id++) {
-      auto chunk = Chunk();
+      auto chunk = opossum::Chunk();
       chunk.add_column(
           add_column<int>(_new_order_size, [&](size_t i) { return i + _order_size + 1 - _new_order_size; }));
       chunk.add_column(add_column<int>(_new_order_size, [&](size_t) { return district_id; }));
@@ -391,7 +391,7 @@ std::shared_ptr<Table> TPCCTableGenerator::generate_new_order_table() {
   return table;
 }
 
-void TPCCTableGenerator::add_all_tables(StorageManager &manager) {
+void TableGenerator::add_all_tables(opossum::StorageManager &manager) {
   auto item_table = generate_items_table();
   auto warehouse_table = generate_warehouse_table();
   auto stock_table = generate_stock_table();
@@ -414,4 +414,4 @@ void TPCCTableGenerator::add_all_tables(StorageManager &manager) {
   manager.add_table("NEW-ORDER", std::move(new_order_table));
 }
 
-}  // namespace opossum
+}  // namespace tpcc
