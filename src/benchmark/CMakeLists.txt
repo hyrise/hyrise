@@ -8,6 +8,7 @@ add_executable(
     operators/difference_benchmark.cpp
         tpcc/delivery_benchmark.cpp
         tpcc/order_status_benchmark.cpp
+        tpcc/new_order_benchmark.cpp
         tpcc/tpcc_base_fixture.cpp
         tpcc/random_generator.hpp
         tpcc/tpcc_table_generator.cpp

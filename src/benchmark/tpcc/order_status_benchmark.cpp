@@ -30,7 +30,8 @@ BENCHMARK_F(TPCCBenchmarkFixture, BM_OrderStatus)(benchmark::State& state) {
     auto c_d_id = 1;
     auto c_w_id = 1;
 
-    auto first_filter = std::make_shared<TableScan>(_gt_customer, "C_LAST", "=", c_last);
+    auto gt = std::make_shared<GetTable>("CUSTOMER");
+    auto first_filter = std::make_shared<TableScan>(gt, "C_LAST", "=", c_last);
     auto second_filter = std::make_shared<TableScan>(first_filter, "C_D_ID", "=", c_d_id);
     auto third_filter = std::make_shared<TableScan>(second_filter, "C_W_ID", "=", c_w_id);
     // TODO(anyone): replace Sum by Count as soon as merged
@@ -38,15 +39,18 @@ BENCHMARK_F(TPCCBenchmarkFixture, BM_OrderStatus)(benchmark::State& state) {
         third_filter, std::vector<std::pair<std::string, AggregateFunction>>{std::make_pair(std::string("C_ID"), Sum)},
         std::vector<std::string>{});
 
+    auto gt_task = std::make_shared<OperatorTask>(gt);
     auto first_filter_task = std::make_shared<OperatorTask>(first_filter);
     auto second_filter_task = std::make_shared<OperatorTask>(second_filter);
     auto third_filter_task = std::make_shared<OperatorTask>(third_filter);
     auto count_task = std::make_shared<OperatorTask>(count);
 
+    gt_task->set_as_predecessor_of(first_filter_task);
     first_filter_task->set_as_predecessor_of(second_filter_task);
     second_filter_task->set_as_predecessor_of(third_filter_task);
     third_filter_task->set_as_predecessor_of(count_task);
 
+    gt_task->schedule();
     first_filter_task->schedule();
     second_filter_task->schedule();
     third_filter_task->schedule();
