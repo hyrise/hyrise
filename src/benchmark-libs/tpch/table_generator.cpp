@@ -14,8 +14,8 @@ TableGenerator::TableGenerator() : _random_gen(RandomGenerator()) {}
 // TODO(anybody) chunk sizes and number of chunks might be tuned in generate_XYZ_table
 
 template <typename T>
-std::shared_ptr<opossum::ValueColumn<T>> TableGenerator::add_column(size_t cardinality,
-                                                               const std::function<T(size_t)> &generator_function) {
+std::shared_ptr<opossum::ValueColumn<T>> TableGenerator::add_column(
+    size_t cardinality, const std::function<T(size_t)> &generator_function) {
   tbb::concurrent_vector<T> column(cardinality);
   for (size_t i = 0; i < column.size(); i++) {
     column[i] = generator_function(i);
@@ -40,17 +40,17 @@ std::shared_ptr<opossum::Table> TableGenerator::generate_suppliers_table() {
   // S_SUPPKEY
   chunk.add_column(add_column<int>(table_size, [](size_t i) { return i; }));
   // S_NAME
-  chunk.add_column(add_column<std::string>(table_size, [](size_t) { return ""; })); // TODO (anybody)
+  chunk.add_column(add_column<std::string>(table_size, [](size_t) { return ""; }));  // TODO(anybody)
   // S_ADDRESS
-  chunk.add_column(add_column<std::string>(table_size, [](size_t) { return ""; })); // TODO (anybody)
+  chunk.add_column(add_column<std::string>(table_size, [](size_t) { return ""; }));  // TODO(anybody)
   // S_NATIONKEY
   chunk.add_column(add_column<int>(table_size, [&](size_t) { return _random_gen.number(0, 24); }));
   // S_PHONE
-  chunk.add_column(add_column<std::string>(table_size, [](size_t) { return ""; })); // TODO (anybody)
+  chunk.add_column(add_column<std::string>(table_size, [](size_t) { return ""; }));  // TODO(anybody)
   // S_ACCTBAL
   chunk.add_column(add_column<float>(table_size, [&](size_t) { return _random_gen.number(-99999, 999999) / 100.f; }));
   // S_COMMENT
-  chunk.add_column(add_column<std::string>(table_size, [](size_t) { return ""; })); // TODO (anybody)
+  chunk.add_column(add_column<std::string>(table_size, [](size_t) { return ""; }));  // TODO(anybody)
 
   table->add_chunk(std::move(chunk));
 

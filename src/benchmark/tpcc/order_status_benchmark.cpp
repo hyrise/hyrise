@@ -20,10 +20,10 @@ namespace opossum {
 
 inline int32_t get_name_count(std::string c_last, int c_d_id, int c_w_id) {
   /**
-     * EXEC SQL SELECT count(c_id) INTO :namecnt
-     * FROM customer
-     * WHERE c_last=:c_last AND c_d_id=:d_id AND c_w_id=:w_id;
-     */
+   * EXEC SQL SELECT count(c_id) INTO :namecnt
+   * FROM customer
+   * WHERE c_last=:c_last AND c_d_id=:d_id AND c_w_id=:w_id;
+   */
 
   StorageManager::get().print();
   auto gt_customer = std::make_shared<GetTable>("CUSTOMER");
@@ -81,13 +81,13 @@ inline int32_t get_name_count(std::string c_last, int c_d_id, int c_w_id) {
 
 inline std::shared_ptr<const Table> get_customer(std::string c_last, int c_d_id, int c_w_id) {
   /**
-     * EXEC SQL DECLARE c_name CURSOR FOR
-     * SELECT c_balance, c_first, c_middle, c_id
-     * FROM customer
-     * WHERE c_last=:c_last AND c_d_id=:d_id AND c_w_id=:w_id
-     * ORDER BY c_first;
-     * EXEC SQL OPEN c_name;
-     */
+   * EXEC SQL DECLARE c_name CURSOR FOR
+   * SELECT c_balance, c_first, c_middle, c_id
+   * FROM customer
+   * WHERE c_last=:c_last AND c_d_id=:d_id AND c_w_id=:w_id
+   * ORDER BY c_first;
+   * EXEC SQL OPEN c_name;
+   */
   StorageManager::get().print();
   auto gt_customer = std::make_shared<GetTable>("CUSTOMER");
   auto first_filter = std::make_shared<TableScan>(gt_customer, "C_LAST", "=", c_last);

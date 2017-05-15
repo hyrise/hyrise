@@ -66,8 +66,7 @@ inline std::vector<std::shared_ptr<OperatorTask>> delivery_del(const int no_o_id
   return {std::move(t_gt), std::move(t_ts1)};
 }
 
-inline std::vector<std::shared_ptr<OperatorTask>> delivery_selOrder(const int d_id, const int w_id,
-                                                                       const int no_o_id) {
+inline std::vector<std::shared_ptr<OperatorTask>> delivery_selOrder(const int d_id, const int w_id, const int no_o_id) {
   /**
    * EXEC SQL SELECT o_c_id INTO :c_id
    * FROM orders
@@ -94,7 +93,7 @@ inline std::vector<std::shared_ptr<OperatorTask>> delivery_selOrder(const int d_
 }
 
 inline std::vector<std::shared_ptr<OperatorTask>> delivery_updateOrder(const int d_id, const int w_id,
-                                                                          const int no_o_id) {
+                                                                       const int no_o_id) {
   /**
    * EXEC SQL UPDATE orders
    * SET o_carrier_id = :o_carrier_id
@@ -121,7 +120,7 @@ inline std::vector<std::shared_ptr<OperatorTask>> delivery_updateOrder(const int
 }
 
 inline std::vector<std::shared_ptr<OperatorTask>> delivery_updateOrderLine(const int d_id, const int w_id,
-                                                                              const int no_o_id) {
+                                                                           const int no_o_id) {
   /**
    * EXEC SQL UPDATE order_line
    * SET ol_delivery_d = :datetime
@@ -148,7 +147,7 @@ inline std::vector<std::shared_ptr<OperatorTask>> delivery_updateOrderLine(const
 }
 
 inline std::vector<std::shared_ptr<OperatorTask>> delivery_sumOrderLine(const int d_id, const int w_id,
-                                                                           const int no_o_id) {
+                                                                        const int no_o_id) {
   /**
    * EXEC SQL SELECT SUM(ol_amount) INTO :ol_total
    * FROM order_line
@@ -158,9 +157,9 @@ inline std::vector<std::shared_ptr<OperatorTask>> delivery_sumOrderLine(const in
   auto ts1 = std::make_shared<TableScan>(gt, ColumnName("OL_O_ID"), "=", no_o_id);
   auto ts2 = std::make_shared<TableScan>(ts1, ColumnName("OL_D_ID"), "=", d_id);
   auto ts3 = std::make_shared<TableScan>(ts2, ColumnName("OL_W_ID"), "=", w_id);
-//  auto sum = std::make_shared<Aggregate>(
-//      ts3, std::vector<std::pair<std::string, AggregateFunction>>{std::make_pair(std::string("OL_AMOUNT"), Sum)},
-//      std::vector<std::string>{});
+  //  auto sum = std::make_shared<Aggregate>(
+  //      ts3, std::vector<std::pair<std::string, AggregateFunction>>{std::make_pair(std::string("OL_AMOUNT"), Sum)},
+  //      std::vector<std::string>{});
   auto sum = std::make_shared<Projection>(ts3, std::vector<std::string>{"OL_AMOUNT"});
 
   auto t_gt = std::make_shared<OperatorTask>(std::move(gt));
