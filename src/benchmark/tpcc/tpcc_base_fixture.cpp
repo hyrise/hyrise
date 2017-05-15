@@ -6,6 +6,8 @@
 
 #include "benchmark/benchmark.h"
 
+#include "../../benchmark-libs/tpcc/random_generator.hpp"
+#include "../../benchmark-libs/tpcc/table_generator.hpp"
 #include "../../lib/operators/get_table.hpp"
 #include "../../lib/scheduler/current_scheduler.hpp"
 #include "../../lib/scheduler/node_queue_scheduler.hpp"
@@ -14,8 +16,6 @@
 #include "../../lib/storage/storage_manager.hpp"
 #include "../../lib/storage/table.hpp"
 #include "../../lib/types.hpp"
-#include "../../tpcc/random_generator.hpp"
-#include "../../tpcc/table_generator.hpp"
 
 namespace opossum {
 
