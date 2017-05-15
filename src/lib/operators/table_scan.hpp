@@ -191,6 +191,9 @@ class TableScan::TableScanImpl : public AbstractReadOnlyOperatorImpl {
     jobs.reserve(in_table->chunk_count());
 
     for (ChunkID chunk_id = 0; chunk_id < in_table->chunk_count(); ++chunk_id) {
+      if (in_table->get_chunk(chunk_id).size() == 0) {
+        continue;
+      }
       jobs.emplace_back(std::make_shared<JobTask>([&in_table, chunk_id, &output_mutex, &output, &column_id1,
                                                    &column_id2, &casted_value1, &casted_value2, this]() {
         const Chunk &chunk_in = in_table->get_chunk(chunk_id);
