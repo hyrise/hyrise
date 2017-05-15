@@ -8,6 +8,7 @@
 #include "../../lib/operators/get_table.hpp"
 #include "../../lib/scheduler/current_scheduler.hpp"
 #include "../../lib/scheduler/node_queue_scheduler.hpp"
+#include "../../lib/scheduler/operator_task.hpp"
 #include "../../lib/scheduler/topology.hpp"
 #include "../../lib/storage/storage_manager.hpp"
 #include "../../lib/storage/table.hpp"
@@ -22,11 +23,24 @@ class TPCCBenchmarkFixture : public benchmark::Fixture {
   TPCCBenchmarkFixture() {
     // Generating TPCC tables
     _gen.add_all_tables(opossum::StorageManager::get());
-//    CurrentScheduler::set(std::make_shared<NodeQueueScheduler>(Topology::create_fake_numa_topology(8, 4)));
+    //    CurrentScheduler::set(std::make_shared<NodeQueueScheduler>(Topology::create_fake_numa_topology(8, 4)));
   }
 
   virtual void TearDown(const ::benchmark::State&) {
-//    CurrentScheduler::set(nullptr);
+    //    CurrentScheduler::set(nullptr);
+  }
+
+  void set_transaction_context_for_operators(const std::shared_ptr<TransactionContext> t_context,
+                                             const std::vector<std::shared_ptr<AbstractOperator>> operators) {
+    for (auto& op : operators) {
+      op->set_transaction_context(t_context);
+    }
+  }
+
+  void schedule_tasks(const std::vector<std::shared_ptr<OperatorTask>> tasks) {
+    for (auto& task : tasks) {
+      task->schedule();
+    }
   }
 
  protected:
