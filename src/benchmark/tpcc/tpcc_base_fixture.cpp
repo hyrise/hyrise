@@ -21,7 +21,7 @@ class TPCCBenchmarkFixture : public benchmark::Fixture {
  public:
   TPCCBenchmarkFixture() {
     // Generating TPCC tables
-    CurrentScheduler::set(std::make_shared<NodeQueueScheduler>(Topology::create_fake_numa_topology(8, 4)));
+//    CurrentScheduler::set(std::make_shared<NodeQueueScheduler>(Topology::create_fake_numa_topology(8, 4)));
     _gen.add_all_tables(opossum::StorageManager::get());
     _gt_item = std::make_shared<GetTable>("ITEM");
     _gt_warehouse = std::make_shared<GetTable>("WAREHOUSE");
@@ -30,7 +30,7 @@ class TPCCBenchmarkFixture : public benchmark::Fixture {
     _gt_customer = std::make_shared<GetTable>("CUSTOMER");
     _gt_history = std::make_shared<GetTable>("HISTORY");
     _gt_order = std::make_shared<GetTable>("ORDER");
-    _gt_order_line = std::make_shared<GetTable>("ORDER");
+    _gt_order_line = std::make_shared<GetTable>("ORDER-LINE");
     _gt_new_order = std::make_shared<GetTable>("NEW-ORDER");
     _gt_item->execute();
     _gt_warehouse->execute();
@@ -45,7 +45,7 @@ class TPCCBenchmarkFixture : public benchmark::Fixture {
 
   virtual void TearDown(const ::benchmark::State&) {
     opossum::StorageManager::get().reset();
-    CurrentScheduler::set(nullptr);
+//    CurrentScheduler::set(nullptr);
   }
 
  protected:
