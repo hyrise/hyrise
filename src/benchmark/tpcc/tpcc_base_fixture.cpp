@@ -13,7 +13,7 @@
 #include "../../lib/storage/storage_manager.hpp"
 #include "../../lib/storage/table.hpp"
 #include "../../lib/types.hpp"
-#include "../../tpcc/table_generator.hpp"
+#include "../../benchmark-libs/tpcc/table_generator.hpp"
 
 namespace opossum {
 
