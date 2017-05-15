@@ -19,18 +19,19 @@ namespace opossum {
 // Defining the base fixture class
 class TPCCBenchmarkFixture : public benchmark::Fixture {
  public:
-  TPCCBenchmarkFixture() {
+  TPCCBenchmarkFixture() : _random_gen(RandomGenerator()) {
     // Generating TPCC tables
     _gen.add_all_tables(opossum::StorageManager::get());
-//    CurrentScheduler::set(std::make_shared<NodeQueueScheduler>(Topology::create_fake_numa_topology(8, 4)));
+    //    CurrentScheduler::set(std::make_shared<NodeQueueScheduler>(Topology::create_fake_numa_topology(8, 4)));
   }
 
   virtual void TearDown(const ::benchmark::State&) {
-//    CurrentScheduler::set(nullptr);
+    //    CurrentScheduler::set(nullptr);
   }
 
  protected:
   TPCCTableGenerator _gen;
+  RandomGenerator _random_gen;
 
   void clear_cache() {
     std::vector<int> clear = std::vector<int>();
