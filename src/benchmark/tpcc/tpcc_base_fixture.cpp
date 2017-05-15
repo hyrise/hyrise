@@ -13,7 +13,7 @@
 #include "../../lib/storage/storage_manager.hpp"
 #include "../../lib/storage/table.hpp"
 #include "../../lib/types.hpp"
-#include "tpcc_table_generator.hpp"
+#include "../../tpcc/table_generator.hpp"
 
 namespace opossum {
 
@@ -44,7 +44,7 @@ class TPCCBenchmarkFixture : public benchmark::Fixture {
   }
 
  protected:
-  TPCCTableGenerator _gen;
+  tpcc::TableGenerator _gen;
 
   void clear_cache() {
     std::vector<int> clear = std::vector<int>();
