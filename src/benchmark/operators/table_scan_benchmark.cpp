@@ -4,32 +4,28 @@
 
 #include "benchmark/benchmark.h"
 
-#include "../../lib/operators/get_table.hpp"
-#include "../../lib/operators/table_scan.hpp"
-#include "../../lib/storage/storage_manager.hpp"
-#include "../../lib/storage/table.hpp"
-#include "../../lib/types.hpp"
 #include "../base_fixture.cpp"
 #include "../table_generator.hpp"
+#include "operators/table_scan.hpp"
 
 namespace opossum {
 
-BENCHMARK_F(BenchmarkFixture, BM_TableScanConstant)(benchmark::State& state) {
+BENCHMARK_F(BenchmarkBasicFixture, BM_TableScanConstant)(benchmark::State& state) {
   clear_cache();
-  auto warm_up = std::make_shared<TableScan>(_gt_a, ColumnName("a"), ">=", 7);
+  auto warm_up = std::make_shared<TableScan>(_table_wrapper_a, ColumnName("a"), ">=", 7);
   warm_up->execute();
   while (state.KeepRunning()) {
-    auto table_scan = std::make_shared<TableScan>(_gt_a, ColumnName("a"), ">=", 7);
+    auto table_scan = std::make_shared<TableScan>(_table_wrapper_a, ColumnName("a"), ">=", 7);
     table_scan->execute();
   }
 }
 
-BENCHMARK_F(BenchmarkFixture, BM_TableScanVariable)(benchmark::State& state) {
+BENCHMARK_F(BenchmarkBasicFixture, BM_TableScanVariable)(benchmark::State& state) {
   clear_cache();
-  auto warm_up = std::make_shared<TableScan>(_gt_a, ColumnName("a"), ">=", ColumnName("b"));
+  auto warm_up = std::make_shared<TableScan>(_table_wrapper_a, ColumnName("a"), ">=", ColumnName("b"));
   warm_up->execute();
   while (state.KeepRunning()) {
-    auto table_scan = std::make_shared<TableScan>(_gt_a, ColumnName("a"), ">=", ColumnName("b"));
+    auto table_scan = std::make_shared<TableScan>(_table_wrapper_a, ColumnName("a"), ">=", ColumnName("b"));
     table_scan->execute();
   }
 }

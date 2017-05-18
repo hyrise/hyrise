@@ -153,8 +153,8 @@ std::shared_ptr<Table> BaseTest::load_table(const std::string &file_name, size_t
     test_table->append(values);
 
     auto &chunk = test_table->get_chunk(test_table->chunk_count() - 1);
-    auto &mvcc_cols = chunk.mvcc_columns();
-    mvcc_cols.begin_cids.back() = 0;
+    auto mvcc_cols = chunk.mvcc_columns();
+    mvcc_cols->begin_cids.back() = 0;
   }
   return test_table;
 }
