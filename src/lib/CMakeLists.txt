@@ -55,8 +55,6 @@ set(
     network/response_builder.hpp
     network/request_handler.hpp
     network/operator_translator.hpp
-    network/generated/opossum.pb.cc
-    network/generated/opossum.grpc.pb.cc
     network/server.hpp
     network/operator_translator.cpp
     network/request_handler.cpp
