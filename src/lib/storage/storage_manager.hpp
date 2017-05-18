@@ -32,6 +32,9 @@ class StorageManager {
   // deletes the entire StorageManager and creates a new one, used especially in tests
   static void reset();
 
+  // For debugging purposes mostly, dump all tables as csv
+  void dump_as_csv(const std::string & path);
+
   StorageManager(StorageManager const &) = delete;
   StorageManager &operator=(const StorageManager &) = delete;
   StorageManager(StorageManager &&) = delete;

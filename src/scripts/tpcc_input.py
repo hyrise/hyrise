@@ -15,7 +15,7 @@ def generate_new_order(input_dict):
 
     invalid_order = random.randint(0, 99) == 0
 
-    for o in ol_count:
+    for o in range(ol_count):
         order_line = []
 
         # If the transaction is to be invalid, make the last order line invalid
