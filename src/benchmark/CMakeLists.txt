@@ -24,6 +24,7 @@ add_executable(
         tpcc/delivery_benchmark.cpp
         tpcc/order_status_benchmark.cpp
         tpcc/new_order_benchmark.cpp
+        tpcc/payment_benchmark.cpp
         tpcc/tpcc_base_fixture.cpp
         benchmark_main.cpp
         benchmark_template.cpp

@@ -70,13 +70,11 @@ set(
     operators/export_binary.hpp
     operators/commit_records.hpp
     operators/aggregate.hpp
-    operators/csv_writer.hpp
     operators/import_binary.cpp
     operators/print.cpp
     operators/union_all.hpp
     operators/join_nested_loop_b.hpp
     operators/index_column_scan.hpp
-    operators/csv.hpp
     operators/delete.hpp
     operators/insert.hpp
     operators/import_binary.hpp
@@ -95,6 +93,8 @@ set(
     operators/difference.hpp
     operators/rollback_records.hpp
     operators/join_hash.cpp
+    operators/limit.cpp
+    operators/limit.hpp
     operators/abstract_operator.cpp
     operators/term.hpp
     operators/difference.cpp
@@ -122,7 +122,6 @@ set(
     operators/union_all.cpp
     operators/update.cpp
     operators/export_csv.hpp
-    operators/csv_writer.cpp
     types.cpp
     scheduler/abstract_scheduler.hpp
     scheduler/worker.hpp
