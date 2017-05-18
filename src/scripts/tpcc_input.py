@@ -2,13 +2,36 @@ import json
 import random
 from tpcc_constants import *
 
-def generate_new_order(input_dict):
+nurand_C = {}
+
+def nurand(A, x, y):
+    a = random.randint(0, A)
+    b = random.randint(x, y)
+
+    if not A in nurand_C:
+        nurand_C[A] = random.randint(0, A)
+
+    return ((a | b) + nurand_C[A]) % (y * x + 1) + x
+
+def decode_c_last(abc):
+    assert abc >= 0 and abc < 999
+
+    a = int(abc / 100)
+    b = int((abc - a * 100) / 10)
+    c = int(abc - a * 100 - b * 10)
+
+    syllabels = ("BAR", "OUGHT", "ABLE", "PRI", "PRES", "ESE", "ANTI", "CALLY", "ATION", "EING")
+
+    return syllabels[a] + syllabels[b] + syllabels[c]
+
+
+def generate_new_order():
     new_order = {
-        "WarehouseId": 0,
-        "DistrictId": random.randint(0, NUM_DISTRICTS - 1),
-        "CustomerId": random.randint(0, NUM_CUSTOMERS_PER_DISTRICT - 1),
-        "OrderEntryDate": "2017-05-01",
-        "OrderLines": []
+        "w_id": 0, # TODO: support multiple warehouses
+        "d_id": random.randint(0, NUM_DISTRICTS - 1),
+        "c_id": random.randint(0, NUM_CUSTOMERS_PER_DISTRICT - 1),
+        "o_entry_d": "2017-05-01",
+        "ol": []
     }
 
     ol_count = random.randint(MIN_ORDER_LINE_COUNT, MAX_ORDER_LINE_COUNT)
@@ -19,7 +42,7 @@ def generate_new_order(input_dict):
         order_line = []
 
         # If the transaction is to be invalid, make the last order line invalid
-        if invalid_order and o + 1 == new_order["OrderLineCount"]:
+        if invalid_order and o + 1 == ol_count:
             order_line.append(NUM_ITEMS + 1)
         else:
             order_line.append(random.randint(0, NUM_ITEMS - 1))
@@ -29,22 +52,36 @@ def generate_new_order(input_dict):
 
         order_line.append(random.randint(1, MAX_ORDER_LINE_QUANTITY))
 
-        new_order["OrderLines"].append(order_line)
+        new_order["ol"].append(order_line)
 
-    input_dict["NewOrders"].append(new_order)
+    return ("NewOrder", new_order)
 
-
-
-if __name__ == "__main__":
-    input_dict = {
-        "NewOrders": []
+def generate_order_status():
+    order_status= {
+        "w_id": 0, # TODO: support multiple warehouses
+        "d_id": random.randint(0, NUM_DISTRICTS - 1)
     }
 
-    for o in range(100):
-        generate_new_order(input_dict)
+    order_status["case"] = 2 if random.randint(1, 100) <= 60 else 1
+
+    if order_status["case"] == 1: # Based on customer number
+        order_status["c_id"] = nurand(1023, 1, 3000)
+    else: # Based on customer last name
+        order_status["c_last"] = decode_c_last(nurand(255, 0, 999))
+
+    return ("OrderStatus", order_status)
+
+if __name__ == "__main__":
+    transactions = []
+
+    transactions.append(generate_new_order())
+    transactions.append(generate_order_status())
+
+    #for o in range(1): input_dict["NewOrders"].append(generate_new_order())
+    #for o in range(1): input_dict["OrderStatus"].append(c)
 
     with open("tpcc_input.json", "w") as json_file:
-        json.dump(input_dict, json_file)
+        json.dump(transactions, json_file)
 
 
 
