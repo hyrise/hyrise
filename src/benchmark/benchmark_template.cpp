@@ -17,7 +17,7 @@
 
 namespace opossum {
 /*
-BENCHMARK_F(BenchmarkFixture, BM_Template)(benchmark::State& state) {
+BENCHMARK_F(BenchmarkBasicFixture, BM_Template)(benchmark::State& state) {
   // Google benchmark automaticly determines a number of executions. The code that should be measured multiple times
   // goes in the while loop. Executions before the loop won't be measured.
   clear_cache();

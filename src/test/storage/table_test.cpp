@@ -28,32 +28,6 @@ TEST_F(StorageTableTest, ChunkCount) {
   EXPECT_EQ(t.chunk_count(), 2u);
 }
 
-TEST_F(StorageTableTest, ChunkCompression) {
-  Table t2{6, true};
-  t2.add_column("col_1", "int");
-  t2.add_column("col_2", "string");
-  t2.append({4, "Bill"});
-  t2.append({4, "Steve"});
-  t2.append({3, "Alexander"});
-  t2.append({4, "Steve"});
-  t2.append({5, "Hasso"});
-  t2.append({3, "Alexander"});
-  t2.append({1, "Bill"});
-
-  EXPECT_EQ(t2.chunk_count(), 2u);
-  // Test attribute vectors
-  EXPECT_EQ(t2.get_chunk(0).get_column(0)->size(), 6u);
-  EXPECT_EQ(t2.get_chunk(0).get_column(1)->size(), 6u);
-
-  // Test dictionary size
-  auto col_1 = std::dynamic_pointer_cast<DictionaryColumn<int>>(t2.get_chunk(0).get_column(0));
-  auto col_2 = std::dynamic_pointer_cast<DictionaryColumn<std::string>>(t2.get_chunk(0).get_column(1));
-
-  // Test if ValueColumn has been transformed to DictionaryColumn
-  EXPECT_NE(col_1, nullptr);
-  EXPECT_NE(col_2, nullptr);
-}
-
 TEST_F(StorageTableTest, GetChunk) {
   t.get_chunk(0);
   // TODO(anyone): Do we want checks here?
@@ -100,7 +74,7 @@ TEST_F(StorageTableTest, ColumnNameTooLong) {
                , std::exception);
 }
 
-TEST_F(StorageTableTest, CompressedChunkHasSameCidColumns) {
+TEST_F(StorageTableTest, ShrinkingMvccColumnsHasNoSideEffects) {
   t.append({4, "Hello,"});
   t.append({6, "world"});
 
@@ -108,30 +82,31 @@ TEST_F(StorageTableTest, CompressedChunkHasSameCidColumns) {
 
   const auto values = std::vector<CommitID>{1u, 2u};
 
-  auto& mvcc_columns = chunk.mvcc_columns();
+  {
+    // acquiring mvcc_columns locks them
+    auto mvcc_columns = chunk.mvcc_columns();
 
-  // tids are not copied because they must be 0, since
-  // otherwise someone else would be trying to
-  // simultaneously change the records
-  mvcc_columns.begin_cids[0u] = values[0u];
-  mvcc_columns.begin_cids[1u] = values[1u];
-  mvcc_columns.end_cids[0u] = values[0u];
-  mvcc_columns.end_cids[1u] = values[1u];
+    mvcc_columns->tids[0u] = values[0u];
+    mvcc_columns->tids[1u] = values[1u];
+    mvcc_columns->begin_cids[0u] = values[0u];
+    mvcc_columns->begin_cids[1u] = values[1u];
+    mvcc_columns->end_cids[0u] = values[0u];
+    mvcc_columns->end_cids[1u] = values[1u];
+  }
 
   const auto previous_size = chunk.size();
 
-  t.compress_chunk(0u);
+  chunk.shrink_mvcc_columns();
 
-  auto& compressed_chunk = t.get_chunk(0u);
+  ASSERT_EQ(previous_size, chunk.size());
+  ASSERT_TRUE(chunk.has_mvcc_columns());
 
-  ASSERT_EQ(previous_size, compressed_chunk.size());
-  ASSERT_TRUE(compressed_chunk.has_mvcc_columns());
-
-  const auto& new_mvcc_columns = compressed_chunk.mvcc_columns();
+  auto new_mvcc_columns = chunk.mvcc_columns();
 
   for (auto i = 0u; i < chunk.size(); ++i) {
-    EXPECT_EQ(new_mvcc_columns.begin_cids[i], values[i]);
-    EXPECT_EQ(new_mvcc_columns.end_cids[i], values[i]);
+    EXPECT_EQ(new_mvcc_columns->tids[i], values[i]);
+    EXPECT_EQ(new_mvcc_columns->begin_cids[i], values[i]);
+    EXPECT_EQ(new_mvcc_columns->end_cids[i], values[i]);
   }
 }
 

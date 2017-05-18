@@ -3,12 +3,14 @@
 #include <memory>
 #include <string>
 #include <utility>
+#include <vector>
 
 #include "../base_test.hpp"
 #include "gtest/gtest.h"
 
 #include "../../lib/operators/abstract_join_operator.hpp"
-#include "../../lib/operators/get_table.hpp"
+#include "../../lib/operators/table_wrapper.hpp"
+#include "../../lib/storage/dictionary_compression.hpp"
 #include "../../lib/storage/storage_manager.hpp"
 #include "../../lib/storage/table.hpp"
 #include "../../lib/types.hpp"
@@ -25,68 +27,50 @@ class JoinTest : public BaseTest {
  protected:
   void SetUp() override {
     // load and create regular ValueColumn tables
-    std::shared_ptr<Table> table = load_table("src/test/tables/int_float.tbl", 2);
-    StorageManager::get().add_table("table_a", std::move(table));
-    _gt_a = std::make_shared<GetTable>("table_a");
+    _table_wrapper_a = std::make_shared<TableWrapper>(load_table("src/test/tables/int_float.tbl", 2));
 
-    table = load_table("src/test/tables/int_float2.tbl", 2);
-    StorageManager::get().add_table("table_b", std::move(table));
-    _gt_b = std::make_shared<GetTable>("table_b");
+    _table_wrapper_b = std::make_shared<TableWrapper>(load_table("src/test/tables/int_float2.tbl", 2));
 
-    table = load_table("src/test/tables/int_string.tbl", 4);
-    StorageManager::get().add_table("table_c", std::move(table));
-    _gt_c = std::make_shared<GetTable>("table_c");
+    _table_wrapper_c = std::make_shared<TableWrapper>(load_table("src/test/tables/int_string.tbl", 4));
 
-    table = load_table("src/test/tables/string_int.tbl", 3);
-    StorageManager::get().add_table("table_d", std::move(table));
-    _gt_d = std::make_shared<GetTable>("table_d");
+    _table_wrapper_d = std::make_shared<TableWrapper>(load_table("src/test/tables/string_int.tbl", 3));
 
-    table = load_table("src/test/tables/int_int.tbl", 4);
-    StorageManager::get().add_table("table_e", std::move(table));
-    _gt_e = std::make_shared<GetTable>("table_e");
+    _table_wrapper_e = std::make_shared<TableWrapper>(load_table("src/test/tables/int_int.tbl", 4));
 
-    table = load_table("src/test/tables/int_int2.tbl", 4);
-    StorageManager::get().add_table("table_f", std::move(table));
-    _gt_f = std::make_shared<GetTable>("table_f");
+    _table_wrapper_f = std::make_shared<TableWrapper>(load_table("src/test/tables/int_int2.tbl", 4));
 
-    table = load_table("src/test/tables/int_int3.tbl", 4);
-    StorageManager::get().add_table("table_g", std::move(table));
-    _gt_g = std::make_shared<GetTable>("table_g");
+    _table_wrapper_g = std::make_shared<TableWrapper>(load_table("src/test/tables/int_int3.tbl", 4));
 
-    table = load_table("src/test/tables/int_int4.tbl", 4);
-    StorageManager::get().add_table("table_h", std::move(table));
-    _gt_h = std::make_shared<GetTable>("table_h");
+    _table_wrapper_h = std::make_shared<TableWrapper>(load_table("src/test/tables/int_int4.tbl", 4));
 
     // load and create DictionaryColumn tables
-    table = load_table("src/test/tables/int_float.tbl", 2);
-    table->compress_chunk(0);
-    table->compress_chunk(1);
-    StorageManager::get().add_table("table_a_dict", std::move(table));
-    _gt_a_dict = std::make_shared<GetTable>("table_a_dict");
+    auto table = load_table("src/test/tables/int_float.tbl", 2);
+    DictionaryCompression::compress_chunks(*table, {0u, 1u});
+
+    _table_wrapper_a_dict = std::make_shared<TableWrapper>(std::move(table));
 
     table = load_table("src/test/tables/int_float2.tbl", 2);
-    table->compress_chunk(0);
-    table->compress_chunk(1);
-    StorageManager::get().add_table("table_b_dict", std::move(table));
-    _gt_b_dict = std::make_shared<GetTable>("table_b_dict");
+    DictionaryCompression::compress_chunks(*table, {0u, 1u});
+
+    _table_wrapper_b_dict = std::make_shared<TableWrapper>(std::move(table));
 
     table = load_table("src/test/tables/int_float.tbl", 2);
-    table->compress_chunk(0);
-    StorageManager::get().add_table("table_c_dict", std::move(table));
-    _gt_c_dict = std::make_shared<GetTable>("table_c_dict");
+    DictionaryCompression::compress_chunks(*table, {0u});
 
-    // execute all GetTable operators in advance
-    _gt_a->execute();
-    _gt_b->execute();
-    _gt_c->execute();
-    _gt_d->execute();
-    _gt_e->execute();
-    _gt_f->execute();
-    _gt_g->execute();
-    _gt_h->execute();
-    _gt_a_dict->execute();
-    _gt_b_dict->execute();
-    _gt_c_dict->execute();
+    _table_wrapper_c_dict = std::make_shared<TableWrapper>(std::move(table));
+
+    // execute all TableWrapper operators in advance
+    _table_wrapper_a->execute();
+    _table_wrapper_b->execute();
+    _table_wrapper_c->execute();
+    _table_wrapper_d->execute();
+    _table_wrapper_e->execute();
+    _table_wrapper_f->execute();
+    _table_wrapper_g->execute();
+    _table_wrapper_h->execute();
+    _table_wrapper_a_dict->execute();
+    _table_wrapper_b_dict->execute();
+    _table_wrapper_c_dict->execute();
   }
 
   // builds and executes the given Join and checks correctness of the output
@@ -108,7 +92,9 @@ class JoinTest : public BaseTest {
     EXPECT_TABLE_EQ(join->get_output(), expected_result);
   }
 
-  std::shared_ptr<GetTable> _gt_a, _gt_b, _gt_c, _gt_d, _gt_e, _gt_f, _gt_g, _gt_h, _gt_a_dict, _gt_b_dict, _gt_c_dict;
+  std::shared_ptr<TableWrapper> _table_wrapper_a, _table_wrapper_b, _table_wrapper_c, _table_wrapper_d,
+      _table_wrapper_e, _table_wrapper_f, _table_wrapper_g, _table_wrapper_h, _table_wrapper_a_dict,
+      _table_wrapper_b_dict, _table_wrapper_c_dict;
 };
 
 }  // namespace opossum

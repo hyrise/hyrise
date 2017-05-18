@@ -25,6 +25,7 @@ class OperatorsDeleteTest : public BaseTest {
   void SetUp() override {
     _table_name = "table_a";
     _table = load_table("src/test/tables/float_int.tbl", 0u);
+    // Delete Operator works with the Storage Manager, so the test table must also be known to the StorageManager
     StorageManager::get().add_table(_table_name, _table);
     _gt = std::make_shared<GetTable>(_table_name);
 
@@ -51,9 +52,9 @@ void OperatorsDeleteTest::helper(bool commit) {
 
   delete_op->execute();
 
-  EXPECT_EQ(_table->get_chunk(0u).mvcc_columns().tids.at(0u), transaction_context->transaction_id());
-  EXPECT_EQ(_table->get_chunk(0u).mvcc_columns().tids.at(1u), 0u);
-  EXPECT_EQ(_table->get_chunk(0u).mvcc_columns().tids.at(2u), transaction_context->transaction_id());
+  EXPECT_EQ(_table->get_chunk(0u).mvcc_columns()->tids.at(0u), transaction_context->transaction_id());
+  EXPECT_EQ(_table->get_chunk(0u).mvcc_columns()->tids.at(1u), 0u);
+  EXPECT_EQ(_table->get_chunk(0u).mvcc_columns()->tids.at(2u), transaction_context->transaction_id());
 
   auto expected_end_cid = cid;
   if (commit) {
@@ -63,15 +64,15 @@ void OperatorsDeleteTest::helper(bool commit) {
     expected_end_cid = Chunk::MAX_COMMIT_ID;
   }
 
-  EXPECT_EQ(_table->get_chunk(0u).mvcc_columns().end_cids.at(0u), expected_end_cid);
-  EXPECT_EQ(_table->get_chunk(0u).mvcc_columns().end_cids.at(1u), Chunk::MAX_COMMIT_ID);
-  EXPECT_EQ(_table->get_chunk(0u).mvcc_columns().end_cids.at(2u), expected_end_cid);
+  EXPECT_EQ(_table->get_chunk(0u).mvcc_columns()->end_cids.at(0u), expected_end_cid);
+  EXPECT_EQ(_table->get_chunk(0u).mvcc_columns()->end_cids.at(1u), Chunk::MAX_COMMIT_ID);
+  EXPECT_EQ(_table->get_chunk(0u).mvcc_columns()->end_cids.at(2u), expected_end_cid);
 
   auto expected_tid = commit ? transaction_context->transaction_id() : 0u;
 
-  EXPECT_EQ(_table->get_chunk(0u).mvcc_columns().tids.at(0u), expected_tid);
-  EXPECT_EQ(_table->get_chunk(0u).mvcc_columns().tids.at(1u), 0u);
-  EXPECT_EQ(_table->get_chunk(0u).mvcc_columns().tids.at(2u), expected_tid);
+  EXPECT_EQ(_table->get_chunk(0u).mvcc_columns()->tids.at(0u), expected_tid);
+  EXPECT_EQ(_table->get_chunk(0u).mvcc_columns()->tids.at(1u), 0u);
+  EXPECT_EQ(_table->get_chunk(0u).mvcc_columns()->tids.at(2u), expected_tid);
 }
 
 TEST_F(OperatorsDeleteTest, ExecuteAndCommit) { helper(true); }

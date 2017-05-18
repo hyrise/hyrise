@@ -20,7 +20,7 @@ class AdaptiveRadixTreeIndexTest : public BaseTest {
   void SetUp() override {
     // we want to custom-build the index, but we have to create an index with a non-empty column.
     // Therefore we build an index and reset the root.
-    dict_col1 = create_column_by_type<std::string>("string", {"test"});
+    dict_col1 = create_dict_column_by_type<std::string>("string", {"test"});
     index1 = std::make_shared<AdaptiveRadixTreeIndex>(std::vector<std::shared_ptr<BaseColumn>>({dict_col1}));
     index1->_root = nullptr;
     index1->_chunk_offsets.clear();
@@ -41,15 +41,6 @@ class AdaptiveRadixTreeIndexTest : public BaseTest {
       pairs.emplace_back(std::make_pair(bc, values1[i]));
     }
     root = index1->_bulk_insert(pairs);
-  }
-
-  template <class T>
-  static std::shared_ptr<BaseColumn> create_column_by_type(const std::string &type, const std::vector<T> &values) {
-    auto value_column = make_shared_by_column_type<BaseColumn, ValueColumn>(type);
-    for (const auto &value : values) {
-      value_column->append(value);
-    }
-    return make_shared_by_column_type<BaseColumn, DictionaryColumn>(type, value_column);
   }
 
   std::shared_ptr<AdaptiveRadixTreeIndex> index1 = nullptr;
