@@ -1,218 +1,249 @@
 #include <memory>
 #include <string>
-#include <utility>
 #include <vector>
 
 #include "benchmark/benchmark.h"
 
-#include "../../lib/operators/aggregate.hpp"
 #include "../../lib/operators/get_table.hpp"
-#include "../../lib/operators/print.hpp"
 #include "../../lib/operators/projection.hpp"
 #include "../../lib/operators/sort.hpp"
+#include "../../lib/operators/limit.hpp"
+#include "../../lib/operators/print.hpp"
 #include "../../lib/operators/table_scan.hpp"
 #include "../../lib/scheduler/operator_task.hpp"
-#include "../../lib/storage/storage_manager.hpp"
 
 #include "tpcc_base_fixture.cpp"
 
 namespace opossum {
 
-inline int32_t get_name_count(std::string c_last, int c_d_id, int c_w_id) {
-  /**
-   * EXEC SQL SELECT count(c_id) INTO :namecnt
-   * FROM customer
-   * WHERE c_last=:c_last AND c_d_id=:d_id AND c_w_id=:w_id;
-   */
+class TPCCOrderStatusBenchmark : public TPCCBenchmarkFixture {
+ public:
+  std::vector<std::shared_ptr<OperatorTask>> get_customer_by_name(const std::string c_last, const int c_d_id,
+                                                                  const int c_w_id) {
+    /**
+     * SELECT c_balance, c_first, c_middle, c_id
+     * FROM customer
+     * WHERE c_last=:c_last AND c_d_id=:d_id AND c_w_id=:w_id
+     * ORDER BY c_first;
+     */
+    auto gt_customer = std::make_shared<GetTable>("CUSTOMER");
+    auto first_filter = std::make_shared<TableScan>(gt_customer, "C_LAST", "=", c_last);
+    auto second_filter = std::make_shared<TableScan>(first_filter, "C_D_ID", "=", c_d_id);
+    auto third_filter = std::make_shared<TableScan>(second_filter, "C_W_ID", "=", c_w_id);
+    std::vector<std::string> columns = {"C_BALANCE", "C_FIRST", "C_MIDDLE", "C_ID"};
+    auto projection = std::make_shared<Projection>(third_filter, columns);
+    auto sort = std::make_shared<Sort>(projection, "C_FIRST", true);
 
-  StorageManager::get().print();
-  auto gt_customer = std::make_shared<GetTable>("CUSTOMER");
-  auto first_filter = std::make_shared<TableScan>(gt_customer, "C_LAST", "=", c_last);
-  auto second_filter = std::make_shared<TableScan>(first_filter, "C_D_ID", "=", c_d_id);
-  auto third_filter = std::make_shared<TableScan>(second_filter, "C_W_ID", "=", c_w_id);
-  // TODO(anyone): replace Sum by Count as soon as merged
-  auto count = std::make_shared<Aggregate>(
-      third_filter, std::vector<std::pair<std::string, AggregateFunction>>{std::make_pair(std::string("C_ID"), Sum)},
-      std::vector<std::string>{"C_D_ID"});
+    auto gt_customer_task = std::make_shared<OperatorTask>(gt_customer);
+    auto first_filter_task = std::make_shared<OperatorTask>(first_filter);
+    auto second_filter_task = std::make_shared<OperatorTask>(second_filter);
+    auto third_filter_task = std::make_shared<OperatorTask>(third_filter);
+    auto projection_task = std::make_shared<OperatorTask>(projection);
+    auto sort_task = std::make_shared<OperatorTask>(sort);
 
-  auto gt_customer_task = std::make_shared<OperatorTask>(gt_customer);
-  auto first_filter_task = std::make_shared<OperatorTask>(first_filter);
-  auto second_filter_task = std::make_shared<OperatorTask>(second_filter);
-  auto third_filter_task = std::make_shared<OperatorTask>(third_filter);
-  auto count_task = std::make_shared<OperatorTask>(count);
+    gt_customer_task->set_as_predecessor_of(first_filter_task);
+    first_filter_task->set_as_predecessor_of(second_filter_task);
+    second_filter_task->set_as_predecessor_of(third_filter_task);
+    third_filter_task->set_as_predecessor_of(projection_task);
+    projection_task->set_as_predecessor_of(sort_task);
 
-  gt_customer_task->set_as_predecessor_of(first_filter_task);
-  first_filter_task->set_as_predecessor_of(second_filter_task);
-  second_filter_task->set_as_predecessor_of(third_filter_task);
-  third_filter_task->set_as_predecessor_of(count_task);
-
-  gt_customer_task->schedule();
-  first_filter_task->schedule();
-  second_filter_task->schedule();
-  third_filter_task->schedule();
-  count_task->schedule();
-
-  count_task->join();
-
-  auto output_operator = count_task->get_operator();
-
-  std::cout << "Rowcount for Customer " << gt_customer_task->get_operator()->get_output()->row_count() << std::endl;
-  std::cout << "Rowcount for First " << first_filter_task->get_operator()->get_output()->row_count() << std::endl;
-  std::cout << "Rowcount for Second " << second_filter_task->get_operator()->get_output()->row_count() << std::endl;
-  std::cout << "Rowcount for Third " << third_filter_task->get_operator()->get_output()->row_count() << std::endl;
-  std::cout << "Rowcount for Count " << count_task->get_operator()->get_output()->row_count() << std::endl;
-
-  std::cout << "----------" << std::endl;
-
-  // get count from COUNT output
-  auto output_table = output_operator->get_output();
-  std::cout << "rowcount " << output_table->row_count() << std::endl;
-
-  if (output_table->row_count() > 0) {
-    // TODO(anyone): switch to COUNT(C_ID) as soon as available
-    auto count_column_id = output_table->column_id_by_name(std::string("SUM(C_ID)"));
-    auto count_result = output_table->get_chunk(0).get_column(count_column_id)->operator[](0);
-
-    std::cout << "Count result " << count_result << std::endl;
+    return {gt_customer_task, first_filter_task, second_filter_task, third_filter_task, projection_task, sort_task};
   }
 
-  return 0;
-}
-
-inline std::shared_ptr<const Table> get_customer(std::string c_last, int c_d_id, int c_w_id) {
-  /**
-   * EXEC SQL DECLARE c_name CURSOR FOR
-   * SELECT c_balance, c_first, c_middle, c_id
-   * FROM customer
-   * WHERE c_last=:c_last AND c_d_id=:d_id AND c_w_id=:w_id
-   * ORDER BY c_first;
-   * EXEC SQL OPEN c_name;
-   */
-  StorageManager::get().print();
-  auto gt_customer = std::make_shared<GetTable>("CUSTOMER");
-  auto first_filter = std::make_shared<TableScan>(gt_customer, "C_LAST", "=", c_last);
-  auto second_filter = std::make_shared<TableScan>(first_filter, "C_D_ID", "=", c_d_id);
-  auto third_filter = std::make_shared<TableScan>(second_filter, "C_W_ID", "=", c_w_id);
-  auto sort = std::make_shared<Sort>(third_filter, "C_FIRST", true);
-  std::vector<std::string> columns = {"C_BALANCE", "C_FIRST", "C_MIDDLE", "C_ID"};
-  auto projection = std::make_shared<Projection>(sort, columns);
-
-  auto gt_customer_task = std::make_shared<OperatorTask>(gt_customer);
-  auto first_filter_task = std::make_shared<OperatorTask>(first_filter);
-  auto second_filter_task = std::make_shared<OperatorTask>(second_filter);
-  auto third_filter_task = std::make_shared<OperatorTask>(third_filter);
-  auto sort_task = std::make_shared<OperatorTask>(sort);
-  auto projection_task = std::make_shared<OperatorTask>(projection);
-
-  gt_customer_task->set_as_predecessor_of(first_filter_task);
-  first_filter_task->set_as_predecessor_of(second_filter_task);
-  second_filter_task->set_as_predecessor_of(third_filter_task);
-  third_filter_task->set_as_predecessor_of(sort_task);
-  sort_task->set_as_predecessor_of(projection_task);
-
-  gt_customer_task->schedule();
-  first_filter_task->schedule();
-  second_filter_task->schedule();
-  third_filter_task->schedule();
-  sort_task->schedule();
-  projection_task->schedule();
-
-  projection_task->join();
-
-  std::cout << "Rowcount for Customer " << gt_customer_task->get_operator()->get_output()->row_count() << std::endl;
-  std::cout << "Rowcount for First " << first_filter_task->get_operator()->get_output()->row_count() << std::endl;
-  std::cout << "Rowcount for Second " << second_filter_task->get_operator()->get_output()->row_count() << std::endl;
-  std::cout << "Rowcount for Third " << third_filter_task->get_operator()->get_output()->row_count() << std::endl;
-  std::cout << "Rowcount for Sort " << sort_task->get_operator()->get_output()->row_count() << std::endl;
-  std::cout << "Rowcount for Projection " << projection_task->get_operator()->get_output()->row_count() << std::endl;
-
-  std::cout << "----------" << std::endl;
-
-  // get count from COUNT output
-  auto output_table = projection_task->get_operator()->get_output();
-  //  std::cout << "rowcount " << output_table->row_count() << std::endl;
-  //  // TODO: switch to COUNT(C_ID) as soon as available
-  //  auto count_column_id = output_table->column_id_by_name(std::string("SUM(C_ID)"));
-  //  auto count_result = output_table->get_chunk(0).get_column(count_column_id)->operator[](0);
-  //
-  //  std::cout << "Count result " << count_result << std::endl;
-
-  return output_table;
-}
-
-BENCHMARK_F(TPCCBenchmarkFixture, BM_OrderStatus)(benchmark::State& state) {
-  clear_cache();
-  //  auto warm_up = std::make_shared<Difference>(_gt_a, _gt_b);
-  //  warm_up->execute();
-  while (state.KeepRunning()) {
-    auto y = _random_gen.number(0, 99);
-    bool byLastname = y < 60;
-
-    // pass in i>1000 to trigger random value generation
-    auto c_last = _random_gen.last_name(2000);
-    size_t c_d_id = _random_gen.number(1, 10);
-    size_t c_w_id = 0;  // there is only one warehouse
-                        //    size_t c_id = randomGenerator.nurand(1023, 1, 3000);
-
-    if (byLastname) {
-      auto namecount = get_name_count(c_last, c_d_id, c_w_id);
-      std::cout << "namecout " << namecount << std::endl;
-
-      auto customer_result = get_customer(c_last, c_d_id, c_w_id);
-
-      std::cout << "customer result " << customer_result->row_count() << std::endl;
-
-      if (namecount % 2) {
-        namecount++;
-      }
-
-      for (int n = 0; n < namecount / 2; n++) {
-      }
-
-      /**
-       * if (namecnt%2) namecnt++; / / Locate midpoint customer
-       * for (n=0; n<namecnt/ 2; n++)
-       * {
-       * EXEC SQL FETCH c_name
-       * INTO :c_balance, :c_first, :c_middle, :c_id;
-       * }
-       * EXEC SQL CLOSE c_name;
-       */
-    } else {
-      /**
-       * EXEC SQL SELECT c_balance, c_first, c_middle, c_last
-       * INTO :c_balance, :c_first, :c_middle, :c_last
-       * FROM customer
-       * WHERE c_id=:c_id AND c_d_id=:d_id AND c_w_id=:w_id;
-       */
-    }
-
+  std::vector<std::shared_ptr<OperatorTask>> get_customer_by_id(const int c_id, const int c_d_id, const int c_w_id) {
     /**
-     * EXEC SQL SELECT o_id, o_carrier_id, o_entry_d
-     * INTO :o_id, :o_carrier_id, :entdate
-     * FROM orders
-     * ORDER BY o_id DESC;
+     * SQL SELECT c_balance, c_first, c_middle, c_last
+     * FROM customer
+     * WHERE c_id=:c_id AND c_d_id=:d_id AND c_w_id=:w_id;
      */
+    auto gt_customer = std::make_shared<GetTable>("CUSTOMER");
+    auto first_filter = std::make_shared<TableScan>(gt_customer, "C_ID", "=", c_id);
+    auto second_filter = std::make_shared<TableScan>(first_filter, "C_D_ID", "=", c_d_id);
+    auto third_filter = std::make_shared<TableScan>(second_filter, "C_W_ID", "=", c_w_id);
+    std::vector<std::string> columns = {"C_BALANCE", "C_FIRST", "C_MIDDLE", "C_LAST"};
+    auto projection = std::make_shared<Projection>(third_filter, columns);
 
+    auto gt_customer_task = std::make_shared<OperatorTask>(gt_customer);
+    auto first_filter_task = std::make_shared<OperatorTask>(first_filter);
+    auto second_filter_task = std::make_shared<OperatorTask>(second_filter);
+    auto third_filter_task = std::make_shared<OperatorTask>(third_filter);
+    auto projection_task = std::make_shared<OperatorTask>(projection);
+
+    gt_customer_task->set_as_predecessor_of(first_filter_task);
+    first_filter_task->set_as_predecessor_of(second_filter_task);
+    second_filter_task->set_as_predecessor_of(third_filter_task);
+    third_filter_task->set_as_predecessor_of(projection_task);
+
+    return {gt_customer_task, first_filter_task, second_filter_task, third_filter_task, projection_task};
+  }
+
+  std::vector<std::shared_ptr<OperatorTask>> get_orders() {
     /**
-     * EXEC SQL DECLARE c_line CURSOR FOR
+     * SELECT o_id, o_carrier_id, o_entry_d
+     * FROM orders
+     * ORDER BY o_id DESC
+     * LIMIT 1;
+     */
+    auto gt_orders = std::make_shared<GetTable>("ORDER");
+    std::vector<std::string> columns = {"O_ID", "O_CARRIER_ID", "O_ENTRY_D"};
+    auto projection = std::make_shared<Projection>(gt_orders, columns);
+    auto sort = std::make_shared<Sort>(projection, "O_ID", false);
+    auto limit = std::make_shared<Limit>(sort, 1);
+
+    auto gt_orders_task = std::make_shared<OperatorTask>(gt_orders);
+    auto projection_task = std::make_shared<OperatorTask>(projection);
+    auto sort_task = std::make_shared<OperatorTask>(sort);
+    auto limit_task = std::make_shared<OperatorTask>(limit);
+
+    gt_orders_task->set_as_predecessor_of(projection_task);
+    projection_task->set_as_predecessor_of(sort_task);
+    sort_task->set_as_predecessor_of(limit_task);
+
+    return {gt_orders_task, projection_task, sort_task, limit_task};
+  }
+
+  std::vector<std::shared_ptr<OperatorTask>> get_order_lines(const int o_id, const int d_id, const int w_id) {
+    /**
      * SELECT ol_i_id, ol_supply_w_id, ol_quantity,
      * ol_amount, ol_delivery_d
      * FROM order_line
      * WHERE ol_o_id=:o_id AND ol_d_id=:d_id AND ol_w_id=:w_id;
      */
+    auto gt_order_lines = std::make_shared<GetTable>("ORDER-LINE");
+    auto first_filter = std::make_shared<TableScan>(gt_order_lines, "OL_O_ID", "=", o_id);
+    auto second_filter = std::make_shared<TableScan>(first_filter, "OL_D_ID", "=", d_id);
+    auto third_filter = std::make_shared<TableScan>(second_filter, "OL_W_ID", "=", w_id);
+    std::vector<std::string> columns = {"OL_I_ID", "OL_SUPPLY_W_ID", "OL_QUANTITY", "OL_AMOUNT", "OL_DELIVERY_D"};
+    auto projection = std::make_shared<Projection>(third_filter, columns);
 
-    /**
-     * i=0;
-     * while (sql_notfound(FALSE))
-     * {
-     * i++;
-     * EXEC SQL FETCH c_line
-     * INTO :ol_i_id[i], :ol_supply_w_id[i], :ol_quantity[i],
-     * :ol_amount[i], :ol_delivery_d[i];
-     * }
-     */
+    auto gt_order_lines_task = std::make_shared<OperatorTask>(gt_order_lines);
+    auto first_filter_task = std::make_shared<OperatorTask>(first_filter);
+    auto second_filter_task = std::make_shared<OperatorTask>(second_filter);
+    auto third_filter_task = std::make_shared<OperatorTask>(third_filter);
+    auto projection_task = std::make_shared<OperatorTask>(projection);
+
+    gt_order_lines_task->set_as_predecessor_of(first_filter_task);
+    first_filter_task->set_as_predecessor_of(second_filter_task);
+    second_filter_task->set_as_predecessor_of(third_filter_task);
+    third_filter_task->set_as_predecessor_of(projection_task);
+
+    return {gt_order_lines_task, first_filter_task, second_filter_task, third_filter_task, projection_task};
   }
-}
+};
+
+  BENCHMARK_F(TPCCOrderStatusBenchmark, BM_TPCC_OrderStatus_GetCustomerByName)(benchmark::State &state) {
+    clear_cache();
+    auto c_last = _random_gen.last_name(2000);
+    auto c_d_id = _random_gen.number(1, 10);
+    auto c_w_id = 0;  // there is only one warehouse
+
+    while (state.KeepRunning()) {
+      auto get_customer_tasks = get_customer_by_name(c_last, c_d_id, c_w_id);
+      schedule_tasks_and_wait(get_customer_tasks);
+    }
+  }
+
+  BENCHMARK_F(TPCCOrderStatusBenchmark, BM_TPCC_OrderStatus_GetCustomerById)(benchmark::State &state) {
+    clear_cache();
+    auto c_last = _random_gen.last_name(2000);
+    auto c_d_id = _random_gen.number(1, 10);
+    auto c_w_id = 0;  // there is only one warehouse
+    auto c_id = _random_gen.nurand(1023, 1, 3000);
+
+    while (state.KeepRunning()) {
+      auto get_customer_tasks = get_customer_by_id(c_id, c_d_id, c_w_id);
+      schedule_tasks_and_wait(get_customer_tasks);
+    }
+  }
+
+  BENCHMARK_F(TPCCOrderStatusBenchmark, BM_TPCC_OrderStatus_GetOrder)(benchmark::State &state) {
+    clear_cache();
+    auto c_last = _random_gen.last_name(2000);
+
+    while (state.KeepRunning()) {
+      auto get_order_tasks = get_orders();
+      schedule_tasks_and_wait(get_order_tasks);
+    }
+  }
+
+// skip due to long execution times
+  BENCHMARK_F(TPCCOrderStatusBenchmark, BM_TPCC_OrderStatus_GetOrderLine)(benchmark::State &state) {
+    clear_cache();
+    auto c_last = _random_gen.last_name(2000);
+    auto c_d_id = _random_gen.number(1, 10);
+    auto c_w_id = 0;  // there is only one warehouse
+
+    while (state.KeepRunning()) {
+      auto get_order_line_tasks = get_order_lines(0, c_d_id, c_w_id);
+
+      for(auto task : get_order_line_tasks) {
+        clock_t begin = clock();
+        task->get_operator()->execute();
+        clock_t end = clock();
+        double elapsed_secs = double(end - begin) / CLOCKS_PER_SEC;
+        std::cerr << elapsed_secs << std::endl;
+      }
+//      schedule_tasks_and_wait(get_order_line_tasks);
+    }
+  }
+
+//BENCHMARK_F(TPCCOrderStatusBenchmark, BM_TPCC_OrderStatus)(benchmark::State &state) {
+//  clear_cache();
+//
+//  while (state.KeepRunning()) {
+//    // pass in i>1000 to trigger random value generation
+//    auto c_last = _random_gen.last_name(2000);
+//    auto c_d_id = _random_gen.number(1, 10);
+//    auto c_w_id = 0;  // there is only one warehouse
+//    auto c_id = _random_gen.nurand(1023, 1, 3000);
+//
+//    // query by last name 6 out of 10 times
+//    if (_random_gen.number(0, 10) < 6) {
+//      auto get_customer_tasks = get_customer_by_name(c_last, c_d_id, c_w_id);
+//      schedule_tasks_and_wait(get_customer_tasks);
+//      std::cerr << "Finished get customer tasks" << std::endl;
+//
+//      auto num_names = get_customer_tasks.back()->get_operator()->get_output()->row_count();
+//      assert(num_names > 0);
+//      std::cerr << "Num_names: " << num_names << std::endl;
+//
+//      auto customer = get_from_table_at_row(get_customer_tasks.back()->get_operator()->get_output(),
+//                                            ceil(num_names / 2));
+//      std::cerr << "Customer is the following:" << std::endl;
+//      std::cerr << "(C_BALANCE, C_FIRST, C_MIDDLE, C_LAST)" << std::endl;
+//      std::ostringstream oss;
+//      for (auto val : *customer) {
+//        oss << boost::lexical_cast<std::string>(val) << " - ";
+//      }
+//      std::cerr << oss.str() << std::endl;
+//    } else {
+//      auto get_customer_tasks = get_customer_by_id(c_id, c_d_id, c_w_id);
+//      schedule_tasks_and_wait(get_customer_tasks);
+//      std::cerr << "Finished get customer tasks" << std::endl;
+//
+//      assert(get_customer_tasks.back()->get_operator()->get_output()->row_count() == 1);
+//      std::cerr << "Rowcount: " << get_customer_tasks.back()->get_operator()->get_output()->row_count() << std::endl;
+//      auto customer = get_from_table_at_row(get_customer_tasks.back()->get_operator()->get_output(), 0);
+//      std::cerr << "Customer is the following:" << std::endl;
+//      std::cerr << "(C_BALANCE, C_FIRST, C_MIDDLE, C_LAST)" << std::endl;
+//      std::ostringstream oss;
+//      for (auto val : *customer) {
+//        oss << boost::lexical_cast<std::string>(val) << " - ";
+//      }
+//      std::cerr << oss.str() << std::endl;
+//    }
+//
+//    auto get_order_tasks = get_orders();
+//    schedule_tasks_and_wait(get_order_tasks);
+//    std::cerr << "Finished get order tasks" << std::endl;
+//
+//    auto get_order_line_tasks = get_order_lines(0, c_d_id, c_w_id);
+//    schedule_tasks_and_wait(get_order_line_tasks);
+//    std::cerr << "Finished get order line tasks" << std::endl;
+//
+////    auto print = std::make_shared<Print>(get_order_line_tasks.back()->get_operator(), std::cerr);
+////    print->execute();
+//  }
+//}
 
 }  // namespace opossum
