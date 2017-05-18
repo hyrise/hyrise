@@ -5,18 +5,18 @@ from sqlitedriver import TXN_QUERIES as tpcc_queries
 from tpcc_constants import *
 
 def execute_sql(cur, statement, params=()):
-    print(statement)
+    print(statement, params)
     cur.execute(statement, params)
 
 def executemany_sql(cur, statement, params=()):
     print(statement)
     cur.executemany(statement, params)
 
-
-def load_table(cur, dir, name):
+def load_table(cur, dir, name, name_override=None):
     csv_meta_path = '%s/%s.meta.csv' % (dir, name)
     csv_path = '%s/%s.csv' % (dir, name)
-    cur = conn.cursor()
+
+    in_db_name = name_override if name_override != None else name
 
     with open(csv_meta_path) as csv_file:
         reader = csv.reader(csv_file, delimiter=',', quotechar='\"')
@@ -32,14 +32,14 @@ def load_table(cur, dir, name):
 
     items_decl = ','.join([' '.join(column) for column in columns])
     placeholders = ','.join(['?' for column in columns])
-    execute_sql(cur, 'CREATE TABLE %s (%s)' % (name, items_decl))
+    execute_sql(cur, 'CREATE TABLE %s (%s)' % (in_db_name, items_decl))
 
     with open(csv_path) as csvfile:
         reader = csv.reader(csvfile, delimiter=',', quotechar='\"')
 
         rows = [row for row in reader]
 
-        executemany_sql(cur, 'INSERT INTO %s VALUES (%s)' % (name, placeholders), rows)
+        executemany_sql(cur, 'INSERT INTO %s VALUES (%s)' % (in_db_name, placeholders), rows)
 
 def init_db():
     conn = sqlite3.connect(':memory:')
@@ -50,11 +50,11 @@ def init_db():
     load_table(cur, csv_path, "WAREHOUSE")
     load_table(cur, csv_path, "DISTRICT")
     load_table(cur, csv_path, "CUSTOMER")
-    load_table(cur, csv_path, "ORDERS")
-    load_table(cur, csv_path, "NEW_ORDER")
+    load_table(cur, csv_path, "ORDER", "ORDERS")
+    load_table(cur, csv_path, "NEW-ORDER", "NEW_ORDER")
     load_table(cur, csv_path, "ITEM")
     load_table(cur, csv_path, "STOCK")
-    load_table(cur, csv_path, "ORDER_LINE")
+    load_table(cur, csv_path, "ORDER-LINE", "ORDER_LINE")
 
     return cur
 
@@ -75,7 +75,7 @@ def process_new_orders(cur, new_orders_results, new_orders):
         w_tax_rate = cur.fetchone()[0]
 
         # Get District
-        execute_sql(cur, new_order_queries["getDistrict"], [w_id, d_id])
+        execute_sql(cur, new_order_queries["getDistrict"], [d_id, w_id])
         district = cur.fetchone()
         d_tax_rate = district[0]
         d_next_o_id = district[1]
@@ -167,7 +167,6 @@ if __name__ == "__main__":
 
     with open(tpcc_input_path) as tpcc_input_file:
         tpcc_input = json.load(tpcc_input_file)
-
 
     process_new_orders(init_db(), query_results["NewOrders"], tpcc_input["NewOrders"])
 
