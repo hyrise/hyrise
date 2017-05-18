@@ -2,14 +2,15 @@
 #include <memory>
 #include <utility>
 
-#include "../benchmark/tpcc/tpcc_table_generator.hpp"
+#include "../benchmark-libs/tpcc/table_generator.hpp"
+#include "operators/aggregate.hpp"
 #include "operators/get_table.hpp"
 #include "operators/print.hpp"
 #include "operators/table_scan.hpp"
 #include "storage/storage_manager.hpp"
 
 int main() {
-  opossum::TPCCTableGenerator generator;
+  tpcc::TableGenerator generator;
 
   generator.add_all_tables(opossum::StorageManager::get());
 

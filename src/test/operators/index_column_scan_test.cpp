@@ -4,13 +4,15 @@
 #include <set>
 #include <string>
 #include <utility>
+#include <vector>
 
 #include "../base_test.hpp"
 #include "gtest/gtest.h"
 
 #include "../../lib/operators/abstract_operator.hpp"
-#include "../../lib/operators/get_table.hpp"
 #include "../../lib/operators/index_column_scan.hpp"
+#include "../../lib/operators/table_wrapper.hpp"
+#include "../../lib/storage/dictionary_compression.hpp"
 #include "../../lib/storage/index/adaptive_radix_tree/adaptive_radix_tree_index.hpp"
 #include "../../lib/storage/index/group_key/composite_group_key_index.hpp"
 #include "../../lib/storage/index/group_key/group_key_index.hpp"
@@ -24,27 +26,26 @@ template <typename DerivedIndex>
 class OperatorsIndexColumnScanTest : public BaseTest {
  protected:
   void SetUp() override {
-    std::shared_ptr<Table> test_table = load_table("src/test/tables/int_float.tbl", 2);
-    StorageManager::get().add_table("table_a", std::move(test_table));
-    _gt = std::make_shared<GetTable>("table_a");
+    _table_wrapper = std::make_shared<TableWrapper>(load_table("src/test/tables/int_float.tbl", 2));
 
     std::shared_ptr<Table> test_table_dict = std::make_shared<Table>(5);
     test_table_dict->add_column("a", "int");
     test_table_dict->add_column("b", "int");
+
     for (int i = 0; i <= 24; i += 2) test_table_dict->append({i, 100 + i});
-    test_table_dict->compress_chunk(0);
+
+    DictionaryCompression::compress_chunks(*test_table_dict, {0u, 1u});
+
     test_table_dict->get_chunk(0).create_index<DerivedIndex>({test_table_dict->get_chunk(0).get_column(0)});
     test_table_dict->get_chunk(0).create_index<DerivedIndex>({test_table_dict->get_chunk(0).get_column(1)});
-    test_table_dict->compress_chunk(1);
-    StorageManager::get().add_table("table_dict", std::move(test_table_dict));
 
-    _gt_dict = std::make_shared<GetTable>("table_dict");
+    _table_wrapper_dict = std::make_shared<TableWrapper>(std::move(test_table_dict));
 
-    _gt->execute();
-    _gt_dict->execute();
+    _table_wrapper->execute();
+    _table_wrapper_dict->execute();
   }
 
-  std::shared_ptr<GetTable> _gt, _gt_dict;
+  std::shared_ptr<TableWrapper> _table_wrapper, _table_wrapper_dict;
 };
 
 // List of indices to test
@@ -55,7 +56,7 @@ TYPED_TEST_CASE(OperatorsIndexColumnScanTest, DerivedIndices);
 TYPED_TEST(OperatorsIndexColumnScanTest, DoubleScan) {
   std::shared_ptr<Table> expected_result = this->load_table("src/test/tables/int_float_filtered.tbl", 2);
 
-  auto scan_1 = std::make_shared<IndexColumnScan>(this->_gt, "a", ">=", 1234);
+  auto scan_1 = std::make_shared<IndexColumnScan>(this->_table_wrapper, "a", ">=", 1234);
   scan_1->execute();
 
   auto scan_2 = std::make_shared<IndexColumnScan>(scan_1, "b", "<", 457.9);
@@ -65,7 +66,7 @@ TYPED_TEST(OperatorsIndexColumnScanTest, DoubleScan) {
 }
 
 TYPED_TEST(OperatorsIndexColumnScanTest, DoubleScanOffsetPosition) {
-  auto scan1 = std::make_shared<IndexColumnScan>(this->_gt_dict, "a", ">", 10);
+  auto scan1 = std::make_shared<IndexColumnScan>(this->_table_wrapper_dict, "a", ">", 10);
   scan1->execute();
   auto scan2 = std::make_shared<IndexColumnScan>(scan1, "b", "=", 118);
   scan2->execute();
@@ -78,14 +79,14 @@ TYPED_TEST(OperatorsIndexColumnScanTest, DoubleScanOffsetPosition) {
 TYPED_TEST(OperatorsIndexColumnScanTest, SingleScan) {
   std::shared_ptr<Table> expected_result = this->load_table("src/test/tables/int_float_filtered2.tbl", 1);
 
-  auto scan = std::make_shared<IndexColumnScan>(this->_gt, "a", ">=", 1234);
+  auto scan = std::make_shared<IndexColumnScan>(this->_table_wrapper, "a", ">=", 1234);
   scan->execute();
 
   this->EXPECT_TABLE_EQ(scan->get_output(), expected_result);
 }
 
 TYPED_TEST(OperatorsIndexColumnScanTest, UnknownOperatorThrowsException) {
-  auto table_scan = std::make_shared<IndexColumnScan>(this->_gt, "a", "?!?", 1234);
+  auto table_scan = std::make_shared<IndexColumnScan>(this->_table_wrapper, "a", "?!?", 1234);
   EXPECT_THROW(table_scan->execute(), std::runtime_error);
 }
 
@@ -101,7 +102,8 @@ TYPED_TEST(OperatorsIndexColumnScanTest, ScanOnDictColumn) {
   tests[">="] = {104, 106, 108, 110, 112, 114, 116, 118, 120, 122, 124};
   tests["BETWEEN"] = {104, 106, 108};
   for (const auto& test : tests) {
-    auto scan = std::make_shared<IndexColumnScan>(this->_gt_dict, "a", test.first, 4, optional<AllTypeVariant>(9));
+    auto scan =
+        std::make_shared<IndexColumnScan>(this->_table_wrapper_dict, "a", test.first, 4, optional<AllTypeVariant>(9));
     scan->execute();
 
     auto expected_copy = test.second;
@@ -127,7 +129,7 @@ TYPED_TEST(OperatorsIndexColumnScanTest, ScanOnReferencedDictColumn) {
   tests[">="] = {104, 106};
   tests["BETWEEN"] = {104, 106};
   for (const auto& test : tests) {
-    auto scan1 = std::make_shared<IndexColumnScan>(this->_gt_dict, "b", "<", 108);
+    auto scan1 = std::make_shared<IndexColumnScan>(this->_table_wrapper_dict, "b", "<", 108);
     scan1->execute();
 
     auto scan2 = std::make_shared<IndexColumnScan>(scan1, "a", test.first, 4, optional<AllTypeVariant>(9));

@@ -263,8 +263,9 @@ inline std::shared_ptr<OperatorTask> OperatorTranslator::translate(
     const proto::ImportCsvOperator& import_csv_operation) {
   const auto& directory = import_csv_operation.directory();
   const auto& filename = import_csv_operation.filename();
+  const auto& full_filename = directory + "/" + filename;
 
-  auto import_csv = std::make_shared<ImportCsv>(directory, filename);
+  auto import_csv = std::make_shared<ImportCsv>(full_filename);
   auto import_task = std::make_shared<OperatorTask>(import_csv);
   _tasks.push_back(import_task);
 
@@ -275,11 +276,13 @@ inline std::shared_ptr<OperatorTask> OperatorTranslator::translate(
     const proto::ExportCsvOperator& export_csv_operator) {
   const auto& directory = export_csv_operator.directory();
   const auto& filename = export_csv_operator.filename();
+  const auto& full_filename = directory + "/" + filename;
+
   if (!export_csv_operator.has_input_operator()) {
     throw std::runtime_error("Missing Input Operator in Export CSV.");
   }
   auto input_task = translate_proto(export_csv_operator.input_operator());
-  auto export_csv = std::make_shared<ExportCsv>(input_task->get_operator(), directory, filename);
+  auto export_csv = std::make_shared<ExportCsv>(input_task->get_operator(), full_filename);
   auto export_csv_task = std::make_shared<OperatorTask>(export_csv);
 
   input_task->set_as_predecessor_of(export_csv_task);

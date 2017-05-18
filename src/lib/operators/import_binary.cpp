@@ -1,5 +1,6 @@
 #include "import_binary.hpp"
 
+#include <cstdint>
 #include <fstream>
 #include <memory>
 #include <numeric>
@@ -9,12 +10,13 @@
 
 #include "import_export/binary.hpp"
 #include "storage/chunk.hpp"
+#include "storage/fitted_attribute_vector.hpp"
 #include "storage/storage_manager.hpp"
 
 namespace opossum {
 
-ImportBinary::ImportBinary(const std::string& filename, const std::string& tablename)
-    : _filename(filename), _tablename(tablename.empty() ? nullopt : optional<std::string>(tablename)) {}
+ImportBinary::ImportBinary(const std::string& filename, const optional<std::string> tablename)
+    : _filename(filename), _tablename(tablename) {}
 
 const std::string ImportBinary::name() const { return "ImportBinary"; }
 
@@ -60,10 +62,8 @@ T ImportBinary::_read_value(std::ifstream& file) {
 }
 
 std::shared_ptr<const Table> ImportBinary::on_execute() {
-  if (_tablename) {
-    if (StorageManager::get().has_table(_tablename.value_or(""))) {
-      return StorageManager::get().get_table(_tablename.value_or(""));
-    }
+  if (_tablename && StorageManager::get().has_table(*_tablename)) {
+    return StorageManager::get().get_table(*_tablename);
   }
 
   std::ifstream file;
@@ -78,7 +78,7 @@ std::shared_ptr<const Table> ImportBinary::on_execute() {
   }
 
   if (_tablename) {
-    StorageManager::get().add_table(_tablename.value_or(""), table);
+    StorageManager::get().add_table(*_tablename, table);
   }
 
   return table;
