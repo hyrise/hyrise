@@ -334,6 +334,26 @@ TYPED_TEST(JoinEquiTest, ColumnsNotOptional) {
                std::runtime_error);
 }
 
+TYPED_TEST(JoinEquiTest, RightJoinRefColumn) {
+  // scan that returns all rows
+  auto scan_a = std::make_shared<TableScan>(this->_table_wrapper_a, "a", ">=", 0);
+  scan_a->execute();
+
+  this->template test_join_output<TypeParam>(
+          scan_a, this->_table_wrapper_b, std::pair<std::string, std::string>("a", "a"), "=", Right,
+          std::string("left."), std::string("right."), "src/test/tables/joinoperators/int_right_join.tbl", 1);
+}
+
+TYPED_TEST(JoinEquiTest, LeftJoinRefColumn) {
+  // scan that returns all rows
+  auto scan_b = std::make_shared<TableScan>(this->_table_wrapper_b, "a", ">=", 0);
+  scan_b->execute();
+
+  this->template test_join_output<TypeParam>(
+          this->_table_wrapper_a, scan_b, std::pair<std::string, std::string>("a", "a"), "=", Left,
+          std::string("left."), std::string("right."), "src/test/tables/joinoperators/int_left_join.tbl", 1);
+}
+
 // Does not work yet due to problems with RowID implementation (RowIDs need to reference a table)
 TYPED_TEST(JoinEquiTest, DISABLED_JoinOnRefColumns) {
   //  Filtering to generate RefColumns
