@@ -19,27 +19,30 @@ DictionaryColumn<T>::DictionaryColumn(const std::vector<T>&& dictionary,
 
 template <typename T>
 const AllTypeVariant DictionaryColumn<T>::operator[](const size_t i) const {
-  /*
-  Handle null values, this is only used for testing the results of joins so far.
-  In order to be able to define an expected output table, we need to replace INVALID_CHUNK_OFFSET
-  with some printable character, in our case 0, resp. "0".
-  Since there is no constructor for String, which takes a numeric 0, we have to differentiate between numbers and
-  strings.
-
-  This should be replaced as soon as we have proper NULL values in Opossum.
-  Similar code is in value_column.hpp
-  */
+  // TODO(anyone): Shouldn’t this throw an exception?
   if (i == INVALID_CHUNK_OFFSET) {
-    if (std::is_same<T, std::string>::value) {
-      return "0";
-    }
-    return T(0);
+    return NullValue{};
   }
-  return (*_dictionary)[_attribute_vector->get(i)];
+
+  const auto value_id = _attribute_vector->get(i);
+
+  if (value_id == NULL_VALUE_ID) {
+    return NullValue{};
+  }
+
+  return (*_dictionary)[value_id];
 }
 
 template <typename T>
 const T DictionaryColumn<T>::get(const size_t i) const {
+  const auto value_id = _attribute_vector->get(i);
+
+#ifdef IS_DEBUG
+  if (value_id == NULL_VALUE_ID) {
+    throw std::logic_error("Value at index " + to_string(i) + "is null.");
+  }
+#endif
+
   return (*_dictionary)[_attribute_vector->get(i)];
 }
 
@@ -58,6 +61,7 @@ std::shared_ptr<const BaseAttributeVector> DictionaryColumn<T>::attribute_vector
   return _attribute_vector;
 }
 
+// TODO(mjendruk): Figure out where it is used and decide appropriatedly
 template <typename T>
 const tbb::concurrent_vector<T> DictionaryColumn<T>::materialize_values() const {
   tbb::concurrent_vector<T> values(_attribute_vector->size());
@@ -71,6 +75,12 @@ const tbb::concurrent_vector<T> DictionaryColumn<T>::materialize_values() const 
 
 template <typename T>
 const T& DictionaryColumn<T>::value_by_value_id(ValueID value_id) const {
+#ifdef IS_DEBUG
+  if (value_id == NULL_VALUE_ID) {
+    throw std::logic_error("Null value id passed.");
+  }
+#endif
+
   return _dictionary->at(value_id);
 }
 
@@ -83,6 +93,12 @@ ValueID DictionaryColumn<T>::lower_bound(T value) const {
 
 template <typename T>
 ValueID DictionaryColumn<T>::lower_bound(const AllTypeVariant& value) const {
+#ifdef IS_DEBUG
+  if (value == AllTypeVariant{}) {
+    throw std::logic_error("Null value passed.");
+  }
+#endif
+
   auto typed_value = type_cast<T>(value);
   return lower_bound(typed_value);
 }
@@ -96,6 +112,12 @@ ValueID DictionaryColumn<T>::upper_bound(T value) const {
 
 template <typename T>
 ValueID DictionaryColumn<T>::upper_bound(const AllTypeVariant& value) const {
+#ifdef IS_DEBUG
+  if (value == AllTypeVariant{}) {
+    throw std::logic_error("Null value passed.");
+  }
+#endif
+
   auto typed_value = type_cast<T>(value);
   return upper_bound(typed_value);
 }
@@ -115,6 +137,7 @@ void DictionaryColumn<T>::visit(ColumnVisitable& visitable, std::shared_ptr<Colu
   visitable.handle_dictionary_column(*this, std::move(context));
 }
 
+// TODO(mjendruk): Add edge case handling for null values
 template <typename T>
 void DictionaryColumn<T>::write_string_representation(std::string& row_string, const ChunkOffset chunk_offset) const {
   std::stringstream buffer;
@@ -129,6 +152,7 @@ void DictionaryColumn<T>::write_string_representation(std::string& row_string, c
   row_string += buffer.str();
 }
 
+// TODO(mjendruk): Adapt once value columns support null values.
 template <typename T>
 void DictionaryColumn<T>::copy_value_to_value_column(BaseColumn& value_column, ChunkOffset chunk_offset) const {
   auto& output_column = static_cast<ValueColumn<T>&>(value_column);
@@ -138,6 +162,7 @@ void DictionaryColumn<T>::copy_value_to_value_column(BaseColumn& value_column, C
   values_out.push_back(value);
 }
 
+// TODO(mjendruk): Figure out where it is used and decide appropriatedly
 template <typename T>
 const std::shared_ptr<std::vector<std::pair<RowID, T>>> DictionaryColumn<T>::materialize(
     ChunkID chunk_id, std::shared_ptr<std::vector<ChunkOffset>> offsets) {

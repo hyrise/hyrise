@@ -1,5 +1,6 @@
 #pragma once
 
+#include <boost/mpl/push_front.hpp>
 #include <boost/hana/ext/boost/mpl/vector.hpp>
 #include <boost/hana/pair.hpp>
 #include <boost/hana/second.hpp>
@@ -27,7 +28,13 @@ static constexpr auto types = hana::transform(column_types, hana::second);
 // Convert tuple to mpl vector
 using TypesAsMplVector = decltype(hana::to<hana::ext::boost::mpl::vector_tag>(types));
 
+// Represents SQL null value
+using NullValue = boost::blank;
+
+// Append NullValue to mpl vector
+using TypesWithNullValue = boost::push_front(TypesAsMplVector, NullValue)::type;
+
 // Create boost::variant from mpl vector
-using AllTypeVariant = typename boost::make_variant_over<TypesAsMplVector>::type;
+using AllTypeVariant = typename boost::make_variant_over<TypesWithNullValue>::type;
 
 }  // namespace opossum
