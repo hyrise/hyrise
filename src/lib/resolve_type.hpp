@@ -2,6 +2,10 @@
 
 #include <boost/hana/for_each.hpp>
 
+#include <memory>
+#include <string>
+#include <utility>
+
 #include "all_type_variant.hpp"
 
 namespace opossum {

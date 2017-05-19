@@ -5,26 +5,22 @@
 
 #include "benchmark/benchmark.h"
 
-#include "../../lib/operators/get_table.hpp"
-#include "../../lib/operators/projection.hpp"
-#include "../../lib/operators/table_scan.hpp"
-#include "../../lib/storage/storage_manager.hpp"
-#include "../../lib/storage/table.hpp"
-#include "../../lib/types.hpp"
 #include "../base_fixture.cpp"
 #include "../table_generator.hpp"
+#include "operators/projection.hpp"
+#include "operators/table_scan.hpp"
 
 namespace opossum {
 
-class OperatorsProjectionBenchmark : public BenchmarkFixture {
+class OperatorsProjectionBenchmark : public BenchmarkBasicFixture {
  public:
   virtual void SetUp(const ::benchmark::State& state) {
-    _table_ref = std::make_shared<TableScan>(_gt_a, "a", ">=", 0);  // all
+    _table_ref = std::make_shared<TableScan>(_table_wrapper_a, "a", ">=", 0);  // all
     _table_ref->execute();
 
-    _tables.emplace_back(_gt_a);       // 0
-    _tables.emplace_back(_gt_b);       // 1
-    _tables.emplace_back(_table_ref);  // 2
+    _tables.emplace_back(_table_wrapper_a);  // 0
+    _tables.emplace_back(_table_wrapper_b);  // 1
+    _tables.emplace_back(_table_ref);        // 2
   }
 
   virtual void TearDown(const ::benchmark::State& state) { StorageManager::get().reset(); }

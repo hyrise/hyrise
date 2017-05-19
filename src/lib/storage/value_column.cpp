@@ -1,7 +1,11 @@
 #include "value_column.hpp"
 
 #include <limits>
+#include <memory>
 #include <sstream>
+#include <string>
+#include <utility>
+#include <vector>
 
 #include "type_cast.hpp"
 

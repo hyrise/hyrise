@@ -1,5 +1,7 @@
 #include "import_binary.hpp"
 
+#include <boost/hana/for_each.hpp>
+
 #include <cstdint>
 #include <fstream>
 #include <memory>
@@ -7,8 +9,6 @@
 #include <string>
 #include <utility>
 #include <vector>
-
-#include <boost/hana/for_each.hpp>
 
 #include "import_export/binary.hpp"
 #include "storage/chunk.hpp"

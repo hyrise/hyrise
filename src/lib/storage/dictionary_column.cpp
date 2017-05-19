@@ -1,5 +1,10 @@
 #include "dictionary_column.hpp"
 
+#include <memory>
+#include <string>
+#include <utility>
+#include <vector>
+
 #include "base_attribute_vector.hpp"
 #include "value_column.hpp"
 

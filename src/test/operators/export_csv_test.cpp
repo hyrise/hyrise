@@ -132,7 +132,7 @@ TEST_F(OperatorsExportCsvTest, ReferenceColumn) {
 
   auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
   table_wrapper->execute();
-  auto scan = std::make_shared<TableScan>(table_wrapper, ColumnName("a"), "<", 5);
+  auto scan = std::make_shared<TableScan>(table_wrapper, "a", "<", 5);
   scan->execute();
   auto ex = std::make_shared<opossum::ExportCsv>(scan, filename);
   ex->execute();

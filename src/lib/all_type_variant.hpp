@@ -7,6 +7,8 @@
 #include <boost/hana/tuple.hpp>
 #include <boost/variant.hpp>
 
+#include <string>
+
 #include "types.hpp"
 
 namespace opossum {
