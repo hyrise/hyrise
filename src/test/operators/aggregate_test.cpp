@@ -116,10 +116,19 @@ TEST_F(OperatorsAggregateTest, OperatorName) {
   EXPECT_EQ(aggregate->name(), "Aggregate");
 }
 
-TEST_F(OperatorsAggregateTest, CannotAggregateStringColumns) {
+TEST_F(OperatorsAggregateTest, CannotSumStringColumns) {
   auto aggregate = std::make_shared<Aggregate>(
       _table_wrapper_1_1_string,
-      std::vector<std::pair<std::string, AggregateFunction>>{std::make_pair(std::string("a"), Min)},
+      std::vector<std::pair<std::string, AggregateFunction>>{std::make_pair(std::string("a"), Sum)},
+      std::vector<std::string>{std::string("a")});
+
+  EXPECT_THROW(aggregate->execute(), std::runtime_error);
+}
+
+TEST_F(OperatorsAggregateTest, CannotAvgStringColumns) {
+  auto aggregate = std::make_shared<Aggregate>(
+      _table_wrapper_1_1_string,
+      std::vector<std::pair<std::string, AggregateFunction>>{std::make_pair(std::string("a"), Avg)},
       std::vector<std::string>{std::string("a")});
 
   EXPECT_THROW(aggregate->execute(), std::runtime_error);
@@ -153,6 +162,16 @@ TEST_F(OperatorsAggregateTest, StringSingleAggregateMax) {
 TEST_F(OperatorsAggregateTest, StringSingleAggregateMin) {
   this->test_output(_table_wrapper_1_1_string, {std::make_pair(std::string("b"), Min)}, {std::string("a")},
                     "src/test/tables/aggregateoperator/groupby_string_1gb_1agg/min.tbl", 1);
+}
+
+TEST_F(OperatorsAggregateTest, StringSingleAggregateStringMax) {
+  this->test_output(_table_wrapper_1_1_string, {std::make_pair(std::string("a"), Max)}, {},
+                    "src/test/tables/aggregateoperator/groupby_string_1gb_1agg/max_str.tbl", 1);
+}
+
+TEST_F(OperatorsAggregateTest, StringSingleAggregateStringMin) {
+  this->test_output(_table_wrapper_1_1_string, {std::make_pair(std::string("a"), Min)}, {},
+                    "src/test/tables/aggregateoperator/groupby_string_1gb_1agg/min_str.tbl", 1);
 }
 
 TEST_F(OperatorsAggregateTest, StringSingleAggregateSum) {
