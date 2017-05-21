@@ -33,7 +33,7 @@ class Delete : public AbstractReadWriteOperator {
   /**
    * Validates the context and the input table
    */
-  bool _execution_input_valid(const std::shared_ptr<TransactionContext> context) const;
+  bool _execution_input_valid(const std::shared_ptr<TransactionContext>& context) const;
 
  private:
   const std::string _table_name;

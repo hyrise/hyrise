@@ -5,6 +5,7 @@
 #include <sstream>
 #include <string>
 #include <utility>
+#include <vector>
 
 #include "../base_test.hpp"
 #include "gtest/gtest.h"
@@ -19,6 +20,7 @@
 #include "../../lib/operators/print.hpp"
 #include "../../lib/operators/table_scan.hpp"
 #include "../../lib/operators/table_wrapper.hpp"
+#include "../../lib/storage/dictionary_compression.hpp"
 #include "../../lib/storage/storage_manager.hpp"
 #include "../../lib/storage/table.hpp"
 #include "../../lib/types.hpp"
@@ -46,8 +48,8 @@ class ResponseBuilderTest : public BaseTest {
     _table_wrapper->execute();
 
     auto test_table_dict = load_table("src/test/tables/int_float.tbl", 2);
-    test_table_dict->compress_chunk(0);
-    test_table_dict->compress_chunk(1);
+
+    DictionaryCompression::compress_table(*test_table_dict);
 
     _table_wrapper_dict = std::make_shared<TableWrapper>(std::move(test_table_dict));
     _table_wrapper_dict->execute();

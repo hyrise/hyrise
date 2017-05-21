@@ -3,12 +3,14 @@
 #include <memory>
 #include <string>
 #include <utility>
+#include <vector>
 
 #include "../base_test.hpp"
 #include "gtest/gtest.h"
 
 #include "../../lib/operators/abstract_join_operator.hpp"
 #include "../../lib/operators/table_wrapper.hpp"
+#include "../../lib/storage/dictionary_compression.hpp"
 #include "../../lib/storage/storage_manager.hpp"
 #include "../../lib/storage/table.hpp"
 #include "../../lib/types.hpp"
@@ -43,17 +45,18 @@ class JoinTest : public BaseTest {
 
     // load and create DictionaryColumn tables
     auto table = load_table("src/test/tables/int_float.tbl", 2);
-    table->compress_chunk(0);
-    table->compress_chunk(1);
+    DictionaryCompression::compress_chunks(*table, {0u, 1u});
+
     _table_wrapper_a_dict = std::make_shared<TableWrapper>(std::move(table));
 
     table = load_table("src/test/tables/int_float2.tbl", 2);
-    table->compress_chunk(0);
-    table->compress_chunk(1);
+    DictionaryCompression::compress_chunks(*table, {0u, 1u});
+
     _table_wrapper_b_dict = std::make_shared<TableWrapper>(std::move(table));
 
     table = load_table("src/test/tables/int_float.tbl", 2);
-    table->compress_chunk(0);
+    DictionaryCompression::compress_chunks(*table, {0u});
+
     _table_wrapper_c_dict = std::make_shared<TableWrapper>(std::move(table));
 
     // execute all TableWrapper operators in advance

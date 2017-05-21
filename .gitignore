@@ -12,3 +12,6 @@ benchmark.json
 *.xcworkspace
 src/lib/network/generated
 .vscode
+
+# CLion cmake directory
+cmake-build-debug

@@ -18,7 +18,7 @@ class Table {
   // creates a table
   // the parameter specifies the maximum chunk size, i.e., partition size
   // default (0) is an unlimited size. A table holds always at least one chunk
-  explicit Table(const size_t chunk_size = 0, const bool auto_compress = false);
+  explicit Table(const size_t chunk_size = 0);
 
   // copying a table is not allowed
   Table(Table const &) = delete;
@@ -51,6 +51,9 @@ class Table {
   // returns the column type of the nth column
   const std::string &column_type(ColumnID column_id) const;
 
+  // returns the vector of column types
+  const std::vector<std::string> &column_types() const;
+
   // returns the column with the given name
   ColumnID column_id_by_name(const std::string &column_name) const;
 
@@ -74,16 +77,11 @@ class Table {
   // calculates the row id from a given chunk and the chunk offset
   RowID calculate_row_id(ChunkID chunk, ChunkOffset offset) const { return RowID{chunk, offset}; }
 
-  // enforces dictionary compression on a certain chunk
-  // not thread-safe
-  void compress_chunk(ChunkID chunk_id);
-
   std::unique_lock<std::mutex> acquire_append_mutex();
 
  protected:
   // 0 means that the chunk has an unlimited size.
   const uint32_t _chunk_size;
-  const bool _auto_compress;
   std::vector<Chunk> _chunks;
 
   // these should be const strings, but having a vector of const values is a C++17 feature
