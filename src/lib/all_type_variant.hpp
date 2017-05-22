@@ -19,10 +19,10 @@ namespace hana = boost::hana;
 static constexpr auto column_types =
     hana::make_tuple(hana::make_pair("int", hana::type_c<int32_t>), hana::make_pair("long", hana::type_c<int64_t>),
                      hana::make_pair("float", hana::type_c<float>), hana::make_pair("double", hana::type_c<double>),
-                     hana::make_pair("string", hana::type_c<std::string>));
+                     hana::make_pair("string", hana::type_c<std::string>));  // NOLINT
 
 // This holds only the possible data types.
-static constexpr auto types = hana::transform(column_types, hana::second);
+static constexpr auto types = hana::transform(column_types, hana::second);  // NOLINT
 
 // Convert tuple to mpl vector
 using TypesAsMplVector = decltype(hana::to<hana::ext::boost::mpl::vector_tag>(types));
