@@ -1,6 +1,7 @@
 #pragma once
 
 #include <random>
+#include <set>
 #include <string>
 #include <vector>
 
@@ -23,6 +24,20 @@ class RandomGenerator {
     }
 
     return s;
+  }
+
+  std::set<size_t> select_unique_ids(size_t num_unique, size_t id_length) {
+    std::set<size_t> rows;
+
+    for (size_t i = 0; i < num_unique; ++i) {
+      size_t index = static_cast<size_t>(-1);
+      do {
+        index = number(0, id_length - 1);
+      } while (rows.find(index) != rows.end());
+      rows.insert(index);
+    }
+    assert(rows.size() == num_unique);
+    return rows;
   }
 
  protected:
