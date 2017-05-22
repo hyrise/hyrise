@@ -18,7 +18,11 @@ AggregateBuilder<std::string>::AggregateBuilder(const AggregateFunction) {
 Aggregate::Aggregate(const std::shared_ptr<AbstractOperator> in,
                      const std::vector<std::pair<std::string, AggregateFunction>> aggregates,
                      const std::vector<std::string> groupby_columns)
-    : AbstractReadOnlyOperator(in), _aggregates(aggregates), _groupby_columns(groupby_columns) {}
+    : AbstractReadOnlyOperator(in), _aggregates(aggregates), _groupby_columns(groupby_columns) {
+  if (aggregates.empty() && groupby_columns.empty()) {
+    throw std::runtime_error("Neither aggregate nor groupby columns have been specified");
+  }
+}
 
 const std::string Aggregate::name() const { return "Aggregate"; }
 
@@ -111,6 +115,7 @@ std::shared_ptr<const Table> Aggregate::on_execute() {
 
       case Sum:
       case Avg:
+      case Count:
         combine_functions.emplace_back([](double new_value, double current_aggregate) {
           if (std::isnan(current_aggregate)) {
             return new_value;
@@ -129,36 +134,69 @@ std::shared_ptr<const Table> Aggregate::on_execute() {
 
     auto hash_keys = keys_per_chunk[chunk_id];
 
-    ColumnID column_index = 0;
-    for (auto column_id : aggregate_column_ids) {
-      auto base_column = chunk_in.get_column(column_id);
-      auto column_type = input_table->column_type(column_id);
+    if (aggregate_column_ids.empty()) {
+      /**
+       * DISTINCT implementation
+       *
+       * In Opossum we handle the SQL keyword DISTINCT by grouping without aggregation.
+       *
+       * For a query like "SELECT DISTINCT * FROM A;"
+       * we would assume that all columns from A are part of 'groupby_columns',
+       * respectively any columns that were specified in the projection.
+       * The optimizer is responsible to take care of passing in the correct columns.
+       *
+       * How does this operation work?
+       * Distinct rows are retrieved by grouping by vectors of values. Similar as for the usual aggregation
+       * these vectors are used as keys in the 'column_results' map.
+       *
+       * At this point we've got all the different keys from the chunks and accumulate them in 'column_results'.
+       * In order to reuse the aggregation implementation, we add a dummy AggregateResult.
+       * One could optimize here in the future.
+       *
+       * Obviously this implementation is also used for plain GroupBy's.
+       */
 
-      auto results = std::make_shared<std::map<AggregateKey, AggregateResult>>();
-
-      /*
-      Invoke the AggregateBuilder for each aggregate column
-      */
-      auto builder =
-          make_shared_by_column_type<ColumnVisitable, AggregateBuilder>(column_type, _aggregates[column_index].second);
-      auto ctx = std::make_shared<AggregateContext>(input_table, chunk_id, column_id, hash_keys, results);
-      base_column->visit(*builder, ctx);
-
-      auto &column_results = static_cast<std::map<AggregateKey, AggregateResult> &>(*results_per_column[column_index]);
-
-      /*
-      Combine the results from this chunk with previous results for this column
-      */
-      for (auto &kv : *results) {
-        auto hash = kv.first;
-        auto result_value = kv.second.first;
-        auto result_counter = kv.second.second;
-
-        column_results[hash].first = combine_functions[column_index](result_value, column_results[hash].first);
-        column_results[hash].second += result_counter;
+      std::map<AggregateKey, AggregateResult> column_results;
+      for (auto &chunk : keys_per_chunk) {
+        for (auto &keys : *chunk) {
+          // insert dummy value to make sure we have the key in our map
+          column_results[keys] = std::make_pair(0, 0);
+        }
       }
+      results_per_column.emplace_back(std::make_shared<std::map<AggregateKey, AggregateResult>>(column_results));
+    } else {
+      ColumnID column_index = 0;
+      for (auto column_id : aggregate_column_ids) {
+        auto base_column = chunk_in.get_column(column_id);
+        auto column_type = input_table->column_type(column_id);
 
-      column_index++;
+        auto results = std::make_shared<std::map<AggregateKey, AggregateResult>>();
+
+        /*
+        Invoke the AggregateBuilder for each aggregate column
+        */
+        auto builder = make_shared_by_column_type<ColumnVisitable, AggregateBuilder>(column_type,
+                                                                                     _aggregates[column_index].second);
+        auto ctx = std::make_shared<AggregateContext>(input_table, chunk_id, column_id, hash_keys, results);
+        base_column->visit(*builder, ctx);
+
+        auto &column_results =
+            static_cast<std::map<AggregateKey, AggregateResult> &>(*results_per_column[column_index]);
+
+        /*
+        Combine the results from this chunk with previous results for this column
+        */
+        for (auto &kv : *results) {
+          auto hash = kv.first;
+          auto result_value = kv.second.first;
+          auto result_counter = kv.second.second;
+
+          column_results[hash].first = combine_functions[column_index](result_value, column_results[hash].first);
+          column_results[hash].second += result_counter;
+        }
+
+        column_index++;
+      }
     }
   }
 
@@ -180,6 +218,20 @@ std::shared_ptr<const Table> Aggregate::on_execute() {
     }
   }
 
+  /**
+   * Write group-by columns.
+   *
+   * 'results_per_column' always contains at least one element, since there are either GroupBy or Aggregate columns.
+   * However, we need to look only at the first element, because the keys for all columns are the same.
+   *
+   * The following loop is used for both, actual GroupBy columns and DISTINCT columns.
+  **/
+  for (auto &map : *results_per_column[0]) {
+    for (size_t group_column_index = 0; group_column_index < map.first.size(); ++group_column_index) {
+      group_columns[group_column_index]->append(map.first[group_column_index]);
+    }
+  }
+
   /*
   Write the aggregated columns to the output
   */
@@ -189,23 +241,18 @@ std::shared_ptr<const Table> Aggregate::on_execute() {
     auto &func = aggregate.second;
 
     // generate the name, e.g. MAX(column_a)
-    std::vector<std::string> names{"MIN", "MAX", "SUM", "AVG"};
+    std::vector<std::string> names{"MIN", "MAX", "SUM", "AVG", "COUNT"};
     output->add_column(names[func] + "(" + column_name + ")", "double", false);
 
     auto col = std::make_shared<ValueColumn<double>>();
     auto &values = col->values();
 
     for (auto &kv : *results_per_column[column_index]) {
-      if (column_index == 0) {
-        // in first iteration, also add the group key values
-        for (size_t group_column_index = 0; group_column_index < kv.first.size(); ++group_column_index) {
-          group_columns[group_column_index]->append(kv.first[group_column_index]);
-        }
-      }
-
       if (func == Avg) {
         // finally calculate the average from the sum
         values.push_back(kv.second.first / kv.second.second);
+      } else if (func == Count) {
+        values.push_back(kv.second.second);
       } else {
         values.push_back(kv.second.first);
       }
