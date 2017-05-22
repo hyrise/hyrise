@@ -3,6 +3,7 @@
 #include <memory>
 #include <string>
 #include <utility>
+#include <vector>
 
 #include "../base_test.hpp"
 #include "gtest/gtest.h"
@@ -11,6 +12,7 @@
 #include "../../lib/operators/export_binary.hpp"
 #include "../../lib/operators/table_scan.hpp"
 #include "../../lib/operators/table_wrapper.hpp"
+#include "../../lib/storage/dictionary_compression.hpp"
 #include "../../lib/storage/storage_manager.hpp"
 #include "../../lib/storage/table.hpp"
 
@@ -115,7 +117,8 @@ TEST_F(OperatorsExportBinaryTest, StringDictionaryColumn) {
   table->append({"is"});
   table->append({"a"});
   table->append({"test"});
-  table->compress_chunk(0);
+
+  DictionaryCompression::compress_table(*table);
 
   auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
   table_wrapper->execute();
@@ -157,8 +160,8 @@ TEST_F(OperatorsExportBinaryTest, AllTypesDictionaryColumn) {
   table->append({"BBBBBBBBBB", 2, static_cast<int64_t>(200), 2.2f, 22.2});
   table->append({"CCCCCCCCCCCCCCC", 3, static_cast<int64_t>(300), 3.3f, 33.3});
   table->append({"DDDDDDDDDDDDDDDDDDDD", 4, static_cast<int64_t>(400), 4.4f, 44.4});
-  table->compress_chunk(0);
-  table->compress_chunk(1);
+
+  DictionaryCompression::compress_table(*table);
 
   auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
   table_wrapper->execute();
@@ -180,7 +183,8 @@ TEST_F(OperatorsExportBinaryTest, AllTypesMixColumn) {
   table->append({"BBBBBBBBBB", 2, static_cast<int64_t>(200), 2.2f, 22.2});
   table->append({"CCCCCCCCCCCCCCC", 3, static_cast<int64_t>(300), 3.3f, 33.3});
   table->append({"DDDDDDDDDDDDDDDDDDDD", 4, static_cast<int64_t>(400), 4.4f, 44.4});
-  table->compress_chunk(0);
+
+  DictionaryCompression::compress_chunks(*table, {0u});
 
   auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
   table_wrapper->execute();
@@ -246,7 +250,8 @@ TEST_F(OperatorsExportBinaryTest, EmptyStringsDictionaryColumn) {
   table->append({""});
   table->append({""});
   table->append({""});
-  table->compress_chunk(0);
+
+  DictionaryCompression::compress_table(*table);
 
   auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
   table_wrapper->execute();

@@ -34,8 +34,8 @@ std::shared_ptr<const Table> Delete::on_execute(std::shared_ptr<TransactionConte
 
       auto expected = 0u;
       // Actual row lock for delete happens here
-      _execute_failed =
-          !referenced_chunk.mvcc_columns().tids[row_id.chunk_offset].compare_exchange_strong(expected, _transaction_id);
+      _execute_failed = !referenced_chunk.mvcc_columns()->tids[row_id.chunk_offset].compare_exchange_strong(
+          expected, _transaction_id);
 
       // the row is already locked and the transaction needs to be rolled back
       if (_execute_failed) return nullptr;
@@ -50,7 +50,7 @@ void Delete::commit_records(const CommitID cid) {
     for (const auto& row_id : *pos_list) {
       auto& chunk = _table->get_chunk(row_id.chunk_id);
 
-      chunk.mvcc_columns().end_cids[row_id.chunk_offset] = cid;
+      chunk.mvcc_columns()->end_cids[row_id.chunk_offset] = cid;
       // We do not unlock the rows so subsequent transactions properly fail when attempting to update these rows.
     }
   }
@@ -64,7 +64,7 @@ void Delete::rollback_records() {
       auto expected = _transaction_id;
 
       // unlock all rows locked in on_execute
-      const auto result = chunk.mvcc_columns().tids[row_id.chunk_offset].compare_exchange_strong(expected, 0u);
+      const auto result = chunk.mvcc_columns()->tids[row_id.chunk_offset].compare_exchange_strong(expected, 0u);
 
       // If the above operation fails, it means the row is locked by another transaction. This must have been
       // the reason why the rollback was initiated. Since on_execute stopped at this row, we can stop
@@ -82,10 +82,12 @@ uint8_t Delete::num_in_tables() const { return 1u; }
  * values_to_delete must be a table with at least one chunk, containing at least one ReferenceColumn
  * that all reference the table specified by table_name.
  */
-bool Delete::_execution_input_valid(const std::shared_ptr<TransactionContext> context) const {
+bool Delete::_execution_input_valid(const std::shared_ptr<TransactionContext>& context) const {
   if (context == nullptr) return false;
 
   const auto values_to_delete = input_table_left();
+
+  if (!StorageManager::get().has_table(_table_name)) return false;
 
   const auto table = StorageManager::get().get_table(_table_name);
 
@@ -99,6 +101,7 @@ bool Delete::_execution_input_valid(const std::shared_ptr<TransactionContext> co
     if (!chunk.references_only_one_table()) return false;
 
     const auto first_column = std::static_pointer_cast<ReferenceColumn>(chunk.get_column(0u));
+
     if (table != first_column->referenced_table()) return false;
   }
 

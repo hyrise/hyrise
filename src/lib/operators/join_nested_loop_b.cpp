@@ -32,7 +32,7 @@ JoinNestedLoopB::JoinNestedLoopB(const std::shared_ptr<const AbstractOperator> l
     DebugFail("JoinNestedLoopB::JoinNestedLoopB: No columns specified for join operator");
   }
 
-  _output = std::make_shared<Table>(0, false);
+  _output = std::make_shared<Table>(0);
   _pos_list_left = std::make_shared<PosList>();
   _pos_list_right = std::make_shared<PosList>();
 }

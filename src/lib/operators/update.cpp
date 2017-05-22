@@ -74,14 +74,16 @@ std::shared_ptr<const Table> Update::on_execute(std::shared_ptr<TransactionConte
 
     for (size_t column_id = 0u; column_id < input_table_left()->col_count(); ++column_id) {
       auto right_col = right_chunk.get_column(column_id);
+
       auto left_col = std::dynamic_pointer_cast<ReferenceColumn>(left_chunk.get_column(column_id));
 
-      insert_chunk.columns()[left_col->referenced_column_id()] = right_col;
+      insert_chunk.replace_column(left_col->referenced_column_id(), right_col);
     }
   }
 
   // 3. call delete on old data.
   _delete = std::make_unique<Delete>(_table_to_update_name, _input_left);
+
   _delete->set_transaction_context(context);
 
   _delete->execute();
@@ -92,6 +94,7 @@ std::shared_ptr<const Table> Update::on_execute(std::shared_ptr<TransactionConte
   // 4. call insert using insert_table.
   auto helper_op = std::make_shared<TableWrapper>(insert_table);
   helper_op->execute();
+
   _insert = std::make_unique<Insert>(_table_to_update_name, helper_op);
   _insert->set_transaction_context(context);
 
@@ -115,7 +118,7 @@ void Update::rollback_records() {
  * that all reference the table specified by table_to_update_name. The column count and types in input_table_left
  * must match the count and types in input_table_right.
  */
-bool Update::_execution_input_valid(const std::shared_ptr<TransactionContext> context) const {
+bool Update::_execution_input_valid(const std::shared_ptr<TransactionContext>& context) const {
   if (context == nullptr) return false;
 
   if (input_table_left()->col_count() != input_table_right()->col_count()) return false;

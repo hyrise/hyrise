@@ -4,6 +4,7 @@
 #include <set>
 #include <string>
 #include <utility>
+#include <vector>
 
 #include "../base_test.hpp"
 #include "gtest/gtest.h"
@@ -11,6 +12,7 @@
 #include "../../lib/operators/abstract_operator.hpp"
 #include "../../lib/operators/index_column_scan.hpp"
 #include "../../lib/operators/table_wrapper.hpp"
+#include "../../lib/storage/dictionary_compression.hpp"
 #include "../../lib/storage/index/adaptive_radix_tree/adaptive_radix_tree_index.hpp"
 #include "../../lib/storage/index/group_key/composite_group_key_index.hpp"
 #include "../../lib/storage/index/group_key/group_key_index.hpp"
@@ -29,11 +31,13 @@ class OperatorsIndexColumnScanTest : public BaseTest {
     std::shared_ptr<Table> test_table_dict = std::make_shared<Table>(5);
     test_table_dict->add_column("a", "int");
     test_table_dict->add_column("b", "int");
+
     for (int i = 0; i <= 24; i += 2) test_table_dict->append({i, 100 + i});
-    test_table_dict->compress_chunk(0);
+
+    DictionaryCompression::compress_chunks(*test_table_dict, {0u, 1u});
+
     test_table_dict->get_chunk(0).create_index<DerivedIndex>({test_table_dict->get_chunk(0).get_column(0)});
     test_table_dict->get_chunk(0).create_index<DerivedIndex>({test_table_dict->get_chunk(0).get_column(1)});
-    test_table_dict->compress_chunk(1);
 
     _table_wrapper_dict = std::make_shared<TableWrapper>(std::move(test_table_dict));
 

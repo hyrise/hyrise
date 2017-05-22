@@ -68,6 +68,7 @@ std::shared_ptr<const Table> Insert::on_execute(std::shared_ptr<TransactionConte
   }
 
   auto total_rows_to_insert = 0u;
+
   for (auto i = 0u; i < input_table_left()->chunk_count(); i++) {
     const auto& chunk = input_table_left()->get_chunk(i);
     total_rows_to_insert += chunk.size();
@@ -152,7 +153,7 @@ std::shared_ptr<const Table> Insert::on_execute(std::shared_ptr<TransactionConte
       // the transaction IDs are set here and not during the resize, because
       // tbb::concurrent_vector::grow_to_at_least(n, t)" does not work with atomics, since their copy constructor is
       // deleted.
-      target_chunk.mvcc_columns().tids[i] = context->transaction_id();
+      target_chunk.mvcc_columns()->tids[i] = context->transaction_id();
       _inserted_rows.emplace_back(_target_table->calculate_row_id(target_chunk_id, i));
     }
 
@@ -167,15 +168,16 @@ void Insert::commit_records(const CommitID cid) {
   for (auto row_id : _inserted_rows) {
     auto& chunk = _target_table->get_chunk(row_id.chunk_id);
 
-    chunk.mvcc_columns().begin_cids[row_id.chunk_offset] = cid;
-    chunk.mvcc_columns().tids[row_id.chunk_offset] = 0u;
+    auto mvcc_columns = chunk.mvcc_columns();
+    mvcc_columns->begin_cids[row_id.chunk_offset] = cid;
+    mvcc_columns->tids[row_id.chunk_offset] = 0u;
   }
 }
 
 void Insert::rollback_records() {
   for (auto row_id : _inserted_rows) {
     auto& chunk = _target_table->get_chunk(row_id.chunk_id);
-    chunk.mvcc_columns().tids[row_id.chunk_offset] = 0u;
+    chunk.mvcc_columns()->tids[row_id.chunk_offset] = 0u;
   }
 }
 

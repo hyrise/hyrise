@@ -13,6 +13,7 @@
 #include "../../lib/operators/aggregate.hpp"
 #include "../../lib/operators/table_scan.hpp"
 #include "../../lib/operators/table_wrapper.hpp"
+#include "../../lib/storage/dictionary_compression.hpp"
 #include "../../lib/storage/storage_manager.hpp"
 #include "../../lib/storage/table.hpp"
 #include "../../lib/types.hpp"
@@ -43,8 +44,8 @@ class OperatorsAggregateTest : public BaseTest {
     _table_wrapper_1_1_string->execute();
 
     auto test_table = load_table("src/test/tables/aggregateoperator/groupby_int_1gb_1agg/input.tbl", 2);
-    test_table->compress_chunk(0);
-    test_table->compress_chunk(1);
+    DictionaryCompression::compress_table(*test_table);
+
     _table_wrapper_1_1_dict = std::make_shared<TableWrapper>(std::move(test_table));
     _table_wrapper_1_1_dict->execute();
   }

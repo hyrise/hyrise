@@ -1,5 +1,6 @@
 #include "import_binary.hpp"
 
+#include <cstdint>
 #include <fstream>
 #include <memory>
 #include <numeric>
@@ -9,6 +10,7 @@
 
 #include "import_export/binary.hpp"
 #include "storage/chunk.hpp"
+#include "storage/fitted_attribute_vector.hpp"
 #include "storage/storage_manager.hpp"
 #include "utils/assert.hpp"
 

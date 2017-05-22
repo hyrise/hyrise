@@ -7,12 +7,13 @@
 #include "../base_test.hpp"
 #include "gtest/gtest.h"
 
+#include "../../lib/import_export/csv.hpp"
 #include "../../lib/operators/export_csv.hpp"
+#include "../../lib/operators/table_scan.hpp"
 #include "../../lib/operators/table_wrapper.hpp"
+#include "../../lib/storage/dictionary_compression.hpp"
 #include "../../lib/storage/storage_manager.hpp"
 #include "../../lib/storage/table.hpp"
-#include "import_export/csv.hpp"
-#include "operators/table_scan.hpp"
 
 namespace opossum {
 
@@ -109,7 +110,7 @@ TEST_F(OperatorsExportCsvTest, DictionaryColumn) {
   table->append({1, "Hallo", 3.5f});
   table->append({1, "Hallo3", 3.55f});
 
-  table->compress_chunk(0);
+  DictionaryCompression::compress_chunks(*table, {0u});
 
   auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
   table_wrapper->execute();

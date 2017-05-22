@@ -11,6 +11,7 @@
 #include "../../lib/operators/projection.hpp"
 #include "../../lib/operators/table_scan.hpp"
 #include "../../lib/operators/table_wrapper.hpp"
+#include "../../lib/storage/dictionary_compression.hpp"
 #include "../../lib/storage/storage_manager.hpp"
 #include "../../lib/storage/table.hpp"
 #include "../../lib/types.hpp"
@@ -27,8 +28,8 @@ class OperatorsProjectionTest : public BaseTest {
     _table_wrapper_int->execute();
 
     std::shared_ptr<Table> test_table_dict = load_table("src/test/tables/int_int_int.tbl", 2);
-    test_table_dict->compress_chunk(0);
-    test_table_dict->compress_chunk(1);
+    DictionaryCompression::compress_table(*test_table_dict);
+
     _table_wrapper_int_dict = std::make_shared<TableWrapper>(std::move(test_table_dict));
     _table_wrapper_int_dict->execute();
   }

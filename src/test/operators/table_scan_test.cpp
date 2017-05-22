@@ -4,6 +4,7 @@
 #include <set>
 #include <string>
 #include <utility>
+#include <vector>
 
 #include "../base_test.hpp"
 #include "gtest/gtest.h"
@@ -11,6 +12,7 @@
 #include "../../lib/operators/abstract_read_only_operator.hpp"
 #include "../../lib/operators/table_scan.hpp"
 #include "../../lib/operators/table_wrapper.hpp"
+#include "../../lib/storage/dictionary_compression.hpp"
 #include "../../lib/storage/table.hpp"
 #include "../../lib/types.hpp"
 
@@ -26,8 +28,7 @@ class OperatorsTableScanTest : public BaseTest {
     test_even_dict->add_column("a", "int");
     test_even_dict->add_column("b", "int");
     for (int i = 0; i <= 24; i += 2) test_even_dict->append({i, 100 + i});
-    test_even_dict->compress_chunk(0);
-    test_even_dict->compress_chunk(1);
+    DictionaryCompression::compress_chunks(*test_even_dict, {0u, 1u});
 
     _table_wrapper_even_dict = std::make_shared<TableWrapper>(std::move(test_even_dict));
     _table_wrapper_even_dict->execute();
@@ -36,8 +37,8 @@ class OperatorsTableScanTest : public BaseTest {
     test_table_part_dict->add_column("a", "int");
     test_table_part_dict->add_column("b", "float");
     for (int i = 1; i < 20; ++i) test_table_part_dict->append({i, 100.1 + i});
-    test_table_part_dict->compress_chunk(0);
-    test_table_part_dict->compress_chunk(2);
+    DictionaryCompression::compress_chunks(*test_table_part_dict, {0u, 2u});
+
     _table_wrapper_part_dict = std::make_shared<TableWrapper>(test_table_part_dict);
     _table_wrapper_part_dict->execute();
 
@@ -68,8 +69,8 @@ class OperatorsTableScanTest : public BaseTest {
     _table_wrapper_int3->execute();
 
     std::shared_ptr<Table> test_table_int3_dict = load_table("src/test/tables/int_int_int.tbl", 2);
-    test_table_int3_dict->compress_chunk(0);
-    test_table_int3_dict->compress_chunk(1);
+    DictionaryCompression::compress_chunks(*test_table_int3_dict, {0u, 1u});
+
     _table_wrapper_int3_dict = std::make_shared<TableWrapper>(std::move(test_table_int3_dict));
     _table_wrapper_int3_dict->execute();
 
@@ -78,7 +79,8 @@ class OperatorsTableScanTest : public BaseTest {
     _test_table_dict_16->add_column("a", "int");
     _test_table_dict_16->add_column("b", "float");
     for (int i = 0; i <= 257; i += 1) _test_table_dict_16->append({i, 100.0f + i});
-    _test_table_dict_16->compress_chunk(0);
+    DictionaryCompression::compress_chunks(*_test_table_dict_16, {0u});
+
     _table_wrapper_dict_16 = std::make_shared<opossum::TableWrapper>(std::move(_test_table_dict_16));
     _table_wrapper_dict_16->execute();
 
@@ -87,7 +89,8 @@ class OperatorsTableScanTest : public BaseTest {
     _test_table_dict_32->add_column("a", "int");
     _test_table_dict_32->add_column("b", "float");
     for (int i = 0; i <= 65537; i += 1) _test_table_dict_32->append({i, 100.0f + i});
-    _test_table_dict_32->compress_chunk(0);
+    DictionaryCompression::compress_chunks(*_test_table_dict_32, {0u});
+
     _table_wrapper_dict_32 = std::make_shared<opossum::TableWrapper>(std::move(_test_table_dict_32));
     _table_wrapper_dict_32->execute();
 
@@ -97,7 +100,9 @@ class OperatorsTableScanTest : public BaseTest {
 
     // load and compress string table
     std::shared_ptr<Table> test_table_string_dict = load_table("src/test/tables/int_string_like.tbl", 5);
-    test_table_string_dict->compress_chunk(0);
+
+    DictionaryCompression::compress_chunks(*test_table_string_dict, {0u});
+
     _table_wrapper_string_dict = std::make_shared<TableWrapper>(std::move(test_table_string_dict));
     _table_wrapper_string_dict->execute();
   }
