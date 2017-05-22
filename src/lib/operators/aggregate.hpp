@@ -188,7 +188,13 @@ It is used to partition the input by the given group key(s)
 */
 template <typename T>
 struct PartitionBuilder : public ColumnVisitable {
-  std::vector<std::function<double(T, double)>> aggregators;
+  PartitionBuilder() : chunk_offset(0) {}
+
+  /*
+  The builder saves the current position in its hash_keys vector.
+  This is crucial to support ReferenceColumns with multiple chunks.
+  */
+  ChunkOffset chunk_offset;
 
   void handle_value_column(BaseColumn &base_column, std::shared_ptr<ColumnVisitableContext> base_context) {
     auto context = std::static_pointer_cast<GroupByContext>(base_context);
@@ -198,13 +204,11 @@ struct PartitionBuilder : public ColumnVisitable {
     if (context->chunk_offsets_in) {
       // This ValueColumn is referenced by a ReferenceColumn (i.e., is probably filtered). We only return the matching
       // rows within the filtered column, together with their original position
-      ChunkOffset chunk_offset = 0;
       for (const ChunkOffset &offset_in_value_column : *(context->chunk_offsets_in)) {
         (*context->hash_keys)[chunk_offset].emplace_back(values[offset_in_value_column]);
         chunk_offset++;
       }
     } else {
-      ChunkOffset chunk_offset = 0;
       for (const auto &value : values) {
         (*context->hash_keys)[chunk_offset].emplace_back(value);
         chunk_offset++;
@@ -223,7 +227,6 @@ struct PartitionBuilder : public ColumnVisitable {
     const std::vector<T> &dictionary = *(column.dictionary());
 
     if (context->chunk_offsets_in) {
-      ChunkOffset chunk_offset = 0;
       for (const ChunkOffset &offset_in_dictionary_column : *(context->chunk_offsets_in)) {
         (*context->hash_keys)[chunk_offset].emplace_back(dictionary[attribute_vector.get(offset_in_dictionary_column)]);
         chunk_offset++;
@@ -231,8 +234,8 @@ struct PartitionBuilder : public ColumnVisitable {
     } else {
       // This DictionaryColumn has to be scanned in full. We directly insert the results into the list of matching
       // rows.
-      for (ChunkOffset chunk_offset = 0; chunk_offset < column.size(); ++chunk_offset) {
-        (*context->hash_keys)[chunk_offset].emplace_back(dictionary[attribute_vector.get(chunk_offset)]);
+      for (ChunkOffset av_offset = 0; av_offset < column.size(); ++av_offset, ++chunk_offset) {
+        (*context->hash_keys)[chunk_offset].emplace_back(dictionary[attribute_vector.get(av_offset)]);
       }
     }
   }
@@ -453,10 +456,9 @@ struct aggregate_traits<
 
 // invalid
 template <typename ColumnType, AggregateFunction function>
-struct aggregate_traits<
-    ColumnType, function,
-    typename std::enable_if<!std::is_arithmetic<ColumnType>::value && (function == Avg || function == Sum),
-                            void>::type> {
+struct aggregate_traits<ColumnType, function, typename std::enable_if<!std::is_arithmetic<ColumnType>::value &&
+                                                                          (function == Avg || function == Sum),
+                                                                      void>::type> {
   typedef invalid_tag aggregate_category;
   typedef ColumnType column_type;
   typedef ColumnType aggregate_type;

@@ -11,6 +11,7 @@
 
 #include "../../lib/operators/abstract_read_only_operator.hpp"
 #include "../../lib/operators/aggregate.hpp"
+#include "../../lib/operators/join_hash.hpp"
 #include "../../lib/operators/table_scan.hpp"
 #include "../../lib/operators/table_wrapper.hpp"
 #include "../../lib/storage/dictionary_compression.hpp"
@@ -42,6 +43,14 @@ class OperatorsAggregateTest : public BaseTest {
     _table_wrapper_1_1_string = std::make_shared<TableWrapper>(
         load_table("src/test/tables/aggregateoperator/groupby_string_1gb_1agg/input.tbl", 2));
     _table_wrapper_1_1_string->execute();
+
+    _table_wrapper_3_1 =
+        std::make_shared<TableWrapper>(load_table("src/test/tables/aggregateoperator/join_2gb_0agg/input_a.tbl", 2));
+    _table_wrapper_3_1->execute();
+
+    _table_wrapper_3_2 =
+        std::make_shared<TableWrapper>(load_table("src/test/tables/aggregateoperator/join_2gb_0agg/input_b.tbl", 2));
+    _table_wrapper_3_2->execute();
 
     auto test_table = load_table("src/test/tables/aggregateoperator/groupby_int_1gb_1agg/input.tbl", 2);
     DictionaryCompression::compress_table(*test_table);
@@ -88,7 +97,7 @@ class OperatorsAggregateTest : public BaseTest {
   }
 
   std::shared_ptr<TableWrapper> _table_wrapper_1_1, _table_wrapper_1_2, _table_wrapper_2_1, _table_wrapper_2_2,
-      _table_wrapper_1_1_string, _table_wrapper_1_1_dict;
+      _table_wrapper_1_1_string, _table_wrapper_1_1_dict, _table_wrapper_3_1, _table_wrapper_3_2;
 };
 
 TEST_F(OperatorsAggregateTest, NumInputTables) {
@@ -407,6 +416,16 @@ TEST_F(OperatorsAggregateTest, DictionarySingleAggregateMinOnRef) {
 
   this->test_output(filtered, {std::make_pair(std::string("b"), Min)}, {std::string("a")},
                     "src/test/tables/aggregateoperator/groupby_int_1gb_1agg/min_filtered.tbl", 1);
+}
+
+TEST_F(OperatorsAggregateTest, JoinThenAggregate) {
+  auto join =
+      std::make_shared<JoinHash>(_table_wrapper_3_1, _table_wrapper_3_2, std::pair<std::string, std::string>("a", "a"),
+                                 "=", Inner, std::string("left."), std::string("right."));
+  join->execute();
+
+  this->test_output(join, {}, {std::string("left.a"), std::string("right.b")},
+                    "src/test/tables/aggregateoperator/join_2gb_0agg/result.tbl", 1);
 }
 
 }  // namespace opossum
