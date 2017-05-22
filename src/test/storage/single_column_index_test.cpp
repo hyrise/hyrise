@@ -7,13 +7,15 @@
 #include "../base_test.hpp"
 #include "gtest/gtest.h"
 
-#include "../lib/common.hpp"
 #include "../lib/storage/base_column.hpp"
 #include "../lib/storage/chunk.hpp"
 #include "../lib/storage/dictionary_column.hpp"
 #include "../lib/storage/index/adaptive_radix_tree/adaptive_radix_tree_index.hpp"
 #include "../lib/storage/index/group_key/composite_group_key_index.hpp"
 #include "../lib/storage/index/group_key/group_key_index.hpp"
+
+#include "../lib/common.hpp"
+#include "../lib/resolve_type.hpp"
 #include "../lib/types.hpp"
 
 namespace opossum {

@@ -8,6 +8,7 @@
 #include "../../lib/operators/delete.hpp"
 #include "../../lib/operators/get_table.hpp"
 #include "../../lib/operators/rollback_records.hpp"
+#include "../../lib/operators/table_scan.hpp"
 #include "../../lib/operators/validate.hpp"
 #include "../../lib/storage/storage_manager.hpp"
 #include "../../lib/storage/table.hpp"

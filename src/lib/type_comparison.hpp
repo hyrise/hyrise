@@ -1,5 +1,7 @@
 #pragma once
 
+#include <boost/lexical_cast.hpp>
+
 #include <type_traits>
 
 namespace opossum {

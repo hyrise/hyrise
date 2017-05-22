@@ -3,6 +3,7 @@
 #include <memory>
 #include <string>
 
+#include "all_type_variant.hpp"
 #include "column_visitable.hpp"
 #include "common.hpp"
 #include "types.hpp"
