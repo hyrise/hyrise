@@ -46,7 +46,7 @@ std::shared_ptr<opossum::Table> TableGenerator::generate_items_table() {
     bool is_original = original_ids.find(i) != original_ids.end();
     if (is_original) {
       std::string originalString("ORIGINAL");
-      size_t start_pos = _random_gen.number(0, data.length() - originalString.length());
+      size_t start_pos = _random_gen.number(0, data.length() - 1 - originalString.length());
       data.replace(start_pos, originalString.length(), originalString);
     }
     return data;
@@ -135,7 +135,7 @@ std::shared_ptr<opossum::Table> TableGenerator::generate_stock_table() {
       bool is_original = original_ids.find(i) != original_ids.end();
       if (is_original) {
         std::string originalString("ORIGINAL");
-        size_t start_pos = _random_gen.number(0, data.length() - originalString.length());
+        size_t start_pos = _random_gen.number(0, data.length() - 1 - originalString.length());
         data.replace(start_pos, originalString.length(), originalString);
       }
       return data;
