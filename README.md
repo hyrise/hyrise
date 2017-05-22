@@ -1,8 +1,8 @@
-[![build status](https://gitlab.hpi.de/OpossumDB/OpossumDB/badges/master/build.svg)](https://gitlab.hpi.de/OpossumDB/OpossumDB/commits/master)
-[![coverage report](https://gitlab.hpi.de/OpossumDB/OpossumDB/badges/master/coverage.svg)](https://gitlab.hpi.de/OpossumDB/OpossumDB/commits/master)
+[![Build Status](https://ares.epic.hpi.uni-potsdam.de/jenkins/buildStatus/icon?job=Hyrise/zweirise/master)](https://ares.epic.hpi.uni-potsdam.de/jenkins/job/Hyrise/job/zweirise/)
+
 # opossum
 
-*Have a look at docs/guidelines*
+*Have a look at our [contributor guidelines](https://github.com/hyrise/zweirise/blob/master/CONTRIBUTING.md)*
 
 The [course material](https://hpi.de//plattner/teaching/winter-term-201617/build-your-own-database.html) is a good starting point to get to know Opossum
 
@@ -117,6 +117,7 @@ Contact: firstname.lastname@hpi.de
 ## Contributors
 
 -	Yannick	Bäumer
+- Timo Djürken
 -	Moritz	Eyssen
 -	Martin	Fischer
 -	Michael	Janke

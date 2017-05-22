@@ -12,8 +12,8 @@ TableGenerator::TableGenerator() : _random_gen(RandomGenerator()), _text_field_g
 // TODO(anybody) chunk sizes and number of chunks might be tuned in generate_XYZ_table
 
 template <typename T>
-std::shared_ptr<opossum::ValueColumn<T>> TableGenerator::add_column(size_t cardinality,
-                                                               const std::function<T(size_t)> &generator_function) {
+std::shared_ptr<opossum::ValueColumn<T>> TableGenerator::add_column(
+    size_t cardinality, const std::function<T(size_t)> &generator_function) {
   tbb::concurrent_vector<T> column(cardinality);
   for (size_t i = 0; i < column.size(); i++) {
     column[i] = generator_function(i);

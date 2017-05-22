@@ -4,7 +4,7 @@
 #include <string>
 #include <vector>
 
-#include "../lib/storage/dictionary_column.hpp"
+#include "../lib/storage/dictionary_compression.hpp"
 #include "../lib/storage/table.hpp"
 #include "../lib/types.hpp"
 #include "gtest/gtest.h"
@@ -46,7 +46,7 @@ class BaseTest : public ::testing::Test {
     for (const auto &value : values) {
       value_column->append(value);
     }
-    return make_shared_by_column_type<BaseColumn, DictionaryColumn>(type, value_column);
+    return DictionaryCompression::compress_column(type, value_column);
   }
 
  public:

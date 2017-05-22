@@ -11,8 +11,9 @@
 
 #include "../../lib/operators/abstract_read_only_operator.hpp"
 #include "../../lib/operators/aggregate.hpp"
-#include "../../lib/operators/get_table.hpp"
 #include "../../lib/operators/table_scan.hpp"
+#include "../../lib/operators/table_wrapper.hpp"
+#include "../../lib/storage/dictionary_compression.hpp"
 #include "../../lib/storage/storage_manager.hpp"
 #include "../../lib/storage/table.hpp"
 #include "../../lib/types.hpp"
@@ -22,37 +23,30 @@ namespace opossum {
 class OperatorsAggregateTest : public BaseTest {
  protected:
   void SetUp() override {
+    _table_wrapper_1_1 = std::make_shared<TableWrapper>(
+        load_table("src/test/tables/aggregateoperator/groupby_int_1gb_1agg/input.tbl", 2));
+    _table_wrapper_1_1->execute();
+
+    _table_wrapper_1_2 = std::make_shared<TableWrapper>(
+        load_table("src/test/tables/aggregateoperator/groupby_int_1gb_2agg/input.tbl", 2));
+    _table_wrapper_1_2->execute();
+
+    _table_wrapper_2_1 = std::make_shared<TableWrapper>(
+        load_table("src/test/tables/aggregateoperator/groupby_int_2gb_1agg/input.tbl", 2));
+    _table_wrapper_2_1->execute();
+
+    _table_wrapper_2_2 = std::make_shared<TableWrapper>(
+        load_table("src/test/tables/aggregateoperator/groupby_int_2gb_2agg/input.tbl", 2));
+    _table_wrapper_2_2->execute();
+
+    _table_wrapper_1_1_string = std::make_shared<TableWrapper>(
+        load_table("src/test/tables/aggregateoperator/groupby_string_1gb_1agg/input.tbl", 2));
+    _table_wrapper_1_1_string->execute();
+
     auto test_table = load_table("src/test/tables/aggregateoperator/groupby_int_1gb_1agg/input.tbl", 2);
-    StorageManager::get().add_table("table_a", std::move(test_table));
-    _gt_1_1 = std::make_shared<GetTable>("table_a");
-    _gt_1_1->execute();
-
-    test_table = load_table("src/test/tables/aggregateoperator/groupby_int_1gb_2agg/input.tbl", 2);
-    StorageManager::get().add_table("table_b", std::move(test_table));
-    _gt_1_2 = std::make_shared<GetTable>("table_b");
-    _gt_1_2->execute();
-
-    test_table = load_table("src/test/tables/aggregateoperator/groupby_int_2gb_1agg/input.tbl", 2);
-    StorageManager::get().add_table("table_c", std::move(test_table));
-    _gt_2_1 = std::make_shared<GetTable>("table_c");
-    _gt_2_1->execute();
-
-    test_table = load_table("src/test/tables/aggregateoperator/groupby_int_2gb_2agg/input.tbl", 2);
-    StorageManager::get().add_table("table_d", std::move(test_table));
-    _gt_2_2 = std::make_shared<GetTable>("table_d");
-    _gt_2_2->execute();
-
-    test_table = load_table("src/test/tables/aggregateoperator/groupby_string_1gb_1agg/input.tbl", 2);
-    StorageManager::get().add_table("table_a_string", std::move(test_table));
-    _gt_1_1_string = std::make_shared<GetTable>("table_a_string");
-    _gt_1_1_string->execute();
-
-    test_table = load_table("src/test/tables/aggregateoperator/groupby_int_1gb_1agg/input.tbl", 2);
-    test_table->compress_chunk(0);
-    test_table->compress_chunk(1);
-    StorageManager::get().add_table("table_a_dict", std::move(test_table));
-    _gt_1_1_dict = std::make_shared<GetTable>("table_a_dict");
-    _gt_1_1_dict->execute();
+    DictionaryCompression::compress_table(*test_table);
+    _table_wrapper_1_1_dict = std::make_shared<TableWrapper>(std::move(test_table));
+    _table_wrapper_1_1_dict->execute();
   }
 
   void test_output(const std::shared_ptr<AbstractOperator> in,
@@ -92,12 +86,13 @@ class OperatorsAggregateTest : public BaseTest {
     }
   }
 
-  std::shared_ptr<GetTable> _gt_1_1, _gt_1_2, _gt_2_1, _gt_2_2, _gt_1_1_string, _gt_1_1_dict;
+  std::shared_ptr<TableWrapper> _table_wrapper_1_1, _table_wrapper_1_2, _table_wrapper_2_1, _table_wrapper_2_2,
+      _table_wrapper_1_1_string, _table_wrapper_1_1_dict;
 };
 
 TEST_F(OperatorsAggregateTest, NumInputTables) {
   auto aggregate = std::make_shared<Aggregate>(
-      _gt_1_1, std::vector<std::pair<std::string, AggregateFunction>>{std::make_pair(std::string("b"), Max)},
+      _table_wrapper_1_1, std::vector<std::pair<std::string, AggregateFunction>>{std::make_pair(std::string("b"), Max)},
       std::vector<std::string>{std::string("a")});
   aggregate->execute();
 
@@ -106,7 +101,7 @@ TEST_F(OperatorsAggregateTest, NumInputTables) {
 
 TEST_F(OperatorsAggregateTest, NumOutputTables) {
   auto aggregate = std::make_shared<Aggregate>(
-      _gt_1_1, std::vector<std::pair<std::string, AggregateFunction>>{std::make_pair(std::string("b"), Max)},
+      _table_wrapper_1_1, std::vector<std::pair<std::string, AggregateFunction>>{std::make_pair(std::string("b"), Max)},
       std::vector<std::string>{std::string("a")});
 
   EXPECT_EQ(aggregate->num_out_tables(), 1);
@@ -114,7 +109,7 @@ TEST_F(OperatorsAggregateTest, NumOutputTables) {
 
 TEST_F(OperatorsAggregateTest, OperatorName) {
   auto aggregate = std::make_shared<Aggregate>(
-      _gt_1_1, std::vector<std::pair<std::string, AggregateFunction>>{std::make_pair(std::string("b"), Max)},
+      _table_wrapper_1_1, std::vector<std::pair<std::string, AggregateFunction>>{std::make_pair(std::string("b"), Max)},
       std::vector<std::string>{std::string("a")});
 
   EXPECT_EQ(aggregate->name(), "Aggregate");
@@ -122,150 +117,277 @@ TEST_F(OperatorsAggregateTest, OperatorName) {
 
 TEST_F(OperatorsAggregateTest, CannotAggregateStringColumns) {
   auto aggregate = std::make_shared<Aggregate>(
-      _gt_1_1_string, std::vector<std::pair<std::string, AggregateFunction>>{std::make_pair(std::string("a"), Min)},
+      _table_wrapper_1_1_string,
+      std::vector<std::pair<std::string, AggregateFunction>>{std::make_pair(std::string("a"), Min)},
       std::vector<std::string>{std::string("a")});
 
   EXPECT_THROW(aggregate->execute(), std::runtime_error);
 }
 
+// Currently not implemented
+TEST_F(OperatorsAggregateTest, DISABLED_CanCountStringColumns) {
+  this->test_output(_table_wrapper_1_1_string, {std::make_pair(std::string("a"), Count)}, {std::string("a")},
+                    "src/test/tables/aggregateoperator/groupby_string_1gb_1agg/count.tbl", 1);
+}
+
 TEST_F(OperatorsAggregateTest, SingleAggregateMax) {
-  this->test_output(_gt_1_1, {std::make_pair(std::string("b"), Max)}, {std::string("a")},
+  this->test_output(_table_wrapper_1_1, {std::make_pair(std::string("b"), Max)}, {std::string("a")},
                     "src/test/tables/aggregateoperator/groupby_int_1gb_1agg/max.tbl", 1);
 }
 
 TEST_F(OperatorsAggregateTest, SingleAggregateMin) {
-  this->test_output(_gt_1_1, {std::make_pair(std::string("b"), Min)}, {std::string("a")},
+  this->test_output(_table_wrapper_1_1, {std::make_pair(std::string("b"), Min)}, {std::string("a")},
                     "src/test/tables/aggregateoperator/groupby_int_1gb_1agg/min.tbl", 1);
 }
 
 TEST_F(OperatorsAggregateTest, SingleAggregateSum) {
-  this->test_output(_gt_1_1, {std::make_pair(std::string("b"), Sum)}, {std::string("a")},
+  this->test_output(_table_wrapper_1_1, {std::make_pair(std::string("b"), Sum)}, {std::string("a")},
                     "src/test/tables/aggregateoperator/groupby_int_1gb_1agg/sum.tbl", 1);
 }
 
 TEST_F(OperatorsAggregateTest, SingleAggregateAvg) {
-  this->test_output(_gt_1_1, {std::make_pair(std::string("b"), Avg)}, {std::string("a")},
+  this->test_output(_table_wrapper_1_1, {std::make_pair(std::string("b"), Avg)}, {std::string("a")},
                     "src/test/tables/aggregateoperator/groupby_int_1gb_1agg/avg.tbl", 1);
 }
 
+TEST_F(OperatorsAggregateTest, SingleAggregateCount) {
+  this->test_output(_table_wrapper_1_1, {std::make_pair(std::string("b"), Count)}, {std::string("a")},
+                    "src/test/tables/aggregateoperator/groupby_int_1gb_1agg/count.tbl", 1);
+}
+
 TEST_F(OperatorsAggregateTest, StringSingleAggregateMax) {
-  this->test_output(_gt_1_1_string, {std::make_pair(std::string("b"), Max)}, {std::string("a")},
+  this->test_output(_table_wrapper_1_1_string, {std::make_pair(std::string("b"), Max)}, {std::string("a")},
                     "src/test/tables/aggregateoperator/groupby_string_1gb_1agg/max.tbl", 1);
 }
 
 TEST_F(OperatorsAggregateTest, StringSingleAggregateMin) {
-  this->test_output(_gt_1_1_string, {std::make_pair(std::string("b"), Min)}, {std::string("a")},
+  this->test_output(_table_wrapper_1_1_string, {std::make_pair(std::string("b"), Min)}, {std::string("a")},
                     "src/test/tables/aggregateoperator/groupby_string_1gb_1agg/min.tbl", 1);
 }
 
 TEST_F(OperatorsAggregateTest, StringSingleAggregateSum) {
-  this->test_output(_gt_1_1_string, {std::make_pair(std::string("b"), Sum)}, {std::string("a")},
+  this->test_output(_table_wrapper_1_1_string, {std::make_pair(std::string("b"), Sum)}, {std::string("a")},
                     "src/test/tables/aggregateoperator/groupby_string_1gb_1agg/sum.tbl", 1);
 }
 
 TEST_F(OperatorsAggregateTest, StringSingleAggregateAvg) {
-  this->test_output(_gt_1_1_string, {std::make_pair(std::string("b"), Avg)}, {std::string("a")},
+  this->test_output(_table_wrapper_1_1_string, {std::make_pair(std::string("b"), Avg)}, {std::string("a")},
                     "src/test/tables/aggregateoperator/groupby_string_1gb_1agg/avg.tbl", 1);
 }
 
+TEST_F(OperatorsAggregateTest, StringSingleAggregateCount) {
+  this->test_output(_table_wrapper_1_1_string, {std::make_pair(std::string("b"), Count)}, {std::string("a")},
+                    "src/test/tables/aggregateoperator/groupby_string_1gb_1agg/count.tbl", 1);
+}
+
 TEST_F(OperatorsAggregateTest, DictionarySingleAggregateMax) {
-  this->test_output(_gt_1_1_dict, {std::make_pair(std::string("b"), Max)}, {std::string("a")},
+  this->test_output(_table_wrapper_1_1_dict, {std::make_pair(std::string("b"), Max)}, {std::string("a")},
                     "src/test/tables/aggregateoperator/groupby_int_1gb_1agg/max.tbl", 1);
 }
 
 TEST_F(OperatorsAggregateTest, DictionarySingleAggregateMin) {
-  this->test_output(_gt_1_1_dict, {std::make_pair(std::string("b"), Min)}, {std::string("a")},
+  this->test_output(_table_wrapper_1_1_dict, {std::make_pair(std::string("b"), Min)}, {std::string("a")},
                     "src/test/tables/aggregateoperator/groupby_int_1gb_1agg/min.tbl", 1);
 }
 
 TEST_F(OperatorsAggregateTest, DictionarySingleAggregateSum) {
-  this->test_output(_gt_1_1_dict, {std::make_pair(std::string("b"), Sum)}, {std::string("a")},
+  this->test_output(_table_wrapper_1_1_dict, {std::make_pair(std::string("b"), Sum)}, {std::string("a")},
                     "src/test/tables/aggregateoperator/groupby_int_1gb_1agg/sum.tbl", 1);
 }
 
 TEST_F(OperatorsAggregateTest, DictionarySingleAggregateAvg) {
-  this->test_output(_gt_1_1_dict, {std::make_pair(std::string("b"), Avg)}, {std::string("a")},
+  this->test_output(_table_wrapper_1_1_dict, {std::make_pair(std::string("b"), Avg)}, {std::string("a")},
                     "src/test/tables/aggregateoperator/groupby_int_1gb_1agg/avg.tbl", 1);
 }
 
+TEST_F(OperatorsAggregateTest, DictionarySingleAggregateCount) {
+  this->test_output(_table_wrapper_1_1_dict, {std::make_pair(std::string("b"), Count)}, {std::string("a")},
+                    "src/test/tables/aggregateoperator/groupby_int_1gb_1agg/count.tbl", 1);
+}
+
 TEST_F(OperatorsAggregateTest, TwoAggregateAvgMax) {
-  this->test_output(_gt_1_2, {std::make_pair(std::string("b"), Max), std::make_pair(std::string("c"), Avg)},
+  this->test_output(_table_wrapper_1_2, {std::make_pair(std::string("b"), Max), std::make_pair(std::string("c"), Avg)},
                     {std::string("a")}, "src/test/tables/aggregateoperator/groupby_int_1gb_2agg/max_avg.tbl", 1);
 }
 
 TEST_F(OperatorsAggregateTest, TwoAggregateMinAvg) {
-  this->test_output(_gt_1_2, {std::make_pair(std::string("b"), Min), std::make_pair(std::string("c"), Avg)},
+  this->test_output(_table_wrapper_1_2, {std::make_pair(std::string("b"), Min), std::make_pair(std::string("c"), Avg)},
                     {std::string("a")}, "src/test/tables/aggregateoperator/groupby_int_1gb_2agg/min_avg.tbl", 1);
 }
 
 TEST_F(OperatorsAggregateTest, TwoAggregateMinMax) {
-  this->test_output(_gt_1_2, {std::make_pair(std::string("b"), Min), std::make_pair(std::string("c"), Max)},
+  this->test_output(_table_wrapper_1_2, {std::make_pair(std::string("b"), Min), std::make_pair(std::string("c"), Max)},
                     {std::string("a")}, "src/test/tables/aggregateoperator/groupby_int_1gb_2agg/min_max.tbl", 1);
 }
 
 TEST_F(OperatorsAggregateTest, TwoAggregateAvgAvg) {
-  this->test_output(_gt_1_2, {std::make_pair(std::string("b"), Avg), std::make_pair(std::string("c"), Avg)},
+  this->test_output(_table_wrapper_1_2, {std::make_pair(std::string("b"), Avg), std::make_pair(std::string("c"), Avg)},
                     {std::string("a")}, "src/test/tables/aggregateoperator/groupby_int_1gb_2agg/avg_avg.tbl", 1);
 }
 
 TEST_F(OperatorsAggregateTest, TwoAggregateSumAvg) {
-  this->test_output(_gt_1_2, {std::make_pair(std::string("b"), Sum), std::make_pair(std::string("c"), Avg)},
+  this->test_output(_table_wrapper_1_2, {std::make_pair(std::string("b"), Sum), std::make_pair(std::string("c"), Avg)},
                     {std::string("a")}, "src/test/tables/aggregateoperator/groupby_int_1gb_2agg/sum_avg.tbl", 1);
 }
 
 TEST_F(OperatorsAggregateTest, TwoAggregateSumSum) {
-  this->test_output(_gt_1_2, {std::make_pair(std::string("b"), Sum), std::make_pair(std::string("c"), Sum)},
+  this->test_output(_table_wrapper_1_2, {std::make_pair(std::string("b"), Sum), std::make_pair(std::string("c"), Sum)},
                     {std::string("a")}, "src/test/tables/aggregateoperator/groupby_int_1gb_2agg/sum_sum.tbl", 1);
 }
 
+TEST_F(OperatorsAggregateTest, TwoAggregateSumCount) {
+  this->test_output(_table_wrapper_1_2,
+                    {std::make_pair(std::string("b"), Sum), std::make_pair(std::string("c"), Count)},
+                    {std::string("a")}, "src/test/tables/aggregateoperator/groupby_int_1gb_2agg/sum_count.tbl", 1);
+}
+
 TEST_F(OperatorsAggregateTest, TwoGroupbyMax) {
-  this->test_output(_gt_2_1, {std::make_pair(std::string("c"), Max)}, {std::string("a"), std::string("b")},
+  this->test_output(_table_wrapper_2_1, {std::make_pair(std::string("c"), Max)}, {std::string("a"), std::string("b")},
                     "src/test/tables/aggregateoperator/groupby_int_2gb_1agg/max.tbl", 1);
 }
 
 TEST_F(OperatorsAggregateTest, TwoGroupbyMin) {
-  this->test_output(_gt_2_1, {std::make_pair(std::string("c"), Min)}, {std::string("a"), std::string("b")},
+  this->test_output(_table_wrapper_2_1, {std::make_pair(std::string("c"), Min)}, {std::string("a"), std::string("b")},
                     "src/test/tables/aggregateoperator/groupby_int_2gb_1agg/min.tbl", 1);
 }
 
 TEST_F(OperatorsAggregateTest, TwoGroupbySum) {
-  this->test_output(_gt_2_1, {std::make_pair(std::string("c"), Sum)}, {std::string("a"), std::string("b")},
+  this->test_output(_table_wrapper_2_1, {std::make_pair(std::string("c"), Sum)}, {std::string("a"), std::string("b")},
                     "src/test/tables/aggregateoperator/groupby_int_2gb_1agg/sum.tbl", 1);
 }
 
 TEST_F(OperatorsAggregateTest, TwoGroupbyAvg) {
-  this->test_output(_gt_2_1, {std::make_pair(std::string("c"), Avg)}, {std::string("a"), std::string("b")},
+  this->test_output(_table_wrapper_2_1, {std::make_pair(std::string("c"), Avg)}, {std::string("a"), std::string("b")},
                     "src/test/tables/aggregateoperator/groupby_int_2gb_1agg/avg.tbl", 1);
 }
 
+TEST_F(OperatorsAggregateTest, TwoGroupbyCount) {
+  this->test_output(_table_wrapper_2_1, {std::make_pair(std::string("c"), Count)}, {std::string("a"), std::string("b")},
+                    "src/test/tables/aggregateoperator/groupby_int_2gb_1agg/count.tbl", 1);
+}
+
 TEST_F(OperatorsAggregateTest, TwoGroupbyAndTwoAggregateMaxAvg) {
-  this->test_output(_gt_2_2, {std::make_pair(std::string("c"), Max), std::make_pair(std::string("d"), Avg)},
+  this->test_output(_table_wrapper_2_2, {std::make_pair(std::string("c"), Max), std::make_pair(std::string("d"), Avg)},
                     {std::string("a"), std::string("b")},
                     "src/test/tables/aggregateoperator/groupby_int_2gb_2agg/max_avg.tbl", 1);
 }
 
 TEST_F(OperatorsAggregateTest, TwoGroupbyAndTwoAggregateMinAvg) {
-  this->test_output(_gt_2_2, {std::make_pair(std::string("c"), Min), std::make_pair(std::string("d"), Avg)},
+  this->test_output(_table_wrapper_2_2, {std::make_pair(std::string("c"), Min), std::make_pair(std::string("d"), Avg)},
                     {std::string("a"), std::string("b")},
                     "src/test/tables/aggregateoperator/groupby_int_2gb_2agg/min_avg.tbl", 1);
 }
 
 TEST_F(OperatorsAggregateTest, TwoGroupbyAndTwoAggregateMinMax) {
-  this->test_output(_gt_2_2, {std::make_pair(std::string("c"), Min), std::make_pair(std::string("d"), Max)},
+  this->test_output(_table_wrapper_2_2, {std::make_pair(std::string("c"), Min), std::make_pair(std::string("d"), Max)},
                     {std::string("a"), std::string("b")},
                     "src/test/tables/aggregateoperator/groupby_int_2gb_2agg/min_max.tbl", 1);
 }
 
 TEST_F(OperatorsAggregateTest, TwoGroupbyAndTwoAggregateSumAvg) {
-  this->test_output(_gt_2_2, {std::make_pair(std::string("c"), Sum), std::make_pair(std::string("d"), Avg)},
+  this->test_output(_table_wrapper_2_2, {std::make_pair(std::string("c"), Sum), std::make_pair(std::string("d"), Avg)},
                     {std::string("a"), std::string("b")},
                     "src/test/tables/aggregateoperator/groupby_int_2gb_2agg/sum_avg.tbl", 1);
 }
 
 TEST_F(OperatorsAggregateTest, TwoGroupbyAndTwoAggregateSumSum) {
-  this->test_output(_gt_2_2, {std::make_pair(std::string("c"), Sum), std::make_pair(std::string("d"), Sum)},
+  this->test_output(_table_wrapper_2_2, {std::make_pair(std::string("c"), Sum), std::make_pair(std::string("d"), Sum)},
                     {std::string("a"), std::string("b")},
                     "src/test/tables/aggregateoperator/groupby_int_2gb_2agg/sum_sum.tbl", 1);
+}
+
+TEST_F(OperatorsAggregateTest, TwoGroupbyAndTwoAggregateSumCount) {
+  this->test_output(
+      _table_wrapper_2_2, {std::make_pair(std::string("c"), Sum), std::make_pair(std::string("d"), Count)},
+      {std::string("a"), std::string("b")}, "src/test/tables/aggregateoperator/groupby_int_2gb_2agg/sum_count.tbl", 1);
+}
+
+TEST_F(OperatorsAggregateTest, NoGroupbySingleAggregateMax) {
+  this->test_output(_table_wrapper_1_1, {std::make_pair(std::string("b"), Max)}, {},
+                    "src/test/tables/aggregateoperator/0gb_1agg/max.tbl", 1);
+}
+
+TEST_F(OperatorsAggregateTest, NoGroupbySingleAggregateMin) {
+  this->test_output(_table_wrapper_1_1, {std::make_pair(std::string("b"), Min)}, {},
+                    "src/test/tables/aggregateoperator/0gb_1agg/min.tbl", 1);
+}
+
+TEST_F(OperatorsAggregateTest, NoGroupbySingleAggregateSum) {
+  this->test_output(_table_wrapper_1_1, {std::make_pair(std::string("b"), Sum)}, {},
+                    "src/test/tables/aggregateoperator/0gb_1agg/sum.tbl", 1);
+}
+
+TEST_F(OperatorsAggregateTest, NoGroupbySingleAggregateAvg) {
+  this->test_output(_table_wrapper_1_1, {std::make_pair(std::string("b"), Avg)}, {},
+                    "src/test/tables/aggregateoperator/0gb_1agg/avg.tbl", 1);
+}
+
+TEST_F(OperatorsAggregateTest, NoGroupbySingleAggregateCount) {
+  this->test_output(_table_wrapper_1_1, {std::make_pair(std::string("b"), Count)}, {},
+                    "src/test/tables/aggregateoperator/0gb_1agg/count.tbl", 1);
+}
+
+TEST_F(OperatorsAggregateTest, OneGroupbyAndNoAggregate) {
+  this->test_output(_table_wrapper_1_1, {}, {std::string("a")},
+                    "src/test/tables/aggregateoperator/groupby_int_1gb_0agg/result.tbl", 1);
+}
+
+TEST_F(OperatorsAggregateTest, TwoGroupbyAndNoAggregate) {
+  this->test_output(_table_wrapper_1_1, {}, {std::string("a"), std::string("b")},
+                    "src/test/tables/aggregateoperator/groupby_int_2gb_0agg/result.tbl", 1);
+}
+
+TEST_F(OperatorsAggregateTest, NoGroupbyAndNoAggregate) {
+  EXPECT_THROW(
+      std::make_shared<Aggregate>(_table_wrapper_1_1_string, std::vector<std::pair<std::string, AggregateFunction>>{},
+                                  std::vector<std::string>{}),
+      std::runtime_error);
+}
+
+/**
+ * Tests for ReferenceColumns
+ */
+
+TEST_F(OperatorsAggregateTest, SingleAggregateMaxOnRef) {
+  auto filtered = std::make_shared<TableScan>(_table_wrapper_1_1, "a", "<", "100");
+  filtered->execute();
+
+  this->test_output(filtered, {std::make_pair(std::string("b"), Max)}, {std::string("a")},
+                    "src/test/tables/aggregateoperator/groupby_int_1gb_1agg/max_filtered.tbl", 1);
+}
+
+TEST_F(OperatorsAggregateTest, TwoGroupbyAndTwoAggregateMinAvgOnRef) {
+  auto filtered = std::make_shared<TableScan>(_table_wrapper_2_2, "a", "<", "100");
+  filtered->execute();
+
+  this->test_output(filtered, {std::make_pair(std::string("c"), Min), std::make_pair(std::string("d"), Avg)},
+                    {std::string("a"), std::string("b")},
+                    "src/test/tables/aggregateoperator/groupby_int_2gb_2agg/min_avg_filtered.tbl", 1);
+}
+
+TEST_F(OperatorsAggregateTest, TwoGroupbySumOnRef) {
+  auto filtered = std::make_shared<TableScan>(_table_wrapper_2_1, "a", "<", "100");
+  filtered->execute();
+
+  this->test_output(filtered, {std::make_pair(std::string("c"), Sum)}, {std::string("a"), std::string("b")},
+                    "src/test/tables/aggregateoperator/groupby_int_2gb_1agg/sum_filtered.tbl", 1);
+}
+
+TEST_F(OperatorsAggregateTest, TwoAggregateSumAvgOnRef) {
+  auto filtered = std::make_shared<TableScan>(_table_wrapper_1_2, "a", "<", "100");
+  filtered->execute();
+
+  this->test_output(filtered, {std::make_pair(std::string("b"), Sum), std::make_pair(std::string("c"), Avg)},
+                    {std::string("a")}, "src/test/tables/aggregateoperator/groupby_int_1gb_2agg/sum_avg_filtered.tbl",
+                    1);
+}
+
+TEST_F(OperatorsAggregateTest, DictionarySingleAggregateMinOnRef) {
+  auto filtered = std::make_shared<TableScan>(_table_wrapper_1_1_dict, "a", "<", "100");
+  filtered->execute();
+
+  this->test_output(filtered, {std::make_pair(std::string("b"), Min)}, {std::string("a")},
+                    "src/test/tables/aggregateoperator/groupby_int_1gb_1agg/min_filtered.tbl", 1);
 }
 
 }  // namespace opossum

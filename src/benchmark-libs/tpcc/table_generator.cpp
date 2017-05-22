@@ -1,6 +1,7 @@
 #include "table_generator.hpp"
 
 #include <functional>
+#include <map>
 #include <memory>
 #include <string>
 #include <utility>
@@ -14,8 +15,8 @@ TableGenerator::TableGenerator() : _random_gen(RandomGenerator()) {}
 // TODO(anybody) chunk sizes and number of chunks might be tuned in generate_XYZ_table
 
 template <typename T>
-std::shared_ptr<opossum::ValueColumn<T>> TableGenerator::add_column(size_t cardinality,
-                                                               const std::function<T(size_t)> &generator_function) {
+std::shared_ptr<opossum::ValueColumn<T>> TableGenerator::add_column(
+    size_t cardinality, const std::function<T(size_t)> &generator_function) {
   tbb::concurrent_vector<T> column(cardinality);
   for (size_t i = 0; i < column.size(); i++) {
     column[i] = generator_function(i);
@@ -91,7 +92,7 @@ std::shared_ptr<opossum::Table> TableGenerator::generate_stock_table() {
   auto table = std::make_shared<opossum::Table>(_chunk_size);
 
   // setup columns
-  table->add_column("S_ID", "int", false);
+  table->add_column("S_I_ID", "int", false);
   table->add_column("S_W_ID", "int", false);
   table->add_column("S_QUANTITY", "int", false);
   table->add_column("S_DIST_01", "string", false);
@@ -391,7 +392,7 @@ std::shared_ptr<opossum::Table> TableGenerator::generate_new_order_table() {
   return table;
 }
 
-void TableGenerator::add_all_tables(opossum::StorageManager &manager) {
+std::shared_ptr<std::map<std::string, std::shared_ptr<opossum::Table>>> TableGenerator::generate_all_tables() {
   auto item_table = generate_items_table();
   auto warehouse_table = generate_warehouse_table();
   auto stock_table = generate_stock_table();
@@ -403,15 +404,17 @@ void TableGenerator::add_all_tables(opossum::StorageManager &manager) {
   auto order_line_table = generate_order_line_table(order_line_counts);
   auto new_order_table = generate_new_order_table();
 
-  manager.add_table("ITEM", std::move(item_table));
-  manager.add_table("WAREHOUSE", std::move(warehouse_table));
-  manager.add_table("STOCK", std::move(stock_table));
-  manager.add_table("DISTRICT", std::move(district_table));
-  manager.add_table("CUSTOMER", std::move(customer_table));
-  manager.add_table("HISTORY", std::move(history_table));
-  manager.add_table("ORDER", std::move(order_table));
-  manager.add_table("ORDER-LINE", std::move(order_line_table));
-  manager.add_table("NEW-ORDER", std::move(new_order_table));
+  return std::make_shared<std::map<std::string, std::shared_ptr<opossum::Table>>>(
+      std::initializer_list<std::map<std::string, std::shared_ptr<opossum::Table>>::value_type>{
+          {"ITEM", std::move(item_table)},
+          {"WAREHOUSE", std::move(warehouse_table)},
+          {"STOCK", std::move(stock_table)},
+          {"DISTRICT", std::move(district_table)},
+          {"CUSTOMER", std::move(customer_table)},
+          {"HISTORY", std::move(history_table)},
+          {"ORDER", std::move(order_table)},
+          {"ORDER-LINE", std::move(order_line_table)},
+          {"NEW-ORDER", std::move(new_order_table)}});
 }
 
 }  // namespace tpcc

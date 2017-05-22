@@ -20,4 +20,5 @@ add_subdirectory(third_party/)
 add_subdirectory(src)
 add_subdirectory(third_party/googletest)
 
-# Useful for printing all c++ files in a directory ´find . -regex ".*/.*\.\(cpp\|hpp\|cc\)" -type f -printf '%P\n'´
+# Useful for printing all c++ files in a directory:
+# find . -type f -name "*.cpp" -o -name "*.hpp" | cut -c 3-
