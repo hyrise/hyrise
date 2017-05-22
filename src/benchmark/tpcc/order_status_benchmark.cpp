@@ -5,10 +5,10 @@
 #include "benchmark/benchmark.h"
 
 #include "../../lib/operators/get_table.hpp"
-#include "../../lib/operators/projection.hpp"
-#include "../../lib/operators/sort.hpp"
 #include "../../lib/operators/limit.hpp"
 #include "../../lib/operators/print.hpp"
+#include "../../lib/operators/projection.hpp"
+#include "../../lib/operators/sort.hpp"
 #include "../../lib/operators/table_scan.hpp"
 #include "../../lib/scheduler/operator_task.hpp"
 
@@ -131,119 +131,88 @@ class TPCCOrderStatusBenchmark : public TPCCBenchmarkFixture {
   }
 };
 
-  BENCHMARK_F(TPCCOrderStatusBenchmark, BM_TPCC_OrderStatus_GetCustomerByName)(benchmark::State &state) {
-    clear_cache();
-    auto c_last = _random_gen.last_name(2000);
-    auto c_d_id = _random_gen.number(1, 10);
-    auto c_w_id = 0;  // there is only one warehouse
+BENCHMARK_F(TPCCOrderStatusBenchmark, BM_TPCC_OrderStatus_GetCustomerByName)(benchmark::State &state) {
+  clear_cache();
+  auto c_last = _random_gen.last_name(2000);
+  auto c_d_id = _random_gen.number(1, 10);
+  auto c_w_id = 0;  // there is only one warehouse
 
-    while (state.KeepRunning()) {
-      auto get_customer_tasks = get_customer_by_name(c_last, c_d_id, c_w_id);
-      schedule_tasks_and_wait(get_customer_tasks);
-    }
+  while (state.KeepRunning()) {
+    auto get_customer_tasks = get_customer_by_name(c_last, c_d_id, c_w_id);
+    schedule_tasks_and_wait(get_customer_tasks);
   }
+}
 
-  BENCHMARK_F(TPCCOrderStatusBenchmark, BM_TPCC_OrderStatus_GetCustomerById)(benchmark::State &state) {
-    clear_cache();
+BENCHMARK_F(TPCCOrderStatusBenchmark, BM_TPCC_OrderStatus_GetCustomerById)(benchmark::State &state) {
+  clear_cache();
+  auto c_last = _random_gen.last_name(2000);
+  auto c_d_id = _random_gen.number(1, 10);
+  auto c_w_id = 0;  // there is only one warehouse
+  auto c_id = _random_gen.nurand(1023, 1, 3000);
+
+  while (state.KeepRunning()) {
+    auto get_customer_tasks = get_customer_by_id(c_id, c_d_id, c_w_id);
+    schedule_tasks_and_wait(get_customer_tasks);
+  }
+}
+
+BENCHMARK_F(TPCCOrderStatusBenchmark, BM_TPCC_OrderStatus_GetOrder)(benchmark::State &state) {
+  clear_cache();
+  auto c_last = _random_gen.last_name(2000);
+
+  while (state.KeepRunning()) {
+    auto get_order_tasks = get_orders();
+    schedule_tasks_and_wait(get_order_tasks);
+  }
+}
+
+// skip due to long execution times
+BENCHMARK_F(TPCCOrderStatusBenchmark, BM_TPCC_OrderStatus_GetOrderLine)(benchmark::State &state) {
+  clear_cache();
+  auto c_last = _random_gen.last_name(2000);
+  auto c_d_id = _random_gen.number(1, 10);
+  auto c_w_id = 0;  // there is only one warehouse
+
+  while (state.KeepRunning()) {
+    auto get_order_line_tasks = get_order_lines(0, c_d_id, c_w_id);
+    schedule_tasks_and_wait(get_order_line_tasks);
+  }
+}
+
+BENCHMARK_F(TPCCOrderStatusBenchmark, BM_TPCC_OrderStatus)(benchmark::State &state) {
+  clear_cache();
+
+  while (state.KeepRunning()) {
+    // pass in i>1000 to trigger random value generation
     auto c_last = _random_gen.last_name(2000);
     auto c_d_id = _random_gen.number(1, 10);
     auto c_w_id = 0;  // there is only one warehouse
     auto c_id = _random_gen.nurand(1023, 1, 3000);
 
-    while (state.KeepRunning()) {
+    // query by last name 6 out of 10 times
+    if (_random_gen.number(0, 10) < 6) {
+      auto get_customer_tasks = get_customer_by_name(c_last, c_d_id, c_w_id);
+      schedule_tasks_and_wait(get_customer_tasks);
+
+      auto num_names = get_customer_tasks.back()->get_operator()->get_output()->row_count();
+      assert(num_names > 0);
+
+      auto customer =
+          get_from_table_at_row(get_customer_tasks.back()->get_operator()->get_output(), ceil(num_names / 2));
+    } else {
       auto get_customer_tasks = get_customer_by_id(c_id, c_d_id, c_w_id);
       schedule_tasks_and_wait(get_customer_tasks);
+
+      assert(get_customer_tasks.back()->get_operator()->get_output()->row_count() == 1);
+      auto customer = get_from_table_at_row(get_customer_tasks.back()->get_operator()->get_output(), 0);
     }
+
+    auto get_order_tasks = get_orders();
+    schedule_tasks_and_wait(get_order_tasks);
+
+    auto get_order_line_tasks = get_order_lines(0, c_d_id, c_w_id);
+    schedule_tasks_and_wait(get_order_line_tasks);
   }
-
-  BENCHMARK_F(TPCCOrderStatusBenchmark, BM_TPCC_OrderStatus_GetOrder)(benchmark::State &state) {
-    clear_cache();
-    auto c_last = _random_gen.last_name(2000);
-
-    while (state.KeepRunning()) {
-      auto get_order_tasks = get_orders();
-      schedule_tasks_and_wait(get_order_tasks);
-    }
-  }
-
-// skip due to long execution times
-  BENCHMARK_F(TPCCOrderStatusBenchmark, BM_TPCC_OrderStatus_GetOrderLine)(benchmark::State &state) {
-    clear_cache();
-    auto c_last = _random_gen.last_name(2000);
-    auto c_d_id = _random_gen.number(1, 10);
-    auto c_w_id = 0;  // there is only one warehouse
-
-    while (state.KeepRunning()) {
-      auto get_order_line_tasks = get_order_lines(0, c_d_id, c_w_id);
-
-      for(auto task : get_order_line_tasks) {
-        clock_t begin = clock();
-        task->get_operator()->execute();
-        clock_t end = clock();
-        double elapsed_secs = double(end - begin) / CLOCKS_PER_SEC;
-        std::cerr << elapsed_secs << std::endl;
-      }
-//      schedule_tasks_and_wait(get_order_line_tasks);
-    }
-  }
-
-//BENCHMARK_F(TPCCOrderStatusBenchmark, BM_TPCC_OrderStatus)(benchmark::State &state) {
-//  clear_cache();
-//
-//  while (state.KeepRunning()) {
-//    // pass in i>1000 to trigger random value generation
-//    auto c_last = _random_gen.last_name(2000);
-//    auto c_d_id = _random_gen.number(1, 10);
-//    auto c_w_id = 0;  // there is only one warehouse
-//    auto c_id = _random_gen.nurand(1023, 1, 3000);
-//
-//    // query by last name 6 out of 10 times
-//    if (_random_gen.number(0, 10) < 6) {
-//      auto get_customer_tasks = get_customer_by_name(c_last, c_d_id, c_w_id);
-//      schedule_tasks_and_wait(get_customer_tasks);
-//      std::cerr << "Finished get customer tasks" << std::endl;
-//
-//      auto num_names = get_customer_tasks.back()->get_operator()->get_output()->row_count();
-//      assert(num_names > 0);
-//      std::cerr << "Num_names: " << num_names << std::endl;
-//
-//      auto customer = get_from_table_at_row(get_customer_tasks.back()->get_operator()->get_output(),
-//                                            ceil(num_names / 2));
-//      std::cerr << "Customer is the following:" << std::endl;
-//      std::cerr << "(C_BALANCE, C_FIRST, C_MIDDLE, C_LAST)" << std::endl;
-//      std::ostringstream oss;
-//      for (auto val : *customer) {
-//        oss << boost::lexical_cast<std::string>(val) << " - ";
-//      }
-//      std::cerr << oss.str() << std::endl;
-//    } else {
-//      auto get_customer_tasks = get_customer_by_id(c_id, c_d_id, c_w_id);
-//      schedule_tasks_and_wait(get_customer_tasks);
-//      std::cerr << "Finished get customer tasks" << std::endl;
-//
-//      assert(get_customer_tasks.back()->get_operator()->get_output()->row_count() == 1);
-//      std::cerr << "Rowcount: " << get_customer_tasks.back()->get_operator()->get_output()->row_count() << std::endl;
-//      auto customer = get_from_table_at_row(get_customer_tasks.back()->get_operator()->get_output(), 0);
-//      std::cerr << "Customer is the following:" << std::endl;
-//      std::cerr << "(C_BALANCE, C_FIRST, C_MIDDLE, C_LAST)" << std::endl;
-//      std::ostringstream oss;
-//      for (auto val : *customer) {
-//        oss << boost::lexical_cast<std::string>(val) << " - ";
-//      }
-//      std::cerr << oss.str() << std::endl;
-//    }
-//
-//    auto get_order_tasks = get_orders();
-//    schedule_tasks_and_wait(get_order_tasks);
-//    std::cerr << "Finished get order tasks" << std::endl;
-//
-//    auto get_order_line_tasks = get_order_lines(0, c_d_id, c_w_id);
-//    schedule_tasks_and_wait(get_order_line_tasks);
-//    std::cerr << "Finished get order line tasks" << std::endl;
-//
-////    auto print = std::make_shared<Print>(get_order_line_tasks.back()->get_operator(), std::cerr);
-////    print->execute();
-//  }
-//}
+}
 
 }  // namespace opossum
