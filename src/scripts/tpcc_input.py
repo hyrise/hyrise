@@ -1,3 +1,4 @@
+import datetime
 import json
 import random
 from tpcc_constants import *
@@ -28,7 +29,7 @@ def decode_c_last(abc):
 def generate_new_order():
     new_order = {
         "w_id": 0, # TODO: support multiple warehouses
-        "d_id": random.randint(0, NUM_DISTRICTS - 1),
+        "d_id": random.randint(0, NUM_DISTRICTS_PER_WAREHOUSE - 1),
         "c_id": random.randint(0, NUM_CUSTOMERS_PER_DISTRICT - 1),
         "o_entry_d": "2017-05-01",
         "ol": []
@@ -54,12 +55,12 @@ def generate_new_order():
 
         new_order["ol"].append(order_line)
 
-    return ("NewOrder", new_order)
+    return "NewOrder", new_order
 
 def generate_order_status():
     order_status= {
         "w_id": 0, # TODO: support multiple warehouses
-        "d_id": random.randint(0, NUM_DISTRICTS - 1)
+        "d_id": random.randint(0, NUM_DISTRICTS_PER_WAREHOUSE - 1)
     }
 
     order_status["case"] = 2 if random.randint(1, 100) <= 60 else 1
@@ -69,16 +70,23 @@ def generate_order_status():
     else: # Based on customer last name
         order_status["c_last"] = decode_c_last(nurand(255, 0, 999))
 
-    return ("OrderStatus", order_status)
+    return "OrderStatus", order_status
+
+def generate_delivery():
+    delivery = {
+        "w_id": 0,
+        "o_carrier_id": random.randint(MIN_CARRIER_ID, MAX_CARRIER_ID),
+        "ol_delivery_d": datetime.datetime.now().strftime('%Y-%m-%d')
+    }
+
+    return "Delivery", delivery
 
 if __name__ == "__main__":
     transactions = []
 
     transactions.append(generate_new_order())
     transactions.append(generate_order_status())
-
-    #for o in range(1): input_dict["NewOrders"].append(generate_new_order())
-    #for o in range(1): input_dict["OrderStatus"].append(c)
+    transactions.append(generate_delivery())
 
     with open("tpcc_input.json", "w") as json_file:
         json.dump(transactions, json_file)

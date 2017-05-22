@@ -4,6 +4,17 @@ import json
 from sqlitedriver import TXN_QUERIES as tpcc_queries
 from tpcc_constants import *
 
+TPCC_TABLES = {
+    ("WAREHOUSE","WAREHOUSE"),
+    ("DISTRICT","DISTRICT"),
+    ("CUSTOMER","CUSTOMER"),
+    ("ORDER", "ORDERS"),
+    ("NEW-ORDER", "NEW_ORDER"),
+    ("ITEM","ITEM"),
+    ("STOCK","STOCK"),
+    ("ORDER-LINE", "ORDER_LINE")
+}
+
 def execute_sql(cur, statement, params=()):
     #print(statement, params)
     cur.execute(statement, params)
@@ -45,18 +56,31 @@ def init_db():
     conn = sqlite3.connect(':memory:')
     cur = conn.cursor()
 
-    csv_path = "/home/moritz/Coding/zweirise/"
+    csv_path = "."
 
-    load_table(cur, csv_path, "WAREHOUSE")
-    load_table(cur, csv_path, "DISTRICT")
-    load_table(cur, csv_path, "CUSTOMER")
-    load_table(cur, csv_path, "ORDER", "ORDERS")
-    load_table(cur, csv_path, "NEW-ORDER", "NEW_ORDER")
-    load_table(cur, csv_path, "ITEM")
-    load_table(cur, csv_path, "STOCK")
-    load_table(cur, csv_path, "ORDER-LINE", "ORDER_LINE")
+    for (file_prefix, table_name) in TPCC_TABLES:
+        load_table(cur, csv_path, file_prefix, table_name)
 
     return cur
+
+def dump_db(cur):
+    def dump_table(cur, dir, table_name, file_prefix):
+        csv_path = "{}/RESULT_{}.csv".format(dir, file_prefix)
+
+        execute_sql(cur, "SELECT * FROM {}".format(table_name))
+        rows = cur.fetchall()
+
+        print('Dumping {} Rows from \'{}\''.format(len(rows), table_name))
+
+        with open(csv_path, 'w') as csv_file:
+            csv_writer = csv.writer(csv_file)
+
+            for row in rows:
+                csv_writer.writerow(row)
+
+
+    for (file_prefix, table_name) in TPCC_TABLES:
+        dump_table(cur, ".", table_name, file_prefix)
 
 def process_new_order(cur, params):
     new_order_queries = tpcc_queries["NEW_ORDER"]
@@ -188,11 +212,47 @@ def process_order_status(cur, params):
         "OrderLines": order_lines
     }
 
+def process_delivery(cur, params):
+    q = tpcc_queries["DELIVERY"]
+
+    w_id = params["w_id"]
+    o_carrier_id = params["o_carrier_id"]
+    ol_delivery_d = params["ol_delivery_d"]
+
+    districts = []
+    for d_id in range(1, NUM_DISTRICTS_PER_WAREHOUSE + 1):
+        execute_sql(cur, q["getNewOrder"], (d_id, w_id))
+        new_order = cur.fetchone()
+        if new_order == None:
+            continue
+
+        no_o_id = new_order[0]
+
+        execute_sql(cur, q["getCId"], [no_o_id, d_id, w_id])
+        c_id = cur.fetchone()[0]
+
+        execute_sql(cur, q["sumOLAmount"], [no_o_id, d_id, w_id])
+        ol_total = cur.fetchone()[0]
+
+        execute_sql(cur, q["deleteNewOrder"], [d_id, w_id, no_o_id])
+        execute_sql(cur, q["updateOrders"], [o_carrier_id, no_o_id, d_id, w_id])
+        execute_sql(cur, q["updateOrderLine"], [ol_delivery_d, no_o_id, d_id, w_id])
+        execute_sql(cur, q["updateCustomer"], [ol_total, c_id, d_id, w_id])
+
+        districts.append((d_id, no_o_id, c_id, ol_total))
+    ## FOR
+
+
+    return {
+        'Districts': districts
+    }
+
+
 if __name__ == "__main__":
     cur = init_db()
 
-    tpcc_input_path = "/home/moritz/Coding/zweirise/src/scripts/tpcc_input.json"
-    tpcc_output_path = "/home/moritz/Coding/zweirise/src/scripts/tpcc_output.json"
+    tpcc_input_path = "tpcc_input.json"
+    tpcc_output_path = "tpcc_output.json"
 
     query_results = []
 
@@ -201,7 +261,8 @@ if __name__ == "__main__":
 
     transaction_dispatch = {
         "NewOrder": process_new_order,
-        "OrderStatus": process_order_status
+        "OrderStatus": process_order_status,
+        "Delivery": process_delivery
     }
 
     for transaction_type, params in tpcc_input:
@@ -209,6 +270,10 @@ if __name__ == "__main__":
 
     with open(tpcc_output_path, "w") as tpcc_output_file:
         json.dump(query_results, tpcc_output_file)
+
+    dump_db(cur)
+
+
 
 
 
