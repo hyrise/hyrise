@@ -1,15 +1,13 @@
 #include "table_generator.hpp"
 
 #include <functional>
-#include <memory>
 #include <string>
-#include <utility>
 
 #include "../lib/storage/value_column.hpp"
 
 namespace tpch {
 
-TableGenerator::TableGenerator() : _random_gen(RandomGenerator()) {}
+TableGenerator::TableGenerator() : _random_gen(RandomGenerator()), _text_field_gen(TextFieldGenerator(_random_gen)) {}
 
 // TODO(anybody) chunk sizes and number of chunks might be tuned in generate_XYZ_table
 
@@ -40,17 +38,23 @@ std::shared_ptr<opossum::Table> TableGenerator::generate_suppliers_table() {
   // S_SUPPKEY
   chunk.add_column(add_column<int>(table_size, [](size_t i) { return i; }));
   // S_NAME
-  chunk.add_column(add_column<std::string>(table_size, [](size_t) { return ""; })); // TODO (anybody)
+  chunk.add_column(add_column<std::string>(table_size, [&](size_t i) {
+    return "Supplier#" + _text_field_gen.fixed_length(i, 9);
+  }));
   // S_ADDRESS
-  chunk.add_column(add_column<std::string>(table_size, [](size_t) { return ""; })); // TODO (anybody)
+  chunk.add_column(add_column<std::string>(table_size, [&](size_t) { return _text_field_gen.v_string(10, 40); }));
   // S_NATIONKEY
-  chunk.add_column(add_column<int>(table_size, [&](size_t) { return _random_gen.number(0, 24); }));
+  auto nationkeys = add_column<int>(table_size, [&](size_t) { return _random_gen.number(0, 24); });
+  chunk.add_column(nationkeys);
   // S_PHONE
-  chunk.add_column(add_column<std::string>(table_size, [](size_t) { return ""; })); // TODO (anybody)
+  chunk.add_column(add_column<std::string>(table_size, [&](size_t i) { return _text_field_gen.phone_number((*nationkeys).get(i)); }));
   // S_ACCTBAL
   chunk.add_column(add_column<float>(table_size, [&](size_t) { return _random_gen.number(-99999, 999999) / 100.f; }));
   // S_COMMENT
-  chunk.add_column(add_column<std::string>(table_size, [](size_t) { return ""; })); // TODO (anybody)
+  // TODO (anybody) add 5% exceptions
+  chunk.add_column(add_column<std::string>(table_size, [&](size_t) {
+    return _text_field_gen.text_string(25,100);
+  }));
 
   table->add_chunk(std::move(chunk));
 

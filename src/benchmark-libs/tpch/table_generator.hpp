@@ -5,6 +5,7 @@
 #include <string>
 #include <vector>
 #include "random_generator.hpp"
+#include "text_field_generator.hpp"
 #include "../lib/storage/storage_manager.hpp"
 #include "../lib/storage/table.hpp"
 
@@ -31,5 +32,6 @@ class TableGenerator {
   std::shared_ptr<opossum::ValueColumn<T>> add_column(size_t cardinality, const std::function<T(size_t)> &generator_function);
 
   RandomGenerator _random_gen;
+  TextFieldGenerator _text_field_gen;
 };
 }  // namespace tpch
