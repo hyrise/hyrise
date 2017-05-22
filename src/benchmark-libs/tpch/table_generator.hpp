@@ -29,7 +29,7 @@ class TableGenerator {
   const size_t _scale_factor = 1;
 
   const size_t _supplier_size = 10000;  // * _scale_factor
-  const size_t _part_size = 200000;  // * _scale_factor
+  const size_t _part_size = 200000;     // * _scale_factor
 
  protected:
   template <typename T>

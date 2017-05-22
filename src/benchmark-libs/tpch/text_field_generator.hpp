@@ -3,6 +3,7 @@
 #include <iomanip>
 #include <sstream>
 #include <string>
+#include <vector>
 #include "grammar.hpp"
 #include "random_generator.hpp"
 
@@ -76,7 +77,6 @@ class TextFieldGenerator {
     return s;
   }
 
-
   std::string part_type() {
     std::string s;
     s += word(part_type_syllables_1) + " ";
@@ -85,9 +85,7 @@ class TextFieldGenerator {
     return s;
   }
 
-  std::string part_container() {
-    return word(part_container_syllables_1) + " " + word(part_container_syllables_2);
-  }
+  std::string part_container() { return word(part_container_syllables_1) + " " + word(part_container_syllables_2); }
 
  protected:
   std::string word(std::vector<std::string> word_vector) {
@@ -99,27 +97,25 @@ class TextFieldGenerator {
   const std::string _text;
 
   const std::vector<std::string> part_name_words = {
-    "almond", "antique", "aquamarine", "azure", "beige", "bisque", "black", "blanched", "blue",
-    "blush", "brown", "burlywood", "burnished", "chartreuse", "chiffon", "chocolate", "coral",
-    "cornflower", "cornsilk", "cream", "cyan", "dark", "deep", "dim", "dodger", "drab", "firebrick",
-    "floral", "forest", "frosted", "gainsboro", "ghost", "goldenrod", "green", "grey", "honeydew",
-    "hot", "indian", "ivory", "khaki", "lace", "lavender", "lawn", "lemon", "light", "lime", "linen",
-    "magenta", "maroon", "medium", "metallic", "midnight", "mint", "misty", "moccasin", "navajo",
-    "navy", "olive", "orange", "orchid", "pale", "papaya", "peach", "peru", "pink", "plum", "powder",
-    "puff", "purple", "red", "rose", "rosy", "royal", "saddle", "salmon", "sandy", "seashell", "sienna",
-    "sky", "slate", "smoke", "snow", "spring", "steel", "tan", "thistle", "tomato", "turquoise", "violet",
-    "wheat", "white", "yellow"};
+      "almond",    "antique",    "aquamarine", "azure",     "beige",     "bisque",     "black",     "blanched",
+      "blue",      "blush",      "brown",      "burlywood", "burnished", "chartreuse", "chiffon",   "chocolate",
+      "coral",     "cornflower", "cornsilk",   "cream",     "cyan",      "dark",       "deep",      "dim",
+      "dodger",    "drab",       "firebrick",  "floral",    "forest",    "frosted",    "gainsboro", "ghost",
+      "goldenrod", "green",      "grey",       "honeydew",  "hot",       "indian",     "ivory",     "khaki",
+      "lace",      "lavender",   "lawn",       "lemon",     "light",     "lime",       "linen",     "magenta",
+      "maroon",    "medium",     "metallic",   "midnight",  "mint",      "misty",      "moccasin",  "navajo",
+      "navy",      "olive",      "orange",     "orchid",    "pale",      "papaya",     "peach",     "peru",
+      "pink",      "plum",       "powder",     "puff",      "purple",    "red",        "rose",      "rosy",
+      "royal",     "saddle",     "salmon",     "sandy",     "seashell",  "sienna",     "sky",       "slate",
+      "smoke",     "snow",       "spring",     "steel",     "tan",       "thistle",    "tomato",    "turquoise",
+      "violet",    "wheat",      "white",      "yellow"};
 
-  const std::vector<std::string> part_type_syllables_1 = {
-    "STANDARD", "SMALL", "MEDIUM", "LARGE", "ECONOMY", "PROMO"};
-  const std::vector<std::string> part_type_syllables_2 = {
-    "ANODIZED", "BURNISHED", "PLATED", "POLISHED", "BRUSHED"};
-  const std::vector<std::string> part_type_syllables_3 = {
-    "TIN", "NICKEL", "BRASS", "STEEL", "COPPER"};
+  const std::vector<std::string> part_type_syllables_1 = {"STANDARD", "SMALL", "MEDIUM", "LARGE", "ECONOMY", "PROMO"};
+  const std::vector<std::string> part_type_syllables_2 = {"ANODIZED", "BURNISHED", "PLATED", "POLISHED", "BRUSHED"};
+  const std::vector<std::string> part_type_syllables_3 = {"TIN", "NICKEL", "BRASS", "STEEL", "COPPER"};
 
-  const std::vector<std::string> part_container_syllables_1 = {
-    "SM", "LG", "MED", "JUMBO", "WRAP"};
-  const std::vector<std::string> part_container_syllables_2 = {
-    "CASE", "BOX", "BAG", "JAR", "PKG", "PACK", "CAN", "DRUM"};
+  const std::vector<std::string> part_container_syllables_1 = {"SM", "LG", "MED", "JUMBO", "WRAP"};
+  const std::vector<std::string> part_container_syllables_2 = {"CASE", "BOX",  "BAG", "JAR",
+                                                               "PKG",  "PACK", "CAN", "DRUM"};
 };
 }  // namespace tpch

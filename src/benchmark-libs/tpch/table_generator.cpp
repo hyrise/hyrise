@@ -4,6 +4,7 @@
 #include <memory>
 #include <string>
 #include <utility>
+#include <vector>
 
 #include "../lib/storage/value_column.hpp"
 
@@ -104,7 +105,8 @@ std::shared_ptr<opossum::Table> TableGenerator::generate_parts_table() {
   }
   chunk.add_column(add_column<std::string>(table_size, [&](size_t i) { return "Manufacturer#" + manufacturers[i]; }));
   // P_BRAND
-  chunk.add_column(add_column<std::string>(table_size, [&](size_t i) { return "Brand#" + manufacturers[i] + std::to_string(_random_gen.number(1, 5)); }));
+  chunk.add_column(add_column<std::string>(
+      table_size, [&](size_t i) { return "Brand#" + manufacturers[i] + std::to_string(_random_gen.number(1, 5)); }));
   // P_TYPE
   chunk.add_column(add_column<std::string>(table_size, [&](size_t) { return _text_field_gen.part_type(); }));
   // P_SIZE
@@ -112,7 +114,8 @@ std::shared_ptr<opossum::Table> TableGenerator::generate_parts_table() {
   // P_CONTAINER
   chunk.add_column(add_column<std::string>(table_size, [&](size_t) { return _text_field_gen.part_container(); }));
   // P_RETAILPRICE
-  chunk.add_column(add_column<float>(table_size, [](size_t i) { return (90000.f + (i % 200001 )/10.f + 100.f * (i % 1000))/100.f; }));
+  chunk.add_column(add_column<float>(
+      table_size, [](size_t i) { return (90000.f + (i % 200001) / 10.f + 100.f * (i % 1000)) / 100.f; }));
   // P_COMMENT
   chunk.add_column(add_column<std::string>(table_size, [&](size_t) { return _text_field_gen.text_string(5, 22); }));
 
