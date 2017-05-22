@@ -124,12 +124,47 @@ std::shared_ptr<opossum::Table> TableGenerator::generate_parts_table() {
   return table;
 }
 
+std::shared_ptr<opossum::Table> TableGenerator::generate_partsupps_table() {
+  auto table = std::make_shared<opossum::Table>(_chunk_size);
+
+  // setup columns
+  table->add_column("PS_PARTKEY", "int", false);
+  table->add_column("PS_SUPPKEY", "int", false);
+  table->add_column("PS_AVAILQTY", "int", false);
+  table->add_column("PS_SUPPLYCOST", "float", false);
+  table->add_column("PS_COMMENT", "string", false);
+
+  auto chunk = opossum::Chunk();
+  size_t table_size = _scale_factor * _part_size * _partsupp_size;
+  // PS_PARTKEY
+  chunk.add_column(add_column<int>(table_size, [&](size_t i) { return i % (_scale_factor * _part_size); }));
+  // PS_SUPPKEY
+  chunk.add_column(add_column<int>(table_size, [&](size_t i) {
+    size_t ps_partkey = i % (_scale_factor * _part_size);
+    size_t j = i / (_scale_factor * _part_size);
+    size_t s = _scale_factor * _supplier_size;
+    return (ps_partkey + (j * (s / 4 + ps_partkey / s))) % s;
+  }));
+  // PS_AVAILQTY
+  chunk.add_column(add_column<int>(table_size, [&](size_t) { return _random_gen.number(1, 9999); }));
+  // PS_SUPPLYCOST
+  chunk.add_column(add_column<float>(table_size, [&](size_t) { return _random_gen.number(100, 100000) / 100.f; }));
+  // PS_COMMENT
+  chunk.add_column(add_column<std::string>(table_size, [&](size_t) { return _text_field_gen.text_string(49, 198); }));
+
+  table->add_chunk(std::move(chunk));
+
+  return table;
+}
+
 void TableGenerator::add_all_tables(opossum::StorageManager &manager) {
   auto supplier_table = generate_suppliers_table();
   auto parts_table = generate_parts_table();
+  auto partsupps_table = generate_partsupps_table();
 
   manager.add_table("SUPPLIER", std::move(supplier_table));
   manager.add_table("PARTS", std::move(parts_table));
+  manager.add_table("PARTSUPPS", std::move(partsupps_table));
 }
 
 }  // namespace tpch
