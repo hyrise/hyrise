@@ -12,7 +12,7 @@
 #include "table.hpp"
 #include "value_column.hpp"
 
-#include "../types.hpp"
+#include "types.hpp"
 
 namespace opossum {
 

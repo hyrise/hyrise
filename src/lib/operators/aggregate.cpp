@@ -7,6 +7,8 @@
 #include <utility>
 #include <vector>
 
+#include "resolve_type.hpp"
+
 namespace opossum {
 
 // disable string columns for aggregate functions

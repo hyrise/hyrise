@@ -7,6 +7,10 @@
 
 #include "concurrency/transaction_context.hpp"
 #include "storage/storage_manager.hpp"
+#include "storage/value_column.hpp"
+
+#include "resolve_type.hpp"
+#include "type_cast.hpp"
 
 namespace opossum {
 

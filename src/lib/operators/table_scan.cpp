@@ -4,6 +4,8 @@
 #include <memory>
 #include <string>
 
+#include "resolve_type.hpp"
+
 namespace opossum {
 
 TableScan::TableScan(const std::shared_ptr<AbstractOperator> in, const std::string& column_name, const std::string& op,

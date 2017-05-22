@@ -7,11 +7,13 @@
 #include <utility>
 #include <vector>
 
+#include "resolve_type.hpp"
 #include "storage/chunk.hpp"
 #include "storage/dictionary_column.hpp"
 #include "storage/fitted_attribute_vector.hpp"
 #include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
+#include "storage/value_column.hpp"
 #include "types.hpp"
 
 namespace opossum {

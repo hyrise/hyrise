@@ -1,14 +1,11 @@
 #pragma once
 
-#include <functional>
-#include <map>
 #include <memory>
 #include <string>
 #include <utility>
 #include <vector>
 
 #include "abstract_read_only_operator.hpp"
-#include "storage/reference_column.hpp"
 
 namespace opossum {
 

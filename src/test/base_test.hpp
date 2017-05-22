@@ -2,14 +2,19 @@
 
 #include <memory>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "../lib/storage/dictionary_compression.hpp"
 #include "../lib/storage/table.hpp"
+#include "../lib/storage/value_column.hpp"
 #include "../lib/types.hpp"
+
 #include "gtest/gtest.h"
 
 namespace opossum {
+
+class Table;
 
 using Matrix = std::vector<std::vector<AllTypeVariant>>;
 
@@ -42,10 +47,8 @@ class BaseTest : public ::testing::Test {
   // creates a dictionary column with the given type and values
   template <class T>
   static std::shared_ptr<BaseColumn> create_dict_column_by_type(const std::string &type, const std::vector<T> &values) {
-    auto value_column = make_shared_by_column_type<BaseColumn, ValueColumn>(type);
-    for (const auto &value : values) {
-      value_column->append(value);
-    }
+    auto vector_values = tbb::concurrent_vector<T>(values.begin(), values.end());
+    auto value_column = std::make_shared<ValueColumn<T>>(std::move(vector_values));
     return DictionaryCompression::compress_column(type, value_column);
   }
 
