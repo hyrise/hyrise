@@ -9,12 +9,10 @@ target_link_libraries(opossumServer opossum boost_program_options)
 add_executable(
     opossumPlayground
     playground.cpp
-    ${PROJECT_SOURCE_DIR}/src/benchmark/tpcc/tpcc_table_generator.cpp
-    ${PROJECT_SOURCE_DIR}/src/benchmark/tpcc/tpcc_table_generator.hpp
 )
 target_link_libraries(opossumPlayground opossum)
 
-# Configure tpcc playground
+# Configure tpc playground
 add_executable(
         opossumPlaygroundTPCC
         playgroundTPCCBenchmark.cpp

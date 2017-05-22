@@ -86,4 +86,4 @@ class RandomGenerator {
   std::default_random_engine engine;
   const size_t _c = number(0, 255);
 };
-}  // namespace tpcc
+}  // namespace tpc
