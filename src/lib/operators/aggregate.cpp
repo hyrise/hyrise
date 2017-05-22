@@ -250,25 +250,25 @@ std::shared_ptr<const Table> Aggregate::on_execute() {
     auto column_id = _aggregate_column_ids[column_index];
     auto type_string = input_table_left()->column_type(column_id);
 
-    hana::for_each(column_types, [&](auto x) {
+    hana::for_each(column_types, [&, this](auto x) {
       if (std::string(hana::first(x)) == type_string) {
         using column_type = typename decltype(+hana::second(x))::type;
 
         switch (aggregate.second) {
           case Min:
-            _write_aggregate_output<column_type, Min>(column_index);
+            this->_write_aggregate_output<column_type, Min>(column_index);
             return;
           case Max:
-            _write_aggregate_output<column_type, Max>(column_index);
+            this->_write_aggregate_output<column_type, Max>(column_index);
             return;
           case Sum:
-            _write_aggregate_output<column_type, Sum>(column_index);
+            this->_write_aggregate_output<column_type, Sum>(column_index);
             return;
           case Avg:
-            _write_aggregate_output<column_type, Avg>(column_index);
+            this->_write_aggregate_output<column_type, Avg>(column_index);
             return;
           case Count:
-            _write_aggregate_output<column_type, Count>(column_index);
+            this->_write_aggregate_output<column_type, Count>(column_index);
             return;
         }
       }

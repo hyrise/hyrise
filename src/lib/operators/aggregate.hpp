@@ -60,11 +60,11 @@ class Aggregate : public AbstractReadOnlyOperator {
   uint8_t num_in_tables() const override;
   uint8_t num_out_tables() const override;
 
- protected:
-  std::shared_ptr<const Table> on_execute() override;
-
   template <typename ColumnType, AggregateFunction function>
   void _write_aggregate_output(ColumnID column_index);
+
+ protected:
+  std::shared_ptr<const Table> on_execute() override;
 
   // template <typename AggregateType, AggregateFunction func>
   // void _write_aggregate_values(tbb::concurrent_vector<AggregateType> &values,
