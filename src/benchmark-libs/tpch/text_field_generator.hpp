@@ -87,6 +87,8 @@ class TextFieldGenerator {
 
   std::string part_container() { return word(part_container_syllables_1) + " " + word(part_container_syllables_2); }
 
+  std::string customer_segment() { return word(customer_segments); }
+
  protected:
   std::string word(std::vector<std::string> word_vector) {
     auto i = _random_gen.number(0, word_vector.size() - 1);
@@ -117,5 +119,7 @@ class TextFieldGenerator {
   const std::vector<std::string> part_container_syllables_1 = {"SM", "LG", "MED", "JUMBO", "WRAP"};
   const std::vector<std::string> part_container_syllables_2 = {"CASE", "BOX",  "BAG", "JAR",
                                                                "PKG",  "PACK", "CAN", "DRUM"};
+
+  const std::vector<std::string> customer_segments = {"AUTOMOBILE", "BUILDING", "FURNITURE", "MACHINERY", "HOUSEHOLD"};
 };
 }  // namespace tpch

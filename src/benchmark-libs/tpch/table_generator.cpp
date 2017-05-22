@@ -157,14 +157,56 @@ std::shared_ptr<opossum::Table> TableGenerator::generate_partsupps_table() {
   return table;
 }
 
+std::shared_ptr<opossum::Table> TableGenerator::generate_customers_table() {
+  auto table = std::make_shared<opossum::Table>(_chunk_size);
+
+  // setup columns
+  table->add_column("C_CUSTKEY", "int", false);
+  table->add_column("C_NAME", "string", false);
+  table->add_column("C_ADDRESS", "string", false);
+  table->add_column("C_NATIONKEY", "int", false);
+  table->add_column("C_PHONE", "string", false);
+  table->add_column("C_ACCTBAL", "float", false);
+  table->add_column("C_MKTSEGMENT", "string", false);
+  table->add_column("C_COMMENT", "string", false);
+
+  auto chunk = opossum::Chunk();
+  size_t table_size = _scale_factor * _customer_size;
+  // C_CUSTKEY
+  chunk.add_column(add_column<int>(table_size, [](size_t i) { return i; }));
+  // C_NAME
+  chunk.add_column(
+      add_column<std::string>(table_size, [&](size_t i) { return "Customer#" + _text_field_gen.fixed_length(i, 9); }));
+  // C_ADDRESS
+  chunk.add_column(add_column<std::string>(table_size, [&](size_t) { return _text_field_gen.v_string(10, 40); }));
+  // C_NATIONKEY
+  auto nationkeys = add_column<int>(table_size, [&](size_t) { return _random_gen.number(0, 24); });
+  chunk.add_column(nationkeys);
+  // C_PHONE
+  chunk.add_column(add_column<std::string>(
+      table_size, [&](size_t i) { return _text_field_gen.phone_number((*nationkeys).get(i)); }));
+  // C_ACCTBAL
+  chunk.add_column(add_column<float>(table_size, [&](size_t) { return _random_gen.number(-99999, 999999) / 100.f; }));
+  // C_MKTSEGMENT
+  chunk.add_column(add_column<std::string>(table_size, [&](size_t) { return _text_field_gen.customer_segment(); }));
+  // C_COMMENT
+  chunk.add_column(add_column<std::string>(table_size, [&](size_t) { return _text_field_gen.text_string(29, 116); }));
+
+  table->add_chunk(std::move(chunk));
+
+  return table;
+}
+
 void TableGenerator::add_all_tables(opossum::StorageManager &manager) {
   auto supplier_table = generate_suppliers_table();
   auto parts_table = generate_parts_table();
   auto partsupps_table = generate_partsupps_table();
+  auto customers_table = generate_customers_table();
 
   manager.add_table("SUPPLIER", std::move(supplier_table));
-  manager.add_table("PARTS", std::move(parts_table));
-  manager.add_table("PARTSUPPS", std::move(partsupps_table));
+  manager.add_table("PART", std::move(parts_table));
+  manager.add_table("PARTSUPP", std::move(partsupps_table));
+  manager.add_table("CUSTOMER", std::move(customers_table));
 }
 
 }  // namespace tpch

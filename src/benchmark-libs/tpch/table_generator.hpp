@@ -24,15 +24,18 @@ class TableGenerator {
 
   std::shared_ptr<opossum::Table> generate_partsupps_table();
 
+  std::shared_ptr<opossum::Table> generate_customers_table();
+
   void add_all_tables(opossum::StorageManager &manager);
 
   const size_t _chunk_size = 1000;
 
   const size_t _scale_factor = 1;
 
-  const size_t _supplier_size = 10000;  // * _scale_factor
-  const size_t _part_size = 200000;     // * _scale_factor
-  const size_t _partsupp_size = 4;      // per part
+  const size_t _supplier_size = 10000;   // * _scale_factor
+  const size_t _part_size = 200000;      // * _scale_factor
+  const size_t _partsupp_size = 4;       // per part
+  const size_t _customer_size = 150000;  // * _scale_factor
 
  protected:
   template <typename T>
