@@ -14,7 +14,8 @@ int main() {
 
   generator.add_all_tables(opossum::StorageManager::get());
 
-  auto item = std::make_shared<opossum::GetTable>("SUPPLIER");
+  // tables: SUPPLIER, PART, PARTSUPP, CUSTOMER
+  auto item = std::make_shared<opossum::GetTable>("CUSTOMER");
   item->execute();
   auto print = std::make_shared<opossum::Print>(item);
   print->execute();

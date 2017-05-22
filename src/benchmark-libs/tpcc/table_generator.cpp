@@ -34,7 +34,7 @@ std::shared_ptr<opossum::Table> TableGenerator::generate_items_table() {
   table->add_column("I_PRICE", "float", false);
   table->add_column("I_DATA", "string", false);
 
-  auto original_ids = _random_gen.select_unique_ids(_item_size / 10, 1, _item_size);
+  auto original_ids = _random_gen.select_unique_ids(_item_size / 10, _item_size);
 
   auto chunk = opossum::Chunk();
   chunk.add_column(add_column<int>(_item_size, [](size_t i) { return i; }));
@@ -46,7 +46,7 @@ std::shared_ptr<opossum::Table> TableGenerator::generate_items_table() {
     bool is_original = original_ids.find(i) != original_ids.end();
     if (is_original) {
       std::string originalString("ORIGINAL");
-      size_t start_pos = _random_gen.number(0, data.length() - originalString.length());
+      size_t start_pos = _random_gen.number(0, data.length() - 1 - originalString.length());
       data.replace(start_pos, originalString.length(), originalString);
     }
     return data;
@@ -111,7 +111,7 @@ std::shared_ptr<opossum::Table> TableGenerator::generate_stock_table() {
   table->add_column("S_DATA", "string", false);
 
   for (size_t warehouse_id = 0; warehouse_id < _warehouse_size; warehouse_id++) {
-    auto original_ids = _random_gen.select_unique_ids(_item_size / 10, 1, _item_size);
+    auto original_ids = _random_gen.select_unique_ids(_item_size / 10, _item_size);
 
     auto chunk = opossum::Chunk();
     chunk.add_column(add_column<int>(_stock_size, [](size_t i) { return i; }));
@@ -135,7 +135,7 @@ std::shared_ptr<opossum::Table> TableGenerator::generate_stock_table() {
       bool is_original = original_ids.find(i) != original_ids.end();
       if (is_original) {
         std::string originalString("ORIGINAL");
-        size_t start_pos = _random_gen.number(0, data.length() - originalString.length());
+        size_t start_pos = _random_gen.number(0, data.length() - 1 - originalString.length());
         data.replace(start_pos, originalString.length(), originalString);
       }
       return data;
@@ -211,7 +211,7 @@ std::shared_ptr<opossum::Table> TableGenerator::generate_customer_table() {
 
   for (size_t warehouse_id = 0; warehouse_id < _warehouse_size; warehouse_id++) {
     for (size_t district_id = 0; district_id < _district_size; district_id++) {
-      auto original_ids = _random_gen.select_unique_ids(_item_size / 10, 1, _item_size);
+      auto original_ids = _random_gen.select_unique_ids(_item_size / 10, _item_size);
 
       auto chunk = opossum::Chunk();
       chunk.add_column(add_column<int>(_customer_size, [](size_t i) { return i; }));
