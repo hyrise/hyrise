@@ -61,13 +61,13 @@ class RandomGenerator {
     return generateString(lower_length, upper_length, '0', 10);
   }
 
-  std::set<size_t> select_unique_ids(size_t num_unique, size_t lower_id, size_t upper_id) {
+  std::set<size_t> select_unique_ids(size_t num_unique, size_t id_length) {
     std::set<size_t> rows;
 
     for (size_t i = 0; i < num_unique; ++i) {
       size_t index = static_cast<size_t>(-1);
       do {
-        index = number(lower_id, upper_id);
+        index = number(0, id_length - 1);
       } while (rows.find(index) != rows.end());
       rows.insert(index);
     }

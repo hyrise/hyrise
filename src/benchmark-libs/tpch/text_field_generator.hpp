@@ -1,8 +1,8 @@
 #pragma once
 
 #include <iomanip>
-#include <string>
 #include <sstream>
+#include <string>
 #include "grammar.hpp"
 #include "random_generator.hpp"
 
@@ -10,8 +10,9 @@ namespace tpch {
 
 class TextFieldGenerator {
  public:
-  // TODO (anybody) change text size to 300MB: 300e6
-  TextFieldGenerator(RandomGenerator random_generator) : _random_gen(random_generator), _text(Grammar(random_generator).text(300e3)) {}
+  // TODO(anybody) change text size to 300MB: 300e6
+  explicit TextFieldGenerator(RandomGenerator random_generator)
+      : _random_gen(random_generator), _text(Grammar(random_generator).text(300e3)) {}
 
   std::string text_string(size_t lower_length, size_t upper_length) {
     auto length = _random_gen.number(lower_length, upper_length);
@@ -53,7 +54,8 @@ class TextFieldGenerator {
 
   std::string phone_number(size_t nationkey) {
     std::stringstream ss;
-    ss << nationkey+10 << "-" << _random_gen.number(100, 999) << "-" << _random_gen.number(100, 999) << "-" << _random_gen.number(1000, 9999);
+    ss << nationkey + 10 << "-" << _random_gen.number(100, 999) << "-" << _random_gen.number(100, 999);
+    ss << "-" << _random_gen.number(1000, 9999);
     return ss.str();
   }
 

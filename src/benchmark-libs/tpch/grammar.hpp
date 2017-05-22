@@ -11,7 +11,7 @@ class RandomGenerator;
 
 class Grammar {
  public:
-  Grammar(RandomGenerator generator) : _random_gen(generator) {}
+  explicit Grammar(RandomGenerator generator) : _random_gen(generator) {}
 
   std::string text(std::streampos min_size) {
     std::stringstream text = sentence();
@@ -25,7 +25,7 @@ class Grammar {
   std::stringstream sentence() {
     std::stringstream phrase = noun_phrase();
     phrase << " ";
-    switch(_random_gen.number(0, 4)) {
+    switch (_random_gen.number(0, 4)) {
       case 0:
         phrase << verb_phrase().rdbuf();
         break;
@@ -39,7 +39,8 @@ class Grammar {
         phrase << prepositional_phrase().rdbuf() << " " << verb_phrase().rdbuf() << " " << noun_phrase().rdbuf();
         break;
       case 4:
-        phrase << prepositional_phrase().rdbuf() << " " << verb_phrase().rdbuf() << " " << prepositional_phrase().rdbuf();
+        phrase << prepositional_phrase().rdbuf() << " " << verb_phrase().rdbuf();
+        phrase << " " << prepositional_phrase().rdbuf();
         break;
     }
     phrase << word(terminators);
@@ -47,7 +48,7 @@ class Grammar {
   }
   std::stringstream noun_phrase() {
     std::stringstream phrase;
-    switch(_random_gen.number(0, 3)) {
+    switch (_random_gen.number(0, 3)) {
       case 0:
         phrase << word(nouns);
         break;
@@ -65,7 +66,7 @@ class Grammar {
   }
   std::stringstream verb_phrase() {
     std::stringstream phrase;
-    switch(_random_gen.number(0, 3)) {
+    switch (_random_gen.number(0, 3)) {
       case 0:
         phrase << word(verbs);
         break;
