@@ -12,6 +12,7 @@
 namespace tpcc {
 
 class TableGenerator {
+  // following TPC-C v5.11.0
  public:
   TableGenerator();
 
