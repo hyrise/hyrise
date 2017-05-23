@@ -1,5 +1,8 @@
 #include "import_binary.hpp"
 
+#include <boost/hana/for_each.hpp>
+
+#include <cstdint>
 #include <fstream>
 #include <memory>
 #include <numeric>
@@ -9,6 +12,7 @@
 
 #include "import_export/binary.hpp"
 #include "storage/chunk.hpp"
+#include "storage/fitted_attribute_vector.hpp"
 #include "storage/storage_manager.hpp"
 
 namespace opossum {

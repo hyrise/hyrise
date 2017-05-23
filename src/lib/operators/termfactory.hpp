@@ -4,6 +4,7 @@
 #include <string>
 #include "term.hpp"
 #include "types.hpp"
+
 namespace opossum {
 /**
  * The termfactory transforms complex string expressions into separate terms of specific types.

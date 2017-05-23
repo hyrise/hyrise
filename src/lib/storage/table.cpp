@@ -9,13 +9,15 @@
 #include <utility>
 #include <vector>
 
-#include "../types.hpp"
 #include "dictionary_column.hpp"
+#include "value_column.hpp"
+
+#include "resolve_type.hpp"
+#include "types.hpp"
 
 namespace opossum {
 
-Table::Table(const size_t chunk_size, const bool auto_compress)
-    : _chunk_size(chunk_size), _auto_compress(auto_compress), _append_mutex(std::make_unique<std::mutex>()) {
+Table::Table(const size_t chunk_size) : _chunk_size(chunk_size), _append_mutex(std::make_unique<std::mutex>()) {
   _chunks.push_back(Chunk{true});
 }
 
@@ -34,11 +36,7 @@ void Table::add_column(const std::string &name, const std::string &type, bool cr
 
 void Table::append(std::vector<AllTypeVariant> values) {
   // TODO(Anyone): Chunks should be preallocated for chunk size
-  if (_chunk_size > 0 && _chunks.back().size() == _chunk_size) {
-    if (_auto_compress) compress_chunk(chunk_count() - 1);
-
-    create_new_chunk();
-  }
+  if (_chunk_size > 0 && _chunks.back().size() == _chunk_size) create_new_chunk();
 
   _chunks.back().append(values);
 }
@@ -73,25 +71,13 @@ ColumnID Table::column_id_by_name(const std::string &column_name) const {
   throw std::runtime_error("column " + column_name + " not found");
 }
 
-void Table::compress_chunk(ChunkID chunk_id) {
-  auto &old_chunk = _chunks.at(chunk_id);
-  Chunk new_chunk{true};
-  for (size_t column_id = 0; column_id < col_count(); ++column_id) {
-    auto dict_col = make_shared_by_column_type<BaseColumn, DictionaryColumn>(column_type(column_id),
-                                                                             old_chunk.get_column(column_id));
-    new_chunk.add_column(std::move(dict_col));
-  }
-
-  new_chunk.move_mvcc_columns_from(old_chunk);
-  new_chunk.shrink_mvcc_columns();
-  _chunks[chunk_id] = std::move(new_chunk);
-}
-
 uint32_t Table::chunk_size() const { return _chunk_size; }
 
 const std::string &Table::column_name(ColumnID column_id) const { return _column_names[column_id]; }
 
 const std::string &Table::column_type(ColumnID column_id) const { return _column_types[column_id]; }
+
+const std::vector<std::string> &Table::column_types() const { return _column_types; }
 
 Chunk &Table::get_chunk(ChunkID chunk_id) { return _chunks[chunk_id]; }
 const Chunk &Table::get_chunk(ChunkID chunk_id) const { return _chunks[chunk_id]; }

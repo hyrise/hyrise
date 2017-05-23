@@ -9,6 +9,9 @@
 #include "storage/reference_column.hpp"
 #include "storage/value_column.hpp"
 
+#include "resolve_type.hpp"
+#include "type_cast.hpp"
+
 namespace opossum {
 
 // We build a row based protobuf response table. We iterate one column chunk by chunk, then the next column chunk by

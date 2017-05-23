@@ -117,6 +117,7 @@ Contact: firstname.lastname@hpi.de
 ## Contributors
 
 -	Yannick	Bäumer
+- Timo Djürken
 -	Moritz	Eyssen
 -	Martin	Fischer
 -	Michael	Janke

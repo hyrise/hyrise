@@ -1,5 +1,8 @@
 #pragma once
 
+// the linter wants this to be above everything else
+#include <shared_mutex>
+
 #include <atomic>
 #include <memory>
 #include <string>
@@ -7,11 +10,17 @@
 
 #include "tbb/concurrent_vector.h"
 
-#include "base_column.hpp"
+#include "all_type_variant.hpp"
+#include "copyable_atomic.hpp"
 #include "index/base_index.hpp"
-#include "value_column.hpp"
+#include "scoped_locking_ptr.hpp"
+#include "types.hpp"
 
 namespace opossum {
+
+class BaseIndex;
+class BaseColumn;
+
 // A chunk is a horizontal partition of a table.
 // It stores the data column by column.
 class Chunk {
@@ -23,9 +32,22 @@ class Chunk {
    * for multiversion concurrency control
    */
   struct MvccColumns {
-    tbb::concurrent_vector<std::atomic<TransactionID>> tids;  ///< 0 unless locked by a transaction
-    tbb::concurrent_vector<CommitID> begin_cids;              ///< commit id when record was added
-    tbb::concurrent_vector<CommitID> end_cids;                ///< commit id when record was deleted
+    friend class Chunk;
+
+   public:
+    tbb::concurrent_vector<copyable_atomic<TransactionID>> tids;  ///< 0 unless locked by a transaction
+    tbb::concurrent_vector<CommitID> begin_cids;                  ///< commit id when record was added
+    tbb::concurrent_vector<CommitID> end_cids;                    ///< commit id when record was deleted
+
+   private:
+    /**
+     * @brief Mutex used to manage access to MVCC columns
+     *
+     * Exclusively locked in shrink_to_fit()
+     * Locked for shared ownership when MVCC columns are accessed
+     * via the mvcc_columns() getters
+     */
+    std::shared_mutex _mutex;
   };
 
  public:
@@ -41,8 +63,12 @@ class Chunk {
   // we overwrite the copy constructor
   Chunk(Chunk &&) = default;
   Chunk &operator=(Chunk &&) = default;
+
   // adds a column to the "right" of the chunk
   void add_column(std::shared_ptr<BaseColumn> column);
+
+  // Atomically replaces the current column at column_id with the passed column
+  void replace_column(size_t column_id, std::shared_ptr<BaseColumn> column);
 
   // returns the number of columns (cannot exceed ColumnID (uint16_t))
   uint16_t col_count() const;
@@ -50,26 +76,40 @@ class Chunk {
   // returns the number of rows (cannot exceed ChunkOffset (uint32_t))
   uint32_t size() const;
 
-  // returns the columns vector for direct manipulation.
-  std::vector<std::shared_ptr<BaseColumn>> &columns() { return _columns; }
-  const std::vector<std::shared_ptr<BaseColumn>> &columns() const { return _columns; }
-
   // adds a new row, given as a list of values, to the chunk
   // note this is slow and not thread-safe and should be used for testing purposes only
   void append(std::vector<AllTypeVariant> values);
 
-  // returns the column at a given position
+  /**
+   * Atomically accesses and returns the column at a given position
+   *
+   * Note: Concurrently with the execution of operators,
+   *       ValueColumns might be exchanged with DictionaryColumns.
+   *       Therefore, if you hold a pointer to a column, you can
+   *       continue to use it without any inconsistencies.
+   *       However, if you call get_column again, be aware that
+   *       the return type might have changed.
+   */
   std::shared_ptr<BaseColumn> get_column(ColumnID column_id) const;
 
   bool has_mvcc_columns() const;
 
-  MvccColumns &mvcc_columns();
-  const MvccColumns &mvcc_columns() const;
+  /**
+   * The locking pointer locks the columns non-exclusively
+   * and unlocks them on destruction
+   *
+   * For improved performance, it is best to call this function
+   * once and retain the reference as long as needed.
+   *
+   * @return a locking ptr to the mvcc columns
+   */
+  SharedScopedLockingPtr<MvccColumns> mvcc_columns();
+  SharedScopedLockingPtr<const MvccColumns> mvcc_columns() const;
 
   /**
    * Compacts the internal represantion of
    * the mvcc columns in order to reduce fragmentation
-   * Note: not thread-safe
+   * Locks mvcc columns exclusively in order to do so
    */
   void shrink_mvcc_columns();
 
@@ -81,14 +121,7 @@ class Chunk {
   void grow_mvcc_column_size_by(size_t delta, CommitID begin_cid);
 
   /**
-   * Moves the mvcc columns from chunk to this instance
-   * Used to transfer the mvcc columns to the new chunk after chunk compression
-   * Note: not thread-safe
-   */
-  void move_mvcc_columns_from(Chunk &chunk);
-
-  /**
-   * reuse mvcc from other chunk
+   * Reuse mvcc from other chunk
    */
   void use_mvcc_columns_from(const Chunk &chunk);
 
@@ -105,7 +138,7 @@ class Chunk {
   bool references_only_one_table() const;
 
  protected:
-  std::vector<std::shared_ptr<BaseColumn>> _columns;
+  tbb::concurrent_vector<std::shared_ptr<BaseColumn>> _columns;
   std::unique_ptr<MvccColumns> _mvcc_columns;
   std::vector<std::shared_ptr<BaseIndex>> _indices;
 };

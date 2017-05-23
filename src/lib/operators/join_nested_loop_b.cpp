@@ -8,6 +8,8 @@
 #include <utility>
 #include <vector>
 
+#include "resolve_type.hpp"
+
 namespace opossum {
 
 JoinNestedLoopB::JoinNestedLoopB(const std::shared_ptr<const AbstractOperator> left,
@@ -36,7 +38,7 @@ JoinNestedLoopB::JoinNestedLoopB(const std::shared_ptr<const AbstractOperator> l
     throw std::runtime_error("JoinNestedLoopB::JoinNestedLoopB: right input operator is null");
   }
 
-  _output = std::make_shared<Table>(0, false);
+  _output = std::make_shared<Table>(0);
   _pos_list_left = std::make_shared<PosList>();
   _pos_list_right = std::make_shared<PosList>();
 }
