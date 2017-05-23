@@ -61,7 +61,7 @@ class Aggregate : public AbstractReadOnlyOperator {
   uint8_t num_out_tables() const override;
 
   template <typename ColumnType, AggregateFunction function>
-  void _write_aggregate_output(ColumnID column_index);
+  void write_aggregate_output(ColumnID column_index);
 
  protected:
   std::shared_ptr<const Table> on_execute() override;
@@ -485,9 +485,75 @@ std::shared_ptr<ColumnVisitable> make_aggregate_visitor(std::shared_ptr<ColumnVi
 
 class AggregateContextCreator {
  public:
-  template <typename ColumnType, AggregateFunction function>
-  static void run(std::vector<std::shared_ptr<ColumnVisitableContext>> &contexts, ColumnID column_index) {
-    contexts[column_index] = make_aggregate_context<ColumnType, function>();
+  template <typename ColumnType>
+  static void run(std::vector<std::shared_ptr<ColumnVisitableContext>> &contexts, ColumnID column_index,
+                  AggregateFunction function) {
+    switch (function) {
+      case Min:
+        contexts[column_index] = make_aggregate_context<ColumnType, Min>();
+        break;
+      case Max:
+        contexts[column_index] = make_aggregate_context<ColumnType, Max>();
+        break;
+      case Sum:
+        contexts[column_index] = make_aggregate_context<ColumnType, Sum>();
+        break;
+      case Avg:
+        contexts[column_index] = make_aggregate_context<ColumnType, Avg>();
+        break;
+      case Count:
+        contexts[column_index] = make_aggregate_context<ColumnType, Count>();
+        break;
+    }
+  }
+};
+
+class AggregateVisitorCreator {
+ public:
+  template <typename ColumnType>
+  static void run(std::shared_ptr<ColumnVisitable> &builder, std::shared_ptr<ColumnVisitableContext> ctx,
+                  std::shared_ptr<GroupByContext> groupby_ctx, AggregateFunction function) {
+    switch (function) {
+      case Min:
+        builder = make_aggregate_visitor<ColumnType, Min>(ctx, groupby_ctx);
+        break;
+      case Max:
+        builder = make_aggregate_visitor<ColumnType, Max>(ctx, groupby_ctx);
+        break;
+      case Sum:
+        builder = make_aggregate_visitor<ColumnType, Sum>(ctx, groupby_ctx);
+        break;
+      case Avg:
+        builder = make_aggregate_visitor<ColumnType, Avg>(ctx, groupby_ctx);
+        break;
+      case Count:
+        builder = make_aggregate_visitor<ColumnType, Count>(ctx, groupby_ctx);
+        break;
+    }
+  }
+};
+
+class AggregateWriter {
+ public:
+  template <typename ColumnType>
+  static void run(Aggregate &aggregate_op, ColumnID column_index, AggregateFunction function) {
+    switch (function) {
+      case Min:
+        aggregate_op.write_aggregate_output<ColumnType, Min>(column_index);
+        break;
+      case Max:
+        aggregate_op.write_aggregate_output<ColumnType, Max>(column_index);
+        break;
+      case Sum:
+        aggregate_op.write_aggregate_output<ColumnType, Sum>(column_index);
+        break;
+      case Avg:
+        aggregate_op.write_aggregate_output<ColumnType, Avg>(column_index);
+        break;
+      case Count:
+        aggregate_op.write_aggregate_output<ColumnType, Count>(column_index);
+        break;
+    }
   }
 };
 

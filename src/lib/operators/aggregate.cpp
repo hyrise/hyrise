@@ -93,23 +93,8 @@ std::shared_ptr<const Table> Aggregate::on_execute() {
   for (ColumnID column_index = 0; column_index < _contexts_per_column.size(); ++column_index) {
     auto type_string = input_table->column_type(_aggregate_column_ids[column_index]);
 
-    switch (_aggregates[column_index].second) {
-      case Min:
-        call_functor_by_column_type<AggregateContextCreator, Min>(type_string, _contexts_per_column, column_index);
-        break;
-      case Max:
-        call_functor_by_column_type<AggregateContextCreator, Max>(type_string, _contexts_per_column, column_index);
-        break;
-      case Sum:
-        call_functor_by_column_type<AggregateContextCreator, Sum>(type_string, _contexts_per_column, column_index);
-        break;
-      case Avg:
-        call_functor_by_column_type<AggregateContextCreator, Avg>(type_string, _contexts_per_column, column_index);
-        break;
-      case Count:
-        call_functor_by_column_type<AggregateContextCreator, Count>(type_string, _contexts_per_column, column_index);
-        break;
-    }
+    call_functor_by_column_type<AggregateContextCreator>(type_string, _contexts_per_column, column_index,
+                                                         _aggregates[column_index].second);
   }
 
   /*
@@ -173,29 +158,8 @@ std::shared_ptr<const Table> Aggregate::on_execute() {
         std::shared_ptr<ColumnVisitable> builder;
         auto ctx = _contexts_per_column[column_index];
 
-        hana::for_each(column_types, [&](auto x) {
-          if (std::string(hana::first(x)) == type_string) {
-            using column_type = typename decltype(+hana::second(x))::type;
-
-            switch (_aggregates[column_index].second) {
-              case Min:
-                builder = make_aggregate_visitor<column_type, Min>(ctx, groupby_ctx);
-                break;
-              case Max:
-                builder = make_aggregate_visitor<column_type, Max>(ctx, groupby_ctx);
-                break;
-              case Sum:
-                builder = make_aggregate_visitor<column_type, Sum>(ctx, groupby_ctx);
-                break;
-              case Avg:
-                builder = make_aggregate_visitor<column_type, Avg>(ctx, groupby_ctx);
-                break;
-              case Count:
-                builder = make_aggregate_visitor<column_type, Count>(ctx, groupby_ctx);
-                break;
-            }
-          }
-        });
+        call_functor_by_column_type<AggregateVisitorCreator>(type_string, builder, ctx, groupby_ctx,
+                                                             _aggregates[column_index].second);
 
         base_column->visit(*builder, ctx);
         column_index++;
@@ -244,29 +208,31 @@ std::shared_ptr<const Table> Aggregate::on_execute() {
     auto column_id = _aggregate_column_ids[column_index];
     auto type_string = input_table_left()->column_type(column_id);
 
-    hana::for_each(column_types, [&, this](auto x) {
-      if (std::string(hana::first(x)) == type_string) {
-        using column_type = typename decltype(+hana::second(x))::type;
+    call_functor_by_column_type<AggregateWriter>(type_string, *this, column_index, _aggregates[column_index].second);
 
-        switch (aggregate.second) {
-          case Min:
-            this->_write_aggregate_output<column_type, Min>(column_index);
-            return;
-          case Max:
-            this->_write_aggregate_output<column_type, Max>(column_index);
-            return;
-          case Sum:
-            this->_write_aggregate_output<column_type, Sum>(column_index);
-            return;
-          case Avg:
-            this->_write_aggregate_output<column_type, Avg>(column_index);
-            return;
-          case Count:
-            this->_write_aggregate_output<column_type, Count>(column_index);
-            return;
-        }
-      }
-    });
+    // hana::for_each(column_types, [&, this](auto x) {
+    //   if (std::string(hana::first(x)) == type_string) {
+    //     using column_type = typename decltype(+hana::second(x))::type;
+
+    //     switch (aggregate.second) {
+    //       case Min:
+    //         this->_write_aggregate_output<column_type, Min>(column_index);
+    //         return;
+    //       case Max:
+    //         this->_write_aggregate_output<column_type, Max>(column_index);
+    //         return;
+    //       case Sum:
+    //         this->_write_aggregate_output<column_type, Sum>(column_index);
+    //         return;
+    //       case Avg:
+    //         this->_write_aggregate_output<column_type, Avg>(column_index);
+    //         return;
+    //       case Count:
+    //         this->_write_aggregate_output<column_type, Count>(column_index);
+    //         return;
+    //     }
+    //   }
+    // });
 
     column_index++;
   }
@@ -277,7 +243,7 @@ std::shared_ptr<const Table> Aggregate::on_execute() {
 }
 
 template <typename ColumnType, AggregateFunction function>
-void Aggregate::_write_aggregate_output(ColumnID column_index) {
+void Aggregate::write_aggregate_output(ColumnID column_index) {
   auto &column_name = _aggregates[column_index].first;
 
   // retrieve type information from the aggregation traits
