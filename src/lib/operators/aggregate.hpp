@@ -71,7 +71,7 @@ class Aggregate : public AbstractReadOnlyOperator {
 
   /*
   The following template functions write the aggregated values for the different aggregate functions.
-  The are separate and templated to avoid compiler errors for invalid type/function combinations.
+  They are separate and templated to avoid compiler errors for invalid type/function combinations.
   */
   // MIN, MAX, SUM write the current aggregated value
   template <typename AggregateType, AggregateFunction func>
