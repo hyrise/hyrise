@@ -4,6 +4,7 @@
 #include "../base_test.hpp"
 #include "gtest/gtest.h"
 
+#include "../lib/type_cast.hpp"
 #include "../lib/types.hpp"
 
 namespace opossum {

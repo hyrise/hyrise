@@ -64,6 +64,8 @@ target_compile_options(opossumProtobuf PRIVATE -Wno-unused-parameter -Wno-deprec
 # Sources and libraries shared among the different builds of the lib
 set(
     SOURCES
+    all_parameter_variant.hpp
+    all_type_variant.hpp
     common.hpp
     concurrency/commit_context.cpp
     concurrency/commit_context.hpp
@@ -146,6 +148,7 @@ set(
     operators/update.hpp
     operators/validate.cpp
     operators/validate.hpp
+    resolve_type.hpp
     scheduler/abstract_scheduler.cpp
     scheduler/abstract_scheduler.hpp
     scheduler/abstract_task.cpp
@@ -172,6 +175,7 @@ set(
     storage/chunk.hpp
     storage/column_visitable.hpp
     storage/copyable_atomic.hpp
+    storage/dictionary_column.cpp
     storage/dictionary_column.hpp
     storage/dictionary_compression.cpp
     storage/dictionary_compression.hpp
@@ -200,11 +204,13 @@ set(
     storage/table.cpp
     storage/table.hpp
     storage/untyped_dictionary_column.hpp
+    storage/value_column.cpp
     storage/value_column.hpp
     tasks/chunk_compression_task.cpp
     tasks/chunk_compression_task.hpp
+    type_cast.cpp
+    type_cast.hpp
     type_comparison.hpp
-    types.cpp
     types.hpp
     uid_allocator.hpp
     utils/cuckoo_hashtable.hpp

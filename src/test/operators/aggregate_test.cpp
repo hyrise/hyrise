@@ -45,6 +45,7 @@ class OperatorsAggregateTest : public BaseTest {
 
     auto test_table = load_table("src/test/tables/aggregateoperator/groupby_int_1gb_1agg/input.tbl", 2);
     DictionaryCompression::compress_table(*test_table);
+
     _table_wrapper_1_1_dict = std::make_shared<TableWrapper>(std::move(test_table));
     _table_wrapper_1_1_dict->execute();
   }
