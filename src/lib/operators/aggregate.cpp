@@ -8,7 +8,6 @@
 #include <vector>
 
 #include "resolve_type.hpp"
-#include "tbb/concurrent_vector.h"
 
 namespace opossum {
 
@@ -155,7 +154,6 @@ std::shared_ptr<const Table> Aggregate::on_execute() {
         Invoke the AggregateVisitor for each aggregate column
         */
         auto groupby_ctx = std::make_shared<GroupByContext>(input_table, chunk_id, column_id, hash_keys);
-
         std::shared_ptr<ColumnVisitable> builder;
         auto ctx = _contexts_per_column[column_index];
 
@@ -242,6 +240,7 @@ void Aggregate::write_aggregate_output(ColumnID column_index) {
   auto ctx = std::static_pointer_cast<AggregateContext<ColumnType, decltype(aggregate_type)>>(
       _contexts_per_column[column_index]);
 
+  // write all group keys into the respective columns
   if (column_index == 0) {
     for (auto &map : *ctx->results) {
       for (size_t group_column_index = 0; group_column_index < map.first.size(); ++group_column_index) {
@@ -250,8 +249,8 @@ void Aggregate::write_aggregate_output(ColumnID column_index) {
     }
   }
 
+  // write aggregated values into the column
   _write_aggregate_values<decltype(aggregate_type), function>(values, ctx->results);
-
   _out_chunk.add_column(col);
 }
 

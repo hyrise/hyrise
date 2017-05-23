@@ -62,6 +62,7 @@ class Aggregate : public AbstractReadOnlyOperator {
   uint8_t num_in_tables() const override;
   uint8_t num_out_tables() const override;
 
+  // write the aggregated output for a given aggregate column
   template <typename ColumnType, AggregateFunction function>
   void write_aggregate_output(ColumnID column_index);
 
@@ -70,13 +71,13 @@ class Aggregate : public AbstractReadOnlyOperator {
 
   /*
   The following template functions write the aggregated values for the different aggregate functions.
-  The are separate and templated to avoid compiler errors.
+  The are separate and templated to avoid compiler errors for invalid type/function combinations.
   */
+  // MIN, MAX, SUM write the current aggregated value
   template <typename AggregateType, AggregateFunction func>
   typename std::enable_if<func == Min || func == Max || func == Sum, void>::type _write_aggregate_values(
       tbb::concurrent_vector<AggregateType> &values,
       std::shared_ptr<std::map<AggregateKey, AggregateResult<AggregateType>>> results) {
-    // MIN, MAX, SUM write the current aggregated value
     for (auto &kv : *results) {
       if (!kv.second.current_aggregate) {
         // this needs to be NULL, as soon as that is implemented!
@@ -87,21 +88,21 @@ class Aggregate : public AbstractReadOnlyOperator {
     }
   }
 
+  // COUNT writes the aggregate counter
   template <typename AggregateType, AggregateFunction func>
   typename std::enable_if<func == Count, void>::type _write_aggregate_values(
       tbb::concurrent_vector<AggregateType> &values,
       std::shared_ptr<std::map<AggregateKey, AggregateResult<AggregateType>>> results) {
-    // COUNT writes the aggregate counter
     for (auto &kv : *results) {
       values.push_back(kv.second.aggregate_count);
     }
   }
 
+  // AVG writes the calculated average from current aggregate and the aggregate counter
   template <typename AggregateType, AggregateFunction func>
   typename std::enable_if<func == Avg && std::is_arithmetic<AggregateType>::value, void>::type _write_aggregate_values(
       tbb::concurrent_vector<AggregateType> &values,
       std::shared_ptr<std::map<AggregateKey, AggregateResult<AggregateType>>> results) {
-    // AVG writes the calculated average from current aggregate and the aggregate counter
     for (auto &kv : *results) {
       if (!kv.second.current_aggregate) {
         // this needs to be NULL, as soon as that is implemented!
@@ -112,14 +113,12 @@ class Aggregate : public AbstractReadOnlyOperator {
     }
   }
 
+  // AVG is not defined for non-arithmetic types. Avoiding compiler errors.
   template <typename AggregateType, AggregateFunction func>
   typename std::enable_if<func == Avg && !std::is_arithmetic<AggregateType>::value, void>::type _write_aggregate_values(
       tbb::concurrent_vector<AggregateType>, std::shared_ptr<std::map<AggregateKey, AggregateResult<AggregateType>>>) {
     throw std::runtime_error("Invalid aggregate");
   }
-
-  template <typename ColumnType, AggregateFunction function, class Enabled = void>
-  void _write(ColumnID column_index);
 
   const std::vector<std::pair<std::string, AggregateFunction>> _aggregates;
   const std::vector<std::string> _groupby_columns;
@@ -156,28 +155,6 @@ struct GroupByContext : ColumnVisitableContext {
   const ColumnID column_id;
   std::shared_ptr<std::vector<AggregateKey>> hash_keys;
   std::shared_ptr<std::vector<ChunkOffset>> chunk_offsets_in;
-};
-
-template <typename ColumnType, typename AggregateType, AggregateFunction function>
-struct AggregateVisitor;
-
-template <typename ColumnType, typename AggregateType>
-struct AggregateContext : ColumnVisitableContext {
-  AggregateContext() {}
-  explicit AggregateContext(std::shared_ptr<GroupByContext> base_context) : groupby_context(base_context) {}
-
-  // constructor for use in ReferenceColumn::visit_dereferenced
-  AggregateContext(std::shared_ptr<BaseColumn>, const std::shared_ptr<const Table>,
-                   std::shared_ptr<ColumnVisitableContext> base_context, ChunkID chunk_id,
-                   std::shared_ptr<std::vector<ChunkOffset>> chunk_offsets)
-      : groupby_context(std::static_pointer_cast<AggregateContext>(base_context)->groupby_context),
-        results(std::static_pointer_cast<AggregateContext>(base_context)->results) {
-    groupby_context->chunk_id = chunk_id;
-    groupby_context->chunk_offsets_in = chunk_offsets;
-  }
-
-  std::shared_ptr<GroupByContext> groupby_context;
-  std::shared_ptr<std::map<AggregateKey, AggregateResult<AggregateType>>> results;
 };
 
 /*
@@ -239,6 +216,11 @@ struct PartitionBuilder : public ColumnVisitable {
   }
 };
 
+/*
+The AggregateFunctionBuilder is used to create the lambda functio that will be used by
+the AggregateVisitor. It is a separate class because methods cannot be partially specialized.
+Therefore, we partially specialize the whole class and define the get_aggregate_function anew every time.
+*/
 template <typename ColumnType, typename AggregateType>
 using aggregate_func_t = std::function<optional<AggregateType>(ColumnType, optional<AggregateType>)>;
 
@@ -293,7 +275,28 @@ struct AggregateFunctionBuilder<ColumnType, AggregateType, Count> {
 };
 
 /*
+Visitor context for the AggregateVisitor.
+*/
+template <typename ColumnType, typename AggregateType>
+struct AggregateContext : ColumnVisitableContext {
+  AggregateContext() {}
+  explicit AggregateContext(std::shared_ptr<GroupByContext> base_context) : groupby_context(base_context) {}
+
+  // constructor for use in ReferenceColumn::visit_dereferenced
+  AggregateContext(std::shared_ptr<BaseColumn>, const std::shared_ptr<const Table>,
+                   std::shared_ptr<ColumnVisitableContext> base_context, ChunkID chunk_id,
+                   std::shared_ptr<std::vector<ChunkOffset>> chunk_offsets)
+      : groupby_context(std::static_pointer_cast<AggregateContext>(base_context)->groupby_context),
+        results(std::static_pointer_cast<AggregateContext>(base_context)->results) {
+    groupby_context->chunk_id = chunk_id;
+    groupby_context->chunk_offsets_in = chunk_offsets;
+  }
+
+  std::shared_ptr<GroupByContext> groupby_context;
+  std::shared_ptr<std::map<AggregateKey, AggregateResult<AggregateType>>> results;
 };
+
+/*
 Visitor for the aggregation phase.
 It is used to gradually build the given aggregate over one column.
 */
@@ -303,6 +306,7 @@ struct AggregateVisitor : public ColumnVisitable {
   ChunkOffset chunk_offset = 0;
 
   AggregateVisitor() {
+    // retrieve the correct lambda for the given types and aggregate function
     aggregate_func = AggregateFunctionBuilder<ColumnType, AggregateType, function>().get_aggregate_function();
   }
 
@@ -390,79 +394,77 @@ struct AggregateVisitor : public ColumnVisitable {
   }
 };
 
-struct aggregate_tag {};
-struct count_tag : public aggregate_tag {};
-struct min_max_tag : public aggregate_tag {};
-struct avg_tag : public aggregate_tag {};
-struct sum_integer_tag : public aggregate_tag {};
-struct sum_float_tag : public aggregate_tag {};
-struct invalid_tag : public aggregate_tag {};
-
+/*
+The following structs describe the different aggregate traits.
+Given a ColumnType and AggregateFunction, certain traits like the aggregate type
+can be deduced.
+*/
 template <typename ColumnType, AggregateFunction function, class Enable = void>
 struct aggregate_traits {
-  typedef aggregate_tag aggregate_category;
   typedef ColumnType column_type;
   typedef void aggregate_type;
   static constexpr AggregateFunction func = function;
   static constexpr const char *aggregate_type_name = "";
 };
 
+// COUNT on all types
 template <typename ColumnType>
 struct aggregate_traits<ColumnType, Count> {
-  typedef count_tag aggregate_category;
   typedef ColumnType column_type;
   typedef int64_t aggregate_type;
   static constexpr const char *aggregate_type_name = "long";
 };
 
+// MIN/MAX on all types
 template <typename ColumnType, AggregateFunction function>
 struct aggregate_traits<ColumnType, function, typename std::enable_if<function == Min || function == Max, void>::type> {
-  typedef min_max_tag aggregate_category;
   typedef ColumnType column_type;
   typedef ColumnType aggregate_type;
   static constexpr const char *aggregate_type_name = "";
 };
 
+// AVG on arithmetic types
 template <typename ColumnType, AggregateFunction function>
 struct aggregate_traits<ColumnType, function,
                         typename std::enable_if<function == Avg && std::is_arithmetic<ColumnType>::value, void>::type> {
-  typedef avg_tag aggregate_category;
   typedef ColumnType column_type;
   typedef double aggregate_type;
   static constexpr const char *aggregate_type_name = "double";
 };
 
+// SUM on integers
 template <typename ColumnType, AggregateFunction function>
 struct aggregate_traits<ColumnType, function,
                         typename std::enable_if<function == Sum && std::is_integral<ColumnType>::value, void>::type> {
-  typedef sum_integer_tag aggregate_category;
   typedef ColumnType column_type;
   typedef int64_t aggregate_type;
   static constexpr const char *aggregate_type_name = "long";
 };
 
+// SUM on floating point numbers
 template <typename ColumnType, AggregateFunction function>
 struct aggregate_traits<
     ColumnType, function,
     typename std::enable_if<function == Sum && std::is_floating_point<ColumnType>::value, void>::type> {
-  typedef sum_float_tag aggregate_category;
   typedef ColumnType column_type;
   typedef double aggregate_type;
   static constexpr const char *aggregate_type_name = "double";
 };
 
-// invalid
+// invalid: AVG on non-arithmetic types
 template <typename ColumnType, AggregateFunction function>
 struct aggregate_traits<
     ColumnType, function,
     typename std::enable_if<!std::is_arithmetic<ColumnType>::value && (function == Avg || function == Sum),
                             void>::type> {
-  typedef invalid_tag aggregate_category;
   typedef ColumnType column_type;
   typedef ColumnType aggregate_type;
   static constexpr const char *aggregate_type_name = "";
 };
 
+/*
+Creates an appropriate AggregateContext based on the ColumnType and AggregateFunction
+*/
 template <typename ColumnType, AggregateFunction function>
 std::shared_ptr<ColumnVisitableContext> make_aggregate_context() {
   typename aggregate_traits<ColumnType, function>::aggregate_type aggregate_type;
@@ -470,6 +472,9 @@ std::shared_ptr<ColumnVisitableContext> make_aggregate_context() {
   return std::make_shared<AggregateContext<ColumnType, decltype(aggregate_type)>>();
 }
 
+/*
+Creates an appropriate AggregateVisitor based on the ColumnType and AggregateFunction
+*/
 template <typename ColumnType, AggregateFunction function>
 std::shared_ptr<ColumnVisitable> make_aggregate_visitor(std::shared_ptr<ColumnVisitableContext> new_ctx,
                                                         std::shared_ptr<GroupByContext> ctx) {
@@ -480,6 +485,11 @@ std::shared_ptr<ColumnVisitable> make_aggregate_visitor(std::shared_ptr<ColumnVi
   return visitor;
 }
 
+/*
+The following classes are functors that are used with  call_functor_by_column_type
+*/
+
+// Creates an AggregateContext
 class AggregateContextCreator {
  public:
   template <typename ColumnType>
@@ -505,6 +515,7 @@ class AggregateContextCreator {
   }
 };
 
+// Creates and AggregateVisitor
 class AggregateVisitorCreator {
  public:
   template <typename ColumnType>
@@ -530,6 +541,7 @@ class AggregateVisitorCreator {
   }
 };
 
+// Writes the aggregate output for a given aggregate column
 class AggregateWriter {
  public:
   template <typename ColumnType>
