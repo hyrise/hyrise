@@ -22,7 +22,7 @@ class CsvWriter {
   template <typename T>
   void write(const T& value) {
     if (_current_col_count > 0) {
-      _stream << csv::separator;
+      _stream << csv_separator;
     }
     _write_value(value);
     ++this->_current_col_count;
@@ -64,9 +64,9 @@ inline void CsvWriter::_write_value<std::string>(const std::string& value) {
    * this behaviour to either general quoting or checking for "illegal"
    * characters.
    */
-  _stream << csv::quote;
+  _stream << csv_quote;
   _stream << escape(value);
-  _stream << csv::quote;
+  _stream << csv_quote;
 }
 
 template <>

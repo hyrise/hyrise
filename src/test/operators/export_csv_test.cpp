@@ -55,7 +55,7 @@ class OperatorsExportCsvTest : public BaseTest {
 
   std::shared_ptr<Table> table;
   const std::string filename = "/tmp/export_test.csv";
-  const std::string meta_filename = filename + csv::meta_file_extension;
+  const std::string meta_filename = filename + csv_meta_file_extension;
 };
 
 TEST_F(OperatorsExportCsvTest, SingleChunkAndMetaInfo) {
