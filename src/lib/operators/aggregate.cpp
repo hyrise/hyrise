@@ -7,6 +7,7 @@
 #include <utility>
 #include <vector>
 
+#include "resolve_type.hpp"
 #include "tbb/concurrent_vector.h"
 
 namespace opossum {
@@ -209,30 +210,6 @@ std::shared_ptr<const Table> Aggregate::on_execute() {
     auto type_string = input_table_left()->column_type(column_id);
 
     call_functor_by_column_type<AggregateWriter>(type_string, *this, column_index, _aggregates[column_index].second);
-
-    // hana::for_each(column_types, [&, this](auto x) {
-    //   if (std::string(hana::first(x)) == type_string) {
-    //     using column_type = typename decltype(+hana::second(x))::type;
-
-    //     switch (aggregate.second) {
-    //       case Min:
-    //         this->_write_aggregate_output<column_type, Min>(column_index);
-    //         return;
-    //       case Max:
-    //         this->_write_aggregate_output<column_type, Max>(column_index);
-    //         return;
-    //       case Sum:
-    //         this->_write_aggregate_output<column_type, Sum>(column_index);
-    //         return;
-    //       case Avg:
-    //         this->_write_aggregate_output<column_type, Avg>(column_index);
-    //         return;
-    //       case Count:
-    //         this->_write_aggregate_output<column_type, Count>(column_index);
-    //         return;
-    //     }
-    //   }
-    // });
 
     column_index++;
   }

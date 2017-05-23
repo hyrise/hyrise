@@ -5,7 +5,6 @@
 #include <vector>
 
 #include "abstract_read_write_operator.hpp"
-#include "table_scan.hpp"
 
 namespace opossum {
 

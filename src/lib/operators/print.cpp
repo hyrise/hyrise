@@ -7,6 +7,9 @@
 #include <string>
 #include <vector>
 
+#include "storage/base_column.hpp"
+#include "type_cast.hpp"
+
 namespace opossum {
 
 Print::Print(const std::shared_ptr<const AbstractOperator> in, std::ostream& out)

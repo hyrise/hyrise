@@ -12,6 +12,8 @@
 #include "import_export/csv.hpp"
 #include "import_export/csv_converter.hpp"
 #include "scheduler/job_task.hpp"
+
+#include "resolve_type.hpp"
 #include "types.hpp"
 
 namespace opossum {

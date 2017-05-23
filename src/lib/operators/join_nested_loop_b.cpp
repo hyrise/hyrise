@@ -8,6 +8,8 @@
 #include <utility>
 #include <vector>
 
+#include "resolve_type.hpp"
+
 namespace opossum {
 
 JoinNestedLoopB::JoinNestedLoopB(const std::shared_ptr<const AbstractOperator> left,

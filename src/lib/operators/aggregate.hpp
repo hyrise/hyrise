@@ -1,6 +1,7 @@
 #pragma once
 
 #include <algorithm>
+#include <cmath>
 #include <functional>
 #include <limits>
 #include <map>
@@ -10,6 +11,7 @@
 #include <vector>
 
 #include "abstract_read_only_operator.hpp"
+#include "resolve_type.hpp"
 #include "scheduler/abstract_task.hpp"
 #include "scheduler/current_scheduler.hpp"
 #include "scheduler/job_task.hpp"
@@ -22,6 +24,15 @@
 namespace opossum {
 
 enum AggregateFunction { Min, Max, Sum, Avg, Count };
+
+/*
+Operator to aggregate columns by certain functions, such as min, max, sum, average, and count. The output is a table
+ with reference columns. As with most operators we do not guarantee a stable operation with regards to positions -
+ i.e. your sorting order.
+Current Limitations (due to lack of time)
+ - we cannot aggregate on string columns (they work for GROUP BY, though)
+ - aggregated columns are always type double (connected with the point above)
+*/
 
 /*
 Current aggregated value and the number of rows that were used.
@@ -41,15 +52,6 @@ The key type that is used for the aggregation map.
 */
 using AggregateKey = std::vector<AllTypeVariant>;
 
-/*
-Operator to aggregate columns by certain functions, such as min, max, sum, average, and count. The output is a table
- with reference columns. As with most operators we do not guarantee a stable operation with regards to positions -
- i.e. your sorting order.
-Current Limitations (due to lack of time)
- - we cannot aggregate on string columns (they work for GROUP BY, though)
- - aggregated columns are always type double (connected with the point above)
-*/
-
 class Aggregate : public AbstractReadOnlyOperator {
  public:
   Aggregate(const std::shared_ptr<AbstractOperator> in,
@@ -65,10 +67,6 @@ class Aggregate : public AbstractReadOnlyOperator {
 
  protected:
   std::shared_ptr<const Table> on_execute() override;
-
-  // template <typename AggregateType, AggregateFunction func>
-  // void _write_aggregate_values(tbb::concurrent_vector<AggregateType> &values,
-  //                              std::shared_ptr<std::map<AggregateKey, AggregateResult<AggregateType>>> results);
 
   /*
   The following template functions write the aggregated values for the different aggregate functions.
@@ -232,7 +230,7 @@ struct PartitionBuilder : public ColumnVisitable {
         chunk_offset++;
       }
     } else {
-      // This DictionaryColumn has to be scanned in full. We directly insert the results into the list of matching
+      // This DictionaryColumn has to be scanned in full. We directly insertt the results into the list of matching
       // rows.
       for (ChunkOffset av_offset = 0; av_offset < column.size(); ++av_offset, ++chunk_offset) {
         (*context->hash_keys)[chunk_offset].emplace_back(dictionary[attribute_vector.get(av_offset)]);
@@ -302,6 +300,7 @@ It is used to gradually build the given aggregate over one column.
 template <typename ColumnType, typename AggregateType, AggregateFunction function>
 struct AggregateVisitor : public ColumnVisitable {
   aggregate_func_t<ColumnType, AggregateType> aggregate_func;
+  ChunkOffset chunk_offset = 0;
 
   AggregateVisitor() {
     aggregate_func = AggregateFunctionBuilder<ColumnType, AggregateType, function>().get_aggregate_function();
@@ -330,7 +329,6 @@ struct AggregateVisitor : public ColumnVisitable {
       // This ValueColumn is referenced by a ReferenceColumn (i.e., is probably filtered). We only return the matching
       // rows within the filtered column, together with their original position
 
-      ChunkOffset chunk_offset = 0;
       for (const ChunkOffset &offset_in_value_column : *(context->groupby_context->chunk_offsets_in)) {
         results[hash_keys[chunk_offset]].current_aggregate =
             aggregate_func(values[offset_in_value_column], results[hash_keys[chunk_offset]].current_aggregate);
@@ -340,7 +338,7 @@ struct AggregateVisitor : public ColumnVisitable {
         chunk_offset++;
       }
     } else {
-      ChunkOffset chunk_offset = 0;
+      // ChunkOffset chunk_offset = 0;
       for (const auto &value : values) {
         results[hash_keys[chunk_offset]].current_aggregate =
             aggregate_func(value, results[hash_keys[chunk_offset]].current_aggregate);
@@ -369,7 +367,6 @@ struct AggregateVisitor : public ColumnVisitable {
     auto &results = static_cast<std::map<AggregateKey, AggregateResult<AggregateType>> &>(*context->results);
 
     if (context->groupby_context->chunk_offsets_in) {
-      ChunkOffset chunk_offset = 0;
       for (const ChunkOffset &offset_in_dictionary_column : *(context->groupby_context->chunk_offsets_in)) {
         results[hash_keys[chunk_offset]].current_aggregate =
             aggregate_func(dictionary[attribute_vector.get(offset_in_dictionary_column)],
@@ -382,9 +379,9 @@ struct AggregateVisitor : public ColumnVisitable {
     } else {
       // This DictionaryColumn has to be scanned in full. We directly insert the results into the list of matching
       // rows.
-      for (ChunkOffset chunk_offset = 0; chunk_offset < column.size(); ++chunk_offset) {
+      for (ChunkOffset av_offset = 0; av_offset < column.size(); ++av_offset, ++chunk_offset) {
         results[hash_keys[chunk_offset]].current_aggregate = aggregate_func(
-            dictionary[attribute_vector.get(chunk_offset)], results[hash_keys[chunk_offset]].current_aggregate);
+            dictionary[attribute_vector.get(av_offset)], results[hash_keys[chunk_offset]].current_aggregate);
 
         // increase value counter
         results[hash_keys[chunk_offset]].aggregate_count++;

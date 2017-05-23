@@ -9,6 +9,8 @@
 #include "storage/reference_column.hpp"
 #include "termfactory.hpp"
 
+#include "resolve_type.hpp"
+
 namespace opossum {
 
 Projection::Projection(const std::shared_ptr<const AbstractOperator> in, const ProjectionDefinitions& columns)
