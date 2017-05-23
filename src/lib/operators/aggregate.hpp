@@ -407,7 +407,7 @@ struct aggregate_traits {
   typedef ColumnType column_type;
   typedef void aggregate_type;
   static constexpr AggregateFunction func = function;
-  static constexpr char aggregate_type_name[] = "";
+  static constexpr const char *aggregate_type_name = "";
 };
 
 template <typename ColumnType>
@@ -415,7 +415,7 @@ struct aggregate_traits<ColumnType, Count> {
   typedef count_tag aggregate_category;
   typedef ColumnType column_type;
   typedef int64_t aggregate_type;
-  static constexpr char aggregate_type_name[] = "long";
+  static constexpr const char *aggregate_type_name = "long";
 };
 
 template <typename ColumnType, AggregateFunction function>
@@ -423,7 +423,7 @@ struct aggregate_traits<ColumnType, function, typename std::enable_if<function =
   typedef min_max_tag aggregate_category;
   typedef ColumnType column_type;
   typedef ColumnType aggregate_type;
-  static constexpr char aggregate_type_name[] = "";
+  static constexpr const char *aggregate_type_name = "";
 };
 
 template <typename ColumnType, AggregateFunction function>
@@ -432,7 +432,7 @@ struct aggregate_traits<ColumnType, function,
   typedef avg_tag aggregate_category;
   typedef ColumnType column_type;
   typedef double aggregate_type;
-  static constexpr char aggregate_type_name[] = "double";
+  static constexpr const char *aggregate_type_name = "double";
 };
 
 template <typename ColumnType, AggregateFunction function>
@@ -441,7 +441,7 @@ struct aggregate_traits<ColumnType, function,
   typedef sum_integer_tag aggregate_category;
   typedef ColumnType column_type;
   typedef int64_t aggregate_type;
-  static constexpr char aggregate_type_name[] = "long";
+  static constexpr const char *aggregate_type_name = "long";
 };
 
 template <typename ColumnType, AggregateFunction function>
@@ -451,7 +451,7 @@ struct aggregate_traits<
   typedef sum_float_tag aggregate_category;
   typedef ColumnType column_type;
   typedef double aggregate_type;
-  static constexpr char aggregate_type_name[] = "double";
+  static constexpr const char *aggregate_type_name = "double";
 };
 
 // invalid
@@ -463,7 +463,7 @@ struct aggregate_traits<
   typedef invalid_tag aggregate_category;
   typedef ColumnType column_type;
   typedef ColumnType aggregate_type;
-  static constexpr char aggregate_type_name[] = "";
+  static constexpr const char *aggregate_type_name = "";
 };
 
 template <typename ColumnType, AggregateFunction function>
