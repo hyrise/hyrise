@@ -456,9 +456,10 @@ struct aggregate_traits<
 
 // invalid
 template <typename ColumnType, AggregateFunction function>
-struct aggregate_traits<ColumnType, function, typename std::enable_if<!std::is_arithmetic<ColumnType>::value &&
-                                                                          (function == Avg || function == Sum),
-                                                                      void>::type> {
+struct aggregate_traits<
+    ColumnType, function,
+    typename std::enable_if<!std::is_arithmetic<ColumnType>::value && (function == Avg || function == Sum),
+                            void>::type> {
   typedef invalid_tag aggregate_category;
   typedef ColumnType column_type;
   typedef ColumnType aggregate_type;
@@ -481,5 +482,13 @@ std::shared_ptr<ColumnVisitable> make_aggregate_visitor(std::shared_ptr<ColumnVi
   std::static_pointer_cast<AggregateContext<ColumnType, decltype(aggregate_type)>>(new_ctx)->groupby_context = ctx;
   return visitor;
 }
+
+class AggregateContextCreator {
+ public:
+  template <typename ColumnType, AggregateFunction function>
+  static void run(std::vector<std::shared_ptr<ColumnVisitableContext>> &contexts, ColumnID column_index) {
+    contexts[column_index] = make_aggregate_context<ColumnType, function>();
+  }
+};
 
 }  // namespace opossum

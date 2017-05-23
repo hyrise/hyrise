@@ -93,29 +93,23 @@ std::shared_ptr<const Table> Aggregate::on_execute() {
   for (ColumnID column_index = 0; column_index < _contexts_per_column.size(); ++column_index) {
     auto type_string = input_table->column_type(_aggregate_column_ids[column_index]);
 
-    hana::for_each(column_types, [&](auto x) {
-      if (std::string(hana::first(x)) == type_string) {
-        using column_type = typename decltype(+hana::second(x))::type;
-
-        switch (_aggregates[column_index].second) {
-          case Min:
-            _contexts_per_column[column_index] = make_aggregate_context<column_type, Min>();
-            break;
-          case Max:
-            _contexts_per_column[column_index] = make_aggregate_context<column_type, Max>();
-            break;
-          case Sum:
-            _contexts_per_column[column_index] = make_aggregate_context<column_type, Sum>();
-            break;
-          case Avg:
-            _contexts_per_column[column_index] = make_aggregate_context<column_type, Avg>();
-            break;
-          case Count:
-            _contexts_per_column[column_index] = make_aggregate_context<column_type, Count>();
-            break;
-        }
-      }
-    });
+    switch (_aggregates[column_index].second) {
+      case Min:
+        call_functor_by_column_type<AggregateContextCreator, Min>(type_string, _contexts_per_column, column_index);
+        break;
+      case Max:
+        call_functor_by_column_type<AggregateContextCreator, Max>(type_string, _contexts_per_column, column_index);
+        break;
+      case Sum:
+        call_functor_by_column_type<AggregateContextCreator, Sum>(type_string, _contexts_per_column, column_index);
+        break;
+      case Avg:
+        call_functor_by_column_type<AggregateContextCreator, Avg>(type_string, _contexts_per_column, column_index);
+        break;
+      case Count:
+        call_functor_by_column_type<AggregateContextCreator, Count>(type_string, _contexts_per_column, column_index);
+        break;
+    }
   }
 
   /*
