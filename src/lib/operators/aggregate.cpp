@@ -227,7 +227,7 @@ std::shared_ptr<const Table> Aggregate::on_execute() {
    * However, we need to look only at the first element, because the keys for all columns are the same.
    *
    * The following loop is used for both, actual GroupBy columns and DISTINCT columns.
-  **/
+   **/
   for (auto &map : *results_per_column[0]) {
     for (size_t group_column_index = 0; group_column_index < map.first.size(); ++group_column_index) {
       group_columns[group_column_index]->append(map.first[group_column_index]);
