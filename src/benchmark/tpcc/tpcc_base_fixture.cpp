@@ -7,15 +7,15 @@
 #include "benchmark/benchmark.h"
 
 #include "../../benchmark-libs/tpcc/random_generator.hpp"
-#include "../../benchmark-libs/tpcc/table_generator.hpp"
-#include "../../lib/operators/get_table.hpp"
-#include "../../lib/scheduler/current_scheduler.hpp"
-#include "../../lib/scheduler/node_queue_scheduler.hpp"
-#include "../../lib/scheduler/operator_task.hpp"
-#include "../../lib/scheduler/topology.hpp"
-#include "../../lib/storage/storage_manager.hpp"
-#include "../../lib/storage/table.hpp"
-#include "../../lib/types.hpp"
+#include "../../benchmark-libs/tpcc/tpcc_table_generator.hpp"
+#include "operators/get_table.hpp"
+#include "scheduler/current_scheduler.hpp"
+#include "scheduler/node_queue_scheduler.hpp"
+#include "scheduler/operator_task.hpp"
+#include "scheduler/topology.hpp"
+#include "storage/storage_manager.hpp"
+#include "storage/table.hpp"
+#include "types.hpp"
 
 namespace opossum {
 
@@ -55,7 +55,9 @@ class TPCCBenchmarkFixture : public benchmark::Fixture {
 
   void schedule_tasks_and_wait(const std::vector<std::shared_ptr<OperatorTask>> tasks) {
     schedule_tasks(tasks);
-    tasks.back()->join();
+    if (tasks.size() > 0) {
+      tasks.back()->join();
+    }
   }
 
  protected:

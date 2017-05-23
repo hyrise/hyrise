@@ -129,6 +129,11 @@ project "opossum"
   includedirs { "third_party/grpc/include/", "third_party/grpc/third_party/protobuf/src/" }
   files { "src/lib/**.hpp", "src/lib/**.cpp" }
 
+project "benchmarklibs"
+  kind "StaticLib"
+  links { "opossum" }
+  files { "src/benchmark-libs/**.cpp" }
+
 project "opossum-asan"
   kind "StaticLib"
   buildoptions {"-fsanitize=address -fno-omit-frame-pointer"}
@@ -205,7 +210,7 @@ project "benchmark"
 project "benchmarkTPCC"
   kind "ConsoleApp"
 
-  links { "opossum", "googlebenchmark" }
+  links { "opossum", "googlebenchmark", "benchmarklibs" }
   files { "src/benchmark/*.hpp", "src/benchmark/*.cpp", "src/benchmark/tpcc/*.hpp", "src/benchmark/tpcc/*.cpp" }
   includedirs { "third_party/benchmark/include" }
   postbuildcommands { "./build/benchmarkTPCC --benchmark_format=json > benchmark.json" }

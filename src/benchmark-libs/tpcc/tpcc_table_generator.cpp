@@ -1,4 +1,4 @@
-#include "table_generator.hpp"
+#include "tpcc_table_generator.hpp"
 
 #include <functional>
 #include <map>
@@ -6,7 +6,7 @@
 #include <string>
 #include <utility>
 
-#include "../lib/storage/value_column.hpp"
+#include "storage/value_column.hpp"
 
 namespace tpcc {
 

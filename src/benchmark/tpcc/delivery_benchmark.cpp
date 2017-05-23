@@ -7,12 +7,13 @@
 
 #include "benchmark/benchmark.h"
 
-#include "../../lib/concurrency/transaction_manager.hpp"
-#include "../../lib/operators/aggregate.hpp"
-#include "../../lib/operators/delete.hpp"
-#include "../../lib/operators/get_table.hpp"
-#include "../../lib/operators/projection.hpp"
-#include "../../lib/scheduler/operator_task.hpp"
+#include "concurrency/transaction_manager.hpp"
+#include "operators/aggregate.hpp"
+#include "operators/delete.hpp"
+#include "operators/get_table.hpp"
+#include "operators/projection.hpp"
+#include "operators/table_scan.hpp"
+#include "scheduler/operator_task.hpp"
 
 #include "tpcc_base_fixture.cpp"
 
