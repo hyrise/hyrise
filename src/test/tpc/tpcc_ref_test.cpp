@@ -19,7 +19,7 @@ class TpccRefTest : public BaseTest {
 
     for (const auto & table_name : TABLE_NAMES) {
       auto table = parser.parse(std::string("./") + table_name + ".csv");
-      StorageManager.
+      StorageManager::get().add_table(table_name, table);
     }
   }
 

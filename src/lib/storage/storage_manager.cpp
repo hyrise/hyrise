@@ -55,7 +55,7 @@ void StorageManager::dump_as_csv(const std::string & path)
     auto tableWrapper = std::make_shared<TableWrapper>(table);
     tableWrapper->execute();
 
-    auto exportCsv = std::make_shared<ExportCsv>(tableWrapper, path, name);
+    auto exportCsv = std::make_shared<ExportCsv>(tableWrapper, path + "/" + name);
     exportCsv->execute();
   }
 }
