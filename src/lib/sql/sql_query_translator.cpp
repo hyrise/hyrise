@@ -116,7 +116,7 @@ bool SQLQueryTranslator::_translate_select(const SelectStatement& select) {
 
   // Translate WHERE.
   // Add table scan if applicable.
-  if (select.whereClause != NULL) {
+  if (select.whereClause != nullptr) {
     Expr& where = *select.whereClause;
     auto input_task = _tasks.back();
 
@@ -136,7 +136,7 @@ bool SQLQueryTranslator::_translate_select(const SelectStatement& select) {
   }
 
   // Translate ORDER BY.
-  if (select.order != NULL) {
+  if (select.order != nullptr) {
     if (!_translate_order_by(*select.order, _tasks.back())) {
       return false;
     }

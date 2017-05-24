@@ -51,7 +51,7 @@ std::shared_ptr<const Table> SQLQueryOperator::on_execute(std::shared_ptr<Transa
   }
   _result_task->schedule();
 
-  return NULL;
+  return nullptr;
 }
 
 }  // namespace opossum
