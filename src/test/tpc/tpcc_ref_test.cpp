@@ -2,11 +2,15 @@
 #include <memory>
 #include <vector>
 
+#include <json.hpp>
+
 #include "../base_test.hpp"
 #include "gtest/gtest.h"
 
 #include "../../lib/storage/storage_manager.hpp"
 #include "../../lib/import_export/csv_rfc_parser.hpp"
+
+using json = nlohmann::json;
 
 namespace opossum {
 
@@ -27,11 +31,21 @@ class TpccRefTest : public BaseTest {
     StorageManager::get().reset();
   }
 
- private:
+private:
 };
 
-TEST_F(TpccRefTest, Test) {
+TEST_F(TpccRefTest, SimulationScenario) {
+    auto json_file = std::ifstream("tpcc_simulation_input.json");
+    auto simulation = nlohmann::json{};
 
+    json_file >> simulation;
+
+    for (const auto & transaction : simulation) {
+        const auto & transaction_name = transaction[0];
+       // const auto & transaction_params = transaction[1];
+
+        std::cout << transaction_name << std::endl;
+    }
 }
 
 }  // namespace opossum

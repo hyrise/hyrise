@@ -84,11 +84,11 @@ def generate_delivery():
 if __name__ == "__main__":
     transactions = []
 
-    transactions.append(generate_new_order())
+    #transactions.append(generate_new_order())
     transactions.append(generate_order_status())
-    transactions.append(generate_delivery())
+    #transactions.append(generate_delivery())
 
-    with open("tpcc_input.json", "w") as json_file:
+    with open("tpcc_simulation_input.json", "w") as json_file:
         json.dump(transactions, json_file)
 
 
