@@ -6,6 +6,7 @@
 #include <string>
 #include <utility>
 
+#include "storage/dictionary_compression.hpp"
 #include "storage/value_column.hpp"
 
 namespace tpcc {
@@ -36,7 +37,7 @@ std::shared_ptr<opossum::Table> TableGenerator::generate_items_table() {
 
   auto original_ids = _random_gen.select_unique_ids(_item_size / 10, _item_size);
 
-  auto chunk = opossum::Chunk();
+  auto chunk = opossum::Chunk(true);
   chunk.add_column(add_column<int>(_item_size, [](size_t i) { return i; }));
   chunk.add_column(add_column<int>(_item_size, [&](size_t) { return _random_gen.number(1, 10000); }));
   chunk.add_column(add_column<std::string>(_item_size, [&](size_t) { return _random_gen.astring(14, 24); }));
@@ -53,6 +54,7 @@ std::shared_ptr<opossum::Table> TableGenerator::generate_items_table() {
   }));
 
   table->add_chunk(std::move(chunk));
+  opossum::DictionaryCompression::compress_table(*table);
 
   return table;
 }
@@ -67,11 +69,11 @@ std::shared_ptr<opossum::Table> TableGenerator::generate_warehouse_table() {
   table->add_column("W_STREET_2", "string", false);
   table->add_column("W_CITY", "string", false);
   table->add_column("W_STATE", "string", false);
-  table->add_column("W_ZIP", "int", false);
+  table->add_column("W_ZIP", "string", false);
   table->add_column("W_TAX", "float", false);
   table->add_column("W_YTD", "float", false);
 
-  auto chunk = opossum::Chunk();
+  auto chunk = opossum::Chunk(true);
   chunk.add_column(add_column<int>(_warehouse_size, [](size_t i) { return i; }));
   chunk.add_column(add_column<std::string>(_warehouse_size, [&](size_t) { return _random_gen.astring(6, 10); }));
   chunk.add_column(add_column<std::string>(_warehouse_size, [&](size_t) { return _random_gen.astring(10, 20); }));
@@ -84,6 +86,7 @@ std::shared_ptr<opossum::Table> TableGenerator::generate_warehouse_table() {
       add_column<float>(_warehouse_size, [&](size_t) { return _customer_ytd * _customer_size * _district_size; }));
 
   table->add_chunk(std::move(chunk));
+  opossum::DictionaryCompression::compress_table(*table);
 
   return table;
 }
@@ -113,7 +116,7 @@ std::shared_ptr<opossum::Table> TableGenerator::generate_stock_table() {
   for (size_t warehouse_id = 0; warehouse_id < _warehouse_size; warehouse_id++) {
     auto original_ids = _random_gen.select_unique_ids(_item_size / 10, _item_size);
 
-    auto chunk = opossum::Chunk();
+    auto chunk = opossum::Chunk(true);
     chunk.add_column(add_column<int>(_stock_size, [](size_t i) { return i; }));
     chunk.add_column(add_column<int>(_stock_size, [&](size_t) { return warehouse_id; }));
     chunk.add_column(add_column<int>(_stock_size, [&](size_t) { return _random_gen.number(10, 100); }));
@@ -144,6 +147,7 @@ std::shared_ptr<opossum::Table> TableGenerator::generate_stock_table() {
     table->add_chunk(std::move(chunk));
   }
 
+  opossum::DictionaryCompression::compress_table(*table);
   return table;
 }
 
@@ -164,7 +168,7 @@ std::shared_ptr<opossum::Table> TableGenerator::generate_district_table() {
   table->add_column("D_NEXT_O_ID", "int", false);
 
   for (size_t warehouse_id = 0; warehouse_id < _warehouse_size; warehouse_id++) {
-    auto chunk = opossum::Chunk();
+    auto chunk = opossum::Chunk(true);
     chunk.add_column(add_column<int>(_district_size, [](size_t i) { return i; }));
     chunk.add_column(add_column<int>(_district_size, [&](size_t) { return warehouse_id; }));
     chunk.add_column(add_column<std::string>(_district_size, [&](size_t) { return _random_gen.astring(6, 10); }));
@@ -180,6 +184,7 @@ std::shared_ptr<opossum::Table> TableGenerator::generate_district_table() {
     table->add_chunk(std::move(chunk));
   }
 
+  opossum::DictionaryCompression::compress_table(*table);
   return table;
 }
 
@@ -213,7 +218,7 @@ std::shared_ptr<opossum::Table> TableGenerator::generate_customer_table() {
     for (size_t district_id = 0; district_id < _district_size; district_id++) {
       auto original_ids = _random_gen.select_unique_ids(_item_size / 10, _item_size);
 
-      auto chunk = opossum::Chunk();
+      auto chunk = opossum::Chunk(true);
       chunk.add_column(add_column<int>(_customer_size, [](size_t i) { return i; }));
       chunk.add_column(add_column<int>(_customer_size, [&](size_t) { return district_id; }));
       chunk.add_column(add_column<int>(_customer_size, [&](size_t) { return warehouse_id; }));
@@ -244,6 +249,7 @@ std::shared_ptr<opossum::Table> TableGenerator::generate_customer_table() {
     }
   }
 
+  opossum::DictionaryCompression::compress_table(*table);
   return table;
 }
 
@@ -262,7 +268,7 @@ std::shared_ptr<opossum::Table> TableGenerator::generate_history_table() {
 
   for (size_t warehouse_id = 0; warehouse_id < _warehouse_size; warehouse_id++) {
     for (size_t district_id = 0; district_id < _district_size; district_id++) {
-      auto chunk = opossum::Chunk();
+      auto chunk = opossum::Chunk(true);
       chunk.add_column(add_column<int>(_history_size_per_district, [&](size_t i) { return i / _history_size; }));
       chunk.add_column(add_column<int>(_history_size_per_district, [&](size_t) { return district_id; }));
       chunk.add_column(add_column<int>(_history_size_per_district, [&](size_t) { return warehouse_id; }));
@@ -274,6 +280,7 @@ std::shared_ptr<opossum::Table> TableGenerator::generate_history_table() {
     }
   }
 
+  opossum::DictionaryCompression::compress_table(*table);
   return table;
 }
 
@@ -308,7 +315,7 @@ std::shared_ptr<opossum::Table> TableGenerator::generate_order_table(
   for (size_t warehouse_id = 0; warehouse_id < _warehouse_size; warehouse_id++) {
     for (size_t district_id = 0; district_id < _district_size; district_id++) {
       auto customer_permutation = _random_gen.permutation(0, _customer_size);
-      auto chunk = opossum::Chunk();
+      auto chunk = opossum::Chunk(true);
       chunk.add_column(add_column<int>(_order_size, [](size_t i) { return i; }));
       chunk.add_column(add_column<int>(_order_size, [&](size_t i) { return customer_permutation[i]; }));
       chunk.add_column(add_column<int>(_order_size, [&](size_t) { return district_id; }));
@@ -324,6 +331,7 @@ std::shared_ptr<opossum::Table> TableGenerator::generate_order_table(
     }
   }
 
+  opossum::DictionaryCompression::compress_table(*table);
   return table;
 }
 
@@ -346,7 +354,7 @@ std::shared_ptr<opossum::Table> TableGenerator::generate_order_line_table(
   for (size_t warehouse_id = 0; warehouse_id < _warehouse_size; warehouse_id++) {
     for (size_t district_id = 0; district_id < _district_size; district_id++) {
       for (size_t order_id = 0; order_id < _order_size; order_id++) {
-        auto chunk = opossum::Chunk();
+        auto chunk = opossum::Chunk(true);
         auto order_line_size = order_line_counts[warehouse_id][district_id][order_id];
         chunk.add_column(add_column<int>(order_line_size, [&](size_t) { return order_id; }));
         chunk.add_column(add_column<int>(order_line_size, [&](size_t) { return district_id; }));
@@ -367,6 +375,7 @@ std::shared_ptr<opossum::Table> TableGenerator::generate_order_line_table(
     }
   }
 
+  opossum::DictionaryCompression::compress_table(*table);
   return table;
 }
 
@@ -380,7 +389,7 @@ std::shared_ptr<opossum::Table> TableGenerator::generate_new_order_table() {
 
   for (size_t warehouse_id = 0; warehouse_id < _warehouse_size; warehouse_id++) {
     for (size_t district_id = 0; district_id < _district_size; district_id++) {
-      auto chunk = opossum::Chunk();
+      auto chunk = opossum::Chunk(true);
       chunk.add_column(
           add_column<int>(_new_order_size, [&](size_t i) { return i + _order_size + 1 - _new_order_size; }));
       chunk.add_column(add_column<int>(_new_order_size, [&](size_t) { return district_id; }));
@@ -389,6 +398,7 @@ std::shared_ptr<opossum::Table> TableGenerator::generate_new_order_table() {
     }
   }
 
+  opossum::DictionaryCompression::compress_table(*table);
   return table;
 }
 
