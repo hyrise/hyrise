@@ -4,6 +4,9 @@
 #include <string>
 #include <utility>
 
+#include "../operators/table_wrapper.hpp"
+#include "../operators/export_csv.hpp"
+
 namespace opossum {
 
 // singleton
@@ -41,5 +44,20 @@ void StorageManager::print(std::ostream &out) const {
 }
 
 void StorageManager::reset() { get() = StorageManager(); }
+
+void StorageManager::dump_as_csv(const std::string & path)
+{
+  for (auto & pair : _tables)
+  {
+    const auto & name = pair.first;
+    auto & table = pair.second;
+
+    auto tableWrapper = std::make_shared<TableWrapper>(table);
+    tableWrapper->execute();
+
+    auto exportCsv = std::make_shared<ExportCsv>(tableWrapper, path + "/" + name + ".csv");
+    exportCsv->execute();
+  }
+}
 
 }  // namespace opossum

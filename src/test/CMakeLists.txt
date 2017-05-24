@@ -55,6 +55,8 @@ set(
     storage/variable_length_key_store_test.cpp
     storage/variable_length_key_test.cpp
     tasks/chunk_compression_task_test.cpp
+    storage/value_column_test.cpp
+    tpc/tpcc_ref_test.cpp
     utils/cuckoo_hashtable_test.cpp
 )
 

@@ -12,7 +12,11 @@ add_executable(
 )
 target_link_libraries(opossumPlayground opossum)
 
-# Configure tpcc playground
+# Configure tpcTableGenerator
+add_executable(tpcTableGenerator tpc_table_generator.cpp)
+target_link_libraries(tpcTableGenerator opossum tpcc)
+
+# Configure tpc playground
 add_executable(
         opossumPlaygroundTPCC
         playgroundTPCCBenchmark.cpp

@@ -9,6 +9,6 @@ set(
     opossum
 )
 
-# Configure the tpcc library
+# Configure the tpc library
 add_library(tpcc STATIC ${SOURCES})
 target_link_libraries(tpcc ${LIBRARIES})

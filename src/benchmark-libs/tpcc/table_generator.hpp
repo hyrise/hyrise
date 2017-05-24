@@ -62,4 +62,4 @@ class TableGenerator {
 
   RandomGenerator _random_gen;
 };
-}  // namespace tpcc
+}  // namespace tpc
