@@ -8,6 +8,7 @@
 #include <vector>
 #include "types.hpp"
 
+#include "storage/value_column.hpp"
 #include "tbb/concurrent_vector.h"
 
 namespace opossum {
