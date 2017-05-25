@@ -204,12 +204,18 @@ def process_order_status(cur, params):
     o_entry_d = order[2]
 
     execute_sql(cur, q["getOrderLines"], (w_id, d_id, o_id))
-    order_lines = cur.fetchall() # (ol_supply_w_id, ol_i_id, ol_quantity, ol_amount, ol_delivery_d)1
+    order_lines = cur.fetchall() # (ol_supply_w_id, ol_i_id, ol_quantity, ol_amount, ol_delivery_d)
 
     return {
-        "Customer": (c_id, c_first, c_middle, c_last, c_balance),
-        "Order": (o_id, o_carrier_id, o_entry_d),
-        "OrderLines": order_lines
+        "c_id": c_id,
+        "c_first": c_first,
+        "c_middle": c_middle,
+        "c_last": c_last,
+        "c_balance": c_balance,
+        "o_id": o_id,
+        "o_carrier_id": o_carrier_id,
+        "o_entry_d": o_entry_d,
+        "order_lines": order_lines
     }
 
 def process_delivery(cur, params):

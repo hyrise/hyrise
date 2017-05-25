@@ -59,8 +59,8 @@ def generate_new_order():
 
 def generate_order_status():
     order_status= {
-        "w_id": 0, # TODO: support multiple warehouses
-        "d_id": random.randint(0, NUM_DISTRICTS_PER_WAREHOUSE - 1)
+        "c_w_id": 0, # TODO: support multiple warehouses
+        "c_d_id": random.randint(0, NUM_DISTRICTS_PER_WAREHOUSE - 1)
     }
 
     order_status["case"] = 2 if random.randint(1, 100) <= 60 else 1
