@@ -8,6 +8,9 @@
 #include "import_export/csv.hpp"
 #include "import_export/csv_converter.hpp"
 
+#include "resolve_type.hpp"
+#include "type_cast.hpp"
+
 namespace opossum {
 
 template <typename CharT, typename TraitsT = std::char_traits<CharT>>
@@ -42,7 +45,7 @@ CsvNonRfcParser::CsvNonRfcParser(const size_t buffer_size, const unsigned int nu
     : _num_tasks(num_tasks), _buffer_size(buffer_size), _task_counter(0) {}
 
 std::shared_ptr<Table> CsvNonRfcParser::parse(const std::string& filename) {
-  auto table = _process_meta_file(filename + csv::meta_file_extension);
+  auto table = _process_meta_file(filename + csv_meta_file_extension);
   _file_info = TableInfo(table);
 
   _file_handle.exceptions(std::ifstream::failbit | std::ifstream::badbit);
@@ -85,7 +88,7 @@ std::shared_ptr<Table> CsvNonRfcParser::parse(const std::string& filename) {
 
 bool CsvNonRfcParser::_start_new_job(std::shared_ptr<std::vector<char>> buffer) {
   //  if buffer is empty, or just a linebreak: skip it!
-  if (buffer->empty() || (buffer->front() == csv::delimiter)) {
+  if (buffer->empty() || (buffer->front() == csv_delimiter)) {
     return false;
   }
 
@@ -285,7 +288,7 @@ bool CsvNonRfcParser::_read_csv(std::istream& stream, std::string& out, const ch
     // If the number is odd, there is an opening quote but no closing quote. The delimiter is part of the field and must
     // appended in this case.
     // Escaped quotes are two quotes and therefore don't change the result of the modulus operation.
-    if (std::count(out.begin(), out.end(), csv::quote) % 2 == 0) {
+    if (std::count(out.begin(), out.end(), csv_quote) % 2 == 0) {
       return true;
     } else {
       out += delimiter;
@@ -298,17 +301,17 @@ bool CsvNonRfcParser::_get_row(std::istream& stream, std::string& out) {
   out.clear();
   std::string line;
 
-  while (std::getline(stream, line, csv::delimiter)) {
+  while (std::getline(stream, line, csv_delimiter)) {
     out += line;
 
-    //    We expcet all delimiters encapsulated in quotes to be escaped with csv::escape, so if the forelast character
+    //    We expcet all delimiters encapsulated in quotes to be escaped with csv_escape, so if the forelast character
     //    is
     //    an escape, the delimiter (last character) is not valid. If the last character is no delimiter, we have
     //    reached the end of the buffer and return an incomplete result
-    if (out[out.size() - 1] == csv::delimiter_escape) {
+    if (out[out.size() - 1] == csv_delimiter_escape) {
       //      unescape the linebreak
       out.erase(out.begin() + out.size() - 1);
-      out += csv::delimiter;
+      out += csv_delimiter;
       continue;
     }
 
@@ -316,19 +319,19 @@ bool CsvNonRfcParser::_get_row(std::istream& stream, std::string& out) {
     // If the number is odd, there is an opening quote but no closing quote. The delimiter is part of the
     // field and must appended in this case.
     // Escaped quotes are two quotes and therefore don't change the result of the modulus operation.
-    auto number_of_quotes = std::count(out.begin(), out.end(), csv::quote);
+    auto number_of_quotes = std::count(out.begin(), out.end(), csv_quote);
     if (number_of_quotes % 2 == 0) {
       return true;
     } else {
       //      Field is incapsulated within quotes
-      if (std::count(out.begin(), out.end(), csv::quote) > 0) {
-        //         If we are searching for the real end of line (linebreak not encapsulated within csv::escape
+      if (std::count(out.begin(), out.end(), csv_quote) > 0) {
+        //         If we are searching for the real end of line (linebreak not encapsulated within csv_escape
         //           example line:
         //           xxx",yyy,"zz\nz"\n
-        //           we found the end of the line, if the csv::delimiter is prepended by a csv::escape, getline()
-        //           erases csv::delimiter,
+        //           we found the end of the line, if the csv_delimiter is prepended by a csv_escape, getline()
+        //           erases csv_delimiter,
         //           so we just check the last character of the fetched line
-        if (out.back() == csv::quote) {
+        if (out.back() == csv_quote) {
           return true;
         }
 
@@ -336,11 +339,11 @@ bool CsvNonRfcParser::_get_row(std::istream& stream, std::string& out) {
         //          xxx",---,"--\n-",---\n
         //          or
         //          "xx\n
-        //          This case is more complicated, we have to check wether there are any csv::quote between the last
+        //          This case is more complicated, we have to check wether there are any csv_quote between the last
         //          csv::seperator
-        //          and the csv::delimiter respectively, in this case, the end of the fetched line
-        auto pos_quote = out.find_last_of(csv::quote);
-        auto pos_seperator = out.find_last_of(csv::separator);
+        //          and the csv_delimiter respectively, in this case, the end of the fetched line
+        auto pos_quote = out.find_last_of(csv_quote);
+        auto pos_seperator = out.find_last_of(csv_separator);
         if (pos_seperator != std::string::npos && pos_quote < pos_seperator) {
           return true;
         }
@@ -358,13 +361,13 @@ bool CsvNonRfcParser::_get_row(std::istream& stream, std::string& out) {
       }
     }
 
-    out += csv::delimiter;
+    out += csv_delimiter;
   }
   return false;
 }
 
 bool CsvNonRfcParser::_get_field(std::istream& stream, std::string& out) {
-  return _read_csv(stream, out, csv::separator);
+  return _read_csv(stream, out, csv_separator);
 }
 
 std::vector<std::string> CsvNonRfcParser::_get_fields(const std::string& row) {

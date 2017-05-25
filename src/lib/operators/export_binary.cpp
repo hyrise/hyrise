@@ -5,9 +5,12 @@
 #include <vector>
 
 #include "../import_export/binary.hpp"
-#include "../types.hpp"
 #include "export_binary.hpp"
 #include "storage/reference_column.hpp"
+
+#include "resolve_type.hpp"
+#include "type_cast.hpp"
+#include "types.hpp"
 
 namespace {
 
@@ -144,7 +147,7 @@ void ExportBinary::ExportBinaryVisitor<T>::handle_value_column(BaseColumn& base_
   auto context = std::static_pointer_cast<ExportContext>(base_context);
   const auto& column = static_cast<ValueColumn<T>&>(base_column);
 
-  _export_value(context->ofstream, binary::ColumnType::value_column);
+  _export_value(context->ofstream, BinaryColumnType::value_column);
   _export_values(context->ofstream, column.values());
 }
 
@@ -154,7 +157,7 @@ void ExportBinary::ExportBinaryVisitor<T>::handle_reference_column(
   auto context = std::static_pointer_cast<ExportContext>(base_context);
 
   // We materialize reference columns and save them as value columns
-  _export_value(context->ofstream, binary::ColumnType::value_column);
+  _export_value(context->ofstream, BinaryColumnType::value_column);
 
   // Unfortunately, we have to iterate over all values of the reference column
   // to materialize its contents. Then we can write them to the file
@@ -170,7 +173,7 @@ void ExportBinary::ExportBinaryVisitor<std::string>::handle_reference_column(
   auto context = std::static_pointer_cast<ExportContext>(base_context);
 
   // We materialize reference columns and save them as value columns
-  _export_value(context->ofstream, binary::ColumnType::value_column);
+  _export_value(context->ofstream, BinaryColumnType::value_column);
 
   // If there is no data, we can skip all of the coming steps.
   if (ref_column.size() == 0) return;
@@ -196,7 +199,7 @@ void ExportBinary::ExportBinaryVisitor<T>::handle_dictionary_column(
   auto context = std::static_pointer_cast<ExportContext>(base_context);
   const auto& column = static_cast<DictionaryColumn<T>&>(base_column);
 
-  _export_value(context->ofstream, binary::ColumnType::dictionary_column);
+  _export_value(context->ofstream, BinaryColumnType::dictionary_column);
   _export_value(context->ofstream, static_cast<const AttributeVectorWidth>(column.attribute_vector()->width()));
 
   // Write the dictionary size and dictionary
