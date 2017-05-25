@@ -10,28 +10,12 @@
 
 namespace opossum {
 
-class SQLBenchmark : public BenchmarkFixture {
+class SQLBenchmark : public BenchmarkBasicFixture {
  public:
   virtual void SetUp(const ::benchmark::State& state) {}
 
   virtual void TearDown(const ::benchmark::State& state) {}
 };
-
-// Same query as BM_TableScanConstant.
-BENCHMARK_F(SQLBenchmark, BM_SQLFullQueryExecution)(benchmark::State& state) {
-  clear_cache();
-  const std::string query = "SELECT * FROM benchmark_table_one WHERE a >= 7;";
-
-  while (state.KeepRunning()) {
-    SQLQueryTranslator translator;
-    translator.translate_query(query);
-    auto tasks = translator.get_tasks();
-
-    for (uint i = 0; i < tasks.size(); ++i) {
-      tasks[i]->get_operator()->execute();
-    }
-  }
-}
 
 BENCHMARK_F(SQLBenchmark, BM_SQLTranslationTotal)(benchmark::State& state) {
   clear_cache();
