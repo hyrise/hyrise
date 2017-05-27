@@ -16,24 +16,26 @@ namespace opossum {
 // Defining the base fixture class
 class BenchmarkBasicFixture : public benchmark::Fixture {
  public:
-  BenchmarkBasicFixture() {
+  virtual void SetUp(::benchmark::State& state) {
     // Generating a test table with generate_table function from table_generator.cpp
 
     auto table_generator = std::make_shared<TableGenerator>();
 
-    auto table = table_generator->get_table();
-
     auto table_generator2 = std::make_shared<TableGenerator>();
 
-    auto table2 = table_generator2->get_table();
-
-    _table_wrapper_a = std::make_shared<TableWrapper>(table_generator->get_table());
-    _table_wrapper_b = std::make_shared<TableWrapper>(table_generator2->get_table());
+    _table_wrapper_a = std::make_shared<TableWrapper>(table_generator->get_table(state.range(0)));
+    _table_wrapper_b = std::make_shared<TableWrapper>(table_generator2->get_table(state.range(0)));
     _table_wrapper_a->execute();
     _table_wrapper_b->execute();
   }
 
   virtual void TearDown(const ::benchmark::State&) { opossum::StorageManager::get().reset(); }
+
+  static void ChunkSizeIn(benchmark::internal::Benchmark* b) {
+    for (size_t i : {0u, 10000u, 100000u}) {
+      b->Args({static_cast<int>(i)});  // i = chunk size
+    }
+  }
 
  protected:
   std::shared_ptr<TableWrapper> _table_wrapper_a;

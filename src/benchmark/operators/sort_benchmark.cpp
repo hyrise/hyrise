@@ -10,20 +10,24 @@
 
 namespace opossum {
 
-BENCHMARK_DEFINE_F(BenchmarkBasicFixture, BM_Sort_ChunkSize)(benchmark::State& state) {
+BENCHMARK_DEFINE_F(BenchmarkBasicFixture, BM_Sort_ChunkSizeOut)(benchmark::State& state) {
   clear_cache();
-  auto warm_up = std::make_shared<Sort>(_table_wrapper_a, "a", state.range(0));
+  auto warm_up = std::make_shared<Sort>(_table_wrapper_a, "a", state.range(1));
   warm_up->execute();
   while (state.KeepRunning()) {
-    auto sort = std::make_shared<Sort>(_table_wrapper_a, "a", state.range(0));
+    auto sort = std::make_shared<Sort>(_table_wrapper_a, "a", state.range(1));
     sort->execute();
   }
 }
 
-static void ChunkSize(benchmark::internal::Benchmark* b) {
-  for (int i : {0, 100}) b->Args({i});  // i = chunk size
+static void ChunkSizeOut(benchmark::internal::Benchmark* b) {
+  for (int i : {0, 10000, 100000}) {
+    for (int j : {0, 10000, 100000}) {
+      b->Args({i, j});  // i = chunk size in, i = chunk size out
+    }
+  }
 }
 
-BENCHMARK_REGISTER_F(BenchmarkBasicFixture, BM_Sort_ChunkSize)->Apply(ChunkSize);
+BENCHMARK_REGISTER_F(BenchmarkBasicFixture, BM_Sort_ChunkSizeOut)->Apply(ChunkSizeOut);
 
 }  // namespace opossum
