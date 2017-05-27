@@ -17,7 +17,7 @@
 
 namespace opossum {
 /*
-BENCHMARK_F(BenchmarkBasicFixture, BM_Template)(benchmark::State& state) {
+BENCHMARK_DEFINE_F(BenchmarkBasicFixture, BM_Template)(benchmark::State& state) {
   // Google benchmark automaticly determines a number of executions. The code that should be measured multiple times
   // goes in the while loop. Executions before the loop won't be measured.
   clear_cache();
@@ -31,5 +31,20 @@ BENCHMARK_F(BenchmarkBasicFixture, BM_Template)(benchmark::State& state) {
     difference->execute();
   }
 }
+
+BENCHMARK_REGISTER_F(BenchmarkBasicFixture, BM_Template)->Apply(BenchmarkBasicFixture::ChunkSizeIn);
+
+
+// If you like to add your own parameters you need to write your own parameters function like this. It is important that
+// the first parameter is always the chunk size of the generated table due to consitent naming.
+static void CustomArguments(benchmark::internal::Benchmark* b) {
+  for (int i : {0, 10000, 100000}) {
+    for (int j = 0; i <= 2; j++) {
+      b->Args({i, j});  // i = column type, j = chunk size in
+    }
+  }
+}
+
+BENCHMARK_REGISTER_F(BenchmarkBasicFixture, BM_Template)->Apply(CustomArguments);
 */
 }  // namespace opossum
