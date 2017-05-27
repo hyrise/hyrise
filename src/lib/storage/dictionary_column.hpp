@@ -34,7 +34,7 @@ class DictionaryColumn : public UntypedDictionaryColumn {
   const T get(const size_t i) const;
 
   // dictionary columns are immutable
-  void append(const AllTypeVariant&) override { Fail("DictionaryColumn is immutable"); }
+  void append(const AllTypeVariant&) override;
 
   // returns an underlying dictionary
   std::shared_ptr<const std::vector<T>> dictionary() const;

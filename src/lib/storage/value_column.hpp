@@ -8,7 +8,6 @@
 #include "tbb/concurrent_vector.h"
 
 #include "base_column.hpp"
-#include "dictionary_column.hpp"
 #include "utils/assert.hpp"
 
 namespace opossum {

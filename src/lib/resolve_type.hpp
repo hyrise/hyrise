@@ -24,7 +24,7 @@ std::unique_ptr<base> make_unique_by_column_type(const std::string &type, Constr
       return;
     }
   });
-  if (IS_DEBUG && !ret) throw std::runtime_error("unknown type " + type);
+  if (IS_DEBUG && !ret) throw std::logic_error("unknown type " + type);
   return ret;
 }
 
@@ -50,7 +50,7 @@ std::unique_ptr<base> make_unique_by_column_types(const std::string &type1, cons
       return;
     }
   });
-  if (IS_DEBUG && !ret) throw std::runtime_error("unknown type " + type1 + " or " + type2);
+  if (IS_DEBUG && !ret) throw std::logic_error("unknown type " + type1 + " or " + type2);
   return ret;
 }
 

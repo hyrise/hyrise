@@ -4,6 +4,8 @@
 #include <exception>
 #include <ostream>
 
+#include "utils/assert.hpp"
+
 namespace opossum {
 
 // Const VariableLengthKeyProxy
