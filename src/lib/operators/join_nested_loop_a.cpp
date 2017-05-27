@@ -8,6 +8,8 @@
 #include "product.hpp"
 #include "utils/assert.hpp"
 
+#include "resolve_type.hpp"
+
 namespace opossum {
 JoinNestedLoopA::JoinNestedLoopA(const std::shared_ptr<const AbstractOperator> left,
                                  const std::shared_ptr<const AbstractOperator> right,

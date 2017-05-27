@@ -8,6 +8,7 @@
 #include <utility>
 #include <vector>
 
+#include "resolve_type.hpp"
 #include "utils/assert.hpp"
 
 namespace opossum {

@@ -9,9 +9,7 @@
 #include "types.hpp"
 
 namespace opossum {
-namespace binary {
 
-enum class ColumnType : uint8_t { value_column = 0, dictionary_column = 1 };
+enum class BinaryColumnType : uint8_t { value_column = 0, dictionary_column = 1 };
 
-}  // namespace binary
 }  // namespace opossum

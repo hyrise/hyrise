@@ -10,8 +10,11 @@
 #include <vector>
 
 #include "dictionary_column.hpp"
-#include "types.hpp"
 #include "utils/assert.hpp"
+#include "value_column.hpp"
+
+#include "resolve_type.hpp"
+#include "types.hpp"
 
 namespace opossum {
 

@@ -3,6 +3,8 @@
 #include <memory>
 #include <string>
 
+#include "resolve_type.hpp"
+
 namespace opossum {
 
 IndexColumnScan::IndexColumnScan(const std::shared_ptr<AbstractOperator> in, const std::string &column_name,

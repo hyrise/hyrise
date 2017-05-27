@@ -1,5 +1,7 @@
 #include "import_binary.hpp"
 
+#include <boost/hana/for_each.hpp>
+
 #include <cstdint>
 #include <fstream>
 #include <memory>
@@ -127,15 +129,15 @@ std::shared_ptr<BaseColumn> ImportBinary::_import_column(std::ifstream& file, Ch
 
 template <typename DataType>
 std::shared_ptr<BaseColumn> ImportBinary::_import_column(std::ifstream& file, ChunkOffset row_count) {
-  const auto column_type = _read_value<binary::ColumnType>(file);
+  const auto column_type = _read_value<BinaryColumnType>(file);
 
   switch (column_type) {
-    case binary::ColumnType::value_column:
+    case BinaryColumnType::value_column:
       return _import_value_column<DataType>(file, row_count);
-    case binary::ColumnType::dictionary_column:
+    case BinaryColumnType::dictionary_column:
       return _import_dictionary_column<DataType>(file, row_count);
     default:
-      // This case happens if the read column type is not a valid binary::ColumnType.
+      // This case happens if the read column type is not a valid BinaryColumnType.
       throw std::runtime_error("Cannot import column: invalid column type");
   }
 }

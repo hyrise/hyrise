@@ -4,6 +4,7 @@
 #include <map>
 #include <memory>
 #include <string>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 
@@ -100,26 +101,27 @@ class ReferenceColumn : public BaseColumn {
     into a vector for each chunk. A potential optimization would be to only do this if the pos_list is really
     unsorted.
     */
-    std::vector<std::shared_ptr<std::vector<ChunkOffset>>> all_chunk_offsets(_referenced_table->chunk_count());
 
-    for (ChunkID chunk_id = 0; chunk_id < _referenced_table->chunk_count(); ++chunk_id) {
-      all_chunk_offsets[chunk_id] = std::make_shared<std::vector<ChunkOffset>>();
-    }
+    std::unordered_map<ChunkID, std::shared_ptr<std::vector<ChunkOffset>>> all_chunk_offsets;
 
     for (auto pos : *(_pos_list)) {
       auto chunk_info = _referenced_table->locate_row(pos);
-      all_chunk_offsets[chunk_info.first]->emplace_back(chunk_info.second);
+
+      auto iter = all_chunk_offsets.find(chunk_info.first);
+      if (iter == all_chunk_offsets.end())
+        iter = all_chunk_offsets.emplace(chunk_info.first, std::make_shared<std::vector<ChunkOffset>>()).first;
+
+      iter->second->emplace_back(chunk_info.second);
     }
 
-    for (ChunkID chunk_id = 0; chunk_id < _referenced_table->chunk_count(); ++chunk_id) {
-      if (all_chunk_offsets[chunk_id]->empty()) {
-        continue;
-      }
+    for (auto &pair : all_chunk_offsets) {
+      auto &chunk_id = pair.first;
+      auto &chunk_offsets = pair.second;
+
       auto &chunk = _referenced_table->get_chunk(chunk_id);
       auto referenced_column = chunk.get_column(_referenced_column_id);
 
-      auto c = std::make_shared<ContextClass>(referenced_column, _referenced_table, ctx, chunk_id,
-                                              all_chunk_offsets[chunk_id]);
+      auto c = std::make_shared<ContextClass>(referenced_column, _referenced_table, ctx, chunk_id, chunk_offsets);
       referenced_column->visit(visitable, c);
     }
   }

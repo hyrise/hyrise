@@ -8,7 +8,10 @@
 #include "product.hpp"
 #include "utils/assert.hpp"
 
+#include "resolve_type.hpp"
+
 namespace opossum {
+
 JoinHash::JoinHash(const std::shared_ptr<const AbstractOperator> left,
                    const std::shared_ptr<const AbstractOperator> right,
                    optional<std::pair<std::string, std::string>> column_names, const std::string &op,

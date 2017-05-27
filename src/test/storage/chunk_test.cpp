@@ -4,6 +4,7 @@
 #include "gtest/gtest.h"
 
 #include "../lib/common.hpp"
+#include "../lib/resolve_type.hpp"
 #include "../lib/storage/base_column.hpp"
 #include "../lib/storage/chunk.hpp"
 #include "../lib/types.hpp"
