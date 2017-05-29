@@ -60,8 +60,8 @@ set(
     concurrency/transaction_manager.cpp
     concurrency/transaction_manager.hpp
     import_export/binary.hpp
-    import_export/csv.hpp
     import_export/csv_converter.hpp
+    import_export/csv.hpp
     import_export/csv_non_rfc_parser.cpp
     import_export/csv_non_rfc_parser.hpp
     import_export/csv_rfc_parser.cpp
@@ -73,9 +73,9 @@ set(
     network/request_handler.cpp
     network/request_handler.hpp
     network/response_builder.hpp
+    network/server_configuration.hpp
     network/server.cpp
     network/server.hpp
-    network/server_configuration.hpp
     operators/abstract_join_operator.cpp
     operators/abstract_join_operator.hpp
     operators/abstract_operator.cpp
@@ -126,8 +126,8 @@ set(
     operators/table_scan.hpp
     operators/table_wrapper.cpp
     operators/table_wrapper.hpp
-    operators/term.hpp
     operators/termfactory.hpp
+    operators/term.hpp
     operators/union_all.cpp
     operators/union_all.hpp
     operators/update.cpp
@@ -174,10 +174,10 @@ set(
     storage/index/group_key/composite_group_key_index.cpp
     storage/index/group_key/composite_group_key_index.hpp
     storage/index/group_key/group_key_index.hpp
-    storage/index/group_key/variable_length_key.cpp
-    storage/index/group_key/variable_length_key.hpp
     storage/index/group_key/variable_length_key_base.cpp
     storage/index/group_key/variable_length_key_base.hpp
+    storage/index/group_key/variable_length_key.cpp
+    storage/index/group_key/variable_length_key.hpp
     storage/index/group_key/variable_length_key_proxy.cpp
     storage/index/group_key/variable_length_key_proxy.hpp
     storage/index/group_key/variable_length_key_store.cpp
