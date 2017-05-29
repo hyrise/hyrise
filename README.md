@@ -120,6 +120,7 @@ Contact: firstname.lastname@hpi.de
 - Timo Djürken
 -	Moritz	Eyssen
 -	Martin	Fischer
+-	Pedro	Flemming
 -	Michael	Janke
 -	Max	Jendruk
 -	Marvin	Keller
