@@ -67,6 +67,9 @@ class Table {
   // note this is slow and not thread-safe and should be used for testing purposes only
   void append(std::vector<AllTypeVariant> values);
 
+  // returns a materialized row from the table
+  const std::vector<AllTypeVariant> fetch_row(const size_t index) const;
+
   // creates a new chunk and appends it
   void create_new_chunk();
 
