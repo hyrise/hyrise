@@ -9,7 +9,6 @@
 #include "gtest/gtest.h"
 
 #include "../base_test.hpp"
-#include "../../benchmark-libs/tpcc/abstract_transaction_impl.h"
 #include "../../benchmark-libs/tpcc/order_status.hpp"
 #include "../../lib/storage/storage_manager.hpp"
 #include "../../lib/import_export/csv_rfc_parser.hpp"
@@ -48,11 +47,11 @@ class OrderStatusTestImpl : public TransactionTestImpl {
         const auto & our = our_result.order_lines[l];
         const auto & ref = ref_result.order_lines[l];
 
-        ASSERT_EQ(ref.ol_supply_w_id, ref.ol_supply_w_id);
-        ASSERT_EQ(ref.ol_i_id, ref.ol_i_id);
-        ASSERT_EQ(ref.ol_quantity, ref.ol_quantity);
-        ASSERT_EQ(ref.ol_amount, ref.ol_amount);
-        ASSERT_EQ(ref.ol_delivery_d, ref.ol_delivery_d);
+        ASSERT_EQ(ref.ol_supply_w_id, our.ol_supply_w_id);
+        ASSERT_EQ(ref.ol_i_id, our.ol_i_id);
+        ASSERT_EQ(ref.ol_quantity, our.ol_quantity);
+        ASSERT_EQ(ref.ol_amount, our.ol_amount);
+        ASSERT_EQ(ref.ol_delivery_d, our.ol_delivery_d);
       }
   }
 
@@ -115,7 +114,7 @@ TEST_F(TpccRefTest, SimulationScenario) {
     auto iter = m_transactionImpls.find(transaction_name);
     assert(iter != m_transactionImpls.end());
 
-    auto & impl = *iter.second;
+    auto & impl = *iter->second;
 
     impl.run_and_test_transaction_from_json(transaction_params, results);
   }

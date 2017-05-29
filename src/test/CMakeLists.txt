@@ -64,6 +64,7 @@ set(
 set(
     LIBRARIES
     gtest
+    tpcc
 )
 
 # Configure opossumTest

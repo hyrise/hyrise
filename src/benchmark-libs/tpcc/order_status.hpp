@@ -7,8 +7,6 @@
 
 #include "../../lib/scheduler/operator_task.hpp"
 
-#include "abstract_transaction_impl.h"
-
 namespace tpcc {
 
 enum class OrderStatusBy {
@@ -43,7 +41,7 @@ struct OrderStatusResult {
   std::vector<OrderStatusOrderLine> order_lines;
 };
 
-class AbstractOrderStatusImpl : public opossum::AbstractTransactionImpl {
+class AbstractOrderStatusImpl {
  public:
   virtual std::vector<std::shared_ptr<opossum::OperatorTask>>
   get_customer_by_name(const std::string c_last, const int c_d_id,

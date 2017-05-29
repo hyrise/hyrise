@@ -25,13 +25,13 @@ OrderStatusResult AbstractOrderStatusImpl::run_transaction(const OrderStatusPara
     auto num_names = get_customer_tasks.back()->get_operator()->get_output()->row_count();
     assert(num_names > 0);
 
-    customer = get_from_table_at_row(get_customer_tasks.back()->get_operator()->get_output(), ceil(num_names / 2));
+    customer = get_customer_tasks.back()->get_operator()->get_output()->fetch_row(ceil(num_names / 2));
   } else {
     auto get_customer_tasks = get_customer_by_id(params.c_id, params.c_d_id, params.c_w_id);
     AbstractScheduler::schedule_tasks_and_wait(get_customer_tasks);
 
     assert(get_customer_tasks.back()->get_operator()->get_output()->row_count() == 1);
-    customer = get_from_table_at_row(get_customer_tasks.back()->get_operator()->get_output(), 0);
+    customer = get_customer_tasks.back()->get_operator()->get_output()->fetch_row(0);
   }
 
   result.c_id = customer[0];
@@ -43,7 +43,7 @@ OrderStatusResult AbstractOrderStatusImpl::run_transaction(const OrderStatusPara
   auto get_order_tasks = get_orders();
   AbstractScheduler::schedule_tasks_and_wait(get_order_tasks);
 
-  auto order = get_from_table_at_row(get_order_tasks.back()->get_operator()->get_output(), 0);
+  auto order = get_order_tasks.back()->get_operator()->get_output()->fetch_row(0);
 
   result.o_id = order[0];
   result.o_carrier_id = order[1];
