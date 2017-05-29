@@ -248,16 +248,16 @@ BENCHMARK_F(TPCCPaymentBenchmark, BM_TPCC_Payment)(benchmark::State &state) {
       schedule_tasks_and_wait(insert_history_tasks);
 
       // Commit transaction.
-//      TransactionManager::get().prepare_commit(*t_context);
+      //      TransactionManager::get().prepare_commit(*t_context);
 
-//      auto commit = std::make_shared<CommitRecords>();
-//      commit->set_transaction_context(t_context);
+      //      auto commit = std::make_shared<CommitRecords>();
+      //      commit->set_transaction_context(t_context);
 
-//      auto commit_task = std::make_shared<OperatorTask>(commit);
-//      commit_task->schedule();
-//      commit_task->join();
-//
-//      TransactionManager::get().commit(*t_context);
+      //      auto commit_task = std::make_shared<OperatorTask>(commit);
+      //      commit_task->schedule();
+      //      commit_task->join();
+      //
+      //      TransactionManager::get().commit(*t_context);
     }
   }
 }

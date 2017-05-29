@@ -1,7 +1,6 @@
 #include <iostream>
 #include <memory>
 
-
 #include "../benchmark-libs/tpcc/tpcc_table_generator.hpp"
 #include "operators/get_table.hpp"
 #include "operators/print.hpp"
