@@ -153,6 +153,7 @@ TEST_F(OperatorsUpdateTest, EmptyChunks) {
   auto gt = std::make_shared<GetTable>(table_name);
   gt->execute();
 
+  // table scan will produce two leading empty chunks
   auto table_scan1 = std::make_shared<TableScan>(gt, "a", "=", "12345");
   table_scan1->set_transaction_context(t_context);
   table_scan1->execute();
@@ -164,6 +165,7 @@ TEST_F(OperatorsUpdateTest, EmptyChunks) {
 
   auto update = std::make_shared<Update>(table_name, table_scan1, updated_rows);
   update->set_transaction_context(t_context);
+  // execute will fail, if not checked for leading empty chunks
   update->execute();
 
   // MVCC commit.
