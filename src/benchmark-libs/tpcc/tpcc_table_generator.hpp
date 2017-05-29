@@ -5,9 +5,11 @@
 #include <memory>
 #include <string>
 #include <vector>
-#include "../lib/storage/storage_manager.hpp"
-#include "../lib/storage/table.hpp"
+
 #include "random_generator.hpp"
+#include "storage/storage_manager.hpp"
+#include "storage/table.hpp"
+#include "storage/value_column.hpp"
 
 namespace tpcc {
 

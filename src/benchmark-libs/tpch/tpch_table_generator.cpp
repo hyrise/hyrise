@@ -1,4 +1,4 @@
-#include "table_generator.hpp"
+#include "tpch_table_generator.hpp"
 
 #include <functional>
 #include <memory>
@@ -6,7 +6,7 @@
 #include <utility>
 #include <vector>
 
-#include "../lib/storage/value_column.hpp"
+#include "storage/value_column.hpp"
 
 namespace tpch {
 

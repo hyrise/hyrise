@@ -4,13 +4,13 @@
 
 #include "benchmark/benchmark.h"
 
-#include "../../lib/operators/get_table.hpp"
-#include "../../lib/operators/limit.hpp"
-#include "../../lib/operators/print.hpp"
-#include "../../lib/operators/projection.hpp"
-#include "../../lib/operators/sort.hpp"
-#include "../../lib/operators/table_scan.hpp"
-#include "../../lib/scheduler/operator_task.hpp"
+#include "operators/get_table.hpp"
+#include "operators/limit.hpp"
+#include "operators/print.hpp"
+#include "operators/projection.hpp"
+#include "operators/sort.hpp"
+#include "operators/table_scan.hpp"
+#include "scheduler/operator_task.hpp"
 
 #include "tpcc_base_fixture.cpp"
 

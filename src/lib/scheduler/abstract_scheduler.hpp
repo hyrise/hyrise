@@ -56,7 +56,9 @@ void AbstractScheduler::schedule_tasks(const std::vector<std::shared_ptr<T>> & t
 template<typename T>
 void AbstractScheduler::schedule_tasks_and_wait(const std::vector<std::shared_ptr<T>> tasks) {
   schedule_tasks(tasks);
-  tasks.back()->join();
+  if (!tasks.empty()) {
+    tasks.back()->join();
+  }
 }
 
 }  // namespace opossum
