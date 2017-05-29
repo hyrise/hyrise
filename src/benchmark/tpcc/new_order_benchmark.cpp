@@ -300,25 +300,25 @@ BENCHMARK_F(TPCCNewOrderBenchmark, BM_TPCC_NewOrder)(benchmark::State& state) {
     auto t_context = TransactionManager::get().new_transaction_context();
 
     auto get_customer_tasks = get_get_customer_and_warehouse_tax_rate_tasks(t_context, w_id, d_id, c_id);
-    schedule_tasks_and_wait(get_customer_tasks);
+    AbstractScheduler::schedule_tasks_and_wait(get_customer_tasks);
 
     auto get_district_tasks = get_get_district_tasks(t_context, d_id, w_id);
-    schedule_tasks_and_wait(get_district_tasks);
+    AbstractScheduler::schedule_tasks_and_wait(get_district_tasks);
 
     //    auto output = last_get_district_task->get_operator()->get_output();
 
     auto increment_next_order_id_tasks = get_increment_next_order_id_tasks(t_context, d_id, w_id, d_next_o_id);
-    schedule_tasks_and_wait(increment_next_order_id_tasks);
+    AbstractScheduler::schedule_tasks_and_wait(increment_next_order_id_tasks);
 
     // TODO(tim): loop
     auto get_item_info_tasks = get_get_item_info_tasks(t_context, ol_i_id);
-    schedule_tasks_and_wait(get_item_info_tasks);
+    AbstractScheduler::schedule_tasks_and_wait(get_item_info_tasks);
 
     auto get_stock_info_tasks = get_get_stock_info_tasks(t_context, ol_i_id, ol_supply_w_id);
-    schedule_tasks_and_wait(get_stock_info_tasks);
+    AbstractScheduler::schedule_tasks_and_wait(get_stock_info_tasks);
 
     auto update_stock_tasks = get_update_stock_tasks(t_context, s_quantity, ol_i_id, ol_supply_w_id);
-    schedule_tasks_and_wait(update_stock_tasks);
+    AbstractScheduler::schedule_tasks_and_wait(update_stock_tasks);
 
     // Commit transaction.
     TransactionManager::get().prepare_commit(*t_context);

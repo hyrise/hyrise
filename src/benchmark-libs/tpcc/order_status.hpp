@@ -43,26 +43,52 @@ struct OrderStatusResult {
   std::vector<OrderStatusOrderLine> order_lines;
 };
 
-class AbstractOrderStatusQueryImpl : public opossum::AbstractTransactionImpl {
+class AbstractOrderStatusImpl : public opossum::AbstractTransactionImpl {
  public:
-  virtual std::vector <std::shared_ptr<OperatorTask>>
+  virtual std::vector<std::shared_ptr<opossum::OperatorTask>>
   get_customer_by_name(const std::string c_last, const int c_d_id,
                        const int c_w_id) = 0;
-
-  virtual std::vector <std::shared_ptr<OperatorTask>>
+  virtual std::vector<std::shared_ptr<opossum::OperatorTask>>
   get_customer_by_id(const int c_id, const int c_d_id, const int c_w_id) = 0;
-
-  virtual std::vector <std::shared_ptr<OperatorTask>> get_orders() = 0;
-
-  virtual std::vector <std::shared_ptr<OperatorTask>>
+  virtual std::vector<std::shared_ptr<opossum::OperatorTask>> get_orders() = 0;
+  virtual std::vector<std::shared_ptr<opossum::OperatorTask>>
   get_order_lines(const int o_id, const int d_id, const int w_id) = 0;
 
   OrderStatusResult run_transaction(const OrderStatusParams & params);
-
-  void run_and_test_transaction_from_json(const nlohmann::json & json_params,
-                                          const nlohmann::json & json_results) override;
 };
 
+class OrderStatusRefImpl : public AbstractOrderStatusImpl
+{
+ public:
+  std::vector<std::shared_ptr<opossum::OperatorTask>>
+  get_customer_by_name(const std::string c_last, const int c_d_id,
+                       const int c_w_id) override;
+  std::vector<std::shared_ptr<opossum::OperatorTask>>
+  get_customer_by_id(const int c_id, const int c_d_id, const int c_w_id) override;
+  std::vector<std::shared_ptr<opossum::OperatorTask>> get_orders() override;
+  std::vector<std::shared_ptr<opossum::OperatorTask>>
+  get_order_lines(const int o_id, const int d_id, const int w_id) override;
+};
 
+}
 
+namespace nlohmann
+{
+template<>
+struct adl_serializer<tpcc::OrderStatusParams> {
+  static void to_json(nlohmann::json &j, const tpcc::OrderStatusParams &v);
+  static void from_json(const nlohmann::json &j, tpcc::OrderStatusParams &v);
+};
+
+template<>
+struct adl_serializer<tpcc::OrderStatusOrderLine> {
+  static void to_json(nlohmann::json &j, const tpcc::OrderStatusOrderLine &v);
+  static void from_json(const nlohmann::json &j, tpcc::OrderStatusOrderLine &v);
+};
+
+template<>
+struct adl_serializer<tpcc::OrderStatusResult> {
+  static void to_json(nlohmann::json &j, const tpcc::OrderStatusResult &v);
+  static void from_json(const nlohmann::json &j, tpcc::OrderStatusResult &v);
+};
 }

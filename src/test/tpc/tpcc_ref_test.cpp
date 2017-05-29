@@ -10,25 +10,68 @@
 
 #include "../base_test.hpp"
 #include "../../benchmark-libs/tpcc/abstract_transaction_impl.h"
+#include "../../benchmark-libs/tpcc/order_status.hpp"
 #include "../../lib/storage/storage_manager.hpp"
 #include "../../lib/import_export/csv_rfc_parser.hpp"
 
 using json = nlohmann::json;
+using namespace tpcc;
 
 namespace opossum {
+
+class TransactionTestImpl {
+ public:
+  virtual void run_and_test_transaction_from_json(const nlohmann::json & json_params,
+                                                  const nlohmann::json & json_results) = 0;
+};
+
+class OrderStatusTestImpl : public TransactionTestImpl {
+ public:
+  void run_and_test_transaction_from_json(const nlohmann::json & json_params,
+                                          const nlohmann::json & json_results) {
+      OrderStatusParams params = json_params;
+      OrderStatusResult ref_result = json_results;
+
+      auto our_result = _ref_impl.run_transaction(params);
+
+      ASSERT_EQ(ref_result.c_id, our_result.c_id);
+      ASSERT_EQ(ref_result.c_first, our_result.c_first);
+      ASSERT_EQ(ref_result.c_middle, our_result.c_middle);
+      ASSERT_EQ(ref_result.c_last, our_result.c_last);
+      ASSERT_EQ(ref_result.c_balance, our_result.c_balance);
+      ASSERT_EQ(ref_result.o_id, our_result.o_id);
+      ASSERT_EQ(ref_result.o_carrier_id, our_result.o_carrier_id);
+      ASSERT_EQ(ref_result.o_entry_d, our_result.o_entry_d);
+
+      ASSERT_EQ(ref_result.order_lines.size(), our_result.order_lines.size());
+      for (size_t l = 0; l < ref_result.order_lines.size(); l++) {
+        const auto & our = our_result.order_lines[l];
+        const auto & ref = ref_result.order_lines[l];
+
+        ASSERT_EQ(ref.ol_supply_w_id, ref.ol_supply_w_id);
+        ASSERT_EQ(ref.ol_i_id, ref.ol_i_id);
+        ASSERT_EQ(ref.ol_quantity, ref.ol_quantity);
+        ASSERT_EQ(ref.ol_amount, ref.ol_amount);
+        ASSERT_EQ(ref.ol_delivery_d, ref.ol_delivery_d);
+      }
+  }
+
+ private:
+  OrderStatusRefImpl _ref_impl;
+};
 
 class TpccRefTest : public BaseTest {
  public:
   TpccRefTest() {
     m_transactionImpls = {
-        {"OrderStatus", std::make_shared<OrderStatusRefImpl>()}
+        {"OrderStatus", std::make_shared<OrderStatusTestImpl>()}
     };
   }
 
  protected:
   void SetUp() override {
-    const auto TABLE_NAMES = {"CUSTOMER", "DISTRICT", "HISTORY", "ITEM", "NEW-ORDER", "ORDER-LINE", "ORDER", "STOCK",
-                              "WAREHOUSE"};
+    const auto TABLE_NAMES = {"CUSTOMER", "DISTRICT", "HISTORY", "ITEM", "NEW-ORDER", "ORDER-LINE",
+                              "ORDER", "STOCK", "WAREHOUSE"};
 
     CsvRfcParser parser(100 * 1000);
 
@@ -42,9 +85,9 @@ class TpccRefTest : public BaseTest {
     StorageManager::get().reset();
   }
 
- private:
+ protected:
   std::unordered_map<std::string,
-      std::shared_ptr<AbstractTransactionImpl>> m_transactionImpls;
+      std::shared_ptr<TransactionTestImpl>> m_transactionImpls;
 };
 
 TEST_F(TpccRefTest, SimulationScenario) {
@@ -67,14 +110,14 @@ TEST_F(TpccRefTest, SimulationScenario) {
     const auto &transaction_name = transaction[0];
     const auto &transaction_params = transaction[1];
 
-    std::cout << transaction_name << std::endl;
+    std::cout << "Testing: " << transaction_name << std::endl;
 
     auto iter = m_transactionImpls.find(transaction_name);
     assert(iter != m_transactionImpls.end());
 
     auto & impl = *iter.second;
 
-    impl.run_and_test_transaction_from_json(transaction_params, results );
+    impl.run_and_test_transaction_from_json(transaction_params, results);
   }
 }
 

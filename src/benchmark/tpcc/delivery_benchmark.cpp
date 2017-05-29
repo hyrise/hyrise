@@ -216,7 +216,7 @@ inline void join_tasks(std::vector<std::shared_ptr<OperatorTask>> tasks) {
 }
 
 inline void execute_tasks(std::vector<std::shared_ptr<OperatorTask>> tasks) {
-  schedule_tasks(tasks);
+  AbstractScheduler::schedule_tasks(tasks);
   join_tasks(std::move(tasks));
 }
 

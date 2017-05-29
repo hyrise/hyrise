@@ -139,7 +139,7 @@ BENCHMARK_F(TPCCOrderStatusBenchmark, BM_TPCC_OrderStatus_GetCustomerByName)(ben
 
   while (state.KeepRunning()) {
     auto get_customer_tasks = get_customer_by_name(c_last, c_d_id, c_w_id);
-    schedule_tasks_and_wait(get_customer_tasks);
+    AbstractScheduler::schedule_tasks_and_wait(get_customer_tasks);
   }
 }
 
@@ -152,7 +152,7 @@ BENCHMARK_F(TPCCOrderStatusBenchmark, BM_TPCC_OrderStatus_GetCustomerById)(bench
 
   while (state.KeepRunning()) {
     auto get_customer_tasks = get_customer_by_id(c_id, c_d_id, c_w_id);
-    schedule_tasks_and_wait(get_customer_tasks);
+    AbstractScheduler::schedule_tasks_and_wait(get_customer_tasks);
   }
 }
 
@@ -162,7 +162,7 @@ BENCHMARK_F(TPCCOrderStatusBenchmark, BM_TPCC_OrderStatus_GetOrder)(benchmark::S
 
   while (state.KeepRunning()) {
     auto get_order_tasks = get_orders();
-    schedule_tasks_and_wait(get_order_tasks);
+    AbstractScheduler::schedule_tasks_and_wait(get_order_tasks);
   }
 }
 
@@ -175,7 +175,7 @@ BENCHMARK_F(TPCCOrderStatusBenchmark, BM_TPCC_OrderStatus_GetOrderLine)(benchmar
 
   while (state.KeepRunning()) {
     auto get_order_line_tasks = get_order_lines(0, c_d_id, c_w_id);
-    schedule_tasks_and_wait(get_order_line_tasks);
+    AbstractScheduler::schedule_tasks_and_wait(get_order_line_tasks);
   }
 }
 
@@ -192,7 +192,7 @@ BENCHMARK_F(TPCCOrderStatusBenchmark, BM_TPCC_OrderStatus)(benchmark::State &sta
     // query by last name 6 out of 10 times
     if (_random_gen.number(0, 10) < 6) {
       auto get_customer_tasks = get_customer_by_name(c_last, c_d_id, c_w_id);
-      schedule_tasks_and_wait(get_customer_tasks);
+      AbstractScheduler::schedule_tasks_and_wait(get_customer_tasks);
 
       auto num_names = get_customer_tasks.back()->get_operator()->get_output()->row_count();
       assert(num_names > 0);
@@ -201,17 +201,17 @@ BENCHMARK_F(TPCCOrderStatusBenchmark, BM_TPCC_OrderStatus)(benchmark::State &sta
           get_from_table_at_row(get_customer_tasks.back()->get_operator()->get_output(), ceil(num_names / 2));
     } else {
       auto get_customer_tasks = get_customer_by_id(c_id, c_d_id, c_w_id);
-      schedule_tasks_and_wait(get_customer_tasks);
+      AbstractScheduler::schedule_tasks_and_wait(get_customer_tasks);
 
       assert(get_customer_tasks.back()->get_operator()->get_output()->row_count() == 1);
       auto customer = get_from_table_at_row(get_customer_tasks.back()->get_operator()->get_output(), 0);
     }
 
     auto get_order_tasks = get_orders();
-    schedule_tasks_and_wait(get_order_tasks);
+    AbstractScheduler::schedule_tasks_and_wait(get_order_tasks);
 
     auto get_order_line_tasks = get_order_lines(0, c_d_id, c_w_id);
-    schedule_tasks_and_wait(get_order_line_tasks);
+    AbstractScheduler::schedule_tasks_and_wait(get_order_line_tasks);
   }
 }
 
