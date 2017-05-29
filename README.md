@@ -6,7 +6,7 @@
 
 The [course material](https://hpi.de//plattner/teaching/winter-term-201617/build-your-own-database.html) is a good starting point to get to know Opossum
 
-## install in docker
+## Install in docker
 To get all dependencies of opossum in a docker image, run
 ```
 docker-compose build
@@ -25,7 +25,7 @@ You can install the dependencies on your own or use the install.sh script which 
 
 The install script currently works with macOS (brew) and Ubuntu 16.10 (apt-get)
 
-### premake4
+### CMake (version >= 3.5)
 install via homebrew / packet manager
 
 ### boost (version: >= 1.61.0)
@@ -79,33 +79,42 @@ used for AddressSanitizer
 
 ## Building and Tooling
 
-### compiler choice
-You can specify the compiler via `premake4 --compiler=clang||gcc`
+It is highly recommended to perform out-of-source build, i.e. creating a separate directory for the build.
+Advisable names for this directory would be `cmake-build-{debug,release}`, depending on the build type.
+Withing this directory call `cmake ..` to configure the build. 
+Subsequent calls to CMake, e.g. when adding files to the build will not be necessary, the generated Makefiles will take care of that.
+  
+### Compiler choice
+CMake will default to your system's default compiler. 
+To use a different one, call like `cmake -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ ..` in a clean build directory.
 
-On linux you have to utilize make's `-R` flag if your choice does not equal your default compiler
+### Build
+Simply call `make -j*`, where `*` denotes the number of threads to use.
 
-### build
-`premake4 && make -j`
+Usually debug binaries are created. 
+To configure a mint build directory for a release build call CMake like `cmake -DCMAKE_BUILD_TYPE=Release`
 
-Usually debug binaries are created. To activate release builds use `make config=release`
+### lint 
+`./scripts/lint.sh` (Google's cpplint is used which needs python 2.7)
 
-### lint (is also automatically triggerd before git commit)
-`premake4 lint` (Google's cpplint is used which needs python 2.7)
+### format 
+`./scripts/format.sh`
 
-### format (is also automatically triggered with make)
-`premake4 format`
-
-### testing (is also automatically triggered before git commit)
-`make test` executes all available tests
-The binary can be executed with `./build/test`
+### testing 
+`make opossumTest` builds all available tests
+The binary can be executed with `./opossumTest`
 
 ### coverage
-`make -j coverage` will print a summary to the command line and create detailed html reports at ./coverage/index.html
+`./scripts/coverage.sh <build dir>` will print a summary to the command line and create detailed html reports at ./coverage/index.html
 
 *Supports only clang on MacOS and only gcc on linux*
 
 ### AddressSanitizer
-`make -j asan` will build OpossumDB with enabled AddressSanitizer options and execute all available tests. It will fail on the first detected memory error and will print a summary. To convert addresses to actual source code locations, make sure llvm-symbolizer is installed (included in llvm package) and is available in `$PATH`. To specify a custom location for the symbolizer, set `$ASAN_SYMBOLIZER_PATH` to the path of the executable. This seems to work out of the box on macOS - If not, make sure to have llvm installed.
+`make opossumAsan` will build OpossumDB with enabled AddressSanitizer options and execute all available tests. 
+It will fail on the first detected memory error and will print a summary. 
+To convert addresses to actual source code locations, make sure llvm-symbolizer is installed (included in llvm package) and is available in `$PATH`. 
+To specify a custom location for the symbolizer, set `$ASAN_SYMBOLIZER_PATH` to the path of the executable. 
+This seems to work out of the box on macOS - If not, make sure to have llvm installed.
 
 ## Naming convention for gtest macros:
 
