@@ -44,7 +44,7 @@ class TableGenerator {
 
   std::shared_ptr<std::map<std::string, std::shared_ptr<opossum::Table>>> generate_all_tables();
 
-  const size_t _chunk_size = 1000;
+  const size_t _chunk_size = 10000;
   const time_t _current_date = std::time(0);
 
   const size_t _item_size = 100000;
@@ -59,8 +59,22 @@ class TableGenerator {
 
  protected:
   template <typename T>
-  std::shared_ptr<opossum::ValueColumn<T>> add_column(size_t cardinality,
-                                                      const std::function<T(size_t)> &generator_function);
+  tbb::concurrent_vector<T> generate_order_line_column(std::vector<size_t> indices,
+                                                       order_line_counts_type order_line_counts,
+                                                       const std::function<T(std::vector<size_t>)> &generator_function);
+
+  //  template <typename T>
+  //  std::shared_ptr<opossum::ValueColumn<T>> add_column(size_t cardinality,
+  //                                                      const std::function<T(size_t)> &generator_function);
+
+  template <typename T>
+  void add_column(std::shared_ptr<std::vector<size_t>> cardinalities, std::shared_ptr<opossum::Table> table,
+                  std::string name, const std::function<T(std::vector<size_t>)> &generator_function);
+
+  template <typename T>
+  void add_column(std::shared_ptr<std::vector<size_t>> cardinalities, order_line_counts_type order_line_counts,
+                  std::shared_ptr<opossum::Table> table, std::string name,
+                  const std::function<T(std::vector<size_t>)> &generator_function);
 
   RandomGenerator _random_gen;
 };

@@ -217,10 +217,10 @@ project "benchmarkTPCC"
 
 project "playgroundTpccBenchmark"
   kind "ConsoleApp"
-  links { "opossum", "googlebenchmark" }
+  links { "opossum", "googlebenchmark", "benchmarklibs"}
   links(libs)
   includedirs { "third_party/benchmark/include" }
-  files { "src/bin/playgroundTPCCBenchmark.cpp", "src/benchmark/tpcc/**.hpp", "src/benchmark/tpcc/**.cpp" }
+  files { "src/bin/playgroundTPCCBenchmark.cpp" }
   postbuildcommands { "./build/playgroundTpccBenchmark" }
 
 project "coverage"

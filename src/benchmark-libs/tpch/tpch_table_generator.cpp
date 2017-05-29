@@ -6,6 +6,7 @@
 #include <utility>
 #include <vector>
 
+#include "storage/dictionary_compression.hpp"
 #include "storage/value_column.hpp"
 
 namespace tpch {
@@ -36,7 +37,7 @@ std::shared_ptr<opossum::Table> TableGenerator::generate_suppliers_table() {
   table->add_column("S_ACCTBAL", "float", false);
   table->add_column("S_COMMENT", "string", false);
 
-  auto chunk = opossum::Chunk();
+  auto chunk = opossum::Chunk(true);
   size_t table_size = _scale_factor * _supplier_size;
   // S_SUPPKEY
   chunk.add_column(add_column<int>(table_size, [](size_t i) { return i; }));
@@ -75,6 +76,7 @@ std::shared_ptr<opossum::Table> TableGenerator::generate_suppliers_table() {
 
   table->add_chunk(std::move(chunk));
 
+  opossum::DictionaryCompression::compress_table(*table);
   return table;
 }
 
@@ -92,7 +94,7 @@ std::shared_ptr<opossum::Table> TableGenerator::generate_parts_table() {
   table->add_column("P_RETAILPRICE", "float", false);
   table->add_column("P_COMMENT", "string", false);
 
-  auto chunk = opossum::Chunk();
+  auto chunk = opossum::Chunk(true);
   size_t table_size = _scale_factor * _part_size;
   // P_PARTKEY
   chunk.add_column(add_column<int>(table_size, [](size_t i) { return i; }));
@@ -121,6 +123,7 @@ std::shared_ptr<opossum::Table> TableGenerator::generate_parts_table() {
 
   table->add_chunk(std::move(chunk));
 
+  opossum::DictionaryCompression::compress_table(*table);
   return table;
 }
 
@@ -134,7 +137,7 @@ std::shared_ptr<opossum::Table> TableGenerator::generate_partsupps_table() {
   table->add_column("PS_SUPPLYCOST", "float", false);
   table->add_column("PS_COMMENT", "string", false);
 
-  auto chunk = opossum::Chunk();
+  auto chunk = opossum::Chunk(true);
   size_t table_size = _scale_factor * _part_size * _partsupp_size;
   // PS_PARTKEY
   chunk.add_column(add_column<int>(table_size, [&](size_t i) { return i % (_scale_factor * _part_size); }));
@@ -154,6 +157,7 @@ std::shared_ptr<opossum::Table> TableGenerator::generate_partsupps_table() {
 
   table->add_chunk(std::move(chunk));
 
+  opossum::DictionaryCompression::compress_table(*table);
   return table;
 }
 
@@ -170,7 +174,7 @@ std::shared_ptr<opossum::Table> TableGenerator::generate_customers_table() {
   table->add_column("C_MKTSEGMENT", "string", false);
   table->add_column("C_COMMENT", "string", false);
 
-  auto chunk = opossum::Chunk();
+  auto chunk = opossum::Chunk(true);
   size_t table_size = _scale_factor * _customer_size;
   // C_CUSTKEY
   chunk.add_column(add_column<int>(table_size, [](size_t i) { return i; }));
@@ -194,6 +198,7 @@ std::shared_ptr<opossum::Table> TableGenerator::generate_customers_table() {
 
   table->add_chunk(std::move(chunk));
 
+  opossum::DictionaryCompression::compress_table(*table);
   return table;
 }
 
