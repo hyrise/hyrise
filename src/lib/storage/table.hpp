@@ -9,6 +9,7 @@
 
 #include "chunk.hpp"
 #include "common.hpp"
+#include "type_cast.hpp"
 #include "types.hpp"
 
 namespace opossum {
@@ -66,6 +67,22 @@ class Table {
   // inserts a row at the end of the table
   // note this is slow and not thread-safe and should be used for testing purposes only
   void append(std::vector<AllTypeVariant> values);
+
+  // returns a materialized row from the table
+  const std::vector<AllTypeVariant> fetch_row(const size_t index) const;
+  // returns one materialized value
+  template <typename T>
+  const T &get_value(const ColumnID column_id = 0u, const size_t row_id = 0u) const {
+    size_t row_counter = 0u;
+    for (auto &chunk : _chunks) {
+      size_t current_size = chunk.size();
+      row_counter += current_size;
+      if (row_counter > row_id) {
+        return get<T>((*chunk.get_column(column_id))[row_id + current_size - row_counter]);
+      }
+    }
+    throw std::runtime_error("Row does not exist.");
+  }
 
   // creates a new chunk and appends it
   void create_new_chunk();
