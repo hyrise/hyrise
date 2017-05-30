@@ -17,7 +17,7 @@ if echo $REPLY | grep -E '^[Yy]$' > /dev/null; then
             # python2.7 is preinstalled on macOS
             # check, for each programme individually with brew, whether it is already installed
             # due to brew issues on MacOS after system upgrade
-            for formula in premake boost gcc clang-format gcovr tbb autoconf automake libtool pkg-config; do
+            for formula in boost gcc clang-format gcovr tbb autoconf automake libtool pkg-config; do
                 # if brew formula is installed
                 if brew ls --versions $formula > /dev/null; then
                     continue
@@ -35,7 +35,7 @@ if echo $REPLY | grep -E '^[Yy]$' > /dev/null; then
         if cat /etc/lsb-release | grep DISTRIB_ID | grep Ubuntu >/dev/null; then
             echo "Installing dependencies (this may take a while)..."
             if sudo apt-get update >/dev/null; then
-                if sudo apt-get install -y premake4 libboost-all-dev clang-format gcovr python2.7 gcc-6 clang llvm libnuma-dev libnuma1 libtbb-dev build-essential autoconf libtool cmake; then
+                if sudo apt-get install -y libboost-all-dev clang-format gcovr python2.7 clang llvm libnuma-dev libnuma1 libtbb-dev build-essential autoconf libtool cmake; then
                     if ! git submodule update --init --recursive; then
                         echo "Error during installation."
                         exit 1
