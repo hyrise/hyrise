@@ -626,7 +626,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
       if (!right && !left) {
         continue;
       } else if (!right || !left) {
-        DebugFail("JoinHash: either left or right pos_list is empty. Should not happen");
+        Fail("JoinHash: either left or right pos_list is empty. Should not happen");
       }
 
       Chunk output_chunk;

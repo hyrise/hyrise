@@ -196,7 +196,7 @@ struct AggregateBuilder : public ColumnVisitable {
         break;
 
       default:
-        DebugFail("AggregateBuilder: invalid aggregate function");
+        Fail("AggregateBuilder: invalid aggregate function");
     }
   }
 

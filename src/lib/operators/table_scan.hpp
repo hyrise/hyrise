@@ -184,7 +184,7 @@ class TableScan::TableScanImpl : public AbstractReadOnlyOperatorImpl {
 
       _type = OpLike;
     } else {
-      DebugFail(std::string("unknown operator ") + _op);
+      Fail(std::string("unknown operator ") + _op);
     }
 
     // We can easily distribute the table scanning work on individual chunks to multiple sub tasks,

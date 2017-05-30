@@ -126,7 +126,7 @@ std::shared_ptr<const Table> Aggregate::on_execute() {
         break;
 
       default:
-        DebugFail("Aggregate: invalid aggregate function");
+        Fail("Aggregate: invalid aggregate function");
     }
   }
 

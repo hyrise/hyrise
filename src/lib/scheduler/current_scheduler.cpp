@@ -24,7 +24,7 @@ void CurrentScheduler::wait_for_tasks(const std::vector<std::shared_ptr<Abstract
   if (IS_DEBUG) {
     for (auto& task : tasks) {
       if (!task->is_scheduled()) {
-        DebugFail("Schedule tasks before joining them");
+        Fail("Schedule tasks before joining them");
       }
     }
   }

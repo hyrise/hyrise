@@ -74,7 +74,7 @@ class ReferenceColumn : public BaseColumn {
         values.push_back(dict_column->get(row.chunk_offset));
         continue;
       }
-      DebugFail("column is no dictonary or value column");
+      Fail("column is no dictonary or value column");
     }
 
     return values;

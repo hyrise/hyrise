@@ -120,7 +120,7 @@ inline std::shared_ptr<OperatorTask> OperatorTranslator::translate(
       join_mode = JoinMode::Self;
       break;
     default:
-      DebugFail("Unknown join mode for nested loop join operator in operator_translator");
+      Fail("Unknown join mode for nested loop join operator in operator_translator");
   }
 
   std::shared_ptr<JoinNestedLoopA> nested_loop_join;

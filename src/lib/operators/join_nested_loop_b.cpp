@@ -30,7 +30,7 @@ JoinNestedLoopB::JoinNestedLoopB(const std::shared_ptr<const AbstractOperator> l
     _left_column_name = column_names->first;
     _right_column_name = column_names->second;
   } else {
-    DebugFail("JoinNestedLoopB::JoinNestedLoopB: No columns specified for join operator");
+    Fail("JoinNestedLoopB::JoinNestedLoopB: No columns specified for join operator");
   }
 
   _output = std::make_shared<Table>(0);
@@ -176,7 +176,7 @@ JoinNestedLoopB::JoinNestedLoopBImpl<T>::JoinNestedLoopBImpl(JoinNestedLoopB& jo
   } else if (_join_nested_loop_b._op == "!=") {
     _compare = [](const T& value_left, const T& value_right) -> bool { return value_left != value_right; };
   } else {
-    DebugFail("JoinNestedLoopBImpl::JoinNestedLoopBImpl: Unknown operator " + _join_nested_loop_b._op);
+    Fail("JoinNestedLoopBImpl::JoinNestedLoopBImpl: Unknown operator " + _join_nested_loop_b._op);
   }
 }
 

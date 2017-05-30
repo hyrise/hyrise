@@ -23,7 +23,7 @@
  *     case 0: //...
  *     case 3: //...
  *     case 17: //...
- *     default: DebugFail("Illegal paramemeter");
+ *     default: Fail("Illegal paramemeter");
  * }
  *
  * --> Use Assert() whenever an invariant should be checked even in release builds, either because testing it is
@@ -45,13 +45,9 @@ inline void Fail(const std::string& msg) { throw std::logic_error(msg); }
 
 inline void DebugAssert(bool expr, const std::string& msg) { Assert(expr, msg); }
 
-inline void DebugFail(const std::string& msg) { Fail(msg); }
-
 #else
 
 inline void DebugAssert(bool expr, const std::string& msg) {}
-
-inline void DebugFail(const std::string& msg) {}
 
 #endif
 

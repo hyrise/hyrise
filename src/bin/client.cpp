@@ -91,7 +91,7 @@ void OpossumClient::print_variant(const proto::Variant& variant) const {
       std::cout << variant.value_long();
       break;
     default:
-      DebugFail("Unknown AllTypeVariant in operator_translator");
+      Fail("Unknown AllTypeVariant in operator_translator");
   }
   std::cout << std::setw(0);
 }

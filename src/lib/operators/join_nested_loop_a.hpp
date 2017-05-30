@@ -82,7 +82,7 @@ class JoinNestedLoopA::JoinNestedLoopAImpl : public AbstractJoinOperatorImpl {
     } else if (op == ">=") {
       _comparator = [](LeftType left_value, RightType right_value) { return !value_smaller(left_value, right_value); };
     } else {
-      DebugFail(std::string("unknown operator ") + op);
+      Fail(std::string("unknown operator ") + op);
     }
   }
 
