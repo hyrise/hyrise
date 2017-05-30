@@ -81,7 +81,7 @@ used for AddressSanitizer
 
 It is highly recommended to perform out-of-source build, i.e. creating a separate directory for the build.
 Advisable names for this directory would be `cmake-build-{debug,release}`, depending on the build type.
-Withing this directory call `cmake ..` to configure the build. 
+Within this directory call `cmake ..` to configure the build.
 Subsequent calls to CMake, e.g. when adding files to the build will not be necessary, the generated Makefiles will take care of that.
   
 ### Compiler choice
@@ -92,7 +92,7 @@ To use a different one, call like `cmake -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_CO
 Simply call `make -j*`, where `*` denotes the number of threads to use.
 
 Usually debug binaries are created. 
-To configure a mint build directory for a release build call CMake like `cmake -DCMAKE_BUILD_TYPE=Release`
+To configure a build directory for a release build make sure it is empty and call CMake like `cmake -DCMAKE_BUILD_TYPE=Release`
 
 ### lint 
 `./scripts/lint.sh` (Google's cpplint is used which needs python 2.7)
