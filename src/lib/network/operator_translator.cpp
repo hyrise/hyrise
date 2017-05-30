@@ -39,7 +39,7 @@ inline AllTypeVariant translate_variant(const proto::Variant& variant) {
     case proto::Variant::kValueLong:
       return variant.value_long();
     default:
-      throw std::runtime_error("Unknown AllTypeVariant in operator_translator");
+      throw std::logic_error("Unknown AllTypeVariant in operator_translator");
   }
 }
 
@@ -336,10 +336,10 @@ std::shared_ptr<OperatorTask> OperatorTranslator::translate_proto(const proto::O
     case proto::OperatorVariant::kNestedLoopJoin:
       return translate(op.nested_loop_join());
     case proto::OperatorVariant::OPERATOR_NOT_SET:
-      throw std::runtime_error(
+      throw std::logic_error(
           "Operator not set. Missing dependency. Cannot translate proto object to opossum operator.");
     default:
-      throw std::runtime_error("Unknown operator type in operator_translator");
+      throw std::logic_error("Unknown operator type in operator_translator");
   }
 }
 

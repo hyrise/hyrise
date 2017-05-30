@@ -68,7 +68,7 @@ ColumnID Table::column_id_by_name(const std::string &column_name) const {
       return column_id;
     }
   }
-  throw std::runtime_error("column " + column_name + " not found");
+  throw std::logic_error("column " + column_name + " not found");
 }
 
 uint32_t Table::chunk_size() const { return _chunk_size; }

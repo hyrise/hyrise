@@ -135,7 +135,7 @@ uint8_t AdaptiveRadixTreeIndex::BinaryComparable::operator[](size_t position) co
   if (position < _parts.size()) {
     return _parts[position];
   } else {
-    throw std::runtime_error("BinaryComparable indexed out of bounds");
+    throw std::logic_error("BinaryComparable indexed out of bounds");
   }
 }
 

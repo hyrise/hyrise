@@ -604,7 +604,7 @@ TEST_F(OperatorTranslatorTest, ProjectionIncompleteInput) {
   projection_operator->mutable_input_operator();
 
   OperatorTranslator translator;
-  EXPECT_THROW(translator.build_tasks_from_proto(msg), std::runtime_error);
+  EXPECT_THROW(translator.build_tasks_from_proto(msg), std::logic_error);
 }
 
 }  // namespace opossum

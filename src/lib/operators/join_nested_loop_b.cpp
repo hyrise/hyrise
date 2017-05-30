@@ -273,7 +273,7 @@ const T& JoinNestedLoopB::JoinNestedLoopBImpl<T>::_resolve_reference(ReferenceCo
   } else if (v_column) {
     return v_column->values()[referenced_chunk_offset];
   } else {
-    throw std::runtime_error("JoinNestedLoopBImpl::_resolve_reference: can't figure out referenced column type");
+    throw std::logic_error("JoinNestedLoopBImpl::_resolve_reference: can't figure out referenced column type");
   }
 }
 
