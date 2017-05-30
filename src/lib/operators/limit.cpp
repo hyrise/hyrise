@@ -6,6 +6,7 @@
 #include <utility>
 
 #include "../storage/reference_column.hpp"
+#include "../storage/table.hpp"
 
 namespace opossum {
 
