@@ -41,14 +41,14 @@ inline void Assert(bool expr, const std::string& msg) {
 
 inline void Fail(const std::string& msg) { throw std::logic_error(msg); }
 
+}  // namespace opossum
+
 #if IS_DEBUG
 
-inline void DebugAssert(bool expr, const std::string& msg) { Assert(expr, msg); }
+#define DebugAssert(expr, msg) opossum::Assert(expr, msg)
 
 #else
 
-inline void DebugAssert(bool expr, const std::string& msg) {}
+#define DebugAssert(expr, msg)
 
 #endif
-
-}  // namespace opossum
