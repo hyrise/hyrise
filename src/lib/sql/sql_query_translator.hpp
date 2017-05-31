@@ -6,6 +6,7 @@
 
 #include "SQLParser.h"
 #include "scheduler/operator_task.hpp"
+#include "sql/sql_parse_tree_cache.hpp"
 
 namespace opossum {
 

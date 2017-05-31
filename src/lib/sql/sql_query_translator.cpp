@@ -22,6 +22,8 @@
 #include "../operators/table_scan.hpp"
 #include "../operators/union_all.hpp"
 
+#include "SQLParser.h"
+
 using hsql::Expr;
 using hsql::SQLParser;
 using hsql::SQLParserResult;
@@ -93,7 +95,9 @@ bool SQLQueryTranslator::translate_statement(const SQLStatement& statement) {
       const SelectStatement& select = (const SelectStatement&)statement;
       return _translate_select(select);
     }
-
+    case hsql::kStmtPrepare: {
+      return true;
+    }
     default:
       _error_msg = "Can only translate SELECT queries at the moment!";
       return false;
