@@ -22,4 +22,4 @@ add_subdirectory(src)
 add_subdirectory(third_party/googletest)
 
 # Useful for printing all c++ files in a directory:
-# find . -type f -name "*.cpp" -o -name "*.hpp" | cut -c 3-
+# find . -type f -name "*.cpp" -o -name "*.hpp" | cut -c 3- | sort

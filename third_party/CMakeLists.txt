@@ -29,3 +29,27 @@ target_include_directories(
     PRIVATE
     benchmark/include
 )
+
+
+#Build sql-parser
+add_library(
+    sqlparser
+
+    sql-parser/src/parser/bison_parser.cpp
+    sql-parser/src/parser/flex_lexer.cpp
+    sql-parser/src/sql/Expr.cpp
+    sql-parser/src/SQLParser.cpp
+    sql-parser/src/SQLParserResult.cpp
+    sql-parser/src/sql/statements.cpp
+    sql-parser/src/util/sqlhelper.cpp
+)
+
+target_compile_options(
+    sqlparser
+    PRIVATE
+    -O3 -Wno-sign-compare
+)
+
+if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
+    target_compile_options(sqlparser PRIVATE -Wno-unneeded-internal-declaration)
+endif()

@@ -213,6 +213,7 @@ set(
     pthread
     z
     tbb
+    sqlparser
 )
 
 if(${NUMA_FOUND})
