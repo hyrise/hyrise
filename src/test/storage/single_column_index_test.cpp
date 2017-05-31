@@ -25,16 +25,16 @@ class SingleColumnIndexTest : public BaseTest {
  protected:
   void SetUp() override {
     dict_col_int = BaseTest::create_dict_column_by_type<int>("int", {3, 4, 0, 4, 2, 7, 8, 1, 4, 9});
-    index_int = std::make_shared<DerivedIndex>(std::vector<std::shared_ptr<BaseColumn>>({dict_col_int}));
+    index_int = std::make_shared<DerivedIndex>(alloc_vector<std::shared_ptr<BaseColumn>>({dict_col_int}));
 
     dict_col_str =
         BaseTest::create_dict_column_by_type<std::string>("string", {"hello", "world", "test", "foo", "bar", "foo"});
-    index_str = std::make_shared<DerivedIndex>(std::vector<std::shared_ptr<BaseColumn>>({dict_col_str}));
+    index_str = std::make_shared<DerivedIndex>(alloc_vector<std::shared_ptr<BaseColumn>>({dict_col_str}));
   }
 
   template <class Iterator>
-  static std::vector<AllTypeVariant> result_as_vector(std::shared_ptr<BaseColumn> col, Iterator begin, Iterator end) {
-    std::vector<AllTypeVariant> result{};
+  static alloc_vector<AllTypeVariant> result_as_vector(std::shared_ptr<BaseColumn> col, Iterator begin, Iterator end) {
+    alloc_vector<AllTypeVariant> result{};
     for (auto iter(std::move(begin)); iter != end; ++iter) {
       result.emplace_back((*col)[*iter]);
     }
@@ -56,13 +56,13 @@ TYPED_TEST(SingleColumnIndexTest, FullRange) {
   auto begin_int = this->index_int->cbegin();
   auto end_int = this->index_int->cend();
   auto result_values_int = this->result_as_vector(this->dict_col_int, begin_int, end_int);
-  auto expected_values_int = std::vector<AllTypeVariant>{0, 1, 2, 3, 4, 4, 4, 7, 8, 9};
+  auto expected_values_int = alloc_vector<AllTypeVariant>{0, 1, 2, 3, 4, 4, 4, 7, 8, 9};
   EXPECT_EQ(expected_values_int, result_values_int);
 
   auto begin_str = this->index_str->cbegin();
   auto end_str = this->index_str->cend();
   auto result_values_str = this->result_as_vector(this->dict_col_str, begin_str, end_str);
-  auto expected_values_str = std::vector<AllTypeVariant>{"bar", "foo", "foo", "hello", "test", "world"};
+  auto expected_values_str = alloc_vector<AllTypeVariant>{"bar", "foo", "foo", "hello", "test", "world"};
   EXPECT_EQ(expected_values_str, result_values_str);
 }
 
@@ -102,7 +102,7 @@ TYPED_TEST(SingleColumnIndexTest, RangeQuery) {
   auto result_values = this->result_as_vector(this->dict_col_int, begin, end);
 
   auto expected_positions = std::set<std::size_t>{0, 4, 7};
-  auto expected_values = std::vector<AllTypeVariant>{1, 2, 3};
+  auto expected_values = alloc_vector<AllTypeVariant>{1, 2, 3};
 
   EXPECT_EQ(expected_positions, result_positions);
   EXPECT_EQ(expected_values, result_values);
@@ -177,7 +177,7 @@ TYPED_TEST(SingleColumnIndexTest, IndexOnNonDictionaryThrows) {
   auto vc_int = make_shared_by_column_type<BaseColumn, ValueColumn>("int");
   vc_int->append(4);
 
-  EXPECT_THROW(std::make_shared<TypeParam>(std::vector<std::shared_ptr<BaseColumn>>({vc_int})), std::logic_error);
+  EXPECT_THROW(std::make_shared<TypeParam>(alloc_vector<std::shared_ptr<BaseColumn>>({vc_int})), std::logic_error);
 }
 
 }  // namespace opossum

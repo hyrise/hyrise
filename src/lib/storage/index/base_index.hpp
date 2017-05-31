@@ -32,7 +32,7 @@ namespace opossum {
 class BaseIndex {
  public:
   // For now we use an iterator over a vector of chunkoffsets as the GroupKeyIndex works like this
-  using Iterator = std::vector<ChunkOffset>::const_iterator;
+  using Iterator = alloc_vector<ChunkOffset>::const_iterator;
 
   /**
    * Creates an index on all given columns. Since all indices are composite indices the order of
@@ -57,7 +57,7 @@ class BaseIndex {
    * The index is NOT considerd to be applicable for columns A, DABC, BAD etc.
    * @return true if the given columns are covered by the index.
    */
-  bool is_index_for(const std::vector<std::shared_ptr<BaseColumn>> &columns) const {
+  bool is_index_for(const alloc_vector<std::shared_ptr<BaseColumn>> &columns) const {
     auto index_columns = _get_index_columns();
     if (columns.size() > index_columns.size()) return false;
     if (columns.empty()) return false;
@@ -79,7 +79,7 @@ class BaseIndex {
    * @param values are used to query the index.
    * @return An Iterator on the position of the first element equal or greater then provided values.
    */
-  Iterator lower_bound(const std::vector<AllTypeVariant> &values) const {
+  Iterator lower_bound(const alloc_vector<AllTypeVariant> &values) const {
     DebugAssert((_get_index_columns().size() >= values.size()),
                 "BaseIndex: The amount of queried columns has to be less or equal to the number of indexed columns.");
 
@@ -97,7 +97,7 @@ class BaseIndex {
    * @param values are used to query the index.
    * @return An Iterator on the position of the first element greater then provided values.
    */
-  Iterator upper_bound(const std::vector<AllTypeVariant> &values) const {
+  Iterator upper_bound(const alloc_vector<AllTypeVariant> &values) const {
     DebugAssert((_get_index_columns().size() >= values.size()),
                 "BaseIndex: The amount of queried columns has to be less or equal to the number of indexed columns.");
 
@@ -127,10 +127,10 @@ class BaseIndex {
    * Seperate the public interface of the index from the interface for programmers implementing own
    * indices. Each method has to fullfill the contract of the corresponding public methods.
    */
-  virtual Iterator _lower_bound(const std::vector<AllTypeVariant> &) const = 0;
-  virtual Iterator _upper_bound(const std::vector<AllTypeVariant> &) const = 0;
+  virtual Iterator _lower_bound(const alloc_vector<AllTypeVariant> &) const = 0;
+  virtual Iterator _upper_bound(const alloc_vector<AllTypeVariant> &) const = 0;
   virtual Iterator _cbegin() const = 0;
   virtual Iterator _cend() const = 0;
-  virtual std::vector<std::shared_ptr<BaseColumn>> _get_index_columns() const = 0;
+  virtual alloc_vector<std::shared_ptr<BaseColumn>> _get_index_columns() const = 0;
 };
 }  // namespace opossum

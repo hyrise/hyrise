@@ -36,8 +36,8 @@ Current Limitations (due to lack of time)
 class Aggregate : public AbstractReadOnlyOperator {
  public:
   Aggregate(const std::shared_ptr<AbstractOperator> in,
-            const std::vector<std::pair<std::string, AggregateFunction>> aggregates,
-            const std::vector<std::string> groupby_columns);
+            const alloc_vector<std::pair<std::string, AggregateFunction>> aggregates,
+            const alloc_vector<std::string> groupby_columns);
 
   const std::string name() const override;
   uint8_t num_in_tables() const override;
@@ -46,8 +46,8 @@ class Aggregate : public AbstractReadOnlyOperator {
  protected:
   std::shared_ptr<const Table> on_execute() override;
 
-  const std::vector<std::pair<std::string, AggregateFunction>> _aggregates;
-  const std::vector<std::string> _groupby_columns;
+  const alloc_vector<std::pair<std::string, AggregateFunction>> _aggregates;
+  const alloc_vector<std::string> _groupby_columns;
 
   std::unique_ptr<AbstractReadOnlyOperatorImpl> _impl;
 };
@@ -79,21 +79,21 @@ using AggregateResult = std::pair<AggregateDouble, size_t>;
 /*
 The key type that is used for the aggregation map.
 */
-using AggregateKey = std::vector<AllTypeVariant>;
+using AggregateKey = alloc_vector<AllTypeVariant>;
 
 /*
 Visitor context for both visitors that are used
 */
 struct AggregateContext : ColumnVisitableContext {
   AggregateContext(std::shared_ptr<const Table> t, ChunkID chunk, ColumnID column,
-                   std::shared_ptr<std::vector<AggregateKey>> keys,
+                   std::shared_ptr<alloc_vector<AggregateKey>> keys,
                    std::shared_ptr<std::map<AggregateKey, AggregateResult>> res = nullptr)
       : table_in(t), chunk_id(chunk), column_id(column), hash_keys(keys), results(res) {}
 
   // constructor for use in ReferenceColumn::visit_dereferenced
   AggregateContext(std::shared_ptr<BaseColumn>, const std::shared_ptr<const Table> referenced_table,
                    std::shared_ptr<ColumnVisitableContext> base_context, ChunkID chunk_id,
-                   std::shared_ptr<std::vector<ChunkOffset>> chunk_offsets)
+                   std::shared_ptr<alloc_vector<ChunkOffset>> chunk_offsets)
       : table_in(referenced_table),
         chunk_id(chunk_id),
         column_id(std::static_pointer_cast<AggregateContext>(base_context)->column_id),
@@ -104,9 +104,9 @@ struct AggregateContext : ColumnVisitableContext {
   std::shared_ptr<const Table> table_in;
   const ChunkID chunk_id;
   const ColumnID column_id;
-  std::shared_ptr<std::vector<AggregateKey>> hash_keys;
+  std::shared_ptr<alloc_vector<AggregateKey>> hash_keys;
   std::shared_ptr<std::map<AggregateKey, AggregateResult>> results;
-  std::shared_ptr<std::vector<ChunkOffset>> chunk_offsets_in;
+  std::shared_ptr<alloc_vector<ChunkOffset>> chunk_offsets_in;
 };
 
 /*
@@ -115,7 +115,7 @@ It is used to partition the input by the given group key(s)
 */
 template <typename T>
 struct PartitionBuilder : public ColumnVisitable {
-  std::vector<std::function<double(T, double)>> aggregators;
+  alloc_vector<std::function<double(T, double)>> aggregators;
 
   void handle_value_column(BaseColumn &base_column, std::shared_ptr<ColumnVisitableContext> base_context) {
     auto context = std::static_pointer_cast<AggregateContext>(base_context);
@@ -147,7 +147,7 @@ struct PartitionBuilder : public ColumnVisitable {
     auto context = std::static_pointer_cast<AggregateContext>(base_context);
     const auto &column = static_cast<DictionaryColumn<T> &>(base_column);
     const BaseAttributeVector &attribute_vector = *(column.attribute_vector());
-    const std::vector<T> &dictionary = *(column.dictionary());
+    const alloc_vector<T> &dictionary = *(column.dictionary());
 
     if (context->chunk_offsets_in) {
       ChunkOffset chunk_offset = 0;
@@ -205,7 +205,7 @@ struct AggregateBuilder : public ColumnVisitable {
     const auto &column = static_cast<ValueColumn<T> &>(base_column);
     const auto &values = column.values();
 
-    auto &hash_keys = static_cast<std::vector<AggregateKey> &>(*context->hash_keys);
+    auto &hash_keys = static_cast<alloc_vector<AggregateKey> &>(*context->hash_keys);
     auto &results = static_cast<std::map<AggregateKey, AggregateResult> &>(*context->results);
 
     if (context->chunk_offsets_in) {
@@ -240,9 +240,9 @@ struct AggregateBuilder : public ColumnVisitable {
     auto context = std::static_pointer_cast<AggregateContext>(base_context);
     const auto &column = static_cast<DictionaryColumn<T> &>(base_column);
     const BaseAttributeVector &attribute_vector = *(column.attribute_vector());
-    const std::vector<T> &dictionary = *(column.dictionary());
+    const alloc_vector<T> &dictionary = *(column.dictionary());
 
-    auto &hash_keys = static_cast<std::vector<AggregateKey> &>(*context->hash_keys);
+    auto &hash_keys = static_cast<alloc_vector<AggregateKey> &>(*context->hash_keys);
     auto &results = static_cast<std::map<AggregateKey, AggregateResult> &>(*context->results);
 
     if (context->chunk_offsets_in) {

@@ -40,7 +40,7 @@ class Worker : public std::enable_shared_from_this<Worker> {
   void operator=(Worker&& rhs) = delete;
 
  protected:
-  void _wait_for_tasks(const std::vector<std::shared_ptr<AbstractTask>>& task);
+  void _wait_for_tasks(const alloc_vector<std::shared_ptr<AbstractTask>>& task);
 
  private:
   /**

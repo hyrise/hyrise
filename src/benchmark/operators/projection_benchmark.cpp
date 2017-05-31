@@ -27,7 +27,7 @@ class OperatorsProjectionBenchmark : public BenchmarkBasicFixture {
 
  protected:
   std::shared_ptr<TableScan> _table_ref;
-  std::vector<std::shared_ptr<AbstractOperator>> _tables;
+  alloc_vector<std::shared_ptr<AbstractOperator>> _tables;
 };
 
 BENCHMARK_DEFINE_F(OperatorsProjectionBenchmark, BM_ProjectionSimple)(benchmark::State& state) {

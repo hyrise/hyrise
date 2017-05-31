@@ -9,13 +9,12 @@
 #include "types.hpp"
 
 #include "storage/value_column.hpp"
-#include "tbb/concurrent_vector.h"
 
 namespace opossum {
 
 std::shared_ptr<Table> TableGenerator::get_table() {
   std::shared_ptr<Table> table = std::make_shared<Table>(_chunk_size);
-  std::vector<tbb::concurrent_vector<int>> value_vectors;
+  alloc_vector<alloc_concurrent_vector<int>> value_vectors;
   auto vector_size = _chunk_size > 0 ? _chunk_size : _num_rows;
   /*
    * Generate table layout with column names from 'a' to 'z'.
@@ -24,7 +23,7 @@ std::shared_ptr<Table> TableGenerator::get_table() {
   for (size_t i = 0; i < _num_columns; i++) {
     auto column_name = std::string(1, static_cast<char>(static_cast<int>('a') + i));
     table->add_column(column_name, "int", false);
-    value_vectors.emplace_back(tbb::concurrent_vector<int>(vector_size));
+    value_vectors.emplace_back(alloc_concurrent_vector<int>(vector_size));
   }
   auto chunk = Chunk();
   std::default_random_engine engine;
@@ -37,7 +36,7 @@ std::shared_ptr<Table> TableGenerator::get_table() {
     if (i % vector_size == 0 && i > 0) {
       for (size_t j = 0; j < _num_columns; j++) {
         chunk.add_column(std::make_shared<ValueColumn<int>>(std::move(value_vectors[j])));
-        value_vectors[j] = tbb::concurrent_vector<int>(vector_size);
+        value_vectors[j] = alloc_concurrent_vector<int>(vector_size);
       }
       table->add_chunk(std::move(chunk));
       chunk = Chunk();

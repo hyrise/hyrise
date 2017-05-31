@@ -17,15 +17,15 @@ class VariableLengthKeyConstProxy;
 
 /**
  * This class stores multiple VariableLengthKeys with a specified byte length of each entry.
- * The intention is to use this class as replacement for std::vector<VariableLengthKey> if every stored
+ * The intention is to use this class as replacement for alloc_vector<VariableLengthKey> if every stored
  * entry has the specified byte size. The provided advantage is the continuous placement of the key data in
- * memory. Since every key has to manage memory by itself in order to achieve variable lengths, a std::vector
+ * memory. Since every key has to manage memory by itself in order to achieve variable lengths, a alloc_vector
  * can only store the VariableKeyLength objects continuously in memory, every object pointing to its memory location.
  * The VariableLengthKeyStore also provides continuous placement of the data pointed to by VariableLengthKey objects.
  * Additionally, every entry is saved word-aligned.
  *
  * In order to achieve the desired result, a proxied container is implemented. The implementation is similiar to
- * common std::vector<bool> implementations, sharing the same drawbacks: a proxied container can never fulfill
+ * common alloc_vector<bool> implementations, sharing the same drawbacks: a proxied container can never fulfill
  * the requirements of a Container and provided iterators can never be standard conform RandomAccessIterators.
  * This implies all common algorithms provided by the standard library are not guaranteed to work with these, but
  * clang and gcc seem to work properly.
@@ -58,7 +58,7 @@ class VariableLengthKeyStore {
   explicit VariableLengthKeyStore(ChunkOffset size, CompositeKeyLength bytes_per_key);
 
   /**
-   * Mimics the operator[] as used in std::vector with the difference that proxy objects are returned instead of
+   * Mimics the operator[] as used in alloc_vector with the difference that proxy objects are returned instead of
    * references. Although proxy objects are returned, they can be nearly used as if they would be references to
    * VariableLengthKeys. The only limitation is that for writing the length of the new key has to match the size of the
    * already stored key.
@@ -104,7 +104,7 @@ class VariableLengthKeyStore {
  private:
   CompositeKeyLength _bytes_per_key;
   CompositeKeyLength _key_alignment;
-  std::vector<VariableLengthKeyWord> _data;
+  alloc_vector<VariableLengthKeyWord> _data;
 
  private:
   /**

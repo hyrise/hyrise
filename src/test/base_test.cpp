@@ -35,7 +35,7 @@ void BaseTest::ASSERT_TABLE_EQ(std::shared_ptr<const Table> tleft, std::shared_p
 
 BaseTest::Matrix BaseTest::_table_to_matrix(const Table &t) {
   // initialize matrix with table sizes
-  Matrix matrix(t.row_count(), std::vector<AllTypeVariant>(t.col_count()));
+  Matrix matrix(t.row_count(), alloc_vector<AllTypeVariant>(t.col_count()));
 
   // set values
   unsigned row_offset = 0;
@@ -123,8 +123,8 @@ void BaseTest::_print_matrix(const BaseTest::Matrix &m) {
 }
 
 template <typename T>
-std::vector<T> BaseTest::_split(const std::string &str, char delimiter) {
-  std::vector<T> internal;
+alloc_vector<T> BaseTest::_split(const std::string &str, char delimiter) {
+  alloc_vector<T> internal;
   std::stringstream ss(str);
   std::string tok;
 
@@ -142,16 +142,16 @@ std::shared_ptr<Table> BaseTest::load_table(const std::string &file_name, size_t
   std::string line;
 
   std::getline(infile, line);
-  std::vector<std::string> col_names = _split<std::string>(line, '|');
+  alloc_vector<std::string> col_names = _split<std::string>(line, '|');
   std::getline(infile, line);
-  std::vector<std::string> col_types = _split<std::string>(line, '|');
+  alloc_vector<std::string> col_types = _split<std::string>(line, '|');
 
   for (size_t i = 0; i < col_names.size(); i++) {
     test_table->add_column(col_names[i], col_types[i]);
   }
 
   while (std::getline(infile, line)) {
-    std::vector<AllTypeVariant> values = _split<AllTypeVariant>(line, '|');
+    alloc_vector<AllTypeVariant> values = _split<AllTypeVariant>(line, '|');
 
     test_table->append(values);
 

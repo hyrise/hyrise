@@ -16,7 +16,7 @@ namespace {
 
 // Writes the content of the vector to the ofstream
 template <typename T>
-void _export_values(std::ofstream& ofstream, const std::vector<T>& values);
+void _export_values(std::ofstream& ofstream, const opossum::alloc_vector<T>& values);
 
 /* Writes the given strings to the ofstream. First an array of string lengths is written. After that the string are
  * written without any gaps between them.
@@ -26,8 +26,8 @@ void _export_values(std::ofstream& ofstream, const std::vector<T>& values);
  * This approach is indeed faster than a dynamic approach with a stringstream.
  */
 template <typename T = opossum::StringLength>
-void _export_string_values(std::ofstream& ofstream, const std::vector<std::string>& values) {
-  std::vector<T> string_lengths(values.size());
+void _export_string_values(std::ofstream& ofstream, const opossum::alloc_vector<std::string>& values) {
+  opossum::alloc_vector<T> string_lengths(values.size());
   size_t total_length = 0;
 
   // Save the length of each string.
@@ -42,7 +42,7 @@ void _export_string_values(std::ofstream& ofstream, const std::vector<std::strin
   if (total_length == 0) return;
 
   // Write all string contents into to buffer.
-  std::vector<char> buffer(total_length);
+  opossum::alloc_vector<char> buffer(total_length);
   size_t start = 0;
   for (const auto& str : values) {
     std::memcpy(buffer.data() + start, str.data(), str.size());
@@ -53,28 +53,28 @@ void _export_string_values(std::ofstream& ofstream, const std::vector<std::strin
 }
 
 template <typename T>
-void _export_values(std::ofstream& ofstream, const std::vector<T>& values) {
+void _export_values(std::ofstream& ofstream, const opossum::alloc_vector<T>& values) {
   ofstream.write(reinterpret_cast<const char*>(values.data()), values.size() * sizeof(T));
 }
 
 // specialized implementation for string values
 template <>
-void _export_values(std::ofstream& ofstream, const std::vector<std::string>& values) {
+void _export_values(std::ofstream& ofstream, const opossum::alloc_vector<std::string>& values) {
   _export_string_values(ofstream, values);
 }
 
 template <typename T>
-void _export_values(std::ofstream& ofstream, const tbb::concurrent_vector<T>& values) {
+void _export_values(std::ofstream& ofstream, const opossum::alloc_concurrent_vector<T>& values) {
   // TODO(all): could be faster if we directly write the values into the stream without prior conversion
-  const auto value_block = std::vector<T>{values.begin(), values.end()};
+  const auto value_block = opossum::alloc_vector<T>{values.begin(), values.end()};
   ofstream.write(reinterpret_cast<const char*>(value_block.data()), value_block.size() * sizeof(T));
 }
 
 // specialized implementation for string values
 template <>
-void _export_values(std::ofstream& ofstream, const tbb::concurrent_vector<std::string>& values) {
+void _export_values(std::ofstream& ofstream, const opossum::alloc_concurrent_vector<std::string>& values) {
   // TODO(all): could be faster if we directly write the values into the stream without prior conversion
-  const auto value_block = std::vector<std::string>{values.begin(), values.end()};
+  const auto value_block = opossum::alloc_vector<std::string>{values.begin(), values.end()};
   _export_string_values(ofstream, value_block);
 }
 
@@ -115,8 +115,8 @@ void ExportBinary::_write_header(const std::shared_ptr<const Table>& table, std:
   _export_value(ofstream, static_cast<ChunkID>(table->chunk_count()));
   _export_value(ofstream, static_cast<ColumnID>(table->col_count()));
 
-  std::vector<std::string> column_types(table->col_count());
-  std::vector<std::string> column_names(table->col_count());
+  alloc_vector<std::string> column_types(table->col_count());
+  alloc_vector<std::string> column_names(table->col_count());
 
   // Transform column types and copy column names in order to write them to the file.
   for (ColumnID column_id = 0; column_id < table->col_count(); ++column_id) {
@@ -180,7 +180,7 @@ void ExportBinary::ExportBinaryVisitor<std::string>::handle_reference_column(
 
   std::stringstream values;
   std::string value;
-  std::vector<StringLength> string_lengths(ref_column.size());
+  alloc_vector<StringLength> string_lengths(ref_column.size());
 
   // We export the values materialized
   for (ChunkOffset row = 0; row < ref_column.size(); ++row) {

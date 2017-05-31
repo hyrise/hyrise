@@ -67,8 +67,8 @@ class ProcessingUnit final : public std::enable_shared_from_this<ProcessingUnit>
   std::shared_ptr<UidAllocator> _worker_id_allocator;
   CpuID _cpuID;
   std::mutex _mutex;  // Synchronizes access to _threads, _workers
-  std::vector<std::thread> _threads;
-  std::vector<std::shared_ptr<Worker>> _workers;
+  alloc_vector<std::thread> _threads;
+  alloc_vector<std::shared_ptr<Worker>> _workers;
   std::atomic_bool _shutdown_flag{false};
   std::atomic<WorkerID> _active_worker_token{INVALID_WORKER_ID};
   std::mutex _hibernation_mutex;

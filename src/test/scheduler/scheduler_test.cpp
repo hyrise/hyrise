@@ -85,10 +85,10 @@ class SchedulerTest : public BaseTest {
   }
 
   void increment_counter_in_subtasks(std::atomic_uint& counter) {
-    std::vector<std::shared_ptr<AbstractTask>> tasks;
+    alloc_vector<std::shared_ptr<AbstractTask>> tasks;
     for (size_t i = 0; i < 10; i++) {
       auto task = std::make_shared<JobTask>([&]() {
-        std::vector<std::shared_ptr<AbstractTask>> jobs;
+        alloc_vector<std::shared_ptr<AbstractTask>> jobs;
         for (size_t j = 0; j < 3; j++) {
           auto job = std::make_shared<JobTask>([&]() { counter++; });
 

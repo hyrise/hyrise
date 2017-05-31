@@ -33,8 +33,8 @@ void OperatorsUpdateTest::helper(std::shared_ptr<GetTable> table_to_update, std:
   ref_table->set_transaction_context(t_context);
   ref_table->execute();
 
-  std::vector<std::string> column_filter_left = {"a"};
-  std::vector<std::string> column_filter_right = {"b"};
+  alloc_vector<std::string> column_filter_left = {"a"};
+  alloc_vector<std::string> column_filter_right = {"b"};
 
   auto projection1 = std::make_shared<Projection>(ref_table, column_filter_left);
   auto projection2 = std::make_shared<Projection>(update_values, column_filter_right);

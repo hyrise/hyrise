@@ -16,10 +16,10 @@ namespace opossum {
 
 class Table;
 
-using Matrix = std::vector<std::vector<AllTypeVariant>>;
+using Matrix = alloc_vector<alloc_vector<AllTypeVariant>>;
 
 class BaseTest : public ::testing::Test {
-  using Matrix = std::vector<std::vector<AllTypeVariant>>;
+  using Matrix = alloc_vector<alloc_vector<AllTypeVariant>>;
 
   // helper functions for _table_equal
   static BaseTest::Matrix _table_to_matrix(const Table &t);
@@ -27,7 +27,7 @@ class BaseTest : public ::testing::Test {
 
   // helper function for load_table
   template <typename T>
-  static std::vector<T> _split(const std::string &str, char delimiter);
+  static alloc_vector<T> _split(const std::string &str, char delimiter);
 
   // compares two tables with regard to the schema and content
   // but ignores the internal representation (chunk size, column type)
@@ -46,8 +46,9 @@ class BaseTest : public ::testing::Test {
 
   // creates a dictionary column with the given type and values
   template <class T>
-  static std::shared_ptr<BaseColumn> create_dict_column_by_type(const std::string &type, const std::vector<T> &values) {
-    auto vector_values = tbb::concurrent_vector<T>(values.begin(), values.end());
+  static std::shared_ptr<BaseColumn> create_dict_column_by_type(const std::string &type,
+                                                                const alloc_vector<T> &values) {
+    auto vector_values = alloc_concurrent_vector<T>(values.begin(), values.end());
     auto value_column = std::make_shared<ValueColumn<T>>(std::move(vector_values));
     return DictionaryCompression::compress_column(type, value_column);
   }

@@ -19,7 +19,7 @@
 
 namespace opossum {
 
-CompositeGroupKeyIndex::CompositeGroupKeyIndex(const std::vector<std::shared_ptr<BaseColumn>> &indexed_columns) {
+CompositeGroupKeyIndex::CompositeGroupKeyIndex(const alloc_vector<std::shared_ptr<BaseColumn>> &indexed_columns) {
   DebugAssert(!indexed_columns.empty(), "CompositeGroupKeyIndex requires at least one column to be indexed.");
 
   if (IS_DEBUG) {
@@ -47,7 +47,7 @@ CompositeGroupKeyIndex::CompositeGroupKeyIndex(const std::vector<std::shared_ptr
   // create concatenated keys and save their positions
   // at this point duplicated keys may be created, they will be handled later
   auto column_size = _indexed_columns.front()->size();
-  auto keys = std::vector<VariableLengthKey>(column_size);
+  auto keys = alloc_vector<VariableLengthKey>(column_size);
   _position_list.resize(column_size);
 
   for (ChunkOffset chunkOffset = 0; chunkOffset < column_size; ++chunkOffset) {
@@ -87,17 +87,17 @@ BaseIndex::Iterator CompositeGroupKeyIndex::_cbegin() const { return _position_l
 
 BaseIndex::Iterator CompositeGroupKeyIndex::_cend() const { return _position_list.cend(); }
 
-BaseIndex::Iterator CompositeGroupKeyIndex::_lower_bound(const std::vector<AllTypeVariant> &values) const {
+BaseIndex::Iterator CompositeGroupKeyIndex::_lower_bound(const alloc_vector<AllTypeVariant> &values) const {
   auto composite_key = _create_composite_key(values, false);
   return _get_position_iterator_for_key(composite_key);
 }
 
-BaseIndex::Iterator CompositeGroupKeyIndex::_upper_bound(const std::vector<AllTypeVariant> &values) const {
+BaseIndex::Iterator CompositeGroupKeyIndex::_upper_bound(const alloc_vector<AllTypeVariant> &values) const {
   auto composite_key = _create_composite_key(values, true);
   return _get_position_iterator_for_key(composite_key);
 }
 
-VariableLengthKey CompositeGroupKeyIndex::_create_composite_key(const std::vector<AllTypeVariant> &values,
+VariableLengthKey CompositeGroupKeyIndex::_create_composite_key(const alloc_vector<AllTypeVariant> &values,
                                                                 bool is_upper_bound) const {
   auto result = VariableLengthKey(_keys.key_size());
 
@@ -143,8 +143,8 @@ BaseIndex::Iterator CompositeGroupKeyIndex::_get_position_iterator_for_key(const
   return position_iter;
 }
 
-std::vector<std::shared_ptr<BaseColumn>> CompositeGroupKeyIndex::_get_index_columns() const {
-  auto result = std::vector<std::shared_ptr<BaseColumn>>();
+alloc_vector<std::shared_ptr<BaseColumn>> CompositeGroupKeyIndex::_get_index_columns() const {
+  auto result = alloc_vector<std::shared_ptr<BaseColumn>>();
   result.reserve(_indexed_columns.size());
   for (auto &&indexed_column : _indexed_columns) {
     result.emplace_back(indexed_column);

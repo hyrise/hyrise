@@ -27,7 +27,7 @@ struct TableInfo {
   }
 
   size_t _col_count;
-  std::vector<std::string> _col_types;
+  alloc_vector<std::string> _col_types;
 };
 /**
  * In contrast to the CsvRfcParse, the CsvNonRfcParser works with a more constraint set of csv files:
@@ -75,14 +75,14 @@ class CsvNonRfcParser {
   std::streamsize _file_size;
 
   // we need a vector to store the jobs objects so they don't end up leaking memory
-  std::vector<std::shared_ptr<JobTask>> _jobs;
+  alloc_vector<std::shared_ptr<JobTask>> _jobs;
 
   // holds information to the table that is going to be created
   TableInfo _file_info;
 
   // Before a new task is shceduled, a place in this array is reserved, so the order of chunks can be preserved, even
   // though some parsing tasks might finish after tasks that were scheduled after them
-  std::vector<std::shared_ptr<ParsingResult>> _parsing_results;
+  alloc_vector<std::shared_ptr<ParsingResult>> _parsing_results;
 
   // holds the current number of running tasks, needs to be atomic to be thread-safe
   std::atomic_uint _task_counter;
@@ -114,7 +114,7 @@ class CsvNonRfcParser {
   bool _read_csv(std::istream& stream, std::string& out, char delimiter);
 
   // parses one row of the csv, internally employs _get_fields
-  std::vector<AllTypeVariant> _parse_row(const std::string line, const TableInfo& info);
+  alloc_vector<AllTypeVariant> _parse_row(const std::string line, const TableInfo& info);
 
   /**
    * This method sanitizes the resultlist that has the following form:
@@ -133,7 +133,7 @@ class CsvNonRfcParser {
    * @param results the result list
    * @param info the structure of the chunks inside the result list
    */
-  void _resolve_orphans_widows(std::vector<std::shared_ptr<ParsingResult>>& results, const TableInfo& info);
+  void _resolve_orphans_widows(alloc_vector<std::shared_ptr<ParsingResult>>& results, const TableInfo& info);
 
   /**
    * This method is the entrypoint for all tasks
@@ -142,7 +142,7 @@ class CsvNonRfcParser {
    * @param buffer a vector containing a section of the file to be parsed
    * @param info information about the structure of the chunks to be created
    */
-  void _parse_csv(std::shared_ptr<std::promise<ParsingResult>> new_chunk, std::shared_ptr<std::vector<char>> buffer,
+  void _parse_csv(std::shared_ptr<std::promise<ParsingResult>> new_chunk, std::shared_ptr<alloc_vector<char>> buffer,
                   const TableInfo& info);
 
   /**
@@ -186,8 +186,8 @@ class CsvNonRfcParser {
   bool _get_field(std::istream& stream, std::string& out);
 
   // Splits and returns all fields from a given CSV row.
-  std::vector<std::string> _get_fields(const std::string& row);
+  alloc_vector<std::string> _get_fields(const std::string& row);
 
-  bool _start_new_job(std::shared_ptr<std::vector<char>> buffer);
+  bool _start_new_job(std::shared_ptr<alloc_vector<char>> buffer);
 };
 }  // namespace opossum

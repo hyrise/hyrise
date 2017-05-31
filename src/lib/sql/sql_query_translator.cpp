@@ -36,7 +36,7 @@ SQLQueryTranslator::SQLQueryTranslator() {}
 
 SQLQueryTranslator::~SQLQueryTranslator() {}
 
-const std::vector<std::shared_ptr<OperatorTask>>& SQLQueryTranslator::get_tasks() { return _tasks; }
+const alloc_vector<std::shared_ptr<OperatorTask>>& SQLQueryTranslator::get_tasks() { return _tasks; }
 
 const std::string& SQLQueryTranslator::get_error_msg() { return _error_msg; }
 
@@ -76,7 +76,7 @@ bool SQLQueryTranslator::parse_query(const std::string& query, hsql::SQLParserRe
 }
 
 bool SQLQueryTranslator::translate_parse_result(const hsql::SQLParserResult& result) {
-  const std::vector<SQLStatement*>& statements = result.getStatements();
+  const alloc_vector<SQLStatement*>& statements = result.getStatements();
 
   for (const SQLStatement* stmt : statements) {
     if (!translate_statement(*stmt)) {
@@ -208,9 +208,9 @@ bool SQLQueryTranslator::_translate_filter_expr(const hsql::Expr& expr,
   return true;
 }
 
-bool SQLQueryTranslator::_translate_projection(const std::vector<hsql::Expr*>& expr_list,
+bool SQLQueryTranslator::_translate_projection(const alloc_vector<hsql::Expr*>& expr_list,
                                                const std::shared_ptr<OperatorTask>& input_task) {
-  std::vector<std::string> columns;
+  alloc_vector<std::string> columns;
   for (const Expr* expr : expr_list) {
     // At this moment we only support selecting columns in the projection.
     if (!expr->isType(hsql::kExprColumnRef) && !expr->isType(hsql::kExprStar)) {
@@ -238,7 +238,7 @@ bool SQLQueryTranslator::_translate_projection(const std::vector<hsql::Expr*>& e
   return true;
 }
 
-bool SQLQueryTranslator::_translate_order_by(const std::vector<hsql::OrderDescription*> order_list,
+bool SQLQueryTranslator::_translate_order_by(const alloc_vector<hsql::OrderDescription*> order_list,
                                              const std::shared_ptr<OperatorTask>& input_task) {
   // Make mutable copy.
   std::shared_ptr<OperatorTask> prev_task = input_task;

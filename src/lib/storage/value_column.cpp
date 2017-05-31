@@ -14,7 +14,7 @@
 namespace opossum {
 
 template <typename T>
-ValueColumn<T>::ValueColumn(tbb::concurrent_vector<T>&& values) : _values(std::move(values)) {}
+ValueColumn<T>::ValueColumn(alloc_concurrent_vector<T>&& values) : _values(std::move(values)) {}
 
 template <typename T>
 const AllTypeVariant ValueColumn<T>::operator[](const size_t i) const {
@@ -56,12 +56,12 @@ void ValueColumn<std::string>::append(const AllTypeVariant& val) {
 }
 
 template <typename T>
-const tbb::concurrent_vector<T>& ValueColumn<T>::values() const {
+const alloc_concurrent_vector<T>& ValueColumn<T>::values() const {
   return _values;
 }
 
 template <typename T>
-tbb::concurrent_vector<T>& ValueColumn<T>::values() {
+alloc_concurrent_vector<T>& ValueColumn<T>::values() {
   return _values;
 }
 
@@ -97,9 +97,9 @@ void ValueColumn<T>::copy_value_to_value_column(BaseColumn& value_column, ChunkO
 }
 
 template <typename T>
-const std::shared_ptr<std::vector<std::pair<RowID, T>>> ValueColumn<T>::materialize(
-    ChunkID chunk_id, std::shared_ptr<std::vector<ChunkOffset>> offsets) {
-  auto materialized_vector = std::make_shared<std::vector<std::pair<RowID, T>>>();
+const std::shared_ptr<alloc_vector<std::pair<RowID, T>>> ValueColumn<T>::materialize(
+    ChunkID chunk_id, std::shared_ptr<alloc_vector<ChunkOffset>> offsets) {
+  auto materialized_vector = std::make_shared<alloc_vector<std::pair<RowID, T>>>();
 
   // we may want to sort offsets first?
   if (offsets) {

@@ -31,7 +31,7 @@ class AbstractScheduler {
 
   virtual void finish() = 0;
 
-  virtual const std::vector<std::shared_ptr<TaskQueue>>& queues() const = 0;
+  virtual const alloc_vector<std::shared_ptr<TaskQueue>>& queues() const = 0;
 
   virtual void schedule(std::shared_ptr<AbstractTask> task, uint32_t preferred_node_id = CURRENT_NODE_ID,
                         SchedulePriority priority = SchedulePriority::Normal) = 0;

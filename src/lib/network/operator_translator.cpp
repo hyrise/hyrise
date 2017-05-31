@@ -53,7 +53,7 @@ inline optional<AllTypeVariant> translate_optional_variant(const proto::Variant&
 inline std::shared_ptr<OperatorTask> OperatorTranslator::translate(
     const proto::ProjectionOperator& projection_operator) {
   const auto column_names_field = projection_operator.column_name();
-  auto column_names = std::vector<std::string>(std::begin(column_names_field), std::end(column_names_field));
+  auto column_names = alloc_vector<std::string>(std::begin(column_names_field), std::end(column_names_field));
   Assert((projection_operator.has_input_operator()), "Missing Input Operator in Projection.");
 
   auto input_task = translate_proto(projection_operator.input_operator());
@@ -299,7 +299,7 @@ inline std::shared_ptr<OperatorTask> OperatorTranslator::translate(const proto::
   return print_task;
 }
 
-const std::vector<std::shared_ptr<OperatorTask>>& OperatorTranslator::build_tasks_from_proto(
+const alloc_vector<std::shared_ptr<OperatorTask>>& OperatorTranslator::build_tasks_from_proto(
     const proto::OperatorVariant& op) {
   translate_proto(op);
   _root_task = _tasks.back();

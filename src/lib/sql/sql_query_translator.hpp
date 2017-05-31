@@ -18,7 +18,7 @@ class SQLQueryTranslator {
   virtual ~SQLQueryTranslator();
 
   // Returns the list of tasks that were created during translation.
-  const std::vector<std::shared_ptr<OperatorTask>>& get_tasks();
+  const alloc_vector<std::shared_ptr<OperatorTask>>& get_tasks();
 
   // Get the error message, if any exists.
   const std::string& get_error_msg();
@@ -47,10 +47,10 @@ class SQLQueryTranslator {
   // OR expressions are not supported yet.
   bool _translate_filter_expr(const hsql::Expr& expr, const std::shared_ptr<OperatorTask>& input_task);
 
-  bool _translate_projection(const std::vector<hsql::Expr*>& expr_list,
+  bool _translate_projection(const alloc_vector<hsql::Expr*>& expr_list,
                              const std::shared_ptr<OperatorTask>& input_task);
 
-  bool _translate_order_by(const std::vector<hsql::OrderDescription*> order_list,
+  bool _translate_order_by(const alloc_vector<hsql::OrderDescription*> order_list,
                            const std::shared_ptr<OperatorTask>& input_task);
 
   bool _translate_table_ref(const hsql::TableRef& table);
@@ -62,7 +62,7 @@ class SQLQueryTranslator {
   static std::string _get_column_name(const hsql::Expr& expr);
 
   // Generated execution plan.
-  std::vector<std::shared_ptr<OperatorTask>> _tasks;
+  alloc_vector<std::shared_ptr<OperatorTask>> _tasks;
 
   // Details about the error, if one occurred.
   std::string _error_msg;

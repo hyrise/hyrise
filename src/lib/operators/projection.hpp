@@ -20,10 +20,10 @@ class Projection : public AbstractReadOnlyOperator {
   // Type as String
   // Name of the new column
   using ProjectionDefinition = std::tuple<std::string /*Expression*/, std::string /*Type*/, std::string /*Name*/>;
-  using ProjectionDefinitions = std::vector<ProjectionDefinition>;
+  using ProjectionDefinitions = alloc_vector<ProjectionDefinition>;
 
   Projection(const std::shared_ptr<const AbstractOperator> in, const ProjectionDefinitions& definitions);
-  Projection(const std::shared_ptr<const AbstractOperator> in, const std::vector<std::string>& columns);
+  Projection(const std::shared_ptr<const AbstractOperator> in, const alloc_vector<std::string>& columns);
 
   const std::string name() const override;
   uint8_t num_in_tables() const override;
@@ -31,7 +31,7 @@ class Projection : public AbstractReadOnlyOperator {
 
  protected:
   ProjectionDefinitions _projection_definitions;
-  std::vector<std::string> _simple_projection;
+  alloc_vector<std::string> _simple_projection;
 
   class ColumnCreator {
    public:

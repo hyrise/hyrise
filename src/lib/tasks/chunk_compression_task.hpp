@@ -37,7 +37,7 @@ class Chunk;
 class ChunkCompressionTask : public AbstractTask {
  public:
   explicit ChunkCompressionTask(const std::string& table_name, const ChunkID chunk_id, bool check_completion = true);
-  explicit ChunkCompressionTask(const std::string& table_name, const std::vector<ChunkID>& chunk_ids,
+  explicit ChunkCompressionTask(const std::string& table_name, const alloc_vector<ChunkID>& chunk_ids,
                                 bool check_completion = true);
 
  protected:
@@ -54,6 +54,6 @@ class ChunkCompressionTask : public AbstractTask {
  private:
   const bool _check_completion;  ///< decides whether chunk_is_completed is called before compression
   const std::string _table_name;
-  const std::vector<ChunkID> _chunk_ids;
+  const alloc_vector<ChunkID> _chunk_ids;
 };
 }  // namespace opossum

@@ -36,7 +36,7 @@ class AdaptiveRadixTreeIndex : public BaseIndex {
   friend class AdaptiveRadixTreeIndexTest_BinaryComparableFromChunkOffset_Test;
 
  public:
-  explicit AdaptiveRadixTreeIndex(const std::vector<std::shared_ptr<BaseColumn>> &index_columns);
+  explicit AdaptiveRadixTreeIndex(const alloc_vector<std::shared_ptr<BaseColumn>> &index_columns);
 
   AdaptiveRadixTreeIndex(const AdaptiveRadixTreeIndex &) = delete;
 
@@ -65,27 +65,27 @@ class AdaptiveRadixTreeIndex : public BaseIndex {
     uint8_t operator[](size_t position) const;
 
    private:
-    std::vector<uint8_t> _parts;
+    alloc_vector<uint8_t> _parts;
   };
 
  private:
-  Iterator _lower_bound(const std::vector<AllTypeVariant> &values) const final;
+  Iterator _lower_bound(const alloc_vector<AllTypeVariant> &values) const final;
 
-  Iterator _upper_bound(const std::vector<AllTypeVariant> &values) const final;
+  Iterator _upper_bound(const alloc_vector<AllTypeVariant> &values) const final;
 
   Iterator _cbegin() const final;
 
   Iterator _cend() const final;
 
-  std::shared_ptr<Node> _bulk_insert(const std::vector<std::pair<BinaryComparable, ChunkOffset>> &values);
+  std::shared_ptr<Node> _bulk_insert(const alloc_vector<std::pair<BinaryComparable, ChunkOffset>> &values);
 
-  std::shared_ptr<Node> _bulk_insert(const std::vector<std::pair<BinaryComparable, ChunkOffset>> &values, size_t depth,
+  std::shared_ptr<Node> _bulk_insert(const alloc_vector<std::pair<BinaryComparable, ChunkOffset>> &values, size_t depth,
                                      Iterator &it);
 
-  std::vector<std::shared_ptr<BaseColumn>> _get_index_columns() const;
+  alloc_vector<std::shared_ptr<BaseColumn>> _get_index_columns() const;
 
   const std::shared_ptr<UntypedDictionaryColumn> _index_column;
-  std::vector<ChunkOffset> _chunk_offsets;
+  alloc_vector<ChunkOffset> _chunk_offsets;
   std::shared_ptr<Node> _root;
 };
 

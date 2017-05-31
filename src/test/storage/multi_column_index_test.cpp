@@ -26,17 +26,17 @@ class MultiColumnIndexTest : public BaseTest {
         "string", {"foo", "bar", "baz", "foo", "bar", "baz", "foo", "bar", "baz", "foo"});
 
     index_int_str =
-        std::make_shared<DerivedIndex>(std::vector<std::shared_ptr<BaseColumn>>{dict_col_int, dict_col_str});
+        std::make_shared<DerivedIndex>(alloc_vector<std::shared_ptr<BaseColumn>>{dict_col_int, dict_col_str});
     index_str_int =
-        std::make_shared<DerivedIndex>(std::vector<std::shared_ptr<BaseColumn>>{dict_col_str, dict_col_int});
+        std::make_shared<DerivedIndex>(alloc_vector<std::shared_ptr<BaseColumn>>{dict_col_str, dict_col_int});
   }
 
   template <class Iterator>
-  static std::vector<std::vector<AllTypeVariant>> result_as_vector(const std::vector<std::shared_ptr<BaseColumn>> cols,
-                                                                   Iterator begin, Iterator end) {
-    std::vector<std::vector<AllTypeVariant>> result{};
+  static alloc_vector<alloc_vector<AllTypeVariant>> result_as_vector(
+      const alloc_vector<std::shared_ptr<BaseColumn>> cols, Iterator begin, Iterator end) {
+    alloc_vector<alloc_vector<AllTypeVariant>> result{};
     for (auto iter(std::move(begin)); iter != end; ++iter) {
-      auto row = std::vector<AllTypeVariant>{};
+      auto row = alloc_vector<AllTypeVariant>{};
       for (auto column : cols) {
         row.emplace_back((*column)[*iter]);
       }
@@ -61,8 +61,8 @@ TYPED_TEST(MultiColumnIndexTest, FullRange) {
   auto result_values_int_str =
       this->result_as_vector({this->dict_col_int, this->dict_col_str}, begin_int_str, end_int_str);
   auto expected_values_int_str =
-      std::vector<std::vector<AllTypeVariant>>{{0, "baz"}, {1, "baz"}, {2, "bar"}, {3, "foo"}, {4, "bar"},
-                                               {4, "bar"}, {4, "foo"}, {7, "baz"}, {8, "foo"}, {9, "foo"}};
+      alloc_vector<alloc_vector<AllTypeVariant>>{{0, "baz"}, {1, "baz"}, {2, "bar"}, {3, "foo"}, {4, "bar"},
+                                                 {4, "bar"}, {4, "foo"}, {7, "baz"}, {8, "foo"}, {9, "foo"}};
   EXPECT_EQ(expected_values_int_str, result_values_int_str);
 
   auto begin_str_int = this->index_str_int->cbegin();
@@ -70,8 +70,8 @@ TYPED_TEST(MultiColumnIndexTest, FullRange) {
   auto result_values_str_int =
       this->result_as_vector({this->dict_col_str, this->dict_col_int}, begin_str_int, end_str_int);
   auto expected_values_str_int =
-      std::vector<std::vector<AllTypeVariant>>{{"bar", 2}, {"bar", 4}, {"bar", 4}, {"baz", 0}, {"baz", 1},
-                                               {"baz", 7}, {"foo", 3}, {"foo", 4}, {"foo", 8}, {"foo", 9}};
+      alloc_vector<alloc_vector<AllTypeVariant>>{{"bar", 2}, {"bar", 4}, {"bar", 4}, {"baz", 0}, {"baz", 1},
+                                                 {"baz", 7}, {"foo", 3}, {"foo", 4}, {"foo", 8}, {"foo", 9}};
   EXPECT_EQ(expected_values_str_int, result_values_str_int);
 }
 

@@ -19,9 +19,9 @@ struct TopologyCpu final {
 };
 
 struct TopologyNode final {
-  explicit TopologyNode(std::vector<TopologyCpu>&& cpus) : cpus(std::move(cpus)) {}
+  explicit TopologyNode(alloc_vector<TopologyCpu>&& cpus) : cpus(std::move(cpus)) {}
 
-  std::vector<TopologyCpu> cpus;
+  alloc_vector<TopologyCpu> cpus;
 };
 
 /**
@@ -38,14 +38,14 @@ class Topology final {
                                                              uint32_t workers_per_node = 1);
   static std::shared_ptr<Topology> create_numa_topology(uint32_t max_num_cores = 0);
 
-  Topology(std::vector<TopologyNode>&& nodes, size_t numCpus) : _nodes(std::move(nodes)), _numCpus(numCpus) {}
+  Topology(alloc_vector<TopologyNode>&& nodes, size_t numCpus) : _nodes(std::move(nodes)), _numCpus(numCpus) {}
 
-  const std::vector<TopologyNode>& nodes() { return _nodes; }
+  const alloc_vector<TopologyNode>& nodes() { return _nodes; }
 
   size_t numCpus() const { return _numCpus; }
 
  private:
-  std::vector<TopologyNode> _nodes;
+  alloc_vector<TopologyNode> _nodes;
   size_t _numCpus;
 };
 }  // namespace opossum

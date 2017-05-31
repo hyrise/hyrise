@@ -35,12 +35,12 @@ std::shared_ptr<Table> CsvRfcParser::parse(const std::string& filename) {
 
   // Add additional null byte at the end in order to allow stroi and friends to work on a c string that ends on a null
   // byte
-  std::vector<char> file_content(file_size + 1);
+  alloc_vector<char> file_content(file_size + 1);
   file.read(file_content.data(), file_size);
 
   // Safe chunks in list to avoid memory relocations
   std::list<Chunk> chunks;
-  std::vector<std::shared_ptr<JobTask>> tasks;
+  alloc_vector<std::shared_ptr<JobTask>> tasks;
 
   auto position = file_content.begin();
   // Use the end without the additional null byte
@@ -78,13 +78,13 @@ std::shared_ptr<Table> CsvRfcParser::parse(const std::string& filename) {
   return table;
 }
 
-void CsvRfcParser::_parse_file_chunk(std::vector<char>::iterator start, std::vector<char>::iterator end, Chunk& chunk,
+void CsvRfcParser::_parse_file_chunk(alloc_vector<char>::iterator start, alloc_vector<char>::iterator end, Chunk& chunk,
                                      const Table& table, ChunkOffset row_count) {
   if (start == end) return;
   auto position = start;
 
   // For each csv column create a CsvConverter which builds up a ValueColumn
-  std::vector<std::unique_ptr<AbstractCsvConverter>> converters;
+  alloc_vector<std::unique_ptr<AbstractCsvConverter>> converters;
   for (ColumnID column_id = 0; column_id < table.col_count(); ++column_id) {
     converters.emplace_back(
         make_unique_by_column_type<AbstractCsvConverter, CsvConverter>(table.column_type(column_id), row_count));
@@ -125,7 +125,7 @@ const std::shared_ptr<Table> CsvRfcParser::_process_meta_file(const std::string&
   file.seekg(0);
 
   // reserve one extra slot that can be overwritten to a null byte
-  std::vector<char> file_content(file_size + 1);
+  alloc_vector<char> file_content(file_size + 1);
   file.read(file_content.data(), file_size);
 
   // ignore additional null byte
@@ -165,8 +165,8 @@ const std::shared_ptr<Table> CsvRfcParser::_process_meta_file(const std::string&
   return table;
 }
 
-std::vector<char>::iterator CsvRfcParser::_next_field(const std::vector<char>::iterator& start,
-                                                      const std::vector<char>::iterator& end, char& last_char) {
+alloc_vector<char>::iterator CsvRfcParser::_next_field(const alloc_vector<char>::iterator& start,
+                                                       const alloc_vector<char>::iterator& end, char& last_char) {
   if (start == end) return start;
   auto position = start;
 
@@ -193,8 +193,8 @@ std::vector<char>::iterator CsvRfcParser::_next_field(const std::vector<char>::i
   return position;
 }
 
-std::vector<char>::iterator CsvRfcParser::_next_row(const std::vector<char>::iterator& start,
-                                                    const std::vector<char>::iterator& end) {
+alloc_vector<char>::iterator CsvRfcParser::_next_row(const alloc_vector<char>::iterator& start,
+                                                     const alloc_vector<char>::iterator& end) {
   bool is_escaped = false;
   auto position = start;
   // find the next delimiter that is not surrounded by quotes

@@ -37,7 +37,7 @@ class CsvWriter {
    * Writes a full line of AllTypeVariants as a row.
    * Also calls end_line() to finish the row.
    */
-  void write_line(const std::vector<AllTypeVariant>& values);
+  void write_line(const alloc_vector<AllTypeVariant>& values);
 
  protected:
   std::string escape(const std::string& string);

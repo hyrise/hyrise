@@ -8,8 +8,6 @@
 #include <string>
 #include <vector>
 
-#include "tbb/concurrent_vector.h"
-
 #include "all_type_variant.hpp"
 #include "copyable_atomic.hpp"
 #include "index/base_index.hpp"
@@ -35,9 +33,9 @@ class Chunk {
     friend class Chunk;
 
    public:
-    tbb::concurrent_vector<copyable_atomic<TransactionID>> tids;  ///< 0 unless locked by a transaction
-    tbb::concurrent_vector<CommitID> begin_cids;                  ///< commit id when record was added
-    tbb::concurrent_vector<CommitID> end_cids;                    ///< commit id when record was deleted
+    alloc_concurrent_vector<copyable_atomic<TransactionID>> tids;  ///< 0 unless locked by a transaction
+    alloc_concurrent_vector<CommitID> begin_cids;                  ///< commit id when record was added
+    alloc_concurrent_vector<CommitID> end_cids;                    ///< commit id when record was deleted
 
    private:
     /**
@@ -78,7 +76,7 @@ class Chunk {
 
   // adds a new row, given as a list of values, to the chunk
   // note this is slow and not thread-safe and should be used for testing purposes only
-  void append(std::vector<AllTypeVariant> values);
+  void append(alloc_vector<AllTypeVariant> values);
 
   /**
    * Atomically accesses and returns the column at a given position
@@ -125,11 +123,11 @@ class Chunk {
    */
   void use_mvcc_columns_from(const Chunk &chunk);
 
-  std::vector<std::shared_ptr<BaseIndex>> get_indices_for(
-      const std::vector<std::shared_ptr<BaseColumn>> &columns) const;
+  alloc_vector<std::shared_ptr<BaseIndex>> get_indices_for(
+      const alloc_vector<std::shared_ptr<BaseColumn>> &columns) const;
 
   template <typename Index>
-  std::shared_ptr<BaseIndex> create_index(const std::vector<std::shared_ptr<BaseColumn>> &index_columns) {
+  std::shared_ptr<BaseIndex> create_index(const alloc_vector<std::shared_ptr<BaseColumn>> &index_columns) {
     auto index = std::make_shared<Index>(index_columns);
     _indices.emplace_back(index);
     return index;
@@ -138,9 +136,9 @@ class Chunk {
   bool references_only_one_table() const;
 
  protected:
-  tbb::concurrent_vector<std::shared_ptr<BaseColumn>> _columns;
+  alloc_concurrent_vector<std::shared_ptr<BaseColumn>> _columns;
   std::unique_ptr<MvccColumns> _mvcc_columns;
-  std::vector<std::shared_ptr<BaseIndex>> _indices;
+  alloc_vector<std::shared_ptr<BaseIndex>> _indices;
 };
 
 }  // namespace opossum

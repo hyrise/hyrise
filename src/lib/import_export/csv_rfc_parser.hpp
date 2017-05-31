@@ -62,7 +62,7 @@ class CsvRfcParser {
    * @param table      Table for that the data should be parsed.
    * @param row_count  Number of rows in the chunk from start to end
    */
-  static void _parse_file_chunk(std::vector<char>::iterator start, std::vector<char>::iterator end, Chunk& chunk,
+  static void _parse_file_chunk(alloc_vector<char>::iterator start, alloc_vector<char>::iterator end, Chunk& chunk,
                                 const Table& table, ChunkOffset row_count);
 
   /*
@@ -75,8 +75,8 @@ class CsvRfcParser {
    * @param end        Search until 'end' for the next field
    * @param last_char  In this parameter the character after the field is saved (separator or delimiter)
    */
-  static std::vector<char>::iterator _next_field(const std::vector<char>::iterator& start,
-                                                 const std::vector<char>::iterator& end, char& last_char);
+  static alloc_vector<char>::iterator _next_field(const alloc_vector<char>::iterator& start,
+                                                  const alloc_vector<char>::iterator& end, char& last_char);
 
   /*
    * Returns the start position of the next csv row after 'start'.
@@ -85,7 +85,7 @@ class CsvRfcParser {
    * @param start      Iterator pointing to the begin of a csv row
    * @param end        Search until 'end' for the next row
    */
-  static std::vector<char>::iterator _next_row(const std::vector<char>::iterator& start,
-                                               const std::vector<char>::iterator& end);
+  static alloc_vector<char>::iterator _next_row(const alloc_vector<char>::iterator& start,
+                                                const alloc_vector<char>::iterator& end);
 };
 }  // namespace opossum

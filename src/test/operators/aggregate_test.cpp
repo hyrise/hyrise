@@ -51,8 +51,8 @@ class OperatorsAggregateTest : public BaseTest {
   }
 
   void test_output(const std::shared_ptr<AbstractOperator> in,
-                   const std::vector<std::pair<std::string, AggregateFunction>> aggregates,
-                   const std::vector<std::string> groupby_columns, const std::string &file_name, size_t chunk_size) {
+                   const alloc_vector<std::pair<std::string, AggregateFunction>> aggregates,
+                   const alloc_vector<std::string> groupby_columns, const std::string &file_name, size_t chunk_size) {
     // load expected results from file
     std::shared_ptr<Table> expected_result = load_table(file_name, chunk_size);
     EXPECT_NE(expected_result, nullptr) << "Could not load expected result table";
@@ -93,8 +93,9 @@ class OperatorsAggregateTest : public BaseTest {
 
 TEST_F(OperatorsAggregateTest, NumInputTables) {
   auto aggregate = std::make_shared<Aggregate>(
-      _table_wrapper_1_1, std::vector<std::pair<std::string, AggregateFunction>>{std::make_pair(std::string("b"), Max)},
-      std::vector<std::string>{std::string("a")});
+      _table_wrapper_1_1,
+      alloc_vector<std::pair<std::string, AggregateFunction>>{std::make_pair(std::string("b"), Max)},
+      alloc_vector<std::string>{std::string("a")});
   aggregate->execute();
 
   EXPECT_EQ(aggregate->num_in_tables(), 1);
@@ -102,16 +103,18 @@ TEST_F(OperatorsAggregateTest, NumInputTables) {
 
 TEST_F(OperatorsAggregateTest, NumOutputTables) {
   auto aggregate = std::make_shared<Aggregate>(
-      _table_wrapper_1_1, std::vector<std::pair<std::string, AggregateFunction>>{std::make_pair(std::string("b"), Max)},
-      std::vector<std::string>{std::string("a")});
+      _table_wrapper_1_1,
+      alloc_vector<std::pair<std::string, AggregateFunction>>{std::make_pair(std::string("b"), Max)},
+      alloc_vector<std::string>{std::string("a")});
 
   EXPECT_EQ(aggregate->num_out_tables(), 1);
 }
 
 TEST_F(OperatorsAggregateTest, OperatorName) {
   auto aggregate = std::make_shared<Aggregate>(
-      _table_wrapper_1_1, std::vector<std::pair<std::string, AggregateFunction>>{std::make_pair(std::string("b"), Max)},
-      std::vector<std::string>{std::string("a")});
+      _table_wrapper_1_1,
+      alloc_vector<std::pair<std::string, AggregateFunction>>{std::make_pair(std::string("b"), Max)},
+      alloc_vector<std::string>{std::string("a")});
 
   EXPECT_EQ(aggregate->name(), "Aggregate");
 }
@@ -119,8 +122,8 @@ TEST_F(OperatorsAggregateTest, OperatorName) {
 TEST_F(OperatorsAggregateTest, CannotAggregateStringColumns) {
   auto aggregate = std::make_shared<Aggregate>(
       _table_wrapper_1_1_string,
-      std::vector<std::pair<std::string, AggregateFunction>>{std::make_pair(std::string("a"), Min)},
-      std::vector<std::string>{std::string("a")});
+      alloc_vector<std::pair<std::string, AggregateFunction>>{std::make_pair(std::string("a"), Min)},
+      alloc_vector<std::string>{std::string("a")});
 
   EXPECT_THROW(aggregate->execute(), std::logic_error);
 }
@@ -340,8 +343,8 @@ TEST_F(OperatorsAggregateTest, TwoGroupbyAndNoAggregate) {
 
 TEST_F(OperatorsAggregateTest, NoGroupbyAndNoAggregate) {
   EXPECT_THROW(
-      std::make_shared<Aggregate>(_table_wrapper_1_1_string, std::vector<std::pair<std::string, AggregateFunction>>{},
-                                  std::vector<std::string>{}),
+      std::make_shared<Aggregate>(_table_wrapper_1_1_string, alloc_vector<std::pair<std::string, AggregateFunction>>{},
+                                  alloc_vector<std::string>{}),
       std::logic_error);
 }
 

@@ -18,7 +18,7 @@ class Print : public AbstractReadOnlyOperator {
   uint8_t num_out_tables() const override;
 
  protected:
-  std::vector<uint16_t> column_string_widths(uint16_t min, uint16_t max, std::shared_ptr<const Table> t) const;
+  alloc_vector<uint16_t> column_string_widths(uint16_t min, uint16_t max, std::shared_ptr<const Table> t) const;
   std::shared_ptr<const Table> on_execute() override;
 
   // stream to print the result

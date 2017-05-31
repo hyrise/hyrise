@@ -8,7 +8,7 @@
 
 namespace opossum {
 
-using Iterator = std::vector<ChunkOffset>::const_iterator;
+using Iterator = alloc_vector<ChunkOffset>::const_iterator;
 
 /**
  * This file declares the Node-types needed for the Adaptive-Radix-Tree (ART)
@@ -52,7 +52,7 @@ class Node4 final : public Node {
   friend class AdaptiveRadixTreeIndexTest_BulkInsert_Test;
 
  public:
-  explicit Node4(std::vector<std::pair<uint8_t, std::shared_ptr<Node>>> &children);
+  explicit Node4(alloc_vector<std::pair<uint8_t, std::shared_ptr<Node>>> &children);
 
   Iterator lower_bound(const AdaptiveRadixTreeIndex::BinaryComparable &key, size_t depth) const override;
 
@@ -91,9 +91,9 @@ class Node4 final : public Node {
 
 class Node16 final : public Node {
  public:
-  explicit Node16(std::vector<std::pair<uint8_t, std::shared_ptr<Node>>
+  explicit Node16(alloc_vector<std::pair<uint8_t, std::shared_ptr<Node>>
 
-                              > &children);
+                               > &children);
 
   Iterator lower_bound(const AdaptiveRadixTreeIndex::BinaryComparable &key, size_t depth) const override;
 
@@ -130,9 +130,9 @@ class Node16 final : public Node {
  */
 class Node48 final : public Node {
  public:
-  explicit Node48(const std::vector<std::pair<uint8_t, std::shared_ptr<Node>>
+  explicit Node48(const alloc_vector<std::pair<uint8_t, std::shared_ptr<Node>>
 
-                                    > &children);
+                                     > &children);
 
   Iterator lower_bound(const AdaptiveRadixTreeIndex::BinaryComparable &key, size_t depth) const override;
 
@@ -160,9 +160,9 @@ class Node48 final : public Node {
  */
 class Node256 final : public Node {
  public:
-  explicit Node256(const std::vector<std::pair<uint8_t, std::shared_ptr<Node>>
+  explicit Node256(const alloc_vector<std::pair<uint8_t, std::shared_ptr<Node>>
 
-                                     > &children);
+                                      > &children);
 
   Iterator lower_bound(const AdaptiveRadixTreeIndex::BinaryComparable &key, size_t depth) const override;
 
@@ -182,7 +182,7 @@ class Node256 final : public Node {
 
 /**
  *
- * Leafs contain two std::vector<ChunkOffset>::const_iterator: _lower_bound and _upper_bound.
+ * Leafs contain two alloc_vector<ChunkOffset>::const_iterator: _lower_bound and _upper_bound.
  *
  * Consider the following example tree showing only its leafs:
  *

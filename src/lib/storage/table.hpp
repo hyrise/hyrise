@@ -52,7 +52,7 @@ class Table {
   const std::string &column_type(ColumnID column_id) const;
 
   // returns the vector of column types
-  const std::vector<std::string> &column_types() const;
+  const alloc_vector<std::string> &column_types() const;
 
   // returns the column with the given name
   ColumnID column_id_by_name(const std::string &column_name) const;
@@ -65,7 +65,7 @@ class Table {
 
   // inserts a row at the end of the table
   // note this is slow and not thread-safe and should be used for testing purposes only
-  void append(std::vector<AllTypeVariant> values);
+  void append(alloc_vector<AllTypeVariant> values);
 
   // creates a new chunk and appends it
   void create_new_chunk();
@@ -82,12 +82,12 @@ class Table {
  protected:
   // 0 means that the chunk has an unlimited size.
   const uint32_t _chunk_size;
-  std::vector<Chunk> _chunks;
+  alloc_vector<Chunk> _chunks;
 
   // these should be const strings, but having a vector of const values is a C++17 feature
   // that is not yet completely implemented in all compilers
-  std::vector<std::string> _column_names;
-  std::vector<std::string> _column_types;
+  alloc_vector<std::string> _column_names;
+  alloc_vector<std::string> _column_types;
 
   std::unique_ptr<std::mutex> _append_mutex;
 };

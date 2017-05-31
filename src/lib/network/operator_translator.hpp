@@ -17,7 +17,7 @@ namespace opossum {
 class OperatorTranslator {
  public:
   // Recursively creates Tasks for all input-operators of `op` and a task for `op` itself
-  const std::vector<std::shared_ptr<OperatorTask>>& build_tasks_from_proto(const proto::OperatorVariant& op);
+  const alloc_vector<std::shared_ptr<OperatorTask>>& build_tasks_from_proto(const proto::OperatorVariant& op);
   // Returns the root task, i.e. the root element of the dependency tree structure. It is the last one to be executed by
   // the scheduler.
   std::shared_ptr<OperatorTask> root_task() { return _root_task; }
@@ -37,7 +37,7 @@ class OperatorTranslator {
   inline std::shared_ptr<OperatorTask> translate(const proto::ExportBinaryOperator&);
   inline std::shared_ptr<OperatorTask> translate(const proto::IndexColumnScanOperator&);
   inline std::shared_ptr<OperatorTask> translate(const proto::NestedLoopJoinOperator&);
-  std::vector<std::shared_ptr<OperatorTask>> _tasks;
+  alloc_vector<std::shared_ptr<OperatorTask>> _tasks;
   std::shared_ptr<OperatorTask> _root_task;
 };
 

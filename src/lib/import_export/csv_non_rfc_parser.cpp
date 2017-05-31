@@ -16,7 +16,7 @@ namespace opossum {
 template <typename CharT, typename TraitsT = std::char_traits<CharT>>
 class VectorStream : public std::basic_streambuf<CharT, TraitsT> {
  public:
-  explicit VectorStream(std::vector<CharT>& vector) {
+  explicit VectorStream(alloc_vector<CharT>& vector) {
     this->setg(vector.data(), vector.data(), vector.data() + vector.size());
   }
 };
@@ -86,7 +86,7 @@ std::shared_ptr<Table> CsvNonRfcParser::parse(const std::string& filename) {
   return table;
 }
 
-bool CsvNonRfcParser::_start_new_job(std::shared_ptr<std::vector<char>> buffer) {
+bool CsvNonRfcParser::_start_new_job(std::shared_ptr<alloc_vector<char>> buffer) {
   //  if buffer is empty, or just a linebreak: skip it!
   if (buffer->empty() || (buffer->front() == csv_delimiter)) {
     return false;
@@ -121,7 +121,7 @@ bool CsvNonRfcParser::_parse_next_buffer() {
   }
 
   //      read data to buffer
-  auto buffer = std::make_shared<std::vector<char>>(adapted_buffer_size);
+  auto buffer = std::make_shared<alloc_vector<char>>(adapted_buffer_size);
   if (_file_handle.tellg() == _file_size || !_file_handle.read(buffer->data(), adapted_buffer_size)) {
     return false;
   }
@@ -160,7 +160,7 @@ void CsvNonRfcParser::_process_task_results(std::shared_ptr<std::future<ParsingR
   parsing_result->_chunk = result._chunk;
 }
 
-void CsvNonRfcParser::_resolve_orphans_widows(std::vector<std::shared_ptr<ParsingResult>>& results,
+void CsvNonRfcParser::_resolve_orphans_widows(alloc_vector<std::shared_ptr<ParsingResult>>& results,
                                               const TableInfo& info) {
   auto first_row = _parse_row(results[0]->_first_row, info);
 
@@ -195,14 +195,14 @@ void CsvNonRfcParser::_resolve_orphans_widows(std::vector<std::shared_ptr<Parsin
   results.insert(results.begin(), std::make_shared<ParsingResult>(std::move(first_element_result)));
 }
 
-std::vector<AllTypeVariant> CsvNonRfcParser::_parse_row(const std::string row, const TableInfo& info) {
+alloc_vector<AllTypeVariant> CsvNonRfcParser::_parse_row(const std::string row, const TableInfo& info) {
   const auto fields = _get_fields(row);
   if (info._col_count != fields.size()) {
     // return empty vector so the calling function can handle incomplete lines
-    return std::vector<AllTypeVariant>(0);
+    return alloc_vector<AllTypeVariant>(0);
   }
 
-  std::vector<AllTypeVariant> values(fields.size());
+  alloc_vector<AllTypeVariant> values(fields.size());
   for (ColumnID i = 0; i < info._col_count; ++i) {
     values[i] = AllTypeVariant(fields[i]);
   }
@@ -211,7 +211,7 @@ std::vector<AllTypeVariant> CsvNonRfcParser::_parse_row(const std::string row, c
 }
 
 void CsvNonRfcParser::_parse_csv(std::shared_ptr<std::promise<ParsingResult>> new_chunk,
-                                 std::shared_ptr<std::vector<char>> buffer, const TableInfo& info) {
+                                 std::shared_ptr<alloc_vector<char>> buffer, const TableInfo& info) {
   // create chunk with the correct columns
   auto chunk = std::make_shared<Chunk>();
   ParsingResult result(chunk);
@@ -370,8 +370,8 @@ bool CsvNonRfcParser::_get_field(std::istream& stream, std::string& out) {
   return _read_csv(stream, out, csv_separator);
 }
 
-std::vector<std::string> CsvNonRfcParser::_get_fields(const std::string& row) {
-  std::vector<std::string> fields;
+alloc_vector<std::string> CsvNonRfcParser::_get_fields(const std::string& row) {
+  alloc_vector<std::string> fields;
   std::stringstream stream{row};
   std::string field;
   while (_get_field(stream, field)) {

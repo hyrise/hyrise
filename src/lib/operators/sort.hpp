@@ -62,7 +62,7 @@ class Sort::SortImpl : public AbstractReadOnlyOperatorImpl {
         _ascending(ascending),
         _output_chunk_size(output_chunk_size) {
     // initialize a structure wich can be sorted by std::sort
-    _row_id_value_vector = std::make_shared<std::vector<std::pair<RowID, SortColumnType>>>();
+    _row_id_value_vector = std::make_shared<alloc_vector<std::pair<RowID, SortColumnType>>>();
   }
 
   std::shared_ptr<const Table> on_execute() override {
@@ -102,7 +102,7 @@ class Sort::SortImpl : public AbstractReadOnlyOperatorImpl {
   // chunk size of the materialized output
   const size_t _output_chunk_size;
 
-  std::shared_ptr<std::vector<std::pair<RowID, SortColumnType>>> _row_id_value_vector;
+  std::shared_ptr<alloc_vector<std::pair<RowID, SortColumnType>>> _row_id_value_vector;
 };
 
 // This class fills the temporary structure to be sorted. Therefore the column to sort by is visited by this class, so
@@ -111,17 +111,18 @@ template <typename SortColumnType>
 class Sort::SortImplMaterializeSortColumn : public ColumnVisitable {
  public:
   SortImplMaterializeSortColumn(std::shared_ptr<const Table> in, const std::string &sort_column_name,
-                                std::shared_ptr<std::vector<std::pair<RowID, SortColumnType>>> id_value_map)
+                                std::shared_ptr<alloc_vector<std::pair<RowID, SortColumnType>>> id_value_map)
       : _table_in(in), _sort_column_name(sort_column_name), _row_id_value_vector(id_value_map) {}
 
   struct MaterializeSortColumnContext : ColumnVisitableContext {
-    MaterializeSortColumnContext(ChunkID c, std::shared_ptr<std::vector<std::pair<RowID, SortColumnType>>> id_value_map)
+    MaterializeSortColumnContext(ChunkID c,
+                                 std::shared_ptr<alloc_vector<std::pair<RowID, SortColumnType>>> id_value_map)
         : chunk_id(c), row_id_value_vector(id_value_map) {}
 
     // constructor for use in ReferenceColumn::visit_dereferenced
     MaterializeSortColumnContext(std::shared_ptr<ColumnVisitableContext> base_context, ChunkID chunk_id,
-                                 std::shared_ptr<std::vector<ChunkOffset>> chunk_offsets,
-                                 std::shared_ptr<std::vector<RowID>> row_ids)
+                                 std::shared_ptr<alloc_vector<ChunkOffset>> chunk_offsets,
+                                 std::shared_ptr<alloc_vector<RowID>> row_ids)
         : chunk_id(chunk_id),
           row_id_value_vector(
               std::static_pointer_cast<MaterializeSortColumnContext>(base_context)->row_id_value_vector),
@@ -129,9 +130,9 @@ class Sort::SortImplMaterializeSortColumn : public ColumnVisitable {
           row_ids_in(row_ids) {}
 
     const ChunkID chunk_id;
-    std::shared_ptr<std::vector<std::pair<RowID, SortColumnType>>> row_id_value_vector;
-    std::shared_ptr<std::vector<ChunkOffset>> chunk_offsets_in;
-    std::shared_ptr<std::vector<RowID>> row_ids_in;
+    std::shared_ptr<alloc_vector<std::pair<RowID, SortColumnType>>> row_id_value_vector;
+    std::shared_ptr<alloc_vector<ChunkOffset>> chunk_offsets_in;
+    std::shared_ptr<alloc_vector<RowID>> row_ids_in;
   };
 
   void execute() {
@@ -177,12 +178,12 @@ class Sort::SortImplMaterializeSortColumn : public ColumnVisitable {
     unsorted.
     */
     auto referenced_table = column.referenced_table();
-    std::vector<std::shared_ptr<std::vector<ChunkOffset>>> all_chunk_offsets(referenced_table->chunk_count());
-    std::vector<std::shared_ptr<std::vector<RowID>>> row_id_maps(referenced_table->chunk_count());
+    alloc_vector<std::shared_ptr<alloc_vector<ChunkOffset>>> all_chunk_offsets(referenced_table->chunk_count());
+    alloc_vector<std::shared_ptr<alloc_vector<RowID>>> row_id_maps(referenced_table->chunk_count());
 
     for (ChunkID chunk_id = 0; chunk_id < referenced_table->chunk_count(); ++chunk_id) {
-      all_chunk_offsets[chunk_id] = std::make_shared<std::vector<ChunkOffset>>();
-      row_id_maps[chunk_id] = std::make_shared<std::vector<RowID>>();
+      all_chunk_offsets[chunk_id] = std::make_shared<alloc_vector<ChunkOffset>>();
+      row_id_maps[chunk_id] = std::make_shared<alloc_vector<RowID>>();
       for (ChunkOffset row_index = 0; row_index < column.size(); row_index++) {
         row_id_maps[chunk_id]->emplace_back(RowID{chunk_id, row_index});
       }
@@ -239,7 +240,7 @@ class Sort::SortImplMaterializeSortColumn : public ColumnVisitable {
 
   const std::shared_ptr<const Table> _table_in;
   const std::string _sort_column_name;
-  std::shared_ptr<std::vector<std::pair<RowID, SortColumnType>>> _row_id_value_vector;
+  std::shared_ptr<alloc_vector<std::pair<RowID, SortColumnType>>> _row_id_value_vector;
 };
 
 // This class fulfills only the materialization task for a sorted row_id_value_vector.
@@ -248,7 +249,7 @@ class Sort::SortImplMaterializeOutput {
  public:
   // creates a new table with reference columns
   SortImplMaterializeOutput(std::shared_ptr<const Table> in,
-                            std::shared_ptr<std::vector<std::pair<RowID, SortColumnType>>> id_value_map,
+                            std::shared_ptr<alloc_vector<std::pair<RowID, SortColumnType>>> id_value_map,
                             const size_t output_chunk_size)
       : _table_in(in), _output_chunk_size(output_chunk_size), _row_id_value_vector(id_value_map) {}
 
@@ -279,7 +280,7 @@ class Sort::SortImplMaterializeOutput {
       // Because we want to add the values row wise we have to save all columns temporarily before we can add them to
       // the
       // output chunk.
-      auto column_vectors = std::vector<std::shared_ptr<BaseColumn>>(output->col_count());
+      auto column_vectors = alloc_vector<std::shared_ptr<BaseColumn>>(output->col_count());
       for (size_t column_id = 0; column_id < output->col_count(); column_id++) {
         auto column_type = _table_in->column_type(column_id);
         column_vectors[column_id] = make_shared_by_column_type<BaseColumn, ValueColumn>(column_type);
@@ -318,7 +319,7 @@ class Sort::SortImplMaterializeOutput {
 
   std::shared_ptr<const Table> _table_in;
   size_t _output_chunk_size;
-  std::shared_ptr<std::vector<std::pair<RowID, SortColumnType>>> _row_id_value_vector;
+  std::shared_ptr<alloc_vector<std::pair<RowID, SortColumnType>>> _row_id_value_vector;
 };
 
 }  // namespace opossum

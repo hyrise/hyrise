@@ -26,13 +26,13 @@ std::shared_ptr<Topology> Topology::create_fake_numa_topology(uint32_t max_num_w
   auto num_nodes = num_workers / workers_per_node;
   if (num_workers % workers_per_node != 0) num_nodes++;
 
-  std::vector<TopologyNode> nodes;
+  alloc_vector<TopologyNode> nodes;
   nodes.reserve(num_nodes);
 
   auto cpuID = 0u;
 
   for (auto n = 0u; n < num_nodes; n++) {
-    std::vector<TopologyCpu> cpus;
+    alloc_vector<TopologyCpu> cpus;
 
     for (auto w = 0u; w < workers_per_node && cpuID < num_workers; w++) {
       cpus.emplace_back(TopologyCpu(cpuID));
@@ -61,11 +61,11 @@ std::shared_ptr<Topology> Topology::create_numa_topology(uint32_t max_num_cores)
   auto cpu_bitmask = numa_allocate_cpumask();
   uint32_t core_count = 0;
 
-  std::vector<TopologyNode> nodes;
+  alloc_vector<TopologyNode> nodes;
 
   for (int n = 0; n <= max_node; n++) {
     if (max_num_cores == 0 || core_count < max_num_cores) {
-      std::vector<TopologyCpu> cpus;
+      alloc_vector<TopologyCpu> cpus;
 
       numa_node_to_cpus(n, cpu_bitmask);
 

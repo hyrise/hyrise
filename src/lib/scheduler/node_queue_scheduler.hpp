@@ -93,7 +93,7 @@ class NodeQueueScheduler : public AbstractScheduler {
 
   void finish() override;
 
-  const std::vector<std::shared_ptr<TaskQueue>>& queues() const override;
+  const alloc_vector<std::shared_ptr<TaskQueue>>& queues() const override;
 
   /**
    * @param task
@@ -106,8 +106,8 @@ class NodeQueueScheduler : public AbstractScheduler {
  private:
   std::atomic<TaskID> _task_counter{0};
   std::shared_ptr<UidAllocator> _worker_id_allocator;
-  std::vector<std::shared_ptr<TaskQueue>> _queues;
-  std::vector<std::shared_ptr<ProcessingUnit>> _processing_units;
+  alloc_vector<std::shared_ptr<TaskQueue>> _queues;
+  alloc_vector<std::shared_ptr<ProcessingUnit>> _processing_units;
   std::atomic_bool _shut_down{false};
 };
 

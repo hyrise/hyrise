@@ -80,7 +80,7 @@ TEST_F(StorageTableTest, ShrinkingMvccColumnsHasNoSideEffects) {
 
   auto& chunk = t.get_chunk(0u);
 
-  const auto values = std::vector<CommitID>{1u, 2u};
+  const auto values = alloc_vector<CommitID>{1u, 2u};
 
   {
     // acquiring mvcc_columns locks them

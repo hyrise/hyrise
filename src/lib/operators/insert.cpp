@@ -65,7 +65,7 @@ std::shared_ptr<const Table> Insert::on_execute(std::shared_ptr<TransactionConte
   _target_table = StorageManager::get().get_table(_target_table_name);
 
   // These TypedColumnProcessors kind of retrieve the template parameter of the columns.
-  auto typed_column_processors = std::vector<std::unique_ptr<AbstractTypedColumnProcessor>>();
+  auto typed_column_processors = alloc_vector<std::unique_ptr<AbstractTypedColumnProcessor>>();
   for (auto column_id = 0u; column_id < _target_table->get_chunk(0).col_count(); ++column_id) {
     typed_column_processors.emplace_back(make_unique_by_column_type<AbstractTypedColumnProcessor, TypedColumnProcessor>(
         _target_table->column_type(column_id)));
@@ -155,7 +155,7 @@ std::shared_ptr<const Table> Insert::on_execute(std::shared_ptr<TransactionConte
       // we do not need to check whether other operators have locked the rows, we have just created them
       // and they are not visible for other operators.
       // the transaction IDs are set here and not during the resize, because
-      // tbb::concurrent_vector::grow_to_at_least(n, t)" does not work with atomics, since their copy constructor is
+      // alloc_concurrent_vector::grow_to_at_least(n, t)" does not work with atomics, since their copy constructor is
       // deleted.
       target_chunk.mvcc_columns()->tids[i] = context->transaction_id();
       _inserted_rows.emplace_back(_target_table->calculate_row_id(target_chunk_id, i));

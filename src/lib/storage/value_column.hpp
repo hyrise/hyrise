@@ -5,8 +5,6 @@
 #include <utility>
 #include <vector>
 
-#include "tbb/concurrent_vector.h"
-
 #include "base_column.hpp"
 #include "utils/assert.hpp"
 
@@ -19,7 +17,7 @@ class ValueColumn : public BaseColumn {
   ValueColumn() = default;
 
   // Create a ValueColumn with the given values
-  explicit ValueColumn(tbb::concurrent_vector<T>&& values);
+  explicit ValueColumn(alloc_concurrent_vector<T>&& values);
 
   // return the value at a certain position. If you want to write efficient operators, back off!
   const AllTypeVariant operator[](const size_t i) const override;
@@ -30,8 +28,8 @@ class ValueColumn : public BaseColumn {
   void append(const AllTypeVariant& val) override;
 
   // returns all values
-  const tbb::concurrent_vector<T>& values() const;
-  tbb::concurrent_vector<T>& values();
+  const alloc_concurrent_vector<T>& values() const;
+  alloc_concurrent_vector<T>& values();
 
   // return the number of entries
   size_t size() const override;
@@ -46,10 +44,10 @@ class ValueColumn : public BaseColumn {
   // we cannot always use the materialize method below because sort results might come from different BaseColumns
   void copy_value_to_value_column(BaseColumn& value_column, ChunkOffset chunk_offset) const override;
 
-  const std::shared_ptr<std::vector<std::pair<RowID, T>>> materialize(
-      ChunkID chunk_id, std::shared_ptr<std::vector<ChunkOffset>> offsets = nullptr);
+  const std::shared_ptr<alloc_vector<std::pair<RowID, T>>> materialize(
+      ChunkID chunk_id, std::shared_ptr<alloc_vector<ChunkOffset>> offsets = nullptr);
 
  protected:
-  tbb::concurrent_vector<T> _values;
+  alloc_concurrent_vector<T> _values;
 };
 }  // namespace opossum

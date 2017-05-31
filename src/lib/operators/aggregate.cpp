@@ -19,8 +19,8 @@ AggregateBuilder<std::string>::AggregateBuilder(const AggregateFunction) {
 }
 
 Aggregate::Aggregate(const std::shared_ptr<AbstractOperator> in,
-                     const std::vector<std::pair<std::string, AggregateFunction>> aggregates,
-                     const std::vector<std::string> groupby_columns)
+                     const alloc_vector<std::pair<std::string, AggregateFunction>> aggregates,
+                     const alloc_vector<std::string> groupby_columns)
     : AbstractReadOnlyOperator(in), _aggregates(aggregates), _groupby_columns(groupby_columns) {
   Assert(!(aggregates.empty() && groupby_columns.empty()), "Neither aggregate nor groupby columns have been specified");
 }
@@ -35,12 +35,12 @@ std::shared_ptr<const Table> Aggregate::on_execute() {
   auto input_table = input_table_left();
 
   // find group by column IDs
-  std::vector<ColumnID> groupby_column_ids;
+  alloc_vector<ColumnID> groupby_column_ids;
   std::transform(_groupby_columns.begin(), _groupby_columns.end(), std::back_inserter(groupby_column_ids),
                  [&](std::string name) { return input_table->column_id_by_name(name); });
 
   // find aggregated column IDs
-  std::vector<ColumnID> aggregate_column_ids;
+  alloc_vector<ColumnID> aggregate_column_ids;
   std::transform(
       _aggregates.begin(), _aggregates.end(), std::back_inserter(aggregate_column_ids),
       [&](std::pair<std::string, AggregateFunction> pair) { return input_table->column_id_by_name(pair.first); });
@@ -51,16 +51,16 @@ std::shared_ptr<const Table> Aggregate::on_execute() {
   This is done by creating a vector that contains the AggregateKey for each row.
   It is gradually built by visitors, one for each group column.
   */
-  auto keys_per_chunk = std::vector<std::shared_ptr<std::vector<AggregateKey>>>(input_table->chunk_count());
+  auto keys_per_chunk = alloc_vector<std::shared_ptr<alloc_vector<AggregateKey>>>(input_table->chunk_count());
 
-  std::vector<std::shared_ptr<AbstractTask>> jobs;
+  alloc_vector<std::shared_ptr<AbstractTask>> jobs;
   jobs.reserve(input_table->chunk_count());
 
   for (ChunkID chunk_id = 0; chunk_id < input_table->chunk_count(); ++chunk_id) {
     jobs.emplace_back(std::make_shared<JobTask>([&, chunk_id, groupby_column_ids]() {
       const Chunk &chunk_in = input_table->get_chunk(chunk_id);
 
-      auto hash_keys = std::make_shared<std::vector<AggregateKey>>(chunk_in.size());
+      auto hash_keys = std::make_shared<alloc_vector<AggregateKey>>(chunk_in.size());
 
       // Partition by group columns
       for (auto column_id : groupby_column_ids) {
@@ -82,7 +82,7 @@ std::shared_ptr<const Table> Aggregate::on_execute() {
   /*
   AGGREGATION PHASE
   */
-  auto results_per_column = std::vector<std::shared_ptr<std::map<AggregateKey, AggregateResult>>>(_aggregates.size());
+  auto results_per_column = alloc_vector<std::shared_ptr<std::map<AggregateKey, AggregateResult>>>(_aggregates.size());
 
   // pre-insert empty maps for each aggregate column
   for (ColumnID column_index = 0; column_index < results_per_column.size(); ++column_index) {
@@ -93,7 +93,7 @@ std::shared_ptr<const Table> Aggregate::on_execute() {
   define the functions that are later used to combine the aggregation results
   from the different chunks.
   */
-  std::vector<std::function<double(double, double)>> combine_functions;
+  alloc_vector<std::function<double(double, double)>> combine_functions;
   for (auto &kv : _aggregates) {
     switch (kv.second) {
       case Min:
@@ -204,7 +204,7 @@ std::shared_ptr<const Table> Aggregate::on_execute() {
   // Write the output
   auto output = std::make_shared<Table>();
   Chunk out_chunk;
-  std::vector<std::shared_ptr<BaseColumn>> group_columns;
+  alloc_vector<std::shared_ptr<BaseColumn>> group_columns;
 
   if (_groupby_columns.size()) {
     // add group by columns
@@ -226,7 +226,7 @@ std::shared_ptr<const Table> Aggregate::on_execute() {
    * However, we need to look only at the first element, because the keys for all columns are the same.
    *
    * The following loop is used for both, actual GroupBy columns and DISTINCT columns.
-  **/
+   **/
   for (auto &map : *results_per_column[0]) {
     for (size_t group_column_index = 0; group_column_index < map.first.size(); ++group_column_index) {
       group_columns[group_column_index]->append(map.first[group_column_index]);
@@ -242,7 +242,7 @@ std::shared_ptr<const Table> Aggregate::on_execute() {
     auto &func = aggregate.second;
 
     // generate the name, e.g. MAX(column_a)
-    std::vector<std::string> names{"MIN", "MAX", "SUM", "AVG", "COUNT"};
+    alloc_vector<std::string> names{"MIN", "MAX", "SUM", "AVG", "COUNT"};
     output->add_column(names[func] + "(" + column_name + ")", "double", false);
 
     auto col = std::make_shared<ValueColumn<double>>();

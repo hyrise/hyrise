@@ -25,7 +25,7 @@ static const uint8_t INVALID_INDEX = 255u;
  * default value of the _partial_keys array is 255u
  */
 
-Node4::Node4(std::vector<std::pair<uint8_t, std::shared_ptr<Node>>> &children) {
+Node4::Node4(alloc_vector<std::pair<uint8_t, std::shared_ptr<Node>>> &children) {
   std::sort(children.begin(), children.end(),
             [](const std::pair<uint8_t, std::shared_ptr<Node>> &lhs,
                const std::pair<uint8_t, std::shared_ptr<Node>> &rhs) { return lhs.first < rhs.first; });
@@ -108,7 +108,7 @@ BaseIndex::Iterator Node4::end() const {
  *
  */
 
-Node16::Node16(std::vector<std::pair<uint8_t, std::shared_ptr<Node>>> &children) {
+Node16::Node16(alloc_vector<std::pair<uint8_t, std::shared_ptr<Node>>> &children) {
   std::sort(children.begin(), children.end(),
             [](const std::pair<uint8_t, std::shared_ptr<Node>> &lhs,
                const std::pair<uint8_t, std::shared_ptr<Node>> &rhs) { return lhs.first < rhs.first; });
@@ -208,7 +208,7 @@ BaseIndex::Iterator Node16::end() const {
  * 47 as this is the maximum index for _children.
  */
 
-Node48::Node48(const std::vector<std::pair<uint8_t, std::shared_ptr<Node>>> &children) {
+Node48::Node48(const alloc_vector<std::pair<uint8_t, std::shared_ptr<Node>>> &children) {
   _index_to_child.fill(INVALID_INDEX);
   for (uint8_t i = 0u; i < children.size(); ++i) {
     _index_to_child[children[i].first] = i;
@@ -303,7 +303,7 @@ BaseIndex::Iterator Node48::end() const {
  *
  */
 
-Node256::Node256(const std::vector<std::pair<uint8_t, std::shared_ptr<Node>>> &children) {
+Node256::Node256(const alloc_vector<std::pair<uint8_t, std::shared_ptr<Node>>> &children) {
   for (uint16_t i = 0; i < children.size(); ++i) {
     _children[children[i].first] = children[i].second;
   }

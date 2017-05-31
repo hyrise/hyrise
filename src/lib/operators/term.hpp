@@ -50,8 +50,8 @@ template <typename T>
 class AbstractTerm {
  public:
   virtual ~AbstractTerm() = default;
-  virtual const tbb::concurrent_vector<T> get_values(const std::shared_ptr<const Table> table,
-                                                     const ChunkID chunk_id) = 0;
+  virtual const alloc_concurrent_vector<T> get_values(const std::shared_ptr<const Table> table,
+                                                      const ChunkID chunk_id) = 0;
 };
 
 /**
@@ -63,8 +63,8 @@ class ConstantTerm : public AbstractTerm<T> {
  public:
   explicit ConstantTerm(const AllTypeVariant& value) : _value(type_cast<T>(value)) {}
 
-  const tbb::concurrent_vector<T> get_values(const std::shared_ptr<const Table> table, const ChunkID chunk_id) final {
-    return tbb::concurrent_vector<T>(table->get_chunk(chunk_id).size(), _value);
+  const alloc_concurrent_vector<T> get_values(const std::shared_ptr<const Table> table, const ChunkID chunk_id) final {
+    return alloc_concurrent_vector<T>(table->get_chunk(chunk_id).size(), _value);
   }
 
   const T get_value() { return _value; }
@@ -88,7 +88,7 @@ class VariableTerm : public AbstractTerm<T> {
     return table->get_chunk(chunk_id).get_column(table->column_id_by_name(_column_name));
   }
 
-  const tbb::concurrent_vector<T> get_values(const std::shared_ptr<const Table> table, const ChunkID chunk_id) {
+  const alloc_concurrent_vector<T> get_values(const std::shared_ptr<const Table> table, const ChunkID chunk_id) {
     auto column = table->get_chunk(chunk_id).get_column(table->column_id_by_name(_column_name));
 
     if (auto value_column = std::dynamic_pointer_cast<ValueColumn<T>>(column)) {
@@ -121,8 +121,8 @@ class ArithmeticTerm : public AbstractTerm<T> {
       : _left(left_term), _right(right_term), _operator(get_operator(string_op)) {}
 
   // recursive solving of terms
-  const tbb::concurrent_vector<T> get_values(const std::shared_ptr<const Table> table, const ChunkID chunk_id) final {
-    tbb::concurrent_vector<T> values;
+  const alloc_concurrent_vector<T> get_values(const std::shared_ptr<const Table> table, const ChunkID chunk_id) final {
+    alloc_concurrent_vector<T> values;
     values.resize(table->get_chunk(chunk_id).size());
 
     // optimization for Constant Terms: the value for a constant term can be directly binded to the operator function

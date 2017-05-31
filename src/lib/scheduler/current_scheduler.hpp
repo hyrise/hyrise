@@ -27,7 +27,7 @@ class CurrentScheduler {
    * If there is an active Scheduler, block execution until all @tasks have finished
    * If there is no active Scheduler, returns immediately since all @tasks have executed when they were scheduled
    */
-  static void wait_for_tasks(const std::vector<std::shared_ptr<AbstractTask>>& tasks);
+  static void wait_for_tasks(const alloc_vector<std::shared_ptr<AbstractTask>>& tasks);
 
  private:
   static std::shared_ptr<AbstractScheduler> _instance;
