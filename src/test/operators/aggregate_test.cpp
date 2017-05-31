@@ -122,7 +122,7 @@ TEST_F(OperatorsAggregateTest, CannotAggregateStringColumns) {
       std::vector<std::pair<std::string, AggregateFunction>>{std::make_pair(std::string("a"), Min)},
       std::vector<std::string>{std::string("a")});
 
-  EXPECT_THROW(aggregate->execute(), std::runtime_error);
+  EXPECT_THROW(aggregate->execute(), std::logic_error);
 }
 
 // Currently not implemented
@@ -342,7 +342,7 @@ TEST_F(OperatorsAggregateTest, NoGroupbyAndNoAggregate) {
   EXPECT_THROW(
       std::make_shared<Aggregate>(_table_wrapper_1_1_string, std::vector<std::pair<std::string, AggregateFunction>>{},
                                   std::vector<std::string>{}),
-      std::runtime_error);
+      std::logic_error);
 }
 
 /**
