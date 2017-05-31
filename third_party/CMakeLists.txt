@@ -47,6 +47,7 @@ add_library(
 target_compile_options(
     sqlparser
     PRIVATE
+    -std=c++1z
     -O3 -Wno-sign-compare
 )
 
