@@ -43,7 +43,7 @@ void AbstractTask::set_as_predecessor_of(std::shared_ptr<AbstractTask> successor
 void AbstractTask::set_node_id(NodeID node_id) { _node_id = node_id; }
 
 void AbstractTask::mark_as_scheduled() {
-  auto already_scheduled __attribute__((unused)) = _is_scheduled.exchange(true);
+  [[gnu::unused]] auto already_scheduled = _is_scheduled.exchange(true);
 
   DebugAssert((!already_scheduled), "Task was already scheduled!");
 }
