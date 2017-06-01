@@ -73,14 +73,11 @@ TEST_F(StorageTableTest, GetValue) {
   t.append({4, "Hello,"});
   t.append({6, "world"});
   t.append({3, "!"});
-  auto val_0_0 = t.get_value<int>();
-  ASSERT_EQ(val_0_0, 4);
-  auto val_0_2 = t.get_value<int>(0u, 2u);
-  EXPECT_EQ(val_0_2, 3);
-  auto val_1_0 = t.get_value<std::string>(1u);
-  ASSERT_FALSE(val_1_0.compare("Hello,"));
-  auto val_1_2 = t.get_value<std::string>(1u, 2u);
-  ASSERT_FALSE(val_1_2.compare("!"));
+  ASSERT_EQ(t.get_value<int>(), 4);
+  EXPECT_EQ(t.get_value<int>(0u, 2u), 3);
+  ASSERT_FALSE(t.get_value<std::string>(1u).compare("Hello,"));
+  ASSERT_FALSE(t.get_value<std::string>(1u, 2u).compare("!"));
+  EXPECT_THROW(t.get_value<int>(3u), std::exception);
 }
 
 TEST_F(StorageTableTest, ColumnNameTooLong) {

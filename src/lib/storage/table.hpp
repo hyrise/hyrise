@@ -70,7 +70,7 @@ class Table {
 
   // returns one materialized value
   template <typename T>
-  const T &get_value(const ColumnID column_id = 0u, const size_t row_number = 0u) const {
+  T get_value(const ColumnID column_id = 0u, const size_t row_number = 0u) const {
     size_t row_counter = 0u;
     for (auto &chunk : _chunks) {
       size_t current_size = chunk.size();
