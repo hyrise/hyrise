@@ -12,26 +12,30 @@
 namespace opossum {
 
 template <typename T>
+ValueColumn<T>::ValueColumn(bool can_be_null) {
+  if (can_be_null) _null_values = std::make_unique<tbb::concurrent_vector<bool>>();
+}
+
+template <typename T>
 ValueColumn<T>::ValueColumn(tbb::concurrent_vector<T>&& values) : _values(std::move(values)) {}
 
 template <typename T>
-const AllTypeVariant ValueColumn<T>::operator[](const size_t i) const {
-  /*
-  Handle null values, this is only used for testing the results of joins so far.
-  In order to be able to define an expected output table, we need to replace INVALID_CHUNK_OFFSET
-  with some printable character, in our case 0, resp. "0".
-  Since there is no constructor for String, which takes a numeric 0, we have to differentiate between numbers and
-  strings.
+ValueColumn<T>::ValueColumn(tbb::concurrent_vector<T>&& values, tbb::concurrent_vector<bool>&& null_values)
+    : _values(std::move(values)),
+      _null_values(std::make_unique<tbb::concurrent_vector<bool>>(std::move(null_values))) {}
 
-  This should be replaced as soon as we have proper NULL values in Opossum.
-  Similar code is in dictionary_column.hpp
-  */
+template <typename T>
+const AllTypeVariant ValueColumn<T>::operator[](const size_t i) const {
+  // TODO(anyone): Shouldn’t this throw an exception?
   if (i == INVALID_CHUNK_OFFSET) {
-    if (std::is_same<T, std::string>::value) {
-      return "0";
-    }
-    return T(0);
+    return NullValue{};
   }
+
+  // Columns supports null values and value is null
+  if (can_be_null() && _null_values->at(i)) {
+    return NullValue{};
+  }
+
   return _values.at(i);
 }
 
@@ -42,15 +46,26 @@ const T ValueColumn<T>::get(const size_t i) const {
 
 template <typename T>
 void ValueColumn<T>::append(const AllTypeVariant& val) {
+  if (can_be_null() && val == AllTypeVariant{}) {
+    _null_values->push_back(true);
+    _values.push_back(T{});
+  }
+
   _values.push_back(type_cast<T>(val));
 }
 
 template <>
 void ValueColumn<std::string>::append(const AllTypeVariant& val) {
+  if (can_be_null() && val == AllTypeVariant{}) {
+    _null_values->push_back(true);
+    _values.push_back(std::string{});
+  }
+
   auto typed_val = type_cast<std::string>(val);
   if (typed_val.length() > std::numeric_limits<StringLength>::max()) {
     throw std::runtime_error("String value is too long to append!");
   }
+
   _values.push_back(typed_val);
 }
 
@@ -65,6 +80,29 @@ tbb::concurrent_vector<T>& ValueColumn<T>::values() {
 }
 
 template <typename T>
+bool ValueColumn<T>::can_be_null() const {
+  return _null_values != nullptr;
+}
+
+template <typename T>
+const tbb::concurrent_vector<bool>& ValueColumn<T>::null_values() const {
+  if (!can_be_null()) {
+    throw std::logic_error("Chunk does not have mvcc columns");
+  }
+
+  return *_null_values;
+}
+
+template <typename T>
+tbb::concurrent_vector<bool>& ValueColumn<T>::null_values() {
+  if (!can_be_null()) {
+    throw std::logic_error("Chunk does not have mvcc columns");
+  }
+
+  return *_null_values;
+}
+
+template <typename T>
 size_t ValueColumn<T>::size() const {
   return _values.size();
 }
@@ -74,6 +112,7 @@ void ValueColumn<T>::visit(ColumnVisitable& visitable, std::shared_ptr<ColumnVis
   visitable.handle_value_column(*this, std::move(context));
 }
 
+// TODO(mjendruk): Add edge case handling for null values
 template <typename T>
 void ValueColumn<T>::write_string_representation(std::string& row_string, const ChunkOffset chunk_offset) const {
   std::stringstream buffer;
@@ -87,6 +126,7 @@ void ValueColumn<T>::write_string_representation(std::string& row_string, const 
   row_string += buffer.str();
 }
 
+// TODO(mjendruk): Figure out where it is used and decide appropriatedly
 template <typename T>
 void ValueColumn<T>::copy_value_to_value_column(BaseColumn& value_column, ChunkOffset chunk_offset) const {
   auto& output_column = static_cast<ValueColumn<T>&>(value_column);
@@ -95,6 +135,7 @@ void ValueColumn<T>::copy_value_to_value_column(BaseColumn& value_column, ChunkO
   values_out.push_back(_values[chunk_offset]);
 }
 
+// TODO(mjendruk): Figure out where it is used and decide appropriatedly
 template <typename T>
 const std::shared_ptr<std::vector<std::pair<RowID, T>>> ValueColumn<T>::materialize(
     ChunkID chunk_id, std::shared_ptr<std::vector<ChunkOffset>> offsets) {

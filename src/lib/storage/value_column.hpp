@@ -15,14 +15,16 @@ namespace opossum {
 template <typename T>
 class ValueColumn : public BaseColumn {
  public:
-  ValueColumn() = default;
+  ValueColumn(bool can_be_null = false);
 
   // Create a ValueColumn with the given values
   explicit ValueColumn(tbb::concurrent_vector<T>&& values);
+  explicit ValueColumn(tbb::concurrent_vector<T>&& values, tbb::concurrent_vector<bool>&& null_values);
 
   // return the value at a certain position. If you want to write efficient operators, back off!
   const AllTypeVariant operator[](const size_t i) const override;
 
+  // TODO(mjendruk): Is this even used?
   const T get(const size_t i) const;
 
   // add a value to the end
@@ -31,6 +33,17 @@ class ValueColumn : public BaseColumn {
   // returns all values
   const tbb::concurrent_vector<T>& values() const;
   tbb::concurrent_vector<T>& values();
+
+  // checks if columns supports null values
+  bool can_be_null() const override;
+
+  /**
+   * @brief Returns null array
+   *
+   * Throws exception if can_be_null() return false
+   */
+  const tbb::concurrent_vector<bool>& null_values() const;
+  tbb::concurrent_vector<bool>& null_values();
 
   // return the number of entries
   size_t size() const override;
@@ -50,6 +63,7 @@ class ValueColumn : public BaseColumn {
 
  protected:
   tbb::concurrent_vector<T> _values;
+  std::unique_ptr<tbb::concurrent_vector<bool>> _null_values;
 };
 
 }  // namespace opossum

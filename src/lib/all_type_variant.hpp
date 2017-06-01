@@ -1,11 +1,11 @@
 #pragma once
 
-#include <boost/mpl/push_front.hpp>
 #include <boost/hana/ext/boost/mpl/vector.hpp>
 #include <boost/hana/pair.hpp>
 #include <boost/hana/second.hpp>
 #include <boost/hana/transform.hpp>
 #include <boost/hana/tuple.hpp>
+#include <boost/mpl/push_front.hpp>
 #include <boost/variant.hpp>
 
 #include <string>
@@ -32,7 +32,7 @@ using TypesAsMplVector = decltype(hana::to<hana::ext::boost::mpl::vector_tag>(ty
 using NullValue = boost::blank;
 
 // Append NullValue to mpl vector
-using TypesWithNullValue = boost::push_front(TypesAsMplVector, NullValue)::type;
+using TypesWithNullValue = boost::mpl::push_front<TypesAsMplVector, NullValue>::type;
 
 // Create boost::variant from mpl vector
 using AllTypeVariant = typename boost::make_variant_over<TypesWithNullValue>::type;

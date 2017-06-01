@@ -33,6 +33,9 @@ class BaseColumn {
   // appends the value at the end of the column
   virtual void append(const AllTypeVariant &val) = 0;
 
+  // checks if columns supports null values
+  virtual bool can_be_null() const = 0;
+
   // returns the number of values
   virtual size_t size() const = 0;
 

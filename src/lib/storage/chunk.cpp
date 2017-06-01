@@ -86,7 +86,7 @@ bool Chunk::has_mvcc_columns() const { return _mvcc_columns != nullptr; }
 SharedScopedLockingPtr<Chunk::MvccColumns> Chunk::mvcc_columns() {
 #ifdef IS_DEBUG
   if (!has_mvcc_columns()) {
-    std::logic_error("Chunk does not have mvcc columns");
+    throw std::logic_error("Chunk does not have mvcc columns");
   }
 #endif
 
@@ -96,7 +96,7 @@ SharedScopedLockingPtr<Chunk::MvccColumns> Chunk::mvcc_columns() {
 SharedScopedLockingPtr<const Chunk::MvccColumns> Chunk::mvcc_columns() const {
 #ifdef IS_DEBUG
   if (!has_mvcc_columns()) {
-    std::logic_error("Chunk does not have mvcc columns");
+    throw std::logic_error("Chunk does not have mvcc columns");
   }
 #endif
 
@@ -106,7 +106,7 @@ SharedScopedLockingPtr<const Chunk::MvccColumns> Chunk::mvcc_columns() const {
 void Chunk::shrink_mvcc_columns() {
 #ifdef IS_DEBUG
   if (!has_mvcc_columns()) {
-    std::logic_error("Chunk does not have mvcc columns.");
+    throw std::logic_error("Chunk does not have mvcc columns.");
   }
 #endif
 

@@ -56,7 +56,7 @@ constexpr CpuID INVALID_CPU_ID = std::numeric_limits<CpuID>::max();
 constexpr WorkerID INVALID_WORKER_ID = std::numeric_limits<WorkerID>::max();
 
 constexpr NodeID CURRENT_NODE_ID = std::numeric_limits<NodeID>::max() - 1;
-constexpr ValueID NULL_VALUE_ID = 0;
+constexpr ValueID NULL_VALUE_ID = std::numeric_limits<ValueID>::max();
 
 // The Scheduler currently supports just these 2 priorities, subject to change.
 enum class SchedulePriority {

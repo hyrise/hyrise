@@ -33,6 +33,10 @@ const std::shared_ptr<const Table> ReferenceColumn::referenced_table() const { r
 size_t ReferenceColumn::referenced_column_id() const { return _referenced_column_id; }
 
 size_t ReferenceColumn::size() const { return _pos_list->size(); }
+
+// TODO(mjendruk): Handle null values properly
+bool ReferenceColumn::can_be_null() const { return false; }
+
 void ReferenceColumn::visit(ColumnVisitable &visitable, std::shared_ptr<ColumnVisitableContext> context) {
   visitable.handle_reference_column(*this, std::move(context));
 }
