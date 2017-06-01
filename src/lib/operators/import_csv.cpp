@@ -24,6 +24,13 @@ std::shared_ptr<const Table> ImportCsv::on_execute() {
     return StorageManager::get().get_table(*_tablename);
   }
 
+  // Check if file exists before giving it to the parser
+  std::ifstream file(_filename);
+  if (!file.is_open()) {
+    throw std::runtime_error("ImportCsv: Could not find file " + _filename);
+  }
+  file.close();
+
   std::shared_ptr<Table> table;
 
   if (_rfc_mode) {

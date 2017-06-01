@@ -70,8 +70,13 @@ std::shared_ptr<const Table> ImportBinary::on_execute() {
   }
 
   std::ifstream file;
-  file.exceptions(std::ifstream::failbit | std::ifstream::badbit);
   file.open(_filename, std::ios::binary);
+
+  if (!file.is_open()) {
+    throw std::runtime_error("ImportBinary: Could not find file " + _filename);
+  }
+
+  file.exceptions(std::ifstream::failbit | std::ifstream::badbit);
 
   std::shared_ptr<Table> table;
   ChunkID chunk_count;
