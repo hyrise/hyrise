@@ -513,7 +513,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
   static void _copy_table_metadata(const std::shared_ptr<const Table> in_table, const std::shared_ptr<Table> out_table,
                                    std::string prefix) {
     for (size_t column_id = 0; column_id < in_table->col_count(); ++column_id) {
-      out_table->add_column(prefix + in_table->column_name(column_id), in_table->column_type(column_id), false);
+      out_table->add_column_definition(prefix + in_table->column_name(column_id), in_table->column_type(column_id));
     }
   }
 

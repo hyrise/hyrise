@@ -25,7 +25,7 @@ std::shared_ptr<const Table> Limit::on_execute() {
   // Create output table and column layout.
   auto output_table = std::make_shared<Table>();
   for (ColumnID column_id = 0; column_id < input_table->col_count(); column_id++) {
-    output_table->add_column(input_table->column_name(column_id), input_table->column_type(column_id), false);
+    output_table->add_column_definition(input_table->column_name(column_id), input_table->column_type(column_id));
   }
 
   ChunkID chunk_id = 0;

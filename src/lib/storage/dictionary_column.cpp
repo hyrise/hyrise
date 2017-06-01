@@ -169,7 +169,7 @@ void DictionaryColumn<T>::copy_value_to_value_column(BaseColumn& value_column, C
   values_out.push_back(value);
 }
 
-// TODO(mjendruk): Figure out where it is used and decide appropriatedly
+// TODO(mjendruk): This is used in JoinHash line 144
 template <typename T>
 const std::shared_ptr<std::vector<std::pair<RowID, T>>> DictionaryColumn<T>::materialize(
     ChunkID chunk_id, std::shared_ptr<std::vector<ChunkOffset>> offsets) {

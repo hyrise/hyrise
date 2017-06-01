@@ -22,7 +22,7 @@ std::shared_ptr<Table> TableGenerator::get_table() {
    */
   for (size_t i = 0; i < _num_columns; i++) {
     auto column_name = std::string(1, static_cast<char>(static_cast<int>('a') + i));
-    table->add_column(column_name, "int", false);
+    table->add_column_definition(column_name, "int");
     value_vectors.emplace_back(tbb::concurrent_vector<int>(vector_size));
   }
   auto chunk = Chunk();

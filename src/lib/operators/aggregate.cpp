@@ -172,8 +172,8 @@ std::shared_ptr<const Table> Aggregate::on_execute() {
   if (_groupby_columns.size()) {
     // add group by columns
     for (ColumnID column_index = 0; column_index < _groupby_columns.size(); ++column_index) {
-      output->add_column(_groupby_columns[column_index], input_table->column_type(groupby_column_ids[column_index]),
-                         false);
+      output->add_column_definition(_groupby_columns[column_index],
+                                    input_table->column_type(groupby_column_ids[column_index]));
 
       group_columns.emplace_back(make_shared_by_column_type<BaseColumn, ValueColumn>(
           input_table->column_type(groupby_column_ids[column_index])));
@@ -192,7 +192,7 @@ std::shared_ptr<const Table> Aggregate::on_execute() {
 
     // generate the name, e.g. MAX(column_a)
     std::vector<std::string> names{"MIN", "MAX", "SUM", "AVG"};
-    output->add_column(names[func] + "(" + column_name + ")", "double", false);
+    output->add_column_definition(names[func] + "(" + column_name + ")", "double");
 
     auto col = std::make_shared<ValueColumn<double>>();
     auto &values = col->values();

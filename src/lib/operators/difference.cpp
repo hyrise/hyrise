@@ -34,7 +34,7 @@ std::shared_ptr<const Table> Difference::on_execute() {
       throw std::runtime_error("Input tables must have same column order and column types");
     }
     // add column definition to output table
-    output->add_column(input_table_left()->column_name(column_id), column_type, false);
+    output->add_column_definition(input_table_left()->column_name(column_id), column_type);
   }
 
   // 1. We create a set of all right input rows as concatenated strings.

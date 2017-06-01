@@ -21,16 +21,21 @@ Table::Table(const size_t chunk_size) : _chunk_size(chunk_size), _append_mutex(s
   _chunks.push_back(Chunk{true});
 }
 
-void Table::add_column(const std::string &name, const std::string &type, bool create_value_column) {
+void Table::add_column_definition(const std::string &name, const std::string &type, bool nullable) {
   if (name.size() > std::numeric_limits<ColumnNameLength>::max()) {
     throw std::runtime_error("Cannot add column. Column name is too long.");
   }
+
   _column_names.push_back(name);
   _column_types.push_back(type);
-  if (create_value_column) {
-    for (auto &chunk : _chunks) {
-      chunk.add_column(make_shared_by_column_type<BaseColumn, ValueColumn>(type));
-    }
+  _column_nullable.push_back(nullable);
+}
+
+void Table::add_column(const std::string &name, const std::string &type, bool nullable) {
+  add_column_definition(name, type, nullable);
+
+  for (auto &chunk : _chunks) {
+    chunk.add_column(make_shared_by_column_type<BaseColumn, ValueColumn>(type, nullable));
   }
 }
 
@@ -43,8 +48,12 @@ void Table::append(std::vector<AllTypeVariant> values) {
 
 void Table::create_new_chunk() {
   Chunk newChunk{true};
-  for (auto &&type : _column_types) {
-    newChunk.add_column(make_shared_by_column_type<BaseColumn, ValueColumn>(type));
+
+  for (auto column_id = 0u; column_id < _column_types.size(); ++column_id) {
+    const auto &type = _column_types[column_id];
+    auto nullable = _column_nullable[column_id];
+
+    newChunk.add_column(make_shared_by_column_type<BaseColumn, ValueColumn>(type, nullable));
   }
   _chunks.push_back(std::move(newChunk));
 }
@@ -76,6 +85,8 @@ uint32_t Table::chunk_size() const { return _chunk_size; }
 const std::string &Table::column_name(ColumnID column_id) const { return _column_names[column_id]; }
 
 const std::string &Table::column_type(ColumnID column_id) const { return _column_types[column_id]; }
+
+bool Table::column_is_nullable(ColumnID column_id) const { return _column_nullable[column_id]; }
 
 const std::vector<std::string> &Table::column_types() const { return _column_types; }
 

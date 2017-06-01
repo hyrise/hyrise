@@ -37,7 +37,8 @@ std::shared_ptr<const Table> Update::on_execute(std::shared_ptr<TransactionConte
   auto insert_table = std::make_shared<Table>();
 
   for (size_t column_id = 0u; column_id < table_to_update->col_count(); ++column_id) {
-    insert_table->add_column(table_to_update->column_name(column_id), table_to_update->column_type(column_id), false);
+    insert_table->add_column_definition(table_to_update->column_name(column_id),
+                                        table_to_update->column_type(column_id));
   }
 
   auto current_row_in_left_chunk = 0u;
