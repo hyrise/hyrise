@@ -34,8 +34,11 @@ size_t ReferenceColumn::referenced_column_id() const { return _referenced_column
 
 size_t ReferenceColumn::size() const { return _pos_list->size(); }
 
-// TODO(mjendruk): Handle null values properly
-bool ReferenceColumn::can_be_null() const { return false; }
+bool ReferenceColumn::can_be_null() const {
+  auto first_referenced_chunk_id = _pos_list.front();
+  auto first_referenced_chunk = _referenced_table->get_chunk(first_referenced_chunk);
+  return first_referenced_chunk.get_column(_referenced_column_id)->can_be_null();
+}
 
 void ReferenceColumn::visit(ColumnVisitable &visitable, std::shared_ptr<ColumnVisitableContext> context) {
   visitable.handle_reference_column(*this, std::move(context));
