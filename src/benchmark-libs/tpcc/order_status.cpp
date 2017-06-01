@@ -1,58 +1,109 @@
 #include "order_status.hpp"
 
 #include <math.h>
+#include <sstream>
 
 #include "../../lib/types.hpp"
 #include "../../lib/operators/get_table.hpp"
 #include "../../lib/operators/table_scan.hpp"
+#include "../../lib/operators/print.hpp"
 #include "../../lib/operators/projection.hpp"
 #include "../../lib/operators/sort.hpp"
 #include "../../lib/operators/limit.hpp"
+
+#define VERBOSE 1
 
 using namespace opossum;
 
 namespace tpcc {
 
-OrderStatusResult AbstractOrderStatusImpl::run_transaction(const OrderStatusParams &params) {
-  OrderStatusResult result;
+std::string OrderStatusParams::to_string() const {
+  std::stringstream s;
 
-  std::vector<AllTypeVariant> customer;
+  s << "{c_w_id: " << c_w_id << "; c_d_id: " << c_d_id << "; ";
+  if (order_status_by == OrderStatusBy::CustomerLastName) {
+    s << "c_last: " << c_last;
+  } else {
+    s << "c_id: " << c_id;
+  }
+
+  s << "}" << std::endl;
+  return s.str();
+}
+
+OrderStatusResult AbstractOrderStatusImpl::run_transaction(const OrderStatusParams &params) {
+#if VERBOSE
+  std::cout << "OrderStatus: Running transaction: " << params.to_string() << std::endl;
+#endif
+
+  OrderStatusResult result;
 
   if (params.order_status_by == OrderStatusBy::CustomerLastName) {
     auto get_customer_tasks = get_customer_by_name(params.c_last, params.c_d_id, params.c_w_id);
     AbstractScheduler::schedule_tasks_and_wait(get_customer_tasks);
 
+#if VERBOSE
+    std::cout << "OrderStatus: GetCustomerByLastName:" << std::endl;
+    Print(get_customer_tasks.back()->get_operator()).execute();
+#endif
+
     auto num_names = get_customer_tasks.back()->get_operator()->get_output()->row_count();
     assert(num_names > 0);
 
-    customer = get_customer_tasks.back()->get_operator()->get_output()->fetch_row(ceil(num_names / 2));
+    auto customer = get_customer_tasks.back()->get_operator()->get_output()->fetch_row(ceil(num_names / 2));
+
+    result.c_balance = boost::get<float>(customer[0]);
+    result.c_first = boost::get<std::string>(customer[1]);
+    result.c_middle = boost::get<std::string>(customer[2]);
+    result.c_last = params.c_last;
+    result.c_id = boost::get<int32_t>(customer[3]);
   } else {
     auto get_customer_tasks = get_customer_by_id(params.c_id, params.c_d_id, params.c_w_id);
     AbstractScheduler::schedule_tasks_and_wait(get_customer_tasks);
 
     assert(get_customer_tasks.back()->get_operator()->get_output()->row_count() == 1);
-    customer = get_customer_tasks.back()->get_operator()->get_output()->fetch_row(0);
-  }
+    auto customer = get_customer_tasks.back()->get_operator()->get_output()->fetch_row(0);
 
-  result.c_id = customer[0];
-  result.c_first = customer[1];
-  result.c_middle = customer[2];
-  result.c_last = customer[3];
-  result.c_balance = customer[4];
+    result.c_balance = boost::get<float>(customer[0]);
+    result.c_first = boost::get<std::string>(customer[1]);
+    result.c_middle = boost::get<std::string>(customer[2]);
+    result.c_last = boost::get<std::string>(customer[3]);
+    result.c_id = params.c_id;
+  }
 
   auto get_order_tasks = get_orders();
   AbstractScheduler::schedule_tasks_and_wait(get_order_tasks);
 
   auto order = get_order_tasks.back()->get_operator()->get_output()->fetch_row(0);
 
-  result.o_id = order[0];
-  result.o_carrier_id = order[1];
-  result.o_entry_d = order[2];
+  result.o_id = boost::get<int32_t>(order[0]);
+  result.o_carrier_id = boost::get<int32_t>(order[1]);
+  result.o_entry_d = boost::get<int32_t>(order[2]);
 
   auto get_order_line_tasks = get_order_lines(0, params.c_d_id, params.c_w_id);
   AbstractScheduler::schedule_tasks_and_wait(get_order_line_tasks);
 
-  auto order_lines_table = get_order_line_tasks.back()->get
+  auto order_lines_table = get_order_line_tasks.back()->get_operator()->get_output();
+
+  result.order_lines.reserve(order_lines_table->row_count());
+  for (uint32_t r = 0; r < order_lines_table->row_count(); r++) {
+    OrderStatusOrderLine order_line;
+
+    const auto row = order_lines_table->fetch_row(r);
+
+    order_line.ol_i_id = boost::get<int32_t>(row[0]);
+    order_line.ol_supply_w_id = boost::get<int32_t>(row[1]);
+    order_line.ol_quantity = boost::get<int32_t>(row[2]);
+    order_line.ol_amount = boost::get<float>(row[3]);
+    order_line.ol_delivery_d = boost::get<int32_t>(row[4]);
+
+    result.order_lines.emplace_back(order_line);
+  }
+
+#if VERBOSE
+  std::cout << "OrderStatus: Finished transaction" << std::endl;
+#endif
+
 
   return result;
 }
@@ -177,13 +228,12 @@ OrderStatusRefImpl::get_order_lines(const int o_id, const int d_id, const int w_
 namespace nlohmann {
 
 using namespace opossum;
+using namespace tpcc;
 
-template<>
 void adl_serializer<OrderStatusParams>::to_json(nlohmann::json &j, const OrderStatusParams &v) {
   throw "Not implemented";
 }
 
-template<>
 void adl_serializer<OrderStatusParams>::from_json(const nlohmann::json &j, OrderStatusParams &v) {
   v.c_w_id = j["c_w_id"];
   v.c_d_id = j["c_d_id"];
@@ -197,26 +247,22 @@ void adl_serializer<OrderStatusParams>::from_json(const nlohmann::json &j, Order
   }
 }
 
-template<>
 void adl_serializer<OrderStatusOrderLine>::to_json(nlohmann::json &j, const OrderStatusOrderLine &v) {
   throw "Not implemented";
 }
 
-template<>
 void adl_serializer<OrderStatusOrderLine>::from_json(const nlohmann::json &j, OrderStatusOrderLine &v) {
-  v.ol_supply_w_id = j["ol_supply_wid"];
+  v.ol_supply_w_id = j["ol_supply_w_id"];
   v.ol_i_id = j["ol_i_id"];
   v.ol_quantity = j["ol_quantity"];
   v.ol_amount = j["ol_amount"];
   v.ol_delivery_d = j["ol_delivery_d"];
 }
 
-template<>
 void adl_serializer<OrderStatusResult>::to_json(nlohmann::json &j, const OrderStatusResult &v) {
   throw "Not implemented";
 }
 
-template<>
 void adl_serializer<OrderStatusResult>::from_json(const nlohmann::json &j, OrderStatusResult &v) {
   v.c_id = j["c_id"];
   v.c_first = j["c_first"];
@@ -227,8 +273,8 @@ void adl_serializer<OrderStatusResult>::from_json(const nlohmann::json &j, Order
   v.o_carrier_id = j["o_carrier_id"];
   v.o_entry_d = j["o_entry_d"];
 
-  if (const auto iter = j.find("order_lines");
-  iter != j.end()) {
+  const auto iter = j.find("order_lines");
+  if (iter != j.end()) {
     for (const auto &j_ol : *iter) {
       OrderStatusOrderLine ol = j_ol;
       v.order_lines.emplace_back(ol);

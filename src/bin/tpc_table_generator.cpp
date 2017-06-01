@@ -3,7 +3,7 @@
 
 #include "operators/export_csv.hpp"
 #include "operators/table_wrapper.hpp"
-#include "../benchmark-libs/tpcc/table_generator.hpp"
+#include "../benchmark-libs/tpcc/tpcc_table_generator.hpp"
 
 using namespace opossum;
 using namespace tpcc;

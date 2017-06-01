@@ -14,30 +14,32 @@ enum class OrderStatusBy {
 };
 
 struct OrderStatusParams {
-  uint32_t c_w_id = 0;
-  uint32_t c_d_id = 0;
+  int32_t c_w_id = 0;
+  int32_t c_d_id = 0;
   OrderStatusBy order_status_by = OrderStatusBy::CustomerNumber;
   uint32_t c_id = 0;
   std::string c_last;
+
+  std::string to_string() const;
 };
 
 struct OrderStatusOrderLine {
-  uint32_t ol_supply_w_id = 0;
-  uint32_t ol_i_id = 0;
-  uint32_t ol_quantity = 0;
+  int32_t ol_supply_w_id = 0;
+  int32_t ol_i_id = 0;
+  int32_t ol_quantity = 0;
   float ol_amount = 0.0f;
-  std::string ol_delivery_d;
+  int32_t ol_delivery_d;
 };
 
 struct OrderStatusResult {
-  uint32_t c_id = 0;
+  int32_t c_id = 0;
   std::string c_first;
   std::string c_middle;
   std::string c_last;
   float c_balance = 0.0f;
-  uint32_t o_id = 0;
-  uint32_t o_carrier_id = 0;
-  std::string o_entry_d;
+  int32_t o_id = 0;
+  int32_t o_carrier_id = 0;
+  int32_t o_entry_d;
   std::vector<OrderStatusOrderLine> order_lines;
 };
 

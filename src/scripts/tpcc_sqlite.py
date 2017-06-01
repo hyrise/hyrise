@@ -24,7 +24,7 @@ def executemany_sql(cur, statement, params=()):
     cur.executemany(statement, params)
 
 def load_table(cur, dir, name, name_override=None):
-    csv_meta_path = '%s/%s.meta.csv' % (dir, name)
+    csv_meta_path = '%s/%s.csv.meta' % (dir, name)
     csv_path = '%s/%s.csv' % (dir, name)
 
     in_db_name = name_override if name_override != None else name
@@ -178,8 +178,8 @@ def process_new_order(cur, params):
 def process_order_status(cur, params):
     q = tpcc_queries["ORDER_STATUS"]
 
-    w_id = params["w_id"]
-    d_id = params["d_id"]
+    w_id = params["c_w_id"]
+    d_id = params["c_d_id"]
 
     if params["case"] == 1:
         c_id = params["c_id"]
@@ -204,7 +204,16 @@ def process_order_status(cur, params):
     o_entry_d = order[2]
 
     execute_sql(cur, q["getOrderLines"], (w_id, d_id, o_id))
-    order_lines = cur.fetchall() # (ol_supply_w_id, ol_i_id, ol_quantity, ol_amount, ol_delivery_d)
+    order_lines = []
+    for order_line_row in cur.fetchall():
+        order_lines.append({
+            "ol_supply_w_id": order_line_row[0],
+            "ol_i_id": order_line_row[1],
+            "ol_quantity": order_line_row[2],
+            "ol_amount": order_line_row[3],
+            "ol_delivery_d": order_line_row[4]
+        })
+
 
     return {
         "c_id": c_id,
@@ -257,8 +266,8 @@ def process_delivery(cur, params):
 if __name__ == "__main__":
     cur = init_db()
 
-    tpcc_input_path = "tpcc_input.json"
-    tpcc_output_path = "tpcc_output.json"
+    tpcc_input_path = "tpcc_simulation_input.json"
+    tpcc_output_path = "tpcc_simulation_results.json"
 
     query_results = []
 
