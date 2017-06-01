@@ -2,6 +2,7 @@
 
 #include <boost/hana/ext/boost/mpl/vector.hpp>
 #include <boost/hana/pair.hpp>
+#include <boost/hana/prepend.hpp>
 #include <boost/hana/second.hpp>
 #include <boost/hana/transform.hpp>
 #include <boost/hana/tuple.hpp>
@@ -25,11 +26,13 @@ static constexpr auto column_types =
 // This holds only the possible data types.
 static constexpr auto types = hana::transform(column_types, hana::second);
 
-// Convert tuple to mpl vector
-using TypesAsMplVector = decltype(hana::to<hana::ext::boost::mpl::vector_tag>(types));
-
 // Represents SQL null value
 using NullValue = boost::blank;
+
+static constexpr auto types_including_null = hana::prepend(types, hana::type_c<NullValue>);
+
+// Convert tuple to mpl vector
+using TypesAsMplVector = decltype(hana::to<hana::ext::boost::mpl::vector_tag>(types));
 
 // Append NullValue to mpl vector
 using TypesWithNullValue = boost::mpl::push_front<TypesAsMplVector, NullValue>::type;
