@@ -43,6 +43,7 @@ void OperatorsDeleteTest::helper(bool commit) {
   auto transaction_context = std::make_shared<TransactionContext>(1u, 1u);
   const auto cid = 1u;
 
+  // Selects two out of three rows.
   auto table_scan = std::make_shared<TableScan>(_gt, "b", ">", "456.7");
 
   table_scan->execute();
@@ -56,12 +57,22 @@ void OperatorsDeleteTest::helper(bool commit) {
   EXPECT_EQ(_table->get_chunk(0u).mvcc_columns()->tids.at(1u), 0u);
   EXPECT_EQ(_table->get_chunk(0u).mvcc_columns()->tids.at(2u), transaction_context->transaction_id());
 
+  // Table has three rows initially.
+  EXPECT_EQ(_table->approx_valid_row_count(), 3u);
+
   auto expected_end_cid = cid;
   if (commit) {
     delete_op->commit_records(cid);
+    delete_op->finish_commit();
+
+    // Delete successful, one row left.
+    EXPECT_EQ(_table->approx_valid_row_count(), 1u);
   } else {
     delete_op->rollback_records();
     expected_end_cid = Chunk::MAX_COMMIT_ID;
+
+    // Delete rolled back, three rows left.
+    EXPECT_EQ(_table->approx_valid_row_count(), 3u);
   }
 
   EXPECT_EQ(_table->get_chunk(0u).mvcc_columns()->end_cids.at(0u), expected_end_cid);
