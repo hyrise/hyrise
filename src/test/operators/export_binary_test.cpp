@@ -33,6 +33,14 @@ class OperatorsExportBinaryTest : public BaseTest {
     std::ifstream original(original_file);
     std::ifstream created(created_file);
 
+    if (!original.is_open()) {
+      throw std::runtime_error("compare_file: Could not find file " + original_file);
+    }
+
+    if (!created.is_open()) {
+      throw std::runtime_error("compare_file: Could not find file " + created_file);
+    }
+
     std::istreambuf_iterator<char> iterator_original(original);
     std::istreambuf_iterator<char> iterator_created(created);
     std::istreambuf_iterator<char> end;
