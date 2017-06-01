@@ -50,7 +50,7 @@ class AbstractOrderStatusImpl {
                        const int c_w_id) = 0;
   virtual std::vector<std::shared_ptr<opossum::OperatorTask>>
   get_customer_by_id(const int c_id, const int c_d_id, const int c_w_id) = 0;
-  virtual std::vector<std::shared_ptr<opossum::OperatorTask>> get_orders() = 0;
+  virtual std::vector<std::shared_ptr<opossum::OperatorTask>> get_orders(const int c_id, const int c_d_id, const int c_w_id) = 0;
   virtual std::vector<std::shared_ptr<opossum::OperatorTask>>
   get_order_lines(const int o_id, const int d_id, const int w_id) = 0;
 
@@ -65,7 +65,7 @@ class OrderStatusRefImpl : public AbstractOrderStatusImpl
                        const int c_w_id) override;
   std::vector<std::shared_ptr<opossum::OperatorTask>>
   get_customer_by_id(const int c_id, const int c_d_id, const int c_w_id) override;
-  std::vector<std::shared_ptr<opossum::OperatorTask>> get_orders() override;
+  std::vector<std::shared_ptr<opossum::OperatorTask>> get_orders(const int c_id, const int c_d_id, const int c_w_id) override;
   std::vector<std::shared_ptr<opossum::OperatorTask>>
   get_order_lines(const int o_id, const int d_id, const int w_id) override;
 };

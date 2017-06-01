@@ -3,6 +3,7 @@ import csv
 import json
 from sqlitedriver import TXN_QUERIES as tpcc_queries
 from tpcc_constants import *
+import math
 
 TPCC_TABLES = {
     ("WAREHOUSE","WAREHOUSE"),
@@ -189,7 +190,7 @@ def process_order_status(cur, params):
         c_last = params["c_last"]
         execute_sql(cur, q["getCustomersByLastName"], (w_id, d_id, c_last))
         customers = cur.fetchall()
-        customer = customers[len(customers) / 2]
+        customer = customers[int(math.ceil(len(customers) / 2))]
 
     c_id = customer[0]
     c_first = customer[1]

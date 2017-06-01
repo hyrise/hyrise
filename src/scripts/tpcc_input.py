@@ -85,7 +85,8 @@ if __name__ == "__main__":
     transactions = []
 
     #transactions.append(generate_new_order())
-    transactions.append(generate_order_status())
+    for i in range(1000):
+        transactions.append(generate_order_status())
     #transactions.append(generate_delivery())
 
     with open("tpcc_simulation_input.json", "w") as json_file:
