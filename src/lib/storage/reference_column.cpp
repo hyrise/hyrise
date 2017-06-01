@@ -20,10 +20,10 @@ ReferenceColumn::ReferenceColumn(const std::shared_ptr<const Table> referenced_t
 }
 
 const AllTypeVariant ReferenceColumn::operator[](const size_t i) const {
-  auto chunk_info = _referenced_table->locate_row((*_pos_list).at(i));
-  auto &chunk = _referenced_table->get_chunk(chunk_info.first);
+  auto chunk_info = _pos_list->at(i);
+  auto &chunk = _referenced_table->get_chunk(chunk_info.chunk_id);
 
-  return (*chunk.get_column(_referenced_column_id))[chunk_info.second];
+  return (*chunk.get_column(_referenced_column_id))[chunk_info.chunk_offset];
 }
 
 void ReferenceColumn::append(const AllTypeVariant &) { throw std::logic_error("ReferenceColumn is immutable"); }

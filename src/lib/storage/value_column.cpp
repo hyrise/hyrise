@@ -46,9 +46,11 @@ const T ValueColumn<T>::get(const size_t i) const {
 
 template <typename T>
 void ValueColumn<T>::append(const AllTypeVariant& val) {
-  if (can_be_null() && val == AllTypeVariant{}) {
-    _null_values->push_back(true);
-    _values.push_back(T{});
+  if (can_be_null()) {
+    bool is_null = val == AllTypeVariant{};
+    _null_values->push_back(is_null);
+    _values.push_back(is_null ? T{} : type_cast<T>(val));
+    return;
   }
 
   _values.push_back(type_cast<T>(val));
@@ -56,9 +58,14 @@ void ValueColumn<T>::append(const AllTypeVariant& val) {
 
 template <>
 void ValueColumn<std::string>::append(const AllTypeVariant& val) {
-  if (can_be_null() && val == AllTypeVariant{}) {
-    _null_values->push_back(true);
-    _values.push_back(std::string{});
+  if (can_be_null()) {
+    bool is_null = val == AllTypeVariant{};
+    _null_values->push_back(is_null);
+
+    if (is_null) {
+      _values.push_back(std::string{});
+      return;
+    }
   }
 
   auto typed_val = type_cast<std::string>(val);

@@ -106,7 +106,10 @@ void BaseTest::_print_matrix(const BaseTest::Matrix &m) {
 
   for (unsigned row = 0; row < left.size(); row++)
     for (unsigned col = 0; col < left[row].size(); col++) {
-      if (tleft.column_type(col) == "float") {
+      if (left[row][col] == AllTypeVariant{} || right[row][col] == AllTypeVariant{}) {
+        // TODO(mjendruk): Check if both columns are nullable
+        EXPECT_EQ(left[row][col], right[row][col]);
+      } else if (tleft.column_type(col) == "float") {
         EXPECT_EQ(tright.column_type(col), "float");
         EXPECT_NEAR(type_cast<float>(left[row][col]), type_cast<float>(right[row][col]), 0.0001)
             << "Row/Col:" << row << "/" << col;
@@ -146,12 +149,30 @@ std::shared_ptr<Table> BaseTest::load_table(const std::string &file_name, size_t
   std::getline(infile, line);
   std::vector<std::string> col_types = _split<std::string>(line, '|');
 
+  auto col_nullable = std::vector<bool>{};
+  for (auto &type : col_types) {
+    auto type_nullable = _split<std::string>(type, '_');
+    type = type_nullable[0];
+
+    auto nullable = type_nullable.size() > 1 && type_nullable[1] == "null";
+    col_nullable.push_back(nullable);
+  }
+
   for (size_t i = 0; i < col_names.size(); i++) {
-    test_table->add_column(col_names[i], col_types[i]);
+    test_table->add_column(col_names[i], col_types[i], col_nullable[i]);
   }
 
   while (std::getline(infile, line)) {
     std::vector<AllTypeVariant> values = _split<AllTypeVariant>(line, '|');
+
+    for (auto column_id = 0u; column_id < values.size(); ++column_id) {
+      auto &value = values[column_id];
+      auto nullable = col_nullable[column_id];
+
+      if (nullable && (value == AllTypeVariant{"null"})) {
+        value = AllTypeVariant{};
+      }
+    }
 
     test_table->append(values);
 
