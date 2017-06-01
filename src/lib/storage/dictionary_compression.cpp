@@ -38,7 +38,7 @@ template <typename T>
 class ColumnCompressor : public ColumnCompressorBase {
  public:
   std::shared_ptr<BaseColumn> compress_column(const std::shared_ptr<BaseColumn>& column) override {
-    auto value_column = std::dynamic_pointer_cast<ValueColumn<T>>(column);
+    auto value_column = std::dynamic_pointer_cast<const ValueColumn<T>>(column);
 
     if (!value_column) {
       throw std::logic_error("Column is either already compressed or type mismatches.");
@@ -49,19 +49,59 @@ class ColumnCompressor : public ColumnCompressorBase {
     const auto& values = value_column->values();
     auto dictionary = std::vector<T>{values.cbegin(), values.cend()};
 
+    // Remove null values from value vector
+    if (value_column->can_be_null()) {
+      const auto& null_values = value_column->null_values();
+
+      // Swap values to back if value is null
+      auto remove_from_here_it = dictionary.end();
+      for (auto record_id = dictionary.size() - 1; record_id >= 0; ++record_id) {
+        if (null_values[record_id]) {
+          std::swap(dictionary[record_id], *(--remove_from_here_it));
+        }
+      }
+
+      // Erase all values
+      dictionary.erase(remove_from_here_it, dictionary.end());
+    }
+
     std::sort(dictionary.begin(), dictionary.end());
     dictionary.erase(std::unique(dictionary.begin(), dictionary.end()), dictionary.end());
     dictionary.shrink_to_fit();
 
     auto attribute_vector = _create_fitted_attribute_vector(dictionary.size(), values.size());
 
-    for (ChunkOffset offset = 0; offset < values.size(); ++offset) {
-      auto value_id = static_cast<ValueID>(
-          std::distance(dictionary.cbegin(), std::lower_bound(dictionary.cbegin(), dictionary.cend(), values[offset])));
-      attribute_vector->set(offset, value_id);
+    if (value_column->can_be_null()) {
+      const auto& null_values = value_column->null_values();
+
+      /**
+       * Iterators are used because values and null_values are of
+       * type tbb::concurrent_vector and thus index-based access isn’t in O(1)
+       */
+      auto value_it = values.cbegin();
+      auto null_value_it = null_values.cbegin();
+      for (; value_it != values.cend(); ++value_it, ++null_value_it) {
+        if (*null_value_it) {
+          attribute_vector->set(offset, NULL_VALUE_ID);
+          continue;
+        }
+
+        auto value_id = find_value_id(dictionary, *value_it);
+        attribute_vector->set(offset, value_id);
+      }
+    } else {
+      for (auto value_it = values.cbegin();; value_it != values.cend(); ++value_it) {
+        auto value_id = find_value_id(dictionary, *value_it);
+        attribute_vector->set(offset, value_id);
+      }
     }
 
-    return std::make_shared<DictionaryColumn<T>>(std::move(dictionary), attribute_vector);
+    return std::make_shared<DictionaryColumn<T>>(std::move(dictionary), attribute_vector, value_column->can_be_null());
+  }
+
+  ValueID find_value_id(const std::vector<T>& dictionary, const T& value) {
+    return static_cast<ValueID>(
+        std::distance(dictionary.cbegin(), std::lower_bound(dictionary.cbegin(), dictionary.cend(), value)));
   }
 };
 
