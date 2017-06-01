@@ -80,19 +80,22 @@ class ColumnCompressor : public ColumnCompressorBase {
        */
       auto value_it = values.cbegin();
       auto null_value_it = null_values.cbegin();
-      for (; value_it != values.cend(); ++value_it, ++null_value_it) {
+      auto index = 0u;
+      for (; value_it != values.cend(); ++value_it, ++null_value_it, ++index) {
         if (*null_value_it) {
-          attribute_vector->set(offset, NULL_VALUE_ID);
+          attribute_vector->set(index, NULL_VALUE_ID);
           continue;
         }
 
         auto value_id = find_value_id(dictionary, *value_it);
-        attribute_vector->set(offset, value_id);
+        attribute_vector->set(index, value_id);
       }
     } else {
-      for (auto value_it = values.cbegin();; value_it != values.cend(); ++value_it) {
+      auto value_it = values.cbegin();
+      auto index = 0u;
+      for (; value_it != values.cend(); ++value_it, ++index) {
         auto value_id = find_value_id(dictionary, *value_it);
-        attribute_vector->set(offset, value_id);
+        attribute_vector->set(index, value_id);
       }
     }
 

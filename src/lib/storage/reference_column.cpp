@@ -35,8 +35,8 @@ size_t ReferenceColumn::referenced_column_id() const { return _referenced_column
 size_t ReferenceColumn::size() const { return _pos_list->size(); }
 
 bool ReferenceColumn::can_be_null() const {
-  auto first_referenced_chunk_id = _pos_list.front();
-  auto first_referenced_chunk = _referenced_table->get_chunk(first_referenced_chunk);
+  auto first_referenced_chunk_id = _pos_list->front();
+  auto &first_referenced_chunk = _referenced_table->get_chunk(first_referenced_chunk_id.chunk_id);
   return first_referenced_chunk.get_column(_referenced_column_id)->can_be_null();
 }
 
