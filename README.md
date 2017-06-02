@@ -101,8 +101,9 @@ To configure a build directory for a release build make sure it is empty and cal
 `./scripts/format.sh`
 
 ### testing 
-`make opossumTest` builds all available tests
-The binary can be executed with `./opossumTest`
+Calling `make opossumTest` from the build directory builds all available tests.
+The binary can be executed with `./<YourBuildDirectory/>opossumTest`.
+Note, that the tests/asan/etc need to be executed from the project root in order for table-files to be found.
 
 ### coverage
 `./scripts/coverage.sh <build dir>` will print a summary to the command line and create detailed html reports at ./coverage/index.html
