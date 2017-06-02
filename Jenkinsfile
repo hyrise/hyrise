@@ -33,7 +33,7 @@ node {
           sh "premake4 --compiler=gcc"
           sh "make -j \$(cat /proc/cpuinfo | grep processor | wc -l) -R config=release test"
         }
-        stage("gc Debug") {
+        stage("gcc Debug") {
           sh "make clean"
           sh "premake4 --compiler=gcc"
           sh "make -j \$(cat /proc/cpuinfo | grep processor | wc -l) -R config=debug test"
