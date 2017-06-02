@@ -8,6 +8,7 @@
 #include "tbb/concurrent_vector.h"
 
 #include "base_column.hpp"
+#include "utils/assert.hpp"
 
 namespace opossum {
 
@@ -51,5 +52,4 @@ class ValueColumn : public BaseColumn {
  protected:
   tbb::concurrent_vector<T> _values;
 };
-
 }  // namespace opossum

@@ -15,6 +15,7 @@
 
 #include "resolve_type.hpp"
 #include "types.hpp"
+#include "utils/assert.hpp"
 
 namespace opossum {
 
@@ -103,11 +104,11 @@ void CsvRfcParser::_parse_file_chunk(std::vector<char>::iterator start, std::vec
     ++current_column;
     // reset current_column if we hit a delimiter
     if (position == end || last_char == csv_delimiter) {
-      if (current_column != table.col_count()) throw std::runtime_error("CSV row does not contain enough values.");
+      Assert((current_column == table.col_count()), "CSV row does not contain enough values.");
       ++current_row;
       current_column = 0;
     }
-    if (current_column >= table.col_count()) throw std::runtime_error("CSV row contains too many values.");
+    Assert((current_column < table.col_count()), "CSV row contains too many values.");
   }
 
   // Transform the field_offsets to columns and add columns to chunk.
@@ -173,12 +174,10 @@ std::vector<char>::iterator CsvRfcParser::_next_field(const std::vector<char>::i
     // The field is escaped and we must find the next csv_quote that is not followed by another csv_quote
     do {
       position = std::find(position + 1, end, csv_quote);
-      if (position == end) throw std::runtime_error("CSV field does not end properly");
+      Assert((position != end), "CSV field does not end properly");
       ++position;
     } while (position != end && *position == csv_quote);
-    if (position != end && *position != csv_separator && *position != csv_delimiter) {
-      throw std::runtime_error("CSV file is corrupt");
-    }
+    Assert(!(position != end && *position != csv_separator && *position != csv_delimiter), "CSV file is corrupt");
   } else /* field is not escaped */ {
     constexpr std::array<char, 2> search_values = {{csv_separator, csv_delimiter}};
     position = std::find_first_of(start, end, search_values.begin(), search_values.end());

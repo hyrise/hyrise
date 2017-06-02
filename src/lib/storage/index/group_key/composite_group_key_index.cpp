@@ -13,29 +13,29 @@
 
 #include <iostream>
 
-#include "../../base_attribute_vector.hpp"
-#include "../../dictionary_column.hpp"
+#include "storage/base_attribute_vector.hpp"
+#include "storage/dictionary_column.hpp"
+#include "utils/assert.hpp"
 
 namespace opossum {
 
 CompositeGroupKeyIndex::CompositeGroupKeyIndex(const std::vector<std::shared_ptr<BaseColumn>> &indexed_columns) {
-  if (indexed_columns.empty())
-    throw std::runtime_error("CompositeGroupKeyIndex requires at least one column to be indexed.");
+  DebugAssert(!indexed_columns.empty(), "CompositeGroupKeyIndex requires at least one column to be indexed.");
 
   if (IS_DEBUG) {
     auto firstSize = indexed_columns.front()->size();
     auto haveAllColumnsSameSize = std::all_of(indexed_columns.cbegin(), indexed_columns.cend(),
                                               [firstSize](const auto &column) { return column->size() == firstSize; });
-    if (!haveAllColumnsSameSize) {
-      throw std::runtime_error("CompositeGroupKey requires same length of all columns that should be indexed.");
-    }
+
+    DebugAssert(haveAllColumnsSameSize,
+                "CompositeGroupKey requires same length of all columns that should be indexed.");
   }
 
   // cast and check columns
   _indexed_columns.reserve(indexed_columns.size());
   for (const auto &column : indexed_columns) {
     auto dict_column = std::dynamic_pointer_cast<UntypedDictionaryColumn>(column);
-    if (!dict_column) throw std::runtime_error("CompositeGroupKeyIndex only works with DictionaryColumns");
+    DebugAssert(static_cast<bool>(dict_column), "CompositeGroupKeyIndex only works with DictionaryColumns");
     _indexed_columns.emplace_back(dict_column);
   }
 

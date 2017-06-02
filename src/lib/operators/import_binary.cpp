@@ -14,6 +14,7 @@
 #include "storage/chunk.hpp"
 #include "storage/fitted_attribute_vector.hpp"
 #include "storage/storage_manager.hpp"
+#include "utils/assert.hpp"
 
 namespace opossum {
 
@@ -122,7 +123,7 @@ std::shared_ptr<BaseColumn> ImportBinary::_import_column(std::ifstream& file, Ch
       result = _import_column<column_type>(file, row_count);
     }
   });
-  if (IS_DEBUG && !result) throw std::runtime_error("unknown type " + data_type);
+  DebugAssert(static_cast<bool>(result), ("unknown type " + data_type));
   return result;
 }
 
@@ -137,7 +138,7 @@ std::shared_ptr<BaseColumn> ImportBinary::_import_column(std::ifstream& file, Ch
       return _import_dictionary_column<DataType>(file, row_count);
     default:
       // This case happens if the read column type is not a valid BinaryColumnType.
-      throw std::runtime_error("Cannot import column: invalid column type");
+      throw std::logic_error("Cannot import column: invalid column type");
   }
 }
 
@@ -151,7 +152,7 @@ std::shared_ptr<BaseAttributeVector> ImportBinary::_import_attribute_vector(
     case 4:
       return std::make_shared<FittedAttributeVector<uint32_t>>(_read_values<uint32_t>(file, row_count));
     default:
-      throw std::runtime_error("Cannot import attribute vector with width: " + std::to_string(attribute_vector_width));
+      throw std::logic_error("Cannot import attribute vector with width: " + std::to_string(attribute_vector_width));
   }
 }
 

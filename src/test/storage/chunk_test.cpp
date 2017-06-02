@@ -63,7 +63,7 @@ TEST_F(StorageChunkTest, UnknownColumnType) {
   // Exception will only be thrown in debug builds
   if (IS_DEBUG) {
     auto wrapper = []() { make_shared_by_column_type<BaseColumn, ValueColumn>("weird_type"); };
-    EXPECT_THROW(wrapper(), std::runtime_error);
+    EXPECT_THROW(wrapper(), std::logic_error);
   }
 }
 
