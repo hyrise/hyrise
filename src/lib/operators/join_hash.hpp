@@ -25,6 +25,7 @@
 #include "storage/value_column.hpp"
 #include "type_comparison.hpp"
 #include "types.hpp"
+#include "utils/assert.hpp"
 #include "utils/cuckoo_hashtable.hpp"
 #include "utils/murmur_hash.hpp"
 
@@ -625,7 +626,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
       if (!right && !left) {
         continue;
       } else if (!right || !left) {
-        throw std::runtime_error("JoinHash: either left or right pos_list is empty. Should not happen");
+        Fail("JoinHash: either left or right pos_list is empty. Should not happen");
       }
 
       Chunk output_chunk;

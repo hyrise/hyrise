@@ -142,6 +142,11 @@ std::shared_ptr<Table> BaseTest::load_table(const std::string &file_name, size_t
   std::shared_ptr<Table> test_table = std::make_shared<Table>(chunk_size);
 
   std::ifstream infile(file_name);
+
+  if (!infile.is_open()) {
+    throw std::runtime_error("load_table: Could not find file " + file_name);
+  }
+
   std::string line;
 
   std::getline(infile, line);

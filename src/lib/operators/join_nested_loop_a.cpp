@@ -6,6 +6,9 @@
 
 #include "join_nested_loop_a.hpp"
 #include "product.hpp"
+#include "utils/assert.hpp"
+
+#include "resolve_type.hpp"
 
 #include "resolve_type.hpp"
 
@@ -15,20 +18,12 @@ JoinNestedLoopA::JoinNestedLoopA(const std::shared_ptr<const AbstractOperator> l
                                  optional<std::pair<std::string, std::string>> column_names, const std::string &op,
                                  const JoinMode mode, const std::string &prefix_left, const std::string &prefix_right)
     : AbstractJoinOperator(left, right, column_names, op, mode, prefix_left, prefix_right) {
-  if (IS_DEBUG) {
-    if (mode == Cross) {
-      throw std::runtime_error(
-          "JoinNestedLoopA: this operator does not support Cross Joins, the optimizer should use Product operator.");
-    }
-
-    if (_mode == Natural) {
-      throw std::runtime_error("NestedLoopJoin: this operator currently does not support Natural Joins.");
-    }
-
-    if (!column_names) {
-      throw std::runtime_error("NestedLoopJoin: optional column names are only supported for Cross and Natural Joins.");
-    }
-  }
+  DebugAssert(
+      (mode != Cross),
+      "JoinNestedLoopA: this operator does not support Cross Joins, the optimizer should use Product operator.");
+  DebugAssert((_mode != Natural), "NestedLoopJoin: this operator currently does not support Natural Joins.");
+  DebugAssert(static_cast<bool>(column_names),
+              "NestedLoopJoin: optional column names are only supported for Cross and Natural Joins.");
 }
 
 const std::string JoinNestedLoopA::name() const { return "JoinNestedLoopA"; }

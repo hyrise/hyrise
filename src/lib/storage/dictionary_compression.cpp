@@ -15,6 +15,7 @@
 #include "storage/table.hpp"
 #include "storage/value_column.hpp"
 #include "types.hpp"
+#include "utils/assert.hpp"
 
 namespace opossum {
 
@@ -115,11 +116,8 @@ std::shared_ptr<BaseColumn> DictionaryCompression::compress_column(const std::st
 }
 
 void DictionaryCompression::compress_chunk(const std::vector<std::string>& column_types, Chunk& chunk) {
-#ifdef IS_DEBUG
-  if (column_types.size() != chunk.col_count()) {
-    throw std::logic_error("Number of column types does not match the chunk’s column count.");
-  }
-#endif
+  DebugAssert((column_types.size() == chunk.col_count()),
+              "Number of column types does not match the chunk’s column count.");
 
   for (auto column_id = 0u; column_id < chunk.col_count(); ++column_id) {
     auto value_column = chunk.get_column(column_id);

@@ -5,9 +5,10 @@
 #include <utility>
 #include <vector>
 
-#include "../types.hpp"
 #include "murmur_hash.hpp"
 #include "type_comparison.hpp"
+#include "types.hpp"
+#include "utils/assert.hpp"
 
 namespace opossum {
 
@@ -87,14 +88,13 @@ class HashTable {
   called before stopping and declaring presence of cycle
   */
   void place(std::shared_ptr<HashElement> element, int hash_function, size_t iterations) {
-    if (iterations == _input_table_size) {
-      /*
-      We were not able to reproduce this case with the current setting (3 hash functions). With 3 hash functions the
-      hash table will have a maximum load of 33%, which should be less enough to avoid cycles at all. In theory there
-      shouldn't be any cycles up to a load of 91%, comp. http://www.ru.is/faculty/ulfar/CuckooHash.pdf
-      */
-      throw std::runtime_error("There is a cycle in Cuckoo. Need to rehash with different hash functions");
-    }
+    /*
+    We were not able to reproduce this case with the current setting (3 hash functions). With 3 hash functions the
+    hash table will have a maximum load of 33%, which should be less enough to avoid cycles at all. In theory there
+    shouldn't be any cycles up to a load of 91%, comp. http://www.ru.is/faculty/ulfar/CuckooHash.pdf
+    */
+    Assert((iterations != _input_table_size),
+           "There is a cycle in Cuckoo. Need to rehash with different hash functions");
 
     /*
     Check if another element is already present at the position.

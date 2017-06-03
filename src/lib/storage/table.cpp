@@ -10,6 +10,7 @@
 #include <vector>
 
 #include "dictionary_column.hpp"
+#include "utils/assert.hpp"
 #include "value_column.hpp"
 
 #include "resolve_type.hpp"
@@ -22,9 +23,7 @@ Table::Table(const size_t chunk_size) : _chunk_size(chunk_size), _append_mutex(s
 }
 
 void Table::add_column_definition(const std::string &name, const std::string &type, bool nullable) {
-  if (name.size() > std::numeric_limits<ColumnNameLength>::max()) {
-    throw std::runtime_error("Cannot add column. Column name is too long.");
-  }
+  Assert((name.size() < std::numeric_limits<ColumnNameLength>::max()), "Cannot add column. Column name is too long.");
 
   _column_names.push_back(name);
   _column_types.push_back(type);
@@ -98,10 +97,9 @@ void Table::add_chunk(Chunk chunk) {
     // the initial chunk was not used yet
     _chunks.clear();
   }
-  if (IS_DEBUG && _chunks.size() > 0 && chunk.col_count() != col_count()) {
-    throw std::runtime_error(std::string("adding chunk with ") + std::to_string(chunk.col_count()) +
-                             " columns to table with " + std::to_string(col_count()) + " columns");
-  }
+  DebugAssert((_chunks.size() == 0 || chunk.col_count() == col_count()),
+              std::string("adding chunk with ") + std::to_string(chunk.col_count()) + " columns to table with " +
+                  std::to_string(col_count()) + " columns");
   _chunks.emplace_back(std::move(chunk));
 }
 

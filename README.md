@@ -6,6 +6,20 @@
 
 The [course material](https://hpi.de//plattner/teaching/winter-term-201617/build-your-own-database.html) is a good starting point to get to know Opossum
 
+## install in docker
+To get all dependencies of opossum in a docker image, run
+```
+docker-compose build
+```
+
+You can start the container via
+```
+docker-compose run --rm opossum
+```
+:whale:
+
+In the container, continue with [Building and Tooling](#building-and-tooling).
+
 ## Dependencies
 You can install the dependencies on your own or use the install.sh script which installs most of the following packages.
 
@@ -120,6 +134,7 @@ Contact: firstname.lastname@hpi.de
 - Timo Djürken
 -	Moritz	Eyssen
 -	Martin	Fischer
+-	Pedro	Flemming
 -	Michael	Janke
 -	Max	Jendruk
 -	Marvin	Keller

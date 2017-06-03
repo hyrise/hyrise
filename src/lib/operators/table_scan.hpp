@@ -21,6 +21,7 @@
 #include "all_parameter_variant.hpp"
 #include "type_cast.hpp"
 #include "types.hpp"
+#include "utils/assert.hpp"
 
 namespace opossum {
 
@@ -167,25 +168,23 @@ class TableScan::TableScanImpl : public AbstractReadOnlyOperatorImpl {
       _value_comparator = [](T left, T right) { return left >= right; };
       _value_id_comparator = [](ValueID found_vid, ValueID search_vid, ValueID) { return found_vid >= search_vid; };
     } else if (_op == "BETWEEN") {
+      DebugAssert(static_cast<bool>(casted_value2), "No second value for BETWEEN comparison given");
+
       _type = OpBetween;
-      if (IS_DEBUG && !casted_value2) throw std::runtime_error("No second value for BETWEEN comparison given");
       _value_comparator = [casted_value2](T value, T left) { return value >= left && value <= casted_value2; };
       _value_id_comparator = [](ValueID found_vid, ValueID search_vid, ValueID search_vid2) {
         return search_vid <= found_vid && found_vid < search_vid2;
       };
     } else if (_op == "LIKE") {
-      _type = OpLike;
       // LIKE is always executed on with constant value (containing a wildcard)
       // using VariableTerm is not supported here
-      if (IS_DEBUG && !_is_constant_value_scan)
-        throw std::runtime_error("LIKE only supports ConstantTerms and std::string type");
-
+      DebugAssert(_is_constant_value_scan, "LIKE only supports ConstantTerms and std::string type");
       const auto column_type = in_table->column_type(column_id1);
-      if (column_type != "string") {
-        throw std::runtime_error("LIKE operator only applicable on string columns");
-      }
+      DebugAssert((column_type == "string"), "LIKE operator only applicable on string columns");
+
+      _type = OpLike;
     } else {
-      throw std::runtime_error(std::string("unknown operator ") + _op);
+      Fail(std::string("unknown operator ") + _op);
     }
 
     // We can easily distribute the table scanning work on individual chunks to multiple sub tasks,
@@ -462,7 +461,7 @@ class TableScan::TableScanImpl<T>::TableScanConstantColumnVisitable : public Col
         break;
 
       default:
-        throw std::logic_error("Unknown comparison type encountered");
+        Fail("Unknown comparison type encountered");
     }
 
     if (_type == OpEquals && search_vid != INVALID_VALUE_ID &&

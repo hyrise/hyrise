@@ -6,6 +6,7 @@
 #include <vector>
 
 #include "base_attribute_vector.hpp"
+#include "utils/assert.hpp"
 #include "value_column.hpp"
 
 #include "type_cast.hpp"
@@ -39,18 +40,14 @@ template <typename T>
 const T DictionaryColumn<T>::get(const size_t i) const {
   const auto value_id = _attribute_vector->get(i);
 
-#ifdef IS_DEBUG
-  if (value_id == NULL_VALUE_ID) {
-    throw std::logic_error("Value at index " + to_string(i) + "is null.");
-  }
-#endif
+  DebugAssert(value_id == NULL_VALUE_ID, "Value at index " + to_string(i) + "is null.");
 
   return (*_dictionary)[_attribute_vector->get(i)];
 }
 
 template <typename T>
 void DictionaryColumn<T>::append(const AllTypeVariant&) {
-  throw std::logic_error("DictionaryColumn is immutable");
+  Fail("DictionaryColumn is immutable");
 }
 
 template <typename T>
@@ -82,11 +79,7 @@ const tbb::concurrent_vector<T> DictionaryColumn<T>::materialize_values() const 
 
 template <typename T>
 const T& DictionaryColumn<T>::value_by_value_id(ValueID value_id) const {
-#ifdef IS_DEBUG
-  if (value_id == NULL_VALUE_ID) {
-    throw std::logic_error("Null value id passed.");
-  }
-#endif
+  DebugAssert(value_id == NULL_VALUE_ID, "Null value id passed.");
 
   return _dictionary->at(value_id);
 }
@@ -100,11 +93,7 @@ ValueID DictionaryColumn<T>::lower_bound(T value) const {
 
 template <typename T>
 ValueID DictionaryColumn<T>::lower_bound(const AllTypeVariant& value) const {
-#ifdef IS_DEBUG
-  if (value == AllTypeVariant{}) {
-    throw std::logic_error("Null value passed.");
-  }
-#endif
+  DebugAssert(value == AllTypeVariant{}, "Null value passed.");
 
   auto typed_value = type_cast<T>(value);
   return lower_bound(typed_value);
@@ -119,11 +108,7 @@ ValueID DictionaryColumn<T>::upper_bound(T value) const {
 
 template <typename T>
 ValueID DictionaryColumn<T>::upper_bound(const AllTypeVariant& value) const {
-#ifdef IS_DEBUG
-  if (value == AllTypeVariant{}) {
-    throw std::logic_error("Null value passed.");
-  }
-#endif
+  DebugAssert(value == AllTypeVariant{}, "Null value passed.");
 
   auto typed_value = type_cast<T>(value);
   return upper_bound(typed_value);

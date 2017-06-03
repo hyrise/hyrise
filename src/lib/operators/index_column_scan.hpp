@@ -19,6 +19,7 @@
 #include "storage/value_column.hpp"
 #include "type_cast.hpp"
 #include "types.hpp"
+#include "utils/assert.hpp"
 
 namespace opossum {
 
@@ -139,15 +140,16 @@ class IndexColumnScan::IndexColumnScanImpl : public AbstractReadOnlyOperatorImpl
       _value_comparator = [casted_value](T val) { return val >= casted_value; };
       _value_id_comparator = [](ValueID found_vid, ValueID search_vid, ValueID) { return found_vid >= search_vid; };
     } else if (_op == "BETWEEN") {
+      DebugAssert(static_cast<bool>(_casted_value2), "No second value for BETWEEN comparison given");
+
       _type = OpBetween;
-      if (IS_DEBUG && !_casted_value2) throw std::runtime_error("No second value for BETWEEN comparison given");
       T casted_value2 = _casted_value2.value_or(T());
       _value_comparator = [casted_value, casted_value2](T val) { return casted_value <= val && val <= casted_value2; };
       _value_id_comparator = [](ValueID found_vid, ValueID search_vid, ValueID search_vid2) {
         return search_vid <= found_vid && found_vid < search_vid2;
       };
     } else {
-      throw std::runtime_error(std::string("unknown operator ") + _op);
+      Fail(std::string("unknown operator ") + _op);
     }
 
     // We can easily distribute the table scanning work on individual chunks to multiple sub tasks,
@@ -335,7 +337,7 @@ class IndexColumnScan::IndexColumnScanImpl : public AbstractReadOnlyOperatorImpl
           break;
 
         default:
-          throw std::logic_error("Unknown comparison type encountered");
+          Fail("Unknown comparison type encountered");
       }
 
       if (_type == OpEquals && search_vid != INVALID_VALUE_ID &&
@@ -412,7 +414,7 @@ class IndexColumnScan::IndexColumnScanImpl : public AbstractReadOnlyOperatorImpl
         upper_bound = index->upper_bound({*search_value_2});
         break;
       default:
-        throw std::logic_error("Unknown comparison type encountered");
+        Fail("Unknown comparison type encountered");
     }
 
     result.insert(result.end(), lower_bound, upper_bound);

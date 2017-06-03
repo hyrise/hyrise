@@ -7,6 +7,8 @@
 #include <utility>
 #include <vector>
 
+#include "utils/assert.hpp"
+
 #include "type_cast.hpp"
 
 namespace opossum {
@@ -46,6 +48,7 @@ const T ValueColumn<T>::get(const size_t i) const {
 
 template <typename T>
 void ValueColumn<T>::append(const AllTypeVariant& val) {
+  // TODO(mjendruk): handle !can_be_null() && is_null
   if (can_be_null()) {
     bool is_null = val == AllTypeVariant{};
     _null_values->push_back(is_null);
@@ -69,9 +72,7 @@ void ValueColumn<std::string>::append(const AllTypeVariant& val) {
   }
 
   auto typed_val = type_cast<std::string>(val);
-  if (typed_val.length() > std::numeric_limits<StringLength>::max()) {
-    throw std::runtime_error("String value is too long to append!");
-  }
+  Assert((typed_val.length() <= std::numeric_limits<StringLength>::max()), "String value is too long to append!");
 
   _values.push_back(typed_val);
 }
@@ -93,18 +94,14 @@ bool ValueColumn<T>::can_be_null() const {
 
 template <typename T>
 const tbb::concurrent_vector<bool>& ValueColumn<T>::null_values() const {
-  if (!can_be_null()) {
-    throw std::logic_error("Chunk does not have mvcc columns");
-  }
+  DebugAssert(!can_be_null(), "Chunk does not have mvcc columns");
 
   return *_null_values;
 }
 
 template <typename T>
 tbb::concurrent_vector<bool>& ValueColumn<T>::null_values() {
-  if (!can_be_null()) {
-    throw std::logic_error("Chunk does not have mvcc columns");
-  }
+  DebugAssert(!can_be_null(), "Chunk does not have mvcc columns");
 
   return *_null_values;
 }

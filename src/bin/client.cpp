@@ -18,6 +18,8 @@
 #include <memory>
 #include <string>
 
+#include "utils/assert.hpp"
+
 namespace po = boost::program_options;
 
 namespace opossum {
@@ -89,7 +91,7 @@ void OpossumClient::print_variant(const proto::Variant& variant) const {
       std::cout << variant.value_long();
       break;
     default:
-      throw std::runtime_error("Unknown AllTypeVariant in operator_translator");
+      Fail("Unknown AllTypeVariant in operator_translator");
   }
   std::cout << std::setw(0);
 }
