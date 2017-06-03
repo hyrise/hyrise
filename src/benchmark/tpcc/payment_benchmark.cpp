@@ -202,20 +202,20 @@ BENCHMARK_F(TPCCPaymentBenchmark, BM_TPCC_Payment)(benchmark::State &state) {
     auto t_context = TransactionManager::get().new_transaction_context();
 
     auto update_warehouse_tasks = update_warehouse(home_warehouse_id, payment_amount);
-    schedule_tasks_and_wait(update_warehouse_tasks);
+    AbstractScheduler::schedule_tasks_and_wait(update_warehouse_tasks);
 
     auto get_warehouse_tasks = get_warehouse(home_warehouse_id);
-    schedule_tasks_and_wait(get_warehouse_tasks);
+    AbstractScheduler::schedule_tasks_and_wait(get_warehouse_tasks);
 
     auto update_district_tasks = update_district(home_warehouse_id, d_id, payment_amount);
-    schedule_tasks_and_wait(update_district_tasks);
+    AbstractScheduler::schedule_tasks_and_wait(update_district_tasks);
 
     auto get_district_tasks = get_district(home_warehouse_id, d_id);
-    schedule_tasks_and_wait(get_district_tasks);
+    AbstractScheduler::schedule_tasks_and_wait(get_district_tasks);
 
     if (use_last_name) {
       auto get_customer_tasks = get_customer_by_name(c_last, d_id, home_warehouse_id);
-      schedule_tasks_and_wait(get_customer_tasks);
+      AbstractScheduler::schedule_tasks_and_wait(get_customer_tasks);
 
       //      auto num_names = get_customer_tasks.back()->get_operator()->get_output()->row_count();
       //      assert(num_names > 0);
@@ -226,7 +226,7 @@ BENCHMARK_F(TPCCPaymentBenchmark, BM_TPCC_Payment)(benchmark::State &state) {
       // locate midpoint customer
     } else {
       auto get_customer_tasks = get_customer_by_id(c_id, d_id, home_warehouse_id);
-      schedule_tasks_and_wait(get_customer_tasks);
+      AbstractScheduler::schedule_tasks_and_wait(get_customer_tasks);
 
       //      assert(get_customer_tasks.back()->get_operator()->get_output()->row_count() == 1);
       //      auto customer = get_from_table_at_row(get_customer_tasks.back()->get_operator()->get_output(), 0);
@@ -238,18 +238,18 @@ BENCHMARK_F(TPCCPaymentBenchmark, BM_TPCC_Payment)(benchmark::State &state) {
        */
       {
         auto get_customer_data_tasks = get_customer_data(c_id, d_id, home_warehouse_id);
-        schedule_tasks_and_wait(get_customer_data_tasks);
+        AbstractScheduler::schedule_tasks_and_wait(get_customer_data_tasks);
 
         auto update_customer_tasks = update_customer(c_id, home_warehouse_id, d_id);
-        schedule_tasks_and_wait(update_customer_tasks);
+        AbstractScheduler::schedule_tasks_and_wait(update_customer_tasks);
       }  // else
       {
         auto update_customer_tasks = update_customer(c_id, home_warehouse_id, d_id);
-        schedule_tasks_and_wait(update_customer_tasks);
+        AbstractScheduler::schedule_tasks_and_wait(update_customer_tasks);
       }
 
       auto insert_history_tasks = insert_history(d_id, home_warehouse_id, c_id /*, d_id, payment_amount, some data*/);
-      schedule_tasks_and_wait(insert_history_tasks);
+      AbstractScheduler::schedule_tasks_and_wait(insert_history_tasks);
 
       // Commit transaction.
       TransactionManager::get().prepare_commit(*t_context);

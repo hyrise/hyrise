@@ -37,7 +37,6 @@ class TPCCBenchmarkFixture : public benchmark::Fixture {
     for (auto it = _tpcc_tables->begin(); it != _tpcc_tables->end(); ++it) {
       opossum::StorageManager::get().add_table(it->first, it->second);
     }
-    std::cerr << "Finished table setup" << std::endl;
   }
 
   void set_transaction_context_for_operators(const std::shared_ptr<TransactionContext> t_context,

@@ -11,7 +11,7 @@
 #include "../../lib/operators/sort.hpp"
 #include "../../lib/operators/limit.hpp"
 
-#define VERBOSE 1
+#define VERBOSE 0
 
 using namespace opossum;
 
