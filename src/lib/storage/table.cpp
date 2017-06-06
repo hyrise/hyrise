@@ -101,7 +101,7 @@ const std::vector<AllTypeVariant> Table::fetch_row(const size_t index) const {
 
   for (auto &chunk : _chunks) {
     // Find chunk containing the row with the specified index.
-    if (chunk.size() == 0 || row_counter + chunk.size() < index) {
+    if (chunk.size() == 0 || row_counter + chunk.size() <= index) {
       row_counter += chunk.size();
       continue;
     }

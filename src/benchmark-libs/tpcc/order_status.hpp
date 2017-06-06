@@ -5,7 +5,9 @@
 
 #include <json.hpp>
 
-#include "../../lib/scheduler/operator_task.hpp"
+#include "scheduler/operator_task.hpp"
+
+#include "defines.h"
 
 namespace tpcc {
 
@@ -50,7 +52,8 @@ class AbstractOrderStatusImpl {
                        const int c_w_id) = 0;
   virtual TaskVector
   get_customer_by_id(const int c_id, const int c_d_id, const int c_w_id) = 0;
-  virtual TaskVector get_orders() = 0;
+
+  virtual TaskVector get_orders(const int c_id, const int c_d_id, const int c_w_id) = 0;
   virtual TaskVector
   get_order_lines(const int o_id, const int d_id, const int w_id) = 0;
 
@@ -65,7 +68,8 @@ class OrderStatusRefImpl : public AbstractOrderStatusImpl
                        const int c_w_id) override;
   TaskVector
   get_customer_by_id(const int c_id, const int c_d_id, const int c_w_id) override;
-  TaskVector get_orders() override;
+
+  TaskVector get_orders(const int c_id, const int c_d_id, const int c_w_id) override;
   TaskVector
   get_order_lines(const int o_id, const int d_id, const int w_id) override;
 };

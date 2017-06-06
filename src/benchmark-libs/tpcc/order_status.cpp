@@ -71,8 +71,13 @@ OrderStatusResult AbstractOrderStatusImpl::run_transaction(const OrderStatusPara
     result.c_id = params.c_id;
   }
 
-  auto get_order_tasks = get_orders();
+  auto get_order_tasks = get_orders(params.c_id, params.c_d_id, params.c_w_id);
   AbstractScheduler::schedule_tasks_and_wait(get_order_tasks);
+
+#if VERBOSE
+  std::cout << "OrderStatus: GetOrders:" << std::endl;
+  Print(get_order_tasks.back()->get_operator()).execute();
+#endif
 
   auto order = get_order_tasks.back()->get_operator()->get_output()->fetch_row(0);
 
@@ -80,8 +85,13 @@ OrderStatusResult AbstractOrderStatusImpl::run_transaction(const OrderStatusPara
   result.o_carrier_id = boost::get<int32_t>(order[1]);
   result.o_entry_d = boost::get<int32_t>(order[2]);
 
-  auto get_order_line_tasks = get_order_lines(0, params.c_d_id, params.c_w_id);
+  auto get_order_line_tasks = get_order_lines(result.o_id, params.c_d_id, params.c_w_id);
   AbstractScheduler::schedule_tasks_and_wait(get_order_line_tasks);
+
+#if VERBOSE
+  std::cout << "OrderStatus: GetOrderLines:" << std::endl;
+  Print(get_order_line_tasks.back()->get_operator()).execute();
+#endif
 
   auto order_lines_table = get_order_line_tasks.back()->get_operator()->get_output();
 
@@ -169,29 +179,39 @@ OrderStatusRefImpl::get_customer_by_id(const int c_id, const int c_d_id, const i
   return {gt_customer_task, first_filter_task, second_filter_task, third_filter_task, projection_task};
 }
 
-TaskVector OrderStatusRefImpl::get_orders() {
+TaskVector OrderStatusRefImpl::get_orders(const int o_c_id, const int o_d_id, const int o_w_id) {
   /**
   * SELECT o_id, o_carrier_id, o_entry_d
   * FROM orders
+  * WHERE o_c_id=o_c_id AND o_d_id=o_d_id AND o_w_id=o_w_id
   * ORDER BY o_id DESC
   * LIMIT 1;
   */
   auto gt_orders = std::make_shared<GetTable>("ORDER");
+  auto first_filter = std::make_shared<TableScan>(gt_orders, "O_C_ID", "=", o_c_id);
+  auto second_filter = std::make_shared<TableScan>(first_filter, "O_D_ID", "=", o_d_id);
+  auto third_filter = std::make_shared<TableScan>(second_filter, "O_W_ID", "=", o_w_id);
   std::vector<std::string> columns = {"O_ID", "O_CARRIER_ID", "O_ENTRY_D"};
-  auto projection = std::make_shared<Projection>(gt_orders, columns);
+  auto projection = std::make_shared<Projection>(third_filter, columns);
   auto sort = std::make_shared<Sort>(projection, "O_ID", false);
   auto limit = std::make_shared<Limit>(sort, 1);
 
   auto gt_orders_task = std::make_shared<OperatorTask>(gt_orders);
+  auto first_filter_task = std::make_shared<OperatorTask>(first_filter);
+  auto second_filter_task = std::make_shared<OperatorTask>(second_filter);
+  auto third_filter_task = std::make_shared<OperatorTask>(third_filter);
   auto projection_task = std::make_shared<OperatorTask>(projection);
   auto sort_task = std::make_shared<OperatorTask>(sort);
   auto limit_task = std::make_shared<OperatorTask>(limit);
 
-  gt_orders_task->set_as_predecessor_of(projection_task);
+  gt_orders_task->set_as_predecessor_of(first_filter_task);
+  first_filter_task->set_as_predecessor_of(second_filter_task);
+  second_filter_task->set_as_predecessor_of(third_filter_task);
+  third_filter_task->set_as_predecessor_of(projection_task);
   projection_task->set_as_predecessor_of(sort_task);
   sort_task->set_as_predecessor_of(limit_task);
 
-  return {gt_orders_task, projection_task, sort_task, limit_task};
+  return {gt_orders_task, first_filter_task, second_filter_task, third_filter_task, projection_task, sort_task, limit_task};
 }
 
 TaskVector
@@ -206,7 +226,7 @@ OrderStatusRefImpl::get_order_lines(const int o_id, const int d_id, const int w_
   auto first_filter = std::make_shared<TableScan>(gt_order_lines, "OL_O_ID", "=", o_id);
   auto second_filter = std::make_shared<TableScan>(first_filter, "OL_D_ID", "=", d_id);
   auto third_filter = std::make_shared<TableScan>(second_filter, "OL_W_ID", "=", w_id);
-  std::vector<std::string> columns = {"OL_I_ID", "OL_SUPPLY_W_ID", "OL_QUANTITY", "OL_AMOUNT", "OL_DELIVERY_D"};
+  std::vector<std::string> columns = {"OL_I_ID", "OL_SUPPLY_W_ID", "OL_QUANTITY", "OL_AMOUNT", "OL_DELIVERY_D", "OL_O_ID"};
   auto projection = std::make_shared<Projection>(third_filter, columns);
 
   auto gt_order_lines_task = std::make_shared<OperatorTask>(gt_order_lines);
