@@ -47,36 +47,6 @@ void SQLQueryTranslator::reset() {
   _error_msg = "";
 }
 
-bool SQLQueryTranslator::translate_query(const std::string& query) {
-  hsql::SQLParserResult result;
-
-  // Parse the query.
-  if (!parse_query(query, &result)) {
-    return false;
-  }
-
-  // Translate into execution plan.
-  if (!translate_parse_result(result)) {
-    return false;
-  }
-
-  return true;
-}
-
-bool SQLQueryTranslator::parse_query(const std::string& query, hsql::SQLParserResult* result) {
-  SQLParser::parseSQLString(query, result);
-
-  if (!result->isValid()) {
-    std::stringstream ss;
-    ss << "SQL Parsing failed: " << result->errorMsg();
-    ss << " (L" << result->errorLine() << ":" << result->errorColumn() << ")";
-    _error_msg = ss.str();
-    return false;
-  }
-
-  return true;
-}
-
 bool SQLQueryTranslator::translate_parse_result(const hsql::SQLParserResult& result) {
   const std::vector<SQLStatement*>& statements = result.getStatements();
 

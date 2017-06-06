@@ -4,6 +4,7 @@
 #include <utility>
 
 #include "../base_test.hpp"
+#include "SQLParser.h"
 #include "gtest/gtest.h"
 
 #include "operators/get_table.hpp"
@@ -34,20 +35,31 @@ class SQLSelectTest : public BaseTest {
     StorageManager::get().add_table("TestTable", test_table2);
   }
 
+  bool compile_query(const std::string query) {
+    hsql::SQLParserResult parse_result;
+    hsql::SQLParser::parseSQLString(query, &parse_result);
+
+    if (!parse_result.isValid()) {
+      return false;
+    }
+
+    return _translator.translate_parse_result(parse_result);
+  }
+
   SQLQueryTranslator _translator;
 };
 
 TEST_F(SQLSelectTest, BasicSuccessTest) {
   const std::string query = "SELECT * FROM test;";
-  ASSERT_TRUE(_translator.translate_query(query));
+  ASSERT_TRUE(compile_query(query));
 
   const std::string faulty_query = "SELECT * WHERE test;";
-  ASSERT_FALSE(_translator.translate_query(faulty_query));
+  ASSERT_FALSE(compile_query(faulty_query));
 }
 
 TEST_F(SQLSelectTest, SelectStarAllTest) {
   const std::string query = "SELECT * FROM table_a;";
-  ASSERT_TRUE(_translator.translate_query(query));
+  ASSERT_TRUE(compile_query(query));
 
   auto tasks = _translator.get_query_plan().tasks();
   ASSERT_EQ(1u, tasks.size());
@@ -66,7 +78,7 @@ TEST_F(SQLSelectTest, SelectStarAllTest) {
 
 TEST_F(SQLSelectTest, SelectWithSingleCondition) {
   const std::string query = "SELECT * FROM table_a WHERE a >= 1234;";
-  ASSERT_TRUE(_translator.translate_query(query));
+  ASSERT_TRUE(compile_query(query));
 
   auto tasks = _translator.get_query_plan().tasks();
   ASSERT_EQ(2u, tasks.size());
@@ -83,7 +95,7 @@ TEST_F(SQLSelectTest, SelectWithSingleCondition) {
 
 TEST_F(SQLSelectTest, SelectWithAndCondition) {
   const std::string query = "SELECT * FROM table_a WHERE a >= 1234 AND b < 457.9";
-  ASSERT_TRUE(_translator.translate_query(query));
+  ASSERT_TRUE(compile_query(query));
 
   auto tasks = _translator.get_query_plan().tasks();
   ASSERT_EQ(3u, tasks.size());
@@ -98,7 +110,7 @@ TEST_F(SQLSelectTest, SelectWithAndCondition) {
 
 // TEST_F(SQLSelectTest, SelectWithBetween) {
 //   const std::string query = "SELECT * FROM TestTable WHERE a BETWEEN 122 AND 124";
-//   ASSERT_TRUE(_translator.translate_query(query));
+//   ASSERT_TRUE(compile_query(query));
 
 //   auto tasks = _translator.get_query_plan().tasks();
 //   ASSERT_EQ(2u, tasks.size());
@@ -113,7 +125,7 @@ TEST_F(SQLSelectTest, SelectWithAndCondition) {
 
 TEST_F(SQLSelectTest, SimpleProjectionTest) {
   const std::string query = "SELECT a FROM table_a;";
-  ASSERT_TRUE(_translator.translate_query(query));
+  ASSERT_TRUE(compile_query(query));
 
   auto tasks = _translator.get_query_plan().tasks();
   ASSERT_EQ(2u, tasks.size());
@@ -128,7 +140,7 @@ TEST_F(SQLSelectTest, SimpleProjectionTest) {
 
 TEST_F(SQLSelectTest, SelectSingleOrderByTest) {
   const std::string query = "SELECT a, b FROM table_a ORDER BY a;";
-  ASSERT_TRUE(_translator.translate_query(query));
+  ASSERT_TRUE(compile_query(query));
 
   auto tasks = _translator.get_query_plan().tasks();
   ASSERT_EQ(3u, tasks.size());
@@ -143,7 +155,7 @@ TEST_F(SQLSelectTest, SelectSingleOrderByTest) {
 
 TEST_F(SQLSelectTest, SelectFromSubSelect) {
   const std::string query = "SELECT a FROM (SELECT a, b FROM table_a WHERE a > 1 ORDER BY b) WHERE a > 0 ORDER BY a;";
-  ASSERT_TRUE(_translator.translate_query(query));
+  ASSERT_TRUE(compile_query(query));
 
   auto tasks = _translator.get_query_plan().tasks();
   ASSERT_EQ(7u, tasks.size());
@@ -160,7 +172,7 @@ TEST_F(SQLSelectTest, SelectBasicInnerJoinTest) {
   const std::string query =
       "SELECT \"left\".a, \"left\".b, \"right\".a, \"right\".b FROM table_a AS \"left\" JOIN table_b AS \"right\" ON a "
       "= a;";
-  ASSERT_TRUE(_translator.translate_query(query));
+  ASSERT_TRUE(compile_query(query));
 
   auto tasks = _translator.get_query_plan().tasks();
   ASSERT_EQ(4u, tasks.size());
@@ -175,7 +187,7 @@ TEST_F(SQLSelectTest, SelectBasicInnerJoinTest) {
 
 TEST_F(SQLSelectTest, SelectBasicLeftJoinTest) {
   const std::string query = "SELECT * FROM table_a AS \"left\" LEFT JOIN table_b AS \"right\" ON a = a;";
-  ASSERT_TRUE(_translator.translate_query(query));
+  ASSERT_TRUE(compile_query(query));
 
   auto tasks = _translator.get_query_plan().tasks();
   ASSERT_EQ(3u, tasks.size());
@@ -198,7 +210,7 @@ TEST_F(SQLSelectTest, SelectWithSchedulerTest) {
   // TODO(torpedro): Adding 'WHERE \"left\".a >= 0;' causes wrong data. Investigate.
   //                 Probable bug in TableScan.
 
-  ASSERT_TRUE(_translator.translate_query(query));
+  ASSERT_TRUE(compile_query(query));
 
   auto tasks = _translator.get_query_plan().tasks();
 

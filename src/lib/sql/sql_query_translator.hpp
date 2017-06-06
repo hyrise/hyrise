@@ -28,15 +28,8 @@ class SQLQueryTranslator {
   // Destroy the currently stored execution plan and state.
   void reset();
 
-  // Parses the given query into a C++ object representation.
-  bool parse_query(const std::string& query, hsql::SQLParserResult* result);
-
   // Translates the give SQL result. Adds the generated execution plan to _tasks.
   bool translate_parse_result(const hsql::SQLParserResult& result);
-
-  // Translates the give SQL query. Adds the generated execution plan to _tasks.
-  // Calls parse_query and translate_parse_result to get the result.
-  bool translate_query(const std::string& query);
 
   // Translates the single given SQL statement. Adds the generated execution plan to _tasks.
   bool translate_statement(const hsql::SQLStatement& statement);

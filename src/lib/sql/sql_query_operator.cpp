@@ -1,11 +1,15 @@
 #include "sql_query_operator.hpp"
 
 #include <memory>
+#include <sstream>
 #include <string>
 
 #include "SQLParser.h"
 
 namespace opossum {
+
+using hsql::SQLParser;
+using hsql::SQLParserResult;
 
 SQLParseTreeCache SQLQueryOperator::_parse_tree_cache = SQLParseTreeCache(0);
 
@@ -27,25 +31,29 @@ const std::shared_ptr<OperatorTask>& SQLQueryOperator::get_result_task() const {
 std::shared_ptr<const Table> SQLQueryOperator::on_execute(std::shared_ptr<TransactionContext> context) {
   // TODO(torpedro): Check query cache for execution plan.
 
-  std::shared_ptr<hsql::SQLParserResult> parse_result = parse_query(_query);
+  std::shared_ptr<SQLParserResult> parse_result = parse_query(_query);
 
   compile_parse_result(parse_result);
 
   return nullptr;
 }
 
-std::shared_ptr<hsql::SQLParserResult> SQLQueryOperator::parse_query(const std::string& query) {
+std::shared_ptr<SQLParserResult> SQLQueryOperator::parse_query(const std::string& query) {
   // Check query cache for parse tree.
   if (_parse_tree_cache.has(_query)) {
     return _parse_tree_cache.get(_query);
   }
 
   // Parse the query.
-  std::shared_ptr<hsql::SQLParserResult> result = std::make_shared<hsql::SQLParserResult>();
+  std::shared_ptr<SQLParserResult> result = std::make_shared<SQLParserResult>();
 
-  // TODO: Move parse logic from translator into this operator
-  if (!_translator.parse_query(_query, result.get())) {
-    throw _translator.get_error_msg();
+  SQLParser::parseSQLString(query, result.get());
+
+  if (!result->isValid()) {
+    std::stringstream error_msg;
+    error_msg << "SQL Parsing failed: " << result->errorMsg();
+    error_msg << " (L" << result->errorLine() << ":" << result->errorColumn() << ")";
+    throw error_msg;
   }
 
   return result;
@@ -54,13 +62,7 @@ std::shared_ptr<hsql::SQLParserResult> SQLQueryOperator::parse_query(const std::
 // Translates the query that is supposed to be prepared and saves it
 // in the prepared statement cache by its name.
 void SQLQueryOperator::prepare_statement(const hsql::PrepareStatement& prepare_stmt) {
-  SQLQueryTranslator translator;
-
-  std::shared_ptr<hsql::SQLParserResult> result;
-  result = std::make_shared<hsql::SQLParserResult>();
-  if (!translator.parse_query(prepare_stmt.query, result.get())) {
-    throw translator.get_error_msg();
-  }
+  std::shared_ptr<SQLParserResult> result = parse_query(prepare_stmt.query);
 
   // Cache the result.
   _prepared_stmts.set(prepare_stmt.name, result);
@@ -72,12 +74,12 @@ void SQLQueryOperator::execute_prepared_statement(const hsql::ExecuteStatement& 
     throw "Requested prepared statement does not exist!";
   }
 
-  std::shared_ptr<hsql::SQLParserResult> parse_result = _prepared_stmts.get(execute_stmt.name);
+  std::shared_ptr<SQLParserResult> parse_result = _prepared_stmts.get(execute_stmt.name);
   compile_parse_result(parse_result);
 }
 
 // Compiles the given parse result into an operator plan.
-void SQLQueryOperator::compile_parse_result(std::shared_ptr<hsql::SQLParserResult> result) {
+void SQLQueryOperator::compile_parse_result(std::shared_ptr<SQLParserResult> result) {
   SQLQueryTranslator translator;
   const std::vector<hsql::SQLStatement*>& statements = result->getStatements();
 
