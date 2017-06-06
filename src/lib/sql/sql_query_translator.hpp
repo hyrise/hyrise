@@ -7,6 +7,7 @@
 #include "SQLParser.h"
 #include "scheduler/operator_task.hpp"
 #include "sql/sql_parse_tree_cache.hpp"
+#include "sql/sql_query_plan.hpp"
 
 namespace opossum {
 
@@ -19,7 +20,7 @@ class SQLQueryTranslator {
   virtual ~SQLQueryTranslator();
 
   // Returns the list of tasks that were created during translation.
-  const std::vector<std::shared_ptr<OperatorTask>>& get_tasks();
+  const SQLQueryPlan& get_query_plan();
 
   // Get the error message, if any exists.
   const std::string& get_error_msg();
@@ -63,7 +64,7 @@ class SQLQueryTranslator {
   static std::string _get_column_name(const hsql::Expr& expr);
 
   // Generated execution plan.
-  std::vector<std::shared_ptr<OperatorTask>> _tasks;
+  SQLQueryPlan _plan;
 
   // Details about the error, if one occurred.
   std::string _error_msg;

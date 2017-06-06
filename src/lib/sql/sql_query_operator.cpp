@@ -99,7 +99,8 @@ void SQLQueryOperator::compile_parse_result(std::shared_ptr<hsql::SQLParserResul
   }
 
   // Schedule all tasks.
-  auto tasks = translator.get_tasks();
+  const SQLQueryPlan& plan = translator.get_query_plan();
+  auto tasks = plan.tasks();
 
   if (tasks.size() > 0) {
     tasks.back()->set_as_predecessor_of(_result_task);
