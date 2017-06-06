@@ -28,10 +28,17 @@ class SQLQueryOperator : public AbstractOperator {
 
   const std::shared_ptr<OperatorTask>& get_result_task() const;
 
+  static SQLParseTreeCache& get_parse_tree_cache();
+
+  // Runtime statistics
+  static size_t num_executed;
+  static size_t parse_tree_cache_hits;
+  static size_t parse_tree_cache_misses;
+
  protected:
   std::shared_ptr<const Table> on_execute(std::shared_ptr<TransactionContext> context) override;
 
-  std::shared_ptr<hsql::SQLParserResult> parse_query(const std::string& query);
+  std::shared_ptr<hsql::SQLParserResult> parse_query(const std::string& query) const;
 
   // Compiles the given parse result into an operator plan.
   void compile_parse_result(std::shared_ptr<hsql::SQLParserResult> result);

@@ -19,9 +19,11 @@ class SQLParseTreeCache {
   // Takes ownership of the result.
   void set(const std::string& query, std::shared_ptr<hsql::SQLParserResult> result);
 
-  bool has(const std::string& query);
+  bool has(const std::string& query) const;
 
   std::shared_ptr<hsql::SQLParserResult> get(const std::string& query);
+
+  void reset(size_t capacity);
 
  protected:
   LRUCache<std::string, std::shared_ptr<hsql::SQLParserResult>> _cache;

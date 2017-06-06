@@ -16,8 +16,12 @@ void SQLParseTreeCache::set(const std::string& query, std::shared_ptr<SQLParserR
   _cache.set(query, result);
 }
 
-bool SQLParseTreeCache::has(const std::string& query) { return _cache.has(query); }
+bool SQLParseTreeCache::has(const std::string& query) const { return _cache.has(query); }
 
 std::shared_ptr<SQLParserResult> SQLParseTreeCache::get(const std::string& query) { return _cache.get(query); }
+
+void SQLParseTreeCache::reset(size_t capacity) {
+  _cache = LRUCache<std::string, std::shared_ptr<hsql::SQLParserResult>>(capacity);
+}
 
 }  // namespace opossum

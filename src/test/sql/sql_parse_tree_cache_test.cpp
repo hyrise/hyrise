@@ -33,42 +33,13 @@ class SQLParseTreeCacheTest : public BaseTest {
   void TearDown() override {
     CurrentScheduler::set(nullptr);  // Make sure there is no Scheduler anymore
   }
+
+  void schedule_query(const std::string& query) {
+    auto op = std::make_shared<SQLQueryOperator>(query);
+    auto task = std::make_shared<OperatorTask>(op);
+    task->schedule();
+  }
 };
-
-TEST_F(SQLParseTreeCacheTest, BasicLRUCacheTest) {
-  LRUCache<int, int> cache(2);
-
-  EXPECT_FALSE(cache.has(1));
-  EXPECT_FALSE(cache.has(2));
-  EXPECT_FALSE(cache.has(3));
-
-  cache.set(1, 2);
-
-  EXPECT_TRUE(cache.has(1));
-  EXPECT_FALSE(cache.has(2));
-  EXPECT_FALSE(cache.has(3));
-
-  EXPECT_EQ(cache.get(1), 2);
-
-  cache.set(1, 2);
-  cache.set(2, 4);
-  cache.set(3, 6);
-
-  EXPECT_FALSE(cache.has(1));
-  EXPECT_TRUE(cache.has(2));
-  EXPECT_TRUE(cache.has(3));
-  EXPECT_EQ(cache.get(2), 4);
-  EXPECT_EQ(cache.get(3), 6);
-
-  cache.get(2);
-  cache.set(1, 5);
-
-  EXPECT_TRUE(cache.has(1));
-  EXPECT_TRUE(cache.has(2));
-  EXPECT_FALSE(cache.has(3));
-  EXPECT_EQ(cache.get(1), 5);
-  EXPECT_EQ(cache.get(2), 4);
-}
 
 TEST_F(SQLParseTreeCacheTest, BasicSQLCacheTest) {
   SQLParseTreeCache cache(2);
@@ -113,6 +84,45 @@ TEST_F(SQLParseTreeCacheTest, BasicPrepareAndExecuteTest) {
 
   auto expected_result = load_table("src/test/tables/int_float.tbl", 2);
   EXPECT_TABLE_EQ(exec_result->get_operator()->get_output(), expected_result);
+}
+
+TEST_F(SQLParseTreeCacheTest, BasicAutoCacheTest) {
+  CurrentScheduler::set(std::make_shared<NodeQueueScheduler>(Topology::create_fake_numa_topology(8, 4)));
+
+  // Reset operator statistics.
+  SQLQueryOperator::num_executed = 0;
+  SQLQueryOperator::parse_tree_cache_hits = 0;
+  SQLQueryOperator::parse_tree_cache_misses = 0;
+
+  SQLParseTreeCache& cache = SQLQueryOperator::get_parse_tree_cache();
+  cache.reset(16);
+
+  const std::string q1 = "SELECT * FROM table_a;";
+  const std::string q2 = "SELECT * FROM table_b;";
+  const std::string q3 = "SELECT * FROM table_a WHERE a > 1;";
+
+  schedule_query(q1);
+  schedule_query(q2);
+  schedule_query(q1);
+  schedule_query(q3);
+  schedule_query(q1);
+  schedule_query(q1);
+  schedule_query(q2);
+  schedule_query(q1);
+  schedule_query(q3);
+  schedule_query(q1);
+
+  CurrentScheduler::get()->finish();
+
+  EXPECT_TRUE(cache.has(q1));
+  EXPECT_TRUE(cache.has(q2));
+  EXPECT_TRUE(cache.has(q3));
+  EXPECT_FALSE(cache.has("SELECT * FROM test;"));
+
+  // Check operator runtime statistics.
+  EXPECT_EQ(10u, SQLQueryOperator::num_executed);
+  EXPECT_EQ(7u, SQLQueryOperator::parse_tree_cache_hits);
+  EXPECT_EQ(3u, SQLQueryOperator::parse_tree_cache_misses);
 }
 
 }  // namespace opossum

@@ -42,7 +42,7 @@ class LRUCache {
     return it->second->second;
   }
 
-  const inline bool has(key_t key) {
+  const inline bool has(key_t key) const {
     auto it = _map.find(key);
     return !(it == _map.end());
   }

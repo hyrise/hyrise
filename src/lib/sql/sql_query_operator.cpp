@@ -11,8 +11,13 @@ namespace opossum {
 using hsql::SQLParser;
 using hsql::SQLParserResult;
 
-SQLParseTreeCache SQLQueryOperator::_parse_tree_cache = SQLParseTreeCache(0);
+// Runtime statistics.
+size_t SQLQueryOperator::num_executed = 0;
+size_t SQLQueryOperator::parse_tree_cache_hits = 0;
+size_t SQLQueryOperator::parse_tree_cache_misses = 0;
 
+// Caches
+SQLParseTreeCache SQLQueryOperator::_parse_tree_cache = SQLParseTreeCache(0);
 SQLParseTreeCache SQLQueryOperator::_prepared_stmts = SQLParseTreeCache(1024);
 
 SQLQueryOperator::SQLQueryOperator(const std::string& query) : _query(query) {
@@ -30,6 +35,7 @@ const std::shared_ptr<OperatorTask>& SQLQueryOperator::get_result_task() const {
 
 std::shared_ptr<const Table> SQLQueryOperator::on_execute(std::shared_ptr<TransactionContext> context) {
   // TODO(torpedro): Check query cache for execution plan.
+  ++num_executed;
 
   std::shared_ptr<SQLParserResult> parse_result = parse_query(_query);
 
@@ -52,11 +58,13 @@ std::shared_ptr<const Table> SQLQueryOperator::on_execute(std::shared_ptr<Transa
   return nullptr;
 }
 
-std::shared_ptr<SQLParserResult> SQLQueryOperator::parse_query(const std::string& query) {
+std::shared_ptr<SQLParserResult> SQLQueryOperator::parse_query(const std::string& query) const {
   // Check query cache for parse tree.
   if (_parse_tree_cache.has(_query)) {
+    ++parse_tree_cache_hits;
     return _parse_tree_cache.get(_query);
   }
+  ++parse_tree_cache_misses;
 
   // Parse the query.
   std::shared_ptr<SQLParserResult> result = std::make_shared<SQLParserResult>();
@@ -69,6 +77,9 @@ std::shared_ptr<SQLParserResult> SQLQueryOperator::parse_query(const std::string
     error_msg << " (L" << result->errorLine() << ":" << result->errorColumn() << ")";
     throw error_msg;
   }
+
+  // Add the result to the cache.
+  _parse_tree_cache.set(_query, result);
 
   return result;
 }
@@ -123,5 +134,8 @@ void SQLQueryOperator::compile_parse_result(std::shared_ptr<SQLParserResult> res
     }
   }
 }
+
+// static
+SQLParseTreeCache& SQLQueryOperator::get_parse_tree_cache() { return _parse_tree_cache; }
 
 }  // namespace opossum
