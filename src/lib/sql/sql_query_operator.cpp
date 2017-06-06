@@ -33,7 +33,21 @@ std::shared_ptr<const Table> SQLQueryOperator::on_execute(std::shared_ptr<Transa
 
   std::shared_ptr<SQLParserResult> parse_result = parse_query(_query);
 
+  // Populates the query plan in _plan.
   compile_parse_result(parse_result);
+
+  // Schedule all tasks in query plan.
+  auto tasks = _plan.tasks();
+
+  if (tasks.size() > 0) {
+    tasks.back()->set_as_predecessor_of(_result_task);
+    _result_op->set_input_operator(tasks.back()->get_operator());
+
+    for (const auto& task : tasks) {
+      task->schedule();
+    }
+    _result_task->schedule();
+  }
 
   return nullptr;
 }
@@ -78,9 +92,20 @@ void SQLQueryOperator::execute_prepared_statement(const hsql::ExecuteStatement& 
   compile_parse_result(parse_result);
 }
 
+// Translate the statement and append the result plan
+// to the current total query plan (in member _plan).
+void SQLQueryOperator::plan_statement(const hsql::SQLStatement& stmt) {
+  SQLQueryTranslator translator;
+
+  if (!translator.translate_statement(stmt)) {
+    throw translator.get_error_msg();
+  }
+
+  _plan.append(translator.get_query_plan());
+}
+
 // Compiles the given parse result into an operator plan.
 void SQLQueryOperator::compile_parse_result(std::shared_ptr<SQLParserResult> result) {
-  SQLQueryTranslator translator;
   const std::vector<hsql::SQLStatement*>& statements = result->getStatements();
 
   for (const hsql::SQLStatement* stmt : statements) {
@@ -92,26 +117,10 @@ void SQLQueryOperator::compile_parse_result(std::shared_ptr<SQLParserResult> res
         execute_prepared_statement((const hsql::ExecuteStatement&)*stmt);
         break;
       default: {
-        if (!translator.translate_statement(*stmt)) {
-          throw translator.get_error_msg();
-        }
+        plan_statement(*stmt);
         break;
       }
     }
-  }
-
-  // Schedule all tasks.
-  const SQLQueryPlan& plan = translator.get_query_plan();
-  auto tasks = plan.tasks();
-
-  if (tasks.size() > 0) {
-    tasks.back()->set_as_predecessor_of(_result_task);
-    _result_op->set_input_operator(tasks.back()->get_operator());
-
-    for (const auto& task : tasks) {
-      task->schedule();
-    }
-    _result_task->schedule();
   }
 }
 

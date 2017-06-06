@@ -43,6 +43,10 @@ class SQLQueryOperator : public AbstractOperator {
   // Tries to fetch the referenced prepared statement and retrieve its cached data.
   void execute_prepared_statement(const hsql::ExecuteStatement& execute_stmt);
 
+  // Translate the statement and append the result plan
+  // to the current total query plan (in member _plan).
+  void plan_statement(const hsql::SQLStatement& stmt);
+
   // Raw SQL query string.
   const std::string _query;
 
@@ -52,7 +56,8 @@ class SQLQueryOperator : public AbstractOperator {
   // Operator task, which wraps the result operator.
   std::shared_ptr<OperatorTask> _result_task;
 
-  SQLQueryTranslator _translator;
+  // Resulting query plan that will be populated during compilation.
+  SQLQueryPlan _plan;
 
   static SQLParseTreeCache _parse_tree_cache;
 

@@ -16,6 +16,8 @@ class SQLQueryPlan {
   // Adds a task to the query plan.
   void add(std::shared_ptr<OperatorTask> task);
 
+  void append(const SQLQueryPlan& other_plan);
+
   // Remove all tasks from the current plan.
   void clear();
 
