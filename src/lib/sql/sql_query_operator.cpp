@@ -20,7 +20,8 @@ size_t SQLQueryOperator::parse_tree_cache_misses = 0;
 SQLParseTreeCache SQLQueryOperator::_parse_tree_cache = SQLParseTreeCache(0);
 SQLParseTreeCache SQLQueryOperator::_prepared_stmts = SQLParseTreeCache(1024);
 
-SQLQueryOperator::SQLQueryOperator(const std::string& query) : _query(query) {
+SQLQueryOperator::SQLQueryOperator(const std::string& query, bool schedule_plan)
+    : _query(query), _schedule_plan(schedule_plan) {
   _result_op = std::make_shared<SQLResultOperator>();
   _result_task = std::make_shared<OperatorTask>(_result_op);
 }
@@ -33,6 +34,8 @@ uint8_t SQLQueryOperator::num_out_tables() const { return 0; }
 
 const std::shared_ptr<OperatorTask>& SQLQueryOperator::get_result_task() const { return _result_task; }
 
+const SQLQueryPlan& SQLQueryOperator::get_query_plan() const { return _plan; }
+
 std::shared_ptr<const Table> SQLQueryOperator::on_execute(std::shared_ptr<TransactionContext> context) {
   // TODO(torpedro): Check query cache for execution plan.
   ++num_executed;
@@ -43,16 +46,18 @@ std::shared_ptr<const Table> SQLQueryOperator::on_execute(std::shared_ptr<Transa
   compile_parse_result(parse_result);
 
   // Schedule all tasks in query plan.
-  auto tasks = _plan.tasks();
+  if (_schedule_plan) {
+    auto tasks = _plan.tasks();
 
-  if (tasks.size() > 0) {
-    tasks.back()->set_as_predecessor_of(_result_task);
-    _result_op->set_input_operator(tasks.back()->get_operator());
+    if (tasks.size() > 0) {
+      tasks.back()->set_as_predecessor_of(_result_task);
+      _result_op->set_input_operator(tasks.back()->get_operator());
 
-    for (const auto& task : tasks) {
-      task->schedule();
+      for (const auto& task : tasks) {
+        task->schedule();
+      }
+      _result_task->schedule();
     }
-    _result_task->schedule();
   }
 
   return nullptr;

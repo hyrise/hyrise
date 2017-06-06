@@ -18,7 +18,7 @@ namespace opossum {
 // will upon completion contain the result table of the query.
 class SQLQueryOperator : public AbstractOperator {
  public:
-  explicit SQLQueryOperator(const std::string& query);
+  explicit SQLQueryOperator(const std::string& query, bool schedule_plan = true);
 
   const std::string name() const override;
 
@@ -27,6 +27,8 @@ class SQLQueryOperator : public AbstractOperator {
   uint8_t num_out_tables() const override;
 
   const std::shared_ptr<OperatorTask>& get_result_task() const;
+
+  const SQLQueryPlan& get_query_plan() const;
 
   static SQLParseTreeCache& get_parse_tree_cache();
 
@@ -65,6 +67,8 @@ class SQLQueryOperator : public AbstractOperator {
 
   // Resulting query plan that will be populated during compilation.
   SQLQueryPlan _plan;
+
+  bool _schedule_plan;
 
   static SQLParseTreeCache _parse_tree_cache;
 

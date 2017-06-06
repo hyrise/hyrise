@@ -49,7 +49,7 @@ class LRUCache {
 
   std::list<kv_pair_t>& list() { return _list; }
 
-  size_t capacity() { return _capacity; }
+  size_t capacity() const { return _capacity; }
 
  private:
   // Doubly-linked list to hold all elements.

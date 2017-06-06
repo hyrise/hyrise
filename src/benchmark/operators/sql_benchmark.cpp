@@ -4,11 +4,15 @@
 
 #include "benchmark/benchmark.h"
 
-#include "../../lib/sql/sql_query_translator.hpp"
 #include "../base_fixture.cpp"
 #include "SQLParser.h"
+#include "sql/sql_query_operator.hpp"
+#include "sql/sql_query_translator.hpp"
 
 namespace opossum {
+
+using hsql::SQLParser;
+using hsql::SQLParserResult;
 
 class SQLBenchmark : public BenchmarkBasicFixture {
  public:
@@ -30,25 +34,27 @@ class SQLBenchmark : public BenchmarkBasicFixture {
 
 BENCHMARK_F(SQLBenchmark, BM_SQLTranslationTotalQ1)(benchmark::State& state) {
   while (state.KeepRunning()) {
+    SQLParserResult result;
+    SQLParser::parseSQLString(Q1, &result);
     SQLQueryTranslator translator;
-    translator.translate_query(Q1);
+    translator.translate_parse_result(result);
   }
 }
 
 BENCHMARK_F(SQLBenchmark, BM_SQLTranslationOnlyParsingQ1)(benchmark::State& state) {
   while (state.KeepRunning()) {
-    hsql::SQLParserResult result;
-    hsql::SQLParser::parseSQLString(Q1, &result);
+    SQLParserResult result;
+    SQLParser::parseSQLString(Q1, &result);
   }
 }
 
 BENCHMARK_F(SQLBenchmark, BM_SQLTranslationOnlyTranslationQ1)(benchmark::State& state) {
-  hsql::SQLParserResult result;
-  hsql::SQLParser::parseSQLString(Q1, &result);
+  SQLParserResult result;
+  SQLParser::parseSQLString(Q1, &result);
 
   while (state.KeepRunning()) {
     SQLQueryTranslator translator;
-    translator.translate_statement(*result.getStatement(0));
+    translator.translate_parse_result(result);
   }
 }
 
@@ -56,36 +62,54 @@ BENCHMARK_F(SQLBenchmark, BM_SQLTranslationOnlyTranslationQ1)(benchmark::State& 
 
 BENCHMARK_F(SQLBenchmark, BM_SQLTranslationOnlyParsingQ2)(benchmark::State& state) {
   while (state.KeepRunning()) {
-    hsql::SQLParserResult result;
-    hsql::SQLParser::parseSQLString(Q2, &result);
+    SQLParserResult result;
+    SQLParser::parseSQLString(Q2, &result);
   }
 }
 
 BENCHMARK_F(SQLBenchmark, BM_SQLTranslationOnlyTranslationQ2)(benchmark::State& state) {
-  hsql::SQLParserResult result;
-  hsql::SQLParser::parseSQLString(Q2, &result);
+  SQLParserResult result;
+  SQLParser::parseSQLString(Q2, &result);
 
   while (state.KeepRunning()) {
     SQLQueryTranslator translator;
-    translator.translate_statement(*result.getStatement(0));
+    translator.translate_parse_result(result);
   }
 }
 
 // Q3
 BENCHMARK_F(SQLBenchmark, BM_SQLTranslationOnlyParsingQ3)(benchmark::State& state) {
   while (state.KeepRunning()) {
-    hsql::SQLParserResult result;
-    hsql::SQLParser::parseSQLString(Q3, &result);
+    SQLParserResult result;
+    SQLParser::parseSQLString(Q3, &result);
   }
 }
 
 BENCHMARK_F(SQLBenchmark, BM_SQLTranslationOnlyTranslationQ3)(benchmark::State& state) {
-  hsql::SQLParserResult result;
-  hsql::SQLParser::parseSQLString(Q3, &result);
+  SQLParserResult result;
+  SQLParser::parseSQLString(Q3, &result);
 
   while (state.KeepRunning()) {
     SQLQueryTranslator translator;
-    translator.translate_statement(*result.getStatement(0));
+    translator.translate_parse_result(result);
+  }
+}
+
+BENCHMARK_F(SQLBenchmark, BM_Q2QueryOperatorWithoutCache)(benchmark::State& state) {
+  // Disable cache.
+  SQLQueryOperator::get_parse_tree_cache().reset(0);
+  while (state.KeepRunning()) {
+    SQLQueryOperator operator_q2(Q2, false);
+    operator_q2.execute();
+  }
+}
+
+BENCHMARK_F(SQLBenchmark, BM_Q2QueryOperatorWithParseTreeCache)(benchmark::State& state) {
+  // Enable cache.
+  SQLQueryOperator::get_parse_tree_cache().reset(16);
+  while (state.KeepRunning()) {
+    SQLQueryOperator operator_q2(Q2, false);
+    operator_q2.execute();
   }
 }
 

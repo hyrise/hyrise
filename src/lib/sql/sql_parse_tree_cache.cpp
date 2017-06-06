@@ -16,7 +16,13 @@ void SQLParseTreeCache::set(const std::string& query, std::shared_ptr<SQLParserR
   _cache.set(query, result);
 }
 
-bool SQLParseTreeCache::has(const std::string& query) const { return _cache.has(query); }
+bool SQLParseTreeCache::has(const std::string& query) const {
+  if (_cache.capacity() == 0) {
+    return false;
+  }
+
+  return _cache.has(query);
+}
 
 std::shared_ptr<SQLParserResult> SQLParseTreeCache::get(const std::string& query) { return _cache.get(query); }
 
