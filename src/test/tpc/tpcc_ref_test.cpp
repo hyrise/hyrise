@@ -10,8 +10,9 @@
 
 #include "../base_test.hpp"
 #include "../../benchmark-libs/tpcc/order_status.hpp"
-#include "../../lib/storage/storage_manager.hpp"
-#include "../../lib/import_export/csv_rfc_parser.hpp"
+#include "../../benchmark-libs/tpcc/new_order.hpp"
+#include "storage/storage_manager.hpp"
+#include "import_export/csv_rfc_parser.hpp"
 
 using json = nlohmann::json;
 using namespace tpcc;
@@ -64,34 +65,37 @@ class NewOrderTestImpl : public TransactionTestImpl {
   void run_and_test_transaction_from_json(const nlohmann::json & json_params,
                                           const nlohmann::json & json_results) {
       NewOrderParams params = json_params;
-      NewOrderResults ref_result = json_results;
+      NewOrderResult ref_result = json_results;
 
       auto our_result = _ref_impl.run_transaction(params);
 
-      ASSERT_EQ(ref_result.c_id, our_result.c_id);
-      ASSERT_EQ(ref_result.c_first, our_result.c_first);
-      ASSERT_EQ(ref_result.c_middle, our_result.c_middle);
+      ASSERT_EQ(ref_result.w_tax_rate, our_result.w_tax_rate);
+      ASSERT_EQ(ref_result.d_tax_rate, our_result.d_tax_rate);
+      ASSERT_EQ(ref_result.d_next_o_id, our_result.d_next_o_id);
+      ASSERT_EQ(ref_result.c_discount, our_result.c_discount);
       ASSERT_EQ(ref_result.c_last, our_result.c_last);
-      ASSERT_EQ(ref_result.c_balance, our_result.c_balance);
-      ASSERT_EQ(ref_result.o_id, our_result.o_id);
-      ASSERT_EQ(ref_result.o_carrier_id, our_result.o_carrier_id);
-      ASSERT_EQ(ref_result.o_entry_d, our_result.o_entry_d);
+      ASSERT_EQ(ref_result.c_credit, our_result.c_credit);
 
       ASSERT_EQ(ref_result.order_lines.size(), our_result.order_lines.size());
       for (size_t l = 0; l < ref_result.order_lines.size(); l++) {
         const auto & our = our_result.order_lines[l];
         const auto & ref = ref_result.order_lines[l];
 
-        ASSERT_EQ(ref.ol_supply_w_id, our.ol_supply_w_id);
-        ASSERT_EQ(ref.ol_i_id, our.ol_i_id);
-        ASSERT_EQ(ref.ol_quantity, our.ol_quantity);
-        ASSERT_EQ(ref.ol_amount, our.ol_amount);
-        ASSERT_EQ(ref.ol_delivery_d, our.ol_delivery_d);
+        ASSERT_EQ(ref.i_price, our.i_price);
+        ASSERT_EQ(ref.i_name, our.i_name);
+        ASSERT_EQ(ref.i_data, our.i_data);
+        ASSERT_EQ(ref.s_qty, our.s_qty);
+        ASSERT_EQ(ref.s_dist_xx, our.s_dist_xx);
+        ASSERT_EQ(ref.s_ytd, our.s_ytd);
+        ASSERT_EQ(ref.s_order_cnt, our.s_order_cnt);
+        ASSERT_EQ(ref.s_remote_cnt, our.s_remote_cnt);
+        ASSERT_EQ(ref.s_data, our.s_data);
+        ASSERT_EQ(ref.amount, our.amount);
       }
   }
 
  private:
-  OrderStatusRefImpl _ref_impl;
+  NewOrderRefImpl _ref_impl;
 };
 
 class TpccRefTest : public BaseTest {

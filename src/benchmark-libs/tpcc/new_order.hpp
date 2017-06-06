@@ -6,6 +6,10 @@
 
 #include "defines.h"
 
+#include "concurrency/transaction_context.hpp"
+
+using namespace opossum;
+
 namespace tpcc {
 
 struct NewOrderOrderLineParams {
@@ -30,8 +34,9 @@ struct NewOrderOrderLineResult {
   std::string s_dist_xx;
   int32_t s_ytd;
   int32_t s_order_cnt;
-  int32_t s_remove_cnt;
+  int32_t s_remote_cnt;
   std::string s_data;
+  float amount;
 };
 
 struct NewOrderResult {
@@ -70,12 +75,25 @@ class AbstractNewOrderImpl {
     const std::shared_ptr<TransactionContext> t_context, const int32_t ol_i_id) = 0;
 
   virtual TaskVector get_get_stock_info_tasks(
-    const std::shared_ptr<TransactionContext> t_context, const int32_t ol_i_id, const int32_t ol_supply_w_id) = 0;
+    const std::shared_ptr<TransactionContext> t_context, const int32_t ol_i_id, const int32_t ol_supply_w_id, const int32_t d_id) = 0;
 
   virtual TaskVector
   get_update_stock_tasks(const std::shared_ptr<TransactionContext> t_context,
                          const int32_t s_quantity, const int32_t ol_i_id,
                          const int32_t ol_supply_w_id) = 0;
+
+  virtual TaskVector get_create_order_line_tasks(
+    const std::shared_ptr<TransactionContext> t_context,
+    const int32_t ol_o_id,
+    const int32_t ol_d_id,
+    const int32_t ol_w_id,
+    const int32_t ol_number,
+    const int32_t ol_i_id,
+    const int32_t ol_supply_w_id,
+    const int32_t ol_delivery_d,
+    const int32_t ol_quantity,
+    const float ol_amount,
+    const std::string & ol_dist_info) = 0;
   
   NewOrderResult run_transaction(const NewOrderParams & params);
 };
@@ -106,12 +124,25 @@ class NewOrderRefImpl : public AbstractNewOrderImpl {
     const std::shared_ptr<TransactionContext> t_context, const int32_t ol_i_id) override;
 
   TaskVector get_get_stock_info_tasks(
-    const std::shared_ptr<TransactionContext> t_context, const int32_t ol_i_id, const int32_t ol_supply_w_id) override;
+    const std::shared_ptr<TransactionContext> t_context, const int32_t ol_i_id, const int32_t ol_supply_w_id, const int32_t d_id) override;
 
   TaskVector
   get_update_stock_tasks(const std::shared_ptr<TransactionContext> t_context,
                          const int32_t s_quantity, const int32_t ol_i_id,
                          const int32_t ol_supply_w_id) override;
+
+  TaskVector get_create_order_line_tasks(
+    const std::shared_ptr<TransactionContext> t_context,
+    const int32_t ol_o_id,
+    const int32_t ol_d_id,
+    const int32_t ol_w_id,
+    const int32_t ol_number,
+    const int32_t ol_i_id,
+    const int32_t ol_supply_w_id,
+    const int32_t ol_delivery_d,
+    const int32_t ol_quantity,
+    const float ol_amount,
+    const std::string & ol_dist_info) override;
 };
 
 }
