@@ -5,8 +5,9 @@
 #include <memory>
 #include <vector>
 
-#include "../../types.hpp"
-#include "../base_column.hpp"
+#include "storage/base_column.hpp"
+#include "types.hpp"
+#include "utils/assert.hpp"
 
 namespace opossum {
 
@@ -79,10 +80,9 @@ class BaseIndex {
    * @return An Iterator on the position of the first element equal or greater then provided values.
    */
   Iterator lower_bound(const std::vector<AllTypeVariant> &values) const {
-    if (_get_index_columns().size() < values.size()) {
-      throw std::runtime_error(
-          "BaseIndex: The amount of queried columns has to be less or equal to the number of indexed columns.");
-    }
+    DebugAssert((_get_index_columns().size() >= values.size()),
+                "BaseIndex: The amount of queried columns has to be less or equal to the number of indexed columns.");
+
     return _lower_bound(values);
   }
 
@@ -98,10 +98,9 @@ class BaseIndex {
    * @return An Iterator on the position of the first element greater then provided values.
    */
   Iterator upper_bound(const std::vector<AllTypeVariant> &values) const {
-    if (_get_index_columns().size() < values.size()) {
-      throw std::runtime_error(
-          "BaseIndex: The amount of queried columns has to be less or equal to the number of indexed columns.");
-    }
+    DebugAssert((_get_index_columns().size() >= values.size()),
+                "BaseIndex: The amount of queried columns has to be less or equal to the number of indexed columns.");
+
     return _upper_bound(values);
   }
 

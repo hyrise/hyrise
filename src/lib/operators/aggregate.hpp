@@ -20,6 +20,7 @@
 #include "storage/value_column.hpp"
 #include "type_comparison.hpp"
 #include "types.hpp"
+#include "utils/assert.hpp"
 
 namespace opossum {
 
@@ -29,9 +30,6 @@ enum AggregateFunction { Min, Max, Sum, Avg, Count };
 Operator to aggregate columns by certain functions, such as min, max, sum, average, and count. The output is a table
  with reference columns. As with most operators we do not guarantee a stable operation with regards to positions -
  i.e. your sorting order.
-Current Limitations (due to lack of time)
- - we cannot aggregate on string columns (they work for GROUP BY, though)
- - aggregated columns are always type double (connected with the point above)
 */
 
 /*

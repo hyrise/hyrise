@@ -1,0 +1,12 @@
+version: '2.1'
+
+services:
+  opossum:
+    image: opossum
+    build: .
+    command: bash -c "bash --rcfile <(echo '. /etc/bash_completion')"
+    working_dir: /opossum
+    volumes:
+      - ".:/opossum"
+      - "~/.ssh/:/root/.ssh/"
+      - "~/.gitconfig:/root/.gitconfig"

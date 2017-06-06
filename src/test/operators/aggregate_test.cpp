@@ -369,7 +369,7 @@ TEST_F(OperatorsAggregateTest, NoGroupbyAndNoAggregate) {
   EXPECT_THROW(
       std::make_shared<Aggregate>(_table_wrapper_1_1_string, std::vector<std::pair<std::string, AggregateFunction>>{},
                                   std::vector<std::string>{}),
-      std::runtime_error);
+      std::logic_error);
 }
 
 /**

@@ -16,7 +16,10 @@ class TermFactoryTest : public BaseTest {
   std::shared_ptr<const Table> _t;
 };
 
-TEST_F(TermFactoryTest, EmptyExpression) { EXPECT_THROW(TermFactory<int>::build_term(""), std::runtime_error); }
+TEST_F(TermFactoryTest, EmptyExpression) {
+  if (!IS_DEBUG) return;
+  EXPECT_THROW(TermFactory<int>::build_term(""), std::logic_error);
+}
 
 TEST_F(TermFactoryTest, SimpelConstantExpression) {
   ASSERT_EQ(TermFactory<int32_t>::build_term("2")->get_values(_t, 0)[0], 2);

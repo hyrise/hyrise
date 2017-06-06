@@ -15,6 +15,7 @@
 #include "storage/value_column.hpp"
 #include "type_comparison.hpp"
 #include "types.hpp"
+#include "utils/assert.hpp"
 
 namespace opossum {
 
@@ -81,7 +82,7 @@ class JoinNestedLoopA::JoinNestedLoopAImpl : public AbstractJoinOperatorImpl {
     } else if (op == ">=") {
       _comparator = [](LeftType left_value, RightType right_value) { return !value_smaller(left_value, right_value); };
     } else {
-      throw std::runtime_error(std::string("unknown operator ") + op);
+      Fail(std::string("unknown operator ") + op);
     }
   }
 
@@ -398,9 +399,8 @@ class JoinNestedLoopA::JoinNestedLoopAImpl : public AbstractJoinOperatorImpl {
         column_left->visit(builder_left, context);
 
         // Different length of poslists would lead to corrupt output chunk.
-        if (pos_list_left->size() != pos_list_right->size()) {
-          throw std::runtime_error("JoinNestedLoopB did generate different number of outputs for Left and Right.");
-        }
+        DebugAssert((pos_list_left->size() == pos_list_right->size()),
+                    "JoinNestedLoopB did generate different number of outputs for Left and Right.");
 
         // Skip Chunks without match
         if (pos_list_left->size() == 0) {

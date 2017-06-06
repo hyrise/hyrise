@@ -5,6 +5,8 @@
 #include "term.hpp"
 #include "types.hpp"
 
+#include "utils/assert.hpp"
+
 namespace opossum {
 /**
  * The termfactory transforms complex string expressions into separate terms of specific types.
@@ -20,7 +22,8 @@ class TermFactory {
  protected:
   TermFactory() = default;
   static std::shared_ptr<AbstractTerm<T>> _build_binary_term(const std::string& expression) {
-    if (expression.empty()) throw std::runtime_error("Empty expression.");
+    DebugAssert(!(expression.empty()), "Empty expression.");
+
     if (expression.front() == table_name_escape) {
       return std::make_shared<VariableTerm<T>>(ColumnName(expression.substr(1)));
     } else {
