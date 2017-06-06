@@ -7,6 +7,7 @@
 #include "operators/abstract_read_only_operator.hpp"
 #include "scheduler/operator_task.hpp"
 #include "sql/sql_parse_tree_cache.hpp"
+#include "sql/sql_query_translator.hpp"
 #include "sql/sql_result_operator.hpp"
 
 namespace opossum {
@@ -30,7 +31,17 @@ class SQLQueryOperator : public AbstractOperator {
  protected:
   std::shared_ptr<const Table> on_execute(std::shared_ptr<TransactionContext> context) override;
 
-  void translate_stmts(std::shared_ptr<hsql::SQLParserResult> result);
+  std::shared_ptr<hsql::SQLParserResult> parse_query(const std::string& query);
+
+  // Compiles the given parse result into an operator plan.
+  void compile_parse_result(std::shared_ptr<hsql::SQLParserResult> result);
+
+  // Translates the query that is supposed to be prepared and saves it
+  // in the prepared statement cache by its name.
+  void prepare_statement(const hsql::PrepareStatement& prepare_stmt);
+
+  // Tries to fetch the referenced prepared statement and retrieve its cached data.
+  void execute_prepared_statement(const hsql::ExecuteStatement& execute_stmt);
 
   // Raw SQL query string.
   const std::string _query;
@@ -38,7 +49,10 @@ class SQLQueryOperator : public AbstractOperator {
   // Result operator, which will be dependent on the full execution of the exec plan.
   std::shared_ptr<SQLResultOperator> _result_op;
 
+  // Operator task, which wraps the result operator.
   std::shared_ptr<OperatorTask> _result_task;
+
+  SQLQueryTranslator _translator;
 
   static SQLParseTreeCache _parse_tree_cache;
 

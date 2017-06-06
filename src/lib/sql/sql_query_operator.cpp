@@ -3,8 +3,6 @@
 #include <memory>
 #include <string>
 
-#include "sql/sql_query_translator.hpp"
-
 #include "SQLParser.h"
 
 namespace opossum {
@@ -29,58 +27,68 @@ const std::shared_ptr<OperatorTask>& SQLQueryOperator::get_result_task() const {
 std::shared_ptr<const Table> SQLQueryOperator::on_execute(std::shared_ptr<TransactionContext> context) {
   // TODO(torpedro): Check query cache for execution plan.
 
-  SQLQueryTranslator translator;
+  std::shared_ptr<hsql::SQLParserResult> parse_result = parse_query(_query);
 
-  std::shared_ptr<hsql::SQLParserResult> result;
-
-  // Check query cache for parse tree.
-  if (_parse_tree_cache.has(_query)) {
-    result = _parse_tree_cache.get(_query);
-
-  } else {
-    // Parse the query.
-    result = std::make_shared<hsql::SQLParserResult>();
-    if (!translator.parse_query(_query, result.get())) {
-      throw translator.get_error_msg();
-    }
-  }
-
-  translate_stmts(result);
+  compile_parse_result(parse_result);
 
   return nullptr;
 }
 
-void SQLQueryOperator::translate_stmts(std::shared_ptr<hsql::SQLParserResult> result) {
+std::shared_ptr<hsql::SQLParserResult> SQLQueryOperator::parse_query(const std::string& query) {
+  // Check query cache for parse tree.
+  if (_parse_tree_cache.has(_query)) {
+    return _parse_tree_cache.get(_query);
+  }
+
+  // Parse the query.
+  std::shared_ptr<hsql::SQLParserResult> result = std::make_shared<hsql::SQLParserResult>();
+
+  // TODO: Move parse logic from translator into this operator
+  if (!_translator.parse_query(_query, result.get())) {
+    throw _translator.get_error_msg();
+  }
+
+  return result;
+}
+
+// Translates the query that is supposed to be prepared and saves it
+// in the prepared statement cache by its name.
+void SQLQueryOperator::prepare_statement(const hsql::PrepareStatement& prepare_stmt) {
+  SQLQueryTranslator translator;
+
+  std::shared_ptr<hsql::SQLParserResult> result;
+  result = std::make_shared<hsql::SQLParserResult>();
+  if (!translator.parse_query(prepare_stmt.query, result.get())) {
+    throw translator.get_error_msg();
+  }
+
+  // Cache the result.
+  _prepared_stmts.set(prepare_stmt.name, result);
+}
+
+// Tries to fetch the referenced prepared statement and retrieve its cached data.
+void SQLQueryOperator::execute_prepared_statement(const hsql::ExecuteStatement& execute_stmt) {
+  if (!_prepared_stmts.has(execute_stmt.name)) {
+    throw "Requested prepared statement does not exist!";
+  }
+
+  std::shared_ptr<hsql::SQLParserResult> parse_result = _prepared_stmts.get(execute_stmt.name);
+  compile_parse_result(parse_result);
+}
+
+// Compiles the given parse result into an operator plan.
+void SQLQueryOperator::compile_parse_result(std::shared_ptr<hsql::SQLParserResult> result) {
   SQLQueryTranslator translator;
   const std::vector<hsql::SQLStatement*>& statements = result->getStatements();
 
   for (const hsql::SQLStatement* stmt : statements) {
     switch (stmt->type()) {
-      case hsql::kStmtPrepare: {
-        const hsql::PrepareStatement* prepare = (const hsql::PrepareStatement*)stmt;
-
-        SQLQueryTranslator translator;
-        std::shared_ptr<hsql::SQLParserResult> result;
-        result = std::make_shared<hsql::SQLParserResult>();
-        if (!translator.parse_query(prepare->query, result.get())) {
-          throw translator.get_error_msg();
-        }
-
-        // Cache the result.
-        _prepared_stmts.set(prepare->name, result);
+      case hsql::kStmtPrepare:
+        prepare_statement((const hsql::PrepareStatement&)*stmt);
         break;
-      }
-      case hsql::kStmtExecute: {
-        const hsql::ExecuteStatement* execute = (const hsql::ExecuteStatement*)stmt;
-
-        if (_prepared_stmts.has(execute->name)) {
-          std::shared_ptr<hsql::SQLParserResult> result = _prepared_stmts.get(execute->name);
-          translator.translate_parse_result(*result);
-        } else {
-          throw "Requested prepared statement does not exist!";
-        }
+      case hsql::kStmtExecute:
+        execute_prepared_statement((const hsql::ExecuteStatement&)*stmt);
         break;
-      }
       default: {
         if (!translator.translate_statement(*stmt)) {
           throw translator.get_error_msg();
