@@ -31,7 +31,7 @@ def generate_new_order():
         "w_id": 0, # TODO: support multiple warehouses
         "d_id": random.randint(0, NUM_DISTRICTS_PER_WAREHOUSE - 1),
         "c_id": random.randint(0, NUM_CUSTOMERS_PER_DISTRICT - 1),
-        "o_entry_d": "2017-05-01",
+        "o_entry_d": 0, #TODO: Enter real data here
         "ol": []
     }
 
@@ -40,22 +40,20 @@ def generate_new_order():
     invalid_order = random.randint(0, 99) == 0
 
     for o in range(ol_count):
-        order_line = []
-
         # If the transaction is to be invalid, make the last order line invalid
         if invalid_order and o + 1 == ol_count:
-            order_line.append(NUM_ITEMS + 1)
+            i_id = NUM_ITEMS + 1
         else:
-            order_line.append(random.randint(0, NUM_ITEMS - 1))
+            i_id = random.randint(0, NUM_ITEMS - 1)
 
-        # TODO: We don't support multiple/remote warehouses yet
-        order_line.append(0)
+        new_order["ol"].append({
+            "i_id": i_id,
+            "w_id": 0,  # TODO: We don't support multiple/remote warehouses yet
+            "qty": random.randint(1, MAX_ORDER_LINE_QUANTITY)
+        })
 
-        order_line.append(random.randint(1, MAX_ORDER_LINE_QUANTITY))
-
-        new_order["ol"].append(order_line)
-
-    return "NewOrder", new_order
+    return {"transaction": "NewOrder",
+            "params": new_order}
 
 def generate_order_status():
     order_status= {
@@ -70,7 +68,8 @@ def generate_order_status():
     else: # Based on customer last name
         order_status["c_last"] = decode_c_last(nurand(255, 0, 999))
 
-    return "OrderStatus", order_status
+    return {"transaction": "OrderStatus",
+            "params": order_status}
 
 def generate_delivery():
     delivery = {
@@ -79,13 +78,14 @@ def generate_delivery():
         "ol_delivery_d": datetime.datetime.now().strftime('%Y-%m-%d')
     }
 
-    return "Delivery", delivery
+    return {"transaction": "Delivery",
+            "params": delivery}
 
 if __name__ == "__main__":
     transactions = []
 
-    #transactions.append(generate_new_order())
-    transactions.append(generate_order_status())
+    transactions.append(generate_new_order())
+    #transactions.append(generate_order_status())
     #transactions.append(generate_delivery())
 
     with open("tpcc_simulation_input.json", "w") as json_file:

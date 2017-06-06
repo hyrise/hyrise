@@ -4,6 +4,7 @@
 
 #include "benchmark/benchmark.h"
 
+#include "concurrency/transaction_manager.hpp"
 #include "operators/get_table.hpp"
 #include "operators/projection.hpp"
 #include "operators/sort.hpp"

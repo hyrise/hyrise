@@ -108,7 +108,7 @@ OrderStatusResult AbstractOrderStatusImpl::run_transaction(const OrderStatusPara
   return result;
 }
 
-std::vector<std::shared_ptr<opossum::OperatorTask>>
+TaskVector
 OrderStatusRefImpl::get_customer_by_name(const std::string c_last, const int c_d_id,
                      const int c_w_id) {
   /**
@@ -141,7 +141,7 @@ OrderStatusRefImpl::get_customer_by_name(const std::string c_last, const int c_d
   return {gt_customer_task, first_filter_task, second_filter_task, third_filter_task, projection_task, sort_task};
 }
 
-std::vector<std::shared_ptr<opossum::OperatorTask>>
+TaskVector
 OrderStatusRefImpl::get_customer_by_id(const int c_id, const int c_d_id, const int c_w_id) {
   /**
    * SQL SELECT c_balance, c_first, c_middle, c_last
@@ -169,7 +169,7 @@ OrderStatusRefImpl::get_customer_by_id(const int c_id, const int c_d_id, const i
   return {gt_customer_task, first_filter_task, second_filter_task, third_filter_task, projection_task};
 }
 
-std::vector<std::shared_ptr<opossum::OperatorTask>> OrderStatusRefImpl::get_orders() {
+TaskVector OrderStatusRefImpl::get_orders() {
   /**
   * SELECT o_id, o_carrier_id, o_entry_d
   * FROM orders
@@ -194,7 +194,7 @@ std::vector<std::shared_ptr<opossum::OperatorTask>> OrderStatusRefImpl::get_orde
   return {gt_orders_task, projection_task, sort_task, limit_task};
 }
 
-std::vector<std::shared_ptr<opossum::OperatorTask>>
+TaskVector
 OrderStatusRefImpl::get_order_lines(const int o_id, const int d_id, const int w_id) {
   /**
   * SELECT ol_i_id, ol_supply_w_id, ol_quantity,

@@ -45,13 +45,13 @@ struct OrderStatusResult {
 
 class AbstractOrderStatusImpl {
  public:
-  virtual std::vector<std::shared_ptr<opossum::OperatorTask>>
+  virtual TaskVector
   get_customer_by_name(const std::string c_last, const int c_d_id,
                        const int c_w_id) = 0;
-  virtual std::vector<std::shared_ptr<opossum::OperatorTask>>
+  virtual TaskVector
   get_customer_by_id(const int c_id, const int c_d_id, const int c_w_id) = 0;
-  virtual std::vector<std::shared_ptr<opossum::OperatorTask>> get_orders() = 0;
-  virtual std::vector<std::shared_ptr<opossum::OperatorTask>>
+  virtual TaskVector get_orders() = 0;
+  virtual TaskVector
   get_order_lines(const int o_id, const int d_id, const int w_id) = 0;
 
   OrderStatusResult run_transaction(const OrderStatusParams & params);
@@ -60,13 +60,13 @@ class AbstractOrderStatusImpl {
 class OrderStatusRefImpl : public AbstractOrderStatusImpl
 {
  public:
-  std::vector<std::shared_ptr<opossum::OperatorTask>>
+  TaskVector
   get_customer_by_name(const std::string c_last, const int c_d_id,
                        const int c_w_id) override;
-  std::vector<std::shared_ptr<opossum::OperatorTask>>
+  TaskVector
   get_customer_by_id(const int c_id, const int c_d_id, const int c_w_id) override;
-  std::vector<std::shared_ptr<opossum::OperatorTask>> get_orders() override;
-  std::vector<std::shared_ptr<opossum::OperatorTask>>
+  TaskVector get_orders() override;
+  TaskVector
   get_order_lines(const int o_id, const int d_id, const int w_id) override;
 };
 

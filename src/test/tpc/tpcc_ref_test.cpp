@@ -59,11 +59,47 @@ class OrderStatusTestImpl : public TransactionTestImpl {
   OrderStatusRefImpl _ref_impl;
 };
 
+class NewOrderTestImpl : public TransactionTestImpl {
+ public:
+  void run_and_test_transaction_from_json(const nlohmann::json & json_params,
+                                          const nlohmann::json & json_results) {
+      NewOrderParams params = json_params;
+      NewOrderResults ref_result = json_results;
+
+      auto our_result = _ref_impl.run_transaction(params);
+
+      ASSERT_EQ(ref_result.c_id, our_result.c_id);
+      ASSERT_EQ(ref_result.c_first, our_result.c_first);
+      ASSERT_EQ(ref_result.c_middle, our_result.c_middle);
+      ASSERT_EQ(ref_result.c_last, our_result.c_last);
+      ASSERT_EQ(ref_result.c_balance, our_result.c_balance);
+      ASSERT_EQ(ref_result.o_id, our_result.o_id);
+      ASSERT_EQ(ref_result.o_carrier_id, our_result.o_carrier_id);
+      ASSERT_EQ(ref_result.o_entry_d, our_result.o_entry_d);
+
+      ASSERT_EQ(ref_result.order_lines.size(), our_result.order_lines.size());
+      for (size_t l = 0; l < ref_result.order_lines.size(); l++) {
+        const auto & our = our_result.order_lines[l];
+        const auto & ref = ref_result.order_lines[l];
+
+        ASSERT_EQ(ref.ol_supply_w_id, our.ol_supply_w_id);
+        ASSERT_EQ(ref.ol_i_id, our.ol_i_id);
+        ASSERT_EQ(ref.ol_quantity, our.ol_quantity);
+        ASSERT_EQ(ref.ol_amount, our.ol_amount);
+        ASSERT_EQ(ref.ol_delivery_d, our.ol_delivery_d);
+      }
+  }
+
+ private:
+  OrderStatusRefImpl _ref_impl;
+};
+
 class TpccRefTest : public BaseTest {
  public:
   TpccRefTest() {
     m_transactionImpls = {
-        {"OrderStatus", std::make_shared<OrderStatusTestImpl>()}
+        {"OrderStatus", std::make_shared<OrderStatusTestImpl>()},
+        {"NewOrder", std::make_shared<NewOrderTestImpl>()}
     };
   }
 
@@ -106,8 +142,8 @@ TEST_F(TpccRefTest, SimulationScenario) {
     const auto &transaction = simulation_input[t];
     const auto &results = simulation_results[t];
 
-    const auto &transaction_name = transaction[0];
-    const auto &transaction_params = transaction[1];
+    const auto &transaction_name = transaction["transaction"];
+    const auto &transaction_params = transaction["params"];
 
     std::cout << "Testing: " << transaction_name << std::endl;
 
