@@ -1,9 +1,9 @@
+#include <map>
 #include <memory>
 #include <numeric>
 #include <string>
 #include <utility>
 #include <vector>
-#include <map>
 
 #include "join_nested_loop_a.hpp"
 #include "product.hpp"

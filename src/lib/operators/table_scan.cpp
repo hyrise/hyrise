@@ -1,9 +1,9 @@
 #include "table_scan.hpp"
 
+#include <algorithm>
 #include <map>
 #include <memory>
 #include <string>
-#include <algorithm>
 #include <utility>
 #include <vector>
 

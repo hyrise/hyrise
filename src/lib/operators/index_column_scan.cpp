@@ -1,9 +1,9 @@
 #include "index_column_scan.hpp"
 
-#include <memory>
-#include <string>
 #include <algorithm>
 #include <map>
+#include <memory>
+#include <string>
 #include <utility>
 #include <vector>
 
