@@ -82,7 +82,7 @@ class ReferenceColumn : public BaseColumn {
 
   size_t size() const override;
 
-  // checks if columns supports null values
+  // returns always true
   bool can_be_null() const override;
 
   const std::shared_ptr<const PosList> pos_list() const;
