@@ -133,7 +133,7 @@ project "sqlparser"
   -- clang throws unneeded-internal-declaration for parser generated code.
   -- This warning does not exist in gcc, so we have to make a special fork here.
   if _OPTIONS["compiler"] == "clang" then
-    buildoptions { "-O3 -Wno-sign-compare -Wno-unneeded-internal-declaration" }
+    buildoptions { "-O3 -Wno-sign-compare -Wno-unneeded-internal-declaration -Wno-format" }
   end
 
   files { "third_party/sql-parser/src/**.cpp" }
