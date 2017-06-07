@@ -1,6 +1,7 @@
 #pragma once
 
 #include <memory>
+#include <mutex>
 #include <string>
 #include <vector>
 
@@ -27,6 +28,8 @@ class SQLParseTreeCache {
 
  protected:
   LRUCache<std::string, std::shared_ptr<hsql::SQLParserResult>> _cache;
+
+  std::mutex _mutex;
 };
 
 }  // namespace opossum

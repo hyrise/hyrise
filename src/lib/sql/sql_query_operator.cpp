@@ -12,13 +12,13 @@ using hsql::SQLParser;
 using hsql::SQLParserResult;
 
 // Runtime statistics.
-size_t SQLQueryOperator::num_executed = 0;
-size_t SQLQueryOperator::parse_tree_cache_hits = 0;
-size_t SQLQueryOperator::parse_tree_cache_misses = 0;
+std::atomic<size_t> SQLQueryOperator::num_executed(0);
+std::atomic<size_t> SQLQueryOperator::parse_tree_cache_hits(0);
+std::atomic<size_t> SQLQueryOperator::parse_tree_cache_misses(0);
 
 // Caches
-SQLParseTreeCache SQLQueryOperator::_parse_tree_cache = SQLParseTreeCache(0);
-SQLParseTreeCache SQLQueryOperator::_prepared_stmts = SQLParseTreeCache(1024);
+SQLParseTreeCache SQLQueryOperator::_parse_tree_cache(0);
+SQLParseTreeCache SQLQueryOperator::_prepared_stmts(1024);
 
 SQLQueryOperator::SQLQueryOperator(const std::string& query, bool schedule_plan)
     : _query(query), _schedule_plan(schedule_plan) {

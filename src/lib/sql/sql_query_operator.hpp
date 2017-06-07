@@ -1,5 +1,6 @@
 #pragma once
 
+#include <atomic>
 #include <memory>
 #include <string>
 
@@ -33,9 +34,9 @@ class SQLQueryOperator : public AbstractOperator {
   static SQLParseTreeCache& get_parse_tree_cache();
 
   // Runtime statistics
-  static size_t num_executed;
-  static size_t parse_tree_cache_hits;
-  static size_t parse_tree_cache_misses;
+  static std::atomic<size_t> num_executed;
+  static std::atomic<size_t> parse_tree_cache_hits;
+  static std::atomic<size_t> parse_tree_cache_misses;
 
  protected:
   std::shared_ptr<const Table> on_execute(std::shared_ptr<TransactionContext> context) override;
