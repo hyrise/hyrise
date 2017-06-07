@@ -40,7 +40,7 @@ template <typename T>
 const T DictionaryColumn<T>::get(const size_t i) const {
   const auto value_id = _attribute_vector->get(i);
 
-  DebugAssert(value_id == NULL_VALUE_ID, "Value at index " + to_string(i) + "is null.");
+  DebugAssert(value_id != NULL_VALUE_ID, "Value at index " + to_string(i) + " is null.");
 
   return (*_dictionary)[_attribute_vector->get(i)];
 }
@@ -79,7 +79,7 @@ const tbb::concurrent_vector<T> DictionaryColumn<T>::materialize_values() const 
 
 template <typename T>
 const T& DictionaryColumn<T>::value_by_value_id(ValueID value_id) const {
-  DebugAssert(value_id == NULL_VALUE_ID, "Null value id passed.");
+  DebugAssert(value_id != NULL_VALUE_ID, "Null value id passed.");
 
   return _dictionary->at(value_id);
 }
@@ -93,7 +93,7 @@ ValueID DictionaryColumn<T>::lower_bound(T value) const {
 
 template <typename T>
 ValueID DictionaryColumn<T>::lower_bound(const AllTypeVariant& value) const {
-  DebugAssert(value == AllTypeVariant{}, "Null value passed.");
+  DebugAssert(value != AllTypeVariant{}, "Null value passed.");
 
   auto typed_value = type_cast<T>(value);
   return lower_bound(typed_value);
@@ -108,7 +108,7 @@ ValueID DictionaryColumn<T>::upper_bound(T value) const {
 
 template <typename T>
 ValueID DictionaryColumn<T>::upper_bound(const AllTypeVariant& value) const {
-  DebugAssert(value == AllTypeVariant{}, "Null value passed.");
+  DebugAssert(value != AllTypeVariant{}, "Null value passed.");
 
   auto typed_value = type_cast<T>(value);
   return upper_bound(typed_value);
