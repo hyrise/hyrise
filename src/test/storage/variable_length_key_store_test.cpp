@@ -130,8 +130,8 @@ TEST_F(VariableLengthKeyStoreTest, DereferenceIterator) {
 }
 
 TEST_F(VariableLengthKeyStoreTest, CopyWithStd) {
-  auto result = std::vector<VariableLengthKey>(_store.size());
-  auto expected = std::vector<VariableLengthKey>{_key_reference, _key_equal, _key_less, _key_greater};
+  auto result = alloc_vector<VariableLengthKey>(_store.size());
+  auto expected = alloc_vector<VariableLengthKey>{_key_reference, _key_equal, _key_less, _key_greater};
   std::copy(_store.cbegin(), _store.cend(), result.begin());
   EXPECT_EQ(expected, result);
 }

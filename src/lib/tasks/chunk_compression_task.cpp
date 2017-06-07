@@ -10,9 +10,9 @@
 namespace opossum {
 
 ChunkCompressionTask::ChunkCompressionTask(const std::string& table_name, const ChunkID chunk_id, bool check_completion)
-    : ChunkCompressionTask{table_name, std::vector<ChunkID>{chunk_id}, check_completion} {}
+    : ChunkCompressionTask{table_name, alloc_vector<ChunkID>{chunk_id}, check_completion} {}
 
-ChunkCompressionTask::ChunkCompressionTask(const std::string& table_name, const std::vector<ChunkID>& chunk_ids,
+ChunkCompressionTask::ChunkCompressionTask(const std::string& table_name, const alloc_vector<ChunkID>& chunk_ids,
                                            bool check_completion)
     : _check_completion{check_completion}, _table_name{table_name}, _chunk_ids{chunk_ids} {}
 

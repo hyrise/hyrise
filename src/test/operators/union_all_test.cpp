@@ -40,7 +40,7 @@ TEST_F(OperatorsUnionAllTest, UnionOfValueTables) {
 TEST_F(OperatorsUnionAllTest, UnionOfValueReferenceTables) {
   std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_float_union.tbl", 2);
 
-  std::vector<std::string> column_filter = {"a", "b"};
+  alloc_vector<std::string> column_filter = {"a", "b"};
   auto projection = std::make_shared<Projection>(_table_wrapper_a, column_filter);
   projection->execute();
 

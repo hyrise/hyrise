@@ -49,14 +49,14 @@ class CompositeGroupKeyIndex : public BaseIndex {
   CompositeGroupKeyIndex &operator=(CompositeGroupKeyIndex &&) = default;
   ~CompositeGroupKeyIndex() = default;
 
-  explicit CompositeGroupKeyIndex(const std::vector<std::shared_ptr<BaseColumn>> &indexed_columns);
+  explicit CompositeGroupKeyIndex(const alloc_vector<std::shared_ptr<BaseColumn>> &indexed_columns);
 
  private:
-  Iterator _lower_bound(const std::vector<AllTypeVariant> &values) const final;
-  Iterator _upper_bound(const std::vector<AllTypeVariant> &values) const final;
+  Iterator _lower_bound(const alloc_vector<AllTypeVariant> &values) const final;
+  Iterator _upper_bound(const alloc_vector<AllTypeVariant> &values) const final;
   Iterator _cbegin() const final;
   Iterator _cend() const final;
-  std::vector<std::shared_ptr<BaseColumn>> _get_index_columns() const final;
+  alloc_vector<std::shared_ptr<BaseColumn>> _get_index_columns() const final;
 
   /**
    * Creates a VariableLengthKey using the values given as parameters.
@@ -88,7 +88,7 @@ class CompositeGroupKeyIndex : public BaseIndex {
    *
    * @returns a VariableLengthKey created based on the given values
    */
-  VariableLengthKey _create_composite_key(const std::vector<AllTypeVariant> &values, bool is_upper_bound) const;
+  VariableLengthKey _create_composite_key(const alloc_vector<AllTypeVariant> &values, bool is_upper_bound) const;
 
   /**
    *
@@ -99,15 +99,15 @@ class CompositeGroupKeyIndex : public BaseIndex {
 
  private:
   // the columns the index is based on
-  std::vector<std::shared_ptr<UntypedDictionaryColumn>> _indexed_columns;
+  alloc_vector<std::shared_ptr<UntypedDictionaryColumn>> _indexed_columns;
 
   // contains concatenated value-ids
   VariableLengthKeyStore _keys;
 
   // the start positions within _position_list for every key
-  std::vector<ChunkOffset> _key_offsets;
+  alloc_vector<ChunkOffset> _key_offsets;
 
   // contains positions, ie ChunkOffsets, for the concatenated value-ids
-  std::vector<ChunkOffset> _position_list;
+  alloc_vector<ChunkOffset> _position_list;
 };
 }  // namespace opossum

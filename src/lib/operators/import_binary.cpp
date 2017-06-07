@@ -28,25 +28,25 @@ uint8_t ImportBinary::num_in_tables() const { return 0; }
 uint8_t ImportBinary::num_out_tables() const { return 1; }
 
 template <typename T>
-std::vector<T> ImportBinary::_read_values(std::ifstream& file, const size_t count) {
-  std::vector<T> values(count);
+alloc_vector<T> ImportBinary::_read_values(std::ifstream& file, const size_t count) {
+  alloc_vector<T> values(count);
   file.read(reinterpret_cast<char*>(values.data()), values.size() * sizeof(T));
   return values;
 }
 
 // specialized implementation for string values
 template <>
-std::vector<std::string> ImportBinary::_read_values(std::ifstream& file, const size_t count) {
+alloc_vector<std::string> ImportBinary::_read_values(std::ifstream& file, const size_t count) {
   return _read_string_values(file, count);
 }
 
 template <typename T>
-std::vector<std::string> ImportBinary::_read_string_values(std::ifstream& file, const size_t count) {
+alloc_vector<std::string> ImportBinary::_read_string_values(std::ifstream& file, const size_t count) {
   const auto string_lengths = _read_values<T>(file, count);
   const auto total_length = std::accumulate(string_lengths.cbegin(), string_lengths.cend(), static_cast<size_t>(0));
   const auto buffer = _read_values<char>(file, total_length);
 
-  std::vector<std::string> values(count);
+  alloc_vector<std::string> values(count);
   size_t start = 0;
 
   for (size_t i = 0; i < count; ++i) {
@@ -163,10 +163,10 @@ std::shared_ptr<BaseAttributeVector> ImportBinary::_import_attribute_vector(
 
 template <typename T>
 std::shared_ptr<ValueColumn<T>> ImportBinary::_import_value_column(std::ifstream& file, ChunkOffset row_count) {
-  // TODO(unknown): Ideally _read_values would directly write into a tbb::concurrent_vector so that no conversion is
+  // TODO(unknown): Ideally _read_values would directly write into a alloc_concurrent_vector so that no conversion is
   // needed
   const auto values = _read_values<T>(file, row_count);
-  return std::make_shared<ValueColumn<T>>(tbb::concurrent_vector<T>{values.begin(), values.end()});
+  return std::make_shared<ValueColumn<T>>(alloc_concurrent_vector<T>{values.begin(), values.end()});
 }
 
 template <typename T>

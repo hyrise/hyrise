@@ -5,7 +5,15 @@
 #include <string>
 #include <vector>
 
+#include "tbb/concurrent_vector.h"
+
 namespace opossum {
+
+template <typename T>
+using alloc_vector = std::vector<T>;
+
+template <typename T>
+using alloc_concurrent_vector = tbb::concurrent_vector<T>;
 
 using ChunkID = uint32_t;
 using ChunkOffset = uint32_t;
@@ -38,7 +46,7 @@ using StringLength = uint16_t;     // The length of column value strings must fi
 using ColumnNameLength = uint8_t;  // The length of column names must fit in this type.
 using AttributeVectorWidth = uint8_t;
 
-using PosList = std::vector<RowID>;
+using PosList = alloc_vector<RowID>;
 
 class ColumnName {
  public:

@@ -45,7 +45,7 @@ std::shared_ptr<PosList> JoinNestedLoopB::_dereference_pos_list(std::shared_ptr<
                                                                 size_t column_id,
                                                                 std::shared_ptr<const PosList> pos_list) {
   // Get all the input pos lists so that we only have to pointer cast the columns once
-  auto input_pos_lists = std::vector<std::shared_ptr<const PosList>>();
+  auto input_pos_lists = alloc_vector<std::shared_ptr<const PosList>>();
   for (ChunkID chunk_id = 0; chunk_id < input_table->chunk_count(); chunk_id++) {
     auto base_column = input_table->get_chunk(chunk_id).get_column(column_id);
     auto reference_column = std::dynamic_pointer_cast<ReferenceColumn>(base_column);

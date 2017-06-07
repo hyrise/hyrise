@@ -21,7 +21,7 @@ class AdaptiveRadixTreeIndexTest : public BaseTest {
     // we want to custom-build the index, but we have to create an index with a non-empty column.
     // Therefore we build an index and reset the root.
     dict_col1 = create_dict_column_by_type<std::string>("string", {"test"});
-    index1 = std::make_shared<AdaptiveRadixTreeIndex>(std::vector<std::shared_ptr<BaseColumn>>({dict_col1}));
+    index1 = std::make_shared<AdaptiveRadixTreeIndex>(alloc_vector<std::shared_ptr<BaseColumn>>({dict_col1}));
     index1->_root = nullptr;
     index1->_chunk_offsets.clear();
     /* root   childx    childxx  childxxx  leaf->chunk offsets
@@ -46,9 +46,9 @@ class AdaptiveRadixTreeIndexTest : public BaseTest {
   std::shared_ptr<AdaptiveRadixTreeIndex> index1 = nullptr;
   std::shared_ptr<BaseColumn> dict_col1 = nullptr;
   std::shared_ptr<Node> root = nullptr;
-  std::vector<std::pair<AdaptiveRadixTreeIndex::BinaryComparable, ChunkOffset>> pairs;
-  std::vector<ValueID> keys1;
-  std::vector<ChunkOffset> values1;
+  alloc_vector<std::pair<AdaptiveRadixTreeIndex::BinaryComparable, ChunkOffset>> pairs;
+  alloc_vector<ValueID> keys1;
+  alloc_vector<ChunkOffset> values1;
 };
 
 TEST_F(AdaptiveRadixTreeIndexTest, BinaryComparableFromChunkOffset) {
@@ -62,8 +62,8 @@ TEST_F(AdaptiveRadixTreeIndexTest, BinaryComparableFromChunkOffset) {
 }
 
 TEST_F(AdaptiveRadixTreeIndexTest, BulkInsert) {
-  std::vector<ChunkOffset> expectedChunkOffets = {0x00000001u, 0x00000007u, 0x00000002u, 0x00000003u,
-                                                  0x00000004u, 0x00000005u, 0x00000006u};
+  alloc_vector<ChunkOffset> expectedChunkOffets = {0x00000001u, 0x00000007u, 0x00000002u, 0x00000003u,
+                                                   0x00000004u, 0x00000005u, 0x00000006u};
   EXPECT_FALSE(std::dynamic_pointer_cast<Leaf>(root));
   EXPECT_EQ(index1->_chunk_offsets, expectedChunkOffets);
 

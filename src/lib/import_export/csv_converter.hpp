@@ -81,7 +81,7 @@ class CsvConverter : public AbstractCsvConverter {
    * csv characters.
    */
   static std::function<T(const char *)> _get_conversion_function();
-  tbb::concurrent_vector<T> _parsed_values;
+  alloc_concurrent_vector<T> _parsed_values;
 };
 
 template <>

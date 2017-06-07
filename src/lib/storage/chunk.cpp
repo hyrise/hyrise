@@ -38,7 +38,7 @@ void Chunk::replace_column(size_t column_id, std::shared_ptr<BaseColumn> column)
   std::atomic_store(&_columns.at(column_id), column);
 }
 
-void Chunk::append(std::vector<AllTypeVariant> values) {
+void Chunk::append(alloc_vector<AllTypeVariant> values) {
   // Do this first to ensure that the first thing to exist in a row are the MVCC columns.
   if (has_mvcc_columns()) grow_mvcc_column_size_by(1u, Chunk::MAX_COMMIT_ID);
 
@@ -104,9 +104,9 @@ void Chunk::shrink_mvcc_columns() {
   _mvcc_columns->end_cids.shrink_to_fit();
 }
 
-std::vector<std::shared_ptr<BaseIndex>> Chunk::get_indices_for(
-    const std::vector<std::shared_ptr<BaseColumn>>& columns) const {
-  auto result = std::vector<std::shared_ptr<BaseIndex>>();
+alloc_vector<std::shared_ptr<BaseIndex>> Chunk::get_indices_for(
+    const alloc_vector<std::shared_ptr<BaseColumn>>& columns) const {
+  auto result = alloc_vector<std::shared_ptr<BaseIndex>>();
   std::copy_if(_indices.cbegin(), _indices.cend(), std::back_inserter(result),
                [&columns](const std::shared_ptr<BaseIndex>& index) { return index->is_index_for(columns); });
   return result;

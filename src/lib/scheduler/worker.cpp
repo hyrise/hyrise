@@ -40,7 +40,7 @@ CpuID Worker::cpu_id() const { return _cpu_id; }
 
 std::weak_ptr<ProcessingUnit> Worker::processing_unit() const { return _processing_unit; }
 
-void Worker::_wait_for_tasks(const std::vector<std::shared_ptr<AbstractTask>>& tasks) {
+void Worker::_wait_for_tasks(const alloc_vector<std::shared_ptr<AbstractTask>>& tasks) {
   /**
    * This method blocks the calling thread (worker) until all tasks have been completed.
    * It hands off the active worker token so that another worker can execute tasks while the calling worker is blocked.

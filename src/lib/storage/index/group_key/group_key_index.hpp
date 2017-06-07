@@ -50,7 +50,7 @@ class GroupKeyIndex : public BaseIndex {
   GroupKeyIndex(GroupKeyIndex &&) = default;
   GroupKeyIndex &operator=(GroupKeyIndex &&) = default;
 
-  explicit GroupKeyIndex(const std::vector<std::shared_ptr<BaseColumn>> index_columns)
+  explicit GroupKeyIndex(const alloc_vector<std::shared_ptr<BaseColumn>> index_columns)
       : _index_column(std::dynamic_pointer_cast<UntypedDictionaryColumn>(index_columns[0])) {
     DebugAssert(static_cast<bool>(_index_column), "GroupKeyIndex only works with DictionaryColumns");
     DebugAssert((index_columns.size() == 1), "GroupKeyIndex only works with a single column");
@@ -58,9 +58,9 @@ class GroupKeyIndex : public BaseIndex {
     // 1) Initialize the index structures
     // 1a) Set the index_offset to size of the dictionary + 1 (plus one to mark the ending position) and set all offsets
     // to 0
-    _index_offsets = std::vector<size_t>(_index_column->unique_values_count() + 1, 0);
+    _index_offsets = alloc_vector<size_t>(_index_column->unique_values_count() + 1, 0);
     // 1b) Set the _index_postings to the size of the attribute vector
-    _index_postings = std::vector<ChunkOffset>(_index_column->size());
+    _index_postings = alloc_vector<ChunkOffset>(_index_column->size());
 
     // 2) Count the occurrences of value-ids: Iterate once over the attribute vector (ie value ids) and count the
     // occurrences of each value id at their respective position in the dictionary, ie the position in the
@@ -75,7 +75,7 @@ class GroupKeyIndex : public BaseIndex {
 
     // 4) Create the postings
     // 4a) Copy _index_offsets to use it as a write counter
-    auto index_offset_copy = std::vector<size_t>(_index_offsets);
+    auto index_offset_copy = alloc_vector<size_t>(_index_offsets);
 
     // 4b) Iterate once again over the attribute vector to obtain the write-offsets
     for (ChunkOffset pos = 0; pos < _index_column->size(); ++pos) {
@@ -89,14 +89,14 @@ class GroupKeyIndex : public BaseIndex {
   }
 
  private:
-  Iterator _lower_bound(const std::vector<AllTypeVariant> &values) const final {
+  Iterator _lower_bound(const alloc_vector<AllTypeVariant> &values) const final {
     DebugAssert((values.size() == 1), "Group Key Index expects only one input value");
 
     ValueID value_id = _index_column->lower_bound(*values.begin());
     return _get_postings_iterator_at(value_id);
   };
 
-  Iterator _upper_bound(const std::vector<AllTypeVariant> &values) const final {
+  Iterator _upper_bound(const alloc_vector<AllTypeVariant> &values) const final {
     DebugAssert((values.size() == 1), "Group Key Index expects only one input value");
 
     ValueID value_id = _index_column->upper_bound(*values.begin());
@@ -124,14 +124,14 @@ class GroupKeyIndex : public BaseIndex {
     return iter;
   }
 
-  std::vector<std::shared_ptr<BaseColumn>> _get_index_columns() const {
-    std::vector<std::shared_ptr<BaseColumn>> v = {_index_column};
+  alloc_vector<std::shared_ptr<BaseColumn>> _get_index_columns() const {
+    alloc_vector<std::shared_ptr<BaseColumn>> v = {_index_column};
     return v;
   }
 
  private:
   const std::shared_ptr<UntypedDictionaryColumn> _index_column;
-  std::vector<std::size_t> _index_offsets;   // maps value-ids to offsets in _index_postings
-  std::vector<ChunkOffset> _index_postings;  // records positions in the attribute vector
+  alloc_vector<std::size_t> _index_offsets;   // maps value-ids to offsets in _index_postings
+  alloc_vector<ChunkOffset> _index_postings;  // records positions in the attribute vector
 };
 }  // namespace opossum

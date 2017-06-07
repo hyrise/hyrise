@@ -34,7 +34,7 @@ void Table::add_column(const std::string &name, const std::string &type, bool cr
   }
 }
 
-void Table::append(std::vector<AllTypeVariant> values) {
+void Table::append(alloc_vector<AllTypeVariant> values) {
   // TODO(Anyone): Chunks should be preallocated for chunk size
   if (_chunk_size > 0 && _chunks.back().size() == _chunk_size) create_new_chunk();
 
@@ -77,7 +77,7 @@ const std::string &Table::column_name(ColumnID column_id) const { return _column
 
 const std::string &Table::column_type(ColumnID column_id) const { return _column_types[column_id]; }
 
-const std::vector<std::string> &Table::column_types() const { return _column_types; }
+const alloc_vector<std::string> &Table::column_types() const { return _column_types; }
 
 Chunk &Table::get_chunk(ChunkID chunk_id) { return _chunks[chunk_id]; }
 const Chunk &Table::get_chunk(ChunkID chunk_id) const { return _chunks[chunk_id]; }

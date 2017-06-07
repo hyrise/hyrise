@@ -41,7 +41,7 @@ class PrintWrapper : public Print {
 
  public:
   explicit PrintWrapper(const std::shared_ptr<AbstractOperator> in) : Print(in), tab(in->get_output()) {}
-  std::vector<uint16_t> test_column_string_widths(uint16_t min, uint16_t max) {
+  alloc_vector<uint16_t> test_column_string_widths(uint16_t min, uint16_t max) {
     return column_string_widths(min, max, tab);
   }
 };

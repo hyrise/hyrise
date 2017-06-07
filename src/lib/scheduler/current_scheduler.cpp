@@ -20,7 +20,7 @@ void CurrentScheduler::set(const std::shared_ptr<AbstractScheduler>& instance) {
 
 bool CurrentScheduler::is_set() { return !!_instance; }
 
-void CurrentScheduler::wait_for_tasks(const std::vector<std::shared_ptr<AbstractTask>>& tasks) {
+void CurrentScheduler::wait_for_tasks(const alloc_vector<std::shared_ptr<AbstractTask>>& tasks) {
   if (IS_DEBUG) {
     for (auto& task : tasks) {
       if (!task->is_scheduled()) {

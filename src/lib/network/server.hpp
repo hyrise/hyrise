@@ -39,10 +39,10 @@ class Server {
   void thread_func_handle_rpcs(const size_t thread_index);
   void create_and_register_request_handler(const size_t thread_index);
 
-  std::vector<std::unique_ptr<grpc::ServerCompletionQueue>> _cqs;
+  alloc_vector<std::unique_ptr<grpc::ServerCompletionQueue>> _cqs;
   proto::OpossumService::AsyncService _service;
   std::unique_ptr<grpc::Server> _server;
-  std::vector<std::thread> _listener_threads;
+  alloc_vector<std::thread> _listener_threads;
   bool _skip_scheduler;
 };
 

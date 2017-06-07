@@ -40,7 +40,7 @@ class BenchmarkBasicFixture : public benchmark::Fixture {
   std::shared_ptr<TableWrapper> _table_wrapper_b;
 
   void clear_cache() {
-    std::vector<int> clear = std::vector<int>();
+    alloc_vector<int> clear = alloc_vector<int>();
     clear.resize(500 * 1000 * 1000, 42);
     for (uint i = 0; i < clear.size(); i++) {
       clear[i] += 1;

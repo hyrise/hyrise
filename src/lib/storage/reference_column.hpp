@@ -41,8 +41,8 @@ class ReferenceColumn : public BaseColumn {
 
   // return generated vector of all values
   template <typename T>
-  const tbb::concurrent_vector<T> materialize_values() const {
-    tbb::concurrent_vector<T> values;
+  const alloc_concurrent_vector<T> materialize_values() const {
+    alloc_concurrent_vector<T> values;
     values.reserve(_pos_list->size());
 
     std::map<ChunkID, std::shared_ptr<ValueColumn<T>>> value_columns;
@@ -102,14 +102,14 @@ class ReferenceColumn : public BaseColumn {
     unsorted.
     */
 
-    std::unordered_map<ChunkID, std::shared_ptr<std::vector<ChunkOffset>>> all_chunk_offsets;
+    std::unordered_map<ChunkID, std::shared_ptr<alloc_vector<ChunkOffset>>> all_chunk_offsets;
 
     for (auto pos : *(_pos_list)) {
       auto chunk_info = _referenced_table->locate_row(pos);
 
       auto iter = all_chunk_offsets.find(chunk_info.first);
       if (iter == all_chunk_offsets.end())
-        iter = all_chunk_offsets.emplace(chunk_info.first, std::make_shared<std::vector<ChunkOffset>>()).first;
+        iter = all_chunk_offsets.emplace(chunk_info.first, std::make_shared<alloc_vector<ChunkOffset>>()).first;
 
       iter->second->emplace_back(chunk_info.second);
     }

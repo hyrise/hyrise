@@ -22,8 +22,8 @@ opossum::VariableLengthKey create_key(uint16_t value) {
   return result;
 }
 
-std::vector<opossum::VariableLengthKey> to_vector(const opossum::VariableLengthKeyStore &keys) {
-  auto result = std::vector<opossum::VariableLengthKey>(keys.size());
+opossum::alloc_vector<opossum::VariableLengthKey> to_vector(const opossum::VariableLengthKeyStore &keys) {
+  auto result = opossum::alloc_vector<opossum::VariableLengthKey>(keys.size());
   std::copy(keys.cbegin(), keys.cend(), result.begin());
   return result;
 }
@@ -36,8 +36,8 @@ testing::AssertionResult is_contained_in(opossum::ChunkOffset value, const std::
   }
 }
 
-void EXPECT_POSITION_LIST_EQ(const std::vector<std::set<opossum::ChunkOffset>> &expected,
-                             const std::vector<opossum::ChunkOffset> &actual) {
+void EXPECT_POSITION_LIST_EQ(const opossum::alloc_vector<std::set<opossum::ChunkOffset>> &expected,
+                             const opossum::alloc_vector<opossum::ChunkOffset> &actual) {
   std::set<opossum::ChunkOffset> distinct_expected_positions = {};
   for (const auto &expection_for_position : expected) {
     distinct_expected_positions.insert(expection_for_position.begin(), expection_for_position.end());
@@ -62,9 +62,9 @@ class CompositeGroupKeyIndexTest : public BaseTest {
         "string", {"hotel", "delta", "frank", "delta", "apple", "charlie", "charlie", "inbox"});
 
     _index_int_str =
-        std::make_shared<CompositeGroupKeyIndex>(std::vector<std::shared_ptr<BaseColumn>>{_column_int, _column_str});
+        std::make_shared<CompositeGroupKeyIndex>(alloc_vector<std::shared_ptr<BaseColumn>>{_column_int, _column_str});
     _index_str_int =
-        std::make_shared<CompositeGroupKeyIndex>(std::vector<std::shared_ptr<BaseColumn>>{_column_str, _column_int});
+        std::make_shared<CompositeGroupKeyIndex>(alloc_vector<std::shared_ptr<BaseColumn>>{_column_str, _column_int});
 
     _keys_int_str = &(_index_int_str->_keys);
     _keys_str_int = &(_index_str_int->_keys);
@@ -90,36 +90,36 @@ class CompositeGroupKeyIndexTest : public BaseTest {
   VariableLengthKeyStore *_keys_int_str;
   VariableLengthKeyStore *_keys_str_int;
 
-  std::vector<ChunkOffset> *_offsets_int_str;
-  std::vector<ChunkOffset> *_offsets_str_int;
+  alloc_vector<ChunkOffset> *_offsets_int_str;
+  alloc_vector<ChunkOffset> *_offsets_str_int;
 
-  std::vector<ChunkOffset> *_position_list_int_str;
-  std::vector<ChunkOffset> *_position_list_str_int;
+  alloc_vector<ChunkOffset> *_position_list_int_str;
+  alloc_vector<ChunkOffset> *_position_list_str_int;
 };
 
 TEST_F(CompositeGroupKeyIndexTest, ConcatenatedKeys) {
   auto expected_int_str =
-      std::vector<VariableLengthKey>{create_key(0x0000), create_key(0x0003), create_key(0x0102), create_key(0x0201),
-                                     create_key(0x0204), create_key(0x0301), create_key(0x0305)};
+      alloc_vector<VariableLengthKey>{create_key(0x0000), create_key(0x0003), create_key(0x0102), create_key(0x0201),
+                                      create_key(0x0204), create_key(0x0301), create_key(0x0305)};
   auto expected_str_int =
-      std::vector<VariableLengthKey>{create_key(0x0000), create_key(0x0102), create_key(0x0103), create_key(0x0201),
-                                     create_key(0x0300), create_key(0x0402), create_key(0x0503)};
+      alloc_vector<VariableLengthKey>{create_key(0x0000), create_key(0x0102), create_key(0x0103), create_key(0x0201),
+                                      create_key(0x0300), create_key(0x0402), create_key(0x0503)};
 
   EXPECT_EQ(expected_int_str, to_vector(*_keys_int_str));
   EXPECT_EQ(expected_str_int, to_vector(*_keys_str_int));
 }
 
 TEST_F(CompositeGroupKeyIndexTest, Offsets) {
-  auto expected_int_str = std::vector<ChunkOffset>{0, 1, 2, 4, 5, 6, 7};
-  auto expected_str_int = std::vector<ChunkOffset>{0, 1, 2, 3, 5, 6, 7};
+  auto expected_int_str = alloc_vector<ChunkOffset>{0, 1, 2, 4, 5, 6, 7};
+  auto expected_str_int = alloc_vector<ChunkOffset>{0, 1, 2, 3, 5, 6, 7};
 
   EXPECT_EQ(expected_int_str, *_offsets_int_str);
   EXPECT_EQ(expected_str_int, *_offsets_str_int);
 }
 
 TEST_F(CompositeGroupKeyIndexTest, PositionList) {
-  auto expected_int_str = std::vector<std::set<ChunkOffset>>{{4}, {2}, {1, 3}, {1, 3}, {6}, {0}, {5}, {7}};
-  auto expected_str_int = std::vector<std::set<ChunkOffset>>{{4}, {6}, {5}, {1, 3}, {1, 3}, {2}, {0}, {7}};
+  auto expected_int_str = alloc_vector<std::set<ChunkOffset>>{{4}, {2}, {1, 3}, {1, 3}, {6}, {0}, {5}, {7}};
+  auto expected_str_int = alloc_vector<std::set<ChunkOffset>>{{4}, {6}, {5}, {1, 3}, {1, 3}, {2}, {0}, {7}};
 
   EXPECT_POSITION_LIST_EQ(expected_int_str, *_position_list_int_str);
   EXPECT_POSITION_LIST_EQ(expected_str_int, *_position_list_str_int);

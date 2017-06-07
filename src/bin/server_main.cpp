@@ -55,7 +55,7 @@ void import_dummy_data(const std::string& directory, const std::string& filename
   for (size_t i = 0; i < t->chunk_count(); ++i) {
     auto& chunk = t->get_chunk(i);
     for (size_t row_id = 0; row_id < chunk.size(); ++row_id) {
-      auto row = std::vector<opossum::AllTypeVariant>();
+      auto row = opossum::alloc_vector<opossum::AllTypeVariant>();
       for (size_t col_id = 0; col_id < t->col_count(); ++col_id) {
         row.push_back((*chunk.get_column(col_id))[row_id]);
       }

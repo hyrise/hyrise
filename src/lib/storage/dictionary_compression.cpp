@@ -48,7 +48,7 @@ class ColumnCompressor : public ColumnCompressorBase {
     // See: https://goo.gl/MCM5rr
     // Create dictionary (enforce unqiueness and sorting)
     const auto& values = value_column->values();
-    auto dictionary = std::vector<T>{values.cbegin(), values.cend()};
+    auto dictionary = alloc_vector<T>{values.cbegin(), values.cend()};
 
     std::sort(dictionary.begin(), dictionary.end());
     dictionary.erase(std::unique(dictionary.begin(), dictionary.end()), dictionary.end());
@@ -72,7 +72,7 @@ std::shared_ptr<BaseColumn> DictionaryCompression::compress_column(const std::st
   return compressor->compress_column(column);
 }
 
-void DictionaryCompression::compress_chunk(const std::vector<std::string>& column_types, Chunk& chunk) {
+void DictionaryCompression::compress_chunk(const alloc_vector<std::string>& column_types, Chunk& chunk) {
   DebugAssert((column_types.size() == chunk.col_count()),
               "Number of column types does not match the chunk’s column count.");
 
@@ -85,7 +85,7 @@ void DictionaryCompression::compress_chunk(const std::vector<std::string>& colum
   chunk.shrink_mvcc_columns();
 }
 
-void DictionaryCompression::compress_chunks(Table& table, const std::vector<ChunkID>& chunk_ids) {
+void DictionaryCompression::compress_chunks(Table& table, const alloc_vector<ChunkID>& chunk_ids) {
   for (auto chunk_id : chunk_ids) {
     if (chunk_id >= table.chunk_count()) {
       throw std::logic_error("Chunk with given ID does not exist.");

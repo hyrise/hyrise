@@ -41,7 +41,7 @@ TEST_F(OperatorsDifferenceTest, DifferenceOnValueTables) {
 TEST_F(OperatorsDifferenceTest, DifferneceOnReferenceTables) {
   std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_float_filtered2.tbl", 2);
 
-  std::vector<std::string> column_filter = {"a", "b"};
+  alloc_vector<std::string> column_filter = {"a", "b"};
   auto projection1 = std::make_shared<Projection>(_table_wrapper_a, column_filter);
   projection1->execute();
 

@@ -90,14 +90,14 @@ class TableScan::TableScanImpl : public AbstractReadOnlyOperatorImpl {
         _is_constant_value_scan(_value.type() == typeid(AllTypeVariant)) {}
 
   struct ScanContext : ColumnVisitableContext {
-    ScanContext(std::shared_ptr<const Table> t, ChunkID c, std::vector<RowID> &mo,
-                const tbb::concurrent_vector<T> &values, std::shared_ptr<std::vector<ChunkOffset>> co = nullptr)
+    ScanContext(std::shared_ptr<const Table> t, ChunkID c, alloc_vector<RowID> &mo,
+                const alloc_concurrent_vector<T> &values, std::shared_ptr<alloc_vector<ChunkOffset>> co = nullptr)
         : table_in(t), chunk_id(c), matches_out(mo), values(values), chunk_offsets_in(std::move(co)) {}
 
     // constructor for use in ReferenceColumn::visit_dereferenced
     ScanContext(std::shared_ptr<BaseColumn>, const std::shared_ptr<const Table> referenced_table,
                 std::shared_ptr<ColumnVisitableContext> base_context, ChunkID chunk_id,
-                std::shared_ptr<std::vector<ChunkOffset>> chunk_offsets)
+                std::shared_ptr<alloc_vector<ChunkOffset>> chunk_offsets)
         : table_in(referenced_table),
           chunk_id(chunk_id),
           matches_out(std::static_pointer_cast<ScanContext>(base_context)->matches_out),
@@ -106,9 +106,9 @@ class TableScan::TableScanImpl : public AbstractReadOnlyOperatorImpl {
 
     std::shared_ptr<const Table> table_in;
     const ChunkID chunk_id;
-    std::vector<RowID> &matches_out;
-    const tbb::concurrent_vector<T> &values;
-    std::shared_ptr<std::vector<ChunkOffset>> chunk_offsets_in;
+    alloc_vector<RowID> &matches_out;
+    const alloc_concurrent_vector<T> &values;
+    std::shared_ptr<alloc_vector<ChunkOffset>> chunk_offsets_in;
   };
 
   std::shared_ptr<const Table> on_execute() override {
@@ -190,7 +190,7 @@ class TableScan::TableScanImpl : public AbstractReadOnlyOperatorImpl {
     // We can easily distribute the table scanning work on individual chunks to multiple sub tasks,
     // we just need to synchronize access to the output table
     std::mutex output_mutex;
-    std::vector<std::shared_ptr<AbstractTask>> jobs;
+    alloc_vector<std::shared_ptr<AbstractTask>> jobs;
     jobs.reserve(in_table->chunk_count());
 
     for (ChunkID chunk_id = 0; chunk_id < in_table->chunk_count(); ++chunk_id) {
@@ -199,10 +199,10 @@ class TableScan::TableScanImpl : public AbstractReadOnlyOperatorImpl {
         const Chunk &chunk_in = in_table->get_chunk(chunk_id);
         Chunk chunk_out;
 
-        std::vector<RowID> matches_in_this_chunk;
+        alloc_vector<RowID> matches_in_this_chunk;
         auto column1 = chunk_in.get_column(column_id1);
 
-        tbb::concurrent_vector<T> values;
+        alloc_concurrent_vector<T> values;
         auto context = std::make_shared<ScanContext>(in_table, chunk_id, matches_in_this_chunk, values);
 
         // The real tablescan work happens now in the visitables. There are two major types of the Visitables: Column
@@ -358,7 +358,7 @@ class TableScan::TableScanImpl<T>::TableScanLikeVisitable : public ColumnVisitab
     } else {
       // First we try to match to the dictonary so that we only have to match the regex to every unique string
       auto dictonary = column.dictionary();
-      std::vector<bool> matches;
+      alloc_vector<bool> matches;
       matches.reserve(dictonary->size());
       for (auto &value : *dictonary) {
         matches.push_back(std::regex_match(value, regex));

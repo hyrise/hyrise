@@ -53,7 +53,7 @@ class TransactionContext {
 
   void register_rw_operator(AbstractReadWriteOperator* op) { _rw_operators.emplace_back(op); }
 
-  std::vector<AbstractReadWriteOperator*> get_rw_operators() const { return _rw_operators; }
+  alloc_vector<AbstractReadWriteOperator*> get_rw_operators() const { return _rw_operators; }
 
   /**
    * Update the counter of active operators
@@ -66,7 +66,7 @@ class TransactionContext {
  private:
   const TransactionID _transaction_id;
   const CommitID _last_commit_id;
-  std::vector<AbstractReadWriteOperator*> _rw_operators;
+  alloc_vector<AbstractReadWriteOperator*> _rw_operators;
 
   std::atomic<TransactionPhase> _phase;
   std::shared_ptr<CommitContext> _commit_context;

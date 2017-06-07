@@ -9,7 +9,7 @@ VariableLengthKeyStore::VariableLengthKeyStore(ChunkOffset size, CompositeKeyLen
   static const CompositeKeyLength alignment = 8u;
   _bytes_per_key = bytes_per_key;
   _key_alignment = (bytes_per_key / alignment + (bytes_per_key % alignment == 0u ? 0u : 1u)) * alignment;
-  _data = std::vector<VariableLengthKeyWord>(size * _key_alignment);
+  _data = alloc_vector<VariableLengthKeyWord>(size * _key_alignment);
 }
 
 VariableLengthKeyProxy VariableLengthKeyStore::operator[](ChunkOffset position) {

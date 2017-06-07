@@ -17,14 +17,14 @@
 
 namespace opossum {
 
-AdaptiveRadixTreeIndex::AdaptiveRadixTreeIndex(const std::vector<std::shared_ptr<BaseColumn>> &index_columns)
+AdaptiveRadixTreeIndex::AdaptiveRadixTreeIndex(const alloc_vector<std::shared_ptr<BaseColumn>> &index_columns)
     : _index_column(std::dynamic_pointer_cast<UntypedDictionaryColumn>(index_columns.front())) {
   DebugAssert(static_cast<bool>(_index_column), "AdaptiveRadixTree only works with DictionaryColumns for now");
   DebugAssert((index_columns.size() == 1), "AdaptiveRadixTree only works with a single column");
 
   // for each valueID in the attribute vector, create a pair consisting of a BinaryComparable of this valueID and its
   // ChunkOffset (needed for bulk-inserting)
-  std::vector<std::pair<BinaryComparable, ChunkOffset>> pairs_to_insert;
+  alloc_vector<std::pair<BinaryComparable, ChunkOffset>> pairs_to_insert;
   pairs_to_insert.reserve(_index_column->attribute_vector()->size());
   for (ChunkOffset chunk_offset = 0u; chunk_offset < _index_column->attribute_vector()->size(); ++chunk_offset) {
     pairs_to_insert.emplace_back(
@@ -33,7 +33,7 @@ AdaptiveRadixTreeIndex::AdaptiveRadixTreeIndex(const std::vector<std::shared_ptr
   _root = _bulk_insert(pairs_to_insert);
 }
 
-BaseIndex::Iterator AdaptiveRadixTreeIndex::_lower_bound(const std::vector<AllTypeVariant> &values) const {
+BaseIndex::Iterator AdaptiveRadixTreeIndex::_lower_bound(const alloc_vector<AllTypeVariant> &values) const {
   assert(values.size() == 1);
   ValueID valueID = _index_column->lower_bound(values[0]);
   if (valueID == INVALID_VALUE_ID) {
@@ -42,7 +42,7 @@ BaseIndex::Iterator AdaptiveRadixTreeIndex::_lower_bound(const std::vector<AllTy
   return _root->lower_bound(BinaryComparable(valueID), 0);
 }
 
-BaseIndex::Iterator AdaptiveRadixTreeIndex::_upper_bound(const std::vector<AllTypeVariant> &values) const {
+BaseIndex::Iterator AdaptiveRadixTreeIndex::_upper_bound(const alloc_vector<AllTypeVariant> &values) const {
   assert(values.size() == 1);
   ValueID valueID = _index_column->upper_bound(values[0]);
   if (valueID == INVALID_VALUE_ID) {
@@ -57,7 +57,7 @@ BaseIndex::Iterator AdaptiveRadixTreeIndex::_cbegin() const { return _chunk_offs
 BaseIndex::Iterator AdaptiveRadixTreeIndex::_cend() const { return _chunk_offsets.cend(); }
 
 std::shared_ptr<Node> AdaptiveRadixTreeIndex::_bulk_insert(
-    const std::vector<std::pair<BinaryComparable, ChunkOffset>> &values) {
+    const alloc_vector<std::pair<BinaryComparable, ChunkOffset>> &values) {
   DebugAssert(!(values.empty()), "Index on empty column is not defined");
   _chunk_offsets.reserve(values.size());
   Iterator begin = _chunk_offsets.cbegin();
@@ -65,7 +65,7 @@ std::shared_ptr<Node> AdaptiveRadixTreeIndex::_bulk_insert(
 }
 
 std::shared_ptr<Node> AdaptiveRadixTreeIndex::_bulk_insert(
-    const std::vector<std::pair<BinaryComparable, ChunkOffset>> &values, size_t depth, BaseIndex::Iterator &it) {
+    const alloc_vector<std::pair<BinaryComparable, ChunkOffset>> &values, size_t depth, BaseIndex::Iterator &it) {
   // This is the anchor of the recursion: if all values have the same key, create a leaf.
   if (std::all_of(values.begin(), values.end(), [&values](const std::pair<BinaryComparable, ChunkOffset> &pair) {
         return values.front().first == pair.first;
@@ -88,13 +88,14 @@ std::shared_ptr<Node> AdaptiveRadixTreeIndex::_bulk_insert(
   }
 
   // radix-partition on the depths-byte into 256 partitions
-  std::array<std::vector<std::pair<BinaryComparable, ChunkOffset>>, std::numeric_limits<uint8_t>::max() + 1> partitions;
+  std::array<alloc_vector<std::pair<BinaryComparable, ChunkOffset>>, std::numeric_limits<uint8_t>::max() + 1>
+      partitions;
   for (const auto &pair : values) {
     partitions[pair.first[depth]].emplace_back(pair);
   }
 
   // call recursively for each non-empty partition and gather the children
-  std::vector<std::pair<uint8_t, std::shared_ptr<Node>>> children;
+  alloc_vector<std::pair<uint8_t, std::shared_ptr<Node>>> children;
 
   for (uint16_t partition_id = 0; partition_id < partitions.size(); ++partition_id) {
     if (!partitions[partition_id].empty()) {
@@ -115,8 +116,8 @@ std::shared_ptr<Node> AdaptiveRadixTreeIndex::_bulk_insert(
   }
 }
 
-std::vector<std::shared_ptr<BaseColumn>> AdaptiveRadixTreeIndex::_get_index_columns() const {
-  std::vector<std::shared_ptr<BaseColumn>> v = {_index_column};
+alloc_vector<std::shared_ptr<BaseColumn>> AdaptiveRadixTreeIndex::_get_index_columns() const {
+  alloc_vector<std::shared_ptr<BaseColumn>> v = {_index_column};
   return v;
 }
 

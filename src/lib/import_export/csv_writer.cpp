@@ -28,7 +28,7 @@ std::string CsvWriter::escape(const std::string& string) {
   return result;
 }
 
-void CsvWriter::write_line(const std::vector<AllTypeVariant>& values) {
+void CsvWriter::write_line(const alloc_vector<AllTypeVariant>& values) {
   for (const auto& value : values) {
     write(value);
   }

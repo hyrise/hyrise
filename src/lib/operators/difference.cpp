@@ -44,7 +44,7 @@ std::shared_ptr<const Table> Difference::on_execute() {
   for (ChunkID chunk_id = 0; chunk_id < input_table_right()->chunk_count(); chunk_id++) {
     const Chunk &chunk = input_table_right()->get_chunk(chunk_id);
     // creating a temporary row representation with strings to be filled column wise
-    auto string_row_vector = std::vector<std::string>(chunk.size());
+    auto string_row_vector = alloc_vector<std::string>(chunk.size());
     for (size_t column_id = 0; column_id < input_table_right()->col_count(); column_id++) {
       const auto base_column = chunk.get_column(column_id);
 

@@ -75,14 +75,14 @@ class IndexColumnScan::IndexColumnScanImpl : public AbstractReadOnlyOperatorImpl
         _casted_value2(value2 ? optional<T>(type_cast<T>(*value2)) : optional<T>(nullopt)) {}
 
   struct ScanContext : ColumnVisitableContext {
-    ScanContext(std::shared_ptr<const Table> t, ChunkID c, std::vector<RowID> &mo,
-                std::shared_ptr<std::vector<ChunkOffset>> co = nullptr)
+    ScanContext(std::shared_ptr<const Table> t, ChunkID c, alloc_vector<RowID> &mo,
+                std::shared_ptr<alloc_vector<ChunkOffset>> co = nullptr)
         : table_in(t), chunk_id(c), matches_out(mo), chunk_offsets_in(std::move(co)) {}
 
     // constructor for use in ReferenceColumn::visit_dereferenced
     ScanContext(std::shared_ptr<BaseColumn>, const std::shared_ptr<const Table> referenced_table,
                 std::shared_ptr<ColumnVisitableContext> base_context, ChunkID chunk_id,
-                std::shared_ptr<std::vector<ChunkOffset>> chunk_offsets)
+                std::shared_ptr<alloc_vector<ChunkOffset>> chunk_offsets)
         : table_in(referenced_table),
           chunk_id(chunk_id),
           matches_out(std::static_pointer_cast<ScanContext>(base_context)->matches_out),
@@ -90,8 +90,8 @@ class IndexColumnScan::IndexColumnScanImpl : public AbstractReadOnlyOperatorImpl
 
     std::shared_ptr<const Table> table_in;
     const ChunkID chunk_id;
-    std::vector<RowID> &matches_out;
-    std::shared_ptr<std::vector<ChunkOffset>> chunk_offsets_in;
+    alloc_vector<RowID> &matches_out;
+    std::shared_ptr<alloc_vector<ChunkOffset>> chunk_offsets_in;
   };
 
   std::shared_ptr<const Table> on_execute() override {
@@ -155,7 +155,7 @@ class IndexColumnScan::IndexColumnScanImpl : public AbstractReadOnlyOperatorImpl
     // We can easily distribute the table scanning work on individual chunks to multiple sub tasks,
     // we just need to synchronize access to the output table
     std::mutex output_mutex;
-    std::vector<std::shared_ptr<AbstractTask>> jobs;
+    alloc_vector<std::shared_ptr<AbstractTask>> jobs;
     jobs.reserve(in_table->chunk_count());
 
     for (ChunkID chunk_id = 0; chunk_id < in_table->chunk_count(); ++chunk_id) {
@@ -164,7 +164,7 @@ class IndexColumnScan::IndexColumnScanImpl : public AbstractReadOnlyOperatorImpl
         const Chunk &chunk_in = in_table->get_chunk(chunk_id);
         Chunk chunk_out;
         auto base_column = chunk_in.get_column(filter_column_id);
-        std::vector<RowID> matches_in_this_chunk;
+        alloc_vector<RowID> matches_in_this_chunk;
 
         base_column->visit(*this, std::make_shared<ScanContext>(in_table, chunk_id, matches_in_this_chunk));
 
@@ -281,7 +281,7 @@ class IndexColumnScan::IndexColumnScanImpl : public AbstractReadOnlyOperatorImpl
     auto in_table = _in_operator->get_output();
     const Chunk &chunk_in = in_table->get_chunk(context->chunk_id);
     auto col = chunk_in.get_column(in_table->column_id_by_name(_filter_column_name));
-    auto indices = chunk_in.get_indices_for(std::vector<std::shared_ptr<BaseColumn>>{col});
+    auto indices = chunk_in.get_indices_for(alloc_vector<std::shared_ptr<BaseColumn>>{col});
 
     if (!indices.empty()) {
       // with index
@@ -298,7 +298,7 @@ class IndexColumnScan::IndexColumnScanImpl : public AbstractReadOnlyOperatorImpl
         std::sort(filtering_list->begin(), filtering_list->end());
 
         // Then, intersect them to get the filtered pos list
-        auto intersected_list = std::vector<ChunkOffset>(filtering_list->size());
+        auto intersected_list = alloc_vector<ChunkOffset>(filtering_list->size());
         std::set_intersection(complete_pos_list.begin(), complete_pos_list.end(), filtering_list->begin(),
                               filtering_list->end(), intersected_list.begin());
 
@@ -372,11 +372,11 @@ class IndexColumnScan::IndexColumnScanImpl : public AbstractReadOnlyOperatorImpl
     }
   }
 
-  std::vector<ChunkOffset> get_pos_list_from_index(std::shared_ptr<BaseIndex> index, T search_value,
-                                                   optional<T> search_value_2) {
+  alloc_vector<ChunkOffset> get_pos_list_from_index(std::shared_ptr<BaseIndex> index, T search_value,
+                                                    optional<T> search_value_2) {
     BaseIndex::Iterator lower_bound, upper_bound;
 
-    std::vector<ChunkOffset> result;
+    alloc_vector<ChunkOffset> result;
 
     switch (_type) {
       case OpEquals:

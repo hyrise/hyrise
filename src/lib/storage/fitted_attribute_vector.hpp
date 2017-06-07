@@ -17,7 +17,7 @@ class FittedAttributeVector : public BaseAttributeVector {
   explicit FittedAttributeVector(size_t size) : _attributes(size) {}
 
   // Creates a FittedAttributeVector from given attributes
-  explicit FittedAttributeVector(const std::vector<uintX_t>& attributes) : _attributes(attributes) {}
+  explicit FittedAttributeVector(const alloc_vector<uintX_t>& attributes) : _attributes(attributes) {}
 
   ValueID get(const size_t i) const final { return _attributes[i]; }
 
@@ -25,7 +25,7 @@ class FittedAttributeVector : public BaseAttributeVector {
   void set(const size_t i, const ValueID value_id) final { _attributes[i] = static_cast<uintX_t>(value_id); }
 
   // returns all attributes
-  const std::vector<uintX_t>& attributes() const { return _attributes; }
+  const alloc_vector<uintX_t>& attributes() const { return _attributes; }
 
   // returns the number of values
   size_t size() const final { return _attributes.size(); }
@@ -33,6 +33,6 @@ class FittedAttributeVector : public BaseAttributeVector {
   AttributeVectorWidth width() const final { return sizeof(uintX_t); }
 
  private:
-  std::vector<uintX_t> _attributes;
+  alloc_vector<uintX_t> _attributes;
 };
 }  // namespace opossum

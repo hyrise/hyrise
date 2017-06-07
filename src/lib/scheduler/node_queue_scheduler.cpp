@@ -80,7 +80,7 @@ void NodeQueueScheduler::finish() {
   _shut_down = true;
 }
 
-const std::vector<std::shared_ptr<TaskQueue>>& NodeQueueScheduler::queues() const { return _queues; }
+const alloc_vector<std::shared_ptr<TaskQueue>>& NodeQueueScheduler::queues() const { return _queues; }
 
 void NodeQueueScheduler::schedule(std::shared_ptr<AbstractTask> task, NodeID preferred_node_id,
                                   SchedulePriority priority) {

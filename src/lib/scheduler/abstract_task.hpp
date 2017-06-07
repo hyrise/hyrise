@@ -125,7 +125,7 @@ class AbstractTask : public std::enable_shared_from_this<AbstractTask> {
 
   // For dependencies
   std::atomic_uint _predecessor_counter{0};
-  std::vector<std::shared_ptr<AbstractTask>> _successors;
+  alloc_vector<std::shared_ptr<AbstractTask>> _successors;
 
   // For making sure a task gets only scheduled and enqueued once, respectively
   // A Task is scheduled once schedule() is called and enqueued, which is an internal process, once it has been added

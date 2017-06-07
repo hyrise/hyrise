@@ -23,7 +23,7 @@ class HashTable {
  public:
   explicit HashTable(size_t input_table_size) : _input_table_size(input_table_size) {
     // prepare internal hash tables and fill with empty elements
-    _hashtables.resize(NUMBER_OF_HASH_FUNCTIONS, std::vector<std::shared_ptr<HashElement>>(input_table_size));
+    _hashtables.resize(NUMBER_OF_HASH_FUNCTIONS, alloc_vector<std::shared_ptr<HashElement>>(input_table_size));
   }
 
   // copying a HashTable is not allowed
@@ -49,7 +49,7 @@ class HashTable {
       }
     }
     auto element =
-        std::make_shared<HashElement>(HashElement{value, std::make_shared<PosList>(std::vector<RowID>{row_id})});
+        std::make_shared<HashElement>(HashElement{value, std::make_shared<PosList>(alloc_vector<RowID>{row_id})});
     place(element, 0, 0);
   }
 
@@ -123,6 +123,6 @@ class HashTable {
   }
 
   size_t _input_table_size;
-  std::vector<std::vector<std::shared_ptr<HashElement>>> _hashtables;
+  alloc_vector<alloc_vector<std::shared_ptr<HashElement>>> _hashtables;
 };
 }  // namespace opossum
