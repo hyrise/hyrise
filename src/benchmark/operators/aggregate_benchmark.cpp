@@ -1,6 +1,7 @@
 #include <memory>
 #include <string>
 #include <utility>
+#include <vector>
 
 #include "benchmark/benchmark.h"
 
