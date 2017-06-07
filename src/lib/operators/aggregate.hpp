@@ -205,7 +205,7 @@ struct PartitionBuilder : public ColumnVisitable {
         chunk_offset++;
       }
     } else {
-      // This DictionaryColumn has to be scanned in full. We directly insertt the results into the list of matching
+      // This DictionaryColumn has to be scanned in full. We directly insert the results into the list of matching
       // rows.
       for (ChunkOffset av_offset = 0; av_offset < column.size(); ++av_offset, ++chunk_offset) {
         (*context->hash_keys)[chunk_offset].emplace_back(dictionary[attribute_vector.get(av_offset)]);
