@@ -6,6 +6,7 @@
 #include <vector>
 
 #include "base_attribute_vector.hpp"
+#include "utils/assert.hpp"
 #include "value_column.hpp"
 
 #include "type_cast.hpp"
@@ -45,7 +46,7 @@ const T DictionaryColumn<T>::get(const size_t i) const {
 
 template <typename T>
 void DictionaryColumn<T>::append(const AllTypeVariant&) {
-  throw std::logic_error("DictionaryColumn is immutable");
+  Fail("DictionaryColumn is immutable");
 }
 
 template <typename T>

@@ -26,10 +26,6 @@ class Validate : public AbstractReadOnlyOperator {
  protected:
   std::shared_ptr<const Table> on_execute(std::shared_ptr<TransactionContext> transactionContext) override;
   std::shared_ptr<const Table> on_execute() override;
-
- protected:
-  const std::shared_ptr<const Table> _in_table;
-  std::shared_ptr<Table> _output;
 };
 
 }  // namespace opossum

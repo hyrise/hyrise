@@ -6,6 +6,7 @@
 #include "concurrency/transaction_context.hpp"
 #include "storage/reference_column.hpp"
 #include "storage/storage_manager.hpp"
+#include "utils/assert.hpp"
 
 namespace opossum {
 
@@ -13,11 +14,7 @@ Delete::Delete(const std::string& table_name, const std::shared_ptr<const Abstra
     : AbstractReadWriteOperator{values_to_delete}, _table_name{table_name} {}
 
 std::shared_ptr<const Table> Delete::on_execute(std::shared_ptr<TransactionContext> context) {
-#ifdef IS_DEBUG
-  if (!_execution_input_valid(context)) {
-    throw std::runtime_error("Input to Delete isn't valid");
-  }
-#endif
+  DebugAssert(_execution_input_valid(context), "Input to Delete isn't valid");
 
   _table = StorageManager::get().get_table(_table_name);
   _transaction_id = context->transaction_id();

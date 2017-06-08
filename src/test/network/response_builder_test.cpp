@@ -32,6 +32,10 @@ std::string load_response(const std::string &file_name) {
   std::string line;
   std::stringstream response_text;
 
+  if (!infile.is_open()) {
+    throw std::runtime_error("load_response: Could not find file " + file_name);
+  }
+
   while (std::getline(infile, line)) {
     response_text << line << std::endl;
   }

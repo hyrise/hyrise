@@ -11,6 +11,7 @@
 #include "storage/reference_column.hpp"
 #include "storage/storage_manager.hpp"
 #include "table_wrapper.hpp"
+#include "utils/assert.hpp"
 
 namespace opossum {
 
@@ -25,11 +26,7 @@ const std::string Update::name() const { return "Update"; }
 uint8_t Update::num_in_tables() const { return 1; }
 
 std::shared_ptr<const Table> Update::on_execute(std::shared_ptr<TransactionContext> context) {
-#ifdef IS_DEBUG
-  if (!_execution_input_valid(context)) {
-    throw std::runtime_error("Input to Update isn't valid");
-  }
-#endif
+  DebugAssert((_execution_input_valid(context)), "Input to Update isn't valid");
 
   const auto table_to_update = StorageManager::get().get_table(_table_to_update_name);
 
@@ -49,6 +46,10 @@ std::shared_ptr<const Table> Update::on_execute(std::shared_ptr<TransactionConte
     auto pos_list = std::make_shared<PosList>();
     for (auto i = 0u; i < input_table_right()->get_chunk(chunk_id).size(); ++i) {
       if (current_pos_list == nullptr || current_row_in_left_chunk == current_pos_list->size()) {
+        while (input_table_left()->get_chunk(current_left_chunk_id).size() == 0u) {
+          ++current_left_chunk_id;
+        }
+
         current_row_in_left_chunk = 0u;
         current_pos_list = std::static_pointer_cast<ReferenceColumn>(
                                input_table_left()->get_chunk(current_left_chunk_id).get_column(0))

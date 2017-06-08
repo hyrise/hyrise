@@ -102,7 +102,7 @@ class VariableTerm : public AbstractTerm<T> {
       return ref_column->template materialize_values<T>();  // Clang needs the template prefix
     }
 
-    throw std::runtime_error("Materializing chunk failed.");
+    throw std::logic_error("Materializing chunk failed.");
   }
 
  protected:
@@ -175,7 +175,7 @@ class ArithmeticTerm : public AbstractTerm<T> {
     } else if (string_op == "%") {
       return std::modulus<T>();
     } else {
-      throw std::runtime_error("Unknown arithmetic operator" + string_op);
+      throw std::logic_error("Unknown arithmetic operator" + string_op);
     }
   }
 
@@ -198,7 +198,7 @@ inline std::function<std::string(const std::string&, const std::string&)> Arithm
   if (string_op == "+") {
     return std::plus<std::string>();
   }
-  throw std::runtime_error("Arithmetic operator " + string_op + " not defined for std::string");
+  throw std::logic_error("Arithmetic operator " + string_op + " not defined for std::string");
 }
 /**
  * Specialized arithmetic operator implementation for float.
@@ -220,7 +220,7 @@ inline std::function<float(const float&, const float&)> ArithmeticTerm<float>::g
   } else if (string_op == "/") {
     return std::divides<float>();
   } else {
-    throw std::runtime_error("Unknown arithmetic operator" + string_op);
+    throw std::logic_error("Unknown arithmetic operator" + string_op);
   }
 }
 /**
@@ -243,7 +243,7 @@ inline std::function<double(const double&, const double&)> ArithmeticTerm<double
   } else if (string_op == "/") {
     return std::divides<double>();
   } else {
-    throw std::runtime_error("Unknown arithmetic operator" + string_op);
+    throw std::logic_error("Unknown arithmetic operator" + string_op);
   }
 }
 
