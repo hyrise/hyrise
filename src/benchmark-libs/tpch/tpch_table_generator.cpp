@@ -392,9 +392,9 @@ std::shared_ptr<opossum::Table> TableGenerator::generate_nations_table() {
   // N_NATIONKEY
   chunk.add_column(add_column<int>(table_size, [](size_t i) { return i; }));
   // N_NAME
-  chunk.add_column(add_column<std::string>(table_size, [](size_t) { return ""; }));
+  chunk.add_column(add_column<std::string>(table_size, [&](size_t i) { return _text_field_gen.nation_names[i]; }));
   // N_REGIONKEY
-  chunk.add_column(add_column<int>(table_size, [](size_t) { return 0; }));
+  chunk.add_column(add_column<int>(table_size, [&](size_t i) { return _region_keys_per_nation[i]; }));
   // N_COMMENT
   chunk.add_column(add_column<std::string>(table_size, [&](size_t) { return _text_field_gen.text_string(31, 114); }));
 
@@ -403,23 +403,47 @@ std::shared_ptr<opossum::Table> TableGenerator::generate_nations_table() {
   return table;
 }
 
-void TableGenerator::add_all_tables(opossum::StorageManager &manager) {
-  // auto supplier_table = generate_suppliers_table();
-  // auto parts_table = generate_parts_table();
-  // auto partsupps_table = generate_partsupps_table();
-  // auto customers_table = generate_customers_table();
-  // auto order_lines = generate_order_lines();
-  // auto orders_table = generate_orders_table(order_lines);
-  // auto lineitems_table = generate_lineitems_table(order_lines);
-  auto nations_table = generate_nations_table();
+std::shared_ptr<opossum::Table> TableGenerator::generate_regions_table() {
+  auto table = std::make_shared<opossum::Table>(_chunk_size);
 
-  // manager.add_table("SUPPLIER", std::move(supplier_table));
-  // manager.add_table("PART", std::move(parts_table));
-  // manager.add_table("PARTSUPP", std::move(partsupps_table));
-  // manager.add_table("CUSTOMER", std::move(customers_table));
-  // manager.add_table("ORDERS", std::move(orders_table));
-  // manager.add_table("LINEITEM", std::move(lineitems_table));
+  // setup columns
+  table->add_column("R_REGIONKEY", "int", false);
+  table->add_column("R_NAME", "string", false);
+  table->add_column("R_COMMENT", "string", false);
+
+  auto chunk = opossum::Chunk();
+  size_t table_size = _region_size;
+  // R_REGIONKEY
+  chunk.add_column(add_column<int>(table_size, [](size_t i) { return i; }));
+  // R_NAME
+  chunk.add_column(add_column<std::string>(table_size, [&](size_t i) { return _text_field_gen.region_names[i]; }));
+  // R_COMMENT
+  chunk.add_column(add_column<std::string>(table_size, [&](size_t) { return _text_field_gen.text_string(31, 115); }));
+
+  table->add_chunk(std::move(chunk));
+
+  return table;
+}
+
+void TableGenerator::add_all_tables(opossum::StorageManager &manager) {
+  auto supplier_table = generate_suppliers_table();
+  auto parts_table = generate_parts_table();
+  auto partsupps_table = generate_partsupps_table();
+  auto customers_table = generate_customers_table();
+  auto order_lines = generate_order_lines();
+  auto orders_table = generate_orders_table(order_lines);
+  auto lineitems_table = generate_lineitems_table(order_lines);
+  auto nations_table = generate_nations_table();
+  auto regions_table = generate_regions_table();
+
+  manager.add_table("SUPPLIER", std::move(supplier_table));
+  manager.add_table("PART", std::move(parts_table));
+  manager.add_table("PARTSUPP", std::move(partsupps_table));
+  manager.add_table("CUSTOMER", std::move(customers_table));
+  manager.add_table("ORDERS", std::move(orders_table));
+  manager.add_table("LINEITEM", std::move(lineitems_table));
   manager.add_table("NATION", std::move(nations_table));
+  manager.add_table("REGION", std::move(regions_table));
 }
 
 }  // namespace tpch
