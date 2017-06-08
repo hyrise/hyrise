@@ -6,8 +6,6 @@
 #include <string>
 #include <utility>
 #include <vector>
-
-#include "storage/value_column.hpp"
 #include "types.hpp"
 
 #include "storage/value_column.hpp"
