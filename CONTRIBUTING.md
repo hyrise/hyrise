@@ -1,14 +1,14 @@
 # Contribution Guidelines
-Do not commit/push directly to the master or develop branch. Instead, create a feature branch and file a merge request.
+Do not commit/push directly to the master or develop branch. Instead, create a feature branch/fork and file a merge request.
 
 # Coding Style
-Avoid exception handling. Because Opossum is not a product, we do not have to recover from errors. Instead, fail loud (i.e., terminate the program) so that developers immediately notice that something is wrong and can fix the problem at its root.
+Avoid exception handling. Because Hyrise is not a product, we do not have to recover from errors. Instead, fail loud (i.e., terminate the program) so that developers immediately notice that something is wrong and can fix the problem at its root.
 
 ## Formatting
 - 2 spaces for indentation
 - 120 columns
 - Comments above code
-- clang_format (executed with each make) enforces these rules automatically
+- clang_format enforces these rules automatically
 
 ## C++ guidelines
 - Do not use `new` or `malloc`
@@ -23,7 +23,7 @@ Avoid exception handling. Because Opossum is not a product, we do not have to re
 - Use `IS_DEBUG` macro for non-essential checks
 - Be specific: `double a = 3.0;` but `float a = 3.0f;`
 
-## Naming
+## Naming Conventions
 
 - Files: lowercase separated by underscores, e.g., abstract_operator.cpp
 - Types (classes, structs, enums, typedefs, using): CamelCase starting with uppercase letter, e.g., `BaseColumn`

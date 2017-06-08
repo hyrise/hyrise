@@ -50,7 +50,10 @@ OrderStatusResult AbstractOrderStatusImpl::run_transaction(const OrderStatusPara
     auto num_names = get_customer_tasks.back()->get_operator()->get_output()->row_count();
     assert(num_names > 0);
 
+    auto & 
+
     auto customer = get_customer_tasks.back()->get_operator()->get_output()->fetch_row(ceil(num_names / 2));
+
 
     result.c_balance = boost::get<float>(customer[0]);
     result.c_first = boost::get<std::string>(customer[1]);

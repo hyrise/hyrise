@@ -39,6 +39,10 @@ class OperatorsExportCsvTest : public BaseTest {
   bool compare_file(const std::string& filename, const std::string& expected_content) {
     std::ifstream t(filename);
 
+    if (!t.is_open()) {
+      throw std::runtime_error("compare_file: Could not find file " + filename);
+    }
+
     std::string content((std::istreambuf_iterator<char>(t)), std::istreambuf_iterator<char>());
 
     int equality = content.compare(expected_content);
@@ -55,7 +59,7 @@ class OperatorsExportCsvTest : public BaseTest {
 
   std::shared_ptr<Table> table;
   const std::string filename = "/tmp/export_test.csv";
-  const std::string meta_filename = filename + csv::meta_file_extension;
+  const std::string meta_filename = filename + csv_meta_file_extension;
 };
 
 TEST_F(OperatorsExportCsvTest, SingleChunkAndMetaInfo) {

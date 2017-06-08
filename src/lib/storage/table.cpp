@@ -10,6 +10,7 @@
 #include <vector>
 
 #include "dictionary_column.hpp"
+#include "utils/assert.hpp"
 #include "value_column.hpp"
 
 #include "resolve_type.hpp"
@@ -22,9 +23,8 @@ Table::Table(const size_t chunk_size) : _chunk_size(chunk_size), _append_mutex(s
 }
 
 void Table::add_column(const std::string &name, const std::string &type, bool create_value_column) {
-  if (name.size() > std::numeric_limits<ColumnNameLength>::max()) {
-    throw std::runtime_error("Cannot add column. Column name is too long.");
-  }
+  Assert((name.size() < std::numeric_limits<ColumnNameLength>::max()), "Cannot add column. Column name is too long.");
+
   _column_names.push_back(name);
   _column_types.push_back(type);
   if (create_value_column) {
@@ -68,7 +68,7 @@ ColumnID Table::column_id_by_name(const std::string &column_name) const {
       return column_id;
     }
   }
-  throw std::runtime_error("column " + column_name + " not found");
+  throw std::logic_error("column " + column_name + " not found");
 }
 
 uint32_t Table::chunk_size() const { return _chunk_size; }
@@ -87,43 +87,12 @@ void Table::add_chunk(Chunk chunk) {
     // the initial chunk was not used yet
     _chunks.clear();
   }
-  if (IS_DEBUG && _chunks.size() > 0 && chunk.col_count() != col_count()) {
-    throw std::runtime_error(std::string("adding chunk with ") + std::to_string(chunk.col_count()) +
-                             " columns to table with " + std::to_string(col_count()) + " columns");
-  }
+  DebugAssert((_chunks.size() == 0 || chunk.col_count() == col_count()),
+              std::string("adding chunk with ") + std::to_string(chunk.col_count()) + " columns to table with " +
+                  std::to_string(col_count()) + " columns");
   _chunks.emplace_back(std::move(chunk));
 }
 
 std::unique_lock<std::mutex> Table::acquire_append_mutex() { return std::unique_lock<std::mutex>(*_append_mutex); }
-
-const std::vector<AllTypeVariant> Table::fetch_row(const size_t index) const {
-  auto row_counter = 0u;
-
-  for (auto &chunk : _chunks) {
-    // Find chunk containing the row with the specified index.
-    if (chunk.size() == 0 || row_counter + chunk.size() <= index) {
-      row_counter += chunk.size();
-      continue;
-    }
-
-    const auto offset = index - row_counter;
-#ifdef IS_DEBUG
-    if (offset >= chunk.size()) {
-      throw std::runtime_error("Row does not exist.");
-    }
-#endif
-
-    std::vector<AllTypeVariant> row;
-    row.reserve(chunk.col_count());
-
-    for (ColumnID column_id = 0; column_id < chunk.col_count(); column_id++) {
-      row.emplace_back(chunk.get_column(column_id)->operator[](offset));
-    }
-
-    return row;
-  }
-
-  throw std::runtime_error("Row does not exist.");
-}
 
 }  // namespace opossum
