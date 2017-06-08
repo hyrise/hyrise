@@ -39,7 +39,7 @@ std::shared_ptr<const Table> Aggregate::on_execute() {
       [&](std::pair<std::string, AggregateFunction> pair) { return input_table->column_id_by_name(pair.first); });
 
   // check for invalid aggregates
-  for (uint aggregate_index = 0; aggregate_index < _aggregates.size(); ++aggregate_index) {
+  for (size_t aggregate_index = 0; aggregate_index < _aggregates.size(); ++aggregate_index) {
     auto column_id = _aggregate_column_ids[aggregate_index];
     auto aggregate = _aggregates[aggregate_index].second;
 
@@ -89,20 +89,22 @@ std::shared_ptr<const Table> Aggregate::on_execute() {
 
   // pre-insert empty maps for each aggregate column
   for (ColumnID column_index = 0; column_index < _contexts_per_column.size(); ++column_index) {
-    auto type_string = input_table->column_type(_aggregate_column_ids[column_index]);
+    auto &type_string = input_table->column_type(_aggregate_column_ids[column_index]);
 
     call_functor_by_column_type<AggregateContextCreator>(type_string, _contexts_per_column, column_index,
                                                          _aggregates[column_index].second);
   }
 
-  /*
-  Insert a dummy context for the DISTINCT implementation.
-  That way, _contexts_per_column will always have atleast one context with results.
-  This is important later on when we write the group keys into the table.
-  */
   if (_aggregate_column_ids.empty()) {
-    auto ctx = std::make_shared<AggregateContext<int32_t, int64_t>>();
-    ctx->results = std::make_shared<std::map<AggregateKey, AggregateResult<int64_t>>>();
+    /*
+    Insert a dummy context for the DISTINCT implementation.
+    That way, _contexts_per_column will always have at least one context with results.
+    This is important later on when we write the group keys into the table.
+
+    We choose int8_t for column type and aggregate type because it's small.
+    */
+    auto ctx = std::make_shared<AggregateContext<int8_t, int8_t>>();
+    ctx->results = std::make_shared<std::map<AggregateKey, AggregateResult<int8_t>>>();
 
     _contexts_per_column.push_back(ctx);
   }
@@ -134,12 +136,12 @@ std::shared_ptr<const Table> Aggregate::on_execute() {
        * Obviously this implementation is also used for plain GroupBy's.
        */
 
-      auto ctx = std::static_pointer_cast<AggregateContext<int32_t, int64_t>>(_contexts_per_column[0]);
+      auto ctx = std::static_pointer_cast<AggregateContext<int8_t, int8_t>>(_contexts_per_column[0]);
       auto &results = *ctx->results;
       for (auto &chunk : keys_per_chunk) {
         for (auto &keys : *chunk) {
           // insert dummy value to make sure we have the key in our map
-          results[keys] = AggregateResult<int64_t>();
+          results[keys] = AggregateResult<int8_t>();
         }
       }
     } else {
@@ -203,7 +205,7 @@ std::shared_ptr<const Table> Aggregate::on_execute() {
   ColumnID column_index = 0;
   for (auto aggregate : _aggregates) {
     auto column_id = _aggregate_column_ids[column_index];
-    auto type_string = input_table_left()->column_type(column_id);
+    auto &type_string = input_table_left()->column_type(column_id);
 
     call_functor_by_column_type<AggregateWriter>(type_string, *this, column_index, _aggregates[column_index].second);
 
