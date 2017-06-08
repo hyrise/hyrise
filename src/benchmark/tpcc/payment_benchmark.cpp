@@ -1,18 +1,14 @@
-#include <concurrency/transaction_manager.hpp>
-#include <concurrency/transaction_manager.hpp>
 #include <memory>
-#include <operators/commit_records.hpp>
 #include <string>
 #include <vector>
 
 #include "benchmark/benchmark.h"
 
-#include <operators/get_table.hpp>
-#include <operators/limit.hpp>
-#include <operators/projection.hpp>
-#include <operators/sort.hpp>
-#include <operators/table_scan.hpp>
-#include <scheduler/operator_task.hpp>
+#include "operators/get_table.hpp"
+#include "operators/projection.hpp"
+#include "operators/sort.hpp"
+#include "operators/table_scan.hpp"
+#include "scheduler/operator_task.hpp"
 
 #include "tpcc_base_fixture.cpp"
 
@@ -20,7 +16,7 @@ namespace opossum {
 
 class TPCCPaymentBenchmark : public TPCCBenchmarkFixture {
  public:
-  std::vector<std::shared_ptr<OperatorTask>> update_warehouse(const int w_id, const double payment_amount) {
+  std::vector<std::shared_ptr<OperatorTask>> update_warehouse(const int w_id, const double) {
     /**
      * UPDATE warehouse SET w_ytd = w_ytd + :h_amount
      * WHERE w_id=:w_id;
@@ -33,7 +29,7 @@ class TPCCPaymentBenchmark : public TPCCBenchmarkFixture {
     return std::vector<std::shared_ptr<OperatorTask>>();
   }
 
-  std::vector<std::shared_ptr<OperatorTask>> get_warehouse(const int w_id) {
+  std::vector<std::shared_ptr<OperatorTask>> get_warehouse(const int) {
     /**
      * SELECT w_street_1, w_street_2, w_city, w_state, w_zip, w_name
      * FROM warehouse
@@ -43,8 +39,7 @@ class TPCCPaymentBenchmark : public TPCCBenchmarkFixture {
     return std::vector<std::shared_ptr<OperatorTask>>();
   }
 
-  std::vector<std::shared_ptr<OperatorTask>> update_district(const int w_id, const int d_id,
-                                                             const double payment_amount) {
+  std::vector<std::shared_ptr<OperatorTask>> update_district(const int, const int, const double) {
     /**
      * UPDATE district SET d_ytd = d_ytd + :h_amount
      * WHERE d_w_id=:w_id AND d_id=:d_id;
@@ -53,7 +48,7 @@ class TPCCPaymentBenchmark : public TPCCBenchmarkFixture {
     return std::vector<std::shared_ptr<OperatorTask>>();
   }
 
-  std::vector<std::shared_ptr<OperatorTask>> get_district(const int w_id, const int d_id) {
+  std::vector<std::shared_ptr<OperatorTask>> get_district(const int, const int) {
     /**
      * SELECT d_street_1, d_street_2, d_city, d_state, d_zip, d_name
      * FROM district
@@ -154,7 +149,7 @@ class TPCCPaymentBenchmark : public TPCCBenchmarkFixture {
     return {gt_customer_task, first_filter_task, second_filter_task, third_filter_task, projection_task};
   }
 
-  std::vector<std::shared_ptr<OperatorTask>> update_customer(const int c_id, const int c_d_id, const int c_w_id) {
+  std::vector<std::shared_ptr<OperatorTask>> update_customer(const int, const int, const int) {
     /**
      * UPDATE customer SET c_balance = :c_balance
      * WHERE c_w_id = :c_w_id AND c_d_id = :c_d_id AND
@@ -171,7 +166,7 @@ class TPCCPaymentBenchmark : public TPCCBenchmarkFixture {
     return std::vector<std::shared_ptr<OperatorTask>>();
   }
 
-  std::vector<std::shared_ptr<OperatorTask>> insert_history(const int c_id, const int c_d_id, const int c_w_id) {
+  std::vector<std::shared_ptr<OperatorTask>> insert_history(const int, const int, const int) {
     /**
      * INSERT INTO history (h_c_d_id, h_c_w_id, h_c_id, h_d_id,
      * h_w_id, h_date, h_amount, h_data)
@@ -189,7 +184,7 @@ BENCHMARK_F(TPCCPaymentBenchmark, BM_TPCC_Payment)(benchmark::State &state) {
   auto home_warehouse_id = 0;  // there is only one warehouse
 
   while (state.KeepRunning()) {
-    // pass in i>1000 to trigger random value generation
+    //     pass in i>1000 to trigger random value generation
     auto c_last = _random_gen.last_name(2000);
     auto d_id = _random_gen.number(1, 10);
     auto c_id = _random_gen.nurand(1023, 1, 3000);
@@ -221,7 +216,8 @@ BENCHMARK_F(TPCCPaymentBenchmark, BM_TPCC_Payment)(benchmark::State &state) {
       //      assert(num_names > 0);
 
       //      auto customer =
-      //          get_from_table_at_row(get_customer_tasks.back()->get_operator()->get_output(), ceil(num_names / 2));
+      //          get_from_table_at_row(get_customer_tasks.back()->get_operator()->get_output(), ceil(num_names /
+      //          2));
 
       // locate midpoint customer
     } else {
@@ -248,20 +244,20 @@ BENCHMARK_F(TPCCPaymentBenchmark, BM_TPCC_Payment)(benchmark::State &state) {
         schedule_tasks_and_wait(update_customer_tasks);
       }
 
-      auto insert_history_tasks = insert_history(d_id, home_warehouse_id, c_id /*, d_id, payment_amount, some data*/);
+      auto insert_history_tasks = insert_history(d_id, home_warehouse_id, c_id);
       schedule_tasks_and_wait(insert_history_tasks);
 
       // Commit transaction.
-      TransactionManager::get().prepare_commit(*t_context);
+      //      TransactionManager::get().prepare_commit(*t_context);
 
-      auto commit = std::make_shared<CommitRecords>();
-      commit->set_transaction_context(t_context);
+      //      auto commit = std::make_shared<CommitRecords>();
+      //      commit->set_transaction_context(t_context);
 
-      auto commit_task = std::make_shared<OperatorTask>(commit);
-      commit_task->schedule();
-      commit_task->join();
-
-      TransactionManager::get().commit(*t_context);
+      //      auto commit_task = std::make_shared<OperatorTask>(commit);
+      //      commit_task->schedule();
+      //      commit_task->join();
+      //
+      //      TransactionManager::get().commit(*t_context);
     }
   }
 }
