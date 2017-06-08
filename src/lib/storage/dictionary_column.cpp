@@ -20,10 +20,7 @@ DictionaryColumn<T>::DictionaryColumn(const std::vector<T>&& dictionary,
 
 template <typename T>
 const AllTypeVariant DictionaryColumn<T>::operator[](const size_t i) const {
-  // TODO(anyone): Shouldn’t this throw an exception?
-  if (i == INVALID_CHUNK_OFFSET) {
-    return NullValue{};
-  }
+  DebugAssert(i != INVALID_CHUNK_OFFSET, "Passed chunk offset must be valid.");
 
   const auto value_id = _attribute_vector->get(i);
 
@@ -36,6 +33,8 @@ const AllTypeVariant DictionaryColumn<T>::operator[](const size_t i) const {
 
 template <typename T>
 const T DictionaryColumn<T>::get(const size_t i) const {
+  DebugAssert(i != INVALID_CHUNK_OFFSET, "Passed chunk offset must be valid.");
+
   const auto value_id = _attribute_vector->get(i);
 
   DebugAssert(value_id != NULL_VALUE_ID, "Value at index " + to_string(i) + " is null.");

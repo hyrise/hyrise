@@ -28,10 +28,7 @@ ValueColumn<T>::ValueColumn(tbb::concurrent_vector<T>&& values, tbb::concurrent_
 
 template <typename T>
 const AllTypeVariant ValueColumn<T>::operator[](const size_t i) const {
-  // TODO(anyone): Shouldn’t this throw an exception?
-  if (i == INVALID_CHUNK_OFFSET) {
-    return NullValue{};
-  }
+  DebugAssert(i != INVALID_CHUNK_OFFSET, "Passed chunk offset must be valid.");
 
   // Columns supports null values and value is null
   if (is_nullable() && _null_values->at(i)) {
@@ -43,6 +40,8 @@ const AllTypeVariant ValueColumn<T>::operator[](const size_t i) const {
 
 template <typename T>
 const T ValueColumn<T>::get(const size_t i) const {
+  DebugAssert(i != INVALID_CHUNK_OFFSET, "Passed chunk offset must be valid.");
+
   Assert(!is_nullable() || !_null_values->at(i), "Can’t return value of column type because it is null.");
   return _values.at(i);
 }
@@ -100,14 +99,14 @@ bool ValueColumn<T>::is_nullable() const {
 
 template <typename T>
 const tbb::concurrent_vector<bool>& ValueColumn<T>::null_values() const {
-  DebugAssert(!is_nullable(), "Chunk does not have mvcc columns");
+  DebugAssert(is_nullable(), "ValueColumn does not have mvcc columns");
 
   return *_null_values;
 }
 
 template <typename T>
 tbb::concurrent_vector<bool>& ValueColumn<T>::null_values() {
-  DebugAssert(!is_nullable(), "Chunk does not have mvcc columns");
+  DebugAssert(is_nullable(), "ValueColumn does not have mvcc columns");
 
   return *_null_values;
 }

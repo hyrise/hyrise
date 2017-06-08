@@ -58,6 +58,44 @@ TEST_F(StorageValueColumnTest, RetrieveValue) {
   EXPECT_EQ(vc_double.values()[0], 3.14);
 }
 
+TEST_F(StorageValueColumnTest, AppendNullValueWhenNotNullable) {
+  EXPECT_TRUE(!vc_int.is_nullable());
+  EXPECT_TRUE(!vc_str.is_nullable());
+  EXPECT_TRUE(!vc_double.is_nullable());
+
+  EXPECT_THROW(vc_int.append(NULL_VALUE), std::exception);
+  EXPECT_THROW(vc_str.append(NULL_VALUE), std::exception);
+  EXPECT_THROW(vc_double.append(NULL_VALUE), std::exception);
+}
+
+TEST_F(StorageValueColumnTest, AppendNullValueWhenNullable) {
+  vc_int = ValueColumn<int>{true};
+  vc_str = ValueColumn<std::string>{true};
+  vc_double = ValueColumn<double>{true};
+
+  EXPECT_TRUE(vc_int.is_nullable());
+  EXPECT_TRUE(vc_str.is_nullable());
+  EXPECT_TRUE(vc_double.is_nullable());
+
+  EXPECT_NO_THROW(vc_int.append(NULL_VALUE));
+  EXPECT_NO_THROW(vc_str.append(NULL_VALUE));
+  EXPECT_NO_THROW(vc_double.append(NULL_VALUE));
+}
+
+TEST_F(StorageValueColumnTest, ArraySubscriptOperatorReturnsNullValue) {
+  vc_int = ValueColumn<int>{true};
+  vc_str = ValueColumn<std::string>{true};
+  vc_double = ValueColumn<double>{true};
+
+  vc_int.append(NULL_VALUE);
+  vc_str.append(NULL_VALUE);
+  vc_double.append(NULL_VALUE);
+
+  EXPECT_EQ(vc_int[0], NULL_VALUE);
+  EXPECT_EQ(vc_str[0], NULL_VALUE);
+  EXPECT_EQ(vc_double[0], NULL_VALUE);
+}
+
 TEST_F(StorageValueColumnTest, StringTooLong) {
   EXPECT_THROW(vc_str.append(std::string(std::numeric_limits<StringLength>::max() + 1ul, 'A')), std::exception);
 }

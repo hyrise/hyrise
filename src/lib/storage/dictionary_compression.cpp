@@ -56,9 +56,10 @@ class ColumnCompressor : public ColumnCompressorBase {
 
       // Swap values to back if value is null
       auto remove_from_here_it = dictionary.end();
-      for (auto record_id = dictionary.size() - 1; record_id >= 0; ++record_id) {
-        if (null_values[record_id]) {
-          std::swap(dictionary[record_id], *(--remove_from_here_it));
+      auto null_it = null_values.crbegin();
+      for (auto dict_it = dictionary.rbegin(); dict_it != dictionary.rend(); ++dict_it, ++null_it) {
+        if (*null_it) {
+          std::swap(*dict_it, *(--remove_from_here_it));
         }
       }
 
@@ -70,7 +71,8 @@ class ColumnCompressor : public ColumnCompressorBase {
     dictionary.erase(std::unique(dictionary.begin(), dictionary.end()), dictionary.end());
     dictionary.shrink_to_fit();
 
-    auto attribute_vector = _create_fitted_attribute_vector(dictionary.size(), values.size());
+    // We need to increment the dictionary size here because of possible null values.
+    auto attribute_vector = _create_fitted_attribute_vector(dictionary.size() + 1u, values.size());
 
     if (value_column->is_nullable()) {
       const auto& null_values = value_column->null_values();
