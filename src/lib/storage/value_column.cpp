@@ -48,21 +48,24 @@ const T ValueColumn<T>::get(const size_t i) const {
 
 template <typename T>
 void ValueColumn<T>::append(const AllTypeVariant& val) {
-  // TODO(mjendruk): handle !is_nullable() && is_null
+  bool is_null = (val == AllTypeVariant{});
+
   if (is_nullable()) {
-    bool is_null = val == AllTypeVariant{};
     _null_values->push_back(is_null);
     _values.push_back(is_null ? T{} : type_cast<T>(val));
     return;
   }
+
+  Assert(!is_null, "ValueColumns is not nullable but value passed is null.");
 
   _values.push_back(type_cast<T>(val));
 }
 
 template <>
 void ValueColumn<std::string>::append(const AllTypeVariant& val) {
+  bool is_null = (val == AllTypeVariant{});
+
   if (is_nullable()) {
-    bool is_null = val == AllTypeVariant{};
     _null_values->push_back(is_null);
 
     if (is_null) {
@@ -70,6 +73,8 @@ void ValueColumn<std::string>::append(const AllTypeVariant& val) {
       return;
     }
   }
+
+  Assert(!is_null, "ValueColumns is not nullable but value passed is null.");
 
   auto typed_val = type_cast<std::string>(val);
   Assert((typed_val.length() <= std::numeric_limits<StringLength>::max()), "String value is too long to append!");

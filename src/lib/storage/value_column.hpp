@@ -41,7 +41,7 @@ class ValueColumn : public BaseColumn {
   /**
    * @brief Returns null array
    *
-   * Throws exception if is_nullable() return false
+   * Throws exception if is_nullable() returns false
    */
   const tbb::concurrent_vector<bool>& null_values() const;
   tbb::concurrent_vector<bool>& null_values();
