@@ -331,9 +331,7 @@ std::shared_ptr<opossum::Table> TableGenerator::generate_lineitems_table(TableGe
     // L_LINENUMBER
     chunk.add_column(add_column<int>(table_size, [](size_t i) { return i; }));
     // L_QUANTITY
-    chunk.add_column(add_column<int>(table_size, [&](size_t i) {
-      return order_lines_per_order[i].quantity;
-    }));
+    chunk.add_column(add_column<int>(table_size, [&](size_t i) { return order_lines_per_order[i].quantity; }));
     // L_EXTENDEDPRICE
     chunk.add_column(add_column<float>(table_size, [&](size_t i) { return order_lines_per_order[i].extendedprice; }));
     // L_DISCOUNT
