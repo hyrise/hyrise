@@ -24,11 +24,6 @@ struct RowID {
   }
 };
 
-// used to represent NULL values
-constexpr ChunkOffset INVALID_CHUNK_OFFSET = std::numeric_limits<ChunkOffset>::max();
-
-constexpr RowID NULL_ROW_ID = RowID{0u, INVALID_CHUNK_OFFSET};
-
 using ColumnID = uint16_t;
 using ValueID = uint32_t;  // Cannot be larger than ChunkOffset
 using WorkerID = uint32_t;
@@ -63,6 +58,14 @@ constexpr CpuID INVALID_CPU_ID = std::numeric_limits<CpuID>::max();
 constexpr WorkerID INVALID_WORKER_ID = std::numeric_limits<WorkerID>::max();
 
 constexpr NodeID CURRENT_NODE_ID = std::numeric_limits<NodeID>::max() - 1;
+
+// Used to represent NULL values
+constexpr ChunkOffset INVALID_CHUNK_OFFSET = std::numeric_limits<ChunkOffset>::max();
+
+// ... in ReferenceColumns
+constexpr RowID NULL_ROW_ID = RowID{0u, INVALID_CHUNK_OFFSET};
+
+// ... in DictionaryColumns
 constexpr ValueID NULL_VALUE_ID = std::numeric_limits<ValueID>::max();
 
 // The Scheduler currently supports just these 2 priorities, subject to change.

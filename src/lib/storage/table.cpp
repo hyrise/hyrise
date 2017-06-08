@@ -46,6 +46,7 @@ void Table::append(std::vector<AllTypeVariant> values) {
 }
 
 void Table::create_new_chunk() {
+  // Create chunk with mvcc columns
   Chunk newChunk{true};
 
   for (auto column_id = 0u; column_id < _column_types.size(); ++column_id) {

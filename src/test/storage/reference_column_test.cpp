@@ -22,12 +22,12 @@ namespace opossum {
 class ReferenceColumnTest : public ::testing::Test {
   virtual void SetUp() {
     _test_table = std::make_shared<opossum::Table>(opossum::Table(3));
-    _test_table->add_column("a", "int");
+    _test_table->add_column("a", "int", true);
     _test_table->add_column("b", "float");
     _test_table->append({123, 456.7f});
     _test_table->append({1234, 457.7f});
     _test_table->append({12345, 458.7f});
-    _test_table->append({12345, 458.7f});
+    _test_table->append({NULL_VALUE, 458.7f});
     _test_table->append({12345, 458.7f});
 
     _test_table_dict = std::make_shared<opossum::Table>(5);
@@ -36,11 +36,7 @@ class ReferenceColumnTest : public ::testing::Test {
     for (int i = 0; i <= 24; i += 2) _test_table_dict->append({i, 100 + i});
 
     DictionaryCompression::compress_chunks(*_test_table_dict, {0u, 1u});
-
-    StorageManager::get().add_table("test_table_dict", _test_table_dict);
   }
-
-  virtual void TearDown() { StorageManager::get().reset(); }
 
  public:
   std::shared_ptr<opossum::Table> _test_table, _test_table_dict;
@@ -84,6 +80,7 @@ TEST_F(ReferenceColumnTest, RetrievesValuesFromChunks) {
   // PosList with (0, 2), (1, 0), (1, 1)
   auto pos_list = std::make_shared<PosList>(std::initializer_list<RowID>(
       {_test_table->calculate_row_id(0, 2), _test_table->calculate_row_id(1, 0), _test_table->calculate_row_id(1, 1)}));
+
   auto ref_column = ReferenceColumn(_test_table, 0, pos_list);
 
   auto& column_1 = *(_test_table->get_chunk(0).get_column(0));
@@ -92,6 +89,22 @@ TEST_F(ReferenceColumnTest, RetrievesValuesFromChunks) {
   EXPECT_EQ(ref_column[0], column_1[2]);
   EXPECT_EQ(ref_column[1], column_2[0]);
   EXPECT_EQ(ref_column[2], column_2[1]);
+}
+
+TEST_F(ReferenceColumnTest, RetrieveNullValueFromNullRowID) {
+  // PosList with (0, 0), (0, 1), NULL_ROW_ID, (0, 2)
+  auto pos_list = std::make_shared<PosList>(
+      std::initializer_list<RowID>({_test_table->calculate_row_id(0, 0), _test_table->calculate_row_id(0, 1),
+                                    NULL_ROW_ID, _test_table->calculate_row_id(0, 2)}));
+
+  auto ref_column = ReferenceColumn(_test_table, 0, pos_list);
+
+  auto& column = *(_test_table->get_chunk(0).get_column(0));
+
+  EXPECT_EQ(ref_column[0], column[0]);
+  EXPECT_EQ(ref_column[1], column[1]);
+  EXPECT_EQ(ref_column[2], NULL_VALUE);
+  EXPECT_EQ(ref_column[3], column[2]);
 }
 
 }  // namespace opossum

@@ -55,16 +55,16 @@ class ColumnCompressor : public ColumnCompressorBase {
       const auto& null_values = value_column->null_values();
 
       // Swap values to back if value is null
-      auto remove_from_here_it = dictionary.end();
+      auto erase_from_here_it = dictionary.end();
       auto null_it = null_values.crbegin();
       for (auto dict_it = dictionary.rbegin(); dict_it != dictionary.rend(); ++dict_it, ++null_it) {
         if (*null_it) {
-          std::swap(*dict_it, *(--remove_from_here_it));
+          std::swap(*dict_it, *(--erase_from_here_it));
         }
       }
 
-      // Erase all values
-      dictionary.erase(remove_from_here_it, dictionary.end());
+      // Erase null values
+      dictionary.erase(erase_from_here_it, dictionary.end());
     }
 
     std::sort(dictionary.begin(), dictionary.end());
