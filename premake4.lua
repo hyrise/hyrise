@@ -97,6 +97,8 @@ solution "opossum"
     defines { "OPOSSUM_NUMA_SUPPORT=0" }
   end
 
+  libs[#libs+1] = "sqlparser"
+
   configuration "Debug"
     defines { "IS_DEBUG=1" }
     flags { "Symbols" }
@@ -124,9 +126,21 @@ project "googlebenchmark"
   configuration "Debug or Release"
     defines {"NDEBUG", "HAVE_STD_REGEX"}
 
+project "sqlparser"
+  kind "StaticLib"
+  buildoptions { "-O3 -Wno-sign-compare" }
+
+  -- clang throws unneeded-internal-declaration for parser generated code.
+  -- This warning does not exist in gcc, so we have to make a special fork here.
+  if _OPTIONS["compiler"] == "clang" then
+    buildoptions { "-O3 -Wno-sign-compare -Wno-unneeded-internal-declaration -Wno-format" }
+  end
+
+  files { "third_party/sql-parser/src/**.cpp" }
+
 project "opossum"
   kind "StaticLib"
-  includedirs { "third_party/grpc/include/", "third_party/grpc/third_party/protobuf/src/" }
+  includedirs { "third_party/grpc/include/", "third_party/grpc/third_party/protobuf/src/", "third_party/sql-parser/src/" }
   files { "src/lib/**.hpp", "src/lib/**.cpp" }
 
 project "benchmarklibs"
@@ -138,35 +152,35 @@ project "opossum-asan"
   kind "StaticLib"
   buildoptions {"-fsanitize=address -fno-omit-frame-pointer"}
   linkoptions {"-fsanitize=address"}
-  includedirs { "third_party/grpc/include/", "third_party/grpc/third_party/protobuf/src/" }
+  includedirs { "third_party/grpc/include/", "third_party/grpc/third_party/protobuf/src/", "third_party/sql-parser/src/" }
   files { "src/lib/**.hpp", "src/lib/**.cpp", "src/bin/server_main.cpp" }
 
 project "opossumCoverage"
   kind "StaticLib"
   buildoptions { "-fprofile-arcs -ftest-coverage" }
   linkoptions { "-lgcov --coverage" }
-  includedirs { "third_party/grpc/include/", "third_party/grpc/third_party/protobuf/src/" }
+  includedirs { "third_party/grpc/include/", "third_party/grpc/third_party/protobuf/src/", "third_party/sql-parser/src/" }
   files { "src/lib/**.hpp", "src/lib/**.cpp" }
 
 -- Static lib for the opossum protobuf and grpc code generated from opossum.proto (see action 'protoc' below)
 project "opossumProtobuf"
   kind "StaticLib"
   buildoptions ("-Wno-unused-parameter -Wno-deprecated-declarations")
-  includedirs { "third_party/grpc/include/", "third_party/grpc/third_party/protobuf/src/" }
+  includedirs { "third_party/grpc/include/", "third_party/grpc/third_party/protobuf/src/", "third_party/sql-parser/src/" }
   files { "src/lib/network/generated/**.pb.cc" }
 
 -- Exemplary opossum client, showing how to use grpc and protobuf at client-side
 project "client"
   kind "ConsoleApp"
   links { "opossumProtobuf", "protobuf", "grpc++", "grpc", "z", "boost_program_options" }
-  includedirs { "third_party/grpc/include/", "third_party/grpc/third_party/protobuf/src/" }
+  includedirs { "third_party/grpc/include/", "third_party/grpc/third_party/protobuf/src/", "third_party/sql-parser/src/" }
   libdirs { "third_party/grpc/libs/opt/", "third_party/grpc/libs/opt/protobuf" }
   files { "src/bin/client.cpp" }
 
 project "server"
   kind "ConsoleApp"
   links { "opossum", "opossumProtobuf", "protobuf", "grpc++", "grpc", "z", "boost_program_options" } -- z is needed on macos to link grpc
-  includedirs { "third_party/grpc/include/", "third_party/grpc/third_party/protobuf/src/" }
+  includedirs { "third_party/grpc/include/", "third_party/grpc/third_party/protobuf/src/", "third_party/sql-parser/src/" }
   libdirs { "third_party/grpc/libs/opt/", "third_party/grpc/libs/opt/protobuf" }
   links(libs)
   files { "src/bin/server_main.cpp" }
@@ -181,7 +195,7 @@ project "test"
   kind "ConsoleApp"
 
   links { "opossum", "googletest", "opossumProtobuf", "protobuf", "grpc++", "grpc", "z" }
-  includedirs { "third_party/googletest/googletest/include", "third_party/grpc/include/", "third_party/grpc/third_party/protobuf/src/" }
+  includedirs { "third_party/googletest/googletest/include", "third_party/grpc/include/", "third_party/grpc/third_party/protobuf/src/", "third_party/sql-parser/src/" }
   libdirs { "third_party/grpc/libs/opt/", "third_party/grpc/libs/opt/protobuf" }
   links(libs)
   files { "src/test/**.hpp", "src/test/**.cpp" }
@@ -193,7 +207,7 @@ project "asan"
   links { "opossum-asan", "googletest", "opossumProtobuf", "protobuf", "grpc++", "grpc", "z" }
   links(libs)
   files { "src/test/**.hpp", "src/test/**.cpp" }
-  includedirs { "third_party/googletest/googletest/include", "third_party/grpc/include/", "third_party/grpc/third_party/protobuf/src/" }
+  includedirs { "third_party/googletest/googletest/include", "third_party/grpc/include/", "third_party/grpc/third_party/protobuf/src/", "third_party/sql-parser/src/" }
   libdirs { "third_party/grpc/libs/opt/", "third_party/grpc/libs/opt/protobuf" }
   buildoptions {"-fsanitize=address -fno-omit-frame-pointer"}
   linkoptions { "-fsanitize=address" }
@@ -202,9 +216,9 @@ project "asan"
 project "benchmark"
   kind "ConsoleApp"
 
-  links { "opossum", "googlebenchmark" }
+  links { "opossum", "googlebenchmark", "sqlparser" }
   files { "src/benchmark/**.hpp", "src/benchmark/**.cpp" }
-  includedirs { "third_party/benchmark/include" }
+  includedirs { "third_party/benchmark/include", "third_party/sql-parser/src/" }
   postbuildcommands { "./build/benchmark --benchmark_format=json > benchmark.json" }
 
 project "benchmarkTPCC"
@@ -231,7 +245,7 @@ project "coverage"
   linkoptions {"--coverage"}
   files { "src/test/**.hpp", "src/test/**.cpp" }
   buildoptions { "-fprofile-arcs -ftest-coverage" }
-  includedirs { "third_party/googletest/googletest/include", "third_party/grpc/include/", "third_party/grpc/third_party/protobuf/src/" }
+  includedirs { "third_party/googletest/googletest/include", "third_party/grpc/include/", "third_party/grpc/third_party/protobuf/src/", "third_party/sql-parser/src/" }
   libdirs { "third_party/grpc/libs/opt/", "third_party/grpc/libs/opt/protobuf" }
   postbuildcommands { "./build/coverage && rm -fr coverage; mkdir coverage && gcovr -s -r . --exclude=\"(.*types*.|.*test*.|.*\.pb\.|third_party)\" --html --html-details -o coverage/index.html" }
 

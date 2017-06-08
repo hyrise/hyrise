@@ -23,6 +23,7 @@ class TransactionManagerTest : public BaseTest {
 };
 
 TEST_F(TransactionManagerTest, NonActiveTransactionCannotBeRolledBack) {
+  if (!IS_DEBUG) return;
   auto context = manager().new_transaction_context();
 
   manager().prepare_commit(*context);

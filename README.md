@@ -1,15 +1,29 @@
 [![Build Status](https://ares.epic.hpi.uni-potsdam.de/jenkins/buildStatus/icon?job=Hyrise/zweirise/master)](https://ares.epic.hpi.uni-potsdam.de/jenkins/job/Hyrise/job/zweirise/)
 
-# opossum
+# Hyrise v2 (Codename OpossumDB)
 
 *Have a look at our [contributor guidelines](https://github.com/hyrise/zweirise/blob/master/CONTRIBUTING.md)*
 
-The [course material](https://hpi.de//plattner/teaching/winter-term-201617/build-your-own-database.html) is a good starting point to get to know Opossum
+The [wiki](https://github.com/hyrise/zweirise/wiki) is a good starting point to get to know Hyrise
+
+## Easy start
+To get all dependencies of Hyrise in a docker image, run
+```
+docker-compose build
+```
+
+You can start the container via
+```
+docker-compose run --rm opossum
+```
+:whale:
+
+In the container, continue with [Building and Tooling](#building-and-tooling).
 
 ## Dependencies
 You can install the dependencies on your own or use the install.sh script which installs most of the following packages.
 
-The install script currently works with macOS (brew) and Ubuntu 16.10 (apt-get)
+The install script was tested under macOS (brew) and Ubuntu 16.10 (apt-get)
 
 ### premake4
 install via homebrew / packet manager
@@ -52,7 +66,9 @@ install via homebrew / packet manager
 install via homebrew / packet manager (installed as default by Ubuntu)
 
 ### get and compile protoc and gRPC
-get via `git submodule update --init --recursive`.
+get via `git submodule update --init --recursive`
+
+The install script builds protoc and gRPC. For manual compilation:
 
 Compile via `CPPFLAGS="-Wno-deprecated-declarations" CFLAGS="-Wno-deprecated-declarations -Wno-implicit-function-declaration -Wno-shift-negative-value" make static --directory=third_party/grpc REQUIRE_CUSTOM_LIBRARIES_opt=true`.
 
@@ -91,7 +107,7 @@ The binary can be executed with `./build/test`
 *Supports only clang on MacOS and only gcc on linux*
 
 ### AddressSanitizer
-`make -j asan` will build OpossumDB with enabled AddressSanitizer options and execute all available tests. It will fail on the first detected memory error and will print a summary. To convert addresses to actual source code locations, make sure llvm-symbolizer is installed (included in llvm package) and is available in `$PATH`. To specify a custom location for the symbolizer, set `$ASAN_SYMBOLIZER_PATH` to the path of the executable. This seems to work out of the box on macOS - If not, make sure to have llvm installed.
+`make -j asan` will build Hyrise with enabled AddressSanitizer options and execute all available tests. It will fail on the first detected memory error and will print a summary. To convert addresses to actual source code locations, make sure llvm-symbolizer is installed (included in llvm package) and is available in `$PATH`. To specify a custom location for the symbolizer, set `$ASAN_SYMBOLIZER_PATH` to the path of the executable. This seems to work out of the box on macOS - If not, make sure to have llvm installed.
 
 ## Naming convention for gtest macros:
 
@@ -120,6 +136,7 @@ Contact: firstname.lastname@hpi.de
 - Timo Djürken
 -	Moritz	Eyssen
 -	Martin	Fischer
+-	Pedro	Flemming
 -	Michael	Janke
 -	Max	Jendruk
 -	Marvin	Keller

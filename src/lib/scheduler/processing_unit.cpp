@@ -1,5 +1,6 @@
 #include "processing_unit.hpp"
 
+#include <functional>
 #include <memory>
 
 #include "abstract_scheduler.hpp"

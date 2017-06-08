@@ -11,9 +11,9 @@
 #include "base_column.hpp"
 #include "dictionary_column.hpp"
 #include "table.hpp"
-#include "value_column.hpp"
-
 #include "types.hpp"
+#include "utils/assert.hpp"
+#include "value_column.hpp"
 
 namespace opossum {
 
@@ -74,7 +74,7 @@ class ReferenceColumn : public BaseColumn {
         values.push_back(dict_column->get(row.chunk_offset));
         continue;
       }
-      throw std::logic_error("column is no dictonary or value column");
+      Fail("column is no dictonary or value column");
     }
 
     return values;

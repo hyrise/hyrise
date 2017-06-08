@@ -7,3 +7,6 @@
 [submodule "third_party/benchmark"]
 	path = third_party/benchmark
 	url = https://github.com/google/benchmark.git
+[submodule "third_party/sql-parser"]
+	path = third_party/sql-parser
+	url = https://github.com/hyrise/sql-parser

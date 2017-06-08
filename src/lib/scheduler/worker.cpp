@@ -13,6 +13,7 @@
 #include "current_scheduler.hpp"
 #include "processing_unit.hpp"
 #include "topology.hpp"
+#include "utils/assert.hpp"
 
 namespace {
 
@@ -45,9 +46,7 @@ void Worker::_wait_for_tasks(const std::vector<std::shared_ptr<AbstractTask>>& t
    * It hands off the active worker token so that another worker can execute tasks while the calling worker is blocked.
    */
   auto processing_unit = _processing_unit.lock();
-  if (IS_DEBUG && !processing_unit) {
-    throw std::logic_error("Bug: Locking the processing unit failed");
-  }
+  DebugAssert(static_cast<bool>(processing_unit), "Bug: Locking the processing unit failed");
 
   processing_unit->yield_active_worker_token(_id);
   processing_unit->wake_or_create_worker();
@@ -58,9 +57,7 @@ void Worker::_wait_for_tasks(const std::vector<std::shared_ptr<AbstractTask>>& t
 }
 
 void Worker::operator()() {
-  if (IS_DEBUG && !this_thread_worker.expired()) {
-    throw std::logic_error("Thread already has a worker");
-  }
+  DebugAssert((this_thread_worker.expired()), "Thread already has a worker");
 
   this_thread_worker = shared_from_this();
 
@@ -68,14 +65,11 @@ void Worker::operator()() {
 
   auto scheduler = CurrentScheduler::get();
 
-  if (IS_DEBUG && !scheduler) {
-    throw std::logic_error("No scheduler");
-  }
+  DebugAssert(static_cast<bool>(scheduler), "No scheduler");
 
   auto processing_unit = _processing_unit.lock();
-  if (IS_DEBUG && !processing_unit) {
-    throw std::logic_error("No processing unit");
-  }
+
+  DebugAssert(static_cast<bool>(processing_unit), "No processing unit");
 
   while (!processing_unit->shutdown_flag()) {
     // Hibernate if this is not the active worker.

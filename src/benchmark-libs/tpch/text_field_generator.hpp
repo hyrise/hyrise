@@ -11,9 +11,8 @@ namespace tpch {
 
 class TextFieldGenerator {
  public:
-  // TODO(anybody) change text size to 300MB: 300e6
   explicit TextFieldGenerator(RandomGenerator random_generator)
-      : _random_gen(random_generator), _text(Grammar(random_generator).text(300e3)) {}
+      : _random_gen(random_generator), _text(Grammar(random_generator).text(300e6)) {}
 
   std::string text_string(size_t lower_length, size_t upper_length) {
     auto length = _random_gen.number(lower_length, upper_length);
@@ -89,6 +88,20 @@ class TextFieldGenerator {
 
   std::string customer_segment() { return word(customer_segments); }
 
+  std::string order_priority() { return word(order_priorities); }
+
+  std::string lineitem_instruction() { return word(lineitem_instructions); }
+
+  std::string lineitem_mode() { return word(lineitem_modes); }
+
+  const std::vector<std::string> nation_names = {
+      "ALGERIA", "ARGENTINA", "BRAZIL",         "CANADA",       "EGYPT", "ETHIOPIA", "FRANCE",
+      "GERMANY", "INDIA",     "INDONESIA",      "IRAN",         "IRAQ",  "JAPAN",    "JORDAN",
+      "KENYA",   "MOROCCO",   "MOZAMBIQUE",     "PERU",         "CHINA", "ROMANIA",  "SAUDI ARABIA",
+      "VIETNAM", "RUSSIA",    "UNITED KINGDOM", "UNITED STATES"};
+
+  const std::vector<std::string> region_names = {"AFRICA", "AMERICA", "ASIA", "EUROPE", "MIDDLE EAST"};
+
  protected:
   std::string word(std::vector<std::string> word_vector) {
     auto i = _random_gen.number(0, word_vector.size() - 1);
@@ -121,5 +134,12 @@ class TextFieldGenerator {
                                                                "PKG",  "PACK", "CAN", "DRUM"};
 
   const std::vector<std::string> customer_segments = {"AUTOMOBILE", "BUILDING", "FURNITURE", "MACHINERY", "HOUSEHOLD"};
+
+  const std::vector<std::string> order_priorities = {"1-URGENT", "2-HIGH", "3-MEDIUM", "4-NOT SPECIFIED", "5-LOW"};
+
+  const std::vector<std::string> lineitem_instructions = {"DELIVER IN PERSON", "COLLECT COD", "NONE",
+                                                          "TAKE BACK RETURN"};
+
+  const std::vector<std::string> lineitem_modes = {"REG AIR", "AIR", "RAIL", "SHIP", "TRUCK", "MAIL", "FOB"};
 };
 }  // namespace tpch

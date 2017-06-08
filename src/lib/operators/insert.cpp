@@ -8,6 +8,7 @@
 #include "concurrency/transaction_context.hpp"
 #include "storage/storage_manager.hpp"
 #include "storage/value_column.hpp"
+#include "utils/assert.hpp"
 
 #include "resolve_type.hpp"
 #include "type_cast.hpp"
@@ -36,7 +37,7 @@ class TypedColumnProcessor : public AbstractTypedColumnProcessor {
   void copy_data(std::shared_ptr<BaseColumn> source, size_t source_start_index, std::shared_ptr<BaseColumn> target,
                  size_t target_start_index, size_t length) override {
     auto casted_target = std::dynamic_pointer_cast<ValueColumn<T>>(target);
-    if (!casted_target) throw std::logic_error("Type mismatch");
+    DebugAssert(static_cast<bool>(casted_target), "Type mismatch");
     auto& vect = casted_target->values();
 
     if (auto casted_source = std::dynamic_pointer_cast<ValueColumn<T>>(source)) {
