@@ -22,7 +22,10 @@ class BaseAttributeVector;
 template <typename T>
 class DictionaryColumn : public UntypedDictionaryColumn {
  public:
-  // Creates a Dictionary column from a given dictionary and attribute vector.
+  /**
+   * Creates a Dictionary column from a given dictionary and attribute vector.
+   * See dictionary_compression.cpp for more.
+   */
   explicit DictionaryColumn(const std::vector<T>&& dictionary,
                             const std::shared_ptr<BaseAttributeVector>& attribute_vector);
 

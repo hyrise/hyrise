@@ -40,6 +40,12 @@ using TypesWithNullValue = boost::mpl::push_front<TypesAsMplVector, NullValue>::
 // Create boost::variant from mpl vector
 using AllTypeVariant = typename boost::make_variant_over<TypesWithNullValue>::type;
 
+/**
+ * Notes:
+ *   – Use this instead of AllTypeVariant{}, AllTypeVariant{NullValue{}}, NullValue{}, etc.
+ *     whenever a null value needs to be represented
+ *   – supports the equality operator: (my_value == NULL_VALUE)
+ */
 static const auto NULL_VALUE = AllTypeVariant{};
 
 }  // namespace opossum
