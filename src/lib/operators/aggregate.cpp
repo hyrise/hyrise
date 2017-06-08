@@ -8,22 +8,21 @@
 #include <vector>
 
 #include "resolve_type.hpp"
+#include "utils/assert.hpp"
 
 namespace opossum {
 
 // disable string columns for aggregate functions
 template <>
 AggregateBuilder<std::string>::AggregateBuilder(const AggregateFunction) {
-  throw std::runtime_error("Cannot use string columns in aggregates");
+  Fail("Cannot use string columns in aggregates");
 }
 
 Aggregate::Aggregate(const std::shared_ptr<AbstractOperator> in,
                      const std::vector<std::pair<std::string, AggregateFunction>> aggregates,
                      const std::vector<std::string> groupby_columns)
     : AbstractReadOnlyOperator(in), _aggregates(aggregates), _groupby_columns(groupby_columns) {
-  if (aggregates.empty() && groupby_columns.empty()) {
-    throw std::runtime_error("Neither aggregate nor groupby columns have been specified");
-  }
+  Assert(!(aggregates.empty() && groupby_columns.empty()), "Neither aggregate nor groupby columns have been specified");
 }
 
 const std::string Aggregate::name() const { return "Aggregate"; }
@@ -127,7 +126,7 @@ std::shared_ptr<const Table> Aggregate::on_execute() {
         break;
 
       default:
-        throw std::runtime_error("Aggregate: invalid aggregate function");
+        Fail("Aggregate: invalid aggregate function");
     }
   }
 

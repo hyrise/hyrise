@@ -18,6 +18,7 @@
 #include "storage/reference_column.hpp"
 #include "storage/value_column.hpp"
 #include "types.hpp"
+#include "utils/assert.hpp"
 
 namespace opossum {
 
@@ -195,7 +196,7 @@ struct AggregateBuilder : public ColumnVisitable {
         break;
 
       default:
-        throw std::runtime_error("AggregateBuilder: invalid aggregate function");
+        Fail("AggregateBuilder: invalid aggregate function");
     }
   }
 

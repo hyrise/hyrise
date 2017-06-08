@@ -9,6 +9,7 @@
 #include "tbb/concurrent_vector.h"
 
 #include "untyped_dictionary_column.hpp"
+#include "utils/assert.hpp"
 
 #include "types.hpp"
 
