@@ -69,8 +69,11 @@ class Table {
   void append(std::vector<AllTypeVariant> values);
 
   // returns one materialized value
+  // multiversion concurrency control values of chunks are ignored
+  // - table needs to be validated before by Validate operator
+  // If you want to write efficient operators, back off!
   template <typename T>
-  T get_value(const ColumnID column_id = 0u, const size_t row_number = 0u) const {
+  T get_value(const ColumnID column_id, const size_t row_number) const {
     size_t row_counter = 0u;
     for (auto &chunk : _chunks) {
       size_t current_size = chunk.size();
