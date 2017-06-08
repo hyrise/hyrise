@@ -239,7 +239,6 @@ add_library(opossumCoverageLib STATIC ${SOURCES})
 target_link_libraries(
     opossumCoverageLib
     ${LIBRARIES}
-    -lgcov
     --coverage
 )
 set_target_properties(opossumCoverageLib PROPERTIES COMPILE_FLAGS "-fprofile-arcs -ftest-coverage")
