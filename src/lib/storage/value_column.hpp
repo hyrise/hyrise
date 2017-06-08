@@ -25,7 +25,6 @@ class ValueColumn : public BaseColumn {
   // return the value at a certain position. If you want to write efficient operators, back off!
   const AllTypeVariant operator[](const size_t i) const override;
 
-  // TODO(mjendruk): Is this even used?
   const T get(const size_t i) const;
 
   // add a value to the end

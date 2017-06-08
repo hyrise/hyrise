@@ -43,6 +43,7 @@ const AllTypeVariant ValueColumn<T>::operator[](const size_t i) const {
 
 template <typename T>
 const T ValueColumn<T>::get(const size_t i) const {
+  Assert(!is_nullable() || !_null_values->at(i), "Can’t return value of column type because it is null.");
   return _values.at(i);
 }
 
