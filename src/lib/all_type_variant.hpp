@@ -40,4 +40,6 @@ using TypesWithNullValue = boost::mpl::push_front<TypesAsMplVector, NullValue>::
 // Create boost::variant from mpl vector
 using AllTypeVariant = typename boost::make_variant_over<TypesWithNullValue>::type;
 
+static const auto NULL_VALUE = AllTypeVariant{};
+
 }  // namespace opossum

@@ -10,7 +10,6 @@
 
 #include "resolve_type.hpp"
 
-
 namespace opossum {
 
 JoinHash::JoinHash(const std::shared_ptr<const AbstractOperator> left,

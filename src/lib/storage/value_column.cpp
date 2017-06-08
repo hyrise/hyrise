@@ -35,7 +35,7 @@ const AllTypeVariant ValueColumn<T>::operator[](const size_t i) const {
 
   // Columns supports null values and value is null
   if (is_nullable() && _null_values->at(i)) {
-    return NullValue{};
+    return NULL_VALUE;
   }
 
   return _values.at(i);
@@ -49,7 +49,7 @@ const T ValueColumn<T>::get(const size_t i) const {
 
 template <typename T>
 void ValueColumn<T>::append(const AllTypeVariant& val) {
-  bool is_null = (val == AllTypeVariant{});
+  bool is_null = (val == NULL_VALUE);
 
   if (is_nullable()) {
     _null_values->push_back(is_null);
@@ -64,7 +64,7 @@ void ValueColumn<T>::append(const AllTypeVariant& val) {
 
 template <>
 void ValueColumn<std::string>::append(const AllTypeVariant& val) {
-  bool is_null = (val == AllTypeVariant{});
+  bool is_null = (val == NULL_VALUE);
 
   if (is_nullable()) {
     _null_values->push_back(is_null);

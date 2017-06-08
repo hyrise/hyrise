@@ -106,8 +106,7 @@ void BaseTest::_print_matrix(const BaseTest::Matrix &m) {
 
   for (unsigned row = 0; row < left.size(); row++)
     for (unsigned col = 0; col < left[row].size(); col++) {
-      if (left[row][col] == AllTypeVariant{} || right[row][col] == AllTypeVariant{}) {
-        // TODO(mjendruk): Check if both columns are nullable
+      if (left[row][col] == NULL_VALUE || right[row][col] == NULL_VALUE) {
         EXPECT_EQ(left[row][col], right[row][col]);
       } else if (tleft.column_type(col) == "float") {
         EXPECT_EQ(tright.column_type(col), "float");
@@ -175,7 +174,7 @@ std::shared_ptr<Table> BaseTest::load_table(const std::string &file_name, size_t
       auto nullable = col_nullable[column_id];
 
       if (nullable && (value == AllTypeVariant{"null"})) {
-        value = AllTypeVariant{};
+        value = NULL_VALUE;
       }
     }
 

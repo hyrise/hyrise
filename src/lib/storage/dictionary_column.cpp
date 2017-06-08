@@ -28,7 +28,7 @@ const AllTypeVariant DictionaryColumn<T>::operator[](const size_t i) const {
   const auto value_id = _attribute_vector->get(i);
 
   if (value_id == NULL_VALUE_ID) {
-    return NullValue{};
+    return NULL_VALUE;
   }
 
   return (*_dictionary)[value_id];
@@ -91,7 +91,7 @@ ValueID DictionaryColumn<T>::lower_bound(T value) const {
 
 template <typename T>
 ValueID DictionaryColumn<T>::lower_bound(const AllTypeVariant& value) const {
-  DebugAssert(value != AllTypeVariant{}, "Null value passed.");
+  DebugAssert(value != NULL_VALUE, "Null value passed.");
 
   auto typed_value = type_cast<T>(value);
   return lower_bound(typed_value);
@@ -106,7 +106,7 @@ ValueID DictionaryColumn<T>::upper_bound(T value) const {
 
 template <typename T>
 ValueID DictionaryColumn<T>::upper_bound(const AllTypeVariant& value) const {
-  DebugAssert(value != AllTypeVariant{}, "Null value passed.");
+  DebugAssert(value != NULL_VALUE, "Null value passed.");
 
   auto typed_value = type_cast<T>(value);
   return upper_bound(typed_value);

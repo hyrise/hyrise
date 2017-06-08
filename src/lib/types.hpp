@@ -17,6 +17,11 @@ struct RowID {
   bool operator<(const RowID &rhs) const {
     return std::tie(chunk_id, chunk_offset) < std::tie(rhs.chunk_id, rhs.chunk_offset);
   }
+
+  // Useful when comparing a row ID to NULL_ROW_ID
+  bool operator==(const RowID &rhs) const {
+    return std::tie(chunk_id, chunk_offset) == std::tie(rhs.chunk_id, rhs.chunk_offset);
+  }
 };
 
 // used to represent NULL values
