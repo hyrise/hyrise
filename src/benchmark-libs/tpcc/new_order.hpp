@@ -4,7 +4,9 @@
 #include <string>
 #include <vector>
 
-#include "defines.h"
+#include <json.hpp>
+
+#include "defines.hpp"
 
 #include "concurrency/transaction_context.hpp"
 
@@ -50,6 +52,7 @@ struct NewOrderResult {
 };
 
 class AbstractNewOrderImpl {
+ public:
   virtual TaskVector get_get_customer_and_warehouse_tax_rate_tasks(
     const std::shared_ptr<TransactionContext> t_context, const int32_t w_id, const int32_t d_id,
     const int32_t c_id) = 0;
@@ -99,6 +102,7 @@ class AbstractNewOrderImpl {
 };
 
 class NewOrderRefImpl : public AbstractNewOrderImpl {
+ public:
   TaskVector get_get_customer_and_warehouse_tax_rate_tasks(
     const std::shared_ptr<TransactionContext> t_context, const int32_t w_id, const int32_t d_id,
     const int32_t c_id) override;
@@ -145,4 +149,31 @@ class NewOrderRefImpl : public AbstractNewOrderImpl {
     const std::string & ol_dist_info) override;
 };
 
+}
+
+namespace nlohmann
+{
+template<>
+struct adl_serializer<tpcc::NewOrderOrderLineParams> {
+  static void to_json(nlohmann::json &j, const tpcc::NewOrderOrderLineParams &v);
+  static void from_json(const nlohmann::json &j, tpcc::NewOrderOrderLineParams &v);
+};
+
+template<>
+struct adl_serializer<tpcc::NewOrderParams> {
+  static void to_json(nlohmann::json &j, const tpcc::NewOrderParams &v);
+  static void from_json(const nlohmann::json &j, tpcc::NewOrderParams &v);
+};
+
+template<>
+struct adl_serializer<tpcc::NewOrderOrderLineResult> {
+  static void to_json(nlohmann::json &j, const tpcc::NewOrderOrderLineResult &v);
+  static void from_json(const nlohmann::json &j, tpcc::NewOrderOrderLineResult &v);
+};
+
+template<>
+struct adl_serializer<tpcc::NewOrderResult> {
+  static void to_json(nlohmann::json &j, const tpcc::NewOrderResult &v);
+  static void from_json(const nlohmann::json &j, tpcc::NewOrderResult &v);
+};
 }

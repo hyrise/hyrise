@@ -453,3 +453,70 @@ TaskVector NewOrderRefImpl::get_create_order_line_tasks(
 
 }
 
+namespace nlohmann {
+
+using namespace opossum;
+using namespace tpcc;
+
+void adl_serializer<NewOrderParams>::to_json(nlohmann::json &j, const NewOrderParams &v) {
+  throw "Not implemented";
+}
+
+void adl_serializer<NewOrderParams>::from_json(const nlohmann::json &j, NewOrderParams &v) {
+  v.w_id = j["w_id"];
+  v.c_id = j["c_id"];
+  v.o_entry_d = j["o_entry_d"];
+
+  v.order_lines.reserve(j["order_lines"].size());
+  for (const auto & ol_j : j["order_lines"]) {
+    NewOrderOrderLineParams order_line_params = ol_j;
+    v.order_lines.emplace_back(order_line_params);
+  }
+}
+
+void adl_serializer<NewOrderOrderLineParams>::to_json(nlohmann::json &j, const NewOrderOrderLineParams &v) {
+  throw "Not implemented";
+}
+
+void adl_serializer<NewOrderOrderLineParams>::from_json(const nlohmann::json &j, NewOrderOrderLineParams &v) {
+  v.i_id = j["i_id"];
+  v.w_id = j["w_id"];
+  v.qty = j["qty"];
+}
+
+void adl_serializer<NewOrderOrderLineResult>::to_json(nlohmann::json &j, const NewOrderOrderLineResult &v) {
+  throw "Not implemented";
+}
+
+void adl_serializer<NewOrderOrderLineResult>::from_json(const nlohmann::json &j, NewOrderOrderLineResult &v) {
+  v.i_price = j["i_price"];
+  v.i_name = j["i_name"];
+  v.i_data = j["i_data"];
+  v.s_qty = j["s_qty"];
+  v.s_dist_xx = j["s_dist_xx"];
+  v.s_ytd = j["s_ytd"];
+  v.s_order_cnt = j["s_order_cnt"];
+  v.s_remote_cnt = j["s_remote_cnt"];
+  v.s_data = j["s_data"];
+  v.amount = j["amount"];
+}
+
+void adl_serializer<NewOrderResult>::to_json(nlohmann::json &j, const NewOrderResult &v) {
+  throw "Not implemented";
+}
+
+void adl_serializer<NewOrderResult>::from_json(const nlohmann::json &j, NewOrderResult &v) {
+  v.w_tax_rate = j["w_tax_rate"];
+  v.d_tax_rate = j["w_tax_rate"];
+  v.d_next_o_id = j["w_tax_rate"];
+  v.c_discount = j["w_tax_rate"];
+  v.c_last = j["w_tax_rate"];
+  v.c_credit = j["w_tax_rate"];
+
+  v.order_lines.reserve(j["order_lines"]);
+  for (const auto & ol_j : j["order_lines"]) {
+    NewOrderOrderLineResult order_line = ol_j;
+    v.order_lines.emplace_back(order_line);
+  }
+}
+}

@@ -7,7 +7,7 @@
 
 #include "scheduler/operator_task.hpp"
 
-#include "defines.h"
+#include "defines.hpp"
 
 namespace tpcc {
 

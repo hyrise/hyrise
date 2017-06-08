@@ -49,10 +49,13 @@ class TPCCOrderStatusBenchmark : public TPCCBenchmarkFixture {
 
   void benchmark_get_order(benchmark::State &state, AbstractOrderStatusImpl &impl) {
     clear_cache();
-    auto c_last = _random_gen.last_name(2000);
+
+    auto c_d_id = _random_gen.number(1, 10);
+    auto c_w_id = 0;  // there is only one warehouse
+    auto c_id = _random_gen.nurand(1023, 1, 3000);
 
     while (state.KeepRunning()) {
-      auto get_order_tasks = impl.get_orders();
+      auto get_order_tasks = impl.get_orders(c_id, c_d_id, c_w_id);
       AbstractScheduler::schedule_tasks_and_wait(get_order_tasks);
     }
   }
