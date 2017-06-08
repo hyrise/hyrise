@@ -8,9 +8,11 @@
 #include "concurrency/transaction_manager.hpp"
 #include "operators/commit_records.hpp"
 #include "operators/get_table.hpp"
+#include "operators/insert.hpp"
 #include "operators/product.hpp"
 #include "operators/projection.hpp"
 #include "operators/table_scan.hpp"
+#include "operators/table_wrapper.hpp"
 #include "operators/update.hpp"
 #include "scheduler/operator_task.hpp"
 
@@ -151,24 +153,116 @@ class TPCCNewOrderBenchmark : public TPCCBenchmarkFixture {
     return {gt_t, ts1_t, ts2_t, original_rows_t, updated_rows_t, update_t};
   }
 
+  template <typename T>
+  std::shared_ptr<ValueColumn<T>> append_single_value(T value) {
+    tbb::concurrent_vector<T> column;
+    column.push_back(value);
+
+    return std::make_shared<ValueColumn<T>>(std::move(column));
+  }
+
   // TODO(tim): re-factor/extend Insert so that we do not have to build a Table object first.
-  //  std::vector<std::shared_ptr<OperatorTask>> get_create_order_tasks(
-  //          const std::shared_ptr<TransactionContext> t_context, const int32_t d_next_o_id, const int32_t d_id, const
-  //          int32_t w_id, const int32_t c_id, const int32_t o_entry_d, const int32_t o_carrier_id, const int32_t
-  //          o_ol_cnt, const int32_t o_all_local) {
-  //    /**
-  //     * INSERT INTO ORDERS (O_ID, O_D_ID, O_W_ID, O_C_ID, O_ENTRY_D, O_CARRIER_ID, O_OL_CNT, O_ALL_LOCAL)
-  //     * VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-  //     */
-  //  }
-  //
-  //  std::vector<std::shared_ptr<OperatorTask>> get_create_new_order_tasks(
-  //          const std::shared_ptr<TransactionContext> t_context, const int32_t o_id, const int32_t d_id, const int32_t
-  //          w_id) {
-  //    /**
-  //     * INSERT INTO NEW_ORDER (NO_O_ID, NO_D_ID, NO_W_ID) VALUES (?, ?, ?)
-  //     */
-  //  }
+  std::vector<std::shared_ptr<OperatorTask>> get_create_order_tasks(const std::shared_ptr<TransactionContext> t_context,
+                                                                    const int32_t d_next_o_id, const int32_t d_id,
+                                                                    const int32_t w_id, const int32_t c_id,
+                                                                    const int32_t o_entry_d, const int32_t o_carrier_id,
+                                                                    const int32_t o_ol_cnt, const int32_t o_all_local) {
+    /**
+     * INSERT INTO ORDERS (O_ID, O_D_ID, O_W_ID, O_C_ID, O_ENTRY_D, O_CARRIER_ID, O_OL_CNT, O_ALL_LOCAL)
+     * VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+     */
+
+    auto target_table_name = std::string("ORDERS");
+    const auto original_table = StorageManager::get().get_table(target_table_name);
+
+    auto new_table = std::make_shared<Table>();
+    for (ColumnID columnID = 0; columnID < original_table->col_count(); columnID++) {
+      new_table->add_column(original_table->column_name(columnID), original_table->column_type(columnID), false);
+    }
+
+    Chunk chunk;
+    chunk.add_column(append_single_value<int32_t>(d_next_o_id));
+    chunk.add_column(append_single_value<int32_t>(d_id));
+    chunk.add_column(append_single_value<int32_t>(w_id));
+    chunk.add_column(append_single_value<int32_t>(c_id));
+    chunk.add_column(append_single_value<int32_t>(o_entry_d));
+    chunk.add_column(append_single_value<int32_t>(o_carrier_id));
+    chunk.add_column(append_single_value<int32_t>(o_ol_cnt));
+    chunk.add_column(append_single_value<int32_t>(o_all_local));
+    new_table->add_chunk(std::move(chunk));
+
+    auto tw = std::make_shared<TableWrapper>(new_table);
+    const auto insert = std::make_shared<Insert>(target_table_name, tw);
+    const auto insert_t = std::make_shared<OperatorTask>(insert);
+
+    return {insert_t};
+  }
+
+  std::vector<std::shared_ptr<OperatorTask>> get_create_new_order_tasks(
+      const std::shared_ptr<TransactionContext> t_context, const int32_t o_id, const int32_t d_id, const int32_t w_id) {
+    /**
+     * INSERT INTO NEW_ORDER (no_o_id, no_d_id, no_w_id)
+     * VALUES (?, ?, ?);
+     */
+
+    auto target_table_name = std::string("NEW_ORDER");
+    const auto original_table = StorageManager::get().get_table(target_table_name);
+
+    auto new_table = std::make_shared<Table>();
+    for (ColumnID columnID = 0; columnID < original_table->col_count(); columnID++) {
+      new_table->add_column(original_table->column_name(columnID), original_table->column_type(columnID), false);
+    }
+
+    Chunk chunk;
+    chunk.add_column(append_single_value<int32_t>(o_id));
+    chunk.add_column(append_single_value<int32_t>(d_id));
+    chunk.add_column(append_single_value<int32_t>(w_id));
+    new_table->add_chunk(std::move(chunk));
+
+    auto tw = std::make_shared<TableWrapper>(new_table);
+    const auto insert = std::make_shared<Insert>(target_table_name, tw);
+    const auto insert_t = std::make_shared<OperatorTask>(insert);
+
+    return {insert_t};
+  }
+
+  std::vector<std::shared_ptr<OperatorTask>> get_create_order_line_tasks(
+      const std::shared_ptr<TransactionContext> t_context, const int32_t ol_o_id, const int32_t ol_d_id,
+      const int32_t ol_w_id, const int32_t ol_number, const int32_t ol_i_id, const int32_t ol_supply_w_id,
+      const int32_t ol_delivery_d, const int32_t ol_quantity, const float ol_amount, const std::string& ol_dist_info) {
+    /**
+     *  INSERT INTO order_line (ol_o_id, ol_d_id, ol_w_id, ol_number,
+     *  ol_i_id, ol_supply_w_id, ol_quantity, ol_amount, ol_dist_info)
+     *  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);
+     */
+
+    auto target_table_name = std::string("ORDER_LINE");
+    const auto original_table = StorageManager::get().get_table(target_table_name);
+
+    auto new_table = std::make_shared<Table>();
+    for (ColumnID columnID = 0; columnID < original_table->col_count(); columnID++) {
+      new_table->add_column(original_table->column_name(columnID), original_table->column_type(columnID), false);
+    }
+
+    Chunk chunk;
+    chunk.add_column(append_single_value<int32_t>(ol_o_id));
+    chunk.add_column(append_single_value<int32_t>(ol_d_id));
+    chunk.add_column(append_single_value<int32_t>(ol_w_id));
+    chunk.add_column(append_single_value<int32_t>(ol_number));
+    chunk.add_column(append_single_value<int32_t>(ol_i_id));
+    chunk.add_column(append_single_value<int32_t>(ol_supply_w_id));
+    chunk.add_column(append_single_value<int32_t>(ol_delivery_d));
+    chunk.add_column(append_single_value<int32_t>(ol_quantity));
+    chunk.add_column(append_single_value<float>(ol_amount));
+    chunk.add_column(append_single_value<std::string>(ol_dist_info));
+    new_table->add_chunk(std::move(chunk));
+
+    auto tw = std::make_shared<TableWrapper>(new_table);
+    const auto insert = std::make_shared<Insert>(target_table_name, tw);
+    const auto insert_t = std::make_shared<OperatorTask>(insert);
+
+    return {insert_t};
+  }
 
   std::vector<std::shared_ptr<OperatorTask>> get_get_item_info_tasks(
       const std::shared_ptr<TransactionContext> t_context, const int32_t ol_i_id) {

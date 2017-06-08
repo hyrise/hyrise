@@ -194,7 +194,7 @@ BENCHMARK_F(TPCCPaymentBenchmark, BM_TPCC_Payment)(benchmark::State &state) {
     auto payment_amount = _random_gen.number(100, 500000) / 100.0;
     //    auto payment_date = std::time(0);
 
-    auto t_context = TransactionManager::get().new_transaction_context();
+    //    auto t_context = TransactionManager::get().new_transaction_context();
 
     auto update_warehouse_tasks = update_warehouse(home_warehouse_id, payment_amount);
     schedule_tasks_and_wait(update_warehouse_tasks);
