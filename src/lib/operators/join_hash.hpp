@@ -469,7 +469,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
               // We assume that the relations have been swapped previously,
               // so that the outer relation is the probing relation.
             } else if (_mode == Left || _mode == Right) {
-              pos_list_left_local->emplace_back(RowID{0, INVALID_CHUNK_OFFSET});
+              pos_list_left_local->emplace_back(NULL_ROW_ID);
               pos_list_right_local->emplace_back(row.row_id);
             }
           }
@@ -493,7 +493,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
 
           for (size_t i = partition_begin; i < partition_end; ++i) {
             auto &row = partition[i];
-            pos_list_left_local->emplace_back(RowID{0, INVALID_CHUNK_OFFSET});
+            pos_list_left_local->emplace_back(NULL_ROW_ID);
             pos_list_right_local->emplace_back(row.row_id);
           }
           if (!pos_list_left_local->empty()) {

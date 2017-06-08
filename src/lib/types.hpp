@@ -22,6 +22,8 @@ struct RowID {
 // used to represent NULL values
 constexpr ChunkOffset INVALID_CHUNK_OFFSET = std::numeric_limits<ChunkOffset>::max();
 
+constexpr RowID NULL_ROW_ID = RowID{0u, INVALID_CHUNK_OFFSET};
+
 using ColumnID = uint16_t;
 using ValueID = uint32_t;  // Cannot be larger than ChunkOffset
 using WorkerID = uint32_t;

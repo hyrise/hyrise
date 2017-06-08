@@ -425,7 +425,7 @@ class JoinNestedLoopA::JoinNestedLoopAImpl : public AbstractJoinOperatorImpl {
     The map that we are iterating through contains one pair for all rows from either Left or Right indicating whether
     a join with a NULL value is necessary.
 
-    We are going to create a new Chunk for each of these rows, because this is the simpliest solution. The difficulty
+    We are going to create a new Chunk for each of these rows, because this is the simplest solution. The difficulty
     lies in resolving chunks with reference columns. We would need to somehow split the remaining rows into groups of
     reference columns and value/dictionary columns rows.
     An improvement would be to group the missing rows by chunk_id and create a new Chunk per group.
@@ -438,9 +438,9 @@ class JoinNestedLoopA::JoinNestedLoopAImpl : public AbstractJoinOperatorImpl {
 
           if (_mode == Left) {
             pos_list_left->emplace_back(elem.first);
-            pos_list_right->emplace_back(RowID{0, INVALID_CHUNK_OFFSET});
+            pos_list_right->emplace_back(NULL_ROW_ID);
           } else if (_mode == Right) {
-            pos_list_left->emplace_back(RowID{0, INVALID_CHUNK_OFFSET});
+            pos_list_left->emplace_back(NULL_ROW_ID);
             pos_list_right->emplace_back(elem.first);
           }
 
