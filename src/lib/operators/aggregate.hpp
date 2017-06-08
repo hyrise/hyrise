@@ -215,23 +215,23 @@ struct PartitionBuilder : public ColumnVisitable {
 };
 
 /*
-The AggregateFunctionBuilder is used to create the lambda functio that will be used by
+The AggregateFunctionBuilder is used to create the lambda function that will be used by
 the AggregateVisitor. It is a separate class because methods cannot be partially specialized.
 Therefore, we partially specialize the whole class and define the get_aggregate_function anew every time.
 */
 template <typename ColumnType, typename AggregateType>
-using aggregate_func_t = std::function<optional<AggregateType>(ColumnType, optional<AggregateType>)>;
+using AggregateFunctor = std::function<optional<AggregateType>(ColumnType, optional<AggregateType>)>;
 
 template <typename ColumnType, typename AggregateType, AggregateFunction function>
 struct AggregateFunctionBuilder {
-  aggregate_func_t<ColumnType, AggregateType> get_aggregate_function() {
+  AggregateFunctor<ColumnType, AggregateType> get_aggregate_function() {
     throw std::runtime_error("Invalid aggregate function");
   }
 };
 
 template <typename ColumnType, typename AggregateType>
 struct AggregateFunctionBuilder<ColumnType, AggregateType, Min> {
-  aggregate_func_t<ColumnType, AggregateType> get_aggregate_function() {
+  AggregateFunctor<ColumnType, AggregateType> get_aggregate_function() {
     return [](ColumnType new_value, optional<AggregateType> current_aggregate) {
       return (!current_aggregate || value_smaller(new_value, *current_aggregate)) ? new_value : *current_aggregate;
     };
@@ -240,7 +240,7 @@ struct AggregateFunctionBuilder<ColumnType, AggregateType, Min> {
 
 template <typename ColumnType, typename AggregateType>
 struct AggregateFunctionBuilder<ColumnType, AggregateType, Max> {
-  aggregate_func_t<ColumnType, AggregateType> get_aggregate_function() {
+  AggregateFunctor<ColumnType, AggregateType> get_aggregate_function() {
     return [](ColumnType new_value, optional<AggregateType> current_aggregate) {
       return (!current_aggregate || value_greater(new_value, *current_aggregate)) ? new_value : *current_aggregate;
     };
@@ -249,7 +249,7 @@ struct AggregateFunctionBuilder<ColumnType, AggregateType, Max> {
 
 template <typename ColumnType, typename AggregateType>
 struct AggregateFunctionBuilder<ColumnType, AggregateType, Sum> {
-  aggregate_func_t<ColumnType, AggregateType> get_aggregate_function() {
+  AggregateFunctor<ColumnType, AggregateType> get_aggregate_function() {
     return [](ColumnType new_value, optional<AggregateType> current_aggregate) {
       return new_value + (!current_aggregate ? 0 : *current_aggregate);
     };
@@ -258,7 +258,7 @@ struct AggregateFunctionBuilder<ColumnType, AggregateType, Sum> {
 
 template <typename ColumnType, typename AggregateType>
 struct AggregateFunctionBuilder<ColumnType, AggregateType, Avg> {
-  aggregate_func_t<ColumnType, AggregateType> get_aggregate_function() {
+  AggregateFunctor<ColumnType, AggregateType> get_aggregate_function() {
     return [](ColumnType new_value, optional<AggregateType> current_aggregate) {
       return new_value + (!current_aggregate ? 0 : *current_aggregate);
     };
@@ -267,7 +267,7 @@ struct AggregateFunctionBuilder<ColumnType, AggregateType, Avg> {
 
 template <typename ColumnType, typename AggregateType>
 struct AggregateFunctionBuilder<ColumnType, AggregateType, Count> {
-  aggregate_func_t<ColumnType, AggregateType> get_aggregate_function() {
+  AggregateFunctor<ColumnType, AggregateType> get_aggregate_function() {
     return [](ColumnType, optional<AggregateType> current_aggregate) { return current_aggregate; };
   }
 };
@@ -300,7 +300,7 @@ It is used to gradually build the given aggregate over one column.
 */
 template <typename ColumnType, typename AggregateType, AggregateFunction function>
 struct AggregateVisitor : public ColumnVisitable {
-  aggregate_func_t<ColumnType, AggregateType> aggregate_func;
+  AggregateFunctor<ColumnType, AggregateType> aggregate_func;
   ChunkOffset chunk_offset = 0;
 
   AggregateVisitor() {
