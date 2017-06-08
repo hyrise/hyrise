@@ -230,7 +230,6 @@ add_library(opossumAsanLib STATIC ${SOURCES})
 target_link_libraries(
     opossumAsanLib
     ${LIBRARIES}
-    -lgcov
     -fsanitize=address
 )
 set_target_properties(opossumAsanLib PROPERTIES COMPILE_FLAGS "-fsanitize=address -fno-omit-frame-pointer")
