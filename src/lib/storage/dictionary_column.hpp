@@ -24,7 +24,7 @@ class DictionaryColumn : public UntypedDictionaryColumn {
  public:
   // Creates a Dictionary column from a given dictionary and attribute vector.
   explicit DictionaryColumn(const std::vector<T>&& dictionary,
-                            const std::shared_ptr<BaseAttributeVector>& attribute_vector, bool can_be_null = false);
+                            const std::shared_ptr<BaseAttributeVector>& attribute_vector);
 
   // return the value at a certain position. If you want to write efficient operators, back off!
   const AllTypeVariant operator[](const size_t i) const override;
@@ -35,8 +35,8 @@ class DictionaryColumn : public UntypedDictionaryColumn {
   // dictionary columns are immutable
   void append(const AllTypeVariant&) override;
 
-  // checks if columns supports null values
-  bool can_be_null() const override;
+  // returns always true
+  bool is_nullable() const override;
 
   // returns an underlying dictionary
   std::shared_ptr<const std::vector<T>> dictionary() const;
@@ -85,7 +85,6 @@ class DictionaryColumn : public UntypedDictionaryColumn {
       ChunkID chunk_id, std::shared_ptr<std::vector<ChunkOffset>> offsets = nullptr);
 
  protected:
-  const bool _can_be_null;
   std::shared_ptr<std::vector<T>> _dictionary;
   std::shared_ptr<BaseAttributeVector> _attribute_vector;
 };

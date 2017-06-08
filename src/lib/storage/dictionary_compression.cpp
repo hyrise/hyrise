@@ -51,7 +51,7 @@ class ColumnCompressor : public ColumnCompressorBase {
     auto dictionary = std::vector<T>{values.cbegin(), values.cend()};
 
     // Remove null values from value vector
-    if (value_column->can_be_null()) {
+    if (value_column->is_nullable()) {
       const auto& null_values = value_column->null_values();
 
       // Swap values to back if value is null
@@ -72,7 +72,7 @@ class ColumnCompressor : public ColumnCompressorBase {
 
     auto attribute_vector = _create_fitted_attribute_vector(dictionary.size(), values.size());
 
-    if (value_column->can_be_null()) {
+    if (value_column->is_nullable()) {
       const auto& null_values = value_column->null_values();
 
       /**
@@ -100,7 +100,7 @@ class ColumnCompressor : public ColumnCompressorBase {
       }
     }
 
-    return std::make_shared<DictionaryColumn<T>>(std::move(dictionary), attribute_vector, value_column->can_be_null());
+    return std::make_shared<DictionaryColumn<T>>(std::move(dictionary), attribute_vector);
   }
 
   ValueID find_value_id(const std::vector<T>& dictionary, const T& value) {

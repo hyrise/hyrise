@@ -16,7 +16,7 @@ namespace opossum {
 template <typename T>
 class ValueColumn : public BaseColumn {
  public:
-  ValueColumn(bool can_be_null = false);
+  explicit ValueColumn(bool nullable = false);
 
   // Create a ValueColumn with the given values
   explicit ValueColumn(tbb::concurrent_vector<T>&& values);
@@ -36,12 +36,12 @@ class ValueColumn : public BaseColumn {
   tbb::concurrent_vector<T>& values();
 
   // checks if columns supports null values
-  bool can_be_null() const override;
+  bool is_nullable() const override;
 
   /**
    * @brief Returns null array
    *
-   * Throws exception if can_be_null() return false
+   * Throws exception if is_nullable() return false
    */
   const tbb::concurrent_vector<bool>& null_values() const;
   tbb::concurrent_vector<bool>& null_values();

@@ -10,7 +10,6 @@
 
 #include "resolve_type.hpp"
 
-#include "resolve_type.hpp"
 
 namespace opossum {
 

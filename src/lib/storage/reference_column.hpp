@@ -83,7 +83,7 @@ class ReferenceColumn : public BaseColumn {
   size_t size() const override;
 
   // returns always true
-  bool can_be_null() const override;
+  bool is_nullable() const override;
 
   const std::shared_ptr<const PosList> pos_list() const;
   const std::shared_ptr<const Table> referenced_table() const;

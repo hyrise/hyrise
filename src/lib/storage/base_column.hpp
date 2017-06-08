@@ -34,7 +34,7 @@ class BaseColumn {
   virtual void append(const AllTypeVariant &val) = 0;
 
   // checks if columns supports null values
-  virtual bool can_be_null() const = 0;
+  virtual bool is_nullable() const = 0;
 
   // returns the number of values
   virtual size_t size() const = 0;

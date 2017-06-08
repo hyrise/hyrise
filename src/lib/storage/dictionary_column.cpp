@@ -15,10 +15,8 @@ namespace opossum {
 
 template <typename T>
 DictionaryColumn<T>::DictionaryColumn(const std::vector<T>&& dictionary,
-                                      const std::shared_ptr<BaseAttributeVector>& attribute_vector, bool can_be_null)
-    : _can_be_null(can_be_null),
-      _dictionary(std::make_shared<std::vector<T>>(std::move(dictionary))),
-      _attribute_vector(attribute_vector) {}
+                                      const std::shared_ptr<BaseAttributeVector>& attribute_vector)
+    : _dictionary(std::make_shared<std::vector<T>>(std::move(dictionary))), _attribute_vector(attribute_vector) {}
 
 template <typename T>
 const AllTypeVariant DictionaryColumn<T>::operator[](const size_t i) const {
@@ -51,8 +49,8 @@ void DictionaryColumn<T>::append(const AllTypeVariant&) {
 }
 
 template <typename T>
-bool DictionaryColumn<T>::can_be_null() const {
-  return _can_be_null;
+bool DictionaryColumn<T>::is_nullable() const {
+  return true;
 }
 
 template <typename T>

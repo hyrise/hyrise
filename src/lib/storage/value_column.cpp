@@ -14,8 +14,8 @@
 namespace opossum {
 
 template <typename T>
-ValueColumn<T>::ValueColumn(bool can_be_null) {
-  if (can_be_null) _null_values = std::make_unique<tbb::concurrent_vector<bool>>();
+ValueColumn<T>::ValueColumn(bool nullable) {
+  if (nullable) _null_values = std::make_unique<tbb::concurrent_vector<bool>>();
 }
 
 template <typename T>
@@ -34,7 +34,7 @@ const AllTypeVariant ValueColumn<T>::operator[](const size_t i) const {
   }
 
   // Columns supports null values and value is null
-  if (can_be_null() && _null_values->at(i)) {
+  if (is_nullable() && _null_values->at(i)) {
     return NullValue{};
   }
 
@@ -48,8 +48,8 @@ const T ValueColumn<T>::get(const size_t i) const {
 
 template <typename T>
 void ValueColumn<T>::append(const AllTypeVariant& val) {
-  // TODO(mjendruk): handle !can_be_null() && is_null
-  if (can_be_null()) {
+  // TODO(mjendruk): handle !is_nullable() && is_null
+  if (is_nullable()) {
     bool is_null = val == AllTypeVariant{};
     _null_values->push_back(is_null);
     _values.push_back(is_null ? T{} : type_cast<T>(val));
@@ -61,7 +61,7 @@ void ValueColumn<T>::append(const AllTypeVariant& val) {
 
 template <>
 void ValueColumn<std::string>::append(const AllTypeVariant& val) {
-  if (can_be_null()) {
+  if (is_nullable()) {
     bool is_null = val == AllTypeVariant{};
     _null_values->push_back(is_null);
 
@@ -88,20 +88,20 @@ tbb::concurrent_vector<T>& ValueColumn<T>::values() {
 }
 
 template <typename T>
-bool ValueColumn<T>::can_be_null() const {
+bool ValueColumn<T>::is_nullable() const {
   return _null_values != nullptr;
 }
 
 template <typename T>
 const tbb::concurrent_vector<bool>& ValueColumn<T>::null_values() const {
-  DebugAssert(!can_be_null(), "Chunk does not have mvcc columns");
+  DebugAssert(!is_nullable(), "Chunk does not have mvcc columns");
 
   return *_null_values;
 }
 
 template <typename T>
 tbb::concurrent_vector<bool>& ValueColumn<T>::null_values() {
-  DebugAssert(!can_be_null(), "Chunk does not have mvcc columns");
+  DebugAssert(!is_nullable(), "Chunk does not have mvcc columns");
 
   return *_null_values;
 }
