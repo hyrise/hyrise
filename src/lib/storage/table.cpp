@@ -95,34 +95,4 @@ void Table::add_chunk(Chunk chunk) {
 
 std::unique_lock<std::mutex> Table::acquire_append_mutex() { return std::unique_lock<std::mutex>(*_append_mutex); }
 
-const std::vector<AllTypeVariant> Table::fetch_row(const size_t index) const {
-  auto row_counter = 0u;
-
-  for (auto &chunk : _chunks) {
-    // Find chunk containing the row with the specified index.
-    if (chunk.size() == 0 || row_counter + chunk.size() < index) {
-      row_counter += chunk.size();
-      continue;
-    }
-
-    const auto offset = index - row_counter;
-#ifdef IS_DEBUG
-    if (offset >= chunk.size()) {
-      throw std::runtime_error("Row does not exist.");
-    }
-#endif
-
-    std::vector<AllTypeVariant> row;
-    row.reserve(chunk.col_count());
-
-    for (ColumnID column_id = 0; column_id < chunk.col_count(); column_id++) {
-      row.emplace_back(chunk.get_column(column_id)->operator[](offset));
-    }
-
-    return row;
-  }
-
-  throw std::runtime_error("Row does not exist.");
-}
-
 }  // namespace opossum
