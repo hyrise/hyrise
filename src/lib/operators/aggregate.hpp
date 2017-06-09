@@ -207,7 +207,7 @@ struct PartitionBuilder : public ColumnVisitable {
     } else {
       // This DictionaryColumn has to be scanned in full. We directly insert the results into the list of matching
       // rows.
-      for (ChunkOffset av_offset = 0; av_offset < column.size(); ++av_offset, ++chunk_offset) {
+      for (size_t av_offset = 0; av_offset < column.size(); ++av_offset, ++chunk_offset) {
         (*context->hash_keys)[chunk_offset].emplace_back(dictionary[attribute_vector.get(av_offset)]);
       }
     }
@@ -381,7 +381,7 @@ struct AggregateVisitor : public ColumnVisitable {
     } else {
       // This DictionaryColumn has to be scanned in full. We directly insert the results into the list of matching
       // rows.
-      for (ChunkOffset av_offset = 0; av_offset < column.size(); ++av_offset, ++chunk_offset) {
+      for (size_t av_offset = 0; av_offset < column.size(); ++av_offset, ++chunk_offset) {
         results[hash_keys[chunk_offset]].current_aggregate = aggregate_func(
             dictionary[attribute_vector.get(av_offset)], results[hash_keys[chunk_offset]].current_aggregate);
 
