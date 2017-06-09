@@ -15,7 +15,7 @@ if echo $REPLY | grep -E '^[Yy]$' > /dev/null; then
             # python2.7 is preinstalled on macOS
             # check, for each programme individually with brew, whether it is already installed
             # due to brew issues on MacOS after system upgrade
-            for formula in boost gcc clang-format gcovr tbb autoconf automake libtool pkg-config; do
+            for formula in boost cmake gcc clang-format gcovr tbb autoconf automake libtool pkg-config; do
                 # if brew formula is installed
                 if brew ls --versions $formula > /dev/null; then
                     continue
