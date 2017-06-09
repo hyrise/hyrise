@@ -31,6 +31,10 @@ class SQLParseTreeCache {
   // Purges all entries from the cache and reinitializes it with the given capacity.
   void reset(size_t capacity);
 
+  inline size_t size() const { return _cache.size(); }
+
+  inline LRUCache<std::string, std::shared_ptr<hsql::SQLParserResult>>& cache() { return _cache; }
+
  protected:
   LRUCache<std::string, std::shared_ptr<hsql::SQLParserResult>> _cache;
 

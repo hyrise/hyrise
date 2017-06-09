@@ -52,21 +52,21 @@ std::shared_ptr<const Table> SQLQueryOperator::on_execute(std::shared_ptr<Transa
   compile_parse_result(parse_result);
 
   // Add the result task to the query plan.
-  auto tasks = _plan.tasks();
-  if (tasks.size() > 0) {
-    tasks.back()->set_as_predecessor_of(_result_task);
-    _result_op->set_input_operator(tasks.back()->get_operator());
+  if (_plan.size() > 0) {
+    _plan.back()->set_as_predecessor_of(_result_task);
+    _result_op->set_input_operator(_plan.back()->get_operator());
     _plan.addTask(_result_task);
   }
 
   // Schedule all tasks in query plan.
   if (_schedule_plan) {
-    for (const auto& task : tasks) {
+    for (const auto& task : _plan.tasks()) {
       task->schedule();
     }
   }
 
-  return nullptr;
+  std::shared_ptr<const Table> table = std::make_shared<const Table>();
+  return table;
 }
 
 std::shared_ptr<SQLParserResult> SQLQueryOperator::parse_query(const std::string& query) const {

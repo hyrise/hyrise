@@ -101,9 +101,14 @@ TEST_F(SQLParseTreeCacheTest, BasicAutoCacheTest) {
   const std::string q2 = "SELECT * FROM table_b;";
   const std::string q3 = "SELECT * FROM table_a WHERE a > 1;";
 
+  // Execute each query once to cache them.
   schedule_query(q1);
   schedule_query(q2);
-  schedule_query(q1);
+  schedule_query(q3);
+
+  CurrentScheduler::get()->finish();
+  CurrentScheduler::set(std::make_shared<NodeQueueScheduler>(Topology::create_fake_numa_topology(8, 4)));
+
   schedule_query(q3);
   schedule_query(q1);
   schedule_query(q1);
@@ -123,7 +128,9 @@ TEST_F(SQLParseTreeCacheTest, BasicAutoCacheTest) {
   EXPECT_EQ(10u, SQLQueryOperator::num_executed);
   EXPECT_EQ(7u, SQLQueryOperator::parse_tree_cache_hits);
   EXPECT_EQ(3u, SQLQueryOperator::parse_tree_cache_misses);
+  EXPECT_EQ(3u, cache.size());
+  EXPECT_EQ(q1, cache.cache().list().front().first);
+  EXPECT_EQ(q2, cache.cache().list().back().first);
 }
 
 }  // namespace opossum
-

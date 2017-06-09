@@ -53,6 +53,8 @@ class LRUCache {
   // Returns the underlying list of all elements in the cache.
   std::list<kv_pair_t>& list() { return _list; }
 
+  size_t size() const { return _map.size(); }
+
   // Return the capacity of the cache.
   size_t capacity() const { return _capacity; }
 
