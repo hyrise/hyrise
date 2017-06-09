@@ -2,15 +2,18 @@
 
 #include <list>
 #include <map>
+#include <utility>
 
 namespace opossum {
 
+// Generic implementation of a least-recently-used cache.
+// Note: This implemenation is not thread-safe.
 template <typename key_t, typename val_t>
 class LRUCache {
  public:
   typedef typename std::pair<key_t, val_t> kv_pair_t;
 
-  LRUCache(size_t capacity) : _capacity(capacity) {}
+  explicit LRUCache(size_t capacity) : _capacity(capacity) {}
 
   // Sets the value to be cached at the given key.
   inline void set(key_t key, val_t value) {
@@ -47,8 +50,10 @@ class LRUCache {
     return !(it == _map.end());
   }
 
+  // Returns the underlying list of all elements in the cache.
   std::list<kv_pair_t>& list() { return _list; }
 
+  // Return the capacity of the cache.
   size_t capacity() const { return _capacity; }
 
  private:

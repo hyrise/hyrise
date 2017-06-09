@@ -126,3 +126,4 @@ TEST_F(SQLParseTreeCacheTest, BasicAutoCacheTest) {
 }
 
 }  // namespace opossum
+

@@ -14,8 +14,8 @@
 namespace opossum {
 
 // The SQLQueryOperator takes a SQL query, parses and transforms it.
-// The it schedules the resulting execution plan. To get the result
-// of the execution plan, it exposes an SQLResultOperator task, which
+// If schedule_plan is 'true', it will automatically schedule the resulting execution plan.
+// To get the result of the execution plan, it exposes an SQLResultOperator task, which
 // will upon completion contain the result table of the query.
 class SQLQueryOperator : public AbstractOperator {
  public:
@@ -29,8 +29,10 @@ class SQLQueryOperator : public AbstractOperator {
 
   const std::shared_ptr<OperatorTask>& get_result_task() const;
 
+  // Return the generated query plan.
   const SQLQueryPlan& get_query_plan() const;
 
+  // Static. Return the running instance of the parse tree cache.
   static SQLParseTreeCache& get_parse_tree_cache();
 
   // Runtime statistics
@@ -69,10 +71,13 @@ class SQLQueryOperator : public AbstractOperator {
   // Resulting query plan that will be populated during compilation.
   SQLQueryPlan _plan;
 
+  // If true, the generated plan will automatically be scheduled by the operator.
   bool _schedule_plan;
 
   static SQLParseTreeCache _parse_tree_cache;
 
+  // Stores all user defined prepared statements.
+  // Has no size limit.
   static SQLParseTreeCache _prepared_stmts;
 };
 

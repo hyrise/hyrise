@@ -11,19 +11,24 @@
 
 namespace opossum {
 
+// Cache that stores instances of SQLParserResult.
+// Uses the least-recently-used cache as underlying storage.
 class SQLParseTreeCache {
  public:
-  SQLParseTreeCache(size_t capacity);
+  explicit SQLParseTreeCache(size_t capacity);
 
   virtual ~SQLParseTreeCache();
 
-  // Takes ownership of the result.
+  // Adds or refreshes the cache entry [query, result].
   void set(const std::string& query, std::shared_ptr<hsql::SQLParserResult> result);
 
+  // Checks whether an entry for the query exists.
   bool has(const std::string& query) const;
 
+  // Returns and refreshes the cache entry for the given query.
   std::shared_ptr<hsql::SQLParserResult> get(const std::string& query);
 
+  // Purges all entries from the cache and reinitializes it with the given capacity.
   void reset(size_t capacity);
 
  protected:

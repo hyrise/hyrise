@@ -178,7 +178,7 @@ bool SQLQueryTranslator::_translate_filter_expr(const hsql::Expr& expr,
   auto table_scan = std::make_shared<TableScan>(input_task->get_operator(), ColumnName(column_name), filter_op, value);
   auto scan_task = std::make_shared<OperatorTask>(table_scan);
   input_task->set_as_predecessor_of(scan_task);
-  _plan.add(scan_task);
+  _plan.addTask(scan_task);
   return true;
 }
 
@@ -208,7 +208,7 @@ bool SQLQueryTranslator::_translate_projection(const std::vector<hsql::Expr*>& e
   auto projection = std::make_shared<Projection>(input_task->get_operator(), columns);
   auto projection_task = std::make_shared<OperatorTask>(projection);
   input_task->set_as_predecessor_of(projection_task);
-  _plan.add(projection_task);
+  _plan.addTask(projection_task);
   return true;
 }
 
@@ -227,7 +227,7 @@ bool SQLQueryTranslator::_translate_order_by(const std::vector<hsql::OrderDescri
     auto sort = std::make_shared<Sort>(prev_task->get_operator(), name, asc);
     auto sort_task = std::make_shared<OperatorTask>(sort);
     prev_task->set_as_predecessor_of(sort_task);
-    _plan.add(sort_task);
+    _plan.addTask(sort_task);
 
     prev_task = sort_task;
   }
@@ -240,7 +240,7 @@ bool SQLQueryTranslator::_translate_table_ref(const hsql::TableRef& table) {
     case hsql::kTableName: {
       auto get_table = std::make_shared<GetTable>(table.name);
       auto task = std::make_shared<OperatorTask>(get_table);
-      _plan.add(task);
+      _plan.addTask(task);
       return true;
     }
     case hsql::kTableSelect: {
@@ -306,7 +306,7 @@ bool SQLQueryTranslator::_translate_table_ref(const hsql::TableRef& table) {
       auto task = std::make_shared<OperatorTask>(join);
       left_task->set_as_predecessor_of(task);
       right_task->set_as_predecessor_of(task);
-      _plan.add(task);
+      _plan.addTask(task);
       return true;
     }
     case hsql::kTableCrossProduct: {

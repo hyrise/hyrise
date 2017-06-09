@@ -3,20 +3,26 @@
 #include <memory>
 #include <sstream>
 #include <string>
+#include <vector>
 
 #include "SQLParser.h"
 
 namespace opossum {
 
+using hsql::SQLStatement;
+using hsql::PrepareStatement;
+using hsql::ExecuteStatement;
+using hsql::kStmtPrepare;
+using hsql::kStmtExecute;
 using hsql::SQLParser;
 using hsql::SQLParserResult;
 
-// Runtime statistics.
+// Static. Runtime statistics.
 std::atomic<size_t> SQLQueryOperator::num_executed(0);
 std::atomic<size_t> SQLQueryOperator::parse_tree_cache_hits(0);
 std::atomic<size_t> SQLQueryOperator::parse_tree_cache_misses(0);
 
-// Caches
+// Static. Query plan caches.
 SQLParseTreeCache SQLQueryOperator::_parse_tree_cache(0);
 SQLParseTreeCache SQLQueryOperator::_prepared_stmts(1024);
 
@@ -45,18 +51,18 @@ std::shared_ptr<const Table> SQLQueryOperator::on_execute(std::shared_ptr<Transa
   // Populates the query plan in _plan.
   compile_parse_result(parse_result);
 
+  // Add the result task to the query plan.
+  auto tasks = _plan.tasks();
+  if (tasks.size() > 0) {
+    tasks.back()->set_as_predecessor_of(_result_task);
+    _result_op->set_input_operator(tasks.back()->get_operator());
+    _plan.addTask(_result_task);
+  }
+
   // Schedule all tasks in query plan.
   if (_schedule_plan) {
-    auto tasks = _plan.tasks();
-
-    if (tasks.size() > 0) {
-      tasks.back()->set_as_predecessor_of(_result_task);
-      _result_op->set_input_operator(tasks.back()->get_operator());
-
-      for (const auto& task : tasks) {
-        task->schedule();
-      }
-      _result_task->schedule();
+    for (const auto& task : tasks) {
+      task->schedule();
     }
   }
 
@@ -64,7 +70,7 @@ std::shared_ptr<const Table> SQLQueryOperator::on_execute(std::shared_ptr<Transa
 }
 
 std::shared_ptr<SQLParserResult> SQLQueryOperator::parse_query(const std::string& query) const {
-  // Check query cache for parse tree.
+  // Check cache for parse tree.
   if (_parse_tree_cache.has(_query)) {
     ++parse_tree_cache_hits;
     return _parse_tree_cache.get(_query);
@@ -91,7 +97,7 @@ std::shared_ptr<SQLParserResult> SQLQueryOperator::parse_query(const std::string
 
 // Translates the query that is supposed to be prepared and saves it
 // in the prepared statement cache by its name.
-void SQLQueryOperator::prepare_statement(const hsql::PrepareStatement& prepare_stmt) {
+void SQLQueryOperator::prepare_statement(const PrepareStatement& prepare_stmt) {
   std::shared_ptr<SQLParserResult> result = parse_query(prepare_stmt.query);
 
   // Cache the result.
@@ -99,7 +105,7 @@ void SQLQueryOperator::prepare_statement(const hsql::PrepareStatement& prepare_s
 }
 
 // Tries to fetch the referenced prepared statement and retrieve its cached data.
-void SQLQueryOperator::execute_prepared_statement(const hsql::ExecuteStatement& execute_stmt) {
+void SQLQueryOperator::execute_prepared_statement(const ExecuteStatement& execute_stmt) {
   if (!_prepared_stmts.has(execute_stmt.name)) {
     throw "Requested prepared statement does not exist!";
   }
@@ -110,7 +116,7 @@ void SQLQueryOperator::execute_prepared_statement(const hsql::ExecuteStatement& 
 
 // Translate the statement and append the result plan
 // to the current total query plan (in member _plan).
-void SQLQueryOperator::plan_statement(const hsql::SQLStatement& stmt) {
+void SQLQueryOperator::plan_statement(const SQLStatement& stmt) {
   SQLQueryTranslator translator;
 
   if (!translator.translate_statement(stmt)) {
@@ -122,15 +128,15 @@ void SQLQueryOperator::plan_statement(const hsql::SQLStatement& stmt) {
 
 // Compiles the given parse result into an operator plan.
 void SQLQueryOperator::compile_parse_result(std::shared_ptr<SQLParserResult> result) {
-  const std::vector<hsql::SQLStatement*>& statements = result->getStatements();
+  const std::vector<SQLStatement*>& statements = result->getStatements();
 
-  for (const hsql::SQLStatement* stmt : statements) {
+  for (const SQLStatement* stmt : statements) {
     switch (stmt->type()) {
-      case hsql::kStmtPrepare:
-        prepare_statement((const hsql::PrepareStatement&)*stmt);
+      case kStmtPrepare:
+        prepare_statement((const PrepareStatement&)*stmt);
         break;
-      case hsql::kStmtExecute:
-        execute_prepared_statement((const hsql::ExecuteStatement&)*stmt);
+      case kStmtExecute:
+        execute_prepared_statement((const ExecuteStatement&)*stmt);
         break;
       default: {
         plan_statement(*stmt);
@@ -140,7 +146,7 @@ void SQLQueryOperator::compile_parse_result(std::shared_ptr<SQLParserResult> res
   }
 }
 
-// static
+// Static.
 SQLParseTreeCache& SQLQueryOperator::get_parse_tree_cache() { return _parse_tree_cache; }
 
 }  // namespace opossum

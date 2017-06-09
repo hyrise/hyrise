@@ -1,5 +1,8 @@
 #include "sql_parse_tree_cache.hpp"
 
+#include <memory>
+#include <string>
+
 using hsql::SQLParserResult;
 
 namespace opossum {
@@ -31,7 +34,7 @@ std::shared_ptr<SQLParserResult> SQLParseTreeCache::get(const std::string& query
 }
 
 void SQLParseTreeCache::reset(size_t capacity) {
-  _cache = LRUCache<std::string, std::shared_ptr<hsql::SQLParserResult>>(capacity);
+  _cache = LRUCache<std::string, std::shared_ptr<SQLParserResult>>(capacity);
 }
 
 }  // namespace opossum
