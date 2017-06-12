@@ -11,6 +11,7 @@ endif()
 set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake ${CMAKE_MODULE_PATH}) # To allow CMake to locate our Find*.cmake files
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}) # Put binaries into root of build tree
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib) # Put libraries into their own dir
+set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -march=native")
 
 # Dependencies
 find_package(Numa)
@@ -21,4 +22,4 @@ add_subdirectory(src)
 add_subdirectory(third_party/googletest)
 
 # Useful for printing all c++ files in a directory:
-# find . -type f -name "*.cpp" -o -name "*.hpp" | cut -c 3-
+# find . -type f -name "*.cpp" -o -name "*.hpp" | cut -c 3- | sort

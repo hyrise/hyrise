@@ -26,7 +26,7 @@ class TransactionContext;
 // In order to use new operators in server mode, the following steps have to be performed:
 //   1. Add a new Operator definition in Protobuf file: `src/lib/network/protos/opossum.proto` and add it to the
 //      enumeration in `OperatorVariant` in this file
-//   2. Run `premake4 protoc` to generate header- and cpp-files for protocol buffer operators
+//   2. The header- and cpp-files for protocol buffer operators will be generated/updated when the opossum lib is built
 //   3. Add a method to class OperatorTranslator in `src/lib/network/operator_translator.cpp` and
 //      `src/lib/network/operator_translator.hpp` that transforms the protocol buffer objects into the corresponding
 //      opossum operator
