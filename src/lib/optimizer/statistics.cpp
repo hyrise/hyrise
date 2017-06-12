@@ -10,36 +10,23 @@
 
 namespace opossum {
 
-size_t Statistics::predicate_result_size(const std::shared_ptr<Table> table, const std::string &column_name,
+double Statistics::predicate_result_size(const std::shared_ptr<Table> table, const std::string &column_name,
                                          const std::string &op, const AllParameterVariant value,
                                          const optional<AllTypeVariant> value2) {
   // currently assuming all values are equally distributed
   auto row_count = table->row_count();
   if (row_count == 0) {
-    return 0;
+    return 0.0;
   }
 
+  // TODO(mp): extend for other comparison operators
   if (op == "=") {
     auto distinct_count = Statistics::get_distinct_count(table, column_name);
-    return row_count / distinct_count;
-  } else if (op == "!=") {
-    Fail(std::string("operator not yet implemented: ") + op);
-  } else if (op == "<") {
-    Fail(std::string("operator not yet implemented: ") + op);
-  } else if (op == "<=") {
-    Fail(std::string("operator not yet implemented: ") + op);
-  } else if (op == ">") {
-    Fail(std::string("operator not yet implemented: ") + op);
-  } else if (op == ">=") {
-    Fail(std::string("operator not yet implemented: ") + op);
-  } else if (op == "BETWEEN") {
-    Fail(std::string("operator not yet implemented: ") + op);
-  } else if (op == "LIKE") {
-    Fail(std::string("operator not yet implemented: ") + op);
-  } else {
-    Fail(std::string("unknown operator ") + op);
+    return (double) row_count / distinct_count;
   }
-  return 0;
+
+  // Brace yourselves.
+  return row_count;
 }
 
 size_t Statistics::get_distinct_count(const std::shared_ptr<Table> table, const std::string &column_name) {
