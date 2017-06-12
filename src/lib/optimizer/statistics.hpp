@@ -13,6 +13,8 @@ class Statistics {
   static size_t predicate_result_size(const std::shared_ptr<Table> table, const std::string &column_name,
                                       const std::string &op, const AllParameterVariant value,
                                       const optional<AllTypeVariant> value2 = nullopt);
+ private:
+  static size_t get_distinct_count(const std::shared_ptr<Table> table, const std::string &column_name);
 };
 
 }  // namespace opossum
