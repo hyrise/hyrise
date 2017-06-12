@@ -104,8 +104,8 @@ std::shared_ptr<const Table> Update::on_execute(std::shared_ptr<TransactionConte
 }
 
 void Update::commit_records(const CommitID cid) {
-  _delete->commit_records(cid);
-  _insert->commit_records(cid);
+  _delete->commit(cid);
+  _insert->commit(cid);
 }
 
 void Update::rollback_records() {

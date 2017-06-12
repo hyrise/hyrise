@@ -32,7 +32,9 @@ class Table {
   // returns the number of columns (cannot exceed ColumnID (uint16_t))
   uint16_t col_count() const;
 
-  // returns the number of rows (cannot exceed ChunkOffset (uint32_t))
+  // Returns the number of rows (cannot exceed ChunkOffset (uint32_t)).
+  // This number includes invalidated (deleted) rows.
+  // Use approx_valid_row_count() for an approximate count of valid rows instead.
   uint32_t row_count() const;
 
   // Returns the number of valid rows (using approximate count of deleted rows)

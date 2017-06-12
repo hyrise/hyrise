@@ -29,6 +29,14 @@ class AbstractReadWriteOperator : public AbstractOperator {
   }
 
   /**
+   * Commits the operator and triggers any potential work following commits.
+   */
+  void commit(const CommitID cid) {
+    commit_records(cid);
+    finish_commit();
+  }
+
+  /**
    * Commits the operator by applying the cid to the mvcc columns for all modified rows and unlocking them. The
    * modifications will be visible as soon as the TransactionManager has completed the commit for this cid.
    * Unlike on_execute, where failures are expected, the commit operation cannot fail.
