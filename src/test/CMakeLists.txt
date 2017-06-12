@@ -6,8 +6,8 @@ set(
     concurrency/transaction_manager_test.cpp
     gtest_case_template.cpp
     gtest_main.cpp
-    lib/all_type_variant_test.cpp
     lib/AllParameterVariant_test.cpp
+    lib/all_type_variant_test.cpp
     network/operator_translator_test.cpp
     network/response_builder_test.cpp
     network/server_test.cpp
@@ -33,8 +33,8 @@ set(
     operators/sort_test.cpp
     operators/table_scan_like_test.cpp
     operators/table_scan_test.cpp
-    operators/term_test.cpp
     operators/termfactory_test.cpp
+    operators/term_test.cpp
     operators/union_all_test.cpp
     operators/update_test.cpp
     operators/validate_test.cpp

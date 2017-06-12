@@ -93,16 +93,8 @@ class TableGenerator {
   const size_t _enddate = get_time(1998, 12, 31);
   const size_t _one_day = get_time(1970, 01, 02) - get_time(1970, 01, 01);
 
-  const std::vector<size_t> _region_keys_per_nation = {
-    0, 1, 1,
-    1, 4, 0,
-    3, 3, 2,
-    2, 4, 4,
-    2, 4, 0,
-    0, 0, 1,
-    2, 3, 4,
-    2, 3, 3,
-    1};
+  const std::vector<size_t> _region_keys_per_nation = {0, 1, 1, 1, 4, 0, 3, 3, 2, 2, 4, 4, 2,
+                                                       4, 0, 0, 0, 1, 2, 3, 4, 2, 3, 3, 1};
 
   RandomGenerator _random_gen;
   TextFieldGenerator _text_field_gen;

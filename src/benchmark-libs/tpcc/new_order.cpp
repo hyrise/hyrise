@@ -6,12 +6,15 @@
 #include "concurrency/transaction_manager.hpp"
 #include "operators/commit_records.hpp"
 #include "operators/get_table.hpp"
+#include "operators/insert.hpp"
 #include "operators/table_scan.hpp"
 #include "operators/product.hpp"
+#include "operators/table_wrapper.hpp"
 #include "operators/update.hpp"
 #include "operators/projection.hpp"
 #include "scheduler/abstract_scheduler.hpp"
 #include "scheduler/operator_task.hpp"
+#include "storage/storage_manager.hpp"
 #include "utils/helper.hpp"
 #include "all_type_variant.hpp"
 
@@ -59,93 +62,100 @@ NewOrderResult AbstractNewOrderImpl::run_transaction(const NewOrderParams &param
   AbstractScheduler::schedule_tasks_and_wait(increment_next_order_id_tasks);
 
   /**
-   * TODO(anyone) CREATE ORDER
+   * CREATE ORDER
    */
+  auto create_order_tasks = get_create_order_tasks(t_context, result.d_next_o_id, params.d_id, params.w_id,
+    params.c_id, params.o_entry_d, 0, params.order_lines.size(), 1);
+  AbstractScheduler::schedule_tasks_and_wait(create_order_tasks);
 
   /**
-   * TODO(anyone) CREATE NEW ORDER
+   * CREATE NEW ORDER
    */
+  auto create_new_order_tasks = get_create_new_order_tasks(t_context, result.d_next_o_id, params.d_id, params.w_id);
+  AbstractScheduler::schedule_tasks_and_wait(create_new_order_tasks);
 
-  for (size_t ol_idx = 0; ol_idx < params.order_lines.size(); ol_idx++) {
-    const auto &order_line_params = params.order_lines[ol_idx];
+//  std::vector<std::shared_ptr<OperatorTask>> all_tasks;
+//
+//  for (size_t ol_idx = 0; ol_idx < params.order_lines.size(); ol_idx++) {
+//    const auto &order_line_params = params.order_lines[ol_idx];
+//
+//    NewOrderOrderLineResult order_line;
+//
+//    /**
+//     * GET ITEM INFO
+//     */
+//    auto get_item_info_tasks = get_get_item_info_tasks(t_context, order_line_params.i_id);
+//    AbstractScheduler::schedule_tasks_and_wait(get_item_info_tasks);
+//    const auto item_info_table = get_item_info_tasks.back()->get_operator()->get_output();
+//
+//    order_line.i_price = item_info_table->get_value<float>(0, 0);
+//    order_line.i_name = item_info_table->get_value<std::string>(1, 0);
+//    order_line.i_data = item_info_table->get_value<std::string>(2, 0);
+//
+//    /**
+//     * GET STOCK INFO
+//     */
+//    auto get_stock_info_tasks = get_get_stock_info_tasks(t_context, order_line_params.i_id, order_line_params.w_id,
+//                                                         params.d_id);
+//    AbstractScheduler::schedule_tasks_and_wait(get_stock_info_tasks);
+//    const auto stock_info_table = get_stock_info_tasks.back()->get_operator()->get_output();
+//
+//    order_line.s_qty = stock_info_table->get_value<int32_t>(0, 0);
+//    order_line.s_data = stock_info_table->get_value<std::string>(1, 0);
+//    order_line.s_ytd = stock_info_table->get_value<int32_t>(2, 0);
+//    order_line.s_order_cnt = stock_info_table->get_value<int32_t>(3, 0);
+//    order_line.s_remote_cnt = stock_info_table->get_value<int32_t>(4, 0);
+//    order_line.s_dist_xx = stock_info_table->get_value<std::string>(5, 0);
+//
+//    /**
+//     * Calculate new s_ytd, s_qty and s_order_cnt
+//     */
+//    //auto s_ytd = order_line.s_ytd + order_line_params.qty; // TODO: why doesn't the tpc ref impl update this in UPDATE STOCK?
+//
+//    int32_t s_qty = order_line.s_qty;
+//    if (order_line.s_qty >= order_line_params.qty + 10) {
+//      s_qty -= order_line_params.qty;
+//    } else {
+//      s_qty += 91 - order_line_params.qty;
+//    }
+//
+//    //auto s_order_cnt = order_line.s_order_cnt + 1; // TODO: why doesn't the tpc ref impl update this in UPDATE STOCK?
+//    order_line.amount = order_line_params.qty * order_line.i_price;
+//
+//    /**
+//     * UPDATE STOCK
+//     */
+//    auto update_stock_tasks = get_update_stock_tasks(t_context, s_qty, order_line_params.i_id,
+//                                                     order_line_params.w_id);
+//    AbstractScheduler::schedule_tasks_and_wait(update_stock_tasks);
+//
+//    /**
+//     * TODO(TIM) CREATE ORDER LINE
+//     */
+//    auto create_order_line_tasks = get_create_order_line_tasks(t_context,
+//                                                               result.d_next_o_id,
+//                                                               params.d_id,
+//                                                               params.w_id,
+//                                                               ol_idx + 1,
+//                                                               order_line_params.i_id,
+//                                                               0, // ol_supply_w_id - we only have one warehouse
+//                                                               params.o_entry_d,
+//                                                               order_line_params.qty,
+//                                                               order_line.amount,
+//                                                               order_line.s_dist_xx);
+//    AbstractScheduler::schedule_tasks_and_wait(create_order_line_tasks);
+//
+//    std::copy(create_order_line_tasks.begin(), create_order_line_tasks.end(), std::back_inserter(all_tasks));
+//
+//    /**
+//     * Add results
+//     */
+//    result.order_lines.emplace_back(order_line);
+//  }
 
-    NewOrderOrderLineResult order_line;
-
-    /**
-     * GET ITEM INFO
-     */
-    auto get_item_info_tasks = get_get_item_info_tasks(t_context, order_line_params.i_id);
-    AbstractScheduler::schedule_tasks_and_wait(get_item_info_tasks);
-    const auto item_info_table = get_item_info_tasks.back()->get_operator()->get_output();
-
-    order_line.i_price = item_info_table->get_value<float>(0, 0);
-    order_line.i_name = item_info_table->get_value<std::string>(1, 0);
-    order_line.i_data = item_info_table->get_value<std::string>(2, 0);
-
-    /**
-     * GET STOCK INFO
-     */
-    auto get_stock_info_tasks = get_get_stock_info_tasks(t_context, order_line_params.i_id, order_line_params.w_id,
-                                                         params.d_id);
-    AbstractScheduler::schedule_tasks_and_wait(get_stock_info_tasks);
-    const auto stock_info_table = get_stock_info_tasks.back()->get_operator()->get_output();
-
-    print_table(stock_info_table);
-
-    order_line.s_qty = stock_info_table->get_value<int32_t>(0, 0);
-    order_line.s_data = stock_info_table->get_value<std::string>(1, 0);
-    //apavlo selects these, TPC doesn't require them
-    //order_line.s_ytd = stock_info_table->get_value<int32_t>(2, 0);
-    //order_line.s_order_cnt = stock_info_table->get_value<int32_t>(3, 0);
-    //order_line.s_remote_cnt = stock_info_table->get_value<int32_t>(4, 0);
-    order_line.s_dist_xx = stock_info_table->get_value<std::string>(2, 0);
-
-    /**
-     * Calculate new s_ytd, s_qty and s_order_cnt
-     */
-    //auto s_ytd = order_line.s_ytd + order_line_params.qty; // TODO: why doesn't the tpc ref impl update this in UPDATE STOCK?
-
-    int32_t s_qty = order_line.s_qty;
-    if (order_line.s_qty >= order_line_params.qty + 10) {
-      s_qty -= order_line_params.qty;
-    } else {
-      s_qty += 91 - order_line_params.qty;
-    }
-
-    //auto s_order_cnt = order_line.s_order_cnt + 1; // TODO: why doesn't the tpc ref impl update this in UPDATE STOCK?
-    order_line.amount = order_line_params.qty * order_line.i_price;
-
-    /**
-     * UPDATE STOCK
-     */
-    auto update_stock_tasks = get_update_stock_tasks(t_context, s_qty, order_line_params.i_id,
-                                                     order_line_params.w_id);
-    AbstractScheduler::schedule_tasks_and_wait(update_stock_tasks);
-
-    /**
-     * TODO(TIM) CREATE ORDER LINE
-     */
-    auto create_order_line_tasks = get_create_order_line_tasks(t_context,
-                                                               result.d_next_o_id,
-                                                               params.d_id,
-                                                               params.w_id,
-                                                               ol_idx + 1,
-                                                               order_line_params.i_id,
-                                                               0, // ol_supply_w_id - we only have one warehouse
-                                                               params.o_entry_d,
-                                                               order_line_params.qty,
-                                                               order_line.amount,
-                                                               order_line.s_dist_xx);
-    AbstractScheduler::schedule_tasks_and_wait(create_order_line_tasks);
-
-
-    /**
-     * Add results
-     */
-    result.order_lines.emplace_back(order_line);
-  }
-
-  // Commit transaction.
+  /**
+   * Commit
+   */
   TransactionManager::get().prepare_commit(*t_context);
 
   auto commit = std::make_shared<CommitRecords>();
@@ -294,35 +304,76 @@ TaskVector NewOrderRefImpl::get_increment_next_order_id_tasks(
 }
 
 // TODO(tim): re-factor/extend Insert so that we do not have to build a Table object first.
-//  std::vector<std::shared_ptr<OperatorTask>> get_create_order_tasks(
-//          const std::shared_ptr<TransactionContext> t_context, const int32_t d_next_o_id, const int32_t d_id, const
-//          int32_t w_id, const int32_t c_id, const int32_t o_entry_d, const int32_t o_carrier_id, const int32_t
-//          o_ol_cnt, const int32_t o_all_local) {
-//    /**
-//     * INSERT INTO ORDERS (O_ID, O_D_ID, O_W_ID, O_C_ID, O_ENTRY_D, O_CARRIER_ID, O_OL_CNT, O_ALL_LOCAL)
-//     * VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-//     */
-//  }
-//
-//  std::vector<std::shared_ptr<OperatorTask>> get_create_new_order_tasks(
-//          const std::shared_ptr<TransactionContext> t_context, const int32_t o_id, const int32_t d_id, const int32_t
-//          w_id) {
-//    /**
-//     * INSERT INTO NEW_ORDER (NO_O_ID, NO_D_ID, NO_W_ID) VALUES (?, ?, ?)
-//     */
-//  }
+TaskVector NewOrderRefImpl::get_create_order_tasks(const std::shared_ptr<TransactionContext> t_context,
+                                                                  const int32_t d_next_o_id, const int32_t d_id,
+                                                                  const int32_t w_id, const int32_t c_id,
+                                                                  const int32_t o_entry_d, const int32_t o_carrier_id,
+                                                                  const int32_t o_ol_cnt, const int32_t o_all_local) {
+  /**
+   * INSERT INTO ORDER (O_ID, O_D_ID, O_W_ID, O_C_ID, O_ENTRY_D, O_CARRIER_ID, O_OL_CNT, O_ALL_LOCAL)
+   * VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+   */
 
-TaskVector NewOrderRefImpl::get_create_order_tasks(
-  const std::shared_ptr<TransactionContext> t_context, const int32_t d_next_o_id, const int32_t d_id, const
-int32_t w_id, const int32_t c_id, const int32_t o_entry_d, const int32_t o_carrier_id, const int32_t
-  o_ol_cnt, const int32_t o_all_local) {
-  return {};
+  auto target_table_name = std::string("ORDER");
+  const auto original_table = StorageManager::get().get_table(target_table_name);
+
+  auto new_table = std::make_shared<Table>();
+  for (ColumnID columnID = 0; columnID < original_table->col_count(); columnID++) {
+    new_table->add_column(original_table->column_name(columnID), original_table->column_type(columnID), false);
+  }
+
+  Chunk chunk;
+  chunk.add_column(create_single_value_column<int32_t>(d_next_o_id));
+  chunk.add_column(create_single_value_column<int32_t>(d_id));
+  chunk.add_column(create_single_value_column<int32_t>(w_id));
+  chunk.add_column(create_single_value_column<int32_t>(c_id));
+  chunk.add_column(create_single_value_column<int32_t>(o_entry_d));
+  chunk.add_column(create_single_value_column<int32_t>(o_carrier_id));
+  chunk.add_column(create_single_value_column<int32_t>(o_ol_cnt));
+  chunk.add_column(create_single_value_column<int32_t>(o_all_local));
+  new_table->add_chunk(std::move(chunk));
+
+  auto tw = std::make_shared<TableWrapper>(new_table);
+  const auto insert = std::make_shared<Insert>(target_table_name, tw);
+
+  set_transaction_context_for_operators(t_context, {insert});
+
+  const auto tw_t = std::make_shared<OperatorTask>(tw);
+  const auto insert_t = std::make_shared<OperatorTask>(insert);
+
+  return {tw_t, insert_t};
 }
 
 TaskVector NewOrderRefImpl::get_create_new_order_tasks(
-  const std::shared_ptr<TransactionContext> t_context, const int32_t o_id, const int32_t d_id, const int32_t
-w_id) {
-  return {};
+  const std::shared_ptr<TransactionContext> t_context, const int32_t o_id, const int32_t d_id, const int32_t w_id) {
+  /**
+   * INSERT INTO NEW_ORDER (no_o_id, no_d_id, no_w_id)
+   * VALUES (?, ?, ?);
+   */
+
+  auto target_table_name = std::string("NEW-ORDER");
+  const auto original_table = StorageManager::get().get_table(target_table_name);
+
+  auto new_table = std::make_shared<Table>();
+  for (ColumnID columnID = 0; columnID < original_table->col_count(); columnID++) {
+    new_table->add_column(original_table->column_name(columnID), original_table->column_type(columnID), false);
+  }
+
+  Chunk chunk;
+  chunk.add_column(create_single_value_column<int32_t>(o_id));
+  chunk.add_column(create_single_value_column<int32_t>(d_id));
+  chunk.add_column(create_single_value_column<int32_t>(w_id));
+  new_table->add_chunk(std::move(chunk));
+
+  auto tw = std::make_shared<TableWrapper>(new_table);
+  const auto insert = std::make_shared<Insert>(target_table_name, tw);
+
+  set_transaction_context_for_operators(t_context, {tw, insert});
+
+  const auto tw_t = std::make_shared<OperatorTask>(tw);
+  const auto insert_t = std::make_shared<OperatorTask>(insert);
+
+  return {tw_t, insert_t};
 }
 
 TaskVector NewOrderRefImpl::get_get_item_info_tasks(
@@ -359,7 +410,7 @@ TaskVector NewOrderRefImpl::get_get_stock_info_tasks(
   const int32_t d_id) {
   /**
       * SELECT
-      *  s_quantity, s_data,
+      *  s_quantity, s_data, s_ytd, s_order_cnt, s_remote_cnt
       *  s_dist_01, s_dist_02, s_dist_03, s_dist_04, s_dist_05 s_dist_06, s_dist_07, s_dist_08, s_dist_09, s_dist_10
       * FROM stock
       * WHERE s_i_id = :ol_i_id AND s_w_id = :ol_supply_w_id;
@@ -372,7 +423,7 @@ TaskVector NewOrderRefImpl::get_get_stock_info_tasks(
 
   std::string s_dist_xx = d_id < 10 ? "S_DIST_0" + std::to_string(d_id) : "S_DIST_" + std::to_string(d_id);
 
-  std::vector<std::string> columns = {"S_QUANTITY", "S_DATA", s_dist_xx};
+  std::vector<std::string> columns = {"S_QUANTITY", "S_DATA", "S_YTD", "S_ORDER_CNT", "S_REMOTE_CNT", s_dist_xx};
   auto proj = std::make_shared<Projection>(ts2, columns);
 
   set_transaction_context_for_operators(t_context, {gt, ts1, ts2, proj});
@@ -451,11 +502,41 @@ TaskVector NewOrderRefImpl::get_create_order_line_tasks(
   const float ol_amount,
   const std::string &ol_dist_info) {
   /**
-   * INSERT INTO ORDER_LINE
-   * (OL_O_ID, OL_D_ID, OL_W_ID, OL_NUMBER, OL_I_ID, OL_SUPPLY_W_ID, OL_DELIVERY_D, OL_QUANTITY,
-   * OL_AMOUNT, OL_DIST_INFO) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+   *  INSERT INTO order_line (ol_o_id, ol_d_id, ol_w_id, ol_number,
+   *  ol_i_id, ol_supply_w_id, ol_quantity, ol_amount, ol_dist_info)
+   *  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);
    */
-  return {};
+
+  auto target_table_name = std::string("ORDER-LINE");
+  const auto original_table = StorageManager::get().get_table(target_table_name);
+
+  auto new_table = std::make_shared<Table>();
+  for (ColumnID columnID = 0; columnID < original_table->col_count(); columnID++) {
+    new_table->add_column(original_table->column_name(columnID), original_table->column_type(columnID), false);
+  }
+
+  Chunk chunk;
+  chunk.add_column(create_single_value_column<int32_t>(ol_o_id));
+  chunk.add_column(create_single_value_column<int32_t>(ol_d_id));
+  chunk.add_column(create_single_value_column<int32_t>(ol_w_id));
+  chunk.add_column(create_single_value_column<int32_t>(ol_number));
+  chunk.add_column(create_single_value_column<int32_t>(ol_i_id));
+  chunk.add_column(create_single_value_column<int32_t>(ol_supply_w_id));
+  chunk.add_column(create_single_value_column<int32_t>(ol_delivery_d));
+  chunk.add_column(create_single_value_column<int32_t>(ol_quantity));
+  chunk.add_column(create_single_value_column<float>(ol_amount));
+  chunk.add_column(create_single_value_column<std::string>(ol_dist_info));
+  new_table->add_chunk(std::move(chunk));
+
+  auto tw = std::make_shared<TableWrapper>(new_table);
+  const auto insert = std::make_shared<Insert>(target_table_name, tw);
+
+  set_transaction_context_for_operators(t_context, {tw, insert});
+
+  const auto tw_t = std::make_shared<OperatorTask>(tw);
+  const auto insert_t = std::make_shared<OperatorTask>(insert);
+
+  return {tw_t, insert_t};
 }
 
 }

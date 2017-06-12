@@ -37,20 +37,6 @@ add_custom_command(
         ${CMAKE_CURRENT_SOURCE_DIR}
 )
 
-# https://cmake.org/cmake/help/v3.0/command/add_custom_command.html:
-#   Do not list the output in more than one independent target that may build in parallel or the two instances of the
-#   rule may conflict (instead use add_custom_target to drive the command and make the other targets depend on that one).
-# This implements the solution proposed by
-#    http://cmake.3232098.n2.nabble.com/How-to-have-generated-source-compiled-multiple-ways-td7585202.html
-add_custom_target(
-    serialize_protobuf_and_grpc_generation
-    DEPENDS
-        ${CMAKE_CURRENT_SOURCE_DIR}/network/generated/opossum.grpc.pb.cc
-        ${CMAKE_CURRENT_SOURCE_DIR}/network/generated/opossum.grpc.pb.h
-        ${CMAKE_CURRENT_SOURCE_DIR}/network/generated/opossum.pb.cc
-        ${CMAKE_CURRENT_SOURCE_DIR}/network/generated/opossum.pb.h
-)
-
 # Protobuf library with overridden deprecated warning
 add_library(
     opossumProtobuf
@@ -74,8 +60,8 @@ set(
     concurrency/transaction_manager.cpp
     concurrency/transaction_manager.hpp
     import_export/binary.hpp
-    import_export/csv.hpp
     import_export/csv_converter.hpp
+    import_export/csv.hpp
     import_export/csv_non_rfc_parser.cpp
     import_export/csv_non_rfc_parser.hpp
     import_export/csv_rfc_parser.cpp
@@ -87,9 +73,9 @@ set(
     network/request_handler.cpp
     network/request_handler.hpp
     network/response_builder.hpp
+    network/server_configuration.hpp
     network/server.cpp
     network/server.hpp
-    network/server_configuration.hpp
     operators/abstract_join_operator.cpp
     operators/abstract_join_operator.hpp
     operators/abstract_operator.cpp
@@ -140,8 +126,8 @@ set(
     operators/table_scan.hpp
     operators/table_wrapper.cpp
     operators/table_wrapper.hpp
-    operators/term.hpp
     operators/termfactory.hpp
+    operators/term.hpp
     operators/union_all.cpp
     operators/union_all.hpp
     operators/update.cpp
@@ -188,10 +174,10 @@ set(
     storage/index/group_key/composite_group_key_index.cpp
     storage/index/group_key/composite_group_key_index.hpp
     storage/index/group_key/group_key_index.hpp
-    storage/index/group_key/variable_length_key.cpp
-    storage/index/group_key/variable_length_key.hpp
     storage/index/group_key/variable_length_key_base.cpp
     storage/index/group_key/variable_length_key_base.hpp
+    storage/index/group_key/variable_length_key.cpp
+    storage/index/group_key/variable_length_key.hpp
     storage/index/group_key/variable_length_key_proxy.cpp
     storage/index/group_key/variable_length_key_proxy.hpp
     storage/index/group_key/variable_length_key_store.cpp
@@ -213,6 +199,7 @@ set(
     type_comparison.hpp
     types.hpp
     uid_allocator.hpp
+    utils/assert.hpp
     utils/cuckoo_hashtable.hpp
     utils/helper.cpp
     utils/helper.hpp
@@ -229,6 +216,7 @@ set(
     pthread
     z
     tbb
+    sqlparser
 )
 
 if(${NUMA_FOUND})
@@ -239,26 +227,21 @@ endif()
 # Configure the regular opossum library used for tests/server/playground...
 add_library(opossum STATIC ${SOURCES})
 target_link_libraries(opossum ${LIBRARIES})
-add_dependencies(opossum serialize_protobuf_and_grpc_generation)
 
 # Configure the lib used for asan
 add_library(opossumAsanLib STATIC ${SOURCES})
 target_link_libraries(
     opossumAsanLib
     ${LIBRARIES}
-    -lgcov
     -fsanitize=address
 )
 set_target_properties(opossumAsanLib PROPERTIES COMPILE_FLAGS "-fsanitize=address -fno-omit-frame-pointer")
-add_dependencies(opossumAsanLib serialize_protobuf_and_grpc_generation)
 
 # Configure the lib used for coverage
 add_library(opossumCoverageLib STATIC ${SOURCES})
 target_link_libraries(
     opossumCoverageLib
     ${LIBRARIES}
-    -lgcov
     --coverage
 )
 set_target_properties(opossumCoverageLib PROPERTIES COMPILE_FLAGS "-fprofile-arcs -ftest-coverage")
-add_dependencies(opossumCoverageLib serialize_protobuf_and_grpc_generation)

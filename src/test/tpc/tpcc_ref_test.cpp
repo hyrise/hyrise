@@ -86,9 +86,9 @@ class NewOrderTestImpl : public TransactionTestImpl {
         ASSERT_EQ(ref.i_data, our.i_data);
         ASSERT_EQ(ref.s_qty, our.s_qty);
         ASSERT_EQ(ref.s_dist_xx, our.s_dist_xx);
-//        ASSERT_EQ(ref.s_ytd, our.s_ytd);
-//        ASSERT_EQ(ref.s_order_cnt, our.s_order_cnt);
-//        ASSERT_EQ(ref.s_remote_cnt, our.s_remote_cnt);
+        ASSERT_EQ(ref.s_ytd, our.s_ytd);
+        ASSERT_EQ(ref.s_order_cnt, our.s_order_cnt);
+        ASSERT_EQ(ref.s_remote_cnt, our.s_remote_cnt);
         ASSERT_EQ(ref.s_data, our.s_data);
         ASSERT_EQ(ref.amount, our.amount);
       }

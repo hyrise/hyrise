@@ -15,37 +15,37 @@ using namespace opossum;
 namespace tpcc {
 
 struct NewOrderOrderLineParams {
-  int32_t i_id;
-  int32_t w_id;
-  int32_t qty;
+  int32_t i_id = 0;
+  int32_t w_id = 0;
+  int32_t qty = 0;
 };
 
 struct NewOrderParams {
-  int32_t w_id;
-  int32_t d_id;
-  int32_t c_id;
-  int32_t o_entry_d;
+  int32_t w_id = 0;
+  int32_t d_id = 0;
+  int32_t c_id = 0;
+  int32_t o_entry_d = 0;
   std::vector<NewOrderOrderLineParams> order_lines;
 };
 
 struct NewOrderOrderLineResult {
-  float i_price;
+  float i_price = 0.0f;
   std::string i_name;
   std::string i_data;
-  int32_t s_qty;
+  int32_t s_qty = 0;
   std::string s_dist_xx;
-  //int32_t s_ytd;
-  //int32_t s_order_cnt;
-  //int32_t s_remote_cnt;
+  int32_t s_ytd = 0;
+  int32_t s_order_cnt = 0;
+  int32_t s_remote_cnt = 0;
   std::string s_data;
-  float amount;
+  float amount = 0.0f;
 };
 
 struct NewOrderResult {
-  float w_tax_rate;
-  float d_tax_rate;
-  int32_t d_next_o_id;
-  float c_discount;
+  float w_tax_rate = 0.0f;
+  float d_tax_rate = 0.0f;
+  int32_t d_next_o_id = 0;
+  float c_discount = 0.0f;
   std::string c_last;
   std::string c_credit;
   std::vector<NewOrderOrderLineResult> order_lines;

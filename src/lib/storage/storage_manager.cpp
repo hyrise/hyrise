@@ -4,8 +4,9 @@
 #include <string>
 #include <utility>
 
-#include "../operators/table_wrapper.hpp"
-#include "../operators/export_csv.hpp"
+#include "utils/assert.hpp"
+#include "operators/table_wrapper.hpp"
+#include "operators/export_csv.hpp"
 
 namespace opossum {
 
@@ -30,7 +31,12 @@ void StorageManager::drop_table(const std::string &name) {
   }
 }
 
-std::shared_ptr<Table> StorageManager::get_table(const std::string &name) const { return _tables.at(name); }
+std::shared_ptr<Table> StorageManager::get_table(const std::string &name) const {
+  auto iter = _tables.find(name);
+  DebugAssert(iter != _tables.end(), "No such table named '" + name + "'");
+
+  return iter->second;
+}
 
 bool StorageManager::has_table(const std::string &name) const { return _tables.count(name); }
 

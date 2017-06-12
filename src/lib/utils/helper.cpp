@@ -18,4 +18,5 @@ void print_table(const std::shared_ptr<const Table> table, PrintMode mode, std::
   table_wrapper->execute();
   Print(table_wrapper, out, mode).execute();
 }
+
 }

@@ -8,9 +8,11 @@
 #include "concurrency/transaction_manager.hpp"
 #include "operators/commit_records.hpp"
 #include "operators/get_table.hpp"
+#include "operators/insert.hpp"
 #include "operators/product.hpp"
 #include "operators/projection.hpp"
 #include "operators/table_scan.hpp"
+#include "operators/table_wrapper.hpp"
 #include "operators/update.hpp"
 #include "scheduler/operator_task.hpp"
 
