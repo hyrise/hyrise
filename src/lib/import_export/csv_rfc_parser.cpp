@@ -57,7 +57,7 @@ std::shared_ptr<Table> CsvRfcParser::parse(const std::string& filename) {
     }
 
     // create chunk and fill with columns
-    chunks.emplace_back();
+    chunks.emplace_back(true);
     auto& chunk = chunks.back();
 
     // create and start parsing task

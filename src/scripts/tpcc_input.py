@@ -32,7 +32,7 @@ def generate_new_order():
         "d_id": random.randint(0, NUM_DISTRICTS_PER_WAREHOUSE - 1),
         "c_id": random.randint(0, NUM_CUSTOMERS_PER_DISTRICT - 1),
         "o_entry_d": 0, #TODO: Enter real data here
-        "ol": []
+        "order_lines": []
     }
 
     ol_count = random.randint(MIN_ORDER_LINE_COUNT, MAX_ORDER_LINE_COUNT)
@@ -46,7 +46,7 @@ def generate_new_order():
         else:
             i_id = random.randint(0, NUM_ITEMS - 1)
 
-        new_order["ol"].append({
+        new_order["order_lines"].append({
             "i_id": i_id,
             "w_id": 0,  # TODO: We don't support multiple/remote warehouses yet
             "qty": random.randint(1, MAX_ORDER_LINE_QUANTITY)

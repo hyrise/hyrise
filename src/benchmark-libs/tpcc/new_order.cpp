@@ -33,22 +33,23 @@ NewOrderResult AbstractNewOrderImpl::run_transaction(const NewOrderParams &param
                                                                                                  params.c_id);
   AbstractScheduler::schedule_tasks_and_wait(get_customer_and_warehouse_tax_rate_tasks);
 
-  row = get_customer_and_warehouse_tax_rate_tasks.back()->get_operator()->get_output()->fetch_row(
-    0);
-  result.c_discount = boost::get<float>(row[0]);
-  result.c_last = boost::get<std::string>(row[1]);
-  result.c_credit = boost::get<float>(row[2]);
-  result.w_tax_rate = boost::get<float>(row[3]);
+  const auto customer_and_warehouse_tax_rate_table = get_customer_and_warehouse_tax_rate_tasks.back()->get_operator()->
+    get_output();
+
+  result.c_discount = customer_and_warehouse_tax_rate_table->get_value<float>(0, 0);
+  result.c_last = customer_and_warehouse_tax_rate_table->get_value<std::string>(1, 0);
+  result.c_credit = customer_and_warehouse_tax_rate_table->get_value<std::string>(2, 0);
+  result.w_tax_rate = customer_and_warehouse_tax_rate_table->get_value<float>(3, 0);
 
   /**
    * GET DISTRICT
    */
   auto get_district_tasks = get_get_district_tasks(t_context, params.d_id, params.w_id);
   AbstractScheduler::schedule_tasks_and_wait(get_district_tasks);
-  row = get_district_tasks.back()->get_operator()->get_output()->fetch_row(0);
+  const auto districts_table = get_district_tasks.back()->get_operator()->get_output();
 
-  result.d_next_o_id = boost::get<int32_t>(row[0]);
-  result.d_tax_rate = boost::get<float>(row[0]);
+  result.d_next_o_id = districts_table->get_value<int32_t>(0, 0);
+  result.d_tax_rate = districts_table->get_value<float>(1, 0);
 
   /**
    * INCREMENT NEXT ORDER ID
@@ -75,11 +76,11 @@ NewOrderResult AbstractNewOrderImpl::run_transaction(const NewOrderParams &param
      */
     auto get_item_info_tasks = get_get_item_info_tasks(t_context, order_line_params.i_id);
     AbstractScheduler::schedule_tasks_and_wait(get_item_info_tasks);
-    row = get_district_tasks.back()->get_operator()->get_output()->fetch_row(0);
+    const auto item_info_table = get_item_info_tasks.back()->get_operator()->get_output();
 
-    order_line.i_price = boost::get<float>(row[0]);
-    order_line.i_name = boost::get<std::string>(row[1]);
-    order_line.i_data = boost::get<std::string>(row[2]);
+    order_line.i_price = item_info_table->get_value<float>(0, 0);
+    order_line.i_name = item_info_table->get_value<std::string>(1, 0);
+    order_line.i_data = item_info_table->get_value<std::string>(2, 0);
 
     /**
      * GET STOCK INFO
@@ -87,19 +88,22 @@ NewOrderResult AbstractNewOrderImpl::run_transaction(const NewOrderParams &param
     auto get_stock_info_tasks = get_get_stock_info_tasks(t_context, order_line_params.i_id, order_line_params.w_id,
                                                          params.d_id);
     AbstractScheduler::schedule_tasks_and_wait(get_stock_info_tasks);
-    row = get_stock_info_tasks.back()->get_operator()->get_output()->fetch_row(0);
+    const auto stock_info_table = get_stock_info_tasks.back()->get_operator()->get_output();
 
-    order_line.s_qty = boost::get<int32_t>(row[0]);
-    order_line.s_data = boost::get<std::string>(row[1]);
-    order_line.s_ytd = boost::get<int32_t>(row[2]);
-    order_line.s_order_cnt = boost::get<int32_t>(row[3]);
-    order_line.s_remote_cnt = boost::get<int32_t>(row[4]);
-    order_line.s_dist_xx = boost::get<std::string>(row[5]);
+    print_table(stock_info_table);
+
+    order_line.s_qty = stock_info_table->get_value<int32_t>(0, 0);
+    order_line.s_data = stock_info_table->get_value<std::string>(1, 0);
+    //apavlo selects these, TPC doesn't require them
+    //order_line.s_ytd = stock_info_table->get_value<int32_t>(2, 0);
+    //order_line.s_order_cnt = stock_info_table->get_value<int32_t>(3, 0);
+    //order_line.s_remote_cnt = stock_info_table->get_value<int32_t>(4, 0);
+    order_line.s_dist_xx = stock_info_table->get_value<std::string>(2, 0);
 
     /**
      * Calculate new s_ytd, s_qty and s_order_cnt
      */
-    auto s_ytd = order_line.s_ytd + order_line_params.qty;
+    //auto s_ytd = order_line.s_ytd + order_line_params.qty; // TODO: why doesn't the tpc ref impl update this in UPDATE STOCK?
 
     int32_t s_qty = order_line.s_qty;
     if (order_line.s_qty >= order_line_params.qty + 10) {
@@ -108,7 +112,7 @@ NewOrderResult AbstractNewOrderImpl::run_transaction(const NewOrderParams &param
       s_qty += 91 - order_line_params.qty;
     }
 
-    auto s_order_cnt = order_line.s_order_cnt + 1;
+    //auto s_order_cnt = order_line.s_order_cnt + 1; // TODO: why doesn't the tpc ref impl update this in UPDATE STOCK?
     order_line.amount = order_line_params.qty * order_line.i_price;
 
     /**
@@ -152,6 +156,8 @@ NewOrderResult AbstractNewOrderImpl::run_transaction(const NewOrderParams &param
   commit_task->join();
 
   TransactionManager::get().commit(*t_context);
+
+  return result;
 }
 
 TaskVector NewOrderRefImpl::get_get_customer_and_warehouse_tax_rate_tasks(
@@ -222,7 +228,7 @@ NewOrderRefImpl::get_get_district_tasks(const std::shared_ptr<TransactionContext
   const auto ts1 = std::make_shared<TableScan>(gt, "D_ID", "=", d_id);
   const auto ts2 = std::make_shared<TableScan>(ts1, "D_W_ID", "=", w_id);
 
-  const std::vector<std::string> columns = {"D_TAX", "D_NEXT_O_ID"};
+  const std::vector<std::string> columns = {"D_NEXT_O_ID", "D_TAX"};
   const auto proj = std::make_shared<Projection>(ts2, columns);
 
   set_transaction_context_for_operators(t_context, {gt, ts1, ts2, proj});
@@ -364,8 +370,9 @@ TaskVector NewOrderRefImpl::get_get_stock_info_tasks(
   auto ts1 = std::make_shared<TableScan>(gt, "S_I_ID", "=", ol_i_id);
   auto ts2 = std::make_shared<TableScan>(ts1, "S_W_ID", "=", ol_supply_w_id);
 
-  std::vector<std::string> columns = {"S_DIST_01", "S_DIST_02", "S_DIST_03", "S_DIST_04", "S_DIST_05",
-                                      "S_DIST_06", "S_DIST_07", "S_DIST_08", "S_DIST_09", "S_DIST_10"};
+  std::string s_dist_xx = d_id < 10 ? "S_DIST_0" + std::to_string(d_id) : "S_DIST_" + std::to_string(d_id);
+
+  std::vector<std::string> columns = {"S_QUANTITY", "S_DATA", s_dist_xx};
   auto proj = std::make_shared<Projection>(ts2, columns);
 
   set_transaction_context_for_operators(t_context, {gt, ts1, ts2, proj});
@@ -464,6 +471,7 @@ void adl_serializer<NewOrderParams>::to_json(nlohmann::json &j, const NewOrderPa
 
 void adl_serializer<NewOrderParams>::from_json(const nlohmann::json &j, NewOrderParams &v) {
   v.w_id = j["w_id"];
+  v.d_id = j["d_id"];
   v.c_id = j["c_id"];
   v.o_entry_d = j["o_entry_d"];
 
@@ -494,9 +502,9 @@ void adl_serializer<NewOrderOrderLineResult>::from_json(const nlohmann::json &j,
   v.i_data = j["i_data"];
   v.s_qty = j["s_qty"];
   v.s_dist_xx = j["s_dist_xx"];
-  v.s_ytd = j["s_ytd"];
-  v.s_order_cnt = j["s_order_cnt"];
-  v.s_remote_cnt = j["s_remote_cnt"];
+//  v.s_ytd = j["s_ytd"];
+//  v.s_order_cnt = j["s_order_cnt"];
+//  v.s_remote_cnt = j["s_remote_cnt"];
   v.s_data = j["s_data"];
   v.amount = j["amount"];
 }
@@ -507,13 +515,13 @@ void adl_serializer<NewOrderResult>::to_json(nlohmann::json &j, const NewOrderRe
 
 void adl_serializer<NewOrderResult>::from_json(const nlohmann::json &j, NewOrderResult &v) {
   v.w_tax_rate = j["w_tax_rate"];
-  v.d_tax_rate = j["w_tax_rate"];
-  v.d_next_o_id = j["w_tax_rate"];
-  v.c_discount = j["w_tax_rate"];
-  v.c_last = j["w_tax_rate"];
-  v.c_credit = j["w_tax_rate"];
+  v.d_tax_rate = j["d_tax_rate"];
+  v.d_next_o_id = j["d_next_o_id"];
+  v.c_discount = j["c_discount"];
+  v.c_last = j["c_last"];
+  v.c_credit = j["c_credit"];
 
-  v.order_lines.reserve(j["order_lines"]);
+  v.order_lines.reserve(j["order_lines"].size());
   for (const auto & ol_j : j["order_lines"]) {
     NewOrderOrderLineResult order_line = ol_j;
     v.order_lines.emplace_back(order_line);

@@ -47,30 +47,29 @@ OrderStatusResult AbstractOrderStatusImpl::run_transaction(const OrderStatusPara
     Print(get_customer_tasks.back()->get_operator()).execute();
 #endif
 
-    auto num_names = get_customer_tasks.back()->get_operator()->get_output()->row_count();
+    const auto customers_table = get_customer_tasks.back()->get_operator()->get_output();
+    const auto num_names = customers_table->row_count();
     assert(num_names > 0);
 
-    auto & 
+    const auto row = (size_t)ceil(num_names / 2);
 
-    auto customer = get_customer_tasks.back()->get_operator()->get_output()->fetch_row(ceil(num_names / 2));
-
-
-    result.c_balance = boost::get<float>(customer[0]);
-    result.c_first = boost::get<std::string>(customer[1]);
-    result.c_middle = boost::get<std::string>(customer[2]);
+    result.c_balance = customers_table->get_value<float>(0, row);
+    result.c_first = customers_table->get_value<std::string>(1, row);
+    result.c_middle = customers_table->get_value<std::string>(2, row);
     result.c_last = params.c_last;
-    result.c_id = boost::get<int32_t>(customer[3]);
+    result.c_id = customers_table->get_value<int32_t>(3, row);
   } else {
     auto get_customer_tasks = get_customer_by_id(params.c_id, params.c_d_id, params.c_w_id);
     AbstractScheduler::schedule_tasks_and_wait(get_customer_tasks);
 
     assert(get_customer_tasks.back()->get_operator()->get_output()->row_count() == 1);
-    auto customer = get_customer_tasks.back()->get_operator()->get_output()->fetch_row(0);
 
-    result.c_balance = boost::get<float>(customer[0]);
-    result.c_first = boost::get<std::string>(customer[1]);
-    result.c_middle = boost::get<std::string>(customer[2]);
-    result.c_last = boost::get<std::string>(customer[3]);
+    const auto customers_table = get_customer_tasks.back()->get_operator()->get_output();
+
+    result.c_balance = customers_table->get_value<float>(0, 0);
+    result.c_first = customers_table->get_value<std::string>(1, 0);
+    result.c_middle = customers_table->get_value<std::string>(2, 0);
+    result.c_last = customers_table->get_value<std::string>(3, 0);
     result.c_id = params.c_id;
   }
 
@@ -82,11 +81,11 @@ OrderStatusResult AbstractOrderStatusImpl::run_transaction(const OrderStatusPara
   Print(get_order_tasks.back()->get_operator()).execute();
 #endif
 
-  auto order = get_order_tasks.back()->get_operator()->get_output()->fetch_row(0);
+  const auto orders_table = get_order_tasks.back()->get_operator()->get_output();
 
-  result.o_id = boost::get<int32_t>(order[0]);
-  result.o_carrier_id = boost::get<int32_t>(order[1]);
-  result.o_entry_d = boost::get<int32_t>(order[2]);
+  result.o_id = orders_table->get_value<int32_t>(0, 0);
+  result.o_carrier_id = orders_table->get_value<int32_t>(1, 0);
+  result.o_entry_d = orders_table->get_value<int32_t>(2, 0);
 
   auto get_order_line_tasks = get_order_lines(result.o_id, params.c_d_id, params.c_w_id);
   AbstractScheduler::schedule_tasks_and_wait(get_order_line_tasks);
@@ -102,13 +101,11 @@ OrderStatusResult AbstractOrderStatusImpl::run_transaction(const OrderStatusPara
   for (uint32_t r = 0; r < order_lines_table->row_count(); r++) {
     OrderStatusOrderLine order_line;
 
-    const auto row = order_lines_table->fetch_row(r);
-
-    order_line.ol_i_id = boost::get<int32_t>(row[0]);
-    order_line.ol_supply_w_id = boost::get<int32_t>(row[1]);
-    order_line.ol_quantity = boost::get<int32_t>(row[2]);
-    order_line.ol_amount = boost::get<float>(row[3]);
-    order_line.ol_delivery_d = boost::get<int32_t>(row[4]);
+    order_line.ol_i_id = order_lines_table->get_value<int32_t>(0, 0);
+    order_line.ol_supply_w_id = order_lines_table->get_value<int32_t>(1, 0);
+    order_line.ol_quantity = order_lines_table->get_value<int32_t>(2, 0);
+    order_line.ol_amount = order_lines_table->get_value<float>(3, 0);
+    order_line.ol_delivery_d = order_lines_table->get_value<int32_t>(4, 0);
 
     result.order_lines.emplace_back(order_line);
   }

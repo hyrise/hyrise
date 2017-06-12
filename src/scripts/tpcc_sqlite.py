@@ -91,7 +91,7 @@ def process_new_order(cur, params):
     c_id = params["c_id"]
     o_entry_d = params["o_entry_d"]
     o_carrier_id = 0 # TODO
-    ol_cnt = len(params["ol"])
+    ol_cnt = len(params["order_lines"])
     all_local = True # TODO once/if we support multiple warehouses
 
     # Get Warehouse Tax Rate
@@ -118,10 +118,10 @@ def process_new_order(cur, params):
 
     # total = 0
 
-    for ol_idx, order_line in enumerate(params["ol"]):
-        ol_i_id = order_line[0]
-        ol_i_w_id = order_line[1]
-        ol_i_qty = order_line[2]
+    for ol_idx, order_line in enumerate(params["order_lines"]):
+        ol_i_id = order_line['i_id']
+        ol_i_w_id = order_line['w_id']
+        ol_i_qty = order_line['qty']
 
         execute_sql(cur, new_order_queries["getItemInfo"], [ol_i_id])
         item = cur.fetchone()
@@ -163,17 +163,28 @@ def process_new_order(cur, params):
                              ol_amount, s_dist_xx])
 
         order_line = {
-            "Item": [i_price, i_name, i_data],
-            "StockInfo": [s_qty, s_dist_xx, s_ytd, s_order_cnt, s_remote_cnt, s_data]
+            'i_price': i_price,
+            'i_name': i_name,
+            'i_data': i_data,
+            's_qty': s_qty,
+            's_dist_xx': s_dist_xx,
+            's_ytd': s_ytd,
+            's_order_cnt': s_order_cnt,
+            's_remote_cnt': s_remote_cnt,
+            's_data': s_data,
+            'amount': ol_amount
         }
 
         order_lines.append(order_line)
 
     return {
-        "WarehouseTaxRate": w_tax_rate,
-        "District": [d_tax_rate, d_next_o_id],
-        "Customer": [c_discount, c_last, c_credit],
-        "OrderLines": order_lines
+        "w_tax_rate": w_tax_rate,
+        "d_tax_rate": d_tax_rate,
+        "d_next_o_id": d_next_o_id,
+        "c_discount": c_discount,
+        "c_last": c_last,
+        "c_credit": c_credit,
+        "order_lines": order_lines
     }
 
 def process_order_status(cur, params):
@@ -281,8 +292,8 @@ if __name__ == "__main__":
         "Delivery": process_delivery
     }
 
-    for transaction_type, params in tpcc_input:
-        query_results.append(transaction_dispatch[transaction_type](cur, params))
+    for transaction in tpcc_input:
+        query_results.append(transaction_dispatch[transaction['transaction']](cur, transaction['params']))
 
     with open(tpcc_output_path, "w") as tpcc_output_file:
         json.dump(query_results, tpcc_output_file)

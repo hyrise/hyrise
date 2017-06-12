@@ -34,9 +34,9 @@ struct NewOrderOrderLineResult {
   std::string i_data;
   int32_t s_qty;
   std::string s_dist_xx;
-  int32_t s_ytd;
-  int32_t s_order_cnt;
-  int32_t s_remote_cnt;
+  //int32_t s_ytd;
+  //int32_t s_order_cnt;
+  //int32_t s_remote_cnt;
   std::string s_data;
   float amount;
 };
@@ -47,7 +47,7 @@ struct NewOrderResult {
   int32_t d_next_o_id;
   float c_discount;
   std::string c_last;
-  float c_credit;
+  std::string c_credit;
   std::vector<NewOrderOrderLineResult> order_lines;
 };
 

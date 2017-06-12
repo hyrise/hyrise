@@ -214,6 +214,8 @@ set(
     types.hpp
     uid_allocator.hpp
     utils/cuckoo_hashtable.hpp
+    utils/helper.cpp
+    utils/helper.hpp
     utils/murmur_hash.cpp
     utils/murmur_hash.hpp
 )
