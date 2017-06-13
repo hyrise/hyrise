@@ -1,6 +1,8 @@
 node {
 
-  docker.image('hyrise/opossum-ci:16.10').inside("-u 0:0") {
+  def oppossumCI = docker.image('hyrise/opossum-ci:16.10');
+  oppossumCI.pull()
+  oppossumCI.inside("-u 0:0") {
 
     try {
 
