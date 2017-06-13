@@ -9,7 +9,7 @@ fi
 GCC_VERSION="$(gcc -dumpversion)"
 GCC7_FLAGS=""
 if [[ $GCC_VERSION -ge 7 ]]; then
-    GCC7_FLAGS="-Wimplicit-fallthrough=0"
+    GCC7_FLAGS="-Wimplicit-fallthrough=0 -Wstringop-overflow=0"
 fi
 
 echo
