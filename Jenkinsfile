@@ -1,6 +1,6 @@
 node {
 
-  docker.image('hyrise/opossum-ci:16.10').inside("-u 0:0") {
+  docker.image('hyrise/opossum-ci:17.04').inside("-u 0:0") {
 
     try {
 
