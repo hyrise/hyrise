@@ -6,6 +6,12 @@ else
     REPLY="y"
 fi
 
+GCC_VERSION="$(gcc -dumpversion)"
+GCC7_FLAGS=""
+if [[ $GCC_VERSION -ge 7 ]]; then
+    GCC7_FLAGS="-Wimplicit-fallthrough=0"
+fi
+
 echo
 if echo $REPLY | grep -E '^[Yy]$' > /dev/null; then
     unamestr=$(uname)
@@ -26,7 +32,7 @@ if echo $REPLY | grep -E '^[Yy]$' > /dev/null; then
                 fi
             done
             if git submodule update --init --recursive; then
-                if CPPFLAGS="-Wno-deprecated-declarations" CFLAGS="-Wno-deprecated-declarations -Wno-implicit-function-declaration -Wno-shift-negative-value" make static -j $(sysctl -n hw.ncpu) --directory=third_party/grpc REQUIRE_CUSTOM_LIBRARIES_opt=true; then
+                if CPPFLAGS="-Wno-deprecated-declarations" CFLAGS="-Wno-deprecated-declarations -Wno-implicit-function-declaration -Wno-shift-negative-value ${GCC7_FLAGS}" make static -j $(sysctl -n hw.ncpu) --directory=third_party/grpc REQUIRE_CUSTOM_LIBRARIES_opt=true; then
                     echo "Installation successful"
                 else
                     echo "Error during gRPC installation."
@@ -46,7 +52,7 @@ if echo $REPLY | grep -E '^[Yy]$' > /dev/null; then
             if sudo apt-get update >/dev/null; then
                 if sudo apt-get install -y libboost-all-dev clang-format gcovr python2.7 gcc-6 clang llvm libnuma-dev libnuma1 libtbb-dev build-essential autoconf libtool cmake; then
                     if git submodule update --init --recursive; then
-                        if CPPFLAGS="-Wno-deprecated-declarations" CFLAGS="-Wno-deprecated-declarations -Wno-implicit-function-declaration -Wno-shift-negative-value" make static -j $(cat /proc/cpuinfo | grep processor | wc -l) --directory=third_party/grpc REQUIRE_CUSTOM_LIBRARIES_opt=true; then
+                        if CPPFLAGS="-Wno-deprecated-declarations" CFLAGS="-Wno-deprecated-declarations -Wno-implicit-function-declaration -Wno-shift-negative-value ${GCC7_FLAGS}" make static -j $(cat /proc/cpuinfo | grep processor | wc -l) --directory=third_party/grpc REQUIRE_CUSTOM_LIBRARIES_opt=true; then
                             echo "Installation successful"
                         else
                             echo "Error during gRPC installation."
