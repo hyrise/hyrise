@@ -16,6 +16,8 @@ Delete::Delete(const std::string& table_name, const std::shared_ptr<const Abstra
 std::shared_ptr<const Table> Delete::on_execute(std::shared_ptr<TransactionContext> context) {
   DebugAssert(_execution_input_valid(context), "Input to Delete isn't valid");
 
+  context->register_rw_operator(this);
+
   _table = StorageManager::get().get_table(_table_name);
   _transaction_id = context->transaction_id();
 

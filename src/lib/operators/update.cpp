@@ -107,16 +107,6 @@ std::shared_ptr<const Table> Update::on_execute(std::shared_ptr<TransactionConte
   return nullptr;
 }
 
-void Update::commit_records(const CommitID cid) {
-  _delete->commit(cid);
-  _insert->commit(cid);
-}
-
-void Update::rollback_records() {
-  _delete->rollback_records();
-  _insert->rollback_records();
-}
-
 /**
  * input_table_left must be a table with at least one chunk, containing at least one ReferenceColumn
  * that all reference the table specified by table_to_update_name. The column count and types in input_table_left
