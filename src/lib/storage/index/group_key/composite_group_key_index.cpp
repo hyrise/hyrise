@@ -24,8 +24,9 @@ CompositeGroupKeyIndex::CompositeGroupKeyIndex(const std::vector<std::shared_ptr
 
   if (IS_DEBUG) {
     auto firstSize = indexed_columns.front()->size();
-    auto haveAllColumnsSameSize = std::all_of(indexed_columns.cbegin(), indexed_columns.cend(),
-                                              [firstSize](const auto &column) { return column->size() == firstSize; });
+    [[gnu::unused]] auto haveAllColumnsSameSize =
+        std::all_of(indexed_columns.cbegin(), indexed_columns.cend(),
+                    [firstSize](const auto &column) { return column->size() == firstSize; });
 
     DebugAssert(haveAllColumnsSameSize,
                 "CompositeGroupKey requires same length of all columns that should be indexed.");

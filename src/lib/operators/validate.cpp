@@ -28,8 +28,7 @@ bool is_row_visible(CommitID our_tid, CommitID our_lcid, ChunkOffset chunk_offse
 
 }  // namespace
 
-Validate::Validate(const std::shared_ptr<AbstractOperator> in)
-    : AbstractReadOnlyOperator(in), _in_table(in->get_output()), _output(std::make_shared<Table>()) {}
+Validate::Validate(const std::shared_ptr<AbstractOperator> in) : AbstractReadOnlyOperator(in) {}
 
 const std::string Validate::name() const { return "Validate"; }
 
@@ -42,6 +41,7 @@ std::shared_ptr<const Table> Validate::on_execute() {
 }
 
 std::shared_ptr<const Table> Validate::on_execute(std::shared_ptr<TransactionContext> transactionContext) {
+  const auto _in_table = input_table_left();
   auto output = std::make_shared<Table>();
 
   // Save column structure.

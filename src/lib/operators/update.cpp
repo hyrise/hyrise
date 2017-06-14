@@ -46,6 +46,10 @@ std::shared_ptr<const Table> Update::on_execute(std::shared_ptr<TransactionConte
     auto pos_list = std::make_shared<PosList>();
     for (auto i = 0u; i < input_table_right()->get_chunk(chunk_id).size(); ++i) {
       if (current_pos_list == nullptr || current_row_in_left_chunk == current_pos_list->size()) {
+        while (input_table_left()->get_chunk(current_left_chunk_id).size() == 0u) {
+          ++current_left_chunk_id;
+        }
+
         current_row_in_left_chunk = 0u;
         current_pos_list = std::static_pointer_cast<ReferenceColumn>(
                                input_table_left()->get_chunk(current_left_chunk_id).get_column(0))

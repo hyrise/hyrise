@@ -63,8 +63,10 @@ void NodeQueueScheduler::finish() {
   }
 
   // All queues SHOULD be empty by now
-  for (auto& queue : _queues) {
-    DebugAssert(queue->empty(), "NodeQueueScheduler bug: Queue wasn't empty even though all tasks finished");
+  if (IS_DEBUG) {
+    for ([[gnu::unused]] auto& queue : _queues) {
+      DebugAssert(queue->empty(), "NodeQueueScheduler bug: Queue wasn't empty even though all tasks finished");
+    }
   }
 
   for (auto& processing_unit : _processing_units) {
