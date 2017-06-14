@@ -1,9 +1,10 @@
 #include <iostream>
 #include <memory>
 
-#include "all_type_variant.hpp"
 #include "../benchmark-libs/tpcc/tpcc_table_generator.hpp"
+#include "all_type_variant.hpp"
 #include "optimizer/statistics.hpp"
+#include "storage/storage_manager.hpp"
 
 int main() {
   std::cout << "starting main" << std::endl;
@@ -12,7 +13,10 @@ int main() {
 
   std::cout << "starting generate table" << std::endl;
 
-  auto customer_table = generator.generate_customer_table();
+  opossum::StorageManager::get().add_table("CUSTOMER", generator.generate_customer_table());
 
-  std::cout << "stats: " << opossum::Statistics::predicate_result_size(customer_table, "C_ID", "=", opossum::AllTypeVariant(1)) << std::endl;
+  auto table_stats = opossum::StorageManager::get().get_table("CUSTOMER")->table_stats;
+  std::cout << "stats: "
+            << opossum::Statistics::predicate_stats(table_stats, "C_ID", "=", opossum::AllTypeVariant(1))->row_count()
+            << std::endl;
 }

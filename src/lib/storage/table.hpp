@@ -9,6 +9,7 @@
 
 #include "chunk.hpp"
 #include "common.hpp"
+#include "optimizer/table_stats.hpp"
 #include "type_cast.hpp"
 #include "types.hpp"
 
@@ -96,6 +97,8 @@ class Table {
   RowID calculate_row_id(ChunkID chunk, ChunkOffset offset) const { return RowID{chunk, offset}; }
 
   std::unique_lock<std::mutex> acquire_append_mutex();
+
+  std::shared_ptr<TableStats> table_stats;
 
  protected:
   // 0 means that the chunk has an unlimited size.
