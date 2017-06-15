@@ -33,10 +33,10 @@ class OperatorsProjectionBenchmark : public BenchmarkBasicFixture {
 BENCHMARK_DEFINE_F(OperatorsProjectionBenchmark, BM_ProjectionSimple)(benchmark::State& state) {
   clear_cache();
   Projection::ProjectionDefinitions definitions = {{"$a", "int", "sum"}};
-  auto warm_up = std::make_shared<Projection>(_tables[state.range(0)], definitions);
+  auto warm_up = std::make_shared<Projection>(_tables[state.range(1)], definitions);
   warm_up->execute();
   while (state.KeepRunning()) {
-    auto projection = std::make_shared<Projection>(_tables[state.range(0)], definitions);
+    auto projection = std::make_shared<Projection>(_tables[state.range(1)], definitions);
     projection->execute();
   }
 }
@@ -44,10 +44,10 @@ BENCHMARK_DEFINE_F(OperatorsProjectionBenchmark, BM_ProjectionSimple)(benchmark:
 BENCHMARK_DEFINE_F(OperatorsProjectionBenchmark, BM_ProjectionVariableTerm)(benchmark::State& state) {
   clear_cache();
   Projection::ProjectionDefinitions definitions = {{"$a+$b", "int", "sum"}};
-  auto warm_up = std::make_shared<Projection>(_tables[state.range(0)], definitions);
+  auto warm_up = std::make_shared<Projection>(_tables[state.range(1)], definitions);
   warm_up->execute();
   while (state.KeepRunning()) {
-    auto projection = std::make_shared<Projection>(_tables[state.range(0)], definitions);
+    auto projection = std::make_shared<Projection>(_tables[state.range(1)], definitions);
     projection->execute();
   }
 }
@@ -55,23 +55,27 @@ BENCHMARK_DEFINE_F(OperatorsProjectionBenchmark, BM_ProjectionVariableTerm)(benc
 BENCHMARK_DEFINE_F(OperatorsProjectionBenchmark, BM_ProjectionConstantTerm)(benchmark::State& state) {
   clear_cache();
   Projection::ProjectionDefinitions definitions = {{"$a+5", "int", "sum"}};
-  auto warm_up = std::make_shared<Projection>(_tables[state.range(0)], definitions);
+  auto warm_up = std::make_shared<Projection>(_tables[state.range(1)], definitions);
   warm_up->execute();
   while (state.KeepRunning()) {
     Projection::ProjectionDefinitions definitions = {{"$a+5", "int", "sum"}};
-    auto projection = std::make_shared<Projection>(_tables[state.range(0)], definitions);
+    auto projection = std::make_shared<Projection>(_tables[state.range(1)], definitions);
     projection->execute();
   }
 }
 
-static void ColumnArguments(benchmark::internal::Benchmark* b) {
-  for (int i = 0; i <= 2; i++) b->Args({i});  // i = column type
+static void CustomArguments(benchmark::internal::Benchmark* b) {
+  for (int i : {0, 10000, 100000}) {
+    for (int j = 0; i <= 2; j++) {
+      b->Args({i, j});  // i = chunk size in, j = column type
+    }
+  }
 }
 
-BENCHMARK_REGISTER_F(OperatorsProjectionBenchmark, BM_ProjectionSimple)->Apply(ColumnArguments);
+BENCHMARK_REGISTER_F(OperatorsProjectionBenchmark, BM_ProjectionSimple)->Apply(CustomArguments);
 
-BENCHMARK_REGISTER_F(OperatorsProjectionBenchmark, BM_ProjectionVariableTerm)->Apply(ColumnArguments);
+BENCHMARK_REGISTER_F(OperatorsProjectionBenchmark, BM_ProjectionVariableTerm)->Apply(CustomArguments);
 
-BENCHMARK_REGISTER_F(OperatorsProjectionBenchmark, BM_ProjectionConstantTerm)->Apply(ColumnArguments);
+BENCHMARK_REGISTER_F(OperatorsProjectionBenchmark, BM_ProjectionConstantTerm)->Apply(CustomArguments);
 
 }  // namespace opossum

@@ -13,10 +13,10 @@
 
 namespace opossum {
 
-std::shared_ptr<Table> TableGenerator::get_table() {
-  std::shared_ptr<Table> table = std::make_shared<Table>(_chunk_size);
+std::shared_ptr<Table> TableGenerator::get_table(const size_t chunk_size) {
+  std::shared_ptr<Table> table = std::make_shared<Table>(chunk_size);
   std::vector<tbb::concurrent_vector<int>> value_vectors;
-  auto vector_size = _chunk_size > 0 ? _chunk_size : _num_rows;
+  auto vector_size = chunk_size > 0 ? chunk_size : _num_rows;
   /*
    * Generate table layout with column names from 'a' to 'z'.
    * Create a vector for each column.

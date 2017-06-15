@@ -11,7 +11,7 @@
 
 namespace opossum {
 
-BENCHMARK_F(BenchmarkBasicFixture, BM_Difference)(benchmark::State& state) {
+BENCHMARK_DEFINE_F(BenchmarkBasicFixture, BM_Difference)(benchmark::State& state) {
   clear_cache();
   auto warm_up = std::make_shared<Difference>(_table_wrapper_a, _table_wrapper_b);
   warm_up->execute();
@@ -20,5 +20,7 @@ BENCHMARK_F(BenchmarkBasicFixture, BM_Difference)(benchmark::State& state) {
     difference->execute();
   }
 }
+
+BENCHMARK_REGISTER_F(BenchmarkBasicFixture, BM_Difference)->Apply(BenchmarkBasicFixture::ChunkSizeIn);
 
 }  // namespace opossum
