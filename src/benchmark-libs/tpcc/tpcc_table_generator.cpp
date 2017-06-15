@@ -405,7 +405,8 @@ std::shared_ptr<opossum::Table> TableGenerator::generate_customer_table() {
   add_column<std::string>(cardinalities, table, "C_DATA",
                           [&](std::vector<size_t>) { return _random_gen.astring(300, 500); });
 
-  opossum::DictionaryCompression::compress_table(*table);
+  // only compress dictionary once insert into tables is possible where the last chunk is compressed
+  // opossum::DictionaryCompression::compress_table(*table);
   return table;
 }
 
@@ -480,7 +481,8 @@ std::shared_ptr<opossum::Table> TableGenerator::generate_order_table(
   });
   add_column<int>(cardinalities, table, "O_ALL_LOCAL", [&](std::vector<size_t>) -> size_t { return 1; });
 
-  opossum::DictionaryCompression::compress_table(*table);
+  // only compress dictionary once insert into tables is possible where the last chunk is compressed
+  // opossum::DictionaryCompression::compress_table(*table);
   return table;
 }
 
@@ -524,7 +526,8 @@ std::shared_ptr<opossum::Table> TableGenerator::generate_order_line_table(
   add_column<std::string>(cardinalities, order_line_counts, table, "OL_DIST_INFO",
                           [&](std::vector<size_t>) { return _random_gen.astring(24, 24); });
 
-  opossum::DictionaryCompression::compress_table(*table);
+  // only compress dictionary once insert into tables is possible where the last chunk is compressed
+  // opossum::DictionaryCompression::compress_table(*table);
   return table;
 }
 
