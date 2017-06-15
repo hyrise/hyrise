@@ -11,6 +11,7 @@
 
 #include "../../lib/operators/abstract_read_only_operator.hpp"
 #include "../../lib/operators/aggregate.hpp"
+#include "../../lib/operators/join_hash.hpp"
 #include "../../lib/operators/table_scan.hpp"
 #include "../../lib/operators/table_wrapper.hpp"
 #include "../../lib/storage/dictionary_compression.hpp"
@@ -42,6 +43,14 @@ class OperatorsAggregateTest : public BaseTest {
     _table_wrapper_1_1_string = std::make_shared<TableWrapper>(
         load_table("src/test/tables/aggregateoperator/groupby_string_1gb_1agg/input.tbl", 2));
     _table_wrapper_1_1_string->execute();
+
+    _table_wrapper_3_1 =
+        std::make_shared<TableWrapper>(load_table("src/test/tables/aggregateoperator/join_2gb_0agg/input_a.tbl", 2));
+    _table_wrapper_3_1->execute();
+
+    _table_wrapper_3_2 =
+        std::make_shared<TableWrapper>(load_table("src/test/tables/aggregateoperator/join_2gb_0agg/input_b.tbl", 2));
+    _table_wrapper_3_2->execute();
 
     auto test_table = load_table("src/test/tables/aggregateoperator/groupby_int_1gb_1agg/input.tbl", 2);
     DictionaryCompression::compress_table(*test_table);
@@ -88,7 +97,7 @@ class OperatorsAggregateTest : public BaseTest {
   }
 
   std::shared_ptr<TableWrapper> _table_wrapper_1_1, _table_wrapper_1_2, _table_wrapper_2_1, _table_wrapper_2_2,
-      _table_wrapper_1_1_string, _table_wrapper_1_1_dict;
+      _table_wrapper_1_1_string, _table_wrapper_1_1_dict, _table_wrapper_3_1, _table_wrapper_3_2;
 };
 
 TEST_F(OperatorsAggregateTest, NumInputTables) {
@@ -116,19 +125,27 @@ TEST_F(OperatorsAggregateTest, OperatorName) {
   EXPECT_EQ(aggregate->name(), "Aggregate");
 }
 
-TEST_F(OperatorsAggregateTest, CannotAggregateStringColumns) {
+TEST_F(OperatorsAggregateTest, CannotSumStringColumns) {
   auto aggregate = std::make_shared<Aggregate>(
       _table_wrapper_1_1_string,
-      std::vector<std::pair<std::string, AggregateFunction>>{std::make_pair(std::string("a"), Min)},
+      std::vector<std::pair<std::string, AggregateFunction>>{std::make_pair(std::string("a"), Sum)},
       std::vector<std::string>{std::string("a")});
 
-  EXPECT_THROW(aggregate->execute(), std::logic_error);
+  EXPECT_THROW(aggregate->execute(), std::runtime_error);
 }
 
-// Currently not implemented
-TEST_F(OperatorsAggregateTest, DISABLED_CanCountStringColumns) {
+TEST_F(OperatorsAggregateTest, CannotAvgStringColumns) {
+  auto aggregate = std::make_shared<Aggregate>(
+      _table_wrapper_1_1_string,
+      std::vector<std::pair<std::string, AggregateFunction>>{std::make_pair(std::string("a"), Avg)},
+      std::vector<std::string>{std::string("a")});
+
+  EXPECT_THROW(aggregate->execute(), std::runtime_error);
+}
+
+TEST_F(OperatorsAggregateTest, CanCountStringColumns) {
   this->test_output(_table_wrapper_1_1_string, {std::make_pair(std::string("a"), Count)}, {std::string("a")},
-                    "src/test/tables/aggregateoperator/groupby_string_1gb_1agg/count.tbl", 1);
+                    "src/test/tables/aggregateoperator/groupby_string_1gb_1agg/count_str.tbl", 1);
 }
 
 TEST_F(OperatorsAggregateTest, SingleAggregateMax) {
@@ -164,6 +181,16 @@ TEST_F(OperatorsAggregateTest, StringSingleAggregateMax) {
 TEST_F(OperatorsAggregateTest, StringSingleAggregateMin) {
   this->test_output(_table_wrapper_1_1_string, {std::make_pair(std::string("b"), Min)}, {std::string("a")},
                     "src/test/tables/aggregateoperator/groupby_string_1gb_1agg/min.tbl", 1);
+}
+
+TEST_F(OperatorsAggregateTest, StringSingleAggregateStringMax) {
+  this->test_output(_table_wrapper_1_1_string, {std::make_pair(std::string("a"), Max)}, {},
+                    "src/test/tables/aggregateoperator/groupby_string_1gb_1agg/max_str.tbl", 1);
+}
+
+TEST_F(OperatorsAggregateTest, StringSingleAggregateStringMin) {
+  this->test_output(_table_wrapper_1_1_string, {std::make_pair(std::string("a"), Min)}, {},
+                    "src/test/tables/aggregateoperator/groupby_string_1gb_1agg/min_str.tbl", 1);
 }
 
 TEST_F(OperatorsAggregateTest, StringSingleAggregateSum) {
@@ -389,6 +416,16 @@ TEST_F(OperatorsAggregateTest, DictionarySingleAggregateMinOnRef) {
 
   this->test_output(filtered, {std::make_pair(std::string("b"), Min)}, {std::string("a")},
                     "src/test/tables/aggregateoperator/groupby_int_1gb_1agg/min_filtered.tbl", 1);
+}
+
+TEST_F(OperatorsAggregateTest, JoinThenAggregate) {
+  auto join =
+      std::make_shared<JoinHash>(_table_wrapper_3_1, _table_wrapper_3_2, std::pair<std::string, std::string>("a", "a"),
+                                 "=", Inner, std::string("left."), std::string("right."));
+  join->execute();
+
+  this->test_output(join, {}, {std::string("left.a"), std::string("right.b")},
+                    "src/test/tables/aggregateoperator/join_2gb_0agg/result.tbl", 1);
 }
 
 }  // namespace opossum

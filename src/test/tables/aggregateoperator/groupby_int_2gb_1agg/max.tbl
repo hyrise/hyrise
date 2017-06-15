@@ -1,5 +1,5 @@
 a|b|MAX(c)
-int|float|double
+int|float|int
 12345|456.7|24
 12345|457.7|33
 123|458.7|20
