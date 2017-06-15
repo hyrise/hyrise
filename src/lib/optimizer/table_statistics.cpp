@@ -42,7 +42,8 @@ std::shared_ptr<TableStatistics> TableStatistics::predicate_statistics(const std
   if (op == "=") {
     auto distinct_count = get_column_statistics(column_name)->get_distinct_count();
     return shared_clone(_row_count / static_cast<double>(distinct_count));
-  } // else if (op == "!=") {
+  }
+  // else if (op == "!=") {
     // Fail(std::string("operator not yet implemented: ") + op);
   // } else if (op == "<") {
   //   Fail(std::string("operator not yet implemented: ") + op);
