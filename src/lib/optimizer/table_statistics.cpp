@@ -10,10 +10,12 @@
 
 namespace opossum {
 
-TableStatistics::TableStatistics(const std::weak_ptr<Table> table) : _table(table) { _row_count = _table.lock()->row_count(); }
+TableStatistics::TableStatistics(const std::weak_ptr<Table> table) : _table(table) {
+  _row_count = _table.lock()->row_count();
+}
 
 TableStatistics::TableStatistics(std::weak_ptr<Table> table, double row_count,
-                       std::map<std::string, std::shared_ptr<ColumnStatistics>> column_statistics)
+                                 std::map<std::string, std::shared_ptr<ColumnStatistics>> column_statistics)
     : _table(table), _row_count(row_count), _column_statistics(column_statistics) {}
 
 double TableStatistics::row_count() { return _row_count; }

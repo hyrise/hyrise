@@ -10,9 +10,9 @@
 namespace opossum {
 
 std::shared_ptr<TableStatistics> Statistics::predicate_stats(const std::shared_ptr<TableStatistics> table_statistics,
-                                                        const std::string &column_name, const std::string &op,
-                                                        const AllParameterVariant value,
-                                                        const optional<AllTypeVariant> value2) {
+                                                             const std::string &column_name, const std::string &op,
+                                                             const AllParameterVariant value,
+                                                             const optional<AllTypeVariant> value2) {
   // currently assuming all values are equally distributed
   auto row_count = table_statistics->row_count();
   if (row_count == 0) {
