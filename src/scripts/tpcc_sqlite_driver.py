@@ -1,3 +1,4 @@
+import argparse
 import sqlite3
 import csv
 import json
@@ -53,6 +54,7 @@ def load_table(cur, dir, name, name_override=None):
 
         executemany_sql(cur, 'INSERT INTO %s VALUES (%s)' % (in_db_name, placeholders), rows)
 
+
 def init_db():
     conn = sqlite3.connect(':memory:')
     cur = conn.cursor()
@@ -63,6 +65,7 @@ def init_db():
         load_table(cur, csv_path, file_prefix, table_name)
 
     return cur
+
 
 def dump_db(cur):
     def dump_table(cur, dir, table_name, file_prefix):
@@ -78,7 +81,6 @@ def dump_db(cur):
 
             for row in rows:
                 csv_writer.writerow(row)
-
 
     for (file_prefix, table_name) in TPCC_TABLES:
         dump_table(cur, ".", table_name, file_prefix)
@@ -201,7 +203,7 @@ def process_order_status(cur, params):
         c_last = params["c_last"]
         execute_sql(cur, q["getCustomersByLastName"], (w_id, d_id, c_last))
         customers = cur.fetchall()
-        customer = customers[int(math.ceil(len(customers) / 2))]
+        customer = customers[int((len(customers) - 1) / 2)]
 
     c_id = customer[0]
     c_first = customer[1]
@@ -225,7 +227,6 @@ def process_order_status(cur, params):
             "ol_amount": order_line_row[3],
             "ol_delivery_d": order_line_row[4]
         })
-
 
     return {
         "c_id": c_id,
@@ -267,19 +268,17 @@ def process_delivery(cur, params):
         execute_sql(cur, q["updateCustomer"], [ol_total, c_id, d_id, w_id])
 
         districts.append((d_id, no_o_id, c_id, ol_total))
-    ## FOR
-
 
     return {
         'Districts': districts
     }
 
 
-if __name__ == "__main__":
+def run_sqlite(distribution):
     cur = init_db()
 
-    tpcc_input_path = "tpcc_simulation_input.json"
-    tpcc_output_path = "tpcc_simulation_results.json"
+    tpcc_input_path = "tpcc_{}_requests.json".format(distribution)
+    tpcc_output_path = "tpcc_{}_results.json".format(distribution)
 
     query_results = []
 
@@ -292,7 +291,7 @@ if __name__ == "__main__":
         "Delivery": process_delivery
     }
 
-    for transaction in tpcc_input:
+    for idx, transaction in enumerate(tpcc_input):
         query_results.append(transaction_dispatch[transaction['transaction']](cur, transaction['params']))
 
     with open(tpcc_output_path, "w") as tpcc_output_file:
@@ -300,6 +299,16 @@ if __name__ == "__main__":
 
     dump_db(cur)
 
+
+if __name__ == "__main__":
+    aparser = argparse.ArgumentParser(description='Runs TPCC requests in SQLite and stores the results')
+    aparser.add_argument('distribution', choices=['test', 'benchmark'],
+                         help="Use the specified distribution")
+    args = vars(aparser.parse_args())
+
+    print('Running requests with \'{}\' distribution'.format(args['distribution']))
+    run_sqlite(args['distribution'])
+    print('Done')
 
 
 

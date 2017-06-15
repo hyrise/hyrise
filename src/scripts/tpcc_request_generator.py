@@ -1,9 +1,11 @@
 import datetime
 import json
 import random
+import argparse
 from tpcc_constants import *
 
 nurand_C = {}
+
 
 def nurand(A, x, y):
     a = random.randint(0, A)
@@ -12,7 +14,8 @@ def nurand(A, x, y):
     if not A in nurand_C:
         nurand_C[A] = random.randint(0, A)
 
-    return ((a | b) + nurand_C[A]) % (y * x + 1) + x
+    return ((a | b) + nurand_C[A]) % (y - x + 1) + x
+
 
 def decode_c_last(abc):
     assert abc >= 0 and abc < 999
@@ -40,11 +43,8 @@ def generate_new_order():
     invalid_order = random.randint(0, 99) == 0
 
     for o in range(ol_count):
-        # If the transaction is to be invalid, make the last order line invalid
-        if invalid_order and o + 1 == ol_count:
-            i_id = NUM_ITEMS + 1
-        else:
-            i_id = random.randint(0, NUM_ITEMS - 1)
+        # TPCC-DEVIATION: We should generate occasional invalid requests here
+        i_id = random.randint(0, NUM_ITEMS - 1)
 
         new_order["order_lines"].append({
             "i_id": i_id,
@@ -71,6 +71,7 @@ def generate_order_status():
     return {"transaction": "OrderStatus",
             "params": order_status}
 
+
 def generate_delivery():
     delivery = {
         "w_id": 0,
@@ -81,15 +82,48 @@ def generate_delivery():
     return {"transaction": "Delivery",
             "params": delivery}
 
-if __name__ == "__main__":
+
+def generate_requests(distribution, num_requests=100):
     transactions = []
 
-    transactions.append(generate_new_order())
-    #transactions.append(generate_order_status())
-    #transactions.append(generate_delivery())
+    if distribution == 'test':
+        for i in range(num_requests):
+            request_type = i % 2
 
-    with open("tpcc_simulation_input.json", "w") as json_file:
+            if request_type == 0:
+                transactions.append(generate_new_order())
+            if request_type == 1:
+                transactions.append(generate_order_status())
+    elif distribution == 'benchmark':
+        while len(transactions) < num_requests:
+            x = random.randint(1, 100)
+            if x <= 4:  # 4%
+                pass # Stock Level
+            elif x <= 4 + 4: # 4%
+                pass # DELIVERY
+            elif x <= 4 + 4 + 4:  # 4%
+                transactions.append(generate_order_status())
+            elif x <= 43 + 4 + 4 + 4:  # 43%
+                pass # PAYMENT
+            else:  # 45%
+                assert x > 100 - 45
+                transactions.append(generate_order_status())
+    else:
+        print("ERROR: Unknown distribution {}".format(distribution))
+
+    with open("tpcc_{}_requests.json".format(distribution), "w") as json_file:
         json.dump(transactions, json_file)
 
 
+if __name__ == '__main__':
+    aparser = argparse.ArgumentParser(description='Generates a JSON file containing TPCC requests')
+    aparser.add_argument('distribution', choices=['test', 'benchmark'],
+                         help='For \'test\', generate even distribution of tests, for \'benchmark\' stick to the distribution specified by TPCC')
+    aparser.add_argument('num_requests', type=int,
+                         help='Number of requests to generate', default=100)
+    args = vars(aparser.parse_args())
+
+    print('Generating {} requests with \'{}\' distribution'.format(args['num_requests'], args['distribution']))
+    generate_requests(args['distribution'], args['num_requests'])
+    print('Done')
 

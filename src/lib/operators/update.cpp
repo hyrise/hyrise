@@ -93,7 +93,9 @@ std::shared_ptr<const Table> Update::on_execute(std::shared_ptr<TransactionConte
   _delete->execute();
 
   _execute_failed |= _delete->execute_failed();
-  if (_execute_failed) return nullptr;
+  if (_execute_failed) {
+    return nullptr;
+  }
 
   // 4. call insert using insert_table.
   auto helper_op = std::make_shared<TableWrapper>(insert_table);

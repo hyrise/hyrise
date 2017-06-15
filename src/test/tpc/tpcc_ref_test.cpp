@@ -38,7 +38,7 @@ class OrderStatusTestImpl : public TransactionTestImpl {
       ASSERT_EQ(ref_result.c_first, our_result.c_first);
       ASSERT_EQ(ref_result.c_middle, our_result.c_middle);
       ASSERT_EQ(ref_result.c_last, our_result.c_last);
-      ASSERT_EQ(ref_result.c_balance, our_result.c_balance);
+      ASSERT_FLOAT_EQ(ref_result.c_balance, our_result.c_balance);
       ASSERT_EQ(ref_result.o_id, our_result.o_id);
       ASSERT_EQ(ref_result.o_carrier_id, our_result.o_carrier_id);
       ASSERT_EQ(ref_result.o_entry_d, our_result.o_entry_d);
@@ -51,7 +51,7 @@ class OrderStatusTestImpl : public TransactionTestImpl {
         ASSERT_EQ(ref.ol_supply_w_id, our.ol_supply_w_id);
         ASSERT_EQ(ref.ol_i_id, our.ol_i_id);
         ASSERT_EQ(ref.ol_quantity, our.ol_quantity);
-        ASSERT_EQ(ref.ol_amount, our.ol_amount);
+        ASSERT_FLOAT_EQ(ref.ol_amount, our.ol_amount);
         ASSERT_EQ(ref.ol_delivery_d, our.ol_delivery_d);
       }
   }
@@ -69,10 +69,10 @@ class NewOrderTestImpl : public TransactionTestImpl {
 
       auto our_result = _ref_impl.run_transaction(params);
 
-      ASSERT_EQ(ref_result.w_tax_rate, our_result.w_tax_rate);
-      ASSERT_EQ(ref_result.d_tax_rate, our_result.d_tax_rate);
+      ASSERT_FLOAT_EQ(ref_result.w_tax_rate, our_result.w_tax_rate);
+      ASSERT_FLOAT_EQ(ref_result.d_tax_rate, our_result.d_tax_rate);
       ASSERT_EQ(ref_result.d_next_o_id, our_result.d_next_o_id);
-      ASSERT_EQ(ref_result.c_discount, our_result.c_discount);
+      ASSERT_FLOAT_EQ(ref_result.c_discount, our_result.c_discount);
       ASSERT_EQ(ref_result.c_last, our_result.c_last);
       ASSERT_EQ(ref_result.c_credit, our_result.c_credit);
 
@@ -81,7 +81,7 @@ class NewOrderTestImpl : public TransactionTestImpl {
         const auto & our = our_result.order_lines[l];
         const auto & ref = ref_result.order_lines[l];
 
-        ASSERT_EQ(ref.i_price, our.i_price);
+        ASSERT_FLOAT_EQ(ref.i_price, our.i_price);
         ASSERT_EQ(ref.i_name, our.i_name);
         ASSERT_EQ(ref.i_data, our.i_data);
         ASSERT_EQ(ref.s_qty, our.s_qty);
@@ -90,7 +90,7 @@ class NewOrderTestImpl : public TransactionTestImpl {
         ASSERT_EQ(ref.s_order_cnt, our.s_order_cnt);
         ASSERT_EQ(ref.s_remote_cnt, our.s_remote_cnt);
         ASSERT_EQ(ref.s_data, our.s_data);
-        ASSERT_EQ(ref.amount, our.amount);
+        ASSERT_FLOAT_EQ(ref.amount, our.amount);
       }
   }
 
@@ -131,14 +131,14 @@ class TpccRefTest : public BaseTest {
 
 TEST_F(TpccRefTest, SimulationScenario) {
   // Load input
-  auto json_simulation_file = std::ifstream("tpcc_simulation_input.json");
+  auto json_simulation_file = std::ifstream("tpcc_test_requests.json");
   assert(json_simulation_file.is_open());
 
   auto simulation_input = nlohmann::json{};
   json_simulation_file >> simulation_input;
 
   // Load output
-  auto json_results_file = std::ifstream("tpcc_simulation_results.json");
+  auto json_results_file = std::ifstream("tpcc_test_results.json");
   assert(json_results_file.is_open());
 
   auto simulation_results = nlohmann::json{};
@@ -153,7 +153,7 @@ TEST_F(TpccRefTest, SimulationScenario) {
     const auto &transaction_name = transaction["transaction"];
     const auto &transaction_params = transaction["params"];
 
-    std::cout << "Testing: " << transaction_name << std::endl;
+    std::cout << "Testing: " << transaction_name << ":" << transaction_params << std::endl;
 
     auto iter = m_transactionImpls.find(transaction_name);
     assert(iter != m_transactionImpls.end());

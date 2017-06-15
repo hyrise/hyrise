@@ -9,6 +9,10 @@
 
 #include "defines.hpp"
 
+namespace opossum {
+  class TransactionContext;
+}
+
 namespace tpcc {
 
 enum class OrderStatusBy {
@@ -58,6 +62,9 @@ class AbstractOrderStatusImpl {
   get_order_lines(const int o_id, const int d_id, const int w_id) = 0;
 
   OrderStatusResult run_transaction(const OrderStatusParams & params);
+
+ protected:
+  std::shared_ptr<opossum::TransactionContext> _t_context;
 };
 
 class OrderStatusRefImpl : public AbstractOrderStatusImpl

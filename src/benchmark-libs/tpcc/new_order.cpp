@@ -12,6 +12,7 @@
 #include "operators/table_wrapper.hpp"
 #include "operators/update.hpp"
 #include "operators/projection.hpp"
+#include "operators/validate.hpp"
 #include "scheduler/abstract_scheduler.hpp"
 #include "scheduler/operator_task.hpp"
 #include "storage/storage_manager.hpp"
@@ -21,6 +22,20 @@
 using namespace opossum;
 
 namespace tpcc {
+
+std::string NewOrderParams::to_string() const {
+  std::stringstream s;
+
+  int32_t w_id = 0;
+  int32_t d_id = 0;
+  int32_t c_id = 0;
+  int32_t o_entry_d = 0;
+
+  s << "{w_id: " << w_id << "; d_id: " << d_id << "; c_id: " << c_id << "; o_entry_d: " << o_entry_d << "; ";
+
+  s << "}" << std::endl;
+  return s.str();
+}
 
 NewOrderResult AbstractNewOrderImpl::run_transaction(const NewOrderParams &params) {
   NewOrderResult result;
@@ -74,84 +89,84 @@ NewOrderResult AbstractNewOrderImpl::run_transaction(const NewOrderParams &param
   auto create_new_order_tasks = get_create_new_order_tasks(t_context, result.d_next_o_id, params.d_id, params.w_id);
   AbstractScheduler::schedule_tasks_and_wait(create_new_order_tasks);
 
-//  std::vector<std::shared_ptr<OperatorTask>> all_tasks;
-//
-//  for (size_t ol_idx = 0; ol_idx < params.order_lines.size(); ol_idx++) {
-//    const auto &order_line_params = params.order_lines[ol_idx];
-//
-//    NewOrderOrderLineResult order_line;
-//
-//    /**
-//     * GET ITEM INFO
-//     */
-//    auto get_item_info_tasks = get_get_item_info_tasks(t_context, order_line_params.i_id);
-//    AbstractScheduler::schedule_tasks_and_wait(get_item_info_tasks);
-//    const auto item_info_table = get_item_info_tasks.back()->get_operator()->get_output();
-//
-//    order_line.i_price = item_info_table->get_value<float>(0, 0);
-//    order_line.i_name = item_info_table->get_value<std::string>(1, 0);
-//    order_line.i_data = item_info_table->get_value<std::string>(2, 0);
-//
-//    /**
-//     * GET STOCK INFO
-//     */
-//    auto get_stock_info_tasks = get_get_stock_info_tasks(t_context, order_line_params.i_id, order_line_params.w_id,
-//                                                         params.d_id);
-//    AbstractScheduler::schedule_tasks_and_wait(get_stock_info_tasks);
-//    const auto stock_info_table = get_stock_info_tasks.back()->get_operator()->get_output();
-//
-//    order_line.s_qty = stock_info_table->get_value<int32_t>(0, 0);
-//    order_line.s_data = stock_info_table->get_value<std::string>(1, 0);
-//    order_line.s_ytd = stock_info_table->get_value<int32_t>(2, 0);
-//    order_line.s_order_cnt = stock_info_table->get_value<int32_t>(3, 0);
-//    order_line.s_remote_cnt = stock_info_table->get_value<int32_t>(4, 0);
-//    order_line.s_dist_xx = stock_info_table->get_value<std::string>(5, 0);
-//
-//    /**
-//     * Calculate new s_ytd, s_qty and s_order_cnt
-//     */
-//    //auto s_ytd = order_line.s_ytd + order_line_params.qty; // TODO: why doesn't the tpc ref impl update this in UPDATE STOCK?
-//
-//    int32_t s_qty = order_line.s_qty;
-//    if (order_line.s_qty >= order_line_params.qty + 10) {
-//      s_qty -= order_line_params.qty;
-//    } else {
-//      s_qty += 91 - order_line_params.qty;
-//    }
-//
-//    //auto s_order_cnt = order_line.s_order_cnt + 1; // TODO: why doesn't the tpc ref impl update this in UPDATE STOCK?
-//    order_line.amount = order_line_params.qty * order_line.i_price;
-//
-//    /**
-//     * UPDATE STOCK
-//     */
-//    auto update_stock_tasks = get_update_stock_tasks(t_context, s_qty, order_line_params.i_id,
-//                                                     order_line_params.w_id);
-//    AbstractScheduler::schedule_tasks_and_wait(update_stock_tasks);
-//
-//    /**
-//     * TODO(TIM) CREATE ORDER LINE
-//     */
-//    auto create_order_line_tasks = get_create_order_line_tasks(t_context,
-//                                                               result.d_next_o_id,
-//                                                               params.d_id,
-//                                                               params.w_id,
-//                                                               ol_idx + 1,
-//                                                               order_line_params.i_id,
-//                                                               0, // ol_supply_w_id - we only have one warehouse
-//                                                               params.o_entry_d,
-//                                                               order_line_params.qty,
-//                                                               order_line.amount,
-//                                                               order_line.s_dist_xx);
-//    AbstractScheduler::schedule_tasks_and_wait(create_order_line_tasks);
-//
-//    std::copy(create_order_line_tasks.begin(), create_order_line_tasks.end(), std::back_inserter(all_tasks));
-//
-//    /**
-//     * Add results
-//     */
-//    result.order_lines.emplace_back(order_line);
-//  }
+  // TODO(anyone): TransactionContext just keeps raw ptr(wtf?) to the Tasks
+  std::vector<std::shared_ptr<OperatorTask>> inner_scope_tasks;
+
+  for (size_t ol_idx = 0; ol_idx < params.order_lines.size(); ol_idx++) {
+    const auto &order_line_params = params.order_lines[ol_idx];
+
+    NewOrderOrderLineResult order_line;
+
+    /**
+     * GET ITEM INFO
+     */
+    auto get_item_info_tasks = get_get_item_info_tasks(t_context, order_line_params.i_id);
+    AbstractScheduler::schedule_tasks_and_wait(get_item_info_tasks);
+    const auto item_info_table = get_item_info_tasks.back()->get_operator()->get_output();
+
+    order_line.i_price = item_info_table->get_value<float>(0, 0);
+    order_line.i_name = item_info_table->get_value<std::string>(1, 0);
+    order_line.i_data = item_info_table->get_value<std::string>(2, 0);
+
+    /**
+     * GET STOCK INFO
+     */
+    auto get_stock_info_tasks = get_get_stock_info_tasks(t_context, order_line_params.i_id, order_line_params.w_id,
+                                                         params.d_id + 1);
+    AbstractScheduler::schedule_tasks_and_wait(get_stock_info_tasks);
+    const auto stock_info_table = get_stock_info_tasks.back()->get_operator()->get_output();
+
+    order_line.s_qty = stock_info_table->get_value<int32_t>(0, 0);
+    order_line.s_data = stock_info_table->get_value<std::string>(1, 0);
+    order_line.s_ytd = stock_info_table->get_value<int32_t>(2, 0);
+    order_line.s_order_cnt = stock_info_table->get_value<int32_t>(3, 0);
+    order_line.s_remote_cnt = stock_info_table->get_value<int32_t>(4, 0);
+    order_line.s_dist_xx = stock_info_table->get_value<std::string>(5, 0);
+
+    /**
+     * Calculate new s_ytd, s_qty and s_order_cnt
+     */
+    //auto s_ytd = order_line.s_ytd + order_line_params.qty; // TODO: why doesn't the tpc ref impl update this in UPDATE STOCK?
+
+    if (order_line.s_qty >= order_line_params.qty + 10) {
+      order_line.s_qty -= order_line_params.qty;
+    } else {
+      order_line.s_qty += 91 - order_line_params.qty;
+    }
+
+    //auto s_order_cnt = order_line.s_order_cnt + 1; // TODO: why doesn't the tpc ref impl update this in UPDATE STOCK?
+    order_line.amount = order_line_params.qty * order_line.i_price;
+
+    /**
+     * UPDATE STOCK
+     */
+    auto update_stock_tasks = get_update_stock_tasks(t_context, order_line.s_qty, order_line_params.i_id,
+                                                     order_line_params.w_id);
+    std::copy(update_stock_tasks.begin(), update_stock_tasks.end(), std::back_inserter(inner_scope_tasks));
+    AbstractScheduler::schedule_tasks_and_wait(update_stock_tasks);
+
+    /**
+     * CREATE ORDER LINE
+     */
+    auto create_order_line_tasks = get_create_order_line_tasks(t_context,
+                                                               result.d_next_o_id,
+                                                               params.d_id,
+                                                               params.w_id,
+                                                               ol_idx + 1,
+                                                               order_line_params.i_id,
+                                                               0, // ol_supply_w_id - we only have one warehouse
+                                                               params.o_entry_d,
+                                                               order_line_params.qty,
+                                                               order_line.amount,
+                                                               order_line.s_dist_xx);
+    std::copy(create_order_line_tasks.begin(), create_order_line_tasks.end(), std::back_inserter(inner_scope_tasks));
+    AbstractScheduler::schedule_tasks_and_wait(create_order_line_tasks);
+
+    /**
+     * Add results
+     */
+    result.order_lines.emplace_back(order_line);
+  }
 
   /**
    * Commit
@@ -181,7 +196,8 @@ TaskVector NewOrderRefImpl::get_get_customer_and_warehouse_tax_rate_tasks(
 
   // Operators
   const auto c_gt = std::make_shared<GetTable>("CUSTOMER");
-  const auto c_ts1 = std::make_shared<TableScan>(c_gt, "C_W_ID", "=", w_id);
+  const auto c_v = std::make_shared<Validate>(c_gt);
+  const auto c_ts1 = std::make_shared<TableScan>(c_v, "C_W_ID", "=", w_id);
   const auto c_ts2 = std::make_shared<TableScan>(c_ts1, "C_D_ID", "=", d_id);
   const auto c_ts3 = std::make_shared<TableScan>(c_ts2, "C_ID", "=", c_id);
 
@@ -194,10 +210,11 @@ TaskVector NewOrderRefImpl::get_get_customer_and_warehouse_tax_rate_tasks(
   const std::vector<std::string> columns = {"C_DISCOUNT", "C_LAST", "C_CREDIT", "W_TAX"};
   const auto proj = std::make_shared<Projection>(join, columns);
 
-  set_transaction_context_for_operators(t_context, {c_gt, c_ts1, c_ts2, c_ts3, w_gt, w_ts, join, proj});
+  set_transaction_context_for_operators(t_context, {c_gt, c_v, c_ts1, c_ts2, c_ts3, w_gt, w_ts, join, proj});
 
   // Tasks
   const auto c_gt_t = std::make_shared<OperatorTask>(c_gt);
+  const auto c_v_t = std::make_shared<OperatorTask>(c_v);
   const auto c_ts1_t = std::make_shared<OperatorTask>(c_ts1);
   const auto c_ts2_t = std::make_shared<OperatorTask>(c_ts2);
   const auto c_ts3_t = std::make_shared<OperatorTask>(c_ts3);
@@ -209,7 +226,8 @@ TaskVector NewOrderRefImpl::get_get_customer_and_warehouse_tax_rate_tasks(
   const auto proj_t = std::make_shared<OperatorTask>(proj);
 
   // Dependencies
-  c_gt_t->set_as_predecessor_of(c_ts1_t);
+  c_gt_t->set_as_predecessor_of(c_v_t);
+  c_v_t->set_as_predecessor_of(c_ts1_t);
   c_ts1_t->set_as_predecessor_of(c_ts2_t);
   c_ts2_t->set_as_predecessor_of(c_ts3_t);
 
@@ -220,7 +238,7 @@ TaskVector NewOrderRefImpl::get_get_customer_and_warehouse_tax_rate_tasks(
 
   join_t->set_as_predecessor_of(proj_t);
 
-  return {c_gt_t, c_ts1_t, c_ts2_t, c_ts3_t, w_gt_t, w_ts_t, join_t, proj_t};
+  return {c_gt_t, c_v_t, c_ts1_t, c_ts2_t, c_ts3_t, w_gt_t, w_ts_t, join_t, proj_t};
 }
 
 TaskVector
@@ -234,27 +252,30 @@ NewOrderRefImpl::get_get_district_tasks(const std::shared_ptr<TransactionContext
 
   // Operators
   const auto gt = std::make_shared<GetTable>("DISTRICT");
+  const auto v = std::make_shared<Validate>(gt);
 
-  const auto ts1 = std::make_shared<TableScan>(gt, "D_ID", "=", d_id);
+  const auto ts1 = std::make_shared<TableScan>(v, "D_ID", "=", d_id);
   const auto ts2 = std::make_shared<TableScan>(ts1, "D_W_ID", "=", w_id);
 
   const std::vector<std::string> columns = {"D_NEXT_O_ID", "D_TAX"};
   const auto proj = std::make_shared<Projection>(ts2, columns);
 
-  set_transaction_context_for_operators(t_context, {gt, ts1, ts2, proj});
+  set_transaction_context_for_operators(t_context, {gt, v, ts1, ts2, proj});
 
   // Tasks
   const auto gt_t = std::make_shared<OperatorTask>(gt);
+  const auto v_t = std::make_shared<OperatorTask>(v);
   const auto ts1_t = std::make_shared<OperatorTask>(ts1);
   const auto ts2_t = std::make_shared<OperatorTask>(ts2);
   const auto proj_t = std::make_shared<OperatorTask>(proj);
 
   // Dependencies
-  gt_t->set_as_predecessor_of(ts1_t);
+  gt_t->set_as_predecessor_of(v_t);
+  v_t->set_as_predecessor_of(ts1_t);
   ts1_t->set_as_predecessor_of(ts2_t);
   ts2_t->set_as_predecessor_of(proj_t);
 
-  return {gt_t, ts1_t, ts2_t, proj_t};
+  return {gt_t, v_t, ts1_t, ts2_t, proj_t};
 }
 
 TaskVector NewOrderRefImpl::get_increment_next_order_id_tasks(
@@ -268,7 +289,8 @@ TaskVector NewOrderRefImpl::get_increment_next_order_id_tasks(
 
   // Operators
   const auto gt = std::make_shared<GetTable>("DISTRICT");
-  const auto ts1 = std::make_shared<TableScan>(gt, "D_ID", "=", d_id);
+  const auto v = std::make_shared<Validate>(gt);
+  const auto ts1 = std::make_shared<TableScan>(v, "D_ID", "=", d_id);
   const auto ts2 = std::make_shared<TableScan>(ts1, "D_W_ID", "=", d_w_id);
 
   const std::vector<std::string> columns = {"D_NEXT_O_ID"};
@@ -280,10 +302,11 @@ TaskVector NewOrderRefImpl::get_increment_next_order_id_tasks(
 
   const auto update = std::make_shared<Update>("DISTRICT", original_rows, updated_rows);
 
-  set_transaction_context_for_operators(t_context, {gt, ts1, ts2, original_rows, updated_rows, update});
+  set_transaction_context_for_operators(t_context, {gt, v, ts1, ts2, original_rows, updated_rows, update});
 
   // Tasks
   const auto gt_t = std::make_shared<OperatorTask>(gt);
+  const auto v_t = std::make_shared<OperatorTask>(v);
   const auto ts1_t = std::make_shared<OperatorTask>(ts1);
   const auto ts2_t = std::make_shared<OperatorTask>(ts2);
   const auto original_rows_t = std::make_shared<OperatorTask>(original_rows);
@@ -291,7 +314,8 @@ TaskVector NewOrderRefImpl::get_increment_next_order_id_tasks(
   const auto update_t = std::make_shared<OperatorTask>(update);
 
   // Dependencies
-  gt_t->set_as_predecessor_of(ts1_t);
+  gt_t->set_as_predecessor_of(v_t);
+  v_t->set_as_predecessor_of(ts1_t);
   ts1_t->set_as_predecessor_of(ts2_t);
 
   ts2_t->set_as_predecessor_of(original_rows_t);
@@ -300,7 +324,7 @@ TaskVector NewOrderRefImpl::get_increment_next_order_id_tasks(
   original_rows_t->set_as_predecessor_of(update_t);
   updated_rows_t->set_as_predecessor_of(update_t);
 
-  return {gt_t, ts1_t, ts2_t, original_rows_t, updated_rows_t, update_t};
+  return {gt_t, v_t, ts1_t, ts2_t, original_rows_t, updated_rows_t, update_t};
 }
 
 // TODO(tim): re-factor/extend Insert so that we do not have to build a Table object first.
@@ -385,24 +409,27 @@ TaskVector NewOrderRefImpl::get_get_item_info_tasks(
    */
 
   // Operators
-  auto gt = std::make_shared<GetTable>("ITEM");
-  auto ts = std::make_shared<TableScan>(gt, "I_ID", "=", ol_i_id);
+  const auto gt = std::make_shared<GetTable>("ITEM");
+  const auto v = std::make_shared<Validate>(gt);
+  const auto ts = std::make_shared<TableScan>(v, "I_ID", "=", ol_i_id);
 
   const std::vector<std::string> columns = {"I_PRICE", "I_NAME", "I_DATA"};
-  auto proj = std::make_shared<Projection>(ts, columns);
+  const auto proj = std::make_shared<Projection>(ts, columns);
 
-  set_transaction_context_for_operators(t_context, {gt, ts, proj});
+  set_transaction_context_for_operators(t_context, {gt, v, ts, proj});
 
   // Tasks
   auto gt_t = std::make_shared<OperatorTask>(gt);
+  auto v_t = std::make_shared<OperatorTask>(v);
   auto ts_t = std::make_shared<OperatorTask>(ts);
   auto proj_t = std::make_shared<OperatorTask>(proj);
 
   // Dependencies
-  gt_t->set_as_predecessor_of(ts_t);
+  gt_t->set_as_predecessor_of(v_t);
+  v_t->set_as_predecessor_of(ts_t);
   ts_t->set_as_predecessor_of(proj_t);
 
-  return {gt_t, ts_t, proj_t};
+  return {gt_t, v_t, ts_t, proj_t};
 }
 
 TaskVector NewOrderRefImpl::get_get_stock_info_tasks(
@@ -417,29 +444,32 @@ TaskVector NewOrderRefImpl::get_get_stock_info_tasks(
       */
 
   // Operators
-  auto gt = std::make_shared<GetTable>("STOCK");
-  auto ts1 = std::make_shared<TableScan>(gt, "S_I_ID", "=", ol_i_id);
-  auto ts2 = std::make_shared<TableScan>(ts1, "S_W_ID", "=", ol_supply_w_id);
+  const auto gt = std::make_shared<GetTable>("STOCK");
+  const auto v = std::make_shared<Validate>(gt);
+  const auto ts1 = std::make_shared<TableScan>(v, "S_I_ID", "=", ol_i_id);
+  const auto ts2 = std::make_shared<TableScan>(ts1, "S_W_ID", "=", ol_supply_w_id);
 
   std::string s_dist_xx = d_id < 10 ? "S_DIST_0" + std::to_string(d_id) : "S_DIST_" + std::to_string(d_id);
 
   std::vector<std::string> columns = {"S_QUANTITY", "S_DATA", "S_YTD", "S_ORDER_CNT", "S_REMOTE_CNT", s_dist_xx};
-  auto proj = std::make_shared<Projection>(ts2, columns);
+  const auto proj = std::make_shared<Projection>(ts2, columns);
 
-  set_transaction_context_for_operators(t_context, {gt, ts1, ts2, proj});
+  set_transaction_context_for_operators(t_context, {gt, v, ts1, ts2, proj});
 
   // Tasks
   auto gt_t = std::make_shared<OperatorTask>(gt);
+  auto v_t = std::make_shared<OperatorTask>(v);
   auto ts1_t = std::make_shared<OperatorTask>(ts1);
   auto ts2_t = std::make_shared<OperatorTask>(ts2);
   auto proj_t = std::make_shared<OperatorTask>(proj);
 
   // Dependencies
-  gt_t->set_as_predecessor_of(ts1_t);
+  gt_t->set_as_predecessor_of(v_t);
+  v_t->set_as_predecessor_of(ts1_t);
   ts1_t->set_as_predecessor_of(ts2_t);
   ts2_t->set_as_predecessor_of(proj_t);
 
-  return {gt_t, ts1_t, ts2_t, proj_t};
+  return {gt_t, v_t, ts1_t, ts2_t, proj_t};
 }
 
 TaskVector
@@ -454,7 +484,8 @@ NewOrderRefImpl::get_update_stock_tasks(const std::shared_ptr<TransactionContext
 
   // Operators
   const auto gt = std::make_shared<GetTable>("STOCK");
-  const auto ts1 = std::make_shared<TableScan>(gt, "S_I_ID", "=", ol_i_id);
+  const auto v = std::make_shared<Validate>(gt);
+  const auto ts1 = std::make_shared<TableScan>(v, "S_I_ID", "=", ol_i_id);
   const auto ts2 = std::make_shared<TableScan>(ts1, "S_W_ID", "=", ol_supply_w_id);
 
   const std::vector<std::string> columns = {"S_QUANTITY"};
@@ -466,10 +497,11 @@ NewOrderRefImpl::get_update_stock_tasks(const std::shared_ptr<TransactionContext
 
   const auto update = std::make_shared<Update>("STOCK", original_rows, updated_rows);
 
-  set_transaction_context_for_operators(t_context, {gt, ts1, ts2, original_rows, updated_rows, update});
+  set_transaction_context_for_operators(t_context, {gt, v, ts1, ts2, original_rows, updated_rows, update});
 
   // Tasks
   const auto gt_t = std::make_shared<OperatorTask>(gt);
+  const auto v_t = std::make_shared<OperatorTask>(v);
   const auto ts1_t = std::make_shared<OperatorTask>(ts1);
   const auto ts2_t = std::make_shared<OperatorTask>(ts2);
   const auto original_rows_t = std::make_shared<OperatorTask>(original_rows);
@@ -477,7 +509,8 @@ NewOrderRefImpl::get_update_stock_tasks(const std::shared_ptr<TransactionContext
   const auto update_t = std::make_shared<OperatorTask>(update);
 
   // Dependencies
-  gt_t->set_as_predecessor_of(ts1_t);
+  gt_t->set_as_predecessor_of(v_t);
+  v_t->set_as_predecessor_of(ts1_t);
   ts1_t->set_as_predecessor_of(ts2_t);
 
   ts2_t->set_as_predecessor_of(original_rows_t);
@@ -486,7 +519,7 @@ NewOrderRefImpl::get_update_stock_tasks(const std::shared_ptr<TransactionContext
   original_rows_t->set_as_predecessor_of(update_t);
   updated_rows_t->set_as_predecessor_of(update_t);
 
-  return {gt_t, ts1_t, ts2_t, original_rows_t, updated_rows_t, update_t};
+  return {gt_t, v_t, ts1_t, ts2_t, original_rows_t, updated_rows_t, update_t};
 }
 
 TaskVector NewOrderRefImpl::get_create_order_line_tasks(
