@@ -19,7 +19,7 @@ class Table {
   // creates a table
   // the parameter specifies the maximum chunk size, i.e., partition size
   // default (0) is an unlimited size. A table holds always at least one chunk
-  explicit Table(const size_t chunk_size = 0);
+  explicit Table(const uint32_t chunk_size = 0);
 
   // copying a table is not allowed
   Table(Table const &) = delete;
@@ -33,8 +33,8 @@ class Table {
   // returns the number of columns (cannot exceed ColumnID (uint16_t))
   uint16_t col_count() const;
 
-  // returns the number of rows (cannot exceed ChunkOffset (uint32_t))
-  uint32_t row_count() const;
+  // returns the number of rows
+  uint64_t row_count() const;
 
   // returns the number of chunks (cannot exceed ChunkID (uint32_t))
   uint32_t chunk_count() const;
