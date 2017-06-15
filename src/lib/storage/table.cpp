@@ -18,7 +18,7 @@
 
 namespace opossum {
 
-Table::Table(const size_t chunk_size) : _chunk_size(chunk_size), _append_mutex(std::make_unique<std::mutex>()) {
+Table::Table(const uint32_t chunk_size) : _chunk_size(chunk_size), _append_mutex(std::make_unique<std::mutex>()) {
   _chunks.push_back(Chunk{true});
 }
 
@@ -41,7 +41,7 @@ void Table::append(std::vector<AllTypeVariant> values) {
   _chunks.back().append(values);
 }
 
-void Table::inc_invalid_row_count(uint32_t count) { _approx_invalid_row_count += count; }
+void Table::inc_invalid_row_count(uint64_t count) { _approx_invalid_row_count += count; }
 
 void Table::create_new_chunk() {
   Chunk newChunk{true};
@@ -53,15 +53,15 @@ void Table::create_new_chunk() {
 
 uint16_t Table::col_count() const { return _column_types.size(); }
 
-uint32_t Table::row_count() const {
-  size_t ret = 0;
+uint64_t Table::row_count() const {
+  uint64_t ret = 0;
   for (auto &&chunk : _chunks) {
     ret += chunk.size();
   }
   return ret;
 }
 
-uint32_t Table::approx_valid_row_count() const { return row_count() - _approx_invalid_row_count; }
+uint64_t Table::approx_valid_row_count() const { return row_count() - _approx_invalid_row_count; }
 
 uint32_t Table::chunk_count() const { return _chunks.size(); }
 
