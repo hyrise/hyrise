@@ -96,6 +96,21 @@ TEST_F(SQLSelectTest, SelectWithAndCondition) {
   EXPECT_TABLE_EQ(tasks.back()->get_operator()->get_output(), expected_result);
 }
 
+TEST_F(SQLSelectTest, SelectWithAndConditionEquality) {
+  const std::string query = "SELECT * FROM table_b WHERE a = 12345 AND b = 457.7";
+  ASSERT_TRUE(_translator.translate_query(query));
+
+  auto tasks = _translator.get_tasks();
+  ASSERT_EQ(3u, tasks.size());
+
+  for (const auto task : tasks) {
+    task->get_operator()->execute();
+  }
+
+  std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_float2_filtered.tbl", 2);
+  EXPECT_TABLE_EQ(tasks.back()->get_operator()->get_output(), expected_result);
+}
+
 // TEST_F(SQLSelectTest, SelectWithBetween) {
 //   const std::string query = "SELECT * FROM TestTable WHERE a BETWEEN 122 AND 124";
 //   ASSERT_TRUE(_translator.translate_query(query));

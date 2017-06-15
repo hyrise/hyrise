@@ -1,5 +1,6 @@
 #include "sql_query_translator.hpp"
 
+#include <algorithm>
 #include <memory>
 #include <sstream>
 #include <string>
@@ -21,6 +22,8 @@
 #include "../operators/sort.hpp"
 #include "../operators/table_scan.hpp"
 #include "../operators/union_all.hpp"
+#include "optimizer/statistics.hpp"
+#include "storage/storage_manager.hpp"
 
 using hsql::Expr;
 using hsql::SQLParser;
@@ -116,6 +119,7 @@ bool SQLQueryTranslator::_translate_select(const SelectStatement& select) {
 
   // Translate WHERE.
   // Add table scan if applicable.
+  // TODO(tim): if we have multiple input tables, _tasks.back() might not be the correct table for the filter.
   if (select.whereClause != nullptr) {
     Expr& where = *select.whereClause;
     auto input_task = _tasks.back();
@@ -123,6 +127,59 @@ bool SQLQueryTranslator::_translate_select(const SelectStatement& select) {
     if (!_translate_filter_expr(where, input_task)) {
       return false;
     }
+  }
+
+  // Create TableScans in the optimal order as estimated by their intermediate result sizes.
+  if (_filters_by_table.size() > 0) {
+    auto stats = Statistics();
+    auto input_task = _tasks.back();
+
+    for (auto& filter : _filters_by_table) {
+      auto table_filters = filter.second;
+      auto predicate_estimates = std::vector<std::pair<size_t, double>>();
+
+      if (table_filters.size() == 1) {
+        // Do not estimate statistics if there is only one filter on the table.
+        // Instead simply add the filter with a dummy value to predicate estimates to avoid duplicate code.
+        predicate_estimates.emplace_back(0, 0.0);
+      } else {
+        // Estimate the result size of the filters individually.
+        auto table_name = filter.first;
+        auto table = StorageManager::get().get_table(table_name);
+
+        for (auto filter_index = 0u; filter_index < table_filters.size(); filter_index++) {
+          auto tuple = table_filters[filter_index];
+          auto estimated_result_size =
+              stats.predicate_stats(table->table_stats, get<0>(tuple), get<1>(tuple), get<2>(tuple))->row_count();
+          predicate_estimates.emplace_back(filter_index, estimated_result_size);
+        }
+
+        // Sort predicates by their estimated result size, smallest sizes first.
+        std::sort(predicate_estimates.begin(), predicate_estimates.end(),
+                  [](auto& left, auto& right) { return left.second < right.second; });
+      }
+
+      // Create TableScans.
+      for (auto& predicate_estimate : predicate_estimates) {
+        auto current_filter = table_filters[predicate_estimate.first];
+        auto column_name = get<0>(current_filter);
+        auto filter_op = get<1>(current_filter);
+        auto value = get<2>(current_filter);
+
+        auto table_scan =
+            std::make_shared<TableScan>(input_task->get_operator(), ColumnName(column_name), filter_op, value);
+        auto scan_task = std::make_shared<OperatorTask>(table_scan);
+        input_task->set_as_predecessor_of(scan_task);
+
+        // Add task to the list, and use this scan task as input for the next scan.
+        _tasks.push_back(scan_task);
+        input_task = scan_task;
+      }
+    }
+
+    // Clear the processed filters.
+    // This is important for sub selects, which would otherwise use them again.
+    _filters_by_table.clear();
   }
 
   // TODO(torpedro): Transform GROUP BY.
@@ -154,6 +211,14 @@ bool SQLQueryTranslator::_translate_filter_expr(const hsql::Expr& expr,
     return false;
   }
 
+  // Check if the filter can be on a physical table.
+  // In that case, we can already do predicate ordering.
+  auto is_base_table = false;
+  auto get_table_operator = std::dynamic_pointer_cast<const GetTable>(input_task->get_operator());
+  if (get_table_operator) {
+    is_base_table = true;
+  }
+
   // Handle operation types and get the filter op string..
   std::string filter_op = "";
   switch (expr.opType) {
@@ -163,10 +228,15 @@ bool SQLQueryTranslator::_translate_filter_expr(const hsql::Expr& expr,
       if (!_translate_filter_expr(*expr.expr, input_task)) {
         return false;
       }
-      if (!_translate_filter_expr(*expr.expr2, _tasks.back())) {
-        return false;
+
+      // If we can filter on a physical table, we don't want to create the TableScans immediately,
+      // but check which order is expected to be the best.
+      // Thus we provide the physical table and not the TableScan of the first expression as input task.
+      if (is_base_table) {
+        return _translate_filter_expr(*expr.expr2, input_task);
+      } else {
+        return _translate_filter_expr(*expr.expr2, _tasks.back());
       }
-      return true;
 
     default:
       // Get the operation string, if possible.
@@ -201,10 +271,19 @@ bool SQLQueryTranslator::_translate_filter_expr(const hsql::Expr& expr,
     return false;
   }
 
-  auto table_scan = std::make_shared<TableScan>(input_task->get_operator(), ColumnName(column_name), filter_op, value);
-  auto scan_task = std::make_shared<OperatorTask>(table_scan);
-  input_task->set_as_predecessor_of(scan_task);
-  _tasks.push_back(scan_task);
+  // If we filter on a base table, temporarily store the parameters for the table scan and create the task later.
+  // Otherwise append the TableScan to `_tasks`.
+  if (is_base_table) {
+    auto table_name = get_table_operator->table_name();
+    _filters_by_table[table_name].emplace_back(ColumnName(column_name), filter_op, value);
+  } else {
+    auto table_scan =
+        std::make_shared<TableScan>(input_task->get_operator(), ColumnName(column_name), filter_op, value);
+    auto scan_task = std::make_shared<OperatorTask>(table_scan);
+    input_task->set_as_predecessor_of(scan_task);
+    _tasks.push_back(scan_task);
+  }
+
   return true;
 }
 

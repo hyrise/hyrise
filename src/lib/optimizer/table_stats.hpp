@@ -21,15 +21,15 @@ class TableStats {
 
  public:
   explicit TableStats(const std::weak_ptr<Table> table);
-  TableStats(const private_key &, std::weak_ptr<Table> table, size_t row_count,
+  TableStats(const private_key &, std::weak_ptr<Table> table, double row_count,
              std::map<std::string, std::shared_ptr<ColumnStats>> column_stats);
-  size_t row_count();
+  double row_count();
   std::shared_ptr<ColumnStats> get_column_stats(const std::string &column_name);
 
  private:
-  std::shared_ptr<TableStats> shared_clone(size_t row_count);
+  std::shared_ptr<TableStats> shared_clone(double row_count);
   const std::weak_ptr<Table> _table;
-  size_t _row_count;
+  double _row_count;
   std::map<std::string, std::shared_ptr<ColumnStats>> _column_stats;
 };
 

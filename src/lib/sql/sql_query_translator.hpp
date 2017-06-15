@@ -2,9 +2,12 @@
 
 #include <memory>
 #include <string>
+#include <tuple>
+#include <unordered_map>
 #include <vector>
 
 #include "SQLParser.h"
+#include "all_parameter_variant.hpp"
 #include "scheduler/operator_task.hpp"
 
 namespace opossum {
@@ -63,6 +66,10 @@ class SQLQueryTranslator {
 
   // Generated execution plan.
   std::vector<std::shared_ptr<OperatorTask>> _tasks;
+
+  // Temporarily store filters for each table to determine best chaining order.
+  std::unordered_map<std::string, std::vector<std::tuple<std::string, std::string, AllParameterVariant>>>
+      _filters_by_table;
 
   // Details about the error, if one occurred.
   std::string _error_msg;

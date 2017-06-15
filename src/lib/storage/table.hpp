@@ -9,12 +9,12 @@
 
 #include "chunk.hpp"
 #include "common.hpp"
-#include "optimizer/table_stats.hpp"
 #include "type_cast.hpp"
 #include "types.hpp"
 
 namespace opossum {
 // A table is partitioned horizontally into a number of chunks
+class TableStats;
 class Table {
  public:
   // creates a table
