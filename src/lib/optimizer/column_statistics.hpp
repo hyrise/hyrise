@@ -12,9 +12,9 @@ class Aggregate;
 class Table;
 class TableWrapper;
 
-class ColumnStats {
+class ColumnStatistics {
  public:
-  ColumnStats(const std::weak_ptr<Table> table, const std::string &column_name);
+  ColumnStatistics(const std::weak_ptr<Table> table, const std::string &column_name);
   size_t get_distinct_count();
   AllTypeVariant get_min();
   AllTypeVariant get_max();

@@ -150,7 +150,7 @@ bool SQLQueryTranslator::_translate_select(const SelectStatement& select) {
         for (auto filter_index = 0u; filter_index < table_filters.size(); filter_index++) {
           auto tuple = table_filters[filter_index];
           auto estimated_result_size =
-              stats.predicate_stats(table->table_stats, get<0>(tuple), get<1>(tuple), get<2>(tuple))->row_count();
+              stats.predicate_stats(table->table_statistics, get<0>(tuple), get<1>(tuple), get<2>(tuple))->row_count();
           predicate_estimates.emplace_back(filter_index, estimated_result_size);
         }
 

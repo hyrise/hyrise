@@ -4,7 +4,7 @@
 #include <string>
 #include <utility>
 
-#include "optimizer/table_stats.hpp"
+#include "optimizer/table_statistics.hpp"
 
 namespace opossum {
 
@@ -15,7 +15,7 @@ StorageManager &StorageManager::get() {
 }
 
 void StorageManager::add_table(const std::string &name, std::shared_ptr<Table> table) {
-  table->table_stats = std::make_shared<TableStats>(table);
+  table->table_statistics = std::make_shared<TableStatistics>(table);
   _tables.insert(std::make_pair(name, std::move(table)));
 }
 

@@ -4,14 +4,14 @@
 #include <string>
 
 #include "all_parameter_variant.hpp"
-#include "optimizer/table_stats.hpp"
+#include "optimizer/table_statistics.hpp"
 #include "storage/table.hpp"
 
 namespace opossum {
 
 class Statistics {
  public:
-  static std::shared_ptr<TableStats> predicate_stats(const std::shared_ptr<TableStats> table_stats,
+  static std::shared_ptr<TableStatistics> predicate_stats(const std::shared_ptr<TableStatistics> table_statistics,
                                                      const std::string &column_name, const std::string &op,
                                                      const AllParameterVariant value,
                                                      const optional<AllTypeVariant> value2 = nullopt);

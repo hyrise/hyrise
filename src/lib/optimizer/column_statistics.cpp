@@ -1,4 +1,4 @@
-#include "column_stats.hpp"
+#include "column_statistics.hpp"
 
 #include <memory>
 #include <string>
@@ -13,13 +13,13 @@
 
 namespace opossum {
 
-ColumnStats::ColumnStats(const std::weak_ptr<Table> table, const std::string &column_name)
+ColumnStatistics::ColumnStatistics(const std::weak_ptr<Table> table, const std::string &column_name)
     : _table(table), _column_name(column_name) {}
-size_t ColumnStats::get_distinct_count() { return _distinct_count.value_or(update_distinct_count()); }
-AllTypeVariant ColumnStats::get_min() { return 0; }
-AllTypeVariant ColumnStats::get_max() { return 0; }
+size_t ColumnStatistics::get_distinct_count() { return _distinct_count.value_or(update_distinct_count()); }
+AllTypeVariant ColumnStatistics::get_min() { return 0; }
+AllTypeVariant ColumnStatistics::get_max() { return 0; }
 
-size_t ColumnStats::update_distinct_count() {
+size_t ColumnStatistics::update_distinct_count() {
   auto shared_table = std::shared_ptr<Table>(_table);
   auto table_wrapper = std::make_shared<TableWrapper>(shared_table);
   table_wrapper->execute();

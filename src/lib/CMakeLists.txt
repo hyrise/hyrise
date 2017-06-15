@@ -134,12 +134,12 @@ set(
     operators/update.hpp
     operators/validate.cpp
     operators/validate.hpp
-    optimizer/column_stats.cpp
-    optimizer/column_stats.hpp
+    optimizer/column_statistics.cpp
+    optimizer/column_statistics.hpp
     optimizer/statistics.cpp
     optimizer/statistics.hpp
-    optimizer/table_stats.cpp
-    optimizer/table_stats.hpp
+    optimizer/table_statistics.cpp
+    optimizer/table_statistics.hpp
     resolve_type.hpp
     scheduler/abstract_scheduler.cpp
     scheduler/abstract_scheduler.hpp

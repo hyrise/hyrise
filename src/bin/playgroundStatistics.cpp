@@ -15,8 +15,8 @@ int main() {
 
   opossum::StorageManager::get().add_table("CUSTOMER", generator.generate_customer_table());
 
-  auto table_stats = opossum::StorageManager::get().get_table("CUSTOMER")->table_stats;
+  auto table_statistics = opossum::StorageManager::get().get_table("CUSTOMER")->table_statistics;
   std::cout << "stats: "
-            << opossum::Statistics::predicate_stats(table_stats, "C_ID", "=", opossum::AllTypeVariant(1))->row_count()
+            << opossum::Statistics::predicate_stats(table_statistics, "C_ID", "=", opossum::AllTypeVariant(1))->row_count()
             << std::endl;
 }

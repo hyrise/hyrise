@@ -14,7 +14,7 @@
 
 namespace opossum {
 // A table is partitioned horizontally into a number of chunks
-class TableStats;
+class TableStatistics;
 class Table {
  public:
   // creates a table
@@ -98,7 +98,7 @@ class Table {
 
   std::unique_lock<std::mutex> acquire_append_mutex();
 
-  std::shared_ptr<TableStats> table_stats;
+  std::shared_ptr<TableStatistics> table_statistics;
 
  protected:
   // 0 means that the chunk has an unlimited size.
