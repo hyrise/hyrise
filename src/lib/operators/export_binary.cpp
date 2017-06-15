@@ -103,8 +103,8 @@ std::shared_ptr<const Table> ExportBinary::on_execute() {
 
   const auto table = _input_left->get_output();
   _write_header(table, ofstream);
-  for (ChunkID chunkID = 0; chunkID < table->chunk_count(); chunkID++) {
-    _write_chunk(table, ofstream, chunkID);
+  for (auto chunk_id = ChunkID{0}; chunk_id < table->chunk_count(); chunk_id++) {
+    _write_chunk(table, ofstream, chunk_id);
   }
 
   return _input_left->get_output();

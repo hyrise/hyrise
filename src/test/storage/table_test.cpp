@@ -29,13 +29,13 @@ TEST_F(StorageTableTest, ChunkCount) {
 }
 
 TEST_F(StorageTableTest, GetChunk) {
-  t.get_chunk(0);
+  t.get_chunk(ChunkID{0});
   // TODO(anyone): Do we want checks here?
-  // EXPECT_THROW(t.get_chunk(1), std::exception);
+  // EXPECT_THROW(t.get_chunk(ChunkID{q}), std::exception);
   t.append({4, "Hello,"});
   t.append({6, "world"});
   t.append({3, "!"});
-  t.get_chunk(1);
+  t.get_chunk(ChunkID{1});
 }
 
 TEST_F(StorageTableTest, ColCount) { EXPECT_EQ(t.col_count(), 2u); }
@@ -89,7 +89,7 @@ TEST_F(StorageTableTest, ShrinkingMvccColumnsHasNoSideEffects) {
   t.append({4, "Hello,"});
   t.append({6, "world"});
 
-  auto& chunk = t.get_chunk(0u);
+  auto& chunk = t.get_chunk(ChunkID{0});
 
   const auto values = std::vector<CommitID>{1u, 2u};
 

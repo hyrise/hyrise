@@ -34,10 +34,12 @@ class OperatorsIndexColumnScanTest : public BaseTest {
 
     for (int i = 0; i <= 24; i += 2) test_table_dict->append({i, 100 + i});
 
-    DictionaryCompression::compress_chunks(*test_table_dict, {0u, 1u});
+    DictionaryCompression::compress_chunks(*test_table_dict, {ChunkID{0}, ChunkID{1}});
 
-    test_table_dict->get_chunk(0).create_index<DerivedIndex>({test_table_dict->get_chunk(0).get_column(0)});
-    test_table_dict->get_chunk(0).create_index<DerivedIndex>({test_table_dict->get_chunk(0).get_column(1)});
+    test_table_dict->get_chunk(ChunkID{0})
+        .create_index<DerivedIndex>({test_table_dict->get_chunk(ChunkID{0}).get_column(0)});
+    test_table_dict->get_chunk(ChunkID{0})
+        .create_index<DerivedIndex>({test_table_dict->get_chunk(ChunkID{0}).get_column(1)});
 
     _table_wrapper_dict = std::make_shared<TableWrapper>(std::move(test_table_dict));
 
@@ -71,7 +73,7 @@ TYPED_TEST(OperatorsIndexColumnScanTest, DoubleScanOffsetPosition) {
   auto scan2 = std::make_shared<IndexColumnScan>(scan1, "b", "=", 118);
   scan2->execute();
 
-  auto& chunk = scan2->get_output()->get_chunk(1);
+  auto& chunk = scan2->get_output()->get_chunk(ChunkID{1});
   EXPECT_EQ(type_cast<int>((*chunk.get_column(0))[0]), 18);
   EXPECT_EQ(type_cast<int>((*chunk.get_column(1))[0]), 118);
 }
@@ -108,7 +110,7 @@ TYPED_TEST(OperatorsIndexColumnScanTest, ScanOnDictColumn) {
     scan->execute();
 
     auto expected_copy = test.second;
-    for (ChunkID chunk_id = 0; chunk_id < scan->get_output()->chunk_count(); ++chunk_id) {
+    for (auto chunk_id = ChunkID{0}; chunk_id < scan->get_output()->chunk_count(); ++chunk_id) {
       auto& chunk = scan->get_output()->get_chunk(chunk_id);
       for (ChunkOffset chunk_offset = 0; chunk_offset < chunk.size(); ++chunk_offset) {
         EXPECT_EQ(expected_copy.erase(type_cast<int>((*chunk.get_column(1))[chunk_offset])), 1ull);
@@ -137,7 +139,7 @@ TYPED_TEST(OperatorsIndexColumnScanTest, ScanOnReferencedDictColumn) {
     scan2->execute();
 
     auto expected_copy = test.second;
-    for (ChunkID chunk_id = 0; chunk_id < scan2->get_output()->chunk_count(); ++chunk_id) {
+    for (auto chunk_id = ChunkID{0}; chunk_id < scan2->get_output()->chunk_count(); ++chunk_id) {
       auto& chunk = scan2->get_output()->get_chunk(chunk_id);
       for (ChunkOffset chunk_offset = 0; chunk_offset < chunk.size(); ++chunk_offset) {
         EXPECT_EQ(expected_copy.erase(type_cast<int>((*chunk.get_column(1))[chunk_offset])), 1ull);

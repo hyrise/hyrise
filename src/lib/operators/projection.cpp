@@ -41,7 +41,7 @@ std::shared_ptr<const Table> Projection::on_execute() {
     output->add_column(std::get<2>(definition), std::get<1>(definition), false);
   }
 
-  for (ChunkID chunk_id = 0; chunk_id < input_table_left()->chunk_count(); ++chunk_id) {
+  for (auto chunk_id = ChunkID{0}; chunk_id < input_table_left()->chunk_count(); ++chunk_id) {
     // fill the new table
     Chunk chunk_out;
     // if there is mvcc information, we have to link it

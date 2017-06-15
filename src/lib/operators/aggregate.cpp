@@ -56,7 +56,7 @@ std::shared_ptr<const Table> Aggregate::on_execute() {
   std::vector<std::shared_ptr<AbstractTask>> jobs;
   jobs.reserve(input_table->chunk_count());
 
-  for (ChunkID chunk_id = 0; chunk_id < input_table->chunk_count(); ++chunk_id) {
+  for (auto chunk_id = ChunkID{0}; chunk_id < input_table->chunk_count(); ++chunk_id) {
     jobs.emplace_back(std::make_shared<JobTask>([&, chunk_id, groupby_column_ids]() {
       const Chunk &chunk_in = input_table->get_chunk(chunk_id);
 
@@ -130,7 +130,7 @@ std::shared_ptr<const Table> Aggregate::on_execute() {
     }
   }
 
-  for (ChunkID chunk_id = 0; chunk_id < input_table->chunk_count(); ++chunk_id) {
+  for (auto chunk_id = ChunkID{0}; chunk_id < input_table->chunk_count(); ++chunk_id) {
     const Chunk &chunk_in = input_table->get_chunk(chunk_id);
 
     auto hash_keys = keys_per_chunk[chunk_id];

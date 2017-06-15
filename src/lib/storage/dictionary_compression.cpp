@@ -96,7 +96,7 @@ void DictionaryCompression::compress_chunks(Table& table, const std::vector<Chun
 }
 
 void DictionaryCompression::compress_table(Table& table) {
-  for (auto chunk_id = 0u; chunk_id < table.chunk_count(); ++chunk_id) {
+  for (auto chunk_id = ChunkID{0}; chunk_id < table.chunk_count(); ++chunk_id) {
     auto& chunk = table.get_chunk(chunk_id);
 
     compress_chunk(table.column_types(), chunk);

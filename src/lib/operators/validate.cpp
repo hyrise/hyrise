@@ -52,7 +52,7 @@ std::shared_ptr<const Table> Validate::on_execute(std::shared_ptr<TransactionCon
   const auto our_tid = transactionContext->transaction_id();
   const auto our_lcid = transactionContext->last_commit_id();
 
-  for (ChunkID chunk_id = 0; chunk_id < _in_table->chunk_count(); ++chunk_id) {
+  for (auto chunk_id = ChunkID{0}; chunk_id < _in_table->chunk_count(); ++chunk_id) {
     const auto &chunk_in = _in_table->get_chunk(chunk_id);
 
     auto chunk_out = Chunk{};

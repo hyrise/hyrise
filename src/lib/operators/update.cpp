@@ -39,9 +39,9 @@ std::shared_ptr<const Table> Update::on_execute(std::shared_ptr<TransactionConte
 
   auto current_row_in_left_chunk = 0u;
   auto current_pos_list = std::shared_ptr<const PosList>();
-  auto current_left_chunk_id = 0u;
+  auto current_left_chunk_id = ChunkID{0};
 
-  for (auto chunk_id = 0u; chunk_id < input_table_right()->chunk_count(); ++chunk_id) {
+  for (auto chunk_id = ChunkID{0}; chunk_id < input_table_right()->chunk_count(); ++chunk_id) {
     // Build poslists for mixed chunk numbers and sizes.
     auto pos_list = std::make_shared<PosList>();
     for (auto i = 0u; i < input_table_right()->get_chunk(chunk_id).size(); ++i) {
@@ -71,8 +71,8 @@ std::shared_ptr<const Table> Update::on_execute(std::shared_ptr<TransactionConte
   }
 
   // 2. Replace the columns to update in insert_table with the updated data from input_table_right
-  const auto& left_chunk = input_table_left()->get_chunk(0);
-  for (auto chunk_id = 0u; chunk_id < insert_table->chunk_count(); ++chunk_id) {
+  const auto& left_chunk = input_table_left()->get_chunk(ChunkID{0});
+  for (auto chunk_id = ChunkID{0}; chunk_id < insert_table->chunk_count(); ++chunk_id) {
     auto& insert_chunk = insert_table->get_chunk(chunk_id);
     auto& right_chunk = input_table_right()->get_chunk(chunk_id);
 
@@ -129,7 +129,7 @@ bool Update::_execution_input_valid(const std::shared_ptr<TransactionContext>& c
 
   const auto table_to_update = StorageManager::get().get_table(_table_to_update_name);
 
-  for (auto chunk_id = 0u; chunk_id < input_table_left()->chunk_count(); ++chunk_id) {
+  for (auto chunk_id = ChunkID{0}; chunk_id < input_table_left()->chunk_count(); ++chunk_id) {
     const auto& chunk = input_table_left()->get_chunk(chunk_id);
 
     if (!chunk.references_only_one_table()) return false;

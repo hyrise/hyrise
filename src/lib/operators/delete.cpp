@@ -21,7 +21,7 @@ std::shared_ptr<const Table> Delete::on_execute(std::shared_ptr<TransactionConte
 
   const auto values_to_delete = input_table_left();
 
-  for (auto chunk_id = 0u; chunk_id < values_to_delete->chunk_count(); ++chunk_id) {
+  for (auto chunk_id = ChunkID{0}; chunk_id < values_to_delete->chunk_count(); ++chunk_id) {
     const auto& chunk = values_to_delete->get_chunk(chunk_id);
 
     // we have already verified that all columns reference the same table
@@ -94,7 +94,7 @@ bool Delete::_execution_input_valid(const std::shared_ptr<TransactionContext>& c
 
   if (values_to_delete->chunk_count() == 0u) return false;
 
-  for (auto chunk_id = 0u; chunk_id < values_to_delete->chunk_count(); ++chunk_id) {
+  for (auto chunk_id = ChunkID{0}; chunk_id < values_to_delete->chunk_count(); ++chunk_id) {
     const auto& chunk = values_to_delete->get_chunk(chunk_id);
 
     if (chunk.col_count() == 0u) return false;

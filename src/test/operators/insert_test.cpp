@@ -34,11 +34,11 @@ TEST_F(OperatorsInsertTest, SelfInsert) {
   ins->execute();
 
   // Check that row has been inserted.
-  EXPECT_EQ(t->get_chunk(0).size(), 6u);
-  EXPECT_EQ((*t->get_chunk(0).get_column(1))[0], AllTypeVariant(12345));
-  EXPECT_EQ((*t->get_chunk(0).get_column(0))[0], AllTypeVariant(458.7f));
-  EXPECT_EQ((*t->get_chunk(0).get_column(1))[3], AllTypeVariant(12345));
-  EXPECT_EQ((*t->get_chunk(0).get_column(0))[3], AllTypeVariant(458.7f));
+  EXPECT_EQ(t->get_chunk(ChunkID{0}).size(), 6u);
+  EXPECT_EQ((*t->get_chunk(ChunkID{0}).get_column(1))[0], AllTypeVariant(12345));
+  EXPECT_EQ((*t->get_chunk(ChunkID{0}).get_column(0))[0], AllTypeVariant(458.7f));
+  EXPECT_EQ((*t->get_chunk(ChunkID{0}).get_column(1))[3], AllTypeVariant(12345));
+  EXPECT_EQ((*t->get_chunk(ChunkID{0}).get_column(0))[3], AllTypeVariant(458.7f));
 }
 
 TEST_F(OperatorsInsertTest, InsertRespectChunkSize) {
@@ -62,7 +62,7 @@ TEST_F(OperatorsInsertTest, InsertRespectChunkSize) {
   ins->execute();
 
   EXPECT_EQ(t->chunk_count(), 4u);
-  EXPECT_EQ(t->get_chunk(3).size(), 1u);
+  EXPECT_EQ(t->get_chunk(ChunkID{3}).size(), 1u);
   EXPECT_EQ(t->row_count(), 13u);
 }
 
@@ -87,7 +87,7 @@ TEST_F(OperatorsInsertTest, MultipleChunks) {
   ins->execute();
 
   EXPECT_EQ(t->chunk_count(), 7u);
-  EXPECT_EQ(t->get_chunk(6).size(), 1u);
+  EXPECT_EQ(t->get_chunk(ChunkID{6}).size(), 1u);
   EXPECT_EQ(t->row_count(), 13u);
 }
 

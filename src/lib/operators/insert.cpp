@@ -66,14 +66,14 @@ std::shared_ptr<const Table> Insert::on_execute(std::shared_ptr<TransactionConte
 
   // These TypedColumnProcessors kind of retrieve the template parameter of the columns.
   auto typed_column_processors = std::vector<std::unique_ptr<AbstractTypedColumnProcessor>>();
-  for (auto column_id = 0u; column_id < _target_table->get_chunk(0).col_count(); ++column_id) {
+  for (auto column_id = 0u; column_id < _target_table->get_chunk(ChunkID{0}).col_count(); ++column_id) {
     typed_column_processors.emplace_back(make_unique_by_column_type<AbstractTypedColumnProcessor, TypedColumnProcessor>(
         _target_table->column_type(column_id)));
   }
 
   auto total_rows_to_insert = 0u;
 
-  for (auto i = 0u; i < input_table_left()->chunk_count(); i++) {
+  for (auto i = ChunkID{0}; i < input_table_left()->chunk_count(); i++) {
     const auto& chunk = input_table_left()->get_chunk(i);
     total_rows_to_insert += chunk.size();
   }
@@ -81,7 +81,7 @@ std::shared_ptr<const Table> Insert::on_execute(std::shared_ptr<TransactionConte
   // First, allocate space for all the rows to insert. Do so while locking the table
   // to prevent multiple threads modifying the table's size simultaneously.
   auto start_index = 0u;
-  auto start_chunk_id = 0u;
+  auto start_chunk_id = ChunkID{0};
   auto total_chunks_inserted = 0u;
   {
     auto scoped_lock = _target_table->acquire_append_mutex();
@@ -92,7 +92,7 @@ std::shared_ptr<const Table> Insert::on_execute(std::shared_ptr<TransactionConte
 
     auto remaining_rows = total_rows_to_insert;
     while (remaining_rows > 0) {
-      auto& current_chunk = _target_table->get_chunk(_target_table->chunk_count() - 1);
+      auto& current_chunk = _target_table->get_chunk(static_cast<ChunkID>(_target_table->chunk_count() - 1));
       auto rows_to_insert_this_loop = std::min(_target_table->chunk_size() - current_chunk.size(), remaining_rows);
 
       // Resize MVCC vectors.
@@ -117,7 +117,7 @@ std::shared_ptr<const Table> Insert::on_execute(std::shared_ptr<TransactionConte
 
   // Then, actually insert the data.
   auto input_offset = 0u;
-  auto source_chunk_id = 0u;
+  auto source_chunk_id = ChunkID{0};
   auto source_chunk_start_index = 0u;
 
   for (auto target_chunk_id = start_chunk_id; target_chunk_id <= start_chunk_id + total_chunks_inserted;

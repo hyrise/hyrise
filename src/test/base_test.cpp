@@ -39,7 +39,7 @@ BaseTest::Matrix BaseTest::_table_to_matrix(const Table &t) {
 
   // set values
   unsigned row_offset = 0;
-  for (ChunkID chunk_id = 0; chunk_id < t.chunk_count(); chunk_id++) {
+  for (auto chunk_id = ChunkID{0}; chunk_id < t.chunk_count(); chunk_id++) {
     const Chunk &chunk = t.get_chunk(chunk_id);
 
     // an empty table's chunk might be missing actual columns
@@ -160,7 +160,7 @@ std::shared_ptr<Table> BaseTest::load_table(const std::string &file_name, size_t
 
     test_table->append(values);
 
-    auto &chunk = test_table->get_chunk(test_table->chunk_count() - 1);
+    auto &chunk = test_table->get_chunk(static_cast<ChunkID>(test_table->chunk_count() - 1));
     auto mvcc_cols = chunk.mvcc_columns();
     mvcc_cols->begin_cids.back() = 0;
   }

@@ -24,7 +24,7 @@ class OperatorsValidateTest : public BaseTest {
   void SetUp() override {
     std::shared_ptr<Table> test_table = load_table("src/test/tables/validate_input.tbl", 2u);
     set_all_records_visible(*test_table);
-    set_record_invisible_for(*test_table, RowID{1u, 0u}, 2u);
+    set_record_invisible_for(*test_table, RowID{ChunkID{1}, 0u}, 2u);
 
     _table_wrapper = std::make_shared<TableWrapper>(std::move(test_table));
 
@@ -38,7 +38,7 @@ class OperatorsValidateTest : public BaseTest {
 };
 
 void OperatorsValidateTest::set_all_records_visible(Table& table) {
-  for (auto chunk_id = 0u; chunk_id < table.chunk_count(); ++chunk_id) {
+  for (auto chunk_id = ChunkID{0}; chunk_id < table.chunk_count(); ++chunk_id) {
     auto& chunk = table.get_chunk(chunk_id);
     auto mvcc_columns = chunk.mvcc_columns();
 

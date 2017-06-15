@@ -59,7 +59,7 @@ class Sort::SortImplMaterializeSortColumn : public ColumnVisitable {
     _row_id_value_vector->reserve(_table_in->row_count());
     auto sort_column_id = _table_in->column_id_by_name(_sort_column_name);
 
-    for (ChunkID chunk_id = 0; chunk_id < _table_in->chunk_count(); chunk_id++) {
+    for (auto chunk_id = ChunkID{0}; chunk_id < _table_in->chunk_count(); chunk_id++) {
       _table_in->get_chunk(chunk_id)
           .get_column(sort_column_id)
           ->visit(*this, std::make_shared<MaterializeSortColumnContext>(chunk_id, _row_id_value_vector));
@@ -101,7 +101,7 @@ class Sort::SortImplMaterializeSortColumn : public ColumnVisitable {
     std::vector<std::shared_ptr<std::vector<ChunkOffset>>> all_chunk_offsets(referenced_table->chunk_count());
     std::vector<std::shared_ptr<std::vector<RowID>>> row_id_maps(referenced_table->chunk_count());
 
-    for (ChunkID chunk_id = 0; chunk_id < referenced_table->chunk_count(); ++chunk_id) {
+    for (auto chunk_id = ChunkID{0}; chunk_id < referenced_table->chunk_count(); ++chunk_id) {
       all_chunk_offsets[chunk_id] = std::make_shared<std::vector<ChunkOffset>>();
       row_id_maps[chunk_id] = std::make_shared<std::vector<RowID>>();
       for (ChunkOffset row_index = 0; row_index < column.size(); row_index++) {
@@ -117,7 +117,7 @@ class Sort::SortImplMaterializeSortColumn : public ColumnVisitable {
       all_chunk_offsets[chunk_info.first]->emplace_back(chunk_info.second);
     }
 
-    for (ChunkID chunk_id = 0; chunk_id < referenced_table->chunk_count(); ++chunk_id) {
+    for (auto chunk_id = ChunkID{0}; chunk_id < referenced_table->chunk_count(); ++chunk_id) {
       if (all_chunk_offsets[chunk_id]->empty()) continue;
       auto &chunk = referenced_table->get_chunk(chunk_id);
       auto referenced_column = chunk.get_column(referenced_column_id);
@@ -196,7 +196,7 @@ class Sort::SortImplMaterializeOutput {
       _output_chunk_size = _row_id_value_vector->size();
     }
     auto row_index = 0u;
-    for (ChunkID chunk_id_out = 0; chunk_id_out < chunk_count_out; chunk_id_out++) {
+    for (auto chunk_id_out = ChunkID{0}; chunk_id_out < chunk_count_out; chunk_id_out++) {
       // Because we want to add the values row wise we have to save all columns temporarily before we can add them to
       // the
       // output chunk.

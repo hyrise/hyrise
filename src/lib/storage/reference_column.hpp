@@ -102,7 +102,7 @@ class ReferenceColumn : public BaseColumn {
     unsorted.
     */
 
-    std::unordered_map<ChunkID, std::shared_ptr<std::vector<ChunkOffset>>> all_chunk_offsets;
+    std::unordered_map<ChunkID, std::shared_ptr<std::vector<ChunkOffset>>, std::hash<uint32_t>> all_chunk_offsets;
 
     for (auto pos : *(_pos_list)) {
       auto chunk_info = _referenced_table->locate_row(pos);

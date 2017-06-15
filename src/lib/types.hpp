@@ -1,5 +1,7 @@
 #pragma once
 
+#include <boost/serialization/strong_typedef.hpp>
+
 #include <cstdint>
 #include <limits>
 #include <string>
@@ -7,7 +9,7 @@
 
 namespace opossum {
 
-using ChunkID = uint32_t;
+BOOST_STRONG_TYPEDEF(uint32_t, ChunkID);
 using ChunkOffset = uint32_t;
 struct RowID {
   ChunkID chunk_id;
