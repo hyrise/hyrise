@@ -5,6 +5,7 @@
 #include <string>
 
 #include "all_parameter_variant.hpp"
+#include "common.hpp"
 #include "optimizer/column_statistics.hpp"
 
 namespace opossum {
@@ -20,6 +21,9 @@ class TableStatistics {
                   std::map<std::string, std::shared_ptr<ColumnStatistics>> column_statistics);
   double row_count();
   std::shared_ptr<ColumnStatistics> get_column_statistics(const std::string &column_name);
+  std::shared_ptr<TableStatistics> predicate_statistics(const std::string &column_name, const std::string &op,
+                                                        const AllParameterVariant value,
+                                                        const optional<AllTypeVariant> value2 = nullopt);
 
  private:
   std::shared_ptr<TableStatistics> shared_clone(double row_count);

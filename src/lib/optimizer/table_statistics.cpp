@@ -28,8 +28,45 @@ std::shared_ptr<ColumnStatistics> TableStatistics::get_column_statistics(const s
   return _column_statistics[column_name];
 }
 
-std::shared_ptr<TableStatistics> TableStatistics::shared_clone(double row_count) {
-  return std::make_shared<TableStatistics>(_table, row_count, _column_statistics);
+std::shared_ptr<TableStatistics> TableStatistics::predicate_statistics(const std::string &column_name,
+                                                                       const std::string &op,
+                                                                       const AllParameterVariant value,
+                                                                       const optional<AllTypeVariant> value2) {
+  // currently assuming all values are equally distributed
+  auto _row_count = row_count();
+  if (_row_count == 0) {
+    return shared_clone(0.);
+  }
+
+  // TODO(mp): extend for other comparison operators
+  if (op == "=") {
+    auto distinct_count = get_column_statistics(column_name)->get_distinct_count();
+    return shared_clone(_row_count / static_cast<double>(distinct_count));
+  } // else if (op == "!=") {
+    // Fail(std::string("operator not yet implemented: ") + op);
+  // } else if (op == "<") {
+  //   Fail(std::string("operator not yet implemented: ") + op);
+  // } else if (op == "<=") {
+  //   Fail(std::string("operator not yet implemented: ") + op);
+  // } else if (op == ">") {
+  //   Fail(std::string("operator not yet implemented: ") + op);
+  // } else if (op == ">=") {
+  //   Fail(std::string("operator not yet implemented: ") + op);
+  // } else if (op == "BETWEEN") {
+  //   Fail(std::string("operator not yet implemented: ") + op);
+  // } else if (op == "LIKE") {
+  //   Fail(std::string("operator not yet implemented: ") + op);
+  // } else {
+  //   Fail(std::string("unknown operator ") + op);
+  // }
+
+  auto distinct_count = get_column_statistics(column_name)->get_distinct_count();
+  // Brace yourselves.
+  return shared_clone(_row_count / static_cast<double>(distinct_count));
+}
+
+std::shared_ptr<TableStatistics> TableStatistics::shared_clone(double _row_count) {
+  return std::make_shared<TableStatistics>(_table, _row_count, _column_statistics);
 }
 
 }  // namespace opossum

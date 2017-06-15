@@ -136,8 +136,6 @@ set(
     operators/validate.hpp
     optimizer/column_statistics.cpp
     optimizer/column_statistics.hpp
-    optimizer/statistics.cpp
-    optimizer/statistics.hpp
     optimizer/table_statistics.cpp
     optimizer/table_statistics.hpp
     resolve_type.hpp

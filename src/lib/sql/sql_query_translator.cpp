@@ -22,7 +22,7 @@
 #include "../operators/sort.hpp"
 #include "../operators/table_scan.hpp"
 #include "../operators/union_all.hpp"
-#include "optimizer/statistics.hpp"
+#include "optimizer/table_statistics.hpp"
 #include "storage/storage_manager.hpp"
 
 using hsql::Expr;
@@ -131,7 +131,6 @@ bool SQLQueryTranslator::_translate_select(const SelectStatement& select) {
 
   // Create TableScans in the optimal order as estimated by their intermediate result sizes.
   if (_filters_by_table.size() > 0) {
-    auto stats = Statistics();
     auto input_task = _tasks.back();
 
     for (auto& filter : _filters_by_table) {
@@ -150,7 +149,7 @@ bool SQLQueryTranslator::_translate_select(const SelectStatement& select) {
         for (auto filter_index = 0u; filter_index < table_filters.size(); filter_index++) {
           auto tuple = table_filters[filter_index];
           auto estimated_result_size =
-              stats.predicate_stats(table->table_statistics, get<0>(tuple), get<1>(tuple), get<2>(tuple))->row_count();
+              table->table_statistics->predicate_statistics(get<0>(tuple), get<1>(tuple), get<2>(tuple))->row_count();
           predicate_estimates.emplace_back(filter_index, estimated_result_size);
         }
 
