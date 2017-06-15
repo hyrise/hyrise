@@ -29,7 +29,10 @@ class SQLParseTreeCache {
   std::shared_ptr<hsql::SQLParserResult> get(const std::string& query);
 
   // Purges all entries from the cache and reinitializes it with the given capacity.
-  void reset(size_t capacity);
+  void clear_and_resize(size_t capacity);
+
+  // Purges all entries from the cache.
+  void clear();
 
   inline size_t size() const { return _cache.size(); }
 

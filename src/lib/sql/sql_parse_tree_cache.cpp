@@ -33,7 +33,12 @@ std::shared_ptr<SQLParserResult> SQLParseTreeCache::get(const std::string& query
   return _cache.get(query);
 }
 
-void SQLParseTreeCache::reset(size_t capacity) {
+void SQLParseTreeCache::clear_and_resize(size_t capacity) {
+  _cache = LRUCache<std::string, std::shared_ptr<SQLParserResult>>(capacity);
+}
+
+void SQLParseTreeCache::clear() {
+  size_t capacity = _cache.capacity();
   _cache = LRUCache<std::string, std::shared_ptr<SQLParserResult>>(capacity);
 }
 

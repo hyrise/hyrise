@@ -1,7 +1,7 @@
 #pragma once
 
 #include <list>
-#include <map>
+#include <unordered_map>
 #include <utility>
 
 namespace opossum {
@@ -37,8 +37,8 @@ class LRUCache {
     }
   }
 
-  // Retrieves the value cached at the key into *value.
-  // Returns false if new value could be returned.
+  // Retrieves the value cached at the key.
+  // Throws an error no item at the key exists.
   inline val_t get(key_t key) {
     auto it = _map.find(key);
     _list.splice(_list.begin(), _list, it->second);
@@ -63,7 +63,7 @@ class LRUCache {
   std::list<kv_pair_t> _list;
 
   // Map to point towards element in the list.
-  std::map<key_t, typename std::list<kv_pair_t>::iterator> _map;
+  std::unordered_map<key_t, typename std::list<kv_pair_t>::iterator> _map;
 
   size_t _capacity;
 };

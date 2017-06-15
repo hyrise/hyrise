@@ -29,21 +29,18 @@ class SQLQueryOperator : public AbstractOperator {
 
   const std::shared_ptr<OperatorTask>& get_result_task() const;
 
+  bool hit_parse_tree_cache() const;
+
   // Return the generated query plan.
   const SQLQueryPlan& get_query_plan() const;
 
   // Static. Return the running instance of the parse tree cache.
   static SQLParseTreeCache& get_parse_tree_cache();
 
-  // Runtime statistics
-  static std::atomic<size_t> num_executed;
-  static std::atomic<size_t> parse_tree_cache_hits;
-  static std::atomic<size_t> parse_tree_cache_misses;
-
  protected:
   std::shared_ptr<const Table> on_execute(std::shared_ptr<TransactionContext> context) override;
 
-  std::shared_ptr<hsql::SQLParserResult> parse_query(const std::string& query) const;
+  std::shared_ptr<hsql::SQLParserResult> parse_query(const std::string& query);
 
   // Compiles the given parse result into an operator plan.
   void compile_parse_result(std::shared_ptr<hsql::SQLParserResult> result);
@@ -71,13 +68,18 @@ class SQLQueryOperator : public AbstractOperator {
   // Resulting query plan that will be populated during compilation.
   SQLQueryPlan _plan;
 
-  // If true, the generated plan will automatically be scheduled by the operator.
+  // True, if the generated plan will automatically be scheduled by the operator.
   bool _schedule_plan;
 
+  // True, if the parse tree was obtained from the cache.
+  bool _hit_parse_tree_cache;
+
+  // Static.
+  // Automatic caching of parse trees during runtime.
   static SQLParseTreeCache _parse_tree_cache;
 
+  // Static.
   // Stores all user defined prepared statements.
-  // Has no size limit.
   static SQLParseTreeCache _prepared_stmts;
 };
 

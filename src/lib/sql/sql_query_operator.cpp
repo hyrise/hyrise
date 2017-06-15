@@ -17,17 +17,13 @@ using hsql::kStmtExecute;
 using hsql::SQLParser;
 using hsql::SQLParserResult;
 
-// Static. Runtime statistics.
-std::atomic<size_t> SQLQueryOperator::num_executed(0);
-std::atomic<size_t> SQLQueryOperator::parse_tree_cache_hits(0);
-std::atomic<size_t> SQLQueryOperator::parse_tree_cache_misses(0);
-
-// Static. Query plan caches.
+// Static.
+// Query plan / parse tree caches.
 SQLParseTreeCache SQLQueryOperator::_parse_tree_cache(0);
 SQLParseTreeCache SQLQueryOperator::_prepared_stmts(1024);
 
 SQLQueryOperator::SQLQueryOperator(const std::string& query, bool schedule_plan)
-    : _query(query), _schedule_plan(schedule_plan) {
+    : _query(query), _schedule_plan(schedule_plan), _hit_parse_tree_cache(false) {
   _result_op = std::make_shared<SQLResultOperator>();
   _result_task = std::make_shared<OperatorTask>(_result_op);
 }
@@ -42,9 +38,10 @@ const std::shared_ptr<OperatorTask>& SQLQueryOperator::get_result_task() const {
 
 const SQLQueryPlan& SQLQueryOperator::get_query_plan() const { return _plan; }
 
+bool SQLQueryOperator::hit_parse_tree_cache() const { return _hit_parse_tree_cache; }
+
 std::shared_ptr<const Table> SQLQueryOperator::on_execute(std::shared_ptr<TransactionContext> context) {
   // TODO(torpedro): Check query cache for execution plan.
-  ++num_executed;
 
   std::shared_ptr<SQLParserResult> parse_result = parse_query(_query);
 
@@ -55,7 +52,7 @@ std::shared_ptr<const Table> SQLQueryOperator::on_execute(std::shared_ptr<Transa
   if (_plan.size() > 0) {
     _plan.back()->set_as_predecessor_of(_result_task);
     _result_op->set_input_operator(_plan.back()->get_operator());
-    _plan.addTask(_result_task);
+    _plan.add_task(_result_task);
   }
 
   // Schedule all tasks in query plan.
@@ -69,13 +66,13 @@ std::shared_ptr<const Table> SQLQueryOperator::on_execute(std::shared_ptr<Transa
   return table;
 }
 
-std::shared_ptr<SQLParserResult> SQLQueryOperator::parse_query(const std::string& query) const {
+std::shared_ptr<SQLParserResult> SQLQueryOperator::parse_query(const std::string& query) {
   // Check cache for parse tree.
   if (_parse_tree_cache.has(_query)) {
-    ++parse_tree_cache_hits;
+    _hit_parse_tree_cache = true;
     return _parse_tree_cache.get(_query);
   }
-  ++parse_tree_cache_misses;
+  _hit_parse_tree_cache = false;
 
   // Parse the query.
   std::shared_ptr<SQLParserResult> result = std::make_shared<SQLParserResult>();

@@ -28,20 +28,35 @@ class SQLParseTreeCacheTest : public BaseTest {
 
     std::shared_ptr<Table> table_b = load_table("src/test/tables/int_float2.tbl", 2);
     StorageManager::get().add_table("table_b", std::move(table_b));
+
+    parse_tree_cache_hits = 0;
   }
 
   void TearDown() override {
     CurrentScheduler::set(nullptr);  // Make sure there is no Scheduler anymore
   }
 
-  void schedule_query(const std::string& query) {
+  std::shared_ptr<OperatorTask> execute_query_task(const std::string& query) {
+    auto op = std::make_shared<SQLQueryOperator>(query);
+    auto task = std::make_shared<OperatorTask>(op);
+    task->execute();
+
+    if (op->hit_parse_tree_cache()) {
+      parse_tree_cache_hits++;
+    }
+    return task;
+  }
+
+  void schedule_query_task(const std::string& query) {
     auto op = std::make_shared<SQLQueryOperator>(query);
     auto task = std::make_shared<OperatorTask>(op);
     task->schedule();
   }
+
+  size_t parse_tree_cache_hits;
 };
 
-TEST_F(SQLParseTreeCacheTest, BasicSQLCacheTest) {
+TEST_F(SQLParseTreeCacheTest, SQLParseTreeCacheTest) {
   SQLParseTreeCache cache(2);
   std::string query1 = "SELECT * FROM test;";
   std::string query2 = "SELECT * FROM test2;";
@@ -63,72 +78,48 @@ TEST_F(SQLParseTreeCacheTest, BasicSQLCacheTest) {
   EXPECT_EQ(cached->size(), 1u);
 }
 
-TEST_F(SQLParseTreeCacheTest, BasicPrepareAndExecuteTest) {
-  CurrentScheduler::set(std::make_shared<NodeQueueScheduler>(Topology::create_fake_numa_topology(8, 4)));
-
+TEST_F(SQLParseTreeCacheTest, PrepareAndExecuteSimpleTest) {
   const std::string prep_query = "PREPARE query FROM 'SELECT * FROM table_a';";
-  auto prep_op = std::make_shared<SQLQueryOperator>(prep_query);
-  auto prep_task = std::make_shared<OperatorTask>(prep_op);
-
   const std::string exec_query = "EXECUTE query;";
-  auto exec_op = std::make_shared<SQLQueryOperator>(exec_query);
-  auto exec_task = std::make_shared<OperatorTask>(exec_op);
+
+  auto prep_task = execute_query_task(prep_query);
+
+  auto exec_task = execute_query_task(exec_query);
+  const std::shared_ptr<SQLQueryOperator>& exec_op =
+      (const std::shared_ptr<SQLQueryOperator>&)exec_task->get_operator();
   auto exec_result = exec_op->get_result_task();
-
-  prep_task->set_as_predecessor_of(exec_task);
-
-  prep_task->schedule();
-  exec_task->schedule();
-
-  CurrentScheduler::get()->finish();
 
   auto expected_result = load_table("src/test/tables/int_float.tbl", 2);
   EXPECT_TABLE_EQ(exec_result->get_operator()->get_output(), expected_result);
 }
 
-TEST_F(SQLParseTreeCacheTest, BasicAutoCacheTest) {
-  CurrentScheduler::set(std::make_shared<NodeQueueScheduler>(Topology::create_fake_numa_topology(8, 4)));
-
-  // Reset operator statistics.
-  SQLQueryOperator::num_executed = 0;
-  SQLQueryOperator::parse_tree_cache_hits = 0;
-  SQLQueryOperator::parse_tree_cache_misses = 0;
-
+TEST_F(SQLParseTreeCacheTest, QueryOperatorParseTreeCache) {
   SQLParseTreeCache& cache = SQLQueryOperator::get_parse_tree_cache();
-  cache.reset(16);
+  cache.clear_and_resize(2);
 
   const std::string q1 = "SELECT * FROM table_a;";
   const std::string q2 = "SELECT * FROM table_b;";
   const std::string q3 = "SELECT * FROM table_a WHERE a > 1;";
 
-  // Execute each query once to cache them.
-  schedule_query(q1);
-  schedule_query(q2);
-  schedule_query(q3);
-
-  CurrentScheduler::get()->finish();
-  CurrentScheduler::set(std::make_shared<NodeQueueScheduler>(Topology::create_fake_numa_topology(8, 4)));
-
-  schedule_query(q3);
-  schedule_query(q1);
-  schedule_query(q1);
-  schedule_query(q2);
-  schedule_query(q1);
-  schedule_query(q3);
-  schedule_query(q1);
-
-  CurrentScheduler::get()->finish();
+  // Execute the queries in arbitrary order.
+  execute_query_task(q1);
+  execute_query_task(q2);
+  execute_query_task(q1);  // Hit.
+  execute_query_task(q3);
+  execute_query_task(q3);  // Hit.
+  execute_query_task(q1);  // Hit.
+  execute_query_task(q2);
+  execute_query_task(q1);  // Hit.
+  execute_query_task(q3);
+  execute_query_task(q1);  // Hit.
 
   EXPECT_TRUE(cache.has(q1));
-  EXPECT_TRUE(cache.has(q2));
+  EXPECT_FALSE(cache.has(q2));
   EXPECT_TRUE(cache.has(q3));
   EXPECT_FALSE(cache.has("SELECT * FROM test;"));
 
-  // Check operator runtime statistics.
-  EXPECT_EQ(10u, SQLQueryOperator::num_executed);
-  EXPECT_EQ(7u, SQLQueryOperator::parse_tree_cache_hits);
-  EXPECT_EQ(3u, SQLQueryOperator::parse_tree_cache_misses);
-  EXPECT_EQ(3u, cache.size());
+  // Check for the expected number of hits.
+  EXPECT_EQ(5u, parse_tree_cache_hits);
 }
 
 }  // namespace opossum

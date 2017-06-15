@@ -11,7 +11,7 @@ size_t SQLQueryPlan::size() const { return _tasks.size(); }
 
 std::shared_ptr<OperatorTask> SQLQueryPlan::back() { return _tasks.back(); }
 
-void SQLQueryPlan::addTask(std::shared_ptr<OperatorTask> task) { _tasks.push_back(task); }
+void SQLQueryPlan::add_task(std::shared_ptr<OperatorTask> task) { _tasks.push_back(task); }
 
 void SQLQueryPlan::clear() { _tasks.clear(); }
 
