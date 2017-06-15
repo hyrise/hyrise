@@ -129,8 +129,6 @@ TEST_F(SQLParseTreeCacheTest, BasicAutoCacheTest) {
   EXPECT_EQ(7u, SQLQueryOperator::parse_tree_cache_hits);
   EXPECT_EQ(3u, SQLQueryOperator::parse_tree_cache_misses);
   EXPECT_EQ(3u, cache.size());
-  EXPECT_EQ(q1, cache.cache().list().front().first);
-  EXPECT_EQ(q2, cache.cache().list().back().first);
 }
 
 }  // namespace opossum
