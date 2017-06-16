@@ -84,7 +84,7 @@ std::shared_ptr<SQLParserResult> SQLQueryOperator::parse_query(const std::string
     std::stringstream error_msg;
     error_msg << "SQL Parsing failed: " << result->errorMsg();
     error_msg << " (L" << result->errorLine() << ":" << result->errorColumn() << ")";
-    throw error_msg;
+    throw std::runtime_error(error_msg.str());
   }
 
   // Add the result to the cache.
@@ -107,7 +107,7 @@ void SQLQueryOperator::execute_prepared_statement(const ExecuteStatement& execut
   std::shared_ptr<SQLParserResult> parse_result = std::make_shared<SQLParserResult>();
 
   if (!_prepared_stmts.try_get(execute_stmt.name, &parse_result)) {
-    throw "Requested prepared statement does not exist!";
+    throw std::runtime_error("Requested prepared statement does not exist!");
   }
 
   compile_parse_result(parse_result);
@@ -119,7 +119,7 @@ void SQLQueryOperator::plan_statement(const SQLStatement& stmt) {
   SQLQueryTranslator translator;
 
   if (!translator.translate_statement(stmt)) {
-    throw translator.get_error_msg();
+    throw std::runtime_error(translator.get_error_msg());
   }
 
   _plan.append(translator.get_query_plan());

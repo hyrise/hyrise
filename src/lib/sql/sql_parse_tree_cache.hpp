@@ -30,6 +30,7 @@ class SQLParseTreeCache {
   bool has(const std::string& query) const;
 
   // Returns and refreshes the cache entry for the given query.
+  // Causes undefined behavior if the query is not in the cache.
   std::shared_ptr<hsql::SQLParserResult> get(const std::string& query);
 
   // Purges all entries from the cache and reinitializes it with the given capacity.

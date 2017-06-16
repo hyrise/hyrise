@@ -14,9 +14,15 @@
 namespace opossum {
 
 // The SQLQueryOperator takes a SQL query, parses and transforms it.
+//
 // If schedule_plan is 'true', it will automatically schedule the resulting execution plan.
 // To get the result of the execution plan, it exposes an SQLResultOperator task, which
 // will upon completion contain the result table of the query.
+//
+// If schedule_plan is 'false', the plan will not automatically be scheduled. Instead it may
+// be retrieved by calling get_query_plan(). This is useful if you would like to manually
+// modify the query plan before execution or use a different execution/scheduling approach
+// than the default. This is also used for testing and benchmarking purposes.
 class SQLQueryOperator : public AbstractOperator {
  public:
   explicit SQLQueryOperator(const std::string& query, bool schedule_plan = true);
@@ -69,7 +75,7 @@ class SQLQueryOperator : public AbstractOperator {
   SQLQueryPlan _plan;
 
   // True, if the generated plan will automatically be scheduled by the operator.
-  bool _schedule_plan;
+  const bool _schedule_plan;
 
   // True, if the parse tree was obtained from the cache.
   bool _hit_parse_tree_cache;

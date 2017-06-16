@@ -38,17 +38,14 @@ class LRUCache {
   }
 
   // Retrieves the value cached at the key.
-  // Throws an error, if no item for the key exists.
+  // Causes undefined behavior if the key is not in the cache.
   inline val_t get(key_t key) {
     auto it = _map.find(key);
     _list.splice(_list.begin(), _list, it->second);
     return it->second->second;
   }
 
-  const inline bool has(key_t key) const {
-    auto it = _map.find(key);
-    return !(it == _map.end());
-  }
+  const inline bool has(key_t key) const { return _map.find(key) != _map.end(); }
 
   // Returns the underlying list of all elements in the cache.
   std::list<kv_pair_t>& list() { return _list; }
