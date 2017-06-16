@@ -7,10 +7,13 @@
 #include <string>
 #include <vector>
 
+#include "strong_typedef.hpp"
+
 namespace opossum {
 
-BOOST_STRONG_TYPEDEF(uint32_t, ChunkID);
+STRONG_TYPEDEF(uint32_t, ChunkID);
 using ChunkOffset = uint32_t;
+
 struct RowID {
   ChunkID chunk_id;
   ChunkOffset chunk_offset;
@@ -24,7 +27,7 @@ struct RowID {
 // used to represent NULL values
 constexpr ChunkOffset INVALID_CHUNK_OFFSET = std::numeric_limits<ChunkOffset>::max();
 
-using ColumnID = uint16_t;
+STRONG_TYPEDEF(uint16_t, ColumnID);
 using ValueID = uint32_t;  // Cannot be larger than ChunkOffset
 using WorkerID = uint32_t;
 using NodeID = uint32_t;

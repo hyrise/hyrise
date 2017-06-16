@@ -29,7 +29,7 @@ std::shared_ptr<const Table> UnionAll::on_execute() {
               "Input tables must have same number of columns");
 
   // copy column definition from input_table_left() to output table
-  for (size_t column_id = 0; column_id < input_table_left()->col_count(); ++column_id) {
+  for (ColumnID column_id{0}; column_id < input_table_left()->col_count(); ++column_id) {
     auto column_type = input_table_left()->column_type(column_id);
     DebugAssert((column_type == input_table_right()->column_type(column_id)),
                 "Input tables must have same column order and column types");
@@ -46,7 +46,7 @@ std::shared_ptr<const Table> UnionAll::on_execute() {
       Chunk chunk_output;
 
       // iterating over all columns of the current chunk
-      for (size_t column_id = 0; column_id < input->col_count(); ++column_id) {
+      for (ColumnID column_id{0}; column_id < input->col_count(); ++column_id) {
         chunk_output.add_column(input->get_chunk(in_chunk_id).get_column(column_id));
       }
 

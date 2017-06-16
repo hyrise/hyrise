@@ -23,13 +23,13 @@ std::shared_ptr<const Table> Product::on_execute() {
   auto output = std::make_shared<Table>();
 
   // add columns from left table to output
-  for (size_t col_id = 0; col_id < input_table_left()->col_count(); ++col_id) {
+  for (ColumnID col_id{0}; col_id < input_table_left()->col_count(); ++col_id) {
     output->add_column(_prefix_left + input_table_left()->column_name(col_id), input_table_left()->column_type(col_id),
                        false);
   }
 
   // add columns from right table to output
-  for (size_t col_id = 0; col_id < input_table_right()->col_count(); ++col_id) {
+  for (ColumnID col_id{0}; col_id < input_table_right()->col_count(); ++col_id) {
     output->add_column(_prefix_right + input_table_right()->column_name(col_id),
                        input_table_right()->column_type(col_id), false);
   }
@@ -70,9 +70,9 @@ void Product::add_product_of_two_chunks(std::shared_ptr<Table> output, ChunkID c
     bool is_left_side = &(chunk_in.get()) == &chunk_left;
     auto table = is_left_side ? input_table_left() : input_table_right();
 
-    for (size_t column_id = 0; column_id < chunk_in.get().col_count(); ++column_id) {
+    for (ColumnID column_id{0}; column_id < chunk_in.get().col_count(); ++column_id) {
       std::shared_ptr<const Table> referenced_table;
-      size_t referenced_column;
+      ColumnID referenced_column;
       std::shared_ptr<const PosList> pos_list_in;
 
       if (auto ref_col_in = std::dynamic_pointer_cast<ReferenceColumn>(chunk_in.get().get_column(column_id))) {

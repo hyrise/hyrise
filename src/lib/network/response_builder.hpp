@@ -33,7 +33,7 @@ class ResponseBuilder {
     }
 
     // Iterate a column chunk by chunk and apply a typed ColumnVisitor, then the next column etc.
-    for (size_t column_index = 0, column_count = table->col_count(); column_index < column_count; ++column_index) {
+    for (ColumnID column_index{0}, column_count{table->col_count()}; column_index < column_count; ++column_index) {
       const auto& type = table->column_type(column_index);
 
       // Register column type and name

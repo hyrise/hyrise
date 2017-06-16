@@ -119,7 +119,7 @@ void ExportBinary::_write_header(const std::shared_ptr<const Table>& table, std:
   std::vector<std::string> column_names(table->col_count());
 
   // Transform column types and copy column names in order to write them to the file.
-  for (ColumnID column_id = 0; column_id < table->col_count(); ++column_id) {
+  for (ColumnID column_id{0}; column_id < table->col_count(); ++column_id) {
     column_types[column_id] = table->column_type(column_id);
     column_names[column_id] = table->column_name(column_id);
   }
@@ -135,7 +135,7 @@ void ExportBinary::_write_chunk(const std::shared_ptr<const Table>& table, std::
   _export_value(ofstream, static_cast<ChunkOffset>(chunk.size()));
 
   // Iterating over all columns of this chunk and exporting them
-  for (ColumnID col_id = 0; col_id < chunk.col_count(); col_id++) {
+  for (ColumnID col_id{0}; col_id < chunk.col_count(); col_id++) {
     auto visitor = make_unique_by_column_type<ColumnVisitable, ExportBinaryVisitor>(table->column_type(col_id));
     chunk.get_column(col_id)->visit(*visitor, context);
   }

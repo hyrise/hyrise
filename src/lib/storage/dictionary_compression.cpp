@@ -76,7 +76,7 @@ void DictionaryCompression::compress_chunk(const std::vector<std::string>& colum
   DebugAssert((column_types.size() == chunk.col_count()),
               "Number of column types does not match the chunk’s column count.");
 
-  for (auto column_id = 0u; column_id < chunk.col_count(); ++column_id) {
+  for (ColumnID column_id{0}; column_id < chunk.col_count(); ++column_id) {
     auto value_column = chunk.get_column(column_id);
     auto dict_column = compress_column(column_types[column_id], value_column);
     chunk.replace_column(column_id, dict_column);

@@ -42,7 +42,7 @@ JoinNestedLoopB::JoinNestedLoopB(const std::shared_ptr<const AbstractOperator> l
 // to the original columns.
 // It is assumed that either non or all chunks of a table contain reference columns.
 std::shared_ptr<PosList> JoinNestedLoopB::_dereference_pos_list(std::shared_ptr<const Table> input_table,
-                                                                size_t column_id,
+                                                                ColumnID column_id,
                                                                 std::shared_ptr<const PosList> pos_list) {
   // Get all the input pos lists so that we only have to pointer cast the columns once
   auto input_pos_lists = std::vector<std::shared_ptr<const PosList>>();
@@ -64,7 +64,7 @@ std::shared_ptr<PosList> JoinNestedLoopB::_dereference_pos_list(std::shared_ptr<
 void JoinNestedLoopB::_append_columns_to_output(std::shared_ptr<const Table> input_table,
                                                 std::shared_ptr<PosList> pos_list, std::string prefix) {
   // Append each column of the input column to the output
-  for (size_t column_id = 0; column_id < input_table->col_count(); column_id++) {
+  for (ColumnID column_id{0}; column_id < input_table->col_count(); column_id++) {
     // Add the column meta data
     _output->add_column(prefix + input_table->column_name(column_id), input_table->column_type(column_id), false);
 
@@ -85,7 +85,7 @@ void JoinNestedLoopB::_append_columns_to_output(std::shared_ptr<const Table> inp
 }
 
 // Join two columns of the input tables
-void JoinNestedLoopB::_join_columns(size_t left_column_id, size_t right_column_id, std::string left_column_type) {
+void JoinNestedLoopB::_join_columns(ColumnID left_column_id, ColumnID right_column_id, std::string left_column_type) {
   auto impl = make_shared_by_column_type<ColumnVisitable, JoinNestedLoopBImpl>(left_column_type, *this);
   // For each combination of chunks from both input tables call visitor pattern to actually perform the join.
   for (ChunkID chunk_id_left = ChunkID{0}; chunk_id_left < input_table_left()->chunk_count(); ++chunk_id_left) {

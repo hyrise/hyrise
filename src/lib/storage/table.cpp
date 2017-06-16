@@ -62,7 +62,7 @@ uint32_t Table::row_count() const {
 ChunkID Table::chunk_count() const { return static_cast<ChunkID>(_chunks.size()); }
 
 ColumnID Table::column_id_by_name(const std::string &column_name) const {
-  for (ColumnID column_id = 0; column_id < col_count(); ++column_id) {
+  for (ColumnID column_id{0}; column_id < col_count(); ++column_id) {
     // TODO(Anyone): make more efficient
     if (_column_names[column_id] == column_name) {
       return column_id;

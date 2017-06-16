@@ -85,7 +85,7 @@ std::shared_ptr<const Table> Aggregate::on_execute() {
   auto results_per_column = std::vector<std::shared_ptr<std::map<AggregateKey, AggregateResult>>>(_aggregates.size());
 
   // pre-insert empty maps for each aggregate column
-  for (ColumnID column_index = 0; column_index < results_per_column.size(); ++column_index) {
+  for (ColumnID column_index{0}; column_index < results_per_column.size(); ++column_index) {
     results_per_column[column_index] = std::make_shared<std::map<AggregateKey, AggregateResult>>();
   }
 
@@ -166,7 +166,7 @@ std::shared_ptr<const Table> Aggregate::on_execute() {
       }
       results_per_column.emplace_back(std::make_shared<std::map<AggregateKey, AggregateResult>>(column_results));
     } else {
-      ColumnID column_index = 0;
+      ColumnID column_index{0};
       for (auto column_id : aggregate_column_ids) {
         auto base_column = chunk_in.get_column(column_id);
         auto column_type = input_table->column_type(column_id);
@@ -208,7 +208,7 @@ std::shared_ptr<const Table> Aggregate::on_execute() {
 
   if (_groupby_columns.size()) {
     // add group by columns
-    for (ColumnID column_index = 0; column_index < _groupby_columns.size(); ++column_index) {
+    for (ColumnID column_index{0}; column_index < _groupby_columns.size(); ++column_index) {
       output->add_column(_groupby_columns[column_index], input_table->column_type(groupby_column_ids[column_index]),
                          false);
 
@@ -236,7 +236,7 @@ std::shared_ptr<const Table> Aggregate::on_execute() {
   /*
   Write the aggregated columns to the output
   */
-  ColumnID column_index = 0;
+  ColumnID column_index{0};
   for (auto aggregate : _aggregates) {
     auto &column_name = aggregate.first;
     auto &func = aggregate.second;

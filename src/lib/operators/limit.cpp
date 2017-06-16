@@ -24,7 +24,7 @@ std::shared_ptr<const Table> Limit::on_execute() {
 
   // Create output table and column layout.
   auto output_table = std::make_shared<Table>();
-  for (ColumnID column_id = 0; column_id < input_table->col_count(); column_id++) {
+  for (ColumnID column_id{0}; column_id < input_table->col_count(); column_id++) {
     output_table->add_column(input_table->column_name(column_id), input_table->column_type(column_id), false);
   }
 
@@ -35,7 +35,7 @@ std::shared_ptr<const Table> Limit::on_execute() {
 
     size_t output_chunk_row_count = std::min<size_t>(input_chunk.size(), _num_rows - i);
 
-    for (ColumnID column_id = 0; column_id < input_table->col_count(); column_id++) {
+    for (ColumnID column_id{0}; column_id < input_table->col_count(); column_id++) {
       const auto input_base_column = input_chunk.get_column(column_id);
       auto output_pos_list = std::make_shared<PosList>(output_chunk_row_count);
       std::shared_ptr<const Table> referenced_table;
