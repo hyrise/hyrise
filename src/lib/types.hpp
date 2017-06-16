@@ -28,7 +28,7 @@ struct RowID {
 constexpr ChunkOffset INVALID_CHUNK_OFFSET = std::numeric_limits<ChunkOffset>::max();
 
 STRONG_TYPEDEF(uint16_t, ColumnID);
-using ValueID = uint32_t;  // Cannot be larger than ChunkOffset
+STRONG_TYPEDEF(uint32_t, ValueID);  // Cannot be larger than ChunkOffset
 using WorkerID = uint32_t;
 using NodeID = uint32_t;
 using TaskID = uint32_t;
