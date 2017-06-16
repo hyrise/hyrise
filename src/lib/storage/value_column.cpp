@@ -30,7 +30,7 @@ const AllTypeVariant ValueColumn<T>::operator[](const size_t i) const {
   DebugAssert(i != INVALID_CHUNK_OFFSET, "Passed chunk offset must be valid.");
 
   // Columns supports null values and value is null
-  if (is_nullable() && _null_values->at(i)) {
+  if (is_nullable() && (*_null_values).at(i)) {
     return NULL_VALUE;
   }
 
@@ -41,7 +41,7 @@ template <typename T>
 const T ValueColumn<T>::get(const size_t i) const {
   DebugAssert(i != INVALID_CHUNK_OFFSET, "Passed chunk offset must be valid.");
 
-  Assert(!is_nullable() || !_null_values->at(i), "Can’t return value of column type because it is null.");
+  Assert(!is_nullable() || !(*_null_values).at(i), "Can’t return value of column type because it is null.");
   return _values.at(i);
 }
 
@@ -50,7 +50,7 @@ void ValueColumn<T>::append(const AllTypeVariant& val) {
   bool is_null = (val == NULL_VALUE);
 
   if (is_nullable()) {
-    _null_values->push_back(is_null);
+    (*_null_values).push_back(is_null);
     _values.push_back(is_null ? T{} : type_cast<T>(val));
     return;
   }
