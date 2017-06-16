@@ -23,18 +23,21 @@
 
 namespace opossum {
 
-// operator to filter a table by a single attribute
-// output is a table with only reference columns
-// to filter by multiple criteria, you can chain the operator
+/**
+ * operator to filter a table by a single attribute
+ * output is a table with only reference columns
+ * to filter by multiple criteria, you can chain the operator
+ *
+ * As with most operators, we do not guarantee a stable operation with regards to positions - i.e., your sorting order
+ * might be disturbed
 
-// As with most operators, we do not guarantee a stable operation with regards to positions - i.e., your sorting order
-// might be disturbed
-
-// This scan differs from the normal table_scan in the single fact that it uses an index on the column to scan
-// if there exists one
-// Therefore, 95% of this code is duplicate to the table_scan.hpp
-// Ideas on how to overcome this duplication are welcome
-
+ * This scan differs from the normal table_scan in the single fact that it uses an index on the column to scan
+ * if there exists one
+ * Therefore, 95% of this code is duplicate to the table_scan.hpp
+ * Ideas on how to overcome this duplication are welcome
+ *
+ * Note: IndexColumnScan does not support null values at the moment
+ */
 class IndexColumnScan : public AbstractReadOnlyOperator {
  public:
   IndexColumnScan(const std::shared_ptr<AbstractOperator> in, const std::string &filter_column_name,

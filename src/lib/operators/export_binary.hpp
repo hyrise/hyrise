@@ -15,6 +15,9 @@
 
 namespace opossum {
 
+/**
+ * Note: ExportBinary does not support null values at the moment
+ */
 class ExportBinary : public AbstractReadOnlyOperator {
  public:
   explicit ExportBinary(const std::shared_ptr<const AbstractOperator> in, const std::string& filename);
