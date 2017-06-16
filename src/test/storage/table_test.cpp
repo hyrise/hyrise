@@ -69,6 +69,17 @@ TEST_F(StorageTableTest, GetColumnIdByName) {
 
 TEST_F(StorageTableTest, GetChunkSize) { EXPECT_EQ(t.chunk_size(), 2u); }
 
+TEST_F(StorageTableTest, GetValue) {
+  t.append({4, "Hello,"});
+  t.append({6, "world"});
+  t.append({3, "!"});
+  ASSERT_EQ(t.get_value<int>(0u, 0u), 4);
+  EXPECT_EQ(t.get_value<int>(0u, 2u), 3);
+  ASSERT_FALSE(t.get_value<std::string>(1u, 0u).compare("Hello,"));
+  ASSERT_FALSE(t.get_value<std::string>(1u, 2u).compare("!"));
+  EXPECT_THROW(t.get_value<int>(3u, 0u), std::exception);
+}
+
 TEST_F(StorageTableTest, ColumnNameTooLong) {
   EXPECT_THROW(t.add_column(std::string(std::numeric_limits<ColumnNameLength>::max() + 1ul, 'A'), "int");
                , std::exception);

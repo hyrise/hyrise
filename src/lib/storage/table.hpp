@@ -9,6 +9,7 @@
 
 #include "chunk.hpp"
 #include "common.hpp"
+#include "type_cast.hpp"
 #include "types.hpp"
 
 namespace opossum {
@@ -18,7 +19,7 @@ class Table {
   // creates a table
   // the parameter specifies the maximum chunk size, i.e., partition size
   // default (0) is an unlimited size. A table holds always at least one chunk
-  explicit Table(const size_t chunk_size = 0);
+  explicit Table(const uint32_t chunk_size = 0);
 
   // copying a table is not allowed
   Table(Table const &) = delete;
@@ -32,8 +33,8 @@ class Table {
   // returns the number of columns (cannot exceed ColumnID (uint16_t))
   uint16_t col_count() const;
 
-  // returns the number of rows (cannot exceed ChunkOffset (uint32_t))
-  uint32_t row_count() const;
+  // returns the number of rows
+  uint64_t row_count() const;
 
   // returns the number of chunks (cannot exceed ChunkID (uint32_t))
   uint32_t chunk_count() const;
@@ -72,6 +73,23 @@ class Table {
   // inserts a row at the end of the table
   // note this is slow and not thread-safe and should be used for testing purposes only
   void append(std::vector<AllTypeVariant> values);
+
+  // returns one materialized value
+  // multiversion concurrency control values of chunks are ignored
+  // - table needs to be validated before by Validate operator
+  // If you want to write efficient operators, back off!
+  template <typename T>
+  T get_value(const ColumnID column_id, const size_t row_number) const {
+    size_t row_counter = 0u;
+    for (auto &chunk : _chunks) {
+      size_t current_size = chunk.size();
+      row_counter += current_size;
+      if (row_counter > row_number) {
+        return get<T>((*chunk.get_column(column_id))[row_number + current_size - row_counter]);
+      }
+    }
+    throw std::runtime_error("Row does not exist.");
+  }
 
   // creates a new chunk and appends it
   void create_new_chunk();
