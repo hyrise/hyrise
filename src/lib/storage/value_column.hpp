@@ -63,7 +63,7 @@ class ValueColumn : public BaseColumn {
 
  protected:
   tbb::concurrent_vector<T> _values;
-  std::unique_ptr<tbb::concurrent_vector<bool>> _null_values;
+  optional<tbb::concurrent_vector<bool>> _null_values;
 };
 
 }  // namespace opossum

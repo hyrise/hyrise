@@ -15,7 +15,7 @@ namespace opossum {
 
 template <typename T>
 ValueColumn<T>::ValueColumn(bool nullable) {
-  if (nullable) _null_values = std::make_unique<tbb::concurrent_vector<bool>>();
+  if (nullable) _null_values = tbb::concurrent_vector<bool>();
 }
 
 template <typename T>
@@ -23,8 +23,7 @@ ValueColumn<T>::ValueColumn(tbb::concurrent_vector<T>&& values) : _values(std::m
 
 template <typename T>
 ValueColumn<T>::ValueColumn(tbb::concurrent_vector<T>&& values, tbb::concurrent_vector<bool>&& null_values)
-    : _values(std::move(values)),
-      _null_values(std::make_unique<tbb::concurrent_vector<bool>>(std::move(null_values))) {}
+    : _values(std::move(values)), _null_values(std::move(null_values)) {}
 
 template <typename T>
 const AllTypeVariant ValueColumn<T>::operator[](const size_t i) const {
@@ -94,7 +93,7 @@ tbb::concurrent_vector<T>& ValueColumn<T>::values() {
 
 template <typename T>
 bool ValueColumn<T>::is_nullable() const {
-  return _null_values != nullptr;
+  return static_cast<bool>(_null_values);
 }
 
 template <typename T>
