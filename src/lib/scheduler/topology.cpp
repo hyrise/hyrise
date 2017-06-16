@@ -29,7 +29,7 @@ std::shared_ptr<Topology> Topology::create_fake_numa_topology(uint32_t max_num_w
   std::vector<TopologyNode> nodes;
   nodes.reserve(num_nodes);
 
-  auto cpuID = 0u;
+  CpuID cpuID{0};
 
   for (auto n = 0u; n < num_nodes; n++) {
     std::vector<TopologyCpu> cpus;

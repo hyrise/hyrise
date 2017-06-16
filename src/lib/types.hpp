@@ -30,9 +30,9 @@ constexpr ChunkOffset INVALID_CHUNK_OFFSET = std::numeric_limits<ChunkOffset>::m
 STRONG_TYPEDEF(uint16_t, ColumnID);
 STRONG_TYPEDEF(uint32_t, ValueID);  // Cannot be larger than ChunkOffset
 using WorkerID = uint32_t;
-using NodeID = uint32_t;
+STRONG_TYPEDEF(uint32_t, NodeID);
 using TaskID = uint32_t;
-using CpuID = uint32_t;
+STRONG_TYPEDEF(uint32_t, CpuID);
 
 // When changing these to 64-bit types, reading and writing to them might not be atomic anymore.
 // Among others, the validate operator might break when another operator is simultaneously writing begin or end CIDs.
@@ -55,12 +55,12 @@ class ColumnName {
   const std::string _name;
 };
 
-constexpr NodeID INVALID_NODE_ID = std::numeric_limits<NodeID>::max();
-constexpr TaskID INVALID_TASK_ID = std::numeric_limits<TaskID>::max();
-constexpr CpuID INVALID_CPU_ID = std::numeric_limits<CpuID>::max();
-constexpr WorkerID INVALID_WORKER_ID = std::numeric_limits<WorkerID>::max();
+constexpr NodeID INVALID_NODE_ID{std::numeric_limits<NodeID::base_type>::max()};
+constexpr TaskID INVALID_TASK_ID{std::numeric_limits<TaskID>::max()};
+constexpr CpuID INVALID_CPU_ID{std::numeric_limits<CpuID::base_type>::max()};
+constexpr WorkerID INVALID_WORKER_ID{std::numeric_limits<WorkerID>::max()};
 
-constexpr NodeID CURRENT_NODE_ID = std::numeric_limits<NodeID>::max() - 1;
+constexpr NodeID CURRENT_NODE_ID{std::numeric_limits<NodeID::base_type>::max() - 1};
 
 // The Scheduler currently supports just these 2 priorities, subject to change.
 enum class SchedulePriority {
