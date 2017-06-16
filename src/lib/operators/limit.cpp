@@ -28,7 +28,7 @@ std::shared_ptr<const Table> Limit::on_execute() {
     output_table->add_column(input_table->column_name(column_id), input_table->column_type(column_id), false);
   }
 
-  auto chunk_id = ChunkID{0};
+  ChunkID chunk_id{0};
   for (size_t i = 0; i < _num_rows && chunk_id < input_table->chunk_count(); chunk_id++) {
     const auto &input_chunk = input_table->get_chunk(chunk_id);
     Chunk output_chunk;

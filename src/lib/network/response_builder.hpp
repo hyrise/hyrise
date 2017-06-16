@@ -43,7 +43,7 @@ class ResponseBuilder {
       auto visitor = make_unique_by_column_type<ColumnVisitable, ResponseBuilderVisitor>(type);
       uint32_t row_index = 0u;
       // Visit a specific column chunk by chunk
-      for (auto chunk_id = ChunkID{0}; chunk_id < table->chunk_count(); ++chunk_id) {
+      for (ChunkID chunk_id{0}; chunk_id < table->chunk_count(); ++chunk_id) {
         const auto& chunk = table->get_chunk(chunk_id);
         if (chunk.size() == 0) {
           continue;

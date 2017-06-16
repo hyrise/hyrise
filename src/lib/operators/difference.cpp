@@ -41,7 +41,7 @@ std::shared_ptr<const Table> Difference::on_execute() {
   std::unordered_set<std::string> right_input_row_set(input_table_right()->row_count());
 
   // Iterating over all chunks and for each chunk over all columns
-  for (auto chunk_id = ChunkID{0}; chunk_id < input_table_right()->chunk_count(); chunk_id++) {
+  for (ChunkID chunk_id{0}; chunk_id < input_table_right()->chunk_count(); chunk_id++) {
     const Chunk &chunk = input_table_right()->get_chunk(chunk_id);
     // creating a temporary row representation with strings to be filled column wise
     auto string_row_vector = std::vector<std::string>(chunk.size());
@@ -60,7 +60,7 @@ std::shared_ptr<const Table> Difference::on_execute() {
   // 2. Now we check for each chunk of the left input wich rows can be added to the output
 
   // Iterating over all chunks and for each chunk over all columns
-  for (auto chunk_id = ChunkID{0}; chunk_id < input_table_left()->chunk_count(); chunk_id++) {
+  for (ChunkID chunk_id{0}; chunk_id < input_table_left()->chunk_count(); chunk_id++) {
     const Chunk &in_chunk = input_table_left()->get_chunk(chunk_id);
     Chunk out_chunk;
 

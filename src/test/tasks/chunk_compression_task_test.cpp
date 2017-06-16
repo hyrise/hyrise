@@ -47,7 +47,7 @@ TEST_F(ChunkCompressionTaskTest, DictionarySize) {
 
   auto dictionary_sizes = std::array<std::vector<size_t>, chunk_count>{{{3u, 3u}, {2u, 3u}}};
 
-  for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
+  for (ChunkID chunk_id{0}; chunk_id < chunk_count; ++chunk_id) {
     auto& chunk = table_dict->get_chunk(chunk_id);
 
     for (auto column_id = 0u; column_id < chunk.col_count(); ++column_id) {

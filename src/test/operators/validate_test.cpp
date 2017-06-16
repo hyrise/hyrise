@@ -38,7 +38,7 @@ class OperatorsValidateTest : public BaseTest {
 };
 
 void OperatorsValidateTest::set_all_records_visible(Table& table) {
-  for (auto chunk_id = ChunkID{0}; chunk_id < table.chunk_count(); ++chunk_id) {
+  for (ChunkID chunk_id{0}; chunk_id < table.chunk_count(); ++chunk_id) {
     auto& chunk = table.get_chunk(chunk_id);
     auto mvcc_columns = chunk.mvcc_columns();
 

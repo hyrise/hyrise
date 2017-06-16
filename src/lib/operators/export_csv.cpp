@@ -71,7 +71,7 @@ void ExportCsv::_generate_content_file(const std::shared_ptr<const Table> &table
    * This is a lot of iterating, but to convert a column-based table to a row-based representation
    * takes some effort.
    */
-  for (auto chunk_id = ChunkID{0}; chunk_id < table->chunk_count(); ++chunk_id) {
+  for (ChunkID chunk_id{0}; chunk_id < table->chunk_count(); ++chunk_id) {
     auto &chunk = table->get_chunk(chunk_id);
     for (ChunkOffset row = 0; row < chunk.size(); ++row) {
       context->currentRow = row;

@@ -127,7 +127,7 @@ class IndexColumnScan::IndexColumnScanImpl : public AbstractReadOnlyOperatorImpl
     std::vector<std::shared_ptr<AbstractTask>> jobs;
     jobs.reserve(in_table->chunk_count());
 
-    for (auto chunk_id = ChunkID{0}; chunk_id < in_table->chunk_count(); ++chunk_id) {
+    for (ChunkID chunk_id{0}; chunk_id < in_table->chunk_count(); ++chunk_id) {
       jobs.emplace_back(std::make_shared<JobTask>([&in_table, chunk_id, &output_mutex, &output, &filter_column_id,
                                                    this]() {
         const Chunk &chunk_in = in_table->get_chunk(chunk_id);

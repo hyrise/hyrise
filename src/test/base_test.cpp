@@ -39,7 +39,7 @@ BaseTest::Matrix BaseTest::_table_to_matrix(const Table &t) {
 
   // set values
   unsigned row_offset = 0;
-  for (auto chunk_id = ChunkID{0}; chunk_id < t.chunk_count(); chunk_id++) {
+  for (ChunkID chunk_id{0}; chunk_id < t.chunk_count(); chunk_id++) {
     const Chunk &chunk = t.get_chunk(chunk_id);
 
     // an empty table's chunk might be missing actual columns

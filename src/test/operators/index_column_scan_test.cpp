@@ -110,7 +110,7 @@ TYPED_TEST(OperatorsIndexColumnScanTest, ScanOnDictColumn) {
     scan->execute();
 
     auto expected_copy = test.second;
-    for (auto chunk_id = ChunkID{0}; chunk_id < scan->get_output()->chunk_count(); ++chunk_id) {
+    for (ChunkID chunk_id{0}; chunk_id < scan->get_output()->chunk_count(); ++chunk_id) {
       auto& chunk = scan->get_output()->get_chunk(chunk_id);
       for (ChunkOffset chunk_offset = 0; chunk_offset < chunk.size(); ++chunk_offset) {
         EXPECT_EQ(expected_copy.erase(type_cast<int>((*chunk.get_column(1))[chunk_offset])), 1ull);
@@ -139,7 +139,7 @@ TYPED_TEST(OperatorsIndexColumnScanTest, ScanOnReferencedDictColumn) {
     scan2->execute();
 
     auto expected_copy = test.second;
-    for (auto chunk_id = ChunkID{0}; chunk_id < scan2->get_output()->chunk_count(); ++chunk_id) {
+    for (ChunkID chunk_id{0}; chunk_id < scan2->get_output()->chunk_count(); ++chunk_id) {
       auto& chunk = scan2->get_output()->get_chunk(chunk_id);
       for (ChunkOffset chunk_offset = 0; chunk_offset < chunk.size(); ++chunk_offset) {
         EXPECT_EQ(expected_copy.erase(type_cast<int>((*chunk.get_column(1))[chunk_offset])), 1ull);
