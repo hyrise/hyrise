@@ -85,7 +85,7 @@ ValueID DictionaryColumn<T>::lower_bound(T value) const {
 
 template <typename T>
 ValueID DictionaryColumn<T>::lower_bound(const AllTypeVariant& value) const {
-  DebugAssert(value != NULL_VALUE, "Null value passed.");
+  DebugAssert(!is_null(value), "Null value passed.");
 
   auto typed_value = type_cast<T>(value);
   return lower_bound(typed_value);
@@ -100,7 +100,7 @@ ValueID DictionaryColumn<T>::upper_bound(T value) const {
 
 template <typename T>
 ValueID DictionaryColumn<T>::upper_bound(const AllTypeVariant& value) const {
-  DebugAssert(value != NULL_VALUE, "Null value passed.");
+  DebugAssert(!is_null(value), "Null value passed.");
 
   auto typed_value = type_cast<T>(value);
   return upper_bound(typed_value);

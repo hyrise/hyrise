@@ -12,6 +12,7 @@
 #include <string>
 
 #include "types.hpp"
+#include "null_value.hpp"
 
 namespace opossum {
 
@@ -26,9 +27,6 @@ static constexpr auto column_types =
 // This holds only the possible data types.
 static constexpr auto types = hana::transform(column_types, hana::second);  // NOLINT
 
-// Represents SQL null value
-using NullValue = boost::blank;
-
 static constexpr auto types_including_null = hana::prepend(types, hana::type_c<NullValue>);
 
 // Convert tuple to mpl vector
@@ -40,11 +38,15 @@ using TypesWithNullValue = boost::mpl::push_front<TypesAsMplVector, NullValue>::
 // Create boost::variant from mpl vector
 using AllTypeVariant = typename boost::make_variant_over<TypesWithNullValue>::type;
 
+// Function to check if AllTypeVariant is null
+inline bool is_null(const AllTypeVariant& variant) { return (variant.which() == 0); }
+
 /**
  * Notes:
  *   – Use this instead of AllTypeVariant{}, AllTypeVariant{NullValue{}}, NullValue{}, etc.
  *     whenever a null value needs to be represented
- *   – supports the equality operator: (my_value == NULL_VALUE)
+ *   - comparing any AllTypeVariant to NULL_VALUE returns false in accordance with the ternary logic
+ *   - use is_null() if you want to check if an AllTypeVariant is null
  */
 static const auto NULL_VALUE = AllTypeVariant{};
 

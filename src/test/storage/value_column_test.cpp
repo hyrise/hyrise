@@ -91,9 +91,9 @@ TEST_F(StorageValueColumnTest, ArraySubscriptOperatorReturnsNullValue) {
   vc_str.append(NULL_VALUE);
   vc_double.append(NULL_VALUE);
 
-  EXPECT_EQ(vc_int[0], NULL_VALUE);
-  EXPECT_EQ(vc_str[0], NULL_VALUE);
-  EXPECT_EQ(vc_double[0], NULL_VALUE);
+  EXPECT_TRUE(is_null(vc_int[0]));
+  EXPECT_TRUE(is_null(vc_str[0]));
+  EXPECT_TRUE(is_null(vc_double[0]));
 }
 
 TEST_F(StorageValueColumnTest, StringTooLong) {

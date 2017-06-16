@@ -28,17 +28,17 @@ class ExportBinary : public AbstractReadOnlyOperator {
    */
   std::shared_ptr<const Table> on_execute() final;
 
-  /*
+  /**
    * Name of the operator is ExportBinary
    */
   const std::string name() const final;
 
-  /*
+  /**
    * This operator allows one table as input
    */
   uint8_t num_in_tables() const final;
 
-  /*
+  /**
    * This operator has one table as output.
    */
   uint8_t num_out_tables() const final;
