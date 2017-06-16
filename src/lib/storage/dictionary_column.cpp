@@ -39,17 +39,12 @@ const T DictionaryColumn<T>::get(const size_t i) const {
 
   DebugAssert(value_id != NULL_VALUE_ID, "Value at index " + to_string(i) + " is null.");
 
-  return (*_dictionary)[_attribute_vector->get(i)];
+  return (*_dictionary)[value_id];
 }
 
 template <typename T>
 void DictionaryColumn<T>::append(const AllTypeVariant&) {
   Fail("DictionaryColumn is immutable");
-}
-
-template <typename T>
-bool DictionaryColumn<T>::is_nullable() const {
-  return true;
 }
 
 template <typename T>
