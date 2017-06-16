@@ -11,7 +11,7 @@
 
 namespace opossum {
 
-// The SQLQueryTranslator offers functionality translate a
+// The SQLQueryTranslator offers functionality to translate a
 // SQLStatement or SQLParserResult object into a SQLQueryPlan.
 // The translator should not be used concurrently.
 class SQLQueryTranslator {

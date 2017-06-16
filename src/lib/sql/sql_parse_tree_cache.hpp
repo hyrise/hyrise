@@ -22,6 +22,10 @@ class SQLParseTreeCache {
   // Adds or refreshes the cache entry [query, result].
   void set(const std::string& query, std::shared_ptr<hsql::SQLParserResult> result);
 
+  // Tries to fetch the cache entry for the query into the result object.
+  // Returns true if the entry was found, false otherwise.
+  bool try_get(const std::string& query, std::shared_ptr<hsql::SQLParserResult>* result);
+
   // Checks whether an entry for the query exists.
   bool has(const std::string& query) const;
 

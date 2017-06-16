@@ -20,13 +20,16 @@ void SQLParseTreeCache::set(const std::string& query, std::shared_ptr<SQLParserR
   _cache.set(query, result);
 }
 
-bool SQLParseTreeCache::has(const std::string& query) const {
-  if (_cache.capacity() == 0) {
+bool SQLParseTreeCache::try_get(const std::string& query, std::shared_ptr<hsql::SQLParserResult>* result) {
+  std::lock_guard<std::mutex> lock(_mutex);
+  if (!_cache.has(query)) {
     return false;
   }
-
-  return _cache.has(query);
+  *result = _cache.get(query);
+  return true;
 }
+
+bool SQLParseTreeCache::has(const std::string& query) const { return _cache.has(query); }
 
 std::shared_ptr<SQLParserResult> SQLParseTreeCache::get(const std::string& query) {
   std::lock_guard<std::mutex> lock(_mutex);

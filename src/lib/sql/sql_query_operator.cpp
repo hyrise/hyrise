@@ -67,16 +67,17 @@ std::shared_ptr<const Table> SQLQueryOperator::on_execute(std::shared_ptr<Transa
 }
 
 std::shared_ptr<SQLParserResult> SQLQueryOperator::parse_query(const std::string& query) {
-  // Check cache for parse tree.
-  if (_parse_tree_cache.has(_query)) {
-    _hit_parse_tree_cache = true;
-    return _parse_tree_cache.get(_query);
-  }
-  _hit_parse_tree_cache = false;
-
-  // Parse the query.
   std::shared_ptr<SQLParserResult> result = std::make_shared<SQLParserResult>();
 
+  // Check parse tree cache.
+  if (_parse_tree_cache.try_get(_query, &result)) {
+    _hit_parse_tree_cache = true;
+    return result;
+  }
+
+  _hit_parse_tree_cache = false;
+
+  // Parse the query into our result object.
   SQLParser::parseSQLString(query, result.get());
 
   if (!result->isValid()) {
@@ -103,11 +104,12 @@ void SQLQueryOperator::prepare_statement(const PrepareStatement& prepare_stmt) {
 
 // Tries to fetch the referenced prepared statement and retrieve its cached data.
 void SQLQueryOperator::execute_prepared_statement(const ExecuteStatement& execute_stmt) {
-  if (!_prepared_stmts.has(execute_stmt.name)) {
+  std::shared_ptr<SQLParserResult> parse_result = std::make_shared<SQLParserResult>();
+
+  if (!_prepared_stmts.try_get(execute_stmt.name, &parse_result)) {
     throw "Requested prepared statement does not exist!";
   }
 
-  std::shared_ptr<SQLParserResult> parse_result = _prepared_stmts.get(execute_stmt.name);
   compile_parse_result(parse_result);
 }
 

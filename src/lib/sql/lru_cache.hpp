@@ -17,10 +17,10 @@ class LRUCache {
 
   // Sets the value to be cached at the given key.
   inline void set(key_t key, val_t value) {
-    auto it = _map.find(key);
     _list.push_front(kv_pair_t(key, std::move(value)));
 
-    // Override old element at that key.
+    // Override old element at that key, if it exists.
+    auto it = _map.find(key);
     if (it != _map.end()) {
       _list.erase(it->second);
       _map.erase(it);
@@ -38,7 +38,7 @@ class LRUCache {
   }
 
   // Retrieves the value cached at the key.
-  // Throws an error no item at the key exists.
+  // Throws an error, if no item for the key exists.
   inline val_t get(key_t key) {
     auto it = _map.find(key);
     _list.splice(_list.begin(), _list, it->second);
