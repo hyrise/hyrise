@@ -53,9 +53,9 @@ class TransactionContext {
 
   /**
    * Add an operator to the list of read-write operators.
-   * Update does not need to call this because it consists of a Delete and an Insert, which call this themselves.
+   * Update must not call this because it consists of a Delete and an Insert, which call this themselves.
    */
-  void register_rw_operator(AbstractReadWriteOperator* op) { _rw_operators.emplace_back(op); }
+  void register_rw_operator(AbstractReadWriteOperator* op) { _rw_operators.push_back(op); }
 
   std::vector<AbstractReadWriteOperator*> get_rw_operators() const { return _rw_operators; }
 
