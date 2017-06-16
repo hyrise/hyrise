@@ -1,0 +1,16 @@
+left.a|left.b|right.a|right.b
+string|int|string|int
+groupA|1|groupA|4
+groupA|2|groupA|4
+groupA|1|groupA|4
+groupA|2|groupA|4
+groupB|3|groupB|4|
+groupB|4|groupB|4|
+groupB|5|groupB|4|
+groupB|3|groupB|3|
+groupB|4|groupB|3|
+groupB|5|groupB|3|
+groupB|3|groupB|3|
+groupB|4|groupB|3|
+groupB|5|groupB|3|
+groupC|6|groupC|1
