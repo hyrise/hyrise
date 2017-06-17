@@ -33,8 +33,16 @@ class Table {
   // returns the number of columns (cannot exceed ColumnID (uint16_t))
   uint16_t col_count() const;
 
-  // returns the number of rows
+  // Returns the number of rows.
+  // This number includes invalidated (deleted) rows.
+  // Use approx_valid_row_count() for an approximate count of valid rows instead.
   uint64_t row_count() const;
+
+  // Returns the number of valid rows (using approximate count of deleted rows)
+  uint64_t approx_valid_row_count() const;
+
+  // Increases the (approximate) count of invalid rows in the table (caused by deletes).
+  void inc_invalid_row_count(uint64_t count);
 
   // returns the number of chunks (cannot exceed ChunkID (uint32_t))
   uint32_t chunk_count() const;
@@ -101,6 +109,11 @@ class Table {
   // 0 means that the chunk has an unlimited size.
   const uint32_t _chunk_size;
   std::vector<Chunk> _chunks;
+
+  // Stores the number of invalid (deleted) rows.
+  // This is currently not an atomic due to performance considerations.
+  // It is simply used as an estimate for the optimizer, and therefore does not need to be exact.
+  uint64_t _approx_invalid_row_count{0};
 
   // these should be const strings, but having a vector of const values is a C++17 feature
   // that is not yet completely implemented in all compilers

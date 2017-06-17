@@ -41,6 +41,8 @@ void Table::append(std::vector<AllTypeVariant> values) {
   _chunks.back().append(values);
 }
 
+void Table::inc_invalid_row_count(uint64_t count) { _approx_invalid_row_count += count; }
+
 void Table::create_new_chunk() {
   Chunk newChunk{true};
   for (auto &&type : _column_types) {
@@ -58,6 +60,8 @@ uint64_t Table::row_count() const {
   }
   return ret;
 }
+
+uint64_t Table::approx_valid_row_count() const { return row_count() - _approx_invalid_row_count; }
 
 uint32_t Table::chunk_count() const { return _chunks.size(); }
 
