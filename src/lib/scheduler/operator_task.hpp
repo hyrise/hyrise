@@ -21,6 +21,7 @@ class OperatorTask : public AbstractTask {
   /**
    * Takes arguments to create any operator (defined by template argument), and then creates a task for that operator.
    * It also sets the dependencies for the task based on the input operators, if any.
+   * There are three versions that differ only in the number of input operators that Operator takes.
    */
   template <typename Operator, typename... ConstructorArgs>
   static std::shared_ptr<OperatorTask> make_from_operator_args(ConstructorArgs &&... args) {
