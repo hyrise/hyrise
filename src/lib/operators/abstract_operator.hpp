@@ -66,6 +66,14 @@ class AbstractOperator {
   std::shared_ptr<TransactionContext> transaction_context() const;
   void set_transaction_context(std::shared_ptr<TransactionContext> transaction_context);
 
+  virtual std::shared_ptr<AbstractOperator> clone() const;
+
+  std::shared_ptr<const AbstractOperator> input_left() const;
+  std::shared_ptr<const AbstractOperator> input_right() const;
+
+  void set_input_left(std::shared_ptr<const AbstractOperator> input_left);
+  void set_input_right(std::shared_ptr<const AbstractOperator> input_right);
+
  protected:
   // abstract method to actually execute the operator
   // execute and get_output are split into two methods to allow for easier

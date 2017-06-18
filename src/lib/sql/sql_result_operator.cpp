@@ -17,8 +17,10 @@ uint8_t SQLResultOperator::num_in_tables() const { return 1; }
 
 uint8_t SQLResultOperator::num_out_tables() const { return 1; }
 
-void SQLResultOperator::set_input_operator(const std::shared_ptr<const AbstractOperator> input) { _input = input; }
+void SQLResultOperator::set_input_operator(const std::shared_ptr<const AbstractOperator> input) { _input_left = input; }
 
-std::shared_ptr<const Table> SQLResultOperator::on_execute() { return _input->get_output(); }
+std::shared_ptr<const Table> SQLResultOperator::on_execute() { return _input_left->get_output(); }
+
+std::shared_ptr<AbstractOperator> SQLResultOperator::clone() const { return std::make_shared<SQLResultOperator>(); }
 
 }  // namespace opossum

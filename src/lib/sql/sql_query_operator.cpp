@@ -21,9 +21,10 @@ using hsql::SQLParserResult;
 // Query plan / parse tree caches.
 SQLParseTreeCache SQLQueryOperator::_parse_tree_cache(0);
 SQLParseTreeCache SQLQueryOperator::_prepared_stmts(1024);
+SQLQueryPlanCache SQLQueryOperator::_query_plan_cache(0);
 
 SQLQueryOperator::SQLQueryOperator(const std::string& query, bool schedule_plan)
-    : _query(query), _schedule_plan(schedule_plan), _hit_parse_tree_cache(false) {
+    : _query(query), _schedule_plan(schedule_plan), _hit_parse_tree_cache(false), _hit_query_plan_cache(false) {
   _result_op = std::make_shared<SQLResultOperator>();
   _result_task = std::make_shared<OperatorTask>(_result_op);
 }
@@ -40,8 +41,22 @@ const SQLQueryPlan& SQLQueryOperator::get_query_plan() const { return _plan; }
 
 bool SQLQueryOperator::hit_parse_tree_cache() const { return _hit_parse_tree_cache; }
 
+bool SQLQueryOperator::hit_query_plan_cache() const { return _hit_query_plan_cache; }
+
 std::shared_ptr<const Table> SQLQueryOperator::on_execute(std::shared_ptr<TransactionContext> context) {
-  // TODO(torpedro): Check query cache for execution plan.
+  
+  // Check the query plan cache.
+  if (_query_plan_cache.try_get(_query, &_plan)) {
+    _hit_query_plan_cache = true;
+
+    if (_schedule_plan) {
+      for (const auto& task : _plan.cloneTasks()) {
+        task->schedule();
+      }
+    }
+
+    return nullptr;
+  }
 
   std::shared_ptr<SQLParserResult> parse_result = parse_query(_query);
 
@@ -62,8 +77,10 @@ std::shared_ptr<const Table> SQLQueryOperator::on_execute(std::shared_ptr<Transa
     }
   }
 
-  std::shared_ptr<const Table> table = std::make_shared<const Table>();
-  return table;
+  // Cache the plan.
+  _query_plan_cache.set(_query, _plan);
+
+  return nullptr;
 }
 
 std::shared_ptr<SQLParserResult> SQLQueryOperator::parse_query(const std::string& query) {
@@ -147,5 +164,8 @@ void SQLQueryOperator::compile_parse_result(std::shared_ptr<SQLParserResult> res
 
 // Static.
 SQLParseTreeCache& SQLQueryOperator::get_parse_tree_cache() { return _parse_tree_cache; }
+
+// Static.
+SQLQueryPlanCache& SQLQueryOperator::get_query_plan_cache() { return _query_plan_cache; }
 
 }  // namespace opossum

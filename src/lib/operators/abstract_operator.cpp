@@ -25,6 +25,18 @@ std::shared_ptr<const Table> AbstractOperator::input_table_right() const { retur
 
 std::shared_ptr<TransactionContext> AbstractOperator::transaction_context() const { return _transaction_context; }
 
+std::shared_ptr<AbstractOperator> AbstractOperator::clone() const {
+  throw std::runtime_error("Clone of operator not implemented.");
+}
+
+std::shared_ptr<const AbstractOperator> AbstractOperator::input_left() const { return _input_left; }
+
+std::shared_ptr<const AbstractOperator> AbstractOperator::input_right() const { return _input_right; }
+
+void AbstractOperator::set_input_left(std::shared_ptr<const AbstractOperator> input_left) { _input_left = input_left; }
+
+void AbstractOperator::set_input_right(std::shared_ptr<const AbstractOperator> input_right) { _input_right = input_right; }
+
 void AbstractOperator::set_transaction_context(std::shared_ptr<TransactionContext> transaction_context) {
   _transaction_context = transaction_context;
 }

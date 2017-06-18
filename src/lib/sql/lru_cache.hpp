@@ -39,7 +39,7 @@ class LRUCache {
 
   // Retrieves the value cached at the key.
   // Causes undefined behavior if the key is not in the cache.
-  inline val_t get(key_t key) {
+  inline val_t& get(key_t key) {
     auto it = _map.find(key);
     _list.splice(_list.begin(), _list, it->second);
     return it->second->second;

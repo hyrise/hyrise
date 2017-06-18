@@ -17,5 +17,9 @@ uint8_t GetTable::num_out_tables() const { return 1; }
 
 const std::string& GetTable::table_name() const { return _name; }
 
+std::shared_ptr<AbstractOperator> GetTable::clone() const {
+  return std::make_shared<GetTable>(_name);
+}
+
 std::shared_ptr<const Table> GetTable::on_execute() { return StorageManager::get().get_table(_name); }
 }  // namespace opossum

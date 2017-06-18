@@ -18,6 +18,8 @@ class GetTable : public AbstractReadOnlyOperator {
 
   const std::string& table_name() const;
 
+  virtual std::shared_ptr<AbstractOperator> clone() const;
+
  protected:
   std::shared_ptr<const Table> on_execute() override;
 

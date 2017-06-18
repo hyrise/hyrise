@@ -8,6 +8,7 @@
 #include "operators/abstract_read_only_operator.hpp"
 #include "scheduler/operator_task.hpp"
 #include "sql/sql_parse_tree_cache.hpp"
+#include "sql/sql_query_plan_cache.hpp"
 #include "sql/sql_query_translator.hpp"
 #include "sql/sql_result_operator.hpp"
 
@@ -37,11 +38,15 @@ class SQLQueryOperator : public AbstractOperator {
 
   bool hit_parse_tree_cache() const;
 
+  bool hit_query_plan_cache() const;
+
   // Return the generated query plan.
   const SQLQueryPlan& get_query_plan() const;
 
   // Static. Return the running instance of the parse tree cache.
   static SQLParseTreeCache& get_parse_tree_cache();
+  
+  static SQLQueryPlanCache& get_query_plan_cache();
 
  protected:
   std::shared_ptr<const Table> on_execute(std::shared_ptr<TransactionContext> context) override;
@@ -80,6 +85,9 @@ class SQLQueryOperator : public AbstractOperator {
   // True, if the parse tree was obtained from the cache.
   bool _hit_parse_tree_cache;
 
+  // True, if the query plan was obtained from the cache.
+  bool _hit_query_plan_cache;
+
   // Static.
   // Automatic caching of parse trees during runtime.
   static SQLParseTreeCache _parse_tree_cache;
@@ -87,6 +95,9 @@ class SQLQueryOperator : public AbstractOperator {
   // Static.
   // Stores all user defined prepared statements.
   static SQLParseTreeCache _prepared_stmts;
+
+  // Static.
+  static SQLQueryPlanCache _query_plan_cache;
 };
 
 }  // namespace opossum
