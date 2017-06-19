@@ -12,7 +12,8 @@ class AbstractNode {
   }
 
   template <typename Node, typename... ConstructorArgs>
-  static const std::shared_ptr<AbstractNode> make_shared_from_args(const std::shared_ptr<AbstractNode> &left, ConstructorArgs &&... args) {
+  static const std::shared_ptr<AbstractNode> make_shared_from_args(const std::shared_ptr<AbstractNode> &left,
+                                                                   ConstructorArgs &&... args) {
     auto node = AbstractNode::make_shared_from_args<Node>(std::forward<ConstructorArgs>(args)...);
     left->set_parent(node);
     node->set_left(left);
@@ -20,7 +21,9 @@ class AbstractNode {
   }
 
   template <typename Node, typename... ConstructorArgs>
-  static const std::shared_ptr<AbstractNode> make_shared_from_args(const std::shared_ptr<AbstractNode> &left, const std::shared_ptr<AbstractNode> &right, ConstructorArgs &&... args) {
+  static const std::shared_ptr<AbstractNode> make_shared_from_args(const std::shared_ptr<AbstractNode> &left,
+                                                                   const std::shared_ptr<AbstractNode> &right,
+                                                                   ConstructorArgs &&... args) {
     auto node = AbstractNode::make_shared_from_args<Node>(left, std::forward<ConstructorArgs>(args)...);
     right->set_parent(node);
     node->set_right(right);
