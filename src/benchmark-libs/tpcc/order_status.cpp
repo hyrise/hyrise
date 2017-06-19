@@ -13,6 +13,7 @@
 #include "operators/sort.hpp"
 #include "operators/limit.hpp"
 #include "operators/validate.hpp"
+#include "storage/storage_manager.hpp"
 #include "utils/helper.hpp"
 
 using namespace opossum;
@@ -51,6 +52,8 @@ OrderStatusResult AbstractOrderStatusImpl::run_transaction(const OrderStatusPara
 
       const auto customers_table = get_customer_tasks.back()->get_operator()->get_output();
       const auto num_names = customers_table->row_count();
+      if (num_names == 0) StorageManager::get().dump_as_csv("/home/moritz/");
+
       assert(num_names > 0);
 
       const auto row = (size_t) (ceil(num_names - 1) / 2);
@@ -63,6 +66,8 @@ OrderStatusResult AbstractOrderStatusImpl::run_transaction(const OrderStatusPara
     } else {
       auto get_customer_tasks = get_customer_by_id(params.c_id, params.c_d_id, params.c_w_id);
       AbstractScheduler::schedule_tasks_and_wait(get_customer_tasks);
+      if (get_customer_tasks.back()->get_operator()->get_output()->row_count() != 1)
+        StorageManager::get().dump_as_csv("/home/moritz/");
 
       assert(get_customer_tasks.back()->get_operator()->get_output()->row_count() == 1);
 
