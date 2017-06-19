@@ -60,6 +60,15 @@ BENCHMARK_F(SQLBenchmark, BM_SQLTranslationOnlyTranslationQ1)(benchmark::State& 
 
 // Q2
 
+BENCHMARK_F(SQLBenchmark, BM_SQLTranslationTotalQ2)(benchmark::State& state) {
+  while (state.KeepRunning()) {
+    SQLParserResult result;
+    SQLParser::parseSQLString(Q2, &result);
+    SQLQueryTranslator translator;
+    translator.translate_parse_result(result);
+  }
+}
+
 BENCHMARK_F(SQLBenchmark, BM_SQLTranslationOnlyParsingQ2)(benchmark::State& state) {
   while (state.KeepRunning()) {
     SQLParserResult result;
@@ -98,6 +107,7 @@ BENCHMARK_F(SQLBenchmark, BM_SQLTranslationOnlyTranslationQ3)(benchmark::State& 
 BENCHMARK_F(SQLBenchmark, BM_Q2QueryOperatorWithoutCache)(benchmark::State& state) {
   // Disable cache.
   SQLQueryOperator::get_parse_tree_cache().clear_and_resize(0);
+  SQLQueryOperator::get_query_plan_cache().clear_and_resize(0);
   while (state.KeepRunning()) {
     SQLQueryOperator operator_q2(Q2, false);
     operator_q2.execute();
@@ -107,6 +117,17 @@ BENCHMARK_F(SQLBenchmark, BM_Q2QueryOperatorWithoutCache)(benchmark::State& stat
 BENCHMARK_F(SQLBenchmark, BM_Q2QueryOperatorWithParseTreeCache)(benchmark::State& state) {
   // Enable cache.
   SQLQueryOperator::get_parse_tree_cache().clear_and_resize(16);
+  SQLQueryOperator::get_query_plan_cache().clear_and_resize(0);
+  while (state.KeepRunning()) {
+    SQLQueryOperator operator_q2(Q2, false);
+    operator_q2.execute();
+  }
+}
+
+BENCHMARK_F(SQLBenchmark, BM_Q2QueryOperatorWithQueryPlanCache)(benchmark::State& state) {
+  // Enable cache.
+  SQLQueryOperator::get_parse_tree_cache().clear_and_resize(0);
+  SQLQueryOperator::get_query_plan_cache().clear_and_resize(16);
   while (state.KeepRunning()) {
     SQLQueryOperator operator_q2(Q2, false);
     operator_q2.execute();
