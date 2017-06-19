@@ -17,7 +17,11 @@ int main() {
 
   auto table_statistics = opossum::StorageManager::get().get_table("CUSTOMER")->table_statistics;
   auto stat1 = table_statistics->predicate_statistics("C_ID", "=", opossum::AllParameterVariant(1));
-  std::cout << "stat 1: " << stat1->row_count() << std::endl;
   auto stat2 = stat1->predicate_statistics("C_D_ID", "!=", opossum::AllParameterVariant(2));
-  std::cout << "stat 2: " << stat2->row_count() << std::endl;
+  std::cout << "original CUSTOMER table" << std::endl;
+  std::cout << *table_statistics << std::endl;
+  std::cout << "filtered (C_ID = 1)" << std::endl;
+  std::cout << *stat1 << std::endl;
+  std::cout << "filtered (C_D_ID != 2)" << std::endl;
+  std::cout << *stat2 << std::endl;
 }

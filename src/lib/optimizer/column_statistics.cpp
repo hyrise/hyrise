@@ -15,6 +15,9 @@ namespace opossum {
 
 ColumnStatistics::ColumnStatistics(const std::weak_ptr<Table> table, const std::string &column_name)
     : _table(table), _column_name(column_name) {}
+ColumnStatistics::ColumnStatistics(size_t distinct_count, AllTypeVariant min, AllTypeVariant max,
+                                   const std::string &column_name)
+    : _column_name(column_name), _distinct_count(distinct_count), _min(min), _max(max) {}
 size_t ColumnStatistics::get_distinct_count() { return _distinct_count.value_or(update_distinct_count()); }
 AllTypeVariant ColumnStatistics::get_min() { return 0; }
 AllTypeVariant ColumnStatistics::get_max() { return 0; }

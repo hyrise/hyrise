@@ -10,13 +10,16 @@
 
 namespace opossum {
 
-TableStatistics::TableStatistics(const std::weak_ptr<Table> table) : _table(table) {
+TableStatistics::TableStatistics(const std::string &name, const std::weak_ptr<Table> table)
+    : _name(name), _table(table) {
   _row_count = _table.lock()->row_count();
 }
 
-TableStatistics::TableStatistics(std::weak_ptr<Table> table, double row_count,
-                                 std::map<std::string, std::shared_ptr<ColumnStatistics>> column_statistics)
-    : _table(table), _row_count(row_count), _column_statistics(column_statistics) {}
+TableStatistics::TableStatistics(const TableStatistics &table_statistics)
+    : _name(table_statistics._name),
+      _table(table_statistics._table),
+      _row_count(table_statistics._row_count),
+      _column_statistics(table_statistics._column_statistics) {}
 
 double TableStatistics::row_count() { return _row_count; }
 
@@ -33,18 +36,47 @@ std::shared_ptr<TableStatistics> TableStatistics::predicate_statistics(const std
                                                                        const AllParameterVariant value,
                                                                        const optional<AllTypeVariant> value2) {
   // currently assuming all values are equally distributed
+
   auto _row_count = row_count();
   if (_row_count == 0) {
-    return shared_clone(0.);
+    auto clone = std::make_shared<TableStatistics>(*this);
+    clone->_row_count = _row_count;
+    return clone;
   }
 
-  // TODO(mp): extend for other comparison operators
+  if (value.type() == typeid(ColumnName)) {
+    // ColumnName column_name = boost::get<ColumnName>(value);
+    // column_id2 = in_table->column_id_by_name(column_name);
+    auto clone = std::make_shared<TableStatistics>(*this);
+    clone->_row_count = _row_count / 3.;
+    return clone;
+  }
+
+  auto casted_value1 = boost::get<AllTypeVariant>(value);
+
+  if (op == "LIKE") {
+    auto clone = std::make_shared<TableStatistics>(*this);
+    clone->_row_count = _row_count / 3.;
+    return clone;
+  }
+
+  auto column_statistics = get_column_statistics(column_name);  // trigger lazy initialization
+  auto clone = std::make_shared<TableStatistics>(*this);
   if (op == "=") {
-    auto distinct_count = get_column_statistics(column_name)->get_distinct_count();
-    return shared_clone(_row_count / static_cast<double>(distinct_count));
+    auto distinct_count = column_statistics->get_distinct_count();
+    clone->_row_count = _row_count / static_cast<double>(distinct_count);
+    clone->_column_statistics[column_name] =
+        std::make_shared<ColumnStatistics>(1, casted_value1, casted_value1, column_name);
+  } else {
+    // TODO(mp): extend for other comparison operators
+    // Brace yourselves.
+    auto distinct_count = column_statistics->get_distinct_count();
+    clone = std::make_shared<TableStatistics>(*this);
+    clone->_row_count = _row_count / static_cast<double>(distinct_count);
+    // Fail(std::string("unknown operator ") + op);
   }
   // else if (op == "!=") {
-    // Fail(std::string("operator not yet implemented: ") + op);
+  // Fail(std::string("operator not yet implemented: ") + op);
   // } else if (op == "<") {
   //   Fail(std::string("operator not yet implemented: ") + op);
   // } else if (op == "<=") {
@@ -55,19 +87,8 @@ std::shared_ptr<TableStatistics> TableStatistics::predicate_statistics(const std
   //   Fail(std::string("operator not yet implemented: ") + op);
   // } else if (op == "BETWEEN") {
   //   Fail(std::string("operator not yet implemented: ") + op);
-  // } else if (op == "LIKE") {
-  //   Fail(std::string("operator not yet implemented: ") + op);
-  // } else {
-  //   Fail(std::string("unknown operator ") + op);
-  // }
-
-  auto distinct_count = get_column_statistics(column_name)->get_distinct_count();
-  // Brace yourselves.
-  return shared_clone(_row_count / static_cast<double>(distinct_count));
-}
-
-std::shared_ptr<TableStatistics> TableStatistics::shared_clone(double _row_count) {
-  return std::make_shared<TableStatistics>(_table, _row_count, _column_statistics);
+  // } else
+  return clone;
 }
 
 }  // namespace opossum
