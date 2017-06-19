@@ -36,7 +36,7 @@ class SQLQueryPlan {
   std::vector<std::shared_ptr<OperatorTask>> cloneTasks() const;
 
  protected:
-  std::vector<std::shared_ptr<OperatorTask>> deepCloneTasks(std::shared_ptr<const AbstractOperator> root) const;
+  void deepCloneTasks(const std::shared_ptr<const AbstractOperator>&, std::vector<std::shared_ptr<OperatorTask>>* tasks) const;
 
   std::vector<std::shared_ptr<OperatorTask>> _tasks;
 };
