@@ -12,7 +12,6 @@
 #include "operators/commit_records.hpp"
 #include "operators/delete.hpp"
 #include "operators/get_table.hpp"
-#include "operators/limit.hpp"
 #include "operators/projection.hpp"
 #include "operators/sort.hpp"
 #include "operators/table_scan.hpp"
