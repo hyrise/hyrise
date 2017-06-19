@@ -114,7 +114,7 @@ TEST_F(OperatorsInsertTest, CompressedChunks) {
   ins->execute();
 
   EXPECT_EQ(t->chunk_count(), 7u);
-  EXPECT_EQ(t->get_chunk(6).size(), 2u);
+  EXPECT_EQ(t->get_chunk(ChunkID{6}).size(), 2u);
   EXPECT_EQ(t->row_count(), 13u);
 }
 
