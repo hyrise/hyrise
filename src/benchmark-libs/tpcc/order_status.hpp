@@ -63,6 +63,8 @@ class AbstractOrderStatusImpl {
 
   OrderStatusResult run_transaction(const OrderStatusParams & params);
 
+  void set_transaction_context(const std::shared_ptr<opossum::TransactionContext> & transaction_context);
+
  protected:
   std::shared_ptr<opossum::TransactionContext> _t_context;
 };

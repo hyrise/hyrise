@@ -28,6 +28,7 @@ class TypedColumnProcessor : public AbstractTypedColumnProcessor {
  public:
   void resize_vector(std::shared_ptr<BaseColumn> column, size_t new_size) override {
     auto casted_col = std::dynamic_pointer_cast<ValueColumn<T>>(column);
+    DebugAssert(static_cast<bool>(casted_col), "Type mismatch");
     auto& vect = casted_col->values();
 
     vect.resize(new_size);

@@ -41,146 +41,132 @@ NewOrderResult AbstractNewOrderImpl::run_transaction(const NewOrderParams &param
   NewOrderResult result;
   std::vector<AllTypeVariant> row;
 
-  auto t_context = TransactionManager::get().new_transaction_context();
+  TransactionManager::get().run_transaction([&](std::shared_ptr<TransactionContext> t_context) {
+    /**
+     * GET CUSTOMER AND WAREHOUSE TAX RATE
+     */
+    auto get_customer_and_warehouse_tax_rate_tasks = get_get_customer_and_warehouse_tax_rate_tasks(t_context, params.w_id,
+                                                                                                   params.d_id,
+                                                                                                   params.c_id);
+    AbstractScheduler::schedule_tasks_and_wait(get_customer_and_warehouse_tax_rate_tasks);
 
-  /**
-   * GET CUSTOMER AND WAREHOUSE TAX RATE
-   */
-  auto get_customer_and_warehouse_tax_rate_tasks = get_get_customer_and_warehouse_tax_rate_tasks(t_context, params.w_id,
-                                                                                                 params.d_id,
-                                                                                                 params.c_id);
-  AbstractScheduler::schedule_tasks_and_wait(get_customer_and_warehouse_tax_rate_tasks);
+    const auto customer_and_warehouse_tax_rate_table = get_customer_and_warehouse_tax_rate_tasks.back()->get_operator()->
+      get_output();
 
-  const auto customer_and_warehouse_tax_rate_table = get_customer_and_warehouse_tax_rate_tasks.back()->get_operator()->
-    get_output();
-
-  result.c_discount = customer_and_warehouse_tax_rate_table->get_value<float>(0, 0);
-  result.c_last = customer_and_warehouse_tax_rate_table->get_value<std::string>(1, 0);
-  result.c_credit = customer_and_warehouse_tax_rate_table->get_value<std::string>(2, 0);
-  result.w_tax_rate = customer_and_warehouse_tax_rate_table->get_value<float>(3, 0);
-
-  /**
-   * GET DISTRICT
-   */
-  auto get_district_tasks = get_get_district_tasks(t_context, params.d_id, params.w_id);
-  AbstractScheduler::schedule_tasks_and_wait(get_district_tasks);
-  const auto districts_table = get_district_tasks.back()->get_operator()->get_output();
-
-  result.d_next_o_id = districts_table->get_value<int32_t>(0, 0);
-  result.d_tax_rate = districts_table->get_value<float>(1, 0);
-
-  /**
-   * INCREMENT NEXT ORDER ID
-   */
-  auto increment_next_order_id_tasks = get_increment_next_order_id_tasks(t_context, params.d_id, params.w_id,
-                                                                         result.d_next_o_id);
-  AbstractScheduler::schedule_tasks_and_wait(increment_next_order_id_tasks);
-
-  /**
-   * CREATE ORDER
-   */
-  auto create_order_tasks = get_create_order_tasks(t_context, result.d_next_o_id, params.d_id, params.w_id,
-    params.c_id, params.o_entry_d, 0, params.order_lines.size(), 1);
-  AbstractScheduler::schedule_tasks_and_wait(create_order_tasks);
-
-  /**
-   * CREATE NEW ORDER
-   */
-  auto create_new_order_tasks = get_create_new_order_tasks(t_context, result.d_next_o_id, params.d_id, params.w_id);
-  AbstractScheduler::schedule_tasks_and_wait(create_new_order_tasks);
-
-  // TODO(anyone): TransactionContext just keeps raw ptr(wtf?) to the Tasks
-  std::vector<std::shared_ptr<OperatorTask>> inner_scope_tasks;
-
-  for (size_t ol_idx = 0; ol_idx < params.order_lines.size(); ol_idx++) {
-    const auto &order_line_params = params.order_lines[ol_idx];
-
-    NewOrderOrderLineResult order_line;
+    result.c_discount = customer_and_warehouse_tax_rate_table->get_value<float>(0, 0);
+    result.c_last = customer_and_warehouse_tax_rate_table->get_value<std::string>(1, 0);
+    result.c_credit = customer_and_warehouse_tax_rate_table->get_value<std::string>(2, 0);
+    result.w_tax_rate = customer_and_warehouse_tax_rate_table->get_value<float>(3, 0);
 
     /**
-     * GET ITEM INFO
+     * GET DISTRICT
      */
-    auto get_item_info_tasks = get_get_item_info_tasks(t_context, order_line_params.i_id);
-    AbstractScheduler::schedule_tasks_and_wait(get_item_info_tasks);
-    const auto item_info_table = get_item_info_tasks.back()->get_operator()->get_output();
+    auto get_district_tasks = get_get_district_tasks(t_context, params.d_id, params.w_id);
+    AbstractScheduler::schedule_tasks_and_wait(get_district_tasks);
+    const auto districts_table = get_district_tasks.back()->get_operator()->get_output();
 
-    order_line.i_price = item_info_table->get_value<float>(0, 0);
-    order_line.i_name = item_info_table->get_value<std::string>(1, 0);
-    order_line.i_data = item_info_table->get_value<std::string>(2, 0);
+    result.d_next_o_id = districts_table->get_value<int32_t>(0, 0);
+    result.d_tax_rate = districts_table->get_value<float>(1, 0);
 
     /**
-     * GET STOCK INFO
+     * INCREMENT NEXT ORDER ID
      */
-    auto get_stock_info_tasks = get_get_stock_info_tasks(t_context, order_line_params.i_id, order_line_params.w_id,
-                                                         params.d_id + 1);
-    AbstractScheduler::schedule_tasks_and_wait(get_stock_info_tasks);
-    const auto stock_info_table = get_stock_info_tasks.back()->get_operator()->get_output();
-
-    order_line.s_qty = stock_info_table->get_value<int32_t>(0, 0);
-    order_line.s_data = stock_info_table->get_value<std::string>(1, 0);
-    order_line.s_ytd = stock_info_table->get_value<int32_t>(2, 0);
-    order_line.s_order_cnt = stock_info_table->get_value<int32_t>(3, 0);
-    order_line.s_remote_cnt = stock_info_table->get_value<int32_t>(4, 0);
-    order_line.s_dist_xx = stock_info_table->get_value<std::string>(5, 0);
+    auto increment_next_order_id_tasks = get_increment_next_order_id_tasks(t_context, params.d_id, params.w_id,
+                                                                           result.d_next_o_id);
+    AbstractScheduler::schedule_tasks_and_wait(increment_next_order_id_tasks);
 
     /**
-     * Calculate new s_ytd, s_qty and s_order_cnt
+     * CREATE ORDER
      */
-    //auto s_ytd = order_line.s_ytd + order_line_params.qty; // TODO: why doesn't the tpc ref impl update this in UPDATE STOCK?
+    auto create_order_tasks = get_create_order_tasks(t_context, result.d_next_o_id, params.d_id, params.w_id,
+      params.c_id, params.o_entry_d, 0, params.order_lines.size(), 1);
+    AbstractScheduler::schedule_tasks_and_wait(create_order_tasks);
 
-    if (order_line.s_qty >= order_line_params.qty + 10) {
-      order_line.s_qty -= order_line_params.qty;
-    } else {
-      order_line.s_qty += 91 - order_line_params.qty;
+    /**
+     * CREATE NEW ORDER
+     */
+    auto create_new_order_tasks = get_create_new_order_tasks(t_context, result.d_next_o_id, params.d_id, params.w_id);
+    AbstractScheduler::schedule_tasks_and_wait(create_new_order_tasks);
+
+    // TODO(anyone): TransactionContext just keeps raw ptr(wtf?) to the Tasks
+    std::vector<std::shared_ptr<OperatorTask>> inner_scope_tasks;
+
+    for (size_t ol_idx = 0; ol_idx < params.order_lines.size(); ol_idx++) {
+      const auto &order_line_params = params.order_lines[ol_idx];
+
+      NewOrderOrderLineResult order_line;
+
+      /**
+       * GET ITEM INFO
+       */
+      auto get_item_info_tasks = get_get_item_info_tasks(t_context, order_line_params.i_id);
+      AbstractScheduler::schedule_tasks_and_wait(get_item_info_tasks);
+      const auto item_info_table = get_item_info_tasks.back()->get_operator()->get_output();
+
+      order_line.i_price = item_info_table->get_value<float>(0, 0);
+      order_line.i_name = item_info_table->get_value<std::string>(1, 0);
+      order_line.i_data = item_info_table->get_value<std::string>(2, 0);
+
+      /**
+       * GET STOCK INFO
+       */
+      auto get_stock_info_tasks = get_get_stock_info_tasks(t_context, order_line_params.i_id, order_line_params.w_id,
+                                                           params.d_id + 1);
+      AbstractScheduler::schedule_tasks_and_wait(get_stock_info_tasks);
+      const auto stock_info_table = get_stock_info_tasks.back()->get_operator()->get_output();
+
+      order_line.s_qty = stock_info_table->get_value<int32_t>(0, 0);
+      order_line.s_data = stock_info_table->get_value<std::string>(1, 0);
+      order_line.s_ytd = stock_info_table->get_value<int32_t>(2, 0);
+      order_line.s_order_cnt = stock_info_table->get_value<int32_t>(3, 0);
+      order_line.s_remote_cnt = stock_info_table->get_value<int32_t>(4, 0);
+      order_line.s_dist_xx = stock_info_table->get_value<std::string>(5, 0);
+
+      /**
+       * Calculate new s_ytd, s_qty and s_order_cnt
+       */
+      //auto s_ytd = order_line.s_ytd + order_line_params.qty; // TODO: why doesn't the tpc ref impl update this in UPDATE STOCK?
+
+      if (order_line.s_qty >= order_line_params.qty + 10) {
+        order_line.s_qty -= order_line_params.qty;
+      } else {
+        order_line.s_qty += 91 - order_line_params.qty;
+      }
+
+      //auto s_order_cnt = order_line.s_order_cnt + 1; // TODO: why doesn't the tpc ref impl update this in UPDATE STOCK?
+      order_line.amount = order_line_params.qty * order_line.i_price;
+
+      /**
+       * UPDATE STOCK
+       */
+      auto update_stock_tasks = get_update_stock_tasks(t_context, order_line.s_qty, order_line_params.i_id,
+                                                       order_line_params.w_id);
+      std::copy(update_stock_tasks.begin(), update_stock_tasks.end(), std::back_inserter(inner_scope_tasks));
+      AbstractScheduler::schedule_tasks_and_wait(update_stock_tasks);
+
+      /**
+       * CREATE ORDER LINE
+       */
+      auto create_order_line_tasks = get_create_order_line_tasks(t_context,
+                                                                 result.d_next_o_id,
+                                                                 params.d_id,
+                                                                 params.w_id,
+                                                                 ol_idx + 1,
+                                                                 order_line_params.i_id,
+                                                                 0, // ol_supply_w_id - we only have one warehouse
+                                                                 params.o_entry_d,
+                                                                 order_line_params.qty,
+                                                                 order_line.amount,
+                                                                 order_line.s_dist_xx);
+      std::copy(create_order_line_tasks.begin(), create_order_line_tasks.end(), std::back_inserter(inner_scope_tasks));
+      AbstractScheduler::schedule_tasks_and_wait(create_order_line_tasks);
+
+      /**
+       * Add results
+       */
+      result.order_lines.emplace_back(order_line);
     }
-
-    //auto s_order_cnt = order_line.s_order_cnt + 1; // TODO: why doesn't the tpc ref impl update this in UPDATE STOCK?
-    order_line.amount = order_line_params.qty * order_line.i_price;
-
-    /**
-     * UPDATE STOCK
-     */
-    auto update_stock_tasks = get_update_stock_tasks(t_context, order_line.s_qty, order_line_params.i_id,
-                                                     order_line_params.w_id);
-    std::copy(update_stock_tasks.begin(), update_stock_tasks.end(), std::back_inserter(inner_scope_tasks));
-    AbstractScheduler::schedule_tasks_and_wait(update_stock_tasks);
-
-    /**
-     * CREATE ORDER LINE
-     */
-    auto create_order_line_tasks = get_create_order_line_tasks(t_context,
-                                                               result.d_next_o_id,
-                                                               params.d_id,
-                                                               params.w_id,
-                                                               ol_idx + 1,
-                                                               order_line_params.i_id,
-                                                               0, // ol_supply_w_id - we only have one warehouse
-                                                               params.o_entry_d,
-                                                               order_line_params.qty,
-                                                               order_line.amount,
-                                                               order_line.s_dist_xx);
-    std::copy(create_order_line_tasks.begin(), create_order_line_tasks.end(), std::back_inserter(inner_scope_tasks));
-    AbstractScheduler::schedule_tasks_and_wait(create_order_line_tasks);
-
-    /**
-     * Add results
-     */
-    result.order_lines.emplace_back(order_line);
-  }
-
-  /**
-   * Commit
-   */
-  TransactionManager::get().prepare_commit(*t_context);
-
-  auto commit = std::make_shared<CommitRecords>();
-  commit->set_transaction_context(t_context);
-
-  auto commit_task = std::make_shared<OperatorTask>(commit);
-  commit_task->schedule();
-  commit_task->join();
-
-  TransactionManager::get().commit(*t_context);
+  });
 
   return result;
 }

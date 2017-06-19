@@ -15,11 +15,15 @@
 #include "operators/validate.hpp"
 #include "utils/helper.hpp"
 
-#define VERBOSE 0
-
 using namespace opossum;
 
 namespace tpcc {
+
+void AbstractOrderStatusImpl::set_transaction_context(
+  const std::shared_ptr<opossum::TransactionContext> & transaction_context)
+{
+  _t_context = transaction_context;
+}
 
 std::string OrderStatusParams::to_string() const {
   std::stringstream s;
@@ -36,103 +40,68 @@ std::string OrderStatusParams::to_string() const {
 }
 
 OrderStatusResult AbstractOrderStatusImpl::run_transaction(const OrderStatusParams &params) {
-#if VERBOSE
-  std::cout << "OrderStatus: Running transaction: " << params.to_string() << std::endl;
-#endif
-  
-  _t_context = TransactionManager::get().new_transaction_context();
-
   OrderStatusResult result;
 
-  if (params.order_status_by == OrderStatusBy::CustomerLastName) {
-    auto get_customer_tasks = get_customer_by_name(params.c_last, params.c_d_id, params.c_w_id);
-    AbstractScheduler::schedule_tasks_and_wait(get_customer_tasks);
+  TransactionManager::get().run_transaction([&](std::shared_ptr<TransactionContext> t_context) {
+    _t_context = t_context;
 
-#if VERBOSE
-    std::cout << "OrderStatus: GetCustomerByLastName:" << std::endl;
-    Print(get_customer_tasks.back()->get_operator()).execute();
-#endif
+    if (params.order_status_by == OrderStatusBy::CustomerLastName) {
+      auto get_customer_tasks = get_customer_by_name(params.c_last, params.c_d_id, params.c_w_id);
+      AbstractScheduler::schedule_tasks_and_wait(get_customer_tasks);
 
-    const auto customers_table = get_customer_tasks.back()->get_operator()->get_output();
-    const auto num_names = customers_table->row_count();
-    assert(num_names > 0);
+      const auto customers_table = get_customer_tasks.back()->get_operator()->get_output();
+      const auto num_names = customers_table->row_count();
+      assert(num_names > 0);
 
-    const auto row = (size_t)(ceil(num_names - 1) / 2);
+      const auto row = (size_t) (ceil(num_names - 1) / 2);
 
-    result.c_balance = customers_table->get_value<float>(0, row);
-    result.c_first = customers_table->get_value<std::string>(1, row);
-    result.c_middle = customers_table->get_value<std::string>(2, row);
-    result.c_last = params.c_last;
-    result.c_id = customers_table->get_value<int32_t>(3, row);
-  } else {
-    auto get_customer_tasks = get_customer_by_id(params.c_id, params.c_d_id, params.c_w_id);
-    AbstractScheduler::schedule_tasks_and_wait(get_customer_tasks);
+      result.c_balance = customers_table->get_value<float>(0, row);
+      result.c_first = customers_table->get_value<std::string>(1, row);
+      result.c_middle = customers_table->get_value<std::string>(2, row);
+      result.c_last = params.c_last;
+      result.c_id = customers_table->get_value<int32_t>(3, row);
+    } else {
+      auto get_customer_tasks = get_customer_by_id(params.c_id, params.c_d_id, params.c_w_id);
+      AbstractScheduler::schedule_tasks_and_wait(get_customer_tasks);
 
-    assert(get_customer_tasks.back()->get_operator()->get_output()->row_count() == 1);
+      assert(get_customer_tasks.back()->get_operator()->get_output()->row_count() == 1);
 
-    const auto customers_table = get_customer_tasks.back()->get_operator()->get_output();
+      const auto customers_table = get_customer_tasks.back()->get_operator()->get_output();
 
-    result.c_balance = customers_table->get_value<float>(0, 0);
-    result.c_first = customers_table->get_value<std::string>(1, 0);
-    result.c_middle = customers_table->get_value<std::string>(2, 0);
-    result.c_last = customers_table->get_value<std::string>(3, 0);
-    result.c_id = params.c_id;
-  }
+      result.c_balance = customers_table->get_value<float>(0, 0);
+      result.c_first = customers_table->get_value<std::string>(1, 0);
+      result.c_middle = customers_table->get_value<std::string>(2, 0);
+      result.c_last = customers_table->get_value<std::string>(3, 0);
+      result.c_id = params.c_id;
+    }
 
-  auto get_order_tasks = get_orders(result.c_id, params.c_d_id, params.c_w_id);
-  AbstractScheduler::schedule_tasks_and_wait(get_order_tasks);
+    auto get_order_tasks = get_orders(result.c_id, params.c_d_id, params.c_w_id);
+    AbstractScheduler::schedule_tasks_and_wait(get_order_tasks);
 
-#if VERBOSE
-  std::cout << "OrderStatus: GetOrders:" << std::endl;
-  Print(get_order_tasks.back()->get_operator()).execute();
-#endif
+    const auto orders_table = get_order_tasks.back()->get_operator()->get_output();
 
-  const auto orders_table = get_order_tasks.back()->get_operator()->get_output();
+    result.o_id = orders_table->get_value<int32_t>(0, 0);
+    result.o_carrier_id = orders_table->get_value<int32_t>(1, 0);
+    result.o_entry_d = orders_table->get_value<int32_t>(2, 0);
 
-  result.o_id = orders_table->get_value<int32_t>(0, 0);
-  result.o_carrier_id = orders_table->get_value<int32_t>(1, 0);
-  result.o_entry_d = orders_table->get_value<int32_t>(2, 0);
+    auto get_order_line_tasks = get_order_lines(result.o_id, params.c_d_id, params.c_w_id);
+    AbstractScheduler::schedule_tasks_and_wait(get_order_line_tasks);
 
-  auto get_order_line_tasks = get_order_lines(result.o_id, params.c_d_id, params.c_w_id);
-  AbstractScheduler::schedule_tasks_and_wait(get_order_line_tasks);
+    auto order_lines_table = get_order_line_tasks.back()->get_operator()->get_output();
 
-#if VERBOSE
-  std::cout << "OrderStatus: GetOrderLines:" << std::endl;
-  Print(get_order_line_tasks.back()->get_operator()).execute();
-#endif
+    result.order_lines.reserve(order_lines_table->row_count());
+    for (uint32_t r = 0; r < order_lines_table->row_count(); r++) {
+      OrderStatusOrderLine order_line;
 
-  auto order_lines_table = get_order_line_tasks.back()->get_operator()->get_output();
+      order_line.ol_i_id = order_lines_table->get_value<int32_t>(0, r);
+      order_line.ol_supply_w_id = order_lines_table->get_value<int32_t>(1, r);
+      order_line.ol_quantity = order_lines_table->get_value<int32_t>(2, r);
+      order_line.ol_amount = order_lines_table->get_value<float>(3, r);
+      order_line.ol_delivery_d = order_lines_table->get_value<int32_t>(4, r);
 
-  result.order_lines.reserve(order_lines_table->row_count());
-  for (uint32_t r = 0; r < order_lines_table->row_count(); r++) {
-    OrderStatusOrderLine order_line;
-
-    order_line.ol_i_id = order_lines_table->get_value<int32_t>(0, r);
-    order_line.ol_supply_w_id = order_lines_table->get_value<int32_t>(1, r);
-    order_line.ol_quantity = order_lines_table->get_value<int32_t>(2, r);
-    order_line.ol_amount = order_lines_table->get_value<float>(3, r);
-    order_line.ol_delivery_d = order_lines_table->get_value<int32_t>(4, r);
-
-    result.order_lines.emplace_back(order_line);
-  }
-
-#if VERBOSE
-  std::cout << "OrderStatus: Finished transaction" << std::endl;
-#endif
-
-  /**
-   * Commit
-   */
-  TransactionManager::get().prepare_commit(*_t_context);
-
-  auto commit = std::make_shared<CommitRecords>();
-  commit->set_transaction_context(_t_context);
-
-  auto commit_task = std::make_shared<OperatorTask>(commit);
-  commit_task->schedule();
-  commit_task->join();
-
-  TransactionManager::get().commit(*_t_context);
+      result.order_lines.emplace_back(order_line);
+    }
+  });
 
   return result;
 }
@@ -141,11 +110,11 @@ TaskVector
 OrderStatusRefImpl::get_customer_by_name(const std::string c_last, const int c_d_id,
                      const int c_w_id) {
   /**
- * SELECT c_balance, c_first, c_middle, c_id
- * FROM customer
- * WHERE c_last=:c_last AND c_d_id=:d_id AND c_w_id=:w_id
- * ORDER BY c_first;
- */
+   * SELECT c_balance, c_first, c_middle, c_id
+   * FROM customer
+   * WHERE c_last=:c_last AND c_d_id=:d_id AND c_w_id=:w_id
+   * ORDER BY c_first;
+   */
   auto gt_customer = std::make_shared<GetTable>("CUSTOMER");
   auto validate = std::make_shared<Validate>(gt_customer);
   auto first_filter = std::make_shared<TableScan>(validate, "C_LAST", "=", c_last);

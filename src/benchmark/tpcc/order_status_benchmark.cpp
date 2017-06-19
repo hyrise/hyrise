@@ -4,6 +4,7 @@
 
 #include "benchmark/benchmark.h"
 
+#include "concurrency/transaction_manager.hpp"
 #include "operators/get_table.hpp"
 #include "operators/limit.hpp"
 #include "operators/print.hpp"
@@ -29,8 +30,11 @@ class TPCCOrderStatusBenchmark : public TPCCBenchmarkFixture {
     auto c_w_id = 0;  // there is only one warehouse
 
     while (state.KeepRunning()) {
-      auto get_customer_tasks = impl.get_customer_by_name(c_last, c_d_id, c_w_id);
-      AbstractScheduler::schedule_tasks_and_wait(get_customer_tasks);
+      TransactionManager::get().run_transaction([&](std::shared_ptr<TransactionContext> t_context) {
+        impl.set_transaction_context(t_context);
+        auto get_customer_tasks = impl.get_customer_by_name(c_last, c_d_id, c_w_id);
+        AbstractScheduler::schedule_tasks_and_wait(get_customer_tasks);
+      });
     }
   }
 
@@ -42,8 +46,11 @@ class TPCCOrderStatusBenchmark : public TPCCBenchmarkFixture {
     auto c_id = _random_gen.nurand(1023, 1, 3000);
 
     while (state.KeepRunning()) {
-      auto get_customer_tasks = impl.get_customer_by_id(c_id, c_d_id, c_w_id);
-      AbstractScheduler::schedule_tasks_and_wait(get_customer_tasks);
+      TransactionManager::get().run_transaction([&](std::shared_ptr<TransactionContext> t_context) {
+        impl.set_transaction_context(t_context);
+        auto get_customer_tasks = impl.get_customer_by_id(c_id, c_d_id, c_w_id);
+        AbstractScheduler::schedule_tasks_and_wait(get_customer_tasks);
+      });
     }
   }
 
@@ -55,8 +62,11 @@ class TPCCOrderStatusBenchmark : public TPCCBenchmarkFixture {
     auto c_id = _random_gen.nurand(1023, 1, 3000);
 
     while (state.KeepRunning()) {
-      auto get_order_tasks = impl.get_orders(c_id, c_d_id, c_w_id);
-      AbstractScheduler::schedule_tasks_and_wait(get_order_tasks);
+      TransactionManager::get().run_transaction([&](std::shared_ptr<TransactionContext> t_context) {
+        impl.set_transaction_context(t_context);
+        auto get_order_tasks = impl.get_orders(c_id, c_d_id, c_w_id);
+        AbstractScheduler::schedule_tasks_and_wait(get_order_tasks);
+      });
     }
   }
 
@@ -67,8 +77,11 @@ class TPCCOrderStatusBenchmark : public TPCCBenchmarkFixture {
     auto c_w_id = 0;  // there is only one warehouse
 
     while (state.KeepRunning()) {
-      auto get_order_line_tasks = impl.get_order_lines(0, c_d_id, c_w_id);
-      AbstractScheduler::schedule_tasks_and_wait(get_order_line_tasks);
+      TransactionManager::get().run_transaction([&](std::shared_ptr<TransactionContext> t_context) {
+        impl.set_transaction_context(t_context);
+        auto get_order_line_tasks = impl.get_order_lines(0, c_d_id, c_w_id);
+        AbstractScheduler::schedule_tasks_and_wait(get_order_line_tasks);
+      });
     }
   }
 

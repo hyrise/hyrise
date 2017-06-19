@@ -95,6 +95,11 @@ class TransactionManager {
 
   /** @} */
 
+  /**
+   * Helper: Create a transaction context, run a function with it and commit the transaction afterwards
+   */
+  void run_transaction(const std::function<void(std::shared_ptr<TransactionContext>)> & fn);
+
  private:
   TransactionManager();
 
