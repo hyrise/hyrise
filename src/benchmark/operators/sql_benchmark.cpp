@@ -131,6 +131,7 @@ BENCHMARK_F(SQLBenchmark, BM_Q2QueryOperatorWithQueryPlanCache)(benchmark::State
   while (state.KeepRunning()) {
     SQLQueryOperator operator_q2(Q2, false);
     operator_q2.execute();
+    operator_q2.get_query_plan().cloneTasks();
   }
 }
 

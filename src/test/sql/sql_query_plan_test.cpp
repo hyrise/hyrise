@@ -29,7 +29,7 @@ class SQLQueryPlanTest : public BaseTest {
 };
 
 TEST_F(SQLQueryPlanTest, SQLQueryPlanCloneTest) {
-  std::string query1 = "SELECT * FROM table_a;";
+  std::string query1 = "SELECT a FROM table_a;";
 
   SQLQueryOperator op(query1, false);
   op.execute();
@@ -37,14 +37,16 @@ TEST_F(SQLQueryPlanTest, SQLQueryPlanCloneTest) {
   // Get the query plan.
   const SQLQueryPlan& plan = op.get_query_plan();
   auto tasks = plan.tasks();
-  ASSERT_EQ(2u, tasks.size());
+  ASSERT_EQ(3u, tasks.size());
   EXPECT_EQ("GetTable", tasks[0]->get_operator()->name());
-  EXPECT_EQ("SQLResultOperator", tasks[1]->get_operator()->name());
+  EXPECT_EQ("Projection", tasks[1]->get_operator()->name());
+  EXPECT_EQ("SQLResultOperator", tasks[2]->get_operator()->name());
 
   auto cloned_tasks = plan.cloneTasks();
-  ASSERT_EQ(2u, cloned_tasks.size());
+  ASSERT_EQ(3u, cloned_tasks.size());
   EXPECT_EQ("GetTable", cloned_tasks[0]->get_operator()->name());
-  EXPECT_EQ("SQLResultOperator", cloned_tasks[1]->get_operator()->name());
+  EXPECT_EQ("Projection", cloned_tasks[1]->get_operator()->name());
+  EXPECT_EQ("SQLResultOperator", cloned_tasks[2]->get_operator()->name());
 
   // Execute both task lists.
   for (auto task : tasks) {
