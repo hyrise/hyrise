@@ -1,7 +1,7 @@
 # Sources and libraries shared among the different builds of the lib
 set(
     SOURCES
-        defines.hpp
+    defines.hpp
     random_generator.hpp
     new_order.cpp
     new_order.hpp
