@@ -10,8 +10,8 @@
 #include "scheduler/job_task.hpp"
 #include "scheduler/node_queue_scheduler.hpp"
 #include "scheduler/topology.hpp"
-#include "sql/sql_query_plan_cache.hpp"
 #include "sql/sql_query_operator.hpp"
+#include "sql/sql_query_plan_cache.hpp"
 #include "storage/storage_manager.hpp"
 
 namespace opossum {
@@ -35,14 +35,15 @@ TEST_F(SQLQueryPlanTest, SQLQueryPlanCloneTest) {
   op.execute();
 
   // Get the query plan.
-  const SQLQueryPlan& plan = op.get_query_plan();
-  auto tasks = plan.tasks();
+  const SQLQueryPlan& plan1 = op.get_query_plan();
+  auto tasks = plan1.tasks();
   ASSERT_EQ(3u, tasks.size());
   EXPECT_EQ("GetTable", tasks[0]->get_operator()->name());
   EXPECT_EQ("Projection", tasks[1]->get_operator()->name());
   EXPECT_EQ("SQLResultOperator", tasks[2]->get_operator()->name());
 
-  auto cloned_tasks = plan.cloneTasks();
+  const SQLQueryPlan plan2 = plan1.recreate();
+  auto cloned_tasks = plan2.tasks();
   ASSERT_EQ(3u, cloned_tasks.size());
   EXPECT_EQ("GetTable", cloned_tasks[0]->get_operator()->name());
   EXPECT_EQ("Projection", cloned_tasks[1]->get_operator()->name());
@@ -60,7 +61,6 @@ TEST_F(SQLQueryPlanTest, SQLQueryPlanCloneTest) {
   // Compare results.
   EXPECT_TABLE_EQ(tasks.back()->get_operator()->get_output(), cloned_tasks.back()->get_operator()->get_output());
 }
-
 
 TEST_F(SQLQueryPlanTest, SQLQueryPlanCloneWithSchedulerTest) {
   std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_float_filtered.tbl", 2);
@@ -83,12 +83,12 @@ TEST_F(SQLQueryPlanTest, SQLQueryPlanCloneWithSchedulerTest) {
   // Get a copy and schedule all tasks.
   CurrentScheduler::set(std::make_shared<NodeQueueScheduler>(Topology::create_fake_numa_topology(8, 4)));
 
-  auto cloned_tasks = tmpl.cloneTasks();
+  auto cloned_tasks = tmpl.recreate().tasks();
   for (auto task : cloned_tasks) {
     task->schedule();
   }
 
-  auto cloned_tasks2 = tmpl.cloneTasks();
+  auto cloned_tasks2 = tmpl.recreate().tasks();
   for (auto task : cloned_tasks2) {
     task->schedule();
   }

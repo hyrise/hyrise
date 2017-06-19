@@ -24,7 +24,7 @@ bool SQLParseTreeCache::try_get(const std::string& query, std::shared_ptr<SQLPar
   if (_cache.capacity() == 0) {
     return false;
   }
-  
+
   std::lock_guard<std::mutex> lock(_mutex);
   if (!_cache.has(query)) {
     return false;

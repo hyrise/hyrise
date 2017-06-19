@@ -44,20 +44,29 @@ bool SQLQueryOperator::hit_parse_tree_cache() const { return _hit_parse_tree_cac
 bool SQLQueryOperator::hit_query_plan_cache() const { return _hit_query_plan_cache; }
 
 std::shared_ptr<const Table> SQLQueryOperator::on_execute(std::shared_ptr<TransactionContext> context) {
-  
-  // Check the query plan cache.
-  if (_query_plan_cache.try_get(_query, &_plan)) {
-    _hit_query_plan_cache = true;
+  // Compile the query.
+  compile_query(_query);
 
-    if (_schedule_plan) {
-      for (const auto& task : _plan.cloneTasks()) {
-        task->schedule();
-      }
+  // Schedule all tasks in query plan.
+  if (_schedule_plan) {
+    for (const auto& task : _plan.tasks()) {
+      task->schedule();
     }
-
-    return nullptr;
   }
 
+  return nullptr;
+}
+
+void SQLQueryOperator::compile_query(const std::string& query) {
+  // Check the query plan cache.
+  SQLQueryPlan cached_plan;
+  if (_query_plan_cache.try_get(_query, &cached_plan)) {
+    _hit_query_plan_cache = true;
+    _plan = cached_plan.recreate();
+    return;
+  }
+
+  // parse the query.
   std::shared_ptr<SQLParserResult> parse_result = parse_query(_query);
 
   // Populates the query plan in _plan.
@@ -70,17 +79,8 @@ std::shared_ptr<const Table> SQLQueryOperator::on_execute(std::shared_ptr<Transa
     _plan.add_task(_result_task);
   }
 
-  // Schedule all tasks in query plan.
-  if (_schedule_plan) {
-    for (const auto& task : _plan.tasks()) {
-      task->schedule();
-    }
-  }
-
   // Cache the plan.
   _query_plan_cache.set(_query, _plan);
-
-  return nullptr;
 }
 
 std::shared_ptr<SQLParserResult> SQLQueryOperator::parse_query(const std::string& query) {

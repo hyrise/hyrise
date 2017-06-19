@@ -38,9 +38,7 @@ SQLQueryPlan SQLQueryPlanCache::get(const std::string& query) {
   return _cache.get(query);
 }
 
-void SQLQueryPlanCache::clear_and_resize(size_t capacity) {
-  _cache = LRUCache<std::string, SQLQueryPlan>(capacity);
-}
+void SQLQueryPlanCache::clear_and_resize(size_t capacity) { _cache = LRUCache<std::string, SQLQueryPlan>(capacity); }
 
 void SQLQueryPlanCache::clear() {
   size_t capacity = _cache.capacity();

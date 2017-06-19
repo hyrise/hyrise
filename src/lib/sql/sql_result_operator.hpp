@@ -28,8 +28,8 @@ class SQLResultOperator : public AbstractReadOnlyOperator {
   // Called by SQLQueryOperator to dynamically set the input operator.
   // Most common operators require the input to be given at construction.
   void set_input_operator(const std::shared_ptr<const AbstractOperator> input);
-  
-  virtual std::shared_ptr<AbstractOperator> clone() const;
+
+  virtual std::shared_ptr<AbstractOperator> recreate() const;
 };
 
 }  // namespace opossum

@@ -10,8 +10,8 @@
 #include "scheduler/job_task.hpp"
 #include "scheduler/node_queue_scheduler.hpp"
 #include "scheduler/topology.hpp"
-#include "sql/sql_query_plan_cache.hpp"
 #include "sql/sql_query_operator.hpp"
+#include "sql/sql_query_plan_cache.hpp"
 #include "storage/storage_manager.hpp"
 
 namespace opossum {
@@ -77,8 +77,8 @@ TEST_F(SQLQueryPlanCacheTest, SQLQueryPlanCacheTest) {
 
   const SQLQueryPlan cached_plan = cache.get(query1);
 
-  auto task_list1 = cached_plan.cloneTasks();
-  auto task_list2 = cached_plan.cloneTasks();
+  auto task_list1 = cached_plan.recreate().tasks();
+  auto task_list2 = cached_plan.recreate().tasks();
 
   for (auto task : task_list1) {
     task->execute();
@@ -93,7 +93,7 @@ TEST_F(SQLQueryPlanCacheTest, SQLQueryPlanCacheTest) {
 
 TEST_F(SQLQueryPlanCacheTest, QueryOperatorParseTreeCache) {
   query_plan_cache_hits = 0;
-  
+
   SQLQueryPlanCache& cache = SQLQueryOperator::get_query_plan_cache();
   cache.clear_and_resize(2);
 

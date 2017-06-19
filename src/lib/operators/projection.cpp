@@ -25,9 +25,9 @@ uint8_t Projection::num_in_tables() const { return 1; }
 
 uint8_t Projection::num_out_tables() const { return 1; }
 
-std::shared_ptr<AbstractOperator> Projection::clone() const {
+std::shared_ptr<AbstractOperator> Projection::recreate() const {
   if (!_simple_projection.empty()) {
-    return std::make_shared<Projection>(nullptr, _simple_projection);    
+    return std::make_shared<Projection>(nullptr, _simple_projection);
   }
   return std::make_shared<Projection>(nullptr, _projection_definitions);
 }

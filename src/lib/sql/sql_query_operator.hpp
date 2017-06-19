@@ -45,13 +45,16 @@ class SQLQueryOperator : public AbstractOperator {
 
   // Static. Return the running instance of the parse tree cache.
   static SQLParseTreeCache& get_parse_tree_cache();
-  
+
   static SQLQueryPlanCache& get_query_plan_cache();
 
  protected:
   std::shared_ptr<const Table> on_execute(std::shared_ptr<TransactionContext> context) override;
 
   std::shared_ptr<hsql::SQLParserResult> parse_query(const std::string& query);
+
+  // Compiles the string into a SQLQueryPlan stored in _plan.
+  void compile_query(const std::string& query);
 
   // Compiles the given parse result into an operator plan.
   void compile_parse_result(std::shared_ptr<hsql::SQLParserResult> result);
@@ -97,6 +100,7 @@ class SQLQueryOperator : public AbstractOperator {
   static SQLParseTreeCache _prepared_stmts;
 
   // Static.
+  // Automatic caching of query plans during runtime.
   static SQLQueryPlanCache _query_plan_cache;
 };
 
