@@ -25,6 +25,8 @@
 #include "optimizer/table_statistics.hpp"
 #include "storage/storage_manager.hpp"
 
+#include "SQLParser.h"
+
 using hsql::Expr;
 using hsql::SQLParser;
 using hsql::SQLParserResult;
@@ -39,43 +41,13 @@ SQLQueryTranslator::SQLQueryTranslator() {}
 
 SQLQueryTranslator::~SQLQueryTranslator() {}
 
-const std::vector<std::shared_ptr<OperatorTask>>& SQLQueryTranslator::get_tasks() { return _tasks; }
+const SQLQueryPlan& SQLQueryTranslator::get_query_plan() { return _plan; }
 
 const std::string& SQLQueryTranslator::get_error_msg() { return _error_msg; }
 
 void SQLQueryTranslator::reset() {
-  _tasks.clear();
+  _plan.clear();
   _error_msg = "";
-}
-
-bool SQLQueryTranslator::translate_query(const std::string& query) {
-  hsql::SQLParserResult result;
-
-  // Parse the query.
-  if (!parse_query(query, &result)) {
-    return false;
-  }
-
-  // Translate into execution plan.
-  if (!translate_parse_result(result)) {
-    return false;
-  }
-
-  return true;
-}
-
-bool SQLQueryTranslator::parse_query(const std::string& query, hsql::SQLParserResult* result) {
-  SQLParser::parseSQLString(query, result);
-
-  if (!result->isValid()) {
-    std::stringstream ss;
-    ss << "SQL Parsing failed: " << result->errorMsg();
-    ss << " (L" << result->errorLine() << ":" << result->errorColumn() << ")";
-    _error_msg = ss.str();
-    return false;
-  }
-
-  return true;
 }
 
 bool SQLQueryTranslator::translate_parse_result(const hsql::SQLParserResult& result) {
@@ -96,7 +68,9 @@ bool SQLQueryTranslator::translate_statement(const SQLStatement& statement) {
       const SelectStatement& select = (const SelectStatement&)statement;
       return _translate_select(select);
     }
-
+    case hsql::kStmtPrepare: {
+      return true;
+    }
     default:
       _error_msg = "Can only translate SELECT queries at the moment!";
       return false;
@@ -119,10 +93,10 @@ bool SQLQueryTranslator::_translate_select(const SelectStatement& select) {
 
   // Translate WHERE.
   // Add table scan if applicable.
-  // TODO(tim): if we have multiple input tables, _tasks.back() might not be the correct table for the filter.
+  // TODO(tim): if we have multiple input tables, _plan.back() might not be the correct table for the filter.
   if (select.whereClause != nullptr) {
     Expr& where = *select.whereClause;
-    auto input_task = _tasks.back();
+    auto input_task = _plan.back();
 
     if (!_translate_filter_expr(where, input_task)) {
       return false;
@@ -131,7 +105,7 @@ bool SQLQueryTranslator::_translate_select(const SelectStatement& select) {
 
   // Create TableScans in the optimal order as estimated by their intermediate result sizes.
   if (_filters_by_table.size() > 0) {
-    auto input_task = _tasks.back();
+    auto input_task = _plan.back();
 
     for (auto& filter : _filters_by_table) {
       auto table_filters = filter.second;
@@ -171,7 +145,7 @@ bool SQLQueryTranslator::_translate_select(const SelectStatement& select) {
         input_task->set_as_predecessor_of(scan_task);
 
         // Add task to the list, and use this scan task as input for the next scan.
-        _tasks.push_back(scan_task);
+        _plan.add_task(scan_task);
         input_task = scan_task;
       }
     }
@@ -187,13 +161,13 @@ bool SQLQueryTranslator::_translate_select(const SelectStatement& select) {
   // Translate SELECT list.
   // Add projection for select list.
   // TODO(torpedro): Handle DISTINCT.
-  if (!_translate_projection(*select.selectList, _tasks.back())) {
+  if (!_translate_projection(*select.selectList, _plan.back())) {
     return false;
   }
 
   // Translate ORDER BY.
   if (select.order != nullptr) {
-    if (!_translate_order_by(*select.order, _tasks.back())) {
+    if (!_translate_order_by(*select.order, _plan.back())) {
       return false;
     }
   }
@@ -234,7 +208,7 @@ bool SQLQueryTranslator::_translate_filter_expr(const hsql::Expr& expr,
       if (is_base_table) {
         return _translate_filter_expr(*expr.expr2, input_task);
       } else {
-        return _translate_filter_expr(*expr.expr2, _tasks.back());
+        return _translate_filter_expr(*expr.expr2, _plan.back());
       }
 
     default:
@@ -271,7 +245,7 @@ bool SQLQueryTranslator::_translate_filter_expr(const hsql::Expr& expr,
   }
 
   // If we filter on a base table, temporarily store the parameters for the table scan and create the task later.
-  // Otherwise append the TableScan to `_tasks`.
+  // Otherwise append the TableScan to `_plan`.
   if (is_base_table) {
     auto table_name = get_table_operator->table_name();
     _filters_by_table[table_name].emplace_back(ColumnName(column_name), filter_op, value);
@@ -280,7 +254,7 @@ bool SQLQueryTranslator::_translate_filter_expr(const hsql::Expr& expr,
         std::make_shared<TableScan>(input_task->get_operator(), ColumnName(column_name), filter_op, value);
     auto scan_task = std::make_shared<OperatorTask>(table_scan);
     input_task->set_as_predecessor_of(scan_task);
-    _tasks.push_back(scan_task);
+    _plan.add_task(scan_task);
   }
 
   return true;
@@ -312,7 +286,7 @@ bool SQLQueryTranslator::_translate_projection(const std::vector<hsql::Expr*>& e
   auto projection = std::make_shared<Projection>(input_task->get_operator(), columns);
   auto projection_task = std::make_shared<OperatorTask>(projection);
   input_task->set_as_predecessor_of(projection_task);
-  _tasks.push_back(projection_task);
+  _plan.add_task(projection_task);
   return true;
 }
 
@@ -331,7 +305,7 @@ bool SQLQueryTranslator::_translate_order_by(const std::vector<hsql::OrderDescri
     auto sort = std::make_shared<Sort>(prev_task->get_operator(), name, asc);
     auto sort_task = std::make_shared<OperatorTask>(sort);
     prev_task->set_as_predecessor_of(sort_task);
-    _tasks.push_back(sort_task);
+    _plan.add_task(sort_task);
 
     prev_task = sort_task;
   }
@@ -344,7 +318,7 @@ bool SQLQueryTranslator::_translate_table_ref(const hsql::TableRef& table) {
     case hsql::kTableName: {
       auto get_table = std::make_shared<GetTable>(table.name);
       auto task = std::make_shared<OperatorTask>(get_table);
-      _tasks.push_back(task);
+      _plan.add_task(task);
       return true;
     }
     case hsql::kTableSelect: {
@@ -358,12 +332,12 @@ bool SQLQueryTranslator::_translate_table_ref(const hsql::TableRef& table) {
       if (!_translate_table_ref(*join_def.left)) {
         return false;
       }
-      auto left_task = _tasks.back();
+      auto left_task = _plan.back();
 
       if (!_translate_table_ref(*join_def.right)) {
         return false;
       }
-      auto right_task = _tasks.back();
+      auto right_task = _plan.back();
 
       // Determine join condition.
       const Expr& condition = *join_def.condition;
@@ -410,7 +384,7 @@ bool SQLQueryTranslator::_translate_table_ref(const hsql::TableRef& table) {
       auto task = std::make_shared<OperatorTask>(join);
       left_task->set_as_predecessor_of(task);
       right_task->set_as_predecessor_of(task);
-      _tasks.push_back(task);
+      _plan.add_task(task);
       return true;
     }
     case hsql::kTableCrossProduct: {

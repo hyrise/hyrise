@@ -9,19 +9,21 @@
 #include "SQLParser.h"
 #include "all_parameter_variant.hpp"
 #include "scheduler/operator_task.hpp"
+#include "sql/sql_parse_tree_cache.hpp"
+#include "sql/sql_query_plan.hpp"
 
 namespace opossum {
 
-// The SQLQueryTranslator offers functionality to parse a query string and
-// transform it into an execution plan. This object should not be called
-// concurrently.
+// The SQLQueryTranslator offers functionality to translate a
+// SQLStatement or SQLParserResult object into a SQLQueryPlan.
+// The translator should not be used concurrently.
 class SQLQueryTranslator {
  public:
   SQLQueryTranslator();
   virtual ~SQLQueryTranslator();
 
   // Returns the list of tasks that were created during translation.
-  const std::vector<std::shared_ptr<OperatorTask>>& get_tasks();
+  const SQLQueryPlan& get_query_plan();
 
   // Get the error message, if any exists.
   const std::string& get_error_msg();
@@ -29,15 +31,8 @@ class SQLQueryTranslator {
   // Destroy the currently stored execution plan and state.
   void reset();
 
-  // Parses the given query into a C++ object representation.
-  bool parse_query(const std::string& query, hsql::SQLParserResult* result);
-
   // Translates the give SQL result. Adds the generated execution plan to _tasks.
   bool translate_parse_result(const hsql::SQLParserResult& result);
-
-  // Translates the give SQL query. Adds the generated execution plan to _tasks.
-  // Calls parse_query and translate_parse_result to get the result.
-  bool translate_query(const std::string& query);
 
   // Translates the single given SQL statement. Adds the generated execution plan to _tasks.
   bool translate_statement(const hsql::SQLStatement& statement);
@@ -65,7 +60,7 @@ class SQLQueryTranslator {
   static std::string _get_column_name(const hsql::Expr& expr);
 
   // Generated execution plan.
-  std::vector<std::shared_ptr<OperatorTask>> _tasks;
+  SQLQueryPlan _plan;
 
   // Temporarily store filters for each table to determine best chaining order.
   std::unordered_map<std::string, std::vector<std::tuple<std::string, std::string, AllParameterVariant>>>
