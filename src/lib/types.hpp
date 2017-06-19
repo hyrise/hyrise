@@ -32,7 +32,7 @@ STRONG_TYPEDEF(uint32_t, ValueID);  // Cannot be larger than ChunkOffset
 using WorkerID = uint32_t;
 STRONG_TYPEDEF(uint32_t, NodeID);
 using TaskID = uint32_t;
-STRONG_TYPEDEF(uint32_t, CpuID);
+STRONG_TYPEDEF(int32_t, CpuID);
 
 // When changing these to 64-bit types, reading and writing to them might not be atomic anymore.
 // Among others, the validate operator might break when another operator is simultaneously writing begin or end CIDs.
