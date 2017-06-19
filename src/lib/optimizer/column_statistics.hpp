@@ -38,7 +38,8 @@ class ColumnStatistics {
   }
 
  private:
-  size_t update_distinct_count();
+  void update_distinct_count();
+  void update_min_max();
 
   const std::weak_ptr<Table> _table;
   const std::string& _column_name;

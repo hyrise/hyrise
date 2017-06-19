@@ -63,10 +63,31 @@ std::shared_ptr<TableStatistics> TableStatistics::predicate_statistics(const std
   auto column_statistics = get_column_statistics(column_name);  // trigger lazy initialization
   auto clone = std::make_shared<TableStatistics>(*this);
   if (op == "=") {
+    if (casted_value1 < column_statistics->get_min() || casted_value1 > column_statistics->get_max()) {
+      clone->_row_count = 0;
+      return clone;
+    }
     auto distinct_count = column_statistics->get_distinct_count();
     clone->_row_count = _row_count / static_cast<double>(distinct_count);
     clone->_column_statistics[column_name] =
         std::make_shared<ColumnStatistics>(1, casted_value1, casted_value1, column_name);
+  } else if (op == "!=") {
+    // disregarding A = 5 AND A != 5
+    // (just don't put this into a query!)
+    auto distinct_count = column_statistics->get_distinct_count();
+    clone->_row_count = _row_count - _row_count / static_cast<double>(distinct_count);
+    clone->_column_statistics[column_name] =
+        std::make_shared<ColumnStatistics>(distinct_count-1, column_statistics->get_min(), column_statistics->get_max(), column_name);
+  } else if (op == "<") {
+    Fail(std::string("operator not yet implemented: ") + op);
+  } else if (op == "<=") {
+    Fail(std::string("operator not yet implemented: ") + op);
+  } else if (op == ">") {
+    Fail(std::string("operator not yet implemented: ") + op);
+  } else if (op == ">=") {
+    Fail(std::string("operator not yet implemented: ") + op);
+  } else if (op == "BETWEEN") {
+    Fail(std::string("operator not yet implemented: ") + op);
   } else {
     // TODO(mp): extend for other comparison operators
     // Brace yourselves.
@@ -75,19 +96,6 @@ std::shared_ptr<TableStatistics> TableStatistics::predicate_statistics(const std
     clone->_row_count = _row_count / static_cast<double>(distinct_count);
     // Fail(std::string("unknown operator ") + op);
   }
-  // else if (op == "!=") {
-  // Fail(std::string("operator not yet implemented: ") + op);
-  // } else if (op == "<") {
-  //   Fail(std::string("operator not yet implemented: ") + op);
-  // } else if (op == "<=") {
-  //   Fail(std::string("operator not yet implemented: ") + op);
-  // } else if (op == ">") {
-  //   Fail(std::string("operator not yet implemented: ") + op);
-  // } else if (op == ">=") {
-  //   Fail(std::string("operator not yet implemented: ") + op);
-  // } else if (op == "BETWEEN") {
-  //   Fail(std::string("operator not yet implemented: ") + op);
-  // } else
   return clone;
 }
 
