@@ -131,6 +131,7 @@ Contact: firstname.lastname@hpi.de
 -	Torben	Meyer
 -	David	Schumann
 -	Daniel	Stolpe
+- Jonathan Striebel
 -	Nils	Thamm
 -	Carsten	Walther
 -	Fabian	Wiebe
