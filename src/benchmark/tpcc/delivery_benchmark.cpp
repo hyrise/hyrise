@@ -1,6 +1,5 @@
 #include <cassert>
 #include <ctime>
-#include <iostream>
 #include <memory>
 #include <string>
 #include <utility>
