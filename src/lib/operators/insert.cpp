@@ -7,6 +7,7 @@
 
 #include "concurrency/transaction_context.hpp"
 #include "storage/storage_manager.hpp"
+#include "storage/untyped_dictionary_column.hpp"
 #include "storage/value_column.hpp"
 #include "utils/assert.hpp"
 
@@ -62,6 +63,8 @@ const std::string Insert::name() const { return "Insert"; }
 uint8_t Insert::num_in_tables() const { return 1; }
 
 std::shared_ptr<const Table> Insert::on_execute(std::shared_ptr<TransactionContext> context) {
+  context->register_rw_operator(this);
+
   _target_table = StorageManager::get().get_table(_target_table_name);
 
   // These TypedColumnProcessors kind of retrieve the template parameter of the columns.
@@ -89,6 +92,12 @@ std::shared_ptr<const Table> Insert::on_execute(std::shared_ptr<TransactionConte
     start_chunk_id = _target_table->chunk_count() - 1;
     auto& last_chunk = _target_table->get_chunk(start_chunk_id);
     start_index = last_chunk.size();
+
+    // If last chunk is compressed, add a new uncompressed chunk
+    if (std::dynamic_pointer_cast<UntypedDictionaryColumn>(last_chunk.get_column(0)) != nullptr) {
+      _target_table->create_new_chunk();
+      total_chunks_inserted++;
+    }
 
     auto remaining_rows = total_rows_to_insert;
     while (remaining_rows > 0) {

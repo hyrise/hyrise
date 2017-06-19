@@ -23,9 +23,16 @@ class AbstractReadWriteOperator : public AbstractOperator {
 
   void execute() override {
     _transaction_context->on_operator_started();
-    _transaction_context->register_rw_operator(this);
     _output = on_execute(_transaction_context);
     _transaction_context->on_operator_finished();
+  }
+
+  /**
+   * Commits the operator and triggers any potential work following commits.
+   */
+  void commit(const CommitID cid) {
+    commit_records(cid);
+    finish_commit();
   }
 
   /**
@@ -33,14 +40,20 @@ class AbstractReadWriteOperator : public AbstractOperator {
    * modifications will be visible as soon as the TransactionManager has completed the commit for this cid.
    * Unlike on_execute, where failures are expected, the commit operation cannot fail.
    */
-  virtual void commit_records(const CommitID cid) = 0;
+  virtual void commit_records(const CommitID cid) {}
+
+  /**
+   * Called immediately after commit_records().
+   * This is the place to do any work after modifying operators were successful, e.g. updating statistics.
+   */
+  virtual void finish_commit() {}
 
   /**
    * Rolls back the operator by unlocking all modified rows. No other action is necessary since commit_records should
    * have never been called and the modifications were not made visible in the first place.
    * Like commit, the rollback operation cannot fail.
    */
-  virtual void rollback_records() = 0;
+  virtual void rollback_records() {}
 
   /**
    * Returns true if a previous call to on_execute produced an error.

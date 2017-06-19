@@ -16,6 +16,8 @@ Delete::Delete(const std::string& table_name, const std::shared_ptr<const Abstra
 std::shared_ptr<const Table> Delete::on_execute(std::shared_ptr<TransactionContext> context) {
   DebugAssert(_execution_input_valid(context), "Input to Delete isn't valid");
 
+  context->register_rw_operator(this);
+
   _table = StorageManager::get().get_table(_table_name);
   _transaction_id = context->transaction_id();
 
@@ -55,6 +57,11 @@ void Delete::commit_records(const CommitID cid) {
       // We do not unlock the rows so subsequent transactions properly fail when attempting to update these rows.
     }
   }
+}
+
+void Delete::finish_commit() {
+  const auto num_rows_deleted = input_table_left()->row_count();
+  _table->inc_invalid_row_count(num_rows_deleted);
 }
 
 void Delete::rollback_records() {
