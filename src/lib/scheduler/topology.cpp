@@ -69,10 +69,10 @@ std::shared_ptr<Topology> Topology::create_numa_topology(uint32_t max_num_cores)
 
       numa_node_to_cpus(n, cpu_bitmask);
 
-      for (int c = 0; c < num_configured_cpus; c++) {
+      for (CpuID c{0}; c < num_configured_cpus; c++) {
         if (numa_bitmask_isbitset(cpu_bitmask, c)) {
           if (max_num_cores == 0 || core_count < max_num_cores) {
-            cpus.emplace_back(TopologyCpu(CpuID{c}));
+            cpus.emplace_back(TopologyCpu(c));
           }
           core_count++;
         }
