@@ -29,7 +29,7 @@ class Projection : public AbstractReadOnlyOperator {
   uint8_t num_in_tables() const override;
   uint8_t num_out_tables() const override;
 
-  virtual std::shared_ptr<AbstractOperator> recreate() const;
+  std::shared_ptr<AbstractOperator> recreate() const override;
 
  protected:
   ProjectionDefinitions _projection_definitions;

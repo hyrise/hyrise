@@ -29,7 +29,7 @@ class SQLResultOperator : public AbstractReadOnlyOperator {
   // Most common operators require the input to be given at construction.
   void set_input_operator(const std::shared_ptr<const AbstractOperator> input);
 
-  virtual std::shared_ptr<AbstractOperator> recreate() const;
+  std::shared_ptr<AbstractOperator> recreate() const override;
 };
 
 }  // namespace opossum
