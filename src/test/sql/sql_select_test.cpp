@@ -16,7 +16,9 @@
 
 namespace opossum {
 
-class SQLSelectTest : public BaseTest {
+typedef std::tuple<std::string, size_t, std::string> SQLTestParam;
+
+class SQLSelectTest : public BaseTest, public ::testing::WithParamInterface<SQLTestParam> {
  protected:
   void SetUp() override {
     std::shared_ptr<Table> table_a = load_table("src/test/tables/int_float.tbl", 2);
@@ -43,10 +45,27 @@ class SQLSelectTest : public BaseTest {
       return false;
     }
 
-    return _translator.translate_parse_result(parse_result);
+    // Compile the parse result.
+    if (!_translator.translate_parse_result(parse_result)) {
+      return false;
+    }
+
+    _plan = _translator.get_query_plan();
+    return true;
+  }
+
+  void execute_query_plan() {
+    for (const auto& task : _plan.tasks()) {
+      task->get_operator()->execute();
+    }
+  }
+
+  std::shared_ptr<const Table> get_plan_result() {
+    return _plan.back()->get_operator()->get_output();
   }
 
   SQLQueryTranslator _translator;
+  SQLQueryPlan _plan;
 };
 
 TEST_F(SQLSelectTest, BasicSuccessTest) {
@@ -62,7 +81,7 @@ TEST_F(SQLSelectTest, SelectStarAllTest) {
   ASSERT_TRUE(compile_query(query));
 
   auto tasks = _translator.get_query_plan().tasks();
-  ASSERT_EQ(1u, tasks.size());
+  ASSERT_EQ(1u, _plan.size());
 
   // Check GetTable task.
   auto get_table_task = tasks[0];
@@ -76,153 +95,62 @@ TEST_F(SQLSelectTest, SelectStarAllTest) {
   EXPECT_TABLE_EQ(get_table->get_output(), expected_result);
 }
 
-TEST_F(SQLSelectTest, SelectWithSingleCondition) {
-  const std::string query = "SELECT * FROM table_a WHERE a >= 1234;";
+
+
+TEST_P(SQLSelectTest, GenericQueryTest) {
+  // Inside a test, access the test parameter with the GetParam() method
+  // of the TestWithParam<T> class:
+  SQLTestParam param = GetParam();
+  std::string query = std::get<0>(param);
+  size_t num_operators = std::get<1>(param);
+  std::string expected_result_file = std::get<2>(param);
+
   ASSERT_TRUE(compile_query(query));
+  ASSERT_EQ(num_operators, _plan.size());
+  execute_query_plan();
 
-  auto tasks = _translator.get_query_plan().tasks();
-  ASSERT_EQ(2u, tasks.size());
-
-  auto get_table = (const std::shared_ptr<GetTable>&)tasks[0]->get_operator();
-  auto table_scan = (const std::shared_ptr<TableScan>&)tasks[1]->get_operator();
-
-  get_table->execute();
-  table_scan->execute();
-
-  std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_float_filtered2.tbl", 1);
-  EXPECT_TABLE_EQ(table_scan->get_output(), expected_result);
+  auto expected_result = load_table(expected_result_file, 1);
+  EXPECT_TABLE_EQ(get_plan_result(), expected_result);
 }
 
-TEST_F(SQLSelectTest, SelectWithAndCondition) {
-  const std::string query = "SELECT * FROM table_a WHERE a >= 1234 AND b < 457.9";
-  ASSERT_TRUE(compile_query(query));
+const SQLTestParam sql_query_tests[] = {
+  SQLTestParam{"SELECT * FROM table_a WHERE a >= 1234;", 2u, "src/test/tables/int_float_filtered2.tbl"},
+  SQLTestParam{"SELECT * FROM table_a WHERE a >= 1234 AND b < 457.9", 3u, "src/test/tables/int_float_filtered.tbl"},
+  SQLTestParam{"SELECT a FROM table_a;", 2u, "src/test/tables/int.tbl"},
+  // TODO(torpedro): Enable this test, after implementing BETWEEN support in translator.
+  // SQLTestParam{"SELECT * FROM TestTable WHERE a BETWEEN 122 AND 124", 2u, "src/test/tables/int_string_filtered.tbl"},
+  SQLTestParam{"SELECT a, b FROM table_a ORDER BY a;", 3u, "src/test/tables/int_float_sorted.tbl"},
+  SQLTestParam{"SELECT a FROM (SELECT a, b FROM table_a WHERE a > 1 ORDER BY b) WHERE a > 0 ORDER BY a;", 7u, "src/test/tables/int.tbl"},
+  SQLTestParam{"SELECT \"left\".a, \"left\".b, \"right\".a, \"right\".b FROM table_a AS \"left\" JOIN table_b AS \"right\" ON a = a;", 4u, "src/test/tables/joinoperators/int_inner_join.tbl"},
+  SQLTestParam{"SELECT * FROM table_a AS \"left\" LEFT JOIN table_b AS \"right\" ON a = a;", 3u, "src/test/tables/joinoperators/int_left_join.tbl"},
+};
 
-  auto tasks = _translator.get_query_plan().tasks();
-  ASSERT_EQ(3u, tasks.size());
+INSTANTIATE_TEST_CASE_P(GenericQueryTest,
+                        SQLSelectTest,
+                        ::testing::ValuesIn(sql_query_tests));
 
-  for (const auto task : tasks) {
-    task->get_operator()->execute();
-  }
-
-  std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_float_filtered.tbl", 2);
-  EXPECT_TABLE_EQ(tasks.back()->get_operator()->get_output(), expected_result);
-}
-
-// TEST_F(SQLSelectTest, SelectWithBetween) {
-//   const std::string query = "SELECT * FROM TestTable WHERE a BETWEEN 122 AND 124";
-//   ASSERT_TRUE(compile_query(query));
-
-//   auto tasks = _translator.get_query_plan().tasks();
-//   ASSERT_EQ(2u, tasks.size());
-
-//   for (const auto task : tasks) {
-//     task->get_operator()->execute();
-//   }
-
-//   std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_string_filtered.tbl", 2);
-//   EXPECT_TABLE_EQ(tasks.back()->get_operator()->get_output(), expected_result);
-// }
-
-TEST_F(SQLSelectTest, SimpleProjectionTest) {
-  const std::string query = "SELECT a FROM table_a;";
-  ASSERT_TRUE(compile_query(query));
-
-  auto tasks = _translator.get_query_plan().tasks();
-  ASSERT_EQ(2u, tasks.size());
-
-  for (const auto task : tasks) {
-    task->get_operator()->execute();
-  }
-
-  std::shared_ptr<Table> expected_result = load_table("src/test/tables/int.tbl", 2);
-  EXPECT_TABLE_EQ(tasks.back()->get_operator()->get_output(), expected_result);
-}
-
-TEST_F(SQLSelectTest, SelectSingleOrderByTest) {
-  const std::string query = "SELECT a, b FROM table_a ORDER BY a;";
-  ASSERT_TRUE(compile_query(query));
-
-  auto tasks = _translator.get_query_plan().tasks();
-  ASSERT_EQ(3u, tasks.size());
-
-  for (const auto task : tasks) {
-    task->get_operator()->execute();
-  }
-
-  std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_float_sorted.tbl", 2);
-  EXPECT_TABLE_EQ(tasks.back()->get_operator()->get_output(), expected_result, true);
-}
-
-TEST_F(SQLSelectTest, SelectFromSubSelect) {
-  const std::string query = "SELECT a FROM (SELECT a, b FROM table_a WHERE a > 1 ORDER BY b) WHERE a > 0 ORDER BY a;";
-  ASSERT_TRUE(compile_query(query));
-
-  auto tasks = _translator.get_query_plan().tasks();
-  ASSERT_EQ(7u, tasks.size());
-
-  for (const auto task : tasks) {
-    task->get_operator()->execute();
-  }
-
-  std::shared_ptr<Table> expected_result = load_table("src/test/tables/int.tbl", 2);
-  EXPECT_TABLE_EQ(tasks.back()->get_operator()->get_output(), expected_result, true);
-}
-
-TEST_F(SQLSelectTest, SelectBasicInnerJoinTest) {
-  const std::string query =
-      "SELECT \"left\".a, \"left\".b, \"right\".a, \"right\".b FROM table_a AS \"left\" JOIN table_b AS \"right\" ON a "
-      "= a;";
-  ASSERT_TRUE(compile_query(query));
-
-  auto tasks = _translator.get_query_plan().tasks();
-  ASSERT_EQ(4u, tasks.size());
-
-  for (const auto task : tasks) {
-    task->get_operator()->execute();
-  }
-
-  std::shared_ptr<Table> expected_result = load_table("src/test/tables/joinoperators/int_inner_join.tbl", 1);
-  EXPECT_TABLE_EQ(tasks.back()->get_operator()->get_output(), expected_result);
-}
-
-TEST_F(SQLSelectTest, SelectBasicLeftJoinTest) {
-  const std::string query = "SELECT * FROM table_a AS \"left\" LEFT JOIN table_b AS \"right\" ON a = a;";
-  ASSERT_TRUE(compile_query(query));
-
-  auto tasks = _translator.get_query_plan().tasks();
-  ASSERT_EQ(3u, tasks.size());
-
-  for (const auto task : tasks) {
-    task->get_operator()->execute();
-  }
-
-  std::shared_ptr<Table> expected_result = load_table("src/test/tables/joinoperators/int_left_join.tbl", 1);
-  EXPECT_TABLE_EQ(tasks.back()->get_operator()->get_output(), expected_result);
-}
 
 TEST_F(SQLSelectTest, SelectWithSchedulerTest) {
-  CurrentScheduler::set(std::make_shared<NodeQueueScheduler>(Topology::create_fake_numa_topology(8, 4)));
-
   const std::string query =
       "SELECT \"left\".a, \"left\".b, \"right\".a, \"right\".b FROM table_a AS \"left\" INNER JOIN table_b AS "
       "\"right\" ON a = a";
+  auto expected_result = load_table("src/test/tables/joinoperators/int_inner_join.tbl", 1);
 
   // TODO(torpedro): Adding 'WHERE \"left\".a >= 0;' causes wrong data. Investigate.
   //                 Probable bug in TableScan.
 
+  CurrentScheduler::set(std::make_shared<NodeQueueScheduler>(Topology::create_fake_numa_topology(8, 4)));
+
   ASSERT_TRUE(compile_query(query));
 
-  auto tasks = _translator.get_query_plan().tasks();
-
-  for (const auto& task : tasks) {
+  for (const auto& task : _plan.tasks()) {
     task->schedule();
   }
 
   CurrentScheduler::get()->finish();
   CurrentScheduler::set(nullptr);
 
-  std::shared_ptr<Table> expected_result = load_table("src/test/tables/joinoperators/int_inner_join.tbl", 1);
-  EXPECT_TABLE_EQ(tasks.back()->get_operator()->get_output(), expected_result, true);
+  EXPECT_TABLE_EQ(get_plan_result(), expected_result, true);
 }
 
 }  // namespace opossum
