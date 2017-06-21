@@ -1,5 +1,6 @@
 #include "sql_query_translator.hpp"
 
+#include <algorithm>
 #include <memory>
 #include <sstream>
 #include <string>
@@ -8,6 +9,7 @@
 
 #include "../operators/abstract_join_operator.hpp"
 #include "../operators/abstract_operator.hpp"
+#include "../operators/aggregate.hpp"
 #include "../operators/difference.hpp"
 #include "../operators/export_binary.hpp"
 #include "../operators/export_csv.hpp"
@@ -21,6 +23,7 @@
 #include "../operators/sort.hpp"
 #include "../operators/table_scan.hpp"
 #include "../operators/union_all.hpp"
+#include "../utils/assert.hpp"
 
 #include "SQLParser.h"
 
@@ -99,8 +102,12 @@ bool SQLQueryTranslator::_translate_select(const SelectStatement& select) {
     }
   }
 
-  // TODO(torpedro): Transform GROUP BY.
-  // TODO(torpedro): Transform HAVING.
+  // Translate GROUP BY & HAVING
+  if (select.groupBy != nullptr) {
+    if (!_translate_group_by(*select.groupBy, *select.selectList, _plan.back())) {
+      return false;
+    }
+  }
 
   // Translate SELECT list.
   // Add projection for select list.
@@ -187,7 +194,8 @@ bool SQLQueryTranslator::_translate_projection(const std::vector<hsql::Expr*>& e
   std::vector<std::string> columns;
   for (const Expr* expr : expr_list) {
     // At this moment we only support selecting columns in the projection.
-    if (!expr->isType(hsql::kExprColumnRef) && !expr->isType(hsql::kExprStar)) {
+    if (!expr->isType(hsql::kExprColumnRef) && !expr->isType(hsql::kExprStar) &&
+        !expr->isType(hsql::kExprFunctionRef)) {
       _error_msg = "Projection only supports columns to be selected.";
       return false;
     }
@@ -209,6 +217,68 @@ bool SQLQueryTranslator::_translate_projection(const std::vector<hsql::Expr*>& e
   auto projection_task = std::make_shared<OperatorTask>(projection);
   input_task->set_as_predecessor_of(projection_task);
   _plan.add_task(projection_task);
+  return true;
+}
+
+bool SQLQueryTranslator::_translate_group_by(const hsql::GroupByDescription& group_by,
+                                             const std::vector<hsql::Expr*>& select_list,
+                                             const std::shared_ptr<OperatorTask>& input_task) {
+  std::vector<std::pair<std::string, AggregateFunction>> aggregates;
+  std::vector<std::string> groupby_columns;
+
+  // Process group by columns.
+  for (const auto expr : *group_by.columns) {
+    DebugAssert(expr->isType(hsql::kExprColumnRef), "Expect group by columns to be column references.");
+    groupby_columns.push_back(expr->name);
+  }
+
+  // Process select list to build aggregate functions.
+  for (const auto expr : select_list) {
+    if (expr->isType(hsql::kExprFunctionRef)) {
+      std::string fun_name(expr->name);
+
+      DebugAssert(expr->exprList->size() == 1, "Expect SQL functions to only have single argument.");
+      std::string argument = expr->exprList->at(0)->name;
+
+      if (fun_name == "SUM") {
+        aggregates.emplace_back(argument, Sum);
+        continue;
+      }
+      if (fun_name == "AVG") {
+        aggregates.emplace_back(argument, Avg);
+        continue;
+      }
+      if (fun_name == "MAX") {
+        aggregates.emplace_back(argument, Max);
+        continue;
+      }
+      if (fun_name == "MIN") {
+        aggregates.emplace_back(argument, Min);
+        continue;
+      }
+      if (fun_name == "COUNT") {
+        aggregates.emplace_back(argument, Count);
+        continue;
+      }
+
+      _error_msg = "Unsupported aggregation function. (" + fun_name + ")";
+      return false;
+    }
+
+    // TODO(torpedro): Check that all other columns are in the group by columns.
+  }
+
+  auto aggregate = std::make_shared<Aggregate>(input_task->get_operator(), aggregates, groupby_columns);
+  auto aggregate_task = std::make_shared<OperatorTask>(aggregate);
+  input_task->set_as_predecessor_of(aggregate_task);
+  _plan.add_task(aggregate_task);
+
+  if (group_by.having != nullptr) {
+    // TODO(torpedro): Handle HAVING.
+    _error_msg = "HAVING clause is not yet supported.";
+    return false;
+  }
+
   return true;
 }
 
@@ -364,6 +434,15 @@ bool SQLQueryTranslator::_translate_filter_op(const hsql::Expr& expr, std::strin
 // static
 std::string SQLQueryTranslator::_get_column_name(const hsql::Expr& expr) {
   std::string name = "";
+
+  if (expr.isType(hsql::kExprFunctionRef)) {
+    name += expr.name;
+    name += "(";
+    name += expr.exprList->at(0)->name;
+    name += ")";
+    return name;
+  }
+
   if (expr.hasTable()) name += std::string(expr.table) + ".";
   name += expr.name;
   return name;
