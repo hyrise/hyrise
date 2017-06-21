@@ -146,6 +146,9 @@ const SQLTestParam sql_query_tests[] = {
                  "src/test/tables/aggregateoperator/groupby_int_1gb_2agg/sum_avg.tbl"},
     SQLTestParam{"SELECT a, b, MAX(c), AVG(d) FROM groupby_int_2gb_2agg GROUP BY a, b;", 3u,
                  "src/test/tables/aggregateoperator/groupby_int_2gb_2agg/max_avg.tbl"},
+    SQLTestParam{
+        "SELECT a, b, MAX(c), AVG(d) FROM groupby_int_2gb_2agg GROUP BY a, b HAVING MAX(c) >= 10 AND MAX(c) < 40;", 5u,
+        "src/test/tables/aggregateoperator/groupby_int_2gb_2agg/max_avg.tbl"},
 };
 
 INSTANTIATE_TEST_CASE_P(GenericQueryTest, SQLSelectTest, ::testing::ValuesIn(sql_query_tests));

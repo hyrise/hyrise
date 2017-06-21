@@ -160,9 +160,10 @@ bool SQLQueryTranslator::_translate_filter_expr(const hsql::Expr& expr,
   // TODO(torpedro): Handle BETWEEN.
 
   // Get the column_name.
-  Expr* column_expr = (expr.expr->isType(hsql::kExprColumnRef)) ? expr.expr : expr.expr2;
+  Expr* column_expr =
+      (expr.expr->isType(hsql::kExprColumnRef) || expr.expr->isType(hsql::kExprFunctionRef)) ? expr.expr : expr.expr2;
 
-  if (!column_expr->isType(hsql::kExprColumnRef)) {
+  if (!column_expr->isType(hsql::kExprColumnRef) && !column_expr->isType(hsql::kExprFunctionRef)) {
     _error_msg = "Unsupported filter expression!";
     return false;
   }
@@ -273,10 +274,11 @@ bool SQLQueryTranslator::_translate_group_by(const hsql::GroupByDescription& gro
   input_task->set_as_predecessor_of(aggregate_task);
   _plan.add_task(aggregate_task);
 
+  // Handle HAVING clause.
   if (group_by.having != nullptr) {
-    // TODO(torpedro): Handle HAVING.
-    _error_msg = "HAVING clause is not yet supported.";
-    return false;
+    if (!_translate_filter_expr(*group_by.having, _plan.back())) {
+      return false;
+    }
   }
 
   return true;
