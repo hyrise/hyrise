@@ -77,12 +77,16 @@ class SQLSelectTest : public BaseTest, public ::testing::WithParamInterface<SQLT
   SQLQueryPlan _plan;
 };
 
-TEST_F(SQLSelectTest, DISABLED_BasicSuccessTest) {
+TEST_F(SQLSelectTest, BasicParserSuccessTest) {
+  hsql::SQLParserResult parse_result;
+
   const std::string query = "SELECT * FROM test;";
-  // ASSERT_TRUE(compile_query(query));
+  hsql::SQLParser::parseSQLString(query, &parse_result);
+  EXPECT_TRUE(parse_result.isValid());
 
   const std::string faulty_query = "SELECT * WHERE test;";
-  // ASSERT_FALSE(compile_query(faulty_query));
+  hsql::SQLParser::parseSQLString(faulty_query, &parse_result);
+  EXPECT_FALSE(parse_result.isValid());
 }
 
 TEST_F(SQLSelectTest, SelectStarAllTest) {
