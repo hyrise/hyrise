@@ -23,7 +23,7 @@
 
 namespace opossum {
 
-inline std::vector<std::shared_ptr<OperatorTask>> delivery_getDId(const int d_id, const int w_id) {
+inline std::vector<std::shared_ptr<OperatorTask>> delivery_get_new_order_id(const int d_id, const int w_id) {
   /**
    * EXEC SQL DECLARE c_no CURSOR FOR
    * SELECT no_o_id
@@ -57,7 +57,7 @@ inline std::vector<std::shared_ptr<OperatorTask>> delivery_getDId(const int d_id
           std::move(t_val), std::move(t_projection), std::move(t_sort)};
 }
 
-inline std::vector<std::shared_ptr<OperatorTask>> delivery_del(const int no_o_id) {
+inline std::vector<std::shared_ptr<OperatorTask>> delivery_delete_from_new_order(const int no_o_id) {
   /**
    * EXEC SQL DELETE
    * FROM new_order
@@ -110,8 +110,8 @@ inline std::vector<std::shared_ptr<OperatorTask>> delivery_selOrder(const int d_
           std::move(t_ts3), std::move(t_val), std::move(t_projection)};
 }
 
-inline std::vector<std::shared_ptr<OperatorTask>> delivery_updateOrder(const int d_id, const int w_id,
-                                                                       const int no_o_id, const int o_carrier_id) {
+inline std::vector<std::shared_ptr<OperatorTask>> delivery_update_order(const int d_id, const int w_id,
+                                                                        const int no_o_id, const int o_carrier_id) {
   /**
    * EXEC SQL UPDATE orders
    * SET o_carrier_id = :o_carrier_id
@@ -150,8 +150,8 @@ inline std::vector<std::shared_ptr<OperatorTask>> delivery_updateOrder(const int
           std::move(t_val), std::move(t_projection), std::move(t_updated_rows), std::move(t_update)};
 }
 
-inline std::vector<std::shared_ptr<OperatorTask>> delivery_updateOrderLine(const int d_id, const int w_id,
-                                                                           const int no_o_id, const time_t datetime) {
+inline std::vector<std::shared_ptr<OperatorTask>> delivery_update_order_line(const int d_id, const int w_id,
+                                                                             const int no_o_id, const time_t datetime) {
   /**
    * EXEC SQL UPDATE order_line
    * SET ol_delivery_d = :datetime
@@ -190,8 +190,8 @@ inline std::vector<std::shared_ptr<OperatorTask>> delivery_updateOrderLine(const
           std::move(t_val), std::move(t_projection), std::move(t_updated_rows), std::move(t_update)};
 }
 
-inline std::vector<std::shared_ptr<OperatorTask>> delivery_sumOrderLine(const int d_id, const int w_id,
-                                                                        const int no_o_id) {
+inline std::vector<std::shared_ptr<OperatorTask>> delivery_sum_of_order_line(const int d_id, const int w_id,
+                                                                             const int no_o_id) {
   /**
    * EXEC SQL SELECT SUM(ol_amount) INTO :ol_total
    * FROM order_line
@@ -222,8 +222,8 @@ inline std::vector<std::shared_ptr<OperatorTask>> delivery_sumOrderLine(const in
   return {std::move(t_gt), std::move(t_ts1), std::move(t_ts2), std::move(t_ts3), std::move(t_val), std::move(t_sum)};
 }
 
-inline std::vector<std::shared_ptr<OperatorTask>> delivery_updateCustomer(const double ol_total, const int d_id,
-                                                                          const int w_id, const int c_id) {
+inline std::vector<std::shared_ptr<OperatorTask>> delivery_update_customer(const double ol_total, const int d_id,
+                                                                           const int w_id, const int c_id) {
   /**
    * EXEC SQL UPDATE customer
    * SET c_balance = c_balance + :ol_total
@@ -262,16 +262,16 @@ inline std::vector<std::shared_ptr<OperatorTask>> delivery_updateCustomer(const 
           std::move(t_val), std::move(t_projection), std::move(t_updated_rows), std::move(t_update)};
 }
 
-inline std::vector<std::shared_ptr<OperatorTask>> commit() {
+inline std::vector<std::shared_ptr<OperatorTask>> delivery_commit_transaction() {
   auto commit = std::make_shared<CommitRecords>();
   return {std::make_shared<OperatorTask>(std::move(commit))};
 }
 
 inline void execute_tasks_with_context(std::vector<std::shared_ptr<OperatorTask>>& tasks,
                                        std::shared_ptr<TransactionContext> t_context) {
-  for (auto job_itr = tasks.begin(), end = tasks.end(); job_itr != end; ++job_itr) {
-    (*job_itr)->get_operator()->set_transaction_context(t_context);
-    (*job_itr)->schedule();
+  for (auto task : tasks) {
+    task->get_operator()->set_transaction_context(t_context);
+    task->schedule();
   }
   tasks.back()->join();
 }
@@ -288,38 +288,38 @@ BENCHMARK_F(TPCCBenchmarkFixture, BM_delivery)(benchmark::State& state) {
     d_id = (d_id + 1) % _gen._district_size;
     int o_carrier_id = _random_gen.number(1, 10);
     const time_t datetime = std::time(0);
-    auto tasks1 = delivery_getDId(d_id, w_id);
-    execute_tasks_with_context(tasks1, t_context);
+    auto tasks = delivery_get_new_order_id(d_id, w_id);
+    execute_tasks_with_context(tasks, t_context);
 
-    assert(tasks1.back()->get_operator()->get_output()->row_count() > 0);
-    auto no_o_id = tasks1.back()->get_operator()->get_output()->get_value<int>(0u, 0u);
-    auto tasks2 = delivery_del(no_o_id);
-    execute_tasks_with_context(tasks2, t_context);
+    assert(tasks.back()->get_operator()->get_output()->row_count() > 0);
+    auto no_o_id = tasks.back()->get_operator()->get_output()->get_value<int>(0u, 0u);
+    tasks = delivery_delete_from_new_order(no_o_id);
+    execute_tasks_with_context(tasks, t_context);
 
-    auto tasks3 = delivery_selOrder(d_id, w_id, no_o_id);
-    execute_tasks_with_context(tasks3, t_context);
+    tasks = delivery_selOrder(d_id, w_id, no_o_id);
+    execute_tasks_with_context(tasks, t_context);
 
-    assert(tasks3.back()->get_operator()->get_output()->row_count() > 0);
-    auto c_id = tasks3.back()->get_operator()->get_output()->get_value<int>(0u, 0u);
+    assert(tasks.back()->get_operator()->get_output()->row_count() > 0);
+    auto c_id = tasks.back()->get_operator()->get_output()->get_value<int>(0u, 0u);
 
-    auto tasks4 = delivery_updateOrder(d_id, w_id, no_o_id, o_carrier_id);
-    execute_tasks_with_context(tasks4, t_context);
+    tasks = delivery_update_order(d_id, w_id, no_o_id, o_carrier_id);
+    execute_tasks_with_context(tasks, t_context);
 
-    auto tasks5 = delivery_updateOrderLine(d_id, w_id, no_o_id, datetime);
-    execute_tasks_with_context(tasks5, t_context);
+    tasks = delivery_update_order_line(d_id, w_id, no_o_id, datetime);
+    execute_tasks_with_context(tasks, t_context);
 
-    auto tasks6 = delivery_sumOrderLine(d_id, w_id, no_o_id);
-    execute_tasks_with_context(tasks6, t_context);
+    tasks = delivery_sum_of_order_line(d_id, w_id, no_o_id);
+    execute_tasks_with_context(tasks, t_context);
 
-    assert(tasks6.back()->get_operator()->get_output()->row_count() > 0);
-    auto ol_total = tasks6.back()->get_operator()->get_output()->get_value<double>(0u, 0u);
-    auto tasks7 = delivery_updateCustomer(ol_total, d_id, w_id, c_id);
-    execute_tasks_with_context(tasks7, t_context);
+    assert(tasks.back()->get_operator()->get_output()->row_count() > 0);
+    auto ol_total = tasks.back()->get_operator()->get_output()->get_value<double>(0u, 0u);
+    tasks = delivery_update_customer(ol_total, d_id, w_id, c_id);
+    execute_tasks_with_context(tasks, t_context);
 
     // Commit transaction.
     TransactionManager::get().prepare_commit(*t_context);
-    auto commit_task = commit();
-    execute_tasks_with_context(commit_task, t_context);
+    tasks = delivery_commit_transaction();
+    execute_tasks_with_context(tasks, t_context);
     TransactionManager::get().commit(*t_context);
   }
 }
