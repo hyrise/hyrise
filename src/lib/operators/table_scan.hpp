@@ -32,7 +32,7 @@ namespace opossum {
 // As with most operators, we do not guarantee a stable operation with regards to positions - i.e., your sorting order
 // might be disturbed
 
-// Because the BETWEEN operator needs 3 values, we didn't implemented the possibilty to scan on 3 columns, as this
+// Because the BETWEEN operator needs 3 values, we didn't implemented the possibility to scan on 3 columns, as this
 // would increase the if-complexity in handle_column again.
 // That's why we only accept a constant value for the second between-parameter.
 

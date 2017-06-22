@@ -4,32 +4,8 @@
 
 namespace opossum {
 
-class AbstractNode {
+class AbstractNode : public std::enable_shared_from_this<AbstractNode> {
  public:
-  template <typename Node, typename... ConstructorArgs>
-  static const std::shared_ptr<AbstractNode> make_shared_from_args(ConstructorArgs &&... args) {
-    return std::make_shared<Node>(std::forward<ConstructorArgs>(args)...);
-  }
-
-  template <typename Node, typename... ConstructorArgs>
-  static const std::shared_ptr<AbstractNode> make_shared_from_args(const std::shared_ptr<AbstractNode> &left,
-                                                                   ConstructorArgs &&... args) {
-    auto node = AbstractNode::make_shared_from_args<Node>(std::forward<ConstructorArgs>(args)...);
-    left->set_parent(node);
-    node->set_left(left);
-    return node;
-  }
-
-  template <typename Node, typename... ConstructorArgs>
-  static const std::shared_ptr<AbstractNode> make_shared_from_args(const std::shared_ptr<AbstractNode> &left,
-                                                                   const std::shared_ptr<AbstractNode> &right,
-                                                                   ConstructorArgs &&... args) {
-    auto node = AbstractNode::make_shared_from_args<Node>(left, std::forward<ConstructorArgs>(args)...);
-    right->set_parent(node);
-    node->set_right(right);
-    return node;
-  }
-
   const std::weak_ptr<AbstractNode> &get_parent() const;
   void set_parent(const std::weak_ptr<AbstractNode> &parent);
 

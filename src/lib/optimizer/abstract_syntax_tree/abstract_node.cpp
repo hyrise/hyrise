@@ -11,11 +11,17 @@ void AbstractNode::set_parent(const std::weak_ptr<AbstractNode> &parent) { _pare
 
 const std::shared_ptr<AbstractNode> &AbstractNode::get_left() const { return _left; }
 
-void AbstractNode::set_left(const std::shared_ptr<AbstractNode> &left) { _left = left; }
+void AbstractNode::set_left(const std::shared_ptr<AbstractNode> &left) {
+  _left = left;
+  left->set_parent(shared_from_this());
+}
 
 const std::shared_ptr<AbstractNode> &AbstractNode::get_right() const { return _right; }
 
-void AbstractNode::set_right(const std::shared_ptr<AbstractNode> &right) { _right = right; }
+void AbstractNode::set_right(const std::shared_ptr<AbstractNode> &right) {
+  _right = right;
+  right->set_parent(shared_from_this());
+}
 
 void AbstractNode::print(const uint8_t indent) const {
   std::cout << std::setw(indent) << " ";
