@@ -271,7 +271,7 @@ BENCHMARK_F(TPCCDeliveryBenchmark, BM_delivery)(benchmark::State& state) {
 
   // currently no warm up
 
-  int w_id = _random_gen.number(0, _gen._warehouse_size - 1);
+  int w_id = static_cast<int32_t>(_random_gen.number(0, _gen._warehouse_size - 1));
   int d_id = 0;
   while (state.KeepRunning()) {
     auto t_context = TransactionManager::get().new_transaction_context();

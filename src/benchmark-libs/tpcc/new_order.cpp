@@ -77,9 +77,6 @@ NewOrderResult AbstractNewOrderImpl::run_transaction(const NewOrderParams &param
     auto create_new_order_tasks = get_create_new_order_tasks(result.d_next_o_id, params.d_id, params.w_id);
     opossum::execute_tasks_with_context(create_new_order_tasks, t_context);
 
-    // TODO(anyone): TransactionContext just keeps raw ptr(wtf?) to the Tasks
-    std::vector<std::shared_ptr<opossum::OperatorTask>> inner_scope_tasks;
-
     for (size_t ol_idx = 0; ol_idx < params.order_lines.size(); ol_idx++) {
       const auto &order_line_params = params.order_lines[ol_idx];
 
@@ -132,7 +129,6 @@ NewOrderResult AbstractNewOrderImpl::run_transaction(const NewOrderParams &param
        */
       auto update_stock_tasks =
           get_update_stock_tasks(order_line.s_qty, order_line_params.i_id, order_line_params.w_id);
-      std::copy(update_stock_tasks.begin(), update_stock_tasks.end(), std::back_inserter(inner_scope_tasks));
       opossum::execute_tasks_with_context(update_stock_tasks, t_context);
 
       /**
@@ -142,7 +138,6 @@ NewOrderResult AbstractNewOrderImpl::run_transaction(const NewOrderParams &param
           result.d_next_o_id, params.d_id, params.w_id, ol_idx + 1, order_line_params.i_id,
           0,  // ol_supply_w_id - we only have one warehouse
           params.o_entry_d, order_line_params.qty, order_line.amount, order_line.s_dist_xx);
-      std::copy(create_order_line_tasks.begin(), create_order_line_tasks.end(), std::back_inserter(inner_scope_tasks));
       opossum::execute_tasks_with_context(create_order_line_tasks, t_context);
 
       /**

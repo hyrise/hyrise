@@ -26,7 +26,7 @@ class TPCCOrderStatusBenchmark : public TPCCBenchmarkFixture {
     clear_cache();
     auto c_last = _random_gen.last_name(2000);
     auto c_d_id = _random_gen.number(1, 10);
-    auto c_w_id = 0;  // there is only one warehouse
+    auto c_w_id = _random_gen.number(0, _gen._warehouse_size - 1);
 
     while (state.KeepRunning()) {
       TransactionManager::get().run_transaction([&](std::shared_ptr<TransactionContext> t_context) {
@@ -40,7 +40,7 @@ class TPCCOrderStatusBenchmark : public TPCCBenchmarkFixture {
     clear_cache();
     auto c_last = _random_gen.last_name(2000);
     auto c_d_id = _random_gen.number(1, 10);
-    auto c_w_id = 0;  // there is only one warehouse
+    auto c_w_id = _random_gen.number(0, _gen._warehouse_size - 1);
     auto c_id = _random_gen.nurand(1023, 1, 3000);
 
     while (state.KeepRunning()) {
@@ -55,7 +55,7 @@ class TPCCOrderStatusBenchmark : public TPCCBenchmarkFixture {
     clear_cache();
 
     auto c_d_id = _random_gen.number(1, 10);
-    auto c_w_id = 0;  // there is only one warehouse
+    auto c_w_id = _random_gen.number(0, _gen._warehouse_size - 1);
     auto c_id = _random_gen.nurand(1023, 1, 3000);
 
     while (state.KeepRunning()) {
@@ -70,7 +70,7 @@ class TPCCOrderStatusBenchmark : public TPCCBenchmarkFixture {
     clear_cache();
     auto c_last = _random_gen.last_name(2000);
     auto c_d_id = _random_gen.number(1, 10);
-    auto c_w_id = 0;  // there is only one warehouse
+    auto c_w_id = _random_gen.number(0, _gen._warehouse_size - 1);
 
     while (state.KeepRunning()) {
       TransactionManager::get().run_transaction([&](std::shared_ptr<TransactionContext> t_context) {

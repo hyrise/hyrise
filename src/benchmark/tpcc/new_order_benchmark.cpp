@@ -31,7 +31,7 @@ class TPCCNewOrderBenchmark : public TPCCBenchmarkFixture {
     while (state.KeepRunning()) {
       tpcc::NewOrderParams params;
 
-      params.w_id = 0;  // TODO(anybody): Change when implementing multiple warehouses
+      params.w_id = static_cast<int32_t>(_random_gen.number(0, _gen._warehouse_size - 1));
       params.d_id = static_cast<int32_t>(_random_gen.number(0, tpcc::NUM_DISTRICTS_PER_WAREHOUSE - 1));
       params.c_id = static_cast<int32_t>(_random_gen.number(0, tpcc::NUM_CUSTOMERS_PER_DISTRICT - 1));
       params.o_entry_d = 0;  // TODO(anybody): Real data
@@ -39,7 +39,7 @@ class TPCCNewOrderBenchmark : public TPCCBenchmarkFixture {
 
       for (size_t ol = 0; ol < params.order_lines.size(); ol++) {
         auto &order_line = params.order_lines[ol];
-        order_line.w_id = 0;  // TODO(anybody): Change when implementing multiple warehouses
+        order_line.w_id = static_cast<int32_t>(_random_gen.number(0, _gen._warehouse_size - 1));
         order_line.i_id = static_cast<int32_t>(_random_gen.number(0, tpcc::NUM_ITEMS - 1));
         order_line.qty = static_cast<int32_t>(_random_gen.number(1, tpcc::MAX_ORDER_LINE_QUANTITY));
       }
