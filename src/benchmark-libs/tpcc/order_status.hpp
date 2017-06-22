@@ -17,9 +17,7 @@ class TransactionContext;
 
 namespace tpcc {
 
-enum class OrderStatusBy {
-  CustomerNumber, CustomerLastName
-};
+enum class OrderStatusBy { CustomerNumber, CustomerLastName };
 
 struct OrderStatusParams {
   int32_t c_w_id = 0;
@@ -53,19 +51,15 @@ struct OrderStatusResult {
 
 class AbstractOrderStatusImpl {
  public:
-  virtual TaskVector
-  get_customer_by_name(const std::string c_last, const int c_d_id,
-                       const int c_w_id) = 0;
-  virtual TaskVector
-  get_customer_by_id(const int c_id, const int c_d_id, const int c_w_id) = 0;
+  virtual TaskVector get_customer_by_name(const std::string c_last, const int c_d_id, const int c_w_id) = 0;
+  virtual TaskVector get_customer_by_id(const int c_id, const int c_d_id, const int c_w_id) = 0;
 
   virtual TaskVector get_orders(const int c_id, const int c_d_id, const int c_w_id) = 0;
-  virtual TaskVector
-  get_order_lines(const int o_id, const int d_id, const int w_id) = 0;
+  virtual TaskVector get_order_lines(const int o_id, const int d_id, const int w_id) = 0;
 
-  OrderStatusResult run_transaction(const OrderStatusParams & params);
+  OrderStatusResult run_transaction(const OrderStatusParams &params);
 
-  void set_transaction_context(const std::shared_ptr<opossum::TransactionContext> & transaction_context);
+  void set_transaction_context(const std::shared_ptr<opossum::TransactionContext> &transaction_context);
 
  protected:
   std::shared_ptr<opossum::TransactionContext> _t_context;
@@ -73,33 +67,29 @@ class AbstractOrderStatusImpl {
 
 class OrderStatusRefImpl : public AbstractOrderStatusImpl {
  public:
-  TaskVector
-  get_customer_by_name(const std::string c_last, const int c_d_id,
-                       const int c_w_id) override;
-  TaskVector
-  get_customer_by_id(const int c_id, const int c_d_id, const int c_w_id) override;
+  TaskVector get_customer_by_name(const std::string c_last, const int c_d_id, const int c_w_id) override;
+  TaskVector get_customer_by_id(const int c_id, const int c_d_id, const int c_w_id) override;
 
   TaskVector get_orders(const int c_id, const int c_d_id, const int c_w_id) override;
-  TaskVector
-  get_order_lines(const int o_id, const int d_id, const int w_id) override;
+  TaskVector get_order_lines(const int o_id, const int d_id, const int w_id) override;
 };
 
 }  // namespace tpcc
 
 namespace nlohmann {
-template<>
+template <>
 struct adl_serializer<tpcc::OrderStatusParams> {
   static void to_json(nlohmann::json &j, const tpcc::OrderStatusParams &v);
   static void from_json(const nlohmann::json &j, tpcc::OrderStatusParams &v);
 };
 
-template<>
+template <>
 struct adl_serializer<tpcc::OrderStatusOrderLine> {
   static void to_json(nlohmann::json &j, const tpcc::OrderStatusOrderLine &v);
   static void from_json(const nlohmann::json &j, tpcc::OrderStatusOrderLine &v);
 };
 
-template<>
+template <>
 struct adl_serializer<tpcc::OrderStatusResult> {
   static void to_json(nlohmann::json &j, const tpcc::OrderStatusResult &v);
   static void from_json(const nlohmann::json &j, tpcc::OrderStatusResult &v);

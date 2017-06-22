@@ -14,7 +14,8 @@ namespace opossum {
 class Table;
 class TransactionContext;
 class AbstractOperator;
-template<typename> class ValueColumn;
+template <typename>
+class ValueColumn;
 
 void set_transaction_context_for_operators(const std::shared_ptr<TransactionContext> t_context,
                                            const std::vector<std::shared_ptr<AbstractOperator>> operators);

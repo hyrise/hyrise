@@ -65,7 +65,7 @@ void TransactionManager::commit(TransactionContext& context, std::function<void(
   context._phase = TransactionPhase::Committed;
 }
 
-void TransactionManager::run_transaction(const std::function<void(std::shared_ptr<TransactionContext>)> & fn) {
+void TransactionManager::run_transaction(const std::function<void(std::shared_ptr<TransactionContext>)>& fn) {
   auto transaction_context = new_transaction_context();
 
   fn(transaction_context);

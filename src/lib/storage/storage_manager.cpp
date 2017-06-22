@@ -4,9 +4,9 @@
 #include <string>
 #include <utility>
 
-#include "utils/assert.hpp"
-#include "operators/table_wrapper.hpp"
 #include "operators/export_csv.hpp"
+#include "operators/table_wrapper.hpp"
+#include "utils/assert.hpp"
 
 namespace opossum {
 
@@ -18,7 +18,7 @@ StorageManager &StorageManager::get() {
 
 void StorageManager::add_table(const std::string &name, std::shared_ptr<Table> table) {
   for (size_t c = 0; c < table->chunk_count(); c++) {
-    auto & chunk = table->get_chunk(c);
+    auto &chunk = table->get_chunk(c);
     assert(chunk.has_mvcc_columns());
   }
 
@@ -56,10 +56,10 @@ void StorageManager::print(std::ostream &out) const {
 
 void StorageManager::reset() { get() = StorageManager(); }
 
-void StorageManager::dump_as_csv(const std::string & path) {
-  for (auto & pair : _tables) {
-    const auto & name = pair.first;
-    auto & table = pair.second;
+void StorageManager::dump_as_csv(const std::string &path) {
+  for (auto &pair : _tables) {
+    const auto &name = pair.first;
+    auto &table = pair.second;
 
     auto tableWrapper = std::make_shared<TableWrapper>(table);
     tableWrapper->execute();

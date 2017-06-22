@@ -8,10 +8,7 @@
 #include "abstract_read_only_operator.hpp"
 
 namespace opossum {
-enum class PrintMode {
-  PrintEmptyChunks,
-  IgnoreEmptyChunks
-};
+enum class PrintMode { PrintEmptyChunks, IgnoreEmptyChunks };
 
 // operator to print the table with its data
 class Print : public AbstractReadOnlyOperator {

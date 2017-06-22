@@ -37,23 +37,23 @@ class AbstractScheduler {
                         SchedulePriority priority = SchedulePriority::Normal) = 0;
 
   // Helper functions - not globals for the sake of it
-  template<typename T>
-  static void schedule_tasks(const std::vector<std::shared_ptr<T>> & tasks);
-  template<typename T>
+  template <typename T>
+  static void schedule_tasks(const std::vector<std::shared_ptr<T>>& tasks);
+  template <typename T>
   static void schedule_tasks_and_wait(const std::vector<std::shared_ptr<T>> tasks);
 
  protected:
   std::shared_ptr<Topology> _topology;
 };
 
-template<typename T>
-void AbstractScheduler::schedule_tasks(const std::vector<std::shared_ptr<T>> & tasks) {
+template <typename T>
+void AbstractScheduler::schedule_tasks(const std::vector<std::shared_ptr<T>>& tasks) {
   for (auto& task : tasks) {
     task->schedule();
   }
 }
 
-template<typename T>
+template <typename T>
 void AbstractScheduler::schedule_tasks_and_wait(const std::vector<std::shared_ptr<T>> tasks) {
   schedule_tasks(tasks);
   if (!tasks.empty()) {
