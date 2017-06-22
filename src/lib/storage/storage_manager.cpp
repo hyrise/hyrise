@@ -32,7 +32,7 @@ void StorageManager::drop_table(const std::string &name) {
 
 std::shared_ptr<Table> StorageManager::get_table(const std::string &name) const {
   auto iter = _tables.find(name);
-  DebugAssert(iter != _tables.end(), "No such table named '" + name + "'");
+  Assert(iter != _tables.end(), "No such table named '" + name + "'");
 
   return iter->second;
 }
