@@ -10,8 +10,8 @@
 #include "scheduler/job_task.hpp"
 #include "scheduler/node_queue_scheduler.hpp"
 #include "scheduler/topology.hpp"
+#include "sql/sql_query_cache.hpp"
 #include "sql/sql_query_operator.hpp"
-#include "sql/sql_query_plan_cache.hpp"
 #include "storage/storage_manager.hpp"
 
 namespace opossum {
@@ -59,7 +59,7 @@ class SQLQueryPlanCacheTest : public BaseTest {
 };
 
 TEST_F(SQLQueryPlanCacheTest, SQLQueryPlanCacheTest) {
-  SQLQueryPlanCache cache(2);
+  SQLQueryCache<SQLQueryPlan> cache(2);
   std::string query1 = "SELECT * FROM table_a;";
   std::string query2 = "SELECT * FROM table_b;";
 
@@ -94,7 +94,7 @@ TEST_F(SQLQueryPlanCacheTest, SQLQueryPlanCacheTest) {
 TEST_F(SQLQueryPlanCacheTest, QueryOperatorParseTreeCache) {
   query_plan_cache_hits = 0;
 
-  SQLQueryPlanCache& cache = SQLQueryOperator::get_query_plan_cache();
+  SQLQueryCache<SQLQueryPlan>& cache = SQLQueryOperator::get_query_plan_cache();
   cache.clear_and_resize(2);
 
   const std::string q1 = "SELECT * FROM table_a;";

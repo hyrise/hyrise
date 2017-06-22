@@ -11,7 +11,6 @@
 #include "scheduler/node_queue_scheduler.hpp"
 #include "scheduler/topology.hpp"
 #include "sql/sql_query_operator.hpp"
-#include "sql/sql_query_plan_cache.hpp"
 #include "storage/storage_manager.hpp"
 
 namespace opossum {

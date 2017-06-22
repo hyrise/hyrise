@@ -7,8 +7,7 @@
 #include "operators/abstract_operator.hpp"
 #include "operators/abstract_read_only_operator.hpp"
 #include "scheduler/operator_task.hpp"
-#include "sql/sql_parse_tree_cache.hpp"
-#include "sql/sql_query_plan_cache.hpp"
+#include "sql/sql_query_cache.hpp"
 #include "sql/sql_query_translator.hpp"
 #include "sql/sql_result_operator.hpp"
 
@@ -44,9 +43,9 @@ class SQLQueryOperator : public AbstractOperator {
   const SQLQueryPlan& get_query_plan() const;
 
   // Static. Return the running instance of the parse tree cache.
-  static SQLParseTreeCache& get_parse_tree_cache();
+  static SQLQueryCache<std::shared_ptr<hsql::SQLParserResult>>& get_parse_tree_cache();
 
-  static SQLQueryPlanCache& get_query_plan_cache();
+  static SQLQueryCache<SQLQueryPlan>& get_query_plan_cache();
 
  protected:
   std::shared_ptr<const Table> on_execute(std::shared_ptr<TransactionContext> context) override;
@@ -93,15 +92,15 @@ class SQLQueryOperator : public AbstractOperator {
 
   // Static.
   // Automatic caching of parse trees during runtime.
-  static SQLParseTreeCache _parse_tree_cache;
+  static SQLQueryCache<std::shared_ptr<hsql::SQLParserResult>> _parse_tree_cache;
 
   // Static.
   // Stores all user defined prepared statements.
-  static SQLParseTreeCache _prepared_stmts;
+  static SQLQueryCache<std::shared_ptr<hsql::SQLParserResult>> _prepared_stmts;
 
   // Static.
   // Automatic caching of query plans during runtime.
-  static SQLQueryPlanCache _query_plan_cache;
+  static SQLQueryCache<SQLQueryPlan> _query_plan_cache;
 };
 
 }  // namespace opossum

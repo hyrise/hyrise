@@ -19,9 +19,9 @@ using hsql::SQLParserResult;
 
 // Static.
 // Query plan / parse tree caches.
-SQLParseTreeCache SQLQueryOperator::_parse_tree_cache(0);
-SQLParseTreeCache SQLQueryOperator::_prepared_stmts(1024);
-SQLQueryPlanCache SQLQueryOperator::_query_plan_cache(0);
+SQLQueryCache<std::shared_ptr<hsql::SQLParserResult>> SQLQueryOperator::_parse_tree_cache(0);
+SQLQueryCache<std::shared_ptr<hsql::SQLParserResult>> SQLQueryOperator::_prepared_stmts(1024);
+SQLQueryCache<SQLQueryPlan> SQLQueryOperator::_query_plan_cache(0);
 
 SQLQueryOperator::SQLQueryOperator(const std::string& query, bool schedule_plan)
     : _query(query), _schedule_plan(schedule_plan), _hit_parse_tree_cache(false), _hit_query_plan_cache(false) {
@@ -163,9 +163,11 @@ void SQLQueryOperator::compile_parse_result(std::shared_ptr<SQLParserResult> res
 }
 
 // Static.
-SQLParseTreeCache& SQLQueryOperator::get_parse_tree_cache() { return _parse_tree_cache; }
+SQLQueryCache<std::shared_ptr<hsql::SQLParserResult>>& SQLQueryOperator::get_parse_tree_cache() {
+  return _parse_tree_cache;
+}
 
 // Static.
-SQLQueryPlanCache& SQLQueryOperator::get_query_plan_cache() { return _query_plan_cache; }
+SQLQueryCache<SQLQueryPlan>& SQLQueryOperator::get_query_plan_cache() { return _query_plan_cache; }
 
 }  // namespace opossum
