@@ -18,7 +18,7 @@ StorageManager &StorageManager::get() {
 
 void StorageManager::add_table(const std::string &name, std::shared_ptr<Table> table) {
   for (size_t c = 0; c < table->chunk_count(); c++) {
-    Assert(table->get_chunk(c).has_mvcc_columns());
+    Assert(table->get_chunk(c).has_mvcc_columns(), "Table must have MVCC columns.");
   }
 
   _tables.insert(std::make_pair(name, std::move(table)));
