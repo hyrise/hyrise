@@ -15,15 +15,13 @@
 
 #include "tpcc_base_fixture.cpp"
 
-#include "../../benchmark-libs/tpcc/order_status.hpp"
-
-using namespace tpcc;
+#include "tpcc/order_status.hpp"
 
 namespace opossum {
 
 class TPCCOrderStatusBenchmark : public TPCCBenchmarkFixture {
  public:
-  void benchmark_get_customer_by_name(benchmark::State &state, AbstractOrderStatusImpl &impl) {
+  void benchmark_get_customer_by_name(benchmark::State &state, tpcc::AbstractOrderStatusImpl &impl) {
     clear_cache();
     auto c_last = _random_gen.last_name(2000);
     auto c_d_id = _random_gen.number(1, 10);
@@ -38,7 +36,7 @@ class TPCCOrderStatusBenchmark : public TPCCBenchmarkFixture {
     }
   }
 
-  void benchmark_get_customer_by_id(benchmark::State &state, AbstractOrderStatusImpl &impl) {
+  void benchmark_get_customer_by_id(benchmark::State &state, tpcc::AbstractOrderStatusImpl &impl) {
     clear_cache();
     auto c_last = _random_gen.last_name(2000);
     auto c_d_id = _random_gen.number(1, 10);
@@ -54,7 +52,7 @@ class TPCCOrderStatusBenchmark : public TPCCBenchmarkFixture {
     }
   }
 
-  void benchmark_get_order(benchmark::State &state, AbstractOrderStatusImpl &impl) {
+  void benchmark_get_order(benchmark::State &state, tpcc::AbstractOrderStatusImpl &impl) {
     clear_cache();
 
     auto c_d_id = _random_gen.number(1, 10);
@@ -85,21 +83,20 @@ class TPCCOrderStatusBenchmark : public TPCCBenchmarkFixture {
     }
   }
 
-  void benchmark_order_status(benchmark::State &state, AbstractOrderStatusImpl &impl) {
+  void benchmark_order_status(benchmark::State &state, tpcc::AbstractOrderStatusImpl &impl) {
     clear_cache();
 
     while (state.KeepRunning()) {
       OrderStatusParams params;
 
-      params.c_w_id = 0; // there is only one warehouse
+      params.c_w_id = 0;  // there is only one warehouse
       params.c_d_id = _random_gen.number(1, 10);
 
       if (_random_gen.number(0, 10) < 6) {
-        params.order_status_by = OrderStatusBy::CustomerLastName;
-        params.c_last = _random_gen.last_name(2000); // pass in i>1000 to trigger random value generation
-
+        params.order_status_by = tpcc::OrderStatusBy::CustomerLastName;
+        params.c_last = _random_gen.last_name(2000);  // pass in i>1000 to trigger random value generation
       } else {
-        params.order_status_by = OrderStatusBy::CustomerNumber;
+        params.order_status_by = tpcc::OrderStatusBy::CustomerNumber;
         params.c_id = _random_gen.nurand(1023, 1, 3000);
       }
 

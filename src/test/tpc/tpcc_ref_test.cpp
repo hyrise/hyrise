@@ -1,21 +1,23 @@
+#include <json.hpp>
+
 #include <array>
 #include <fstream>
 #include <memory>
+#include <string>
 #include <unordered_map>
 #include <vector>
 
-#include <json.hpp>
-
 #include "gtest/gtest.h"
 
-#include "../base_test.hpp"
-#include "../../benchmark-libs/tpcc/order_status.hpp"
-#include "../../benchmark-libs/tpcc/new_order.hpp"
+#include "base_test.hpp"
+
 #include "storage/storage_manager.hpp"
 #include "import_export/csv_rfc_parser.hpp"
 
+#include "tpcc/order_status.hpp"
+#include "tpcc/new_order.hpp"
+
 using json = nlohmann::json;
-using namespace tpcc;
 
 namespace opossum {
 

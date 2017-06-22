@@ -13,4 +13,4 @@ constexpr int32_t MAX_ORDER_LINE_QUANTITY = 10;
 constexpr int32_t MIN_CARRIER_ID = 1;
 constexpr int32_t MAX_CARRIER_ID = 10;
 
-}
+}  // namespace tpcc

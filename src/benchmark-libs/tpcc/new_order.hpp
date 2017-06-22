@@ -1,16 +1,15 @@
 #pragma once
 
+#include <json.hpp>
+
 #include <stdint.h>
+#include <memory>
 #include <string>
 #include <vector>
-
-#include <json.hpp>
 
 #include "defines.hpp"
 
 #include "concurrency/transaction_context.hpp"
-
-using namespace opossum;
 
 namespace tpcc {
 
@@ -64,7 +63,7 @@ class AbstractNewOrderImpl {
                          const int32_t d_id, const int32_t w_id) = 0;
 
   virtual TaskVector get_increment_next_order_id_tasks(
-    const std::shared_ptr<TransactionContext> t_context, const int32_t d_id, const int32_t d_w_id,
+    const std::shared_ptr<opossum::TransactionContext> t_context, const int32_t d_id, const int32_t d_w_id,
     const int32_t d_next_o_id) = 0;
 
   virtual TaskVector get_create_order_tasks(
@@ -73,14 +72,15 @@ class AbstractNewOrderImpl {
     o_ol_cnt, const int32_t o_all_local) = 0;
 
   virtual TaskVector get_create_new_order_tasks(
-    const std::shared_ptr<TransactionContext> t_context, const int32_t o_id, const int32_t d_id, const int32_t
+    const std::shared_ptr<opossum::TransactionContext> t_context, const int32_t o_id, const int32_t d_id, const int32_t
   w_id) = 0;
 
   virtual TaskVector get_get_item_info_tasks(
-    const std::shared_ptr<TransactionContext> t_context, const int32_t ol_i_id) = 0;
+    const std::shared_ptr<opossum::TransactionContext> t_context, const int32_t ol_i_id) = 0;
 
   virtual TaskVector get_get_stock_info_tasks(
-    const std::shared_ptr<TransactionContext> t_context, const int32_t ol_i_id, const int32_t ol_supply_w_id, const int32_t d_id) = 0;
+    const std::shared_ptr<opossum::TransactionContext> t_context, const int32_t ol_i_id, const int32_t ol_supply_w_id,
+    const int32_t d_id) = 0;
 
   virtual TaskVector
   get_update_stock_tasks(const std::shared_ptr<TransactionContext> t_context,
@@ -88,7 +88,7 @@ class AbstractNewOrderImpl {
                          const int32_t ol_supply_w_id) = 0;
 
   virtual TaskVector get_create_order_line_tasks(
-    const std::shared_ptr<TransactionContext> t_context,
+    const std::shared_ptr<opossum::TransactionContext> t_context,
     const int32_t ol_o_id,
     const int32_t ol_d_id,
     const int32_t ol_w_id,
@@ -99,14 +99,14 @@ class AbstractNewOrderImpl {
     const int32_t ol_quantity,
     const float ol_amount,
     const std::string & ol_dist_info) = 0;
-  
+
   NewOrderResult run_transaction(const NewOrderParams & params);
 };
 
 class NewOrderRefImpl : public AbstractNewOrderImpl {
  public:
   TaskVector get_get_customer_and_warehouse_tax_rate_tasks(
-    const std::shared_ptr<TransactionContext> t_context, const int32_t w_id, const int32_t d_id,
+    const std::shared_ptr<opossum::TransactionContext> t_context, const int32_t w_id, const int32_t d_id,
     const int32_t c_id) override;
 
   TaskVector
@@ -114,31 +114,32 @@ class NewOrderRefImpl : public AbstractNewOrderImpl {
                          const int32_t d_id, const int32_t w_id) override;
 
   TaskVector get_increment_next_order_id_tasks(
-    const std::shared_ptr<TransactionContext> t_context, const int32_t d_id, const int32_t d_w_id,
+    const std::shared_ptr<opossum::TransactionContext> t_context, const int32_t d_id, const int32_t d_w_id,
     const int32_t d_next_o_id) override;
 
   TaskVector get_create_order_tasks(
-    const std::shared_ptr<TransactionContext> t_context, const int32_t d_next_o_id, const int32_t d_id, const
+    const std::shared_ptr<opossum::TransactionContext> t_context, const int32_t d_next_o_id, const int32_t d_id, const
   int32_t w_id, const int32_t c_id, const int32_t o_entry_d, const int32_t o_carrier_id, const int32_t
     o_ol_cnt, const int32_t o_all_local) override;
 
   TaskVector get_create_new_order_tasks(
-    const std::shared_ptr<TransactionContext> t_context, const int32_t o_id, const int32_t d_id, const int32_t
+    const std::shared_ptr<opossum::TransactionContext> t_context, const int32_t o_id, const int32_t d_id, const int32_t
   w_id) override;
 
   TaskVector get_get_item_info_tasks(
-    const std::shared_ptr<TransactionContext> t_context, const int32_t ol_i_id) override;
+    const std::shared_ptr<opossum::TransactionContext> t_context, const int32_t ol_i_id) override;
 
   TaskVector get_get_stock_info_tasks(
-    const std::shared_ptr<TransactionContext> t_context, const int32_t ol_i_id, const int32_t ol_supply_w_id, const int32_t d_id) override;
+    const std::shared_ptr<opossum::TransactionContext> t_context, const int32_t ol_i_id, const int32_t ol_supply_w_id,
+    const int32_t d_id) override;
 
   TaskVector
-  get_update_stock_tasks(const std::shared_ptr<TransactionContext> t_context,
+  get_update_stock_tasks(const std::shared_ptr<opossum::TransactionContext> t_context,
                          const int32_t s_quantity, const int32_t ol_i_id,
                          const int32_t ol_supply_w_id) override;
 
   TaskVector get_create_order_line_tasks(
-    const std::shared_ptr<TransactionContext> t_context,
+    const std::shared_ptr<opossum::TransactionContext> t_context,
     const int32_t ol_o_id,
     const int32_t ol_d_id,
     const int32_t ol_w_id,
@@ -151,10 +152,9 @@ class NewOrderRefImpl : public AbstractNewOrderImpl {
     const std::string & ol_dist_info) override;
 };
 
-}
+}  // namespace tpcc
 
-namespace nlohmann
-{
+namespace nlohmann {
 template<>
 struct adl_serializer<tpcc::NewOrderOrderLineParams> {
   static void to_json(nlohmann::json &j, const tpcc::NewOrderOrderLineParams &v);
@@ -178,4 +178,4 @@ struct adl_serializer<tpcc::NewOrderResult> {
   static void to_json(nlohmann::json &j, const tpcc::NewOrderResult &v);
   static void from_json(const nlohmann::json &j, tpcc::NewOrderResult &v);
 };
-}
+}  // namespace nlohmann

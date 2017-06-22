@@ -1,5 +1,8 @@
 #include "helper.hpp"
 
+#include <memory>
+#include <vector>
+
 #include "concurrency/transaction_context.hpp"
 #include "operators/abstract_operator.hpp"
 #include "operators/table_wrapper.hpp"
@@ -19,4 +22,4 @@ void print_table(const std::shared_ptr<const Table> table, PrintMode mode, std::
   Print(table_wrapper, out, mode).execute();
 }
 
-}
+}  // namespace opossum

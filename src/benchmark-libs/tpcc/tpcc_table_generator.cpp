@@ -575,4 +575,4 @@ std::shared_ptr<std::map<std::string, std::shared_ptr<opossum::Table>>> TableGen
           {"NEW-ORDER", std::move(new_order_table)}});
 }
 
-}  // namespace tpc
+}  // namespace tpcc

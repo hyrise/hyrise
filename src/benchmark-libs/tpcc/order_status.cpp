@@ -1,6 +1,9 @@
 #include "order_status.hpp"
 
 #include <math.h>
+#include <memory>
+#include <string>
+#include <vector>
 #include <sstream>
 
 #include "types.hpp"
@@ -16,13 +19,10 @@
 #include "storage/storage_manager.hpp"
 #include "utils/helper.hpp"
 
-using namespace opossum;
-
 namespace tpcc {
 
 void AbstractOrderStatusImpl::set_transaction_context(
-  const std::shared_ptr<opossum::TransactionContext> & transaction_context)
-{
+  const std::shared_ptr<opossum::TransactionContext> & transaction_context) {
   _t_context = transaction_context;
 }
 
@@ -43,20 +43,18 @@ std::string OrderStatusParams::to_string() const {
 OrderStatusResult AbstractOrderStatusImpl::run_transaction(const OrderStatusParams &params) {
   OrderStatusResult result;
 
-  TransactionManager::get().run_transaction([&](std::shared_ptr<TransactionContext> t_context) {
+  opossum::TransactionManager::get().run_transaction([&](std::shared_ptr<opossum::TransactionContext> t_context) {
     _t_context = t_context;
 
     if (params.order_status_by == OrderStatusBy::CustomerLastName) {
       auto get_customer_tasks = get_customer_by_name(params.c_last, params.c_d_id, params.c_w_id);
-      AbstractScheduler::schedule_tasks_and_wait(get_customer_tasks);
+      opossum::AbstractScheduler::schedule_tasks_and_wait(get_customer_tasks);
 
       const auto customers_table = get_customer_tasks.back()->get_operator()->get_output();
       const auto num_names = customers_table->row_count();
-      if (num_names == 0) StorageManager::get().dump_as_csv("/home/moritz/");
+      DebugAssert(num_names > 0, "No such customer named '" + params.c_last + "'");
 
-      assert(num_names > 0);
-
-      const auto row = (size_t) (ceil(num_names - 1) / 2);
+      const auto row = static_cast<size_t>(ceil(num_names - 1) / 2);
 
       result.c_balance = customers_table->get_value<float>(0, row);
       result.c_first = customers_table->get_value<std::string>(1, row);
@@ -65,11 +63,9 @@ OrderStatusResult AbstractOrderStatusImpl::run_transaction(const OrderStatusPara
       result.c_id = customers_table->get_value<int32_t>(3, row);
     } else {
       auto get_customer_tasks = get_customer_by_id(params.c_id, params.c_d_id, params.c_w_id);
-      AbstractScheduler::schedule_tasks_and_wait(get_customer_tasks);
-      if (get_customer_tasks.back()->get_operator()->get_output()->row_count() != 1)
-        StorageManager::get().dump_as_csv("/home/moritz/");
-
-      assert(get_customer_tasks.back()->get_operator()->get_output()->row_count() == 1);
+      opossum::AbstractScheduler::schedule_tasks_and_wait(get_customer_tasks);
+      DebugAssert(get_customer_tasks.back()->get_operator()->get_output()->row_count() == 1,
+                  "Selecting by ID has to yield exactly one customer");
 
       const auto customers_table = get_customer_tasks.back()->get_operator()->get_output();
 
@@ -81,7 +77,7 @@ OrderStatusResult AbstractOrderStatusImpl::run_transaction(const OrderStatusPara
     }
 
     auto get_order_tasks = get_orders(result.c_id, params.c_d_id, params.c_w_id);
-    AbstractScheduler::schedule_tasks_and_wait(get_order_tasks);
+    opossum::AbstractScheduler::schedule_tasks_and_wait(get_order_tasks);
 
     const auto orders_table = get_order_tasks.back()->get_operator()->get_output();
 
@@ -90,7 +86,7 @@ OrderStatusResult AbstractOrderStatusImpl::run_transaction(const OrderStatusPara
     result.o_entry_d = orders_table->get_value<int32_t>(2, 0);
 
     auto get_order_line_tasks = get_order_lines(result.o_id, params.c_d_id, params.c_w_id);
-    AbstractScheduler::schedule_tasks_and_wait(get_order_line_tasks);
+    opossum::AbstractScheduler::schedule_tasks_and_wait(get_order_line_tasks);
 
     auto order_lines_table = get_order_line_tasks.back()->get_operator()->get_output();
 
@@ -120,22 +116,22 @@ OrderStatusRefImpl::get_customer_by_name(const std::string c_last, const int c_d
    * WHERE c_last=:c_last AND c_d_id=:d_id AND c_w_id=:w_id
    * ORDER BY c_first;
    */
-  auto gt_customer = std::make_shared<GetTable>("CUSTOMER");
-  auto validate = std::make_shared<Validate>(gt_customer);
-  auto first_filter = std::make_shared<TableScan>(validate, "C_LAST", "=", c_last);
-  auto second_filter = std::make_shared<TableScan>(first_filter, "C_D_ID", "=", c_d_id);
-  auto third_filter = std::make_shared<TableScan>(second_filter, "C_W_ID", "=", c_w_id);
+  auto gt_customer = std::make_shared<opossum::GetTable>("CUSTOMER");
+  auto validate = std::make_shared<opossum::Validate>(gt_customer);
+  auto first_filter = std::make_shared<opossum::TableScan>(validate, "C_LAST", "=", c_last);
+  auto second_filter = std::make_shared<opossum::TableScan>(first_filter, "C_D_ID", "=", c_d_id);
+  auto third_filter = std::make_shared<opossum::TableScan>(second_filter, "C_W_ID", "=", c_w_id);
   std::vector<std::string> columns = {"C_BALANCE", "C_FIRST", "C_MIDDLE", "C_ID"};
-  auto projection = std::make_shared<Projection>(third_filter, columns);
-  auto sort = std::make_shared<Sort>(projection, "C_FIRST", true);
+  auto projection = std::make_shared<opossum::Projection>(third_filter, columns);
+  auto sort = std::make_shared<opossum::Sort>(projection, "C_FIRST", true);
 
-  auto gt_customer_task = std::make_shared<OperatorTask>(gt_customer);
-  auto validate_task = std::make_shared<OperatorTask>(validate);
-  auto first_filter_task = std::make_shared<OperatorTask>(first_filter);
-  auto second_filter_task = std::make_shared<OperatorTask>(second_filter);
-  auto third_filter_task = std::make_shared<OperatorTask>(third_filter);
-  auto projection_task = std::make_shared<OperatorTask>(projection);
-  auto sort_task = std::make_shared<OperatorTask>(sort);
+  auto gt_customer_task = std::make_shared<opossum::OperatorTask>(gt_customer);
+  auto validate_task = std::make_shared<opossum::OperatorTask>(validate);
+  auto first_filter_task = std::make_shared<opossum::OperatorTask>(first_filter);
+  auto second_filter_task = std::make_shared<opossum::OperatorTask>(second_filter);
+  auto third_filter_task = std::make_shared<opossum::OperatorTask>(third_filter);
+  auto projection_task = std::make_shared<opossum::OperatorTask>(projection);
+  auto sort_task = std::make_shared<opossum::OperatorTask>(sort);
 
   gt_customer_task->set_as_predecessor_of(validate_task);
   validate_task->set_as_predecessor_of(first_filter_task);
@@ -144,10 +140,11 @@ OrderStatusRefImpl::get_customer_by_name(const std::string c_last, const int c_d
   third_filter_task->set_as_predecessor_of(projection_task);
   projection_task->set_as_predecessor_of(sort_task);
 
-  set_transaction_context_for_operators(_t_context, {gt_customer, validate, first_filter, 
+  opossum::set_transaction_context_for_operators(_t_context, {gt_customer, validate, first_filter,
                                                      second_filter, third_filter, projection, sort});
-  
-  return {gt_customer_task, validate_task, first_filter_task, second_filter_task, third_filter_task, projection_task, sort_task};
+
+  return {gt_customer_task, validate_task, first_filter_task, second_filter_task, third_filter_task, projection_task,
+          sort_task};
 }
 
 TaskVector
@@ -157,20 +154,20 @@ OrderStatusRefImpl::get_customer_by_id(const int c_id, const int c_d_id, const i
    * FROM customer
    * WHERE c_id=:c_id AND c_d_id=:d_id AND c_w_id=:w_id;
    */
-  auto gt_customer = std::make_shared<GetTable>("CUSTOMER");
-  auto validate = std::make_shared<Validate>(gt_customer);
-  auto first_filter = std::make_shared<TableScan>(validate, "C_ID", "=", c_id);
-  auto second_filter = std::make_shared<TableScan>(first_filter, "C_D_ID", "=", c_d_id);
-  auto third_filter = std::make_shared<TableScan>(second_filter, "C_W_ID", "=", c_w_id);
+  auto gt_customer = std::make_shared<opossum::GetTable>("CUSTOMER");
+  auto validate = std::make_shared<opossum::Validate>(gt_customer);
+  auto first_filter = std::make_shared<opossum::TableScan>(validate, "C_ID", "=", c_id);
+  auto second_filter = std::make_shared<opossum::TableScan>(first_filter, "C_D_ID", "=", c_d_id);
+  auto third_filter = std::make_shared<opossum::TableScan>(second_filter, "C_W_ID", "=", c_w_id);
   std::vector<std::string> columns = {"C_BALANCE", "C_FIRST", "C_MIDDLE", "C_LAST"};
-  auto projection = std::make_shared<Projection>(third_filter, columns);
+  auto projection = std::make_shared<opossum::Projection>(third_filter, columns);
 
-  auto gt_customer_task = std::make_shared<OperatorTask>(gt_customer);
-  auto validate_task = std::make_shared<OperatorTask>(validate);
-  auto first_filter_task = std::make_shared<OperatorTask>(first_filter);
-  auto second_filter_task = std::make_shared<OperatorTask>(second_filter);
-  auto third_filter_task = std::make_shared<OperatorTask>(third_filter);
-  auto projection_task = std::make_shared<OperatorTask>(projection);
+  auto gt_customer_task = std::make_shared<opossum::OperatorTask>(gt_customer);
+  auto validate_task = std::make_shared<opossum::OperatorTask>(validate);
+  auto first_filter_task = std::make_shared<opossum::OperatorTask>(first_filter);
+  auto second_filter_task = std::make_shared<opossum::OperatorTask>(second_filter);
+  auto third_filter_task = std::make_shared<opossum::OperatorTask>(third_filter);
+  auto projection_task = std::make_shared<opossum::OperatorTask>(projection);
 
   gt_customer_task->set_as_predecessor_of(validate_task);
   validate_task->set_as_predecessor_of(first_filter_task);
@@ -178,9 +175,9 @@ OrderStatusRefImpl::get_customer_by_id(const int c_id, const int c_d_id, const i
   second_filter_task->set_as_predecessor_of(third_filter_task);
   third_filter_task->set_as_predecessor_of(projection_task);
 
-  set_transaction_context_for_operators(_t_context, {gt_customer, validate, first_filter, 
+  opossum::set_transaction_context_for_operators(_t_context, {gt_customer, validate, first_filter,
                                                      second_filter, third_filter, projection});
-  
+
   return {gt_customer_task, validate_task, first_filter_task, second_filter_task, third_filter_task, projection_task};
 }
 
@@ -192,24 +189,24 @@ TaskVector OrderStatusRefImpl::get_orders(const int o_c_id, const int o_d_id, co
   * ORDER BY o_id DESC
   * LIMIT 1;
   */
-  auto gt_orders = std::make_shared<GetTable>("ORDER");
-  auto validate = std::make_shared<Validate>(gt_orders);
-  auto first_filter = std::make_shared<TableScan>(validate, "O_C_ID", "=", o_c_id);
-  auto second_filter = std::make_shared<TableScan>(first_filter, "O_D_ID", "=", o_d_id);
-  auto third_filter = std::make_shared<TableScan>(second_filter, "O_W_ID", "=", o_w_id);
+  auto gt_orders = std::make_shared<opossum::GetTable>("ORDER");
+  auto validate = std::make_shared<opossum::Validate>(gt_orders);
+  auto first_filter = std::make_shared<opossum::TableScan>(validate, "O_C_ID", "=", o_c_id);
+  auto second_filter = std::make_shared<opossum::TableScan>(first_filter, "O_D_ID", "=", o_d_id);
+  auto third_filter = std::make_shared<opossum::TableScan>(second_filter, "O_W_ID", "=", o_w_id);
   std::vector<std::string> columns = {"O_ID", "O_CARRIER_ID", "O_ENTRY_D"};
-  auto projection = std::make_shared<Projection>(third_filter, columns);
-  auto sort = std::make_shared<Sort>(projection, "O_ID", false);
-  auto limit = std::make_shared<Limit>(sort, 1);
+  auto projection = std::make_shared<opossum::Projection>(third_filter, columns);
+  auto sort = std::make_shared<opossum::Sort>(projection, "O_ID", false);
+  auto limit = std::make_shared<opossum::Limit>(sort, 1);
 
-  auto gt_orders_task = std::make_shared<OperatorTask>(gt_orders);
-  auto validate_task = std::make_shared<OperatorTask>(validate);
-  auto first_filter_task = std::make_shared<OperatorTask>(first_filter);
-  auto second_filter_task = std::make_shared<OperatorTask>(second_filter);
-  auto third_filter_task = std::make_shared<OperatorTask>(third_filter);
-  auto projection_task = std::make_shared<OperatorTask>(projection);
-  auto sort_task = std::make_shared<OperatorTask>(sort);
-  auto limit_task = std::make_shared<OperatorTask>(limit);
+  auto gt_orders_task = std::make_shared<opossum::OperatorTask>(gt_orders);
+  auto validate_task = std::make_shared<opossum::OperatorTask>(validate);
+  auto first_filter_task = std::make_shared<opossum::OperatorTask>(first_filter);
+  auto second_filter_task = std::make_shared<opossum::OperatorTask>(second_filter);
+  auto third_filter_task = std::make_shared<opossum::OperatorTask>(third_filter);
+  auto projection_task = std::make_shared<opossum::OperatorTask>(projection);
+  auto sort_task = std::make_shared<opossum::OperatorTask>(sort);
+  auto limit_task = std::make_shared<opossum::OperatorTask>(limit);
 
   gt_orders_task->set_as_predecessor_of(validate_task);
   validate_task->set_as_predecessor_of(first_filter_task);
@@ -218,12 +215,13 @@ TaskVector OrderStatusRefImpl::get_orders(const int o_c_id, const int o_d_id, co
   third_filter_task->set_as_predecessor_of(projection_task);
   projection_task->set_as_predecessor_of(sort_task);
   sort_task->set_as_predecessor_of(limit_task);
-  
-  set_transaction_context_for_operators(_t_context, {gt_orders, validate, first_filter, 
-                                                     second_filter, third_filter, projection, 
+
+  opossum::set_transaction_context_for_operators(_t_context, {gt_orders, validate, first_filter,
+                                                     second_filter, third_filter, projection,
                                                      sort, limit});
 
-  return {gt_orders_task, validate_task, first_filter_task, second_filter_task, third_filter_task, projection_task, sort_task, limit_task};
+  return {gt_orders_task, validate_task, first_filter_task, second_filter_task, third_filter_task, projection_task,
+          sort_task, limit_task};
 }
 
 TaskVector
@@ -234,20 +232,21 @@ OrderStatusRefImpl::get_order_lines(const int o_id, const int d_id, const int w_
   * FROM order_line
   * WHERE ol_o_id=:o_id AND ol_d_id=:d_id AND ol_w_id=:w_id;
   */
-  auto gt_order_lines = std::make_shared<GetTable>("ORDER-LINE");
-  auto validate = std::make_shared<Validate>(gt_order_lines);
-  auto first_filter = std::make_shared<TableScan>(validate, "OL_O_ID", "=", o_id);
-  auto second_filter = std::make_shared<TableScan>(first_filter, "OL_D_ID", "=", d_id);
-  auto third_filter = std::make_shared<TableScan>(second_filter, "OL_W_ID", "=", w_id);
-  std::vector<std::string> columns = {"OL_I_ID", "OL_SUPPLY_W_ID", "OL_QUANTITY", "OL_AMOUNT", "OL_DELIVERY_D", "OL_O_ID"};
-  auto projection = std::make_shared<Projection>(third_filter, columns);
+  auto gt_order_lines = std::make_shared<opossum::GetTable>("ORDER-LINE");
+  auto validate = std::make_shared<opossum::Validate>(gt_order_lines);
+  auto first_filter = std::make_shared<opossum::TableScan>(validate, "OL_O_ID", "=", o_id);
+  auto second_filter = std::make_shared<opossum::TableScan>(first_filter, "OL_D_ID", "=", d_id);
+  auto third_filter = std::make_shared<opossum::TableScan>(second_filter, "OL_W_ID", "=", w_id);
+  std::vector<std::string> columns = {"OL_I_ID", "OL_SUPPLY_W_ID", "OL_QUANTITY", "OL_AMOUNT", "OL_DELIVERY_D",
+                                      "OL_O_ID"};
+  auto projection = std::make_shared<opossum::Projection>(third_filter, columns);
 
-  auto gt_order_lines_task = std::make_shared<OperatorTask>(gt_order_lines);
-  auto validate_task = std::make_shared<OperatorTask>(validate);
-  auto first_filter_task = std::make_shared<OperatorTask>(first_filter);
-  auto second_filter_task = std::make_shared<OperatorTask>(second_filter);
-  auto third_filter_task = std::make_shared<OperatorTask>(third_filter);
-  auto projection_task = std::make_shared<OperatorTask>(projection);
+  auto gt_order_lines_task = std::make_shared<opossum::OperatorTask>(gt_order_lines);
+  auto validate_task = std::make_shared<opossum::OperatorTask>(validate);
+  auto first_filter_task = std::make_shared<opossum::OperatorTask>(first_filter);
+  auto second_filter_task = std::make_shared<opossum::OperatorTask>(second_filter);
+  auto third_filter_task = std::make_shared<opossum::OperatorTask>(third_filter);
+  auto projection_task = std::make_shared<opossum::OperatorTask>(projection);
 
   gt_order_lines_task->set_as_predecessor_of(validate_task);
   validate_task->set_as_predecessor_of(first_filter_task);
@@ -255,24 +254,22 @@ OrderStatusRefImpl::get_order_lines(const int o_id, const int d_id, const int w_
   second_filter_task->set_as_predecessor_of(third_filter_task);
   third_filter_task->set_as_predecessor_of(projection_task);
 
-  set_transaction_context_for_operators(_t_context, {gt_order_lines, validate, first_filter, 
-                                                     second_filter, third_filter, projection});
+  opossum::set_transaction_context_for_operators(_t_context, {gt_order_lines, validate, first_filter,
+                                                              second_filter, third_filter, projection});
 
-  return {gt_order_lines_task, validate_task, first_filter_task, second_filter_task, third_filter_task, projection_task};
+  return {gt_order_lines_task, validate_task, first_filter_task, second_filter_task, third_filter_task,
+          projection_task};
 }
 
-}
+}  // namespace tpcc
 
 namespace nlohmann {
 
-using namespace opossum;
-using namespace tpcc;
-
-void adl_serializer<OrderStatusParams>::to_json(nlohmann::json &j, const OrderStatusParams &v) {
+void adl_serializer<tpcc::OrderStatusParams>::to_json(nlohmann::json &j, const tpcc::OrderStatusParams &v) {
   throw "Not implemented";
 }
 
-void adl_serializer<OrderStatusParams>::from_json(const nlohmann::json &j, OrderStatusParams &v) {
+void adl_serializer<tpcc::OrderStatusParams>::from_json(const nlohmann::json &j, tpcc::OrderStatusParams &v) {
   v.c_w_id = j["c_w_id"];
   v.c_d_id = j["c_d_id"];
 
@@ -319,4 +316,4 @@ void adl_serializer<OrderStatusResult>::from_json(const nlohmann::json &j, Order
     }
   }
 }
-}
+}  // namespace nlohmann

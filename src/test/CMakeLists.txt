@@ -81,6 +81,8 @@ set(
     tpcc
 )
 
+include_directories(${CMAKE_CURRENT_SOURCE_DIR})
+
 # Configure opossumTest
 add_executable(opossumTest ${OPOSSUM_TEST_SOURCES})
 target_link_libraries(opossumTest opossum ${LIBRARIES})

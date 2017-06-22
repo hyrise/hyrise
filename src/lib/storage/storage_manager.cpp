@@ -56,10 +56,8 @@ void StorageManager::print(std::ostream &out) const {
 
 void StorageManager::reset() { get() = StorageManager(); }
 
-void StorageManager::dump_as_csv(const std::string & path)
-{
-  for (auto & pair : _tables)
-  {
+void StorageManager::dump_as_csv(const std::string & path) {
+  for (auto & pair : _tables) {
     const auto & name = pair.first;
     auto & table = pair.second;
 

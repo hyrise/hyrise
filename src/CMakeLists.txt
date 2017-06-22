@@ -21,6 +21,7 @@ include_directories(
     ${PROJECT_SOURCE_DIR}/third_party/json
     ${PROJECT_SOURCE_DIR}/third_party/sql-parser/src
 
+    ${PROJECT_SOURCE_DIR}/src/benchmark-libs/
     ${PROJECT_SOURCE_DIR}/src/lib/
 )
 

@@ -1,16 +1,18 @@
 #pragma once
 
-#include <stdint.h>
-#include <string>
-
 #include <json.hpp>
+
+#include <stdint.h>
+#include <memory>
+#include <string>
+#include <vector>
 
 #include "scheduler/operator_task.hpp"
 
 #include "defines.hpp"
 
 namespace opossum {
-  class TransactionContext;
+class TransactionContext;
 }
 
 namespace tpcc {
@@ -69,8 +71,7 @@ class AbstractOrderStatusImpl {
   std::shared_ptr<opossum::TransactionContext> _t_context;
 };
 
-class OrderStatusRefImpl : public AbstractOrderStatusImpl
-{
+class OrderStatusRefImpl : public AbstractOrderStatusImpl {
  public:
   TaskVector
   get_customer_by_name(const std::string c_last, const int c_d_id,
@@ -83,10 +84,9 @@ class OrderStatusRefImpl : public AbstractOrderStatusImpl
   get_order_lines(const int o_id, const int d_id, const int w_id) override;
 };
 
-}
+}  // namespace tpcc
 
-namespace nlohmann
-{
+namespace nlohmann {
 template<>
 struct adl_serializer<tpcc::OrderStatusParams> {
   static void to_json(nlohmann::json &j, const tpcc::OrderStatusParams &v);
@@ -104,4 +104,4 @@ struct adl_serializer<tpcc::OrderStatusResult> {
   static void to_json(nlohmann::json &j, const tpcc::OrderStatusResult &v);
   static void from_json(const nlohmann::json &j, tpcc::OrderStatusResult &v);
 };
-}
+}  // namespace nlohmann

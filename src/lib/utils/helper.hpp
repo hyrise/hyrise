@@ -1,10 +1,11 @@
 #pragma once
 
+#include <tbb/tbb.h>
+
 #include <iostream>
 #include <memory>
+#include <utility>
 #include <vector>
-
-#include <tbb/tbb.h>
 
 #include "operators/print.hpp"
 
@@ -29,4 +30,4 @@ std::shared_ptr<ValueColumn<T>> create_single_value_column(T value) {
   return std::make_shared<ValueColumn<T>>(std::move(column));
 }
 
-}
+}  // namespace opossum
