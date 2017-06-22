@@ -12,6 +12,7 @@ namespace tpcc {
 
 class RandomGenerator {
  public:
+  // Fix random seed, to make sure the benchmark is deterministic
   RandomGenerator() : engine(42) {}
 
   size_t number(size_t lower, size_t upper) {

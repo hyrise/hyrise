@@ -1,5 +1,10 @@
 #pragma once
 
+/**
+ * This file is loosely related to src/scripts/constants.py and contains constants specified in the TPCC benchmark
+ * These constants are used for the opossumBenchmarkTPCC-Suite
+ */
+
 #include <stdint.h>
 
 namespace tpcc {

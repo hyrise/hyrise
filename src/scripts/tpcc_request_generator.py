@@ -92,7 +92,7 @@ def generate_requests(distribution, num_requests=100):
 
             if request_type == 0:
                 transactions.append(generate_new_order())
-            if request_type == 1:
+            elif request_type == 1:
                 transactions.append(generate_order_status())
     elif distribution == 'benchmark':
         while len(transactions) < num_requests:
@@ -121,9 +121,9 @@ if __name__ == '__main__':
                          help='For \'test\', generate even distribution of tests, for \'benchmark\' stick to the distribution specified by TPCC')
     aparser.add_argument('num_requests', type=int,
                          help='Number of requests to generate', default=100)
-    args = vars(aparser.parse_args())
+    args = aparser.parse_args()
 
-    print('Generating {} requests with \'{}\' distribution'.format(args['num_requests'], args['distribution']))
-    generate_requests(args['distribution'], args['num_requests'])
+    print('Generating {} requests with \'{}\' distribution'.format(args.num_requests, args.distribution))
+    generate_requests(args.distribution, args.num_requests)
     print('Done')
 

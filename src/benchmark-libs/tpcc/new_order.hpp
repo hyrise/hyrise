@@ -25,8 +25,6 @@ struct NewOrderParams {
   int32_t c_id = 0;
   int32_t o_entry_d = 0;
   std::vector<NewOrderOrderLineParams> order_lines;
-
-  std::string to_string() const;
 };
 
 struct NewOrderOrderLineResult {

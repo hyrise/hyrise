@@ -25,22 +25,24 @@ def executemany_sql(cur, statement, params=()):
     #print(statement)
     cur.executemany(statement, params)
 
-def load_table(cur, dir, name, name_override=None):
-    csv_meta_path = '%s/%s.csv.meta' % (dir, name)
-    csv_path = '%s/%s.csv' % (dir, name)
+def load_table(cur, directory, name, name_override=None):
+    csv_meta_path = '%s/%s.csv.meta' % (directory, name)
+    csv_path = '%s/%s.csv' % (directory, name)
 
-    in_db_name = name_override if name_override != None else name
+    in_db_name = name_override if name_override is not None else name
 
     with open(csv_meta_path) as csv_file:
         reader = csv.reader(csv_file, delimiter=',', quotechar='\"')
 
         columns = []
 
+        csv_type_to_sql = {'int': 'INTEGER',
+                           'float': 'REAL',
+                           'string': 'TEXT'}
+
         for row in reader:
             if row[0] == 'ColumnType':
-                column_type = {'int': 'INTEGER',
-                               'float': 'REAL',
-                               'string': 'TEXT'}[row[2].lower()]
+                column_type = csv_type_to_sql[row[2].lower()]
                 columns.append((row[1], column_type))
 
     items_decl = ','.join([' '.join(column) for column in columns])
@@ -251,7 +253,7 @@ def process_delivery(cur, params):
     for d_id in range(1, NUM_DISTRICTS_PER_WAREHOUSE + 1):
         execute_sql(cur, q["getNewOrder"], (d_id, w_id))
         new_order = cur.fetchone()
-        if new_order == None:
+        if new_order is None:
             continue
 
         no_o_id = new_order[0]
@@ -291,7 +293,7 @@ def run_sqlite(distribution):
         "Delivery": process_delivery
     }
 
-    for idx, transaction in enumerate(tpcc_input):
+    for transaction in tpcc_input:
         query_results.append(transaction_dispatch[transaction['transaction']](cur, transaction['params']))
 
     with open(tpcc_output_path, "w") as tpcc_output_file:
@@ -304,16 +306,8 @@ if __name__ == "__main__":
     aparser = argparse.ArgumentParser(description='Runs TPCC requests in SQLite and stores the results')
     aparser.add_argument('distribution', choices=['test', 'benchmark'],
                          help="Use the specified distribution")
-    args = vars(aparser.parse_args())
+    args = aparser.parse_args()
 
-    print('Running requests with \'{}\' distribution'.format(args['distribution']))
-    run_sqlite(args['distribution'])
+    print('Running requests with \'{}\' distribution'.format(args.distribution))
+    run_sqlite(args.distribution)
     print('Done')
-
-
-
-
-
-
-
-

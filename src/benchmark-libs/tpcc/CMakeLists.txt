@@ -2,11 +2,11 @@
 set(
     SOURCES
     defines.hpp
-    random_generator.hpp
     new_order.cpp
     new_order.hpp
     order_status.cpp
     order_status.hpp
+    random_generator.hpp
     tpcc_table_generator.cpp
 )
 

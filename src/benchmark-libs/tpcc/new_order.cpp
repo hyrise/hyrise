@@ -27,20 +27,6 @@
 
 namespace tpcc {
 
-std::string NewOrderParams::to_string() const {
-  std::stringstream s;
-
-  int32_t w_id = 0;
-  int32_t d_id = 0;
-  int32_t c_id = 0;
-  int32_t o_entry_d = 0;
-
-  s << "{w_id: " << w_id << "; d_id: " << d_id << "; c_id: " << c_id << "; o_entry_d: " << o_entry_d << "; ";
-
-  s << "}" << std::endl;
-  return s.str();
-}
-
 NewOrderResult AbstractNewOrderImpl::run_transaction(const NewOrderParams &params) {
   NewOrderResult result;
   std::vector<opossum::AllTypeVariant> row;
@@ -120,7 +106,7 @@ NewOrderResult AbstractNewOrderImpl::run_transaction(const NewOrderParams &param
 
       order_line.s_qty = stock_info_table->get_value<int32_t>(0, 0);
       order_line.s_data = stock_info_table->get_value<std::string>(1, 0);
-      order_line.s_ytd = stock_info_table->get_value<int32_t>(2, 0);
+      //order_line.s_ytd = stock_info_table->get_value<int32_t>(2, 0);
       order_line.s_order_cnt = stock_info_table->get_value<int32_t>(3, 0);
       order_line.s_remote_cnt = stock_info_table->get_value<int32_t>(4, 0);
       order_line.s_dist_xx = stock_info_table->get_value<std::string>(5, 0);
@@ -459,6 +445,8 @@ TaskVector NewOrderRefImpl::get_update_stock_tasks(const std::shared_ptr<opossum
                                                    const int32_t s_quantity, const int32_t ol_i_id,
                                                    const int32_t ol_supply_w_id) {
   /**
+   * TODO(anybody) unlike Pavlo, this doesn't update ytd, remote_cnt, order_cnt
+   *
    * UPDATE stock
    * SET s_quantity = :s_quantity
    * WHERE s_i_id = :ol_i_id AND s_w_id = :ol_supply_w_id
@@ -591,9 +579,10 @@ void adl_serializer<tpcc::NewOrderOrderLineResult>::from_json(const nlohmann::js
   v.i_data = j["i_data"];
   v.s_qty = j["s_qty"];
   v.s_dist_xx = j["s_dist_xx"];
-  //  v.s_ytd = j["s_ytd"];
-  //  v.s_order_cnt = j["s_order_cnt"];
-  //  v.s_remote_cnt = j["s_remote_cnt"];
+  // TODO(anybody): don't use these until they are updated in STOCK UPDATE.
+  //v.s_ytd = j["s_ytd"];
+  //v.s_order_cnt = j["s_order_cnt"];
+  //v.s_remote_cnt = j["s_remote_cnt"];
   v.s_data = j["s_data"];
   v.amount = j["amount"];
 }

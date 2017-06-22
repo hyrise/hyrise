@@ -54,25 +54,5 @@ class TPCCBenchmarkFixture : public benchmark::Fixture {
     }
     clear.resize(0);
   }
-
-  // untested!!
-  std::shared_ptr<std::vector<AllTypeVariant>> get_from_table_at_row(std::shared_ptr<const Table> table, size_t row) {
-    auto row_counter = 0;
-    for (ChunkID i = 0; i < table->chunk_count(); i++) {
-      auto& chunk = table->get_chunk(i);
-      // TODO(anyone): check for chunksize + row_counter == row
-      if (chunk.size() + row_counter < row) {
-        row_counter += chunk.size();
-      } else {
-        auto result = std::make_shared<std::vector<AllTypeVariant>>();
-        for (ChunkID i = 0; i < chunk.col_count(); i++) {
-          const auto& column = chunk.get_column(i);
-          result->emplace_back(column->operator[](row - row_counter));
-        }
-        return result;
-      }
-    }
-    throw std::runtime_error("trying to select row that is bigger than size of table");
-  }
 };
 }  // namespace opossum
