@@ -70,8 +70,8 @@ def init_db():
 
 
 def dump_db(cur):
-    def dump_table(cur, dir, table_name, file_prefix):
-        csv_path = "{}/RESULT_{}.csv".format(dir, file_prefix)
+    def dump_table(cur, directory, table_name, file_prefix):
+        csv_path = "{}/RESULT_{}.csv".format(directory, file_prefix)
 
         execute_sql(cur, "SELECT * FROM {}".format(table_name))
         rows = cur.fetchall()
