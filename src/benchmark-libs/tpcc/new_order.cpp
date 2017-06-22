@@ -283,7 +283,6 @@ TaskVector NewOrderRefImpl::get_increment_next_order_id_tasks(
   return {gt_t, v_t, ts1_t, ts2_t, original_rows_t, updated_rows_t, update_t};
 }
 
-// TODO(tim): re-factor/extend Insert so that we do not have to build a Table object first.
 TaskVector NewOrderRefImpl::get_create_order_tasks(const int32_t d_next_o_id, const int32_t d_id, const int32_t w_id,
                                                    const int32_t c_id, const int32_t o_entry_d,
                                                    const int32_t o_carrier_id, const int32_t o_ol_cnt,
