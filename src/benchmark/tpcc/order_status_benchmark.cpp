@@ -68,7 +68,7 @@ class TPCCOrderStatusBenchmark : public TPCCBenchmarkFixture {
     }
   }
 
-  void benchmark_get_order_line(benchmark::State &state, AbstractOrderStatusImpl &impl) {
+  void benchmark_get_order_line(benchmark::State &state, tpcc::AbstractOrderStatusImpl &impl) {
     clear_cache();
     auto c_last = _random_gen.last_name(2000);
     auto c_d_id = _random_gen.number(1, 10);
@@ -87,7 +87,7 @@ class TPCCOrderStatusBenchmark : public TPCCBenchmarkFixture {
     clear_cache();
 
     while (state.KeepRunning()) {
-      OrderStatusParams params;
+      tpcc::OrderStatusParams params;
 
       params.c_w_id = 0;  // there is only one warehouse
       params.c_d_id = _random_gen.number(1, 10);

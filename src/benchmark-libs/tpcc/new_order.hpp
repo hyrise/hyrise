@@ -55,11 +55,11 @@ struct NewOrderResult {
 class AbstractNewOrderImpl {
  public:
   virtual TaskVector get_get_customer_and_warehouse_tax_rate_tasks(
-    const std::shared_ptr<TransactionContext> t_context, const int32_t w_id, const int32_t d_id,
+    const std::shared_ptr<opossum::TransactionContext> t_context, const int32_t w_id, const int32_t d_id,
     const int32_t c_id) = 0;
 
   virtual TaskVector
-  get_get_district_tasks(const std::shared_ptr<TransactionContext> t_context,
+  get_get_district_tasks(const std::shared_ptr<opossum::TransactionContext> t_context,
                          const int32_t d_id, const int32_t w_id) = 0;
 
   virtual TaskVector get_increment_next_order_id_tasks(
@@ -67,7 +67,7 @@ class AbstractNewOrderImpl {
     const int32_t d_next_o_id) = 0;
 
   virtual TaskVector get_create_order_tasks(
-    const std::shared_ptr<TransactionContext> t_context, const int32_t d_next_o_id, const int32_t d_id, const
+    const std::shared_ptr<opossum::TransactionContext> t_context, const int32_t d_next_o_id, const int32_t d_id, const
   int32_t w_id, const int32_t c_id, const int32_t o_entry_d, const int32_t o_carrier_id, const int32_t
     o_ol_cnt, const int32_t o_all_local) = 0;
 
@@ -83,7 +83,7 @@ class AbstractNewOrderImpl {
     const int32_t d_id) = 0;
 
   virtual TaskVector
-  get_update_stock_tasks(const std::shared_ptr<TransactionContext> t_context,
+  get_update_stock_tasks(const std::shared_ptr<opossum::TransactionContext> t_context,
                          const int32_t s_quantity, const int32_t ol_i_id,
                          const int32_t ol_supply_w_id) = 0;
 
@@ -110,7 +110,7 @@ class NewOrderRefImpl : public AbstractNewOrderImpl {
     const int32_t c_id) override;
 
   TaskVector
-  get_get_district_tasks(const std::shared_ptr<TransactionContext> t_context,
+  get_get_district_tasks(const std::shared_ptr<opossum::TransactionContext> t_context,
                          const int32_t d_id, const int32_t w_id) override;
 
   TaskVector get_increment_next_order_id_tasks(

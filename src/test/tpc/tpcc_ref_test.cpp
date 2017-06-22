@@ -31,8 +31,8 @@ class OrderStatusTestImpl : public TransactionTestImpl {
  public:
   void run_and_test_transaction_from_json(const nlohmann::json & json_params,
                                           const nlohmann::json & json_results) {
-      OrderStatusParams params = json_params;
-      OrderStatusResult ref_result = json_results;
+      tpcc::OrderStatusParams params = json_params;
+      tpcc::OrderStatusResult ref_result = json_results;
 
       auto our_result = _ref_impl.run_transaction(params);
 
@@ -59,15 +59,15 @@ class OrderStatusTestImpl : public TransactionTestImpl {
   }
 
  private:
-  OrderStatusRefImpl _ref_impl;
+  tpcc::OrderStatusRefImpl _ref_impl;
 };
 
 class NewOrderTestImpl : public TransactionTestImpl {
  public:
   void run_and_test_transaction_from_json(const nlohmann::json & json_params,
                                           const nlohmann::json & json_results) {
-      NewOrderParams params = json_params;
-      NewOrderResult ref_result = json_results;
+      tpcc::NewOrderParams params = json_params;
+      tpcc::NewOrderResult ref_result = json_results;
 
       auto our_result = _ref_impl.run_transaction(params);
 
@@ -97,7 +97,7 @@ class NewOrderTestImpl : public TransactionTestImpl {
   }
 
  private:
-  NewOrderRefImpl _ref_impl;
+  tpcc::NewOrderRefImpl _ref_impl;
 };
 
 class TpccRefTest : public BaseTest {

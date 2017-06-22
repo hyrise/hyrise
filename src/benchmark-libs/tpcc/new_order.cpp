@@ -43,9 +43,9 @@ std::string NewOrderParams::to_string() const {
 
 NewOrderResult AbstractNewOrderImpl::run_transaction(const NewOrderParams &params) {
   NewOrderResult result;
-  std::vector<AllTypeVariant> row;
+  std::vector<opossum::AllTypeVariant> row;
 
-  TransactionManager::get().run_transaction([&](std::shared_ptr<oposum::TransactionContext> t_context) {
+  opossum::TransactionManager::get().run_transaction([&](std::shared_ptr<opossum::TransactionContext> t_context) {
     /**
      * GET CUSTOMER AND WAREHOUSE TAX RATE
      */
@@ -94,7 +94,7 @@ NewOrderResult AbstractNewOrderImpl::run_transaction(const NewOrderParams &param
     opossum::AbstractScheduler::schedule_tasks_and_wait(create_new_order_tasks);
 
     // TODO(anyone): TransactionContext just keeps raw ptr(wtf?) to the Tasks
-    std::vector<std::shared_ptr<OperatorTask>> inner_scope_tasks;
+    std::vector<std::shared_ptr<opossum::OperatorTask>> inner_scope_tasks;
 
     for (size_t ol_idx = 0; ol_idx < params.order_lines.size(); ol_idx++) {
       const auto &order_line_params = params.order_lines[ol_idx];
@@ -179,7 +179,7 @@ NewOrderResult AbstractNewOrderImpl::run_transaction(const NewOrderParams &param
 }
 
 TaskVector NewOrderRefImpl::get_get_customer_and_warehouse_tax_rate_tasks(
-  const std::shared_ptr<oposum::TransactionContext> t_context, const int32_t w_id, const int32_t d_id,
+  const std::shared_ptr<opossum::TransactionContext> t_context, const int32_t w_id, const int32_t d_id,
   const int32_t c_id) {
   /**
    * SELECT c_discount, c_last, c_credit, w_tax
@@ -235,7 +235,7 @@ TaskVector NewOrderRefImpl::get_get_customer_and_warehouse_tax_rate_tasks(
 }
 
 TaskVector
-NewOrderRefImpl::get_get_district_tasks(const std::shared_ptr<oposum::TransactionContext> t_context,
+NewOrderRefImpl::get_get_district_tasks(const std::shared_ptr<opossum::TransactionContext> t_context,
                                         const int32_t d_id, const int32_t w_id) {
   /**
    * SELECT d_next_o_id, d_tax
@@ -272,7 +272,7 @@ NewOrderRefImpl::get_get_district_tasks(const std::shared_ptr<oposum::Transactio
 }
 
 TaskVector NewOrderRefImpl::get_increment_next_order_id_tasks(
-  const std::shared_ptr<oposum::TransactionContext> t_context, const int32_t d_id, const int32_t d_w_id,
+  const std::shared_ptr<opossum::TransactionContext> t_context, const int32_t d_id, const int32_t d_w_id,
   const int32_t d_next_o_id) {
   /**
   * UPDATE district
@@ -290,7 +290,7 @@ TaskVector NewOrderRefImpl::get_increment_next_order_id_tasks(
   const auto original_rows = std::make_shared<opossum::Projection>(ts2, columns);
 
   const opossum::Projection::ProjectionDefinitions definitions{
-    Projection::ProjectionDefinition{std::to_string(d_next_o_id) + "+1", "int", "fix"}};
+    opossum::Projection::ProjectionDefinition{std::to_string(d_next_o_id) + "+1", "int", "fix"}};
   const auto updated_rows = std::make_shared<opossum::Projection>(ts2, definitions);
 
   const auto update = std::make_shared<opossum::Update>("DISTRICT", original_rows, updated_rows);
@@ -321,7 +321,7 @@ TaskVector NewOrderRefImpl::get_increment_next_order_id_tasks(
 }
 
 // TODO(tim): re-factor/extend Insert so that we do not have to build a Table object first.
-TaskVector NewOrderRefImpl::get_create_order_tasks(const std::shared_ptr<oposum::TransactionContext> t_context,
+TaskVector NewOrderRefImpl::get_create_order_tasks(const std::shared_ptr<opossum::TransactionContext> t_context,
                                                                   const int32_t d_next_o_id, const int32_t d_id,
                                                                   const int32_t w_id, const int32_t c_id,
                                                                   const int32_t o_entry_d, const int32_t o_carrier_id,
@@ -332,26 +332,26 @@ TaskVector NewOrderRefImpl::get_create_order_tasks(const std::shared_ptr<oposum:
    */
 
   auto target_table_name = std::string("ORDER");
-  const auto original_table = StorageManager::get().get_table(target_table_name);
+  const auto original_table = opossum::StorageManager::get().get_table(target_table_name);
 
-  auto new_table = std::make_shared<Table>();
-  for (ColumnID columnID = 0; columnID < original_table->col_count(); columnID++) {
+  auto new_table = std::make_shared<opossum::Table>();
+  for (opossum::ColumnID columnID = 0; columnID < original_table->col_count(); columnID++) {
     new_table->add_column(original_table->column_name(columnID), original_table->column_type(columnID), false);
   }
 
-  Chunk chunk;
-  chunk.add_column(create_single_value_column<int32_t>(d_next_o_id));
-  chunk.add_column(create_single_value_column<int32_t>(d_id));
-  chunk.add_column(create_single_value_column<int32_t>(w_id));
-  chunk.add_column(create_single_value_column<int32_t>(c_id));
-  chunk.add_column(create_single_value_column<int32_t>(o_entry_d));
-  chunk.add_column(create_single_value_column<int32_t>(o_carrier_id));
-  chunk.add_column(create_single_value_column<int32_t>(o_ol_cnt));
-  chunk.add_column(create_single_value_column<int32_t>(o_all_local));
+  opossum::Chunk chunk;
+  chunk.add_column(opossum::create_single_value_column<int32_t>(d_next_o_id));
+  chunk.add_column(opossum::create_single_value_column<int32_t>(d_id));
+  chunk.add_column(opossum::create_single_value_column<int32_t>(w_id));
+  chunk.add_column(opossum::create_single_value_column<int32_t>(c_id));
+  chunk.add_column(opossum::create_single_value_column<int32_t>(o_entry_d));
+  chunk.add_column(opossum::create_single_value_column<int32_t>(o_carrier_id));
+  chunk.add_column(opossum::create_single_value_column<int32_t>(o_ol_cnt));
+  chunk.add_column(opossum::create_single_value_column<int32_t>(o_all_local));
   new_table->add_chunk(std::move(chunk));
 
   auto tw = std::make_shared<opossum::TableWrapper>(new_table);
-  const auto insert = std::make_shared<Insert>(target_table_name, tw);
+  const auto insert = std::make_shared<opossum::Insert>(target_table_name, tw);
 
   opossum::set_transaction_context_for_operators(t_context, {insert});
 
@@ -362,7 +362,7 @@ TaskVector NewOrderRefImpl::get_create_order_tasks(const std::shared_ptr<oposum:
 }
 
 TaskVector NewOrderRefImpl::get_create_new_order_tasks(
-  const std::shared_ptr<oposum::TransactionContext> t_context, const int32_t o_id, const int32_t d_id,
+  const std::shared_ptr<opossum::TransactionContext> t_context, const int32_t o_id, const int32_t d_id,
   const int32_t w_id) {
   /**
    * INSERT INTO NEW_ORDER (no_o_id, no_d_id, no_w_id)
@@ -370,21 +370,21 @@ TaskVector NewOrderRefImpl::get_create_new_order_tasks(
    */
 
   auto target_table_name = std::string("NEW-ORDER");
-  const auto original_table = StorageManager::get().get_table(target_table_name);
+  const auto original_table = opossum::StorageManager::get().get_table(target_table_name);
 
-  auto new_table = std::make_shared<Table>();
-  for (ColumnID columnID = 0; columnID < original_table->col_count(); columnID++) {
+  auto new_table = std::make_shared<opossum::Table>();
+  for (opossum::ColumnID columnID = 0; columnID < original_table->col_count(); columnID++) {
     new_table->add_column(original_table->column_name(columnID), original_table->column_type(columnID), false);
   }
 
-  Chunk chunk;
-  chunk.add_column(create_single_value_column<int32_t>(o_id));
-  chunk.add_column(create_single_value_column<int32_t>(d_id));
-  chunk.add_column(create_single_value_column<int32_t>(w_id));
+  opossum::Chunk chunk;
+  chunk.add_column(opossum::create_single_value_column<int32_t>(o_id));
+  chunk.add_column(opossum::create_single_value_column<int32_t>(d_id));
+  chunk.add_column(opossum::create_single_value_column<int32_t>(w_id));
   new_table->add_chunk(std::move(chunk));
 
   auto tw = std::make_shared<opossum::TableWrapper>(new_table);
-  const auto insert = std::make_shared<Insert>(target_table_name, tw);
+  const auto insert = std::make_shared<opossum::Insert>(target_table_name, tw);
 
   opossum::set_transaction_context_for_operators(t_context, {tw, insert});
 
@@ -395,7 +395,7 @@ TaskVector NewOrderRefImpl::get_create_new_order_tasks(
 }
 
 TaskVector NewOrderRefImpl::get_get_item_info_tasks(
-  const std::shared_ptr<oposum::TransactionContext> t_context, const int32_t ol_i_id) {
+  const std::shared_ptr<opossum::TransactionContext> t_context, const int32_t ol_i_id) {
   /**
    * SELECT i_price, i_name , i_data
    * FROM item
@@ -427,7 +427,7 @@ TaskVector NewOrderRefImpl::get_get_item_info_tasks(
 }
 
 TaskVector NewOrderRefImpl::get_get_stock_info_tasks(
-  const std::shared_ptr<oposum::TransactionContext> t_context, const int32_t ol_i_id, const int32_t ol_supply_w_id,
+  const std::shared_ptr<opossum::TransactionContext> t_context, const int32_t ol_i_id, const int32_t ol_supply_w_id,
   const int32_t d_id) {
   /**
       * SELECT
@@ -467,7 +467,7 @@ TaskVector NewOrderRefImpl::get_get_stock_info_tasks(
 }
 
 TaskVector
-NewOrderRefImpl::get_update_stock_tasks(const std::shared_ptr<oposum::TransactionContext> t_context,
+NewOrderRefImpl::get_update_stock_tasks(const std::shared_ptr<opossum::TransactionContext> t_context,
                                         const int32_t s_quantity, const int32_t ol_i_id,
                                         const int32_t ol_supply_w_id) {
   /**
@@ -486,7 +486,7 @@ NewOrderRefImpl::get_update_stock_tasks(const std::shared_ptr<oposum::Transactio
   const auto original_rows = std::make_shared<opossum::Projection>(ts2, columns);
 
   const opossum::Projection::ProjectionDefinitions definitions{
-    Projection::ProjectionDefinition{std::to_string(s_quantity), "int", "fix"}};
+    opossum::Projection::ProjectionDefinition{std::to_string(s_quantity), "int", "fix"}};
   const auto updated_rows = std::make_shared<opossum::Projection>(ts2, definitions);
 
   const auto update = std::make_shared<opossum::Update>("STOCK", original_rows, updated_rows);
@@ -517,7 +517,7 @@ NewOrderRefImpl::get_update_stock_tasks(const std::shared_ptr<oposum::Transactio
 }
 
 TaskVector NewOrderRefImpl::get_create_order_line_tasks(
-  const std::shared_ptr<oposum::TransactionContext> t_context,
+  const std::shared_ptr<opossum::TransactionContext> t_context,
   const int32_t ol_o_id,
   const int32_t ol_d_id,
   const int32_t ol_w_id,
@@ -535,28 +535,28 @@ TaskVector NewOrderRefImpl::get_create_order_line_tasks(
    */
 
   auto target_table_name = std::string("ORDER-LINE");
-  const auto original_table = StorageManager::get().get_table(target_table_name);
+  const auto original_table = opossum::StorageManager::get().get_table(target_table_name);
 
-  auto new_table = std::make_shared<Table>();
-  for (ColumnID columnID = 0; columnID < original_table->col_count(); columnID++) {
+  auto new_table = std::make_shared<opossum::Table>();
+  for (opossum::ColumnID columnID = 0; columnID < original_table->col_count(); columnID++) {
     new_table->add_column(original_table->column_name(columnID), original_table->column_type(columnID), false);
   }
 
-  Chunk chunk;
-  chunk.add_column(create_single_value_column<int32_t>(ol_o_id));
-  chunk.add_column(create_single_value_column<int32_t>(ol_d_id));
-  chunk.add_column(create_single_value_column<int32_t>(ol_w_id));
-  chunk.add_column(create_single_value_column<int32_t>(ol_number));
-  chunk.add_column(create_single_value_column<int32_t>(ol_i_id));
-  chunk.add_column(create_single_value_column<int32_t>(ol_supply_w_id));
-  chunk.add_column(create_single_value_column<int32_t>(ol_delivery_d));
-  chunk.add_column(create_single_value_column<int32_t>(ol_quantity));
-  chunk.add_column(create_single_value_column<float>(ol_amount));
-  chunk.add_column(create_single_value_column<std::string>(ol_dist_info));
+  opossum::Chunk chunk;
+  chunk.add_column(opossum::create_single_value_column<int32_t>(ol_o_id));
+  chunk.add_column(opossum::create_single_value_column<int32_t>(ol_d_id));
+  chunk.add_column(opossum::create_single_value_column<int32_t>(ol_w_id));
+  chunk.add_column(opossum::create_single_value_column<int32_t>(ol_number));
+  chunk.add_column(opossum::create_single_value_column<int32_t>(ol_i_id));
+  chunk.add_column(opossum::create_single_value_column<int32_t>(ol_supply_w_id));
+  chunk.add_column(opossum::create_single_value_column<int32_t>(ol_delivery_d));
+  chunk.add_column(opossum::create_single_value_column<int32_t>(ol_quantity));
+  chunk.add_column(opossum::create_single_value_column<float>(ol_amount));
+  chunk.add_column(opossum::create_single_value_column<std::string>(ol_dist_info));
   new_table->add_chunk(std::move(chunk));
 
   auto tw = std::make_shared<opossum::TableWrapper>(new_table);
-  const auto insert = std::make_shared<Insert>(target_table_name, tw);
+  const auto insert = std::make_shared<opossum::Insert>(target_table_name, tw);
 
   opossum::set_transaction_context_for_operators(t_context, {tw, insert});
 

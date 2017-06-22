@@ -274,19 +274,19 @@ void adl_serializer<tpcc::OrderStatusParams>::from_json(const nlohmann::json &j,
   v.c_d_id = j["c_d_id"];
 
   if (j["case"] == 1) {
-    v.order_status_by = OrderStatusBy::CustomerNumber;
+    v.order_status_by = tpcc::OrderStatusBy::CustomerNumber;
     v.c_id = j["c_id"];
   } else {
-    v.order_status_by = OrderStatusBy::CustomerLastName;
+    v.order_status_by = tpcc::OrderStatusBy::CustomerLastName;
     v.c_last = j["c_last"];
   }
 }
 
-void adl_serializer<OrderStatusOrderLine>::to_json(nlohmann::json &j, const OrderStatusOrderLine &v) {
+void adl_serializer<tpcc::OrderStatusOrderLine>::to_json(nlohmann::json &j, const tpcc::OrderStatusOrderLine &v) {
   throw "Not implemented";
 }
 
-void adl_serializer<OrderStatusOrderLine>::from_json(const nlohmann::json &j, OrderStatusOrderLine &v) {
+void adl_serializer<tpcc::OrderStatusOrderLine>::from_json(const nlohmann::json &j, tpcc::OrderStatusOrderLine &v) {
   v.ol_supply_w_id = j["ol_supply_w_id"];
   v.ol_i_id = j["ol_i_id"];
   v.ol_quantity = j["ol_quantity"];
@@ -294,11 +294,11 @@ void adl_serializer<OrderStatusOrderLine>::from_json(const nlohmann::json &j, Or
   v.ol_delivery_d = j["ol_delivery_d"];
 }
 
-void adl_serializer<OrderStatusResult>::to_json(nlohmann::json &j, const OrderStatusResult &v) {
+void adl_serializer<tpcc::OrderStatusResult>::to_json(nlohmann::json &j, const tpcc::OrderStatusResult &v) {
   throw "Not implemented";
 }
 
-void adl_serializer<OrderStatusResult>::from_json(const nlohmann::json &j, OrderStatusResult &v) {
+void adl_serializer<tpcc::OrderStatusResult>::from_json(const nlohmann::json &j, tpcc::OrderStatusResult &v) {
   v.c_id = j["c_id"];
   v.c_first = j["c_first"];
   v.c_middle = j["c_middle"];
@@ -311,7 +311,7 @@ void adl_serializer<OrderStatusResult>::from_json(const nlohmann::json &j, Order
   const auto iter = j.find("order_lines");
   if (iter != j.end()) {
     for (const auto &j_ol : *iter) {
-      OrderStatusOrderLine ol = j_ol;
+      tpcc::  OrderStatusOrderLine ol = j_ol;
       v.order_lines.emplace_back(ol);
     }
   }
