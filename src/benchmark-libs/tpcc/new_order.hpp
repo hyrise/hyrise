@@ -53,7 +53,7 @@ struct NewOrderResult {
 class AbstractNewOrderImpl {
  public:
   virtual TaskVector get_get_customer_and_warehouse_tax_rate_tasks(const int32_t w_id, const int32_t d_id,
-      const int32_t c_id) = 0;
+                                                                   const int32_t c_id) = 0;
 
   virtual TaskVector get_get_district_tasks(const int32_t d_id, const int32_t w_id) = 0;
 
@@ -88,8 +88,7 @@ class NewOrderRefImpl : public AbstractNewOrderImpl {
   TaskVector get_get_customer_and_warehouse_tax_rate_tasks(const int32_t w_id, const int32_t d_id,
                                                            const int32_t c_id) override;
 
-  TaskVector get_get_district_tasks(const int32_t d_id,
-                                    const int32_t w_id) override;
+  TaskVector get_get_district_tasks(const int32_t d_id, const int32_t w_id) override;
 
   TaskVector get_increment_next_order_id_tasks(const int32_t d_id, const int32_t d_w_id,
                                                const int32_t d_next_o_id) override;

@@ -167,12 +167,12 @@ TaskVector OrderStatusRefImpl::get_customer_by_id(const int c_id, const int c_d_
 
 TaskVector OrderStatusRefImpl::get_orders(const int o_c_id, const int o_d_id, const int o_w_id) {
   /**
-  * SELECT o_id, o_carrier_id, o_entry_d
-  * FROM orders
-  * WHERE o_c_id=o_c_id AND o_d_id=o_d_id AND o_w_id=o_w_id
-  * ORDER BY o_id DESC
-  * LIMIT 1;
-  */
+   * SELECT o_id, o_carrier_id, o_entry_d
+   * FROM orders
+   * WHERE o_c_id=o_c_id AND o_d_id=o_d_id AND o_w_id=o_w_id
+   * ORDER BY o_id DESC
+   * LIMIT 1;
+   */
   auto gt_orders = std::make_shared<opossum::GetTable>("ORDER");
   auto validate = std::make_shared<opossum::Validate>(gt_orders);
   auto first_filter = std::make_shared<opossum::TableScan>(validate, "O_C_ID", "=", o_c_id);
@@ -206,11 +206,11 @@ TaskVector OrderStatusRefImpl::get_orders(const int o_c_id, const int o_d_id, co
 
 TaskVector OrderStatusRefImpl::get_order_lines(const int o_id, const int d_id, const int w_id) {
   /**
-  * SELECT ol_i_id, ol_supply_w_id, ol_quantity,
-  * ol_amount, ol_delivery_d
-  * FROM order_line
-  * WHERE ol_o_id=:o_id AND ol_d_id=:d_id AND ol_w_id=:w_id;
-  */
+   * SELECT ol_i_id, ol_supply_w_id, ol_quantity,
+   * ol_amount, ol_delivery_d
+   * FROM order_line
+   * WHERE ol_o_id=:o_id AND ol_d_id=:d_id AND ol_w_id=:w_id;
+   */
   auto gt_order_lines = std::make_shared<opossum::GetTable>("ORDER-LINE");
   auto validate = std::make_shared<opossum::Validate>(gt_order_lines);
   auto first_filter = std::make_shared<opossum::TableScan>(validate, "OL_O_ID", "=", o_id);

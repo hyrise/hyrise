@@ -34,6 +34,10 @@ tbb::concurrent_vector<T> TableGenerator::generate_order_line_column(
   return values;
 }
 
+/**
+ * Specialized version for `ORDER-LINE` table.
+ * TODO(anyone): look into how to merge this.
+ */
 template <typename T>
 void TableGenerator::add_column(std::shared_ptr<std::vector<size_t>> cardinalities,
                                 TableGenerator::order_line_counts_type order_line_counts,
@@ -93,7 +97,7 @@ void TableGenerator::add_column(std::shared_ptr<std::vector<size_t>> cardinaliti
     }
   }
 
-  // write partially filled chunk
+  // write partially filled last chunk
   if (row_index % _chunk_size != 0) {
     auto value_column = std::make_shared<opossum::ValueColumn<T>>(std::move(column));
 
@@ -278,10 +282,10 @@ std::shared_ptr<opossum::Table> TableGenerator::generate_stock_table() {
   add_column<int>(cardinalities, table, "S_QUANTITY",
                   [&](std::vector<size_t>) -> size_t { return _random_gen.number(10, 100); });
   for (int district_i = 1; district_i <= 10; district_i++) {
-      std::stringstream district_i_str;
-      district_i_str << std::setw(2) << std::setfill('0') << district_i;
-      add_column<std::string>(cardinalities, table, "S_DIST_" + district_i_str.str(),
-                              [&](std::vector<size_t>) { return _random_gen.astring(24, 24); });
+    std::stringstream district_i_str;
+    district_i_str << std::setw(2) << std::setfill('0') << district_i;
+    add_column<std::string>(cardinalities, table, "S_DIST_" + district_i_str.str(),
+                            [&](std::vector<size_t>) { return _random_gen.astring(24, 24); });
   }
   add_column<int>(cardinalities, table, "S_YTD", [&](std::vector<size_t>) { return 0; });
   add_column<int>(cardinalities, table, "S_ORDER_CNT", [&](std::vector<size_t>) { return 0; });
@@ -465,8 +469,6 @@ std::shared_ptr<opossum::Table> TableGenerator::generate_order_table(
 std::shared_ptr<opossum::Table> TableGenerator::generate_order_line_table(
     TableGenerator::order_line_counts_type order_line_counts) {
   auto table = std::make_shared<opossum::Table>(_chunk_size);
-
-  //  auto order_line_size = order_line_counts[warehouse_id][district_id][order_id];
 
   auto cardinalities = std::make_shared<std::vector<size_t>>(
       std::initializer_list<size_t>{_warehouse_size, _district_size, _order_size});

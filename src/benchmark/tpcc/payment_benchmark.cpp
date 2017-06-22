@@ -96,13 +96,13 @@ class TPCCPaymentBenchmark : public TPCCBenchmarkFixture {
 
   std::vector<std::shared_ptr<OperatorTask>> get_customer_by_id(const int c_id, const int c_d_id, const int c_w_id) {
     /**
-      * SELECT c_first, c_middle, c_last,
-      * c_street_1, c_street_2, c_city, c_state, c_zip,
-      * c_phone, c_credit, c_credit_lim,
-      * c_discount, c_balance, c_since
-      * FROM customer
-      * WHERE c_w_id=:c_w_id AND c_d_id=:c_d_id AND c_id=:c_id;
-      */
+     * SELECT c_first, c_middle, c_last,
+     * c_street_1, c_street_2, c_city, c_state, c_zip,
+     * c_phone, c_credit, c_credit_lim,
+     * c_discount, c_balance, c_since
+     * FROM customer
+     * WHERE c_w_id=:c_w_id AND c_d_id=:c_d_id AND c_id=:c_id;
+     */
     auto gt_customer = std::make_shared<GetTable>("CUSTOMER");
     auto first_filter = std::make_shared<TableScan>(gt_customer, "C_ID", "=", c_id);
     auto second_filter = std::make_shared<TableScan>(first_filter, "C_D_ID", "=", c_d_id);

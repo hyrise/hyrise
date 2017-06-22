@@ -117,22 +117,22 @@ Contact: firstname.lastname@hpi.de
 
 ## Contributors
 
--	Yannick	Bäumer
+- Yannick Bäumer
 - Timo Djürken
--	Moritz	Eyssen
--	Martin	Fischer
--	Pedro	Flemming
--	Michael	Janke
--	Max	Jendruk
--	Marvin	Keller
--	Sven	Lehmann
--	Jan	Mattfeld
--	Arne	Mayer
--	Torben	Meyer
--	David	Schumann
--	Daniel	Stolpe
--	Jonathan	Striebel
--	Nils	Thamm
--	Carsten	Walther
--	Fabian	Wiebe
--	Tim	Zimmermann
+- Moritz Eyssen
+- Martin Fischer
+- Pedro Flemming
+- Michael Janke
+- Max Jendruk
+- Marvin Keller
+- Sven Lehmann
+- Jan Mattfeld
+- Arne Mayer
+- Torben Meyer
+- David Schumann
+- Daniel Stolpe
+- Jonathan Striebel
+- Nils Thamm
+- Carsten Walther
+- Fabian Wiebe
+- Tim Zimmermann

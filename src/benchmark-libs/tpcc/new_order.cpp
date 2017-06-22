@@ -67,8 +67,8 @@ NewOrderResult AbstractNewOrderImpl::run_transaction(const NewOrderParams &param
     /**
      * CREATE ORDER
      */
-    auto create_order_tasks = get_create_order_tasks(result.d_next_o_id, params.d_id, params.w_id,
-                                                     params.c_id, params.o_entry_d, 0, params.order_lines.size(), 1);
+    auto create_order_tasks = get_create_order_tasks(result.d_next_o_id, params.d_id, params.w_id, params.c_id,
+                                                     params.o_entry_d, 0, params.order_lines.size(), 1);
     opossum::execute_tasks_with_context(create_order_tasks, t_context);
 
     /**
@@ -134,10 +134,10 @@ NewOrderResult AbstractNewOrderImpl::run_transaction(const NewOrderParams &param
       /**
        * CREATE ORDER LINE
        */
-      auto create_order_line_tasks = get_create_order_line_tasks(
-          result.d_next_o_id, params.d_id, params.w_id, ol_idx + 1, order_line_params.i_id,
-          0,  // ol_supply_w_id - we only have one warehouse
-          params.o_entry_d, order_line_params.qty, order_line.amount, order_line.s_dist_xx);
+      auto create_order_line_tasks =
+          get_create_order_line_tasks(result.d_next_o_id, params.d_id, params.w_id, ol_idx + 1, order_line_params.i_id,
+                                      0,  // ol_supply_w_id - we only have one warehouse
+                                      params.o_entry_d, order_line_params.qty, order_line.amount, order_line.s_dist_xx);
       opossum::execute_tasks_with_context(create_order_line_tasks, t_context);
 
       /**
@@ -150,9 +150,8 @@ NewOrderResult AbstractNewOrderImpl::run_transaction(const NewOrderParams &param
   return result;
 }
 
-TaskVector NewOrderRefImpl::get_get_customer_and_warehouse_tax_rate_tasks(
-    const int32_t w_id, const int32_t d_id,
-    const int32_t c_id) {
+TaskVector NewOrderRefImpl::get_get_customer_and_warehouse_tax_rate_tasks(const int32_t w_id, const int32_t d_id,
+                                                                          const int32_t c_id) {
   /**
    * SELECT c_discount, c_last, c_credit, w_tax
    * FROM customer, warehouse
@@ -237,13 +236,13 @@ TaskVector NewOrderRefImpl::get_get_district_tasks(const int32_t d_id, const int
   return {gt_t, v_t, ts1_t, ts2_t, proj_t};
 }
 
-TaskVector NewOrderRefImpl::get_increment_next_order_id_tasks(
-    const int32_t d_id, const int32_t d_w_id, const int32_t d_next_o_id) {
+TaskVector NewOrderRefImpl::get_increment_next_order_id_tasks(const int32_t d_id, const int32_t d_w_id,
+                                                              const int32_t d_next_o_id) {
   /**
-  * UPDATE district
-  * SET d_next_o_id = :d_next_o_id + 1
-  * WHERE d_id = :d_id AND d_w_id = :w_id
-  */
+   * UPDATE district
+   * SET d_next_o_id = :d_next_o_id + 1
+   * WHERE d_id = :d_id AND d_w_id = :w_id
+   */
 
   // Operators
   const auto gt = std::make_shared<opossum::GetTable>("DISTRICT");
@@ -381,12 +380,12 @@ TaskVector NewOrderRefImpl::get_get_item_info_tasks(const int32_t ol_i_id) {
 TaskVector NewOrderRefImpl::get_get_stock_info_tasks(const int32_t ol_i_id, const int32_t ol_supply_w_id,
                                                      const int32_t d_id) {
   /**
-      * SELECT
-      *  s_quantity, s_data, s_ytd, s_order_cnt, s_remote_cnt
-      *  s_dist_01, s_dist_02, s_dist_03, s_dist_04, s_dist_05 s_dist_06, s_dist_07, s_dist_08, s_dist_09, s_dist_10
-      * FROM stock
-      * WHERE s_i_id = :ol_i_id AND s_w_id = :ol_supply_w_id;
-      */
+   * SELECT
+   *  s_quantity, s_data, s_ytd, s_order_cnt, s_remote_cnt
+   *  s_dist_01, s_dist_02, s_dist_03, s_dist_04, s_dist_05 s_dist_06, s_dist_07, s_dist_08, s_dist_09, s_dist_10
+   * FROM stock
+   * WHERE s_i_id = :ol_i_id AND s_w_id = :ol_supply_w_id;
+   */
 
   // Operators
   const auto gt = std::make_shared<opossum::GetTable>("STOCK");
@@ -548,9 +547,9 @@ void adl_serializer<tpcc::NewOrderOrderLineResult>::from_json(const nlohmann::js
   v.s_qty = j["s_qty"];
   v.s_dist_xx = j["s_dist_xx"];
   // TODO(anybody): don't use these until they are updated in STOCK UPDATE.
-  //v.s_ytd = j["s_ytd"];
-  //v.s_order_cnt = j["s_order_cnt"];
-  //v.s_remote_cnt = j["s_remote_cnt"];
+  // v.s_ytd = j["s_ytd"];
+  // v.s_order_cnt = j["s_order_cnt"];
+  // v.s_remote_cnt = j["s_remote_cnt"];
   v.s_data = j["s_data"];
   v.amount = j["amount"];
 }
