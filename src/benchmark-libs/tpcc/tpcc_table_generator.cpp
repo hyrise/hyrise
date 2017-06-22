@@ -15,16 +15,6 @@ namespace tpcc {
 
 TableGenerator::TableGenerator() : _random_gen(RandomGenerator()) {}
 
-// template <typename T>
-// std::shared_ptr<opossum::ValueColumn<T>> TableGenerator::add_column(
-//    size_t cardinality, const std::function<T(size_t)> &generator_function) {
-//  tbb::concurrent_vector<T> column(cardinality);
-//  for (size_t i = 0; i < column.size(); i++) {
-//    column[i] = generator_function(i);
-//  }
-//  return std::make_shared<opossum::ValueColumn<T>>(std::move(column));
-//}
-
 template <typename T>
 tbb::concurrent_vector<T> TableGenerator::generate_order_line_column(
     std::vector<size_t> indices, TableGenerator::order_line_counts_type order_line_counts,

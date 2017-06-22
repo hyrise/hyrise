@@ -25,6 +25,8 @@ class TPCCBenchmarkFixture : public benchmark::Fixture {
   TPCCBenchmarkFixture() : _gen(tpcc::TableGenerator()), _random_gen(tpcc::RandomGenerator()) {
     // Generating TPCC tables
     _tpcc_tables = _gen.generate_all_tables();
+    // We currently run the benchmarks without a scheduler because there seem to be some problems when it is activated.
+    // TODO(mp): investigate and fix.
     //    CurrentScheduler::set(std::make_shared<NodeQueueScheduler>(Topology::create_fake_numa_topology(8, 4)));
   }
 

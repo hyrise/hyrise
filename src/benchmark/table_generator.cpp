@@ -11,8 +11,6 @@
 #include "storage/value_column.hpp"
 #include "tbb/concurrent_vector.h"
 
-#include "../lib/storage/value_column.hpp"
-
 namespace opossum {
 
 std::shared_ptr<Table> TableGenerator::get_table() {
