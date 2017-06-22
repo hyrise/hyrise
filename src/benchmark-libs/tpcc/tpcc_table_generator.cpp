@@ -1,8 +1,10 @@
 #include "tpcc_table_generator.hpp"
 
 #include <functional>
+#include <iomanip>
 #include <map>
 #include <memory>
+#include <sstream>
 #include <string>
 #include <utility>
 #include <vector>
@@ -275,26 +277,12 @@ std::shared_ptr<opossum::Table> TableGenerator::generate_stock_table() {
   add_column<int>(cardinalities, table, "S_W_ID", [&](std::vector<size_t> indices) -> size_t { return indices[0]; });
   add_column<int>(cardinalities, table, "S_QUANTITY",
                   [&](std::vector<size_t>) -> size_t { return _random_gen.number(10, 100); });
-  add_column<std::string>(cardinalities, table, "S_DIST_01",
-                          [&](std::vector<size_t>) { return _random_gen.astring(24, 24); });
-  add_column<std::string>(cardinalities, table, "S_DIST_02",
-                          [&](std::vector<size_t>) { return _random_gen.astring(24, 24); });
-  add_column<std::string>(cardinalities, table, "S_DIST_03",
-                          [&](std::vector<size_t>) { return _random_gen.astring(24, 24); });
-  add_column<std::string>(cardinalities, table, "S_DIST_04",
-                          [&](std::vector<size_t>) { return _random_gen.astring(24, 24); });
-  add_column<std::string>(cardinalities, table, "S_DIST_05",
-                          [&](std::vector<size_t>) { return _random_gen.astring(24, 24); });
-  add_column<std::string>(cardinalities, table, "S_DIST_06",
-                          [&](std::vector<size_t>) { return _random_gen.astring(24, 24); });
-  add_column<std::string>(cardinalities, table, "S_DIST_07",
-                          [&](std::vector<size_t>) { return _random_gen.astring(24, 24); });
-  add_column<std::string>(cardinalities, table, "S_DIST_08",
-                          [&](std::vector<size_t>) { return _random_gen.astring(24, 24); });
-  add_column<std::string>(cardinalities, table, "S_DIST_09",
-                          [&](std::vector<size_t>) { return _random_gen.astring(24, 24); });
-  add_column<std::string>(cardinalities, table, "S_DIST_10",
-                          [&](std::vector<size_t>) { return _random_gen.astring(24, 24); });
+  for (int district_i = 1; district_i <= 10; district_i++) {
+      std::stringstream district_i_str;
+      district_i_str << std::setw(2) << std::setfill('0') << district_i;
+      add_column<std::string>(cardinalities, table, "S_DIST_" + district_i_str.str(),
+                              [&](std::vector<size_t>) { return _random_gen.astring(24, 24); });
+  }
   add_column<int>(cardinalities, table, "S_YTD", [&](std::vector<size_t>) { return 0; });
   add_column<int>(cardinalities, table, "S_ORDER_CNT", [&](std::vector<size_t>) { return 0; });
   add_column<int>(cardinalities, table, "S_REMOTE_CNT", [&](std::vector<size_t>) { return 0; });
