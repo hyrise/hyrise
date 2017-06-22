@@ -134,6 +134,10 @@ set(
     operators/update.hpp
     operators/validate.cpp
     operators/validate.hpp
+    optimizer/abstract_syntax_tree/abstract_node.cpp
+    optimizer/abstract_syntax_tree/abstract_node.hpp
+    optimizer/abstract_syntax_tree/projection_node.hpp
+    optimizer/abstract_syntax_tree/table_node.hpp
     optimizer/column_statistics.cpp
     optimizer/column_statistics.hpp
     optimizer/table_statistics.cpp
