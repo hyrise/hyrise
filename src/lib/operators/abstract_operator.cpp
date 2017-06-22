@@ -23,6 +23,14 @@ std::shared_ptr<const Table> AbstractOperator::input_table_left() const { return
 
 std::shared_ptr<const Table> AbstractOperator::input_table_right() const { return _input_right->get_output(); }
 
+std::shared_ptr<AbstractOperator> AbstractOperator::input_left() const {
+  return std::const_pointer_cast<AbstractOperator>(_input_left);
+}
+
+std::shared_ptr<AbstractOperator> AbstractOperator::input_right() const {
+  return std::const_pointer_cast<AbstractOperator>(_input_right);
+}
+
 std::shared_ptr<TransactionContext> AbstractOperator::transaction_context() const { return _transaction_context; }
 
 void AbstractOperator::set_transaction_context(std::shared_ptr<TransactionContext> transaction_context) {

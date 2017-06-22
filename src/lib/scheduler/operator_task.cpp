@@ -15,6 +15,29 @@
 namespace opossum {
 OperatorTask::OperatorTask(std::shared_ptr<AbstractOperator> op) : _op(std::move(op)) {}
 
+const std::vector<std::shared_ptr<OperatorTask>> OperatorTask::make_tasks_from_operator(
+    std::shared_ptr<AbstractOperator> op) {
+  std::vector<std::shared_ptr<OperatorTask>> tasks;
+
+  auto task = std::make_shared<OperatorTask>(op);
+
+  if (auto left = op->input_left()) {
+    auto left_tasks = OperatorTask::make_tasks_from_operator(left);
+    left_tasks.back()->set_as_predecessor_of(task);
+    tasks.insert(tasks.end(), left_tasks.begin(), left_tasks.end());
+  }
+
+  if (auto right = op->input_right()) {
+    auto right_tasks = OperatorTask::make_tasks_from_operator(right);
+    right_tasks.back()->set_as_predecessor_of(task);
+    tasks.insert(tasks.end(), right_tasks.begin(), right_tasks.end());
+  }
+
+  tasks.push_back(task);
+
+  return tasks;
+}
+
 const std::shared_ptr<AbstractOperator> &OperatorTask::get_operator() const { return _op; }
 
 void OperatorTask::on_execute() {
