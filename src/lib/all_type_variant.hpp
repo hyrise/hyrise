@@ -1,6 +1,8 @@
 #pragma once
 
+#include <boost/hana/drop_back.hpp>
 #include <boost/hana/ext/boost/mpl/vector.hpp>
+#include <boost/hana/for_each.hpp>
 #include <boost/hana/pair.hpp>
 #include <boost/hana/second.hpp>
 #include <boost/hana/transform.hpp>
@@ -21,6 +23,8 @@ static constexpr auto column_types =
                      hana::make_pair("float", hana::type_c<float>), hana::make_pair("double", hana::type_c<double>),
                      hana::make_pair("string", hana::type_c<std::string>));  // NOLINT
 
+static constexpr auto numeric_column_types = hana::drop_back(column_types);
+
 // This holds only the possible data types.
 static constexpr auto types = hana::transform(column_types, hana::second);  // NOLINT
 
@@ -29,5 +33,26 @@ using TypesAsMplVector = decltype(hana::to<hana::ext::boost::mpl::vector_tag>(ty
 
 // Create boost::variant from mpl vector
 using AllTypeVariant = typename boost::make_variant_over<TypesAsMplVector>::type;
+
+static inline double all_type_variant_to_double(const AllTypeVariant &variant) {
+  double ret = 0;
+  int i = 0;
+  hana::for_each(numeric_column_types, [&](auto column_type) {
+    if (i == variant.which()) {
+      using variant_type = typename decltype(+hana::second(column_type))::type;
+      ret = boost::get<variant_type>(variant);
+    }
+    i++;
+  });
+  return ret;
+}
+
+static inline double operator+(const AllTypeVariant &lhs, const AllTypeVariant &rhs) {
+  return all_type_variant_to_double(lhs) + all_type_variant_to_double(rhs);
+}
+
+static inline double operator-(const AllTypeVariant &rhs) { return -all_type_variant_to_double(rhs); }
+
+static inline double operator-(const AllTypeVariant &lhs, const AllTypeVariant &rhs) { return lhs + (-rhs); }
 
 }  // namespace opossum

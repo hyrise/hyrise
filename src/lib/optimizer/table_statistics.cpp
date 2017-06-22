@@ -1,5 +1,6 @@
 #include "table_statistics.hpp"
 
+#include <iostream>
 #include <map>
 #include <memory>
 #include <string>
@@ -62,32 +63,42 @@ std::shared_ptr<TableStatistics> TableStatistics::predicate_statistics(const std
 
   auto column_statistics = get_column_statistics(column_name);  // trigger lazy initialization
   auto clone = std::make_shared<TableStatistics>(*this);
+  auto distinct_count = column_statistics->get_distinct_count();
   if (op == "=") {
     if (casted_value1 < column_statistics->get_min() || casted_value1 > column_statistics->get_max()) {
       clone->_row_count = 0;
       return clone;
     }
-    auto distinct_count = column_statistics->get_distinct_count();
     clone->_row_count = _row_count / static_cast<double>(distinct_count);
     clone->_column_statistics[column_name] =
         std::make_shared<ColumnStatistics>(1, casted_value1, casted_value1, column_name);
   } else if (op == "!=") {
     // disregarding A = 5 AND A != 5
     // (just don't put this into a query!)
-    auto distinct_count = column_statistics->get_distinct_count();
     clone->_row_count = _row_count - _row_count / static_cast<double>(distinct_count);
-    clone->_column_statistics[column_name] =
-        std::make_shared<ColumnStatistics>(distinct_count-1, column_statistics->get_min(), column_statistics->get_max(), column_name);
+    clone->_column_statistics[column_name] = std::make_shared<ColumnStatistics>(
+        distinct_count - 1, column_statistics->get_min(), column_statistics->get_max(), column_name);
   } else if (op == "<") {
-    Fail(std::string("operator not yet implemented: ") + op);
-  } else if (op == "<=") {
-    Fail(std::string("operator not yet implemented: ") + op);
-  } else if (op == ">") {
-    Fail(std::string("operator not yet implemented: ") + op);
-  } else if (op == ">=") {
-    Fail(std::string("operator not yet implemented: ") + op);
-  } else if (op == "BETWEEN") {
-    Fail(std::string("operator not yet implemented: ") + op);
+    if (casted_value1 <= column_statistics->get_min()) {
+      clone->_row_count = 0;
+      return clone;
+    }
+    auto min = column_statistics->get_min();
+    auto max = column_statistics->get_max();
+    std::cout << "rc " << _row_count << ", casted value " << casted_value1 << std::endl;
+    std::cout << (casted_value1 - min) << std::endl;
+    std::cout << (max - min + 1) << std::endl;
+    clone->_row_count = _row_count * (casted_value1 - min) / (max - min + 1);
+    clone->_column_statistics[column_name] =
+        std::make_shared<ColumnStatistics>(distinct_count, min, casted_value1, column_name);
+    // } else if (op == "<=") {
+    //   Fail(std::string("operator not yet implemented: ") + op);
+    // } else if (op == ">") {
+    //   Fail(std::string("operator not yet implemented: ") + op);
+    // } else if (op == ">=") {
+    //   Fail(std::string("operator not yet implemented: ") + op);
+    // } else if (op == "BETWEEN") {
+    //   Fail(std::string("operator not yet implemented: ") + op);
   } else {
     // TODO(mp): extend for other comparison operators
     // Brace yourselves.

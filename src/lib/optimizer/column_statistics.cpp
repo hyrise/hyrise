@@ -19,19 +19,19 @@ ColumnStatistics::ColumnStatistics(size_t distinct_count, AllTypeVariant min, Al
                                    const std::string &column_name)
     : _column_name(column_name), _distinct_count(distinct_count), _min(min), _max(max) {}
 size_t ColumnStatistics::get_distinct_count() {
-  if (! _distinct_count) {
+  if (!_distinct_count) {
     update_distinct_count();
   }
   return *_distinct_count;
 }
 AllTypeVariant ColumnStatistics::get_min() {
-  if (! _min) {
+  if (!_min) {
     update_min_max();
   }
   return *_min;
 }
 AllTypeVariant ColumnStatistics::get_max() {
-  if (! _max) {
+  if (!_max) {
     update_min_max();
   }
   return *_max;
@@ -52,7 +52,8 @@ void ColumnStatistics::update_min_max() {
   auto shared_table = std::shared_ptr<Table>(_table);
   auto table_wrapper = std::make_shared<TableWrapper>(shared_table);
   table_wrapper->execute();
-  auto aggregate_args = std::vector<std::pair<std::string, AggregateFunction>>{std::make_pair(_column_name, Min), std::make_pair(_column_name, Max)};
+  auto aggregate_args = std::vector<std::pair<std::string, AggregateFunction>>{std::make_pair(_column_name, Min),
+                                                                               std::make_pair(_column_name, Max)};
   auto aggregate = std::make_shared<Aggregate>(table_wrapper, aggregate_args, std::vector<std::string>{});
   aggregate->execute();
   auto aggregate_table = aggregate->get_output();
