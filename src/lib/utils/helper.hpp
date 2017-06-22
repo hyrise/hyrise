@@ -14,11 +14,12 @@ namespace opossum {
 class Table;
 class TransactionContext;
 class AbstractOperator;
+class OperatorTask;
 template <typename>
 class ValueColumn;
 
-void set_transaction_context_for_operators(const std::shared_ptr<TransactionContext> t_context,
-                                           const std::vector<std::shared_ptr<AbstractOperator>> operators);
+void execute_tasks_with_context(std::vector<std::shared_ptr<OperatorTask>> & tasks,
+                                std::shared_ptr<TransactionContext> t_context);
 
 void print_table(const std::shared_ptr<const Table> table, PrintMode mode = PrintMode::IgnoreEmptyChunks,
                  std::ostream& out = std::cout);

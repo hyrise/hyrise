@@ -58,11 +58,6 @@ class AbstractOrderStatusImpl {
   virtual TaskVector get_order_lines(const int o_id, const int d_id, const int w_id) = 0;
 
   OrderStatusResult run_transaction(const OrderStatusParams &params);
-
-  void set_transaction_context(const std::shared_ptr<opossum::TransactionContext> &transaction_context);
-
- protected:
-  std::shared_ptr<opossum::TransactionContext> _t_context;
 };
 
 class OrderStatusRefImpl : public AbstractOrderStatusImpl {

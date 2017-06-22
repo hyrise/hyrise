@@ -21,11 +21,6 @@
 
 namespace tpcc {
 
-void AbstractOrderStatusImpl::set_transaction_context(
-    const std::shared_ptr<opossum::TransactionContext> &transaction_context) {
-  _t_context = transaction_context;
-}
-
 std::string OrderStatusParams::to_string() const {
   std::stringstream s;
 
@@ -44,11 +39,9 @@ OrderStatusResult AbstractOrderStatusImpl::run_transaction(const OrderStatusPara
   OrderStatusResult result;
 
   opossum::TransactionManager::get().run_transaction([&](std::shared_ptr<opossum::TransactionContext> t_context) {
-    _t_context = t_context;
-
     if (params.order_status_by == OrderStatusBy::CustomerLastName) {
       auto get_customer_tasks = get_customer_by_name(params.c_last, params.c_d_id, params.c_w_id);
-      opossum::AbstractScheduler::schedule_tasks_and_wait(get_customer_tasks);
+      opossum::execute_tasks_with_context(get_customer_tasks, t_context);
 
       const auto customers_table = get_customer_tasks.back()->get_operator()->get_output();
       const auto num_names = customers_table->row_count();
@@ -63,7 +56,7 @@ OrderStatusResult AbstractOrderStatusImpl::run_transaction(const OrderStatusPara
       result.c_id = customers_table->get_value<int32_t>(3, row);
     } else {
       auto get_customer_tasks = get_customer_by_id(params.c_id, params.c_d_id, params.c_w_id);
-      opossum::AbstractScheduler::schedule_tasks_and_wait(get_customer_tasks);
+      opossum::execute_tasks_with_context(get_customer_tasks, t_context);
       DebugAssert(get_customer_tasks.back()->get_operator()->get_output()->row_count() == 1,
                   "Selecting by ID has to yield exactly one customer");
 
@@ -77,7 +70,7 @@ OrderStatusResult AbstractOrderStatusImpl::run_transaction(const OrderStatusPara
     }
 
     auto get_order_tasks = get_orders(result.c_id, params.c_d_id, params.c_w_id);
-    opossum::AbstractScheduler::schedule_tasks_and_wait(get_order_tasks);
+    opossum::execute_tasks_with_context(get_order_tasks, t_context);
 
     const auto orders_table = get_order_tasks.back()->get_operator()->get_output();
 
@@ -86,7 +79,7 @@ OrderStatusResult AbstractOrderStatusImpl::run_transaction(const OrderStatusPara
     result.o_entry_d = orders_table->get_value<int32_t>(2, 0);
 
     auto get_order_line_tasks = get_order_lines(result.o_id, params.c_d_id, params.c_w_id);
-    opossum::AbstractScheduler::schedule_tasks_and_wait(get_order_line_tasks);
+    opossum::execute_tasks_with_context(get_order_line_tasks, t_context);
 
     auto order_lines_table = get_order_line_tasks.back()->get_operator()->get_output();
 
@@ -138,9 +131,6 @@ TaskVector OrderStatusRefImpl::get_customer_by_name(const std::string c_last, co
   third_filter_task->set_as_predecessor_of(projection_task);
   projection_task->set_as_predecessor_of(sort_task);
 
-  opossum::set_transaction_context_for_operators(
-      _t_context, {gt_customer, validate, first_filter, second_filter, third_filter, projection, sort});
-
   return {gt_customer_task,  validate_task,   first_filter_task, second_filter_task,
           third_filter_task, projection_task, sort_task};
 }
@@ -171,9 +161,6 @@ TaskVector OrderStatusRefImpl::get_customer_by_id(const int c_id, const int c_d_
   first_filter_task->set_as_predecessor_of(second_filter_task);
   second_filter_task->set_as_predecessor_of(third_filter_task);
   third_filter_task->set_as_predecessor_of(projection_task);
-
-  opossum::set_transaction_context_for_operators(
-      _t_context, {gt_customer, validate, first_filter, second_filter, third_filter, projection});
 
   return {gt_customer_task, validate_task, first_filter_task, second_filter_task, third_filter_task, projection_task};
 }
@@ -213,9 +200,6 @@ TaskVector OrderStatusRefImpl::get_orders(const int o_c_id, const int o_d_id, co
   projection_task->set_as_predecessor_of(sort_task);
   sort_task->set_as_predecessor_of(limit_task);
 
-  opossum::set_transaction_context_for_operators(
-      _t_context, {gt_orders, validate, first_filter, second_filter, third_filter, projection, sort, limit});
-
   return {gt_orders_task,    validate_task,   first_filter_task, second_filter_task,
           third_filter_task, projection_task, sort_task,         limit_task};
 }
@@ -248,9 +232,6 @@ TaskVector OrderStatusRefImpl::get_order_lines(const int o_id, const int d_id, c
   first_filter_task->set_as_predecessor_of(second_filter_task);
   second_filter_task->set_as_predecessor_of(third_filter_task);
   third_filter_task->set_as_predecessor_of(projection_task);
-
-  opossum::set_transaction_context_for_operators(
-      _t_context, {gt_order_lines, validate, first_filter, second_filter, third_filter, projection});
 
   return {gt_order_lines_task, validate_task,     first_filter_task,
           second_filter_task,  third_filter_task, projection_task};

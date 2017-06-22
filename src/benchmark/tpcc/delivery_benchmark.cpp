@@ -18,6 +18,7 @@
 #include "operators/update.hpp"
 #include "operators/validate.hpp"
 #include "scheduler/operator_task.hpp"
+#include "utils/helper.hpp"
 
 #include "tpcc_base_fixture.cpp"
 
@@ -262,14 +263,6 @@ class TPCCDeliveryBenchmark : public TPCCBenchmarkFixture {
   inline std::vector<std::shared_ptr<OperatorTask>> commit() {
     auto commit = std::make_shared<CommitRecords>();
     return {std::make_shared<OperatorTask>(commit)};
-  }
-
-  inline void execute_tasks_with_context(std::vector<std::shared_ptr<OperatorTask>>& tasks,
-                                         std::shared_ptr<TransactionContext> t_context) {
-    for (auto& task : tasks) {
-      task->get_operator()->set_transaction_context(t_context);
-    }
-    AbstractScheduler::schedule_tasks_and_wait(tasks);
   }
 };
 

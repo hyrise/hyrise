@@ -52,38 +52,29 @@ struct NewOrderResult {
 
 class AbstractNewOrderImpl {
  public:
-  virtual TaskVector get_get_customer_and_warehouse_tax_rate_tasks(
-      const std::shared_ptr<opossum::TransactionContext> t_context, const int32_t w_id, const int32_t d_id,
+  virtual TaskVector get_get_customer_and_warehouse_tax_rate_tasks(const int32_t w_id, const int32_t d_id,
       const int32_t c_id) = 0;
 
-  virtual TaskVector get_get_district_tasks(const std::shared_ptr<opossum::TransactionContext> t_context,
-                                            const int32_t d_id, const int32_t w_id) = 0;
+  virtual TaskVector get_get_district_tasks(const int32_t d_id, const int32_t w_id) = 0;
 
-  virtual TaskVector get_increment_next_order_id_tasks(const std::shared_ptr<opossum::TransactionContext> t_context,
-                                                       const int32_t d_id, const int32_t d_w_id,
+  virtual TaskVector get_increment_next_order_id_tasks(const int32_t d_id, const int32_t d_w_id,
                                                        const int32_t d_next_o_id) = 0;
 
-  virtual TaskVector get_create_order_tasks(const std::shared_ptr<opossum::TransactionContext> t_context,
-                                            const int32_t d_next_o_id, const int32_t d_id, const int32_t w_id,
+  virtual TaskVector get_create_order_tasks(const int32_t d_next_o_id, const int32_t d_id, const int32_t w_id,
                                             const int32_t c_id, const int32_t o_entry_d, const int32_t o_carrier_id,
                                             const int32_t o_ol_cnt, const int32_t o_all_local) = 0;
 
-  virtual TaskVector get_create_new_order_tasks(const std::shared_ptr<opossum::TransactionContext> t_context,
-                                                const int32_t o_id, const int32_t d_id, const int32_t w_id) = 0;
+  virtual TaskVector get_create_new_order_tasks(const int32_t o_id, const int32_t d_id, const int32_t w_id) = 0;
 
-  virtual TaskVector get_get_item_info_tasks(const std::shared_ptr<opossum::TransactionContext> t_context,
-                                             const int32_t ol_i_id) = 0;
+  virtual TaskVector get_get_item_info_tasks(const int32_t ol_i_id) = 0;
 
-  virtual TaskVector get_get_stock_info_tasks(const std::shared_ptr<opossum::TransactionContext> t_context,
-                                              const int32_t ol_i_id, const int32_t ol_supply_w_id,
+  virtual TaskVector get_get_stock_info_tasks(const int32_t ol_i_id, const int32_t ol_supply_w_id,
                                               const int32_t d_id) = 0;
 
-  virtual TaskVector get_update_stock_tasks(const std::shared_ptr<opossum::TransactionContext> t_context,
-                                            const int32_t s_quantity, const int32_t ol_i_id,
+  virtual TaskVector get_update_stock_tasks(const int32_t s_quantity, const int32_t ol_i_id,
                                             const int32_t ol_supply_w_id) = 0;
 
-  virtual TaskVector get_create_order_line_tasks(const std::shared_ptr<opossum::TransactionContext> t_context,
-                                                 const int32_t ol_o_id, const int32_t ol_d_id, const int32_t ol_w_id,
+  virtual TaskVector get_create_order_line_tasks(const int32_t ol_o_id, const int32_t ol_d_id, const int32_t ol_w_id,
                                                  const int32_t ol_number, const int32_t ol_i_id,
                                                  const int32_t ol_supply_w_id, const int32_t ol_delivery_d,
                                                  const int32_t ol_quantity, const float ol_amount,
@@ -94,37 +85,29 @@ class AbstractNewOrderImpl {
 
 class NewOrderRefImpl : public AbstractNewOrderImpl {
  public:
-  TaskVector get_get_customer_and_warehouse_tax_rate_tasks(const std::shared_ptr<opossum::TransactionContext> t_context,
-                                                           const int32_t w_id, const int32_t d_id,
+  TaskVector get_get_customer_and_warehouse_tax_rate_tasks(const int32_t w_id, const int32_t d_id,
                                                            const int32_t c_id) override;
 
-  TaskVector get_get_district_tasks(const std::shared_ptr<opossum::TransactionContext> t_context, const int32_t d_id,
+  TaskVector get_get_district_tasks(const int32_t d_id,
                                     const int32_t w_id) override;
 
-  TaskVector get_increment_next_order_id_tasks(const std::shared_ptr<opossum::TransactionContext> t_context,
-                                               const int32_t d_id, const int32_t d_w_id,
+  TaskVector get_increment_next_order_id_tasks(const int32_t d_id, const int32_t d_w_id,
                                                const int32_t d_next_o_id) override;
 
-  TaskVector get_create_order_tasks(const std::shared_ptr<opossum::TransactionContext> t_context,
-                                    const int32_t d_next_o_id, const int32_t d_id, const int32_t w_id,
+  TaskVector get_create_order_tasks(const int32_t d_next_o_id, const int32_t d_id, const int32_t w_id,
                                     const int32_t c_id, const int32_t o_entry_d, const int32_t o_carrier_id,
                                     const int32_t o_ol_cnt, const int32_t o_all_local) override;
 
-  TaskVector get_create_new_order_tasks(const std::shared_ptr<opossum::TransactionContext> t_context,
-                                        const int32_t o_id, const int32_t d_id, const int32_t w_id) override;
+  TaskVector get_create_new_order_tasks(const int32_t o_id, const int32_t d_id, const int32_t w_id) override;
 
-  TaskVector get_get_item_info_tasks(const std::shared_ptr<opossum::TransactionContext> t_context,
-                                     const int32_t ol_i_id) override;
+  TaskVector get_get_item_info_tasks(const int32_t ol_i_id) override;
 
-  TaskVector get_get_stock_info_tasks(const std::shared_ptr<opossum::TransactionContext> t_context,
-                                      const int32_t ol_i_id, const int32_t ol_supply_w_id, const int32_t d_id) override;
+  TaskVector get_get_stock_info_tasks(const int32_t ol_i_id, const int32_t ol_supply_w_id, const int32_t d_id) override;
 
-  TaskVector get_update_stock_tasks(const std::shared_ptr<opossum::TransactionContext> t_context,
-                                    const int32_t s_quantity, const int32_t ol_i_id,
+  TaskVector get_update_stock_tasks(const int32_t s_quantity, const int32_t ol_i_id,
                                     const int32_t ol_supply_w_id) override;
 
-  TaskVector get_create_order_line_tasks(const std::shared_ptr<opossum::TransactionContext> t_context,
-                                         const int32_t ol_o_id, const int32_t ol_d_id, const int32_t ol_w_id,
+  TaskVector get_create_order_line_tasks(const int32_t ol_o_id, const int32_t ol_d_id, const int32_t ol_w_id,
                                          const int32_t ol_number, const int32_t ol_i_id, const int32_t ol_supply_w_id,
                                          const int32_t ol_delivery_d, const int32_t ol_quantity, const float ol_amount,
                                          const std::string &ol_dist_info) override;
