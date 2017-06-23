@@ -120,7 +120,7 @@ void ValueColumn<T>::visit(ColumnVisitable& visitable, std::shared_ptr<ColumnVis
   visitable.handle_value_column(*this, std::move(context));
 }
 
-// TODO(mjendruk): Add edge case handling for null values
+// TODO(anyone): This method is part of an algorithm that hasn't yet been updated to support null values.
 template <typename T>
 void ValueColumn<T>::write_string_representation(std::string& row_string, const ChunkOffset chunk_offset) const {
   std::stringstream buffer;
@@ -134,7 +134,7 @@ void ValueColumn<T>::write_string_representation(std::string& row_string, const 
   row_string += buffer.str();
 }
 
-// TODO(mjendruk): Figure out where it is used and decide appropriatedly
+// TODO(anyone): This method is part of an algorithm that hasn't yet been updated to support null values.
 template <typename T>
 void ValueColumn<T>::copy_value_to_value_column(BaseColumn& value_column, ChunkOffset chunk_offset) const {
   auto& output_column = static_cast<ValueColumn<T>&>(value_column);
@@ -143,7 +143,7 @@ void ValueColumn<T>::copy_value_to_value_column(BaseColumn& value_column, ChunkO
   values_out.push_back(_values[chunk_offset]);
 }
 
-// TODO(mjendruk): Figure out where it is used and decide appropriatedly
+// TODO(anyone): This method is part of an algorithm that hasn't yet been updated to support null values.
 template <typename T>
 const std::shared_ptr<std::vector<std::pair<RowID, T>>> ValueColumn<T>::materialize(
     ChunkID chunk_id, std::shared_ptr<std::vector<ChunkOffset>> offsets) {

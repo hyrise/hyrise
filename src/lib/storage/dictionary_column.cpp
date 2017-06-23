@@ -57,7 +57,7 @@ std::shared_ptr<const BaseAttributeVector> DictionaryColumn<T>::attribute_vector
   return _attribute_vector;
 }
 
-// TODO(mjendruk): Figure out where it is used and decide appropriatedly
+// TODO(anyone): This method is part of an algorithm that hasn’t yet been updated to support null values.
 template <typename T>
 const tbb::concurrent_vector<T> DictionaryColumn<T>::materialize_values() const {
   tbb::concurrent_vector<T> values(_attribute_vector->size());
@@ -121,7 +121,7 @@ void DictionaryColumn<T>::visit(ColumnVisitable& visitable, std::shared_ptr<Colu
   visitable.handle_dictionary_column(*this, std::move(context));
 }
 
-// TODO(mjendruk): Add edge case handling for null values
+// TODO(anyone): This method is part of an algorithm that hasn’t yet been updated to support null values.
 template <typename T>
 void DictionaryColumn<T>::write_string_representation(std::string& row_string, const ChunkOffset chunk_offset) const {
   std::stringstream buffer;
@@ -136,7 +136,7 @@ void DictionaryColumn<T>::write_string_representation(std::string& row_string, c
   row_string += buffer.str();
 }
 
-// TODO(mjendruk): Adapt once value columns support null values.
+// TODO(anyone): This method is part of an algorithm that hasn’t yet been updated to support null values.
 template <typename T>
 void DictionaryColumn<T>::copy_value_to_value_column(BaseColumn& value_column, ChunkOffset chunk_offset) const {
   auto& output_column = static_cast<ValueColumn<T>&>(value_column);
@@ -146,7 +146,7 @@ void DictionaryColumn<T>::copy_value_to_value_column(BaseColumn& value_column, C
   values_out.push_back(value);
 }
 
-// TODO(mjendruk): This is used in JoinHash line 144
+// TODO(anyone): This method is part of an algorithm that hasn’t yet been updated to support null values.
 template <typename T>
 const std::shared_ptr<std::vector<std::pair<RowID, T>>> DictionaryColumn<T>::materialize(
     ChunkID chunk_id, std::shared_ptr<std::vector<ChunkOffset>> offsets) {
