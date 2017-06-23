@@ -98,14 +98,14 @@ bool ValueColumn<T>::is_nullable() const {
 
 template <typename T>
 const tbb::concurrent_vector<bool>& ValueColumn<T>::null_values() const {
-  DebugAssert(is_nullable(), "ValueColumn does not have mvcc columns");
+  DebugAssert(is_nullable(), "ValueColumn does not support null values.");
 
   return *_null_values;
 }
 
 template <typename T>
 tbb::concurrent_vector<bool>& ValueColumn<T>::null_values() {
-  DebugAssert(is_nullable(), "ValueColumn does not have mvcc columns");
+  DebugAssert(is_nullable(), "ValueColumn does not support null values.");
 
   return *_null_values;
 }
