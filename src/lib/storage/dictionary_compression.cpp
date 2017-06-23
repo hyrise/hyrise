@@ -90,14 +90,14 @@ class ColumnCompressor : public ColumnCompressorBase {
           continue;
         }
 
-        auto value_id = find_value_id(dictionary, *value_it);
+        auto value_id = get_value_id(dictionary, *value_it);
         attribute_vector->set(index, value_id);
       }
     } else {
       auto value_it = values.cbegin();
       auto index = 0u;
       for (; value_it != values.cend(); ++value_it, ++index) {
-        auto value_id = find_value_id(dictionary, *value_it);
+        auto value_id = get_value_id(dictionary, *value_it);
         attribute_vector->set(index, value_id);
       }
     }
@@ -105,7 +105,7 @@ class ColumnCompressor : public ColumnCompressorBase {
     return std::make_shared<DictionaryColumn<T>>(std::move(dictionary), attribute_vector);
   }
 
-  ValueID find_value_id(const std::vector<T>& dictionary, const T& value) {
+  ValueID get_value_id(const std::vector<T>& dictionary, const T& value) {
     return static_cast<ValueID>(
         std::distance(dictionary.cbegin(), std::lower_bound(dictionary.cbegin(), dictionary.cend(), value)));
   }
