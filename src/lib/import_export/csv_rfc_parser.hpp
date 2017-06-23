@@ -4,6 +4,7 @@
 #include <string>
 #include <vector>
 
+#include "import_export/csv.hpp"
 #include "storage/table.hpp"
 
 namespace opossum {
@@ -27,7 +28,7 @@ class CsvRfcParser {
    * @param filename    Path to the input file.
    * @param buffer_size  Specifies the amount of data from the input file in bytes that a single task should work on.
    */
-  explicit CsvRfcParser(size_t buffer_size);
+  explicit CsvRfcParser(size_t buffer_size, CsvConfig csv_config);
 
   // cannot move-assign because of const members
   CsvRfcParser& operator=(CsvRfcParser&&) = delete;
@@ -38,6 +39,8 @@ class CsvRfcParser {
  protected:
   // Number of bytes that a task processes from the input file.
   const size_t _buffer_size;
+  // Csv configuration, e.g. delimiter, separator, etc.
+  const CsvConfig _csv_config;
 
  protected:
   /* Creates the table structure from the meta file.
@@ -50,7 +53,7 @@ class CsvRfcParser {
    *  Column Type,b,string
    *  Column Type,c,float
    */
-  static const std::shared_ptr<Table> _process_meta_file(const std::string& meta_file);
+  static const std::shared_ptr<Table> _process_meta_file(const std::string& meta_file, CsvConfig config);
 
   /*
    * Processes one part of the input data and fills the given chunk with columns which contain the parsed values.
@@ -63,7 +66,7 @@ class CsvRfcParser {
    * @param row_count  Number of rows in the chunk from start to end
    */
   static void _parse_file_chunk(std::vector<char>::iterator start, std::vector<char>::iterator end, Chunk& chunk,
-                                const Table& table, ChunkOffset row_count);
+                                const Table& table, ChunkOffset row_count, CsvConfig config);
 
   /*
    * Returns the start position of the next csv field after 'start'.
@@ -76,7 +79,8 @@ class CsvRfcParser {
    * @param last_char  In this parameter the character after the field is saved (separator or delimiter)
    */
   static std::vector<char>::iterator _next_field(const std::vector<char>::iterator& start,
-                                                 const std::vector<char>::iterator& end, char& last_char);
+                                                 const std::vector<char>::iterator& end, char& last_char,
+                                                 CsvConfig config);
 
   /*
    * Returns the start position of the next csv row after 'start'.
@@ -86,6 +90,6 @@ class CsvRfcParser {
    * @param end        Search until 'end' for the next row
    */
   static std::vector<char>::iterator _next_row(const std::vector<char>::iterator& start,
-                                               const std::vector<char>::iterator& end);
+                                               const std::vector<char>::iterator& end, CsvConfig config);
 };
 }  // namespace opossum

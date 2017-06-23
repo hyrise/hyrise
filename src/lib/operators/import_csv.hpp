@@ -5,6 +5,7 @@
 #include <vector>
 
 #include "abstract_read_only_operator.hpp"
+#include "import_export/csv.hpp"
 
 namespace opossum {
 
@@ -21,10 +22,21 @@ class ImportCsv : public AbstractReadOnlyOperator {
   /*
    * @param filename    Path to the input file.
    * @param tablename   Optional. Name of the table to store/look up in the StorageManager.
-   * @param buffer_size Specifies the amount of data from the input file in bytes that a single task should work on.
    * @param rfc_mode    If true parse according to RFC 4180 else parse as non-RFC format
+   * @param buffer_size Specifies the amount of data from the input file in bytes that a single task should work on.
    */
   explicit ImportCsv(const std::string& filename, const optional<std::string> tablename = nullopt, bool rfc_mode = true,
+                     size_t buffer_size = 50 * 1024 * 1024 /*50 MB*/);
+
+  /*
+   * @param filename    Path to the input file.
+   * @param config      Csv configuration, e.g. delimiter, separator, etc.
+   * @param tablename   Optional. Name of the table to store/look up in the StorageManager.
+   * @param rfc_mode    If true parse according to RFC 4180 else parse as non-RFC format
+   * @param buffer_size Specifies the amount of data from the input file in bytes that a single task should work on.
+   */
+  explicit ImportCsv(const std::string& filename, const CsvConfig config,
+                     const optional<std::string> tablename = nullopt, bool rfc_mode = true,
                      size_t buffer_size = 50 * 1024 * 1024 /*50 MB*/);
 
   // cannot move-assign because of const members
@@ -51,5 +63,7 @@ class ImportCsv : public AbstractReadOnlyOperator {
   const bool _rfc_mode;
   // Number of bytes that a task processes from the input file.
   const size_t _buffer_size;
+  // Csv configuration, e.g. delimiter, separator, etc.
+  const CsvConfig _config;
 };
 }  // namespace opossum
