@@ -34,8 +34,8 @@ class ValueColumn : public BaseColumn {
   const tbb::concurrent_vector<T>& values() const;
   tbb::concurrent_vector<T>& values();
 
-  // checks if columns supports null values
-  bool is_nullable() const override;
+  // returns if columns supports null values
+  bool is_nullable() const;
 
   /**
    * @brief Returns null array
