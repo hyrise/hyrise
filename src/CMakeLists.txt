@@ -21,6 +21,8 @@ include_directories(
     ${PROJECT_SOURCE_DIR}/third_party/sql-parser/src
 
     ${PROJECT_SOURCE_DIR}/src/lib/
+
+    ${TBB_INCLUDE_DIR}
 )
 
 link_directories(
