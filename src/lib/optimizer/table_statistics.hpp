@@ -6,7 +6,7 @@
 
 #include "all_parameter_variant.hpp"
 #include "common.hpp"
-#include "optimizer/column_statistics.hpp"
+#include "optimizer/abstract_column_statistics.hpp"
 
 namespace opossum {
 
@@ -19,7 +19,7 @@ class TableStatistics {
   explicit TableStatistics(const std::string &name, const std::weak_ptr<Table> table);
   TableStatistics(const TableStatistics &table_statistics);
   double row_count();
-  std::shared_ptr<ColumnStatistics> get_column_statistics(const std::string &column_name);
+  std::shared_ptr<AbstractColumnStatistics> get_column_statistics(const std::string &column_name);
   std::shared_ptr<TableStatistics> predicate_statistics(const std::string &column_name, const std::string &op,
                                                         const AllParameterVariant value,
                                                         const optional<AllTypeVariant> value2 = nullopt);
@@ -36,7 +36,7 @@ class TableStatistics {
   const std::string _name;
   const std::weak_ptr<Table> _table;
   double _row_count;
-  std::map<std::string, std::shared_ptr<ColumnStatistics>> _column_statistics;
+  std::map<std::string, std::shared_ptr<AbstractColumnStatistics>> _column_statistics;
 };
 
 }  // namespace opossum
