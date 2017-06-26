@@ -10,8 +10,8 @@
 #include "common.hpp"
 #include "operators/aggregate.hpp"
 #include "operators/table_wrapper.hpp"
-#include "storage/table.hpp"
-#include "type_cast.hpp"
+// #include "storage/table.hpp"
+// #include "type_cast.hpp"
 
 namespace opossum {
 
@@ -27,6 +27,10 @@ ColumnStatistics<T>::ColumnStatistics(size_t distinct_count, AllTypeVariant min,
 template <typename T>
 ColumnStatistics<T>::ColumnStatistics(size_t distinct_count, T min, T max, const std::string &column_name)
     : _column_name(column_name), _distinct_count(distinct_count), _min(min), _max(max) {}
+
+template <typename T>
+ColumnStatistics<T>::ColumnStatistics(size_t distinct_count, const std::string &column_name)
+        : _column_name(column_name), _distinct_count(distinct_count) {}
 
 template <typename T>
 size_t ColumnStatistics<T>::get_distinct_count() {
@@ -77,6 +81,20 @@ void ColumnStatistics<T>::update_min_max() {
   _min = aggregate_table->template get_value<T>(0, 0);
   _max = aggregate_table->template get_value<T>(1, 0);
 }
+
+template <>
+std::tuple<double, std::shared_ptr<AbstractColumnStatistics>> ColumnStatistics<std::string>::predicate_selectivity(
+        const std::string &op, const AllTypeVariant value, const optional<AllTypeVariant> value2) {
+  if (op == "=") {
+    auto column_statistics = std::make_shared<ColumnStatistics>(1, _column_name);
+    return {1.0 / get_distinct_count(), column_statistics};
+  } else if (op == "!=") {
+    auto column_statistics = std::make_shared<ColumnStatistics>(get_distinct_count() - 1, _column_name);
+    return {1.0 / (get_distinct_count() - 1), column_statistics};
+  }
+  return {1.0, nullptr};
+};
+
 template <typename T>
 std::tuple<double, std::shared_ptr<AbstractColumnStatistics>> ColumnStatistics<T>::predicate_selectivity(
     const std::string &op, const AllTypeVariant value, const optional<AllTypeVariant> value2) {
@@ -101,12 +119,12 @@ std::tuple<double, std::shared_ptr<AbstractColumnStatistics>> ColumnStatistics<T
     auto min = get_min();
     auto max = get_max();
     //    std::cout << "rc " << _row_count << ", casted value " << casted_value1 << std::endl;
-    std::cout << (casted_value1 - min) << std::endl;
-    std::cout << (max - min + 1) << std::endl;
+//    std::cout << (casted_value1 - min) << std::endl;
+//    std::cout << (max - min + 1) << std::endl;
     auto column_statistics = std::make_shared<ColumnStatistics>(get_distinct_count(), min, casted_value1, _column_name);
     return {(casted_value1 - min) / (max - min + 1), column_statistics};
-    // } else if (op == "<=") {
-    //   Fail(std::string("operator not yet implemented: ") + op);
+     } else if (op == "<=") {
+       Fail(std::string("operator not yet implemented: ") + op);
     // } else if (op == ">") {
     //   Fail(std::string("operator not yet implemented: ") + op);
     // } else if (op == ">=") {
@@ -122,6 +140,7 @@ std::tuple<double, std::shared_ptr<AbstractColumnStatistics>> ColumnStatistics<T
     // Fail(std::string("unknown operator ") + op);
     return {1.0 / get_distinct_count(), nullptr};
   }
+  return {1.0, nullptr};
 }
 
 template <typename T>
