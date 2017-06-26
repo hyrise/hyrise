@@ -257,18 +257,15 @@ std::shared_ptr<AbstractNode> SQLQueryNodeTranslator::_translate_projection(
     const std::vector<hsql::Expr*>& expr_list, const std::shared_ptr<AbstractNode>& input_node) {
   std::vector<std::string> columns;
   for (const Expr* expr : expr_list) {
-    // At this moment we only support selecting columns in the projection.
     // TODO(tim): expressions
-    if (!expr->isType(hsql::kExprColumnRef) && !expr->isType(hsql::kExprStar)) {
-      throw std::runtime_error("Projection only supports columns to be selected.");
-    }
-
-    if (expr->isType(hsql::kExprStar)) {
+    if (expr->isType(hsql::kExprColumnRef)) {
+      columns.push_back(_get_column_name(*expr));
+    } else if (expr->isType(hsql::kExprStar)) {
       // Resolve '*' by getting the output columns of the input node.
       auto input_columns = input_node->output_columns();
       columns.insert(columns.end(), input_columns.begin(), input_columns.end());
     } else {
-      columns.push_back(_get_column_name(*expr));
+      throw std::runtime_error("Projection only supports columns to be selected.");
     }
   }
 
