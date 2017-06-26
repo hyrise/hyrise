@@ -42,4 +42,37 @@ TEST_F(AbstractSyntaxTreeTest, ParentTest) {
   ASSERT_EQ(p_n->get_parent().lock(), nullptr);
 }
 
+TEST_F(AbstractSyntaxTreeTest, ChainSameNodesTest) {
+  const auto t_n = std::make_shared<TableNode>("a");
+
+  ASSERT_EQ(t_n->get_left(), nullptr);
+  ASSERT_EQ(t_n->get_right(), nullptr);
+  ASSERT_EQ(t_n->get_parent().lock(), nullptr);
+
+  const auto ts_n = std::make_shared<TableScanNode>("c1", ScanType::OpEquals, "a");
+  ts_n->set_left(t_n);
+
+  ASSERT_EQ(t_n->get_parent().lock(), ts_n);
+  ASSERT_EQ(ts_n->get_left(), t_n);
+  ASSERT_EQ(ts_n->get_right(), nullptr);
+  ASSERT_EQ(ts_n->get_parent().lock(), nullptr);
+
+  const auto ts_n_2 = std::make_shared<TableScanNode>("c2", ScanType::OpEquals, "b");
+  ts_n_2->set_left(ts_n);
+
+  ASSERT_EQ(ts_n->get_parent().lock(), ts_n_2);
+  ASSERT_EQ(ts_n_2->get_left(), ts_n);
+  ASSERT_EQ(ts_n_2->get_right(), nullptr);
+  ASSERT_EQ(ts_n_2->get_parent().lock(), nullptr);
+
+  std::vector<std::string> column_names = {"c1", "c2"};
+  const auto p_n = std::make_shared<ProjectionNode>(column_names);
+  p_n->set_left(ts_n_2);
+
+  ASSERT_EQ(ts_n_2->get_parent().lock(), p_n);
+  ASSERT_EQ(p_n->get_left(), ts_n_2);
+  ASSERT_EQ(p_n->get_right(), nullptr);
+  ASSERT_EQ(p_n->get_parent().lock(), nullptr);
+}
+
 }  // namespace opossum

@@ -40,6 +40,7 @@ set(
     operators/validate_test.cpp
     operators/validate_visibility_test.cpp
     optimizer/abstract_syntax_tree_test.cpp
+    optimizer/predicate_reordering_test.cpp
     scheduler/scheduler_test.cpp
     sql/sql_basic_cache_test.cpp
     sql/sql_parse_tree_cache_test.cpp

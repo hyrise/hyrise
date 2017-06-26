@@ -6,6 +6,8 @@
 
 namespace opossum {
 
+enum NodeType { ProjectionNodeType, TableNodeType, TableScanNodeType };
+
 class AbstractNode : public std::enable_shared_from_this<AbstractNode> {
  public:
   const std::weak_ptr<AbstractNode> &get_parent() const;
@@ -17,10 +19,16 @@ class AbstractNode : public std::enable_shared_from_this<AbstractNode> {
   const std::shared_ptr<AbstractNode> &get_right() const;
   void set_right(const std::shared_ptr<AbstractNode> &right);
 
+  const NodeType get_type() const;
+  void set_type(const NodeType _type);
+
   virtual const std::vector<std::string> output_columns();
 
   void print(const uint8_t indent = 0) const;
   virtual const std::string description() const = 0;
+
+ protected:
+  NodeType _type;
 
  private:
   std::weak_ptr<AbstractNode> _parent;

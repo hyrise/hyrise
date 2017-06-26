@@ -26,6 +26,10 @@ void AbstractNode::set_right(const std::shared_ptr<AbstractNode> &right) {
   right->set_parent(shared_from_this());
 }
 
+const NodeType AbstractNode::get_type() const { return _type; }
+
+void AbstractNode::set_type(const NodeType type) { _type = type; }
+
 const std::vector<std::string> AbstractNode::output_columns() {
   std::vector<std::string> output_columns;
 

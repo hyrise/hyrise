@@ -10,7 +10,9 @@ namespace opossum {
 
 class ProjectionNode : public AbstractNode {
  public:
-  explicit ProjectionNode(const std::vector<std::string>& column_names) : _column_names(column_names) {}
+  explicit ProjectionNode(const std::vector<std::string>& column_names) : _column_names(column_names) {
+    _type = ProjectionNodeType;
+  }
 
   const std::string description() const override;
 

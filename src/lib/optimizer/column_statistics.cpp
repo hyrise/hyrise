@@ -120,28 +120,32 @@ std::tuple<double, std::shared_ptr<AbstractColumnStatistics>> ColumnStatistics<T
       return {0.0, nullptr};
     }
     double selectivity = (casted_value1 - get_min()) / static_cast<double>(get_max() - get_min() + 1);
-    auto column_statistics = std::make_shared<ColumnStatistics>(selectivity * get_distinct_count(), get_min(), casted_value1 - 1, _column_name);
+    auto column_statistics = std::make_shared<ColumnStatistics>(selectivity * get_distinct_count(), get_min(),
+                                                                casted_value1 - 1, _column_name);
     return {selectivity, column_statistics};
-  } else if (op == "<=" || (op == "<" && ! std::is_integral<T>::value)) {
+  } else if (op == "<=" || (op == "<" && !std::is_integral<T>::value)) {
     if (casted_value1 < get_min()) {
       return {0.0, nullptr};
     }
-    double selectivity = (casted_value1 - get_min()+ 1) / static_cast<double>(get_max() - get_min() + 1);
-    auto column_statistics = std::make_shared<ColumnStatistics>(selectivity * get_distinct_count(), get_min(), casted_value1, _column_name);
+    double selectivity = (casted_value1 - get_min() + 1) / static_cast<double>(get_max() - get_min() + 1);
+    auto column_statistics =
+        std::make_shared<ColumnStatistics>(selectivity * get_distinct_count(), get_min(), casted_value1, _column_name);
     return {selectivity, column_statistics};
   } else if (op == ">" && std::is_integral<T>::value) {
     if (casted_value1 >= get_max()) {
       return {0.0, nullptr};
     }
     double selectivity = (get_max() - casted_value1) / static_cast<double>(get_max() - get_min() + 1);
-    auto column_statistics = std::make_shared<ColumnStatistics>(selectivity * get_distinct_count(), casted_value1 + 1, get_max(), _column_name);
+    auto column_statistics = std::make_shared<ColumnStatistics>(selectivity * get_distinct_count(), casted_value1 + 1,
+                                                                get_max(), _column_name);
     return {selectivity, column_statistics};
-  } else if (op == ">=" || (op == "<" && ! std::is_integral<T>::value)) {
+  } else if (op == ">=" || (op == "<" && !std::is_integral<T>::value)) {
     if (casted_value1 > get_max()) {
       return {0.0, nullptr};
     }
     double selectivity = (get_max() - casted_value1 + 1) / static_cast<double>(get_max() - get_min() + 1);
-    auto column_statistics = std::make_shared<ColumnStatistics>(selectivity * get_distinct_count(), casted_value1, get_max(), _column_name);
+    auto column_statistics =
+        std::make_shared<ColumnStatistics>(selectivity * get_distinct_count(), casted_value1, get_max(), _column_name);
     return {selectivity, column_statistics};
   } else if (op == "BETWEEN") {
     if (!value2) {
@@ -152,8 +156,8 @@ std::tuple<double, std::shared_ptr<AbstractColumnStatistics>> ColumnStatistics<T
       return {0.0, nullptr};
     }
     double selectivity = (casted_value2 - casted_value1 + 1) / static_cast<double>(get_max() - get_min() + 1);
-    auto column_statistics =
-        std::make_shared<ColumnStatistics>(selectivity * get_distinct_count(), casted_value1, casted_value2, _column_name);
+    auto column_statistics = std::make_shared<ColumnStatistics>(selectivity * get_distinct_count(), casted_value1,
+                                                                casted_value2, _column_name);
     return {selectivity, column_statistics};
   } else {
     // Brace yourselves.
