@@ -82,6 +82,7 @@ void ColumnStatistics<T>::update_min_max() {
   _max = aggregate_table->template get_value<T>(1, 0);
 }
 
+// string specialization
 template <>
 std::tuple<double, std::shared_ptr<AbstractColumnStatistics>> ColumnStatistics<std::string>::predicate_selectivity(
     const std::string &op, const AllTypeVariant value, const optional<AllTypeVariant> value2) {
@@ -92,6 +93,7 @@ std::tuple<double, std::shared_ptr<AbstractColumnStatistics>> ColumnStatistics<s
     auto column_statistics = std::make_shared<ColumnStatistics>(get_distinct_count() - 1, _column_name);
     return {1.0 / (get_distinct_count() - 1), column_statistics};
   }
+  // TODO(anybody) implement other table-scan operators for string.
   return {1.0, nullptr};
 }
 
@@ -159,7 +161,6 @@ std::tuple<double, std::shared_ptr<AbstractColumnStatistics>> ColumnStatistics<T
     return {(casted_value2 - casted_value1 + 1) / (max - min + 1), column_statistics};
   } else {
     // Brace yourselves.
-    // Fail(std::string("unknown operator ") + op);
     return {1.0 / get_distinct_count(), nullptr};
   }
   return {1.0, nullptr};
