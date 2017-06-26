@@ -110,7 +110,9 @@ class Table {
 
   std::unique_lock<std::mutex> acquire_append_mutex();
 
-  std::shared_ptr<TableStatistics> table_statistics;
+  void set_table_statistics(std::shared_ptr<TableStatistics> table_statistics) { _table_statistics = table_statistics; }
+
+  std::shared_ptr<TableStatistics> get_table_statistics() { return _table_statistics; }
 
  protected:
   // 0 means that the chunk has an unlimited size.
@@ -126,6 +128,8 @@ class Table {
   // that is not yet completely implemented in all compilers
   std::vector<std::string> _column_names;
   std::vector<std::string> _column_types;
+
+  std::shared_ptr<TableStatistics> _table_statistics;
 
   std::unique_ptr<std::mutex> _append_mutex;
 };

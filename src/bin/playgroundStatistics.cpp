@@ -15,7 +15,7 @@ int main() {
 
   opossum::StorageManager::get().add_table("CUSTOMER", generator.generate_customer_table());
 
-  auto table_statistics = opossum::StorageManager::get().get_table("CUSTOMER")->table_statistics;
+  auto table_statistics = opossum::StorageManager::get().get_table("CUSTOMER")->get_table_statistics();
   auto stat1 = table_statistics->predicate_statistics("C_ID", "=", opossum::AllParameterVariant(1));
   auto stat2 = stat1->predicate_statistics("C_D_ID", "!=", opossum::AllParameterVariant(2));
   auto stat3 = stat1->predicate_statistics("C_D_ID", "<", opossum::AllParameterVariant(5));
