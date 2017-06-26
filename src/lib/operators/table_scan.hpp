@@ -25,6 +25,17 @@
 
 namespace opossum {
 
+enum ScanType {
+  OpEquals,
+  OpNotEquals,
+  OpLessThan,
+  OpLessThanEquals,
+  OpGreaterThan,
+  OpGreaterThanEquals,
+  OpBetween,
+  OpLike
+};
+
 // operator to filter a table by a single attribute
 // output is an table with only reference columns
 // to filter by multiple criteria, you can chain the operator
@@ -57,17 +68,6 @@ class TableScan : public AbstractReadOnlyOperator {
   const optional<AllTypeVariant> _value2;
 
   std::unique_ptr<AbstractReadOnlyOperatorImpl> _impl;
-
-  enum ScanType {
-    OpEquals,
-    OpNotEquals,
-    OpLessThan,
-    OpLessThanEquals,
-    OpGreaterThan,
-    OpGreaterThanEquals,
-    OpBetween,
-    OpLike
-  };
 
   static std::string &replace_all(std::string &str, const std::string &old_value, const std::string &new_value);
   static std::map<std::string, std::string> extract_character_ranges(std::string &str);

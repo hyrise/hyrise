@@ -5,6 +5,7 @@
 #include "../base_test.hpp"
 #include "gtest/gtest.h"
 
+#include "operators/table_scan.hpp"
 #include "optimizer/abstract_syntax_tree/projection_node.hpp"
 #include "optimizer/abstract_syntax_tree/table_node.hpp"
 #include "optimizer/abstract_syntax_tree/table_scan_node.hpp"
@@ -23,7 +24,7 @@ TEST_F(AbstractSyntaxTreeTest, ParentTest) {
   ASSERT_EQ(t_n->get_right(), nullptr);
   ASSERT_EQ(t_n->get_parent().lock(), nullptr);
 
-  const auto ts_n = std::make_shared<TableScanNode>("c1", "=", "a");
+  const auto ts_n = std::make_shared<TableScanNode>("c1", ScanType::OpEquals, "a");
   ts_n->set_left(t_n);
 
   ASSERT_EQ(t_n->get_parent().lock(), ts_n);

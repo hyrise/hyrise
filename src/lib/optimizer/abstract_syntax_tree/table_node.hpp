@@ -1,5 +1,8 @@
 #pragma once
 
+#include <string>
+#include <vector>
+
 #include "common.hpp"
 #include "optimizer/abstract_syntax_tree/abstract_node.hpp"
 
@@ -7,12 +10,15 @@ namespace opossum {
 
 class TableNode : public AbstractNode {
  public:
-  TableNode(const std::string table_name) : _table_name(table_name){};
+  explicit TableNode(const std::string table_name) : _table_name(table_name) {}
 
-  const std::string description() const override { return "Table: " + _table_name; }
+  const std::string description() const override;
+
+  const std::vector<std::string> output_columns() override;
 
  private:
   const std::string _table_name;
+  std::vector<std::string> _column_names;
 };
 
 }  // namespace opossum

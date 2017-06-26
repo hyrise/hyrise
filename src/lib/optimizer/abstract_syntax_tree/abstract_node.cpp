@@ -2,6 +2,9 @@
 
 #include <iomanip>
 #include <iostream>
+#include <memory>
+#include <string>
+#include <vector>
 
 namespace opossum {
 
@@ -21,6 +24,22 @@ const std::shared_ptr<AbstractNode> &AbstractNode::get_right() const { return _r
 void AbstractNode::set_right(const std::shared_ptr<AbstractNode> &right) {
   _right = right;
   right->set_parent(shared_from_this());
+}
+
+const std::vector<std::string> AbstractNode::output_columns() {
+  std::vector<std::string> output_columns;
+
+  if (_left) {
+    auto left_output_columns = _left->output_columns();
+    output_columns.insert(output_columns.end(), left_output_columns.begin(), left_output_columns.end());
+  }
+
+  if (_right) {
+    auto right_output_columns = _right->output_columns();
+    output_columns.insert(output_columns.end(), right_output_columns.begin(), right_output_columns.end());
+  }
+
+  return output_columns;
 }
 
 void AbstractNode::print(const uint8_t indent) const {

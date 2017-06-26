@@ -43,6 +43,7 @@ set(
     scheduler/scheduler_test.cpp
     sql/sql_basic_cache_test.cpp
     sql/sql_parse_tree_cache_test.cpp
+    sql/sql_query_node_translator_test.cpp
     sql/sql_query_operator_test.cpp
     sql/sql_select_test.cpp
     storage/adaptive_radix_tree_index_test.cpp

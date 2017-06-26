@@ -1,6 +1,8 @@
 #pragma once
 
 #include <memory>
+#include <string>
+#include <vector>
 
 namespace opossum {
 
@@ -14,6 +16,8 @@ class AbstractNode : public std::enable_shared_from_this<AbstractNode> {
 
   const std::shared_ptr<AbstractNode> &get_right() const;
   void set_right(const std::shared_ptr<AbstractNode> &right);
+
+  virtual const std::vector<std::string> output_columns();
 
   void print(const uint8_t indent = 0) const;
   virtual const std::string description() const = 0;

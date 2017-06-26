@@ -93,7 +93,6 @@ bool SQLQueryTranslator::_translate_select(const SelectStatement& select) {
 
   // Translate WHERE.
   // Add table scan if applicable.
-  // TODO(tim): if we have multiple input tables, _plan.back() might not be the correct table for the filter.
   if (select.whereClause != nullptr) {
     Expr& where = *select.whereClause;
     auto input_task = _plan.back();

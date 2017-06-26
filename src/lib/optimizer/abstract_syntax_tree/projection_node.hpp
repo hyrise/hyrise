@@ -1,6 +1,6 @@
 #pragma once
 
-#include <sstream>
+#include <string>
 #include <vector>
 
 #include "common.hpp"
@@ -10,19 +10,11 @@ namespace opossum {
 
 class ProjectionNode : public AbstractNode {
  public:
-  ProjectionNode(const std::vector<std::string>& column_names) : _column_names(column_names){};
+  explicit ProjectionNode(const std::vector<std::string>& column_names) : _column_names(column_names) {}
 
-  const std::string description() const override {
-    std::ostringstream desc;
+  const std::string description() const override;
 
-    desc << "Projection: ";
-
-    for (auto& column : _column_names) {
-      desc << " " << column;
-    }
-
-    return desc.str();
-  }
+  const std::vector<std::string> output_columns() override;
 
  private:
   const std::vector<std::string> _column_names;

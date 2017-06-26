@@ -136,8 +136,11 @@ set(
     operators/validate.hpp
     optimizer/abstract_syntax_tree/abstract_node.cpp
     optimizer/abstract_syntax_tree/abstract_node.hpp
+    optimizer/abstract_syntax_tree/projection_node.cpp
     optimizer/abstract_syntax_tree/projection_node.hpp
+    optimizer/abstract_syntax_tree/table_node.cpp
     optimizer/abstract_syntax_tree/table_node.hpp
+    optimizer/abstract_syntax_tree/table_scan_node.cpp
     optimizer/abstract_syntax_tree/table_scan_node.hpp
     optimizer/abstract_column_statistics.hpp
     optimizer/column_statistics.cpp
@@ -148,6 +151,8 @@ set(
     sql/lru_cache.hpp
     sql/sql_parse_tree_cache.hpp
     sql/sql_parse_tree_cache.cpp
+    sql/sql_query_node_translator.hpp
+    sql/sql_query_node_translator.cpp
     sql/sql_query_operator.hpp
     sql/sql_query_operator.cpp
     sql/sql_query_plan.hpp

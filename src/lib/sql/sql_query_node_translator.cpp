@@ -1,0 +1,281 @@
+#include "sql_query_node_translator.hpp"
+
+#include <memory>
+#include <string>
+#include <unordered_map>
+#include <vector>
+
+#include "operators/table_scan.hpp"
+#include "optimizer/abstract_syntax_tree/abstract_node.hpp"
+#include "optimizer/abstract_syntax_tree/projection_node.hpp"
+#include "optimizer/abstract_syntax_tree/table_node.hpp"
+#include "optimizer/abstract_syntax_tree/table_scan_node.hpp"
+#include "storage/storage_manager.hpp"
+
+#include "SQLParser.h"
+
+using hsql::Expr;
+using hsql::JoinDefinition;
+using hsql::SelectStatement;
+using hsql::SQLStatement;
+
+namespace opossum {
+
+SQLQueryNodeTranslator::SQLQueryNodeTranslator() {}
+
+SQLQueryNodeTranslator::~SQLQueryNodeTranslator() {}
+
+std::vector<std::shared_ptr<AbstractNode>> SQLQueryNodeTranslator::translate_parse_result(
+    const hsql::SQLParserResult& result) {
+  std::vector<std::shared_ptr<AbstractNode>> result_nodes;
+  const std::vector<SQLStatement*>& statements = result.getStatements();
+
+  for (const SQLStatement* stmt : statements) {
+    auto result_node = translate_statement(*stmt);
+    result_nodes.push_back(result_node);
+  }
+
+  return result_nodes;
+}
+
+std::shared_ptr<AbstractNode> SQLQueryNodeTranslator::translate_statement(const SQLStatement& statement) {
+  switch (statement.type()) {
+    case hsql::kStmtSelect: {
+      const SelectStatement& select = (const SelectStatement&)statement;
+      return _translate_select(select);
+    }
+    case hsql::kStmtPrepare: {
+      // TODO(tim): what to return?
+    }
+    default:
+      throw std::runtime_error("Translating statement failed.");
+  }
+}
+
+std::shared_ptr<AbstractNode> SQLQueryNodeTranslator::_translate_select(const SelectStatement& select) {
+  // SQL Order of Operations: http://www.bennadel.com/blog/70-sql-query-order-of-operations.htm
+  // 1. FROM clause
+  // 2. WHERE clause
+  // 3. GROUP BY clause
+  // 4. HAVING clause
+  // 5. SELECT clause
+  // 6. ORDER BY clause
+
+  // Translate FROM.
+  auto current_result_node = _translate_table_ref(*select.fromTable);
+
+  // Translate WHERE.
+  if (select.whereClause) {
+    current_result_node = _translate_filter_expr(*select.whereClause, current_result_node);
+  }
+
+  // TODO(torpedro): Transform GROUP BY.
+  // TODO(torpedro): Transform HAVING.
+
+  // Translate SELECT list.
+  // TODO(torpedro): Handle DISTINCT.
+  current_result_node = _translate_projection(*select.selectList, current_result_node);
+
+  // Translate ORDER BY.
+  // TODO(tim): order by
+  //  if (select.order != nullptr) {
+  //    current_result_node = _translate_order_by(*select.order, current_result_node);
+  //  }
+
+  // TODO(torpedro): Translate LIMIT/TOP.
+
+  return current_result_node;
+}
+
+// TODO(tim): JoinNode
+// std::shared_ptr<AbstractNode> SQLQueryNodeTranslator::_translate_join(const JoinDefinition& join) {
+//  // Get left and right sub tables.
+//  if (!_translate_table_ref(*join.left)) {
+//    return false;
+//  }
+//  auto left_task = _plan.back();
+//
+//  if (!_translate_table_ref(*join.right)) {
+//    return false;
+//  }
+//  auto right_task = _plan.back();
+//
+//  // Determine join condition.
+//  const Expr& condition = *join.condition;
+//  std::pair<std::string, std::string> columns(condition.expr->name, condition.expr2->name);
+//  std::string op;
+//  if (!_translate_filter_op(condition, &op)) {
+//    throw std::runtime_error("Can not handle JOIN condition.");
+//    return false;
+//  }
+//
+//  // Determine join mode.
+//  JoinMode mode;
+//  switch (join.type) {
+//    case hsql::kJoinInner:
+//      mode = Inner;
+//      break;
+//    case hsql::kJoinOuter:
+//      mode = Outer;
+//      break;
+//    case hsql::kJoinLeft:
+//      mode = Left;
+//      break;
+//    case hsql::kJoinRight:
+//      mode = Right;
+//      break;
+//    case hsql::kJoinNatural:
+//      mode = Natural;
+//      break;
+//    case hsql::kJoinCross:
+//      mode = Cross;
+//      break;
+//    default:
+//      throw std::runtime_error("Unable to handle join type.");
+//      return false;
+//  }
+//
+//  // In Opossum, the join requires a prefix.
+//  std::string prefix_left = std::string(join.left->getName()) + ".";
+//  std::string prefix_right = std::string(join.right->getName()) + ".";
+//
+//  // TODO(torpedro): Optimize join type selection.
+//  auto join = std::make_shared<JoinNestedLoopA>(left_task->get_operator(), right_task->get_operator(), columns, op,
+//                                                mode, prefix_left, prefix_right);
+//  auto task = std::make_shared<OperatorTask>(join);
+//  left_task->set_as_predecessor_of(task);
+//  right_task->set_as_predecessor_of(task);
+//  _plan.add_task(task);
+//  return true;
+//}
+
+std::shared_ptr<AbstractNode> SQLQueryNodeTranslator::_translate_table_ref(const hsql::TableRef& table) {
+  switch (table.type) {
+    case hsql::kTableName: {
+      return std::make_shared<TableNode>(table.name);
+    }
+    case hsql::kTableSelect: {
+      return _translate_select(*table.select);
+    }
+    case hsql::kTableJoin: {
+      // TODO(tim)
+      //      return _translate_join(*table.join);
+      throw std::runtime_error("Join not supported at the moment.");
+    }
+    case hsql::kTableCrossProduct: {
+      // TODO(tim)
+      //      return _translate_cross_product(*table.join);
+      throw std::runtime_error("Unable to translate table cross product.");
+    }
+  }
+  throw std::runtime_error("Unable to translate source table.");
+}
+
+const std::string SQLQueryNodeTranslator::_get_column_name(const hsql::Expr& expr) const {
+  std::string name = "";
+  if (expr.hasTable()) {
+    name += std::string(expr.table) + ".";
+  }
+
+  name += expr.name;
+
+  if (name.empty()) {
+    throw std::runtime_error("Column name is empty.");
+  }
+
+  return name;
+}
+
+const AllTypeVariant SQLQueryNodeTranslator::_translate_literal(const hsql::Expr& expr) {
+  switch (expr.type) {
+    case hsql::kExprLiteralInt:
+      return expr.ival;
+    case hsql::kExprLiteralFloat:
+      return expr.fval;
+    case hsql::kExprLiteralString:
+      return expr.name;
+    default:
+      throw std::runtime_error("Could not translate literal: expression type not supported.");
+  }
+}
+
+std::shared_ptr<AbstractNode> SQLQueryNodeTranslator::_translate_filter_expr(
+    const hsql::Expr& expr, const std::shared_ptr<AbstractNode>& input_node) {
+  if (!expr.isType(hsql::kExprOperator)) {
+    throw std::runtime_error("Filter expression clause has to be of type operator!");
+  }
+
+  // If the expression is a nested expression, recursively resolve.
+  // TODO(tim): implement OR.
+  if (expr.opType == hsql::kOpAnd) {
+    auto filter_node = _translate_filter_expr(*expr.expr, input_node);
+    return _translate_filter_expr(*expr.expr, filter_node);
+  }
+
+  // TODO(tim): move to function / global namespace / whatever.
+  std::unordered_map<hsql::OperatorType, ScanType> operator_to_filter_type = {
+      //          {hsql::kOpEquals, ScanType::OpEquals},
+      {hsql::kOpNotEquals, ScanType::OpNotEquals},
+
+      //          {hsql::kOpGreater, ScanType::OpGreaterThan},
+      {hsql::kOpGreaterEq, ScanType::OpGreaterThanEquals},
+
+      //          {hsql::kOpLess, ScanType::OpLessThan},
+      {hsql::kOpLessEq, ScanType::OpLessThanEquals},
+
+      {hsql::kOpBetween, ScanType::OpBetween},
+
+      {hsql::kOpLike, ScanType::OpLike},
+  };
+
+  auto it = operator_to_filter_type.find(expr.opType);
+  if (it == operator_to_filter_type.end()) {
+    throw std::runtime_error("Filter expression clause operator is not yet supported.");
+  }
+
+  auto scan_type = it->second;
+
+  // TODO(torpedro): Handle BETWEEN.
+
+  Expr* column_expr = (expr.expr->isType(hsql::kExprColumnRef)) ? expr.expr : expr.expr2;
+  if (!column_expr->isType(hsql::kExprColumnRef)) {
+    throw std::runtime_error("Unsupported filter: we must have a column reference on either side of the expression.");
+  }
+
+  const auto column_name = _get_column_name(*column_expr);
+
+  Expr* other_expr = (column_expr == expr.expr) ? expr.expr2 : expr.expr;
+  const AllTypeVariant value = _translate_literal(*other_expr);
+
+  auto table_scan_node = std::make_shared<TableScanNode>(column_name, scan_type, value);
+  table_scan_node->set_left(input_node);
+
+  return table_scan_node;
+}
+
+std::shared_ptr<AbstractNode> SQLQueryNodeTranslator::_translate_projection(
+    const std::vector<hsql::Expr*>& expr_list, const std::shared_ptr<AbstractNode>& input_node) {
+  std::vector<std::string> columns;
+  for (const Expr* expr : expr_list) {
+    // At this moment we only support selecting columns in the projection.
+    // TODO(tim): expressions
+    if (!expr->isType(hsql::kExprColumnRef) && !expr->isType(hsql::kExprStar)) {
+      throw std::runtime_error("Projection only supports columns to be selected.");
+    }
+
+    if (expr->isType(hsql::kExprStar)) {
+      // Resolve '*' by getting the output columns of the input node.
+      auto input_columns = input_node->output_columns();
+      columns.insert(columns.end(), input_columns.begin(), input_columns.end());
+    } else {
+      columns.push_back(_get_column_name(*expr));
+    }
+  }
+
+  auto projection_node = std::make_shared<ProjectionNode>(columns);
+  projection_node->set_left(input_node);
+
+  return projection_node;
+}
+
+}  // namespace opossum
