@@ -23,11 +23,11 @@ std::shared_ptr<const Table> AbstractOperator::input_table_left() const { return
 
 std::shared_ptr<const Table> AbstractOperator::input_table_right() const { return _input_right->get_output(); }
 
-std::shared_ptr<AbstractOperator> AbstractOperator::input_left() const {
+std::shared_ptr<AbstractOperator> AbstractOperator::mutable_input_left() const {
   return std::const_pointer_cast<AbstractOperator>(_input_left);
 }
 
-std::shared_ptr<AbstractOperator> AbstractOperator::input_right() const {
+std::shared_ptr<AbstractOperator> AbstractOperator::mutable_input_right() const {
   return std::const_pointer_cast<AbstractOperator>(_input_right);
 }
 

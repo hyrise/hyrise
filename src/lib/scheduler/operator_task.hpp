@@ -27,6 +27,9 @@ class OperatorTask : public AbstractTask {
  protected:
   void on_execute() override;
 
+  static void _add_tasks_from_operator(std::shared_ptr<AbstractOperator> op,
+                                       std::vector<std::shared_ptr<OperatorTask>>& tasks);
+
  private:
   std::shared_ptr<AbstractOperator> _op;
 };
