@@ -23,9 +23,12 @@ class AbstractReadWriteOperator : public AbstractOperator,
       : AbstractOperator(left, right), _execute_failed{false} {}
 
   void execute() override {
-    _transaction_context->on_operator_started();
-    _output = on_execute(_transaction_context);
-    _transaction_context->on_operator_finished();
+    auto transaction_context = _transaction_context.lock();
+    DebugAssert(static_cast<bool>(transaction_context), "Probably a bug.");
+
+    transaction_context->on_operator_started();
+    _output = on_execute(transaction_context);
+    transaction_context->on_operator_finished();
   }
 
   /**
