@@ -99,7 +99,7 @@ template <typename T>
 std::tuple<double, std::shared_ptr<AbstractColumnStatistics>> ColumnStatistics<T>::predicate_selectivity(
     const std::string &op, const AllTypeVariant value, const optional<AllTypeVariant> value2) {
   auto casted_value1 = get<T>(value);
-  //  auto casted_value2 = get<T>(value);
+
   if (op == "=") {
     if (casted_value1 < get_min() || casted_value1 > get_max()) {
       return {0.0, nullptr};
@@ -118,25 +118,47 @@ std::tuple<double, std::shared_ptr<AbstractColumnStatistics>> ColumnStatistics<T
     }
     auto min = get_min();
     auto max = get_max();
-    //    std::cout << "rc " << _row_count << ", casted value " << casted_value1 << std::endl;
-    //    std::cout << (casted_value1 - min) << std::endl;
-    //    std::cout << (max - min + 1) << std::endl;
+    auto column_statistics = std::make_shared<ColumnStatistics>(get_distinct_count(), min, casted_value1, _column_name);
+    return {(casted_value1 - min + 1) / (max - min + 1), column_statistics};
+  } else if (op == "<=") {
+    if (casted_value1 < get_min()) {
+      return {0.0, nullptr};
+    }
+    auto min = get_min();
+    auto max = get_max();
     auto column_statistics = std::make_shared<ColumnStatistics>(get_distinct_count(), min, casted_value1, _column_name);
     return {(casted_value1 - min) / (max - min + 1), column_statistics};
-  } else if (op == "<=") {
-    Fail(std::string("operator not yet implemented: ") + op);
-    // } else if (op == ">") {
-    //   Fail(std::string("operator not yet implemented: ") + op);
-    // } else if (op == ">=") {
-    //   Fail(std::string("operator not yet implemented: ") + op);
-    // } else if (op == "BETWEEN") {
-    //   Fail(std::string("operator not yet implemented: ") + op);
+  } else if (op == ">") {
+    if (casted_value1 >= get_max()) {
+      return {0.0, nullptr};
+    }
+    auto min = get_min();
+    auto max = get_max();
+    auto column_statistics = std::make_shared<ColumnStatistics>(get_distinct_count(), casted_value1, max, _column_name);
+    return {(max - casted_value1) / (max - min + 1), column_statistics};
+  } else if (op == ">=") {
+    if (casted_value1 > get_max()) {
+      return {0.0, nullptr};
+    }
+    auto min = get_min();
+    auto max = get_max();
+    auto column_statistics = std::make_shared<ColumnStatistics>(get_distinct_count(), casted_value1, max, _column_name);
+    return {(max - casted_value1 + 1) / (max - min + 1), column_statistics};
+  } else if (op == "BETWEEN") {
+    if (!value2) {
+      Fail(std::string("operator ") + op + std::string("should get two parameters, second is missing!"));
+    }
+    auto casted_value2 = get<T>(*value2);
+    if (casted_value1 > casted_value2 || casted_value1 > get_max() || casted_value2 < get_min()) {
+      return {0.0, nullptr};
+    }
+    auto min = get_min();
+    auto max = get_max();
+    auto column_statistics =
+        std::make_shared<ColumnStatistics>(get_distinct_count(), casted_value1, casted_value2, _column_name);
+    return {(casted_value2 - casted_value1 + 1) / (max - min + 1), column_statistics};
   } else {
-    // TODO(mp): extend for other comparison operators
     // Brace yourselves.
-    //    auto distinct_count = get_distinct_count();
-    //    clone = std::make_shared<TableStatistics>(*this);
-    //    clone->_row_count = _row_count / static_cast<double>(distinct_count);
     // Fail(std::string("unknown operator ") + op);
     return {1.0 / get_distinct_count(), nullptr};
   }
