@@ -31,10 +31,10 @@ class ColumnStatistics : public AbstractColumnStatistics {
 
  public:
   ColumnStatistics(const std::weak_ptr<Table> table, const std::string& column_name);
-  ColumnStatistics(size_t distinct_count, AllTypeVariant min, AllTypeVariant max, const std::string& column_name);
-  ColumnStatistics(size_t distinct_count, T min, T max, const std::string& column_name);
-  ColumnStatistics(size_t distinct_count, const std::string& column_name);
-  virtual size_t get_distinct_count();
+  ColumnStatistics(double distinct_count, AllTypeVariant min, AllTypeVariant max, const std::string& column_name);
+  ColumnStatistics(double distinct_count, T min, T max, const std::string& column_name);
+  ColumnStatistics(double distinct_count, const std::string& column_name);
+  double get_distinct_count();
   T get_min();
   T get_max();
 
@@ -49,7 +49,7 @@ class ColumnStatistics : public AbstractColumnStatistics {
 
   const std::weak_ptr<Table> _table;
   const std::string& _column_name;
-  optional<size_t> _distinct_count;
+  optional<double> _distinct_count;
   optional<T> _min;
   optional<T> _max;
 };

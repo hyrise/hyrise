@@ -13,8 +13,7 @@ namespace opossum {
 
 class AbstractSyntaxTreeTest : public BaseTest {
  protected:
-  void SetUp() override {
-  }
+  void SetUp() override {}
 };
 
 TEST_F(AbstractSyntaxTreeTest, ParentTest) {
