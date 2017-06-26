@@ -82,7 +82,7 @@ node {
 
       stage("TPCC Test") {
           sh "cd clang-debug && make -j \$(cat /proc/cpuinfo | grep processor | wc -l) opossumTestTPCC tpcTableGenerator"
-          sh "./scripts/test_tpcc.sh"        
+          sh "./scripts/test_tpcc.sh clang-debug"        
       }		
 
       stage("Cleanup") {
