@@ -47,12 +47,4 @@ static inline double all_type_variant_to_double(const AllTypeVariant &variant) {
   return ret;
 }
 
-static inline double operator+(const AllTypeVariant &lhs, const AllTypeVariant &rhs) {
-  return all_type_variant_to_double(lhs) + all_type_variant_to_double(rhs);
-}
-
-static inline double operator-(const AllTypeVariant &rhs) { return -all_type_variant_to_double(rhs); }
-
-static inline double operator-(const AllTypeVariant &lhs, const AllTypeVariant &rhs) { return lhs + (-rhs); }
-
 }  // namespace opossum
