@@ -17,7 +17,7 @@ class OperatorTask : public AbstractTask {
   explicit OperatorTask(std::shared_ptr<AbstractOperator> op);
 
   /**
-   * Create tasks from result operator and set task dependencies automatically.
+   * Create tasks recursively from result operator and set task dependencies automatically.
    */
   static const std::vector<std::shared_ptr<OperatorTask>> make_tasks_from_operator(
       std::shared_ptr<AbstractOperator> op);
