@@ -75,6 +75,11 @@ class AbstractOperator {
   std::shared_ptr<const AbstractOperator> input_left() const;
   std::shared_ptr<const AbstractOperator> input_right() const;
 
+  // Return input operators.
+  // Note: these methods cast away const for the return shared_ptr of AbstractOperator.
+  std::shared_ptr<AbstractOperator> mutable_input_left() const;
+  std::shared_ptr<AbstractOperator> mutable_input_right() const;
+
   // Set the input operators.
   void set_input_left(std::shared_ptr<const AbstractOperator> input_left);
   void set_input_right(std::shared_ptr<const AbstractOperator> input_right);
