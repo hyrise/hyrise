@@ -49,7 +49,8 @@ inline void Fail(const std::string& msg) { throw std::logic_error(msg); }
 
 #define __FILENAME__ (__FILE__ + SOURCE_PATH_SIZE)
 
-#define DebugAssert(expr, msg) opossum::Assert(expr, std::string{__FILENAME__} + ":" BOOST_PP_STRINGIZE(__LINE__) " " + msg)
+#define DebugAssert(expr, msg) \
+  opossum::Assert(expr, std::string {__FILENAME__} + ":" BOOST_PP_STRINGIZE(__LINE__) " " + msg)
 
 #else
 
