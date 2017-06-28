@@ -360,7 +360,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
         auto output_offsets = std::vector<size_t>(num_partitions, 0);
 
         // add up the output offsets for chunks before this one
-        for (auto i = ChunkID{0}; i < chunk_id; ++i) {
+        for (ChunkID i{0}; i < chunk_id; ++i) {
           for (size_t j = 0; j < num_partitions; ++j) {
             output_offsets[j] += histograms[i]->operator[](j);
           }
@@ -563,13 +563,13 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
     right_chunk_offsets->resize(right_chunk_count);
 
     size_t offset_left = 0;
-    for (auto i = ChunkID{0}; i < left_chunk_count; ++i) {
+    for (ChunkID i{0}; i < left_chunk_count; ++i) {
       left_chunk_offsets->operator[](i) = offset_left;
       offset_left += _left_in_table->get_chunk(i).size();
     }
 
     size_t offset_right = 0;
-    for (auto i = ChunkID{0}; i < right_chunk_count; ++i) {
+    for (ChunkID i{0}; i < right_chunk_count; ++i) {
       right_chunk_offsets->operator[](i) = offset_right;
       offset_right += _right_in_table->get_chunk(i).size();
     }
