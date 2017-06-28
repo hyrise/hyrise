@@ -28,7 +28,7 @@ class OperatorsTableScanTest : public BaseTest {
     test_even_dict->add_column("a", "int");
     test_even_dict->add_column("b", "int");
     for (int i = 0; i <= 24; i += 2) test_even_dict->append({i, 100 + i});
-    DictionaryCompression::compress_chunks(*test_even_dict, {0u, 1u});
+    DictionaryCompression::compress_chunks(*test_even_dict, {ChunkID{0}, ChunkID{1}});
 
     _table_wrapper_even_dict = std::make_shared<TableWrapper>(std::move(test_even_dict));
     _table_wrapper_even_dict->execute();
@@ -37,7 +37,7 @@ class OperatorsTableScanTest : public BaseTest {
     test_table_part_dict->add_column("a", "int");
     test_table_part_dict->add_column("b", "float");
     for (int i = 1; i < 20; ++i) test_table_part_dict->append({i, 100.1 + i});
-    DictionaryCompression::compress_chunks(*test_table_part_dict, {0u, 2u});
+    DictionaryCompression::compress_chunks(*test_table_part_dict, {ChunkID{0}, ChunkID{2}});
 
     _table_wrapper_part_dict = std::make_shared<TableWrapper>(test_table_part_dict);
     _table_wrapper_part_dict->execute();
@@ -46,18 +46,18 @@ class OperatorsTableScanTest : public BaseTest {
     test_table_filtered->add_column("a", "int", false);
     test_table_filtered->add_column("b", "float", false);
     auto pos_list = std::make_shared<PosList>();
-    pos_list->emplace_back(test_table_part_dict->calculate_row_id(3, 1));
-    pos_list->emplace_back(test_table_part_dict->calculate_row_id(2, 0));
-    pos_list->emplace_back(test_table_part_dict->calculate_row_id(1, 1));
-    pos_list->emplace_back(test_table_part_dict->calculate_row_id(3, 3));
-    pos_list->emplace_back(test_table_part_dict->calculate_row_id(1, 3));
-    pos_list->emplace_back(test_table_part_dict->calculate_row_id(0, 2));
-    pos_list->emplace_back(test_table_part_dict->calculate_row_id(2, 2));
-    pos_list->emplace_back(test_table_part_dict->calculate_row_id(2, 4));
-    pos_list->emplace_back(test_table_part_dict->calculate_row_id(0, 0));
-    pos_list->emplace_back(test_table_part_dict->calculate_row_id(0, 4));
-    auto col_a = std::make_shared<ReferenceColumn>(test_table_part_dict, 0, pos_list);
-    auto col_b = std::make_shared<ReferenceColumn>(test_table_part_dict, 1, pos_list);
+    pos_list->emplace_back(test_table_part_dict->calculate_row_id(ChunkID{3}, 1));
+    pos_list->emplace_back(test_table_part_dict->calculate_row_id(ChunkID{2}, 0));
+    pos_list->emplace_back(test_table_part_dict->calculate_row_id(ChunkID{1}, 1));
+    pos_list->emplace_back(test_table_part_dict->calculate_row_id(ChunkID{3}, 3));
+    pos_list->emplace_back(test_table_part_dict->calculate_row_id(ChunkID{1}, 3));
+    pos_list->emplace_back(test_table_part_dict->calculate_row_id(ChunkID{0}, 2));
+    pos_list->emplace_back(test_table_part_dict->calculate_row_id(ChunkID{2}, 2));
+    pos_list->emplace_back(test_table_part_dict->calculate_row_id(ChunkID{2}, 4));
+    pos_list->emplace_back(test_table_part_dict->calculate_row_id(ChunkID{0}, 0));
+    pos_list->emplace_back(test_table_part_dict->calculate_row_id(ChunkID{0}, 4));
+    auto col_a = std::make_shared<ReferenceColumn>(test_table_part_dict, ColumnID{0}, pos_list);
+    auto col_b = std::make_shared<ReferenceColumn>(test_table_part_dict, ColumnID{1}, pos_list);
     Chunk chunk;
     chunk.add_column(col_a);
     chunk.add_column(col_b);
@@ -69,7 +69,7 @@ class OperatorsTableScanTest : public BaseTest {
     _table_wrapper_int3->execute();
 
     std::shared_ptr<Table> test_table_int3_dict = load_table("src/test/tables/int_int_int.tbl", 2);
-    DictionaryCompression::compress_chunks(*test_table_int3_dict, {0u, 1u});
+    DictionaryCompression::compress_chunks(*test_table_int3_dict, {ChunkID{0}, ChunkID{1}});
 
     _table_wrapper_int3_dict = std::make_shared<TableWrapper>(std::move(test_table_int3_dict));
     _table_wrapper_int3_dict->execute();
@@ -79,7 +79,7 @@ class OperatorsTableScanTest : public BaseTest {
     _test_table_dict_16->add_column("a", "int");
     _test_table_dict_16->add_column("b", "float");
     for (int i = 0; i <= 257; i += 1) _test_table_dict_16->append({i, 100.0f + i});
-    DictionaryCompression::compress_chunks(*_test_table_dict_16, {0u});
+    DictionaryCompression::compress_chunks(*_test_table_dict_16, {ChunkID{0}});
 
     _table_wrapper_dict_16 = std::make_shared<opossum::TableWrapper>(std::move(_test_table_dict_16));
     _table_wrapper_dict_16->execute();
@@ -89,7 +89,7 @@ class OperatorsTableScanTest : public BaseTest {
     _test_table_dict_32->add_column("a", "int");
     _test_table_dict_32->add_column("b", "float");
     for (int i = 0; i <= 65537; i += 1) _test_table_dict_32->append({i, 100.0f + i});
-    DictionaryCompression::compress_chunks(*_test_table_dict_32, {0u});
+    DictionaryCompression::compress_chunks(*_test_table_dict_32, {ChunkID{0}});
 
     _table_wrapper_dict_32 = std::make_shared<opossum::TableWrapper>(std::move(_test_table_dict_32));
     _table_wrapper_dict_32->execute();
@@ -101,7 +101,7 @@ class OperatorsTableScanTest : public BaseTest {
     // load and compress string table
     std::shared_ptr<Table> test_table_string_dict = load_table("src/test/tables/int_string_like.tbl", 5);
 
-    DictionaryCompression::compress_chunks(*test_table_string_dict, {0u});
+    DictionaryCompression::compress_chunks(*test_table_string_dict, {ChunkID{0}});
 
     _table_wrapper_string_dict = std::make_shared<TableWrapper>(std::move(test_table_string_dict));
     _table_wrapper_string_dict->execute();
@@ -128,7 +128,7 @@ TEST_F(OperatorsTableScanTest, EmptyResultScan) {
   auto scan_1 = std::make_shared<TableScan>(_table_wrapper, "a", ">", 90000);
   scan_1->execute();
 
-  for (auto i = 0u; i < scan_1->get_output()->chunk_count(); i++)
+  for (auto i = ChunkID{0}; i < scan_1->get_output()->chunk_count(); i++)
     EXPECT_EQ(scan_1->get_output()->get_chunk(i).col_count(), 2u);
 }
 
@@ -164,10 +164,10 @@ TEST_F(OperatorsTableScanTest, ScanOnDictColumn) {
     scan->execute();
 
     auto expected_copy = test.second;
-    for (ChunkID chunk_id = 0; chunk_id < scan->get_output()->chunk_count(); ++chunk_id) {
+    for (ChunkID chunk_id{0}; chunk_id < scan->get_output()->chunk_count(); ++chunk_id) {
       auto& chunk = scan->get_output()->get_chunk(chunk_id);
       for (ChunkOffset chunk_offset = 0; chunk_offset < chunk.size(); ++chunk_offset) {
-        EXPECT_EQ(expected_copy.erase(type_cast<int>((*chunk.get_column(1))[chunk_offset])), 1ull);
+        EXPECT_EQ(expected_copy.erase(type_cast<int>((*chunk.get_column(ColumnID{1}))[chunk_offset])), 1ull);
       }
     }
     EXPECT_EQ(expected_copy.size(), 0ull);
@@ -193,10 +193,10 @@ TEST_F(OperatorsTableScanTest, ScanOnReferencedDictColumn) {
     scan2->execute();
 
     auto expected_copy = test.second;
-    for (ChunkID chunk_id = 0; chunk_id < scan2->get_output()->chunk_count(); ++chunk_id) {
+    for (ChunkID chunk_id{0}; chunk_id < scan2->get_output()->chunk_count(); ++chunk_id) {
       auto& chunk = scan2->get_output()->get_chunk(chunk_id);
       for (ChunkOffset chunk_offset = 0; chunk_offset < chunk.size(); ++chunk_offset) {
-        EXPECT_EQ(expected_copy.erase(type_cast<int>((*chunk.get_column(1))[chunk_offset])), 1ull);
+        EXPECT_EQ(expected_copy.erase(type_cast<int>((*chunk.get_column(ColumnID{1}))[chunk_offset])), 1ull);
       }
     }
     EXPECT_EQ(expected_copy.size(), (size_t)0);
@@ -237,10 +237,10 @@ TEST_F(OperatorsTableScanTest, ScanOnDictColumnValueGreaterMaxDictionaryValue) {
     scan->execute();
 
     auto expected_copy = test.second;
-    for (ChunkID chunk_id = 0; chunk_id < scan->get_output()->chunk_count(); ++chunk_id) {
+    for (ChunkID chunk_id{0}; chunk_id < scan->get_output()->chunk_count(); ++chunk_id) {
       auto& chunk = scan->get_output()->get_chunk(chunk_id);
       for (ChunkOffset chunk_offset = 0; chunk_offset < chunk.size(); ++chunk_offset) {
-        EXPECT_EQ(expected_copy.erase(type_cast<int>((*chunk.get_column(1))[chunk_offset])), 1ull);
+        EXPECT_EQ(expected_copy.erase(type_cast<int>((*chunk.get_column(ColumnID{1}))[chunk_offset])), 1ull);
       }
     }
     EXPECT_EQ(expected_copy.size(), 0ull);
@@ -281,10 +281,11 @@ TEST_F(OperatorsTableScanTest, ScanOnDictColumnAroundBounds) {
     scan->execute();
 
     auto expected_copy = test.second;
-    for (ChunkID chunk_id = 0; chunk_id < scan->get_output()->chunk_count(); ++chunk_id) {
+    for (ChunkID chunk_id{0}; chunk_id < scan->get_output()->chunk_count(); ++chunk_id) {
       auto& chunk = scan->get_output()->get_chunk(chunk_id);
       for (ChunkOffset chunk_offset = 0; chunk_offset < chunk.size(); ++chunk_offset) {
-        EXPECT_EQ(expected_copy.erase(type_cast<int>((*chunk.get_column(1))[chunk_offset])), static_cast<size_t>(1));
+        EXPECT_EQ(expected_copy.erase(type_cast<int>((*chunk.get_column(ColumnID{1}))[chunk_offset])),
+                  static_cast<size_t>(1));
       }
     }
     EXPECT_EQ(expected_copy.size(), 0ull);

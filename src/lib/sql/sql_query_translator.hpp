@@ -48,6 +48,9 @@ class SQLQueryTranslator {
   bool _translate_projection(const std::vector<hsql::Expr*>& expr_list,
                              const std::shared_ptr<OperatorTask>& input_task);
 
+  bool _translate_group_by(const hsql::GroupByDescription& group_by, const std::vector<hsql::Expr*>& select_list,
+                           const std::shared_ptr<OperatorTask>& input_task);
+
   bool _translate_order_by(const std::vector<hsql::OrderDescription*> order_list,
                            const std::shared_ptr<OperatorTask>& input_task);
 

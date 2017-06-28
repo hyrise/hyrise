@@ -1,6 +1,7 @@
 
 #include <memory>
 #include <string>
+#include <tuple>
 #include <utility>
 
 #include "../base_test.hpp"
@@ -16,7 +17,9 @@
 
 namespace opossum {
 
-class SQLSelectTest : public BaseTest {
+typedef std::tuple<std::string, size_t, std::string> SQLTestParam;
+
+class SQLSelectTest : public BaseTest, public ::testing::WithParamInterface<SQLTestParam> {
  protected:
   void SetUp() override {
     std::shared_ptr<Table> table_a = load_table("src/test/tables/int_float.tbl", 2);
@@ -33,36 +36,65 @@ class SQLSelectTest : public BaseTest {
 
     std::shared_ptr<Table> test_table2 = load_table("src/test/tables/int_string2.tbl", 2);
     StorageManager::get().add_table("TestTable", test_table2);
+
+    std::shared_ptr<Table> groupby_int_1gb_1agg =
+        load_table("src/test/tables/aggregateoperator/groupby_int_1gb_1agg/input.tbl", 2);
+    StorageManager::get().add_table("groupby_int_1gb_1agg", groupby_int_1gb_1agg);
+
+    std::shared_ptr<Table> groupby_int_1gb_2agg =
+        load_table("src/test/tables/aggregateoperator/groupby_int_1gb_2agg/input.tbl", 2);
+    StorageManager::get().add_table("groupby_int_1gb_2agg", groupby_int_1gb_2agg);
+
+    std::shared_ptr<Table> groupby_int_2gb_2agg =
+        load_table("src/test/tables/aggregateoperator/groupby_int_2gb_2agg/input.tbl", 2);
+    StorageManager::get().add_table("groupby_int_2gb_2agg", groupby_int_2gb_2agg);
   }
 
-  bool compile_query(const std::string query) {
+  void compile_query(const std::string query) {
     hsql::SQLParserResult parse_result;
     hsql::SQLParser::parseSQLString(query, &parse_result);
 
-    if (!parse_result.isValid()) {
-      return false;
+    ASSERT_TRUE(parse_result.isValid());
+
+    // Compile the parse result.
+    bool success = _translator.translate_parse_result(parse_result);
+    if (!success) {
+      throw std::runtime_error(_translator.get_error_msg());
     }
 
-    return _translator.translate_parse_result(parse_result);
+    _plan = _translator.get_query_plan();
   }
 
+  void execute_query_plan() {
+    for (const auto& task : _plan.tasks()) {
+      task->get_operator()->execute();
+    }
+  }
+
+  std::shared_ptr<const Table> get_plan_result() { return _plan.back()->get_operator()->get_output(); }
+
   SQLQueryTranslator _translator;
+  SQLQueryPlan _plan;
 };
 
-TEST_F(SQLSelectTest, BasicSuccessTest) {
+TEST_F(SQLSelectTest, BasicParserSuccessTest) {
+  hsql::SQLParserResult parse_result;
+
   const std::string query = "SELECT * FROM test;";
-  ASSERT_TRUE(compile_query(query));
+  hsql::SQLParser::parseSQLString(query, &parse_result);
+  EXPECT_TRUE(parse_result.isValid());
 
   const std::string faulty_query = "SELECT * WHERE test;";
-  ASSERT_FALSE(compile_query(faulty_query));
+  hsql::SQLParser::parseSQLString(faulty_query, &parse_result);
+  EXPECT_FALSE(parse_result.isValid());
 }
 
 TEST_F(SQLSelectTest, SelectStarAllTest) {
   const std::string query = "SELECT * FROM table_a;";
-  ASSERT_TRUE(compile_query(query));
+  compile_query(query);
 
   auto tasks = _translator.get_query_plan().tasks();
-  ASSERT_EQ(1u, tasks.size());
+  ASSERT_EQ(1u, _plan.size());
 
   // Check GetTable task.
   auto get_table_task = tasks[0];
@@ -76,168 +108,76 @@ TEST_F(SQLSelectTest, SelectStarAllTest) {
   EXPECT_TABLE_EQ(get_table->get_output(), expected_result);
 }
 
-TEST_F(SQLSelectTest, SelectWithSingleCondition) {
-  const std::string query = "SELECT * FROM table_a WHERE a >= 1234;";
-  ASSERT_TRUE(compile_query(query));
+TEST_P(SQLSelectTest, GenericQueryTest) {
+  // Inside a test, access the test parameter with the GetParam() method
+  // of the TestWithParam<T> class:
+  SQLTestParam param = GetParam();
+  std::string query = std::get<0>(param);
+  size_t num_operators = std::get<1>(param);
+  std::string expected_result_file = std::get<2>(param);
 
-  auto tasks = _translator.get_query_plan().tasks();
-  ASSERT_EQ(2u, tasks.size());
+  compile_query(query);
+  ASSERT_EQ(num_operators, _plan.size());
+  execute_query_plan();
 
-  auto get_table = (const std::shared_ptr<GetTable>&)tasks[0]->get_operator();
-  auto table_scan = (const std::shared_ptr<TableScan>&)tasks[1]->get_operator();
-
-  get_table->execute();
-  table_scan->execute();
-
-  std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_float_filtered2.tbl", 1);
-  EXPECT_TABLE_EQ(table_scan->get_output(), expected_result);
+  auto expected_result = load_table(expected_result_file, 1);
+  EXPECT_TABLE_EQ(get_plan_result(), expected_result);
 }
 
-TEST_F(SQLSelectTest, SelectWithAndCondition) {
-  const std::string query = "SELECT * FROM table_a WHERE a >= 1234 AND b < 457.9";
-  ASSERT_TRUE(compile_query(query));
+const SQLTestParam sql_query_tests[] = {
+    // Table Scans
+    SQLTestParam{"SELECT * FROM table_a WHERE a >= 1234;", 2u, "src/test/tables/int_float_filtered2.tbl"},
+    SQLTestParam{"SELECT * FROM table_a WHERE a >= 1234 AND b < 457.9", 3u, "src/test/tables/int_float_filtered.tbl"},
+    // TODO(torpedro): Enable this test, after implementing BETWEEN support in translator.
+    // SQLTestParam{"SELECT * FROM TestTable WHERE a BETWEEN 122 AND 124", 2u,
+    // "src/test/tables/int_string_filtered.tbl"},
+    // Projection
+    SQLTestParam{"SELECT a FROM table_a;", 2u, "src/test/tables/int.tbl"},
+    // ORDER BY
+    SQLTestParam{"SELECT a, b FROM table_a ORDER BY a;", 3u, "src/test/tables/int_float_sorted.tbl"},
+    SQLTestParam{"SELECT a FROM (SELECT a, b FROM table_a WHERE a > 1 ORDER BY b) WHERE a > 0 ORDER BY a;", 7u,
+                 "src/test/tables/int.tbl"},
+    // JOIN
+    SQLTestParam{"SELECT \"left\".a, \"left\".b, \"right\".a, \"right\".b FROM table_a AS \"left\" JOIN table_b AS "
+                 "\"right\" ON a = a;",
+                 4u, "src/test/tables/joinoperators/int_inner_join.tbl"},
+    SQLTestParam{"SELECT * FROM table_a AS \"left\" LEFT JOIN table_b AS \"right\" ON a = a;", 3u,
+                 "src/test/tables/joinoperators/int_left_join.tbl"},
+    // GROUP BY
+    SQLTestParam{"SELECT a, SUM(b) FROM groupby_int_1gb_1agg GROUP BY a;", 3u,
+                 "src/test/tables/aggregateoperator/groupby_int_1gb_1agg/sum.tbl"},
+    SQLTestParam{"SELECT a, SUM(b), AVG(c) FROM groupby_int_1gb_2agg GROUP BY a;", 3u,
+                 "src/test/tables/aggregateoperator/groupby_int_1gb_2agg/sum_avg.tbl"},
+    SQLTestParam{"SELECT a, b, MAX(c), AVG(d) FROM groupby_int_2gb_2agg GROUP BY a, b;", 3u,
+                 "src/test/tables/aggregateoperator/groupby_int_2gb_2agg/max_avg.tbl"},
+    SQLTestParam{
+        "SELECT a, b, MAX(c), AVG(d) FROM groupby_int_2gb_2agg GROUP BY a, b HAVING MAX(c) >= 10 AND MAX(c) < 40;", 5u,
+        "src/test/tables/aggregateoperator/groupby_int_2gb_2agg/max_avg.tbl"},
+};
 
-  auto tasks = _translator.get_query_plan().tasks();
-  ASSERT_EQ(3u, tasks.size());
-
-  for (const auto task : tasks) {
-    task->get_operator()->execute();
-  }
-
-  std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_float_filtered.tbl", 2);
-  EXPECT_TABLE_EQ(tasks.back()->get_operator()->get_output(), expected_result);
-}
-
-TEST_F(SQLSelectTest, SelectWithAndConditionEquality) {
-  const std::string query = "SELECT * FROM table_b WHERE a = 12345 AND b = 457.7";
-  ASSERT_TRUE(compile_query(query));
-
-  auto tasks = _translator.get_query_plan().tasks();
-  ASSERT_EQ(3u, tasks.size());
-
-  for (const auto task : tasks) {
-    task->get_operator()->execute();
-  }
-
-  std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_float2_filtered.tbl", 2);
-  EXPECT_TABLE_EQ(tasks.back()->get_operator()->get_output(), expected_result);
-}
-
-// TEST_F(SQLSelectTest, SelectWithBetween) {
-//   const std::string query = "SELECT * FROM TestTable WHERE a BETWEEN 122 AND 124";
-//   ASSERT_TRUE(compile_query(query));
-
-//   auto tasks = _translator.get_query_plan().tasks();
-//   ASSERT_EQ(2u, tasks.size());
-
-//   for (const auto task : tasks) {
-//     task->get_operator()->execute();
-//   }
-
-//   std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_string_filtered.tbl", 2);
-//   EXPECT_TABLE_EQ(tasks.back()->get_operator()->get_output(), expected_result);
-// }
-
-TEST_F(SQLSelectTest, SimpleProjectionTest) {
-  const std::string query = "SELECT a FROM table_a;";
-  ASSERT_TRUE(compile_query(query));
-
-  auto tasks = _translator.get_query_plan().tasks();
-  ASSERT_EQ(2u, tasks.size());
-
-  for (const auto task : tasks) {
-    task->get_operator()->execute();
-  }
-
-  std::shared_ptr<Table> expected_result = load_table("src/test/tables/int.tbl", 2);
-  EXPECT_TABLE_EQ(tasks.back()->get_operator()->get_output(), expected_result);
-}
-
-TEST_F(SQLSelectTest, SelectSingleOrderByTest) {
-  const std::string query = "SELECT a, b FROM table_a ORDER BY a;";
-  ASSERT_TRUE(compile_query(query));
-
-  auto tasks = _translator.get_query_plan().tasks();
-  ASSERT_EQ(3u, tasks.size());
-
-  for (const auto task : tasks) {
-    task->get_operator()->execute();
-  }
-
-  std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_float_sorted.tbl", 2);
-  EXPECT_TABLE_EQ(tasks.back()->get_operator()->get_output(), expected_result, true);
-}
-
-TEST_F(SQLSelectTest, SelectFromSubSelect) {
-  const std::string query = "SELECT a FROM (SELECT a, b FROM table_a WHERE a > 1 ORDER BY b) WHERE a > 0 ORDER BY a;";
-  ASSERT_TRUE(compile_query(query));
-
-  auto tasks = _translator.get_query_plan().tasks();
-  ASSERT_EQ(7u, tasks.size());
-
-  for (const auto task : tasks) {
-    task->get_operator()->execute();
-  }
-
-  std::shared_ptr<Table> expected_result = load_table("src/test/tables/int.tbl", 2);
-  EXPECT_TABLE_EQ(tasks.back()->get_operator()->get_output(), expected_result, true);
-}
-
-TEST_F(SQLSelectTest, SelectBasicInnerJoinTest) {
-  const std::string query =
-      "SELECT \"left\".a, \"left\".b, \"right\".a, \"right\".b FROM table_a AS \"left\" JOIN table_b AS \"right\" ON a "
-      "= a;";
-  ASSERT_TRUE(compile_query(query));
-
-  auto tasks = _translator.get_query_plan().tasks();
-  ASSERT_EQ(4u, tasks.size());
-
-  for (const auto task : tasks) {
-    task->get_operator()->execute();
-  }
-
-  std::shared_ptr<Table> expected_result = load_table("src/test/tables/joinoperators/int_inner_join.tbl", 1);
-  EXPECT_TABLE_EQ(tasks.back()->get_operator()->get_output(), expected_result);
-}
-
-TEST_F(SQLSelectTest, SelectBasicLeftJoinTest) {
-  const std::string query = "SELECT * FROM table_a AS \"left\" LEFT JOIN table_b AS \"right\" ON a = a;";
-  ASSERT_TRUE(compile_query(query));
-
-  auto tasks = _translator.get_query_plan().tasks();
-  ASSERT_EQ(3u, tasks.size());
-
-  for (const auto task : tasks) {
-    task->get_operator()->execute();
-  }
-
-  std::shared_ptr<Table> expected_result = load_table("src/test/tables/joinoperators/int_left_join.tbl", 1);
-  EXPECT_TABLE_EQ(tasks.back()->get_operator()->get_output(), expected_result);
-}
+INSTANTIATE_TEST_CASE_P(GenericQueryTest, SQLSelectTest, ::testing::ValuesIn(sql_query_tests));
 
 TEST_F(SQLSelectTest, SelectWithSchedulerTest) {
-  CurrentScheduler::set(std::make_shared<NodeQueueScheduler>(Topology::create_fake_numa_topology(8, 4)));
-
   const std::string query =
       "SELECT \"left\".a, \"left\".b, \"right\".a, \"right\".b FROM table_a AS \"left\" INNER JOIN table_b AS "
       "\"right\" ON a = a";
+  auto expected_result = load_table("src/test/tables/joinoperators/int_inner_join.tbl", 1);
 
   // TODO(torpedro): Adding 'WHERE \"left\".a >= 0;' causes wrong data. Investigate.
   //                 Probable bug in TableScan.
 
-  ASSERT_TRUE(compile_query(query));
+  CurrentScheduler::set(std::make_shared<NodeQueueScheduler>(Topology::create_fake_numa_topology(8, 4)));
 
-  auto tasks = _translator.get_query_plan().tasks();
+  compile_query(query);
 
-  for (const auto& task : tasks) {
+  for (const auto& task : _plan.tasks()) {
     task->schedule();
   }
 
   CurrentScheduler::get()->finish();
   CurrentScheduler::set(nullptr);
 
-  std::shared_ptr<Table> expected_result = load_table("src/test/tables/joinoperators/int_inner_join.tbl", 1);
-  EXPECT_TABLE_EQ(tasks.back()->get_operator()->get_output(), expected_result, true);
+  EXPECT_TABLE_EQ(get_plan_result(), expected_result, true);
 }
 
 }  // namespace opossum

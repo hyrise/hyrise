@@ -351,13 +351,13 @@ class JoinNestedLoopA::JoinNestedLoopAImpl : public AbstractJoinOperatorImpl {
     Right now we would also prepend the new prefix, which may result in a name like this:
     Left.Right.Right.ColumnA
     */
-    for (ColumnID column_id = 0; column_id < _left_in_table->col_count(); ++column_id) {
+    for (ColumnID column_id{0}; column_id < _left_in_table->col_count(); ++column_id) {
       _output_table->add_column(_prefix_left + _left_in_table->column_name(column_id),
                                 _left_in_table->column_type(column_id), false);
     }
 
     // Preparing output table by adding columns from right table
-    for (ColumnID column_id = 0; column_id < _right_in_table->col_count(); ++column_id) {
+    for (ColumnID column_id{0}; column_id < _right_in_table->col_count(); ++column_id) {
       _output_table->add_column(_prefix_right + _right_in_table->column_name(column_id),
                                 _right_in_table->column_type(column_id), false);
     }
@@ -371,13 +371,13 @@ class JoinNestedLoopA::JoinNestedLoopAImpl : public AbstractJoinOperatorImpl {
     auto rows_potentially_joined_with_null_values = std::make_shared<std::map<RowID, bool>>();
 
     // Scan all chunks from left input
-    for (ChunkID chunk_id_left = 0; chunk_id_left < _left_in_table->chunk_count(); ++chunk_id_left) {
+    for (ChunkID chunk_id_left = ChunkID{0}; chunk_id_left < _left_in_table->chunk_count(); ++chunk_id_left) {
       auto column_left = _left_in_table->get_chunk(chunk_id_left).get_column(_left_column_id);
 
       BuilderLeft builder_left;
 
       // Scan all chunks for right input
-      for (ChunkID chunk_id_right = 0; chunk_id_right < _right_in_table->chunk_count(); ++chunk_id_right) {
+      for (ChunkID chunk_id_right = ChunkID{0}; chunk_id_right < _right_in_table->chunk_count(); ++chunk_id_right) {
         auto column_right = _right_in_table->get_chunk(chunk_id_right).get_column(_right_column_id);
 
         auto pos_list_left = std::make_shared<PosList>();
@@ -430,9 +430,9 @@ class JoinNestedLoopA::JoinNestedLoopAImpl : public AbstractJoinOperatorImpl {
 
           if (_mode == Left) {
             pos_list_left->emplace_back(elem.first);
-            pos_list_right->emplace_back(RowID{0, INVALID_CHUNK_OFFSET});
+            pos_list_right->emplace_back(RowID{ChunkID{0}, INVALID_CHUNK_OFFSET});
           } else if (_mode == Right) {
-            pos_list_left->emplace_back(RowID{0, INVALID_CHUNK_OFFSET});
+            pos_list_left->emplace_back(RowID{ChunkID{0}, INVALID_CHUNK_OFFSET});
             pos_list_right->emplace_back(elem.first);
           }
 
@@ -462,7 +462,7 @@ class JoinNestedLoopA::JoinNestedLoopAImpl : public AbstractJoinOperatorImpl {
   static void write_output_chunks(Chunk &output_chunk, const std::shared_ptr<const Table> input_table, ChunkID chunk_id,
                                   std::shared_ptr<PosList> pos_list, bool null_value = false) {
     // Add columns from left table to output chunk
-    for (ColumnID column_id = 0; column_id < input_table->col_count(); ++column_id) {
+    for (ColumnID column_id{0}; column_id < input_table->col_count(); ++column_id) {
       std::shared_ptr<BaseColumn> column;
 
       // Keep it simple for now and handle null_values seperately. We don't have a chunk_id for null values and thus

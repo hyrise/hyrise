@@ -19,7 +19,7 @@ class FittedAttributeVector : public BaseAttributeVector {
   // Creates a FittedAttributeVector from given attributes
   explicit FittedAttributeVector(const std::vector<uintX_t>& attributes) : _attributes(attributes) {}
 
-  ValueID get(const size_t i) const final { return _attributes[i]; }
+  ValueID get(const size_t i) const final { return static_cast<ValueID>(_attributes[i]); }
 
   // inserts the value_id at a given position
   void set(const size_t i, const ValueID value_id) final { _attributes[i] = static_cast<uintX_t>(value_id); }

@@ -13,6 +13,7 @@
 #include "operators/table_wrapper.hpp"
 #include "storage/table.hpp"
 #include "type_cast.hpp"
+#include "types.hpp"
 
 namespace opossum {
 
@@ -79,8 +80,8 @@ void ColumnStatistics<T>::update_min_max() {
   auto aggregate = std::make_shared<Aggregate>(table_wrapper, aggregate_args, std::vector<std::string>{});
   aggregate->execute();
   auto aggregate_table = aggregate->get_output();
-  _min = aggregate_table->template get_value<T>(0, 0);
-  _max = aggregate_table->template get_value<T>(1, 0);
+  _min = aggregate_table->template get_value<T>(ColumnID{0}, 0);
+  _max = aggregate_table->template get_value<T>(ColumnID{1}, 0);
 }
 
 // string specialization
