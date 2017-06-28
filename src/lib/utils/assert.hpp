@@ -1,5 +1,7 @@
 #pragma once
 
+#include <boost/preprocessor/stringize.hpp>
+
 #include <exception>
 #include <string>
 
@@ -45,7 +47,10 @@ inline void Fail(const std::string& msg) { throw std::logic_error(msg); }
 
 #if IS_DEBUG
 
-#define DebugAssert(expr, msg) opossum::Assert(expr, msg)
+#define __FILENAME__ (__FILE__ + SOURCE_PATH_SIZE)
+
+#define DebugAssert(expr, msg) \
+  opossum::Assert(expr, std::string {__FILENAME__} + ":" BOOST_PP_STRINGIZE(__LINE__) " " + msg)
 
 #else
 
