@@ -33,7 +33,7 @@ class ResponseBuilder {
     }
 
     // Iterate a column chunk by chunk and apply a typed ColumnVisitor, then the next column etc.
-    for (size_t column_index = 0, column_count = table->col_count(); column_index < column_count; ++column_index) {
+    for (ColumnID column_index{0}, column_count{table->col_count()}; column_index < column_count; ++column_index) {
       const auto& type = table->column_type(column_index);
 
       // Register column type and name
@@ -43,7 +43,7 @@ class ResponseBuilder {
       auto visitor = make_unique_by_column_type<ColumnVisitable, ResponseBuilderVisitor>(type);
       uint32_t row_index = 0u;
       // Visit a specific column chunk by chunk
-      for (ChunkID chunk_id = 0; chunk_id < table->chunk_count(); ++chunk_id) {
+      for (ChunkID chunk_id{0}; chunk_id < table->chunk_count(); ++chunk_id) {
         const auto& chunk = table->get_chunk(chunk_id);
         if (chunk.size() == 0) {
           continue;

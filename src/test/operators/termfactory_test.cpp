@@ -22,30 +22,30 @@ TEST_F(TermFactoryTest, EmptyExpression) {
 }
 
 TEST_F(TermFactoryTest, SimpelConstantExpression) {
-  ASSERT_EQ(TermFactory<int32_t>::build_term("2")->get_values(_t, 0)[0], 2);
-  ASSERT_EQ(TermFactory<int64_t>::build_term("2")->get_values(_t, 0)[0], 2l);
-  ASSERT_EQ(TermFactory<double>::build_term("2.1")->get_values(_t, 0)[0], 2.1);
-  ASSERT_EQ(TermFactory<float>::build_term("3.4")->get_values(_t, 0)[0], 3.4f);
+  ASSERT_EQ(TermFactory<int32_t>::build_term("2")->get_values(_t, ChunkID{0})[0], 2);
+  ASSERT_EQ(TermFactory<int64_t>::build_term("2")->get_values(_t, ChunkID{0})[0], 2l);
+  ASSERT_EQ(TermFactory<double>::build_term("2.1")->get_values(_t, ChunkID{0})[0], 2.1);
+  ASSERT_EQ(TermFactory<float>::build_term("3.4")->get_values(_t, ChunkID{0})[0], 3.4f);
 }
 
 TEST_F(TermFactoryTest, SimpelVariantExpression) {
-  ASSERT_EQ(TermFactory<int32_t>::build_term("$a")->get_values(_t, 0)[0], 123);
+  ASSERT_EQ(TermFactory<int32_t>::build_term("$a")->get_values(_t, ChunkID{0})[0], 123);
 }
 
 TEST_F(TermFactoryTest, SimpelArithmeticConstantExpression) {
-  ASSERT_EQ(TermFactory<int32_t>::build_term("1+2")->get_values(_t, 0)[0], 3);
+  ASSERT_EQ(TermFactory<int32_t>::build_term("1+2")->get_values(_t, ChunkID{0})[0], 3);
 }
 
 TEST_F(TermFactoryTest, SimpelArithmeticMixedExpression) {
-  ASSERT_EQ(TermFactory<int32_t>::build_term("1+$a")->get_values(_t, 0)[0], 124);
+  ASSERT_EQ(TermFactory<int32_t>::build_term("1+$a")->get_values(_t, ChunkID{0})[0], 124);
 }
 
 TEST_F(TermFactoryTest, ComplexArithmeticConstantExpression) {
-  ASSERT_EQ(TermFactory<int32_t>::build_term("1+2*4/2%7-1")->get_values(_t, 0)[0], 4);
+  ASSERT_EQ(TermFactory<int32_t>::build_term("1+2*4/2%7-1")->get_values(_t, ChunkID{0})[0], 4);
 }
 
 TEST_F(TermFactoryTest, ComplexArithmeticConstantExpressionTwo) {
-  ASSERT_EQ(TermFactory<int32_t>::build_term("1+2*4-5")->get_values(_t, 0)[0], 4);
+  ASSERT_EQ(TermFactory<int32_t>::build_term("1+2*4-5")->get_values(_t, ChunkID{0})[0], 4);
 }
 
 }  // namespace opossum

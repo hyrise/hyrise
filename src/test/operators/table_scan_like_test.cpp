@@ -34,7 +34,7 @@ class OperatorsTableScanLikeTest : public BaseTest {
 
     // load and compress string table
     auto test_table_string_dict = load_table("src/test/tables/int_string_like.tbl", 5);
-    DictionaryCompression::compress_chunks(*test_table_string_dict, {0u});
+    DictionaryCompression::compress_chunks(*test_table_string_dict, {ChunkID{0}});
 
     StorageManager::get().add_table("table_string_dict", test_table_string_dict);
 

@@ -29,7 +29,7 @@ void NodeQueueScheduler::begin() {
   _processing_units.reserve(_topology->numCpus());
   _queues.reserve(_topology->nodes().size());
 
-  for (size_t q = 0; q < _topology->nodes().size(); q++) {
+  for (NodeID q{0}; q < _topology->nodes().size(); q++) {
     auto queue = std::make_shared<TaskQueue>(q);
 
     _queues.emplace_back(queue);
@@ -102,11 +102,12 @@ void NodeQueueScheduler::schedule(std::shared_ptr<AbstractTask> task, NodeID pre
       preferred_node_id = worker->queue()->node_id();
     } else {
       // TODO(all): Actually, this should be ANY_NODE_ID, LIGHT_LOAD_NODE or something
-      preferred_node_id = 0;
+      preferred_node_id = NodeID{0};
     }
   }
 
-  DebugAssert(!(preferred_node_id >= _queues.size()), "preferred_node_id is not within range of available nodes");
+  DebugAssert(!(static_cast<size_t>(preferred_node_id) >= _queues.size()),
+              "preferred_node_id is not within range of available nodes");
 
   auto queue = _queues[preferred_node_id];
   queue->push(std::move(task), static_cast<uint32_t>(priority));

@@ -104,7 +104,7 @@ class NodeQueueScheduler : public AbstractScheduler {
                 SchedulePriority priority = SchedulePriority::Normal) override;
 
  private:
-  std::atomic<TaskID> _task_counter{0};
+  std::atomic<TaskID> _task_counter{TaskID{0}};
   std::shared_ptr<UidAllocator> _worker_id_allocator;
   std::vector<std::shared_ptr<TaskQueue>> _queues;
   std::vector<std::shared_ptr<ProcessingUnit>> _processing_units;
