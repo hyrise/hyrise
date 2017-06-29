@@ -64,7 +64,8 @@ class CsvNonRfcParser {
    * @param num_tasks   number of tasks (parsing one buffer of size buffer_size each) that will run at the same time,
    * once one task has finished, another one will be started immediately
    */
-  explicit CsvNonRfcParser(const size_t buffer_size, const CsvConfig & csv_config = {}, const unsigned int num_tasks = 4);
+  explicit CsvNonRfcParser(const size_t buffer_size, const CsvConfig & csv_config = {},
+                           const unsigned int num_tasks = 4);
 
   // Returns the table that was created from the csv file.
   std::shared_ptr<Table> parse(const std::string& filename);
