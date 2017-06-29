@@ -77,7 +77,7 @@ void AbstractNode::print(const uint8_t indent) const {
 std::shared_ptr<TableStatistics> AbstractNode::create_statistics() const {
   Assert(static_cast<bool>(_left),
          "Default create_statistics()-impl requires children, override for special node types");
-  return _left->statistics();
+  return _left->get_or_create_statistics();
 }
 
 }  // namespace opossum

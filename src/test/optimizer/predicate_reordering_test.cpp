@@ -59,6 +59,32 @@ TEST_F(PredicateReorderingTest, SimpleReorderingTest) {
   auto ts_n_1 = std::make_shared<TableScanNode>("c2", ScanType::OpGreaterThan, 50);
   ts_n_1->set_left(ts_n_0);
 
+  ts_n_1->get_or_create_statistics();
+
+
+  auto reordered = rule.apply_rule(ts_n_1);
+
+  std::cout << " Printing result " << std::endl;
+  reordered->print();
+
+  ASSERT_EQ(reordered, ts_n_1);
+  ASSERT_EQ(reordered->left(), ts_n_0);
+  ASSERT_EQ(reordered->left()->left(), t_n);
+}
+
+TEST_F(PredicateReorderingTest, MoreComplexReorderingTest) {
+  PredicateReorderingRule rule;
+
+  auto t_n = std::make_shared<TableNode>("a");
+
+  t_n->set_statistics(std::make_shared<TableStatisticsMock>());
+
+  auto ts_n_0 = std::make_shared<TableScanNode>("c1", ScanType::OpGreaterThan, 10);
+  ts_n_0->set_left(t_n);
+
+  auto ts_n_1 = std::make_shared<TableScanNode>("c2", ScanType::OpGreaterThan, 50);
+  ts_n_1->set_left(ts_n_0);
+
   auto ts_n_2 = std::make_shared<TableScanNode>("c3", ScanType::OpGreaterThan, 90);
   ts_n_2->set_left(ts_n_1);
 
@@ -73,6 +99,7 @@ TEST_F(PredicateReorderingTest, SimpleReorderingTest) {
   ASSERT_EQ(reordered, ts_n_2);
   ASSERT_EQ(reordered->left(), ts_n_0);
   ASSERT_EQ(reordered->left()->left(), ts_n_1);
+  ASSERT_EQ(reordered->left()->left()->left(), t_n);
 }
 
 TEST_F(PredicateReorderingTest, ComplexReorderingTest) {
@@ -108,12 +135,13 @@ TEST_F(PredicateReorderingTest, ComplexReorderingTest) {
   std::cout << " Printing result " << std::endl;
   reordered->print();
 
-  ASSERT_EQ(reordered, ts_n_2);
-  ASSERT_EQ(reordered->left(), ts_n_0);
-  ASSERT_EQ(reordered->left()->left(), ts_n_1);
-  ASSERT_EQ(reordered->left()->left()->left(), p_n);
-  ASSERT_EQ(reordered->left()->left()->left()->left(), ts_n_4);
-  ASSERT_EQ(reordered->left()->left()->left()->left()->left(), ts_n_3);
+  ASSERT_EQ(reordered, ts_n_3);
+  ASSERT_EQ(reordered->left(), ts_n_4);
+  ASSERT_EQ(reordered->left()->left(), p_n);
+  ASSERT_EQ(reordered->left()->left()->left(), ts_n_2);
+  ASSERT_EQ(reordered->left()->left()->left()->left(), ts_n_0);
+  ASSERT_EQ(reordered->left()->left()->left()->left()->left(), ts_n_1);
+  ASSERT_EQ(reordered->left()->left()->left()->left()->left()->left(), t_n);
 }
 
 }  // namespace opossum

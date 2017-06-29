@@ -24,6 +24,7 @@ std::shared_ptr<AbstractNode> PredicateReorderingRule::apply_rule(std::shared_pt
     reorder_table_scans(table_scan_nodes);
 
     apply_rule(current_node);
+    return table_scan_nodes.back();
   } else {
     if (node->left()) apply_rule(node->left());
     if (node->right()) apply_rule(node->right());
