@@ -257,7 +257,8 @@ void CsvNonRfcParser::_parse_csv(std::shared_ptr<std::promise<ParsingResult>> ne
   new_chunk->set_value(std::move(result));
 }
 
-const std::shared_ptr<Table> CsvNonRfcParser::_process_meta_file(const std::string& meta_file, const CsvConfig & config) {
+const std::shared_ptr<Table> CsvNonRfcParser::_process_meta_file(const std::string& meta_file,
+                                                                 const CsvConfig & config) {
   std::ifstream file;
   file.exceptions(std::ifstream::failbit | std::ifstream::badbit);
   file.open(meta_file);
