@@ -22,4 +22,12 @@ const std::string TableScanNode::description() const {
   return desc.str();
 }
 
+const std::string& TableScanNode::column_name() const { return _column_name; };
+
+const ScanType& TableScanNode::scan_type() const { return _scan_type; };
+
+const AllParameterVariant& TableScanNode::value() const { return _value; };
+
+const optional<AllTypeVariant>& TableScanNode::value2() const { return _value2; };
+
 }  // namespace opossum

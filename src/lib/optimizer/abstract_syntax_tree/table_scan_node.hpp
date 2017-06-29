@@ -19,6 +19,11 @@ class TableScanNode : public AbstractNode {
 
   const std::string description() const override;
 
+  const std::string& column_name() const;
+  const ScanType& scan_type() const;
+  const AllParameterVariant& value() const;
+  const optional<AllTypeVariant>& value2() const;
+
  private:
   const std::string _column_name;
   const ScanType _scan_type;
