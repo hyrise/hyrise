@@ -1,7 +1,7 @@
 # Find the numa policy library.
 # Output variables:
 #  TBB_INCLUDE_DIR : e.g., /usr/include/.
-#  TBB_LIBRARY     : Library path of numa library
+#  TBB_LIBRARY     : Library path of Intel Threading Building Blocks library
 #  TBB_FOUND       : True if found.
 FIND_PATH(TBB_INCLUDE_DIR NAME tbb/tbb.h
     HINTS $ENV{HOME}/local/include /opt/local/include /usr/local/include /usr/include)
