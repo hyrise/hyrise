@@ -8,7 +8,7 @@
 #include "optimizer/abstract_syntax_tree/table_scan_node.hpp"
 
 namespace opossum {
-class PredicateReorderingRule : AbstractRule {
+class PredicateReorderingRule : public AbstractRule {
  public:
   std::shared_ptr<AbstractNode> apply_rule(std::shared_ptr<AbstractNode> node) override;
 

@@ -234,6 +234,7 @@ set(
     type_cast.cpp
     type_cast.hpp
     type_comparison.hpp
+    types.cpp
     types.hpp
     uid_allocator.hpp
     utils/assert.hpp

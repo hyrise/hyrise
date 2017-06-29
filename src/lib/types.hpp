@@ -5,6 +5,7 @@
 #include <cstdint>
 #include <limits>
 #include <string>
+#include <tuple>
 #include <vector>
 
 #include "strong_typedef.hpp"
@@ -83,5 +84,23 @@ enum class SchedulePriority {
   Normal = 1,  // Schedule task at the end of the queue
   High = 0     // Schedule task at the beginning of the queue
 };
+
+/**
+ * Used by TableScans, Joins, etc. and the respective Optimizer entities
+ */
+enum class ScanType {
+  OpEquals,
+  OpNotEquals,
+  OpLessThan,
+  OpLessThanEquals,
+  OpGreaterThan,
+  OpGreaterThanEquals,
+  OpBetween,
+  OpLike,
+  OpUnknown
+};
+
+std::string scan_type_to_string(ScanType scan_type);
+ScanType scan_type_from_string(const std::string & scan_str);
 
 }  // namespace opossum

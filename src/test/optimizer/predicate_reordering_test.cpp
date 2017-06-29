@@ -13,13 +13,13 @@
 
 namespace opossum {
 
-class TableStatisticsMock : public TableStatistics {
-public:
-  MOCK_METHOD0(row_count, double());
-//  MOCK_METHOD1(predicate_statistics, std::shared_ptr<TableStatistics>(const std::string &column_name, ScanType op,
-//    const AllParameterVariant value,
-//    const optional<AllTypeVariant> value2));
-};
+//class TableStatisticsMock : public TableStatistics {
+//public:
+//  MOCK_METHOD0(row_count, double());
+////  MOCK_METHOD1(predicate_statistics, std::shared_ptr<TableStatistics>(const std::string &column_name, ScanType op,
+////    const AllParameterVariant value,
+////    const optional<AllTypeVariant> value2));
+//};
 
 class PredicateReorderingTest : public BaseTest {
 protected:
@@ -30,11 +30,11 @@ protected:
 
   std::shared_ptr<AbstractNode> setupAst() {
     t_n = std::make_shared<TableNode>("a");
-    auto statisticsMock = std::make_shared<TableStatisticsMock>();
-    t_n->set_statistics(statisticsMock);
+//    auto statisticsMock = std::make_shared<TableStatisticsMock>();
+//    t_n->set_statistics(statisticsMock);
 
-    EXPECT_CALL(*statisticsMock, row_count())
-                .WillOnce(Return(5));
+//    EXPECT_CALL(*statisticsMock, row_count())
+//                .WillOnce(Return(5));
 
     ts_n_0 = std::make_shared<TableScanNode>("c1", ScanType::OpGreaterThan, 10);
     ts_n_0->set_left(t_n);
@@ -57,8 +57,8 @@ TEST_F(PredicateReorderingTest, SimpleReorderingTest) {
   std::cout << " Printing result " << std::endl;
   reordered->print();
   ASSERT_EQ(reordered, ts_n_0);
-  ASSERT_EQ(reordered->get_left(), ts_n_1);
-  ASSERT_EQ(reordered->get_left()->get_left(), ts_n_2);
+  ASSERT_EQ(reordered->left(), ts_n_1);
+  ASSERT_EQ(reordered->left()->left(), ts_n_2);
 }
 
 }  // namespace opossum

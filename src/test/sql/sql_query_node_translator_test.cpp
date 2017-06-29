@@ -54,8 +54,8 @@ TEST_F(SQLQueryNodeTranslatorTest, SelectStarAllTest) {
   std::vector<std::string> expected_columns{"a", "b"};
   EXPECT_EQ(expected_columns, result_node->output_columns());
 
-  EXPECT_FALSE(result_node->get_right());
-  EXPECT_FALSE(result_node->get_left()->get_left());
+  EXPECT_FALSE(result_node->right());
+  EXPECT_FALSE(result_node->left()->left());
 }
 
 TEST_F(SQLQueryNodeTranslatorTest, SelectWithAndCondition) {
@@ -63,20 +63,20 @@ TEST_F(SQLQueryNodeTranslatorTest, SelectWithAndCondition) {
   auto result_node = compile_query(query);
 
   EXPECT_TRUE(std::dynamic_pointer_cast<ProjectionNode>(result_node));
-  EXPECT_FALSE(result_node->get_right());
+  EXPECT_FALSE(result_node->right());
 
-  auto ts_node_1 = result_node->get_left();
+  auto ts_node_1 = result_node->left();
   EXPECT_TRUE(std::dynamic_pointer_cast<TableScanNode>(ts_node_1));
-  EXPECT_FALSE(ts_node_1->get_right());
+  EXPECT_FALSE(ts_node_1->right());
 
-  auto ts_node_2 = ts_node_1->get_left();
+  auto ts_node_2 = ts_node_1->left();
   EXPECT_TRUE(std::dynamic_pointer_cast<TableScanNode>(ts_node_2));
-  EXPECT_FALSE(ts_node_2->get_right());
+  EXPECT_FALSE(ts_node_2->right());
 
-  auto t_node = ts_node_2->get_left();
+  auto t_node = ts_node_2->left();
   EXPECT_TRUE(std::dynamic_pointer_cast<TableNode>(t_node));
-  EXPECT_FALSE(t_node->get_left());
-  EXPECT_FALSE(t_node->get_right());
+  EXPECT_FALSE(t_node->left());
+  EXPECT_FALSE(t_node->right());
 }
 
 }  // namespace opossum

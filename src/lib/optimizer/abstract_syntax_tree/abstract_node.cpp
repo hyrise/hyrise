@@ -5,33 +5,35 @@
 #include <memory>
 #include <string>
 #include <vector>
+
 #include "optimizer/table_statistics.hpp"
+#include "utils/assert.hpp"
 
 namespace opossum {
 
-const std::weak_ptr<AbstractNode> &AbstractNode::get_parent() const { return _parent; }
+const std::weak_ptr<AbstractNode> &AbstractNode::parent() const { return _parent; }
 
 void AbstractNode::set_parent(const std::weak_ptr<AbstractNode> parent) { _parent = parent; }
 
-const std::shared_ptr<AbstractNode> &AbstractNode::get_left() const { return _left; }
+const std::shared_ptr<AbstractNode> &AbstractNode::left() const { return _left; }
 
 void AbstractNode::set_left(const std::shared_ptr<AbstractNode> left) {
   _left = left;
   left->set_parent(shared_from_this());
 }
 
-const std::shared_ptr<AbstractNode> &AbstractNode::get_right() const { return _right; }
+const std::shared_ptr<AbstractNode> &AbstractNode::right() const { return _right; }
 
 void AbstractNode::set_right(const std::shared_ptr<AbstractNode> right) {
   _right = right;
   right->set_parent(shared_from_this());
 }
 
-const NodeType AbstractNode::get_type() const { return _type; }
+const NodeType AbstractNode::type() const { return _type; }
 
 void AbstractNode::set_type(const NodeType type) { _type = type; }
 
-const std::shared_ptr<TableStatistics> AbstractNode::get_statistics() const { return _statistics; };
+const std::shared_ptr<TableStatistics> AbstractNode::statistics() const { return _statistics; };
 void AbstractNode::set_statistics(const std::shared_ptr<TableStatistics> statistics) { _statistics = statistics; };
 
 const std::vector<std::string> AbstractNode::output_columns() {
@@ -50,6 +52,15 @@ const std::vector<std::string> AbstractNode::output_columns() {
   return output_columns;
 }
 
+const std::shared_ptr<TableStatistics> AbstractNode::get_or_create_statistics() {
+  if (_statistics) {
+    return _statistics;
+  }
+
+  _statistics = create_statistics();
+  return _statistics;
+}
+
 void AbstractNode::print(const uint8_t indent) const {
   std::cout << std::setw(indent) << " ";
   std::cout << description() << std::endl;
@@ -62,4 +73,11 @@ void AbstractNode::print(const uint8_t indent) const {
     _right->print(indent + 2);
   }
 }
+
+std::shared_ptr<TableStatistics> AbstractNode::create_statistics() const {
+  Assert(static_cast<bool>(_left),
+         "Default create_statistics()-impl requires children, override for special node types");
+  return _left->statistics();
+}
+
 }  // namespace opossum

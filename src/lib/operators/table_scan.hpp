@@ -25,17 +25,6 @@
 
 namespace opossum {
 
-enum ScanType {
-  OpEquals,
-  OpNotEquals,
-  OpLessThan,
-  OpLessThanEquals,
-  OpGreaterThan,
-  OpGreaterThanEquals,
-  OpBetween,
-  OpLike
-};
-
 // operator to filter a table by a single attribute
 // output is an table with only reference columns
 // to filter by multiple criteria, you can chain the operator

@@ -179,36 +179,31 @@ class TableScan::TableScanImpl : public AbstractReadOnlyOperatorImpl {
     // chosen operator. For now, we can save us some dark template magic by using the switch below.
     // DO NOT copy this code, however, without discussing if there is a better way to avoid code duplication.
 
+    _type = scan_type_from_string(_op);
+
     if (_op == "=") {
-      _type = OpEquals;
       _value_comparator = [](T left, T right) { return left == right; };
       _value_id_comparator = [](ValueID found_vid, ValueID search_vid, ValueID) { return found_vid == search_vid; };
     } else if (_op == "!=") {
-      _type = OpNotEquals;
       _value_comparator = [](T left, T right) { return left != right; };
       _value_id_comparator = [](ValueID found_vid, ValueID search_vid, ValueID) { return found_vid != search_vid; };
     } else if (_op == "<") {
-      _type = OpLessThan;
       _value_comparator = [](T left, T right) { return left < right; };
       _value_id_comparator = [](ValueID found_vid, ValueID search_vid, ValueID) { return found_vid < search_vid; };
     } else if (_op == "<=") {
-      _type = OpLessThanEquals;
       _value_comparator = [](T left, T right) { return left <= right; };
       _value_id_comparator = [](ValueID found_vid, ValueID search_vid, ValueID) { return found_vid < search_vid; };
       //                                                                                           ^
       //                                                               sic! see handle_dictionary_column for details
     } else if (_op == ">") {
-      _type = OpGreaterThan;
       _value_comparator = [](T left, T right) { return left > right; };
       _value_id_comparator = [](ValueID found_vid, ValueID search_vid, ValueID) { return found_vid >= search_vid; };
     } else if (_op == ">=") {
-      _type = OpGreaterThanEquals;
       _value_comparator = [](T left, T right) { return left >= right; };
       _value_id_comparator = [](ValueID found_vid, ValueID search_vid, ValueID) { return found_vid >= search_vid; };
     } else if (_op == "BETWEEN") {
       DebugAssert(static_cast<bool>(casted_value2), "No second value for BETWEEN comparison given");
 
-      _type = OpBetween;
       _value_comparator = [casted_value2](T value, T left) { return value >= left && value <= casted_value2; };
       _value_id_comparator = [](ValueID found_vid, ValueID search_vid, ValueID search_vid2) {
         return search_vid <= found_vid && found_vid < search_vid2;
@@ -220,7 +215,6 @@ class TableScan::TableScanImpl : public AbstractReadOnlyOperatorImpl {
       const auto column_type = in_table->column_type(column_id1);
       DebugAssert((column_type == "string"), "LIKE operator only applicable on string columns");
 
-      _type = OpLike;
     } else {
       Fail(std::string("unknown operator ") + _op);
     }
@@ -247,7 +241,7 @@ class TableScan::TableScanImpl : public AbstractReadOnlyOperatorImpl {
         // and Constant.
         // Because Like can be optimized it has its own Visitable (constant only)
 
-        if (_type == OpLike) {
+        if (_type == ScanType::OpLike) {
           auto visitable = TableScanLikeVisitable(type_cast<std::string>(casted_value1));
           column1->visit(visitable, context);
         } else if (_is_constant_value_scan) {
@@ -479,21 +473,20 @@ class TableScan::TableScanImpl<T>::TableScanConstantColumnVisitable : public Col
 
     ValueID search_vid;
     ValueID search_vid2 = INVALID_VALUE_ID;
-
     switch (_type) {
-      case OpEquals:
-      case OpNotEquals:
-      case OpLessThan:
-      case OpGreaterThanEquals:
+      case ScanType::OpEquals:
+      case ScanType::OpNotEquals:
+      case ScanType::OpLessThan:
+      case ScanType::OpGreaterThanEquals:
         search_vid = column.lower_bound(_constant_value);
         break;
 
-      case OpLessThanEquals:
-      case OpGreaterThan:
+      case ScanType::OpLessThanEquals:
+      case ScanType::OpGreaterThan:
         search_vid = column.upper_bound(_constant_value);
         break;
 
-      case OpBetween:
+      case ScanType::OpBetween:
         search_vid = column.lower_bound(_constant_value);
         search_vid2 = column.upper_bound(*_constant_value2);
         break;
@@ -502,13 +495,13 @@ class TableScan::TableScanImpl<T>::TableScanConstantColumnVisitable : public Col
         Fail("Unknown comparison type encountered");
     }
 
-    if (_type == OpEquals && search_vid != INVALID_VALUE_ID &&
+    if (_type == ScanType::OpEquals && search_vid != INVALID_VALUE_ID &&
         column.value_by_value_id(search_vid) != _constant_value) {
       // the value is not in the dictionary and cannot be in the table
       return;
     }
 
-    if (_type == OpNotEquals && search_vid != INVALID_VALUE_ID &&
+    if (_type == ScanType::OpNotEquals && search_vid != INVALID_VALUE_ID &&
         column.value_by_value_id(search_vid) != _constant_value) {
       // the value is not in the dictionary and cannot be in the table
       search_vid = INVALID_VALUE_ID;

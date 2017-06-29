@@ -19,4 +19,8 @@ const std::vector<std::string> TableNode::output_columns() {
   return _column_names;
 }
 
+std::shared_ptr<TableStatistics> TableNode::create_statistics() const {
+  return StorageManager::get().get_table(_table_name)->get_table_statistics();
+}
+
 }  // namespace opossum
