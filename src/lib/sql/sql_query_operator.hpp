@@ -33,6 +33,8 @@ class SQLQueryOperator : public AbstractOperator {
 
   uint8_t num_out_tables() const override;
 
+  std::shared_ptr<AbstractOperator> recreate() const override;
+
   const std::shared_ptr<OperatorTask>& get_result_task() const;
 
   bool hit_parse_tree_cache() const;

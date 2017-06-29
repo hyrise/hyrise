@@ -48,6 +48,10 @@ class ImportBinary : public AbstractReadOnlyOperator {
   // This operator has one table as output.
   uint8_t num_out_tables() const final;
 
+  inline std::shared_ptr<AbstractOperator> recreate() const override {
+    throw std::runtime_error("Operator " + this->name() + " does not implement recreation.");
+  }
+
  private:
   /*
    * Reads the header from the given file.

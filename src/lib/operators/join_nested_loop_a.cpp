@@ -31,6 +31,10 @@ uint8_t JoinNestedLoopA::num_in_tables() const { return 2; }
 
 uint8_t JoinNestedLoopA::num_out_tables() const { return 1; }
 
+std::shared_ptr<AbstractOperator> JoinNestedLoopA::recreate() const {
+  return std::make_shared<JoinNestedLoopA>(nullptr, nullptr, _column_names, _op, _mode, _prefix_left, _prefix_right);
+}
+
 std::shared_ptr<const Table> JoinNestedLoopA::on_execute() {
   const auto first_column = _column_names->first;
   const auto second_column = _column_names->second;

@@ -162,6 +162,10 @@ void SQLQueryOperator::compile_parse_result(std::shared_ptr<SQLParserResult> res
   }
 }
 
+std::shared_ptr<AbstractOperator> SQLQueryOperator::recreate() const {
+  return std::make_shared<SQLQueryOperator>(_query, _schedule_plan);
+}
+
 // Static.
 SQLQueryCache<std::shared_ptr<hsql::SQLParserResult>>& SQLQueryOperator::get_parse_tree_cache() {
   return _parse_tree_cache;

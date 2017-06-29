@@ -69,7 +69,7 @@ class AbstractOperator {
   // Returns a new instance of the same operator with the same configuration.
   // Does not recreate the input operators. They will be set to nullptr.
   // An operator needs to override this method in order to be cacheable.
-  virtual std::shared_ptr<AbstractOperator> recreate() const;
+  virtual std::shared_ptr<AbstractOperator> recreate() const = 0;
 
   // Get the input operators.
   std::shared_ptr<const AbstractOperator> input_left() const;
