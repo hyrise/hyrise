@@ -10,27 +10,25 @@ namespace opossum {
 
 AbstractNode::AbstractNode(NodeType node_type) : _type(node_type) {}
 
-const std::weak_ptr<AbstractNode> &AbstractNode::get_parent() const { return _parent; }
+const std::weak_ptr<AbstractNode> &AbstractNode::parent() const { return _parent; }
 
 void AbstractNode::set_parent(const std::weak_ptr<AbstractNode> &parent) { _parent = parent; }
 
-const std::shared_ptr<AbstractNode> &AbstractNode::get_left() const { return _left; }
+const std::shared_ptr<AbstractNode> &AbstractNode::left() const { return _left; }
 
 void AbstractNode::set_left(const std::shared_ptr<AbstractNode> &left) {
   _left = left;
   left->set_parent(shared_from_this());
 }
 
-const std::shared_ptr<AbstractNode> &AbstractNode::get_right() const { return _right; }
+const std::shared_ptr<AbstractNode> &AbstractNode::right() const { return _right; }
 
 void AbstractNode::set_right(const std::shared_ptr<AbstractNode> &right) {
   _right = right;
   right->set_parent(shared_from_this());
 }
 
-const NodeType AbstractNode::get_type() const { return _type; }
-
-void AbstractNode::set_type(const NodeType type) { _type = type; }
+const NodeType AbstractNode::type() const { return _type; }
 
 const std::vector<std::string> AbstractNode::output_columns() {
   std::vector<std::string> output_columns;

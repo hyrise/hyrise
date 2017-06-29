@@ -10,19 +10,18 @@ enum class NodeType { Projection, Table, TableScan };
 
 class AbstractNode : public std::enable_shared_from_this<AbstractNode> {
  public:
-  AbstractNode(NodeType node_type);
+  explicit AbstractNode(NodeType node_type);
 
-  const std::weak_ptr<AbstractNode> &get_parent() const;
+  const std::weak_ptr<AbstractNode> &parent() const;
   void set_parent(const std::weak_ptr<AbstractNode> &parent);
 
-  const std::shared_ptr<AbstractNode> &get_left() const;
+  const std::shared_ptr<AbstractNode> &left() const;
   void set_left(const std::shared_ptr<AbstractNode> &left);
 
-  const std::shared_ptr<AbstractNode> &get_right() const;
+  const std::shared_ptr<AbstractNode> &right() const;
   void set_right(const std::shared_ptr<AbstractNode> &right);
 
-  const NodeType get_type() const;
-  void set_type(const NodeType _type);
+  const NodeType type() const;
 
   virtual const std::vector<std::string> output_columns();
 

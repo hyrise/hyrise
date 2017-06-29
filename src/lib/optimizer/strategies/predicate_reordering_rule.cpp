@@ -13,7 +13,7 @@ std::vector<std::shared_ptr<TableScanNode>> PredicateReorderingRule::find_all_pr
   std::vector<std::shared_ptr<TableScanNode>> nodes;
 
   QueryPlanHelper::filter<TableScanNode>(
-      node, nodes, [&](std::shared_ptr<AbstractNode> item) { return item->get_type() == NodeType::TableScan; });
+      node, nodes, [&](std::shared_ptr<AbstractNode> item) { return item->type() == NodeType::TableScan; });
 
   return nodes;
 }

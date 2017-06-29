@@ -15,12 +15,12 @@ class QueryPlanHelper {
       filtered.push_back(std::dynamic_pointer_cast<T>(node));
     }
 
-    if (node->get_left()) {
-      filter<T>(node->get_left(), filtered, filter_condition);
+    if (node->left()) {
+      filter<T>(node->left(), filtered, filter_condition);
     }
 
-    if (node->get_right()) {
-      filter<T>(node->get_right(), filtered, filter_condition);
+    if (node->right()) {
+      filter<T>(node->right(), filtered, filter_condition);
     }
   }
 };

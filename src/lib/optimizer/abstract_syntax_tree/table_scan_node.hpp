@@ -14,14 +14,14 @@ namespace opossum {
 
 class TableScanNode : public AbstractNode {
  public:
-  TableScanNode(const std::string &column_name, const ScanType &op, const AllParameterVariant value,
+  TableScanNode(const std::string &column_name, const ScanType &scan_type, const AllParameterVariant value,
                 const optional<AllTypeVariant> value2 = nullopt);
 
   const std::string description() const override;
 
  private:
   const std::string _column_name;
-  const ScanType _op;
+  const ScanType _scan_type;
   const AllParameterVariant _value;
   const optional<AllTypeVariant> _value2;
 };

@@ -34,9 +34,9 @@ class ColumnStatistics : public AbstractColumnStatistics {
   ColumnStatistics(double distinct_count, AllTypeVariant min, AllTypeVariant max, const std::string& column_name);
   ColumnStatistics(double distinct_count, T min, T max, const std::string& column_name);
   ColumnStatistics(double distinct_count, const std::string& column_name);
-  double get_distinct_count();
-  T get_min();
-  T get_max();
+  double distinct_count();
+  T min();
+  T max();
 
   virtual ~ColumnStatistics() = default;
   virtual std::tuple<double, std::shared_ptr<AbstractColumnStatistics>> predicate_selectivity(
