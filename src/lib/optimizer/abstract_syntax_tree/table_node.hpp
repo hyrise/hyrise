@@ -17,7 +17,7 @@ class TableNode : public AbstractNode {
   const std::vector<std::string> output_columns() override;
 
  protected:
-  virtual std::shared_ptr<TableStatistics> create_statistics() const;
+  std::shared_ptr<TableStatistics> create_statistics() const override;
 
  private:
   const std::string _table_name;

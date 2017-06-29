@@ -17,7 +17,7 @@ std::string scan_type_to_string(ScanType scan_type) {
     default: // Covers OpUnknown
       break;
   }
-  Fail("Unknown ScanType " + static_cast<std::underlying_type<ScanType>::type>(scan_type));
+  Fail("Unknown ScanType " + std::to_string(static_cast<std::underlying_type<ScanType>::type>(scan_type)));
   return "";
 }
 
