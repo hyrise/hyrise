@@ -3,7 +3,7 @@
 namespace opossum {
 
 /*
- * Predefined characters used for the csv file.
+ * Predefined characters used for the csv file
  */
 
 constexpr char csv_delimiter = '\n';
