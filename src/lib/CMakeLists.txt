@@ -134,9 +134,11 @@ set(
     operators/update.hpp
     operators/validate.cpp
     operators/validate.hpp
+    optimizer/abstract_column_statistics.hpp
     optimizer/abstract_syntax_tree/abstract_node.cpp
     optimizer/abstract_syntax_tree/abstract_node.hpp
-    optimizer/abstract_syntax_tree/projection_node.cpp
+    optimizer/abstract_syntax_tree/node_operator_translator.hpp
+    optimizer/abstract_syntax_tree/node_operator_translator.cpp
     optimizer/abstract_syntax_tree/query_plan_helper.hpp
     optimizer/abstract_syntax_tree/projection_node.cpp
     optimizer/abstract_syntax_tree/projection_node.hpp
@@ -144,11 +146,8 @@ set(
     optimizer/abstract_syntax_tree/table_node.hpp
     optimizer/abstract_syntax_tree/table_scan_node.cpp
     optimizer/abstract_syntax_tree/table_scan_node.hpp
-    optimizer/abstract_column_statistics.hpp
     optimizer/column_statistics.cpp
     optimizer/column_statistics.hpp
-    optimizer/operator_translator.hpp
-    optimizer/operator_translator.cpp
     optimizer/strategies/abstract_rule.hpp
     optimizer/strategies/predicate_reordering_rule.cpp
     optimizer/strategies/predicate_reordering_rule.hpp

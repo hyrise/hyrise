@@ -11,19 +11,19 @@
 
 namespace opossum {
 
-class OperatorTranslator {
+class NodeOperatorTranslator {
  public:
-  static OperatorTranslator &get();
+  static NodeOperatorTranslator &get();
 
-  OperatorTranslator(OperatorTranslator const &) = delete;
-  OperatorTranslator &operator=(const OperatorTranslator &) = delete;
-  OperatorTranslator(OperatorTranslator &&) = delete;
+  NodeOperatorTranslator(NodeOperatorTranslator const &) = delete;
+  NodeOperatorTranslator &operator=(const NodeOperatorTranslator &) = delete;
+  NodeOperatorTranslator(NodeOperatorTranslator &&) = delete;
 
-  static const std::shared_ptr<AbstractOperator> translate_operator(std::shared_ptr<AbstractNode> node);
+  const std::shared_ptr<AbstractOperator> translate_node(std::shared_ptr<AbstractNode> node) const;
 
  protected:
-  OperatorTranslator();
-  OperatorTranslator &operator=(OperatorTranslator &&) = default;
+  NodeOperatorTranslator();
+  NodeOperatorTranslator &operator=(NodeOperatorTranslator &&) = default;
 
  private:
   const std::shared_ptr<AbstractOperator> translate_table_node(std::shared_ptr<AbstractNode> node) const;
@@ -31,7 +31,7 @@ class OperatorTranslator {
   const std::shared_ptr<AbstractOperator> translate_projection_node(std::shared_ptr<AbstractNode> node) const;
 
  private:
-  static std::unordered_map<NodeType, std::function<std::shared_ptr<AbstractOperator>(std::shared_ptr<AbstractNode>)>>
+  std::unordered_map<NodeType, std::function<std::shared_ptr<AbstractOperator>(std::shared_ptr<AbstractNode>)>>
       _operator_factory;
 };
 

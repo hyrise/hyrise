@@ -214,18 +214,18 @@ std::shared_ptr<AbstractNode> SQLQueryNodeTranslator::_translate_filter_expr(
 
   // TODO(tim): move to function / global namespace / whatever.
   std::unordered_map<hsql::OperatorType, ScanType> operator_to_filter_type = {
-      //          {hsql::kOpEquals, ScanType::OpEquals},
-      {hsql::kOpNotEquals, ScanType::OpNotEquals},
+    {hsql::kOpEquals, ScanType::OpEquals},
+    {hsql::kOpNotEquals, ScanType::OpNotEquals},
 
-      //          {hsql::kOpGreater, ScanType::OpGreaterThan},
-      {hsql::kOpGreaterEq, ScanType::OpGreaterThanEquals},
+    {hsql::kOpGreater, ScanType::OpGreaterThan},
+    {hsql::kOpGreaterEq, ScanType::OpGreaterThanEquals},
 
-      //          {hsql::kOpLess, ScanType::OpLessThan},
-      {hsql::kOpLessEq, ScanType::OpLessThanEquals},
+    {hsql::kOpLess, ScanType::OpLessThan},
+    {hsql::kOpLessEq, ScanType::OpLessThanEquals},
 
-      {hsql::kOpBetween, ScanType::OpBetween},
+    {hsql::kOpBetween, ScanType::OpBetween},
 
-      {hsql::kOpLike, ScanType::OpLike},
+    {hsql::kOpLike, ScanType::OpLike},
   };
 
   auto it = operator_to_filter_type.find(expr.opType);
