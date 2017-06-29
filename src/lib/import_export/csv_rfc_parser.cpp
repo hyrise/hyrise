@@ -85,12 +85,12 @@ void CsvRfcParser::_parse_file_chunk(std::vector<char>::iterator start, std::vec
 
   // For each csv column create a CsvConverter which builds up a ValueColumn
   std::vector<std::unique_ptr<AbstractCsvConverter>> converters;
-  for (ColumnID column_id = 0; column_id < table.col_count(); ++column_id) {
+  for (ColumnID column_id{0}; column_id < table.col_count(); ++column_id) {
     converters.emplace_back(
         make_unique_by_column_type<AbstractCsvConverter, CsvConverter>(table.column_type(column_id), row_count));
   }
 
-  ColumnID current_column = 0;
+  ColumnID current_column{0};
   ChunkOffset current_row = 0;
 
   while (position < end) {

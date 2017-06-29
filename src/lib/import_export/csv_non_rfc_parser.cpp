@@ -203,7 +203,7 @@ std::vector<AllTypeVariant> CsvNonRfcParser::_parse_row(const std::string row, c
   }
 
   std::vector<AllTypeVariant> values(fields.size());
-  for (ColumnID i = 0; i < info._col_count; ++i) {
+  for (ColumnID i{0}; i < info._col_count; ++i) {
     values[i] = AllTypeVariant(fields[i]);
   }
 

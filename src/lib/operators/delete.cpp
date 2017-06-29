@@ -23,11 +23,11 @@ std::shared_ptr<const Table> Delete::on_execute(std::shared_ptr<TransactionConte
 
   const auto values_to_delete = input_table_left();
 
-  for (auto chunk_id = 0u; chunk_id < values_to_delete->chunk_count(); ++chunk_id) {
+  for (ChunkID chunk_id{0}; chunk_id < values_to_delete->chunk_count(); ++chunk_id) {
     const auto& chunk = values_to_delete->get_chunk(chunk_id);
 
     // we have already verified that all columns reference the same table
-    const auto first_column = std::static_pointer_cast<ReferenceColumn>(chunk.get_column(0));
+    const auto first_column = std::static_pointer_cast<ReferenceColumn>(chunk.get_column(ColumnID{0}));
     const auto pos_list = first_column->pos_list();
 
     _pos_lists.emplace_back(pos_list);
@@ -103,14 +103,14 @@ bool Delete::_execution_input_valid(const std::shared_ptr<TransactionContext>& c
 
   if (values_to_delete->chunk_count() == 0u) return false;
 
-  for (auto chunk_id = 0u; chunk_id < values_to_delete->chunk_count(); ++chunk_id) {
+  for (ChunkID chunk_id{0}; chunk_id < values_to_delete->chunk_count(); ++chunk_id) {
     const auto& chunk = values_to_delete->get_chunk(chunk_id);
 
     if (chunk.col_count() == 0u) return false;
 
     if (!chunk.references_only_one_table()) return false;
 
-    const auto first_column = std::static_pointer_cast<ReferenceColumn>(chunk.get_column(0u));
+    const auto first_column = std::static_pointer_cast<ReferenceColumn>(chunk.get_column(ColumnID{0}));
 
     if (table != first_column->referenced_table()) return false;
   }
