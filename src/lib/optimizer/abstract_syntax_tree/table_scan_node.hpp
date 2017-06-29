@@ -17,7 +17,7 @@ class TableScanNode : public AbstractNode {
   TableScanNode(const std::string &column_name, const ScanType &op, const AllParameterVariant value,
                 const optional<AllTypeVariant> value2 = nullopt)
       : _column_name(column_name), _op(op), _value(value), _value2(value2) {
-    _type = TableScanNodeType;
+    _type = NodeType::TableScan;
   }
 
   const std::string description() const override;

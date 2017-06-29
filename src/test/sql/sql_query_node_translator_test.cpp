@@ -62,19 +62,19 @@ TEST_F(SQLQueryNodeTranslatorTest, SelectWithAndCondition) {
   const auto query = "SELECT * FROM table_a WHERE a >= 1234 AND b < 457.9";
   auto result_node = compile_query(query);
 
-  EXPECT_TRUE(std::dynamic_pointer_cast<ProjectionNode>(result_node));
+  EXPECT_EQ(result_node->get_type(), NodeType::Projection);
   EXPECT_FALSE(result_node->get_right());
 
   auto ts_node_1 = result_node->get_left();
-  EXPECT_TRUE(std::dynamic_pointer_cast<TableScanNode>(ts_node_1));
+  EXPECT_EQ(ts_node_1->get_type(), NodeType::TableScan);
   EXPECT_FALSE(ts_node_1->get_right());
 
   auto ts_node_2 = ts_node_1->get_left();
-  EXPECT_TRUE(std::dynamic_pointer_cast<TableScanNode>(ts_node_2));
+  EXPECT_EQ(ts_node_2->get_type(), NodeType::TableScan);
   EXPECT_FALSE(ts_node_2->get_right());
 
   auto t_node = ts_node_2->get_left();
-  EXPECT_TRUE(std::dynamic_pointer_cast<TableNode>(t_node));
+  EXPECT_EQ(t_node->get_type(), NodeType::Table);
   EXPECT_FALSE(t_node->get_left());
   EXPECT_FALSE(t_node->get_right());
 }

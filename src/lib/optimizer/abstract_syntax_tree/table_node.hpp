@@ -10,7 +10,7 @@ namespace opossum {
 
 class TableNode : public AbstractNode {
  public:
-  explicit TableNode(const std::string table_name) : _table_name(table_name) { _type = TableNodeType; }
+  explicit TableNode(const std::string table_name) : _table_name(table_name) { _type = NodeType::Table; }
 
   const std::string description() const override;
 

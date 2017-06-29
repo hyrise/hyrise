@@ -6,7 +6,7 @@
 
 namespace opossum {
 
-enum NodeType { ProjectionNodeType, TableNodeType, TableScanNodeType };
+enum class NodeType { Projection, Table, TableScan };
 
 class AbstractNode : public std::enable_shared_from_this<AbstractNode> {
  public:
@@ -28,6 +28,7 @@ class AbstractNode : public std::enable_shared_from_this<AbstractNode> {
   virtual const std::string description() const = 0;
 
  protected:
+  // Used to easily differentiate between node types without pointer casts.
   NodeType _type;
 
  private:
