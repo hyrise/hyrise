@@ -282,7 +282,7 @@ BENCHMARK_F(TPCCDeliveryBenchmark, BM_delivery)(benchmark::State& state) {
     execute_tasks_with_context(tasks, t_context);
 
     assert(tasks.back()->get_operator()->get_output()->row_count() > 0);
-    auto no_o_id = tasks.back()->get_operator()->get_output()->get_value<int>(0u, 0u);
+    auto no_o_id = tasks.back()->get_operator()->get_output()->get_value<int>(opossum::ColumnID(0u), 0u);
     tasks = delete_from_new_order(no_o_id);
     execute_tasks_with_context(tasks, t_context);
 
@@ -290,7 +290,7 @@ BENCHMARK_F(TPCCDeliveryBenchmark, BM_delivery)(benchmark::State& state) {
     execute_tasks_with_context(tasks, t_context);
 
     assert(tasks.back()->get_operator()->get_output()->row_count() > 0);
-    auto c_id = tasks.back()->get_operator()->get_output()->get_value<int>(0u, 0u);
+    auto c_id = tasks.back()->get_operator()->get_output()->get_value<int>(opossum::ColumnID(0u), 0u);
 
     tasks = update_order(d_id, w_id, no_o_id, o_carrier_id);
     execute_tasks_with_context(tasks, t_context);
@@ -302,7 +302,7 @@ BENCHMARK_F(TPCCDeliveryBenchmark, BM_delivery)(benchmark::State& state) {
     execute_tasks_with_context(tasks, t_context);
 
     assert(tasks.back()->get_operator()->get_output()->row_count() > 0);
-    auto ol_total = tasks.back()->get_operator()->get_output()->get_value<double>(0u, 0u);
+    auto ol_total = tasks.back()->get_operator()->get_output()->get_value<double>(opossum::ColumnID(0u), 0u);
     tasks = update_customer(ol_total, d_id, w_id, c_id);
     execute_tasks_with_context(tasks, t_context);
 

@@ -49,11 +49,11 @@ OrderStatusResult AbstractOrderStatusImpl::run_transaction(const OrderStatusPara
 
       const auto row = static_cast<size_t>(ceil(num_names - 1) / 2);
 
-      result.c_balance = customers_table->get_value<float>(0, row);
-      result.c_first = customers_table->get_value<std::string>(1, row);
-      result.c_middle = customers_table->get_value<std::string>(2, row);
+      result.c_balance = customers_table->get_value<float>(opossum::ColumnID(0), row);
+      result.c_first = customers_table->get_value<std::string>(opossum::ColumnID(1), row);
+      result.c_middle = customers_table->get_value<std::string>(opossum::ColumnID(2), row);
       result.c_last = params.c_last;
-      result.c_id = customers_table->get_value<int32_t>(3, row);
+      result.c_id = customers_table->get_value<int32_t>(opossum::ColumnID(3), row);
     } else {
       auto get_customer_tasks = get_customer_by_id(params.c_id, params.c_d_id, params.c_w_id);
       opossum::execute_tasks_with_context(get_customer_tasks, t_context);
@@ -62,10 +62,10 @@ OrderStatusResult AbstractOrderStatusImpl::run_transaction(const OrderStatusPara
 
       const auto customers_table = get_customer_tasks.back()->get_operator()->get_output();
 
-      result.c_balance = customers_table->get_value<float>(0, 0);
-      result.c_first = customers_table->get_value<std::string>(1, 0);
-      result.c_middle = customers_table->get_value<std::string>(2, 0);
-      result.c_last = customers_table->get_value<std::string>(3, 0);
+      result.c_balance = customers_table->get_value<float>(opossum::ColumnID(0), 0);
+      result.c_first = customers_table->get_value<std::string>(opossum::ColumnID(1), 0);
+      result.c_middle = customers_table->get_value<std::string>(opossum::ColumnID(2), 0);
+      result.c_last = customers_table->get_value<std::string>(opossum::ColumnID(3), 0);
       result.c_id = params.c_id;
     }
 
@@ -74,9 +74,9 @@ OrderStatusResult AbstractOrderStatusImpl::run_transaction(const OrderStatusPara
 
     const auto orders_table = get_order_tasks.back()->get_operator()->get_output();
 
-    result.o_id = orders_table->get_value<int32_t>(0, 0);
-    result.o_carrier_id = orders_table->get_value<int32_t>(1, 0);
-    result.o_entry_d = orders_table->get_value<int32_t>(2, 0);
+    result.o_id = orders_table->get_value<int32_t>(opossum::ColumnID(0), 0);
+    result.o_carrier_id = orders_table->get_value<int32_t>(opossum::ColumnID(1), 0);
+    result.o_entry_d = orders_table->get_value<int32_t>(opossum::ColumnID(2), 0);
 
     auto get_order_line_tasks = get_order_lines(result.o_id, params.c_d_id, params.c_w_id);
     opossum::execute_tasks_with_context(get_order_line_tasks, t_context);
@@ -87,11 +87,11 @@ OrderStatusResult AbstractOrderStatusImpl::run_transaction(const OrderStatusPara
     for (uint32_t r = 0; r < order_lines_table->row_count(); r++) {
       OrderStatusOrderLine order_line;
 
-      order_line.ol_i_id = order_lines_table->get_value<int32_t>(0, r);
-      order_line.ol_supply_w_id = order_lines_table->get_value<int32_t>(1, r);
-      order_line.ol_quantity = order_lines_table->get_value<int32_t>(2, r);
-      order_line.ol_amount = order_lines_table->get_value<float>(3, r);
-      order_line.ol_delivery_d = order_lines_table->get_value<int32_t>(4, r);
+      order_line.ol_i_id = order_lines_table->get_value<int32_t>(opossum::ColumnID(0), r);
+      order_line.ol_supply_w_id = order_lines_table->get_value<int32_t>(opossum::ColumnID(1), r);
+      order_line.ol_quantity = order_lines_table->get_value<int32_t>(opossum::ColumnID(2), r);
+      order_line.ol_amount = order_lines_table->get_value<float>(opossum::ColumnID(3), r);
+      order_line.ol_delivery_d = order_lines_table->get_value<int32_t>(opossum::ColumnID(4), r);
 
       result.order_lines.emplace_back(order_line);
     }

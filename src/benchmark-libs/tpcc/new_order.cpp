@@ -42,10 +42,10 @@ NewOrderResult AbstractNewOrderImpl::run_transaction(const NewOrderParams &param
     const auto customer_and_warehouse_tax_rate_table =
         get_customer_and_warehouse_tax_rate_tasks.back()->get_operator()->get_output();
 
-    result.c_discount = customer_and_warehouse_tax_rate_table->get_value<float>(0, 0);
-    result.c_last = customer_and_warehouse_tax_rate_table->get_value<std::string>(1, 0);
-    result.c_credit = customer_and_warehouse_tax_rate_table->get_value<std::string>(2, 0);
-    result.w_tax_rate = customer_and_warehouse_tax_rate_table->get_value<float>(3, 0);
+    result.c_discount = customer_and_warehouse_tax_rate_table->get_value<float>(opossum::ColumnID(0), 0);
+    result.c_last = customer_and_warehouse_tax_rate_table->get_value<std::string>(opossum::ColumnID(1), 0);
+    result.c_credit = customer_and_warehouse_tax_rate_table->get_value<std::string>(opossum::ColumnID(2), 0);
+    result.w_tax_rate = customer_and_warehouse_tax_rate_table->get_value<float>(opossum::ColumnID(3), 0);
 
     /**
      * GET DISTRICT
@@ -54,8 +54,8 @@ NewOrderResult AbstractNewOrderImpl::run_transaction(const NewOrderParams &param
     opossum::execute_tasks_with_context(get_district_tasks, t_context);
     const auto districts_table = get_district_tasks.back()->get_operator()->get_output();
 
-    result.d_next_o_id = districts_table->get_value<int32_t>(0, 0);
-    result.d_tax_rate = districts_table->get_value<float>(1, 0);
+    result.d_next_o_id = districts_table->get_value<int32_t>(opossum::ColumnID(0), 0);
+    result.d_tax_rate = districts_table->get_value<float>(opossum::ColumnID(1), 0);
 
     /**
      * INCREMENT NEXT ORDER ID
@@ -89,9 +89,9 @@ NewOrderResult AbstractNewOrderImpl::run_transaction(const NewOrderParams &param
       opossum::execute_tasks_with_context(get_item_info_tasks, t_context);
       const auto item_info_table = get_item_info_tasks.back()->get_operator()->get_output();
 
-      order_line.i_price = item_info_table->get_value<float>(0, 0);
-      order_line.i_name = item_info_table->get_value<std::string>(1, 0);
-      order_line.i_data = item_info_table->get_value<std::string>(2, 0);
+      order_line.i_price = item_info_table->get_value<float>(opossum::ColumnID(0), 0);
+      order_line.i_name = item_info_table->get_value<std::string>(opossum::ColumnID(1), 0);
+      order_line.i_data = item_info_table->get_value<std::string>(opossum::ColumnID(2), 0);
 
       /**
        * GET STOCK INFO
@@ -101,12 +101,12 @@ NewOrderResult AbstractNewOrderImpl::run_transaction(const NewOrderParams &param
       opossum::execute_tasks_with_context(get_stock_info_tasks, t_context);
       const auto stock_info_table = get_stock_info_tasks.back()->get_operator()->get_output();
 
-      order_line.s_qty = stock_info_table->get_value<int32_t>(0, 0);
-      order_line.s_data = stock_info_table->get_value<std::string>(1, 0);
-      order_line.s_ytd = stock_info_table->get_value<int32_t>(2, 0);
-      order_line.s_order_cnt = stock_info_table->get_value<int32_t>(3, 0);
-      order_line.s_remote_cnt = stock_info_table->get_value<int32_t>(4, 0);
-      order_line.s_dist_xx = stock_info_table->get_value<std::string>(5, 0);
+      order_line.s_qty = stock_info_table->get_value<int32_t>(opossum::ColumnID(0), 0);
+      order_line.s_data = stock_info_table->get_value<std::string>(opossum::ColumnID(1), 0);
+      order_line.s_ytd = stock_info_table->get_value<int32_t>(opossum::ColumnID(2), 0);
+      order_line.s_order_cnt = stock_info_table->get_value<int32_t>(opossum::ColumnID(3), 0);
+      order_line.s_remote_cnt = stock_info_table->get_value<int32_t>(opossum::ColumnID(4), 0);
+      order_line.s_dist_xx = stock_info_table->get_value<std::string>(opossum::ColumnID(5), 0);
 
       /**
        * Calculate new s_ytd, s_qty and s_order_cnt
@@ -295,7 +295,7 @@ TaskVector NewOrderRefImpl::get_create_order_tasks(const int32_t d_next_o_id, co
   const auto original_table = opossum::StorageManager::get().get_table(target_table_name);
 
   auto new_table = std::make_shared<opossum::Table>();
-  for (opossum::ColumnID columnID = 0; columnID < original_table->col_count(); columnID++) {
+  for (opossum::ColumnID columnID{0}; columnID < original_table->col_count(); columnID++) {
     new_table->add_column(original_table->column_name(columnID), original_table->column_type(columnID), false);
   }
 
@@ -329,7 +329,7 @@ TaskVector NewOrderRefImpl::get_create_new_order_tasks(const int32_t o_id, const
   const auto original_table = opossum::StorageManager::get().get_table(target_table_name);
 
   auto new_table = std::make_shared<opossum::Table>();
-  for (opossum::ColumnID columnID = 0; columnID < original_table->col_count(); columnID++) {
+  for (opossum::ColumnID columnID{0}; columnID < original_table->col_count(); columnID++) {
     new_table->add_column(original_table->column_name(columnID), original_table->column_type(columnID), false);
   }
 
@@ -477,7 +477,7 @@ TaskVector NewOrderRefImpl::get_create_order_line_tasks(const int32_t ol_o_id, c
   const auto original_table = opossum::StorageManager::get().get_table(target_table_name);
 
   auto new_table = std::make_shared<opossum::Table>();
-  for (opossum::ColumnID columnID = 0; columnID < original_table->col_count(); columnID++) {
+  for (opossum::ColumnID columnID{0}; columnID < original_table->col_count(); columnID++) {
     new_table->add_column(original_table->column_name(columnID), original_table->column_type(columnID), false);
   }
 
