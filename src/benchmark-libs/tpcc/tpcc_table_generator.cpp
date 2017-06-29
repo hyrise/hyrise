@@ -88,7 +88,7 @@ void TableGenerator::add_column(std::shared_ptr<std::vector<size_t>> cardinaliti
           chunk.add_column(value_column);
           table->add_chunk(std::move(chunk));
         } else {
-          auto chunk_id = row_index / _chunk_size;
+          opossum::ChunkID chunk_id{row_index / _chunk_size};
           auto &chunk = table->get_chunk(chunk_id);
           chunk.add_column(value_column);
         }
@@ -110,7 +110,7 @@ void TableGenerator::add_column(std::shared_ptr<std::vector<size_t>> cardinaliti
       chunk.add_column(value_column);
       table->add_chunk(std::move(chunk));
     } else {
-      auto chunk_id = row_index / _chunk_size;
+      opossum::ChunkID chunk_id{row_index / _chunk_size};
       auto &chunk = table->get_chunk(chunk_id);
       chunk.add_column(value_column);
     }
@@ -170,7 +170,7 @@ void TableGenerator::add_column(std::shared_ptr<std::vector<size_t>> cardinaliti
     // write output chunks if column size has reached chunk_size
     if (row_index % _chunk_size == _chunk_size - 1) {
       auto value_column = std::make_shared<opossum::ValueColumn<T>>(std::move(column));
-      opossum::ChunkID chunk_id = row_index / _chunk_size;
+      opossum::ChunkID chunk_id{row_index / _chunk_size};
 
       if (is_first_column) {
         opossum::Chunk chunk(true);
@@ -196,7 +196,7 @@ void TableGenerator::add_column(std::shared_ptr<std::vector<size_t>> cardinaliti
       chunk.add_column(value_column);
       table->add_chunk(std::move(chunk));
     } else {
-      auto chunk_id = row_count / _chunk_size;
+      opossum::ChunkID chunk_id{row_count / _chunk_size};
       auto &chunk = table->get_chunk(chunk_id);
       chunk.add_column(value_column);
     }
