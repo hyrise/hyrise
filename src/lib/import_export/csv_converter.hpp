@@ -69,7 +69,7 @@ class CsvConverter : public AbstractCsvConverter {
   explicit CsvConverter(ChunkOffset size, const CsvConfig & config = {}) : _parsed_values(size), _config(config) {}
 
   void insert(const char *value, ChunkOffset position) override {
-    _parsed_values[position] = _get_conversion_function(_config)(value);
+    _parsed_values[position] = _get_conversion_function()(value);
   }
 
   std::unique_ptr<BaseColumn> finish() override { return std::make_unique<ValueColumn<T>>(std::move(_parsed_values)); }
@@ -81,37 +81,37 @@ class CsvConverter : public AbstractCsvConverter {
    * The assumption is that only csv fields of type string must be unescaped because other types cannot contain special
    * csv characters.
    */
-  static std::function<T(const char *)> _get_conversion_function(const CsvConfig & config = {});
+  std::function<T(const char *)> _get_conversion_function();
   tbb::concurrent_vector<T> _parsed_values;
   CsvConfig _config;
 };
 
 template <>
-inline std::function<int(const char *)> CsvConverter<int>::_get_conversion_function(const CsvConfig & config) {
+inline std::function<int(const char *)> CsvConverter<int>::_get_conversion_function() {
   return [](const char *str) { return std::atoi(str); };
 }
 
 template <>
-inline std::function<int64_t(const char *)> CsvConverter<int64_t>::_get_conversion_function(const CsvConfig & config) {
+inline std::function<int64_t(const char *)> CsvConverter<int64_t>::_get_conversion_function() {
   return [](const char *str) { return static_cast<int64_t>(std::atoll(str)); };
 }
 
 template <>
-inline std::function<float(const char *)> CsvConverter<float>::_get_conversion_function(const CsvConfig & config) {
+inline std::function<float(const char *)> CsvConverter<float>::_get_conversion_function() {
   return [](const char *str) { return std::atof(str); };
 }
 
 template <>
-inline std::function<double(const char *)> CsvConverter<double>::_get_conversion_function(const CsvConfig & config) {
+inline std::function<double(const char *)> CsvConverter<double>::_get_conversion_function() {
   // atof actually converts to a double and can be used here
   return [](const char *str) { return std::atof(str); };
 }
 
 template <>
-inline std::function<std::string(const char *)> CsvConverter<std::string>::_get_conversion_function(const CsvConfig & config) {
-  return [config](const char *str) {
+inline std::function<std::string(const char *)> CsvConverter<std::string>::_get_conversion_function() {
+  return [this](const char *str) {
     std::string value{str};
-    unescape(value, config);
+    unescape(value, _config);
     return value;
   };
 }
