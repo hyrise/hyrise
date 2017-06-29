@@ -82,9 +82,7 @@ void DictionaryCompression::compress_chunk(const std::vector<std::string>& colum
     chunk.replace_column(column_id, dict_column);
   }
 
-  if (chunk.has_mvcc_columns()) {
-    chunk.shrink_mvcc_columns();
-  }
+  chunk.shrink_mvcc_columns();
 }
 
 void DictionaryCompression::compress_chunks(Table& table, const std::vector<ChunkID>& chunk_ids) {
