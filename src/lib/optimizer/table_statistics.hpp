@@ -16,11 +16,16 @@ class TableStatistics {
   friend class Statistics;
 
  public:
+  TableStatistics() = default;
+
   explicit TableStatistics(const std::string &name, const std::weak_ptr<Table> table);
   TableStatistics(const TableStatistics &table_statistics);
+
+  virtual ~TableStatistics() = default;
+
   double row_count();
   std::shared_ptr<AbstractColumnStatistics> get_column_statistics(const std::string &column_name);
-  std::shared_ptr<TableStatistics> predicate_statistics(const std::string &column_name, const std::string &op,
+  virtual std::shared_ptr<TableStatistics> predicate_statistics(const std::string &column_name, const std::string &op,
                                                         const AllParameterVariant value,
                                                         const optional<AllTypeVariant> value2 = nullopt);
   friend std::ostream &operator<<(std::ostream &os, TableStatistics &obj) {
@@ -32,7 +37,7 @@ class TableStatistics {
     return os;
   }
 
- private:
+ protected:
   const std::string _name;
   const std::weak_ptr<Table> _table;
   double _row_count;

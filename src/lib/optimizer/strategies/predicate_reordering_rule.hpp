@@ -13,7 +13,7 @@ class PredicateReorderingRule : public AbstractRule {
   std::shared_ptr<AbstractNode> apply_rule(std::shared_ptr<AbstractNode> node) override;
 
  private:
-  std::vector<std::shared_ptr<TableScanNode>> find_all_predicates_in_scope(std::shared_ptr<AbstractNode> node);
+  static void reorder_table_scans(std::vector<std::shared_ptr<TableScanNode>> & table_scans);
 };
 
 }  // namespace opossum

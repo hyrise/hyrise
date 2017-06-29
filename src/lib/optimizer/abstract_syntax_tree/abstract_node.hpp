@@ -12,8 +12,11 @@ enum NodeType { ProjectionNodeType, TableNodeType, TableScanNodeType };
 
 class AbstractNode : public std::enable_shared_from_this<AbstractNode> {
  public:
+  /**
+   * set_parent() is implicitly included in set_left()/set_right()
+   */
   const std::weak_ptr<AbstractNode> &parent() const;
-  void set_parent(const std::weak_ptr<AbstractNode> parent);
+  void clear_parent();
 
   const std::shared_ptr<AbstractNode> &left() const;
   void set_left(const std::shared_ptr<AbstractNode> left);
