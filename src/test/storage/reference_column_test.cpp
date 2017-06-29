@@ -99,12 +99,13 @@ TEST_F(ReferenceColumnTest, RetrievesValuesFromChunks) {
 TEST_F(ReferenceColumnTest, RetrieveNullValueFromNullRowID) {
   // PosList with (0, 0), (0, 1), NULL_ROW_ID, (0, 2)
   auto pos_list = std::make_shared<PosList>(
-      std::initializer_list<RowID>({_test_table->calculate_row_id(0, 0), _test_table->calculate_row_id(0, 1),
-                                    NULL_ROW_ID, _test_table->calculate_row_id(0, 2)}));
+      std::initializer_list<RowID>({_test_table->calculate_row_id(ChunkID{0u}, ChunkOffset{0u}),
+                                    _test_table->calculate_row_id(ChunkID{0u}, ChunkOffset{1u}), NULL_ROW_ID,
+                                    _test_table->calculate_row_id(ChunkID{0u}, ChunkOffset{2u})}));
 
-  auto ref_column = ReferenceColumn(_test_table, 0, pos_list);
+  auto ref_column = ReferenceColumn(_test_table, ColumnID{0u}, pos_list);
 
-  auto& column = *(_test_table->get_chunk(0).get_column(0));
+  auto& column = *(_test_table->get_chunk(ChunkID{0u}).get_column(ColumnID{0u}));
 
   EXPECT_EQ(ref_column[0], column[0]);
   EXPECT_EQ(ref_column[1], column[1]);

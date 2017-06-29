@@ -528,7 +528,8 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
                                    std::string prefix) {
     for (ColumnID column_id{0}; column_id < in_table->col_count(); ++column_id) {
       // TODO(anyone): Refine since not all column are nullable
-      out_table->add_column_definition(prefix + in_table->column_name(column_id), in_table->column_type(column_id), true);
+      out_table->add_column_definition(prefix + in_table->column_name(column_id), in_table->column_type(column_id),
+                                       true);
     }
   }
 

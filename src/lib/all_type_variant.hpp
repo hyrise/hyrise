@@ -11,8 +11,8 @@
 
 #include <string>
 
-#include "types.hpp"
 #include "null_value.hpp"
+#include "types.hpp"
 
 namespace opossum {
 

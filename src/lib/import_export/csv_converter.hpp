@@ -36,7 +36,7 @@ class AbstractCsvConverter {
    * The operation is in-place and does not create a new string object.
    * Field must be a valid csv field.
    */
-  static void unescape(std::string &field, const CsvConfig & config = {}) {
+  static void unescape(std::string &field, const CsvConfig &config = {}) {
     // String does not contain escaping if it is not surrounded with quotes
     if (field.empty() || field.front() != config.quote) return;
 
@@ -50,13 +50,13 @@ class AbstractCsvConverter {
     // character.
     std::copy_if(field.begin() + 1, field.end() - 1, std::back_inserter(unescaped_string),
                  [&last_char, &config](const char c) {
-      bool do_copy = last_char != config.escape || c != config.quote;
-      // Set last_char to zero if the current character should not be copied
-      // This is necessary because config.escape and config.quote are the same characters
-      // and therefore a sequence of three quotes would trigger the condition above twice.
-      last_char = do_copy ? c : 0;
-      return do_copy;
-    });
+                   bool do_copy = last_char != config.escape || c != config.quote;
+                   // Set last_char to zero if the current character should not be copied
+                   // This is necessary because config.escape and config.quote are the same characters
+                   // and therefore a sequence of three quotes would trigger the condition above twice.
+                   last_char = do_copy ? c : 0;
+                   return do_copy;
+                 });
 
     unescaped_string.shrink_to_fit();
     field = std::move(unescaped_string);
@@ -66,7 +66,7 @@ class AbstractCsvConverter {
 template <typename T>
 class CsvConverter : public AbstractCsvConverter {
  public:
-  explicit CsvConverter(ChunkOffset size, const CsvConfig & config = {}) : _parsed_values(size), _config(config) {}
+  explicit CsvConverter(ChunkOffset size, const CsvConfig &config = {}) : _parsed_values(size), _config(config) {}
 
   void insert(const char *value, ChunkOffset position) override {
     _parsed_values[position] = _get_conversion_function()(value);

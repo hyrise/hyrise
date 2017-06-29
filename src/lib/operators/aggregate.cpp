@@ -172,7 +172,8 @@ std::shared_ptr<const Table> Aggregate::on_execute() {
   if (_groupby_columns.size()) {
     // add group by columns
     for (ColumnID column_index{0}; column_index < _groupby_columns.size(); ++column_index) {
-      _output->add_column_definition(_groupby_columns[column_index], input_table->column_type(groupby_column_ids[column_index]));
+      _output->add_column_definition(_groupby_columns[column_index],
+                                     input_table->column_type(groupby_column_ids[column_index]));
 
       _group_columns.emplace_back(make_shared_by_column_type<BaseColumn, ValueColumn>(
           input_table->column_type(groupby_column_ids[column_index])));

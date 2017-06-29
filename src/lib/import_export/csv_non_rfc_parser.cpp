@@ -41,7 +41,7 @@ struct ParsingResult {
   std::shared_ptr<Chunk> _chunk;
 };
 
-CsvNonRfcParser::CsvNonRfcParser(const size_t buffer_size, const CsvConfig & csv_config, const unsigned int num_tasks)
+CsvNonRfcParser::CsvNonRfcParser(const size_t buffer_size, const CsvConfig& csv_config, const unsigned int num_tasks)
     : _num_tasks(num_tasks), _buffer_size(buffer_size), _task_counter(0), _csv_config(csv_config) {}
 
 std::shared_ptr<Table> CsvNonRfcParser::parse(const std::string& filename) {
@@ -163,7 +163,7 @@ void CsvNonRfcParser::_process_task_results(std::shared_ptr<std::future<ParsingR
 }
 
 void CsvNonRfcParser::_resolve_orphans_widows(std::vector<std::shared_ptr<ParsingResult>>& results,
-                                              const TableInfo& info, const CsvConfig & config) {
+                                              const TableInfo& info, const CsvConfig& config) {
   auto first_row = _parse_row(results[0]->_first_row, info, config);
 
   auto first_element_chunk = std::make_shared<Chunk>();
@@ -198,7 +198,7 @@ void CsvNonRfcParser::_resolve_orphans_widows(std::vector<std::shared_ptr<Parsin
 }
 
 std::vector<AllTypeVariant> CsvNonRfcParser::_parse_row(const std::string row, const TableInfo& info,
-                                                        const CsvConfig & config) {
+                                                        const CsvConfig& config) {
   const auto fields = _get_fields(row, config);
   if (info._col_count != fields.size()) {
     // return empty vector so the calling function can handle incomplete lines
@@ -215,7 +215,7 @@ std::vector<AllTypeVariant> CsvNonRfcParser::_parse_row(const std::string row, c
 
 void CsvNonRfcParser::_parse_csv(std::shared_ptr<std::promise<ParsingResult>> new_chunk,
                                  std::shared_ptr<std::vector<char>> buffer, const TableInfo& info,
-                                 const CsvConfig & config) {
+                                 const CsvConfig& config) {
   // create chunk with the correct columns
   auto chunk = std::make_shared<Chunk>();
   ParsingResult result(chunk);
@@ -258,7 +258,7 @@ void CsvNonRfcParser::_parse_csv(std::shared_ptr<std::promise<ParsingResult>> ne
 }
 
 const std::shared_ptr<Table> CsvNonRfcParser::_process_meta_file(const std::string& meta_file,
-                                                                 const CsvConfig & config) {
+                                                                 const CsvConfig& config) {
   std::ifstream file;
   file.exceptions(std::ifstream::failbit | std::ifstream::badbit);
   file.open(meta_file);
@@ -283,7 +283,7 @@ const std::shared_ptr<Table> CsvNonRfcParser::_process_meta_file(const std::stri
   return table;
 }
 
-bool CsvNonRfcParser::_read_csv(std::istream& stream, std::string& out, const CsvConfig & config) {
+bool CsvNonRfcParser::_read_csv(std::istream& stream, std::string& out, const CsvConfig& config) {
   out.clear();
   std::string line;
 
@@ -302,7 +302,7 @@ bool CsvNonRfcParser::_read_csv(std::istream& stream, std::string& out, const Cs
   return false;
 }
 
-bool CsvNonRfcParser::_get_row(std::istream& stream, std::string& out, const CsvConfig & config) {
+bool CsvNonRfcParser::_get_row(std::istream& stream, std::string& out, const CsvConfig& config) {
   out.clear();
   std::string line;
 
@@ -371,11 +371,11 @@ bool CsvNonRfcParser::_get_row(std::istream& stream, std::string& out, const Csv
   return false;
 }
 
-bool CsvNonRfcParser::_get_field(std::istream& stream, std::string& out, const CsvConfig & config) {
+bool CsvNonRfcParser::_get_field(std::istream& stream, std::string& out, const CsvConfig& config) {
   return _read_csv(stream, out, config);
 }
 
-std::vector<std::string> CsvNonRfcParser::_get_fields(const std::string& row, const CsvConfig & config) {
+std::vector<std::string> CsvNonRfcParser::_get_fields(const std::string& row, const CsvConfig& config) {
   std::vector<std::string> fields;
   std::stringstream stream{row};
   std::string field;
