@@ -123,4 +123,21 @@ TEST_F(OperatorsImportCsvTest, Parallel) {
   CurrentScheduler::set(nullptr);
 }
 
+TEST_F(OperatorsImportCsvTest, SemicolonSeparator) {
+  CsvConfig config;
+  config.separator = ';';
+  auto importer = std::make_shared<ImportCsv>("src/test/csv/ints_semicolon_separator.csv", config);
+  importer->execute();
+
+  auto expected_table = std::make_shared<Table>(5);
+  expected_table->add_column("a", "int");
+  expected_table->add_column("b", "int");
+  expected_table->add_column("c", "int");
+  for (int i = 0; i < 8; ++i) {
+    expected_table->append({1, 2, 3});
+  }
+
+  EXPECT_TABLE_EQ(importer->get_output(), expected_table, true);
+}
+
 }  // namespace opossum
