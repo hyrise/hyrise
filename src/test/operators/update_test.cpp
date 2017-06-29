@@ -33,6 +33,10 @@ void OperatorsUpdateTest::helper(std::shared_ptr<GetTable> table_to_update, std:
   ref_table->set_transaction_context(t_context);
   ref_table->execute();
 
+  // Save the original number of rows as well as the number of rows that will be updated.
+  auto original_row_count = ref_table->get_output()->row_count();
+  auto updated_rows_count = update_values->get_output()->row_count();
+
   std::vector<std::string> column_filter_left = {"a"};
   std::vector<std::string> column_filter_right = {"b"};
 
@@ -63,6 +67,18 @@ void OperatorsUpdateTest::helper(std::shared_ptr<GetTable> table_to_update, std:
   validate->execute();
 
   EXPECT_TABLE_EQ(validate->get_output(), expected_result);
+
+  // The new validated table should have the same number of (valid) rows as before.
+  EXPECT_EQ(validate->get_output()->row_count(), original_row_count);
+
+  // Refresh the table that was updated. It should have the same number of valid rows (approximated) as before.
+  // Approximation should be exact here because we do not have ti deal with parallelism issues in tests.
+  auto updated_table = std::make_shared<GetTable>("updateTestTable");
+  updated_table->execute();
+  EXPECT_EQ(updated_table->get_output()->approx_valid_row_count(), original_row_count);
+
+  // The total row count (valid + invalid) should have increased by the number of rows that were updated.
+  EXPECT_EQ(updated_table->get_output()->row_count(), original_row_count + updated_rows_count);
 }
 
 TEST_F(OperatorsUpdateTest, SelfUpdate) {
