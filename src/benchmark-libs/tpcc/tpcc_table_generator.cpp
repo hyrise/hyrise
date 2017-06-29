@@ -84,7 +84,7 @@ void TableGenerator::add_column(std::shared_ptr<std::vector<size_t>> cardinaliti
           chunk.add_column(value_column);
           table->add_chunk(std::move(chunk));
         } else {
-          opossum::ChunkID chunk_id{row_index / _chunk_size};
+          opossum::ChunkID chunk_id{static_cast<uint32_t>(row_index / _chunk_size)};
           auto &chunk = table->get_chunk(chunk_id);
           chunk.add_column(value_column);
         }
@@ -106,7 +106,7 @@ void TableGenerator::add_column(std::shared_ptr<std::vector<size_t>> cardinaliti
       chunk.add_column(value_column);
       table->add_chunk(std::move(chunk));
     } else {
-      opossum::ChunkID chunk_id{row_index / _chunk_size};
+      opossum::ChunkID chunk_id{static_cast<uint32_t>(row_index / _chunk_size)};
       auto &chunk = table->get_chunk(chunk_id);
       chunk.add_column(value_column);
     }
@@ -166,7 +166,7 @@ void TableGenerator::add_column(std::shared_ptr<std::vector<size_t>> cardinaliti
     // write output chunks if column size has reached chunk_size
     if (row_index % _chunk_size == _chunk_size - 1) {
       auto value_column = std::make_shared<opossum::ValueColumn<T>>(std::move(column));
-      opossum::ChunkID chunk_id{row_index / _chunk_size};
+      opossum::ChunkID chunk_id{static_cast<uint32_t>(row_index / _chunk_size)};
 
       if (is_first_column) {
         opossum::Chunk chunk(true);
@@ -192,7 +192,7 @@ void TableGenerator::add_column(std::shared_ptr<std::vector<size_t>> cardinaliti
       chunk.add_column(value_column);
       table->add_chunk(std::move(chunk));
     } else {
-      opossum::ChunkID chunk_id{row_count / _chunk_size};
+      opossum::ChunkID chunk_id{static_cast<uint32_t>(row_count / _chunk_size)};
       auto &chunk = table->get_chunk(chunk_id);
       chunk.add_column(value_column);
     }
@@ -443,8 +443,8 @@ std::shared_ptr<opossum::Table> TableGenerator::generate_order_table(
    * indices[2] = order
    */
 
-  // TODO(anyone): generate a new customer permutation for each district and warehouse. Currently they all have the same
-  // permutation
+  // TODO(anyone): generate a new customer permutation for each district and warehouse. Currently they all have the
+  // same permutation
   auto customer_permutation = _random_gen.permutation(0, _customer_size);
 
   add_column<int>(cardinalities, table, "O_ID", [&](std::vector<size_t> indices) -> size_t { return indices[2]; });
