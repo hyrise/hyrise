@@ -27,7 +27,7 @@ namespace opossum {
  */
 class Sort : public AbstractReadOnlyOperator {
  public:
-  // The parameter chunk_size sets the chunk size of the output table, wich will allways be materialized
+  // The parameter chunk_size sets the chunk size of the output table, wich will always be materialized
   Sort(const std::shared_ptr<const AbstractOperator> in, const std::string &sort_column_name,
        const bool ascending = true, const size_t output_chunk_size = 0);
 
