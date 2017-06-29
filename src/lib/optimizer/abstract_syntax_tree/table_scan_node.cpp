@@ -1,5 +1,6 @@
 #include "table_scan_node.hpp"
 
+#include <memory>
 #include <string>
 
 #include "common.hpp"
@@ -19,11 +20,10 @@ const std::string TableScanNode::description() const {
 }
 
 std::shared_ptr<TableStatistics> TableScanNode::create_statistics() const {
-  Assert(static_cast<bool>(_left),
-         "Table scan needs left input");
+  Assert(static_cast<bool>(_left), "Table scan needs left input");
 
-  return _left->get_or_create_statistics()->predicate_statistics(
-    _column_name, scan_type_to_string(_scan_type), _value, _value2);
+  return _left->get_or_create_statistics()->predicate_statistics(_column_name, scan_type_to_string(_scan_type), _value,
+                                                                 _value2);
 }
 
 }  // namespace opossum

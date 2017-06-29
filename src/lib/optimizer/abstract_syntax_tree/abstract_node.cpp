@@ -33,8 +33,8 @@ const NodeType AbstractNode::type() const { return _type; }
 
 void AbstractNode::set_type(const NodeType type) { _type = type; }
 
-const std::shared_ptr<TableStatistics> AbstractNode::statistics() const { return _statistics; };
-void AbstractNode::set_statistics(const std::shared_ptr<TableStatistics> statistics) { _statistics = statistics; };
+const std::shared_ptr<TableStatistics> AbstractNode::statistics() const { return _statistics; }
+void AbstractNode::set_statistics(const std::shared_ptr<TableStatistics> statistics) { _statistics = statistics; }
 
 const std::vector<std::string> AbstractNode::output_columns() {
   std::vector<std::string> output_columns;

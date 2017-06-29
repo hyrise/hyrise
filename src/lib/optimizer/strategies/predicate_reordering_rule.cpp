@@ -1,5 +1,6 @@
 #include "predicate_reordering_rule.hpp"
 
+#include <algorithm>
 #include <iostream>
 #include <memory>
 #include <vector>
@@ -8,9 +9,7 @@
 
 namespace opossum {
 
-
 std::shared_ptr<AbstractNode> PredicateReorderingRule::apply_rule(std::shared_ptr<AbstractNode> node) {
-
   if (node->type() == NodeType::TableScanNodeType) {
     std::vector<std::shared_ptr<TableScanNode>> table_scan_nodes;
 
@@ -33,18 +32,19 @@ std::shared_ptr<AbstractNode> PredicateReorderingRule::apply_rule(std::shared_pt
   return node;
 }
 
-void PredicateReorderingRule::reorder_table_scans(std::vector<std::shared_ptr<TableScanNode>> & table_scans) {
+void PredicateReorderingRule::reorder_table_scans(std::vector<std::shared_ptr<TableScanNode>>& table_scans) {
   auto parent = table_scans.front()->parent().lock();
   auto child = table_scans.back()->left();
   auto is_left = parent && parent->left() == table_scans.front();
 
-  std::sort(table_scans.begin(), table_scans.end(), [] (auto & l, auto & r) {
-    return l->statistics()->row_count() < r->statistics()->row_count();
-  });
+  std::sort(table_scans.begin(), table_scans.end(),
+            [](auto& l, auto& r) { return l->statistics()->row_count() < r->statistics()->row_count(); });
 
   if (parent) {
-    if (is_left) parent->set_left(table_scans.back());
-    else parent->set_right(table_scans.back());
+    if (is_left)
+      parent->set_left(table_scans.back());
+    else
+      parent->set_right(table_scans.back());
   }
 
   table_scans.front()->set_left(child);
@@ -52,7 +52,6 @@ void PredicateReorderingRule::reorder_table_scans(std::vector<std::shared_ptr<Ta
   for (size_t table_scan_idx = 1; table_scan_idx < table_scans.size(); table_scan_idx++) {
     table_scans[table_scan_idx]->set_left(table_scans[table_scan_idx - 1]);
   }
-
 }
 
 }  // namespace opossum

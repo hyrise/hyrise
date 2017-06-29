@@ -1,5 +1,6 @@
 #pragma once
 
+#include <memory>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -22,10 +23,10 @@ class TableScanNode : public AbstractNode {
 
   const std::string description() const override;
 
-  const std::string &column_name() const { return _column_name; };
-  const ScanType scan_type() const { return _scan_type; };
-  const AllParameterVariant &value() const { return _value; };
-  const optional<AllTypeVariant> &value2() const { return _value2; };
+  const std::string &column_name() const { return _column_name; }
+  const ScanType scan_type() const { return _scan_type; }
+  const AllParameterVariant &value() const { return _value; }
+  const optional<AllTypeVariant> &value2() const { return _value2; }
 
  protected:
   std::shared_ptr<TableStatistics> create_statistics() const override;

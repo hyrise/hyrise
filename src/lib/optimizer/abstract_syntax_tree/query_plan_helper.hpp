@@ -17,25 +17,26 @@ class QueryPlanHelper {
       filtered.push_back(std::dynamic_pointer_cast<T>(node));
     }
 
-//    if (node->get_left()) {
-//      filter<T>(node->get_left(), filtered, filter_condition);
-//    }
-//
-//    if (node->get_right()) {
-//      filter<T>(node->get_right(), filtered, filter_condition);
-//    }
+    //    if (node->get_left()) {
+    //      filter<T>(node->get_left(), filtered, filter_condition);
+    //    }
+    //
+    //    if (node->get_right()) {
+    //      filter<T>(node->get_right(), filtered, filter_condition);
+    //    }
   }
 
-  static void traverse(std::shared_ptr<AbstractNode> node, std::function<void(std::shared_ptr<AbstractNode>)> function) {
+  static void traverse(std::shared_ptr<AbstractNode> node,
+                       std::function<void(std::shared_ptr<AbstractNode>)> function) {
     function(node);
 
-//    if (node->get_left()) {
-//      traverse(node->get_left(), function);
-//    }
-//
-//    if (node->get_right()) {
-//      traverse(node->get_right(), function);
-//    }
+    //    if (node->get_left()) {
+    //      traverse(node->get_left(), function);
+    //    }
+    //
+    //    if (node->get_right()) {
+    //      traverse(node->get_right(), function);
+    //    }
   }
 };
 

@@ -101,6 +101,6 @@ enum class ScanType {
 };
 
 std::string scan_type_to_string(ScanType scan_type);
-ScanType scan_type_from_string(const std::string & scan_str);
+ScanType scan_type_from_string(const std::string &scan_str);
 
 }  // namespace opossum

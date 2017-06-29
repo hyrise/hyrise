@@ -3,8 +3,8 @@
 #include <vector>
 
 #include "../base_test.hpp"
-#include "gtest/gtest.h"
 #include "gmock/gmock.h"
+#include "gtest/gtest.h"
 
 #include "optimizer/abstract_syntax_tree/projection_node.hpp"
 #include "optimizer/abstract_syntax_tree/table_node.hpp"
@@ -15,17 +15,13 @@ namespace opossum {
 
 class TableStatisticsMock : public TableStatistics {
  public:
-  TableStatisticsMock() {
-    _row_count = 0;
-  }
+  TableStatisticsMock() { _row_count = 0; }
 
-  TableStatisticsMock(double row_count) {
-    _row_count = row_count;
-  }
+  explicit TableStatisticsMock(double row_count) { _row_count = row_count; }
 
   std::shared_ptr<TableStatistics> predicate_statistics(const std::string &column_name, const std::string &op,
-                                                                const AllParameterVariant value,
-                                                                const optional<AllTypeVariant> value2) override {
+                                                        const AllParameterVariant value,
+                                                        const optional<AllTypeVariant> value2) override {
     if (column_name == "c1") {
       return std::make_shared<TableStatisticsMock>(500);
     }
@@ -42,7 +38,7 @@ class TableStatisticsMock : public TableStatistics {
 };
 
 class PredicateReorderingTest : public BaseTest {
-protected:
+ protected:
   void SetUp() override {}
 };
 
@@ -61,11 +57,10 @@ TEST_F(PredicateReorderingTest, SimpleReorderingTest) {
 
   ts_n_1->get_or_create_statistics();
 
-
   auto reordered = rule.apply_rule(ts_n_1);
 
-  std::cout << " Printing result " << std::endl;
-  reordered->print();
+  //  std::cout << " Printing result " << std::endl;
+  //  reordered->print();
 
   ASSERT_EQ(reordered, ts_n_1);
   ASSERT_EQ(reordered->left(), ts_n_0);
@@ -90,11 +85,10 @@ TEST_F(PredicateReorderingTest, MoreComplexReorderingTest) {
 
   ts_n_2->get_or_create_statistics();
 
-
   auto reordered = rule.apply_rule(ts_n_2);
 
-  std::cout << " Printing result " << std::endl;
-  reordered->print();
+  //  std::cout << " Printing result " << std::endl;
+  //  reordered->print();
 
   ASSERT_EQ(reordered, ts_n_2);
   ASSERT_EQ(reordered->left(), ts_n_0);
@@ -118,7 +112,7 @@ TEST_F(PredicateReorderingTest, ComplexReorderingTest) {
   auto ts_n_2 = std::make_shared<TableScanNode>("c3", ScanType::OpGreaterThan, 90);
   ts_n_2->set_left(ts_n_1);
 
-  std::vector<std::string> columns ({"c1", "c2"});
+  std::vector<std::string> columns({"c1", "c2"});
   auto p_n = std::make_shared<ProjectionNode>(columns);
   p_n->set_left(ts_n_2);
 
@@ -132,8 +126,8 @@ TEST_F(PredicateReorderingTest, ComplexReorderingTest) {
 
   auto reordered = rule.apply_rule(ts_n_4);
 
-  std::cout << " Printing result " << std::endl;
-  reordered->print();
+  //  std::cout << " Printing result " << std::endl;
+  //  reordered->print();
 
   ASSERT_EQ(reordered, ts_n_3);
   ASSERT_EQ(reordered->left(), ts_n_4);

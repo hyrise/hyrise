@@ -32,7 +32,7 @@ class AbstractNode : public std::enable_shared_from_this<AbstractNode> {
 
   virtual const std::vector<std::string> output_columns();
   const std::shared_ptr<TableStatistics> get_or_create_statistics();
-  
+
   void print(const uint8_t indent = 0) const;
   virtual const std::string description() const = 0;
 
