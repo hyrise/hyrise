@@ -477,10 +477,14 @@ bool SQLQueryTranslator::_translate_literal(const hsql::Expr& expr, AllTypeVaria
 // static
 bool SQLQueryTranslator::_translate_filter_op(const hsql::Expr& expr, std::string* output) {
   switch (expr.opType) {
-    case hsql::kOpSimple:
-      if (expr.isSimpleOp('=')) *output = "=";
-      if (expr.isSimpleOp('<')) *output = "<";
-      if (expr.isSimpleOp('>')) *output = ">";
+    case hsql::kOpEquals:
+      *output = "=";
+      return true;
+    case hsql::kOpLess:
+      *output = "<";
+      return true;
+    case hsql::kOpGreater:
+      *output = ">";
       return true;
     case hsql::kOpGreaterEq:
       *output = ">=";
