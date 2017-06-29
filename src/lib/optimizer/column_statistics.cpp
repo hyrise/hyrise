@@ -24,15 +24,23 @@ ColumnStatistics<T>::ColumnStatistics(const std::weak_ptr<Table> table, const st
 template <typename T>
 ColumnStatistics<T>::ColumnStatistics(double distinct_count, AllTypeVariant min, AllTypeVariant max,
                                       const std::string &column_name)
-    : _column_name(column_name), _distinct_count(distinct_count), _min(get<T>(min)), _max(get<T>(max)) {}
+    : _table(std::weak_ptr<Table>()),
+      _column_name(column_name),
+      _distinct_count(distinct_count),
+      _min(get<T>(min)),
+      _max(get<T>(max)) {}
 
 template <typename T>
 ColumnStatistics<T>::ColumnStatistics(double distinct_count, T min, T max, const std::string &column_name)
-    : _column_name(column_name), _distinct_count(distinct_count), _min(min), _max(max) {}
+    : _table(std::weak_ptr<Table>()),
+      _column_name(column_name),
+      _distinct_count(distinct_count),
+      _min(min),
+      _max(max) {}
 
 template <typename T>
 ColumnStatistics<T>::ColumnStatistics(double distinct_count, const std::string &column_name)
-    : _column_name(column_name), _distinct_count(distinct_count) {}
+    : _table(std::weak_ptr<Table>()), _column_name(column_name), _distinct_count(distinct_count) {}
 
 template <typename T>
 double ColumnStatistics<T>::distinct_count() {
