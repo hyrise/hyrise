@@ -16,6 +16,7 @@ class TableStatistics {
   friend class Statistics;
 
  public:
+  explicit TableStatistics(const std::string &name);
   explicit TableStatistics(const std::string &name, const std::weak_ptr<Table> table);
   TableStatistics(const TableStatistics &table_statistics);
   double row_count();
