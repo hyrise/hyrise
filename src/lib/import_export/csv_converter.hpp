@@ -50,13 +50,13 @@ class AbstractCsvConverter {
     // character.
     std::copy_if(field.begin() + 1, field.end() - 1, std::back_inserter(unescaped_string),
                  [&last_char, &config](const char c) {
-                   bool do_copy = last_char != config.escape || c != config.quote;
-                   // Set last_char to zero if the current character should not be copied
-                   // This is necessary because config.escape and config.quote are the same characters
-                   // and therefore a sequence of three quotes would trigger the condition above twice.
-                   last_char = do_copy ? c : 0;
-                   return do_copy;
-                 });
+      bool do_copy = last_char != config.escape || c != config.quote;
+      // Set last_char to zero if the current character should not be copied
+      // This is necessary because config.escape and config.quote are the same characters
+      // and therefore a sequence of three quotes would trigger the condition above twice.
+      last_char = do_copy ? c : 0;
+      return do_copy;
+    });
 
     unescaped_string.shrink_to_fit();
     field = std::move(unescaped_string);
