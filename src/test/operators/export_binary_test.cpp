@@ -192,7 +192,7 @@ TEST_F(OperatorsExportBinaryTest, AllTypesMixColumn) {
   table->append({"CCCCCCCCCCCCCCC", 3, static_cast<int64_t>(300), 3.3f, 33.3});
   table->append({"DDDDDDDDDDDDDDDDDDDD", 4, static_cast<int64_t>(400), 4.4f, 44.4});
 
-  DictionaryCompression::compress_chunks(*table, {0u});
+  DictionaryCompression::compress_chunks(*table, {ChunkID{0}});
 
   auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
   table_wrapper->execute();

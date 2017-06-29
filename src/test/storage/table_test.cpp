@@ -29,13 +29,13 @@ TEST_F(StorageTableTest, ChunkCount) {
 }
 
 TEST_F(StorageTableTest, GetChunk) {
-  t.get_chunk(0);
+  t.get_chunk(ChunkID{0});
   // TODO(anyone): Do we want checks here?
-  // EXPECT_THROW(t.get_chunk(1), std::exception);
+  // EXPECT_THROW(t.get_chunk(ChunkID{q}), std::exception);
   t.append({4, "Hello,"});
   t.append({6, "world"});
   t.append({3, "!"});
-  t.get_chunk(1);
+  t.get_chunk(ChunkID{1});
 }
 
 TEST_F(StorageTableTest, ColCount) { EXPECT_EQ(t.col_count(), 2u); }
@@ -49,17 +49,17 @@ TEST_F(StorageTableTest, RowCount) {
 }
 
 TEST_F(StorageTableTest, GetColumnName) {
-  EXPECT_EQ(t.column_name(0), "col_1");
-  EXPECT_EQ(t.column_name(1), "col_2");
+  EXPECT_EQ(t.column_name(ColumnID{0}), "col_1");
+  EXPECT_EQ(t.column_name(ColumnID{1}), "col_2");
   // TODO(anyone): Do we want checks here?
-  // EXPECT_THROW(t.column_name(2), std::exception);
+  // EXPECT_THROW(t.column_name(ColumnID{2}), std::exception);
 }
 
 TEST_F(StorageTableTest, GetColumnType) {
-  EXPECT_EQ(t.column_type(0), "int");
-  EXPECT_EQ(t.column_type(1), "string");
+  EXPECT_EQ(t.column_type(ColumnID{0}), "int");
+  EXPECT_EQ(t.column_type(ColumnID{1}), "string");
   // TODO(anyone): Do we want checks here?
-  // EXPECT_THROW(t.column_type(2), std::exception);
+  // EXPECT_THROW(t.column_type(ColumnID{2}), std::exception);
 }
 
 TEST_F(StorageTableTest, GetColumnIdByName) {
@@ -73,11 +73,11 @@ TEST_F(StorageTableTest, GetValue) {
   t.append({4, "Hello,"});
   t.append({6, "world"});
   t.append({3, "!"});
-  ASSERT_EQ(t.get_value<int>(0u, 0u), 4);
-  EXPECT_EQ(t.get_value<int>(0u, 2u), 3);
-  ASSERT_FALSE(t.get_value<std::string>(1u, 0u).compare("Hello,"));
-  ASSERT_FALSE(t.get_value<std::string>(1u, 2u).compare("!"));
-  EXPECT_THROW(t.get_value<int>(3u, 0u), std::exception);
+  ASSERT_EQ(t.get_value<int>(ColumnID{0}, 0u), 4);
+  EXPECT_EQ(t.get_value<int>(ColumnID{0}, 2u), 3);
+  ASSERT_FALSE(t.get_value<std::string>(ColumnID{1}, 0u).compare("Hello,"));
+  ASSERT_FALSE(t.get_value<std::string>(ColumnID{1}, 2u).compare("!"));
+  EXPECT_THROW(t.get_value<int>(ColumnID{3}, 0u), std::exception);
 }
 
 TEST_F(StorageTableTest, ColumnNameTooLong) {
@@ -89,7 +89,7 @@ TEST_F(StorageTableTest, ShrinkingMvccColumnsHasNoSideEffects) {
   t.append({4, "Hello,"});
   t.append({6, "world"});
 
-  auto& chunk = t.get_chunk(0u);
+  auto& chunk = t.get_chunk(ChunkID{0});
 
   const auto values = std::vector<CommitID>{1u, 2u};
 

@@ -22,7 +22,7 @@ struct TableInfo {
   TableInfo() : _col_count(0) {}
 
   explicit TableInfo(std::shared_ptr<Table> table) : _col_count(table->col_count()) {
-    for (ColumnID i = 0; i < table->col_count(); i++) {
+    for (ColumnID i{0}; i < table->col_count(); i++) {
       _col_types.push_back(table->column_type(i));
     }
   }

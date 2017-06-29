@@ -86,8 +86,8 @@ class JoinNestedLoopB : public AbstractJoinOperator {
 
   void _add_outer_join_rows(std::shared_ptr<const Table> outer_side_table, std::shared_ptr<PosList> outer_side_pos_list,
                             std::set<RowID>& outer_side_matches, std::shared_ptr<PosList> null_side_pos_list);
-  void _join_columns(size_t left_column_id, size_t right_column_id, std::string left_column_type);
-  std::shared_ptr<PosList> _dereference_pos_list(std::shared_ptr<const Table> input_table, size_t column_id,
+  void _join_columns(ColumnID left_column_id, ColumnID right_column_id, std::string left_column_type);
+  std::shared_ptr<PosList> _dereference_pos_list(std::shared_ptr<const Table> input_table, ColumnID column_id,
                                                  std::shared_ptr<const PosList> pos_list);
   void _append_columns_to_output(std::shared_ptr<const Table> input_table, std::shared_ptr<PosList> pos_list,
                                  std::string prefix);

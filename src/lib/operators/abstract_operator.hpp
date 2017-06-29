@@ -66,6 +66,11 @@ class AbstractOperator {
   std::shared_ptr<TransactionContext> transaction_context() const;
   void set_transaction_context(std::shared_ptr<TransactionContext> transaction_context);
 
+  // Return input operators.
+  // Note: these methods cast away const for the return shared_ptr of AbstractOperator.
+  std::shared_ptr<AbstractOperator> mutable_input_left() const;
+  std::shared_ptr<AbstractOperator> mutable_input_right() const;
+
  protected:
   // abstract method to actually execute the operator
   // execute and get_output are split into two methods to allow for easier

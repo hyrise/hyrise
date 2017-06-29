@@ -59,7 +59,7 @@ class Sort::SortImplMaterializeSortColumn : public ColumnVisitable {
     _row_id_value_vector->reserve(_table_in->row_count());
     auto sort_column_id = _table_in->column_id_by_name(_sort_column_name);
 
-    for (ChunkID chunk_id = 0; chunk_id < _table_in->chunk_count(); chunk_id++) {
+    for (ChunkID chunk_id{0}; chunk_id < _table_in->chunk_count(); chunk_id++) {
       _table_in->get_chunk(chunk_id)
           .get_column(sort_column_id)
           ->visit(*this, std::make_shared<MaterializeSortColumnContext>(chunk_id, _row_id_value_vector));
@@ -101,7 +101,7 @@ class Sort::SortImplMaterializeSortColumn : public ColumnVisitable {
     std::vector<std::shared_ptr<std::vector<ChunkOffset>>> all_chunk_offsets(referenced_table->chunk_count());
     std::vector<std::shared_ptr<std::vector<RowID>>> row_id_maps(referenced_table->chunk_count());
 
-    for (ChunkID chunk_id = 0; chunk_id < referenced_table->chunk_count(); ++chunk_id) {
+    for (ChunkID chunk_id{0}; chunk_id < referenced_table->chunk_count(); ++chunk_id) {
       all_chunk_offsets[chunk_id] = std::make_shared<std::vector<ChunkOffset>>();
       row_id_maps[chunk_id] = std::make_shared<std::vector<RowID>>();
       for (ChunkOffset row_index = 0; row_index < column.size(); row_index++) {
@@ -117,7 +117,7 @@ class Sort::SortImplMaterializeSortColumn : public ColumnVisitable {
       all_chunk_offsets[chunk_info.first]->emplace_back(chunk_info.second);
     }
 
-    for (ChunkID chunk_id = 0; chunk_id < referenced_table->chunk_count(); ++chunk_id) {
+    for (ChunkID chunk_id{0}; chunk_id < referenced_table->chunk_count(); ++chunk_id) {
       if (all_chunk_offsets[chunk_id]->empty()) continue;
       auto &chunk = referenced_table->get_chunk(chunk_id);
       auto referenced_column = chunk.get_column(referenced_column_id);
@@ -177,7 +177,7 @@ class Sort::SortImplMaterializeOutput {
     // First we create a new table as the output
     auto output = std::make_shared<Table>(_output_chunk_size);
 
-    for (size_t column_id = 0; column_id < _table_in->col_count(); column_id++) {
+    for (ColumnID column_id{0}; column_id < _table_in->col_count(); column_id++) {
       output->add_column(_table_in->column_name(column_id), _table_in->column_type(column_id), false);
     }
 
@@ -196,12 +196,12 @@ class Sort::SortImplMaterializeOutput {
       _output_chunk_size = _row_id_value_vector->size();
     }
     auto row_index = 0u;
-    for (ChunkID chunk_id_out = 0; chunk_id_out < chunk_count_out; chunk_id_out++) {
+    for (auto chunk_id_out = ChunkID{0}; chunk_id_out < chunk_count_out; chunk_id_out++) {
       // Because we want to add the values row wise we have to save all columns temporarily before we can add them to
       // the
       // output chunk.
       auto column_vectors = std::vector<std::shared_ptr<BaseColumn>>(output->col_count());
-      for (size_t column_id = 0; column_id < output->col_count(); column_id++) {
+      for (ColumnID column_id{0}; column_id < output->col_count(); column_id++) {
         auto column_type = _table_in->column_type(column_id);
         column_vectors[column_id] = make_shared_by_column_type<BaseColumn, ValueColumn>(column_type);
       }
@@ -211,7 +211,7 @@ class Sort::SortImplMaterializeOutput {
       for (ChunkOffset chunk_offset_out = 0;
            chunk_offset_out < _output_chunk_size && row_index < _row_id_value_vector->size(); chunk_offset_out++) {
         auto row_id_in = _table_in->locate_row(_row_id_value_vector->at(row_index).first);
-        for (size_t column_id = 0; column_id < output->col_count(); column_id++) {
+        for (ColumnID column_id{0}; column_id < output->col_count(); column_id++) {
           // The actual value is added by visiting the input column, wich then calls a function on the output column to
           // copy the value
 
@@ -228,7 +228,7 @@ class Sort::SortImplMaterializeOutput {
         }
         row_index++;
       }
-      for (size_t column_id = 0; column_id < output->col_count(); column_id++) {
+      for (ColumnID column_id{0}; column_id < output->col_count(); column_id++) {
         chunk_out.add_column(std::move(column_vectors[column_id]));
       }
       output->add_chunk(std::move(chunk_out));
