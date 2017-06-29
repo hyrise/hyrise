@@ -42,11 +42,11 @@ JoinNestedLoopB::JoinNestedLoopB(const std::shared_ptr<const AbstractOperator> l
 // to the original columns.
 // It is assumed that either non or all chunks of a table contain reference columns.
 std::shared_ptr<PosList> JoinNestedLoopB::_dereference_pos_list(std::shared_ptr<const Table> input_table,
-                                                                size_t column_id,
+                                                                ColumnID column_id,
                                                                 std::shared_ptr<const PosList> pos_list) {
   // Get all the input pos lists so that we only have to pointer cast the columns once
   auto input_pos_lists = std::vector<std::shared_ptr<const PosList>>();
-  for (ChunkID chunk_id = 0; chunk_id < input_table->chunk_count(); chunk_id++) {
+  for (ChunkID chunk_id{0}; chunk_id < input_table->chunk_count(); chunk_id++) {
     auto base_column = input_table->get_chunk(chunk_id).get_column(column_id);
     auto reference_column = std::dynamic_pointer_cast<ReferenceColumn>(base_column);
     input_pos_lists.push_back(reference_column->pos_list());
@@ -64,31 +64,32 @@ std::shared_ptr<PosList> JoinNestedLoopB::_dereference_pos_list(std::shared_ptr<
 void JoinNestedLoopB::_append_columns_to_output(std::shared_ptr<const Table> input_table,
                                                 std::shared_ptr<PosList> pos_list, std::string prefix) {
   // Append each column of the input column to the output
-  for (size_t column_id = 0; column_id < input_table->col_count(); column_id++) {
+  for (ColumnID column_id{0}; column_id < input_table->col_count(); column_id++) {
     // Add the column meta data
     _output->add_column_definition(prefix + input_table->column_name(column_id), input_table->column_type(column_id));
 
     // Check whether the column consists of reference columns
-    const auto r_column = std::dynamic_pointer_cast<ReferenceColumn>(input_table->get_chunk(0).get_column(column_id));
+    const auto r_column =
+        std::dynamic_pointer_cast<ReferenceColumn>(input_table->get_chunk(ChunkID{0}).get_column(column_id));
     if (r_column) {
       // Create a pos_list referencing the original column
       auto new_pos_list = _dereference_pos_list(input_table, column_id, pos_list);
       auto ref_column = std::make_shared<ReferenceColumn>(r_column->referenced_table(),
                                                           r_column->referenced_column_id(), new_pos_list);
-      _output->get_chunk(0).add_column(ref_column);
+      _output->get_chunk(ChunkID{0}).add_column(ref_column);
     } else {
       auto ref_column = std::make_shared<ReferenceColumn>(input_table, column_id, pos_list);
-      _output->get_chunk(0).add_column(ref_column);
+      _output->get_chunk(ChunkID{0}).add_column(ref_column);
     }
   }
 }
 
 // Join two columns of the input tables
-void JoinNestedLoopB::_join_columns(size_t left_column_id, size_t right_column_id, std::string left_column_type) {
+void JoinNestedLoopB::_join_columns(ColumnID left_column_id, ColumnID right_column_id, std::string left_column_type) {
   auto impl = make_shared_by_column_type<ColumnVisitable, JoinNestedLoopBImpl>(left_column_type, *this);
   // For each combination of chunks from both input tables call visitor pattern to actually perform the join.
-  for (ChunkID chunk_id_left = 0; chunk_id_left < input_table_left()->chunk_count(); ++chunk_id_left) {
-    for (ChunkID chunk_id_right = 0; chunk_id_right < input_table_right()->chunk_count(); ++chunk_id_right) {
+  for (ChunkID chunk_id_left = ChunkID{0}; chunk_id_left < input_table_left()->chunk_count(); ++chunk_id_left) {
+    for (ChunkID chunk_id_right = ChunkID{0}; chunk_id_right < input_table_right()->chunk_count(); ++chunk_id_right) {
       auto& chunk_left = input_table_left()->get_chunk(chunk_id_left);
       auto column_left = chunk_left.get_column(left_column_id);
       auto& chunk_right = input_table_right()->get_chunk(chunk_id_right);
@@ -106,7 +107,7 @@ void JoinNestedLoopB::_add_outer_join_rows(std::shared_ptr<const Table> outer_si
                                            std::shared_ptr<PosList> outer_side_pos_list,
                                            std::set<RowID>& outer_side_matches,
                                            std::shared_ptr<PosList> null_side_pos_list) {
-  for (ChunkID chunk_id = 0; chunk_id < outer_side_table->chunk_count(); chunk_id++) {
+  for (ChunkID chunk_id{0}; chunk_id < outer_side_table->chunk_count(); chunk_id++) {
     for (ChunkOffset chunk_offset = 0; chunk_offset < outer_side_table->get_chunk(chunk_id).size(); chunk_offset++) {
       RowID row_id = RowID{chunk_id, chunk_offset};
 

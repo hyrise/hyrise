@@ -36,7 +36,7 @@ class FittedAttributeVector : public BaseAttributeVector {
    */
   ValueID get(const size_t i) const final {
     auto value_id = _attributes[i];
-    return (value_id == CLAMPED_NULL_VALUE_ID) ? NULL_VALUE_ID : value_id;
+    return (value_id == CLAMPED_NULL_VALUE_ID) ? NULL_VALUE_ID : static_cast<ValueID>(value_id);
   }
 
   /**

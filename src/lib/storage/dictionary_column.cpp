@@ -80,7 +80,7 @@ template <typename T>
 ValueID DictionaryColumn<T>::lower_bound(T value) const {
   auto it = std::lower_bound(_dictionary->cbegin(), _dictionary->cend(), value);
   if (it == _dictionary->cend()) return INVALID_VALUE_ID;
-  return std::distance(_dictionary->cbegin(), it);
+  return static_cast<ValueID>(std::distance(_dictionary->cbegin(), it));
 }
 
 template <typename T>
@@ -88,14 +88,14 @@ ValueID DictionaryColumn<T>::lower_bound(const AllTypeVariant& value) const {
   DebugAssert(!is_null(value), "Null value passed.");
 
   auto typed_value = type_cast<T>(value);
-  return lower_bound(typed_value);
+  return static_cast<ValueID>(lower_bound(typed_value));
 }
 
 template <typename T>
 ValueID DictionaryColumn<T>::upper_bound(T value) const {
   auto it = std::upper_bound(_dictionary->cbegin(), _dictionary->cend(), value);
   if (it == _dictionary->cend()) return INVALID_VALUE_ID;
-  return std::distance(_dictionary->cbegin(), it);
+  return static_cast<ValueID>(std::distance(_dictionary->cbegin(), it));
 }
 
 template <typename T>
@@ -103,7 +103,7 @@ ValueID DictionaryColumn<T>::upper_bound(const AllTypeVariant& value) const {
   DebugAssert(!is_null(value), "Null value passed.");
 
   auto typed_value = type_cast<T>(value);
-  return upper_bound(typed_value);
+  return static_cast<ValueID>(upper_bound(typed_value));
 }
 
 template <typename T>

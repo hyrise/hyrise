@@ -114,7 +114,7 @@ TEST_F(OperatorsExportCsvTest, DictionaryColumn) {
   table->append({1, "Hallo", 3.5f});
   table->append({1, "Hallo3", 3.55f});
 
-  DictionaryCompression::compress_chunks(*table, {0u});
+  DictionaryCompression::compress_chunks(*table, {ChunkID{0}});
 
   auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
   table_wrapper->execute();

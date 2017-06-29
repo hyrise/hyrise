@@ -45,7 +45,7 @@ class Table {
   void inc_invalid_row_count(uint64_t count);
 
   // returns the number of chunks (cannot exceed ChunkID (uint32_t))
-  uint32_t chunk_count() const;
+  ChunkID chunk_count() const;
 
   // returns the chunk with the given id
   Chunk &get_chunk(ChunkID chunk_id);

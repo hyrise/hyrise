@@ -10,6 +10,11 @@ else()
     add_definitions(-DOPOSSUM_NUMA_SUPPORT=0)
 endif()
 
+# This will be used by the DebugAssert macro to output
+# a file path relative to CMAKE_SOURCE_DIR
+string(LENGTH "${CMAKE_SOURCE_DIR}/" SOURCE_PATH_SIZE)
+add_definitions("-DSOURCE_PATH_SIZE=${SOURCE_PATH_SIZE}")
+
 # Global flags and include directories
 add_compile_options(-std=c++1z -pthread -Wno-error=unused-parameter -Wall -Werror)
 

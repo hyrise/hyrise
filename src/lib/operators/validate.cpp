@@ -45,20 +45,20 @@ std::shared_ptr<const Table> Validate::on_execute(std::shared_ptr<TransactionCon
   auto output = std::make_shared<Table>();
 
   // Save column structure.
-  for (size_t column_id = 0; column_id < _in_table->col_count(); ++column_id) {
+  for (ColumnID column_id{0}; column_id < _in_table->col_count(); ++column_id) {
     output->add_column_definition(_in_table->column_name(column_id), _in_table->column_type(column_id));
   }
 
   const auto our_tid = transactionContext->transaction_id();
   const auto our_lcid = transactionContext->last_commit_id();
 
-  for (ChunkID chunk_id = 0; chunk_id < _in_table->chunk_count(); ++chunk_id) {
+  for (ChunkID chunk_id{0}; chunk_id < _in_table->chunk_count(); ++chunk_id) {
     const auto &chunk_in = _in_table->get_chunk(chunk_id);
 
     auto chunk_out = Chunk{};
     auto pos_list_out = std::make_shared<PosList>();
     auto referenced_table = std::shared_ptr<const Table>();
-    const auto ref_col_in = std::dynamic_pointer_cast<ReferenceColumn>(chunk_in.get_column(0));
+    const auto ref_col_in = std::dynamic_pointer_cast<ReferenceColumn>(chunk_in.get_column(ColumnID{0}));
 
     // If the columns in this chunk reference a column, build a poslist for a reference column.
     if (ref_col_in) {
@@ -77,7 +77,7 @@ std::shared_ptr<const Table> Validate::on_execute(std::shared_ptr<TransactionCon
       }
 
       // Construct the actual ReferenceColumn objects and add them to the chunk.
-      for (size_t column_id = 0; column_id < chunk_in.col_count(); ++column_id) {
+      for (ColumnID column_id{0}; column_id < chunk_in.col_count(); ++column_id) {
         const auto column = std::static_pointer_cast<ReferenceColumn>(chunk_in.get_column(column_id));
         const auto referenced_column_id = column->referenced_column_id();
         auto ref_col_out = std::make_shared<ReferenceColumn>(referenced_table, referenced_column_id, pos_list_out);
@@ -97,7 +97,7 @@ std::shared_ptr<const Table> Validate::on_execute(std::shared_ptr<TransactionCon
       }
 
       // Create actual ReferenceColumn objects.
-      for (size_t column_id = 0; column_id < chunk_in.col_count(); ++column_id) {
+      for (ColumnID column_id{0}; column_id < chunk_in.col_count(); ++column_id) {
         auto ref_col_out = std::make_shared<ReferenceColumn>(referenced_table, column_id, pos_list_out);
         chunk_out.add_column(ref_col_out);
       }
