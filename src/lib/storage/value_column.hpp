@@ -64,6 +64,8 @@ class ValueColumn : public BaseColumn {
  protected:
   tbb::concurrent_vector<T> _values;
   optional<tbb::concurrent_vector<bool>> _null_values;
+  // While a ValueColumn knows if it is nullable or not by looking at this optional, a DictionaryColumn does not.
+  // For this reason, we need to store the nullable information separately in the table's definition.
 };
 
 }  // namespace opossum
