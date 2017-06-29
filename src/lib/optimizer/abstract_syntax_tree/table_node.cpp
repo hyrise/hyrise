@@ -7,6 +7,8 @@
 
 namespace opossum {
 
+TableNode::TableNode(const std::string table_name) : AbstractNode(NodeType::Table), _table_name(table_name) {}
+
 const std::string TableNode::description() const { return "Table: " + _table_name; }
 
 const std::vector<std::string> TableNode::output_columns() {

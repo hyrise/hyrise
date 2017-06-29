@@ -6,6 +6,10 @@
 
 namespace opossum {
 
+TableScanNode::TableScanNode(const std::string &column_name, const ScanType &op, const AllParameterVariant value,
+                             const optional<AllTypeVariant> value2)
+    : AbstractNode(NodeType::TableScan), _column_name(column_name), _op(op), _value(value), _value2(value2) {}
+
 const std::string TableScanNode::description() const {
   std::ostringstream desc;
 

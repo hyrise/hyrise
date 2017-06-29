@@ -8,6 +8,9 @@
 
 namespace opossum {
 
+ProjectionNode::ProjectionNode(const std::vector<std::string>& column_names)
+    : AbstractNode(NodeType::Projection), _column_names(column_names) {}
+
 const std::string ProjectionNode::description() const {
   std::ostringstream desc;
 

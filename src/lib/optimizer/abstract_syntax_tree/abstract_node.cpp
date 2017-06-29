@@ -8,6 +8,8 @@
 
 namespace opossum {
 
+AbstractNode::AbstractNode(NodeType node_type) : _type(node_type) {}
+
 const std::weak_ptr<AbstractNode> &AbstractNode::get_parent() const { return _parent; }
 
 void AbstractNode::set_parent(const std::weak_ptr<AbstractNode> &parent) { _parent = parent; }
