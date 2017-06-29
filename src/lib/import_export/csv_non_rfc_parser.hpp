@@ -64,7 +64,7 @@ class CsvNonRfcParser {
    * @param num_tasks   number of tasks (parsing one buffer of size buffer_size each) that will run at the same time,
    * once one task has finished, another one will be started immediately
    */
-  explicit CsvNonRfcParser(const size_t buffer_size, const CsvConfig csv_config, const unsigned int num_tasks = 4);
+  explicit CsvNonRfcParser(const size_t buffer_size, const CsvConfig & csv_config = {}, const unsigned int num_tasks = 4);
 
   // Returns the table that was created from the csv file.
   std::shared_ptr<Table> parse(const std::string& filename);
@@ -109,16 +109,16 @@ class CsvNonRfcParser {
    *  Column Type,b,string
    *  Column Type,c,float
    */
-  const std::shared_ptr<Table> _process_meta_file(const std::string& meta_file, const CsvConfig config);
+  const std::shared_ptr<Table> _process_meta_file(const std::string& meta_file, const CsvConfig & config);
 
   // Reads in a full CSV row and respects the not-safe-mode conditions
-  bool _get_row(std::istream& stream, std::string& out, const CsvConfig config);
+  bool _get_row(std::istream& stream, std::string& out, const CsvConfig & config);
 
   // Reads in a full CSV field or row (safe mode) depending on the given delimiter
-  bool _read_csv(std::istream& stream, std::string& out, const CsvConfig config);
+  bool _read_csv(std::istream& stream, std::string& out, const CsvConfig & config);
 
   // parses one row of the csv, internally employs _get_fields
-  std::vector<AllTypeVariant> _parse_row(const std::string line, const TableInfo& info, const CsvConfig config);
+  std::vector<AllTypeVariant> _parse_row(const std::string line, const TableInfo& info, const CsvConfig & config);
 
   /**
    * This method sanitizes the resultlist that has the following form:
@@ -138,7 +138,7 @@ class CsvNonRfcParser {
    * @param info the structure of the chunks inside the result list
    */
   void _resolve_orphans_widows(std::vector<std::shared_ptr<ParsingResult>>& results, const TableInfo& info,
-                               const CsvConfig config);
+                               const CsvConfig & config);
 
   /**
    * This method is the entrypoint for all tasks
@@ -148,7 +148,7 @@ class CsvNonRfcParser {
    * @param info information about the structure of the chunks to be created
    */
   void _parse_csv(std::shared_ptr<std::promise<ParsingResult>> new_chunk, std::shared_ptr<std::vector<char>> buffer,
-                  const TableInfo& info, const CsvConfig config);
+                  const TableInfo& info, const CsvConfig & config);
 
   /**
    * This method creates a new buffer by reading from the file, prepares a new task and starts it
@@ -188,10 +188,10 @@ class CsvNonRfcParser {
    * @param out
    * @return true if a field could be extracted, false if not
    */
-  bool _get_field(std::istream& stream, std::string& out, const CsvConfig config);
+  bool _get_field(std::istream& stream, std::string& out, const CsvConfig & config);
 
   // Splits and returns all fields from a given CSV row.
-  std::vector<std::string> _get_fields(const std::string& row, const CsvConfig config);
+  std::vector<std::string> _get_fields(const std::string& row, const CsvConfig & config);
 
   bool _start_new_job(std::shared_ptr<std::vector<char>> buffer);
 };
