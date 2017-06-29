@@ -35,7 +35,7 @@ std::shared_ptr<const Table> UnionAll::on_execute() {
                 "Input tables must have same column order and column types");
 
     // add column definition to output table
-    output->add_column(input_table_left()->column_name(column_id), column_type, false);
+    output->add_column_definition(input_table_left()->column_name(column_id), column_type);
   }
 
   // add positions to output by iterating over both input tables

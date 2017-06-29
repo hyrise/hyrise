@@ -178,7 +178,7 @@ class Sort::SortImplMaterializeOutput {
     auto output = std::make_shared<Table>(_output_chunk_size);
 
     for (ColumnID column_id{0}; column_id < _table_in->col_count(); column_id++) {
-      output->add_column(_table_in->column_name(column_id), _table_in->column_type(column_id), false);
+      output->add_column_definition(_table_in->column_name(column_id), _table_in->column_type(column_id));
     }
 
     // After we created the output table and initialized the column structure, we can start adding values. Because the

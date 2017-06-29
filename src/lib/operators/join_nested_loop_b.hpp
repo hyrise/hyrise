@@ -18,9 +18,13 @@
 
 namespace opossum {
 
+/**
+ * There are two nested loop joins, implemented by two groups: JoinNestedLoopA and B. They should be functionally
+ * identical.
+ *
+ * Note: JoinNestedLoopB does not support null values in input tables at the moment
+ */
 class JoinNestedLoopB : public AbstractJoinOperator {
-  // There are two nested loop joins, implemented by two groups: JoinNestedLoopA and B. They should be functionally
-  // identical.
  public:
   JoinNestedLoopB(const std::shared_ptr<const AbstractOperator> left,
                   const std::shared_ptr<const AbstractOperator> right,

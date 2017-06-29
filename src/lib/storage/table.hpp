@@ -60,6 +60,9 @@ class Table {
   // returns the column type of the nth column
   const std::string &column_type(ColumnID column_id) const;
 
+  // return whether nth column is nullable
+  bool column_is_nullable(ColumnID column_id) const;
+
   // returns the vector of column types
   const std::vector<std::string> &column_types() const;
 
@@ -69,8 +72,11 @@ class Table {
   // return the maximum chunk size (cannot exceed ChunkOffset (uint32_t))
   uint32_t chunk_size() const;
 
+  // adds column definition without creating the actual columns
+  void add_column_definition(const std::string &name, const std::string &type, bool nullable = false);
+
   // adds a column to the end, i.e., right, of the table
-  void add_column(const std::string &name, const std::string &type, bool create_value_column = true);
+  void add_column(const std::string &name, const std::string &type, bool nullable = false);
 
   // inserts a row at the end of the table
   // note this is slow and not thread-safe and should be used for testing purposes only
@@ -119,6 +125,7 @@ class Table {
   // that is not yet completely implemented in all compilers
   std::vector<std::string> _column_names;
   std::vector<std::string> _column_types;
+  std::vector<bool> _column_nullable;
 
   std::unique_ptr<std::mutex> _append_mutex;
 };

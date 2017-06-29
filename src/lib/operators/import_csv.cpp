@@ -17,7 +17,7 @@ ImportCsv::ImportCsv(const std::string& filename, const optional<std::string> ta
       _buffer_size(buffer_size),
       _config(CsvConfig{}) {}
 
-ImportCsv::ImportCsv(const std::string& filename, const CsvConfig & config, const optional<std::string> tablename,
+ImportCsv::ImportCsv(const std::string& filename, const CsvConfig& config, const optional<std::string> tablename,
                      bool rfc_mode, size_t buffer_size)
     : _filename(filename), _tablename(tablename), _rfc_mode(rfc_mode), _buffer_size(buffer_size), _config(config) {}
 

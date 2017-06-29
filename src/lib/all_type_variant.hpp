@@ -2,13 +2,16 @@
 
 #include <boost/hana/ext/boost/mpl/vector.hpp>
 #include <boost/hana/pair.hpp>
+#include <boost/hana/prepend.hpp>
 #include <boost/hana/second.hpp>
 #include <boost/hana/transform.hpp>
 #include <boost/hana/tuple.hpp>
+#include <boost/mpl/push_front.hpp>
 #include <boost/variant.hpp>
 
 #include <string>
 
+#include "null_value.hpp"
 #include "types.hpp"
 
 namespace opossum {
@@ -24,10 +27,27 @@ static constexpr auto column_types =
 // This holds only the possible data types.
 static constexpr auto types = hana::transform(column_types, hana::second);  // NOLINT
 
+static constexpr auto types_including_null = hana::prepend(types, hana::type_c<NullValue>);
+
 // Convert tuple to mpl vector
 using TypesAsMplVector = decltype(hana::to<hana::ext::boost::mpl::vector_tag>(types));
 
+// Append NullValue to mpl vector
+using TypesWithNullValue = boost::mpl::push_front<TypesAsMplVector, NullValue>::type;
+
 // Create boost::variant from mpl vector
-using AllTypeVariant = typename boost::make_variant_over<TypesAsMplVector>::type;
+using AllTypeVariant = typename boost::make_variant_over<TypesWithNullValue>::type;
+
+// Function to check if AllTypeVariant is null
+inline bool is_null(const AllTypeVariant& variant) { return (variant.which() == 0); }
+
+/**
+ * Notes:
+ *   – Use this instead of AllTypeVariant{}, AllTypeVariant{NullValue{}}, NullValue{}, etc.
+ *     whenever a null value needs to be represented
+ *   - comparing any AllTypeVariant to NULL_VALUE returns false in accordance with the ternary logic
+ *   - use is_null() if you want to check if an AllTypeVariant is null
+ */
+static const auto NULL_VALUE = AllTypeVariant{};
 
 }  // namespace opossum

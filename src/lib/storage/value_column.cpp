@@ -14,41 +14,67 @@
 namespace opossum {
 
 template <typename T>
+ValueColumn<T>::ValueColumn(bool nullable) {
+  if (nullable) _null_values = tbb::concurrent_vector<bool>();
+}
+
+template <typename T>
 ValueColumn<T>::ValueColumn(tbb::concurrent_vector<T>&& values) : _values(std::move(values)) {}
 
 template <typename T>
-const AllTypeVariant ValueColumn<T>::operator[](const size_t i) const {
-  /*
-  Handle null values, this is only used for testing the results of joins so far.
-  In order to be able to define an expected output table, we need to replace INVALID_CHUNK_OFFSET
-  with some printable character, in our case 0, resp. "0".
-  Since there is no constructor for String, which takes a numeric 0, we have to differentiate between numbers and
-  strings.
+ValueColumn<T>::ValueColumn(tbb::concurrent_vector<T>&& values, tbb::concurrent_vector<bool>&& null_values)
+    : _values(std::move(values)), _null_values(std::move(null_values)) {}
 
-  This should be replaced as soon as we have proper NULL values in Opossum.
-  Similar code is in dictionary_column.hpp
-  */
-  if (i == INVALID_CHUNK_OFFSET) {
-    if (std::is_same<T, std::string>::value) {
-      return "0";
-    }
-    return T(0);
+template <typename T>
+const AllTypeVariant ValueColumn<T>::operator[](const size_t i) const {
+  DebugAssert(i != INVALID_CHUNK_OFFSET, "Passed chunk offset must be valid.");
+
+  // Columns supports null values and value is null
+  if (is_nullable() && (*_null_values).at(i)) {
+    return NULL_VALUE;
   }
+
   return _values.at(i);
 }
 
 template <typename T>
 const T ValueColumn<T>::get(const size_t i) const {
+  DebugAssert(i != INVALID_CHUNK_OFFSET, "Passed chunk offset must be valid.");
+
+  Assert(!is_nullable() || !(*_null_values).at(i), "Can’t return value of column type because it is null.");
   return _values.at(i);
 }
 
 template <typename T>
 void ValueColumn<T>::append(const AllTypeVariant& val) {
+  bool is_null = opossum::is_null(val);
+
+  if (is_nullable()) {
+    (*_null_values).push_back(is_null);
+    _values.push_back(is_null ? T{} : type_cast<T>(val));
+    return;
+  }
+
+  Assert(!is_null, "ValueColumns is not nullable but value passed is null.");
+
   _values.push_back(type_cast<T>(val));
 }
 
 template <>
 void ValueColumn<std::string>::append(const AllTypeVariant& val) {
+  bool is_null = opossum::is_null(val);
+
+  if (is_nullable()) {
+    _null_values->push_back(is_null);
+
+    if (is_null) {
+      _values.push_back(std::string{});
+      return;
+    }
+  }
+
+  Assert(!is_null, "ValueColumns is not nullable but value passed is null.");
+
   auto typed_val = type_cast<std::string>(val);
   Assert((typed_val.length() <= std::numeric_limits<StringLength>::max()), "String value is too long to append!");
 
@@ -66,6 +92,25 @@ tbb::concurrent_vector<T>& ValueColumn<T>::values() {
 }
 
 template <typename T>
+bool ValueColumn<T>::is_nullable() const {
+  return static_cast<bool>(_null_values);
+}
+
+template <typename T>
+const tbb::concurrent_vector<bool>& ValueColumn<T>::null_values() const {
+  DebugAssert(is_nullable(), "This ValueColumn does not support null values.");
+
+  return *_null_values;
+}
+
+template <typename T>
+tbb::concurrent_vector<bool>& ValueColumn<T>::null_values() {
+  DebugAssert(is_nullable(), "This ValueColumn does not support null values.");
+
+  return *_null_values;
+}
+
+template <typename T>
 size_t ValueColumn<T>::size() const {
   return _values.size();
 }
@@ -75,6 +120,7 @@ void ValueColumn<T>::visit(ColumnVisitable& visitable, std::shared_ptr<ColumnVis
   visitable.handle_value_column(*this, std::move(context));
 }
 
+// TODO(anyone): This method is part of an algorithm that hasn't yet been updated to support null values.
 template <typename T>
 void ValueColumn<T>::write_string_representation(std::string& row_string, const ChunkOffset chunk_offset) const {
   std::stringstream buffer;
@@ -88,6 +134,7 @@ void ValueColumn<T>::write_string_representation(std::string& row_string, const 
   row_string += buffer.str();
 }
 
+// TODO(anyone): This method is part of an algorithm that hasn't yet been updated to support null values.
 template <typename T>
 void ValueColumn<T>::copy_value_to_value_column(BaseColumn& value_column, ChunkOffset chunk_offset) const {
   auto& output_column = static_cast<ValueColumn<T>&>(value_column);
@@ -96,6 +143,7 @@ void ValueColumn<T>::copy_value_to_value_column(BaseColumn& value_column, ChunkO
   values_out.push_back(_values[chunk_offset]);
 }
 
+// TODO(anyone): This method is part of an algorithm that hasn't yet been updated to support null values.
 template <typename T>
 const std::shared_ptr<std::vector<std::pair<RowID, T>>> ValueColumn<T>::materialize(
     ChunkID chunk_id, std::shared_ptr<std::vector<ChunkOffset>> offsets) {
