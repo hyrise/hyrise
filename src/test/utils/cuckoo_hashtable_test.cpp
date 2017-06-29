@@ -11,8 +11,8 @@ class CuckooHashtableTest : public BaseTest {};
 
 TEST_F(CuckooHashtableTest, BasicPutAndGet) {
   auto hashtable = std::make_shared<HashTable<int32_t>>(2);
-  hashtable->put(5, RowID{0, 0});
-  hashtable->put(6, RowID{0, 0});
+  hashtable->put(5, RowID{ChunkID{0}, 0});
+  hashtable->put(6, RowID{ChunkID{0}, 0});
 
   EXPECT_TRUE(hashtable->get(5));
   EXPECT_TRUE(hashtable->get(6));
@@ -21,8 +21,8 @@ TEST_F(CuckooHashtableTest, BasicPutAndGet) {
 
 TEST_F(CuckooHashtableTest, StackRowIDs) {
   auto hashtable = std::make_shared<HashTable<int32_t>>(2);
-  hashtable->put(5, RowID{0, 0});
-  hashtable->put(5, RowID{0, 1});
+  hashtable->put(5, RowID{ChunkID{0}, 0});
+  hashtable->put(5, RowID{ChunkID{0}, 1});
 
   auto row_ids = hashtable->get(5);
 
@@ -43,10 +43,10 @@ TEST_F(CuckooHashtableTest, HandleCollision) {
   All these 4 integers should produce the same position for the first hash function, thus there is a collision.
   This test ensures that the values are properly inserted by using the other hash functions.
   */
-  hashtable->put(4, RowID{0, 0});
-  hashtable->put(3617331, RowID{0, 0});
-  hashtable->put(5346671, RowID{0, 0});
-  hashtable->put(6165505, RowID{0, 0});
+  hashtable->put(4, RowID{ChunkID{0}, 0});
+  hashtable->put(3617331, RowID{ChunkID{0}, 0});
+  hashtable->put(5346671, RowID{ChunkID{0}, 0});
+  hashtable->put(6165505, RowID{ChunkID{0}, 0});
 
   EXPECT_TRUE(hashtable->get(4));
   EXPECT_TRUE(hashtable->get(3617331));

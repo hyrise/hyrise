@@ -221,8 +221,9 @@ set(
     grpc
     pthread
     z
-    tbb
     sqlparser
+
+    ${TBB_LIBRARY}
 )
 
 if(${NUMA_FOUND})

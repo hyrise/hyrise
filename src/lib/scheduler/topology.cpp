@@ -18,9 +18,9 @@ std::shared_ptr<Topology> Topology::create_fake_numa_topology(uint32_t max_num_w
   /**
    * Leave one thread free so hopefully the system won't freeze - but if we only have one thread, use that one.
    */
-  auto num_workers = std::max<uint32_t>(1, max_num_threads - 1);
+  auto num_workers = std::max<int32_t>(1, max_num_threads - 1);
   if (max_num_workers != 0) {
-    num_workers = std::min(num_workers, max_num_workers);
+    num_workers = std::min<int32_t>(num_workers, max_num_workers);
   }
 
   auto num_nodes = num_workers / workers_per_node;
@@ -29,7 +29,7 @@ std::shared_ptr<Topology> Topology::create_fake_numa_topology(uint32_t max_num_w
   std::vector<TopologyNode> nodes;
   nodes.reserve(num_nodes);
 
-  auto cpuID = 0u;
+  CpuID cpuID{0};
 
   for (auto n = 0u; n < num_nodes; n++) {
     std::vector<TopologyCpu> cpus;
@@ -57,7 +57,7 @@ std::shared_ptr<Topology> Topology::create_numa_topology(uint32_t max_num_cores)
   }
 
   auto max_node = numa_max_node();
-  auto num_configured_cpus = numa_num_configured_cpus();
+  CpuID num_configured_cpus{numa_num_configured_cpus()};
   auto cpu_bitmask = numa_allocate_cpumask();
   uint32_t core_count = 0;
 
@@ -69,7 +69,7 @@ std::shared_ptr<Topology> Topology::create_numa_topology(uint32_t max_num_cores)
 
       numa_node_to_cpus(n, cpu_bitmask);
 
-      for (int c = 0; c < num_configured_cpus; c++) {
+      for (CpuID c{0}; c < num_configured_cpus; c++) {
         if (numa_bitmask_isbitset(cpu_bitmask, c)) {
           if (max_num_cores == 0 || core_count < max_num_cores) {
             cpus.emplace_back(TopologyCpu(c));

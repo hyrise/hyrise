@@ -46,7 +46,7 @@ class CsvWriter {
   void _write_value(const T& value);
 
   std::ofstream _stream;
-  ColumnID _current_col_count = 0;
+  ColumnID _current_col_count{0};
 };
 
 template <typename T>

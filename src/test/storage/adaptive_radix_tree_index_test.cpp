@@ -33,7 +33,8 @@ class AdaptiveRadixTreeIndexTest : public BaseTest {
      *     |----------------------> 01 --> 0x00000006u
      */
 
-    keys1 = {0x01010101u, 0x01010102u, 0x01010201u, 0x01020101u, 0x01020102u, 0x02010101u, 0x01010101u};
+    keys1 = {ValueID{0x01010101u}, ValueID{0x01010102u}, ValueID{0x01010201u}, ValueID{0x01020101u},
+             ValueID{0x01020102u}, ValueID{0x02010101u}, ValueID{0x01010101u}};
     values1 = {0x00000001u, 0x00000002u, 0x00000003u, 0x00000004u, 0x00000005u, 0x00000006u, 0x00000007u};
 
     for (size_t i = 0; i < 7; ++i) {
@@ -52,7 +53,7 @@ class AdaptiveRadixTreeIndexTest : public BaseTest {
 };
 
 TEST_F(AdaptiveRadixTreeIndexTest, BinaryComparableFromChunkOffset) {
-  ValueID test_value = 0x01020304u;
+  ValueID test_value{0x01020304u};
   AdaptiveRadixTreeIndex::BinaryComparable binary_comparable = AdaptiveRadixTreeIndex::BinaryComparable(test_value);
   EXPECT_EQ(binary_comparable[0], static_cast<uint8_t>(0x01u));
   EXPECT_EQ(binary_comparable[1], static_cast<uint8_t>(0x02u));

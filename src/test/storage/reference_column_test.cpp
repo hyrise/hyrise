@@ -35,7 +35,7 @@ class ReferenceColumnTest : public ::testing::Test {
     _test_table_dict->add_column("b", "int");
     for (int i = 0; i <= 24; i += 2) _test_table_dict->append({i, 100 + i});
 
-    DictionaryCompression::compress_chunks(*_test_table_dict, {0u, 1u});
+    DictionaryCompression::compress_chunks(*_test_table_dict, {ChunkID{0}, ChunkID{1}});
 
     StorageManager::get().add_table("test_table_dict", _test_table_dict);
   }
@@ -48,8 +48,9 @@ class ReferenceColumnTest : public ::testing::Test {
 };
 
 TEST_F(ReferenceColumnTest, IsImmutable) {
-  auto pos_list = std::make_shared<PosList>(std::initializer_list<RowID>({{0, 0}, {0, 1}, {0, 2}}));
-  auto ref_column = ReferenceColumn(_test_table, 0, pos_list);
+  auto pos_list =
+      std::make_shared<PosList>(std::initializer_list<RowID>({{ChunkID{0}, 0}, {ChunkID{0}, 1}, {ChunkID{0}, 2}}));
+  auto ref_column = ReferenceColumn(_test_table, ColumnID{0}, pos_list);
 
   EXPECT_THROW(ref_column.append(1), std::logic_error);
 }
@@ -57,10 +58,11 @@ TEST_F(ReferenceColumnTest, IsImmutable) {
 TEST_F(ReferenceColumnTest, RetrievesValues) {
   // PosList with (0, 0), (0, 1), (0, 2)
   auto pos_list = std::make_shared<PosList>(std::initializer_list<RowID>(
-      {_test_table->calculate_row_id(0, 0), _test_table->calculate_row_id(0, 1), _test_table->calculate_row_id(0, 2)}));
-  auto ref_column = ReferenceColumn(_test_table, 0, pos_list);
+      {_test_table->calculate_row_id(ChunkID{0}, 0), _test_table->calculate_row_id(ChunkID{0}, 1),
+       _test_table->calculate_row_id(ChunkID{0}, 2)}));
+  auto ref_column = ReferenceColumn(_test_table, ColumnID{0}, pos_list);
 
-  auto& column = *(_test_table->get_chunk(0).get_column(0));
+  auto& column = *(_test_table->get_chunk(ChunkID{0}).get_column(ColumnID{0}));
 
   EXPECT_EQ(ref_column[0], column[0]);
   EXPECT_EQ(ref_column[1], column[1]);
@@ -70,10 +72,11 @@ TEST_F(ReferenceColumnTest, RetrievesValues) {
 TEST_F(ReferenceColumnTest, RetrievesValuesOutOfOrder) {
   // PosList with (0, 1), (0, 2), (0, 0)
   auto pos_list = std::make_shared<PosList>(std::initializer_list<RowID>(
-      {_test_table->calculate_row_id(0, 1), _test_table->calculate_row_id(0, 2), _test_table->calculate_row_id(0, 0)}));
-  auto ref_column = ReferenceColumn(_test_table, 0, pos_list);
+      {_test_table->calculate_row_id(ChunkID{0}, 1), _test_table->calculate_row_id(ChunkID{0}, 2),
+       _test_table->calculate_row_id(ChunkID{0}, 0)}));
+  auto ref_column = ReferenceColumn(_test_table, ColumnID{0}, pos_list);
 
-  auto& column = *(_test_table->get_chunk(0).get_column(0));
+  auto& column = *(_test_table->get_chunk(ChunkID{0}).get_column(ColumnID{0}));
 
   EXPECT_EQ(ref_column[0], column[1]);
   EXPECT_EQ(ref_column[1], column[2]);
@@ -83,11 +86,12 @@ TEST_F(ReferenceColumnTest, RetrievesValuesOutOfOrder) {
 TEST_F(ReferenceColumnTest, RetrievesValuesFromChunks) {
   // PosList with (0, 2), (1, 0), (1, 1)
   auto pos_list = std::make_shared<PosList>(std::initializer_list<RowID>(
-      {_test_table->calculate_row_id(0, 2), _test_table->calculate_row_id(1, 0), _test_table->calculate_row_id(1, 1)}));
-  auto ref_column = ReferenceColumn(_test_table, 0, pos_list);
+      {_test_table->calculate_row_id(ChunkID{0}, 2), _test_table->calculate_row_id(ChunkID{1}, 0),
+       _test_table->calculate_row_id(ChunkID{1}, 1)}));
+  auto ref_column = ReferenceColumn(_test_table, ColumnID{0}, pos_list);
 
-  auto& column_1 = *(_test_table->get_chunk(0).get_column(0));
-  auto& column_2 = *(_test_table->get_chunk(1).get_column(0));
+  auto& column_1 = *(_test_table->get_chunk(ChunkID{0}).get_column(ColumnID{0}));
+  auto& column_2 = *(_test_table->get_chunk(ChunkID{1}).get_column(ColumnID{0}));
 
   EXPECT_EQ(ref_column[0], column_1[2]);
   EXPECT_EQ(ref_column[1], column_2[0]);

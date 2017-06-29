@@ -45,17 +45,17 @@ class JoinTest : public BaseTest {
 
     // load and create DictionaryColumn tables
     auto table = load_table("src/test/tables/int_float.tbl", 2);
-    DictionaryCompression::compress_chunks(*table, {0u, 1u});
+    DictionaryCompression::compress_chunks(*table, {ChunkID{0}, ChunkID{1}});
 
     _table_wrapper_a_dict = std::make_shared<TableWrapper>(std::move(table));
 
     table = load_table("src/test/tables/int_float2.tbl", 2);
-    DictionaryCompression::compress_chunks(*table, {0u, 1u});
+    DictionaryCompression::compress_chunks(*table, {ChunkID{0}, ChunkID{1}});
 
     _table_wrapper_b_dict = std::make_shared<TableWrapper>(std::move(table));
 
     table = load_table("src/test/tables/int_float.tbl", 2);
-    DictionaryCompression::compress_chunks(*table, {0u});
+    DictionaryCompression::compress_chunks(*table, {ChunkID{0}});
 
     _table_wrapper_c_dict = std::make_shared<TableWrapper>(std::move(table));
 
