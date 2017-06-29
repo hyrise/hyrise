@@ -21,6 +21,6 @@ const std::vector<std::string> TableNode::output_columns() {
   return _column_names;
 }
 
-const std::string& TableNode::table_name() const { return _table_name; };
+const std::string& TableNode::table_name() const { return _table_name; }
 
 }  // namespace opossum

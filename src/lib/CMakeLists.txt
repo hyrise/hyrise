@@ -145,11 +145,13 @@ set(
     optimizer/abstract_syntax_tree/table_scan_node.cpp
     optimizer/abstract_syntax_tree/table_scan_node.hpp
     optimizer/abstract_column_statistics.hpp
+    optimizer/column_statistics.cpp
+    optimizer/column_statistics.hpp
+    optimizer/operator_translator.hpp
+    optimizer/operator_translator.cpp
     optimizer/strategies/abstract_rule.hpp
     optimizer/strategies/predicate_reordering_rule.cpp
     optimizer/strategies/predicate_reordering_rule.hpp
-    optimizer/column_statistics.cpp
-    optimizer/column_statistics.hpp
     optimizer/table_statistics.cpp
     optimizer/table_statistics.hpp
     resolve_type.hpp

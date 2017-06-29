@@ -113,16 +113,15 @@ std::tuple<double, std::shared_ptr<AbstractColumnStatistics>> ColumnStatistics<T
   } else if (op == "!=") {
     // disregarding A = 5 AND A != 5
     // (just don't put this into a query!)
-    auto column_statistics =
-        std::make_shared<ColumnStatistics>(distinct_count() - 1, min(), max(), _column_name);
+    auto column_statistics = std::make_shared<ColumnStatistics>(distinct_count() - 1, min(), max(), _column_name);
     return {(-1.0 + distinct_count()) / distinct_count(), column_statistics};
   } else if (op == "<" && std::is_integral<T>::value) {
     if (casted_value1 <= min()) {
       return {0.0, nullptr};
     }
     double selectivity = (casted_value1 - min()) / static_cast<double>(max() - min() + 1);
-    auto column_statistics = std::make_shared<ColumnStatistics>(selectivity * distinct_count(), min(),
-                                                                casted_value1 - 1, _column_name);
+    auto column_statistics =
+        std::make_shared<ColumnStatistics>(selectivity * distinct_count(), min(), casted_value1 - 1, _column_name);
     return {selectivity, column_statistics};
   } else if (op == "<=" || (op == "<" && !std::is_integral<T>::value)) {
     if (casted_value1 < min()) {
@@ -137,8 +136,8 @@ std::tuple<double, std::shared_ptr<AbstractColumnStatistics>> ColumnStatistics<T
       return {0.0, nullptr};
     }
     double selectivity = (max() - casted_value1) / static_cast<double>(max() - min() + 1);
-    auto column_statistics = std::make_shared<ColumnStatistics>(selectivity * distinct_count(), casted_value1 + 1,
-                                                                max(), _column_name);
+    auto column_statistics =
+        std::make_shared<ColumnStatistics>(selectivity * distinct_count(), casted_value1 + 1, max(), _column_name);
     return {selectivity, column_statistics};
   } else if (op == ">=" || (op == "<" && !std::is_integral<T>::value)) {
     if (casted_value1 > max()) {
@@ -157,8 +156,8 @@ std::tuple<double, std::shared_ptr<AbstractColumnStatistics>> ColumnStatistics<T
       return {0.0, nullptr};
     }
     double selectivity = (casted_value2 - casted_value1 + 1) / static_cast<double>(max() - min() + 1);
-    auto column_statistics = std::make_shared<ColumnStatistics>(selectivity * distinct_count(), casted_value1,
-                                                                casted_value2, _column_name);
+    auto column_statistics =
+        std::make_shared<ColumnStatistics>(selectivity * distinct_count(), casted_value1, casted_value2, _column_name);
     return {selectivity, column_statistics};
   } else {
     // Brace yourselves.
