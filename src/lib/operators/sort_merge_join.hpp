@@ -132,7 +132,7 @@ class SortMergeJoin : public AbstractJoinOperator {
   std::string _left_column_name;
   std::string _right_column_name;
 
-  // should be 2^x
+  // the partition count should be a power of two, i.e. 1, 2, 4, 8, 16, ...
   uint32_t _partition_count;
 
   // std::shared_ptr<Table> _output;
