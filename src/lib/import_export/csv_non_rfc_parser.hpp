@@ -8,6 +8,7 @@
 #include <string>
 #include <vector>
 
+#include "import_export/csv.hpp"
 #include "operators/abstract_read_only_operator.hpp"
 #include "scheduler/job_task.hpp"
 
@@ -21,7 +22,7 @@ struct TableInfo {
   TableInfo() : _col_count(0) {}
 
   explicit TableInfo(std::shared_ptr<Table> table) : _col_count(table->col_count()) {
-    for (ColumnID i = 0; i < table->col_count(); i++) {
+    for (ColumnID i{0}; i < table->col_count(); i++) {
       _col_types.push_back(table->column_type(i));
     }
   }
@@ -63,7 +64,8 @@ class CsvNonRfcParser {
    * @param num_tasks   number of tasks (parsing one buffer of size buffer_size each) that will run at the same time,
    * once one task has finished, another one will be started immediately
    */
-  explicit CsvNonRfcParser(const size_t buffer_size, const unsigned int num_tasks = 4);
+  explicit CsvNonRfcParser(const size_t buffer_size, const CsvConfig& csv_config = {},
+                           const unsigned int num_tasks = 4);
 
   // Returns the table that was created from the csv file.
   std::shared_ptr<Table> parse(const std::string& filename);
@@ -95,6 +97,9 @@ class CsvNonRfcParser {
   // in an initial loop, but rather step by step once a parsing task finishes
   uint64_t _file_read_state;
 
+  // Csv configuration, e.g. delimiter, separator, etc.
+  const CsvConfig _csv_config;
+
  protected:
   /* Creates the table structure from the meta file.
    *  The following is the content of an example meta file:
@@ -105,16 +110,16 @@ class CsvNonRfcParser {
    *  Column Type,b,string
    *  Column Type,c,float
    */
-  const std::shared_ptr<Table> _process_meta_file(const std::string& meta_file);
+  const std::shared_ptr<Table> _process_meta_file(const std::string& meta_file, const CsvConfig& config);
 
   // Reads in a full CSV row and respects the not-safe-mode conditions
-  bool _get_row(std::istream& stream, std::string& out);
+  bool _get_row(std::istream& stream, std::string& out, const CsvConfig& config);
 
   // Reads in a full CSV field or row (safe mode) depending on the given delimiter
-  bool _read_csv(std::istream& stream, std::string& out, char delimiter);
+  bool _read_csv(std::istream& stream, std::string& out, const CsvConfig& config);
 
   // parses one row of the csv, internally employs _get_fields
-  std::vector<AllTypeVariant> _parse_row(const std::string line, const TableInfo& info);
+  std::vector<AllTypeVariant> _parse_row(const std::string line, const TableInfo& info, const CsvConfig& config);
 
   /**
    * This method sanitizes the resultlist that has the following form:
@@ -133,7 +138,8 @@ class CsvNonRfcParser {
    * @param results the result list
    * @param info the structure of the chunks inside the result list
    */
-  void _resolve_orphans_widows(std::vector<std::shared_ptr<ParsingResult>>& results, const TableInfo& info);
+  void _resolve_orphans_widows(std::vector<std::shared_ptr<ParsingResult>>& results, const TableInfo& info,
+                               const CsvConfig& config);
 
   /**
    * This method is the entrypoint for all tasks
@@ -143,7 +149,7 @@ class CsvNonRfcParser {
    * @param info information about the structure of the chunks to be created
    */
   void _parse_csv(std::shared_ptr<std::promise<ParsingResult>> new_chunk, std::shared_ptr<std::vector<char>> buffer,
-                  const TableInfo& info);
+                  const TableInfo& info, const CsvConfig& config);
 
   /**
    * This method creates a new buffer by reading from the file, prepares a new task and starts it
@@ -183,10 +189,10 @@ class CsvNonRfcParser {
    * @param out
    * @return true if a field could be extracted, false if not
    */
-  bool _get_field(std::istream& stream, std::string& out);
+  bool _get_field(std::istream& stream, std::string& out, const CsvConfig& config);
 
   // Splits and returns all fields from a given CSV row.
-  std::vector<std::string> _get_fields(const std::string& row);
+  std::vector<std::string> _get_fields(const std::string& row, const CsvConfig& config);
 
   bool _start_new_job(std::shared_ptr<std::vector<char>> buffer);
 };

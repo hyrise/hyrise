@@ -10,6 +10,11 @@ else()
     add_definitions(-DOPOSSUM_NUMA_SUPPORT=0)
 endif()
 
+# This will be used by the DebugAssert macro to output
+# a file path relative to CMAKE_SOURCE_DIR
+string(LENGTH "${CMAKE_SOURCE_DIR}/" SOURCE_PATH_SIZE)
+add_definitions("-DSOURCE_PATH_SIZE=${SOURCE_PATH_SIZE}")
+
 # Global flags and include directories
 add_compile_options(-std=c++1z -pthread -Wno-error=unused-parameter -Wall -Werror)
 
@@ -18,8 +23,11 @@ include_directories(
     ${PROJECT_SOURCE_DIR}/third_party/googletest/googletest/include
     ${PROJECT_SOURCE_DIR}/third_party/grpc/include
     ${PROJECT_SOURCE_DIR}/third_party/grpc/third_party/protobuf/src
+    ${PROJECT_SOURCE_DIR}/third_party/sql-parser/src
 
     ${PROJECT_SOURCE_DIR}/src/lib/
+
+    ${TBB_INCLUDE_DIR}
 )
 
 link_directories(

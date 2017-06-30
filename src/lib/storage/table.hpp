@@ -33,11 +33,19 @@ class Table {
   // returns the number of columns (cannot exceed ColumnID (uint16_t))
   uint16_t col_count() const;
 
-  // returns the number of rows
+  // Returns the number of rows.
+  // This number includes invalidated (deleted) rows.
+  // Use approx_valid_row_count() for an approximate count of valid rows instead.
   uint64_t row_count() const;
 
+  // Returns the number of valid rows (using approximate count of deleted rows)
+  uint64_t approx_valid_row_count() const;
+
+  // Increases the (approximate) count of invalid rows in the table (caused by deletes).
+  void inc_invalid_row_count(uint64_t count);
+
   // returns the number of chunks (cannot exceed ChunkID (uint32_t))
-  uint32_t chunk_count() const;
+  ChunkID chunk_count() const;
 
   // returns the chunk with the given id
   Chunk &get_chunk(ChunkID chunk_id);
@@ -52,6 +60,9 @@ class Table {
   // returns the column type of the nth column
   const std::string &column_type(ColumnID column_id) const;
 
+  // return whether nth column is nullable
+  bool column_is_nullable(ColumnID column_id) const;
+
   // returns the vector of column types
   const std::vector<std::string> &column_types() const;
 
@@ -61,8 +72,11 @@ class Table {
   // return the maximum chunk size (cannot exceed ChunkOffset (uint32_t))
   uint32_t chunk_size() const;
 
+  // adds column definition without creating the actual columns
+  void add_column_definition(const std::string &name, const std::string &type, bool nullable = false);
+
   // adds a column to the end, i.e., right, of the table
-  void add_column(const std::string &name, const std::string &type, bool create_value_column = true);
+  void add_column(const std::string &name, const std::string &type, bool nullable = false);
 
   // inserts a row at the end of the table
   // note this is slow and not thread-safe and should be used for testing purposes only
@@ -102,10 +116,16 @@ class Table {
   const uint32_t _chunk_size;
   std::vector<Chunk> _chunks;
 
+  // Stores the number of invalid (deleted) rows.
+  // This is currently not an atomic due to performance considerations.
+  // It is simply used as an estimate for the optimizer, and therefore does not need to be exact.
+  uint64_t _approx_invalid_row_count{0};
+
   // these should be const strings, but having a vector of const values is a C++17 feature
   // that is not yet completely implemented in all compilers
   std::vector<std::string> _column_names;
   std::vector<std::string> _column_types;
+  std::vector<bool> _column_nullable;
 
   std::unique_ptr<std::mutex> _append_mutex;
 };

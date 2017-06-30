@@ -55,7 +55,7 @@ TEST_F(StorageChunkTest, RetrieveColumn) {
   c.add_column(vc_str);
   c.append({2, "two"});
 
-  auto base_col = c.get_column(0);
+  auto base_col = c.get_column(ColumnID{0});
   EXPECT_EQ(base_col->size(), 4u);
 }
 

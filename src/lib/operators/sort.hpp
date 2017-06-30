@@ -19,12 +19,15 @@
 
 namespace opossum {
 
-// operator to sort a table by a single column
-// Multi-column sort is not supported yet. For now, you will have to sort by the secondary criterion, then by the first
-
-// The parameter chunk_size sets the chunk size of the output table, wich will allways be materialized
+/**
+ * Operator to sort a table by a single column
+ * Multi-column sort is not supported yet. For now, you will have to sort by the secondary criterion, then by the first
+ *
+ * Note: Product does not support null values at the moment
+ */
 class Sort : public AbstractReadOnlyOperator {
  public:
+  // The parameter chunk_size sets the chunk size of the output table, wich will always be materialized
   Sort(const std::shared_ptr<const AbstractOperator> in, const std::string &sort_column_name,
        const bool ascending = true, const size_t output_chunk_size = 0);
 

@@ -15,6 +15,7 @@ set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -march=native")
 
 # Dependencies
 find_package(Numa)
+find_package(Tbb REQUIRED)
 
 # Include sub-CMakeLists.txt
 add_subdirectory(third_party/)

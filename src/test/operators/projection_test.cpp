@@ -126,8 +126,7 @@ TEST_F(OperatorsProjectionTest, VariableArithmeticWithRefProjection) {
 }
 
 TEST_F(OperatorsProjectionTest, ValueColumnCount) {
-  Projection::ProjectionDefinitions columns{{"$a", "int", "a"},
-                                            Projection::ProjectionDefinition{"$b", "int", "b"}};
+  Projection::ProjectionDefinitions columns{{"$a", "int", "a"}, Projection::ProjectionDefinition{"$b", "int", "b"}};
   auto projection_1 = std::make_shared<opossum::Projection>(_table_wrapper, columns);
   projection_1->execute();
   EXPECT_EQ(projection_1->get_output()->col_count(), (u_int)2);
@@ -151,8 +150,7 @@ TEST_F(OperatorsProjectionTest, ReferenceColumnCount) {
   auto scan = std::make_shared<opossum::TableScan>(_table_wrapper, "a", "=", 1234);
   scan->execute();
 
-  Projection::ProjectionDefinitions columns{{"$a", "int", "a"},
-                                            Projection::ProjectionDefinition{"$b", "int", "b"}};
+  Projection::ProjectionDefinitions columns{{"$a", "int", "a"}, Projection::ProjectionDefinition{"$b", "int", "b"}};
   auto projection_1 = std::make_shared<opossum::Projection>(scan, columns);
   projection_1->execute();
   EXPECT_EQ(projection_1->get_output()->col_count(), (u_int)2);
@@ -172,24 +170,21 @@ TEST_F(OperatorsProjectionTest, ReferenceColumnCount) {
 }
 
 TEST_F(OperatorsProjectionTest, NumInputTables) {
-  Projection::ProjectionDefinitions columns = {{"$a", "int", "a"},
-                                               Projection::ProjectionDefinition{"$b", "int", "b"}};
+  Projection::ProjectionDefinitions columns = {{"$a", "int", "a"}, Projection::ProjectionDefinition{"$b", "int", "b"}};
   auto projection_1 = std::make_shared<opossum::Projection>(_table_wrapper, columns);
 
   EXPECT_EQ(projection_1->num_in_tables(), 1);
 }
 
 TEST_F(OperatorsProjectionTest, NumOutputTables) {
-  Projection::ProjectionDefinitions columns = {{"$a", "int", "a"},
-                                               Projection::ProjectionDefinition{"$b", "int", "b"}};
+  Projection::ProjectionDefinitions columns = {{"$a", "int", "a"}, Projection::ProjectionDefinition{"$b", "int", "b"}};
   auto projection_1 = std::make_shared<opossum::Projection>(_table_wrapper, columns);
 
   EXPECT_EQ(projection_1->num_out_tables(), 1);
 }
 
 TEST_F(OperatorsProjectionTest, OperatorName) {
-  Projection::ProjectionDefinitions columns = {{"$a", "int", "a"},
-                                               Projection::ProjectionDefinition{"$b", "int", "b"}};
+  Projection::ProjectionDefinitions columns = {{"$a", "int", "a"}, Projection::ProjectionDefinition{"$b", "int", "b"}};
   auto projection_1 = std::make_shared<opossum::Projection>(_table_wrapper, columns);
 
   EXPECT_EQ(projection_1->name(), "Projection");

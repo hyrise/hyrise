@@ -50,6 +50,9 @@ The key type that is used for the aggregation map.
 */
 using AggregateKey = std::vector<AllTypeVariant>;
 
+/**
+ * Note: Aggregate does not support null values at the moment
+ */
 class Aggregate : public AbstractReadOnlyOperator {
  public:
   Aggregate(const std::shared_ptr<AbstractOperator> in,
@@ -451,10 +454,9 @@ struct aggregate_traits<
 
 // invalid: AVG on non-arithmetic types
 template <typename ColumnType, AggregateFunction function>
-struct aggregate_traits<
-    ColumnType, function,
-    typename std::enable_if<!std::is_arithmetic<ColumnType>::value && (function == Avg || function == Sum),
-                            void>::type> {
+struct aggregate_traits<ColumnType, function, typename std::enable_if<!std::is_arithmetic<ColumnType>::value &&
+                                                                          (function == Avg || function == Sum),
+                                                                      void>::type> {
   typedef ColumnType column_type;
   typedef ColumnType aggregate_type;
   static constexpr const char *aggregate_type_name = "";

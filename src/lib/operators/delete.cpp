@@ -16,16 +16,18 @@ Delete::Delete(const std::string& table_name, const std::shared_ptr<const Abstra
 std::shared_ptr<const Table> Delete::on_execute(std::shared_ptr<TransactionContext> context) {
   DebugAssert(_execution_input_valid(context), "Input to Delete isn't valid");
 
+  context->register_rw_operator(this);
+
   _table = StorageManager::get().get_table(_table_name);
   _transaction_id = context->transaction_id();
 
   const auto values_to_delete = input_table_left();
 
-  for (auto chunk_id = 0u; chunk_id < values_to_delete->chunk_count(); ++chunk_id) {
+  for (ChunkID chunk_id{0}; chunk_id < values_to_delete->chunk_count(); ++chunk_id) {
     const auto& chunk = values_to_delete->get_chunk(chunk_id);
 
     // we have already verified that all columns reference the same table
-    const auto first_column = std::static_pointer_cast<ReferenceColumn>(chunk.get_column(0));
+    const auto first_column = std::static_pointer_cast<ReferenceColumn>(chunk.get_column(ColumnID{0}));
     const auto pos_list = first_column->pos_list();
 
     _pos_lists.emplace_back(pos_list);
@@ -55,6 +57,11 @@ void Delete::commit_records(const CommitID cid) {
       // We do not unlock the rows so subsequent transactions properly fail when attempting to update these rows.
     }
   }
+}
+
+void Delete::finish_commit() {
+  const auto num_rows_deleted = input_table_left()->row_count();
+  _table->inc_invalid_row_count(num_rows_deleted);
 }
 
 void Delete::rollback_records() {
@@ -94,14 +101,14 @@ bool Delete::_execution_input_valid(const std::shared_ptr<TransactionContext>& c
 
   if (values_to_delete->chunk_count() == 0u) return false;
 
-  for (auto chunk_id = 0u; chunk_id < values_to_delete->chunk_count(); ++chunk_id) {
+  for (ChunkID chunk_id{0}; chunk_id < values_to_delete->chunk_count(); ++chunk_id) {
     const auto& chunk = values_to_delete->get_chunk(chunk_id);
 
     if (chunk.col_count() == 0u) return false;
 
     if (!chunk.references_only_one_table()) return false;
 
-    const auto first_column = std::static_pointer_cast<ReferenceColumn>(chunk.get_column(0u));
+    const auto first_column = std::static_pointer_cast<ReferenceColumn>(chunk.get_column(ColumnID{0}));
 
     if (table != first_column->referenced_table()) return false;
   }

@@ -11,7 +11,6 @@
 
 #include "../../lib/operators/get_table.hpp"
 #include "../../lib/operators/join_hash.hpp"
-#include "../../lib/operators/sort_merge_join.hpp"
 #include "../../lib/operators/join_nested_loop_a.hpp"
 #include "../../lib/operators/join_nested_loop_b.hpp"
 #include "../../lib/operators/print.hpp"
@@ -31,7 +30,7 @@ template <typename T>
 class JoinEquiTest : public JoinTest {};
 
 // here we define all Join types
-typedef ::testing::Types<JoinNestedLoopA, JoinNestedLoopB, JoinHash, SortMergeJoin> JoinEquiTypes;
+using JoinEquiTypes = ::testing::Types<JoinNestedLoopA, JoinNestedLoopB, JoinHash /* , SortMergeJoin */>;
 TYPED_TEST_CASE(JoinEquiTest, JoinEquiTypes);
 
 TYPED_TEST(JoinEquiTest, WrongJoinOperator) {
@@ -323,10 +322,10 @@ TYPED_TEST(JoinEquiTest, AppliesPrefixes) {
                                           std::string("pref1."), std::string("pref2."));
   join->execute();
 
-  ASSERT_EQ(join->get_output()->column_name(0), "pref1.a");
-  ASSERT_EQ(join->get_output()->column_name(1), "pref1.b");
-  ASSERT_EQ(join->get_output()->column_name(2), "pref2.a");
-  ASSERT_EQ(join->get_output()->column_name(3), "pref2.b");
+  ASSERT_EQ(join->get_output()->column_name(ColumnID{0}), "pref1.a");
+  ASSERT_EQ(join->get_output()->column_name(ColumnID{1}), "pref1.b");
+  ASSERT_EQ(join->get_output()->column_name(ColumnID{2}), "pref2.a");
+  ASSERT_EQ(join->get_output()->column_name(ColumnID{3}), "pref2.b");
 }
 
 TYPED_TEST(JoinEquiTest, ColumnsNotOptional) {

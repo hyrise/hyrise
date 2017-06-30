@@ -41,11 +41,12 @@ struct ParsingResult {
   std::shared_ptr<Chunk> _chunk;
 };
 
-CsvNonRfcParser::CsvNonRfcParser(const size_t buffer_size, const unsigned int num_tasks)
-    : _num_tasks(num_tasks), _buffer_size(buffer_size), _task_counter(0) {}
+CsvNonRfcParser::CsvNonRfcParser(const size_t buffer_size, const CsvConfig& csv_config, const unsigned int num_tasks)
+    : _num_tasks(num_tasks), _buffer_size(buffer_size), _task_counter(0), _csv_config(csv_config) {}
 
 std::shared_ptr<Table> CsvNonRfcParser::parse(const std::string& filename) {
-  auto table = _process_meta_file(filename + csv_meta_file_extension);
+  auto meta_file_config = CsvConfig{};
+  auto table = _process_meta_file(filename + _csv_config.meta_file_extension, meta_file_config);
   _file_info = TableInfo(table);
 
   _file_handle.exceptions(std::ifstream::failbit | std::ifstream::badbit);
@@ -73,7 +74,7 @@ std::shared_ptr<Table> CsvNonRfcParser::parse(const std::string& filename) {
     }
   } while (!finished || _task_counter > 0);
 
-  _resolve_orphans_widows(_parsing_results, _file_info);
+  _resolve_orphans_widows(_parsing_results, _file_info, _csv_config);
 
   // finally add all processed chunks to the table
   for (auto& result : _parsing_results) {
@@ -88,7 +89,7 @@ std::shared_ptr<Table> CsvNonRfcParser::parse(const std::string& filename) {
 
 bool CsvNonRfcParser::_start_new_job(std::shared_ptr<std::vector<char>> buffer) {
   //  if buffer is empty, or just a linebreak: skip it!
-  if (buffer->empty() || (buffer->front() == csv_delimiter)) {
+  if (buffer->empty() || (buffer->front() == _csv_config.delimiter)) {
     return false;
   }
 
@@ -97,7 +98,8 @@ bool CsvNonRfcParser::_start_new_job(std::shared_ptr<std::vector<char>> buffer) 
   // the future needs to be obtained from promise before the promise is moved to the new thread
   auto future = std::make_shared<std::future<ParsingResult>>(promise->get_future());
 
-  auto job = std::make_shared<JobTask>([promise, buffer, this] { _parse_csv(promise, buffer, _file_info); });
+  auto job =
+      std::make_shared<JobTask>([promise, buffer, this] { _parse_csv(promise, buffer, _file_info, _csv_config); });
 
   _jobs.push_back(job);
   // move thread and future object to a vector so it can be processed later on
@@ -161,8 +163,8 @@ void CsvNonRfcParser::_process_task_results(std::shared_ptr<std::future<ParsingR
 }
 
 void CsvNonRfcParser::_resolve_orphans_widows(std::vector<std::shared_ptr<ParsingResult>>& results,
-                                              const TableInfo& info) {
-  auto first_row = _parse_row(results[0]->_first_row, info);
+                                              const TableInfo& info, const CsvConfig& config) {
+  auto first_row = _parse_row(results[0]->_first_row, info, config);
 
   auto first_element_chunk = std::make_shared<Chunk>();
   for (auto& type : info._col_types) {
@@ -173,12 +175,12 @@ void CsvNonRfcParser::_resolve_orphans_widows(std::vector<std::shared_ptr<Parsin
   ParsingResult first_element_result(first_element_chunk);
 
   for (size_t i = 0; i < results.size() - 1; i++) {
-    auto last_row = _parse_row(results[i]->_last_row, info);
+    auto last_row = _parse_row(results[i]->_last_row, info, config);
 
-    auto first_row_of_next_chunk = _parse_row(results[i + 1]->_first_row, info);
+    auto first_row_of_next_chunk = _parse_row(results[i + 1]->_first_row, info, config);
 
     if (last_row.size() < info._col_count || first_row_of_next_chunk.size() < info._col_count) {
-      auto joined = _parse_row(results[i]->_last_row + results[i + 1]->_first_row, info);
+      auto joined = _parse_row(results[i]->_last_row + results[i + 1]->_first_row, info, config);
 
       results[i]->_chunk->append(joined);
     } else {
@@ -187,7 +189,7 @@ void CsvNonRfcParser::_resolve_orphans_widows(std::vector<std::shared_ptr<Parsin
     }
   }
 
-  auto last_row = _parse_row(results.back()->_last_row, info);
+  auto last_row = _parse_row(results.back()->_last_row, info, config);
 
   // empty lines at the end of the document might add a "last row" containing of no elements, ignore that line
   if (last_row.size() == info._col_count) results.back()->_chunk->append(last_row);
@@ -195,15 +197,16 @@ void CsvNonRfcParser::_resolve_orphans_widows(std::vector<std::shared_ptr<Parsin
   results.insert(results.begin(), std::make_shared<ParsingResult>(std::move(first_element_result)));
 }
 
-std::vector<AllTypeVariant> CsvNonRfcParser::_parse_row(const std::string row, const TableInfo& info) {
-  const auto fields = _get_fields(row);
+std::vector<AllTypeVariant> CsvNonRfcParser::_parse_row(const std::string row, const TableInfo& info,
+                                                        const CsvConfig& config) {
+  const auto fields = _get_fields(row, config);
   if (info._col_count != fields.size()) {
     // return empty vector so the calling function can handle incomplete lines
     return std::vector<AllTypeVariant>(0);
   }
 
   std::vector<AllTypeVariant> values(fields.size());
-  for (ColumnID i = 0; i < info._col_count; ++i) {
+  for (ColumnID i{0}; i < info._col_count; ++i) {
     values[i] = AllTypeVariant(fields[i]);
   }
 
@@ -211,7 +214,8 @@ std::vector<AllTypeVariant> CsvNonRfcParser::_parse_row(const std::string row, c
 }
 
 void CsvNonRfcParser::_parse_csv(std::shared_ptr<std::promise<ParsingResult>> new_chunk,
-                                 std::shared_ptr<std::vector<char>> buffer, const TableInfo& info) {
+                                 std::shared_ptr<std::vector<char>> buffer, const TableInfo& info,
+                                 const CsvConfig& config) {
   // create chunk with the correct columns
   auto chunk = std::make_shared<Chunk>();
   ParsingResult result(chunk);
@@ -227,21 +231,21 @@ void CsvNonRfcParser::_parse_csv(std::shared_ptr<std::promise<ParsingResult>> ne
   std::string row, prefetch_row;
 
   // save the first line to the result object for the resolution of orphans and widows later on
-  _get_row(is, result._first_row);
+  _get_row(is, result._first_row, config);
 
-  bool has_next = _get_row(is, prefetch_row);
+  bool has_next = _get_row(is, prefetch_row, config);
 
   int count = 0;
 
   while (has_next) {
     row = prefetch_row;
-    has_next = _get_row(is, prefetch_row);
+    has_next = _get_row(is, prefetch_row, config);
 
     if (!has_next) {
       break;
     }
 
-    const auto fields = _parse_row(row, info);
+    const auto fields = _parse_row(row, info, config);
 
     result._chunk->append(fields);
     ++count;
@@ -253,7 +257,8 @@ void CsvNonRfcParser::_parse_csv(std::shared_ptr<std::promise<ParsingResult>> ne
   new_chunk->set_value(std::move(result));
 }
 
-const std::shared_ptr<Table> CsvNonRfcParser::_process_meta_file(const std::string& meta_file) {
+const std::shared_ptr<Table> CsvNonRfcParser::_process_meta_file(const std::string& meta_file,
+                                                                 const CsvConfig& config) {
   std::ifstream file;
   file.exceptions(std::ifstream::failbit | std::ifstream::badbit);
   file.open(meta_file);
@@ -262,56 +267,56 @@ const std::shared_ptr<Table> CsvNonRfcParser::_process_meta_file(const std::stri
 
   std::string row;
   // skip header
-  _get_row(file, row);
+  _get_row(file, row, config);
 
   // read chunk size
-  _get_row(file, row);
-  auto fields = _get_fields(row);
+  _get_row(file, row, config);
+  auto fields = _get_fields(row, config);
   const int chunk_size = type_cast<int>(fields[2]);
   const auto table = std::make_shared<Table>(chunk_size);
 
   // read column info
-  while (_get_row(file, row)) {
-    fields = _get_fields(row);
+  while (_get_row(file, row, config)) {
+    fields = _get_fields(row, config);
     table->add_column(type_cast<std::string>(fields[1]), type_cast<std::string>(fields[2]));
   }
   return table;
 }
 
-bool CsvNonRfcParser::_read_csv(std::istream& stream, std::string& out, const char delimiter) {
+bool CsvNonRfcParser::_read_csv(std::istream& stream, std::string& out, const CsvConfig& config) {
   out.clear();
   std::string line;
 
-  while (std::getline(stream, line, delimiter)) {
+  while (std::getline(stream, line, config.separator)) {
     out += line;
     // If the number of quotes is even, "out" contains a full row.
     // If the number is odd, there is an opening quote but no closing quote. The delimiter is part of the field and must
     // appended in this case.
     // Escaped quotes are two quotes and therefore don't change the result of the modulus operation.
-    if (std::count(out.begin(), out.end(), csv_quote) % 2 == 0) {
+    if (std::count(out.begin(), out.end(), config.quote) % 2 == 0) {
       return true;
     } else {
-      out += delimiter;
+      out += config.separator;
     }
   }
   return false;
 }
 
-bool CsvNonRfcParser::_get_row(std::istream& stream, std::string& out) {
+bool CsvNonRfcParser::_get_row(std::istream& stream, std::string& out, const CsvConfig& config) {
   out.clear();
   std::string line;
 
-  while (std::getline(stream, line, csv_delimiter)) {
+  while (std::getline(stream, line, config.delimiter)) {
     out += line;
 
     //    We expcet all delimiters encapsulated in quotes to be escaped with csv_escape, so if the forelast character
     //    is
     //    an escape, the delimiter (last character) is not valid. If the last character is no delimiter, we have
     //    reached the end of the buffer and return an incomplete result
-    if (out[out.size() - 1] == csv_delimiter_escape) {
+    if (out[out.size() - 1] == config.delimiter_escape) {
       //      unescape the linebreak
       out.erase(out.begin() + out.size() - 1);
-      out += csv_delimiter;
+      out += config.delimiter;
       continue;
     }
 
@@ -319,19 +324,19 @@ bool CsvNonRfcParser::_get_row(std::istream& stream, std::string& out) {
     // If the number is odd, there is an opening quote but no closing quote. The delimiter is part of the
     // field and must appended in this case.
     // Escaped quotes are two quotes and therefore don't change the result of the modulus operation.
-    auto number_of_quotes = std::count(out.begin(), out.end(), csv_quote);
+    auto number_of_quotes = std::count(out.begin(), out.end(), config.quote);
     if (number_of_quotes % 2 == 0) {
       return true;
     } else {
       //      Field is incapsulated within quotes
-      if (std::count(out.begin(), out.end(), csv_quote) > 0) {
+      if (std::count(out.begin(), out.end(), config.quote) > 0) {
         //         If we are searching for the real end of line (linebreak not encapsulated within csv_escape
         //           example line:
         //           xxx",yyy,"zz\nz"\n
         //           we found the end of the line, if the csv_delimiter is prepended by a csv_escape, getline()
         //           erases csv_delimiter,
         //           so we just check the last character of the fetched line
-        if (out.back() == csv_quote) {
+        if (out.back() == config.quote) {
           return true;
         }
 
@@ -340,11 +345,11 @@ bool CsvNonRfcParser::_get_row(std::istream& stream, std::string& out) {
         //          or
         //          "xx\n
         //          This case is more complicated, we have to check wether there are any csv_quote between the last
-        //          csv::seperator
+        //          csv::separator
         //          and the csv_delimiter respectively, in this case, the end of the fetched line
-        auto pos_quote = out.find_last_of(csv_quote);
-        auto pos_seperator = out.find_last_of(csv_separator);
-        if (pos_seperator != std::string::npos && pos_quote < pos_seperator) {
+        auto pos_quote = out.find_last_of(config.quote);
+        auto pos_separator = out.find_last_of(config.separator);
+        if (pos_separator != std::string::npos && pos_quote < pos_separator) {
           return true;
         }
 
@@ -361,21 +366,21 @@ bool CsvNonRfcParser::_get_row(std::istream& stream, std::string& out) {
       }
     }
 
-    out += csv_delimiter;
+    out += config.delimiter;
   }
   return false;
 }
 
-bool CsvNonRfcParser::_get_field(std::istream& stream, std::string& out) {
-  return _read_csv(stream, out, csv_separator);
+bool CsvNonRfcParser::_get_field(std::istream& stream, std::string& out, const CsvConfig& config) {
+  return _read_csv(stream, out, config);
 }
 
-std::vector<std::string> CsvNonRfcParser::_get_fields(const std::string& row) {
+std::vector<std::string> CsvNonRfcParser::_get_fields(const std::string& row, const CsvConfig& config) {
   std::vector<std::string> fields;
   std::stringstream stream{row};
   std::string field;
-  while (_get_field(stream, field)) {
-    AbstractCsvConverter::unescape(field);
+  while (_get_field(stream, field, config)) {
+    AbstractCsvConverter::unescape(field, config);
     fields.emplace_back(field);
   }
   return fields;

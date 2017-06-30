@@ -39,13 +39,13 @@ BaseTest::Matrix BaseTest::_table_to_matrix(const Table &t) {
 
   // set values
   unsigned row_offset = 0;
-  for (ChunkID chunk_id = 0; chunk_id < t.chunk_count(); chunk_id++) {
+  for (ChunkID chunk_id{0}; chunk_id < t.chunk_count(); chunk_id++) {
     const Chunk &chunk = t.get_chunk(chunk_id);
 
     // an empty table's chunk might be missing actual columns
     if (chunk.size() == 0) continue;
 
-    for (size_t col_id = 0; col_id < t.col_count(); ++col_id) {
+    for (ColumnID col_id{0}; col_id < t.col_count(); ++col_id) {
       std::shared_ptr<BaseColumn> column = chunk.get_column(col_id);
 
       for (ChunkOffset chunk_offset = 0; chunk_offset < chunk.size(); ++chunk_offset) {
@@ -61,7 +61,7 @@ BaseTest::Matrix BaseTest::_table_to_matrix(const Table &t) {
 void BaseTest::_print_matrix(const BaseTest::Matrix &m) {
   std::cout << "-------------" << std::endl;
   for (unsigned row = 0; row < m.size(); row++) {
-    for (unsigned col = 0; col < m[row].size(); col++) {
+    for (ColumnID col{0}; col < m[row].size(); col++) {
       std::cout << std::setw(8) << m[row][col] << " ";
     }
     std::cout << std::endl;
@@ -80,7 +80,7 @@ void BaseTest::_print_matrix(const BaseTest::Matrix &m) {
     return ::testing::AssertionFailure() << "Number of columns is different.";
   }
   //  - column names and types
-  for (size_t col_id = 0; col_id < tright.col_count(); ++col_id) {
+  for (ColumnID col_id{0}; col_id < tright.col_count(); ++col_id) {
     if (tleft.column_type(col_id) != tright.column_type(col_id) ||
         tleft.column_name(col_id) != tright.column_name(col_id)) {
       std::cout << "Column with ID " << col_id << " is different" << std::endl;
@@ -105,8 +105,10 @@ void BaseTest::_print_matrix(const BaseTest::Matrix &m) {
   }
 
   for (unsigned row = 0; row < left.size(); row++)
-    for (unsigned col = 0; col < left[row].size(); col++) {
-      if (tleft.column_type(col) == "float") {
+    for (ColumnID col{0}; col < left[row].size(); col++) {
+      if (is_null(left[row][col]) || is_null(right[row][col])) {
+        EXPECT_TRUE(is_null(left[row][col]) && is_null(right[row][col]));
+      } else if (tleft.column_type(col) == "float") {
         EXPECT_EQ(tright.column_type(col), "float");
         EXPECT_NEAR(type_cast<float>(left[row][col]), type_cast<float>(right[row][col]), 0.0001)
             << "Row/Col:" << row << "/" << col;
@@ -151,16 +153,34 @@ std::shared_ptr<Table> BaseTest::load_table(const std::string &file_name, size_t
   std::getline(infile, line);
   std::vector<std::string> col_types = _split<std::string>(line, '|');
 
+  auto col_nullable = std::vector<bool>{};
+  for (auto &type : col_types) {
+    auto type_nullable = _split<std::string>(type, '_');
+    type = type_nullable[0];
+
+    auto nullable = type_nullable.size() > 1 && type_nullable[1] == "null";
+    col_nullable.push_back(nullable);
+  }
+
   for (size_t i = 0; i < col_names.size(); i++) {
-    test_table->add_column(col_names[i], col_types[i]);
+    test_table->add_column(col_names[i], col_types[i], col_nullable[i]);
   }
 
   while (std::getline(infile, line)) {
     std::vector<AllTypeVariant> values = _split<AllTypeVariant>(line, '|');
 
+    for (auto column_id = 0u; column_id < values.size(); ++column_id) {
+      auto &value = values[column_id];
+      auto nullable = col_nullable[column_id];
+
+      if (nullable && (value == AllTypeVariant{"null"})) {
+        value = NULL_VALUE;
+      }
+    }
+
     test_table->append(values);
 
-    auto &chunk = test_table->get_chunk(test_table->chunk_count() - 1);
+    auto &chunk = test_table->get_chunk(static_cast<ChunkID>(test_table->chunk_count() - 1));
     auto mvcc_cols = chunk.mvcc_columns();
     mvcc_cols->begin_cids.back() = 0;
   }

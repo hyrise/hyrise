@@ -81,7 +81,7 @@ std::shared_ptr<const Table> ImportBinary::on_execute() {
   std::shared_ptr<Table> table;
   ChunkID chunk_count;
   std::tie(table, chunk_count) = _read_header(file);
-  for (ChunkID chunkID = 0; chunkID < chunk_count; ++chunkID) {
+  for (ChunkID chunk_id{0}; chunk_id < chunk_count; ++chunk_id) {
     table->add_chunk(_import_chunk(file, table));
   }
 
@@ -102,8 +102,8 @@ std::pair<std::shared_ptr<Table>, ChunkID> ImportBinary::_read_header(std::ifstr
   auto table = std::make_shared<Table>(chunk_size);
 
   // Add columns to table
-  for (ColumnID column_id = 0; column_id < column_count; ++column_id) {
-    table->add_column(column_names[column_id], data_types[column_id], false);
+  for (ColumnID column_id{0}; column_id < column_count; ++column_id) {
+    table->add_column_definition(column_names[column_id], data_types[column_id]);
   }
 
   return std::make_pair(table, chunk_count);
@@ -113,7 +113,7 @@ Chunk ImportBinary::_import_chunk(std::ifstream& file, std::shared_ptr<Table>& t
   const auto row_count = _read_value<ChunkOffset>(file);
   Chunk chunk;
 
-  for (ColumnID column_id = 0; column_id < table->col_count(); ++column_id) {
+  for (ColumnID column_id{0}; column_id < table->col_count(); ++column_id) {
     chunk.add_column(_import_column(file, row_count, table->column_type(column_id)));
   }
   return chunk;

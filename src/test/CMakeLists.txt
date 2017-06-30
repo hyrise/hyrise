@@ -40,6 +40,10 @@ set(
     operators/validate_test.cpp
     operators/validate_visibility_test.cpp
     scheduler/scheduler_test.cpp
+    sql/sql_basic_cache_test.cpp
+    sql/sql_parse_tree_cache_test.cpp
+    sql/sql_query_operator_test.cpp
+    sql/sql_select_test.cpp
     storage/adaptive_radix_tree_index_test.cpp
     storage/chunk_test.cpp
     storage/composite_group_key_index_test.cpp
@@ -55,6 +59,7 @@ set(
     storage/variable_length_key_store_test.cpp
     storage/variable_length_key_test.cpp
     tasks/chunk_compression_task_test.cpp
+    tasks/operator_task_test.cpp
     utils/cuckoo_hashtable_test.cpp
 )
 

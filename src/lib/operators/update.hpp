@@ -19,6 +19,8 @@ class Insert;
  * data that is used to update the rows specified by the first table.
  *
  * Assumption: The input has been validated before.
+ *
+ * Note: Update does not support null values at the moment
  */
 class Update : public AbstractReadWriteOperator {
  public:
@@ -26,9 +28,6 @@ class Update : public AbstractReadWriteOperator {
                   std::shared_ptr<AbstractOperator> update_values);
 
   ~Update();
-
-  void commit_records(const CommitID cid) override;
-  void rollback_records() override;
 
   const std::string name() const override;
   uint8_t num_in_tables() const override;

@@ -118,7 +118,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
   */
   template <typename T>
   struct PartitionedElement {
-    PartitionedElement() : row_id(RowID{0, 0}), partition_hash(0), value(T()) {}
+    PartitionedElement() : row_id(RowID{ChunkID{0}, 0}), partition_hash(0), value(T()) {}
     PartitionedElement(RowID row, Hash hash, T val) : row_id(row), partition_hash(hash), value(val) {}
 
     RowID row_id;
@@ -170,7 +170,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
 
       std::vector<std::shared_ptr<std::vector<ChunkOffset>>> all_chunk_offsets(referenced_table->chunk_count());
 
-      for (ChunkID chunk_id = 0; chunk_id < referenced_table->chunk_count(); ++chunk_id) {
+      for (ChunkID chunk_id{0}; chunk_id < referenced_table->chunk_count(); ++chunk_id) {
         all_chunk_offsets[chunk_id] = std::make_shared<std::vector<ChunkOffset>>();
       }
 
@@ -178,7 +178,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
         all_chunk_offsets[pos.chunk_id]->emplace_back(pos.chunk_offset);
       }
 
-      for (ChunkID chunk_id = 0; chunk_id < referenced_table->chunk_count(); ++chunk_id) {
+      for (ChunkID chunk_id{0}; chunk_id < referenced_table->chunk_count(); ++chunk_id) {
         if (all_chunk_offsets[chunk_id]->empty()) {
           continue;
         }
@@ -212,7 +212,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
   };
 
   template <typename T>
-  std::shared_ptr<Partition<T>> _materialize_input(const std::shared_ptr<const Table> in_table, size_t column_id,
+  std::shared_ptr<Partition<T>> _materialize_input(const std::shared_ptr<const Table> in_table, ColumnID column_id,
                                                    std::vector<std::shared_ptr<std::vector<size_t>>> &histograms) {
     // list of all elements that will be partitioned
     auto elements = std::make_shared<Partition<T>>();
@@ -232,7 +232,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
 
     // fill work queue
     size_t output_offset = 0;
-    for (ChunkID chunk_id = 0; chunk_id < in_table->chunk_count(); chunk_id++) {
+    for (ChunkID chunk_id{0}; chunk_id < in_table->chunk_count(); chunk_id++) {
       auto column = in_table->get_chunk(chunk_id).get_column(column_id);
 
       chunk_offsets[chunk_id] = output_offset;
@@ -246,7 +246,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
     std::vector<std::shared_ptr<AbstractTask>> jobs;
     jobs.reserve(in_table->chunk_count());
 
-    for (ChunkID chunk_id = 0; chunk_id < in_table->chunk_count(); ++chunk_id) {
+    for (ChunkID chunk_id{0}; chunk_id < in_table->chunk_count(); ++chunk_id) {
       jobs.emplace_back(std::make_shared<JobTask>([&, chunk_id]() {
         // Get information from work queue
         auto output_offset = chunk_offsets[chunk_id];
@@ -326,7 +326,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
     radix_output.partition_offsets.resize(num_partitions + 1);
 
     // use histograms to calculate partition offsets
-    for (ChunkID chunk_id = 0; chunk_id < offsets.size(); ++chunk_id) {
+    for (ChunkID chunk_id{0}; chunk_id < offsets.size(); ++chunk_id) {
       size_t local_sum = 0;
       auto &histogram = static_cast<std::vector<size_t> &>(*histograms[chunk_id]);
 
@@ -354,18 +354,18 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
     std::vector<std::shared_ptr<AbstractTask>> jobs;
     jobs.reserve(offsets.size());
 
-    for (ChunkID chunk_id = 0; chunk_id < offsets.size(); ++chunk_id) {
+    for (ChunkID chunk_id{0}; chunk_id < offsets.size(); ++chunk_id) {
       jobs.emplace_back(std::make_shared<JobTask>([&, chunk_id] {
         // calculate output offsets for each partition
         auto output_offsets = std::vector<size_t>(num_partitions, 0);
 
         // add up the output offsets for chunks before this one
-        for (size_t i = 0; i < chunk_id; ++i) {
+        for (ChunkID i{0}; i < chunk_id; ++i) {
           for (size_t j = 0; j < num_partitions; ++j) {
             output_offsets[j] += histograms[i]->operator[](j);
           }
         }
-        for (size_t i = chunk_id; i < offsets.size(); ++i) {
+        for (auto i = chunk_id; i < offsets.size(); ++i) {
           for (size_t j = 1; j < num_partitions; ++j) {
             output_offsets[j] += histograms[i]->operator[](j - 1);
           }
@@ -482,7 +482,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
               // We assume that the relations have been swapped previously,
               // so that the outer relation is the probing relation.
             } else if (_mode == Left || _mode == Right) {
-              pos_list_left_local->emplace_back(RowID{0, INVALID_CHUNK_OFFSET});
+              pos_list_left_local->emplace_back(RowID{ChunkID{0}, INVALID_CHUNK_OFFSET});
               pos_list_right_local->emplace_back(row.row_id);
             }
           }
@@ -506,7 +506,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
 
           for (size_t i = partition_begin; i < partition_end; ++i) {
             auto &row = partition[i];
-            pos_list_left_local->emplace_back(RowID{0, INVALID_CHUNK_OFFSET});
+            pos_list_left_local->emplace_back(RowID{ChunkID{0}, INVALID_CHUNK_OFFSET});
             pos_list_right_local->emplace_back(row.row_id);
           }
           if (!pos_list_left_local->empty()) {
@@ -526,8 +526,10 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
   */
   static void _copy_table_metadata(const std::shared_ptr<const Table> in_table, const std::shared_ptr<Table> out_table,
                                    std::string prefix) {
-    for (size_t column_id = 0; column_id < in_table->col_count(); ++column_id) {
-      out_table->add_column(prefix + in_table->column_name(column_id), in_table->column_type(column_id), false);
+    for (ColumnID column_id{0}; column_id < in_table->col_count(); ++column_id) {
+      // TODO(anyone): Refine since not all column are nullable
+      out_table->add_column_definition(prefix + in_table->column_name(column_id), in_table->column_type(column_id),
+                                       true);
     }
   }
 
@@ -563,13 +565,13 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
     right_chunk_offsets->resize(right_chunk_count);
 
     size_t offset_left = 0;
-    for (size_t i = 0; i < left_chunk_count; ++i) {
+    for (ChunkID i{0}; i < left_chunk_count; ++i) {
       left_chunk_offsets->operator[](i) = offset_left;
       offset_left += _left_in_table->get_chunk(i).size();
     }
 
     size_t offset_right = 0;
-    for (size_t i = 0; i < right_chunk_count; ++i) {
+    for (ChunkID i{0}; i < right_chunk_count; ++i) {
       right_chunk_offsets->operator[](i) = offset_right;
       offset_right += _right_in_table->get_chunk(i).size();
     }
@@ -628,9 +630,13 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
     But we expect that it is not possible to have both ReferenceColumns and Value/DictionaryColumn in one table.
     */
     auto ref_col_left =
-        std::dynamic_pointer_cast<ReferenceColumn>(_left_in_table->get_chunk(0).get_column(0)) ? true : false;
+        std::dynamic_pointer_cast<ReferenceColumn>(_left_in_table->get_chunk(ChunkID{0}).get_column(ColumnID{0}))
+            ? true
+            : false;
     auto ref_col_right =
-        std::dynamic_pointer_cast<ReferenceColumn>(_right_in_table->get_chunk(0).get_column(0)) ? true : false;
+        std::dynamic_pointer_cast<ReferenceColumn>(_right_in_table->get_chunk(ChunkID{0}).get_column(ColumnID{0}))
+            ? true
+            : false;
 
     for (size_t i = 0; i < left_pos_lists.size(); i++) {
       auto &left = left_pos_lists[i];
@@ -661,15 +667,16 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
   static void write_output_chunks(Chunk &output_chunk, const std::shared_ptr<const Table> input_table,
                                   std::shared_ptr<PosList> pos_list, bool is_ref_column) {
     // Add columns from input table to output chunk
-    for (size_t column_id = 0; column_id < input_table->col_count(); ++column_id) {
+    for (ColumnID column_id{0}; column_id < input_table->col_count(); ++column_id) {
       std::shared_ptr<BaseColumn> column;
 
       if (is_ref_column) {
-        auto ref_col = std::dynamic_pointer_cast<ReferenceColumn>(input_table->get_chunk(0).get_column(column_id));
+        auto ref_col =
+            std::dynamic_pointer_cast<ReferenceColumn>(input_table->get_chunk(ChunkID{0}).get_column(column_id));
 
         // Get all the input pos lists so that we only have to pointer cast the columns once
         auto input_pos_lists = std::vector<std::shared_ptr<const PosList>>();
-        for (ChunkID chunk_id = 0; chunk_id < input_table->chunk_count(); chunk_id++) {
+        for (ChunkID chunk_id{0}; chunk_id < input_table->chunk_count(); chunk_id++) {
           // This works because we assume that the columns have to be either all ReferenceColumns or none.
           auto ref_column =
               std::dynamic_pointer_cast<ReferenceColumn>(input_table->get_chunk(chunk_id).get_column(column_id));

@@ -106,8 +106,6 @@ set(
     operators/insert.hpp
     operators/join_hash.cpp
     operators/join_hash.hpp
-    operators/sort_merge_join.cpp
-    operators/sort_merge_join.hpp
     operators/join_nested_loop_a.cpp
     operators/join_nested_loop_a.hpp
     operators/join_nested_loop_b.cpp
@@ -137,6 +135,17 @@ set(
     operators/validate.cpp
     operators/validate.hpp
     resolve_type.hpp
+    sql/lru_cache.hpp
+    sql/sql_parse_tree_cache.hpp
+    sql/sql_parse_tree_cache.cpp
+    sql/sql_query_operator.hpp
+    sql/sql_query_operator.cpp
+    sql/sql_query_plan.hpp
+    sql/sql_query_plan.cpp
+    sql/sql_query_translator.hpp
+    sql/sql_query_translator.cpp
+    sql/sql_result_operator.hpp
+    sql/sql_result_operator.cpp
     scheduler/abstract_scheduler.cpp
     scheduler/abstract_scheduler.hpp
     scheduler/abstract_task.cpp
@@ -214,8 +223,9 @@ set(
     grpc
     pthread
     z
-    tbb
     sqlparser
+
+    ${TBB_LIBRARY}
 )
 
 if(${NUMA_FOUND})

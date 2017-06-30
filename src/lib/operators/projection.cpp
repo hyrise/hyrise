@@ -38,10 +38,10 @@ std::shared_ptr<const Table> Projection::on_execute() {
 
   // Prepare terms and output table for each column to project
   for (auto& definition : _projection_definitions) {
-    output->add_column(std::get<2>(definition), std::get<1>(definition), false);
+    output->add_column_definition(std::get<2>(definition), std::get<1>(definition));
   }
 
-  for (ChunkID chunk_id = 0; chunk_id < input_table_left()->chunk_count(); ++chunk_id) {
+  for (ChunkID chunk_id{0}; chunk_id < input_table_left()->chunk_count(); ++chunk_id) {
     // fill the new table
     Chunk chunk_out;
     // if there is mvcc information, we have to link it

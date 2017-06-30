@@ -59,7 +59,7 @@ std::shared_ptr<const Table> Aggregate::on_execute() {
   std::vector<std::shared_ptr<AbstractTask>> jobs;
   jobs.reserve(input_table->chunk_count());
 
-  for (ChunkID chunk_id = 0; chunk_id < input_table->chunk_count(); ++chunk_id) {
+  for (ChunkID chunk_id{0}; chunk_id < input_table->chunk_count(); ++chunk_id) {
     jobs.emplace_back(std::make_shared<JobTask>([&, chunk_id, groupby_column_ids]() {
       const Chunk &chunk_in = input_table->get_chunk(chunk_id);
 
@@ -88,7 +88,7 @@ std::shared_ptr<const Table> Aggregate::on_execute() {
   _contexts_per_column = std::vector<std::shared_ptr<ColumnVisitableContext>>(_aggregates.size());
 
   // pre-insert empty maps for each aggregate column
-  for (ColumnID column_index = 0; column_index < _contexts_per_column.size(); ++column_index) {
+  for (ColumnID column_index{0}; column_index < _contexts_per_column.size(); ++column_index) {
     auto &type_string = input_table->column_type(_aggregate_column_ids[column_index]);
 
     call_functor_by_column_type<AggregateContextCreator>(type_string, _contexts_per_column, column_index,
@@ -109,7 +109,7 @@ std::shared_ptr<const Table> Aggregate::on_execute() {
     _contexts_per_column.push_back(ctx);
   }
 
-  for (ChunkID chunk_id = 0; chunk_id < input_table->chunk_count(); ++chunk_id) {
+  for (ChunkID chunk_id{0}; chunk_id < input_table->chunk_count(); ++chunk_id) {
     const Chunk &chunk_in = input_table->get_chunk(chunk_id);
 
     auto hash_keys = keys_per_chunk[chunk_id];
@@ -145,7 +145,7 @@ std::shared_ptr<const Table> Aggregate::on_execute() {
         }
       }
     } else {
-      ColumnID column_index = 0;
+      ColumnID column_index{0};
       for (auto column_id : _aggregate_column_ids) {
         auto base_column = chunk_in.get_column(column_id);
         auto type_string = input_table->column_type(column_id);
@@ -171,9 +171,9 @@ std::shared_ptr<const Table> Aggregate::on_execute() {
 
   if (_groupby_columns.size()) {
     // add group by columns
-    for (ColumnID column_index = 0; column_index < _groupby_columns.size(); ++column_index) {
-      _output->add_column(_groupby_columns[column_index], input_table->column_type(groupby_column_ids[column_index]),
-                          false);
+    for (ColumnID column_index{0}; column_index < _groupby_columns.size(); ++column_index) {
+      _output->add_column_definition(_groupby_columns[column_index],
+                                     input_table->column_type(groupby_column_ids[column_index]));
 
       _group_columns.emplace_back(make_shared_by_column_type<BaseColumn, ValueColumn>(
           input_table->column_type(groupby_column_ids[column_index])));
@@ -202,7 +202,7 @@ std::shared_ptr<const Table> Aggregate::on_execute() {
   /*
   Write the aggregated columns to the output
   */
-  ColumnID column_index = 0;
+  ColumnID column_index{0};
   for (auto aggregate : _aggregates) {
     auto column_id = _aggregate_column_ids[column_index];
     auto &type_string = input_table_left()->column_type(column_id);
@@ -232,7 +232,7 @@ void Aggregate::write_aggregate_output(ColumnID column_index) {
 
   // generate the name, e.g. MAX(column_a)
   std::vector<std::string> names{"MIN", "MAX", "SUM", "AVG", "COUNT"};
-  _output->add_column(names[function] + "(" + column_name + ")", aggregate_type_name, false);
+  _output->add_column_definition(names[function] + "(" + column_name + ")", aggregate_type_name);
 
   auto col = std::make_shared<ValueColumn<decltype(aggregate_type)>>();
   auto &values = col->values();
