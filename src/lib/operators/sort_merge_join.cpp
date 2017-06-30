@@ -107,9 +107,8 @@ void SortMergeJoin::SortMergeJoinImpl<T>::sort_table(std::shared_ptr<SortedTable
     size += input->chunk_size();
     chunk_ids.push_back(chunk_id);
     if (size > partitionSizeThreshold || chunk_id == input->chunk_count() - 1) {
-      auto self = this;
-      jobs.push_back(std::make_shared<JobTask>([self, chunk_ids, input, column_name, left] {
-        self->sort_partition(chunk_ids, input, column_name, left);
+      jobs.push_back(std::make_shared<JobTask>([this, chunk_ids, input, column_name, left] {
+        this->sort_partition(chunk_ids, input, column_name, left);
       }));
       size = 0;
       chunk_ids.clear();
@@ -637,17 +636,17 @@ void SortMergeJoin::SortMergeJoinImpl<T>::perform_join() {
   std::vector<PosList> pos_lists_left(_sort_merge_join._partition_count);
   std::vector<PosList> pos_lists_right(_sort_merge_join._partition_count);
 
-  std::vector<std::thread> threads;
+  std::vector<std::shared_ptr<AbstractTask>> jobs;
 
   // Parallel join for each partition
   for (uint32_t partition_number = 0; partition_number < _sort_merge_join._partition_count; ++partition_number) {
-    threads.push_back(std::thread(&SortMergeJoin::SortMergeJoinImpl<T>::partition_join, *this, partition_number,
-                                  std::ref(pos_lists_left), std::ref(pos_lists_right)));
+    jobs.push_back(std::make_shared<JobTask>([this, partition_number, &pos_lists_left, &pos_lists_right]{
+      this->partition_join(partition_number, std::ref(pos_lists_left), std::ref(pos_lists_right));
+    }));
+    jobs.back()->schedule();
   }
 
-  for (auto& thread : threads) {
-    thread.join();
-  }
+  CurrentScheduler::wait_for_tasks(jobs);
 
   // Merge pos_lists_left of partitions together
   for (auto& p_list : pos_lists_left) {
