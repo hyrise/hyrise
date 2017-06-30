@@ -84,13 +84,12 @@ class SortMergeJoin : public AbstractJoinOperator {
     void value_based_partitioning();
 
     template <typename T2>
-    typename std::enable_if<std::is_arithmetic<T2>::value, size_t>::type get_radix(T2 value, size_t radix_bits) {
-      auto result = reinterpret_cast<size_t*>(&value);
-      return *result & radix_bits;
+    typename std::enable_if<std::is_arithmetic<T2>::value, uint32_t>::type get_radix(T2 value, uint32_t radix_bits) {
+      return static_cast<uint32_t>(value) & radix_bits;
     }
     template <typename T2>
-    typename std::enable_if<!std::is_arithmetic<T2>::value, size_t>::type get_radix(T2 value, size_t radix_bits) {
-      auto result = reinterpret_cast<const size_t*>(value.c_str());
+    typename std::enable_if<!std::is_arithmetic<T2>::value, uint32_t>::type get_radix(T2 value, uint32_t radix_bits) {
+      auto result = reinterpret_cast<const uint32_t*>(value.c_str());
       return *result & radix_bits;
     }
 
