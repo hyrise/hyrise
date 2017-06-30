@@ -348,6 +348,9 @@ void SortMergeJoin::SortMergeJoinImpl<T>::value_based_partitioning() {
 ** End of Non-Equi Join methods
 */
 
+/*
+** Performs the join on a single partition.
+*/
 template <typename T>
 void SortMergeJoin::SortMergeJoinImpl<T>::partition_join(uint32_t partition_number,
                                                          std::vector<PosList>& pos_lists_left,
