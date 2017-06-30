@@ -100,23 +100,24 @@ void SortMergeJoin::SortMergeJoinImpl<T>::sort_table(std::shared_ptr<SortedTable
 
   const uint32_t partitionSizeThreshold =
       100000;  // can be extended to find that value dynamically later on (depending on hardware etc.)
-  std::vector<std::thread> threads;
+  std::vector<std::shared_ptr<AbstractTask>> jobs;
   uint32_t size = 0;
   std::vector<ChunkID> chunk_ids;
   for (ChunkID chunk_id = 0; chunk_id < input->chunk_count(); ++chunk_id) {
     size += input->chunk_size();
     chunk_ids.push_back(chunk_id);
     if (size > partitionSizeThreshold || chunk_id == input->chunk_count() - 1) {
-      threads.push_back(std::thread(&SortMergeJoin::SortMergeJoinImpl<T>::sort_partition, *this, chunk_ids, input,
-                                    column_name, left));
+      auto self = this;
+      jobs.push_back(std::make_shared<JobTask>([self, chunk_ids, input, column_name, left] {
+        self->sort_partition(chunk_ids, input, column_name, left);
+      }));
       size = 0;
       chunk_ids.clear();
+      jobs.back()->schedule();
     }
   }
 
-  for (auto& thread : threads) {
-    thread.join();
-  }
+  CurrentScheduler::wait_for_tasks(jobs);
 
   if (_sort_merge_join._partition_count == 1) {
     std::vector<std::pair<T, RowID>> partition_values;
