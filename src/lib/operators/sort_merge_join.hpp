@@ -55,8 +55,8 @@ class SortMergeJoin : public AbstractJoinOperator {
       SortedChunk() {}
 
       std::vector<std::pair<T, RowID>> values;
-      std::map<uint64_t, uint32_t> histogram;
-      std::map<uint64_t, uint32_t> prefix;
+      std::map<uint32_t, uint32_t> histogram;
+      std::map<uint32_t, uint32_t> prefix;
 
       std::map<T, uint32_t> histogram_v;
       std::map<T, uint32_t> prefix_v;
@@ -67,7 +67,7 @@ class SortMergeJoin : public AbstractJoinOperator {
       SortedTable() {}
 
       std::vector<SortedChunk> partition;
-      std::map<uint64_t, uint32_t> histogram;
+      std::map<uint32_t, uint32_t> histogram;
 
       std::map<T, uint32_t> histogram_v;
     };
