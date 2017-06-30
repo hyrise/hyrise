@@ -352,14 +352,14 @@ class JoinNestedLoopA::JoinNestedLoopAImpl : public AbstractJoinOperatorImpl {
     Left.Right.Right.ColumnA
     */
     for (ColumnID column_id{0}; column_id < _left_in_table->col_count(); ++column_id) {
-      _output_table->add_column(_prefix_left + _left_in_table->column_name(column_id),
-                                _left_in_table->column_type(column_id), false);
+      _output_table->add_column_definition(_prefix_left + _left_in_table->column_name(column_id),
+                                           _left_in_table->column_type(column_id), true);
     }
 
     // Preparing output table by adding columns from right table
     for (ColumnID column_id{0}; column_id < _right_in_table->col_count(); ++column_id) {
-      _output_table->add_column(_prefix_right + _right_in_table->column_name(column_id),
-                                _right_in_table->column_type(column_id), false);
+      _output_table->add_column_definition(_prefix_right + _right_in_table->column_name(column_id),
+                                           _right_in_table->column_type(column_id), true);
     }
 
     /*
