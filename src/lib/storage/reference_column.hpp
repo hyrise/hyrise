@@ -1,13 +1,19 @@
 #pragma once
 
 #include <iostream>
+#include <map>
 #include <memory>
 #include <string>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 
 #include "base_column.hpp"
+#include "dictionary_column.hpp"
 #include "table.hpp"
+#include "types.hpp"
+#include "utils/assert.hpp"
+#include "value_column.hpp"
 
 namespace opossum {
 
@@ -33,6 +39,47 @@ class ReferenceColumn : public BaseColumn {
 
   void append(const AllTypeVariant &) override;
 
+  // return generated vector of all values
+  template <typename T>
+  const tbb::concurrent_vector<T> materialize_values() const {
+    tbb::concurrent_vector<T> values;
+    values.reserve(_pos_list->size());
+
+    std::map<ChunkID, std::shared_ptr<ValueColumn<T>>> value_columns;
+    std::map<ChunkID, std::shared_ptr<DictionaryColumn<T>>> dict_columns;
+
+    for (const RowID &row : *_pos_list) {
+      auto search = value_columns.find(row.chunk_id);
+      if (search != value_columns.end()) {
+        values.push_back(search->second->get(row.chunk_offset));
+        continue;
+      }
+      auto search_dict = dict_columns.find(row.chunk_id);
+      if (search_dict != dict_columns.end()) {
+        values.push_back(search_dict->second->get(row.chunk_offset));
+        continue;
+      }
+
+      auto &chunk = _referenced_table->get_chunk(row.chunk_id);
+      std::shared_ptr<BaseColumn> column = chunk.get_column(_referenced_column_id);
+
+      if (auto value_column = std::dynamic_pointer_cast<ValueColumn<T>>(column)) {
+        value_columns[row.chunk_id] = value_column;
+        values.push_back(value_column->get(row.chunk_offset));
+        continue;
+      }
+
+      if (auto dict_column = std::dynamic_pointer_cast<DictionaryColumn<T>>(column)) {
+        dict_columns[row.chunk_id] = dict_column;
+        values.push_back(dict_column->get(row.chunk_offset));
+        continue;
+      }
+      Fail("column is no dictonary or value column");
+    }
+
+    return values;
+  }
+
   size_t size() const override;
 
   const std::shared_ptr<const PosList> pos_list() const;
@@ -54,29 +101,34 @@ class ReferenceColumn : public BaseColumn {
     into a vector for each chunk. A potential optimization would be to only do this if the pos_list is really
     unsorted.
     */
-    std::vector<std::shared_ptr<std::vector<ChunkOffset>>> all_chunk_offsets(_referenced_table->chunk_count());
 
-    for (ChunkID chunk_id = 0; chunk_id < _referenced_table->chunk_count(); ++chunk_id) {
-      all_chunk_offsets[chunk_id] = std::make_shared<std::vector<ChunkOffset>>();
-    }
+    std::unordered_map<ChunkID, std::shared_ptr<std::vector<ChunkOffset>>> all_chunk_offsets;
 
     for (auto pos : *(_pos_list)) {
       auto chunk_info = _referenced_table->locate_row(pos);
-      all_chunk_offsets[chunk_info.first]->emplace_back(chunk_info.second);
+
+      auto iter = all_chunk_offsets.find(chunk_info.first);
+      if (iter == all_chunk_offsets.end())
+        iter = all_chunk_offsets.emplace(chunk_info.first, std::make_shared<std::vector<ChunkOffset>>()).first;
+
+      iter->second->emplace_back(chunk_info.second);
     }
 
-    for (ChunkID chunk_id = 0; chunk_id < _referenced_table->chunk_count(); ++chunk_id) {
-      if (all_chunk_offsets[chunk_id]->empty()) {
-        continue;
-      }
+    for (auto &pair : all_chunk_offsets) {
+      auto &chunk_id = pair.first;
+      auto &chunk_offsets = pair.second;
+
       auto &chunk = _referenced_table->get_chunk(chunk_id);
       auto referenced_column = chunk.get_column(_referenced_column_id);
 
-      auto c = std::make_shared<ContextClass>(referenced_column, _referenced_table, ctx, chunk_id,
-                                              all_chunk_offsets[chunk_id]);
+      auto c = std::make_shared<ContextClass>(referenced_column, _referenced_table, ctx, chunk_id, chunk_offsets);
       referenced_column->visit(visitable, c);
     }
   }
+
+  // copies one of its own values to a different ValueColumn - mainly used for materialization
+  // we cannot always use the materialize method below because sort results might come from different BaseColumns
+  void copy_value_to_value_column(BaseColumn &, ChunkOffset) const override;
 };
 
 }  // namespace opossum

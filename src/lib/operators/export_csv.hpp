@@ -4,8 +4,13 @@
 #include <string>
 
 #include "abstract_read_only_operator.hpp"
+#include "import_export/csv_writer.hpp"
+#include "storage/column_visitable.hpp"
 
 namespace opossum {
+
+class ReferenceColumn;
+
 /*
  * With the ExportCsv operator, selected tables of a database
  * can be exported to csv files. A valid input can herefore be
@@ -23,12 +28,9 @@ class ExportCsv : public AbstractReadOnlyOperator {
    *                    whose output is used as output for the table. If exporting
    *                    a predefined table is wished, it must first be retrieved with
    *                    the gettable operator.
-   * @param directory   The directory where the files will be created.
-   * @param filename    The name assigned to the table for this export. This has no other effect
-   *                    than to define the file names: <filename>.csv and <filename>.meta.csv
+   * @param filename    Location and name of the output file. Additionally a file called <filename>.meta is created.
    */
-  explicit ExportCsv(const std::shared_ptr<const AbstractOperator> in, const std::string& directory,
-                     const std::string& filename);
+  explicit ExportCsv(const std::shared_ptr<const AbstractOperator> in, const std::string& filename);
 
   // cannot move-assign because of const members
   ExportCsv& operator=(ExportCsv&&) = delete;
@@ -68,10 +70,10 @@ class ExportCsv : public AbstractReadOnlyOperator {
    *
    *  PropertyType  | Key | Value
    *  ---------------------------
-   *  Chunk Size    |     | 100
-   *  Column Type   | a   | int
-   *  Column Type   | b   | string
-   *  Column Type   | c   | float
+   *  ChunkSize     |     | 100
+   *  ColumnType    | a   | int
+   *  ColumnType    | b   | string
+   *  ColumnType    | c   | float
    *
    *  Returns the input table
    */
@@ -92,13 +94,20 @@ class ExportCsv : public AbstractReadOnlyOperator {
    */
   uint8_t num_out_tables() const override;
 
- protected:
-  // Path to the directory containing the csv file
-  const std::string _directory;
-  // Name of the csv file without file extension
+ private:
+  // Name of the output file
   const std::string _filename;
 
   static void _generate_meta_info_file(const std::shared_ptr<const Table>& table, const std::string& meta_file);
   static void _generate_content_file(const std::shared_ptr<const Table>& table, const std::string& csv_file);
+
+  template <typename T>
+  class ExportCsvVisitor;
+
+  struct ExportCsvContext : ColumnVisitableContext {
+    explicit ExportCsvContext(CsvWriter& csvWriter) : csvWriter(csvWriter) {}
+    CsvWriter& csvWriter;
+    ChunkOffset currentRow;
+  };
 };
 }  // namespace opossum

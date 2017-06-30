@@ -2,13 +2,16 @@
 #include <iterator>
 #include <limits>
 #include <memory>
+#include <mutex>
 #include <string>
 #include <utility>
 #include <vector>
 
+#include "base_column.hpp"
 #include "chunk.hpp"
 #include "index/group_key/group_key_index.hpp"
 #include "reference_column.hpp"
+#include "utils/assert.hpp"
 #include "value_column.hpp"
 
 namespace opossum {
@@ -23,12 +26,16 @@ Chunk::Chunk(const bool has_mvcc_columns) {
 
 void Chunk::add_column(std::shared_ptr<BaseColumn> column) {
   // The added column must have the same size as the chunk.
-  if (IS_DEBUG && _columns.size() > 0 && size() != column->size()) {
-    throw std::runtime_error("Trying to add column with mismatching size to chunk");
-  }
+  DebugAssert((_columns.size() <= 0 || size() == column->size()),
+              "Trying to add column with mismatching size to chunk");
+
   if (_columns.size() == 0 && has_mvcc_columns()) grow_mvcc_column_size_by(column->size(), 0);
 
-  _columns.emplace_back(column);
+  _columns.push_back(column);
+}
+
+void Chunk::replace_column(size_t column_id, std::shared_ptr<BaseColumn> column) {
+  std::atomic_store(&_columns.at(column_id), column);
 }
 
 void Chunk::append(std::vector<AllTypeVariant> values) {
@@ -36,10 +43,8 @@ void Chunk::append(std::vector<AllTypeVariant> values) {
   if (has_mvcc_columns()) grow_mvcc_column_size_by(1u, Chunk::MAX_COMMIT_ID);
 
   // The added values, i.e., a new row, must have the same number of attribues as the table.
-  if (IS_DEBUG && _columns.size() != values.size()) {
-    throw std::runtime_error("append: number of columns (" + to_string(_columns.size()) +
-                             ") does not match value list (" + to_string(values.size()) + ")");
-  }
+  DebugAssert((_columns.size() == values.size()), ("append: number of columns (" + to_string(_columns.size()) +
+                                                   ") does not match value list (" + to_string(values.size()) + ")"));
 
   auto column_it = _columns.cbegin();
   auto value_it = values.begin();
@@ -48,68 +53,56 @@ void Chunk::append(std::vector<AllTypeVariant> values) {
   }
 }
 
-std::shared_ptr<BaseColumn> Chunk::get_column(ColumnID column_id) const { return _columns.at(column_id); }
+std::shared_ptr<BaseColumn> Chunk::get_column(ColumnID column_id) const {
+  return std::atomic_load(&_columns.at(column_id));
+}
 
 uint16_t Chunk::col_count() const { return _columns.size(); }
 
 uint32_t Chunk::size() const {
   if (_columns.empty()) return 0;
-  return _columns.front()->size();
+  auto first_column = get_column(0u);
+  return first_column->size();
 }
 
 void Chunk::grow_mvcc_column_size_by(size_t delta, CommitID begin_cid) {
   _mvcc_columns->tids.grow_to_at_least(size() + delta);
   _mvcc_columns->begin_cids.grow_to_at_least(size() + delta, begin_cid);
-  _mvcc_columns->end_cids.grow_to_at_least(size() + delta, std::numeric_limits<uint32_t>::max());
+  _mvcc_columns->end_cids.grow_to_at_least(size() + delta, MAX_COMMIT_ID);
+}
+
+void Chunk::use_mvcc_columns_from(const Chunk& chunk) {
+  _mvcc_columns = std::make_unique<MvccColumns>();
+
+  auto mvcc_columns = chunk.mvcc_columns();
+  _mvcc_columns->begin_cids = mvcc_columns->begin_cids;
+  _mvcc_columns->end_cids = mvcc_columns->end_cids;
+  _mvcc_columns->tids.grow_by(_mvcc_columns->tids.size());
 }
 
 bool Chunk::has_mvcc_columns() const { return _mvcc_columns != nullptr; }
 
-Chunk::MvccColumns& Chunk::mvcc_columns() {
-#ifdef IS_DEBUG
-  if (!has_mvcc_columns()) {
-    std::logic_error("Chunk does not have mvcc columns");
-  }
-#endif
+SharedScopedLockingPtr<Chunk::MvccColumns> Chunk::mvcc_columns() {
+  DebugAssert((has_mvcc_columns()), "Chunk does not have mvcc columns");
 
-  return *_mvcc_columns;
+  return {*_mvcc_columns, _mvcc_columns->_mutex};
 }
 
-const Chunk::MvccColumns& Chunk::mvcc_columns() const {
-#ifdef IS_DEBUG
-  if (!has_mvcc_columns()) {
-    std::logic_error("Chunk does not have mvcc columns");
-  }
-#endif
+SharedScopedLockingPtr<const Chunk::MvccColumns> Chunk::mvcc_columns() const {
+  DebugAssert((has_mvcc_columns()), "Chunk does not have mvcc columns");
 
-  return *_mvcc_columns;
+  return {*_mvcc_columns, _mvcc_columns->_mutex};
 }
 
 void Chunk::shrink_mvcc_columns() {
-#ifdef IS_DEBUG
-  if (!has_mvcc_columns()) {
-    std::logic_error("Chunk does not have mvcc columns.");
-  }
-#endif
+  DebugAssert((has_mvcc_columns()), "Chunk does not have mvcc columns");
 
-  // the mvcc columns need to be replaced because
-  // std::atomic<> is neither copyable nor moveable
-  auto new_columns = std::make_unique<MvccColumns>();
+  std::unique_lock<std::shared_mutex> lock{_mvcc_columns->_mutex};
 
-  // since this method should only be called if nobody else
-  // is accessing the chunk, all tids must be 0 and don't need to be copied.
-  new_columns->tids.grow_by(_mvcc_columns->tids.size());
-
+  _mvcc_columns->tids.shrink_to_fit();
   _mvcc_columns->begin_cids.shrink_to_fit();
   _mvcc_columns->end_cids.shrink_to_fit();
-
-  new_columns->begin_cids = std::move(_mvcc_columns->begin_cids);
-  new_columns->end_cids = std::move(_mvcc_columns->end_cids);
-
-  _mvcc_columns = std::move(new_columns);
 }
-
-void Chunk::move_mvcc_columns_from(Chunk& chunk) { _mvcc_columns = std::move(chunk._mvcc_columns); }
 
 std::vector<std::shared_ptr<BaseIndex>> Chunk::get_indices_for(
     const std::vector<std::shared_ptr<BaseColumn>>& columns) const {
@@ -118,6 +111,7 @@ std::vector<std::shared_ptr<BaseIndex>> Chunk::get_indices_for(
                [&columns](const std::shared_ptr<BaseIndex>& index) { return index->is_index_for(columns); });
   return result;
 }
+
 bool Chunk::references_only_one_table() const {
   if (this->col_count() == 0) return false;
 

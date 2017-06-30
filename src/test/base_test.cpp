@@ -5,10 +5,13 @@
 #include <memory>
 #include <sstream>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "../lib/concurrency/transaction_manager.hpp"
 #include "../lib/storage/storage_manager.hpp"
+#include "../lib/storage/table.hpp"
+#include "../lib/type_cast.hpp"
 
 namespace opossum {
 
@@ -105,12 +108,12 @@ void BaseTest::_print_matrix(const BaseTest::Matrix &m) {
     for (unsigned col = 0; col < left[row].size(); col++) {
       if (tleft.column_type(col) == "float") {
         EXPECT_EQ(tright.column_type(col), "float");
-        EXPECT_NEAR(type_cast<float>(left[row][col]), type_cast<float>(right[row][col]), 0.0001) << "Row/Col:" << row
-                                                                                                 << "/" << col;
+        EXPECT_NEAR(type_cast<float>(left[row][col]), type_cast<float>(right[row][col]), 0.0001)
+            << "Row/Col:" << row << "/" << col;
       } else if (tleft.column_type(col) == "double") {
         EXPECT_EQ(tright.column_type(col), "double");
-        EXPECT_NEAR(type_cast<double>(left[row][col]), type_cast<double>(right[row][col]), 0.0001) << "Row/Col:" << row
-                                                                                                   << "/" << col;
+        EXPECT_NEAR(type_cast<double>(left[row][col]), type_cast<double>(right[row][col]), 0.0001)
+            << "Row/Col:" << row << "/" << col;
       } else {
         EXPECT_EQ(left[row][col], right[row][col]) << "Row:" << row + 1 << " Col:" << col + 1;
       }
@@ -136,6 +139,11 @@ std::shared_ptr<Table> BaseTest::load_table(const std::string &file_name, size_t
   std::shared_ptr<Table> test_table = std::make_shared<Table>(chunk_size);
 
   std::ifstream infile(file_name);
+
+  if (!infile.is_open()) {
+    throw std::runtime_error("load_table: Could not find file " + file_name);
+  }
+
   std::string line;
 
   std::getline(infile, line);
@@ -153,8 +161,8 @@ std::shared_ptr<Table> BaseTest::load_table(const std::string &file_name, size_t
     test_table->append(values);
 
     auto &chunk = test_table->get_chunk(test_table->chunk_count() - 1);
-    auto &mvcc_cols = chunk.mvcc_columns();
-    mvcc_cols.begin_cids.back() = 0;
+    auto mvcc_cols = chunk.mvcc_columns();
+    mvcc_cols->begin_cids.back() = 0;
   }
   return test_table;
 }

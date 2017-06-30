@@ -4,6 +4,8 @@
 #include <exception>
 #include <ostream>
 
+#include "utils/assert.hpp"
+
 namespace opossum {
 
 // Const VariableLengthKeyProxy
@@ -38,10 +40,9 @@ VariableLengthKeyProxy::VariableLengthKeyProxy(VariableLengthKeyWord *data, Comp
     : VariableLengthKeyConstProxy(data, bytes_per_key) {}
 
 VariableLengthKeyProxy &VariableLengthKeyProxy::operator=(const VariableLengthKeyBase &rhs) {
-  if (_impl._size != rhs._size)
-    throw std::runtime_error(
-        "Copying the data of a VariableLengthKey to a VariableLenghtKeyProxy requires that both have the same key "
-        "size.");
+  DebugAssert(
+      (_impl._size == rhs._size),
+      "Copying the data of a VariableLengthKey to a VariableLenghtKeyProxy requires that both have the same key size.");
 
   std::copy(rhs._data, rhs._data + _impl._size, _impl._data);
   return *this;

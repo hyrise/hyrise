@@ -4,8 +4,8 @@
 #include <string>
 #include <vector>
 
-#include "../common.hpp"
-#include "../storage/table.hpp"
+#include "common.hpp"
+#include "storage/table.hpp"
 
 namespace opossum {
 
@@ -22,6 +22,17 @@ class TransactionContext;
 // succeed if execute was called before. Otherwise, a nullptr or an empty table could be returned.
 //
 // Operators shall not be executed twice.
+//
+// In order to use new operators in server mode, the following steps have to be performed:
+//   1. Add a new Operator definition in Protobuf file: `src/lib/network/protos/opossum.proto` and add it to the
+//      enumeration in `OperatorVariant` in this file
+//   2. The header- and cpp-files for protocol buffer operators will be generated/updated when the opossum lib is built
+//   3. Add a method to class OperatorTranslator in `src/lib/network/operator_translator.cpp` and
+//      `src/lib/network/operator_translator.hpp` that transforms the protocol buffer objects into the corresponding
+//      opossum operator
+//   4. Add an entry in the swith-case of OperatorTranslator::translate_proto() to dispatch calls to the method created
+//      in step 3
+//   5. Write a test in `src/test/network/operator_translator_test.cpp`
 class AbstractOperator {
  public:
   AbstractOperator(const std::shared_ptr<const AbstractOperator> left = nullptr,

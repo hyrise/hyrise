@@ -1,14 +1,14 @@
 # Contribution Guidelines
-Do not commit/push directly to the master or develop branch. Instead, create a feature branch and file a merge request.
+Do not commit/push directly to the master or develop branch. Instead, create a feature branch/fork and file a merge request.
 
 # Coding Style
-Avoid exception handling. Because Opossum is not a product, we do not have to recover from errors. Instead, fail loud (i.e., terminate the program) so that developers immediately notice that something is wrong and can fix the problem at its root.
+Avoid exception handling. Because Hyrise is not a product, we do not have to recover from errors. Instead, fail loud (i.e., terminate the program) so that developers immediately notice that something is wrong and can fix the problem at its root.
 
 ## Formatting
 - 2 spaces for indentation
 - 120 columns
 - Comments above code
-- clang_format (executed with each make) enforces these rules automatically
+- clang_format enforces these rules automatically
 
 ## C++ guidelines
 - Do not use `new` or `malloc`
@@ -23,13 +23,14 @@ Avoid exception handling. Because Opossum is not a product, we do not have to re
 - Use `IS_DEBUG` macro for non-essential checks
 - Be specific: `double a = 3.0;` but `float a = 3.0f;`
 
-## Naming
+## Naming Conventions
 
 - Files: lowercase separated by underscores, e.g., abstract_operator.cpp
 - Types (classes, structs, enums, typedefs, using): CamelCase starting with uppercase letter, e.g., `BaseColumn`
 - Variables: lowercase separated by underscores, e.g., `chunk_size`
 - Functions: lowercase separated by underscores, e.g., `get_num_in_tables()`
 - Private / proctected members / methods: like variables / functions with leading underscore, e.g., `_get_chunks()`
+- Classes that are used only to have a non-templated base class are named `BaseXY` (e.g., BaseColumn), while classes that have multiple differing implementations are named `AbstractXY` (e.g., AbstractOperator)
 
 - Choose descriptive names. Avoid `i`, `j`, etc. in loops.
 

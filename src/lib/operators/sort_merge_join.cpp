@@ -9,6 +9,8 @@
 #include <utility>
 #include <vector>
 
+#include "resolve_type.hpp"
+
 namespace opossum {
 
 SortMergeJoin::SortMergeJoin(const std::shared_ptr<const AbstractOperator> left,
@@ -17,7 +19,7 @@ SortMergeJoin::SortMergeJoin(const std::shared_ptr<const AbstractOperator> left,
                              const JoinMode mode, const std::string& prefix_left, const std::string& prefix_right)
     : AbstractJoinOperator(left, right, column_names, op, mode, prefix_left, prefix_right), _partition_count(1) {
   if (_mode == Cross || !column_names) {
-    throw std::runtime_error(
+    throw std::logic_error(
         "SortMergeJoin: this operator does not support Cross Joins, the optimizer should use Product operator "
         "instead.");
   }

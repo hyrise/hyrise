@@ -1,5 +1,8 @@
 #include "import_binary.hpp"
 
+#include <boost/hana/for_each.hpp>
+
+#include <cstdint>
 #include <fstream>
 #include <memory>
 #include <numeric>
@@ -9,12 +12,14 @@
 
 #include "import_export/binary.hpp"
 #include "storage/chunk.hpp"
+#include "storage/fitted_attribute_vector.hpp"
 #include "storage/storage_manager.hpp"
+#include "utils/assert.hpp"
 
 namespace opossum {
 
-ImportBinary::ImportBinary(const std::string& filename, const std::string& tablename)
-    : _filename(filename), _tablename(tablename.empty() ? nullopt : optional<std::string>(tablename)) {}
+ImportBinary::ImportBinary(const std::string& filename, const optional<std::string> tablename)
+    : _filename(filename), _tablename(tablename) {}
 
 const std::string ImportBinary::name() const { return "ImportBinary"; }
 
@@ -60,15 +65,18 @@ T ImportBinary::_read_value(std::ifstream& file) {
 }
 
 std::shared_ptr<const Table> ImportBinary::on_execute() {
-  if (_tablename) {
-    if (StorageManager::get().has_table(_tablename.value_or(""))) {
-      return StorageManager::get().get_table(_tablename.value_or(""));
-    }
+  if (_tablename && StorageManager::get().has_table(*_tablename)) {
+    return StorageManager::get().get_table(*_tablename);
   }
 
   std::ifstream file;
-  file.exceptions(std::ifstream::failbit | std::ifstream::badbit);
   file.open(_filename, std::ios::binary);
+
+  if (!file.is_open()) {
+    throw std::runtime_error("ImportBinary: Could not find file " + _filename);
+  }
+
+  file.exceptions(std::ifstream::failbit | std::ifstream::badbit);
 
   std::shared_ptr<Table> table;
   ChunkID chunk_count;
@@ -78,7 +86,7 @@ std::shared_ptr<const Table> ImportBinary::on_execute() {
   }
 
   if (_tablename) {
-    StorageManager::get().add_table(_tablename.value_or(""), table);
+    StorageManager::get().add_table(*_tablename, table);
   }
 
   return table;
@@ -120,22 +128,22 @@ std::shared_ptr<BaseColumn> ImportBinary::_import_column(std::ifstream& file, Ch
       result = _import_column<column_type>(file, row_count);
     }
   });
-  if (IS_DEBUG && !result) throw std::runtime_error("unknown type " + data_type);
+  DebugAssert(static_cast<bool>(result), ("unknown type " + data_type));
   return result;
 }
 
 template <typename DataType>
 std::shared_ptr<BaseColumn> ImportBinary::_import_column(std::ifstream& file, ChunkOffset row_count) {
-  const auto column_type = _read_value<binary::ColumnType>(file);
+  const auto column_type = _read_value<BinaryColumnType>(file);
 
   switch (column_type) {
-    case binary::ColumnType::value_column:
+    case BinaryColumnType::value_column:
       return _import_value_column<DataType>(file, row_count);
-    case binary::ColumnType::dictionary_column:
+    case BinaryColumnType::dictionary_column:
       return _import_dictionary_column<DataType>(file, row_count);
     default:
-      // This case happens if the read column type is not a valid binary::ColumnType.
-      throw std::runtime_error("Cannot import column: invalid column type");
+      // This case happens if the read column type is not a valid BinaryColumnType.
+      throw std::logic_error("Cannot import column: invalid column type");
   }
 }
 
@@ -149,7 +157,7 @@ std::shared_ptr<BaseAttributeVector> ImportBinary::_import_attribute_vector(
     case 4:
       return std::make_shared<FittedAttributeVector<uint32_t>>(_read_values<uint32_t>(file, row_count));
     default:
-      throw std::runtime_error("Cannot import attribute vector with width: " + std::to_string(attribute_vector_width));
+      throw std::logic_error("Cannot import attribute vector with width: " + std::to_string(attribute_vector_width));
   }
 }
 

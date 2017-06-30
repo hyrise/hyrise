@@ -67,6 +67,7 @@ void OperatorsUpdateTest::helper(std::shared_ptr<GetTable> table_to_update, std:
 
 TEST_F(OperatorsUpdateTest, SelfUpdate) {
   auto t = load_table("src/test/tables/int_int.tbl", 0u);
+  // Update operator works on the StorageManager
   StorageManager::get().add_table("updateTestTable", t);
 
   auto gt = std::make_shared<GetTable>("updateTestTable");
@@ -141,5 +142,39 @@ TEST_F(OperatorsUpdateTest, MultipleChunks) {
 
   std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_int_same.tbl", 1);
   helper(gt, gt2, expected_result);
+}
+TEST_F(OperatorsUpdateTest, EmptyChunks) {
+  auto t = load_table("src/test/tables/int.tbl", 1u);
+  std::string table_name = "updateTestTable";
+  StorageManager::get().add_table(table_name, t);
+
+  auto t_context = TransactionManager::get().new_transaction_context();
+
+  auto gt = std::make_shared<GetTable>(table_name);
+  gt->execute();
+
+  // table scan will produce two leading empty chunks
+  auto table_scan1 = std::make_shared<TableScan>(gt, "a", "=", "12345");
+  table_scan1->set_transaction_context(t_context);
+  table_scan1->execute();
+
+  Projection::ProjectionDefinitions definitions{Projection::ProjectionDefinition{std::to_string(1), "int", "a"}};
+  auto updated_rows = std::make_shared<Projection>(table_scan1, definitions);
+  updated_rows->set_transaction_context(t_context);
+  updated_rows->execute();
+
+  auto update = std::make_shared<Update>(table_name, table_scan1, updated_rows);
+  update->set_transaction_context(t_context);
+  // execute will fail, if not checked for leading empty chunks
+  update->execute();
+
+  // MVCC commit.
+  TransactionManager::get().prepare_commit(*t_context);
+
+  auto commit_op = std::make_shared<CommitRecords>();
+  commit_op->set_transaction_context(t_context);
+  commit_op->execute();
+
+  TransactionManager::get().commit(*t_context);
 }
 }  // namespace opossum

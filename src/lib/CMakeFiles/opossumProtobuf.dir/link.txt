@@ -1,0 +1,2 @@
+/usr/bin/ar qc libopossumProtobuf.a  CMakeFiles/opossumProtobuf.dir/network/generated/opossum.pb.cc.o CMakeFiles/opossumProtobuf.dir/network/generated/opossum.grpc.pb.cc.o
+/usr/bin/ranlib libopossumProtobuf.a

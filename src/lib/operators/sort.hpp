@@ -3,21 +3,30 @@
 #include <algorithm>
 #include <functional>
 #include <memory>
+#include <mutex>
 #include <string>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 
 #include "abstract_read_only_operator.hpp"
+#include "storage/dictionary_column.hpp"
 #include "storage/reference_column.hpp"
+#include "storage/value_column.hpp"
+
+#include "resolve_type.hpp"
+#include "types.hpp"
 
 namespace opossum {
 
 // operator to sort a table by a single column
 // Multi-column sort is not supported yet. For now, you will have to sort by the secondary criterion, then by the first
+
+// The parameter chunk_size sets the chunk size of the output table, wich will allways be materialized
 class Sort : public AbstractReadOnlyOperator {
  public:
   Sort(const std::shared_ptr<const AbstractOperator> in, const std::string &sort_column_name,
-       const bool ascending = true);
+       const bool ascending = true, const size_t output_chunk_size = 0);
 
   const std::string name() const override;
   uint8_t num_in_tables() const override;
@@ -26,122 +35,74 @@ class Sort : public AbstractReadOnlyOperator {
  protected:
   std::shared_ptr<const Table> on_execute() override;
 
-  template <typename T>
+  // The operator is seperated in three different classes. SortImpl is the common templated implementation of the
+  // operator. SortImpl* und SortImplMaterializeOutput are extra classes for the visitor pattern. They fulfill a certain
+  // task during the Sort process, as described later on.
+  template <typename SortColumnType>
   class SortImpl;
+  template <typename SortColumnType>
+  class SortImplMaterializeSortColumn;
+  template <typename SortColumnType>
+  class SortImplMaterializeOutput;
 
   std::unique_ptr<AbstractReadOnlyOperatorImpl> _impl;
-  std::string _sort_column_name;
-  bool _ascending;
+  const std::string _sort_column_name;
+  const bool _ascending;
+  const size_t _output_chunk_size;
 };
 
-// we need to use the impl pattern because the comparator of the sort depends on the type of the column
-template <typename T>
+// we need to use the impl pattern because the scan operator of the sort depends on the type of the column
+template <typename SortColumnType>
 class Sort::SortImpl : public AbstractReadOnlyOperatorImpl {
  public:
-  // creates a new table with reference columns
-  SortImpl(const std::shared_ptr<const AbstractOperator> in, const std::string &sort_column_name,
-           const bool ascending = true)
-      : _in_op(in),
+  SortImpl(const std::shared_ptr<const Table> table_in, const std::string &sort_column_name,
+           const bool ascending = true, const size_t output_chunk_size = 0)
+      : _table_in(table_in),
         _sort_column_name(sort_column_name),
         _ascending(ascending),
-        _pos_list(std::make_shared<PosList>()),
-        _row_id_value_vector(std::make_shared<std::vector<std::pair<RowID, T>>>()) {}
+        _output_chunk_size(output_chunk_size) {
+    // initialize a structure wich can be sorted by std::sort
+    _row_id_value_vector = std::make_shared<std::vector<std::pair<RowID, SortColumnType>>>();
+  }
 
   std::shared_ptr<const Table> on_execute() override {
-    auto output = std::make_shared<Table>();
+    // 1. Prepare Sort: Creating rowid-value-Structur
+    auto preparation = std::make_shared<SortImplMaterializeSortColumn<SortColumnType>>(_table_in, _sort_column_name,
+                                                                                       _row_id_value_vector);
+    preparation->execute();
 
-    auto in_table = _in_op->get_output();
-    auto sort_column_id = in_table->column_id_by_name(_sort_column_name);
-
-    // copy the structure of the input table, creating ReferenceColumns where needed
-    for (size_t column_id = 0; column_id < in_table->col_count(); ++column_id) {
-      std::shared_ptr<ReferenceColumn> ref;
-      if (auto reference_col =
-              std::dynamic_pointer_cast<ReferenceColumn>(in_table->get_chunk(0).get_column(column_id))) {
-        ref = std::make_shared<ReferenceColumn>(reference_col->referenced_table(), column_id, _pos_list);
-      } else {
-        ref = std::make_shared<ReferenceColumn>(in_table, column_id, _pos_list);
-      }
-      output->add_column(in_table->column_name(column_id), in_table->column_type(column_id), false);
-      output->get_chunk(0).add_column(ref);
-      // TODO(Anyone): do we want to distinguish between chunk tables and "reference tables"?
-    }
-
-    // We sort by copying all values and their RowIds into _row_id_value_vector which is then sorted by
-    // sort_with_operator. Afterwards, we extract the RowIds and write them to the position list shared by all of our
-    // ReferenceColumns
-
-    // Step 1: Add all values to _row_id_value_vector
-
-    for (size_t chunk = 0; chunk < in_table->chunk_count(); chunk++) {
-      // distinguishes the cases how the sort attribute is stored, i.e., as reference or value column
-      if (auto value_column =
-              std::dynamic_pointer_cast<ValueColumn<T>>(in_table->get_chunk(chunk).get_column(sort_column_id))) {
-        // case: sort attribute is in a value column
-        auto &values = value_column->values();
-        for (size_t offset = 0; offset < values.size(); offset++) {
-          _row_id_value_vector->emplace_back(in_table->calculate_row_id(chunk, offset), values[offset]);
-        }
-      } else if (auto referenced_column = std::dynamic_pointer_cast<ReferenceColumn>(
-                     in_table->get_chunk(chunk).get_column(sort_column_id))) {
-        // case: sort attribute is in a reference column.
-        auto val_table = referenced_column->referenced_table();
-        std::vector<std::vector<T>> reference_values = {};
-        for (size_t chunk = 0; chunk < val_table->chunk_count(); chunk++) {
-          if (auto val_col =
-                  std::dynamic_pointer_cast<ValueColumn<T>>(val_table->get_chunk(chunk).get_column(sort_column_id))) {
-            const auto &values = val_col->values();
-            reference_values.emplace_back(values.cbegin(), values.cend());
-          } else {
-            throw std::logic_error("Referenced table must only contain value columns");
-          }
-        }
-        if (referenced_column->pos_list()) {
-          auto pos_list_in = referenced_column->pos_list();
-          for (size_t pos = 0; pos < pos_list_in->size(); pos++) {
-            auto row_id = (*pos_list_in)[pos];
-            auto chunk_info = in_table->locate_row(row_id);
-            auto chunk_id = chunk_info.first;
-            auto chunk_offset = chunk_info.second;
-            // TODO(md) use c++ explode
-            _row_id_value_vector->emplace_back(row_id, reference_values[chunk_id][chunk_offset]);
-          }
-        }
-      } else {
-        throw std::logic_error("Column must either be a value or reference column");
-      }
-    }
-
-    // Step 2: Do the actual sort
-
+    // 2. After we got our ValueRowID Map we sort the map by the value of the pair
     if (_ascending) {
       sort_with_operator<std::less<>>();
     } else {
       sort_with_operator<std::greater<>>();
     }
 
-    // Step 3: Get the sorted row ids and write them to the position list
-
-    for (size_t row = 0; row < _row_id_value_vector->size(); row++) {
-      _pos_list->emplace_back(_row_id_value_vector->at(row).first);
-    }
-
-    return output;
+    // 3. Materialization of the result: We take the sorted ValueRowID Vector, create chunks fill them until they are
+    // full and create the next one. Each chunk is filled row by row.
+    auto materialization = std::make_shared<SortImplMaterializeOutput<SortColumnType>>(_table_in, _row_id_value_vector,
+                                                                                       _output_chunk_size);
+    return materialization->execute();
   }
 
   template <typename Comp>
   void sort_with_operator() {
     Comp comp;
     std::stable_sort(_row_id_value_vector->begin(), _row_id_value_vector->end(),
-                     [comp](std::pair<RowID, T> a, std::pair<RowID, T> b) { return comp(a.second, b.second); });
+                     [comp](std::pair<RowID, SortColumnType> a, std::pair<RowID, SortColumnType> b) {
+                       return comp(a.second, b.second);
+                     });
   }
 
-  std::shared_ptr<const AbstractOperator> _in_op;
+  const std::shared_ptr<const Table> _table_in;
 
   // column to sort by
-  std::string _sort_column_name;
+  const std::string _sort_column_name;
   const bool _ascending;
-  std::shared_ptr<PosList> _pos_list;
-  std::shared_ptr<std::vector<std::pair<RowID, T>>> _row_id_value_vector;
+  // chunk size of the materialized output
+  const size_t _output_chunk_size;
+
+  std::shared_ptr<std::vector<std::pair<RowID, SortColumnType>>> _row_id_value_vector;
 };
+
 }  // namespace opossum

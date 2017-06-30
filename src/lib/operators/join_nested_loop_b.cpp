@@ -8,6 +8,9 @@
 #include <utility>
 #include <vector>
 
+#include "resolve_type.hpp"
+#include "utils/assert.hpp"
+
 namespace opossum {
 
 JoinNestedLoopB::JoinNestedLoopB(const std::shared_ptr<const AbstractOperator> left,
@@ -15,14 +18,11 @@ JoinNestedLoopB::JoinNestedLoopB(const std::shared_ptr<const AbstractOperator> l
                                  optional<std::pair<std::string, std::string>> column_names, const std::string& op,
                                  const JoinMode mode, const std::string& prefix_left, const std::string& prefix_right)
     : AbstractJoinOperator(left, right, column_names, op, mode, prefix_left, prefix_right), _op{op}, _mode{mode} {
-  if (mode == Cross) {
-    throw std::runtime_error(
-        "JoinNestedLoopA: this operator does not support Cross Joins, the optimizer should use Product operator.");
-  }
-
-  if (_mode == Natural) {
-    throw std::runtime_error("NestedLoopJoin: this operator currently does not support Natural Joins.");
-  }
+  DebugAssert(
+      (mode != Cross),
+      "JoinNestedLoopA: this operator does not support Cross Joins, the optimizer should use Product operator.");
+  DebugAssert(left != nullptr, "JoinNestedLoopB::JoinNestedLoopB: left input operator is null");
+  DebugAssert(right != nullptr, "JoinNestedLoopB::JoinNestedLoopB: right input operator is null");
 
   // Check optional column names
   // Per definition either two names are specified or none
@@ -30,17 +30,10 @@ JoinNestedLoopB::JoinNestedLoopB(const std::shared_ptr<const AbstractOperator> l
     _left_column_name = column_names->first;
     _right_column_name = column_names->second;
   } else {
-    throw std::runtime_error("JoinNestedLoopB::JoinNestedLoopB: No columns specified for join operator");
+    Fail("JoinNestedLoopB::JoinNestedLoopB: No columns specified for join operator");
   }
 
-  if (left == nullptr) {
-    throw std::runtime_error("JoinNestedLoopB::JoinNestedLoopB: left input operator is null");
-  }
-  if (right == nullptr) {
-    throw std::runtime_error("JoinNestedLoopB::JoinNestedLoopB: right input operator is null");
-  }
-
-  _output = std::make_shared<Table>(0, false);
+  _output = std::make_shared<Table>(0);
   _pos_list_left = std::make_shared<PosList>();
   _pos_list_right = std::make_shared<PosList>();
 }
@@ -135,11 +128,10 @@ std::shared_ptr<const Table> JoinNestedLoopB::on_execute() {
 
   // Ensure matching column types for simplicity
   // Joins on non-matching types can be added later.
-  if (left_column_type != right_column_type) {
-    throw std::runtime_error("JoinNestedLoopB::execute: column type \"" + left_column_type + "\" of left column \"" +
-                             _left_column_name + "\" does not match colum type \"" + right_column_type +
-                             "\" of right column \"" + _right_column_name + "\"!");
-  }
+  DebugAssert((left_column_type == right_column_type),
+              "JoinNestedLoopB::execute: column type \"" + left_column_type + "\" of left column \"" +
+                  _left_column_name + "\" does not match colum type \"" + right_column_type + "\" of right column \"" +
+                  _right_column_name + "\"!");
 
   _join_columns(left_column_id, right_column_id, left_column_type);
 
@@ -184,7 +176,7 @@ JoinNestedLoopB::JoinNestedLoopBImpl<T>::JoinNestedLoopBImpl(JoinNestedLoopB& jo
   } else if (_join_nested_loop_b._op == "!=") {
     _compare = [](const T& value_left, const T& value_right) -> bool { return value_left != value_right; };
   } else {
-    throw std::runtime_error("JoinNestedLoopBImpl::JoinNestedLoopBImpl: Unknown operator " + _join_nested_loop_b._op);
+    Fail("JoinNestedLoopBImpl::JoinNestedLoopBImpl: Unknown operator " + _join_nested_loop_b._op);
   }
 }
 
@@ -281,7 +273,7 @@ const T& JoinNestedLoopB::JoinNestedLoopBImpl<T>::_resolve_reference(ReferenceCo
   } else if (v_column) {
     return v_column->values()[referenced_chunk_offset];
   } else {
-    throw std::runtime_error("JoinNestedLoopBImpl::_resolve_reference: can't figure out referenced column type");
+    throw std::logic_error("JoinNestedLoopBImpl::_resolve_reference: can't figure out referenced column type");
   }
 }
 
