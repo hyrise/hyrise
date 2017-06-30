@@ -98,7 +98,7 @@ void SortMergeJoin::SortMergeJoinImpl<T>::sort_table(std::shared_ptr<SortedTable
     sort_table->partition[chunk_id].values.resize(input->get_chunk(chunk_id).size());
   }
 
-  const uint32_t threshold =
+  const uint32_t partitionSizeThreshold =
       100000;  // can be extended to find that value dynamically later on (depending on hardware etc.)
   std::vector<std::thread> threads;
   uint32_t size = 0;
@@ -106,7 +106,7 @@ void SortMergeJoin::SortMergeJoinImpl<T>::sort_table(std::shared_ptr<SortedTable
   for (ChunkID chunk_id = 0; chunk_id < input->chunk_count(); ++chunk_id) {
     size += input->chunk_size();
     chunk_ids.push_back(chunk_id);
-    if (size > threshold || chunk_id == input->chunk_count() - 1) {
+    if (size > partitionSizeThreshold || chunk_id == input->chunk_count() - 1) {
       threads.push_back(std::thread(&SortMergeJoin::SortMergeJoinImpl<T>::sort_partition, *this, chunk_ids, input,
                                     column_name, left));
       size = 0;
