@@ -667,10 +667,12 @@ void SortMergeJoin::SortMergeJoinImpl<T>::perform_join() {
 template <typename T>
 void SortMergeJoin::SortMergeJoinImpl<T>::build_output(std::shared_ptr<Table>& output) {
   // Left output
-  for (ColumnID column_id = static_cast<ColumnID>(0); column_id < _sort_merge_join.input_table_left()->col_count(); column_id++) {
+  auto col_count_left = _sort_merge_join.input_table_left()->col_count();
+  for (ColumnID column_id = static_cast<ColumnID>(0); column_id < col_count_left; column_id++) {
     // Add the column meta data
-    output->add_column_definition(_sort_merge_join._prefix_left + _sort_merge_join.input_table_left()->column_name(column_id),
-                       _sort_merge_join.input_table_left()->column_type(column_id), false);
+    auto column_name = _sort_merge_join._prefix_left + _sort_merge_join.input_table_left()->column_name(column_id);
+    auto column_type = _sort_merge_join.input_table_left()->column_type(column_id);
+    output->add_column_definition(column_name, column_type, false);
 
     // Check whether the column consists of reference columns
     const auto r_column = std::dynamic_pointer_cast<ReferenceColumn>(
@@ -690,10 +692,12 @@ void SortMergeJoin::SortMergeJoinImpl<T>::build_output(std::shared_ptr<Table>& o
   }
 
   // Right_output
-  for (ColumnID column_id = static_cast<ColumnID>(0); column_id < _sort_merge_join.input_table_right()->col_count(); column_id++) {
+  auto col_count_right = _sort_merge_join.input_table_right()->col_count();
+  for (ColumnID column_id = static_cast<ColumnID>(0); column_id < col_count_right; column_id++) {
     // Add the column meta data
-    output->add_column_definition(_sort_merge_join._prefix_right + _sort_merge_join.input_table_right()->column_name(column_id),
-                       _sort_merge_join.input_table_right()->column_type(column_id), false);
+    auto column_name = _sort_merge_join._prefix_right + _sort_merge_join.input_table_right()->column_name(column_id);
+    auto column_type = _sort_merge_join.input_table_right()->column_type(column_id);
+    output->add_column_definition(column_name, column_type, false);
 
     // Check whether the column is a reference column
     const auto r_column = std::dynamic_pointer_cast<ReferenceColumn>(
@@ -766,7 +770,7 @@ void SortMergeJoin::SortMergeJoinImpl<T>::handle_value_column(BaseColumn& column
   auto sort_context = std::static_pointer_cast<SortContext>(context);
   auto& sorted_table = sort_context->write_to_sorted_left_table ? _sorted_left_table : _sorted_right_table;
 
-  for (ChunkOffset chunk_offset = static_cast<ChunkOffset>(0); chunk_offset < value_column.values().size(); chunk_offset++) {
+  for (auto chunk_offset = static_cast<ChunkOffset>(0); chunk_offset < value_column.values().size(); chunk_offset++) {
     RowID row_id{sort_context->chunk_id, chunk_offset};
     sorted_table->partition[sort_context->chunk_id].values[chunk_offset] =
         std::pair<T, RowID>(value_column.values()[chunk_offset], row_id);
