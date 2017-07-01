@@ -669,7 +669,7 @@ void SortMergeJoin::SortMergeJoinImpl<T>::build_output(std::shared_ptr<Table>& o
   // Left output
   for (ColumnID column_id = static_cast<ColumnID>(0); column_id < _sort_merge_join.input_table_left()->col_count(); column_id++) {
     // Add the column meta data
-    output->add_column(_sort_merge_join._prefix_left + _sort_merge_join.input_table_left()->column_name(column_id),
+    output->add_column_definition(_sort_merge_join._prefix_left + _sort_merge_join.input_table_left()->column_name(column_id),
                        _sort_merge_join.input_table_left()->column_type(column_id), false);
 
     // Check whether the column consists of reference columns
@@ -692,7 +692,7 @@ void SortMergeJoin::SortMergeJoinImpl<T>::build_output(std::shared_ptr<Table>& o
   // Right_output
   for (ColumnID column_id = static_cast<ColumnID>(0); column_id < _sort_merge_join.input_table_right()->col_count(); column_id++) {
     // Add the column meta data
-    output->add_column(_sort_merge_join._prefix_right + _sort_merge_join.input_table_right()->column_name(column_id),
+    output->add_column_definition(_sort_merge_join._prefix_right + _sort_merge_join.input_table_right()->column_name(column_id),
                        _sort_merge_join.input_table_right()->column_type(column_id), false);
 
     // Check whether the column is a reference column
