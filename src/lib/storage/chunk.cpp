@@ -27,7 +27,7 @@ Chunk::Chunk(const bool has_mvcc_columns) {
 void Chunk::add_column(std::shared_ptr<BaseColumn> column) {
   // The added column must have the same size as the chunk.
   DebugAssert((_columns.size() <= 0 || size() == column->size()),
-              "Trying to add column with mismatching size to chunk.");
+              "Trying to add column with mismatching size to chunk");
 
   if (_columns.size() == 0 && has_mvcc_columns()) grow_mvcc_column_size_by(column->size(), 0);
 
