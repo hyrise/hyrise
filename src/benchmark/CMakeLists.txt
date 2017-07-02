@@ -20,4 +20,3 @@ target_link_libraries(
     opossum
     benchmark
 )
-
