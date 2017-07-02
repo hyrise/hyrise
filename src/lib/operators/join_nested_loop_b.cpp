@@ -66,7 +66,7 @@ void JoinNestedLoopB::_append_columns_to_output(std::shared_ptr<const Table> inp
   // Append each column of the input column to the output
   for (ColumnID column_id{0}; column_id < input_table->col_count(); column_id++) {
     // Add the column meta data
-    _output->add_column(prefix + input_table->column_name(column_id), input_table->column_type(column_id), false);
+    _output->add_column_definition(prefix + input_table->column_name(column_id), input_table->column_type(column_id));
 
     // Check whether the column consists of reference columns
     const auto r_column =
@@ -114,7 +114,7 @@ void JoinNestedLoopB::_add_outer_join_rows(std::shared_ptr<const Table> outer_si
       // if there was no match during the join phase
       if (outer_side_matches.find(row_id) == outer_side_matches.end()) {
         outer_side_pos_list->push_back(row_id);
-        null_side_pos_list->push_back(RowID{ChunkID{0}, INVALID_CHUNK_OFFSET});
+        null_side_pos_list->push_back(NULL_ROW_ID);
       }
     }
   }

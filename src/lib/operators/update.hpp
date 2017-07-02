@@ -19,6 +19,8 @@ class Insert;
  * data that is used to update the rows specified by the first table.
  *
  * Assumption: The input has been validated before.
+ *
+ * Note: Update does not support null values at the moment
  */
 class Update : public AbstractReadWriteOperator {
  public:

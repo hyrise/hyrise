@@ -38,10 +38,12 @@ struct RowID {
   bool operator<(const RowID &rhs) const {
     return std::tie(chunk_id, chunk_offset) < std::tie(rhs.chunk_id, rhs.chunk_offset);
   }
-};
 
-// used to represent NULL values
-constexpr ChunkOffset INVALID_CHUNK_OFFSET = std::numeric_limits<ChunkOffset>::max();
+  // Useful when comparing a row ID to NULL_ROW_ID
+  bool operator==(const RowID &rhs) const {
+    return std::tie(chunk_id, chunk_offset) == std::tie(rhs.chunk_id, rhs.chunk_offset);
+  }
+};
 
 STRONG_TYPEDEF(uint16_t, ColumnID);
 STRONG_TYPEDEF(uint32_t, ValueID);  // Cannot be larger than ChunkOffset
@@ -77,6 +79,15 @@ constexpr CpuID INVALID_CPU_ID{std::numeric_limits<CpuID::base_type>::max()};
 constexpr WorkerID INVALID_WORKER_ID{std::numeric_limits<WorkerID>::max()};
 
 constexpr NodeID CURRENT_NODE_ID{std::numeric_limits<NodeID::base_type>::max() - 1};
+
+// Used to represent NULL values
+constexpr ChunkOffset INVALID_CHUNK_OFFSET{std::numeric_limits<ChunkOffset>::max()};
+
+// ... in ReferenceColumns
+const RowID NULL_ROW_ID = RowID{ChunkID{0u}, INVALID_CHUNK_OFFSET};  // TODO(anyone): Couldn’t use constexpr here
+
+// ... in DictionaryColumns
+constexpr ValueID NULL_VALUE_ID{std::numeric_limits<ValueID::base_type>::max()};
 
 // The Scheduler currently supports just these 2 priorities, subject to change.
 enum class SchedulePriority {

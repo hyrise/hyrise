@@ -8,6 +8,9 @@
 
 namespace opossum {
 
+/**
+ * Note: Difference does not support null values at the moment
+ */
 class Difference : public AbstractReadOnlyOperator {
  public:
   Difference(const std::shared_ptr<const AbstractOperator> left_in,

@@ -16,6 +16,7 @@ namespace opossum {
  * If parameter tablename provided, the imported table is stored in the StorageManager. If a table with this name
  * already exists, it is returned and no import is performed.
  *
+ * Note: ImportCsv does not support null values at the moment
  */
 class ImportCsv : public AbstractReadOnlyOperator {
  public:

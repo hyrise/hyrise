@@ -15,6 +15,7 @@ class TransactionContext;
  * the values to insert in a separate table using the same column layout.
  *
  * Assumption: The input has been validated before.
+ * Note: Insert does not support null values at the moment
  */
 class Insert : public AbstractReadWriteOperator {
  public:
