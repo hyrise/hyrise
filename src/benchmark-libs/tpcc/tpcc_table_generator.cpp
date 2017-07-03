@@ -1,8 +1,10 @@
 #include "tpcc_table_generator.hpp"
 
 #include <functional>
+#include <iomanip>
 #include <map>
 #include <memory>
+#include <sstream>
 #include <string>
 #include <utility>
 #include <vector>
@@ -14,16 +16,6 @@
 namespace tpcc {
 
 TableGenerator::TableGenerator() : _random_gen(RandomGenerator()) {}
-
-// template <typename T>
-// std::shared_ptr<opossum::ValueColumn<T>> TableGenerator::add_column(
-//    size_t cardinality, const std::function<T(size_t)> &generator_function) {
-//  tbb::concurrent_vector<T> column(cardinality);
-//  for (size_t i = 0; i < column.size(); i++) {
-//    column[i] = generator_function(i);
-//  }
-//  return std::make_shared<opossum::ValueColumn<T>>(std::move(column));
-//}
 
 template <typename T>
 tbb::concurrent_vector<T> TableGenerator::generate_order_line_column(
@@ -42,6 +34,10 @@ tbb::concurrent_vector<T> TableGenerator::generate_order_line_column(
   return values;
 }
 
+/**
+ * Specialized version for `ORDER-LINE` table.
+ * TODO(anyone): look into how to merge this.
+ */
 template <typename T>
 void TableGenerator::add_column(std::shared_ptr<std::vector<size_t>> cardinalities,
                                 TableGenerator::order_line_counts_type order_line_counts,
@@ -55,7 +51,7 @@ void TableGenerator::add_column(std::shared_ptr<std::vector<size_t>> cardinaliti
   bool is_first_column = table->col_count() == 0;
 
   auto data_type_name = opossum::get_name_of_type<T>();
-  table->add_column(name, data_type_name, false);
+  table->add_column_definition(name, data_type_name);
 
   auto row_count = std::accumulate(std::begin(*cardinalities), std::end(*cardinalities), 1u, std::multiplies<size_t>());
 
@@ -88,7 +84,7 @@ void TableGenerator::add_column(std::shared_ptr<std::vector<size_t>> cardinaliti
           chunk.add_column(value_column);
           table->add_chunk(std::move(chunk));
         } else {
-          opossum::ChunkID chunk_id{row_index / _chunk_size};
+          opossum::ChunkID chunk_id{static_cast<uint32_t>(row_index / _chunk_size)};
           auto &chunk = table->get_chunk(chunk_id);
           chunk.add_column(value_column);
         }
@@ -101,7 +97,7 @@ void TableGenerator::add_column(std::shared_ptr<std::vector<size_t>> cardinaliti
     }
   }
 
-  // write partially filled chunk
+  // write partially filled last chunk
   if (row_index % _chunk_size != 0) {
     auto value_column = std::make_shared<opossum::ValueColumn<T>>(std::move(column));
 
@@ -110,7 +106,7 @@ void TableGenerator::add_column(std::shared_ptr<std::vector<size_t>> cardinaliti
       chunk.add_column(value_column);
       table->add_chunk(std::move(chunk));
     } else {
-      opossum::ChunkID chunk_id{row_index / _chunk_size};
+      opossum::ChunkID chunk_id{static_cast<uint32_t>(row_index / _chunk_size)};
       auto &chunk = table->get_chunk(chunk_id);
       chunk.add_column(value_column);
     }
@@ -147,7 +143,7 @@ void TableGenerator::add_column(std::shared_ptr<std::vector<size_t>> cardinaliti
   bool is_first_column = table->col_count() == 0;
 
   auto data_type_name = opossum::get_name_of_type<T>();
-  table->add_column(name, data_type_name, false);
+  table->add_column_definition(name, data_type_name);
 
   auto row_count = std::accumulate(std::begin(*cardinalities), std::end(*cardinalities), 1u, std::multiplies<size_t>());
 
@@ -170,7 +166,7 @@ void TableGenerator::add_column(std::shared_ptr<std::vector<size_t>> cardinaliti
     // write output chunks if column size has reached chunk_size
     if (row_index % _chunk_size == _chunk_size - 1) {
       auto value_column = std::make_shared<opossum::ValueColumn<T>>(std::move(column));
-      opossum::ChunkID chunk_id{row_index / _chunk_size};
+      opossum::ChunkID chunk_id{static_cast<uint32_t>(row_index / _chunk_size)};
 
       if (is_first_column) {
         opossum::Chunk chunk(true);
@@ -196,7 +192,7 @@ void TableGenerator::add_column(std::shared_ptr<std::vector<size_t>> cardinaliti
       chunk.add_column(value_column);
       table->add_chunk(std::move(chunk));
     } else {
-      opossum::ChunkID chunk_id{row_count / _chunk_size};
+      opossum::ChunkID chunk_id{static_cast<uint32_t>(row_count / _chunk_size)};
       auto &chunk = table->get_chunk(chunk_id);
       chunk.add_column(value_column);
     }
@@ -285,26 +281,12 @@ std::shared_ptr<opossum::Table> TableGenerator::generate_stock_table() {
   add_column<int>(cardinalities, table, "S_W_ID", [&](std::vector<size_t> indices) -> size_t { return indices[0]; });
   add_column<int>(cardinalities, table, "S_QUANTITY",
                   [&](std::vector<size_t>) -> size_t { return _random_gen.number(10, 100); });
-  add_column<std::string>(cardinalities, table, "S_DIST_01",
-                          [&](std::vector<size_t>) { return _random_gen.astring(24, 24); });
-  add_column<std::string>(cardinalities, table, "S_DIST_02",
-                          [&](std::vector<size_t>) { return _random_gen.astring(24, 24); });
-  add_column<std::string>(cardinalities, table, "S_DIST_03",
-                          [&](std::vector<size_t>) { return _random_gen.astring(24, 24); });
-  add_column<std::string>(cardinalities, table, "S_DIST_04",
-                          [&](std::vector<size_t>) { return _random_gen.astring(24, 24); });
-  add_column<std::string>(cardinalities, table, "S_DIST_05",
-                          [&](std::vector<size_t>) { return _random_gen.astring(24, 24); });
-  add_column<std::string>(cardinalities, table, "S_DIST_06",
-                          [&](std::vector<size_t>) { return _random_gen.astring(24, 24); });
-  add_column<std::string>(cardinalities, table, "S_DIST_07",
-                          [&](std::vector<size_t>) { return _random_gen.astring(24, 24); });
-  add_column<std::string>(cardinalities, table, "S_DIST_08",
-                          [&](std::vector<size_t>) { return _random_gen.astring(24, 24); });
-  add_column<std::string>(cardinalities, table, "S_DIST_09",
-                          [&](std::vector<size_t>) { return _random_gen.astring(24, 24); });
-  add_column<std::string>(cardinalities, table, "S_DIST_10",
-                          [&](std::vector<size_t>) { return _random_gen.astring(24, 24); });
+  for (int district_i = 1; district_i <= 10; district_i++) {
+    std::stringstream district_i_str;
+    district_i_str << std::setw(2) << std::setfill('0') << district_i;
+    add_column<std::string>(cardinalities, table, "S_DIST_" + district_i_str.str(),
+                            [&](std::vector<size_t>) { return _random_gen.astring(24, 24); });
+  }
   add_column<int>(cardinalities, table, "S_YTD", [&](std::vector<size_t>) { return 0; });
   add_column<int>(cardinalities, table, "S_ORDER_CNT", [&](std::vector<size_t>) { return 0; });
   add_column<int>(cardinalities, table, "S_REMOTE_CNT", [&](std::vector<size_t>) { return 0; });
@@ -405,8 +387,7 @@ std::shared_ptr<opossum::Table> TableGenerator::generate_customer_table() {
   add_column<std::string>(cardinalities, table, "C_DATA",
                           [&](std::vector<size_t>) { return _random_gen.astring(300, 500); });
 
-  // only compress dictionary once insert into tables is possible where the last chunk is compressed
-  // opossum::DictionaryCompression::compress_table(*table);
+  opossum::DictionaryCompression::compress_table(*table);
   return table;
 }
 
@@ -462,8 +443,8 @@ std::shared_ptr<opossum::Table> TableGenerator::generate_order_table(
    * indices[2] = order
    */
 
-  // TODO(anyone): generate a new customer permutation for each district and warehouse. Currently they all have the same
-  // permutation
+  // TODO(anyone): generate a new customer permutation for each district and warehouse. Currently they all have the
+  // same permutation
   auto customer_permutation = _random_gen.permutation(0, _customer_size);
 
   add_column<int>(cardinalities, table, "O_ID", [&](std::vector<size_t> indices) -> size_t { return indices[2]; });
@@ -481,16 +462,13 @@ std::shared_ptr<opossum::Table> TableGenerator::generate_order_table(
   });
   add_column<int>(cardinalities, table, "O_ALL_LOCAL", [&](std::vector<size_t>) -> size_t { return 1; });
 
-  // only compress dictionary once insert into tables is possible where the last chunk is compressed
-  // opossum::DictionaryCompression::compress_table(*table);
+  opossum::DictionaryCompression::compress_table(*table);
   return table;
 }
 
 std::shared_ptr<opossum::Table> TableGenerator::generate_order_line_table(
     TableGenerator::order_line_counts_type order_line_counts) {
   auto table = std::make_shared<opossum::Table>(_chunk_size);
-
-  //  auto order_line_size = order_line_counts[warehouse_id][district_id][order_id];
 
   auto cardinalities = std::make_shared<std::vector<size_t>>(
       std::initializer_list<size_t>{_warehouse_size, _district_size, _order_size});
@@ -526,8 +504,7 @@ std::shared_ptr<opossum::Table> TableGenerator::generate_order_line_table(
   add_column<std::string>(cardinalities, order_line_counts, table, "OL_DIST_INFO",
                           [&](std::vector<size_t>) { return _random_gen.astring(24, 24); });
 
-  // only compress dictionary once insert into tables is possible where the last chunk is compressed
-  // opossum::DictionaryCompression::compress_table(*table);
+  opossum::DictionaryCompression::compress_table(*table);
   return table;
 }
 

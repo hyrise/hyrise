@@ -33,29 +33,9 @@ target_link_libraries(
     tpcc
 )
 
-# Configure tpcc playground
-add_executable(
-    opossumPlaygroundTPCC
-
-    playgroundTPCCBenchmark.cpp
-)
-target_link_libraries(
-    opossumPlaygroundTPCC
-    opossum
-    tpcc
-)
-
-# Configure tpch playground
-add_executable(
-    opossumPlaygroundTPCH
-
-    playgroundTPCHBenchmark.cpp
-)
-target_link_libraries(
-    opossumPlaygroundTPCH
-    opossum
-    tpch
-)
+# Configure tpcTableGenerator
+add_executable(tpcTableGenerator tpc_table_generator.cpp)
+target_link_libraries(tpcTableGenerator opossum tpcc)
 
 # Configure client
 add_executable(

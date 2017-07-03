@@ -38,7 +38,7 @@ class Update : public AbstractReadWriteOperator {
 
  protected:
   const std::string _table_to_update_name;
-  std::unique_ptr<Delete> _delete;
-  std::unique_ptr<Insert> _insert;
+  std::shared_ptr<Delete> _delete;
+  std::shared_ptr<Insert> _insert;
 };
 }  // namespace opossum

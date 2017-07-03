@@ -12,8 +12,8 @@
 
 namespace opossum {
 
-Print::Print(const std::shared_ptr<const AbstractOperator> in, std::ostream& out)
-    : AbstractReadOnlyOperator(in), _out(out) {}
+Print::Print(const std::shared_ptr<const AbstractOperator> in, std::ostream& out, PrintMode mode)
+    : AbstractReadOnlyOperator(in), _out(out), _mode(mode) {}
 
 const std::string Print::name() const { return "Print"; }
 
@@ -37,8 +37,12 @@ std::shared_ptr<const Table> Print::on_execute() {
 
   // print each chunk
   for (ChunkID chunk_id{0}; chunk_id < input_table_left()->chunk_count(); ++chunk_id) {
-    _out << "=== Chunk " << chunk_id << " === " << std::endl;
     auto& chunk = input_table_left()->get_chunk(chunk_id);
+    if (chunk.size() == 0 && _mode == PrintMode::IgnoreEmptyChunks) {
+      continue;
+    }
+
+    _out << "=== Chunk " << chunk_id << " === " << std::endl;
 
     if (chunk.size() == 0) {
       _out << "Empty chunk." << std::endl;

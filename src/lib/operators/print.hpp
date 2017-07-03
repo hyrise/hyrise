@@ -8,6 +8,8 @@
 #include "abstract_read_only_operator.hpp"
 
 namespace opossum {
+enum class PrintMode { PrintEmptyChunks, IgnoreEmptyChunks };
+
 /**
  * operator to print the table with its data
  *
@@ -15,7 +17,8 @@ namespace opossum {
  */
 class Print : public AbstractReadOnlyOperator {
  public:
-  explicit Print(const std::shared_ptr<const AbstractOperator> in, std::ostream& out = std::cout);
+  explicit Print(const std::shared_ptr<const AbstractOperator> in, std::ostream& out = std::cout,
+                 PrintMode mode = PrintMode::PrintEmptyChunks);
 
   const std::string name() const override;
   uint8_t num_in_tables() const override;
@@ -27,5 +30,6 @@ class Print : public AbstractReadOnlyOperator {
 
   // stream to print the result
   std::ostream& _out;
+  PrintMode _mode;
 };
 }  // namespace opossum

@@ -12,7 +12,8 @@ namespace tpcc {
 
 class RandomGenerator {
  public:
-  RandomGenerator() : engine(std::random_device()()) {}
+  // Fix random seed, to make sure the benchmark is deterministic
+  RandomGenerator() : engine(42) {}
 
   size_t number(size_t lower, size_t upper) {
     std::uniform_int_distribution<size_t> dist(lower, upper);

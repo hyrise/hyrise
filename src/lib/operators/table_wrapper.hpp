@@ -12,7 +12,7 @@ namespace opossum {
  */
 class TableWrapper : public AbstractReadOnlyOperator {
  public:
-  explicit TableWrapper(const std::shared_ptr<Table> table);
+  explicit TableWrapper(const std::shared_ptr<const Table> table);
 
   const std::string name() const override;
   uint8_t num_in_tables() const override;
@@ -22,6 +22,6 @@ class TableWrapper : public AbstractReadOnlyOperator {
   std::shared_ptr<const Table> on_execute() override;
 
   // Table to retrieve
-  const std::shared_ptr<Table> _table;
+  const std::shared_ptr<const Table> _table;
 };
 }  // namespace opossum

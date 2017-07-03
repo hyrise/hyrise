@@ -64,7 +64,7 @@ class AbstractOperator {
   virtual uint8_t num_out_tables() const = 0;
 
   std::shared_ptr<TransactionContext> transaction_context() const;
-  void set_transaction_context(std::shared_ptr<TransactionContext> transaction_context);
+  void set_transaction_context(std::weak_ptr<TransactionContext> transaction_context);
 
   // Return input operators.
   // Note: these methods cast away const for the return shared_ptr of AbstractOperator.
@@ -87,7 +87,7 @@ class AbstractOperator {
   // Is nullptr until the operator is executed
   std::shared_ptr<const Table> _output;
 
-  std::shared_ptr<TransactionContext> _transaction_context;
+  std::weak_ptr<TransactionContext> _transaction_context;
 };
 
 }  // namespace opossum
