@@ -15,6 +15,7 @@
 #include "SQLParser.h"
 
 using hsql::Expr;
+using hsql::ExprType;
 using hsql::JoinDefinition;
 using hsql::SelectStatement;
 using hsql::SQLStatement;
@@ -74,7 +75,25 @@ std::shared_ptr<AbstractNode> SQLQueryNodeTranslator::_translate_select(const Se
 
   // Translate SELECT list.
   // TODO(torpedro): Handle DISTINCT.
-  current_result_node = _translate_projection(*select.selectList, current_result_node);
+  Assert(select.selectList != nullptr, "SELECT list needs to exist");
+  Assert(!select.selectList->empty(), "SELECT list needs to have entries");
+
+  if (select.selectList->front()->isType(kExprFunctionRef)) {
+    /**
+     * If the first select list entry is a function, we _currently_ assume all the other entries to be functions as
+     * well. We turn the list into an aggregate.
+     */
+#if IS_DEBUG
+     for (size_t e = 1; e < select.selectList->size(); e++) {
+       Assert((*select.selectList)[e]->isType(kExprFunctionRef), "Select List entry " + std::to_string(e) + " is no function");
+     }
+#endif
+
+    current_result_node = _tran
+
+  } else {
+    current_result_node = _translate_projection(*select.selectList, current_result_node);
+  }
 
   // Translate ORDER BY.
   // TODO(tim): order by
@@ -209,7 +228,7 @@ std::shared_ptr<AbstractNode> SQLQueryNodeTranslator::_translate_filter_expr(
   // TODO(tim): implement OR.
   if (expr.opType == hsql::kOpAnd) {
     auto filter_node = _translate_filter_expr(*expr.expr, input_node);
-    return _translate_filter_expr(*expr.expr, filter_node);
+    return _translate_filter_expr(*expr.expr2, filter_node);
   }
 
   // TODO(tim): move to function / global namespace / whatever.

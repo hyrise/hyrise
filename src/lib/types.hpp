@@ -95,4 +95,6 @@ enum class SchedulePriority {
   High = 0     // Schedule task at the beginning of the queue
 };
 
+enum AggregateFunction { Min, Max, Sum, Avg, Count };
+
 }  // namespace opossum

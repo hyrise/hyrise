@@ -79,4 +79,27 @@ TEST_F(SQLQueryNodeTranslatorTest, SelectWithAndCondition) {
   EXPECT_FALSE(t_node->right());
 }
 
+TEST_F(SQLQueryNodeTranslatorTest, AggregateWithExpression) {
+  const auto query = "SELECT SUM(a+b) AS s FROM table_a";
+  const auto result_node = compile_query(query);
+
+//  EXPECT_EQ(result_node->type(), NodeType::Projection);
+//  EXPECT_FALSE(result_node->right());
+//
+//  auto aggr_node_1 = result_node->left();
+//  EXPECT_EQ(aggr_node_1->type(), NodeType::Aggregate);
+//  EXPECT_FALSE(aggr_node_1->right());
+//
+//  auto proj_node_1 = aggr_node_1->left();
+//  EXPECT_EQ(proj_node_1->type(), NodeType::Projection);
+//  EXPECT_FALSE(proj_node_1->right());
+//
+//  auto t_node_1 = proj_node_1->left();
+//  EXPECT_EQ(t_node_1->type(), NodeType::Table);
+//  EXPECT_FALSE(t_node_1->left());
+//  EXPECT_FALSE(t_node_1->right());
+
+}
+
+
 }  // namespace opossum
