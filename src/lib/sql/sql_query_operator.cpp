@@ -62,7 +62,7 @@ void SQLQueryOperator::compile_query(const std::string& query) {
   optional<SQLQueryPlan> cached_plan = _query_plan_cache.try_get(_query);
   if (cached_plan) {
     _query_plan_cache_hit = true;
-    _plan = cached_plan.value().recreate();
+    _plan = (*cached_plan).recreate();
     return;
   }
 
@@ -88,7 +88,7 @@ std::shared_ptr<SQLParserResult> SQLQueryOperator::parse_query(const std::string
   optional<std::shared_ptr<SQLParserResult>> cached_result = _parse_tree_cache.try_get(_query);
   if (cached_result) {
     _parse_tree_cache_hit = true;
-    return cached_result.value();
+    return *cached_result;
   }
 
   _parse_tree_cache_hit = false;
@@ -127,7 +127,7 @@ void SQLQueryOperator::execute_prepared_statement(const ExecuteStatement& execut
     throw std::runtime_error("Requested prepared statement does not exist!");
   }
 
-  compile_parse_result(cached_result.value());
+  compile_parse_result(*cached_result);
 }
 
 // Translate the statement and append the result plan
