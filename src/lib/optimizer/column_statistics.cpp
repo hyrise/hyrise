@@ -119,6 +119,9 @@ std::tuple<double, std::shared_ptr<AbstractColumnStatistics>> ColumnStatistics<T
     auto column_statistics = std::make_shared<ColumnStatistics>(1, casted_value1, casted_value1, _column_name);
     return {1.0 / distinct_count(), column_statistics};
   } else if (op == "!=") {
+    if (casted_value1 < min() || casted_value1 > max()) {
+      return {1.0, nullptr};
+    }
     // disregarding A = 5 AND A != 5
     // (just don't put this into a query!)
     auto column_statistics = std::make_shared<ColumnStatistics>(distinct_count() - 1, min(), max(), _column_name);
@@ -132,7 +135,7 @@ std::tuple<double, std::shared_ptr<AbstractColumnStatistics>> ColumnStatistics<T
         std::make_shared<ColumnStatistics>(selectivity * distinct_count(), min(), casted_value1 - 1, _column_name);
     return {selectivity, column_statistics};
   } else if (op == "<=" || (op == "<" && !std::is_integral<T>::value)) {
-    if (casted_value1 < min()) {
+    if (casted_value1 < min() || (op == "<" && casted_value1 <= min())) {
       return {0.0, nullptr};
     }
     double selectivity = (casted_value1 - min() + 1) / static_cast<double>(max() - min() + 1);
@@ -147,8 +150,8 @@ std::tuple<double, std::shared_ptr<AbstractColumnStatistics>> ColumnStatistics<T
     auto column_statistics =
         std::make_shared<ColumnStatistics>(selectivity * distinct_count(), casted_value1 + 1, max(), _column_name);
     return {selectivity, column_statistics};
-  } else if (op == ">=" || (op == "<" && !std::is_integral<T>::value)) {
-    if (casted_value1 > max()) {
+  } else if (op == ">=" || (op == ">" && !std::is_integral<T>::value)) {
+    if (casted_value1 > max() || (op == ">" && casted_value1 >= max())) {
       return {0.0, nullptr};
     }
     double selectivity = (max() - casted_value1 + 1) / static_cast<double>(max() - min() + 1);
