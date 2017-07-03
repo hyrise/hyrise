@@ -21,6 +21,8 @@ namespace opossum {
  * This operator reads a Opossum binary file and creates a table from that input.
  * If parameter tablename provided, the imported table is stored in the StorageManager. If a table with this name
  * already exists, it is returned and no import is performed.
+ *
+ * Note: ImportBinary does not support null values at the moment
  */
 class ImportBinary : public AbstractReadOnlyOperator {
  public:

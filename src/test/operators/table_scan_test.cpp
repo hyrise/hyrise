@@ -43,8 +43,8 @@ class OperatorsTableScanTest : public BaseTest {
     _table_wrapper_part_dict->execute();
 
     std::shared_ptr<Table> test_table_filtered = std::make_shared<Table>(5);
-    test_table_filtered->add_column("a", "int", false);
-    test_table_filtered->add_column("b", "float", false);
+    test_table_filtered->add_column_definition("a", "int");
+    test_table_filtered->add_column_definition("b", "float");
     auto pos_list = std::make_shared<PosList>();
     pos_list->emplace_back(test_table_part_dict->calculate_row_id(ChunkID{3}, 1));
     pos_list->emplace_back(test_table_part_dict->calculate_row_id(ChunkID{2}, 0));

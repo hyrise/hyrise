@@ -93,6 +93,34 @@ TEST_F(StorageDictionaryColumnTest, CompressColumnDouble) {
   EXPECT_EQ((*dict)[2], 1.1);
 }
 
+TEST_F(StorageDictionaryColumnTest, CompressNullableColumnInt) {
+  vc_int = std::make_shared<ValueColumn<int>>(true);
+
+  vc_int->append(4);
+  vc_int->append(4);
+  vc_int->append(3);
+  vc_int->append(4);
+  vc_int->append(NULL_VALUE);
+  vc_int->append(3);
+
+  auto col = DictionaryCompression::compress_column("int", vc_int);
+  auto dict_col = std::dynamic_pointer_cast<DictionaryColumn<int>>(col);
+
+  // Test attribute_vector size
+  EXPECT_EQ(dict_col->size(), 6u);
+
+  // Test dictionary size (uniqueness)
+  EXPECT_EQ(dict_col->unique_values_count(), 2u);
+
+  // Test sorting
+  auto dict = dict_col->dictionary();
+  EXPECT_EQ((*dict)[0], 3);
+  EXPECT_EQ((*dict)[1], 4);
+
+  // Test retrieval of null value
+  EXPECT_TRUE(is_null((*dict_col)[4]));
+}
+
 TEST_F(StorageDictionaryColumnTest, LowerUpperBound) {
   for (int i = 0; i <= 10; i += 2) vc_int->append(i);
 

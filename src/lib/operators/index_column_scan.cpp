@@ -70,7 +70,7 @@ class IndexColumnScan::IndexColumnScanImpl : public AbstractReadOnlyOperatorImpl
     auto filter_column_id = in_table->column_id_by_name(_filter_column_name);
 
     for (ColumnID column_id{0}; column_id < in_table->col_count(); ++column_id) {
-      output->add_column(in_table->column_name(column_id), in_table->column_type(column_id), false);
+      output->add_column_definition(in_table->column_name(column_id), in_table->column_type(column_id));
     }
 
     // Definining all possible operators here might appear odd. Chances are, however, that we will not

@@ -10,7 +10,11 @@
 namespace opossum {
 enum class PrintMode { PrintEmptyChunks, IgnoreEmptyChunks };
 
-// operator to print the table with its data
+/**
+ * operator to print the table with its data
+ *
+ * Note: Print does not support null values at the moment
+ */
 class Print : public AbstractReadOnlyOperator {
  public:
   explicit Print(const std::shared_ptr<const AbstractOperator> in, std::ostream& out = std::cout,

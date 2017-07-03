@@ -18,7 +18,7 @@
 
 namespace opossum {
 
-CsvRfcParser::CsvRfcParser(size_t buffer_size, const CsvConfig & csv_config)
+CsvRfcParser::CsvRfcParser(size_t buffer_size, const CsvConfig& csv_config)
     : _buffer_size(buffer_size), _csv_config(csv_config) {}
 
 std::shared_ptr<Table> CsvRfcParser::parse(const std::string& filename) {
@@ -82,7 +82,7 @@ std::shared_ptr<Table> CsvRfcParser::parse(const std::string& filename) {
 }
 
 void CsvRfcParser::_parse_file_chunk(std::vector<char>::iterator start, std::vector<char>::iterator end, Chunk& chunk,
-                                     const Table& table, ChunkOffset row_count, const CsvConfig & config) {
+                                     const Table& table, ChunkOffset row_count, const CsvConfig& config) {
   if (start == end) return;
   auto position = start;
 
@@ -120,7 +120,7 @@ void CsvRfcParser::_parse_file_chunk(std::vector<char>::iterator start, std::vec
   }
 }
 
-const std::shared_ptr<Table> CsvRfcParser::_process_meta_file(const std::string& meta_file, const CsvConfig & config) {
+const std::shared_ptr<Table> CsvRfcParser::_process_meta_file(const std::string& meta_file, const CsvConfig& config) {
   std::ifstream file;
   file.exceptions(std::ifstream::failbit | std::ifstream::badbit);
   file.open(meta_file, std::ifstream::binary | std::ifstream::ate);
@@ -170,7 +170,7 @@ const std::shared_ptr<Table> CsvRfcParser::_process_meta_file(const std::string&
 
 std::vector<char>::iterator CsvRfcParser::_next_field(const std::vector<char>::iterator& start,
                                                       const std::vector<char>::iterator& end, char& last_char,
-                                                      const CsvConfig & config) {
+                                                      const CsvConfig& config) {
   if (start == end) return start;
   auto position = start;
 
@@ -198,7 +198,7 @@ std::vector<char>::iterator CsvRfcParser::_next_field(const std::vector<char>::i
 }
 
 std::vector<char>::iterator CsvRfcParser::_next_row(const std::vector<char>::iterator& start,
-                                                    const std::vector<char>::iterator& end, const CsvConfig & config) {
+                                                    const std::vector<char>::iterator& end, const CsvConfig& config) {
   bool is_escaped = false;
   auto position = start;
   // find the next delimiter that is not surrounded by quotes

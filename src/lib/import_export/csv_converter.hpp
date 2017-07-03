@@ -36,7 +36,7 @@ class AbstractCsvConverter {
    * The operation is in-place and does not create a new string object.
    * Field must be a valid csv field.
    */
-  static void unescape(std::string &field, const CsvConfig & config = {}) {
+  static void unescape(std::string &field, const CsvConfig &config = {}) {
     // String does not contain escaping if it is not surrounded with quotes
     if (field.empty() || field.front() != config.quote) return;
 
@@ -66,7 +66,7 @@ class AbstractCsvConverter {
 template <typename T>
 class CsvConverter : public AbstractCsvConverter {
  public:
-  explicit CsvConverter(ChunkOffset size, const CsvConfig & config = {}) : _parsed_values(size), _config(config) {}
+  explicit CsvConverter(ChunkOffset size, const CsvConfig &config = {}) : _parsed_values(size), _config(config) {}
 
   void insert(const char *value, ChunkOffset position) override {
     _parsed_values[position] = _get_conversion_function()(value);

@@ -12,7 +12,11 @@
 
 namespace opossum {
 
-// operator to select a subset of the set of all columns found in the table
+/**
+ * Operator to select a subset of the set of all columns found in the table
+ *
+ * Note: Projection does not support null values at the moment
+ */
 class Projection : public AbstractReadOnlyOperator {
  public:
   // Defines one output column
