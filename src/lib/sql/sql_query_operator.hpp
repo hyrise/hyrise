@@ -37,9 +37,9 @@ class SQLQueryOperator : public AbstractOperator {
 
   const std::shared_ptr<OperatorTask>& get_result_task() const;
 
-  bool hit_parse_tree_cache() const;
+  bool parse_tree_cache_hit() const;
 
-  bool hit_query_plan_cache() const;
+  bool query_plan_cache_hit() const;
 
   // Return the generated query plan.
   const SQLQueryPlan& get_query_plan() const;
@@ -87,10 +87,10 @@ class SQLQueryOperator : public AbstractOperator {
   const bool _schedule_plan;
 
   // True, if the parse tree was obtained from the cache.
-  bool _hit_parse_tree_cache;
+  bool _parse_tree_cache_hit;
 
   // True, if the query plan was obtained from the cache.
-  bool _hit_query_plan_cache;
+  bool _query_plan_cache_hit;
 
   // Static.
   // Automatic caching of parse trees during runtime.

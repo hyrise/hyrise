@@ -24,7 +24,7 @@ SQLQueryCache<std::shared_ptr<hsql::SQLParserResult>> SQLQueryOperator::_prepare
 SQLQueryCache<SQLQueryPlan> SQLQueryOperator::_query_plan_cache(0);
 
 SQLQueryOperator::SQLQueryOperator(const std::string& query, bool schedule_plan)
-    : _query(query), _schedule_plan(schedule_plan), _hit_parse_tree_cache(false), _hit_query_plan_cache(false) {
+    : _query(query), _schedule_plan(schedule_plan), _parse_tree_cache_hit(false), _query_plan_cache_hit(false) {
   _result_op = std::make_shared<SQLResultOperator>();
   _result_task = std::make_shared<OperatorTask>(_result_op);
 }
@@ -39,9 +39,9 @@ const std::shared_ptr<OperatorTask>& SQLQueryOperator::get_result_task() const {
 
 const SQLQueryPlan& SQLQueryOperator::get_query_plan() const { return _plan; }
 
-bool SQLQueryOperator::hit_parse_tree_cache() const { return _hit_parse_tree_cache; }
+bool SQLQueryOperator::parse_tree_cache_hit() const { return _parse_tree_cache_hit; }
 
-bool SQLQueryOperator::hit_query_plan_cache() const { return _hit_query_plan_cache; }
+bool SQLQueryOperator::query_plan_cache_hit() const { return _query_plan_cache_hit; }
 
 std::shared_ptr<const Table> SQLQueryOperator::on_execute(std::shared_ptr<TransactionContext> context) {
   // Compile the query.
@@ -61,7 +61,7 @@ void SQLQueryOperator::compile_query(const std::string& query) {
   // Check the query plan cache.
   SQLQueryPlan cached_plan;
   if (_query_plan_cache.try_get(_query, &cached_plan)) {
-    _hit_query_plan_cache = true;
+    _query_plan_cache_hit = true;
     _plan = cached_plan.recreate();
     return;
   }
@@ -88,11 +88,11 @@ std::shared_ptr<SQLParserResult> SQLQueryOperator::parse_query(const std::string
 
   // Check parse tree cache.
   if (_parse_tree_cache.try_get(_query, &result)) {
-    _hit_parse_tree_cache = true;
+    _parse_tree_cache_hit = true;
     return result;
   }
 
-  _hit_parse_tree_cache = false;
+  _parse_tree_cache_hit = false;
 
   // Parse the query into our result object.
   SQLParser::parseSQLString(query, result.get());

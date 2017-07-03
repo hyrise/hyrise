@@ -38,11 +38,11 @@ class SQLQueryPlanCacheTest : public BaseTest {
     auto task = std::make_shared<OperatorTask>(op);
     task->execute();
 
-    if (op->hit_parse_tree_cache()) {
+    if (op->parse_tree_cache_hit()) {
       parse_tree_cache_hits++;
     }
 
-    if (op->hit_query_plan_cache()) {
+    if (op->query_plan_cache_hit()) {
       query_plan_cache_hits++;
     }
     return task;
