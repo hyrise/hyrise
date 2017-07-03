@@ -17,7 +17,7 @@ class TableStatisticsTest : public BaseTest {
     std::shared_ptr<Table> table_a = load_table("src/test/tables/int_float_double_string.tbl", 0);
     StorageManager::get().add_table("table_a", std::move(table_a));
 
-    table_a_stats = std::make_shared<TableStatistics>("table_a");
+    table_a_stats = opossum::StorageManager::get().get_table("table_a")->get_table_statistics();;
 
     //          std::shared_ptr<Table> table_b = load_table("src/test/tables/int_float2.tbl", 0);
     //          StorageManager::get().add_table("table_b", std::move(table_b));
@@ -58,6 +58,15 @@ TEST_F(TableStatisticsTest, NotEqualTest) {
 
   stat = table_a_stats->predicate_statistics("b", "!=", opossum::AllParameterVariant(7.f));
   ASSERT_EQ(stat->row_count(), 6.);
+
+  stat = table_a_stats->predicate_statistics("d", "!=", opossum::AllParameterVariant("b"));
+  ASSERT_EQ(stat->row_count(), 5.);
+
+  stat = table_a_stats->predicate_statistics("d", "!=", opossum::AllParameterVariant("a"));
+  ASSERT_EQ(stat->row_count(), 6.);
+
+  stat = table_a_stats->predicate_statistics("d", "!=", opossum::AllParameterVariant("h"));
+  ASSERT_EQ(stat->row_count(), 6.);
 }
 
 TEST_F(TableStatisticsTest, EqualTest) {
@@ -78,6 +87,15 @@ TEST_F(TableStatisticsTest, EqualTest) {
 
   stat = table_a_stats->predicate_statistics("b", "=", opossum::AllParameterVariant(7.f));
   ASSERT_EQ(stat->row_count(), 0.);
+
+  stat = table_a_stats->predicate_statistics("d", "!=", opossum::AllParameterVariant("b"));
+  ASSERT_EQ(stat->row_count(), 5.);
+
+  stat = table_a_stats->predicate_statistics("d", "!=", opossum::AllParameterVariant("a"));
+  ASSERT_EQ(stat->row_count(), 6.);
+
+  stat = table_a_stats->predicate_statistics("d", "!=", opossum::AllParameterVariant("h"));
+  ASSERT_EQ(stat->row_count(), 6.);
 }
 
 TEST_F(TableStatisticsTest, LessThanTest) {
