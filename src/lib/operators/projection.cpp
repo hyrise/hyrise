@@ -25,6 +25,13 @@ uint8_t Projection::num_in_tables() const { return 1; }
 
 uint8_t Projection::num_out_tables() const { return 1; }
 
+std::shared_ptr<AbstractOperator> Projection::recreate() const {
+  if (!_simple_projection.empty()) {
+    return std::make_shared<Projection>(_input_left->recreate(), _simple_projection);
+  }
+  return std::make_shared<Projection>(_input_left->recreate(), _projection_definitions);
+}
+
 std::shared_ptr<const Table> Projection::on_execute() {
   if (!_simple_projection.empty()) {
     for (auto& column : _simple_projection) {
