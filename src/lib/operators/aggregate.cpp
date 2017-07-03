@@ -26,7 +26,7 @@ uint8_t Aggregate::num_in_tables() const { return 1; }
 uint8_t Aggregate::num_out_tables() const { return 1; }
 
 std::shared_ptr<AbstractOperator> Aggregate::recreate() const {
-  return std::make_shared<Aggregate>(nullptr, _aggregates, _groupby_columns);
+  return std::make_shared<Aggregate>(_input_left->recreate(), _aggregates, _groupby_columns);
 }
 
 std::shared_ptr<const Table> Aggregate::on_execute() {

@@ -129,10 +129,10 @@ std::shared_ptr<const Table> JoinNestedLoopB::on_execute() {
 
   // Ensure matching column types for simplicity
   // Joins on non-matching types can be added later.
-  DebugAssert((left_column_type == right_column_type), "JoinNestedLoopB::execute: column type \"" + left_column_type +
-                                                           "\" of left column \"" + _left_column_name +
-                                                           "\" does not match colum type \"" + right_column_type +
-                                                           "\" of right column \"" + _right_column_name + "\"!");
+  DebugAssert((left_column_type == right_column_type),
+              "JoinNestedLoopB::execute: column type \"" + left_column_type + "\" of left column \"" +
+                  _left_column_name + "\" does not match colum type \"" + right_column_type + "\" of right column \"" +
+                  _right_column_name + "\"!");
 
   _join_columns(left_column_id, right_column_id, left_column_type);
 
@@ -157,7 +157,8 @@ uint8_t JoinNestedLoopB::num_in_tables() const { return 2u; }
 uint8_t JoinNestedLoopB::num_out_tables() const { return 1u; }
 
 std::shared_ptr<AbstractOperator> JoinNestedLoopB::recreate() const {
-  return std::make_shared<JoinNestedLoopB>(nullptr, nullptr, _column_names, _op, _mode, _prefix_left, _prefix_right);
+  return std::make_shared<JoinNestedLoopB>(_input_left->recreate(), _input_right->recreate(), _column_names, _op, _mode,
+                                           _prefix_left, _prefix_right);
 }
 
 template <typename T>

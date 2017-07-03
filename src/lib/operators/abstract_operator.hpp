@@ -67,7 +67,7 @@ class AbstractOperator {
   void set_transaction_context(std::shared_ptr<TransactionContext> transaction_context);
 
   // Returns a new instance of the same operator with the same configuration.
-  // Does not recreate the input operators. They will be set to nullptr.
+  // Recursively recreates the input operators.
   // An operator needs to override this method in order to be cacheable.
   virtual std::shared_ptr<AbstractOperator> recreate() const = 0;
 
@@ -79,10 +79,6 @@ class AbstractOperator {
   // Note: these methods cast away const for the return shared_ptr of AbstractOperator.
   std::shared_ptr<AbstractOperator> mutable_input_left() const;
   std::shared_ptr<AbstractOperator> mutable_input_right() const;
-
-  // Set the input operators.
-  void set_input_left(std::shared_ptr<const AbstractOperator> input_left);
-  void set_input_right(std::shared_ptr<const AbstractOperator> input_right);
 
  protected:
   // abstract method to actually execute the operator

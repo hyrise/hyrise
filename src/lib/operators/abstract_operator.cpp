@@ -37,12 +37,6 @@ std::shared_ptr<const AbstractOperator> AbstractOperator::input_left() const { r
 
 std::shared_ptr<const AbstractOperator> AbstractOperator::input_right() const { return _input_right; }
 
-void AbstractOperator::set_input_left(std::shared_ptr<const AbstractOperator> input_left) { _input_left = input_left; }
-
-void AbstractOperator::set_input_right(std::shared_ptr<const AbstractOperator> input_right) {
-  _input_right = input_right;
-}
-
 void AbstractOperator::set_transaction_context(std::shared_ptr<TransactionContext> transaction_context) {
   _transaction_context = transaction_context;
 }

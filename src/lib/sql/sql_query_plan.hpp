@@ -37,9 +37,6 @@ class SQLQueryPlan {
   SQLQueryPlan recreate() const;
 
  protected:
-  void recreate_tasks_deep(const std::shared_ptr<const AbstractOperator>& root_operator,
-                           std::vector<std::shared_ptr<OperatorTask>>* tasks) const;
-
   std::vector<std::shared_ptr<OperatorTask>> _tasks;
 };
 

@@ -55,9 +55,7 @@ class SQLQueryCache {
   void clear_and_resize(size_t capacity) { _cache = LRUCache<key_t, val_t>(capacity); }
 
   // Purges all entries from the cache.
-  void clear() {
-    clear_and_resize(_cache.capacity());
-  }
+  void clear() { clear_and_resize(_cache.capacity()); }
 
   size_t size() const { return _cache.size(); }
 

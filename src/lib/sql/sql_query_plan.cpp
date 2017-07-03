@@ -24,41 +24,13 @@ const std::vector<std::shared_ptr<OperatorTask>>& SQLQueryPlan::tasks() const { 
 
 SQLQueryPlan SQLQueryPlan::recreate() const {
   // Recreate the task tree.
-  const auto root = this->back();
-  std::vector<std::shared_ptr<OperatorTask>> new_tasks;
-  new_tasks.reserve(_tasks.size());
-  recreate_tasks_deep(root->get_operator(), &new_tasks);
+  const std::shared_ptr<const AbstractOperator>& root_operator = this->back()->get_operator();
+  std::shared_ptr<AbstractOperator> new_root = root_operator->recreate();
+  const auto new_tasks = OperatorTask::make_tasks_from_operator(new_root);
 
   // Return a new query plan instance with the new task tree.
   SQLQueryPlan new_plan(std::move(new_tasks));
   return new_plan;
-}
-
-void SQLQueryPlan::recreate_tasks_deep(const std::shared_ptr<const AbstractOperator>& root_operator,
-                                       std::vector<std::shared_ptr<OperatorTask>>* tasks) const {
-  auto root_copy = root_operator->recreate();
-  auto root_copy_task = std::make_shared<OperatorTask>(root_copy);
-
-  // Traverse left input.
-  auto left_op = root_operator->input_left();
-  if (left_op.get() != nullptr) {
-    recreate_tasks_deep(left_op, tasks);
-
-    root_copy->set_input_left(tasks->back()->get_operator());
-    tasks->back()->set_as_predecessor_of(root_copy_task);
-  }
-
-  // Traverse right input.
-  auto right_op = root_operator->input_right();
-  if (right_op.get() != nullptr) {
-    recreate_tasks_deep(right_op, tasks);
-
-    root_copy->set_input_right(tasks->back()->get_operator());
-    tasks->back()->set_as_predecessor_of(root_copy_task);
-  }
-
-  // Add the root task at the end.
-  tasks->push_back(std::move(root_copy_task));
 }
 
 }  // namespace opossum

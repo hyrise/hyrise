@@ -38,7 +38,7 @@ std::string &TableScan::replace_all(std::string &str, const std::string &old_val
 }
 
 std::shared_ptr<AbstractOperator> TableScan::recreate() const {
-  return std::make_shared<TableScan>(nullptr, _column_name, _op, _value, _value2);
+  return std::make_shared<TableScan>(_input_left->recreate(), _column_name, _op, _value, _value2);
 }
 
 std::map<std::string, std::string> TableScan::extract_character_ranges(std::string &str) {
