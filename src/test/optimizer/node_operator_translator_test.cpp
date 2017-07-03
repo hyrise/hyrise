@@ -60,4 +60,10 @@ TEST_F(NodeOperatorTranslatorTest, SelectStarAllTest) {
   execute_and_check(query, expected_result);
 }
 
+TEST_F(NodeOperatorTranslatorTest, SelectWithAndCondition) {
+  const auto query = "SELECT * FROM table_b WHERE a = 12345 AND b > 457;";
+  const auto expected_result = load_table("src/test/tables/int_float2_filtered.tbl", 2);
+  execute_and_check(query, expected_result);
+}
+
 }  // namespace opossum
