@@ -52,7 +52,7 @@ class JoinHash : public AbstractJoinOperator {
   const std::string name() const override;
   uint8_t num_in_tables() const override;
   uint8_t num_out_tables() const override;
-  inline std::shared_ptr<AbstractOperator> recreate() const override {
+  std::shared_ptr<AbstractOperator> recreate() const override {
     throw std::runtime_error("Operator " + this->name() + " does not implement recreation.");
   }
 
