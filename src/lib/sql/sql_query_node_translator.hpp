@@ -24,19 +24,22 @@ class SQLQueryNodeTranslator {
  protected:
   std::shared_ptr<AbstractNode> _translate_select(const hsql::SelectStatement& select);
 
-  //  std::shared_ptr<AbstractNode> _translate_join(const hsql::JoinDefinition& select);
+  std::shared_ptr<AbstractNode> _translate_table_ref(const hsql::TableRef& table);
 
   std::shared_ptr<AbstractNode> _translate_filter_expr(const hsql::Expr& expr,
                                                        const std::shared_ptr<AbstractNode>& input_node);
 
-  std::shared_ptr<AbstractNode> _translate_table_ref(const hsql::TableRef& table);
+  std::shared_ptr<AbstractNode> _translate_projection(const std::vector<hsql::Expr*>& expr_list,
+                                                      const std::shared_ptr<AbstractNode>& input_node);
+
+  std::shared_ptr<AbstractNode> _translate_order_by(const std::vector<hsql::OrderDescription*> order_list,
+                                                    const std::shared_ptr<AbstractNode>& input_node);
+
+  //  std::shared_ptr<AbstractNode> _translate_join(const hsql::JoinDefinition& select);
 
   const std::string _get_column_name(const hsql::Expr& expr) const;
 
   const AllTypeVariant _translate_literal(const hsql::Expr& expr);
-
-  std::shared_ptr<AbstractNode> _translate_projection(const std::vector<hsql::Expr*>& expr_list,
-                                                      const std::shared_ptr<AbstractNode>& input_node);
 };
 
 }  // namespace opossum
