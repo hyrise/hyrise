@@ -25,7 +25,8 @@ NodeOperatorTranslator::NodeOperatorTranslator() {
       std::bind(&NodeOperatorTranslator::translate_projection_node, this, std::placeholders::_1);
 }
 
-const std::shared_ptr<AbstractOperator> NodeOperatorTranslator::translate_node(std::shared_ptr<AbstractNode> node) const {
+const std::shared_ptr<AbstractOperator> NodeOperatorTranslator::translate_node(
+    std::shared_ptr<AbstractNode> node) const {
   auto it = _operator_factory.find(node->type());
 
   if (it == _operator_factory.end()) {
