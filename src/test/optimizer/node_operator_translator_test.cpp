@@ -46,15 +46,18 @@ class NodeOperatorTranslatorTest : public BaseTest {
     return tasks.back();
   }
 
+  void execute_and_check(const std::string query, std::shared_ptr<Table> expected_result) {
+    auto result_task = schedule_query_and_return_task(query);
+    EXPECT_TABLE_EQ(result_task->get_operator()->get_output(), expected_result);
+  }
+
   SQLQueryNodeTranslator _node_translator;
 };
 
 TEST_F(NodeOperatorTranslatorTest, SelectStarAllTest) {
   const auto query = "SELECT * FROM table_a;";
-  auto result_task = schedule_query_and_return_task(query);
-
-  auto expected_result = load_table("src/test/tables/int_float.tbl", 2);
-  EXPECT_TABLE_EQ(result_task->get_operator()->get_output(), expected_result);
+  const auto expected_result = load_table("src/test/tables/int_float.tbl", 2);
+  execute_and_check(query, expected_result);
 }
 
 }  // namespace opossum
