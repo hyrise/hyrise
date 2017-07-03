@@ -8,6 +8,8 @@
 
 #include "optimizer/table_statistics.hpp"
 #include "storage/storage_manager.hpp"
+#include "operators/table_wrapper.hpp"
+#include "operators/table_scan.hpp"
 
 namespace opossum {
 
@@ -36,6 +38,19 @@ class TableStatisticsTest : public BaseTest {
 
   std::shared_ptr<TableStatistics> table_a_stats;
   std::shared_ptr<TableStatistics> table_b_stats;
+
+  std::pair<std::shared_ptr<TableStatistics>, std::shared_ptr<Table>> compare_statistic_with_table_scan(std::pair<std::shared_ptr<TableStatistics>, std::shared_ptr<Table>> table_input, const std::string &column_name, const std::string& op, const AllTypeVariant value, const optional<AllTypeVariant> value2) {
+    auto stat = table_a_stats->predicate_statistics(column_name, op, value, value2);
+    auto table_wraper = std::make_shared<TableWrapper>(table_input.second);
+    table_wraper->execute();
+    auto table_scan = std::make_shared<TableScan>(table_wraper, column_name, op, value, value2);
+    table_scan->execute();
+    ASSERT_EQ(stat->row_count(), table_scan->get_output()->row_count());
+  };
+
+//  std::pair<std::shared_ptr<TableStatistics>, std::shared_ptr<Table>> compare_statistic_with_table_scan(std::pair<std::shared_ptr<TableStatistics>) {
+//
+//  };
 };
 
 TEST_F(TableStatisticsTest, GetTableTest) { ASSERT_EQ(table_a_stats->row_count(), 6.); }
@@ -189,6 +204,7 @@ TEST_F(TableStatisticsTest, GreaterEqualThanTest) {
   stat = table_a_stats->predicate_statistics("b", ">=", opossum::AllParameterVariant(7.f));
   ASSERT_EQ(stat->row_count(), 0.);
 }
+
 
 //
 //    TEST_F(TableStatisticsTest, NotEqualTest) {

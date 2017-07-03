@@ -129,7 +129,7 @@ std::tuple<double, std::shared_ptr<AbstractColumnStatistics>> ColumnStatistics<T
     if (casted_value1 < min() || casted_value1 > max()) {
       return {1.0, nullptr};
     }
-    // disregarding A = 5 AND A != 5
+    // disregarding A != 5 AND A = 5
     // (just don't put this into a query!)
     auto column_statistics = std::make_shared<ColumnStatistics>(distinct_count() - 1, min(), max(), _column_name);
     return {(-1.0 + distinct_count()) / distinct_count(), column_statistics};
