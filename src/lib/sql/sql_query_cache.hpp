@@ -30,15 +30,14 @@ class SQLQueryCache {
 
   // Tries to fetch the cache entry for the query into the result object.
   // Returns true if the entry was found, false otherwise.
-  bool try_get(const key_t& query, val_t* result) {
-    if (_cache.capacity() == 0) return false;
+  optional<val_t> try_get(const key_t& query) {
+    if (_cache.capacity() == 0) return {};
 
     std::lock_guard<std::mutex> lock(_mutex);
     if (!_cache.has(query)) {
-      return false;
+      return {};
     }
-    *result = _cache.get(query);
-    return true;
+    return _cache.get(query);
   }
 
   // Checks whether an entry for the query exists.

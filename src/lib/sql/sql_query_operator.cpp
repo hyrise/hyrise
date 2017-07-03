@@ -59,10 +59,10 @@ std::shared_ptr<const Table> SQLQueryOperator::on_execute(std::shared_ptr<Transa
 
 void SQLQueryOperator::compile_query(const std::string& query) {
   // Check the query plan cache.
-  SQLQueryPlan cached_plan;
-  if (_query_plan_cache.try_get(_query, &cached_plan)) {
+  optional<SQLQueryPlan> cached_plan = _query_plan_cache.try_get(_query);
+  if (cached_plan) {
     _query_plan_cache_hit = true;
-    _plan = cached_plan.recreate();
+    _plan = cached_plan.value().recreate();
     return;
   }
 
@@ -84,17 +84,17 @@ void SQLQueryOperator::compile_query(const std::string& query) {
 }
 
 std::shared_ptr<SQLParserResult> SQLQueryOperator::parse_query(const std::string& query) {
-  std::shared_ptr<SQLParserResult> result = std::make_shared<SQLParserResult>();
-
   // Check parse tree cache.
-  if (_parse_tree_cache.try_get(_query, &result)) {
+  optional<std::shared_ptr<SQLParserResult>> cached_result = _parse_tree_cache.try_get(_query);
+  if (cached_result) {
     _parse_tree_cache_hit = true;
-    return result;
+    return cached_result.value();
   }
 
   _parse_tree_cache_hit = false;
 
   // Parse the query into our result object.
+  std::shared_ptr<SQLParserResult> result = std::make_shared<SQLParserResult>();
   SQLParser::parseSQLString(query, result.get());
 
   if (!result->isValid()) {
@@ -121,13 +121,13 @@ void SQLQueryOperator::prepare_statement(const PrepareStatement& prepare_stmt) {
 
 // Tries to fetch the referenced prepared statement and retrieve its cached data.
 void SQLQueryOperator::execute_prepared_statement(const ExecuteStatement& execute_stmt) {
-  std::shared_ptr<SQLParserResult> parse_result = std::make_shared<SQLParserResult>();
+  optional<std::shared_ptr<SQLParserResult>> cached_result = _prepared_stmts.try_get(execute_stmt.name);
 
-  if (!_prepared_stmts.try_get(execute_stmt.name, &parse_result)) {
+  if (!cached_result) {
     throw std::runtime_error("Requested prepared statement does not exist!");
   }
 
-  compile_parse_result(parse_result);
+  compile_parse_result(cached_result.value());
 }
 
 // Translate the statement and append the result plan
