@@ -37,14 +37,58 @@ namespace opossum {
         std::shared_ptr<TableStatistics> table_b_stats;
     };
 
-    TEST_F(TableStatisticsTest, SimpleTest) {
+    TEST_F(TableStatisticsTest, GetTableTest) {
       ASSERT_EQ(table_a_stats->row_count(), 3.);
+    }
+
+    TEST_F(TableStatisticsTest, NotEqualTest) {
       auto stat1 = table_a_stats->predicate_statistics("a", "!=", opossum::AllParameterVariant(123));
       ASSERT_EQ(stat1->row_count(), 2.);
-//      auto stat2 = stat1->predicate_statistics("C_D_ID", "!=", opossum::AllParameterVariant(2));
-      auto stat2 = stat1->predicate_statistics("b", "<", opossum::AllParameterVariant(458.2f));
-      ASSERT_GT(stat2->row_count(), 1.);
-      ASSERT_LT(stat2->row_count(), 2.);
+
+      auto stat2 = table_a_stats->predicate_statistics("a", "!=", opossum::AllParameterVariant(457.2f));
+      ASSERT_EQ(stat2->row_count(), 2.);
     }
+
+    TEST_F(TableStatisticsTest, EqualTest) {
+      auto stat1 = table_a_stats->predicate_statistics("a", "=", opossum::AllParameterVariant(123));
+      ASSERT_EQ(stat1->row_count(), 1.);
+
+      auto stat2 = table_a_stats->predicate_statistics("a", "=", opossum::AllParameterVariant(457.2f));
+      ASSERT_EQ(stat2->row_count(), 1.);
+    }
+
+//    TEST_F(TableStatisticsTest, LessThanTest) {
+//      auto stat1 = table_a_stats->predicate_statistics("a", "<", opossum::AllParameterVariant(6234));
+//      ASSERT_EQ(stat1->row_count(), 1.);
+//
+//      auto stat2 = table_a_stats->predicate_statistics("a", "<", opossum::AllParameterVariant(457.2f));
+//      ASSERT_EQ(stat2->row_count(), 1.);
+//    }
+//
+//    TEST_F(TableStatisticsTest, LessEqualThanTest) {
+//      auto stat1 = table_a_stats->predicate_statistics("a", "<=", opossum::AllParameterVariant(6234));
+//      ASSERT_EQ(stat1->row_count(), 1.);
+//
+//      auto stat2 = table_a_stats->predicate_statistics("a", "<=", opossum::AllParameterVariant(458.2f));
+//      ASSERT_EQ(stat2->row_count(), 1.);
+//    }
+//
+//
+//
+//
+//    TEST_F(TableStatisticsTest, NotEqualTest) {
+//      auto stat1 = table_a_stats->predicate_statistics("a", "!=", opossum::AllParameterVariant(123));
+//      ASSERT_EQ(stat1->row_count(), 2.);
+//
+//      auto stat2 = table_a_stats->predicate_statistics("a", "!=", opossum::AllParameterVariant(458.2f));
+//      ASSERT_EQ(stat2->row_count(), 2.);
+//
+//
+//
+////      auto stat2 = stat1->predicate_statistics("C_D_ID", "!=", opossum::AllParameterVariant(2));
+//      auto stat2 = stat1->predicate_statistics("b", "<", opossum::AllParameterVariant(458.2f));
+//      ASSERT_GT(stat2->row_count(), 1.);
+//      ASSERT_LT(stat2->row_count(), 2.);
+//    }
 
 }  // namespace opossum
