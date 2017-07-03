@@ -51,7 +51,7 @@ void TableGenerator::add_column(std::shared_ptr<std::vector<size_t>> cardinaliti
   bool is_first_column = table->col_count() == 0;
 
   auto data_type_name = opossum::get_name_of_type<T>();
-  table->add_column(name, data_type_name, false);
+  table->add_column_definition(name, data_type_name);
 
   auto row_count = std::accumulate(std::begin(*cardinalities), std::end(*cardinalities), 1u, std::multiplies<size_t>());
 
@@ -143,7 +143,7 @@ void TableGenerator::add_column(std::shared_ptr<std::vector<size_t>> cardinaliti
   bool is_first_column = table->col_count() == 0;
 
   auto data_type_name = opossum::get_name_of_type<T>();
-  table->add_column(name, data_type_name, false);
+  table->add_column_definition(name, data_type_name);
 
   auto row_count = std::accumulate(std::begin(*cardinalities), std::end(*cardinalities), 1u, std::multiplies<size_t>());
 
