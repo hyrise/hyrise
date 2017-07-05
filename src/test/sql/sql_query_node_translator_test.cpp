@@ -58,6 +58,11 @@ TEST_F(SQLQueryNodeTranslatorTest, SelectStarAllTest) {
   EXPECT_FALSE(result_node->left()->left());
 }
 
+TEST_F(SQLQueryNodeTranslatorTest, ExpressionTest) {
+  const auto query = "SELECT * FROM table_a WHERE a = 1234 + 1";
+  auto result_node = compile_query(query);
+}
+
 TEST_F(SQLQueryNodeTranslatorTest, SelectWithAndCondition) {
   const auto query = "SELECT * FROM table_a WHERE a >= 1234 AND b < 457.9";
   auto result_node = compile_query(query);

@@ -6,7 +6,7 @@
 
 namespace opossum {
 
-enum class NodeType { Projection, Table, TableScan };
+enum class NodeType { Projection, Table, TableScan, Expression };
 
 class AbstractNode : public std::enable_shared_from_this<AbstractNode> {
  public:

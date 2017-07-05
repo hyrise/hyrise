@@ -8,6 +8,7 @@
 
 #include "all_type_variant.hpp"
 #include "optimizer/abstract_syntax_tree/abstract_node.hpp"
+#include "optimizer/abstract_syntax_tree/expression_node.hpp"
 
 namespace opossum {
 
@@ -37,6 +38,8 @@ class SQLQueryNodeTranslator {
 
   std::shared_ptr<AbstractNode> _translate_projection(const std::vector<hsql::Expr*>& expr_list,
                                                       const std::shared_ptr<AbstractNode>& input_node);
+
+  std::shared_ptr<ExpressionNode> _translate_expression(const hsql::Expr& expr);
 };
 
 }  // namespace opossum
