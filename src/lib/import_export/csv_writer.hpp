@@ -17,7 +17,7 @@ class CsvWriter {
    * Creates a new CsvWriter with the given file as output file.
    * @param file The file to output the csv to.
    */
-  explicit CsvWriter(const std::string& file);
+  explicit CsvWriter(const std::string& file, const CsvConfig& config = {});
 
   template <typename T>
   void write(const T& value) {
@@ -47,7 +47,7 @@ class CsvWriter {
 
   std::ofstream _stream;
   ColumnID _current_col_count{0};
-  CsvConfig _config{};
+  CsvConfig _config;
 };
 
 template <typename T>

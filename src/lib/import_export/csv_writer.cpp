@@ -8,7 +8,8 @@
 
 namespace opossum {
 
-CsvWriter::CsvWriter(const std::string& file) {
+CsvWriter::CsvWriter(const std::string& file, const CsvConfig& config)
+: _config(config) {
   _stream.exceptions(std::ifstream::failbit | std::ifstream::badbit);
   _stream.open(file);
 }
