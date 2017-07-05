@@ -245,7 +245,6 @@ bool SQLQueryTranslator::_translate_group_by(const hsql::GroupByDescription& gro
       std::string fun_name(expr->name);
 
       DebugAssert(expr->exprList->size() == 1, "Expect SQL functions to only have single argument.");
-      DebugAssert(expr->exprList->at(0)->isType(kExprColumnRef), "Expecting ColumnRef");
       std::string argument = _get_column_name(*expr->exprList->at(0));
 
       if (agg_map.find(fun_name) != agg_map.end()) {
@@ -326,7 +325,8 @@ bool SQLQueryTranslator::_translate_table_ref(const hsql::TableRef& table) {
 
       // Determine join condition.
       const Expr& condition = *join_def.condition;
-      std::pair<std::string, std::string> columns(condition.expr->name, condition.expr2->name);
+      std::pair<std::string, std::string> columns(_get_column_name(*condition.expr),
+                                                  _get_column_name(*condition.expr2));
       std::string op;
       if (!_translate_filter_op(condition, &op)) {
         _error_msg = "Can not handle JOIN condition.";
@@ -435,12 +435,12 @@ std::string SQLQueryTranslator::_get_column_name(const hsql::Expr& expr) {
   if (expr.isType(hsql::kExprFunctionRef)) {
     name += expr.name;
     name += "(";
-    DebugAssert(*expr.exprList->at(0)->isType(kExprColumnRef), "Expecting ColumnRef");
     name += _get_column_name(*expr.exprList->at(0));
     name += ")";
     return name;
   }
 
+  DebugAssert(expr.isType(hsql::kExprColumnRef), "Expected column reference.");
   if (expr.hasTable()) name += std::string(expr.table) + ".";
   name += expr.name;
   return name;

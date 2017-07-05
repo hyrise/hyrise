@@ -44,7 +44,7 @@ class SQLSelectTest : public BaseTest, public ::testing::WithParamInterface<SQLT
         load_table("src/test/tables/aggregateoperator/groupby_int_2gb_2agg/input.tbl", 2);
     StorageManager::get().add_table("groupby_int_2gb_2agg", groupby_int_2gb_2agg);
 
-    // Create TPC-H customer table
+    // Load TPC-H tables
     load_tpch_tables();
   }
 
@@ -54,6 +54,9 @@ class SQLSelectTest : public BaseTest, public ::testing::WithParamInterface<SQLT
 
     std::shared_ptr<Table> orders = load_table("src/test/tables/tpch/orders.tbl", 1);
     StorageManager::get().add_table("orders", orders);
+
+    std::shared_ptr<Table> lineitem = load_table("src/test/tables/tpch/lineitem.tbl", 1);
+    StorageManager::get().add_table("lineitem", lineitem);
   }
 
   void compile_query(const std::string query) {
@@ -179,6 +182,15 @@ const SQLTestParam test_queries[] = {
                  "  GROUP BY customer.c_custkey, customer.c_name"
                  "  HAVING COUNT(orders.o_orderkey) >= 100;",
                  6u, true, ""},
+    SQLTestParam{"SELECT customer.c_custkey, customer.c_name, COUNT(orderitems.\"orders.o_orderkey\")"
+                 "  FROM customer"
+                 "  JOIN (SELECT * FROM "
+                 "    orders"
+                 "    JOIN lineitem ON o_orderkey = l_orderkey"
+                 "  ) AS orderitems ON c_custkey = orders.o_custkey"
+                 "  GROUP BY customer.c_custkey, customer.c_name"
+                 "  HAVING COUNT(orderitems.\"orders.o_orderkey\") >= 100;",
+                 8u, true, ""},
 };
 
 INSTANTIATE_TEST_CASE_P(test_queries, SQLSelectTest, ::testing::ValuesIn(test_queries));
