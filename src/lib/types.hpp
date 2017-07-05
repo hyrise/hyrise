@@ -95,4 +95,15 @@ enum class SchedulePriority {
   High = 0     // Schedule task at the beginning of the queue
 };
 
+// Part of AllParameterVariant to reference parameters that will be replaced later.
+class ParameterValue {
+ public:
+  explicit ParameterValue(unsigned index) : _index(index) {}
+
+  unsigned index() const { return _index; }
+
+ private:
+  unsigned _index;
+};
+
 }  // namespace opossum

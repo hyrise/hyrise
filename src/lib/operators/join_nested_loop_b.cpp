@@ -156,9 +156,9 @@ uint8_t JoinNestedLoopB::num_in_tables() const { return 2u; }
 
 uint8_t JoinNestedLoopB::num_out_tables() const { return 1u; }
 
-std::shared_ptr<AbstractOperator> JoinNestedLoopB::recreate() const {
-  return std::make_shared<JoinNestedLoopB>(_input_left->recreate(), _input_right->recreate(), _column_names, _op, _mode,
-                                           _prefix_left, _prefix_right);
+std::shared_ptr<AbstractOperator> JoinNestedLoopB::recreate(const std::vector<AllParameterVariant>& args) const {
+  return std::make_shared<JoinNestedLoopB>(_input_left->recreate(args), _input_right->recreate(args), _column_names,
+                                           _op, _mode, _prefix_left, _prefix_right);
 }
 
 template <typename T>

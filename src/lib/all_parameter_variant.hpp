@@ -15,7 +15,8 @@ namespace hana = boost::hana;
 // This holds pairs of all types and their respective string representation
 static constexpr auto parameter_types =
     hana::make_tuple(hana::make_pair("AllTypeVariant", hana::type_c<AllTypeVariant>),
-                     hana::make_pair("ColumnName", hana::type_c<ColumnName>));  // NOLINT
+                     hana::make_pair("ColumnName", hana::type_c<ColumnName>),      // NOLINT
+                     hana::make_pair("Parameter", hana::type_c<ParameterValue>));  // NOLINT
 
 // This holds only the possible data types.
 static constexpr auto parameter_types_as_hana_sequence = hana::transform(parameter_types, hana::second);  // NOLINT

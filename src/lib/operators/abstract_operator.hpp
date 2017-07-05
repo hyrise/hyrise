@@ -4,6 +4,7 @@
 #include <string>
 #include <vector>
 
+#include "all_parameter_variant.hpp"
 #include "common.hpp"
 #include "storage/table.hpp"
 
@@ -69,7 +70,7 @@ class AbstractOperator {
   // Returns a new instance of the same operator with the same configuration.
   // Recursively recreates the input operators.
   // An operator needs to override this method in order to be cacheable.
-  virtual std::shared_ptr<AbstractOperator> recreate() const = 0;
+  virtual std::shared_ptr<AbstractOperator> recreate(const std::vector<AllParameterVariant> &args) const = 0;
 
   // Get the input operators.
   std::shared_ptr<const AbstractOperator> input_left() const;

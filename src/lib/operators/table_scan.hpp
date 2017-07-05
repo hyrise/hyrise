@@ -48,7 +48,7 @@ class TableScan : public AbstractReadOnlyOperator {
   uint8_t num_in_tables() const override;
   uint8_t num_out_tables() const override;
 
-  std::shared_ptr<AbstractOperator> recreate() const override;
+  std::shared_ptr<AbstractOperator> recreate(const std::vector<AllParameterVariant> &args) const override;
 
  protected:
   std::shared_ptr<const Table> on_execute() override;

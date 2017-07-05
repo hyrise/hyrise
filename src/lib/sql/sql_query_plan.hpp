@@ -3,6 +3,7 @@
 #include <memory>
 #include <vector>
 
+#include "all_parameter_variant.hpp"
 #include "scheduler/operator_task.hpp"
 
 namespace opossum {
@@ -21,6 +22,8 @@ class SQLQueryPlan {
   // final task in the query plan and contains its result after execution.
   std::shared_ptr<OperatorTask> back() const;
 
+  void pop_back();
+
   // Adds a task to the end of the query plan.
   void add_task(std::shared_ptr<OperatorTask> task);
 
@@ -34,10 +37,16 @@ class SQLQueryPlan {
   const std::vector<std::shared_ptr<OperatorTask>>& tasks() const;
 
   // Recreates the query plan with a new and equivalent set of tasks.
-  SQLQueryPlan recreate() const;
+  SQLQueryPlan recreate(const std::vector<AllParameterVariant>& arguments = {}) const;
+
+  void set_num_parameters(unsigned num_parameters);
+
+  unsigned num_parameters() const;
 
  protected:
   std::vector<std::shared_ptr<OperatorTask>> _tasks;
+
+  unsigned _num_parameters;
 };
 
 }  // namespace opossum
