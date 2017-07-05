@@ -22,6 +22,7 @@ class SQLQueryPlan {
   // final task in the query plan and contains its result after execution.
   std::shared_ptr<OperatorTask> back() const;
 
+  // Remove the last last from the plan.
   void pop_back();
 
   // Adds a task to the end of the query plan.
@@ -37,16 +38,19 @@ class SQLQueryPlan {
   const std::vector<std::shared_ptr<OperatorTask>>& tasks() const;
 
   // Recreates the query plan with a new and equivalent set of tasks.
+  // The given list of arguments is passed to the recreate method of all operators to replace ParameterValues.
   SQLQueryPlan recreate(const std::vector<AllParameterVariant>& arguments = {}) const;
 
-  void set_num_parameters(unsigned num_parameters);
+  // Set the number of parameters that this query plan contains.
+  void set_num_parameters(uint16_t num_parameters);
 
-  unsigned num_parameters() const;
+  // Get the number of parameters that this query plan contains.
+  uint16_t num_parameters() const;
 
  protected:
   std::vector<std::shared_ptr<OperatorTask>> _tasks;
 
-  unsigned _num_parameters;
+  uint16_t _num_parameters;
 };
 
 }  // namespace opossum

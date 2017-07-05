@@ -96,14 +96,16 @@ enum class SchedulePriority {
 };
 
 // Part of AllParameterVariant to reference parameters that will be replaced later.
+// When stored in an operator, the operator's recreate method can contain functionality
+// that will replace a ParameterValue with an explicit value from a given list of arguments
 class ParameterValue {
  public:
-  explicit ParameterValue(unsigned index) : _index(index) {}
+  explicit ParameterValue(uint16_t index) : _index(index) {}
 
-  unsigned index() const { return _index; }
+  uint16_t index() const { return _index; }
 
  private:
-  unsigned _index;
+  uint16_t _index;
 };
 
 }  // namespace opossum

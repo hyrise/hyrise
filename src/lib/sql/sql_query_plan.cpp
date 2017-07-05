@@ -38,8 +38,8 @@ SQLQueryPlan SQLQueryPlan::recreate(const std::vector<AllParameterVariant>& argu
   return new_plan;
 }
 
-void SQLQueryPlan::set_num_parameters(unsigned num_parameters) { _num_parameters = num_parameters; }
+void SQLQueryPlan::set_num_parameters(uint16_t num_parameters) { _num_parameters = num_parameters; }
 
-unsigned SQLQueryPlan::num_parameters() const { return _num_parameters; }
+uint16_t SQLQueryPlan::num_parameters() const { return _num_parameters; }
 
 }  // namespace opossum
