@@ -62,6 +62,7 @@ class Aggregate : public AbstractReadOnlyOperator {
   const std::string name() const override;
   uint8_t num_in_tables() const override;
   uint8_t num_out_tables() const override;
+  std::shared_ptr<AbstractOperator> recreate() const override;
 
   // write the aggregated output for a given aggregate column
   template <typename ColumnType, AggregateFunction function>

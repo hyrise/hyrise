@@ -15,4 +15,4 @@ src/lib/network/generated
 *.pyc
 
 # CLion cmake directory
-cmake-build-debug
+cmake-build-*

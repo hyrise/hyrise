@@ -55,6 +55,10 @@ class ImportCsv : public AbstractReadOnlyOperator {
   // This operator has one table as output.
   uint8_t num_out_tables() const override;
 
+  std::shared_ptr<AbstractOperator> recreate() const override {
+    throw std::runtime_error("Operator " + this->name() + " does not implement recreation.");
+  }
+
  protected:
   // Path to the input file
   const std::string _filename;
