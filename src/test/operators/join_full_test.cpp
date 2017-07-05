@@ -14,6 +14,7 @@
 #include "../../lib/operators/join_nested_loop_a.hpp"
 #include "../../lib/operators/join_nested_loop_b.hpp"
 #include "../../lib/operators/print.hpp"
+#include "../../lib/operators/sort_merge_join.hpp"
 #include "../../lib/operators/table_scan.hpp"
 #include "../../lib/storage/storage_manager.hpp"
 #include "../../lib/storage/table.hpp"
@@ -30,7 +31,7 @@ template <typename T>
 class JoinFullTest : public JoinTest {};
 
 // here we define all Join types
-typedef ::testing::Types<JoinNestedLoopA, JoinNestedLoopB /* , SortMergeJoin */> JoinFullTypes;
+typedef ::testing::Types<JoinNestedLoopA, JoinNestedLoopB, SortMergeJoin> JoinFullTypes;
 TYPED_TEST_CASE(JoinFullTest, JoinFullTypes);
 
 TYPED_TEST(JoinFullTest, CrossJoin) {
@@ -283,17 +284,6 @@ TYPED_TEST(JoinFullTest, GreaterEqualInnerJoin) {
                                              std::pair<std::string, std::string>("b", "b"), ">=", Inner,
                                              std::string("left."), std::string("right."),
                                              "src/test/tables/joinoperators/float_greaterequal_inner_join.tbl", 1);
-}
-
-TYPED_TEST(JoinFullTest, NotEqualInnerJoin) {
-  // Joining two Integer Columns
-  this->template test_join_output<TypeParam>(
-      this->_table_wrapper_a, this->_table_wrapper_b, std::pair<std::string, std::string>("a", "a"), "!=", Inner,
-      std::string("left."), std::string("right."), "src/test/tables/joinoperators/int_notequal_inner_join.tbl", 1);
-  // Joining two Float Columns
-  this->template test_join_output<TypeParam>(
-      this->_table_wrapper_a, this->_table_wrapper_b, std::pair<std::string, std::string>("b", "b"), "!=", Inner,
-      std::string("left."), std::string("right."), "src/test/tables/joinoperators/float_notequal_inner_join.tbl", 1);
 }
 
 TYPED_TEST(JoinFullTest, JoinOnMixedValueAndDictionaryColumns) {

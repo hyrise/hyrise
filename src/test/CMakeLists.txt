@@ -24,6 +24,7 @@ set(
     operators/insert_test.cpp
     operators/join_equi_test.cpp
     operators/join_full_test.cpp
+    operators/join_not_equal_inner_test.cpp
     operators/join_test.hpp
     operators/limit_test.cpp
     operators/print_test.cpp
@@ -84,6 +85,3 @@ set_target_properties(opossumCoverage PROPERTIES COMPILE_FLAGS "-fprofile-arcs -
 add_executable(opossumAsan ${SOURCES})
 target_link_libraries(opossumAsan opossumAsanLib ${LIBRARIES} -fsanitize=address)
 set_target_properties(opossumAsan PROPERTIES COMPILE_FLAGS "-fsanitize=address -fno-omit-frame-pointer")
-
-
-
