@@ -23,6 +23,9 @@ namespace opossum {
 class TPCCBenchmarkFixture : public benchmark::Fixture {
  public:
   TPCCBenchmarkFixture() : _gen(tpcc::TableGenerator()), _random_gen(tpcc::RandomGenerator()) {
+    // TODO(mp): This constructor is currently run once before each TPCC benchmark.
+    // Thus we create all tables up to 8 times, which takes quite a long time.
+    std::cout << "Generating tables (this might take a couple of minutes)..." << std::endl;
     // Generating TPCC tables
     _tpcc_tables = _gen.generate_all_tables();
     // We currently run the benchmarks without a scheduler because there seem to be some problems when it is activated.
