@@ -17,7 +17,8 @@
 
 namespace opossum {
 
-typedef std::tuple<std::string, size_t, std::string> SQLTestParam;
+// Query, Number of Operators, Execute Plan, Expected Result Table
+typedef std::tuple<std::string, size_t, bool, std::string> SQLTestParam;
 
 class SQLSelectTest : public BaseTest, public ::testing::WithParamInterface<SQLTestParam> {
  protected:
@@ -27,12 +28,6 @@ class SQLSelectTest : public BaseTest, public ::testing::WithParamInterface<SQLT
 
     std::shared_ptr<Table> table_b = load_table("src/test/tables/int_float2.tbl", 2);
     StorageManager::get().add_table("table_b", std::move(table_b));
-
-    std::shared_ptr<Table> table_c = load_table("src/test/tables/int_string.tbl", 4);
-    StorageManager::get().add_table("table_c", std::move(table_c));
-
-    std::shared_ptr<Table> table_d = load_table("src/test/tables/string_int.tbl", 3);
-    StorageManager::get().add_table("table_d", std::move(table_d));
 
     std::shared_ptr<Table> test_table2 = load_table("src/test/tables/int_string2.tbl", 2);
     StorageManager::get().add_table("TestTable", test_table2);
@@ -48,6 +43,17 @@ class SQLSelectTest : public BaseTest, public ::testing::WithParamInterface<SQLT
     std::shared_ptr<Table> groupby_int_2gb_2agg =
         load_table("src/test/tables/aggregateoperator/groupby_int_2gb_2agg/input.tbl", 2);
     StorageManager::get().add_table("groupby_int_2gb_2agg", groupby_int_2gb_2agg);
+
+    // Create TPC-H customer table
+    load_tpch_tables();
+  }
+
+  void load_tpch_tables() {
+    std::shared_ptr<Table> customer = load_table("src/test/tables/tpch/customer.tbl", 1);
+    StorageManager::get().add_table("customer", customer);
+
+    std::shared_ptr<Table> orders = load_table("src/test/tables/tpch/orders.tbl", 1);
+    StorageManager::get().add_table("orders", orders);
   }
 
   void compile_query(const std::string query) {
@@ -89,85 +95,15 @@ TEST_F(SQLSelectTest, BasicParserSuccessTest) {
   EXPECT_FALSE(parse_result.isValid());
 }
 
-TEST_F(SQLSelectTest, SelectStarAllTest) {
-  const std::string query = "SELECT * FROM table_a;";
-  compile_query(query);
-
-  auto tasks = _translator.get_query_plan().tasks();
-  ASSERT_EQ(1u, _plan.size());
-
-  // Check GetTable task.
-  auto get_table_task = tasks[0];
-  auto get_table = (const std::shared_ptr<GetTable>&)get_table_task->get_operator();
-  ASSERT_EQ("table_a", get_table->table_name());
-
-  // Execute GetTable and check result.
-  auto expected_result = load_table("src/test/tables/int_float.tbl", 1);
-  get_table->execute();
-
-  EXPECT_TABLE_EQ(get_table->get_output(), expected_result);
-}
-
-TEST_P(SQLSelectTest, GenericQueryTest) {
-  // Inside a test, access the test parameter with the GetParam() method
-  // of the TestWithParam<T> class:
-  SQLTestParam param = GetParam();
-  std::string query = std::get<0>(param);
-  size_t num_operators = std::get<1>(param);
-  std::string expected_result_file = std::get<2>(param);
-
-  compile_query(query);
-  ASSERT_EQ(num_operators, _plan.size());
-  execute_query_plan();
-
-  auto expected_result = load_table(expected_result_file, 1);
-  EXPECT_TABLE_EQ(get_plan_result(), expected_result);
-}
-
-const SQLTestParam sql_query_tests[] = {
-    // Table Scans
-    SQLTestParam{"SELECT * FROM table_a WHERE a >= 1234;", 2u, "src/test/tables/int_float_filtered2.tbl"},
-    SQLTestParam{"SELECT * FROM table_a WHERE a >= 1234 AND b < 457.9", 3u, "src/test/tables/int_float_filtered.tbl"},
-    // TODO(torpedro): Enable this test, after implementing BETWEEN support in translator.
-    // SQLTestParam{"SELECT * FROM TestTable WHERE a BETWEEN 122 AND 124", 2u,
-    // "src/test/tables/int_string_filtered.tbl"},
-    // Projection
-    SQLTestParam{"SELECT a FROM table_a;", 2u, "src/test/tables/int.tbl"},
-    // ORDER BY
-    SQLTestParam{"SELECT a, b FROM table_a ORDER BY a;", 3u, "src/test/tables/int_float_sorted.tbl"},
-    SQLTestParam{"SELECT a FROM (SELECT a, b FROM table_a WHERE a > 1 ORDER BY b) WHERE a > 0 ORDER BY a;", 7u,
-                 "src/test/tables/int.tbl"},
-    // JOIN
-    SQLTestParam{"SELECT \"left\".a, \"left\".b, \"right\".a, \"right\".b FROM table_a AS \"left\" JOIN table_b AS "
-                 "\"right\" ON a = a;",
-                 4u, "src/test/tables/joinoperators/int_inner_join.tbl"},
-    SQLTestParam{"SELECT * FROM table_a AS \"left\" LEFT JOIN table_b AS \"right\" ON a = a;", 3u,
-                 "src/test/tables/joinoperators/int_left_join.tbl"},
-    // GROUP BY
-    SQLTestParam{"SELECT a, SUM(b) FROM groupby_int_1gb_1agg GROUP BY a;", 3u,
-                 "src/test/tables/aggregateoperator/groupby_int_1gb_1agg/sum.tbl"},
-    SQLTestParam{"SELECT a, SUM(b), AVG(c) FROM groupby_int_1gb_2agg GROUP BY a;", 3u,
-                 "src/test/tables/aggregateoperator/groupby_int_1gb_2agg/sum_avg.tbl"},
-    SQLTestParam{"SELECT a, b, MAX(c), AVG(d) FROM groupby_int_2gb_2agg GROUP BY a, b;", 3u,
-                 "src/test/tables/aggregateoperator/groupby_int_2gb_2agg/max_avg.tbl"},
-    SQLTestParam{
-        "SELECT a, b, MAX(c), AVG(d) FROM groupby_int_2gb_2agg GROUP BY a, b HAVING MAX(c) >= 10 AND MAX(c) < 40;", 5u,
-        "src/test/tables/aggregateoperator/groupby_int_2gb_2agg/max_avg.tbl"},
-};
-
-INSTANTIATE_TEST_CASE_P(GenericQueryTest, SQLSelectTest, ::testing::ValuesIn(sql_query_tests));
-
 TEST_F(SQLSelectTest, SelectWithSchedulerTest) {
   const std::string query =
       "SELECT \"left\".a, \"left\".b, \"right\".a, \"right\".b FROM table_a AS \"left\" INNER JOIN table_b AS "
       "\"right\" ON a = a";
   auto expected_result = load_table("src/test/tables/joinoperators/int_inner_join.tbl", 1);
-
   // TODO(torpedro): Adding 'WHERE \"left\".a >= 0;' causes wrong data. Investigate.
   //                 Probable bug in TableScan.
 
   CurrentScheduler::set(std::make_shared<NodeQueueScheduler>(Topology::create_fake_numa_topology(8, 4)));
-
   compile_query(query);
 
   for (const auto& task : _plan.tasks()) {
@@ -179,5 +115,72 @@ TEST_F(SQLSelectTest, SelectWithSchedulerTest) {
 
   EXPECT_TABLE_EQ(get_plan_result(), expected_result, true);
 }
+
+// Generic test case that will be called with the parameters listed below.
+// Compiles a query and executes it, if specified.
+// Checks the number of operators in the plan and can check the result against a table in a file.
+TEST_P(SQLSelectTest, SQLQueryTest) {
+  SQLTestParam param = GetParam();
+  std::string query = std::get<0>(param);
+  size_t num_operators = std::get<1>(param);
+  bool should_execute = std::get<2>(param);
+  std::string expected_result_file = std::get<3>(param);
+
+  compile_query(query);
+  EXPECT_EQ(num_operators, _plan.size());
+
+  if (should_execute) {
+    execute_query_plan();
+
+    if (!expected_result_file.empty()) {
+      auto expected_result = load_table(expected_result_file, 1);
+      EXPECT_TABLE_EQ(get_plan_result(), expected_result);
+    }
+  }
+}
+
+const SQLTestParam test_queries[] = {
+    SQLTestParam{"SELECT * FROM table_a;", 1u, true, "src/test/tables/int_float.tbl"},
+    // Table Scans
+    SQLTestParam{"SELECT * FROM table_a WHERE a >= 1234;", 2u, true, "src/test/tables/int_float_filtered2.tbl"},
+    SQLTestParam{"SELECT * FROM table_a WHERE a >= 1234 AND b < 457.9", 3u, true,
+                 "src/test/tables/int_float_filtered.tbl"},
+    // TODO(torpedro): Enable this test, after implementing BETWEEN support in translator.
+    // SQLTestParam{"SELECT * FROM TestTable WHERE a BETWEEN 122 AND 124", 2u,
+    // "src/test/tables/int_string_filtered.tbl"},
+    // Projection
+    SQLTestParam{"SELECT a FROM table_a;", 2u, true, "src/test/tables/int.tbl"},
+    // ORDER BY
+    SQLTestParam{"SELECT a, b FROM table_a ORDER BY a;", 3u, true, "src/test/tables/int_float_sorted.tbl"},
+    SQLTestParam{"SELECT a FROM (SELECT a, b FROM table_a WHERE a > 1 ORDER BY b) WHERE a > 0 ORDER BY a;", 7u, true,
+                 "src/test/tables/int.tbl"},
+    // JOIN
+    SQLTestParam{"SELECT \"left\".a, \"left\".b, \"right\".a, \"right\".b FROM table_a AS \"left\" JOIN table_b AS "
+                 "\"right\" ON a = a;",
+                 4u, true, "src/test/tables/joinoperators/int_inner_join.tbl"},
+    SQLTestParam{"SELECT * FROM table_a AS \"left\" LEFT JOIN table_b AS \"right\" ON a = a;", 3u, true,
+                 "src/test/tables/joinoperators/int_left_join.tbl"},
+    // GROUP BY
+    SQLTestParam{"SELECT a, SUM(b) FROM groupby_int_1gb_1agg GROUP BY a;", 3u, true,
+                 "src/test/tables/aggregateoperator/groupby_int_1gb_1agg/sum.tbl"},
+    SQLTestParam{"SELECT a, SUM(b), AVG(c) FROM groupby_int_1gb_2agg GROUP BY a;", 3u, true,
+                 "src/test/tables/aggregateoperator/groupby_int_1gb_2agg/sum_avg.tbl"},
+    SQLTestParam{"SELECT a, b, MAX(c), AVG(d) FROM groupby_int_2gb_2agg GROUP BY a, b;", 3u, true,
+                 "src/test/tables/aggregateoperator/groupby_int_2gb_2agg/max_avg.tbl"},
+    SQLTestParam{
+        "SELECT a, b, MAX(c), AVG(d) FROM groupby_int_2gb_2agg GROUP BY a, b HAVING MAX(c) >= 10 AND MAX(c) < 40;", 5u,
+        true, "src/test/tables/aggregateoperator/groupby_int_2gb_2agg/max_avg.tbl"},
+
+    SQLTestParam{"SELECT * FROM customer;", 1u, true, ""},
+    SQLTestParam{"SELECT c_custkey, c_name FROM customer;", 2u, true, ""},
+    SQLTestParam{"SELECT customer.c_custkey, customer.c_name, COUNT(orders.o_orderkey)"
+                 "  FROM customer"
+                 "  JOIN orders ON c_custkey = o_custkey"
+                 "  GROUP BY customer.c_custkey, customer.c_name"
+                 "  HAVING COUNT(orders.o_orderkey) >= 100;",
+                 6u, true, ""},
+};
+
+INSTANTIATE_TEST_CASE_P(test_queries, SQLSelectTest, ::testing::ValuesIn(test_queries));
 
 }  // namespace opossum
