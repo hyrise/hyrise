@@ -65,7 +65,6 @@ class JoinNestedLoopA::JoinNestedLoopAImpl : public AbstractJoinOperatorImpl {
         _prefix_left(prefix_left),
         _prefix_right(prefix_right),
         _output_table(std::make_shared<Table>()) {
-
     // Parsing the join operator
     switch (_scan_type) {
       case ScanType::OpEquals: {
@@ -94,7 +93,6 @@ class JoinNestedLoopA::JoinNestedLoopAImpl : public AbstractJoinOperatorImpl {
       }
       default:
         Fail(std::string("Unsupported operator for join."));
-
     }
   }
 
