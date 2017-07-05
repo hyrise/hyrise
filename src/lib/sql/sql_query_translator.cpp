@@ -231,7 +231,7 @@ bool SQLQueryTranslator::_translate_group_by(const hsql::GroupByDescription& gro
   // Process group by columns.
   for (const auto expr : *group_by.columns) {
     DebugAssert(expr->isType(hsql::kExprColumnRef), "Expect group by columns to be column references.");
-    groupby_columns.push_back(expr->name);
+    groupby_columns.push_back(_get_column_name(*expr));
   }
 
   // Process select list to build aggregate functions.
@@ -245,7 +245,8 @@ bool SQLQueryTranslator::_translate_group_by(const hsql::GroupByDescription& gro
       std::string fun_name(expr->name);
 
       DebugAssert(expr->exprList->size() == 1, "Expect SQL functions to only have single argument.");
-      std::string argument = expr->exprList->at(0)->name;
+      DebugAssert(expr->exprList->at(0)->isType(kExprColumnRef), "Expecting ColumnRef");
+      std::string argument = _get_column_name(*expr->exprList->at(0));
 
       if (agg_map.find(fun_name) != agg_map.end()) {
         aggregates.emplace_back(argument, agg_map[fun_name]);
@@ -434,7 +435,8 @@ std::string SQLQueryTranslator::_get_column_name(const hsql::Expr& expr) {
   if (expr.isType(hsql::kExprFunctionRef)) {
     name += expr.name;
     name += "(";
-    name += expr.exprList->at(0)->name;
+    DebugAssert(*expr.exprList->at(0)->isType(kExprColumnRef), "Expecting ColumnRef");
+    name += _get_column_name(*expr.exprList->at(0));
     name += ")";
     return name;
   }
