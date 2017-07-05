@@ -28,7 +28,7 @@ class JoinNestedLoopB : public AbstractJoinOperator {
  public:
   JoinNestedLoopB(const std::shared_ptr<const AbstractOperator> left,
                   const std::shared_ptr<const AbstractOperator> right,
-                  optional<std::pair<std::string, std::string>> column_names, const std::string& op,
+                  optional<std::pair<std::string, std::string>> column_names, const ScanType scan_type,
                   const JoinMode mode, const std::string& prefix_left = "", const std::string& prefix_right = "");
 
   const std::string name() const override;
@@ -100,7 +100,7 @@ class JoinNestedLoopB : public AbstractJoinOperator {
   // Input fields
   std::string _left_column_name;
   std::string _right_column_name;
-  std::string _op;
+  ScanType _scan_type;
   JoinMode _mode;
 
   // Output fields
