@@ -29,7 +29,7 @@ namespace opossum {
 OpossumClient::OpossumClient(std::shared_ptr<Channel> channel) : _stub(proto::OpossumService::NewStub(channel)) {}
 
 // Assembles the client's payload, sends it and presents the response back from the server.
-void OpossumClient::query(std::string& table_name, std::string& column_name, std::string& filter_op,
+void OpossumClient::query(std::string& table_name, std::string& column_name, proto::ScanType scan_type,
                           std::string& filter) {
   // Data we are sending to the server.
   proto::Request request;
@@ -37,11 +37,11 @@ void OpossumClient::query(std::string& table_name, std::string& column_name, std
   proto::GetTableOperator* get_table = nullptr;
   auto root_op_variant = request.mutable_root_operator();
 
-  if (!column_name.empty() && !filter_op.empty() && !filter.empty()) {
+  if (!column_name.empty() && !filter.empty()) {
     // Init a TableScan (protobuf allocates and manages the needed resources)
     proto::TableScanOperator* table_scan = root_op_variant->mutable_table_scan();
     table_scan->set_column_name(column_name);
-    table_scan->set_filter_operator(filter_op);
+    table_scan->set_filter_operator(scan_type);
     proto::Variant* variant = table_scan->mutable_value();
     variant->set_value_int(std::stoi(filter));
     // Add a GetTable operator as input operator for TableScan
@@ -127,6 +127,42 @@ void OpossumClient::print_response_table(proto::Response& response) const {
 
 }  // namespace opossum
 
+opossum::proto::ScanType filter_string_to_scan_type(std::string filter_op) {
+  if (filter_op == "=") {
+    return opossum::proto::ScanType::OpEquals;
+  }
+
+  if (filter_op == "!=") {
+    return opossum::proto::ScanType::OpEquals;
+  }
+
+  if (filter_op == ">") {
+    return opossum::proto::ScanType::OpEquals;
+  }
+
+  if (filter_op == ">=") {
+    return opossum::proto::ScanType::OpEquals;
+  }
+
+  if (filter_op == "<") {
+    return opossum::proto::ScanType::OpEquals;
+  }
+
+  if (filter_op == "<=") {
+    return opossum::proto::ScanType::OpEquals;
+  }
+
+  if (filter_op == "BETWEEN") {
+    return opossum::proto::ScanType::OpEquals;
+  }
+
+  if (filter_op == "LIKE") {
+    return opossum::proto::ScanType::OpEquals;
+  }
+
+  throw std::runtime_error("Unsupported filter: " + filter_op);
+}
+
 int main(int argc, char** argv) {
   po::options_description desc("Allowed options");
   auto options = desc.add_options();
@@ -164,7 +200,7 @@ int main(int argc, char** argv) {
   opossum::OpossumClient client(grpc::CreateChannel(address, grpc::InsecureChannelCredentials()));
 
   std::cout << "Sending query to " << address << std::endl;
-  client.query(table_name, column_name, filter_op, filter);
+  client.query(table_name, column_name, filter_string_to_scan_type(filter_op), filter);
 
   return 0;
 }
