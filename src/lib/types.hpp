@@ -108,4 +108,15 @@ class ParameterValue {
   uint16_t _index;
 };
 
+enum class ScanType {
+  OpEquals,
+  OpNotEquals,
+  OpLessThan,
+  OpLessThanEquals,
+  OpGreaterThan,
+  OpGreaterThanEquals,
+  OpBetween,
+  OpLike
+};
+
 }  // namespace opossum

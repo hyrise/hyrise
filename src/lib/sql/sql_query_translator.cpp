@@ -25,6 +25,7 @@
 #include "../operators/table_scan.hpp"
 #include "../operators/union_all.hpp"
 #include "../utils/assert.hpp"
+#include "types.hpp"
 
 #include "SQLParser.h"
 
@@ -137,7 +138,7 @@ bool SQLQueryTranslator::_translate_filter_expr(const hsql::Expr& expr,
   }
 
   // Handle operation types and get the filter op string..
-  std::string filter_op = "";
+  ScanType scan_type;
   switch (expr.opType) {
     case hsql::kOpAnd:
       // Recursively translate the child expressions.
@@ -152,7 +153,7 @@ bool SQLQueryTranslator::_translate_filter_expr(const hsql::Expr& expr,
 
     default:
       // Get the operation string, if possible.
-      if (!_translate_filter_op(expr, &filter_op)) {
+      if (!_translate_filter_op(expr, &scan_type)) {
         _error_msg = "Filter expression clause operator is not supported yet!";
         return false;
       }
@@ -176,12 +177,12 @@ bool SQLQueryTranslator::_translate_filter_expr(const hsql::Expr& expr,
 
   const AllParameterVariant value = translate_literal(*other_expr);
 
-  if (filter_op.length() == 0 || column_name.length() == 0) {
+  if (column_name.length() == 0) {
     _error_msg = "Unsupported filter expression!";
     return false;
   }
 
-  auto table_scan = std::make_shared<TableScan>(input_task->get_operator(), ColumnName(column_name), filter_op, value);
+  auto table_scan = std::make_shared<TableScan>(input_task->get_operator(), ColumnName(column_name), scan_type, value);
   auto scan_task = std::make_shared<OperatorTask>(table_scan);
   input_task->set_as_predecessor_of(scan_task);
   _plan.add_task(scan_task);
@@ -324,8 +325,8 @@ bool SQLQueryTranslator::_translate_table_ref(const hsql::TableRef& table) {
       const Expr& condition = *join_def.condition;
       std::pair<std::string, std::string> columns(_get_column_name(*condition.expr),
                                                   _get_column_name(*condition.expr2));
-      std::string op;
-      if (!_translate_filter_op(condition, &op)) {
+      ScanType scan_type;
+      if (!_translate_filter_op(condition, &scan_type)) {
         _error_msg = "Can not handle JOIN condition.";
         return false;
       }
@@ -361,8 +362,8 @@ bool SQLQueryTranslator::_translate_table_ref(const hsql::TableRef& table) {
       std::string prefix_right = std::string(join_def.right->getName()) + ".";
 
       // TODO(torpedro): Optimize join type selection.
-      auto join = std::make_shared<JoinNestedLoopA>(left_task->get_operator(), right_task->get_operator(), columns, op,
-                                                    mode, prefix_left, prefix_right);
+      auto join = std::make_shared<JoinNestedLoopA>(left_task->get_operator(), right_task->get_operator(), columns,
+                                                    scan_type, mode, prefix_left, prefix_right);
       auto task = std::make_shared<OperatorTask>(join);
       left_task->set_as_predecessor_of(task);
       right_task->set_as_predecessor_of(task);
@@ -395,28 +396,28 @@ const AllParameterVariant SQLQueryTranslator::translate_literal(const hsql::Expr
 }
 
 // static
-bool SQLQueryTranslator::_translate_filter_op(const hsql::Expr& expr, std::string* output) {
+bool SQLQueryTranslator::_translate_filter_op(const hsql::Expr& expr, ScanType* output) {
   switch (expr.opType) {
     case hsql::kOpEquals:
-      *output = "=";
+      *output = ScanType::OpEquals;
       return true;
     case hsql::kOpLess:
-      *output = "<";
+      *output = ScanType::OpLessThan;
       return true;
     case hsql::kOpGreater:
-      *output = ">";
+      *output = ScanType::OpGreaterThan;
       return true;
     case hsql::kOpGreaterEq:
-      *output = ">=";
+      *output = ScanType::OpGreaterThanEquals;
       return true;
     case hsql::kOpLessEq:
-      *output = "<=";
+      *output = ScanType::OpLessThanEquals;
       return true;
     case hsql::kOpNotEquals:
-      *output = "!=";
+      *output = ScanType::OpNotEquals;
       return true;
     case hsql::kOpBetween:
-      *output = "BETWEEN";
+      *output = ScanType::OpBetween;
       return true;
     default:
       return false;

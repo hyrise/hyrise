@@ -55,7 +55,7 @@ class SQLQueryTranslator {
 
   bool _translate_table_ref(const hsql::TableRef& table);
 
-  static bool _translate_filter_op(const hsql::Expr& expr, std::string* output);
+  static bool _translate_filter_op(const hsql::Expr& expr, ScanType* output);
 
   static std::string _get_column_name(const hsql::Expr& expr);
 
