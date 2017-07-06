@@ -1,3 +1,34 @@
+"""
+    Loads the Tables (NEW-ORDER.csv, ...) into SQLite and performs the transactions specified in
+    tpcc_{distribution}_requests.json in SQLite. The results of the SELECT queries will be saved as a JSON file
+    tpcc_{distribution}_results.json like this:
+
+    {
+    "d_tax_rate": 0.1285,
+    "c_discount": 0.3788,
+    "c_last": "ESEBARPRI",
+    "order_lines": [
+      {
+        "s_qty": 71,
+        "s_data": "fbuxpnaeencpkxzqpfzyhkrcwjmedxscuzljdovjvphpmhqqw",
+        "i_price": 47.91,
+        "s_dist_xx": "lzcanywofkakndmnbsspwrka",
+        "s_order_cnt": 1,
+        "i_name": "mttdbjlrqxmgehzpjlkffek",
+        "s_ytd": 9,
+        "amount": 431.18999999999994,
+        "s_remote_cnt": 0,
+        "i_data": "qzorffpwgkyolunpxfdxbjlgpll"
+      }
+    ],
+    "c_credit": "GC",
+    "d_next_o_id": 3001,
+    "w_tax_rate": 0.1716
+  }
+
+  After all Transactions have been performed, the tables will be exported as CSVs (RESULT_NEW-ORDER.csv, ...)
+"""
+
 import argparse
 import sqlite3
 import csv
