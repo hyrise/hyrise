@@ -15,9 +15,11 @@ namespace opossum {
 
 JoinNestedLoopB::JoinNestedLoopB(const std::shared_ptr<const AbstractOperator> left,
                                  const std::shared_ptr<const AbstractOperator> right,
-                                 optional<std::pair<std::string, std::string>> column_names, const std::string& op,
+                                 optional<std::pair<std::string, std::string>> column_names, const ScanType scan_type,
                                  const JoinMode mode, const std::string& prefix_left, const std::string& prefix_right)
-    : AbstractJoinOperator(left, right, column_names, op, mode, prefix_left, prefix_right), _op{op}, _mode{mode} {
+    : AbstractJoinOperator(left, right, column_names, scan_type, mode, prefix_left, prefix_right),
+      _scan_type{scan_type},
+      _mode{mode} {
   DebugAssert(
       (mode != Cross),
       "JoinNestedLoopA: this operator does not support Cross Joins, the optimizer should use Product operator.");
@@ -157,8 +159,8 @@ uint8_t JoinNestedLoopB::num_in_tables() const { return 2u; }
 uint8_t JoinNestedLoopB::num_out_tables() const { return 1u; }
 
 std::shared_ptr<AbstractOperator> JoinNestedLoopB::recreate() const {
-  return std::make_shared<JoinNestedLoopB>(_input_left->recreate(), _input_right->recreate(), _column_names, _op, _mode,
-                                           _prefix_left, _prefix_right);
+  return std::make_shared<JoinNestedLoopB>(_input_left->recreate(), _input_right->recreate(), _column_names, _scan_type,
+                                           _mode, _prefix_left, _prefix_right);
 }
 
 template <typename T>
@@ -169,20 +171,33 @@ JoinNestedLoopB::JoinNestedLoopBImpl<T>::JoinNestedLoopBImpl(JoinNestedLoopB& jo
     return;
   }
 
-  if (_join_nested_loop_b._op == "=") {
-    _compare = [](const T& value_left, const T& value_right) -> bool { return value_left == value_right; };
-  } else if (_join_nested_loop_b._op == "<") {
-    _compare = [](const T& value_left, const T& value_right) -> bool { return value_left < value_right; };
-  } else if (_join_nested_loop_b._op == ">") {
-    _compare = [](const T& value_left, const T& value_right) -> bool { return value_left > value_right; };
-  } else if (_join_nested_loop_b._op == ">=") {
-    _compare = [](const T& value_left, const T& value_right) -> bool { return value_left >= value_right; };
-  } else if (_join_nested_loop_b._op == "<=") {
-    _compare = [](const T& value_left, const T& value_right) -> bool { return value_left <= value_right; };
-  } else if (_join_nested_loop_b._op == "!=") {
-    _compare = [](const T& value_left, const T& value_right) -> bool { return value_left != value_right; };
-  } else {
-    Fail("JoinNestedLoopBImpl::JoinNestedLoopBImpl: Unknown operator " + _join_nested_loop_b._op);
+  switch (_join_nested_loop_b._scan_type) {
+    case ScanType::OpEquals: {
+      _compare = [](const T &value_left, const T &value_right) -> bool { return value_left == value_right; };
+      break;
+    }
+    case ScanType::OpLessThan: {
+      _compare = [](const T& value_left, const T& value_right) -> bool { return value_left < value_right; };
+      break;
+    }
+    case ScanType::OpGreaterThan: {
+      _compare = [](const T& value_left, const T& value_right) -> bool { return value_left > value_right; };
+      break;
+    }
+    case ScanType::OpGreaterThanEquals: {
+      _compare = [](const T& value_left, const T& value_right) -> bool { return value_left >= value_right; };
+      break;
+    }
+    case ScanType::OpLessThanEquals: {
+      _compare = [](const T& value_left, const T& value_right) -> bool { return value_left <= value_right; };
+      break;
+    }
+    case ScanType::OpNotEquals: {
+      _compare = [](const T& value_left, const T& value_right) -> bool { return value_left != value_right; };
+      break;
+    }
+    default:
+      Fail("JoinNestedLoopBImpl::JoinNestedLoopBImpl: Unknown operator.");
   }
 }
 

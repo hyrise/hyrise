@@ -8,12 +8,13 @@
 #include <vector>
 
 #include "resolve_type.hpp"
+#include "types.hpp"
 
 namespace opossum {
 
-TableScan::TableScan(const std::shared_ptr<AbstractOperator> in, const std::string &column_name, const std::string &op,
-                     const AllParameterVariant value, const optional<AllTypeVariant> value2)
-    : AbstractReadOnlyOperator(in), _column_name(column_name), _op(op), _value(value), _value2(value2) {}
+TableScan::TableScan(const std::shared_ptr<AbstractOperator> in, const std::string &column_name,
+                     const ScanType scan_type, const AllParameterVariant value, const optional<AllTypeVariant> value2)
+    : AbstractReadOnlyOperator(in), _column_name(column_name), _scan_type(scan_type), _value(value), _value2(value2) {}
 
 const std::string TableScan::name() const { return "TableScan"; }
 
@@ -24,7 +25,7 @@ uint8_t TableScan::num_out_tables() const { return 1; }
 std::shared_ptr<const Table> TableScan::on_execute() {
   _impl = make_unique_by_column_type<AbstractReadOnlyOperatorImpl, TableScanImpl>(
       input_table_left()->column_type(input_table_left()->column_id_by_name(_column_name)), _input_left, _column_name,
-      _op, _value, _value2);
+      _scan_type, _value, _value2);
   return _impl->on_execute();
 }
 
@@ -38,7 +39,7 @@ std::string &TableScan::replace_all(std::string &str, const std::string &old_val
 }
 
 std::shared_ptr<AbstractOperator> TableScan::recreate() const {
-  return std::make_shared<TableScan>(_input_left->recreate(), _column_name, _op, _value, _value2);
+  return std::make_shared<TableScan>(_input_left->recreate(), _column_name, _scan_type, _value, _value2);
 }
 
 std::map<std::string, std::string> TableScan::extract_character_ranges(std::string &str) {
@@ -120,13 +121,12 @@ std::string TableScan::sqllike_to_regex(std::string sqllike) {
 template <typename T>
 class TableScan::TableScanImpl : public AbstractReadOnlyOperatorImpl {
  public:
-  // supported values for op are {"=", "!=", "<", "<=", ">", ">=", "BETWEEN"}
   // creates a new table with reference columns
   TableScanImpl(const std::shared_ptr<const AbstractOperator> in, const std::string &filter_column_name,
-                const std::string &op, const AllParameterVariant value, const optional<AllTypeVariant> value2)
+                const ScanType scan_type, const AllParameterVariant value, const optional<AllTypeVariant> value2)
       : _in_operator(in),
         _filter_column_name(filter_column_name),
-        _op(op),
+        _scan_type(scan_type),
         _value(value),
         _value2(value2),
         _is_constant_value_scan(_value.type() == typeid(AllTypeVariant)) {}
@@ -183,50 +183,55 @@ class TableScan::TableScanImpl : public AbstractReadOnlyOperatorImpl {
     // chosen operator. For now, we can save us some dark template magic by using the switch below.
     // DO NOT copy this code, however, without discussing if there is a better way to avoid code duplication.
 
-    if (_op == "=") {
-      _type = OpEquals;
-      _value_comparator = [](T left, T right) { return left == right; };
-      _value_id_comparator = [](ValueID found_vid, ValueID search_vid, ValueID) { return found_vid == search_vid; };
-    } else if (_op == "!=") {
-      _type = OpNotEquals;
-      _value_comparator = [](T left, T right) { return left != right; };
-      _value_id_comparator = [](ValueID found_vid, ValueID search_vid, ValueID) { return found_vid != search_vid; };
-    } else if (_op == "<") {
-      _type = OpLessThan;
-      _value_comparator = [](T left, T right) { return left < right; };
-      _value_id_comparator = [](ValueID found_vid, ValueID search_vid, ValueID) { return found_vid < search_vid; };
-    } else if (_op == "<=") {
-      _type = OpLessThanEquals;
-      _value_comparator = [](T left, T right) { return left <= right; };
-      _value_id_comparator = [](ValueID found_vid, ValueID search_vid, ValueID) { return found_vid < search_vid; };
-      //                                                                                           ^
-      //                                                               sic! see handle_dictionary_column for details
-    } else if (_op == ">") {
-      _type = OpGreaterThan;
-      _value_comparator = [](T left, T right) { return left > right; };
-      _value_id_comparator = [](ValueID found_vid, ValueID search_vid, ValueID) { return found_vid >= search_vid; };
-    } else if (_op == ">=") {
-      _type = OpGreaterThanEquals;
-      _value_comparator = [](T left, T right) { return left >= right; };
-      _value_id_comparator = [](ValueID found_vid, ValueID search_vid, ValueID) { return found_vid >= search_vid; };
-    } else if (_op == "BETWEEN") {
-      DebugAssert(static_cast<bool>(casted_value2), "No second value for BETWEEN comparison given");
-
-      _type = OpBetween;
-      _value_comparator = [casted_value2](T value, T left) { return value >= left && value <= casted_value2; };
-      _value_id_comparator = [](ValueID found_vid, ValueID search_vid, ValueID search_vid2) {
-        return search_vid <= found_vid && found_vid < search_vid2;
-      };
-    } else if (_op == "LIKE") {
-      // LIKE is always executed on with constant value (containing a wildcard)
-      // using VariableTerm is not supported here
-      DebugAssert(_is_constant_value_scan, "LIKE only supports ConstantTerms and std::string type");
-      const auto column_type = in_table->column_type(column_id1);
-      DebugAssert((column_type == "string"), "LIKE operator only applicable on string columns");
-
-      _type = OpLike;
-    } else {
-      Fail(std::string("unknown operator ") + _op);
+    switch (_scan_type) {
+      case ScanType::OpEquals: {
+        _value_comparator = [](T left, T right) { return left == right; };
+        _value_id_comparator = [](ValueID found_vid, ValueID search_vid, ValueID) { return found_vid == search_vid; };
+        break;
+      }
+      case ScanType::OpNotEquals: {
+        _value_comparator = [](T left, T right) { return left != right; };
+        _value_id_comparator = [](ValueID found_vid, ValueID search_vid, ValueID) { return found_vid != search_vid; };
+        break;
+      }
+      case ScanType::OpLessThan: {
+        _value_comparator = [](T left, T right) { return left < right; };
+        _value_id_comparator = [](ValueID found_vid, ValueID search_vid, ValueID) { return found_vid < search_vid; };
+        break;
+      }
+      case ScanType::OpLessThanEquals: {
+        _value_comparator = [](T left, T right) { return left <= right; };
+        _value_id_comparator = [](ValueID found_vid, ValueID search_vid, ValueID) { return found_vid < search_vid; };
+        break;
+      }
+      case ScanType::OpGreaterThan: {
+        _value_comparator = [](T left, T right) { return left > right; };
+        _value_id_comparator = [](ValueID found_vid, ValueID search_vid, ValueID) { return found_vid >= search_vid; };
+        break;
+      }
+      case ScanType::OpGreaterThanEquals: {
+        _value_comparator = [](T left, T right) { return left >= right; };
+        _value_id_comparator = [](ValueID found_vid, ValueID search_vid, ValueID) { return found_vid >= search_vid; };
+        break;
+      }
+      case ScanType::OpBetween: {
+        DebugAssert(static_cast<bool>(casted_value2), "No second value for BETWEEN comparison given");
+        _value_comparator = [casted_value2](T value, T left) { return value >= left && value <= casted_value2; };
+        _value_id_comparator = [](ValueID found_vid, ValueID search_vid, ValueID search_vid2) {
+          return search_vid <= found_vid && found_vid < search_vid2;
+        };
+        break;
+      }
+      case ScanType::OpLike: {
+        // LIKE is always executed on with constant value (containing a wildcard)
+        // using VariableTerm is not supported here
+        DebugAssert(_is_constant_value_scan, "LIKE only supports ConstantTerms and std::string type");
+        const auto column_type = in_table->column_type(column_id1);
+        DebugAssert((column_type == "string"), "LIKE operator only applicable on string columns");
+        break;
+      }
+      default:
+        Fail(std::string("Unsupported operator."));
     }
 
     // We can easily distribute the table scanning work on individual chunks to multiple sub tasks,
@@ -251,11 +256,11 @@ class TableScan::TableScanImpl : public AbstractReadOnlyOperatorImpl {
         // and Constant.
         // Because Like can be optimized it has its own Visitable (constant only)
 
-        if (_type == OpLike) {
+        if (_scan_type == ScanType::OpLike) {
           auto visitable = TableScanLikeVisitable(type_cast<std::string>(casted_value1));
           column1->visit(visitable, context);
         } else if (_is_constant_value_scan) {
-          auto visitable = TableScanConstantColumnVisitable(_value_comparator, _value_id_comparator, _type,
+          auto visitable = TableScanConstantColumnVisitable(_value_comparator, _value_id_comparator, _scan_type,
                                                             casted_value1, casted_value2);
           column1->visit(visitable, context);
         } else {
@@ -340,10 +345,10 @@ class TableScan::TableScanImpl : public AbstractReadOnlyOperatorImpl {
   std::string _op;
   std::function<bool(T, T)> _value_comparator;
   std::function<bool(ValueID, ValueID, ValueID)> _value_id_comparator;
+  ScanType _scan_type;
   const AllParameterVariant _value;
   const optional<AllTypeVariant> _value2;
   bool _is_constant_value_scan;  // indicates whether we compare two columns or a column with a (constant) value
-  ScanType _type;
 };
 
 template <typename T>
@@ -423,11 +428,11 @@ template <typename T>
 class TableScan::TableScanImpl<T>::TableScanConstantColumnVisitable : public ColumnVisitable {
  public:
   TableScanConstantColumnVisitable(std::function<bool(T, T)> value_comparator,
-                                   std::function<bool(ValueID, ValueID, ValueID)> value_id_comparator, ScanType type,
-                                   T constant_value, optional<T> constant_value2)
+                                   std::function<bool(ValueID, ValueID, ValueID)> value_id_comparator,
+                                   ScanType scan_type, T constant_value, optional<T> constant_value2)
       : _value_comparator(value_comparator),
         _value_id_comparator(value_id_comparator),
-        _type(type),
+        _scan_type(scan_type),
         _constant_value(constant_value),
         _constant_value2(constant_value2) {}
   void handle_value_column(BaseColumn &base_column, std::shared_ptr<ColumnVisitableContext> base_context) override {
@@ -484,20 +489,20 @@ class TableScan::TableScanImpl<T>::TableScanConstantColumnVisitable : public Col
     ValueID search_vid;
     ValueID search_vid2 = INVALID_VALUE_ID;
 
-    switch (_type) {
-      case OpEquals:
-      case OpNotEquals:
-      case OpLessThan:
-      case OpGreaterThanEquals:
+    switch (_scan_type) {
+      case ScanType::OpEquals:
+      case ScanType::OpNotEquals:
+      case ScanType::OpLessThan:
+      case ScanType::OpGreaterThanEquals:
         search_vid = column.lower_bound(_constant_value);
         break;
 
-      case OpLessThanEquals:
-      case OpGreaterThan:
+      case ScanType::OpLessThanEquals:
+      case ScanType::OpGreaterThan:
         search_vid = column.upper_bound(_constant_value);
         break;
 
-      case OpBetween:
+      case ScanType::OpBetween:
         search_vid = column.lower_bound(_constant_value);
         search_vid2 = column.upper_bound(*_constant_value2);
         break;
@@ -506,13 +511,13 @@ class TableScan::TableScanImpl<T>::TableScanConstantColumnVisitable : public Col
         Fail("Unknown comparison type encountered");
     }
 
-    if (_type == OpEquals && search_vid != INVALID_VALUE_ID &&
+    if (_scan_type == ScanType::OpEquals && search_vid != INVALID_VALUE_ID &&
         column.value_by_value_id(search_vid) != _constant_value) {
       // the value is not in the dictionary and cannot be in the table
       return;
     }
 
-    if (_type == OpNotEquals && search_vid != INVALID_VALUE_ID &&
+    if (_scan_type == ScanType::OpNotEquals && search_vid != INVALID_VALUE_ID &&
         column.value_by_value_id(search_vid) != _constant_value) {
       // the value is not in the dictionary and cannot be in the table
       search_vid = INVALID_VALUE_ID;
@@ -540,7 +545,7 @@ class TableScan::TableScanImpl<T>::TableScanConstantColumnVisitable : public Col
  protected:
   std::function<bool(T, T)> _value_comparator;
   std::function<bool(ValueID, ValueID, ValueID)> _value_id_comparator;
-  ScanType _type;
+  ScanType _scan_type;
   T _constant_value;
   optional<T> _constant_value2;
 };
