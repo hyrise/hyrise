@@ -51,7 +51,7 @@ class ColumnStatistics : public AbstractColumnStatistics {
   void update_min_max();
 
   const std::weak_ptr<Table> _table;
-  const std::string& _column_name;
+  const std::string _column_name;  // ToDo(Jonathan + Fabian)
   optional<double> _distinct_count;
   optional<T> _min;
   optional<T> _max;

@@ -258,9 +258,9 @@ std::tuple<double, std::shared_ptr<AbstractColumnStatistics>> ColumnStatistics<T
 template <typename T>
 std::ostream &ColumnStatistics<T>::to_stream(std::ostream &os) {
   os << "Col Stats " << _column_name << std::endl;
-  os << "  dist. " << *_distinct_count << std::endl;
-  os << "  min   " << *_min << std::endl;
-  os << "  max   " << *_max;
+  os << "  dist. " << _distinct_count << std::endl;
+  os << "  min   " << _min << std::endl;
+  os << "  max   " << _max;
   return os;
 }
 

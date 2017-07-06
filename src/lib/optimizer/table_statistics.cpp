@@ -23,7 +23,7 @@ TableStatistics::TableStatistics(const TableStatistics &table_statistics)
     : _name(table_statistics._name),
       _table(table_statistics._table),
       _row_count(table_statistics._row_count),
-      _column_statistics(std::map<std::string, std::shared_ptr<AbstractColumnStatistics>>(table_statistics._column_statistics)) {}
+      _column_statistics(table_statistics._column_statistics) {}
 
 double TableStatistics::row_count() { return _row_count; }
 
@@ -59,21 +59,21 @@ std::shared_ptr<TableStatistics> TableStatistics::predicate_statistics(const std
     return clone;
   }
 
+  auto old_column_statistic = get_column_statistics(column_name);
   auto clone = std::make_shared<TableStatistics>(*this);
-  auto column_statistics = clone->get_column_statistics(column_name);
   double selectivity;
-  std::shared_ptr<AbstractColumnStatistics> column_statistic;
+  std::shared_ptr<AbstractColumnStatistics> new_column_statistic;
   if (value.type() == typeid(ColumnName)) {
     ColumnName value_column_name = boost::get<ColumnName>(value);
     auto value_column_statistics = get_column_statistics(value_column_name);
-    std::tie(selectivity, column_statistic) =
-        column_statistics->predicate_selectivity(op, value_column_statistics, value2);
+    std::tie(selectivity, new_column_statistic) =
+        old_column_statistic->predicate_selectivity(op, value_column_statistics, value2);
   } else {
     auto casted_value1 = boost::get<AllTypeVariant>(value);
-    std::tie(selectivity, column_statistic) = column_statistics->predicate_selectivity(op, casted_value1, value2);
+    std::tie(selectivity, new_column_statistic) = old_column_statistic->predicate_selectivity(op, casted_value1, value2);
   }
-  if (column_statistic) {
-    clone->_column_statistics[column_name] = column_statistic;
+  if (new_column_statistic != nullptr) {
+    clone->_column_statistics[column_name] = new_column_statistic;
   }
   clone->_row_count *= selectivity;
 
