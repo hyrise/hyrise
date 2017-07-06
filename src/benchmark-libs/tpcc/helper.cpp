@@ -7,6 +7,7 @@
 #include "operators/abstract_operator.hpp"
 #include "scheduler/abstract_scheduler.hpp"
 #include "scheduler/abstract_task.hpp"
+#include "scheduler/current_scheduler.hpp"
 #include "scheduler/operator_task.hpp"
 
 namespace tpcc {
@@ -16,7 +17,7 @@ void execute_tasks_with_context(std::vector<std::shared_ptr<opossum::OperatorTas
   for (auto& task : tasks) {
     task->get_operator()->set_transaction_context(t_context);
   }
-  opossum::AbstractScheduler::schedule_tasks_and_wait_for_back(tasks);
+  opossum::CurrentScheduler::schedule_and_wait_for_tasks(tasks);
 }
 
 }  // namespace tpcc

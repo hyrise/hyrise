@@ -36,32 +36,8 @@ class AbstractScheduler {
   virtual void schedule(std::shared_ptr<AbstractTask> task, NodeID preferred_node_id = CURRENT_NODE_ID,
                         SchedulePriority priority = SchedulePriority::Normal) = 0;
 
-  // Helper functions - not globals for the sake of it
-  template <typename T>
-  static void schedule_tasks(const std::vector<std::shared_ptr<T>>& tasks);
-
-  // Intended to be called with the tasks in order, i.e. tasks.back() being the last task to be executed, i.e. being the
-  // task whose output is the result of the query
-  template <typename T>
-  static void schedule_tasks_and_wait_for_back(const std::vector<std::shared_ptr<T>> tasks);
-
  protected:
   std::shared_ptr<Topology> _topology;
 };
-
-template <typename T>
-void AbstractScheduler::schedule_tasks(const std::vector<std::shared_ptr<T>>& tasks) {
-  for (auto& task : tasks) {
-    task->schedule();
-  }
-}
-
-template <typename T>
-void AbstractScheduler::schedule_tasks_and_wait_for_back(const std::vector<std::shared_ptr<T>> tasks) {
-  schedule_tasks(tasks);
-  if (!tasks.empty()) {
-    tasks.back()->join();
-  }
-}
 
 }  // namespace opossum
