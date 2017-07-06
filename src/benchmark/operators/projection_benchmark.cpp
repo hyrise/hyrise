@@ -15,7 +15,7 @@ namespace opossum {
 class OperatorsProjectionBenchmark : public BenchmarkBasicFixture {
  public:
   virtual void SetUp(const ::benchmark::State& state) {
-    _table_ref = std::make_shared<TableScan>(_table_wrapper_a, "a", ">=", 0);  // all
+    _table_ref = std::make_shared<TableScan>(_table_wrapper_a, "a", ScanType::OpGreaterThanEquals, 0);  // all
     _table_ref->execute();
 
     _tables.emplace_back(_table_wrapper_a);  // 0
