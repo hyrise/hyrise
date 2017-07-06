@@ -1,8 +1,33 @@
+"""
+    Generates a file tpcc_{distribution}_requests.json that contains a list of tpcc transactions and their
+    respective parameters.
+
+    See --help for options.
+
+    For
+    {distribution} == test this will contain the same number of requests of each transaction type, while
+    {distribution} == benchmark will generate requests based on their distribution as specified by TPCC
+
+    For a ORDER-STATUS transaction, e.g., the JSON could look like this:
+    {
+        "transaction": "OrderStatus",
+        "params": {
+          "c_w_id": 0,
+          "case": 2,
+          "c_last": "CALLYOUGHTATION",
+          "c_d_id": 2
+        }
+    }
+
+    Currently supported TPCC transactions are: ORDER-STATUS, NEW-ORDER and DELIVERY
+"""
+
 import datetime
 import json
 import random
 import argparse
 from tpcc_constants import *
+
 
 nurand_C = {}
 

@@ -301,8 +301,9 @@ std::shared_ptr<opossum::Table> TableGenerator::generate_warehouse_table() {
   add_column<std::string>(table, "W_ZIP", cardinalities, [&](std::vector<size_t>) { return _random_gen.zip_code(); });
   add_column<float>(table, "W_TAX", cardinalities,
                     [&](std::vector<size_t>) { return _random_gen.number(0, 2000) / 10000.f; });
-  add_column<float>(table, "W_YTD", cardinalities,
-                    [&](std::vector<size_t>) { return CUSTOMER_YTD * NUM_CUSTOMERS_PER_DISTRICT * NUM_DISTRICTS_PER_WAREHOUSE; });
+  add_column<float>(table, "W_YTD", cardinalities, [&](std::vector<size_t>) {
+    return CUSTOMER_YTD * NUM_CUSTOMERS_PER_DISTRICT * NUM_DISTRICTS_PER_WAREHOUSE;
+  });
 
   opossum::DictionaryCompression::compress_table(*table);
 
@@ -353,8 +354,8 @@ std::shared_ptr<opossum::Table> TableGenerator::generate_stock_table() {
 std::shared_ptr<opossum::Table> TableGenerator::generate_district_table() {
   auto table = std::make_shared<opossum::Table>(_chunk_size);
 
-  auto cardinalities =
-      std::make_shared<std::vector<size_t>>(std::initializer_list<size_t>{_warehouse_size, NUM_DISTRICTS_PER_WAREHOUSE});
+  auto cardinalities = std::make_shared<std::vector<size_t>>(
+      std::initializer_list<size_t>{_warehouse_size, NUM_DISTRICTS_PER_WAREHOUSE});
 
   /**
    * indices[0] = warehouse
@@ -377,7 +378,8 @@ std::shared_ptr<opossum::Table> TableGenerator::generate_district_table() {
   add_column<std::string>(table, "D_ZIP", cardinalities, [&](std::vector<size_t>) { return _random_gen.zip_code(); });
   add_column<float>(table, "D_TAX", cardinalities,
                     [&](std::vector<size_t>) { return _random_gen.number(0, 2000) / 10000.f; });
-  add_column<float>(table, "D_YTD", cardinalities, [&](std::vector<size_t>) { return CUSTOMER_YTD * NUM_CUSTOMERS_PER_DISTRICT; });
+  add_column<float>(table, "D_YTD", cardinalities,
+                    [&](std::vector<size_t>) { return CUSTOMER_YTD * NUM_CUSTOMERS_PER_DISTRICT; });
   add_column<int>(table, "D_NEXT_O_ID", cardinalities, [&](std::vector<size_t>) -> size_t { return NUM_ORDERS + 1; });
 
   opossum::DictionaryCompression::compress_table(*table);
@@ -440,8 +442,8 @@ std::shared_ptr<opossum::Table> TableGenerator::generate_customer_table() {
 std::shared_ptr<opossum::Table> TableGenerator::generate_history_table() {
   auto table = std::make_shared<opossum::Table>(_chunk_size);
 
-  auto cardinalities = std::make_shared<std::vector<size_t>>(
-      std::initializer_list<size_t>{_warehouse_size, NUM_DISTRICTS_PER_WAREHOUSE, NUM_CUSTOMERS_PER_DISTRICT, NUM_HISTORY_ENTRIES});
+  auto cardinalities = std::make_shared<std::vector<size_t>>(std::initializer_list<size_t>{
+      _warehouse_size, NUM_DISTRICTS_PER_WAREHOUSE, NUM_CUSTOMERS_PER_DISTRICT, NUM_HISTORY_ENTRIES});
 
   /**
    * indices[0] = warehouse
@@ -567,9 +569,8 @@ std::shared_ptr<opossum::Table> TableGenerator::generate_new_order_table() {
    * indices[1] = district
    * indices[2] = new_order
    */
-  add_column<int>(table, "NO_O_ID", cardinalities, [&](std::vector<size_t> indices) -> size_t {
-    return indices[2] + NUM_ORDERS + 1 - NUM_NEW_ORDERS;
-  });
+  add_column<int>(table, "NO_O_ID", cardinalities,
+                  [&](std::vector<size_t> indices) -> size_t { return indices[2] + NUM_ORDERS + 1 - NUM_NEW_ORDERS; });
   add_column<int>(table, "NO_D_ID", cardinalities, [&](std::vector<size_t> indices) -> size_t { return indices[1]; });
   add_column<int>(table, "NO_W_ID", cardinalities, [&](std::vector<size_t> indices) -> size_t { return indices[0]; });
 
