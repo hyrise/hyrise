@@ -58,19 +58,19 @@ TYPED_TEST_CASE(OperatorsIndexColumnScanTest, DerivedIndices);
 TYPED_TEST(OperatorsIndexColumnScanTest, DoubleScan) {
   std::shared_ptr<Table> expected_result = this->load_table("src/test/tables/int_float_filtered.tbl", 2);
 
-  auto scan_1 = std::make_shared<IndexColumnScan>(this->_table_wrapper, "a", ">=", 1234);
+  auto scan_1 = std::make_shared<IndexColumnScan>(this->_table_wrapper, "a", ScanType::OpGreaterThanEquals, 1234);
   scan_1->execute();
 
-  auto scan_2 = std::make_shared<IndexColumnScan>(scan_1, "b", "<", 457.9);
+  auto scan_2 = std::make_shared<IndexColumnScan>(scan_1, "b", ScanType::OpLessThan, 457.9);
   scan_2->execute();
 
   this->EXPECT_TABLE_EQ(scan_2->get_output(), expected_result);
 }
 
 TYPED_TEST(OperatorsIndexColumnScanTest, DoubleScanOffsetPosition) {
-  auto scan1 = std::make_shared<IndexColumnScan>(this->_table_wrapper_dict, "a", ">", 10);
+  auto scan1 = std::make_shared<IndexColumnScan>(this->_table_wrapper_dict, "a", ScanType::OpGreaterThan, 10);
   scan1->execute();
-  auto scan2 = std::make_shared<IndexColumnScan>(scan1, "b", "=", 118);
+  auto scan2 = std::make_shared<IndexColumnScan>(scan1, "b", ScanType::OpEquals, 118);
   scan2->execute();
 
   auto& chunk = scan2->get_output()->get_chunk(ChunkID{1});
@@ -81,29 +81,29 @@ TYPED_TEST(OperatorsIndexColumnScanTest, DoubleScanOffsetPosition) {
 TYPED_TEST(OperatorsIndexColumnScanTest, SingleScan) {
   std::shared_ptr<Table> expected_result = this->load_table("src/test/tables/int_float_filtered2.tbl", 1);
 
-  auto scan = std::make_shared<IndexColumnScan>(this->_table_wrapper, "a", ">=", 1234);
+  auto scan = std::make_shared<IndexColumnScan>(this->_table_wrapper, "a", ScanType::OpGreaterThanEquals, 1234);
   scan->execute();
 
   this->EXPECT_TABLE_EQ(scan->get_output(), expected_result);
 }
 
-TYPED_TEST(OperatorsIndexColumnScanTest, UnknownOperatorThrowsException) {
+TYPED_TEST(OperatorsIndexColumnScanTest, LikeOperatorThrowsException) {
   if (!IS_DEBUG) return;
-  auto table_scan = std::make_shared<IndexColumnScan>(this->_table_wrapper, "a", "?!?", 1234);
+  auto table_scan = std::make_shared<IndexColumnScan>(this->_table_wrapper, "a", ScanType::OpLike, 1234);
   EXPECT_THROW(table_scan->execute(), std::logic_error);
 }
 
 TYPED_TEST(OperatorsIndexColumnScanTest, ScanOnDictColumn) {
   // we do not need to check for a non existing value, because that happens automatically when we scan the second chunk
 
-  std::map<std::string, std::set<int>> tests;
-  tests["="] = {104};
-  tests["!="] = {100, 102, 106, 108, 110, 112, 114, 116, 118, 120, 122, 124};
-  tests["<"] = {100, 102};
-  tests["<="] = {100, 102, 104};
-  tests[">"] = {106, 108, 110, 112, 114, 116, 118, 120, 122, 124};
-  tests[">="] = {104, 106, 108, 110, 112, 114, 116, 118, 120, 122, 124};
-  tests["BETWEEN"] = {104, 106, 108};
+  std::map<ScanType, std::set<int>> tests;
+  tests[ScanType::OpEquals] = {104};
+  tests[ScanType::OpNotEquals] = {100, 102, 106, 108, 110, 112, 114, 116, 118, 120, 122, 124};
+  tests[ScanType::OpLessThan] = {100, 102};
+  tests[ScanType::OpLessThanEquals] = {100, 102, 104};
+  tests[ScanType::OpGreaterThan] = {106, 108, 110, 112, 114, 116, 118, 120, 122, 124};
+  tests[ScanType::OpGreaterThanEquals] = {104, 106, 108, 110, 112, 114, 116, 118, 120, 122, 124};
+  tests[ScanType::OpBetween] = {104, 106, 108};
   for (const auto& test : tests) {
     auto scan =
         std::make_shared<IndexColumnScan>(this->_table_wrapper_dict, "a", test.first, 4, optional<AllTypeVariant>(9));
@@ -123,16 +123,16 @@ TYPED_TEST(OperatorsIndexColumnScanTest, ScanOnDictColumn) {
 TYPED_TEST(OperatorsIndexColumnScanTest, ScanOnReferencedDictColumn) {
   // we do not need to check for a non existing value, because that happens automatically when we scan the second chunk
 
-  std::map<std::string, std::set<int>> tests;
-  tests["="] = {104};
-  tests["!="] = {100, 102, 106};
-  tests["<"] = {100, 102};
-  tests["<="] = {100, 102, 104};
-  tests[">"] = {106};
-  tests[">="] = {104, 106};
-  tests["BETWEEN"] = {104, 106};
+  std::map<ScanType, std::set<int>> tests;
+  tests[ScanType::OpEquals] = {104};
+  tests[ScanType::OpNotEquals] = {100, 102, 106};
+  tests[ScanType::OpLessThan] = {100, 102};
+  tests[ScanType::OpLessThanEquals] = {100, 102, 104};
+  tests[ScanType::OpGreaterThan] = {106};
+  tests[ScanType::OpGreaterThanEquals] = {104, 106};
+  tests[ScanType::OpBetween] = {104, 106};
   for (const auto& test : tests) {
-    auto scan1 = std::make_shared<IndexColumnScan>(this->_table_wrapper_dict, "b", "<", 108);
+    auto scan1 = std::make_shared<IndexColumnScan>(this->_table_wrapper_dict, "b", ScanType::OpLessThan, 108);
     scan1->execute();
 
     auto scan2 = std::make_shared<IndexColumnScan>(scan1, "a", test.first, 4, optional<AllTypeVariant>(9));

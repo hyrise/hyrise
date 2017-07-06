@@ -8,6 +8,7 @@
 #include "gtest/gtest.h"
 
 #include "optimizer/abstract_syntax_tree/projection_node.hpp"
+#include "optimizer/abstract_syntax_tree/sort_node.hpp"
 #include "optimizer/abstract_syntax_tree/table_node.hpp"
 #include "optimizer/abstract_syntax_tree/table_scan_node.hpp"
 #include "sql/sql_query_node_translator.hpp"
@@ -101,5 +102,23 @@ TEST_F(SQLQueryNodeTranslatorTest, AggregateWithExpression) {
 
 }
 
+TEST_F(SQLQueryNodeTranslatorTest, SelectMultipleOrderBy) {
+  const auto query = "SELECT * FROM table_a ORDER BY a DESC, b ASC;";
+  auto result_node = compile_query(query);
 
+  // The first order by description is executed last (see sort operator for details).
+  auto sort_node_1 = std::dynamic_pointer_cast<SortNode>(result_node);
+  EXPECT_EQ(sort_node_1->type(), NodeType::Sort);
+  EXPECT_EQ(sort_node_1->column_name(), "a");
+  EXPECT_FALSE(sort_node_1->asc());
+  EXPECT_FALSE(sort_node_1->right());
+
+  auto sort_node_2 = std::dynamic_pointer_cast<SortNode>(sort_node_1->left());
+  EXPECT_EQ(sort_node_2->type(), NodeType::Sort);
+  EXPECT_EQ(sort_node_2->column_name(), "b");
+  EXPECT_TRUE(sort_node_2->asc());
+  EXPECT_FALSE(sort_node_2->right());
+  // This node has an input node, but we don't care for it in this test.
+  EXPECT_TRUE(sort_node_2->left());
+}
 }  // namespace opossum

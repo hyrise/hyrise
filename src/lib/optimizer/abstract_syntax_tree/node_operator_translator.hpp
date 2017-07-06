@@ -29,6 +29,7 @@ class NodeOperatorTranslator {
   const std::shared_ptr<AbstractOperator> translate_table_node(std::shared_ptr<AbstractNode> node) const;
   const std::shared_ptr<AbstractOperator> translate_table_scan_node(std::shared_ptr<AbstractNode> node) const;
   const std::shared_ptr<AbstractOperator> translate_projection_node(std::shared_ptr<AbstractNode> node) const;
+  const std::shared_ptr<AbstractOperator> translate_order_by_node(std::shared_ptr<AbstractNode> node) const;
 
  private:
   std::unordered_map<NodeType, std::function<std::shared_ptr<AbstractOperator>(std::shared_ptr<AbstractNode>)>>

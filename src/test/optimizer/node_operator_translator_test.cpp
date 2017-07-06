@@ -46,9 +46,10 @@ class NodeOperatorTranslatorTest : public BaseTest {
     return tasks.back();
   }
 
-  void execute_and_check(const std::string query, std::shared_ptr<Table> expected_result) {
+  void execute_and_check(const std::string query, std::shared_ptr<Table> expected_result,
+                         bool order_sensitive = false) {
     auto result_task = schedule_query_and_return_task(query);
-    EXPECT_TABLE_EQ(result_task->get_operator()->get_output(), expected_result);
+    EXPECT_TABLE_EQ(result_task->get_operator()->get_output(), expected_result, order_sensitive);
   }
 
   SQLQueryNodeTranslator _node_translator;
@@ -58,6 +59,24 @@ TEST_F(NodeOperatorTranslatorTest, SelectStarAllTest) {
   const auto query = "SELECT * FROM table_a;";
   const auto expected_result = load_table("src/test/tables/int_float.tbl", 2);
   execute_and_check(query, expected_result);
+}
+
+TEST_F(NodeOperatorTranslatorTest, SelectWithAndCondition) {
+  const auto query = "SELECT * FROM table_b WHERE a = 12345 AND b > 457;";
+  const auto expected_result = load_table("src/test/tables/int_float2_filtered.tbl", 2);
+  execute_and_check(query, expected_result);
+}
+
+TEST_F(NodeOperatorTranslatorTest, SelectWithOrderByDesc) {
+  const auto query = "SELECT * FROM table_a ORDER BY a DESC;";
+  const auto expected_result = load_table("src/test/tables/int_float_reverse.tbl", 2);
+  execute_and_check(query, expected_result, true);
+}
+
+TEST_F(NodeOperatorTranslatorTest, SelectWithMultipleOrderByColumns) {
+  const auto query = "SELECT * FROM table_b ORDER BY a, b ASC;";
+  const auto expected_result = load_table("src/test/tables/int_float2_sorted.tbl", 2);
+  execute_and_check(query, expected_result, true);
 }
 
 }  // namespace opossum

@@ -7,6 +7,17 @@ service OpossumService {
   rpc Query (Request) returns (Response) {}
 }
 
+enum ScanType {
+  OpEquals = 0;
+  OpNotEquals = 1;
+  OpLessThan = 2;
+  OpLessThanEquals = 3;
+  OpGreaterThan = 4;
+  OpGreaterThanEquals = 5;
+  OpBetween = 6;
+  OpLike = 7;
+}
+
 // AllTypeVariant "union"
 message Variant {
   oneof variant {
@@ -56,7 +67,7 @@ message ProjectionOperator {
 message TableScanOperator {
   OperatorVariant input_operator = 1;
   string column_name = 2;
-  string filter_operator = 3;
+  ScanType filter_operator = 3;
   Variant value = 4;
   Variant value2 = 5; // not explicitly specified as optional as everything is optional
 }
@@ -64,7 +75,7 @@ message TableScanOperator {
 message IndexColumnScanOperator {
   OperatorVariant input_operator = 1;
   string column_name = 2;
-  string filter_operator = 3;
+  ScanType filter_operator = 3;
   Variant value = 4;
   Variant value2 = 5; // not explicitly specified as optional as everything is optional
 }
@@ -74,7 +85,7 @@ message NestedLoopJoinOperator {
   OperatorVariant right_operator = 2;
   string left_column_name = 3;
   string right_column_name = 4;
-  string op = 5;
+  ScanType op = 5;
   enum JoinMode {
     Inner = 0;
     Left = 1;

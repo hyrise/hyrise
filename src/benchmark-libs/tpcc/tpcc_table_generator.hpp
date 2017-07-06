@@ -63,10 +63,6 @@ class TableGenerator {
                                                        order_line_counts_type order_line_counts,
                                                        const std::function<T(std::vector<size_t>)> &generator_function);
 
-  //  template <typename T>
-  //  std::shared_ptr<opossum::ValueColumn<T>> add_column(size_t cardinality,
-  //                                                      const std::function<T(size_t)> &generator_function);
-
   template <typename T>
   void add_column(std::shared_ptr<std::vector<size_t>> cardinalities, std::shared_ptr<opossum::Table> table,
                   std::string name, const std::function<T(std::vector<size_t>)> &generator_function);

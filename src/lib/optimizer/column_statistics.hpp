@@ -30,25 +30,28 @@ class ColumnStatistics : public AbstractColumnStatistics {
   void update_distinct_count();
 
  public:
-  ColumnStatistics(const std::weak_ptr<Table> table, const std::string& column_name);
-  ColumnStatistics(double distinct_count, AllTypeVariant min, AllTypeVariant max, const std::string& column_name);
-  ColumnStatistics(double distinct_count, T min, T max, const std::string& column_name);
-  ColumnStatistics(double distinct_count, const std::string& column_name);
+  ColumnStatistics(const std::weak_ptr<Table> table, const ColumnID column_id);
+  ColumnStatistics(double distinct_count, AllTypeVariant min, AllTypeVariant max, const ColumnID column_id);
+  ColumnStatistics(double distinct_count, T min, T max, const ColumnID column_id);
+  ColumnStatistics(double distinct_count, const ColumnID column_id);
   double distinct_count();
   T min();
   T max();
 
-  virtual ~ColumnStatistics() = default;
-  virtual std::tuple<double, std::shared_ptr<AbstractColumnStatistics>> predicate_selectivity(
-      const std::string& op, const AllTypeVariant value, const optional<AllTypeVariant> value2);
+  ~ColumnStatistics() override = default;
+  std::tuple<double, std::shared_ptr<AbstractColumnStatistics>> predicate_selectivity(
+      const ScanType scan_type, const AllTypeVariant value, const optional<AllTypeVariant> value2) override;
+  std::tuple<double, std::shared_ptr<AbstractColumnStatistics>> predicate_selectivity(
+      const ScanType scan_type, const std::shared_ptr<AbstractColumnStatistics> value_column_statistics,
+      const optional<AllTypeVariant> value2) override;
 
  protected:
-  virtual std::ostream& to_stream(std::ostream& os);
+  std::ostream& to_stream(std::ostream& os) override;
 
   void update_min_max();
 
   const std::weak_ptr<Table> _table;
-  const std::string& _column_name;
+  const ColumnID _column_id;
   optional<double> _distinct_count;
   optional<T> _min;
   optional<T> _max;

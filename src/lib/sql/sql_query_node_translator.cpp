@@ -8,9 +8,11 @@
 #include "operators/table_scan.hpp"
 #include "optimizer/abstract_syntax_tree/abstract_node.hpp"
 #include "optimizer/abstract_syntax_tree/projection_node.hpp"
+#include "optimizer/abstract_syntax_tree/sort_node.hpp"
 #include "optimizer/abstract_syntax_tree/table_node.hpp"
 #include "optimizer/abstract_syntax_tree/table_scan_node.hpp"
 #include "storage/storage_manager.hpp"
+#include "utils/assert.hpp"
 
 #include "SQLParser.h"
 
@@ -103,10 +105,9 @@ std::shared_ptr<AbstractNode> SQLQueryNodeTranslator::_translate_select(const Se
   }
 
   // Translate ORDER BY.
-  // TODO(tim): order by
-  //  if (select.order != nullptr) {
-  //    current_result_node = _translate_order_by(*select.order, current_result_node);
-  //  }
+  if (select.order != nullptr) {
+    current_result_node = _translate_order_by(*select.order, current_result_node);
+  }
 
   // TODO(torpedro): Translate LIMIT/TOP.
 
@@ -239,19 +240,12 @@ std::shared_ptr<AbstractNode> SQLQueryNodeTranslator::_translate_filter_expr(
   }
 
   // TODO(tim): move to function / global namespace / whatever.
+  // TODO(tim): handle IN with join
   std::unordered_map<hsql::OperatorType, ScanType> operator_to_filter_type = {
-    {hsql::kOpEquals, ScanType::OpEquals},
-    {hsql::kOpNotEquals, ScanType::OpNotEquals},
-
-    {hsql::kOpGreater, ScanType::OpGreaterThan},
-    {hsql::kOpGreaterEq, ScanType::OpGreaterThanEquals},
-
-    {hsql::kOpLess, ScanType::OpLessThan},
-    {hsql::kOpLessEq, ScanType::OpLessThanEquals},
-
-    {hsql::kOpBetween, ScanType::OpBetween},
-
-    {hsql::kOpLike, ScanType::OpLike},
+      {hsql::kOpEquals, ScanType::OpEquals},       {hsql::kOpNotEquals, ScanType::OpNotEquals},
+      {hsql::kOpGreater, ScanType::OpGreaterThan}, {hsql::kOpGreaterEq, ScanType::OpGreaterThanEquals},
+      {hsql::kOpLess, ScanType::OpLessThan},       {hsql::kOpLessEq, ScanType::OpLessThanEquals},
+      {hsql::kOpBetween, ScanType::OpBetween},     {hsql::kOpLike, ScanType::OpLike},
   };
 
   auto it = operator_to_filter_type.find(expr.opType);
@@ -299,6 +293,35 @@ std::shared_ptr<AbstractNode> SQLQueryNodeTranslator::_translate_projection(
   projection_node->set_left(input_node);
 
   return projection_node;
+}
+
+std::shared_ptr<AbstractNode> SQLQueryNodeTranslator::_translate_order_by(
+    const std::vector<hsql::OrderDescription*> order_list, const std::shared_ptr<AbstractNode>& input_node) {
+  if (order_list.empty()) {
+    return input_node;
+  }
+
+  std::shared_ptr<AbstractNode> current_result_node = input_node;
+
+  // Go through all the order descriptions and create a sort node for each of them.
+  // Iterate in reverse because the sort operator does not support multiple columns,
+  // and instead relies on stable sort. We therefore sort by the n+1-th column before sorting by the n-th column.
+  for (auto it = order_list.rbegin(); it != order_list.rend(); ++it) {
+    auto order_description = *it;
+    const auto& order_expr = *order_description->expr;
+
+    // TODO(tim): handle non-column refs
+    Assert(order_expr.isType(hsql::kExprColumnRef), "Can only order by columns for now.");
+
+    const auto column_name = _get_column_name(order_expr);
+    const auto asc = order_description->type == hsql::kOrderAsc;
+
+    auto sort_node = std::make_shared<SortNode>(column_name, asc);
+    sort_node->set_left(current_result_node);
+    current_result_node = sort_node;
+  }
+
+  return current_result_node;
 }
 
 }  // namespace opossum

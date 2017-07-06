@@ -97,4 +97,15 @@ enum class SchedulePriority {
 
 enum AggregateFunction { Min, Max, Sum, Avg, Count };
 
+enum class ScanType {
+  OpEquals,
+  OpNotEquals,
+  OpLessThan,
+  OpLessThanEquals,
+  OpGreaterThan,
+  OpGreaterThanEquals,
+  OpBetween,
+  OpLike
+};
+
 }  // namespace opossum
