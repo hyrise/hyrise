@@ -61,6 +61,16 @@ TEST_F(SQLQueryNodeTranslatorTest, SelectStarAllTest) {
 TEST_F(SQLQueryNodeTranslatorTest, ExpressionTest) {
   const auto query = "SELECT * FROM table_a WHERE a = 1234 + 1";
   auto result_node = compile_query(query);
+
+  EXPECT_EQ(result_node->type(), NodeType::Projection);
+  EXPECT_FALSE(result_node->right());
+
+  auto ts_node_1 = result_node->left();
+  EXPECT_EQ(ts_node_1->type(), NodeType::TableScan);
+  EXPECT_FALSE(ts_node_1->right());
+
+  auto predicate = ts_node_1->predicate();
+  EXPECT_EQ(predicate->expression_type(), ExpressionType::ExpressionEquals);
 }
 
 TEST_F(SQLQueryNodeTranslatorTest, SelectWithAndCondition) {
