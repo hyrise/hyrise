@@ -247,7 +247,7 @@ std::shared_ptr<AbstractNode> SQLQueryNodeTranslator::_translate_filter_expr(
   Expr* other_expr = (column_expr == expr.expr) ? expr.expr2 : expr.expr;
   const AllTypeVariant value = _translate_literal(*other_expr);
 
-  auto table_scan_node = std::make_shared<TableScanNode>(column_name, scan_type, value);
+  auto table_scan_node = std::make_shared<TableScanNode>(column_name, expressionNode, scan_type, value);
   table_scan_node->set_left(input_node);
 
   return table_scan_node;
