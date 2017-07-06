@@ -128,7 +128,6 @@ class TableScan::TableScanImpl : public AbstractReadOnlyOperatorImpl {
         _filter_column_name(filter_column_name),
         _value(value),
         _value2(value2),
-        _is_constant_value_scan(is_variant(_value)),
         _scan_type(scan_type) {}
 
   // TODO(mjendruk): Is chunk_offsets_in ever used?
@@ -154,44 +153,62 @@ class TableScan::TableScanImpl : public AbstractReadOnlyOperatorImpl {
     std::shared_ptr<std::vector<ChunkOffset>> chunk_offsets_in;
   };
 
-  std::shared_ptr<const Table> on_execute() override {
-    auto output = std::make_shared<Table>();
+  void parse_input_and_create_visitable()
+  {
+    _in_table = _in_operator->get_output();
+    _column_id = _in_table->column_id_by_name(_filter_column_name);
 
-    auto in_table = _in_operator->get_output();
-    ColumnID column_id1, column_id2;
+    if (_scan_type == ScanType::OpLike) {
+      _scan_class = ScanClass::Like;
 
-    T casted_value1;
-    optional<T> casted_value2;
+      /**
+       * LIKE is always executed on with constant value (containing a wildcard)
+       * using a VariableTerm (ColumnName, see term.hpp) is not supported here
+       */
+      DebugAssert(is_variant(_value), "LIKE only supports ConstantTerms.");
 
-    column_id1 = in_table->column_id_by_name(_filter_column_name);
-    if (_is_constant_value_scan) {
-      // column_a == 5
-      const auto variant_value1 = boost::get<AllTypeVariant>(_value);
-      DebugAssert(!is_null(variant_value1), "Value cannot be NULL.");
-      casted_value1 = type_cast<T>(variant_value1);
+      const auto column_type = _in_table->column_type(_column_id);
+      DebugAssert((column_type == "string"), "LIKE operator only applicable on string columns.");
 
-      if (_value2) {
-        DebugAssert(!is_null(*_value2), "Value2 cannot be NULL.");
-        casted_value2 = get<T>(*_value2);
-      }
+      const auto variant_value = boost::get<AllTypeVariant>(_value);
+
+      DebugAssert(!is_null(variant_value), "Value cannot be NULL.");
+
+      const auto typed_value = type_cast<std::string>(variant_value);
+
+      _column_visitable = std::make_unique<TableScanLikeVisitable>(typed_value);
+
+      return;
+    }
+
+    // Only used for BETWEEN
+    optional<T> typed_value2;
+    if (_scan_type == ScanType::OpBetween)
+    {
+      DebugAssert(static_cast<bool>(_value2), "No second value for BETWEEN comparison given.");
+      DebugAssert(!is_null(*_value2), "Value2 cannot be NULL.");
+      typed_value2 = type_cast<T>(*_value2);
+    }
+
+    set_comparators(typed_value2);
+
+    if (is_variant(_value)) {
+      _scan_class = ScanClass::Constant;
+
+      const auto variant_value = boost::get<AllTypeVariant>(_value);
+      DebugAssert(!is_null(variant_value), "Value cannot be NULL.");
+      const auto typed_value = type_cast<T>(variant_value);
+
+      _column_visitable = std::make_unique<TableScanConstantColumnVisitable>(_value_comparator, _value_id_comparator,
+                                                                             _scan_type, typed_value, typed_value2);
     } else {
-      // column_a == column_b
-      ColumnName column_name = boost::get<ColumnName>(_value);
-      column_id2 = in_table->column_id_by_name(column_name);
+      _scan_class = ScanClass::Variable;
+
+      _column_visitable = std::make_unique<TableScanVariableColumnVisitable>(_value_comparator, _value_id_comparator);
     }
+  }
 
-    for (ColumnID column_id{0}; column_id < in_table->col_count(); ++column_id) {
-      output->add_column_definition(in_table->column_name(column_id), in_table->column_type(column_id));
-    }
-
-    // Definining all possible operators here might appear odd. Chances are, however, that we will not
-    // have a similar comparison anywhere else. Index scans, for example, would not use an adaptable binary
-    // predicate, but will have to use different methods (lower_range, upper_range, ...) based on the
-    // chosen operator. For now, we can save us some dark template magic by using the switch below.
-    // DO NOT copy this code, however, without discussing if there is a better way to avoid code duplication.
-
-    // TODO(mjendruk): if T == std::string, the strings are copied each time but should be passed as a reference.
-
+  void set_comparators(optional<T> typed_value2) {
     switch (_scan_type) {
       case ScanType::OpEquals: {
         _value_comparator = [](T left, T right) { return left == right; };
@@ -224,72 +241,83 @@ class TableScan::TableScanImpl : public AbstractReadOnlyOperatorImpl {
         break;
       }
       case ScanType::OpBetween: {
-        DebugAssert(static_cast<bool>(casted_value2), "No second value for BETWEEN comparison given");
-        _value_comparator = [casted_value2](T value, T left) { return value >= left && value <= casted_value2; };
+        _value_comparator = [typed_value2](T value, T left) { return value >= left && value <= typed_value2; };
         _value_id_comparator = [](ValueID found_vid, ValueID search_vid, ValueID search_vid2) {
           return search_vid <= found_vid && found_vid < search_vid2;
         };
         break;
       }
-      case ScanType::OpLike: {
-        // LIKE is always executed on with constant value (containing a wildcard)
-        // using VariableTerm is not supported here
-        DebugAssert(_is_constant_value_scan, "LIKE only supports ConstantTerms and std::string type");
-        const auto column_type = in_table->column_type(column_id1);
-        DebugAssert((column_type == "string"), "LIKE operator only applicable on string columns");
-        break;
-      }
+      case ScanType::OpLike:
+        Fail("This method should only be called when ScanType::OpLike has been ruled out.");
       default:
-        Fail(std::string("Unsupported operator."));
+        Fail("Unsupported operator.");
     }
+  }
+
+  void init_output_table() {
+    _output_table = std::make_shared<Table>();
+
+    for (ColumnID column_id{0}; column_id < _in_table->col_count(); ++column_id) {
+      _output_table->add_column_definition(_in_table->column_name(column_id), _in_table->column_type(column_id));
+    }
+  }
+
+  tbb::concurrent_vector<T> materialize_column(const Chunk & chunk_in, const ColumnID column_id) {
+    const auto column = chunk_in.get_column(column_id);
+
+    auto values = tbb::concurrent_vector<T>{};
+
+    if (auto value_column = std::dynamic_pointer_cast<const ValueColumn<T>>(column)) {
+      values = value_column->values();  // TODO(mjendruk): copy here is unneccesary, but shared pointer impl is needed
+    } else if (auto dict_column = std::dynamic_pointer_cast<const DictionaryColumn<T>>(column)) {
+      values = dict_column->materialize_values();
+    } else if (auto ref_column = std::dynamic_pointer_cast<const ReferenceColumn>(column)) {
+      values = ref_column->template materialize_values<T>();  // Clang needs the template prefix
+    }
+
+    return values;
+  }
+
+  std::shared_ptr<const Table> on_execute() override {
+    parse_input_and_create_visitable();
+    init_output_table();
 
     // We can easily distribute the table scanning work on individual chunks to multiple sub tasks,
     // we just need to synchronize access to the output table
     std::mutex output_mutex;
     std::vector<std::shared_ptr<AbstractTask>> jobs;
-    jobs.reserve(in_table->chunk_count());
+    jobs.reserve(_in_table->chunk_count());
 
-    for (ChunkID chunk_id{0}; chunk_id < in_table->chunk_count(); ++chunk_id) {
-      jobs.emplace_back(std::make_shared<JobTask>([&in_table, chunk_id, &output_mutex, &output, &column_id1,
-                                                   &column_id2, &casted_value1, &casted_value2, this]() {
-        const Chunk &chunk_in = in_table->get_chunk(chunk_id);
+    for (ChunkID chunk_id{0}; chunk_id < _in_table->chunk_count(); ++chunk_id) {
+      jobs.emplace_back(std::make_shared<JobTask>([chunk_id, &output_mutex, this]() {
+        const Chunk &chunk_in = _in_table->get_chunk(chunk_id);
         Chunk chunk_out;
 
         PosList matches_in_this_chunk;
-        auto column1 = chunk_in.get_column(column_id1);
+        auto column = chunk_in.get_column(_column_id);
 
-        // TODO(mjendruk): find a better name; why is it a concurrent vector?
+        // TODO(mjendruk): Find a better name; why is it a concurrent vector?
         tbb::concurrent_vector<T> values;
 
-        // TODO(mjendruk): Do all column visitables need `values`?
-        auto context = std::make_shared<ScanContext>(in_table, chunk_id, matches_in_this_chunk, values);
+        // TODO(mjendruk): Move into visitable?
+        if (_scan_class == ScanClass::Variable)
+        {
+          const auto & column_name = boost::get<ColumnName>(_value);
+          const auto & column_id = _in_table->column_id_by_name(column_name);
 
-        // The real tablescan work happens now in the visitables. There are two major types of the Visitables: Column
-        // and Constant.
-        // Because Like can be optimized it has its own Visitable (constant only)
-
-        // TODO(mjendruk): We don’t need these visitables once per chunk!
-
-        if (_scan_type == ScanType::OpLike) {
-          auto visitable = TableScanLikeVisitable(type_cast<std::string>(casted_value1));
-          column1->visit(visitable, context);
-        } else if (_is_constant_value_scan) {
-          auto visitable = TableScanConstantColumnVisitable(_value_comparator, _value_id_comparator, _scan_type,
-                                                            casted_value1, casted_value2);
-          column1->visit(visitable, context);
-        } else {
-          // the second column gets materialized
-          auto column2 = chunk_in.get_column(column_id2);
-          if (auto value_column = std::dynamic_pointer_cast<ValueColumn<T>>(column2)) {
-            values = value_column->values();  // copy here is unneccesary, but shared pointer impl is needed
-          } else if (auto dict_column = std::dynamic_pointer_cast<DictionaryColumn<T>>(column2)) {
-            values = dict_column->materialize_values();
-          } else if (auto ref_column = std::dynamic_pointer_cast<ReferenceColumn>(column2)) {
-            values = ref_column->template materialize_values<T>();  // Clang needs the template prefix
-          }
-          auto visitable = TableScanVariableColumnVisitable(_value_comparator, _value_id_comparator);
-          column1->visit(visitable, context);
+          // Second columns gets materialized
+          values = materialize_column(chunk_in, column_id);
         }
+
+        // TODO(mjendruk): Do all column visitables need `values`? – no!
+        auto context = std::make_shared<ScanContext>(_in_table, chunk_id, matches_in_this_chunk, values);
+
+        /**
+         * The real tablescan work happens now in the visitables.
+         * There are two major types of the Visitables: Column and Constant.
+         * Because Like can be optimized it has its own Visitable (constant only)
+         */
+        column->visit(*_column_visitable, context);
 
         // We now receive the visits in the handler methods below...
 
@@ -307,7 +335,7 @@ class TableScan::TableScanImpl : public AbstractReadOnlyOperatorImpl {
         // PosList. Because Value/DictionaryColumns do not have an incoming PosList, they are represented with
         // nullptr.
         std::map<std::shared_ptr<const PosList>, std::shared_ptr<PosList>> filtered_pos_lists;
-        for (ColumnID column_id{0}; column_id < in_table->col_count(); ++column_id) {
+        for (ColumnID column_id{0}; column_id < _in_table->col_count(); ++column_id) {
           auto ref_col_in = std::dynamic_pointer_cast<ReferenceColumn>(chunk_in.get_column(column_id));
           std::shared_ptr<const PosList> pos_list_in;
           std::shared_ptr<const Table> referenced_table_out;
@@ -317,7 +345,7 @@ class TableScan::TableScanImpl : public AbstractReadOnlyOperatorImpl {
             referenced_table_out = ref_col_in->referenced_table();
             referenced_column_id = ref_col_in->referenced_column_id();
           } else {
-            referenced_table_out = in_table;
+            referenced_table_out = _in_table;
             referenced_column_id = column_id;
           }
 
@@ -340,7 +368,7 @@ class TableScan::TableScanImpl : public AbstractReadOnlyOperatorImpl {
 
         {
           std::lock_guard<std::mutex> lock(output_mutex);
-          output->add_chunk(std::move(chunk_out));
+          _output_table->add_chunk(std::move(chunk_out));
         }
       }));
       jobs.back()->schedule();
@@ -348,7 +376,7 @@ class TableScan::TableScanImpl : public AbstractReadOnlyOperatorImpl {
 
     CurrentScheduler::wait_for_tasks(jobs);
 
-    return output;
+    return _output_table;
   }
 
  private:
@@ -362,12 +390,22 @@ class TableScan::TableScanImpl : public AbstractReadOnlyOperatorImpl {
   const std::string _op;
   const AllParameterVariant _value;
   const optional<AllTypeVariant> _value2;
-  const bool _is_constant_value_scan;  // indicates whether we compare two columns or a column with a (constant) value
+  const ScanType _scan_type;
+
+  enum class ScanClass {
+    Like,
+    Constant,
+    Variable
+  };
+
+  std::shared_ptr<const Table> _in_table;
+  ScanClass _scan_class;
+  ColumnID _column_id;
+  std::unique_ptr<ColumnVisitable> _column_visitable;
+  std::shared_ptr<Table> _output_table;
 
   std::function<bool(T, T)> _value_comparator;
   std::function<bool(ValueID, ValueID, ValueID)> _value_id_comparator;
-
-  ScanType _scan_type;
 };
 
 template <typename T>
@@ -376,7 +414,7 @@ class TableScan::TableScanImpl<T>::TableScanLikeVisitable : public ColumnVisitab
   TableScanLikeVisitable(std::string like_string) {
     // convert the given SQL-like search term into a c++11 regex to use it for the actual matching
     std::string regex_string = sqllike_to_regex(like_string);
-    regex = std::regex(regex_string, std::regex_constants::icase);  // case insentivity
+    _regex = std::regex(regex_string, std::regex_constants::icase);  // case insentivity
   }
 
   void handle_value_column(BaseColumn &base_column, std::shared_ptr<ColumnVisitableContext> base_context) override {
@@ -388,14 +426,14 @@ class TableScan::TableScanImpl<T>::TableScanLikeVisitable : public ColumnVisitab
     if (context->chunk_offsets_in) {
       // This ValueColumn is referenced by a ReferenceColumn (i.e., is probably filtered)
       for (const ChunkOffset &offset_in_value_column : *(context->chunk_offsets_in)) {
-        if (std::regex_match(left[offset_in_value_column], regex)) {
+        if (std::regex_match(left[offset_in_value_column], _regex)) {
           matches_out.emplace_back(RowID{context->chunk_id, offset_in_value_column});
         }
       }
     } else {
       ChunkOffset chunk_offset = 0;
       for (const auto &value : left) {
-        if (std::regex_match(value, regex)) matches_out.emplace_back(RowID{context->chunk_id, chunk_offset});
+        if (std::regex_match(value, _regex)) matches_out.emplace_back(RowID{context->chunk_id, chunk_offset});
         chunk_offset++;
       }
     }
@@ -417,7 +455,7 @@ class TableScan::TableScanImpl<T>::TableScanLikeVisitable : public ColumnVisitab
       // first we get all attribute values
       for (const ChunkOffset &offset_in_dictionary_column : *(context->chunk_offsets_in)) {
         auto &value = column.get(offset_in_dictionary_column);
-        if (std::regex_match(value, regex)) {
+        if (std::regex_match(value, _regex)) {
           matches_out.emplace_back(RowID{context->chunk_id, offset_in_dictionary_column});
         }
       }
@@ -427,7 +465,7 @@ class TableScan::TableScanImpl<T>::TableScanLikeVisitable : public ColumnVisitab
       std::vector<bool> matches;
       matches.reserve(dictonary->size());
       for (auto &value : *dictonary) {
-        matches.push_back(std::regex_match(value, regex));
+        matches.push_back(std::regex_match(value, _regex));
       }
       // then we start to test the matchpattern
       for (ChunkOffset chunk_offset = 0; chunk_offset < column.size(); ++chunk_offset) {
@@ -439,7 +477,7 @@ class TableScan::TableScanImpl<T>::TableScanLikeVisitable : public ColumnVisitab
   }
 
  protected:
-  std::regex regex;
+  std::regex _regex;
 };
 
 // Constant TableScan (e.g. a < 1)
@@ -478,13 +516,13 @@ class TableScan::TableScanImpl<T>::TableScanConstantColumnVisitable : public Col
             continue;
           }
 
-          if (_value_comparator(left[offset_in_value_column], _constant_value)) {
+          if (_value_comparator(left[offset_in_value_column], right)) {
             matches_out.push_back(RowID{context->chunk_id, offset_in_value_column});
           }
         }
       } else {
         for (const auto &offset_in_value_column : chunk_offsets) {
-          if (_value_comparator(left[offset_in_value_column], _constant_value)) {
+          if (_value_comparator(left[offset_in_value_column], right)) {
             matches_out.push_back(RowID{context->chunk_id, offset_in_value_column});
           }
         }
