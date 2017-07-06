@@ -5,10 +5,10 @@
 
 #include "benchmark/benchmark.h"
 
-#include "../lib/operators/table_wrapper.hpp"
-#include "../lib/storage/storage_manager.hpp"
-#include "../lib/storage/table.hpp"
-#include "../lib/types.hpp"
+#include "operators/table_wrapper.hpp"
+#include "storage/storage_manager.hpp"
+#include "storage/table.hpp"
+#include "types.hpp"
 #include "table_generator.hpp"
 
 namespace opossum {
