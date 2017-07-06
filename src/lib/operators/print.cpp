@@ -9,6 +9,7 @@
 
 #include "storage/base_column.hpp"
 #include "type_cast.hpp"
+#include "operators/table_wrapper.hpp"
 
 namespace opossum {
 
@@ -20,6 +21,17 @@ const std::string Print::name() const { return "Print"; }
 uint8_t Print::num_in_tables() const { return 1; }
 
 uint8_t Print::num_out_tables() const { return 1; }
+
+std::shared_ptr<AbstractOperator> Print::recreate() const {
+  return std::make_shared<Print>(_input_left->recreate(), _out);
+}
+
+void Print::print(std::shared_ptr<const Table> table, PrintMode mode,
+                  std::ostream& out) {
+  auto table_wrapper = std::make_shared<TableWrapper>(table);
+  table_wrapper->execute();
+  Print(table_wrapper, out, mode).execute();
+}
 
 std::shared_ptr<const Table> Print::on_execute() {
   auto widths = column_string_widths(8, 20, input_table_left());

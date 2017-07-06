@@ -16,7 +16,7 @@ int main() {
   }
 
   std::cout << " > Dumping as CSV" << std::endl;
-  opossum::StorageManager::get().dump_as_csv(".");
+  opossum::StorageManager::get().export_all_tables_as_csv(".");
 
   std::cout << " > Done" << std::endl;
 

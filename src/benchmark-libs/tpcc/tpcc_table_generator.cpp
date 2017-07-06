@@ -9,6 +9,7 @@
 #include <utility>
 #include <vector>
 
+#include "constants.hpp"
 #include "resolve_type.hpp"
 #include "storage/dictionary_compression.hpp"
 #include "storage/value_column.hpp"
@@ -50,7 +51,7 @@ void TableGenerator::add_column(std::shared_ptr<std::vector<size_t>> cardinaliti
    */
   bool is_first_column = table->col_count() == 0;
 
-  auto data_type_name = opossum::get_name_of_type<T>();
+  auto data_type_name = opossum::name_of_type<T>();
   table->add_column_definition(name, data_type_name);
 
   auto row_count = std::accumulate(std::begin(*cardinalities), std::end(*cardinalities), 1u, std::multiplies<size_t>());
@@ -142,7 +143,7 @@ void TableGenerator::add_column(std::shared_ptr<std::vector<size_t>> cardinaliti
    */
   bool is_first_column = table->col_count() == 0;
 
-  auto data_type_name = opossum::get_name_of_type<T>();
+  auto data_type_name = opossum::name_of_type<T>();
   table->add_column_definition(name, data_type_name);
 
   auto row_count = std::accumulate(std::begin(*cardinalities), std::end(*cardinalities), 1u, std::multiplies<size_t>());
@@ -202,13 +203,13 @@ void TableGenerator::add_column(std::shared_ptr<std::vector<size_t>> cardinaliti
 std::shared_ptr<opossum::Table> TableGenerator::generate_items_table() {
   auto table = std::make_shared<opossum::Table>(_chunk_size);
 
-  auto cardinalities = std::make_shared<std::vector<size_t>>(std::initializer_list<size_t>{_item_size});
+  auto cardinalities = std::make_shared<std::vector<size_t>>(std::initializer_list<size_t>{NUM_ITEMS});
 
   /**
    * indices[0] = item
    */
 
-  auto original_ids = _random_gen.select_unique_ids(_item_size / 10, _item_size);
+  auto original_ids = _random_gen.select_unique_ids(NUM_ITEMS / 10, NUM_ITEMS);
 
   add_column<int>(cardinalities, table, "I_ID", [&](std::vector<size_t> indices) -> size_t { return indices[0]; });
   add_column<int>(cardinalities, table, "I_IM_ID",
@@ -253,11 +254,11 @@ std::shared_ptr<opossum::Table> TableGenerator::generate_warehouse_table() {
                           [&](std::vector<size_t>) { return _random_gen.astring(10, 20); });
   add_column<std::string>(cardinalities, table, "W_STATE",
                           [&](std::vector<size_t>) { return _random_gen.astring(2, 2); });
-  add_column<std::string>(cardinalities, table, "W_ZIP", [&](std::vector<size_t>) { return _random_gen.zipCode(); });
+  add_column<std::string>(cardinalities, table, "W_ZIP", [&](std::vector<size_t>) { return _random_gen.zip_code(); });
   add_column<float>(cardinalities, table, "W_TAX",
                     [&](std::vector<size_t>) { return _random_gen.number(0, 2000) / 10000.f; });
   add_column<float>(cardinalities, table, "W_YTD",
-                    [&](std::vector<size_t>) { return _customer_ytd * _customer_size * _district_size; });
+                    [&](std::vector<size_t>) { return CUSTOMER_YTD * NUM_CUSTOMERS_PER_DISTRICT * NUM_DISTRICTS_PER_WAREHOUSE; });
 
   opossum::DictionaryCompression::compress_table(*table);
 
@@ -268,14 +269,14 @@ std::shared_ptr<opossum::Table> TableGenerator::generate_stock_table() {
   auto table = std::make_shared<opossum::Table>(_chunk_size);
 
   auto cardinalities =
-      std::make_shared<std::vector<size_t>>(std::initializer_list<size_t>{_warehouse_size, _stock_size});
+      std::make_shared<std::vector<size_t>>(std::initializer_list<size_t>{_warehouse_size, NUM_STOCK_ITEMS});
 
   /**
    * indices[0] = warehouse
    * indices[1] = stock
    */
 
-  auto original_ids = _random_gen.select_unique_ids(_item_size / 10, _item_size);
+  auto original_ids = _random_gen.select_unique_ids(NUM_ITEMS / 10, NUM_ITEMS);
 
   add_column<int>(cardinalities, table, "S_I_ID", [&](std::vector<size_t> indices) -> size_t { return indices[1]; });
   add_column<int>(cardinalities, table, "S_W_ID", [&](std::vector<size_t> indices) -> size_t { return indices[0]; });
@@ -309,7 +310,7 @@ std::shared_ptr<opossum::Table> TableGenerator::generate_district_table() {
   auto table = std::make_shared<opossum::Table>(_chunk_size);
 
   auto cardinalities =
-      std::make_shared<std::vector<size_t>>(std::initializer_list<size_t>{_warehouse_size, _district_size});
+      std::make_shared<std::vector<size_t>>(std::initializer_list<size_t>{_warehouse_size, NUM_DISTRICTS_PER_WAREHOUSE});
 
   /**
    * indices[0] = warehouse
@@ -328,11 +329,11 @@ std::shared_ptr<opossum::Table> TableGenerator::generate_district_table() {
                           [&](std::vector<size_t>) { return _random_gen.astring(10, 20); });
   add_column<std::string>(cardinalities, table, "D_STATE",
                           [&](std::vector<size_t>) { return _random_gen.astring(2, 2); });
-  add_column<std::string>(cardinalities, table, "D_ZIP", [&](std::vector<size_t>) { return _random_gen.zipCode(); });
+  add_column<std::string>(cardinalities, table, "D_ZIP", [&](std::vector<size_t>) { return _random_gen.zip_code(); });
   add_column<float>(cardinalities, table, "D_TAX",
                     [&](std::vector<size_t>) { return _random_gen.number(0, 2000) / 10000.f; });
-  add_column<float>(cardinalities, table, "D_YTD", [&](std::vector<size_t>) { return _customer_ytd * _customer_size; });
-  add_column<int>(cardinalities, table, "D_NEXT_O_ID", [&](std::vector<size_t>) -> size_t { return _order_size + 1; });
+  add_column<float>(cardinalities, table, "D_YTD", [&](std::vector<size_t>) { return CUSTOMER_YTD * NUM_CUSTOMERS_PER_DISTRICT; });
+  add_column<int>(cardinalities, table, "D_NEXT_O_ID", [&](std::vector<size_t>) -> size_t { return NUM_ORDERS + 1; });
 
   opossum::DictionaryCompression::compress_table(*table);
   return table;
@@ -342,7 +343,7 @@ std::shared_ptr<opossum::Table> TableGenerator::generate_customer_table() {
   auto table = std::make_shared<opossum::Table>(_chunk_size);
 
   auto cardinalities = std::make_shared<std::vector<size_t>>(
-      std::initializer_list<size_t>{_warehouse_size, _district_size, _customer_size});
+      std::initializer_list<size_t>{_warehouse_size, NUM_DISTRICTS_PER_WAREHOUSE, NUM_CUSTOMERS_PER_DISTRICT});
 
   /**
    * indices[0] = warehouse
@@ -350,7 +351,7 @@ std::shared_ptr<opossum::Table> TableGenerator::generate_customer_table() {
    * indices[2] = customer
    */
 
-  auto original_ids = _random_gen.select_unique_ids(_item_size / 10, _item_size);
+  auto original_ids = _random_gen.select_unique_ids(NUM_ITEMS / 10, NUM_ITEMS);
 
   add_column<int>(cardinalities, table, "C_ID", [&](std::vector<size_t> indices) -> size_t { return indices[2]; });
   add_column<int>(cardinalities, table, "C_D_ID", [&](std::vector<size_t> indices) -> size_t { return indices[1]; });
@@ -369,7 +370,7 @@ std::shared_ptr<opossum::Table> TableGenerator::generate_customer_table() {
                           [&](std::vector<size_t>) { return _random_gen.astring(10, 20); });
   add_column<std::string>(cardinalities, table, "C_STATE",
                           [&](std::vector<size_t>) { return _random_gen.astring(2, 2); });
-  add_column<std::string>(cardinalities, table, "C_ZIP", [&](std::vector<size_t>) { return _random_gen.zipCode(); });
+  add_column<std::string>(cardinalities, table, "C_ZIP", [&](std::vector<size_t>) { return _random_gen.zip_code(); });
   add_column<std::string>(cardinalities, table, "C_PHONE",
                           [&](std::vector<size_t>) { return _random_gen.nstring(16, 16); });
   add_column<int>(cardinalities, table, "C_SINCE", [&](std::vector<size_t>) { return _current_date; });
@@ -380,8 +381,8 @@ std::shared_ptr<opossum::Table> TableGenerator::generate_customer_table() {
   add_column<int>(cardinalities, table, "C_CREDIT_LIM", [&](std::vector<size_t>) { return 50000; });
   add_column<float>(cardinalities, table, "C_DISCOUNT",
                     [&](std::vector<size_t>) { return _random_gen.number(0, 5000) / 10000.f; });
-  add_column<float>(cardinalities, table, "C_BALANCE", [&](std::vector<size_t>) { return -_customer_ytd; });
-  add_column<float>(cardinalities, table, "C_YTD_PAYMENT", [&](std::vector<size_t>) { return _customer_ytd; });
+  add_column<float>(cardinalities, table, "C_BALANCE", [&](std::vector<size_t>) { return -CUSTOMER_YTD; });
+  add_column<float>(cardinalities, table, "C_YTD_PAYMENT", [&](std::vector<size_t>) { return CUSTOMER_YTD; });
   add_column<int>(cardinalities, table, "C_PAYMENT_CNT", [&](std::vector<size_t>) { return 1; });
   add_column<int>(cardinalities, table, "C_DELIVERY_CNT", [&](std::vector<size_t>) { return 0; });
   add_column<std::string>(cardinalities, table, "C_DATA",
@@ -395,7 +396,7 @@ std::shared_ptr<opossum::Table> TableGenerator::generate_history_table() {
   auto table = std::make_shared<opossum::Table>(_chunk_size);
 
   auto cardinalities = std::make_shared<std::vector<size_t>>(
-      std::initializer_list<size_t>{_warehouse_size, _district_size, _customer_size, _history_size});
+      std::initializer_list<size_t>{_warehouse_size, NUM_DISTRICTS_PER_WAREHOUSE, NUM_CUSTOMERS_PER_DISTRICT, NUM_HISTORY_ENTRIES});
 
   /**
    * indices[0] = warehouse
@@ -419,9 +420,9 @@ std::shared_ptr<opossum::Table> TableGenerator::generate_history_table() {
 TableGenerator::order_line_counts_type TableGenerator::generate_order_line_counts() {
   order_line_counts_type v(_warehouse_size);
   for (auto &v_per_warehouse : v) {
-    v_per_warehouse.resize(_district_size);
+    v_per_warehouse.resize(NUM_DISTRICTS_PER_WAREHOUSE);
     for (auto &v_per_district : v_per_warehouse) {
-      v_per_district.resize(_order_size);
+      v_per_district.resize(NUM_ORDERS);
       for (auto &v_per_order : v_per_district) {
         v_per_order = _random_gen.number(5, 15);
       }
@@ -435,7 +436,7 @@ std::shared_ptr<opossum::Table> TableGenerator::generate_order_table(
   auto table = std::make_shared<opossum::Table>(_chunk_size);
 
   auto cardinalities = std::make_shared<std::vector<size_t>>(
-      std::initializer_list<size_t>{_warehouse_size, _district_size, _order_size});
+      std::initializer_list<size_t>{_warehouse_size, NUM_DISTRICTS_PER_WAREHOUSE, NUM_ORDERS});
 
   /**
    * indices[0] = warehouse
@@ -445,7 +446,7 @@ std::shared_ptr<opossum::Table> TableGenerator::generate_order_table(
 
   // TODO(anyone): generate a new customer permutation for each district and warehouse. Currently they all have the
   // same permutation
-  auto customer_permutation = _random_gen.permutation(0, _customer_size);
+  auto customer_permutation = _random_gen.permutation(0, NUM_CUSTOMERS_PER_DISTRICT);
 
   add_column<int>(cardinalities, table, "O_ID", [&](std::vector<size_t> indices) -> size_t { return indices[2]; });
   add_column<int>(cardinalities, table, "O_C_ID",
@@ -455,7 +456,7 @@ std::shared_ptr<opossum::Table> TableGenerator::generate_order_table(
   add_column<int>(cardinalities, table, "O_ENTRY_D", [&](std::vector<size_t>) { return _current_date; });
   // TODO(anybody) -1 should be null
   add_column<int>(cardinalities, table, "O_CARRIER_ID", [&](std::vector<size_t> indices) {
-    return indices[2] <= _order_size - _new_order_size ? _random_gen.number(1, 10) : -1;
+    return indices[2] <= NUM_ORDERS - NUM_NEW_ORDERS ? _random_gen.number(1, 10) : -1;
   });
   add_column<int>(cardinalities, table, "O_OL_CNT", [&](std::vector<size_t> indices) -> size_t {
     return order_line_counts[indices[0]][indices[1]][indices[2]];
@@ -471,7 +472,7 @@ std::shared_ptr<opossum::Table> TableGenerator::generate_order_line_table(
   auto table = std::make_shared<opossum::Table>(_chunk_size);
 
   auto cardinalities = std::make_shared<std::vector<size_t>>(
-      std::initializer_list<size_t>{_warehouse_size, _district_size, _order_size});
+      std::initializer_list<size_t>{_warehouse_size, NUM_DISTRICTS_PER_WAREHOUSE, NUM_ORDERS});
 
   /**
    * indices[0] = warehouse
@@ -489,17 +490,17 @@ std::shared_ptr<opossum::Table> TableGenerator::generate_order_line_table(
   add_column<int>(cardinalities, order_line_counts, table, "OL_NUMBER",
                   [&](std::vector<size_t> indices) -> size_t { return indices[3]; });
   add_column<int>(cardinalities, order_line_counts, table, "OL_I_ID",
-                  [&](std::vector<size_t>) -> size_t { return _random_gen.number(1, _item_size); });
+                  [&](std::vector<size_t>) -> size_t { return _random_gen.number(1, NUM_ITEMS); });
   add_column<int>(cardinalities, order_line_counts, table, "OL_SUPPLY_W_ID",
                   [&](std::vector<size_t> indices) -> size_t { return indices[0]; });
   // TODO(anybody) -1 should be null
   add_column<int>(cardinalities, order_line_counts, table, "OL_DELIVERY_D", [&](std::vector<size_t> indices) {
-    return indices[2] <= _order_size - _new_order_size ? _current_date : -1;
+    return indices[2] <= NUM_ORDERS - NUM_NEW_ORDERS ? _current_date : -1;
   });
   add_column<int>(cardinalities, order_line_counts, table, "OL_QUANTITY",
                   [&](std::vector<size_t>) -> size_t { return 5; });
   add_column<float>(cardinalities, order_line_counts, table, "OL_AMOUNT", [&](std::vector<size_t> indices) -> float {
-    return indices[2] <= _order_size - _new_order_size ? 0.f : _random_gen.number(1, 999999) / 100.f;
+    return indices[2] <= NUM_ORDERS - NUM_NEW_ORDERS ? 0.f : _random_gen.number(1, 999999) / 100.f;
   });
   add_column<std::string>(cardinalities, order_line_counts, table, "OL_DIST_INFO",
                           [&](std::vector<size_t>) { return _random_gen.astring(24, 24); });
@@ -512,7 +513,7 @@ std::shared_ptr<opossum::Table> TableGenerator::generate_new_order_table() {
   auto table = std::make_shared<opossum::Table>(_chunk_size);
 
   auto cardinalities = std::make_shared<std::vector<size_t>>(
-      std::initializer_list<size_t>{_warehouse_size, _district_size, _order_size});
+      std::initializer_list<size_t>{_warehouse_size, NUM_DISTRICTS_PER_WAREHOUSE, NUM_ORDERS});
 
   /**
    * indices[0] = warehouse
@@ -521,7 +522,7 @@ std::shared_ptr<opossum::Table> TableGenerator::generate_new_order_table() {
    */
 
   add_column<int>(cardinalities, table, "NO_O_ID", [&](std::vector<size_t> indices) -> size_t {
-    return indices[2] + _order_size + 1 - _new_order_size;
+    return indices[2] + NUM_ORDERS + 1 - NUM_NEW_ORDERS;
   });
   add_column<int>(cardinalities, table, "NO_D_ID", [&](std::vector<size_t> indices) -> size_t { return indices[1]; });
   add_column<int>(cardinalities, table, "NO_W_ID", [&](std::vector<size_t> indices) -> size_t { return indices[0]; });

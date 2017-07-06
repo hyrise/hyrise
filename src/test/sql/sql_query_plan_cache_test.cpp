@@ -14,13 +14,10 @@
 #include "sql/sql_query_operator.hpp"
 #include "storage/storage_manager.hpp"
 
-using hsql::SQLParserResult;
-using hsql::SQLParser;
-
 namespace opossum {
 
 // The fixture for testing class GetTable.
-class SQLParseTreeCacheTest : public BaseTest {
+class SQLQueryPlanCacheTest : public BaseTest {
  protected:
   void SetUp() override {
     std::shared_ptr<Table> table_a = load_table("src/test/tables/int_float.tbl", 2);
@@ -44,6 +41,10 @@ class SQLParseTreeCacheTest : public BaseTest {
     if (op->parse_tree_cache_hit()) {
       parse_tree_cache_hits++;
     }
+
+    if (op->query_plan_cache_hit()) {
+      query_plan_cache_hits++;
+    }
     return task;
   }
 
@@ -54,47 +55,46 @@ class SQLParseTreeCacheTest : public BaseTest {
   }
 
   size_t parse_tree_cache_hits;
+  size_t query_plan_cache_hits;
 };
 
-TEST_F(SQLParseTreeCacheTest, SQLParseTreeCacheTest) {
-  SQLQueryCache<std::shared_ptr<hsql::SQLParserResult>> cache(2);
-  std::string query1 = "SELECT * FROM test;";
-  std::string query2 = "SELECT * FROM test2;";
-
-  std::shared_ptr<SQLParserResult> result;
+TEST_F(SQLQueryPlanCacheTest, SQLQueryPlanCacheTest) {
+  SQLQueryCache<SQLQueryPlan> cache(2);
+  std::string query1 = "SELECT * FROM table_a;";
+  std::string query2 = "SELECT * FROM table_b;";
 
   EXPECT_FALSE(cache.has(query1));
   EXPECT_FALSE(cache.has(query2));
 
-  result.reset(SQLParser::parseSQLString(query1.c_str()));
+  SQLQueryOperator op(query1, false);
+  op.execute();
 
-  cache.set(query1, result);
+  // Cache the query plan.
+  cache.set(query1, op.get_query_plan());
 
   EXPECT_FALSE(cache.has(query2));
   EXPECT_TRUE(cache.has(query1));
 
-  std::shared_ptr<SQLParserResult> cached = cache.get(query1);
-  EXPECT_EQ(cached, result);
-  EXPECT_EQ(cached->size(), 1u);
+  const SQLQueryPlan cached_plan = cache.get(query1);
+
+  auto task_list1 = cached_plan.recreate().tasks();
+  auto task_list2 = cached_plan.recreate().tasks();
+
+  for (auto task : task_list1) {
+    task->execute();
+  }
+
+  for (auto task : task_list2) {
+    task->execute();
+  }
+
+  EXPECT_TABLE_EQ(task_list1.back()->get_operator()->get_output(), task_list2.back()->get_operator()->get_output());
 }
 
-TEST_F(SQLParseTreeCacheTest, PrepareAndExecuteSimpleTest) {
-  const std::string prep_query = "PREPARE query FROM 'SELECT * FROM table_a';";
-  const std::string exec_query = "EXECUTE query;";
+TEST_F(SQLQueryPlanCacheTest, QueryOperatorParseTreeCache) {
+  query_plan_cache_hits = 0;
 
-  auto prep_task = execute_query_task(prep_query);
-
-  auto exec_task = execute_query_task(exec_query);
-  const std::shared_ptr<SQLQueryOperator>& exec_op =
-      (const std::shared_ptr<SQLQueryOperator>&)exec_task->get_operator();
-  auto exec_result = exec_op->get_result_task();
-
-  auto expected_result = load_table("src/test/tables/int_float.tbl", 2);
-  EXPECT_TABLE_EQ(exec_result->get_operator()->get_output(), expected_result);
-}
-
-TEST_F(SQLParseTreeCacheTest, QueryOperatorParseTreeCache) {
-  SQLQueryCache<std::shared_ptr<hsql::SQLParserResult>>& cache = SQLQueryOperator::get_parse_tree_cache();
+  SQLQueryCache<SQLQueryPlan>& cache = SQLQueryOperator::get_query_plan_cache();
   cache.clear_and_resize(2);
 
   const std::string q1 = "SELECT * FROM table_a;";
@@ -119,7 +119,7 @@ TEST_F(SQLParseTreeCacheTest, QueryOperatorParseTreeCache) {
   EXPECT_FALSE(cache.has("SELECT * FROM test;"));
 
   // Check for the expected number of hits.
-  EXPECT_EQ(5u, parse_tree_cache_hits);
+  EXPECT_EQ(5u, query_plan_cache_hits);
 }
 
 }  // namespace opossum

@@ -29,6 +29,10 @@ std::shared_ptr<TransactionContext> AbstractOperator::transaction_context() cons
   return _transaction_context.lock();
 }
 
+void AbstractOperator::set_transaction_context(std::weak_ptr<TransactionContext> transaction_context) {
+  _transaction_context = transaction_context;
+}
+
 std::shared_ptr<AbstractOperator> AbstractOperator::mutable_input_left() const {
   return std::const_pointer_cast<AbstractOperator>(_input_left);
 }
@@ -37,8 +41,8 @@ std::shared_ptr<AbstractOperator> AbstractOperator::mutable_input_right() const 
   return std::const_pointer_cast<AbstractOperator>(_input_right);
 }
 
-void AbstractOperator::set_transaction_context(std::weak_ptr<TransactionContext> transaction_context) {
-  _transaction_context = transaction_context;
-}
+std::shared_ptr<const AbstractOperator> AbstractOperator::input_left() const { return _input_left; }
+
+std::shared_ptr<const AbstractOperator> AbstractOperator::input_right() const { return _input_right; }
 
 }  // namespace opossum

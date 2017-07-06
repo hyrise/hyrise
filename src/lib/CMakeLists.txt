@@ -136,8 +136,6 @@ set(
     operators/validate.hpp
     resolve_type.hpp
     sql/lru_cache.hpp
-    sql/sql_parse_tree_cache.hpp
-    sql/sql_parse_tree_cache.cpp
     sql/sql_query_operator.hpp
     sql/sql_query_operator.cpp
     sql/sql_query_plan.hpp
@@ -212,7 +210,6 @@ set(
     uid_allocator.hpp
     utils/assert.hpp
     utils/cuckoo_hashtable.hpp
-    utils/helper.cpp
     utils/helper.hpp
     utils/murmur_hash.cpp
     utils/murmur_hash.hpp

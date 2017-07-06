@@ -21,9 +21,9 @@ target_link_libraries(
     opossum
 )
 
-# Configure tpcTableGenerator
-add_executable(tpcTableGenerator tpc_table_generator.cpp)
-target_link_libraries(tpcTableGenerator opossum tpcc)
+# Configure tpccTableGenerator
+add_executable(tpccTableGenerator tpcc_table_generator.cpp)
+target_link_libraries(tpccTableGenerator opossum tpcc)
 
 # Configure client
 add_executable(

@@ -39,8 +39,11 @@ class AbstractScheduler {
   // Helper functions - not globals for the sake of it
   template <typename T>
   static void schedule_tasks(const std::vector<std::shared_ptr<T>>& tasks);
+
+  // Intended to be called with the tasks in order, i.e. tasks.back() being the last task to be executed, i.e. being the
+  // task whose output is the result of the query
   template <typename T>
-  static void schedule_tasks_and_wait(const std::vector<std::shared_ptr<T>> tasks);
+  static void schedule_tasks_and_wait_for_back(const std::vector<std::shared_ptr<T>> tasks);
 
  protected:
   std::shared_ptr<Topology> _topology;
@@ -54,7 +57,7 @@ void AbstractScheduler::schedule_tasks(const std::vector<std::shared_ptr<T>>& ta
 }
 
 template <typename T>
-void AbstractScheduler::schedule_tasks_and_wait(const std::vector<std::shared_ptr<T>> tasks) {
+void AbstractScheduler::schedule_tasks_and_wait_for_back(const std::vector<std::shared_ptr<T>> tasks) {
   schedule_tasks(tasks);
   if (!tasks.empty()) {
     tasks.back()->join();

@@ -8,6 +8,8 @@
 #include <string>
 #include <vector>
 
+#include "utils/assert.hpp"
+
 namespace tpcc {
 
 class RandomGenerator {
@@ -20,10 +22,12 @@ class RandomGenerator {
     return dist(engine);
   }
 
-  std::string zipCode() { return nstring(4, 4) + "11111"; }
+  std::string zip_code() { return nstring(4, 4) + "11111"; }
 
+  // Function and parameters as defined by TPCC
+  // Non-Uniform-Random
   size_t nurand(size_t a, size_t x, size_t y) {
-    assert(0 <= _c && _c <= a);
+    opossum::Assert(0 <= _c && _c <= a, "Invalid param: a=" + std::to_string(a));
     return (((number(0, a) | number(x, y)) + _c) % (y - x + 1)) + x;
   }
 
@@ -44,7 +48,7 @@ class RandomGenerator {
     return last_name;
   }
 
-  std::string generateString(size_t lower_length, size_t upper_length, char base_character, int num_characters) {
+  std::string generate_string(size_t lower_length, size_t upper_length, char base_character, int num_characters) {
     size_t length = number(lower_length, upper_length);
     std::string s;
     for (size_t i = 0; i < length; i++) {
@@ -54,12 +58,16 @@ class RandomGenerator {
     return s;
   }
 
+  // Function and parameters as defined by TPCC
+  // Generates alphanumeric string of random length
   std::string astring(size_t lower_length, size_t upper_length) {
-    return generateString(lower_length, upper_length, 'a', 26);
+    return generate_string(lower_length, upper_length, 'a', 26);
   }
 
+  // Function and parameters as defined by TPCC
+  // Generates numeric string of random length
   std::string nstring(size_t lower_length, size_t upper_length) {
-    return generateString(lower_length, upper_length, '0', 10);
+    return generate_string(lower_length, upper_length, '0', 10);
   }
 
   std::set<size_t> select_unique_ids(size_t num_unique, size_t id_length) {

@@ -88,7 +88,7 @@ void call_functor_by_column_type(const std::string &type, Args &&... args) {
 }
 
 template <typename T>
-std::string get_name_of_type() {
+std::string name_of_type() {
   /*
    * This function returns the name of an Opossum datatype based on the definition in hana_types.
    */

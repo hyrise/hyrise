@@ -7,6 +7,7 @@
 #include <vector>
 
 #include "concurrency/transaction_manager.hpp"
+#include "helper.hpp"
 #include "operators/commit_records.hpp"
 #include "operators/get_table.hpp"
 #include "operators/limit.hpp"
@@ -41,7 +42,7 @@ OrderStatusResult AbstractOrderStatusImpl::run_transaction(const OrderStatusPara
   opossum::TransactionManager::get().run_transaction([&](std::shared_ptr<opossum::TransactionContext> t_context) {
     if (params.order_status_by == OrderStatusBy::CustomerLastName) {
       auto get_customer_tasks = get_customer_by_name(params.c_last, params.c_d_id, params.c_w_id);
-      opossum::execute_tasks_with_context(get_customer_tasks, t_context);
+      execute_tasks_with_context(get_customer_tasks, t_context);
 
       const auto customers_table = get_customer_tasks.back()->get_operator()->get_output();
       const auto num_names = customers_table->row_count();
@@ -56,7 +57,7 @@ OrderStatusResult AbstractOrderStatusImpl::run_transaction(const OrderStatusPara
       result.c_id = customers_table->get_value<int32_t>(opossum::ColumnID(3), row);
     } else {
       auto get_customer_tasks = get_customer_by_id(params.c_id, params.c_d_id, params.c_w_id);
-      opossum::execute_tasks_with_context(get_customer_tasks, t_context);
+      execute_tasks_with_context(get_customer_tasks, t_context);
       DebugAssert(get_customer_tasks.back()->get_operator()->get_output()->row_count() == 1,
                   "Selecting by ID has to yield exactly one customer");
 
@@ -70,7 +71,7 @@ OrderStatusResult AbstractOrderStatusImpl::run_transaction(const OrderStatusPara
     }
 
     auto get_order_tasks = get_orders(result.c_id, params.c_d_id, params.c_w_id);
-    opossum::execute_tasks_with_context(get_order_tasks, t_context);
+    execute_tasks_with_context(get_order_tasks, t_context);
 
     const auto orders_table = get_order_tasks.back()->get_operator()->get_output();
 
@@ -79,7 +80,7 @@ OrderStatusResult AbstractOrderStatusImpl::run_transaction(const OrderStatusPara
     result.o_entry_d = orders_table->get_value<int32_t>(opossum::ColumnID(2), 0);
 
     auto get_order_line_tasks = get_order_lines(result.o_id, params.c_d_id, params.c_w_id);
-    opossum::execute_tasks_with_context(get_order_line_tasks, t_context);
+    execute_tasks_with_context(get_order_line_tasks, t_context);
 
     auto order_lines_table = get_order_line_tasks.back()->get_operator()->get_output();
 

@@ -12,6 +12,7 @@
 #include "operators/sort.hpp"
 #include "operators/table_scan.hpp"
 #include "scheduler/operator_task.hpp"
+#include "tpcc/helper.hpp"
 #include "utils/helper.hpp"
 
 #include "tpcc_base_fixture.cpp"
@@ -31,7 +32,7 @@ class TPCCOrderStatusBenchmark : public TPCCBenchmarkFixture {
     while (state.KeepRunning()) {
       TransactionManager::get().run_transaction([&](std::shared_ptr<TransactionContext> t_context) {
         auto get_customer_tasks = impl.get_customer_by_name(c_last, c_d_id, c_w_id);
-        execute_tasks_with_context(get_customer_tasks, t_context);
+        tpcc::execute_tasks_with_context(get_customer_tasks, t_context);
       });
     }
   }
@@ -46,7 +47,7 @@ class TPCCOrderStatusBenchmark : public TPCCBenchmarkFixture {
     while (state.KeepRunning()) {
       TransactionManager::get().run_transaction([&](std::shared_ptr<TransactionContext> t_context) {
         auto get_customer_tasks = impl.get_customer_by_id(c_id, c_d_id, c_w_id);
-        execute_tasks_with_context(get_customer_tasks, t_context);
+        tpcc::execute_tasks_with_context(get_customer_tasks, t_context);
       });
     }
   }
@@ -61,7 +62,7 @@ class TPCCOrderStatusBenchmark : public TPCCBenchmarkFixture {
     while (state.KeepRunning()) {
       TransactionManager::get().run_transaction([&](std::shared_ptr<TransactionContext> t_context) {
         auto get_order_tasks = impl.get_orders(c_id, c_d_id, c_w_id);
-        execute_tasks_with_context(get_order_tasks, t_context);
+        tpcc::execute_tasks_with_context(get_order_tasks, t_context);
       });
     }
   }
@@ -75,7 +76,7 @@ class TPCCOrderStatusBenchmark : public TPCCBenchmarkFixture {
     while (state.KeepRunning()) {
       TransactionManager::get().run_transaction([&](std::shared_ptr<TransactionContext> t_context) {
         auto get_order_line_tasks = impl.get_order_lines(0, c_d_id, c_w_id);
-        execute_tasks_with_context(get_order_line_tasks, t_context);
+        tpcc::execute_tasks_with_context(get_order_line_tasks, t_context);
       });
     }
   }

@@ -23,6 +23,10 @@ class Print : public AbstractReadOnlyOperator {
   const std::string name() const override;
   uint8_t num_in_tables() const override;
   uint8_t num_out_tables() const override;
+  std::shared_ptr<AbstractOperator> recreate() const override;
+
+  static void print(std::shared_ptr<const Table> table, PrintMode mode = PrintMode::IgnoreEmptyChunks,
+                    std::ostream& out = std::cout);
 
  protected:
   std::vector<uint16_t> column_string_widths(uint16_t min, uint16_t max, std::shared_ptr<const Table> t) const;
