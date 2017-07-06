@@ -10,13 +10,8 @@
 #include "optimizer/column_statistics.hpp"
 #include "resolve_type.hpp"
 #include "storage/table.hpp"
-#include "storage/storage_manager.hpp"
 
 namespace opossum {
-
-TableStatistics::TableStatistics(const std::string &name)
-    : TableStatistics(name, StorageManager::get().get_table(name)) {
-}
 
 TableStatistics::TableStatistics(const std::string &name, const std::weak_ptr<Table> table)
     : _name(name), _table(table), _column_statistics(std::make_shared<std::map<std::string, std::shared_ptr<AbstractColumnStatistics>>>()) {

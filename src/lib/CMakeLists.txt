@@ -142,6 +142,8 @@ set(
     optimizer/abstract_syntax_tree/query_plan_helper.hpp
     optimizer/abstract_syntax_tree/projection_node.cpp
     optimizer/abstract_syntax_tree/projection_node.hpp
+    optimizer/abstract_syntax_tree/sort_node.cpp
+    optimizer/abstract_syntax_tree/sort_node.hpp
     optimizer/abstract_syntax_tree/table_node.cpp
     optimizer/abstract_syntax_tree/table_node.hpp
     optimizer/abstract_syntax_tree/table_scan_node.cpp

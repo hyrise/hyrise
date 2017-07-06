@@ -25,7 +25,8 @@ NodeOperatorTranslator::NodeOperatorTranslator() {
       std::bind(&NodeOperatorTranslator::translate_projection_node, this, std::placeholders::_1);
 }
 
-const std::shared_ptr<AbstractOperator> NodeOperatorTranslator::translate_node(std::shared_ptr<AbstractNode> node) const {
+const std::shared_ptr<AbstractOperator> NodeOperatorTranslator::translate_node(
+    std::shared_ptr<AbstractNode> node) const {
   auto it = _operator_factory.find(node->type());
 
   if (it == _operator_factory.end()) {
@@ -46,9 +47,15 @@ const std::shared_ptr<AbstractOperator> NodeOperatorTranslator::translate_table_
   auto input_operator = translate_node(node->left());
   auto table_scan_node = std::dynamic_pointer_cast<TableScanNode>(node);
 
-  // TODO(tim): change to ScanType
-  // return std::make_shared<TableScan>(input_operator, table_scan_node->column_name(), table_scan_node->scan_type(),
-  return std::make_shared<TableScan>(input_operator, table_scan_node->column_name(), "=", table_scan_node->value(),
+  std::unordered_map<ScanType, std::string> scan_type_to_string = {
+      {ScanType::OpEquals, "="},        {ScanType::OpNotEquals, "!="},
+      {ScanType::OpGreaterThan, ">"},   {ScanType::OpGreaterThanEquals, ">="},
+      {ScanType::OpLessThan, "<"},      {ScanType::OpLessThanEquals, "<="},
+      {ScanType::OpBetween, "BETWEEN"}, {ScanType::OpLike, "LIKE"},
+  };
+  // TODO(tim): change to ScanType and remove mapping
+  return std::make_shared<TableScan>(input_operator, table_scan_node->column_name(),
+                                     scan_type_to_string[table_scan_node->scan_type()], table_scan_node->value(),
                                      table_scan_node->value2());
 }
 
