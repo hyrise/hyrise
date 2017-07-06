@@ -30,12 +30,12 @@ class TPCCBenchmarkFixture : public benchmark::Fixture {
     _tpcc_tables = _gen.generate_all_tables();
     // We currently run the benchmarks without a scheduler because there seem to be some problems when it is activated.
     // TODO(mp): investigate and fix.
-    //CurrentScheduler::set(std::make_shared<NodeQueueScheduler>(Topology::create_fake_numa_topology(4, 2)));
+    // CurrentScheduler::set(std::make_shared<NodeQueueScheduler>(Topology::create_fake_numa_topology(4, 2)));
   }
 
   virtual void TearDown(const ::benchmark::State&) {
     opossum::StorageManager::get().reset();
-    //CurrentScheduler::set(nullptr);
+    // CurrentScheduler::set(nullptr);
   }
 
   virtual void SetUp(const ::benchmark::State&) {
