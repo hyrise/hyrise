@@ -31,29 +31,29 @@ class OrderStatusTestImpl : public TransactionTestImpl {
  public:
   void run_and_test_transaction_from_json(const nlohmann::json &json_params, const nlohmann::json &json_results) {
     tpcc::OrderStatusParams params = json_params;
-    tpcc::OrderStatusResult ref_result = json_results;
+    tpcc::OrderStatusResult sqlite_results = json_results;
 
     auto our_result = _ref_impl.run_transaction(params);
 
-    ASSERT_EQ(ref_result.c_id, our_result.c_id);
-    ASSERT_EQ(ref_result.c_first, our_result.c_first);
-    ASSERT_EQ(ref_result.c_middle, our_result.c_middle);
-    ASSERT_EQ(ref_result.c_last, our_result.c_last);
-    ASSERT_FLOAT_EQ(ref_result.c_balance, our_result.c_balance);
-    ASSERT_EQ(ref_result.o_id, our_result.o_id);
-    ASSERT_EQ(ref_result.o_carrier_id, our_result.o_carrier_id);
-    ASSERT_EQ(ref_result.o_entry_d, our_result.o_entry_d);
+    ASSERT_EQ(sqlite_results.c_id, our_result.c_id);
+    ASSERT_EQ(sqlite_results.c_first, our_result.c_first);
+    ASSERT_EQ(sqlite_results.c_middle, our_result.c_middle);
+    ASSERT_EQ(sqlite_results.c_last, our_result.c_last);
+    ASSERT_FLOAT_EQ(sqlite_results.c_balance, our_result.c_balance);
+    ASSERT_EQ(sqlite_results.o_id, our_result.o_id);
+    ASSERT_EQ(sqlite_results.o_carrier_id, our_result.o_carrier_id);
+    ASSERT_EQ(sqlite_results.o_entry_d, our_result.o_entry_d);
 
-    ASSERT_EQ(ref_result.order_lines.size(), our_result.order_lines.size());
-    for (size_t l = 0; l < ref_result.order_lines.size(); l++) {
-      const auto &our = our_result.order_lines[l];
-      const auto &ref = ref_result.order_lines[l];
+    ASSERT_EQ(sqlite_results.order_lines.size(), our_result.order_lines.size());
+    for (size_t l = 0; l < sqlite_results.order_lines.size(); l++) {
+      const auto &our_ol = our_result.order_lines[l];
+      const auto &sqlite_ol = sqlite_results.order_lines[l];
 
-      ASSERT_EQ(ref.ol_supply_w_id, our.ol_supply_w_id);
-      ASSERT_EQ(ref.ol_i_id, our.ol_i_id);
-      ASSERT_EQ(ref.ol_quantity, our.ol_quantity);
-      ASSERT_FLOAT_EQ(ref.ol_amount, our.ol_amount);
-      ASSERT_EQ(ref.ol_delivery_d, our.ol_delivery_d);
+      ASSERT_EQ(sqlite_ol.ol_supply_w_id, our_ol.ol_supply_w_id);
+      ASSERT_EQ(sqlite_ol.ol_i_id, our_ol.ol_i_id);
+      ASSERT_EQ(sqlite_ol.ol_quantity, our_ol.ol_quantity);
+      ASSERT_FLOAT_EQ(sqlite_ol.ol_amount, our_ol.ol_amount);
+      ASSERT_EQ(sqlite_ol.ol_delivery_d, our_ol.ol_delivery_d);
     }
   }
 
@@ -65,32 +65,32 @@ class NewOrderTestImpl : public TransactionTestImpl {
  public:
   void run_and_test_transaction_from_json(const nlohmann::json &json_params, const nlohmann::json &json_results) {
     tpcc::NewOrderParams params = json_params;
-    tpcc::NewOrderResult ref_result = json_results;
+    tpcc::NewOrderResult sqlite_results = json_results;
 
     auto our_result = _ref_impl.run_transaction(params);
 
-    ASSERT_FLOAT_EQ(ref_result.w_tax_rate, our_result.w_tax_rate);
-    ASSERT_FLOAT_EQ(ref_result.d_tax_rate, our_result.d_tax_rate);
-    ASSERT_EQ(ref_result.d_next_o_id, our_result.d_next_o_id);
-    ASSERT_FLOAT_EQ(ref_result.c_discount, our_result.c_discount);
-    ASSERT_EQ(ref_result.c_last, our_result.c_last);
-    ASSERT_EQ(ref_result.c_credit, our_result.c_credit);
+    ASSERT_FLOAT_EQ(sqlite_results.w_tax_rate, our_result.w_tax_rate);
+    ASSERT_FLOAT_EQ(sqlite_results.d_tax_rate, our_result.d_tax_rate);
+    ASSERT_EQ(sqlite_results.d_next_o_id, our_result.d_next_o_id);
+    ASSERT_FLOAT_EQ(sqlite_results.c_discount, our_result.c_discount);
+    ASSERT_EQ(sqlite_results.c_last, our_result.c_last);
+    ASSERT_EQ(sqlite_results.c_credit, our_result.c_credit);
 
-    ASSERT_EQ(ref_result.order_lines.size(), our_result.order_lines.size());
-    for (size_t l = 0; l < ref_result.order_lines.size(); l++) {
-      const auto &our = our_result.order_lines[l];
-      const auto &ref = ref_result.order_lines[l];
+    ASSERT_EQ(sqlite_results.order_lines.size(), our_result.order_lines.size());
+    for (size_t l = 0; l < sqlite_results.order_lines.size(); l++) {
+      const auto &our_ol = our_result.order_lines[l];
+      const auto &sqlite_ol = sqlite_results.order_lines[l];
 
-      ASSERT_FLOAT_EQ(ref.i_price, our.i_price);
-      ASSERT_EQ(ref.i_name, our.i_name);
-      ASSERT_EQ(ref.i_data, our.i_data);
-      ASSERT_EQ(ref.s_qty, our.s_qty);
-      ASSERT_EQ(ref.s_dist_xx, our.s_dist_xx);
-      ASSERT_EQ(ref.s_ytd, our.s_ytd);
-      ASSERT_EQ(ref.s_order_cnt, our.s_order_cnt);
-      ASSERT_EQ(ref.s_remote_cnt, our.s_remote_cnt);
-      ASSERT_EQ(ref.s_data, our.s_data);
-      ASSERT_FLOAT_EQ(ref.amount, our.amount);
+      ASSERT_FLOAT_EQ(sqlite_ol.i_price, our_ol.i_price);
+      ASSERT_EQ(sqlite_ol.i_name, our_ol.i_name);
+      ASSERT_EQ(sqlite_ol.i_data, our_ol.i_data);
+      ASSERT_EQ(sqlite_ol.s_qty, our_ol.s_qty);
+      ASSERT_EQ(sqlite_ol.s_dist_xx, our_ol.s_dist_xx);
+      ASSERT_EQ(sqlite_ol.s_ytd, our_ol.s_ytd);
+      ASSERT_EQ(sqlite_ol.s_order_cnt, our_ol.s_order_cnt);
+      ASSERT_EQ(sqlite_ol.s_remote_cnt, our_ol.s_remote_cnt);
+      ASSERT_EQ(sqlite_ol.s_data, our_ol.s_data);
+      ASSERT_FLOAT_EQ(sqlite_ol.amount, our_ol.amount);
     }
   }
 
