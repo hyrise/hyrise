@@ -38,7 +38,7 @@ class RandomGenerator {
    * Generates a non-uniform random number based on a formula defined by TPCC
    */
   size_t nurand(size_t a, size_t x, size_t y) {
-    opossum::Assert(0 <= _c && _c <= a, "Invalid param: a=" + std::to_string(a));
+    opossum::Assert(_c <= a, "Invalid param: a=" + std::to_string(a));
     return (((number(0, a) | number(x, y)) + _c) % (y - x + 1)) + x;
   }
 
