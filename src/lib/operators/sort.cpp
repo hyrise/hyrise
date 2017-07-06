@@ -19,8 +19,8 @@ uint8_t Sort::num_in_tables() const { return 1; }
 
 uint8_t Sort::num_out_tables() const { return 1; }
 
-std::shared_ptr<AbstractOperator> Sort::recreate() const {
-  return std::make_shared<Sort>(_input_left->recreate(), _sort_column_name, _ascending, _output_chunk_size);
+std::shared_ptr<AbstractOperator> Sort::recreate(const std::vector<AllParameterVariant> &args) const {
+  return std::make_shared<Sort>(_input_left->recreate(args), _sort_column_name, _ascending, _output_chunk_size);
 }
 
 std::shared_ptr<const Table> Sort::on_execute() {
