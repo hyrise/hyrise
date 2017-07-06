@@ -142,6 +142,8 @@ std::tuple<double, std::shared_ptr<AbstractColumnStatistics>> ColumnStatistics<T
              (scan_type == ScanType::OpLessThan && !std::is_integral<T>::value)) {
     if (casted_value1 < min() || (scan_type == ScanType::OpLessThan && casted_value1 <= min())) {
       return {0.0, nullptr};
+    } else if (casted_value1 >= max()) {
+      return {1.0, nullptr};
     }
     double selectivity = (casted_value1 - min() + 1) / static_cast<double>(max() - min() + 1);
     auto column_statistics =
@@ -159,6 +161,8 @@ std::tuple<double, std::shared_ptr<AbstractColumnStatistics>> ColumnStatistics<T
              (scan_type == ScanType::OpGreaterThan && !std::is_integral<T>::value)) {
     if (casted_value1 > max() || (scan_type == ScanType::OpGreaterThan && casted_value1 >= max())) {
       return {0.0, nullptr};
+    } else if (casted_value1 <= min()) {
+      return {1.0, nullptr};
     }
     double selectivity = (max() - casted_value1 + 1) / static_cast<double>(max() - min() + 1);
     auto column_statistics =

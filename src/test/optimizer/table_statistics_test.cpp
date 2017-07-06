@@ -55,31 +55,23 @@ class TableStatisticsTest : public BaseTest {
     auto table_scan = std::make_shared<TableScan>(table_wraper, column_name, scan_type, value, value2);
     table_scan->execute();
     TableContainer output_container{statistics, table_scan->get_output()};
-    assert_equal_row_count(output_container, offset);
+    assert_equal_row_count(output_container);
     return output_container;
   }
 
-  //  TableContainer compare_statistic_with_table_scan(const TableContainer & table_container, const std::string
-  //  &column_name, const ScanType scan_type, const AllParameterVariant value, const optional<AllTypeVariant> value2 =
-  //  nullopt, const int offset = 0) {
-  //    TableContainer output_container = statistic_with_table_scan(table_container, column_name, scan_type, value,
-  //    value2, offset); assert_equal_row_count(output_container, offset); return output_container;
-  //  }
-
   // ASSERT_EQ does not work in member function
   struct {
-    void operator()(const TableContainer& table_container, const int offset = 0) {
-      ASSERT_EQ(table_container.statistics->row_count(), offset + static_cast<int>(table_container.table->row_count()));
+    void operator()(const TableContainer& table_container) {
+      ASSERT_EQ(static_cast<int>(table_container.statistics->row_count()),
+                static_cast<int>(table_container.table->row_count()));
     }
   } assert_equal_row_count;
 
   template <typename T>
   void check_column_with_values(const TableContainer& table_container, const std::string& column_name,
-                                const ScanType scan_type, const std::vector<T>& values, const int offset = 0) {
+                                const ScanType scan_type, const std::vector<T>& values) {
     for (const auto& value : values) {
-      check_statistic_with_table_scan(table_container, column_name, scan_type, opossum::AllParameterVariant(value),
-                                      nullopt, offset);
-      //      assert_equal_row_count(output_container, offset);
+      check_statistic_with_table_scan(table_container, column_name, scan_type, opossum::AllParameterVariant(value));
     }
   }
 
@@ -89,10 +81,7 @@ class TableStatisticsTest : public BaseTest {
   std::vector<std::string> string_values{"a", "b", "g", "h"};
 };
 
-TEST_F(TableStatisticsTest, GetTableTest) {
-  ASSERT_EQ(table_a_stats->row_count(), 6.);
-  assert_equal_row_count(table_a_container);
-}
+TEST_F(TableStatisticsTest, GetTableTest) { assert_equal_row_count(table_a_container); }
 
 TEST_F(TableStatisticsTest, NotEqualTest) {
   ScanType scan_type = ScanType::OpNotEquals;
@@ -100,35 +89,6 @@ TEST_F(TableStatisticsTest, NotEqualTest) {
   check_column_with_values(table_a_container, "b", scan_type, float_values);
   check_column_with_values(table_a_container, "c", scan_type, double_values);
   check_column_with_values(table_a_container, "d", scan_type, string_values);
-
-  //  auto table_container = compare_statistic_with_table_scan(table_a_container, "a", ScanType::OpNotEquals,
-  //  opossum::AllParameterVariant(1)); assert_equal_row_count(table_container); auto stat =
-  //  table_a_stats->predicate_statistics("a", ScanType::OpNotEquals, opossum::AllParameterVariant(1));
-  //  ASSERT_EQ(stat->row_count(), 5.);
-  //
-  //  stat = table_a_stats->predicate_statistics("a", ScanType::OpNotEquals, opossum::AllParameterVariant(0));
-  //  ASSERT_EQ(stat->row_count(), 6.);
-  //
-  //  stat = table_a_stats->predicate_statistics("a", ScanType::OpNotEquals, opossum::AllParameterVariant(7));
-  //  ASSERT_EQ(stat->row_count(), 6.);
-  //
-  //  stat = table_a_stats->predicate_statistics("b", ScanType::OpNotEquals, opossum::AllParameterVariant(1.f));
-  //  ASSERT_EQ(stat->row_count(), 5.);
-  //
-  //  stat = table_a_stats->predicate_statistics("b", ScanType::OpNotEquals, opossum::AllParameterVariant(0.f));
-  //  ASSERT_EQ(stat->row_count(), 6.);
-  //
-  //  stat = table_a_stats->predicate_statistics("b", ScanType::OpNotEquals, opossum::AllParameterVariant(7.f));
-  //  ASSERT_EQ(stat->row_count(), 6.);
-  //
-  //  stat = table_a_stats->predicate_statistics("d", ScanType::OpNotEquals, opossum::AllParameterVariant("b"));
-  //  ASSERT_EQ(stat->row_count(), 5.);
-  //
-  //  stat = table_a_stats->predicate_statistics("d", ScanType::OpNotEquals, opossum::AllParameterVariant("a"));
-  //  ASSERT_EQ(stat->row_count(), 6.);
-  //
-  //  stat = table_a_stats->predicate_statistics("d", ScanType::OpNotEquals, opossum::AllParameterVariant("h"));
-  //  ASSERT_EQ(stat->row_count(), 6.);
 }
 
 TEST_F(TableStatisticsTest, EqualTest) {
@@ -140,95 +100,39 @@ TEST_F(TableStatisticsTest, EqualTest) {
 }
 
 TEST_F(TableStatisticsTest, LessThanTest) {
-  auto stat = table_a_stats->predicate_statistics("a", ScanType::OpLessThan, opossum::AllParameterVariant(2));
-  ASSERT_EQ(stat->row_count(), 1.);
-
-  stat = table_a_stats->predicate_statistics("a", ScanType::OpLessThan, opossum::AllParameterVariant(1));
-  ASSERT_EQ(stat->row_count(), 0.);
-
-  stat = table_a_stats->predicate_statistics("a", ScanType::OpLessThan, opossum::AllParameterVariant(6));
-  ASSERT_EQ(stat->row_count(), 5.);
-
-  stat = table_a_stats->predicate_statistics("b", ScanType::OpLessThan, opossum::AllParameterVariant(2.f));
-  ASSERT_EQ(stat->row_count(), 2.);
-
-  stat = table_a_stats->predicate_statistics("b", ScanType::OpLessThan, opossum::AllParameterVariant(1.f));
-  ASSERT_EQ(stat->row_count(), 0.);
-
-  stat = table_a_stats->predicate_statistics("b", ScanType::OpLessThan, opossum::AllParameterVariant(6.f));
-  ASSERT_EQ(stat->row_count(), 6.);
+  ScanType scan_type = ScanType::OpLessThan;
+  check_column_with_values(table_a_container, "a", scan_type, int_values);
+  std::vector<float> custom_float_values{0.f, 1.f, 5.5f, 7.f};
+  check_column_with_values(table_a_container, "b", scan_type, custom_float_values);
+  std::vector<double> custom_double_values{0., 1., 5.5, 7.};
+  check_column_with_values(table_a_container, "c", scan_type, custom_double_values);
+  //  check_column_with_values(table_a_container, "d", scan_type, string_values);
 }
 
 TEST_F(TableStatisticsTest, LessEqualThanTest) {
-  auto stat = table_a_stats->predicate_statistics("a", ScanType::OpLessThanEquals, opossum::AllParameterVariant(3));
-  ASSERT_EQ(stat->row_count(), 3.);
-
-  stat = table_a_stats->predicate_statistics("a", ScanType::OpLessThanEquals, opossum::AllParameterVariant(0));
-  ASSERT_EQ(stat->row_count(), 0.);
-
-  stat = table_a_stats->predicate_statistics("a", ScanType::OpLessThanEquals, opossum::AllParameterVariant(1));
-  ASSERT_EQ(stat->row_count(), 1.);
-
-  stat = table_a_stats->predicate_statistics("a", ScanType::OpLessThanEquals, opossum::AllParameterVariant(6));
-  ASSERT_EQ(stat->row_count(), 6.);
-
-  stat = table_a_stats->predicate_statistics("b", ScanType::OpLessThanEquals, opossum::AllParameterVariant(3.f));
-  ASSERT_EQ(stat->row_count(), 3.);
-
-  stat = table_a_stats->predicate_statistics("b", ScanType::OpLessThanEquals, opossum::AllParameterVariant(0.f));
-  ASSERT_EQ(stat->row_count(), 0.);
-
-  stat = table_a_stats->predicate_statistics("b", ScanType::OpLessThanEquals, opossum::AllParameterVariant(1.f));
-  ASSERT_EQ(stat->row_count(), 1.);
-
-  stat = table_a_stats->predicate_statistics("b", ScanType::OpLessThanEquals, opossum::AllParameterVariant(6.f));
-  ASSERT_EQ(stat->row_count(), 6.);
+  ScanType scan_type = ScanType::OpLessThanEquals;
+  check_column_with_values(table_a_container, "a", scan_type, int_values);
+  check_column_with_values(table_a_container, "b", scan_type, float_values);
+  check_column_with_values(table_a_container, "c", scan_type, double_values);
+  //  check_column_with_values(table_a_container, "d", scan_type, string_values);
 }
 
 TEST_F(TableStatisticsTest, GreaterThanTest) {
-  auto stat = table_a_stats->predicate_statistics("a", ScanType::OpGreaterThan, opossum::AllParameterVariant(2));
-  ASSERT_EQ(stat->row_count(), 4.);
-
-  stat = table_a_stats->predicate_statistics("a", ScanType::OpGreaterThan, opossum::AllParameterVariant(1));
-  ASSERT_EQ(stat->row_count(), 5.);
-
-  stat = table_a_stats->predicate_statistics("a", ScanType::OpGreaterThan, opossum::AllParameterVariant(6));
-  ASSERT_EQ(stat->row_count(), 0.);
-
-  stat = table_a_stats->predicate_statistics("b", ScanType::OpGreaterThan, opossum::AllParameterVariant(3.f));
-  ASSERT_EQ(stat->row_count(), 4.);
-
-  stat = table_a_stats->predicate_statistics("b", ScanType::OpGreaterThan, opossum::AllParameterVariant(1.f));
-  ASSERT_EQ(stat->row_count(), 6.);
-
-  stat = table_a_stats->predicate_statistics("b", ScanType::OpGreaterThan, opossum::AllParameterVariant(6.f));
-  ASSERT_EQ(stat->row_count(), 0.);
+  ScanType scan_type = ScanType::OpGreaterThan;
+  check_column_with_values(table_a_container, "a", scan_type, int_values);
+  std::vector<float> custom_float_values{0.f, 1.5f, 6.f, 7.f};
+  check_column_with_values(table_a_container, "b", scan_type, custom_float_values);
+  std::vector<double> custom_double_values{0., 1.5, 6., 7.};
+  check_column_with_values(table_a_container, "c", scan_type, custom_double_values);
+  //  check_column_with_values(table_a_container, "d", scan_type, string_values);
 }
 
 TEST_F(TableStatisticsTest, GreaterEqualThanTest) {
-  auto stat = table_a_stats->predicate_statistics("a", ScanType::OpGreaterThanEquals, opossum::AllParameterVariant(3));
-  ASSERT_EQ(stat->row_count(), 4.);
-
-  stat = table_a_stats->predicate_statistics("a", ScanType::OpGreaterThanEquals, opossum::AllParameterVariant(1));
-  ASSERT_EQ(stat->row_count(), 6.);
-
-  stat = table_a_stats->predicate_statistics("a", ScanType::OpGreaterThanEquals, opossum::AllParameterVariant(6));
-  ASSERT_EQ(stat->row_count(), 1.);
-
-  stat = table_a_stats->predicate_statistics("a", ScanType::OpGreaterThanEquals, opossum::AllParameterVariant(7));
-  ASSERT_EQ(stat->row_count(), 0.);
-
-  stat = table_a_stats->predicate_statistics("b", ScanType::OpGreaterThanEquals, opossum::AllParameterVariant(3.f));
-  ASSERT_EQ(stat->row_count(), 4.);
-
-  stat = table_a_stats->predicate_statistics("b", ScanType::OpGreaterThanEquals, opossum::AllParameterVariant(1.f));
-  ASSERT_EQ(stat->row_count(), 6.);
-
-  stat = table_a_stats->predicate_statistics("b", ScanType::OpGreaterThanEquals, opossum::AllParameterVariant(6.f));
-  ASSERT_EQ(stat->row_count(), 1.);
-
-  stat = table_a_stats->predicate_statistics("b", ScanType::OpGreaterThanEquals, opossum::AllParameterVariant(7.f));
-  ASSERT_EQ(stat->row_count(), 0.);
+  ScanType scan_type = ScanType::OpGreaterThanEquals;
+  check_column_with_values(table_a_container, "a", scan_type, int_values);
+  check_column_with_values(table_a_container, "b", scan_type, float_values);
+  check_column_with_values(table_a_container, "c", scan_type, double_values);
+  //  check_column_with_values(table_a_container, "d", scan_type, string_values);
 }
 
 //
