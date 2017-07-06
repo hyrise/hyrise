@@ -78,16 +78,23 @@ std::shared_ptr<AbstractNode> SQLQueryNodeTranslator::_translate_select(const Se
   Assert(select.selectList != nullptr, "SELECT list needs to exist");
   Assert(!select.selectList->empty(), "SELECT list needs to have entries");
 
-  if (select.selectList->front()->isType(kExprFunctionRef)) {
+  if (select.selectList->front()->isType(hsql::kExprFunctionRef)) {
     /**
      * If the first select list entry is a function, we _currently_ assume all the other entries to be functions as
      * well. We turn the list into an aggregate.
      */
 #if IS_DEBUG
      for (size_t e = 1; e < select.selectList->size(); e++) {
-       Assert((*select.selectList)[e]->isType(kExprFunctionRef), "Select List entry " + std::to_string(e) + " is no function");
+       Assert((*select.selectList)[e]->isType(hsql::kExprFunctionRef),
+              "Select List entry " + std::to_string(e) + " is no function");
      }
 #endif
+
+
+
+    for (auto * expr : (*select.selectList)) {
+
+    }
 
     current_result_node = _tran
 

@@ -80,7 +80,7 @@ TEST_F(SQLQueryNodeTranslatorTest, SelectWithAndCondition) {
 }
 
 TEST_F(SQLQueryNodeTranslatorTest, AggregateWithExpression) {
-  const auto query = "SELECT SUM(a+b) AS s FROM table_a";
+  const auto query = "SELECT SUM(a+b) AS s, SUM(a*b) as f FROM table_a";
   const auto result_node = compile_query(query);
 
 //  EXPECT_EQ(result_node->type(), NodeType::Projection);
