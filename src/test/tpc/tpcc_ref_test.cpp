@@ -101,7 +101,7 @@ class NewOrderTestImpl : public TransactionTestImpl {
 class TpccRefTest : public BaseTest {
  public:
   TpccRefTest() {
-    m_transactionImpls = {{"OrderStatus", std::make_shared<OrderStatusTestImpl>()},
+    _transaction_impls = {{"OrderStatus", std::make_shared<OrderStatusTestImpl>()},
                           {"NewOrder", std::make_shared<NewOrderTestImpl>()}};
   }
 
@@ -121,7 +121,7 @@ class TpccRefTest : public BaseTest {
   void TearDown() override { StorageManager::get().reset(); }
 
  protected:
-  std::unordered_map<std::string, std::shared_ptr<TransactionTestImpl>> m_transactionImpls;
+  std::unordered_map<std::string, std::shared_ptr<TransactionTestImpl>> _transaction_impls;
 };
 
 TEST_F(TpccRefTest, SimulationScenario) {
@@ -150,8 +150,8 @@ TEST_F(TpccRefTest, SimulationScenario) {
 
     std::cout << "Testing: " << transaction_name << ":" << transaction_params << std::endl;
 
-    auto iter = m_transactionImpls.find(transaction_name);
-    assert(iter != m_transactionImpls.end());
+    auto iter = _transaction_impls.find(transaction_name);
+    assert(iter != _transaction_impls.end());
 
     auto &impl = *iter->second;
 
