@@ -4,12 +4,12 @@
 #include <string>
 #include <vector>
 
-#include "csv.hpp"
 #include "types.hpp"
 
 namespace opossum {
 
-CsvWriter::CsvWriter(const std::string& file) {
+CsvWriter::CsvWriter(const std::string& file, const CsvConfig& config)
+: _config(config) {
   _stream.exceptions(std::ifstream::failbit | std::ifstream::badbit);
   _stream.open(file);
 }
@@ -20,8 +20,8 @@ CsvWriter::CsvWriter(const std::string& file) {
 std::string CsvWriter::escape(const std::string& string) {
   std::string result(string);
   size_t next_pos = 0;
-  while (std::string::npos != (next_pos = result.find(csv_quote, next_pos))) {
-    result.insert(next_pos, 1, csv_escape);
+  while (std::string::npos != (next_pos = result.find(_config.quote, next_pos))) {
+    result.insert(next_pos, 1, _config.escape);
     // Has to jump 2 positions ahead because a new character had been inserted.
     next_pos += 2;
   }
@@ -36,7 +36,7 @@ void CsvWriter::write_line(const std::vector<AllTypeVariant>& values) {
 }
 
 void CsvWriter::end_line() {
-  _stream << csv_delimiter;
+  _stream << _config.delimiter;
   _current_col_count = 0;
 }
 
