@@ -211,6 +211,18 @@ TEST_F(OperatorsTableScanTest, ScanOnDictColumnWithNullValues) {
   EXPECT_TABLE_EQ(scan_1->get_output(), expected_result);
 }
 
+TEST_F(OperatorsTableScanTest, ScanOnReferenceColumnWithNullValues) {
+  std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_float_with_null_filtered.tbl", 2);
+
+  auto scan_1 = std::make_shared<TableScan>(_table_wrapper_null, ColumnName{"a"}, ScanType::OpGreaterThan, 0);
+  scan_1->execute();
+
+  auto scan_2 = std::make_shared<TableScan>(scan_1, ColumnName("a"), ScanType::OpGreaterThan, 200);
+  scan_2->execute();
+
+  EXPECT_TABLE_EQ(scan_2->get_output(), expected_result);
+}
+
 TEST_F(OperatorsTableScanTest, ScanOnReferencedDictColumn) {
   // we do not need to check for a non existing value, because that happens automatically when we scan the second chunk
 
