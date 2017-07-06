@@ -22,8 +22,8 @@ uint8_t Print::num_in_tables() const { return 1; }
 
 uint8_t Print::num_out_tables() const { return 1; }
 
-std::shared_ptr<AbstractOperator> Print::recreate() const {
-  return std::make_shared<Print>(_input_left->recreate(), _out);
+std::shared_ptr<AbstractOperator> Print::recreate(const std::vector<AllParameterVariant>& args) const {
+  return std::make_shared<Print>(_input_left->recreate(args), _out);
 }
 
 void Print::print(std::shared_ptr<const Table> table, uint32_t flags, std::ostream& out) {

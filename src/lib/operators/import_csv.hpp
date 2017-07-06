@@ -55,7 +55,7 @@ class ImportCsv : public AbstractReadOnlyOperator {
   // This operator has one table as output.
   uint8_t num_out_tables() const override;
 
-  std::shared_ptr<AbstractOperator> recreate() const override {
+  std::shared_ptr<AbstractOperator> recreate(const std::vector<AllParameterVariant>& args) const override {
     throw std::runtime_error("Operator " + this->name() + " does not implement recreation.");
   }
 

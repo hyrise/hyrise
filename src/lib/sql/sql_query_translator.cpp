@@ -174,11 +174,8 @@ bool SQLQueryTranslator::_translate_filter_expr(const hsql::Expr& expr,
   // Get the value.
   // At this moment the value is expected to be a literal.
   Expr* other_expr = (column_expr == expr.expr) ? expr.expr2 : expr.expr;
-  AllTypeVariant value;
-  if (!_translate_literal(*other_expr, &value)) {
-    _error_msg = "Expected literal in WHERE condition.";
-    return false;
-  }
+
+  const AllParameterVariant value = translate_literal(*other_expr);
 
   if (column_name.length() == 0) {
     _error_msg = "Unsupported filter expression!";
@@ -383,19 +380,18 @@ bool SQLQueryTranslator::_translate_table_ref(const hsql::TableRef& table) {
 }
 
 // static
-bool SQLQueryTranslator::_translate_literal(const hsql::Expr& expr, AllTypeVariant* output) {
+const AllParameterVariant SQLQueryTranslator::translate_literal(const hsql::Expr& expr) {
   switch (expr.type) {
     case hsql::kExprLiteralInt:
-      *output = expr.ival;
-      return true;
+      return AllTypeVariant(expr.ival);
     case hsql::kExprLiteralFloat:
-      *output = expr.fval;
-      return true;
+      return AllTypeVariant(expr.fval);
     case hsql::kExprLiteralString:
-      *output = expr.name;
-      return true;
+      return AllTypeVariant(expr.name);
+    case hsql::kExprParameter:
+      return ValuePlaceholder(expr.ival);
     default:
-      return false;
+      throw std::runtime_error("Error while SQL planning. Expected literal.");
   }
 }
 
