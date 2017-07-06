@@ -209,6 +209,13 @@ class TableScan::TableScanImpl : public AbstractReadOnlyOperatorImpl {
   }
 
   void set_comparators(optional<T> typed_value2) {
+    /**
+     * Definining all possible operators here might appear odd. Chances are, however, that we will not
+     * have a similar comparison anywhere else. Index scans, for example, would not use an adaptable binary
+     * predicate, but will have to use different methods (lower_range, upper_range, ...) based on the
+     * chosen operator. For now, we can save us some dark template magic by using the switch below.
+     * DO NOT copy this code, however, without discussing if there is a better way to avoid code duplication.
+     */
     switch (_scan_type) {
       case ScanType::OpEquals: {
         _value_comparator = [](T left, T right) { return left == right; };
