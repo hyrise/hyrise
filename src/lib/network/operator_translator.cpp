@@ -51,6 +51,29 @@ inline optional<AllTypeVariant> translate_optional_variant(const proto::Variant&
     return translate_variant(variant);
 }
 
+inline ScanType translate_scan_type(const proto::ScanType& scan_type) {
+  switch (scan_type) {
+    case proto::ScanType::OpEquals:
+      return ScanType::OpEquals;
+    case proto::ScanType::OpNotEquals:
+      return ScanType::OpNotEquals;
+    case proto::ScanType::OpLessThan:
+      return ScanType::OpLessThan;
+    case proto::ScanType::OpLessThanEquals:
+      return ScanType::OpLessThanEquals;
+    case proto::ScanType::OpGreaterThan:
+      return ScanType::OpGreaterThan;
+    case proto::ScanType::OpGreaterThanEquals:
+      return ScanType::OpGreaterThanEquals;
+    case proto::ScanType::OpBetween:
+      return ScanType::OpBetween;
+    case proto::ScanType::OpLike:
+      return ScanType::OpLike;
+    default:
+      throw std::logic_error("Unsupported ScanType.");
+  }
+}
+
 inline std::shared_ptr<OperatorTask> OperatorTranslator::translate(
     const proto::ProjectionOperator& projection_operator) {
   const auto column_names_field = projection_operator.column_name();
@@ -95,15 +118,7 @@ inline std::shared_ptr<OperatorTask> OperatorTranslator::translate(
 
   auto input_left_task = translate_proto(nested_loop_join_operator.left_operator());
   auto input_right_task = translate_proto(nested_loop_join_operator.right_operator());
-  auto& op = nested_loop_join_operator.op();
-
-  std::unordered_map<std::string, ScanType> string_to_scan_type = {
-      {"=", ScanType::OpEquals},        {"!=", ScanType::OpNotEquals},
-      {">", ScanType::OpGreaterThan},   {">=", ScanType::OpGreaterThanEquals},
-      {"<", ScanType::OpLessThan},      {"<=", ScanType::OpLessThanEquals},
-      {"BETWEEN", ScanType::OpBetween}, {"LIKE", ScanType::OpLike},
-  };
-  auto scan_type = string_to_scan_type[op];
+  const auto& scan_type = translate_scan_type(nested_loop_join_operator.op());
 
   JoinMode join_mode;
   switch (nested_loop_join_operator.mode()) {
@@ -158,14 +173,7 @@ inline std::shared_ptr<OperatorTask> OperatorTranslator::translate(
 inline std::shared_ptr<OperatorTask> OperatorTranslator::translate(
     const proto::TableScanOperator& table_scan_operator) {
   const auto& column_name = table_scan_operator.column_name();
-  const auto& filter_op = table_scan_operator.filter_operator();
-  std::unordered_map<std::string, ScanType> string_to_scan_type = {
-      {"=", ScanType::OpEquals},        {"!=", ScanType::OpNotEquals},
-      {">", ScanType::OpGreaterThan},   {">=", ScanType::OpGreaterThanEquals},
-      {"<", ScanType::OpLessThan},      {"<=", ScanType::OpLessThanEquals},
-      {"BETWEEN", ScanType::OpBetween}, {"LIKE", ScanType::OpLike},
-  };
-  auto scan_type = string_to_scan_type[filter_op];
+  const auto& scan_type = translate_scan_type(table_scan_operator.filter_operator());
   Assert((table_scan_operator.has_input_operator()), "Missing Input Operator in Table Scan.");
 
   auto input_task = translate_proto(table_scan_operator.input_operator());
@@ -184,14 +192,7 @@ inline std::shared_ptr<OperatorTask> OperatorTranslator::translate(
 inline std::shared_ptr<OperatorTask> OperatorTranslator::translate(
     const proto::IndexColumnScanOperator& index_column_scan_operator) {
   const auto& column_name = index_column_scan_operator.column_name();
-  const auto& filter_operator = index_column_scan_operator.filter_operator();
-  std::unordered_map<std::string, ScanType> string_to_scan_type = {
-      {"=", ScanType::OpEquals},        {"!=", ScanType::OpNotEquals},
-      {">", ScanType::OpGreaterThan},   {">=", ScanType::OpGreaterThanEquals},
-      {"<", ScanType::OpLessThan},      {"<=", ScanType::OpLessThanEquals},
-      {"BETWEEN", ScanType::OpBetween},
-  };
-  auto scan_type = string_to_scan_type[filter_operator];
+  const auto& scan_type = translate_scan_type(index_column_scan_operator.filter_operator());
   Assert((index_column_scan_operator.has_input_operator()), "Missing Input Operator in Index Column Scan.");
 
   auto input_task = translate_proto(index_column_scan_operator.input_operator());
