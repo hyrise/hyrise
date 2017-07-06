@@ -9,9 +9,9 @@
 #include <vector>
 
 #include "all_type_variant.hpp"
-#include "helper.hpp"
 #include "concurrency/commit_context.hpp"
 #include "concurrency/transaction_manager.hpp"
+#include "helper.hpp"
 #include "operators/commit_records.hpp"
 #include "operators/get_table.hpp"
 #include "operators/insert.hpp"

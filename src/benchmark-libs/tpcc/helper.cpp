@@ -1,5 +1,8 @@
 #include "helper.hpp"
 
+#include <memory>
+#include <vector>
+
 #include "concurrency/transaction_context.hpp"
 #include "operators/abstract_operator.hpp"
 #include "scheduler/abstract_scheduler.hpp"

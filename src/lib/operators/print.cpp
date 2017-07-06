@@ -7,9 +7,9 @@
 #include <string>
 #include <vector>
 
+#include "operators/table_wrapper.hpp"
 #include "storage/base_column.hpp"
 #include "type_cast.hpp"
-#include "operators/table_wrapper.hpp"
 
 namespace opossum {
 
@@ -26,8 +26,7 @@ std::shared_ptr<AbstractOperator> Print::recreate() const {
   return std::make_shared<Print>(_input_left->recreate(), _out);
 }
 
-void Print::print(std::shared_ptr<const Table> table, uint32_t flags,
-                  std::ostream& out) {
+void Print::print(std::shared_ptr<const Table> table, uint32_t flags, std::ostream& out) {
   auto table_wrapper = std::make_shared<TableWrapper>(table);
   table_wrapper->execute();
   Print(table_wrapper, out, flags).execute();
