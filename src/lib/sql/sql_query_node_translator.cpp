@@ -92,7 +92,8 @@ std::shared_ptr<AbstractNode> SQLQueryNodeTranslator::_translate_select(const Se
      }
 #endif
 
-
+    std::vector<AggregateColumnDefinition> aggregate_column_definitions;
+    aggregate_column_definitions.reserve(select.selectList->size());
 
     for (auto * expr : (*select.selectList)) {
 

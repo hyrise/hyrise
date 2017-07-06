@@ -11,7 +11,7 @@ namespace opossum {
 
 class AggregateNode : public AbstractNode {
  public:
-  explicit AggregateNode(const std::vector<std::pair<std::string, AggregateFunction>> aggregates,
+  explicit AggregateNode(const std::vector<AggregateColumnDefinition> aggregates,
                          const std::vector<std::string> groupby_columns);
 
   const std::string description() const override;
@@ -19,7 +19,7 @@ class AggregateNode : public AbstractNode {
   const std::vector<std::string> output_columns() override;
 
  private:
-  std::vector<std::pair<std::string, AggregateFunction>> _aggregates;
+  std::vector<AggregateColumnDefinition> _aggregates;
   std::vector<std::string> _groupby_columns;
 };
 

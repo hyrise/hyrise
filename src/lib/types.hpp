@@ -97,6 +97,11 @@ enum class SchedulePriority {
 
 enum AggregateFunction { Min, Max, Sum, Avg, Count };
 
+struct AggregateColumnDefinition {
+  AggregateFunction function;
+  std::string column;
+};
+
 enum class ScanType {
   OpEquals,
   OpNotEquals,
@@ -107,5 +112,4 @@ enum class ScanType {
   OpBetween,
   OpLike
 };
-
 }  // namespace opossum

@@ -8,7 +8,7 @@
 
 namespace opossum {
 
-AggregateNode::AggregateNode(const std::vector<std::pair<std::string, AggregateFunction>> aggregates,
+AggregateNode::AggregateNode(const std::vector<AggregateColumnDefinition> aggregates,
                        const std::vector<std::string> groupby_columns):
   AbstractNode(NodeType::Aggregate),
   _aggregates(aggregates),
