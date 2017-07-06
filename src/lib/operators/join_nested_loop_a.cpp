@@ -14,9 +14,9 @@
 namespace opossum {
 JoinNestedLoopA::JoinNestedLoopA(const std::shared_ptr<const AbstractOperator> left,
                                  const std::shared_ptr<const AbstractOperator> right,
-                                 optional<std::pair<std::string, std::string>> column_names, const std::string &op,
+                                 optional<std::pair<std::string, std::string>> column_names, const ScanType scan_type,
                                  const JoinMode mode, const std::string &prefix_left, const std::string &prefix_right)
-    : AbstractJoinOperator(left, right, column_names, op, mode, prefix_left, prefix_right) {
+    : AbstractJoinOperator(left, right, column_names, scan_type, mode, prefix_left, prefix_right) {
   DebugAssert(
       (mode != Cross),
       "JoinNestedLoopA: this operator does not support Cross Joins, the optimizer should use Product operator.");
@@ -31,6 +31,11 @@ uint8_t JoinNestedLoopA::num_in_tables() const { return 2; }
 
 uint8_t JoinNestedLoopA::num_out_tables() const { return 1; }
 
+std::shared_ptr<AbstractOperator> JoinNestedLoopA::recreate() const {
+  return std::make_shared<JoinNestedLoopA>(_input_left->recreate(), _input_right->recreate(), _column_names, _scan_type,
+                                           _mode, _prefix_left, _prefix_right);
+}
+
 std::shared_ptr<const Table> JoinNestedLoopA::on_execute() {
   const auto first_column = _column_names->first;
   const auto second_column = _column_names->second;
@@ -38,7 +43,7 @@ std::shared_ptr<const Table> JoinNestedLoopA::on_execute() {
   _impl = make_unique_by_column_types<AbstractReadOnlyOperatorImpl, JoinNestedLoopAImpl>(
       input_table_left()->column_type(input_table_left()->column_id_by_name(first_column)),
       input_table_right()->column_type(input_table_right()->column_id_by_name(second_column)), _input_left,
-      _input_right, *_column_names, _op, _mode, _prefix_left, _prefix_right);
+      _input_right, *_column_names, _scan_type, _mode, _prefix_left, _prefix_right);
 
   return _impl->on_execute();
 }
@@ -49,32 +54,45 @@ class JoinNestedLoopA::JoinNestedLoopAImpl : public AbstractJoinOperatorImpl {
  public:
   JoinNestedLoopAImpl(const std::shared_ptr<const AbstractOperator> left,
                       const std::shared_ptr<const AbstractOperator> right,
-                      const std::pair<const std::string, const std::string> &column_names, const std::string &op,
+                      const std::pair<const std::string, const std::string> &column_names, const ScanType scan_type,
                       const JoinMode mode, const std::string &prefix_left, const std::string &prefix_right)
       : _left_in_table(left->get_output()),
         _right_in_table(right->get_output()),
         _left_column_id(_left_in_table->column_id_by_name(column_names.first)),
         _right_column_id(_right_in_table->column_id_by_name(column_names.second)),
-        _op(op),
+        _scan_type(scan_type),
         _mode(mode),
         _prefix_left(prefix_left),
         _prefix_right(prefix_right),
         _output_table(std::make_shared<Table>()) {
     // Parsing the join operator
-    if (op == "=") {
-      _comparator = [](LeftType left_value, RightType right_value) { return value_equal(left_value, right_value); };
-    } else if (op == "!=") {
-      _comparator = [](LeftType left_value, RightType right_value) { return !value_equal(left_value, right_value); };
-    } else if (op == "<") {
-      _comparator = [](LeftType left_value, RightType right_value) { return value_smaller(left_value, right_value); };
-    } else if (op == "<=") {
-      _comparator = [](LeftType left_value, RightType right_value) { return !value_greater(left_value, right_value); };
-    } else if (op == ">") {
-      _comparator = [](LeftType left_value, RightType right_value) { return value_greater(left_value, right_value); };
-    } else if (op == ">=") {
-      _comparator = [](LeftType left_value, RightType right_value) { return !value_smaller(left_value, right_value); };
-    } else {
-      Fail(std::string("unknown operator ") + op);
+    switch (_scan_type) {
+      case ScanType::OpEquals: {
+        _comparator = [](LeftType left_val, RightType right_val) { return value_equal(left_val, right_val); };
+        break;
+      }
+      case ScanType::OpNotEquals: {
+        _comparator = [](LeftType left_val, RightType right_val) { return !value_equal(left_val, right_val); };
+        break;
+      }
+      case ScanType::OpLessThan: {
+        _comparator = [](LeftType left_val, RightType right_val) { return value_smaller(left_val, right_val); };
+        break;
+      }
+      case ScanType::OpLessThanEquals: {
+        _comparator = [](LeftType left_val, RightType right_val) { return !value_greater(left_val, right_val); };
+        break;
+      }
+      case ScanType::OpGreaterThan: {
+        _comparator = [](LeftType left_val, RightType right_val) { return value_greater(left_val, right_val); };
+        break;
+      }
+      case ScanType::OpGreaterThanEquals: {
+        _comparator = [](LeftType left_val, RightType right_val) { return !value_smaller(left_val, right_val); };
+        break;
+      }
+      default:
+        Fail(std::string("Unsupported operator for join."));
     }
   }
 
@@ -502,7 +520,7 @@ class JoinNestedLoopA::JoinNestedLoopAImpl : public AbstractJoinOperatorImpl {
  protected:
   const std::shared_ptr<const Table> _left_in_table, _right_in_table;
   const ColumnID _left_column_id, _right_column_id;
-  const std::string _op;
+  const ScanType _scan_type;
   const JoinMode _mode;
   const std::string _prefix_left;
   const std::string _prefix_right;

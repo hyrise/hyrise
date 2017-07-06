@@ -21,6 +21,10 @@ uint8_t Print::num_in_tables() const { return 1; }
 
 uint8_t Print::num_out_tables() const { return 1; }
 
+std::shared_ptr<AbstractOperator> Print::recreate() const {
+  return std::make_shared<Print>(_input_left->recreate(), _out);
+}
+
 std::shared_ptr<const Table> Print::on_execute() {
   auto widths = column_string_widths(8, 20, input_table_left());
 

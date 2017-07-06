@@ -95,4 +95,15 @@ enum class SchedulePriority {
   High = 0     // Schedule task at the beginning of the queue
 };
 
+enum class ScanType {
+  OpEquals,
+  OpNotEquals,
+  OpLessThan,
+  OpLessThanEquals,
+  OpGreaterThan,
+  OpGreaterThanEquals,
+  OpBetween,
+  OpLike
+};
+
 }  // namespace opossum

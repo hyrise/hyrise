@@ -84,7 +84,7 @@ class OperatorsAggregateTest : public BaseTest {
 
       if (ref != "") {
         // also try a TableScan on every involved column
-        input = std::make_shared<TableScan>(in, ref, ">=", 0);
+        input = std::make_shared<TableScan>(in, ref, ScanType::OpGreaterThanEquals, 0);
         input->execute();
       }
 
@@ -377,7 +377,7 @@ TEST_F(OperatorsAggregateTest, NoGroupbyAndNoAggregate) {
  */
 
 TEST_F(OperatorsAggregateTest, SingleAggregateMaxOnRef) {
-  auto filtered = std::make_shared<TableScan>(_table_wrapper_1_1, "a", "<", "100");
+  auto filtered = std::make_shared<TableScan>(_table_wrapper_1_1, "a", ScanType::OpLessThan, "100");
   filtered->execute();
 
   this->test_output(filtered, {std::make_pair(std::string("b"), Max)}, {std::string("a")},
@@ -385,7 +385,7 @@ TEST_F(OperatorsAggregateTest, SingleAggregateMaxOnRef) {
 }
 
 TEST_F(OperatorsAggregateTest, TwoGroupbyAndTwoAggregateMinAvgOnRef) {
-  auto filtered = std::make_shared<TableScan>(_table_wrapper_2_2, "a", "<", "100");
+  auto filtered = std::make_shared<TableScan>(_table_wrapper_2_2, "a", ScanType::OpLessThan, "100");
   filtered->execute();
 
   this->test_output(filtered, {std::make_pair(std::string("c"), Min), std::make_pair(std::string("d"), Avg)},
@@ -394,7 +394,7 @@ TEST_F(OperatorsAggregateTest, TwoGroupbyAndTwoAggregateMinAvgOnRef) {
 }
 
 TEST_F(OperatorsAggregateTest, TwoGroupbySumOnRef) {
-  auto filtered = std::make_shared<TableScan>(_table_wrapper_2_1, "a", "<", "100");
+  auto filtered = std::make_shared<TableScan>(_table_wrapper_2_1, "a", ScanType::OpLessThan, "100");
   filtered->execute();
 
   this->test_output(filtered, {std::make_pair(std::string("c"), Sum)}, {std::string("a"), std::string("b")},
@@ -402,7 +402,7 @@ TEST_F(OperatorsAggregateTest, TwoGroupbySumOnRef) {
 }
 
 TEST_F(OperatorsAggregateTest, TwoAggregateSumAvgOnRef) {
-  auto filtered = std::make_shared<TableScan>(_table_wrapper_1_2, "a", "<", "100");
+  auto filtered = std::make_shared<TableScan>(_table_wrapper_1_2, "a", ScanType::OpLessThan, "100");
   filtered->execute();
 
   this->test_output(filtered, {std::make_pair(std::string("b"), Sum), std::make_pair(std::string("c"), Avg)},
@@ -411,7 +411,7 @@ TEST_F(OperatorsAggregateTest, TwoAggregateSumAvgOnRef) {
 }
 
 TEST_F(OperatorsAggregateTest, DictionarySingleAggregateMinOnRef) {
-  auto filtered = std::make_shared<TableScan>(_table_wrapper_1_1_dict, "a", "<", "100");
+  auto filtered = std::make_shared<TableScan>(_table_wrapper_1_1_dict, "a", ScanType::OpLessThan, "100");
   filtered->execute();
 
   this->test_output(filtered, {std::make_pair(std::string("b"), Min)}, {std::string("a")},
@@ -421,7 +421,7 @@ TEST_F(OperatorsAggregateTest, DictionarySingleAggregateMinOnRef) {
 TEST_F(OperatorsAggregateTest, JoinThenAggregate) {
   auto join =
       std::make_shared<JoinHash>(_table_wrapper_3_1, _table_wrapper_3_2, std::pair<std::string, std::string>("a", "a"),
-                                 "=", Inner, std::string("left."), std::string("right."));
+                                 ScanType::OpEquals, Inner, std::string("left."), std::string("right."));
   join->execute();
 
   this->test_output(join, {}, {std::string("left.a"), std::string("right.b")},

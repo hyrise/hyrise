@@ -40,7 +40,7 @@ std::shared_ptr<AbstractColumnStatistics> TableStatistics::get_column_statistics
 }
 
 std::shared_ptr<TableStatistics> TableStatistics::predicate_statistics(const std::string &column_name,
-                                                                       const std::string &op,
+                                                                       const ScanType scan_type,
                                                                        const AllParameterVariant value,
                                                                        const optional<AllTypeVariant> value2) {
   // currently assuming all values are equally distributed
@@ -52,7 +52,7 @@ std::shared_ptr<TableStatistics> TableStatistics::predicate_statistics(const std
     return clone;
   }
 
-  if (op == "LIKE") {
+  if (scan_type == ScanType::OpLike) {
     // simple heuristic:
     auto clone = std::make_shared<TableStatistics>(*this);
     clone->_row_count = _row_count / 3.;
@@ -67,10 +67,10 @@ std::shared_ptr<TableStatistics> TableStatistics::predicate_statistics(const std
     ColumnName value_column_name = boost::get<ColumnName>(value);
     auto value_column_statistics = get_column_statistics(value_column_name);
     std::tie(selectivity, new_column_statistic) =
-        old_column_statistic->predicate_selectivity(op, value_column_statistics, value2);
+        old_column_statistic->predicate_selectivity(scan_type, value_column_statistics, value2);
   } else {
     auto casted_value1 = boost::get<AllTypeVariant>(value);
-    std::tie(selectivity, new_column_statistic) = old_column_statistic->predicate_selectivity(op, casted_value1, value2);
+    std::tie(selectivity, new_column_statistic) = old_column_statistic->predicate_selectivity(scan_type, casted_value1, value2);
   }
   if (new_column_statistic != nullptr) {
     clone->_column_statistics[column_name] = new_column_statistic;

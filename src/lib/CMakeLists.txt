@@ -157,8 +157,6 @@ set(
     optimizer/table_statistics.hpp
     resolve_type.hpp
     sql/lru_cache.hpp
-    sql/sql_parse_tree_cache.hpp
-    sql/sql_parse_tree_cache.cpp
     sql/sql_query_node_translator.hpp
     sql/sql_query_node_translator.cpp
     sql/sql_query_operator.hpp
