@@ -30,10 +30,10 @@ class ColumnStatistics : public AbstractColumnStatistics {
   void update_distinct_count();
 
  public:
-  ColumnStatistics(const std::weak_ptr<Table> table, const std::string& column_name);
-  ColumnStatistics(double distinct_count, AllTypeVariant min, AllTypeVariant max, const std::string& column_name);
-  ColumnStatistics(double distinct_count, T min, T max, const std::string& column_name);
-  ColumnStatistics(double distinct_count, const std::string& column_name);
+  ColumnStatistics(const std::weak_ptr<Table> table, const ColumnID column_id);
+  ColumnStatistics(double distinct_count, AllTypeVariant min, AllTypeVariant max, const ColumnID column_id);
+  ColumnStatistics(double distinct_count, T min, T max, const ColumnID column_id);
+  ColumnStatistics(double distinct_count, const ColumnID column_id);
   double distinct_count();
   T min();
   T max();
@@ -51,7 +51,7 @@ class ColumnStatistics : public AbstractColumnStatistics {
   void update_min_max();
 
   const std::weak_ptr<Table> _table;
-  const std::string _column_name;  // ToDo(Jonathan + Fabian)
+  const ColumnID _column_id;
   optional<double> _distinct_count;
   optional<T> _min;
   optional<T> _max;

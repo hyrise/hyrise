@@ -19,8 +19,8 @@ class TableStatistics {
   explicit TableStatistics(const std::string &name, const std::weak_ptr<Table> table);
   TableStatistics(const TableStatistics &table_statistics);
   double row_count();
-  std::shared_ptr<AbstractColumnStatistics> get_column_statistics(const std::string &column_name);
-  std::shared_ptr<TableStatistics> predicate_statistics(const std::string &column_name, const ScanType scan_type,
+  std::shared_ptr<AbstractColumnStatistics> get_column_statistics(const ColumnID column_id);
+  std::shared_ptr<TableStatistics> predicate_statistics(const std::string& column_name, const ScanType scan_type,
                                                         const AllParameterVariant value,
                                                         const optional<AllTypeVariant> value2 = nullopt);
   friend std::ostream &operator<<(std::ostream &os, TableStatistics &obj) {
@@ -36,7 +36,7 @@ class TableStatistics {
   const std::string _name;
   const std::weak_ptr<Table> _table;
   double _row_count;
-  std::map<std::string, std::shared_ptr<AbstractColumnStatistics>> _column_statistics;
+  std::map<ColumnID, std::shared_ptr<AbstractColumnStatistics>> _column_statistics;
 };
 
 }  // namespace opossum
