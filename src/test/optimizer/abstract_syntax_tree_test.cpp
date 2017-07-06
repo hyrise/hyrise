@@ -29,6 +29,7 @@ class AbstractSyntaxTreeTest : public BaseTest {
     };
 
     auto node = std::make_shared<ExpressionNode>(scan_type_to_expression_type[operation]);
+    return node;
   }
 
 };

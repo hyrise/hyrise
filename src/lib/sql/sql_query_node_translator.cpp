@@ -12,6 +12,7 @@
 #include "optimizer/abstract_syntax_tree/sort_node.hpp"
 #include "optimizer/abstract_syntax_tree/table_node.hpp"
 #include "optimizer/abstract_syntax_tree/table_scan_node.hpp"
+#include "sql/sql_expression_translator.hpp"
 #include "storage/storage_manager.hpp"
 #include "utils/assert.hpp"
 
@@ -197,7 +198,9 @@ const AllTypeVariant SQLQueryNodeTranslator::_translate_literal(const hsql::Expr
     case hsql::kExprLiteralString:
       return expr.name;
     default:
-      throw std::runtime_error("Could not translate literal: expression type not supported.");
+      std::cout << "Unexpected Expr type" << std::endl;
+      return 0;
+//      throw std::runtime_error("Could not translate literal: expression type not supported.");
   }
 }
 
@@ -233,9 +236,7 @@ std::shared_ptr<AbstractNode> SQLQueryNodeTranslator::_translate_filter_expr(
   // TODO(torpedro): Handle BETWEEN.
 
 
-  std::shared_ptr<ExpressionNode> expressionNode = _translate_expression(expr);
-
-  expressionNode->print();
+  std::shared_ptr<ExpressionNode> expressionNode = SQLExpressionTranslator::translate_expression(expr);
 
   Expr* column_expr = (expr.expr->isType(hsql::kExprColumnRef)) ? expr.expr : expr.expr2;
   if (!column_expr->isType(hsql::kExprColumnRef)) {
@@ -251,71 +252,6 @@ std::shared_ptr<AbstractNode> SQLQueryNodeTranslator::_translate_filter_expr(
   table_scan_node->set_left(input_node);
 
   return table_scan_node;
-}
-
-std::shared_ptr<ExpressionNode> SQLQueryNodeTranslator::_translate_expression(const hsql::Expr& expr) {
-
-  // TODO(Sven): move to function / global namespace / whatever.
-  std::unordered_map<hsql::OperatorType, ExpressionType> operator_to_expression_type = {
-    {hsql::kOpPlus, ExpressionType::ExpressionPlus},
-    {hsql::kOpMinus, ExpressionType::ExpressionMinus},
-
-
-    {hsql::kOpAsterisk, ExpressionType::ExpressionAsterisk},
-    {hsql::kOpSlash, ExpressionType::ExpressionSlash},
-
-    {hsql::kOpPercentage, ExpressionType::ExpressionPercentage},
-    {hsql::kOpCaret, ExpressionType::ExpressionCaret},
-
-    {hsql::kOpBetween, ExpressionType::ExpressionBetween},
-
-    {hsql::kOpEquals, ExpressionType::ExpressionEquals},
-    {hsql::kOpNotEquals, ExpressionType::ExpressionNotEquals},
-    {hsql::kOpLess, ExpressionType::ExpressionLess},
-    {hsql::kOpLessEq, ExpressionType::ExpressionLessEq},
-    {hsql::kOpGreater, ExpressionType::ExpressionGreater},
-    {hsql::kOpGreaterEq, ExpressionType::ExpressionGreaterEq},
-
-    {hsql::kOpLike, ExpressionType::ExpressionLike},
-    {hsql::kOpNotLike, ExpressionType::ExpressionNotLike}
-  };
-
-  // TODO(Sven): move to function / global namespace / whatever.
-  std::unordered_map<hsql::ExprType, ExpressionType> expr_to_expression_type = {
-    {hsql::kExprLiteralFloat, ExpressionType::ExpressionLiteral},
-    {hsql::kExprLiteralString, ExpressionType::ExpressionLiteral},
-    {hsql::kExprLiteralInt, ExpressionType::ExpressionLiteral},
-    {hsql::kExprStar, ExpressionType::ExpressionStar},
-    {hsql::kExprParameter, ExpressionType::ExpressionParameter},
-    {hsql::kExprColumnRef, ExpressionType::ExpressionColumnReference},
-    {hsql::kExprFunctionRef, ExpressionType::ExpressionFunctionReference},
-    {hsql::kExprOperator, ExpressionType::ExpressionOperator},
-    {hsql::kExprSelect, ExpressionType::ExpressionSelect},
-    {hsql::kExprHint, ExpressionType::ExpressionHint}
-  };
-
-  auto expressionType = expr_to_expression_type.at(expr.type);
-
-  std::shared_ptr<ExpressionNode> node;
-  if (expressionType == ExpressionOperator) {
-    auto operatorType = operator_to_expression_type.at(expr.opType);
-    node = std::make_shared<ExpressionNode>(operatorType);
-  } else {
-    node = std::make_shared<ExpressionNode>(expressionType);
-  }
-
-  if (expr.expr) {
-    auto left = _translate_expression(*expr.expr);
-    node->set_left(left);
-  }
-
-  if (expr.expr2) {
-    auto right = _translate_expression(*expr.expr2);
-    node->set_right(right);
-  }
-
-  return node;
-
 }
 
 std::shared_ptr<AbstractNode> SQLQueryNodeTranslator::_translate_projection(
