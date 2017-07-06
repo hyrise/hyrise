@@ -19,7 +19,8 @@ class AbstractColumnStatistics {
   virtual std::tuple<double, std::shared_ptr<AbstractColumnStatistics>> predicate_selectivity(
       const std::string &op, const AllTypeVariant value, const optional<AllTypeVariant> value2) = 0;
   virtual std::tuple<double, std::shared_ptr<AbstractColumnStatistics>> predicate_selectivity(
-      const std::string& op, const std::shared_ptr<AbstractColumnStatistics> value_column_statistics, const optional<AllTypeVariant> value2) = 0;
+      const std::string &op, const std::shared_ptr<AbstractColumnStatistics> value_column_statistics,
+      const optional<AllTypeVariant> value2) = 0;
   virtual ~AbstractColumnStatistics() = default;
 
   AbstractColumnStatistics() = default;

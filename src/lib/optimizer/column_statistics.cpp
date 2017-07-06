@@ -186,7 +186,8 @@ std::tuple<double, std::shared_ptr<AbstractColumnStatistics>> ColumnStatistics<T
 
 template <typename T>
 std::tuple<double, std::shared_ptr<AbstractColumnStatistics>> ColumnStatistics<T>::predicate_selectivity(
-    const std::string& op, const std::shared_ptr<AbstractColumnStatistics> value_column_statistics, const optional<AllTypeVariant> value2) {
+    const std::string &op, const std::shared_ptr<AbstractColumnStatistics> value_column_statistics,
+    const optional<AllTypeVariant> value2) {
   // auto casted_value1 = type_cast<T>(value);
 
   if (op == "=") {
@@ -196,7 +197,6 @@ std::tuple<double, std::shared_ptr<AbstractColumnStatistics>> ColumnStatistics<T
     auto column_statistics = std::make_shared<ColumnStatistics>(1, min(), max(), _column_name);
     return {1.0 / 5.0, column_statistics};
   }
-
 
   // } else if (op == "!=") {
   //   // disregarding A = 5 AND A != 5
@@ -245,7 +245,8 @@ std::tuple<double, std::shared_ptr<AbstractColumnStatistics>> ColumnStatistics<T
   //   }
   //   double selectivity = (casted_value2 - casted_value1 + 1) / static_cast<double>(max() - min() + 1);
   //   auto column_statistics =
-  //       std::make_shared<ColumnStatistics>(selectivity * distinct_count(), casted_value1, casted_value2, _column_name);
+  //       std::make_shared<ColumnStatistics>(selectivity * distinct_count(), casted_value1, casted_value2,
+  //       _column_name);
   //   return {selectivity, column_statistics};
   // } else {
   //   // Brace yourselves.

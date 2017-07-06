@@ -54,7 +54,7 @@ inline bool is_null(const AllTypeVariant& variant) { return (variant.which() == 
  */
 static const auto NULL_VALUE = AllTypeVariant{};
 
-static inline double all_type_variant_to_double(const AllTypeVariant &variant) {
+static inline double all_type_variant_to_double(const AllTypeVariant& variant) {
   double ret = 0;
   int i = 0;
   hana::for_each(numeric_column_types, [&](auto column_type) {

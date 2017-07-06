@@ -14,7 +14,9 @@
 namespace opossum {
 
 TableStatistics::TableStatistics(const std::string &name, const std::weak_ptr<Table> table)
-    : _name(name), _table(table), _column_statistics(std::make_shared<std::map<std::string, std::shared_ptr<AbstractColumnStatistics>>>()) {
+    : _name(name),
+      _table(table),
+      _column_statistics(std::make_shared<std::map<std::string, std::shared_ptr<AbstractColumnStatistics>>>()) {
   _row_count = _table.lock()->row_count();
 }
 
@@ -31,8 +33,8 @@ std::shared_ptr<AbstractColumnStatistics> TableStatistics::get_column_statistics
   auto column_stat = _column_statistics->find(column_name);
   if (column_stat == _column_statistics->end()) {
     auto column_type = table->column_type(table->column_id_by_name(column_name));
-    auto column_statistics = make_shared_by_column_type<AbstractColumnStatistics, ColumnStatistics>(
-        column_type, _table, column_name);
+    auto column_statistics =
+        make_shared_by_column_type<AbstractColumnStatistics, ColumnStatistics>(column_type, _table, column_name);
     _column_statistics->emplace(column_name, column_statistics);
   }
   return _column_statistics->at(column_name);
@@ -68,8 +70,7 @@ std::shared_ptr<TableStatistics> TableStatistics::predicate_statistics(const std
         column_statistics->predicate_selectivity(op, value_column_statistics, value2);
   } else {
     auto casted_value1 = boost::get<AllTypeVariant>(value);
-    std::tie(selectivity, column_statistic) =
-        column_statistics->predicate_selectivity(op, casted_value1, value2);
+    std::tie(selectivity, column_statistic) = column_statistics->predicate_selectivity(op, casted_value1, value2);
   }
   auto clone = std::make_shared<TableStatistics>(*this);
   if (column_statistic) {

@@ -30,7 +30,8 @@ int main() {
   std::cout << *stat3 << std::endl;
 
   std::cout << "--- COLUMN Table Scans ---" << std::endl;
-  stat1 = table_statistics->predicate_statistics("C_ID", "=", opossum::AllParameterVariant(opossum::ColumnName("C_D_ID")));
+  stat1 =
+      table_statistics->predicate_statistics("C_ID", "=", opossum::AllParameterVariant(opossum::ColumnName("C_D_ID")));
   std::cout << "original CUSTOMER table" << std::endl;
   std::cout << *table_statistics << std::endl;
   std::cout << "C_ID = C_D_ID" << std::endl;
