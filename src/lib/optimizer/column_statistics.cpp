@@ -1,5 +1,6 @@
 #include "column_statistics.hpp"
 
+#include <algorithm>
 #include <memory>
 #include <string>
 #include <tuple>
@@ -186,18 +187,40 @@ std::tuple<double, std::shared_ptr<AbstractColumnStatistics>> ColumnStatistics<T
   return {1.0, nullptr};
 }
 
+// string specialization
+template <>
+std::tuple<double, std::shared_ptr<AbstractColumnStatistics>, std::shared_ptr<AbstractColumnStatistics>> ColumnStatistics<std::string>::predicate_selectivity(
+    const ScanType scan_type, const std::shared_ptr<AbstractColumnStatistics> abstract_value_column_statistics,
+    const optional<AllTypeVariant> value2) {
+  // TODO(anybody)
+  return {1.0, nullptr, nullptr};
+}
+
 template <typename T>
-std::tuple<double, std::shared_ptr<AbstractColumnStatistics>> ColumnStatistics<T>::predicate_selectivity(
-    const ScanType scan_type, const std::shared_ptr<AbstractColumnStatistics> value_column_statistics,
+std::tuple<double, std::shared_ptr<AbstractColumnStatistics>, std::shared_ptr<AbstractColumnStatistics>> ColumnStatistics<T>::predicate_selectivity(
+    const ScanType scan_type, const std::shared_ptr<AbstractColumnStatistics> abstract_value_column_statistics,
     const optional<AllTypeVariant> value2) {
   // auto casted_value1 = type_cast<T>(value);
+  auto value_column_statistics = std::dynamic_pointer_cast<ColumnStatistics<T>>(abstract_value_column_statistics);
+
+  auto common_min = std::max(min(), value_column_statistics->min());
+  auto common_max = std::min(max(), value_column_statistics->max());
 
   if (scan_type == ScanType::OpEquals) {
-    // if (casted_value1 < min() || casted_value1 > max()) {
-    //   return {0.0, nullptr};
-    // }
-    auto column_statistics = std::make_shared<ColumnStatistics>(1, min(), max(), _column_name);
-    return {1.0 / 5.0, column_statistics};
+    if (common_min > common_max) {
+      return {0.0, nullptr, nullptr};
+    }
+
+    double overlapping_ratio_this = (common_max - common_min + 1) / (double)(max() - min() + 1);
+    double overlapping_ratio_value = (common_max - common_min + 1) / (double)(value_column_statistics->max() - value_column_statistics->min() + 1);
+    auto overlapping_distinct_count_this = overlapping_ratio_this * distinct_count();
+    auto overlapping_distinct_count_value = overlapping_ratio_value * value_column_statistics->distinct_count();
+    auto overlapping_distinct_count = std::min(overlapping_distinct_count_this, overlapping_distinct_count_value);
+    auto probability_hit_value = 1. / distinct_count() / value_column_statistics->distinct_count();
+
+    auto column_statistics_this = std::make_shared<ColumnStatistics>(overlapping_distinct_count, common_min, common_max, _column_name);
+    auto column_statistics_value = std::make_shared<ColumnStatistics>(overlapping_distinct_count, common_min, common_max, value_column_statistics->_column_name);
+    return {overlapping_distinct_count * probability_hit_value, column_statistics_this, column_statistics_value};
   }
 
   // } else if (scan_type == ScanType::OpNotEquals) {
@@ -256,7 +279,7 @@ std::tuple<double, std::shared_ptr<AbstractColumnStatistics>> ColumnStatistics<T
   //   // Brace yourselves.
   //   return {1.0 / distinct_count(), nullptr};
   // }
-  return {1.0, nullptr};
+  return {1.0, nullptr, nullptr};
 }
 
 template <typename T>
