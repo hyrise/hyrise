@@ -32,11 +32,7 @@ ColumnStatistics<T>::ColumnStatistics(double distinct_count, AllTypeVariant min,
 
 template <typename T>
 ColumnStatistics<T>::ColumnStatistics(double distinct_count, T min, T max, const ColumnID column_id)
-    : _table(std::weak_ptr<Table>()),
-      _column_id(column_id),
-      _distinct_count(distinct_count),
-      _min(min),
-      _max(max) {}
+    : _table(std::weak_ptr<Table>()), _column_id(column_id), _distinct_count(distinct_count), _min(min), _max(max) {}
 
 template <typename T>
 ColumnStatistics<T>::ColumnStatistics(double distinct_count, const ColumnID column_id)
@@ -83,8 +79,9 @@ void ColumnStatistics<T>::update_min_max() {
   auto shared_table = _table.lock();
   auto table_wrapper = std::make_shared<TableWrapper>(shared_table);
   table_wrapper->execute();
-  auto aggregate_args = std::vector<std::pair<std::string, AggregateFunction>>{std::make_pair(shared_table->column_names()[_column_id], Min),
-                                                                               std::make_pair(shared_table->column_names()[_column_id], Max)};
+  auto &column_name = shared_table->column_names()[_column_id];
+  auto aggregate_args = std::vector<std::pair<std::string, AggregateFunction>>{std::make_pair(column_name, Min),
+                                                                               std::make_pair(column_name, Max)};
   auto aggregate = std::make_shared<Aggregate>(table_wrapper, aggregate_args, std::vector<std::string>{});
   aggregate->execute();
   auto aggregate_table = aggregate->get_output();

@@ -14,8 +14,7 @@
 namespace opossum {
 
 TableStatistics::TableStatistics(const std::string &name, const std::weak_ptr<Table> table)
-    : _name(name),
-      _table(table) {
+    : _name(name), _table(table) {
   _row_count = _table.lock()->row_count();
 }
 
@@ -73,7 +72,8 @@ std::shared_ptr<TableStatistics> TableStatistics::predicate_statistics(const std
         old_column_statistic->predicate_selectivity(scan_type, value_column_statistics, value2);
   } else {
     auto casted_value1 = boost::get<AllTypeVariant>(value);
-    std::tie(selectivity, new_column_statistic) = old_column_statistic->predicate_selectivity(scan_type, casted_value1, value2);
+    std::tie(selectivity, new_column_statistic) =
+        old_column_statistic->predicate_selectivity(scan_type, casted_value1, value2);
   }
   if (new_column_statistic != nullptr) {
     clone->_column_statistics[column_id] = new_column_statistic;
