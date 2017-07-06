@@ -20,10 +20,10 @@
 namespace opossum {
 
 /**
- * Operator to sort a table by a single column
+ * Operator to sort a table by a single column. This implementation is stable.
  * Multi-column sort is not supported yet. For now, you will have to sort by the secondary criterion, then by the first
  *
- * Note: Product does not support null values at the moment
+ * Note: Sort does not support null values at the moment
  */
 class Sort : public AbstractReadOnlyOperator {
  public:
