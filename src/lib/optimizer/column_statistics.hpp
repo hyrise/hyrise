@@ -38,12 +38,14 @@ class ColumnStatistics : public AbstractColumnStatistics {
   T min();
   T max();
 
-  virtual ~ColumnStatistics() = default;
-  virtual std::tuple<double, std::shared_ptr<AbstractColumnStatistics>> predicate_selectivity(
-      const std::string& op, const AllTypeVariant value, const optional<AllTypeVariant> value2);
+  ~ColumnStatistics() override = default;
+  std::tuple<double, std::shared_ptr<AbstractColumnStatistics>> predicate_selectivity(
+      const std::string& op, const AllTypeVariant value, const optional<AllTypeVariant> value2) override;
+  std::tuple<double, std::shared_ptr<AbstractColumnStatistics>> predicate_selectivity(
+      const std::string& op, const std::shared_ptr<AbstractColumnStatistics> value_column_statistics, const optional<AllTypeVariant> value2) override;
 
  protected:
-  virtual std::ostream& to_stream(std::ostream& os);
+  std::ostream& to_stream(std::ostream& os) override;
 
   void update_min_max();
 

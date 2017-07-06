@@ -27,7 +27,7 @@ class TableStatistics {
   friend std::ostream &operator<<(std::ostream &os, TableStatistics &obj) {
     os << "Table Stats " << obj._name << std::endl;
     os << " row count: " << obj._row_count;
-    for (auto column_statistics_pair : obj._column_statistics) {
+    for (auto column_statistics_pair : *obj._column_statistics) {
       os << std::endl << " " << *column_statistics_pair.second;
     }
     return os;
@@ -37,7 +37,7 @@ class TableStatistics {
   const std::string _name;
   const std::weak_ptr<Table> _table;
   double _row_count;
-  std::map<std::string, std::shared_ptr<AbstractColumnStatistics>> _column_statistics;
+  std::shared_ptr<std::map<std::string, std::shared_ptr<AbstractColumnStatistics>>> _column_statistics;
 };
 
 }  // namespace opossum
