@@ -35,13 +35,6 @@ class SortMergeJoin : public AbstractJoinOperator {
   void set_partition_count(uint32_t number);
 
  protected:
-  struct SortContext : ColumnVisitableContext {
-    SortContext(ChunkID chunk_id, bool left) : chunk_id(chunk_id), write_to_sorted_left_table(left) {}
-
-    ChunkID chunk_id;
-    bool write_to_sorted_left_table;
-  };
-
   template <typename T>
   class SortMergeJoinImpl : public AbstractJoinOperatorImpl, public ColumnVisitable {
    public:
@@ -75,12 +68,19 @@ class SortMergeJoin : public AbstractJoinOperator {
       std::map<T, uint32_t> histogram_v;
     };
 
+    struct SortContext : ColumnVisitableContext {
+      SortContext(ChunkID chunk_id, std::shared_ptr<SortedTable> output) : chunk_id(chunk_id), sort_output_table(output) {}
+
+      ChunkID chunk_id;
+      std::shared_ptr<SortedTable> sort_output_table;
+    };
+
    protected:
     // Sort functions
     void sort_table(std::shared_ptr<SortedTable> sort_table, std::shared_ptr<const Table> input,
-                    const std::string& column_name, bool left);
+                    const std::string& column_name);
     void sort_partition(const std::vector<ChunkID> chunk_ids, std::shared_ptr<const Table> input,
-                        const std::string& column_name, bool left);
+                        const std::string& column_name, std::shared_ptr<SortedTable> sort_output_table);
 
     // Partitioning in case of Non-Equi-Join
     void value_based_table_partitioning(std::shared_ptr<SortedTable> sort_table, std::vector<T>& p_values);
@@ -126,8 +126,6 @@ class SortMergeJoin : public AbstractJoinOperator {
     SortMergeJoin& _sort_merge_join;
     std::shared_ptr<SortedTable> _sorted_left_table;
     std::shared_ptr<SortedTable> _sorted_right_table;
-    SortedTable _left_table;
-    SortedTable _right_table;
   };
 
   std::unique_ptr<AbstractJoinOperatorImpl> _impl;
