@@ -97,10 +97,10 @@ enum class SchedulePriority {
 
 // Part of AllParameterVariant to reference parameters that will be replaced later.
 // When stored in an operator, the operator's recreate method can contain functionality
-// that will replace a ParameterValue with an explicit value from a given list of arguments
-class ParameterValue {
+// that will replace a ValuePlaceholder with an explicit value from a given list of arguments
+class ValuePlaceholder {
  public:
-  explicit ParameterValue(uint16_t index) : _index(index) {}
+  explicit ValuePlaceholder(uint16_t index) : _index(index) {}
 
   uint16_t index() const { return _index; }
 

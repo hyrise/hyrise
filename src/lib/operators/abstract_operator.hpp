@@ -68,7 +68,7 @@ class AbstractOperator {
   void set_transaction_context(std::shared_ptr<TransactionContext> transaction_context);
 
   // Returns a new instance of the same operator with the same configuration.
-  // The given arguments are used to replace the ParameterValue objects within the new operator, if applicable.
+  // The given arguments are used to replace the ValuePlaceholder objects within the new operator, if applicable.
   // Recursively recreates the input operators and passes the argument list along.
   // An operator needs to implement this method in order to be cacheable.
   virtual std::shared_ptr<AbstractOperator> recreate(const std::vector<AllParameterVariant> &args) const = 0;

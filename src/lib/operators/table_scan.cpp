@@ -40,8 +40,8 @@ std::string &TableScan::replace_all(std::string &str, const std::string &old_val
 
 std::shared_ptr<AbstractOperator> TableScan::recreate(const std::vector<AllParameterVariant> &args) const {
   // Replace value in the new operator, if it's a parameter and an argument is available.
-  if (_value.type() == typeid(ParameterValue)) {
-    uint16_t index = boost::get<ParameterValue>(_value).index();
+  if (_value.type() == typeid(ValuePlaceholder)) {
+    uint16_t index = boost::get<ValuePlaceholder>(_value).index();
     if (index < args.size()) {
       return std::make_shared<TableScan>(_input_left->recreate(args), _column_name, _scan_type, args[index], _value2);
     }

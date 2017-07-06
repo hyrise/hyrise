@@ -38,7 +38,7 @@ class SQLQueryPlan {
   const std::vector<std::shared_ptr<OperatorTask>>& tasks() const;
 
   // Recreates the query plan with a new and equivalent set of tasks.
-  // The given list of arguments is passed to the recreate method of all operators to replace ParameterValues.
+  // The given list of arguments is passed to the recreate method of all operators to replace ValuePlaceholders.
   SQLQueryPlan recreate(const std::vector<AllParameterVariant>& arguments = {}) const;
 
   // Set the number of parameters that this query plan contains.

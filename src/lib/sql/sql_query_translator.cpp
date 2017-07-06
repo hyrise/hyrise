@@ -389,7 +389,7 @@ const AllParameterVariant SQLQueryTranslator::translate_literal(const hsql::Expr
     case hsql::kExprLiteralString:
       return AllTypeVariant(expr.name);
     case hsql::kExprParameter:
-      return ParameterValue(expr.ival);
+      return ValuePlaceholder(expr.ival);
     default:
       throw std::runtime_error("Error while SQL planning. Expected literal.");
   }
