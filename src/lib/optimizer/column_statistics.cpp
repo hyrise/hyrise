@@ -95,15 +95,15 @@ void ColumnStatistics<T>::update_min_max() {
 // string specialization
 template <>
 std::tuple<double, std::shared_ptr<AbstractColumnStatistics>> ColumnStatistics<std::string>::predicate_selectivity(
-    const std::string &op, const AllTypeVariant value, const optional<AllTypeVariant> value2) {
+    const ScanType scan_type, const AllTypeVariant value, const optional<AllTypeVariant> value2) {
   auto casted_value1 = type_cast<std::string>(value);
-  if (op == "=") {
+  if (scan_type == ScanType::OpEquals) {
     if (casted_value1 < min() || casted_value1 > max()) {
       return {0.0, nullptr};
     }
     auto column_statistics = std::make_shared<ColumnStatistics>(1, _column_name);
     return {1.0 / distinct_count(), column_statistics};
-  } else if (op == "!=") {
+  } else if (scan_type == ScanType::OpNotEquals) {
     if (casted_value1 < min() || casted_value1 > max()) {
       return {1.0, nullptr};
     }
@@ -116,16 +116,16 @@ std::tuple<double, std::shared_ptr<AbstractColumnStatistics>> ColumnStatistics<s
 
 template <typename T>
 std::tuple<double, std::shared_ptr<AbstractColumnStatistics>> ColumnStatistics<T>::predicate_selectivity(
-    const std::string &op, const AllTypeVariant value, const optional<AllTypeVariant> value2) {
+    const ScanType scan_type, const AllTypeVariant value, const optional<AllTypeVariant> value2) {
   auto casted_value1 = type_cast<T>(value);
 
-  if (op == "=") {
+  if (scan_type == ScanType::OpEquals) {
     if (casted_value1 < min() || casted_value1 > max()) {
       return {0.0, nullptr};
     }
     auto column_statistics = std::make_shared<ColumnStatistics>(1, casted_value1, casted_value1, _column_name);
     return {1.0 / distinct_count(), column_statistics};
-  } else if (op == "!=") {
+  } else if (scan_type == ScanType::OpNotEquals) {
     if (casted_value1 < min() || casted_value1 > max()) {
       return {1.0, nullptr};
     }
@@ -133,7 +133,7 @@ std::tuple<double, std::shared_ptr<AbstractColumnStatistics>> ColumnStatistics<T
     // (just don't put this into a query!)
     auto column_statistics = std::make_shared<ColumnStatistics>(distinct_count() - 1, min(), max(), _column_name);
     return {(-1.0 + distinct_count()) / distinct_count(), column_statistics};
-  } else if (op == "<" && std::is_integral<T>::value) {
+  } else if (scan_type == ScanType::OpLessThan && std::is_integral<T>::value) {
     if (casted_value1 <= min()) {
       return {0.0, nullptr};
     }
@@ -141,15 +141,16 @@ std::tuple<double, std::shared_ptr<AbstractColumnStatistics>> ColumnStatistics<T
     auto column_statistics =
         std::make_shared<ColumnStatistics>(selectivity * distinct_count(), min(), casted_value1 - 1, _column_name);
     return {selectivity, column_statistics};
-  } else if (op == "<=" || (op == "<" && !std::is_integral<T>::value)) {
-    if (casted_value1 < min() || (op == "<" && casted_value1 <= min())) {
+  } else if (scan_type == ScanType::OpLessThanEquals ||
+             (scan_type == ScanType::OpLessThan && !std::is_integral<T>::value)) {
+    if (casted_value1 < min() || (scan_type == ScanType::OpLessThan && casted_value1 <= min())) {
       return {0.0, nullptr};
     }
     double selectivity = (casted_value1 - min() + 1) / static_cast<double>(max() - min() + 1);
     auto column_statistics =
         std::make_shared<ColumnStatistics>(selectivity * distinct_count(), min(), casted_value1, _column_name);
     return {selectivity, column_statistics};
-  } else if (op == ">" && std::is_integral<T>::value) {
+  } else if (scan_type == ScanType::OpGreaterThan && std::is_integral<T>::value) {
     if (casted_value1 >= max()) {
       return {0.0, nullptr};
     }
@@ -157,17 +158,18 @@ std::tuple<double, std::shared_ptr<AbstractColumnStatistics>> ColumnStatistics<T
     auto column_statistics =
         std::make_shared<ColumnStatistics>(selectivity * distinct_count(), casted_value1 + 1, max(), _column_name);
     return {selectivity, column_statistics};
-  } else if (op == ">=" || (op == ">" && !std::is_integral<T>::value)) {
-    if (casted_value1 > max() || (op == ">" && casted_value1 >= max())) {
+  } else if (scan_type == ScanType::OpGreaterThanEquals ||
+             (scan_type == ScanType::OpGreaterThan && !std::is_integral<T>::value)) {
+    if (casted_value1 > max() || (scan_type == ScanType::OpGreaterThan && casted_value1 >= max())) {
       return {0.0, nullptr};
     }
     double selectivity = (max() - casted_value1 + 1) / static_cast<double>(max() - min() + 1);
     auto column_statistics =
         std::make_shared<ColumnStatistics>(selectivity * distinct_count(), casted_value1, max(), _column_name);
     return {selectivity, column_statistics};
-  } else if (op == "BETWEEN") {
+  } else if (scan_type == ScanType::OpBetween) {
     if (!value2) {
-      Fail(std::string("operator ") + op + std::string("should get two parameters, second is missing!"));
+      Fail(std::string("operator BETWEEN should get two parameters, second is missing!"));
     }
     auto casted_value2 = type_cast<T>(*value2);
     if (casted_value1 > casted_value2 || casted_value1 > max() || casted_value2 < min()) {
@@ -186,11 +188,11 @@ std::tuple<double, std::shared_ptr<AbstractColumnStatistics>> ColumnStatistics<T
 
 template <typename T>
 std::tuple<double, std::shared_ptr<AbstractColumnStatistics>> ColumnStatistics<T>::predicate_selectivity(
-    const std::string &op, const std::shared_ptr<AbstractColumnStatistics> value_column_statistics,
+    const ScanType scan_type, const std::shared_ptr<AbstractColumnStatistics> value_column_statistics,
     const optional<AllTypeVariant> value2) {
   // auto casted_value1 = type_cast<T>(value);
 
-  if (op == "=") {
+  if (scan_type == ScanType::OpEquals) {
     // if (casted_value1 < min() || casted_value1 > max()) {
     //   return {0.0, nullptr};
     // }
@@ -198,12 +200,12 @@ std::tuple<double, std::shared_ptr<AbstractColumnStatistics>> ColumnStatistics<T
     return {1.0 / 5.0, column_statistics};
   }
 
-  // } else if (op == "!=") {
+  // } else if (scan_type == ScanType::OpNotEquals) {
   //   // disregarding A = 5 AND A != 5
   //   // (just don't put this into a query!)
   //   auto column_statistics = std::make_shared<ColumnStatistics>(distinct_count() - 1, min(), max(), _column_name);
   //   return {(-1.0 + distinct_count()) / distinct_count(), column_statistics};
-  // } else if (op == "<" && std::is_integral<T>::value) {
+  // } else if (scan_type == ScanType::OpLessThan && std::is_integral<T>::value) {
   //   if (casted_value1 <= min()) {
   //     return {0.0, nullptr};
   //   }
@@ -211,7 +213,8 @@ std::tuple<double, std::shared_ptr<AbstractColumnStatistics>> ColumnStatistics<T
   //   auto column_statistics =
   //       std::make_shared<ColumnStatistics>(selectivity * distinct_count(), min(), casted_value1 - 1, _column_name);
   //   return {selectivity, column_statistics};
-  // } else if (op == "<=" || (op == "<" && !std::is_integral<T>::value)) {
+  // } else if (scan_type == ScanType::OpLessThanEquals || (scan_type == ScanType::OpLessThan &&
+  // !std::is_integral<T>::value)) {
   //   if (casted_value1 < min()) {
   //     return {0.0, nullptr};
   //   }
@@ -219,7 +222,7 @@ std::tuple<double, std::shared_ptr<AbstractColumnStatistics>> ColumnStatistics<T
   //   auto column_statistics =
   //       std::make_shared<ColumnStatistics>(selectivity * distinct_count(), min(), casted_value1, _column_name);
   //   return {selectivity, column_statistics};
-  // } else if (op == ">" && std::is_integral<T>::value) {
+  // } else if (scan_type == ScanType::OpGreaterThan && std::is_integral<T>::value) {
   //   if (casted_value1 >= max()) {
   //     return {0.0, nullptr};
   //   }
@@ -227,7 +230,8 @@ std::tuple<double, std::shared_ptr<AbstractColumnStatistics>> ColumnStatistics<T
   //   auto column_statistics =
   //       std::make_shared<ColumnStatistics>(selectivity * distinct_count(), casted_value1 + 1, max(), _column_name);
   //   return {selectivity, column_statistics};
-  // } else if (op == ">=" || (op == "<" && !std::is_integral<T>::value)) {
+  // } else if (scan_type == ScanType::OpGreaterThanEquals || (scan_type == ScanType::OpLessThan &&
+  // !std::is_integral<T>::value)) {
   //   if (casted_value1 > max()) {
   //     return {0.0, nullptr};
   //   }
@@ -235,9 +239,9 @@ std::tuple<double, std::shared_ptr<AbstractColumnStatistics>> ColumnStatistics<T
   //   auto column_statistics =
   //       std::make_shared<ColumnStatistics>(selectivity * distinct_count(), casted_value1, max(), _column_name);
   //   return {selectivity, column_statistics};
-  // } else if (op == "BETWEEN") {
+  // } else if (scan_type == ScanType::OpBetween) {
   //   if (!value2) {
-  //     Fail(std::string("operator ") + op + std::string("should get two parameters, second is missing!"));
+  //     Fail(std::string("operator ") + scan_type + std::string("should get two parameters, second is missing!"));
   //   }
   //   auto casted_value2 = type_cast<T>(*value2);
   //   if (casted_value1 > casted_value2 || casted_value1 > max() || casted_value2 < min()) {

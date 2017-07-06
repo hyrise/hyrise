@@ -17,7 +17,8 @@ TableScanNode::TableScanNode(const std::string& column_name, const ScanType& sca
 const std::string TableScanNode::description() const {
   std::ostringstream desc;
 
-  desc << "TableScan: [" << _column_name << "] [" << _scan_type << "]";
+  desc << "TableScan: [" << _column_name << "]";
+  //  desc << "TableScan: [" << _column_name << "] [" << _scan_type << "]";
   //    desc << "[" << boost::get<std::string>(_value) << "]";
   //    if (_value2) {
   //      desc << " [" << boost::get<std::string>(*_value2) << "]";

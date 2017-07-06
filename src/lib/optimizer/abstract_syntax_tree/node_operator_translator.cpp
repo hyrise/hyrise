@@ -26,7 +26,7 @@ NodeOperatorTranslator::NodeOperatorTranslator() {
   _operator_factory[NodeType::Projection] =
       std::bind(&NodeOperatorTranslator::translate_projection_node, this, std::placeholders::_1);
   _operator_factory[NodeType::Sort] =
-          std::bind(&NodeOperatorTranslator::translate_order_by_node, this, std::placeholders::_1);
+      std::bind(&NodeOperatorTranslator::translate_order_by_node, this, std::placeholders::_1);
 }
 
 const std::shared_ptr<AbstractOperator> NodeOperatorTranslator::translate_node(
@@ -50,17 +50,8 @@ const std::shared_ptr<AbstractOperator> NodeOperatorTranslator::translate_table_
     std::shared_ptr<AbstractNode> node) const {
   auto input_operator = translate_node(node->left());
   auto table_scan_node = std::dynamic_pointer_cast<TableScanNode>(node);
-
-  std::unordered_map<ScanType, std::string> scan_type_to_string = {
-      {ScanType::OpEquals, "="},        {ScanType::OpNotEquals, "!="},
-      {ScanType::OpGreaterThan, ">"},   {ScanType::OpGreaterThanEquals, ">="},
-      {ScanType::OpLessThan, "<"},      {ScanType::OpLessThanEquals, "<="},
-      {ScanType::OpBetween, "BETWEEN"}, {ScanType::OpLike, "LIKE"},
-  };
-  // TODO(tim): change to ScanType and remove mapping
-  return std::make_shared<TableScan>(input_operator, table_scan_node->column_name(),
-                                     scan_type_to_string[table_scan_node->scan_type()], table_scan_node->value(),
-                                     table_scan_node->value2());
+  return std::make_shared<TableScan>(input_operator, table_scan_node->column_name(), table_scan_node->scan_type(),
+                                     table_scan_node->value(), table_scan_node->value2());
 }
 
 const std::shared_ptr<AbstractOperator> NodeOperatorTranslator::translate_projection_node(
@@ -70,7 +61,7 @@ const std::shared_ptr<AbstractOperator> NodeOperatorTranslator::translate_projec
 }
 
 const std::shared_ptr<AbstractOperator> NodeOperatorTranslator::translate_order_by_node(
-        std::shared_ptr<AbstractNode> node) const {
+    std::shared_ptr<AbstractNode> node) const {
   auto input_operator = translate_node(node->left());
 
   auto sort_node = std::dynamic_pointer_cast<SortNode>(node);

@@ -40,9 +40,9 @@ class ColumnStatistics : public AbstractColumnStatistics {
 
   ~ColumnStatistics() override = default;
   std::tuple<double, std::shared_ptr<AbstractColumnStatistics>> predicate_selectivity(
-      const std::string& op, const AllTypeVariant value, const optional<AllTypeVariant> value2) override;
+      const ScanType scan_type, const AllTypeVariant value, const optional<AllTypeVariant> value2) override;
   std::tuple<double, std::shared_ptr<AbstractColumnStatistics>> predicate_selectivity(
-      const std::string& op, const std::shared_ptr<AbstractColumnStatistics> value_column_statistics,
+      const ScanType scan_type, const std::shared_ptr<AbstractColumnStatistics> value_column_statistics,
       const optional<AllTypeVariant> value2) override;
 
  protected:

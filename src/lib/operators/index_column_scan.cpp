@@ -12,9 +12,9 @@
 namespace opossum {
 
 IndexColumnScan::IndexColumnScan(const std::shared_ptr<AbstractOperator> in, const std::string &column_name,
-                                 const std::string &op, const AllTypeVariant value,
+                                 const ScanType scan_type, const AllTypeVariant value,
                                  const optional<AllTypeVariant> value2)
-    : AbstractReadOnlyOperator(in), _column_name(column_name), _op(op), _value(value), _value2(value2) {}
+    : AbstractReadOnlyOperator(in), _column_name(column_name), _scan_type(scan_type), _value(value), _value2(value2) {}
 
 const std::string IndexColumnScan::name() const { return "IndexColumnScan"; }
 
@@ -25,7 +25,7 @@ uint8_t IndexColumnScan::num_out_tables() const { return 1; }
 std::shared_ptr<const Table> IndexColumnScan::on_execute() {
   _impl = make_unique_by_column_type<AbstractReadOnlyOperatorImpl, IndexColumnScanImpl>(
       input_table_left()->column_type(input_table_left()->column_id_by_name(_column_name)), _input_left, _column_name,
-      _op, _value, _value2);
+      _scan_type, _value, _value2);
   return _impl->on_execute();
 }
 
@@ -33,13 +33,13 @@ std::shared_ptr<const Table> IndexColumnScan::on_execute() {
 template <typename T>
 class IndexColumnScan::IndexColumnScanImpl : public AbstractReadOnlyOperatorImpl, public ColumnVisitable {
  public:
-  // supported values for op are {"=", "!=", "<", "<=", ">", ">=", "BETWEEN"}
+  // IndexColumnScan currently does not support ScanType::OpLike
   // creates a new table with reference columns
   IndexColumnScanImpl(const std::shared_ptr<const AbstractOperator> in, const std::string &filter_column_name,
-                      const std::string &op, const AllTypeVariant value, const optional<AllTypeVariant> value2)
+                      const ScanType scan_type, const AllTypeVariant value, const optional<AllTypeVariant> value2)
       : _in_operator(in),
         _filter_column_name(filter_column_name),
-        _op(op),
+        _scan_type(scan_type),
         _casted_value(type_cast<T>(value)),
         _casted_value2(value2 ? optional<T>(type_cast<T>(*value2)) : optional<T>(nullopt)) {}
 
@@ -82,43 +82,52 @@ class IndexColumnScan::IndexColumnScanImpl : public AbstractReadOnlyOperatorImpl
     // we need these copies so that they can be captured by the lambdas below
     T casted_value = _casted_value;
 
-    if (_op == "=") {
-      _type = OpEquals;
-      _value_comparator = [casted_value](T val) { return val == casted_value; };
-      _value_id_comparator = [](ValueID found_vid, ValueID search_vid, ValueID) { return found_vid == search_vid; };
-    } else if (_op == "!=") {
-      _type = OpNotEquals;
-      _value_comparator = [casted_value](T val) { return val != casted_value; };
-      _value_id_comparator = [](ValueID found_vid, ValueID search_vid, ValueID) { return found_vid != search_vid; };
-    } else if (_op == "<") {
-      _type = OpLessThan;
-      _value_comparator = [casted_value](T val) { return val < casted_value; };
-      _value_id_comparator = [](ValueID found_vid, ValueID search_vid, ValueID) { return found_vid < search_vid; };
-    } else if (_op == "<=") {
-      _type = OpLessThanEquals;
-      _value_comparator = [casted_value](T val) { return val <= casted_value; };
-      _value_id_comparator = [](ValueID found_vid, ValueID search_vid, ValueID) { return found_vid < search_vid; };
-      //                                                                                           ^
-      //                                                               sic! see handle_dictionary_column for details
-    } else if (_op == ">") {
-      _type = OpGreaterThan;
-      _value_comparator = [casted_value](T val) { return val > casted_value; };
-      _value_id_comparator = [](ValueID found_vid, ValueID search_vid, ValueID) { return found_vid >= search_vid; };
-    } else if (_op == ">=") {
-      _type = OpGreaterThanEquals;
-      _value_comparator = [casted_value](T val) { return val >= casted_value; };
-      _value_id_comparator = [](ValueID found_vid, ValueID search_vid, ValueID) { return found_vid >= search_vid; };
-    } else if (_op == "BETWEEN") {
-      DebugAssert(static_cast<bool>(_casted_value2), "No second value for BETWEEN comparison given");
-
-      _type = OpBetween;
-      T casted_value2 = _casted_value2.value_or(T());
-      _value_comparator = [casted_value, casted_value2](T val) { return casted_value <= val && val <= casted_value2; };
-      _value_id_comparator = [](ValueID found_vid, ValueID search_vid, ValueID search_vid2) {
-        return search_vid <= found_vid && found_vid < search_vid2;
-      };
-    } else {
-      Fail(std::string("unknown operator ") + _op);
+    switch (_scan_type) {
+      case ScanType::OpEquals: {
+        _value_comparator = [casted_value](T val) { return val == casted_value; };
+        _value_id_comparator = [](ValueID found_vid, ValueID search_vid, ValueID) { return found_vid == search_vid; };
+        break;
+      }
+      case ScanType::OpNotEquals: {
+        _value_comparator = [casted_value](T val) { return val != casted_value; };
+        _value_id_comparator = [](ValueID found_vid, ValueID search_vid, ValueID) { return found_vid != search_vid; };
+        break;
+      }
+      case ScanType::OpLessThan: {
+        _value_comparator = [casted_value](T val) { return val < casted_value; };
+        _value_id_comparator = [](ValueID found_vid, ValueID search_vid, ValueID) { return found_vid < search_vid; };
+        break;
+      }
+      case ScanType::OpLessThanEquals: {
+        _value_comparator = [casted_value](T val) { return val <= casted_value; };
+        _value_id_comparator = [](ValueID found_vid, ValueID search_vid, ValueID) { return found_vid < search_vid; };
+        //                                                                                           ^
+        //                                                               sic! see handle_dictionary_column for details
+        break;
+      }
+      case ScanType::OpGreaterThan: {
+        _value_comparator = [casted_value](T val) { return val > casted_value; };
+        _value_id_comparator = [](ValueID found_vid, ValueID search_vid, ValueID) { return found_vid >= search_vid; };
+        break;
+      }
+      case ScanType::OpGreaterThanEquals: {
+        _value_comparator = [casted_value](T val) { return val >= casted_value; };
+        _value_id_comparator = [](ValueID found_vid, ValueID search_vid, ValueID) { return found_vid >= search_vid; };
+        break;
+      }
+      case ScanType::OpBetween: {
+        DebugAssert(static_cast<bool>(_casted_value2), "No second value for BETWEEN comparison given");
+        T casted_value2 = _casted_value2.value_or(T());
+        _value_comparator = [casted_value, casted_value2](T val) {
+          return casted_value <= val && val <= casted_value2;
+        };
+        _value_id_comparator = [](ValueID found_vid, ValueID search_vid, ValueID search_vid2) {
+          return search_vid <= found_vid && found_vid < search_vid2;
+        };
+        break;
+      }
+      default:
+        Fail(std::string("Unsupported operator."));
     }
 
     // We can easily distribute the table scanning work on individual chunks to multiple sub tasks,
@@ -287,35 +296,35 @@ class IndexColumnScan::IndexColumnScanImpl : public AbstractReadOnlyOperatorImpl
       ValueID search_vid;
       ValueID search_vid2 = INVALID_VALUE_ID;
 
-      switch (_type) {
-        case OpEquals:
-        case OpNotEquals:
-        case OpLessThan:
-        case OpGreaterThanEquals:
+      switch (_scan_type) {
+        case ScanType::OpEquals:
+        case ScanType::OpNotEquals:
+        case ScanType::OpLessThan:
+        case ScanType::OpGreaterThanEquals: {
           search_vid = column.lower_bound(_casted_value);
           break;
-
-        case OpLessThanEquals:
-        case OpGreaterThan:
+        }
+        case ScanType::OpLessThanEquals:
+        case ScanType::OpGreaterThan: {
           search_vid = column.upper_bound(_casted_value);
           break;
-
-        case OpBetween:
+        }
+        case ScanType::OpBetween: {
           search_vid = column.lower_bound(_casted_value);
           search_vid2 = column.upper_bound(*_casted_value2);
           break;
-
+        }
         default:
           Fail("Unknown comparison type encountered");
       }
 
-      if (_type == OpEquals && search_vid != INVALID_VALUE_ID &&
+      if (_scan_type == ScanType::OpEquals && search_vid != INVALID_VALUE_ID &&
           column.value_by_value_id(search_vid) != _casted_value) {
         // the value is not in the dictionary and cannot be in the table
         return;
       }
 
-      if (_type == OpNotEquals && search_vid != INVALID_VALUE_ID &&
+      if (_scan_type == ScanType::OpNotEquals && search_vid != INVALID_VALUE_ID &&
           column.value_by_value_id(search_vid) != _casted_value) {
         // the value is not in the dictionary and cannot be in the table
         search_vid = INVALID_VALUE_ID;
@@ -347,12 +356,13 @@ class IndexColumnScan::IndexColumnScanImpl : public AbstractReadOnlyOperatorImpl
 
     std::vector<ChunkOffset> result;
 
-    switch (_type) {
-      case OpEquals:
+    switch (_scan_type) {
+      case ScanType::OpEquals: {
         lower_bound = index->lower_bound({search_value});
         upper_bound = index->upper_bound({search_value});
         break;
-      case OpNotEquals:
+      }
+      case ScanType::OpNotEquals: {
         // first, get all values less than the search value
         lower_bound = index->cbegin();
         upper_bound = index->lower_bound({search_value});
@@ -362,26 +372,32 @@ class IndexColumnScan::IndexColumnScanImpl : public AbstractReadOnlyOperatorImpl
         lower_bound = index->upper_bound({search_value});
         upper_bound = index->cend();
         break;
-      case OpLessThan:
+      }
+      case ScanType::OpLessThan: {
         lower_bound = index->cbegin();
         upper_bound = index->lower_bound({search_value});
         break;
-      case OpGreaterThanEquals:
+      }
+      case ScanType::OpGreaterThanEquals: {
         lower_bound = index->lower_bound({search_value});
         upper_bound = index->cend();
         break;
-      case OpLessThanEquals:
+      }
+      case ScanType::OpLessThanEquals: {
         lower_bound = index->cbegin();
         upper_bound = index->upper_bound({search_value});
         break;
-      case OpGreaterThan:
+      }
+      case ScanType::OpGreaterThan: {
         lower_bound = index->upper_bound({search_value});
         upper_bound = index->cend();
         break;
-      case OpBetween:
+      }
+      case ScanType::OpBetween: {
         lower_bound = index->lower_bound({search_value});
         upper_bound = index->upper_bound({*search_value_2});
         break;
+      }
       default:
         Fail("Unknown comparison type encountered");
     }
@@ -393,12 +409,11 @@ class IndexColumnScan::IndexColumnScanImpl : public AbstractReadOnlyOperatorImpl
 
   const std::shared_ptr<const AbstractOperator> _in_operator;
   std::string _filter_column_name;
-  std::string _op;
+  ScanType _scan_type;
   std::function<bool(T)> _value_comparator;
   std::function<bool(ValueID, ValueID, ValueID)> _value_id_comparator;
   const T _casted_value;
   const optional<T> _casted_value2;
-  ScanType _type;
   // by adding a second, optional parameter to the function, we could easily support between as well
 };
 

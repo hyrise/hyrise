@@ -9,7 +9,6 @@
 #include "SQLParser.h"
 #include "all_parameter_variant.hpp"
 #include "scheduler/operator_task.hpp"
-#include "sql/sql_parse_tree_cache.hpp"
 #include "sql/sql_query_plan.hpp"
 
 namespace opossum {
@@ -58,7 +57,7 @@ class SQLQueryTranslator {
 
   static bool _translate_literal(const hsql::Expr& expr, AllTypeVariant* output);
 
-  static bool _translate_filter_op(const hsql::Expr& expr, std::string* output);
+  static bool _translate_filter_op(const hsql::Expr& expr, ScanType* output);
 
   static std::string _get_column_name(const hsql::Expr& expr);
 
@@ -66,7 +65,7 @@ class SQLQueryTranslator {
   SQLQueryPlan _plan;
 
   // Temporarily store filters for each table to determine best chaining order.
-  std::unordered_map<std::string, std::vector<std::tuple<std::string, std::string, AllParameterVariant>>>
+  std::unordered_map<std::string, std::vector<std::tuple<std::string, ScanType, AllParameterVariant>>>
       _filters_by_table;
 
   // Details about the error, if one occurred.

@@ -46,7 +46,8 @@ class NodeOperatorTranslatorTest : public BaseTest {
     return tasks.back();
   }
 
-  void execute_and_check(const std::string query, std::shared_ptr<Table> expected_result, bool order_sensitive=false) {
+  void execute_and_check(const std::string query, std::shared_ptr<Table> expected_result,
+                         bool order_sensitive = false) {
     auto result_task = schedule_query_and_return_task(query);
     EXPECT_TABLE_EQ(result_task->get_operator()->get_output(), expected_result, order_sensitive);
   }
