@@ -11,8 +11,8 @@ const std::string SortNode::description() const {
   return "Sort: " + _column_name + " (" + (_asc ? "asc" : "desc") + ")";
 }
 
-const std::string SortNode::column_name() const { return _column_name; };
+const std::string SortNode::column_name() const { return _column_name; }
 
-const bool SortNode::asc() const { return _asc; };
+const bool SortNode::asc() const { return _asc; }
 
 }  // namespace opossum
