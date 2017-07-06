@@ -55,12 +55,13 @@ class TableGenerator {
                                                        const std::function<T(std::vector<size_t>)> &generator_function);
 
   template <typename T>
-  void add_column(std::shared_ptr<std::vector<size_t>> cardinalities, std::shared_ptr<opossum::Table> table,
-                  std::string name, const std::function<T(std::vector<size_t>)> &generator_function);
+  void add_column(std::shared_ptr<opossum::Table> table, std::string name,
+                  std::shared_ptr<std::vector<size_t>> cardinalities,
+                  const std::function<T(std::vector<size_t>)> &generator_function);
 
   template <typename T>
-  void add_column(std::shared_ptr<std::vector<size_t>> cardinalities, order_line_counts_type order_line_counts,
-                  std::shared_ptr<opossum::Table> table, std::string name,
+  void add_column(std::shared_ptr<opossum::Table> table, std::string name,
+                  std::shared_ptr<std::vector<size_t>> cardinalities, order_line_counts_type order_line_counts,
                   const std::function<T(std::vector<size_t>)> &generator_function);
 
   RandomGenerator _random_gen;
