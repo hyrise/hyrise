@@ -12,7 +12,7 @@
 
 namespace opossum {
 
-enum ExpressionType {
+enum class ExpressionType {
   ExpressionLiteral,
   ExpressionStar,
   ExpressionParameter,
@@ -41,25 +41,34 @@ enum ExpressionType {
   ExpressionIsNull,
   ExpressionExists,
   ExpressionBetween,
+  ExpressionCase,
   ExpressionHint
 };
 
 class ExpressionNode : public AbstractNode {
 public:
-  ExpressionNode(ExpressionType type);
+  ExpressionNode(const ExpressionType type);
+  ExpressionNode(const ExpressionType type, const std::string &table_name, const std::string &column_name);
+  ExpressionNode(const ExpressionType type, const AllTypeVariant value/*, const AllTypeVariant value2*/);
 
   const std::string description() const override;
 
   const std::string& table_name() const;
+
   const std::string& column_name() const;
+
   const AllTypeVariant value() const;
-  const AllTypeVariant value2() const;
+
+//  const AllTypeVariant value2() const;
+
   const ExpressionType expression_type() const;
 
 private:
+  const std::string _type_to_string() const;
+
   const ExpressionType _type;
   const AllTypeVariant _value;
-  const AllTypeVariant _value2;
+//  const AllTypeVariant _value2;
 
   const std::string _name;
   const std::string _table;

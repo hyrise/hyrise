@@ -156,19 +156,6 @@ set(
     optimizer/table_statistics.cpp
     optimizer/table_statistics.hpp
     resolve_type.hpp
-    sql/lru_cache.hpp
-    sql/sql_parse_tree_cache.hpp
-    sql/sql_parse_tree_cache.cpp
-    sql/sql_query_node_translator.hpp
-    sql/sql_query_node_translator.cpp
-    sql/sql_query_operator.hpp
-    sql/sql_query_operator.cpp
-    sql/sql_query_plan.hpp
-    sql/sql_query_plan.cpp
-    sql/sql_query_translator.hpp
-    sql/sql_query_translator.cpp
-    sql/sql_result_operator.hpp
-    sql/sql_result_operator.cpp
     scheduler/abstract_scheduler.cpp
     scheduler/abstract_scheduler.hpp
     scheduler/abstract_task.cpp
@@ -189,8 +176,17 @@ set(
     scheduler/topology.hpp
     scheduler/worker.cpp
     scheduler/worker.hpp
+    sql/lru_cache.hpp
+    sql/sql_expression_translator.cpp
+    sql/sql_expression_translator.hpp
+    sql/sql_parse_tree_cache.cpp
+    sql/sql_parse_tree_cache.hpp
+    sql/sql_query_node_translator.cpp
+    sql/sql_query_node_translator.hpp
     sql/sql_query_operator.cpp
     sql/sql_query_operator.hpp
+    sql/sql_query_plan.cpp
+    sql/sql_query_plan.hpp
     sql/sql_query_translator.cpp
     sql/sql_query_translator.hpp
     sql/sql_result_operator.cpp
