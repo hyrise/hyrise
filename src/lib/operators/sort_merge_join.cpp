@@ -332,24 +332,37 @@ void SortMergeJoin::SortMergeJoinImpl<T>::value_based_partitioning() {
   std::vector<T> p_values(_partition_count);
   std::vector<std::map<T, uint32_t>> sample_values(_partition_count);
 
-  std::cout << "vbp: before for-loop" << std::endl;
-
   for (uint32_t partition_number = 0; partition_number < _sorted_left_table->partition.size(); ++partition_number) {
-    std::cout << "loop " << partition_number << std::endl;
+
+    auto & values = _sorted_left_table->partition[partition_number].values;
     // left side
-    if (max_value < _sorted_left_table->partition[partition_number].values.back().first) {
-      max_value = _sorted_left_table->partition[partition_number].values.back().first;
+    if (max_value < values.back().first) {
+      max_value = values.back().first;
     }
 
-    std::cout << "get samples"  << std::endl;
     // get samples
-    auto & values = _sorted_left_table->partition[partition_number].values;
-    uint32_t step_size = (values.size() - 1) / _partition_count;
+    uint32_t step_size = values.size() / _partition_count;
+    //DebugAssert((step_size >= 1), "SortMergeJoin value_based_partitioning: step size is <= 0");
+    for (uint32_t pos = step_size, partition_id = 0; pos < values.size() - 1; pos += step_size, partition_id++) {
+      if (sample_values[partition_id].count(values[pos].first) == 0) {
+        sample_values[partition_id].insert(std::pair<T, uint32_t>(values[pos].first, 1));
+      } else {
+        ++(sample_values[partition_id].at(values[pos].first));
+      }
+    }
+  }
+
+  for (uint32_t partition_number = 0; partition_number < _sorted_right_table->partition.size(); ++partition_number) {
+    // right side
+    auto& values = _sorted_right_table->partition[partition_number].values;
+    if (max_value < values.back().first) {
+      max_value = values.back().first;
+    }
+
+    // get samples
+    uint32_t step_size = values.size() / _partition_count;
     uint32_t i = 0;
-    std::cout << "values.size(): " << values.size() << std::endl;
-    std::cout << "step size: " << step_size << std::endl;
     for (uint32_t pos = step_size; pos < values.size() - 1; pos += step_size) {
-      std::cout << "inner loop: " << pos << std::endl;
       if (sample_values[i].count(values[pos].first) == 0) {
         sample_values[i].insert(std::pair<T, uint32_t>(values[pos].first, 1));
       } else {
@@ -359,36 +372,9 @@ void SortMergeJoin::SortMergeJoinImpl<T>::value_based_partitioning() {
     }
   }
 
-  std::cout << "after outer loop" << std::endl;
-
-  for (uint32_t partition_number = 0; partition_number < _sorted_right_table->partition.size(); ++partition_number) {
-    // right side
-    if (max_value < _sorted_right_table->partition[partition_number].values.back().first) {
-      max_value = _sorted_right_table->partition[partition_number].values.back().first;
-    }
-
-    // get samples
-    uint32_t step_size = (_sorted_right_table->partition[partition_number].values.size() - 1) / _partition_count;
-    uint32_t i = 0;
-    for (uint32_t pos = step_size; pos < _sorted_right_table->partition[partition_number].values.size() - 1;
-         pos += step_size) {
-      if (sample_values[i].count(_sorted_right_table->partition[partition_number].values[pos].first) == 0) {
-        sample_values[i].insert(
-            std::pair<T, uint32_t>(_sorted_right_table->partition[partition_number].values[pos].first, 1));
-      } else {
-        ++(sample_values[i].at(_sorted_right_table->partition[partition_number].values[pos].first));
-      }
-      ++i;
-    }
-  }
-
-  T value{0};
-
-  std::cout << "before pick from sample values" << std::endl;
-
   // Pick from sample values most common split values
   for (uint32_t i = 0; i < _partition_count - 1; ++i) {
-    value = T{0};
+    T value{0};
     uint32_t count = 0;
     for (auto& v : sample_values[i]) {
       if (v.second > count) {
