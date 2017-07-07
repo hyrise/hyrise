@@ -49,23 +49,23 @@ class SortMergeJoin : public AbstractJoinOperator {
 
       std::vector<std::pair<T, RowID>> values;
 
-      std::map<uint32_t, uint32_t> histogram;
+      // Used to count the number of entries for each partition from this chunk
+      std::map<uint32_t, uint32_t> partition_histogram;
       std::map<uint32_t, uint32_t> prefix;
 
-      std::map<T, uint32_t> histogram_v;
+      std::map<T, uint32_t> value_histogram;
       std::map<T, uint32_t> prefix_v;
     };
 
-    // struct used for materialized sorted Table
+    // struct used for a materialized sorted Table
     struct SortedTable {
       SortedTable() {}
 
       std::vector<SortedChunk> partition;
 
-      // used to count the number of entries for each partition
-      std::map<uint32_t, uint32_t> histogram;
-
-      std::map<T, uint32_t> histogram_v;
+      // used to count the number of entries for each partition from the whole table
+      std::map<uint32_t, uint32_t> partition_histogram;
+      std::map<T, uint32_t> value_histogram;
     };
 
     struct SortContext : ColumnVisitableContext {
@@ -135,7 +135,6 @@ class SortMergeJoin : public AbstractJoinOperator {
   // the partition count should be a power of two, i.e. 1, 2, 4, 8, 16, ...
   uint32_t _partition_count;
 
-  // std::shared_ptr<Table> _output;
   std::shared_ptr<PosList> _pos_list_left;
   std::shared_ptr<PosList> _pos_list_right;
 };
