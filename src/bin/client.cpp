@@ -165,7 +165,7 @@ int main(int argc, char** argv) {
   opossum::OpossumClient client(grpc::CreateChannel(address, grpc::InsecureChannelCredentials()));
 
   std::cout << "Sending query to " << address << std::endl;
-  client.query(table_name, column_name, opossum::op_string_to_scan_type[filter_op], filter);
+  client.query(table_name, column_name, opossum::op_string_to_scan_type.at(filter_op), filter);
 
   return 0;
 }
