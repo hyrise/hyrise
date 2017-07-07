@@ -18,6 +18,7 @@
 #include <memory>
 #include <string>
 
+#include "constant_mappings.hpp"
 #include "utils/assert.hpp"
 
 namespace po = boost::program_options;
@@ -127,42 +128,6 @@ void OpossumClient::print_response_table(proto::Response& response) const {
 
 }  // namespace opossum
 
-opossum::proto::ScanType filter_string_to_scan_type(std::string filter_op) {
-  if (filter_op == "=") {
-    return opossum::proto::ScanType::OpEquals;
-  }
-
-  if (filter_op == "!=") {
-    return opossum::proto::ScanType::OpEquals;
-  }
-
-  if (filter_op == ">") {
-    return opossum::proto::ScanType::OpEquals;
-  }
-
-  if (filter_op == ">=") {
-    return opossum::proto::ScanType::OpEquals;
-  }
-
-  if (filter_op == "<") {
-    return opossum::proto::ScanType::OpEquals;
-  }
-
-  if (filter_op == "<=") {
-    return opossum::proto::ScanType::OpEquals;
-  }
-
-  if (filter_op == "BETWEEN") {
-    return opossum::proto::ScanType::OpEquals;
-  }
-
-  if (filter_op == "LIKE") {
-    return opossum::proto::ScanType::OpEquals;
-  }
-
-  throw std::runtime_error("Unsupported filter: " + filter_op);
-}
-
 int main(int argc, char** argv) {
   po::options_description desc("Allowed options");
   auto options = desc.add_options();
@@ -200,7 +165,7 @@ int main(int argc, char** argv) {
   opossum::OpossumClient client(grpc::CreateChannel(address, grpc::InsecureChannelCredentials()));
 
   std::cout << "Sending query to " << address << std::endl;
-  client.query(table_name, column_name, filter_string_to_scan_type(filter_op), filter);
+  client.query(table_name, column_name, opossum::op_string_to_scan_type[filter_op], filter);
 
   return 0;
 }

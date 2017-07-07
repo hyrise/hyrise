@@ -59,6 +59,7 @@ set(
     concurrency/transaction_context.hpp
     concurrency/transaction_manager.cpp
     concurrency/transaction_manager.hpp
+    constant_mappings.hpp
     import_export/binary.hpp
     import_export/csv_converter.hpp
     import_export/csv.hpp
