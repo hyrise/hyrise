@@ -56,7 +56,7 @@ SortMergeJoin::SortMergeJoin(const std::shared_ptr<const AbstractOperator> left,
 
   // Create implementation to compute join result
   _impl = make_unique_by_column_type<AbstractJoinOperatorImpl, SortMergeJoinImpl>(left_column_type,
-    *this, left_column_name, right_column_name, 1 /* partition count */);
+    *this, left_column_name, right_column_name, 2 /* partition count */);
 }
 
 std::shared_ptr<const Table> SortMergeJoin::on_execute() { return _impl->on_execute(); }
@@ -90,9 +90,13 @@ std::shared_ptr<const Table> SortMergeJoin::SortMergeJoinImpl<T>::on_execute() {
   _sorted_left_table = sort_table(_sort_merge_join.input_table_left(), _left_column_name);
   _sorted_right_table = sort_table(_sort_merge_join.input_table_right(), _right_column_name);
 
+  std::cout << "Table sorting ran through" << std::endl;
+
   if (_sort_merge_join._op != "=" && _partition_count > 1) {
     value_based_partitioning();
   }
+
+  std::cout << "value based partitioning ran through" << std::endl;
 
   perform_join();
 
@@ -322,6 +326,88 @@ void SortMergeJoin::SortMergeJoinImpl<T>::handle_reference_column(ReferenceColum
 */
 
 template <typename T>
+void SortMergeJoin::SortMergeJoinImpl<T>::value_based_partitioning() {
+  // get minimum and maximum values for tables to have a somewhat reliable partitioning
+  T max_value = _sorted_left_table->partition[0].values[0].first;
+  std::vector<T> p_values(_partition_count);
+  std::vector<std::map<T, uint32_t>> sample_values(_partition_count);
+
+  std::cout << "vbp: before for-loop" << std::endl;
+
+  for (uint32_t partition_number = 0; partition_number < _sorted_left_table->partition.size(); ++partition_number) {
+    std::cout << "loop " << partition_number << std::endl;
+    // left side
+    if (max_value < _sorted_left_table->partition[partition_number].values.back().first) {
+      max_value = _sorted_left_table->partition[partition_number].values.back().first;
+    }
+
+    std::cout << "get samples"  << std::endl;
+    // get samples
+    auto & values = _sorted_left_table->partition[partition_number].values;
+    uint32_t step_size = (values.size() - 1) / _partition_count;
+    uint32_t i = 0;
+    std::cout << "values.size(): " << values.size() << std::endl;
+    std::cout << "step size: " << step_size << std::endl;
+    for (uint32_t pos = step_size; pos < values.size() - 1; pos += step_size) {
+      std::cout << "inner loop: " << pos << std::endl;
+      if (sample_values[i].count(values[pos].first) == 0) {
+        sample_values[i].insert(std::pair<T, uint32_t>(values[pos].first, 1));
+      } else {
+        ++(sample_values[i].at(values[pos].first));
+      }
+      ++i;
+    }
+  }
+
+  std::cout << "after outer loop" << std::endl;
+
+  for (uint32_t partition_number = 0; partition_number < _sorted_right_table->partition.size(); ++partition_number) {
+    // right side
+    if (max_value < _sorted_right_table->partition[partition_number].values.back().first) {
+      max_value = _sorted_right_table->partition[partition_number].values.back().first;
+    }
+
+    // get samples
+    uint32_t step_size = (_sorted_right_table->partition[partition_number].values.size() - 1) / _partition_count;
+    uint32_t i = 0;
+    for (uint32_t pos = step_size; pos < _sorted_right_table->partition[partition_number].values.size() - 1;
+         pos += step_size) {
+      if (sample_values[i].count(_sorted_right_table->partition[partition_number].values[pos].first) == 0) {
+        sample_values[i].insert(
+            std::pair<T, uint32_t>(_sorted_right_table->partition[partition_number].values[pos].first, 1));
+      } else {
+        ++(sample_values[i].at(_sorted_right_table->partition[partition_number].values[pos].first));
+      }
+      ++i;
+    }
+  }
+
+  T value{0};
+
+  std::cout << "before pick from sample values" << std::endl;
+
+  // Pick from sample values most common split values
+  for (uint32_t i = 0; i < _partition_count - 1; ++i) {
+    value = T{0};
+    uint32_t count = 0;
+    for (auto& v : sample_values[i]) {
+      if (v.second > count) {
+        value = v.first;
+        count = v.second;
+      }
+    }
+
+    p_values[i] = value;
+  }
+  p_values.back() = max_value;
+
+  std::cout << "before value_based_table_partitioning" << std::endl;
+
+  value_based_table_partitioning(_sorted_left_table, p_values);
+  value_based_table_partitioning(_sorted_right_table, p_values);
+}
+
+template <typename T>
 void SortMergeJoin::SortMergeJoinImpl<T>::value_based_table_partitioning(std::shared_ptr<SortedTable> sort_table,
                                                                          std::vector<T>& p_values) {
   std::vector<std::vector<std::pair<T, RowID>>> partitions;
@@ -394,75 +480,6 @@ void SortMergeJoin::SortMergeJoinImpl<T>::value_based_table_partitioning(std::sh
   }
 }
 
-template <typename T>
-void SortMergeJoin::SortMergeJoinImpl<T>::value_based_partitioning() {
-  // get minimum and maximum values for tables to have a somewhat reliable partitioning
-  T max_value = _sorted_left_table->partition[0].values[0].first;
-  std::vector<T> p_values(_partition_count);
-  std::vector<std::map<T, uint32_t>> sample_values(_partition_count);
-
-  for (uint32_t partition_number = 0; partition_number < _sorted_left_table->partition.size(); ++partition_number) {
-    // left side
-    if (max_value < _sorted_left_table->partition[partition_number].values.back().first) {
-      max_value = _sorted_left_table->partition[partition_number].values.back().first;
-    }
-
-    // get samples
-    uint32_t step_size = (_sorted_left_table->partition[partition_number].values.size() - 1) / _partition_count;
-    uint32_t i = 0;
-    for (uint32_t pos = step_size; pos < _sorted_left_table->partition[partition_number].values.size() - 1;
-         pos += step_size) {
-      if (sample_values[i].count(_sorted_left_table->partition[partition_number].values[pos].first) == 0) {
-        sample_values[i].insert(
-            std::pair<T, uint32_t>(_sorted_left_table->partition[partition_number].values[pos].first, 1));
-      } else {
-        ++(sample_values[i].at(_sorted_left_table->partition[partition_number].values[pos].first));
-      }
-      ++i;
-    }
-  }
-
-  for (uint32_t partition_number = 0; partition_number < _sorted_right_table->partition.size(); ++partition_number) {
-    // right side
-    if (max_value < _sorted_right_table->partition[partition_number].values.back().first) {
-      max_value = _sorted_right_table->partition[partition_number].values.back().first;
-    }
-
-    // get samples
-    uint32_t step_size = (_sorted_right_table->partition[partition_number].values.size() - 1) / _partition_count;
-    uint32_t i = 0;
-    for (uint32_t pos = step_size; pos < _sorted_right_table->partition[partition_number].values.size() - 1;
-         pos += step_size) {
-      if (sample_values[i].count(_sorted_right_table->partition[partition_number].values[pos].first) == 0) {
-        sample_values[i].insert(
-            std::pair<T, uint32_t>(_sorted_right_table->partition[partition_number].values[pos].first, 1));
-      } else {
-        ++(sample_values[i].at(_sorted_right_table->partition[partition_number].values[pos].first));
-      }
-      ++i;
-    }
-  }
-
-  T value{0};
-
-  // Pick from sample values most common split values
-  for (uint32_t i = 0; i < _partition_count - 1; ++i) {
-    value = T{0};
-    uint32_t count = 0;
-    for (auto& v : sample_values[i]) {
-      if (v.second > count) {
-        value = v.first;
-        count = v.second;
-      }
-    }
-
-    p_values[i] = value;
-  }
-  p_values.back() = max_value;
-
-  value_based_table_partitioning(_sorted_left_table, p_values);
-  value_based_table_partitioning(_sorted_right_table, p_values);
-}
 
 /*
 ** End of Non-Equi Join methods

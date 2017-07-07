@@ -241,7 +241,7 @@ TYPED_TEST(JoinFullTest, SmallerInnerJoin) {
   this->template test_join_output<TypeParam>(
       this->_table_wrapper_a, this->_table_wrapper_b, std::pair<std::string, std::string>("a", "a"), "<", Inner,
       std::string("left."), std::string("right."), "src/test/tables/joinoperators/int_smaller_inner_join.tbl", 1);
-
+      std::cout << "integer ran through" << std::endl;
   // Joining two Float Columns
   this->template test_join_output<TypeParam>(
       this->_table_wrapper_a, this->_table_wrapper_b, std::pair<std::string, std::string>("b", "b"), "<", Inner,
