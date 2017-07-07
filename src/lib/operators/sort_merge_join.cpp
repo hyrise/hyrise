@@ -96,10 +96,7 @@ std::shared_ptr<const Table> SortMergeJoin::SortMergeJoinImpl<T>::on_execute() {
 
   perform_join();
 
-  auto output = std::make_shared<Table>();
-  build_output(output);
-
-  return output;
+  return build_output();
 }
 
 template <typename T>
@@ -790,7 +787,10 @@ void SortMergeJoin::SortMergeJoinImpl<T>::perform_join() {
 }
 
 template <typename T>
-void SortMergeJoin::SortMergeJoinImpl<T>::build_output(std::shared_ptr<Table>& output) {
+std::shared_ptr<Table> SortMergeJoin::SortMergeJoinImpl<T>::build_output() {
+
+  auto output = std::make_shared<Table>();
+
   // Left output
   auto col_count_left = _sort_merge_join.input_table_left()->col_count();
   for (ColumnID column_id{0}; column_id < col_count_left; column_id++) {
@@ -840,6 +840,8 @@ void SortMergeJoin::SortMergeJoinImpl<T>::build_output(std::shared_ptr<Table>& o
       output->get_chunk(ChunkID{0}).add_column(ref_column);
     }
   }
+
+  return output;
 }
 
 template <typename T>

@@ -116,7 +116,7 @@ class SortMergeJoin : public AbstractJoinOperator {
     void perform_join();
 
     // builds output based on pos_list_left/-_right
-    void build_output(std::shared_ptr<Table>& output);
+    std::shared_ptr<Table> build_output();
 
     std::shared_ptr<PosList> dereference_pos_list(std::shared_ptr<const Table> input_table, ColumnID column_id,
                                                   std::shared_ptr<const PosList> pos_list);
