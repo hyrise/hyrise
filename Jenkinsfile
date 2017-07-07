@@ -96,7 +96,7 @@ node {
       }
 
       stage("Cleanup") {
-        // Clean up workspace
+        // Clean up workspace.
         step([$class: 'WsCleanup'])
       }
 
