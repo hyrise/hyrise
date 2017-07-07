@@ -32,13 +32,12 @@ class SortMergeJoin : public AbstractJoinOperator {
   uint8_t num_in_tables() const override;
   uint8_t num_out_tables() const override;
 
-  void set_partition_count(uint32_t number);
-
  protected:
   template <typename T>
   class SortMergeJoinImpl : public AbstractJoinOperatorImpl, public ColumnVisitable {
    public:
-    SortMergeJoinImpl<T>(SortMergeJoin& sort_merge_join);
+    SortMergeJoinImpl<T>(SortMergeJoin& sort_merge_join, std::string left_column_name, std::string right_column_name,
+      uint32_t partition_count);
 
     // AbstractJoinOperatorImpl implementation
     std::shared_ptr<const Table> on_execute() override;
@@ -126,16 +125,17 @@ class SortMergeJoin : public AbstractJoinOperator {
     SortMergeJoin& _sort_merge_join;
     std::shared_ptr<SortedTable> _sorted_left_table;
     std::shared_ptr<SortedTable> _sorted_right_table;
+
+    std::string _left_column_name;
+    std::string _right_column_name;
+
+    // the partition count should be a power of two, i.e. 1, 2, 4, 8, 16, ...
+    uint32_t _partition_count;
+
+    std::shared_ptr<PosList> _pos_list_left;
+    std::shared_ptr<PosList> _pos_list_right;
   };
 
   std::unique_ptr<AbstractJoinOperatorImpl> _impl;
-  std::string _left_column_name;
-  std::string _right_column_name;
-
-  // the partition count should be a power of two, i.e. 1, 2, 4, 8, 16, ...
-  uint32_t _partition_count;
-
-  std::shared_ptr<PosList> _pos_list_left;
-  std::shared_ptr<PosList> _pos_list_right;
 };
 }  // namespace opossum
