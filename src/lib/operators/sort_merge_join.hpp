@@ -69,7 +69,7 @@ class SortMergeJoin : public AbstractJoinOperator {
     };
 
     struct SortContext : ColumnVisitableContext {
-      SortContext(ChunkID chunk_id, std::shared_ptr<SortedTable> output) : chunk_id(chunk_id), sort_output_table(output) {}
+      SortContext(ChunkID id, std::shared_ptr<SortedTable> output) : chunk_id(id), sort_output_table(output) {}
 
       ChunkID chunk_id;
       std::shared_ptr<SortedTable> sort_output_table;
@@ -77,14 +77,18 @@ class SortMergeJoin : public AbstractJoinOperator {
 
    protected:
     // Sort functions
-    void sort_table(std::shared_ptr<SortedTable> sort_table, std::shared_ptr<const Table> input,
-                    const std::string& column_name);
+    std::shared_ptr<SortedTable> sort_table(std::shared_ptr<const Table> input, const std::string& column_name);
     void sort_partition(const std::vector<ChunkID> chunk_ids, std::shared_ptr<const Table> input,
                         const std::string& column_name, std::shared_ptr<SortedTable> sort_output_table);
 
+    // ColumnVisitable implementations to sort concrete chunks
+    void handle_value_column(BaseColumn& column, std::shared_ptr<ColumnVisitableContext> context) override;
+    void handle_dictionary_column(BaseColumn& column, std::shared_ptr<ColumnVisitableContext> context) override;
+    void handle_reference_column(ReferenceColumn& column, std::shared_ptr<ColumnVisitableContext> context) override;
+
     // Partitioning in case of Non-Equi-Join
-    void value_based_table_partitioning(std::shared_ptr<SortedTable> sort_table, std::vector<T>& p_values);
     void value_based_partitioning();
+    void value_based_table_partitioning(std::shared_ptr<SortedTable> sort_table, std::vector<T>& p_values);
 
     template <typename T2>
     typename std::enable_if<std::is_arithmetic<T2>::value, uint32_t>::type get_radix(T2 value, uint32_t radix_bits) {
@@ -116,11 +120,6 @@ class SortMergeJoin : public AbstractJoinOperator {
 
     std::shared_ptr<PosList> dereference_pos_list(std::shared_ptr<const Table> input_table, ColumnID column_id,
                                                   std::shared_ptr<const PosList> pos_list);
-
-    // ColumnVisitable implementation
-    void handle_value_column(BaseColumn& column, std::shared_ptr<ColumnVisitableContext> context) override;
-    void handle_dictionary_column(BaseColumn& column, std::shared_ptr<ColumnVisitableContext> context) override;
-    void handle_reference_column(ReferenceColumn& column, std::shared_ptr<ColumnVisitableContext> context) override;
 
    protected:
     SortMergeJoin& _sort_merge_join;
