@@ -15,16 +15,20 @@ namespace opossum {
  * It mainly provides the commit_records and rollback_records methods, which are used by the CommitRecords
  * and RollbackRecords operators, respectively.
  */
-class AbstractReadWriteOperator : public AbstractOperator {
+class AbstractReadWriteOperator : public AbstractOperator,
+                                  public std::enable_shared_from_this<AbstractReadWriteOperator> {
  public:
   explicit AbstractReadWriteOperator(const std::shared_ptr<const AbstractOperator> left = nullptr,
                                      const std::shared_ptr<const AbstractOperator> right = nullptr)
       : AbstractOperator(left, right), _execute_failed{false} {}
 
   void execute() override {
-    _transaction_context->on_operator_started();
-    _output = on_execute(_transaction_context);
-    _transaction_context->on_operator_finished();
+    auto transaction_context = _transaction_context.lock();
+    DebugAssert(static_cast<bool>(transaction_context), "Probably a bug.");
+
+    transaction_context->on_operator_started();
+    _output = on_execute(transaction_context);
+    transaction_context->on_operator_finished();
   }
 
   /**

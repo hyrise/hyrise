@@ -11,9 +11,7 @@
 #include <vector>
 
 #include "current_scheduler.hpp"
-#include "processing_unit.hpp"
 #include "topology.hpp"
-#include "utils/assert.hpp"
 
 namespace {
 
@@ -39,22 +37,6 @@ std::shared_ptr<TaskQueue> Worker::queue() const { return _queue; }
 CpuID Worker::cpu_id() const { return _cpu_id; }
 
 std::weak_ptr<ProcessingUnit> Worker::processing_unit() const { return _processing_unit; }
-
-void Worker::_wait_for_tasks(const std::vector<std::shared_ptr<AbstractTask>>& tasks) {
-  /**
-   * This method blocks the calling thread (worker) until all tasks have been completed.
-   * It hands off the active worker token so that another worker can execute tasks while the calling worker is blocked.
-   */
-  auto processing_unit = _processing_unit.lock();
-  DebugAssert(static_cast<bool>(processing_unit), "Bug: Locking the processing unit failed");
-
-  processing_unit->yield_active_worker_token(_id);
-  processing_unit->wake_or_create_worker();
-
-  for (auto& task : tasks) {
-    task->_join_without_replacement_worker();
-  }
-}
 
 void Worker::operator()() {
   DebugAssert((this_thread_worker.expired()), "Thread already has a worker");

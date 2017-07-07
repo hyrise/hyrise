@@ -14,7 +14,7 @@ namespace opossum {
 
 /**
  * @brief Represents SQL null value in AllTypeVariant
- * 
+ *
  * Based on boost/blank.hpp with changed relational operators
  */
 struct NullValue {};

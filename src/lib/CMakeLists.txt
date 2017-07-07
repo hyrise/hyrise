@@ -208,7 +208,9 @@ set(
     type_comparison.hpp
     types.hpp
     uid_allocator.hpp
+    utils/assert.hpp
     utils/cuckoo_hashtable.hpp
+    utils/helper.hpp
     utils/murmur_hash.cpp
     utils/murmur_hash.hpp
 )

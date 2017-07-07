@@ -20,3 +20,21 @@ target_link_libraries(
     opossum
     benchmark
 )
+
+add_executable(
+    opossumBenchmarkTPCC
+
+    benchmark_main.cpp
+    benchmark_template.cpp
+    tpcc/delivery_benchmark.cpp
+    #tpcc/order_status_benchmark.cpp
+    #tpcc/new_order_benchmark.cpp
+    #tpcc/tpcc_base_fixture.cpp
+)
+
+target_link_libraries(
+        opossumBenchmarkTPCC
+        opossum
+        benchmark
+        tpcc
+)

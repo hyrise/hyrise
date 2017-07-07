@@ -23,8 +23,10 @@ include_directories(
     ${PROJECT_SOURCE_DIR}/third_party/googletest/googletest/include
     ${PROJECT_SOURCE_DIR}/third_party/grpc/include
     ${PROJECT_SOURCE_DIR}/third_party/grpc/third_party/protobuf/src
+    ${PROJECT_SOURCE_DIR}/third_party/json
     ${PROJECT_SOURCE_DIR}/third_party/sql-parser/src
 
+    ${PROJECT_SOURCE_DIR}/src/benchmark-libs/
     ${PROJECT_SOURCE_DIR}/src/lib/
 
     ${TBB_INCLUDE_DIR}
@@ -36,6 +38,7 @@ link_directories(
 )
 
 add_subdirectory(benchmark)
+add_subdirectory(benchmark-libs)
 add_subdirectory(bin)
 add_subdirectory(lib)
 add_subdirectory(test)
