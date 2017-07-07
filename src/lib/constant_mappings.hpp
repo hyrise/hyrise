@@ -1,3 +1,4 @@
+#include <string>
 #include <unordered_map>
 
 namespace opossum {
@@ -11,7 +12,6 @@ namespace opossum {
 
     {">", opossum::proto::ScanType::OpGreaterThan},
     {">=", opossum::proto::ScanType::OpGreaterThanEquals},
-
 
     {"BETWEEN", opossum::proto::ScanType::OpBetween},
     {"LIKE", opossum::proto::ScanType::OpLike},
