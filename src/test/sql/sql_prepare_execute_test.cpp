@@ -44,6 +44,7 @@ TEST_P(SQLPrepareExecuteTest, GenericQueryTest) {
   const SQLTestParam param = GetParam();
   const std::string query = std::get<0>(param);
   const size_t num_operators = std::get<1>(param);
+  const size_t num_trees = (num_operators > 0) ? 1u : 0u;
   const std::string expected_result_file = std::get<2>(param);
 
   auto op = std::make_shared<SQLQueryOperator>(query, false);
@@ -54,15 +55,17 @@ TEST_P(SQLPrepareExecuteTest, GenericQueryTest) {
 
   const SQLQueryPlan& plan = op->get_query_plan();
 
-  ASSERT_EQ(num_operators, plan.size());
+  ASSERT_EQ(num_trees, plan.num_trees());
+  ASSERT_EQ(num_operators, plan.num_operators());
 
-  for (const auto& task : plan.tasks()) {
+  auto tasks = plan.tasks();
+  for (const auto& task : tasks) {
     task->execute();
   }
 
   if (!expected_result_file.empty()) {
     auto expected_result = load_table(expected_result_file, 1);
-    EXPECT_TABLE_EQ(plan.back()->get_operator()->get_output(), expected_result);
+    EXPECT_TABLE_EQ(plan.root()->get_output(), expected_result);
   }
 }
 
@@ -71,21 +74,21 @@ const SQLTestParam sql_query_tests[] = {
     SQLTestParam{"PREPARE a1 FROM 'SELECT * FROM table_a WHERE a >= 1234;'", 0u, ""},
     SQLTestParam{"PREPARE a2 FROM 'SELECT * FROM table_a WHERE a >= 1234 AND b < 457.9'", 0u, ""},
 
-    SQLTestParam{"EXECUTE a1;", 3u, "src/test/tables/int_float_filtered2.tbl"},
-    SQLTestParam{"EXECUTE a2;", 4u, "src/test/tables/int_float_filtered.tbl"},
-    SQLTestParam{"EXECUTE a1;", 3u, "src/test/tables/int_float_filtered2.tbl"},
-    SQLTestParam{"EXECUTE a2;", 4u, "src/test/tables/int_float_filtered.tbl"},
-    SQLTestParam{"EXECUTE a1;", 3u, "src/test/tables/int_float_filtered2.tbl"},
-    SQLTestParam{"EXECUTE a2;", 4u, "src/test/tables/int_float_filtered.tbl"},
+    SQLTestParam{"EXECUTE a1;", 2u, "src/test/tables/int_float_filtered2.tbl"},
+    SQLTestParam{"EXECUTE a2;", 3u, "src/test/tables/int_float_filtered.tbl"},
+    SQLTestParam{"EXECUTE a1;", 2u, "src/test/tables/int_float_filtered2.tbl"},
+    SQLTestParam{"EXECUTE a2;", 3u, "src/test/tables/int_float_filtered.tbl"},
+    SQLTestParam{"EXECUTE a1;", 2u, "src/test/tables/int_float_filtered2.tbl"},
+    SQLTestParam{"EXECUTE a2;", 3u, "src/test/tables/int_float_filtered.tbl"},
 
     // Parameterized
     SQLTestParam{"PREPARE a3 FROM 'SELECT * FROM table_a WHERE a >= ?;'", 0u, ""},
     SQLTestParam{"PREPARE a4 FROM 'SELECT * FROM table_a WHERE a >= ? AND b < ?'", 0u, ""},
 
-    SQLTestParam{"EXECUTE a3 (1234)", 3u, "src/test/tables/int_float_filtered2.tbl"},
-    SQLTestParam{"EXECUTE a4 (1234, 457.9)", 4u, "src/test/tables/int_float_filtered.tbl"},
-    SQLTestParam{"EXECUTE a4 (0, 500)", 4u, "src/test/tables/int_float.tbl"},
-    SQLTestParam{"EXECUTE a4 (1234, 500)", 4u, "src/test/tables/int_float_filtered2.tbl"},
+    SQLTestParam{"EXECUTE a3 (1234)", 2u, "src/test/tables/int_float_filtered2.tbl"},
+    SQLTestParam{"EXECUTE a4 (1234, 457.9)", 3u, "src/test/tables/int_float_filtered.tbl"},
+    SQLTestParam{"EXECUTE a4 (0, 500)", 3u, "src/test/tables/int_float.tbl"},
+    SQLTestParam{"EXECUTE a4 (1234, 500)", 3u, "src/test/tables/int_float_filtered2.tbl"},
 
     // TPC-H schema
     SQLTestParam{"PREPARE a5 FROM '"
@@ -100,8 +103,8 @@ const SQLTestParam sql_query_tests[] = {
                  "    HAVING COUNT(orderitems.\"orders.o_orderkey\") >= ?"
                  "';",
                  0u, ""},
-    SQLTestParam{"EXECUTE a5 (0, 20);", 10u, ""}, SQLTestParam{"EXECUTE a5 (0, 21);", 10u, ""},
-    SQLTestParam{"EXECUTE a5 (0, 22);", 10u, ""},
+    SQLTestParam{"EXECUTE a5 (0, 20);", 9u, ""}, SQLTestParam{"EXECUTE a5 (0, 21);", 9u, ""},
+    SQLTestParam{"EXECUTE a5 (0, 22);", 9u, ""},
 };
 
 INSTANTIATE_TEST_CASE_P(GenericPrepareExecuteTest, SQLPrepareExecuteTest, ::testing::ValuesIn(sql_query_tests));

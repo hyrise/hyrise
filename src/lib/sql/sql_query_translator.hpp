@@ -6,7 +6,7 @@
 
 #include "SQLParser.h"
 #include "all_parameter_variant.hpp"
-#include "scheduler/operator_task.hpp"
+#include "operators/abstract_operator.hpp"
 #include "sql/sql_query_plan.hpp"
 
 namespace opossum {
@@ -42,16 +42,16 @@ class SQLQueryTranslator {
   // Evaluates the expression and pushes one or more TableScans onto
   // the tasks list. AND expressions are chained TableScans.
   // OR expressions are not supported yet.
-  bool _translate_filter_expr(const hsql::Expr& expr, const std::shared_ptr<OperatorTask>& input_task);
+  bool _translate_filter_expr(const hsql::Expr& expr, const std::shared_ptr<AbstractOperator>& input_op);
 
   bool _translate_projection(const std::vector<hsql::Expr*>& expr_list,
-                             const std::shared_ptr<OperatorTask>& input_task);
+                             const std::shared_ptr<AbstractOperator>& input_op);
 
   bool _translate_group_by(const hsql::GroupByDescription& group_by, const std::vector<hsql::Expr*>& select_list,
-                           const std::shared_ptr<OperatorTask>& input_task);
+                           const std::shared_ptr<AbstractOperator>& input_op);
 
   bool _translate_order_by(const std::vector<hsql::OrderDescription*> order_list,
-                           const std::shared_ptr<OperatorTask>& input_task);
+                           const std::shared_ptr<AbstractOperator>& input_op);
 
   bool _translate_table_ref(const hsql::TableRef& table);
 
