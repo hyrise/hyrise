@@ -60,7 +60,7 @@ class SortMergeJoin : public AbstractJoinOperator {
     struct SortedTable {
       SortedTable() {}
 
-      std::vector<SortedChunk> partition;
+      std::vector<SortedChunk> partitions;
 
       // used to count the number of entries for each partition from the whole table
       std::map<uint32_t, uint32_t> partition_histogram;
@@ -68,17 +68,19 @@ class SortMergeJoin : public AbstractJoinOperator {
     };
 
     struct SortContext : ColumnVisitableContext {
-      SortContext(ChunkID id, std::shared_ptr<SortedTable> output) : chunk_id(id), sort_output_table(output) {}
+      SortContext(ChunkID id, std::shared_ptr<std::vector<SortedChunk>> output_chunks) : chunk_id(id),
+        sort_output_chunks(output_chunks) {}
 
       ChunkID chunk_id;
-      std::shared_ptr<SortedTable> sort_output_table;
+      std::shared_ptr<std::vector<SortedChunk>> sort_output_chunks;
     };
 
    protected:
     // Sort functions
     std::shared_ptr<SortedTable> sort_table(std::shared_ptr<const Table> input, const std::string& column_name);
+    std::shared_ptr<std::vector<SortedChunk>> sort_input_chunks(std::shared_ptr<const Table> input, const std::string& column_name);
 
-    // ColumnVisitable implementations to sort concrete chunks
+    // ColumnVisitable implementations to sort concrete input chunks
     void handle_value_column(BaseColumn& column, std::shared_ptr<ColumnVisitableContext> context) override;
     void handle_dictionary_column(BaseColumn& column, std::shared_ptr<ColumnVisitableContext> context) override;
     void handle_reference_column(ReferenceColumn& column, std::shared_ptr<ColumnVisitableContext> context) override;
