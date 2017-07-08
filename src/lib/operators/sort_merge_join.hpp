@@ -77,8 +77,6 @@ class SortMergeJoin : public AbstractJoinOperator {
    protected:
     // Sort functions
     std::shared_ptr<SortedTable> sort_table(std::shared_ptr<const Table> input, const std::string& column_name);
-    void sort_partition(const std::vector<ChunkID> chunk_ids, std::shared_ptr<const Table> input,
-                        const std::string& column_name, std::shared_ptr<SortedTable> sort_output_table);
 
     // ColumnVisitable implementations to sort concrete chunks
     void handle_value_column(BaseColumn& column, std::shared_ptr<ColumnVisitableContext> context) override;

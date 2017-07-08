@@ -116,7 +116,7 @@ std::shared_ptr<typename SortMergeJoin::SortMergeJoinImpl<T>::SortedTable>
   }
 
   // can be extended to find that value dynamically later on (depending on hardware etc.)
-  const uint32_t partitionSizeThreshold = 100000;
+  const uint32_t partitionSizeThreshold = 1000;
   std::vector<std::shared_ptr<AbstractTask>> jobs;
   uint32_t size = 0;
   std::vector<ChunkID> chunk_ids;
@@ -124,8 +124,13 @@ std::shared_ptr<typename SortMergeJoin::SortMergeJoinImpl<T>::SortedTable>
     size += input->chunk_size();
     chunk_ids.push_back(chunk_id);
     if (size > partitionSizeThreshold || chunk_id == input->chunk_count() - 1) {
+      // Spawn a job responsible for sorting multiple chunks of the input table
       jobs.push_back(std::make_shared<JobTask>([this, sorted_table, chunk_ids, input, column_name] {
-        this->sort_partition(chunk_ids, input, column_name, sorted_table);
+        for (auto chunk_id : chunk_ids) {
+          auto column = input->get_chunk(chunk_id).get_column(input->column_id_by_name(column_name));
+          auto context = std::make_shared<SortContext>(chunk_id, sorted_table);
+          column->visit(*this, context);
+        }
       }));
       size = 0;
       chunk_ids.clear();
@@ -217,33 +222,18 @@ std::shared_ptr<typename SortMergeJoin::SortMergeJoinImpl<T>::SortedTable>
 }
 
 template <typename T>
-void SortMergeJoin::SortMergeJoinImpl<T>::sort_partition(const std::vector<ChunkID> chunk_ids,
-                                                         std::shared_ptr<const Table> input,
-                                                         const std::string& column_name,
-                                                         std::shared_ptr<SortedTable> sort_output_table) {
-  for (auto chunk_id : chunk_ids) {
-    auto& chunk = input->get_chunk(chunk_id);
-    auto column = chunk.get_column(input->column_id_by_name(column_name));
-    auto context = std::make_shared<SortContext>(chunk_id, sort_output_table);
-    column->visit(*this, context);
-  }
-}
-
-template <typename T>
 void SortMergeJoin::SortMergeJoinImpl<T>::handle_value_column(BaseColumn& column,
                                                               std::shared_ptr<ColumnVisitableContext> context) {
   auto& value_column = dynamic_cast<ValueColumn<T>&>(column);
   auto sort_context = std::static_pointer_cast<SortContext>(context);
-  auto& sorted_table = sort_context->sort_output_table;;
+  auto& sorted_chunk = sort_context->sort_output_table->partition[sort_context->chunk_id].values;
 
   for (ChunkOffset chunk_offset{0}; chunk_offset < value_column.values().size(); chunk_offset++) {
     RowID row_id{sort_context->chunk_id, chunk_offset};
-    sorted_table->partition[sort_context->chunk_id].values[chunk_offset] =
-        std::pair<T, RowID>(value_column.values()[chunk_offset], row_id);
+    sorted_chunk[chunk_offset] = std::pair<T, RowID>(value_column.values()[chunk_offset], row_id);
   }
 
-  std::sort(sorted_table->partition[sort_context->chunk_id].values.begin(),
-            sorted_table->partition[sort_context->chunk_id].values.end(),
+  std::sort(sorted_chunk.begin(), sorted_chunk.end(),
             [](auto& value_left, auto& value_right) { return value_left.first < value_right.first; });
 }
 
