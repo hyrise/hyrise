@@ -387,8 +387,6 @@ void SortMergeJoin::SortMergeJoinImpl<T>::value_based_partitioning() {
   }
   p_values.back() = max_value;
 
-  std::cout << "before value_based_table_partitioning" << std::endl;
-
   value_based_table_partitioning(_sorted_left_table, p_values);
   value_based_table_partitioning(_sorted_right_table, p_values);
 }
@@ -404,6 +402,8 @@ void SortMergeJoin::SortMergeJoinImpl<T>::value_based_table_partitioning(std::sh
   for (auto& i : p_values) {
     sort_table->value_histogram.insert(std::pair<T, uint32_t>(i, 0));
   }
+
+  std::cout << "406" << std::endl;
 
   // Each chunk should prepare additional data to enable partitioning
   for (auto& s_chunk : sort_table->partition) {
@@ -423,6 +423,8 @@ void SortMergeJoin::SortMergeJoinImpl<T>::value_based_table_partitioning(std::sh
     }
   }
 
+  std::cout << "426" << std::endl;
+
   // Each chunk need to sequentially fill _prefix map to actually fill partition of tables in parallel
   for (auto& s_chunk : sort_table->partition) {
     for (auto& radix : p_values) {
@@ -438,18 +440,33 @@ void SortMergeJoin::SortMergeJoinImpl<T>::value_based_table_partitioning(std::sh
     ++i;
   }
 
+  std::cout << "443" << std::endl;
+
+  /*
+  for (auto& s_chunk : sorted_table->partition) {
+    for (auto& entry : s_chunk.values) {
+      auto radix = get_radix<T>(entry.first, _partition_count - 1);
+      partitions[radix].at(s_chunk.prefix[radix]++) = entry;
+    }
+  }
+  */
+
   // Each chunk fills (parallel) partition
   for (auto& s_chunk : sort_table->partition) {
     for (auto& entry : s_chunk.values) {
-      uint32_t i = 0;
+      uint32_t partition_id = 0;
       for (auto& radix : p_values) {
         if (entry.first <= radix) {
-          partitions[i].at(s_chunk.prefix_v[radix]++) = entry;
-          ++i;
+          std::cout << "s_chunk.prefix_v.size(): " << s_chunk.prefix_v.size() << std::endl;
+          std::cout << "radix: " << radix << std::endl;
+          partitions[partition_id].at(s_chunk.prefix_v[radix]++) = entry;
+          partition_id++;
         }
       }
     }
   }
+
+  std::cout << "458" << std::endl;
 
   // move result to table
   sort_table->partition.clear();
@@ -458,12 +475,16 @@ void SortMergeJoin::SortMergeJoinImpl<T>::value_based_table_partitioning(std::sh
     sort_table->partition[index].values = partitions[index];
   }
 
+  std::cout << "467" << std::endl;
+
   // Sort partitions (right now std:sort -> but maybe can be replaced with
   // an algorithm more efficient, if subparts are already sorted [InsertionSort?])
   for (auto& partition : sort_table->partition) {
     std::sort(partition.values.begin(), partition.values.end(),
               [](auto& value_left, auto& value_right) { return value_left.first < value_right.first; });
   }
+
+  std::cout << "476" << std::endl;
 }
 
 
