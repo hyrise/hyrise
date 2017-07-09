@@ -25,7 +25,7 @@ class TableScanNode : public AbstractNode {
   const AllParameterVariant& value() const;
   const optional<AllTypeVariant>& value2() const;
 
-protected:
+ protected:
   std::shared_ptr<TableStatistics> create_statistics() const override;
 
  private:

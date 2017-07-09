@@ -25,9 +25,10 @@ class TableStatistics {
 
   double row_count();
   std::shared_ptr<AbstractColumnStatistics> get_column_statistics(const ColumnID column_id);
-  virtual std::shared_ptr<TableStatistics> predicate_statistics(const std::string &column_name, const ScanType scan_type,
-                                                        const AllParameterVariant value,
-                                                        const optional<AllTypeVariant> value2 = nullopt);
+  virtual std::shared_ptr<TableStatistics> predicate_statistics(const std::string &column_name,
+                                                                const ScanType scan_type,
+                                                                const AllParameterVariant value,
+                                                                const optional<AllTypeVariant> value2 = nullopt);
   friend std::ostream &operator<<(std::ostream &os, TableStatistics &obj) {
     os << "Table Stats " << obj._name << std::endl;
     os << " row count: " << obj._row_count;
