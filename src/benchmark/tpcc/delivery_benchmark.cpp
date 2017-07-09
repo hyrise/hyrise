@@ -18,6 +18,8 @@
 #include "operators/update.hpp"
 #include "operators/validate.hpp"
 #include "scheduler/operator_task.hpp"
+#include "tpcc/constants.hpp"
+#include "tpcc/helper.hpp"
 #include "utils/helper.hpp"
 
 #include "tpcc_base_fixture.cpp"
@@ -275,41 +277,41 @@ BENCHMARK_F(TPCCDeliveryBenchmark, BM_delivery)(benchmark::State& state) {
   int d_id = 0;
   while (state.KeepRunning()) {
     auto t_context = TransactionManager::get().new_transaction_context();
-    d_id = (d_id + 1) % _gen._district_size;
+    d_id = (d_id + 1) % tpcc::NUM_DISTRICTS_PER_WAREHOUSE;
     int o_carrier_id = _random_gen.number(1, 10);
     const time_t datetime = std::time(0);
     auto tasks = get_new_order_id(d_id, w_id);
-    execute_tasks_with_context(tasks, t_context);
+    tpcc::execute_tasks_with_context(tasks, t_context);
 
     assert(tasks.back()->get_operator()->get_output()->row_count() > 0);
     auto no_o_id = tasks.back()->get_operator()->get_output()->get_value<int>(opossum::ColumnID(0u), 0u);
     tasks = delete_from_new_order(no_o_id);
-    execute_tasks_with_context(tasks, t_context);
+    tpcc::execute_tasks_with_context(tasks, t_context);
 
     tasks = get_order_id(d_id, w_id, no_o_id);
-    execute_tasks_with_context(tasks, t_context);
+    tpcc::execute_tasks_with_context(tasks, t_context);
 
     assert(tasks.back()->get_operator()->get_output()->row_count() > 0);
     auto c_id = tasks.back()->get_operator()->get_output()->get_value<int>(opossum::ColumnID(0u), 0u);
 
     tasks = update_order(d_id, w_id, no_o_id, o_carrier_id);
-    execute_tasks_with_context(tasks, t_context);
+    tpcc::execute_tasks_with_context(tasks, t_context);
 
     tasks = update_order_line(d_id, w_id, no_o_id, datetime);
-    execute_tasks_with_context(tasks, t_context);
+    tpcc::execute_tasks_with_context(tasks, t_context);
 
     tasks = sum_of_order_line(d_id, w_id, no_o_id);
-    execute_tasks_with_context(tasks, t_context);
+    tpcc::execute_tasks_with_context(tasks, t_context);
 
     assert(tasks.back()->get_operator()->get_output()->row_count() > 0);
     auto ol_total = tasks.back()->get_operator()->get_output()->get_value<double>(opossum::ColumnID(0u), 0u);
     tasks = update_customer(ol_total, d_id, w_id, c_id);
-    execute_tasks_with_context(tasks, t_context);
+    tpcc::execute_tasks_with_context(tasks, t_context);
 
     // Commit transaction.
     TransactionManager::get().prepare_commit(*t_context);
     tasks = commit();
-    execute_tasks_with_context(tasks, t_context);
+    tpcc::execute_tasks_with_context(tasks, t_context);
     TransactionManager::get().commit(*t_context);
   }
 }

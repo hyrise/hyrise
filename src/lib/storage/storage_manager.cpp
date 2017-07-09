@@ -18,7 +18,7 @@ StorageManager &StorageManager::get() {
 }
 
 void StorageManager::add_table(const std::string &name, std::shared_ptr<Table> table) {
-  for (opossum::ChunkID chunk_id{0}; chunk_id < table->chunk_count(); chunk_id++) {
+  for (ChunkID chunk_id{0}; chunk_id < table->chunk_count(); chunk_id++) {
     Assert(table->get_chunk(chunk_id).has_mvcc_columns(), "Table must have MVCC columns.");
   }
 
@@ -57,7 +57,7 @@ void StorageManager::print(std::ostream &out) const {
 
 void StorageManager::reset() { get() = StorageManager(); }
 
-void StorageManager::dump_as_csv(const std::string &path) {
+void StorageManager::export_all_tables_as_csv(const std::string &path) {
   for (auto &pair : _tables) {
     const auto &name = pair.first;
     auto &table = pair.second;

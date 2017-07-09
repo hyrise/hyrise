@@ -18,10 +18,7 @@ class OperatorTask;
 template <typename>
 class ValueColumn;
 
-void execute_tasks_with_context(std::vector<std::shared_ptr<OperatorTask>>& tasks,
-                                std::shared_ptr<TransactionContext> t_context);
-
-void print_table(const std::shared_ptr<const Table> table, PrintMode mode = PrintMode::IgnoreEmptyChunks,
+void print_table(const std::shared_ptr<const Table> table, uint32_t flags = PrintIgnoreEmptyChunks,
                  std::ostream& out = std::cout);
 
 template <typename T>

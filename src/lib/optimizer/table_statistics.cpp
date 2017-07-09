@@ -74,6 +74,8 @@ std::shared_ptr<TableStatistics> TableStatistics::predicate_statistics(const std
     if (new_value_column_statistics != nullptr) {
       clone->_column_statistics[value_column_id] = new_value_column_statistics;
     }
+  } else if (value.type() == typeid(ValuePlaceholder)) {
+    throw std::runtime_error("ValuePlaceholder not supported in TableStatistic yet.");
   } else {
     auto casted_value1 = boost::get<AllTypeVariant>(value);
     std::tie(selectivity, new_column_statistics) =

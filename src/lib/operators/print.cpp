@@ -7,13 +7,14 @@
 #include <string>
 #include <vector>
 
+#include "operators/table_wrapper.hpp"
 #include "storage/base_column.hpp"
 #include "type_cast.hpp"
 
 namespace opossum {
 
-Print::Print(const std::shared_ptr<const AbstractOperator> in, std::ostream& out, PrintMode mode)
-    : AbstractReadOnlyOperator(in), _out(out), _mode(mode) {}
+Print::Print(const std::shared_ptr<const AbstractOperator> in, std::ostream& out, uint32_t flags)
+    : AbstractReadOnlyOperator(in), _out(out), _flags(flags) {}
 
 const std::string Print::name() const { return "Print"; }
 
@@ -21,8 +22,14 @@ uint8_t Print::num_in_tables() const { return 1; }
 
 uint8_t Print::num_out_tables() const { return 1; }
 
-std::shared_ptr<AbstractOperator> Print::recreate() const {
-  return std::make_shared<Print>(_input_left->recreate(), _out);
+std::shared_ptr<AbstractOperator> Print::recreate(const std::vector<AllParameterVariant>& args) const {
+  return std::make_shared<Print>(_input_left->recreate(args), _out);
+}
+
+void Print::print(std::shared_ptr<const Table> table, uint32_t flags, std::ostream& out) {
+  auto table_wrapper = std::make_shared<TableWrapper>(table);
+  table_wrapper->execute();
+  Print(table_wrapper, out, flags).execute();
 }
 
 std::shared_ptr<const Table> Print::on_execute() {
@@ -42,7 +49,7 @@ std::shared_ptr<const Table> Print::on_execute() {
   // print each chunk
   for (ChunkID chunk_id{0}; chunk_id < input_table_left()->chunk_count(); ++chunk_id) {
     auto& chunk = input_table_left()->get_chunk(chunk_id);
-    if (chunk.size() == 0 && _mode == PrintMode::IgnoreEmptyChunks) {
+    if (chunk.size() == 0 && (_flags & PrintIgnoreEmptyChunks)) {
       continue;
     }
 

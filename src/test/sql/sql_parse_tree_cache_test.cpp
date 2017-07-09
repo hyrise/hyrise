@@ -78,21 +78,6 @@ TEST_F(SQLParseTreeCacheTest, SQLParseTreeCacheTest) {
   EXPECT_EQ(cached->size(), 1u);
 }
 
-TEST_F(SQLParseTreeCacheTest, PrepareAndExecuteSimpleTest) {
-  const std::string prep_query = "PREPARE query FROM 'SELECT * FROM table_a';";
-  const std::string exec_query = "EXECUTE query;";
-
-  auto prep_task = execute_query_task(prep_query);
-
-  auto exec_task = execute_query_task(exec_query);
-  const std::shared_ptr<SQLQueryOperator>& exec_op =
-      (const std::shared_ptr<SQLQueryOperator>&)exec_task->get_operator();
-  auto exec_result = exec_op->get_result_task();
-
-  auto expected_result = load_table("src/test/tables/int_float.tbl", 2);
-  EXPECT_TABLE_EQ(exec_result->get_operator()->get_output(), expected_result);
-}
-
 TEST_F(SQLParseTreeCacheTest, QueryOperatorParseTreeCache) {
   SQLQueryCache<std::shared_ptr<hsql::SQLParserResult>>& cache = SQLQueryOperator::get_parse_tree_cache();
   cache.clear_and_resize(2);
