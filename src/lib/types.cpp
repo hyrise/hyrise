@@ -28,6 +28,7 @@ std::string scan_type_to_string(ScanType scan_type) {
     case ScanType::OpLike:
       return "LIKE";
   }
+  throw std::runtime_error("Unexpected ScanType");
 }
 
 ScanType scan_type_from_string(const std::string& scan_str) {
