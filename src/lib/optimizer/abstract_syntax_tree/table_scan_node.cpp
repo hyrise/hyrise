@@ -1,5 +1,6 @@
 #include "table_scan_node.hpp"
 
+#include <memory>
 #include <string>
 
 #include "common.hpp"

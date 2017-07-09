@@ -200,7 +200,7 @@ const AllTypeVariant SQLQueryNodeTranslator::_translate_literal(const hsql::Expr
     default:
       std::cout << "Unexpected Expr type" << std::endl;
       return 0;
-//      throw std::runtime_error("Could not translate literal: expression type not supported.");
+      //      throw std::runtime_error("Could not translate literal: expression type not supported.");
   }
 }
 
@@ -234,7 +234,6 @@ std::shared_ptr<AbstractNode> SQLQueryNodeTranslator::_translate_filter_expr(
   auto scan_type = it->second;
 
   // TODO(torpedro): Handle BETWEEN.
-
 
   std::shared_ptr<ExpressionNode> expressionNode = SQLExpressionTranslator::translate_expression(expr);
 

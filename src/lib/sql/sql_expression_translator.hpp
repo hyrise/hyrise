@@ -14,13 +14,13 @@
 namespace opossum {
 
 class SQLExpressionTranslator {
-public:
+ public:
   SQLExpressionTranslator();
   virtual ~SQLExpressionTranslator();
 
   static std::shared_ptr<ExpressionNode> translate_expression(const hsql::Expr& expr);
 
-protected:
+ protected:
   static ExpressionType _operator_to_expression_type(hsql::OperatorType type);
 };
 

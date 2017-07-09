@@ -69,28 +69,45 @@ std::shared_ptr<ExpressionNode> SQLExpressionTranslator::translate_expression(co
 }
 
 ExpressionType SQLExpressionTranslator::_operator_to_expression_type(hsql::OperatorType type) {
-  switch(type) {
-    case hsql::kOpPlus: return ExpressionType::ExpressionPlus;
-    case hsql::kOpMinus: return ExpressionType::ExpressionMinus;
-    case hsql::kOpAsterisk: return ExpressionType::ExpressionAsterisk;
-    case hsql::kOpSlash: return ExpressionType::ExpressionSlash;
-    case hsql::kOpPercentage: return ExpressionType::ExpressionPercentage;
-    case hsql::kOpCaret: return ExpressionType::ExpressionCaret;
-    case hsql::kOpBetween: return ExpressionType::ExpressionBetween;
-    case hsql::kOpEquals: return ExpressionType::ExpressionEquals;
-    case hsql::kOpNotEquals: return ExpressionType::ExpressionNotEquals;
-    case hsql::kOpLess: return ExpressionType::ExpressionLess;
-    case hsql::kOpLessEq: return ExpressionType::ExpressionLessEq;
-    case hsql::kOpGreater: return ExpressionType::ExpressionGreater;
-    case hsql::kOpGreaterEq: return ExpressionType::ExpressionGreaterEq;
-    case hsql::kOpLike: return ExpressionType::ExpressionLike;
-    case hsql::kOpNotLike: return ExpressionType::ExpressionNotLike;
-    case hsql::kOpCase: return ExpressionType::ExpressionCase;
+  switch (type) {
+    case hsql::kOpPlus:
+      return ExpressionType::ExpressionPlus;
+    case hsql::kOpMinus:
+      return ExpressionType::ExpressionMinus;
+    case hsql::kOpAsterisk:
+      return ExpressionType::ExpressionAsterisk;
+    case hsql::kOpSlash:
+      return ExpressionType::ExpressionSlash;
+    case hsql::kOpPercentage:
+      return ExpressionType::ExpressionPercentage;
+    case hsql::kOpCaret:
+      return ExpressionType::ExpressionCaret;
+    case hsql::kOpBetween:
+      return ExpressionType::ExpressionBetween;
+    case hsql::kOpEquals:
+      return ExpressionType::ExpressionEquals;
+    case hsql::kOpNotEquals:
+      return ExpressionType::ExpressionNotEquals;
+    case hsql::kOpLess:
+      return ExpressionType::ExpressionLess;
+    case hsql::kOpLessEq:
+      return ExpressionType::ExpressionLessEq;
+    case hsql::kOpGreater:
+      return ExpressionType::ExpressionGreater;
+    case hsql::kOpGreaterEq:
+      return ExpressionType::ExpressionGreaterEq;
+    case hsql::kOpLike:
+      return ExpressionType::ExpressionLike;
+    case hsql::kOpNotLike:
+      return ExpressionType::ExpressionNotLike;
+    case hsql::kOpCase:
+      return ExpressionType::ExpressionCase;
     case hsql::kOpExists:
     case hsql::kOpIn:
     case hsql::kOpIsNull:
     case hsql::kOpOr:
-    default: throw std::runtime_error("Not support OperatorType");
+    default:
+      throw std::runtime_error("Not support OperatorType");
   }
 }
 

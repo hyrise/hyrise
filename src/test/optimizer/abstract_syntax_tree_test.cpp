@@ -1,5 +1,6 @@
 #include <memory>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 #include "../base_test.hpp"
@@ -16,22 +17,21 @@ class AbstractSyntaxTreeTest : public BaseTest {
  protected:
   void SetUp() override {}
 
-  std::shared_ptr<ExpressionNode> generate_simple_expression(std::string& column_name, ScanType operation, std::string& condition) {
+  std::shared_ptr<ExpressionNode> generate_simple_expression(std::string& column_name, ScanType operation,
+                                                             std::string& condition) {
     std::unordered_map<ScanType, ExpressionType> scan_type_to_expression_type = {
-      {ScanType::OpBetween, ExpressionType::ExpressionBetween},
-      {ScanType::OpEquals, ExpressionType::ExpressionEquals},
-      {ScanType::OpNotEquals, ExpressionType::ExpressionNotEquals},
-      {ScanType::OpLessThan, ExpressionType::ExpressionLess},
-      {ScanType::OpLessThanEquals, ExpressionType::ExpressionLessEq},
-      {ScanType::OpGreaterThan, ExpressionType::ExpressionGreater},
-      {ScanType::OpGreaterThanEquals, ExpressionType::ExpressionGreaterEq},
-      {ScanType::OpLike, ExpressionType::ExpressionLike}
-    };
+        {ScanType::OpBetween, ExpressionType::ExpressionBetween},
+        {ScanType::OpEquals, ExpressionType::ExpressionEquals},
+        {ScanType::OpNotEquals, ExpressionType::ExpressionNotEquals},
+        {ScanType::OpLessThan, ExpressionType::ExpressionLess},
+        {ScanType::OpLessThanEquals, ExpressionType::ExpressionLessEq},
+        {ScanType::OpGreaterThan, ExpressionType::ExpressionGreater},
+        {ScanType::OpGreaterThanEquals, ExpressionType::ExpressionGreaterEq},
+        {ScanType::OpLike, ExpressionType::ExpressionLike}};
 
     auto node = std::make_shared<ExpressionNode>(scan_type_to_expression_type[operation]);
     return node;
   }
-
 };
 
 TEST_F(AbstractSyntaxTreeTest, ParentTest) {
