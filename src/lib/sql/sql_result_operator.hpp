@@ -2,6 +2,7 @@
 
 #include <memory>
 #include <string>
+#include <vector>
 
 #include "operators/abstract_operator.hpp"
 #include "operators/abstract_read_only_operator.hpp"
@@ -29,7 +30,7 @@ class SQLResultOperator : public AbstractReadOnlyOperator {
   // Most common operators require the input to be given at construction.
   void set_input_operator(const std::shared_ptr<const AbstractOperator> input);
 
-  std::shared_ptr<AbstractOperator> recreate() const override;
+  std::shared_ptr<AbstractOperator> recreate(const std::vector<AllParameterVariant> &args) const override;
 };
 
 }  // namespace opossum

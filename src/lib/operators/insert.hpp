@@ -2,6 +2,7 @@
 
 #include <memory>
 #include <string>
+#include <vector>
 
 #include "abstract_read_write_operator.hpp"
 
@@ -26,7 +27,7 @@ class Insert : public AbstractReadWriteOperator {
 
   const std::string name() const override;
   uint8_t num_in_tables() const override;
-  std::shared_ptr<AbstractOperator> recreate() const override {
+  std::shared_ptr<AbstractOperator> recreate(const std::vector<AllParameterVariant>& args) const override {
     throw std::runtime_error("Operator " + this->name() + " does not implement recreation.");
   }
 

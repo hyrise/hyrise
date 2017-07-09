@@ -11,6 +11,7 @@
 #include "all_type_variant.hpp"
 #include "concurrency/commit_context.hpp"
 #include "concurrency/transaction_manager.hpp"
+#include "helper.hpp"
 #include "operators/commit_records.hpp"
 #include "operators/get_table.hpp"
 #include "operators/insert.hpp"
@@ -37,7 +38,7 @@ NewOrderResult AbstractNewOrderImpl::run_transaction(const NewOrderParams &param
      */
     auto get_customer_and_warehouse_tax_rate_tasks =
         get_get_customer_and_warehouse_tax_rate_tasks(params.w_id, params.d_id, params.c_id);
-    opossum::execute_tasks_with_context(get_customer_and_warehouse_tax_rate_tasks, t_context);
+    execute_tasks_with_context(get_customer_and_warehouse_tax_rate_tasks, t_context);
 
     const auto customer_and_warehouse_tax_rate_table =
         get_customer_and_warehouse_tax_rate_tasks.back()->get_operator()->get_output();
@@ -51,7 +52,7 @@ NewOrderResult AbstractNewOrderImpl::run_transaction(const NewOrderParams &param
      * GET DISTRICT
      */
     auto get_district_tasks = get_get_district_tasks(params.d_id, params.w_id);
-    opossum::execute_tasks_with_context(get_district_tasks, t_context);
+    execute_tasks_with_context(get_district_tasks, t_context);
     const auto districts_table = get_district_tasks.back()->get_operator()->get_output();
 
     result.d_next_o_id = districts_table->get_value<int32_t>(opossum::ColumnID(0), 0);
@@ -62,20 +63,20 @@ NewOrderResult AbstractNewOrderImpl::run_transaction(const NewOrderParams &param
      */
     auto increment_next_order_id_tasks =
         get_increment_next_order_id_tasks(params.d_id, params.w_id, result.d_next_o_id);
-    opossum::execute_tasks_with_context(increment_next_order_id_tasks, t_context);
+    execute_tasks_with_context(increment_next_order_id_tasks, t_context);
 
     /**
      * CREATE ORDER
      */
     auto create_order_tasks = get_create_order_tasks(result.d_next_o_id, params.d_id, params.w_id, params.c_id,
                                                      params.o_entry_d, 0, params.order_lines.size(), 1);
-    opossum::execute_tasks_with_context(create_order_tasks, t_context);
+    execute_tasks_with_context(create_order_tasks, t_context);
 
     /**
      * CREATE NEW ORDER
      */
     auto create_new_order_tasks = get_create_new_order_tasks(result.d_next_o_id, params.d_id, params.w_id);
-    opossum::execute_tasks_with_context(create_new_order_tasks, t_context);
+    execute_tasks_with_context(create_new_order_tasks, t_context);
 
     for (size_t ol_idx = 0; ol_idx < params.order_lines.size(); ol_idx++) {
       const auto &order_line_params = params.order_lines[ol_idx];
@@ -86,7 +87,7 @@ NewOrderResult AbstractNewOrderImpl::run_transaction(const NewOrderParams &param
        * GET ITEM INFO
        */
       auto get_item_info_tasks = get_get_item_info_tasks(order_line_params.i_id);
-      opossum::execute_tasks_with_context(get_item_info_tasks, t_context);
+      execute_tasks_with_context(get_item_info_tasks, t_context);
       const auto item_info_table = get_item_info_tasks.back()->get_operator()->get_output();
 
       order_line.i_price = item_info_table->get_value<float>(opossum::ColumnID(0), 0);
@@ -98,7 +99,7 @@ NewOrderResult AbstractNewOrderImpl::run_transaction(const NewOrderParams &param
        */
       auto get_stock_info_tasks =
           get_get_stock_info_tasks(order_line_params.i_id, order_line_params.w_id, params.d_id + 1);
-      opossum::execute_tasks_with_context(get_stock_info_tasks, t_context);
+      execute_tasks_with_context(get_stock_info_tasks, t_context);
       const auto stock_info_table = get_stock_info_tasks.back()->get_operator()->get_output();
 
       order_line.s_qty = stock_info_table->get_value<int32_t>(opossum::ColumnID(0), 0);
@@ -129,7 +130,7 @@ NewOrderResult AbstractNewOrderImpl::run_transaction(const NewOrderParams &param
        */
       auto update_stock_tasks =
           get_update_stock_tasks(order_line.s_qty, order_line_params.i_id, order_line_params.w_id);
-      opossum::execute_tasks_with_context(update_stock_tasks, t_context);
+      execute_tasks_with_context(update_stock_tasks, t_context);
 
       /**
        * CREATE ORDER LINE
@@ -138,7 +139,7 @@ NewOrderResult AbstractNewOrderImpl::run_transaction(const NewOrderParams &param
           get_create_order_line_tasks(result.d_next_o_id, params.d_id, params.w_id, ol_idx + 1, order_line_params.i_id,
                                       0,  // ol_supply_w_id - we only have one warehouse
                                       params.o_entry_d, order_line_params.qty, order_line.amount, order_line.s_dist_xx);
-      opossum::execute_tasks_with_context(create_order_line_tasks, t_context);
+      execute_tasks_with_context(create_order_line_tasks, t_context);
 
       /**
        * Add results

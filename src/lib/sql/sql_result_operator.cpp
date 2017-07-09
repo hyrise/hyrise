@@ -2,6 +2,7 @@
 
 #include <memory>
 #include <string>
+#include <vector>
 
 #include "sql_query_translator.hpp"
 
@@ -21,9 +22,9 @@ void SQLResultOperator::set_input_operator(const std::shared_ptr<const AbstractO
 
 std::shared_ptr<const Table> SQLResultOperator::on_execute() { return _input_left->get_output(); }
 
-std::shared_ptr<AbstractOperator> SQLResultOperator::recreate() const {
+std::shared_ptr<AbstractOperator> SQLResultOperator::recreate(const std::vector<AllParameterVariant> &args) const {
   auto op = std::make_shared<SQLResultOperator>();
-  op->set_input_operator(_input_left->recreate());
+  op->set_input_operator(_input_left->recreate(args));
   return op;
 }
 
