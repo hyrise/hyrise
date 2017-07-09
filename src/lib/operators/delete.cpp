@@ -16,7 +16,7 @@ Delete::Delete(const std::string& table_name, const std::shared_ptr<const Abstra
 std::shared_ptr<const Table> Delete::on_execute(std::shared_ptr<TransactionContext> context) {
   DebugAssert(_execution_input_valid(context), "Input to Delete isn't valid");
 
-  context->register_rw_operator(this);
+  context->register_rw_operator(shared_from_this());
 
   _table = StorageManager::get().get_table(_table_name);
   _transaction_id = context->transaction_id();
@@ -41,7 +41,9 @@ std::shared_ptr<const Table> Delete::on_execute(std::shared_ptr<TransactionConte
           expected, _transaction_id);
 
       // the row is already locked and the transaction needs to be rolled back
-      if (_execute_failed) return nullptr;
+      if (_execute_failed) {
+        return nullptr;
+      }
     }
   }
 
