@@ -24,7 +24,7 @@ class AbstractJoinOperator : public AbstractReadOnlyOperator {
  public:
   AbstractJoinOperator(const std::shared_ptr<const AbstractOperator> left,
                        const std::shared_ptr<const AbstractOperator> right,
-                       optional<std::pair<std::string, std::string>> column_names, const std::string &op,
+                       optional<std::pair<std::string, std::string>> column_names, const ScanType scan_type,
                        const JoinMode mode, const std::string &prefix_left, const std::string &prefix_right);
 
   virtual ~AbstractJoinOperator() = default;
@@ -39,7 +39,7 @@ class AbstractJoinOperator : public AbstractReadOnlyOperator {
   AbstractJoinOperator &operator=(AbstractJoinOperator &&) = default;
 
  protected:
-  const std::string _op;
+  const ScanType _scan_type;
   const JoinMode _mode;
   const std::string _prefix_left;
   const std::string _prefix_right;

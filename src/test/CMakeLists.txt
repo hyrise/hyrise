@@ -1,11 +1,16 @@
 set(
-    SOURCES
+    SHARED_SOURCES
     base_test.cpp
     base_test.hpp
-    concurrency/commit_context_test.cpp
-    concurrency/transaction_manager_test.cpp
     gtest_case_template.cpp
     gtest_main.cpp
+)
+
+set(
+    OPOSSUM_TEST_SOURCES
+    ${SHARED_SOURCES}
+    concurrency/commit_context_test.cpp
+    concurrency/transaction_manager_test.cpp
     lib/AllParameterVariant_test.cpp
     lib/all_type_variant_test.cpp
     network/operator_translator_test.cpp
@@ -40,12 +45,17 @@ set(
     operators/validate_test.cpp
     operators/validate_visibility_test.cpp
     optimizer/abstract_syntax_tree_test.cpp
+    optimizer/node_operator_translator_test.cpp
     optimizer/predicate_reordering_test.cpp
+    optimizer/table_statistics_test.cpp
     scheduler/scheduler_test.cpp
     sql/sql_basic_cache_test.cpp
     sql/sql_parse_tree_cache_test.cpp
     sql/sql_query_node_translator_test.cpp
+    sql/sql_prepare_execute_test.cpp
     sql/sql_query_operator_test.cpp
+    sql/sql_query_plan_test.cpp
+    sql/sql_query_plan_cache_test.cpp
     sql/sql_select_test.cpp
     storage/adaptive_radix_tree_index_test.cpp
     storage/chunk_test.cpp
@@ -66,25 +76,38 @@ set(
     utils/cuckoo_hashtable_test.cpp
 )
 
+set (
+    TPCC_TEST_SOURCES
+    ${SHARED_SOURCES}
+    tpc/tpcc_ref_test.cpp
+)
+
 # Both opossumTest and opossumAsan link against these
 set(
     LIBRARIES
     gtest
+    tpcc
 )
 
+include_directories(${CMAKE_CURRENT_SOURCE_DIR})
+
 # Configure opossumTest
-add_executable(opossumTest ${SOURCES})
+add_executable(opossumTest ${OPOSSUM_TEST_SOURCES})
 target_link_libraries(opossumTest opossum ${LIBRARIES})
 
 # Configure opossumCoverageApp
-add_executable(opossumCoverage ${SOURCES})
+add_executable(opossumCoverage ${OPOSSUM_TEST_SOURCES})
 target_link_libraries(opossumCoverage opossumCoverageLib ${LIBRARIES} --coverage)
 set_target_properties(opossumCoverage PROPERTIES COMPILE_FLAGS "-fprofile-arcs -ftest-coverage")
 
 # Configure opossumAsanApp
-add_executable(opossumAsan ${SOURCES})
+add_executable(opossumAsan ${OPOSSUM_TEST_SOURCES})
 target_link_libraries(opossumAsan opossumAsanLib ${LIBRARIES} -fsanitize=address)
 set_target_properties(opossumAsan PROPERTIES COMPILE_FLAGS "-fsanitize=address -fno-omit-frame-pointer")
+
+# Configure opossumTestTPCC
+add_executable(opossumTestTPCC ${TPCC_TEST_SOURCES})
+target_link_libraries(opossumTestTPCC opossum ${LIBRARIES})
 
 
 

@@ -25,25 +25,30 @@
 
 namespace opossum {
 
-// operator to filter a table by a single attribute
-// output is an table with only reference columns
-// to filter by multiple criteria, you can chain the operator
-
-// As with most operators, we do not guarantee a stable operation with regards to positions - i.e., your sorting order
-// might be disturbed
-
-// Because the BETWEEN operator needs 3 values, we didn't implemented the possibility to scan on 3 columns, as this
-// would increase the if-complexity in handle_column again.
-// That's why we only accept a constant value for the second between-parameter.
-
+/**
+ * operator to filter a table by a single attribute
+ * output is a table with only reference columns
+ * to filter by multiple criteria, you can chain the operator
+ *
+ * As with most operators, we do not guarantee a stable operation with regards to positions - i.e., your sorting order
+ * might be disturbed
+ *
+ * Because the BETWEEN operator needs 3 values, we didn't implemented the possibilty to scan on 3 columns, as this
+ * would increase the if-complexity in handle_column again.
+ * That's why we only accept a constant value for the second between-parameter.
+ *
+ * Note: TableScan does not support null values at the moment
+ */
 class TableScan : public AbstractReadOnlyOperator {
  public:
-  TableScan(const std::shared_ptr<AbstractOperator> in, const std::string &filter_column_name, const std::string &op,
+  TableScan(const std::shared_ptr<AbstractOperator> in, const std::string &filter_column_name, const ScanType scan_type,
             const AllParameterVariant value, const optional<AllTypeVariant> value2 = nullopt);
 
   const std::string name() const override;
   uint8_t num_in_tables() const override;
   uint8_t num_out_tables() const override;
+
+  std::shared_ptr<AbstractOperator> recreate(const std::vector<AllParameterVariant> &args) const override;
 
  protected:
   std::shared_ptr<const Table> on_execute() override;
@@ -52,7 +57,7 @@ class TableScan : public AbstractReadOnlyOperator {
   class TableScanImpl;
 
   const std::string _column_name;
-  const std::string _op;
+  const ScanType _scan_type;
   const AllParameterVariant _value;
   const optional<AllTypeVariant> _value2;
 

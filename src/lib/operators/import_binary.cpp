@@ -103,7 +103,7 @@ std::pair<std::shared_ptr<Table>, ChunkID> ImportBinary::_read_header(std::ifstr
 
   // Add columns to table
   for (ColumnID column_id{0}; column_id < column_count; ++column_id) {
-    table->add_column(column_names[column_id], data_types[column_id], false);
+    table->add_column_definition(column_names[column_id], data_types[column_id]);
   }
 
   return std::make_pair(table, chunk_count);
@@ -111,7 +111,7 @@ std::pair<std::shared_ptr<Table>, ChunkID> ImportBinary::_read_header(std::ifstr
 
 Chunk ImportBinary::_import_chunk(std::ifstream& file, std::shared_ptr<Table>& table) {
   const auto row_count = _read_value<ChunkOffset>(file);
-  Chunk chunk;
+  Chunk chunk{true};
 
   for (ColumnID column_id{0}; column_id < table->col_count(); ++column_id) {
     chunk.add_column(_import_column(file, row_count, table->column_type(column_id)));

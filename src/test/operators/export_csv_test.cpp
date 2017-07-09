@@ -59,7 +59,7 @@ class OperatorsExportCsvTest : public BaseTest {
 
   std::shared_ptr<Table> table;
   const std::string filename = "/tmp/export_test.csv";
-  const std::string meta_filename = filename + csv_meta_file_extension;
+  const std::string meta_filename = filename + CsvConfig{}.meta_file_extension;
 };
 
 TEST_F(OperatorsExportCsvTest, SingleChunkAndMetaInfo) {
@@ -136,7 +136,7 @@ TEST_F(OperatorsExportCsvTest, ReferenceColumn) {
 
   auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
   table_wrapper->execute();
-  auto scan = std::make_shared<TableScan>(table_wrapper, "a", "<", 5);
+  auto scan = std::make_shared<TableScan>(table_wrapper, "a", ScanType::OpLessThan, 5);
   scan->execute();
   auto ex = std::make_shared<opossum::ExportCsv>(scan, filename);
   ex->execute();

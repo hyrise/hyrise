@@ -15,20 +15,17 @@ namespace opossum {
 
 class TableScanNode : public AbstractNode {
  public:
-  TableScanNode(const std::string &column_name, const ScanType scan_type, const AllParameterVariant value,
-                const optional<AllTypeVariant> value2 = nullopt)
-      : _column_name(column_name), _scan_type(scan_type), _value(value), _value2(value2) {
-    _type = TableScanNodeType;
-  }
+  TableScanNode(const std::string& column_name, const ScanType& scan_type, const AllParameterVariant value,
+                const optional<AllTypeVariant> value2 = nullopt);
 
   const std::string description() const override;
 
-  const std::string &column_name() const { return _column_name; }
-  const ScanType scan_type() const { return _scan_type; }
-  const AllParameterVariant &value() const { return _value; }
-  const optional<AllTypeVariant> &value2() const { return _value2; }
+  const std::string& column_name() const;
+  const ScanType& scan_type() const;
+  const AllParameterVariant& value() const;
+  const optional<AllTypeVariant>& value2() const;
 
- protected:
+protected:
   std::shared_ptr<TableStatistics> create_statistics() const override;
 
  private:

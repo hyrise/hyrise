@@ -21,6 +21,8 @@ namespace opossum {
  * This operator reads a Opossum binary file and creates a table from that input.
  * If parameter tablename provided, the imported table is stored in the StorageManager. If a table with this name
  * already exists, it is returned and no import is performed.
+ *
+ * Note: ImportBinary does not support null values at the moment
  */
 class ImportBinary : public AbstractReadOnlyOperator {
  public:
@@ -47,6 +49,10 @@ class ImportBinary : public AbstractReadOnlyOperator {
 
   // This operator has one table as output.
   uint8_t num_out_tables() const final;
+
+  std::shared_ptr<AbstractOperator> recreate(const std::vector<AllParameterVariant>& args) const override {
+    throw std::runtime_error("Operator " + this->name() + " does not implement recreation.");
+  }
 
  private:
   /*

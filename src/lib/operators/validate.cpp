@@ -46,7 +46,7 @@ std::shared_ptr<const Table> Validate::on_execute(std::shared_ptr<TransactionCon
 
   // Save column structure.
   for (ColumnID column_id{0}; column_id < _in_table->col_count(); ++column_id) {
-    output->add_column(_in_table->column_name(column_id), _in_table->column_type(column_id), false);
+    output->add_column_definition(_in_table->column_name(column_id), _in_table->column_type(column_id));
   }
 
   const auto our_tid = transactionContext->transaction_id();

@@ -2,6 +2,7 @@
 
 #include <memory>
 #include <string>
+#include <vector>
 
 #include "abstract_read_write_operator.hpp"
 
@@ -15,6 +16,7 @@ class TransactionContext;
  * the values to insert in a separate table using the same column layout.
  *
  * Assumption: The input has been validated before.
+ * Note: Insert does not support null values at the moment
  */
 class Insert : public AbstractReadWriteOperator {
  public:
@@ -25,6 +27,9 @@ class Insert : public AbstractReadWriteOperator {
 
   const std::string name() const override;
   uint8_t num_in_tables() const override;
+  std::shared_ptr<AbstractOperator> recreate(const std::vector<AllParameterVariant>& args) const override {
+    throw std::runtime_error("Operator " + this->name() + " does not implement recreation.");
+  }
 
  protected:
   std::shared_ptr<const Table> on_execute(std::shared_ptr<TransactionContext> context) override;

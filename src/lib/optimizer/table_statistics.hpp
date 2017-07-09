@@ -24,10 +24,10 @@ class TableStatistics {
   virtual ~TableStatistics() = default;
 
   double row_count();
-  std::shared_ptr<AbstractColumnStatistics> get_column_statistics(const std::string &column_name);
-  virtual std::shared_ptr<TableStatistics> predicate_statistics(const std::string &column_name, const std::string &op,
-                                                                const AllParameterVariant value,
-                                                                const optional<AllTypeVariant> value2 = nullopt);
+  std::shared_ptr<AbstractColumnStatistics> get_column_statistics(const ColumnID column_id);
+  virtual std::shared_ptr<TableStatistics> predicate_statistics(const std::string &column_name, const ScanType scan_type,
+                                                        const AllParameterVariant value,
+                                                        const optional<AllTypeVariant> value2 = nullopt);
   friend std::ostream &operator<<(std::ostream &os, TableStatistics &obj) {
     os << "Table Stats " << obj._name << std::endl;
     os << " row count: " << obj._row_count;
@@ -41,7 +41,7 @@ class TableStatistics {
   const std::string _name;
   const std::weak_ptr<Table> _table;
   double _row_count;
-  std::map<std::string, std::shared_ptr<AbstractColumnStatistics>> _column_statistics;
+  std::map<ColumnID, std::shared_ptr<AbstractColumnStatistics>> _column_statistics;
 };
 
 }  // namespace opossum

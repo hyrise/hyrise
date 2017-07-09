@@ -59,6 +59,7 @@ set(
     concurrency/transaction_context.hpp
     concurrency/transaction_manager.cpp
     concurrency/transaction_manager.hpp
+    constant_mappings.hpp
     import_export/binary.hpp
     import_export/csv_converter.hpp
     import_export/csv.hpp
@@ -134,28 +135,29 @@ set(
     operators/update.hpp
     operators/validate.cpp
     operators/validate.hpp
+    optimizer/abstract_column_statistics.hpp
     optimizer/abstract_syntax_tree/abstract_node.cpp
     optimizer/abstract_syntax_tree/abstract_node.hpp
-    optimizer/abstract_syntax_tree/projection_node.cpp
+    optimizer/abstract_syntax_tree/node_operator_translator.hpp
+    optimizer/abstract_syntax_tree/node_operator_translator.cpp
     optimizer/abstract_syntax_tree/query_plan_helper.hpp
     optimizer/abstract_syntax_tree/projection_node.cpp
     optimizer/abstract_syntax_tree/projection_node.hpp
+    optimizer/abstract_syntax_tree/sort_node.cpp
+    optimizer/abstract_syntax_tree/sort_node.hpp
     optimizer/abstract_syntax_tree/table_node.cpp
     optimizer/abstract_syntax_tree/table_node.hpp
     optimizer/abstract_syntax_tree/table_scan_node.cpp
     optimizer/abstract_syntax_tree/table_scan_node.hpp
-    optimizer/abstract_column_statistics.hpp
+    optimizer/column_statistics.cpp
+    optimizer/column_statistics.hpp
     optimizer/strategies/abstract_rule.hpp
     optimizer/strategies/predicate_reordering_rule.cpp
     optimizer/strategies/predicate_reordering_rule.hpp
-    optimizer/column_statistics.cpp
-    optimizer/column_statistics.hpp
     optimizer/table_statistics.cpp
     optimizer/table_statistics.hpp
     resolve_type.hpp
     sql/lru_cache.hpp
-    sql/sql_parse_tree_cache.hpp
-    sql/sql_parse_tree_cache.cpp
     sql/sql_query_node_translator.hpp
     sql/sql_query_node_translator.cpp
     sql/sql_query_operator.hpp
@@ -239,6 +241,8 @@ set(
     uid_allocator.hpp
     utils/assert.hpp
     utils/cuckoo_hashtable.hpp
+    utils/helper.cpp
+    utils/helper.hpp
     utils/murmur_hash.cpp
     utils/murmur_hash.hpp
 )
@@ -251,8 +255,9 @@ set(
     grpc
     pthread
     z
-    tbb
     sqlparser
+
+    ${TBB_LIBRARY}
 )
 
 if(${NUMA_FOUND})

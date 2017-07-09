@@ -10,7 +10,7 @@
 #include "scheduler/job_task.hpp"
 #include "scheduler/node_queue_scheduler.hpp"
 #include "scheduler/topology.hpp"
-#include "sql/sql_parse_tree_cache.hpp"
+#include "sql/sql_query_cache.hpp"
 #include "sql/sql_query_operator.hpp"
 #include "storage/storage_manager.hpp"
 
@@ -41,7 +41,7 @@ class SQLParseTreeCacheTest : public BaseTest {
     auto task = std::make_shared<OperatorTask>(op);
     task->execute();
 
-    if (op->hit_parse_tree_cache()) {
+    if (op->parse_tree_cache_hit()) {
       parse_tree_cache_hits++;
     }
     return task;
@@ -57,7 +57,7 @@ class SQLParseTreeCacheTest : public BaseTest {
 };
 
 TEST_F(SQLParseTreeCacheTest, SQLParseTreeCacheTest) {
-  SQLParseTreeCache cache(2);
+  SQLQueryCache<std::shared_ptr<hsql::SQLParserResult>> cache(2);
   std::string query1 = "SELECT * FROM test;";
   std::string query2 = "SELECT * FROM test2;";
 
@@ -78,23 +78,8 @@ TEST_F(SQLParseTreeCacheTest, SQLParseTreeCacheTest) {
   EXPECT_EQ(cached->size(), 1u);
 }
 
-TEST_F(SQLParseTreeCacheTest, PrepareAndExecuteSimpleTest) {
-  const std::string prep_query = "PREPARE query FROM 'SELECT * FROM table_a';";
-  const std::string exec_query = "EXECUTE query;";
-
-  auto prep_task = execute_query_task(prep_query);
-
-  auto exec_task = execute_query_task(exec_query);
-  const std::shared_ptr<SQLQueryOperator>& exec_op =
-      (const std::shared_ptr<SQLQueryOperator>&)exec_task->get_operator();
-  auto exec_result = exec_op->get_result_task();
-
-  auto expected_result = load_table("src/test/tables/int_float.tbl", 2);
-  EXPECT_TABLE_EQ(exec_result->get_operator()->get_output(), expected_result);
-}
-
 TEST_F(SQLParseTreeCacheTest, QueryOperatorParseTreeCache) {
-  SQLParseTreeCache& cache = SQLQueryOperator::get_parse_tree_cache();
+  SQLQueryCache<std::shared_ptr<hsql::SQLParserResult>>& cache = SQLQueryOperator::get_parse_tree_cache();
   cache.clear_and_resize(2);
 
   const std::string q1 = "SELECT * FROM table_a;";

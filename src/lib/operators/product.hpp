@@ -9,10 +9,13 @@
 
 namespace opossum {
 
-// Operator to calculate the cartesian product (unconditional join)
-// This is for demonstration purposes and for supporting the full relational algebra.
-// To avoid ambiguity for instance when doing a self-join, the column names can be prefixed
-
+/**
+ * Operator to calculate the cartesian product (unconditional join)
+ * This is for demonstration purposes and for supporting the full relational algebra.
+ * To avoid ambiguity for instance when doing a self-join, the column names can be prefixed
+ *
+ * Note: Product does not support null values at the moment
+ */
 class Product : public AbstractReadOnlyOperator {
  public:
   Product(const std::shared_ptr<const AbstractOperator> left, const std::shared_ptr<const AbstractOperator> right,
@@ -21,6 +24,9 @@ class Product : public AbstractReadOnlyOperator {
   const std::string name() const override;
   uint8_t num_in_tables() const override;
   uint8_t num_out_tables() const override;
+  std::shared_ptr<AbstractOperator> recreate(const std::vector<AllParameterVariant> &args) const override {
+    throw std::runtime_error("Operator " + this->name() + " does not implement recreation.");
+  }
 
  protected:
   void add_product_of_two_chunks(std::shared_ptr<Table> output, ChunkID chunk_id_left, ChunkID chunk_id_right);

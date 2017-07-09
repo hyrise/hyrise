@@ -12,7 +12,11 @@
 
 namespace opossum {
 
-// operator to select a subset of the set of all columns found in the table
+/**
+ * Operator to select a subset of the set of all columns found in the table
+ *
+ * Note: Projection does not support null values at the moment
+ */
 class Projection : public AbstractReadOnlyOperator {
  public:
   // Defines one output column
@@ -28,6 +32,8 @@ class Projection : public AbstractReadOnlyOperator {
   const std::string name() const override;
   uint8_t num_in_tables() const override;
   uint8_t num_out_tables() const override;
+
+  std::shared_ptr<AbstractOperator> recreate(const std::vector<AllParameterVariant>& args) const override;
 
  protected:
   ProjectionDefinitions _projection_definitions;

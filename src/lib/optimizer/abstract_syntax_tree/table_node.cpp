@@ -8,6 +8,8 @@
 
 namespace opossum {
 
+TableNode::TableNode(const std::string table_name) : AbstractNode(NodeType::Table), _table_name(table_name) {}
+
 const std::string TableNode::description() const { return "Table: " + _table_name; }
 
 const std::vector<std::string> TableNode::output_columns() {
@@ -23,5 +25,7 @@ const std::vector<std::string> TableNode::output_columns() {
 std::shared_ptr<TableStatistics> TableNode::create_statistics() const {
   return StorageManager::get().get_table(_table_name)->get_table_statistics();
 }
+
+const std::string& TableNode::table_name() const { return _table_name; }
 
 }  // namespace opossum

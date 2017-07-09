@@ -1,7 +1,6 @@
 
 #include <array>
 #include <memory>
-#include <utility>
 #include <vector>
 
 #include "../base_test.hpp"
@@ -60,18 +59,6 @@ TEST_F(ChunkCompressionTaskTest, DictionarySize) {
       EXPECT_EQ(dict_column->unique_values_count(), dictionary_sizes[chunk_id][column_id]);
     }
   }
-}
-
-TEST_F(ChunkCompressionTaskTest, CompressWithoutMVCC) {
-  auto table = std::make_shared<Table>(0);
-  Chunk chunk{false};
-
-  table->add_chunk(std::move(chunk));
-
-  StorageManager::get().add_table("table_nomvcc", table);
-
-  auto compression = std::make_unique<ChunkCompressionTask>("table_nomvcc", ChunkID{0}, false);
-  compression->execute();
 }
 
 }  // namespace opossum

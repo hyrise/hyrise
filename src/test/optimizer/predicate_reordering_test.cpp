@@ -19,7 +19,7 @@ class TableStatisticsMock : public TableStatistics {
 
   explicit TableStatisticsMock(double row_count) { _row_count = row_count; }
 
-  std::shared_ptr<TableStatistics> predicate_statistics(const std::string &column_name, const std::string &op,
+  std::shared_ptr<TableStatistics> predicate_statistics(const std::string &column_name, const ScanType scan_type,
                                                         const AllParameterVariant value,
                                                         const optional<AllTypeVariant> value2) override {
     if (column_name == "c1") {
@@ -59,11 +59,8 @@ TEST_F(PredicateReorderingTest, SimpleReorderingTest) {
 
   auto reordered = rule.apply_rule(ts_n_1);
 
-  //  std::cout << " Printing result " << std::endl;
-  //  reordered->print();
-
-  ASSERT_EQ(reordered, ts_n_1);
-  ASSERT_EQ(reordered->left(), ts_n_0);
+  ASSERT_EQ(reordered, ts_n_0);
+  ASSERT_EQ(reordered->left(), ts_n_1);
   ASSERT_EQ(reordered->left()->left(), t_n);
 }
 

@@ -22,15 +22,14 @@ target_link_libraries(
 )
 
 add_executable(
-        opossumBenchmarkTPCC
+    opossumBenchmarkTPCC
 
-        tpcc/delivery_benchmark.cpp
-        tpcc/order_status_benchmark.cpp
-        tpcc/new_order_benchmark.cpp
-        tpcc/payment_benchmark.cpp
-        tpcc/tpcc_base_fixture.cpp
-        benchmark_main.cpp
-        benchmark_template.cpp
+    benchmark_main.cpp
+    benchmark_template.cpp
+    tpcc/delivery_benchmark.cpp
+    #tpcc/order_status_benchmark.cpp
+    #tpcc/new_order_benchmark.cpp
+    #tpcc/tpcc_base_fixture.cpp
 )
 
 target_link_libraries(

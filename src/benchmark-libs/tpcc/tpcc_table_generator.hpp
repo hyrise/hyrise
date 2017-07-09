@@ -46,16 +46,7 @@ class TableGenerator {
 
   const size_t _chunk_size = 10000;
   const time_t _current_date = std::time(0);
-
-  const size_t _item_size = 100000;
   const size_t _warehouse_size = 1;
-  const size_t _stock_size = 100000;   // per warehouse
-  const size_t _district_size = 10;    // per warehouse
-  const size_t _customer_size = 3000;  // per district
-  const size_t _history_size = 1;      // per customer
-  const size_t _order_size = 3000;     // per district
-  const size_t _new_order_size = 900;  // per district
-  const float _customer_ytd = 10.f;
 
  protected:
   template <typename T>
@@ -63,17 +54,14 @@ class TableGenerator {
                                                        order_line_counts_type order_line_counts,
                                                        const std::function<T(std::vector<size_t>)> &generator_function);
 
-  //  template <typename T>
-  //  std::shared_ptr<opossum::ValueColumn<T>> add_column(size_t cardinality,
-  //                                                      const std::function<T(size_t)> &generator_function);
+  template <typename T>
+  void add_column(std::shared_ptr<opossum::Table> table, std::string name,
+                  std::shared_ptr<std::vector<size_t>> cardinalities,
+                  const std::function<T(std::vector<size_t>)> &generator_function);
 
   template <typename T>
-  void add_column(std::shared_ptr<std::vector<size_t>> cardinalities, std::shared_ptr<opossum::Table> table,
-                  std::string name, const std::function<T(std::vector<size_t>)> &generator_function);
-
-  template <typename T>
-  void add_column(std::shared_ptr<std::vector<size_t>> cardinalities, order_line_counts_type order_line_counts,
-                  std::shared_ptr<opossum::Table> table, std::string name,
+  void add_column(std::shared_ptr<opossum::Table> table, std::string name,
+                  std::shared_ptr<std::vector<size_t>> cardinalities, order_line_counts_type order_line_counts,
                   const std::function<T(std::vector<size_t>)> &generator_function);
 
   RandomGenerator _random_gen;

@@ -8,6 +8,7 @@
 #include "gtest/gtest.h"
 
 #include "optimizer/abstract_syntax_tree/projection_node.hpp"
+#include "optimizer/abstract_syntax_tree/sort_node.hpp"
 #include "optimizer/abstract_syntax_tree/table_node.hpp"
 #include "optimizer/abstract_syntax_tree/table_scan_node.hpp"
 #include "sql/sql_query_node_translator.hpp"
@@ -62,21 +63,41 @@ TEST_F(SQLQueryNodeTranslatorTest, SelectWithAndCondition) {
   const auto query = "SELECT * FROM table_a WHERE a >= 1234 AND b < 457.9";
   auto result_node = compile_query(query);
 
-  EXPECT_TRUE(std::dynamic_pointer_cast<ProjectionNode>(result_node));
+  EXPECT_EQ(result_node->type(), NodeType::Projection);
   EXPECT_FALSE(result_node->right());
 
   auto ts_node_1 = result_node->left();
-  EXPECT_TRUE(std::dynamic_pointer_cast<TableScanNode>(ts_node_1));
+  EXPECT_EQ(ts_node_1->type(), NodeType::TableScan);
   EXPECT_FALSE(ts_node_1->right());
 
   auto ts_node_2 = ts_node_1->left();
-  EXPECT_TRUE(std::dynamic_pointer_cast<TableScanNode>(ts_node_2));
+  EXPECT_EQ(ts_node_2->type(), NodeType::TableScan);
   EXPECT_FALSE(ts_node_2->right());
 
   auto t_node = ts_node_2->left();
-  EXPECT_TRUE(std::dynamic_pointer_cast<TableNode>(t_node));
+  EXPECT_EQ(t_node->type(), NodeType::Table);
   EXPECT_FALSE(t_node->left());
   EXPECT_FALSE(t_node->right());
+}
+
+TEST_F(SQLQueryNodeTranslatorTest, SelectMultipleOrderBy) {
+  const auto query = "SELECT * FROM table_a ORDER BY a DESC, b ASC;";
+  auto result_node = compile_query(query);
+
+  // The first order by description is executed last (see sort operator for details).
+  auto sort_node_1 = std::dynamic_pointer_cast<SortNode>(result_node);
+  EXPECT_EQ(sort_node_1->type(), NodeType::Sort);
+  EXPECT_EQ(sort_node_1->column_name(), "a");
+  EXPECT_FALSE(sort_node_1->asc());
+  EXPECT_FALSE(sort_node_1->right());
+
+  auto sort_node_2 = std::dynamic_pointer_cast<SortNode>(sort_node_1->left());
+  EXPECT_EQ(sort_node_2->type(), NodeType::Sort);
+  EXPECT_EQ(sort_node_2->column_name(), "b");
+  EXPECT_TRUE(sort_node_2->asc());
+  EXPECT_FALSE(sort_node_2->right());
+  // This node has an input node, but we don't care for it in this test.
+  EXPECT_TRUE(sort_node_2->left());
 }
 
 }  // namespace opossum

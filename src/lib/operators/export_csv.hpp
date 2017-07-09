@@ -2,6 +2,7 @@
 
 #include <memory>
 #include <string>
+#include <vector>
 
 #include "abstract_read_only_operator.hpp"
 #include "import_export/csv_writer.hpp"
@@ -19,6 +20,8 @@ class ReferenceColumn;
  * Additionally to the main csv file, which contains the contents of the table,
  * a meta file is generated. This meta file contains further information,
  * such as the types of the columns in the table.
+ *
+ * Note: ExportCsv does not support null values at the moment
  */
 class ExportCsv : public AbstractReadOnlyOperator {
  public:
@@ -93,6 +96,10 @@ class ExportCsv : public AbstractReadOnlyOperator {
    * This operator has one table as output.
    */
   uint8_t num_out_tables() const override;
+
+  std::shared_ptr<AbstractOperator> recreate(const std::vector<AllParameterVariant>& args) const override {
+    throw std::runtime_error("Operator " + this->name() + " does not implement recreation.");
+  }
 
  private:
   // Name of the output file

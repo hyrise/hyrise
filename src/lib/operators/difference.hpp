@@ -2,12 +2,16 @@
 
 #include <memory>
 #include <string>
+#include <vector>
 
 #include "abstract_read_only_operator.hpp"
 #include "types.hpp"
 
 namespace opossum {
 
+/**
+ * Note: Difference does not support null values at the moment
+ */
 class Difference : public AbstractReadOnlyOperator {
  public:
   Difference(const std::shared_ptr<const AbstractOperator> left_in,
@@ -16,6 +20,10 @@ class Difference : public AbstractReadOnlyOperator {
   const std::string name() const override;
   uint8_t num_in_tables() const override;
   uint8_t num_out_tables() const override;
+
+  std::shared_ptr<AbstractOperator> recreate(const std::vector<AllParameterVariant> &args) const override {
+    throw std::runtime_error("Operator " + this->name() + " does not implement recreation.");
+  }
 
  protected:
   void initialize_chunk(const size_t chunk_id);

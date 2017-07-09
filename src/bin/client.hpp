@@ -26,7 +26,7 @@ class OpossumClient {
   explicit OpossumClient(std::shared_ptr<Channel> channel);
 
   // Assembles the client's payload, sends it and presents the response back from the server.
-  void query(std::string& table_name, std::string& column_name, std::string& filter_op, std::string& filter);
+  void query(std::string& table_name, std::string& column_name, proto::ScanType scan_type, std::string& filter);
 
  protected:
   void print_response_table(proto::Response& response) const;

@@ -19,18 +19,23 @@
 
 namespace opossum {
 
-// operator to sort a table by a single column
-// Multi-column sort is not supported yet. For now, you will have to sort by the secondary criterion, then by the first
-
-// The parameter chunk_size sets the chunk size of the output table, wich will allways be materialized
+/**
+ * Operator to sort a table by a single column. This implements a stable sort, i.e., rows that share the same value will
+ * maintain their relative order.
+ * Multi-column sort is not supported yet. For now, you will have to sort by the secondary criterion, then by the first
+ *
+ * Note: Sort does not support null values at the moment
+ */
 class Sort : public AbstractReadOnlyOperator {
  public:
+  // The parameter chunk_size sets the chunk size of the output table, which will always be materialized
   Sort(const std::shared_ptr<const AbstractOperator> in, const std::string &sort_column_name,
        const bool ascending = true, const size_t output_chunk_size = 0);
 
   const std::string name() const override;
   uint8_t num_in_tables() const override;
   uint8_t num_out_tables() const override;
+  std::shared_ptr<AbstractOperator> recreate(const std::vector<AllParameterVariant> &args) const override;
 
  protected:
   std::shared_ptr<const Table> on_execute() override;

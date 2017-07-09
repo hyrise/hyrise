@@ -11,27 +11,27 @@
 
 namespace opossum {
 
-const std::weak_ptr<AbstractNode> &AbstractNode::parent() const { return _parent; }
+AbstractNode::AbstractNode(NodeType node_type) : _type(node_type) {}
+
+const std::weak_ptr<AbstractNode> AbstractNode::parent() const { return _parent; }
 
 void AbstractNode::clear_parent() { _parent = {}; }
 
-const std::shared_ptr<AbstractNode> &AbstractNode::left() const { return _left; }
+const std::shared_ptr<AbstractNode> AbstractNode::left() const { return _left; }
 
-void AbstractNode::set_left(const std::shared_ptr<AbstractNode> left) {
+void AbstractNode::set_left(const std::shared_ptr<AbstractNode> &left) {
   _left = left;
   if (left) left->_parent = shared_from_this();
 }
 
-const std::shared_ptr<AbstractNode> &AbstractNode::right() const { return _right; }
+const std::shared_ptr<AbstractNode> AbstractNode::right() const { return _right; }
 
-void AbstractNode::set_right(const std::shared_ptr<AbstractNode> right) {
+void AbstractNode::set_right(const std::shared_ptr<AbstractNode> &right) {
   _right = right;
   if (right) right->_parent = shared_from_this();
 }
 
 const NodeType AbstractNode::type() const { return _type; }
-
-void AbstractNode::set_type(const NodeType type) { _type = type; }
 
 const std::shared_ptr<TableStatistics> AbstractNode::statistics() const { return _statistics; }
 void AbstractNode::set_statistics(const std::shared_ptr<TableStatistics> statistics) { _statistics = statistics; }

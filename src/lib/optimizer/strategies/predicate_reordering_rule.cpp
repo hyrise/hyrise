@@ -10,12 +10,12 @@
 namespace opossum {
 
 std::shared_ptr<AbstractNode> PredicateReorderingRule::apply_rule(std::shared_ptr<AbstractNode> node) {
-  if (node->type() == NodeType::TableScanNodeType) {
+  if (node->type() == NodeType::TableScan) {
     std::vector<std::shared_ptr<TableScanNode>> table_scan_nodes;
 
     auto current_node = node;
 
-    while (current_node->type() == NodeType::TableScanNodeType) {
+    while (current_node->type() == NodeType::TableScan) {
       table_scan_nodes.emplace_back(std::dynamic_pointer_cast<TableScanNode>(current_node));
       current_node = current_node->left();
     }

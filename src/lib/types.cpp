@@ -6,6 +6,9 @@
 
 namespace opossum {
 
+/**
+ * Used for Debug Printing
+ */
 std::string scan_type_to_string(ScanType scan_type) {
   switch (scan_type) {
     case ScanType::OpEquals:
@@ -24,11 +27,7 @@ std::string scan_type_to_string(ScanType scan_type) {
       return "BETWEEN";
     case ScanType::OpLike:
       return "LIKE";
-    default:  // Covers OpUnknown
-      break;
   }
-  Fail("Unknown ScanType " + std::to_string(static_cast<std::underlying_type<ScanType>::type>(scan_type)));
-  return "";
 }
 
 ScanType scan_type_from_string(const std::string& scan_str) {
@@ -41,6 +40,7 @@ ScanType scan_type_from_string(const std::string& scan_str) {
   if (scan_str == "BETWEEN") return ScanType::OpBetween;
   if (scan_str == "LIKE") return ScanType::OpLike;
   Fail("Unknown Scan '" + scan_str + "'");
-  return ScanType::OpUnknown;
+  // compiler expects return even after Fail
+  return {};
 }
 }  // namespace opossum

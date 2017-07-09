@@ -50,6 +50,9 @@ The key type that is used for the aggregation map.
 */
 using AggregateKey = std::vector<AllTypeVariant>;
 
+/**
+ * Note: Aggregate does not support null values at the moment
+ */
 class Aggregate : public AbstractReadOnlyOperator {
  public:
   Aggregate(const std::shared_ptr<AbstractOperator> in,
@@ -59,6 +62,7 @@ class Aggregate : public AbstractReadOnlyOperator {
   const std::string name() const override;
   uint8_t num_in_tables() const override;
   uint8_t num_out_tables() const override;
+  std::shared_ptr<AbstractOperator> recreate(const std::vector<AllParameterVariant> &args) const override;
 
   // write the aggregated output for a given aggregate column
   template <typename ColumnType, AggregateFunction function>

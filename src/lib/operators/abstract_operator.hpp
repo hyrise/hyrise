@@ -4,6 +4,7 @@
 #include <string>
 #include <vector>
 
+#include "all_parameter_variant.hpp"
 #include "common.hpp"
 #include "storage/table.hpp"
 
@@ -64,7 +65,17 @@ class AbstractOperator {
   virtual uint8_t num_out_tables() const = 0;
 
   std::shared_ptr<TransactionContext> transaction_context() const;
-  void set_transaction_context(std::shared_ptr<TransactionContext> transaction_context);
+  void set_transaction_context(std::weak_ptr<TransactionContext> transaction_context);
+
+  // Returns a new instance of the same operator with the same configuration.
+  // The given arguments are used to replace the ValuePlaceholder objects within the new operator, if applicable.
+  // Recursively recreates the input operators and passes the argument list along.
+  // An operator needs to implement this method in order to be cacheable.
+  virtual std::shared_ptr<AbstractOperator> recreate(const std::vector<AllParameterVariant> &args) const = 0;
+
+  // Get the input operators.
+  std::shared_ptr<const AbstractOperator> input_left() const;
+  std::shared_ptr<const AbstractOperator> input_right() const;
 
   // Return input operators.
   // Note: these methods cast away const for the return shared_ptr of AbstractOperator.
@@ -87,7 +98,7 @@ class AbstractOperator {
   // Is nullptr until the operator is executed
   std::shared_ptr<const Table> _output;
 
-  std::shared_ptr<TransactionContext> _transaction_context;
+  std::weak_ptr<TransactionContext> _transaction_context;
 };
 
 }  // namespace opossum

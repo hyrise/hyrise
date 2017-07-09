@@ -3,15 +3,17 @@
 namespace opossum {
 
 /*
- * Predefined characters used for the csv file.
+ * Predefined characters used for the csv file
  */
 
-constexpr char csv_delimiter = '\n';
-constexpr char csv_separator = ',';
-constexpr char csv_quote = '"';
-constexpr char csv_escape = '"';
-constexpr char csv_delimiter_escape = '\\';
+struct CsvConfig {
+  char delimiter = '\n';
+  char separator = ',';
+  char quote = '"';
+  char escape = '"';
+  char delimiter_escape = '\\';
 
-constexpr auto csv_meta_file_extension = ".meta";
+  const char *meta_file_extension = ".meta";
+};
 
 }  // namespace opossum

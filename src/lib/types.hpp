@@ -39,10 +39,12 @@ struct RowID {
   bool operator<(const RowID &rhs) const {
     return std::tie(chunk_id, chunk_offset) < std::tie(rhs.chunk_id, rhs.chunk_offset);
   }
-};
 
-// used to represent NULL values
-constexpr ChunkOffset INVALID_CHUNK_OFFSET = std::numeric_limits<ChunkOffset>::max();
+  // Useful when comparing a row ID to NULL_ROW_ID
+  bool operator==(const RowID &rhs) const {
+    return std::tie(chunk_id, chunk_offset) == std::tie(rhs.chunk_id, rhs.chunk_offset);
+  }
+};
 
 STRONG_TYPEDEF(uint16_t, ColumnID);
 STRONG_TYPEDEF(uint32_t, ValueID);  // Cannot be larger than ChunkOffset
@@ -79,15 +81,34 @@ constexpr WorkerID INVALID_WORKER_ID{std::numeric_limits<WorkerID>::max()};
 
 constexpr NodeID CURRENT_NODE_ID{std::numeric_limits<NodeID::base_type>::max() - 1};
 
+// Used to represent NULL values
+constexpr ChunkOffset INVALID_CHUNK_OFFSET{std::numeric_limits<ChunkOffset>::max()};
+
+// ... in ReferenceColumns
+const RowID NULL_ROW_ID = RowID{ChunkID{0u}, INVALID_CHUNK_OFFSET};  // TODO(anyone): Couldn’t use constexpr here
+
+// ... in DictionaryColumns
+constexpr ValueID NULL_VALUE_ID{std::numeric_limits<ValueID::base_type>::max()};
+
 // The Scheduler currently supports just these 2 priorities, subject to change.
 enum class SchedulePriority {
   Normal = 1,  // Schedule task at the end of the queue
   High = 0     // Schedule task at the beginning of the queue
 };
 
-/**
- * Used by TableScans, Joins, etc. and the respective Optimizer entities
- */
+// Part of AllParameterVariant to reference parameters that will be replaced later.
+// When stored in an operator, the operator's recreate method can contain functionality
+// that will replace a ValuePlaceholder with an explicit value from a given list of arguments
+class ValuePlaceholder {
+ public:
+  explicit ValuePlaceholder(uint16_t index) : _index(index) {}
+
+  uint16_t index() const { return _index; }
+
+ private:
+  uint16_t _index;
+};
+
 enum class ScanType {
   OpEquals,
   OpNotEquals,
@@ -96,8 +117,7 @@ enum class ScanType {
   OpGreaterThan,
   OpGreaterThanEquals,
   OpBetween,
-  OpLike,
-  OpUnknown
+  OpLike
 };
 
 std::string scan_type_to_string(ScanType scan_type);
