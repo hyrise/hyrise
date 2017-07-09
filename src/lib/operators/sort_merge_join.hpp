@@ -68,11 +68,10 @@ class SortMergeJoin : public AbstractJoinOperator {
     };
 
     struct SortContext : ColumnVisitableContext {
-      SortContext(ChunkID id, std::shared_ptr<std::vector<SortedChunk>> output_chunks) : chunk_id(id),
-        sort_output_chunks(output_chunks) {}
+      SortContext(ChunkID id, std::vector<std::pair<T, RowID>>& output) : chunk_id(id), sort_output(output) {}
 
       ChunkID chunk_id;
-      std::shared_ptr<std::vector<SortedChunk>> sort_output_chunks;
+      std::vector<std::pair<T, RowID>>& sort_output;
     };
 
    protected:

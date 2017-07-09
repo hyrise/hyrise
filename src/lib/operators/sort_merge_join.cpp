@@ -128,7 +128,7 @@ std::shared_ptr<std::vector<typename SortMergeJoin::SortMergeJoinImpl<T>::Sorted
         jobs.push_back(std::make_shared<JobTask>([this, sorted_chunks, chunk_ids, input, column_name] {
           for (auto chunk_id : chunk_ids) {
             auto column = input->get_chunk(chunk_id).get_column(input->column_id_by_name(column_name));
-            auto context = std::make_shared<SortContext>(chunk_id, sorted_chunks);
+            auto context = std::make_shared<SortContext>(chunk_id, sorted_chunks->at(chunk_id).values);
             column->visit(*this, context);
           }
         }));
@@ -226,17 +226,17 @@ void SortMergeJoin::SortMergeJoinImpl<T>::handle_value_column(BaseColumn& column
                                                               std::shared_ptr<ColumnVisitableContext> context) {
   auto& value_column = dynamic_cast<ValueColumn<T>&>(column);
   auto sort_context = std::static_pointer_cast<SortContext>(context);
-  auto& sorted_chunk = sort_context->sort_output_chunks->at(sort_context->chunk_id).values;
-  DebugAssert(column.size() == sorted_chunk.size(), "An input chunk has a different size than a sorted chunk!");
+  auto& output = sort_context->sort_output;
+  DebugAssert(column.size() == output.size(), "An input chunk has a different size than a sorted chunk!");
 
   // Copy over every entry
   for (ChunkOffset chunk_offset{0}; chunk_offset < value_column.values().size(); chunk_offset++) {
     RowID row_id{sort_context->chunk_id, chunk_offset};
-    sorted_chunk[chunk_offset] = std::pair<T, RowID>(value_column.values()[chunk_offset], row_id);
+    output[chunk_offset] = std::pair<T, RowID>(value_column.values()[chunk_offset], row_id);
   }
 
   // Sort the entries
-  std::sort(sorted_chunk.begin(), sorted_chunk.end(),
+  std::sort(output.begin(), output.end(),
             [](auto& value_left, auto& value_right) { return value_left.first < value_right.first; });
 }
 
@@ -245,9 +245,8 @@ void SortMergeJoin::SortMergeJoinImpl<T>::handle_dictionary_column(BaseColumn& c
                                                                    std::shared_ptr<ColumnVisitableContext> context) {
   auto& dictionary_column = dynamic_cast<DictionaryColumn<T>&>(column);
   auto sort_context = std::static_pointer_cast<SortContext>(context);
-  auto& sorted_chunk = sort_context->sort_output_chunks->at(sort_context->chunk_id).values;
-  DebugAssert(column.size() == sorted_chunk.size(), "An input chunk has a different size than a sorted chunk!");
-
+  auto& output = sort_context->sort_output;
+  DebugAssert(column.size() == output.size(), "An input chunk has a different size than a sorted chunk!");
 
   auto value_ids = dictionary_column.attribute_vector();
   auto dict = dictionary_column.dictionary();
@@ -263,12 +262,15 @@ void SortMergeJoin::SortMergeJoinImpl<T>::handle_dictionary_column(BaseColumn& c
   ChunkOffset chunk_offset{0};
   for (ValueID value_id{0}; value_id < dict->size(); value_id++) {
     for (auto& row_id : value_count[value_id]) {
-      sorted_chunk[chunk_offset] = std::pair<T, RowID>(dict->at(value_id), row_id);
+      output[chunk_offset] = std::pair<T, RowID>(dict->at(value_id), row_id);
       chunk_offset++;
     }
   }
 }
 
+/**
+* Sorts the contents of a reference column into a sorted_chunk
+**/
 template <typename T>
 void SortMergeJoin::SortMergeJoinImpl<T>::handle_reference_column(ReferenceColumn& ref_column,
                                                                   std::shared_ptr<ColumnVisitableContext> context) {
@@ -276,8 +278,8 @@ void SortMergeJoin::SortMergeJoinImpl<T>::handle_reference_column(ReferenceColum
   auto referenced_column_id = ref_column.referenced_column_id();
   auto sort_context = std::static_pointer_cast<SortContext>(context);
   auto pos_list = ref_column.pos_list();
-  auto& sorted_chunk = sort_context->sort_output_chunks->at(sort_context->chunk_id).values;
-  DebugAssert(ref_column.size() == sorted_chunk.size(), "An input chunk has a different size than a sorted chunk!");
+  auto& output = sort_context->sort_output;
+  DebugAssert(ref_column.size() == output.size(), "An input chunk has a different size than a sorted chunk!");
 
 
   // Retrieve the columns from the referenced table so they only have to be casted once
@@ -306,12 +308,12 @@ void SortMergeJoin::SortMergeJoinImpl<T>::handle_reference_column(ReferenceColum
           "SortMergeJoinImpl::handle_reference_column: Referenced column is neither value nor dictionary column!");
     }
 
-    sorted_chunk[chunk_offset] = (std::pair<T, RowID>(value, RowID{sort_context->chunk_id, chunk_offset}));
+    output[chunk_offset] = (std::pair<T, RowID>(value, RowID{sort_context->chunk_id, chunk_offset}));
   }
 
   // Sort the values
-  std::sort(sorted_chunk.begin(), sorted_chunk.end(),
-            [](auto& value_left, auto& value_right) { return value_left.first < value_right.first; });
+  std::sort(output.begin(), output.end(),
+                [](auto& value_left, auto& value_right) { return value_left.first < value_right.first; });
 }
 
 /*
