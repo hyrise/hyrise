@@ -11,11 +11,9 @@
 namespace opossum {
 
 class AbstractColumnStatistics {
- protected:
-  virtual std::ostream &to_stream(std::ostream &os) = 0;
-
  public:
-  friend std::ostream &operator<<(std::ostream &os, AbstractColumnStatistics &obj) { return obj.to_stream(os); }
+  AbstractColumnStatistics() = default;
+  virtual ~AbstractColumnStatistics() = default;
 
   virtual std::tuple<double, std::shared_ptr<AbstractColumnStatistics>> predicate_selectivity(
       const ScanType scan_type, const AllTypeVariant value, const optional<AllTypeVariant> value2) = 0;
@@ -28,9 +26,10 @@ class AbstractColumnStatistics {
   virtual std::tuple<double, std::shared_ptr<AbstractColumnStatistics>> predicate_selectivity(
       const ScanType scan_type, const ValuePlaceholder value, const optional<AllTypeVariant> value2) = 0;
 
-  virtual ~AbstractColumnStatistics() = default;
+  friend std::ostream &operator<<(std::ostream &os, AbstractColumnStatistics &obj) { return obj.to_stream(os); }
 
-  AbstractColumnStatistics() = default;
+ protected:
+  virtual std::ostream &to_stream(std::ostream &os) = 0;
 };
 
 }  // namespace opossum

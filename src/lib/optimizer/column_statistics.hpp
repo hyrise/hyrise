@@ -15,8 +15,8 @@ class Aggregate;
 class Table;
 class TableWrapper;
 
-template <typename T>
-std::ostream& operator<<(std::ostream& os, opossum::optional<T>& obj) {
+template <typename ColumnType>
+std::ostream& operator<<(std::ostream& os, opossum::optional<ColumnType>& obj) {
   if (obj) {
     return os << *obj;
   } else {
@@ -24,18 +24,11 @@ std::ostream& operator<<(std::ostream& os, opossum::optional<T>& obj) {
   }
 }
 
-template <typename T>
+template <typename ColumnType>
 class ColumnStatistics : public AbstractColumnStatistics {
- protected:
-  void update_distinct_count();
-
  public:
   ColumnStatistics(const std::weak_ptr<Table> table, const ColumnID column_id);
-  ColumnStatistics(double distinct_count, T min, T max, const ColumnID column_id);
-  double distinct_count();
-  T min();
-  T max();
-
+  ColumnStatistics(double distinct_count, ColumnType min, ColumnType max, const ColumnID column_id);
   ~ColumnStatistics() override = default;
 
   std::tuple<double, std::shared_ptr<AbstractColumnStatistics>> predicate_selectivity(
@@ -49,16 +42,25 @@ class ColumnStatistics : public AbstractColumnStatistics {
   std::tuple<double, std::shared_ptr<AbstractColumnStatistics>> predicate_selectivity(
       const ScanType scan_type, const ValuePlaceholder value, const optional<AllTypeVariant> value2);
 
+  double distinct_count();
+  ColumnType min();
+  ColumnType max();
+
  protected:
   std::ostream& to_stream(std::ostream& os) override;
 
+  void update_distinct_count();
   void update_min_max();
 
+  // Only available for statistics of tables in the StorageManager.
+  // This is a weak_ptr, as
+  // Table --shared_ptr--> TableStatistics --shared_ptr--> ColumnStatistics
   const std::weak_ptr<Table> _table;
   const ColumnID _column_id;
+  // those can be lazy initialized
   optional<double> _distinct_count;
-  optional<T> _min;
-  optional<T> _max;
+  optional<ColumnType> _min;
+  optional<ColumnType> _max;
 };
 
 }  // namespace opossum

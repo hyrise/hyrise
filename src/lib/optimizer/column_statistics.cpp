@@ -18,40 +18,41 @@
 
 namespace opossum {
 
-template <typename T>
-ColumnStatistics<T>::ColumnStatistics(const std::weak_ptr<Table> table, const ColumnID column_id)
+template <typename ColumnType>
+ColumnStatistics<ColumnType>::ColumnStatistics(const std::weak_ptr<Table> table, const ColumnID column_id)
     : _table(table), _column_id(column_id) {}
 
-template <typename T>
-ColumnStatistics<T>::ColumnStatistics(double distinct_count, T min, T max, const ColumnID column_id)
+template <typename ColumnType>
+ColumnStatistics<ColumnType>::ColumnStatistics(double distinct_count, ColumnType min, ColumnType max,
+                                               const ColumnID column_id)
     : _table(std::weak_ptr<Table>()), _column_id(column_id), _distinct_count(distinct_count), _min(min), _max(max) {}
 
-template <typename T>
-double ColumnStatistics<T>::distinct_count() {
+template <typename ColumnType>
+double ColumnStatistics<ColumnType>::distinct_count() {
   if (!_distinct_count) {
     update_distinct_count();
   }
   return *_distinct_count;
 }
 
-template <typename T>
-T ColumnStatistics<T>::min() {
+template <typename ColumnType>
+ColumnType ColumnStatistics<ColumnType>::min() {
   if (!_min) {
     update_min_max();
   }
   return *_min;
 }
 
-template <typename T>
-T ColumnStatistics<T>::max() {
+template <typename ColumnType>
+ColumnType ColumnStatistics<ColumnType>::max() {
   if (!_max) {
     update_min_max();
   }
   return *_max;
 }
 
-template <typename T>
-void ColumnStatistics<T>::update_distinct_count() {
+template <typename ColumnType>
+void ColumnStatistics<ColumnType>::update_distinct_count() {
   auto shared_table = _table.lock();
   auto table_wrapper = std::make_shared<TableWrapper>(shared_table);
   table_wrapper->execute();
@@ -62,8 +63,8 @@ void ColumnStatistics<T>::update_distinct_count() {
   _distinct_count = aggregate_table->row_count();
 }
 
-template <typename T>
-void ColumnStatistics<T>::update_min_max() {
+template <typename ColumnType>
+void ColumnStatistics<ColumnType>::update_min_max() {
   auto shared_table = _table.lock();
   auto table_wrapper = std::make_shared<TableWrapper>(shared_table);
   table_wrapper->execute();
@@ -73,11 +74,14 @@ void ColumnStatistics<T>::update_min_max() {
   auto aggregate = std::make_shared<Aggregate>(table_wrapper, aggregate_args, std::vector<std::string>{});
   aggregate->execute();
   auto aggregate_table = aggregate->get_output();
-  _min = aggregate_table->template get_value<T>(ColumnID{0}, 0);
-  _max = aggregate_table->template get_value<T>(ColumnID{1}, 0);
+  _min = aggregate_table->template get_value<ColumnType>(ColumnID{0}, 0);
+  _max = aggregate_table->template get_value<ColumnType>(ColumnID{1}, 0);
 }
 
-// string specialization
+/**
+ * Predicate selectivity for constants,
+ * specialized for strings.
+ */
 template <>
 std::tuple<double, std::shared_ptr<AbstractColumnStatistics>> ColumnStatistics<std::string>::predicate_selectivity(
     const ScanType scan_type, const AllTypeVariant value, const optional<AllTypeVariant> value2) {
@@ -102,10 +106,14 @@ std::tuple<double, std::shared_ptr<AbstractColumnStatistics>> ColumnStatistics<s
   }
 }
 
-template <typename T>
-std::tuple<double, std::shared_ptr<AbstractColumnStatistics>> ColumnStatistics<T>::predicate_selectivity(
+/**
+ * Predicate selectivity for constants,
+ * every type but strings.
+ */
+template <typename ColumnType>
+std::tuple<double, std::shared_ptr<AbstractColumnStatistics>> ColumnStatistics<ColumnType>::predicate_selectivity(
     const ScanType scan_type, const AllTypeVariant value, const optional<AllTypeVariant> value2) {
-  auto casted_value1 = type_cast<T>(value);
+  auto casted_value1 = type_cast<ColumnType>(value);
 
   switch (scan_type) {
     case ScanType::OpEquals: {
@@ -123,7 +131,7 @@ std::tuple<double, std::shared_ptr<AbstractColumnStatistics>> ColumnStatistics<T
       return {(distinct_count() - 1.) / distinct_count(), column_statistics};
     }
     case ScanType::OpLessThan: {
-      if (std::is_integral<T>::value) {
+      if (std::is_integral<ColumnType>::value) {
         if (casted_value1 <= min()) {
           return {0., nullptr};
         }
@@ -146,7 +154,7 @@ std::tuple<double, std::shared_ptr<AbstractColumnStatistics>> ColumnStatistics<T
       return {selectivity, column_statistics};
     }
     case ScanType::OpGreaterThan: {
-      if (std::is_integral<T>::value) {
+      if (std::is_integral<ColumnType>::value) {
         if (casted_value1 >= max()) {
           return {0., nullptr};
         }
@@ -172,7 +180,7 @@ std::tuple<double, std::shared_ptr<AbstractColumnStatistics>> ColumnStatistics<T
       if (!value2) {
         Fail(std::string("operator BETWEEN should get two parameters, second is missing!"));
       }
-      auto casted_value2 = type_cast<T>(*value2);
+      auto casted_value2 = type_cast<ColumnType>(*value2);
       if (casted_value1 > casted_value2 || casted_value1 > max() || casted_value2 < min()) {
         return {0., nullptr};
       }
@@ -185,11 +193,12 @@ std::tuple<double, std::shared_ptr<AbstractColumnStatistics>> ColumnStatistics<T
     }
     default: { return {1. / 3., nullptr}; }
   }
-  // Brace yourselves.
-  // return {1. / 3., nullptr};
 }
 
-// string specialization
+/**
+ * Predicate selectivity for two columns,
+ * specialized for strings.
+ */
 template <>
 std::tuple<double, std::shared_ptr<AbstractColumnStatistics>, std::shared_ptr<AbstractColumnStatistics>>
 ColumnStatistics<std::string>::predicate_selectivity(
@@ -199,13 +208,17 @@ ColumnStatistics<std::string>::predicate_selectivity(
   return {1., nullptr, nullptr};
 }
 
-template <typename T>
+/**
+ * Predicate selectivity for two columns,
+ * every type but strings.
+ */
+template <typename ColumnType>
 std::tuple<double, std::shared_ptr<AbstractColumnStatistics>, std::shared_ptr<AbstractColumnStatistics>>
-ColumnStatistics<T>::predicate_selectivity(
+ColumnStatistics<ColumnType>::predicate_selectivity(
     const ScanType scan_type, const std::shared_ptr<AbstractColumnStatistics> abstract_value_column_statistics,
     const optional<AllTypeVariant> value2) {
-  // auto casted_value1 = type_cast<T>(value);
-  auto value_column_statistics = std::dynamic_pointer_cast<ColumnStatistics<T>>(abstract_value_column_statistics);
+  auto value_column_statistics =
+      std::dynamic_pointer_cast<ColumnStatistics<ColumnType>>(abstract_value_column_statistics);
 
   auto common_min = std::max(min(), value_column_statistics->min());
   auto common_max = std::min(max(), value_column_statistics->max());
@@ -236,8 +249,11 @@ ColumnStatistics<T>::predicate_selectivity(
   }
 }
 
-template <typename T>
-std::tuple<double, std::shared_ptr<AbstractColumnStatistics>> ColumnStatistics<T>::predicate_selectivity(
+/**
+ * Predicate selectivity for prepared statements.
+ */
+template <typename ColumnType>
+std::tuple<double, std::shared_ptr<AbstractColumnStatistics>> ColumnStatistics<ColumnType>::predicate_selectivity(
     const ScanType scan_type, const ValuePlaceholder value, const optional<AllTypeVariant> value2) {
   switch (scan_type) {
     case ScanType::OpEquals: {
@@ -252,8 +268,8 @@ std::tuple<double, std::shared_ptr<AbstractColumnStatistics>> ColumnStatistics<T
   }
 }
 
-template <typename T>
-std::ostream &ColumnStatistics<T>::to_stream(std::ostream &os) {
+template <typename ColumnType>
+std::ostream &ColumnStatistics<ColumnType>::to_stream(std::ostream &os) {
   os << "Col Stats id: " << _column_id << std::endl;
   os << "  dist. " << _distinct_count << std::endl;
   os << "  min   " << _min << std::endl;
