@@ -8,7 +8,7 @@ namespace opossum {
 
 PredicateNode::PredicateNode(const std::string& column_name, ScanType scan_type, const AllParameterVariant value,
                              const optional<AllTypeVariant> value2)
-    : AbstractAstNode(AstNodeType::TableScan),
+    : AbstractAstNode(AstNodeType::Predicate),
       _column_name(column_name),
       _scan_type(scan_type),
       _value(value),

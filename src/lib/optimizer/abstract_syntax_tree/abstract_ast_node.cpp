@@ -37,6 +37,8 @@ const std::vector<std::string> &AbstractAstNode::output_columns() const {
   /**
    * Rebuild _output_columns when node has both children as there is no way to detect whether one of them has changed
    */
+  _output_columns.clear();
+
   if (_left) {
     auto left_output_columns = _left->output_columns();
     _output_columns.insert(_output_columns.end(), left_output_columns.begin(), left_output_columns.end());

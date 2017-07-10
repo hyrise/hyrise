@@ -3,9 +3,9 @@
 #include <boost/serialization/strong_typedef.hpp>
 
 #include <cstdint>
-#include <functional>
 #include <limits>
 #include <string>
+#include <tuple>
 #include <vector>
 
 #include "strong_typedef.hpp"

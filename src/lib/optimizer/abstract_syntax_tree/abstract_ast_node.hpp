@@ -7,15 +7,15 @@
 
 namespace opossum {
 
-enum class AstNodeType { Projection, Table, TableScan, Sort };
+enum class AstNodeType { Projection, Table, Predicate, Sort };
 
 class AbstractAstNode : public std::enable_shared_from_this<AbstractAstNode> {
  public:
   explicit AbstractAstNode(AstNodeType node_type);
 
   /**
-   * set_parent() is implicitly included in set_left()/set_right() use these functions if you wish to set a parent,
-   * for clearing use clear_parent()
+   * The _parent is implicitly set in set_left/set_right
+   * for un-setting _parent use clear_parent()
    */
   std::shared_ptr<AbstractAstNode> parent() const;
   void clear_parent();
