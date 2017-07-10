@@ -40,7 +40,8 @@ class TableStatistics {
 
  protected:
   const std::string _name;
-  const std::weak_ptr<Table> _table;
+  // TODO(sven): why is const missing
+  std::weak_ptr<Table> _table;
   double _row_count;
   std::map<ColumnID, std::shared_ptr<AbstractColumnStatistics>> _column_statistics;
 };
