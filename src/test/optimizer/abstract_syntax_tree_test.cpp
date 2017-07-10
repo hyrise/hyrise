@@ -20,14 +20,14 @@ class AbstractSyntaxTreeTest : public BaseTest {
   std::shared_ptr<ExpressionNode> generate_simple_expression(std::string& column_name, ScanType operation,
                                                              std::string& condition) {
     std::unordered_map<ScanType, ExpressionType> scan_type_to_expression_type = {
-        {ScanType::OpBetween, ExpressionType::ExpressionBetween},
-        {ScanType::OpEquals, ExpressionType::ExpressionEquals},
-        {ScanType::OpNotEquals, ExpressionType::ExpressionNotEquals},
-        {ScanType::OpLessThan, ExpressionType::ExpressionLess},
-        {ScanType::OpLessThanEquals, ExpressionType::ExpressionLessEq},
-        {ScanType::OpGreaterThan, ExpressionType::ExpressionGreater},
-        {ScanType::OpGreaterThanEquals, ExpressionType::ExpressionGreaterEq},
-        {ScanType::OpLike, ExpressionType::ExpressionLike}};
+        {ScanType::OpBetween, ExpressionType::Between},
+        {ScanType::OpEquals, ExpressionType::Equals},
+        {ScanType::OpNotEquals, ExpressionType::NotEquals},
+        {ScanType::OpLessThan, ExpressionType::Less},
+        {ScanType::OpLessThanEquals, ExpressionType::LessEquals},
+        {ScanType::OpGreaterThan, ExpressionType::Greater},
+        {ScanType::OpGreaterThanEquals, ExpressionType::GreaterEquals},
+        {ScanType::OpLike, ExpressionType::Like}};
 
     auto node = std::make_shared<ExpressionNode>(scan_type_to_expression_type[operation]);
     return node;

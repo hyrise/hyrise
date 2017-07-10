@@ -1,5 +1,6 @@
 #include "sql_expression_translator.hpp"
 
+#include <iostream>
 #include <memory>
 #include <string>
 #include <unordered_map>
@@ -30,23 +31,34 @@ std::shared_ptr<ExpressionNode> SQLExpressionTranslator::translate_expression(co
   } else {
     switch (expr.type) {
       case hsql::kExprColumnRef:
-        node = std::make_shared<ExpressionNode>(ExpressionType::ExpressionColumnReference, table_name, name);
+        node = std::make_shared<ExpressionNode>(ExpressionType::ColumnReference, table_name, name);
         break;
-      case hsql::kExprFunctionRef:
+      case hsql::kExprFunctionRef: {
+        // TODO(mp): Parse Function name to Aggregate Function
+
+        auto expression_list = std::make_shared<std::vector<std::shared_ptr<ExpressionNode>>>();
+        for (auto elem : *(expr.exprList)) {
+          auto node = translate_expression(*elem);
+          expression_list->emplace_back(node);
+        }
+
+        node = std::make_shared<ExpressionNode>(ExpressionType::FunctionReference, name, expression_list);
+        break;
+      }
       case hsql::kExprLiteralFloat:
-        node = std::make_shared<ExpressionNode>(ExpressionType::ExpressionLiteral, float_value);
+        node = std::make_shared<ExpressionNode>(ExpressionType::Literal, float_value);
         break;
       case hsql::kExprLiteralInt:
-        node = std::make_shared<ExpressionNode>(ExpressionType::ExpressionLiteral, int_value);
+        node = std::make_shared<ExpressionNode>(ExpressionType::Literal, int_value);
         break;
       case hsql::kExprLiteralString:
-        node = std::make_shared<ExpressionNode>(ExpressionType::ExpressionLiteral, name);
+        node = std::make_shared<ExpressionNode>(ExpressionType::Literal, name);
         break;
       case hsql::kExprParameter:
-        node = std::make_shared<ExpressionNode>(ExpressionType::ExpressionParameter, int_value);
+        node = std::make_shared<ExpressionNode>(ExpressionType::Parameter, int_value);
         break;
       case hsql::kExprStar:
-        node = std::make_shared<ExpressionNode>(ExpressionType::ExpressionStar);
+        node = std::make_shared<ExpressionNode>(ExpressionType::Star);
         break;
       case hsql::kExprSelect:
       case hsql::kExprHint:
@@ -71,37 +83,37 @@ std::shared_ptr<ExpressionNode> SQLExpressionTranslator::translate_expression(co
 ExpressionType SQLExpressionTranslator::_operator_to_expression_type(hsql::OperatorType type) {
   switch (type) {
     case hsql::kOpPlus:
-      return ExpressionType::ExpressionPlus;
+      return ExpressionType::Plus;
     case hsql::kOpMinus:
-      return ExpressionType::ExpressionMinus;
+      return ExpressionType::Minus;
     case hsql::kOpAsterisk:
-      return ExpressionType::ExpressionAsterisk;
+      return ExpressionType::Asterisk;
     case hsql::kOpSlash:
-      return ExpressionType::ExpressionSlash;
+      return ExpressionType::Slash;
     case hsql::kOpPercentage:
-      return ExpressionType::ExpressionPercentage;
+      return ExpressionType::Percentage;
     case hsql::kOpCaret:
-      return ExpressionType::ExpressionCaret;
+      return ExpressionType::Caret;
     case hsql::kOpBetween:
-      return ExpressionType::ExpressionBetween;
+      return ExpressionType::Between;
     case hsql::kOpEquals:
-      return ExpressionType::ExpressionEquals;
+      return ExpressionType::Equals;
     case hsql::kOpNotEquals:
-      return ExpressionType::ExpressionNotEquals;
+      return ExpressionType::NotEquals;
     case hsql::kOpLess:
-      return ExpressionType::ExpressionLess;
+      return ExpressionType::Less;
     case hsql::kOpLessEq:
-      return ExpressionType::ExpressionLessEq;
+      return ExpressionType::LessEquals;
     case hsql::kOpGreater:
-      return ExpressionType::ExpressionGreater;
+      return ExpressionType::Greater;
     case hsql::kOpGreaterEq:
-      return ExpressionType::ExpressionGreaterEq;
+      return ExpressionType::GreaterEquals;
     case hsql::kOpLike:
-      return ExpressionType::ExpressionLike;
+      return ExpressionType::Like;
     case hsql::kOpNotLike:
-      return ExpressionType::ExpressionNotLike;
+      return ExpressionType::NotLike;
     case hsql::kOpCase:
-      return ExpressionType::ExpressionCase;
+      return ExpressionType::Case;
     case hsql::kOpExists:
     case hsql::kOpIn:
     case hsql::kOpIsNull:
