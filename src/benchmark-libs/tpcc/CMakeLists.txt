@@ -2,6 +2,8 @@
 set(
     SOURCES
     defines.hpp
+    helper.cpp
+    helper.hpp
     new_order.cpp
     new_order.hpp
     order_status.cpp

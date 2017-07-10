@@ -76,10 +76,13 @@ void AbstractTask::join() {
    */
   if (CurrentScheduler::is_set()) {
     auto worker = Worker::get_this_thread_worker();
-    worker->_wait_for_tasks({shared_from_this()});
-  } else {
-    _join_without_replacement_worker();
+    if (worker) {
+      worker->_wait_for_tasks(std::vector<std::shared_ptr<AbstractTask>>({shared_from_this()}));
+      return;
+    }
   }
+
+  _join_without_replacement_worker();
 }
 
 void AbstractTask::_join_without_replacement_worker() {

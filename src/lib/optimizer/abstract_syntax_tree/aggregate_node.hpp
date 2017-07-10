@@ -5,9 +5,16 @@
 
 #include "common.hpp"
 #include "optimizer/abstract_syntax_tree/abstract_node.hpp"
+#include "optimizer/abstract_syntax_tree/expression_node.hpp"
 #include "types.hpp"
 
 namespace opossum {
+
+struct AggregateColumnDefinition
+{
+  std::string alias;
+  std::shared_ptr<ExpressionNode> expr;
+};
 
 class AggregateNode : public AbstractNode {
  public:
@@ -22,5 +29,7 @@ class AggregateNode : public AbstractNode {
   std::vector<AggregateColumnDefinition> _aggregates;
   std::vector<std::string> _groupby_columns;
 };
+
+class AggregateNode::
 
 }  // namespace opossum

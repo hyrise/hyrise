@@ -7,10 +7,12 @@
 
 #include "operators/table_scan.hpp"
 #include "optimizer/abstract_syntax_tree/abstract_node.hpp"
+#include "optimizer/abstract_syntax_tree/expression_node.hpp"
 #include "optimizer/abstract_syntax_tree/projection_node.hpp"
 #include "optimizer/abstract_syntax_tree/sort_node.hpp"
 #include "optimizer/abstract_syntax_tree/table_node.hpp"
 #include "optimizer/abstract_syntax_tree/table_scan_node.hpp"
+#include "sql/sql_expression_translator.hpp"
 #include "storage/storage_manager.hpp"
 #include "utils/assert.hpp"
 
@@ -95,11 +97,11 @@ std::shared_ptr<AbstractNode> SQLQueryNodeTranslator::_translate_select(const Se
     std::vector<AggregateColumnDefinition> aggregate_column_definitions;
     aggregate_column_definitions.reserve(select.selectList->size());
 
-    for (auto * expr : (*select.selectList)) {
-
-    }
-
-    current_result_node = _tran
+//    for (auto * expr : (*select.selectList)) {
+//
+//    }
+//
+//    current_result_node = _tran
 
   } else {
     current_result_node = _translate_projection(*select.selectList, current_result_node);
@@ -223,7 +225,9 @@ const AllTypeVariant SQLQueryNodeTranslator::_translate_literal(const hsql::Expr
     case hsql::kExprLiteralString:
       return expr.name;
     default:
-      throw std::runtime_error("Could not translate literal: expression type not supported.");
+      std::cout << "Unexpected Expr type" << std::endl;
+      return 0;
+      //      throw std::runtime_error("Could not translate literal: expression type not supported.");
   }
 }
 
@@ -258,6 +262,8 @@ std::shared_ptr<AbstractNode> SQLQueryNodeTranslator::_translate_filter_expr(
 
   // TODO(torpedro): Handle BETWEEN.
 
+  std::shared_ptr<ExpressionNode> expressionNode = SQLExpressionTranslator::translate_expression(expr);
+
   Expr* column_expr = (expr.expr->isType(hsql::kExprColumnRef)) ? expr.expr : expr.expr2;
   if (!column_expr->isType(hsql::kExprColumnRef)) {
     throw std::runtime_error("Unsupported filter: we must have a column reference on either side of the expression.");
@@ -268,7 +274,7 @@ std::shared_ptr<AbstractNode> SQLQueryNodeTranslator::_translate_filter_expr(
   Expr* other_expr = (column_expr == expr.expr) ? expr.expr2 : expr.expr;
   const AllTypeVariant value = _translate_literal(*other_expr);
 
-  auto table_scan_node = std::make_shared<TableScanNode>(column_name, scan_type, value);
+  auto table_scan_node = std::make_shared<TableScanNode>(column_name, expressionNode, scan_type, value);
   table_scan_node->set_left(input_node);
 
   return table_scan_node;

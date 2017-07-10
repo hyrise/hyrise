@@ -1,5 +1,6 @@
 #include <memory>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 #include "../base_test.hpp"
@@ -15,6 +16,22 @@ namespace opossum {
 class AbstractSyntaxTreeTest : public BaseTest {
  protected:
   void SetUp() override {}
+
+  std::shared_ptr<ExpressionNode> generate_simple_expression(std::string& column_name, ScanType operation,
+                                                             std::string& condition) {
+    std::unordered_map<ScanType, ExpressionType> scan_type_to_expression_type = {
+        {ScanType::OpBetween, ExpressionType::ExpressionBetween},
+        {ScanType::OpEquals, ExpressionType::ExpressionEquals},
+        {ScanType::OpNotEquals, ExpressionType::ExpressionNotEquals},
+        {ScanType::OpLessThan, ExpressionType::ExpressionLess},
+        {ScanType::OpLessThanEquals, ExpressionType::ExpressionLessEq},
+        {ScanType::OpGreaterThan, ExpressionType::ExpressionGreater},
+        {ScanType::OpGreaterThanEquals, ExpressionType::ExpressionGreaterEq},
+        {ScanType::OpLike, ExpressionType::ExpressionLike}};
+
+    auto node = std::make_shared<ExpressionNode>(scan_type_to_expression_type[operation]);
+    return node;
+  }
 };
 
 TEST_F(AbstractSyntaxTreeTest, ParentTest) {
@@ -24,7 +41,7 @@ TEST_F(AbstractSyntaxTreeTest, ParentTest) {
   ASSERT_EQ(t_n->right(), nullptr);
   ASSERT_EQ(t_n->parent().lock(), nullptr);
 
-  const auto ts_n = std::make_shared<TableScanNode>("c1", ScanType::OpEquals, "a");
+  const auto ts_n = std::make_shared<TableScanNode>("c1", nullptr, ScanType::OpEquals, "a");
   ts_n->set_left(t_n);
 
   ASSERT_EQ(t_n->parent().lock(), ts_n);
@@ -49,7 +66,7 @@ TEST_F(AbstractSyntaxTreeTest, ChainSameNodesTest) {
   ASSERT_EQ(t_n->right(), nullptr);
   ASSERT_EQ(t_n->parent().lock(), nullptr);
 
-  const auto ts_n = std::make_shared<TableScanNode>("c1", ScanType::OpEquals, "a");
+  const auto ts_n = std::make_shared<TableScanNode>("c1", nullptr, ScanType::OpEquals, "a");
   ts_n->set_left(t_n);
 
   ASSERT_EQ(t_n->parent().lock(), ts_n);
@@ -57,7 +74,7 @@ TEST_F(AbstractSyntaxTreeTest, ChainSameNodesTest) {
   ASSERT_EQ(ts_n->right(), nullptr);
   ASSERT_EQ(ts_n->parent().lock(), nullptr);
 
-  const auto ts_n_2 = std::make_shared<TableScanNode>("c2", ScanType::OpEquals, "b");
+  const auto ts_n_2 = std::make_shared<TableScanNode>("c2", nullptr, ScanType::OpEquals, "b");
   ts_n_2->set_left(ts_n);
 
   ASSERT_EQ(ts_n->parent().lock(), ts_n_2);
