@@ -28,21 +28,21 @@ template <typename ColumnType>
 class ColumnStatistics : public AbstractColumnStatistics {
  public:
   ColumnStatistics(const std::weak_ptr<Table> table, const ColumnID column_id);
-  ColumnStatistics(double distinct_count, ColumnType min, ColumnType max, const ColumnID column_id);
+  ColumnStatistics(float distinct_count, ColumnType min, ColumnType max, const ColumnID column_id);
   ~ColumnStatistics() override = default;
 
-  std::tuple<double, std::shared_ptr<AbstractColumnStatistics>> predicate_selectivity(
+  std::tuple<float, std::shared_ptr<AbstractColumnStatistics>> predicate_selectivity(
       const ScanType scan_type, const AllTypeVariant value, const optional<AllTypeVariant> value2) override;
 
-  std::tuple<double, std::shared_ptr<AbstractColumnStatistics>, std::shared_ptr<AbstractColumnStatistics>>
+  std::tuple<float, std::shared_ptr<AbstractColumnStatistics>, std::shared_ptr<AbstractColumnStatistics>>
   predicate_selectivity(const ScanType scan_type,
                         const std::shared_ptr<AbstractColumnStatistics> abstract_value_column_statistics,
                         const optional<AllTypeVariant> value2) override;
 
-  std::tuple<double, std::shared_ptr<AbstractColumnStatistics>> predicate_selectivity(
+  std::tuple<float, std::shared_ptr<AbstractColumnStatistics>> predicate_selectivity(
       const ScanType scan_type, const ValuePlaceholder value, const optional<AllTypeVariant> value2) override;
 
-  double distinct_count();
+  float distinct_count();
   ColumnType min();
   ColumnType max();
 
@@ -58,7 +58,7 @@ class ColumnStatistics : public AbstractColumnStatistics {
   const std::weak_ptr<Table> _table;
   const ColumnID _column_id;
   // those can be lazy initialized
-  optional<double> _distinct_count;
+  optional<float> _distinct_count;
   optional<ColumnType> _min;
   optional<ColumnType> _max;
 };

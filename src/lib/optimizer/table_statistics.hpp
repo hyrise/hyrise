@@ -25,7 +25,7 @@ class TableStatistics {
   TableStatistics(const std::string &name, const std::weak_ptr<Table> table);
   TableStatistics(const TableStatistics &table_statistics);
 
-  double row_count();
+  float row_count();
   std::shared_ptr<AbstractColumnStatistics> get_column_statistics(const ColumnID column_id);
   std::shared_ptr<TableStatistics> predicate_statistics(const std::string &column_name, const ScanType scan_type,
                                                         const AllParameterVariant value,
@@ -46,7 +46,7 @@ class TableStatistics {
   // This is a weak_ptr, as
   // Table --shared_ptr--> TableStatistics
   const std::weak_ptr<Table> _table;
-  double _row_count;
+  float _row_count;
   std::map<ColumnID, std::shared_ptr<AbstractColumnStatistics>> _column_statistics;
 };
 
