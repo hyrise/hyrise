@@ -99,7 +99,7 @@ std::tuple<double, std::shared_ptr<AbstractColumnStatistics>> ColumnStatistics<s
     if (casted_value1 < min() || casted_value1 > max()) {
       return {0.0, nullptr};
     }
-    auto column_statistics = std::make_shared<ColumnStatistics>(1, _column_id);
+    auto column_statistics = std::make_shared<ColumnStatistics>(1, casted_value1, casted_value1, _column_id);
     return {1.0 / distinct_count(), column_statistics};
   } else if (scan_type == ScanType::OpNotEquals) {
     if (casted_value1 < min() || casted_value1 > max()) {
@@ -177,6 +177,8 @@ std::tuple<double, std::shared_ptr<AbstractColumnStatistics>> ColumnStatistics<T
     if (casted_value1 > casted_value2 || casted_value1 > max() || casted_value2 < min()) {
       return {0.0, nullptr};
     }
+    casted_value1 = std::max(casted_value1, min());
+    casted_value2 = std::min(casted_value2, max());
     double selectivity = (casted_value2 - casted_value1 + 1) / static_cast<double>(max() - min() + 1);
     auto column_statistics =
         std::make_shared<ColumnStatistics>(selectivity * distinct_count(), casted_value1, casted_value2, _column_id);
