@@ -1,95 +1,78 @@
 #include <memory>
 #include <string>
-#include <unordered_map>
 #include <vector>
 
 #include "../base_test.hpp"
 #include "gtest/gtest.h"
 
 #include "operators/table_scan.hpp"
+#include "optimizer/abstract_syntax_tree/predicate_node.hpp"
 #include "optimizer/abstract_syntax_tree/projection_node.hpp"
 #include "optimizer/abstract_syntax_tree/table_node.hpp"
-#include "optimizer/abstract_syntax_tree/table_scan_node.hpp"
 
 namespace opossum {
 
 class AbstractSyntaxTreeTest : public BaseTest {
  protected:
   void SetUp() override {}
-
-  std::shared_ptr<ExpressionNode> generate_simple_expression(std::string& column_name, ScanType operation,
-                                                             std::string& condition) {
-    std::unordered_map<ScanType, ExpressionType> scan_type_to_expression_type = {
-        {ScanType::OpBetween, ExpressionType::ExpressionBetween},
-        {ScanType::OpEquals, ExpressionType::ExpressionEquals},
-        {ScanType::OpNotEquals, ExpressionType::ExpressionNotEquals},
-        {ScanType::OpLessThan, ExpressionType::ExpressionLess},
-        {ScanType::OpLessThanEquals, ExpressionType::ExpressionLessEq},
-        {ScanType::OpGreaterThan, ExpressionType::ExpressionGreater},
-        {ScanType::OpGreaterThanEquals, ExpressionType::ExpressionGreaterEq},
-        {ScanType::OpLike, ExpressionType::ExpressionLike}};
-
-    auto node = std::make_shared<ExpressionNode>(scan_type_to_expression_type[operation]);
-    return node;
-  }
 };
 
 TEST_F(AbstractSyntaxTreeTest, ParentTest) {
-  const auto t_n = std::make_shared<TableNode>("a");
+  const auto table_node = std::make_shared<TableNode>("a");
 
-  ASSERT_EQ(t_n->left(), nullptr);
-  ASSERT_EQ(t_n->right(), nullptr);
-  ASSERT_EQ(t_n->parent().lock(), nullptr);
+  ASSERT_EQ(table_node->left(), nullptr);
+  ASSERT_EQ(table_node->right(), nullptr);
+  ASSERT_EQ(table_node->parent(), nullptr);
 
-  const auto ts_n = std::make_shared<TableScanNode>("c1", nullptr, ScanType::OpEquals, "a");
-  ts_n->set_left(t_n);
+  const auto predicate_node = std::make_shared<PredicateNode>("c1", ScanType::OpEquals, "a");
+  predicate_node->set_left(table_node);
 
-  ASSERT_EQ(t_n->parent().lock(), ts_n);
-  ASSERT_EQ(ts_n->left(), t_n);
-  ASSERT_EQ(ts_n->right(), nullptr);
-  ASSERT_EQ(ts_n->parent().lock(), nullptr);
+  ASSERT_EQ(table_node->parent(), predicate_node);
+  ASSERT_EQ(predicate_node->left(), table_node);
+  ASSERT_EQ(predicate_node->right(), nullptr);
+  ASSERT_EQ(predicate_node->parent(), nullptr);
 
   std::vector<std::string> column_names = {"c1", "c2"};
-  const auto p_n = std::make_shared<ProjectionNode>(column_names);
-  p_n->set_left(ts_n);
+  const auto projection_node = std::make_shared<ProjectionNode>(column_names);
+  projection_node->set_left(predicate_node);
 
-  ASSERT_EQ(ts_n->parent().lock(), p_n);
-  ASSERT_EQ(p_n->left(), ts_n);
-  ASSERT_EQ(p_n->right(), nullptr);
-  ASSERT_EQ(p_n->parent().lock(), nullptr);
+  ASSERT_EQ(predicate_node->parent(), projection_node);
+  ASSERT_EQ(projection_node->left(), predicate_node);
+  ASSERT_EQ(projection_node->right(), nullptr);
+  ASSERT_EQ(projection_node->parent(), nullptr);
 }
 
 TEST_F(AbstractSyntaxTreeTest, ChainSameNodesTest) {
-  const auto t_n = std::make_shared<TableNode>("a");
+  const auto table_node = std::make_shared<TableNode>("a");
 
-  ASSERT_EQ(t_n->left(), nullptr);
-  ASSERT_EQ(t_n->right(), nullptr);
-  ASSERT_EQ(t_n->parent().lock(), nullptr);
+  ASSERT_EQ(table_node->left(), nullptr);
+  ASSERT_EQ(table_node->right(), nullptr);
+  ASSERT_EQ(table_node->parent(), nullptr);
 
-  const auto ts_n = std::make_shared<TableScanNode>("c1", nullptr, ScanType::OpEquals, "a");
-  ts_n->set_left(t_n);
+  const auto predicate_node = std::make_shared<PredicateNode>("c1", ScanType::OpEquals, "a");
+  predicate_node->set_left(table_node);
 
-  ASSERT_EQ(t_n->parent().lock(), ts_n);
-  ASSERT_EQ(ts_n->left(), t_n);
-  ASSERT_EQ(ts_n->right(), nullptr);
-  ASSERT_EQ(ts_n->parent().lock(), nullptr);
+  ASSERT_EQ(table_node->parent(), predicate_node);
+  ASSERT_EQ(predicate_node->left(), table_node);
+  ASSERT_EQ(predicate_node->right(), nullptr);
+  ASSERT_EQ(predicate_node->parent(), nullptr);
 
-  const auto ts_n_2 = std::make_shared<TableScanNode>("c2", nullptr, ScanType::OpEquals, "b");
-  ts_n_2->set_left(ts_n);
+  const auto predicate_node_2 = std::make_shared<PredicateNode>("c2", ScanType::OpEquals, "b");
+  predicate_node_2->set_left(predicate_node);
 
-  ASSERT_EQ(ts_n->parent().lock(), ts_n_2);
-  ASSERT_EQ(ts_n_2->left(), ts_n);
-  ASSERT_EQ(ts_n_2->right(), nullptr);
-  ASSERT_EQ(ts_n_2->parent().lock(), nullptr);
+  ASSERT_EQ(predicate_node->parent(), predicate_node_2);
+  ASSERT_EQ(predicate_node_2->left(), predicate_node);
+  ASSERT_EQ(predicate_node_2->right(), nullptr);
+  ASSERT_EQ(predicate_node_2->parent(), nullptr);
 
   std::vector<std::string> column_names = {"c1", "c2"};
-  const auto p_n = std::make_shared<ProjectionNode>(column_names);
-  p_n->set_left(ts_n_2);
+  const auto projection_node = std::make_shared<ProjectionNode>(column_names);
+  projection_node->set_left(predicate_node_2);
 
-  ASSERT_EQ(ts_n_2->parent().lock(), p_n);
-  ASSERT_EQ(p_n->left(), ts_n_2);
-  ASSERT_EQ(p_n->right(), nullptr);
-  ASSERT_EQ(p_n->parent().lock(), nullptr);
+  ASSERT_EQ(predicate_node_2->parent(), projection_node);
+  ASSERT_EQ(projection_node->left(), predicate_node_2);
+  ASSERT_EQ(projection_node->right(), nullptr);
+  ASSERT_EQ(projection_node->parent(), nullptr);
 }
 
 }  // namespace opossum

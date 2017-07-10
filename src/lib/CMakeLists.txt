@@ -145,14 +145,16 @@ set(
     optimizer/abstract_syntax_tree/node_operator_translator.hpp
     optimizer/abstract_syntax_tree/node_operator_translator.cpp
     optimizer/abstract_syntax_tree/query_plan_helper.hpp
+    optimizer/abstract_syntax_tree/abstract_ast_node.cpp
+    optimizer/abstract_syntax_tree/abstract_ast_node.hpp
+    optimizer/abstract_syntax_tree/predicate_node.cpp
+    optimizer/abstract_syntax_tree/predicate_node.hpp
     optimizer/abstract_syntax_tree/projection_node.cpp
     optimizer/abstract_syntax_tree/projection_node.hpp
     optimizer/abstract_syntax_tree/sort_node.cpp
     optimizer/abstract_syntax_tree/sort_node.hpp
     optimizer/abstract_syntax_tree/table_node.cpp
     optimizer/abstract_syntax_tree/table_node.hpp
-    optimizer/abstract_syntax_tree/table_scan_node.cpp
-    optimizer/abstract_syntax_tree/table_scan_node.hpp
     optimizer/column_statistics.cpp
     optimizer/column_statistics.hpp
     optimizer/strategies/abstract_rule.hpp

@@ -4,17 +4,17 @@
 #include <vector>
 
 #include "common.hpp"
-#include "optimizer/abstract_syntax_tree/abstract_node.hpp"
+#include "optimizer/abstract_syntax_tree/abstract_ast_node.hpp"
 
 namespace opossum {
 
-class TableNode : public AbstractNode {
+class TableNode : public AbstractAstNode {
  public:
   explicit TableNode(const std::string table_name);
 
-  const std::string description() const override;
+  std::string description() const override;
 
-  const std::vector<std::string> output_columns() override;
+  const std::vector<std::string>& output_columns() const override;
 
   const std::string& table_name() const;
 
