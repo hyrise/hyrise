@@ -15,15 +15,15 @@ class AbstractColumnStatistics {
   AbstractColumnStatistics() = default;
   virtual ~AbstractColumnStatistics() = default;
 
-  virtual std::tuple<double, std::shared_ptr<AbstractColumnStatistics>> predicate_selectivity(
+  virtual std::tuple<float, std::shared_ptr<AbstractColumnStatistics>> predicate_selectivity(
       const ScanType scan_type, const AllTypeVariant value, const optional<AllTypeVariant> value2) = 0;
 
-  virtual std::tuple<double, std::shared_ptr<AbstractColumnStatistics>, std::shared_ptr<AbstractColumnStatistics>>
+  virtual std::tuple<float, std::shared_ptr<AbstractColumnStatistics>, std::shared_ptr<AbstractColumnStatistics>>
   predicate_selectivity(const ScanType scan_type,
                         const std::shared_ptr<AbstractColumnStatistics> abstract_value_column_statistics,
                         const optional<AllTypeVariant> value2) = 0;
 
-  virtual std::tuple<double, std::shared_ptr<AbstractColumnStatistics>> predicate_selectivity(
+  virtual std::tuple<float, std::shared_ptr<AbstractColumnStatistics>> predicate_selectivity(
       const ScanType scan_type, const ValuePlaceholder value, const optional<AllTypeVariant> value2) = 0;
 
   friend std::ostream &operator<<(std::ostream &os, AbstractColumnStatistics &obj) { return obj.to_stream(os); }

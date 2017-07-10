@@ -24,7 +24,7 @@ TableStatistics::TableStatistics(const TableStatistics &table_statistics)
       _row_count(table_statistics._row_count),
       _column_statistics(table_statistics._column_statistics) {}
 
-double TableStatistics::row_count() { return _row_count; }
+float TableStatistics::row_count() { return _row_count; }
 
 std::shared_ptr<AbstractColumnStatistics> TableStatistics::get_column_statistics(const ColumnID column_id) {
   auto table = _table.lock();
@@ -54,7 +54,7 @@ std::shared_ptr<TableStatistics> TableStatistics::predicate_statistics(const std
   if (scan_type == ScanType::OpLike) {
     // simple heuristic:
     auto clone = std::make_shared<TableStatistics>(*this);
-    clone->_row_count = _row_count / 3.;
+    clone->_row_count = _row_count / 3.f;
     return clone;
   }
 
@@ -63,7 +63,7 @@ std::shared_ptr<TableStatistics> TableStatistics::predicate_statistics(const std
 
   auto old_column_statistics = get_column_statistics(column_id);
   auto clone = std::make_shared<TableStatistics>(*this);
-  double selectivity;
+  float selectivity;
   std::shared_ptr<AbstractColumnStatistics> new_column_statistics;
   if (value.type() == typeid(ColumnName)) {
     const ColumnID value_column_id = table->column_id_by_name(boost::get<ColumnName>(value));
@@ -83,7 +83,7 @@ std::shared_ptr<TableStatistics> TableStatistics::predicate_statistics(const std
     std::tie(selectivity, new_column_statistics) =
         old_column_statistics->predicate_selectivity(scan_type, casted_value1, value2);
   } else {
-    selectivity = 1. / 3.;
+    selectivity = 1.f / 3;
   }
   if (new_column_statistics != nullptr) {
     clone->_column_statistics[column_id] = new_column_statistics;
