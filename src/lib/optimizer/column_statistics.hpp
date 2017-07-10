@@ -40,7 +40,7 @@ class ColumnStatistics : public AbstractColumnStatistics {
                         const optional<AllTypeVariant> value2) override;
 
   std::tuple<double, std::shared_ptr<AbstractColumnStatistics>> predicate_selectivity(
-      const ScanType scan_type, const ValuePlaceholder value, const optional<AllTypeVariant> value2);
+      const ScanType scan_type, const ValuePlaceholder value, const optional<AllTypeVariant> value2) override;
 
   double distinct_count();
   ColumnType min();
