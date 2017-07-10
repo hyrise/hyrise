@@ -120,6 +120,4 @@ enum class ScanType {
   OpLike
 };
 
-std::string scan_type_to_string(ScanType scan_type);
-
 }  // namespace opossum

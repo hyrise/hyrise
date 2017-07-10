@@ -3,6 +3,7 @@
 #include <string>
 
 #include "common.hpp"
+#include "constant_mappings.hpp"
 
 namespace opossum {
 
@@ -17,7 +18,7 @@ PredicateNode::PredicateNode(const std::string& column_name, ScanType scan_type,
 std::string PredicateNode::description() const {
   std::ostringstream desc;
 
-  desc << "TableScan: [" << _column_name << "] [" << scan_type_to_string(_scan_type) << "]";
+  desc << "TableScan: [" << _column_name << "] [" << scan_type_to_string.at(_scan_type) << "]";
   desc << "[" << boost::get<std::string>(boost::get<AllTypeVariant>(_value)) << "]";
   if (_value2) {
     desc << " [" << boost::get<std::string>(_value2.value()) << "]";
