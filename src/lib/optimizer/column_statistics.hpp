@@ -16,15 +16,6 @@ class Table;
 class TableWrapper;
 
 template <typename ColumnType>
-std::ostream& operator<<(std::ostream& os, opossum::optional<ColumnType>& obj) {
-  if (obj) {
-    return os << *obj;
-  } else {
-    return os << "NA";
-  }
-}
-
-template <typename ColumnType>
 class ColumnStatistics : public AbstractColumnStatistics {
  public:
   ColumnStatistics(const std::weak_ptr<Table> table, const ColumnID column_id);
@@ -62,5 +53,14 @@ class ColumnStatistics : public AbstractColumnStatistics {
   optional<ColumnType> _min;
   optional<ColumnType> _max;
 };
+
+template <typename ColumnType>
+std::ostream& operator<<(std::ostream& os, opossum::optional<ColumnType>& obj) {
+  if (obj) {
+    return os << *obj;
+  } else {
+    return os << "NA";
+  }
+}
 
 }  // namespace opossum
