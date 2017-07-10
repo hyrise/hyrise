@@ -26,7 +26,7 @@ class TableStatisticsTest : public BaseTest {
     std::shared_ptr<Table> table_a = load_table("src/test/tables/int_float_double_string.tbl", 0);
     StorageManager::get().add_table("table_a", table_a);
 
-    auto table_a_stats = opossum::StorageManager::get().get_table("table_a")->get_table_statistics();
+    auto table_a_stats = opossum::StorageManager::get().get_table("table_a")->table_statistics();
     _table_a_container = TableContainer{table_a_stats, table_a};
   }
 

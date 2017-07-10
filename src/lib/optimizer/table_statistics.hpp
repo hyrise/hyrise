@@ -15,7 +15,7 @@ class Table;
 /**
  * TableStatistics represents the expected statistics of a table.
  * This can be either a table in the StorageManager, or a result of an operator.
- * TableStatistics stores ColumnStatistics as pointers to AbstractColumnStatistics.
+ * TableStatistics store ColumnStatistics as pointers to AbstractColumnStatistics.
  * ColumnStatistics is typed by the ColumnType and implements the abstract methods.
  */
 class TableStatistics {
@@ -49,5 +49,13 @@ class TableStatistics {
   float _row_count;
   std::map<ColumnID, std::shared_ptr<AbstractColumnStatistics>> _column_statistics;
 };
+
+// default selectivity factors for assumption of uniform distribution
+constexpr float default_selectivity = 0.5f;
+constexpr float like_selectivity = 0.1f;
+// below are taken from paper "Access path selection in a relational database management system",
+// P. Griffiths Selinger, 1979
+constexpr float open_ended_selectivity = 1.f / 3.f;
+constexpr float between_selectivity = 0.25f;
 
 }  // namespace opossum
