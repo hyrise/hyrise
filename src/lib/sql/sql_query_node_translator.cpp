@@ -3,10 +3,12 @@
 #include <memory>
 #include <string>
 #include <unordered_map>
+#include <utility>
 #include <vector>
 
-#include "operators/table_scan.hpp"
+#include "operators/abstract_join_operator.hpp"
 #include "optimizer/abstract_syntax_tree/abstract_node.hpp"
+#include "optimizer/abstract_syntax_tree/join_node.hpp"
 #include "optimizer/abstract_syntax_tree/projection_node.hpp"
 #include "optimizer/abstract_syntax_tree/sort_node.hpp"
 #include "optimizer/abstract_syntax_tree/table_node.hpp"
@@ -88,67 +90,63 @@ std::shared_ptr<AbstractNode> SQLQueryNodeTranslator::_translate_select(const Se
   return current_result_node;
 }
 
-// TODO(tim): JoinNode
-// std::shared_ptr<AbstractNode> SQLQueryNodeTranslator::_translate_join(const JoinDefinition& join) {
-//  // Get left and right sub tables.
-//  if (!_translate_table_ref(*join.left)) {
-//    return false;
-//  }
-//  auto left_task = _plan.back();
-//
-//  if (!_translate_table_ref(*join.right)) {
-//    return false;
-//  }
-//  auto right_task = _plan.back();
-//
-//  // Determine join condition.
-//  const Expr& condition = *join.condition;
-//  std::pair<std::string, std::string> columns(condition.expr->name, condition.expr2->name);
-//  std::string op;
-//  if (!_translate_filter_op(condition, &op)) {
-//    throw std::runtime_error("Can not handle JOIN condition.");
-//    return false;
-//  }
-//
-//  // Determine join mode.
-//  JoinMode mode;
-//  switch (join.type) {
-//    case hsql::kJoinInner:
-//      mode = Inner;
-//      break;
-//    case hsql::kJoinOuter:
-//      mode = Outer;
-//      break;
-//    case hsql::kJoinLeft:
-//      mode = Left;
-//      break;
-//    case hsql::kJoinRight:
-//      mode = Right;
-//      break;
-//    case hsql::kJoinNatural:
-//      mode = Natural;
-//      break;
-//    case hsql::kJoinCross:
-//      mode = Cross;
-//      break;
-//    default:
-//      throw std::runtime_error("Unable to handle join type.");
-//      return false;
-//  }
-//
-//  // In Opossum, the join requires a prefix.
-//  std::string prefix_left = std::string(join.left->getName()) + ".";
-//  std::string prefix_right = std::string(join.right->getName()) + ".";
-//
-//  // TODO(torpedro): Optimize join type selection.
-//  auto join = std::make_shared<JoinNestedLoopA>(left_task->get_operator(), right_task->get_operator(), columns, op,
-//                                                mode, prefix_left, prefix_right);
-//  auto task = std::make_shared<OperatorTask>(join);
-//  left_task->set_as_predecessor_of(task);
-//  right_task->set_as_predecessor_of(task);
-//  _plan.add_task(task);
-//  return true;
-//}
+std::shared_ptr<AbstractNode> SQLQueryNodeTranslator::_translate_join(const JoinDefinition& join) {
+  auto left_node = _translate_table_ref(*join.left);
+  auto right_node = _translate_table_ref(*join.right);
+
+  const Expr& condition = *join.condition;
+  std::pair<std::string, std::string> column_names(condition.expr->name, condition.expr2->name);
+
+  // Joins currently only support one simple condition (i.e., not multiple conditions).
+  // TODO(tim): move to function / global namespace / whatever.
+  std::unordered_map<hsql::OperatorType, ScanType> operator_to_filter_type = {
+          {hsql::kOpEquals, ScanType::OpEquals},       {hsql::kOpNotEquals, ScanType::OpNotEquals},
+          {hsql::kOpGreater, ScanType::OpGreaterThan}, {hsql::kOpGreaterEq, ScanType::OpGreaterThanEquals},
+          {hsql::kOpLess, ScanType::OpLessThan},       {hsql::kOpLessEq, ScanType::OpLessThanEquals},
+          {hsql::kOpBetween, ScanType::OpBetween},     {hsql::kOpLike, ScanType::OpLike},
+  };
+
+  auto it = operator_to_filter_type.find(condition.opType);
+  if (it == operator_to_filter_type.end()) {
+    Fail("Filter expression clause operator is not yet supported.");
+  }
+
+  auto scan_type = it->second;
+
+  // Determine join mode.
+  // TODO(tim): refactor to other location
+  JoinMode join_mode;
+  switch (join.type) {
+    case hsql::kJoinInner:
+      join_mode = Inner;
+      break;
+    case hsql::kJoinOuter:
+      join_mode = Outer;
+      break;
+    case hsql::kJoinLeft:
+      join_mode = Left;
+      break;
+    case hsql::kJoinRight:
+      join_mode = Right;
+      break;
+    case hsql::kJoinNatural:
+      join_mode = Natural;
+      break;
+    case hsql::kJoinCross:
+      join_mode = Cross;
+      break;
+    default:
+      Fail("Unable to handle join type.");
+  }
+
+  std::string prefix_left = std::string(join.left->getName()) + ".";
+  std::string prefix_right = std::string(join.right->getName()) + ".";
+
+  auto join_node = std::make_shared<JoinNode>(column_names, scan_type, join_mode, prefix_left, prefix_right);
+  join_node->set_left(left_node);
+  join_node->set_right(right_node);
+  return join_node;
+}
 
 std::shared_ptr<AbstractNode> SQLQueryNodeTranslator::_translate_table_ref(const hsql::TableRef& table) {
   switch (table.type) {
@@ -160,8 +158,7 @@ std::shared_ptr<AbstractNode> SQLQueryNodeTranslator::_translate_table_ref(const
     }
     case hsql::kTableJoin: {
       // TODO(tim)
-      //      return _translate_join(*table.join);
-      throw std::runtime_error("Join not supported at the moment.");
+      return _translate_join(*table.join);
     }
     case hsql::kTableCrossProduct: {
       // TODO(tim)

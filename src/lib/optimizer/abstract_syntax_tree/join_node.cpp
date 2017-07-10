@@ -1,6 +1,8 @@
 #include "join_node.hpp"
 
 #include <string>
+#include <utility>
+#include <vector>
 
 #include "common.hpp"
 
@@ -22,6 +24,20 @@ const std::string JoinNode::description() const {
   desc << "Join: [" << _column_names->first << "-" << _column_names->second << "]";
 
   return desc.str();
+}
+
+const std::vector<std::string> JoinNode::output_columns() {
+  std::vector<std::string> output_columns;
+
+  for (auto &column_name : left()->output_columns()) {
+    output_columns.push_back(prefix_left() + column_name);
+  }
+
+  for (auto &column_name : right()->output_columns()) {
+    output_columns.push_back(prefix_right() + column_name);
+  }
+
+  return output_columns;
 }
 
 optional<std::pair<std::string, std::string>> JoinNode::column_names() const { return _column_names; }

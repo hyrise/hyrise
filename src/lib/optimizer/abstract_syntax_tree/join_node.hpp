@@ -2,6 +2,7 @@
 
 #include <string>
 #include <unordered_map>
+#include <utility>
 #include <vector>
 
 #include "all_parameter_variant.hpp"
@@ -18,6 +19,8 @@ class JoinNode : public AbstractNode {
            const JoinMode join_mode, const std::string &prefix_left, const std::string &prefix_right);
 
   const std::string description() const override;
+
+  const std::vector<std::string> output_columns() override;
 
   optional<std::pair<std::string, std::string>> column_names() const;
   ScanType scan_type() const;
