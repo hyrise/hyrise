@@ -31,9 +31,7 @@ class ColumnStatistics : public AbstractColumnStatistics {
 
  public:
   ColumnStatistics(const std::weak_ptr<Table> table, const ColumnID column_id);
-  ColumnStatistics(double distinct_count, AllTypeVariant min, AllTypeVariant max, const ColumnID column_id);
   ColumnStatistics(double distinct_count, T min, T max, const ColumnID column_id);
-  ColumnStatistics(double distinct_count, const ColumnID column_id);
   double distinct_count();
   T min();
   T max();
