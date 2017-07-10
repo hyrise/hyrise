@@ -32,7 +32,7 @@ std::shared_ptr<AbstractColumnStatistics> TableStatistics::get_column_statistics
   if (column_stat == _column_statistics.end()) {
     auto column_type = table->column_type(column_id);
     auto column_statistics =
-        make_shared_by_column_type<AbstractColumnStatistics, ColumnStatistics>(column_type, _table, column_id);
+        make_shared_by_column_type<AbstractColumnStatistics, ColumnStatistics>(column_type, column_id, _table);
     _column_statistics[column_id] = column_statistics;
   }
   return _column_statistics[column_id];
@@ -54,7 +54,7 @@ std::shared_ptr<TableStatistics> TableStatistics::predicate_statistics(const std
   if (scan_type == ScanType::OpLike) {
     // simple heuristic:
     auto clone = std::make_shared<TableStatistics>(*this);
-    clone->_row_count = _row_count / 3.f;
+    clone->_row_count = _row_count * like_selectivity;
     return clone;
   }
 
@@ -65,26 +65,35 @@ std::shared_ptr<TableStatistics> TableStatistics::predicate_statistics(const std
   auto clone = std::make_shared<TableStatistics>(*this);
   float selectivity;
   std::shared_ptr<AbstractColumnStatistics> new_column_statistics;
+
   if (value.type() == typeid(ColumnName)) {
     const ColumnID value_column_id = table->column_id_by_name(boost::get<ColumnName>(value));
     auto value_column_statistics = get_column_statistics(value_column_id);
     std::shared_ptr<AbstractColumnStatistics> new_value_column_statistics;
+
     std::tie(selectivity, new_column_statistics, new_value_column_statistics) =
         old_column_statistics->predicate_selectivity(scan_type, value_column_statistics, value2);
+
     if (new_value_column_statistics != nullptr) {
       clone->_column_statistics[value_column_id] = new_value_column_statistics;
     }
+
   } else if (value.type() == typeid(AllTypeVariant)) {
     auto casted_value1 = boost::get<AllTypeVariant>(value);
+
     std::tie(selectivity, new_column_statistics) =
         old_column_statistics->predicate_selectivity(scan_type, casted_value1, value2);
+
   } else if (value.type() == typeid(ValuePlaceholder)) {
     auto casted_value1 = boost::get<ValuePlaceholder>(value);
+
     std::tie(selectivity, new_column_statistics) =
         old_column_statistics->predicate_selectivity(scan_type, casted_value1, value2);
+
   } else {
-    selectivity = 1.f / 3;
+    selectivity = 1.f;
   }
+
   if (new_column_statistics != nullptr) {
     clone->_column_statistics[column_id] = new_column_statistics;
   }

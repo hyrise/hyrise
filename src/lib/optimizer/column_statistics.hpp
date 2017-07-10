@@ -18,8 +18,8 @@ class TableWrapper;
 template <typename ColumnType>
 class ColumnStatistics : public AbstractColumnStatistics {
  public:
-  ColumnStatistics(const std::weak_ptr<Table> table, const ColumnID column_id);
-  ColumnStatistics(float distinct_count, ColumnType min, ColumnType max, const ColumnID column_id);
+  ColumnStatistics(const ColumnID column_id, const std::weak_ptr<Table> table);
+  ColumnStatistics(const ColumnID column_id, float distinct_count, ColumnType min, ColumnType max);
   ~ColumnStatistics() override = default;
 
   std::tuple<float, std::shared_ptr<AbstractColumnStatistics>> predicate_selectivity(
@@ -43,11 +43,13 @@ class ColumnStatistics : public AbstractColumnStatistics {
   void update_distinct_count();
   void update_min_max();
 
+  const ColumnID _column_id;
+
   // Only available for statistics of tables in the StorageManager.
   // This is a weak_ptr, as
   // Table --shared_ptr--> TableStatistics --shared_ptr--> ColumnStatistics
   const std::weak_ptr<Table> _table;
-  const ColumnID _column_id;
+
   // those can be lazy initialized
   optional<float> _distinct_count;
   optional<ColumnType> _min;
