@@ -35,7 +35,7 @@ class SQLQueryNodeTranslator {
   std::shared_ptr<AbstractNode> _translate_order_by(const std::vector<hsql::OrderDescription*> order_list,
                                                     const std::shared_ptr<AbstractNode>& input_node);
 
-  //  std::shared_ptr<AbstractNode> _translate_join(const hsql::JoinDefinition& select);
+  std::shared_ptr<AbstractNode> _translate_join(const hsql::JoinDefinition& select);
 
   const std::string _get_column_name(const hsql::Expr& expr) const;
 

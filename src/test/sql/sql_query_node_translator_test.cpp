@@ -7,6 +7,7 @@
 #include "SQLParser.h"
 #include "gtest/gtest.h"
 
+#include "optimizer/abstract_syntax_tree/join_node.hpp"
 #include "optimizer/abstract_syntax_tree/projection_node.hpp"
 #include "optimizer/abstract_syntax_tree/sort_node.hpp"
 #include "optimizer/abstract_syntax_tree/table_node.hpp"
@@ -96,8 +97,27 @@ TEST_F(SQLQueryNodeTranslatorTest, SelectMultipleOrderBy) {
   EXPECT_EQ(sort_node_2->column_name(), "b");
   EXPECT_TRUE(sort_node_2->asc());
   EXPECT_FALSE(sort_node_2->right());
-  // This node has an input node, but we don't care for it in this test.
+  // This node has an input node, but we don't care what kind it is in this test.
   EXPECT_TRUE(sort_node_2->left());
+}
+
+TEST_F(SQLQueryNodeTranslatorTest, SelectInnerJoin) {
+  const auto query = "SELECT * FROM table_a AS a INNER JOIN table_b AS b ON a.a = b.a;";
+  auto result_node = compile_query(query);
+
+  EXPECT_EQ(result_node->type(), NodeType::Projection);
+  auto projection_node = std::dynamic_pointer_cast<ProjectionNode>(result_node);
+  std::vector<std::string> output_columns = {"a.a", "a.b", "b.a", "b.b"};
+  EXPECT_EQ(projection_node->output_columns(), output_columns);
+
+  EXPECT_EQ(result_node->left()->type(), NodeType::Join);
+  auto join_node = std::dynamic_pointer_cast<JoinNode>(result_node->left());
+  EXPECT_EQ(join_node->scan_type(), ScanType::OpEquals);
+  EXPECT_EQ(join_node->join_mode(), JoinMode::Inner);
+  EXPECT_EQ(join_node->prefix_left(), "a.");
+  EXPECT_EQ(join_node->prefix_right(), "b.");
+  EXPECT_EQ(join_node->column_names()->first, "a");
+  EXPECT_EQ(join_node->column_names()->second, "a");
 }
 
 }  // namespace opossum
