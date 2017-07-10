@@ -8,19 +8,19 @@
 #include "all_type_variant.hpp"
 #include "common.hpp"
 #include "operators/table_scan.hpp"
-#include "optimizer/abstract_syntax_tree/abstract_node.hpp"
+#include "optimizer/abstract_syntax_tree/abstract_ast_node.hpp"
 
 namespace opossum {
 
-class TableScanNode : public AbstractNode {
+class PredicateNode : public AbstractAstNode {
  public:
-  TableScanNode(const std::string& column_name, const ScanType& scan_type, const AllParameterVariant value,
+  PredicateNode(const std::string& column_name, ScanType scan_type, const AllParameterVariant value,
                 const optional<AllTypeVariant> value2 = nullopt);
 
-  const std::string description() const override;
+  std::string description() const override;
 
   const std::string& column_name() const;
-  const ScanType& scan_type() const;
+  ScanType scan_type() const;
   const AllParameterVariant& value() const;
   const optional<AllTypeVariant>& value2() const;
 

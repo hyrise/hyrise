@@ -3,6 +3,7 @@
 #include <boost/serialization/strong_typedef.hpp>
 
 #include <cstdint>
+#include <functional>
 #include <limits>
 #include <string>
 #include <vector>
@@ -118,5 +119,7 @@ enum class ScanType {
   OpBetween,
   OpLike
 };
+
+std::string scan_type_to_string(ScanType scan_type);
 
 }  // namespace opossum
