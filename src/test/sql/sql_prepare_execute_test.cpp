@@ -80,15 +80,12 @@ const SQLTestParam sql_query_tests[] = {
 
     // Parameterized
     SQLTestParam{"PREPARE a3 FROM 'SELECT * FROM table_a WHERE a >= ?;'", 0u, ""},
+    SQLTestParam{"PREPARE a4 FROM 'SELECT * FROM table_a WHERE a >= ? AND b < ?'", 0u, ""},
 
-    // TODO(mp): enable these tests as soon as TableStatistics support ValuePlaceholders.
-    // Currently throwing exceptions.
-    //    SQLTestParam{"PREPARE a4 FROM 'SELECT * FROM table_a WHERE a >= ? AND b < ?'", 0u, ""},
-    //
-    //    SQLTestParam{"EXECUTE a3 (1234)", 3u, "src/test/tables/int_float_filtered2.tbl"},
-    //    SQLTestParam{"EXECUTE a4 (1234, 457.9)", 4u, "src/test/tables/int_float_filtered.tbl"},
-    //    SQLTestParam{"EXECUTE a4 (0, 500)", 4u, "src/test/tables/int_float.tbl"},
-    //    SQLTestParam{"EXECUTE a4 (1234, 500)", 4u, "src/test/tables/int_float_filtered2.tbl"},
+    SQLTestParam{"EXECUTE a3 (1234)", 3u, "src/test/tables/int_float_filtered2.tbl"},
+    SQLTestParam{"EXECUTE a4 (1234, 457.9)", 4u, "src/test/tables/int_float_filtered.tbl"},
+    SQLTestParam{"EXECUTE a4 (0, 500)", 4u, "src/test/tables/int_float.tbl"},
+    SQLTestParam{"EXECUTE a4 (1234, 500)", 4u, "src/test/tables/int_float_filtered2.tbl"},
 
     // TPC-H schema
     SQLTestParam{"PREPARE a5 FROM '"
