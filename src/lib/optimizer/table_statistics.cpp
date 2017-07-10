@@ -79,16 +79,16 @@ std::shared_ptr<TableStatistics> TableStatistics::predicate_statistics(const std
     }
 
   } else if (value.type() == typeid(AllTypeVariant)) {
-    auto casted_value1 = boost::get<AllTypeVariant>(value);
+    auto casted_value = boost::get<AllTypeVariant>(value);
 
     std::tie(selectivity, new_column_statistics) =
-        old_column_statistics->predicate_selectivity(scan_type, casted_value1, value2);
+        old_column_statistics->predicate_selectivity(scan_type, casted_value, value2);
 
   } else if (value.type() == typeid(ValuePlaceholder)) {
-    auto casted_value1 = boost::get<ValuePlaceholder>(value);
+    auto casted_value = boost::get<ValuePlaceholder>(value);
 
     std::tie(selectivity, new_column_statistics) =
-        old_column_statistics->predicate_selectivity(scan_type, casted_value1, value2);
+        old_column_statistics->predicate_selectivity(scan_type, casted_value, value2);
 
   } else {
     selectivity = 1.f;
