@@ -78,9 +78,12 @@ std::shared_ptr<TableStatistics> TableStatistics::predicate_statistics(const std
     auto casted_value1 = boost::get<AllTypeVariant>(value);
     std::tie(selectivity, new_column_statistics) =
         old_column_statistics->predicate_selectivity(scan_type, casted_value1, value2);
+  } else if (value.type() == typeid(ValuePlaceholder)) {
+    auto casted_value1 = boost::get<ValuePlaceholder>(value);
+    std::tie(selectivity, new_column_statistics) =
+        old_column_statistics->predicate_selectivity(scan_type, casted_value1, value2);
   } else {
-    // ToDo(Jonathan + Fabian) implementation for other types like prepared statements
-    return clone;
+    selectivity = 1. / 3.;
   }
   if (new_column_statistics != nullptr) {
     clone->_column_statistics[column_id] = new_column_statistics;

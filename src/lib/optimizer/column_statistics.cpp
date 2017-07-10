@@ -130,7 +130,7 @@ std::tuple<double, std::shared_ptr<AbstractColumnStatistics>> ColumnStatistics<T
     // disregarding A != 5 AND A = 5
     // (just don't put this into a query!)
     auto column_statistics = std::make_shared<ColumnStatistics>(distinct_count() - 1, min(), max(), _column_id);
-    return {(-1.0 + distinct_count()) / distinct_count(), column_statistics};
+    return {(distinct_count() - 1.) / distinct_count(), column_statistics};
   } else if (scan_type == ScanType::OpLessThan && std::is_integral<T>::value) {
     if (casted_value1 <= min()) {
       return {0.0, nullptr};
@@ -183,11 +183,9 @@ std::tuple<double, std::shared_ptr<AbstractColumnStatistics>> ColumnStatistics<T
     auto column_statistics =
         std::make_shared<ColumnStatistics>(selectivity * distinct_count(), casted_value1, casted_value2, _column_id);
     return {selectivity, column_statistics};
-  } else {
-    // Brace yourselves.
-    return {1.0 / distinct_count(), nullptr};
   }
-  return {1.0, nullptr};
+  // Brace yourselves.
+  return {1. / 3., nullptr};
 }
 
 // string specialization
@@ -289,6 +287,19 @@ ColumnStatistics<T>::predicate_selectivity(
   //   return {1.0 / distinct_count(), nullptr};
   // }
   return {1.0, nullptr, nullptr};
+}
+
+template <typename T>
+std::tuple<double, std::shared_ptr<AbstractColumnStatistics>> ColumnStatistics<T>::predicate_selectivity(
+    const ScanType scan_type, const ValuePlaceholder value, const optional<AllTypeVariant> value2) {
+  if (scan_type == ScanType::OpEquals) {
+    auto column_statistics = std::make_shared<ColumnStatistics>(1, min(), max(), _column_id);
+    return {1.0 / distinct_count(), column_statistics};
+  } else if (scan_type == ScanType::OpNotEquals) {
+    auto column_statistics = std::make_shared<ColumnStatistics>(distinct_count() - 1, min(), max(), _column_id);
+    return {(distinct_count() - 1.0) / distinct_count(), column_statistics};
+  }
+  return {1. / 2., nullptr};
 }
 
 template <typename T>
