@@ -135,6 +135,11 @@ set(
     operators/update.hpp
     operators/validate.cpp
     operators/validate.hpp
+    optimizer/abstract_column_statistics.hpp
+    optimizer/column_statistics.cpp
+    optimizer/column_statistics.hpp
+    optimizer/table_statistics.cpp
+    optimizer/table_statistics.hpp
     resolve_type.hpp
     sql/lru_cache.hpp
     sql/sql_query_operator.hpp
