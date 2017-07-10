@@ -79,4 +79,10 @@ TEST_F(NodeOperatorTranslatorTest, SelectWithMultipleOrderByColumns) {
   execute_and_check(query, expected_result, true);
 }
 
+TEST_F(NodeOperatorTranslatorTest, SelectInnerJoin) {
+  const auto query = "SELECT * FROM table_a AS \"left\" INNER JOIN table_b AS \"right\" ON \"left\".a = \"right\".a;";
+  const auto expected_result = load_table("src/test/tables/joinoperators/int_inner_join.tbl", 2);
+  execute_and_check(query, expected_result);
+}
+
 }  // namespace opossum
