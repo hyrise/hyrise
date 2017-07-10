@@ -7,7 +7,7 @@
 
 #include "optimizer/abstract_syntax_tree/projection_node.hpp"
 #include "optimizer/abstract_syntax_tree/table_node.hpp"
-#include "optimizer/abstract_syntax_tree/table_scan_node.hpp"
+#include "optimizer/abstract_syntax_tree/predicate_node.hpp"
 #include "optimizer/strategies/predicate_reordering_rule.hpp"
 
 namespace opossum {
@@ -16,15 +16,15 @@ class PredicateReorderingTest : public BaseTest {
  protected:
   void SetUp() override { ast = setupAst(); }
 
-  std::shared_ptr<AbstractNode> ast;
+  std::shared_ptr<AbstractAstNode> ast;
 
-  std::shared_ptr<AbstractNode> setupAst() {
+  std::shared_ptr<AbstractAstNode> setupAst() {
     const auto t_n = std::make_shared<TableNode>("a");
 
-    const auto ts_n = std::make_shared<TableScanNode>("c1", nullptr, ScanType::OpEquals, "a");
+    const auto ts_n = std::make_shared<PredicateNode>("c1", nullptr, ScanType::OpEquals, "a");
     ts_n->set_left(t_n);
 
-    const auto ts_n_2 = std::make_shared<TableScanNode>("c2", nullptr, ScanType::OpEquals, "a");
+    const auto ts_n_2 = std::make_shared<PredicateNode>("c2", nullptr, ScanType::OpEquals, "a");
     ts_n_2->set_left(ts_n);
 
     return ts_n_2;

@@ -5,8 +5,8 @@
 #include <vector>
 
 #include "all_type_variant.hpp"
+#include "abstract_ast_node.hpp"
 #include "common.hpp"
-#include "optimizer/abstract_syntax_tree/abstract_node.hpp"
 
 namespace opossum {
 
@@ -43,13 +43,13 @@ enum class ExpressionType {
   ExpressionHint
 };
 
-class ExpressionNode : public AbstractNode {
+class ExpressionNode : public AbstractAstNode {
  public:
   explicit ExpressionNode(const ExpressionType type);
   ExpressionNode(const ExpressionType type, const std::string& table_name, const std::string& column_name);
   ExpressionNode(const ExpressionType type, const AllTypeVariant value /*, const AllTypeVariant value2*/);
 
-  const std::string description() const override;
+  std::string description() const override;
 
   const std::string& table_name() const;
 

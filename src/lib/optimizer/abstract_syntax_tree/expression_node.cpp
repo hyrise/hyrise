@@ -10,23 +10,23 @@
 namespace opossum {
 
 ExpressionNode::ExpressionNode(const ExpressionType type)
-    : AbstractNode(NodeType::Expression),
+    : AbstractAstNode(AstNodeType::Expression),
       _type(type),
       _value(NULL_VALUE) /*, _value2(NULL_VALUE)*/,
       _name("-"),
       _table("-") {}
 
 ExpressionNode::ExpressionNode(const ExpressionType type, const std::string &table_name, const std::string &column_name)
-    : AbstractNode(NodeType::Expression),
+    : AbstractAstNode(AstNodeType::Expression),
       _type(type),
       _value(NULL_VALUE) /*, _value2(NULL_VALUE)*/,
       _name(column_name),
       _table(table_name) {}
 
 ExpressionNode::ExpressionNode(const ExpressionType type, const AllTypeVariant value /*, const AllTypeVariant value2*/)
-    : AbstractNode(NodeType::Expression), _type(type), _value(value) /*, _value2(value2)*/, _name("-"), _table("-") {}
+    : AbstractAstNode(AstNodeType::Expression), _type(type), _value(value) /*, _value2(value2)*/, _name("-"), _table("-") {}
 
-const std::string ExpressionNode::description() const {
+std::string ExpressionNode::description() const {
   std::ostringstream desc;
 
   desc << "Expression (" << _type_to_string() << ", " << value() /*<< ", " << value2()*/ << ", " << table_name() << ", "

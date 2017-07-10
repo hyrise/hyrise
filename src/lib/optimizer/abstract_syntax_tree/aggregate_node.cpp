@@ -10,16 +10,16 @@ namespace opossum {
 
 AggregateNode::AggregateNode(const std::vector<AggregateColumnDefinition> aggregates,
                        const std::vector<std::string> groupby_columns):
-  AbstractNode(NodeType::Aggregate),
+  AbstractAstNode(AstNodeType::Aggregate),
   _aggregates(aggregates),
   _groupby_columns(groupby_columns)
 {}
 
-const std::string AggregateNode::description() const {
+std::string AggregateNode::description() const {
   return "Aggregate";
 }
 
-const std::vector<std::string> AggregateNode::output_columns() {
-  return {};
+const std::vector<std::string> & AggregateNode::output_columns() const {
+  return _output_columns;
 }
 }  // namespace opossum

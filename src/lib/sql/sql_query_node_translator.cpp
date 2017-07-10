@@ -6,12 +6,12 @@
 #include <vector>
 
 #include "operators/table_scan.hpp"
-#include "optimizer/abstract_syntax_tree/abstract_node.hpp"
+#include "optimizer/abstract_syntax_tree/abstract_ast_node.hpp"
 #include "optimizer/abstract_syntax_tree/expression_node.hpp"
 #include "optimizer/abstract_syntax_tree/projection_node.hpp"
 #include "optimizer/abstract_syntax_tree/sort_node.hpp"
 #include "optimizer/abstract_syntax_tree/table_node.hpp"
-#include "optimizer/abstract_syntax_tree/table_scan_node.hpp"
+#include "optimizer/abstract_syntax_tree/predicate_node.hpp"
 #include "sql/sql_expression_translator.hpp"
 #include "storage/storage_manager.hpp"
 #include "utils/assert.hpp"
@@ -30,9 +30,9 @@ SQLQueryNodeTranslator::SQLQueryNodeTranslator() {}
 
 SQLQueryNodeTranslator::~SQLQueryNodeTranslator() {}
 
-std::vector<std::shared_ptr<AbstractNode>> SQLQueryNodeTranslator::translate_parse_result(
+std::vector<std::shared_ptr<AbstractAstNode>> SQLQueryNodeTranslator::translate_parse_result(
     const hsql::SQLParserResult& result) {
-  std::vector<std::shared_ptr<AbstractNode>> result_nodes;
+  std::vector<std::shared_ptr<AbstractAstNode>> result_nodes;
   const std::vector<SQLStatement*>& statements = result.getStatements();
 
   for (const SQLStatement* stmt : statements) {
@@ -43,7 +43,7 @@ std::vector<std::shared_ptr<AbstractNode>> SQLQueryNodeTranslator::translate_par
   return result_nodes;
 }
 
-std::shared_ptr<AbstractNode> SQLQueryNodeTranslator::translate_statement(const SQLStatement& statement) {
+std::shared_ptr<AbstractAstNode> SQLQueryNodeTranslator::translate_statement(const SQLStatement& statement) {
   switch (statement.type()) {
     case hsql::kStmtSelect: {
       const SelectStatement& select = (const SelectStatement&)statement;
@@ -57,7 +57,7 @@ std::shared_ptr<AbstractNode> SQLQueryNodeTranslator::translate_statement(const 
   }
 }
 
-std::shared_ptr<AbstractNode> SQLQueryNodeTranslator::_translate_select(const SelectStatement& select) {
+std::shared_ptr<AbstractAstNode> SQLQueryNodeTranslator::_translate_select(const SelectStatement& select) {
   // SQL Order of Operations: http://www.bennadel.com/blog/70-sql-query-order-of-operations.htm
   // 1. FROM clause
   // 2. WHERE clause
@@ -94,8 +94,8 @@ std::shared_ptr<AbstractNode> SQLQueryNodeTranslator::_translate_select(const Se
      }
 #endif
 
-    std::vector<AggregateColumnDefinition> aggregate_column_definitions;
-    aggregate_column_definitions.reserve(select.selectList->size());
+//    std::vector<AggregateColumnDefinition> aggregate_column_definitions;
+//    aggregate_column_definitions.reserve(select.selectList->size());
 
 //    for (auto * expr : (*select.selectList)) {
 //
@@ -118,7 +118,7 @@ std::shared_ptr<AbstractNode> SQLQueryNodeTranslator::_translate_select(const Se
 }
 
 // TODO(tim): JoinNode
-// std::shared_ptr<AbstractNode> SQLQueryNodeTranslator::_translate_join(const JoinDefinition& join) {
+// std::shared_ptr<AbstractAstNode> SQLQueryNodeTranslator::_translate_join(const JoinDefinition& join) {
 //  // Get left and right sub tables.
 //  if (!_translate_table_ref(*join.left)) {
 //    return false;
@@ -179,7 +179,7 @@ std::shared_ptr<AbstractNode> SQLQueryNodeTranslator::_translate_select(const Se
 //  return true;
 //}
 
-std::shared_ptr<AbstractNode> SQLQueryNodeTranslator::_translate_table_ref(const hsql::TableRef& table) {
+std::shared_ptr<AbstractAstNode> SQLQueryNodeTranslator::_translate_table_ref(const hsql::TableRef& table) {
   switch (table.type) {
     case hsql::kTableName: {
       return std::make_shared<TableNode>(table.name);
@@ -231,8 +231,8 @@ const AllTypeVariant SQLQueryNodeTranslator::_translate_literal(const hsql::Expr
   }
 }
 
-std::shared_ptr<AbstractNode> SQLQueryNodeTranslator::_translate_filter_expr(
-    const hsql::Expr& expr, const std::shared_ptr<AbstractNode>& input_node) {
+std::shared_ptr<AbstractAstNode> SQLQueryNodeTranslator::_translate_filter_expr(
+    const hsql::Expr& expr, const std::shared_ptr<AbstractAstNode>& input_node) {
   if (!expr.isType(hsql::kExprOperator)) {
     throw std::runtime_error("Filter expression clause has to be of type operator!");
   }
@@ -274,14 +274,14 @@ std::shared_ptr<AbstractNode> SQLQueryNodeTranslator::_translate_filter_expr(
   Expr* other_expr = (column_expr == expr.expr) ? expr.expr2 : expr.expr;
   const AllTypeVariant value = _translate_literal(*other_expr);
 
-  auto table_scan_node = std::make_shared<TableScanNode>(column_name, expressionNode, scan_type, value);
-  table_scan_node->set_left(input_node);
+  auto predicate_node = std::make_shared<PredicateNode>(column_name, expressionNode, scan_type, value);
+  predicate_node->set_left(input_node);
 
-  return table_scan_node;
+  return predicate_node;
 }
 
-std::shared_ptr<AbstractNode> SQLQueryNodeTranslator::_translate_projection(
-    const std::vector<hsql::Expr*>& expr_list, const std::shared_ptr<AbstractNode>& input_node) {
+std::shared_ptr<AbstractAstNode> SQLQueryNodeTranslator::_translate_projection(
+    const std::vector<hsql::Expr*>& expr_list, const std::shared_ptr<AbstractAstNode>& input_node) {
   std::vector<std::string> columns;
   for (const Expr* expr : expr_list) {
     // TODO(tim): expressions
@@ -302,13 +302,13 @@ std::shared_ptr<AbstractNode> SQLQueryNodeTranslator::_translate_projection(
   return projection_node;
 }
 
-std::shared_ptr<AbstractNode> SQLQueryNodeTranslator::_translate_order_by(
-    const std::vector<hsql::OrderDescription*> order_list, const std::shared_ptr<AbstractNode>& input_node) {
+std::shared_ptr<AbstractAstNode> SQLQueryNodeTranslator::_translate_order_by(
+    const std::vector<hsql::OrderDescription*> order_list, const std::shared_ptr<AbstractAstNode>& input_node) {
   if (order_list.empty()) {
     return input_node;
   }
 
-  std::shared_ptr<AbstractNode> current_result_node = input_node;
+  std::shared_ptr<AbstractAstNode> current_result_node = input_node;
 
   // Go through all the order descriptions and create a sort node for each of them.
   // Iterate in reverse because the sort operator does not support multiple columns,
