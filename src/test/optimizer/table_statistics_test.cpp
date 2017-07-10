@@ -71,6 +71,7 @@ class TableStatisticsTest : public BaseTest {
 
   TableContainer _table_a_container;
 
+  //  {below min, min, max, above max}
   std::vector<int> _int_values{0, 1, 6, 7};
   std::vector<float> _float_values{0.f, 1.f, 6.f, 7.f};
   std::vector<double> _double_values{0., 1., 6., 7.};
