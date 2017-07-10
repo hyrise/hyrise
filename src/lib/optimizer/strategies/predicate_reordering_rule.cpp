@@ -5,8 +5,6 @@
 #include <memory>
 #include <vector>
 
-#include "optimizer/abstract_syntax_tree/query_plan_helper.hpp"
-
 namespace opossum {
 
 std::shared_ptr<AbstractNode> PredicateReorderingRule::apply_rule(std::shared_ptr<AbstractNode> node) {

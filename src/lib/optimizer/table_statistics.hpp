@@ -16,6 +16,7 @@ class TableStatistics {
   friend class Statistics;
 
  public:
+  // Needed for mocking in tests
   TableStatistics() = default;
 
   explicit TableStatistics(const std::string &name, const std::weak_ptr<Table> table);
@@ -40,7 +41,17 @@ class TableStatistics {
 
  protected:
   const std::string _name;
-  // TODO(sven): why is const missing
+  /**
+   * Even though _table should be a const pointer, this member cannot be defined const
+   * as there are issues with Clang in that case:
+   *
+   * Clang will implicitly delete the default constructor if the 'const weak_ptr' is not set by the constructor.
+   * For a mocked TableStatistics object this is the case, since we don't need an actual Table
+   * but just try to call the default constructor of weak_ptr.
+   *
+   * This issue was reproducible on Jenkins and some Online Compilers with Clang 3.8, but not with Clang on Mac.
+   * GCC is able to handle 'const weak_ptr' for this setting.
+   */
   std::weak_ptr<Table> _table;
   double _row_count;
   std::map<ColumnID, std::shared_ptr<AbstractColumnStatistics>> _column_statistics;
