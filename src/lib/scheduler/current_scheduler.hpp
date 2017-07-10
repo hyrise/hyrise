@@ -29,20 +29,20 @@ class CurrentScheduler {
    * If there is an active Scheduler, block execution until all @tasks have finished
    * If there is no active Scheduler, returns immediately since all @tasks have executed when they were scheduled
    */
-  template<typename TaskType>
+  template <typename TaskType>
   static void wait_for_tasks(const std::vector<std::shared_ptr<TaskType>>& tasks);
 
-  template<typename TaskType>
+  template <typename TaskType>
   static void schedule_tasks(const std::vector<std::shared_ptr<TaskType>>& tasks);
 
-  template<typename TaskType>
+  template <typename TaskType>
   static void schedule_and_wait_for_tasks(const std::vector<std::shared_ptr<TaskType>>& tasks);
 
  private:
   static std::shared_ptr<AbstractScheduler> _instance;
 };
 
-template<typename TaskType>
+template <typename TaskType>
 void CurrentScheduler::wait_for_tasks(const std::vector<std::shared_ptr<TaskType>>& tasks) {
   if (IS_DEBUG) {
     for (auto& task : tasks) {
@@ -64,18 +64,17 @@ void CurrentScheduler::wait_for_tasks(const std::vector<std::shared_ptr<TaskType
   }
 }
 
-template<typename TaskType>
+template <typename TaskType>
 void CurrentScheduler::schedule_tasks(const std::vector<std::shared_ptr<TaskType>>& tasks) {
-  for (auto & task : tasks) {
+  for (auto& task : tasks) {
     task->schedule();
   }
 }
 
-template<typename TaskType>
+template <typename TaskType>
 void CurrentScheduler::schedule_and_wait_for_tasks(const std::vector<std::shared_ptr<TaskType>>& tasks) {
   schedule_tasks(tasks);
   wait_for_tasks(tasks);
 }
 
 }  // namespace opossum
-

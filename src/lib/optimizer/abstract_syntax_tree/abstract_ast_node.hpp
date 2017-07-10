@@ -28,9 +28,9 @@ class AbstractAstNode : public std::enable_shared_from_this<AbstractAstNode> {
 
   AstNodeType type() const;
 
-  virtual const std::vector<std::string> & output_columns() const;
+  virtual const std::vector<std::string> &output_columns() const;
 
-  void print(const uint32_t indent = 0, std::ostream& out = std::cout) const;
+  void print(const uint32_t indent = 0, std::ostream &out = std::cout) const;
   virtual std::string description() const = 0;
 
  protected:

@@ -1,5 +1,7 @@
 #include "types.hpp"
 
+#include <string>
+
 #include "utils/assert.hpp"
 
 namespace opossum {
@@ -27,5 +29,4 @@ std::string scan_type_to_string(ScanType scan_type) {
   Fail("Unknown ScanType");
   return "";
 }
-
-}
+}  // namespace opossum

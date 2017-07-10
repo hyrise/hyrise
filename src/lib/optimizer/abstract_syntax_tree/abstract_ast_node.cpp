@@ -30,7 +30,7 @@ void AbstractAstNode::set_right(const std::shared_ptr<AbstractAstNode> &right) {
 
 AstNodeType AbstractAstNode::type() const { return _type; }
 
-const std::vector<std::string> & AbstractAstNode::output_columns() const {
+const std::vector<std::string> &AbstractAstNode::output_columns() const {
   if (_left && !_right) return _left->output_columns();
   if (!_left && _right) return _right->output_columns();
 
@@ -50,7 +50,7 @@ const std::vector<std::string> & AbstractAstNode::output_columns() const {
   return _output_columns;
 }
 
-void AbstractAstNode::print(const uint32_t indent, std::ostream& out) const {
+void AbstractAstNode::print(const uint32_t indent, std::ostream &out) const {
   out << std::setw(indent) << " ";
   out << description() << std::endl;
 

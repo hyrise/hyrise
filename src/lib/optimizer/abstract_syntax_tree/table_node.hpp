@@ -14,7 +14,7 @@ class TableNode : public AbstractAstNode {
 
   std::string description() const override;
 
-  const std::vector<std::string> & output_columns() const override;
+  const std::vector<std::string>& output_columns() const override;
 
   const std::string& table_name() const;
 

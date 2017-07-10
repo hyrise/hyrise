@@ -6,9 +6,9 @@
 #include "gtest/gtest.h"
 
 #include "operators/table_scan.hpp"
+#include "optimizer/abstract_syntax_tree/predicate_node.hpp"
 #include "optimizer/abstract_syntax_tree/projection_node.hpp"
 #include "optimizer/abstract_syntax_tree/table_node.hpp"
-#include "optimizer/abstract_syntax_tree/predicate_node.hpp"
 
 namespace opossum {
 

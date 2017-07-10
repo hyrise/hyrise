@@ -11,7 +11,7 @@ TableNode::TableNode(const std::string table_name) : AbstractAstNode(AstNodeType
 
 std::string TableNode::description() const { return "Table: " + _table_name; }
 
-const std::vector<std::string> & TableNode::output_columns() const {
+const std::vector<std::string>& TableNode::output_columns() const {
   // Cache call to StorageManager.
   if (_column_names.empty()) {
     auto table = StorageManager::get().get_table(_table_name);
