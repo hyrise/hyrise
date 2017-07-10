@@ -15,11 +15,11 @@ class SortNode : public AbstractAstNode {
   std::string description() const override;
 
   std::string column_name() const;
-  bool asc() const;
+  bool ascending() const;
 
  private:
   const std::string _column_name;
-  const bool _asc;
+  const bool _ascending;
 };
 
 }  // namespace opossum
