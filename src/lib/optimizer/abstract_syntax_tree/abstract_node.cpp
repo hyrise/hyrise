@@ -10,7 +10,7 @@ namespace opossum {
 
 AbstractNode::AbstractNode(NodeType node_type) : _type(node_type) {}
 
-const std::weak_ptr<AbstractNode> &AbstractNode::parent() const { return _parent; }
+const std::shared_ptr<AbstractNode> AbstractNode::parent() const { return _parent.lock(); }
 
 void AbstractNode::set_parent(const std::weak_ptr<AbstractNode> &parent) { _parent = parent; }
 
