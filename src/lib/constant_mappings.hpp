@@ -2,7 +2,7 @@
 #include <unordered_map>
 
 #include "types.hpp"
-#include "network/generated/opossum.pb.h"
+#include "network/opossum.pb.wrapper.h"
 
 namespace opossum {
 
