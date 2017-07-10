@@ -6,7 +6,6 @@
 #include <vector>
 
 #include "common.hpp"
-#include "operators/abstract_join_operator.hpp"
 #include "operators/abstract_operator.hpp"
 #include "operators/difference.hpp"
 #include "operators/export_binary.hpp"
