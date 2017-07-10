@@ -9,11 +9,7 @@
 #include "../base_test.hpp"
 #include "gtest/gtest.h"
 
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wunused-parameter"
-#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-#include "../../lib/network/generated/opossum.pb.h"
-#pragma GCC diagnostic pop
+#include "../../lib/network/opossum.pb.wrapper.h"
 #include "../../lib/network/operator_translator.hpp"
 #include "../../lib/operators/abstract_operator.hpp"
 #include "../../lib/operators/difference.hpp"

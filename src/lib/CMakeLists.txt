@@ -71,6 +71,7 @@ set(
     import_export/csv_writer.hpp
     network/operator_translator.cpp
     network/operator_translator.hpp
+    network/opossum.pb.wrapper.h
     network/request_handler.cpp
     network/request_handler.hpp
     network/response_builder.hpp
