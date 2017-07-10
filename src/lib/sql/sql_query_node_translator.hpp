@@ -30,6 +30,9 @@ class SQLQueryNodeTranslator {
   std::shared_ptr<AbstractAstNode> _translate_filter_expr(const hsql::Expr& expr,
                                                        const std::shared_ptr<AbstractAstNode>& input_node);
 
+  std::shared_ptr<AbstractAstNode> _translate_aggregate(const hsql::SelectStatement & select,
+                                                        const std::shared_ptr<AbstractAstNode>& input_node);
+
   std::shared_ptr<AbstractAstNode> _translate_projection(const std::vector<hsql::Expr*>& expr_list,
                                                       const std::shared_ptr<AbstractAstNode>& input_node);
 

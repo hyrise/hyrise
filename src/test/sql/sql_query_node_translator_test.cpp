@@ -7,6 +7,7 @@
 #include "SQLParser.h"
 #include "gtest/gtest.h"
 
+#include "optimizer/abstract_syntax_tree/aggregate_node.hpp"
 #include "optimizer/abstract_syntax_tree/projection_node.hpp"
 #include "optimizer/abstract_syntax_tree/sort_node.hpp"
 #include "optimizer/abstract_syntax_tree/table_node.hpp"
@@ -135,21 +136,18 @@ TEST_F(SQLQueryNodeTranslatorTest, AggregateWithExpression) {
   const auto query = "SELECT SUM(a+b) AS s, SUM(a*b) as f FROM table_a";
   const auto result_node = compile_query(query);
 
-//  EXPECT_EQ(result_node->type(), AstNodeType::Projection);
-//  EXPECT_FALSE(result_node->right());
-//
-//  auto aggr_node_1 = result_node->left();
-//  EXPECT_EQ(aggr_node_1->type(), AstNodeType::Aggregate);
-//  EXPECT_FALSE(aggr_node_1->right());
-//
-//  auto proj_node_1 = aggr_node_1->left();
-//  EXPECT_EQ(proj_node_1->type(), AstNodeType::Projection);
-//  EXPECT_FALSE(proj_node_1->right());
-//
-//  auto t_node_1 = proj_node_1->left();
-//  EXPECT_EQ(t_node_1->type(), AstNodeType::Table);
-//  EXPECT_FALSE(t_node_1->left());
-//  EXPECT_FALSE(t_node_1->right());
+  EXPECT_EQ(result_node->type(), AstNodeType::Aggregate);
+  EXPECT_FALSE(result_node->right());
+
+  const auto aggregate_node = std::dynamic_pointer_cast<AggregateNode>(result_node);
+  EXPECT_EQ(aggregate_node->aggregates().size(), 2u);
+  EXPECT_EQ(aggregate_node->aggregates().at(0).alias, std::string("s"));
+  EXPECT_EQ(aggregate_node->aggregates().at(1).alias, std::string("f"));
+
+  auto t_node_1 = result_node->left();
+  EXPECT_EQ(t_node_1->type(), AstNodeType::Table);
+  EXPECT_FALSE(t_node_1->left());
+  EXPECT_FALSE(t_node_1->right());
 
 }
 
