@@ -119,4 +119,6 @@ enum class ScanType {
   OpLike
 };
 
+enum class JoinMode { Inner, Left, Right, Outer, Cross, Natural, Self };
+
 }  // namespace opossum
