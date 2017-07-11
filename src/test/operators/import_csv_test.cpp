@@ -140,4 +140,17 @@ TEST_F(OperatorsImportCsvTest, SemicolonSeparator) {
   EXPECT_TABLE_EQ(importer->get_output(), expected_table, true);
 }
 
+TEST_F(OperatorsImportCsvTest, ChunkSize) {
+  // chunk_size is defined as "20" in .meta file
+  auto importer = std::make_shared<ImportCsv>("src/test/csv/float_int_large.csv");
+  importer->execute();
+
+  // check if chunk_size property is correct
+  EXPECT_EQ(importer->get_output()->chunk_size(), 20U);
+
+  // check if actual chunk_size is correct
+  EXPECT_EQ(importer->get_output()->get_chunk(ChunkID{0}).size(), 20U);
+  EXPECT_EQ(importer->get_output()->get_chunk(ChunkID{1}).size(), 20U);
+}
+
 }  // namespace opossum

@@ -53,7 +53,8 @@ std::shared_ptr<Table> CsvRfcParser::parse(const std::string& filename) {
     ChunkOffset row_count = 0;
     const auto start = position;
     // loop over rows until block size reached or end of file_content reached
-    while (position < content_end && position - start < static_cast<std::streamsize>(_buffer_size)) {
+    // while (position < content_end && position - start < static_cast<std::streamsize>(_buffer_size)) {
+    while (position < content_end && row_count < table->chunk_size()) {
       position = _next_row(position, content_end, _csv_config);
       ++row_count;
     }
@@ -163,7 +164,7 @@ const std::shared_ptr<Table> CsvRfcParser::_process_meta_file(const std::string&
     position = _next_field(position, end, last_char, config);
     std::string column_type = field_start.base();
     AbstractCsvConverter::unescape(column_type, config);
-    table->add_column(column_name, column_type);
+    table->add_column_definition(column_name, column_type);
   }
   return table;
 }
