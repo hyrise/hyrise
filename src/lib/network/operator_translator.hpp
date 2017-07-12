@@ -4,8 +4,9 @@
 #include <memory>
 #include <vector>
 
-#include "../scheduler/operator_task.hpp"
-#include "network/opossum.pb.wrapper.hpp"
+#include "opossum.pb.wrapper.hpp"
+
+#include "scheduler/operator_task.hpp"
 
 namespace opossum {
 
