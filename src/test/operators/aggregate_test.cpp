@@ -9,15 +9,15 @@
 #include "../base_test.hpp"
 #include "gtest/gtest.h"
 
-#include "../../lib/operators/abstract_read_only_operator.hpp"
-#include "../../lib/operators/aggregate.hpp"
-#include "../../lib/operators/join_hash.hpp"
-#include "../../lib/operators/table_scan.hpp"
-#include "../../lib/operators/table_wrapper.hpp"
-#include "../../lib/storage/dictionary_compression.hpp"
-#include "../../lib/storage/storage_manager.hpp"
-#include "../../lib/storage/table.hpp"
-#include "../../lib/types.hpp"
+#include "operators/abstract_read_only_operator.hpp"
+#include "operators/aggregate.hpp"
+#include "operators/join_hash.hpp"
+#include "operators/table_scan.hpp"
+#include "operators/table_wrapper.hpp"
+#include "storage/dictionary_compression.hpp"
+#include "storage/storage_manager.hpp"
+#include "storage/table.hpp"
+#include "types.hpp"
 
 namespace opossum {
 
@@ -421,7 +421,7 @@ TEST_F(OperatorsAggregateTest, DictionarySingleAggregateMinOnRef) {
 TEST_F(OperatorsAggregateTest, JoinThenAggregate) {
   auto join =
       std::make_shared<JoinHash>(_table_wrapper_3_1, _table_wrapper_3_2, std::pair<std::string, std::string>("a", "a"),
-                                 ScanType::OpEquals, Inner, std::string("left."), std::string("right."));
+                                 ScanType::OpEquals, JoinMode::Inner, std::string("left."), std::string("right."));
   join->execute();
 
   this->test_output(join, {}, {std::string("left.a"), std::string("right.b")},
