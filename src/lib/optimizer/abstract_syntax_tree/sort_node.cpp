@@ -8,7 +8,7 @@ SortNode::SortNode(const std::string column_name, const bool asc)
     : AbstractASTNode(ASTNodeType::Sort), _column_name(column_name), _ascending(asc) {}
 
 std::string SortNode::description() const {
-    return "Sort: " + _column_name + " (" + (_ascending ? "asc" : "desc") + ")";
+  return "Sort: " + _column_name + " (" + (_ascending ? "asc" : "desc") + ")";
 }
 
 std::string SortNode::column_name() const { return _column_name; }

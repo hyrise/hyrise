@@ -46,15 +46,13 @@ const std::vector<std::string> &AbstractASTNode::output_column_names() const {
 
   if (_left_child) {
     auto left_output_columns = _left_child->output_column_names();
-    _output_column_names.insert(_output_column_names.end(),
-                                std::make_move_iterator(left_output_columns.begin()),
+    _output_column_names.insert(_output_column_names.end(), std::make_move_iterator(left_output_columns.begin()),
                                 std::make_move_iterator(left_output_columns.end()));
   }
 
   if (_right_child) {
     auto right_output_columns = _right_child->output_column_names();
-    _output_column_names.insert(_output_column_names.end(),
-                                std::make_move_iterator(right_output_columns.begin()),
+    _output_column_names.insert(_output_column_names.end(), std::make_move_iterator(right_output_columns.begin()),
                                 std::make_move_iterator(right_output_columns.end()));
   }
 

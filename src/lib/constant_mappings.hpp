@@ -1,8 +1,8 @@
 #include <string>
 #include <unordered_map>
 
+#include "network/opossum.pb.wrapper.hpp"
 #include "types.hpp"
-#include "network/opossum.pb.wrapper.h"
 
 namespace opossum {
 

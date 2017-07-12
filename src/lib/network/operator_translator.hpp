@@ -5,7 +5,7 @@
 #include <vector>
 
 #include "../scheduler/operator_task.hpp"
-#include "network/opossum.pb.wrapper.h"
+#include "network/opossum.pb.wrapper.hpp"
 
 namespace opossum {
 

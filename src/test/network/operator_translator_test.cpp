@@ -9,8 +9,8 @@
 #include "../base_test.hpp"
 #include "gtest/gtest.h"
 
-#include "../../lib/network/opossum.pb.wrapper.h"
 #include "../../lib/network/operator_translator.hpp"
+#include "network/opossum.pb.wrapper.hpp"
 #include "../../lib/operators/abstract_operator.hpp"
 #include "../../lib/operators/difference.hpp"
 #include "../../lib/operators/export_binary.hpp"
