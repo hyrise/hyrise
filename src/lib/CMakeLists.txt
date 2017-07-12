@@ -65,6 +65,8 @@ set(
     import_export/csv.hpp
     import_export/csv_non_rfc_parser.cpp
     import_export/csv_non_rfc_parser.hpp
+    import_export/csv_parser.cpp
+    import_export/csv_parser.hpp
     import_export/csv_rfc_parser.cpp
     import_export/csv_rfc_parser.hpp
     import_export/csv_writer.cpp
