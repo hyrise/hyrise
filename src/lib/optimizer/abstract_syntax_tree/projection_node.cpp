@@ -9,8 +9,8 @@
 namespace opossum {
 
 ProjectionNode::ProjectionNode(const std::vector<std::string>& column_names)
-    : AbstractAstNode(AstNodeType::Projection) {
-  _output_columns = column_names;
+    : AbstractASTNode(ASTNodeType::Projection) {
+  _output_column_names = column_names;
 }
 
 std::string ProjectionNode::description() const {
@@ -18,13 +18,13 @@ std::string ProjectionNode::description() const {
 
   desc << "Projection: ";
 
-  for (auto& column : _output_columns) {
+  for (auto& column : _output_column_names) {
     desc << " " << column;
   }
 
   return desc.str();
 }
 
-const std::vector<std::string>& ProjectionNode::output_columns() const { return _output_columns; }
+const std::vector<std::string>& ProjectionNode::output_column_names() const { return _output_column_names; }
 
 }  // namespace opossum

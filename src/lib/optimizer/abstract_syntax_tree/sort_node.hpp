@@ -8,7 +8,7 @@
 
 namespace opossum {
 
-class SortNode : public AbstractAstNode {
+class SortNode : public AbstractASTNode {
  public:
   explicit SortNode(const std::string column_name, const bool asc);
 

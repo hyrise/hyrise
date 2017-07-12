@@ -8,19 +8,18 @@
 
 namespace opossum {
 
-class TableNode : public AbstractAstNode {
+class TableNode : public AbstractASTNode {
  public:
   explicit TableNode(const std::string table_name);
 
   std::string description() const override;
 
-  const std::vector<std::string>& output_columns() const override;
+  const std::vector<std::string>& output_column_names() const override;
 
   const std::string& table_name() const;
 
  private:
   const std::string _table_name;
-  std::vector<std::string> _column_names;
 };
 
 }  // namespace opossum

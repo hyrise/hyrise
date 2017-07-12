@@ -5,7 +5,7 @@
 namespace opossum {
 
 SortNode::SortNode(const std::string column_name, const bool asc)
-    : AbstractAstNode(AstNodeType::Sort), _column_name(column_name), _ascending(asc) {}
+    : AbstractASTNode(ASTNodeType::Sort), _column_name(column_name), _ascending(asc) {}
 
 std::string SortNode::description() const {
     return "Sort: " + _column_name + " (" + (_ascending ? "asc" : "desc") + ")";

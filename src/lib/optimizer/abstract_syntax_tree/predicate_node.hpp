@@ -12,7 +12,7 @@
 
 namespace opossum {
 
-class PredicateNode : public AbstractAstNode {
+class PredicateNode : public AbstractASTNode {
  public:
   PredicateNode(const std::string& column_name, ScanType scan_type, const AllParameterVariant value,
                 const optional<AllTypeVariant> value2 = nullopt);

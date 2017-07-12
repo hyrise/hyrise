@@ -8,13 +8,13 @@
 
 namespace opossum {
 
-class ProjectionNode : public AbstractAstNode {
+class ProjectionNode : public AbstractASTNode {
  public:
   explicit ProjectionNode(const std::vector<std::string>& column_names);
 
   std::string description() const override;
 
-  const std::vector<std::string>& output_columns() const override;
+  const std::vector<std::string>& output_column_names() const override;
 };
 
 }  // namespace opossum
