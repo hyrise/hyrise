@@ -67,12 +67,12 @@ bool SQLQueryTranslator::translate_parse_result(const hsql::SQLParserResult& res
 bool SQLQueryTranslator::translate_statement(const SQLStatement& statement) {
   switch (statement.type()) {
     case hsql::kStmtSelect: {
-      _plan.add_tree();
-
       const SelectStatement& select = (const SelectStatement&)statement;
-      return _translate_select(select);
-    }
-    case hsql::kStmtPrepare: {
+      if (!_translate_select(select)) {
+        return false;
+      }
+
+      _plan.add_root(_current_root);
       return true;
     }
     default:
@@ -99,7 +99,7 @@ bool SQLQueryTranslator::_translate_select(const SelectStatement& select) {
   // Add table scan if applicable.
   if (select.whereClause != nullptr) {
     Expr& where = *select.whereClause;
-    auto input_op = _plan.root();
+    auto input_op = _current_root;
     if (!_translate_filter_expr(where, input_op)) {
       return false;
     }
@@ -107,7 +107,7 @@ bool SQLQueryTranslator::_translate_select(const SelectStatement& select) {
 
   // Translate GROUP BY & HAVING
   if (select.groupBy != nullptr) {
-    if (!_translate_group_by(*select.groupBy, *select.selectList, _plan.root())) {
+    if (!_translate_group_by(*select.groupBy, *select.selectList, _current_root)) {
       return false;
     }
   }
@@ -115,13 +115,13 @@ bool SQLQueryTranslator::_translate_select(const SelectStatement& select) {
   // Translate SELECT list.
   // Add projection for select list.
   // TODO(torpedro): Handle DISTINCT.
-  if (!_translate_projection(*select.selectList, _plan.root())) {
+  if (!_translate_projection(*select.selectList, _current_root)) {
     return false;
   }
 
   // Translate ORDER BY.
   if (select.order != nullptr) {
-    if (!_translate_order_by(*select.order, _plan.root())) {
+    if (!_translate_order_by(*select.order, _current_root)) {
       return false;
     }
   }
@@ -147,7 +147,7 @@ bool SQLQueryTranslator::_translate_filter_expr(const hsql::Expr& expr,
       if (!_translate_filter_expr(*expr.expr, input_op)) {
         return false;
       }
-      if (!_translate_filter_expr(*expr.expr2, _plan.root())) {
+      if (!_translate_filter_expr(*expr.expr2, _current_root)) {
         return false;
       }
       return true;
@@ -184,7 +184,7 @@ bool SQLQueryTranslator::_translate_filter_expr(const hsql::Expr& expr,
   }
 
   auto table_scan = std::make_shared<TableScan>(input_op, ColumnName(column_name), scan_type, value);
-  _plan.set_root(table_scan);
+  _current_root = table_scan;
   return true;
 }
 
@@ -213,7 +213,7 @@ bool SQLQueryTranslator::_translate_projection(const std::vector<hsql::Expr*>& e
   }
 
   auto projection = std::make_shared<Projection>(input_op, columns);
-  _plan.set_root(projection);
+  _current_root = projection;
   return true;
 }
 
@@ -255,11 +255,11 @@ bool SQLQueryTranslator::_translate_group_by(const hsql::GroupByDescription& gro
   }
 
   auto aggregate = std::make_shared<Aggregate>(input_op, aggregates, groupby_columns);
-  _plan.set_root(aggregate);
+  _current_root = aggregate;
 
   // Handle HAVING clause.
   if (group_by.having != nullptr) {
-    if (!_translate_filter_expr(*group_by.having, _plan.root())) {
+    if (!_translate_filter_expr(*group_by.having, _current_root)) {
       return false;
     }
   }
@@ -280,7 +280,7 @@ bool SQLQueryTranslator::_translate_order_by(const std::vector<hsql::OrderDescri
     const std::string name = _get_column_name(expr);
     const bool asc = (order_desc->type == hsql::kOrderAsc);
     auto sort = std::make_shared<Sort>(prev_op, name, asc);
-    _plan.set_root(sort);
+    _current_root = sort;
     prev_op = sort;
   }
 
@@ -291,7 +291,7 @@ bool SQLQueryTranslator::_translate_table_ref(const hsql::TableRef& table) {
   switch (table.type) {
     case hsql::kTableName: {
       auto get_table = std::make_shared<GetTable>(table.name);
-      _plan.set_root(get_table);
+      _current_root = get_table;
       return true;
     }
     case hsql::kTableSelect: {
@@ -305,12 +305,12 @@ bool SQLQueryTranslator::_translate_table_ref(const hsql::TableRef& table) {
       if (!_translate_table_ref(*join_def.left)) {
         return false;
       }
-      auto left_op = _plan.root();
+      auto left_op = _current_root;
 
       if (!_translate_table_ref(*join_def.right)) {
         return false;
       }
-      auto right_op = _plan.root();
+      auto right_op = _current_root;
 
       // Determine join condition.
       const Expr& condition = *join_def.condition;
@@ -355,7 +355,7 @@ bool SQLQueryTranslator::_translate_table_ref(const hsql::TableRef& table) {
       // TODO(torpedro): Optimize join type selection.
       auto join =
           std::make_shared<JoinNestedLoopA>(left_op, right_op, columns, scan_type, mode, prefix_left, prefix_right);
-      _plan.set_root(join);
+      _current_root = join;
       return true;
     }
     case hsql::kTableCrossProduct: {

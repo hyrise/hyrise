@@ -62,6 +62,9 @@ class SQLQueryTranslator {
   // Generated execution plan.
   SQLQueryPlan _plan;
 
+  // Current root of the operator tree that is being built.
+  std::shared_ptr<AbstractOperator> _current_root;
+
   // Details about the error, if one occurred.
   std::string _error_msg;
 };

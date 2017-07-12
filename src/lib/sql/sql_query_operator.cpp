@@ -53,8 +53,10 @@ std::shared_ptr<const Table> SQLQueryOperator::on_execute(std::shared_ptr<Transa
   if (_schedule_plan) {
     // Add the result task to the end of the query plan.
     std::vector<std::shared_ptr<OperatorTask>> tasks = _plan.tasks();
-    _result_op->set_input_operator(tasks.back()->get_operator());
-    tasks.back()->set_as_predecessor_of(_result_task);
+    if (tasks.size() > 0) {
+      _result_op->set_input_operator(tasks.back()->get_operator());
+      tasks.back()->set_as_predecessor_of(_result_task);
+    }
     tasks.push_back(_result_task);
 
     for (const auto& task : tasks) {
