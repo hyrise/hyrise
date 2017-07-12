@@ -8,9 +8,9 @@
 
 namespace opossum {
 
-class TableNode : public AbstractASTNode {
+class PhysicalTableNode : public AbstractASTNode {
  public:
-  explicit TableNode(const std::string table_name);
+  explicit PhysicalTableNode(const std::string table_name);
 
   std::string description() const override;
 

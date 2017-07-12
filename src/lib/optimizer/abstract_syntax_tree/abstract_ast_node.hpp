@@ -7,7 +7,7 @@
 
 namespace opossum {
 
-enum class ASTNodeType { Projection, Table, Predicate, Sort };
+enum class ASTNodeType { PhysicalTable, Predicate, Projection, Sort };
 
 /**
  * Abstract element in an Abstract Syntax Tree.

@@ -6,9 +6,9 @@
 #include "gtest/gtest.h"
 
 #include "operators/table_scan.hpp"
+#include "optimizer/abstract_syntax_tree/physical_table_node.hpp"
 #include "optimizer/abstract_syntax_tree/predicate_node.hpp"
 #include "optimizer/abstract_syntax_tree/projection_node.hpp"
-#include "optimizer/abstract_syntax_tree/table_node.hpp"
 
 namespace opossum {
 
@@ -18,7 +18,7 @@ class AbstractSyntaxTreeTest : public BaseTest {
 };
 
 TEST_F(AbstractSyntaxTreeTest, ParentTest) {
-  const auto table_node = std::make_shared<TableNode>("a");
+  const auto table_node = std::make_shared<PhysicalTableNode>("a");
 
   ASSERT_EQ(table_node->left_child(), nullptr);
   ASSERT_EQ(table_node->right_child(), nullptr);
@@ -43,7 +43,7 @@ TEST_F(AbstractSyntaxTreeTest, ParentTest) {
 }
 
 TEST_F(AbstractSyntaxTreeTest, ChainSameNodesTest) {
-  const auto table_node = std::make_shared<TableNode>("a");
+  const auto table_node = std::make_shared<PhysicalTableNode>("a");
 
   ASSERT_EQ(table_node->left_child(), nullptr);
   ASSERT_EQ(table_node->right_child(), nullptr);
