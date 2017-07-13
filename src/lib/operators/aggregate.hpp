@@ -54,8 +54,7 @@ using AggregateKey = std::vector<AllTypeVariant>;
  * Optionally, an alias can be specified to use as the output name.
  */
 struct AggregateDefinition {
-  AggregateDefinition(const std::string &column_name,
-                      const AggregateFunction function,
+  AggregateDefinition(const std::string &column_name, const AggregateFunction function,
                       const optional<std::string> &alias = {});
 
   std::string column_name;

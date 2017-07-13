@@ -5,8 +5,8 @@
 #include <string>
 #include <vector>
 
-#include "all_type_variant.hpp"
 #include "abstract_ast_node.hpp"
+#include "all_type_variant.hpp"
 #include "common.hpp"
 #include "optimizer/abstract_syntax_tree/abstract_expression_node.hpp"
 #include "types.hpp"

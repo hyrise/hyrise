@@ -12,11 +12,9 @@
 
 namespace opossum {
 
-AggregateDefinition::AggregateDefinition(const std::string &column_name,
-                                         const AggregateFunction function,
+AggregateDefinition::AggregateDefinition(const std::string &column_name, const AggregateFunction function,
                                          const optional<std::string> &alias)
-  : column_name(column_name), function(function), alias(alias)
-{}
+    : column_name(column_name), function(function), alias(alias) {}
 
 Aggregate::Aggregate(const std::shared_ptr<AbstractOperator> in, const std::vector<AggregateDefinition> aggregates,
                      const std::vector<std::string> groupby_columns)

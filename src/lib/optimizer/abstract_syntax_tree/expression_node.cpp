@@ -5,18 +5,19 @@
 #include <string>
 #include <vector>
 
-#include "type_cast.hpp"
 #include "all_type_variant.hpp"
-#include "constant_mappings.hpp"
 #include "common.hpp"
 #include "constant_mappings.hpp"
+#include "type_cast.hpp"
 #include "utils/assert.hpp"
 
 namespace opossum {
 
 const std::unordered_map<ExpressionType, std::string> expression_type_to_operator = {
-  {ExpressionType::Plus, "+"},     {ExpressionType::Minus, "-"},
-  {ExpressionType::Asterisk, "*"}, {ExpressionType::Slash, "/"},
+    {ExpressionType::Plus, "+"},
+    {ExpressionType::Minus, "-"},
+    {ExpressionType::Asterisk, "*"},
+    {ExpressionType::Slash, "/"},
 };
 
 ExpressionNode::ExpressionNode(const ExpressionType type)
@@ -63,14 +64,12 @@ std::string ExpressionNode::description() const {
 }
 
 bool ExpressionNode::is_arithmetic() const {
-  return _type == ExpressionType::Minus || _type == ExpressionType::Plus
-         || _type == ExpressionType::Asterisk || _type == ExpressionType::Slash;
+  return _type == ExpressionType::Minus || _type == ExpressionType::Plus || _type == ExpressionType::Asterisk ||
+         _type == ExpressionType::Slash;
 }
 
 bool ExpressionNode::is_operand() const {
-  return
-    _type == ExpressionType::Literal ||
-    _type == ExpressionType::ColumnReference;
+  return _type == ExpressionType::Literal || _type == ExpressionType::ColumnReference;
 }
 
 const std::string &ExpressionNode::table_name() const { return _table; }
@@ -96,11 +95,11 @@ std::string ExpressionNode::to_expression_string() const {
 
     auto left_expression_node = std::static_pointer_cast<ExpressionNode>(left());
     auto right_expression_node = std::static_pointer_cast<ExpressionNode>(right());
-    Assert(static_cast<bool>(left_expression_node) &&
-             static_cast<bool>(right_expression_node), "Operator needs both operands to be expressions");
+    Assert(static_cast<bool>(left_expression_node) && static_cast<bool>(right_expression_node),
+           "Operator needs both operands to be expressions");
 
     return left_expression_node->to_expression_string() + expression_type_to_operator.at(_type) +
-      right_expression_node->to_expression_string();
+           right_expression_node->to_expression_string();
   } else {
     Fail("To generate expression string, ExpressionNodes need to be operators or operands");
   }

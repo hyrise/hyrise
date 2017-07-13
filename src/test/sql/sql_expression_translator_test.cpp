@@ -6,12 +6,12 @@
 #include "../base_test.hpp"
 
 #include "optimizer/abstract_syntax_tree/expression_node.hpp"
+#include "optimizer/abstract_syntax_tree/predicate_node.hpp"
 #include "optimizer/abstract_syntax_tree/projection_node.hpp"
 #include "optimizer/abstract_syntax_tree/table_node.hpp"
-#include "optimizer/abstract_syntax_tree/predicate_node.hpp"
-#include "sql/sql_query_node_translator.hpp"
 #include "sql/SQLStatement.h"
 #include "sql/sql_expression_translator.hpp"
+#include "sql/sql_query_node_translator.hpp"
 #include "storage/storage_manager.hpp"
 
 namespace opossum {

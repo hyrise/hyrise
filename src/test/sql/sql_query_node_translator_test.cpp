@@ -8,10 +8,10 @@
 #include "gtest/gtest.h"
 
 #include "optimizer/abstract_syntax_tree/aggregate_node.hpp"
+#include "optimizer/abstract_syntax_tree/predicate_node.hpp"
 #include "optimizer/abstract_syntax_tree/projection_node.hpp"
 #include "optimizer/abstract_syntax_tree/sort_node.hpp"
 #include "optimizer/abstract_syntax_tree/table_node.hpp"
-#include "optimizer/abstract_syntax_tree/predicate_node.hpp"
 #include "sql/sql_query_node_translator.hpp"
 #include "storage/storage_manager.hpp"
 
@@ -148,7 +148,6 @@ TEST_F(SQLQueryNodeTranslatorTest, AggregateWithExpression) {
   EXPECT_EQ(t_node_1->type(), AstNodeType::Table);
   EXPECT_FALSE(t_node_1->left());
   EXPECT_FALSE(t_node_1->right());
-
 }
 
 TEST_F(SQLQueryNodeTranslatorTest, SelectMultipleOrderBy) {

@@ -1,8 +1,8 @@
 #include <string>
 #include <unordered_map>
 
-#include "types.hpp"
 #include "network/opossum.pb.wrapper.h"
+#include "types.hpp"
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-parameter"
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"

@@ -91,9 +91,8 @@ std::shared_ptr<AbstractOperator> NodeOperatorTranslator::translate_aggregate_no
 
   auto alias_index = 0;
 
-  for (const auto & aggregate : aggregates)
-  {
-    const auto & expr = aggregate.expr;
+  for (const auto &aggregate : aggregates) {
+    const auto &expr = aggregate.expr;
     Assert(expr->type() == ExpressionType::FunctionReference, "Expression is not a function.");
 
     const auto &arithmetic_expr = std::dynamic_pointer_cast<ExpressionNode>(expr->expression_list()->at(0));
@@ -106,10 +105,10 @@ std::shared_ptr<AbstractOperator> NodeOperatorTranslator::translate_aggregate_no
     auto right_operand = std::dynamic_pointer_cast<ExpressionNode>(arithmetic_expr->right());
     Assert(static_cast<bool>(right_operand), "Right child of arithmetic expression is not an expression.");
 
-    Assert(left_operand->type() == ExpressionType::Literal ||
-             left_operand->type() == ExpressionType::ColumnReference, "Left child is not a literal or column ref.");
-    Assert(right_operand->type() == ExpressionType::Literal ||
-             right_operand->type() == ExpressionType::ColumnReference, "Right child is not a literal or column ref.");
+    Assert(left_operand->type() == ExpressionType::Literal || left_operand->type() == ExpressionType::ColumnReference,
+           "Left child is not a literal or column ref.");
+    Assert(right_operand->type() == ExpressionType::Literal || right_operand->type() == ExpressionType::ColumnReference,
+           "Right child is not a literal or column ref.");
 
     auto alias = "alias" + std::to_string(alias_index);
     alias_index++;
