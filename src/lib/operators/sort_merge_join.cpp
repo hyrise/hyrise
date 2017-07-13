@@ -727,31 +727,27 @@ class SortMergeJoin::SortMergeJoinImpl : public AbstractJoinOperatorImpl, public
     // indexis reaching their maximum size is not possible. So one could think to put it there instead, to safe up this
     // additional if-condition. But there is an edge case in which the last loop run was a "equi hit" and one index
     // reaching its maximum size, but one element potentially is still present on the other side.
-    if (!(left_index == left_size && right_index == right_size)) {
-      // The left side has finished -> add the remaining ones on the right side
-      if (left_index == left_size) {
-        if (_sort_merge_join._mode == Right || _sort_merge_join._mode == Outer) {
-          RowID right_row_id;
+    // The left side has finished -> add the remaining ones on the right side
+    if (left_index == left_size && (_sort_merge_join._mode == Right || _sort_merge_join._mode == Outer)) {
+      RowID right_row_id;
 
-          for (; right_index < right_size; ++right_index) {
-            right_row_id = right_current_partition.values[right_index].second;
-            pos_lists_left[partition_number].push_back(RowID{ChunkID{0}, INVALID_CHUNK_OFFSET});
-            pos_lists_right[partition_number].push_back(right_row_id);
-          }
-        }
+      while(right_index < right_size) {
+        right_row_id = right_current_partition.values[right_index].second;
+        pos_lists_left[partition_number].push_back(RowID{ChunkID{0}, INVALID_CHUNK_OFFSET});
+        pos_lists_right[partition_number].push_back(right_row_id);
+        right_index++;
       }
+    }
 
-      // The right side has finished -> add the remaining ones on the left side
-      if (right_index == right_size) {
-        if (_sort_merge_join._mode == Left || _sort_merge_join._mode == Outer) {
-          RowID left_row_id;
+    // The right side has finished -> add the remaining ones on the left side
+    if (right_index == right_size && (_sort_merge_join._mode == Left || _sort_merge_join._mode == Outer)) {
+      RowID left_row_id;
 
-          for (; left_index < left_size; ++left_index) {
-            left_row_id = left_current_partition.values[left_index].second;
-            pos_lists_left[partition_number].push_back(left_row_id);
-            pos_lists_right[partition_number].push_back(RowID{ChunkID{0}, INVALID_CHUNK_OFFSET});
-          }
-        }
+      while(left_index < left_size) {
+        left_row_id = left_current_partition.values[left_index].second;
+        pos_lists_right[partition_number].push_back(RowID{ChunkID{0}, INVALID_CHUNK_OFFSET});
+        pos_lists_left[partition_number].push_back(left_row_id);
+        left_index++;
       }
     }
   }
@@ -811,8 +807,6 @@ class SortMergeJoin::SortMergeJoinImpl : public AbstractJoinOperatorImpl, public
   }
 
   void perform_join() {
-    _pos_list_left = std::make_shared<PosList>();
-    _pos_list_right = std::make_shared<PosList>();
 
     std::vector<PosList> pos_lists_left(_partition_count);
     std::vector<PosList> pos_lists_right(_partition_count);
@@ -828,6 +822,9 @@ class SortMergeJoin::SortMergeJoinImpl : public AbstractJoinOperatorImpl, public
     }
 
     CurrentScheduler::wait_for_tasks(jobs);
+
+    _pos_list_left = std::make_shared<PosList>();
+    _pos_list_right = std::make_shared<PosList>();
 
     // Merge pos_lists_left of partitions together
     for (auto& p_list : pos_lists_left) {
