@@ -59,6 +59,7 @@ set(
     concurrency/transaction_context.hpp
     concurrency/transaction_manager.cpp
     concurrency/transaction_manager.hpp
+    constant_mappings.cpp
     constant_mappings.hpp
     import_export/binary.hpp
     import_export/csv_converter.hpp
@@ -139,11 +140,12 @@ set(
     optimizer/abstract_column_statistics.hpp
     optimizer/abstract_syntax_tree/aggregate_node.cpp
     optimizer/abstract_syntax_tree/aggregate_node.hpp
+    optimizer/abstract_syntax_tree/abstract_expression_node.cpp
+    optimizer/abstract_syntax_tree/abstract_expression_node.hpp
     optimizer/abstract_syntax_tree/expression_node.cpp
     optimizer/abstract_syntax_tree/expression_node.hpp
     optimizer/abstract_syntax_tree/node_operator_translator.hpp
     optimizer/abstract_syntax_tree/node_operator_translator.cpp
-    optimizer/abstract_syntax_tree/query_plan_helper.hpp
     optimizer/abstract_syntax_tree/abstract_ast_node.cpp
     optimizer/abstract_syntax_tree/abstract_ast_node.hpp
     optimizer/abstract_syntax_tree/predicate_node.cpp
@@ -157,8 +159,6 @@ set(
     optimizer/column_statistics.cpp
     optimizer/column_statistics.hpp
     optimizer/strategies/abstract_rule.hpp
-    optimizer/strategies/predicate_reordering_rule.cpp
-    optimizer/strategies/predicate_reordering_rule.hpp
     optimizer/table_statistics.cpp
     optimizer/table_statistics.hpp
     resolve_type.hpp

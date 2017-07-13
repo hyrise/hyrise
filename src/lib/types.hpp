@@ -121,4 +121,38 @@ enum class ScanType {
   OpBetween,
   OpLike
 };
+
+enum class ExpressionType {
+  Literal,
+  Star,
+  Parameter,
+  ColumnReference,
+  FunctionReference,
+  Operator,
+  Select,
+  Plus,
+  Minus,
+  Asterisk,
+  Slash,
+  Percentage,
+  Caret,
+  Equals,
+  NotEquals,
+  Less,
+  LessEquals,
+  Greater,
+  GreaterEquals,
+  Like,
+  NotLike,
+  And,
+  Or,
+  In,
+  Not,
+  IsNull,
+  Exists,
+  Between,
+  Case,
+  Hint
+};
+
 }  // namespace opossum

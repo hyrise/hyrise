@@ -2,6 +2,7 @@
 
 #include <memory>
 
+#include "constant_mappings.hpp"
 #include "operators/aggregate.hpp"
 #include "operators/get_table.hpp"
 #include "operators/projection.hpp"
@@ -94,7 +95,7 @@ std::shared_ptr<AbstractOperator> NodeOperatorTranslator::translate_aggregate_no
   for (const auto & aggregate : aggregates)
   {
     const auto & expr = aggregate.expr;
-    Assert(expr->expression_type() == ExpressionType::ExpressionFunctionReference, "");
+    Assert(expr->type() == ExpressionType::FunctionReference, "");
 
     const auto & arithmetic_expr = std::dynamic_pointer_cast<ExpressionNode>(expr->left());
     Assert(static_cast<bool>(arithmetic_expr), "");
@@ -106,10 +107,10 @@ std::shared_ptr<AbstractOperator> NodeOperatorTranslator::translate_aggregate_no
     auto right_operand = std::dynamic_pointer_cast<ExpressionNode>(arithmetic_expr->right());
     Assert(static_cast<bool>(right_operand), "");
 
-    Assert(left_operand->expression_type() == ExpressionType::ExpressionLiteral ||
-             left_operand->expression_type() == ExpressionType::ExpressionColumnReference, "");
-    Assert(right_operand->expression_type() == ExpressionType::ExpressionLiteral ||
-             right_operand->expression_type() == ExpressionType::ExpressionColumnReference, "");
+    Assert(left_operand->type() == ExpressionType::Literal ||
+             left_operand->type() == ExpressionType::ColumnReference, "");
+    Assert(right_operand->type() == ExpressionType::Literal ||
+             right_operand->type() == ExpressionType::ColumnReference, "");
 
     auto alias = "alias" + std::to_string(alias_index);
     alias_index++;
@@ -128,44 +129,46 @@ std::shared_ptr<AbstractOperator> NodeOperatorTranslator::translate_aggregate_no
   for (size_t aggregate_idx = 0; aggregate_idx < aggregates.size(); aggregate_idx++) {
     const auto & aggregate = aggregates[aggregate_idx];
 
-    Assert(aggregate.expr->expression_type() == ExpressionType::ExpressionFunctionReference, ""
+    Assert(aggregate.expr->type() == ExpressionType::FunctionReference, ""
       "Only functions are supported in Aggregates");
-    const auto aggregate_function = aggregate.expr->aggregate_function();
+    const auto aggregate_function = string_to_aggregate_function.at(aggregate.expr->name());
 
     aggregate_definitions.emplace_back(expr_aliases[aggregate_idx], aggregate_function);
   }
-  out_operator = std::make_shared<Aggregate>(out_operator, aggregate_definitions);
+  out_operator = std::make_shared<Aggregate>(out_operator, aggregate_definitions, std::vector<std::string>());
 
   /**
    * Build Projection from Aggregate functions to alias names
    *    e.g. for `SUM(a*b) as foo` this will project the column "SUM(a*b)" to "foo"
    */
-  auto alias_projection_needed = std::any_of(aggregates.begin(), aggregates.end(),
-                                             [] (const auto & aggregate) {
-    return static_cast<bool>(aggregate.alias);
-  });
+//  auto alias_projection_needed = std::any_of(aggregates.begin(), aggregates.end(),
+//                                             [] (const auto & aggregate) {
+//    return static_cast<bool>(aggregate.alias);
+//  });
 
   // If there are no aliases just skip this step, e.g. for SELECT COUNT(), SUM(a) [...]
   // this step is not necessary.
-  if (alias_projection_needed) {
-    std::vector<std::string> columns;
-    columns.reserve(aggregates.size());
+//  if (alias_projection_needed) {
+//    std::vector<std::string> columns;
+//    columns.reserve(aggregates.size());
+//
+//    for (const auto & aggregate : aggregates) {
+//      std::string out_alias;
+//      if (aggregate.alias) {
+//        out_alias = *aggregate.alias;
+//      } else {
+//        // If there is no alias for a column, just reproject to the same name, e.g.,
+//        // in SELECT COUNT() as c, SUM(a) [...] this will project "SUM(a)" to "SUM(a)"
+//        out_alias = aggregate.expr->to_alias_name();
+//      }
+//
+//      columns.emplace_back(out_alias);
+//    }
+//
+//    out_operator = std::make_shared<Projection>(out_operator, columns);
+//  }
 
-    for (const auto & aggregate : aggregates) {
-      std::string out_alias;
-      if (aggregate.alias) {
-        out_alias = *aggregate.alias;
-      } else {
-        // If there is no alias for a column, just reproject to the same name, e.g.,
-        // in SELECT COUNT() as c, SUM(a) [...] this will project "SUM(a)" to "SUM(a)"
-        out_alias = aggregate.expr->to_alias_name();
-      }
-
-      columns.emplace_back(out_alias);
-    }
-
-    out_operator = std::make_shared<Projection>(out_operator, columns);
-  }
+  return out_operator;
 }
 
 }  // namespace opossum

@@ -74,7 +74,7 @@ TEST_F(SQLQueryNodeTranslatorTest, ExpressionTest) {
 
   auto predicate = std::static_pointer_cast<PredicateNode>(ts_node_1)->predicate();
   predicate->print();
-  EXPECT_EQ(predicate->expression_type(), ExpressionType::ExpressionEquals);
+  EXPECT_EQ(predicate->type(), ExpressionType::Equals);
 }
 
 TEST_F(SQLQueryNodeTranslatorTest, ExpressionStringTest) {
@@ -91,7 +91,7 @@ TEST_F(SQLQueryNodeTranslatorTest, ExpressionStringTest) {
 
   auto predicate = std::static_pointer_cast<PredicateNode>(ts_node_1)->predicate();
   predicate->print();
-  EXPECT_EQ(predicate->expression_type(), ExpressionType::ExpressionEquals);
+  EXPECT_EQ(predicate->type(), ExpressionType::Equals);
 }
 
 TEST_F(SQLQueryNodeTranslatorTest, ExpressionStringTest2) {
@@ -108,7 +108,7 @@ TEST_F(SQLQueryNodeTranslatorTest, ExpressionStringTest2) {
 
   auto predicate = std::static_pointer_cast<PredicateNode>(ts_node_1)->predicate();
   predicate->print();
-  EXPECT_EQ(predicate->expression_type(), ExpressionType::ExpressionEquals);
+  EXPECT_EQ(predicate->type(), ExpressionType::Equals);
 }
 
 TEST_F(SQLQueryNodeTranslatorTest, SelectWithAndCondition) {
