@@ -721,12 +721,10 @@ class SortMergeJoin::SortMergeJoinImpl : public AbstractJoinOperatorImpl, public
       }
     }
 
-    // The while loop may have ended, but the last element gets skipped in certain cases.
-    // But it is important for "Outer-Joins" to include this element of course.
-    // The first if-condition is mandatory: Putting this whole part into the while loop in the "not equal part" both
-    // indexis reaching their maximum size is not possible. So one could think to put it there instead, to safe up this
-    // additional if-condition. But there is an edge case in which the last loop run was a "equi hit" and one index
-    // reaching its maximum size, but one element potentially is still present on the other side.
+    // There is an edge case in which the last loop run was a "equi hit" and one index
+    // reached its maximum size, but one element is potentially still present on the other side.
+    // It is important for "Outer-Joins" to include this element of course.
+
     // The left side has finished -> add the remaining ones on the right side
     if (left_index == left_size && (_sort_merge_join._mode == Right || _sort_merge_join._mode == Outer)) {
       RowID right_row_id;
