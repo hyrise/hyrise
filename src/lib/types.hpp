@@ -1,5 +1,6 @@
 #pragma once
 
+#include <tbb/concurrent_vector.h>
 #include <boost/serialization/strong_typedef.hpp>
 
 #include <cstdint>
@@ -8,8 +9,18 @@
 #include <vector>
 
 #include "strong_typedef.hpp"
+#include "stub_polymorphic_allocator.hpp"
 
 namespace opossum {
+
+template <typename T>
+using polymorphic_allocator = PolymorphicAllocator<T>;
+
+template <typename T>
+using alloc_vector = std::vector<T, polymorphic_allocator<T>>;
+
+template <typename T>
+using alloc_concurrent_vector = tbb::concurrent_vector<T, polymorphic_allocator<T>>;
 
 //
 // We use STRONG_TYPEDEF to avoid things like adding chunk ids and value ids.
@@ -61,7 +72,7 @@ using StringLength = uint16_t;     // The length of column value strings must fi
 using ColumnNameLength = uint8_t;  // The length of column names must fit in this type.
 using AttributeVectorWidth = uint8_t;
 
-using PosList = std::vector<RowID>;
+using PosList = alloc_vector<RowID>;
 
 class ColumnName {
  public:

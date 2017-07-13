@@ -48,7 +48,7 @@ class ColumnCompressor : public ColumnCompressorBase {
     // See: https://goo.gl/MCM5rr
     // Create dictionary (enforce unqiueness and sorting)
     const auto& values = value_column->values();
-    auto dictionary = std::vector<T>{values.cbegin(), values.cend()};
+    auto dictionary = alloc_vector<T>{values.cbegin(), values.cend()};
 
     // Remove null values from value vector
     if (value_column->is_nullable()) {
@@ -105,7 +105,7 @@ class ColumnCompressor : public ColumnCompressorBase {
     return std::make_shared<DictionaryColumn<T>>(std::move(dictionary), attribute_vector);
   }
 
-  ValueID get_value_id(const std::vector<T>& dictionary, const T& value) {
+  ValueID get_value_id(const alloc_vector<T>& dictionary, const T& value) {
     return static_cast<ValueID>(
         std::distance(dictionary.cbegin(), std::lower_bound(dictionary.cbegin(), dictionary.cend(), value)));
   }
