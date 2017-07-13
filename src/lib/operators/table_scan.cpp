@@ -132,9 +132,8 @@ class TableScan::TableScanImpl : public AbstractReadOnlyOperatorImpl {
 
   // TODO(mjendruk): Is chunk_offsets_in ever used?
   struct ScanContext : ColumnVisitableContext {
-    ScanContext(std::shared_ptr<const Table> t, ChunkID c, std::vector<RowID> &mo,
-                const tbb::concurrent_vector<T> &values, std::shared_ptr<std::vector<ChunkOffset>> co = nullptr)
-        : table_in(t), chunk_id(c), matches_out(mo), values(values), chunk_offsets_in(std::move(co)) {}
+    ScanContext(std::shared_ptr<const Table> t, ChunkID c, std::vector<RowID> &mo, std::shared_ptr<std::vector<ChunkOffset>> co = nullptr)
+        : table_in(t), chunk_id(c), matches_out(mo), chunk_offsets_in(std::move(co)) {}
 
     // constructor for use in ReferenceColumn::visit_dereferenced
     ScanContext(std::shared_ptr<BaseColumn>, const std::shared_ptr<const Table> referenced_table,
@@ -143,13 +142,13 @@ class TableScan::TableScanImpl : public AbstractReadOnlyOperatorImpl {
         : table_in(referenced_table),
           chunk_id(chunk_id),
           matches_out(std::static_pointer_cast<ScanContext>(base_context)->matches_out),
-          values(std::static_pointer_cast<ScanContext>(base_context)->values),
           chunk_offsets_in(chunk_offsets) {}
+
+    const Chunk & get_chunk() const { return table_in->get_chunk(chunk_id); }
 
     const std::shared_ptr<const Table> table_in;
     const ChunkID chunk_id;
     std::vector<RowID> &matches_out;
-    const tbb::concurrent_vector<T> &values;
     std::shared_ptr<std::vector<ChunkOffset>> chunk_offsets_in;
   };
 
@@ -204,7 +203,11 @@ class TableScan::TableScanImpl : public AbstractReadOnlyOperatorImpl {
     } else {
       _scan_class = ScanClass::Variable;
 
-      _column_visitable = std::make_unique<TableScanVariableColumnVisitable>(_value_comparator, _value_id_comparator);
+      const auto & column_name = boost::get<ColumnName>(_value);
+      const auto & column_id = _in_table->column_id_by_name(column_name);
+
+      _column_visitable = std::make_unique<TableScanVariableColumnVisitable>(_value_comparator, _value_id_comparator,
+                                                                             column_id);
     }
   }
 
@@ -269,22 +272,6 @@ class TableScan::TableScanImpl : public AbstractReadOnlyOperatorImpl {
     }
   }
 
-  tbb::concurrent_vector<T> materialize_column(const Chunk & chunk_in, const ColumnID column_id) {
-    const auto column = chunk_in.get_column(column_id);
-
-    auto values = tbb::concurrent_vector<T>{};
-
-    if (auto value_column = std::dynamic_pointer_cast<const ValueColumn<T>>(column)) {
-      values = value_column->values();  // TODO(mjendruk): copy here is unneccesary, but shared pointer impl is needed
-    } else if (auto dict_column = std::dynamic_pointer_cast<const DictionaryColumn<T>>(column)) {
-      values = dict_column->materialize_values();
-    } else if (auto ref_column = std::dynamic_pointer_cast<const ReferenceColumn>(column)) {
-      values = ref_column->template materialize_values<T>();  // Clang needs the template prefix
-    }
-
-    return values;
-  }
-
   std::shared_ptr<const Table> on_execute() override {
     parse_input_and_create_visitable();
     init_output_table();
@@ -303,21 +290,7 @@ class TableScan::TableScanImpl : public AbstractReadOnlyOperatorImpl {
         PosList matches_in_this_chunk;
         auto column = chunk_in.get_column(_column_id);
 
-        // TODO(mjendruk): Find a better name; why is it a concurrent vector?
-        tbb::concurrent_vector<T> values;
-
-        // TODO(mjendruk): Move into visitable?
-        if (_scan_class == ScanClass::Variable)
-        {
-          const auto & column_name = boost::get<ColumnName>(_value);
-          const auto & column_id = _in_table->column_id_by_name(column_name);
-
-          // Second columns gets materialized
-          values = materialize_column(chunk_in, column_id);
-        }
-
-        // TODO(mjendruk): Do all column visitables need `values`? – no!
-        auto context = std::make_shared<ScanContext>(_in_table, chunk_id, matches_in_this_chunk, values);
+        auto context = std::make_shared<ScanContext>(_in_table, chunk_id, matches_in_this_chunk);
 
         /**
          * The real tablescan work happens now in the visitables.
@@ -678,8 +651,9 @@ template <typename T>
 class TableScan::TableScanImpl<T>::TableScanVariableColumnVisitable : public ColumnVisitable {
  public:
   TableScanVariableColumnVisitable(std::function<bool(T, T)> value_comparator,
-                                   std::function<bool(ValueID, ValueID, ValueID)> value_id_comparator)
-      : _value_comparator(value_comparator), _value_id_comparator(value_id_comparator) {}
+                                   std::function<bool(ValueID, ValueID, ValueID)> value_id_comparator,
+                                   const ColumnID & column_id2)
+      : _value_comparator(value_comparator), _value_id_comparator(value_id_comparator), _column_id2(column_id2) {}
 
   void handle_value_column(BaseColumn &base_column, std::shared_ptr<ColumnVisitableContext> base_context) override {
     auto context = std::static_pointer_cast<ScanContext>(base_context);
@@ -687,14 +661,15 @@ class TableScan::TableScanImpl<T>::TableScanVariableColumnVisitable : public Col
     const auto &left = column.values();
     auto &matches_out = context->matches_out;
 
+    const auto right_values = materialize_column(*context, _column_id2);
+
     // TODO(mjendruk): Here we need to add custom code for null values
 
     if (context->chunk_offsets_in) {
       // This ValueColumn is referenced by a ReferenceColumn (i.e., is probably filtered). We only return the matching
       // rows within the filtered column, together with their original position
-      const auto &right = context->values;
       for (const ChunkOffset &offset_in_value_column : *(context->chunk_offsets_in)) {
-        if (_value_comparator(left[offset_in_value_column], right[offset_in_value_column])) {
+        if (_value_comparator(left[offset_in_value_column], right_values[offset_in_value_column])) {
           matches_out.emplace_back(RowID{context->chunk_id, offset_in_value_column});
         }
       }
@@ -702,9 +677,8 @@ class TableScan::TableScanImpl<T>::TableScanVariableColumnVisitable : public Col
     } else {
       // This ValueColumn has to be scanned in full. We directly insert the results into the list of matching rows.
       ChunkOffset chunk_offset = 0;
-      const auto &right = context->values;
       for (const auto &value : left) {
-        if (_value_comparator(value, right[chunk_offset]))
+        if (_value_comparator(value, right_values[chunk_offset]))
           matches_out.emplace_back(RowID{context->chunk_id, chunk_offset});
         chunk_offset++;
       }
@@ -722,26 +696,45 @@ class TableScan::TableScanImpl<T>::TableScanVariableColumnVisitable : public Col
     auto &matches_out = context->matches_out;
 
     const auto &left = column.materialize_values();  // also materializing the values on the left side
-    const auto &right = context->values;
+    const auto right_values = materialize_column(*context, _column_id2);
+
     if (context->chunk_offsets_in) {
       for (const ChunkOffset &offset_in_value_column : *(context->chunk_offsets_in)) {
-        if (_value_comparator(left[offset_in_value_column], right[offset_in_value_column])) {
+        if (_value_comparator(left[offset_in_value_column], right_values[offset_in_value_column])) {
           matches_out.emplace_back(RowID{context->chunk_id, offset_in_value_column});
         }
       }
     } else {
       ChunkOffset chunk_offset = 0;
       for (const auto &value : left) {
-        if (_value_comparator(value, right[chunk_offset]))
+        if (_value_comparator(value, right_values[chunk_offset]))
           matches_out.emplace_back(RowID{context->chunk_id, chunk_offset});
         chunk_offset++;
       }
     }
   }
 
+  tbb::concurrent_vector<T> materialize_column(const ScanContext & context, const ColumnID column_id) {
+    const auto & chunk_in = context.get_chunk();
+    const auto column = chunk_in.get_column(column_id);
+
+    auto values = tbb::concurrent_vector<T>{};
+
+    if (auto value_column = std::dynamic_pointer_cast<const ValueColumn<T>>(column)) {
+      values = value_column->values();  // TODO(mjendruk): copy here is unneccesary, but shared pointer impl is needed
+    } else if (auto dict_column = std::dynamic_pointer_cast<const DictionaryColumn<T>>(column)) {
+      values = dict_column->materialize_values();
+    } else if (auto ref_column = std::dynamic_pointer_cast<const ReferenceColumn>(column)) {
+      values = ref_column->template materialize_values<T>();  // Clang needs the template prefix
+    }
+
+    return values;
+  }
+
  protected:
-  std::function<bool(T, T)> _value_comparator;
-  std::function<bool(ValueID, ValueID, ValueID)> _value_id_comparator;
+  const std::function<bool(T, T)> _value_comparator;
+  const std::function<bool(ValueID, ValueID, ValueID)> _value_id_comparator;
+  const ColumnID _column_id2;
 };
 
 }  // namespace opossum
