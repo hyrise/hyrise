@@ -22,16 +22,16 @@ class ColumnStatistics : public AbstractColumnStatistics {
   ColumnStatistics(const ColumnID column_id, float distinct_count, ColumnType min, ColumnType max);
   ~ColumnStatistics() override = default;
 
-  std::tuple<float, std::shared_ptr<AbstractColumnStatistics>> predicate_selectivity(
+  ColumnStatisticsContainer predicate_selectivity(
       const ScanType scan_type, const AllTypeVariant value, const optional<AllTypeVariant> value2) override;
 
-  std::tuple<float, std::shared_ptr<AbstractColumnStatistics>, std::shared_ptr<AbstractColumnStatistics>>
+  ColumnStatisticsContainer predicate_selectivity(
+      const ScanType scan_type, const ValuePlaceholder value, const optional<AllTypeVariant> value2) override;
+
+  TwoColumnStatisticsContainer
   predicate_selectivity(const ScanType scan_type,
                         const std::shared_ptr<AbstractColumnStatistics> abstract_value_column_statistics,
                         const optional<AllTypeVariant> value2) override;
-
-  std::tuple<float, std::shared_ptr<AbstractColumnStatistics>> predicate_selectivity(
-      const ScanType scan_type, const ValuePlaceholder value, const optional<AllTypeVariant> value2) override;
 
   float distinct_count();
   ColumnType min();

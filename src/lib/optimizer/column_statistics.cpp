@@ -51,6 +51,10 @@ ColumnType ColumnStatistics<ColumnType>::max() {
   return *_max;
 }
 
+/**
+ * Calcute distinct count from table.
+ * Calculation is delegated to aggregate operator.
+ */
 template <typename ColumnType>
 void ColumnStatistics<ColumnType>::update_distinct_count() {
   auto table = _table.lock();
@@ -63,6 +67,10 @@ void ColumnStatistics<ColumnType>::update_distinct_count() {
   _distinct_count = aggregate_table->row_count();
 }
 
+/**
+ * Calcute min and max values from table.
+ * Calculation is delegated to aggregate operator.
+ */
 template <typename ColumnType>
 void ColumnStatistics<ColumnType>::update_min_max() {
   auto table = _table.lock();
@@ -83,7 +91,7 @@ void ColumnStatistics<ColumnType>::update_min_max() {
  * specialized for strings.
  */
 template <>
-std::tuple<float, std::shared_ptr<AbstractColumnStatistics>> ColumnStatistics<std::string>::predicate_selectivity(
+ColumnStatisticsContainer ColumnStatistics<std::string>::predicate_selectivity(
     const ScanType scan_type, const AllTypeVariant value, const optional<AllTypeVariant> value2) {
   auto casted_value = type_cast<std::string>(value);
   switch (scan_type) {
@@ -111,7 +119,7 @@ std::tuple<float, std::shared_ptr<AbstractColumnStatistics>> ColumnStatistics<st
  * every type but strings.
  */
 template <typename ColumnType>
-std::tuple<float, std::shared_ptr<AbstractColumnStatistics>> ColumnStatistics<ColumnType>::predicate_selectivity(
+    ColumnStatisticsContainer ColumnStatistics<ColumnType>::predicate_selectivity(
     const ScanType scan_type, const AllTypeVariant value, const optional<AllTypeVariant> value2) {
   auto casted_value = type_cast<ColumnType>(value);
 
@@ -204,7 +212,7 @@ std::tuple<float, std::shared_ptr<AbstractColumnStatistics>> ColumnStatistics<Co
  * specialized for strings.
  */
 template <>
-std::tuple<float, std::shared_ptr<AbstractColumnStatistics>, std::shared_ptr<AbstractColumnStatistics>>
+TwoColumnStatisticsContainer
 ColumnStatistics<std::string>::predicate_selectivity(
     const ScanType scan_type, const std::shared_ptr<AbstractColumnStatistics> abstract_value_column_statistics,
     const optional<AllTypeVariant> value2) {
@@ -217,12 +225,13 @@ ColumnStatistics<std::string>::predicate_selectivity(
  * every type but strings.
  */
 template <typename ColumnType>
-std::tuple<float, std::shared_ptr<AbstractColumnStatistics>, std::shared_ptr<AbstractColumnStatistics>>
+TwoColumnStatisticsContainer
 ColumnStatistics<ColumnType>::predicate_selectivity(
     const ScanType scan_type, const std::shared_ptr<AbstractColumnStatistics> abstract_value_column_statistics,
     const optional<AllTypeVariant> value2) {
   auto value_column_statistics =
       std::dynamic_pointer_cast<ColumnStatistics<ColumnType>>(abstract_value_column_statistics);
+  DebugAssert(value_column_statistics == nullptr, "Cannot compare columns of different type");
 
   auto common_min = std::max(min(), value_column_statistics->min());
   auto common_max = std::min(max(), value_column_statistics->max());
@@ -257,7 +266,7 @@ ColumnStatistics<ColumnType>::predicate_selectivity(
  * Predicate selectivity for prepared statements.
  */
 template <typename ColumnType>
-std::tuple<float, std::shared_ptr<AbstractColumnStatistics>> ColumnStatistics<ColumnType>::predicate_selectivity(
+ColumnStatisticsContainer ColumnStatistics<ColumnType>::predicate_selectivity(
     const ScanType scan_type, const ValuePlaceholder value, const optional<AllTypeVariant> value2) {
   switch (scan_type) {
     case ScanType::OpEquals: {

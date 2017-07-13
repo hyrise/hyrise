@@ -63,41 +63,37 @@ std::shared_ptr<TableStatistics> TableStatistics::predicate_statistics(const std
 
   auto old_column_statistics = get_column_statistics(column_id);
   auto clone = std::make_shared<TableStatistics>(*this);
-  float selectivity;
-  std::shared_ptr<AbstractColumnStatistics> new_column_statistics;
+  ColumnStatisticsContainer column_statistics_container{1, nullptr};
 
   if (value.type() == typeid(ColumnName)) {
     const ColumnID value_column_id = table->column_id_by_name(boost::get<ColumnName>(value));
     auto value_column_statistics = get_column_statistics(value_column_id);
-    std::shared_ptr<AbstractColumnStatistics> new_value_column_statistics;
 
-    std::tie(selectivity, new_column_statistics, new_value_column_statistics) =
+    auto two_column_statistics_container =
         old_column_statistics->predicate_selectivity(scan_type, value_column_statistics, value2);
 
-    if (new_value_column_statistics != nullptr) {
-      clone->_column_statistics[value_column_id] = new_value_column_statistics;
+    if (two_column_statistics_container.second_column_statistics != nullptr) {
+      clone->_column_statistics[value_column_id] = two_column_statistics_container.second_column_statistics;
     }
+    column_statistics_container = two_column_statistics_container;
 
   } else if (value.type() == typeid(AllTypeVariant)) {
     auto casted_value = boost::get<AllTypeVariant>(value);
 
-    std::tie(selectivity, new_column_statistics) =
+    column_statistics_container =
         old_column_statistics->predicate_selectivity(scan_type, casted_value, value2);
 
   } else if (value.type() == typeid(ValuePlaceholder)) {
     auto casted_value = boost::get<ValuePlaceholder>(value);
 
-    std::tie(selectivity, new_column_statistics) =
+    column_statistics_container =
         old_column_statistics->predicate_selectivity(scan_type, casted_value, value2);
-
-  } else {
-    selectivity = 1.f;
   }
 
-  if (new_column_statistics != nullptr) {
-    clone->_column_statistics[column_id] = new_column_statistics;
+  if (column_statistics_container.column_statistics != nullptr) {
+    clone->_column_statistics[column_id] = column_statistics_container.column_statistics;
   }
-  clone->_row_count *= selectivity;
+  clone->_row_count *= column_statistics_container.selectivity;
 
   return clone;
 }
