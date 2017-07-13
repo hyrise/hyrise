@@ -23,20 +23,20 @@ class ColumnStatistics : public AbstractColumnStatistics {
  public:
   ColumnStatistics(const ColumnID column_id, const std::weak_ptr<Table> table);
   ColumnStatistics(const ColumnID column_id, float distinct_count, ColumnType min, ColumnType max);
-  virtual ~ColumnStatistics() override = default;
+  ~ColumnStatistics() override = default;
 
-  virtual ColumnStatisticsContainer predicate_selectivity(const ScanType scan_type, const AllTypeVariant &value,
-                                                          const optional<AllTypeVariant> &value2) override;
+  ColumnStatisticsContainer predicate_selectivity(const ScanType scan_type, const AllTypeVariant &value,
+                                                  const optional<AllTypeVariant> &value2) override;
 
-  virtual ColumnStatisticsContainer predicate_selectivity(const ScanType scan_type, const ValuePlaceholder &value,
-                                                          const optional<AllTypeVariant> &value2) override;
+  ColumnStatisticsContainer predicate_selectivity(const ScanType scan_type, const ValuePlaceholder &value,
+                                                  const optional<AllTypeVariant> &value2) override;
 
-  virtual TwoColumnStatisticsContainer predicate_selectivity(
+  TwoColumnStatisticsContainer predicate_selectivity(
       const ScanType scan_type, const std::shared_ptr<AbstractColumnStatistics> abstract_value_column_statistics,
       const optional<AllTypeVariant> &value2) override;
 
  protected:
-  virtual std::ostream &print_to_stream(std::ostream &os) const override;
+  std::ostream &print_to_stream(std::ostream &os) const override;
 
   float distinct_count() const;
   ColumnType min() const;
