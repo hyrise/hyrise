@@ -67,7 +67,7 @@ template <typename ColumnType>
 void ColumnStatistics<ColumnType>::initialze_min_max() const {
   // Calculation is delegated to aggregate operator.
   auto table = _table.lock();
-  DebugAssert(table != nullptr, "Table deleted.");
+  DebugAssert(table != nullptr, "Corresponding table of column statistics is deleted.");
   auto table_wrapper = std::make_shared<TableWrapper>(table);
   table_wrapper->execute();
   const std::string &column_name = table->column_name(_column_id);
@@ -127,6 +127,9 @@ ColumnStatisticsContainer ColumnStatistics<ColumnType>::predicate_selectivity(co
       return {(distinct_count() - 1) / distinct_count(), column_statistics};
     }
     case ScanType::OpLessThan: {
+      // distinction between integers and decimicals
+      // for integers "< value" means that the new max is value <= value - 1
+      // for decimals "< value" means that the new max is value <= value - ε
       if (std::is_integral<ColumnType>::value) {
         if (casted_value <= min()) {
           return {0.f, nullptr};
@@ -152,6 +155,9 @@ ColumnStatisticsContainer ColumnStatistics<ColumnType>::predicate_selectivity(co
       return {selectivity, column_statistics};
     }
     case ScanType::OpGreaterThan: {
+      // distinction between integers and decimicals
+      // for integers "> value" means that the new min value is >= value + 1
+      // for decimals "> value" means that the new min value is >= value + ε
       if (std::is_integral<ColumnType>::value) {
         if (casted_value >= max()) {
           return {0.f, nullptr};
@@ -177,7 +183,7 @@ ColumnStatisticsContainer ColumnStatistics<ColumnType>::predicate_selectivity(co
       return {selectivity, column_statistics};
     }
     case ScanType::OpBetween: {
-      DebugAssert(static_cast<bool>(value2), "operator BETWEEN should get two parameters, second is missing!");
+      DebugAssert(static_cast<bool>(value2), "Operator BETWEEN should get two parameters, second is missing!");
       auto casted_value2 = type_cast<ColumnType>(*value2);
       if (casted_value > casted_value2 || casted_value > max() || casted_value2 < min()) {
         return {0.f, nullptr};
@@ -233,7 +239,7 @@ TwoColumnStatisticsContainer ColumnStatistics<ColumnType>::predicate_selectivity
           value_column_statistics->_column_id, overlapping_distinct_count, common_min, common_max);
       return {overlapping_distinct_count * probability_hit_value, column_statistics_this, column_statistics_value};
     }
-    // TODO(Jonathan, Fabian) finish predicates for multi-columns
+    // TODO(Jonathan, Fabian) finish predicates for predicates with two columns
     default: { return {1.f, nullptr, nullptr}; }
   }
 }
@@ -260,7 +266,7 @@ ColumnStatisticsContainer ColumnStatistics<std::string>::predicate_selectivity(c
       return {OPEN_ENDED_SELECTIVITY, column_statistics};
     }
     case ScanType::OpBetween: {
-      DebugAssert(static_cast<bool>(value2), "operator BETWEEN should get two parameters, second is missing!");
+      DebugAssert(static_cast<bool>(value2), "Operator BETWEEN should get two parameters, second is missing!");
       auto column_statistics = std::make_shared<ColumnStatistics>(_column_id, distinct_count() * BETWEEN_SELECTIVITY,
                                                                   min(), type_cast<std::string>(*value2));
       { return {BETWEEN_SELECTIVITY, column_statistics}; }
@@ -291,15 +297,9 @@ ColumnStatisticsContainer ColumnStatistics<ColumnType>::predicate_selectivity(co
       return {OPEN_ENDED_SELECTIVITY, column_statistics};
     }
     case ScanType::OpBetween: {
-      DebugAssert(static_cast<bool>(value2), "operator BETWEEN should get two parameters, second is missing!");
+      DebugAssert(static_cast<bool>(value2), "Operator BETWEEN should get two parameters, second is missing!");
       auto casted_value2 = type_cast<ColumnType>(*value2);
-      float selectivity;
-      if (std::is_integral<ColumnType>::value) {
-        selectivity = (casted_value2 - min()) / static_cast<float>(max() - min() + 1);
-      } else {
-        selectivity = (casted_value2 - min() + 1) / static_cast<float>(max() - min() + 1);
-      }
-      selectivity *= OPEN_ENDED_SELECTIVITY;
+      float selectivity = (casted_value2 - min() + 1) / static_cast<float>(max() - min() + 1) * OPEN_ENDED_SELECTIVITY;
       auto column_statistics =
           std::make_shared<ColumnStatistics>(_column_id, distinct_count() * selectivity, min(), casted_value2);
       { return {selectivity, column_statistics}; }
