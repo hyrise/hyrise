@@ -66,10 +66,14 @@ SortMergeJoin::SortMergeJoin(const std::shared_ptr<const AbstractOperator> left,
 template <typename T>
 class SortMergeJoin::SortMergeJoinImpl : public AbstractJoinOperatorImpl, public ColumnVisitable {
  public:
-  SortMergeJoinImpl<T>(SortMergeJoin& sort_merge_join, const std::string& left_column_name, const std::string& right_column_name,
-                       const std::string& op, const JoinMode mode, uint32_t partition_count)
-    : _sort_merge_join{sort_merge_join}, _left_column_name{left_column_name},
-      _right_column_name{right_column_name}, _op(op), _mode(mode), _partition_count{partition_count} {}
+  SortMergeJoinImpl<T>(SortMergeJoin& sort_merge_join, const std::string& left_column_name,
+            const std::string& right_column_name, const std::string& op, const JoinMode mode, uint32_t partition_count)
+            : _sort_merge_join{sort_merge_join}, _left_column_name{left_column_name},
+              _right_column_name{right_column_name}, _op(op), _mode(mode), _partition_count{partition_count} {
+
+    _output_pos_lists_left.resize(_partition_count);
+    _output_pos_lists_right.resize(_partition_count);
+  }
 
   virtual ~SortMergeJoinImpl() = default;
 
@@ -117,10 +121,10 @@ class SortMergeJoin::SortMergeJoinImpl : public AbstractJoinOperatorImpl, public
   const JoinMode _mode;
 
   // the partition count should be a power of two, i.e. 1, 2, 4, 8, 16, ...
-  uint32_t _partition_count;
+  size_t _partition_count;
 
-  std::shared_ptr<PosList> _pos_list_left;
-  std::shared_ptr<PosList> _pos_list_right;
+  std::vector<std::shared_ptr<PosList>> _output_pos_lists_left;
+  std::vector<std::shared_ptr<PosList>> _output_pos_lists_right;
 
   // Radix calculation functions
   template <typename T2>
@@ -507,160 +511,154 @@ class SortMergeJoin::SortMergeJoinImpl : public AbstractJoinOperatorImpl, public
     return offset;
   }
 
+  void join_runs(size_t partition_number, size_t left_run_start, size_t left_run_end,
+                 size_t right_run_start, size_t right_run_end)
+  {
+    std::cout << "now joining a run" << std::endl;
+
+    auto& left_partition = _sorted_left_table->partitions[partition_number];
+    auto& right_partition = _sorted_right_table->partitions[partition_number];
+
+    auto output_left = _output_pos_lists_left[partition_number];
+    auto output_right = _output_pos_lists_right[partition_number];
+
+    auto& left_value = left_partition.values[left_run_start].first;
+    auto& right_value = right_partition.values[right_run_start].first;
+
+    std::cout << "op: " << _op << std::endl;
+    if (_op == "=") {
+      // Search for matching values of both partitions
+      if (left_value == right_value) {
+        // Match found
+        std::cout << "match" << std::endl;
+        // Find all same values in each table then add cross product to _output
+        for (auto l = left_run_start; l <= left_run_end; l++) {
+          auto& left_row_id = left_partition.values[l].second;
+          for (auto r = right_run_start; r <= right_run_end; r++) {
+            auto& right_row_id = right_partition.values[r].second;
+            std::cout << "now adding" << std::endl;
+            std::cout << "output_left: " << (output_left == nullptr) << std::endl;
+            std::cout << "output_right: " << (output_right == nullptr) << std::endl;
+            output_left->push_back(left_row_id);
+            output_right->push_back(right_row_id);
+          }
+        }
+      } else {
+        // No Match found
+        std::cout << "no match" << std::endl;
+        // Add null values when appropriate on the side which index gets increased at the end of one loop run
+        if (left_value < right_value) {
+          // Check for correct mode
+          if (_mode == Left || _mode == Outer) {
+            for (auto l = left_run_start; l <= left_run_end; l++) {
+              auto& left_row_id = left_partition.values[l].second;
+              output_left->push_back(left_row_id);
+              output_right->push_back(RowID{ChunkID{0}, INVALID_CHUNK_OFFSET});
+            }
+          }
+        } else {
+          // Check for correct mode
+          if (_mode == Right || _mode == Outer) {
+            for (auto r = right_run_start; r <= right_run_end; r++) {
+              auto right_row_id = right_partition.values[r].second;
+              output_left->push_back(RowID{ChunkID{0}, INVALID_CHUNK_OFFSET});
+              output_right->push_back(right_row_id);
+            }
+          }
+        }
+      }
+    }
+
+    // Logic for ">" and ">=" operators
+    if (_op == ">" || _op == ">=") {
+      if (left_value == right_value) {
+        // Fewer values have to be added in the ">" case, so traversal will end at "right_index"
+        // In the ">=" case the value at "right_run_end" has still to be added, so "dependend_max_index" has to be of
+        // one greater value
+        auto dependend_max_index = (_op == ">") ? right_run_start : right_run_end + 1;
+
+        // Add all smaller values of the right side (addSmallerValues method) to each left side representant (for loop)
+        for (auto l = left_run_start; l <= left_run_end; l++) {
+          auto left_row_id = left_partition.values[l].second;
+          addSmallerValues(partition_number, _sorted_right_table, _output_pos_lists_right, _output_pos_lists_left,
+                           dependend_max_index, left_row_id);
+        }
+      } else {
+        // Found right_value that is greater than left_value. That means all potential right_values before are smaller
+        if (left_value < right_value) {
+          for (auto l = left_run_start; l <= left_run_end; l++) {
+            auto left_row_id = left_partition.values[l].second;
+            addSmallerValues(partition_number, _sorted_right_table, _output_pos_lists_right, _output_pos_lists_left,
+                            right_run_start, left_row_id);
+          }
+        }
+      }
+    }
+
+    // Turn around the logic of ">" and ">=" operators
+    if (_op == "<" || _op == "<=") {
+      if (left_value == right_value) {
+        // Viewer values have to be added in the "<" case, so traversal will begin at "left_run_end + 1"
+        // In the "<=" case the traversal has to start at "left_index"
+        auto dependend_max_index = (_op == "<") ? right_run_end + 1 : right_run_start;
+
+        for (auto l = left_run_start; l <= left_run_end; l++) {
+          auto left_row_id = left_partition.values[l].second;
+          addGreaterValues(partition_number, _sorted_right_table, _output_pos_lists_left, _output_pos_lists_right,
+                           dependend_max_index, left_row_id);
+        }
+
+      } else {
+        // Found right_value that is greater than left_value. That means all potantial right_values following are
+        // greater too
+        if (left_value < right_value) {
+          for (auto l = left_run_start; l <= left_run_end; l++) {
+            auto left_row_id = left_partition.values[l].second;
+            addGreaterValues(partition_number, _sorted_right_table, _output_pos_lists_left, _output_pos_lists_right,
+                             right_run_start, left_row_id);
+          }
+        }
+      }
+    }
+  }
 
   /*
   ** Performs the join on a single partition. Looks for matches.
   */
-  void partition_join(uint32_t partition_number, std::vector<PosList>& pos_lists_left,
-                      std::vector<PosList>& pos_lists_right) {
-    uint32_t left_index = 0;
-    uint32_t right_index = 0;
+  void join_partition(size_t partition_number) {
 
-    auto& left_current_partition = _sorted_left_table->partitions[partition_number];
-    auto& right_current_partition = _sorted_right_table->partitions[partition_number];
+    _output_pos_lists_left[partition_number] = std::make_shared<PosList>();
+    _output_pos_lists_right[partition_number] = std::make_shared<PosList>();
 
-    const size_t left_size = left_current_partition.values.size();
-    const size_t right_size = right_current_partition.values.size();
+    size_t left_run_start = 0;
+    size_t right_run_start = 0;
 
-    while (left_index < left_size && right_index < right_size) {
-      auto& left_value = left_current_partition.values[left_index].first;
-      auto& right_value = right_current_partition.values[right_index].first;
+    auto& left_partition = _sorted_left_table->partitions[partition_number];
+    auto& right_partition = _sorted_right_table->partitions[partition_number];
 
-      auto left_index_offset = run_length(left_index, left_current_partition.values) - 1;
-      auto right_index_offset = run_length(right_index, right_current_partition.values) - 1;
+    const size_t left_size = left_partition.values.size();
+    const size_t right_size = right_partition.values.size();
 
-      auto max_left_index = left_index + left_index_offset;
-      auto max_right_index = right_index + right_index_offset;
+    while (left_run_start < left_size && right_run_start < right_size) {
+      auto& left_value = left_partition.values[left_run_start].first;
+      auto& right_value = right_partition.values[right_run_start].first;
 
-      if (_op == "=") {
-        // Search for matching values of both partitions
-        if (left_value == right_value) {
-          // Match found
-          // Find all same values in each table then add cross product to _output
-          for (uint32_t l_index = left_index; l_index <= max_left_index; ++l_index) {
-            auto left_row_id = left_current_partition.values[l_index].second;
-            for (uint32_t r_index = right_index; r_index <= max_right_index; ++r_index) {
-              auto right_row_id = right_current_partition.values[r_index].second;
-              pos_lists_left[partition_number].push_back(left_row_id);
-              pos_lists_right[partition_number].push_back(right_row_id);
-            }
-          }
+      auto left_run_end = left_run_start + run_length(left_run_start, left_partition.values) - 1;
+      auto right_run_end = right_run_start + run_length(right_run_start, right_partition.values) - 1;
 
-          // Afterwards set index for both tables to next new value
-          left_index += left_index_offset + 1u;
-          right_index += right_index_offset + 1u;
+      join_runs(partition_number, left_run_start, left_run_end, right_run_start, right_run_end);
 
-        } else {
-          // No Match found
-          // Add null values when appropriate on the side which index gets increased at the end of one loop run
-          if (left_value < right_value) {
-            // Check for correct mode
-            if (_mode == Left || _mode == Outer) {
-              for (uint32_t l_index = left_index; l_index <= max_left_index; ++l_index) {
-                auto left_row_id = left_current_partition.values[l_index].second;
-
-                pos_lists_left[partition_number].push_back(left_row_id);
-                pos_lists_right[partition_number].push_back(RowID{ChunkID{0}, INVALID_CHUNK_OFFSET});
-              }
-            }
-          } else {
-            // Check for correct mode
-            if (_mode == Right || _mode == Outer) {
-              for (uint32_t r_index = right_index; r_index <= max_right_index; ++r_index) {
-                auto right_row_id = right_current_partition.values[r_index].second;
-
-                pos_lists_left[partition_number].push_back(RowID{ChunkID{0}, INVALID_CHUNK_OFFSET});
-                pos_lists_right[partition_number].push_back(right_row_id);
-              }
-            }
-          }
-
-          // Determine which index has to get incremented
-          // Set the smaller side to next new value
-          if (left_value < right_value) {
-            left_index += left_index_offset + 1u;
-          } else {
-            right_index += right_index_offset + 1u;
-          }
-        }
+      // Advance to the next run on the smaller side
+      if(left_value == right_value) {
+        left_run_start = left_run_end + 1;
+        right_run_start = right_run_end + 1;
+      }else if(left_value < right_value) {
+        left_run_start = left_run_end + 1;
+      }
+      else{
+        right_run_start = right_run_end + 1;
       }
 
-      // Logic for ">" and ">=" operators
-      if (_op == ">" || _op == ">=") {
-        if (left_value == right_value) {
-          // Viewer values have to be added in the ">" case, so traversal will end at "right_index"
-          // In the ">=" case the value at "max_right_index" has still to be added, so "dependend_max_index" has to be of
-          // one greater value
-          auto dependend_max_index = (_op == ">") ? right_index : max_right_index + 1;
-
-          // Add all smaller values of the right side (addSmallerValues method) to each left side representant (for loop)
-          for (uint32_t l_index = left_index; l_index <= max_left_index; ++l_index) {
-            auto left_row_id = left_current_partition.values[l_index].second;
-            addSmallerValues(partition_number, _sorted_right_table, pos_lists_right, pos_lists_left,
-                             dependend_max_index, left_row_id);
-          }
-
-          // Afterwards set index for both tables to next new value
-          left_index += left_index_offset + 1u;
-          right_index += right_index_offset + 1u;
-
-        } else {
-          // Found right_value that is greater than left_value. That means all potantial right_values before are smaller
-          if (left_value < right_value) {
-            for (uint32_t l_index = left_index; l_index <= max_left_index; ++l_index) {
-              auto left_row_id = left_current_partition.values[l_index].second;
-              addSmallerValues(partition_number, _sorted_right_table, pos_lists_right, pos_lists_left, right_index,
-                               left_row_id);
-            }
-          }
-
-          // Determine which index has to get incremented
-          // Set the smaller side to next new value
-          if (left_value < right_value) {
-            left_index += left_index_offset + 1u;
-          } else {
-            right_index += right_index_offset + 1u;
-          }
-        }
-      }
-
-      // Turn around the logic of ">" and ">=" operators
-      if (_op == "<" || _op == "<=") {
-        if (left_value == right_value) {
-          // Viewer values have to be added in the "<" case, so traversal will begin at "max_left_index + 1"
-          // In the "<=" case the traversal has to start at "left_index"
-          auto dependend_max_index = (_op == "<") ? max_right_index + 1 : right_index;
-
-          for (uint32_t l_index = left_index; l_index <= max_left_index; ++l_index) {
-            auto left_row_id = left_current_partition.values[l_index].second;
-            addGreaterValues(partition_number, _sorted_right_table, pos_lists_left, pos_lists_right,
-                             dependend_max_index, left_row_id);
-          }
-
-          // Afterwards set index for both tables to next new value
-          left_index += left_index_offset + 1u;
-          right_index += right_index_offset + 1u;
-
-        } else {
-          // Found right_value that is greater than left_value. That means all potantial right_values following are
-          // greater too
-          if (left_value < right_value) {
-            for (uint32_t l_index = left_index; l_index <= max_left_index; ++l_index) {
-              auto left_row_id = left_current_partition.values[l_index].second;
-              addGreaterValues(partition_number, _sorted_right_table, pos_lists_left, pos_lists_right, right_index,
-                               left_row_id);
-            }
-          }
-
-          // Determine which index has to get incremented
-          // Set the smaller side to next new value
-          if (left_value < right_value) {
-            left_index += left_index_offset + 1u;
-          } else {
-            right_index += right_index_offset + 1u;
-          }
-        }
-      }
     }
 
     // There is an edge case in which the last loop run was a "equi hit" and one index
@@ -668,28 +666,28 @@ class SortMergeJoin::SortMergeJoinImpl : public AbstractJoinOperatorImpl, public
     // It is important for "Outer-Joins" to include this element of course.
 
     // The left side has finished -> add the remaining ones on the right side
-    if (left_index == left_size && (_mode == Right || _mode == Outer)) {
-      while(right_index < right_size) {
-        auto right_row_id = right_current_partition.values[right_index].second;
-        pos_lists_left[partition_number].push_back(RowID{ChunkID{0}, INVALID_CHUNK_OFFSET});
-        pos_lists_right[partition_number].push_back(right_row_id);
-        right_index++;
+    if (left_run_start == left_size && (_mode == Right || _mode == Outer)) {
+      while(right_run_start < right_size) {
+        auto right_row_id = right_partition.values[right_run_start].second;
+        _output_pos_lists_left[partition_number]->push_back(RowID{ChunkID{0}, INVALID_CHUNK_OFFSET});
+        _output_pos_lists_right[partition_number]->push_back(right_row_id);
+        right_run_start++;
       }
     }
 
     // The right side has finished -> add the remaining ones on the left side
-    if (right_index == right_size && (_mode == Left || _mode == Outer)) {
-      while(left_index < left_size) {
-        auto left_row_id = left_current_partition.values[left_index].second;
-        pos_lists_right[partition_number].push_back(RowID{ChunkID{0}, INVALID_CHUNK_OFFSET});
-        pos_lists_left[partition_number].push_back(left_row_id);
-        left_index++;
+    if (right_run_start == right_size && (_mode == Left || _mode == Outer)) {
+      while(left_run_start < left_size) {
+        auto left_row_id = left_partition.values[left_run_start].second;
+        _output_pos_lists_left[partition_number]->push_back(left_row_id);
+        _output_pos_lists_right[partition_number]->push_back(RowID{ChunkID{0}, INVALID_CHUNK_OFFSET});
+        left_run_start++;
       }
     }
   }
 
   void addSmallerValues(uint32_t partition_number, std::shared_ptr<SortedTable>& table_smaller_values,
-                        std::vector<PosList>& pos_list_smaller, std::vector<PosList>& pos_list_greater,
+                        std::vector<std::shared_ptr<PosList>>& pos_list_smaller, std::vector<std::shared_ptr<PosList>>& pos_list_greater,
                         uint32_t max_index_smaller_values, RowID greaterId) {
     RowID smaller_value_row_id;
 
@@ -700,15 +698,15 @@ class SortMergeJoin::SortMergeJoinImpl : public AbstractJoinOperatorImpl, public
 
         for (auto& values : partition_smaller_values.values) {
           smaller_value_row_id = values.second;
-          pos_list_smaller[partition_number].push_back(smaller_value_row_id);
-          pos_list_greater[partition_number].push_back(greaterId);
+          pos_list_smaller[partition_number]->push_back(smaller_value_row_id);
+          pos_list_greater[partition_number]->push_back(greaterId);
         }
       } else {
         // Add values from current partition
         for (uint32_t index = 0; index < max_index_smaller_values; ++index) {
           smaller_value_row_id = table_smaller_values->partitions[partition_number].values[index].second;
-          pos_list_smaller[partition_number].push_back(smaller_value_row_id);
-          pos_list_greater[partition_number].push_back(greaterId);
+          pos_list_smaller[partition_number]->push_back(smaller_value_row_id);
+          pos_list_greater[partition_number]->push_back(greaterId);
         }
       }
     }
@@ -716,7 +714,7 @@ class SortMergeJoin::SortMergeJoinImpl : public AbstractJoinOperatorImpl, public
 
   void addGreaterValues(uint32_t partition_number,
                         std::shared_ptr<SortMergeJoinImpl::SortedTable>& table_greater_values,
-                        std::vector<PosList>& pos_list_smaller, std::vector<PosList>& pos_list_greater,
+                        std::vector<std::shared_ptr<PosList>>& pos_list_smaller, std::vector<std::shared_ptr<PosList>>& pos_list_greater,
                         uint32_t start_index_greater_values, RowID smallerId) {
     RowID greater_value_row_id;
     size_t partition_size = table_greater_values->partitions[partition_number].values.size();
@@ -728,51 +726,54 @@ class SortMergeJoin::SortMergeJoinImpl : public AbstractJoinOperatorImpl, public
 
         for (auto& values : partition_greater_values.values) {
           greater_value_row_id = values.second;
-          pos_list_smaller[partition_number].push_back(smallerId);
-          pos_list_greater[partition_number].push_back(greater_value_row_id);
+          pos_list_smaller[partition_number]->push_back(smallerId);
+          pos_list_greater[partition_number]->push_back(greater_value_row_id);
         }
       } else {
         // Add values from current partition
         for (uint32_t index = start_index_greater_values; index < partition_size; ++index) {
           greater_value_row_id = table_greater_values->partitions[partition_number].values[index].second;
-          pos_list_smaller[partition_number].push_back(smallerId);
-          pos_list_greater[partition_number].push_back(greater_value_row_id);
+          pos_list_smaller[partition_number]->push_back(smallerId);
+          pos_list_greater[partition_number]->push_back(greater_value_row_id);
         }
       }
     }
   }
 
-  void perform_join() {
+  std::shared_ptr<PosList> concatenate_pos_lists(std::vector<std::shared_ptr<PosList>>& pos_lists) {
+    auto output = std::make_shared<PosList>();
 
-    std::vector<PosList> pos_lists_left(_partition_count);
-    std::vector<PosList> pos_lists_right(_partition_count);
+    for (auto pos_list : pos_lists) {
+      output->reserve(output->size() + pos_list->size());
+      output->insert(pos_list->end(), pos_list->begin(), pos_list->end());
+    }
+
+    return output;
+  }
+
+  std::pair<std::shared_ptr<PosList>, std::shared_ptr<PosList>> perform_join() {
 
     std::vector<std::shared_ptr<AbstractTask>> jobs;
 
     // Parallel join for each partition
-    for (uint32_t partition_number = 0; partition_number < _partition_count; ++partition_number) {
-      jobs.push_back(std::make_shared<JobTask>([this, partition_number, &pos_lists_left, &pos_lists_right]{
-        this->partition_join(partition_number, std::ref(pos_lists_left), std::ref(pos_lists_right));
+    for (size_t partition_number = 0; partition_number < _partition_count; ++partition_number) {
+      jobs.push_back(std::make_shared<JobTask>([this, partition_number]{
+        this->join_partition(partition_number);
       }));
       jobs.back()->schedule();
     }
 
     CurrentScheduler::wait_for_tasks(jobs);
 
-    _pos_list_left = std::make_shared<PosList>();
-    _pos_list_right = std::make_shared<PosList>();
+    std::cout << "now concatenating pos lists" << std::endl;
 
-    // Merge pos_lists_left of partitions together
-    for (auto& p_list : pos_lists_left) {
-      _pos_list_left->reserve(_pos_list_left->size() + p_list.size());
-      _pos_list_left->insert(_pos_list_left->end(), p_list.begin(), p_list.end());
-    }
+    // merge the pos lists into single pos lists
+    auto output_pos_list_left = concatenate_pos_lists(_output_pos_lists_left);
+    auto output_pos_list_right = concatenate_pos_lists(_output_pos_lists_right);
 
-    // Merge pos_lists_right of partitions together
-    for (auto& p_list : pos_lists_right) {
-      _pos_list_right->reserve(_pos_list_right->size() + p_list.size());
-      _pos_list_right->insert(_pos_list_right->end(), p_list.begin(), p_list.end());
-    }
+    std::cout << "concatenated pos lists" << std::endl;
+
+    return std::pair<std::shared_ptr<PosList>, std::shared_ptr<PosList>>(output_pos_list_left, output_pos_list_right);
   }
 
   /**
@@ -843,13 +844,14 @@ class SortMergeJoin::SortMergeJoinImpl : public AbstractJoinOperatorImpl, public
 
     std::cout << "value based partitioning ran through" << std::endl;
 
-    perform_join();
-
+    auto output_pos_lists = perform_join();
     auto output = std::make_shared<Table>();
 
+    std::cout << "perform join ran through" << std::endl;
+
     // Add the columns from both input tables to the output
-    add_output_columns(output, _sort_merge_join.input_table_left(), _sort_merge_join._prefix_left, _pos_list_left);
-    add_output_columns(output, _sort_merge_join.input_table_right(), _sort_merge_join._prefix_right, _pos_list_right);
+    add_output_columns(output, _sort_merge_join.input_table_left(), _sort_merge_join._prefix_left, output_pos_lists.first);
+    add_output_columns(output, _sort_merge_join.input_table_right(), _sort_merge_join._prefix_right, output_pos_lists.second);
 
     return output;
   }
