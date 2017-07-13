@@ -26,11 +26,11 @@ class SortMergeJoin : public AbstractJoinOperator {
                 optional<std::pair<std::string, std::string>> column_names, const std::string& op, const JoinMode mode,
                 const std::string& prefix_left, const std::string& prefix_right);
 
-  std::shared_ptr<const Table> on_execute() override;
+  std::shared_ptr<const Table> on_execute() override { return _impl->on_execute(); };
 
-  const std::string name() const override;
-  uint8_t num_in_tables() const override;
-  uint8_t num_out_tables() const override;
+  const std::string name() const override { return "SortMergeJoin"; };
+  uint8_t num_in_tables() const override { return 2u; };
+  uint8_t num_out_tables() const override { return 1u; };
 
  protected:
   template <typename T>

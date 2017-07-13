@@ -20,7 +20,7 @@ SortMergeJoin::SortMergeJoin(const std::shared_ptr<const AbstractOperator> left,
     : AbstractJoinOperator(left, right, column_names, op, mode, prefix_left, prefix_right) {
 
   // Validate the parameters
-  if (_mode == Cross || !column_names) {
+  if (mode == Cross || !column_names) {
     throw std::logic_error(
         "SortMergeJoin: this operator does not support Cross Joins, the optimizer should use Product operator "
         "instead.");
@@ -56,16 +56,8 @@ SortMergeJoin::SortMergeJoin(const std::shared_ptr<const AbstractOperator> left,
 
   // Create implementation to compute join result
   _impl = make_unique_by_column_type<AbstractJoinOperatorImpl, SortMergeJoinImpl>(left_column_type,
-    *this, left_column_name, right_column_name, 1 /* partition count */);
+    *this, left_column_name, right_column_name, op, mode,1 /* partition count */);
 }
-
-std::shared_ptr<const Table> SortMergeJoin::on_execute() { return _impl->on_execute(); }
-
-const std::string SortMergeJoin::name() const { return "SortMergeJoin"; }
-
-uint8_t SortMergeJoin::num_in_tables() const { return 2u; }
-
-uint8_t SortMergeJoin::num_out_tables() const { return 1u; }
 
 /**
 ** Start of implementation
@@ -74,39 +66,10 @@ uint8_t SortMergeJoin::num_out_tables() const { return 1u; }
 template <typename T>
 class SortMergeJoin::SortMergeJoinImpl : public AbstractJoinOperatorImpl, public ColumnVisitable {
  public:
-  SortMergeJoinImpl<T>(SortMergeJoin& sort_merge_join, std::string left_column_name, std::string right_column_name,
-                       uint32_t partition_count)
+  SortMergeJoinImpl<T>(SortMergeJoin& sort_merge_join, const std::string& left_column_name, const std::string& right_column_name,
+                       const std::string& op, const JoinMode mode, uint32_t partition_count)
     : _sort_merge_join{sort_merge_join}, _left_column_name{left_column_name},
-      _right_column_name{right_column_name}, _partition_count{partition_count} {}
-
-  std::shared_ptr<const Table> on_execute() {
-
-    if (_partition_count == 0u) {
-      throw std::runtime_error("SortMergeJoinImpl::on_execute: Partition count is 0!");
-    }
-
-    // Sort the input tables
-    _sorted_left_table = sort_table(_sort_merge_join.input_table_left(), _left_column_name);
-    _sorted_right_table = sort_table(_sort_merge_join.input_table_right(), _right_column_name);
-
-    std::cout << "Table sorting ran through" << std::endl;
-
-    if (_sort_merge_join._op != "=" && _partition_count > 1) {
-      value_based_partitioning();
-    }
-
-    std::cout << "value based partitioning ran through" << std::endl;
-
-    perform_join();
-
-    auto output = std::make_shared<Table>();
-
-    // Add the columns from both input tables to the output
-    add_output_columns(output, _sort_merge_join.input_table_left(), _sort_merge_join._prefix_left, _pos_list_left);
-    add_output_columns(output, _sort_merge_join.input_table_right(), _sort_merge_join._prefix_right, _pos_list_right);
-
-    return output;
-  }
+      _right_column_name{right_column_name}, _op(op), _mode(mode), _partition_count{partition_count} {}
 
   virtual ~SortMergeJoinImpl() = default;
 
@@ -147,8 +110,11 @@ class SortMergeJoin::SortMergeJoinImpl : public AbstractJoinOperatorImpl, public
   std::shared_ptr<SortedTable> _sorted_left_table;
   std::shared_ptr<SortedTable> _sorted_right_table;
 
-  std::string _left_column_name;
-  std::string _right_column_name;
+  const std::string _left_column_name;
+  const std::string _right_column_name;
+
+  const std::string _op;
+  const JoinMode _mode;
 
   // the partition count should be a power of two, i.e. 1, 2, 4, 8, 16, ...
   uint32_t _partition_count;
@@ -185,7 +151,7 @@ class SortMergeJoin::SortMergeJoinImpl : public AbstractJoinOperatorImpl, public
       }
     } else {
       // Do radix-partitioning here for _partition_count > 1 partitions
-      if (_sort_merge_join._op == "=") {
+      if (_op == "=") {
         sorted_table->partitions.resize(_partition_count);
 
         // for prefix computation we need to table-wide know how many entries there are for each partition
@@ -566,7 +532,7 @@ class SortMergeJoin::SortMergeJoinImpl : public AbstractJoinOperatorImpl, public
       auto max_left_index = left_index + left_index_offset;
       auto max_right_index = right_index + right_index_offset;
 
-      if (_sort_merge_join._op == "=") {
+      if (_op == "=") {
         // Search for matching values of both partitions
         if (left_value == right_value) {
           // Match found
@@ -589,7 +555,7 @@ class SortMergeJoin::SortMergeJoinImpl : public AbstractJoinOperatorImpl, public
           // Add null values when appropriate on the side which index gets increased at the end of one loop run
           if (left_value < right_value) {
             // Check for correct mode
-            if (_sort_merge_join._mode == Left || _sort_merge_join._mode == Outer) {
+            if (_mode == Left || _mode == Outer) {
               for (uint32_t l_index = left_index; l_index <= max_left_index; ++l_index) {
                 auto left_row_id = left_current_partition.values[l_index].second;
 
@@ -599,7 +565,7 @@ class SortMergeJoin::SortMergeJoinImpl : public AbstractJoinOperatorImpl, public
             }
           } else {
             // Check for correct mode
-            if (_sort_merge_join._mode == Right || _sort_merge_join._mode == Outer) {
+            if (_mode == Right || _mode == Outer) {
               for (uint32_t r_index = right_index; r_index <= max_right_index; ++r_index) {
                 auto right_row_id = right_current_partition.values[r_index].second;
 
@@ -620,12 +586,12 @@ class SortMergeJoin::SortMergeJoinImpl : public AbstractJoinOperatorImpl, public
       }
 
       // Logic for ">" and ">=" operators
-      if (_sort_merge_join._op == ">" || _sort_merge_join._op == ">=") {
+      if (_op == ">" || _op == ">=") {
         if (left_value == right_value) {
           // Viewer values have to be added in the ">" case, so traversal will end at "right_index"
           // In the ">=" case the value at "max_right_index" has still to be added, so "dependend_max_index" has to be of
           // one greater value
-          auto dependend_max_index = (_sort_merge_join._op == ">") ? right_index : max_right_index + 1;
+          auto dependend_max_index = (_op == ">") ? right_index : max_right_index + 1;
 
           // Add all smaller values of the right side (addSmallerValues method) to each left side representant (for loop)
           for (uint32_t l_index = left_index; l_index <= max_left_index; ++l_index) {
@@ -659,11 +625,11 @@ class SortMergeJoin::SortMergeJoinImpl : public AbstractJoinOperatorImpl, public
       }
 
       // Turn around the logic of ">" and ">=" operators
-      if (_sort_merge_join._op == "<" || _sort_merge_join._op == "<=") {
+      if (_op == "<" || _op == "<=") {
         if (left_value == right_value) {
           // Viewer values have to be added in the "<" case, so traversal will begin at "max_left_index + 1"
           // In the "<=" case the traversal has to start at "left_index"
-          auto dependend_max_index = (_sort_merge_join._op == "<") ? max_right_index + 1 : right_index;
+          auto dependend_max_index = (_op == "<") ? max_right_index + 1 : right_index;
 
           for (uint32_t l_index = left_index; l_index <= max_left_index; ++l_index) {
             auto left_row_id = left_current_partition.values[l_index].second;
@@ -702,7 +668,7 @@ class SortMergeJoin::SortMergeJoinImpl : public AbstractJoinOperatorImpl, public
     // It is important for "Outer-Joins" to include this element of course.
 
     // The left side has finished -> add the remaining ones on the right side
-    if (left_index == left_size && (_sort_merge_join._mode == Right || _sort_merge_join._mode == Outer)) {
+    if (left_index == left_size && (_mode == Right || _mode == Outer)) {
       while(right_index < right_size) {
         auto right_row_id = right_current_partition.values[right_index].second;
         pos_lists_left[partition_number].push_back(RowID{ChunkID{0}, INVALID_CHUNK_OFFSET});
@@ -712,7 +678,7 @@ class SortMergeJoin::SortMergeJoinImpl : public AbstractJoinOperatorImpl, public
     }
 
     // The right side has finished -> add the remaining ones on the left side
-    if (right_index == right_size && (_sort_merge_join._mode == Left || _sort_merge_join._mode == Outer)) {
+    if (right_index == right_size && (_mode == Left || _mode == Outer)) {
       while(left_index < left_size) {
         auto left_row_id = left_current_partition.values[left_index].second;
         pos_lists_right[partition_number].push_back(RowID{ChunkID{0}, INVALID_CHUNK_OFFSET});
@@ -856,6 +822,36 @@ class SortMergeJoin::SortMergeJoinImpl : public AbstractJoinOperatorImpl, public
     }
 
     return new_pos_list;
+  }
+
+ public:
+  std::shared_ptr<const Table> on_execute() {
+
+    if (_partition_count == 0u) {
+      throw std::runtime_error("SortMergeJoinImpl::on_execute: Partition count is 0!");
+    }
+
+    // Sort the input tables
+    _sorted_left_table = sort_table(_sort_merge_join.input_table_left(), _left_column_name);
+    _sorted_right_table = sort_table(_sort_merge_join.input_table_right(), _right_column_name);
+
+    std::cout << "Table sorting ran through" << std::endl;
+
+    if (_op != "=" && _partition_count > 1) {
+      value_based_partitioning();
+    }
+
+    std::cout << "value based partitioning ran through" << std::endl;
+
+    perform_join();
+
+    auto output = std::make_shared<Table>();
+
+    // Add the columns from both input tables to the output
+    add_output_columns(output, _sort_merge_join.input_table_left(), _sort_merge_join._prefix_left, _pos_list_left);
+    add_output_columns(output, _sort_merge_join.input_table_right(), _sort_merge_join._prefix_right, _pos_list_right);
+
+    return output;
   }
 };
 
