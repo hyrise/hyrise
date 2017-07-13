@@ -25,20 +25,13 @@ class TableStatistics {
   TableStatistics(const std::string &name, const std::shared_ptr<Table> table);
   TableStatistics(const TableStatistics &table_statistics);
 
-  float row_count();
+  float row_count() const;
   std::shared_ptr<AbstractColumnStatistics> get_column_statistics(const ColumnID column_id);
   std::shared_ptr<TableStatistics> predicate_statistics(const std::string &column_name, const ScanType scan_type,
                                                         const AllParameterVariant &value,
                                                         const optional<AllTypeVariant> &value2 = nullopt);
 
-  friend std::ostream &operator<<(std::ostream &os, TableStatistics &obj) {
-    os << "Table Stats " << obj._name << std::endl;
-    os << " row count: " << obj._row_count;
-    for (auto statistics : obj._column_statistics) {
-      os << std::endl << " " << *statistics;
-    }
-    return os;
-  }
+  friend std::ostream &operator<<(std::ostream &os, TableStatistics &obj);
 
  private:
   const std::string _name;
@@ -49,6 +42,15 @@ class TableStatistics {
   float _row_count;
   std::vector<std::shared_ptr<AbstractColumnStatistics>> _column_statistics;
 };
+
+inline std::ostream &operator<<(std::ostream &os, TableStatistics &obj) {
+  os << "Table Stats " << obj._name << std::endl;
+  os << " row count: " << obj._row_count;
+  for (auto statistics : obj._column_statistics) {
+    if (statistics) os << std::endl << " " << *statistics;
+  }
+  return os;
+}
 
 // default selectivity factors for assumption of uniform distribution
 constexpr float DEFAULT_SELECTIVITY = 0.5f;

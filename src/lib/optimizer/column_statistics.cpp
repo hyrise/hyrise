@@ -29,36 +29,14 @@ ColumnStatistics<ColumnType>::ColumnStatistics(const ColumnID column_id, float d
     : _column_id(column_id), _table(std::weak_ptr<Table>()), _distinct_count(distinct_count), _min(min), _max(max) {}
 
 template <typename ColumnType>
-float ColumnStatistics<ColumnType>::distinct_count() {
-  if (!_distinct_count) {
-    update_distinct_count();
+float ColumnStatistics<ColumnType>::distinct_count() const {
+  if (_distinct_count) {
+    return *_distinct_count;
   }
-  return *_distinct_count;
-}
 
-template <typename ColumnType>
-ColumnType ColumnStatistics<ColumnType>::min() {
-  if (!_min) {
-    update_min_max();
-  }
-  return *_min;
-}
-
-template <typename ColumnType>
-ColumnType ColumnStatistics<ColumnType>::max() {
-  if (!_max) {
-    update_min_max();
-  }
-  return *_max;
-}
-
-/**
- * Calcute distinct count from table.
- * Calculation is delegated to aggregate operator.
- */
-template <typename ColumnType>
-void ColumnStatistics<ColumnType>::update_distinct_count() {
+  // Calculation of distinct_count is delegated to aggregate operator.
   auto table = _table.lock();
+  DebugAssert(table != nullptr, "Corresponding table of column statistics is deleted.");
   auto table_wrapper = std::make_shared<TableWrapper>(table);
   table_wrapper->execute();
   auto aggregate = std::make_shared<Aggregate>(table_wrapper, std::vector<std::pair<std::string, AggregateFunction>>{},
@@ -66,15 +44,30 @@ void ColumnStatistics<ColumnType>::update_distinct_count() {
   aggregate->execute();
   auto aggregate_table = aggregate->get_output();
   _distinct_count = aggregate_table->row_count();
+  return *_distinct_count;
 }
 
-/**
- * Calcute min and max values from table.
- * Calculation is delegated to aggregate operator.
- */
 template <typename ColumnType>
-void ColumnStatistics<ColumnType>::update_min_max() {
+ColumnType ColumnStatistics<ColumnType>::min() const {
+  if (!_min) {
+    initialze_min_max();
+  }
+  return *_min;
+}
+
+template <typename ColumnType>
+ColumnType ColumnStatistics<ColumnType>::max() const {
+  if (!_max) {
+    initialze_min_max();
+  }
+  return *_max;
+}
+
+template <typename ColumnType>
+void ColumnStatistics<ColumnType>::initialze_min_max() const {
+  // Calculation is delegated to aggregate operator.
   auto table = _table.lock();
+  DebugAssert(table != nullptr, "Table deleted.");
   auto table_wrapper = std::make_shared<TableWrapper>(table);
   table_wrapper->execute();
   const std::string &column_name = table->column_name(_column_id);
@@ -87,10 +80,6 @@ void ColumnStatistics<ColumnType>::update_min_max() {
   _max = aggregate_table->template get_value<ColumnType>(ColumnID{1}, 0);
 }
 
-/**
- * Predicate selectivity for constants,
- * specialized for strings.
- */
 template <>
 ColumnStatisticsContainer ColumnStatistics<std::string>::predicate_selectivity(const ScanType scan_type,
                                                                                const AllTypeVariant &value,
@@ -116,10 +105,6 @@ ColumnStatisticsContainer ColumnStatistics<std::string>::predicate_selectivity(c
   }
 }
 
-/**
- * Predicate selectivity for constants,
- * every type but strings.
- */
 template <typename ColumnType>
 ColumnStatisticsContainer ColumnStatistics<ColumnType>::predicate_selectivity(const ScanType scan_type,
                                                                               const AllTypeVariant &value,
@@ -208,22 +193,14 @@ ColumnStatisticsContainer ColumnStatistics<ColumnType>::predicate_selectivity(co
   }
 }
 
-/**
- * Predicate selectivity for two columns,
- * specialized for strings.
- */
 template <>
 TwoColumnStatisticsContainer ColumnStatistics<std::string>::predicate_selectivity(
     const ScanType scan_type, const std::shared_ptr<AbstractColumnStatistics> abstract_value_column_statistics,
     const optional<AllTypeVariant> &value2) {
-  // TODO(anybody) implement speacial case for strings
+  // TODO(anybody) implement special case for strings
   return {1.f, nullptr, nullptr};
 }
 
-/**
- * Predicate selectivity for two columns,
- * every type but strings.
- */
 template <typename ColumnType>
 TwoColumnStatisticsContainer ColumnStatistics<ColumnType>::predicate_selectivity(
     const ScanType scan_type, const std::shared_ptr<AbstractColumnStatistics> abstract_value_column_statistics,
@@ -261,10 +238,6 @@ TwoColumnStatisticsContainer ColumnStatistics<ColumnType>::predicate_selectivity
   }
 }
 
-/**
- * Predicate selectivity for prepared statements,
- * specialized for strings.
- */
 template <>
 ColumnStatisticsContainer ColumnStatistics<std::string>::predicate_selectivity(const ScanType scan_type,
                                                                                const ValuePlaceholder &value,
@@ -296,10 +269,6 @@ ColumnStatisticsContainer ColumnStatistics<std::string>::predicate_selectivity(c
   }
 }
 
-/**
- * Predicate selectivity for prepared statements,
- * every type but strings.
- */
 template <typename ColumnType>
 ColumnStatisticsContainer ColumnStatistics<ColumnType>::predicate_selectivity(const ScanType scan_type,
                                                                               const ValuePlaceholder &value,
