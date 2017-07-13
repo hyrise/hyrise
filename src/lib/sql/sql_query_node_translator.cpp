@@ -6,7 +6,6 @@
 #include <utility>
 #include <vector>
 
-#include "operators/abstract_join_operator.hpp"
 #include "optimizer/abstract_syntax_tree/abstract_node.hpp"
 #include "optimizer/abstract_syntax_tree/join_node.hpp"
 #include "optimizer/abstract_syntax_tree/projection_node.hpp"
@@ -14,6 +13,7 @@
 #include "optimizer/abstract_syntax_tree/table_node.hpp"
 #include "optimizer/abstract_syntax_tree/table_scan_node.hpp"
 #include "storage/storage_manager.hpp"
+#include "types.hpp"
 #include "utils/assert.hpp"
 
 #include "SQLParser.h"
@@ -118,22 +118,22 @@ std::shared_ptr<AbstractNode> SQLQueryNodeTranslator::_translate_join(const Join
   JoinMode join_mode;
   switch (join.type) {
     case hsql::kJoinInner:
-      join_mode = Inner;
+      join_mode = JoinMode::Inner;
       break;
     case hsql::kJoinOuter:
-      join_mode = Outer;
+      join_mode = JoinMode::Outer;
       break;
     case hsql::kJoinLeft:
-      join_mode = Left;
+      join_mode = JoinMode::Left;
       break;
     case hsql::kJoinRight:
-      join_mode = Right;
+      join_mode = JoinMode::Right;
       break;
     case hsql::kJoinNatural:
-      join_mode = Natural;
+      join_mode = JoinMode::Natural;
       break;
     case hsql::kJoinCross:
-      join_mode = Cross;
+      join_mode = JoinMode::Cross;
       break;
     default:
       Fail("Unable to handle join type.");
