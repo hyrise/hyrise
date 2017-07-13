@@ -32,15 +32,17 @@ class ColumnStatistics : public AbstractColumnStatistics {
       const ScanType scan_type, const std::shared_ptr<AbstractColumnStatistics> abstract_value_column_statistics,
       const optional<AllTypeVariant> &value2) override;
 
-  float distinct_count();
-  ColumnType min();
-  ColumnType max();
-
  protected:
+  float distinct_count() const;
+  ColumnType min() const;
+  ColumnType max() const;
+
   std::ostream &print_to_stream(std::ostream &os) const override;
 
-  void update_distinct_count();
-  void update_min_max();
+  /**
+   * Calcute min and max values from table.
+   */
+  void initialze_min_max() const;
 
   const ColumnID _column_id;
 
@@ -50,13 +52,13 @@ class ColumnStatistics : public AbstractColumnStatistics {
   const std::weak_ptr<Table> _table;
 
   // those can be lazy initialized
-  optional<float> _distinct_count;
-  optional<ColumnType> _min;
-  optional<ColumnType> _max;
+  mutable optional<float> _distinct_count;
+  mutable optional<ColumnType> _min;
+  mutable optional<ColumnType> _max;
 };
 
 template <typename ColumnType>
-std::ostream &operator<<(std::ostream &os, const opossum::optional<ColumnType> &obj) {
+inline std::ostream &operator<<(std::ostream &os, const opossum::optional<ColumnType> &obj) {
   if (obj) {
     return os << *obj;
   } else {

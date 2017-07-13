@@ -22,11 +22,12 @@ TableStatistics::TableStatistics(const TableStatistics &table_statistics)
       _row_count(table_statistics._row_count),
       _column_statistics(table_statistics._column_statistics) {}
 
-float TableStatistics::row_count() { return _row_count; }
+float TableStatistics::row_count() const { return _row_count; }
 
 std::shared_ptr<AbstractColumnStatistics> TableStatistics::get_column_statistics(const ColumnID column_id) {
   if (_column_statistics[column_id] == nullptr) {
     auto table = _table.lock();
+    DebugAssert(table != nullptr, "Corresponding table of table statistics is deleted.");
     auto column_type = table->column_type(column_id);
     auto column_statistics =
         make_shared_by_column_type<AbstractColumnStatistics, ColumnStatistics>(column_type, column_id, _table);
@@ -56,6 +57,7 @@ std::shared_ptr<TableStatistics> TableStatistics::predicate_statistics(const std
   }
 
   auto table = _table.lock();
+  DebugAssert(table != nullptr, "Corresponding table of table statistics is deleted.");
   const ColumnID column_id = table->column_id_by_name(column_name);
 
   auto old_column_statistics = get_column_statistics(column_id);
