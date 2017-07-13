@@ -42,8 +42,6 @@ class AbstractColumnStatistics {
   virtual std::ostream &print_to_stream(std::ostream &os) const = 0;
 };
 
-inline std::ostream &operator<<(std::ostream &os, AbstractColumnStatistics &obj) { return obj.print_to_stream(os); }
-
 /**
  * Return type of get selectivity functions for operations on one column
  */
@@ -62,5 +60,7 @@ struct TwoColumnStatisticsContainer : public ColumnStatisticsContainer {
 
   std::shared_ptr<AbstractColumnStatistics> second_column_statistics;
 };
+
+inline std::ostream &operator<<(std::ostream &os, AbstractColumnStatistics &obj) { return obj.print_to_stream(os); }
 
 }  // namespace opossum
