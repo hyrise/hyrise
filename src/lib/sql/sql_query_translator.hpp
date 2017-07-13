@@ -11,9 +11,9 @@
 
 namespace opossum {
 
-// The SQLQueryTranslator offers functionality to translate a
-// SQLStatement or SQLParserResult object into a SQLQueryPlan.
-// The translator should not be used concurrently.
+// The SQLQueryTranslator translates SQLStatement objects into an Hyrise operator trees.
+// The operator trees are added to a SQLQueryPlan by their roots.
+// This object can not be used concurrently.
 class SQLQueryTranslator {
  public:
   SQLQueryTranslator();
@@ -28,10 +28,14 @@ class SQLQueryTranslator {
   // Destroy the currently stored execution plan and state.
   void reset();
 
-  // Translates the give SQL result. Adds the generated execution plan to _tasks.
+  // Translates the give SQL result.
+  // Adds the generated operator trees to the SQLQueryPlan.
+  // Returns false, if an error occurred.
   bool translate_parse_result(const hsql::SQLParserResult& result);
 
-  // Translates the single given SQL statement. Adds the generated execution plan to _tasks.
+  // Translates the single given SQL statement.
+  // Adds the generated operator tree to the SQLQueryPlan.
+  // Returns false, if an error occurred.
   bool translate_statement(const hsql::SQLStatement& statement);
 
   static const AllParameterVariant translate_literal(const hsql::Expr& expr);

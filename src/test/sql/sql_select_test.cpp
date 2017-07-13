@@ -80,7 +80,7 @@ class SQLSelectTest : public BaseTest, public ::testing::WithParamInterface<SQLT
     }
   }
 
-  std::shared_ptr<const Table> get_plan_result() { return _plan.roots().back()->get_output(); }
+  std::shared_ptr<const Table> get_plan_result() { return _plan.tree_roots().back()->get_output(); }
 
   SQLQueryTranslator _translator;
   SQLQueryPlan _plan;

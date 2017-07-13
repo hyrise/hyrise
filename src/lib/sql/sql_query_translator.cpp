@@ -72,7 +72,7 @@ bool SQLQueryTranslator::translate_statement(const SQLStatement& statement) {
         return false;
       }
 
-      _plan.add_root(_current_root);
+      _plan.add_tree_by_root(_current_root);
       return true;
     }
     default:
