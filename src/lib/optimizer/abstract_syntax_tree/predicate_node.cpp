@@ -8,8 +8,7 @@
 namespace opossum {
 
 PredicateNode::PredicateNode(const std::string& column_name, const std::shared_ptr<ExpressionNode> predicate,
-                             ScanType scan_type, const AllParameterVariant value,
-                             const optional<AllTypeVariant> value2)
+                             ScanType scan_type, const AllParameterVariant value, const optional<AllTypeVariant> value2)
     : AbstractAstNode(AstNodeType::Predicate),
       _column_name(column_name),
       _predicate(predicate),
@@ -23,7 +22,7 @@ std::string PredicateNode::description() const {
   desc << "TableScan: [" << _column_name << "] [" << scan_type_to_string.at(_scan_type) << "]";
   desc << "[" << boost::get<std::string>(boost::get<AllTypeVariant>(_value)) << "]";
   if (_value2) {
-    desc << " [" << boost::get<std::string>(_value2.value()) << "]";
+    desc << " [" << boost::get<std::string>(*_value2) << "]";
   }
 
   return desc.str();

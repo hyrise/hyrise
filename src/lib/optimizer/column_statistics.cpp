@@ -68,7 +68,7 @@ void ColumnStatistics<T>::update_distinct_count() {
   auto shared_table = _table.lock();
   auto table_wrapper = std::make_shared<TableWrapper>(shared_table);
   table_wrapper->execute();
-  auto aggregate = std::make_shared<Aggregate>(table_wrapper, std::vector<std::pair<std::string, AggregateFunction>>{},
+  auto aggregate = std::make_shared<Aggregate>(table_wrapper, std::vector<AggregateDefinition>{},
                                                std::vector<std::string>{shared_table->column_name(_column_id)});
   aggregate->execute();
   auto aggregate_table = aggregate->get_output();
@@ -81,8 +81,8 @@ void ColumnStatistics<T>::update_min_max() {
   auto table_wrapper = std::make_shared<TableWrapper>(shared_table);
   table_wrapper->execute();
   const std::string &column_name = shared_table->column_name(_column_id);
-  auto aggregate_args = std::vector<std::pair<std::string, AggregateFunction>>{std::make_pair(column_name, Min),
-                                                                               std::make_pair(column_name, Max)};
+  auto aggregate_args =
+      std::vector<AggregateDefinition>{AggregateDefinition(column_name, Min), AggregateDefinition(column_name, Max)};
   auto aggregate = std::make_shared<Aggregate>(table_wrapper, aggregate_args, std::vector<std::string>{});
   aggregate->execute();
   auto aggregate_table = aggregate->get_output();
