@@ -229,9 +229,11 @@ TableGenerator::order_lines_type TableGenerator::generate_order_lines() {
     size_t order_i = &order_lines_per_order - &all_order_lines[0];
     size_t orderkey = order_i / 8 * 32 + order_i % 8;
     size_t orderdate = _random_gen.number(_startdate, _enddate - 151 * _one_day);
+    size_t linenumber = 0;
     for (auto &order_line : order_lines_per_order) {
       order_line.orderkey = orderkey;
       order_line.partkey = _random_gen.number(0, _scale_factor * _part_size - 1);
+      order_line.linenumber = linenumber;
       order_line.quantity = _random_gen.number(1, 50);
       float part_retailprice = calculate_part_retailprice(order_line.partkey);
       order_line.extendedprice = order_line.quantity * part_retailprice;
@@ -241,6 +243,7 @@ TableGenerator::order_lines_type TableGenerator::generate_order_lines() {
       order_line.shipdate = orderdate + _random_gen.number(1, 121) * _one_day;
       order_line.receiptdate = order_line.shipdate + _random_gen.number(1, 30) * _one_day;
       order_line.linestatus = order_line.shipdate > _currentdate ? "O" : "F";
+      linenumber++;
     }
   }
   return std::make_shared<std::vector<std::vector<OrderLine>>>(all_order_lines);
@@ -248,33 +251,19 @@ TableGenerator::order_lines_type TableGenerator::generate_order_lines() {
 
 std::shared_ptr<opossum::Table> TableGenerator::generate_orders_table(TableGenerator::order_lines_type order_lines) {
   auto table = std::make_shared<opossum::Table>(_chunk_size);
-
-  // setup columns
-  table->add_column_definition("O_ORDERKEY", "int");
-  table->add_column_definition("O_CUSTKEY", "int");
-  table->add_column_definition("O_ORDERSTATUS", "string");
-  table->add_column_definition("O_TOTALPRICE", "float");
-  table->add_column_definition("O_ORDERDATE", "int");
-  table->add_column_definition("O_ORDERPRIORITY", "string");
-  table->add_column_definition("O_CLERK", "string");
-  table->add_column_definition("O_SHIPPRIORITY", "int");
-  table->add_column_definition("O_COMMENT", "string");
-
-  auto chunk = opossum::Chunk(true);
   size_t table_size = _order_size * _scale_factor * _customer_size;
-  // O_ORDERKEY
-  chunk.add_column(add_column<int>(table_size, [&](size_t i) { return order_lines->at(i)[0].orderkey; }));
-  // O_CUSTKEY
-  chunk.add_column(add_column<int>(table_size, [&](size_t) {
+  auto cardinalities = std::make_shared<std::vector<size_t>>(std::initializer_list<size_t>{table_size});
+
+  add_column<int>(table, "O_ORDERKEY", cardinalities, [&](std::vector<size_t> indices) { return order_lines->at(indices[0])[0].orderkey; });
+  add_column<int>(table, "O_CUSTKEY", cardinalities, [&](std::vector<size_t>) {
     // O_CUSTKEY should be random between 0 and _scale_factor * _customer_size,
     // but O_CUSTKEY % 3 must not be 0 (only two third of the keys are used).
     size_t max_compacted_key = _scale_factor * _customer_size / 3 * 2 - 1;
     size_t compacted_key = _random_gen.number(0, max_compacted_key);
     return compacted_key / 2 * 3 + compacted_key % 2 + 1;
-  }));
-  // O_ORDERSTATUS
-  chunk.add_column(add_column<std::string>(table_size, [&](size_t i) {
-    auto lines = order_lines->at(i);
+  });
+  add_column<std::string>(table, "O_ORDERSTATUS", cardinalities, [&](std::vector<size_t> indices) {
+    auto lines = order_lines->at(indices[0]);
     bool all_f = std::all_of(lines.begin(), lines.end(), [](OrderLine line) { return line.linestatus == "F"; });
     if (all_f) {
       return "F";
@@ -284,30 +273,22 @@ std::shared_ptr<opossum::Table> TableGenerator::generate_orders_table(TableGener
       return "O";
     }
     return "P";
-  }));
-  // O_TOTALPRICE
-  chunk.add_column(add_column<float>(table_size, [&](size_t i) {
+  });
+  add_column<float>(table, "O_TOTALPRICE", cardinalities, [&](std::vector<size_t> indices) {
     float sum = 0.f;
-    for (auto &order_line : order_lines->at(i)) {
+    for (auto &order_line : order_lines->at(indices[0])) {
       sum += order_line.extendedprice * (1 + order_line.tax) * (1 - order_line.discount);
     }
     return sum;
-  }));
-  // O_ORDERDATE
-  chunk.add_column(add_column<int>(table_size, [&](size_t i) { return order_lines->at(i)[0].orderdate; }));
-  // O_ORDERPRIORITY
-  chunk.add_column(add_column<std::string>(table_size, [&](size_t) { return _text_field_gen.order_priority(); }));
-  // O_CLERK
-  chunk.add_column(add_column<std::string>(table_size, [&](size_t) {
+  });
+  add_column<int>(table, "O_ORDERDATE", cardinalities, [&](std::vector<size_t> indices) { return order_lines->at(indices[0])[0].orderdate; });
+  add_column<std::string>(table, "O_ORDERPRIORITY", cardinalities, [&](std::vector<size_t>) { return _text_field_gen.order_priority(); });
+  add_column<std::string>(table, "O_CLERK", cardinalities, [&](std::vector<size_t>) {
     size_t clerk_number = _random_gen.number(1, 1000);
     return "Clerk#" + _text_field_gen.fixed_length(clerk_number, 9);
-  }));
-  // O_SHIPPRIORITY
-  chunk.add_column(add_column<int>(table_size, [](size_t) { return 0; }));
-  // O_COMMENT
-  chunk.add_column(add_column<std::string>(table_size, [&](size_t) { return _text_field_gen.text_string(29, 116); }));
-
-  table->add_chunk(std::move(chunk));
+  });
+  add_column<int>(table, "O_SHIPPRIORITY", cardinalities, [&](std::vector<size_t>) { return 0; });
+  add_column<std::string>(table, "O_COMMENT", cardinalities, [&](std::vector<size_t>) { return _text_field_gen.text_string(29, 116); });
 
   opossum::DictionaryCompression::compress_table(*table);
   return table;
@@ -315,78 +296,43 @@ std::shared_ptr<opossum::Table> TableGenerator::generate_orders_table(TableGener
 
 std::shared_ptr<opossum::Table> TableGenerator::generate_lineitems_table(TableGenerator::order_lines_type order_lines) {
   auto table = std::make_shared<opossum::Table>(_chunk_size);
-
-  // setup columns
-  table->add_column_definition("L_ORDERKEY", "int");
-  table->add_column_definition("L_PARTKEY", "int");
-  table->add_column_definition("L_SUPPKEY", "int");
-  table->add_column_definition("L_LINENUMBER", "int");
-  table->add_column_definition("L_QUANTITY", "int");
-  table->add_column_definition("L_EXTENDEDPRICE", "float");
-  table->add_column_definition("L_DISCOUNT", "float");
-  table->add_column_definition("L_TAX", "float");
-  table->add_column_definition("L_RETURNFLAG", "string");
-  table->add_column_definition("L_LINESTATUS", "string");
-  table->add_column_definition("L_SHIPDATE", "int");
-  table->add_column_definition("L_COMMITDATE", "int");
-  table->add_column_definition("L_RECEIPTDATE", "int");
-  table->add_column_definition("L_SHIPINSTRUCT", "string");
-  table->add_column_definition("L_SHIPMODE", "string");
-  table->add_column_definition("L_COMMENT", "string");
-
-  for (auto &order_lines_per_order : *order_lines) {
-    size_t table_size = order_lines_per_order.size();
-    auto chunk = opossum::Chunk(true);
-    // L_ORDERKEY
-    chunk.add_column(add_column<int>(table_size, [&](size_t i) { return order_lines_per_order[i].orderkey; }));
-    // L_PARTKEY
-    chunk.add_column(add_column<int>(table_size, [&](size_t i) { return order_lines_per_order[i].partkey; }));
-    // L_SUPPKEY
-    chunk.add_column(add_column<int>(table_size, [](size_t) { return 1234; }));
-    // L_LINENUMBER
-    chunk.add_column(add_column<int>(table_size, [](size_t i) { return i; }));
-    // L_QUANTITY
-    chunk.add_column(add_column<int>(table_size, [&](size_t i) { return order_lines_per_order[i].quantity; }));
-    // L_EXTENDEDPRICE
-    chunk.add_column(add_column<float>(table_size, [&](size_t i) { return order_lines_per_order[i].extendedprice; }));
-    // L_DISCOUNT
-    chunk.add_column(add_column<float>(table_size, [&](size_t i) { return order_lines_per_order[i].discount; }));
-    // L_TAX
-    chunk.add_column(add_column<float>(table_size, [&](size_t i) { return order_lines_per_order[i].tax; }));
-    // L_RETURNFLAG
-    chunk.add_column(add_column<std::string>(table_size, [&](size_t i) {
-      if (order_lines_per_order[i].receiptdate <= _currentdate) {
-        if (_random_gen.number(0, 1)) {
-          return "R";
-        } else {
-          return "A";
-        }
-      } else {
-        return "N";
-      }
-    }));
-    // L_LINESTATUS
-    chunk.add_column(
-        add_column<std::string>(table_size, [&](size_t i) { return order_lines_per_order[i].linestatus; }));
-    // L_SHIPDATE
-    chunk.add_column(add_column<int>(table_size, [&](size_t i) { return order_lines_per_order[i].shipdate; }));
-    // L_COMMITDATE
-    chunk.add_column(add_column<int>(table_size, [&](size_t i) {
-      auto orderdate = order_lines_per_order[i].orderdate;
-      return orderdate + _random_gen.number(30, 90) * _one_day;
-    }));
-    // L_RECEIPTDATE
-    chunk.add_column(add_column<int>(table_size, [&](size_t i) { return order_lines_per_order[i].receiptdate; }));
-    // L_SHIPINSTRUCT
-    chunk.add_column(
-        add_column<std::string>(table_size, [&](size_t) { return _text_field_gen.lineitem_instruction(); }));
-    // L_SHIPMODE
-    chunk.add_column(add_column<std::string>(table_size, [&](size_t) { return _text_field_gen.lineitem_mode(); }));
-    // L_COMMENT
-    chunk.add_column(add_column<std::string>(table_size, [&](size_t) { return _text_field_gen.text_string(10, 43); }));
-
-    table->add_chunk(std::move(chunk));
+  size_t table_size = 0;
+  std::vector<OrderLine> flattened_orderlines;
+  for(const auto &order_lines_per_order: *order_lines) {
+    table_size += order_lines_per_order.size();
+    flattened_orderlines.insert(flattened_orderlines.end(), order_lines_per_order.begin(), order_lines_per_order.end());
   }
+  auto cardinalities = std::make_shared<std::vector<size_t>>(std::initializer_list<size_t>{table_size});
+
+  add_column<int>(table, "L_ORDERKEY", cardinalities, [&](std::vector<size_t> indices) { return flattened_orderlines[indices[0]].orderkey; });
+  add_column<int>(table, "L_PARTKEY", cardinalities, [&](std::vector<size_t> indices) { return flattened_orderlines[indices[0]].partkey; });
+  add_column<int>(table, "L_SUPPKEY", cardinalities, [&](std::vector<size_t> indices) { return 1234; }); // TODO
+  add_column<int>(table, "L_LINENUMBER", cardinalities, [&](std::vector<size_t> indices) { return flattened_orderlines[indices[0]].linenumber; });
+  add_column<int>(table, "L_QUANTITY", cardinalities, [&](std::vector<size_t> indices) { return flattened_orderlines[indices[0]].quantity; });
+  add_column<float>(table, "L_EXTENDEDPRICE", cardinalities, [&](std::vector<size_t> indices) { return flattened_orderlines[indices[0]].extendedprice; });
+  add_column<float>(table, "L_DISCOUNT", cardinalities, [&](std::vector<size_t> indices) { return flattened_orderlines[indices[0]].discount; });
+  add_column<float>(table, "L_TAX", cardinalities, [&](std::vector<size_t> indices) { return flattened_orderlines[indices[0]].tax; });
+  add_column<std::string>(table, "L_RETURNFLAG", cardinalities, [&](std::vector<size_t> indices) {
+    if (flattened_orderlines[indices[0]].receiptdate <= _currentdate) {
+      if (_random_gen.number(0, 1)) {
+        return "R";
+      } else {
+        return "A";
+      }
+    } else {
+      return "N";
+    }
+  });
+  add_column<std::string>(table, "L_LINESTATUS", cardinalities, [&](std::vector<size_t> indices) { return flattened_orderlines[indices[0]].linestatus; });
+  add_column<int>(table, "L_SHIPDATE", cardinalities, [&](std::vector<size_t> indices) { return flattened_orderlines[indices[0]].shipdate; });
+  add_column<int>(table, "L_COMMITDATE", cardinalities, [&](std::vector<size_t> indices) {
+    auto orderdate = flattened_orderlines[indices[0]].orderdate;
+    return orderdate + _random_gen.number(30, 90) * _one_day;
+  });
+  add_column<int>(table, "L_RECEIPTDATE", cardinalities, [&](std::vector<size_t> indices) { return flattened_orderlines[indices[0]].receiptdate; });
+  add_column<std::string>(table, "L_SHIPINSTRUCT", cardinalities, [&](std::vector<size_t>) { return _text_field_gen.lineitem_instruction(); });
+  add_column<std::string>(table, "L_SHIPMODE", cardinalities, [&](std::vector<size_t>) { return _text_field_gen.lineitem_mode(); });
+  add_column<std::string>(table, "L_COMMENT", cardinalities, [&](std::vector<size_t>) { return _text_field_gen.text_string(10, 43); });
 
   opossum::DictionaryCompression::compress_table(*table);
   return table;

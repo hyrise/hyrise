@@ -19,6 +19,7 @@ class TableGenerator {
   struct OrderLine {
     size_t orderkey;  // same for all orderlines of same order
     size_t partkey;
+    size_t linenumber;
     size_t quantity;
     float extendedprice;
     float discount;
@@ -72,7 +73,7 @@ class TableGenerator {
   void add_column(std::shared_ptr<opossum::Table> table, std::string name,
                   std::shared_ptr<std::vector<size_t>> cardinalities,
                   const std::function<T(std::vector<size_t>)> &generator_function);
-  
+
   template <typename T>
   std::shared_ptr<opossum::ValueColumn<T>> add_column(size_t cardinality,
                                                       const std::function<T(size_t)> &generator_function);
