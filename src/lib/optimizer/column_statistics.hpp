@@ -22,23 +22,22 @@ class ColumnStatistics : public AbstractColumnStatistics {
   ColumnStatistics(const ColumnID column_id, float distinct_count, ColumnType min, ColumnType max);
   ~ColumnStatistics() override = default;
 
-  ColumnStatisticsContainer predicate_selectivity(
-      const ScanType scan_type, const AllTypeVariant value, const optional<AllTypeVariant> value2) override;
+  ColumnStatisticsContainer predicate_selectivity(const ScanType scan_type, const AllTypeVariant &value,
+                                                  const optional<AllTypeVariant> &value2) override;
 
-  ColumnStatisticsContainer predicate_selectivity(
-      const ScanType scan_type, const ValuePlaceholder value, const optional<AllTypeVariant> value2) override;
+  ColumnStatisticsContainer predicate_selectivity(const ScanType scan_type, const ValuePlaceholder &value,
+                                                  const optional<AllTypeVariant> &value2) override;
 
-  TwoColumnStatisticsContainer
-  predicate_selectivity(const ScanType scan_type,
-                        const std::shared_ptr<AbstractColumnStatistics> abstract_value_column_statistics,
-                        const optional<AllTypeVariant> value2) override;
+  TwoColumnStatisticsContainer predicate_selectivity(
+      const ScanType scan_type, const std::shared_ptr<AbstractColumnStatistics> abstract_value_column_statistics,
+      const optional<AllTypeVariant> &value2) override;
 
   float distinct_count();
   ColumnType min();
   ColumnType max();
 
  protected:
-  std::ostream& to_stream(std::ostream& os) override;
+  std::ostream &print_to_stream(std::ostream &os) const override;
 
   void update_distinct_count();
   void update_min_max();
@@ -57,7 +56,7 @@ class ColumnStatistics : public AbstractColumnStatistics {
 };
 
 template <typename ColumnType>
-std::ostream& operator<<(std::ostream& os, opossum::optional<ColumnType>& obj) {
+std::ostream &operator<<(std::ostream &os, const opossum::optional<ColumnType> &obj) {
   if (obj) {
     return os << *obj;
   } else {
