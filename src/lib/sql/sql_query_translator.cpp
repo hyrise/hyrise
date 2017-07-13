@@ -411,22 +411,22 @@ bool SQLQueryTranslator::_translate_table_ref(const hsql::TableRef& table) {
       JoinMode mode;
       switch (join_def.type) {
         case hsql::kJoinInner:
-          mode = Inner;
+          mode = JoinMode::Inner;
           break;
         case hsql::kJoinOuter:
-          mode = Outer;
+          mode = JoinMode::Outer;
           break;
         case hsql::kJoinLeft:
-          mode = Left;
+          mode = JoinMode::Left;
           break;
         case hsql::kJoinRight:
-          mode = Right;
+          mode = JoinMode::Right;
           break;
         case hsql::kJoinNatural:
-          mode = Natural;
+          mode = JoinMode::Natural;
           break;
         case hsql::kJoinCross:
-          mode = Cross;
+          mode = JoinMode::Cross;
           break;
         default:
           _error_msg = "Unable to handle join type.";

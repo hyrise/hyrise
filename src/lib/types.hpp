@@ -155,4 +155,6 @@ enum class ExpressionType {
   Hint
 };
 
+enum class JoinMode { Inner, Left, Right, Outer, Cross, Natural, Self };
+
 }  // namespace opossum
