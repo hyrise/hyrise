@@ -124,18 +124,19 @@ float TableGenerator::calculate_part_retailprice(size_t i) const {
 
 std::shared_ptr<opossum::Table> TableGenerator::generate_suppliers_table() {
   auto table = std::make_shared<opossum::Table>(_chunk_size);
-  auto cardinalities = std::make_shared<std::vector<size_t>>(std::initializer_list<size_t>{_scale_factor * _supplier_size});
+  size_t table_size = _scale_factor * _supplier_size;
+  auto cardinalities = std::make_shared<std::vector<size_t>>(std::initializer_list<size_t>{table_size});
 
   add_column<int>(table, "S_SUPPKEY", cardinalities, [&](std::vector<size_t> indices) { return indices[0]; });
   add_column<std::string>(table, "S_NAME", cardinalities, [&](std::vector<size_t> indices) { return "Supplier#" + _text_field_gen.fixed_length(indices[0], 9); });
   add_column<std::string>(table, "S_ADDRESS", cardinalities, [&](std::vector<size_t>) { return _text_field_gen.v_string(10, 40); });
-  std::vector<int> nationkeys (cardinalities->at(0));
+  std::vector<int> nationkeys (table_size);
   std::generate(nationkeys.begin(), nationkeys.end(), [&]() { return _random_gen.number(0, 24); });
   add_column<int>(table, "S_NATIONKEY", cardinalities, [&](std::vector<size_t> indices) { return nationkeys[indices[0]]; });
   add_column<std::string>(table, "S_PHONE", cardinalities, [&](std::vector<size_t> indices) { return _text_field_gen.phone_number(nationkeys[indices[0]]); });
   add_column<float>(table, "S_ACCTBAL", cardinalities, [&](std::vector<size_t>) { return _random_gen.number(-99999, 999999) / 100.f; });
-  auto complaint_ids = _random_gen.select_unique_ids(5 * _scale_factor, cardinalities->at(0));
-  auto recommendation_ids = _random_gen.select_unique_ids(5 * _scale_factor, cardinalities->at(0));
+  auto complaint_ids = _random_gen.select_unique_ids(5 * _scale_factor, table_size);
+  auto recommendation_ids = _random_gen.select_unique_ids(5 * _scale_factor, table_size);
   add_column<std::string>(table, "S_COMMENT", cardinalities, [&](std::vector<size_t> indices) {
     std::string comment = _text_field_gen.text_string(25, 100);
     bool complaints = complaint_ids.find(indices[0]) != complaint_ids.end();
@@ -159,45 +160,24 @@ std::shared_ptr<opossum::Table> TableGenerator::generate_suppliers_table() {
 
 std::shared_ptr<opossum::Table> TableGenerator::generate_parts_table() {
   auto table = std::make_shared<opossum::Table>(_chunk_size);
-
-  // setup columns
-  table->add_column_definition("P_PARTKEY", "int");
-  table->add_column_definition("P_NAME", "string");
-  table->add_column_definition("P_MFGR", "string");
-  table->add_column_definition("P_BRAND", "string");
-  table->add_column_definition("P_TYPE", "string");
-  table->add_column_definition("P_SIZE", "int");
-  table->add_column_definition("P_CONTAINER", "string");
-  table->add_column_definition("P_RETAILPRICE", "float");
-  table->add_column_definition("P_COMMENT", "string");
-
-  auto chunk = opossum::Chunk(true);
   size_t table_size = _scale_factor * _part_size;
-  // P_PARTKEY
-  chunk.add_column(add_column<int>(table_size, [](size_t i) { return i; }));
-  // P_NAME
-  chunk.add_column(add_column<std::string>(table_size, [&](size_t) { return _text_field_gen.part_name(); }));
-  // P_MFGR
-  std::vector<std::string> manufacturers(table_size);
-  for (size_t i = 0; i < manufacturers.size(); i++) {
-    manufacturers[i] = std::to_string(_random_gen.number(1, 5));
-  }
-  chunk.add_column(add_column<std::string>(table_size, [&](size_t i) { return "Manufacturer#" + manufacturers[i]; }));
-  // P_BRAND
-  chunk.add_column(add_column<std::string>(
-      table_size, [&](size_t i) { return "Brand#" + manufacturers[i] + std::to_string(_random_gen.number(1, 5)); }));
-  // P_TYPE
-  chunk.add_column(add_column<std::string>(table_size, [&](size_t) { return _text_field_gen.part_type(); }));
-  // P_SIZE
-  chunk.add_column(add_column<int>(table_size, [&](size_t) { return _random_gen.number(1, 50); }));
-  // P_CONTAINER
-  chunk.add_column(add_column<std::string>(table_size, [&](size_t) { return _text_field_gen.part_container(); }));
-  // P_RETAILPRICE
-  chunk.add_column(add_column<float>(table_size, [&](size_t i) { return calculate_part_retailprice(i); }));
-  // P_COMMENT
-  chunk.add_column(add_column<std::string>(table_size, [&](size_t) { return _text_field_gen.text_string(5, 22); }));
+  auto cardinalities = std::make_shared<std::vector<size_t>>(std::initializer_list<size_t>{table_size});
 
-  table->add_chunk(std::move(chunk));
+  add_column<int>(table, "P_PARTKEY", cardinalities, [&](std::vector<size_t> indices) { return indices[0]; });
+  add_column<std::string>(table, "P_NAME", cardinalities, [&](std::vector<size_t>) { return _text_field_gen.part_name(); });
+  std::vector<std::string> manufacturers(table_size);
+  std::generate(manufacturers.begin(), manufacturers.end(), [&]() { return std::to_string(_random_gen.number(1, 5)); });
+  add_column<std::string>(table, "P_MFGR", cardinalities, [&](std::vector<size_t> indices) {
+    return "Manufacturer#" + manufacturers[indices[0]];
+  });
+  add_column<std::string>(table, "P_BRAND", cardinalities, [&](std::vector<size_t> indices) {
+    return "Brand#" + manufacturers[indices[0]] + std::to_string(_random_gen.number(1, 5));
+  });
+  add_column<std::string>(table, "P_TYPE", cardinalities, [&](std::vector<size_t>) { return _text_field_gen.part_type(); });
+  add_column<int>(table, "P_SIZE", cardinalities, [&](std::vector<size_t> indices) { return _random_gen.number(1, 50); });
+  add_column<std::string>(table, "P_CONTAINER", cardinalities, [&](std::vector<size_t>) { return _text_field_gen.part_container(); });
+  add_column<float>(table, "P_RETAILPRICE", cardinalities, [&](std::vector<size_t> indices) { return calculate_part_retailprice(indices[0]); });
+  add_column<std::string>(table, "P_COMMENT", cardinalities, [&](std::vector<size_t>) { return _text_field_gen.text_string(5, 22); });
 
   opossum::DictionaryCompression::compress_table(*table);
   return table;
@@ -205,33 +185,16 @@ std::shared_ptr<opossum::Table> TableGenerator::generate_parts_table() {
 
 std::shared_ptr<opossum::Table> TableGenerator::generate_partsupps_table() {
   auto table = std::make_shared<opossum::Table>(_chunk_size);
+  auto cardinalities = std::make_shared<std::vector<size_t>>(std::initializer_list<size_t>{_scale_factor * _part_size, _partsupp_size});
 
-  // setup columns
-  table->add_column_definition("PS_PARTKEY", "int");
-  table->add_column_definition("PS_SUPPKEY", "int");
-  table->add_column_definition("PS_AVAILQTY", "int");
-  table->add_column_definition("PS_SUPPLYCOST", "float");
-  table->add_column_definition("PS_COMMENT", "string");
-
-  auto chunk = opossum::Chunk(true);
-  size_t table_size = _scale_factor * _part_size * _partsupp_size;
-  // PS_PARTKEY
-  chunk.add_column(add_column<int>(table_size, [&](size_t i) { return i % (_scale_factor * _part_size); }));
-  // PS_SUPPKEY
-  chunk.add_column(add_column<int>(table_size, [&](size_t i) {
-    size_t ps_partkey = i % (_scale_factor * _part_size);
-    size_t j = i / (_scale_factor * _part_size);
+  add_column<int>(table, "PS_PARTKEY", cardinalities, [&](std::vector<size_t> indices) { return indices[0]; });
+  add_column<int>(table, "PS_SUPPKEY", cardinalities, [&](std::vector<size_t> indices) {
     size_t s = _scale_factor * _supplier_size;
-    return (ps_partkey + (j * (s / 4 + ps_partkey / s))) % s;
-  }));
-  // PS_AVAILQTY
-  chunk.add_column(add_column<int>(table_size, [&](size_t) { return _random_gen.number(1, 9999); }));
-  // PS_SUPPLYCOST
-  chunk.add_column(add_column<float>(table_size, [&](size_t) { return _random_gen.number(100, 100000) / 100.f; }));
-  // PS_COMMENT
-  chunk.add_column(add_column<std::string>(table_size, [&](size_t) { return _text_field_gen.text_string(49, 198); }));
-
-  table->add_chunk(std::move(chunk));
+    return (indices[0] + (indices[1] * (s / 4 + indices[0] / s))) % s;
+  });
+  add_column<int>(table, "PS_AVAILQTY", cardinalities, [&](std::vector<size_t>) { return _random_gen.number(1, 9999); });
+  add_column<float>(table, "PS_SUPPLYCOST", cardinalities, [&](std::vector<size_t>) { return _random_gen.number(100, 100000) / 100.f; });
+  add_column<std::string>(table, "PS_COMMENT", cardinalities, [&](std::vector<size_t>) { return _text_field_gen.text_string(49, 198); });
 
   opossum::DictionaryCompression::compress_table(*table);
   return table;
@@ -239,40 +202,19 @@ std::shared_ptr<opossum::Table> TableGenerator::generate_partsupps_table() {
 
 std::shared_ptr<opossum::Table> TableGenerator::generate_customers_table() {
   auto table = std::make_shared<opossum::Table>(_chunk_size);
-
-  // setup columns
-  table->add_column_definition("C_CUSTKEY", "int");
-  table->add_column_definition("C_NAME", "string");
-  table->add_column_definition("C_ADDRESS", "string");
-  table->add_column_definition("C_NATIONKEY", "int");
-  table->add_column_definition("C_PHONE", "string");
-  table->add_column_definition("C_ACCTBAL", "float");
-  table->add_column_definition("C_MKTSEGMENT", "string");
-  table->add_column_definition("C_COMMENT", "string");
-
-  auto chunk = opossum::Chunk(true);
   size_t table_size = _scale_factor * _customer_size;
-  // C_CUSTKEY
-  chunk.add_column(add_column<int>(table_size, [](size_t i) { return i; }));
-  // C_NAME
-  chunk.add_column(
-      add_column<std::string>(table_size, [&](size_t i) { return "Customer#" + _text_field_gen.fixed_length(i, 9); }));
-  // C_ADDRESS
-  chunk.add_column(add_column<std::string>(table_size, [&](size_t) { return _text_field_gen.v_string(10, 40); }));
-  // C_NATIONKEY
-  auto nationkeys = add_column<int>(table_size, [&](size_t) { return _random_gen.number(0, 24); });
-  chunk.add_column(nationkeys);
-  // C_PHONE
-  chunk.add_column(add_column<std::string>(
-      table_size, [&](size_t i) { return _text_field_gen.phone_number((*nationkeys).get(i)); }));
-  // C_ACCTBAL
-  chunk.add_column(add_column<float>(table_size, [&](size_t) { return _random_gen.number(-99999, 999999) / 100.f; }));
-  // C_MKTSEGMENT
-  chunk.add_column(add_column<std::string>(table_size, [&](size_t) { return _text_field_gen.customer_segment(); }));
-  // C_COMMENT
-  chunk.add_column(add_column<std::string>(table_size, [&](size_t) { return _text_field_gen.text_string(29, 116); }));
+  auto cardinalities = std::make_shared<std::vector<size_t>>(std::initializer_list<size_t>{table_size});
 
-  table->add_chunk(std::move(chunk));
+  add_column<int>(table, "C_CUSTKEY", cardinalities, [&](std::vector<size_t> indices) { return indices[0]; });
+  add_column<std::string>(table, "C_NAME", cardinalities, [&](std::vector<size_t> indices) { return "Customer#" + _text_field_gen.fixed_length(indices[0], 9); });
+  add_column<std::string>(table, "C_ADDRESS", cardinalities, [&](std::vector<size_t>) { return _text_field_gen.v_string(10, 40); });
+  std::vector<int> nationkeys (table_size);
+  std::generate(nationkeys.begin(), nationkeys.end(), [&]() { return _random_gen.number(0, 24); });
+  add_column<int>(table, "C_NATIONKEY", cardinalities, [&](std::vector<size_t> indices) { return nationkeys[indices[0]]; });
+  add_column<std::string>(table, "C_PHONE", cardinalities, [&](std::vector<size_t> indices) { return _text_field_gen.phone_number(nationkeys[indices[0]]); });
+  add_column<float>(table, "C_ACCTBAL", cardinalities, [&](std::vector<size_t>) { return _random_gen.number(-99999, 999999) / 100.f; });
+  add_column<std::string>(table, "C_MKTSEGMENT", cardinalities, [&](std::vector<size_t>) { return _text_field_gen.customer_segment(); });
+  add_column<std::string>(table, "C_COMMENT", cardinalities, [&](std::vector<size_t>) { return _text_field_gen.text_string(29, 116); });
 
   opossum::DictionaryCompression::compress_table(*table);
   return table;
@@ -452,47 +394,25 @@ std::shared_ptr<opossum::Table> TableGenerator::generate_lineitems_table(TableGe
 
 std::shared_ptr<opossum::Table> TableGenerator::generate_nations_table() {
   auto table = std::make_shared<opossum::Table>(_chunk_size);
+  auto cardinalities = std::make_shared<std::vector<size_t>>(std::initializer_list<size_t>{_nation_size});
 
-  // setup columns
-  table->add_column_definition("N_NATIONKEY", "int");
-  table->add_column_definition("N_NAME", "string");
-  table->add_column_definition("N_REGIONKEY", "int");
-  table->add_column_definition("N_COMMENT", "string");
+  add_column<int>(table, "N_NATIONKEY", cardinalities, [&](std::vector<size_t> indices) { return indices[0]; });
+  add_column<std::string>(table, "N_NAME", cardinalities, [&](std::vector<size_t> indices) { return _text_field_gen.nation_names[indices[0]]; });
+  add_column<int>(table, "N_REGIONKEY", cardinalities, [&](std::vector<size_t> indices) { return _region_keys_per_nation[indices[0]]; });
+  add_column<std::string>(table, "N_COMMENT", cardinalities, [&](std::vector<size_t>) { return _text_field_gen.text_string(31, 114); });
 
-  auto chunk = opossum::Chunk(true);
-  size_t table_size = _nation_size;
-  // N_NATIONKEY
-  chunk.add_column(add_column<int>(table_size, [](size_t i) { return i; }));
-  // N_NAME
-  chunk.add_column(add_column<std::string>(table_size, [&](size_t i) { return _text_field_gen.nation_names[i]; }));
-  // N_REGIONKEY
-  chunk.add_column(add_column<int>(table_size, [&](size_t i) { return _region_keys_per_nation[i]; }));
-  // N_COMMENT
-  chunk.add_column(add_column<std::string>(table_size, [&](size_t) { return _text_field_gen.text_string(31, 114); }));
-
-  table->add_chunk(std::move(chunk));
-
+  opossum::DictionaryCompression::compress_table(*table);
   return table;
 }
 
 std::shared_ptr<opossum::Table> TableGenerator::generate_regions_table() {
   auto table = std::make_shared<opossum::Table>(_chunk_size);
+  auto cardinalities = std::make_shared<std::vector<size_t>>(std::initializer_list<size_t>{_region_size});
 
   // setup columns
-  table->add_column_definition("R_REGIONKEY", "int");
-  table->add_column_definition("R_NAME", "string");
-  table->add_column_definition("R_COMMENT", "string");
-
-  auto chunk = opossum::Chunk(true);
-  size_t table_size = _region_size;
-  // R_REGIONKEY
-  chunk.add_column(add_column<int>(table_size, [](size_t i) { return i; }));
-  // R_NAME
-  chunk.add_column(add_column<std::string>(table_size, [&](size_t i) { return _text_field_gen.region_names[i]; }));
-  // R_COMMENT
-  chunk.add_column(add_column<std::string>(table_size, [&](size_t) { return _text_field_gen.text_string(31, 115); }));
-
-  table->add_chunk(std::move(chunk));
+  add_column<int>(table, "R_REGIONKEY", cardinalities, [&](std::vector<size_t> indices) { return indices[0]; });
+  add_column<std::string>(table, "R_NAME", cardinalities, [&](std::vector<size_t> indices) { return _text_field_gen.region_names[indices[0]]; });
+  add_column<std::string>(table, "R_COMMENT", cardinalities, [&](std::vector<size_t>) { return _text_field_gen.text_string(31, 115); });
 
   opossum::DictionaryCompression::compress_table(*table);
   return table;
