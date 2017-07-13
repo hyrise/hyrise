@@ -13,26 +13,27 @@
 
 namespace opossum {
 
-TableStatistics::TableStatistics(const std::string &name, const std::shared_ptr<Table> table)
-    : _name(name), _table(table), _row_count(table->row_count()), _column_statistics(_row_count) {}
+TableStatistics::TableStatistics(const std::shared_ptr<Table> table)
+    : _table(table), _row_count(table->row_count()), _column_statistics(_row_count) {}
 
 TableStatistics::TableStatistics(const TableStatistics &table_statistics)
-    : _name(table_statistics._name),
-      _table(table_statistics._table),
+    : _table(table_statistics._table),
       _row_count(table_statistics._row_count),
       _column_statistics(table_statistics._column_statistics) {}
 
 float TableStatistics::row_count() const { return _row_count; }
 
-std::shared_ptr<AbstractColumnStatistics> TableStatistics::get_column_statistics(const ColumnID column_id) {
-  if (_column_statistics[column_id] == nullptr) {
-    auto table = _table.lock();
-    DebugAssert(table != nullptr, "Corresponding table of table statistics is deleted.");
-    auto column_type = table->column_type(column_id);
-    auto column_statistics =
-        make_shared_by_column_type<AbstractColumnStatistics, ColumnStatistics>(column_type, column_id, _table);
-    _column_statistics[column_id] = column_statistics;
+std::shared_ptr<AbstractColumnStatistics> TableStatistics::column_statistics(const ColumnID column_id) {
+  if (_column_statistics[column_id]) {
+    return _column_statistics[column_id];
   }
+
+  auto table = _table.lock();
+  DebugAssert(table != nullptr, "Corresponding table of table statistics is deleted.");
+  auto column_type = table->column_type(column_id);
+  auto column_statistics =
+      make_shared_by_column_type<AbstractColumnStatistics, ColumnStatistics>(column_type, column_id, _table);
+  _column_statistics[column_id] = column_statistics;
   return _column_statistics[column_id];
 }
 
@@ -60,13 +61,13 @@ std::shared_ptr<TableStatistics> TableStatistics::predicate_statistics(const std
   DebugAssert(table != nullptr, "Corresponding table of table statistics is deleted.");
   const ColumnID column_id = table->column_id_by_name(column_name);
 
-  auto old_column_statistics = get_column_statistics(column_id);
+  auto old_column_statistics = column_statistics(column_id);
   auto clone = std::make_shared<TableStatistics>(*this);
   ColumnStatisticsContainer column_statistics_container{1, nullptr};
 
   if (value.type() == typeid(ColumnName)) {
     const ColumnID value_column_id = table->column_id_by_name(boost::get<ColumnName>(value));
-    auto value_column_statistics = get_column_statistics(value_column_id);
+    auto value_column_statistics = column_statistics(value_column_id);
 
     auto two_column_statistics_container =
         old_column_statistics->predicate_selectivity(scan_type, value_column_statistics, value2);
