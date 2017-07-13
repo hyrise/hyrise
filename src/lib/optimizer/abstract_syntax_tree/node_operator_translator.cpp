@@ -77,12 +77,26 @@ std::shared_ptr<AbstractOperator> NodeOperatorTranslator::translate_aggregate_no
   const auto aggregate_node = std::dynamic_pointer_cast<AggregateNode>(node);
   const auto & aggregates = aggregate_node->aggregates();
 
-  std::shared_ptr<AbstractOperator> out_operator;
+  std::shared_ptr<AbstractOperator> out_operator = input_operator;
 
   /**
    * Handle arithmetic expressions in aggregate functions via Projection. Support only one level
    * of arithmetics, i.e. SUM(a*b) is fine SUM(a*b+c) is not
    */
+  std::vector<std::string> expr_aliases;
+  expr_aliases.reserve(aggregates.size());
+
+  Projection::ProjectionDefinitions definitions;
+  definitions.reserve(aggregates.size());
+
+  out_operator = std::make_shared<Projection>(out_operator, definitions);
+
+  for (const auto & aggregate : aggregates)
+  {
+     const auto & expr = aggregate.expr;
+    
+     Assert(!expr->left() && !expr->right() )
+  }
 
   /**
    * Build Aggregate
@@ -98,7 +112,7 @@ std::shared_ptr<AbstractOperator> NodeOperatorTranslator::translate_aggregate_no
 
     aggregate_definitions.emplace_back(expr_aliases[aggregate_idx], aggregate_function);
   }
-  out_operator = std::make_shared<Aggregate>(out_operator, aggregate_definitions)
+  out_operator = std::make_shared<Aggregate>(out_operator, aggregate_definitions);
 
   /**
    * Build Projection from Aggregate functions to alias names
