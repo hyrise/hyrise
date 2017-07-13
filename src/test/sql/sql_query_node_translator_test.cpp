@@ -116,8 +116,8 @@ TEST_F(SQLQueryNodeTranslatorTest, SelectInnerJoin) {
   EXPECT_EQ(join_node->join_mode(), JoinMode::Inner);
   EXPECT_EQ(join_node->prefix_left(), "a.");
   EXPECT_EQ(join_node->prefix_right(), "b.");
-  EXPECT_EQ(join_node->column_names()->first, "a");
-  EXPECT_EQ(join_node->column_names()->second, "a");
+  EXPECT_EQ(join_node->join_column_names()->first, "a");
+  EXPECT_EQ(join_node->join_column_names()->second, "a");
 }
 
 }  // namespace opossum

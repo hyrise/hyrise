@@ -22,14 +22,14 @@ class JoinNode : public AbstractNode {
 
   const std::vector<std::string> output_columns() override;
 
-  optional<std::pair<std::string, std::string>> column_names() const;
+  optional<std::pair<std::string, std::string>> join_column_names() const;
   ScanType scan_type() const;
   JoinMode join_mode() const;
   std::string prefix_left() const;
   std::string prefix_right() const;
 
  private:
-  optional<std::pair<std::string, std::string>> _column_names;
+  optional<std::pair<std::string, std::string>> _join_column_names;
   ScanType _scan_type;
   JoinMode _join_mode;
   std::string _prefix_left;

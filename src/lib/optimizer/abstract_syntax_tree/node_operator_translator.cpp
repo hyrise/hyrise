@@ -79,7 +79,7 @@ const std::shared_ptr<AbstractOperator> NodeOperatorTranslator::translate_join_n
 
   auto join_node = std::dynamic_pointer_cast<JoinNode>(node);
   return std::make_shared<JoinHash>(input_left_operator, input_right_operator,
-                                    join_node->column_names(), join_node->scan_type(), join_node->join_mode(),
+                                    join_node->join_column_names(), join_node->scan_type(), join_node->join_mode(),
                                     join_node->prefix_left(), join_node->prefix_right());
 }
 
