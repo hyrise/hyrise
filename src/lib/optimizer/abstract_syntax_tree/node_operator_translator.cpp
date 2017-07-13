@@ -9,9 +9,9 @@
 #include "operators/sort.hpp"
 #include "operators/table_scan.hpp"
 #include "optimizer/abstract_syntax_tree/aggregate_node.hpp"
+#include "optimizer/abstract_syntax_tree/predicate_node.hpp"
 #include "optimizer/abstract_syntax_tree/sort_node.hpp"
 #include "optimizer/abstract_syntax_tree/table_node.hpp"
-#include "optimizer/abstract_syntax_tree/predicate_node.hpp"
 
 namespace opossum {
 
@@ -34,8 +34,7 @@ NodeOperatorTranslator::NodeOperatorTranslator() {
       std::bind(&NodeOperatorTranslator::translate_aggregate_node, this, std::placeholders::_1);
 }
 
-std::shared_ptr<AbstractOperator> NodeOperatorTranslator::translate_node(
-    std::shared_ptr<AbstractAstNode> node) const {
+std::shared_ptr<AbstractOperator> NodeOperatorTranslator::translate_node(std::shared_ptr<AbstractAstNode> node) const {
   auto it = _operator_factory.find(node->type());
 
   Assert(it != _operator_factory.end(), "No factory for AstNodeType.");
@@ -72,11 +71,11 @@ std::shared_ptr<AbstractOperator> NodeOperatorTranslator::translate_order_by_nod
 }
 
 std::shared_ptr<AbstractOperator> NodeOperatorTranslator::translate_aggregate_node(
-  std::shared_ptr<AbstractAstNode> node) const {
+    std::shared_ptr<AbstractAstNode> node) const {
   auto input_operator = translate_node(node->left());
 
   const auto aggregate_node = std::dynamic_pointer_cast<AggregateNode>(node);
-  const auto & aggregates = aggregate_node->aggregates();
+  const auto &aggregates = aggregate_node->aggregates();
 
   std::shared_ptr<AbstractOperator> out_operator = input_operator;
 
@@ -97,7 +96,7 @@ std::shared_ptr<AbstractOperator> NodeOperatorTranslator::translate_aggregate_no
     const auto & expr = aggregate.expr;
     Assert(expr->type() == ExpressionType::FunctionReference, "");
 
-    const auto & arithmetic_expr = std::dynamic_pointer_cast<ExpressionNode>(expr->left());
+    const auto &arithmetic_expr = std::dynamic_pointer_cast<ExpressionNode>(expr->left());
     Assert(static_cast<bool>(arithmetic_expr), "");
 
     Assert(arithmetic_expr->is_arithmetic(), "");
@@ -124,49 +123,18 @@ std::shared_ptr<AbstractOperator> NodeOperatorTranslator::translate_aggregate_no
   /**
    * Build Aggregate
    */
-  std::vector<std::pair<std::string, AggregateFunction>> aggregate_definitions;
+  std::vector<AggregateDefinition> aggregate_definitions;
   aggregate_definitions.reserve(aggregates.size());
   for (size_t aggregate_idx = 0; aggregate_idx < aggregates.size(); aggregate_idx++) {
-    const auto & aggregate = aggregates[aggregate_idx];
+    const auto &aggregate = aggregates[aggregate_idx];
 
     Assert(aggregate.expr->type() == ExpressionType::FunctionReference, ""
       "Only functions are supported in Aggregates");
     const auto aggregate_function = string_to_aggregate_function.at(aggregate.expr->name());
 
-    aggregate_definitions.emplace_back(expr_aliases[aggregate_idx], aggregate_function);
+    aggregate_definitions.emplace_back(expr_aliases[aggregate_idx], aggregate_function, aggregate.alias);
   }
   out_operator = std::make_shared<Aggregate>(out_operator, aggregate_definitions, std::vector<std::string>());
-
-  /**
-   * Build Projection from Aggregate functions to alias names
-   *    e.g. for `SUM(a*b) as foo` this will project the column "SUM(a*b)" to "foo"
-   */
-//  auto alias_projection_needed = std::any_of(aggregates.begin(), aggregates.end(),
-//                                             [] (const auto & aggregate) {
-//    return static_cast<bool>(aggregate.alias);
-//  });
-
-  // If there are no aliases just skip this step, e.g. for SELECT COUNT(), SUM(a) [...]
-  // this step is not necessary.
-//  if (alias_projection_needed) {
-//    std::vector<std::string> columns;
-//    columns.reserve(aggregates.size());
-//
-//    for (const auto & aggregate : aggregates) {
-//      std::string out_alias;
-//      if (aggregate.alias) {
-//        out_alias = *aggregate.alias;
-//      } else {
-//        // If there is no alias for a column, just reproject to the same name, e.g.,
-//        // in SELECT COUNT() as c, SUM(a) [...] this will project "SUM(a)" to "SUM(a)"
-//        out_alias = aggregate.expr->to_alias_name();
-//      }
-//
-//      columns.emplace_back(out_alias);
-//    }
-//
-//    out_operator = std::make_shared<Projection>(out_operator, columns);
-//  }
 
   return out_operator;
 }

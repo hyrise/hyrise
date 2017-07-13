@@ -49,12 +49,26 @@ The key type that is used for the aggregation map.
 using AggregateKey = std::vector<AllTypeVariant>;
 
 /**
+ * Struct to specify aggregates.
+ * Aggregates are defined by the column_name they operate on and the aggregate function they use.
+ * Optionally, an alias can be specified to use as the output name.
+ */
+struct AggregateDefinition {
+  AggregateDefinition(const std::string &column_name,
+                      const AggregateFunction function,
+                      const optional<std::string> &alias = {});
+
+  std::string column_name;
+  AggregateFunction function;
+  optional<std::string> alias;
+};
+
+/**
  * Note: Aggregate does not support null values at the moment
  */
 class Aggregate : public AbstractReadOnlyOperator {
  public:
-  Aggregate(const std::shared_ptr<AbstractOperator> in,
-            const std::vector<std::pair<std::string, AggregateFunction>> aggregates,
+  Aggregate(const std::shared_ptr<AbstractOperator> in, const std::vector<AggregateDefinition> aggregates,
             const std::vector<std::string> groupby_columns);
 
   const std::string name() const override;
@@ -120,7 +134,7 @@ class Aggregate : public AbstractReadOnlyOperator {
     throw std::runtime_error("Invalid aggregate");
   }
 
-  const std::vector<std::pair<std::string, AggregateFunction>> _aggregates;
+  const std::vector<AggregateDefinition> _aggregates;
   const std::vector<std::string> _groupby_columns;
 
   std::unique_ptr<AbstractReadOnlyOperatorImpl> _impl;
