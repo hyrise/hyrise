@@ -36,9 +36,6 @@ class NodeOperatorTranslator {
  private:
   std::unordered_map<AstNodeType, std::function<std::shared_ptr<AbstractOperator>(std::shared_ptr<AbstractAstNode>)>>
       _operator_factory;
-  // Used to generate unique_aliases
-  // TODO(mp) could be turned into translation-local non-atomic
-  std::atomic_uint64_t _alias_generator;
 };
 
 }  // namespace opossum

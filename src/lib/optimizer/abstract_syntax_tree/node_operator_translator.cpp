@@ -89,14 +89,36 @@ std::shared_ptr<AbstractOperator> NodeOperatorTranslator::translate_aggregate_no
   Projection::ProjectionDefinitions definitions;
   definitions.reserve(aggregates.size());
 
-  out_operator = std::make_shared<Projection>(out_operator, definitions);
+  auto alias_index = 0;
 
   for (const auto & aggregate : aggregates)
   {
-     const auto & expr = aggregate.expr;
-    
-     Assert(!expr->left() && !expr->right() )
+    const auto & expr = aggregate.expr;
+    Assert(expr->expression_type() == ExpressionType::ExpressionFunctionReference, "");
+
+    const auto & arithmetic_expr = std::dynamic_pointer_cast<ExpressionNode>(expr->left());
+    Assert(static_cast<bool>(arithmetic_expr), "");
+
+    Assert(arithmetic_expr->is_arithmetic(), "");
+
+    auto left_operand = std::dynamic_pointer_cast<ExpressionNode>(arithmetic_expr->left());
+    Assert(static_cast<bool>(left_operand), "");
+    auto right_operand = std::dynamic_pointer_cast<ExpressionNode>(arithmetic_expr->right());
+    Assert(static_cast<bool>(right_operand), "");
+
+    Assert(left_operand->expression_type() == ExpressionType::ExpressionLiteral ||
+             left_operand->expression_type() == ExpressionType::ExpressionColumnReference, "");
+    Assert(right_operand->expression_type() == ExpressionType::ExpressionLiteral ||
+             right_operand->expression_type() == ExpressionType::ExpressionColumnReference, "");
+
+    auto alias = "alias" + std::to_string(alias_index);
+    alias_index++;
+
+    definitions.emplace_back(arithmetic_expr->to_expression_string(), "float", alias);
+    expr_aliases.emplace_back(alias);
   }
+
+  out_operator = std::make_shared<Projection>(out_operator, definitions);
 
   /**
    * Build Aggregate
