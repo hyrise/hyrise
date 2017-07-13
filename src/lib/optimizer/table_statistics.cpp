@@ -1,9 +1,9 @@
 #include "table_statistics.hpp"
 
 #include <iostream>
-#include <map>
 #include <memory>
 #include <string>
+#include <vector>
 
 #include "all_parameter_variant.hpp"
 #include "optimizer/abstract_column_statistics.hpp"
@@ -13,10 +13,8 @@
 
 namespace opossum {
 
-TableStatistics::TableStatistics(const std::string &name, const std::weak_ptr<Table> table)
-    : _name(name), _table(table) {
-  _row_count = _table.lock()->row_count();
-}
+TableStatistics::TableStatistics(const std::string &name, const std::shared_ptr<Table> table)
+    : _name(name), _table(table), _row_count(table->row_count()), _column_statistics(_row_count) {}
 
 TableStatistics::TableStatistics(const TableStatistics &table_statistics)
     : _name(table_statistics._name),
@@ -27,9 +25,8 @@ TableStatistics::TableStatistics(const TableStatistics &table_statistics)
 float TableStatistics::row_count() { return _row_count; }
 
 std::shared_ptr<AbstractColumnStatistics> TableStatistics::get_column_statistics(const ColumnID column_id) {
-  auto table = _table.lock();
-  auto column_stat = _column_statistics.find(column_id);
-  if (column_stat == _column_statistics.end()) {
+  if (_column_statistics[column_id] == nullptr) {
+    auto table = _table.lock();
     auto column_type = table->column_type(column_id);
     auto column_statistics =
         make_shared_by_column_type<AbstractColumnStatistics, ColumnStatistics>(column_type, column_id, _table);
@@ -40,8 +37,8 @@ std::shared_ptr<AbstractColumnStatistics> TableStatistics::get_column_statistics
 
 std::shared_ptr<TableStatistics> TableStatistics::predicate_statistics(const std::string &column_name,
                                                                        const ScanType scan_type,
-                                                                       const AllParameterVariant value,
-                                                                       const optional<AllTypeVariant> value2) {
+                                                                       const AllParameterVariant &value,
+                                                                       const optional<AllTypeVariant> &value2) {
   // currently assuming all values are equally distributed
 
   auto _row_count = row_count();
@@ -54,7 +51,7 @@ std::shared_ptr<TableStatistics> TableStatistics::predicate_statistics(const std
   if (scan_type == ScanType::OpLike) {
     // simple heuristic:
     auto clone = std::make_shared<TableStatistics>(*this);
-    clone->_row_count = _row_count * like_selectivity;
+    clone->_row_count = _row_count * LIKE_SELECTIVITY;
     return clone;
   }
 
@@ -80,14 +77,12 @@ std::shared_ptr<TableStatistics> TableStatistics::predicate_statistics(const std
   } else if (value.type() == typeid(AllTypeVariant)) {
     auto casted_value = boost::get<AllTypeVariant>(value);
 
-    column_statistics_container =
-        old_column_statistics->predicate_selectivity(scan_type, casted_value, value2);
+    column_statistics_container = old_column_statistics->predicate_selectivity(scan_type, casted_value, value2);
 
   } else if (value.type() == typeid(ValuePlaceholder)) {
     auto casted_value = boost::get<ValuePlaceholder>(value);
 
-    column_statistics_container =
-        old_column_statistics->predicate_selectivity(scan_type, casted_value, value2);
+    column_statistics_container = old_column_statistics->predicate_selectivity(scan_type, casted_value, value2);
   }
 
   if (column_statistics_container.column_statistics != nullptr) {

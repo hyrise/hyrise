@@ -13,6 +13,7 @@
 #include "operators/aggregate.hpp"
 #include "operators/table_wrapper.hpp"
 #include "storage/table.hpp"
+#include "table_statistics.hpp"
 #include "type_cast.hpp"
 #include "types.hpp"
 
@@ -91,8 +92,9 @@ void ColumnStatistics<ColumnType>::update_min_max() {
  * specialized for strings.
  */
 template <>
-ColumnStatisticsContainer ColumnStatistics<std::string>::predicate_selectivity(
-    const ScanType scan_type, const AllTypeVariant value, const optional<AllTypeVariant> value2) {
+ColumnStatisticsContainer ColumnStatistics<std::string>::predicate_selectivity(const ScanType scan_type,
+                                                                               const AllTypeVariant &value,
+                                                                               const optional<AllTypeVariant> &value2) {
   auto casted_value = type_cast<std::string>(value);
   switch (scan_type) {
     case ScanType::OpEquals: {
@@ -119,8 +121,9 @@ ColumnStatisticsContainer ColumnStatistics<std::string>::predicate_selectivity(
  * every type but strings.
  */
 template <typename ColumnType>
-    ColumnStatisticsContainer ColumnStatistics<ColumnType>::predicate_selectivity(
-    const ScanType scan_type, const AllTypeVariant value, const optional<AllTypeVariant> value2) {
+ColumnStatisticsContainer ColumnStatistics<ColumnType>::predicate_selectivity(const ScanType scan_type,
+                                                                              const AllTypeVariant &value,
+                                                                              const optional<AllTypeVariant> &value2) {
   auto casted_value = type_cast<ColumnType>(value);
 
   switch (scan_type) {
@@ -212,10 +215,9 @@ template <typename ColumnType>
  * specialized for strings.
  */
 template <>
-TwoColumnStatisticsContainer
-ColumnStatistics<std::string>::predicate_selectivity(
+TwoColumnStatisticsContainer ColumnStatistics<std::string>::predicate_selectivity(
     const ScanType scan_type, const std::shared_ptr<AbstractColumnStatistics> abstract_value_column_statistics,
-    const optional<AllTypeVariant> value2) {
+    const optional<AllTypeVariant> &value2) {
   // TODO(anybody) implement speacial case for strings
   return {1.f, nullptr, nullptr};
 }
@@ -225,10 +227,9 @@ ColumnStatistics<std::string>::predicate_selectivity(
  * every type but strings.
  */
 template <typename ColumnType>
-TwoColumnStatisticsContainer
-ColumnStatistics<ColumnType>::predicate_selectivity(
+TwoColumnStatisticsContainer ColumnStatistics<ColumnType>::predicate_selectivity(
     const ScanType scan_type, const std::shared_ptr<AbstractColumnStatistics> abstract_value_column_statistics,
-    const optional<AllTypeVariant> value2) {
+    const optional<AllTypeVariant> &value2) {
   auto value_column_statistics =
       std::dynamic_pointer_cast<ColumnStatistics<ColumnType>>(abstract_value_column_statistics);
   DebugAssert(value_column_statistics == nullptr, "Cannot compare columns of different type");
@@ -263,11 +264,13 @@ ColumnStatistics<ColumnType>::predicate_selectivity(
 }
 
 /**
- * Predicate selectivity for prepared statements.
+ * Predicate selectivity for prepared statements,
+ * specialized for strings.
  */
-template <typename ColumnType>
-ColumnStatisticsContainer ColumnStatistics<ColumnType>::predicate_selectivity(
-    const ScanType scan_type, const ValuePlaceholder value, const optional<AllTypeVariant> value2) {
+template <>
+ColumnStatisticsContainer ColumnStatistics<std::string>::predicate_selectivity(const ScanType scan_type,
+                                                                               const ValuePlaceholder &value,
+                                                                               const optional<AllTypeVariant> &value2) {
   switch (scan_type) {
     case ScanType::OpEquals: {
       auto column_statistics = std::make_shared<ColumnStatistics>(_column_id, 1, min(), max());
@@ -277,13 +280,67 @@ ColumnStatisticsContainer ColumnStatistics<ColumnType>::predicate_selectivity(
       auto column_statistics = std::make_shared<ColumnStatistics>(_column_id, distinct_count() - 1, min(), max());
       return {(distinct_count() - 1.f) / distinct_count(), column_statistics};
     }
-    // TODO(anyone) implement other scan types
+    case ScanType::OpLessThan:
+    case ScanType::OpLessThanEquals:
+    case ScanType::OpGreaterThan:
+    case ScanType::OpGreaterThanEquals: {
+      auto column_statistics =
+          std::make_shared<ColumnStatistics>(_column_id, distinct_count() * OPEN_ENDED_SELECTIVITY, min(), max());
+      return {OPEN_ENDED_SELECTIVITY, column_statistics};
+    }
+    case ScanType::OpBetween: {
+      auto column_statistics = std::make_shared<ColumnStatistics>(_column_id, distinct_count() * BETWEEN_SELECTIVITY,
+                                                                  min(), type_cast<std::string>(*value2));
+      { return {BETWEEN_SELECTIVITY, column_statistics}; }
+    }
+    default: { return {1.f, nullptr}; }
+  }
+}
+
+/**
+ * Predicate selectivity for prepared statements,
+ * every type but strings.
+ */
+template <typename ColumnType>
+ColumnStatisticsContainer ColumnStatistics<ColumnType>::predicate_selectivity(const ScanType scan_type,
+                                                                              const ValuePlaceholder &value,
+                                                                              const optional<AllTypeVariant> &value2) {
+  switch (scan_type) {
+    case ScanType::OpEquals: {
+      auto column_statistics = std::make_shared<ColumnStatistics>(_column_id, 1, min(), max());
+      return {1.f / distinct_count(), column_statistics};
+    }
+    case ScanType::OpNotEquals: {
+      auto column_statistics = std::make_shared<ColumnStatistics>(_column_id, distinct_count() - 1, min(), max());
+      return {(distinct_count() - 1.f) / distinct_count(), column_statistics};
+    }
+    case ScanType::OpLessThan:
+    case ScanType::OpLessThanEquals:
+    case ScanType::OpGreaterThan:
+    case ScanType::OpGreaterThanEquals: {
+      auto column_statistics =
+          std::make_shared<ColumnStatistics>(_column_id, distinct_count() * OPEN_ENDED_SELECTIVITY, min(), max());
+      return {OPEN_ENDED_SELECTIVITY, column_statistics};
+    }
+    case ScanType::OpBetween: {
+      auto casted_value2 = type_cast<ColumnType>(*value2);
+      float selectivity;
+      if (std::is_integral<ColumnType>::value) {
+        selectivity = (casted_value2 - min()) / static_cast<float>(max() - min() + 1);
+      } else {
+        selectivity = (casted_value2 - min() + 1) / static_cast<float>(max() - min() + 1);
+      }
+      selectivity *= OPEN_ENDED_SELECTIVITY;
+      auto column_statistics =
+          std::make_shared<ColumnStatistics>(_column_id, distinct_count() * selectivity, min(), casted_value2);
+      { return {selectivity, column_statistics}; }
+    }
     default: { return {1.f, nullptr}; }
   }
 }
 
 template <typename ColumnType>
-std::ostream &ColumnStatistics<ColumnType>::to_stream(std::ostream &os) {
+std::ostream &ColumnStatistics<ColumnType>::print_to_stream(std::ostream &os) const {
   os << "Col Stats id: " << _column_id << std::endl;
   os << "  dist. " << _distinct_count << std::endl;
   os << "  min   " << _min << std::endl;
