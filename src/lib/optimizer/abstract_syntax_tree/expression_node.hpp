@@ -7,6 +7,7 @@
 #include "all_type_variant.hpp"
 #include "abstract_ast_node.hpp"
 #include "common.hpp"
+#include "types.hpp"
 
 namespace opossum {
 
@@ -49,6 +50,15 @@ class ExpressionNode : public AbstractAstNode {
   ExpressionNode(const ExpressionType type, const std::string& table_name, const std::string& column_name);
   ExpressionNode(const ExpressionType type, const AllTypeVariant value /*, const AllTypeVariant value2*/);
 
+  // Is +, -, *, /
+  bool is_arithmetic() const;
+
+  // Is literal or column-ref
+  bool is_operand() const;
+
+  // Convert expression_type to AggregateFunction, if possible
+  AggregateFunction as_aggregate_function() const;
+
   std::string description() const override;
 
   const std::string& table_name() const;
@@ -60,6 +70,9 @@ class ExpressionNode : public AbstractAstNode {
   //  const AllTypeVariant value2() const;
 
   const ExpressionType expression_type() const;
+
+  // Expression as string, parse-able by Projection
+  std::string to_expression_string() const;
 
  private:
   const std::string _type_to_string() const;

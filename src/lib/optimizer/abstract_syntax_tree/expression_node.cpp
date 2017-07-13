@@ -2,12 +2,19 @@
 
 #include <sstream>
 #include <string>
+#include <type_cast.hpp>
 
 #include "all_type_variant.hpp"
+#include "constant_mappings.hpp"
 #include "common.hpp"
 #include "utils/assert.hpp"
 
 namespace opossum {
+
+const std::unordered_map<ExpressionType, std::string> expression_type_to_string = {
+  {ExpressionType::ExpressionPlus, "+"},     {ExpressionType::ExpressionMinus, "-"},
+  {ExpressionType::ExpressionAsterisk, "*"}, {ExpressionType::ExpressionSlash, "/"},
+};
 
 ExpressionNode::ExpressionNode(const ExpressionType type)
     : AbstractAstNode(AstNodeType::Expression),
@@ -26,6 +33,10 @@ ExpressionNode::ExpressionNode(const ExpressionType type, const std::string &tab
 ExpressionNode::ExpressionNode(const ExpressionType type, const AllTypeVariant value /*, const AllTypeVariant value2*/)
     : AbstractAstNode(AstNodeType::Expression), _type(type), _value(value) /*, _value2(value2)*/, _name("-"), _table("-") {}
 
+AggregateFunction ExpressionNode::as_aggregate_function() const {
+  Fail("Can't do this right now");
+}
+
 std::string ExpressionNode::description() const {
   std::ostringstream desc;
 
@@ -33,6 +44,17 @@ std::string ExpressionNode::description() const {
        << column_name() << ")";
 
   return desc.str();
+}
+
+bool ExpressionNode::is_arithmetic() const {
+  return _type == ExpressionType::ExpressionMinus || _type == ExpressionType::ExpressionPlus
+         || _type == ExpressionType::ExpressionAsterisk || _type == ExpressionType::ExpressionSlash;
+}
+
+bool ExpressionNode::is_operand() const {
+  return
+    _type == ExpressionType::ExpressionLiteral ||
+    _type == ExpressionType::ExpressionColumnReference;
 }
 
 const std::string &ExpressionNode::table_name() const { return _table; }
@@ -46,6 +68,23 @@ const AllTypeVariant ExpressionNode::value() const { return _value; }
 //}
 
 const ExpressionType ExpressionNode::expression_type() const { return _type; }
+
+std::string ExpressionNode::to_expression_string() const {
+  if (is_operand()) {
+    return type_cast<std::string>(_value);
+  } else if (is_arithmetic()) { // TODO(mp) Should be is_operator() to also support "=", ...
+    Assert(static_cast<bool>(left()) && static_cast<bool>(right()), "Operator needs both operands");
+    auto left_expression_node = std::static_pointer_cast<ExpressionNode>(left());
+    auto right_expression_node = std::static_pointer_cast<ExpressionNode>(right());
+    Assert(static_cast<bool>(left_expression_node) &&
+             static_cast<bool>(right_expression_node), "Operator needs both operands to be expressions");
+
+    return left_expression_node->to_expression_string() + expression_type_to_string.at(_type) +
+      right_expression_node->to_expression_string();
+  } else {
+    Fail("To generate expression string, ExpressionNodes need to be operators or operands");
+  }
+}
 
 const std::string ExpressionNode::_type_to_string() const {
   switch (_type) {
