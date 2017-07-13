@@ -5,6 +5,7 @@
 #include <vector>
 
 #include "SQLParser.h"
+#include "all_parameter_variant.hpp"
 #include "scheduler/operator_task.hpp"
 #include "sql/sql_query_plan.hpp"
 
@@ -33,6 +34,8 @@ class SQLQueryTranslator {
   // Translates the single given SQL statement. Adds the generated execution plan to _tasks.
   bool translate_statement(const hsql::SQLStatement& statement);
 
+  static const AllParameterVariant translate_literal(const hsql::Expr& expr);
+
  protected:
   bool _translate_select(const hsql::SelectStatement& select);
 
@@ -51,8 +54,6 @@ class SQLQueryTranslator {
                            const std::shared_ptr<OperatorTask>& input_task);
 
   bool _translate_table_ref(const hsql::TableRef& table);
-
-  static bool _translate_literal(const hsql::Expr& expr, AllTypeVariant* output);
 
   static bool _translate_filter_op(const hsql::Expr& expr, ScanType* output);
 

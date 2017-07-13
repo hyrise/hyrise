@@ -95,6 +95,19 @@ enum class SchedulePriority {
   High = 0     // Schedule task at the beginning of the queue
 };
 
+// Part of AllParameterVariant to reference parameters that will be replaced later.
+// When stored in an operator, the operator's recreate method can contain functionality
+// that will replace a ValuePlaceholder with an explicit value from a given list of arguments
+class ValuePlaceholder {
+ public:
+  explicit ValuePlaceholder(uint16_t index) : _index(index) {}
+
+  uint16_t index() const { return _index; }
+
+ private:
+  uint16_t _index;
+};
+
 enum class ScanType {
   OpEquals,
   OpNotEquals,
@@ -105,5 +118,7 @@ enum class ScanType {
   OpBetween,
   OpLike
 };
+
+enum class JoinMode { Inner, Left, Right, Outer, Cross, Natural, Self };
 
 }  // namespace opossum

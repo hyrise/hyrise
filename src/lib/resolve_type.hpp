@@ -2,6 +2,7 @@
 
 #include <boost/hana/for_each.hpp>
 
+#include <boost/hana/size.hpp>
 #include <memory>
 #include <string>
 #include <utility>
@@ -84,6 +85,33 @@ void call_functor_by_column_type(const std::string &type, Args &&... args) {
       Functor::template run<column_type>(std::forward<Args>(args)...);
     }
   });
+}
+
+template <typename T>
+std::string name_of_type() {
+  /*
+   * This function returns the name of an Opossum datatype based on the definition in hana_types.
+   */
+  auto func = [](std::string s, auto element) {
+    // a matching type was found before
+    if (s.size() != 0) {
+      return s;
+    }
+    // check whether T is one of the Opossum datatypes
+    using column_type = typename decltype(+hana::second(element))::type;
+    if (boost::is_same<T, column_type>::value) {
+      return std::string(hana::first(element));
+    }
+
+    return std::string("");
+  };
+
+  auto type_string = hana::fold_left(column_types, std::string(""), func);
+  if (type_string.size() == 0) {
+    throw std::runtime_error("Trying to parse unknown type which is not part of AllTypeVariant");
+  }
+
+  return type_string;
 }
 
 }  // namespace opossum

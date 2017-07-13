@@ -3,6 +3,7 @@
 #include <atomic>
 #include <memory>
 #include <string>
+#include <vector>
 
 #include "operators/abstract_operator.hpp"
 #include "operators/abstract_read_only_operator.hpp"
@@ -33,7 +34,7 @@ class SQLQueryOperator : public AbstractOperator {
 
   uint8_t num_out_tables() const override;
 
-  std::shared_ptr<AbstractOperator> recreate() const override;
+  std::shared_ptr<AbstractOperator> recreate(const std::vector<AllParameterVariant>& args) const override;
 
   const std::shared_ptr<OperatorTask>& get_result_task() const;
 
@@ -98,7 +99,7 @@ class SQLQueryOperator : public AbstractOperator {
 
   // Static.
   // Stores all user defined prepared statements.
-  static SQLQueryCache<std::shared_ptr<hsql::SQLParserResult>> _prepared_stmts;
+  static SQLQueryCache<SQLQueryPlan> _prepared_stmts;
 
   // Static.
   // Automatic caching of query plans during runtime.

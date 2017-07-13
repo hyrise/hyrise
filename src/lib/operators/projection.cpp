@@ -25,11 +25,11 @@ uint8_t Projection::num_in_tables() const { return 1; }
 
 uint8_t Projection::num_out_tables() const { return 1; }
 
-std::shared_ptr<AbstractOperator> Projection::recreate() const {
+std::shared_ptr<AbstractOperator> Projection::recreate(const std::vector<AllParameterVariant>& args) const {
   if (!_simple_projection.empty()) {
-    return std::make_shared<Projection>(_input_left->recreate(), _simple_projection);
+    return std::make_shared<Projection>(_input_left->recreate(args), _simple_projection);
   }
-  return std::make_shared<Projection>(_input_left->recreate(), _projection_definitions);
+  return std::make_shared<Projection>(_input_left->recreate(args), _projection_definitions);
 }
 
 std::shared_ptr<const Table> Projection::on_execute() {

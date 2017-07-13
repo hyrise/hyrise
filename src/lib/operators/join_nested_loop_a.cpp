@@ -18,9 +18,9 @@ JoinNestedLoopA::JoinNestedLoopA(const std::shared_ptr<const AbstractOperator> l
                                  const JoinMode mode, const std::string &prefix_left, const std::string &prefix_right)
     : AbstractJoinOperator(left, right, column_names, scan_type, mode, prefix_left, prefix_right) {
   DebugAssert(
-      (mode != Cross),
+      (mode != JoinMode::Cross),
       "JoinNestedLoopA: this operator does not support Cross Joins, the optimizer should use Product operator.");
-  DebugAssert((_mode != Natural), "NestedLoopJoin: this operator currently does not support Natural Joins.");
+  DebugAssert((_mode != JoinMode::Natural), "NestedLoopJoin: this operator currently does not support Natural Joins.");
   DebugAssert(static_cast<bool>(column_names),
               "NestedLoopJoin: optional column names are only supported for Cross and Natural Joins.");
 }
@@ -31,9 +31,9 @@ uint8_t JoinNestedLoopA::num_in_tables() const { return 2; }
 
 uint8_t JoinNestedLoopA::num_out_tables() const { return 1; }
 
-std::shared_ptr<AbstractOperator> JoinNestedLoopA::recreate() const {
-  return std::make_shared<JoinNestedLoopA>(_input_left->recreate(), _input_right->recreate(), _column_names, _scan_type,
-                                           _mode, _prefix_left, _prefix_right);
+std::shared_ptr<AbstractOperator> JoinNestedLoopA::recreate(const std::vector<AllParameterVariant> &args) const {
+  return std::make_shared<JoinNestedLoopA>(_input_left->recreate(args), _input_right->recreate(args), _column_names,
+                                           _scan_type, _mode, _prefix_left, _prefix_right);
 }
 
 std::shared_ptr<const Table> JoinNestedLoopA::on_execute() {
@@ -301,7 +301,7 @@ class JoinNestedLoopA::JoinNestedLoopAImpl : public AbstractJoinOperatorImpl {
           auto current_left = RowID{context->chunk_id_left, row_left};
           if (is_match) {
             // For outer joins we need to mark these rows, since they don't need to be added later on.
-            if (context->join_mode == Right) {
+            if (context->join_mode == JoinMode::Right) {
               (*unmatched_rows_map)[current_right] = false;
             } else {
               (*unmatched_rows_map)[current_left] = false;
@@ -310,7 +310,7 @@ class JoinNestedLoopA::JoinNestedLoopAImpl : public AbstractJoinOperatorImpl {
           } else {
             // If this row combination has been joined previously, don't do anything.
             // If they are not in the unmatched_rows_map, add them here.
-            if (context->join_mode == Right) {
+            if (context->join_mode == JoinMode::Right) {
               if (unmatched_rows_map->find(current_right) == unmatched_rows_map->end()) {
                 (*unmatched_rows_map)[current_right] = true;
               }
@@ -334,7 +334,7 @@ class JoinNestedLoopA::JoinNestedLoopAImpl : public AbstractJoinOperatorImpl {
           auto current_left = RowID{context->chunk_id_left, row_left};
           if (is_match) {
             // For outer joins we need to mark these rows, since they don't need to be added later on.
-            if (context->join_mode == Right) {
+            if (context->join_mode == JoinMode::Right) {
               (*unmatched_rows_map)[current_right] = false;
             } else {
               (*unmatched_rows_map)[current_left] = false;
@@ -343,7 +343,7 @@ class JoinNestedLoopA::JoinNestedLoopAImpl : public AbstractJoinOperatorImpl {
           } else {
             // If this row combination has been joined previously, don't do anything.
             // If they are not in the unmatched_rows_map, add them here.
-            if (context->join_mode == Right) {
+            if (context->join_mode == JoinMode::Right) {
               if (unmatched_rows_map->find(current_right) == unmatched_rows_map->end()) {
                 (*unmatched_rows_map)[current_right] = true;
               }
@@ -440,16 +440,16 @@ class JoinNestedLoopA::JoinNestedLoopAImpl : public AbstractJoinOperatorImpl {
     reference columns and value/dictionary columns rows.
     An improvement would be to group the missing rows by chunk_id and create a new Chunk per group.
     */
-    if (_mode == Left || _mode == Right) {
+    if (_mode == JoinMode::Left || _mode == JoinMode::Right) {
       for (const auto &elem : *rows_potentially_joined_with_null_values) {
         if (elem.second) {
           auto pos_list_left = std::make_shared<PosList>();
           auto pos_list_right = std::make_shared<PosList>();
 
-          if (_mode == Left) {
+          if (_mode == JoinMode::Left) {
             pos_list_left->emplace_back(elem.first);
             pos_list_right->emplace_back(RowID{ChunkID{0}, INVALID_CHUNK_OFFSET});
-          } else if (_mode == Right) {
+          } else if (_mode == JoinMode::Right) {
             pos_list_left->emplace_back(RowID{ChunkID{0}, INVALID_CHUNK_OFFSET});
             pos_list_right->emplace_back(elem.first);
           }

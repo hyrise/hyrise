@@ -21,7 +21,7 @@ JoinNestedLoopB::JoinNestedLoopB(const std::shared_ptr<const AbstractOperator> l
       _scan_type{scan_type},
       _mode{mode} {
   DebugAssert(
-      (mode != Cross),
+      (mode != JoinMode::Cross),
       "JoinNestedLoopA: this operator does not support Cross Joins, the optimizer should use Product operator.");
   DebugAssert(left != nullptr, "JoinNestedLoopB::JoinNestedLoopB: left input operator is null");
   DebugAssert(right != nullptr, "JoinNestedLoopB::JoinNestedLoopB: right input operator is null");
@@ -131,18 +131,18 @@ std::shared_ptr<const Table> JoinNestedLoopB::on_execute() {
 
   // Ensure matching column types for simplicity
   // Joins on non-matching types can be added later.
-  DebugAssert((left_column_type == right_column_type),
-              "JoinNestedLoopB::execute: column type \"" + left_column_type + "\" of left column \"" +
-                  _left_column_name + "\" does not match colum type \"" + right_column_type + "\" of right column \"" +
-                  _right_column_name + "\"!");
+  DebugAssert((left_column_type == right_column_type), "JoinNestedLoopB::execute: column type \"" + left_column_type +
+                                                           "\" of left column \"" + _left_column_name +
+                                                           "\" does not match colum type \"" + right_column_type +
+                                                           "\" of right column \"" + _right_column_name + "\"!");
 
   _join_columns(left_column_id, right_column_id, left_column_type);
 
-  if (_mode == Left || _mode == Outer) {
+  if (_mode == JoinMode::Left || _mode == JoinMode::Outer) {
     _add_outer_join_rows(input_table_left(), _pos_list_left, _left_match, _pos_list_right);
   }
 
-  if (_mode == Right || _mode == Outer) {
+  if (_mode == JoinMode::Right || _mode == JoinMode::Outer) {
     _add_outer_join_rows(input_table_right(), _pos_list_right, _right_match, _pos_list_left);
   }
 
@@ -158,22 +158,22 @@ uint8_t JoinNestedLoopB::num_in_tables() const { return 2u; }
 
 uint8_t JoinNestedLoopB::num_out_tables() const { return 1u; }
 
-std::shared_ptr<AbstractOperator> JoinNestedLoopB::recreate() const {
-  return std::make_shared<JoinNestedLoopB>(_input_left->recreate(), _input_right->recreate(), _column_names, _scan_type,
-                                           _mode, _prefix_left, _prefix_right);
+std::shared_ptr<AbstractOperator> JoinNestedLoopB::recreate(const std::vector<AllParameterVariant>& args) const {
+  return std::make_shared<JoinNestedLoopB>(_input_left->recreate(args), _input_right->recreate(args), _column_names,
+                                           _scan_type, _mode, _prefix_left, _prefix_right);
 }
 
 template <typename T>
 JoinNestedLoopB::JoinNestedLoopBImpl<T>::JoinNestedLoopBImpl(JoinNestedLoopB& join_nested_loop_b)
     : _join_nested_loop_b{join_nested_loop_b} {
   // No compare function is necessary for the cross join
-  if (_join_nested_loop_b._mode == Cross) {
+  if (_join_nested_loop_b._mode == JoinMode::Cross) {
     return;
   }
 
   switch (_join_nested_loop_b._scan_type) {
     case ScanType::OpEquals: {
-      _compare = [](const T &value_left, const T &value_right) -> bool { return value_left == value_right; };
+      _compare = [](const T& value_left, const T& value_right) -> bool { return value_left == value_right; };
       break;
     }
     case ScanType::OpLessThan: {
@@ -223,12 +223,12 @@ void JoinNestedLoopB::JoinNestedLoopBImpl<T>::_match_values(const T& value_left,
     RowID right_row_id = _join_nested_loop_b.input_table_right()->calculate_row_id(
         context->_right_chunk_id, reverse_order ? left_chunk_offset : right_chunk_offset);
 
-    if (context->_mode == Left || context->_mode == Outer) {
+    if (context->_mode == JoinMode::Left || context->_mode == JoinMode::Outer) {
       // For inner joins, the list of matched values is not needed and is not maintained
       _join_nested_loop_b._left_match.insert(left_row_id);
     }
 
-    if (context->_mode == Right || context->_mode == Outer) {
+    if (context->_mode == JoinMode::Right || context->_mode == JoinMode::Outer) {
       _join_nested_loop_b._right_match.insert(right_row_id);
     }
 

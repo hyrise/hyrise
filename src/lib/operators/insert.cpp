@@ -29,6 +29,7 @@ class TypedColumnProcessor : public AbstractTypedColumnProcessor {
  public:
   void resize_vector(std::shared_ptr<BaseColumn> column, size_t new_size) override {
     auto casted_col = std::dynamic_pointer_cast<ValueColumn<T>>(column);
+    DebugAssert(static_cast<bool>(casted_col), "Type mismatch");
     auto& vect = casted_col->values();
 
     vect.resize(new_size);
@@ -63,7 +64,7 @@ const std::string Insert::name() const { return "Insert"; }
 uint8_t Insert::num_in_tables() const { return 1; }
 
 std::shared_ptr<const Table> Insert::on_execute(std::shared_ptr<TransactionContext> context) {
-  context->register_rw_operator(this);
+  context->register_rw_operator(shared_from_this());
 
   _target_table = StorageManager::get().get_table(_target_table_name);
 

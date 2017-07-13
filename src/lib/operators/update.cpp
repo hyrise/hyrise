@@ -87,20 +87,22 @@ std::shared_ptr<const Table> Update::on_execute(std::shared_ptr<TransactionConte
   }
 
   // 3. call delete on old data.
-  _delete = std::make_unique<Delete>(_table_to_update_name, _input_left);
+  _delete = std::make_shared<Delete>(_table_to_update_name, _input_left);
 
   _delete->set_transaction_context(context);
 
   _delete->execute();
 
   _execute_failed |= _delete->execute_failed();
-  if (_execute_failed) return nullptr;
+  if (_execute_failed) {
+    return nullptr;
+  }
 
   // 4. call insert using insert_table.
   auto helper_op = std::make_shared<TableWrapper>(insert_table);
   helper_op->execute();
 
-  _insert = std::make_unique<Insert>(_table_to_update_name, helper_op);
+  _insert = std::make_shared<Insert>(_table_to_update_name, helper_op);
   _insert->set_transaction_context(context);
 
   _insert->execute();

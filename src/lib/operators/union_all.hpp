@@ -2,6 +2,7 @@
 
 #include <memory>
 #include <string>
+#include <vector>
 
 #include "abstract_read_only_operator.hpp"
 #include "types.hpp"
@@ -15,7 +16,7 @@ class UnionAll : public AbstractReadOnlyOperator {
   const std::string name() const override;
   uint8_t num_in_tables() const override;
   uint8_t num_out_tables() const override;
-  std::shared_ptr<AbstractOperator> recreate() const override {
+  std::shared_ptr<AbstractOperator> recreate(const std::vector<AllParameterVariant> &args) const override {
     throw std::runtime_error("Operator " + this->name() + " does not implement recreation.");
   }
 
