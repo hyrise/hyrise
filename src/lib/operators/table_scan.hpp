@@ -53,19 +53,19 @@ class TableScan : public AbstractReadOnlyOperator {
  protected:
   std::shared_ptr<const Table> on_execute() override;
 
-  template <typename T>
-  class TableScanImpl;
+  void init_output_table();
+  void init_visitor();
 
+ private:
   const std::string _column_name;
   const ScanType _scan_type;
   const AllParameterVariant _value;
   const optional<AllTypeVariant> _value2;
 
-  std::unique_ptr<AbstractReadOnlyOperatorImpl> _impl;
-
-  static std::string &replace_all(std::string &str, const std::string &old_value, const std::string &new_value);
-  static std::map<std::string, std::string> extract_character_ranges(std::string &str);
-  static std::string sqllike_to_regex(std::string sqllike);
+  std::shared_ptr<const Table> _in_table;
+  ColumnID _column_id;
+  std::unique_ptr<ColumnVisitable> _column_visitable;
+  std::shared_ptr<Table> _output_table;
 };
 
 }  // namespace opossum
