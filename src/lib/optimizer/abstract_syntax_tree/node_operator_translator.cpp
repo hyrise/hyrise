@@ -94,22 +94,22 @@ std::shared_ptr<AbstractOperator> NodeOperatorTranslator::translate_aggregate_no
   for (const auto & aggregate : aggregates)
   {
     const auto & expr = aggregate.expr;
-    Assert(expr->type() == ExpressionType::FunctionReference, "");
+    Assert(expr->type() == ExpressionType::FunctionReference, "Expression is not a function.");
 
-    const auto &arithmetic_expr = std::dynamic_pointer_cast<ExpressionNode>(expr->left());
-    Assert(static_cast<bool>(arithmetic_expr), "");
+    const auto &arithmetic_expr = std::dynamic_pointer_cast<ExpressionNode>(expr->expression_list()->at(0));
+    Assert(static_cast<bool>(arithmetic_expr), "First item of expression_list is not an expression.");
 
-    Assert(arithmetic_expr->is_arithmetic(), "");
+    Assert(arithmetic_expr->is_arithmetic(), "Expression is not an arithmetic expression.");
 
     auto left_operand = std::dynamic_pointer_cast<ExpressionNode>(arithmetic_expr->left());
-    Assert(static_cast<bool>(left_operand), "");
+    Assert(static_cast<bool>(left_operand), "Left child of arithmetic expression is not an expression.");
     auto right_operand = std::dynamic_pointer_cast<ExpressionNode>(arithmetic_expr->right());
-    Assert(static_cast<bool>(right_operand), "");
+    Assert(static_cast<bool>(right_operand), "Right child of arithmetic expression is not an expression.");
 
     Assert(left_operand->type() == ExpressionType::Literal ||
-             left_operand->type() == ExpressionType::ColumnReference, "");
+             left_operand->type() == ExpressionType::ColumnReference, "Left child is not a literal or column ref.");
     Assert(right_operand->type() == ExpressionType::Literal ||
-             right_operand->type() == ExpressionType::ColumnReference, "");
+             right_operand->type() == ExpressionType::ColumnReference, "Right child is not a literal or column ref.");
 
     auto alias = "alias" + std::to_string(alias_index);
     alias_index++;
@@ -128,8 +128,7 @@ std::shared_ptr<AbstractOperator> NodeOperatorTranslator::translate_aggregate_no
   for (size_t aggregate_idx = 0; aggregate_idx < aggregates.size(); aggregate_idx++) {
     const auto &aggregate = aggregates[aggregate_idx];
 
-    Assert(aggregate.expr->type() == ExpressionType::FunctionReference, ""
-      "Only functions are supported in Aggregates");
+    Assert(aggregate.expr->type() == ExpressionType::FunctionReference, "Only functions are supported in Aggregates");
     const auto aggregate_function = string_to_aggregate_function.at(aggregate.expr->name());
 
     aggregate_definitions.emplace_back(expr_aliases[aggregate_idx], aggregate_function, aggregate.alias);

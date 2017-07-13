@@ -79,4 +79,13 @@ TEST_F(NodeOperatorTranslatorTest, SelectWithMultipleOrderByColumns) {
   execute_and_check(query, expected_result, true);
 }
 
+// TODO(tim): Projection cannot handle expression `$a + $b`
+// because it is not able to handle columns with different data types.
+// Create issue with failing test.
+TEST_F(NodeOperatorTranslatorTest, SelectWithAggregate) {
+  const auto query = "SELECT SUM(b + b) AS sum_b_b FROM table_a;";
+  const auto expected_result = load_table("src/test/tables/int_float_sum_b_plus_b.tbl", 2);
+  execute_and_check(query, expected_result, true);
+}
+
 }  // namespace opossum

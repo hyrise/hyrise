@@ -86,10 +86,14 @@ const AllTypeVariant ExpressionNode::value() const { return _value; }
 //}
 
 std::string ExpressionNode::to_expression_string() const {
-  if (is_operand()) {
+  if (_type == ExpressionType::Literal) {
     return type_cast<std::string>(_value);
-  } else if (is_arithmetic()) { // TODO(mp) Should be is_operator() to also support "=", ...
+  } else if (_type == ExpressionType::ColumnReference) {
+    return "$" + _name;
+  } else if (is_arithmetic()) {
+    // TODO(mp) Should be is_operator() to also support "=", ...
     Assert(static_cast<bool>(left()) && static_cast<bool>(right()), "Operator needs both operands");
+
     auto left_expression_node = std::static_pointer_cast<ExpressionNode>(left());
     auto right_expression_node = std::static_pointer_cast<ExpressionNode>(right());
     Assert(static_cast<bool>(left_expression_node) &&
