@@ -36,10 +36,13 @@ class AbstractColumnStatistics {
       const ScanType scan_type, const std::shared_ptr<AbstractColumnStatistics> abstract_value_column_statistics,
       const optional<AllTypeVariant> &value2) = 0;
 
-  friend std::ostream &operator<<(std::ostream &os, AbstractColumnStatistics &obj);
-
  protected:
+  /**
+   * In order to to call insertion operator on ostream with AbstractColumnStatistics with values of ColumnStatistics<T>,
+   * std::ostream &operator<< with AbstractColumnStatistics calls virtual function print_to_stream
+   */
   virtual std::ostream &print_to_stream(std::ostream &os) const = 0;
+  friend std::ostream &operator<<(std::ostream &os, AbstractColumnStatistics &obj);
 };
 
 /**
