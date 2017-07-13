@@ -192,9 +192,7 @@ ColumnStatisticsContainer ColumnStatistics<ColumnType>::predicate_selectivity(co
       return {selectivity, column_statistics};
     }
     case ScanType::OpBetween: {
-      if (!value2) {
-        Fail("operator BETWEEN should get two parameters, second is missing!");
-      }
+      DebugAssert(static_cast<bool>(value2), "operator BETWEEN should get two parameters, second is missing!");
       auto casted_value2 = type_cast<ColumnType>(*value2);
       if (casted_value > casted_value2 || casted_value > max() || casted_value2 < min()) {
         return {0.f, nullptr};
@@ -289,6 +287,7 @@ ColumnStatisticsContainer ColumnStatistics<std::string>::predicate_selectivity(c
       return {OPEN_ENDED_SELECTIVITY, column_statistics};
     }
     case ScanType::OpBetween: {
+      DebugAssert(static_cast<bool>(value2), "operator BETWEEN should get two parameters, second is missing!");
       auto column_statistics = std::make_shared<ColumnStatistics>(_column_id, distinct_count() * BETWEEN_SELECTIVITY,
                                                                   min(), type_cast<std::string>(*value2));
       { return {BETWEEN_SELECTIVITY, column_statistics}; }
@@ -323,6 +322,7 @@ ColumnStatisticsContainer ColumnStatistics<ColumnType>::predicate_selectivity(co
       return {OPEN_ENDED_SELECTIVITY, column_statistics};
     }
     case ScanType::OpBetween: {
+      DebugAssert(static_cast<bool>(value2), "operator BETWEEN should get two parameters, second is missing!");
       auto casted_value2 = type_cast<ColumnType>(*value2);
       float selectivity;
       if (std::is_integral<ColumnType>::value) {
