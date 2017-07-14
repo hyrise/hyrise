@@ -12,8 +12,14 @@
 
 namespace opossum {
 
-Aggregate::Aggregate(const std::shared_ptr<AbstractOperator> in,
-                     const std::vector<std::pair<std::string, AggregateFunction>> aggregates,
+AggregateDefinition::AggregateDefinition(const std::string &column_name, const AggregateFunction function)
+    : column_name(column_name), function(function) {}
+
+AggregateDefinition::AggregateDefinition(const std::string &column_name, const AggregateFunction function,
+                                         const std::string &alias)
+    : column_name(column_name), function(function), alias(alias) {}
+
+Aggregate::Aggregate(const std::shared_ptr<AbstractOperator> in, const std::vector<AggregateDefinition> aggregates,
                      const std::vector<std::string> groupby_columns)
     : AbstractReadOnlyOperator(in), _aggregates(aggregates), _groupby_columns(groupby_columns) {
   Assert(!(aggregates.empty() && groupby_columns.empty()), "Neither aggregate nor groupby columns have been specified");
@@ -38,14 +44,13 @@ std::shared_ptr<const Table> Aggregate::on_execute() {
                  [&](std::string name) { return input_table->column_id_by_name(name); });
 
   // find aggregated column IDs
-  std::transform(
-      _aggregates.begin(), _aggregates.end(), std::back_inserter(_aggregate_column_ids),
-      [&](std::pair<std::string, AggregateFunction> pair) { return input_table->column_id_by_name(pair.first); });
+  std::transform(_aggregates.begin(), _aggregates.end(), std::back_inserter(_aggregate_column_ids),
+                 [&](AggregateDefinition agg_def) { return input_table->column_id_by_name(agg_def.column_name); });
 
   // check for invalid aggregates
   for (size_t aggregate_index = 0; aggregate_index < _aggregates.size(); ++aggregate_index) {
     auto column_id = _aggregate_column_ids[aggregate_index];
-    auto aggregate = _aggregates[aggregate_index].second;
+    auto aggregate = _aggregates[aggregate_index].function;
 
     if (input_table->column_type(column_id) == "string" && (aggregate == Sum || aggregate == Avg)) {
       throw std::runtime_error("Aggregate: Cannot calculate SUM or AVG on string column");
@@ -96,7 +101,7 @@ std::shared_ptr<const Table> Aggregate::on_execute() {
     auto &type_string = input_table->column_type(_aggregate_column_ids[column_index]);
 
     call_functor_by_column_type<AggregateContextCreator>(type_string, _contexts_per_column, column_index,
-                                                         _aggregates[column_index].second);
+                                                         _aggregates[column_index].function);
   }
 
   if (_aggregate_column_ids.empty()) {
@@ -162,7 +167,7 @@ std::shared_ptr<const Table> Aggregate::on_execute() {
         auto ctx = _contexts_per_column[column_index];
 
         call_functor_by_column_type<AggregateVisitorCreator>(type_string, builder, ctx, groupby_ctx,
-                                                             _aggregates[column_index].second);
+                                                             _aggregates[column_index].function);
 
         base_column->visit(*builder, ctx);
         column_index++;
@@ -211,7 +216,7 @@ std::shared_ptr<const Table> Aggregate::on_execute() {
     auto column_id = _aggregate_column_ids[column_index];
     auto &type_string = input_table_left()->column_type(column_id);
 
-    call_functor_by_column_type<AggregateWriter>(type_string, *this, column_index, _aggregates[column_index].second);
+    call_functor_by_column_type<AggregateWriter>(type_string, *this, column_index, _aggregates[column_index].function);
 
     column_index++;
   }
@@ -223,7 +228,7 @@ std::shared_ptr<const Table> Aggregate::on_execute() {
 
 template <typename ColumnType, AggregateFunction function>
 void Aggregate::write_aggregate_output(ColumnID column_index) {
-  auto &column_name = _aggregates[column_index].first;
+  auto &column_name = _aggregates[column_index].column_name;
 
   // retrieve type information from the aggregation traits
   typename aggregate_traits<ColumnType, function>::aggregate_type aggregate_type;
@@ -234,9 +239,16 @@ void Aggregate::write_aggregate_output(ColumnID column_index) {
     aggregate_type_name = input_table_left()->column_type(_aggregate_column_ids[column_index]);
   }
 
-  // generate the name, e.g. MAX(column_a)
-  std::vector<std::string> names{"MIN", "MAX", "SUM", "AVG", "COUNT"};
-  _output->add_column_definition(names[function] + "(" + column_name + ")", aggregate_type_name);
+  // use the alias or generate the name, e.g. MAX(column_a)
+  std::string output_column_name;
+  if (_aggregates[column_index].alias) {
+    output_column_name = *_aggregates[column_index].alias;
+  } else {
+    std::vector<std::string> names{"MIN", "MAX", "SUM", "AVG", "COUNT"};
+    output_column_name = names[function] + "(" + column_name + ")";
+  }
+
+  _output->add_column_definition(output_column_name, aggregate_type_name);
 
   auto col = std::make_shared<ValueColumn<decltype(aggregate_type)>>();
   auto &values = col->values();
