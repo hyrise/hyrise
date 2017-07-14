@@ -7,6 +7,7 @@
 #include <utility>
 #include <vector>
 
+#include "storage/value_column_iterable.hpp"
 #include "resolve_type.hpp"
 #include "types.hpp"
 
@@ -472,63 +473,29 @@ class TableScanVisitableCreator<T>::TableScanConstantColumnVisitable : public Co
     auto context = std::static_pointer_cast<ScanContext>(base_context);
     const auto &column = static_cast<ValueColumn<T> &>(base_column);
 
-    const auto &left = column.values();
-    const auto right = _constant_value;
-
     auto &matches_out = context->matches_out;
+    const auto & chunk_id = context->chunk_id;
 
-    if (context->chunk_offsets_in) {
-      // This ValueColumn is referenced by a ReferenceColumn (i.e., is probably filtered). We only return the matching
-      // rows within the filtered column, together with their original position
-      const auto &chunk_offsets = *(context->chunk_offsets_in);
+    /**
+     * This generic lambda will be compiled four times taking into consideration
+     * whether the column is nullable and/or referenced by a reference column.
+     */
+    auto scan = [&matches_out, &chunk_id, this] (auto it, auto end) {
+      for (; it != end; ++it) {
+        /**
+         * If the column is not nullable, is_null() always returns false
+         * and this line can hence be optimized out by the compiler.
+         */
+        if ((*it).is_null()) continue;
 
-      if (column.is_nullable()) {
-        const auto &left_is_null = column.null_values();
-
-        for (const auto &offset_in_value_column : chunk_offsets) {
-          if (left_is_null[offset_in_value_column]) {
-            // The value in the left column is NULL and thus can’t be compared.
-            continue;
-          }
-
-          if (_value_comparator(left[offset_in_value_column], right)) {
-            matches_out.push_back(RowID{context->chunk_id, offset_in_value_column});
-          }
-        }
-      } else {
-        for (const auto &offset_in_value_column : chunk_offsets) {
-          if (_value_comparator(left[offset_in_value_column], right)) {
-            matches_out.push_back(RowID{context->chunk_id, offset_in_value_column});
-          }
-        }
+        if (_value_comparator((*it).value(), _constant_value))
+          matches_out.push_back(RowID{chunk_id, (*it).chunk_offset()});
       }
-    } else {
-      if (column.is_nullable()) {
-        const auto &left_is_null = column.null_values();
+    };
 
-        auto chunk_offset = ChunkOffset{0u};
-        auto left_it = left.cbegin();
-        auto left_is_null_it = left_is_null.cbegin();
-        for (; left_it != left.cend(); ++left_it, ++left_is_null_it, ++chunk_offset) {
-          if (*left_is_null_it) {
-            // The value in the left column is NULL and thus can’t be compared.
-            continue;
-          }
+    auto iterable = ValueColumnIterable<T>{column, context->chunk_offsets_in};
 
-          if (_value_comparator(*left_it, right)) {
-            matches_out.push_back(RowID{context->chunk_id, chunk_offset});
-          }
-        }
-      } else {
-        auto chunk_offset = ChunkOffset{0u};
-        auto left_it = left.cbegin();
-        for (; left_it != left.cend(); ++left_it, ++chunk_offset) {
-          if (_value_comparator(*left_it, right)) {
-            matches_out.push_back(RowID{context->chunk_id, chunk_offset});
-          }
-        }
-      }
-    }
+    iterable.execute_for_all(scan);
   }
 
   void handle_reference_column(ReferenceColumn &column, std::shared_ptr<ColumnVisitableContext> base_context) override {

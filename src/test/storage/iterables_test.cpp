@@ -48,7 +48,7 @@ TEST_F(IterablesTest, IteratorExecuteForAll) {
   auto column = chunk.get_column(ColumnID{0u});
   auto int_column = std::dynamic_pointer_cast<ValueColumn<int>>(column);
 
-  auto iterable = ValueColumnIterable<int>{int_column};
+  auto iterable = ValueColumnIterable<int>{*int_column};
 
   EXPECT_EQ(iterable.type(), ValueColumnIterableType::Simple);
 
@@ -66,7 +66,7 @@ TEST_F(IterablesTest, ReferencedIteratorExecuteForAll) {
   auto chunk_offsets = std::vector<ChunkOffset>{0u, 2u, 3u};
   auto chunk_offsets_ptr = std::make_shared<std::vector<ChunkOffset>>(std::move(chunk_offsets));
 
-  auto iterable = ValueColumnIterable<int>{int_column, chunk_offsets_ptr};
+  auto iterable = ValueColumnIterable<int>{*int_column, chunk_offsets_ptr};
 
   EXPECT_EQ(iterable.type(), ValueColumnIterableType::Referenced);
 
@@ -81,7 +81,7 @@ TEST_F(IterablesTest, NullableIteratorExecuteForAll) {
   auto column = chunk.get_column(ColumnID{0u});
   auto int_column = std::dynamic_pointer_cast<ValueColumn<int>>(column);
 
-  auto iterable = ValueColumnIterable<int>{int_column};
+  auto iterable = ValueColumnIterable<int>{*int_column};
 
   EXPECT_EQ(iterable.type(), ValueColumnIterableType::Nullable);
 
@@ -99,7 +99,7 @@ TEST_F(IterablesTest, NullableReferencedIteratorExecuteForAll) {
   auto chunk_offsets = std::vector<ChunkOffset>{0u, 2u, 3u};
   auto chunk_offsets_ptr = std::make_shared<std::vector<ChunkOffset>>(std::move(chunk_offsets));
 
-  auto iterable = ValueColumnIterable<int>{int_column, chunk_offsets_ptr};
+  auto iterable = ValueColumnIterable<int>{*int_column, chunk_offsets_ptr};
 
   EXPECT_EQ(iterable.type(), ValueColumnIterableType::NullableReferenced);
 

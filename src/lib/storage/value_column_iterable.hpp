@@ -29,7 +29,7 @@ class ValueColumnIterable
 
     const T & value() const { return _value; }
     bool is_null() const { return false; }
-    ChunkOffset chunk_offset() { return _chunk_offset; }
+    ChunkOffset chunk_offset() const { return _chunk_offset; }
 
    private:
     const T & _value;
@@ -154,37 +154,37 @@ class ValueColumnIterable
     ChunkOffsetIterator _chunk_offset_it;
   };
 
-  ValueColumnIterable(std::shared_ptr<const ValueColumn<T>> column,
+  ValueColumnIterable(const ValueColumn<T> & column,
                       std::shared_ptr<const std::vector<ChunkOffset>> chunk_offsets = nullptr)
       : _column{column}, _chunk_offsets{chunk_offsets} {}
 
   template <typename Functor>
   auto execute_for_all(const Functor & func) {
-    if (_column->is_nullable() && _chunk_offsets != nullptr) {
-      auto begin = NullableReferencedIterator(_column->values(), _column->null_values(), _chunk_offsets->cbegin());
-      auto end = NullableReferencedIterator(_column->values(), _column->null_values(), _chunk_offsets->cend());
+    if (_column.is_nullable() && _chunk_offsets != nullptr) {
+      auto begin = NullableReferencedIterator(_column.values(), _column.null_values(), _chunk_offsets->cbegin());
+      auto end = NullableReferencedIterator(_column.values(), _column.null_values(), _chunk_offsets->cend());
       return func(begin, end);
     }
 
     if (_chunk_offsets != nullptr) {
-      auto begin = ReferencedIterator(_column->values(), _chunk_offsets->cbegin());
-      auto end = ReferencedIterator(_column->values(), _chunk_offsets->cend());
+      auto begin = ReferencedIterator(_column.values(), _chunk_offsets->cbegin());
+      auto end = ReferencedIterator(_column.values(), _chunk_offsets->cend());
       return func(begin, end);
     }
 
-    if (_column->is_nullable()) {
-      auto begin = NullableIterator(_column->values().cbegin(), _column->values().cbegin(), _column->null_values().cbegin());
-      auto end = NullableIterator(_column->values().cbegin(), _column->values().cend(), _column->null_values().cend());
+    if (_column.is_nullable()) {
+      auto begin = NullableIterator(_column.values().cbegin(), _column.values().cbegin(), _column.null_values().cbegin());
+      auto end = NullableIterator(_column.values().cbegin(), _column.values().cend(), _column.null_values().cend());
       return func(begin, end);
     }
 
-    auto begin = Iterator(_column->values().cbegin(), _column->values().cbegin());
-    auto end = Iterator(_column->values().cend(), _column->values().cend());
+    auto begin = Iterator(_column.values().cbegin(), _column.values().cbegin());
+    auto end = Iterator(_column.values().cend(), _column.values().cend());
     return func(begin, end);
   }
 
   Type type() const {
-    if (_column->is_nullable() && _chunk_offsets != nullptr) {
+    if (_column.is_nullable() && _chunk_offsets != nullptr) {
       return Type::NullableReferenced;
     }
 
@@ -192,7 +192,7 @@ class ValueColumnIterable
       return Type::Referenced;
     }
 
-    if (_column->is_nullable()) {
+    if (_column.is_nullable()) {
       return Type::Nullable;
     }
 
@@ -200,7 +200,7 @@ class ValueColumnIterable
   }
 
  private:
-  const std::shared_ptr<const ValueColumn<T>> _column;
+  const ValueColumn<T> & _column;
   const std::shared_ptr<const std::vector<ChunkOffset>> _chunk_offsets;
 };
 
