@@ -17,7 +17,14 @@ node {
       }
 
       stage("Linting") {
-        sh "scripts/lint.sh || (echo "ERROR: Linting error occured. Execute \"scripts/lint.sh\" for details!" && exit 1)"
+        sh '''
+          scripts/lint.sh
+
+          if [ $? != 0 ]; then
+            echo "ERROR: Linting error occured. Execute \"scripts/lint.sh\" for details!"
+            exit 1
+          fi
+        '''
       }
 
       stage("Build") {
