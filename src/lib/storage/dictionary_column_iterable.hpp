@@ -4,14 +4,16 @@
 
 #include <iterator>
 
-#include "dictionary_column.h"
+#include "dictionary_column.hpp"
 
+
+namespace opossum {
 
 template <typename T>
 class DictionaryColumnIterable
 {
  public:
-  class NullableColumnValue {
+  class ColumnValue {
    public:
     ColumnValue(const T & value, const bool null_value, const ChunkOffset & chunk_offset)
         : _value{value},
@@ -28,7 +30,7 @@ class DictionaryColumnIterable
     const ChunkOffset & _chunk_offset;
   };
 
-  class Iterator : std::iterator<std::input_iterator_tag, NullableColumnValue, std::ptrdiff_t, NullableColumnValue *, NullableColumnValue> {
+  class Iterator : public std::iterator<std::input_iterator_tag, ColumnValue, std::ptrdiff_t, ColumnValue *, ColumnValue> {
    public:
     using Dictionary = std::vector<T>;
 
@@ -41,14 +43,14 @@ class DictionaryColumnIterable
     bool operator==(Iterator other) const { return _index == other._index; }
     bool operator!=(Iterator other) const { return !(*this == other); }
 
-    reference operator*() const {
+    auto operator*() const {
       const auto value_id = _attribute_vector->get(_index);
       const auto is_null = (value_id == NULL_VALUE_ID);
 
       if (is_null)
-        return NullableColumnValue{T{}, is_null, _index};
+        return ColumnValue{T{}, is_null, _index};
 
-      return NullColumnValue{_dictionary[value_id], is_null, _index};
+      return ColumnValue{_dictionary[value_id], is_null, _index};
     }
 
    private:
@@ -57,7 +59,7 @@ class DictionaryColumnIterable
     size_t _index;
   };
 
-  class ReferencedIterator : std::iterator<std::input_iterator_tag, NullableColumnValue, std::ptrdiff_t, NullableColumnValue *, NullableColumnValue> {
+  class ReferencedIterator : public std::iterator<std::input_iterator_tag, ColumnValue, std::ptrdiff_t, ColumnValue *, ColumnValue> {
    public:
     using Dictionary = std::vector<T>;
     using ChunkOffsetIterator = std::vector<ChunkOffset>::const_iterator;
@@ -75,14 +77,14 @@ class DictionaryColumnIterable
 
     bool operator!=(Iterator other) const { return !(*this == other); }
 
-    reference operator*() const {
+    auto operator*() const {
       const auto value_id = _attribute_vector->get(*_chunk_offset_it);
       const auto is_null = (value_id == NULL_VALUE_ID);
 
       if (is_null)
-        return NullableColumnValue{T{}, is_null, *_chunk_offset_it};
+        return ColumnValue{T{}, is_null, *_chunk_offset_it};
 
-      return NullableColumnValue{_dictionary[value_id], is_null, *_chunk_offset_it};
+      return ColumnValue{_dictionary[value_id], is_null, *_chunk_offset_it};
     }
 
    private:
@@ -91,8 +93,8 @@ class DictionaryColumnIterable
     ChunkOffsetIterator _chunk_offset_it;
   };
 
-  DictionaryColumnIterable(std::shared_ptr<const Dictionary<T>> column,
-                           std::shared_ptr<const std::vector<ChunkOffset>> chunk_offsets)
+  DictionaryColumnIterable(std::shared_ptr<const DictionaryColumn<T>> column,
+                           std::shared_ptr<const std::vector<ChunkOffset>> chunk_offsets = nullptr)
       : _column{column}, _chunk_offsets{chunk_offsets} {}
 
   template <typename Functor>
@@ -112,3 +114,5 @@ class DictionaryColumnIterable
   const std::shared_ptr<const DictionaryColumn<T>> _column;
   const std::shared_ptr<const std::vector<ChunkOffset>> _chunk_offsets;
 };
+
+}  // namespace opossum

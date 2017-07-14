@@ -173,6 +173,7 @@ set(
     storage/copyable_atomic.hpp
     storage/dictionary_column.cpp
     storage/dictionary_column.hpp
+    storage/dictionary_column_iterable.hpp
     storage/dictionary_compression.cpp
     storage/dictionary_compression.hpp
     storage/fitted_attribute_vector.hpp
@@ -202,6 +203,7 @@ set(
     storage/untyped_dictionary_column.hpp
     storage/value_column.cpp
     storage/value_column.hpp
+    storage/value_column_iterable.hpp
     tasks/chunk_compression_task.cpp
     tasks/chunk_compression_task.hpp
     type_cast.cpp

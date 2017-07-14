@@ -4,12 +4,24 @@
 
 #include <iterator>
 
-#include "value_column.h"
+#include "value_column.hpp"
 
+
+namespace opossum {
+
+enum class ValueColumnIterableType {
+  NullableReferenced,
+  Referenced,
+  Nullable,
+  Simple
+};
 
 template <typename T>
 class ValueColumnIterable
 {
+ public:
+  using Type = ValueColumnIterableType;
+
  public:
   class ColumnValue {
    public:
@@ -26,7 +38,7 @@ class ValueColumnIterable
 
   class NullableColumnValue {
    public:
-    ColumnValue(const T & value, const bool null_value, const ChunkOffset & chunk_offset)
+    NullableColumnValue(const T & value, const bool null_value, const ChunkOffset & chunk_offset)
         : _value{value},
           _null_value{null_value},
           _chunk_offset{chunk_offset} {}
@@ -41,9 +53,9 @@ class ValueColumnIterable
     const ChunkOffset & _chunk_offset;
   };
 
-  class Iterator : std::iterator<std::input_iterator_tag, ColumnValue, std::ptrdiff_t, ColumnValue *, ColumnValue> {
+  class Iterator : public std::iterator<std::input_iterator_tag, ColumnValue, std::ptrdiff_t, ColumnValue *, ColumnValue> {
    public:
-    using ValueIterator = tbb::concurrent_vector<T>::const_iterator
+    using ValueIterator = typename tbb::concurrent_vector<T>::const_iterator;
 
    public:
     explicit Iterator(const ValueIterator & begin_value_it, const ValueIterator & value_it)
@@ -53,17 +65,17 @@ class ValueColumnIterable
     Iterator operator++(int) { auto retval = *this; ++(*this); return retval; }
     bool operator==(Iterator other) const { return _value_it == other._value_it; }
     bool operator!=(Iterator other) const { return !(*this == other); }
-    reference operator*() const { return ColumnValue{*_value_it, std::distance(_begin_value_it, _value_it)}; }
+    auto operator*() const { return ColumnValue{*_value_it, std::distance(_begin_value_it, _value_it)}; }
 
    private:
     const ValueIterator _begin_value_it;
     ValueIterator _value_it;
   };
 
-  class NullableIterator : std::iterator<std::input_iterator_tag, NullableColumnValue, std::ptrdiff_t, NullableColumnValue *, NullableColumnValue> {
+  class NullableIterator : public std::iterator<std::input_iterator_tag, NullableColumnValue, std::ptrdiff_t, NullableColumnValue *, NullableColumnValue> {
    public:
-    using ValueIterator = tbb::concurrent_vector<T>::const_iterator
-    using NullValueIterator = tbb::concurrent_vector<bool>::const_iterator
+    using ValueIterator = typename tbb::concurrent_vector<T>::const_iterator;
+    using NullValueIterator = tbb::concurrent_vector<bool>::const_iterator;
 
    public:
     explicit NullableIterator(const ValueIterator & begin_value_it, const ValueIterator & value_it, const NullValueIterator & null_value_it)
@@ -71,12 +83,12 @@ class ValueColumnIterable
           _value_it(value_it),
           _null_value_it{null_value_it} {}
 
-    Iterator& operator++() { ++_value_it; ++_null_value_it; return *this;}
-    Iterator operator++(int) { auto retval = *this; ++(*this); return retval; }
-    bool operator==(Iterator other) const { return _value_it == other._value_it; }
-    bool operator!=(Iterator other) const { return !(*this == other); }
+    NullableIterator& operator++() { ++_value_it; ++_null_value_it; return *this;}
+    NullableIterator operator++(int) { auto retval = *this; ++(*this); return retval; }
+    bool operator==(NullableIterator other) const { return _value_it == other._value_it; }
+    bool operator!=(NullableIterator other) const { return !(*this == other); }
 
-    reference operator*() const {
+    auto operator*() const {
       return NullableColumnValue{*_value_it, *_null_value_it, std::distance(_begin_value_it, _value_it)};
     }
 
@@ -86,7 +98,7 @@ class ValueColumnIterable
     NullValueIterator _null_value_it;
   };
 
-  class ReferencedIterator : std::iterator<std::input_iterator_tag, ColumnValue, std::ptrdiff_t, ColumnValue *, ColumnValue> {
+  class ReferencedIterator : public std::iterator<std::input_iterator_tag, ColumnValue, std::ptrdiff_t, ColumnValue *, ColumnValue> {
    public:
     using ValueVector = tbb::concurrent_vector<T>;
     using ChunkOffsetIterator = std::vector<ChunkOffset>::const_iterator;
@@ -95,16 +107,16 @@ class ValueColumnIterable
     explicit ReferencedIterator(const ValueVector & values, const ChunkOffsetIterator & chunk_offset_it)
         : _values{values}, _chunk_offset_it(chunk_offset_it) {}
 
-    Iterator& operator++() { ++_chunk_offset_it; return *this;}
-    Iterator operator++(int) { auto retval = *this; ++(*this); return retval; }
+    ReferencedIterator& operator++() { ++_chunk_offset_it; return *this;}
+    ReferencedIterator operator++(int) { auto retval = *this; ++(*this); return retval; }
 
-    bool operator==(Iterator other) const {
+    bool operator==(ReferencedIterator other) const {
       return (_chunk_offset_it == other._chunk_offset_it) && (&_values == &other._values);
     }
 
-    bool operator!=(Iterator other) const { return !(*this == other); }
+    bool operator!=(ReferencedIterator other) const { return !(*this == other); }
 
-    reference operator*() const {
+    auto operator*() const {
       return ColumnValue{_values[*_chunk_offset_it], *_chunk_offset_it};
     }
 
@@ -113,7 +125,7 @@ class ValueColumnIterable
     ChunkOffsetIterator _chunk_offset_it;
   };
 
-  class NullableReferencedIterator : std::iterator<std::input_iterator_tag, NullableColumnValue, std::ptrdiff_t, NullableColumnValue *, NullableColumnValue> {
+  class NullableReferencedIterator : public std::iterator<std::input_iterator_tag, NullableColumnValue, std::ptrdiff_t, NullableColumnValue *, NullableColumnValue> {
    public:
     using ValueVector = tbb::concurrent_vector<T>;
     using NullValueVector = tbb::concurrent_vector<bool>;
@@ -123,16 +135,16 @@ class ValueColumnIterable
     explicit NullableReferencedIterator(const ValueVector & values, const NullValueVector & null_values, const ChunkOffsetIterator & chunk_offset_it)
         : _values{values}, _null_values{null_values}, _chunk_offset_it(chunk_offset_it) {}
 
-    Iterator& operator++() { ++_chunk_offset_it; return *this;}
-    Iterator operator++(int) { auto retval = *this; ++(*this); return retval; }
+    NullableReferencedIterator& operator++() { ++_chunk_offset_it; return *this;}
+    NullableReferencedIterator operator++(int) { auto retval = *this; ++(*this); return retval; }
 
-    bool operator==(Iterator other) const {
+    bool operator==(NullableReferencedIterator other) const {
       return (_chunk_offset_it == other._chunk_offset_it) && (&_values == &other._values);
     }
 
-    bool operator!=(Iterator other) const { return !(*this == other); }
+    bool operator!=(NullableReferencedIterator other) const { return !(*this == other); }
 
-    reference operator*() const {
+    auto operator*() const {
       return NullableColumnValue{_values[*_chunk_offset_it], _null_values[*_chunk_offset_it], *_chunk_offset_it};
     }
 
@@ -143,12 +155,12 @@ class ValueColumnIterable
   };
 
   ValueColumnIterable(std::shared_ptr<const ValueColumn<T>> column,
-                      std::shared_ptr<const std::vector<ChunkOffset>> chunk_offsets)
+                      std::shared_ptr<const std::vector<ChunkOffset>> chunk_offsets = nullptr)
       : _column{column}, _chunk_offsets{chunk_offsets} {}
 
   template <typename Functor>
   auto execute_for_all(const Functor & func) {
-    if (column->is_nullable() && _chunk_offsets != nullptr) {
+    if (_column->is_nullable() && _chunk_offsets != nullptr) {
       auto begin = NullableReferencedIterator(_column->values(), _column->null_values(), _chunk_offsets->cbegin());
       auto end = NullableReferencedIterator(_column->values(), _column->null_values(), _chunk_offsets->cend());
       return func(begin, end);
@@ -160,9 +172,9 @@ class ValueColumnIterable
       return func(begin, end);
     }
 
-    if (column->is_nullable()) {
-      auto begin = NullableIterator(_column->values().cbegin(), _column->values().cbegin(), _column->null_values()->cbegin());
-      auto end = NullableIterator(_column->values().cbegin(), _column->values().cend(), _column->null_values()->cend());
+    if (_column->is_nullable()) {
+      auto begin = NullableIterator(_column->values().cbegin(), _column->values().cbegin(), _column->null_values().cbegin());
+      auto end = NullableIterator(_column->values().cbegin(), _column->values().cend(), _column->null_values().cend());
       return func(begin, end);
     }
 
@@ -171,7 +183,25 @@ class ValueColumnIterable
     return func(begin, end);
   }
 
+  Type type() const {
+    if (_column->is_nullable() && _chunk_offsets != nullptr) {
+      return Type::NullableReferenced;
+    }
+
+    if (_chunk_offsets != nullptr) {
+      return Type::Referenced;
+    }
+
+    if (_column->is_nullable()) {
+      return Type::Nullable;
+    }
+
+    return Type::Simple;
+  }
+
  private:
   const std::shared_ptr<const ValueColumn<T>> _column;
   const std::shared_ptr<const std::vector<ChunkOffset>> _chunk_offsets;
 };
+
+}  // namespace opossum
