@@ -19,40 +19,21 @@ SortMergeJoin::SortMergeJoin(const std::shared_ptr<const AbstractOperator> left,
                              const JoinMode mode, const std::string& prefix_left, const std::string& prefix_right)
     : AbstractJoinOperator(left, right, column_names, op, mode, prefix_left, prefix_right) {
 
-  // Validate the parameters
-  if (mode == Cross || !column_names) {
-    throw std::logic_error(
-        "SortMergeJoin: this operator does not support Cross Joins, the optimizer should use Product operator "
-        "instead.");
-  }
-
-  if (left == nullptr) {
-    throw std::runtime_error("SortMergeJoin::SortMergeJoin: left input operator is null");
-  }
-
-  if (right == nullptr) {
-    throw std::runtime_error("SortMergeJoin::SortMergeJoin: right input operator is null");
-  }
-
-  // Check for valid operators "=", "<", ">", "<=", ">="
-  if (op != "=" && op != "<" && op != ">" && op != "<=" && op != ">=") {
-    throw std::runtime_error("SortMergeJoin::SortMergeJoin: Unknown operator " + op);
-  }
+  DebugAssert(mode != Cross && column_names, "this operator does not support cross joins");
+  DebugAssert(left != nullptr, "left input operator is null");
+  DebugAssert(right != nullptr, "right input operator is null");
+  DebugAssert(op == "=" || op == "<" || op == ">" || op == "<=" || op == ">=", "unknown operator " + op);
 
   auto left_column_name = column_names->first;
   auto right_column_name = column_names->second;
 
   // Check column_type
-  const auto& left_column_id = input_table_left()->column_id_by_name(left_column_name);
-  const auto& right_column_id = input_table_right()->column_id_by_name(right_column_name);
+  const auto left_column_id = input_table_left()->column_id_by_name(left_column_name);
+  const auto right_column_id = input_table_right()->column_id_by_name(right_column_name);
   const auto& left_column_type = input_table_left()->column_type(left_column_id);
   const auto& right_column_type = input_table_right()->column_type(right_column_id);
 
-  if (left_column_type != right_column_type) {
-    throw std::runtime_error("SortMergeJoin::SortMergeJoin: column type \"" + left_column_type +
-                             "\" of left column \"" + left_column_name + "\" does not match colum type \"" +
-                             right_column_type + "\" of right column \"" + right_column_name + "\"!");
-  }
+  DebugAssert(left_column_type == right_column_type, "left and right column types do not match");
 
   // Create implementation to compute join result
   _impl = make_unique_by_column_type<AbstractJoinOperatorImpl, SortMergeJoinImpl>(left_column_type,
@@ -322,16 +303,15 @@ class SortMergeJoin::SortMergeJoinImpl : public AbstractJoinOperatorImpl, public
 
       // Dereference the value
       T value;
-      if (v_columns[row_id.chunk_id]) {
-        value = v_columns[row_id.chunk_id]->values()[row_id.chunk_offset];
-      } else if (d_columns[row_id.chunk_id]) {
-        ValueID value_id = d_columns[row_id.chunk_id]->attribute_vector()->get(row_id.chunk_offset);
-        value = d_columns[row_id.chunk_id]->dictionary()->at(value_id);
+      auto& v_column = v_columns[row_id.chunk_id];
+      auto& d_column = d_columns[row_id.chunk_id]
+      DebugAssert(v_column || d_column, "Referenced column is neither value nor dictionary column!");
+      if (v_column) {
+        value = v_column->values()[row_id.chunk_offset];
       } else {
-        throw std::runtime_error(
-            "SortMergeJoinImpl::handle_reference_column: Referenced column is neither value nor dictionary column!");
+        ValueID value_id = d_column->attribute_vector()->get(row_id.chunk_offset);
+        value = d_column->dictionary()->at(value_id);
       }
-
       output[chunk_offset] = (std::pair<T, RowID>(value, RowID{sort_context->chunk_id, chunk_offset}));
     }
 
@@ -827,10 +807,7 @@ class SortMergeJoin::SortMergeJoinImpl : public AbstractJoinOperatorImpl, public
 
  public:
   std::shared_ptr<const Table> on_execute() {
-
-    if (_partition_count == 0u) {
-      throw std::runtime_error("SortMergeJoinImpl::on_execute: Partition count is 0!");
-    }
+    DebugAssert(_partition_count > 0, "partition count is <= 0!");
 
     // Sort the input tables
     _sorted_left_table = sort_table(_sort_merge_join.input_table_left(), _left_column_name);
