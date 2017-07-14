@@ -365,51 +365,44 @@ class SortMergeJoin::SortMergeJoinImpl : public AbstractJoinOperatorImpl, public
     auto max_value = std::max(max_value_left, max_value_right);
 
     // Pick the split values to be the most common sample value for each partition
-    std::vector<T> p_values(_partition_count);
+    std::vector<T> split_values(_partition_count);
     for (size_t partition_id = 0; partition_id < _partition_count - 1; partition_id++) {
-      T value{0};
-      uint32_t count = 0;
-
-      for (auto& v : sample_values[partition_id]) {
-        if (v.second > count) {
-          value = v.first;
-          count = v.second;
-        }
-      }
-
-      p_values[partition_id] = value;
+      split_values[partition_id] = std::max_element(sample_values[partition_id].begin(), sample_values[partition_id].end(),
+        [](auto& a, auto& b){
+            return a.second < b.second;
+        })->first;
     }
-    p_values.back() = max_value;
+    split_values.back() = max_value;
 
-    value_based_table_partitioning(_sorted_left_table, p_values);
-    value_based_table_partitioning(_sorted_right_table, p_values);
+    value_based_table_partitioning(_sorted_left_table, split_values);
+    value_based_table_partitioning(_sorted_right_table, split_values);
   }
 
-  void value_based_table_partitioning(std::shared_ptr<SortedTable> sort_table, std::vector<T>& p_values) {
+  void value_based_table_partitioning(std::shared_ptr<SortedTable> sort_table, std::vector<T>& split_values) {
 
     std::vector<std::vector<std::pair<T, RowID>>> partitions;
     partitions.resize(_partition_count);
 
     // for prefix computation we need to table-wide know how many entries there are for each partition
     // right now we expect an equally randomized entryset
-    for (auto& i : p_values) {
-      sort_table->value_histogram.insert(std::pair<T, uint32_t>(i, 0));
+    for (auto& value : split_values) {
+      sort_table->value_histogram.insert(std::pair<T, uint32_t>(value, 0));
     }
 
     std::cout << "450" << std::endl;
 
     // Each chunk should prepare additional data to enable partitioning
     for (auto& s_chunk : sort_table->partitions) {
-      for (auto& i : p_values) {
-        s_chunk.value_histogram.insert(std::pair<T, uint32_t>(i, 0));
-        s_chunk.prefix_v.insert(std::pair<T, uint32_t>(i, 0));
+      for (auto& value : split_values) {
+        s_chunk.value_histogram.insert(std::pair<T, uint32_t>(value, 0));
+        s_chunk.prefix_v.insert(std::pair<T, uint32_t>(value, 0));
       }
 
       // fill histogram
       for (auto& entry : s_chunk.values) {
-        for (auto& i : p_values) {
-          if (entry.first <= i) {
-            ++(s_chunk.value_histogram[i]);
+        for (auto& split_value : split_values) {
+          if (entry.first <= split_value) {
+            s_chunk.value_histogram[split_value]++;
             break;
           }
         }
@@ -420,16 +413,16 @@ class SortMergeJoin::SortMergeJoinImpl : public AbstractJoinOperatorImpl, public
 
     // Each chunk need to sequentially fill _prefix map to actually fill partition of tables in parallel
     for (auto& s_chunk : sort_table->partitions) {
-      for (auto& radix : p_values) {
-        s_chunk.prefix_v[radix] = sort_table->value_histogram[radix];
-        sort_table->value_histogram[radix] += s_chunk.value_histogram[radix];
+      for (auto& split_value : split_values) {
+        s_chunk.prefix_v[split_value] = sort_table->value_histogram[split_value];
+        sort_table->value_histogram[split_value] += s_chunk.value_histogram[split_value];
       }
     }
 
     // prepare for parallel access later on
     uint32_t i = 0;
-    for (auto& radix : p_values) {
-      partitions[i].resize(sort_table->value_histogram[radix]);
+    for (auto& split_value : split_values) {
+      partitions[i].resize(sort_table->value_histogram[split_value]);
       ++i;
     }
 
@@ -448,11 +441,12 @@ class SortMergeJoin::SortMergeJoinImpl : public AbstractJoinOperatorImpl, public
     for (auto& s_chunk : sort_table->partitions) {
       for (auto& entry : s_chunk.values) {
         uint32_t partition_id = 0;
-        for (auto& radix : p_values) {
+        for (auto& radix : split_values) {
           if (entry.first <= radix) {
             std::cout << "s_chunk.prefix_v.size(): " << s_chunk.prefix_v.size() << std::endl;
             std::cout << "radix: " << radix << std::endl;
-            partitions[partition_id].at(s_chunk.prefix_v[radix]++) = entry;
+            partitions[partition_id].at(s_chunk.prefix_v[radix]) = entry;
+            s_chunk.prefix_v[radix]++;
             partition_id++;
           }
         }
