@@ -8,17 +8,17 @@
 
 namespace opossum {
 
-std::vector<std::shared_ptr<TableScanNode>> PredicateReorderingRule::find_all_predicates_in_scope(
-    std::shared_ptr<AbstractNode> node) {
-  std::vector<std::shared_ptr<TableScanNode>> nodes;
+std::vector<std::shared_ptr<PredicateNode>> PredicateReorderingRule::find_all_predicates_in_scope(
+    std::shared_ptr<AbstractASTNode> node) {
+  std::vector<std::shared_ptr<PredicateNode>> nodes;
 
-  QueryPlanHelper::filter<TableScanNode>(
-      node, nodes, [&](std::shared_ptr<AbstractNode> item) { return item->type() == NodeType::TableScan; });
+  QueryPlanHelper::filter<PredicateNode>(
+      node, nodes, [&](std::shared_ptr<AbstractASTNode> item) { return item->type() == ASTNodeType::Predicate; });
 
   return nodes;
 }
 
-std::shared_ptr<AbstractNode> PredicateReorderingRule::apply_rule(std::shared_ptr<AbstractNode> node) {
+std::shared_ptr<AbstractASTNode> PredicateReorderingRule::apply_rule(std::shared_ptr<AbstractASTNode> node) {
   auto nodes = find_all_predicates_in_scope(node);
   std::cout << "Found " << nodes.size() << " nodes" << std::endl;
 

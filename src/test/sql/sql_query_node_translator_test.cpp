@@ -7,11 +7,12 @@
 #include "SQLParser.h"
 #include "gtest/gtest.h"
 
+#include "optimizer/abstract_syntax_tree/abstract_ast_node.hpp"
 #include "optimizer/abstract_syntax_tree/join_node.hpp"
+#include "optimizer/abstract_syntax_tree/predicate_node.hpp"
 #include "optimizer/abstract_syntax_tree/projection_node.hpp"
 #include "optimizer/abstract_syntax_tree/sort_node.hpp"
-#include "optimizer/abstract_syntax_tree/table_node.hpp"
-#include "optimizer/abstract_syntax_tree/table_scan_node.hpp"
+#include "optimizer/abstract_syntax_tree/stored_table_node.hpp"
 #include "sql/sql_query_node_translator.hpp"
 #include "storage/storage_manager.hpp"
 
@@ -27,7 +28,7 @@ class SQLQueryNodeTranslatorTest : public BaseTest {
     StorageManager::get().add_table("table_b", std::move(table_b));
   }
 
-  std::shared_ptr<AbstractNode> compile_query(const std::string query) {
+  std::shared_ptr<AbstractASTNode> compile_query(const std::string query) {
     hsql::SQLParserResult parse_result;
     hsql::SQLParser::parseSQLString(query, &parse_result);
 
@@ -54,31 +55,31 @@ TEST_F(SQLQueryNodeTranslatorTest, SelectStarAllTest) {
   auto result_node = compile_query(query);
 
   std::vector<std::string> expected_columns{"a", "b"};
-  EXPECT_EQ(expected_columns, result_node->output_columns());
+  EXPECT_EQ(expected_columns, result_node->output_column_names());
 
-  EXPECT_FALSE(result_node->right());
-  EXPECT_FALSE(result_node->left()->left());
+  EXPECT_FALSE(result_node->right_child());
+  EXPECT_FALSE(result_node->left_child()->left_child());
 }
 
 TEST_F(SQLQueryNodeTranslatorTest, SelectWithAndCondition) {
   const auto query = "SELECT * FROM table_a WHERE a >= 1234 AND b < 457.9";
   auto result_node = compile_query(query);
 
-  EXPECT_EQ(result_node->type(), NodeType::Projection);
-  EXPECT_FALSE(result_node->right());
+  EXPECT_EQ(result_node->type(), ASTNodeType::Projection);
+  EXPECT_FALSE(result_node->right_child());
 
-  auto ts_node_1 = result_node->left();
-  EXPECT_EQ(ts_node_1->type(), NodeType::TableScan);
-  EXPECT_FALSE(ts_node_1->right());
+  auto ts_node_1 = result_node->left_child();
+  EXPECT_EQ(ts_node_1->type(), ASTNodeType::Predicate);
+  EXPECT_FALSE(ts_node_1->right_child());
 
-  auto ts_node_2 = ts_node_1->left();
-  EXPECT_EQ(ts_node_2->type(), NodeType::TableScan);
-  EXPECT_FALSE(ts_node_2->right());
+  auto ts_node_2 = ts_node_1->left_child();
+  EXPECT_EQ(ts_node_2->type(), ASTNodeType::Predicate);
+  EXPECT_FALSE(ts_node_2->right_child());
 
-  auto t_node = ts_node_2->left();
-  EXPECT_EQ(t_node->type(), NodeType::Table);
-  EXPECT_FALSE(t_node->left());
-  EXPECT_FALSE(t_node->right());
+  auto t_node = ts_node_2->left_child();
+  EXPECT_EQ(t_node->type(), ASTNodeType::StoredTable);
+  EXPECT_FALSE(t_node->left_child());
+  EXPECT_FALSE(t_node->right_child());
 }
 
 TEST_F(SQLQueryNodeTranslatorTest, SelectMultipleOrderBy) {
@@ -87,31 +88,31 @@ TEST_F(SQLQueryNodeTranslatorTest, SelectMultipleOrderBy) {
 
   // The first order by description is executed last (see sort operator for details).
   auto sort_node_1 = std::dynamic_pointer_cast<SortNode>(result_node);
-  EXPECT_EQ(sort_node_1->type(), NodeType::Sort);
+  EXPECT_EQ(sort_node_1->type(), ASTNodeType::Sort);
   EXPECT_EQ(sort_node_1->column_name(), "a");
-  EXPECT_FALSE(sort_node_1->asc());
-  EXPECT_FALSE(sort_node_1->right());
+  EXPECT_FALSE(sort_node_1->ascending());
+  EXPECT_FALSE(sort_node_1->right_child());
 
-  auto sort_node_2 = std::dynamic_pointer_cast<SortNode>(sort_node_1->left());
-  EXPECT_EQ(sort_node_2->type(), NodeType::Sort);
+  auto sort_node_2 = std::dynamic_pointer_cast<SortNode>(sort_node_1->left_child());
+  EXPECT_EQ(sort_node_2->type(), ASTNodeType::Sort);
   EXPECT_EQ(sort_node_2->column_name(), "b");
-  EXPECT_TRUE(sort_node_2->asc());
-  EXPECT_FALSE(sort_node_2->right());
+  EXPECT_TRUE(sort_node_2->ascending());
+  EXPECT_FALSE(sort_node_2->right_child());
   // This node has an input node, but we don't care what kind it is in this test.
-  EXPECT_TRUE(sort_node_2->left());
+  EXPECT_TRUE(sort_node_2->left_child());
 }
 
 TEST_F(SQLQueryNodeTranslatorTest, SelectInnerJoin) {
   const auto query = "SELECT * FROM table_a AS a INNER JOIN table_b AS b ON a.a = b.a;";
   auto result_node = compile_query(query);
 
-  EXPECT_EQ(result_node->type(), NodeType::Projection);
+  EXPECT_EQ(result_node->type(), ASTNodeType::Projection);
   auto projection_node = std::dynamic_pointer_cast<ProjectionNode>(result_node);
   std::vector<std::string> output_columns = {"a.a", "a.b", "b.a", "b.b"};
-  EXPECT_EQ(projection_node->output_columns(), output_columns);
+  EXPECT_EQ(projection_node->output_column_names(), output_columns);
 
-  EXPECT_EQ(result_node->left()->type(), NodeType::Join);
-  auto join_node = std::dynamic_pointer_cast<JoinNode>(result_node->left());
+  EXPECT_EQ(result_node->left_child()->type(), ASTNodeType::Join);
+  auto join_node = std::dynamic_pointer_cast<JoinNode>(result_node->left_child());
   EXPECT_EQ(join_node->scan_type(), ScanType::OpEquals);
   EXPECT_EQ(join_node->join_mode(), JoinMode::Inner);
   EXPECT_EQ(join_node->prefix_left(), "a.");

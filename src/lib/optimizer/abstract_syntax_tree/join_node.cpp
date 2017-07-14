@@ -1,5 +1,6 @@
 #include "join_node.hpp"
 
+#include <sstream>
 #include <string>
 #include <utility>
 #include <vector>
@@ -10,14 +11,14 @@ namespace opossum {
 
 JoinNode::JoinNode(optional<std::pair<std::string, std::string>> join_column_names, const ScanType scan_type,
                    const JoinMode join_mode, const std::string &prefix_left, const std::string &prefix_right)
-    : AbstractNode(NodeType::Join),
+    : AbstractASTNode(ASTNodeType::Join),
       _join_column_names(join_column_names),
       _scan_type(scan_type),
       _join_mode(join_mode),
       _prefix_left(prefix_left),
       _prefix_right(prefix_right) {}
 
-const std::string JoinNode::description() const {
+std::string JoinNode::description() const {
   std::ostringstream desc;
 
   // TODO(tim): add more details
@@ -29,18 +30,21 @@ const std::string JoinNode::description() const {
   return desc.str();
 }
 
-const std::vector<std::string> JoinNode::output_columns() {
-  std::vector<std::string> output_columns;
+std::vector<std::string> JoinNode::output_column_names() const {
+  /**
+   * Add respective prefix to column names.
+   */
+  std::vector<std::string> output_column_names;
 
-  for (auto &column_name : left()->output_columns()) {
-    output_columns.push_back(prefix_left() + column_name);
+  for (auto &column_name : left_child()->output_column_names()) {
+    output_column_names.push_back(prefix_left() + column_name);
   }
 
-  for (auto &column_name : right()->output_columns()) {
-    output_columns.push_back(prefix_right() + column_name);
+  for (auto &column_name : right_child()->output_column_names()) {
+    output_column_names.push_back(prefix_right() + column_name);
   }
 
-  return output_columns;
+  return output_column_names;
 }
 
 optional<std::pair<std::string, std::string>> JoinNode::join_column_names() const { return _join_column_names; }
