@@ -327,25 +327,22 @@ class SortMergeJoin::SortMergeJoinImpl : public AbstractJoinOperatorImpl, public
                   [](auto& value_left, auto& value_right) { return value_left.first < value_right.first; });
   }
 
-  // Partitioning in case of Non-Equi-Join
-  void value_based_partitioning() {
-    // get minimum and maximum values for tables to have a somewhat reliable partitioning
-    T max_value = _sorted_left_table->partitions[0].values[0].first;
-    std::vector<T> p_values(_partition_count);
-    std::vector<std::map<T, uint32_t>> sample_values(_partition_count);
+  T pick_sample_values(std::vector<std::map<T, uint32_t>>& sample_values, std::vector<SortedChunk> partitions) {
+    auto max_value = partitions[0].values[0].first;
 
-    for (uint32_t partition_number = 0; partition_number < _sorted_left_table->partitions.size(); ++partition_number) {
+    for (size_t partition_number = 0; partition_number < partitions.size(); ++partition_number) {
 
-      auto & values = _sorted_left_table->partitions[partition_number].values;
-      // left side
+      auto & values = partitions[partition_number].values;
+
+      // Since the chunks are sorted, the maximum values are at the back of them
       if (max_value < values.back().first) {
         max_value = values.back().first;
       }
 
       // get samples
-      uint32_t step_size = values.size() / _partition_count;
+      size_t step_size = values.size() / _partition_count;
       //DebugAssert((step_size >= 1), "SortMergeJoin value_based_partitioning: step size is <= 0");
-      for (uint32_t pos = step_size, partition_id = 0; pos < values.size() - 1; pos += step_size, partition_id++) {
+      for (size_t pos = step_size, partition_id = 0; pos < values.size() - 1; pos += step_size, partition_id++) {
         if (sample_values[partition_id].count(values[pos].first) == 0) {
           sample_values[partition_id].insert(std::pair<T, uint32_t>(values[pos].first, 1));
         } else {
@@ -354,38 +351,33 @@ class SortMergeJoin::SortMergeJoinImpl : public AbstractJoinOperatorImpl, public
       }
     }
 
-    for (uint32_t partition_number = 0; partition_number < _sorted_right_table->partitions.size(); ++partition_number) {
-      // right side
-      auto& values = _sorted_right_table->partitions[partition_number].values;
-      if (max_value < values.back().first) {
-        max_value = values.back().first;
-      }
+    return max_value;
+  }
 
-      // get samples
-      uint32_t step_size = values.size() / _partition_count;
-      uint32_t i = 0;
-      for (uint32_t pos = step_size; pos < values.size() - 1; pos += step_size) {
-        if (sample_values[i].count(values[pos].first) == 0) {
-          sample_values[i].insert(std::pair<T, uint32_t>(values[pos].first, 1));
-        } else {
-          ++(sample_values[i].at(values[pos].first));
-        }
-        ++i;
-      }
-    }
 
-    // Pick from sample values most common split values
-    for (uint32_t i = 0; i < _partition_count - 1; ++i) {
+  // Partitioning in case of Non-Equi-Join
+  void value_based_partitioning() {
+    std::vector<std::map<T, uint32_t>> sample_values(_partition_count);
+
+    auto max_value_left = pick_sample_values(sample_values, _sorted_left_table->partitions);
+    auto max_value_right = pick_sample_values(sample_values, _sorted_right_table->partitions);
+
+    auto max_value = std::max(max_value_left, max_value_right);
+
+    // Pick the split values to be the most common sample value for each partition
+    std::vector<T> p_values(_partition_count);
+    for (size_t partition_id = 0; partition_id < _partition_count - 1; partition_id++) {
       T value{0};
       uint32_t count = 0;
-      for (auto& v : sample_values[i]) {
+
+      for (auto& v : sample_values[partition_id]) {
         if (v.second > count) {
           value = v.first;
           count = v.second;
         }
       }
 
-      p_values[i] = value;
+      p_values[partition_id] = value;
     }
     p_values.back() = max_value;
 
@@ -803,7 +795,7 @@ class SortMergeJoin::SortMergeJoinImpl : public AbstractJoinOperatorImpl, public
   std::shared_ptr<const Table> on_execute() {
     DebugAssert(_partition_count > 0, "partition count is <= 0!");
 
-    // Sort the input tables
+    // Sort and partition the input tables
     _sorted_left_table = sort_table(_sort_merge_join.input_table_left(), _left_column_name);
     _sorted_right_table = sort_table(_sort_merge_join.input_table_right(), _right_column_name);
 
@@ -811,9 +803,8 @@ class SortMergeJoin::SortMergeJoinImpl : public AbstractJoinOperatorImpl, public
 
     if (_op != "=" && _partition_count > 1) {
       value_based_partitioning();
+      std::cout << "value based partitioning ran through" << std::endl;
     }
-
-    std::cout << "value based partitioning ran through" << std::endl;
 
     perform_join();
 
