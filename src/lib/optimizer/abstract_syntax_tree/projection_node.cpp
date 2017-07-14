@@ -25,6 +25,6 @@ std::string ProjectionNode::description() const {
   return desc.str();
 }
 
-const std::vector<std::string>& ProjectionNode::output_column_names() const { return _output_column_names; }
+std::vector<std::string> ProjectionNode::output_column_names() const { return _output_column_names; }
 
 }  // namespace opossum

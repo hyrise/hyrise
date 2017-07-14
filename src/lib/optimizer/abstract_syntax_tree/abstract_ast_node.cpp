@@ -35,7 +35,7 @@ void AbstractASTNode::set_right_child(const std::shared_ptr<AbstractASTNode> &ri
 
 ASTNodeType AbstractASTNode::type() const { return _type; }
 
-const std::vector<std::string> &AbstractASTNode::output_column_names() const {
+std::vector<std::string> AbstractASTNode::output_column_names() const {
   if (_left_child && !_right_child) return _left_child->output_column_names();
   if (!_left_child && _right_child) return _right_child->output_column_names();
 
@@ -45,15 +45,13 @@ const std::vector<std::string> &AbstractASTNode::output_column_names() const {
   _output_column_names.clear();
 
   if (_left_child) {
-    auto left_output_columns = _left_child->output_column_names();
-    _output_column_names.insert(_output_column_names.end(), std::make_move_iterator(left_output_columns.begin()),
-                                std::make_move_iterator(left_output_columns.end()));
+    const auto &left_output_columns = _left_child->output_column_names();
+    _output_column_names.insert(_output_column_names.end(), left_output_columns.begin(), left_output_columns.end());
   }
 
   if (_right_child) {
-    auto right_output_columns = _right_child->output_column_names();
-    _output_column_names.insert(_output_column_names.end(), std::make_move_iterator(right_output_columns.begin()),
-                                std::make_move_iterator(right_output_columns.end()));
+    const auto &right_output_columns = _right_child->output_column_names();
+    _output_column_names.insert(_output_column_names.end(), right_output_columns.begin(), right_output_columns.end());
   }
 
   return _output_column_names;

@@ -7,7 +7,7 @@
 
 namespace opossum {
 
-enum class ASTNodeType { PhysicalTable, Predicate, Projection, Sort };
+enum class ASTNodeType { Predicate, Projection, Sort, StoredTable };
 
 /**
  * Abstract element in an Abstract Syntax Tree.
@@ -32,7 +32,7 @@ class AbstractASTNode : public std::enable_shared_from_this<AbstractASTNode> {
 
   ASTNodeType type() const;
 
-  virtual const std::vector<std::string> &output_column_names() const;
+  virtual std::vector<std::string> output_column_names() const;
 
   void print(const uint32_t level = 0, std::ostream &out = std::cout) const;
   virtual std::string description() const = 0;
