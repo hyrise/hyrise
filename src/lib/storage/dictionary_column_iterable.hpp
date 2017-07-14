@@ -9,9 +9,17 @@
 
 namespace opossum {
 
+enum class DictionaryColumnIterableType {
+  Referenced,
+  Simple
+};
+
 template <typename T>
 class DictionaryColumnIterable
 {
+ public:
+  using Type = DictionaryColumnIterableType;
+
  public:
   class ColumnValue {
    public:
@@ -68,14 +76,14 @@ class DictionaryColumnIterable
     explicit ReferencedIterator(const Dictionary & dictionary, const BaseAttributeVector * attribute_vector, const ChunkOffsetIterator & chunk_offset_it)
         : _dictionary{dictionary}, _attribute_vector(attribute_vector), _chunk_offset_it(chunk_offset_it) {}
 
-    Iterator& operator++() { ++_chunk_offset_it; return *this;}
-    Iterator operator++(int) { auto retval = *this; ++(*this); return retval; }
+    ReferencedIterator& operator++() { ++_chunk_offset_it; return *this;}
+    ReferencedIterator operator++(int) { auto retval = *this; ++(*this); return retval; }
 
-    bool operator==(Iterator other) const {
+    bool operator==(ReferencedIterator other) const {
       return (_chunk_offset_it == other._chunk_offset_it);
     }
 
-    bool operator!=(Iterator other) const { return !(*this == other); }
+    bool operator!=(ReferencedIterator other) const { return !(*this == other); }
 
     auto operator*() const {
       const auto value_id = _attribute_vector->get(*_chunk_offset_it);
@@ -98,16 +106,24 @@ class DictionaryColumnIterable
       : _column{column}, _chunk_offsets{chunk_offsets} {}
 
   template <typename Functor>
-  void execute_for_all(const Functor & func) {
+  auto execute_for_all(const Functor & func) {
     if (_chunk_offsets != nullptr) {
-      auto begin = ReferencedIterator(*_column->dictionary(), *_column->attribute_vector(), _chunk_offsets->cbegin());
-      auto end = ReferencedIterator(*_column->dictionary(), *_column->attribute_vector(), _chunk_offsets->cend());
+      auto begin = ReferencedIterator(*_column->dictionary(), _column->attribute_vector().get(), _chunk_offsets->cbegin());
+      auto end = ReferencedIterator(*_column->dictionary(), _column->attribute_vector().get(), _chunk_offsets->cend());
       return func(begin, end);
     }
 
-    auto begin = Iterator(*_column->dictionary(), *_column->attribute_vector(), 0u);
-    auto end = Iterator(*_column->dictionary(), *_column->attribute_vector(), _column->size());
+    auto begin = Iterator(*_column->dictionary(), _column->attribute_vector().get(), 0u);
+    auto end = Iterator(*_column->dictionary(), _column->attribute_vector().get(), _column->size());
     return func(begin, end);
+  }
+
+  Type type() const {
+    if (_chunk_offsets != nullptr) {
+      return Type::Referenced;
+    }
+
+    return Type::Simple;
   }
 
  private:

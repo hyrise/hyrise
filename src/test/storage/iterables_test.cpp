@@ -8,6 +8,7 @@
 
 #include "../lib/storage/dictionary_column.hpp"
 #include "../lib/storage/dictionary_column_iterable.hpp"
+#include "../lib/storage/dictionary_compression.hpp"
 #include "../lib/storage/value_column.hpp"
 #include "../lib/storage/value_column_iterable.hpp"
 #include "../lib/storage/table.hpp"
@@ -105,6 +106,43 @@ TEST_F(IterablesTest, NullableReferencedIteratorExecuteForAll) {
   const auto sum = iterable.execute_for_all(SumUp{});
 
   EXPECT_EQ(sum, 13'579);
+}
+
+TEST_F(IterablesTest, DictIteratorExecuteForAll) {
+  DictionaryCompression::compress_table(*table);
+
+  auto & chunk = table->get_chunk(ChunkID{0u});
+
+  auto column = chunk.get_column(ColumnID{0u});
+  auto int_column = std::dynamic_pointer_cast<DictionaryColumn<int>>(column);
+
+  auto iterable = DictionaryColumnIterable<int>{int_column};
+
+  EXPECT_EQ(iterable.type(), DictionaryColumnIterableType::Simple);
+
+  const auto sum = iterable.execute_for_all(SumUp{});
+
+  EXPECT_EQ(sum, 24'825);
+}
+
+TEST_F(IterablesTest, DictReferencedIteratorExecuteForAll) {
+  DictionaryCompression::compress_table(*table);
+
+  auto & chunk = table->get_chunk(ChunkID{0u});
+
+  auto column = chunk.get_column(ColumnID{0u});
+  auto int_column = std::dynamic_pointer_cast<DictionaryColumn<int>>(column);
+
+  auto chunk_offsets = std::vector<ChunkOffset>{0u, 2u, 3u};
+  auto chunk_offsets_ptr = std::make_shared<std::vector<ChunkOffset>>(std::move(chunk_offsets));
+
+  auto iterable = DictionaryColumnIterable<int>{int_column, chunk_offsets_ptr};
+
+  EXPECT_EQ(iterable.type(), DictionaryColumnIterableType::Referenced);
+
+  const auto sum = iterable.execute_for_all(SumUp{});
+
+  EXPECT_EQ(sum, 12'480);
 }
 
 }  // namespace opossum
