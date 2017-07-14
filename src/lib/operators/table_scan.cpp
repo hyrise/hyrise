@@ -8,6 +8,7 @@
 #include <vector>
 
 #include "storage/value_column_iterable.hpp"
+#include "storage/dictionary_column_iterable.hpp"
 #include "resolve_type.hpp"
 #include "types.hpp"
 
@@ -158,7 +159,7 @@ class TableScanVisitableCreator : public TableScanVisitableCreatorBase {
       const auto & column_name = boost::get<ColumnName>(_value);
       const auto & column_id = _in_table->column_id_by_name(column_name);
 
-      return std::make_unique<TableScanVariableColumnVisitable>(_value_comparator, _value_id_comparator, column_id);
+      return std::make_unique<TableScanVariableColumnVisitable>(_value_comparator, column_id);
     }
   }
 
@@ -612,39 +613,102 @@ class TableScanVisitableCreator<T>::TableScanConstantColumnVisitable : public Co
 template <typename T>
 class TableScanVisitableCreator<T>::TableScanVariableColumnVisitable : public ColumnVisitable {
  public:
-  TableScanVariableColumnVisitable(std::function<bool(T, T)> value_comparator,
-                                   std::function<bool(ValueID, ValueID, ValueID)> value_id_comparator,
-                                   const ColumnID & column_id2)
-      : _value_comparator(value_comparator), _value_id_comparator(value_id_comparator), _column_id2(column_id2) {}
+  TableScanVariableColumnVisitable(std::function<bool(T, T)> value_comparator, const ColumnID & column_id2)
+      : _value_comparator(value_comparator), _column_id2(column_id2) {}
+
+  /**
+   * @brief The actual scan
+   */
+  struct Scan
+  {
+    Scan(const ChunkID chunk_id, const std::function<bool(T, T)> comparator, std::vector<RowID> & matches_out)
+        : _chunk_id{chunk_id}, _comparator{comparator}, _matches_out{matches_out} {}
+
+    /**
+     * Depending on the columns being compared (ValueColumn with/without null values, DictionaryColumn, referenced)
+     * this function will be called with a different set of iterators
+     *
+     * @see DictionaryColumnIterable, ValueColumnIterable
+     */
+    template <typename LeftIterator, typename RightIterator>
+    void operator()(LeftIterator left_it, LeftIterator left_end, RightIterator right_it, RightIterator right_end) {
+      for (; left_it != left_end; ++left_it, ++right_it) {
+        if ((*left_it).is_null() || (*right_it).is_null()) continue;
+
+        if (_comparator((*left_it).value(), (*right_it).value()))
+          _matches_out.push_back(RowID{_chunk_id, (*left_it).chunk_offset()});
+      }
+    }
+
+    const ChunkID _chunk_id;
+    const std::function<bool(T, T)> _comparator;
+    std::vector<RowID> & _matches_out;
+  };
+
+  template <typename LeftColumnIterable>
+  struct RightColumnVisitable : ColumnVisitable {
+    RightColumnVisitable(const LeftColumnIterable & left_column_iterable, const std::function<bool(T, T)> comparator)
+        : _left_column_iterable{left_column_iterable}, _comparator{comparator} {}
+
+    void handle_value_column(BaseColumn &base_column, std::shared_ptr<ColumnVisitableContext> base_context) override {
+      auto context = std::static_pointer_cast<ScanContext>(base_context);
+
+      const auto &right_column = static_cast<ValueColumn<T> &>(base_column);
+
+      const auto chunk_id = context->chunk_id;
+      auto &matches_out = context->matches_out;
+
+      auto right_column_iterable = ValueColumnIterable<T>(right_column, context->chunk_offsets_in);
+
+      auto scan = Scan{chunk_id, _comparator, matches_out};
+
+      _left_column_iterable.execute_for_all([&scan, right_column_iterable] (auto left_it, auto left_end) {
+        right_column_iterable.execute_for_all([&scan, left_it, left_end] (auto right_it, auto right_end) {
+          scan(left_it, left_end, right_it, right_end);
+        });
+      });
+    }
+
+    void handle_reference_column(ReferenceColumn &column, std::shared_ptr<ColumnVisitableContext> base_context) override {
+      column.visit_dereferenced<ScanContext>(*this, base_context);
+    }
+
+    void handle_dictionary_column(BaseColumn &base_column, std::shared_ptr<ColumnVisitableContext> base_context) override {
+      auto context = std::static_pointer_cast<ScanContext>(base_context);
+
+      const auto &right_column = static_cast<DictionaryColumn<T> &>(base_column);
+
+      const auto chunk_id = context->chunk_id;
+      auto &matches_out = context->matches_out;
+
+      auto right_column_iterable = DictionaryColumnIterable<T>(right_column, context->chunk_offsets_in);
+
+      auto scan = Scan{chunk_id, _comparator, matches_out};
+
+      _left_column_iterable.execute_for_all([&scan, right_column_iterable] (auto left_it, auto left_end) {
+        right_column_iterable.execute_for_all([&scan, left_it, left_end] (auto right_it, auto right_end) {
+          scan(left_it, left_end, right_it, right_end);
+        });
+      });
+    }
+
+    const LeftColumnIterable & _left_column_iterable;
+    const std::function<bool(T, T)> _comparator;
+  };
 
   void handle_value_column(BaseColumn &base_column, std::shared_ptr<ColumnVisitableContext> base_context) override {
     auto context = std::static_pointer_cast<ScanContext>(base_context);
-    const auto &column = static_cast<ValueColumn<T> &>(base_column);
-    const auto &left = column.values();
-    auto &matches_out = context->matches_out;
 
-    const auto right_values = materialize_column(*context, _column_id2);
+    const auto &left_column = static_cast<ValueColumn<T> &>(base_column);
 
-    // TODO(mjendruk): Here custom code needs to be added for null values
+    auto left_column_iterable = ValueColumnIterable<T>(left_column, context->chunk_offsets_in);
 
-    if (context->chunk_offsets_in) {
-      // This ValueColumn is referenced by a ReferenceColumn (i.e., is probably filtered). We only return the matching
-      // rows within the filtered column, together with their original position
-      for (const ChunkOffset &offset_in_value_column : *(context->chunk_offsets_in)) {
-        if (_value_comparator(left[offset_in_value_column], right_values[offset_in_value_column])) {
-          matches_out.emplace_back(RowID{context->chunk_id, offset_in_value_column});
-        }
-      }
+    auto right_column_visitable = RightColumnVisitable<ValueColumnIterable<T>>(left_column_iterable, _value_comparator);
 
-    } else {
-      // This ValueColumn has to be scanned in full. We directly insert the results into the list of matching rows.
-      ChunkOffset chunk_offset = 0;
-      for (const auto &value : left) {
-        if (_value_comparator(value, right_values[chunk_offset]))
-          matches_out.emplace_back(RowID{context->chunk_id, chunk_offset});
-        chunk_offset++;
-      }
-    }
+    const auto & chunk_in = context->get_chunk();
+    const auto right_column = chunk_in.get_column(_column_id2);
+
+    right_column->visit(right_column_visitable, base_context);
   }
 
   void handle_reference_column(ReferenceColumn &column, std::shared_ptr<ColumnVisitableContext> base_context) override {
@@ -654,48 +718,20 @@ class TableScanVisitableCreator<T>::TableScanVariableColumnVisitable : public Co
   void handle_dictionary_column(BaseColumn &base_column,
                                 std::shared_ptr<ColumnVisitableContext> base_context) override {
     auto context = std::static_pointer_cast<ScanContext>(base_context);
-    const auto &column = static_cast<DictionaryColumn<T> &>(base_column);
-    auto &matches_out = context->matches_out;
+    const auto &left_column = static_cast<DictionaryColumn<T> &>(base_column);
 
-    const auto &left = column.materialize_values();  // also materializing the values on the left side
-    const auto right_values = materialize_column(*context, _column_id2);
+    auto left_column_iterable = DictionaryColumnIterable<T>(left_column, context->chunk_offsets_in);
 
-    if (context->chunk_offsets_in) {
-      for (const ChunkOffset &offset_in_value_column : *(context->chunk_offsets_in)) {
-        if (_value_comparator(left[offset_in_value_column], right_values[offset_in_value_column])) {
-          matches_out.emplace_back(RowID{context->chunk_id, offset_in_value_column});
-        }
-      }
-    } else {
-      ChunkOffset chunk_offset = 0;
-      for (const auto &value : left) {
-        if (_value_comparator(value, right_values[chunk_offset]))
-          matches_out.emplace_back(RowID{context->chunk_id, chunk_offset});
-        chunk_offset++;
-      }
-    }
-  }
+    auto right_column_visitable = RightColumnVisitable<DictionaryColumnIterable<T>>(left_column_iterable, _value_comparator);
 
-  tbb::concurrent_vector<T> materialize_column(const ScanContext & context, const ColumnID column_id) {
-    const auto & chunk_in = context.get_chunk();
-    const auto column = chunk_in.get_column(column_id);
+    const auto & chunk_in = context->get_chunk();
+    const auto right_column = chunk_in.get_column(_column_id2);
 
-    auto values = tbb::concurrent_vector<T>{};
-
-    if (auto value_column = std::dynamic_pointer_cast<const ValueColumn<T>>(column)) {
-      values = value_column->values();  // TODO(mjendruk): copy here is unneccesary, but shared pointer impl is needed
-    } else if (auto dict_column = std::dynamic_pointer_cast<const DictionaryColumn<T>>(column)) {
-      values = dict_column->materialize_values();
-    } else if (auto ref_column = std::dynamic_pointer_cast<const ReferenceColumn>(column)) {
-      values = ref_column->template materialize_values<T>();  // Clang needs the template prefix
-    }
-
-    return values;
+    right_column->visit(right_column_visitable, base_context);
   }
 
  protected:
   const std::function<bool(T, T)> _value_comparator;
-  const std::function<bool(ValueID, ValueID, ValueID)> _value_id_comparator;
   const ColumnID _column_id2;
 };
 

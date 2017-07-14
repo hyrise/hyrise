@@ -101,20 +101,20 @@ class DictionaryColumnIterable
     ChunkOffsetIterator _chunk_offset_it;
   };
 
-  DictionaryColumnIterable(std::shared_ptr<const DictionaryColumn<T>> column,
+  DictionaryColumnIterable(const DictionaryColumn<T> & column,
                            std::shared_ptr<const std::vector<ChunkOffset>> chunk_offsets = nullptr)
       : _column{column}, _chunk_offsets{chunk_offsets} {}
 
   template <typename Functor>
-  auto execute_for_all(const Functor & func) {
+  auto execute_for_all(const Functor & func) const {
     if (_chunk_offsets != nullptr) {
-      auto begin = ReferencedIterator(*_column->dictionary(), _column->attribute_vector().get(), _chunk_offsets->cbegin());
-      auto end = ReferencedIterator(*_column->dictionary(), _column->attribute_vector().get(), _chunk_offsets->cend());
+      auto begin = ReferencedIterator(*_column.dictionary(), _column.attribute_vector().get(), _chunk_offsets->cbegin());
+      auto end = ReferencedIterator(*_column.dictionary(), _column.attribute_vector().get(), _chunk_offsets->cend());
       return func(begin, end);
     }
 
-    auto begin = Iterator(*_column->dictionary(), _column->attribute_vector().get(), 0u);
-    auto end = Iterator(*_column->dictionary(), _column->attribute_vector().get(), _column->size());
+    auto begin = Iterator(*_column.dictionary(), _column.attribute_vector().get(), 0u);
+    auto end = Iterator(*_column.dictionary(), _column.attribute_vector().get(), _column.size());
     return func(begin, end);
   }
 
@@ -127,7 +127,7 @@ class DictionaryColumnIterable
   }
 
  private:
-  const std::shared_ptr<const DictionaryColumn<T>> _column;
+  const DictionaryColumn<T> &  _column;
   const std::shared_ptr<const std::vector<ChunkOffset>> _chunk_offsets;
 };
 

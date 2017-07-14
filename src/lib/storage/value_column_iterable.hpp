@@ -159,7 +159,7 @@ class ValueColumnIterable
       : _column{column}, _chunk_offsets{chunk_offsets} {}
 
   template <typename Functor>
-  auto execute_for_all(const Functor & func) {
+  auto execute_for_all(const Functor & func) const {
     if (_column.is_nullable() && _chunk_offsets != nullptr) {
       auto begin = NullableReferencedIterator(_column.values(), _column.null_values(), _chunk_offsets->cbegin());
       auto end = NullableReferencedIterator(_column.values(), _column.null_values(), _chunk_offsets->cend());

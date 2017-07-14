@@ -116,7 +116,7 @@ TEST_F(IterablesTest, DictIteratorExecuteForAll) {
   auto column = chunk.get_column(ColumnID{0u});
   auto int_column = std::dynamic_pointer_cast<DictionaryColumn<int>>(column);
 
-  auto iterable = DictionaryColumnIterable<int>{int_column};
+  auto iterable = DictionaryColumnIterable<int>{*int_column};
 
   EXPECT_EQ(iterable.type(), DictionaryColumnIterableType::Simple);
 
@@ -136,7 +136,7 @@ TEST_F(IterablesTest, DictReferencedIteratorExecuteForAll) {
   auto chunk_offsets = std::vector<ChunkOffset>{0u, 2u, 3u};
   auto chunk_offsets_ptr = std::make_shared<std::vector<ChunkOffset>>(std::move(chunk_offsets));
 
-  auto iterable = DictionaryColumnIterable<int>{int_column, chunk_offsets_ptr};
+  auto iterable = DictionaryColumnIterable<int>{*int_column, chunk_offsets_ptr};
 
   EXPECT_EQ(iterable.type(), DictionaryColumnIterableType::Referenced);
 
