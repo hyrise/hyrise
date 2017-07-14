@@ -654,52 +654,45 @@ class SortMergeJoin::SortMergeJoinImpl : public AbstractJoinOperatorImpl, public
   void addSmallerValues(uint32_t partition_number, std::shared_ptr<SortedTable> table_smaller_values,
                         std::shared_ptr<PosList> output_smaller, std::shared_ptr<PosList> output_greater,
                         uint32_t max_index_smaller_values, RowID greaterId) {
-    RowID smaller_value_row_id;
 
-    for (uint32_t p_number = 0; p_number <= partition_number; ++p_number) {
-      if (p_number != partition_number) {
-        // Add values from previous partitions
-        auto& partition_smaller_values = table_smaller_values->partitions[p_number];
-
-        for (auto& values : partition_smaller_values.values) {
-          smaller_value_row_id = values.second;
-          output_smaller->push_back(smaller_value_row_id);
-          output_greater->push_back(greaterId);
-        }
-      } else {
-        // Add values from current partition
-        for (uint32_t index = 0; index < max_index_smaller_values; ++index) {
-          smaller_value_row_id = table_smaller_values->partitions[partition_number].values[index].second;
-          output_smaller->push_back(smaller_value_row_id);
-          output_greater->push_back(greaterId);
-        }
+    // Add values from previous partitions
+    for (size_t partition_id = 0; partition_id < partition_number; partition_id++) {
+      auto& partition_smaller_values = table_smaller_values->partitions[partition_id];
+      for (auto& values : partition_smaller_values.values) {
+        auto smaller_value_row_id = values.second;
+        output_smaller->push_back(smaller_value_row_id);
+        output_greater->push_back(greaterId);
       }
+    }
+
+    // Add values from current partition
+    for (uint32_t index = 0; index < max_index_smaller_values; ++index) {
+      auto smaller_value_row_id = table_smaller_values->partitions[partition_number].values[index].second;
+      output_smaller->push_back(smaller_value_row_id);
+      output_greater->push_back(greaterId);
     }
   }
 
   void addGreaterValues(size_t partition_number, std::shared_ptr<SortedTable> table_greater_values,
                         std::shared_ptr<PosList> output_smaller, std::shared_ptr<PosList> output_greater,
                         size_t start_index_greater_values, RowID smallerId) {
-    RowID greater_value_row_id;
+
     size_t partition_size = table_greater_values->partitions[partition_number].values.size();
 
-    for (size_t p_number = partition_number; p_number < _partition_count; ++p_number) {
-      if (p_number != partition_number) {
-        // Add values from previous partitions
-        auto& partition_greater_values = table_greater_values->partitions[p_number];
+    // Add values from current partition
+    for (size_t index = start_index_greater_values; index < partition_size; ++index) {
+      auto greater_value_row_id = table_greater_values->partitions[partition_number].values[index].second;
+      output_smaller->push_back(smallerId);
+      output_greater->push_back(greater_value_row_id);
+    }
 
-        for (auto& values : partition_greater_values.values) {
-          greater_value_row_id = values.second;
-          output_smaller->push_back(smallerId);
-          output_greater->push_back(greater_value_row_id);
-        }
-      } else {
-        // Add values from current partition
-        for (size_t index = start_index_greater_values; index < partition_size; ++index) {
-          greater_value_row_id = table_greater_values->partitions[partition_number].values[index].second;
-          output_smaller->push_back(smallerId);
-          output_greater->push_back(greater_value_row_id);
-        }
+    // Add values from next partitions
+    for (size_t partition_id = partition_number + 1; partition_id < _partition_count; partition_id++) {
+      auto& partition_greater_values = table_greater_values->partitions[partition_id];
+      for (auto& values : partition_greater_values.values) {
+        auto greater_value_row_id = values.second;
+        output_smaller->push_back(smallerId);
+        output_greater->push_back(greater_value_row_id);
       }
     }
   }
