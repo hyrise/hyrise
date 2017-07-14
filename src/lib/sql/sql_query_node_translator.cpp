@@ -241,9 +241,7 @@ std::shared_ptr<AbstractAstNode> SQLQueryNodeTranslator::_translate_filter_expr(
     throw std::runtime_error("Filter expression clause operator is not yet supported.");
   }
 
-  auto scan_type = it->second;
-
-  // TODO(torpedro): Handle BETWEEN.
+  const auto scan_type = it->second;
 
   std::shared_ptr<ExpressionNode> expressionNode = SQLExpressionTranslator::translate_expression(expr);
 
@@ -254,10 +252,20 @@ std::shared_ptr<AbstractAstNode> SQLQueryNodeTranslator::_translate_filter_expr(
 
   const auto column_name = _get_column_name(*column_expr);
 
-  Expr* other_expr = (column_expr == expr.expr) ? expr.expr2 : expr.expr;
-  const AllTypeVariant value = _translate_literal(*other_expr);
+  AllTypeVariant value;
+  optional<AllTypeVariant> value2;
+  if (scan_type == ScanType::OpBetween) {
+    const Expr *left_expr = expr.exprList->at(0);
+    value = _translate_literal(*left_expr);
 
-  auto predicate_node = std::make_shared<PredicateNode>(column_name, expressionNode, scan_type, value);
+    const Expr *right_expr = expr.exprList->at(1);
+    value2 = _translate_literal(*right_expr);
+  } else {
+    const Expr* other_expr = (column_expr == expr.expr) ? expr.expr2 : expr.expr;
+    value = _translate_literal(*other_expr);
+  }
+
+  auto predicate_node = std::make_shared<PredicateNode>(column_name, expressionNode, scan_type, value, value2);
   predicate_node->set_left(input_node);
 
   return predicate_node;

@@ -66,12 +66,11 @@ TEST_F(TPCHTest, TPCH6) {
    *    a. use strings as data type for now
    *    b. pre-calculate date operation
    *  2. arithmetic expressions with constants are not resolved automatically yet, so pre-calculate them as well
-   *  3. BETWEEN is not supported yet, change to <= and >=
    */
   const auto query = "SELECT SUM(l_extendedprice*l_discount) AS REVENUE\n"
           "FROM lineitem\n"
           "WHERE l_shipdate >= '1994-01-01' AND l_shipdate < '1995-01-01'\n"
-          "AND l_discount >= .05 AND l_discount <= .07 AND l_quantity < 24;";
+          "AND l_discount BETWEEN .05 AND .07 AND l_quantity < 24;";
   const auto expected_result = load_table("src/test/tables/tpch/results/tpch6.tbl", 2);
   execute_and_check(query, expected_result, true);
 }
