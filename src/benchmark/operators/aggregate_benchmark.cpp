@@ -24,5 +24,6 @@ BENCHMARK_DEFINE_F(BenchmarkBasicFixture, BM_Aggregate)(benchmark::State& state)
     aggregate->execute();
   }
 }
+BENCHMARK_REGISTER_F(BenchmarkBasicFixture, BM_Aggregate)->Apply(BenchmarkBasicFixture::ChunkSizeIn);
 
 }  // namespace opossum

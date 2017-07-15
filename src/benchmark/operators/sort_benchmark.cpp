@@ -28,6 +28,6 @@ static void ChunkSizeOut(benchmark::internal::Benchmark* b) {
   }
 }
 
-BENCHMARK_REGISTER_F(BenchmarkBasicFixture, BM_Sort_ChunkSizeOut)->Apply(ChunkSize);
+BENCHMARK_REGISTER_F(BenchmarkBasicFixture, BM_Sort_ChunkSizeOut)->Apply(ChunkSizeOut);
 
 }  // namespace opossum

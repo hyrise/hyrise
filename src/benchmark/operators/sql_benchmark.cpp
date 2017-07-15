@@ -32,7 +32,7 @@ class SQLBenchmark : public BenchmarkBasicFixture {
 
 // Q1
 
-BENCHMARK_REGISTER_F(SQLBenchmark, BM_SQLTranslationTotalQ1)(benchmark::State& state) {
+BENCHMARK_DEFINE_F(SQLBenchmark, BM_SQLTranslationTotalQ1)(benchmark::State& state) {
   while (state.KeepRunning()) {
     SQLParserResult result;
     SQLParser::parseSQLString(Q1, &result);
@@ -41,14 +41,14 @@ BENCHMARK_REGISTER_F(SQLBenchmark, BM_SQLTranslationTotalQ1)(benchmark::State& s
   }
 }
 
-BENCHMARK_REGISTER_F(SQLBenchmark, BM_SQLTranslationOnlyParsingQ1)(benchmark::State& state) {
+BENCHMARK_DEFINE_F(SQLBenchmark, BM_SQLTranslationOnlyParsingQ1)(benchmark::State& state) {
   while (state.KeepRunning()) {
     SQLParserResult result;
     SQLParser::parseSQLString(Q1, &result);
   }
 }
 
-BENCHMARK_REGISTER_F(SQLBenchmark, BM_SQLTranslationOnlyTranslationQ1)(benchmark::State& state) {
+BENCHMARK_DEFINE_F(SQLBenchmark, BM_SQLTranslationOnlyTranslationQ1)(benchmark::State& state) {
   SQLParserResult result;
   SQLParser::parseSQLString(Q1, &result);
 
@@ -60,7 +60,7 @@ BENCHMARK_REGISTER_F(SQLBenchmark, BM_SQLTranslationOnlyTranslationQ1)(benchmark
 
 // Q2
 
-BENCHMARK_REGISTER_F(SQLBenchmark, BM_SQLTranslationTotalQ2)(benchmark::State& state) {
+BENCHMARK_DEFINE_F(SQLBenchmark, BM_SQLTranslationTotalQ2)(benchmark::State& state) {
   while (state.KeepRunning()) {
     SQLParserResult result;
     SQLParser::parseSQLString(Q2, &result);
@@ -69,14 +69,14 @@ BENCHMARK_REGISTER_F(SQLBenchmark, BM_SQLTranslationTotalQ2)(benchmark::State& s
   }
 }
 
-BENCHMARK_REGISTER_F(SQLBenchmark, BM_SQLTranslationOnlyParsingQ2)(benchmark::State& state) {
+BENCHMARK_DEFINE_F(SQLBenchmark, BM_SQLTranslationOnlyParsingQ2)(benchmark::State& state) {
   while (state.KeepRunning()) {
     SQLParserResult result;
     SQLParser::parseSQLString(Q2, &result);
   }
 }
 
-BENCHMARK_REGISTER_F(SQLBenchmark, BM_SQLTranslationOnlyTranslationQ2)(benchmark::State& state) {
+BENCHMARK_DEFINE_F(SQLBenchmark, BM_SQLTranslationOnlyTranslationQ2)(benchmark::State& state) {
   SQLParserResult result;
   SQLParser::parseSQLString(Q2, &result);
 
@@ -87,14 +87,14 @@ BENCHMARK_REGISTER_F(SQLBenchmark, BM_SQLTranslationOnlyTranslationQ2)(benchmark
 }
 
 // Q3
-BENCHMARK_REGISTER_F(SQLBenchmark, BM_SQLTranslationOnlyParsingQ3)(benchmark::State& state) {
+BENCHMARK_DEFINE_F(SQLBenchmark, BM_SQLTranslationOnlyParsingQ3)(benchmark::State& state) {
   while (state.KeepRunning()) {
     SQLParserResult result;
     SQLParser::parseSQLString(Q3, &result);
   }
 }
 
-BENCHMARK_REGISTER_F(SQLBenchmark, BM_SQLTranslationOnlyTranslationQ3)(benchmark::State& state) {
+BENCHMARK_DEFINE_F(SQLBenchmark, BM_SQLTranslationOnlyTranslationQ3)(benchmark::State& state) {
   SQLParserResult result;
   SQLParser::parseSQLString(Q3, &result);
 
@@ -104,7 +104,7 @@ BENCHMARK_REGISTER_F(SQLBenchmark, BM_SQLTranslationOnlyTranslationQ3)(benchmark
   }
 }
 
-BENCHMARK_REGISTER_F(SQLBenchmark, BM_Q2QueryOperatorWithoutCache)(benchmark::State& state) {
+BENCHMARK_DEFINE_F(SQLBenchmark, BM_Q2QueryOperatorWithoutCache)(benchmark::State& state) {
   // Disable cache.
   SQLQueryOperator::get_parse_tree_cache().clear_and_resize(0);
   SQLQueryOperator::get_query_plan_cache().clear_and_resize(0);
@@ -114,7 +114,7 @@ BENCHMARK_REGISTER_F(SQLBenchmark, BM_Q2QueryOperatorWithoutCache)(benchmark::St
   }
 }
 
-BENCHMARK_REGISTER_F(SQLBenchmark, BM_Q2QueryOperatorWithParseTreeCache)(benchmark::State& state) {
+BENCHMARK_DEFINE_F(SQLBenchmark, BM_Q2QueryOperatorWithParseTreeCache)(benchmark::State& state) {
   // Enable cache.
   SQLQueryOperator::get_parse_tree_cache().clear_and_resize(16);
   SQLQueryOperator::get_query_plan_cache().clear_and_resize(0);
@@ -124,7 +124,7 @@ BENCHMARK_REGISTER_F(SQLBenchmark, BM_Q2QueryOperatorWithParseTreeCache)(benchma
   }
 }
 
-BENCHMARK_REGISTER_F(SQLBenchmark, BM_Q2QueryOperatorWithQueryPlanCache)(benchmark::State& state) {
+BENCHMARK_DEFINE_F(SQLBenchmark, BM_Q2QueryOperatorWithQueryPlanCache)(benchmark::State& state) {
   // Enable cache.
   SQLQueryOperator::get_parse_tree_cache().clear_and_resize(0);
   SQLQueryOperator::get_query_plan_cache().clear_and_resize(16);
