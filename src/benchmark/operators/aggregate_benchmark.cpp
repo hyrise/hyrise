@@ -11,7 +11,7 @@
 
 namespace opossum {
 
-BENCHMARK_F(BenchmarkBasicFixture, BM_Aggregate)(benchmark::State& state) {
+BENCHMARK_DEFINE_F(BenchmarkBasicFixture, BM_Aggregate)(benchmark::State& state) {
   clear_cache();
 
   std::vector<AggregateDefinition> aggregates = {{"b", Min}};
