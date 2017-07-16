@@ -220,7 +220,7 @@ bool SQLQueryTranslator::_translate_projection(const std::vector<hsql::Expr*>& e
 bool SQLQueryTranslator::_translate_group_by(const hsql::GroupByDescription& group_by,
                                              const std::vector<hsql::Expr*>& select_list,
                                              const std::shared_ptr<AbstractOperator>& input_op) {
-  std::vector<std::pair<std::string, AggregateFunction>> aggregates;
+  std::vector<AggregateDefinition> aggregates;
   std::vector<std::string> groupby_columns;
 
   // Process group by columns.

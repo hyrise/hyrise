@@ -4,12 +4,9 @@
 #include <memory>
 #include <vector>
 
-#include "../scheduler/operator_task.hpp"
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wunused-parameter"
-#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-#include "generated/opossum.pb.h"
-#pragma GCC diagnostic pop
+#include "opossum.pb.wrapper.hpp"
+
+#include "scheduler/operator_task.hpp"
 
 namespace opossum {
 
