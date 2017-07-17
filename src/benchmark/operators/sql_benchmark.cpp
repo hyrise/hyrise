@@ -32,7 +32,7 @@ class SQLBenchmark : public BenchmarkBasicFixture {
 
 // Q1
 
-BENCHMARK_DEFINE_F(SQLBenchmark, BM_SQLTranslationTotalQ1)(benchmark::State& state) {
+BENCHMARK_F(SQLBenchmark, BM_SQLTranslationTotalQ1)(benchmark::State& state) {
   while (state.KeepRunning()) {
     SQLParserResult result;
     SQLParser::parseSQLString(Q1, &result);
@@ -41,14 +41,14 @@ BENCHMARK_DEFINE_F(SQLBenchmark, BM_SQLTranslationTotalQ1)(benchmark::State& sta
   }
 }
 
-BENCHMARK_DEFINE_F(SQLBenchmark, BM_SQLTranslationOnlyParsingQ1)(benchmark::State& state) {
+BENCHMARK_F(SQLBenchmark, BM_SQLTranslationOnlyParsingQ1)(benchmark::State& state) {
   while (state.KeepRunning()) {
     SQLParserResult result;
     SQLParser::parseSQLString(Q1, &result);
   }
 }
 
-BENCHMARK_DEFINE_F(SQLBenchmark, BM_SQLTranslationOnlyTranslationQ1)(benchmark::State& state) {
+BENCHMARK_F(SQLBenchmark, BM_SQLTranslationOnlyTranslationQ1)(benchmark::State& state) {
   SQLParserResult result;
   SQLParser::parseSQLString(Q1, &result);
 
@@ -60,7 +60,7 @@ BENCHMARK_DEFINE_F(SQLBenchmark, BM_SQLTranslationOnlyTranslationQ1)(benchmark::
 
 // Q2
 
-BENCHMARK_DEFINE_F(SQLBenchmark, BM_SQLTranslationTotalQ2)(benchmark::State& state) {
+BENCHMARK_F(SQLBenchmark, BM_SQLTranslationTotalQ2)(benchmark::State& state) {
   while (state.KeepRunning()) {
     SQLParserResult result;
     SQLParser::parseSQLString(Q2, &result);
@@ -69,14 +69,14 @@ BENCHMARK_DEFINE_F(SQLBenchmark, BM_SQLTranslationTotalQ2)(benchmark::State& sta
   }
 }
 
-BENCHMARK_DEFINE_F(SQLBenchmark, BM_SQLTranslationOnlyParsingQ2)(benchmark::State& state) {
+BENCHMARK_F(SQLBenchmark, BM_SQLTranslationOnlyParsingQ2)(benchmark::State& state) {
   while (state.KeepRunning()) {
     SQLParserResult result;
     SQLParser::parseSQLString(Q2, &result);
   }
 }
 
-BENCHMARK_DEFINE_F(SQLBenchmark, BM_SQLTranslationOnlyTranslationQ2)(benchmark::State& state) {
+BENCHMARK_F(SQLBenchmark, BM_SQLTranslationOnlyTranslationQ2)(benchmark::State& state) {
   SQLParserResult result;
   SQLParser::parseSQLString(Q2, &result);
 
@@ -87,14 +87,14 @@ BENCHMARK_DEFINE_F(SQLBenchmark, BM_SQLTranslationOnlyTranslationQ2)(benchmark::
 }
 
 // Q3
-BENCHMARK_DEFINE_F(SQLBenchmark, BM_SQLTranslationOnlyParsingQ3)(benchmark::State& state) {
+BENCHMARK_F(SQLBenchmark, BM_SQLTranslationOnlyParsingQ3)(benchmark::State& state) {
   while (state.KeepRunning()) {
     SQLParserResult result;
     SQLParser::parseSQLString(Q3, &result);
   }
 }
 
-BENCHMARK_DEFINE_F(SQLBenchmark, BM_SQLTranslationOnlyTranslationQ3)(benchmark::State& state) {
+BENCHMARK_F(SQLBenchmark, BM_SQLTranslationOnlyTranslationQ3)(benchmark::State& state) {
   SQLParserResult result;
   SQLParser::parseSQLString(Q3, &result);
 
@@ -133,5 +133,9 @@ BENCHMARK_DEFINE_F(SQLBenchmark, BM_Q2QueryOperatorWithQueryPlanCache)(benchmark
     operator_q2.execute();
   }
 }
+
+BENCHMARK_REGISTER_F(SQLBenchmark, BM_Q2QueryOperatorWithoutCache)->Apply(BenchmarkBasicFixture::ChunkSizeIn);
+BENCHMARK_REGISTER_F(SQLBenchmark, BM_Q2QueryOperatorWithParseTreeCache)->Apply(BenchmarkBasicFixture::ChunkSizeIn);
+BENCHMARK_REGISTER_F(SQLBenchmark, BM_Q2QueryOperatorWithQueryPlanCache)->Apply(BenchmarkBasicFixture::ChunkSizeIn);
 
 }  // namespace opossum
