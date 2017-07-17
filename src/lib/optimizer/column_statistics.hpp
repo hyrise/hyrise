@@ -45,7 +45,7 @@ class ColumnStatistics : public AbstractColumnStatistics {
   /**
    * Calcute min and max values from table.
    */
-  void initialze_min_max() const;
+  void initialize_min_max() const;
 
   const ColumnID _column_id;
 

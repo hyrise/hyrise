@@ -39,7 +39,7 @@ float ColumnStatistics<ColumnType>::distinct_count() const {
   DebugAssert(table != nullptr, "Corresponding table of column statistics is deleted.");
   auto table_wrapper = std::make_shared<TableWrapper>(table);
   table_wrapper->execute();
-  auto aggregate = std::make_shared<Aggregate>(table_wrapper, std::vector<std::pair<std::string, AggregateFunction>>{},
+  auto aggregate = std::make_shared<Aggregate>(table_wrapper, std::vector<AggregateDefinition>{},
                                                std::vector<std::string>{table->column_name(_column_id)});
   aggregate->execute();
   auto aggregate_table = aggregate->get_output();
@@ -50,7 +50,7 @@ float ColumnStatistics<ColumnType>::distinct_count() const {
 template <typename ColumnType>
 ColumnType ColumnStatistics<ColumnType>::min() const {
   if (!_min) {
-    initialze_min_max();
+    initialize_min_max();
   }
   return *_min;
 }
@@ -58,21 +58,20 @@ ColumnType ColumnStatistics<ColumnType>::min() const {
 template <typename ColumnType>
 ColumnType ColumnStatistics<ColumnType>::max() const {
   if (!_max) {
-    initialze_min_max();
+    initialize_min_max();
   }
   return *_max;
 }
 
 template <typename ColumnType>
-void ColumnStatistics<ColumnType>::initialze_min_max() const {
+void ColumnStatistics<ColumnType>::initialize_min_max() const {
   // Calculation is delegated to aggregate operator.
   auto table = _table.lock();
   DebugAssert(table != nullptr, "Corresponding table of column statistics is deleted.");
   auto table_wrapper = std::make_shared<TableWrapper>(table);
   table_wrapper->execute();
   const std::string &column_name = table->column_name(_column_id);
-  auto aggregate_args = std::vector<std::pair<std::string, AggregateFunction>>{std::make_pair(column_name, Min),
-                                                                               std::make_pair(column_name, Max)};
+  auto aggregate_args = std::vector<AggregateDefinition>{{column_name, Min}, {column_name, Max}};
   auto aggregate = std::make_shared<Aggregate>(table_wrapper, aggregate_args, std::vector<std::string>{});
   aggregate->execute();
   auto aggregate_table = aggregate->get_output();
