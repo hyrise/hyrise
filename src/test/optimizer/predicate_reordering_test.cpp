@@ -22,10 +22,10 @@ class PredicateReorderingTest : public BaseTest {
   std::shared_ptr<AbstractASTNode> setupAst() {
     const auto t_n = std::make_shared<StoredTableNode>("a");
 
-    const auto ts_n = std::make_shared<PredicateNode>("c1", ScanType::OpEquals, "a");
+    const auto ts_n = std::make_shared<PredicateNode>("c1", nullptr, ScanType::OpEquals, "a");
     ts_n->set_left_child(t_n);
 
-    const auto ts_n_2 = std::make_shared<PredicateNode>("c2", ScanType::OpEquals, "a");
+    const auto ts_n_2 = std::make_shared<PredicateNode>("c2", nullptr, ScanType::OpEquals, "a");
     ts_n_2->set_left_child(ts_n);
 
     return ts_n_2;

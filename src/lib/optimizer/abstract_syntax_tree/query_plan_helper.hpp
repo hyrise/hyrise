@@ -4,6 +4,8 @@
 #include <memory>
 #include <vector>
 
+#include "abstract_ast_node.hpp"
+
 namespace opossum {
 
 class QueryPlanHelper {

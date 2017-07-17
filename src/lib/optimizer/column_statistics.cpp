@@ -50,7 +50,7 @@ float ColumnStatistics<ColumnType>::distinct_count() const {
 template <typename ColumnType>
 ColumnType ColumnStatistics<ColumnType>::min() const {
   if (!_min) {
-    initialze_min_max();
+    initialize_min_max();
   }
   return *_min;
 }
@@ -58,13 +58,13 @@ ColumnType ColumnStatistics<ColumnType>::min() const {
 template <typename ColumnType>
 ColumnType ColumnStatistics<ColumnType>::max() const {
   if (!_max) {
-    initialze_min_max();
+    initialize_min_max();
   }
   return *_max;
 }
 
 template <typename ColumnType>
-void ColumnStatistics<ColumnType>::initialze_min_max() const {
+void ColumnStatistics<ColumnType>::initialize_min_max() const {
   // Calculation is delegated to aggregate operator.
   auto table = _table.lock();
   DebugAssert(table != nullptr, "Corresponding table of column statistics is deleted.");

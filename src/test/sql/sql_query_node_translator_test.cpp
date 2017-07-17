@@ -8,11 +8,11 @@
 #include "gtest/gtest.h"
 
 #include "optimizer/abstract_syntax_tree/abstract_ast_node.hpp"
+#include "optimizer/abstract_syntax_tree/aggregate_node.hpp"
 #include "optimizer/abstract_syntax_tree/join_node.hpp"
 #include "optimizer/abstract_syntax_tree/predicate_node.hpp"
 #include "optimizer/abstract_syntax_tree/projection_node.hpp"
 #include "optimizer/abstract_syntax_tree/sort_node.hpp"
-#include "optimizer/abstract_syntax_tree/stored_table_node.hpp"
 #include "sql/sql_query_node_translator.hpp"
 #include "storage/storage_manager.hpp"
 
@@ -61,6 +61,57 @@ TEST_F(SQLQueryNodeTranslatorTest, SelectStarAllTest) {
   EXPECT_FALSE(result_node->left_child()->left_child());
 }
 
+TEST_F(SQLQueryNodeTranslatorTest, ExpressionTest) {
+  const auto query = "SELECT * FROM table_a WHERE a = 1234 + 1";
+  std::cout << query << std::endl;
+  auto result_node = compile_query(query);
+
+  EXPECT_EQ(result_node->type(), ASTNodeType::Projection);
+  EXPECT_FALSE(result_node->right_child());
+
+  auto ts_node_1 = result_node->left_child();
+  EXPECT_EQ(ts_node_1->type(), ASTNodeType::Predicate);
+  EXPECT_FALSE(ts_node_1->right_child());
+
+  auto predicate = std::static_pointer_cast<PredicateNode>(ts_node_1)->predicate();
+  predicate->print();
+  EXPECT_EQ(predicate->type(), ExpressionType::Equals);
+}
+
+TEST_F(SQLQueryNodeTranslatorTest, ExpressionStringTest) {
+  const auto query = "SELECT * FROM table_a WHERE a = \"b\"";
+  std::cout << query << std::endl;
+  auto result_node = compile_query(query);
+
+  EXPECT_EQ(result_node->type(), ASTNodeType::Projection);
+  EXPECT_FALSE(result_node->right_child());
+
+  auto ts_node_1 = result_node->left_child();
+  EXPECT_EQ(ts_node_1->type(), ASTNodeType::Predicate);
+  EXPECT_FALSE(ts_node_1->right_child());
+
+  auto predicate = std::static_pointer_cast<PredicateNode>(ts_node_1)->predicate();
+  predicate->print();
+  EXPECT_EQ(predicate->type(), ExpressionType::Equals);
+}
+
+TEST_F(SQLQueryNodeTranslatorTest, ExpressionStringTest2) {
+  const auto query = "SELECT * FROM table_a WHERE a = 'b'";
+  std::cout << query << std::endl;
+  auto result_node = compile_query(query);
+
+  EXPECT_EQ(result_node->type(), ASTNodeType::Projection);
+  EXPECT_FALSE(result_node->right_child());
+
+  auto ts_node_1 = result_node->left_child();
+  EXPECT_EQ(ts_node_1->type(), ASTNodeType::Predicate);
+  EXPECT_FALSE(ts_node_1->right_child());
+
+  auto predicate = std::static_pointer_cast<PredicateNode>(ts_node_1)->predicate();
+  predicate->print();
+  EXPECT_EQ(predicate->type(), ExpressionType::Equals);
+}
+
 TEST_F(SQLQueryNodeTranslatorTest, SelectWithAndCondition) {
   const auto query = "SELECT * FROM table_a WHERE a >= 1234 AND b < 457.9";
   auto result_node = compile_query(query);
@@ -80,6 +131,24 @@ TEST_F(SQLQueryNodeTranslatorTest, SelectWithAndCondition) {
   EXPECT_EQ(t_node->type(), ASTNodeType::StoredTable);
   EXPECT_FALSE(t_node->left_child());
   EXPECT_FALSE(t_node->right_child());
+}
+
+TEST_F(SQLQueryNodeTranslatorTest, AggregateWithExpression) {
+  const auto query = "SELECT SUM(a+b) AS s, SUM(a*b) as f FROM table_a";
+  const auto result_node = compile_query(query);
+
+  EXPECT_EQ(result_node->type(), ASTNodeType::Aggregate);
+  EXPECT_FALSE(result_node->right_child());
+
+  const auto aggregate_node = std::dynamic_pointer_cast<AggregateNode>(result_node);
+  EXPECT_EQ(aggregate_node->aggregates().size(), 2u);
+  EXPECT_EQ(aggregate_node->aggregates().at(0).alias, std::string("s"));
+  EXPECT_EQ(aggregate_node->aggregates().at(1).alias, std::string("f"));
+
+  auto t_node_1 = result_node->left_child();
+  EXPECT_EQ(t_node_1->type(), ASTNodeType::StoredTable);
+  EXPECT_FALSE(t_node_1->left_child());
+  EXPECT_FALSE(t_node_1->right_child());
 }
 
 TEST_F(SQLQueryNodeTranslatorTest, SelectMultipleOrderBy) {
@@ -120,5 +189,4 @@ TEST_F(SQLQueryNodeTranslatorTest, SelectInnerJoin) {
   EXPECT_EQ(join_node->join_column_names()->first, "a");
   EXPECT_EQ(join_node->join_column_names()->second, "a");
 }
-
 }  // namespace opossum

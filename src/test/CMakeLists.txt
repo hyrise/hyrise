@@ -50,6 +50,7 @@ set(
     optimizer/table_statistics_test.cpp
     scheduler/scheduler_test.cpp
     sql/sql_basic_cache_test.cpp
+    sql/sql_expression_translator_test.cpp
     sql/sql_parse_tree_cache_test.cpp
     sql/sql_query_node_translator_test.cpp
     sql/sql_prepare_execute_test.cpp
@@ -57,6 +58,7 @@ set(
     sql/sql_query_plan_test.cpp
     sql/sql_query_plan_cache_test.cpp
     sql/sql_select_test.cpp
+    sql/tpch_test.cpp
     storage/adaptive_radix_tree_index_test.cpp
     storage/chunk_test.cpp
     storage/composite_group_key_index_test.cpp

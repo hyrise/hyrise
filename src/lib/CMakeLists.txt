@@ -59,6 +59,7 @@ set(
     concurrency/transaction_context.hpp
     concurrency/transaction_manager.cpp
     concurrency/transaction_manager.hpp
+    constant_mappings.cpp
     constant_mappings.hpp
     import_export/binary.hpp
     import_export/csv_converter.hpp
@@ -139,6 +140,12 @@ set(
     optimizer/abstract_column_statistics.hpp
     optimizer/abstract_syntax_tree/abstract_ast_node.cpp
     optimizer/abstract_syntax_tree/abstract_ast_node.hpp
+    optimizer/abstract_syntax_tree/abstract_expression_node.cpp
+    optimizer/abstract_syntax_tree/abstract_expression_node.hpp
+    optimizer/abstract_syntax_tree/aggregate_node.cpp
+    optimizer/abstract_syntax_tree/aggregate_node.hpp
+    optimizer/abstract_syntax_tree/expression_node.cpp
+    optimizer/abstract_syntax_tree/expression_node.hpp
     optimizer/abstract_syntax_tree/join_node.cpp
     optimizer/abstract_syntax_tree/join_node.hpp
     optimizer/abstract_syntax_tree/node_operator_translator.hpp
@@ -181,6 +188,9 @@ set(
     scheduler/worker.cpp
     scheduler/worker.hpp
     sql/lru_cache.hpp
+    sql/sql_expression_translator.cpp
+    sql/sql_expression_translator.hpp
+    sql/sql_query_cache.hpp
     sql/sql_query_node_translator.cpp
     sql/sql_query_node_translator.hpp
     sql/sql_query_operator.cpp

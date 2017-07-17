@@ -96,6 +96,8 @@ enum class SchedulePriority {
   High = 0     // Schedule task at the beginning of the queue
 };
 
+enum AggregateFunction { Min, Max, Sum, Avg, Count };
+
 // Part of AllParameterVariant to reference parameters that will be replaced later.
 // When stored in an operator, the operator's recreate method can contain functionality
 // that will replace a ValuePlaceholder with an explicit value from a given list of arguments
@@ -118,6 +120,39 @@ enum class ScanType {
   OpGreaterThanEquals,
   OpBetween,
   OpLike
+};
+
+enum class ExpressionType {
+  Literal,
+  Star,
+  Parameter,
+  ColumnReference,
+  FunctionReference,
+  Operator,
+  Select,
+  Plus,
+  Minus,
+  Asterisk,
+  Slash,
+  Percentage,
+  Caret,
+  Equals,
+  NotEquals,
+  Less,
+  LessEquals,
+  Greater,
+  GreaterEquals,
+  Like,
+  NotLike,
+  And,
+  Or,
+  In,
+  Not,
+  IsNull,
+  Exists,
+  Between,
+  Case,
+  Hint
 };
 
 enum class JoinMode { Inner, Left, Right, Outer, Cross, Natural, Self };

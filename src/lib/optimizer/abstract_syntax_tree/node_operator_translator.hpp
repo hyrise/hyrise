@@ -1,5 +1,6 @@
 #pragma once
 
+#include <atomic>
 #include <functional>
 #include <memory>
 #include <unordered_map>
@@ -31,6 +32,7 @@ class NodeOperatorTranslator {
   const std::shared_ptr<AbstractOperator> translate_projection_node(std::shared_ptr<AbstractASTNode> node) const;
   const std::shared_ptr<AbstractOperator> translate_order_by_node(std::shared_ptr<AbstractASTNode> node) const;
   const std::shared_ptr<AbstractOperator> translate_join_node(std::shared_ptr<AbstractASTNode> node) const;
+  const std::shared_ptr<AbstractOperator> translate_aggregate_node(std::shared_ptr<AbstractASTNode> node) const;
 
  private:
   std::unordered_map<ASTNodeType, std::function<std::shared_ptr<AbstractOperator>(std::shared_ptr<AbstractASTNode>)>>

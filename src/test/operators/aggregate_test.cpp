@@ -251,7 +251,7 @@ TEST_F(OperatorsAggregateTest, TwoAggregateSumAvg) {
 }
 
 TEST_F(OperatorsAggregateTest, TwoAggregateSumAvgAlias) {
-  this->test_output(_table_wrapper_1_2, {{"b", Sum, "sum_b"}, {"c", Avg}}, {std::string("a")},
+  this->test_output(_table_wrapper_1_2, {{"b", Sum, optional<std::string>("sum_b")}, {"c", Avg}}, {std::string("a")},
                     "src/test/tables/aggregateoperator/groupby_int_1gb_2agg/sum_avg_alias.tbl", 1);
 }
 
