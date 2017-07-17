@@ -65,19 +65,7 @@ std::shared_ptr<TableStatistics> TableStatistics::predicate_statistics(const std
   auto clone = std::make_shared<TableStatistics>(*this);
   ColumnStatisticsContainer column_statistics_container{1, nullptr};
 
-  if (value.type() == typeid(ColumnName)) {
-    const ColumnID value_column_id = table->column_id_by_name(boost::get<ColumnName>(value));
-    auto value_column_statistics = column_statistics(value_column_id);
-
-    auto two_column_statistics_container =
-        old_column_statistics->predicate_selectivity(scan_type, value_column_statistics, value2);
-
-    if (two_column_statistics_container.second_column_statistics != nullptr) {
-      clone->_column_statistics[value_column_id] = two_column_statistics_container.second_column_statistics;
-    }
-    column_statistics_container = two_column_statistics_container;
-
-  } else if (value.type() == typeid(AllTypeVariant)) {
+  if (value.type() == typeid(AllTypeVariant)) {
     auto casted_value = boost::get<AllTypeVariant>(value);
 
     column_statistics_container = old_column_statistics->predicate_selectivity(scan_type, casted_value, value2);

@@ -31,10 +31,6 @@ class ColumnStatistics : public AbstractColumnStatistics {
   ColumnStatisticsContainer predicate_selectivity(const ScanType scan_type, const ValuePlaceholder &value,
                                                   const optional<AllTypeVariant> &value2) override;
 
-  TwoColumnStatisticsContainer predicate_selectivity(
-      const ScanType scan_type, const std::shared_ptr<AbstractColumnStatistics> abstract_value_column_statistics,
-      const optional<AllTypeVariant> &value2) override;
-
  protected:
   std::ostream &print_to_stream(std::ostream &os) const override;
 
