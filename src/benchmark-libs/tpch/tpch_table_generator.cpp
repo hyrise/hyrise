@@ -122,6 +122,11 @@ float TableGenerator::calculate_part_retailprice(size_t i) const {
   return (90000.f + (i % 200001) / 10.f + 100.f * (i % 1000)) / 100.f;
 }
 
+int TableGenerator::calculate_partsuppkey(size_t partkey, size_t supplier) const {
+  size_t s = _scale_factor * _supplier_size;
+  return (partkey + (supplier * (s / 4 + partkey / s))) % s;
+}
+
 std::shared_ptr<opossum::Table> TableGenerator::generate_suppliers_table() {
   auto table = std::make_shared<opossum::Table>(_chunk_size);
   size_t table_size = _scale_factor * _supplier_size;
@@ -188,10 +193,7 @@ std::shared_ptr<opossum::Table> TableGenerator::generate_partsupps_table() {
   auto cardinalities = std::make_shared<std::vector<size_t>>(std::initializer_list<size_t>{_scale_factor * _part_size, _partsupp_size});
 
   add_column<int>(table, "PS_PARTKEY", cardinalities, [&](std::vector<size_t> indices) { return indices[0]; });
-  add_column<int>(table, "PS_SUPPKEY", cardinalities, [&](std::vector<size_t> indices) {
-    size_t s = _scale_factor * _supplier_size;
-    return (indices[0] + (indices[1] * (s / 4 + indices[0] / s))) % s;
-  });
+  add_column<int>(table, "PS_SUPPKEY", cardinalities, [&](std::vector<size_t> indices) { return calculate_partsuppkey(indices[0], indices[1]); });
   add_column<int>(table, "PS_AVAILQTY", cardinalities, [&](std::vector<size_t>) { return _random_gen.number(1, 9999); });
   add_column<float>(table, "PS_SUPPLYCOST", cardinalities, [&](std::vector<size_t>) { return _random_gen.number(100, 100000) / 100.f; });
   add_column<std::string>(table, "PS_COMMENT", cardinalities, [&](std::vector<size_t>) { return _text_field_gen.text_string(49, 198); });
@@ -306,7 +308,10 @@ std::shared_ptr<opossum::Table> TableGenerator::generate_lineitems_table(TableGe
 
   add_column<int>(table, "L_ORDERKEY", cardinalities, [&](std::vector<size_t> indices) { return flattened_orderlines[indices[0]].orderkey; });
   add_column<int>(table, "L_PARTKEY", cardinalities, [&](std::vector<size_t> indices) { return flattened_orderlines[indices[0]].partkey; });
-  add_column<int>(table, "L_SUPPKEY", cardinalities, [&](std::vector<size_t> indices) { return 1234; }); // TODO
+  add_column<int>(table, "L_SUPPKEY", cardinalities, [&](std::vector<size_t> indices) {
+    size_t supplier = _random_gen.number(0, 3);
+    return calculate_partsuppkey(flattened_orderlines[indices[0]].partkey, supplier);
+  });
   add_column<int>(table, "L_LINENUMBER", cardinalities, [&](std::vector<size_t> indices) { return flattened_orderlines[indices[0]].linenumber; });
   add_column<int>(table, "L_QUANTITY", cardinalities, [&](std::vector<size_t> indices) { return flattened_orderlines[indices[0]].quantity; });
   add_column<float>(table, "L_EXTENDEDPRICE", cardinalities, [&](std::vector<size_t> indices) { return flattened_orderlines[indices[0]].extendedprice; });

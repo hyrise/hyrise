@@ -80,6 +80,8 @@ class TableGenerator {
 
   float calculate_part_retailprice(size_t i) const;
 
+  int calculate_partsuppkey(size_t partkey, size_t supplier) const;
+
   size_t get_time(size_t year, size_t month, size_t day) {
     struct std::tm time;
     time.tm_sec = 0;
