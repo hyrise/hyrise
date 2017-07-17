@@ -181,7 +181,7 @@ std::shared_ptr<AbstractASTNode> SQLQueryNodeTranslator::_translate_table_ref(co
   throw std::runtime_error("Unable to translate source table.");
 }
 
-const std::string SQLQueryNodeTranslator::_get_column_name(const hsql::Expr& expr) const {
+std::string SQLQueryNodeTranslator::_get_column_name(const hsql::Expr& expr) const {
   std::string name = "";
   if (expr.hasTable()) {
     name += std::string(expr.table) + ".";
@@ -196,7 +196,7 @@ const std::string SQLQueryNodeTranslator::_get_column_name(const hsql::Expr& exp
   return name;
 }
 
-const AllTypeVariant SQLQueryNodeTranslator::_translate_literal(const hsql::Expr& expr) {
+AllTypeVariant SQLQueryNodeTranslator::_translate_literal(const hsql::Expr& expr) {
   switch (expr.type) {
     case hsql::kExprLiteralInt:
       return expr.ival;
@@ -249,17 +249,17 @@ std::shared_ptr<AbstractASTNode> SQLQueryNodeTranslator::_translate_filter_expr(
 
   const auto column_name = _get_column_name(*column_expr);
 
-  AllTypeVariant value;
+  AllParameterVariant value;
   optional<AllTypeVariant> value2;
   if (scan_type == ScanType::OpBetween) {
     const Expr* left_expr = expr.exprList->at(0);
-    value = _translate_literal(*left_expr);
+    value = AllParameterVariant(_translate_literal(*left_expr));
 
     const Expr* right_expr = expr.exprList->at(1);
     value2 = _translate_literal(*right_expr);
   } else {
     const Expr* other_expr = (column_expr == expr.expr) ? expr.expr2 : expr.expr;
-    value = _translate_literal(*other_expr);
+    value = AllParameterVariant(_translate_literal(*other_expr));
   }
 
   auto predicate_node = std::make_shared<PredicateNode>(column_name, expressionNode, scan_type, value, value2);
