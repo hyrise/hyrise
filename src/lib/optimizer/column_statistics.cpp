@@ -199,56 +199,6 @@ ColumnStatisticsContainer ColumnStatistics<ColumnType>::predicate_selectivity(co
 }
 
 template <>
-TwoColumnStatisticsContainer ColumnStatistics<std::string>::predicate_selectivity(
-    const ScanType scan_type, const std::shared_ptr<AbstractColumnStatistics> abstract_value_column_statistics,
-    const optional<AllTypeVariant> &value2) {
-  // TODO(anybody) implement special case for strings
-  return {1.f, nullptr, nullptr};
-}
-
-template <typename ColumnType>
-TwoColumnStatisticsContainer ColumnStatistics<ColumnType>::predicate_selectivity(
-    const ScanType scan_type, const std::shared_ptr<AbstractColumnStatistics> abstract_value_column_statistics,
-    const optional<AllTypeVariant> &value2) {
-  auto value_column_statistics =
-      std::dynamic_pointer_cast<ColumnStatistics<ColumnType>>(abstract_value_column_statistics);
-  DebugAssert(value_column_statistics != nullptr, "Cannot compare columns of different type");
-
-  auto common_min = std::max(min(), value_column_statistics->min());
-  auto common_max = std::min(max(), value_column_statistics->max());
-
-  switch (scan_type) {
-    case ScanType::OpEquals: {
-      if (common_min > common_max) {
-        return {0.f, nullptr, nullptr};
-      }
-
-      // calculate what percentage of values lie in common value range
-      float overlapping_ratio_this = (common_max - common_min + 1) / static_cast<float>(max() - min() + 1);
-      float overlapping_ratio_value =
-          (common_max - common_min + 1) /
-          static_cast<float>(value_column_statistics->max() - value_column_statistics->min() + 1);
-
-      // calculate how many distinct values lie in common value range
-      auto overlapping_distinct_count_this = overlapping_ratio_this * distinct_count();
-      auto overlapping_distinct_count_value = overlapping_ratio_value * value_column_statistics->distinct_count();
-      auto overlapping_distinct_count = std::min(overlapping_distinct_count_this, overlapping_distinct_count_value);
-
-      // calculate the probability that two values in the common range match
-      auto probability_hit_value = value_column_statistics->distinct_count() / distinct_count();
-
-      auto column_statistics_this =
-          std::make_shared<ColumnStatistics>(_column_id, overlapping_distinct_count, common_min, common_max);
-      auto column_statistics_value = std::make_shared<ColumnStatistics>(
-          value_column_statistics->_column_id, overlapping_distinct_count, common_min, common_max);
-      return {overlapping_distinct_count * probability_hit_value, column_statistics_this, column_statistics_value};
-    }
-    // TODO(Jonathan, Fabian) finish predicates for predicates with two columns
-    default: { return {1.f, nullptr, nullptr}; }
-  }
-}
-
-template <>
 ColumnStatisticsContainer ColumnStatistics<std::string>::predicate_selectivity(const ScanType scan_type,
                                                                                const ValuePlaceholder &value,
                                                                                const optional<AllTypeVariant> &value2) {

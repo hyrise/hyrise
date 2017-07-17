@@ -11,7 +11,6 @@
 namespace opossum {
 
 struct ColumnStatisticsContainer;
-struct TwoColumnStatisticsContainer;
 
 class AbstractColumnStatistics {
  public:
@@ -29,13 +28,6 @@ class AbstractColumnStatistics {
   virtual ColumnStatisticsContainer predicate_selectivity(const ScanType scan_type, const ValuePlaceholder &value,
                                                           const optional<AllTypeVariant> &value2) = 0;
 
-  /**
-   * Predicate selectivity for two columns.
-   */
-  virtual TwoColumnStatisticsContainer predicate_selectivity(
-      const ScanType scan_type, const std::shared_ptr<AbstractColumnStatistics> abstract_value_column_statistics,
-      const optional<AllTypeVariant> &value2) = 0;
-
  protected:
   /**
    * In order to to call insertion operator on ostream with AbstractColumnStatistics with values of ColumnStatistics<T>,
@@ -51,17 +43,6 @@ class AbstractColumnStatistics {
 struct ColumnStatisticsContainer {
   float selectivity;
   std::shared_ptr<AbstractColumnStatistics> column_statistics;
-};
-
-/**
- * Return type of get selectivity functions for operations on two column
- */
-struct TwoColumnStatisticsContainer : public ColumnStatisticsContainer {
-  TwoColumnStatisticsContainer(float selectivity, std::shared_ptr<AbstractColumnStatistics> column_stats,
-                               std::shared_ptr<AbstractColumnStatistics> second_colomn_stats)
-      : ColumnStatisticsContainer{selectivity, column_stats}, second_column_statistics(second_colomn_stats) {}
-
-  std::shared_ptr<AbstractColumnStatistics> second_column_statistics;
 };
 
 inline std::ostream &operator<<(std::ostream &os, AbstractColumnStatistics &obj) { return obj.print_to_stream(os); }
