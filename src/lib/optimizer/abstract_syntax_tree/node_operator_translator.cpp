@@ -1,6 +1,8 @@
 #include "node_operator_translator.hpp"
 
 #include <memory>
+#include <string>
+#include <vector>
 
 #include "constant_mappings.hpp"
 #include "operators/aggregate.hpp"

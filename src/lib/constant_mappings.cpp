@@ -1,5 +1,8 @@
 #include "constant_mappings.hpp"
 
+#include <string>
+#include <unordered_map>
+
 namespace opossum {
 
 const std::unordered_map<std::string, proto::ScanType> string_to_proto_scan_type = {

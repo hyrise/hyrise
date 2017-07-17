@@ -1,5 +1,6 @@
 #pragma once
 
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -11,7 +12,7 @@
 namespace opossum {
 
 struct AggregateColumnDefinition {
-  AggregateColumnDefinition(const std::shared_ptr<ExpressionNode>& expr);
+  explicit AggregateColumnDefinition(const std::shared_ptr<ExpressionNode>& expr);
   AggregateColumnDefinition(const std::string& alias, const std::shared_ptr<ExpressionNode>& expr);
 
   optional<std::string> alias;

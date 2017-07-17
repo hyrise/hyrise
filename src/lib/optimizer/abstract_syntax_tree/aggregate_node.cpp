@@ -1,5 +1,6 @@
 #include "aggregate_node.hpp"
 
+#include <memory>
 #include <sstream>
 #include <string>
 #include <vector>

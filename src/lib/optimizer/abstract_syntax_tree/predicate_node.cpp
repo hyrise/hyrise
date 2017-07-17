@@ -1,5 +1,6 @@
 #include "predicate_node.hpp"
 
+#include <memory>
 #include <string>
 
 #include "common.hpp"
