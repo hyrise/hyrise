@@ -56,6 +56,9 @@ class Table {
   // adds a chunk to the table
   void add_chunk(Chunk chunk);
 
+  // Returns a list of all column names.
+  const std::vector<std::string> column_names() const;
+
   // returns the column name of the nth column
   const std::string &column_name(ColumnID column_id) const;
 

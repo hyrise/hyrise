@@ -5,6 +5,7 @@
 #include <cstdint>
 #include <limits>
 #include <string>
+#include <tuple>
 #include <vector>
 
 #include "strong_typedef.hpp"
@@ -118,5 +119,7 @@ enum class ScanType {
   OpBetween,
   OpLike
 };
+
+enum class JoinMode { Inner, Left, Right, Outer, Cross, Natural, Self };
 
 }  // namespace opossum

@@ -71,6 +71,7 @@ set(
     import_export/csv_writer.hpp
     network/operator_translator.cpp
     network/operator_translator.hpp
+    network/opossum.pb.wrapper.hpp
     network/request_handler.cpp
     network/request_handler.hpp
     network/response_builder.hpp
@@ -135,6 +136,16 @@ set(
     operators/update.hpp
     operators/validate.cpp
     operators/validate.hpp
+    optimizer/abstract_syntax_tree/abstract_ast_node.cpp
+    optimizer/abstract_syntax_tree/abstract_ast_node.hpp
+    optimizer/abstract_syntax_tree/predicate_node.cpp
+    optimizer/abstract_syntax_tree/predicate_node.hpp
+    optimizer/abstract_syntax_tree/projection_node.cpp
+    optimizer/abstract_syntax_tree/projection_node.hpp
+    optimizer/abstract_syntax_tree/sort_node.cpp
+    optimizer/abstract_syntax_tree/sort_node.hpp
+    optimizer/abstract_syntax_tree/stored_table_node.cpp
+    optimizer/abstract_syntax_tree/stored_table_node.hpp
     optimizer/abstract_column_statistics.hpp
     optimizer/column_statistics.cpp
     optimizer/column_statistics.hpp
