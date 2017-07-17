@@ -261,7 +261,7 @@ std::shared_ptr<AbstractASTNode> SQLQueryNodeTranslator::_translate_filter_expr(
     const Expr* other_expr = (column_expr == expr.expr) ? expr.expr2 : expr.expr;
     value = AllParameterVariant(_translate_literal(*other_expr));
   }
-  
+
   const std::string column_name2{column_name};
   const std::shared_ptr<ExpressionNode> expressionNode2{expressionNode};
   ScanType scan_type2{scan_type};
