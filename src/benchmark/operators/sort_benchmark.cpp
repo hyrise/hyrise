@@ -21,9 +21,9 @@ BENCHMARK_DEFINE_F(BenchmarkBasicFixture, BM_Sort_ChunkSizeOut)(benchmark::State
 }
 
 static void ChunkSizeOut(benchmark::internal::Benchmark* b) {
-  for (int i : {0, 10000, 100000}) {
-    for (int j : {0, 10000, 100000}) {
-      b->Args({i, j});  // i = chunk size in, i = chunk size out
+  for (ChunkID chunk_size_in : {0, 10000, 100000}) {
+    for (ChunkID chunk_size_out : {0, 10000, 100000}) {
+      b->Args({chunk_size_in, chunk_size_out});
     }
   }
 }

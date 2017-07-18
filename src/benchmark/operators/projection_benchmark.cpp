@@ -15,6 +15,7 @@ namespace opossum {
 class OperatorsProjectionBenchmark : public BenchmarkBasicFixture {
  public:
   void SetUp(const ::benchmark::State& state) override {
+    BenchmarkBasicFixture::SetUp(state);
     _table_ref = std::make_shared<TableScan>(_table_wrapper_a, "a", ScanType::OpGreaterThanEquals, 0);  // all
     _table_ref->execute();
 
@@ -65,9 +66,9 @@ BENCHMARK_DEFINE_F(OperatorsProjectionBenchmark, BM_ProjectionConstantTerm)(benc
 }
 
 static void CustomArguments(benchmark::internal::Benchmark* b) {
-  for (int i : {0, 10000, 100000}) {
-    for (int j = 0; j <= 2; j++) {
-      b->Args({i, j});  // i = column type, j = chunk size in
+  for (ChunkID chunk_size : {ChunkID(0), ChunkID(10000), ChunkID(100000)}) {
+    for (int column_type = 0; column_type <= 2; column_type++) {
+      b->Args({static_cast<int>(chunk_size), column_type});
     }
   }
 }

@@ -5,7 +5,7 @@
 namespace opossum {
 class TableGenerator {
  public:
-  std::shared_ptr<Table> get_table(const size_t chunk_size);
+  std::shared_ptr<Table> get_table(const ChunkID chunk_size);
 
  protected:
   const size_t _num_columns = 10;

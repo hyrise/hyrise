@@ -32,7 +32,7 @@ class BenchmarkBasicFixture : public benchmark::Fixture {
   void TearDown(const ::benchmark::State&) override { opossum::StorageManager::get().reset(); }
 
   static void ChunkSizeIn(benchmark::internal::Benchmark* b) {
-    for (size_t i : {0u, 10000u, 100000u}) {
+    for (ChunkID i : {0u, 10000u, 100000u}) {
       b->Args({static_cast<int>(i)});  // i = chunk size
     }
   }
