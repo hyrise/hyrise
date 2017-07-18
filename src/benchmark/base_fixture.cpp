@@ -23,8 +23,9 @@ class BenchmarkBasicFixture : public benchmark::Fixture {
 
     auto table_generator2 = std::make_shared<TableGenerator>();
 
-    _table_wrapper_a = std::make_shared<TableWrapper>(table_generator->get_table(state.range(0)));
-    _table_wrapper_b = std::make_shared<TableWrapper>(table_generator2->get_table(state.range(0)));
+    _table_wrapper_a = std::make_shared<TableWrapper>(table_generator->get_table(static_cast<ChunkID>(state.range(0))));
+    _table_wrapper_b =
+        std::make_shared<TableWrapper>(table_generator2->get_table(static_cast<ChunkID>(state.range(0))));
     _table_wrapper_a->execute();
     _table_wrapper_b->execute();
   }
@@ -32,7 +33,7 @@ class BenchmarkBasicFixture : public benchmark::Fixture {
   void TearDown(const ::benchmark::State&) override { opossum::StorageManager::get().reset(); }
 
   static void ChunkSizeIn(benchmark::internal::Benchmark* b) {
-    for (ChunkID i : {0u, 10000u, 100000u}) {
+    for (ChunkID i : {ChunkID(0), ChunkID(10000), ChunkID(100000)}) {
       b->Args({static_cast<int>(i)});  // i = chunk size
     }
   }
