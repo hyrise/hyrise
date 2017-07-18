@@ -21,7 +21,7 @@ namespace opossum {
 
 struct SQLTestParam {
   SQLTestParam(std::string query, std::string result_table_path)
-      : query(query), result_table_path(result_table_path), order_sensitive(false){};
+      : query(query), result_table_path(result_table_path), order_sensitive(false) {}
   SQLTestParam(std::string query, std::string result_table_path, bool order_sensitive)
       : query(query), result_table_path(result_table_path), order_sensitive(order_sensitive) {}
 
@@ -118,13 +118,14 @@ const SQLTestParam test_queries[] = {
      "src/test/tables/joinoperators/int_left_join.tbl"},
 
     // GROUP BY
-    // TODO(mp): group by
-    //        {"SELECT a, SUM(b) FROM groupby_int_1gb_1agg GROUP BY a;",
-    //                     "src/test/tables/aggregateoperator/groupby_int_1gb_1agg/sum.tbl"},
-    //        {"SELECT a, SUM(b), AVG(c) FROM groupby_int_1gb_2agg GROUP BY a;",
-    //                     "src/test/tables/aggregateoperator/groupby_int_1gb_2agg/sum_avg.tbl"},
-    //        {"SELECT a, b, MAX(c), AVG(d) FROM groupby_int_2gb_2agg GROUP BY a, b;",
-    //                     "src/test/tables/aggregateoperator/groupby_int_2gb_2agg/max_avg.tbl"},
+    {"SELECT a, SUM(b) FROM groupby_int_1gb_1agg GROUP BY a;",
+            "src/test/tables/aggregateoperator/groupby_int_1gb_1agg/sum.tbl"},
+    {"SELECT a, SUM(b), AVG(c) FROM groupby_int_1gb_2agg GROUP BY a;",
+            "src/test/tables/aggregateoperator/groupby_int_1gb_2agg/sum_avg.tbl"},
+    {"SELECT a, b, MAX(c), AVG(d) FROM groupby_int_2gb_2agg GROUP BY a, b;",
+            "src/test/tables/aggregateoperator/groupby_int_2gb_2agg/max_avg.tbl"},
+
+    // HAVING
     //        {"SELECT a, b, MAX(c), AVG(d) FROM groupby_int_2gb_2agg GROUP BY a, b HAVING MAX(c) >= 10"
     //                             " AND MAX(c) < 40;",
     //                             "src/test/tables/aggregateoperator/groupby_int_2gb_2agg/max_avg.tbl"},

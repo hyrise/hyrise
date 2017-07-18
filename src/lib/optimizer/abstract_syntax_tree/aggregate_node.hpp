@@ -13,10 +13,10 @@ namespace opossum {
 
 struct AggregateColumnDefinition {
   explicit AggregateColumnDefinition(const std::shared_ptr<ExpressionNode>& expr);
-  AggregateColumnDefinition(const std::string& alias, const std::shared_ptr<ExpressionNode>& expr);
+  AggregateColumnDefinition(const std::shared_ptr<ExpressionNode>& expr, const std::string& alias);
 
-  optional<std::string> alias;
   std::shared_ptr<ExpressionNode> expr;
+  optional<std::string> alias;
 };
 
 class AggregateNode : public AbstractASTNode {

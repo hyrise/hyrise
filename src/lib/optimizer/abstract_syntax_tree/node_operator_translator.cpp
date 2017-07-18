@@ -111,33 +111,46 @@ const std::shared_ptr<AbstractOperator> NodeOperatorTranslator::translate_aggreg
 
   auto alias_index = 0;
 
+  // We only need a Projection if we have arithmetic expressions.
+  bool need_projection = false;
+
   for (const auto &aggregate : aggregates) {
     const auto &expr = aggregate.expr;
     Assert(expr->type() == ExpressionType::FunctionReference, "Expression is not a function.");
 
-    const auto &arithmetic_expr = std::dynamic_pointer_cast<ExpressionNode>(expr->expression_list()->at(0));
-    Assert(static_cast<bool>(arithmetic_expr), "First item of expression_list is not an expression.");
+    const auto &func_expr = std::dynamic_pointer_cast<ExpressionNode>(expr->expression_list()->at(0));
+    Assert(static_cast<bool>(func_expr), "First item of expression_list is not an expression.");
 
-    Assert(arithmetic_expr->is_arithmetic(), "Expression is not an arithmetic expression.");
+    if (func_expr->is_operand()) {
+      // TODO(tim): column data type is not always float
+      // TODO(tim): check if this can be done prettier
+      definitions.emplace_back(func_expr->name(), "float", func_expr->name());
+      expr_aliases.emplace_back(func_expr->name());
+    } else if (func_expr->is_arithmetic()) {
+      need_projection = true;
 
-    auto left_operand = std::dynamic_pointer_cast<ExpressionNode>(arithmetic_expr->left_child());
-    Assert(static_cast<bool>(left_operand), "Left child of arithmetic expression is not an expression.");
-    auto right_operand = std::dynamic_pointer_cast<ExpressionNode>(arithmetic_expr->right_child());
-    Assert(static_cast<bool>(right_operand), "Right child of arithmetic expression is not an expression.");
+      auto left_operand = std::dynamic_pointer_cast<ExpressionNode>(func_expr->left_child());
+      Assert(static_cast<bool>(left_operand), "Left child of arithmetic expression is not an expression.");
+      Assert(left_operand->is_operand(), "Left child is not a literal or column ref.");
 
-    Assert(left_operand->type() == ExpressionType::Literal || left_operand->type() == ExpressionType::ColumnReference,
-           "Left child is not a literal or column ref.");
-    Assert(right_operand->type() == ExpressionType::Literal || right_operand->type() == ExpressionType::ColumnReference,
-           "Right child is not a literal or column ref.");
+      auto right_operand = std::dynamic_pointer_cast<ExpressionNode>(func_expr->right_child());
+      Assert(static_cast<bool>(right_operand), "Right child of arithmetic expression is not an expression.");
+      Assert(right_operand->is_operand(), "Right child is not a literal or column ref.");
 
-    auto alias = "alias" + std::to_string(alias_index);
-    alias_index++;
+      auto alias = "alias" + std::to_string(alias_index);
+      alias_index++;
 
-    definitions.emplace_back(arithmetic_expr->to_expression_string(), "float", alias);
-    expr_aliases.emplace_back(alias);
+      // TODO(tim): column data type is not always float
+      definitions.emplace_back(func_expr->to_expression_string(), "float", alias);
+      expr_aliases.emplace_back(alias);
+    } else {
+      Fail("Expression is neither operand nor function.");
+    }
   }
 
-  out_operator = std::make_shared<Projection>(out_operator, definitions);
+  if (need_projection) {
+    out_operator = std::make_shared<Projection>(out_operator, definitions);
+  }
 
   /**
    * Build Aggregate
@@ -152,7 +165,7 @@ const std::shared_ptr<AbstractOperator> NodeOperatorTranslator::translate_aggreg
 
     aggregate_definitions.emplace_back(expr_aliases[aggregate_idx], aggregate_function, aggregate.alias);
   }
-  out_operator = std::make_shared<Aggregate>(out_operator, aggregate_definitions, std::vector<std::string>());
+  out_operator = std::make_shared<Aggregate>(out_operator, aggregate_definitions, aggregate_node->groupby_columns());
 
   return out_operator;
 }

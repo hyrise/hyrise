@@ -70,25 +70,31 @@ std::shared_ptr<AbstractASTNode> SQLQueryNodeTranslator::_translate_select(const
   // 5. SELECT clause
   // 6. ORDER BY clause
 
-  // Translate FROM.
   auto current_result_node = _translate_table_ref(*select.fromTable);
 
-  // Translate WHERE.
   if (select.whereClause) {
     current_result_node = _translate_filter_expr(*select.whereClause, current_result_node);
   }
 
-  // Translate SELECT list.
   // TODO(torpedro): Handle DISTINCT.
   Assert(select.selectList != nullptr, "SELECT list needs to exist");
   Assert(!select.selectList->empty(), "SELECT list needs to have entries");
 
-  if (select.selectList->front()->isType(hsql::kExprFunctionRef)) {
-    /**
-     * If the first select list entry is a function, we _currently_ assume all the other entries to be functions as
-     * well. We turn the list into an aggregate.
-     */
-    current_result_node = _translate_aggregate(select, current_result_node);
+  // If the query has a GROUP BY clause or if it has aggregates, we do not need a top-level projection
+  // because all elements must either be aggregate functions or columns of the GROUP BY clause,
+  // so the Aggregate operator will handle them.
+  auto is_aggregate = select.groupBy != nullptr;
+  if (!is_aggregate) {
+    for (auto* expr : *select.selectList) {
+      if (expr->isType(hsql::kExprFunctionRef)) {
+        is_aggregate = true;
+        break;
+      }
+    }
+  }
+
+  if (is_aggregate) {
+    current_result_node = _translate_aggregate(select.groupBy, *select.selectList, current_result_node);
   } else {
     current_result_node = _translate_projection(*select.selectList, current_result_node);
   }
@@ -275,15 +281,8 @@ std::shared_ptr<AbstractASTNode> SQLQueryNodeTranslator::_translate_filter_expr(
 }
 
 std::shared_ptr<AbstractASTNode> SQLQueryNodeTranslator::_translate_aggregate(
-    const hsql::SelectStatement& select, const std::shared_ptr<AbstractASTNode>& input_node) {
-  const auto& select_list = *select.selectList;
-#if IS_DEBUG
-  for (size_t e = 1; e < select_list.size(); e++) {
-    Assert(select_list[e]->isType(hsql::kExprFunctionRef),
-           "Select List entry " + std::to_string(e) + " is no function");
-  }
-#endif
-
+        const hsql::GroupByDescription* group_by, const std::vector<hsql::Expr*>& select_list,
+        const std::shared_ptr<AbstractASTNode>& input_node) {
   /**
    * Build Aggregates
    */
@@ -291,25 +290,26 @@ std::shared_ptr<AbstractASTNode> SQLQueryNodeTranslator::_translate_aggregate(
   aggregate_column_definitions.reserve(select_list.size());
 
   for (auto* expr : select_list) {
-    auto opossum_expr = SQLExpressionTranslator().translate_expression(*expr);
-    if (expr->alias)
-      aggregate_column_definitions.emplace_back(expr->alias, opossum_expr);
-    else
-      aggregate_column_definitions.emplace_back(opossum_expr);
+    if (expr->isType(hsql::kExprFunctionRef)) {
+      auto opossum_expr = SQLExpressionTranslator().translate_expression(*expr);
+      if (expr->alias) {
+        aggregate_column_definitions.emplace_back(opossum_expr, expr->alias);
+      } else {
+        aggregate_column_definitions.emplace_back(opossum_expr);
+      }
+    } else if (expr->isType(hsql::kExprColumnRef)) {
+      // If the item is a column, it has to be in the GROUP BY clause.
+      // TODO(tim): do check
+    }
   }
 
   /**
    * Build GROUP BY
    */
   std::vector<std::string> groupby_columns;
-  if (select.groupBy != nullptr) {
-    // TODO(tim&moritz): Transform HAVING.
-    Assert(select.groupBy->having == nullptr, "HAVING not supported, yet");
-    Assert(select.groupBy->columns != nullptr, "Need columns");
-
-    groupby_columns.reserve(select.groupBy->columns->size());
-
-    for (const auto* groupby_expr : *select.groupBy->columns) {
+  if (group_by != nullptr) {
+    groupby_columns.reserve(group_by->columns->size());
+    for (const auto* groupby_expr : *group_by->columns) {
       Assert(groupby_expr->isType(hsql::kExprColumnRef), "Only column ref GROUP BYs supported atm");
       Assert(groupby_expr->name != nullptr, "Expr::name needs to be set");
 
@@ -320,13 +320,16 @@ std::shared_ptr<AbstractASTNode> SQLQueryNodeTranslator::_translate_aggregate(
   auto aggregate_node = std::make_shared<AggregateNode>(aggregate_column_definitions, groupby_columns);
   aggregate_node->set_left_child(input_node);
 
+  // TODO(tim&moritz): Transform HAVING.
+  Assert(group_by == nullptr || group_by->having == nullptr, "HAVING not supported, yet");
+
   return aggregate_node;
 }
 
 std::shared_ptr<AbstractASTNode> SQLQueryNodeTranslator::_translate_projection(
-    const std::vector<hsql::Expr*>& expr_list, const std::shared_ptr<AbstractASTNode>& input_node) {
+    const std::vector<hsql::Expr*>& select_list, const std::shared_ptr<AbstractASTNode>& input_node) {
   std::vector<std::string> columns;
-  for (const Expr* expr : expr_list) {
+  for (const Expr* expr : select_list) {
     // TODO(tim): expressions
     if (expr->isType(hsql::kExprColumnRef)) {
       columns.push_back(_get_column_name(*expr));
