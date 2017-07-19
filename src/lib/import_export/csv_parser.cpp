@@ -9,9 +9,9 @@
 #include "import_export/csv_converter.hpp"
 #include "scheduler/job_task.hpp"
 
-// #include "resolve_type.hpp"
+#include "resolve_type.hpp"
 // #include "types.hpp"
-// #include "utils/assert.hpp"
+#include "utils/assert.hpp"
 
 namespace opossum {
 
@@ -19,8 +19,6 @@ CsvParser::CsvParser(size_t buffer_size, const CsvConfig & csv_config)
     : _buffer_size(buffer_size), _csv_config(csv_config) {}
 
 std::shared_ptr<Table> CsvParser::parse(const std::string& filename) {
-  const auto& delimiter = _csv_config.delimiter;
-
   const auto table = process_meta_file(filename + _csv_config.meta_file_extension);
 
   std::ifstream csvfile { filename };
@@ -29,26 +27,26 @@ std::shared_ptr<Table> CsvParser::parse(const std::string& filename) {
   // return empty table if input file is empty
   if (!csvfile) return table;
 
-  // make sure content ends with '\n' for better row processing later
-  if (content.back() != delimiter) content.push_back(delimiter);
+  // make sure content ends with a delimiter for better row processing later
+  if (content.back() != _csv_config.delimiter) content.push_back(_csv_config.delimiter);
 
   // Safe chunks in list to avoid memory relocations
   std::list<Chunk> chunks;
   std::vector<std::shared_ptr<JobTask>> tasks;
-  std::vector<size_t> row_ends;
-  while (find_n(content, delimiter, table->chunk_size(), row_ends)) {
+  std::vector<size_t> field_ends;
+  while (find_fields_in_chunk(content, *table.get(), field_ends)) {
 
     // create chunk and fill with columns
     chunks.emplace_back(true);
     auto& chunk = chunks.back();
 
     // create and start parsing task
-    tasks.emplace_back(std::make_shared<JobTask>([this, &chunk, &table, &content, &row_ends]() {
-      parse_chunk(chunk, *table, content, row_ends);
+    tasks.emplace_back(std::make_shared<JobTask>([this, &content, &table, &field_ends, &chunk]() {
+      parse_into_chunk(content, *table, field_ends, chunk);
     }));
     tasks.back()->schedule();
 
-    content.erase(0, row_ends.back() + 1);
+    content.erase(0, field_ends.back() + 1);
   }
 
   for (auto& task : tasks) {
@@ -62,17 +60,31 @@ std::shared_ptr<Table> CsvParser::parse(const std::string& filename) {
   return table;
 }
 
-void CsvParser::parse_chunk(Chunk & chunk, const Table & table, const std::string & csvcontent, const std::vector<size_t> & row_ends) {
+void CsvParser::parse_into_chunk(const std::string & content, const Table & table, const std::vector<size_t> & field_ends, Chunk & chunk) {
+  // // For each csv column create a CsvConverter which builds up a ValueColumn
+  // const auto row_count = field_ends.size() / table.col_count();
+  // printf("%lu\n", row_count);
+  // std::vector<std::unique_ptr<AbstractCsvConverter>> converters;
+  // for (ColumnID column_id{0}; column_id < table.col_count(); ++column_id) {
+  //   converters.emplace_back(
+  //       make_unique_by_column_type<AbstractCsvConverter, CsvConverter>(table.column_type(column_id), row_count, _csv_config));
+  // }
+
   size_t start = 0;
-  for (const auto end : row_ends) {
-    auto row = csvcontent.substr(start, end-start);
+  ChunkOffset current_row = 0;
+  for (const auto end : field_ends) {
+    auto field = content.substr(start, end-start);
     start = end + 1;
+
+    // converters[current_column]->insert(&*field_start, current_row);
+
+    ++current_row;
   }
 }
 
 std::shared_ptr<Table> CsvParser::process_meta_file(const std::string & filename) {
   const char delimiter = '\n';
-  const char seperator = ',';
+  const char separator = ',';
 
   std::ifstream metafile { filename };
   std::string content { std::istreambuf_iterator<char>(metafile), {} };
@@ -84,8 +96,8 @@ std::shared_ptr<Table> CsvParser::process_meta_file(const std::string & filename
   content.erase(0, content.find(delimiter) + 1);
 
   // skip next two fields
-  content.erase(0, content.find(seperator) + 1);
-  content.erase(0, content.find(seperator) + 1);
+  content.erase(0, content.find(separator) + 1);
+  content.erase(0, content.find(separator) + 1);
 
   // read chunk size
   auto pos = content.find(delimiter);
@@ -99,15 +111,15 @@ std::shared_ptr<Table> CsvParser::process_meta_file(const std::string & filename
     auto row = content.substr(0, pos);
 
     // skip field
-    row.erase(0, row.find(seperator) + 1);
+    row.erase(0, row.find(separator) + 1);
 
     // read column name
-    auto row_pos = row.find(seperator);
+    auto row_pos = row.find(separator);
     const auto column_name = row.substr(0, row_pos);
     row.erase(0, row_pos + 1);
 
     // read column type
-    row_pos = row.find(seperator);
+    row_pos = row.find(separator);
     const auto column_type = row.substr(0, row_pos);
 
     content.erase(0, pos + 1);
@@ -117,18 +129,24 @@ std::shared_ptr<Table> CsvParser::process_meta_file(const std::string & filename
   return table;
 }
 
-bool CsvParser::find_n(const std::string & str, const char & find, const unsigned int N, std::vector<size_t> & indices) {
+bool CsvParser::find_fields_in_chunk(const std::string & str, const Table & table, std::vector<size_t> & indices) {
   indices.clear();
-  if ( 0 == N || str.empty()) { return false; }
+  if ( 0 == table.chunk_size() || str.empty()) { return false; }
 
   size_t pos, from = 0;
-  indices.reserve(N);
-
-  for (unsigned int i = 0; i < N; ++i) {
-    pos = str.find(find, from);
+  unsigned int fields = 0, rows = 0;
+  std::string search_for {_csv_config.separator, _csv_config.delimiter};
+  while (rows < table.chunk_size()) {
+    ++fields;
+    pos = str.find_first_of(search_for, from);
     if ( std::string::npos == pos ) { break; }
+    if ( str.at(pos) == _csv_config.delimiter ) {
+      Assert(fields == table.col_count(), "Number of CSV fields does not match number of columns.");
+      ++rows;
+      fields = 0;
+    }
     indices.push_back(pos);
-    from = pos + 1; // from = pos + find.size();
+    from = pos + 1;
   }
 
   return true;

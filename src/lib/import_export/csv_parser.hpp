@@ -29,9 +29,9 @@ class CsvParser {
   std::shared_ptr<Table> parse(const std::string & filename);
 
  protected:
-  void parse_chunk(Chunk & chunk, const Table & table, const std::string & csvcontent, const std::vector<size_t> & row_ends);
+  void parse_into_chunk(const std::string & content, const Table & table, const std::vector<size_t> & field_ends, Chunk & chunk);
   std::shared_ptr<Table> process_meta_file(const std::string & filename);
-  bool find_n(const std::string & str, const char & find, const unsigned int N, std::vector<size_t> & indices);
+  bool find_fields_in_chunk(const std::string & str, const Table & table, std::vector<size_t> & indices);
 
   // Number of bytes that a task processes from the input file.
   const size_t _buffer_size;
