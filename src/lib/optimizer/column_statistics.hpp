@@ -1,7 +1,7 @@
 #pragma once
 
-#include <iostream>
 #include <memory>
+#include <ostream>
 #include <string>
 #include <tuple>
 
@@ -25,18 +25,27 @@ class ColumnStatistics : public AbstractColumnStatistics {
   ColumnStatistics(const ColumnID column_id, float distinct_count, ColumnType min, ColumnType max);
   ~ColumnStatistics() override = default;
 
-  ColumnStatisticsContainer predicate_selectivity(const ScanType scan_type, const AllTypeVariant &value,
-                                                  const optional<AllTypeVariant> &value2) override;
+  ColumnSelectivityResult predicate_selectivity(const ScanType scan_type, const AllTypeVariant &value,
+                                                const optional<AllTypeVariant> &value2) override;
 
-  ColumnStatisticsContainer predicate_selectivity(const ScanType scan_type, const ValuePlaceholder &value,
-                                                  const optional<AllTypeVariant> &value2) override;
+  ColumnSelectivityResult predicate_selectivity(const ScanType scan_type, const ValuePlaceholder &value,
+                                                const optional<AllTypeVariant> &value2) override;
 
  protected:
   std::ostream &print_to_stream(std::ostream &os) const override;
 
+  /**
+   * Accessors for class variable optionals. Compute values, if not available.
+   */
   float distinct_count() const;
-  ColumnType min() const;
-  ColumnType max() const;
+  ColumnType &min() const;
+  ColumnType &max() const;
+
+  ColumnSelectivityResult calculate_selectivity_for_range_and_create_output(ColumnType &new_min, ColumnType &new_max);
+
+  ColumnSelectivityResult calculate_selectivity_for_equals_and_create_output(ColumnType &value);
+
+  ColumnSelectivityResult calculate_selectivity_for_unequals_and_create_output(ColumnType &value);
 
   /**
    * Calcute min and max values from table.

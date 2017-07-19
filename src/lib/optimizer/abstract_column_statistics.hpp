@@ -1,7 +1,7 @@
 #pragma once
 
-#include <iostream>
 #include <memory>
+#include <ostream>
 #include <string>
 #include <tuple>
 
@@ -10,8 +10,14 @@
 
 namespace opossum {
 
-struct ColumnStatisticsContainer;
+struct ColumnSelectivityResult;
 
+/**
+ * Most prediction computation is delegated from table statistics to typed column statistics.
+ * This enables the possibility to work with column type for min and max values.
+ *
+ * Therefore, column statistics implement functions for all operators so that
+ */
 class AbstractColumnStatistics {
  public:
   virtual ~AbstractColumnStatistics() = default;
@@ -19,14 +25,14 @@ class AbstractColumnStatistics {
   /**
    * Predicate selectivity for constants.
    */
-  virtual ColumnStatisticsContainer predicate_selectivity(const ScanType scan_type, const AllTypeVariant &value,
-                                                          const optional<AllTypeVariant> &value2) = 0;
+  virtual ColumnSelectivityResult predicate_selectivity(const ScanType scan_type, const AllTypeVariant &value,
+                                                        const optional<AllTypeVariant> &value2) = 0;
 
   /**
    * Predicate selectivity for prepared statements.
    */
-  virtual ColumnStatisticsContainer predicate_selectivity(const ScanType scan_type, const ValuePlaceholder &value,
-                                                          const optional<AllTypeVariant> &value2) = 0;
+  virtual ColumnSelectivityResult predicate_selectivity(const ScanType scan_type, const ValuePlaceholder &value,
+                                                        const optional<AllTypeVariant> &value2) = 0;
 
  protected:
   /**
@@ -40,8 +46,8 @@ class AbstractColumnStatistics {
 /**
  * Return type of get selectivity functions for operations on one column
  */
-struct ColumnStatisticsContainer {
-  float selectivity;
+struct ColumnSelectivityResult {
+  float selectivity = 0.f;
   std::shared_ptr<AbstractColumnStatistics> column_statistics;
 };
 

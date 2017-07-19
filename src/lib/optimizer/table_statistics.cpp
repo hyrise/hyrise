@@ -16,11 +16,6 @@ namespace opossum {
 TableStatistics::TableStatistics(const std::shared_ptr<Table> table)
     : _table(table), _row_count(table->row_count()), _column_statistics(_row_count) {}
 
-TableStatistics::TableStatistics(const TableStatistics &table_statistics)
-    : _table(table_statistics._table),
-      _row_count(table_statistics._row_count),
-      _column_statistics(table_statistics._column_statistics) {}
-
 float TableStatistics::row_count() const { return _row_count; }
 
 std::shared_ptr<AbstractColumnStatistics> TableStatistics::column_statistics(const ColumnID column_id) {
@@ -63,7 +58,7 @@ std::shared_ptr<TableStatistics> TableStatistics::predicate_statistics(const std
 
   auto old_column_statistics = column_statistics(column_id);
   auto clone = std::make_shared<TableStatistics>(*this);
-  ColumnStatisticsContainer column_statistics_container{1, nullptr};
+  ColumnSelectivityResult column_statistics_container{1, nullptr};
 
   if (value.type() == typeid(AllTypeVariant)) {
     auto casted_value = boost::get<AllTypeVariant>(value);
