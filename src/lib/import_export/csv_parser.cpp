@@ -37,7 +37,7 @@ std::shared_ptr<Table> CsvParser::parse(const std::string& filename) {
   std::vector<std::shared_ptr<JobTask>> tasks;
   size_t pos;
   std::vector<size_t> row_ends;
-  do {
+  while (!content.empty()) {
     row_ends.clear();
     pos = find_Nth(content, delimiter, table->chunk_size(), row_ends);
 
@@ -46,13 +46,13 @@ std::shared_ptr<Table> CsvParser::parse(const std::string& filename) {
     auto& chunk = chunks.back();
 
     // create and start parsing task
-    tasks.emplace_back(std::make_shared<JobTask>([this, &chunk, &table, content, row_ends]() {
+    tasks.emplace_back(std::make_shared<JobTask>([this, &chunk, &table, &content, &row_ends]() {
       parse_chunk(chunk, *table, content, row_ends);
     }));
     tasks.back()->schedule();
 
     content.erase(0, pos + 1);
-  } while (pos != std::string::npos);
+  }
 
   for (auto& task : tasks) {
     task->join();
@@ -69,7 +69,6 @@ void CsvParser::parse_chunk(Chunk & chunk, const Table & table, const std::strin
   size_t start = 0;
   for (const auto end : row_ends) {
     auto row = csvcontent.substr(start, end-start);
-    // printf("%s\n", row.c_str());
     start = end + 1;
   }
 }
@@ -115,7 +114,6 @@ std::shared_ptr<Table> CsvParser::process_meta_file(const std::string & filename
     const auto column_type = row.substr(0, row_pos);
 
     content.erase(0, pos + 1);
-
     table->add_column_definition(column_name, column_type);
   }
 
