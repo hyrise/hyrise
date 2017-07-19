@@ -25,9 +25,8 @@ class BenchmarkBasicFixture : public benchmark::Fixture {
 
     auto table_generator2 = std::make_shared<TableGenerator>();
 
-    _table_wrapper_a = std::make_shared<TableWrapper>(table_generator->get_table(chunk_size));
-    _table_wrapper_b =
-        std::make_shared<TableWrapper>(table_generator2->get_table(chunk_size));
+    _table_wrapper_a = std::make_shared<TableWrapper>(table_generator->get_table(_chunk_size));
+    _table_wrapper_b = std::make_shared<TableWrapper>(table_generator2->get_table(_chunk_size));
     _table_wrapper_a->execute();
     _table_wrapper_b->execute();
   }
