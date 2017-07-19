@@ -31,7 +31,7 @@ class CsvParser {
  protected:
   void parse_chunk(Chunk & chunk, const Table & table, const std::string & csvcontent, const std::vector<size_t> & row_ends);
   std::shared_ptr<Table> process_meta_file(const std::string & filename);
-  size_t find_Nth(const std::string & str, const char & find, const unsigned int N, std::vector<size_t> & indices);
+  bool find_n(const std::string & str, const char & find, const unsigned int N, std::vector<size_t> & indices);
 
   // Number of bytes that a task processes from the input file.
   const size_t _buffer_size;

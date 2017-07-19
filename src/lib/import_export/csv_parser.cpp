@@ -35,11 +35,8 @@ std::shared_ptr<Table> CsvParser::parse(const std::string& filename) {
   // Safe chunks in list to avoid memory relocations
   std::list<Chunk> chunks;
   std::vector<std::shared_ptr<JobTask>> tasks;
-  size_t pos;
   std::vector<size_t> row_ends;
-  while (!content.empty()) {
-    row_ends.clear();
-    pos = find_Nth(content, delimiter, table->chunk_size(), row_ends);
+  while (find_n(content, delimiter, table->chunk_size(), row_ends)) {
 
     // create chunk and fill with columns
     chunks.emplace_back(true);
@@ -51,7 +48,7 @@ std::shared_ptr<Table> CsvParser::parse(const std::string& filename) {
     }));
     tasks.back()->schedule();
 
-    content.erase(0, pos + 1);
+    content.erase(0, row_ends.back() + 1);
   }
 
   for (auto& task : tasks) {
@@ -120,9 +117,9 @@ std::shared_ptr<Table> CsvParser::process_meta_file(const std::string & filename
   return table;
 }
 
-size_t CsvParser::find_Nth(const std::string & str, const char & find, const unsigned int N, std::vector<size_t> & indices) {
-  DebugAssert(indices.empty(), "CsvParse::find_Nth should be passed an empty indices vector.");
-  if ( 0 == N ) { return std::string::npos; }
+bool CsvParser::find_n(const std::string & str, const char & find, const unsigned int N, std::vector<size_t> & indices) {
+  indices.clear();
+  if ( 0 == N || str.empty()) { return false; }
 
   size_t pos, from = 0;
   indices.reserve(N);
@@ -134,7 +131,7 @@ size_t CsvParser::find_Nth(const std::string & str, const char & find, const uns
     from = pos + 1; // from = pos + find.size();
   }
 
-  return pos;
+  return true;
 }
 
 }  // namespace opossum
