@@ -4,7 +4,7 @@
 #include <string>
 
 #include "import_export/csv_non_rfc_parser.hpp"
-#include "import_export/csv_rfc_parser.hpp"
+#include "import_export/csv_parser.hpp"
 #include "storage/storage_manager.hpp"
 
 namespace opossum {
@@ -42,7 +42,7 @@ std::shared_ptr<const Table> ImportCsv::on_execute() {
   std::shared_ptr<Table> table;
 
   if (_rfc_mode) {
-    CsvRfcParser parser{_buffer_size, _config};
+    CsvParser parser{_buffer_size, _config};
     table = parser.parse(_filename);
   } else {
     CsvNonRfcParser parser{_buffer_size, _config};

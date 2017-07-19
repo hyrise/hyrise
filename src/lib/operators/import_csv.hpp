@@ -43,8 +43,6 @@ class ImportCsv : public AbstractReadOnlyOperator {
   // cannot move-assign because of const members
   ImportCsv& operator=(ImportCsv&&) = delete;
 
-  // Returns the table that was created from the csv file.
-  std::shared_ptr<const Table> on_execute() override;
 
   // Name of the operator is "ImportCSV"
   const std::string name() const override;
@@ -60,6 +58,9 @@ class ImportCsv : public AbstractReadOnlyOperator {
   }
 
  protected:
+  // Returns the table that was created from the csv file.
+  std::shared_ptr<const Table> on_execute() override;
+
   // Path to the input file
   const std::string _filename;
   // Name for adding the table to the StorageManager
