@@ -16,28 +16,33 @@ namespace opossum {
 // Defining the base fixture class
 class BenchmarkBasicFixture : public benchmark::Fixture {
  public:
-  BenchmarkBasicFixture() {
+  void SetUp(::benchmark::State& state) override {
     // Generating a test table with generate_table function from table_generator.cpp
+
+    _chunk_size = static_cast<ChunkID>(state.range(0));
 
     auto table_generator = std::make_shared<TableGenerator>();
 
-    auto table = table_generator->get_table();
-
     auto table_generator2 = std::make_shared<TableGenerator>();
 
-    auto table2 = table_generator2->get_table();
-
-    _table_wrapper_a = std::make_shared<TableWrapper>(table_generator->get_table());
-    _table_wrapper_b = std::make_shared<TableWrapper>(table_generator2->get_table());
+    _table_wrapper_a = std::make_shared<TableWrapper>(table_generator->get_table(_chunk_size));
+    _table_wrapper_b = std::make_shared<TableWrapper>(table_generator2->get_table(_chunk_size));
     _table_wrapper_a->execute();
     _table_wrapper_b->execute();
   }
 
-  virtual void TearDown(const ::benchmark::State&) { opossum::StorageManager::get().reset(); }
+  void TearDown(::benchmark::State&) override { opossum::StorageManager::get().reset(); }
+
+  static void ChunkSizeIn(benchmark::internal::Benchmark* b) {
+    for (ChunkID i : {ChunkID(0), ChunkID(10000), ChunkID(100000)}) {
+      b->Args({static_cast<int>(i)});  // i = chunk size
+    }
+  }
 
  protected:
   std::shared_ptr<TableWrapper> _table_wrapper_a;
   std::shared_ptr<TableWrapper> _table_wrapper_b;
+  ChunkID _chunk_size;
 
   void clear_cache() {
     std::vector<int> clear = std::vector<int>();
