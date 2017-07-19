@@ -19,13 +19,15 @@ class BenchmarkBasicFixture : public benchmark::Fixture {
   void SetUp(::benchmark::State& state) override {
     // Generating a test table with generate_table function from table_generator.cpp
 
+    _chunk_size = static_cast<ChunkID>(state.range(0));
+
     auto table_generator = std::make_shared<TableGenerator>();
 
     auto table_generator2 = std::make_shared<TableGenerator>();
 
-    _table_wrapper_a = std::make_shared<TableWrapper>(table_generator->get_table(static_cast<ChunkID>(state.range(0))));
+    _table_wrapper_a = std::make_shared<TableWrapper>(table_generator->get_table(chunk_size));
     _table_wrapper_b =
-        std::make_shared<TableWrapper>(table_generator2->get_table(static_cast<ChunkID>(state.range(0))));
+        std::make_shared<TableWrapper>(table_generator2->get_table(chunk_size));
     _table_wrapper_a->execute();
     _table_wrapper_b->execute();
   }
@@ -41,6 +43,7 @@ class BenchmarkBasicFixture : public benchmark::Fixture {
  protected:
   std::shared_ptr<TableWrapper> _table_wrapper_a;
   std::shared_ptr<TableWrapper> _table_wrapper_b;
+  ChunkID _chunk_size;
 
   void clear_cache() {
     std::vector<int> clear = std::vector<int>();

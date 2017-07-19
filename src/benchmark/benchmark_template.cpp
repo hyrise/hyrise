@@ -16,6 +16,13 @@
 #include "table_generator.hpp"
 
 namespace opossum {
+/**
+ * For a full documentation of googlebenchmark see https://github.com/google/benchmark
+ * This template should give you a short overview of the basic functionalities and important steps to follow.
+ * If your benchmark only needs one or two test tables you are fine with the example below.
+ * In case you need more costumizations you have to write your own fixture.
+ * Important is that if you use the state.range() function you should declare a variable with a meaningful name 
+ * and use this variable in your benchmarks. Thus the code stays readable.
 /*
 BENCHMARK_F(BenchmarkBasicFixture, BM_Template)(benchmark::State& state) {
   // Google benchmark automaticly determines a number of executions. The code that should be measured multiple times
