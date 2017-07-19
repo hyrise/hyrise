@@ -26,6 +26,7 @@ class AbstractCsvConverter {
 
   // Converts value to the underlying data type and saves it at the given position.
   virtual void insert(const char *value, ChunkOffset position) = 0;
+  virtual void insert(const std::string & value, ChunkOffset position) = 0;
 
   // Returns the Column which contains the previously converted values.
   // After the call of finish, no other operation should be called.
@@ -72,6 +73,10 @@ class CsvConverter : public AbstractCsvConverter {
     _parsed_values[position] = _get_conversion_function()(value);
   }
 
+  void insert(const std::string & value, ChunkOffset position) override {
+    _parsed_values[position] = _get_conversion_function_str()(value);
+  }
+
   std::unique_ptr<BaseColumn> finish() override { return std::make_unique<ValueColumn<T>>(std::move(_parsed_values)); }
 
  private:
@@ -82,6 +87,7 @@ class CsvConverter : public AbstractCsvConverter {
    * csv characters.
    */
   std::function<T(const char *)> _get_conversion_function();
+  std::function<T(const std::string &)> _get_conversion_function_str();
   tbb::concurrent_vector<T> _parsed_values;
   CsvConfig _config;
 };
@@ -113,6 +119,35 @@ inline std::function<std::string(const char *)> CsvConverter<std::string>::_get_
     std::string value{str};
     unescape(value, _config);
     return value;
+  };
+}
+
+template <>
+inline std::function<int(const std::string &)> CsvConverter<int>::_get_conversion_function_str() {
+  return [](const std::string & str) { return std::stoi(str); };
+}
+
+template <>
+inline std::function<int64_t(const std::string &)> CsvConverter<int64_t>::_get_conversion_function_str() {
+  return [](const std::string & str) { return static_cast<int64_t>(std::stoll(str)); };
+}
+
+template <>
+inline std::function<float(const std::string &)> CsvConverter<float>::_get_conversion_function_str() {
+  return [](const std::string & str) { return std::stof(str); };
+}
+
+template <>
+inline std::function<double(const std::string &)> CsvConverter<double>::_get_conversion_function_str() {
+  return [](const std::string & str) { return std::stod(str); };
+}
+
+template <>
+inline std::function<std::string(const std::string &)> CsvConverter<std::string>::_get_conversion_function_str() {
+  return [this](const std::string & str) {
+    std::string copy = str;
+    unescape(copy, _config);
+    return copy;
   };
 }
 
