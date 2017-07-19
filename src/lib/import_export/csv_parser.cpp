@@ -111,19 +111,27 @@ bool CsvParser::find_fields_in_chunk(const std::string & str, const Table & tabl
   if ( 0 == table.chunk_size() || str.empty()) { return false; }
 
   size_t pos, from = 0;
-  unsigned int fields = 0, rows = 0;
-  std::string search_for {_csv_config.separator, _csv_config.delimiter};
+  unsigned int rows = 0, field_count = 1;
+  bool in_quotes = false;
+  std::string search_for {_csv_config.separator, _csv_config.delimiter, _csv_config.quote};
+
   while (rows < table.chunk_size()) {
-    ++fields;
     pos = str.find_first_of(search_for, from);
     if ( std::string::npos == pos ) { break; }
-    if ( str.at(pos) == _csv_config.delimiter ) {
-      Assert(fields == table.col_count(), "Number of CSV fields does not match number of columns.");
-      ++rows;
-      fields = 0;
-    }
-    indices.push_back(pos);
     from = pos + 1;
+    const char elem = str.at(pos);
+
+    in_quotes = (elem == _csv_config.quote) ? !in_quotes : in_quotes;
+
+    if ( elem == _csv_config.delimiter && !in_quotes) {
+      Assert(field_count == table.col_count(), "Number of CSV fields does not match number of columns.");
+      ++rows;
+      field_count = 0;
+    }
+
+    if (in_quotes || elem == _csv_config.quote) { continue; }
+    ++field_count;
+    indices.push_back(pos);
   }
 
   return true;
