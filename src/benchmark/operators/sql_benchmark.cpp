@@ -16,9 +16,9 @@ using hsql::SQLParserResult;
 
 class SQLBenchmark : public BenchmarkBasicFixture {
  public:
-  void SetUp(const ::benchmark::State& state) override {}
+  void SetUp(::benchmark::State& state) override {}
 
-  void TearDown(const ::benchmark::State& state) override {}
+  void TearDown(::benchmark::State& state) override {}
 
   const std::string Q1 = "SELECT * FROM test;";
   const std::string Q2 =

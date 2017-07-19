@@ -16,7 +16,7 @@ namespace opossum {
 // Defining the base fixture class
 class BenchmarkBasicFixture : public benchmark::Fixture {
  public:
-  void SetUp(const ::benchmark::State& state) override {
+  void SetUp(::benchmark::State& state) override {
     // Generating a test table with generate_table function from table_generator.cpp
 
     auto table_generator = std::make_shared<TableGenerator>();
@@ -30,7 +30,7 @@ class BenchmarkBasicFixture : public benchmark::Fixture {
     _table_wrapper_b->execute();
   }
 
-  void TearDown(const ::benchmark::State&) override { opossum::StorageManager::get().reset(); }
+  void TearDown(::benchmark::State&) override { opossum::StorageManager::get().reset(); }
 
   static void ChunkSizeIn(benchmark::internal::Benchmark* b) {
     for (ChunkID i : {ChunkID(0), ChunkID(10000), ChunkID(100000)}) {

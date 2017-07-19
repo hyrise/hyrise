@@ -14,7 +14,7 @@ namespace opossum {
 
 class OperatorsProjectionBenchmark : public BenchmarkBasicFixture {
  public:
-  void SetUp(const ::benchmark::State& state) override {
+  void SetUp(::benchmark::State& state) override {
     BenchmarkBasicFixture::SetUp(state);
     _table_ref = std::make_shared<TableScan>(_table_wrapper_a, "a", ScanType::OpGreaterThanEquals, 0);  // all
     _table_ref->execute();
@@ -24,7 +24,7 @@ class OperatorsProjectionBenchmark : public BenchmarkBasicFixture {
     _tables.emplace_back(_table_ref);        // 2
   }
 
-  void TearDown(const ::benchmark::State& state) override { StorageManager::get().reset(); }
+  void TearDown(::benchmark::State& state) override { StorageManager::get().reset(); }
 
  protected:
   std::shared_ptr<TableScan> _table_ref;
