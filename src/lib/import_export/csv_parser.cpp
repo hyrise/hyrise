@@ -10,7 +10,6 @@
 #include "scheduler/job_task.hpp"
 
 #include "resolve_type.hpp"
-// #include "types.hpp"
 #include "utils/assert.hpp"
 
 namespace opossum {
@@ -58,28 +57,6 @@ std::shared_ptr<Table> CsvParser::parse(const std::string& filename) {
   }
 
   return table;
-}
-
-void CsvParser::parse_into_chunk(const std::string & content, const Table & table, const std::vector<size_t> & field_ends, Chunk & chunk) {
-  // // For each csv column create a CsvConverter which builds up a ValueColumn
-  // const auto row_count = field_ends.size() / table.col_count();
-  // printf("%lu\n", row_count);
-  // std::vector<std::unique_ptr<AbstractCsvConverter>> converters;
-  // for (ColumnID column_id{0}; column_id < table.col_count(); ++column_id) {
-  //   converters.emplace_back(
-  //       make_unique_by_column_type<AbstractCsvConverter, CsvConverter>(table.column_type(column_id), row_count, _csv_config));
-  // }
-
-  size_t start = 0;
-  ChunkOffset current_row = 0;
-  for (const auto end : field_ends) {
-    auto field = content.substr(start, end-start);
-    start = end + 1;
-
-    // converters[current_column]->insert(&*field_start, current_row);
-
-    ++current_row;
-  }
 }
 
 std::shared_ptr<Table> CsvParser::process_meta_file(const std::string & filename) {
@@ -150,6 +127,35 @@ bool CsvParser::find_fields_in_chunk(const std::string & str, const Table & tabl
   }
 
   return true;
+}
+
+void CsvParser::parse_into_chunk(const std::string & content, const Table & table, const std::vector<size_t> & field_ends, Chunk & chunk) {
+  // For each csv column create a CsvConverter which builds up a ValueColumn
+  const auto col_count = table.col_count();
+  const auto row_count = field_ends.size() / col_count;
+  std::vector<std::unique_ptr<AbstractCsvConverter>> converters;
+  for (ColumnID column_id{0}; column_id < col_count; ++column_id) {
+    converters.emplace_back(
+        make_unique_by_column_type<AbstractCsvConverter, CsvConverter>(table.column_type(column_id), row_count, _csv_config));
+  }
+
+  size_t start = 0;
+  for (ChunkOffset row_i = 0; row_i < row_count; ++row_i)
+  {
+    for (ColumnID col_i{0}; col_i < col_count; ++col_i)
+    {
+      const auto end = field_ends.at(row_i*col_count + col_i);
+      auto field = content.substr(start, end-start);
+      start = end + 1;
+
+      converters[col_i]->insert(field, row_i);
+    }
+  }
+
+  // Transform the field_offsets to columns and add columns to chunk.
+  for (auto& converter : converters) {
+    chunk.add_column(converter->finish());
+  }
 }
 
 }  // namespace opossum

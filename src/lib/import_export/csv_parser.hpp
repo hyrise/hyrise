@@ -14,7 +14,6 @@ namespace opossum {
 class CsvParser {
  public:
   /*
-   * @param buffer_size Specifies the amount of data from the input file in bytes that a single task should work on.
    * @param csv_config  Csv configuration (delimiter, separator, ..)
    */
   explicit CsvParser(size_t buffer_size, const CsvConfig & csv_config = {});
@@ -29,8 +28,8 @@ class CsvParser {
   std::shared_ptr<Table> parse(const std::string & filename);
 
  protected:
-  void parse_into_chunk(const std::string & content, const Table & table, const std::vector<size_t> & field_ends, Chunk & chunk);
   std::shared_ptr<Table> process_meta_file(const std::string & filename);
+  void parse_into_chunk(const std::string & content, const Table & table, const std::vector<size_t> & field_ends, Chunk & chunk);
   bool find_fields_in_chunk(const std::string & str, const Table & table, std::vector<size_t> & indices);
 
   // Number of bytes that a task processes from the input file.
