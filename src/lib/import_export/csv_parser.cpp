@@ -35,16 +35,17 @@ std::shared_ptr<Table> CsvParser::parse(const std::string& filename) {
   std::vector<size_t> field_ends;
   while (find_fields_in_chunk(content, *table.get(), field_ends)) {
 
-    // create chunk and fill with columns
+    // create empty chunk
     chunks.emplace_back(true);
     auto& chunk = chunks.back();
 
-    // create and start parsing task
+    // create and start parsing task to fill chunk
     tasks.emplace_back(std::make_shared<JobTask>([this, &content, &table, &field_ends, &chunk]() {
       parse_into_chunk(content, *table, field_ends, chunk);
     }));
     tasks.back()->schedule();
 
+    // Remove processed part of the csv content
     content.erase(0, field_ends.back() + 1);
   }
 
@@ -92,12 +93,14 @@ std::shared_ptr<Table> CsvParser::process_meta_file(const std::string & filename
 
     // read column name
     auto row_pos = row.find(separator);
-    const auto column_name = row.substr(0, row_pos);
+    auto column_name = row.substr(0, row_pos);
+    AbstractCsvConverter::unescape(column_name);
     row.erase(0, row_pos + 1);
 
     // read column type
     row_pos = row.find(separator);
-    const auto column_type = row.substr(0, row_pos);
+    auto column_type = row.substr(0, row_pos);
+    AbstractCsvConverter::unescape(column_type);
 
     content.erase(0, pos + 1);
     table->add_column_definition(column_name, column_type);
@@ -110,12 +113,13 @@ bool CsvParser::find_fields_in_chunk(const std::string & str, const Table & tabl
   indices.clear();
   if ( 0 == table.chunk_size() || str.empty()) { return false; }
 
+  std::string search_for {_csv_config.separator, _csv_config.delimiter, _csv_config.quote};
+
   size_t pos, from = 0;
   unsigned int rows = 0, field_count = 1;
   bool in_quotes = false;
-  std::string search_for {_csv_config.separator, _csv_config.delimiter, _csv_config.quote};
-
   while (rows < table.chunk_size()) {
+    // Find either of row separator, column delimitor, quote identifier
     pos = str.find_first_of(search_for, from);
     if ( std::string::npos == pos ) { break; }
     from = pos + 1;
@@ -123,13 +127,16 @@ bool CsvParser::find_fields_in_chunk(const std::string & str, const Table & tabl
 
     in_quotes = (elem == _csv_config.quote) ? !in_quotes : in_quotes;
 
+    // Determine if delimiter marks end of row or is part of the (string) value
     if ( elem == _csv_config.delimiter && !in_quotes) {
       Assert(field_count == table.col_count(), "Number of CSV fields does not match number of columns.");
       ++rows;
       field_count = 0;
     }
 
+    // Determine if separator marks end of field or is part of the (string) value
     if (in_quotes || elem == _csv_config.quote) { continue; }
+
     ++field_count;
     indices.push_back(pos);
   }
