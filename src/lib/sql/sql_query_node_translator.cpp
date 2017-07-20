@@ -189,15 +189,25 @@ std::shared_ptr<AbstractASTNode> SQLQueryNodeTranslator::_translate_table_ref(co
 
 std::string SQLQueryNodeTranslator::_get_column_name(const hsql::Expr& expr) const {
   std::string name = "";
+
+  // Translate an aggregate function to a string that the Aggregate operator generates.
+  if (expr.isType(hsql::kExprFunctionRef)) {
+    name += expr.name;
+    name += "(";
+    name += _get_column_name(*expr.exprList->at(0));
+    name += ")";
+    return name;
+  }
+
+  DebugAssert(expr.isType(hsql::kExprColumnRef), "Expected column reference.");
+
   if (expr.hasTable()) {
     name += std::string(expr.table) + ".";
   }
 
   name += expr.name;
 
-  if (name.empty()) {
-    throw std::runtime_error("Column name is empty.");
-  }
+  Assert(!name.empty(), "Column name is empty.");
 
   return name;
 }
@@ -241,22 +251,26 @@ std::shared_ptr<AbstractASTNode> SQLQueryNodeTranslator::_translate_filter_expr(
 
   auto it = operator_to_filter_type.find(expr.opType);
   if (it == operator_to_filter_type.end()) {
-    throw std::runtime_error("Filter expression clause operator is not yet supported.");
+    Fail("Filter expression clause operator is not yet supported.");
   }
 
   const auto scan_type = it->second;
 
-  std::shared_ptr<ExpressionNode> expressionNode = SQLExpressionTranslator::translate_expression(expr);
-
-  Expr* column_expr = (expr.expr->isType(hsql::kExprColumnRef)) ? expr.expr : expr.expr2;
-  if (!column_expr->isType(hsql::kExprColumnRef)) {
-    throw std::runtime_error("Unsupported filter: we must have a column reference on either side of the expression.");
+  // We accept functions here because we assume they have been translated by Aggregate.
+  // They will be treated as a regular column of the same name.
+  // TODO(mp): this has to change once we have extended HAVING support.
+  Expr* column_expr =
+      (expr.expr->isType(hsql::kExprColumnRef) || expr.expr->isType(hsql::kExprFunctionRef)) ? expr.expr : expr.expr2;
+  if (!column_expr->isType(hsql::kExprColumnRef) && !column_expr->isType(hsql::kExprFunctionRef)) {
+    Fail("Unsupported filter: we must have a function or column reference on either side of the expression.");
   }
 
   const auto column_name = _get_column_name(*column_expr);
 
   AllParameterVariant value;
   optional<AllTypeVariant> value2;
+  std::shared_ptr<ExpressionNode> expressionNode = SQLExpressionTranslator::translate_expression(expr);
+
   if (scan_type == ScanType::OpBetween) {
     const Expr* left_expr = expr.exprList->at(0);
     value = AllParameterVariant(_translate_literal(*left_expr));
@@ -300,6 +314,8 @@ std::shared_ptr<AbstractASTNode> SQLQueryNodeTranslator::_translate_aggregate(
     } else if (expr->isType(hsql::kExprColumnRef)) {
       // If the item is a column, it has to be in the GROUP BY clause.
       // TODO(tim): do check
+    } else {
+      Fail("Unsupported item in projection list for AggregateOperator.");
     }
   }
 
@@ -321,17 +337,24 @@ std::shared_ptr<AbstractASTNode> SQLQueryNodeTranslator::_translate_aggregate(
   auto aggregate_node = std::make_shared<AggregateNode>(aggregate_column_definitions, groupby_columns);
   aggregate_node->set_left_child(input_node);
 
-  // TODO(tim&moritz): Transform HAVING.
-  Assert(group_by == nullptr || group_by->having == nullptr, "HAVING not supported, yet");
+  if (group_by == nullptr || group_by->having == nullptr) {
+    return aggregate_node;
+  }
 
-  return aggregate_node;
+  /**
+   * Build HAVING
+   */
+  // TODO(mp): Support HAVING clauses with aggregates different to the ones in the select list.
+  // The HAVING clause may contain aggregates that are not part of the select list.
+  // In that case, a succeeding table scan will not be able to filter because the column will not be part of the table.
+  return _translate_filter_expr(*group_by->having, aggregate_node);
 }
 
 std::shared_ptr<AbstractASTNode> SQLQueryNodeTranslator::_translate_projection(
     const std::vector<hsql::Expr*>& select_list, const std::shared_ptr<AbstractASTNode>& input_node) {
   std::vector<std::string> columns;
   for (const Expr* expr : select_list) {
-    // TODO(tim): expressions
+    // TODO(mp): expressions
     if (expr->isType(hsql::kExprColumnRef)) {
       columns.push_back(_get_column_name(*expr));
     } else if (expr->isType(hsql::kExprStar)) {

@@ -119,16 +119,17 @@ const SQLTestParam test_queries[] = {
 
     // GROUP BY
     {"SELECT a, SUM(b) FROM groupby_int_1gb_1agg GROUP BY a;",
-            "src/test/tables/aggregateoperator/groupby_int_1gb_1agg/sum.tbl"},
+     "src/test/tables/aggregateoperator/groupby_int_1gb_1agg/sum.tbl"},
     {"SELECT a, SUM(b), AVG(c) FROM groupby_int_1gb_2agg GROUP BY a;",
-            "src/test/tables/aggregateoperator/groupby_int_1gb_2agg/sum_avg.tbl"},
+     "src/test/tables/aggregateoperator/groupby_int_1gb_2agg/sum_avg.tbl"},
     {"SELECT a, b, MAX(c), AVG(d) FROM groupby_int_2gb_2agg GROUP BY a, b;",
-            "src/test/tables/aggregateoperator/groupby_int_2gb_2agg/max_avg.tbl"},
+     "src/test/tables/aggregateoperator/groupby_int_2gb_2agg/max_avg.tbl"},
 
     // HAVING
-    //        {"SELECT a, b, MAX(c), AVG(d) FROM groupby_int_2gb_2agg GROUP BY a, b HAVING MAX(c) >= 10"
-    //                             " AND MAX(c) < 40;",
-    //                             "src/test/tables/aggregateoperator/groupby_int_2gb_2agg/max_avg.tbl"},
+    {"SELECT a, b, MAX(c), AVG(d) FROM groupby_int_2gb_2agg GROUP BY a, b HAVING MAX(c) >= 10 AND MAX(c) < 40;",
+     "src/test/tables/aggregateoperator/groupby_int_2gb_2agg/max_avg.tbl"},
+    {"SELECT a, b, MAX(c), AVG(d) FROM groupby_int_2gb_2agg GROUP BY a, b HAVING MAX(c) > 10 AND MAX(c) <= 30;",
+     "src/test/tables/aggregateoperator/groupby_int_2gb_2agg/max_avg_having.tbl"},
 
     // TODO(mp): create result tables
     //        {"SELECT * FROM customer;", 1u, true, ""},
