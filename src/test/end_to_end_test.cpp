@@ -39,6 +39,9 @@ class EndToEndTest : public BaseTest, public ::testing::WithParamInterface<SQLTe
     std::shared_ptr<Table> table_b = load_table("src/test/tables/int_float2.tbl", 2);
     StorageManager::get().add_table("table_b", std::move(table_b));
 
+    std::shared_ptr<Table> table_c = load_table("src/test/tables/int_float4.tbl", 2);
+    StorageManager::get().add_table("table_c", std::move(table_c));
+
     std::shared_ptr<Table> test_table2 = load_table("src/test/tables/int_string2.tbl", 2);
     StorageManager::get().add_table("TestTable", test_table2);
 
@@ -106,9 +109,10 @@ const SQLTestParam test_queries[] = {
     {"SELECT a FROM table_a;", "src/test/tables/int.tbl"},
 
     // ORDER BY
-    {"SELECT a, b FROM table_a ORDER BY a;", "src/test/tables/int_float_sorted.tbl"},
+    {"SELECT a, b FROM table_a ORDER BY a;", "src/test/tables/int_float_sorted.tbl", true},
+    {"SELECT * FROM table_c ORDER BY a, b;", "src/test/tables/int_float2_sorted.tbl", true},
     {"SELECT a FROM (SELECT a, b FROM table_a WHERE a > 1 ORDER BY b) WHERE a > 0 ORDER BY a;",
-     "src/test/tables/int.tbl"},
+     "src/test/tables/int.tbl", true},
 
     // JOIN
     {"SELECT \"left\".a, \"left\".b, \"right\".a, \"right\".b FROM table_a AS \"left\" JOIN table_b AS "
