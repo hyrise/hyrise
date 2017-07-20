@@ -561,9 +561,9 @@ class SortMergeJoin::SortMergeJoinImpl : public AbstractJoinOperatorImpl, public
         for (auto l = left_run_start; l <= left_run_end; l++) {
           auto& lhs_id = left_partition.values[l].second;
           if(include_current_partition) {
-            emit_rhs_values(partition_number, partition_number, right_run_start, rhs_size - 1, lhs_id);
+            emit_rhs_values(partition_number, partition_number, right_run_start, rhs_size, lhs_id);
           }
-          emit_all_rhs_values(partition_number, partition_number + 1, _partition_count - 1, lhs_id);
+          emit_all_rhs_values(partition_number, partition_number + 1, _partition_count, lhs_id);
         }
       }
     }
@@ -574,8 +574,8 @@ class SortMergeJoin::SortMergeJoinImpl : public AbstractJoinOperatorImpl, public
                         uint32_t max_index_smaller_values, RowID greaterId) {
 
 
-    emit_all_rhs_values(partition_number, 0, partition_number - 1, greaterId);
-    emit_rhs_values(partition_number, partition_number, 0, max_index_smaller_values - 1, greaterId);
+    emit_all_rhs_values(partition_number, 0, partition_number, greaterId);
+    emit_rhs_values(partition_number, partition_number, 0, max_index_smaller_values, greaterId);
   }
 
   void add_greater_values(size_t partition_number, std::shared_ptr<SortedTable> table_greater_values,
@@ -584,23 +584,52 @@ class SortMergeJoin::SortMergeJoinImpl : public AbstractJoinOperatorImpl, public
 
     size_t partition_size = table_greater_values->partitions[partition_number].values.size();
 
-    emit_rhs_values(partition_number, partition_number, start_index_greater_values, partition_size - 1, smallerId);
-    emit_all_rhs_values(partition_number, partition_number + 1, _partition_count - 1, smallerId);
+    emit_rhs_values(partition_number, partition_number, start_index_greater_values, partition_size, smallerId);
+    emit_all_rhs_values(partition_number, partition_number + 1, _partition_count, smallerId);
 
   }
 
   void emit_rhs_values(size_t output_partition, size_t rhs_partition, size_t from_index, size_t to_index, RowID lhs_id) {
+    DebugAssert(rhs_partition >= 0, "rhs_partition is < 0");
+    DebugAssert(rhs_partition < _partition_count, "rhs_partition is >= _partition_count");
+    DebugAssert(_output_pos_lists_left.size() == _partition_count, "output pos lists left count mismatch");
+    DebugAssert(_output_pos_lists_right.size() == _partition_count, "output pos lists right count mismatch");
+
     auto& values = _sorted_right_table->partitions[rhs_partition].values;
 
-    for(size_t i = from_index; i <= to_index; i++) {
+    DebugAssert(from_index >= 0, "from_index is < 0");
+    DebugAssert(from_index < values.size(), "from_index is >= size");
+    DebugAssert(to_index >= 0, "to_index is < 0");
+    DebugAssert(to_index <= values.size(), "to_index is > size");
+    DebugAssert(from_index < to_index, "from_index is < to_index");
+
+    for(size_t i = from_index; i < to_index; i++) {
       _output_pos_lists_left[output_partition]->push_back(lhs_id);
       _output_pos_lists_right[output_partition]->push_back(values[i].second);
     }
+
   }
 
   void emit_all_rhs_values(size_t output_partition, size_t from_rhs_partition, size_t to_rhs_partition, RowID lhs_id) {
+/*
+    DebugAssert(0 <= output_partition, "output_partition out of range");
+    DebugAssert(output_partition < _partition_count, "output_partition out of range");
+    DebugAssert(from_rhs_partition >= 0, "from_rhs_partition is < 0");
+    DebugAssert(to_rhs_partition >= 0, "to_rhs_partition is < 0");
+    DebugAssert(from_rhs_partition < _partition_count, "from_rhs_partition is >= _partition_count");
+    DebugAssert(to_rhs_partition < _partition_count, "to_rhs_partition is >= _partition_count");
+    */
+    DebugAssert(_output_pos_lists_left.size() == _partition_count, "output pos lists left count mismatch");
+    DebugAssert(_output_pos_lists_right.size() == _partition_count, "output pos lists right count mismatch");
+
+    std::cout << "_partition_count: " << _partition_count << std::endl;
+    std::cout << "from_rhs_partition: " << from_rhs_partition << std::endl;
+    std::cout << "to_rhs_partition: " << to_rhs_partition << std::endl;
+
     // Add all values from the specified chunks
-    for(size_t partition_id = from_rhs_partition; partition_id <= to_rhs_partition; partition_id++) {
+    for(size_t partition_id = from_rhs_partition; partition_id < to_rhs_partition; partition_id++) {
+      DebugAssert(partition_id >= 0, "partition_id < 0");
+      DebugAssert(partition_id < _partition_count, "partition_id >= _partition_count");
       auto& values = _sorted_right_table->partitions[partition_id].values;
       for(auto& value : values) {
         _output_pos_lists_left[output_partition]->push_back(lhs_id);
