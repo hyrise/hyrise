@@ -21,10 +21,10 @@ int main() {
   }
   std::cout << " > Printing Contents" << std::endl;
   // tables: SUPPLIER, PART, PARTSUPP, CUSTOMER, ORDERS, LINEITEM, NATION, REGION
-  auto table1 = std::make_shared<opossum::GetTable>("LINEITEM");
-  table1->execute();
-  auto print1 = std::make_shared<opossum::Print>(table1);
-  print1->execute();
+  // auto table1 = std::make_shared<opossum::GetTable>("LINEITEM");
+  // table1->execute();
+  // auto print1 = std::make_shared<opossum::Print>(table1);
+  // print1->execute();
   // auto table2 = std::make_shared<opossum::GetTable>("LINEITEM");
   // table2->execute();
   // auto print2 = std::make_shared<opossum::Print>(table2);
@@ -36,4 +36,9 @@ int main() {
   for (auto& pair : *tables) {
     opossum::StorageManager::get().add_table(pair.first, pair.second);
   }
+
+  auto table2 = std::make_shared<opossum::GetTable>("ORDER-LINE");
+  table2->execute();
+  auto print2 = std::make_shared<opossum::Print>(table2);
+  print2->execute();
 }

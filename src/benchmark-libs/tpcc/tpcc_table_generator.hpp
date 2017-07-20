@@ -6,6 +6,7 @@
 #include <string>
 #include <vector>
 
+#include "benchmark_utilities/benchmark_table_generator.hpp"
 #include "random_generator.hpp"
 #include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
@@ -13,7 +14,7 @@
 
 namespace tpcc {
 
-class TableGenerator {
+class TableGenerator : public benchmark_utilities::BenchmarkTableGenerator {
   // following TPC-C v5.11.0
  public:
   TableGenerator();
@@ -50,19 +51,16 @@ class TableGenerator {
 
  protected:
   template <typename T>
-  tbb::concurrent_vector<T> generate_order_line_column(std::vector<size_t> indices,
-                                                       order_line_counts_type order_line_counts,
-                                                       const std::function<T(std::vector<size_t>)> &generator_function);
+  std::vector<T> generate_inner_order_line_column(std::vector<size_t> indices,
+                                                  order_line_counts_type order_line_counts,
+                                                  const std::function<T(std::vector<size_t>)> &generator_function);
 
   template <typename T>
-  void add_column(std::shared_ptr<opossum::Table> table, std::string name,
-                  std::shared_ptr<std::vector<size_t>> cardinalities,
-                  const std::function<T(std::vector<size_t>)> &generator_function);
-
-  template <typename T>
-  void add_column(std::shared_ptr<opossum::Table> table, std::string name,
-                  std::shared_ptr<std::vector<size_t>> cardinalities, order_line_counts_type order_line_counts,
-                  const std::function<T(std::vector<size_t>)> &generator_function);
+  void add_order_line_column(std::shared_ptr<opossum::Table> table,
+                             std::string name,
+                             std::shared_ptr<std::vector<size_t>> cardinalities,
+                             TableGenerator::order_line_counts_type order_line_counts,
+                             const std::function<T(std::vector<size_t>)> &generator_function);
 
   RandomGenerator _random_gen;
 };

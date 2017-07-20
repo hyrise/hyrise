@@ -9,22 +9,27 @@ namespace benchmark_utilities {
 
 class RandomGenerator {
  public:
+  // Fix random seed by default, to make sure the benchmark is deterministic
   RandomGenerator(unsigned int seed = 42) : engine(seed) {}
 
+  /**
+   * Generates a random number between lower and upper.
+   * @param lower       the lower bound
+   * @param upper       the upper bound
+   * @return            a random number
+   */
   int32_t number(int32_t lower, int32_t upper) {
     std::uniform_int_distribution<int32_t> dist(lower, upper);
     return dist(engine);
   }
 
-  std::string generateString(size_t lower_length, size_t upper_length, char base_character, int num_characters) {
-    size_t length = number(lower_length, upper_length);
-    std::string s;
-    for (size_t i = 0; i < length; i++) {
-      s.append(1, static_cast<char>(base_character + number(0, num_characters - 1)));
-    }
-    return s;
-  }
-
+  /**
+   * Generates a set of unique ints with a defined length.
+   * This function is used, e.g., to generate foreign key relationships
+   * @param num_unique      number of unique values to be returned
+   * @param max_id          maximum number in the set
+   * @return                a set of unique numbers
+   */
   std::set<size_t> select_unique_ids(size_t num_unique, size_t id_length) {
     std::set<size_t> rows;
 

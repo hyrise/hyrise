@@ -18,231 +18,6 @@ namespace tpcc {
 
 TableGenerator::TableGenerator() : _random_gen(RandomGenerator()) {}
 
-/**
- * In TPCC table sizes are usually defined relatively to each other.
- * E.g. the specification defines that there are 10 district for each warehouse.
- *
- * A trivial approach to implement this in our table generator would be to iterate in nested loops and add all rows.
- * However, this makes it hard to take care of a certain chunk_size. With nested loops
- * chunks only contain as many rows as there are iterations in the most inner loop.
- *
- * In this method we basically generate the whole column in a single loop,
- * so that we can easily split when a Chunk is full. To do that we have all the cardinalities of the influencing tables:
- * E.g. for the CUSTOMER table we have the following cardinalities:
- * indices[0] = warehouse_size = 1
- * indices[1] = district_size = 10
- * indices[2] = customer_size = 3000
- * So in total we have to generate 1*10*3000 = 30 000 customers.
- *
- * @tparam T                  the type of the column
- * @param table               the column shall be added to this table as well as column metadata
- * @param name                the name of the column
- * @param cardinalities       the cardinalities of the different 'nested loops',
- *                            e.g. 10 districts per warehouse results in {1, 10}
- * @param generator_function  a lambda function to generate values for this column
- */
-template <typename T>
-void TableGenerator::add_column(std::shared_ptr<opossum::Table> table, std::string name,
-                                std::shared_ptr<std::vector<size_t>> cardinalities,
-                                const std::function<T(std::vector<size_t>)> &generator_function) {
-  /**
-   * We have to add Chunks when we add the first column.
-   * This has to be made after the first column was created and added,
-   * because empty Chunks would be pruned right away.
-   */
-  bool is_first_column = table->col_count() == 0;
-
-  auto data_type_name = opossum::name_of_type<T>();
-  table->add_column_definition(name, data_type_name);
-
-  /**
-   * Calculate the total row count for this column based on the cardinalities of the influencing tables.
-   * For the CUSTOMER table this calculates 1*10*3000
-   */
-  auto row_count = std::accumulate(std::begin(*cardinalities), std::end(*cardinalities), 1u, std::multiplies<size_t>());
-
-  tbb::concurrent_vector<T> column;
-  column.reserve(_chunk_size);
-
-  /**
-   * The loop over all records that the final column of the table will contain, e.g. row_count = 30 000 for CUSTOMER
-   */
-  for (size_t row_index = 0; row_index < row_count; row_index++) {
-    std::vector<size_t> indices(cardinalities->size());
-
-    /**
-     * Calculate indices for internal loops
-     *
-     * We have to take care of writing IDs for referenced table correctly, e.g. when they are used as foreign key.
-     * In that case the 'generator_function' has to be able to access the current index of our loops correctly,
-     * which we ensure by defining them here.
-     *
-     * For example for CUSTOMER:
-     * WAREHOUSE_ID | DISTRICT_ID | CUSTOMER_ID
-     * indices[0]   | indices[1]  | indices[2]
-     */
-    for (size_t loop = 0; loop < cardinalities->size(); loop++) {
-      auto divisor = std::accumulate(std::begin(*cardinalities) + loop + 1, std::end(*cardinalities), 1u,
-                                     std::multiplies<size_t>());
-      indices[loop] = (row_index / divisor) % cardinalities->at(loop);
-    }
-
-    /**
-     * Actually generating and adding values.
-     * Pass in the previously generated indices to use them in 'generator_function',
-     * e.g. when generating IDs.
-     */
-    column.push_back(generator_function(indices));
-
-    // write output chunks if column size has reached chunk_size
-    if (row_index % _chunk_size == _chunk_size - 1) {
-      auto value_column = std::make_shared<opossum::ValueColumn<T>>(std::move(column));
-      opossum::ChunkID chunk_id{static_cast<uint32_t>(row_index / _chunk_size)};
-
-      // add Chunk if it is the first column, e.g. WAREHOUSE_ID in the example above
-      if (is_first_column) {
-        opossum::Chunk chunk(true);
-        chunk.add_column(value_column);
-        table->add_chunk(std::move(chunk));
-      } else {
-        auto &chunk = table->get_chunk(chunk_id);
-        chunk.add_column(value_column);
-      }
-
-      // reset column
-      column.clear();
-      column.reserve(_chunk_size);
-    }
-  }
-
-  // write partially filled last chunk
-  if (row_count % _chunk_size != 0) {
-    auto value_column = std::make_shared<opossum::ValueColumn<T>>(std::move(column));
-
-    // add Chunk if it is the first column, e.g. WAREHOUSE_ID in the example above
-    if (is_first_column) {
-      opossum::Chunk chunk(true);
-      chunk.add_column(value_column);
-      table->add_chunk(std::move(chunk));
-    } else {
-      opossum::ChunkID chunk_id{static_cast<uint32_t>(row_count / _chunk_size)};
-      auto &chunk = table->get_chunk(chunk_id);
-      chunk.add_column(value_column);
-    }
-  }
-}
-
-/**
- * Generates a column for the 'ORDER-LINE' table. This is used in the specialization of add_column below.
- * In contrast to other tables the ORDER-LINE table is NOT defined by saying, there are 10 order-line per order,
- * but instead there 5 to 15 order-lines per order.
- * @tparam T
- * @param indices
- * @param order_line_counts
- * @param generator_function
- * @return
- */
-template <typename T>
-tbb::concurrent_vector<T> TableGenerator::generate_order_line_column(
-    std::vector<size_t> indices, TableGenerator::order_line_counts_type order_line_counts,
-    const std::function<T(std::vector<size_t>)> &generator_function) {
-  auto order_line_count = order_line_counts[indices[0]][indices[1]][indices[2]];
-
-  tbb::concurrent_vector<T> values;
-  values.reserve(order_line_count);
-  for (size_t i = 0; i < order_line_count; i++) {
-    auto copied_indices = indices;
-    copied_indices.push_back(i);
-    values.push_back(generator_function(copied_indices));
-  }
-
-  return values;
-}
-
-/**
- * Specialized version of add_column for 'ORDER-LINE' table.
- * For 'order-line' it is not explicitly defined by TPCC how many elements we have in the most inner loop.
- * Instead there is a random number of 'order-lines' for each order,
- * thus we cannot reuse the implementation of 'add_column' at this point.
- *
- * Have a look at add_column for further comments and detailed explanation.
- *
- * TODO(anyone): look into how to merge this with the more general add_column.
- */
-template <typename T>
-void TableGenerator::add_column(std::shared_ptr<opossum::Table> table, std::string name,
-                                std::shared_ptr<std::vector<size_t>> cardinalities,
-                                TableGenerator::order_line_counts_type order_line_counts,
-                                const std::function<T(std::vector<size_t>)> &generator_function) {
-  bool is_first_column = table->col_count() == 0;
-
-  auto data_type_name = opossum::name_of_type<T>();
-  table->add_column_definition(name, data_type_name);
-
-  auto row_count = std::accumulate(std::begin(*cardinalities), std::end(*cardinalities), 1u, std::multiplies<size_t>());
-
-  tbb::concurrent_vector<T> column;
-  column.reserve(_chunk_size);
-
-  size_t row_index = 0;
-
-  for (size_t loop_index = 0; loop_index < row_count; loop_index++) {
-    std::vector<size_t> indices(cardinalities->size());
-
-    // calculate indices for internal loops
-    for (size_t loop = 0; loop < cardinalities->size(); loop++) {
-      auto divisor = std::accumulate(std::begin(*cardinalities) + loop + 1, std::end(*cardinalities), 1u,
-                                     std::multiplies<size_t>());
-      indices[loop] = (loop_index / divisor) % cardinalities->at(loop);
-    }
-
-    /**
-     * This is the only difference to the original add_column.
-     * We generate a vector of values with variable length (depending on the number of order_line)
-     * and iterate it to add to the output column.
-     */
-    auto values = generate_order_line_column(indices, order_line_counts, generator_function);
-    for (T &value : values) {
-      column.push_back(value);
-
-      // write output chunks if column size has reached chunk_size
-      if (row_index % _chunk_size == _chunk_size - 1) {
-        auto value_column = std::make_shared<opossum::ValueColumn<T>>(std::move(column));
-
-        if (is_first_column) {
-          opossum::Chunk chunk(true);
-          chunk.add_column(value_column);
-          table->add_chunk(std::move(chunk));
-        } else {
-          opossum::ChunkID chunk_id{static_cast<uint32_t>(row_index / _chunk_size)};
-          auto &chunk = table->get_chunk(chunk_id);
-          chunk.add_column(value_column);
-        }
-
-        // reset column
-        column.clear();
-        column.reserve(_chunk_size);
-      }
-      row_index++;
-    }
-  }
-
-  // write partially filled last chunk
-  if (row_index % _chunk_size != 0) {
-    auto value_column = std::make_shared<opossum::ValueColumn<T>>(std::move(column));
-
-    if (is_first_column) {
-      opossum::Chunk chunk(true);
-      chunk.add_column(value_column);
-      table->add_chunk(std::move(chunk));
-    } else {
-      opossum::ChunkID chunk_id{static_cast<uint32_t>(row_index / _chunk_size)};
-      auto &chunk = table->get_chunk(chunk_id);
-      chunk.add_column(value_column);
-    }
-  }
-}
-
 std::shared_ptr<opossum::Table> TableGenerator::generate_items_table() {
   auto table = std::make_shared<opossum::Table>(_chunk_size);
 
@@ -515,6 +290,46 @@ TableGenerator::order_line_counts_type TableGenerator::generate_order_line_count
   return v;
 }
 
+/**
+ * Generates a column for the 'ORDER-LINE' table. This is used in the specialization of add_column to insert vectors.
+ * In contrast to other tables the ORDER-LINE table is NOT defined by saying, there are 10 order-line per order,
+ * but instead there 5 to 15 order-lines per order.
+ * @tparam T
+ * @param indices
+ * @param order_line_counts
+ * @param generator_function
+ * @return
+ */
+template <typename T>
+std::vector<T> TableGenerator::generate_inner_order_line_column(
+    std::vector<size_t> indices, TableGenerator::order_line_counts_type order_line_counts,
+    const std::function<T(std::vector<size_t>)> &generator_function) {
+  auto order_line_count = order_line_counts[indices[0]][indices[1]][indices[2]];
+
+  std::vector<T> values;
+  values.reserve(order_line_count);
+  for (size_t i = 0; i < order_line_count; i++) {
+    auto copied_indices = indices;
+    copied_indices.push_back(i);
+    values.push_back(generator_function(copied_indices));
+  }
+
+  return values;
+}
+
+template <typename T>
+void TableGenerator::add_order_line_column(
+                                std::shared_ptr<opossum::Table> table,
+                                std::string name,
+                                std::shared_ptr<std::vector<size_t>> cardinalities,
+                                TableGenerator::order_line_counts_type order_line_counts,
+                                const std::function<T(std::vector<size_t>)> &generator_function) {
+  const std::function<std::vector<T>(std::vector<size_t>)> wrapped_generator_function = [&](std::vector<size_t> indices) {
+    return generate_inner_order_line_column(indices, order_line_counts, generator_function);
+  };
+  add_column(table, name, cardinalities, wrapped_generator_function);
+}
+
 std::shared_ptr<opossum::Table> TableGenerator::generate_order_line_table(
     TableGenerator::order_line_counts_type order_line_counts) {
   auto table = std::make_shared<opossum::Table>(_chunk_size);
@@ -529,29 +344,29 @@ std::shared_ptr<opossum::Table> TableGenerator::generate_order_line_table(
    * indices[3] = order_line_size
    */
 
-  add_column<int>(table, "OL_O_ID", cardinalities, order_line_counts,
-                  [&](std::vector<size_t> indices) -> size_t { return indices[2]; });
-  add_column<int>(table, "OL_D_ID", cardinalities, order_line_counts,
-                  [&](std::vector<size_t> indices) -> size_t { return indices[1]; });
-  add_column<int>(table, "OL_W_ID", cardinalities, order_line_counts,
-                  [&](std::vector<size_t> indices) -> size_t { return indices[0]; });
-  add_column<int>(table, "OL_NUMBER", cardinalities, order_line_counts,
-                  [&](std::vector<size_t> indices) -> size_t { return indices[3]; });
-  add_column<int>(table, "OL_I_ID", cardinalities, order_line_counts,
-                  [&](std::vector<size_t>) -> size_t { return _random_gen.number(1, NUM_ITEMS); });
-  add_column<int>(table, "OL_SUPPLY_W_ID", cardinalities, order_line_counts,
-                  [&](std::vector<size_t> indices) -> size_t { return indices[0]; });
+  add_order_line_column<int>(table, "OL_O_ID", cardinalities, order_line_counts,
+                  [&](std::vector<size_t> indices) { return indices[2]; });
+  add_order_line_column<int>(table, "OL_D_ID", cardinalities, order_line_counts,
+                  [&](std::vector<size_t> indices) { return indices[1]; });
+  add_order_line_column<int>(table, "OL_W_ID", cardinalities, order_line_counts,
+                  [&](std::vector<size_t> indices) { return indices[0]; });
+  add_order_line_column<int>(table, "OL_NUMBER", cardinalities, order_line_counts,
+                  [&](std::vector<size_t> indices) { return indices[3]; });
+  add_order_line_column<int>(table, "OL_I_ID", cardinalities, order_line_counts,
+                  [&](std::vector<size_t>) { return _random_gen.number(1, NUM_ITEMS); });
+  add_order_line_column<int>(table, "OL_SUPPLY_W_ID", cardinalities, order_line_counts,
+                  [&](std::vector<size_t> indices) { return indices[0]; });
   // TODO(anybody) -1 should be null
-  add_column<int>(table, "OL_DELIVERY_D", cardinalities, order_line_counts, [&](std::vector<size_t> indices) {
+  add_order_line_column<int>(table, "OL_DELIVERY_D", cardinalities, order_line_counts, [&](std::vector<size_t> indices) {
     return indices[2] <= NUM_ORDERS - NUM_NEW_ORDERS ? _current_date : -1;
   });
-  add_column<int>(table, "OL_QUANTITY", cardinalities, order_line_counts,
-                  [&](std::vector<size_t>) -> size_t { return 5; });
+  add_order_line_column<int>(table, "OL_QUANTITY", cardinalities, order_line_counts,
+                  [&](std::vector<size_t>) { return 5; });
 
-  add_column<float>(table, "OL_AMOUNT", cardinalities, order_line_counts, [&](std::vector<size_t> indices) -> float {
+  add_order_line_column<float>(table, "OL_AMOUNT", cardinalities, order_line_counts, [&](std::vector<size_t> indices) {
     return indices[2] <= NUM_ORDERS - NUM_NEW_ORDERS ? 0.f : _random_gen.number(1, 999999) / 100.f;
   });
-  add_column<std::string>(table, "OL_DIST_INFO", cardinalities, order_line_counts,
+  add_order_line_column<std::string>(table, "OL_DIST_INFO", cardinalities, order_line_counts,
                           [&](std::vector<size_t>) { return _random_gen.astring(24, 24); });
 
   opossum::DictionaryCompression::compress_table(*table);
