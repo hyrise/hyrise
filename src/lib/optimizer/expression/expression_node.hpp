@@ -70,7 +70,8 @@ class ExpressionNode : public std::enable_shared_from_this<ExpressionNode> {
 
   const std::string _name;
   const std::string _table;
-  //  char* alias;
+  // TODO(mp): support aliases
+  //  const std::string alias;
 
   std::weak_ptr<ExpressionNode> _parent;
   std::shared_ptr<ExpressionNode> _left_child;
