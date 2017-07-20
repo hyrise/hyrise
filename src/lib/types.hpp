@@ -71,7 +71,7 @@ class ColumnName {
   operator std::string() const { return _name; }
 
  protected:
-  std::string _name;
+  const std::string _name;
 };
 
 constexpr NodeID INVALID_NODE_ID{std::numeric_limits<NodeID::base_type>::max()};

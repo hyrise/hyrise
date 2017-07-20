@@ -11,13 +11,7 @@
 
 #include "SQLParser.h"
 
-using hsql::Expr;
-
 namespace opossum {
-
-SQLExpressionTranslator::SQLExpressionTranslator() {}
-
-SQLExpressionTranslator::~SQLExpressionTranslator() {}
 
 std::shared_ptr<ExpressionNode> SQLExpressionTranslator::translate_expression(const hsql::Expr& expr) {
   auto table_name = (expr.table) ? std::string(expr.table) : std::string("");

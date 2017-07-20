@@ -89,7 +89,7 @@ void ExpressionNode::print(const uint8_t level) const {
   }
 }
 
-bool ExpressionNode::is_arithmetic_operand() const {
+bool ExpressionNode::is_arithmetic_operator() const {
   return _type == ExpressionType::Minus || _type == ExpressionType::Plus || _type == ExpressionType::Asterisk ||
          _type == ExpressionType::Slash;
 }
@@ -116,7 +116,7 @@ std::string ExpressionNode::to_expression_string() const {
     return type_cast<std::string>(_value);
   } else if (_type == ExpressionType::ColumnReference) {
     return "$" + _name;
-  } else if (is_arithmetic_operand()) {
+  } else if (is_arithmetic_operator()) {
     // TODO(mp) Should be is_operator() to also support "=", ...
     Assert(static_cast<bool>(left_child()) && static_cast<bool>(right_child()), "Operator needs both operands");
 
