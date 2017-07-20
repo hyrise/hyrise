@@ -3,6 +3,8 @@
 #include <string>
 #include <unordered_map>
 
+#include "sql/Expr.h"
+
 namespace opossum {
 
 const std::unordered_map<std::string, proto::ScanType> string_to_proto_scan_type = {
@@ -57,6 +59,29 @@ const std::unordered_map<const ExpressionType, std::string> expression_type_to_s
     {ExpressionType::Between, "Between"},
     {ExpressionType::Hint, "Hint"},
     {ExpressionType::Case, "Case"},
+};
+
+const std::unordered_map<const hsql::OperatorType, const ExpressionType> operator_type_to_expression_type = {
+    {hsql::kOpPlus, ExpressionType::Plus},
+    {hsql::kOpMinus, ExpressionType::Minus},
+    {hsql::kOpAsterisk, ExpressionType::Asterisk},
+    {hsql::kOpSlash, ExpressionType::Slash},
+    {hsql::kOpPercentage, ExpressionType::Percentage},
+    {hsql::kOpCaret, ExpressionType::Caret},
+    {hsql::kOpBetween, ExpressionType::Between},
+    {hsql::kOpEquals, ExpressionType::Equals},
+    {hsql::kOpNotEquals, ExpressionType::NotEquals},
+    {hsql::kOpLess, ExpressionType::Less},
+    {hsql::kOpLessEq, ExpressionType::LessEquals},
+    {hsql::kOpGreater, ExpressionType::Greater},
+    {hsql::kOpGreaterEq, ExpressionType::GreaterEquals},
+    {hsql::kOpLike, ExpressionType::Like},
+    {hsql::kOpNotLike, ExpressionType::NotLike},
+    {hsql::kOpCase, ExpressionType::Case},
+    {hsql::kOpExists, ExpressionType::Exists},
+    {hsql::kOpIn, ExpressionType::In},
+    {hsql::kOpIsNull, ExpressionType::IsNull},
+    {hsql::kOpOr, ExpressionType::Or},
 };
 
 }  // namespace opossum
