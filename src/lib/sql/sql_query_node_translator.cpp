@@ -115,7 +115,8 @@ std::shared_ptr<AbstractASTNode> SQLQueryNodeTranslator::_translate_join(const J
   auto right_node = _translate_table_ref(*join.right);
 
   const Expr& condition = *join.condition;
-  std::pair<std::string, std::string> column_names(condition.expr->name, condition.expr2->name);
+  std::pair<std::string, std::string> column_names(get_column_name(*condition.expr),
+                                                   get_column_name(*condition.expr2));
 
   // Joins currently only support one simple condition (i.e., not multiple conditions).
   // TODO(tim): move to function / global namespace / whatever.
@@ -188,14 +189,14 @@ std::shared_ptr<AbstractASTNode> SQLQueryNodeTranslator::_translate_table_ref(co
   throw std::runtime_error("Unable to translate source table.");
 }
 
-std::string SQLQueryNodeTranslator::_get_column_name(const hsql::Expr& expr) const {
+std::string SQLQueryNodeTranslator::get_column_name(const hsql::Expr& expr) {
   std::string name = "";
 
   // Translate an aggregate function to a string that the Aggregate operator generates.
   if (expr.isType(hsql::kExprFunctionRef)) {
     name += expr.name;
     name += "(";
-    name += _get_column_name(*expr.exprList->at(0));
+    name += get_column_name(*expr.exprList->at(0));
     name += ")";
     return name;
   }
@@ -213,7 +214,7 @@ std::string SQLQueryNodeTranslator::_get_column_name(const hsql::Expr& expr) con
   return name;
 }
 
-AllParameterVariant SQLQueryNodeTranslator::_translate_literal(const hsql::Expr& expr) const {
+AllParameterVariant SQLQueryNodeTranslator::translate_literal(const hsql::Expr& expr) {
   switch (expr.type) {
     case hsql::kExprLiteralInt:
       return AllTypeVariant(expr.ival);
@@ -224,7 +225,7 @@ AllParameterVariant SQLQueryNodeTranslator::_translate_literal(const hsql::Expr&
     case hsql::kExprParameter:
       return ValuePlaceholder(expr.ival);
     case hsql::kExprColumnRef:
-      return ColumnName(_get_column_name(expr));
+      return ColumnName(get_column_name(expr));
     default:
       Fail("Could not translate literal: expression type not supported.");
       return {};
@@ -275,7 +276,7 @@ std::shared_ptr<AbstractASTNode> SQLQueryNodeTranslator::_translate_filter_expr(
            "Unsupported filter: we must have a function or column reference on at least one side of the expression.");
   }
 
-  const auto column_name = _get_column_name(*column_operand_expr);
+  const auto column_name = get_column_name(*column_operand_expr);
 
   AllParameterVariant value;
   optional<AllTypeVariant> value2;
@@ -284,13 +285,13 @@ std::shared_ptr<AbstractASTNode> SQLQueryNodeTranslator::_translate_filter_expr(
     const Expr* left_expr = (*expr.exprList)[0];
     const Expr* right_expr = (*expr.exprList)[1];
 
-    value = _translate_literal(*left_expr);
+    value = translate_literal(*left_expr);
 
     // TODO(torpedro / mp): TableScan does not support AllParameterVariant as second value.
     // This would be required to prepare BETWEEN.
-    value2 = boost::get<AllTypeVariant>(_translate_literal(*right_expr));
+    value2 = boost::get<AllTypeVariant>(translate_literal(*right_expr));
   } else {
-    value = _translate_literal(*value_operand_expr);
+    value = translate_literal(*value_operand_expr);
   }
 
   std::shared_ptr<ExpressionNode> expression_node = SQLExpressionTranslator::translate_expression(expr);
@@ -369,7 +370,7 @@ std::shared_ptr<AbstractASTNode> SQLQueryNodeTranslator::_translate_projection(
   for (const Expr* expr : select_list) {
     // TODO(mp): expressions
     if (expr->isType(hsql::kExprColumnRef)) {
-      columns.push_back(_get_column_name(*expr));
+      columns.push_back(get_column_name(*expr));
     } else if (expr->isType(hsql::kExprStar)) {
       // Resolve '*' by getting the output columns of the input node.
       auto input_columns = input_node->output_column_names();
@@ -403,7 +404,7 @@ std::shared_ptr<AbstractASTNode> SQLQueryNodeTranslator::_translate_order_by(
     // TODO(tim): handle non-column refs
     Assert(order_expr.isType(hsql::kExprColumnRef), "Can only order by columns for now.");
 
-    const auto column_name = _get_column_name(order_expr);
+    const auto column_name = get_column_name(order_expr);
     const auto asc = order_description->type == hsql::kOrderAsc;
 
     auto sort_node = std::make_shared<SortNode>(column_name, asc);
