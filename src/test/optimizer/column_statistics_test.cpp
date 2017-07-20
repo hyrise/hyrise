@@ -16,29 +16,31 @@ class ColumnStatisticsTest : public BaseTest {
  protected:
   void SetUp() override {
     _table = load_table("src/test/tables/int_float_double_string.tbl", 0);
-    _column_statistics_int = std::make_shared<ColumnStatistics<int>>(ColumnID(0), _table);
+    _column_statistics_int = std::make_shared<ColumnStatistics<int32_t>>(ColumnID(0), _table);
     _column_statistics_float = std::make_shared<ColumnStatistics<float>>(ColumnID(1), _table);
     _column_statistics_double = std::make_shared<ColumnStatistics<double>>(ColumnID(2), _table);
     _column_statistics_string = std::make_shared<ColumnStatistics<std::string>>(ColumnID(3), _table);
   }
 
+  // For single value scans (i.e. all but BETWEEN)
   template <typename T>
   void predict_selectivities_and_compare(const std::shared_ptr<ColumnStatistics<T>> column_statistic,
                                          const ScanType scan_type, const std::vector<T> &values,
                                          const std::vector<float> &expected_selectivities) {
     auto expected_selectivities_itr = expected_selectivities.begin();
-    for (const auto value : values) {
+    for (const auto & value : values) {
       auto result_container = column_statistic->predicate_selectivity(scan_type, AllTypeVariant(value));
       EXPECT_FLOAT_EQ(result_container.selectivity, *expected_selectivities_itr++);
     }
   }
 
+  // For BETWEEN
   template <typename T>
   void predict_selectivities_and_compare(const std::shared_ptr<ColumnStatistics<T>> column_statistic,
                                          const ScanType scan_type, const std::vector<std::pair<T, T>> &values,
                                          const std::vector<float> &expected_selectivities) {
     auto expected_selectivities_itr = expected_selectivities.begin();
-    for (const auto value_pair : values) {
+    for (const auto & value_pair : values) {
       auto result_container = column_statistic->predicate_selectivity(scan_type, AllTypeVariant(value_pair.first),
                                                                       AllTypeVariant(value_pair.second));
       EXPECT_FLOAT_EQ(result_container.selectivity, *expected_selectivities_itr++);
@@ -50,7 +52,7 @@ class ColumnStatisticsTest : public BaseTest {
       const std::shared_ptr<ColumnStatistics<T>> column_statistic, const ScanType scan_type,
       const std::vector<T> &values2, const std::vector<float> &expected_selectivities) {
     auto expected_selectivities_itr = expected_selectivities.begin();
-    for (const auto value2 : values2) {
+    for (const auto & value2 : values2) {
       auto result_container =
           column_statistic->predicate_selectivity(scan_type, ValuePlaceholder(0), AllTypeVariant(value2));
       EXPECT_FLOAT_EQ(result_container.selectivity, *expected_selectivities_itr++);
@@ -58,13 +60,13 @@ class ColumnStatisticsTest : public BaseTest {
   }
 
   std::shared_ptr<Table> _table;
-  std::shared_ptr<ColumnStatistics<int>> _column_statistics_int;
+  std::shared_ptr<ColumnStatistics<int32_t>> _column_statistics_int;
   std::shared_ptr<ColumnStatistics<float>> _column_statistics_float;
   std::shared_ptr<ColumnStatistics<double>> _column_statistics_double;
   std::shared_ptr<ColumnStatistics<std::string>> _column_statistics_string;
 
   //  {below min, min, middle, max, above max}
-  std::vector<int> _int_values{0, 1, 3, 6, 7};
+  std::vector<int32_t> _int_values{0, 1, 3, 6, 7};
   std::vector<float> _float_values{0.f, 1.f, 3.f, 6.f, 7.f};
   std::vector<double> _double_values{0., 1., 3., 6., 7.};
   std::vector<std::string> _string_values{"a", "b", "c", "g", "h"};
@@ -137,7 +139,7 @@ TEST_F(ColumnStatisticsTest, GreaterEqualThanTest) {
 TEST_F(ColumnStatisticsTest, BetweenTest) {
   ScanType scan_type = ScanType::OpBetween;
 
-  std::vector<std::pair<int, int>> int_values{{-1, 0}, {-1, 2}, {1, 2}, {0, 7}, {5, 6}, {5, 8}, {7, 8}};
+  std::vector<std::pair<int32_t, int32_t>> int_values{{-1, 0}, {-1, 2}, {1, 2}, {0, 7}, {5, 6}, {5, 8}, {7, 8}};
   std::vector<float> selectivities_int{0.f, 1.f / 3.f, 1.f / 3.f, 1.f, 1.f / 3.f, 1.f / 3.f, 0.f};
   predict_selectivities_and_compare(_column_statistics_int, scan_type, int_values, selectivities_int);
 

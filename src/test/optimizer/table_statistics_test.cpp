@@ -16,6 +16,7 @@ namespace opossum {
 
 class TableStatisticsTest : public BaseTest {
  protected:
+  // 
   struct TableContainer {
     std::shared_ptr<TableStatistics> statistics;
     std::shared_ptr<const Table> table;
@@ -36,9 +37,9 @@ class TableStatisticsTest : public BaseTest {
                                                  const ScanType scan_type, const AllParameterVariant value,
                                                  const optional<AllTypeVariant> value2 = nullopt) {
     auto statistics = table_container.statistics->predicate_statistics(column_name, scan_type, value, value2);
-    auto table_wraper = std::make_shared<TableWrapper>(table_container.table);
-    table_wraper->execute();
-    auto table_scan = std::make_shared<TableScan>(table_wraper, column_name, scan_type, value, value2);
+    auto table_wrapper = std::make_shared<TableWrapper>(table_container.table);
+    table_wrapper->execute();
+    auto table_scan = std::make_shared<TableScan>(table_wrapper, column_name, scan_type, value, value2);
     table_scan->execute();
     TableContainer output_container{statistics, table_scan->get_output()};
     assert_equal_row_count(output_container);
@@ -83,7 +84,7 @@ class TableStatisticsTest : public BaseTest {
   TableContainer _table_a_container;
 
   //  {below min, min, max, above max}
-  std::vector<int> _int_values{0, 1, 6, 7};
+  std::vector<int32_t> _int_values{0, 1, 6, 7};
   std::vector<float> _float_values{0.f, 1.f, 6.f, 7.f};
   std::vector<double> _double_values{0., 1., 6., 7.};
   std::vector<std::string> _string_values{"a", "b", "g", "h"};
@@ -155,7 +156,7 @@ TEST_F(TableStatisticsTest, GreaterEqualThanTest) {
 
 TEST_F(TableStatisticsTest, BetweenTest) {
   ScanType scan_type = ScanType::OpBetween;
-  std::vector<std::pair<int, int>> int_values{{-1, 0}, {-1, 2}, {1, 2}, {0, 7}, {5, 6}, {5, 8}, {7, 8}};
+  std::vector<std::pair<int32_t, int32_t>> int_values{{-1, 0}, {-1, 2}, {1, 2}, {0, 7}, {5, 6}, {5, 8}, {7, 8}};
   check_column_with_values(_table_a_container, "i", scan_type, int_values);
   std::vector<std::pair<float, float>> float_values{{-1.f, 0.f}, {-1.f, 1.9f}, {1.f, 1.9f}, {0.f, 7.f},
                                                     {5.1f, 6.f}, {5.1f, 8.f},  {7.f, 8.f}};
