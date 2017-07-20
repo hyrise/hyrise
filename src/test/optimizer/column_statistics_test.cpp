@@ -155,32 +155,32 @@ TEST_F(ColumnStatisticsTest, StoredProcedureNotEqualsTest) {
   ScanType scan_type = ScanType::OpNotEquals;
 
   auto result_container_int = _column_statistics_int->predicate_selectivity(scan_type, ValuePlaceholder(0));
-  ASSERT_EQ(result_container_int.selectivity, 5.f / 6.f);
+  EXPECT_FLOAT_EQ(result_container_int.selectivity, 5.f / 6.f);
 
   auto result_container_float = _column_statistics_float->predicate_selectivity(scan_type, ValuePlaceholder(0));
-  ASSERT_EQ(result_container_float.selectivity, 5.f / 6.f);
+  EXPECT_FLOAT_EQ(result_container_float.selectivity, 5.f / 6.f);
 
   auto result_container_double = _column_statistics_double->predicate_selectivity(scan_type, ValuePlaceholder(0));
-  ASSERT_EQ(result_container_double.selectivity, 5.f / 6.f);
+  EXPECT_FLOAT_EQ(result_container_double.selectivity, 5.f / 6.f);
 
   auto result_container_string = _column_statistics_string->predicate_selectivity(scan_type, ValuePlaceholder(0));
-  ASSERT_EQ(result_container_string.selectivity, 5.f / 6.f);
+  EXPECT_FLOAT_EQ(result_container_string.selectivity, 5.f / 6.f);
 }
 
 TEST_F(ColumnStatisticsTest, StoredProcedureEqualsTest) {
   ScanType scan_type = ScanType::OpEquals;
 
   auto result_container_int = _column_statistics_int->predicate_selectivity(scan_type, ValuePlaceholder(0));
-  ASSERT_EQ(result_container_int.selectivity, 1.f / 6.f);
+  EXPECT_FLOAT_EQ(result_container_int.selectivity, 1.f / 6.f);
 
   auto result_container_float = _column_statistics_float->predicate_selectivity(scan_type, ValuePlaceholder(0));
-  ASSERT_EQ(result_container_float.selectivity, 1.f / 6.f);
+  EXPECT_FLOAT_EQ(result_container_float.selectivity, 1.f / 6.f);
 
   auto result_container_double = _column_statistics_double->predicate_selectivity(scan_type, ValuePlaceholder(0));
-  ASSERT_EQ(result_container_double.selectivity, 1.f / 6.f);
+  EXPECT_FLOAT_EQ(result_container_double.selectivity, 1.f / 6.f);
 
   auto result_container_string = _column_statistics_string->predicate_selectivity(scan_type, ValuePlaceholder(0));
-  ASSERT_EQ(result_container_string.selectivity, 1.f / 6.f);
+  EXPECT_FLOAT_EQ(result_container_string.selectivity, 1.f / 6.f);
 }
 
 TEST_F(ColumnStatisticsTest, StoredProcedureOpenEndedTest) {
@@ -188,20 +188,22 @@ TEST_F(ColumnStatisticsTest, StoredProcedureOpenEndedTest) {
   ScanType scan_type = ScanType::OpLessThan;
 
   auto result_container_int = _column_statistics_int->predicate_selectivity(scan_type, ValuePlaceholder(0));
-  ASSERT_EQ(result_container_int.selectivity, 1.f / 3.f);
+  EXPECT_FLOAT_EQ(result_container_int.selectivity, 1.f / 3.f);
 
   auto result_container_float = _column_statistics_float->predicate_selectivity(scan_type, ValuePlaceholder(0));
-  ASSERT_EQ(result_container_float.selectivity, 1.f / 3.f);
+  EXPECT_FLOAT_EQ(result_container_float.selectivity, 1.f / 3.f);
 
   auto result_container_double = _column_statistics_double->predicate_selectivity(scan_type, ValuePlaceholder(0));
-  ASSERT_EQ(result_container_double.selectivity, 1.f / 3.f);
+  EXPECT_FLOAT_EQ(result_container_double.selectivity, 1.f / 3.f);
 
   auto result_container_string = _column_statistics_string->predicate_selectivity(scan_type, ValuePlaceholder(0));
-  ASSERT_EQ(result_container_string.selectivity, 1.f / 3.f);
+  EXPECT_FLOAT_EQ(result_container_string.selectivity, 1.f / 3.f);
 }
 
 TEST_F(ColumnStatisticsTest, StoredProcedureBetweenTest) {
   ScanType scan_type = ScanType::OpBetween;
+
+  // selectivities = selectivities from LessEqualThan / 0.3f
 
   std::vector<float> selectivities_int{0.f, 1.f / 18.f, 1.f / 6.f, 1.f / 3.f, 1.f / 3.f};
   predict_selectivities_for_stored_procedures_and_compare(_column_statistics_int, scan_type, _int_values,
