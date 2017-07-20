@@ -137,7 +137,7 @@ TEST_F(SQLExpressionTranslatorTest, ExpressionComplexFunctionTest) {
   auto &first = expressions->at(0);
 
   EXPECT_EQ(first->type(), ExpressionType::FunctionReference);
-  EXPECT_EQ(first->expression_list()->size(), 1);
+  EXPECT_EQ(first->expression_list()->size(), 1u);
   EXPECT_EQ(first->expression_list()->at(0)->type(), ExpressionType::Asterisk);
   EXPECT_EQ(first->expression_list()->at(0)->left_child()->type(), ExpressionType::ColumnReference);
   EXPECT_EQ(first->expression_list()->at(0)->right_child()->type(), ExpressionType::ColumnReference);

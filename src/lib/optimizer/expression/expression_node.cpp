@@ -27,7 +27,7 @@ ExpressionNode::ExpressionNode(const ExpressionType type, const AllTypeVariant v
                                const std::shared_ptr<std::vector<std::shared_ptr<ExpressionNode>>> expression_list,
                                const std::string &name, const std::string &table)
     : _type(type),
-      _value(value) /*, _value2(NULL_VALUE)*/,
+      _value(value),
       _expression_list(expression_list),
       _name(name),
       _table(table) {}
@@ -85,15 +85,15 @@ void ExpressionNode::print(const uint8_t level) const {
   std::cout << description() << std::endl;
 
   if (_left_child) {
-    _left_child->print(level + 2);
+    _left_child->print(level + 2u);
   }
 
   if (_right_child) {
-    _right_child->print(level + 2);
+    _right_child->print(level + 2u);
   }
 }
 
-bool ExpressionNode::is_arithmetic() const {
+bool ExpressionNode::is_arithmetic_operand() const {
   return _type == ExpressionType::Minus || _type == ExpressionType::Plus || _type == ExpressionType::Asterisk ||
          _type == ExpressionType::Slash;
 }
@@ -101,7 +101,7 @@ bool ExpressionNode::is_arithmetic() const {
 const std::string ExpressionNode::description() const {
   std::ostringstream desc;
 
-  desc << "Expression (" << expression_type_to_string.at(_type) << ", " << value() /*<< ", " << value2()*/ << ", "
+  desc << "Expression (" << expression_type_to_string.at(_type) << ", " << value() << ", "
        << table_name() << ", " << column_name() << ")";
 
   return desc.str();
@@ -115,30 +115,22 @@ const std::string &ExpressionNode::column_name() const { return _name; }
 
 const AllTypeVariant ExpressionNode::value() const { return _value; }
 
-// const AllTypeVariant ExpressionNode::value2() const {
-//  return _value2;
-//}
-
 std::string ExpressionNode::to_expression_string() const {
   if (_type == ExpressionType::Literal) {
     return type_cast<std::string>(_value);
   } else if (_type == ExpressionType::ColumnReference) {
     return "$" + _name;
-  } else if (is_arithmetic()) {
+  } else if (is_arithmetic_operand()) {
     // TODO(mp) Should be is_operator() to also support "=", ...
     Assert(static_cast<bool>(left_child()) && static_cast<bool>(right_child()), "Operator needs both operands");
 
-    auto left_expression_node = std::static_pointer_cast<ExpressionNode>(left_child());
-    auto right_expression_node = std::static_pointer_cast<ExpressionNode>(right_child());
-    Assert(static_cast<bool>(left_expression_node) && static_cast<bool>(right_expression_node),
-           "Operator needs both operands to be expressions");
-
-    return left_expression_node->to_expression_string() + expression_type_to_operator.at(_type) +
-           right_expression_node->to_expression_string();
+    return left_child()->to_expression_string() + expression_type_to_operator.at(_type) +
+           right_child()->to_expression_string();
   } else {
     Fail("To generate expression string, ExpressionNodes need to be operators or operands");
   }
 
+  // Should never be returned, but Clang is complaining about missing return statement
   return "";
 }
 

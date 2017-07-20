@@ -44,11 +44,10 @@ class ExpressionNode : public std::enable_shared_from_this<ExpressionNode> {
   const ExpressionType type() const;
 
   void print(const uint8_t level = 0) const;
+  const std::string description() const;
 
   // Is +, -, *, /
-  bool is_arithmetic() const;
-
-  const std::string description() const;
+  bool is_arithmetic_operand() const;
 
   const std::string& table_name() const;
 
@@ -56,9 +55,6 @@ class ExpressionNode : public std::enable_shared_from_this<ExpressionNode> {
   const std::string& column_name() const;
 
   const AllTypeVariant value() const;
-
-  // There is currently no need for value2
-  //  const AllTypeVariant value2() const;
 
   const std::shared_ptr<std::vector<std::shared_ptr<ExpressionNode>>>& expression_list() const;
 
@@ -70,7 +66,6 @@ class ExpressionNode : public std::enable_shared_from_this<ExpressionNode> {
 
  private:
   const AllTypeVariant _value;
-  //  const AllTypeVariant _value2;
   const std::shared_ptr<std::vector<std::shared_ptr<ExpressionNode>>> _expression_list;
 
   const std::string _name;
