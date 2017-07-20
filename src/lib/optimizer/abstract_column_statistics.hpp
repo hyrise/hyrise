@@ -14,9 +14,12 @@ struct ColumnSelectivityResult;
 
 /**
  * Most prediction computation is delegated from table statistics to typed column statistics.
- * This enables the possibility to work with column type for min and max values.
+ * This enables the possibility to work with the column type for min and max values.
  *
- * Therefore, column statistics implement functions for all operators so that
+ * Therefore, column statistics implements functions for all operators
+ * so that the corresponding table statistics functions can delegate all predictions to column statistics.
+ * These functions return a column selectivity result object combining the selectivity the operator
+ * and if changed the newly created column statistics.
  */
 class AbstractColumnStatistics {
  public:
@@ -24,12 +27,15 @@ class AbstractColumnStatistics {
 
   /**
    * Predicate selectivity for constants.
+   * Predict result of a table scan with constant values.
    */
   virtual ColumnSelectivityResult predicate_selectivity(const ScanType scan_type, const AllTypeVariant &value,
                                                         const optional<AllTypeVariant> &value2) = 0;
 
   /**
    * Predicate selectivity for prepared statements.
+   * In comparison to predicate selectivity for constants value is not known yet.
+   * Therefore, when necessary default selectivity values are used for predictions.
    */
   virtual ColumnSelectivityResult predicate_selectivity(const ScanType scan_type, const ValuePlaceholder &value,
                                                         const optional<AllTypeVariant> &value2) = 0;
@@ -44,7 +50,7 @@ class AbstractColumnStatistics {
 };
 
 /**
- * Return type of get selectivity functions for operations on one column
+ * Return type of selectivity functions for operations on one column.
  */
 struct ColumnSelectivityResult {
   float selectivity = 0.f;
