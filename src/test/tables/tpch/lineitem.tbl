@@ -1,0 +1,3 @@
+l_orderkey|l_partkey|l_suppkey|l_linenumber|l_quantity|l_extendedprice|l_discount|l_tax|l_returnflag|l_linestatus|l_shipdate|l_commitdate|l_receiptdate|l_shipinstruct|l_shipmode|l_comment
+int|int|int|int|float|float|float|float|string|string|string|string|string|string|string|string
+0|0|0|0|1.0|2.0|3.0|4.0|A|B|24-12-2017|24-12-2017|24-12-2017|-|-|-
