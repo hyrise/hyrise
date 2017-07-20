@@ -94,7 +94,7 @@ std::shared_ptr<AbstractASTNode> SQLQueryNodeTranslator::_translate_select(const
   }
 
   if (is_aggregate) {
-    current_result_node = _translate_aggregate(select.groupBy, *select.selectList, current_result_node);
+    current_result_node = _translate_aggregate(select, current_result_node);
   } else {
     current_result_node = _translate_projection(*select.selectList, current_result_node);
   }
@@ -281,8 +281,8 @@ std::shared_ptr<AbstractASTNode> SQLQueryNodeTranslator::_translate_filter_expr(
 }
 
 std::shared_ptr<AbstractASTNode> SQLQueryNodeTranslator::_translate_aggregate(
-        const hsql::GroupByDescription* group_by, const std::vector<hsql::Expr*>& select_list,
-        const std::shared_ptr<AbstractASTNode>& input_node) {
+    const hsql::SelectStatement& select, const std::shared_ptr<AbstractASTNode>& input_node) {
+  const auto& select_list = *select.selectList;
   /**
    * Build Aggregates
    */
@@ -306,6 +306,7 @@ std::shared_ptr<AbstractASTNode> SQLQueryNodeTranslator::_translate_aggregate(
   /**
    * Build GROUP BY
    */
+  const auto* group_by = select.groupBy;
   std::vector<std::string> groupby_columns;
   if (group_by != nullptr) {
     groupby_columns.reserve(group_by->columns->size());
