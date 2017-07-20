@@ -14,8 +14,8 @@
 
 namespace opossum {
 
-CsvParser::CsvParser(size_t buffer_size, const CsvConfig & csv_config)
-    : _buffer_size(buffer_size), _csv_config(csv_config) {}
+CsvParser::CsvParser(const size_t buffer_size, const CsvConfig & csv_config, const bool rfc_mode)
+    : _buffer_size(buffer_size), _csv_config(csv_config), _rfc(rfc_mode) {}
 
 std::shared_ptr<Table> CsvParser::parse(const std::string& filename) {
   const auto table = process_meta_file(filename + _csv_config.meta_file_extension);
@@ -163,6 +163,11 @@ void CsvParser::parse_into_chunk(const std::string & content, const Table & tabl
       auto field = content.substr(start, end-start);
       start = end + 1;
 
+      if (!_rfc) {
+        // CSV fields not following RFC 4810 might need some preprocessing
+        sanitize_field(field);
+      }
+
       converters[col_i]->insert(field, row_i);
     }
   }
@@ -170,6 +175,18 @@ void CsvParser::parse_into_chunk(const std::string & content, const Table & tabl
   // Transform the field_offsets to columns and add columns to chunk.
   for (auto& converter : converters) {
     chunk.add_column(converter->finish());
+  }
+}
+
+void CsvParser::sanitize_field(std::string & field) {
+  const std::string escaped_linebreak = "\\\n";
+  const std::string linebreak = "\n";
+
+  std::string::size_type pos = 0;
+  while ((pos = field.find(escaped_linebreak, pos)) != std::string::npos)
+  {
+    field.replace(pos, escaped_linebreak.size(), linebreak);
+    pos += linebreak.size();
   }
 }
 
