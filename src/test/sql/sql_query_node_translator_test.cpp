@@ -63,7 +63,6 @@ TEST_F(SQLQueryNodeTranslatorTest, SelectStarAllTest) {
 
 TEST_F(SQLQueryNodeTranslatorTest, ExpressionTest) {
   const auto query = "SELECT * FROM table_a WHERE a = 1234 + 1";
-  std::cout << query << std::endl;
   auto result_node = compile_query(query);
 
   EXPECT_EQ(result_node->type(), ASTNodeType::Projection);
@@ -74,13 +73,11 @@ TEST_F(SQLQueryNodeTranslatorTest, ExpressionTest) {
   EXPECT_FALSE(ts_node_1->right_child());
 
   auto predicate = std::static_pointer_cast<PredicateNode>(ts_node_1)->predicate();
-  predicate->print();
   EXPECT_EQ(predicate->type(), ExpressionType::Equals);
 }
 
 TEST_F(SQLQueryNodeTranslatorTest, ExpressionStringTest) {
   const auto query = "SELECT * FROM table_a WHERE a = \"b\"";
-  std::cout << query << std::endl;
   auto result_node = compile_query(query);
 
   EXPECT_EQ(result_node->type(), ASTNodeType::Projection);
@@ -91,13 +88,11 @@ TEST_F(SQLQueryNodeTranslatorTest, ExpressionStringTest) {
   EXPECT_FALSE(ts_node_1->right_child());
 
   auto predicate = std::static_pointer_cast<PredicateNode>(ts_node_1)->predicate();
-  predicate->print();
   EXPECT_EQ(predicate->type(), ExpressionType::Equals);
 }
 
 TEST_F(SQLQueryNodeTranslatorTest, ExpressionStringTest2) {
   const auto query = "SELECT * FROM table_a WHERE a = 'b'";
-  std::cout << query << std::endl;
   auto result_node = compile_query(query);
 
   EXPECT_EQ(result_node->type(), ASTNodeType::Projection);
@@ -108,7 +103,6 @@ TEST_F(SQLQueryNodeTranslatorTest, ExpressionStringTest2) {
   EXPECT_FALSE(ts_node_1->right_child());
 
   auto predicate = std::static_pointer_cast<PredicateNode>(ts_node_1)->predicate();
-  predicate->print();
   EXPECT_EQ(predicate->type(), ExpressionType::Equals);
 }
 

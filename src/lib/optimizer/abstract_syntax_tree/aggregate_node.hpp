@@ -6,7 +6,7 @@
 
 #include "common.hpp"
 #include "optimizer/abstract_syntax_tree/abstract_ast_node.hpp"
-#include "optimizer/abstract_syntax_tree/expression_node.hpp"
+#include "optimizer/expression/expression_node.hpp"
 #include "types.hpp"
 
 namespace opossum {

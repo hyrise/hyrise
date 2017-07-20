@@ -140,14 +140,12 @@ set(
     optimizer/abstract_column_statistics.hpp
     optimizer/abstract_syntax_tree/abstract_ast_node.cpp
     optimizer/abstract_syntax_tree/abstract_ast_node.hpp
-    optimizer/abstract_syntax_tree/abstract_expression_node.cpp
-    optimizer/abstract_syntax_tree/abstract_expression_node.hpp
     optimizer/abstract_syntax_tree/aggregate_node.cpp
     optimizer/abstract_syntax_tree/aggregate_node.hpp
-    optimizer/abstract_syntax_tree/expression_node.cpp
-    optimizer/abstract_syntax_tree/expression_node.hpp
     optimizer/abstract_syntax_tree/join_node.cpp
     optimizer/abstract_syntax_tree/join_node.hpp
+    optimizer/expression/expression_node.cpp
+    optimizer/expression/expression_node.hpp
     optimizer/abstract_syntax_tree/node_operator_translator.hpp
     optimizer/abstract_syntax_tree/node_operator_translator.cpp
     optimizer/abstract_syntax_tree/predicate_node.cpp
@@ -161,9 +159,11 @@ set(
     optimizer/abstract_syntax_tree/stored_table_node.hpp
     optimizer/column_statistics.cpp
     optimizer/column_statistics.hpp
-    optimizer/strategies/abstract_rule.hpp
-    optimizer/strategies/predicate_reordering_rule.cpp
-    optimizer/strategies/predicate_reordering_rule.hpp
+    optimizer/strategy/abstract_rule.hpp
+    optimizer/strategy/simplify_expression_rule.cpp
+    optimizer/strategy/simplify_expression_rule.hpp
+    optimizer/strategy/predicate_reordering_rule.cpp
+    optimizer/strategy/predicate_reordering_rule.hpp
     optimizer/table_statistics.cpp
     optimizer/table_statistics.hpp
     resolve_type.hpp

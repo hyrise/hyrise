@@ -20,7 +20,7 @@ PredicateNode::PredicateNode(const std::string& column_name, const std::shared_p
 std::string PredicateNode::description() const {
   std::ostringstream desc;
 
-  desc << "TableScan: [" << _column_name << "] [" << scan_type_to_string.at(_scan_type) << "]";
+  desc << "Predicate: [" << _column_name << "] [" << scan_type_to_string.at(_scan_type) << "]";
   desc << "[" << boost::get<std::string>(boost::get<AllTypeVariant>(_value)) << "]";
   if (_value2) {
     desc << " [" << boost::get<std::string>(*_value2) << "]";
@@ -32,6 +32,8 @@ std::string PredicateNode::description() const {
 const std::string& PredicateNode::column_name() const { return _column_name; }
 
 const std::shared_ptr<ExpressionNode> PredicateNode::predicate() const { return _predicate; }
+
+void PredicateNode::set_predicate(const std::shared_ptr<ExpressionNode> predicate) { _predicate = predicate; }
 
 ScanType PredicateNode::scan_type() const { return _scan_type; }
 

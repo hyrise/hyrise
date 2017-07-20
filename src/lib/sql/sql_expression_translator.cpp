@@ -6,7 +6,7 @@
 #include <unordered_map>
 #include <vector>
 
-#include "optimizer/abstract_syntax_tree/expression_node.hpp"
+#include "optimizer/expression/expression_node.hpp"
 
 #include "SQLParser.h"
 
@@ -26,39 +26,39 @@ std::shared_ptr<ExpressionNode> SQLExpressionTranslator::translate_expression(co
 
   std::shared_ptr<ExpressionNode> node;
   if (expr.type == hsql::kExprOperator) {
-    auto operatorType = _operator_to_expression_type(expr.opType);
-    node = std::make_shared<ExpressionNode>(operatorType);
+    auto operator_type = _operator_to_expression_type(expr.opType);
+    node = ExpressionNode::create_expression(operator_type);
   } else {
     switch (expr.type) {
       case hsql::kExprColumnRef:
-        node = std::make_shared<ExpressionNode>(ExpressionType::ColumnReference, table_name, name);
+        node = ExpressionNode::create_column_reference(table_name, name);
         break;
       case hsql::kExprFunctionRef: {
         // TODO(mp): Parse Function name to Aggregate Function
+        // auto aggregate_function = string_to_aggregate_function.at(name);
 
         auto expression_list = std::make_shared<std::vector<std::shared_ptr<ExpressionNode>>>();
         for (auto elem : *(expr.exprList)) {
-          auto node = translate_expression(*elem);
-          expression_list->emplace_back(node);
+          expression_list->emplace_back(translate_expression(*elem));
         }
 
-        node = std::make_shared<ExpressionNode>(ExpressionType::FunctionReference, name, expression_list);
+        node = ExpressionNode::create_function_reference(name, expression_list);
         break;
       }
       case hsql::kExprLiteralFloat:
-        node = std::make_shared<ExpressionNode>(ExpressionType::Literal, float_value);
+        node = ExpressionNode::create_literal(float_value);
         break;
       case hsql::kExprLiteralInt:
-        node = std::make_shared<ExpressionNode>(ExpressionType::Literal, int_value);
+        node = ExpressionNode::create_literal(int_value);
         break;
       case hsql::kExprLiteralString:
-        node = std::make_shared<ExpressionNode>(ExpressionType::Literal, name);
+        node = ExpressionNode::create_literal(name);
         break;
       case hsql::kExprParameter:
-        node = std::make_shared<ExpressionNode>(ExpressionType::Parameter, int_value);
+        node = ExpressionNode::create_parameter(int_value);
         break;
       case hsql::kExprStar:
-        node = std::make_shared<ExpressionNode>(ExpressionType::Star);
+        node = ExpressionNode::create_expression(ExpressionType::Star);
         break;
       case hsql::kExprSelect:
       case hsql::kExprHint:

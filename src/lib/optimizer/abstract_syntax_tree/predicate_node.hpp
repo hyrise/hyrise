@@ -10,7 +10,7 @@
 #include "common.hpp"
 
 #include "abstract_ast_node.hpp"
-#include "expression_node.hpp"
+#include "optimizer/expression/expression_node.hpp"
 
 #include "operators/table_scan.hpp"
 
@@ -29,9 +29,16 @@ class PredicateNode : public AbstractASTNode {
   const AllParameterVariant& value() const;
   const optional<AllTypeVariant>& value2() const;
 
+  void set_predicate(const std::shared_ptr<ExpressionNode> predicate);
+
  private:
   const std::string _column_name;
-  const std::shared_ptr<ExpressionNode> _predicate;
+  /**
+   * Design decision:
+   * We decided to have mutable Nodes for now.
+   * By that we can apply rules without creating new nodes for every optimization rule.
+   */
+  std::shared_ptr<ExpressionNode> _predicate;
   const ScanType _scan_type;
   const AllParameterVariant _value;
   const optional<AllTypeVariant> _value2;
