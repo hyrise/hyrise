@@ -20,14 +20,15 @@ class Table;
  * This can be either a table in the StorageManager, or a result of an operator.
  *
  * Table statistics can be chained in the same way as operators.
- * The initial table statisics is available via function table_statistics() from the corresponding table.
+ * The initial table statistics is available via function table_statistics() from the corresponding table.
  *
  * Table statistics implements a function for each operator with the same interface as the operator.
  * Each function returns a new table statistics object
  * from which the expected row count of the corresponding output table can be accessed.
  * Currently, only predicate_statistics() for table scans is implemented.
  *
- * Statistics component assumes a uniform value distribution in columns.
+ * Statistics component assumes a uniform value distribution in columns. If values for predictions are missing
+ * (e.g. placeholders in prepared statements), default selectivity values from below are used.
  *
  * Table statistics store column statistics as pointers to AbstractColumnStatistics.
  * Column statistics is typed by ColumnType and implements the abstract methods.
@@ -71,6 +72,7 @@ class TableStatistics {
   // it is multiplied with selectivity factor of a corresponding operator to predict the operator's output
   // precision is lost, if row count is rounded
   float _row_count;
+
   std::vector<std::shared_ptr<AbstractColumnStatistics>> _column_statistics;
 
   friend class Statistics;

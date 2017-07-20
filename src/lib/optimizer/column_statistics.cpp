@@ -7,6 +7,7 @@
 #include <type_traits>
 #include <utility>
 #include <vector>
+#include <ostream>
 
 #include "all_parameter_variant.hpp"
 #include "common.hpp"
@@ -79,6 +80,9 @@ void ColumnStatistics<ColumnType>::initialize_min_max() const {
   _max = aggregate_table->template get_value<ColumnType>(ColumnID{1}, 0);
 }
 
+/**
+ * Specialization for strings as they cannot be used in subtractions.
+ */
 template <>
 ColumnSelectivityResult ColumnStatistics<std::string>::calculate_selectivity_for_range_and_create_output(
     std::string &new_min, std::string &new_max) {
@@ -131,6 +135,9 @@ ColumnSelectivityResult ColumnStatistics<ColumnType>::calculate_selectivity_for_
   return {1 - 1.f / distinct_count(), column_statistics};
 }
 
+/**
+ * Specialization for strings as they cannot be used in subtractions.
+ */
 template <>
 ColumnSelectivityResult ColumnStatistics<std::string>::predicate_selectivity(const ScanType scan_type,
                                                                              const AllTypeVariant &value,

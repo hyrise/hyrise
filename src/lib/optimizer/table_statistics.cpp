@@ -36,8 +36,6 @@ std::shared_ptr<TableStatistics> TableStatistics::predicate_statistics(const std
                                                                        const ScanType scan_type,
                                                                        const AllParameterVariant &value,
                                                                        const optional<AllTypeVariant> &value2) {
-  // currently assuming all values are equally distributed
-
   auto _row_count = row_count();
   if (_row_count == 0) {
     auto clone = std::make_shared<TableStatistics>(*this);
@@ -57,9 +55,12 @@ std::shared_ptr<TableStatistics> TableStatistics::predicate_statistics(const std
   const ColumnID column_id = table->column_id_by_name(column_name);
 
   auto old_column_statistics = column_statistics(column_id);
+
+  // create copy of this as this should not be adapted for current table scan
   auto clone = std::make_shared<TableStatistics>(*this);
   ColumnSelectivityResult column_statistics_container{1, nullptr};
 
+  // delegate prediction to corresponding column statistics
   if (value.type() == typeid(AllTypeVariant)) {
     auto casted_value = boost::get<AllTypeVariant>(value);
 
