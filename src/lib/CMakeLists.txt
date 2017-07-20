@@ -137,35 +137,18 @@ set(
     operators/update.hpp
     operators/validate.cpp
     operators/validate.hpp
-    optimizer/abstract_column_statistics.hpp
     optimizer/abstract_syntax_tree/abstract_ast_node.cpp
     optimizer/abstract_syntax_tree/abstract_ast_node.hpp
-    optimizer/abstract_syntax_tree/aggregate_node.cpp
-    optimizer/abstract_syntax_tree/aggregate_node.hpp
-    optimizer/abstract_syntax_tree/join_node.cpp
-    optimizer/abstract_syntax_tree/join_node.hpp
     optimizer/expression/expression_node.cpp
     optimizer/expression/expression_node.hpp
-    optimizer/abstract_syntax_tree/node_operator_translator.hpp
-    optimizer/abstract_syntax_tree/node_operator_translator.cpp
     optimizer/abstract_syntax_tree/predicate_node.cpp
     optimizer/abstract_syntax_tree/predicate_node.hpp
-    optimizer/abstract_syntax_tree/query_plan_helper.hpp
     optimizer/abstract_syntax_tree/projection_node.cpp
     optimizer/abstract_syntax_tree/projection_node.hpp
     optimizer/abstract_syntax_tree/sort_node.cpp
     optimizer/abstract_syntax_tree/sort_node.hpp
     optimizer/abstract_syntax_tree/stored_table_node.cpp
     optimizer/abstract_syntax_tree/stored_table_node.hpp
-    optimizer/column_statistics.cpp
-    optimizer/column_statistics.hpp
-    optimizer/strategy/abstract_rule.hpp
-    optimizer/strategy/simplify_expression_rule.cpp
-    optimizer/strategy/simplify_expression_rule.hpp
-    optimizer/strategy/predicate_reordering_rule.cpp
-    optimizer/strategy/predicate_reordering_rule.hpp
-    optimizer/table_statistics.cpp
-    optimizer/table_statistics.hpp
     resolve_type.hpp
     scheduler/abstract_scheduler.cpp
     scheduler/abstract_scheduler.hpp
@@ -191,8 +174,6 @@ set(
     sql/sql_expression_translator.cpp
     sql/sql_expression_translator.hpp
     sql/sql_query_cache.hpp
-    sql/sql_query_node_translator.cpp
-    sql/sql_query_node_translator.hpp
     sql/sql_query_operator.cpp
     sql/sql_query_operator.hpp
     sql/sql_query_plan.cpp
@@ -247,7 +228,6 @@ set(
     uid_allocator.hpp
     utils/assert.hpp
     utils/cuckoo_hashtable.hpp
-    utils/helper.cpp
     utils/helper.hpp
     utils/murmur_hash.cpp
     utils/murmur_hash.hpp

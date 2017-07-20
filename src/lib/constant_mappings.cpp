@@ -59,8 +59,4 @@ const std::unordered_map<const ExpressionType, std::string> expression_type_to_s
     {ExpressionType::Case, "Case"},
 };
 
-// TODO(mp): this should be case-insensitive
-const std::unordered_map<std::string, AggregateFunction> string_to_aggregate_function = {
-    {"MIN", Min}, {"MAX", Max}, {"SUM", Sum}, {"AVG", Avg}, {"COUNT", Count},
-};
 }  // namespace opossum

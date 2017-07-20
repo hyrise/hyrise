@@ -5,7 +5,6 @@
 #include <string>
 #include <vector>
 
-#include "SQLParser.h"
 
 #include "all_parameter_variant.hpp"
 

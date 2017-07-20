@@ -3,9 +3,9 @@
 #include <memory>
 #include <vector>
 
-#include "processing_unit.hpp"
 #include "task_queue.hpp"
 #include "types.hpp"
+#include "processing_unit.hpp"
 #include "utils/assert.hpp"
 
 namespace opossum {
@@ -42,7 +42,7 @@ class Worker : public std::enable_shared_from_this<Worker> {
   void operator=(Worker&& rhs) = delete;
 
  protected:
-  template <typename TaskType>
+  template<typename TaskType>
   void _wait_for_tasks(const std::vector<std::shared_ptr<TaskType>>& task);
 
  private:
@@ -58,7 +58,7 @@ class Worker : public std::enable_shared_from_this<Worker> {
   CpuID _cpu_id;
 };
 
-template <typename TaskType>
+template<typename TaskType>
 void Worker::_wait_for_tasks(const std::vector<std::shared_ptr<TaskType>>& tasks) {
   /**
    * This method blocks the calling thread (worker) until all tasks have been completed.

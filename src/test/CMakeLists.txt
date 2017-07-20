@@ -11,7 +11,6 @@ set(
     ${SHARED_SOURCES}
     concurrency/commit_context_test.cpp
     concurrency/transaction_manager_test.cpp
-    end_to_end_test.cpp
     lib/AllParameterVariant_test.cpp
     lib/all_type_variant_test.cpp
     network/operator_translator_test.cpp
@@ -46,21 +45,15 @@ set(
     operators/validate_test.cpp
     operators/validate_visibility_test.cpp
     optimizer/abstract_syntax_tree_test.cpp
-    optimizer/node_operator_translator_test.cpp
-    optimizer/strategy/simplify_expression_rule_test.cpp
-    optimizer/strategy/predicate_reordering_test.cpp
-    optimizer/table_statistics_test.cpp
     scheduler/scheduler_test.cpp
     sql/sql_basic_cache_test.cpp
     sql/sql_expression_translator_test.cpp
     sql/sql_parse_tree_cache_test.cpp
-    sql/sql_query_node_translator_test.cpp
     sql/sql_prepare_execute_test.cpp
     sql/sql_query_operator_test.cpp
     sql/sql_query_plan_test.cpp
     sql/sql_query_plan_cache_test.cpp
     sql/sql_select_test.cpp
-    sql/tpch_test.cpp
     storage/adaptive_radix_tree_index_test.cpp
     storage/chunk_test.cpp
     storage/composite_group_key_index_test.cpp

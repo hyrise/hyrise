@@ -14,7 +14,6 @@
 
 namespace opossum {
 // A table is partitioned horizontally into a number of chunks
-class TableStatistics;
 class Table {
  public:
   // creates a table
@@ -90,21 +89,17 @@ class Table {
   // multiversion concurrency control values of chunks are ignored
   // - table needs to be validated before by Validate operator
   // If you want to write efficient operators, back off!
-  AllTypeVariant get_all_type_variant_value(const ColumnID column_id, const size_t row_number) const {
+  template <typename T>
+  T get_value(const ColumnID column_id, const size_t row_number) const {
     size_t row_counter = 0u;
     for (auto &chunk : _chunks) {
       size_t current_size = chunk.size();
       row_counter += current_size;
       if (row_counter > row_number) {
-        return (*chunk.get_column(column_id))[row_number + current_size - row_counter];
+        return get<T>((*chunk.get_column(column_id))[row_number + current_size - row_counter]);
       }
     }
     throw std::runtime_error("Row does not exist.");
-  }
-
-  template <typename T>
-  T get_value(const ColumnID column_id, const size_t row_number) const {
-    return get<T>(get_all_type_variant_value(column_id, row_number));
   }
 
   // creates a new chunk and appends it
@@ -118,10 +113,6 @@ class Table {
   RowID calculate_row_id(ChunkID chunk, ChunkOffset offset) const { return RowID{chunk, offset}; }
 
   std::unique_lock<std::mutex> acquire_append_mutex();
-
-  void set_table_statistics(std::shared_ptr<TableStatistics> table_statistics) { _table_statistics = table_statistics; }
-
-  std::shared_ptr<TableStatistics> table_statistics() { return _table_statistics; }
 
  protected:
   // 0 means that the chunk has an unlimited size.
@@ -138,8 +129,6 @@ class Table {
   std::vector<std::string> _column_names;
   std::vector<std::string> _column_types;
   std::vector<bool> _column_nullable;
-
-  std::shared_ptr<TableStatistics> _table_statistics;
 
   std::unique_ptr<std::mutex> _append_mutex;
 };

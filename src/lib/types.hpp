@@ -96,8 +96,6 @@ enum class SchedulePriority {
   High = 0     // Schedule task at the beginning of the queue
 };
 
-enum AggregateFunction { Min, Max, Sum, Avg, Count };
-
 // Part of AllParameterVariant to reference parameters that will be replaced later.
 // When stored in an operator, the operator's recreate method can contain functionality
 // that will replace a ValuePlaceholder with an explicit value from a given list of arguments
