@@ -47,7 +47,7 @@ class BenchmarkTableGenerator {
    * @param name                the name of the column
    * @param cardinalities       the cardinalities of the different 'nested loops',
    *                            e.g. 10 districts per warehouse results in {1, 10}
-   * @param generator_function  a lambda function to generate one ore multiple values for this column
+   * @param generator_function  a lambda function to generate a vector of values for this column
    */
   template <typename T>
   void add_column(std::shared_ptr<opossum::Table> table, std::string name,
@@ -148,6 +148,17 @@ class BenchmarkTableGenerator {
     }
   }
 
+  /**
+   * This method simplifies the interface for columns,
+   * where only a single element is added in the inner loop.
+   *
+   * @tparam T                  the type of the column
+   * @param table               the column shall be added to this table as well as column metadata
+   * @param name                the name of the column
+   * @param cardinalities       the cardinalities of the different 'nested loops',
+   *                            e.g. 10 districts per warehouse results in {1, 10}
+   * @param generator_function  a lambda function to generate a value for this column
+   */
   template <typename T>
   void add_column(std::shared_ptr<opossum::Table> table, std::string name,
                   std::shared_ptr<std::vector<size_t>> cardinalities,

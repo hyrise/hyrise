@@ -11,7 +11,7 @@ namespace benchmark_utilities {
 class RandomGenerator {
  public:
   // Fix random seed by default, to make sure the benchmark is deterministic
-  explicit RandomGenerator(unsigned int seed = 42) : engine(seed) {}
+  explicit RandomGenerator(uint32_t seed = 42) : engine(seed) {}
 
   /**
    * Generates a random number between lower and upper.
@@ -33,7 +33,7 @@ class RandomGenerator {
    */
   std::set<size_t> select_unique_ids(size_t num_unique, size_t id_length) {
     std::set<size_t> rows;
-
+    opossum::Assert(num_unique <= id_length, "There are not enough ids to be selected!");
     for (size_t i = 0; i < num_unique; ++i) {
       size_t index = static_cast<size_t>(-1);
       do {
@@ -41,7 +41,6 @@ class RandomGenerator {
       } while (rows.find(index) != rows.end());
       rows.insert(index);
     }
-    opossum::Assert(rows.size() == num_unique, "There are not enough unique ids to be selected!");
     return rows;
   }
 
