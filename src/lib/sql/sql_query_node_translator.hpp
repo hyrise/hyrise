@@ -44,9 +44,9 @@ class SQLQueryNodeTranslator {
 
   std::shared_ptr<ExpressionNode> _translate_expression(const hsql::Expr& expr);
 
-  const std::string _get_column_name(const hsql::Expr& expr) const;
+  std::string _get_column_name(const hsql::Expr& expr) const;
 
-  const AllTypeVariant _translate_literal(const hsql::Expr& expr);
+  AllTypeVariant _translate_literal(const hsql::Expr& expr);
 };
 
 }  // namespace opossum
