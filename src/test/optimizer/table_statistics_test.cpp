@@ -34,15 +34,15 @@ class TableStatisticsTest : public BaseTest {
    * Predict output size of one TableScan with statistics and compare with actual output size of an actual TableScan.
    */
   TableWithStatistics check_statistic_with_table_scan(const TableWithStatistics& table_with_statistics,
-                                                       const std::string& column_name,
-                                                       const ScanType scan_type,
-                                                       const AllParameterVariant value,
-                                                       const optional<AllTypeVariant> value2 = nullopt) {
+                                                      const std::string& column_name, const ScanType scan_type,
+                                                      const AllParameterVariant value,
+                                                      const optional<AllTypeVariant> value2 = nullopt) {
     auto table_wrapper = std::make_shared<TableWrapper>(table_with_statistics.table);
     table_wrapper->execute();
     auto table_scan = std::make_shared<TableScan>(table_wrapper, column_name, scan_type, value, value2);
     table_scan->execute();
-    auto post_table_scan_statistics = table_with_statistics.statistics->predicate_statistics(column_name, scan_type, value, value2);
+    auto post_table_scan_statistics =
+        table_with_statistics.statistics->predicate_statistics(column_name, scan_type, value, value2);
     TableWithStatistics output;
     output.table = table_scan->get_output();
     output.statistics = post_table_scan_statistics;
@@ -74,8 +74,8 @@ class TableStatisticsTest : public BaseTest {
   void check_column_with_values(const TableWithStatistics& table_with_statistics, const std::string& column_name,
                                 const ScanType scan_type, const std::vector<std::pair<T, T>>& values) {
     for (const auto& value_pair : values) {
-      check_statistic_with_table_scan(table_with_statistics, column_name, scan_type, AllParameterVariant(value_pair.first),
-                                      AllTypeVariant(value_pair.second));
+      check_statistic_with_table_scan(table_with_statistics, column_name, scan_type,
+                                      AllParameterVariant(value_pair.first), AllTypeVariant(value_pair.second));
     }
   }
 
@@ -184,11 +184,12 @@ TEST_F(TableStatisticsTest, NotOverlappingTableScans) {
       check_statistic_with_table_scan(_table_a_with_statistics, "s", ScanType::OpEquals, AllParameterVariant("f"));
   check_statistic_with_table_scan(container, "s", ScanType::OpNotEquals, AllParameterVariant("f"));
 
-  container =
-      check_statistic_with_table_scan(_table_a_with_statistics, "f", ScanType::OpLessThanEquals, AllParameterVariant(3.5f));
+  container = check_statistic_with_table_scan(_table_a_with_statistics, "f", ScanType::OpLessThanEquals,
+                                              AllParameterVariant(3.5f));
   check_statistic_with_table_scan(container, "f", ScanType::OpGreaterThan, AllParameterVariant(3.5f));
 
-  container = check_statistic_with_table_scan(_table_a_with_statistics, "i", ScanType::OpLessThan, AllParameterVariant(4));
+  container =
+      check_statistic_with_table_scan(_table_a_with_statistics, "i", ScanType::OpLessThan, AllParameterVariant(4));
   container = check_statistic_with_table_scan(container, "i", ScanType::OpGreaterThan, AllParameterVariant(2));
   check_statistic_with_table_scan(container, "i", ScanType::OpEquals, AllParameterVariant(3));
 }
