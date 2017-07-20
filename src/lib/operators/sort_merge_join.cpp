@@ -487,10 +487,11 @@ class SortMergeJoin::SortMergeJoinImpl : public AbstractJoinOperatorImpl, public
   void join_runs(size_t partition_number, size_t left_run_start, size_t left_run_end,
                  size_t right_run_start, size_t right_run_end)
   {
-    std::cout << "now joining a run" << std::endl;
+    //std::cout << "now joining a run" << std::endl;
 
     auto& left_partition = _sorted_left_table->partitions[partition_number];
     auto& right_partition = _sorted_right_table->partitions[partition_number];
+    auto rhs_size = right_partition.values.size();
 
     auto output_left = _output_pos_lists_left[partition_number];
     auto output_right = _output_pos_lists_right[partition_number];
@@ -550,19 +551,32 @@ class SortMergeJoin::SortMergeJoinImpl : public AbstractJoinOperatorImpl, public
       }
     }
 
+    if (_op == "<") {
+      if (left_value < right_value) {
+        for (auto l = left_run_start; l <= left_run_end; l++) {
+          auto& lhs_id = left_partition.values[l].second;
+          emit_rhs_values(partition_number, partition_number, right_run_start, rhs_size, lhs_id);
+          emit_all_rhs_values(partition_number, partition_number + 1, _partition_count, lhs_id);
+        }
+      }
+      if (left_value == right_value){
+        for (auto l = left_run_start; l <= left_run_end; l++) {
+          auto& lhs_id = left_partition.values[l].second;
+          emit_rhs_values(partition_number, partition_number, right_run_end + 1, rhs_size, lhs_id);
+          emit_all_rhs_values(partition_number, partition_number + 1, _partition_count, lhs_id);
+        }
+      }
+    }
+
     // Turn around the logic of ">" and ">=" operators
-    if (_op == "<" || _op == "<=") {
+    if (_op == "<=") {
       // Found right_value that is greater than left_value. That means all potential right_values following are
       // greater too
       if (left_value <= right_value) {
         auto rhs_size = right_partition.values.size();
-        bool include_current_partition = (_op == "<=" && left_value == right_value);
-
         for (auto l = left_run_start; l <= left_run_end; l++) {
           auto& lhs_id = left_partition.values[l].second;
-          if(include_current_partition) {
-            emit_rhs_values(partition_number, partition_number, right_run_start, rhs_size, lhs_id);
-          }
+          emit_rhs_values(partition_number, partition_number, right_run_start, rhs_size, lhs_id);
           emit_all_rhs_values(partition_number, partition_number + 1, _partition_count, lhs_id);
         }
       }
@@ -599,10 +613,7 @@ class SortMergeJoin::SortMergeJoinImpl : public AbstractJoinOperatorImpl, public
     auto& values = _sorted_right_table->partitions[rhs_partition].values;
 
     DebugAssert(from_index >= 0, "from_index is < 0");
-    DebugAssert(from_index < values.size(), "from_index is >= size");
-    DebugAssert(to_index >= 0, "to_index is < 0");
     DebugAssert(to_index <= values.size(), "to_index is > size");
-    DebugAssert(from_index < to_index, "from_index is < to_index");
 
     for(size_t i = from_index; i < to_index; i++) {
       _output_pos_lists_left[output_partition]->push_back(lhs_id);
@@ -785,7 +796,7 @@ class SortMergeJoin::SortMergeJoinImpl : public AbstractJoinOperatorImpl, public
     _sorted_left_table = sort_table(_sort_merge_join.input_table_left(), _left_column_name);
     _sorted_right_table = sort_table(_sort_merge_join.input_table_right(), _right_column_name);
 
-    std::cout << "Table sorting ran through" << std::endl;
+    //std::cout << "Table sorting ran through" << std::endl;
 
     if (_op != "=" && _partition_count > 1) {
       value_based_partitioning();
@@ -794,7 +805,7 @@ class SortMergeJoin::SortMergeJoinImpl : public AbstractJoinOperatorImpl, public
 
     perform_join();
 
-    std::cout << "perform join ran through" << std::endl;
+    //std::cout << "perform join ran through" << std::endl;
 
     auto output = std::make_shared<Table>();
 
