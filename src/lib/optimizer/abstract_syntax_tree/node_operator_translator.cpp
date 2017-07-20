@@ -118,8 +118,7 @@ const std::shared_ptr<AbstractOperator> NodeOperatorTranslator::translate_aggreg
     const auto &expr = aggregate.expr;
     Assert(expr->type() == ExpressionType::FunctionReference, "Expression is not a function.");
 
-    const auto &func_expr = std::dynamic_pointer_cast<ExpressionNode>(expr->expression_list()->at(0));
-    Assert(static_cast<bool>(func_expr), "First item of expression_list is not an expression.");
+    const auto &func_expr = (*expr->expression_list())[0];
 
     if (func_expr->is_operand()) {
       // TODO(tim): column data type is not always float
