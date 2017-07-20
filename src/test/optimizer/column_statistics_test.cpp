@@ -28,7 +28,7 @@ class ColumnStatisticsTest : public BaseTest {
                                          const ScanType scan_type, const std::vector<T> &values,
                                          const std::vector<float> &expected_selectivities) {
     auto expected_selectivities_itr = expected_selectivities.begin();
-    for (const auto & value : values) {
+    for (const auto &value : values) {
       auto result_container = column_statistic->predicate_selectivity(scan_type, AllTypeVariant(value));
       EXPECT_FLOAT_EQ(result_container.selectivity, *expected_selectivities_itr++);
     }
@@ -40,7 +40,7 @@ class ColumnStatisticsTest : public BaseTest {
                                          const ScanType scan_type, const std::vector<std::pair<T, T>> &values,
                                          const std::vector<float> &expected_selectivities) {
     auto expected_selectivities_itr = expected_selectivities.begin();
-    for (const auto & value_pair : values) {
+    for (const auto &value_pair : values) {
       auto result_container = column_statistic->predicate_selectivity(scan_type, AllTypeVariant(value_pair.first),
                                                                       AllTypeVariant(value_pair.second));
       EXPECT_FLOAT_EQ(result_container.selectivity, *expected_selectivities_itr++);
@@ -52,7 +52,7 @@ class ColumnStatisticsTest : public BaseTest {
       const std::shared_ptr<ColumnStatistics<T>> column_statistic, const ScanType scan_type,
       const std::vector<T> &values2, const std::vector<float> &expected_selectivities) {
     auto expected_selectivities_itr = expected_selectivities.begin();
-    for (const auto & value2 : values2) {
+    for (const auto &value2 : values2) {
       auto result_container =
           column_statistic->predicate_selectivity(scan_type, ValuePlaceholder(0), AllTypeVariant(value2));
       EXPECT_FLOAT_EQ(result_container.selectivity, *expected_selectivities_itr++);
