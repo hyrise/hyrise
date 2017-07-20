@@ -14,26 +14,24 @@ namespace opossum {
 class Table;
 
 /**
- * Table statistics is the interface to the statistics component.
+ * TableStatistics is the interface to the statistics component.
  *
- * Table statistics represents the expected statistics of a table.
+ * It represents the expected statistics of a table.
  * This can be either a table in the StorageManager, or a result of an operator.
  *
- * Table statistics can be chained in the same way as operators.
+ * TableStatistics can be chained in the same way as operators.
  * The initial table statistics is available via function table_statistics() from the corresponding table.
  *
- * Table statistics implements a function for each operator with the same interface as the operator.
- * Each function returns a new table statistics object
- * from which the expected row count of the corresponding output table can be accessed.
- * Currently, only predicate_statistics() for table scans is implemented.
+ * TableStatistics will eventually implement a function for each operator, currently supporting only predicates
+ * (via predicate_statistics()) from which the expected row count of the corresponding output table can be accessed.
  *
- * Statistics component assumes a uniform value distribution in columns. If values for predictions are missing
+ * The statistics component assumes a uniform value distribution in columns. If values for predictions are missing
  * (e.g. placeholders in prepared statements), default selectivity values from below are used.
  *
- * Table statistics store column statistics as pointers to AbstractColumnStatistics.
- * Column statistics is typed by ColumnType and implements the abstract methods.
- * Public table statistics functions pass on the parameters to the corresponding column statistics functions.
- * These compute a new column statistics and the predicted selectivity of an operator.
+ * TableStatistics store column statistics as AbstractColumnStatistics, which are instances of
+ * ColumnStatistics<ColumnType>
+ * Public TableStatistics functions pass on the parameters to the corresponding column statistics functions.
+ * These compute a new ColumnStatistics<> and the predicted selectivity of an operator.
  */
 class TableStatistics {
  public:
@@ -71,18 +69,17 @@ class TableStatistics {
   // row count is not an integer as it is a predicted value
   // it is multiplied with selectivity factor of a corresponding operator to predict the operator's output
   // precision is lost, if row count is rounded
-  float _row_count;
+  float _row_count = 0.0f;
 
   std::vector<std::shared_ptr<AbstractColumnStatistics>> _column_statistics;
 
-  friend class Statistics;
   friend std::ostream &operator<<(std::ostream &os, TableStatistics &obj);
 };
 
 inline std::ostream &operator<<(std::ostream &os, TableStatistics &obj) {
   os << "Table Stats " << std::endl;
   os << " row count: " << obj._row_count;
-  for (auto statistics : obj._column_statistics) {
+  for (const auto & statistics : obj._column_statistics) {
     if (statistics) os << std::endl << " " << *statistics;
   }
   return os;
