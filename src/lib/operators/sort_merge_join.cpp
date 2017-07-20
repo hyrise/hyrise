@@ -354,7 +354,6 @@ class SortMergeJoin::SortMergeJoinImpl : public AbstractJoinOperatorImpl, public
     return max_value;
   }
 
-
   // Partitioning in case of Non-Equi-Join
   void value_based_partitioning() {
     std::vector<std::map<T, uint32_t>> sample_values(_partition_count);
@@ -539,17 +538,50 @@ class SortMergeJoin::SortMergeJoinImpl : public AbstractJoinOperatorImpl, public
     }
 
     // Logic for ">" and ">=" operators
-    if (_op == ">" || _op == ">=") {
+    /*if (_op == ">=") {
       // Found right_value that is greater than left_value. That means all potential right_values before are smaller
       if (left_value <= right_value) {
         for (auto l = left_run_start; l <= left_run_end; l++) {
-          auto dependend_max_index = (_op == ">=" && left_value == right_value) ? right_run_end + 1 : right_run_start;
+          auto dependend_max_index = (left_value == right_value) ? right_run_end + 1 : right_run_start;
           auto& left_row_id = left_partition.values[l].second;
           add_smaller_values(partition_number, _sorted_right_table, output_right, output_left,
                           dependend_max_index, left_row_id);
         }
       }
+    }*/
+
+
+    if (_op == ">") {
+      if(left_value <= right_value)
+      {
+        for (auto l = left_run_start; l <= left_run_end; l++) {
+          auto& lhs_id = left_partition.values[l].second;
+          emit_all_rhs_values(partition_number, 0, partition_number, lhs_id);
+          emit_rhs_values(partition_number, partition_number, 0, right_run_start, lhs_id);
+        }
+      }
     }
+
+/*
+    if (_op == ">=") {
+      if(left_value >= right_value) {
+        for (auto l = left_run_start; l <= left_run_end; l++) {
+          auto& lhs_id = left_partition.values[l].second;
+          emit_all_rhs_values(partition_number, 0, partition_number, lhs_id);
+          emit_rhs_values(partition_number, partition_number, 0, right_run_end + 1, lhs_id);
+        }
+      }
+
+      if(left_value < right_value) {
+        for (auto l = left_run_start; l <= left_run_end; l++) {
+          auto& lhs_id = left_partition.values[l].second;
+          emit_all_rhs_values(partition_number, 0, partition_number, lhs_id);
+          emit_rhs_values(partition_number, partition_number, 0, right_run_start, lhs_id);
+        }
+      }
+
+    }
+    */
 
     if (_op == "<") {
       if (left_value < right_value) {
@@ -568,10 +600,8 @@ class SortMergeJoin::SortMergeJoinImpl : public AbstractJoinOperatorImpl, public
       }
     }
 
-    // Turn around the logic of ">" and ">=" operators
     if (_op == "<=") {
-      // Found right_value that is greater than left_value. That means all potential right_values following are
-      // greater too
+      // This run and everything following on the right side is a match
       if (left_value <= right_value) {
         auto rhs_size = right_partition.values.size();
         for (auto l = left_run_start; l <= left_run_end; l++) {
@@ -583,25 +613,17 @@ class SortMergeJoin::SortMergeJoinImpl : public AbstractJoinOperatorImpl, public
     }
   }
 
-  void add_smaller_values(uint32_t partition_number, std::shared_ptr<SortedTable> table_smaller_values,
-                        std::shared_ptr<PosList> output_smaller, std::shared_ptr<PosList> output_greater,
-                        uint32_t max_index_smaller_values, RowID greaterId) {
+/*
+  void emit_combinations(size_t output_partition, size_t lhs_from_index, size_t lhs_to_index, size_t from_rhs_partition, size_t from_rhs_index,
+                          size_t to_rhs_partition, size_t to_rhs_index) {
+    auto& left_partition = _sorted_left_table->partitions[output_partition];
+    for (auto l = lhs_from_index; l < lhs_to_index; l++) {
+      auto& lhs_id = left_partition.values[l].second;
+      emit_rhs_values(output_partition, output_partition, right_run_end + 1, rhs_size, lhs_id);
+      emit_all_rhs_values(output_partition, output_partition + 1, _partition_count, lhs_id);
+    }
+  }*/
 
-
-    emit_all_rhs_values(partition_number, 0, partition_number, greaterId);
-    emit_rhs_values(partition_number, partition_number, 0, max_index_smaller_values, greaterId);
-  }
-
-  void add_greater_values(size_t partition_number, std::shared_ptr<SortedTable> table_greater_values,
-                        std::shared_ptr<PosList> output_smaller, std::shared_ptr<PosList> output_greater,
-                        size_t start_index_greater_values, RowID smallerId) {
-
-    size_t partition_size = table_greater_values->partitions[partition_number].values.size();
-
-    emit_rhs_values(partition_number, partition_number, start_index_greater_values, partition_size, smallerId);
-    emit_all_rhs_values(partition_number, partition_number + 1, _partition_count, smallerId);
-
-  }
 
   void emit_rhs_values(size_t output_partition, size_t rhs_partition, size_t from_index, size_t to_index, RowID lhs_id) {
 
@@ -623,26 +645,10 @@ class SortMergeJoin::SortMergeJoinImpl : public AbstractJoinOperatorImpl, public
   }
 
   void emit_all_rhs_values(size_t output_partition, size_t from_rhs_partition, size_t to_rhs_partition, RowID lhs_id) {
-/*
-    DebugAssert(0 <= output_partition, "output_partition out of range");
-    DebugAssert(output_partition < _partition_count, "output_partition out of range");
-    DebugAssert(from_rhs_partition >= 0, "from_rhs_partition is < 0");
-    DebugAssert(to_rhs_partition >= 0, "to_rhs_partition is < 0");
-    DebugAssert(from_rhs_partition < _partition_count, "from_rhs_partition is >= _partition_count");
-    DebugAssert(to_rhs_partition < _partition_count, "to_rhs_partition is >= _partition_count");
-    */
-    DebugAssert(_output_pos_lists_left.size() == _partition_count, "output pos lists left count mismatch");
-    DebugAssert(_output_pos_lists_right.size() == _partition_count, "output pos lists right count mismatch");
-
     // Add all values from the specified chunks
     for(size_t partition_id = from_rhs_partition; partition_id < to_rhs_partition; partition_id++) {
-      DebugAssert(partition_id >= 0, "partition_id < 0");
-      DebugAssert(partition_id < _partition_count, "partition_id >= _partition_count");
-      auto& values = _sorted_right_table->partitions[partition_id].values;
-      for(auto& value : values) {
-        _output_pos_lists_left[output_partition]->push_back(lhs_id);
-        _output_pos_lists_right[output_partition]->push_back(value.second);
-      }
+      auto partition_size = _sorted_right_table->partitions[partition_id].values.size();
+      emit_rhs_values(output_partition, partition_id, 0, partition_size, lhs_id);
     }
   }
 

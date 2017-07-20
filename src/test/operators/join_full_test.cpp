@@ -273,6 +273,13 @@ TYPED_TEST(JoinFullTest, GreaterInnerJoin) {
       std::string("left."), std::string("right."), "src/test/tables/joinoperators/float_greater_inner_join.tbl", 1);
 }
 
+TYPED_TEST(JoinFullTest, GreaterInnerJoin2) {
+  // Joining two Integer Columns
+  this->template test_join_output<TypeParam>(
+      this->_table_wrapper_i, this->_table_wrapper_j, std::pair<std::string, std::string>("a", "a"), ">", Inner,
+      std::string("left."), std::string("right."), "src/test/tables/joinoperators/int_greater_inner_join_2.tbl", 1);
+}
+
 TYPED_TEST(JoinFullTest, GreaterEqualInnerJoin) {
   // Joining two Integer Columns
   this->template test_join_output<TypeParam>(
