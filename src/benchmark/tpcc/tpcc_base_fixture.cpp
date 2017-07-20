@@ -34,12 +34,12 @@ class TPCCBenchmarkFixture : public benchmark::Fixture {
     // CurrentScheduler::set(std::make_shared<NodeQueueScheduler>(Topology::create_fake_numa_topology(4, 2)));
   }
 
-  virtual void TearDown(const ::benchmark::State&) {
+  void TearDown(::benchmark::State&) override {
     opossum::StorageManager::get().reset();
     // CurrentScheduler::set(nullptr);
   }
 
-  virtual void SetUp(const ::benchmark::State&) {
+  void SetUp(::benchmark::State&) override {
     for (auto it = _tpcc_tables->begin(); it != _tpcc_tables->end(); ++it) {
       opossum::StorageManager::get().add_table(it->first, it->second);
     }
