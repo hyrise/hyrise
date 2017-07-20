@@ -556,7 +556,7 @@ class SortMergeJoin::SortMergeJoinImpl : public AbstractJoinOperatorImpl, public
       // greater too
       if (left_value <= right_value) {
         auto rhs_size = right_partition.values.size();
-        bool include_current_partition = (_op == "<" && left_value == right_value);
+        bool include_current_partition = (_op == "<=" && left_value == right_value);
 
         for (auto l = left_run_start; l <= left_run_end; l++) {
           auto& lhs_id = left_partition.values[l].second;
@@ -590,6 +590,7 @@ class SortMergeJoin::SortMergeJoinImpl : public AbstractJoinOperatorImpl, public
   }
 
   void emit_rhs_values(size_t output_partition, size_t rhs_partition, size_t from_index, size_t to_index, RowID lhs_id) {
+
     DebugAssert(rhs_partition >= 0, "rhs_partition is < 0");
     DebugAssert(rhs_partition < _partition_count, "rhs_partition is >= _partition_count");
     DebugAssert(_output_pos_lists_left.size() == _partition_count, "output pos lists left count mismatch");
@@ -621,10 +622,6 @@ class SortMergeJoin::SortMergeJoinImpl : public AbstractJoinOperatorImpl, public
     */
     DebugAssert(_output_pos_lists_left.size() == _partition_count, "output pos lists left count mismatch");
     DebugAssert(_output_pos_lists_right.size() == _partition_count, "output pos lists right count mismatch");
-
-    std::cout << "_partition_count: " << _partition_count << std::endl;
-    std::cout << "from_rhs_partition: " << from_rhs_partition << std::endl;
-    std::cout << "to_rhs_partition: " << to_rhs_partition << std::endl;
 
     // Add all values from the specified chunks
     for(size_t partition_id = from_rhs_partition; partition_id < to_rhs_partition; partition_id++) {
