@@ -26,8 +26,7 @@ class TableStatisticsTest : public BaseTest {
     std::shared_ptr<Table> table_a = load_table("src/test/tables/int_float_double_string.tbl", 0);
     StorageManager::get().add_table("table_a", table_a);
 
-    auto table_a_stats = opossum::StorageManager::get().get_table("table_a")->table_statistics();
-    _table_a_container = TableContainer{table_a_stats, table_a};
+    _table_a_container = TableContainer{table_a->table_statistics(), table_a};
   }
 
   TableContainer check_statistic_with_table_scan(const TableContainer& table_container, const std::string& column_name,
@@ -55,7 +54,7 @@ class TableStatisticsTest : public BaseTest {
   void check_column_with_values(const TableContainer& table_container, const std::string& column_name,
                                 const ScanType scan_type, const std::vector<T>& values) {
     for (const auto& value : values) {
-      check_statistic_with_table_scan(table_container, column_name, scan_type, opossum::AllParameterVariant(value));
+      check_statistic_with_table_scan(table_container, column_name, scan_type, AllParameterVariant(value));
     }
   }
 
@@ -63,9 +62,8 @@ class TableStatisticsTest : public BaseTest {
   void check_column_with_values(const TableContainer& table_container, const std::string& column_name,
                                 const ScanType scan_type, const std::vector<std::pair<T, T>>& values) {
     for (const auto& value_pair : values) {
-      check_statistic_with_table_scan(table_container, column_name, scan_type,
-                                      opossum::AllParameterVariant(value_pair.first),
-                                      opossum::AllTypeVariant(value_pair.second));
+      check_statistic_with_table_scan(table_container, column_name, scan_type, AllParameterVariant(value_pair.first),
+                                      AllTypeVariant(value_pair.second));
     }
   }
 
@@ -88,7 +86,7 @@ TEST_F(TableStatisticsTest, NotEqualTest) {
   check_column_with_values(_table_a_container, "s", scan_type, _string_values);
 }
 
-TEST_F(TableStatisticsTest, EqualTest) {
+TEST_F(TableStatisticsTest, EqualsTest) {
   ScanType scan_type = ScanType::OpEquals;
   check_column_with_values(_table_a_container, "i", scan_type, _int_values);
   check_column_with_values(_table_a_container, "f", scan_type, _float_values);
@@ -160,9 +158,8 @@ TEST_F(TableStatisticsTest, BetweenTest) {
 
 TEST_F(TableStatisticsTest, MultipleColumnTableScans) {
   auto container = check_statistic_with_table_scan(_table_a_container, "d", ScanType::OpBetween,
-                                                   opossum::AllParameterVariant(2.), opossum::AllTypeVariant(5.));
-  container =
-      check_statistic_with_table_scan(container, "i", ScanType::OpGreaterThanEquals, opossum::AllParameterVariant(4));
+                                                   AllParameterVariant(2.), AllTypeVariant(5.));
+  container = check_statistic_with_table_scan(container, "i", ScanType::OpGreaterThanEquals, AllParameterVariant(4));
 }
 
 TEST_F(TableStatisticsTest, NotOverlappingTableScans) {
@@ -170,17 +167,16 @@ TEST_F(TableStatisticsTest, NotOverlappingTableScans) {
    * check that min and max values of columns are set
    */
   auto container =
-      check_statistic_with_table_scan(_table_a_container, "s", ScanType::OpEquals, opossum::AllParameterVariant("f"));
-  check_statistic_with_table_scan(container, "s", ScanType::OpNotEquals, opossum::AllParameterVariant("f"));
-
-  container = check_statistic_with_table_scan(_table_a_container, "f", ScanType::OpLessThanEquals,
-                                              opossum::AllParameterVariant(3.5f));
-  check_statistic_with_table_scan(container, "f", ScanType::OpGreaterThan, opossum::AllParameterVariant(3.5f));
+      check_statistic_with_table_scan(_table_a_container, "s", ScanType::OpEquals, AllParameterVariant("f"));
+  check_statistic_with_table_scan(container, "s", ScanType::OpNotEquals, AllParameterVariant("f"));
 
   container =
-      check_statistic_with_table_scan(_table_a_container, "i", ScanType::OpLessThan, opossum::AllParameterVariant(4));
-  container = check_statistic_with_table_scan(container, "i", ScanType::OpGreaterThan, opossum::AllParameterVariant(2));
-  check_statistic_with_table_scan(container, "i", ScanType::OpEquals, opossum::AllParameterVariant(3));
+      check_statistic_with_table_scan(_table_a_container, "f", ScanType::OpLessThanEquals, AllParameterVariant(3.5f));
+  check_statistic_with_table_scan(container, "f", ScanType::OpGreaterThan, AllParameterVariant(3.5f));
+
+  container = check_statistic_with_table_scan(_table_a_container, "i", ScanType::OpLessThan, AllParameterVariant(4));
+  container = check_statistic_with_table_scan(container, "i", ScanType::OpGreaterThan, AllParameterVariant(2));
+  check_statistic_with_table_scan(container, "i", ScanType::OpEquals, AllParameterVariant(3));
 }
 
 }  // namespace opossum

@@ -30,7 +30,7 @@ class AbstractColumnStatistics {
    * Predict result of a table scan with constant values.
    */
   virtual ColumnSelectivityResult predicate_selectivity(const ScanType scan_type, const AllTypeVariant &value,
-                                                        const optional<AllTypeVariant> &value2) = 0;
+                                                        const optional<AllTypeVariant> &value2 = nullopt) = 0;
 
   /**
    * Predicate selectivity for prepared statements.
@@ -38,7 +38,7 @@ class AbstractColumnStatistics {
    * Therefore, when necessary default selectivity values are used for predictions.
    */
   virtual ColumnSelectivityResult predicate_selectivity(const ScanType scan_type, const ValuePlaceholder &value,
-                                                        const optional<AllTypeVariant> &value2) = 0;
+                                                        const optional<AllTypeVariant> &value2 = nullopt) = 0;
 
  protected:
   /**

@@ -2,12 +2,12 @@
 
 #include <algorithm>
 #include <memory>
+#include <ostream>
 #include <string>
 #include <tuple>
 #include <type_traits>
 #include <utility>
 #include <vector>
-#include <ostream>
 
 #include "all_parameter_variant.hpp"
 #include "common.hpp"
