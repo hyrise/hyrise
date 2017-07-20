@@ -35,6 +35,7 @@ target_link_libraries(
     opossumPlaygroundTPCH
     opossum
     tpch
+    tpcc
 )
 
 # Configure client

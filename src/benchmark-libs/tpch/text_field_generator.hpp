@@ -4,15 +4,17 @@
 #include <sstream>
 #include <string>
 #include <vector>
+
+#include "benchmark_utilities/random_generator.hpp"
 #include "grammar.hpp"
-#include "random_generator.hpp"
 
 namespace tpch {
 
 class TextFieldGenerator {
  public:
-  explicit TextFieldGenerator(RandomGenerator random_generator)
-      : _random_gen(random_generator), _text(Grammar(random_generator).text(300e2)) {} //TODO(Jonathan) set back to 300e6 (300MB)
+  explicit TextFieldGenerator(benchmark_utilities::RandomGenerator random_generator)
+      : _random_gen(random_generator),
+        _text(Grammar(random_generator).text(300e2)) {}  // TODO(Jonathan) set back to 300e6 (300MB)
 
   std::string text_string(size_t lower_length, size_t upper_length) {
     auto length = _random_gen.number(lower_length, upper_length);
@@ -108,7 +110,7 @@ class TextFieldGenerator {
     return word_vector[i];
   }
 
-  RandomGenerator _random_gen;
+  benchmark_utilities::RandomGenerator _random_gen;
   const std::string _text;
 
   const std::vector<std::string> part_name_words = {

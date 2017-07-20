@@ -3,15 +3,13 @@
 #include <sstream>
 #include <string>
 #include <vector>
-#include "random_generator.hpp"
+#include "benchmark_utilities/random_generator.hpp"
 
 namespace tpch {
 
-class RandomGenerator;
-
 class Grammar {
  public:
-  explicit Grammar(RandomGenerator generator) : _random_gen(generator) {}
+  explicit Grammar(benchmark_utilities::RandomGenerator generator) : _random_gen(generator) {}
 
   std::string text(std::streampos min_size) {
     std::stringstream text = sentence();
@@ -92,7 +90,7 @@ class Grammar {
     return word_vector[i];
   }
 
-  RandomGenerator _random_gen;
+  benchmark_utilities::RandomGenerator _random_gen;
 
   const std::vector<std::string> nouns = {
       "foxes",     "ideas",       "theodolites", "pinto",     "beans",       "instructions", "dependencies", "excuses",

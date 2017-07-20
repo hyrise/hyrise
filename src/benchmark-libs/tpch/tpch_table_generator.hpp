@@ -1,19 +1,19 @@
 #pragma once
 
 #include <time.h>
+#include <map>
 #include <memory>
 #include <string>
 #include <vector>
 
-#include "random_generator.hpp"
-#include "storage/storage_manager.hpp"
+#include "benchmark_utilities/benchmark_table_generator.hpp"
+#include "benchmark_utilities/random_generator.hpp"
 #include "storage/table.hpp"
-#include "storage/value_column.hpp"
 #include "text_field_generator.hpp"
 
 namespace tpch {
 
-class TableGenerator {
+class TableGenerator : public benchmark_utilities::BenchmarkTableGenerator {
   // following TPC-H v2.17.2
  public:
   struct OrderLine {
@@ -54,30 +54,21 @@ class TableGenerator {
 
   std::shared_ptr<opossum::Table> generate_regions_table();
 
-  std::shared_ptr<std::map<std::string, std::shared_ptr<opossum::Table>>> generate_all_tables();
+  std::shared_ptr<std::map<std::string, std::shared_ptr<opossum::Table>>> generate_all_tables() override;
 
   const size_t _chunk_size = 1000;
 
   const size_t _scale_factor = 1;
 
-  const size_t _supplier_size = 10000;   // * _scale_factor
-  const size_t _part_size = 200;      // * _scale_factor
-  const size_t _partsupp_size = 4;       // per part
-  const size_t _customer_size = 150;  // * _scale_factor
-  const size_t _order_size = 10;         // per customer
+  const size_t _supplier_size = 10000;  // * _scale_factor
+  const size_t _part_size = 200;        // * _scale_factor
+  const size_t _partsupp_size = 4;      // per part
+  const size_t _customer_size = 150;    // * _scale_factor
+  const size_t _order_size = 10;        // per customer
   const size_t _nation_size = 25;
   const size_t _region_size = 5;
 
  protected:
-  template <typename T>
-  void add_column(std::shared_ptr<opossum::Table> table, std::string name,
-                  std::shared_ptr<std::vector<size_t>> cardinalities,
-                  const std::function<T(std::vector<size_t>)> &generator_function);
-
-  template <typename T>
-  std::shared_ptr<opossum::ValueColumn<T>> add_column(size_t cardinality,
-                                                      const std::function<T(size_t)> &generator_function);
-
   float calculate_part_retailprice(size_t i) const;
 
   int calculate_partsuppkey(size_t partkey, size_t supplier) const;
@@ -104,7 +95,7 @@ class TableGenerator {
   const std::vector<size_t> _region_keys_per_nation = {0, 1, 1, 1, 4, 0, 3, 3, 2, 2, 4, 4, 2,
                                                        4, 0, 0, 0, 1, 2, 3, 4, 2, 3, 3, 1};
 
-  RandomGenerator _random_gen;
+  benchmark_utilities::RandomGenerator _random_gen;
   TextFieldGenerator _text_field_gen;
 };
 }  // namespace tpch

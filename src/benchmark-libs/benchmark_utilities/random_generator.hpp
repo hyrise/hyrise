@@ -4,13 +4,12 @@
 #include <random>
 #include <set>
 #include <string>
-#include <vector>
 
-namespace tpch {
+namespace benchmark_utilities {
 
 class RandomGenerator {
  public:
-  RandomGenerator() : engine(std::random_device()()) {}
+  RandomGenerator(unsigned int seed = 42) : engine(seed) {}
 
   int32_t number(int32_t lower, int32_t upper) {
     std::uniform_int_distribution<int32_t> dist(lower, upper);
@@ -23,7 +22,6 @@ class RandomGenerator {
     for (size_t i = 0; i < length; i++) {
       s.append(1, static_cast<char>(base_character + number(0, num_characters - 1)));
     }
-
     return s;
   }
 
@@ -44,4 +42,4 @@ class RandomGenerator {
  protected:
   std::default_random_engine engine;
 };
-}  // namespace tpch
+}  // namespace benchmark_utilities
