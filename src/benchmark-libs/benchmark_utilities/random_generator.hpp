@@ -1,9 +1,10 @@
 #pragma once
 
-#include <cassert>
 #include <random>
 #include <set>
 #include <string>
+
+#include "utils/assert.hpp"
 
 namespace benchmark_utilities {
 
@@ -40,7 +41,7 @@ class RandomGenerator {
       } while (rows.find(index) != rows.end());
       rows.insert(index);
     }
-    assert(rows.size() == num_unique);
+    opossum::Assert(rows.size() == num_unique, "There are not enough unique ids to be selected!");
     return rows;
   }
 
