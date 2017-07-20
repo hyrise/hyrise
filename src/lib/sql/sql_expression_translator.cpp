@@ -6,7 +6,7 @@
 #include <unordered_map>
 #include <vector>
 
-#include "optimizer/abstract_syntax_tree/expression_node.hpp"
+#include "optimizer/expression/expression_node.hpp"
 
 #include "SQLParser.h"
 

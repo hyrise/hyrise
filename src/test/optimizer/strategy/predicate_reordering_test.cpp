@@ -2,14 +2,14 @@
 #include <string>
 #include <vector>
 
-#include "../base_test.hpp"
+#include "base_test.hpp"
 #include "gtest/gtest.h"
 
 #include "optimizer/abstract_syntax_tree/abstract_ast_node.hpp"
 #include "optimizer/abstract_syntax_tree/predicate_node.hpp"
 #include "optimizer/abstract_syntax_tree/projection_node.hpp"
 #include "optimizer/abstract_syntax_tree/stored_table_node.hpp"
-#include "optimizer/strategies/predicate_reordering_rule.hpp"
+#include "optimizer/strategy/predicate_reordering_rule.hpp"
 
 namespace opossum {
 
@@ -32,15 +32,15 @@ class PredicateReorderingTest : public BaseTest {
   }
 };
 
-TEST_F(PredicateReorderingTest, SimpleReorderingTest) {
-  PredicateReorderingRule rule;
-
-  auto reordered = rule.apply_rule(ast);
-
-  std::cout << " Printing result " << std::endl;
-  reordered->print();
-
-  //    ASSERT_TRUE(false);
-}
+// TEST_F(PredicateReorderingTest, SimpleReorderingTest) {
+//  PredicateReorderingRule rule;
+//
+//  auto reordered = rule.apply_rule(ast);
+//
+//  std::cout << " Printing result " << std::endl;
+//  reordered->print();
+//
+//  //    ASSERT_TRUE(false);
+//}
 
 }  // namespace opossum

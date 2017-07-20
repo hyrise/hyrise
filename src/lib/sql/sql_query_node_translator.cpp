@@ -8,12 +8,12 @@
 
 #include "optimizer/abstract_syntax_tree/abstract_ast_node.hpp"
 #include "optimizer/abstract_syntax_tree/aggregate_node.hpp"
-#include "optimizer/abstract_syntax_tree/expression_node.hpp"
 #include "optimizer/abstract_syntax_tree/join_node.hpp"
 #include "optimizer/abstract_syntax_tree/predicate_node.hpp"
 #include "optimizer/abstract_syntax_tree/projection_node.hpp"
 #include "optimizer/abstract_syntax_tree/sort_node.hpp"
 #include "optimizer/abstract_syntax_tree/stored_table_node.hpp"
+#include "optimizer/expression/expression_node.hpp"
 #include "sql/sql_expression_translator.hpp"
 #include "storage/storage_manager.hpp"
 

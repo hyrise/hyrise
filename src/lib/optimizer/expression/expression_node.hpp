@@ -5,17 +5,35 @@
 #include <string>
 #include <vector>
 
-#include "abstract_ast_node.hpp"
 #include "all_type_variant.hpp"
 #include "common.hpp"
-#include "optimizer/abstract_syntax_tree/abstract_expression_node.hpp"
 #include "types.hpp"
 
 namespace opossum {
 
-class ExpressionNode : public AbstractExpressionNode {
+class ExpressionNode : public std::enable_shared_from_this<ExpressionNode> {
  public:
   explicit ExpressionNode(const ExpressionType type);
+
+  const std::weak_ptr<ExpressionNode>& parent() const;
+  void set_parent(const std::weak_ptr<ExpressionNode>& parent);
+
+  const std::shared_ptr<ExpressionNode>& left_child() const;
+  void set_left_child(const std::shared_ptr<ExpressionNode>& left);
+
+  const std::shared_ptr<ExpressionNode>& right_child() const;
+  void set_right_child(const std::shared_ptr<ExpressionNode>& right);
+
+  const ExpressionType type() const;
+
+  void print(const uint8_t level = 0) const;
+
+  // Is +, -, *, /
+  bool is_arithmetic() const;
+
+  // Is literal or column-ref
+  bool is_operand() const;
+
   // ColumnReferences
   ExpressionNode(const ExpressionType type, const std::string& table_name, const std::string& column_name);
   // Literals
@@ -24,16 +42,10 @@ class ExpressionNode : public AbstractExpressionNode {
   ExpressionNode(const ExpressionType type, const std::string& function_name,
                  std::shared_ptr<std::vector<std::shared_ptr<ExpressionNode>>> expression_list);
 
-  // Is +, -, *, /
-  bool is_arithmetic() const;
-
-  // Is literal or column-ref
-  bool is_operand() const;
-
   // Convert expression_type to AggregateFunction, if possible
   AggregateFunction as_aggregate_function() const;
 
-  std::string description() const override;
+  const std::string description() const;
 
   const std::string& table_name() const;
 
@@ -50,6 +62,9 @@ class ExpressionNode : public AbstractExpressionNode {
   // Expression as string, parse-able by Projection
   std::string to_expression_string() const;
 
+ protected:
+  const ExpressionType _type;
+
  private:
   const AllTypeVariant _value;
   //  const AllTypeVariant _value2;
@@ -58,6 +73,10 @@ class ExpressionNode : public AbstractExpressionNode {
   const std::string _name;
   const std::string _table;
   //  char* alias;
+
+  std::weak_ptr<ExpressionNode> _parent;
+  std::shared_ptr<ExpressionNode> _left_child;
+  std::shared_ptr<ExpressionNode> _right_child;
 };
 
 }  // namespace opossum

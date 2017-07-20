@@ -1,5 +1,7 @@
 #include "expression_node.hpp"
 
+#include <iomanip>
+#include <iostream>
 #include <memory>
 #include <sstream>
 #include <string>
@@ -22,46 +24,57 @@ const std::unordered_map<ExpressionType, std::string> expression_type_to_operato
 };
 
 ExpressionNode::ExpressionNode(const ExpressionType type)
-    : AbstractExpressionNode(type),
-      _value(NULL_VALUE) /*, _value2(NULL_VALUE)*/,
-      _expression_list({}),
-      _name("-"),
-      _table("-") {}
+    : _type(type), _value(NULL_VALUE) /*, _value2(NULL_VALUE)*/, _expression_list({}), _name("-"), _table("-") {}
 
 ExpressionNode::ExpressionNode(const ExpressionType type, const std::string &table_name, const std::string &column_name)
-    : AbstractExpressionNode(type),
+    : _type(type),
       _value(NULL_VALUE) /*, _value2(NULL_VALUE)*/,
       _expression_list({}),
       _name(column_name),
       _table(table_name) {}
 
 ExpressionNode::ExpressionNode(const ExpressionType type, const AllTypeVariant value /*, const AllTypeVariant value2*/)
-    : AbstractExpressionNode(type),
-      _value(value) /*, _value2(value2)*/,
-      _expression_list({}),
-      _name("-"),
-      _table("-") {}
+    : _type(type), _value(value) /*, _value2(value2)*/, _expression_list({}), _name("-"), _table("-") {}
 
 ExpressionNode::ExpressionNode(const ExpressionType type, const std::string &function_name,
                                std::shared_ptr<std::vector<std::shared_ptr<ExpressionNode>>> expression_list)
-    : AbstractExpressionNode(type),
+    : _type(type),
       _value(NULL_VALUE) /*, _value2(NULL_VALUE)*/,
       _expression_list(expression_list),
       _name(function_name),
       _table("-") {}
 
-AggregateFunction ExpressionNode::as_aggregate_function() const {
-  Fail("Can't do this right now");
-  return AggregateFunction::Avg;
+const std::weak_ptr<ExpressionNode> &ExpressionNode::parent() const { return _parent; }
+
+void ExpressionNode::set_parent(const std::weak_ptr<ExpressionNode> &parent) { _parent = parent; }
+
+const std::shared_ptr<ExpressionNode> &ExpressionNode::left_child() const { return _left_child; }
+
+void ExpressionNode::set_left_child(const std::shared_ptr<ExpressionNode> &left) {
+  _left_child = left;
+  left->_parent = shared_from_this();
 }
 
-std::string ExpressionNode::description() const {
-  std::ostringstream desc;
+const std::shared_ptr<ExpressionNode> &ExpressionNode::right_child() const { return _right_child; }
 
-  desc << "Expression (" << expression_type_to_string.at(_type) << ", " << value() /*<< ", " << value2()*/ << ", "
-       << table_name() << ", " << column_name() << ")";
+void ExpressionNode::set_right_child(const std::shared_ptr<ExpressionNode> &right) {
+  _right_child = right;
+  right->_parent = shared_from_this();
+}
 
-  return desc.str();
+const ExpressionType ExpressionNode::type() const { return _type; }
+
+void ExpressionNode::print(const uint8_t level) const {
+  std::cout << std::setw(level) << " ";
+  std::cout << description() << std::endl;
+
+  if (_left_child) {
+    _left_child->print(level + 2);
+  }
+
+  if (_right_child) {
+    _right_child->print(level + 2);
+  }
 }
 
 bool ExpressionNode::is_arithmetic() const {
@@ -71,6 +84,20 @@ bool ExpressionNode::is_arithmetic() const {
 
 bool ExpressionNode::is_operand() const {
   return _type == ExpressionType::Literal || _type == ExpressionType::ColumnReference;
+}
+
+AggregateFunction ExpressionNode::as_aggregate_function() const {
+  Fail("Can't do this right now");
+  return AggregateFunction::Avg;
+}
+
+const std::string ExpressionNode::description() const {
+  std::ostringstream desc;
+
+  desc << "Expression (" << expression_type_to_string.at(_type) << ", " << value() /*<< ", " << value2()*/ << ", "
+       << table_name() << ", " << column_name() << ")";
+
+  return desc.str();
 }
 
 const std::string &ExpressionNode::table_name() const { return _table; }
