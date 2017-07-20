@@ -13,8 +13,25 @@ namespace opossum {
 
 class ExpressionNode : public std::enable_shared_from_this<ExpressionNode> {
  public:
-  explicit ExpressionNode(const ExpressionType type);
+  ExpressionNode(const ExpressionType type, const AllTypeVariant value,
+                 const std::shared_ptr<std::vector<std::shared_ptr<ExpressionNode>>> expression_list,
+                 const std::string& name, const std::string& table);
 
+  static std::shared_ptr<ExpressionNode> create_expression(const ExpressionType type);
+
+  static std::shared_ptr<ExpressionNode> create_column_reference(const std::string& table_name,
+                                                                 const std::string& column_name);
+
+  static std::shared_ptr<ExpressionNode> create_literal(const AllTypeVariant value);
+
+  static std::shared_ptr<ExpressionNode> create_parameter(const AllTypeVariant value);
+
+  static std::shared_ptr<ExpressionNode> create_function_reference(
+      const std::string& function_name, std::shared_ptr<std::vector<std::shared_ptr<ExpressionNode>>> expression_list);
+
+  /*
+   * Helper functions for Expression Trees
+   */
   const std::weak_ptr<ExpressionNode>& parent() const;
   void set_parent(const std::weak_ptr<ExpressionNode>& parent);
 
@@ -30,20 +47,6 @@ class ExpressionNode : public std::enable_shared_from_this<ExpressionNode> {
 
   // Is +, -, *, /
   bool is_arithmetic() const;
-
-  // Is literal or column-ref
-  bool is_operand() const;
-
-  // ColumnReferences
-  ExpressionNode(const ExpressionType type, const std::string& table_name, const std::string& column_name);
-  // Literals
-  ExpressionNode(const ExpressionType type, const AllTypeVariant value /*, const AllTypeVariant value2*/);
-  // FunctionReferences
-  ExpressionNode(const ExpressionType type, const std::string& function_name,
-                 std::shared_ptr<std::vector<std::shared_ptr<ExpressionNode>>> expression_list);
-
-  // Convert expression_type to AggregateFunction, if possible
-  AggregateFunction as_aggregate_function() const;
 
   const std::string description() const;
 

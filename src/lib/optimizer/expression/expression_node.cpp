@@ -23,26 +23,42 @@ const std::unordered_map<ExpressionType, std::string> expression_type_to_operato
     {ExpressionType::Slash, "/"},
 };
 
-ExpressionNode::ExpressionNode(const ExpressionType type)
-    : _type(type), _value(NULL_VALUE) /*, _value2(NULL_VALUE)*/, _expression_list({}), _name("-"), _table("-") {}
-
-ExpressionNode::ExpressionNode(const ExpressionType type, const std::string &table_name, const std::string &column_name)
+ExpressionNode::ExpressionNode(const ExpressionType type, const AllTypeVariant value,
+                               const std::shared_ptr<std::vector<std::shared_ptr<ExpressionNode>>> expression_list,
+                               const std::string &name, const std::string &table)
     : _type(type),
-      _value(NULL_VALUE) /*, _value2(NULL_VALUE)*/,
-      _expression_list({}),
-      _name(column_name),
-      _table(table_name) {}
-
-ExpressionNode::ExpressionNode(const ExpressionType type, const AllTypeVariant value /*, const AllTypeVariant value2*/)
-    : _type(type), _value(value) /*, _value2(value2)*/, _expression_list({}), _name("-"), _table("-") {}
-
-ExpressionNode::ExpressionNode(const ExpressionType type, const std::string &function_name,
-                               std::shared_ptr<std::vector<std::shared_ptr<ExpressionNode>>> expression_list)
-    : _type(type),
-      _value(NULL_VALUE) /*, _value2(NULL_VALUE)*/,
+      _value(value) /*, _value2(NULL_VALUE)*/,
       _expression_list(expression_list),
-      _name(function_name),
-      _table("-") {}
+      _name(name),
+      _table(table) {}
+
+std::shared_ptr<ExpressionNode> ExpressionNode::create_expression(const ExpressionType type) {
+  auto expr_list = std::make_shared<std::vector<std::shared_ptr<ExpressionNode>>>();
+  return std::make_shared<ExpressionNode>(type, NULL_VALUE, expr_list, "", "");
+}
+
+std::shared_ptr<ExpressionNode> ExpressionNode::create_column_reference(const std::string &table_name,
+                                                                        const std::string &column_name) {
+  auto expr_list = std::make_shared<std::vector<std::shared_ptr<ExpressionNode>>>();
+  return std::make_shared<ExpressionNode>(ExpressionType::ColumnReference, NULL_VALUE, expr_list, column_name,
+                                          table_name);
+}
+
+std::shared_ptr<ExpressionNode> ExpressionNode::create_literal(const AllTypeVariant value) {
+  auto expr_list = std::make_shared<std::vector<std::shared_ptr<ExpressionNode>>>();
+  return std::make_shared<ExpressionNode>(ExpressionType::Literal, value, expr_list, "", "");
+}
+
+std::shared_ptr<ExpressionNode> ExpressionNode::create_parameter(const AllTypeVariant value) {
+  auto expr_list = std::make_shared<std::vector<std::shared_ptr<ExpressionNode>>>();
+  return std::make_shared<ExpressionNode>(ExpressionType::Parameter, value, expr_list, "", "");
+}
+
+std::shared_ptr<ExpressionNode> ExpressionNode::create_function_reference(
+    const std::string &function_name, std::shared_ptr<std::vector<std::shared_ptr<ExpressionNode>>> expression_list) {
+  return std::make_shared<ExpressionNode>(ExpressionType::FunctionReference, NULL_VALUE, expression_list, function_name,
+                                          "");
+}
 
 const std::weak_ptr<ExpressionNode> &ExpressionNode::parent() const { return _parent; }
 
@@ -80,15 +96,6 @@ void ExpressionNode::print(const uint8_t level) const {
 bool ExpressionNode::is_arithmetic() const {
   return _type == ExpressionType::Minus || _type == ExpressionType::Plus || _type == ExpressionType::Asterisk ||
          _type == ExpressionType::Slash;
-}
-
-bool ExpressionNode::is_operand() const {
-  return _type == ExpressionType::Literal || _type == ExpressionType::ColumnReference;
-}
-
-AggregateFunction ExpressionNode::as_aggregate_function() const {
-  Fail("Can't do this right now");
-  return AggregateFunction::Avg;
 }
 
 const std::string ExpressionNode::description() const {
