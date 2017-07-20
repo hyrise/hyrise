@@ -226,7 +226,7 @@ AllParameterVariant SQLQueryNodeTranslator::_translate_literal(const hsql::Expr&
     case hsql::kExprColumnRef:
       return ColumnName(_get_column_name(expr));
     default:
-      Fail"Could not translate literal: expression type not supported.");
+      Fail("Could not translate literal: expression type not supported.");
       return {};
   }
 }

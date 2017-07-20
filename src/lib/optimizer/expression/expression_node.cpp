@@ -98,6 +98,10 @@ bool ExpressionNode::is_arithmetic() const {
          _type == ExpressionType::Slash;
 }
 
+bool ExpressionNode::is_operand() const {
+  return _type == ExpressionType::Literal || _type == ExpressionType::ColumnReference;
+}
+
 const std::string ExpressionNode::description() const {
   std::ostringstream desc;
 

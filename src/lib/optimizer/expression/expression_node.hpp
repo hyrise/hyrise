@@ -48,6 +48,8 @@ class ExpressionNode : public std::enable_shared_from_this<ExpressionNode> {
   // Is +, -, *, /
   bool is_arithmetic() const;
 
+  bool is_operand() const;
+
   const std::string description() const;
 
   const std::string& table_name() const;
