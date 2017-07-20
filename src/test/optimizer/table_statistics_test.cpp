@@ -29,6 +29,9 @@ class TableStatisticsTest : public BaseTest {
     _table_a_container = TableContainer{table_a->table_statistics(), table_a};
   }
 
+  /**
+   * Predict output size of one table scan and compare with actual output size.
+   */
   TableContainer check_statistic_with_table_scan(const TableContainer& table_container, const std::string& column_name,
                                                  const ScanType scan_type, const AllParameterVariant value,
                                                  const optional<AllTypeVariant> value2 = nullopt) {
@@ -42,7 +45,9 @@ class TableStatisticsTest : public BaseTest {
     return output_container;
   }
 
-  // ASSERT_EQ does not work in member function
+  /**
+   * ASSERT_EQ does not work in member function
+   */
   struct {
     void operator()(const TableContainer& table_container) {
       ASSERT_EQ(static_cast<int>(round(table_container.statistics->row_count())),
@@ -50,6 +55,9 @@ class TableStatisticsTest : public BaseTest {
     }
   } assert_equal_row_count;
 
+  /**
+   * Predict output sizes of tables scans and compare with actual output sizes.
+   */
   template <typename T>
   void check_column_with_values(const TableContainer& table_container, const std::string& column_name,
                                 const ScanType scan_type, const std::vector<T>& values) {
@@ -58,6 +66,9 @@ class TableStatisticsTest : public BaseTest {
     }
   }
 
+  /**
+   * Predict output sizes of tables scans with two values (scan type = OpBetween) and compare with actual output sizes.
+   */
   template <typename T>
   void check_column_with_values(const TableContainer& table_container, const std::string& column_name,
                                 const ScanType scan_type, const std::vector<std::pair<T, T>>& values) {

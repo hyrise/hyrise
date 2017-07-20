@@ -105,6 +105,9 @@ ColumnSelectivityResult ColumnStatistics<ColumnType>::calculate_selectivity_for_
     return {0.f, nullptr};
   }
   float selectivity;
+  // distinction between integers and decimals
+  // for integers the number of possible integers is used within the inclusive ranges
+  // for decimals the size of the range is used
   if (std::is_integral<ColumnType>::value) {
     selectivity = static_cast<float>(new_max - new_min + 1) / static_cast<float>(max() - min() + 1);
   } else {
@@ -169,7 +172,7 @@ ColumnSelectivityResult ColumnStatistics<ColumnType>::predicate_selectivity(cons
       return calculate_selectivity_for_unequals_and_create_output(casted_value);
     }
     case ScanType::OpLessThan: {
-      // distinction between integers and decimicals
+      // distinction between integers and decimals
       // for integers "< value" means that the new max is value <= value - 1
       // for decimals "< value" means that the new max is value <= value - ε
       if (std::is_integral<ColumnType>::value) {
@@ -183,7 +186,7 @@ ColumnSelectivityResult ColumnStatistics<ColumnType>::predicate_selectivity(cons
       return calculate_selectivity_for_range_and_create_output(min(), casted_value);
     }
     case ScanType::OpGreaterThan: {
-      // distinction between integers and decimicals
+      // distinction between integers and decimals
       // for integers "> value" means that the new min value is >= value + 1
       // for decimals "> value" means that the new min value is >= value + ε
       if (std::is_integral<ColumnType>::value) {
