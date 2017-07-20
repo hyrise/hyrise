@@ -49,6 +49,7 @@ set(
     optimizer/node_operator_translator_test.cpp
     optimizer/strategy/simplify_expression_rule_test.cpp
     optimizer/strategy/predicate_reordering_test.cpp
+    optimizer/column_statistics_test.cpp
     optimizer/table_statistics_test.cpp
     scheduler/scheduler_test.cpp
     sql/sql_basic_cache_test.cpp

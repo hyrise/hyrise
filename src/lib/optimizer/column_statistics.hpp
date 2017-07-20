@@ -26,10 +26,10 @@ class ColumnStatistics : public AbstractColumnStatistics {
   ~ColumnStatistics() override = default;
 
   ColumnSelectivityResult predicate_selectivity(const ScanType scan_type, const AllTypeVariant &value,
-                                                const optional<AllTypeVariant> &value2) override;
+                                                const optional<AllTypeVariant> &value2 = nullopt) override;
 
   ColumnSelectivityResult predicate_selectivity(const ScanType scan_type, const ValuePlaceholder &value,
-                                                const optional<AllTypeVariant> &value2) override;
+                                                const optional<AllTypeVariant> &value2 = nullopt) override;
 
  protected:
   std::ostream &print_to_stream(std::ostream &os) const override;
