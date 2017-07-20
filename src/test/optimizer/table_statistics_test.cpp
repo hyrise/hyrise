@@ -11,7 +11,6 @@
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
 #include "optimizer/table_statistics.hpp"
-#include "storage/storage_manager.hpp"
 
 namespace opossum {
 
@@ -23,10 +22,11 @@ class TableStatisticsTest : public BaseTest {
   };
 
   void SetUp() override {
-    std::shared_ptr<Table> table_a = load_table("src/test/tables/int_float_double_string.tbl", 0);
-    StorageManager::get().add_table("table_a", table_a);
+    auto table = load_table("src/test/tables/int_float_double_string.tbl", 0);
+    auto statistics = std::make_shared<TableStatistics>(table);
+    table->set_table_statistics(statistics);
 
-    _table_a_container = TableContainer{table_a->table_statistics(), table_a};
+    _table_a_container = TableContainer{statistics, table};
   }
 
   /**
