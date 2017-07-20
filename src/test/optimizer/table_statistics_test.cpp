@@ -50,13 +50,14 @@ class TableStatisticsTest : public BaseTest {
    */
   struct {
     void operator()(const TableContainer& table_container) {
-      ASSERT_EQ(static_cast<int>(round(table_container.statistics->row_count())),
-                static_cast<int>(round(table_container.table->row_count())));
+      // round float value of row count prediction
+      EXPECT_EQ(round(table_container.statistics->row_count()), table_container.table->row_count());
     }
   } assert_equal_row_count;
 
   /**
-   * Predict output sizes of tables scans and compare with actual output sizes.
+   * Predict output sizes of tables scans with one value and compare with actual output sizes.
+   * Does not work with ValuePlaceholder of stored procedures.
    */
   template <typename T>
   void check_column_with_values(const TableContainer& table_container, const std::string& column_name,
@@ -68,6 +69,7 @@ class TableStatisticsTest : public BaseTest {
 
   /**
    * Predict output sizes of tables scans with two values (scan type = OpBetween) and compare with actual output sizes.
+   * Does not work with ValuePlaceholder of stored procedures.
    */
   template <typename T>
   void check_column_with_values(const TableContainer& table_container, const std::string& column_name,
