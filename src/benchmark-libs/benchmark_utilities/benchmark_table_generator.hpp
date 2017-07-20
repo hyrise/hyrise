@@ -27,7 +27,7 @@ class BenchmarkTableGenerator {
 
   /**
    * In TPCC and TPCH table sizes are usually defined relatively to each other.
-   * E.g. the specification defines that there are 10 district for each warehouse.
+   * E.g. the specification defines that there are 10 districts for each warehouse.
    *
    * A trivial approach to implement this in our table generator would be to iterate in nested loops and add all rows.
    * However, this makes it hard to take care of a certain chunk_size. With nested loops
