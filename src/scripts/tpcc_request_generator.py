@@ -109,6 +109,12 @@ def generate_delivery():
 
 
 def generate_requests(distribution, num_requests=100):
+    # It is desirable to make the generated requests reproducible to, e.g.
+    # allow for local debugging of CI errors. Python's random should be deterministic if
+    # the seed is initialized:
+    # https://stackoverflow.com/a/7030595
+    random.seed("HyriseSeed")
+
     transactions = []
 
     if distribution == 'test':

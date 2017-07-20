@@ -11,7 +11,6 @@
 #include "optimizer/expression/expression_node.hpp"
 #include "sql/SQLStatement.h"
 #include "sql/sql_expression_translator.hpp"
-#include "sql/sql_query_node_translator.hpp"
 #include "storage/storage_manager.hpp"
 
 namespace opossum {
