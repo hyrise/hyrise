@@ -13,8 +13,7 @@ namespace tpch {
 class TextFieldGenerator {
  public:
   explicit TextFieldGenerator(benchmark_utilities::RandomGenerator random_generator)
-      : _random_gen(random_generator),
-        _text(Grammar(random_generator).text(300e2)) {}  // TODO(Jonathan) set back to 300e6 (300MB)
+      : _random_gen(random_generator), _text(Grammar(random_generator).text(300e6)) {}
 
   std::string text_string(size_t lower_length, size_t upper_length) {
     auto length = _random_gen.number(lower_length, upper_length);

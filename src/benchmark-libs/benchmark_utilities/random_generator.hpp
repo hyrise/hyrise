@@ -10,7 +10,7 @@ namespace benchmark_utilities {
 class RandomGenerator {
  public:
   // Fix random seed by default, to make sure the benchmark is deterministic
-  RandomGenerator(unsigned int seed = 42) : engine(seed) {}
+  explicit RandomGenerator(unsigned int seed = 42) : engine(seed) {}
 
   /**
    * Generates a random number between lower and upper.

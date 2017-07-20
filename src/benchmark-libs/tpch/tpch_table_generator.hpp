@@ -30,7 +30,7 @@ class TableGenerator : public benchmark_utilities::BenchmarkTableGenerator {
     std::string linestatus;
   };
 
-  TableGenerator();
+  explicit TableGenerator(const size_t chunk_size = 1000, const size_t scale_factor = 1);
 
   virtual ~TableGenerator() = default;
 
@@ -56,9 +56,8 @@ class TableGenerator : public benchmark_utilities::BenchmarkTableGenerator {
 
   std::shared_ptr<std::map<std::string, std::shared_ptr<opossum::Table>>> generate_all_tables() override;
 
-  const size_t _chunk_size = 1000;
-
-  const size_t _scale_factor = 1;
+  const size_t _chunk_size;
+  const size_t _scale_factor;
 
   const size_t _supplier_size = 10000;  // * _scale_factor
   const size_t _part_size = 200;        // * _scale_factor
@@ -71,7 +70,7 @@ class TableGenerator : public benchmark_utilities::BenchmarkTableGenerator {
  protected:
   float calculate_part_retailprice(size_t i) const;
 
-  int calculate_partsuppkey(size_t partkey, size_t supplier) const;
+  int32_t calculate_partsuppkey(size_t partkey, size_t supplier) const;
 
   size_t get_time(size_t year, size_t month, size_t day) {
     struct std::tm time;

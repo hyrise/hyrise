@@ -34,7 +34,8 @@ class BenchmarkTableGenerator {
    * chunks only contain as many rows as there are iterations in the most inner loop.
    *
    * In this method we basically generate the whole column in a single loop,
-   * so that we can easily split when a Chunk is full. To do that we have all the cardinalities of the influencing tables:
+   * so that we can easily split when a Chunk is full. To do that we have all the cardinalities of the influencing
+   * tables:
    * E.g. for the CUSTOMER table we have the following cardinalities:
    * indices[0] = warehouse_size = 1
    * indices[1] = district_size = 10
@@ -151,9 +152,8 @@ class BenchmarkTableGenerator {
   void add_column(std::shared_ptr<opossum::Table> table, std::string name,
                   std::shared_ptr<std::vector<size_t>> cardinalities,
                   const std::function<T(std::vector<size_t>)> &generator_function) {
-    const std::function<std::vector<T>(std::vector<size_t>)> wrapped_generator_function = [generator_function](std::vector<size_t> indices) {
-      return std::vector<T>({generator_function(indices)});
-    };
+    const std::function<std::vector<T>(std::vector<size_t>)> wrapped_generator_function =
+        [generator_function](std::vector<size_t> indices) { return std::vector<T>({generator_function(indices)}); };
     add_column(table, name, cardinalities, wrapped_generator_function);
   }
 };

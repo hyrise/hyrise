@@ -16,7 +16,7 @@ namespace tpcc {
 class RandomGenerator : public benchmark_utilities::RandomGenerator {
  public:
   // Fix random seed by default, to make sure the benchmark is deterministic
-  RandomGenerator(unsigned int seed = 42) : benchmark_utilities::RandomGenerator(seed) {}
+  explicit RandomGenerator(unsigned int seed = 42) : benchmark_utilities::RandomGenerator(seed) {}
 
   /**
    * Generates a random zip code as defined by TPCC

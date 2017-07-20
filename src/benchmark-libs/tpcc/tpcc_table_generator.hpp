@@ -17,7 +17,7 @@ namespace tpcc {
 class TableGenerator : public benchmark_utilities::BenchmarkTableGenerator {
   // following TPC-C v5.11.0
  public:
-  TableGenerator();
+  explicit TableGenerator(const size_t chunk_size = 10000, const size_t warehouse_size = 1);
 
   virtual ~TableGenerator() = default;
 
@@ -45,19 +45,17 @@ class TableGenerator : public benchmark_utilities::BenchmarkTableGenerator {
 
   std::shared_ptr<std::map<std::string, std::shared_ptr<opossum::Table>>> generate_all_tables();
 
-  const size_t _chunk_size = 10000;
+  const size_t _chunk_size;
+  const size_t _warehouse_size;
   const time_t _current_date = std::time(0);
-  const size_t _warehouse_size = 1;
 
  protected:
   template <typename T>
-  std::vector<T> generate_inner_order_line_column(std::vector<size_t> indices,
-                                                  order_line_counts_type order_line_counts,
+  std::vector<T> generate_inner_order_line_column(std::vector<size_t> indices, order_line_counts_type order_line_counts,
                                                   const std::function<T(std::vector<size_t>)> &generator_function);
 
   template <typename T>
-  void add_order_line_column(std::shared_ptr<opossum::Table> table,
-                             std::string name,
+  void add_order_line_column(std::shared_ptr<opossum::Table> table, std::string name,
                              std::shared_ptr<std::vector<size_t>> cardinalities,
                              TableGenerator::order_line_counts_type order_line_counts,
                              const std::function<T(std::vector<size_t>)> &generator_function);

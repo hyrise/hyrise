@@ -8,11 +8,16 @@
 #include <utility>
 #include <vector>
 
+#include "constants.hpp"
 #include "storage/dictionary_compression.hpp"
 
 namespace tpch {
 
-TableGenerator::TableGenerator() : _random_gen(benchmark_utilities::RandomGenerator()), _text_field_gen(TextFieldGenerator(_random_gen)) {}
+TableGenerator::TableGenerator(const size_t chunk_size, const size_t scale_factor)
+    : _chunk_size(chunk_size),
+      _scale_factor(scale_factor),
+      _random_gen(benchmark_utilities::RandomGenerator()),
+      _text_field_gen(TextFieldGenerator(_random_gen)) {}
 
 // TODO(anybody) chunk sizes and number of chunks might be tuned in generate_XYZ_table
 
@@ -20,14 +25,14 @@ float TableGenerator::calculate_part_retailprice(size_t i) const {
   return (90000.f + (i % 200001) / 10.f + 100.f * (i % 1000)) / 100.f;
 }
 
-int TableGenerator::calculate_partsuppkey(size_t partkey, size_t supplier) const {
-  size_t s = _scale_factor * _supplier_size;
+int32_t TableGenerator::calculate_partsuppkey(size_t partkey, size_t supplier) const {
+  size_t s = _scale_factor * NUM_SUPPLIERS;
   return (partkey + (supplier * (s / 4 + partkey / s))) % s;
 }
 
 std::shared_ptr<opossum::Table> TableGenerator::generate_suppliers_table() {
   auto table = std::make_shared<opossum::Table>(_chunk_size);
-  size_t table_size = _scale_factor * _supplier_size;
+  size_t table_size = _scale_factor * NUM_SUPPLIERS;
   auto cardinalities = std::make_shared<std::vector<size_t>>(std::initializer_list<size_t>{table_size});
 
   add_column<int>(table, "S_SUPPKEY", cardinalities, [&](std::vector<size_t> indices) { return indices[0]; });
@@ -70,7 +75,7 @@ std::shared_ptr<opossum::Table> TableGenerator::generate_suppliers_table() {
 
 std::shared_ptr<opossum::Table> TableGenerator::generate_parts_table() {
   auto table = std::make_shared<opossum::Table>(_chunk_size);
-  size_t table_size = _scale_factor * _part_size;
+  size_t table_size = _scale_factor * NUM_PARTS;
   auto cardinalities = std::make_shared<std::vector<size_t>>(std::initializer_list<size_t>{table_size});
 
   add_column<int>(table, "P_PARTKEY", cardinalities, [&](std::vector<size_t> indices) { return indices[0]; });
@@ -100,8 +105,8 @@ std::shared_ptr<opossum::Table> TableGenerator::generate_parts_table() {
 
 std::shared_ptr<opossum::Table> TableGenerator::generate_partsupps_table() {
   auto table = std::make_shared<opossum::Table>(_chunk_size);
-  auto cardinalities =
-      std::make_shared<std::vector<size_t>>(std::initializer_list<size_t>{_scale_factor * _part_size, _partsupp_size});
+  auto cardinalities = std::make_shared<std::vector<size_t>>(
+      std::initializer_list<size_t>{_scale_factor * NUM_PARTS, NUM_PARTSUPPS_PER_PART});
 
   add_column<int>(table, "PS_PARTKEY", cardinalities, [&](std::vector<size_t> indices) { return indices[0]; });
   add_column<int>(table, "PS_SUPPKEY", cardinalities,
@@ -119,7 +124,7 @@ std::shared_ptr<opossum::Table> TableGenerator::generate_partsupps_table() {
 
 std::shared_ptr<opossum::Table> TableGenerator::generate_customers_table() {
   auto table = std::make_shared<opossum::Table>(_chunk_size);
-  size_t table_size = _scale_factor * _customer_size;
+  size_t table_size = _scale_factor * NUM_CUSTOMERS;
   auto cardinalities = std::make_shared<std::vector<size_t>>(std::initializer_list<size_t>{table_size});
 
   add_column<int>(table, "C_CUSTKEY", cardinalities, [&](std::vector<size_t> indices) { return indices[0]; });
@@ -147,8 +152,8 @@ std::shared_ptr<opossum::Table> TableGenerator::generate_customers_table() {
 }
 
 TableGenerator::order_lines_type TableGenerator::generate_order_lines() {
-  size_t total_order_size = _order_size * _scale_factor * _customer_size;
-  std::vector<std::vector<OrderLine>> all_order_lines(total_order_size);
+  size_t totalNUM_ORDERS_PER_CUSTOMER = NUM_ORDERS_PER_CUSTOMER * _scale_factor * NUM_CUSTOMERS;
+  std::vector<std::vector<OrderLine>> all_order_lines(totalNUM_ORDERS_PER_CUSTOMER);
   for (auto &order_lines_per_order : all_order_lines) {
     size_t order_lines_size = _random_gen.number(1, 7);
     order_lines_per_order.resize(order_lines_size);
@@ -158,7 +163,7 @@ TableGenerator::order_lines_type TableGenerator::generate_order_lines() {
     size_t linenumber = 0;
     for (auto &order_line : order_lines_per_order) {
       order_line.orderkey = orderkey;
-      order_line.partkey = _random_gen.number(0, _scale_factor * _part_size - 1);
+      order_line.partkey = _random_gen.number(0, _scale_factor * NUM_PARTS - 1);
       order_line.linenumber = linenumber;
       order_line.quantity = _random_gen.number(1, 50);
       float part_retailprice = calculate_part_retailprice(order_line.partkey);
@@ -177,15 +182,15 @@ TableGenerator::order_lines_type TableGenerator::generate_order_lines() {
 
 std::shared_ptr<opossum::Table> TableGenerator::generate_orders_table(TableGenerator::order_lines_type order_lines) {
   auto table = std::make_shared<opossum::Table>(_chunk_size);
-  size_t table_size = _order_size * _scale_factor * _customer_size;
+  size_t table_size = NUM_ORDERS_PER_CUSTOMER * _scale_factor * NUM_CUSTOMERS;
   auto cardinalities = std::make_shared<std::vector<size_t>>(std::initializer_list<size_t>{table_size});
 
   add_column<int>(table, "O_ORDERKEY", cardinalities,
                   [&](std::vector<size_t> indices) { return order_lines->at(indices[0])[0].orderkey; });
   add_column<int>(table, "O_CUSTKEY", cardinalities, [&](std::vector<size_t>) {
-    // O_CUSTKEY should be random between 0 and _scale_factor * _customer_size,
+    // O_CUSTKEY should be random between 0 and _scale_factor * NUM_CUSTOMERS,
     // but O_CUSTKEY % 3 must not be 0 (only two third of the keys are used).
-    size_t max_compacted_key = _scale_factor * _customer_size / 3 * 2 - 1;
+    size_t max_compacted_key = _scale_factor * NUM_CUSTOMERS / 3 * 2 - 1;
     size_t compacted_key = _random_gen.number(0, max_compacted_key);
     return compacted_key / 2 * 3 + compacted_key % 2 + 1;
   });
@@ -286,7 +291,7 @@ std::shared_ptr<opossum::Table> TableGenerator::generate_lineitems_table(TableGe
 
 std::shared_ptr<opossum::Table> TableGenerator::generate_nations_table() {
   auto table = std::make_shared<opossum::Table>(_chunk_size);
-  auto cardinalities = std::make_shared<std::vector<size_t>>(std::initializer_list<size_t>{_nation_size});
+  auto cardinalities = std::make_shared<std::vector<size_t>>(std::initializer_list<size_t>{NUM_NATIONS});
 
   add_column<int>(table, "N_NATIONKEY", cardinalities, [&](std::vector<size_t> indices) { return indices[0]; });
   add_column<std::string>(table, "N_NAME", cardinalities,
@@ -302,7 +307,7 @@ std::shared_ptr<opossum::Table> TableGenerator::generate_nations_table() {
 
 std::shared_ptr<opossum::Table> TableGenerator::generate_regions_table() {
   auto table = std::make_shared<opossum::Table>(_chunk_size);
-  auto cardinalities = std::make_shared<std::vector<size_t>>(std::initializer_list<size_t>{_region_size});
+  auto cardinalities = std::make_shared<std::vector<size_t>>(std::initializer_list<size_t>{NUM_REGIONS});
 
   // setup columns
   add_column<int>(table, "R_REGIONKEY", cardinalities, [&](std::vector<size_t> indices) { return indices[0]; });

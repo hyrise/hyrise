@@ -3,12 +3,12 @@
 #include "operators/export_csv.hpp"
 #include "storage/storage_manager.hpp"
 
-#include "tpcc/tpcc_table_generator.hpp"
+#include "tpch/tpch_table_generator.hpp"
 
 int main() {
-  std::cout << "TPCC" << std::endl;
+  std::cout << "TPCH" << std::endl;
   std::cout << " > Generating tables" << std::endl;
-  auto tables = tpcc::TableGenerator().generate_all_tables();
+  auto tables = tpch::TableGenerator().generate_all_tables();
 
   for (auto& pair : *tables) {
     opossum::StorageManager::get().add_table(pair.first, pair.second);
