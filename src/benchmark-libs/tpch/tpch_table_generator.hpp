@@ -59,14 +59,6 @@ class TableGenerator : public benchmark_utilities::BenchmarkTableGenerator {
   const size_t _chunk_size;
   const size_t _scale_factor;
 
-  const size_t _supplier_size = 10000;  // * _scale_factor
-  const size_t _part_size = 200;        // * _scale_factor
-  const size_t _partsupp_size = 4;      // per part
-  const size_t _customer_size = 150;    // * _scale_factor
-  const size_t _order_size = 10;        // per customer
-  const size_t _nation_size = 25;
-  const size_t _region_size = 5;
-
  protected:
   float calculate_part_retailprice(size_t i) const;
 
