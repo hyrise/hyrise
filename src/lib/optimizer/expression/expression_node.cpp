@@ -24,13 +24,9 @@ const std::unordered_map<ExpressionType, std::string> expression_type_to_operato
 };
 
 ExpressionNode::ExpressionNode(const ExpressionType type, const AllTypeVariant value,
-                               const std::shared_ptr<std::vector<std::shared_ptr<ExpressionNode>>> expression_list,
+                               const std::shared_ptr<std::vector<std::shared_ptr<ExpressionNode>>> &expression_list,
                                const std::string &name, const std::string &table)
-    : _type(type),
-      _value(value),
-      _expression_list(expression_list),
-      _name(name),
-      _table(table) {}
+    : _type(type), _value(value), _expression_list(expression_list), _name(name), _table(table) {}
 
 std::shared_ptr<ExpressionNode> ExpressionNode::create_expression(const ExpressionType type) {
   auto expr_list = std::make_shared<std::vector<std::shared_ptr<ExpressionNode>>>();
@@ -101,8 +97,8 @@ bool ExpressionNode::is_arithmetic_operand() const {
 const std::string ExpressionNode::description() const {
   std::ostringstream desc;
 
-  desc << "Expression (" << expression_type_to_string.at(_type) << ", " << value() << ", "
-       << table_name() << ", " << column_name() << ")";
+  desc << "Expression (" << expression_type_to_string.at(_type) << ", " << value() << ", " << table_name() << ", "
+       << column_name() << ")";
 
   return desc.str();
 }
@@ -130,7 +126,7 @@ std::string ExpressionNode::to_expression_string() const {
     Fail("To generate expression string, ExpressionNodes need to be operators or operands");
   }
 
-  // Should never be returned, but Clang is complaining about missing return statement
+  // Should never be reached, but Clang is complaining about missing return statement
   return "";
 }
 

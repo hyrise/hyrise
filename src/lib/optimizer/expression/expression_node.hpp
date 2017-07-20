@@ -14,7 +14,7 @@ namespace opossum {
 class ExpressionNode : public std::enable_shared_from_this<ExpressionNode> {
  public:
   ExpressionNode(const ExpressionType type, const AllTypeVariant value,
-                 const std::shared_ptr<std::vector<std::shared_ptr<ExpressionNode>>> expression_list,
+                 const std::shared_ptr<std::vector<std::shared_ptr<ExpressionNode>>>& expression_list,
                  const std::string& name, const std::string& table);
 
   static std::shared_ptr<ExpressionNode> create_expression(const ExpressionType type);
