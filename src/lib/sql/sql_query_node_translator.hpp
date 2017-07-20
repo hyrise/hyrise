@@ -6,7 +6,7 @@
 
 #include "SQLParser.h"
 
-#include "all_type_variant.hpp"
+#include "all_parameter_variant.hpp"
 
 #include "optimizer/abstract_syntax_tree/abstract_ast_node.hpp"
 #include "optimizer/expression/expression_node.hpp"
@@ -44,7 +44,7 @@ class SQLQueryNodeTranslator {
 
   std::string _get_column_name(const hsql::Expr& expr) const;
 
-  AllTypeVariant _translate_literal(const hsql::Expr& expr);
+  AllParameterVariant _translate_literal(const hsql::Expr& expr) const;
 };
 
 }  // namespace opossum

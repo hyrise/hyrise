@@ -17,6 +17,7 @@
 #include "sql/sql_expression_translator.hpp"
 #include "storage/storage_manager.hpp"
 
+#include "all_type_variant.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 
@@ -212,18 +213,21 @@ std::string SQLQueryNodeTranslator::_get_column_name(const hsql::Expr& expr) con
   return name;
 }
 
-AllTypeVariant SQLQueryNodeTranslator::_translate_literal(const hsql::Expr& expr) {
+AllParameterVariant SQLQueryNodeTranslator::_translate_literal(const hsql::Expr& expr) const {
   switch (expr.type) {
     case hsql::kExprLiteralInt:
-      return expr.ival;
+      return AllTypeVariant(expr.ival);
     case hsql::kExprLiteralFloat:
-      return expr.fval;
+      return AllTypeVariant(expr.fval);
     case hsql::kExprLiteralString:
-      return expr.name;
+      return AllTypeVariant(expr.name);
+    case hsql::kExprParameter:
+      return ValuePlaceholder(expr.ival);
+    case hsql::kExprColumnRef:
+      return ColumnName(_get_column_name(expr));
     default:
-      std::cout << "Unexpected Expr type" << std::endl;
-      return 0;
-      //      throw std::runtime_error("Could not translate literal: expression type not supported.");
+      Fail"Could not translate literal: expression type not supported.");
+      return {};
   }
 }
 
@@ -259,36 +263,45 @@ std::shared_ptr<AbstractASTNode> SQLQueryNodeTranslator::_translate_filter_expr(
   // We accept functions here because we assume they have been translated by Aggregate.
   // They will be treated as a regular column of the same name.
   // TODO(mp): this has to change once we have extended HAVING support.
-  Expr* column_expr =
-      (expr.expr->isType(hsql::kExprColumnRef) || expr.expr->isType(hsql::kExprFunctionRef)) ? expr.expr : expr.expr2;
-  if (!column_expr->isType(hsql::kExprColumnRef) && !column_expr->isType(hsql::kExprFunctionRef)) {
-    Fail("Unsupported filter: we must have a function or column reference on either side of the expression.");
+  Expr* column_operand_expr = nullptr;
+  Expr* value_operand_expr = nullptr;
+  if (expr.expr->isType(hsql::kExprColumnRef) || expr.expr->isType(hsql::kExprFunctionRef)) {
+    column_operand_expr = expr.expr;
+    value_operand_expr = expr.expr2;
+  } else {
+    value_operand_expr = expr.expr;
+    column_operand_expr = expr.expr2;
+    Assert(column_operand_expr->isType(hsql::kExprColumnRef) || column_operand_expr->isType(hsql::kExprFunctionRef),
+           "Unsupported filter: we must have a function or column reference on at least one side of the expression.");
   }
 
-  const auto column_name = _get_column_name(*column_expr);
+  const auto column_name = _get_column_name(*column_operand_expr);
 
   AllParameterVariant value;
   optional<AllTypeVariant> value2;
-  std::shared_ptr<ExpressionNode> expressionNode = SQLExpressionTranslator::translate_expression(expr);
 
   if (scan_type == ScanType::OpBetween) {
-    const Expr* left_expr = expr.exprList->at(0);
-    value = AllParameterVariant(_translate_literal(*left_expr));
+    const Expr* left_expr = (*expr.exprList)[0];
+    const Expr* right_expr = (*expr.exprList)[1];
 
-    const Expr* right_expr = expr.exprList->at(1);
-    value2 = _translate_literal(*right_expr);
+    value = _translate_literal(*left_expr);
+
+    // TODO(torpedro / mp): TableScan does not support AllParameterVariant as second value.
+    // This would be required to prepare BETWEEN.
+    value2 = boost::get<AllTypeVariant>(_translate_literal(*right_expr));
   } else {
-    const Expr* other_expr = (column_expr == expr.expr) ? expr.expr2 : expr.expr;
-    value = AllParameterVariant(_translate_literal(*other_expr));
+    value = _translate_literal(*value_operand_expr);
   }
 
+  std::shared_ptr<ExpressionNode> expression_node = SQLExpressionTranslator::translate_expression(expr);
+  // TODO(moritz&tim): remove, just for compilation testing
   const std::string column_name2{column_name};
-  const std::shared_ptr<ExpressionNode> expressionNode2{expressionNode};
+  const std::shared_ptr<ExpressionNode> expression_node2{expression_node};
   ScanType scan_type2{scan_type};
   const AllParameterVariant value3{value};
   const optional<AllTypeVariant> value4{value2};
 
-  auto predicate_node = std::make_shared<PredicateNode>(column_name2, expressionNode2, scan_type2, value3, value4);
+  auto predicate_node = std::make_shared<PredicateNode>(column_name2, expression_node2, scan_type2, value3, value4);
   predicate_node->set_left_child(input_node);
 
   return predicate_node;

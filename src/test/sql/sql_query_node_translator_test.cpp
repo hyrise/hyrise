@@ -61,7 +61,7 @@ TEST_F(SQLQueryNodeTranslatorTest, SelectStarAllTest) {
   EXPECT_FALSE(result_node->left_child()->left_child());
 }
 
-TEST_F(SQLQueryNodeTranslatorTest, ExpressionTest) {
+TEST_F(SQLQueryNodeTranslatorTest, DISABLED_ExpressionTest) {
   const auto query = "SELECT * FROM table_a WHERE a = 1234 + 1";
   auto result_node = compile_query(query);
 
