@@ -43,7 +43,6 @@ class ImportCsv : public AbstractReadOnlyOperator {
   // cannot move-assign because of const members
   ImportCsv& operator=(ImportCsv&&) = delete;
 
-
   // Name of the operator is "ImportCSV"
   const std::string name() const override;
 

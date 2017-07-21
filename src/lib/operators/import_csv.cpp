@@ -1,7 +1,7 @@
 #include "import_csv.hpp"
 
-#include <memory>
 #include <fstream>
+#include <memory>
 #include <string>
 
 #include "import_export/csv_parser.hpp"
