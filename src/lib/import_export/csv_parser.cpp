@@ -4,13 +4,13 @@
 #include <list>
 #include <memory>
 #include <string>
+#include <utility>
+#include <vector>
 
 #include "import_export/csv_converter.hpp"
 #include "scheduler/job_task.hpp"
 #include "utils/assert.hpp"
-
 #include "resolve_type.hpp"
-#include "utils/assert.hpp"
 
 namespace opossum {
 

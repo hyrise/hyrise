@@ -2,6 +2,7 @@
 
 #include <memory>
 #include <string>
+#include <vector>
 
 #include "import_export/csv.hpp"
 #include "storage/table.hpp"
