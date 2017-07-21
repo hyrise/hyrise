@@ -26,7 +26,8 @@ class ImportCsv : public AbstractReadOnlyOperator {
    * @param rfc_mode    If true parse according to RFC 4180 else parse as non-RFC format
    * @param buffer_size Specifies the amount of data from the input file in bytes that a single task should work on.
    */
-  explicit ImportCsv(const std::string& filename, const optional<std::string> tablename = nullopt, bool rfc_mode = true);
+  explicit ImportCsv(const std::string& filename, const optional<std::string> tablename = nullopt,
+                     bool rfc_mode = true);
 
   /*
    * @param filename    Path to the input file.

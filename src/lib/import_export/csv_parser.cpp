@@ -14,8 +14,7 @@
 
 namespace opossum {
 
-CsvParser::CsvParser(const CsvConfig& csv_config, const bool rfc_mode)
-    : _csv_config(csv_config), _rfc(rfc_mode) {}
+CsvParser::CsvParser(const CsvConfig& csv_config, const bool rfc_mode) : _csv_config(csv_config), _rfc(rfc_mode) {}
 
 std::shared_ptr<Table> CsvParser::parse(const std::string& filename) {
   const auto table = process_meta_file(filename + _csv_config.meta_file_extension);

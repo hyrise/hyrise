@@ -10,10 +10,7 @@
 namespace opossum {
 
 ImportCsv::ImportCsv(const std::string& filename, const optional<std::string> tablename, bool rfc_mode)
-    : _filename(filename),
-      _tablename(tablename),
-      _rfc_mode(rfc_mode),
-      _config(CsvConfig{}) {}
+    : _filename(filename), _tablename(tablename), _rfc_mode(rfc_mode), _config(CsvConfig{}) {}
 
 ImportCsv::ImportCsv(const std::string& filename, const CsvConfig& config, const optional<std::string> tablename,
                      bool rfc_mode)
