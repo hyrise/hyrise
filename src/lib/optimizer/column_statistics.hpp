@@ -56,11 +56,27 @@ class ColumnStatistics : public BaseColumnStatistics {
   ColumnType min() const;
   ColumnType max() const;
 
-  ColumnSelectivityResult calculate_selectivity_for_range_and_create_output(ColumnType new_min, ColumnType new_max);
+  /**
+   * Estimate selectivity based on new range between new_min and new_max and current range between min and max.
+   * @param new_min: Min for new column statistics.
+   * @param new_max: Max for new column statistics.
+   * @return Selectivity and new column statistics, if selectivity not 0 or 1.
+   */
+  ColumnSelectivityResult estimate_selectivity_for_range(ColumnType new_min, ColumnType new_max);
 
-  ColumnSelectivityResult calculate_selectivity_for_equals_and_create_output(ColumnType value);
+  /**
+   * Estimate selectivity for aggregate with scan type equals and constant value.
+   * @param value: constant value of aggregate
+   * @return Selectivity and new column statistics, if selectivity not 0 or 1.
+   */
+  ColumnSelectivityResult estimate_selectivity_for_equals(ColumnType value);
 
-  ColumnSelectivityResult calculate_selectivity_for_unequals_and_create_output(ColumnType value);
+  /**
+   * Estimate selectivity for aggregate with scan type not equals and constant value.
+   * @param value: constant value of aggregate
+   * @return Selectivity and new column statistics, if selectivity not 0 or 1.
+   */
+  ColumnSelectivityResult selectivity_for_unequals(ColumnType value);
 
   /**
    * Calcute min and max values from table.

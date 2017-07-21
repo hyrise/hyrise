@@ -81,8 +81,8 @@ void ColumnStatistics<ColumnType>::initialize_min_max() const {
 }
 
 template <typename ColumnType>
-ColumnSelectivityResult ColumnStatistics<ColumnType>::calculate_selectivity_for_range_and_create_output(
-    ColumnType new_min, ColumnType new_max) {
+ColumnSelectivityResult ColumnStatistics<ColumnType>::estimate_selectivity_for_range(ColumnType new_min,
+                                                                                     ColumnType new_max) {
   new_min = std::max(new_min, min());
   new_max = std::min(new_max, max());
   if (new_min == min() && new_max == max()) {
@@ -108,8 +108,8 @@ ColumnSelectivityResult ColumnStatistics<ColumnType>::calculate_selectivity_for_
  * Specialization for strings as they cannot be used in subtractions.
  */
 template <>
-ColumnSelectivityResult ColumnStatistics<std::string>::calculate_selectivity_for_range_and_create_output(
-    std::string new_min, std::string new_max) {
+ColumnSelectivityResult ColumnStatistics<std::string>::estimate_selectivity_for_range(std::string new_min,
+                                                                                      std::string new_max) {
   new_min = std::max(new_min, min());
   new_max = std::min(new_max, max());
   if (new_max < new_min) {
@@ -119,8 +119,7 @@ ColumnSelectivityResult ColumnStatistics<std::string>::calculate_selectivity_for
 }
 
 template <typename ColumnType>
-ColumnSelectivityResult ColumnStatistics<ColumnType>::calculate_selectivity_for_equals_and_create_output(
-    ColumnType value) {
+ColumnSelectivityResult ColumnStatistics<ColumnType>::estimate_selectivity_for_equals(ColumnType value) {
   if (value < min() || value > max()) {
     return {0.f, nullptr};
   }
@@ -129,8 +128,7 @@ ColumnSelectivityResult ColumnStatistics<ColumnType>::calculate_selectivity_for_
 }
 
 template <typename ColumnType>
-ColumnSelectivityResult ColumnStatistics<ColumnType>::calculate_selectivity_for_unequals_and_create_output(
-    ColumnType value) {
+ColumnSelectivityResult ColumnStatistics<ColumnType>::selectivity_for_unequals(ColumnType value) {
   if (value < min() || value > max()) {
     return {1.f, nullptr};
   }
@@ -145,43 +143,43 @@ ColumnSelectivityResult ColumnStatistics<ColumnType>::estimate_selectivity_for_p
 
   switch (scan_type) {
     case ScanType::OpEquals: {
-      return calculate_selectivity_for_equals_and_create_output(casted_value);
+      return estimate_selectivity_for_equals(casted_value);
     }
     case ScanType::OpNotEquals: {
-      return calculate_selectivity_for_unequals_and_create_output(casted_value);
+      return selectivity_for_unequals(casted_value);
     }
     case ScanType::OpLessThan: {
       // distinction between integers and decimals
       // for integers "< value" means that the new max is value <= value - 1
       // for decimals "< value" means that the new max is value <= value - ε
       if (std::is_integral<ColumnType>::value) {
-        return calculate_selectivity_for_range_and_create_output(min(), --casted_value);
+        return estimate_selectivity_for_range(min(), casted_value - 1);
       }
       // intentionally no break
       // if ColumnType is a floating point number,
       // OpLessThanEquals behaviour is expected instead of OpLessThan
     }
     case ScanType::OpLessThanEquals: {
-      return calculate_selectivity_for_range_and_create_output(min(), casted_value);
+      return estimate_selectivity_for_range(min(), casted_value);
     }
     case ScanType::OpGreaterThan: {
       // distinction between integers and decimals
       // for integers "> value" means that the new min value is >= value + 1
       // for decimals "> value" means that the new min value is >= value + ε
       if (std::is_integral<ColumnType>::value) {
-        return calculate_selectivity_for_range_and_create_output(++casted_value, max());
+        return estimate_selectivity_for_range(casted_value + 1, max());
       }
       // intentionally no break
       // if ColumnType is a floating point number,
       // OpGreaterThanEquals behaviour is expected instead of OpGreaterThan
     }
     case ScanType::OpGreaterThanEquals: {
-      return calculate_selectivity_for_range_and_create_output(casted_value, max());
+      return estimate_selectivity_for_range(casted_value, max());
     }
     case ScanType::OpBetween: {
       DebugAssert(static_cast<bool>(value2), "Operator BETWEEN should get two parameters, second is missing!");
       auto casted_value2 = type_cast<ColumnType>(*value2);
-      return calculate_selectivity_for_range_and_create_output(casted_value, casted_value2);
+      return estimate_selectivity_for_range(casted_value, casted_value2);
     }
     default: { return {1.f, nullptr}; }
   }
@@ -196,10 +194,10 @@ ColumnSelectivityResult ColumnStatistics<std::string>::estimate_selectivity_for_
   auto casted_value = type_cast<std::string>(value);
   switch (scan_type) {
     case ScanType::OpEquals: {
-      return calculate_selectivity_for_equals_and_create_output(casted_value);
+      return estimate_selectivity_for_equals(casted_value);
     }
     case ScanType::OpNotEquals: {
-      return calculate_selectivity_for_unequals_and_create_output(casted_value);
+      return selectivity_for_unequals(casted_value);
     }
     // TODO(anybody) implement other table-scan operators for string.
     default: { return {1.f, nullptr}; }
@@ -232,7 +230,7 @@ ColumnSelectivityResult ColumnStatistics<ColumnType>::estimate_selectivity_for_p
       // then, the open ended selectivity is applied on the result
       DebugAssert(static_cast<bool>(value2), "Operator BETWEEN should get two parameters, second is missing!");
       auto casted_value2 = type_cast<ColumnType>(*value2);
-      ColumnSelectivityResult output = calculate_selectivity_for_range_and_create_output(min(), casted_value2);
+      ColumnSelectivityResult output = estimate_selectivity_for_range(min(), casted_value2);
       // return, if value2 < min
       if (output.selectivity == 0.f) {
         return output;

@@ -28,6 +28,7 @@ class BaseColumnStatistics {
   /**
    * Estimate selectivity for predicate with constants.
    * Predict result of a table scan with constant values.
+   * @return Selectivity and new column statistics, if selectivity not 0 or 1.
    */
   virtual ColumnSelectivityResult estimate_selectivity_for_predicate(
       const ScanType scan_type, const AllTypeVariant &value, const optional<AllTypeVariant> &value2 = nullopt) = 0;
@@ -36,6 +37,7 @@ class BaseColumnStatistics {
    * Estimate selectivity for predicate with prepared statements.
    * In comparison to predicates with constants value is not known yet.
    * Therefore, when necessary, default selectivity values are used for predictions.
+   * @return Selectivity and new column statistics, if selectivity not 0 or 1.
    */
   virtual ColumnSelectivityResult estimate_selectivity_for_predicate(
       const ScanType scan_type, const ValuePlaceholder &value, const optional<AllTypeVariant> &value2 = nullopt) = 0;
@@ -44,6 +46,7 @@ class BaseColumnStatistics {
   /**
    * In order to to call insertion operator on ostream with BaseColumnStatistics with values of ColumnStatistics<T>,
    * std::ostream &operator<< with BaseColumnStatistics calls virtual function print_to_stream
+   * @return Selectivity and new column statistics, if selectivity not 0 or 1.
    */
   virtual std::ostream &print_to_stream(std::ostream &os) const = 0;
   friend std::ostream &operator<<(std::ostream &os, BaseColumnStatistics &obj);
