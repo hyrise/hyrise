@@ -1,9 +1,9 @@
 #include "import_csv.hpp"
 
 #include <memory>
+#include <fstream>
 #include <string>
 
-#include "import_export/csv_non_rfc_parser.hpp"
 #include "import_export/csv_parser.hpp"
 #include "storage/storage_manager.hpp"
 
@@ -40,14 +40,8 @@ std::shared_ptr<const Table> ImportCsv::on_execute() {
   file.close();
 
   std::shared_ptr<Table> table;
-
-  if (_rfc_mode) {
-    CsvParser parser{_buffer_size, _config};
-    table = parser.parse(_filename);
-  } else {
-    CsvNonRfcParser parser{_buffer_size, _config};
-    table = parser.parse(_filename);
-  }
+  CsvParser parser{_buffer_size, _config, _rfc_mode};
+  table = parser.parse(_filename);
 
   if (_tablename) {
     StorageManager::get().add_table(*_tablename, table);

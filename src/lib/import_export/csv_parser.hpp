@@ -9,12 +9,21 @@
 namespace opossum {
 
 /*
- * Blabla
+ * Creates a Table with values of the parsed csv file <filename> and the corresponding meta file
+ * <filename>.meta
+ * The files are parsed according to RFC 4180 if not otherwise specified.
+ * For the structure of the meta csv file see export_csv.hpp
+ *
+ * This parser reads the whole csv file and iterates over it to seperate the data into chunks that are aligned with the
+ * csv rows.
+ * Each data chunk is parsed and converted into a opossum chunk. In the end all chunks are combined to the final table.
  */
 class CsvParser {
  public:
   /*
+   * @param buffer_size Number of bytes that a task processes from the input file.
    * @param csv_config  Csv configuration (delimiter, separator, ..).
+   * @param rfc_mode    Indicator whether RFC 4180 should be used for parsing.
    */
   explicit CsvParser(const size_t buffer_size, const CsvConfig & csv_config = {}, const bool rfc_mode = true);
 
