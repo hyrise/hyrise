@@ -49,7 +49,7 @@ float ColumnStatistics<ColumnType>::distinct_count() const {
 }
 
 template <typename ColumnType>
-ColumnType &ColumnStatistics<ColumnType>::min() const {
+ColumnType ColumnStatistics<ColumnType>::min() const {
   if (!_min) {
     initialize_min_max();
   }
@@ -57,7 +57,7 @@ ColumnType &ColumnStatistics<ColumnType>::min() const {
 }
 
 template <typename ColumnType>
-ColumnType &ColumnStatistics<ColumnType>::max() const {
+ColumnType ColumnStatistics<ColumnType>::max() const {
   if (!_max) {
     initialize_min_max();
   }
@@ -80,23 +80,9 @@ void ColumnStatistics<ColumnType>::initialize_min_max() const {
   _max = aggregate_table->template get_value<ColumnType>(ColumnID{1}, 0);
 }
 
-/**
- * Specialization for strings as they cannot be used in subtractions.
- */
-template <>
-ColumnSelectivityResult ColumnStatistics<std::string>::calculate_selectivity_for_range_and_create_output(
-    std::string &new_min, std::string &new_max) {
-  new_min = std::max(new_min, min());
-  new_max = std::min(new_max, max());
-  if (new_max < new_min) {
-    return {0.f, nullptr};
-  }
-  return {1.f, nullptr};
-}
-
 template <typename ColumnType>
 ColumnSelectivityResult ColumnStatistics<ColumnType>::calculate_selectivity_for_range_and_create_output(
-    ColumnType &new_min, ColumnType &new_max) {
+    ColumnType new_min, ColumnType new_max) {
   new_min = std::max(new_min, min());
   new_max = std::min(new_max, max());
   if (new_min == min() && new_max == max()) {
@@ -118,9 +104,23 @@ ColumnSelectivityResult ColumnStatistics<ColumnType>::calculate_selectivity_for_
   return {selectivity, column_statistics};
 }
 
+/**
+ * Specialization for strings as they cannot be used in subtractions.
+ */
+template <>
+ColumnSelectivityResult ColumnStatistics<std::string>::calculate_selectivity_for_range_and_create_output(
+    std::string new_min, std::string new_max) {
+  new_min = std::max(new_min, min());
+  new_max = std::min(new_max, max());
+  if (new_max < new_min) {
+    return {0.f, nullptr};
+  }
+  return {1.f, nullptr};
+}
+
 template <typename ColumnType>
 ColumnSelectivityResult ColumnStatistics<ColumnType>::calculate_selectivity_for_equals_and_create_output(
-    ColumnType &value) {
+    ColumnType value) {
   if (value < min() || value > max()) {
     return {0.f, nullptr};
   }
@@ -130,7 +130,7 @@ ColumnSelectivityResult ColumnStatistics<ColumnType>::calculate_selectivity_for_
 
 template <typename ColumnType>
 ColumnSelectivityResult ColumnStatistics<ColumnType>::calculate_selectivity_for_unequals_and_create_output(
-    ColumnType &value) {
+    ColumnType value) {
   if (value < min() || value > max()) {
     return {1.f, nullptr};
   }
@@ -138,30 +138,9 @@ ColumnSelectivityResult ColumnStatistics<ColumnType>::calculate_selectivity_for_
   return {1 - 1.f / distinct_count(), column_statistics};
 }
 
-/**
- * Specialization for strings as they cannot be used in subtractions.
- */
-template <>
-ColumnSelectivityResult ColumnStatistics<std::string>::predicate_selectivity(const ScanType scan_type,
-                                                                             const AllTypeVariant &value,
-                                                                             const optional<AllTypeVariant> &value2) {
-  auto casted_value = type_cast<std::string>(value);
-  switch (scan_type) {
-    case ScanType::OpEquals: {
-      return calculate_selectivity_for_equals_and_create_output(casted_value);
-    }
-    case ScanType::OpNotEquals: {
-      return calculate_selectivity_for_unequals_and_create_output(casted_value);
-    }
-    // TODO(anybody) implement other table-scan operators for string.
-    default: { return {1.f, nullptr}; }
-  }
-}
-
 template <typename ColumnType>
-ColumnSelectivityResult ColumnStatistics<ColumnType>::predicate_selectivity(const ScanType scan_type,
-                                                                            const AllTypeVariant &value,
-                                                                            const optional<AllTypeVariant> &value2) {
+ColumnSelectivityResult ColumnStatistics<ColumnType>::estimate_selectivity_for_predicate(
+    const ScanType scan_type, const AllTypeVariant &value, const optional<AllTypeVariant> &value2) {
   auto casted_value = type_cast<ColumnType>(value);
 
   switch (scan_type) {
@@ -208,10 +187,28 @@ ColumnSelectivityResult ColumnStatistics<ColumnType>::predicate_selectivity(cons
   }
 }
 
+/**
+ * Specialization for strings as they cannot be used in subtractions.
+ */
+template <>
+ColumnSelectivityResult ColumnStatistics<std::string>::estimate_selectivity_for_predicate(
+    const ScanType scan_type, const AllTypeVariant &value, const optional<AllTypeVariant> &value2) {
+  auto casted_value = type_cast<std::string>(value);
+  switch (scan_type) {
+    case ScanType::OpEquals: {
+      return calculate_selectivity_for_equals_and_create_output(casted_value);
+    }
+    case ScanType::OpNotEquals: {
+      return calculate_selectivity_for_unequals_and_create_output(casted_value);
+    }
+    // TODO(anybody) implement other table-scan operators for string.
+    default: { return {1.f, nullptr}; }
+  }
+}
+
 template <typename ColumnType>
-ColumnSelectivityResult ColumnStatistics<ColumnType>::predicate_selectivity(const ScanType scan_type,
-                                                                            const ValuePlaceholder &value,
-                                                                            const optional<AllTypeVariant> &value2) {
+ColumnSelectivityResult ColumnStatistics<ColumnType>::estimate_selectivity_for_predicate(
+    const ScanType scan_type, const ValuePlaceholder &value, const optional<AllTypeVariant> &value2) {
   switch (scan_type) {
     case ScanType::OpEquals: {
       auto column_statistics = std::make_shared<ColumnStatistics>(_column_id, 1, min(), max());
@@ -225,9 +222,9 @@ ColumnSelectivityResult ColumnStatistics<ColumnType>::predicate_selectivity(cons
     case ScanType::OpLessThanEquals:
     case ScanType::OpGreaterThan:
     case ScanType::OpGreaterThanEquals: {
-      auto column_statistics =
-          std::make_shared<ColumnStatistics>(_column_id, distinct_count() * OPEN_ENDED_SELECTIVITY, min(), max());
-      return {OPEN_ENDED_SELECTIVITY, column_statistics};
+      auto column_statistics = std::make_shared<ColumnStatistics>(
+          _column_id, distinct_count() * DEFAULT_OPEN_ENDED_SELECTIVITY, min(), max());
+      return {DEFAULT_OPEN_ENDED_SELECTIVITY, column_statistics};
     }
     case ScanType::OpBetween: {
       // since the value2 is known,
@@ -245,10 +242,10 @@ ColumnSelectivityResult ColumnStatistics<ColumnType>::predicate_selectivity(cons
         output.column_statistics = std::make_shared<ColumnStatistics>(_column_id, distinct_count(), min(), max());
       }
       // apply default selectivity for open ended
-      output.selectivity *= OPEN_ENDED_SELECTIVITY;
+      output.selectivity *= DEFAULT_OPEN_ENDED_SELECTIVITY;
       // column statistis have just been created, therefore, cast to the column type cannot fail
       auto column_statistics = std::dynamic_pointer_cast<ColumnStatistics<ColumnType>>(output.column_statistics);
-      *(column_statistics->_distinct_count) *= OPEN_ENDED_SELECTIVITY;
+      *(column_statistics->_distinct_count) *= DEFAULT_OPEN_ENDED_SELECTIVITY;
       return output;
     }
     default: { return {1.f, nullptr}; }

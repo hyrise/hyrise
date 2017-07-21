@@ -29,7 +29,7 @@ class ColumnStatisticsTest : public BaseTest {
                                          const std::vector<float> &expected_selectivities) {
     auto expected_selectivities_itr = expected_selectivities.begin();
     for (const auto &value : values) {
-      auto result_container = column_statistic->predicate_selectivity(scan_type, AllTypeVariant(value));
+      auto result_container = column_statistic->estimate_selectivity_for_predicate(scan_type, AllTypeVariant(value));
       EXPECT_FLOAT_EQ(result_container.selectivity, *expected_selectivities_itr++);
     }
   }
@@ -41,8 +41,8 @@ class ColumnStatisticsTest : public BaseTest {
                                          const std::vector<float> &expected_selectivities) {
     auto expected_selectivities_itr = expected_selectivities.begin();
     for (const auto &value_pair : values) {
-      auto result_container = column_statistic->predicate_selectivity(scan_type, AllTypeVariant(value_pair.first),
-                                                                      AllTypeVariant(value_pair.second));
+      auto result_container = column_statistic->estimate_selectivity_for_predicate(
+          scan_type, AllTypeVariant(value_pair.first), AllTypeVariant(value_pair.second));
       EXPECT_FLOAT_EQ(result_container.selectivity, *expected_selectivities_itr++);
     }
   }
@@ -54,7 +54,7 @@ class ColumnStatisticsTest : public BaseTest {
     auto expected_selectivities_itr = expected_selectivities.begin();
     for (const auto &value2 : values2) {
       auto result_container =
-          column_statistic->predicate_selectivity(scan_type, ValuePlaceholder(0), AllTypeVariant(value2));
+          column_statistic->estimate_selectivity_for_predicate(scan_type, ValuePlaceholder(0), AllTypeVariant(value2));
       EXPECT_FLOAT_EQ(result_container.selectivity, *expected_selectivities_itr++);
     }
   }
@@ -156,32 +156,40 @@ TEST_F(ColumnStatisticsTest, BetweenTest) {
 TEST_F(ColumnStatisticsTest, StoredProcedureNotEqualsTest) {
   ScanType scan_type = ScanType::OpNotEquals;
 
-  auto result_container_int = _column_statistics_int->predicate_selectivity(scan_type, ValuePlaceholder(0));
+  auto result_container_int =
+      _column_statistics_int->estimate_selectivity_for_predicate(scan_type, ValuePlaceholder(0));
   EXPECT_FLOAT_EQ(result_container_int.selectivity, 5.f / 6.f);
 
-  auto result_container_float = _column_statistics_float->predicate_selectivity(scan_type, ValuePlaceholder(0));
+  auto result_container_float =
+      _column_statistics_float->estimate_selectivity_for_predicate(scan_type, ValuePlaceholder(0));
   EXPECT_FLOAT_EQ(result_container_float.selectivity, 5.f / 6.f);
 
-  auto result_container_double = _column_statistics_double->predicate_selectivity(scan_type, ValuePlaceholder(0));
+  auto result_container_double =
+      _column_statistics_double->estimate_selectivity_for_predicate(scan_type, ValuePlaceholder(0));
   EXPECT_FLOAT_EQ(result_container_double.selectivity, 5.f / 6.f);
 
-  auto result_container_string = _column_statistics_string->predicate_selectivity(scan_type, ValuePlaceholder(0));
+  auto result_container_string =
+      _column_statistics_string->estimate_selectivity_for_predicate(scan_type, ValuePlaceholder(0));
   EXPECT_FLOAT_EQ(result_container_string.selectivity, 5.f / 6.f);
 }
 
 TEST_F(ColumnStatisticsTest, StoredProcedureEqualsTest) {
   ScanType scan_type = ScanType::OpEquals;
 
-  auto result_container_int = _column_statistics_int->predicate_selectivity(scan_type, ValuePlaceholder(0));
+  auto result_container_int =
+      _column_statistics_int->estimate_selectivity_for_predicate(scan_type, ValuePlaceholder(0));
   EXPECT_FLOAT_EQ(result_container_int.selectivity, 1.f / 6.f);
 
-  auto result_container_float = _column_statistics_float->predicate_selectivity(scan_type, ValuePlaceholder(0));
+  auto result_container_float =
+      _column_statistics_float->estimate_selectivity_for_predicate(scan_type, ValuePlaceholder(0));
   EXPECT_FLOAT_EQ(result_container_float.selectivity, 1.f / 6.f);
 
-  auto result_container_double = _column_statistics_double->predicate_selectivity(scan_type, ValuePlaceholder(0));
+  auto result_container_double =
+      _column_statistics_double->estimate_selectivity_for_predicate(scan_type, ValuePlaceholder(0));
   EXPECT_FLOAT_EQ(result_container_double.selectivity, 1.f / 6.f);
 
-  auto result_container_string = _column_statistics_string->predicate_selectivity(scan_type, ValuePlaceholder(0));
+  auto result_container_string =
+      _column_statistics_string->estimate_selectivity_for_predicate(scan_type, ValuePlaceholder(0));
   EXPECT_FLOAT_EQ(result_container_string.selectivity, 1.f / 6.f);
 }
 
@@ -189,16 +197,20 @@ TEST_F(ColumnStatisticsTest, StoredProcedureOpenEndedTest) {
   // OpLessThan, OpGreaterThan, OpLessThanEquals, OpGreaterThanEquals are same for stored procedures
   ScanType scan_type = ScanType::OpLessThan;
 
-  auto result_container_int = _column_statistics_int->predicate_selectivity(scan_type, ValuePlaceholder(0));
+  auto result_container_int =
+      _column_statistics_int->estimate_selectivity_for_predicate(scan_type, ValuePlaceholder(0));
   EXPECT_FLOAT_EQ(result_container_int.selectivity, 1.f / 3.f);
 
-  auto result_container_float = _column_statistics_float->predicate_selectivity(scan_type, ValuePlaceholder(0));
+  auto result_container_float =
+      _column_statistics_float->estimate_selectivity_for_predicate(scan_type, ValuePlaceholder(0));
   EXPECT_FLOAT_EQ(result_container_float.selectivity, 1.f / 3.f);
 
-  auto result_container_double = _column_statistics_double->predicate_selectivity(scan_type, ValuePlaceholder(0));
+  auto result_container_double =
+      _column_statistics_double->estimate_selectivity_for_predicate(scan_type, ValuePlaceholder(0));
   EXPECT_FLOAT_EQ(result_container_double.selectivity, 1.f / 3.f);
 
-  auto result_container_string = _column_statistics_string->predicate_selectivity(scan_type, ValuePlaceholder(0));
+  auto result_container_string =
+      _column_statistics_string->estimate_selectivity_for_predicate(scan_type, ValuePlaceholder(0));
   EXPECT_FLOAT_EQ(result_container_string.selectivity, 1.f / 3.f);
 }
 

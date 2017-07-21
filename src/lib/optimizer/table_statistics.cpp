@@ -6,7 +6,7 @@
 #include <vector>
 
 #include "all_parameter_variant.hpp"
-#include "optimizer/abstract_column_statistics.hpp"
+#include "optimizer/base_column_statistics.hpp"
 #include "optimizer/column_statistics.hpp"
 #include "resolve_type.hpp"
 #include "storage/table.hpp"
@@ -18,7 +18,7 @@ TableStatistics::TableStatistics(const std::shared_ptr<Table> table)
 
 float TableStatistics::row_count() const { return _row_count; }
 
-std::shared_ptr<AbstractColumnStatistics> TableStatistics::column_statistics(const ColumnID column_id) {
+std::shared_ptr<BaseColumnStatistics> TableStatistics::column_statistics(const ColumnID column_id) {
   if (_column_statistics[column_id]) {
     return _column_statistics[column_id];
   }
@@ -27,7 +27,7 @@ std::shared_ptr<AbstractColumnStatistics> TableStatistics::column_statistics(con
   DebugAssert(table != nullptr, "Corresponding table of table statistics is deleted.");
   auto column_type = table->column_type(column_id);
   auto column_statistics =
-      make_shared_by_column_type<AbstractColumnStatistics, ColumnStatistics>(column_type, column_id, _table);
+      make_shared_by_column_type<BaseColumnStatistics, ColumnStatistics>(column_type, column_id, _table);
   _column_statistics[column_id] = column_statistics;
   return _column_statistics[column_id];
 }
@@ -46,7 +46,7 @@ std::shared_ptr<TableStatistics> TableStatistics::predicate_statistics(const std
   if (scan_type == ScanType::OpLike) {
     // simple heuristic:
     auto clone = std::make_shared<TableStatistics>(*this);
-    clone->_row_count = _row_count * LIKE_SELECTIVITY;
+    clone->_row_count = _row_count * DEFAULT_LIKE_SELECTIVITY;
     return clone;
   }
 
@@ -64,12 +64,14 @@ std::shared_ptr<TableStatistics> TableStatistics::predicate_statistics(const std
   if (value.type() == typeid(AllTypeVariant)) {
     auto casted_value = boost::get<AllTypeVariant>(value);
 
-    column_statistics_container = old_column_statistics->predicate_selectivity(scan_type, casted_value, value2);
+    column_statistics_container =
+        old_column_statistics->estimate_selectivity_for_predicate(scan_type, casted_value, value2);
 
   } else if (value.type() == typeid(ValuePlaceholder)) {
     auto casted_value = boost::get<ValuePlaceholder>(value);
 
-    column_statistics_container = old_column_statistics->predicate_selectivity(scan_type, casted_value, value2);
+    column_statistics_container =
+        old_column_statistics->estimate_selectivity_for_predicate(scan_type, casted_value, value2);
   }
 
   if (column_statistics_container.column_statistics != nullptr) {
