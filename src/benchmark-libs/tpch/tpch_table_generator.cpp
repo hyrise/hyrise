@@ -152,12 +152,14 @@ std::shared_ptr<opossum::Table> TableGenerator::generate_customers_table() {
 }
 
 TableGenerator::order_lines_type TableGenerator::generate_order_lines() {
-  size_t totalNUM_ORDERS_PER_CUSTOMER = NUM_ORDERS_PER_CUSTOMER * _scale_factor * NUM_CUSTOMERS;
-  std::vector<std::vector<OrderLine>> all_order_lines(totalNUM_ORDERS_PER_CUSTOMER);
+  const size_t total_orders_per_customer = NUM_ORDERS_PER_CUSTOMER * _scale_factor * NUM_CUSTOMERS;
+  std::vector<std::vector<OrderLine>> all_order_lines(total_orders_per_customer);
   for (auto &order_lines_per_order : all_order_lines) {
     size_t order_lines_size = _random_gen.number(1, 7);
     order_lines_per_order.resize(order_lines_size);
     size_t order_i = &order_lines_per_order - &all_order_lines[0];
+    // This key is only populated to 25%, according to the TPCH specification.
+    // The first 8 of each 32 keys are used, the other 24 are unused.
     size_t orderkey = order_i / 8 * 32 + order_i % 8;
     size_t orderdate = _random_gen.number(_startdate, _enddate - 151 * _one_day);
     size_t linenumber = 0;
