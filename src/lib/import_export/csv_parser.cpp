@@ -40,8 +40,8 @@ std::shared_ptr<Table> CsvParser::parse(const std::string& filename) {
     auto& chunk = chunks.back();
 
     // create and start parsing task to fill chunk
-    tasks.emplace_back(std::make_shared<JobTask>([this, &content, &table, &field_ends, &chunk]() {
-      parse_into_chunk(content, *table, field_ends, chunk);
+    tasks.emplace_back(std::make_shared<JobTask>([this, content, field_ends, &table, &chunk]() {
+      parse_into_chunk(content, field_ends, *table, chunk);
     }));
     tasks.back()->schedule();
 
@@ -144,7 +144,7 @@ bool CsvParser::find_fields_in_chunk(const std::string & str, const Table & tabl
   return true;
 }
 
-void CsvParser::parse_into_chunk(const std::string & content, const Table & table, const std::vector<size_t> & field_ends, Chunk & chunk) {
+void CsvParser::parse_into_chunk(const std::string & content, const std::vector<size_t> & field_ends, const Table & table, Chunk & chunk) {
   // For each csv column create a CsvConverter which builds up a ValueColumn
   const auto col_count = table.col_count();
   const auto row_count = field_ends.size() / col_count;
