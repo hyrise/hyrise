@@ -32,7 +32,7 @@ class ColumnStatistics : public BaseColumnStatistics {
   /**
    * Create a new column statistics object from given parameters.
    * Distinct_count, min and max are set with creation.
-   * Therefor, table is not set as table is only used to calculate min, max and distinct_count.
+   * Therefore, table is not set as table is only used to calculate min, max and distinct_count.
    * This constructor is used by column statistics when returning a new column statistics from estimate selectivity
    * functions.
    */
