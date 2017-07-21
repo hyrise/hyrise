@@ -23,16 +23,16 @@ class ColumnStatistics : public BaseColumnStatistics {
  public:
   /**
    * Create a new column statistics object from a column within a table.
-   * The statistics values distinct_count, min and max are not set till used.
-   * This constructor is used by table statistics when a non existent table statistics is requestet.
+   * The statistics values distinct count, min and max are not set till used.
+   * This constructor is used by table statistics when a non-existent table statistics is requestet.
    * @param column_id: id of corresponding column
    * @param table: table, which contains the column
    */
   ColumnStatistics(const ColumnID column_id, const std::weak_ptr<Table> table);
   /**
    * Create a new column statistics object from given parameters.
-   * Distinct_count, min and max are set with creation.
-   * Therefore, table is not set as table is only used to calculate min, max and distinct_count.
+   * Distinct count, min and max are set during the creation.
+   * Therefore, _table is not set as it is only used to calculate min, max and distinct_count.
    * This constructor is used by column statistics when returning a new column statistics from estimate selectivity
    * functions.
    */
