@@ -21,11 +21,10 @@ namespace opossum {
 class CsvParser {
  public:
   /*
-   * @param buffer_size Number of bytes that a task processes from the input file.
    * @param csv_config  Csv configuration (delimiter, separator, ..).
    * @param rfc_mode    Indicator whether RFC 4180 should be used for parsing.
    */
-  explicit CsvParser(const size_t buffer_size, const CsvConfig& csv_config = {}, const bool rfc_mode = true);
+  explicit CsvParser(const CsvConfig& csv_config = {}, const bool rfc_mode = true);
 
   // cannot move-assign because of const members
   CsvParser& operator=(CsvParser&&) = delete;
@@ -43,8 +42,6 @@ class CsvParser {
                         Chunk& chunk);
   void sanitize_field(std::string& field);
 
-  // Number of bytes that a task processes from the input file.
-  const size_t _buffer_size;
   // Csv configuration, e.g. delimiter, separator, etc.
   const CsvConfig _csv_config;
   // Indicator whether RFC 4180 should be used for parsing. https://tools.ietf.org/html/rfc4180

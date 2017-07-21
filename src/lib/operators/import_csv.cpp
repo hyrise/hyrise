@@ -9,17 +9,15 @@
 
 namespace opossum {
 
-ImportCsv::ImportCsv(const std::string& filename, const optional<std::string> tablename, bool rfc_mode,
-                     size_t buffer_size)
+ImportCsv::ImportCsv(const std::string& filename, const optional<std::string> tablename, bool rfc_mode)
     : _filename(filename),
       _tablename(tablename),
       _rfc_mode(rfc_mode),
-      _buffer_size(buffer_size),
       _config(CsvConfig{}) {}
 
 ImportCsv::ImportCsv(const std::string& filename, const CsvConfig& config, const optional<std::string> tablename,
-                     bool rfc_mode, size_t buffer_size)
-    : _filename(filename), _tablename(tablename), _rfc_mode(rfc_mode), _buffer_size(buffer_size), _config(config) {}
+                     bool rfc_mode)
+    : _filename(filename), _tablename(tablename), _rfc_mode(rfc_mode), _config(config) {}
 
 const std::string ImportCsv::name() const { return "ImportCSV"; }
 
@@ -40,7 +38,7 @@ std::shared_ptr<const Table> ImportCsv::on_execute() {
   file.close();
 
   std::shared_ptr<Table> table;
-  CsvParser parser{_buffer_size, _config, _rfc_mode};
+  CsvParser parser{_config, _rfc_mode};
   table = parser.parse(_filename);
 
   if (_tablename) {

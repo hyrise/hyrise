@@ -107,7 +107,7 @@ TEST_F(OperatorsImportCsvTest, EmptyStrings) {
 TEST_F(OperatorsImportCsvTest, Parallel) {
   CurrentScheduler::set(std::make_shared<NodeQueueScheduler>(Topology::create_fake_numa_topology(8, 4)));
   auto importer = std::make_shared<OperatorTask>(
-      std::make_shared<ImportCsv>("src/test/csv/float_int_large.csv", nullopt, true, 500));
+      std::make_shared<ImportCsv>("src/test/csv/float_int_large.csv", nullopt, true));
   importer->schedule();
 
   auto expected_table = std::make_shared<Table>(20);
