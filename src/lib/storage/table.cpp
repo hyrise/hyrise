@@ -86,6 +86,8 @@ ColumnID Table::column_id_by_name(const std::string &column_name) const {
 
 uint32_t Table::chunk_size() const { return _chunk_size; }
 
+const std::vector<std::string> Table::column_names() const { return _column_names; }
+
 const std::string &Table::column_name(ColumnID column_id) const { return _column_names[column_id]; }
 
 const std::string &Table::column_type(ColumnID column_id) const { return _column_types[column_id]; }

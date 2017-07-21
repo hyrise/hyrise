@@ -80,7 +80,7 @@ class SQLSelectTest : public BaseTest, public ::testing::WithParamInterface<SQLT
     }
   }
 
-  std::shared_ptr<const Table> get_plan_result() { return _plan.back()->get_operator()->get_output(); }
+  std::shared_ptr<const Table> get_plan_result() { return _plan.tree_roots().back()->get_output(); }
 
   SQLQueryTranslator _translator;
   SQLQueryPlan _plan;
@@ -130,7 +130,8 @@ TEST_P(SQLSelectTest, SQLQueryTest) {
   std::string expected_result_file = std::get<3>(param);
 
   compile_query(query);
-  EXPECT_EQ(num_operators, _plan.size());
+  EXPECT_EQ(1u, _plan.num_trees());
+  EXPECT_EQ(num_operators, _plan.num_operators());
 
   if (should_execute) {
     execute_query_plan();

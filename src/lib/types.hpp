@@ -5,6 +5,7 @@
 #include <cstdint>
 #include <limits>
 #include <string>
+#include <tuple>
 #include <vector>
 
 #include "strong_typedef.hpp"
