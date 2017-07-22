@@ -341,7 +341,7 @@ class SortMergeJoin::SortMergeJoinImpl : public AbstractJoinOperatorImpl, public
 
       // get samples
       size_t step_size = values.size() / _partition_count;
-      //DebugAssert((step_size >= 1), "SortMergeJoin value_based_partitioning: step size is <= 0");
+      DebugAssert((step_size >= 1), "SortMergeJoin value_based_partitioning: step size is <= 0");
       for (size_t pos = step_size, partition_id = 0; pos < values.size() - 1; pos += step_size, partition_id++) {
         if (sample_values[partition_id].count(values[pos].first) == 0) {
           sample_values[partition_id].insert(std::pair<T, uint32_t>(values[pos].first, 1));
@@ -504,14 +504,9 @@ class SortMergeJoin::SortMergeJoinImpl : public AbstractJoinOperatorImpl, public
       if (left_value == right_value) {
         // Match found
         // Find all same values in each table then add cross product to _output
-        for (auto l = left_run_start; l <= left_run_end; l++) {
-          auto& left_row_id = left_partition.values[l].second;
-          for (auto r = right_run_start; r <= right_run_end; r++) {
-            auto& right_row_id = right_partition.values[r].second;
-            output_left->push_back(left_row_id);
-            output_right->push_back(right_row_id);
-          }
-        }
+        TableRange left_range(partition_number, left_run_start, left_run_end);
+        TableRange right_range(partition_number, right_run_start, right_run_end);
+        emit_combinations(partition_number, left_range, right_range);
       } else {
         // No Match found
         // Add null values when appropriate on the side which index gets increased at the end of one loop run
@@ -552,8 +547,7 @@ class SortMergeJoin::SortMergeJoinImpl : public AbstractJoinOperatorImpl, public
 
 
     if (_op == ">") {
-      if(left_value <= right_value)
-      {
+      if(left_value <= right_value) {
         for (auto l = left_run_start; l <= left_run_end; l++) {
           auto& lhs_id = left_partition.values[l].second;
           emit_all_rhs_values(partition_number, 0, partition_number, lhs_id);
@@ -562,16 +556,8 @@ class SortMergeJoin::SortMergeJoinImpl : public AbstractJoinOperatorImpl, public
       }
     }
 
-/*
+    /*
     if (_op == ">=") {
-      if(left_value >= right_value) {
-        for (auto l = left_run_start; l <= left_run_end; l++) {
-          auto& lhs_id = left_partition.values[l].second;
-          emit_all_rhs_values(partition_number, 0, partition_number, lhs_id);
-          emit_rhs_values(partition_number, partition_number, 0, right_run_end + 1, lhs_id);
-        }
-      }
-
       if(left_value < right_value) {
         for (auto l = left_run_start; l <= left_run_end; l++) {
           auto& lhs_id = left_partition.values[l].second;
@@ -579,14 +565,17 @@ class SortMergeJoin::SortMergeJoinImpl : public AbstractJoinOperatorImpl, public
           emit_rhs_values(partition_number, partition_number, 0, right_run_start, lhs_id);
         }
       }
-
-    }
-    */
+    }*/
 
     if (_op == "<") {
       if (left_value < right_value) {
+        //TableRange left_range(partition_number, left_run_start, partition_number, left_run_end);
+        //TableRange right_range(partition_number, right_run_start, _partition_count - 1, left_run_end);
+        //emit_combinations(partition_number, left_range, right_range);
+
         for (auto l = left_run_start; l <= left_run_end; l++) {
           auto& lhs_id = left_partition.values[l].second;
+
           emit_rhs_values(partition_number, partition_number, right_run_start, rhs_size, lhs_id);
           emit_all_rhs_values(partition_number, partition_number + 1, _partition_count, lhs_id);
         }
@@ -613,16 +602,44 @@ class SortMergeJoin::SortMergeJoinImpl : public AbstractJoinOperatorImpl, public
     }
   }
 
-/*
-  void emit_combinations(size_t output_partition, size_t lhs_from_index, size_t lhs_to_index, size_t from_rhs_partition, size_t from_rhs_index,
-                          size_t to_rhs_partition, size_t to_rhs_index) {
-    auto& left_partition = _sorted_left_table->partitions[output_partition];
-    for (auto l = lhs_from_index; l < lhs_to_index; l++) {
-      auto& lhs_id = left_partition.values[l].second;
-      emit_rhs_values(output_partition, output_partition, right_run_end + 1, rhs_size, lhs_id);
-      emit_all_rhs_values(output_partition, output_partition + 1, _partition_count, lhs_id);
+  struct TableRange {
+    TableRange(int start_partition, int start_index, int end_partition, int end_index)
+      : start_partition(start_partition), start_index(start_index), end_partition(end_partition), end_index(end_index)
+      {}
+
+    TableRange(int partition, int start_index, int end_index)
+      : start_partition(partition), start_index(start_index), end_partition(partition), end_index(end_index)
+      {}
+
+    int start_partition;
+    int start_index;
+    int end_partition;
+    int end_index;
+  };
+
+  void emit_combinations(size_t output_partition, TableRange left_range, TableRange right_range) {
+    for(int partition = left_range.start_partition; partition <= left_range.end_partition; partition++) {
+      auto& values = _sorted_left_table->partitions[partition].values;
+      int start_index = (partition == left_range.start_partition) ? left_range.start_index : 0;
+      int end_index = (partition == left_range.end_partition) ? left_range.end_index : values.size() - 1;
+      for(int index = start_index; index <= end_index; index++) {
+        emit_combinations(output_partition, values[index].second, right_range);
+      }
     }
-  }*/
+  }
+
+  void emit_combinations(size_t output_partition, RowID left_id, TableRange right_range) {
+    for(int partition = right_range.start_partition; partition <= right_range.end_partition; partition++) {
+      auto& values = _sorted_right_table->partitions[partition].values;
+      int start_index = (partition == right_range.start_partition) ? right_range.start_index : 0;
+      int end_index = (partition == right_range.end_partition) ? right_range.end_index : values.size() - 1;
+      for(int index = start_index; index <= end_index; index++) {
+        auto& right_id = values[index].second;
+        _output_pos_lists_left[output_partition]->push_back(left_id);
+        _output_pos_lists_right[output_partition]->push_back(right_id);
+      }
+    }
+  }
 
 
   void emit_rhs_values(size_t output_partition, size_t rhs_partition, size_t from_index, size_t to_index, RowID lhs_id) {
@@ -646,11 +663,13 @@ class SortMergeJoin::SortMergeJoinImpl : public AbstractJoinOperatorImpl, public
 
   void emit_all_rhs_values(size_t output_partition, size_t from_rhs_partition, size_t to_rhs_partition, RowID lhs_id) {
     // Add all values from the specified chunks
-    for(size_t partition_id = from_rhs_partition; partition_id < to_rhs_partition; partition_id++) {
+    for(size_t partition_id = from_rhs_partition; partition_id <= to_rhs_partition; partition_id++) {
       auto partition_size = _sorted_right_table->partitions[partition_id].values.size();
       emit_rhs_values(output_partition, partition_id, 0, partition_size, lhs_id);
     }
   }
+
+
 
   /*
   ** Performs the join on a single partition. Looks for matches.
@@ -676,10 +695,10 @@ class SortMergeJoin::SortMergeJoinImpl : public AbstractJoinOperatorImpl, public
       join_runs(partition_number, left_run_start, left_run_end, right_run_start, right_run_end);
 
       // Advance to the next run on the smaller side
-      if(left_value == right_value) {
+      if(left_value == right_value || left_run_end + 1 == left_size) {
         left_run_start = left_run_end + 1;
         right_run_start = right_run_end + 1;
-      }else if(left_value < right_value) {
+      }else if(left_value < right_value || right_run_end + 1 == right_size) {
         left_run_start = left_run_end + 1;
       }
       else{
