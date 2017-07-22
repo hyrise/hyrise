@@ -633,7 +633,7 @@ class TableScanVisitableCreator<T>::TableScanVariableColumnVisitable : public Co
 
     /**
      * Depending on the columns being compared (ValueColumn with/without null values, DictionaryColumn, referenced)
-     * this function will be called with a different set of iterators
+     * this function will be called with different sets of iterators
      *
      * @see DictionaryColumnIterable, ValueColumnIterable
      */

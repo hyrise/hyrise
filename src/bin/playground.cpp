@@ -1,1 +1,29 @@
-int main() { return 0; }
+
+#include <memory>
+#include <typeinfo>
+#include <iostream>
+#include <type_traits>
+
+#include <boost/hana/type.hpp>
+
+#include "resolve_column_type.hpp"
+
+using namespace opossum;
+
+template <typename T>
+void method(T && val) {
+  if constexpr (decltype(val)::is_reference_column()) {
+    std::cout << "Hallo" << std::endl;
+  }
+}
+
+int main() {
+  auto column = ValueColumn<int>{};
+  column.append(42);
+
+  resolve_column_type("int", column, [] (auto & column) {
+    std::cout << typeid(column).name() << std::endl;
+  });
+
+  method(column);
+}

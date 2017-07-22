@@ -135,6 +135,7 @@ set(
     operators/update.hpp
     operators/validate.cpp
     operators/validate.hpp
+    resolve_column_type.hpp
     resolve_type.hpp
     sql/lru_cache.hpp
     sql/sql_query_operator.hpp
