@@ -10,6 +10,11 @@
 
 namespace tpch {
 
+/**
+ * TextFieldGenerator provides methods to easily generate the text fields specified by TPCH.
+ * This includes text consisting of random characters, random strings from dictionaries
+ * as well as formatting utilities.
+ */
 class TextFieldGenerator {
  public:
   explicit TextFieldGenerator(benchmark_utilities::RandomGenerator random_generator)
@@ -21,23 +26,33 @@ class TextFieldGenerator {
     return _text.substr(start, length);
   }
 
+  /**
+   * v_string corresponds to the TPC-H specification of v-string, which defines it as
+   * a random string consisting of random characters from an alphanumeric character-set
+   * of at least 64 characters. The length of the string should be between lower_length
+   * and upper_length (inclusive).
+   */
   std::string v_string(size_t lower_length, size_t upper_length) {
     size_t length = _random_gen.number(lower_length, upper_length);
     std::string s;
+    s.reserve(length);
     for (size_t i = 0; i < length; i++) {
       auto offset = _random_gen.number(0, 63);
       size_t char_index;
-      if (offset < 10) {
+      // to construct alphanumeric characters, different ranges of offset
+      // are mapped to different character ranges by the following cascade:
+      // (denoted as offset range -> character range)
+      if (offset < 10) {  // 0-9 -> 0-9
         char_index = '0' + offset;
       } else {
         offset -= 10;
-        if (offset < 26) {
+        if (offset < 26) {  // 10-35 -> a-z
           char_index = 'a' + offset;
         } else {
           offset -= 26;
-          if (offset < 26) {
+          if (offset < 26) {  // 36-61 -> A-Z
             char_index = 'A' + offset;
-          } else {
+          } else {  // 62-63 -> special characters
             offset -= 26;
             if (offset == 0) {
               char_index = '.';
@@ -68,13 +83,15 @@ class TextFieldGenerator {
 
   std::string part_name() {
     auto work_ids = _random_gen.select_unique_ids(5, part_name_words.size());
+    // The following lines concatenate the strings, having a delimiter
+    // only between the strings, no trailing or leading one.
     auto it = work_ids.begin();
-    std::string s(part_name_words[*it]);
+    std::stringstream ss;
+    ss << part_name_words[*it++];
     for (; it != work_ids.end(); it++) {
-      s += " ";
-      s += part_name_words[*it];
+      ss << " " << part_name_words[*it];
     }
-    return s;
+    return ss.str();
   }
 
   std::string part_type() {
