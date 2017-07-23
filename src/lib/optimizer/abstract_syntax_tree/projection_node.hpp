@@ -4,20 +4,17 @@
 #include <vector>
 
 #include "common.hpp"
-#include "optimizer/abstract_syntax_tree/abstract_node.hpp"
+#include "optimizer/abstract_syntax_tree/abstract_ast_node.hpp"
 
 namespace opossum {
 
-class ProjectionNode : public AbstractNode {
+class ProjectionNode : public AbstractASTNode {
  public:
   explicit ProjectionNode(const std::vector<std::string>& column_names);
 
-  const std::string description() const override;
+  std::string description() const override;
 
-  const std::vector<std::string> output_columns() override;
-
- private:
-  const std::vector<std::string> _column_names;
+  std::vector<std::string> output_column_names() const override;
 };
 
 }  // namespace opossum

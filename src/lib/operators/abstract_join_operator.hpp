@@ -6,6 +6,7 @@
 #include <vector>
 
 #include "abstract_read_only_operator.hpp"
+#include "types.hpp"
 
 namespace opossum {
 
@@ -18,7 +19,6 @@ namespace opossum {
 
 // Natural Join is a special case of an inner join without join_columns
 // Natural and Cross Join do not enforce column_names
-enum JoinMode { Inner, Left, Right, Outer, Cross, Natural, Self };
 
 class AbstractJoinOperator : public AbstractReadOnlyOperator {
  public:

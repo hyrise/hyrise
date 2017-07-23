@@ -71,7 +71,7 @@ class ColumnName {
   operator std::string() const { return _name; }
 
  protected:
-  const std::string _name;
+  std::string _name;
 };
 
 constexpr NodeID INVALID_NODE_ID{std::numeric_limits<NodeID::base_type>::max()};
@@ -95,6 +95,8 @@ enum class SchedulePriority {
   Normal = 1,  // Schedule task at the end of the queue
   High = 0     // Schedule task at the beginning of the queue
 };
+
+enum AggregateFunction { Min, Max, Sum, Avg, Count };
 
 // Part of AllParameterVariant to reference parameters that will be replaced later.
 // When stored in an operator, the operator's recreate method can contain functionality
@@ -120,7 +122,39 @@ enum class ScanType {
   OpLike
 };
 
-std::string scan_type_to_string(ScanType scan_type);
-ScanType scan_type_from_string(const std::string &scan_str);
+enum class ExpressionType {
+  Literal,
+  Star,
+  Parameter,
+  ColumnReference,
+  FunctionReference,
+  Operator,
+  Select,
+  Plus,
+  Minus,
+  Asterisk,
+  Slash,
+  Percentage,
+  Caret,
+  Equals,
+  NotEquals,
+  Less,
+  LessEquals,
+  Greater,
+  GreaterEquals,
+  Like,
+  NotLike,
+  And,
+  Or,
+  In,
+  Not,
+  IsNull,
+  Exists,
+  Between,
+  Case,
+  Hint
+};
+
+enum class JoinMode { Inner, Left, Right, Outer, Cross, Natural, Self };
 
 }  // namespace opossum

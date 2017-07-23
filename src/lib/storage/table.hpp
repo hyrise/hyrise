@@ -121,7 +121,7 @@ class Table {
 
   void set_table_statistics(std::shared_ptr<TableStatistics> table_statistics) { _table_statistics = table_statistics; }
 
-  std::shared_ptr<TableStatistics> get_table_statistics() { return _table_statistics; }
+  std::shared_ptr<TableStatistics> table_statistics() { return _table_statistics; }
 
  protected:
   // 0 means that the chunk has an unlimited size.

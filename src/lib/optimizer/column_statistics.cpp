@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <memory>
+#include <ostream>
 #include <string>
 #include <tuple>
 #include <type_traits>
@@ -13,284 +14,249 @@
 #include "operators/aggregate.hpp"
 #include "operators/table_wrapper.hpp"
 #include "storage/table.hpp"
+#include "table_statistics.hpp"
 #include "type_cast.hpp"
 #include "types.hpp"
 
 namespace opossum {
 
-template <typename T>
-ColumnStatistics<T>::ColumnStatistics(const std::weak_ptr<Table> table, const ColumnID column_id)
-    : _table(table), _column_id(column_id) {}
+template <typename ColumnType>
+ColumnStatistics<ColumnType>::ColumnStatistics(const ColumnID column_id, const std::weak_ptr<Table> table)
+    : _column_id(column_id), _table(table) {}
 
-template <typename T>
-ColumnStatistics<T>::ColumnStatistics(double distinct_count, AllTypeVariant min, AllTypeVariant max,
-                                      const ColumnID column_id)
-    : _table(std::weak_ptr<Table>()),
-      _column_id(column_id),
-      _distinct_count(distinct_count),
-      _min(get<T>(min)),
-      _max(get<T>(max)) {}
+template <typename ColumnType>
+ColumnStatistics<ColumnType>::ColumnStatistics(const ColumnID column_id, float distinct_count, ColumnType min,
+                                               ColumnType max)
+    : _column_id(column_id), _table(std::weak_ptr<Table>()), _distinct_count(distinct_count), _min(min), _max(max) {}
 
-template <typename T>
-ColumnStatistics<T>::ColumnStatistics(double distinct_count, T min, T max, const ColumnID column_id)
-    : _table(std::weak_ptr<Table>()), _column_id(column_id), _distinct_count(distinct_count), _min(min), _max(max) {}
-
-template <typename T>
-ColumnStatistics<T>::ColumnStatistics(double distinct_count, const ColumnID column_id)
-    : _table(std::weak_ptr<Table>()), _column_id(column_id), _distinct_count(distinct_count) {}
-
-template <typename T>
-double ColumnStatistics<T>::distinct_count() {
-  if (!_distinct_count) {
-    update_distinct_count();
+template <typename ColumnType>
+float ColumnStatistics<ColumnType>::distinct_count() const {
+  if (_distinct_count) {
+    return *_distinct_count;
   }
+
+  // Calculation of distinct_count is delegated to aggregate operator.
+  auto table = _table.lock();
+  DebugAssert(table != nullptr, "Corresponding table of column statistics is deleted.");
+  auto table_wrapper = std::make_shared<TableWrapper>(table);
+  table_wrapper->execute();
+  auto aggregate = std::make_shared<Aggregate>(table_wrapper, std::vector<AggregateDefinition>{},
+                                               std::vector<std::string>{table->column_name(_column_id)});
+  aggregate->execute();
+  auto aggregate_table = aggregate->get_output();
+  _distinct_count = aggregate_table->row_count();
   return *_distinct_count;
 }
 
-template <typename T>
-T ColumnStatistics<T>::min() {
+template <typename ColumnType>
+ColumnType &ColumnStatistics<ColumnType>::min() const {
   if (!_min) {
-    update_min_max();
+    initialize_min_max();
   }
   return *_min;
 }
 
-template <typename T>
-T ColumnStatistics<T>::max() {
+template <typename ColumnType>
+ColumnType &ColumnStatistics<ColumnType>::max() const {
   if (!_max) {
-    update_min_max();
+    initialize_min_max();
   }
   return *_max;
 }
 
-template <typename T>
-void ColumnStatistics<T>::update_distinct_count() {
-  auto shared_table = _table.lock();
-  auto table_wrapper = std::make_shared<TableWrapper>(shared_table);
+template <typename ColumnType>
+void ColumnStatistics<ColumnType>::initialize_min_max() const {
+  // Calculation is delegated to aggregate operator.
+  auto table = _table.lock();
+  DebugAssert(table != nullptr, "Corresponding table of column statistics is deleted.");
+  auto table_wrapper = std::make_shared<TableWrapper>(table);
   table_wrapper->execute();
-  auto aggregate = std::make_shared<Aggregate>(table_wrapper, std::vector<std::pair<std::string, AggregateFunction>>{},
-                                               std::vector<std::string>{shared_table->column_name(_column_id)});
-  aggregate->execute();
-  auto aggregate_table = aggregate->get_output();
-  _distinct_count = aggregate_table->row_count();
-}
-
-template <typename T>
-void ColumnStatistics<T>::update_min_max() {
-  auto shared_table = _table.lock();
-  auto table_wrapper = std::make_shared<TableWrapper>(shared_table);
-  table_wrapper->execute();
-  const std::string &column_name = shared_table->column_name(_column_id);
-  auto aggregate_args = std::vector<std::pair<std::string, AggregateFunction>>{std::make_pair(column_name, Min),
-                                                                               std::make_pair(column_name, Max)};
+  const std::string &column_name = table->column_name(_column_id);
+  auto aggregate_args = std::vector<AggregateDefinition>{{column_name, Min}, {column_name, Max}};
   auto aggregate = std::make_shared<Aggregate>(table_wrapper, aggregate_args, std::vector<std::string>{});
   aggregate->execute();
   auto aggregate_table = aggregate->get_output();
-  _min = aggregate_table->template get_value<T>(ColumnID{0}, 0);
-  _max = aggregate_table->template get_value<T>(ColumnID{1}, 0);
+  _min = aggregate_table->template get_value<ColumnType>(ColumnID{0}, 0);
+  _max = aggregate_table->template get_value<ColumnType>(ColumnID{1}, 0);
 }
 
-// string specialization
+/**
+ * Specialization for strings as they cannot be used in subtractions.
+ */
 template <>
-std::tuple<double, std::shared_ptr<AbstractColumnStatistics>> ColumnStatistics<std::string>::predicate_selectivity(
-    const ScanType scan_type, const AllTypeVariant value, const optional<AllTypeVariant> value2) {
-  auto casted_value1 = type_cast<std::string>(value);
-  if (scan_type == ScanType::OpEquals) {
-    if (casted_value1 < min() || casted_value1 > max()) {
-      return {0.0, nullptr};
-    }
-    auto column_statistics = std::make_shared<ColumnStatistics>(1, _column_id);
-    return {1.0 / distinct_count(), column_statistics};
-  } else if (scan_type == ScanType::OpNotEquals) {
-    if (casted_value1 < min() || casted_value1 > max()) {
-      return {1.0, nullptr};
-    }
-    auto column_statistics = std::make_shared<ColumnStatistics>(distinct_count() - 1, _column_id);
-    return {1. - 1. / distinct_count(), column_statistics};
+ColumnSelectivityResult ColumnStatistics<std::string>::calculate_selectivity_for_range_and_create_output(
+    std::string &new_min, std::string &new_max) {
+  new_min = std::max(new_min, min());
+  new_max = std::min(new_max, max());
+  if (new_max < new_min) {
+    return {0.f, nullptr};
   }
-  // TODO(anybody) implement other table-scan operators for string.
-  return {1.0, nullptr};
+  return {1.f, nullptr};
 }
 
-template <typename T>
-std::tuple<double, std::shared_ptr<AbstractColumnStatistics>> ColumnStatistics<T>::predicate_selectivity(
-    const ScanType scan_type, const AllTypeVariant value, const optional<AllTypeVariant> value2) {
-  auto casted_value1 = type_cast<T>(value);
-
-  if (scan_type == ScanType::OpEquals) {
-    if (casted_value1 < min() || casted_value1 > max()) {
-      return {0.0, nullptr};
-    }
-    auto column_statistics = std::make_shared<ColumnStatistics>(1, casted_value1, casted_value1, _column_id);
-    return {1.0 / distinct_count(), column_statistics};
-  } else if (scan_type == ScanType::OpNotEquals) {
-    if (casted_value1 < min() || casted_value1 > max()) {
-      return {1.0, nullptr};
-    }
-    // disregarding A != 5 AND A = 5
-    // (just don't put this into a query!)
-    auto column_statistics = std::make_shared<ColumnStatistics>(distinct_count() - 1, min(), max(), _column_id);
-    return {(-1.0 + distinct_count()) / distinct_count(), column_statistics};
-  } else if (scan_type == ScanType::OpLessThan && std::is_integral<T>::value) {
-    if (casted_value1 <= min()) {
-      return {0.0, nullptr};
-    }
-    double selectivity = (casted_value1 - min()) / static_cast<double>(max() - min() + 1);
-    auto column_statistics =
-        std::make_shared<ColumnStatistics>(selectivity * distinct_count(), min(), casted_value1 - 1, _column_id);
-    return {selectivity, column_statistics};
-  } else if (scan_type == ScanType::OpLessThanEquals ||
-             (scan_type == ScanType::OpLessThan && !std::is_integral<T>::value)) {
-    if (casted_value1 < min() || (scan_type == ScanType::OpLessThan && casted_value1 <= min())) {
-      return {0.0, nullptr};
-    } else if (casted_value1 >= max()) {
-      return {1.0, nullptr};
-    }
-    double selectivity = (casted_value1 - min() + 1) / static_cast<double>(max() - min() + 1);
-    auto column_statistics =
-        std::make_shared<ColumnStatistics>(selectivity * distinct_count(), min(), casted_value1, _column_id);
-    return {selectivity, column_statistics};
-  } else if (scan_type == ScanType::OpGreaterThan && std::is_integral<T>::value) {
-    if (casted_value1 >= max()) {
-      return {0.0, nullptr};
-    }
-    double selectivity = (max() - casted_value1) / static_cast<double>(max() - min() + 1);
-    auto column_statistics =
-        std::make_shared<ColumnStatistics>(selectivity * distinct_count(), casted_value1 + 1, max(), _column_id);
-    return {selectivity, column_statistics};
-  } else if (scan_type == ScanType::OpGreaterThanEquals ||
-             (scan_type == ScanType::OpGreaterThan && !std::is_integral<T>::value)) {
-    if (casted_value1 > max() || (scan_type == ScanType::OpGreaterThan && casted_value1 >= max())) {
-      return {0.0, nullptr};
-    } else if (casted_value1 <= min()) {
-      return {1.0, nullptr};
-    }
-    double selectivity = (max() - casted_value1 + 1) / static_cast<double>(max() - min() + 1);
-    auto column_statistics =
-        std::make_shared<ColumnStatistics>(selectivity * distinct_count(), casted_value1, max(), _column_id);
-    return {selectivity, column_statistics};
-  } else if (scan_type == ScanType::OpBetween) {
-    if (!value2) {
-      Fail(std::string("operator BETWEEN should get two parameters, second is missing!"));
-    }
-    auto casted_value2 = type_cast<T>(*value2);
-    if (casted_value1 > casted_value2 || casted_value1 > max() || casted_value2 < min()) {
-      return {0.0, nullptr};
-    }
-    double selectivity = (casted_value2 - casted_value1 + 1) / static_cast<double>(max() - min() + 1);
-    auto column_statistics =
-        std::make_shared<ColumnStatistics>(selectivity * distinct_count(), casted_value1, casted_value2, _column_id);
-    return {selectivity, column_statistics};
+template <typename ColumnType>
+ColumnSelectivityResult ColumnStatistics<ColumnType>::calculate_selectivity_for_range_and_create_output(
+    ColumnType &new_min, ColumnType &new_max) {
+  new_min = std::max(new_min, min());
+  new_max = std::min(new_max, max());
+  if (new_min == min() && new_max == max()) {
+    return {1.f, nullptr};
+  } else if (new_max < new_min) {
+    return {0.f, nullptr};
+  }
+  float selectivity;
+  // distinction between integers and decimals
+  // for integers the number of possible integers is used within the inclusive ranges
+  // for decimals the size of the range is used
+  if (std::is_integral<ColumnType>::value) {
+    selectivity = static_cast<float>(new_max - new_min + 1) / static_cast<float>(max() - min() + 1);
   } else {
-    // Brace yourselves.
-    return {1.0 / distinct_count(), nullptr};
+    selectivity = static_cast<float>(new_max - new_min) / static_cast<float>(max() - min());
   }
-  return {1.0, nullptr};
+  auto column_statistics =
+      std::make_shared<ColumnStatistics>(_column_id, selectivity * distinct_count(), new_min, new_max);
+  return {selectivity, column_statistics};
 }
 
-// string specialization
+template <typename ColumnType>
+ColumnSelectivityResult ColumnStatistics<ColumnType>::calculate_selectivity_for_equals_and_create_output(
+    ColumnType &value) {
+  if (value < min() || value > max()) {
+    return {0.f, nullptr};
+  }
+  auto column_statistics = std::make_shared<ColumnStatistics>(_column_id, 1, value, value);
+  return {1.f / distinct_count(), column_statistics};
+}
+
+template <typename ColumnType>
+ColumnSelectivityResult ColumnStatistics<ColumnType>::calculate_selectivity_for_unequals_and_create_output(
+    ColumnType &value) {
+  if (value < min() || value > max()) {
+    return {1.f, nullptr};
+  }
+  auto column_statistics = std::make_shared<ColumnStatistics>(_column_id, distinct_count() - 1, min(), max());
+  return {1 - 1.f / distinct_count(), column_statistics};
+}
+
+/**
+ * Specialization for strings as they cannot be used in subtractions.
+ */
 template <>
-std::tuple<double, std::shared_ptr<AbstractColumnStatistics>, std::shared_ptr<AbstractColumnStatistics>>
-ColumnStatistics<std::string>::predicate_selectivity(
-    const ScanType scan_type, const std::shared_ptr<AbstractColumnStatistics> abstract_value_column_statistics,
-    const optional<AllTypeVariant> value2) {
-  // TODO(anybody)
-  return {1.0, nullptr, nullptr};
-}
-
-template <typename T>
-std::tuple<double, std::shared_ptr<AbstractColumnStatistics>, std::shared_ptr<AbstractColumnStatistics>>
-ColumnStatistics<T>::predicate_selectivity(
-    const ScanType scan_type, const std::shared_ptr<AbstractColumnStatistics> abstract_value_column_statistics,
-    const optional<AllTypeVariant> value2) {
-  // auto casted_value1 = type_cast<T>(value);
-  auto value_column_statistics = std::dynamic_pointer_cast<ColumnStatistics<T>>(abstract_value_column_statistics);
-
-  auto common_min = std::max(min(), value_column_statistics->min());
-  auto common_max = std::min(max(), value_column_statistics->max());
-
-  if (scan_type == ScanType::OpEquals) {
-    if (common_min > common_max) {
-      return {0.0, nullptr, nullptr};
+ColumnSelectivityResult ColumnStatistics<std::string>::predicate_selectivity(const ScanType scan_type,
+                                                                             const AllTypeVariant &value,
+                                                                             const optional<AllTypeVariant> &value2) {
+  auto casted_value = type_cast<std::string>(value);
+  switch (scan_type) {
+    case ScanType::OpEquals: {
+      return calculate_selectivity_for_equals_and_create_output(casted_value);
     }
-
-    double overlapping_ratio_this = (common_max - common_min + 1) / static_cast<double>(max() - min() + 1);
-    double overlapping_ratio_value =
-        (common_max - common_min + 1) /
-        static_cast<double>(value_column_statistics->max() - value_column_statistics->min() + 1);
-    auto overlapping_distinct_count_this = overlapping_ratio_this * distinct_count();
-    auto overlapping_distinct_count_value = overlapping_ratio_value * value_column_statistics->distinct_count();
-    auto overlapping_distinct_count = std::min(overlapping_distinct_count_this, overlapping_distinct_count_value);
-    auto probability_hit_value = 1. / distinct_count() / value_column_statistics->distinct_count();
-
-    auto column_statistics_this =
-        std::make_shared<ColumnStatistics>(overlapping_distinct_count, common_min, common_max, _column_id);
-    auto column_statistics_value = std::make_shared<ColumnStatistics>(overlapping_distinct_count, common_min,
-                                                                      common_max, value_column_statistics->_column_id);
-    return {overlapping_distinct_count * probability_hit_value, column_statistics_this, column_statistics_value};
+    case ScanType::OpNotEquals: {
+      return calculate_selectivity_for_unequals_and_create_output(casted_value);
+    }
+    // TODO(anybody) implement other table-scan operators for string.
+    default: { return {1.f, nullptr}; }
   }
-
-  // } else if (scan_type == ScanType::OpNotEquals) {
-  //   // disregarding A = 5 AND A != 5
-  //   // (just don't put this into a query!)
-  //   auto column_statistics = std::make_shared<ColumnStatistics>(distinct_count() - 1, min(), max(), _column_id);
-  //   return {(-1.0 + distinct_count()) / distinct_count(), column_statistics};
-  // } else if (scan_type == ScanType::OpLessThan && std::is_integral<T>::value) {
-  //   if (casted_value1 <= min()) {
-  //     return {0.0, nullptr};
-  //   }
-  //   double selectivity = (casted_value1 - min()) / static_cast<double>(max() - min() + 1);
-  //   auto column_statistics =
-  //       std::make_shared<ColumnStatistics>(selectivity * distinct_count(), min(), casted_value1 - 1, _column_id);
-  //   return {selectivity, column_statistics};
-  // } else if (scan_type == ScanType::OpLessThanEquals || (scan_type == ScanType::OpLessThan &&
-  // !std::is_integral<T>::value)) {
-  //   if (casted_value1 < min()) {
-  //     return {0.0, nullptr};
-  //   }
-  //   double selectivity = (casted_value1 - min() + 1) / static_cast<double>(max() - min() + 1);
-  //   auto column_statistics =
-  //       std::make_shared<ColumnStatistics>(selectivity * distinct_count(), min(), casted_value1, _column_id);
-  //   return {selectivity, column_statistics};
-  // } else if (scan_type == ScanType::OpGreaterThan && std::is_integral<T>::value) {
-  //   if (casted_value1 >= max()) {
-  //     return {0.0, nullptr};
-  //   }
-  //   double selectivity = (max() - casted_value1) / static_cast<double>(max() - min() + 1);
-  //   auto column_statistics =
-  //       std::make_shared<ColumnStatistics>(selectivity * distinct_count(), casted_value1 + 1, max(), _column_id);
-  //   return {selectivity, column_statistics};
-  // } else if (scan_type == ScanType::OpGreaterThanEquals || (scan_type == ScanType::OpLessThan &&
-  // !std::is_integral<T>::value)) {
-  //   if (casted_value1 > max()) {
-  //     return {0.0, nullptr};
-  //   }
-  //   double selectivity = (max() - casted_value1 + 1) / static_cast<double>(max() - min() + 1);
-  //   auto column_statistics =
-  //       std::make_shared<ColumnStatistics>(selectivity * distinct_count(), casted_value1, max(), _column_id);
-  //   return {selectivity, column_statistics};
-  // } else if (scan_type == ScanType::OpBetween) {
-  //   if (!value2) {
-  //     Fail(std::string("operator ") + scan_type + std::string("should get two parameters, second is missing!"));
-  //   }
-  //   auto casted_value2 = type_cast<T>(*value2);
-  //   if (casted_value1 > casted_value2 || casted_value1 > max() || casted_value2 < min()) {
-  //     return {0.0, nullptr};
-  //   }
-  //   double selectivity = (casted_value2 - casted_value1 + 1) / static_cast<double>(max() - min() + 1);
-  //   auto column_statistics =
-  //       std::make_shared<ColumnStatistics>(selectivity * distinct_count(), casted_value1, casted_value2,
-  //       _column_id);
-  //   return {selectivity, column_statistics};
-  // } else {
-  //   // Brace yourselves.
-  //   return {1.0 / distinct_count(), nullptr};
-  // }
-  return {1.0, nullptr, nullptr};
 }
 
-template <typename T>
-std::ostream &ColumnStatistics<T>::to_stream(std::ostream &os) {
+template <typename ColumnType>
+ColumnSelectivityResult ColumnStatistics<ColumnType>::predicate_selectivity(const ScanType scan_type,
+                                                                            const AllTypeVariant &value,
+                                                                            const optional<AllTypeVariant> &value2) {
+  auto casted_value = type_cast<ColumnType>(value);
+
+  switch (scan_type) {
+    case ScanType::OpEquals: {
+      return calculate_selectivity_for_equals_and_create_output(casted_value);
+    }
+    case ScanType::OpNotEquals: {
+      return calculate_selectivity_for_unequals_and_create_output(casted_value);
+    }
+    case ScanType::OpLessThan: {
+      // distinction between integers and decimals
+      // for integers "< value" means that the new max is value <= value - 1
+      // for decimals "< value" means that the new max is value <= value - ε
+      if (std::is_integral<ColumnType>::value) {
+        return calculate_selectivity_for_range_and_create_output(min(), --casted_value);
+      }
+      // intentionally no break
+      // if ColumnType is a floating point number,
+      // OpLessThanEquals behaviour is expected instead of OpLessThan
+    }
+    case ScanType::OpLessThanEquals: {
+      return calculate_selectivity_for_range_and_create_output(min(), casted_value);
+    }
+    case ScanType::OpGreaterThan: {
+      // distinction between integers and decimals
+      // for integers "> value" means that the new min value is >= value + 1
+      // for decimals "> value" means that the new min value is >= value + ε
+      if (std::is_integral<ColumnType>::value) {
+        return calculate_selectivity_for_range_and_create_output(++casted_value, max());
+      }
+      // intentionally no break
+      // if ColumnType is a floating point number,
+      // OpGreaterThanEquals behaviour is expected instead of OpGreaterThan
+    }
+    case ScanType::OpGreaterThanEquals: {
+      return calculate_selectivity_for_range_and_create_output(casted_value, max());
+    }
+    case ScanType::OpBetween: {
+      DebugAssert(static_cast<bool>(value2), "Operator BETWEEN should get two parameters, second is missing!");
+      auto casted_value2 = type_cast<ColumnType>(*value2);
+      return calculate_selectivity_for_range_and_create_output(casted_value, casted_value2);
+    }
+    default: { return {1.f, nullptr}; }
+  }
+}
+
+template <typename ColumnType>
+ColumnSelectivityResult ColumnStatistics<ColumnType>::predicate_selectivity(const ScanType scan_type,
+                                                                            const ValuePlaceholder &value,
+                                                                            const optional<AllTypeVariant> &value2) {
+  switch (scan_type) {
+    case ScanType::OpEquals: {
+      auto column_statistics = std::make_shared<ColumnStatistics>(_column_id, 1, min(), max());
+      return {1.f / distinct_count(), column_statistics};
+    }
+    case ScanType::OpNotEquals: {
+      auto column_statistics = std::make_shared<ColumnStatistics>(_column_id, distinct_count() - 1, min(), max());
+      return {(distinct_count() - 1.f) / distinct_count(), column_statistics};
+    }
+    case ScanType::OpLessThan:
+    case ScanType::OpLessThanEquals:
+    case ScanType::OpGreaterThan:
+    case ScanType::OpGreaterThanEquals: {
+      auto column_statistics =
+          std::make_shared<ColumnStatistics>(_column_id, distinct_count() * OPEN_ENDED_SELECTIVITY, min(), max());
+      return {OPEN_ENDED_SELECTIVITY, column_statistics};
+    }
+    case ScanType::OpBetween: {
+      // since the value2 is known,
+      // first, statistics for the operation <= value are calulated
+      // then, the open ended selectivity is applied on the result
+      DebugAssert(static_cast<bool>(value2), "Operator BETWEEN should get two parameters, second is missing!");
+      auto casted_value2 = type_cast<ColumnType>(*value2);
+      ColumnSelectivityResult output = calculate_selectivity_for_range_and_create_output(min(), casted_value2);
+      // return, if value2 < min
+      if (output.selectivity == 0.f) {
+        return output;
+      }
+      // create statistics, if value2 >= max
+      if (output.column_statistics == nullptr) {
+        output.column_statistics = std::make_shared<ColumnStatistics>(_column_id, distinct_count(), min(), max());
+      }
+      // apply default selectivity for open ended
+      output.selectivity *= OPEN_ENDED_SELECTIVITY;
+      // column statistis have just been created, therefore, cast to the column type cannot fail
+      auto column_statistics = std::dynamic_pointer_cast<ColumnStatistics<ColumnType>>(output.column_statistics);
+      *(column_statistics->_distinct_count) *= OPEN_ENDED_SELECTIVITY;
+      return output;
+    }
+    default: { return {1.f, nullptr}; }
+  }
+}
+
+template <typename ColumnType>
+std::ostream &ColumnStatistics<ColumnType>::print_to_stream(std::ostream &os) const {
   os << "Col Stats id: " << _column_id << std::endl;
   os << "  dist. " << _distinct_count << std::endl;
   os << "  min   " << _min << std::endl;

@@ -173,7 +173,7 @@ class TableScan::TableScanImpl : public AbstractReadOnlyOperatorImpl {
     if (_is_constant_value_scan) {
       // column_a == 5
       casted_value1 = type_cast<T>(boost::get<AllTypeVariant>(_value));
-      if (_value2) casted_value2 = boost::get<T>(*_value2);
+      if (_value2) casted_value2 = type_cast<T>(*_value2);
     } else {
       // column_a == column_b
       ColumnName column_name = boost::get<ColumnName>(_value);
