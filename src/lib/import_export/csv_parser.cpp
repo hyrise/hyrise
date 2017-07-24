@@ -8,9 +8,9 @@
 #include <vector>
 
 #include "import_export/csv_converter.hpp"
+#include "resolve_type.hpp"
 #include "scheduler/job_task.hpp"
 #include "utils/assert.hpp"
-#include "resolve_type.hpp"
 
 namespace opossum {
 
