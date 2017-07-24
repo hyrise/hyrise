@@ -24,7 +24,7 @@ class ColumnStatistics : public BaseColumnStatistics {
   /**
    * Create a new column statistics object from a column within a table.
    * The column statistics values distinct count, min and max are not set till used.
-   * This constructor is used by table statistics when a non-existent column statistics is requestet.
+   * This constructor is used by table statistics when a non-existent column statistics is requested.
    * @param column_id: id of corresponding column
    * @param table: table, which contains the column
    */
