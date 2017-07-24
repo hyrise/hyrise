@@ -61,13 +61,18 @@ std::shared_ptr<TableStatistics> TableStatistics::predicate_statistics(const std
   ColumnSelectivityResult column_statistics_container{1, nullptr};
 
   // delegate prediction to corresponding column statistics
-  if (value.type() == typeid(AllTypeVariant)) {
+  if (value.type() == typeid(ColumnName)) {
+    // TODO(Fabian, Jonathan) implement estimations for predicates with two columns
+
+  } else if (value.type() == typeid(AllTypeVariant)) {
     auto casted_value = boost::get<AllTypeVariant>(value);
 
     column_statistics_container =
         old_column_statistics->estimate_selectivity_for_predicate(scan_type, casted_value, value2);
 
-  } else if (value.type() == typeid(ValuePlaceholder)) {
+  } else {
+    DebugAssert(value.type() == typeid(ValuePlaceholder),
+                "AllParameterVariant type is not implemented in statistics component.");
     auto casted_value = boost::get<ValuePlaceholder>(value);
 
     column_statistics_container =
