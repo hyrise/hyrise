@@ -155,9 +155,12 @@ ColumnSelectivityResult ColumnStatistics<ColumnType>::estimate_selectivity_for_p
       if (std::is_integral<ColumnType>::value) {
         return estimate_selectivity_for_range(min(), casted_value - 1);
       }
-      // intentionally no break
-      // if ColumnType is a floating point number,
-      // OpLessThanEquals behaviour is expected instead of OpLessThan
+// intentionally no break
+// if ColumnType is a floating point number,
+// OpLessThanEquals behaviour is expected instead of OpLessThan
+#if __has_cpp_attribute(fallthrough)
+      [[fallthrough]];
+#endif
     }
     case ScanType::OpLessThanEquals: {
       return estimate_selectivity_for_range(min(), casted_value);
@@ -169,9 +172,12 @@ ColumnSelectivityResult ColumnStatistics<ColumnType>::estimate_selectivity_for_p
       if (std::is_integral<ColumnType>::value) {
         return estimate_selectivity_for_range(casted_value + 1, max());
       }
-      // intentionally no break
-      // if ColumnType is a floating point number,
-      // OpGreaterThanEquals behaviour is expected instead of OpGreaterThan
+// intentionally no break
+// if ColumnType is a floating point number,
+// OpGreaterThanEquals behaviour is expected instead of OpGreaterThan
+#if __has_cpp_attribute(fallthrough)
+      [[fallthrough]];
+#endif
     }
     case ScanType::OpGreaterThanEquals: {
       return estimate_selectivity_for_range(casted_value, max());
