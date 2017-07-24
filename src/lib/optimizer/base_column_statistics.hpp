@@ -46,6 +46,8 @@ class BaseColumnStatistics {
   /**
    * In order to to call insertion operator on ostream with BaseColumnStatistics with values of ColumnStatistics<T>,
    * std::ostream &operator<< with BaseColumnStatistics calls virtual function print_to_stream
+   * This approach allows printing ColumnStatistics<T> without the need to cast BaseColumnStatistics to
+   * ColumnStatistics<T>.
    * @return Selectivity and new column statistics, if selectivity not 0 or 1.
    */
   virtual std::ostream &print_to_stream(std::ostream &os) const = 0;
