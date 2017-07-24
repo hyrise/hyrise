@@ -490,7 +490,7 @@ class SortMergeJoin::SortMergeJoinImpl : public AbstractJoinOperatorImpl, public
 
     auto& left_partition = _sorted_left_table->partitions[partition_number];
     auto& right_partition = _sorted_right_table->partitions[partition_number];
-    auto rhs_size = right_partition.values.size();
+    //auto rhs_size = right_partition.values.size();
 
     auto output_left = _output_pos_lists_left[partition_number];
     auto output_right = _output_pos_lists_right[partition_number];
@@ -532,72 +532,52 @@ class SortMergeJoin::SortMergeJoinImpl : public AbstractJoinOperatorImpl, public
       }
     }
 
-    // Logic for ">" and ">=" operators
-    /*if (_op == ">=") {
-      // Found right_value that is greater than left_value. That means all potential right_values before are smaller
-      if (left_value <= right_value) {
-        for (auto l = left_run_start; l <= left_run_end; l++) {
-          auto dependend_max_index = (left_value == right_value) ? right_run_end + 1 : right_run_start;
-          auto& left_row_id = left_partition.values[l].second;
-          add_smaller_values(partition_number, _sorted_right_table, output_right, output_left,
-                          dependend_max_index, left_row_id);
-        }
-      }
-    }*/
-
-
     if (_op == ">") {
-      if(left_value <= right_value) {
-        for (auto l = left_run_start; l <= left_run_end; l++) {
-          auto& lhs_id = left_partition.values[l].second;
-          emit_all_rhs_values(partition_number, 0, partition_number, lhs_id);
-          emit_rhs_values(partition_number, partition_number, 0, right_run_start, lhs_id);
-        }
+      if (left_value > right_value) {
+        TableRange left_range(partition_number, left_run_start, _partition_count - 1,
+          _sorted_left_table->partitions[_partition_count - 1].values.size() -1);
+        TableRange right_range(partition_number, right_run_start, right_run_end);
+        emit_combinations(partition_number, left_range, right_range);
+      }
+      if (left_value == right_value){
+        TableRange left_range(partition_number, left_run_end + 1, _partition_count - 1,
+          _sorted_left_table->partitions[_partition_count - 1].values.size() - 1);
+        TableRange right_range(partition_number, right_run_start, right_run_end);
+        emit_combinations(partition_number, left_range, right_range);
       }
     }
 
-    /*
     if (_op == ">=") {
-      if(left_value < right_value) {
-        for (auto l = left_run_start; l <= left_run_end; l++) {
-          auto& lhs_id = left_partition.values[l].second;
-          emit_all_rhs_values(partition_number, 0, partition_number, lhs_id);
-          emit_rhs_values(partition_number, partition_number, 0, right_run_start, lhs_id);
-        }
+      if(left_value >= right_value) {
+        TableRange left_range(partition_number, left_run_start, _partition_count - 1,
+          _sorted_left_table->partitions[_partition_count - 1].values.size() -1);
+        TableRange right_range(partition_number, right_run_start, right_run_end);
+        emit_combinations(partition_number, left_range, right_range);
       }
-    }*/
+    }
 
     if (_op == "<") {
       if (left_value < right_value) {
-        //TableRange left_range(partition_number, left_run_start, partition_number, left_run_end);
-        //TableRange right_range(partition_number, right_run_start, _partition_count - 1, left_run_end);
-        //emit_combinations(partition_number, left_range, right_range);
-
-        for (auto l = left_run_start; l <= left_run_end; l++) {
-          auto& lhs_id = left_partition.values[l].second;
-
-          emit_rhs_values(partition_number, partition_number, right_run_start, rhs_size, lhs_id);
-          emit_all_rhs_values(partition_number, partition_number + 1, _partition_count, lhs_id);
-        }
+        TableRange left_range(partition_number, left_run_start, left_run_end);
+        TableRange right_range(partition_number, right_run_start, _partition_count - 1,
+          _sorted_right_table->partitions[_partition_count - 1].values.size() -1);
+        emit_combinations(partition_number, left_range, right_range);
       }
       if (left_value == right_value){
-        for (auto l = left_run_start; l <= left_run_end; l++) {
-          auto& lhs_id = left_partition.values[l].second;
-          emit_rhs_values(partition_number, partition_number, right_run_end + 1, rhs_size, lhs_id);
-          emit_all_rhs_values(partition_number, partition_number + 1, _partition_count, lhs_id);
-        }
+        TableRange left_range(partition_number, left_run_start, left_run_end);
+        TableRange right_range(partition_number, right_run_end + 1, _partition_count - 1,
+          _sorted_right_table->partitions[_partition_count - 1].values.size() - 1);
+        emit_combinations(partition_number, left_range, right_range);
       }
     }
 
     if (_op == "<=") {
       // This run and everything following on the right side is a match
       if (left_value <= right_value) {
-        auto rhs_size = right_partition.values.size();
-        for (auto l = left_run_start; l <= left_run_end; l++) {
-          auto& lhs_id = left_partition.values[l].second;
-          emit_rhs_values(partition_number, partition_number, right_run_start, rhs_size, lhs_id);
-          emit_all_rhs_values(partition_number, partition_number + 1, _partition_count, lhs_id);
-        }
+        TableRange left_range(partition_number, left_run_start, left_run_end);
+        TableRange right_range(partition_number, right_run_start, _partition_count - 1,
+           _sorted_right_table->partitions[_partition_count - 1].values.size() -1);
+        emit_combinations(partition_number, left_range, right_range);
       }
     }
   }
@@ -695,10 +675,10 @@ class SortMergeJoin::SortMergeJoinImpl : public AbstractJoinOperatorImpl, public
       join_runs(partition_number, left_run_start, left_run_end, right_run_start, right_run_end);
 
       // Advance to the next run on the smaller side
-      if(left_value == right_value || left_run_end + 1 == left_size) {
+      if(left_value == right_value) {
         left_run_start = left_run_end + 1;
         right_run_start = right_run_end + 1;
-      }else if(left_value < right_value || right_run_end + 1 == right_size) {
+      }else if(left_value < right_value) {
         left_run_start = left_run_end + 1;
       }
       else{
