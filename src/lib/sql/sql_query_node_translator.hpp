@@ -24,7 +24,7 @@ class SQLQueryNodeTranslator {
   std::shared_ptr<AbstractASTNode> translate_statement(const hsql::SQLStatement& statement);
 
   static AllParameterVariant translate_literal(const hsql::Expr& expr);
-  static std::string get_column_name(const hsql::Expr& expr);
+  static std::string get_column_name(const hsql::Expr& expr, bool include_table_name);
 
  protected:
   std::shared_ptr<AbstractASTNode> _translate_select(const hsql::SelectStatement& select);

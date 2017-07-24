@@ -26,6 +26,16 @@ class SQLQueryNodeTranslatorTest : public BaseTest {
 
     std::shared_ptr<Table> table_b = load_table("src/test/tables/int_float2.tbl", 2);
     StorageManager::get().add_table("table_b", std::move(table_b));
+
+    // TPCH
+    std::shared_ptr<Table> customer = load_table("src/test/tables/tpch/customer.tbl", 1);
+    StorageManager::get().add_table("customer", customer);
+
+    std::shared_ptr<Table> orders = load_table("src/test/tables/tpch/orders.tbl", 1);
+    StorageManager::get().add_table("orders", orders);
+
+    std::shared_ptr<Table> lineitem = load_table("src/test/tables/tpch/lineitem.tbl", 1);
+    StorageManager::get().add_table("lineitem", lineitem);
   }
 
   std::shared_ptr<AbstractASTNode> compile_query(const std::string query) {
@@ -182,5 +192,24 @@ TEST_F(SQLQueryNodeTranslatorTest, SelectInnerJoin) {
   EXPECT_EQ(join_node->prefix_right(), "b.");
   EXPECT_EQ(join_node->join_column_names()->first, "a");
   EXPECT_EQ(join_node->join_column_names()->second, "a");
+}
+
+// TODO(tim&moritz) Name this properly
+TEST_F(SQLQueryNodeTranslatorTest, ComplexQuery) {
+  const auto query =
+    "  SELECT customer.c_custkey, customer.c_name, COUNT(orderitems.\"orders.o_orderkey\")"
+    "    FROM customer"
+    "    JOIN (SELECT * FROM "
+    "      orders"
+    "      JOIN lineitem ON o_orderkey = l_orderkey"
+    "      WHERE orders.o_custkey = ?"
+    "    ) AS orderitems ON c_custkey = orders.o_custkey"
+    "    GROUP BY customer.c_custkey, customer.c_name"
+    "    HAVING COUNT(orderitems.\"orders.o_orderkey\") >= ?"
+    ";";
+
+  auto result_node = compile_query(query);
+
+  result_node->print();
 }
 }  // namespace opossum

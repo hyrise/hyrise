@@ -24,7 +24,7 @@ std::string JoinNode::description() const {
   // TODO(tim): add more details
   desc << "Join";
   if (_join_column_names) {
-    desc << ": [" << (*_join_column_names).first << "-" << (*_join_column_names).second << "]";
+    desc << ": [" << (*_join_column_names).first << " AND " << (*_join_column_names).second << "]";
   }
 
   return desc.str();

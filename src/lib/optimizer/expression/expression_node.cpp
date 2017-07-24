@@ -124,6 +124,8 @@ const AllTypeVariant ExpressionNode::value() const { return _value; }
 //}
 
 std::string ExpressionNode::to_expression_string() const {
+
+
   if (_type == ExpressionType::Literal) {
     return type_cast<std::string>(_value);
   } else if (_type == ExpressionType::ColumnReference) {
@@ -139,6 +141,8 @@ std::string ExpressionNode::to_expression_string() const {
 
     return left_expression_node->to_expression_string() + expression_type_to_operator.at(_type) +
            right_expression_node->to_expression_string();
+  } else if (_type == ExpressionType::FunctionReference) {
+    return _name + "()";
   } else {
     Fail("To generate expression string, ExpressionNodes need to be operators or operands");
   }

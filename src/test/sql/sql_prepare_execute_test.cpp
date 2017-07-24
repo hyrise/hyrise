@@ -98,12 +98,13 @@ const SQLTestParam sql_query_tests[] = {
                  "      orders"
                  "      JOIN lineitem ON o_orderkey = l_orderkey"
                  "      WHERE orders.o_custkey = ?"
-                 "    ) AS orderitems ON c_custkey = orders.o_custkey"
+                 "    ) AS orderitems ON c_custkey = \"orders.o_custkey\""
                  "    GROUP BY customer.c_custkey, customer.c_name"
                  "    HAVING COUNT(orderitems.\"orders.o_orderkey\") >= ?"
                  "';",
                  0u, ""},
-    SQLTestParam{"EXECUTE a5 (0, 20);", 9u, ""}, SQLTestParam{"EXECUTE a5 (0, 21);", 9u, ""},
+    SQLTestParam{"EXECUTE a5 (0, 20);", 9u, ""},
+    SQLTestParam{"EXECUTE a5 (0, 21);", 9u, ""},
     SQLTestParam{"EXECUTE a5 (0, 22);", 9u, ""},
 };
 

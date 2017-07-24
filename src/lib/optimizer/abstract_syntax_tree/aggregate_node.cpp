@@ -33,7 +33,25 @@ AggregateNode::AggregateNode(const std::vector<AggregateColumnDefinition> aggreg
   }
 }
 
-std::string AggregateNode::description() const { return "Aggregate"; }
+std::string AggregateNode::description() const {
+  std::ostringstream s;
+
+  s << "Aggregate: ";
+  for (const auto & aggregate : _aggregates) {
+    s << aggregate.expr->to_expression_string();
+    if (aggregate.alias) s << "AS '" << (*aggregate.alias) << "'";
+    if (aggregate.expr != _aggregates.back().expr) s << ", "; // HAAACKY! but works
+  }
+
+  if (!_groupby_columns.empty()) {
+    s << " GROUP BY ";
+    for (const auto & column_name : _groupby_columns) {
+      s << column_name << ", ";
+    }
+  }
+
+  return s.str();
+}
 
 std::vector<std::string> AggregateNode::output_column_names() const { return _output_column_names; }
 
