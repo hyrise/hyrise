@@ -18,7 +18,7 @@ struct ColumnSelectivityResult;
  *
  * Therefore, column statistics implements functions for all operators
  * so that the corresponding table statistics functions can delegate all predictions to column statistics.
- * These functions return a column selectivity result object combining the selectivity the operator
+ * These functions return a column selectivity result object combining the selectivity of the operator
  * and if changed the newly created column statistics.
  */
 class BaseColumnStatistics {
