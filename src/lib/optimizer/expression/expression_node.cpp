@@ -16,49 +16,45 @@
 
 namespace opossum {
 
-const std::unordered_map<ExpressionType, std::string> expression_type_to_operator = {
-    {ExpressionType::Plus, "+"},
-    {ExpressionType::Minus, "-"},
-    {ExpressionType::Asterisk, "*"},
-    {ExpressionType::Slash, "/"},
-};
-
-ExpressionNode::ExpressionNode(const ExpressionType type, const AllTypeVariant value,
-                               const std::shared_ptr<std::vector<std::shared_ptr<ExpressionNode>>> &expression_list,
-                               const std::string &name, const std::string &table)
-    : _type(type), _value(value), _expression_list(expression_list), _name(name), _table(table) {}
+ExpressionNode::ExpressionNode(const ExpressionType type, const AllTypeVariant &value,
+                               const std::vector<std::shared_ptr<ExpressionNode>> &expression_list,
+                               const std::string &name, const std::string &table, const std::string &alias)
+    : _type(type), _value(value), _expression_list(expression_list), _name(name), _table(table), _alias(alias) {}
 
 std::shared_ptr<ExpressionNode> ExpressionNode::create_expression(const ExpressionType type) {
-  auto expr_list = std::make_shared<std::vector<std::shared_ptr<ExpressionNode>>>();
-  return std::make_shared<ExpressionNode>(type, NULL_VALUE, expr_list, "", "");
+  const std::vector<std::shared_ptr<ExpressionNode>> expr_list;
+  // create shared_ptr explicitly since we have only a private constructor that make_shared cannot access
+  return std::shared_ptr<ExpressionNode>(new ExpressionNode(type, NULL_VALUE, expr_list, "", "", ""));
 }
 
 std::shared_ptr<ExpressionNode> ExpressionNode::create_column_reference(const std::string &table_name,
-                                                                        const std::string &column_name) {
-  auto expr_list = std::make_shared<std::vector<std::shared_ptr<ExpressionNode>>>();
+                                                                        const std::string &column_name,
+                                                                        const std::string &alias) {
+  const std::vector<std::shared_ptr<ExpressionNode>> expr_list;
   return std::make_shared<ExpressionNode>(ExpressionType::ColumnReference, NULL_VALUE, expr_list, column_name,
-                                          table_name);
+                                          table_name, alias);
 }
 
-std::shared_ptr<ExpressionNode> ExpressionNode::create_literal(const AllTypeVariant value) {
-  auto expr_list = std::make_shared<std::vector<std::shared_ptr<ExpressionNode>>>();
-  return std::make_shared<ExpressionNode>(ExpressionType::Literal, value, expr_list, "", "");
+std::shared_ptr<ExpressionNode> ExpressionNode::create_literal(const AllTypeVariant &value) {
+  const std::vector<std::shared_ptr<ExpressionNode>> expr_list;
+  return std::make_shared<ExpressionNode>(ExpressionType::Literal, value, expr_list, "", "", "");
 }
 
-std::shared_ptr<ExpressionNode> ExpressionNode::create_parameter(const AllTypeVariant value) {
-  auto expr_list = std::make_shared<std::vector<std::shared_ptr<ExpressionNode>>>();
-  return std::make_shared<ExpressionNode>(ExpressionType::Parameter, value, expr_list, "", "");
+std::shared_ptr<ExpressionNode> ExpressionNode::create_parameter(const AllTypeVariant &value) {
+  const std::vector<std::shared_ptr<ExpressionNode>> expr_list;
+  return std::make_shared<ExpressionNode>(ExpressionType::Parameter, value, expr_list, "", "", "");
 }
 
 std::shared_ptr<ExpressionNode> ExpressionNode::create_function_reference(
-    const std::string &function_name, std::shared_ptr<std::vector<std::shared_ptr<ExpressionNode>>> expression_list) {
+    const std::string &function_name, const std::vector<std::shared_ptr<ExpressionNode>> &expression_list,
+    const std::string &alias) {
   return std::make_shared<ExpressionNode>(ExpressionType::FunctionReference, NULL_VALUE, expression_list, function_name,
-                                          "");
+                                          "", alias);
 }
 
 const std::weak_ptr<ExpressionNode> &ExpressionNode::parent() const { return _parent; }
 
-void ExpressionNode::set_parent(const std::weak_ptr<ExpressionNode> &parent) { _parent = parent; }
+void ExpressionNode::clear_parent() { _parent = {}; }
 
 const std::shared_ptr<ExpressionNode> &ExpressionNode::left_child() const { return _left_child; }
 
@@ -97,19 +93,54 @@ bool ExpressionNode::is_arithmetic_operator() const {
 const std::string ExpressionNode::description() const {
   std::ostringstream desc;
 
-  desc << "Expression (" << expression_type_to_string.at(_type) << ", " << value() << ", " << table_name() << ", "
-       << column_name() << ")";
+  desc << "Expression (" << expression_type_to_string.at(_type) << ")";
+
+  switch (_type) {
+    case ExpressionType::Literal:
+      desc << "[" << value() << "]";
+      break;
+    case ExpressionType::ColumnReference:
+      desc << "[Table: " << table_name() << ", Column: " << name() << ", Alias: " << alias() << "]";
+      break;
+    case ExpressionType::FunctionReference:
+      desc << "[" << name() << ": " << std::endl;
+      for (const auto &expr : expression_list()) {
+        desc << expr->description() << ", " << std::endl;
+      }
+      desc << "]";
+      break;
+    case ExpressionType::Select:
+      desc << "[" << alias() << "]";
+      break;
+    default: {}
+  }
 
   return desc.str();
 }
 
-const std::string &ExpressionNode::table_name() const { return _table; }
+const std::string &ExpressionNode::table_name() const {
+  DebugAssert(_type == ExpressionType::ColumnReference,
+              "Expression other than ColumnReference does not have table_name");
+  return _table;
+}
 
-const std::string &ExpressionNode::name() const { return _name; }
+const std::string &ExpressionNode::name() const {
+  DebugAssert(_type == ExpressionType::ColumnReference || _type == ExpressionType::FunctionReference,
+              "Expression " + expression_type_to_string.at(_type) + " does not have a name");
+  return _name;
+}
 
-const std::string &ExpressionNode::column_name() const { return _name; }
+const std::string &ExpressionNode::alias() const {
+  DebugAssert(_type == ExpressionType::ColumnReference || _type == ExpressionType::Select,
+              "Expression " + expression_type_to_string.at(_type) + " does not have an alias");
+  return _alias;
+}
 
-const AllTypeVariant ExpressionNode::value() const { return _value; }
+const AllTypeVariant ExpressionNode::value() const {
+  DebugAssert(_type == ExpressionType::Literal,
+              "Expression " + expression_type_to_string.at(_type) + " does not have a value");
+  return _value;
+}
 
 std::string ExpressionNode::to_expression_string() const {
   if (_type == ExpressionType::Literal) {
@@ -120,7 +151,7 @@ std::string ExpressionNode::to_expression_string() const {
     // TODO(mp) Should be is_operator() to also support "=", ...
     Assert(static_cast<bool>(left_child()) && static_cast<bool>(right_child()), "Operator needs both operands");
 
-    return left_child()->to_expression_string() + expression_type_to_operator.at(_type) +
+    return left_child()->to_expression_string() + expression_type_to_operator_string.at(_type) +
            right_child()->to_expression_string();
   } else {
     Fail("To generate expression string, ExpressionNodes need to be operators or operands");
@@ -130,8 +161,6 @@ std::string ExpressionNode::to_expression_string() const {
   return "";
 }
 
-const std::shared_ptr<std::vector<std::shared_ptr<ExpressionNode>>> &ExpressionNode::expression_list() const {
-  return _expression_list;
-}
+const std::vector<std::shared_ptr<ExpressionNode>> &ExpressionNode::expression_list() const { return _expression_list; }
 
 }  // namespace opossum

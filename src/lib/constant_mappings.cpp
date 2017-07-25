@@ -28,40 +28,43 @@ const std::unordered_map<ScanType, std::string> scan_type_to_string = {
     {opossum::ScanType::OpBetween, "BETWEEN"}, {opossum::ScanType::OpLike, "LIKE"},
 };
 
-const std::unordered_map<const ExpressionType, std::string> expression_type_to_string = {
+const std::unordered_map<ExpressionType, std::string> expression_type_to_string = {
     {ExpressionType::Literal, "Literal"},
     {ExpressionType::Star, "Star"},
     {ExpressionType::Parameter, "Parameter"},
     {ExpressionType::ColumnReference, "ColumnReference"},
     {ExpressionType::FunctionReference, "FunctionReference"},
-    {ExpressionType::Operator, "Operator"},
     {ExpressionType::Select, "Select"},
+    /*Arithmetic operators*/
     {ExpressionType::Plus, "Plus"},
     {ExpressionType::Minus, "Minus"},
     {ExpressionType::Asterisk, "Asterisk"},
     {ExpressionType::Slash, "Slash"},
     {ExpressionType::Percentage, "Percentage"},
     {ExpressionType::Caret, "Caret"},
+    /*Logical operators*/
     {ExpressionType::Equals, "Equals"},
     {ExpressionType::NotEquals, "NotEquals"},
-    {ExpressionType::Less, "Less"},
-    {ExpressionType::LessEquals, "LessEquals"},
-    {ExpressionType::Greater, "Greater"},
-    {ExpressionType::GreaterEquals, "GreaterEquals"},
+    {ExpressionType::LessThan, "LessThan"},
+    {ExpressionType::LessThanEquals, "LessThanEquals"},
+    {ExpressionType::GreaterThan, "GreaterThan"},
+    {ExpressionType::GreaterThanEquals, "GreaterThanEquals"},
     {ExpressionType::Like, "Like"},
     {ExpressionType::NotLike, "NotLike"},
     {ExpressionType::And, "And"},
     {ExpressionType::Or, "Or"},
-    {ExpressionType::In, "In"},
-    {ExpressionType::Not, "Not"},
-    {ExpressionType::IsNull, "IsNull"},
-    {ExpressionType::Exists, "Exists"},
     {ExpressionType::Between, "Between"},
-    {ExpressionType::Hint, "Hint"},
+    {ExpressionType::Not, "Not"},
+    /*Set operators*/
+    {ExpressionType::In, "In"},
+    {ExpressionType::Exists, "Exists"},
+    /*Other*/
+    {ExpressionType::IsNull, "IsNull"},
     {ExpressionType::Case, "Case"},
+    {ExpressionType::Hint, "Hint"},
 };
 
-const std::unordered_map<const hsql::OperatorType, const ExpressionType> operator_type_to_expression_type = {
+const std::unordered_map<hsql::OperatorType, ExpressionType> operator_type_to_expression_type = {
     {hsql::kOpPlus, ExpressionType::Plus},
     {hsql::kOpMinus, ExpressionType::Minus},
     {hsql::kOpAsterisk, ExpressionType::Asterisk},
@@ -71,10 +74,10 @@ const std::unordered_map<const hsql::OperatorType, const ExpressionType> operato
     {hsql::kOpBetween, ExpressionType::Between},
     {hsql::kOpEquals, ExpressionType::Equals},
     {hsql::kOpNotEquals, ExpressionType::NotEquals},
-    {hsql::kOpLess, ExpressionType::Less},
-    {hsql::kOpLessEq, ExpressionType::LessEquals},
-    {hsql::kOpGreater, ExpressionType::Greater},
-    {hsql::kOpGreaterEq, ExpressionType::GreaterEquals},
+    {hsql::kOpLess, ExpressionType::LessThan},
+    {hsql::kOpLessEq, ExpressionType::LessThanEquals},
+    {hsql::kOpGreater, ExpressionType::GreaterThan},
+    {hsql::kOpGreaterEq, ExpressionType::GreaterThanEquals},
     {hsql::kOpLike, ExpressionType::Like},
     {hsql::kOpNotLike, ExpressionType::NotLike},
     {hsql::kOpCase, ExpressionType::Case},
@@ -82,6 +85,11 @@ const std::unordered_map<const hsql::OperatorType, const ExpressionType> operato
     {hsql::kOpIn, ExpressionType::In},
     {hsql::kOpIsNull, ExpressionType::IsNull},
     {hsql::kOpOr, ExpressionType::Or},
+};
+
+const std::unordered_map<ExpressionType, std::string> expression_type_to_operator_string = {
+    {ExpressionType::Plus, "+"},  {ExpressionType::Minus, "-"},      {ExpressionType::Asterisk, "*"},
+    {ExpressionType::Slash, "/"}, {ExpressionType::Percentage, "%"}, {ExpressionType::Caret, "^"},
 };
 
 }  // namespace opossum
