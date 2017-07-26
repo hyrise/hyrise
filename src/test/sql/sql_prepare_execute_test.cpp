@@ -91,18 +91,20 @@ const SQLTestParam sql_query_tests[] = {
     SQLTestParam{"EXECUTE a4 (1234, 500)", 3u, "src/test/tables/int_float_filtered2.tbl"},
 
     // TPC-H schema
+    // TODO(tim): aliases / join prefixes
     SQLTestParam{"PREPARE a5 FROM '"
-                 "  SELECT customer.c_custkey, customer.c_name, COUNT(orderitems.\"orders.o_orderkey\")"
+                 "  SELECT customer.c_custkey, customer.c_name, COUNT(\"orderitems.orders.o_orderkey\")"
                  "    FROM customer"
                  "    JOIN (SELECT * FROM "
                  "      orders"
                  "      JOIN lineitem ON o_orderkey = l_orderkey"
-                 "      WHERE orders.o_custkey = ?"
+                 "      WHERE \"orders.o_custkey\" = ?"
                  "    ) AS orderitems ON c_custkey = \"orders.o_custkey\""
                  "    GROUP BY customer.c_custkey, customer.c_name"
-                 "    HAVING COUNT(orderitems.\"orders.o_orderkey\") >= ?"
+                 "    HAVING COUNT(\"orderitems.orders.o_orderkey\") >= ?"
                  "';",
                  0u, ""},
+    // TODO(tim): result tables
     SQLTestParam{"EXECUTE a5 (0, 20);", 9u, ""},
     SQLTestParam{"EXECUTE a5 (0, 21);", 9u, ""},
     SQLTestParam{"EXECUTE a5 (0, 22);", 9u, ""},

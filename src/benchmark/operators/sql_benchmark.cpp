@@ -3,11 +3,12 @@
 #include <utility>
 
 #include "benchmark/benchmark.h"
+#include "SQLParser.h"
 
 #include "../base_fixture.cpp"
-#include "SQLParser.h"
+#include "optimizer/abstract_syntax_tree/node_operator_translator.hpp"
+#include "sql/sql_query_node_translator.hpp"
 #include "sql/sql_query_operator.hpp"
-#include "sql/sql_query_translator.hpp"
 
 namespace opossum {
 
@@ -36,8 +37,10 @@ BENCHMARK_F(SQLBenchmark, BM_SQLTranslationTotalQ1)(benchmark::State& state) {
   while (state.KeepRunning()) {
     SQLParserResult result;
     SQLParser::parseSQLString(Q1, &result);
-    SQLQueryTranslator translator;
-    translator.translate_parse_result(result);
+
+    SQLQueryNodeTranslator translator;
+    auto result_node = translator.translate_parse_result(result)[0];
+    NodeOperatorTranslator::get().translate_node(result_node);
   }
 }
 
@@ -53,8 +56,9 @@ BENCHMARK_F(SQLBenchmark, BM_SQLTranslationOnlyTranslationQ1)(benchmark::State& 
   SQLParser::parseSQLString(Q1, &result);
 
   while (state.KeepRunning()) {
-    SQLQueryTranslator translator;
-    translator.translate_parse_result(result);
+    SQLQueryNodeTranslator translator;
+    auto result_node = translator.translate_parse_result(result)[0];
+    NodeOperatorTranslator::get().translate_node(result_node);
   }
 }
 
@@ -64,8 +68,10 @@ BENCHMARK_F(SQLBenchmark, BM_SQLTranslationTotalQ2)(benchmark::State& state) {
   while (state.KeepRunning()) {
     SQLParserResult result;
     SQLParser::parseSQLString(Q2, &result);
-    SQLQueryTranslator translator;
-    translator.translate_parse_result(result);
+
+    SQLQueryNodeTranslator translator;
+    auto result_node = translator.translate_parse_result(result)[0];
+    NodeOperatorTranslator::get().translate_node(result_node);
   }
 }
 
@@ -81,8 +87,9 @@ BENCHMARK_F(SQLBenchmark, BM_SQLTranslationOnlyTranslationQ2)(benchmark::State& 
   SQLParser::parseSQLString(Q2, &result);
 
   while (state.KeepRunning()) {
-    SQLQueryTranslator translator;
-    translator.translate_parse_result(result);
+    SQLQueryNodeTranslator translator;
+    auto result_node = translator.translate_parse_result(result)[0];
+    NodeOperatorTranslator::get().translate_node(result_node);
   }
 }
 
@@ -99,8 +106,9 @@ BENCHMARK_F(SQLBenchmark, BM_SQLTranslationOnlyTranslationQ3)(benchmark::State& 
   SQLParser::parseSQLString(Q3, &result);
 
   while (state.KeepRunning()) {
-    SQLQueryTranslator translator;
-    translator.translate_parse_result(result);
+    SQLQueryNodeTranslator translator;
+    auto result_node = translator.translate_parse_result(result)[0];
+    NodeOperatorTranslator::get().translate_node(result_node);
   }
 }
 
