@@ -72,16 +72,16 @@ void ExpressionNode::set_right_child(const std::shared_ptr<ExpressionNode> &righ
 
 const ExpressionType ExpressionNode::type() const { return _type; }
 
-void ExpressionNode::print(const uint8_t level) const {
-  std::cout << std::setw(level) << " ";
+void ExpressionNode::print(const uint8_t indentation) const {
+  std::cout << std::setw(indentation) << " ";
   std::cout << description() << std::endl;
 
   if (_left_child) {
-    _left_child->print(level + 2u);
+    _left_child->print(indentation + 2u);
   }
 
   if (_right_child) {
-    _right_child->print(level + 2u);
+    _right_child->print(indentation + 2u);
   }
 }
 

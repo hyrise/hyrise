@@ -33,11 +33,6 @@ class PredicateNode : public AbstractASTNode {
 
  private:
   const std::string _column_name;
-  /**
-   * Design decision:
-   * We decided to have mutable Nodes for now.
-   * By that we can apply rules without creating new nodes for every optimization rule.
-   */
   std::shared_ptr<ExpressionNode> _predicate;
   const ScanType _scan_type;
   const AllParameterVariant _value;

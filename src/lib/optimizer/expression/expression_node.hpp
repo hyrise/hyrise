@@ -69,7 +69,7 @@ class ExpressionNode : public std::enable_shared_from_this<ExpressionNode> {
   /*
    * Methods for debug printing
    */
-  void print(const uint8_t level = 0) const;
+  void print(const uint8_t indentation = 0) const;
   const std::string description() const;
 
   // Is +, -, *, /
