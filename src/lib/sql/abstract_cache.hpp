@@ -12,6 +12,8 @@ class AbstractCache {
 
   explicit AbstractCache(size_t capacity) : _capacity(capacity) {}
 
+  virtual ~AbstractCache() {}
+
   // Cache the value at the given key.
   // If the new size exceeds the capacity an item may be evicted.
   // Depending on the underlying strategy, the parameters for cost and size may be used.
