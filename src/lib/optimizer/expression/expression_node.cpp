@@ -130,7 +130,8 @@ const std::string &ExpressionNode::name() const {
 }
 
 const std::string &ExpressionNode::alias() const {
-  DebugAssert(_type == ExpressionType::ColumnReference || _type == ExpressionType::FunctionReference || _type == ExpressionType::Select,
+  DebugAssert(_type == ExpressionType::ColumnReference || _type == ExpressionType::FunctionReference ||
+                  _type == ExpressionType::Select,
               "Expression " + expression_type_to_string.at(_type) + " does not have an alias");
   return _alias;
 }
