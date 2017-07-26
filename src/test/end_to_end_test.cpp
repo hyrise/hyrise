@@ -12,9 +12,9 @@
 #include "operators/table_scan.hpp"
 #include "optimizer/abstract_syntax_tree/node_operator_translator.hpp"
 #include "scheduler/node_queue_scheduler.hpp"
+#include "scheduler/operator_task.hpp"
 #include "scheduler/topology.hpp"
 #include "sql/sql_query_node_translator.hpp"
-#include "sql/sql_query_translator.hpp"
 #include "storage/storage_manager.hpp"
 
 namespace opossum {

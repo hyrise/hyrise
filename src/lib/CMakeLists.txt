@@ -197,8 +197,6 @@ set(
     sql/sql_query_operator.hpp
     sql/sql_query_plan.cpp
     sql/sql_query_plan.hpp
-    sql/sql_query_translator.cpp
-    sql/sql_query_translator.hpp
     sql/sql_result_operator.cpp
     sql/sql_result_operator.hpp
     storage/base_attribute_vector.hpp
