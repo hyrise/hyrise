@@ -71,7 +71,7 @@ class ColumnName {
 
   operator std::string() const { return _name; }
 
-  friend std::ostream & operator<<(std::ostream & o, const ColumnName & column_name) {
+  friend std::ostream &operator<<(std::ostream &o, const ColumnName &column_name) {
     o << column_name._name;
     return o;
   }
@@ -113,7 +113,7 @@ class ValuePlaceholder {
 
   uint16_t index() const { return _index; }
 
-  friend std::ostream & operator<<(std::ostream & o, const ValuePlaceholder & placeholder) {
+  friend std::ostream &operator<<(std::ostream &o, const ValuePlaceholder &placeholder) {
     o << "?" << placeholder.index();
     return o;
   }

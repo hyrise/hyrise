@@ -105,8 +105,7 @@ const SQLTestParam sql_query_tests[] = {
                  "';",
                  0u, ""},
     // TODO(tim): result tables
-    SQLTestParam{"EXECUTE a5 (0, 20);", 9u, ""},
-    SQLTestParam{"EXECUTE a5 (0, 21);", 9u, ""},
+    SQLTestParam{"EXECUTE a5 (0, 20);", 9u, ""}, SQLTestParam{"EXECUTE a5 (0, 21);", 9u, ""},
     SQLTestParam{"EXECUTE a5 (0, 22);", 9u, ""},
 };
 

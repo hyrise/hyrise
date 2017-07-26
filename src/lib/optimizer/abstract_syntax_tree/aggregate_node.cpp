@@ -37,7 +37,7 @@ std::string AggregateNode::description() const {
   std::ostringstream s;
 
   s << "Aggregate: ";
-  for (const auto & aggregate : _aggregates) {
+  for (const auto& aggregate : _aggregates) {
     s << aggregate.expr->to_expression_string();
     if (aggregate.alias) s << "AS '" << (*aggregate.alias) << "'";
     // HAAACKY! but works
@@ -46,7 +46,7 @@ std::string AggregateNode::description() const {
 
   if (!_groupby_columns.empty()) {
     s << " GROUP BY ";
-    for (const auto & column_name : _groupby_columns) {
+    for (const auto& column_name : _groupby_columns) {
       s << column_name << ", ";
     }
   }

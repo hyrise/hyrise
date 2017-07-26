@@ -135,7 +135,6 @@ const SQLTestParam test_queries[] = {
     {"SELECT a, b, MAX(c), AVG(d) FROM groupby_int_2gb_2agg GROUP BY a, b HAVING MAX(c) > 10 AND MAX(c) <= 30;",
      "src/test/tables/aggregateoperator/groupby_int_2gb_2agg/max_avg_having.tbl"},
 
-
     // TODO(mp): create result tables
     //        {"SELECT * FROM customer;", 1u, true, ""},
     //        {"SELECT c_custkey, c_name FROM customer;", 2u, true, ""},

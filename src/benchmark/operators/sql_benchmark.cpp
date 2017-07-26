@@ -2,8 +2,8 @@
 #include <string>
 #include <utility>
 
-#include "benchmark/benchmark.h"
 #include "SQLParser.h"
+#include "benchmark/benchmark.h"
 
 #include "../base_fixture.cpp"
 #include "optimizer/abstract_syntax_tree/node_operator_translator.hpp"

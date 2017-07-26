@@ -125,13 +125,13 @@ TEST_F(SQLSelectTest, SelectWithSchedulerTest) {
 TEST_P(SQLSelectTest, SQLQueryTest) {
   SQLTestParam param = GetParam();
   std::string query = std::get<0>(param);
-//  size_t num_operators = std::get<1>(param);
+  //  size_t num_operators = std::get<1>(param);
   bool should_execute = std::get<2>(param);
   std::string expected_result_file = std::get<3>(param);
 
   compile_query(query);
   EXPECT_EQ(1u, _plan.num_trees());
-//  EXPECT_EQ(num_operators, _plan.num_operators());
+  //  EXPECT_EQ(num_operators, _plan.num_operators());
 
   if (should_execute) {
     execute_query_plan();

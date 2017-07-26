@@ -197,16 +197,16 @@ TEST_F(SQLQueryNodeTranslatorTest, SelectInnerJoin) {
 // TODO(tim&moritz) Name this properly
 TEST_F(SQLQueryNodeTranslatorTest, ComplexQuery) {
   const auto query =
-    "  SELECT customer.c_custkey, customer.c_name, COUNT(orderitems.\"orders.o_orderkey\")"
-    "    FROM customer"
-    "    JOIN (SELECT * FROM "
-    "      orders"
-    "      JOIN lineitem ON o_orderkey = l_orderkey"
-    "      WHERE orders.o_custkey = ?"
-    "    ) AS orderitems ON c_custkey = orders.o_custkey"
-    "    GROUP BY customer.c_custkey, customer.c_name"
-    "    HAVING COUNT(orderitems.\"orders.o_orderkey\") >= ?"
-    ";";
+      "  SELECT customer.c_custkey, customer.c_name, COUNT(orderitems.\"orders.o_orderkey\")"
+      "    FROM customer"
+      "    JOIN (SELECT * FROM "
+      "      orders"
+      "      JOIN lineitem ON o_orderkey = l_orderkey"
+      "      WHERE orders.o_custkey = ?"
+      "    ) AS orderitems ON c_custkey = orders.o_custkey"
+      "    GROUP BY customer.c_custkey, customer.c_name"
+      "    HAVING COUNT(orderitems.\"orders.o_orderkey\") >= ?"
+      ";";
 
   auto result_node = compile_query(query);
 
