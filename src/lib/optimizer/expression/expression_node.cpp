@@ -23,8 +23,7 @@ ExpressionNode::ExpressionNode(const ExpressionType type, const AllTypeVariant &
 
 std::shared_ptr<ExpressionNode> ExpressionNode::create_expression(const ExpressionType type) {
   const std::vector<std::shared_ptr<ExpressionNode>> expr_list;
-  // create shared_ptr explicitly since we have only a private constructor that make_shared cannot access
-  return std::shared_ptr<ExpressionNode>(new ExpressionNode(type, NULL_VALUE, expr_list, "", "", ""));
+  return std::make_shared<ExpressionNode>(type, NULL_VALUE, expr_list, "", "", "");
 }
 
 std::shared_ptr<ExpressionNode> ExpressionNode::create_column_reference(const std::string &table_name,
@@ -131,7 +130,7 @@ const std::string &ExpressionNode::name() const {
 }
 
 const std::string &ExpressionNode::alias() const {
-  DebugAssert(_type == ExpressionType::ColumnReference || _type == ExpressionType::Select,
+  DebugAssert(_type == ExpressionType::ColumnReference || _type == ExpressionType::FunctionReference || _type == ExpressionType::Select,
               "Expression " + expression_type_to_string.at(_type) + " does not have an alias");
   return _alias;
 }
@@ -148,7 +147,7 @@ std::string ExpressionNode::to_expression_string() const {
   } else if (_type == ExpressionType::ColumnReference) {
     return "$" + _name;
   } else if (is_arithmetic_operator()) {
-    // TODO(mp) Should be is_operator() to also support "=", ...
+    // TODO(mp) Should be is_operator() to also support ExpressionType::Equals, ...
     Assert(static_cast<bool>(left_child()) && static_cast<bool>(right_child()), "Operator needs both operands");
 
     return left_child()->to_expression_string() + expression_type_to_operator_string.at(_type) +
