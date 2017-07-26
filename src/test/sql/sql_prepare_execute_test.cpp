@@ -56,7 +56,7 @@ TEST_P(SQLPrepareExecuteTest, GenericQueryTest) {
   const SQLQueryPlan& plan = op->get_query_plan();
 
   ASSERT_EQ(num_trees, plan.num_trees());
-  //ASSERT_EQ(num_operators, plan.num_operators());
+  // ASSERT_EQ(num_operators, plan.num_operators());
 
   auto tasks = plan.tasks();
   for (const auto& task : tasks) {

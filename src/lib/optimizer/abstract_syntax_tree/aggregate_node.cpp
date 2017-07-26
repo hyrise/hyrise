@@ -40,7 +40,8 @@ std::string AggregateNode::description() const {
   for (const auto & aggregate : _aggregates) {
     s << aggregate.expr->to_expression_string();
     if (aggregate.alias) s << "AS '" << (*aggregate.alias) << "'";
-    if (aggregate.expr != _aggregates.back().expr) s << ", "; // HAAACKY! but works
+    // HAAACKY! but works
+    if (aggregate.expr != _aggregates.back().expr) s << ", ";
   }
 
   if (!_groupby_columns.empty()) {

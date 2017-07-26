@@ -3,12 +3,11 @@
 #include <memory>
 #include <string>
 #include <vector>
-#include <operators/join_nested_loop_a.hpp>
 
 #include "constant_mappings.hpp"
 #include "operators/aggregate.hpp"
 #include "operators/get_table.hpp"
-#include "operators/join_hash.hpp"
+#include "operators/join_nested_loop_a.hpp"
 #include "operators/projection.hpp"
 #include "operators/sort.hpp"
 #include "operators/table_scan.hpp"
