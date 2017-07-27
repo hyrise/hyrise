@@ -64,7 +64,7 @@ class LRUKCache : public AbstractCache<key_t, val_t> {
     ++_access_counter;
 
     auto it = _map.find(key);
-    if (_map.find(key) != _map.end()) {
+    if (it != _map.end()) {
       // Update entry.
       handle_t handle = it->second;
 
