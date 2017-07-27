@@ -19,6 +19,17 @@ class SQLExpressionTranslatorTest : public BaseTest {
  protected:
   void SetUp() override {}
 
+  /*
+   * The following two functions are quite similar and contain lots of code duplication.
+   * However, extracting redundant lines of code led to inconsistent pointers in the hsql::Expr classes.
+   * For example, nullptr were surprisingly pointing to invalid addresses or enum values changed.
+   *
+   * Due to time limitations and expected upcoming changes in hsql::SQLParser we decided to stick with the
+   * code duplication for now.
+   *
+   * Hopefully this is fixed once hsql::SQLParser uses Smart Pointers as proposed in #55 in hyrise/sql-parser.
+   * TODO(anyone): refactor these two methods
+   */
   std::shared_ptr<ExpressionNode> compile_where_expression(const std::string &query) {
     hsql::SQLParserResult parse_result;
     hsql::SQLParser::parseSQLString(query, &parse_result);
@@ -141,18 +152,6 @@ TEST_F(SQLExpressionTranslatorTest, ExpressionStar) {
   auto &first = expressions.at(0);
 
   EXPECT_EQ(first->type(), ExpressionType::Star);
-  EXPECT_EQ(first->left_child(), nullptr);
-  EXPECT_EQ(first->right_child(), nullptr);
-}
-
-TEST_F(SQLExpressionTranslatorTest, ExpressionParameter) {
-  const auto query = "SELECT ? FROM table_a";
-  auto expressions = compile_select_expression(query);
-
-  ASSERT_EQ(expressions.size(), 1u);
-  auto &first = expressions.at(0);
-
-  EXPECT_EQ(first->type(), ExpressionType::Parameter);
   EXPECT_EQ(first->left_child(), nullptr);
   EXPECT_EQ(first->right_child(), nullptr);
 }

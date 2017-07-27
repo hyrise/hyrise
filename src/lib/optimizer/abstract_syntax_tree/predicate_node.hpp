@@ -18,8 +18,9 @@ namespace opossum {
 
 class PredicateNode : public AbstractASTNode {
  public:
-  PredicateNode(const std::string& column_name, const std::shared_ptr<ExpressionNode> predicate, ScanType scan_type,
-                const AllParameterVariant value, const optional<AllTypeVariant> value2 = nullopt);
+  PredicateNode(const std::string& column_name, const std::shared_ptr<ExpressionNode> predicate,
+                const ScanType scan_type, const AllParameterVariant value,
+                const optional<AllTypeVariant> value2 = nullopt);
 
   std::string description() const override;
 

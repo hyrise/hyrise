@@ -1,5 +1,6 @@
 #pragma once
 
+#include <iostream>
 #include <memory>
 #include <sstream>
 #include <string>
@@ -69,7 +70,7 @@ class ExpressionNode : public std::enable_shared_from_this<ExpressionNode> {
   /*
    * Methods for debug printing
    */
-  void print(const uint8_t indentation = 0) const;
+  void print(const uint32_t level = 0, std::ostream& out = std::cout) const;
   const std::string description() const;
 
   // Is +, -, *, /
