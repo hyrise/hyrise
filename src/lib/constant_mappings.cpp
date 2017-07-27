@@ -3,9 +3,22 @@
 #include <string>
 #include <unordered_map>
 
+#include <boost/bimap.hpp>
+
 #include "sql/Expr.h"
 
 namespace opossum {
+
+/*
+ * boost::bimap does not support initializer_lists.
+ * Instead we use this helper function to have an initializer_list-friendly interface.
+ */
+template <typename L, typename R>
+boost::bimap<L, R>
+make_bimap(std::initializer_list<typename boost::bimap<L, R>::value_type> list)
+{
+  return boost::bimap<L, R>(list.begin(), list.end());
+}
 
 const std::unordered_map<std::string, proto::ScanType> string_to_proto_scan_type = {
     {"=", opossum::proto::ScanType::OpEquals},        {"!=", opossum::proto::ScanType::OpNotEquals},
@@ -14,19 +27,12 @@ const std::unordered_map<std::string, proto::ScanType> string_to_proto_scan_type
     {"BETWEEN", opossum::proto::ScanType::OpBetween}, {"LIKE", opossum::proto::ScanType::OpLike},
 };
 
-const std::unordered_map<std::string, ScanType> string_to_scan_type = {
-    {"=", opossum::ScanType::OpEquals},        {"!=", opossum::ScanType::OpNotEquals},
-    {"<", opossum::ScanType::OpLessThan},      {"<=", opossum::ScanType::OpLessThanEquals},
-    {">", opossum::ScanType::OpGreaterThan},   {">=", opossum::ScanType::OpGreaterThanEquals},
-    {"BETWEEN", opossum::ScanType::OpBetween}, {"LIKE", opossum::ScanType::OpLike},
-};
-
-const std::unordered_map<ScanType, std::string> scan_type_to_string = {
-    {opossum::ScanType::OpEquals, "="},        {opossum::ScanType::OpNotEquals, "!="},
-    {opossum::ScanType::OpLessThan, "<"},      {opossum::ScanType::OpLessThanEquals, "<="},
-    {opossum::ScanType::OpGreaterThan, ">"},   {opossum::ScanType::OpGreaterThanEquals, ">="},
-    {opossum::ScanType::OpBetween, "BETWEEN"}, {opossum::ScanType::OpLike, "LIKE"},
-};
+const boost::bimap<ScanType, std::string> scan_type_to_string = make_bimap<ScanType, std::string>({
+  {ScanType::OpEquals, "="},        {ScanType::OpNotEquals, "!="},
+  {ScanType::OpLessThan, "<"},      {ScanType::OpLessThanEquals, "<="},
+  {ScanType::OpGreaterThan, ">"},   {ScanType::OpGreaterThanEquals, ">="},
+  {ScanType::OpBetween, "BETWEEN"}, {ScanType::OpLike, "LIKE"},
+});
 
 const std::unordered_map<ExpressionType, std::string> expression_type_to_string = {
     {ExpressionType::Literal, "Literal"},
