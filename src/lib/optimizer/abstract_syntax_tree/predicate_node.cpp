@@ -9,7 +9,8 @@
 namespace opossum {
 
 PredicateNode::PredicateNode(const std::string& column_name, const std::shared_ptr<ExpressionNode> predicate,
-                             ScanType scan_type, const AllParameterVariant value, const optional<AllTypeVariant> & value2)
+                             ScanType scan_type, const AllParameterVariant value,
+                             const optional<AllTypeVariant> & value2)
     : AbstractASTNode(ASTNodeType::Predicate),
       _column_name(column_name),
       _predicate(predicate),

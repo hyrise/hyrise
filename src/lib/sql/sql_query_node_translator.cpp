@@ -274,7 +274,8 @@ std::shared_ptr<AbstractASTNode> SQLQueryNodeTranslator::_translate_filter_expr(
   ScanType scan_type2{scan_type};
   const AllParameterVariant value3{value};
 
-  std::shared_ptr<PredicateNode> predicate_node = std::make_shared<PredicateNode>(column_name2, expression_node2, scan_type2, value3, value2);
+  auto predicate_node =
+      std::make_shared<PredicateNode>(column_name2, expression_node2, scan_type2, value3, value2);
 
   predicate_node->set_left_child(input_node);
 
