@@ -37,13 +37,16 @@ std::shared_ptr<Table> CsvParser::parse(const std::string& filename) {
     chunks.emplace_back(true);
     auto& chunk = chunks.back();
 
-    // create and start parsing task to fill chunk
-    tasks.emplace_back(std::make_shared<JobTask>(
-        [this, content, field_ends, &table, &chunk]() { parse_into_chunk(content, field_ends, *table, chunk); }));
-    tasks.back()->schedule();
+    // Only pass the part of the string that is actually needed to the parsing task
+    std::string relevant_content = content.substr(0, field_ends.back());
 
     // Remove processed part of the csv content
     content.erase(0, field_ends.back() + 1);
+
+    // create and start parsing task to fill chunk
+    tasks.emplace_back(std::make_shared<JobTask>(
+        [this, relevant_content, field_ends, &table, &chunk]() { parse_into_chunk(relevant_content, field_ends, *table, chunk); }));
+    tasks.back()->schedule();
   }
 
   for (auto& task : tasks) {
@@ -118,7 +121,7 @@ bool CsvParser::find_fields_in_chunk(const std::string& str, const Table& table,
   unsigned int rows = 0, field_count = 1;
   bool in_quotes = false;
   while (rows < table.chunk_size()) {
-    // Find either of row separator, column delimitor, quote identifier
+    // Find either of row separator, column delimiter, quote identifier
     pos = str.find_first_of(search_for, from);
     if (std::string::npos == pos) {
       break;
@@ -126,7 +129,7 @@ bool CsvParser::find_fields_in_chunk(const std::string& str, const Table& table,
     from = pos + 1;
     const char elem = str.at(pos);
 
-    in_quotes = (elem == _csv_config.quote) ? !in_quotes : in_quotes;
+    if (elem == _csv_config.quote) in_quotes = !in_quotes;
 
     // Determine if delimiter marks end of row or is part of the (string) value
     if (elem == _csv_config.delimiter && !in_quotes) {
@@ -159,9 +162,9 @@ void CsvParser::parse_into_chunk(const std::string& content, const std::vector<s
   }
 
   size_t start = 0;
-  for (ChunkOffset row_i = 0; row_i < row_count; ++row_i) {
-    for (ColumnID col_i{0}; col_i < col_count; ++col_i) {
-      const auto end = field_ends.at(row_i * col_count + col_i);
+  for (ChunkOffset row_id = 0; row_id < row_count; ++row_id) {
+    for (ColumnID column_id{0}; column_id < col_count; ++column_id) {
+      const auto end = field_ends.at(row_id * col_count + column_id);
       auto field = content.substr(start, end - start);
       start = end + 1;
 
@@ -170,7 +173,7 @@ void CsvParser::parse_into_chunk(const std::string& content, const std::vector<s
         sanitize_field(field);
       }
 
-      converters[col_i]->insert(field, row_i);
+      converters[column_id]->insert(field, row_id);
     }
   }
 
