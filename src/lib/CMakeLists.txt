@@ -125,6 +125,8 @@ set(
     operators/sort.hpp
     operators/table_scan.cpp
     operators/table_scan.hpp
+    operators/new_table_scan.cpp
+    operators/new_table_scan.hpp
     operators/table_wrapper.cpp
     operators/table_wrapper.hpp
     operators/termfactory.hpp
@@ -213,6 +215,7 @@ set(
     types.hpp
     uid_allocator.hpp
     utils/assert.hpp
+    utils/binary_operators.hpp
     utils/cuckoo_hashtable.hpp
     utils/helper.hpp
     utils/murmur_hash.cpp

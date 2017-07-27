@@ -16,8 +16,6 @@ namespace opossum {
 template <typename T>
 class ValueColumn : public BaseColumn {
  public:
-  static constexpr bool is_reference_column() { return false; }
-
   template <typename U>
   static constexpr bool has_type() { return std::is_same<U, T>{}; }
 
@@ -66,6 +64,8 @@ class ValueColumn : public BaseColumn {
 
   const std::shared_ptr<std::vector<std::pair<RowID, T>>> materialize(
       ChunkID chunk_id, std::shared_ptr<std::vector<ChunkOffset>> offsets = nullptr);
+
+  bool is_reference_column() const override;
 
  protected:
   tbb::concurrent_vector<T> _values;

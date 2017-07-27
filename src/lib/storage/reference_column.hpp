@@ -20,9 +20,6 @@ namespace opossum {
 // ReferenceColumn is a specific column type that stores all its values as position list of a referenced column
 class ReferenceColumn : public BaseColumn {
  public:
-  static constexpr bool is_reference_column() { return true; }
-
- public:
   // creates a reference column
   // the parameters specify the positions and the referenced column
   ReferenceColumn(const std::shared_ptr<const Table> referenced_table, const ColumnID referenced_column_id,
@@ -124,6 +121,8 @@ class ReferenceColumn : public BaseColumn {
   // copies one of its own values to a different ValueColumn - mainly used for materialization
   // we cannot always use the materialize method below because sort results might come from different BaseColumns
   void copy_value_to_value_column(BaseColumn &, ChunkOffset) const override;
+
+  bool is_reference_column() const override;
 
  protected:
   // After an operator finishes, its shared_ptr reference to the table gets deleted. Thus, the ReferenceColumns need

@@ -2,10 +2,11 @@
 
 #include <type_traits>
 
-#include <boost/hana/type.hpp>
-
+#include "storage/value_column_iterable.hpp"
+#include "storage/dictionary_column_iterable.hpp"
 #include "utils/binary_operators.hpp"
-#include "utils/type_traits.hpp"
+#include "resolve_column_type.hpp"
+
 
 namespace opossum {
 
@@ -13,7 +14,7 @@ namespace opossum {
  * @brief The actual scan
  */
 struct Scan {
-  Scan(const ChunkID chunk_id, std::vector<RowID> & matches_out)
+  Scan(const ChunkID chunk_id, PosList & matches_out)
       : _chunk_id{chunk_id}, _matches_out{matches_out} {}
 
   template <typename LeftIterator, typename RightIterator, typename Comparator>
@@ -29,28 +30,29 @@ struct Scan {
   }
 
   const ChunkID _chunk_id;
-  std::vector<RowID> & _matches_out;
+  PosList & _matches_out;
 };
 
-class NewTableScan::AbstractScan {
+class AbstractScan {
  public:
-  AbstractScan(std::shared_ptr<const Table> in_table);
+  AbstractScan(std::shared_ptr<const Table> in_table) : _in_table{in_table} {}
+  virtual ~AbstractScan() = default;
 
-  virtual std::vector<ChunkOffset> scan_chunk(const ChunkID & chunk_id) = 0;
+  virtual PosList scan_chunk(const ChunkID & chunk_id) = 0;
 
  protected:
   const std::shared_ptr<const Table> _in_table;
 };
 
 // 2 data columns (dictionary, value)
-class DataColumnComparisonScan : public NewTableScan::AbstractScan {
+class DataColumnComparisonScan : public AbstractScan {
  public:
-  ConstantValueScan(std::shared_ptr<const Table> in_table, const std::string & left_column_id,
-                    const std::string & right_column_id, const ScanType & scan_type)
+  DataColumnComparisonScan(std::shared_ptr<const Table> in_table, const ColumnID left_column_id,
+                    const ColumnID right_column_id, const ScanType & scan_type)
       : AbstractScan{in_table}, _left_column_id{left_column_id}, _right_column_id{right_column_id},
         _scan_type{scan_type} {}
 
-  std::vector<ChunkOffset> scan_chunk(const ChunkID & chunk_id) override {
+  PosList scan_chunk(const ChunkID & chunk_id) override {
     const auto & chunk = _in_table->get_chunk(chunk_id);
     const auto left_column_type = _in_table->column_type(_left_column_id);
     const auto right_column_type = _in_table->column_type(_right_column_id);
@@ -58,29 +60,31 @@ class DataColumnComparisonScan : public NewTableScan::AbstractScan {
     const auto left_column = chunk.get_column(_left_column_id);
     const auto right_column = chunk.get_column(_right_column_id);
 
-    auto matches_out = std::vector<RowID>{};
+    auto matches_out = PosList{};
     auto scan = Scan{chunk_id, matches_out};
 
-    // TODO(mjendruk): Exclude comparing strings to numerical types ...
-    resolve_column_type(left_column_type, left_column, [&] (auto typed_left_column) {
-      resolve_column_type(right_column_type, right_column, [&] (auto typed_right_column) {
+    resolve_column_type(left_column_type, *left_column, [&] (auto &typed_left_column) {
+      resolve_column_type(right_column_type, *right_column, [&] (auto &typed_right_column) {
         resolve_operator_type(_scan_type, [&] (auto comparator) {
           using LeftColumn = std::decay_t<decltype(typed_left_column)>;
           using RightColumn = std::decay_t<decltype(typed_right_column)>;
 
-          // Don’t compile the code for reference columns
-          constexpr auto not_reference_columns = !LeftColumn::is_reference_column() && !RightColumn::is_reference_column();
-          if constexpr (not_reference_columns) {
+          constexpr auto left_is_string_column = LeftColumn::template has_type<std::string>();
+          constexpr auto right_is_string_column = RightColumn::template has_type<std::string>();
+          constexpr auto neither_is_string_column = !left_is_string_column && !right_is_string_column;
+          constexpr auto both_are_string_columns = left_is_string_column && right_is_string_column;
 
+          if constexpr (neither_is_string_column || both_are_string_columns) {
             auto left_column_iterable = create_iterable_from_column(typed_left_column);
             auto right_column_iterable = create_iterable_from_column(typed_right_column);
 
-            _left_column_iterable.execute_for_all([&] (auto left_it, auto left_end) {
+            left_column_iterable.execute_for_all([&] (auto left_it, auto left_end) {
               right_column_iterable.execute_for_all([&] (auto right_it, auto right_end) {
                 scan(comparator, left_it, left_end, right_it);
               });
             });
-
+          } else {
+            Fail("std::string cannot be compared to numerical type!");
           }
         });
       });
@@ -145,6 +149,8 @@ NewTableScan::NewTableScan(const std::shared_ptr<AbstractOperator> in, const std
     : AbstractReadOnlyOperator{in}, _left_column_name{left_column_name}, _scan_type{scan_type},
       _right_parameter{right_parameter}, _right_value2{right_value2} {}
 
+NewTableScan::~NewTableScan() = default;
+
 const std::string NewTableScan::name() const { return "NewTableScan"; }
 
 uint8_t NewTableScan::num_in_tables() const { return 1; }
@@ -160,10 +166,38 @@ std::shared_ptr<const Table> NewTableScan::on_execute()
   _in_table = input_table_left();
 
   init_scan();
+  init_output_table();
 
-  // TODO(mjendruk): Implement stuff here ...
+  std::mutex output_mutex;
 
-  return nullptr;
+  auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
+  jobs.reserve(_in_table->chunk_count());
+
+  for (ChunkID chunk_id{0u}; chunk_id < _in_table->chunk_count(); ++chunk_id) {
+    auto job_task = std::make_shared<JobTask>([=, &output_mutex]() {
+
+      const auto matches_out = std::make_shared<PosList>(_scan->scan_chunk(chunk_id));
+
+      Chunk chunk_out;
+
+      for (ColumnID column_id{0u}; column_id < _in_table->col_count(); ++column_id) {
+        // TODO(mjendruk): Handle reference columns
+
+        auto ref_column_out = std::make_shared<ReferenceColumn>(_in_table, column_id, matches_out);
+        chunk_out.add_column(ref_column_out);
+      }
+
+      std::lock_guard<std::mutex> lock(output_mutex);
+      _output_table->add_chunk(std::move(chunk_out));
+    });
+
+    jobs.push_back(job_task);
+    job_task->schedule();
+  }
+
+  CurrentScheduler::wait_for_tasks(jobs);
+
+return _output_table;
 }
 
 void NewTableScan::init_scan()
@@ -171,7 +205,7 @@ void NewTableScan::init_scan()
   const auto left_column_id = _in_table->column_id_by_name(_left_column_name);
 
   DebugAssert(_in_table->chunk_count() > 0u, "Input table must contain at least 1 chunk.");
-  const auto & first_chunk = _in_table->get_chunk(0u);
+  const auto & first_chunk = _in_table->get_chunk(ChunkID{0u});
 
   const auto is_reference_table = first_chunk.get_column(left_column_id)->is_reference_column();
 
@@ -186,6 +220,15 @@ void NewTableScan::init_scan()
     } else {
       _scan = std::make_unique<DataColumnComparisonScan>(_in_table, left_column_id, right_column_id, _scan_type);
     }
+  }
+}
+
+void NewTableScan::init_output_table()
+{
+  _output_table = std::make_shared<Table>();
+
+  for (ColumnID column_id{0}; column_id < _in_table->col_count(); ++column_id) {
+    _output_table->add_column_definition(_in_table->column_name(column_id), _in_table->column_type(column_id));
   }
 }
 

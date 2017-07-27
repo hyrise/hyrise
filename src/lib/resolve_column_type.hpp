@@ -44,9 +44,7 @@ void resolve_column_type(const std::string & type, BaseColumn & column, const Fu
         }
 
         void handle_reference_column(ReferenceColumn &column, std::shared_ptr<ColumnVisitableContext> c) override {
-          auto context = std::static_pointer_cast<Context>(c);
-
-          context->func(column);
+          Fail("resolve_column_type does not handle reference columns.");
         }
       };
 

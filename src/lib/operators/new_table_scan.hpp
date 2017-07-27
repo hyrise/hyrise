@@ -25,11 +25,15 @@
 
 namespace opossum {
 
+class AbstractScan;
 
 class NewTableScan : public AbstractReadOnlyOperator {
  public:
-  NewTableScan(const std::shared_ptr<AbstractOperator> in, const std::string &left_column_name, const ScanType scan_type,
-               const AllParameterVariant & right_parameter, const optional<AllTypeVariant> right_value2 = nullopt);
+  NewTableScan(const std::shared_ptr<AbstractOperator> in, const std::string &left_column_name,
+               const ScanType scan_type, const AllParameterVariant right_parameter,
+               const optional<AllTypeVariant> right_value2 = nullopt);
+
+  ~NewTableScan();
 
   const std::string name() const override;
   uint8_t num_in_tables() const override;
@@ -41,6 +45,7 @@ class NewTableScan : public AbstractReadOnlyOperator {
   std::shared_ptr<const Table> on_execute() override;
 
   void init_scan();
+  void init_output_table();
 
  private:
   const std::string _left_column_name;
@@ -48,10 +53,9 @@ class NewTableScan : public AbstractReadOnlyOperator {
   const AllParameterVariant _right_parameter;
   const optional<AllTypeVariant> _right_value2;
 
-  class AbstractScan;
-
   std::shared_ptr<const Table> _in_table;
   std::unique_ptr<AbstractScan> _scan;
+  std::shared_ptr<Table> _output_table;
 };
 
 }  // namespace opossum

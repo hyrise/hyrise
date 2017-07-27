@@ -167,6 +167,9 @@ const std::shared_ptr<std::vector<std::pair<RowID, T>>> ValueColumn<T>::material
   return materialized_vector;
 }
 
+template <typename T>
+bool ValueColumn<T>::is_reference_column() const { return false; }
+
 template class ValueColumn<int32_t>;
 template class ValueColumn<int64_t>;
 template class ValueColumn<float>;
