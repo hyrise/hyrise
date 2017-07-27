@@ -80,10 +80,8 @@ std::vector<std::shared_ptr<AbstractASTNode>> SQLQueryNodeTranslator::translate_
 
 std::shared_ptr<AbstractASTNode> SQLQueryNodeTranslator::translate_statement(const SQLStatement& statement) {
   switch (statement.type()) {
-    case hsql::kStmtSelect: {
-      const auto& select = (const SelectStatement&)statement;
-      return _translate_select(select);
-    }
+    case hsql::kStmtSelect:
+      return _translate_select((const SelectStatement&)statement);
     default:
       Fail("Translating statement failed.");
       return {};

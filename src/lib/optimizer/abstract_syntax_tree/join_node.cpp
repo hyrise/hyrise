@@ -6,6 +6,7 @@
 #include <vector>
 
 #include "common.hpp"
+#include "constant_mappings.hpp"
 
 namespace opossum {
 
@@ -21,11 +22,16 @@ JoinNode::JoinNode(optional<std::pair<std::string, std::string>> join_column_nam
 std::string JoinNode::description() const {
   std::ostringstream desc;
 
-  // TODO(tim): add more details
-  desc << "Join";
+  desc << "Join" ;
+  desc << " [" << join_mode_to_string.at(_join_mode) << "]";
+
   if (_join_column_names) {
-    desc << ": [" << (*_join_column_names).first << " AND " << (*_join_column_names).second << "]";
+    desc << " [" << (*_join_column_names).first;
+    desc << " " << scan_type_to_string.at(_scan_type);
+    desc << " " << (*_join_column_names).second << "]";
   }
+
+  desc << " [" << _prefix_left << " / " << _prefix_right << "]";
 
   return desc.str();
 }

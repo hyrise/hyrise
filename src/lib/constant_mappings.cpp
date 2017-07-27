@@ -26,6 +26,13 @@ const std::unordered_map<ScanType, std::string> scan_type_to_string = {
     {opossum::ScanType::OpBetween, "BETWEEN"}, {opossum::ScanType::OpLike, "LIKE"},
 };
 
+const std::unordered_map<const JoinMode, std::string> join_mode_to_string = {
+        {JoinMode::Cross, "Cross"},        {JoinMode::Inner, "Inner"},
+        {JoinMode::Left, "Left"},      {JoinMode::Natural, "Natural"},
+        {JoinMode::Outer, "Outer"},   {JoinMode::Right, "Right"},
+        {JoinMode::Self, "Self"},
+};
+
 const std::unordered_map<const ExpressionType, std::string> expression_type_to_string = {
     {ExpressionType::Literal, "Literal"},
     {ExpressionType::Star, "Star"},
