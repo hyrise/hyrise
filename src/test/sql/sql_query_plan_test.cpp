@@ -24,6 +24,9 @@ class SQLQueryPlanTest : public BaseTest {
 
     std::shared_ptr<Table> table_b = load_table("src/test/tables/int_float2.tbl", 2);
     StorageManager::get().add_table("table_b", std::move(table_b));
+
+    SQLQueryOperator::get_parse_tree_cache().clear_and_resize(0);
+    SQLQueryOperator::get_query_plan_cache().clear_and_resize(0);
   }
 };
 
@@ -36,17 +39,15 @@ TEST_F(SQLQueryPlanTest, SQLQueryPlanCloneTest) {
   // Get the query plan.
   const SQLQueryPlan& plan1 = op.get_query_plan();
   auto tasks = plan1.tasks();
-  ASSERT_EQ(3u, tasks.size());
+  ASSERT_EQ(2u, tasks.size());
   EXPECT_EQ("GetTable", tasks[0]->get_operator()->name());
   EXPECT_EQ("Projection", tasks[1]->get_operator()->name());
-  EXPECT_EQ("SQLResultOperator", tasks[2]->get_operator()->name());
 
   const SQLQueryPlan plan2 = plan1.recreate();
   auto cloned_tasks = plan2.tasks();
-  ASSERT_EQ(3u, cloned_tasks.size());
+  ASSERT_EQ(2u, cloned_tasks.size());
   EXPECT_EQ("GetTable", cloned_tasks[0]->get_operator()->name());
   EXPECT_EQ("Projection", cloned_tasks[1]->get_operator()->name());
-  EXPECT_EQ("SQLResultOperator", cloned_tasks[2]->get_operator()->name());
 
   // Execute both task lists.
   for (auto task : tasks) {
@@ -73,11 +74,10 @@ TEST_F(SQLQueryPlanTest, SQLQueryPlanCloneWithSchedulerTest) {
   // Get the query plan template.
   const SQLQueryPlan& tmpl = op.get_query_plan();
   auto tmpl_tasks = tmpl.tasks();
-  ASSERT_EQ(4u, tmpl_tasks.size());
+  ASSERT_EQ(3u, tmpl_tasks.size());
   EXPECT_EQ("GetTable", tmpl_tasks[0]->get_operator()->name());
   EXPECT_EQ("TableScan", tmpl_tasks[1]->get_operator()->name());
   EXPECT_EQ("TableScan", tmpl_tasks[2]->get_operator()->name());
-  EXPECT_EQ("SQLResultOperator", tmpl_tasks[3]->get_operator()->name());
 
   // Get a copy and schedule all tasks.
   CurrentScheduler::set(std::make_shared<NodeQueueScheduler>(Topology::create_fake_numa_topology(8, 4)));
