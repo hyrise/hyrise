@@ -220,7 +220,7 @@ TEST_F(SQLQueryNodeTranslatorTest, SelectInnerJoin) {
   EXPECT_EQ(join_node->join_column_names()->second, "a");
 }
 
-// TODO(tim&moritz) Name this properly
+// TODO(tim&moritz): BLOCKING - Name this properly
 TEST_F(SQLQueryNodeTranslatorTest, ComplexQuery) {
   const auto query =
       "  SELECT customer.c_custkey, customer.c_name, COUNT(orderitems.\"orders.o_orderkey\")"
