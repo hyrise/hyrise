@@ -162,23 +162,19 @@ std::shared_ptr<AbstractASTNode> SQLQueryNodeTranslator::_translate_join(const J
 
 std::shared_ptr<AbstractASTNode> SQLQueryNodeTranslator::_translate_table_ref(const hsql::TableRef& table) {
   switch (table.type) {
-    case hsql::kTableName: {
+    case hsql::kTableName:
       return std::make_shared<StoredTableNode>(table.name);
-    }
-    case hsql::kTableSelect: {
+    case hsql::kTableSelect:
       return _translate_select(*table.select);
-    }
-    case hsql::kTableJoin: {
+    case hsql::kTableJoin:
       return _translate_join(*table.join);
-    }
-    case hsql::kTableCrossProduct: {
-      // TODO(mp)
+    case hsql::kTableCrossProduct:
+      // TODO(anybody)
       Fail("Unable to translate table cross product.");
+    default:
+      Fail("Unable to translate source table.");
       return {};
-    }
   }
-  Fail("Unable to translate source table.");
-  return {};
 }
 
 std::string SQLQueryNodeTranslator::get_column_name(const hsql::Expr& expr, bool include_table_name) {
