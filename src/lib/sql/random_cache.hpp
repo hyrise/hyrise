@@ -22,7 +22,7 @@ class RandomCache : public AbstractCache<key_t, val_t> {
   }
 
   // Sets the value to be cached at the given key.
-  void set(key_t key, val_t value, double cost = 1.0, double size = 1.0) {
+  void set(const key_t& key, val_t value, double cost = 1.0, double size = 1.0) {
     // Override old element at that key, if it exists.
     auto it = _map.find(key);
     if (it != _map.end()) {
@@ -46,12 +46,12 @@ class RandomCache : public AbstractCache<key_t, val_t> {
   }
 
   // Retrieves the value cached at the key.
-  val_t& get(key_t key) {
+  val_t& get(const key_t& key) {
     auto it = _map.find(key);
     return it->second->second;
   }
 
-  bool has(key_t key) const { return _map.find(key) != _map.end(); }
+  bool has(const key_t& key) const { return _map.find(key) != _map.end(); }
 
   size_t size() const { return _map.size(); }
 

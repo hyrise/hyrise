@@ -34,7 +34,7 @@ class GDFSCache : public AbstractCache<key_t, val_t> {
 
   explicit GDFSCache(size_t capacity) : AbstractCache<key_t, val_t>(capacity), _inflation(0.0) {}
 
-  void set(key_t key, val_t value, double cost = 1.0, double size = 1.0) {
+  void set(const key_t& key, val_t value, double cost = 1.0, double size = 1.0) {
     auto it = _map.find(key);
     if (_map.find(key) != _map.end()) {
       // Update priority.
@@ -66,7 +66,7 @@ class GDFSCache : public AbstractCache<key_t, val_t> {
     _map[key] = handle;
   }
 
-  val_t& get(key_t key) {
+  val_t& get(const key_t& key) {
     auto it = _map.find(key);
     handle_t handle = it->second;
     entry_t& entry = (*handle);
@@ -76,7 +76,7 @@ class GDFSCache : public AbstractCache<key_t, val_t> {
     return entry.value;
   }
 
-  bool has(key_t key) const { return _map.find(key) != _map.end(); }
+  bool has(const key_t& key) const { return _map.find(key) != _map.end(); }
 
   size_t size() const { return _map.size(); }
 
@@ -94,7 +94,7 @@ class GDFSCache : public AbstractCache<key_t, val_t> {
 
   double inflation() const { return _inflation; }
 
-  double priority(key_t key) const {
+  double priority(const key_t& key) const {
     auto it = _map.find(key);
     return (*it->second).priority;
   }
