@@ -22,7 +22,7 @@ JoinNode::JoinNode(optional<std::pair<std::string, std::string>> join_column_nam
 std::string JoinNode::description() const {
   std::ostringstream desc;
 
-  desc << "Join" ;
+  desc << "Join";
   desc << " [" << join_mode_to_string.at(_join_mode) << "]";
 
   if (_join_column_names) {
