@@ -84,11 +84,9 @@ std::shared_ptr<AbstractASTNode> SQLQueryNodeTranslator::translate_statement(con
       const auto& select = (const SelectStatement&)statement;
       return _translate_select(select);
     }
-    case hsql::kStmtPrepare: {
-      // TODO(tim): BLOCKING - what to return?
-    }
     default:
       Fail("Translating statement failed.");
+      return {};
   }
 }
 
@@ -176,9 +174,11 @@ std::shared_ptr<AbstractASTNode> SQLQueryNodeTranslator::_translate_table_ref(co
     case hsql::kTableCrossProduct: {
       // TODO(mp)
       Fail("Unable to translate table cross product.");
+      return {};
     }
   }
   Fail("Unable to translate source table.");
+  return {};
 }
 
 std::string SQLQueryNodeTranslator::get_column_name(const hsql::Expr& expr, bool include_table_name) {
