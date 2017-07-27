@@ -137,6 +137,31 @@ TEST_F(SQLQueryNodeTranslatorTest, SelectWithAndCondition) {
   EXPECT_FALSE(t_node->right_child());
 }
 
+TEST_F(SQLQueryNodeTranslatorTest, AggregateWithGroupBy) {
+  const auto query = "SELECT a, SUM(b) AS s FROM table_a GROUP BY a;";
+  const auto result_node = compile_query(query);
+
+  EXPECT_EQ(result_node->type(), ASTNodeType::Aggregate);
+  EXPECT_FALSE(result_node->right_child());
+
+  const auto aggregate_node = std::dynamic_pointer_cast<AggregateNode>(result_node);
+  EXPECT_EQ(aggregate_node->aggregates().size(), 1u);
+  const std::vector<std::string> groupby_columns = {"a"};
+  EXPECT_EQ(aggregate_node->groupby_columns(), groupby_columns);
+  EXPECT_EQ(aggregate_node->aggregates().at(0).alias, std::string("s"));
+
+  auto t_node_1 = result_node->left_child();
+  EXPECT_EQ(t_node_1->type(), ASTNodeType::StoredTable);
+  EXPECT_FALSE(t_node_1->left_child());
+  EXPECT_FALSE(t_node_1->right_child());
+}
+
+TEST_F(SQLQueryNodeTranslatorTest, AggregateWithInvalidGroupBy) {
+  // Cannot select b without being in GROUP BY clause.
+  const auto query = "SELECT b, SUM(b) AS s FROM table_a GROUP BY a;";
+  EXPECT_THROW(compile_query(query), std::logic_error);
+}
+
 TEST_F(SQLQueryNodeTranslatorTest, AggregateWithExpression) {
   const auto query = "SELECT SUM(a+b) AS s, SUM(a*b) as f FROM table_a";
   const auto result_node = compile_query(query);
@@ -146,6 +171,7 @@ TEST_F(SQLQueryNodeTranslatorTest, AggregateWithExpression) {
 
   const auto aggregate_node = std::dynamic_pointer_cast<AggregateNode>(result_node);
   EXPECT_EQ(aggregate_node->aggregates().size(), 2u);
+  EXPECT_EQ(aggregate_node->groupby_columns().size(), 0u);
   EXPECT_EQ(aggregate_node->aggregates().at(0).alias, std::string("s"));
   EXPECT_EQ(aggregate_node->aggregates().at(1).alias, std::string("f"));
 

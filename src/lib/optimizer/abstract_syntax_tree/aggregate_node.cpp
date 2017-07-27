@@ -18,12 +18,12 @@ AggregateColumnDefinition::AggregateColumnDefinition(const std::shared_ptr<Expre
 AggregateNode::AggregateNode(const std::vector<AggregateColumnDefinition> aggregates,
                              const std::vector<std::string>& groupby_columns)
     : AbstractASTNode(ASTNodeType::Aggregate), _aggregates(aggregates), _groupby_columns(groupby_columns) {
-  for (const auto aggregate : aggregates) {
+  for (const auto& aggregate : aggregates) {
     std::string alias;
     if (aggregate.alias)
       alias = *aggregate.alias;
     else
-      alias = "TODO";  // aggregate.expr->to_alias_name();  // TODO(mp)
+      alias = "TODO";  // TODO(mp): aggregate.expr->to_alias_name()
 
     _output_column_names.emplace_back(alias);
   }

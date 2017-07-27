@@ -284,6 +284,8 @@ std::shared_ptr<AbstractASTNode> SQLQueryNodeTranslator::_translate_filter_expr(
 std::shared_ptr<AbstractASTNode> SQLQueryNodeTranslator::_translate_aggregate(
     const hsql::SelectStatement& select, const std::shared_ptr<AbstractASTNode>& input_node) {
   const auto& select_list = *select.selectList;
+  const auto* group_by = select.groupBy;
+
   /**
    * Build Aggregates
    */
@@ -300,7 +302,21 @@ std::shared_ptr<AbstractASTNode> SQLQueryNodeTranslator::_translate_aggregate(
       }
     } else if (expr->isType(hsql::kExprColumnRef)) {
       // If the item is a column, it has to be in the GROUP BY clause.
-      // TODO(tim): do check
+      Assert(group_by != nullptr, "SELECT list contains a column, but the query does not have a GROUP BY clause.");
+
+      auto expr_name = expr->getName();
+
+      auto is_in_group_by_clause = false;
+      for (const auto* groupby_expr : *group_by->columns) {
+        if (*expr_name == *groupby_expr->getName()) {
+          is_in_group_by_clause = true;
+          break;
+        }
+      }
+
+      if (!is_in_group_by_clause) {
+        Fail("Column is specified in SELECT list, but not in GROUP BY clause.");
+      }
     } else {
       Fail("Unsupported item in projection list for AggregateOperator.");
     }
@@ -309,7 +325,6 @@ std::shared_ptr<AbstractASTNode> SQLQueryNodeTranslator::_translate_aggregate(
   /**
    * Build GROUP BY
    */
-  const auto* group_by = select.groupBy;
   std::vector<std::string> groupby_columns;
   if (group_by != nullptr) {
     groupby_columns.reserve(group_by->columns->size());
@@ -374,7 +389,7 @@ std::shared_ptr<AbstractASTNode> SQLQueryNodeTranslator::_translate_order_by(
     auto order_description = *it;
     const auto& order_expr = *order_description->expr;
 
-    // TODO(mp): handle non-column refs
+    // TODO(anybody): handle non-column refs
     Assert(order_expr.isType(hsql::kExprColumnRef), "Can only order by columns for now.");
 
     const auto column_name = get_column_name(order_expr, true);
