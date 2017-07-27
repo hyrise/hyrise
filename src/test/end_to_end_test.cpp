@@ -135,24 +135,23 @@ const SQLTestParam test_queries[] = {
     {"SELECT a, b, MAX(c), AVG(d) FROM groupby_int_2gb_2agg GROUP BY a, b HAVING MAX(c) > 10 AND MAX(c) <= 30;",
      "src/test/tables/aggregateoperator/groupby_int_2gb_2agg/max_avg_having.tbl"},
 
-    // TODO(mp): create result tables
-    //        {"SELECT * FROM customer;", 1u, true, ""},
-    //        {"SELECT c_custkey, c_name FROM customer;", 2u, true, ""},
-    //        {"SELECT customer.c_custkey, customer.c_name, COUNT(orders.o_orderkey)"
-    //                             "  FROM customer"
-    //                             "  JOIN orders ON c_custkey = o_custkey"
-    //                             "  GROUP BY customer.c_custkey, customer.c_name"
-    //                             "  HAVING COUNT(orders.o_orderkey) >= 100;",
-    //                     6u, true, ""},
-    //        {"SELECT customer.c_custkey, customer.c_name, COUNT(orderitems.\"orders.o_orderkey\")"
-    //                             "  FROM customer"
-    //                             "  JOIN (SELECT * FROM "
-    //                             "    orders"
-    //                             "    JOIN lineitem ON o_orderkey = l_orderkey"
-    //                             "  ) AS orderitems ON c_custkey = orders.o_custkey"
-    //                             "  GROUP BY customer.c_custkey, customer.c_name"
-    //                             "  HAVING COUNT(orderitems.\"orders.o_orderkey\") >= 100;",
-    //                     8u, true, ""},
+    {"SELECT * FROM customer;", "src/test/tables/tpch/customer.tbl"},
+    {"SELECT c_custkey, c_name FROM customer;", "src/test/tables/tpch/customer_projection.tbl"},
+    {"SELECT customer.c_custkey, customer.c_name, COUNT(\"orders.o_orderkey\")"
+     "  FROM customer"
+     "  JOIN orders ON c_custkey = o_custkey"
+     "  GROUP BY \"customer.c_custkey\", \"customer.c_name\""
+     "  HAVING COUNT(\"orders.o_orderkey\") >= 100;",
+     "src/test/tables/tpch/customer_join_orders.tbl"},
+    {"SELECT customer.c_custkey, customer.c_name, COUNT(\"orderitems.orders.o_orderkey\")"
+     "  FROM customer"
+     "  JOIN (SELECT * FROM "
+     "    orders"
+     "    JOIN lineitem ON o_orderkey = l_orderkey"
+     "  ) AS orderitems ON c_custkey = \"orders.o_custkey\""
+     "  GROUP BY customer.c_custkey, customer.c_name"
+     "  HAVING COUNT(\"orderitems.orders.o_orderkey\") >= 100;",
+     "src/test/tables/tpch/customer_join_orders_alias.tbl"},
 };
 
 INSTANTIATE_TEST_CASE_P(test_queries, EndToEndTest, ::testing::ValuesIn(test_queries));

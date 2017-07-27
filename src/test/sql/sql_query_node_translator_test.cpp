@@ -157,7 +157,7 @@ TEST_F(SQLQueryNodeTranslatorTest, AggregateWithGroupBy) {
 }
 
 TEST_F(SQLQueryNodeTranslatorTest, AggregateWithInvalidGroupBy) {
-  // Cannot select b without being in GROUP BY clause.
+  // Cannot select b without it being in the GROUP BY clause.
   const auto query = "SELECT b, SUM(b) AS s FROM table_a GROUP BY a;";
   EXPECT_THROW(compile_query(query), std::logic_error);
 }

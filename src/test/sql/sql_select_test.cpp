@@ -175,14 +175,14 @@ const SQLTestParam test_queries[] = {
         "SELECT a, b, MAX(c), AVG(d) FROM groupby_int_2gb_2agg GROUP BY a, b HAVING MAX(c) >= 10 AND MAX(c) < 40;", 5u,
         true, "src/test/tables/aggregateoperator/groupby_int_2gb_2agg/max_avg.tbl"},
 
-    SQLTestParam{"SELECT * FROM customer;", 1u, true, ""},
-    SQLTestParam{"SELECT c_custkey, c_name FROM customer;", 2u, true, ""},
+    SQLTestParam{"SELECT * FROM customer;", 1u, true, "src/test/tables/tpch/customer.tbl"},
+    SQLTestParam{"SELECT c_custkey, c_name FROM customer;", 2u, true, "src/test/tables/tpch/customer_projection.tbl"},
     SQLTestParam{"SELECT customer.c_custkey, customer.c_name, COUNT(\"orders.o_orderkey\")"
                  "  FROM customer"
                  "  JOIN orders ON c_custkey = o_custkey"
                  "  GROUP BY \"customer.c_custkey\", \"customer.c_name\""
                  "  HAVING COUNT(\"orders.o_orderkey\") >= 100;",
-                 6u, true, ""},
+                 6u, true, "src/test/tables/tpch/customer_join_orders.tbl"},
     SQLTestParam{"SELECT customer.c_custkey, customer.c_name, COUNT(\"orderitems.orders.o_orderkey\")"
                  "  FROM customer"
                  "  JOIN (SELECT * FROM "
@@ -191,7 +191,7 @@ const SQLTestParam test_queries[] = {
                  "  ) AS orderitems ON c_custkey = \"orders.o_custkey\""
                  "  GROUP BY customer.c_custkey, customer.c_name"
                  "  HAVING COUNT(\"orderitems.orders.o_orderkey\") >= 100;",
-                 8u, true, ""},
+                 8u, true, "src/test/tables/tpch/customer_join_orders_alias.tbl"},
 };
 
 INSTANTIATE_TEST_CASE_P(test_queries, SQLSelectTest, ::testing::ValuesIn(test_queries));
