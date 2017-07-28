@@ -268,8 +268,7 @@ std::shared_ptr<AbstractASTNode> SQLQueryNodeTranslator::_translate_filter_expr(
   }
 
   std::shared_ptr<ExpressionNode> expression_node = SQLExpressionTranslator::translate_expression(expr);
-  auto predicate_node =
-      std::make_shared<PredicateNode>(column_name, expression_node, scan_type, value, value2);
+  auto predicate_node = std::make_shared<PredicateNode>(column_name, expression_node, scan_type, value, value2);
 
   predicate_node->set_left_child(input_node);
 
