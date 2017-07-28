@@ -137,7 +137,6 @@ set(
     operators/update.hpp
     operators/validate.cpp
     operators/validate.hpp
-    optimizer/abstract_column_statistics.hpp
     optimizer/abstract_syntax_tree/abstract_ast_node.cpp
     optimizer/abstract_syntax_tree/abstract_ast_node.hpp
     optimizer/abstract_syntax_tree/aggregate_node.cpp
@@ -157,6 +156,7 @@ set(
     optimizer/abstract_syntax_tree/sort_node.hpp
     optimizer/abstract_syntax_tree/stored_table_node.cpp
     optimizer/abstract_syntax_tree/stored_table_node.hpp
+    optimizer/base_column_statistics.hpp
     optimizer/column_statistics.cpp
     optimizer/column_statistics.hpp
     optimizer/strategy/abstract_rule.hpp
