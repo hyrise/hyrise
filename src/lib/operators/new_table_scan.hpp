@@ -54,6 +54,7 @@ class NewTableScan : public AbstractReadOnlyOperator {
   const optional<AllTypeVariant> _right_value2;
 
   std::shared_ptr<const Table> _in_table;
+  bool _is_reference_table;
   std::unique_ptr<AbstractScan> _scan;
   std::shared_ptr<Table> _output_table;
 };

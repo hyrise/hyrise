@@ -215,6 +215,7 @@ set(
     storage/index/group_key/variable_length_key_store.hpp
     storage/reference_column.cpp
     storage/reference_column.hpp
+    storage/reference_column_iterable.hpp
     storage/scoped_locking_ptr.hpp
     storage/storage_manager.cpp
     storage/storage_manager.hpp

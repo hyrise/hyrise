@@ -16,6 +16,16 @@ namespace opossum {
 namespace hana = boost::hana;
 
 template <typename Functor>
+void resolve_type(const std::string & type, const Functor & func) {
+  hana::for_each(column_types, [&](auto x) {
+    if (std::string(hana::first(x)) == type) {
+      // The + before hana::second - which returns a reference - converts its return value into a value
+      func(+hana::second(x));
+    }
+  });
+}
+
+template <typename Functor>
 void resolve_column_type(const std::string & type, BaseColumn & column, const Functor & func) {
   hana::for_each(column_types, [&](auto x) {
     if (std::string(hana::first(x)) == type) {
