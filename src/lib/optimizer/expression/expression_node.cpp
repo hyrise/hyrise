@@ -19,7 +19,7 @@ namespace opossum {
 ExpressionNode::ExpressionNode(const ExpressionType type, const AllTypeVariant &value,
                                const std::vector<std::shared_ptr<ExpressionNode>> &expression_list,
                                const std::string &name, const std::string &table, const std::string &alias)
-    : _type(type), _value(value), _expression_list(expression_list), _name(name), _table(table), _alias(alias) {}
+    : _type(type), _value(value), _expression_list(expression_list), _name(name), _table_name(table), _alias(alias) {}
 
 std::shared_ptr<ExpressionNode> ExpressionNode::create_expression(const ExpressionType type) {
   const std::vector<std::shared_ptr<ExpressionNode>> expr_list;
@@ -41,7 +41,7 @@ std::shared_ptr<ExpressionNode> ExpressionNode::create_literal(const AllTypeVari
 
 std::shared_ptr<ExpressionNode> ExpressionNode::create_parameter(const AllTypeVariant &value) {
   const std::vector<std::shared_ptr<ExpressionNode>> expr_list;
-  return std::make_shared<ExpressionNode>(ExpressionType::Parameter, value, expr_list, "", "", "");
+  return std::make_shared<ExpressionNode>(ExpressionType::Placeholder, value, expr_list, "", "", "");
 }
 
 std::shared_ptr<ExpressionNode> ExpressionNode::create_function_reference(
@@ -51,18 +51,18 @@ std::shared_ptr<ExpressionNode> ExpressionNode::create_function_reference(
                                           "", alias);
 }
 
-const std::weak_ptr<ExpressionNode> &ExpressionNode::parent() const { return _parent; }
+const std::weak_ptr<ExpressionNode> ExpressionNode::parent() const { return _parent; }
 
-void ExpressionNode::clear_parent() { _parent = {}; }
+void ExpressionNode::clear_parent() { _parent.reset(); }
 
-const std::shared_ptr<ExpressionNode> &ExpressionNode::left_child() const { return _left_child; }
+const std::shared_ptr<ExpressionNode> ExpressionNode::left_child() const { return _left_child; }
 
 void ExpressionNode::set_left_child(const std::shared_ptr<ExpressionNode> &left) {
   _left_child = left;
   left->_parent = shared_from_this();
 }
 
-const std::shared_ptr<ExpressionNode> &ExpressionNode::right_child() const { return _right_child; }
+const std::shared_ptr<ExpressionNode> ExpressionNode::right_child() const { return _right_child; }
 
 void ExpressionNode::set_right_child(const std::shared_ptr<ExpressionNode> &right) {
   _right_child = right;
@@ -120,7 +120,7 @@ const std::string ExpressionNode::description() const {
 const std::string &ExpressionNode::table_name() const {
   DebugAssert(_type == ExpressionType::ColumnReference,
               "Expression other than ColumnReference does not have table_name");
-  return _table;
+  return _table_name;
 }
 
 const std::string &ExpressionNode::name() const {

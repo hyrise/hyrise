@@ -38,7 +38,7 @@ const boost::bimap<ScanType, std::string> scan_type_to_string = make_bimap<ScanT
 const std::unordered_map<ExpressionType, std::string> expression_type_to_string = {
     {ExpressionType::Literal, "Literal"},
     {ExpressionType::Star, "Star"},
-    {ExpressionType::Parameter, "Parameter"},
+    {ExpressionType::Placeholder, "Parameter"},
     {ExpressionType::ColumnReference, "ColumnReference"},
     {ExpressionType::FunctionReference, "FunctionReference"},
     {ExpressionType::Select, "Select"},

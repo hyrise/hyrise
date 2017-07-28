@@ -56,13 +56,13 @@ class ExpressionNode : public std::enable_shared_from_this<ExpressionNode> {
   /*
    * Helper methods for Expression Trees
    */
-  const std::weak_ptr<ExpressionNode>& parent() const;
+  const std::weak_ptr<ExpressionNode> parent() const;
   void clear_parent();
 
-  const std::shared_ptr<ExpressionNode>& left_child() const;
+  const std::shared_ptr<ExpressionNode> left_child() const;
   void set_left_child(const std::shared_ptr<ExpressionNode>& left);
 
-  const std::shared_ptr<ExpressionNode>& right_child() const;
+  const std::shared_ptr<ExpressionNode> right_child() const;
   void set_right_child(const std::shared_ptr<ExpressionNode>& right);
 
   const ExpressionType type() const;
@@ -110,7 +110,7 @@ class ExpressionNode : public std::enable_shared_from_this<ExpressionNode> {
   // a name, which could the column name or a function name
   const std::string _name;
   // a table name, only used for ColumnReferences
-  const std::string _table;
+  const std::string _table_name;
   // an alias, used for ColumnReferences, Selects, FunctionReferences
   const std::string _alias;
 

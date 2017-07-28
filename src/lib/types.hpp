@@ -127,7 +127,7 @@ enum class ExpressionType {
   /*A star as in SELECT * FROM ...*/
   Star,
   /*A parameter used in PreparedStatements*/
-  Parameter,
+  Placeholder,
   /*A reference to a column*/
   ColumnReference,
   /*A reference to a function, such as COUNT, MIN, MAX*/

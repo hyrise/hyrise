@@ -132,7 +132,7 @@ TEST_F(SQLExpressionTranslatorTest, ExpressionGreaterEqualsParameter) {
 
   EXPECT_EQ(predicate->type(), ExpressionType::GreaterThanEquals);
   EXPECT_EQ(predicate->left_child()->type(), ExpressionType::ColumnReference);
-  EXPECT_EQ(predicate->right_child()->type(), ExpressionType::Parameter);
+  EXPECT_EQ(predicate->right_child()->type(), ExpressionType::Placeholder);
 }
 
 TEST_F(SQLExpressionTranslatorTest, ExpressionLessEqualsParameter) {
@@ -141,7 +141,7 @@ TEST_F(SQLExpressionTranslatorTest, ExpressionLessEqualsParameter) {
 
   EXPECT_EQ(predicate->type(), ExpressionType::LessThanEquals);
   EXPECT_EQ(predicate->left_child()->type(), ExpressionType::ColumnReference);
-  EXPECT_EQ(predicate->right_child()->type(), ExpressionType::Parameter);
+  EXPECT_EQ(predicate->right_child()->type(), ExpressionType::Placeholder);
 }
 
 TEST_F(SQLExpressionTranslatorTest, ExpressionStar) {

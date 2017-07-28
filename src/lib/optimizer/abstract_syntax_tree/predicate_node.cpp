@@ -21,11 +21,8 @@ PredicateNode::PredicateNode(const std::string& column_name, const std::shared_p
 std::string PredicateNode::description() const {
   std::ostringstream desc;
 
-  desc << "Predicate: [" << _column_name << "] [" << scan_type_to_string.left.at(_scan_type) << "]";
-  desc << "[" << boost::get<std::string>(boost::get<AllTypeVariant>(_value)) << "]";
-  if (_value2) {
-    desc << " [" << boost::get<std::string>(*_value2) << "]";
-  }
+  // TODO(anyone): correctly print _predicate as soon as it is fully used
+  desc << "Predicate: [" << _column_name << "] [" << scan_type_to_string.left.at(_scan_type) << "] ";
 
   return desc.str();
 }
