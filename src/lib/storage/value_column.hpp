@@ -16,6 +16,8 @@ namespace opossum {
 template <typename T>
 class ValueColumn : public BaseColumn {
  public:
+  using Type = T;
+
   template <typename U>
   static constexpr bool has_type() { return std::is_same<U, T>{}; }
 

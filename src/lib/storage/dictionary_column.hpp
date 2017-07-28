@@ -23,6 +23,8 @@ class BaseAttributeVector;
 template <typename T>
 class DictionaryColumn : public UntypedDictionaryColumn {
  public:
+  using Type = T;
+
   template <typename U>
   static constexpr bool has_type() { return std::is_same<U, T>{}; }
 

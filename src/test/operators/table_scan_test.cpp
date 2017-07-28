@@ -165,6 +165,15 @@ TEST_F(OperatorsTableScanTest, SingleScanReturnsCorrectRowCount) {
   EXPECT_TABLE_EQ(scan->get_output(), expected_result);
 }
 
+TEST_F(OperatorsTableScanTest, SingleScanReturnsCorrectRowCountNew) {
+  std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_float_filtered2.tbl", 1);
+
+  auto scan = std::make_shared<NewTableScan>(_table_wrapper, ColumnName("a"), ScanType::OpGreaterThanEquals, 1234);
+  scan->execute();
+
+  EXPECT_TABLE_EQ(scan->get_output(), expected_result);
+}
+
 TEST_F(OperatorsTableScanTest, ValueIsNullThrowsException) {
   if (!IS_DEBUG) return;
   auto table_scan = std::make_shared<TableScan>(_table_wrapper, ColumnName("a"), ScanType::OpGreaterThanEquals, NULL_VALUE);

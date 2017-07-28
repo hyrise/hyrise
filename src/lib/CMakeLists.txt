@@ -189,6 +189,7 @@ set(
     storage/chunk.cpp
     storage/chunk.hpp
     storage/column_visitable.hpp
+    storage/constant_value_iterable.hpp
     storage/copyable_atomic.hpp
     storage/dictionary_column.cpp
     storage/dictionary_column.hpp
@@ -254,7 +255,6 @@ set(
 if(${NUMA_FOUND})
     set(LIBRARIES ${LIBRARIES} ${NUMA_LIBRARY})
 endif()
-
 
 # Configure the regular opossum library used for tests/server/playground...
 add_library(opossum STATIC ${SOURCES})

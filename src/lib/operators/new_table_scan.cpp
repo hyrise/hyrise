@@ -4,6 +4,7 @@
 
 #include "storage/value_column_iterable.hpp"
 #include "storage/dictionary_column_iterable.hpp"
+#include "storage/constant_value_iterable.hpp"
 #include "utils/binary_operators.hpp"
 #include "resolve_column_type.hpp"
 
@@ -41,7 +42,93 @@ class AbstractScan {
   virtual PosList scan_chunk(const ChunkID & chunk_id) = 0;
 
  protected:
+  template <typename Functor>
+  void resolve_operator_type(const ScanType scan_type, const Functor & func) {
+    switch (scan_type) {
+      case ScanType::OpEquals:
+        func(Equal{});
+        break;
+
+      case ScanType::OpNotEquals:
+        func(NotEqual{});
+        break;
+
+      case ScanType::OpLessThan:
+        func(Less{});
+        break;
+
+      case ScanType::OpLessThanEquals:
+        func(LessEqual{});
+        break;
+
+      case ScanType::OpGreaterThan:
+        func(Greater{});
+        break;
+
+      case ScanType::OpGreaterThanEquals:
+        func(GreaterEqual{});
+        break;
+
+      case ScanType::OpBetween:
+        Fail("This method should only be called when ScanType::OpBetween has been ruled out.");
+
+      case ScanType::OpLike:
+        Fail("This method should only be called when ScanType::OpLike has been ruled out.");
+
+      default:
+        Fail("Unsupported operator.");
+    }
+  }
+
+  template <typename Type>
+  auto create_iterable_from_column(ValueColumn<Type> & column) { return ValueColumnIterable<Type>{column}; }
+
+  template <typename Type>
+  auto create_iterable_from_column(DictionaryColumn<Type> & column) { return DictionaryColumnIterable<Type>{column}; }
+
+ protected:
   const std::shared_ptr<const Table> _in_table;
+};
+
+// 1 data column (dictionary, value)
+class DataColumnScan : public AbstractScan {
+ public:
+  DataColumnScan(std::shared_ptr<const Table> in_table, const ColumnID left_column_id,
+                 const AllTypeVariant & right_value, const ScanType & scan_type)
+      : AbstractScan{in_table}, _left_column_id{left_column_id}, _right_value{right_value}, _scan_type{scan_type} {}
+
+  PosList scan_chunk(const ChunkID & chunk_id) override {
+    const auto & chunk = _in_table->get_chunk(chunk_id);
+
+    const auto left_column_type = _in_table->column_type(_left_column_id);
+    const auto left_column = chunk.get_column(_left_column_id);
+
+    auto matches_out = PosList{};
+    auto scan = Scan{chunk_id, matches_out};
+
+    resolve_column_type(left_column_type, *left_column, [&] (auto &typed_left_column) {
+      resolve_operator_type(_scan_type, [&] (auto comparator) {
+        using LeftColumn = std::decay_t<decltype(typed_left_column)>;
+        using ColumnType = typename LeftColumn::Type;
+
+        auto left_column_iterable = create_iterable_from_column(typed_left_column);
+        auto right_value_iterable = ConstantValueIterable<ColumnType>{_right_value};
+
+        left_column_iterable.execute_for_all([&] (auto left_it, auto left_end) {
+          right_value_iterable.execute_for_all([&] (auto right_it) {
+            scan(comparator, left_it, left_end, right_it);
+          });
+        });
+      });
+    });
+
+    return matches_out;
+  }
+
+ private:
+  const ColumnID _left_column_id;
+  const AllTypeVariant _right_value;
+  const ScanType _scan_type;
 };
 
 // 2 data columns (dictionary, value)
@@ -93,55 +180,13 @@ class DataColumnComparisonScan : public AbstractScan {
     return matches_out;
   }
 
-  template <typename Functor>
-  void resolve_operator_type(const ScanType scan_type, const Functor & func) {
-    switch (_scan_type) {
-      case ScanType::OpEquals:
-        func(Equal{});
-        break;
-
-      case ScanType::OpNotEquals:
-        func(NotEqual{});
-        break;
-
-      case ScanType::OpLessThan:
-        func(Less{});
-        break;
-
-      case ScanType::OpLessThanEquals:
-        func(LessEqual{});
-        break;
-
-      case ScanType::OpGreaterThan:
-        func(Greater{});
-        break;
-
-      case ScanType::OpGreaterThanEquals:
-        func(GreaterEqual{});
-        break;
-
-      case ScanType::OpBetween:
-        Fail("This method should only be called when ScanType::OpBetween has been ruled out.");
-
-      case ScanType::OpLike:
-        Fail("This method should only be called when ScanType::OpLike has been ruled out.");
-
-      default:
-        Fail("Unsupported operator.");
-    }
-  }
-
-  template <typename Type>
-  auto create_iterable_from_column(ValueColumn<Type> & column) { return ValueColumnIterable<Type>(column); }
-
-  template <typename Type>
-  auto create_iterable_from_column(DictionaryColumn<Type> & column) { return DictionaryColumnIterable<Type>(column); }
-
  private:
   const ColumnID _left_column_id;
   const ColumnID _right_column_id;
   const ScanType _scan_type;
 };
+
+
 
 NewTableScan::NewTableScan(const std::shared_ptr<AbstractOperator> in, const std::string &left_column_name,
                            const ScanType scan_type, const AllParameterVariant right_parameter,
@@ -210,7 +255,13 @@ void NewTableScan::init_scan()
   const auto is_reference_table = first_chunk.get_column(left_column_id)->is_reference_column();
 
   if (is_variant(_right_parameter)) {
-    // TODO(mjendruk): Implement scan for constant value
+    const auto right_value = boost::get<AllTypeVariant>(_right_parameter);
+
+    if (is_reference_table) {
+      // TODO(mjendruk): Implement scan for one reference column
+    } else {
+      _scan = std::make_unique<DataColumnScan>(_in_table, left_column_id, right_value, _scan_type);
+    }
   } else /* is_column_name(_right_parameter) */ {
     const auto right_column_name = boost::get<ColumnName>(_right_parameter);
     const auto right_column_id = _in_table->column_id_by_name(right_column_name);
