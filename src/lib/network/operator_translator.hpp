@@ -6,9 +6,9 @@
 
 #include "opossum.pb.wrapper.hpp"
 
-#include "scheduler/operator_task.hpp"
-
 namespace opossum {
+
+class OperatorTask;
 
 // Translates a Protocol Buffer object tree structure into OperatorTasks with dependencies
 class OperatorTranslator {

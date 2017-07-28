@@ -3,8 +3,11 @@
 #include <memory>
 #include <utility>
 
-#include "network/operator_translator.hpp"
+#include "operator_translator.hpp"
+#include "response_builder.hpp"
+
 #include "scheduler/job_task.hpp"
+#include "scheduler/operator_task.hpp"
 
 namespace opossum {
 
