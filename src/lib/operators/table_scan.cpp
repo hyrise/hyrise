@@ -7,8 +7,8 @@
 #include <utility>
 #include <vector>
 
-#include "storage/value_column_iterable.hpp"
-#include "storage/dictionary_column_iterable.hpp"
+#include "storage/iterables/value_column_iterable.hpp"
+#include "storage/iterables/dictionary_column_iterable.hpp"
 #include "resolve_type.hpp"
 #include "types.hpp"
 

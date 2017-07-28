@@ -5,7 +5,8 @@
 #include <iterator>
 #include <map>
 
-#include "value_column.hpp"
+#include "storage/reference_column.hpp"
+#include "column_value.hpp"
 
 
 namespace opossum {
@@ -15,21 +16,7 @@ template <typename T>
 class ReferenceColumnIterable
 {
  public:
-  class NullableColumnValue {
-   public:
-    NullableColumnValue(const T & value, const bool null_value)
-        : _value{value},
-          _null_value{null_value} {}
-
-    const T & value() const { return _value; }
-    bool is_null() const { return _null_value; }
-
-   private:
-    const T & _value;
-    const bool _null_value;
-  };
-
-  class Iterator : public std::iterator<std::input_iterator_tag, NullableColumnValue, std::ptrdiff_t, NullableColumnValue *, NullableColumnValue> {
+  class Iterator : public std::iterator<std::input_iterator_tag, NullableColumnValue<T>, std::ptrdiff_t, NullableColumnValue<T> *, NullableColumnValue<T>> {
    public:
     using PosListIterator = PosList::const_iterator;
 
@@ -46,7 +33,7 @@ class ReferenceColumnIterable
 
     auto operator*() const {
       if (*_pos_list_it == NULL_ROW_ID)
-        return NullableColumnValue{T{}, true};
+        return NullableColumnValue<T>{T{}, true, 0u};
 
       const auto chunk_id = _pos_list_it->chunk_id;
       const auto chunk_offset = _pos_list_it->chunk_offset;
@@ -75,32 +62,32 @@ class ReferenceColumnIterable
       }
 
       Fail("Referenced column is neither value nor dictionary column.");
-      return NullableColumnValue{T{}, false};
+      return NullableColumnValue<T>{T{}, false, 0u};
     }
 
-    NullableColumnValue value_from_value_column(const ValueColumn<T> & column, const ChunkOffset & chunk_offset) const {
+    auto value_from_value_column(const ValueColumn<T> & column, const ChunkOffset & chunk_offset) const {
       if (column.is_nullable()) {
         auto is_null = column.null_values()[chunk_offset];
         const auto & value = is_null ? T{} : column.values()[chunk_offset];
-        return NullableColumnValue{value, is_null};
+        return NullableColumnValue<T>{value, is_null, 0u};
       }
 
       const auto & value = column.values()[chunk_offset];
-      return NullableColumnValue{value, false};
+      return NullableColumnValue<T>{value, false, 0u};
     }
 
-    NullableColumnValue value_from_dictionary_column(const DictionaryColumn<T> & column, const ChunkOffset & chunk_offset) const {
+    auto value_from_dictionary_column(const DictionaryColumn<T> & column, const ChunkOffset & chunk_offset) const {
       auto attribute_vector = column.attribute_vector();
       auto value_id = attribute_vector->get(chunk_offset);
 
       if (value_id == NULL_VALUE_ID) {
-        return NullableColumnValue{T{}, true};
+        return NullableColumnValue<T>{T{}, true, 0u};
       }
 
       auto dictionary = column.dictionary();
       const auto & value = (*dictionary)[value_id];
 
-      return NullableColumnValue{value, false};
+      return NullableColumnValue<T>{value, false, 0u};
     }
 
    private:

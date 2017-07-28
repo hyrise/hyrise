@@ -2,10 +2,10 @@
 
 #include <type_traits>
 
-#include "storage/value_column_iterable.hpp"
-#include "storage/dictionary_column_iterable.hpp"
-#include "storage/reference_column_iterable.hpp"
-#include "storage/constant_value_iterable.hpp"
+#include "storage/iterables/value_column_iterable.hpp"
+#include "storage/iterables/dictionary_column_iterable.hpp"
+#include "storage/iterables/reference_column_iterable.hpp"
+#include "storage/iterables/constant_value_iterable.hpp"
 #include "utils/binary_operators.hpp"
 #include "resolve_column_type.hpp"
 

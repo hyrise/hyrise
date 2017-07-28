@@ -1,7 +1,5 @@
 #pragma once
 
-#include "tbb/concurrent_vector.h"
-
 #include <iterator>
 
 #include "all_type_variant.hpp"

@@ -189,11 +189,9 @@ set(
     storage/chunk.cpp
     storage/chunk.hpp
     storage/column_visitable.hpp
-    storage/constant_value_iterable.hpp
     storage/copyable_atomic.hpp
     storage/dictionary_column.cpp
     storage/dictionary_column.hpp
-    storage/dictionary_column_iterable.hpp
     storage/dictionary_compression.cpp
     storage/dictionary_compression.hpp
     storage/fitted_attribute_vector.hpp
@@ -213,9 +211,13 @@ set(
     storage/index/group_key/variable_length_key_proxy.hpp
     storage/index/group_key/variable_length_key_store.cpp
     storage/index/group_key/variable_length_key_store.hpp
+    storage/iterables/column_value.hpp
+    storage/iterables/constant_value_iterable.hpp
+    storage/iterables/dictionary_column_iterable.hpp
+    storage/iterables/reference_column_iterable.hpp
+    storage/iterables/value_column_iterable.hpp
     storage/reference_column.cpp
     storage/reference_column.hpp
-    storage/reference_column_iterable.hpp
     storage/scoped_locking_ptr.hpp
     storage/storage_manager.cpp
     storage/storage_manager.hpp
@@ -224,7 +226,6 @@ set(
     storage/untyped_dictionary_column.hpp
     storage/value_column.cpp
     storage/value_column.hpp
-    storage/value_column_iterable.hpp
     tasks/chunk_compression_task.cpp
     tasks/chunk_compression_task.hpp
     type_cast.cpp

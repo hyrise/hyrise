@@ -4,7 +4,8 @@
 
 #include <iterator>
 
-#include "value_column.hpp"
+#include "storage/value_column.hpp"
+#include "column_value.hpp"
 
 
 namespace opossum {
@@ -23,37 +24,7 @@ class ValueColumnIterable
   using Type = ValueColumnIterableType;
 
  public:
-  class ColumnValue {
-   public:
-    ColumnValue(const T & value, const ChunkOffset & chunk_offset) : _value{value}, _chunk_offset{chunk_offset} {}
-
-    const T & value() const { return _value; }
-    bool is_null() const { return false; }
-    ChunkOffset chunk_offset() const { return _chunk_offset; }
-
-   private:
-    const T & _value;
-    const ChunkOffset & _chunk_offset;
-  };
-
-  class NullableColumnValue {
-   public:
-    NullableColumnValue(const T & value, const bool null_value, const ChunkOffset & chunk_offset)
-        : _value{value},
-          _null_value{null_value},
-          _chunk_offset{chunk_offset} {}
-
-    const T & value() const { return _value; }
-    bool is_null() const { return _null_value; }
-    ChunkOffset chunk_offset() { return _chunk_offset; }
-
-   private:
-    const T & _value;
-    const bool _null_value;
-    const ChunkOffset & _chunk_offset;
-  };
-
-  class Iterator : public std::iterator<std::input_iterator_tag, ColumnValue, std::ptrdiff_t, ColumnValue *, ColumnValue> {
+  class Iterator : public std::iterator<std::input_iterator_tag, ColumnValue<T>, std::ptrdiff_t, ColumnValue<T> *, ColumnValue<T>> {
    public:
     using ValueIterator = typename tbb::concurrent_vector<T>::const_iterator;
 
@@ -65,14 +36,14 @@ class ValueColumnIterable
     Iterator operator++(int) { auto retval = *this; ++(*this); return retval; }
     bool operator==(Iterator other) const { return _value_it == other._value_it; }
     bool operator!=(Iterator other) const { return !(*this == other); }
-    auto operator*() const { return ColumnValue{*_value_it, std::distance(_begin_value_it, _value_it)}; }
+    auto operator*() const { return ColumnValue<T>{*_value_it, std::distance(_begin_value_it, _value_it)}; }
 
    private:
     const ValueIterator _begin_value_it;
     ValueIterator _value_it;
   };
 
-  class NullableIterator : public std::iterator<std::input_iterator_tag, NullableColumnValue, std::ptrdiff_t, NullableColumnValue *, NullableColumnValue> {
+  class NullableIterator : public std::iterator<std::input_iterator_tag, NullableColumnValue<T>, std::ptrdiff_t, NullableColumnValue<T> *, NullableColumnValue<T>> {
    public:
     using ValueIterator = typename tbb::concurrent_vector<T>::const_iterator;
     using NullValueIterator = tbb::concurrent_vector<bool>::const_iterator;
@@ -89,7 +60,7 @@ class ValueColumnIterable
     bool operator!=(NullableIterator other) const { return !(*this == other); }
 
     auto operator*() const {
-      return NullableColumnValue{*_value_it, *_null_value_it, std::distance(_begin_value_it, _value_it)};
+      return NullableColumnValue<T>{*_value_it, *_null_value_it, std::distance(_begin_value_it, _value_it)};
     }
 
    private:
@@ -98,7 +69,7 @@ class ValueColumnIterable
     NullValueIterator _null_value_it;
   };
 
-  class ReferencedIterator : public std::iterator<std::input_iterator_tag, ColumnValue, std::ptrdiff_t, ColumnValue *, ColumnValue> {
+  class ReferencedIterator : public std::iterator<std::input_iterator_tag, ColumnValue<T>, std::ptrdiff_t, ColumnValue<T> *, ColumnValue<T>> {
    public:
     using ValueVector = tbb::concurrent_vector<T>;
     using ChunkOffsetIterator = std::vector<ChunkOffset>::const_iterator;
@@ -117,7 +88,7 @@ class ValueColumnIterable
     bool operator!=(ReferencedIterator other) const { return !(*this == other); }
 
     auto operator*() const {
-      return ColumnValue{_values[*_chunk_offset_it], *_chunk_offset_it};
+      return ColumnValue<T>{_values[*_chunk_offset_it], *_chunk_offset_it};
     }
 
    private:
@@ -125,7 +96,7 @@ class ValueColumnIterable
     ChunkOffsetIterator _chunk_offset_it;
   };
 
-  class NullableReferencedIterator : public std::iterator<std::input_iterator_tag, NullableColumnValue, std::ptrdiff_t, NullableColumnValue *, NullableColumnValue> {
+  class NullableReferencedIterator : public std::iterator<std::input_iterator_tag, NullableColumnValue<T>, std::ptrdiff_t, NullableColumnValue<T> *, NullableColumnValue<T>> {
    public:
     using ValueVector = tbb::concurrent_vector<T>;
     using NullValueVector = tbb::concurrent_vector<bool>;
@@ -145,7 +116,7 @@ class ValueColumnIterable
     bool operator!=(NullableReferencedIterator other) const { return !(*this == other); }
 
     auto operator*() const {
-      return NullableColumnValue{_values[*_chunk_offset_it], _null_values[*_chunk_offset_it], *_chunk_offset_it};
+      return NullableColumnValue<T>{_values[*_chunk_offset_it], _null_values[*_chunk_offset_it], *_chunk_offset_it};
     }
 
    private:

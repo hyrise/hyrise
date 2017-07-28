@@ -4,7 +4,8 @@
 
 #include <iterator>
 
-#include "dictionary_column.hpp"
+#include "storage/dictionary_column.hpp"
+#include "column_value.hpp"
 
 
 namespace opossum {
@@ -21,24 +22,7 @@ class DictionaryColumnIterable
   using Type = DictionaryColumnIterableType;
 
  public:
-  class ColumnValue {
-   public:
-    ColumnValue(const T & value, const bool null_value, const ChunkOffset & chunk_offset)
-        : _value{value},
-          _null_value{null_value},
-          _chunk_offset{chunk_offset} {}
-
-    const T & value() const { return _value; }
-    bool is_null() const { return _null_value; }
-    ChunkOffset chunk_offset() { return _chunk_offset; }
-
-   private:
-    const T & _value;
-    const bool _null_value;
-    const ChunkOffset & _chunk_offset;
-  };
-
-  class Iterator : public std::iterator<std::input_iterator_tag, ColumnValue, std::ptrdiff_t, ColumnValue *, ColumnValue> {
+  class Iterator : public std::iterator<std::input_iterator_tag, NullableColumnValue<T>, std::ptrdiff_t, NullableColumnValue<T> *, NullableColumnValue<T>> {
    public:
     using Dictionary = std::vector<T>;
 
@@ -56,9 +40,9 @@ class DictionaryColumnIterable
       const auto is_null = (value_id == NULL_VALUE_ID);
 
       if (is_null)
-        return ColumnValue{T{}, is_null, _index};
+        return NullableColumnValue<T>{T{}, is_null, _index};
 
-      return ColumnValue{_dictionary[value_id], is_null, _index};
+      return NullableColumnValue<T>{_dictionary[value_id], is_null, _index};
     }
 
    private:
@@ -67,7 +51,7 @@ class DictionaryColumnIterable
     size_t _index;
   };
 
-  class ReferencedIterator : public std::iterator<std::input_iterator_tag, ColumnValue, std::ptrdiff_t, ColumnValue *, ColumnValue> {
+  class ReferencedIterator : public std::iterator<std::input_iterator_tag, NullableColumnValue<T>, std::ptrdiff_t, NullableColumnValue<T> *, NullableColumnValue<T>> {
    public:
     using Dictionary = std::vector<T>;
     using ChunkOffsetIterator = std::vector<ChunkOffset>::const_iterator;
@@ -90,9 +74,9 @@ class DictionaryColumnIterable
       const auto is_null = (value_id == NULL_VALUE_ID);
 
       if (is_null)
-        return ColumnValue{T{}, is_null, *_chunk_offset_it};
+        return NullableColumnValue<T>{T{}, is_null, *_chunk_offset_it};
 
-      return ColumnValue{_dictionary[value_id], is_null, *_chunk_offset_it};
+      return NullableColumnValue<T>{_dictionary[value_id], is_null, *_chunk_offset_it};
     }
 
    private:
