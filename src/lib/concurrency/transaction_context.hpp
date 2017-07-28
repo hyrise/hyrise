@@ -5,13 +5,12 @@
 #include <memory>
 #include <vector>
 
-#include "commit_context.hpp"
-
 #include "types.hpp"
 
 namespace opossum {
 
 class AbstractReadWriteOperator;
+class CommitContext;
 
 enum class TransactionPhase { Active, Failed, RolledBack, Committing, Committed };
 

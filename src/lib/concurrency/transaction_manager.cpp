@@ -3,6 +3,8 @@
 #include <memory>
 #include <stdexcept>
 
+#include "commit_context.hpp"
+#include "transaction_context.hpp"
 #include "operators/commit_records.hpp"
 #include "scheduler/operator_task.hpp"
 #include "utils/assert.hpp"
