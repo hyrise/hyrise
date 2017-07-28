@@ -3,12 +3,12 @@
 #include <memory>
 #include <vector>
 
-#include "abstract_scheduler.hpp"
 #include "utils/assert.hpp"
 #include "worker.hpp"
 
 namespace opossum {
 
+class AbstractScheduler;
 class AbstractTask;
 
 /**

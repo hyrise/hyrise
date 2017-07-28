@@ -5,9 +5,6 @@
 #include <vector>
 
 #include "abstract_scheduler.hpp"
-#include "task_queue.hpp"
-#include "uid_allocator.hpp"
-#include "worker.hpp"
 
 namespace opossum {
 
@@ -74,8 +71,10 @@ namespace opossum {
  * [1] http://frankdenneman.nl/2016/07/13/numa-deep-dive-4-local-memory-optimization/
  */
 
-class Topology;
 class ProcessingUnit;
+class TaskQueue;
+class Topology;
+class UidAllocator;
 
 /**
  * Schedules Tasks

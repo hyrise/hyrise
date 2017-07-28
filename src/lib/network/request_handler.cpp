@@ -6,6 +6,7 @@
 #include "operator_translator.hpp"
 #include "response_builder.hpp"
 
+#include "operators/abstract_operator.hpp"
 #include "scheduler/job_task.hpp"
 #include "scheduler/operator_task.hpp"
 

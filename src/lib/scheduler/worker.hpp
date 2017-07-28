@@ -3,14 +3,14 @@
 #include <memory>
 #include <vector>
 
-#include "task_queue.hpp"
-#include "types.hpp"
 #include "processing_unit.hpp"
+
+#include "types.hpp"
 #include "utils/assert.hpp"
 
 namespace opossum {
 
-class ProcessingUnit;
+class TaskQueue;
 
 /**
  * To be executed on a separate Thread, fetches and executes tasks until the queue is empty AND the shutdown flag is set
