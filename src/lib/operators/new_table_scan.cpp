@@ -23,9 +23,12 @@ struct Scan {
   void operator()(const Comparator & comparator, LeftIterator left_it, LeftIterator left_end, RightIterator right_it) {
     auto chunk_offset = ChunkOffset{0u};
     for (; left_it != left_end; ++left_it, ++right_it, ++chunk_offset) {
-      if ((*left_it).is_null() || (*right_it).is_null()) continue;
+      const auto left = *left_it;
+      const auto right = *right_it;
+      
+      if (left.is_null() || right.is_null()) continue;
 
-      if (comparator((*left_it).value(), (*right_it).value())) {
+      if (comparator(left.value(), right.value())) {
         _matches_out.push_back(RowID{_chunk_id, chunk_offset});
       }
     }
@@ -299,7 +302,6 @@ std::shared_ptr<const Table> NewTableScan::on_execute()
           auto ref_column_out = std::make_shared<ReferenceColumn>(table_out, column_id_out, filtered_pos_list);
           chunk_out.add_column(ref_column_out);
         }
-
       } else {
         for (ColumnID column_id{0u}; column_id < _in_table->col_count(); ++column_id) {
           auto ref_column_out = std::make_shared<ReferenceColumn>(_in_table, column_id, matches_out);
