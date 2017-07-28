@@ -59,8 +59,8 @@ ScanType JoinNode::scan_type() const { return _scan_type; }
 
 JoinMode JoinNode::join_mode() const { return _join_mode; }
 
-std::string JoinNode::prefix_left() const { return _prefix_left; }
+const std::string &JoinNode::prefix_left() const { return _prefix_left; }
 
-std::string JoinNode::prefix_right() const { return _prefix_right; }
+const std::string &JoinNode::prefix_right() const { return _prefix_right; }
 
 }  // namespace opossum
