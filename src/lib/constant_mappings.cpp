@@ -99,4 +99,9 @@ const std::unordered_map<ExpressionType, std::string> expression_type_to_operato
     {ExpressionType::Slash, "/"}, {ExpressionType::Percentage, "%"}, {ExpressionType::Caret, "^"},
 };
 
+const std::unordered_map<JoinMode, std::string> join_mode_to_string = {
+    {JoinMode::Cross, "Cross"}, {JoinMode::Inner, "Inner"}, {JoinMode::Left, "Left"}, {JoinMode::Natural, "Natural"},
+    {JoinMode::Outer, "Outer"}, {JoinMode::Right, "Right"}, {JoinMode::Self, "Self"},
+};
+
 }  // namespace opossum
