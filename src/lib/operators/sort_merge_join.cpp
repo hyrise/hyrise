@@ -497,9 +497,22 @@ class SortMergeJoin::SortMergeJoinImpl : public AbstractJoinOperatorImpl, public
 
   struct TableRange {
     TableRange(TablePosition start_position, TablePosition end_position) : start(start_position), end(end_position) {}
+    TableRange(int partition, int start_index, int end_index)
+      : start{TablePosition(partition, start_index)}, end{TablePosition(partition, end_index)} {}
 
     TablePosition start;
     TablePosition end;
+
+    void for_every_row_id(std::function<void(RowID&)> action, std::shared_ptr<SortedTable> table) {
+      for (int partition = start.partition; partition <= end.partition; partition++) {
+        auto& values = table->partitions[partition].values;
+        int start_index = (partition == start.partition) ? start.index : 0;
+        int end_index = (partition == end.partition) ? end.index : values.size();
+        for (int index = start_index; index < end_index; index++) {
+          action(values[index].second);
+        }
+      }
+    }
   };
 
   void join_runs(size_t partition_number, TableRange left_run, TableRange right_run) {
@@ -569,28 +582,29 @@ class SortMergeJoin::SortMergeJoinImpl : public AbstractJoinOperatorImpl, public
     }
   }
 
-  void emit_combinations(size_t output_partition, TableRange left_range, TableRange right_range) {
-    for (int partition = left_range.start.partition; partition <= left_range.end.partition; partition++) {
-      auto& values = _sorted_left_table->partitions[partition].values;
-      int start_index = (partition == left_range.start.partition) ? left_range.start.index : 0;
-      int end_index = (partition == left_range.end.partition) ? left_range.end.index : values.size();
-      for (int index = start_index; index < end_index; index++) {
-        emit_combinations(output_partition, values[index].second, right_range);
-      }
-    }
+  void emit_combination(size_t output_partition, RowID& left, RowID& right) {
+    _output_pos_lists_left[output_partition]->push_back(left);
+    _output_pos_lists_right[output_partition]->push_back(right);
   }
 
-  void emit_combinations(size_t output_partition, RowID left_id, TableRange right_range) {
-    for (int partition = right_range.start.partition; partition <= right_range.end.partition; partition++) {
-      auto& values = _sorted_right_table->partitions[partition].values;
-      int start_index = (partition == right_range.start.partition) ? right_range.start.index : 0;
-      int end_index = (partition == right_range.end.partition) ? right_range.end.index : values.size();
-      for (int index = start_index; index < end_index; index++) {
-        auto& right_id = values[index].second;
-        _output_pos_lists_left[output_partition]->push_back(left_id);
-        _output_pos_lists_right[output_partition]->push_back(right_id);
-      }
-    }
+  void emit_combinations(size_t output_partition, TableRange left_range, TableRange right_range) {
+    left_range.for_every_row_id([this, output_partition, &right_range](RowID& left_row_id) {
+      right_range.for_every_row_id([this, output_partition, &left_row_id](RowID& right_row_id){
+        this->emit_combination(output_partition, left_row_id, right_row_id);
+      }, _sorted_right_table);
+    }, _sorted_left_table);
+  }
+
+  void emit_right_null_combinations(size_t output_partition, TableRange left_range) {
+    left_range.for_every_row_id([this, output_partition](RowID& left_row_id) {
+        this->emit_combination(output_partition, left_row_id, RowID{ChunkID{0}, INVALID_CHUNK_OFFSET});
+    }, _sorted_left_table);
+  }
+
+  void emit_left_null_combinations(size_t output_partition, TableRange right_range) {
+    right_range.for_every_row_id([this, output_partition](RowID& right_row_id) {
+        this->emit_combination(output_partition, RowID{ChunkID{0}, INVALID_CHUNK_OFFSET}, right_row_id);
+    }, _sorted_right_table);
   }
 
   /*
@@ -613,10 +627,8 @@ class SortMergeJoin::SortMergeJoinImpl : public AbstractJoinOperatorImpl, public
       auto left_run_end = left_run_start + run_length(left_run_start, left_partition.values);
       auto right_run_end = right_run_start + run_length(right_run_start, right_partition.values);
 
-      TableRange left_run(TablePosition(partition_number, left_run_start),
-                            TablePosition(partition_number, left_run_end));
-      TableRange right_run(TablePosition(partition_number, right_run_start),
-                            TablePosition(partition_number, right_run_end));
+      TableRange left_run(partition_number, left_run_start, left_run_end);
+      TableRange right_run(partition_number, right_run_start, right_run_end);
       join_runs(partition_number, left_run, right_run);
 
       // Advance to the next run on the smaller side
