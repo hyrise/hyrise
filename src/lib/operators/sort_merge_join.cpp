@@ -525,7 +525,7 @@ class SortMergeJoin::SortMergeJoinImpl : public AbstractJoinOperatorImpl, public
     auto& left_value = left_partition.values[left_run.start.index].first;
     auto& right_value = right_partition.values[right_run.start.index].first;
 
-    std::cout << "op: " << _op << std::endl;
+    // std::cout << "op: " << _op << std::endl;
     if (_op == "=") {
       // Check for a match
       if (left_value == right_value) {
@@ -536,20 +536,12 @@ class SortMergeJoin::SortMergeJoinImpl : public AbstractJoinOperatorImpl, public
         if (left_value < right_value) {
           // Check for correct mode
           if (_mode == Left || _mode == Outer) {
-            for (auto l = left_run.start.index; l < left_run.end.index; l++) {
-              auto& left_row_id = left_partition.values[l].second;
-              output_left->push_back(left_row_id);
-              output_right->push_back(RowID{ChunkID{0}, INVALID_CHUNK_OFFSET});
-            }
+            emit_right_null_combinations(partition_number, left_run);
           }
         } else {
           // Check for correct mode
           if (_mode == Right || _mode == Outer) {
-            for (auto r = right_run.start.index; r < right_run.end.index; r++) {
-              auto& right_row_id = right_partition.values[r].second;
-              output_left->push_back(RowID{ChunkID{0}, INVALID_CHUNK_OFFSET});
-              output_right->push_back(right_row_id);
-            }
+            emit_left_null_combinations(partition_number, right_run);
           }
         }
       }
@@ -597,13 +589,15 @@ class SortMergeJoin::SortMergeJoinImpl : public AbstractJoinOperatorImpl, public
 
   void emit_right_null_combinations(size_t output_partition, TableRange left_range) {
     left_range.for_every_row_id([this, output_partition](RowID& left_row_id) {
-        this->emit_combination(output_partition, left_row_id, RowID{ChunkID{0}, INVALID_CHUNK_OFFSET});
+      RowID null_row{ChunkID{0}, INVALID_CHUNK_OFFSET};
+      this->emit_combination(output_partition, left_row_id, null_row);
     }, _sorted_left_table);
   }
 
   void emit_left_null_combinations(size_t output_partition, TableRange right_range) {
     right_range.for_every_row_id([this, output_partition](RowID& right_row_id) {
-        this->emit_combination(output_partition, RowID{ChunkID{0}, INVALID_CHUNK_OFFSET}, right_row_id);
+      RowID null_row{ChunkID{0}, INVALID_CHUNK_OFFSET};
+      this->emit_combination(output_partition, null_row, right_row_id);
     }, _sorted_right_table);
   }
 
@@ -648,22 +642,12 @@ class SortMergeJoin::SortMergeJoinImpl : public AbstractJoinOperatorImpl, public
 
     // The left side has finished -> add the remaining ones on the right side
     if (left_run_start == left_size && (_mode == Right || _mode == Outer)) {
-      while (right_run_start < right_size) {
-        auto right_row_id = right_partition.values[right_run_start].second;
-        _output_pos_lists_left[partition_number]->push_back(RowID{ChunkID{0}, INVALID_CHUNK_OFFSET});
-        _output_pos_lists_right[partition_number]->push_back(right_row_id);
-        right_run_start++;
-      }
+      emit_left_null_combinations(partition_number, TableRange(partition_number, right_run_start, right_size));
     }
 
     // The right side has finished -> add the remaining ones on the left side
     if (right_run_start == right_size && (_mode == Left || _mode == Outer)) {
-      while (left_run_start < left_size) {
-        auto left_row_id = left_partition.values[left_run_start].second;
-        _output_pos_lists_left[partition_number]->push_back(left_row_id);
-        _output_pos_lists_right[partition_number]->push_back(RowID{ChunkID{0}, INVALID_CHUNK_OFFSET});
-        left_run_start++;
-      }
+      emit_right_null_combinations(partition_number, TableRange(partition_number, left_run_start, left_size));
     }
   }
 
