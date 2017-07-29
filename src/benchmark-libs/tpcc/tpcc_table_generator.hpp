@@ -6,15 +6,15 @@
 #include <string>
 #include <vector>
 
-#include "benchmark_utilities/benchmark_table_generator.hpp"
-#include "random_generator.hpp"
+#include "benchmark_utilities/abstract_benchmark_table_generator.hpp"
 #include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
 #include "storage/value_column.hpp"
+#include "tpcc_random_generator.hpp"
 
 namespace tpcc {
 
-class TableGenerator : public benchmark_utilities::BenchmarkTableGenerator {
+class TableGenerator : public benchmark_utilities::AbstractBenchmarkTableGenerator {
   // following TPC-C v5.11.0
  public:
   explicit TableGenerator(const size_t chunk_size = 10000, const size_t warehouse_size = 1);
@@ -60,6 +60,6 @@ class TableGenerator : public benchmark_utilities::BenchmarkTableGenerator {
                              TableGenerator::order_line_counts_type order_line_counts,
                              const std::function<T(std::vector<size_t>)> &generator_function);
 
-  RandomGenerator _random_gen;
+  TpccRandomGenerator _random_gen;
 };
 }  // namespace tpcc

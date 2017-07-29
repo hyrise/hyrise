@@ -14,7 +14,8 @@
 namespace tpch {
 
 TableGenerator::TableGenerator(const size_t chunk_size, const size_t scale_factor)
-    : _chunk_size(chunk_size),
+    : AbstractBenchmarkTableGenerator(1000),
+      _chunk_size(chunk_size),
       _scale_factor(scale_factor),
       _random_gen(benchmark_utilities::RandomGenerator()),
       _text_field_gen(TextFieldGenerator(_random_gen)) {}
@@ -42,14 +43,14 @@ std::shared_ptr<opossum::Table> TableGenerator::generate_suppliers_table() {
   add_column<std::string>(table, "S_ADDRESS", cardinalities,
                           [&](std::vector<size_t>) { return _text_field_gen.v_string(10, 40); });
   std::vector<int> nationkeys(table_size);
-  std::generate(nationkeys.begin(), nationkeys.end(), [&]() { return _random_gen.number(0, 24); });
+  std::generate(nationkeys.begin(), nationkeys.end(), [&]() { return _random_gen.random_number(0, 24); });
   add_column<int>(table, "S_NATIONKEY", cardinalities,
                   [&](std::vector<size_t> indices) { return nationkeys[indices[0]]; });
   add_column<std::string>(table, "S_PHONE", cardinalities, [&](std::vector<size_t> indices) {
     return _text_field_gen.phone_number(nationkeys[indices[0]]);
   });
   add_column<float>(table, "S_ACCTBAL", cardinalities,
-                    [&](std::vector<size_t>) { return _random_gen.number(-99999, 999999) / 100.f; });
+                    [&](std::vector<size_t>) { return _random_gen.random_number(-99999, 999999) / 100.f; });
   auto complaint_ids = _random_gen.select_unique_ids(5 * _scale_factor, table_size);
   auto recommendation_ids = _random_gen.select_unique_ids(5 * _scale_factor, table_size);
   add_column<std::string>(table, "S_COMMENT", cardinalities, [&](std::vector<size_t> indices) {
@@ -57,13 +58,13 @@ std::shared_ptr<opossum::Table> TableGenerator::generate_suppliers_table() {
     bool complaints = complaint_ids.find(indices[0]) != complaint_ids.end();
     if (complaints) {
       std::string replacement("Customer Complaints");
-      size_t start_pos = _random_gen.number(0, comment.length() - 1 - replacement.length());
+      size_t start_pos = _random_gen.random_number(0, comment.length() - 1 - replacement.length());
       comment.replace(start_pos, replacement.length(), replacement);
     }
     bool recommends = recommendation_ids.find(indices[0]) != recommendation_ids.end();
     if (recommends) {
       std::string replacement("Customer Recommends");
-      size_t start_pos = _random_gen.number(0, comment.length() - 1 - replacement.length());
+      size_t start_pos = _random_gen.random_number(0, comment.length() - 1 - replacement.length());
       comment.replace(start_pos, replacement.length(), replacement);
     }
     return comment;
@@ -82,16 +83,17 @@ std::shared_ptr<opossum::Table> TableGenerator::generate_parts_table() {
   add_column<std::string>(table, "P_NAME", cardinalities,
                           [&](std::vector<size_t>) { return _text_field_gen.part_name(); });
   std::vector<std::string> manufacturers(table_size);
-  std::generate(manufacturers.begin(), manufacturers.end(), [&]() { return std::to_string(_random_gen.number(1, 5)); });
+  std::generate(manufacturers.begin(), manufacturers.end(),
+                [&]() { return std::to_string(_random_gen.random_number(1, 5)); });
   add_column<std::string>(table, "P_MFGR", cardinalities,
                           [&](std::vector<size_t> indices) { return "Manufacturer#" + manufacturers[indices[0]]; });
   add_column<std::string>(table, "P_BRAND", cardinalities, [&](std::vector<size_t> indices) {
-    return "Brand#" + manufacturers[indices[0]] + std::to_string(_random_gen.number(1, 5));
+    return "Brand#" + manufacturers[indices[0]] + std::to_string(_random_gen.random_number(1, 5));
   });
   add_column<std::string>(table, "P_TYPE", cardinalities,
                           [&](std::vector<size_t>) { return _text_field_gen.part_type(); });
   add_column<int>(table, "P_SIZE", cardinalities,
-                  [&](std::vector<size_t> indices) { return _random_gen.number(1, 50); });
+                  [&](std::vector<size_t> indices) { return _random_gen.random_number(1, 50); });
   add_column<std::string>(table, "P_CONTAINER", cardinalities,
                           [&](std::vector<size_t>) { return _text_field_gen.part_container(); });
   add_column<float>(table, "P_RETAILPRICE", cardinalities,
@@ -112,9 +114,9 @@ std::shared_ptr<opossum::Table> TableGenerator::generate_partsupps_table() {
   add_column<int>(table, "PS_SUPPKEY", cardinalities,
                   [&](std::vector<size_t> indices) { return calculate_partsuppkey(indices[0], indices[1]); });
   add_column<int>(table, "PS_AVAILQTY", cardinalities,
-                  [&](std::vector<size_t>) { return _random_gen.number(1, 9999); });
+                  [&](std::vector<size_t>) { return _random_gen.random_number(1, 9999); });
   add_column<float>(table, "PS_SUPPLYCOST", cardinalities,
-                    [&](std::vector<size_t>) { return _random_gen.number(100, 100000) / 100.f; });
+                    [&](std::vector<size_t>) { return _random_gen.random_number(100, 100000) / 100.f; });
   add_column<std::string>(table, "PS_COMMENT", cardinalities,
                           [&](std::vector<size_t>) { return _text_field_gen.text_string(49, 198); });
 
@@ -134,14 +136,14 @@ std::shared_ptr<opossum::Table> TableGenerator::generate_customers_table() {
   add_column<std::string>(table, "C_ADDRESS", cardinalities,
                           [&](std::vector<size_t>) { return _text_field_gen.v_string(10, 40); });
   std::vector<int> nationkeys(table_size);
-  std::generate(nationkeys.begin(), nationkeys.end(), [&]() { return _random_gen.number(0, 24); });
+  std::generate(nationkeys.begin(), nationkeys.end(), [&]() { return _random_gen.random_number(0, 24); });
   add_column<int>(table, "C_NATIONKEY", cardinalities,
                   [&](std::vector<size_t> indices) { return nationkeys[indices[0]]; });
   add_column<std::string>(table, "C_PHONE", cardinalities, [&](std::vector<size_t> indices) {
     return _text_field_gen.phone_number(nationkeys[indices[0]]);
   });
   add_column<float>(table, "C_ACCTBAL", cardinalities,
-                    [&](std::vector<size_t>) { return _random_gen.number(-99999, 999999) / 100.f; });
+                    [&](std::vector<size_t>) { return _random_gen.random_number(-99999, 999999) / 100.f; });
   add_column<std::string>(table, "C_MKTSEGMENT", cardinalities,
                           [&](std::vector<size_t>) { return _text_field_gen.customer_segment(); });
   add_column<std::string>(table, "C_COMMENT", cardinalities,
@@ -155,26 +157,26 @@ TableGenerator::order_lines_type TableGenerator::generate_order_lines() {
   const size_t total_orders_per_customer = NUM_ORDERS_PER_CUSTOMER * _scale_factor * NUM_CUSTOMERS;
   std::vector<std::vector<OrderLine>> all_order_lines(total_orders_per_customer);
   for (auto &order_lines_per_order : all_order_lines) {
-    size_t order_lines_size = _random_gen.number(1, 7);
+    size_t order_lines_size = _random_gen.random_number(1, 7);
     order_lines_per_order.resize(order_lines_size);
     size_t order_i = &order_lines_per_order - &all_order_lines[0];
     // This key is only populated to 25%, according to the TPCH specification.
     // The first 8 of each 32 keys are used, the other 24 are unused.
     size_t orderkey = order_i / 8 * 32 + order_i % 8;
-    size_t orderdate = _random_gen.number(_startdate, _enddate - 151 * _one_day);
+    size_t orderdate = _random_gen.random_number(_startdate, _enddate - 151 * _one_day);
     size_t linenumber = 0;
     for (auto &order_line : order_lines_per_order) {
       order_line.orderkey = orderkey;
-      order_line.partkey = _random_gen.number(0, _scale_factor * NUM_PARTS - 1);
+      order_line.partkey = _random_gen.random_number(0, _scale_factor * NUM_PARTS - 1);
       order_line.linenumber = linenumber;
-      order_line.quantity = _random_gen.number(1, 50);
+      order_line.quantity = _random_gen.random_number(1, 50);
       float part_retailprice = calculate_part_retailprice(order_line.partkey);
       order_line.extendedprice = order_line.quantity * part_retailprice;
-      order_line.discount = _random_gen.number(1, 10) / 100.f;
-      order_line.tax = _random_gen.number(1, 8) / 100.f;
+      order_line.discount = _random_gen.random_number(1, 10) / 100.f;
+      order_line.tax = _random_gen.random_number(1, 8) / 100.f;
       order_line.orderdate = orderdate;
-      order_line.shipdate = orderdate + _random_gen.number(1, 121) * _one_day;
-      order_line.receiptdate = order_line.shipdate + _random_gen.number(1, 30) * _one_day;
+      order_line.shipdate = orderdate + _random_gen.random_number(1, 121) * _one_day;
+      order_line.receiptdate = order_line.shipdate + _random_gen.random_number(1, 30) * _one_day;
       order_line.linestatus = order_line.shipdate > _currentdate ? "O" : "F";
       linenumber++;
     }
@@ -193,7 +195,7 @@ std::shared_ptr<opossum::Table> TableGenerator::generate_orders_table(TableGener
     // O_CUSTKEY should be random between 0 and _scale_factor * NUM_CUSTOMERS,
     // but O_CUSTKEY % 3 must not be 0 (only two third of the keys are used).
     size_t max_compacted_key = _scale_factor * NUM_CUSTOMERS / 3 * 2 - 1;
-    size_t compacted_key = _random_gen.number(0, max_compacted_key);
+    size_t compacted_key = _random_gen.random_number(0, max_compacted_key);
     return compacted_key / 2 * 3 + compacted_key % 2 + 1;
   });
   add_column<std::string>(table, "O_ORDERSTATUS", cardinalities, [&](std::vector<size_t> indices) {
@@ -220,7 +222,7 @@ std::shared_ptr<opossum::Table> TableGenerator::generate_orders_table(TableGener
   add_column<std::string>(table, "O_ORDERPRIORITY", cardinalities,
                           [&](std::vector<size_t>) { return _text_field_gen.order_priority(); });
   add_column<std::string>(table, "O_CLERK", cardinalities, [&](std::vector<size_t>) {
-    size_t clerk_number = _random_gen.number(1, 1000);
+    size_t clerk_number = _random_gen.random_number(1, 1000);
     return "Clerk#" + _text_field_gen.fixed_length(clerk_number, 9);
   });
   add_column<int>(table, "O_SHIPPRIORITY", cardinalities, [&](std::vector<size_t>) { return 0; });
@@ -246,7 +248,7 @@ std::shared_ptr<opossum::Table> TableGenerator::generate_lineitems_table(TableGe
   add_column<int>(table, "L_PARTKEY", cardinalities,
                   [&](std::vector<size_t> indices) { return flattened_orderlines[indices[0]].partkey; });
   add_column<int>(table, "L_SUPPKEY", cardinalities, [&](std::vector<size_t> indices) {
-    size_t supplier = _random_gen.number(0, 3);
+    size_t supplier = _random_gen.random_number(0, 3);
     return calculate_partsuppkey(flattened_orderlines[indices[0]].partkey, supplier);
   });
   add_column<int>(table, "L_LINENUMBER", cardinalities,
@@ -261,7 +263,7 @@ std::shared_ptr<opossum::Table> TableGenerator::generate_lineitems_table(TableGe
                     [&](std::vector<size_t> indices) { return flattened_orderlines[indices[0]].tax; });
   add_column<std::string>(table, "L_RETURNFLAG", cardinalities, [&](std::vector<size_t> indices) {
     if (flattened_orderlines[indices[0]].receiptdate <= _currentdate) {
-      if (_random_gen.number(0, 1)) {
+      if (_random_gen.random_number(0, 1)) {
         return "R";
       } else {
         return "A";
@@ -276,7 +278,7 @@ std::shared_ptr<opossum::Table> TableGenerator::generate_lineitems_table(TableGe
                   [&](std::vector<size_t> indices) { return flattened_orderlines[indices[0]].shipdate; });
   add_column<int>(table, "L_COMMITDATE", cardinalities, [&](std::vector<size_t> indices) {
     auto orderdate = flattened_orderlines[indices[0]].orderdate;
-    return orderdate + _random_gen.number(30, 90) * _one_day;
+    return orderdate + _random_gen.random_number(30, 90) * _one_day;
   });
   add_column<int>(table, "L_RECEIPTDATE", cardinalities,
                   [&](std::vector<size_t> indices) { return flattened_orderlines[indices[0]].receiptdate; });

@@ -6,14 +6,14 @@
 #include <string>
 #include <vector>
 
-#include "benchmark_utilities/benchmark_table_generator.hpp"
+#include "benchmark_utilities/abstract_benchmark_table_generator.hpp"
 #include "benchmark_utilities/random_generator.hpp"
 #include "storage/table.hpp"
 #include "text_field_generator.hpp"
 
 namespace tpch {
 
-class TableGenerator : public benchmark_utilities::BenchmarkTableGenerator {
+class TableGenerator : public benchmark_utilities::AbstractBenchmarkTableGenerator {
   // following TPC-H v2.17.2
  public:
   struct OrderLine {

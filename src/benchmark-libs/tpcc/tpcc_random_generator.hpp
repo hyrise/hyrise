@@ -12,10 +12,10 @@
 
 namespace tpcc {
 
-class RandomGenerator : public benchmark_utilities::RandomGenerator {
+class TpccRandomGenerator : public benchmark_utilities::RandomGenerator {
  public:
   // Fix random seed by default, to make sure the benchmark is deterministic
-  explicit RandomGenerator(uint32_t seed = 42) : benchmark_utilities::RandomGenerator(seed) {}
+  explicit TpccRandomGenerator(uint32_t seed = 42) : benchmark_utilities::RandomGenerator(seed) {}
 
   /**
    * Generates a random zip code as defined by TPCC
@@ -27,8 +27,8 @@ class RandomGenerator : public benchmark_utilities::RandomGenerator {
    * Generates a non-uniform random number based on a formula defined by TPCC
    */
   size_t nurand(size_t a, size_t x, size_t y) {
-    opossum::Assert(_c <= a, "Invalid param: a=" + std::to_string(a));
-    return (((number(0, a) | number(x, y)) + _c) % (y - x + 1)) + x;
+    opossum::Assert(_nurand_constant_c <= a, "Invalid param: a=" + std::to_string(a));
+    return (((random_number(0, a) | random_number(x, y)) + _nurand_constant_c) % (y - x + 1)) + x;
   }
 
   /**
@@ -55,10 +55,10 @@ class RandomGenerator : public benchmark_utilities::RandomGenerator {
   }
 
   std::string generate_string(size_t lower_length, size_t upper_length, char base_character, int num_characters) {
-    size_t length = number(lower_length, upper_length);
+    size_t length = random_number(lower_length, upper_length);
     std::string s;
     for (size_t i = 0; i < length; i++) {
-      s.append(1, static_cast<char>(base_character + number(0, num_characters - 1)));
+      s.append(1, static_cast<char>(base_character + random_number(0, num_characters - 1)));
     }
     return s;
   }
@@ -83,6 +83,6 @@ class RandomGenerator : public benchmark_utilities::RandomGenerator {
   }
 
  protected:
-  const size_t _c = number(0, 255);
+  const size_t _nurand_constant_c = random_number(0, 255);
 };
 }  // namespace tpcc

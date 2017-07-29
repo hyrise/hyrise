@@ -11,19 +11,20 @@
 #include "resolve_type.hpp"
 #include "storage/table.hpp"
 #include "storage/value_column.hpp"
+#include "types.hpp"
 
 namespace benchmark_utilities {
 
-class BenchmarkTableGenerator {
+class AbstractBenchmarkTableGenerator {
  public:
-  explicit BenchmarkTableGenerator(const size_t chunk_size = 1000) : _chunk_size(chunk_size) {}
+  explicit AbstractBenchmarkTableGenerator(const opossum::ChunkOffset chunk_size) : _chunk_size(chunk_size) {}
 
-  virtual ~BenchmarkTableGenerator() = default;
+  virtual ~AbstractBenchmarkTableGenerator() = default;
 
   virtual std::shared_ptr<std::map<std::string, std::shared_ptr<opossum::Table>>> generate_all_tables() = 0;
 
  protected:
-  const size_t _chunk_size;
+  const opossum::ChunkOffset _chunk_size;
 
   /**
    * In TPCC and TPCH table sizes are usually defined relatively to each other.
@@ -55,7 +56,7 @@ class BenchmarkTableGenerator {
                   const std::function<std::vector<T>(std::vector<size_t>)> &generator_function) {
     /**
      * We have to add Chunks when we add the first column.
-     * This has to be made after the first column was created and added,
+     * This has to be done after the first column was created and added,
      * because empty Chunks would be pruned right away.
      */
     bool is_first_column = table->col_count() == 0;

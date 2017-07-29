@@ -19,7 +19,7 @@ class RandomGenerator {
    * @param upper       the upper bound
    * @return            a random number
    */
-  int32_t number(int32_t lower, int32_t upper) {
+  int32_t random_number(int32_t lower, int32_t upper) {
     std::uniform_int_distribution<int32_t> dist(lower, upper);
     return dist(engine);
   }
@@ -28,7 +28,7 @@ class RandomGenerator {
    * Generates a set of unique ints with a defined length.
    * This function is used, e.g., to generate foreign key relationships
    * @param num_unique      number of unique values to be returned
-   * @param max_id          maximum number in the set
+   * @param id_length       maximum number in the set
    * @return                a set of unique numbers
    */
   std::set<size_t> select_unique_ids(size_t num_unique, size_t id_length) {
@@ -37,7 +37,7 @@ class RandomGenerator {
     for (size_t i = 0; i < num_unique; ++i) {
       size_t index = static_cast<size_t>(-1);
       do {
-        index = number(0, id_length - 1);
+        index = random_number(0, id_length - 1);
       } while (rows.find(index) != rows.end());
       rows.insert(index);
     }
