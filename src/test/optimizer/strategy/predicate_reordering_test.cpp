@@ -17,19 +17,14 @@ namespace opossum {
 
 class TableStatisticsMock : public TableStatistics {
  public:
-  TableStatisticsMock() { _row_count = 0; }
+  // we don't need a shared_ptr<Table> for this mock, so just set a nullptr
+  TableStatisticsMock() : TableStatistics(std::make_shared<Table>()) { _row_count = 0; }
 
-  explicit TableStatisticsMock(float row_count) { _row_count = row_count; }
+  explicit TableStatisticsMock(float row_count) : TableStatistics(std::make_shared<Table>()) { _row_count = row_count; }
 
   std::shared_ptr<TableStatistics> predicate_statistics(const std::string &column_name, const ScanType scan_type,
                                                         const AllParameterVariant &value,
                                                         const optional<AllTypeVariant> &value2) override {
-    //      virtual std::shared_ptr<TableStatistics> predicate_statistics(const std::string &column_name, const ScanType
-    //      scan_type,
-    //                                                                    const AllParameterVariant &value,
-    //                                                                    const optional<AllTypeVariant> &value2 =
-    //                                                                    nullopt);
-
     if (column_name == "c1") {
       return std::make_shared<TableStatisticsMock>(500);
     }

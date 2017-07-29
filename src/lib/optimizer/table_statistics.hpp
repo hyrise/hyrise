@@ -7,7 +7,7 @@
 
 #include "all_parameter_variant.hpp"
 #include "common.hpp"
-#include "optimizer/abstract_column_statistics.hpp"
+#include "optimizer/base_column_statistics.hpp"
 
 namespace opossum {
 
@@ -28,17 +28,13 @@ class Table;
  * The statistics component assumes a uniform value distribution in columns. If values for predictions are missing
  * (e.g. placeholders in prepared statements), default selectivity values from below are used.
  *
- * TableStatistics store column statistics as AbstractColumnStatistics, which are instances of
+ * TableStatistics store column statistics as BaseColumnStatistics, which are instances of
  * ColumnStatistics<ColumnType>
  * Public TableStatistics functions pass on the parameters to the corresponding column statistics functions.
  * These compute a new ColumnStatistics<> and the predicted selectivity of an operator.
  */
 class TableStatistics {
  public:
-  // Needed for mocking in tests
-  // TODO(anyone): is there a better to allow mocking classes except for adding a default constructor?
-  TableStatistics() = default;
-
   /**
    * Creates a table statistics from a table.
    * This should only be done by the storage manager when adding a table to storage manager.
@@ -50,16 +46,14 @@ class TableStatistics {
    */
   TableStatistics(const TableStatistics &table_statistics) = default;
 
-  virtual ~TableStatistics() = default;
-
   /**
-   * Returns the expected row_cunt of the output of the corresponding operator.
+   * Returns the expected row_count of the output of the corresponding operator.
+   * See _distinct_count declaration below or explanation of float type.
    */
   float row_count() const;
 
   /**
    * Get table statistics for the operator table scan table scan.
-   * Has to be virtual for mocked subclasses in tests
    */
   virtual std::shared_ptr<TableStatistics> predicate_statistics(const std::string &column_name,
                                                                 const ScanType scan_type,
@@ -67,35 +61,19 @@ class TableStatistics {
                                                                 const optional<AllTypeVariant> &value2 = nullopt);
 
  protected:
-  std::shared_ptr<AbstractColumnStatistics> column_statistics(const ColumnID column_id);
+  std::shared_ptr<BaseColumnStatistics> column_statistics(const ColumnID column_id);
 
   // Only available for statistics of tables in the StorageManager.
   // This is a weak_ptr, as
   // Table --shared_ptr--> TableStatistics
-
-  /**
-   * Only available for statistics of tables in the StorageManager.
-   * This is a weak_ptr, as
-   * Table <--shared_ptr--> TableStatistics
-   *
-   * Even though _table should be a const pointer, this member cannot be defined const
-   * as there are issues with Clang in that case:
-   *
-   * Clang will implicitly delete the default constructor if the 'const weak_ptr' is not set by the constructor.
-   * For a mocked TableStatistics object this is the case, since we don't need an actual Table
-   * but just try to call the default constructor of weak_ptr.
-   *
-   * This issue was reproducible on Jenkins and some Online Compilers with Clang 3.8, but not with Clang on Mac.
-   * GCC is able to handle 'const weak_ptr' for this setting.
-   */
-  std::weak_ptr<Table> _table;
+  const std::weak_ptr<Table> _table;
 
   // row count is not an integer as it is a predicted value
   // it is multiplied with selectivity factor of a corresponding operator to predict the operator's output
   // precision is lost, if row count is rounded
   float _row_count = 0.0f;
 
-  std::vector<std::shared_ptr<AbstractColumnStatistics>> _column_statistics;
+  std::vector<std::shared_ptr<BaseColumnStatistics>> _column_statistics;
 
   friend std::ostream &operator<<(std::ostream &os, TableStatistics &obj);
 };
@@ -111,10 +89,10 @@ inline std::ostream &operator<<(std::ostream &os, TableStatistics &obj) {
 
 // default selectivity factors for assumption of uniform distribution
 constexpr float DEFAULT_SELECTIVITY = 0.5f;
-constexpr float LIKE_SELECTIVITY = 0.1f;
+constexpr float DEFAULT_LIKE_SELECTIVITY = 0.1f;
 // values below are taken from paper "Access path selection in a relational database management system",
 // P. Griffiths Selinger, 1979
-constexpr float OPEN_ENDED_SELECTIVITY = 1.f / 3.f;
-constexpr float BETWEEN_SELECTIVITY = 0.25f;
+constexpr float DEFAULT_OPEN_ENDED_SELECTIVITY = 1.f / 3.f;
+constexpr float DEFAULT_BETWEEN_SELECTIVITY = 0.25f;
 
 }  // namespace opossum

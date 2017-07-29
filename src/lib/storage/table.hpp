@@ -13,6 +13,8 @@
 #include "types.hpp"
 
 namespace opossum {
+class TableStatistics;
+
 // A table is partitioned horizontally into a number of chunks
 class TableStatistics;
 class Table {

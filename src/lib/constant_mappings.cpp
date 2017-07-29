@@ -63,4 +63,10 @@ const std::unordered_map<const ExpressionType, std::string> expression_type_to_s
 const std::unordered_map<std::string, AggregateFunction> string_to_aggregate_function = {
     {"MIN", Min}, {"MAX", Max}, {"SUM", Sum}, {"AVG", Avg}, {"COUNT", Count},
 };
+
+const std::unordered_map<const JoinMode, std::string> join_mode_to_string = {
+    {JoinMode::Cross, "Cross"}, {JoinMode::Inner, "Inner"}, {JoinMode::Left, "Left"}, {JoinMode::Natural, "Natural"},
+    {JoinMode::Outer, "Outer"}, {JoinMode::Right, "Right"}, {JoinMode::Self, "Self"},
+};
+
 }  // namespace opossum

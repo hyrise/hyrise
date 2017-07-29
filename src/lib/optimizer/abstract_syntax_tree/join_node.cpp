@@ -6,6 +6,7 @@
 #include <vector>
 
 #include "common.hpp"
+#include "constant_mappings.hpp"
 
 namespace opossum {
 
@@ -21,11 +22,16 @@ JoinNode::JoinNode(optional<std::pair<std::string, std::string>> join_column_nam
 std::string JoinNode::description() const {
   std::ostringstream desc;
 
-  // TODO(tim): add more details
   desc << "Join";
+  desc << " [" << join_mode_to_string.at(_join_mode) << "]";
+
   if (_join_column_names) {
-    desc << ": [" << (*_join_column_names).first << "-" << (*_join_column_names).second << "]";
+    desc << " [" << (*_join_column_names).first;
+    desc << " " << scan_type_to_string.at(_scan_type);
+    desc << " " << (*_join_column_names).second << "]";
   }
+
+  desc << " [" << _prefix_left << " / " << _prefix_right << "]";
 
   return desc.str();
 }
@@ -53,8 +59,8 @@ ScanType JoinNode::scan_type() const { return _scan_type; }
 
 JoinMode JoinNode::join_mode() const { return _join_mode; }
 
-std::string JoinNode::prefix_left() const { return _prefix_left; }
+const std::string &JoinNode::prefix_left() const { return _prefix_left; }
 
-std::string JoinNode::prefix_right() const { return _prefix_right; }
+const std::string &JoinNode::prefix_right() const { return _prefix_right; }
 
 }  // namespace opossum
