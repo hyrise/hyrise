@@ -15,9 +15,6 @@
 
 namespace opossum {
 
-template <typename T>
-class ValueColumn;
-
 class BaseAttributeVector;
 class BaseColumn;
 
