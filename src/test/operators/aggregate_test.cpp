@@ -125,14 +125,14 @@ TEST_F(OperatorsAggregateTest, CannotSumStringColumns) {
   auto aggregate = std::make_shared<Aggregate>(_table_wrapper_1_1_string, std::vector<AggregateDefinition>{{"a", Sum}},
                                                std::vector<std::string>{std::string("a")});
 
-  EXPECT_THROW(aggregate->execute(), std::runtime_error);
+  EXPECT_THROW(aggregate->execute(), std::logic_error);
 }
 
 TEST_F(OperatorsAggregateTest, CannotAvgStringColumns) {
   auto aggregate = std::make_shared<Aggregate>(_table_wrapper_1_1_string, std::vector<AggregateDefinition>{{"a", Avg}},
                                                std::vector<std::string>{std::string("a")});
 
-  EXPECT_THROW(aggregate->execute(), std::runtime_error);
+  EXPECT_THROW(aggregate->execute(), std::logic_error);
 }
 
 TEST_F(OperatorsAggregateTest, CanCountStringColumns) {

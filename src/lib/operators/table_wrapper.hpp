@@ -6,6 +6,8 @@
 
 #include "abstract_read_only_operator.hpp"
 
+#include "utils/assert.hpp"
+
 namespace opossum {
 
 /**
@@ -19,7 +21,8 @@ class TableWrapper : public AbstractReadOnlyOperator {
   uint8_t num_in_tables() const override;
   uint8_t num_out_tables() const override;
   std::shared_ptr<AbstractOperator> recreate(const std::vector<AllParameterVariant> &args) const override {
-    throw std::runtime_error("Operator " + this->name() + " does not implement recreation.");
+    Fail("Operator " + this->name() + " does not implement recreation.");
+    return {};
   }
 
  protected:

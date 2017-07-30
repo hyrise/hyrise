@@ -37,7 +37,8 @@ uint8_t Validate::num_in_tables() const { return 1; }
 uint8_t Validate::num_out_tables() const { return 1; }
 
 std::shared_ptr<const Table> Validate::on_execute() {
-  throw std::logic_error("Validate can't be called without a transaction context.");
+  Fail("Validate can't be called without a transaction context.");
+  return {};
 }
 
 std::shared_ptr<const Table> Validate::on_execute(std::shared_ptr<TransactionContext> transactionContext) {

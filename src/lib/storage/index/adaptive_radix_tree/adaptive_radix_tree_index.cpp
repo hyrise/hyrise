@@ -82,7 +82,7 @@ std::shared_ptr<Node> AdaptiveRadixTreeIndex::_bulk_insert(
     std::advance(it, values.size());
     auto cap2 = _chunk_offsets.capacity();
     // we are not allowed to change the size of the vector as it would invalidate all our Iterators
-    if (cap != cap2) throw std::length_error("_chunk_offsets capacity changes, all Iterators are invalidated");
+    Assert(cap == cap2, "_chunk_offsets capacity changes, all Iterators are invalidated");
 
     // "it" points to the position after the last inserted ChunkOffset --> this is the upper_bound of the leave
     Iterator upper = it;

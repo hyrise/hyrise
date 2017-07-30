@@ -28,9 +28,8 @@ void StorageManager::add_table(const std::string &name, std::shared_ptr<Table> t
 }
 
 void StorageManager::drop_table(const std::string &name) {
-  if (!_tables.erase(name)) {
-    throw std::out_of_range("table " + name + " does not exist");
-  }
+  auto num_deleted = _tables.erase(name);
+  Assert(num_deleted == 1, "Error deleting table " + name + ": _erase() returned " + std::to_string(num_deleted) + ".");
 }
 
 std::shared_ptr<Table> StorageManager::get_table(const std::string &name) const {

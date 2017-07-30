@@ -136,7 +136,7 @@ class Aggregate : public AbstractReadOnlyOperator {
   template <typename AggregateType, AggregateFunction func>
   typename std::enable_if<func == Avg && !std::is_arithmetic<AggregateType>::value, void>::type _write_aggregate_values(
       tbb::concurrent_vector<AggregateType>, std::shared_ptr<std::map<AggregateKey, AggregateResult<AggregateType>>>) {
-    throw std::runtime_error("Invalid aggregate");
+    Fail("Invalid aggregate");
   }
 
   const std::vector<AggregateDefinition> _aggregates;
@@ -245,9 +245,7 @@ using AggregateFunctor = std::function<optional<AggregateType>(ColumnType, optio
 
 template <typename ColumnType, typename AggregateType, AggregateFunction function>
 struct AggregateFunctionBuilder {
-  AggregateFunctor<ColumnType, AggregateType> get_aggregate_function() {
-    throw std::runtime_error("Invalid aggregate function");
-  }
+  AggregateFunctor<ColumnType, AggregateType> get_aggregate_function() { Fail("Invalid aggregate function"); }
 };
 
 template <typename ColumnType, typename AggregateType>

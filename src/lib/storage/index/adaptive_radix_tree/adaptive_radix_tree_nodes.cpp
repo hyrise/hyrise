@@ -11,6 +11,7 @@
 #include "storage/index/base_index.hpp"
 
 #include "types.hpp"
+#include "utils/assert.hpp"
 
 namespace opossum {
 
@@ -95,7 +96,8 @@ BaseIndex::Iterator Node4::end() const {
       return _children[i - 1]->end();
     }
   }
-  throw std::logic_error("Empty _children array in Node4 should never happen");
+  Fail("Empty _children array in Node4 should never happen");
+  return {};
 }
 
 /**
@@ -285,7 +287,8 @@ BaseIndex::Iterator Node48::begin() const {
       return _children[_index_to_child[i]]->begin();
     }
   }
-  throw std::logic_error("Empty _index_to_child array in Node48 should never happen");
+  Fail("Empty _index_to_child array in Node48 should never happen");
+  return {};
 }
 
 BaseIndex::Iterator Node48::end() const {
@@ -294,7 +297,8 @@ BaseIndex::Iterator Node48::end() const {
       return _children[_index_to_child[i]]->begin();
     }
   }
-  throw std::logic_error("Empty _index_to_child array in Node48 should never happen");
+  Fail("Empty _index_to_child array in Node48 should never happen");
+  return {};
 }
 
 /**
@@ -370,7 +374,8 @@ BaseIndex::Iterator Node256::begin() const {
       return _children[i]->begin();
     }
   }
-  throw std::logic_error("Empty _children array in Node256 should never happen");
+  Fail("Empty _children array in Node256 should never happen");
+  return {};
 }
 
 BaseIndex::Iterator Node256::end() const {
@@ -379,7 +384,8 @@ BaseIndex::Iterator Node256::end() const {
       return _children[i]->begin();
     }
   }
-  throw std::logic_error("Empty _children array in Node256 should never happen");
+  Fail("Empty _children array in Node256 should never happen");
+  return {};
 }
 
 Leaf::Leaf(BaseIndex::Iterator &lower, BaseIndex::Iterator &upper) : _begin(lower), _end(upper) {}
