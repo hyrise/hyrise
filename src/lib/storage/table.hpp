@@ -7,12 +7,15 @@
 #include <utility>
 #include <vector>
 
+#include "base_column.hpp"
 #include "chunk.hpp"
+
 #include "common.hpp"
 #include "type_cast.hpp"
 #include "types.hpp"
 
 namespace opossum {
+
 class TableStatistics;
 
 // A table is partitioned horizontally into a number of chunks

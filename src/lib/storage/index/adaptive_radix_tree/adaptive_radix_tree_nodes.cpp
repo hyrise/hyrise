@@ -1,5 +1,4 @@
 #include "adaptive_radix_tree_nodes.hpp"
-#include "adaptive_radix_tree_index.hpp"
 
 #include <algorithm>
 #include <iterator>
@@ -7,10 +6,11 @@
 #include <utility>
 #include <vector>
 
-#include "../../../types.hpp"
-#include "../../base_column.hpp"
-#include "../../untyped_dictionary_column.hpp"
-#include "../base_index.hpp"
+#include "adaptive_radix_tree_index.hpp"
+
+#include "storage/index/base_index.hpp"
+
+#include "types.hpp"
 
 namespace opossum {
 

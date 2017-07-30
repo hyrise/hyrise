@@ -3,6 +3,8 @@
 #include <iterator>
 #include <vector>
 
+#include "variable_length_key_proxy.hpp"
+
 namespace opossum {
 
 VariableLengthKeyStore::VariableLengthKeyStore(ChunkOffset size, CompositeKeyLength bytes_per_key) {

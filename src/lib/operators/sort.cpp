@@ -5,7 +5,11 @@
 #include <utility>
 #include <vector>
 
+#include "storage/base_attribute_vector.hpp"
+#include "storage/column_visitable.hpp"
+
 namespace opossum {
+
 Sort::Sort(const std::shared_ptr<const AbstractOperator> in, const std::string &sort_column_name, const bool ascending,
            const size_t output_chunk_size)
     : AbstractReadOnlyOperator(in),

@@ -3,7 +3,6 @@
 #include <cstdint>
 
 #include <algorithm>
-#include <exception>
 #include <iterator>
 #include <memory>
 #include <numeric>
@@ -11,10 +10,11 @@
 #include <utility>
 #include <vector>
 
-#include <iostream>
+#include "variable_length_key_proxy.hpp"
 
 #include "storage/base_attribute_vector.hpp"
-#include "storage/dictionary_column.hpp"
+#include "storage/untyped_dictionary_column.hpp"
+
 #include "utils/assert.hpp"
 
 namespace opossum {
@@ -119,7 +119,7 @@ VariableLengthKey CompositeGroupKeyIndex::_create_composite_key(const std::vecto
 
   // fill empty space of key with zeros if less values than columns were provided
   auto empty_bits =
-      std::accumulate(_indexed_columns.cbegin() + values.size(), _indexed_columns.cend(), static_cast<std::uint8_t>(0u),
+      std::accumulate(_indexed_columns.cbegin() + values.size(), _indexed_columns.cend(), static_cast<uint8_t>(0u),
                       [](auto value, auto column) { return value + column->attribute_vector()->width() * CHAR_BIT; });
   result <<= empty_bits;
 

@@ -1,9 +1,10 @@
 #pragma once
 
-#include "variable_length_key.hpp"
 #include "variable_length_key_base.hpp"
 
 namespace opossum {
+
+class VariableLengthKey;
 
 /**
  * Proxy for VariableLengthKey mimicing const VariableLengthKey &. The proxy is neccessary in order to directly read the

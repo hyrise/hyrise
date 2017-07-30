@@ -7,6 +7,7 @@
 #include "operators/export_csv.hpp"
 #include "operators/table_wrapper.hpp"
 #include "optimizer/table_statistics.hpp"
+
 #include "utils/assert.hpp"
 
 namespace opossum {
@@ -62,11 +63,11 @@ void StorageManager::export_all_tables_as_csv(const std::string &path) {
     const auto &name = pair.first;
     auto &table = pair.second;
 
-    auto tableWrapper = std::make_shared<TableWrapper>(table);
-    tableWrapper->execute();
+    auto table_wrapper = std::make_shared<TableWrapper>(table);
+    table_wrapper->execute();
 
-    auto exportCsv = std::make_shared<ExportCsv>(tableWrapper, path + "/" + name + ".csv");
-    exportCsv->execute();
+    auto export_csv = std::make_shared<ExportCsv>(table_wrapper, path + "/" + name + ".csv");
+    export_csv->execute();
   }
 }
 

@@ -1,17 +1,19 @@
 #include "adaptive_radix_tree_index.hpp"
-#include "adaptive_radix_tree_nodes.hpp"
 
 #include <algorithm>
 #include <iterator>
 #include <limits>
 #include <memory>
-#include <stdexcept>
 #include <utility>
 #include <vector>
 
+#include "adaptive_radix_tree_nodes.hpp"
+
+#include "storage/base_attribute_vector.hpp"
 #include "storage/base_column.hpp"
 #include "storage/index/base_index.hpp"
 #include "storage/untyped_dictionary_column.hpp"
+
 #include "types.hpp"
 #include "utils/assert.hpp"
 
@@ -132,11 +134,9 @@ AdaptiveRadixTreeIndex::BinaryComparable::BinaryComparable(ValueID value) : _par
 size_t AdaptiveRadixTreeIndex::BinaryComparable::size() const { return _parts.size(); }
 
 uint8_t AdaptiveRadixTreeIndex::BinaryComparable::operator[](size_t position) const {
-  if (position < _parts.size()) {
-    return _parts[position];
-  } else {
-    throw std::logic_error("BinaryComparable indexed out of bounds");
-  }
+  Assert(position < _parts.size(), "BinaryComparable indexed out of bounds");
+
+  return _parts[position];
 }
 
 bool operator==(const AdaptiveRadixTreeIndex::BinaryComparable &lhs,
