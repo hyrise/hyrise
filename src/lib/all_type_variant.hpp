@@ -1,8 +1,6 @@
 #pragma once
 
-#include <boost/hana/drop_back.hpp>
 #include <boost/hana/ext/boost/mpl/vector.hpp>
-#include <boost/hana/for_each.hpp>
 #include <boost/hana/pair.hpp>
 #include <boost/hana/prepend.hpp>
 #include <boost/hana/second.hpp>
@@ -25,8 +23,6 @@ static constexpr auto column_types =
     hana::make_tuple(hana::make_pair("int", hana::type_c<int32_t>), hana::make_pair("long", hana::type_c<int64_t>),
                      hana::make_pair("float", hana::type_c<float>), hana::make_pair("double", hana::type_c<double>),
                      hana::make_pair("string", hana::type_c<std::string>));  // NOLINT
-
-static constexpr auto numeric_column_types = hana::drop_back(column_types);
 
 // This holds only the possible data types.
 static constexpr auto types = hana::transform(column_types, hana::second);  // NOLINT
@@ -53,18 +49,5 @@ inline bool is_null(const AllTypeVariant& variant) { return (variant.which() == 
  *   - use is_null() if you want to check if an AllTypeVariant is null
  */
 static const auto NULL_VALUE = AllTypeVariant{};
-
-static inline double all_type_variant_to_double(const AllTypeVariant& variant) {
-  double ret = 0;
-  int i = 0;
-  hana::for_each(numeric_column_types, [&](auto column_type) {
-    if (i == variant.which()) {
-      using variant_type = typename decltype(+hana::second(column_type))::type;
-      ret = boost::get<variant_type>(variant);
-    }
-    i++;
-  });
-  return ret;
-}
 
 }  // namespace opossum

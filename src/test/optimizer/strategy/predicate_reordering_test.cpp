@@ -35,8 +35,8 @@ class TableStatisticsMock : public TableStatistics {
       return std::make_shared<TableStatisticsMock>(950);
     }
 
-    Fail("Shouldn't happen");
-    return {};
+    Fail("Tried to access TableStatisticsMock with unexpected column");
+    return nullptr;
   }
 };
 
@@ -52,10 +52,10 @@ TEST_F(PredicateReorderingTest, SimpleReorderingTest) {
 
   t_n->set_statistics(std::make_shared<TableStatisticsMock>());
 
-  auto ts_n_0 = std::make_shared<PredicateNode>("c1", nullptr, ScanType::OpGreaterThan, 10);
+  auto ts_n_0 = std::make_shared<PredicateNode>("c1", ScanType::OpGreaterThan, 10);
   ts_n_0->set_left_child(t_n);
 
-  auto ts_n_1 = std::make_shared<PredicateNode>("c2", nullptr, ScanType::OpGreaterThan, 50);
+  auto ts_n_1 = std::make_shared<PredicateNode>("c2", ScanType::OpGreaterThan, 50);
   ts_n_1->set_left_child(ts_n_0);
 
   ts_n_1->get_or_create_statistics();
@@ -74,21 +74,18 @@ TEST_F(PredicateReorderingTest, MoreComplexReorderingTest) {
 
   t_n->set_statistics(std::make_shared<TableStatisticsMock>());
 
-  auto ts_n_0 = std::make_shared<PredicateNode>("c1", nullptr, ScanType::OpGreaterThan, 10);
+  auto ts_n_0 = std::make_shared<PredicateNode>("c1", ScanType::OpGreaterThan, 10);
   ts_n_0->set_left_child(t_n);
 
-  auto ts_n_1 = std::make_shared<PredicateNode>("c2", nullptr, ScanType::OpGreaterThan, 50);
+  auto ts_n_1 = std::make_shared<PredicateNode>("c2", ScanType::OpGreaterThan, 50);
   ts_n_1->set_left_child(ts_n_0);
 
-  auto ts_n_2 = std::make_shared<PredicateNode>("c3", nullptr, ScanType::OpGreaterThan, 90);
+  auto ts_n_2 = std::make_shared<PredicateNode>("c3", ScanType::OpGreaterThan, 90);
   ts_n_2->set_left_child(ts_n_1);
 
   ts_n_2->get_or_create_statistics();
 
   auto reordered = rule.apply_rule(ts_n_2);
-
-  //  std::cout << " Printing result " << std::endl;
-  //  reordered->print();
 
   ASSERT_EQ(reordered, ts_n_2);
   ASSERT_EQ(reordered->left_child(), ts_n_0);
@@ -103,31 +100,28 @@ TEST_F(PredicateReorderingTest, ComplexReorderingTest) {
 
   t_n->set_statistics(std::make_shared<TableStatisticsMock>());
 
-  auto ts_n_0 = std::make_shared<PredicateNode>("c1", nullptr, ScanType::OpGreaterThan, 10);
+  auto ts_n_0 = std::make_shared<PredicateNode>("c1", ScanType::OpGreaterThan, 10);
   ts_n_0->set_left_child(t_n);
 
-  auto ts_n_1 = std::make_shared<PredicateNode>("c2", nullptr, ScanType::OpGreaterThan, 50);
+  auto ts_n_1 = std::make_shared<PredicateNode>("c2", ScanType::OpGreaterThan, 50);
   ts_n_1->set_left_child(ts_n_0);
 
-  auto ts_n_2 = std::make_shared<PredicateNode>("c3", nullptr, ScanType::OpGreaterThan, 90);
+  auto ts_n_2 = std::make_shared<PredicateNode>("c3", ScanType::OpGreaterThan, 90);
   ts_n_2->set_left_child(ts_n_1);
 
   std::vector<std::string> columns({"c1", "c2"});
   auto p_n = std::make_shared<ProjectionNode>(columns);
   p_n->set_left_child(ts_n_2);
 
-  auto ts_n_3 = std::make_shared<PredicateNode>("c1", nullptr, ScanType::OpGreaterThan, 10);
+  auto ts_n_3 = std::make_shared<PredicateNode>("c1", ScanType::OpGreaterThan, 10);
   ts_n_3->set_left_child(p_n);
 
-  auto ts_n_4 = std::make_shared<PredicateNode>("c2", nullptr, ScanType::OpGreaterThan, 50);
+  auto ts_n_4 = std::make_shared<PredicateNode>("c2", ScanType::OpGreaterThan, 50);
   ts_n_4->set_left_child(ts_n_3);
 
   ts_n_4->get_or_create_statistics();
 
   auto reordered = rule.apply_rule(ts_n_4);
-
-  //  std::cout << " Printing result " << std::endl;
-  //  reordered->print();
 
   ASSERT_EQ(reordered, ts_n_3);
   ASSERT_EQ(reordered->left_child(), ts_n_4);

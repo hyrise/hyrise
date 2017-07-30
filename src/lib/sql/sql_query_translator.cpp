@@ -8,25 +8,24 @@
 #include <utility>
 #include <vector>
 
-#include "operators/abstract_join_operator.hpp"
-#include "operators/abstract_operator.hpp"
-#include "operators/aggregate.hpp"
-#include "operators/difference.hpp"
-#include "operators/export_binary.hpp"
-#include "operators/export_csv.hpp"
-#include "operators/get_table.hpp"
-#include "operators/import_csv.hpp"
-#include "operators/index_column_scan.hpp"
-#include "operators/join_nested_loop_a.hpp"
-#include "operators/product.hpp"
-#include "operators/projection.hpp"
-#include "operators/sort.hpp"
-#include "operators/table_scan.hpp"
-#include "operators/union_all.hpp"
-#include "optimizer/table_statistics.hpp"
-#include "storage/storage_manager.hpp"
+#include "../operators/abstract_join_operator.hpp"
+#include "../operators/abstract_operator.hpp"
+#include "../operators/aggregate.hpp"
+#include "../operators/difference.hpp"
+#include "../operators/export_binary.hpp"
+#include "../operators/export_csv.hpp"
+#include "../operators/get_table.hpp"
+#include "../operators/import_csv.hpp"
+#include "../operators/index_column_scan.hpp"
+#include "../operators/join_nested_loop_a.hpp"
+#include "../operators/print.hpp"
+#include "../operators/product.hpp"
+#include "../operators/projection.hpp"
+#include "../operators/sort.hpp"
+#include "../operators/table_scan.hpp"
+#include "../operators/union_all.hpp"
+#include "../utils/assert.hpp"
 #include "types.hpp"
-#include "utils/assert.hpp"
 
 #include "SQLParser.h"
 
@@ -152,6 +151,7 @@ bool SQLQueryTranslator::_translate_filter_expr(const hsql::Expr& expr,
         return false;
       }
       return true;
+
     default:
       // Get the operation string, if possible.
       if (!_translate_filter_op(expr, &scan_type)) {
@@ -185,7 +185,6 @@ bool SQLQueryTranslator::_translate_filter_expr(const hsql::Expr& expr,
 
   auto table_scan = std::make_shared<TableScan>(input_op, ColumnName(column_name), scan_type, value);
   _current_root = table_scan;
-
   return true;
 }
 

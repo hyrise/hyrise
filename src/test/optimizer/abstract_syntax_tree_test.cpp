@@ -26,7 +26,7 @@ TEST_F(AbstractSyntaxTreeTest, ParentTest) {
   ASSERT_EQ(table_node->right_child(), nullptr);
   ASSERT_EQ(table_node->parent(), nullptr);
 
-  const auto predicate_node = std::make_shared<PredicateNode>("c1", nullptr, ScanType::OpEquals, "a");
+  const auto predicate_node = std::make_shared<PredicateNode>("c1", ScanType::OpEquals, "a");
   predicate_node->set_left_child(table_node);
 
   ASSERT_EQ(table_node->parent(), predicate_node);
@@ -51,7 +51,7 @@ TEST_F(AbstractSyntaxTreeTest, ChainSameNodesTest) {
   ASSERT_EQ(table_node->right_child(), nullptr);
   ASSERT_EQ(table_node->parent(), nullptr);
 
-  const auto predicate_node = std::make_shared<PredicateNode>("c1", nullptr, ScanType::OpEquals, "a");
+  const auto predicate_node = std::make_shared<PredicateNode>("c1", ScanType::OpEquals, "a");
   predicate_node->set_left_child(table_node);
 
   ASSERT_EQ(table_node->parent(), predicate_node);
@@ -59,7 +59,7 @@ TEST_F(AbstractSyntaxTreeTest, ChainSameNodesTest) {
   ASSERT_EQ(predicate_node->right_child(), nullptr);
   ASSERT_EQ(predicate_node->parent(), nullptr);
 
-  const auto predicate_node_2 = std::make_shared<PredicateNode>("c2", nullptr, ScanType::OpEquals, "b");
+  const auto predicate_node_2 = std::make_shared<PredicateNode>("c2", ScanType::OpEquals, "b");
   predicate_node_2->set_left_child(predicate_node);
 
   ASSERT_EQ(predicate_node->parent(), predicate_node_2);
