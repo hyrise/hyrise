@@ -20,6 +20,7 @@
 #include "operators/sort.hpp"
 #include "operators/table_scan.hpp"
 #include "operators/union_all.hpp"
+#include "scheduler/operator_task.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 

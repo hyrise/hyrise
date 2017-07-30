@@ -6,9 +6,13 @@
 #include <utility>
 #include <vector>
 
+#include "abstract_task.hpp"
 #include "current_scheduler.hpp"
 #include "processing_unit.hpp"
+#include "task_queue.hpp"
 #include "topology.hpp"
+
+#include "uid_allocator.hpp"
 #include "utils/assert.hpp"
 
 namespace opossum {

@@ -3,9 +3,9 @@
 #include <memory>
 #include <string>
 
-#include "scheduler/topology.hpp"
-
 namespace opossum {
+
+class Topology;
 
 // See Server::start()
 struct ServerConfiguration {

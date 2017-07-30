@@ -4,9 +4,6 @@
 #include <functional>
 #include <memory>
 
-#include "commit_context.hpp"
-#include "transaction_context.hpp"
-
 #include "types.hpp"
 
 /**
@@ -40,6 +37,9 @@
  */
 
 namespace opossum {
+
+class CommitContext;
+class TransactionContext;
 
 /**
  * The TransactionManager is responsible for a consistent assignment of
