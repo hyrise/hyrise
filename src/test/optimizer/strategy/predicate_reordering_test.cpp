@@ -3,7 +3,6 @@
 #include <vector>
 
 #include "../../base_test.hpp"
-#include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
 #include "optimizer/abstract_syntax_tree/predicate_node.hpp"
@@ -158,13 +157,10 @@ TEST_F(PredicateReorderingTest, TwoReorderings) {
   std::vector<std::string> columns({"c1", "c2"});
   auto projection_node = std::make_shared<ProjectionNode>(columns);
   projection_node->set_left_child(predicate_node_3);
-
-
+  
   projection_node->get_or_create_statistics();
 
   auto reordered = rule.apply_rule(projection_node);
-
-  reordered->print();
 
   EXPECT_EQ(reordered, projection_node);
   EXPECT_EQ(reordered->left_child(), predicate_node_2);
