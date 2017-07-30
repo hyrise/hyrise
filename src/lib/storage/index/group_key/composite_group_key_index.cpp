@@ -1,5 +1,6 @@
 #include "composite_group_key_index.hpp"
 
+#include <climits>
 #include <cstdint>
 
 #include <algorithm>

@@ -4,6 +4,8 @@
 
 #include "benchmark/benchmark.h"
 
+#include "tpcc_base_fixture.hpp"
+
 #include "concurrency/transaction_manager.hpp"
 #include "operators/get_table.hpp"
 #include "operators/limit.hpp"
@@ -12,12 +14,11 @@
 #include "operators/sort.hpp"
 #include "operators/table_scan.hpp"
 #include "scheduler/operator_task.hpp"
+
 #include "tpcc/helper.hpp"
-#include "utils/helper.hpp"
-
-#include "tpcc_base_fixture.cpp"
-
 #include "tpcc/order_status.hpp"
+
+#include "utils/helper.hpp"
 
 namespace opossum {
 
