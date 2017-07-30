@@ -2,8 +2,6 @@
 
 #include <memory>
 
-#include "topology.hpp"
-
 namespace opossum {
 
 AbstractScheduler::AbstractScheduler(std::shared_ptr<Topology> topology) : _topology(topology) {}

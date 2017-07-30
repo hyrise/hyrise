@@ -19,9 +19,11 @@
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include "network/generated/opossum.grpc.pb.h"
 #pragma GCC diagnostic pop
+
 #include "network/server.hpp"
+#include "network/server_configuration.hpp"
+#include "scheduler/topology.hpp"
 #include "storage/storage_manager.hpp"
-#include "storage/table.hpp"
 
 using grpc::Channel;
 using grpc::ClientAsyncResponseReader;

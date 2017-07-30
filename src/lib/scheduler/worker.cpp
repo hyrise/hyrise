@@ -10,8 +10,10 @@
 #include <thread>
 #include <vector>
 
+#include "abstract_scheduler.hpp"
+#include "abstract_task.hpp"
 #include "current_scheduler.hpp"
-#include "topology.hpp"
+#include "task_queue.hpp"
 
 namespace {
 
