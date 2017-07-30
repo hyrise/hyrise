@@ -141,11 +141,8 @@ set(
     optimizer/abstract_syntax_tree/abstract_ast_node.hpp
     optimizer/abstract_syntax_tree/join_node.cpp
     optimizer/abstract_syntax_tree/join_node.hpp
-    optimizer/abstract_syntax_tree/join_node.cpp
-    optimizer/abstract_syntax_tree/join_node.hpp
     optimizer/abstract_syntax_tree/predicate_node.cpp
     optimizer/abstract_syntax_tree/predicate_node.hpp
-    optimizer/abstract_syntax_tree/query_plan_helper.hpp
     optimizer/abstract_syntax_tree/projection_node.cpp
     optimizer/abstract_syntax_tree/projection_node.hpp
     optimizer/abstract_syntax_tree/sort_node.cpp

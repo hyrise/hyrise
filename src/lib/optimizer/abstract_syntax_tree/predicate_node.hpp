@@ -10,9 +10,10 @@
 #include "common.hpp"
 
 #include "abstract_ast_node.hpp"
-#include "optimizer/table_statistics.hpp"
 
 namespace opossum {
+
+class TableStatistics;
 
 class PredicateNode : public AbstractASTNode {
  public:

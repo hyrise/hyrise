@@ -6,6 +6,7 @@
 
 #include "common.hpp"
 #include "constant_mappings.hpp"
+#include "optimizer/table_statistics.hpp"
 #include "utils/assert.hpp"
 
 namespace opossum {
@@ -39,7 +40,7 @@ const AllParameterVariant& PredicateNode::value() const { return _value; }
 const optional<AllTypeVariant>& PredicateNode::value2() const { return _value2; }
 
 std::shared_ptr<TableStatistics> PredicateNode::create_statistics() const {
-  Assert(static_cast<bool>(left_child()), "Table scan needs left input");
+  Assert(static_cast<bool>(left_child()), "Predicate node needs left input");
 
   return left_child()->get_or_create_statistics()->predicate_statistics(_column_name, _scan_type, _value, _value2);
 }
