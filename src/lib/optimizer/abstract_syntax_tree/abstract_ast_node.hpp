@@ -44,7 +44,7 @@ class AbstractASTNode : public std::enable_shared_from_this<AbstractASTNode> {
   virtual std::string description() const = 0;
 
  protected:
-  virtual std::shared_ptr<TableStatistics> create_statistics() const;
+  virtual const std::shared_ptr<TableStatistics> create_statistics() const;
 
   // Used to easily differentiate between node types without pointer casts.
   ASTNodeType _type;

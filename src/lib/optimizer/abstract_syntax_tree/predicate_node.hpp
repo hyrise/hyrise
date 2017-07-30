@@ -5,11 +5,10 @@
 #include <unordered_map>
 #include <vector>
 
+#include "abstract_ast_node.hpp"
 #include "all_parameter_variant.hpp"
 #include "all_type_variant.hpp"
 #include "common.hpp"
-
-#include "abstract_ast_node.hpp"
 
 namespace opossum {
 
@@ -28,7 +27,7 @@ class PredicateNode : public AbstractASTNode {
   const optional<AllTypeVariant>& value2() const;
 
  private:
-  std::shared_ptr<TableStatistics> create_statistics() const override;
+  const std::shared_ptr<TableStatistics> create_statistics() const override;
 
   const std::string _column_name;
   const ScanType _scan_type;
