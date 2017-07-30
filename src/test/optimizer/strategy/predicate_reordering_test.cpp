@@ -129,7 +129,8 @@ TEST_F(PredicateReorderingTest, ComplexReorderingTest) {
   EXPECT_EQ(reordered->left_child()->left_child()->left_child(), predicate_node_2);
   EXPECT_EQ(reordered->left_child()->left_child()->left_child()->left_child(), predicate_node_0);
   EXPECT_EQ(reordered->left_child()->left_child()->left_child()->left_child()->left_child(), predicate_node_1);
-  EXPECT_EQ(reordered->left_child()->left_child()->left_child()->left_child()->left_child()->left_child(), stored_table_node);
+  EXPECT_EQ(reordered->left_child()->left_child()->left_child()->left_child()->left_child()->left_child(),
+            stored_table_node);
 }
 
 TEST_F(PredicateReorderingTest, TwoReorderings) {
@@ -157,7 +158,7 @@ TEST_F(PredicateReorderingTest, TwoReorderings) {
   std::vector<std::string> columns({"c1", "c2"});
   auto projection_node = std::make_shared<ProjectionNode>(columns);
   projection_node->set_left_child(predicate_node_3);
-  
+
   projection_node->get_or_create_statistics();
 
   auto reordered = rule.apply_rule(projection_node);
@@ -168,7 +169,8 @@ TEST_F(PredicateReorderingTest, TwoReorderings) {
   EXPECT_EQ(reordered->left_child()->left_child()->left_child(), sort_node);
   EXPECT_EQ(reordered->left_child()->left_child()->left_child()->left_child(), predicate_node_0);
   EXPECT_EQ(reordered->left_child()->left_child()->left_child()->left_child()->left_child(), predicate_node_1);
-  EXPECT_EQ(reordered->left_child()->left_child()->left_child()->left_child()->left_child()->left_child(), stored_table_node);
+  EXPECT_EQ(reordered->left_child()->left_child()->left_child()->left_child()->left_child()->left_child(),
+            stored_table_node);
 }
 
 }  // namespace opossum
