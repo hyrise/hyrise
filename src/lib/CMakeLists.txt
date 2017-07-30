@@ -213,6 +213,7 @@ set(
     types.hpp
     uid_allocator.hpp
     utils/cuckoo_hashtable.hpp
+    utils/radix_partition_sort.hpp
     utils/murmur_hash.cpp
     utils/murmur_hash.hpp
 )
