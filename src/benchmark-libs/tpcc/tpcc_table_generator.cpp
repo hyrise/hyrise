@@ -10,9 +10,14 @@
 #include <vector>
 
 #include "constants.hpp"
-#include "resolve_type.hpp"
+
+#include "storage/chunk.hpp"
 #include "storage/dictionary_compression.hpp"
+#include "storage/table.hpp"
 #include "storage/value_column.hpp"
+
+#include "resolve_type.hpp"
+#include "types.hpp"
 
 namespace tpcc {
 

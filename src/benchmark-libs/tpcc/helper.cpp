@@ -3,10 +3,7 @@
 #include <memory>
 #include <vector>
 
-#include "concurrency/transaction_context.hpp"
 #include "operators/abstract_operator.hpp"
-#include "scheduler/abstract_scheduler.hpp"
-#include "scheduler/abstract_task.hpp"
 #include "scheduler/current_scheduler.hpp"
 #include "scheduler/operator_task.hpp"
 

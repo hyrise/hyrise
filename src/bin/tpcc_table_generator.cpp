@@ -1,10 +1,9 @@
 #include <iostream>
 #include <memory>
 
-#include "operators/export_csv.hpp"
-#include "operators/table_wrapper.hpp"
-
 #include "tpcc/tpcc_table_generator.hpp"
+
+#include "storage/storage_manager.hpp"
 
 int main() {
   std::cout << "TPCC" << std::endl;

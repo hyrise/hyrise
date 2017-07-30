@@ -4,8 +4,10 @@
 #include <vector>
 
 namespace opossum {
+
 class OperatorTask;
 class TransactionContext;
+
 }  // namespace opossum
 
 namespace tpcc {

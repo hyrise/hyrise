@@ -6,10 +6,15 @@
 #include <string>
 #include <vector>
 
+#include "tbb/concurrent_vector.h"
+
 #include "random_generator.hpp"
-#include "storage/storage_manager.hpp"
-#include "storage/table.hpp"
-#include "storage/value_column.hpp"
+
+namespace opossum {
+
+class Table;
+
+}  // namespace opossum
 
 namespace tpcc {
 
