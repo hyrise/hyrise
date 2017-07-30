@@ -28,9 +28,17 @@ class ExpressionNode : public std::enable_shared_from_this<ExpressionNode> {
   /*
    * This constructor is meant for internal use only and therefor should be private.
    * However, in C++ one is not able to call std::make_shared with a private constructor.
+   * The naive approach of befriending std::make_shared does not work here, as the implementation of std::make_shared is
+   * compiler-specific and usually relies on internal impl-classes.
+   * (e.g.:
+   * https://stackoverflow.com/questions/3541632/using-make-shared-with-a-protected-constructor-abstract-interface)
+   * We refrained from using the suggested pass-key-idiom as it only increases complexity but does not help removing a
+   * public constructor.
    *
-   * We debated between creating the shared_ptr explicitly and making the constructor public.
-   * For now we decided to follow the latter.
+   * In the end we debated between creating the shared_ptr explicitly in the factory methods
+   * and making the constructor public. For now we decided to follow the latter.
+   *
+   * We highly suggest using one of the create_*-methods over using this constructor.
    */
   ExpressionNode(const ExpressionType type, const AllTypeVariant& value,
                  const std::vector<std::shared_ptr<ExpressionNode>>& expression_list, const std::string& name,
@@ -73,7 +81,7 @@ class ExpressionNode : public std::enable_shared_from_this<ExpressionNode> {
   void print(const uint32_t level = 0, std::ostream& out = std::cout) const;
   const std::string description() const;
 
-  // Is +, -, *, /
+  // Is +, -, * (arithmetic usage, not SELECT * FROM), /, %, ^
   bool is_arithmetic_operator() const;
 
   /*
@@ -107,7 +115,7 @@ class ExpressionNode : public std::enable_shared_from_this<ExpressionNode> {
    */
   const std::vector<std::shared_ptr<ExpressionNode>> _expression_list;
 
-  // a name, which could the column name or a function name
+  // a name, which could be a column name or a function name
   const std::string _name;
   // a table name, only used for ColumnReferences
   const std::string _table_name;
