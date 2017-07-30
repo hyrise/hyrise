@@ -1,6 +1,5 @@
 #pragma once
 
-#include <atomic>
 #include <functional>
 
 #include "abstract_task.hpp"
