@@ -12,6 +12,31 @@
 namespace opossum {
 
 template <typename T>
+struct SortedChunk {
+  SortedChunk() {}
+
+  std::vector<std::pair<T, RowID>> values;
+
+  // Used to count the number of entries for each partition from this chunk
+  std::map<uint32_t, uint32_t> partition_histogram;
+  std::map<uint32_t, uint32_t> prefix;
+
+  std::map<T, uint32_t> value_histogram;
+  std::map<T, uint32_t> prefix_v;
+};
+
+template <typename T>
+struct SortedTable {
+  SortedTable() {}
+
+  std::vector<SortedChunk<T>> partitions;
+
+  // used to count the number of entries for each partition from the whole table
+  std::map<uint32_t, uint32_t> partition_histogram;
+  std::map<T, uint32_t> value_histogram;
+ };
+
+template <typename T>
 class RadixPartitionSort : public ColumnVisitable {
  public:
    RadixPartitionSort(const std::shared_ptr<const AbstractOperator> left,
@@ -41,31 +66,6 @@ class RadixPartitionSort : public ColumnVisitable {
   virtual ~RadixPartitionSort() = default;
 
   protected:
-    // struct used for materialized sorted Chunk
-    struct SortedChunk {
-      SortedChunk() {}
-
-      std::vector<std::pair<T, RowID>> values;
-
-      // Used to count the number of entries for each partition from this chunk
-      std::map<uint32_t, uint32_t> partition_histogram;
-      std::map<uint32_t, uint32_t> prefix;
-
-      std::map<T, uint32_t> value_histogram;
-      std::map<T, uint32_t> prefix_v;
-    };
-
-    // struct used for a materialized sorted Table
-    struct SortedTable {
-      SortedTable() {}
-
-      std::vector<SortedChunk> partitions;
-
-      // used to count the number of entries for each partition from the whole table
-      std::map<uint32_t, uint32_t> partition_histogram;
-      std::map<T, uint32_t> value_histogram;
-   };
-
    struct SortContext : ColumnVisitableContext {
      SortContext(ChunkID id, std::vector<std::pair<T, RowID>>& output) : chunk_id(id), sort_output(output) {}
 
@@ -84,8 +84,8 @@ class RadixPartitionSort : public ColumnVisitable {
    // the partition count should be a power of two, i.e. 1, 2, 4, 8, 16, ...
    size_t _partition_count;
 
-   std::shared_ptr<SortedTable> _sorted_left_table;
-   std::shared_ptr<SortedTable> _sorted_right_table;
+   std::shared_ptr<SortedTable<T>> _sorted_left_table;
+   std::shared_ptr<SortedTable<T>> _sorted_right_table;
 
    // Radix calculation functions
    template <typename T2>
@@ -100,10 +100,10 @@ class RadixPartitionSort : public ColumnVisitable {
    }
 
      // Sort functions
-   std::shared_ptr<SortedTable> sort_table(std::shared_ptr<const Table> input, const std::string& column_name) {
+   std::shared_ptr<SortedTable<T>> sort_table(std::shared_ptr<const Table> input, const std::string& column_name) {
      auto sorted_input_chunks_ptr = sort_input_chunks(input, column_name);
      auto& sorted_input_chunks = *sorted_input_chunks_ptr;
-     auto sorted_table = std::make_shared<SortedTable>();
+     auto sorted_table = std::make_shared<SortedTable<T>>();
 
      DebugAssert((_partition_count >= 1), "_partition_count is < 1");
 
@@ -173,9 +173,9 @@ class RadixPartitionSort : public ColumnVisitable {
      return sorted_table;
    }
 
-   std::shared_ptr<std::vector<SortedChunk>> sort_input_chunks(std::shared_ptr<const Table> input,
+   std::shared_ptr<std::vector<SortedChunk<T>>> sort_input_chunks(std::shared_ptr<const Table> input,
                                                                const std::string& column_name) {
-     auto sorted_chunks = std::make_shared<std::vector<SortedChunk>>(input->chunk_count());
+     auto sorted_chunks = std::make_shared<std::vector<SortedChunk<T>>>(input->chunk_count());
 
      // Can be extended to find that value dynamically later on (depending on hardware etc.)
      const uint32_t partitionSizeThreshold = 10000;
@@ -297,7 +297,7 @@ class RadixPartitionSort : public ColumnVisitable {
                    [](auto& value_left, auto& value_right) { return value_left.first < value_right.first; });
    }
 
-   T pick_sample_values(std::vector<std::map<T, uint32_t>>& sample_values, std::vector<SortedChunk> partitions) {
+   T pick_sample_values(std::vector<std::map<T, uint32_t>>& sample_values, std::vector<SortedChunk<T>> partitions) {
      auto max_value = partitions[0].values[0].first;
 
      for (size_t partition_number = 0; partition_number < partitions.size(); ++partition_number) {
@@ -347,7 +347,7 @@ class RadixPartitionSort : public ColumnVisitable {
      value_based_table_partitioning(_sorted_right_table, split_values);
    }
 
-  void value_based_table_partitioning(std::shared_ptr<SortedTable> sort_table, std::vector<T>& split_values) {
+  void value_based_table_partitioning(std::shared_ptr<SortedTable<T>> sort_table, std::vector<T>& split_values) {
      std::vector<std::vector<std::pair<T, RowID>>> partitions;
      partitions.resize(_partition_count);
 
@@ -458,6 +458,10 @@ class RadixPartitionSort : public ColumnVisitable {
        value_based_partitioning();
        std::cout << "value based partitioning ran through" << std::endl;
      }
+   }
+
+   std::pair<std::shared_ptr<SortedTable<T>>, std::shared_ptr<SortedTable<T>> get_output() {
+     return std::make_pair(_sorted_left_table, _sorted_right_table);
    }
 };
 
