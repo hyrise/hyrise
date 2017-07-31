@@ -109,6 +109,7 @@ class ValuePlaceholder {
   uint16_t _index;
 };
 
+// TODO(anyone): integrate and replace with ExpressionType
 enum class ScanType {
   OpEquals,
   OpNotEquals,
@@ -118,6 +119,53 @@ enum class ScanType {
   OpGreaterThanEquals,
   OpBetween,
   OpLike
+};
+
+enum class ExpressionType {
+  /*Any literal value*/
+  Literal,
+  /*A star as in SELECT * FROM ...*/
+  Star,
+  /*A parameter used in PreparedStatements*/
+  Placeholder,
+  /*A reference to a column*/
+  ColumnReference,
+  /*A reference to a function, such as COUNT, MIN, MAX*/
+  FunctionReference,
+
+  /*A subselect*/
+  Select,
+
+  /*Arithmetic operators*/
+  Addition,
+  Subtraction,
+  Multiplication,
+  Division,
+  Modulo,
+  Power,
+
+  /*Logical operators*/
+  Equals,
+  NotEquals,
+  LessThan,
+  LessThanEquals,
+  GreaterThan,
+  GreaterThanEquals,
+  Like,
+  NotLike,
+  And,
+  Or,
+  Between,
+  Not,
+
+  /*Set operators*/
+  In,
+  Exists,
+
+  /*Others*/
+  IsNull,
+  Case,
+  Hint
 };
 
 enum class JoinMode { Inner, Left, Right, Outer, Cross, Natural, Self };
