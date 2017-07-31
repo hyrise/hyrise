@@ -7,6 +7,7 @@
 #include <utility>
 #include <vector>
 
+#include "constant_mappings.hpp"
 #include "resolve_type.hpp"
 #include "utils/assert.hpp"
 
@@ -49,7 +50,8 @@ std::shared_ptr<const Table> Aggregate::on_execute() {
     auto column_id = _aggregate_column_ids[aggregate_index];
     auto aggregate = _aggregates[aggregate_index].function;
 
-    if (input_table->column_type(column_id) == "string" && (aggregate == Sum || aggregate == Avg)) {
+    if (input_table->column_type(column_id) == "string" &&
+        (aggregate == AggregateFunction::Sum || aggregate == AggregateFunction::Avg)) {
       throw std::runtime_error("Aggregate: Cannot calculate SUM or AVG on string column");
     }
   }
@@ -241,8 +243,7 @@ void Aggregate::write_aggregate_output(ColumnID column_index) {
   if (_aggregates[column_index].alias) {
     output_column_name = *_aggregates[column_index].alias;
   } else {
-    std::vector<std::string> names{"MIN", "MAX", "SUM", "AVG", "COUNT"};
-    output_column_name = names[function] + "(" + column_name + ")";
+    output_column_name = aggregate_function_to_string.left.at(function) + "(" + column_name + ")";
   }
 
   _output->add_column_definition(output_column_name, aggregate_type_name);

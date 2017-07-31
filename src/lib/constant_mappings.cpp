@@ -105,8 +105,12 @@ const std::unordered_map<JoinMode, std::string> join_mode_to_string = {
 };
 
 // TODO(mp): this should be case-insensitive
-const std::unordered_map<std::string, AggregateFunction> string_to_aggregate_function = {
-    {"MIN", Min}, {"MAX", Max}, {"SUM", Sum}, {"AVG", Avg}, {"COUNT", Count},
-};
+const auto aggregate_function_to_string = make_bimap<AggregateFunction, std::string>({
+    {AggregateFunction::Min, "MIN"},
+    {AggregateFunction::Max, "MAX"},
+    {AggregateFunction::Sum, "SUM"},
+    {AggregateFunction::Avg, "AVG"},
+    {AggregateFunction::Count, "COUNT"},
+});
 
 }  // namespace opossum

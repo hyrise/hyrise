@@ -160,7 +160,7 @@ const std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::translate_aggre
     const auto &aggregate = aggregates[aggregate_idx];
 
     Assert(aggregate.expr->type() == ExpressionType::FunctionReference, "Only functions are supported in Aggregates");
-    const auto aggregate_function = string_to_aggregate_function.at(aggregate.expr->name());
+    const auto aggregate_function = aggregate_function_to_string.right.at(aggregate.expr->name());
 
     aggregate_definitions.emplace_back(expr_aliases[aggregate_idx], aggregate_function, aggregate.alias);
   }

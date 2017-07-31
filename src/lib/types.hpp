@@ -181,4 +181,6 @@ enum class ExpressionType {
 
 enum class JoinMode { Inner, Left, Right, Outer, Cross, Natural, Self };
 
+enum class AggregateFunction { Min, Max, Sum, Avg, Count };
+
 }  // namespace opossum
