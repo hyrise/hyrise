@@ -37,10 +37,10 @@ add_library(
 
     sql-parser/src/parser/bison_parser.cpp
     sql-parser/src/parser/flex_lexer.cpp
-    sql-parser/src/sql/statements.cpp
     sql-parser/src/sql/Expr.cpp
     sql-parser/src/sql/PrepareStatement.cpp
     sql-parser/src/sql/SQLStatement.cpp
+    sql-parser/src/sql/statements.cpp
     sql-parser/src/SQLParser.cpp
     sql-parser/src/SQLParserResult.cpp
     sql-parser/src/util/sqlhelper.cpp
