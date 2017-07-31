@@ -4,12 +4,14 @@
 #include <string>
 #include <vector>
 
-#include "common.hpp"
 #include "optimizer/abstract_syntax_tree/abstract_ast_node.hpp"
-#include "optimizer/expression/expression_node.hpp"
+
+#include "common.hpp"
 #include "types.hpp"
 
 namespace opossum {
+
+class ExpressionNode;
 
 struct AggregateColumnDefinition {
   explicit AggregateColumnDefinition(const std::shared_ptr<ExpressionNode>& expr,
@@ -29,8 +31,9 @@ class AggregateNode : public AbstractASTNode {
   explicit AggregateNode(const std::vector<AggregateColumnDefinition>& aggregates,
                          const std::vector<std::string>& groupby_columns);
 
-  const std::vector<AggregateColumnDefinition>& aggregates() const { return _aggregates; }
-  const std::vector<std::string>& groupby_columns() const { return _groupby_columns; }
+  const std::vector<AggregateColumnDefinition>& aggregates() const;
+
+  const std::vector<std::string>& groupby_columns() const;
 
   std::string description() const override;
 

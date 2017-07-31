@@ -5,6 +5,8 @@
 #include <string>
 #include <vector>
 
+#include "optimizer/expression/expression_node.hpp"
+
 #include "common.hpp"
 
 namespace opossum {
@@ -18,10 +20,13 @@ AggregateNode::AggregateNode(const std::vector<AggregateColumnDefinition>& aggre
     : AbstractASTNode(ASTNodeType::Aggregate), _aggregates(aggregates), _groupby_columns(groupby_columns) {
   for (const auto& aggregate : aggregates) {
     std::string alias;
-    if (aggregate.alias)
+    if (aggregate.alias) {
       alias = *aggregate.alias;
-    else
-      alias = "TODO";  // TODO(mp): aggregate.expr->to_alias_name()
+    } else {
+      // TODO(mp): this is currently not correct, but hard to fix.
+      // Postpone to resolve with major re-factoring of Projection and expressions.
+      alias = aggregate.expr->to_expression_string();
+    }
 
     _output_column_names.emplace_back(alias);
   }
@@ -30,6 +35,10 @@ AggregateNode::AggregateNode(const std::vector<AggregateColumnDefinition>& aggre
     _output_column_names.emplace_back(groupby_column);
   }
 }
+
+const std::vector<AggregateColumnDefinition>& AggregateNode::aggregates() const { return _aggregates; }
+
+const std::vector<std::string>& AggregateNode::groupby_columns() const { return _groupby_columns; }
 
 std::string AggregateNode::description() const {
   std::ostringstream s;
