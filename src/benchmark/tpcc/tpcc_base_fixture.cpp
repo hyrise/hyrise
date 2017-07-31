@@ -22,7 +22,7 @@ namespace opossum {
 // Defining the base fixture class
 class TPCCBenchmarkFixture : public benchmark::Fixture {
  public:
-  TPCCBenchmarkFixture() : _gen(tpcc::TableGenerator()), _random_gen(tpcc::RandomGenerator()) {
+  TPCCBenchmarkFixture() : _gen(tpcc::TableGenerator()), _random_gen(tpcc::TpccRandomGenerator()) {
     // TODO(mp): This constructor is currently run once before each TPCC benchmark.
     // Thus we create all tables up to 8 times, which takes quite a long time.
     std::cout << "Generating tables (this might take a couple of minutes)..." << std::endl;
@@ -47,7 +47,7 @@ class TPCCBenchmarkFixture : public benchmark::Fixture {
 
  protected:
   tpcc::TableGenerator _gen;
-  tpcc::RandomGenerator _random_gen;
+  tpcc::TpccRandomGenerator _random_gen;
   std::shared_ptr<std::map<std::string, std::shared_ptr<Table>>> _tpcc_tables;
 
   void clear_cache() {
