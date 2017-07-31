@@ -239,8 +239,6 @@ set(
     uid_allocator.hpp
     utils/assert.hpp
     utils/cuckoo_hashtable.hpp
-    utils/helper.cpp
-    utils/helper.hpp
     utils/murmur_hash.cpp
     utils/murmur_hash.hpp
 )

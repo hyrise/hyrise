@@ -18,7 +18,6 @@
 #include "operators/validate.hpp"
 #include "storage/storage_manager.hpp"
 #include "types.hpp"
-#include "utils/helper.hpp"
 
 namespace tpcc {
 

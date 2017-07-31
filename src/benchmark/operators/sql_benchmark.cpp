@@ -38,8 +38,7 @@ BENCHMARK_F(SQLBenchmark, BM_SQLTranslationTotalQ1)(benchmark::State& state) {
     SQLParserResult result;
     SQLParser::parseSQLString(Q1, &result);
 
-    SQLToASTTranslator translator;
-    auto result_node = translator.translate_parse_result(result)[0];
+    auto result_node = SQLToASTTranslator::get().translate_parse_result(result)[0];
     ASTToOperatorTranslator::get().translate_node(result_node);
   }
 }
@@ -56,8 +55,7 @@ BENCHMARK_F(SQLBenchmark, BM_SQLTranslationOnlyTranslationQ1)(benchmark::State& 
   SQLParser::parseSQLString(Q1, &result);
 
   while (state.KeepRunning()) {
-    SQLToASTTranslator translator;
-    auto result_node = translator.translate_parse_result(result)[0];
+    auto result_node = SQLToASTTranslator::get().translate_parse_result(result)[0];
     ASTToOperatorTranslator::get().translate_node(result_node);
   }
 }
@@ -69,8 +67,7 @@ BENCHMARK_F(SQLBenchmark, BM_SQLTranslationTotalQ2)(benchmark::State& state) {
     SQLParserResult result;
     SQLParser::parseSQLString(Q2, &result);
 
-    SQLToASTTranslator translator;
-    auto result_node = translator.translate_parse_result(result)[0];
+    auto result_node = SQLToASTTranslator::get().translate_parse_result(result)[0];
     ASTToOperatorTranslator::get().translate_node(result_node);
   }
 }
@@ -87,8 +84,7 @@ BENCHMARK_F(SQLBenchmark, BM_SQLTranslationOnlyTranslationQ2)(benchmark::State& 
   SQLParser::parseSQLString(Q2, &result);
 
   while (state.KeepRunning()) {
-    SQLToASTTranslator translator;
-    auto result_node = translator.translate_parse_result(result)[0];
+    auto result_node = SQLToASTTranslator::get().translate_parse_result(result)[0];
     ASTToOperatorTranslator::get().translate_node(result_node);
   }
 }
@@ -106,8 +102,7 @@ BENCHMARK_F(SQLBenchmark, BM_SQLTranslationOnlyTranslationQ3)(benchmark::State& 
   SQLParser::parseSQLString(Q3, &result);
 
   while (state.KeepRunning()) {
-    SQLToASTTranslator translator;
-    auto result_node = translator.translate_parse_result(result)[0];
+    auto result_node = SQLToASTTranslator::get().translate_parse_result(result)[0];
     ASTToOperatorTranslator::get().translate_node(result_node);
   }
 }
