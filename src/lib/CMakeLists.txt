@@ -139,6 +139,8 @@ set(
     operators/validate.hpp
     optimizer/abstract_syntax_tree/abstract_ast_node.cpp
     optimizer/abstract_syntax_tree/abstract_ast_node.hpp
+    optimizer/abstract_syntax_tree/aggregate_node.cpp
+    optimizer/abstract_syntax_tree/aggregate_node.hpp
     optimizer/abstract_syntax_tree/join_node.cpp
     optimizer/abstract_syntax_tree/join_node.hpp
     optimizer/abstract_syntax_tree/predicate_node.cpp

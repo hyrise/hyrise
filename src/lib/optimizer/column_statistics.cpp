@@ -72,7 +72,8 @@ void ColumnStatistics<ColumnType>::initialize_min_max() const {
   auto table_wrapper = std::make_shared<TableWrapper>(table);
   table_wrapper->execute();
   const std::string &column_name = table->column_name(_column_id);
-  auto aggregate_args = std::vector<AggregateDefinition>{{column_name, Min}, {column_name, Max}};
+  auto aggregate_args =
+      std::vector<AggregateDefinition>{{column_name, AggregateFunction::Min}, {column_name, AggregateFunction::Max}};
   auto aggregate = std::make_shared<Aggregate>(table_wrapper, aggregate_args, std::vector<std::string>{});
   aggregate->execute();
   auto aggregate_table = aggregate->get_output();
