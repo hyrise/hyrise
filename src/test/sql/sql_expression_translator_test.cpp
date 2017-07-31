@@ -83,7 +83,7 @@ TEST_F(SQLExpressionTranslatorTest, ArithmeticExpression) {
 
   EXPECT_EQ(predicate->type(), ExpressionType::Equals);
   EXPECT_EQ(predicate->left_child()->type(), ExpressionType::ColumnReference);
-  EXPECT_EQ(predicate->right_child()->type(), ExpressionType::Plus);
+  EXPECT_EQ(predicate->right_child()->type(), ExpressionType::Addition);
 
   auto plus_expression = predicate->right_child();
   EXPECT_EQ(plus_expression->left_child()->type(), ExpressionType::Literal);
@@ -184,7 +184,7 @@ TEST_F(SQLExpressionTranslatorTest, ExpressionComplexFunction) {
   ASSERT_EQ(first->expression_list().size(), 1u);
 
   auto function_expression = first->expression_list().at(0);
-  EXPECT_EQ(function_expression->type(), ExpressionType::Asterisk);
+  EXPECT_EQ(function_expression->type(), ExpressionType::Multiplication);
   EXPECT_EQ(function_expression->left_child()->type(), ExpressionType::ColumnReference);
   EXPECT_EQ(function_expression->right_child()->type(), ExpressionType::ColumnReference);
 }
@@ -196,7 +196,7 @@ TEST_F(SQLExpressionTranslatorTest, ExpressionStringConcatenation) {
   EXPECT_EQ(expressions.size(), 1u);
   auto &first = expressions.at(0);
 
-  EXPECT_EQ(first->type(), ExpressionType::Plus);
+  EXPECT_EQ(first->type(), ExpressionType::Addition);
   EXPECT_EQ(first->left_child()->type(), ExpressionType::Literal);
   EXPECT_EQ(first->right_child()->type(), ExpressionType::Literal);
 }
