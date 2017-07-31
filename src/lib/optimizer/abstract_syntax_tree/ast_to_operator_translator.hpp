@@ -1,11 +1,11 @@
 #pragma once
 
+#include <boost/noncopyable.hpp>
+
 #include <atomic>
 #include <functional>
 #include <memory>
 #include <unordered_map>
-
-#include <boost/noncopyable.hpp>
 
 #include "all_type_variant.hpp"
 #include "operators/abstract_operator.hpp"

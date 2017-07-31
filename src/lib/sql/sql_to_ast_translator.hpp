@@ -1,10 +1,10 @@
 #pragma once
 
+#include <boost/noncopyable.hpp>
+
 #include <memory>
 #include <string>
 #include <vector>
-
-#include <boost/noncopyable.hpp>
 
 #include "SQLParser.h"
 
