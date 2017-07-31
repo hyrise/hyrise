@@ -13,7 +13,7 @@
 #include "optimizer/abstract_syntax_tree/predicate_node.hpp"
 #include "optimizer/abstract_syntax_tree/projection_node.hpp"
 #include "optimizer/abstract_syntax_tree/sort_node.hpp"
-#include "sql/sql_query_node_translator.hpp"
+#include "sql/sql_to_ast_translator.hpp"
 #include "storage/storage_manager.hpp"
 
 namespace opossum {
@@ -52,7 +52,7 @@ class SQLQueryNodeTranslatorTest : public BaseTest {
     return _translator.translate_parse_result(parse_result)[0];
   }
 
-  SQLQueryNodeTranslator _translator;
+  SQLToASTTranslator _translator;
 };
 
 TEST_F(SQLQueryNodeTranslatorTest, BasicSuccessTest) {

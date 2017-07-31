@@ -8,9 +8,9 @@
 #include "gtest/gtest.h"
 
 #include "operators/abstract_operator.hpp"
-#include "optimizer/abstract_syntax_tree/node_operator_translator.hpp"
+#include "optimizer/abstract_syntax_tree/ast_to_operator_translator.hpp"
 #include "scheduler/operator_task.hpp"
-#include "sql/sql_query_node_translator.hpp"
+#include "sql/sql_to_ast_translator.hpp"
 #include "storage/storage_manager.hpp"
 
 namespace opossum {
@@ -31,7 +31,7 @@ class TPCHTest : public BaseTest {
     }
 
     auto result_node = _node_translator.translate_parse_result(parse_result)[0];
-    return NodeOperatorTranslator::get().translate_node(result_node);
+    return ASTToOperatorTranslator::get().translate_node(result_node);
   }
 
   std::shared_ptr<OperatorTask> schedule_query_and_return_task(const std::string query) {
@@ -49,7 +49,7 @@ class TPCHTest : public BaseTest {
     EXPECT_TABLE_EQ(result_task->get_operator()->get_output(), expected_result, order_sensitive);
   }
 
-  SQLQueryNodeTranslator _node_translator;
+  SQLToASTTranslator _node_translator;
 };
 
 TEST_F(TPCHTest, TPCH6) {

@@ -1,4 +1,4 @@
-#include "sql_query_node_translator.hpp"
+#include "sql_to_ast_translator.hpp"
 
 #include <memory>
 #include <string>
@@ -55,7 +55,12 @@ JoinMode translate_join_type_to_join_mode(const hsql::JoinType join_type) {
   return it->second;
 }
 
-std::vector<std::shared_ptr<AbstractASTNode>> SQLQueryNodeTranslator::translate_parse_result(
+SQLToASTTranslator& SQLToASTTranslator::get() {
+  static SQLToASTTranslator instance;
+  return instance;
+}
+
+std::vector<std::shared_ptr<AbstractASTNode>> SQLToASTTranslator::translate_parse_result(
     const hsql::SQLParserResult& result) {
   std::vector<std::shared_ptr<AbstractASTNode>> result_nodes;
   const std::vector<hsql::SQLStatement*>& statements = result.getStatements();
@@ -68,7 +73,7 @@ std::vector<std::shared_ptr<AbstractASTNode>> SQLQueryNodeTranslator::translate_
   return result_nodes;
 }
 
-std::shared_ptr<AbstractASTNode> SQLQueryNodeTranslator::translate_statement(const hsql::SQLStatement& statement) {
+std::shared_ptr<AbstractASTNode> SQLToASTTranslator::translate_statement(const hsql::SQLStatement& statement) {
   switch (statement.type()) {
     case hsql::kStmtSelect:
       return _translate_select((const hsql::SelectStatement&)statement);
@@ -78,7 +83,7 @@ std::shared_ptr<AbstractASTNode> SQLQueryNodeTranslator::translate_statement(con
   }
 }
 
-std::shared_ptr<AbstractASTNode> SQLQueryNodeTranslator::_translate_select(const hsql::SelectStatement& select) {
+std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_select(const hsql::SelectStatement& select) {
   // SQL Order of Operations: http://www.bennadel.com/blog/70-sql-query-order-of-operations.htm
   // 1. FROM clause
   // 2. WHERE clause
@@ -126,7 +131,7 @@ std::shared_ptr<AbstractASTNode> SQLQueryNodeTranslator::_translate_select(const
   return current_result_node;
 }
 
-std::shared_ptr<AbstractASTNode> SQLQueryNodeTranslator::_translate_join(const hsql::JoinDefinition& join) {
+std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_join(const hsql::JoinDefinition& join) {
   auto left_node = _translate_table_ref(*join.left);
   auto right_node = _translate_table_ref(*join.right);
 
@@ -148,7 +153,7 @@ std::shared_ptr<AbstractASTNode> SQLQueryNodeTranslator::_translate_join(const h
   return join_node;
 }
 
-std::shared_ptr<AbstractASTNode> SQLQueryNodeTranslator::_translate_table_ref(const hsql::TableRef& table) {
+std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_table_ref(const hsql::TableRef& table) {
   switch (table.type) {
     case hsql::kTableName:
       return std::make_shared<StoredTableNode>(table.name);
@@ -165,7 +170,7 @@ std::shared_ptr<AbstractASTNode> SQLQueryNodeTranslator::_translate_table_ref(co
   }
 }
 
-std::string SQLQueryNodeTranslator::get_column_name(const hsql::Expr& expr, bool include_table_name) {
+std::string SQLToASTTranslator::get_column_name(const hsql::Expr& expr, bool include_table_name) {
   std::string name;
 
   // Translate an aggregate function to a string that the Aggregate operator generates.
@@ -190,7 +195,7 @@ std::string SQLQueryNodeTranslator::get_column_name(const hsql::Expr& expr, bool
   return name;
 }
 
-AllParameterVariant SQLQueryNodeTranslator::translate_literal(const hsql::Expr& expr) {
+AllParameterVariant SQLToASTTranslator::translate_literal(const hsql::Expr& expr) {
   switch (expr.type) {
     case hsql::kExprLiteralInt:
       return AllTypeVariant(expr.ival);
@@ -208,7 +213,7 @@ AllParameterVariant SQLQueryNodeTranslator::translate_literal(const hsql::Expr& 
   }
 }
 
-std::shared_ptr<AbstractASTNode> SQLQueryNodeTranslator::_translate_filter_expr(
+std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_filter_expr(
     const hsql::Expr& expr, const std::shared_ptr<AbstractASTNode>& input_node) {
   if (!expr.isType(hsql::kExprOperator)) {
     Fail("Filter expression clause has to be of type operator!");
@@ -265,7 +270,7 @@ std::shared_ptr<AbstractASTNode> SQLQueryNodeTranslator::_translate_filter_expr(
   return predicate_node;
 }
 
-std::shared_ptr<AbstractASTNode> SQLQueryNodeTranslator::_translate_aggregate(
+std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_aggregate(
     const hsql::SelectStatement& select, const std::shared_ptr<AbstractASTNode>& input_node) {
   const auto& select_list = *select.selectList;
   const auto* group_by = select.groupBy;
@@ -336,7 +341,7 @@ std::shared_ptr<AbstractASTNode> SQLQueryNodeTranslator::_translate_aggregate(
   return _translate_filter_expr(*group_by->having, aggregate_node);
 }
 
-std::shared_ptr<AbstractASTNode> SQLQueryNodeTranslator::_translate_projection(
+std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_projection(
     const std::vector<hsql::Expr*>& select_list, const std::shared_ptr<AbstractASTNode>& input_node) {
   std::vector<std::string> columns;
   for (const hsql::Expr* expr : select_list) {
@@ -358,8 +363,8 @@ std::shared_ptr<AbstractASTNode> SQLQueryNodeTranslator::_translate_projection(
   return projection_node;
 }
 
-std::shared_ptr<AbstractASTNode> SQLQueryNodeTranslator::_translate_order_by(
-    const std::vector<hsql::OrderDescription*> order_list, const std::shared_ptr<AbstractASTNode>& input_node) {
+std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_order_by(
+    const std::vector<hsql::OrderDescription*> & order_list, const std::shared_ptr<AbstractASTNode>& input_node) {
   if (order_list.empty()) {
     return input_node;
   }

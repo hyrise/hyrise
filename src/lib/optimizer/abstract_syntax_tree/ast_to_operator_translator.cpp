@@ -1,4 +1,4 @@
-#include "node_operator_translator.hpp"
+#include "ast_to_operator_translator.hpp"
 
 #include <memory>
 #include <string>
@@ -21,28 +21,28 @@
 namespace opossum {
 
 // singleton
-NodeOperatorTranslator &NodeOperatorTranslator::get() {
-  static NodeOperatorTranslator instance;
+ASTToOperatorTranslator &ASTToOperatorTranslator::get() {
+  static ASTToOperatorTranslator instance;
   return instance;
 }
 
-NodeOperatorTranslator::NodeOperatorTranslator() {
+ASTToOperatorTranslator::ASTToOperatorTranslator() {
   _operator_factory[ASTNodeType::StoredTable] =
-      std::bind(&NodeOperatorTranslator::translate_table_node, this, std::placeholders::_1);
+      std::bind(&ASTToOperatorTranslator::translate_table_node, this, std::placeholders::_1);
   _operator_factory[ASTNodeType::Predicate] =
-      std::bind(&NodeOperatorTranslator::translate_table_scan_node, this, std::placeholders::_1);
+      std::bind(&ASTToOperatorTranslator::translate_table_scan_node, this, std::placeholders::_1);
   _operator_factory[ASTNodeType::Projection] =
-      std::bind(&NodeOperatorTranslator::translate_projection_node, this, std::placeholders::_1);
+      std::bind(&ASTToOperatorTranslator::translate_projection_node, this, std::placeholders::_1);
   _operator_factory[ASTNodeType::Sort] =
-      std::bind(&NodeOperatorTranslator::translate_order_by_node, this, std::placeholders::_1);
+      std::bind(&ASTToOperatorTranslator::translate_order_by_node, this, std::placeholders::_1);
   _operator_factory[ASTNodeType::Join] =
-      std::bind(&NodeOperatorTranslator::translate_join_node, this, std::placeholders::_1);
+      std::bind(&ASTToOperatorTranslator::translate_join_node, this, std::placeholders::_1);
   _operator_factory[ASTNodeType::Aggregate] =
-      std::bind(&NodeOperatorTranslator::translate_aggregate_node, this, std::placeholders::_1);
+      std::bind(&ASTToOperatorTranslator::translate_aggregate_node, this, std::placeholders::_1);
 }
 
-const std::shared_ptr<AbstractOperator> NodeOperatorTranslator::translate_node(
-    std::shared_ptr<AbstractASTNode> node) const {
+const std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::translate_node(
+    const std::shared_ptr<AbstractASTNode> & node) const {
   auto it = _operator_factory.find(node->type());
 
   if (it == _operator_factory.end()) {
@@ -52,35 +52,35 @@ const std::shared_ptr<AbstractOperator> NodeOperatorTranslator::translate_node(
   return it->second(node);
 }
 
-const std::shared_ptr<AbstractOperator> NodeOperatorTranslator::translate_table_node(
-    std::shared_ptr<AbstractASTNode> node) const {
+const std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::translate_table_node(
+    const std::shared_ptr<AbstractASTNode> & node) const {
   auto table_node = std::dynamic_pointer_cast<StoredTableNode>(node);
   return std::make_shared<GetTable>(table_node->table_name());
 }
 
-const std::shared_ptr<AbstractOperator> NodeOperatorTranslator::translate_table_scan_node(
-    std::shared_ptr<AbstractASTNode> node) const {
+const std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::translate_table_scan_node(
+    const std::shared_ptr<AbstractASTNode> & node) const {
   auto input_operator = translate_node(node->left_child());
   auto table_scan_node = std::dynamic_pointer_cast<PredicateNode>(node);
   return std::make_shared<TableScan>(input_operator, table_scan_node->column_name(), table_scan_node->scan_type(),
                                      table_scan_node->value(), table_scan_node->value2());
 }
 
-const std::shared_ptr<AbstractOperator> NodeOperatorTranslator::translate_projection_node(
-    std::shared_ptr<AbstractASTNode> node) const {
+const std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::translate_projection_node(
+    const std::shared_ptr<AbstractASTNode> & node) const {
   auto input_operator = translate_node(node->left_child());
   return std::make_shared<Projection>(input_operator, node->output_column_names());
 }
 
-const std::shared_ptr<AbstractOperator> NodeOperatorTranslator::translate_order_by_node(
-    std::shared_ptr<AbstractASTNode> node) const {
+const std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::translate_order_by_node(
+    const std::shared_ptr<AbstractASTNode> & node) const {
   auto input_operator = translate_node(node->left_child());
   auto sort_node = std::dynamic_pointer_cast<SortNode>(node);
   return std::make_shared<Sort>(input_operator, sort_node->column_name(), sort_node->ascending());
 }
 
-const std::shared_ptr<AbstractOperator> NodeOperatorTranslator::translate_join_node(
-    std::shared_ptr<AbstractASTNode> node) const {
+const std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::translate_join_node(
+    const std::shared_ptr<AbstractASTNode> & node) const {
   auto input_left_operator = translate_node(node->left_child());
   auto input_right_operator = translate_node(node->right_child());
 
@@ -90,8 +90,8 @@ const std::shared_ptr<AbstractOperator> NodeOperatorTranslator::translate_join_n
                                            join_node->prefix_right());
 }
 
-const std::shared_ptr<AbstractOperator> NodeOperatorTranslator::translate_aggregate_node(
-    std::shared_ptr<AbstractASTNode> node) const {
+const std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::translate_aggregate_node(
+    const std::shared_ptr<AbstractASTNode> & node) const {
   auto input_operator = translate_node(node->left_child());
 
   const auto aggregate_node = std::dynamic_pointer_cast<AggregateNode>(node);

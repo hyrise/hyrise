@@ -69,7 +69,7 @@ std::shared_ptr<ExpressionNode> SQLExpressionTranslator::translate_expression(co
        *
        * Right now, I cannot estimate the consequences of such a circular reference for the optimizer rules.
        */
-      // TODO(mp): translate as soon as SQLQueryNodeTranslator is merged
+      // TODO(mp): translate as soon as SQLToASTTranslator is merged
       throw std::runtime_error("Selects are not supported yet.");
     default:
       throw std::runtime_error("Unsupported expression type");

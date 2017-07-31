@@ -10,10 +10,10 @@
 
 #include "operators/get_table.hpp"
 #include "operators/table_scan.hpp"
-#include "optimizer/abstract_syntax_tree/node_operator_translator.hpp"
+#include "optimizer/abstract_syntax_tree/ast_to_operator_translator.hpp"
 #include "scheduler/node_queue_scheduler.hpp"
 #include "scheduler/topology.hpp"
-#include "sql/sql_query_node_translator.hpp"
+#include "sql/sql_to_ast_translator.hpp"
 #include "sql/sql_query_plan.hpp"
 #include "storage/storage_manager.hpp"
 
@@ -69,7 +69,7 @@ class SQLSelectTest : public BaseTest, public ::testing::WithParamInterface<SQLT
 
     // Compile the parse result.
     auto result_node = _translator.translate_parse_result(parse_result)[0];
-    auto result_operator = NodeOperatorTranslator::get().translate_node(result_node);
+    auto result_operator = ASTToOperatorTranslator::get().translate_node(result_node);
 
     _plan.add_tree_by_root(result_operator);
   }
@@ -82,7 +82,7 @@ class SQLSelectTest : public BaseTest, public ::testing::WithParamInterface<SQLT
 
   std::shared_ptr<const Table> get_plan_result() { return _plan.tree_roots().back()->get_output(); }
 
-  SQLQueryNodeTranslator _translator;
+  SQLToASTTranslator _translator;
   SQLQueryPlan _plan;
 };
 

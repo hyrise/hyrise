@@ -11,7 +11,6 @@ set(
     ${SHARED_SOURCES}
     concurrency/commit_context_test.cpp
     concurrency/transaction_manager_test.cpp
-    end_to_end_test.cpp
     lib/AllParameterVariant_test.cpp
     lib/all_type_variant_test.cpp
     network/operator_translator_test.cpp
@@ -59,6 +58,7 @@ set(
     sql/sql_query_plan_test.cpp
     sql/sql_query_plan_cache_test.cpp
     sql/sql_select_test.cpp
+    sql/sql_to_result_test.cpp
     sql/tpch_test.cpp
     storage/adaptive_radix_tree_index_test.cpp
     storage/chunk_test.cpp

@@ -143,8 +143,8 @@ set(
     optimizer/abstract_syntax_tree/aggregate_node.hpp
     optimizer/abstract_syntax_tree/join_node.cpp
     optimizer/abstract_syntax_tree/join_node.hpp
-    optimizer/abstract_syntax_tree/node_operator_translator.hpp
-    optimizer/abstract_syntax_tree/node_operator_translator.cpp
+    optimizer/abstract_syntax_tree/ast_to_operator_translator.hpp
+    optimizer/abstract_syntax_tree/ast_to_operator_translator.cpp
     optimizer/abstract_syntax_tree/predicate_node.cpp
     optimizer/abstract_syntax_tree/predicate_node.hpp
     optimizer/abstract_syntax_tree/projection_node.cpp
@@ -185,14 +185,14 @@ set(
     sql/sql_expression_translator.cpp
     sql/sql_expression_translator.hpp
     sql/sql_query_cache.hpp
-    sql/sql_query_node_translator.cpp
-    sql/sql_query_node_translator.hpp
     sql/sql_query_operator.cpp
     sql/sql_query_operator.hpp
     sql/sql_query_plan.cpp
     sql/sql_query_plan.hpp
     sql/sql_result_operator.cpp
     sql/sql_result_operator.hpp
+    sql/sql_to_ast_translator.cpp
+    sql/sql_to_ast_translator.hpp
     storage/base_attribute_vector.hpp
     storage/base_column.hpp
     storage/chunk.cpp

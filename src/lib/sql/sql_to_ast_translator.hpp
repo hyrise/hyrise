@@ -4,6 +4,8 @@
 #include <string>
 #include <vector>
 
+#include <boost/noncopyable.hpp>
+
 #include "SQLParser.h"
 
 #include "all_parameter_variant.hpp"
@@ -13,10 +15,9 @@
 
 namespace opossum {
 
-class SQLQueryNodeTranslator {
+class SQLToASTTranslator final : public boost::noncopyable {
  public:
-  SQLQueryNodeTranslator() = default;
-  virtual ~SQLQueryNodeTranslator() = default;
+  static SQLToASTTranslator& get();
 
   // Translates the given SQL result.
   std::vector<std::shared_ptr<AbstractASTNode>> translate_parse_result(const hsql::SQLParserResult& result);
@@ -40,7 +41,7 @@ class SQLQueryNodeTranslator {
   std::shared_ptr<AbstractASTNode> _translate_projection(const std::vector<hsql::Expr*>& select_list,
                                                          const std::shared_ptr<AbstractASTNode>& input_node);
 
-  std::shared_ptr<AbstractASTNode> _translate_order_by(const std::vector<hsql::OrderDescription*> order_list,
+  std::shared_ptr<AbstractASTNode> _translate_order_by(const std::vector<hsql::OrderDescription*> & order_list,
                                                        const std::shared_ptr<AbstractASTNode>& input_node);
 
   std::shared_ptr<AbstractASTNode> _translate_join(const hsql::JoinDefinition& select);

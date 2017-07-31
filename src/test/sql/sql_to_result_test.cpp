@@ -10,11 +10,11 @@
 
 #include "operators/get_table.hpp"
 #include "operators/table_scan.hpp"
-#include "optimizer/abstract_syntax_tree/node_operator_translator.hpp"
+#include "optimizer/abstract_syntax_tree/ast_to_operator_translator.hpp"
 #include "scheduler/node_queue_scheduler.hpp"
 #include "scheduler/operator_task.hpp"
 #include "scheduler/topology.hpp"
-#include "sql/sql_query_node_translator.hpp"
+#include "sql/sql_to_ast_translator.hpp"
 #include "storage/storage_manager.hpp"
 
 namespace opossum {
@@ -30,7 +30,7 @@ struct SQLTestParam {
   const bool order_sensitive;
 };
 
-class EndToEndTest : public BaseTest, public ::testing::WithParamInterface<SQLTestParam> {
+class SQLToResultTest : public BaseTest, public ::testing::WithParamInterface<SQLTestParam> {
  protected:
   void SetUp() override {
     std::shared_ptr<Table> table_a = load_table("src/test/tables/int_float.tbl", 2);
@@ -68,13 +68,15 @@ class EndToEndTest : public BaseTest, public ::testing::WithParamInterface<SQLTe
     StorageManager::get().add_table("lineitem", lineitem);
   }
 
-  SQLQueryNodeTranslator _node_translator;
+  // Don't use singletons - rule out the possibility of tests polluting global state
+  SQLToASTTranslator _sql_to_ast_translator;
+  ASTToOperatorTranslator _ast_to_operator_translator;
 };
 
 // Generic test case that will be called with the parameters listed below.
 // Compiles a query, optimizes, and executes it.
 // Checks the result against a table in a file.
-TEST_P(EndToEndTest, SQLQueryTest) {
+TEST_P(SQLToResultTest, SQLQueryTest) {
   SQLTestParam params = GetParam();
 
   auto expected_result = load_table(params.result_table_path, 2);
@@ -87,8 +89,8 @@ TEST_P(EndToEndTest, SQLQueryTest) {
   }
 
   // Expect the query to be a single statement.
-  auto result_node = _node_translator.translate_parse_result(parse_result)[0];
-  auto result_operator = NodeOperatorTranslator::get().translate_node(result_node);
+  auto result_node = _sql_to_ast_translator.translate_parse_result(parse_result)[0];
+  auto result_operator = _ast_to_operator_translator.translate_node(result_node);
 
   auto tasks = OperatorTask::make_tasks_from_operator(result_operator);
   CurrentScheduler::schedule_and_wait_for_tasks(tasks);
@@ -154,6 +156,6 @@ const SQLTestParam test_queries[] = {
      "src/test/tables/tpch/customer_join_orders_alias.tbl"},
 };
 
-INSTANTIATE_TEST_CASE_P(test_queries, EndToEndTest, ::testing::ValuesIn(test_queries));
+INSTANTIATE_TEST_CASE_P(test_queries, SQLToResultTest, ::testing::ValuesIn(test_queries));
 
 }  // namespace opossum
