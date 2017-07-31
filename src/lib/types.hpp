@@ -137,12 +137,12 @@ enum class ExpressionType {
   Select,
 
   /*Arithmetic operators*/
-  Plus,
-  Minus,
-  Asterisk,
-  Slash,
-  Percentage,
-  Caret,
+  Addition,
+  Subtraction,
+  Multiplication,
+  Division,
+  Modulo,
+  Power,
 
   /*Logical operators*/
   Equals,

@@ -43,12 +43,12 @@ const std::unordered_map<ExpressionType, std::string> expression_type_to_string 
     {ExpressionType::FunctionReference, "FunctionReference"},
     {ExpressionType::Select, "Select"},
     /*Arithmetic operators*/
-    {ExpressionType::Plus, "Plus"},
-    {ExpressionType::Minus, "Minus"},
-    {ExpressionType::Asterisk, "Asterisk"},
-    {ExpressionType::Slash, "Slash"},
-    {ExpressionType::Percentage, "Percentage"},
-    {ExpressionType::Caret, "Caret"},
+    {ExpressionType::Addition, "Addition"},
+    {ExpressionType::Subtraction, "Subtraction"},
+    {ExpressionType::Multiplication, "Multiplication"},
+    {ExpressionType::Division, "Division"},
+    {ExpressionType::Modulo, "Modulo"},
+    {ExpressionType::Power, "Power"},
     /*Logical operators*/
     {ExpressionType::Equals, "Equals"},
     {ExpressionType::NotEquals, "NotEquals"},
@@ -72,12 +72,12 @@ const std::unordered_map<ExpressionType, std::string> expression_type_to_string 
 };
 
 const std::unordered_map<hsql::OperatorType, ExpressionType> operator_type_to_expression_type = {
-    {hsql::kOpPlus, ExpressionType::Plus},
-    {hsql::kOpMinus, ExpressionType::Minus},
-    {hsql::kOpAsterisk, ExpressionType::Asterisk},
-    {hsql::kOpSlash, ExpressionType::Slash},
-    {hsql::kOpPercentage, ExpressionType::Percentage},
-    {hsql::kOpCaret, ExpressionType::Caret},
+    {hsql::kOpPlus, ExpressionType::Addition},
+    {hsql::kOpMinus, ExpressionType::Subtraction},
+    {hsql::kOpAsterisk, ExpressionType::Multiplication},
+    {hsql::kOpSlash, ExpressionType::Division},
+    {hsql::kOpPercentage, ExpressionType::Modulo},
+    {hsql::kOpCaret, ExpressionType::Power},
     {hsql::kOpBetween, ExpressionType::Between},
     {hsql::kOpEquals, ExpressionType::Equals},
     {hsql::kOpNotEquals, ExpressionType::NotEquals},
@@ -95,8 +95,8 @@ const std::unordered_map<hsql::OperatorType, ExpressionType> operator_type_to_ex
 };
 
 const std::unordered_map<ExpressionType, std::string> expression_type_to_operator_string = {
-    {ExpressionType::Plus, "+"},  {ExpressionType::Minus, "-"},      {ExpressionType::Asterisk, "*"},
-    {ExpressionType::Slash, "/"}, {ExpressionType::Percentage, "%"}, {ExpressionType::Caret, "^"},
+    {ExpressionType::Addition, "+"}, {ExpressionType::Subtraction, "-"}, {ExpressionType::Multiplication, "*"},
+    {ExpressionType::Division, "/"}, {ExpressionType::Modulo, "%"},      {ExpressionType::Power, "^"},
 };
 
 const std::unordered_map<JoinMode, std::string> join_mode_to_string = {

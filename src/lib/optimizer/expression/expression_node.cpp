@@ -85,8 +85,9 @@ void ExpressionNode::print(const uint32_t level, std::ostream &out) const {
 }
 
 bool ExpressionNode::is_arithmetic_operator() const {
-  return _type == ExpressionType::Minus || _type == ExpressionType::Plus || _type == ExpressionType::Asterisk ||
-         _type == ExpressionType::Slash || _type == ExpressionType::Percentage || _type == ExpressionType::Caret;
+  return _type == ExpressionType::Subtraction || _type == ExpressionType::Addition ||
+         _type == ExpressionType::Multiplication || _type == ExpressionType::Division ||
+         _type == ExpressionType::Modulo || _type == ExpressionType::Power;
 }
 
 const std::string ExpressionNode::description() const {
