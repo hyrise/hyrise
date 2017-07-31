@@ -124,8 +124,6 @@ const AllTypeVariant ExpressionNode::value() const { return _value; }
 //}
 
 std::string ExpressionNode::to_expression_string() const {
-
-
   if (_type == ExpressionType::Literal) {
     return type_cast<std::string>(_value);
   } else if (_type == ExpressionType::ColumnReference) {

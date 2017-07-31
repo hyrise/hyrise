@@ -20,6 +20,7 @@
 #include <vector>
 
 #include "network/server.hpp"
+#include "network/server_configuration.hpp"
 #include "operators/import_csv.hpp"
 #include "scheduler/topology.hpp"
 #include "storage/storage_manager.hpp"

@@ -3,11 +3,11 @@
 #include <memory>
 #include <vector>
 
-#include "operators/abstract_operator.hpp"
-
 #include "scheduler/abstract_task.hpp"
 
 namespace opossum {
+
+class AbstractOperator;
 
 /**
  * Makes an AbstractOperator scheduleable

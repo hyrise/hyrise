@@ -27,6 +27,9 @@ class SQLQueryNodeTranslatorTest : public BaseTest {
     std::shared_ptr<Table> table_b = load_table("src/test/tables/int_float2.tbl", 2);
     StorageManager::get().add_table("table_b", std::move(table_b));
 
+    std::shared_ptr<Table> table_c = load_table("src/test/tables/int_float5.tbl", 2);
+    StorageManager::get().add_table("table_c", std::move(table_c));
+
     // TPCH
     std::shared_ptr<Table> customer = load_table("src/test/tables/tpch/customer.tbl", 1);
     StorageManager::get().add_table("customer", customer);
@@ -137,6 +140,31 @@ TEST_F(SQLQueryNodeTranslatorTest, SelectWithAndCondition) {
   EXPECT_FALSE(t_node->right_child());
 }
 
+TEST_F(SQLQueryNodeTranslatorTest, AggregateWithGroupBy) {
+  const auto query = "SELECT a, SUM(b) AS s FROM table_a GROUP BY a;";
+  const auto result_node = compile_query(query);
+
+  EXPECT_EQ(result_node->type(), ASTNodeType::Aggregate);
+  EXPECT_FALSE(result_node->right_child());
+
+  const auto aggregate_node = std::dynamic_pointer_cast<AggregateNode>(result_node);
+  EXPECT_EQ(aggregate_node->aggregates().size(), 1u);
+  const std::vector<std::string> groupby_columns = {"a"};
+  EXPECT_EQ(aggregate_node->groupby_columns(), groupby_columns);
+  EXPECT_EQ(aggregate_node->aggregates().at(0).alias, std::string("s"));
+
+  auto t_node_1 = result_node->left_child();
+  EXPECT_EQ(t_node_1->type(), ASTNodeType::StoredTable);
+  EXPECT_FALSE(t_node_1->left_child());
+  EXPECT_FALSE(t_node_1->right_child());
+}
+
+TEST_F(SQLQueryNodeTranslatorTest, AggregateWithInvalidGroupBy) {
+  // Cannot select b without it being in the GROUP BY clause.
+  const auto query = "SELECT b, SUM(b) AS s FROM table_a GROUP BY a;";
+  EXPECT_THROW(compile_query(query), std::logic_error);
+}
+
 TEST_F(SQLQueryNodeTranslatorTest, AggregateWithExpression) {
   const auto query = "SELECT SUM(a+b) AS s, SUM(a*b) as f FROM table_a";
   const auto result_node = compile_query(query);
@@ -146,6 +174,7 @@ TEST_F(SQLQueryNodeTranslatorTest, AggregateWithExpression) {
 
   const auto aggregate_node = std::dynamic_pointer_cast<AggregateNode>(result_node);
   EXPECT_EQ(aggregate_node->aggregates().size(), 2u);
+  EXPECT_EQ(aggregate_node->groupby_columns().size(), 0u);
   EXPECT_EQ(aggregate_node->aggregates().at(0).alias, std::string("s"));
   EXPECT_EQ(aggregate_node->aggregates().at(1).alias, std::string("f"));
 
@@ -194,22 +223,42 @@ TEST_F(SQLQueryNodeTranslatorTest, SelectInnerJoin) {
   EXPECT_EQ(join_node->join_column_names()->second, "a");
 }
 
-// TODO(tim&moritz) Name this properly
+TEST_F(SQLQueryNodeTranslatorTest, JoinWithoutAlias) {
+  const auto query = "SELECT * FROM table_a INNER JOIN table_b AS tbl_b ON a.a = b.a;";
+  auto result_node = compile_query(query);
+
+  EXPECT_EQ(result_node->type(), ASTNodeType::Projection);
+  auto projection_node = std::dynamic_pointer_cast<ProjectionNode>(result_node);
+  std::vector<std::string> output_columns = {"a", "b", "a", "d"};
+  EXPECT_EQ(projection_node->output_column_names(), output_columns);
+
+  EXPECT_EQ(result_node->left_child()->type(), ASTNodeType::Join);
+  auto join_node = std::dynamic_pointer_cast<JoinNode>(result_node->left_child());
+  EXPECT_EQ(join_node->scan_type(), ScanType::OpEquals);
+  EXPECT_EQ(join_node->join_mode(), JoinMode::Inner);
+  EXPECT_EQ(join_node->prefix_left(), "a.");
+  EXPECT_EQ(join_node->prefix_right(), "b.");
+  EXPECT_EQ(join_node->join_column_names()->first, "a");
+  EXPECT_EQ(join_node->join_column_names()->second, "a");
+}
+
+// TODO(tim&moritz): BLOCKING - Name this properly
 TEST_F(SQLQueryNodeTranslatorTest, ComplexQuery) {
   const auto query =
-    "  SELECT customer.c_custkey, customer.c_name, COUNT(orderitems.\"orders.o_orderkey\")"
-    "    FROM customer"
-    "    JOIN (SELECT * FROM "
-    "      orders"
-    "      JOIN lineitem ON o_orderkey = l_orderkey"
-    "      WHERE orders.o_custkey = ?"
-    "    ) AS orderitems ON c_custkey = orders.o_custkey"
-    "    GROUP BY customer.c_custkey, customer.c_name"
-    "    HAVING COUNT(orderitems.\"orders.o_orderkey\") >= ?"
-    ";";
+      "  SELECT customer.c_custkey, customer.c_name, COUNT(orderitems.\"orders.o_orderkey\")"
+      "    FROM customer"
+      "    JOIN (SELECT * FROM "
+      "      orders"
+      "      JOIN lineitem ON o_orderkey = l_orderkey"
+      "      WHERE orders.o_custkey = ?"
+      "    ) AS orderitems ON c_custkey = orders.o_custkey"
+      "    GROUP BY customer.c_custkey, customer.c_name"
+      "    HAVING COUNT(orderitems.\"orders.o_orderkey\") >= ?"
+      ";";
 
   auto result_node = compile_query(query);
 
   result_node->print();
 }
+
 }  // namespace opossum

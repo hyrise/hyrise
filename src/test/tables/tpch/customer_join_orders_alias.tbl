@@ -1,0 +1,2 @@
+customer.c_custkey|customer.c_name|COUNT(orderitems.orders.o_orderkey)
+int|string|long

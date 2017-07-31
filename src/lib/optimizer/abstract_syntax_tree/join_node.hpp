@@ -26,8 +26,8 @@ class JoinNode : public AbstractASTNode {
   optional<std::pair<std::string, std::string>> join_column_names() const;
   ScanType scan_type() const;
   JoinMode join_mode() const;
-  std::string prefix_left() const;
-  std::string prefix_right() const;
+  const std::string &prefix_left() const;
+  const std::string &prefix_right() const;
 
  private:
   optional<std::pair<std::string, std::string>> _join_column_names;

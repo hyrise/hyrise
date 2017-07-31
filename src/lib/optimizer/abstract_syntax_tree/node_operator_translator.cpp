@@ -3,12 +3,11 @@
 #include <memory>
 #include <string>
 #include <vector>
-#include <operators/join_nested_loop_a.hpp>
 
 #include "constant_mappings.hpp"
 #include "operators/aggregate.hpp"
 #include "operators/get_table.hpp"
-#include "operators/join_hash.hpp"
+#include "operators/join_nested_loop_a.hpp"
 #include "operators/projection.hpp"
 #include "operators/sort.hpp"
 #include "operators/table_scan.hpp"
@@ -87,8 +86,8 @@ const std::shared_ptr<AbstractOperator> NodeOperatorTranslator::translate_join_n
 
   auto join_node = std::dynamic_pointer_cast<JoinNode>(node);
   return std::make_shared<JoinNestedLoopA>(input_left_operator, input_right_operator, join_node->join_column_names(),
-                                    join_node->scan_type(), join_node->join_mode(), join_node->prefix_left(),
-                                    join_node->prefix_right());
+                                           join_node->scan_type(), join_node->join_mode(), join_node->prefix_left(),
+                                           join_node->prefix_right());
 }
 
 const std::shared_ptr<AbstractOperator> NodeOperatorTranslator::translate_aggregate_node(

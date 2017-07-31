@@ -1,11 +1,9 @@
 #pragma once
 
 #include <memory>
-#include <unordered_map>
 #include <utility>
 #include <vector>
 
-#include "task_queue.hpp"
 #include "types.hpp"
 
 namespace opossum {
