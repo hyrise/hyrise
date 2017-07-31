@@ -102,8 +102,6 @@ enum class SchedulePriority {
   High = 0     // Schedule task at the beginning of the queue
 };
 
-enum AggregateFunction { Min, Max, Sum, Avg, Count };
-
 // Part of AllParameterVariant to reference parameters that will be replaced later.
 // When stored in an operator, the operator's recreate method can contain functionality
 // that will replace a ValuePlaceholder with an explicit value from a given list of arguments
@@ -122,6 +120,7 @@ class ValuePlaceholder {
   uint16_t _index;
 };
 
+// TODO(anyone): integrate and replace with ExpressionType
 enum class ScanType {
   OpEquals,
   OpNotEquals,
@@ -134,34 +133,48 @@ enum class ScanType {
 };
 
 enum class ExpressionType {
+  /*Any literal value*/
   Literal,
+  /*A star as in SELECT * FROM ...*/
   Star,
-  Parameter,
+  /*A parameter used in PreparedStatements*/
+  Placeholder,
+  /*A reference to a column*/
   ColumnReference,
+  /*A reference to a function, such as COUNT, MIN, MAX*/
   FunctionReference,
-  Operator,
+
+  /*A subselect*/
   Select,
+
+  /*Arithmetic operators*/
   Plus,
   Minus,
   Asterisk,
   Slash,
   Percentage,
   Caret,
+
+  /*Logical operators*/
   Equals,
   NotEquals,
-  Less,
-  LessEquals,
-  Greater,
-  GreaterEquals,
+  LessThan,
+  LessThanEquals,
+  GreaterThan,
+  GreaterThanEquals,
   Like,
   NotLike,
   And,
   Or,
-  In,
-  Not,
-  IsNull,
-  Exists,
   Between,
+  Not,
+
+  /*Set operators*/
+  In,
+  Exists,
+
+  /*Others*/
+  IsNull,
   Case,
   Hint
 };

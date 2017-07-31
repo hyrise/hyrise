@@ -2,6 +2,7 @@
 
 #include <iomanip>
 #include <iostream>
+#include <iterator>
 #include <memory>
 #include <string>
 #include <vector>
@@ -68,5 +69,4 @@ void AbstractASTNode::print(const uint32_t level, std::ostream &out) const {
     _right_child->print(level + 2, out);
   }
 }
-
 }  // namespace opossum

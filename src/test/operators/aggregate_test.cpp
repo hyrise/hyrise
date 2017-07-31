@@ -59,8 +59,8 @@ class OperatorsAggregateTest : public BaseTest {
     _table_wrapper_1_1_dict->execute();
   }
 
-  void test_output(const std::shared_ptr<AbstractOperator> in, const std::vector<AggregateDefinition> aggregates,
-                   const std::vector<std::string> groupby_columns, const std::string &file_name, size_t chunk_size) {
+  void test_output(const std::shared_ptr<AbstractOperator> in, const std::vector<AggregateDefinition> &aggregates,
+                   const std::vector<std::string> &groupby_columns, const std::string &file_name, size_t chunk_size) {
     // load expected results from file
     std::shared_ptr<Table> expected_result = load_table(file_name, chunk_size);
     EXPECT_NE(expected_result, nullptr) << "Could not load expected result table";
@@ -251,7 +251,7 @@ TEST_F(OperatorsAggregateTest, TwoAggregateSumAvg) {
 }
 
 TEST_F(OperatorsAggregateTest, TwoAggregateSumAvgAlias) {
-  this->test_output(_table_wrapper_1_2, {{"b", Sum, optional<std::string>("sum_b")}, {"c", Avg}}, {std::string("a")},
+  this->test_output(_table_wrapper_1_2, {{"b", Sum, {"sum_b"}}, {"c", Avg}}, {std::string("a")},
                     "src/test/tables/aggregateoperator/groupby_int_1gb_2agg/sum_avg_alias.tbl", 1);
 }
 

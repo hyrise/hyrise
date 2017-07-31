@@ -143,13 +143,10 @@ set(
     optimizer/abstract_syntax_tree/aggregate_node.hpp
     optimizer/abstract_syntax_tree/join_node.cpp
     optimizer/abstract_syntax_tree/join_node.hpp
-    optimizer/expression/expression_node.cpp
-    optimizer/expression/expression_node.hpp
     optimizer/abstract_syntax_tree/node_operator_translator.hpp
     optimizer/abstract_syntax_tree/node_operator_translator.cpp
     optimizer/abstract_syntax_tree/predicate_node.cpp
     optimizer/abstract_syntax_tree/predicate_node.hpp
-    optimizer/abstract_syntax_tree/query_plan_helper.hpp
     optimizer/abstract_syntax_tree/projection_node.cpp
     optimizer/abstract_syntax_tree/projection_node.hpp
     optimizer/abstract_syntax_tree/sort_node.cpp
@@ -159,11 +156,8 @@ set(
     optimizer/base_column_statistics.hpp
     optimizer/column_statistics.cpp
     optimizer/column_statistics.hpp
-    optimizer/strategy/abstract_rule.hpp
-    optimizer/strategy/simplify_expression_rule.cpp
-    optimizer/strategy/simplify_expression_rule.hpp
-    optimizer/strategy/predicate_reordering_rule.cpp
-    optimizer/strategy/predicate_reordering_rule.hpp
+    optimizer/expression/expression_node.cpp
+    optimizer/expression/expression_node.hpp
     optimizer/table_statistics.cpp
     optimizer/table_statistics.hpp
     resolve_type.hpp

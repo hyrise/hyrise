@@ -118,14 +118,14 @@ const std::shared_ptr<AbstractOperator> NodeOperatorTranslator::translate_aggreg
     const auto &expr = aggregate.expr;
     Assert(expr->type() == ExpressionType::FunctionReference, "Expression is not a function.");
 
-    const auto &func_expr = (*expr->expression_list())[0];
+    const auto &func_expr = (expr->expression_list())[0];
 
     if (func_expr->is_operand()) {
       // TODO(tim): column data type is not always float
       // TODO(tim): check if this can be done prettier
       definitions.emplace_back(func_expr->name(), "float", func_expr->name());
       expr_aliases.emplace_back(func_expr->name());
-    } else if (func_expr->is_arithmetic()) {
+    } else if (func_expr->is_arithmetic_operator()) {
       need_projection = true;
 
       auto left_operand = std::dynamic_pointer_cast<ExpressionNode>(func_expr->left_child());

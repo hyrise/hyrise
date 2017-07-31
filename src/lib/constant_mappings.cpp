@@ -1,27 +1,38 @@
 #include "constant_mappings.hpp"
 
+#include <boost/bimap.hpp>
 #include <string>
 #include <unordered_map>
 
+#include "sql/Expr.h"
+
 namespace opossum {
 
-const std::unordered_map<std::string, proto::ScanType> string_to_proto_scan_type = {
+/*
+ * boost::bimap does not support initializer_lists.
+ * Instead we use this helper function to have an initializer_list-friendly interface.
+ */
+template <typename L, typename R>
+boost::bimap<L, R> make_bimap(std::initializer_list<typename boost::bimap<L, R>::value_type> list) {
+  return boost::bimap<L, R>(list.begin(), list.end());
+}
+
+const boost::bimap<ScanType, std::string> scan_type_to_string = make_bimap<ScanType, std::string>({
+    {ScanType::OpEquals, "="},
+    {ScanType::OpNotEquals, "!="},
+    {ScanType::OpLessThan, "<"},
+    {ScanType::OpLessThanEquals, "<="},
+    {ScanType::OpGreaterThan, ">"},
+    {ScanType::OpGreaterThanEquals, ">="},
+    {ScanType::OpBetween, "BETWEEN"},
+    {ScanType::OpLike, "LIKE"},
+});
+
+const std::unordered_map<std::string, const proto::ScanType> string_to_proto_scan_type = {
     {"=", proto::ScanType::OpEquals},        {"!=", proto::ScanType::OpNotEquals},
     {"<", proto::ScanType::OpLessThan},      {"<=", proto::ScanType::OpLessThanEquals},
     {">", proto::ScanType::OpGreaterThan},   {">=", proto::ScanType::OpGreaterThanEquals},
     {"BETWEEN", proto::ScanType::OpBetween}, {"LIKE", proto::ScanType::OpLike},
-};
-
-const std::unordered_map<std::string, ScanType> string_to_scan_type = {
-    {"=", ScanType::OpEquals},          {"!=", ScanType::OpNotEquals},  {"<", ScanType::OpLessThan},
-    {"<=", ScanType::OpLessThanEquals}, {">", ScanType::OpGreaterThan}, {">=", ScanType::OpGreaterThanEquals},
-    {"BETWEEN", ScanType::OpBetween},   {"LIKE", ScanType::OpLike},
-};
-
-const std::unordered_map<ScanType, std::string> scan_type_to_string = {
-    {ScanType::OpEquals, "="},          {ScanType::OpNotEquals, "!="},  {ScanType::OpLessThan, "<"},
-    {ScanType::OpLessThanEquals, "<="}, {ScanType::OpGreaterThan, ">"}, {ScanType::OpGreaterThanEquals, ">="},
-    {ScanType::OpBetween, "BETWEEN"},   {ScanType::OpLike, "LIKE"},
 };
 
 const std::unordered_map<const JoinMode, std::string> join_mode_to_string = {
@@ -32,38 +43,70 @@ const std::unordered_map<const JoinMode, std::string> join_mode_to_string = {
 const std::unordered_map<const ExpressionType, std::string> expression_type_to_string = {
     {ExpressionType::Literal, "Literal"},
     {ExpressionType::Star, "Star"},
-    {ExpressionType::Parameter, "Parameter"},
+    {ExpressionType::Placeholder, "Parameter"},
     {ExpressionType::ColumnReference, "ColumnReference"},
     {ExpressionType::FunctionReference, "FunctionReference"},
-    {ExpressionType::Operator, "Operator"},
     {ExpressionType::Select, "Select"},
+    /*Arithmetic operators*/
     {ExpressionType::Plus, "Plus"},
     {ExpressionType::Minus, "Minus"},
     {ExpressionType::Asterisk, "Asterisk"},
     {ExpressionType::Slash, "Slash"},
     {ExpressionType::Percentage, "Percentage"},
     {ExpressionType::Caret, "Caret"},
+    /*Logical operators*/
     {ExpressionType::Equals, "Equals"},
     {ExpressionType::NotEquals, "NotEquals"},
-    {ExpressionType::Less, "Less"},
-    {ExpressionType::LessEquals, "LessEquals"},
-    {ExpressionType::Greater, "Greater"},
-    {ExpressionType::GreaterEquals, "GreaterEquals"},
+    {ExpressionType::LessThan, "LessThan"},
+    {ExpressionType::LessThanEquals, "LessThanEquals"},
+    {ExpressionType::GreaterThan, "GreaterThan"},
+    {ExpressionType::GreaterThanEquals, "GreaterThanEquals"},
     {ExpressionType::Like, "Like"},
     {ExpressionType::NotLike, "NotLike"},
     {ExpressionType::And, "And"},
     {ExpressionType::Or, "Or"},
-    {ExpressionType::In, "In"},
-    {ExpressionType::Not, "Not"},
-    {ExpressionType::IsNull, "IsNull"},
-    {ExpressionType::Exists, "Exists"},
     {ExpressionType::Between, "Between"},
-    {ExpressionType::Hint, "Hint"},
+    {ExpressionType::Not, "Not"},
+    /*Set operators*/
+    {ExpressionType::In, "In"},
+    {ExpressionType::Exists, "Exists"},
+    /*Other*/
+    {ExpressionType::IsNull, "IsNull"},
     {ExpressionType::Case, "Case"},
+    {ExpressionType::Hint, "Hint"},
+};
+
+const std::unordered_map<const hsql::OperatorType, const ExpressionType> operator_type_to_expression_type = {
+    {hsql::kOpPlus, ExpressionType::Plus},
+    {hsql::kOpMinus, ExpressionType::Minus},
+    {hsql::kOpAsterisk, ExpressionType::Asterisk},
+    {hsql::kOpSlash, ExpressionType::Slash},
+    {hsql::kOpPercentage, ExpressionType::Percentage},
+    {hsql::kOpCaret, ExpressionType::Caret},
+    {hsql::kOpBetween, ExpressionType::Between},
+    {hsql::kOpEquals, ExpressionType::Equals},
+    {hsql::kOpNotEquals, ExpressionType::NotEquals},
+    {hsql::kOpLess, ExpressionType::LessThan},
+    {hsql::kOpLessEq, ExpressionType::LessThanEquals},
+    {hsql::kOpGreater, ExpressionType::GreaterThan},
+    {hsql::kOpGreaterEq, ExpressionType::GreaterThanEquals},
+    {hsql::kOpLike, ExpressionType::Like},
+    {hsql::kOpNotLike, ExpressionType::NotLike},
+    {hsql::kOpCase, ExpressionType::Case},
+    {hsql::kOpExists, ExpressionType::Exists},
+    {hsql::kOpIn, ExpressionType::In},
+    {hsql::kOpIsNull, ExpressionType::IsNull},
+    {hsql::kOpOr, ExpressionType::Or},
+};
+
+const std::unordered_map<const ExpressionType, std::string> expression_type_to_operator_string = {
+    {ExpressionType::Plus, "+"},  {ExpressionType::Minus, "-"},      {ExpressionType::Asterisk, "*"},
+    {ExpressionType::Slash, "/"}, {ExpressionType::Percentage, "%"}, {ExpressionType::Caret, "^"},
 };
 
 // TODO(mp): this should be case-insensitive
-const std::unordered_map<std::string, AggregateFunction> string_to_aggregate_function = {
+const std::unordered_map<std::string, const AggregateFunction> string_to_aggregate_function = {
     {"MIN", Min}, {"MAX", Max}, {"SUM", Sum}, {"AVG", Avg}, {"COUNT", Count},
 };
+
 }  // namespace opossum

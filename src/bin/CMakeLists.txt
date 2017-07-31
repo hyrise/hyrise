@@ -21,18 +21,6 @@ target_link_libraries(
     opossum
 )
 
-# Configure statistics playground
-add_executable(
-    opossumPlaygroundStatistics
-
-    playgroundStatistics.cpp
-)
-target_link_libraries(
-    opossumPlaygroundStatistics
-    opossum
-    tpcc
-)
-
 # Configure tpccTableGenerator
 add_executable(tpccTableGenerator tpcc_table_generator.cpp)
 target_link_libraries(tpccTableGenerator opossum tpcc)

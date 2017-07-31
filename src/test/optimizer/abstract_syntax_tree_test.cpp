@@ -6,7 +6,6 @@
 #include "../base_test.hpp"
 #include "gtest/gtest.h"
 
-#include "operators/abstract_join_operator.hpp"
 #include "optimizer/abstract_syntax_tree/join_node.hpp"
 #include "optimizer/abstract_syntax_tree/predicate_node.hpp"
 #include "optimizer/abstract_syntax_tree/projection_node.hpp"

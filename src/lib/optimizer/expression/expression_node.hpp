@@ -1,5 +1,6 @@
 #pragma once
 
+#include <iostream>
 #include <memory>
 #include <sstream>
 #include <string>
@@ -11,73 +12,118 @@
 
 namespace opossum {
 
+/**
+ * The basic idea of this ExpressionNode is to have a representation of SQL Expressions within Hyrise and especially the
+ * optimizer.
+ *
+ * Similar as for the AST we might have a tree of ExpressionNodes,
+ * e.g. 'columnA = 5' would be represented as a root expression with the type ExpressionType::Equals and
+ * two child nodes of types ExpressionType::ColumnReference and ExpressionType::Literal.
+ *
+ * For now we decided to have a single ExpressionNode without further specializations. This goes hand in hand with the
+ * approach used in hsql::Expr.
+ */
 class ExpressionNode : public std::enable_shared_from_this<ExpressionNode> {
  public:
-  ExpressionNode(const ExpressionType type, const AllTypeVariant value,
-                 const std::shared_ptr<std::vector<std::shared_ptr<ExpressionNode>>> expression_list,
-                 const std::string& name, const std::string& table);
+  /*
+   * This constructor is meant for internal use only and therefor should be private.
+   * However, in C++ one is not able to call std::make_shared with a private constructor.
+   * The naive approach of befriending std::make_shared does not work here, as the implementation of std::make_shared is
+   * compiler-specific and usually relies on internal impl-classes.
+   * (e.g.:
+   * https://stackoverflow.com/questions/3541632/using-make-shared-with-a-protected-constructor-abstract-interface)
+   * We refrained from using the suggested pass-key-idiom as it only increases complexity but does not help removing a
+   * public constructor.
+   *
+   * In the end we debated between creating the shared_ptr explicitly in the factory methods
+   * and making the constructor public. For now we decided to follow the latter.
+   *
+   * We highly suggest using one of the create_*-methods over using this constructor.
+   */
+  ExpressionNode(const ExpressionType type, const AllTypeVariant& value,
+                 const std::vector<std::shared_ptr<ExpressionNode>>& expression_list, const std::string& name,
+                 const std::string& table, const std::string& alias);
 
+  /*
+   * Factory Methods to create Expressions of specific type
+   */
   static std::shared_ptr<ExpressionNode> create_expression(const ExpressionType type);
 
   static std::shared_ptr<ExpressionNode> create_column_reference(const std::string& table_name,
-                                                                 const std::string& column_name);
+                                                                 const std::string& column_name,
+                                                                 const std::string& alias);
 
-  static std::shared_ptr<ExpressionNode> create_literal(const AllTypeVariant value);
+  static std::shared_ptr<ExpressionNode> create_literal(const AllTypeVariant& value);
 
-  static std::shared_ptr<ExpressionNode> create_parameter(const AllTypeVariant value);
+  static std::shared_ptr<ExpressionNode> create_parameter(const AllTypeVariant& value);
 
   static std::shared_ptr<ExpressionNode> create_function_reference(
-      const std::string& function_name, std::shared_ptr<std::vector<std::shared_ptr<ExpressionNode>>> expression_list);
+      const std::string& function_name, const std::vector<std::shared_ptr<ExpressionNode>>& expression_list,
+      const std::string& alias);
 
   /*
-   * Helper functions for Expression Trees
+   * Helper methods for Expression Trees
    */
-  const std::weak_ptr<ExpressionNode>& parent() const;
-  void set_parent(const std::weak_ptr<ExpressionNode>& parent);
+  const std::weak_ptr<ExpressionNode> parent() const;
+  void clear_parent();
 
-  const std::shared_ptr<ExpressionNode>& left_child() const;
+  const std::shared_ptr<ExpressionNode> left_child() const;
   void set_left_child(const std::shared_ptr<ExpressionNode>& left);
 
-  const std::shared_ptr<ExpressionNode>& right_child() const;
+  const std::shared_ptr<ExpressionNode> right_child() const;
   void set_right_child(const std::shared_ptr<ExpressionNode>& right);
 
   const ExpressionType type() const;
 
-  void print(const uint8_t level = 0) const;
-
-  // Is +, -, *, /
-  bool is_arithmetic() const;
-
-  bool is_operand() const;
+  /*
+   * Methods for debug printing
+   */
+  void print(const uint32_t level = 0, std::ostream& out = std::cout) const;
 
   const std::string description() const;
 
+  // Is +, -, * (arithmetic usage, not SELECT * FROM), /, %, ^
+  bool is_arithmetic_operator() const;
+
+  bool is_operand() const;
+
+  /*
+   * Getters
+   */
   const std::string& table_name() const;
 
   const std::string& name() const;
-  const std::string& column_name() const;
+
+  const std::string& alias() const;
 
   const AllTypeVariant value() const;
 
-  // There is currently no need for value2
-  //  const AllTypeVariant value2() const;
-
-  const std::shared_ptr<std::vector<std::shared_ptr<ExpressionNode>>>& expression_list() const;
+  const std::vector<std::shared_ptr<ExpressionNode>>& expression_list() const;
 
   // Expression as string, parse-able by Projection
   std::string to_expression_string() const;
 
- protected:
-  const ExpressionType _type;
-
  private:
+  // the type of the expression
+  const ExpressionType _type;
+  // the value of an expression, e.g. of a Literal
   const AllTypeVariant _value;
-  //  const AllTypeVariant _value2;
-  const std::shared_ptr<std::vector<std::shared_ptr<ExpressionNode>>> _expression_list;
+  /*
+   * A list of Expressions used in FunctionReferences and CASE Expressions.
+   * Not sure if this is the perfect way to go forward, but this is how hsql::Expr handles this.
+   *
+   * In case there are at most two expressions in this list, one could replace this list with an additional layer in the
+   * Expression hierarchy.
+   * E.g. for CASE one could argue that the THEN case becomes the left child, whereas ELSE becomes the right child.
+   */
+  const std::vector<std::shared_ptr<ExpressionNode>> _expression_list;
 
+  // a name, which could be a column name or a function name
   const std::string _name;
-  const std::string _table;
-  //  char* alias;
+  // a table name, only used for ColumnReferences
+  const std::string _table_name;
+  // an alias, used for ColumnReferences, Selects, FunctionReferences
+  const std::string _alias;
 
   std::weak_ptr<ExpressionNode> _parent;
   std::shared_ptr<ExpressionNode> _left_child;

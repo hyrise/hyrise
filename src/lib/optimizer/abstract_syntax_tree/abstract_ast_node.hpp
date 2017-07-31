@@ -7,11 +7,16 @@
 
 namespace opossum {
 
-enum class ASTNodeType { Aggregate, Expression, Join, Predicate, Projection, Sort, StoredTable };
+enum class ASTNodeType { Aggregate, Join, Predicate, Projection, Sort, StoredTable };
 
 /**
  * Abstract element in an Abstract Syntax Tree.
  * This tree is the base structure used by the optimizer to change the query plan.
+ *
+ *
+ * Design decision:
+ * We decided to have mutable Nodes for now.
+ * By that we can apply rules without creating new nodes for every optimization rule.
  */
 class AbstractASTNode : public std::enable_shared_from_this<AbstractASTNode> {
  public:
@@ -35,7 +40,6 @@ class AbstractASTNode : public std::enable_shared_from_this<AbstractASTNode> {
   virtual std::vector<std::string> output_column_names() const;
 
   void print(const uint32_t level = 0, std::ostream &out = std::cout) const;
-
   virtual std::string description() const = 0;
 
  protected:
