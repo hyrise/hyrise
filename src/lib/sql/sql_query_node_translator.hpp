@@ -15,8 +15,8 @@ namespace opossum {
 
 class SQLQueryNodeTranslator {
  public:
-  SQLQueryNodeTranslator();
-  virtual ~SQLQueryNodeTranslator();
+  SQLQueryNodeTranslator() = default;
+  virtual ~SQLQueryNodeTranslator() = default;
 
   // Translates the given SQL result.
   std::vector<std::shared_ptr<AbstractASTNode>> translate_parse_result(const hsql::SQLParserResult& result);

@@ -23,24 +23,14 @@
 
 #include "SQLParser.h"
 
-using hsql::Expr;
-using hsql::ExprType;
-using hsql::JoinDefinition;
-using hsql::SelectStatement;
-using hsql::SQLStatement;
-
 namespace opossum {
-
-SQLQueryNodeTranslator::SQLQueryNodeTranslator() {}
-
-SQLQueryNodeTranslator::~SQLQueryNodeTranslator() {}
 
 std::vector<std::shared_ptr<AbstractASTNode>> SQLQueryNodeTranslator::translate_parse_result(
     const hsql::SQLParserResult& result) {
   std::vector<std::shared_ptr<AbstractASTNode>> result_nodes;
-  const std::vector<SQLStatement*>& statements = result.getStatements();
+  const std::vector<hsql::SQLStatement*>& statements = result.getStatements();
 
-  for (const SQLStatement* stmt : statements) {
+  for (const hsql::SQLStatement* stmt : statements) {
     auto result_node = translate_statement(*stmt);
     result_nodes.push_back(result_node);
   }
@@ -48,10 +38,10 @@ std::vector<std::shared_ptr<AbstractASTNode>> SQLQueryNodeTranslator::translate_
   return result_nodes;
 }
 
-std::shared_ptr<AbstractASTNode> SQLQueryNodeTranslator::translate_statement(const SQLStatement& statement) {
+std::shared_ptr<AbstractASTNode> SQLQueryNodeTranslator::translate_statement(const hsql::SQLStatement& statement) {
   switch (statement.type()) {
     case hsql::kStmtSelect: {
-      const SelectStatement& select = (const SelectStatement&)statement;
+      const auto & select = (const hsql::SelectStatement&)statement;
       return _translate_select(select);
     }
     case hsql::kStmtPrepare: {
@@ -62,7 +52,7 @@ std::shared_ptr<AbstractASTNode> SQLQueryNodeTranslator::translate_statement(con
   }
 }
 
-std::shared_ptr<AbstractASTNode> SQLQueryNodeTranslator::_translate_select(const SelectStatement& select) {
+std::shared_ptr<AbstractASTNode> SQLQueryNodeTranslator::_translate_select(const hsql::SelectStatement& select) {
   // SQL Order of Operations: http://www.bennadel.com/blog/70-sql-query-order-of-operations.htm
   // 1. FROM clause
   // 2. WHERE clause
@@ -110,11 +100,11 @@ std::shared_ptr<AbstractASTNode> SQLQueryNodeTranslator::_translate_select(const
   return current_result_node;
 }
 
-std::shared_ptr<AbstractASTNode> SQLQueryNodeTranslator::_translate_join(const JoinDefinition& join) {
+std::shared_ptr<AbstractASTNode> SQLQueryNodeTranslator::_translate_join(const hsql::JoinDefinition& join) {
   auto left_node = _translate_table_ref(*join.left);
   auto right_node = _translate_table_ref(*join.right);
 
-  const Expr& condition = *join.condition;
+  const hsql::Expr& condition = *join.condition;
   std::pair<std::string, std::string> column_names(get_column_name(*condition.expr, false),
                                                    get_column_name(*condition.expr2, false));
 
@@ -264,8 +254,8 @@ std::shared_ptr<AbstractASTNode> SQLQueryNodeTranslator::_translate_filter_expr(
   // We accept functions here because we assume they have been translated by Aggregate.
   // They will be treated as a regular column of the same name.
   // TODO(mp): this has to change once we have extended HAVING support.
-  Expr* column_operand_expr = nullptr;
-  Expr* value_operand_expr = nullptr;
+  hsql::Expr* column_operand_expr = nullptr;
+  hsql::Expr* value_operand_expr = nullptr;
   if (expr.expr->isType(hsql::kExprColumnRef) || expr.expr->isType(hsql::kExprFunctionRef)) {
     column_operand_expr = expr.expr;
     value_operand_expr = expr.expr2;
@@ -282,8 +272,8 @@ std::shared_ptr<AbstractASTNode> SQLQueryNodeTranslator::_translate_filter_expr(
   optional<AllTypeVariant> value2;
 
   if (scan_type == ScanType::OpBetween) {
-    const Expr* left_expr = (*expr.exprList)[0];
-    const Expr* right_expr = (*expr.exprList)[1];
+    const hsql::Expr* left_expr = (*expr.exprList)[0];
+    const hsql::Expr* right_expr = (*expr.exprList)[1];
 
     value = translate_literal(*left_expr);
 
@@ -342,7 +332,7 @@ std::shared_ptr<AbstractASTNode> SQLQueryNodeTranslator::_translate_aggregate(
     groupby_columns.reserve(group_by->columns->size());
     for (const auto* groupby_expr : *group_by->columns) {
       Assert(groupby_expr->isType(hsql::kExprColumnRef), "Only column ref GROUP BYs supported atm");
-      Assert(groupby_expr->name != nullptr, "Expr::name needs to be set");
+      Assert(groupby_expr->name != nullptr, "hsql::Expr::name needs to be set");
 
       groupby_columns.emplace_back(get_column_name(*groupby_expr, true));
     }
@@ -367,7 +357,7 @@ std::shared_ptr<AbstractASTNode> SQLQueryNodeTranslator::_translate_aggregate(
 std::shared_ptr<AbstractASTNode> SQLQueryNodeTranslator::_translate_projection(
     const std::vector<hsql::Expr*>& select_list, const std::shared_ptr<AbstractASTNode>& input_node) {
   std::vector<std::string> columns;
-  for (const Expr* expr : select_list) {
+  for (const hsql::Expr* expr : select_list) {
     // TODO(mp): expressions
     if (expr->isType(hsql::kExprColumnRef)) {
       columns.push_back(get_column_name(*expr, true));
