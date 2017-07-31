@@ -13,7 +13,6 @@
 #include "operators/table_scan.hpp"
 #include "scheduler/operator_task.hpp"
 #include "tpcc/helper.hpp"
-#include "utils/helper.hpp"
 
 #include "tpcc_base_fixture.cpp"
 
