@@ -364,7 +364,7 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_projection(
 }
 
 std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_order_by(
-    const std::vector<hsql::OrderDescription*> & order_list, const std::shared_ptr<AbstractASTNode>& input_node) {
+    const std::vector<hsql::OrderDescription*>& order_list, const std::shared_ptr<AbstractASTNode>& input_node) {
   if (order_list.empty()) {
     return input_node;
   }

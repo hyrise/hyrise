@@ -29,15 +29,15 @@ const boost::bimap<ScanType, std::string> scan_type_to_string = make_bimap<ScanT
 });
 
 const std::unordered_map<std::string, proto::ScanType> string_to_proto_scan_type = {
-  {"=", proto::ScanType::OpEquals},        {"!=", proto::ScanType::OpNotEquals},
-  {"<", proto::ScanType::OpLessThan},      {"<=", proto::ScanType::OpLessThanEquals},
-  {">", proto::ScanType::OpGreaterThan},   {">=", proto::ScanType::OpGreaterThanEquals},
-  {"BETWEEN", proto::ScanType::OpBetween}, {"LIKE", proto::ScanType::OpLike},
+    {"=", proto::ScanType::OpEquals},        {"!=", proto::ScanType::OpNotEquals},
+    {"<", proto::ScanType::OpLessThan},      {"<=", proto::ScanType::OpLessThanEquals},
+    {">", proto::ScanType::OpGreaterThan},   {">=", proto::ScanType::OpGreaterThanEquals},
+    {"BETWEEN", proto::ScanType::OpBetween}, {"LIKE", proto::ScanType::OpLike},
 };
 
 const std::unordered_map<JoinMode, std::string> join_mode_to_string = {
-  {JoinMode::Cross, "Cross"}, {JoinMode::Inner, "Inner"}, {JoinMode::Left, "Left"}, {JoinMode::Natural, "Natural"},
-  {JoinMode::Outer, "Outer"}, {JoinMode::Right, "Right"}, {JoinMode::Self, "Self"},
+    {JoinMode::Cross, "Cross"}, {JoinMode::Inner, "Inner"}, {JoinMode::Left, "Left"}, {JoinMode::Natural, "Natural"},
+    {JoinMode::Outer, "Outer"}, {JoinMode::Right, "Right"}, {JoinMode::Self, "Self"},
 };
 
 const std::unordered_map<ExpressionType, std::string> expression_type_to_string = {
@@ -100,8 +100,8 @@ const std::unordered_map<hsql::OperatorType, ExpressionType> operator_type_to_ex
 };
 
 const std::unordered_map<ExpressionType, std::string> expression_type_to_operator_string = {
-  {ExpressionType::Addition, "+"}, {ExpressionType::Subtraction, "-"}, {ExpressionType::Multiplication, "*"},
-  {ExpressionType::Division, "/"}, {ExpressionType::Modulo, "%"},      {ExpressionType::Power, "^"},
+    {ExpressionType::Addition, "+"}, {ExpressionType::Subtraction, "-"}, {ExpressionType::Multiplication, "*"},
+    {ExpressionType::Division, "/"}, {ExpressionType::Modulo, "%"},      {ExpressionType::Power, "^"},
 };
 
 // TODO(mp): this should be case-insensitive

@@ -13,8 +13,8 @@
 #include "optimizer/abstract_syntax_tree/ast_to_operator_translator.hpp"
 #include "scheduler/node_queue_scheduler.hpp"
 #include "scheduler/topology.hpp"
-#include "sql/sql_to_ast_translator.hpp"
 #include "sql/sql_query_plan.hpp"
+#include "sql/sql_to_ast_translator.hpp"
 #include "storage/storage_manager.hpp"
 
 namespace opossum {

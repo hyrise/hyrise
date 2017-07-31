@@ -9,8 +9,8 @@
 
 #include "all_parameter_variant.hpp"
 #include "optimizer/abstract_syntax_tree/ast_to_operator_translator.hpp"
-#include "sql_to_ast_translator.hpp"
 #include "sql_query_plan.hpp"
+#include "sql_to_ast_translator.hpp"
 
 namespace opossum {
 
