@@ -223,25 +223,6 @@ TEST_F(SQLQueryNodeTranslatorTest, SelectInnerJoin) {
   EXPECT_EQ(join_node->join_column_names()->second, "a");
 }
 
-TEST_F(SQLQueryNodeTranslatorTest, JoinWithoutAlias) {
-  const auto query = "SELECT * FROM table_a INNER JOIN table_b AS tbl_b ON a.a = b.a;";
-  auto result_node = compile_query(query);
-
-  EXPECT_EQ(result_node->type(), ASTNodeType::Projection);
-  auto projection_node = std::dynamic_pointer_cast<ProjectionNode>(result_node);
-  std::vector<std::string> output_columns = {"a", "b", "a", "d"};
-  EXPECT_EQ(projection_node->output_column_names(), output_columns);
-
-  EXPECT_EQ(result_node->left_child()->type(), ASTNodeType::Join);
-  auto join_node = std::dynamic_pointer_cast<JoinNode>(result_node->left_child());
-  EXPECT_EQ(join_node->scan_type(), ScanType::OpEquals);
-  EXPECT_EQ(join_node->join_mode(), JoinMode::Inner);
-  EXPECT_EQ(join_node->prefix_left(), "a.");
-  EXPECT_EQ(join_node->prefix_right(), "b.");
-  EXPECT_EQ(join_node->join_column_names()->first, "a");
-  EXPECT_EQ(join_node->join_column_names()->second, "a");
-}
-
 // TODO(tim&moritz): BLOCKING - Name this properly
 TEST_F(SQLQueryNodeTranslatorTest, ComplexQuery) {
   const auto query =
