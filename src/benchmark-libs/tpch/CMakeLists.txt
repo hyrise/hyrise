@@ -1,6 +1,7 @@
 # Sources and libraries shared among the different builds of the lib
 set(
     SOURCES
+        text_field_generator.cpp
         tpch_table_generator.cpp
 )
 

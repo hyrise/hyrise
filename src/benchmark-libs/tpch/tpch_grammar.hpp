@@ -24,6 +24,11 @@ class TpchGrammar {
     return text.str();
   }
 
+  std::string random_word(const std::vector<std::string> &word_vector) {
+    auto i = _random_gen.random_number(0, word_vector.size() - 1);
+    return word_vector[i];
+  }
+
  protected:
   std::stringstream sentence() {
     std::stringstream phrase = noun_phrase();
@@ -46,7 +51,7 @@ class TpchGrammar {
         phrase << " " << prepositional_phrase().rdbuf();
         break;
     }
-    phrase << word(terminators);
+    phrase << random_word(terminators);
     return phrase;
   }
 
@@ -54,16 +59,16 @@ class TpchGrammar {
     std::stringstream phrase;
     switch (_random_gen.random_number(0, 3)) {
       case 0:
-        phrase << word(nouns);
+        phrase << random_word(nouns);
         break;
       case 1:
-        phrase << word(adjectives) << " " << word(nouns);
+        phrase << random_word(adjectives) << " " << random_word(nouns);
         break;
       case 2:
-        phrase << word(adjectives) << ", " << word(adjectives) << " " << word(nouns);
+        phrase << random_word(adjectives) << ", " << random_word(adjectives) << " " << random_word(nouns);
         break;
       case 3:
-        phrase << word(adverbs) << " " << word(adjectives) << " " << word(nouns);
+        phrase << random_word(adverbs) << " " << random_word(adjectives) << " " << random_word(nouns);
         break;
     }
     return phrase;
@@ -73,16 +78,16 @@ class TpchGrammar {
     std::stringstream phrase;
     switch (_random_gen.random_number(0, 3)) {
       case 0:
-        phrase << word(verbs);
+        phrase << random_word(verbs);
         break;
       case 1:
-        phrase << word(auxiliaries) << " " << word(verbs);
+        phrase << random_word(auxiliaries) << " " << random_word(verbs);
         break;
       case 2:
-        phrase << word(verbs) << " " << word(adverbs);
+        phrase << random_word(verbs) << " " << random_word(adverbs);
         break;
       case 3:
-        phrase << word(auxiliaries) << " " << word(verbs) << " " << word(adverbs);
+        phrase << random_word(auxiliaries) << " " << random_word(verbs) << " " << random_word(adverbs);
         break;
     }
     return phrase;
@@ -90,13 +95,8 @@ class TpchGrammar {
 
   std::stringstream prepositional_phrase() {
     std::stringstream phrase;
-    phrase << word(prepositions) << " the " << noun_phrase().rdbuf();
+    phrase << random_word(prepositions) << " the " << noun_phrase().rdbuf();
     return phrase;
-  }
-
-  std::string word(const std::vector<std::string> &word_vector) {
-    auto i = _random_gen.random_number(0, word_vector.size() - 1);
-    return word_vector[i];
   }
 
   benchmark_utilities::RandomGenerator _random_gen;
