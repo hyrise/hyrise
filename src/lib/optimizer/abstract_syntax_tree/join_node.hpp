@@ -14,6 +14,10 @@
 
 namespace opossum {
 
+/**
+ * This node type is used to represent any type of Join, including cross products.
+ * The idea is that the optimizer is able to change the type of join if it sees fit.
+ */
 class JoinNode : public AbstractASTNode {
  public:
   JoinNode(optional<std::pair<std::string, std::string>> column_names, const ScanType scan_type,

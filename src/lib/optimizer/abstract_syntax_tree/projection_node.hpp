@@ -8,6 +8,9 @@
 
 namespace opossum {
 
+/**
+ * Node type to represent common projections, i.e. without any aggregate functionality.
+ */
 class ProjectionNode : public AbstractASTNode {
  public:
   explicit ProjectionNode(const std::vector<std::string>& column_names);

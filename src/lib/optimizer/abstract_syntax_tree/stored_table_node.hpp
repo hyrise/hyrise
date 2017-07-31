@@ -8,6 +8,10 @@
 
 namespace opossum {
 
+/**
+ * This node type represents a table stored by the table manager.
+ * They are the leafs of every meaningful AST tree.
+ */
 class StoredTableNode : public AbstractASTNode {
  public:
   explicit StoredTableNode(const std::string& table_name);
