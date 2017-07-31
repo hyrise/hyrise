@@ -19,15 +19,16 @@
 
 namespace opossum {
 
+enum class OrderSensitivity { Sensitive, Insensitive };
+
 struct SQLTestParam {
-  SQLTestParam(std::string query, std::string result_table_path)
-      : query(query), result_table_path(result_table_path), order_sensitive(false) {}
-  SQLTestParam(std::string query, std::string result_table_path, bool order_sensitive)
-      : query(query), result_table_path(result_table_path), order_sensitive(order_sensitive) {}
+  SQLTestParam(const std::string &query, const std::string &result_table_path,
+               OrderSensitivity orderSensitivity = OrderSensitivity::Insensitive)
+      : query(query), result_table_path(result_table_path), order_sensitive(orderSensitivity) {}
 
   const std::string query;
   const std::string result_table_path;
-  const bool order_sensitive;
+  const OrderSensitivity order_sensitive;
 };
 
 class SQLToResultTest : public BaseTest, public ::testing::WithParamInterface<SQLTestParam> {
@@ -96,7 +97,7 @@ TEST_P(SQLToResultTest, SQLQueryTest) {
   CurrentScheduler::schedule_and_wait_for_tasks(tasks);
 
   auto result_table = tasks.back()->get_operator()->get_output();
-  EXPECT_TABLE_EQ(result_table, expected_result, params.order_sensitive);
+  EXPECT_TABLE_EQ(result_table, expected_result, params.order_sensitive == OrderSensitivity::Sensitive);
 }
 
 const SQLTestParam test_queries[] = {
@@ -111,10 +112,10 @@ const SQLTestParam test_queries[] = {
     {"SELECT a FROM table_a;", "src/test/tables/int.tbl"},
 
     // ORDER BY
-    {"SELECT a, b FROM table_a ORDER BY a;", "src/test/tables/int_float_sorted.tbl", true},
-    {"SELECT * FROM table_c ORDER BY a, b;", "src/test/tables/int_float2_sorted.tbl", true},
+    {"SELECT a, b FROM table_a ORDER BY a;", "src/test/tables/int_float_sorted.tbl", OrderSensitivity::Sensitive},
+    {"SELECT * FROM table_c ORDER BY a, b;", "src/test/tables/int_float2_sorted.tbl", OrderSensitivity::Sensitive},
     {"SELECT a FROM (SELECT a, b FROM table_a WHERE a > 1 ORDER BY b) WHERE a > 0 ORDER BY a;",
-     "src/test/tables/int.tbl", true},
+     "src/test/tables/int.tbl", OrderSensitivity::Sensitive},
 
     // JOIN
     {"SELECT \"left\".a, \"left\".b, \"right\".a, \"right\".b FROM table_a AS \"left\" JOIN table_b AS "

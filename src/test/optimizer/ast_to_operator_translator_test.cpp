@@ -15,7 +15,7 @@
 
 namespace opossum {
 
-class NodeOperatorTranslatorTest : public BaseTest {
+class ASTToOperatorTranslatorTest : public BaseTest {
  protected:
   void SetUp() override {
     std::shared_ptr<Table> table_a = load_table("src/test/tables/int_float.tbl", 2);
@@ -55,31 +55,31 @@ class NodeOperatorTranslatorTest : public BaseTest {
   SQLToASTTranslator _node_translator;
 };
 
-TEST_F(NodeOperatorTranslatorTest, SelectStarAllTest) {
+TEST_F(ASTToOperatorTranslatorTest, SelectStarAllTest) {
   const auto query = "SELECT * FROM table_a;";
   const auto expected_result = load_table("src/test/tables/int_float.tbl", 2);
   execute_and_check(query, expected_result);
 }
 
-TEST_F(NodeOperatorTranslatorTest, SelectWithAndCondition) {
+TEST_F(ASTToOperatorTranslatorTest, SelectWithAndCondition) {
   const auto query = "SELECT * FROM table_b WHERE a = 12345 AND b > 457;";
   const auto expected_result = load_table("src/test/tables/int_float2_filtered.tbl", 2);
   execute_and_check(query, expected_result);
 }
 
-TEST_F(NodeOperatorTranslatorTest, SelectWithOrderByDesc) {
+TEST_F(ASTToOperatorTranslatorTest, SelectWithOrderByDesc) {
   const auto query = "SELECT * FROM table_a ORDER BY a DESC;";
   const auto expected_result = load_table("src/test/tables/int_float_reverse.tbl", 2);
   execute_and_check(query, expected_result, true);
 }
 
-TEST_F(NodeOperatorTranslatorTest, SelectWithMultipleOrderByColumns) {
+TEST_F(ASTToOperatorTranslatorTest, SelectWithMultipleOrderByColumns) {
   const auto query = "SELECT * FROM table_b ORDER BY a, b ASC;";
   const auto expected_result = load_table("src/test/tables/int_float2_sorted.tbl", 2);
   execute_and_check(query, expected_result, true);
 }
 
-TEST_F(NodeOperatorTranslatorTest, SelectInnerJoin) {
+TEST_F(ASTToOperatorTranslatorTest, SelectInnerJoin) {
   const auto query = "SELECT * FROM table_a AS \"left\" INNER JOIN table_b AS \"right\" ON \"left\".a = \"right\".a;";
   const auto expected_result = load_table("src/test/tables/joinoperators/int_inner_join.tbl", 2);
   execute_and_check(query, expected_result);
@@ -88,7 +88,7 @@ TEST_F(NodeOperatorTranslatorTest, SelectInnerJoin) {
 // TODO(tim): Projection cannot handle expression `$a + $b`
 // because it is not able to handle columns with different data types.
 // Create issue with failing test.
-TEST_F(NodeOperatorTranslatorTest, SelectWithAggregate) {
+TEST_F(ASTToOperatorTranslatorTest, SelectWithAggregate) {
   const auto query = "SELECT SUM(b + b) AS sum_b_b FROM table_a;";
   const auto expected_result = load_table("src/test/tables/int_float_sum_b_plus_b.tbl", 2);
   execute_and_check(query, expected_result, true);

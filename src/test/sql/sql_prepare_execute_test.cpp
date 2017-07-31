@@ -89,25 +89,6 @@ const SQLTestParam sql_query_tests[] = {
     SQLTestParam{"EXECUTE a4 (1234, 457.9)", 3u, "src/test/tables/int_float_filtered.tbl"},
     SQLTestParam{"EXECUTE a4 (0, 500)", 3u, "src/test/tables/int_float.tbl"},
     SQLTestParam{"EXECUTE a4 (1234, 500)", 3u, "src/test/tables/int_float_filtered2.tbl"},
-
-    // TPC-H schema
-    // TODO(mp): aliases / join prefixes
-    SQLTestParam{"PREPARE a5 FROM '"
-                 "  SELECT customer.c_custkey, customer.c_name, COUNT(\"orderitems.orders.o_orderkey\")"
-                 "    FROM customer"
-                 "    JOIN (SELECT * FROM "
-                 "      orders"
-                 "      JOIN lineitem ON o_orderkey = l_orderkey"
-                 "      WHERE \"orders.o_custkey\" = ?"
-                 "    ) AS orderitems ON c_custkey = \"orders.o_custkey\""
-                 "    GROUP BY customer.c_custkey, customer.c_name"
-                 "    HAVING COUNT(\"orderitems.orders.o_orderkey\") >= ?"
-                 "';",
-                 0u, ""},
-    SQLTestParam{"EXECUTE a5 (0, 0);", 9u, "src/test/tables/tpch/customer_join_orders_alias_values.tbl"},
-    SQLTestParam{"EXECUTE a5 (0, 20);", 9u, "src/test/tables/tpch/customer_join_orders_alias.tbl"},
-    SQLTestParam{"EXECUTE a5 (0, 21);", 9u, "src/test/tables/tpch/customer_join_orders_alias.tbl"},
-    SQLTestParam{"EXECUTE a5 (0, 22);", 9u, "src/test/tables/tpch/customer_join_orders_alias.tbl"},
 };
 
 INSTANTIATE_TEST_CASE_P(GenericPrepareExecuteTest, SQLPrepareExecuteTest, ::testing::ValuesIn(sql_query_tests));

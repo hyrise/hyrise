@@ -45,19 +45,18 @@ set(
     operators/validate_test.cpp
     operators/validate_visibility_test.cpp
     optimizer/abstract_syntax_tree_test.cpp
+    optimizer/ast_to_operator_translator_test.cpp
     optimizer/column_statistics_test.cpp
-    optimizer/node_operator_translator_test.cpp
     optimizer/table_statistics_test.cpp
     scheduler/scheduler_test.cpp
     sql/sql_basic_cache_test.cpp
     sql/sql_expression_translator_test.cpp
     sql/sql_parse_tree_cache_test.cpp
-    sql/sql_query_node_translator_test.cpp
     sql/sql_prepare_execute_test.cpp
     sql/sql_query_operator_test.cpp
     sql/sql_query_plan_test.cpp
     sql/sql_query_plan_cache_test.cpp
-    sql/sql_select_test.cpp
+    sql/sql_to_ast_translator_test.cpp
     sql/sql_to_result_test.cpp
     sql/tpch_test.cpp
     storage/adaptive_radix_tree_index_test.cpp

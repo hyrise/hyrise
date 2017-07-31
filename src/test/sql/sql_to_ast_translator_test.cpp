@@ -18,7 +18,7 @@
 
 namespace opossum {
 
-class SQLQueryNodeTranslatorTest : public BaseTest {
+class SQLToASTTranslatorTest : public BaseTest {
  protected:
   void SetUp() override {
     std::shared_ptr<Table> table_a = load_table("src/test/tables/int_float.tbl", 2);
@@ -41,7 +41,7 @@ class SQLQueryNodeTranslatorTest : public BaseTest {
     StorageManager::get().add_table("lineitem", lineitem);
   }
 
-  std::shared_ptr<AbstractASTNode> compile_query(const std::string query) {
+  std::shared_ptr<AbstractASTNode> compile_query(const std::string &query) {
     hsql::SQLParserResult parse_result;
     hsql::SQLParser::parseSQLString(query, &parse_result);
 
@@ -55,15 +55,7 @@ class SQLQueryNodeTranslatorTest : public BaseTest {
   SQLToASTTranslator _translator;
 };
 
-TEST_F(SQLQueryNodeTranslatorTest, BasicSuccessTest) {
-  const auto query = "SELECT * FROM table_a;";
-  compile_query(query);
-
-  const auto faulty_query = "SELECT * WHERE test;";
-  EXPECT_THROW(compile_query(faulty_query), std::runtime_error);
-}
-
-TEST_F(SQLQueryNodeTranslatorTest, SelectStarAllTest) {
+TEST_F(SQLToASTTranslatorTest, SelectStarAllTest) {
   const auto query = "SELECT * FROM table_a;";
   auto result_node = compile_query(query);
 
@@ -74,7 +66,7 @@ TEST_F(SQLQueryNodeTranslatorTest, SelectStarAllTest) {
   EXPECT_FALSE(result_node->left_child()->left_child());
 }
 
-TEST_F(SQLQueryNodeTranslatorTest, DISABLED_ExpressionTest) {
+TEST_F(SQLToASTTranslatorTest, DISABLED_ExpressionTest) {
   const auto query = "SELECT * FROM table_a WHERE a = 1234 + 1";
   auto result_node = compile_query(query);
 
@@ -89,7 +81,7 @@ TEST_F(SQLQueryNodeTranslatorTest, DISABLED_ExpressionTest) {
   EXPECT_EQ(predicate->type(), ExpressionType::Equals);
 }
 
-TEST_F(SQLQueryNodeTranslatorTest, ExpressionStringTest) {
+TEST_F(SQLToASTTranslatorTest, ExpressionStringTest) {
   const auto query = "SELECT * FROM table_a WHERE a = \"b\"";
   auto result_node = compile_query(query);
 
@@ -104,7 +96,7 @@ TEST_F(SQLQueryNodeTranslatorTest, ExpressionStringTest) {
   EXPECT_EQ(predicate->type(), ExpressionType::Equals);
 }
 
-TEST_F(SQLQueryNodeTranslatorTest, ExpressionStringTest2) {
+TEST_F(SQLToASTTranslatorTest, ExpressionStringTest2) {
   const auto query = "SELECT * FROM table_a WHERE a = 'b'";
   auto result_node = compile_query(query);
 
@@ -119,7 +111,7 @@ TEST_F(SQLQueryNodeTranslatorTest, ExpressionStringTest2) {
   EXPECT_EQ(predicate->type(), ExpressionType::Equals);
 }
 
-TEST_F(SQLQueryNodeTranslatorTest, SelectWithAndCondition) {
+TEST_F(SQLToASTTranslatorTest, SelectWithAndCondition) {
   const auto query = "SELECT * FROM table_a WHERE a >= 1234 AND b < 457.9";
   auto result_node = compile_query(query);
 
@@ -140,7 +132,7 @@ TEST_F(SQLQueryNodeTranslatorTest, SelectWithAndCondition) {
   EXPECT_FALSE(t_node->right_child());
 }
 
-TEST_F(SQLQueryNodeTranslatorTest, AggregateWithGroupBy) {
+TEST_F(SQLToASTTranslatorTest, AggregateWithGroupBy) {
   const auto query = "SELECT a, SUM(b) AS s FROM table_a GROUP BY a;";
   const auto result_node = compile_query(query);
 
@@ -159,13 +151,13 @@ TEST_F(SQLQueryNodeTranslatorTest, AggregateWithGroupBy) {
   EXPECT_FALSE(t_node_1->right_child());
 }
 
-TEST_F(SQLQueryNodeTranslatorTest, AggregateWithInvalidGroupBy) {
+TEST_F(SQLToASTTranslatorTest, AggregateWithInvalidGroupBy) {
   // Cannot select b without it being in the GROUP BY clause.
   const auto query = "SELECT b, SUM(b) AS s FROM table_a GROUP BY a;";
   EXPECT_THROW(compile_query(query), std::logic_error);
 }
 
-TEST_F(SQLQueryNodeTranslatorTest, AggregateWithExpression) {
+TEST_F(SQLToASTTranslatorTest, AggregateWithExpression) {
   const auto query = "SELECT SUM(a+b) AS s, SUM(a*b) as f FROM table_a";
   const auto result_node = compile_query(query);
 
@@ -184,7 +176,7 @@ TEST_F(SQLQueryNodeTranslatorTest, AggregateWithExpression) {
   EXPECT_FALSE(t_node_1->right_child());
 }
 
-TEST_F(SQLQueryNodeTranslatorTest, SelectMultipleOrderBy) {
+TEST_F(SQLToASTTranslatorTest, SelectMultipleOrderBy) {
   const auto query = "SELECT * FROM table_a ORDER BY a DESC, b ASC;";
   auto result_node = compile_query(query);
 
@@ -204,7 +196,7 @@ TEST_F(SQLQueryNodeTranslatorTest, SelectMultipleOrderBy) {
   EXPECT_TRUE(sort_node_2->left_child());
 }
 
-TEST_F(SQLQueryNodeTranslatorTest, SelectInnerJoin) {
+TEST_F(SQLToASTTranslatorTest, SelectInnerJoin) {
   const auto query = "SELECT * FROM table_a AS a INNER JOIN table_b AS b ON a.a = b.a;";
   auto result_node = compile_query(query);
 
@@ -221,25 +213,6 @@ TEST_F(SQLQueryNodeTranslatorTest, SelectInnerJoin) {
   EXPECT_EQ(join_node->prefix_right(), "b.");
   EXPECT_EQ(join_node->join_column_names()->first, "a");
   EXPECT_EQ(join_node->join_column_names()->second, "a");
-}
-
-// TODO(tim&moritz): BLOCKING - Name this properly
-TEST_F(SQLQueryNodeTranslatorTest, ComplexQuery) {
-  const auto query =
-      "  SELECT customer.c_custkey, customer.c_name, COUNT(orderitems.\"orders.o_orderkey\")"
-      "    FROM customer"
-      "    JOIN (SELECT * FROM "
-      "      orders"
-      "      JOIN lineitem ON o_orderkey = l_orderkey"
-      "      WHERE orders.o_custkey = ?"
-      "    ) AS orderitems ON c_custkey = orders.o_custkey"
-      "    GROUP BY customer.c_custkey, customer.c_name"
-      "    HAVING COUNT(orderitems.\"orders.o_orderkey\") >= ?"
-      ";";
-
-  auto result_node = compile_query(query);
-
-  result_node->print();
 }
 
 }  // namespace opossum
