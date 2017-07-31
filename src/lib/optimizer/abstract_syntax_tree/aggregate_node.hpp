@@ -12,13 +12,17 @@
 namespace opossum {
 
 struct AggregateColumnDefinition {
-  explicit AggregateColumnDefinition(const std::shared_ptr<ExpressionNode>& expr);
-  AggregateColumnDefinition(const std::shared_ptr<ExpressionNode>& expr, const std::string& alias);
+  AggregateColumnDefinition(const std::shared_ptr<ExpressionNode>& expr, const optional<std::string>& alias = {});
 
   std::shared_ptr<ExpressionNode> expr;
   optional<std::string> alias;
 };
 
+/**
+ * This node type is used to describe SELECT lists for statements that have at least one of the following:
+ *  - one or more functions in their SELECT list
+ *  - a GROUP BY clause
+ */
 class AggregateNode : public AbstractASTNode {
  public:
   explicit AggregateNode(const std::vector<AggregateColumnDefinition> aggregates,

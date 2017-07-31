@@ -9,10 +9,8 @@
 
 namespace opossum {
 
-AggregateColumnDefinition::AggregateColumnDefinition(const std::shared_ptr<ExpressionNode>& expr) : expr(expr) {}
-
 AggregateColumnDefinition::AggregateColumnDefinition(const std::shared_ptr<ExpressionNode>& expr,
-                                                     const std::string& alias)
+                                                     const optional<std::string>& alias)
     : expr(expr), alias(alias) {}
 
 AggregateNode::AggregateNode(const std::vector<AggregateColumnDefinition> aggregates,

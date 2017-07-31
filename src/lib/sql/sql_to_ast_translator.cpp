@@ -284,11 +284,13 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_aggregate(
   for (auto* expr : select_list) {
     if (expr->isType(hsql::kExprFunctionRef)) {
       auto opossum_expr = SQLExpressionTranslator().translate_expression(*expr);
+
+      optional<std::string> alias;
       if (expr->alias) {
-        aggregate_column_definitions.emplace_back(opossum_expr, expr->alias);
-      } else {
-        aggregate_column_definitions.emplace_back(opossum_expr);
+        alias = std::string(expr->alias);
       }
+
+      aggregate_column_definitions.emplace_back(opossum_expr, alias);
     } else if (expr->isType(hsql::kExprColumnRef)) {
       // If the item is a column, it has to be in the GROUP BY clause.
       Assert(group_by != nullptr, "SELECT list contains a column, but the query does not have a GROUP BY clause.");

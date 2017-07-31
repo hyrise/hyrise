@@ -24,7 +24,7 @@ const std::unordered_map<std::string, proto::ScanType> string_to_proto_scan_type
     {"BETWEEN", proto::ScanType::OpBetween}, {"LIKE", proto::ScanType::OpLike},
 };
 
-const boost::bimap<ScanType, std::string> scan_type_to_string = make_bimap<ScanType, std::string>({
+const auto scan_type_to_string = make_bimap<ScanType, std::string>({
     {ScanType::OpEquals, "="},
     {ScanType::OpNotEquals, "!="},
     {ScanType::OpLessThan, "<"},
