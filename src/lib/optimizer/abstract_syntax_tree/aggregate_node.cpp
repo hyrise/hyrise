@@ -13,7 +13,7 @@ AggregateColumnDefinition::AggregateColumnDefinition(const std::shared_ptr<Expre
                                                      const optional<std::string>& alias)
     : expr(expr), alias(alias) {}
 
-AggregateNode::AggregateNode(const std::vector<AggregateColumnDefinition> aggregates,
+AggregateNode::AggregateNode(const std::vector<AggregateColumnDefinition>& aggregates,
                              const std::vector<std::string>& groupby_columns)
     : AbstractASTNode(ASTNodeType::Aggregate), _aggregates(aggregates), _groupby_columns(groupby_columns) {
   for (const auto& aggregate : aggregates) {

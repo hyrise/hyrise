@@ -12,7 +12,8 @@
 namespace opossum {
 
 struct AggregateColumnDefinition {
-  AggregateColumnDefinition(const std::shared_ptr<ExpressionNode>& expr, const optional<std::string>& alias = {});
+  explicit AggregateColumnDefinition(const std::shared_ptr<ExpressionNode>& expr,
+                                     const optional<std::string>& alias = {});
 
   std::shared_ptr<ExpressionNode> expr;
   optional<std::string> alias;
@@ -25,7 +26,7 @@ struct AggregateColumnDefinition {
  */
 class AggregateNode : public AbstractASTNode {
  public:
-  explicit AggregateNode(const std::vector<AggregateColumnDefinition> aggregates,
+  explicit AggregateNode(const std::vector<AggregateColumnDefinition>& aggregates,
                          const std::vector<std::string>& groupby_columns);
 
   const std::vector<AggregateColumnDefinition>& aggregates() const { return _aggregates; }
