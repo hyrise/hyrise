@@ -6,7 +6,7 @@
 
 #include "benchmark/benchmark.h"
 
-#include "../../benchmark-libs/tpcc/random_generator.hpp"
+#include "../../benchmark-libs/tpcc/tpcc_random_generator.hpp"
 #include "../../benchmark-libs/tpcc/tpcc_table_generator.hpp"
 #include "operators/get_table.hpp"
 #include "scheduler/current_scheduler.hpp"
