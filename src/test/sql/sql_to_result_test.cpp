@@ -68,10 +68,6 @@ class SQLToResultTest : public BaseTest, public ::testing::WithParamInterface<SQ
     std::shared_ptr<Table> lineitem = load_table("src/test/tables/tpch/lineitem.tbl", 1);
     StorageManager::get().add_table("lineitem", lineitem);
   }
-
-  // Don't use singletons - rule out the possibility of tests polluting global state
-  SQLToASTTranslator _sql_to_ast_translator;
-  ASTToOperatorTranslator _ast_to_operator_translator;
 };
 
 // Generic test case that will be called with the parameters listed below.
@@ -90,8 +86,8 @@ TEST_P(SQLToResultTest, SQLQueryTest) {
   }
 
   // Expect the query to be a single statement.
-  auto result_node = _sql_to_ast_translator.translate_parse_result(parse_result)[0];
-  auto result_operator = _ast_to_operator_translator.translate_node(result_node);
+  auto result_node = SQLToASTTranslator::get().translate_parse_result(parse_result)[0];
+  auto result_operator = ASTToOperatorTranslator::get().translate_node(result_node);
 
   auto tasks = OperatorTask::make_tasks_from_operator(result_operator);
   CurrentScheduler::schedule_and_wait_for_tasks(tasks);

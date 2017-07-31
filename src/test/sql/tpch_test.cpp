@@ -30,7 +30,7 @@ class TPCHTest : public BaseTest {
       throw std::runtime_error("Query is not valid.");
     }
 
-    auto result_node = _node_translator.translate_parse_result(parse_result)[0];
+    auto result_node = SQLToASTTranslator::get().translate_parse_result(parse_result)[0];
     return ASTToOperatorTranslator::get().translate_node(result_node);
   }
 
@@ -48,8 +48,6 @@ class TPCHTest : public BaseTest {
     auto result_task = schedule_query_and_return_task(query);
     EXPECT_TABLE_EQ(result_task->get_operator()->get_output(), expected_result, order_sensitive);
   }
-
-  SQLToASTTranslator _node_translator;
 };
 
 TEST_F(TPCHTest, TPCH6) {

@@ -15,6 +15,24 @@
 
 namespace opossum {
 
+/**
+ * Produces an AST (Abstract Syntax Tree), as defined in optimizer/abstract_syntax_tree, from a hsql::SQLParseResult.
+ *
+ * The elements of the vector returned by SQLToASTTranslator::translate_parse_result(const hsql::SQLParserResult&)
+ * point to the root/result nodes of the ASTs.
+ *
+ * An AST can either be handed to the optimizer, once it is added, or it can be directly turned into Operators by
+ * the ASTToOperatorTranslator.
+ *
+ * Refer to sql_to_result_test.cpp for an example of the SQLToASTTranslator in proper action. It is intended to be used
+ * as a Singleton via SQLToASTTranslator::get(), but there is no harm in instanciating it, e.g. for tests
+ *
+ * The basic usage looks like this:
+ *
+ * hsql::SQLParserResult parse_result;
+ * hsql::SQLParser::parseSQLString(params.query, &parse_result);
+ * auto result_nodes = SQLToASTTranslator::get().translate_parse_result(parse_result);
+ */
 class SQLToASTTranslator final : public boost::noncopyable {
  public:
   static SQLToASTTranslator& get();
@@ -45,6 +63,9 @@ class SQLToASTTranslator final : public boost::noncopyable {
                                                        const std::shared_ptr<AbstractASTNode>& input_node);
 
   std::shared_ptr<AbstractASTNode> _translate_join(const hsql::JoinDefinition& select);
+
+ private:
+  SQLToASTTranslator() = default;
 };
 
 }  // namespace opossum

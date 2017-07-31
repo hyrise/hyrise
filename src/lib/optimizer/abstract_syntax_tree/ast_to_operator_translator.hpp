@@ -14,13 +14,18 @@
 
 namespace opossum {
 
+/**
+ * Translates an AST (Abstract Syntax Tree), represented by its root node, into a Operator tree for of the execution
+ * engine, which in return is represented by its root Operator.
+ */
 class ASTToOperatorTranslator final : public boost::noncopyable {
  public:
   static ASTToOperatorTranslator &get();
 
-  ASTToOperatorTranslator();
-
   const std::shared_ptr<AbstractOperator> translate_node(const std::shared_ptr<AbstractASTNode> &node) const;
+
+ private:
+  ASTToOperatorTranslator();
 
  private:
   const std::shared_ptr<AbstractOperator> translate_table_node(const std::shared_ptr<AbstractASTNode> &node) const;

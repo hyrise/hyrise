@@ -49,10 +49,8 @@ class SQLToASTTranslatorTest : public BaseTest {
       throw std::runtime_error("Query is not valid.");
     }
 
-    return _translator.translate_parse_result(parse_result)[0];
+    return SQLToASTTranslator::get().translate_parse_result(parse_result)[0];
   }
-
-  SQLToASTTranslator _translator;
 };
 
 TEST_F(SQLToASTTranslatorTest, SelectStarAllTest) {
