@@ -10,7 +10,7 @@ namespace opossum {
 
 class StoredTableNode : public AbstractASTNode {
  public:
-  explicit StoredTableNode(const std::string table_name);
+  explicit StoredTableNode(const std::string &table_name);
 
   std::string description() const override;
 
