@@ -24,7 +24,7 @@ const std::unordered_map<std::string, proto::ScanType> string_to_proto_scan_type
     {"BETWEEN", proto::ScanType::OpBetween}, {"LIKE", proto::ScanType::OpLike},
 };
 
-const auto scan_type_to_string = make_bimap<ScanType, std::string>({
+const boost::bimap<ScanType, std::string> scan_type_to_string = make_bimap<ScanType, std::string>({
     {ScanType::OpEquals, "="},
     {ScanType::OpNotEquals, "!="},
     {ScanType::OpLessThan, "<"},
@@ -105,12 +105,13 @@ const std::unordered_map<JoinMode, std::string> join_mode_to_string = {
 };
 
 // TODO(mp): this should be case-insensitive
-const auto aggregate_function_to_string = make_bimap<AggregateFunction, std::string>({
-    {AggregateFunction::Min, "MIN"},
-    {AggregateFunction::Max, "MAX"},
-    {AggregateFunction::Sum, "SUM"},
-    {AggregateFunction::Avg, "AVG"},
-    {AggregateFunction::Count, "COUNT"},
-});
+const boost::bimap<AggregateFunction, std::string> aggregate_function_to_string =
+    make_bimap<AggregateFunction, std::string>({
+        {AggregateFunction::Min, "MIN"},
+        {AggregateFunction::Max, "MAX"},
+        {AggregateFunction::Sum, "SUM"},
+        {AggregateFunction::Avg, "AVG"},
+        {AggregateFunction::Count, "COUNT"},
+    });
 
 }  // namespace opossum
