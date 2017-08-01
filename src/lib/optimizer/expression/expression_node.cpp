@@ -156,13 +156,8 @@ std::string ExpressionNode::to_expression_string() const {
     // TODO(mp) Should be is_operator() to also support ExpressionType::Equals, ...
     Assert(static_cast<bool>(left_child()) && static_cast<bool>(right_child()), "Operator needs both operands");
 
-    auto left_expression_node = std::static_pointer_cast<ExpressionNode>(left_child());
-    auto right_expression_node = std::static_pointer_cast<ExpressionNode>(right_child());
-    Assert(static_cast<bool>(left_expression_node) && static_cast<bool>(right_expression_node),
-           "Operator needs both operands to be expressions");
-
-    return left_expression_node->to_expression_string() + expression_type_to_operator_string.at(_type) +
-           right_expression_node->to_expression_string();
+    return left_child()->to_expression_string() + expression_type_to_operator_string.at(_type) +
+            right_child()->to_expression_string();
   } else if (_type == ExpressionType::FunctionReference) {
     return _name + "()";
   } else {
