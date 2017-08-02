@@ -12,7 +12,7 @@
 namespace opossum {
 
 // Generic cache implementation using the LRU-K policy.
-// When an item should be evicted the item with the larges backward k-distance is evicted.
+// When an item should be evicted the item with the largest backward k-distance is evicted.
 // This is the item whose k-th most recent access is the furthest in the past.
 // Note: This implementation is not thread-safe.
 template <size_t K, typename key_t, typename val_t>
@@ -64,7 +64,7 @@ class LRUKCache : public AbstractCache<key_t, val_t> {
     ++_access_counter;
 
     auto it = _map.find(key);
-    if (_map.find(key) != _map.end()) {
+    if (it != _map.end()) {
       // Update entry.
       handle_t handle = it->second;
 

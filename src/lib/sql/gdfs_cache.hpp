@@ -35,7 +35,7 @@ class GDFSCache : public AbstractCache<key_t, val_t> {
 
   void set(const key_t& key, const val_t& value, double cost = 1.0, double size = 1.0) {
     auto it = _map.find(key);
-    if (_map.find(key) != _map.end()) {
+    if (it != _map.end()) {
       // Update priority.
       handle_t handle = it->second;
 
@@ -93,7 +93,7 @@ class GDFSCache : public AbstractCache<key_t, val_t> {
 
   double inflation() const { return _inflation; }
 
-  double priority(key_t key) const {
+  double priority(const key_t& key) const {
     auto it = _map.find(key);
     return (*it->second).priority;
   }
