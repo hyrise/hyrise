@@ -3,6 +3,8 @@
 #include <memory>
 #include <stdexcept>
 
+#include "commit_context.hpp"
+
 #include "utils/assert.hpp"
 
 namespace opossum {
