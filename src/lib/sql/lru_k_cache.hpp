@@ -60,7 +60,7 @@ class LRUKCache : public AbstractCache<key_t, val_t> {
 
   explicit LRUKCache(size_t capacity) : AbstractCache<key_t, val_t>(capacity), _access_counter(0) {}
 
-  void set(key_t key, val_t value, double cost = 1.0, double size = 1.0) {
+  void set(const key_t& key, const val_t& value, double cost = 1.0, double size = 1.0) {
     ++_access_counter;
 
     auto it = _map.find(key);
@@ -89,7 +89,7 @@ class LRUKCache : public AbstractCache<key_t, val_t> {
     _map[key] = handle;
   }
 
-  val_t& get(key_t key) {
+  val_t& get(const key_t& key) {
     ++_access_counter;
 
     auto it = _map.find(key);
@@ -100,7 +100,7 @@ class LRUKCache : public AbstractCache<key_t, val_t> {
     return entry.value;
   }
 
-  bool has(key_t key) const { return _map.find(key) != _map.end(); }
+  bool has(const key_t& key) const { return _map.find(key) != _map.end(); }
 
   size_t size() const { return _map.size(); }
 
