@@ -7,9 +7,9 @@
 #include "../base_test.hpp"
 #include "gtest/gtest.h"
 
-#include "scheduler/operator_task.hpp"
-
 namespace opossum {
+
+class OperatorTask;
 
 // The fixture for testing class GetTable.
 class SQLBaseTest : public BaseTest {

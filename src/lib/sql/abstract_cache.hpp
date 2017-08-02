@@ -15,7 +15,7 @@ class AbstractCache {
   virtual ~AbstractCache() {}
 
   // Cache the value at the given key.
-  // If the new size exceeds the capacity an item may be evicted.
+  // If the new size exceeds the capacity an item will be evicted.
   // Depending on the underlying strategy, the parameters for cost and size may be used.
   // If they are not intended to be used, we specify constant default values here.
   virtual void set(key_t key, val_t value, double cost = 1.0, double size = 1.0) = 0;
@@ -37,7 +37,7 @@ class AbstractCache {
   virtual void clear_and_resize(size_t capacity) = 0;
 
   // Return the capacity of the cache.
-  virtual size_t capacity() const { return _capacity; }
+  size_t capacity() const { return _capacity; }
 
  protected:
   size_t _capacity;

@@ -4,6 +4,7 @@
 #include <string>
 #include <utility>
 
+#include "scheduler/operator_task.hpp"
 #include "sql/sql_query_operator.hpp"
 
 namespace opossum {

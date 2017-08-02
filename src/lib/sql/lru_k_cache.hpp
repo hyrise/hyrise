@@ -11,43 +11,6 @@
 
 namespace opossum {
 
-// Entries within the LRU-K cache.
-// They keep a reference history of the K last accesses.
-template <size_t K, typename key_t, typename val_t>
-struct LRUKCacheEntry {
-  key_t key;
-  val_t value;
-
-  // Reference history, ordered with the least-recent access at the beginning.
-  std::vector<size_t> history;
-
-  // Adds an entry to the history list of the cache entry.
-  // If the history has K elements, all items are shifted left
-  // and the new entry is added at the end.
-  void add_history_entry(size_t current_access_counter) {
-    if (history.size() < K) {
-      history.push_back(current_access_counter);
-      return;
-    }
-
-    for (size_t i = K - 1; i > 0; --i) {
-      history[i - 1] = history[i];
-    }
-    history[K - 1] = current_access_counter;
-  }
-
-  // The underlying heap in the LRU-K cache is a max-heap.
-  // The item with the largest backward k-distance should be at the top.
-  // This is the item with the lowest k-th most recent access number.
-  // If the history of both items is not equally long, the item with the shorter history is evicted.
-  bool operator<(const LRUKCacheEntry& rhs) const {
-    if (history.size() != rhs.history.size()) {
-      return history.size() > rhs.history.size();
-    }
-    return history[0] > rhs.history[0];
-  }
-};
-
 // Generic cache implementation using the LRU-K policy.
 // When an item should be evicted the item with the larges backward k-distance is evicted.
 // This is the item whose k-th most recent access is the furthest in the past.
@@ -55,7 +18,44 @@ struct LRUKCacheEntry {
 template <size_t K, typename key_t, typename val_t>
 class LRUKCache : public AbstractCache<key_t, val_t> {
  public:
-  typedef LRUKCacheEntry<K, key_t, val_t> entry_t;
+  // Entries within the LRU-K cache.
+  // They keep a reference history of the K last accesses.
+  class LRUKCacheEntry {
+   public:
+    key_t key;
+    val_t value;
+
+    // Reference history, ordered with the least-recent access at the beginning.
+    std::vector<size_t> history;
+
+    // Adds an entry to the history list of the cache entry.
+    // If the history has K elements, all items are shifted left
+    // and the new entry is added at the end.
+    void add_history_entry(size_t current_access_counter) {
+      if (history.size() < K) {
+        history.push_back(current_access_counter);
+        return;
+      }
+
+      for (size_t i = K - 1; i > 0; --i) {
+        history[i - 1] = history[i];
+      }
+      history[K - 1] = current_access_counter;
+    }
+
+    // The underlying heap in the LRU-K cache is a max-heap.
+    // The item with the largest backward k-distance should be at the top.
+    // This is the item with the lowest k-th most recent access number.
+    // If the history of both items is not equally long, the item with the shorter history is evicted.
+    bool operator<(const LRUKCacheEntry& rhs) const {
+      if (history.size() != rhs.history.size()) {
+        return history.size() > rhs.history.size();
+      }
+      return history[0] > rhs.history[0];
+    }
+  };
+
+  typedef LRUKCacheEntry entry_t;
   typedef typename boost::heap::fibonacci_heap<entry_t>::handle_type handle_t;
 
   explicit LRUKCache(size_t capacity) : AbstractCache<key_t, val_t>(capacity), _access_counter(0) {}

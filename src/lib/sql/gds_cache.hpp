@@ -10,26 +10,25 @@
 
 namespace opossum {
 
-// Entries within the GDS cache.
-template <typename key_t, typename val_t>
-struct GDSCacheEntry {
-  key_t key;
-  val_t value;
-  double cost;
-  double size;
-  double priority;
-
-  // The underlying heap is a max-heap.
-  // To have the item with lowest priority at the top, we invert the comparison.
-  bool operator<(const GDSCacheEntry& rhs) const { return priority > rhs.priority; }
-};
-
 // Generic cache implementation using the GDS policy.
 // Note: This implementation is not thread-safe.
 template <typename key_t, typename val_t>
 class GDSCache : public AbstractCache<key_t, val_t> {
  public:
-  typedef GDSCacheEntry<key_t, val_t> entry_t;
+  // Entries within the GDS cache.
+  struct GDSCacheEntry {
+    key_t key;
+    val_t value;
+    double cost;
+    double size;
+    double priority;
+
+    // The underlying heap is a max-heap.
+    // To have the item with lowest priority at the top, we invert the comparison.
+    bool operator<(const GDSCacheEntry& rhs) const { return priority > rhs.priority; }
+  };
+
+  typedef GDSCacheEntry entry_t;
   typedef typename boost::heap::fibonacci_heap<entry_t>::handle_type handle_t;
 
   explicit GDSCache(size_t capacity) : AbstractCache<key_t, val_t>(capacity), _inflation(0.0) {}
