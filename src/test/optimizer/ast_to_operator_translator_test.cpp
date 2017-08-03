@@ -181,7 +181,7 @@ TEST_F(ASTToOperatorTranslatorTest, AggregateNodeWithArithmetics) {
   ASSERT_TRUE(projection_op);
 
   const auto projection_definitions = projection_op->projection_definitions();
-  ASSERT_EQ(projection_definitions.size(), 1);
+  ASSERT_EQ(projection_definitions.size(), 1u);
 
   const auto projection_definition = projection_definitions[0];
   EXPECT_EQ(std::get<0>(projection_definition), "$b*2");
