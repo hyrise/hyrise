@@ -2,6 +2,7 @@
 set(
     SOURCES
         text_field_generator.cpp
+        tpch_grammer.cpp
         tpch_table_generator.cpp
 )
 
