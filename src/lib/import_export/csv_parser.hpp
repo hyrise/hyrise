@@ -38,11 +38,11 @@ class CsvParser {
   std::shared_ptr<Table> parse(const std::string& filename);
 
  protected:
-  std::shared_ptr<Table> process_meta_file(const std::string& filename);
-  bool find_fields_in_chunk(std::experimental::string_view str, const Table& table, std::vector<size_t>& indices);
-  void parse_into_chunk(std::experimental::string_view content, const std::vector<size_t>& field_ends, const Table& table,
+  std::shared_ptr<Table> _process_meta_file(const std::string& filename);
+  bool _find_fields_in_chunk(std::experimental::string_view str, const Table& table, std::vector<size_t>& indices);
+  void _parse_into_chunk(std::experimental::string_view content, const std::vector<size_t>& field_ends, const Table& table,
                         Chunk& chunk);
-  void sanitize_field(std::string& field);
+  void _sanitize_field(std::string& field);
 
   // Csv configuration, e.g. delimiter, separator, etc.
   const CsvConfig _csv_config;
