@@ -43,7 +43,7 @@ class TableGenerator : public benchmark_utilities::AbstractBenchmarkTableGenerat
 
   std::shared_ptr<opossum::Table> generate_new_order_table();
 
-  std::shared_ptr<std::map<std::string, std::shared_ptr<opossum::Table>>> generate_all_tables();
+  std::map<std::string, std::shared_ptr<opossum::Table>> generate_all_tables();
 
   const size_t _chunk_size;
   const size_t _warehouse_size;

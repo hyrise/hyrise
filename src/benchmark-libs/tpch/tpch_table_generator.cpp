@@ -382,7 +382,7 @@ std::shared_ptr<opossum::Table> TableGenerator::generate_regions_table() {
   return table;
 }
 
-std::shared_ptr<std::map<std::string, std::shared_ptr<opossum::Table>>> TableGenerator::generate_all_tables() {
+std::map<std::string, std::shared_ptr<opossum::Table>> TableGenerator::generate_all_tables() {
   auto supplier_table = generate_suppliers_table();
   auto parts_table = generate_parts_table();
   auto partsupps_table = generate_partsupps_table();
@@ -393,8 +393,7 @@ std::shared_ptr<std::map<std::string, std::shared_ptr<opossum::Table>>> TableGen
   auto nations_table = generate_nations_table();
   auto regions_table = generate_regions_table();
 
-  return std::make_shared<std::map<std::string, std::shared_ptr<opossum::Table>>>(
-      std::initializer_list<std::map<std::string, std::shared_ptr<opossum::Table>>::value_type>{
+  return std::map<std::string, std::shared_ptr<opossum::Table>>({
           {"SUPPLIER", std::move(supplier_table)},
           {"PART", std::move(parts_table)},
           {"PARTSUPP", std::move(partsupps_table)},

@@ -394,7 +394,7 @@ std::shared_ptr<opossum::Table> TableGenerator::generate_new_order_table() {
   return table;
 }
 
-std::shared_ptr<std::map<std::string, std::shared_ptr<opossum::Table>>> TableGenerator::generate_all_tables() {
+std::map<std::string, std::shared_ptr<opossum::Table>> TableGenerator::generate_all_tables() {
   auto item_table = generate_items_table();
   auto warehouse_table = generate_warehouse_table();
   auto stock_table = generate_stock_table();
@@ -406,8 +406,7 @@ std::shared_ptr<std::map<std::string, std::shared_ptr<opossum::Table>>> TableGen
   auto order_line_table = generate_order_line_table(order_line_counts);
   auto new_order_table = generate_new_order_table();
 
-  return std::make_shared<std::map<std::string, std::shared_ptr<opossum::Table>>>(
-      std::initializer_list<std::map<std::string, std::shared_ptr<opossum::Table>>::value_type>{
+  return std::map<std::string, std::shared_ptr<opossum::Table>>({
           {"ITEM", std::move(item_table)},
           {"WAREHOUSE", std::move(warehouse_table)},
           {"STOCK", std::move(stock_table)},

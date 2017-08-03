@@ -40,7 +40,7 @@ class TPCCBenchmarkFixture : public benchmark::Fixture {
   }
 
   void SetUp(::benchmark::State&) override {
-    for (auto it = _tpcc_tables->begin(); it != _tpcc_tables->end(); ++it) {
+    for (auto it = _tpcc_tables.begin(); it != _tpcc_tables.end(); ++it) {
       opossum::StorageManager::get().add_table(it->first, it->second);
     }
   }
@@ -48,7 +48,7 @@ class TPCCBenchmarkFixture : public benchmark::Fixture {
  protected:
   tpcc::TableGenerator _gen;
   tpcc::TpccRandomGenerator _random_gen;
-  std::shared_ptr<std::map<std::string, std::shared_ptr<Table>>> _tpcc_tables;
+  std::map<std::string, std::shared_ptr<Table>> _tpcc_tables;
 
   void clear_cache() {
     std::vector<int> clear = std::vector<int>();

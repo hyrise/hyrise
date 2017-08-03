@@ -54,7 +54,7 @@ class TableGenerator : public benchmark_utilities::AbstractBenchmarkTableGenerat
 
   std::shared_ptr<opossum::Table> generate_regions_table();
 
-  std::shared_ptr<std::map<std::string, std::shared_ptr<opossum::Table>>> generate_all_tables() override;
+  std::map<std::string, std::shared_ptr<opossum::Table>> generate_all_tables() override;
 
   const size_t _chunk_size;
   const size_t _scale_factor;

@@ -21,7 +21,7 @@ class AbstractBenchmarkTableGenerator {
 
   virtual ~AbstractBenchmarkTableGenerator() = default;
 
-  virtual std::shared_ptr<std::map<std::string, std::shared_ptr<opossum::Table>>> generate_all_tables() = 0;
+  virtual std::map<std::string, std::shared_ptr<opossum::Table>> generate_all_tables() = 0;
 
  protected:
   const opossum::ChunkOffset _chunk_size;
