@@ -46,11 +46,16 @@ const std::shared_ptr<TableStatistics> AbstractASTNode::get_or_create_statistics
   return _statistics;
 }
 
+const std::shared_ptr<TableStatistics> AbstractASTNode::create_statistics_from(
+    std::shared_ptr<AbstractASTNode> parent) const {
+  return parent->get_or_create_statistics();
+}
+
 // TODO(mp): This does not support Joins or Unions. Add support for nodes with two children later.
 const std::shared_ptr<TableStatistics> AbstractASTNode::create_statistics() const {
   Assert(static_cast<bool>(_left_child),
          "Default create_statistics()-impl requires children, override for special node types");
-  return _left_child->get_or_create_statistics();
+  return create_statistics_from(_left_child);
 }
 
 std::vector<std::string> AbstractASTNode::output_column_names() const {

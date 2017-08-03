@@ -42,6 +42,7 @@ class AbstractASTNode : public std::enable_shared_from_this<AbstractASTNode> {
   const std::shared_ptr<TableStatistics> &statistics() const;
   void set_statistics(std::shared_ptr<TableStatistics> statistics);
   const std::shared_ptr<TableStatistics> get_or_create_statistics();
+  virtual const std::shared_ptr<TableStatistics> create_statistics_from(std::shared_ptr<AbstractASTNode> parent) const;
 
   virtual std::vector<std::string> output_column_names() const;
 

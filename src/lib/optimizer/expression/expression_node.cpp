@@ -28,7 +28,7 @@ std::shared_ptr<ExpressionNode> ExpressionNode::create_expression(const Expressi
 
 std::shared_ptr<ExpressionNode> ExpressionNode::create_column_reference(const std::string &table_name,
                                                                         const std::string &column_name,
-                                                                        const std::string& alias) {
+                                                                        const std::string &alias) {
   const std::vector<std::shared_ptr<ExpressionNode>> expr_list;
   return std::make_shared<ExpressionNode>(ExpressionType::ColumnReference, NULL_VALUE, expr_list, column_name,
                                           table_name, alias);

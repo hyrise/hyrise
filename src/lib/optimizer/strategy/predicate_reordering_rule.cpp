@@ -1,6 +1,7 @@
 #include "predicate_reordering_rule.hpp"
 
 #include <algorithm>
+#include <constant_mappings.hpp>
 #include <iostream>
 #include <memory>
 #include <vector>
@@ -36,8 +37,9 @@ const void PredicateReorderingRule::reorder_predicates(std::vector<std::shared_p
   auto child = predicates.back()->left_child();
   auto is_left = parent && parent->left_child() == predicates.front();
 
-  std::sort(predicates.begin(), predicates.end(),
-            [](auto& l, auto& r) { return l->statistics()->row_count() < r->statistics()->row_count(); });
+  std::sort(predicates.begin(), predicates.end(), [&](auto& l, auto& r) {
+    return l->create_statistics_from(child)->row_count() < r->create_statistics_from(child)->row_count();
+  });
 
   // Correct AST hierarchy
   if (parent) {

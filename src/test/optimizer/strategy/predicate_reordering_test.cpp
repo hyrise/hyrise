@@ -1,4 +1,5 @@
 #include <memory>
+#include <storage/storage_manager.hpp>
 #include <string>
 #include <vector>
 
@@ -255,6 +256,59 @@ TEST_F(PredicateReorderingTest, TwoReorderings) {
   EXPECT_EQ(reordered->left_child()->left_child()->left_child()->left_child()->left_child(), predicate_node_1);
   EXPECT_EQ(reordered->left_child()->left_child()->left_child()->left_child()->left_child()->left_child(),
             stored_table_node);
+}
+
+TEST_F(PredicateReorderingTest, SameOrderingForStoredTable) {
+  std::shared_ptr<Table> table_a = load_table("src/test/tables/int_float4.tbl", 2);
+  StorageManager::get().add_table("table_a", std::move(table_a));
+
+  PredicateReorderingRule rule;
+
+  auto stored_table_node = std::make_shared<StoredTableNode>("table_a");
+
+  // Setup expressions
+  auto equals_expression_0 = ExpressionNode::create_expression(ExpressionType::LessThan);
+  auto column_reference_expression_0 = ExpressionNode::create_column_reference("table_a", "a");
+  auto literal_expression_0 = ExpressionNode::create_literal(20);
+  equals_expression_0->set_left_child(column_reference_expression_0);
+  equals_expression_0->set_right_child(literal_expression_0);
+
+  auto equals_expression_1 = ExpressionNode::create_expression(ExpressionType::GreaterThan);
+  auto column_reference_expression_1 = ExpressionNode::create_column_reference("table_a", "b");
+  auto literal_expression_1 = ExpressionNode::create_literal(458.5);
+  equals_expression_1->set_left_child(column_reference_expression_1);
+  equals_expression_1->set_right_child(literal_expression_1);
+
+  // Setup first AST
+  auto predicate_node_0 = std::make_shared<PredicateNode>("a", equals_expression_0, ScanType::OpLessThan, 20);
+  predicate_node_0->set_left_child(stored_table_node);
+
+  auto predicate_node_1 = std::make_shared<PredicateNode>("b", equals_expression_1, ScanType::OpGreaterThan, 458.5);
+  predicate_node_1->set_left_child(predicate_node_0);
+
+  predicate_node_1->get_or_create_statistics();
+
+  auto reordered = rule.apply_rule(predicate_node_1);
+
+  // Setup second AST
+  auto predicate_node_2 = std::make_shared<PredicateNode>("b", equals_expression_1, ScanType::OpGreaterThan, 458.5);
+  predicate_node_2->set_left_child(stored_table_node);
+
+  auto predicate_node_3 = std::make_shared<PredicateNode>("a", equals_expression_0, ScanType::OpLessThan, 20);
+  predicate_node_3->set_left_child(predicate_node_2);
+
+  predicate_node_3->get_or_create_statistics();
+
+  auto reordered_1 = rule.apply_rule(predicate_node_3);
+
+  // Compare expressions in PredicateNodes
+  auto first_predicate_0 = std::dynamic_pointer_cast<PredicateNode>(reordered);
+  auto first_predicate_1 = std::dynamic_pointer_cast<PredicateNode>(reordered_1);
+  EXPECT_EQ(first_predicate_0->predicate(), first_predicate_1->predicate());
+  auto second_predicate_0 = std::dynamic_pointer_cast<PredicateNode>(first_predicate_0->left_child());
+  auto second_predicate_1 = std::dynamic_pointer_cast<PredicateNode>(first_predicate_1->left_child());
+  EXPECT_EQ(second_predicate_0->predicate(), second_predicate_1->predicate());
+  EXPECT_EQ(second_predicate_0->left_child(), second_predicate_0->left_child());
 }
 
 }  // namespace opossum
