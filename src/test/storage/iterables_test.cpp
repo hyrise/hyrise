@@ -7,10 +7,10 @@
 #include "gtest/gtest.h"
 
 #include "../lib/storage/dictionary_column.hpp"
-#include "../lib/storage/dictionary_column_iterable.hpp"
+#include "../lib/storage/iterables/dictionary_column_iterable.hpp"
 #include "../lib/storage/dictionary_compression.hpp"
 #include "../lib/storage/value_column.hpp"
-#include "../lib/storage/value_column_iterable.hpp"
+#include "../lib/storage/iterables/value_column_iterable.hpp"
 #include "../lib/storage/table.hpp"
 
 namespace opossum {
