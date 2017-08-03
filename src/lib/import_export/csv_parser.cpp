@@ -4,6 +4,7 @@
 #include <list>
 #include <memory>
 #include <string>
+#include <experimental/string_view>
 #include <utility>
 #include <vector>
 
@@ -28,20 +29,22 @@ std::shared_ptr<Table> CsvParser::parse(const std::string& filename) {
   // make sure content ends with a delimiter for better row processing later
   if (content.back() != _csv_config.delimiter) content.push_back(_csv_config.delimiter);
 
+  std::experimental::string_view content_view{content.c_str(), content.size()};
+
   // Safe chunks in list to avoid memory relocations
   std::list<Chunk> chunks;
   std::vector<std::shared_ptr<JobTask>> tasks;
   std::vector<size_t> field_ends;
-  while (find_fields_in_chunk(content, *table.get(), field_ends)) {
+  while (find_fields_in_chunk(content_view, *table.get(), field_ends)) {
     // create empty chunk
     chunks.emplace_back(true);
     auto& chunk = chunks.back();
 
     // Only pass the part of the string that is actually needed to the parsing task
-    std::string relevant_content = content.substr(0, field_ends.back());
+    std::experimental::string_view relevant_content = content_view.substr(0, field_ends.back());
 
     // Remove processed part of the csv content
-    content.erase(0, field_ends.back() + 1);
+    content_view = content_view.substr(field_ends.back() + 1);
 
     // create and start parsing task to fill chunk
     tasks.emplace_back(std::make_shared<JobTask>(
@@ -109,7 +112,7 @@ std::shared_ptr<Table> CsvParser::process_meta_file(const std::string& filename)
   return table;
 }
 
-bool CsvParser::find_fields_in_chunk(const std::string& str, const Table& table, std::vector<size_t>& indices) {
+bool CsvParser::find_fields_in_chunk(std::experimental::string_view str, const Table& table, std::vector<size_t>& indices) {
   indices.clear();
   if (0 == table.chunk_size() || str.empty()) {
     return false;
@@ -150,7 +153,7 @@ bool CsvParser::find_fields_in_chunk(const std::string& str, const Table& table,
   return true;
 }
 
-void CsvParser::parse_into_chunk(const std::string& content, const std::vector<size_t>& field_ends, const Table& table,
+void CsvParser::parse_into_chunk(std::experimental::string_view content, const std::vector<size_t>& field_ends, const Table& table,
                                  Chunk& chunk) {
   // For each csv column create a CsvConverter which builds up a ValueColumn
   const auto col_count = table.col_count();
@@ -165,7 +168,7 @@ void CsvParser::parse_into_chunk(const std::string& content, const std::vector<s
   for (ChunkOffset row_id = 0; row_id < row_count; ++row_id) {
     for (ColumnID column_id{0}; column_id < col_count; ++column_id) {
       const auto end = field_ends.at(row_id * col_count + column_id);
-      auto field = content.substr(start, end - start);
+      auto field = content.substr(start, end - start).to_string();
       start = end + 1;
 
       if (!_rfc) {
