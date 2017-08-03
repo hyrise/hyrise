@@ -1,6 +1,7 @@
 #include "new_table_scan.hpp"
 
-#include <type_traits>
+#include <boost/hana/type.hpp>
+#include <boost/hana/or.hpp>
 
 #include "storage/iterables/value_column_iterable.hpp"
 #include "storage/iterables/dictionary_column_iterable.hpp"
@@ -12,12 +13,21 @@
 
 namespace opossum {
 
+namespace hana = boost::hana;
+
 /**
  * @brief The actual scan
  */
 struct Scan {
   Scan(const ChunkID chunk_id, PosList & matches_out)
       : _chunk_id{chunk_id}, _matches_out{matches_out} {}
+
+  template <typename LeftIterator, typename RightIterator>
+  void operator()(const ScanType & scan_type, LeftIterator left_it, LeftIterator left_end, RightIterator right_it) {
+    resolve_operator_type(scan_type, [=] (auto comparator) { 
+      operator()(comparator, left_it, left_end, right_it); 
+    });
+  }
 
   template <typename LeftIterator, typename RightIterator, typename Comparator>
   void operator()(const Comparator & comparator, LeftIterator left_it, LeftIterator left_end, RightIterator right_it) {
@@ -40,66 +50,42 @@ struct Scan {
 
 class AbstractScan {
  public:
-  AbstractScan(std::shared_ptr<const Table> in_table) : _in_table{in_table} {}
+  AbstractScan(std::shared_ptr<const Table> in_table, const ScanType scan_type) : _in_table{in_table}, _scan_type{scan_type} {}
   virtual ~AbstractScan() = default;
 
   virtual PosList scan_chunk(const ChunkID & chunk_id) = 0;
 
  protected:
-  template <typename Functor>
-  void resolve_operator_type(const ScanType scan_type, const Functor & func) {
-    switch (scan_type) {
-      case ScanType::OpEquals:
-        func(Equal{});
-        break;
-
-      case ScanType::OpNotEquals:
-        func(NotEqual{});
-        break;
-
-      case ScanType::OpLessThan:
-        func(Less{});
-        break;
-
-      case ScanType::OpLessThanEquals:
-        func(LessEqual{});
-        break;
-
-      case ScanType::OpGreaterThan:
-        func(Greater{});
-        break;
-
-      case ScanType::OpGreaterThanEquals:
-        func(GreaterEqual{});
-        break;
-
-      case ScanType::OpBetween:
-        Fail("This method should only be called when ScanType::OpBetween has been ruled out.");
-
-      case ScanType::OpLike:
-        Fail("This method should only be called when ScanType::OpLike has been ruled out.");
-
-      default:
-        Fail("Unsupported operator.");
-    }
-  }
-
   template <typename Type>
   auto create_iterable_from_column(ValueColumn<Type> & column) { return ValueColumnIterable<Type>{column}; }
 
   template <typename Type>
   auto create_iterable_from_column(DictionaryColumn<Type> & column) { return DictionaryColumnIterable<Type>{column}; }
 
+  template <typename Type>
+  auto create_iterable_from_column(ReferenceColumn & column) { return ReferenceColumnIterable<Type>{column}; }
+  
+  template <typename LeftIterable, typename RightIterable>
+  void scan(LeftIterable & left_iterable, RightIterable & right_iterable, const ChunkID chunk_id, PosList & matches_out) {
+    left_iterable.execute_for_all([&] (auto left_it, auto left_end) {
+      right_iterable.execute_for_all([&] (auto right_it, auto right_end) {
+        Scan{chunk_id, matches_out}(_scan_type, left_it, left_end, right_it);
+      });
+    });
+  }
+
  protected:
   const std::shared_ptr<const Table> _in_table;
+  const ScanType _scan_type;
 };
+
 
 // 1 data column (dictionary, value)
 class DataColumnScan : public AbstractScan {
  public:
-  DataColumnScan(std::shared_ptr<const Table> in_table, const ColumnID left_column_id,
-                 const AllTypeVariant & right_value, const ScanType & scan_type)
-      : AbstractScan{in_table}, _left_column_id{left_column_id}, _right_value{right_value}, _scan_type{scan_type} {}
+  DataColumnScan(std::shared_ptr<const Table> in_table, const ScanType & scan_type,
+                 const ColumnID left_column_id, const AllTypeVariant & right_value)
+      : AbstractScan{in_table, scan_type}, _left_column_id{left_column_id}, _right_value{right_value} {}
 
   PosList scan_chunk(const ChunkID & chunk_id) override {
     const auto & chunk = _in_table->get_chunk(chunk_id);
@@ -108,22 +94,14 @@ class DataColumnScan : public AbstractScan {
     const auto left_column = chunk.get_column(_left_column_id);
 
     auto matches_out = PosList{};
-    auto scan = Scan{chunk_id, matches_out};
 
-    resolve_column_type(left_column_type, *left_column, [&] (auto &typed_left_column) {
-      resolve_operator_type(_scan_type, [&] (auto comparator) {
-        using LeftColumn = std::decay_t<decltype(typed_left_column)>;
-        using ColumnType = typename LeftColumn::Type;
+    resolve_column_type(left_column_type, *left_column, [&] (auto type, auto &typed_left_column) {
+      using Type = typename decltype(type)::type;
 
-        auto left_column_iterable = create_iterable_from_column(typed_left_column);
-        auto right_value_iterable = ConstantValueIterable<ColumnType>{_right_value};
+      auto left_column_iterable = create_iterable_from_column(typed_left_column);
+      auto right_value_iterable = ConstantValueIterable<Type>{_right_value};
 
-        left_column_iterable.execute_for_all([&] (auto left_it, auto left_end) {
-          right_value_iterable.execute_for_all([&] (auto right_it) {
-            scan(comparator, left_it, left_end, right_it);
-          });
-        });
-      });
+      scan(left_column_iterable, right_value_iterable, chunk_id, matches_out);
     });
 
     return matches_out;
@@ -132,15 +110,15 @@ class DataColumnScan : public AbstractScan {
  private:
   const ColumnID _left_column_id;
   const AllTypeVariant _right_value;
-  const ScanType _scan_type;
 };
+
 
 // 1 reference column
 class ReferenceColumnScan : public AbstractScan {
  public:
-  ReferenceColumnScan(std::shared_ptr<const Table> in_table, const ColumnID left_column_id,
-                      const AllTypeVariant & right_value, const ScanType & scan_type)
-      : AbstractScan{in_table}, _left_column_id{left_column_id}, _right_value{right_value}, _scan_type{scan_type} {}
+  ReferenceColumnScan(std::shared_ptr<const Table> in_table, const ScanType & scan_type,
+                      const ColumnID left_column_id, const AllTypeVariant & right_value)
+      : AbstractScan{in_table, scan_type}, _left_column_id{left_column_id}, _right_value{right_value} {}
 
   PosList scan_chunk(const ChunkID & chunk_id) override {
     const auto & chunk = _in_table->get_chunk(chunk_id);
@@ -151,21 +129,14 @@ class ReferenceColumnScan : public AbstractScan {
     DebugAssert(left_column != nullptr, "Left column must be of type ReferenceColumn");
 
     auto matches_out = PosList{};
-    auto scan = Scan{chunk_id, matches_out};
 
     resolve_type(left_column_type, [&] (auto type) {
-      resolve_operator_type(_scan_type, [&] (auto comparator) {
-        using Type = typename decltype(type)::type;
+      using Type = typename decltype(type)::type;
 
-        auto left_column_iterable = ReferenceColumnIterable<Type>(*left_column);
-        auto right_value_iterable = ConstantValueIterable<Type>(_right_value);
+      auto left_column_iterable = ReferenceColumnIterable<Type>(*left_column);
+      auto right_value_iterable = ConstantValueIterable<Type>(_right_value);
 
-        left_column_iterable.execute_for_all([&] (auto left_it, auto left_end) {
-          right_value_iterable.execute_for_all([&] (auto right_it) {
-            scan(comparator, left_it, left_end, right_it);
-          });
-        });
-      });
+      scan(left_column_iterable, right_value_iterable, chunk_id, matches_out);
     });
 
     return matches_out;
@@ -174,16 +145,15 @@ class ReferenceColumnScan : public AbstractScan {
  private:
   const ColumnID _left_column_id;
   const AllTypeVariant _right_value;
-  const ScanType _scan_type;
 };
+
 
 // 2 data columns (dictionary, value)
 class DataColumnComparisonScan : public AbstractScan {
  public:
-  DataColumnComparisonScan(std::shared_ptr<const Table> in_table, const ColumnID left_column_id,
-                    const ColumnID right_column_id, const ScanType & scan_type)
-      : AbstractScan{in_table}, _left_column_id{left_column_id}, _right_column_id{right_column_id},
-        _scan_type{scan_type} {}
+  DataColumnComparisonScan(std::shared_ptr<const Table> in_table, const ScanType & scan_type,
+                           const ColumnID left_column_id, const ColumnID right_column_id)
+      : AbstractScan{in_table, scan_type}, _left_column_id{left_column_id}, _right_column_id{right_column_id} {}
 
   PosList scan_chunk(const ChunkID & chunk_id) override {
     const auto & chunk = _in_table->get_chunk(chunk_id);
@@ -194,32 +164,22 @@ class DataColumnComparisonScan : public AbstractScan {
     const auto right_column = chunk.get_column(_right_column_id);
 
     auto matches_out = PosList{};
-    auto scan = Scan{chunk_id, matches_out};
 
-    resolve_column_type(left_column_type, *left_column, [&] (auto &typed_left_column) {
-      resolve_column_type(right_column_type, *right_column, [&] (auto &typed_right_column) {
-        resolve_operator_type(_scan_type, [&] (auto comparator) {
-          using LeftColumn = std::decay_t<decltype(typed_left_column)>;
-          using RightColumn = std::decay_t<decltype(typed_right_column)>;
+    resolve_column_type(left_column_type, *left_column, [&] (auto left_type, auto &typed_left_column) {
+      resolve_column_type(right_column_type, *right_column, [&] (auto right_type, auto &typed_right_column) {
+        constexpr auto left_is_string_column = (left_type == hana::type_c<std::string>);
+        constexpr auto right_is_string_column = (right_type == hana::type_c<std::string>);
+        constexpr auto neither_is_string_column = !left_is_string_column && !right_is_string_column;
+        constexpr auto both_are_string_columns = left_is_string_column && right_is_string_column;
 
-          constexpr auto left_is_string_column = LeftColumn::template has_type<std::string>();
-          constexpr auto right_is_string_column = RightColumn::template has_type<std::string>();
-          constexpr auto neither_is_string_column = !left_is_string_column && !right_is_string_column;
-          constexpr auto both_are_string_columns = left_is_string_column && right_is_string_column;
+        if constexpr (neither_is_string_column || both_are_string_columns) {
+          auto left_column_iterable = create_iterable_from_column(typed_left_column);
+          auto right_column_iterable = create_iterable_from_column(typed_right_column);
 
-          if constexpr (neither_is_string_column || both_are_string_columns) {
-            auto left_column_iterable = create_iterable_from_column(typed_left_column);
-            auto right_column_iterable = create_iterable_from_column(typed_right_column);
-
-            left_column_iterable.execute_for_all([&] (auto left_it, auto left_end) {
-              right_column_iterable.execute_for_all([&] (auto right_it, auto right_end) {
-                scan(comparator, left_it, left_end, right_it);
-              });
-            });
-          } else {
-            Fail("std::string cannot be compared to numerical type!");
-          }
-        });
+          scan(left_column_iterable, right_column_iterable, chunk_id, matches_out);
+        } else {
+          Fail("std::string cannot be compared to numerical type!");
+        }
       });
     });
 
@@ -229,9 +189,57 @@ class DataColumnComparisonScan : public AbstractScan {
  private:
   const ColumnID _left_column_id;
   const ColumnID _right_column_id;
-  const ScanType _scan_type;
 };
 
+
+// 2 data columns (dictionary, value)
+class ReferenceColumnComparisonScan : public AbstractScan {
+ public:
+  ReferenceColumnComparisonScan(std::shared_ptr<const Table> in_table, const ScanType & scan_type,
+                                const ColumnID left_column_id, const ColumnID right_column_id)
+      : AbstractScan{in_table, scan_type}, _left_column_id{left_column_id}, _right_column_id{right_column_id} {}
+
+  PosList scan_chunk(const ChunkID & chunk_id) override {
+    const auto & chunk = _in_table->get_chunk(chunk_id);
+    const auto left_column_type = _in_table->column_type(_left_column_id);
+    const auto right_column_type = _in_table->column_type(_right_column_id);
+
+    const auto left_column = std::dynamic_pointer_cast<ReferenceColumn>(chunk.get_column(_left_column_id));
+    const auto right_column = std::dynamic_pointer_cast<ReferenceColumn>(chunk.get_column(_right_column_id));
+
+    DebugAssert(left_column != nullptr, "Left column must be of type ReferenceColumn");
+    DebugAssert(right_column != nullptr, "Right column must be of type ReferenceColumn");
+
+    auto matches_out = PosList{};
+
+    resolve_type(left_column_type, [&] (auto left_type) {
+      resolve_type(right_column_type, [&] (auto right_type) {
+        constexpr auto left_is_string_column = (left_type == hana::type_c<std::string>);
+        constexpr auto right_is_string_column = (right_type == hana::type_c<std::string>);
+        constexpr auto neither_is_string_column = !left_is_string_column && !right_is_string_column;
+        constexpr auto both_are_string_columns = left_is_string_column && right_is_string_column;
+
+        if constexpr (neither_is_string_column || both_are_string_columns) {
+          using LeftType = typename decltype(left_type)::type;
+          using RightType = typename decltype(right_type)::type;
+
+          auto left_column_iterable = create_iterable_from_column<LeftType>(*left_column);
+          auto right_column_iterable = create_iterable_from_column<RightType>(*right_column);
+
+          scan(left_column_iterable, right_column_iterable, chunk_id, matches_out);
+        } else {
+          Fail("std::string cannot be compared to numerical type!");
+        }
+      });
+    });
+
+    return matches_out;
+  }
+
+ private:
+  const ColumnID _left_column_id;
+  const ColumnID _right_column_id;
+};
 
 
 NewTableScan::NewTableScan(const std::shared_ptr<AbstractOperator> in, const std::string &left_column_name,
@@ -335,18 +343,18 @@ void NewTableScan::init_scan()
     const auto right_value = boost::get<AllTypeVariant>(_right_parameter);
 
     if (_is_reference_table) {
-      _scan = std::make_unique<ReferenceColumnScan>(_in_table, left_column_id, right_value, _scan_type);
+      _scan = std::make_unique<ReferenceColumnScan>(_in_table, _scan_type, left_column_id, right_value);
     } else {
-      _scan = std::make_unique<DataColumnScan>(_in_table, left_column_id, right_value, _scan_type);
+      _scan = std::make_unique<DataColumnScan>(_in_table, _scan_type, left_column_id, right_value);
     }
   } else /* is_column_name(_right_parameter) */ {
     const auto right_column_name = boost::get<ColumnName>(_right_parameter);
     const auto right_column_id = _in_table->column_id_by_name(right_column_name);
 
     if (_is_reference_table) {
-      // TODO(mjendruk): Implement scan for two reference columns
+      _scan = std::make_unique<ReferenceColumnComparisonScan>(_in_table, _scan_type, left_column_id, right_column_id);
     } else {
-      _scan = std::make_unique<DataColumnComparisonScan>(_in_table, left_column_id, right_column_id, _scan_type);
+      _scan = std::make_unique<DataColumnComparisonScan>(_in_table, _scan_type, left_column_id, right_column_id);
     }
   }
 }

@@ -43,14 +43,14 @@ void resolve_column_type(const std::string & type, BaseColumn & column, const Fu
           const auto context = std::static_pointer_cast<Context>(c);
           auto &column = static_cast<ValueColumn<Type> &>(base_column);
 
-          context->func(column);
+          context->func(hana::type_c<Type>, column);
         }
 
         void handle_dictionary_column(BaseColumn &base_column, std::shared_ptr<ColumnVisitableContext> c) override {
           const auto context = std::static_pointer_cast<Context>(c);
           auto &column = static_cast<DictionaryColumn<Type> &>(base_column);
 
-          context->func(column);
+          context->func(hana::type_c<Type>, column);
         }
 
         void handle_reference_column(ReferenceColumn &column, std::shared_ptr<ColumnVisitableContext> c) override {

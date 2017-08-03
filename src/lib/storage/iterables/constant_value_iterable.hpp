@@ -44,7 +44,8 @@ class ConstantValueIterable
   template <typename Functor>
   auto execute_for_all(const Functor & func) const {
     auto begin = Iterator{_value};
-    return func(begin);
+    // TODO(mjendruk): Find a better solution here.
+    return func(begin, begin);
   }
 
  private:
