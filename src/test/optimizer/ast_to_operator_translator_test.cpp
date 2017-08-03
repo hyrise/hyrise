@@ -30,9 +30,7 @@ class ASTToOperatorTranslatorTest : public BaseTest {
     StorageManager::get().add_table("table_int_float2", load_table("src/test/tables/int_float2.tbl", 2));
   }
 
-  void TearDown() override {
-    StorageManager::get().reset();
-  }
+  void TearDown() override { StorageManager::get().reset(); }
 };
 
 TEST_F(ASTToOperatorTranslatorTest, StoredTableNode) {
@@ -60,7 +58,8 @@ TEST_F(ASTToOperatorTranslatorTest, PredicateNodeUnaryScan) {
 
 TEST_F(ASTToOperatorTranslatorTest, PredicateNodeBinaryScan) {
   const auto stored_table_node = std::make_shared<StoredTableNode>("table_int_float");
-  auto predicate_node = std::make_shared<PredicateNode>("a", nullptr, ScanType::OpBetween, AllParameterVariant(42), AllTypeVariant(1337));
+  auto predicate_node =
+      std::make_shared<PredicateNode>("a", nullptr, ScanType::OpBetween, AllParameterVariant(42), AllTypeVariant(1337));
   predicate_node->set_left_child(stored_table_node);
   const auto op = ASTToOperatorTranslator::get().translate_node(predicate_node);
 
@@ -98,8 +97,8 @@ TEST_F(ASTToOperatorTranslatorTest, SortNode) {
 TEST_F(ASTToOperatorTranslatorTest, JoinNode) {
   const auto stored_table_node_left = std::make_shared<StoredTableNode>("table_int_float");
   const auto stored_table_node_right = std::make_shared<StoredTableNode>("table_int_float2");
-  auto join_node = std::make_shared<JoinNode>(std::make_pair(std::string("a"), std::string("a")), ScanType::OpEquals, JoinMode::Outer,
-    "alpha.", "beta.");
+  auto join_node = std::make_shared<JoinNode>(std::make_pair(std::string("a"), std::string("a")), ScanType::OpEquals,
+                                              JoinMode::Outer, "alpha.", "beta.");
   join_node->set_left_child(stored_table_node_left);
   join_node->set_right_child(stored_table_node_right);
   const auto op = ASTToOperatorTranslator::get().translate_node(join_node);
@@ -117,12 +116,11 @@ TEST_F(ASTToOperatorTranslatorTest, AggregateNodeNoArithmetics) {
   const auto stored_table_node = std::make_shared<StoredTableNode>("table_int_float");
 
   auto sum_expression = ExpressionNode::create_function_reference(
-    "SUM",
-    {ExpressionNode::create_column_reference("table_int_float", "a", "")},
-    {});
-  auto aggregate_node = std::make_shared<AggregateNode>(
-    std::vector<AggregateColumnDefinition>{AggregateColumnDefinition{sum_expression, optional<std::string>("sum_of_a")}},
-    std::vector<std::string>{});
+      "SUM", {ExpressionNode::create_column_reference("table_int_float", "a", "")}, {});
+  auto aggregate_node =
+      std::make_shared<AggregateNode>(std::vector<AggregateColumnDefinition>{AggregateColumnDefinition{
+                                          sum_expression, optional<std::string>("sum_of_a")}},
+                                      std::vector<std::string>{});
   aggregate_node->set_left_child(stored_table_node);
 
   const auto op = ASTToOperatorTranslator::get().translate_node(aggregate_node);
@@ -153,9 +151,10 @@ TEST_F(ASTToOperatorTranslatorTest, AggregateNodeWithArithmetics) {
   // because it is not able to handle columns with different data types.
   // Create issue with failing test.
   auto sum_expression = ExpressionNode::create_function_reference("SUM", {expr_multiplication}, {});
-  auto aggregate_node = std::make_shared<AggregateNode>(
-          std::vector<AggregateColumnDefinition>{AggregateColumnDefinition{sum_expression, optional<std::string>("sum_of_b_times_two")}},
-          std::vector<std::string>{"a"});
+  auto aggregate_node =
+      std::make_shared<AggregateNode>(std::vector<AggregateColumnDefinition>{AggregateColumnDefinition{
+                                          sum_expression, optional<std::string>("sum_of_b_times_two")}},
+                                      std::vector<std::string>{"a"});
   aggregate_node->set_left_child(stored_table_node);
 
   const auto op = ASTToOperatorTranslator::get().translate_node(aggregate_node);
@@ -190,43 +189,41 @@ TEST_F(ASTToOperatorTranslatorTest, AggregateNodeWithArithmetics) {
   EXPECT_EQ(std::get<2>(projection_definition), "alias0");
 }
 
-//TEST_F(ASTToOperatorTranslatorTest, SelectStarAllTest) {
-//  const auto query = "SELECT * FROM table_a;";
-//  const auto expected_result = load_table("src/test/tables/int_float.tbl", 2);
-//  execute_and_check(query, expected_result);
-//}
-//
-//TEST_F(ASTToOperatorTranslatorTest, SelectWithAndCondition) {
-//  const auto query = "SELECT * FROM table_b WHERE a = 12345 AND b > 457;";
-//  const auto expected_result = load_table("src/test/tables/int_float2_filtered.tbl", 2);
-//  execute_and_check(query, expected_result);
-//}
-//
-//TEST_F(ASTToOperatorTranslatorTest, SelectWithOrderByDesc) {
-//  const auto query = "SELECT * FROM table_a ORDER BY a DESC;";
-//  const auto expected_result = load_table("src/test/tables/int_float_reverse.tbl", 2);
-//  execute_and_check(query, expected_result, true);
-//}
-//
-//TEST_F(ASTToOperatorTranslatorTest, SelectWithMultipleOrderByColumns) {
-//  const auto query = "SELECT * FROM table_b ORDER BY a, b ASC;";
-//  const auto expected_result = load_table("src/test/tables/int_float2_sorted.tbl", 2);
-//  execute_and_check(query, expected_result, true);
-//}
-//
-//TEST_F(ASTToOperatorTranslatorTest, SelectInnerJoin) {
-//  const auto query = "SELECT * FROM table_a AS \"left\" INNER JOIN table_b AS \"right\" ON \"left\".a = \"right\".a;";
-//  const auto expected_result = load_table("src/test/tables/joinoperators/int_inner_join.tbl", 2);
-//  execute_and_check(query, expected_result);
-//}
-//
-//// TODO(tim): Projection cannot handle expression `$a + $b`
-//// because it is not able to handle columns with different data types.
-//// Create issue with failing test.
-//TEST_F(ASTToOperatorTranslatorTest, SelectWithAggregate) {
-//  const auto query = "SELECT SUM(b + b) AS sum_b_b FROM table_a;";
-//  const auto expected_result = load_table("src/test/tables/int_float_sum_b_plus_b.tbl", 2);
-//  execute_and_check(query, expected_result, true);
-//}
+TEST_F(ASTToOperatorTranslatorTest, MultipleNodesHierarchy) {
+  const auto stored_table_node_left = std::make_shared<StoredTableNode>("table_int_float");
+  auto predicate_node_left = std::make_shared<PredicateNode>("a", nullptr, ScanType::OpEquals, AllParameterVariant(42));
+  predicate_node_left->set_left_child(stored_table_node_left);
+
+  const auto stored_table_node_right = std::make_shared<StoredTableNode>("table_int_float2");
+  auto predicate_node_right =
+      std::make_shared<PredicateNode>("b", nullptr, ScanType::OpGreaterThan, AllParameterVariant(30.0));
+  predicate_node_right->set_left_child(stored_table_node_right);
+
+  auto join_node = std::make_shared<JoinNode>(std::make_pair(std::string("a"), std::string("a")), ScanType::OpEquals,
+                                              JoinMode::Inner, "alpha.", "beta.");
+  join_node->set_left_child(predicate_node_left);
+  join_node->set_right_child(predicate_node_right);
+
+  const auto op = ASTToOperatorTranslator::get().translate_node(join_node);
+
+  const auto join_op = std::dynamic_pointer_cast<const JoinNestedLoopA>(op);
+  ASSERT_TRUE(join_op);
+
+  const auto predicate_op_left = std::dynamic_pointer_cast<const TableScan>(join_op->input_left());
+  ASSERT_TRUE(predicate_op_left);
+  EXPECT_EQ(predicate_op_left->scan_type(), ScanType::OpEquals);
+
+  const auto predicate_op_right = std::dynamic_pointer_cast<const TableScan>(join_op->input_right());
+  ASSERT_TRUE(predicate_op_right);
+  EXPECT_EQ(predicate_op_right->scan_type(), ScanType::OpGreaterThan);
+
+  const auto get_table_op_left = std::dynamic_pointer_cast<const GetTable>(predicate_op_left->input_left());
+  ASSERT_TRUE(get_table_op_left);
+  EXPECT_EQ(get_table_op_left->table_name(), "table_int_float");
+
+  const auto get_table_op_right = std::dynamic_pointer_cast<const GetTable>(predicate_op_right->input_left());
+  ASSERT_TRUE(get_table_op_right);
+  EXPECT_EQ(get_table_op_right->table_name(), "table_int_float2");
+}
 
 }  // namespace opossum

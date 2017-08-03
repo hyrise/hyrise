@@ -130,7 +130,7 @@ const SQLTestParam test_queries[] = {
     {"SELECT * FROM table_a AS \"left\" LEFT JOIN table_b AS \"right\" ON a = a;",
      "src/test/tables/joinoperators/int_left_join.tbl"},
     {"SELECT * FROM table_a AS \"left\" INNER JOIN table_b AS \"right\" ON \"left\".a = \"right\".a;",
-        "src/test/tables/joinoperators/int_inner_join.tbl"},
+     "src/test/tables/joinoperators/int_inner_join.tbl"},
 
     // GROUP BY
     {"SELECT a, SUM(b) FROM groupby_int_1gb_1agg GROUP BY a;",

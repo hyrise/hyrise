@@ -53,13 +53,13 @@ const std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::translate_node(
 }
 
 const std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::translate_stored_table_node(
-  const std::shared_ptr<AbstractASTNode> &node) const {
+    const std::shared_ptr<AbstractASTNode> &node) const {
   auto table_node = std::dynamic_pointer_cast<StoredTableNode>(node);
   return std::make_shared<GetTable>(table_node->table_name());
 }
 
 const std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::translate_predicate_node(
-  const std::shared_ptr<AbstractASTNode> &node) const {
+    const std::shared_ptr<AbstractASTNode> &node) const {
   auto input_operator = translate_node(node->left_child());
   auto table_scan_node = std::dynamic_pointer_cast<PredicateNode>(node);
   return std::make_shared<TableScan>(input_operator, table_scan_node->column_name(), table_scan_node->scan_type(),
@@ -73,7 +73,7 @@ const std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::translate_proje
 }
 
 const std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::translate_sort_node(
-  const std::shared_ptr<AbstractASTNode> &node) const {
+    const std::shared_ptr<AbstractASTNode> &node) const {
   auto input_operator = translate_node(node->left_child());
   auto sort_node = std::dynamic_pointer_cast<SortNode>(node);
   return std::make_shared<Sort>(input_operator, sort_node->column_name(), sort_node->ascending());

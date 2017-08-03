@@ -28,7 +28,8 @@ class ASTToOperatorTranslator final : public boost::noncopyable {
   ASTToOperatorTranslator();
 
  private:
-  const std::shared_ptr<AbstractOperator> translate_stored_table_node(const std::shared_ptr<AbstractASTNode> &node) const;
+  const std::shared_ptr<AbstractOperator> translate_stored_table_node(
+      const std::shared_ptr<AbstractASTNode> &node) const;
   const std::shared_ptr<AbstractOperator> translate_predicate_node(const std::shared_ptr<AbstractASTNode> &node) const;
   const std::shared_ptr<AbstractOperator> translate_projection_node(const std::shared_ptr<AbstractASTNode> &node) const;
   const std::shared_ptr<AbstractOperator> translate_sort_node(const std::shared_ptr<AbstractASTNode> &node) const;

@@ -26,6 +26,8 @@ const std::string &AbstractJoinOperator::prefix_left() const { return _prefix_le
 
 const std::string &AbstractJoinOperator::prefix_right() const { return _prefix_right; }
 
-const optional<std::pair<std::string, std::string>> &AbstractJoinOperator::column_names() const { return _column_names; }
+const optional<std::pair<std::string, std::string>> &AbstractJoinOperator::column_names() const {
+  return _column_names;
+}
 
 }  // namespace opossum
