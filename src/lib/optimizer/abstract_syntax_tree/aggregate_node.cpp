@@ -31,9 +31,7 @@ AggregateNode::AggregateNode(const std::vector<AggregateColumnDefinition>& aggre
     _output_column_names.emplace_back(alias);
   }
 
-  for (const auto& groupby_column : groupby_columns) {
-    _output_column_names.emplace_back(groupby_column);
-  }
+  _output_column_names = groupby_columns;
 }
 
 const std::vector<AggregateColumnDefinition>& AggregateNode::aggregates() const { return _aggregates; }
@@ -43,19 +41,24 @@ const std::vector<std::string>& AggregateNode::groupby_columns() const { return 
 std::string AggregateNode::description() const {
   std::ostringstream s;
 
-  s << "Aggregate: ";
-  for (const auto& aggregate : _aggregates) {
+  auto stream_aggregate = [&] (const AggregateColumnDefinition & aggregate) {
     s << aggregate.expr->to_expression_string();
     if (aggregate.alias) s << "AS '" << (*aggregate.alias) << "'";
-    // HAAACKY! but works
-    if (aggregate.expr != _aggregates.back().expr) s << ", ";
+  };
+
+  auto it = _aggregates.begin();
+  if (it != _aggregates.end()) stream_aggregate(*it);
+  for (; it != _aggregates.end(); ++it) {
+    s << ", ";
+    stream_aggregate(*it);
   }
 
   if (!_groupby_columns.empty()) {
-    s << " GROUP BY ";
+    s << " GROUP BY [";
     for (const auto& column_name : _groupby_columns) {
       s << column_name << ", ";
     }
+    s << "]";
   }
 
   return s.str();
