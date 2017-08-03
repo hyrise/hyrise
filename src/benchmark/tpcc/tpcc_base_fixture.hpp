@@ -6,7 +6,7 @@
 
 #include "benchmark/benchmark.h"
 
-#include "../../benchmark-libs/tpcc/random_generator.hpp"
+#include "../../benchmark-libs/tpcc/tpcc_random_generator.hpp"
 #include "../../benchmark-libs/tpcc/tpcc_table_generator.hpp"
 
 namespace opossum {
@@ -22,9 +22,9 @@ class TPCCBenchmarkFixture : public benchmark::Fixture {
   void SetUp(::benchmark::State&) override;
 
  protected:
-  tpcc::TableGenerator _gen;
-  tpcc::RandomGenerator _random_gen;
-  std::shared_ptr<std::map<std::string, std::shared_ptr<Table>>> _tpcc_tables;
+  tpcc::TpccTableGenerator _gen;
+  tpcc::TpccRandomGenerator _random_gen;
+  std::map<std::string, std::shared_ptr<Table>> _tpcc_tables;
 
   void clear_cache();
 };

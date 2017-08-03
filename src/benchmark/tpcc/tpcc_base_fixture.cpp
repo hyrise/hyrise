@@ -7,7 +7,8 @@
 
 namespace opossum {
 
-TPCCBenchmarkFixture::TPCCBenchmarkFixture() : _gen(tpcc::TableGenerator()), _random_gen(tpcc::RandomGenerator()) {
+TPCCBenchmarkFixture::TPCCBenchmarkFixture()
+    : _gen(tpcc::TpccTableGenerator()), _random_gen(tpcc::TpccRandomGenerator()) {
   // TODO(mp): This constructor is currently run once before each TPCC benchmark.
   // Thus we create all tables up to 8 times, which takes quite a long time.
   std::cout << "Generating tables (this might take a couple of minutes)..." << std::endl;
@@ -20,13 +21,13 @@ TPCCBenchmarkFixture::TPCCBenchmarkFixture() : _gen(tpcc::TableGenerator()), _ra
 }
 
 void TPCCBenchmarkFixture::TearDown(::benchmark::State&) {
-  opossum::StorageManager::get().reset();
+  StorageManager::get().reset();
   // CurrentScheduler::set(nullptr);
 }
 
 void TPCCBenchmarkFixture::SetUp(::benchmark::State&) {
-  for (auto it = _tpcc_tables->begin(); it != _tpcc_tables->end(); ++it) {
-    opossum::StorageManager::get().add_table(it->first, it->second);
+  for (auto it = _tpcc_tables.begin(); it != _tpcc_tables.end(); ++it) {
+    StorageManager::get().add_table(it->first, it->second);
   }
 }
 
