@@ -26,8 +26,8 @@ class TPCCOrderStatusBenchmark : public TPCCBenchmarkFixture {
   void benchmark_get_customer_by_name(benchmark::State &state, tpcc::AbstractOrderStatusImpl &impl) {
     clear_cache();
     auto c_last = _random_gen.last_name(2000);
-    auto c_d_id = _random_gen.number(1, 10);
-    auto c_w_id = _random_gen.number(0, _gen._warehouse_size - 1);
+    auto c_d_id = _random_gen.random_number(1, 10);
+    auto c_w_id = _random_gen.random_number(0, _gen._warehouse_size - 1);
 
     while (state.KeepRunning()) {
       TransactionManager::get().run_transaction([&](std::shared_ptr<TransactionContext> t_context) {
@@ -40,8 +40,8 @@ class TPCCOrderStatusBenchmark : public TPCCBenchmarkFixture {
   void benchmark_get_customer_by_id(benchmark::State &state, tpcc::AbstractOrderStatusImpl &impl) {
     clear_cache();
     auto c_last = _random_gen.last_name(2000);
-    auto c_d_id = _random_gen.number(1, 10);
-    auto c_w_id = _random_gen.number(0, _gen._warehouse_size - 1);
+    auto c_d_id = _random_gen.random_number(1, 10);
+    auto c_w_id = _random_gen.random_number(0, _gen._warehouse_size - 1);
     auto c_id = _random_gen.nurand(1023, 1, 3000);
 
     while (state.KeepRunning()) {
@@ -55,8 +55,8 @@ class TPCCOrderStatusBenchmark : public TPCCBenchmarkFixture {
   void benchmark_get_order(benchmark::State &state, tpcc::AbstractOrderStatusImpl &impl) {
     clear_cache();
 
-    auto c_d_id = _random_gen.number(1, 10);
-    auto c_w_id = _random_gen.number(0, _gen._warehouse_size - 1);
+    auto c_d_id = _random_gen.random_number(1, 10);
+    auto c_w_id = _random_gen.random_number(0, _gen._warehouse_size - 1);
     auto c_id = _random_gen.nurand(1023, 1, 3000);
 
     while (state.KeepRunning()) {
@@ -70,8 +70,8 @@ class TPCCOrderStatusBenchmark : public TPCCBenchmarkFixture {
   void benchmark_get_order_line(benchmark::State &state, tpcc::AbstractOrderStatusImpl &impl) {
     clear_cache();
     auto c_last = _random_gen.last_name(2000);
-    auto c_d_id = _random_gen.number(1, 10);
-    auto c_w_id = _random_gen.number(0, _gen._warehouse_size - 1);
+    auto c_d_id = _random_gen.random_number(1, 10);
+    auto c_w_id = _random_gen.random_number(0, _gen._warehouse_size - 1);
 
     while (state.KeepRunning()) {
       TransactionManager::get().run_transaction([&](std::shared_ptr<TransactionContext> t_context) {
@@ -88,9 +88,9 @@ class TPCCOrderStatusBenchmark : public TPCCBenchmarkFixture {
       tpcc::OrderStatusParams params;
 
       params.c_w_id = 0;  // there is only one warehouse
-      params.c_d_id = _random_gen.number(1, 10);
+      params.c_d_id = _random_gen.random_number(1, 10);
 
-      if (_random_gen.number(0, 10) < 6) {
+      if (_random_gen.random_number(0, 10) < 6) {
         params.order_status_by = tpcc::OrderStatusBy::CustomerLastName;
         params.c_last = _random_gen.last_name(2000);  // pass in i>1000 to trigger random value generation
       } else {

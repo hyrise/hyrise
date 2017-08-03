@@ -6,7 +6,7 @@
 
 #include "benchmark/benchmark.h"
 
-#include "../../benchmark-libs/tpcc/random_generator.hpp"
+#include "../../benchmark-libs/tpcc/tpcc_random_generator.hpp"
 #include "../../benchmark-libs/tpcc/tpcc_table_generator.hpp"
 #include "operators/get_table.hpp"
 #include "scheduler/current_scheduler.hpp"
@@ -22,7 +22,7 @@ namespace opossum {
 // Defining the base fixture class
 class TPCCBenchmarkFixture : public benchmark::Fixture {
  public:
-  TPCCBenchmarkFixture() : _gen(tpcc::TableGenerator()), _random_gen(tpcc::RandomGenerator()) {
+  TPCCBenchmarkFixture() : _gen(tpcc::TpccTableGenerator()), _random_gen(tpcc::TpccRandomGenerator()) {
     // TODO(mp): This constructor is currently run once before each TPCC benchmark.
     // Thus we create all tables up to 8 times, which takes quite a long time.
     std::cout << "Generating tables (this might take a couple of minutes)..." << std::endl;
@@ -40,15 +40,15 @@ class TPCCBenchmarkFixture : public benchmark::Fixture {
   }
 
   void SetUp(::benchmark::State&) override {
-    for (auto it = _tpcc_tables->begin(); it != _tpcc_tables->end(); ++it) {
+    for (auto it = _tpcc_tables.begin(); it != _tpcc_tables.end(); ++it) {
       opossum::StorageManager::get().add_table(it->first, it->second);
     }
   }
 
  protected:
-  tpcc::TableGenerator _gen;
-  tpcc::RandomGenerator _random_gen;
-  std::shared_ptr<std::map<std::string, std::shared_ptr<Table>>> _tpcc_tables;
+  tpcc::TpccTableGenerator _gen;
+  tpcc::TpccRandomGenerator _random_gen;
+  std::map<std::string, std::shared_ptr<Table>> _tpcc_tables;
 
   void clear_cache() {
     std::vector<int> clear = std::vector<int>();
