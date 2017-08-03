@@ -321,9 +321,9 @@ std::vector<T> TpccTableGenerator::generate_inner_order_line_column(
 
 template <typename T>
 void TpccTableGenerator::add_order_line_column(std::shared_ptr<opossum::Table> table, std::string name,
-                                           std::shared_ptr<std::vector<size_t>> cardinalities,
-                                           TpccTableGenerator::order_line_counts_type order_line_counts,
-                                           const std::function<T(std::vector<size_t>)> &generator_function) {
+                                               std::shared_ptr<std::vector<size_t>> cardinalities,
+                                               TpccTableGenerator::order_line_counts_type order_line_counts,
+                                               const std::function<T(std::vector<size_t>)> &generator_function) {
   const std::function<std::vector<T>(std::vector<size_t>)> wrapped_generator_function =
       [&](std::vector<size_t> indices) {
         return generate_inner_order_line_column(indices, order_line_counts, generator_function);
@@ -406,16 +406,15 @@ std::map<std::string, std::shared_ptr<opossum::Table>> TpccTableGenerator::gener
   auto order_line_table = generate_order_line_table(order_line_counts);
   auto new_order_table = generate_new_order_table();
 
-  return std::map<std::string, std::shared_ptr<opossum::Table>>({
-          {"ITEM", std::move(item_table)},
-          {"WAREHOUSE", std::move(warehouse_table)},
-          {"STOCK", std::move(stock_table)},
-          {"DISTRICT", std::move(district_table)},
-          {"CUSTOMER", std::move(customer_table)},
-          {"HISTORY", std::move(history_table)},
-          {"ORDER", std::move(order_table)},
-          {"ORDER-LINE", std::move(order_line_table)},
-          {"NEW-ORDER", std::move(new_order_table)}});
+  return std::map<std::string, std::shared_ptr<opossum::Table>>({{"ITEM", std::move(item_table)},
+                                                                 {"WAREHOUSE", std::move(warehouse_table)},
+                                                                 {"STOCK", std::move(stock_table)},
+                                                                 {"DISTRICT", std::move(district_table)},
+                                                                 {"CUSTOMER", std::move(customer_table)},
+                                                                 {"HISTORY", std::move(history_table)},
+                                                                 {"ORDER", std::move(order_table)},
+                                                                 {"ORDER-LINE", std::move(order_line_table)},
+                                                                 {"NEW-ORDER", std::move(new_order_table)}});
 }
 
 }  // namespace tpcc

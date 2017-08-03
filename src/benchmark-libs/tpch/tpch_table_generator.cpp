@@ -213,7 +213,8 @@ TpchTableGenerator::order_lines_type TpchTableGenerator::generate_order_lines() 
   return std::make_shared<std::vector<std::vector<OrderLine>>>(all_order_lines);
 }
 
-std::shared_ptr<opossum::Table> TpchTableGenerator::generate_orders_table(TpchTableGenerator::order_lines_type order_lines) {
+std::shared_ptr<opossum::Table> TpchTableGenerator::generate_orders_table(
+    TpchTableGenerator::order_lines_type order_lines) {
   auto table = std::make_shared<opossum::Table>(_chunk_size);
   size_t table_size = NUM_ORDERS_PER_CUSTOMER * _scale_factor * NUM_CUSTOMERS;
   auto cardinalities = std::make_shared<std::vector<size_t>>(std::initializer_list<size_t>{table_size});
@@ -270,7 +271,8 @@ std::shared_ptr<opossum::Table> TpchTableGenerator::generate_orders_table(TpchTa
   return table;
 }
 
-std::shared_ptr<opossum::Table> TpchTableGenerator::generate_lineitems_table(TpchTableGenerator::order_lines_type order_lines) {
+std::shared_ptr<opossum::Table> TpchTableGenerator::generate_lineitems_table(
+    TpchTableGenerator::order_lines_type order_lines) {
   auto table = std::make_shared<opossum::Table>(_chunk_size);
   size_t table_size = 0;
   std::vector<OrderLine> flattened_orderlines;
@@ -393,15 +395,14 @@ std::map<std::string, std::shared_ptr<opossum::Table>> TpchTableGenerator::gener
   auto nations_table = generate_nations_table();
   auto regions_table = generate_regions_table();
 
-  return std::map<std::string, std::shared_ptr<opossum::Table>>({
-          {"SUPPLIER", std::move(supplier_table)},
-          {"PART", std::move(parts_table)},
-          {"PARTSUPP", std::move(partsupps_table)},
-          {"CUSTOMER", std::move(customers_table)},
-          {"ORDERS", std::move(orders_table)},
-          {"LINEITEM", std::move(lineitems_table)},
-          {"NATION", std::move(nations_table)},
-          {"REGION", std::move(regions_table)}});
+  return std::map<std::string, std::shared_ptr<opossum::Table>>({{"SUPPLIER", std::move(supplier_table)},
+                                                                 {"PART", std::move(parts_table)},
+                                                                 {"PARTSUPP", std::move(partsupps_table)},
+                                                                 {"CUSTOMER", std::move(customers_table)},
+                                                                 {"ORDERS", std::move(orders_table)},
+                                                                 {"LINEITEM", std::move(lineitems_table)},
+                                                                 {"NATION", std::move(nations_table)},
+                                                                 {"REGION", std::move(regions_table)}});
 }
 
 }  // namespace tpch

@@ -12,7 +12,9 @@ namespace tpch {
  * The text is later used to draw substrings from to fill multiple columns.
  */
 TextFieldGenerator::TextFieldGenerator(benchmark_utilities::RandomGenerator random_generator)
-    : _random_gen(random_generator), _grammar(TpchGrammar(random_generator)), _text(_grammar.random_text(300'000'000)) {}
+    : _random_gen(random_generator),
+      _grammar(TpchGrammar(random_generator)),
+      _text(_grammar.random_text(300'000'000)) {}
 
 std::string TextFieldGenerator::text_string(size_t lower_length, size_t upper_length) {
   auto length = _random_gen.random_number(lower_length, upper_length);
