@@ -1,6 +1,6 @@
 #include <memory>
-#include <storage/storage_manager.hpp>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "../../base_test.hpp"
@@ -11,6 +11,7 @@
 #include "optimizer/abstract_syntax_tree/sort_node.hpp"
 #include "optimizer/abstract_syntax_tree/stored_table_node.hpp"
 #include "optimizer/strategy/predicate_reordering_rule.hpp"
+#include "storage/storage_manager.hpp"
 
 #include "utils/assert.hpp"
 

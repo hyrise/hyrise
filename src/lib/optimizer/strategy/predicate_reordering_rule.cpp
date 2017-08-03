@@ -1,11 +1,11 @@
 #include "predicate_reordering_rule.hpp"
 
 #include <algorithm>
-#include <constant_mappings.hpp>
 #include <iostream>
 #include <memory>
 #include <vector>
 
+#include "constant_mappings.hpp"
 #include "optimizer/abstract_syntax_tree/abstract_ast_node.hpp"
 #include "optimizer/abstract_syntax_tree/predicate_node.hpp"
 
