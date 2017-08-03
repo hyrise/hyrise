@@ -8,7 +8,7 @@
 int main() {
   std::cout << "TPCH" << std::endl;
   std::cout << " > Generating tables" << std::endl;
-  auto tables = tpch::TableGenerator().generate_all_tables();
+  auto tables = tpch::TpchTableGenerator().generate_all_tables();
 
   for (auto& pair : tables) {
     opossum::StorageManager::get().add_table(pair.first, pair.second);

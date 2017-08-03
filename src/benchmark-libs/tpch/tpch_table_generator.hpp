@@ -14,7 +14,7 @@
 
 namespace tpch {
 
-class TableGenerator : public benchmark_utilities::AbstractBenchmarkTableGenerator {
+class TpchTableGenerator : public benchmark_utilities::AbstractBenchmarkTableGenerator {
   // following TPC-H v2.17.2
  public:
   struct OrderLine {
@@ -31,9 +31,9 @@ class TableGenerator : public benchmark_utilities::AbstractBenchmarkTableGenerat
     std::string linestatus;
   };
 
-  explicit TableGenerator(const opossum::ChunkOffset = 1'000'000, const size_t scale_factor = 1);
+  explicit TpchTableGenerator(const opossum::ChunkOffset = 1'000'000, const size_t scale_factor = 1);
 
-  virtual ~TableGenerator() = default;
+  virtual ~TpchTableGenerator() = default;
 
   std::shared_ptr<opossum::Table> generate_suppliers_table();
 

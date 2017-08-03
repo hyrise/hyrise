@@ -15,12 +15,12 @@
 
 namespace tpcc {
 
-class TableGenerator : public benchmark_utilities::AbstractBenchmarkTableGenerator {
+class TpccTableGenerator : public benchmark_utilities::AbstractBenchmarkTableGenerator {
   // following TPC-C v5.11.0
  public:
-  explicit TableGenerator(const opossum::ChunkOffset chunk_size = 1'000'000, const size_t warehouse_size = 1);
+  explicit TpccTableGenerator(const opossum::ChunkOffset chunk_size = 1'000'000, const size_t warehouse_size = 1);
 
-  virtual ~TableGenerator() = default;
+  virtual ~TpccTableGenerator() = default;
 
   std::shared_ptr<opossum::Table> generate_items_table();
 
@@ -57,7 +57,7 @@ class TableGenerator : public benchmark_utilities::AbstractBenchmarkTableGenerat
   template <typename T>
   void add_order_line_column(std::shared_ptr<opossum::Table> table, std::string name,
                              std::shared_ptr<std::vector<size_t>> cardinalities,
-                             TableGenerator::order_line_counts_type order_line_counts,
+                             order_line_counts_type order_line_counts,
                              const std::function<T(std::vector<size_t>)> &generator_function);
 
   TpccRandomGenerator _random_gen;
