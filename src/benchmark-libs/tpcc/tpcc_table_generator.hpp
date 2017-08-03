@@ -11,13 +11,14 @@
 #include "storage/table.hpp"
 #include "storage/value_column.hpp"
 #include "tpcc_random_generator.hpp"
+#include "types.hpp"
 
 namespace tpcc {
 
 class TableGenerator : public benchmark_utilities::AbstractBenchmarkTableGenerator {
   // following TPC-C v5.11.0
  public:
-  explicit TableGenerator(const size_t chunk_size = 10000, const size_t warehouse_size = 1);
+  explicit TableGenerator(const opossum::ChunkOffset chunk_size = 1'000'000, const size_t warehouse_size = 1);
 
   virtual ~TableGenerator() = default;
 
@@ -45,7 +46,6 @@ class TableGenerator : public benchmark_utilities::AbstractBenchmarkTableGenerat
 
   std::map<std::string, std::shared_ptr<opossum::Table>> generate_all_tables();
 
-  const size_t _chunk_size;
   const size_t _warehouse_size;
   const time_t _current_date = std::time(0);
 

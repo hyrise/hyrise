@@ -10,6 +10,7 @@
 #include "benchmark_utilities/random_generator.hpp"
 #include "storage/table.hpp"
 #include "text_field_generator.hpp"
+#include "types.hpp"
 
 namespace tpch {
 
@@ -30,7 +31,7 @@ class TableGenerator : public benchmark_utilities::AbstractBenchmarkTableGenerat
     std::string linestatus;
   };
 
-  explicit TableGenerator(const size_t chunk_size = 1000, const size_t scale_factor = 1);
+  explicit TableGenerator(const opossum::ChunkOffset = 1'000'000, const size_t scale_factor = 1);
 
   virtual ~TableGenerator() = default;
 
@@ -56,7 +57,6 @@ class TableGenerator : public benchmark_utilities::AbstractBenchmarkTableGenerat
 
   std::map<std::string, std::shared_ptr<opossum::Table>> generate_all_tables() override;
 
-  const size_t _chunk_size;
   const size_t _scale_factor;
 
  protected:

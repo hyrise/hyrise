@@ -13,12 +13,12 @@
 #include "resolve_type.hpp"
 #include "storage/dictionary_compression.hpp"
 #include "storage/value_column.hpp"
+#include "types.hpp"
 
 namespace tpcc {
 
-TableGenerator::TableGenerator(const size_t chunk_size, const size_t warehouse_size)
-    : AbstractBenchmarkTableGenerator(1000),
-      _chunk_size(chunk_size),
+TableGenerator::TableGenerator(const opossum::ChunkOffset chunk_size, const size_t warehouse_size)
+    : AbstractBenchmarkTableGenerator(chunk_size),
       _warehouse_size(warehouse_size),
       _random_gen(TpccRandomGenerator()) {}
 

@@ -10,12 +10,12 @@
 
 #include "constants.hpp"
 #include "storage/dictionary_compression.hpp"
+#include "types.hpp"
 
 namespace tpch {
 
-TableGenerator::TableGenerator(const size_t chunk_size, const size_t scale_factor)
-    : AbstractBenchmarkTableGenerator(1000),
-      _chunk_size(chunk_size),
+TableGenerator::TableGenerator(const opossum::ChunkOffset chunk_size, const size_t scale_factor)
+    : AbstractBenchmarkTableGenerator(chunk_size),
       _scale_factor(scale_factor),
       _random_gen(benchmark_utilities::RandomGenerator()),
       _text_field_gen(TextFieldGenerator(_random_gen)) {}
