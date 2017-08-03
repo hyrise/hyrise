@@ -8,6 +8,7 @@
 #include "optimizer/expression/expression_node.hpp"
 
 #include "common.hpp"
+#include "utils/assert.hpp"
 
 namespace opossum {
 
@@ -23,9 +24,10 @@ AggregateNode::AggregateNode(const std::vector<AggregateColumnDefinition>& aggre
     if (aggregate.alias) {
       alias = *aggregate.alias;
     } else {
-      // TODO(mp): this is currently not correct, but hard to fix.
-      // Postpone to resolve with major re-factoring of Projection and expressions.
-      alias = aggregate.expr->to_expression_string();
+      // If the aggregate function has no alias defined in the query, we simply name it like the function.
+      // This might result in multiple output columns with the same name, but Postgres is doing things the same way.
+      DebugAssert(aggregate.expr->type() == ExpressionType::FunctionReference, "Expression must be a function.");
+      alias = aggregate.expr->name();
     }
 
     _output_column_names.emplace_back(alias);
