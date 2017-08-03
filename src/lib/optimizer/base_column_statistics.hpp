@@ -11,6 +11,7 @@
 namespace opossum {
 
 struct ColumnSelectivityResult;
+struct TwoColumnSelectivityResult;
 
 /**
  * Most prediction computation is delegated from table statistics to typed column statistics.
@@ -42,6 +43,13 @@ class BaseColumnStatistics {
   virtual ColumnSelectivityResult estimate_selectivity_for_predicate(
       const ScanType scan_type, const ValuePlaceholder &value, const optional<AllTypeVariant> &value2 = nullopt) = 0;
 
+  /**
+   * Predicate selectivity for two columns.
+   */
+  virtual TwoColumnSelectivityResult estimate_selectivity_for_predicate(
+      const ScanType scan_type, const std::shared_ptr<BaseColumnStatistics> abstract_value_column_statistics,
+      const optional<AllTypeVariant> &value2 = nullopt) = 0;
+
  protected:
   /**
    * In order to to call insertion operator on ostream with BaseColumnStatistics with values of ColumnStatistics<T>,
@@ -60,6 +68,17 @@ class BaseColumnStatistics {
 struct ColumnSelectivityResult {
   float selectivity;
   std::shared_ptr<BaseColumnStatistics> column_statistics;
+};
+
+/**
+ * Return type of selectivity functions for operations on two columns.
+ */
+struct TwoColumnSelectivityResult : public ColumnSelectivityResult {
+  TwoColumnSelectivityResult(float selectivity, std::shared_ptr<BaseColumnStatistics> column_stats,
+                               std::shared_ptr<BaseColumnStatistics> second_column_stats)
+      : ColumnSelectivityResult{selectivity, column_stats}, second_column_statistics(second_column_stats) {}
+
+  std::shared_ptr<BaseColumnStatistics> second_column_statistics;
 };
 
 inline std::ostream &operator<<(std::ostream &os, BaseColumnStatistics &obj) { return obj.print_to_stream(os); }

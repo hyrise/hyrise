@@ -62,7 +62,16 @@ std::shared_ptr<TableStatistics> TableStatistics::predicate_statistics(const std
 
   // delegate prediction to corresponding column statistics
   if (value.type() == typeid(ColumnName)) {
-    // TODO(Fabian, Jonathan) implement estimations for predicates with two columns
+    const ColumnID value_column_id = table->column_id_by_name(boost::get<ColumnName>(value));
+    auto value_column_statistics = column_statistics(value_column_id);
+
+    auto two_column_statistics_container =
+        old_column_statistics->estimate_selectivity_for_predicate(scan_type, value_column_statistics, value2);
+
+    if (two_column_statistics_container.second_column_statistics != nullptr) {
+      clone->_column_statistics[value_column_id] = two_column_statistics_container.second_column_statistics;
+    }
+    column_statistics_container = two_column_statistics_container;
 
   } else if (value.type() == typeid(AllTypeVariant)) {
     auto casted_value = boost::get<AllTypeVariant>(value);
