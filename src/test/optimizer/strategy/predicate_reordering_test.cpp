@@ -52,10 +52,22 @@ TEST_F(PredicateReorderingTest, SimpleReorderingTest) {
 
   stored_table_node->set_statistics(std::make_shared<TableStatisticsMock>());
 
-  auto predicate_node_0 = std::make_shared<PredicateNode>("c1", ScanType::OpGreaterThan, 10);
+  auto equals_expression_0 = ExpressionNode::create_expression(ExpressionType::GreaterThan);
+  auto column_reference_expression_0 = ExpressionNode::create_column_reference("a", "c1");
+  auto literal_expression_0 = ExpressionNode::create_literal(10);
+  equals_expression_0->set_left_child(column_reference_expression_0);
+  equals_expression_0->set_right_child(literal_expression_0);
+
+  auto predicate_node_0 = std::make_shared<PredicateNode>("c1", equals_expression_0, ScanType::OpGreaterThan, 10);
   predicate_node_0->set_left_child(stored_table_node);
 
-  auto predicate_node_1 = std::make_shared<PredicateNode>("c2", ScanType::OpGreaterThan, 50);
+  auto equals_expression_1 = ExpressionNode::create_expression(ExpressionType::GreaterThan);
+  auto column_reference_expression_1 = ExpressionNode::create_column_reference("a", "c2");
+  auto literal_expression_1 = ExpressionNode::create_literal(50);
+  equals_expression_1->set_left_child(column_reference_expression_1);
+  equals_expression_1->set_right_child(literal_expression_1);
+
+  auto predicate_node_1 = std::make_shared<PredicateNode>("c2", equals_expression_1, ScanType::OpGreaterThan, 50);
   predicate_node_1->set_left_child(predicate_node_0);
 
   predicate_node_1->get_or_create_statistics();
@@ -74,13 +86,31 @@ TEST_F(PredicateReorderingTest, MoreComplexReorderingTest) {
 
   stored_table_node->set_statistics(std::make_shared<TableStatisticsMock>());
 
-  auto predicate_node_0 = std::make_shared<PredicateNode>("c1", ScanType::OpGreaterThan, 10);
+  auto equals_expression_0 = ExpressionNode::create_expression(ExpressionType::GreaterThan);
+  auto column_reference_expression_0 = ExpressionNode::create_column_reference("a", "c1");
+  auto literal_expression_0 = ExpressionNode::create_literal(10);
+  equals_expression_0->set_left_child(column_reference_expression_0);
+  equals_expression_0->set_right_child(literal_expression_0);
+
+  auto predicate_node_0 = std::make_shared<PredicateNode>("c1", equals_expression_0, ScanType::OpGreaterThan, 10);
   predicate_node_0->set_left_child(stored_table_node);
 
-  auto predicate_node_1 = std::make_shared<PredicateNode>("c2", ScanType::OpGreaterThan, 50);
+  auto equals_expression_1 = ExpressionNode::create_expression(ExpressionType::GreaterThan);
+  auto column_reference_expression_1 = ExpressionNode::create_column_reference("a", "c2");
+  auto literal_expression_1 = ExpressionNode::create_literal(50);
+  equals_expression_1->set_left_child(column_reference_expression_1);
+  equals_expression_1->set_right_child(literal_expression_1);
+
+  auto predicate_node_1 = std::make_shared<PredicateNode>("c2", equals_expression_1, ScanType::OpGreaterThan, 50);
   predicate_node_1->set_left_child(predicate_node_0);
 
-  auto predicate_node_2 = std::make_shared<PredicateNode>("c3", ScanType::OpGreaterThan, 90);
+  auto equals_expression_2 = ExpressionNode::create_expression(ExpressionType::GreaterThan);
+  auto column_reference_expression_2 = ExpressionNode::create_column_reference("a", "c3");
+  auto literal_expression_2 = ExpressionNode::create_literal(90);
+  equals_expression_2->set_left_child(column_reference_expression_2);
+  equals_expression_2->set_right_child(literal_expression_2);
+
+  auto predicate_node_2 = std::make_shared<PredicateNode>("c3", equals_expression_2, ScanType::OpGreaterThan, 90);
   predicate_node_2->set_left_child(predicate_node_1);
 
   predicate_node_2->get_or_create_statistics();
@@ -100,23 +130,53 @@ TEST_F(PredicateReorderingTest, ComplexReorderingTest) {
 
   stored_table_node->set_statistics(std::make_shared<TableStatisticsMock>());
 
-  auto predicate_node_0 = std::make_shared<PredicateNode>("c1", ScanType::OpGreaterThan, 10);
+  auto equals_expression_0 = ExpressionNode::create_expression(ExpressionType::GreaterThan);
+  auto column_reference_expression_0 = ExpressionNode::create_column_reference("a", "c1");
+  auto literal_expression_0 = ExpressionNode::create_literal(10);
+  equals_expression_0->set_left_child(column_reference_expression_0);
+  equals_expression_0->set_right_child(literal_expression_0);
+
+  auto predicate_node_0 = std::make_shared<PredicateNode>("c1", equals_expression_0, ScanType::OpGreaterThan, 10);
   predicate_node_0->set_left_child(stored_table_node);
 
-  auto predicate_node_1 = std::make_shared<PredicateNode>("c2", ScanType::OpGreaterThan, 50);
+  auto equals_expression_1 = ExpressionNode::create_expression(ExpressionType::GreaterThan);
+  auto column_reference_expression_1 = ExpressionNode::create_column_reference("a", "c2");
+  auto literal_expression_1 = ExpressionNode::create_literal(50);
+  equals_expression_1->set_left_child(column_reference_expression_1);
+  equals_expression_1->set_right_child(literal_expression_1);
+
+  auto predicate_node_1 = std::make_shared<PredicateNode>("c2", equals_expression_1, ScanType::OpGreaterThan, 50);
   predicate_node_1->set_left_child(predicate_node_0);
 
-  auto predicate_node_2 = std::make_shared<PredicateNode>("c3", ScanType::OpGreaterThan, 90);
+  auto equals_expression_2 = ExpressionNode::create_expression(ExpressionType::GreaterThan);
+  auto column_reference_expression_2 = ExpressionNode::create_column_reference("a", "c3");
+  auto literal_expression_2 = ExpressionNode::create_literal(90);
+  equals_expression_2->set_left_child(column_reference_expression_2);
+  equals_expression_2->set_right_child(literal_expression_2);
+
+  auto predicate_node_2 = std::make_shared<PredicateNode>("c3", equals_expression_2, ScanType::OpGreaterThan, 90);
   predicate_node_2->set_left_child(predicate_node_1);
 
   std::vector<std::string> columns({"c1", "c2"});
   auto projection_node = std::make_shared<ProjectionNode>(columns);
   projection_node->set_left_child(predicate_node_2);
 
-  auto predicate_node_3 = std::make_shared<PredicateNode>("c1", ScanType::OpGreaterThan, 10);
+  auto equals_expression_3 = ExpressionNode::create_expression(ExpressionType::GreaterThan);
+  auto column_reference_expression_3 = ExpressionNode::create_column_reference("a", "c1");
+  auto literal_expression_3 = ExpressionNode::create_literal(10);
+  equals_expression_3->set_left_child(column_reference_expression_3);
+  equals_expression_3->set_right_child(literal_expression_3);
+
+  auto predicate_node_3 = std::make_shared<PredicateNode>("c1", equals_expression_3, ScanType::OpGreaterThan, 10);
   predicate_node_3->set_left_child(projection_node);
 
-  auto predicate_node_4 = std::make_shared<PredicateNode>("c2", ScanType::OpGreaterThan, 50);
+  auto equals_expression_4 = ExpressionNode::create_expression(ExpressionType::GreaterThan);
+  auto column_reference_expression_4 = ExpressionNode::create_column_reference("a", "c2");
+  auto literal_expression_4 = ExpressionNode::create_literal(90);
+  equals_expression_4->set_left_child(column_reference_expression_4);
+  equals_expression_4->set_right_child(literal_expression_4);
+
+  auto predicate_node_4 = std::make_shared<PredicateNode>("c2", equals_expression_4, ScanType::OpGreaterThan, 50);
   predicate_node_4->set_left_child(predicate_node_3);
 
   predicate_node_4->get_or_create_statistics();
@@ -140,19 +200,43 @@ TEST_F(PredicateReorderingTest, TwoReorderings) {
 
   stored_table_node->set_statistics(std::make_shared<TableStatisticsMock>());
 
-  auto predicate_node_0 = std::make_shared<PredicateNode>("c1", ScanType::OpGreaterThan, 10);
+  auto equals_expression_0 = ExpressionNode::create_expression(ExpressionType::GreaterThan);
+  auto column_reference_expression_0 = ExpressionNode::create_column_reference("a", "c1");
+  auto literal_expression_0 = ExpressionNode::create_literal(10);
+  equals_expression_0->set_left_child(column_reference_expression_0);
+  equals_expression_0->set_right_child(literal_expression_0);
+
+  auto predicate_node_0 = std::make_shared<PredicateNode>("c1", equals_expression_0, ScanType::OpGreaterThan, 10);
   predicate_node_0->set_left_child(stored_table_node);
 
-  auto predicate_node_1 = std::make_shared<PredicateNode>("c2", ScanType::OpGreaterThan, 50);
+  auto equals_expression_1 = ExpressionNode::create_expression(ExpressionType::GreaterThan);
+  auto column_reference_expression_1 = ExpressionNode::create_column_reference("a", "c2");
+  auto literal_expression_1 = ExpressionNode::create_literal(50);
+  equals_expression_1->set_left_child(column_reference_expression_1);
+  equals_expression_1->set_right_child(literal_expression_1);
+
+  auto predicate_node_1 = std::make_shared<PredicateNode>("c2", equals_expression_1, ScanType::OpGreaterThan, 50);
   predicate_node_1->set_left_child(predicate_node_0);
 
   auto sort_node = std::make_shared<SortNode>("c1", true);
   sort_node->set_left_child(predicate_node_1);
 
-  auto predicate_node_2 = std::make_shared<PredicateNode>("c3", ScanType::OpGreaterThan, 90);
+  auto equals_expression_2 = ExpressionNode::create_expression(ExpressionType::GreaterThan);
+  auto column_reference_expression_2 = ExpressionNode::create_column_reference("a", "c3");
+  auto literal_expression_2 = ExpressionNode::create_literal(90);
+  equals_expression_2->set_left_child(column_reference_expression_2);
+  equals_expression_2->set_right_child(literal_expression_2);
+
+  auto predicate_node_2 = std::make_shared<PredicateNode>("c3", equals_expression_2, ScanType::OpGreaterThan, 90);
   predicate_node_2->set_left_child(sort_node);
 
-  auto predicate_node_3 = std::make_shared<PredicateNode>("c2", ScanType::OpGreaterThan, 50);
+  auto equals_expression_3 = ExpressionNode::create_expression(ExpressionType::GreaterThan);
+  auto column_reference_expression_3 = ExpressionNode::create_column_reference("a", "c2");
+  auto literal_expression_3 = ExpressionNode::create_literal(50);
+  equals_expression_3->set_left_child(column_reference_expression_3);
+  equals_expression_3->set_right_child(literal_expression_3);
+
+  auto predicate_node_3 = std::make_shared<PredicateNode>("c2", equals_expression_3, ScanType::OpGreaterThan, 50);
   predicate_node_3->set_left_child(predicate_node_2);
 
   std::vector<std::string> columns({"c1", "c2"});

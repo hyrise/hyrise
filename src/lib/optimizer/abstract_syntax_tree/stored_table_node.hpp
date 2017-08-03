@@ -21,7 +21,7 @@ class StoredTableNode : public AbstractASTNode {
   const std::string& table_name() const;
 
  private:
-  std::shared_ptr<TableStatistics> create_statistics() const override;
+  const std::shared_ptr<TableStatistics> create_statistics() const override;
   const std::string _table_name;
 };
 
