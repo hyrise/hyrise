@@ -128,13 +128,9 @@ const std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::translate_aggre
     } else if (func_expr->is_arithmetic_operator()) {
       need_projection = true;
 
-      auto left_operand = std::dynamic_pointer_cast<ExpressionNode>(func_expr->left_child());
-      Assert(static_cast<bool>(left_operand), "Left child of arithmetic expression is not an expression.");
-      Assert(left_operand->is_operand(), "Left child is not a literal or column ref.");
-
-      auto right_operand = std::dynamic_pointer_cast<ExpressionNode>(func_expr->right_child());
-      Assert(static_cast<bool>(right_operand), "Right child of arithmetic expression is not an expression.");
-      Assert(right_operand->is_operand(), "Right child is not a literal or column ref.");
+      // TODO(mp): Support more complex expressions.
+      Assert(func_expr->left_child()->is_operand(), "Left child is not a literal or column ref.");
+      Assert(func_expr->right_child()->is_operand(), "Right child is not a literal or column ref.");
 
       auto alias = "alias" + std::to_string(alias_index);
       alias_index++;
