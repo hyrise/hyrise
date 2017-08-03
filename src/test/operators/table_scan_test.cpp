@@ -27,7 +27,7 @@ class OperatorsTableScanTest : public BaseTest {
     std::shared_ptr<Table> test_even_dict = std::make_shared<Table>(5);
     test_even_dict->add_column("a", "int");
     test_even_dict->add_column("b", "int");
-    for (int i = 0; i <= 24; i += 2) test_even_dict->append({i, 100 + i});
+    for (auto i = 0u; i <= 24u; i += 2) test_even_dict->append({i, 100 + i});
     DictionaryCompression::compress_chunks(*test_even_dict, {ChunkID{0}, ChunkID{1}});
 
     _table_wrapper_even_dict = std::make_shared<TableWrapper>(std::move(test_even_dict));
@@ -39,7 +39,7 @@ class OperatorsTableScanTest : public BaseTest {
     table->add_column("a", "int");
     table->add_column("b", "float");
 
-    for (int i = 1; i < 20; ++i) {
+    for (auto i = 1u; i < 20; ++i) {
       table->append({i, 100.1 + i});
     }
 
@@ -89,7 +89,7 @@ class OperatorsTableScanTest : public BaseTest {
     auto table = std::make_shared<opossum::Table>(0);
     table->add_column("a", "int");
     table->add_column("b", "float");
-    for (int i = 0; i <= num_entries; i += 1) table->append({i, 100.0f + i});
+    for (auto i = 0u; i <= num_entries; i += 1) table->append({i, 100.0f + i});
     DictionaryCompression::compress_chunks(*table, {ChunkID{0}});
 
     table_wrapper = std::make_shared<opossum::TableWrapper>(std::move(table));
