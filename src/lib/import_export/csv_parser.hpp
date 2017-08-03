@@ -2,9 +2,9 @@
 
 #include <memory>
 #include <string>
-#include <experimental/string_view>
 #include <vector>
 
+#include "common.hpp"
 #include "import_export/csv.hpp"
 #include "storage/table.hpp"
 
@@ -39,8 +39,8 @@ class CsvParser {
 
  protected:
   std::shared_ptr<Table> _process_meta_file(const std::string& filename);
-  bool _find_fields_in_chunk(std::experimental::string_view str, const Table& table, std::vector<size_t>& indices);
-  void _parse_into_chunk(std::experimental::string_view content, const std::vector<size_t>& field_ends, const Table& table,
+  bool _find_fields_in_chunk(string_view str, const Table& table, std::vector<size_t>& indices);
+  void _parse_into_chunk(string_view content, const std::vector<size_t>& field_ends, const Table& table,
                         Chunk& chunk);
   void _sanitize_field(std::string& field);
 
