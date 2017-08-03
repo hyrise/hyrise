@@ -32,6 +32,9 @@ class Sort : public AbstractReadOnlyOperator {
   Sort(const std::shared_ptr<const AbstractOperator> in, const std::string &sort_column_name,
        const bool ascending = true, const size_t output_chunk_size = 0);
 
+  const std::string &sort_column_name() const;
+  bool ascending() const;
+
   const std::string name() const override;
   uint8_t num_in_tables() const override;
   uint8_t num_out_tables() const override;

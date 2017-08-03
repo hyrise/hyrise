@@ -29,6 +29,9 @@ class Projection : public AbstractReadOnlyOperator {
   Projection(const std::shared_ptr<const AbstractOperator> in, const ProjectionDefinitions& definitions);
   Projection(const std::shared_ptr<const AbstractOperator> in, const std::vector<std::string>& columns);
 
+  const ProjectionDefinitions &projection_definitions() const;
+  const std::vector<std::string> &simple_projection() const;
+
   const std::string name() const override;
   uint8_t num_in_tables() const override;
   uint8_t num_out_tables() const override;

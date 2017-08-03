@@ -76,6 +76,8 @@ class ColumnName {
     return o;
   }
 
+  bool operator==(const ColumnName &rhs) const { return _name == rhs._name; }
+
  protected:
   std::string _name;
 };
@@ -115,6 +117,8 @@ class ValuePlaceholder {
     o << "?" << placeholder.index();
     return o;
   }
+
+  bool operator==(const ValuePlaceholder &rhs) const { return _index == rhs._index; }
 
  private:
   uint16_t _index;

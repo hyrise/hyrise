@@ -28,13 +28,13 @@ ASTToOperatorTranslator &ASTToOperatorTranslator::get() {
 
 ASTToOperatorTranslator::ASTToOperatorTranslator() {
   _operator_factory[ASTNodeType::StoredTable] =
-      std::bind(&ASTToOperatorTranslator::translate_table_node, this, std::placeholders::_1);
+      std::bind(&ASTToOperatorTranslator::translate_stored_table_node, this, std::placeholders::_1);
   _operator_factory[ASTNodeType::Predicate] =
-      std::bind(&ASTToOperatorTranslator::translate_table_scan_node, this, std::placeholders::_1);
+      std::bind(&ASTToOperatorTranslator::translate_predicate_node, this, std::placeholders::_1);
   _operator_factory[ASTNodeType::Projection] =
       std::bind(&ASTToOperatorTranslator::translate_projection_node, this, std::placeholders::_1);
   _operator_factory[ASTNodeType::Sort] =
-      std::bind(&ASTToOperatorTranslator::translate_order_by_node, this, std::placeholders::_1);
+      std::bind(&ASTToOperatorTranslator::translate_sort_node, this, std::placeholders::_1);
   _operator_factory[ASTNodeType::Join] =
       std::bind(&ASTToOperatorTranslator::translate_join_node, this, std::placeholders::_1);
   _operator_factory[ASTNodeType::Aggregate] =
@@ -52,14 +52,14 @@ const std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::translate_node(
   return it->second(node);
 }
 
-const std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::translate_table_node(
-    const std::shared_ptr<AbstractASTNode> &node) const {
+const std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::translate_stored_table_node(
+  const std::shared_ptr<AbstractASTNode> &node) const {
   auto table_node = std::dynamic_pointer_cast<StoredTableNode>(node);
   return std::make_shared<GetTable>(table_node->table_name());
 }
 
-const std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::translate_table_scan_node(
-    const std::shared_ptr<AbstractASTNode> &node) const {
+const std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::translate_predicate_node(
+  const std::shared_ptr<AbstractASTNode> &node) const {
   auto input_operator = translate_node(node->left_child());
   auto table_scan_node = std::dynamic_pointer_cast<PredicateNode>(node);
   return std::make_shared<TableScan>(input_operator, table_scan_node->column_name(), table_scan_node->scan_type(),
@@ -72,8 +72,8 @@ const std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::translate_proje
   return std::make_shared<Projection>(input_operator, node->output_column_names());
 }
 
-const std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::translate_order_by_node(
-    const std::shared_ptr<AbstractASTNode> &node) const {
+const std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::translate_sort_node(
+  const std::shared_ptr<AbstractASTNode> &node) const {
   auto input_operator = translate_node(node->left_child());
   auto sort_node = std::dynamic_pointer_cast<SortNode>(node);
   return std::make_shared<Sort>(input_operator, sort_node->column_name(), sort_node->ascending());
@@ -100,7 +100,7 @@ const std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::translate_aggre
   std::shared_ptr<AbstractOperator> out_operator = input_operator;
 
   /**
-   * Handle arithmetic expressions in aggregate functions via Projection. Support only one level
+   * 1. Handle arithmetic expressions in aggregate functions via Projection. Support only one level
    * of arithmetics, i.e. SUM(a*b) is fine SUM(a*b+c) is not
    */
   std::vector<std::string> expr_aliases;
@@ -152,7 +152,7 @@ const std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::translate_aggre
   }
 
   /**
-   * Build Aggregate
+   * 2. Build Aggregate
    */
   std::vector<AggregateDefinition> aggregate_definitions;
   aggregate_definitions.reserve(aggregates.size());

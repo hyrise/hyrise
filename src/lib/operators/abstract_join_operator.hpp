@@ -29,6 +29,12 @@ class AbstractJoinOperator : public AbstractReadOnlyOperator {
 
   virtual ~AbstractJoinOperator() = default;
 
+  ScanType scan_type() const;
+  JoinMode mode() const;
+  const std::string &prefix_left() const;
+  const std::string &prefix_right() const;
+  const optional<std::pair<std::string, std::string>> &column_names() const;
+
   // copying a operator is not allowed
   AbstractJoinOperator(AbstractJoinOperator const &) = delete;
   AbstractJoinOperator &operator=(const AbstractJoinOperator &) = delete;

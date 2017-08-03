@@ -23,6 +23,10 @@ Aggregate::Aggregate(const std::shared_ptr<AbstractOperator> in, const std::vect
   Assert(!(aggregates.empty() && groupby_columns.empty()), "Neither aggregate nor groupby columns have been specified");
 }
 
+const std::vector<AggregateDefinition> &Aggregate::aggregates() const { return _aggregates; }
+
+const std::vector<std::string> &Aggregate::groupby_columns() const { return _groupby_columns; }
+
 const std::string Aggregate::name() const { return "Aggregate"; }
 
 uint8_t Aggregate::num_in_tables() const { return 1; }

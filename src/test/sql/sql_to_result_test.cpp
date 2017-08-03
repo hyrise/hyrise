@@ -100,6 +100,7 @@ const SQLTestParam test_queries[] = {
     {"SELECT * FROM table_a;", "src/test/tables/int_float.tbl"},
 
     // Table Scans
+    {"SELECT * FROM table_b WHERE a = 12345 AND b > 457;", "src/test/tables/int_float2_filtered.tbl"},
     {"SELECT * FROM table_a WHERE a >= 1234;", "src/test/tables/int_float_filtered2.tbl"},
     {"SELECT * FROM table_a WHERE a >= 1234 AND b < 457.9", "src/test/tables/int_float_filtered.tbl"},
     {"SELECT * FROM TestTable WHERE a BETWEEN 122 AND 124", "src/test/tables/int_string_filtered.tbl"},
@@ -108,10 +109,19 @@ const SQLTestParam test_queries[] = {
     {"SELECT a FROM table_a;", "src/test/tables/int.tbl"},
 
     // ORDER BY
+    {"SELECT * FROM table_a ORDER BY a DESC;", "src/test/tables/int_float_reverse.tbl", OrderSensitivity::Sensitive},
+    {"SELECT * FROM table_b ORDER BY a, b;", "src/test/tables/int_float2_sorted.tbl", OrderSensitivity::Sensitive},
+    {"SELECT * FROM table_b ORDER BY a, b ASC;", "src/test/tables/int_float2_sorted.tbl", OrderSensitivity::Sensitive},
     {"SELECT a, b FROM table_a ORDER BY a;", "src/test/tables/int_float_sorted.tbl", OrderSensitivity::Sensitive},
     {"SELECT * FROM table_c ORDER BY a, b;", "src/test/tables/int_float2_sorted.tbl", OrderSensitivity::Sensitive},
     {"SELECT a FROM (SELECT a, b FROM table_a WHERE a > 1 ORDER BY b) WHERE a > 0 ORDER BY a;",
      "src/test/tables/int.tbl", OrderSensitivity::Sensitive},
+
+    // AGGREGATE
+    // TODO(tim): Projection cannot handle expression `$a + $b`
+    // because it is not able to handle columns with different data types.
+    // Create issue with failing test.
+    {"SELECT SUM(b + b) AS sum_b_b FROM table_a;", "src/test/tables/int_float_sum_b_plus_b.tbl"},
 
     // JOIN
     {"SELECT \"left\".a, \"left\".b, \"right\".a, \"right\".b FROM table_a AS \"left\" JOIN table_b AS "
@@ -119,6 +129,8 @@ const SQLTestParam test_queries[] = {
      "src/test/tables/joinoperators/int_inner_join.tbl"},
     {"SELECT * FROM table_a AS \"left\" LEFT JOIN table_b AS \"right\" ON a = a;",
      "src/test/tables/joinoperators/int_left_join.tbl"},
+    {"SELECT * FROM table_a AS \"left\" INNER JOIN table_b AS \"right\" ON \"left\".a = \"right\".a;",
+        "src/test/tables/joinoperators/int_inner_join.tbl"},
 
     // GROUP BY
     {"SELECT a, SUM(b) FROM groupby_int_1gb_1agg GROUP BY a;",

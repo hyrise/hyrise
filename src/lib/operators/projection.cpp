@@ -19,6 +19,10 @@ Projection::Projection(const std::shared_ptr<const AbstractOperator> in, const P
 Projection::Projection(const std::shared_ptr<const AbstractOperator> in, const std::vector<std::string>& columns)
     : AbstractReadOnlyOperator(in), _simple_projection(columns) {}
 
+const Projection::ProjectionDefinitions &Projection::projection_definitions() const { return _projection_definitions; }
+
+const std::vector<std::string> &Projection::simple_projection() const { return _simple_projection; }
+
 const std::string Projection::name() const { return "Projection"; }
 
 uint8_t Projection::num_in_tables() const { return 1; }

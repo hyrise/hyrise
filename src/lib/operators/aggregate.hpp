@@ -70,6 +70,9 @@ class Aggregate : public AbstractReadOnlyOperator {
   Aggregate(const std::shared_ptr<AbstractOperator> in, const std::vector<AggregateDefinition> aggregates,
             const std::vector<std::string> groupby_columns);
 
+  const std::vector<AggregateDefinition> &aggregates() const;
+  const std::vector<std::string> &groupby_columns() const;
+
   const std::string name() const override;
   uint8_t num_in_tables() const override;
   uint8_t num_out_tables() const override;
