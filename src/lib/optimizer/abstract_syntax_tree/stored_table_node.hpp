@@ -6,9 +6,10 @@
 
 #include "common.hpp"
 #include "optimizer/abstract_syntax_tree/abstract_ast_node.hpp"
-#include "optimizer/table_statistics.hpp"
 
 namespace opossum {
+
+class TableStatistics;
 
 class StoredTableNode : public AbstractASTNode {
  public:

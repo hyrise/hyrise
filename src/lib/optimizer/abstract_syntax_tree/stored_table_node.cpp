@@ -4,6 +4,7 @@
 #include <string>
 #include <vector>
 
+#include "optimizer/table_statistics.hpp"
 #include "storage/storage_manager.hpp"
 
 namespace opossum {

@@ -8,6 +8,7 @@
 #include "constant_mappings.hpp"
 #include "optimizer/abstract_syntax_tree/abstract_ast_node.hpp"
 #include "optimizer/abstract_syntax_tree/predicate_node.hpp"
+#include "optimizer/table_statistics.hpp"
 
 namespace opossum {
 
@@ -41,7 +42,7 @@ const void PredicateReorderingRule::reorder_predicates(std::vector<std::shared_p
     return l->create_statistics_from(child)->row_count() < r->create_statistics_from(child)->row_count();
   });
 
-  // Correct AST hierarchy
+  // Embed in AST hierarchy
   if (parent) {
     if (is_left) {
       parent->set_left_child(predicates.back());
