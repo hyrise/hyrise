@@ -15,7 +15,6 @@
 #include "storage/dictionary_compression.hpp"
 #include "storage/table.hpp"
 #include "storage/value_column.hpp"
-#include "types.hpp"
 
 #include "resolve_type.hpp"
 #include "types.hpp"
