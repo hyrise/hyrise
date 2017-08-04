@@ -22,6 +22,7 @@ BENCHMARK_DEFINE_F(BenchmarkBasicFixture, BM_TableScanConstant)(benchmark::State
 
 BENCHMARK_DEFINE_F(BenchmarkBasicFixture, BM_TableScanVariable)(benchmark::State& state) {
   clear_cache();
+
   auto warm_up =
       std::make_shared<TableScan>(_table_wrapper_a, ColumnName("a"), ScanType::OpGreaterThanEquals, ColumnName("b"));
   warm_up->execute();

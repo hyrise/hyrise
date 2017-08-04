@@ -99,17 +99,30 @@ class OperatorsTableScanTest : public BaseTest {
     _table_wrapper_string->execute();
 
     // load and compress string table
-    std::shared_ptr<Table> test_table_string_dict = load_table("src/test/tables/int_string_like.tbl", 5);
+    auto test_table_string_dict = load_table("src/test/tables/int_string_like.tbl", 5);
 
     DictionaryCompression::compress_chunks(*test_table_string_dict, {ChunkID{0}});
 
     _table_wrapper_string_dict = std::make_shared<TableWrapper>(std::move(test_table_string_dict));
     _table_wrapper_string_dict->execute();
+
+    // load table with null values
+    _table_wrapper_null = std::make_shared<TableWrapper>(load_table("src/test/tables/int_float_with_null.tbl", 2));
+    _table_wrapper_null->execute();
+
+    // load table with null values and compress
+    auto table_dict_null = load_table("src/test/tables/int_float_with_null.tbl", 2);
+
+    DictionaryCompression::compress_table(*table_dict_null);
+
+    _table_wrapper_dict_null = std::make_shared<TableWrapper>(table_dict_null);
+    _table_wrapper_dict_null->execute();
   }
 
   std::shared_ptr<TableWrapper> _table_wrapper, _table_wrapper_even_dict, _table_wrapper_part_dict,
       _table_wrapper_filtered, _table_wrapper_dict_16, _table_wrapper_dict_32, _table_wrapper_int3,
-      _table_wrapper_int3_dict, _table_wrapper_string, _table_wrapper_string_dict;
+      _table_wrapper_int3_dict, _table_wrapper_string, _table_wrapper_string_dict, _table_wrapper_null,
+      _table_wrapper_dict_null;
 };
 
 TEST_F(OperatorsTableScanTest, DoubleScan) {
@@ -141,6 +154,18 @@ TEST_F(OperatorsTableScanTest, SingleScanReturnsCorrectRowCount) {
   EXPECT_TABLE_EQ(scan->get_output(), expected_result);
 }
 
+TEST_F(OperatorsTableScanTest, ValueIsNullThrowsException) {
+  if (!IS_DEBUG) return;
+  auto table_scan = std::make_shared<TableScan>(_table_wrapper, ColumnName("a"), ScanType::OpGreaterThanEquals, NULL_VALUE);
+  EXPECT_THROW(table_scan->execute(), std::logic_error);
+}
+
+TEST_F(OperatorsTableScanTest, Value2IsNullThrowsException) {
+  if (!IS_DEBUG) return;
+  auto table_scan = std::make_shared<TableScan>(_table_wrapper, ColumnName("a"), ScanType::OpBetween, 123, NULL_VALUE);
+  EXPECT_THROW(table_scan->execute(), std::logic_error);
+}
+
 TEST_F(OperatorsTableScanTest, ScanOnDictColumn) {
   // we do not need to check for a non existing value, because that happens automatically when we scan the second chunk
 
@@ -166,6 +191,36 @@ TEST_F(OperatorsTableScanTest, ScanOnDictColumn) {
     }
     EXPECT_EQ(expected_copy.size(), 0ull);
   }
+}
+
+TEST_F(OperatorsTableScanTest, ScanOnValueColumnWithNullValues) {
+  std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_float_with_null_filtered.tbl", 2);
+
+  auto scan_1 = std::make_shared<TableScan>(_table_wrapper_null, ColumnName("a"), ScanType::OpGreaterThan, 200);
+  scan_1->execute();
+
+  EXPECT_TABLE_EQ(scan_1->get_output(), expected_result);
+}
+
+TEST_F(OperatorsTableScanTest, ScanOnDictColumnWithNullValues) {
+  std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_float_with_null_filtered.tbl", 2);
+
+  auto scan_1 = std::make_shared<TableScan>(_table_wrapper_dict_null, ColumnName("a"), ScanType::OpGreaterThan, 200);
+  scan_1->execute();
+
+  EXPECT_TABLE_EQ(scan_1->get_output(), expected_result);
+}
+
+TEST_F(OperatorsTableScanTest, ScanOnReferenceColumnWithNullValues) {
+  std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_float_with_null_filtered.tbl", 2);
+
+  auto scan_1 = std::make_shared<TableScan>(_table_wrapper_null, ColumnName{"a"}, ScanType::OpGreaterThan, 0);
+  scan_1->execute();
+
+  auto scan_2 = std::make_shared<TableScan>(scan_1, ColumnName("a"), ScanType::OpGreaterThan, 200);
+  scan_2->execute();
+
+  EXPECT_TABLE_EQ(scan_2->get_output(), expected_result);
 }
 
 TEST_F(OperatorsTableScanTest, ScanOnReferencedDictColumn) {
