@@ -111,7 +111,7 @@ class SortMergeJoin::SortMergeJoinImpl : public AbstractJoinOperatorImpl {
     TablePosition start;
     TablePosition end;
 
-    void for_every_row_id(std::function<void(RowID&)> action, std::shared_ptr<SortedTable<T>> table) {
+    void for_every_row_id(std::shared_ptr<SortedTable<T>> table, std::function<void(RowID&)> action) {
       for (int partition = start.partition; partition <= end.partition; partition++) {
         auto& values = table->partitions[partition].values;
         int start_index = (partition == start.partition) ? start.index : 0;
@@ -196,36 +196,39 @@ class SortMergeJoin::SortMergeJoinImpl : public AbstractJoinOperatorImpl {
   }
 
   void emit_combinations(size_t output_partition, TableRange left_range, TableRange right_range) {
-    left_range.for_every_row_id([this, output_partition, &right_range](RowID& left_row_id) {
-      right_range.for_every_row_id([this, output_partition, &left_row_id](RowID& right_row_id){
+    left_range.for_every_row_id(_sorted_left_table, [&](RowID& left_row_id) {
+      right_range.for_every_row_id(_sorted_right_table, [&](RowID& right_row_id) {
         this->emit_combination(output_partition, left_row_id, right_row_id);
-      }, _sorted_right_table);
-    }, _sorted_left_table);
+      });
+    });
   }
 
   void emit_right_null_combinations(size_t output_partition, TableRange left_range) {
-    left_range.for_every_row_id([this, output_partition](RowID& left_row_id) {
+    left_range.for_every_row_id(_sorted_left_table, [&](RowID& left_row_id) {
       RowID null_row{ChunkID{0}, INVALID_CHUNK_OFFSET};
       this->emit_combination(output_partition, left_row_id, null_row);
-    }, _sorted_left_table);
+    });
   }
 
   void emit_left_null_combinations(size_t output_partition, TableRange right_range) {
-    right_range.for_every_row_id([this, output_partition](RowID& right_row_id) {
+    right_range.for_every_row_id(_sorted_right_table, [&](RowID& right_row_id) {
       RowID null_row{ChunkID{0}, INVALID_CHUNK_OFFSET};
       this->emit_combination(output_partition, null_row, right_row_id);
-    }, _sorted_right_table);
+    });
   }
 
   /*
-  ** Performs the join on a single partition. Looks for matches.
+  ** Performs the join on a single partition.
   */
   void join_partition(size_t partition_number) {
+    auto& left_partition = _sorted_left_table->partitions[partition_number];
+    auto& right_partition = _sorted_right_table->partitions[partition_number];
+
     size_t left_run_start = 0;
     size_t right_run_start = 0;
 
-    auto& left_partition = _sorted_left_table->partitions[partition_number];
-    auto& right_partition = _sorted_right_table->partitions[partition_number];
+    auto left_run_end = left_run_start + run_length(left_run_start, left_partition.values);
+    auto right_run_end = right_run_start + run_length(right_run_start, right_partition.values);
 
     const size_t left_size = left_partition.values.size();
     const size_t right_size = right_partition.values.size();
@@ -234,21 +237,25 @@ class SortMergeJoin::SortMergeJoinImpl : public AbstractJoinOperatorImpl {
       auto& left_value = left_partition.values[left_run_start].first;
       auto& right_value = right_partition.values[right_run_start].first;
 
-      auto left_run_end = left_run_start + run_length(left_run_start, left_partition.values);
-      auto right_run_end = right_run_start + run_length(right_run_start, right_partition.values);
-
       TableRange left_run(partition_number, left_run_start, left_run_end);
       TableRange right_run(partition_number, right_run_start, right_run_end);
       join_runs(partition_number, left_run, right_run);
 
-      // Advance to the next run on the smaller side
+      // Advance to the next run on the smaller side or both if equal
       if (left_value == right_value) {
+        // Advance both runs
         left_run_start = left_run_end;
         right_run_start = right_run_end;
+        left_run_end = left_run_start + run_length(left_run_start, left_partition.values);
+        right_run_end = right_run_start + run_length(right_run_start, right_partition.values);
       } else if (left_value < right_value) {
+        // Advance the left run
         left_run_start = left_run_end;
+        left_run_end = left_run_start + run_length(left_run_start, left_partition.values);
       } else {
+        // Advance the right run
         right_run_start = right_run_end;
+        right_run_end = right_run_start + run_length(right_run_start, right_partition.values);
       }
     }
 
@@ -362,8 +369,6 @@ class SortMergeJoin::SortMergeJoinImpl : public AbstractJoinOperatorImpl {
     _sorted_right_table = sort_output.second;
 
     perform_join();
-
-    // std::cout << "perform join ran through" << std::endl;
 
     auto output = std::make_shared<Table>();
 
