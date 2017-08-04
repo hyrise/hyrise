@@ -12,7 +12,7 @@
 
 namespace opossum {
 
-TableScan::TableScan(const std::shared_ptr<AbstractOperator> in, const std::string &column_name,
+TableScan::TableScan(const std::shared_ptr<AbstractOperator> in, const ColumnID column_name,
                      const ScanType scan_type, const AllParameterVariant value, const optional<AllTypeVariant> value2)
     : AbstractReadOnlyOperator(in), _column_name(column_name), _scan_type(scan_type), _value(value), _value2(value2) {}
 
@@ -24,7 +24,7 @@ uint8_t TableScan::num_out_tables() const { return 1; }
 
 std::shared_ptr<const Table> TableScan::on_execute() {
   _impl = make_unique_by_column_type<AbstractReadOnlyOperatorImpl, TableScanImpl>(
-      input_table_left()->column_type(input_table_left()->column_id_by_name(_column_name)), _input_left, _column_name,
+      input_table_left()->column_type(_column_name), _input_left, _column_name,
       _scan_type, _value, _value2);
   return _impl->on_execute();
 }
@@ -129,7 +129,7 @@ template <typename T>
 class TableScan::TableScanImpl : public AbstractReadOnlyOperatorImpl {
  public:
   // creates a new table with reference columns
-  TableScanImpl(const std::shared_ptr<const AbstractOperator> in, const std::string &filter_column_name,
+  TableScanImpl(const std::shared_ptr<const AbstractOperator> in, const ColumnID filter_column_name,
                 const ScanType scan_type, const AllParameterVariant value, const optional<AllTypeVariant> value2)
       : _in_operator(in),
         _filter_column_name(filter_column_name),
@@ -169,7 +169,7 @@ class TableScan::TableScanImpl : public AbstractReadOnlyOperatorImpl {
     optional<T> casted_value2;
     std::string like_regex;
 
-    column_id1 = in_table->column_id_by_name(_filter_column_name);
+    column_id1 = _filter_column_name;
     if (_is_constant_value_scan) {
       // column_a == 5
       casted_value1 = type_cast<T>(boost::get<AllTypeVariant>(_value));
@@ -348,7 +348,7 @@ class TableScan::TableScanImpl : public AbstractReadOnlyOperatorImpl {
   class TableScanLikeVisitable;
 
   const std::shared_ptr<const AbstractOperator> _in_operator;
-  std::string _filter_column_name;
+  ColumnID _filter_column_name;
   std::string _op;
   std::function<bool(T, T)> _value_comparator;
   std::function<bool(ValueID, ValueID, ValueID)> _value_id_comparator;

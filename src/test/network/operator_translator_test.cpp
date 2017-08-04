@@ -83,7 +83,7 @@ TEST_F(OperatorTranslatorTest, ScanTableInt) {
 
   auto msg = proto::OperatorVariant();
   proto::TableScanOperator* table_scan_operator = msg.mutable_table_scan();
-  table_scan_operator->set_column_name("a");
+  table_scan_operator->set_column_name(ColumnID{0});
   table_scan_operator->set_filter_operator(proto::ScanType::OpEquals);
   proto::Variant* variant = table_scan_operator->mutable_value();
   variant->set_value_int(123);
@@ -114,7 +114,7 @@ TEST_F(OperatorTranslatorTest, ScanTableIntBetween) {
 
   auto msg = proto::OperatorVariant();
   proto::TableScanOperator* table_scan_operator = msg.mutable_table_scan();
-  table_scan_operator->set_column_name("a");
+  table_scan_operator->set_column_name(ColumnID{0});
   table_scan_operator->set_filter_operator(proto::ScanType::OpBetween);
   proto::Variant* variant = table_scan_operator->mutable_value();
   variant->set_value_int(122);
@@ -147,7 +147,7 @@ TEST_F(OperatorTranslatorTest, ScanTableString) {
 
   auto msg = proto::OperatorVariant();
   proto::TableScanOperator* table_scan_operator = msg.mutable_table_scan();
-  table_scan_operator->set_column_name("b");
+  table_scan_operator->set_column_name(ColumnID{1});
   table_scan_operator->set_filter_operator(proto::ScanType::OpEquals);
   proto::Variant* variant = table_scan_operator->mutable_value();
   variant->set_value_string("A");
@@ -207,9 +207,7 @@ TEST_F(OperatorTranslatorTest, Product) {
   auto msg = proto::OperatorVariant();
   proto::ProductOperator* product_operation = msg.mutable_product();
   product_operation->mutable_left_operator()->mutable_get_table()->set_table_name("table_a");
-  product_operation->set_prefix_left("left.");
   product_operation->mutable_right_operator()->mutable_get_table()->set_table_name("table_b");
-  product_operation->set_prefix_right("right.");
 
   OperatorTranslator translator;
   auto& tasks = translator.build_tasks_from_proto(msg);
@@ -328,7 +326,7 @@ TEST_F(OperatorTranslatorTest, TableScanAndProjection) {
 
   auto msg = proto::OperatorVariant();
   proto::TableScanOperator* table_scan_operator = msg.mutable_table_scan();
-  table_scan_operator->set_column_name("a");
+  table_scan_operator->set_column_name(ColumnID{0});
   table_scan_operator->set_filter_operator(proto::ScanType::OpEquals);
   proto::Variant* variant = table_scan_operator->mutable_value();
   variant->set_value_int(123);
@@ -523,12 +521,11 @@ TEST_F(OperatorTranslatorTest, DISABLED_NestedLoopJoinModes) {
   auto msg = proto::OperatorVariant();
   proto::NestedLoopJoinOperator* join_operation = msg.mutable_nested_loop_join();
   join_operation->mutable_left_operator()->mutable_get_table()->set_table_name("table_int_float");
-  join_operation->set_prefix_left("left");
   join_operation->mutable_right_operator()->mutable_get_table()->set_table_name("table_int_float_2");
-  join_operation->set_prefix_right("right");
   join_operation->set_op(proto::ScanType::OpEquals);
-  join_operation->set_left_column_name("a");
-  join_operation->set_right_column_name("a");
+//  TODO(mp): fix and change to ColumnID
+//  join_operation->set_left_column_name("a");
+//  join_operation->set_right_column_name("a");
 
   auto modes = {proto::NestedLoopJoinOperator::Inner, proto::NestedLoopJoinOperator::Left,
                 proto::NestedLoopJoinOperator::Right, proto::NestedLoopJoinOperator::Outer,
@@ -553,13 +550,12 @@ TEST_F(OperatorTranslatorTest, DISABLED_NestedLoopJoinWithColumns) {
   auto msg = proto::OperatorVariant();
   proto::NestedLoopJoinOperator* join_operation = msg.mutable_nested_loop_join();
   join_operation->mutable_left_operator()->mutable_get_table()->set_table_name("table_int_float");
-  join_operation->set_prefix_left("left");
   join_operation->mutable_right_operator()->mutable_get_table()->set_table_name("table_int_float_2");
-  join_operation->set_prefix_right("right");
   join_operation->set_mode(proto::NestedLoopJoinOperator::Left);
   join_operation->set_op(proto::ScanType::OpEquals);
-  join_operation->set_left_column_name("a");
-  join_operation->set_right_column_name("a");
+//  TODO(mp): fix and change to ColumnID
+//  join_operation->set_left_column_name("a");
+//  join_operation->set_right_column_name("a");
 
   OperatorTranslator translator;
   auto& tasks = translator.build_tasks_from_proto(msg);

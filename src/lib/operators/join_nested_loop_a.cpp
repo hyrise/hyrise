@@ -14,9 +14,9 @@
 namespace opossum {
 JoinNestedLoopA::JoinNestedLoopA(const std::shared_ptr<const AbstractOperator> left,
                                  const std::shared_ptr<const AbstractOperator> right,
-                                 optional<std::pair<std::string, std::string>> column_names, const ScanType scan_type,
-                                 const JoinMode mode, const std::string &prefix_left, const std::string &prefix_right)
-    : AbstractJoinOperator(left, right, column_names, scan_type, mode, prefix_left, prefix_right) {
+                                 optional<std::pair<ColumnID, ColumnID>> column_names, const ScanType scan_type,
+                                 const JoinMode mode)
+    : AbstractJoinOperator(left, right, column_names, scan_type, mode) {
   DebugAssert(
       (mode != JoinMode::Cross),
       "JoinNestedLoopA: this operator does not support Cross Joins, the optimizer should use Product operator.");
@@ -33,7 +33,7 @@ uint8_t JoinNestedLoopA::num_out_tables() const { return 1; }
 
 std::shared_ptr<AbstractOperator> JoinNestedLoopA::recreate(const std::vector<AllParameterVariant> &args) const {
   return std::make_shared<JoinNestedLoopA>(_input_left->recreate(args), _input_right->recreate(args), _column_names,
-                                           _scan_type, _mode, _prefix_left, _prefix_right);
+                                           _scan_type, _mode);
 }
 
 std::shared_ptr<const Table> JoinNestedLoopA::on_execute() {
@@ -41,9 +41,9 @@ std::shared_ptr<const Table> JoinNestedLoopA::on_execute() {
   const auto second_column = _column_names->second;
 
   _impl = make_unique_by_column_types<AbstractReadOnlyOperatorImpl, JoinNestedLoopAImpl>(
-      input_table_left()->column_type(input_table_left()->column_id_by_name(first_column)),
-      input_table_right()->column_type(input_table_right()->column_id_by_name(second_column)), _input_left,
-      _input_right, *_column_names, _scan_type, _mode, _prefix_left, _prefix_right);
+      input_table_left()->column_type(first_column),
+      input_table_right()->column_type(second_column), _input_left,
+      _input_right, *_column_names, _scan_type, _mode);
 
   return _impl->on_execute();
 }
@@ -54,16 +54,14 @@ class JoinNestedLoopA::JoinNestedLoopAImpl : public AbstractJoinOperatorImpl {
  public:
   JoinNestedLoopAImpl(const std::shared_ptr<const AbstractOperator> left,
                       const std::shared_ptr<const AbstractOperator> right,
-                      const std::pair<const std::string, const std::string> &column_names, const ScanType scan_type,
-                      const JoinMode mode, const std::string &prefix_left, const std::string &prefix_right)
+                      const std::pair<ColumnID, ColumnID> &column_names, const ScanType scan_type,
+                      const JoinMode mode)
       : _left_in_table(left->get_output()),
         _right_in_table(right->get_output()),
-        _left_column_id(_left_in_table->column_id_by_name(column_names.first)),
-        _right_column_id(_right_in_table->column_id_by_name(column_names.second)),
+        _left_column_id(column_names.first),
+        _right_column_id(column_names.second),
         _scan_type(scan_type),
         _mode(mode),
-        _prefix_left(prefix_left),
-        _prefix_right(prefix_right),
         _output_table(std::make_shared<Table>()) {
     // Parsing the join operator
     switch (_scan_type) {
@@ -361,22 +359,14 @@ class JoinNestedLoopA::JoinNestedLoopAImpl : public AbstractJoinOperatorImpl {
   std::shared_ptr<const Table> on_execute() override {
     // Preparing output table by adding columns from left table
 
-    /*
-    The prefix approach as used here will not work properly for nested join queries.
-    Instead we need a concept of aliases in Opossum, so that it is always clear whether
-    a column name is an actual column name, a column name with some table prefix,
-    or a column name with another prefix/alias.
-    Right now we would also prepend the new prefix, which may result in a name like this:
-    Left.Right.Right.ColumnA
-    */
     for (ColumnID column_id{0}; column_id < _left_in_table->col_count(); ++column_id) {
-      _output_table->add_column_definition(_prefix_left + _left_in_table->column_name(column_id),
+      _output_table->add_column_definition(_left_in_table->column_name(column_id),
                                            _left_in_table->column_type(column_id), true);
     }
 
     // Preparing output table by adding columns from right table
     for (ColumnID column_id{0}; column_id < _right_in_table->col_count(); ++column_id) {
-      _output_table->add_column_definition(_prefix_right + _right_in_table->column_name(column_id),
+      _output_table->add_column_definition(_right_in_table->column_name(column_id),
                                            _right_in_table->column_type(column_id), true);
     }
 
@@ -522,8 +512,6 @@ class JoinNestedLoopA::JoinNestedLoopAImpl : public AbstractJoinOperatorImpl {
   const ColumnID _left_column_id, _right_column_id;
   const ScanType _scan_type;
   const JoinMode _mode;
-  const std::string _prefix_left;
-  const std::string _prefix_right;
   const std::shared_ptr<Table> _output_table;
   std::function<bool(LeftType, RightType)> _comparator;
 };

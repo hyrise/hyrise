@@ -183,8 +183,8 @@ bool SQLQueryTranslator::_translate_filter_expr(const hsql::Expr& expr,
     return false;
   }
 
-  auto table_scan = std::make_shared<TableScan>(input_op, ColumnName(column_name), scan_type, value);
-  _current_root = table_scan;
+//  auto table_scan = std::make_shared<TableScan>(input_op, ColumnName(column_name), scan_type, value);
+//  _current_root = table_scan;
   return true;
 }
 
@@ -243,7 +243,7 @@ bool SQLQueryTranslator::_translate_group_by(const hsql::GroupByDescription& gro
       std::string argument = _get_column_name(*expr->exprList->at(0));
 
       if (agg_map.find(fun_name) != agg_map.end()) {
-        aggregates.emplace_back(argument, agg_map[fun_name]);
+//        aggregates.emplace_back(argument, agg_map[fun_name]);
         continue;
       }
 
@@ -254,8 +254,8 @@ bool SQLQueryTranslator::_translate_group_by(const hsql::GroupByDescription& gro
     // TODO(torpedro): Check that all other columns are in the group by columns.
   }
 
-  auto aggregate = std::make_shared<Aggregate>(input_op, aggregates, groupby_columns);
-  _current_root = aggregate;
+//  auto aggregate = std::make_shared<Aggregate>(input_op, aggregates, groupby_columns);
+//  _current_root = aggregate;
 
   // Handle HAVING clause.
   if (group_by.having != nullptr) {
@@ -314,8 +314,10 @@ bool SQLQueryTranslator::_translate_table_ref(const hsql::TableRef& table) {
 
       // Determine join condition.
       const Expr& condition = *join_def.condition;
-      std::pair<std::string, std::string> columns(_get_column_name(*condition.expr),
-                                                  _get_column_name(*condition.expr2));
+//      TODO(mp): Fix in upcoming translator
+//      std::pair<ColumnID, ColumnID> columns(_get_column_name(*condition.expr),
+//                                                  _get_column_name(*condition.expr2));
+      std::pair<ColumnID, ColumnID> columns(ColumnID{0}, ColumnID{0});
       ScanType scan_type;
       if (!_translate_filter_op(condition, &scan_type)) {
         _error_msg = "Can not handle JOIN condition.";
@@ -348,13 +350,9 @@ bool SQLQueryTranslator::_translate_table_ref(const hsql::TableRef& table) {
           return false;
       }
 
-      // In Opossum, the join requires a prefix.
-      std::string prefix_left = std::string(join_def.left->getName()) + ".";
-      std::string prefix_right = std::string(join_def.right->getName()) + ".";
-
       // TODO(torpedro): Optimize join type selection.
       auto join =
-          std::make_shared<JoinNestedLoopA>(left_op, right_op, columns, scan_type, mode, prefix_left, prefix_right);
+          std::make_shared<JoinNestedLoopA>(left_op, right_op, columns, scan_type, mode);
       _current_root = join;
       return true;
     }

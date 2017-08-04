@@ -101,7 +101,7 @@ TEST_F(SQLSelectTest, BasicParserSuccessTest) {
 TEST_F(SQLSelectTest, SelectWithSchedulerTest) {
   const std::string query =
       "SELECT \"left\".a, \"left\".b, \"right\".a, \"right\".b FROM table_a AS \"left\" INNER JOIN table_b AS "
-      "\"right\" ON a = a";
+      "\"right\" ON \"left\".a = \"right\".a";
   auto expected_result = load_table("src/test/tables/joinoperators/int_inner_join.tbl", 1);
   // TODO(torpedro): Adding 'WHERE \"left\".a >= 0;' causes wrong data. Investigate.
   //                 Probable bug in TableScan.

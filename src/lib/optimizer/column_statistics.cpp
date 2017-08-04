@@ -41,7 +41,7 @@ float ColumnStatistics<ColumnType>::distinct_count() const {
   auto table_wrapper = std::make_shared<TableWrapper>(table);
   table_wrapper->execute();
   auto aggregate = std::make_shared<Aggregate>(table_wrapper, std::vector<AggregateDefinition>{},
-                                               std::vector<std::string>{table->column_name(_column_id)});
+                                               std::vector<ColumnID>{_column_id});
   aggregate->execute();
   auto aggregate_table = aggregate->get_output();
   _distinct_count = aggregate_table->row_count();
@@ -71,9 +71,9 @@ void ColumnStatistics<ColumnType>::initialize_min_max() const {
   DebugAssert(table != nullptr, "Corresponding table of column statistics is deleted.");
   auto table_wrapper = std::make_shared<TableWrapper>(table);
   table_wrapper->execute();
-  const std::string &column_name = table->column_name(_column_id);
-  auto aggregate_args = std::vector<AggregateDefinition>{{column_name, Min}, {column_name, Max}};
-  auto aggregate = std::make_shared<Aggregate>(table_wrapper, aggregate_args, std::vector<std::string>{});
+//  const std::string &column_name = table->column_name(_column_id);
+  auto aggregate_args = std::vector<AggregateDefinition>{{_column_id, Min}, {_column_id, Max}};
+  auto aggregate = std::make_shared<Aggregate>(table_wrapper, aggregate_args, std::vector<ColumnID>{});
   aggregate->execute();
   auto aggregate_table = aggregate->get_output();
   _min = aggregate_table->template get_value<ColumnType>(ColumnID{0}, 0);

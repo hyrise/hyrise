@@ -44,8 +44,7 @@ namespace opossum {
 class JoinHash : public AbstractJoinOperator {
  public:
   JoinHash(const std::shared_ptr<const AbstractOperator> left, const std::shared_ptr<const AbstractOperator> right,
-           optional<std::pair<std::string, std::string>> column_names, const ScanType scan_type, const JoinMode mode,
-           const std::string &prefix_left, const std::string &prefix_right);
+           optional<std::pair<ColumnID, ColumnID>> column_names, const ScanType scan_type, const JoinMode mode);
 
   std::shared_ptr<const Table> on_execute() override;
 

@@ -12,15 +12,15 @@
 
 namespace opossum {
 
-AggregateDefinition::AggregateDefinition(const std::string &column_name, const AggregateFunction function)
+AggregateDefinition::AggregateDefinition(const ColumnID column_name, const AggregateFunction function)
     : column_name(column_name), function(function) {}
 
-AggregateDefinition::AggregateDefinition(const std::string &column_name, const AggregateFunction function,
+AggregateDefinition::AggregateDefinition(const ColumnID column_name, const AggregateFunction function,
                                          const std::string &alias)
     : column_name(column_name), function(function), alias(alias) {}
 
 Aggregate::Aggregate(const std::shared_ptr<AbstractOperator> in, const std::vector<AggregateDefinition> aggregates,
-                     const std::vector<std::string> groupby_columns)
+                     const std::vector<ColumnID> groupby_columns)
     : AbstractReadOnlyOperator(in), _aggregates(aggregates), _groupby_columns(groupby_columns) {
   Assert(!(aggregates.empty() && groupby_columns.empty()), "Neither aggregate nor groupby columns have been specified");
 }
@@ -38,14 +38,11 @@ std::shared_ptr<AbstractOperator> Aggregate::recreate(const std::vector<AllParam
 std::shared_ptr<const Table> Aggregate::on_execute() {
   auto input_table = input_table_left();
 
-  // find group by column IDs
-  std::vector<ColumnID> groupby_column_ids;
-  std::transform(_groupby_columns.begin(), _groupby_columns.end(), std::back_inserter(groupby_column_ids),
-                 [&](std::string name) { return input_table->column_id_by_name(name); });
+  auto groupby_columns = _groupby_columns;
 
   // find aggregated column IDs
   std::transform(_aggregates.begin(), _aggregates.end(), std::back_inserter(_aggregate_column_ids),
-                 [&](AggregateDefinition agg_def) { return input_table->column_id_by_name(agg_def.column_name); });
+                 [&](AggregateDefinition agg_def) { return agg_def.column_name; });
 
   // check for invalid aggregates
   for (size_t aggregate_index = 0; aggregate_index < _aggregates.size(); ++aggregate_index) {
@@ -69,13 +66,13 @@ std::shared_ptr<const Table> Aggregate::on_execute() {
   jobs.reserve(input_table->chunk_count());
 
   for (ChunkID chunk_id{0}; chunk_id < input_table->chunk_count(); ++chunk_id) {
-    jobs.emplace_back(std::make_shared<JobTask>([&, chunk_id, groupby_column_ids]() {
+    jobs.emplace_back(std::make_shared<JobTask>([&, chunk_id]() {
       const Chunk &chunk_in = input_table->get_chunk(chunk_id);
 
       auto hash_keys = std::make_shared<std::vector<AggregateKey>>(chunk_in.size());
 
       // Partition by group columns
-      for (auto column_id : groupby_column_ids) {
+      for (auto column_id : _groupby_columns) {
         auto base_column = chunk_in.get_column(column_id);
         auto column_type = input_table->column_type(column_id);
 
@@ -181,11 +178,11 @@ std::shared_ptr<const Table> Aggregate::on_execute() {
   if (_groupby_columns.size()) {
     // add group by columns
     for (ColumnID column_index{0}; column_index < _groupby_columns.size(); ++column_index) {
-      _output->add_column_definition(_groupby_columns[column_index],
-                                     input_table->column_type(groupby_column_ids[column_index]));
+      _output->add_column_definition(input_table->column_name(column_index),
+                                     input_table->column_type(column_index));
 
       _group_columns.emplace_back(make_shared_by_column_type<BaseColumn, ValueColumn>(
-          input_table->column_type(groupby_column_ids[column_index])));
+          input_table->column_type(column_index)));
 
       _out_chunk.add_column(_group_columns.back());
     }
@@ -245,7 +242,7 @@ void Aggregate::write_aggregate_output(ColumnID column_index) {
     output_column_name = *_aggregates[column_index].alias;
   } else {
     std::vector<std::string> names{"MIN", "MAX", "SUM", "AVG", "COUNT"};
-    output_column_name = names[function] + "(" + column_name + ")";
+    output_column_name = names[function] + "(" + input_table_left()->column_name(column_name) + ")";
   }
 
   _output->add_column_definition(output_column_name, aggregate_type_name);

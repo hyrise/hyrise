@@ -9,9 +9,8 @@
 
 namespace opossum {
 Product::Product(const std::shared_ptr<const AbstractOperator> left,
-                 const std::shared_ptr<const AbstractOperator> right, const std::string& prefix_left,
-                 const std::string& prefix_right)
-    : AbstractReadOnlyOperator(left, right), _prefix_left(prefix_left), _prefix_right(prefix_right) {}
+                 const std::shared_ptr<const AbstractOperator> right)
+    : AbstractReadOnlyOperator(left, right) {}
 
 const std::string Product::name() const { return "Product"; }
 
@@ -24,13 +23,13 @@ std::shared_ptr<const Table> Product::on_execute() {
 
   // add columns from left table to output
   for (ColumnID col_id{0}; col_id < input_table_left()->col_count(); ++col_id) {
-    output->add_column_definition(_prefix_left + input_table_left()->column_name(col_id),
+    output->add_column_definition(input_table_left()->column_name(col_id),
                                   input_table_left()->column_type(col_id));
   }
 
   // add columns from right table to output
   for (ColumnID col_id{0}; col_id < input_table_right()->col_count(); ++col_id) {
-    output->add_column_definition(_prefix_right + input_table_right()->column_name(col_id),
+    output->add_column_definition(input_table_right()->column_name(col_id),
                                   input_table_right()->column_type(col_id));
   }
 

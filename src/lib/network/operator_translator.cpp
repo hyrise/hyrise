@@ -90,16 +90,13 @@ inline std::shared_ptr<OperatorTask> OperatorTranslator::translate(
 }
 
 inline std::shared_ptr<OperatorTask> OperatorTranslator::translate(const proto::ProductOperator& product_operator) {
-  auto& prefix_left = product_operator.prefix_left();
-  auto& prefix_right = product_operator.prefix_right();
   Assert((product_operator.has_left_operator()), "Missing left Operator in Product.");
   Assert((product_operator.has_right_operator()), "Missing right Operator in Product.");
 
   auto input_left_task = translate_proto(product_operator.left_operator());
   auto input_right_task = translate_proto(product_operator.right_operator());
 
-  auto product = std::make_shared<Product>(input_left_task->get_operator(), input_right_task->get_operator(),
-                                           prefix_left, prefix_right);
+  auto product = std::make_shared<Product>(input_left_task->get_operator(), input_right_task->get_operator());
   auto product_task = std::make_shared<OperatorTask>(product);
   input_left_task->set_as_predecessor_of(product_task);
   input_right_task->set_as_predecessor_of(product_task);
@@ -110,8 +107,6 @@ inline std::shared_ptr<OperatorTask> OperatorTranslator::translate(const proto::
 
 inline std::shared_ptr<OperatorTask> OperatorTranslator::translate(
     const proto::NestedLoopJoinOperator& nested_loop_join_operator) {
-  auto& prefix_left = nested_loop_join_operator.prefix_left();
-  auto& prefix_right = nested_loop_join_operator.prefix_right();
   Assert((nested_loop_join_operator.has_left_operator()), "Missing left Operator in Nested Loop Join.");
   Assert((nested_loop_join_operator.has_right_operator()), "Missing right Operator in Nested Loop Join.");
 
@@ -148,18 +143,18 @@ inline std::shared_ptr<OperatorTask> OperatorTranslator::translate(
 
   std::shared_ptr<JoinNestedLoopA> nested_loop_join;
 
-  if (!nested_loop_join_operator.left_column_name().empty() && !nested_loop_join_operator.right_column_name().empty()) {
+//  if (!nested_loop_join_operator.left_column_name().empty() && !nested_loop_join_operator.right_column_name().empty()) {
     auto column_names =
-        std::make_pair(nested_loop_join_operator.left_column_name(), nested_loop_join_operator.right_column_name());
-    auto join_columns = optional<std::pair<std::string, std::string>>(column_names);
+        std::make_pair(ColumnID{nested_loop_join_operator.left_column_name()}, ColumnID{nested_loop_join_operator.right_column_name()});
+    auto join_columns = optional<std::pair<ColumnID, ColumnID>>(column_names);
     nested_loop_join =
         std::make_shared<JoinNestedLoopA>(input_left_task->get_operator(), input_right_task->get_operator(),
-                                          join_columns, scan_type, join_mode, prefix_left, prefix_right);
-  } else {
-    nested_loop_join =
-        std::make_shared<JoinNestedLoopA>(input_left_task->get_operator(), input_right_task->get_operator(), nullopt,
-                                          scan_type, join_mode, prefix_left, prefix_right);
-  }
+                                          join_columns, scan_type, join_mode);
+//  } else {
+//    nested_loop_join =
+//        std::make_shared<JoinNestedLoopA>(input_left_task->get_operator(), input_right_task->get_operator(), nullopt,
+//                                          scan_type, join_mode);
+//  }
 
   auto nested_loop_join_task = std::make_shared<OperatorTask>(nested_loop_join);
   input_left_task->set_as_predecessor_of(nested_loop_join_task);
@@ -180,7 +175,7 @@ inline std::shared_ptr<OperatorTask> OperatorTranslator::translate(
   const auto value = translate_variant(table_scan_operator.value());
   const auto value2 = translate_optional_variant(table_scan_operator.value2());
 
-  auto table_scan = std::make_shared<TableScan>(input_task->get_operator(), column_name, scan_type, value, value2);
+  auto table_scan = std::make_shared<TableScan>(input_task->get_operator(), ColumnID{column_name}, scan_type, value, value2);
   auto scan_task = std::make_shared<OperatorTask>(table_scan);
   input_task->set_as_predecessor_of(scan_task);
   _tasks.push_back(scan_task);
