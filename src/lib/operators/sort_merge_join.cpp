@@ -46,7 +46,7 @@ SortMergeJoin::SortMergeJoin(const std::shared_ptr<const AbstractOperator> left,
 **/
 
 template <typename T>
-class SortMergeJoin::SortMergeJoinImpl : public AbstractJoinOperatorImpl, public ColumnVisitable {
+class SortMergeJoin::SortMergeJoinImpl : public AbstractJoinOperatorImpl {
  public:
   SortMergeJoinImpl<T>(SortMergeJoin& sort_merge_join, std::string left_column_name,
             std::string right_column_name, std::string op, JoinMode mode, size_t partition_count)
@@ -64,8 +64,8 @@ class SortMergeJoin::SortMergeJoinImpl : public AbstractJoinOperatorImpl, public
 
  protected:
   SortMergeJoin& _sort_merge_join;
-  std::shared_ptr<SortedTable> _sorted_left_table;
-  std::shared_ptr<SortedTable> _sorted_right_table;
+  std::shared_ptr<SortedTable<T>> _sorted_left_table;
+  std::shared_ptr<SortedTable<T>> _sorted_right_table;
 
   const std::string _left_column_name;
   const std::string _right_column_name;
@@ -111,7 +111,7 @@ class SortMergeJoin::SortMergeJoinImpl : public AbstractJoinOperatorImpl, public
     TablePosition start;
     TablePosition end;
 
-    void for_every_row_id(std::function<void(RowID&)> action, std::shared_ptr<SortedTable> table) {
+    void for_every_row_id(std::function<void(RowID&)> action, std::shared_ptr<SortedTable<T>> table) {
       for (int partition = start.partition; partition <= end.partition; partition++) {
         auto& values = table->partitions[partition].values;
         int start_index = (partition == start.partition) ? start.index : 0;
@@ -123,6 +123,11 @@ class SortMergeJoin::SortMergeJoinImpl : public AbstractJoinOperatorImpl, public
     }
   };
 
+  TablePosition end_of_table(std::shared_ptr<SortedTable<T>> table) {
+    auto last_partition = table->partitions.size() - 1;
+    return TablePosition(last_partition, table->partitions[last_partition].values.size());
+  }
+
   void join_runs(size_t partition_number, TableRange left_run, TableRange right_run) {
     auto& left_partition = _sorted_left_table->partitions[partition_number];
     auto& right_partition = _sorted_right_table->partitions[partition_number];
@@ -132,6 +137,9 @@ class SortMergeJoin::SortMergeJoinImpl : public AbstractJoinOperatorImpl, public
 
     auto& left_value = left_partition.values[left_run.start.index].first;
     auto& right_value = right_partition.values[right_run.start.index].first;
+
+    auto end_of_left_table = end_of_table(_sorted_left_table);
+    auto end_of_right_table = end_of_table(_sorted_right_table);
 
     // std::cout << "op: " << _op << std::endl;
     if (_op == "=") {
@@ -157,28 +165,28 @@ class SortMergeJoin::SortMergeJoinImpl : public AbstractJoinOperatorImpl, public
 
     if (_op == ">") {
       if (left_value > right_value) {
-        emit_combinations(partition_number, left_run.start.to(_sorted_left_table->end_position()), right_run);
+        emit_combinations(partition_number, left_run.start.to(end_of_left_table), right_run);
       }
       if (left_value == right_value) {
-        emit_combinations(partition_number, left_run.end.to(_sorted_left_table->end_position()), right_run);
+        emit_combinations(partition_number, left_run.end.to(end_of_left_table), right_run);
       }
     }
 
     if (_op == ">=" && left_value >= right_value) {
-      emit_combinations(partition_number, left_run.start.to(_sorted_left_table->end_position()), right_run);
+      emit_combinations(partition_number, left_run.start.to(end_of_left_table), right_run);
     }
 
     if (_op == "<") {
       if (left_value < right_value) {
-        emit_combinations(partition_number, left_run, right_run.start.to(_sorted_right_table->end_position()));
+        emit_combinations(partition_number, left_run, right_run.start.to(end_of_right_table));
       }
       if (left_value == right_value) {
-        emit_combinations(partition_number, left_run, right_run.end.to(_sorted_right_table->end_position()));
+        emit_combinations(partition_number, left_run, right_run.end.to(end_of_right_table));
       }
     }
 
     if (_op == "<=" && left_value <= right_value) {
-      emit_combinations(partition_number, left_run, right_run.start.to(_sorted_right_table->end_position()));
+      emit_combinations(partition_number, left_run, right_run.start.to(end_of_right_table));
     }
   }
 
@@ -262,8 +270,13 @@ class SortMergeJoin::SortMergeJoinImpl : public AbstractJoinOperatorImpl, public
   std::shared_ptr<PosList> concatenate_pos_lists(std::vector<std::shared_ptr<PosList>>& pos_lists) {
     auto output = std::make_shared<PosList>();
 
+    size_t total_size = 0;
+    for(auto pos_list : pos_lists) {
+      total_size += pos_list->size();
+    }
+
+    output->reserve(total_size);
     for (auto pos_list : pos_lists) {
-      output->reserve(output->size() + pos_list->size());
       output->insert(output->end(), pos_list->begin(), pos_list->end());
     }
 
@@ -340,16 +353,13 @@ class SortMergeJoin::SortMergeJoinImpl : public AbstractJoinOperatorImpl, public
   std::shared_ptr<const Table> on_execute() {
     DebugAssert(_partition_count > 0, "partition count is <= 0!");
 
+    auto radix_partitioner = RadixPartitionSort<T>(_sort_merge_join._input_left, _sort_merge_join._input_right,
+                              *_sort_merge_join._column_names, _op, _mode, _partition_count);
     // Sort and partition the input tables
-    _sorted_left_table = sort_table(_sort_merge_join.input_table_left(), _left_column_name);
-    _sorted_right_table = sort_table(_sort_merge_join.input_table_right(), _right_column_name);
-
-    // std::cout << "Table sorting ran through" << std::endl;
-
-    if (_op != "=" && _partition_count > 1) {
-      value_based_partitioning();
-      std::cout << "value based partitioning ran through" << std::endl;
-    }
+    radix_partitioner.execute();
+    auto sort_output = radix_partitioner.get_output();
+    _sorted_left_table = sort_output.first;
+    _sorted_right_table = sort_output.second;
 
     perform_join();
 

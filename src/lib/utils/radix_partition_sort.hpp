@@ -460,7 +460,7 @@ class RadixPartitionSort : public ColumnVisitable {
      }
    }
 
-   std::pair<std::shared_ptr<SortedTable<T>>, std::shared_ptr<SortedTable<T>> get_output() {
+   std::pair<std::shared_ptr<SortedTable<T>>, std::shared_ptr<SortedTable<T>>> get_output() {
      return std::make_pair(_sorted_left_table, _sorted_right_table);
    }
 };
