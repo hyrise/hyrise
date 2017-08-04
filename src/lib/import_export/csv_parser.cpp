@@ -12,6 +12,7 @@
 #include "import_export/csv_converter.hpp"
 #include "scheduler/job_task.hpp"
 #include "utils/assert.hpp"
+#include "storage/table.hpp"
 
 namespace opossum {
 
@@ -112,9 +113,9 @@ std::shared_ptr<Table> CsvParser::_process_meta_file(const std::string& filename
   return table;
 }
 
-bool CsvParser::_find_fields_in_chunk(string_view str, const Table& table, std::vector<size_t>& indices) {
-  indices.clear();
-  if (0 == table.chunk_size() || str.empty()) {
+bool CsvParser::_find_fields_in_chunk(string_view csv_content, const Table& table, std::vector<size_t>& field_ends) {
+  field_ends.clear();
+  if (0 == table.chunk_size() || csv_content.empty()) {
     return false;
   }
 
@@ -125,12 +126,12 @@ bool CsvParser::_find_fields_in_chunk(string_view str, const Table& table, std::
   bool in_quotes = false;
   while (rows < table.chunk_size()) {
     // Find either of row separator, column delimiter, quote identifier
-    pos = str.find_first_of(search_for, from);
+    pos = csv_content.find_first_of(search_for, from);
     if (std::string::npos == pos) {
       break;
     }
     from = pos + 1;
-    const char elem = str.at(pos);
+    const char elem = csv_content.at(pos);
 
     if (elem == _csv_config.quote) in_quotes = !in_quotes;
 
@@ -147,13 +148,13 @@ bool CsvParser::_find_fields_in_chunk(string_view str, const Table& table, std::
     }
 
     ++field_count;
-    indices.push_back(pos);
+    field_ends.push_back(pos);
   }
 
   return true;
 }
 
-void CsvParser::_parse_into_chunk(string_view content, const std::vector<size_t>& field_ends, const Table& table,
+void CsvParser::_parse_into_chunk(string_view csv_chunk, const std::vector<size_t>& field_ends, const Table& table,
                                  Chunk& chunk) {
   // For each csv column create a CsvConverter which builds up a ValueColumn
   const auto col_count = table.col_count();
@@ -168,7 +169,7 @@ void CsvParser::_parse_into_chunk(string_view content, const std::vector<size_t>
   for (ChunkOffset row_id = 0; row_id < row_count; ++row_id) {
     for (ColumnID column_id{0}; column_id < col_count; ++column_id) {
       const auto end = field_ends.at(row_id * col_count + column_id);
-      auto field = content.substr(start, end - start).to_string();
+      auto field = csv_chunk.substr(start, end - start).to_string();
       start = end + 1;
 
       if (!_rfc) {
@@ -187,8 +188,8 @@ void CsvParser::_parse_into_chunk(string_view content, const std::vector<size_t>
 }
 
 void CsvParser::_sanitize_field(std::string& field) {
-  const std::string escaped_linebreak = "\\\n";
-  const std::string linebreak = "\n";
+  const std::string linebreak(1, _csv_config.delimiter);
+  const std::string escaped_linebreak = std::string(1, _csv_config.delimiter_escape) + std::string(1, _csv_config.delimiter);
 
   std::string::size_type pos = 0;
   while ((pos = field.find(escaped_linebreak, pos)) != std::string::npos) {
