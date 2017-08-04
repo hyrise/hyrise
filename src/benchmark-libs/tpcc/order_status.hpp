@@ -7,13 +7,13 @@
 #include <string>
 #include <vector>
 
-#include "scheduler/operator_task.hpp"
-
 #include "defines.hpp"
 
 namespace opossum {
+
 class TransactionContext;
-}
+
+}  // namespace opossum
 
 namespace tpcc {
 
@@ -72,6 +72,7 @@ class OrderStatusRefImpl : public AbstractOrderStatusImpl {
 }  // namespace tpcc
 
 namespace nlohmann {
+
 template <>
 struct adl_serializer<tpcc::OrderStatusParams> {
   static void to_json(nlohmann::json &j, const tpcc::OrderStatusParams &v);
@@ -89,4 +90,5 @@ struct adl_serializer<tpcc::OrderStatusResult> {
   static void to_json(nlohmann::json &j, const tpcc::OrderStatusResult &v);
   static void from_json(const nlohmann::json &j, tpcc::OrderStatusResult &v);
 };
+
 }  // namespace nlohmann

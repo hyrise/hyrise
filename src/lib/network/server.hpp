@@ -8,7 +8,6 @@
 #include <grpc/support/log.h>
 
 #include <memory>
-#include <string>
 #include <thread>
 #include <vector>
 
@@ -17,12 +16,10 @@
 #pragma GCC diagnostic ignored "-Wunused-parameter"
 #include "network/generated/opossum.grpc.pb.h"
 #pragma GCC diagnostic pop
-#include "network/operator_translator.hpp"
-#include "network/request_handler.hpp"
-#include "network/response_builder.hpp"
-#include "network/server_configuration.hpp"
 
 namespace opossum {
+
+struct ServerConfiguration;
 
 class Server {
  public:

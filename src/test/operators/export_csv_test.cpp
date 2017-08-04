@@ -7,13 +7,15 @@
 #include "../base_test.hpp"
 #include "gtest/gtest.h"
 
-#include "../../lib/import_export/csv.hpp"
-#include "../../lib/operators/export_csv.hpp"
-#include "../../lib/operators/table_scan.hpp"
-#include "../../lib/operators/table_wrapper.hpp"
-#include "../../lib/storage/dictionary_compression.hpp"
-#include "../../lib/storage/storage_manager.hpp"
-#include "../../lib/storage/table.hpp"
+#include "import_export/csv.hpp"
+#include "operators/export_csv.hpp"
+#include "operators/table_scan.hpp"
+#include "operators/table_wrapper.hpp"
+#include "storage/dictionary_compression.hpp"
+#include "storage/storage_manager.hpp"
+#include "storage/table.hpp"
+
+#include "utils/assert.hpp"
 
 namespace opossum {
 
@@ -38,10 +40,7 @@ class OperatorsExportCsvTest : public BaseTest {
 
   bool compare_file(const std::string& filename, const std::string& expected_content) {
     std::ifstream t(filename);
-
-    if (!t.is_open()) {
-      throw std::runtime_error("compare_file: Could not find file " + filename);
-    }
+    Assert(t.is_open(), "compare_file: Could not find file " + filename);
 
     std::string content((std::istreambuf_iterator<char>(t)), std::istreambuf_iterator<char>());
 

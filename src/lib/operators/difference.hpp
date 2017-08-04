@@ -5,7 +5,9 @@
 #include <vector>
 
 #include "abstract_read_only_operator.hpp"
+
 #include "types.hpp"
+#include "utils/assert.hpp"
 
 namespace opossum {
 
@@ -22,7 +24,8 @@ class Difference : public AbstractReadOnlyOperator {
   uint8_t num_out_tables() const override;
 
   std::shared_ptr<AbstractOperator> recreate(const std::vector<AllParameterVariant> &args) const override {
-    throw std::runtime_error("Operator " + this->name() + " does not implement recreation.");
+    Fail("Operator " + this->name() + " does not implement recreation.");
+    return {};
   }
 
  protected:

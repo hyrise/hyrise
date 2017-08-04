@@ -3,7 +3,7 @@
 #include <memory>
 #include <vector>
 
-#include "abstract_task.hpp"
+#include "abstract_scheduler.hpp"
 
 namespace opossum {
 

@@ -5,9 +5,12 @@
 #include <utility>
 #include <vector>
 
+#include "abstract_scheduler.hpp"
 #include "current_scheduler.hpp"
-#include "utils/assert.hpp"
+#include "task_queue.hpp"
 #include "worker.hpp"
+
+#include "utils/assert.hpp"
 
 namespace opossum {
 

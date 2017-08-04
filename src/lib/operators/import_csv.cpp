@@ -7,6 +7,8 @@
 #include "import_export/csv_parser.hpp"
 #include "storage/storage_manager.hpp"
 
+#include "utils/assert.hpp"
+
 namespace opossum {
 
 ImportCsv::ImportCsv(const std::string& filename, const optional<std::string> tablename)
@@ -28,9 +30,7 @@ std::shared_ptr<const Table> ImportCsv::on_execute() {
 
   // Check if file exists before giving it to the parser
   std::ifstream file(_filename);
-  if (!file.is_open()) {
-    throw std::runtime_error("ImportCsv: Could not find file " + _filename);
-  }
+  Assert(file.is_open(), "ImportCsv: Could not find file " + _filename);
   file.close();
 
   std::shared_ptr<Table> table;

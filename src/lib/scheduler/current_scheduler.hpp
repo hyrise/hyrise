@@ -3,13 +3,12 @@
 #include <memory>
 #include <vector>
 
-#include "abstract_scheduler.hpp"
 #include "utils/assert.hpp"
 #include "worker.hpp"
 
 namespace opossum {
 
-class AbstractTask;
+class AbstractScheduler;
 
 /**
  * Holds the singleton instance (or the lack of one) of the currently active Scheduler
