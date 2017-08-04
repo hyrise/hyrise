@@ -11,13 +11,17 @@
 #include <vector>
 
 #include "abstract_read_only_operator.hpp"
-#include "resolve_type.hpp"
+
 #include "scheduler/abstract_task.hpp"
 #include "scheduler/current_scheduler.hpp"
 #include "scheduler/job_task.hpp"
+#include "storage/base_attribute_vector.hpp"
+#include "storage/column_visitable.hpp"
 #include "storage/dictionary_column.hpp"
 #include "storage/reference_column.hpp"
 #include "storage/value_column.hpp"
+
+#include "resolve_type.hpp"
 #include "type_comparison.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
@@ -132,7 +136,7 @@ class Aggregate : public AbstractReadOnlyOperator {
   template <typename AggregateType, AggregateFunction func>
   typename std::enable_if<func == Avg && !std::is_arithmetic<AggregateType>::value, void>::type _write_aggregate_values(
       tbb::concurrent_vector<AggregateType>, std::shared_ptr<std::map<AggregateKey, AggregateResult<AggregateType>>>) {
-    throw std::runtime_error("Invalid aggregate");
+    Fail("Invalid aggregate");
   }
 
   const std::vector<AggregateDefinition> _aggregates;
@@ -241,9 +245,7 @@ using AggregateFunctor = std::function<optional<AggregateType>(ColumnType, optio
 
 template <typename ColumnType, typename AggregateType, AggregateFunction function>
 struct AggregateFunctionBuilder {
-  AggregateFunctor<ColumnType, AggregateType> get_aggregate_function() {
-    throw std::runtime_error("Invalid aggregate function");
-  }
+  AggregateFunctor<ColumnType, AggregateType> get_aggregate_function() { Fail("Invalid aggregate function"); }
 };
 
 template <typename ColumnType, typename AggregateType>

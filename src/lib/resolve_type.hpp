@@ -107,9 +107,7 @@ std::string name_of_type() {
   };
 
   auto type_string = hana::fold_left(column_types, std::string(""), func);
-  if (type_string.size() == 0) {
-    throw std::runtime_error("Trying to parse unknown type which is not part of AllTypeVariant");
-  }
+  Assert(type_string.size() > 0, "Trying to parse unknown type which is not part of AllTypeVariant");
 
   return type_string;
 }

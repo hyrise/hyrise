@@ -1,13 +1,14 @@
 #include <memory>
 #include <string>
-#include <utility>
 #include <vector>
 
 #include "benchmark/benchmark.h"
 
-#include "../base_fixture.cpp"
+#include "../base_fixture.hpp"
 #include "../table_generator.hpp"
+
 #include "operators/aggregate.hpp"
+#include "operators/table_wrapper.hpp"
 
 namespace opossum {
 
@@ -15,7 +16,7 @@ BENCHMARK_DEFINE_F(BenchmarkBasicFixture, BM_Aggregate)(benchmark::State& state)
   clear_cache();
 
   std::vector<AggregateDefinition> aggregates = {{"b", Min}};
-  std::vector<std::string> groupby = {std::string("a")};
+  std::vector<std::string> groupby = {"a"};
 
   auto warm_up = std::make_shared<Aggregate>(_table_wrapper_a, aggregates, groupby);
   warm_up->execute();

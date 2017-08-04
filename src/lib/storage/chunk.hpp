@@ -10,10 +10,10 @@
 
 #include "tbb/concurrent_vector.h"
 
-#include "all_type_variant.hpp"
 #include "copyable_atomic.hpp"
-#include "index/base_index.hpp"
 #include "scoped_locking_ptr.hpp"
+
+#include "all_type_variant.hpp"
 #include "types.hpp"
 
 namespace opossum {

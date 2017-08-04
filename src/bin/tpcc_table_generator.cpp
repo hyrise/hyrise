@@ -2,7 +2,6 @@
 
 #include "operators/export_csv.hpp"
 #include "storage/storage_manager.hpp"
-
 #include "tpcc/tpcc_table_generator.hpp"
 
 int main() {

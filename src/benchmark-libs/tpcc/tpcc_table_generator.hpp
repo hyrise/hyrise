@@ -1,17 +1,22 @@
 #pragma once
 
-#include <time.h>
+#include <ctime>
+
 #include <map>
 #include <memory>
 #include <string>
 #include <vector>
 
+#include "tbb/concurrent_vector.h"
+
 #include "benchmark_utilities/abstract_benchmark_table_generator.hpp"
-#include "storage/storage_manager.hpp"
-#include "storage/table.hpp"
-#include "storage/value_column.hpp"
 #include "tpcc_random_generator.hpp"
-#include "types.hpp"
+
+namespace opossum {
+
+class Table;
+
+}  // namespace opossum
 
 namespace tpcc {
 

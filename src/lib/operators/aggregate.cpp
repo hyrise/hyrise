@@ -53,7 +53,7 @@ std::shared_ptr<const Table> Aggregate::on_execute() {
     auto aggregate = _aggregates[aggregate_index].function;
 
     if (input_table->column_type(column_id) == "string" && (aggregate == Sum || aggregate == Avg)) {
-      throw std::runtime_error("Aggregate: Cannot calculate SUM or AVG on string column");
+      Fail("Aggregate: Cannot calculate SUM or AVG on string column");
     }
   }
 

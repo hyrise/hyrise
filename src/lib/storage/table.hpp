@@ -7,12 +7,16 @@
 #include <utility>
 #include <vector>
 
+#include "base_column.hpp"
 #include "chunk.hpp"
+
 #include "common.hpp"
 #include "type_cast.hpp"
 #include "types.hpp"
+#include "utils/assert.hpp"
 
 namespace opossum {
+
 class TableStatistics;
 
 // A table is partitioned horizontally into a number of chunks
@@ -101,7 +105,8 @@ class Table {
         return get<T>((*chunk.get_column(column_id))[row_number + current_size - row_counter]);
       }
     }
-    throw std::runtime_error("Row does not exist.");
+    Fail("Row does not exist.");
+    return {};
   }
 
   // creates a new chunk and appends it

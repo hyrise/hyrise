@@ -8,12 +8,14 @@
 #include "../base_test.hpp"
 #include "gtest/gtest.h"
 
-#include "../lib/common.hpp"
-#include "../lib/storage/base_column.hpp"
-#include "../lib/storage/chunk.hpp"
-#include "../lib/storage/dictionary_column.hpp"
-#include "../lib/storage/index/group_key/composite_group_key_index.hpp"
-#include "../lib/types.hpp"
+#include "storage/base_column.hpp"
+#include "storage/chunk.hpp"
+#include "storage/dictionary_column.hpp"
+#include "storage/index/group_key/composite_group_key_index.hpp"
+#include "storage/index/group_key/variable_length_key_proxy.hpp"
+
+#include "common.hpp"
+#include "types.hpp"
 
 namespace {
 opossum::VariableLengthKey create_key(uint16_t value) {

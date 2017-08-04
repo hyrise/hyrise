@@ -7,6 +7,7 @@
 
 #include "import_export/csv.hpp"
 #include "import_export/csv_writer.hpp"
+#include "storage/base_attribute_vector.hpp"
 #include "storage/dictionary_column.hpp"
 #include "storage/reference_column.hpp"
 

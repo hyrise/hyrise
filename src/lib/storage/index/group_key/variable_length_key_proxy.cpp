@@ -1,8 +1,9 @@
 #include "variable_length_key_proxy.hpp"
 
 #include <algorithm>
-#include <exception>
 #include <ostream>
+
+#include "variable_length_key.hpp"
 
 #include "utils/assert.hpp"
 

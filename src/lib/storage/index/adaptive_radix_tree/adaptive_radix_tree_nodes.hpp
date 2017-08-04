@@ -1,11 +1,13 @@
-#include "adaptive_radix_tree_index.hpp"
-
 #include <array>
 #include <functional>
 #include <iterator>
 #include <memory>
 #include <utility>
 #include <vector>
+
+#include "adaptive_radix_tree_index.hpp"
+
+#include "types.hpp"
 
 namespace opossum {
 

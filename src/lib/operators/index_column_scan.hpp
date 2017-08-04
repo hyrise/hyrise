@@ -10,6 +10,7 @@
 #include <vector>
 
 #include "abstract_read_only_operator.hpp"
+
 #include "scheduler/abstract_task.hpp"
 #include "scheduler/current_scheduler.hpp"
 #include "scheduler/job_task.hpp"
@@ -17,6 +18,7 @@
 #include "storage/index/base_index.hpp"
 #include "storage/reference_column.hpp"
 #include "storage/value_column.hpp"
+
 #include "type_cast.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
@@ -48,7 +50,8 @@ class IndexColumnScan : public AbstractReadOnlyOperator {
   uint8_t num_in_tables() const override;
   uint8_t num_out_tables() const override;
   std::shared_ptr<AbstractOperator> recreate(const std::vector<AllParameterVariant> &args) const override {
-    throw std::runtime_error("Operator " + this->name() + " does not implement recreation.");
+    Fail("Operator " + this->name() + " does not implement recreation.");
+    return {};
   }
 
  protected:

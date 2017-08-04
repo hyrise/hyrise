@@ -9,9 +9,11 @@
 #include "../base_test.hpp"
 #include "gtest/gtest.h"
 
-#include "../lib/common.hpp"
-#include "../lib/storage/index/group_key/variable_length_key_store.hpp"
-#include "../lib/types.hpp"
+#include "storage/index/group_key/variable_length_key_proxy.hpp"
+#include "storage/index/group_key/variable_length_key_store.hpp"
+
+#include "common.hpp"
+#include "types.hpp"
 
 namespace opossum {
 
