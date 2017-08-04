@@ -23,21 +23,15 @@ class ImportCsv : public AbstractReadOnlyOperator {
   /*
    * @param filename    Path to the input file.
    * @param tablename   Optional. Name of the table to store/look up in the StorageManager.
-   * @param rfc_mode    If true parse according to RFC 4180 else parse as non-RFC format
-   * @param buffer_size Specifies the amount of data from the input file in bytes that a single task should work on.
    */
-  explicit ImportCsv(const std::string& filename, const optional<std::string> tablename = nullopt,
-                     bool rfc_mode = true);
+  explicit ImportCsv(const std::string& filename, const optional<std::string> tablename = nullopt);
 
   /*
    * @param filename    Path to the input file.
    * @param config      Csv configuration, e.g. delimiter, separator, etc.
    * @param tablename   Optional. Name of the table to store/look up in the StorageManager.
-   * @param rfc_mode    If true parse according to RFC 4180 else parse as non-RFC format
-   * @param buffer_size Specifies the amount of data from the input file in bytes that a single task should work on.
    */
-  explicit ImportCsv(const std::string& filename, const CsvConfig& config,
-                     const optional<std::string> tablename = nullopt, bool rfc_mode = true);
+  explicit ImportCsv(const std::string& filename, const CsvConfig& config, const optional<std::string> tablename = nullopt);
 
   // cannot move-assign because of const members
   ImportCsv& operator=(ImportCsv&&) = delete;
@@ -63,8 +57,6 @@ class ImportCsv : public AbstractReadOnlyOperator {
   const std::string _filename;
   // Name for adding the table to the StorageManager
   const optional<std::string> _tablename;
-  // Parsing mode
-  const bool _rfc_mode;
   // Csv configuration, e.g. delimiter, separator, etc.
   const CsvConfig _config;
 };

@@ -29,7 +29,7 @@ class CsvParser {
    * @param csv_config  Csv configuration (delimiter, separator, ..).
    * @param rfc_mode    Indicator whether RFC 4180 should be used for parsing.
    */
-  explicit CsvParser(const CsvConfig& csv_config = {}, const bool rfc_mode = true);
+  explicit CsvParser(const CsvConfig& csv_config = {});
 
   // cannot move-assign because of const members
   CsvParser& operator=(CsvParser&&) = delete;
@@ -70,7 +70,5 @@ class CsvParser {
 
   // Csv configuration, e.g. delimiter, separator, etc.
   const CsvConfig _csv_config;
-  // Indicator whether RFC 4180 should be used for parsing. https://tools.ietf.org/html/rfc4180
-  bool _rfc;
 };
 }  // namespace opossum

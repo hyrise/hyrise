@@ -106,8 +106,7 @@ TEST_F(OperatorsImportCsvTest, EmptyStrings) {
 
 TEST_F(OperatorsImportCsvTest, Parallel) {
   CurrentScheduler::set(std::make_shared<NodeQueueScheduler>(Topology::create_fake_numa_topology(8, 4)));
-  auto importer =
-      std::make_shared<OperatorTask>(std::make_shared<ImportCsv>("src/test/csv/float_int_large.csv", nullopt, true));
+  auto importer = std::make_shared<OperatorTask>(std::make_shared<ImportCsv>("src/test/csv/float_int_large.csv"));
   importer->schedule();
 
   auto expected_table = std::make_shared<Table>(20);
@@ -151,6 +150,22 @@ TEST_F(OperatorsImportCsvTest, ChunkSize) {
   // check if actual chunk_size is correct
   EXPECT_EQ(importer->get_output()->get_chunk(ChunkID{0}).size(), 20U);
   EXPECT_EQ(importer->get_output()->get_chunk(ChunkID{1}).size(), 20U);
+}
+
+TEST_F(OperatorsImportCsvTest, StringEscapingNonRfc) {
+  CsvConfig config;
+  config.rfc_mode = false;
+  auto importer = std::make_shared<ImportCsv>("src/test/csv/string_escaped_unsafe.csv", config);
+  importer->execute();
+
+  auto expected_table = std::make_shared<Table>(5);
+  expected_table->add_column("a", "string");
+  expected_table->append({"aa\"\"aa"});
+  expected_table->append({"xx\"x"});
+  expected_table->append({"yy,y"});
+  expected_table->append({"zz\nz"});
+
+  EXPECT_TABLE_EQ(importer->get_output(), expected_table, true);
 }
 
 }  // namespace opossum

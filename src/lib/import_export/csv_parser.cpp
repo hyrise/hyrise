@@ -16,7 +16,7 @@
 
 namespace opossum {
 
-CsvParser::CsvParser(const CsvConfig& csv_config, const bool rfc_mode) : _csv_config(csv_config), _rfc(rfc_mode) {}
+CsvParser::CsvParser(const CsvConfig& csv_config) : _csv_config(csv_config) {}
 
 std::shared_ptr<Table> CsvParser::parse(const std::string& filename) {
   const auto table = _process_meta_file(filename + _csv_config.meta_file_extension);
@@ -172,7 +172,7 @@ void CsvParser::_parse_into_chunk(string_view csv_chunk, const std::vector<size_
       auto field = csv_chunk.substr(start, end - start).to_string();
       start = end + 1;
 
-      if (!_rfc) {
+      if (!_csv_config.rfc_mode) {
         // CSV fields not following RFC 4810 might need some preprocessing
         _sanitize_field(field);
       }
