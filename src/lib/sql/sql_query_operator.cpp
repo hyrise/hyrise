@@ -9,6 +9,8 @@
 
 #include "all_parameter_variant.hpp"
 
+#include "utils/assert.hpp"
+
 namespace opossum {
 
 using hsql::SQLStatement;

@@ -9,7 +9,6 @@
 namespace opossum {
 
 class AbstractScheduler;
-class AbstractTask;
 
 /**
  * Holds the singleton instance (or the lack of one) of the currently active Scheduler

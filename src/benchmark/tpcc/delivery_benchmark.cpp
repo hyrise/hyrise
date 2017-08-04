@@ -7,6 +7,8 @@
 
 #include "benchmark/benchmark.h"
 
+#include "tpcc_base_fixture.hpp"
+
 #include "concurrency/transaction_manager.hpp"
 #include "operators/aggregate.hpp"
 #include "operators/commit_records.hpp"
@@ -18,12 +20,11 @@
 #include "operators/update.hpp"
 #include "operators/validate.hpp"
 #include "scheduler/operator_task.hpp"
-#include "types.hpp"
 
 #include "tpcc/constants.hpp"
 #include "tpcc/helper.hpp"
 
-#include "tpcc_base_fixture.cpp"
+#include "utils/helper.hpp"
 
 namespace opossum {
 
@@ -273,12 +274,12 @@ BENCHMARK_F(TPCCDeliveryBenchmark, BM_delivery)(benchmark::State& state) {
 
   // currently no warm up
 
-  int w_id = static_cast<int32_t>(_random_gen.number(0, _gen._warehouse_size - 1));
+  int w_id = static_cast<int32_t>(_random_gen.random_number(0, _gen._warehouse_size - 1));
   int d_id = 0;
   while (state.KeepRunning()) {
     auto t_context = TransactionManager::get().new_transaction_context();
     d_id = (d_id + 1) % tpcc::NUM_DISTRICTS_PER_WAREHOUSE;
-    int o_carrier_id = _random_gen.number(1, 10);
+    int o_carrier_id = _random_gen.random_number(1, 10);
     const time_t datetime = std::time(0);
     auto tasks = get_new_order_id(d_id, w_id);
     tpcc::execute_tasks_with_context(tasks, t_context);

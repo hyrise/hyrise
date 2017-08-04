@@ -129,7 +129,7 @@ TEST_F(OperatorsAggregateTest, CannotSumStringColumns) {
                                                std::vector<AggregateDefinition>{{"a", AggregateFunction::Sum}},
                                                std::vector<std::string>{std::string("a")});
 
-  EXPECT_THROW(aggregate->execute(), std::runtime_error);
+  EXPECT_THROW(aggregate->execute(), std::logic_error);
 }
 
 TEST_F(OperatorsAggregateTest, CannotAvgStringColumns) {
@@ -137,7 +137,7 @@ TEST_F(OperatorsAggregateTest, CannotAvgStringColumns) {
                                                std::vector<AggregateDefinition>{{"a", AggregateFunction::Avg}},
                                                std::vector<std::string>{std::string("a")});
 
-  EXPECT_THROW(aggregate->execute(), std::runtime_error);
+  EXPECT_THROW(aggregate->execute(), std::logic_error);
 }
 
 TEST_F(OperatorsAggregateTest, CanCountStringColumns) {
