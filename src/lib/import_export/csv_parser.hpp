@@ -9,8 +9,8 @@
 
 namespace opossum {
 
-  class Table;
-  class Chunk;
+class Table;
+class Chunk;
 
 /*
  * Creates a Table with values of the parsed csv file <filename> and the corresponding meta file
@@ -50,7 +50,8 @@ class CsvParser {
   /*
    * @param      csv_content String_view on the remaining content of the CSV.
    * @param      table       Empty table created by _process_meta_file.
-   * @param[out] field_ends  Empty vector, to be filled with positions of the field ends for one chunk found in \p csv_content.
+   * @param[out] field_ends  Empty vector, to be filled with positions of the field ends for one chunk found in \p
+   * csv_content.
    * @returns                False if \p csv_content is empty or chunk_size set to 0, True otherwise.
    */
   bool _find_fields_in_chunk(string_view csv_content, const Table& table, std::vector<size_t>& field_ends);
@@ -61,7 +62,8 @@ class CsvParser {
    * @param      table      Empty table created by _process_meta_file.
    * @param[out] chunk      Empty chunk, to be filled with fields found in \p csv_chunk.
    */
-  void _parse_into_chunk(string_view csv_chunk, const std::vector<size_t>& field_ends, const Table& table, Chunk& chunk);
+  void _parse_into_chunk(string_view csv_chunk, const std::vector<size_t>& field_ends, const Table& table,
+                         Chunk& chunk);
 
   /*
    * @param field The field that needs to be modified to be RFC 4180 compliant.

@@ -8,11 +8,11 @@
 #include <vector>
 
 #include "common.hpp"
-#include "resolve_type.hpp"
 #include "import_export/csv_converter.hpp"
+#include "resolve_type.hpp"
 #include "scheduler/job_task.hpp"
-#include "utils/assert.hpp"
 #include "storage/table.hpp"
+#include "utils/assert.hpp"
 
 namespace opossum {
 
@@ -48,8 +48,9 @@ std::shared_ptr<Table> CsvParser::parse(const std::string& filename) {
     content_view = content_view.substr(field_ends.back() + 1);
 
     // create and start parsing task to fill chunk
-    tasks.emplace_back(std::make_shared<JobTask>(
-        [this, relevant_content, field_ends, &table, &chunk]() { _parse_into_chunk(relevant_content, field_ends, *table, chunk); }));
+    tasks.emplace_back(std::make_shared<JobTask>([this, relevant_content, field_ends, &table, &chunk]() {
+      _parse_into_chunk(relevant_content, field_ends, *table, chunk);
+    }));
     tasks.back()->schedule();
   }
 
@@ -155,7 +156,7 @@ bool CsvParser::_find_fields_in_chunk(string_view csv_content, const Table& tabl
 }
 
 void CsvParser::_parse_into_chunk(string_view csv_chunk, const std::vector<size_t>& field_ends, const Table& table,
-                                 Chunk& chunk) {
+                                  Chunk& chunk) {
   // For each csv column create a CsvConverter which builds up a ValueColumn
   const auto col_count = table.col_count();
   const auto row_count = field_ends.size() / col_count;
@@ -189,7 +190,8 @@ void CsvParser::_parse_into_chunk(string_view csv_chunk, const std::vector<size_
 
 void CsvParser::_sanitize_field(std::string& field) {
   const std::string linebreak(1, _csv_config.delimiter);
-  const std::string escaped_linebreak = std::string(1, _csv_config.delimiter_escape) + std::string(1, _csv_config.delimiter);
+  const std::string escaped_linebreak =
+      std::string(1, _csv_config.delimiter_escape) + std::string(1, _csv_config.delimiter);
 
   std::string::size_type pos = 0;
   while ((pos = field.find(escaped_linebreak, pos)) != std::string::npos) {

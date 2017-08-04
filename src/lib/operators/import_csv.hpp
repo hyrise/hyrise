@@ -31,7 +31,8 @@ class ImportCsv : public AbstractReadOnlyOperator {
    * @param config      Csv configuration, e.g. delimiter, separator, etc.
    * @param tablename   Optional. Name of the table to store/look up in the StorageManager.
    */
-  explicit ImportCsv(const std::string& filename, const CsvConfig& config, const optional<std::string> tablename = nullopt);
+  explicit ImportCsv(const std::string& filename, const CsvConfig& config,
+                     const optional<std::string> tablename = nullopt);
 
   // cannot move-assign because of const members
   ImportCsv& operator=(ImportCsv&&) = delete;
