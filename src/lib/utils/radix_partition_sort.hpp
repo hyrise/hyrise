@@ -13,9 +13,9 @@ namespace opossum {
 
 template <typename T>
 struct SortedChunk {
-  SortedChunk() {}
+  SortedChunk() : values{std::make_shared<std::vector<std::pair<RowID, T>>>()} {}
 
-  std::vector<std::pair<RowID, T>> values;
+  std::shared_ptr<std::vector<std::pair<RowID, T>>> values;
 
   // Used to count the number of entries for each partition from this chunk
   std::map<uint32_t, uint32_t> partition_histogram;
@@ -67,10 +67,10 @@ class RadixPartitionSort : public ColumnVisitable {
 
   protected:
    struct SortContext : ColumnVisitableContext {
-     SortContext(ChunkID id, std::vector<std::pair<RowID, T>>& output) : chunk_id(id), sort_output(output) {}
+     SortContext(ChunkID id) : chunk_id(id) {}
 
      ChunkID chunk_id;
-     std::vector<std::pair<RowID, T>>& sort_output;
+     std::shared_ptr<std::vector<std::pair<RowID, T>>> sort_output;
    };
 
    // Input parameters
@@ -110,8 +110,8 @@ class RadixPartitionSort : public ColumnVisitable {
      if (_partition_count == 1) {
        sorted_table->partitions.resize(1);
        for (auto& sorted_chunk : sorted_input_chunks) {
-         for (auto& entry : sorted_chunk.values) {
-           sorted_table->partitions[0].values.push_back(entry);
+         for (auto& entry : *(sorted_chunk.values)) {
+           sorted_table->partitions[0].values->push_back(entry);
          }
        }
      } else {
@@ -134,7 +134,7 @@ class RadixPartitionSort : public ColumnVisitable {
            // fill histogram
            // count the number of entries for each partition_id
            // each partition corresponds to a radix
-           for (auto& entry : sorted_chunk.values) {
+           for (auto& entry : *(sorted_chunk.values)) {
              auto radix = get_radix<T>(entry.second, _partition_count - 1);
              sorted_chunk.partition_histogram[radix]++;
            }
@@ -150,14 +150,14 @@ class RadixPartitionSort : public ColumnVisitable {
 
          // prepare for parallel access later on
          for (uint32_t partition_id = 0; partition_id < _partition_count; ++partition_id) {
-           sorted_table->partitions[partition_id].values.resize(sorted_table->partition_histogram[partition_id]);
+           sorted_table->partitions[partition_id].values->resize(sorted_table->partition_histogram[partition_id]);
          }
 
          // Move each entry into its appropriate partition
          for (auto& sorted_chunk : sorted_input_chunks) {
-           for (auto& entry : sorted_chunk.values) {
+           for (auto& entry : *(sorted_chunk.values)) {
              auto radix = get_radix<T>(entry.second, _partition_count - 1);
-             sorted_table->partitions[radix].values.at(sorted_chunk.prefix[radix]++) = entry;
+             sorted_table->partitions[radix].values->at(sorted_chunk.prefix[radix]++) = entry;
            }
          }
        }
@@ -166,7 +166,7 @@ class RadixPartitionSort : public ColumnVisitable {
      // Sort each partition (right now std::sort -> but maybe can be replaced with
      // an algorithm more efficient, if subparts are already sorted [InsertionSort?!])
      for (auto& partition : sorted_table->partitions) {
-       std::sort(partition.values.begin(), partition.values.end(),
+       std::sort(partition.values->begin(), partition.values->end(),
                  [](auto& value_left, auto& value_right) { return value_left.second < value_right.second; });
      }
 
@@ -192,8 +192,9 @@ class RadixPartitionSort : public ColumnVisitable {
          jobs.push_back(std::make_shared<JobTask>([this, sorted_chunks, chunk_ids, input, column_name] {
            for (auto chunk_id : chunk_ids) {
              auto column = input->get_chunk(chunk_id).get_column(input->column_id_by_name(column_name));
-             auto context = std::make_shared<SortContext>(chunk_id, sorted_chunks->at(chunk_id).values);
+             auto context = std::make_shared<SortContext>(chunk_id);
              column->visit(*this, context);
+             sorted_chunks->at(chunk_id).values = context->sort_output;
            }
          }));
          size = 0;
@@ -211,27 +212,21 @@ class RadixPartitionSort : public ColumnVisitable {
 
      // ColumnVisitable implementations to sort concrete input chunks
    void handle_value_column(BaseColumn& column, std::shared_ptr<ColumnVisitableContext> context) override {
-     auto& value_column = dynamic_cast<ValueColumn<T>&>(column);
+     auto& value_column = static_cast<ValueColumn<T>&>(column);
      auto sort_context = std::static_pointer_cast<SortContext>(context);
-     auto& output = sort_context->sort_output;
-     output.resize(column.size());
-
-     // Copy over every entry
-     for (ChunkOffset chunk_offset{0}; chunk_offset < value_column.values().size(); chunk_offset++) {
-     RowID row_id{sort_context->chunk_id, chunk_offset};
-     output[chunk_offset] = std::pair<RowID, T>(row_id, value_column.values()[chunk_offset]);
-     }
+     sort_context->sort_output = value_column.materialize(sort_context->chunk_id, nullptr);
 
      // Sort the entries
-     std::sort(output.begin(), output.end(),
+     std::sort(sort_context->sort_output->begin(), sort_context->sort_output->end(),
      [](auto& value_left, auto& value_right) { return value_left.second < value_right.second; });
    }
 
    void handle_dictionary_column(BaseColumn& column, std::shared_ptr<ColumnVisitableContext> context) override {
      auto& dictionary_column = dynamic_cast<DictionaryColumn<T>&>(column);
      auto sort_context = std::static_pointer_cast<SortContext>(context);
-     auto& output = sort_context->sort_output;
-     output.resize(column.size());
+     sort_context->sort_output = std::make_shared<std::vector<std::pair<RowID, T>>>();
+     auto output = sort_context->sort_output;
+     output->resize(column.size());
 
      auto value_ids = dictionary_column.attribute_vector();
      auto dict = dictionary_column.dictionary();
@@ -247,7 +242,7 @@ class RadixPartitionSort : public ColumnVisitable {
      ChunkOffset chunk_offset{0};
      for (ValueID value_id{0}; value_id < dict->size(); value_id++) {
        for (auto& row_id : value_count[value_id]) {
-         output[chunk_offset] = std::pair<RowID, T>(row_id, dict->at(value_id));
+         output->at(chunk_offset) = std::pair<RowID, T>(row_id, dict->at(value_id));
          chunk_offset++;
        }
      }
@@ -261,8 +256,9 @@ class RadixPartitionSort : public ColumnVisitable {
      auto referenced_column_id = ref_column.referenced_column_id();
      auto sort_context = std::static_pointer_cast<SortContext>(context);
      auto pos_list = ref_column.pos_list();
-     auto& output = sort_context->sort_output;
-     output.resize(ref_column.size());
+     sort_context->sort_output = std::make_shared<std::vector<std::pair<RowID, T>>>();
+     auto output = sort_context->sort_output;
+     output->resize(ref_column.size());
 
      // Retrieve the columns from the referenced table so they only have to be casted once
      auto v_columns = std::vector<std::shared_ptr<ValueColumn<T>>>(referenced_table->chunk_count());
@@ -289,33 +285,33 @@ class RadixPartitionSort : public ColumnVisitable {
          ValueID value_id = d_column->attribute_vector()->get(row_id.chunk_offset);
          value = d_column->dictionary()->at(value_id);
        }
-       output[chunk_offset] = (std::pair<RowID, T>(RowID{sort_context->chunk_id, chunk_offset}, value));
+       output->at(chunk_offset) = (std::pair<RowID, T>(RowID{sort_context->chunk_id, chunk_offset}, value));
      }
 
      // Sort the values
-     std::sort(output.begin(), output.end(),
+     std::sort(output->begin(), output->end(),
                    [](auto& value_left, auto& value_right) { return value_left.second < value_right.second; });
    }
 
    T pick_sample_values(std::vector<std::map<T, uint32_t>>& sample_values, std::vector<SortedChunk<T>> partitions) {
-     auto max_value = partitions[0].values[0].second;
+     auto max_value = partitions[0].values->at(0).second;
 
      for (size_t partition_number = 0; partition_number < partitions.size(); ++partition_number) {
-       auto & values = partitions[partition_number].values;
+       auto values = partitions[partition_number].values;
 
        // Since the chunks are sorted, the maximum values are at the back of them
-       if (max_value < values.back().second) {
-         max_value = values.back().second;
+       if (max_value < values->back().second) {
+         max_value = values->back().second;
        }
 
        // get samples
-       size_t step_size = values.size() / _partition_count;
+       size_t step_size = values->size() / _partition_count;
        DebugAssert((step_size >= 1), "SortMergeJoin value_based_partitioning: step size is <= 0");
-       for (size_t pos = step_size, partition_id = 0; pos < values.size() - 1; pos += step_size, partition_id++) {
-         if (sample_values[partition_id].count(values[pos].second) == 0) {
-           sample_values[partition_id].insert(std::pair<T, uint32_t>(values[pos].second, 1));
+       for (size_t pos = step_size, partition_id = 0; pos < values->size() - 1; pos += step_size, partition_id++) {
+         if (sample_values[partition_id].count(values->at(pos).second) == 0) {
+           sample_values[partition_id].insert(std::pair<T, uint32_t>(values->at(pos).second, 1));
          } else {
-           ++(sample_values[partition_id].at(values[pos].second));
+           ++(sample_values[partition_id].at(values->at(pos).second));
          }
        }
      }
@@ -348,8 +344,11 @@ class RadixPartitionSort : public ColumnVisitable {
    }
 
   void value_based_table_partitioning(std::shared_ptr<SortedTable<T>> sort_table, std::vector<T>& split_values) {
-     std::vector<std::vector<std::pair<RowID, T>>> partitions;
+     std::vector<std::shared_ptr<std::vector<std::pair<RowID, T>>>> partitions;
      partitions.resize(_partition_count);
+     for(size_t partition = 0; partition < _partition_count; partition++) {
+       partitions[partition] = std::make_shared<std::vector<std::pair<RowID, T>>>();
+     }
 
      // for prefix computation we need to table-wide know how many entries there are for each partition
      // right now we expect an equally randomized entryset
@@ -367,7 +366,7 @@ class RadixPartitionSort : public ColumnVisitable {
        }
 
        // fill histogram
-       for (auto& entry : s_chunk.values) {
+       for (auto& entry : *(s_chunk.values)) {
          for (auto& split_value : split_values) {
            if (entry.second <= split_value) {
              s_chunk.value_histogram[split_value]++;
@@ -390,16 +389,16 @@ class RadixPartitionSort : public ColumnVisitable {
      // prepare for parallel access later on
      uint32_t i = 0;
      for (auto& split_value : split_values) {
-       partitions[i].resize(sort_table->value_histogram[split_value]);
+       partitions[i]->resize(sort_table->value_histogram[split_value]);
        ++i;
      }
 
      std::cout << "487" << std::endl;
 
      for (auto& s_chunk : sort_table->partitions) {
-       for (auto& entry : s_chunk.values) {
+       for (auto& entry : *(s_chunk.values)) {
          auto radix = get_radix<T>(entry.second, _partition_count - 1);
-         partitions[radix].at(s_chunk.prefix[radix]++) = entry;
+         partitions[radix]->at(s_chunk.prefix[radix]++) = entry;
        }
      }
 
@@ -407,13 +406,13 @@ class RadixPartitionSort : public ColumnVisitable {
 
      // Each chunk fills (parallel) partition
      for (auto& s_chunk : sort_table->partitions) {
-       for (auto& entry : s_chunk.values) {
+       for (auto& entry : *(s_chunk.values)) {
          uint32_t partition_id = 0;
          for (auto& radix : split_values) {
            if (entry.second <= radix) {
              std::cout << "s_chunk.prefix_v.size(): " << s_chunk.prefix_v.size() << std::endl;
              std::cout << "radix: " << radix << std::endl;
-             partitions[partition_id].at(s_chunk.prefix_v[radix]) = entry;
+             partitions[partition_id]->at(s_chunk.prefix_v[radix]) = entry;
              s_chunk.prefix_v[radix]++;
              partition_id++;
            }
@@ -424,7 +423,6 @@ class RadixPartitionSort : public ColumnVisitable {
      std::cout << "513" << std::endl;
 
      // move result to table
-     sort_table->partitions.clear();
      sort_table->partitions.resize(partitions.size());
      for (size_t index = 0; index < partitions.size(); ++index) {
        sort_table->partitions[index].values = partitions[index];
@@ -435,7 +433,7 @@ class RadixPartitionSort : public ColumnVisitable {
      // Sort partitions (right now std:sort -> but maybe can be replaced with
      // an algorithm more efficient, if subparts are already sorted [InsertionSort?])
      for (auto& partition : sort_table->partitions) {
-       std::sort(partition.values.begin(), partition.values.end(),
+       std::sort(partition.values->begin(), partition.values->end(),
                  [](auto& value_left, auto& value_right) { return value_left.second < value_right.second; });
      }
 
