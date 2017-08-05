@@ -27,7 +27,7 @@ class DictionaryColumnIterable
     using Dictionary = std::vector<T>;
 
    public:
-    explicit Iterator(const Dictionary & dictionary, const BaseAttributeVector * attribute_vector, size_t index)
+    explicit Iterator(const Dictionary & dictionary, const BaseAttributeVector & attribute_vector, size_t index)
         : _dictionary{dictionary}, _attribute_vector(attribute_vector), _index{index} {}
 
     Iterator& operator++() { ++_index; return *this;}
@@ -36,7 +36,7 @@ class DictionaryColumnIterable
     bool operator!=(Iterator other) const { return !(*this == other); }
 
     auto operator*() const {
-      const auto value_id = _attribute_vector->get(_index);
+      const auto value_id = _attribute_vector.get(_index);
       const auto is_null = (value_id == NULL_VALUE_ID);
 
       if (is_null)
@@ -47,63 +47,63 @@ class DictionaryColumnIterable
 
    private:
     const Dictionary & _dictionary;
-    const BaseAttributeVector * _attribute_vector;
+    const BaseAttributeVector & _attribute_vector;
     size_t _index;
   };
 
   class ReferencedIterator : public std::iterator<std::input_iterator_tag, NullableColumnValue<T>, std::ptrdiff_t, NullableColumnValue<T> *, NullableColumnValue<T>> {
    public:
     using Dictionary = std::vector<T>;
-    using ChunkOffsetIterator = std::vector<ChunkOffset>::const_iterator;
+    using ChunkOffsetsIterator = std::vector<std::pair<ChunkOffset, ChunkOffset>>::const_iterator;
 
    public:
-    explicit ReferencedIterator(const Dictionary & dictionary, const BaseAttributeVector * attribute_vector, const ChunkOffsetIterator & chunk_offset_it)
-        : _dictionary{dictionary}, _attribute_vector(attribute_vector), _chunk_offset_it(chunk_offset_it) {}
+    explicit ReferencedIterator(const Dictionary & dictionary, const BaseAttributeVector & attribute_vector, const ChunkOffsetsIterator & chunk_offsets_it)
+        : _dictionary{dictionary}, _attribute_vector(attribute_vector), _chunk_offsets_it(chunk_offsets_it) {}
 
-    ReferencedIterator& operator++() { ++_chunk_offset_it; return *this;}
+    ReferencedIterator& operator++() { ++_chunk_offsets_it; return *this;}
     ReferencedIterator operator++(int) { auto retval = *this; ++(*this); return retval; }
 
     bool operator==(ReferencedIterator other) const {
-      return (_chunk_offset_it == other._chunk_offset_it);
+      return (_chunk_offsets_it == other._chunk_offsets_it);
     }
 
     bool operator!=(ReferencedIterator other) const { return !(*this == other); }
 
     auto operator*() const {
-      const auto value_id = _attribute_vector->get(*_chunk_offset_it);
+      const auto value_id = _attribute_vector.get(_chunk_offsets_it->second);
       const auto is_null = (value_id == NULL_VALUE_ID);
 
       if (is_null)
-        return NullableColumnValue<T>{T{}, is_null, *_chunk_offset_it};
+        return NullableColumnValue<T>{T{}, is_null, _chunk_offsets_it->first};
 
-      return NullableColumnValue<T>{_dictionary[value_id], is_null, *_chunk_offset_it};
+      return NullableColumnValue<T>{_dictionary[value_id], is_null, _chunk_offsets_it->first};
     }
 
    private:
     const Dictionary & _dictionary;
     const BaseAttributeVector * _attribute_vector;
-    ChunkOffsetIterator _chunk_offset_it;
+    ChunkOffsetsIterator _chunk_offsets_it;
   };
 
   DictionaryColumnIterable(const DictionaryColumn<T> & column,
-                           std::shared_ptr<const std::vector<ChunkOffset>> chunk_offsets = nullptr)
-      : _column{column}, _chunk_offsets{chunk_offsets} {}
+                           const std::vector<std::pair<ChunkOffset, ChunkOffset>> * mapped_chunk_offsets = nullptr)
+      : _column{column}, mapped_chunk_offsets{chunk_offsets} {}
 
   template <typename Functor>
   auto execute_for_all(const Functor & func) const {
-    if (_chunk_offsets != nullptr) {
-      auto begin = ReferencedIterator(*_column.dictionary(), _column.attribute_vector().get(), _chunk_offsets->cbegin());
-      auto end = ReferencedIterator(*_column.dictionary(), _column.attribute_vector().get(), _chunk_offsets->cend());
+    if (_mapped_chunk_offsets != nullptr) {
+      auto begin = ReferencedIterator(*_column.dictionary(), *_column.attribute_vector(), _mapped_chunk_offsets->cbegin());
+      auto end = ReferencedIterator(*_column.dictionary(), *_column.attribute_vector(), _mapped_chunk_offsets->cend());
       return func(begin, end);
     }
 
-    auto begin = Iterator(*_column.dictionary(), _column.attribute_vector().get(), 0u);
-    auto end = Iterator(*_column.dictionary(), _column.attribute_vector().get(), _column.size());
+    auto begin = Iterator(*_column.dictionary(), *_column.attribute_vector(), 0u);
+    auto end = Iterator(*_column.dictionary(), *_column.attribute_vector(), _column.size());
     return func(begin, end);
   }
 
   Type type() const {
-    if (_chunk_offsets != nullptr) {
+    if (_mapped_chunk_offsets != nullptr) {
       return Type::Referenced;
     }
 
@@ -111,8 +111,8 @@ class DictionaryColumnIterable
   }
 
  private:
-  const DictionaryColumn<T> &  _column;
-  const std::shared_ptr<const std::vector<ChunkOffset>> _chunk_offsets;
+  const DictionaryColumn<T> & _column;
+  const std::vector<std::pair<ChunkOffset, ChunkOffset>> * _mapped_chunk_offsets;
 };
 
 }  // namespace opossum

@@ -3,6 +3,7 @@
 #include "tbb/concurrent_vector.h"
 
 #include <iterator>
+#include <utility>
 
 #include "storage/value_column.hpp"
 #include "column_value.hpp"
@@ -72,74 +73,74 @@ class ValueColumnIterable
   class ReferencedIterator : public std::iterator<std::input_iterator_tag, ColumnValue<T>, std::ptrdiff_t, ColumnValue<T> *, ColumnValue<T>> {
    public:
     using ValueVector = tbb::concurrent_vector<T>;
-    using ChunkOffsetIterator = std::vector<ChunkOffset>::const_iterator;
+    using ChunkOffsetsIterator = std::vector<std::pair<ChunkOffset, ChunkOffset>>::const_iterator;
 
    public:
-    explicit ReferencedIterator(const ValueVector & values, const ChunkOffsetIterator & chunk_offset_it)
-        : _values{values}, _chunk_offset_it(chunk_offset_it) {}
+    explicit ReferencedIterator(const ValueVector & values, const ChunkOffsetsIterator & chunk_offsets_it)
+        : _values{values}, _chunk_offsets_it(chunk_offset_it) {}
 
-    ReferencedIterator& operator++() { ++_chunk_offset_it; return *this;}
+    ReferencedIterator& operator++() { ++_chunk_offsets_it; return *this;}
     ReferencedIterator operator++(int) { auto retval = *this; ++(*this); return retval; }
 
     bool operator==(ReferencedIterator other) const {
-      return (_chunk_offset_it == other._chunk_offset_it) && (&_values == &other._values);
+      return (_chunk_offsets_it == other._chunk_offsets_it) && (&_values == &other._values);
     }
 
     bool operator!=(ReferencedIterator other) const { return !(*this == other); }
 
     auto operator*() const {
-      return ColumnValue<T>{_values[*_chunk_offset_it], *_chunk_offset_it};
+      return ColumnValue<T>{_values[_chunk_offsets_it->second], _chunk_offsets_it->first};
     }
 
    private:
     const ValueVector & _values;
-    ChunkOffsetIterator _chunk_offset_it;
+    ChunkOffsetsIterator _chunk_offsets_it;
   };
 
   class NullableReferencedIterator : public std::iterator<std::input_iterator_tag, NullableColumnValue<T>, std::ptrdiff_t, NullableColumnValue<T> *, NullableColumnValue<T>> {
    public:
     using ValueVector = tbb::concurrent_vector<T>;
     using NullValueVector = tbb::concurrent_vector<bool>;
-    using ChunkOffsetIterator = std::vector<ChunkOffset>::const_iterator;
+    using ChunkOffsetsIterator = std::vector<std::pair<ChunkOffset, ChunkOffset>>::const_iterator;
 
    public:
-    explicit NullableReferencedIterator(const ValueVector & values, const NullValueVector & null_values, const ChunkOffsetIterator & chunk_offset_it)
-        : _values{values}, _null_values{null_values}, _chunk_offset_it(chunk_offset_it) {}
+    explicit NullableReferencedIterator(const ValueVector & values, const NullValueVector & null_values, const ChunkOffsetsIterator & chunk_offsets_it)
+        : _values{values}, _null_values{null_values}, _chunk_offsets_it(chunk_offsets_it) {}
 
-    NullableReferencedIterator& operator++() { ++_chunk_offset_it; return *this;}
+    NullableReferencedIterator& operator++() { ++_chunk_offsets_it; return *this;}
     NullableReferencedIterator operator++(int) { auto retval = *this; ++(*this); return retval; }
 
     bool operator==(NullableReferencedIterator other) const {
-      return (_chunk_offset_it == other._chunk_offset_it) && (&_values == &other._values);
+      return (_chunk_offsets_it == other._chunk_offsets_it) && (&_values == &other._values);
     }
 
     bool operator!=(NullableReferencedIterator other) const { return !(*this == other); }
 
     auto operator*() const {
-      return NullableColumnValue<T>{_values[*_chunk_offset_it], _null_values[*_chunk_offset_it], *_chunk_offset_it};
+      return NullableColumnValue<T>{_values[_chunk_offsets_it->second], _null_values[_chunk_offsets_it->second], _chunk_offsets_it->first};
     }
 
    private:
     const ValueVector & _values;
     const NullValueVector & _null_values;
-    ChunkOffsetIterator _chunk_offset_it;
+    ChunkOffsetIterator _chunk_offsets_it;
   };
 
   ValueColumnIterable(const ValueColumn<T> & column,
-                      std::shared_ptr<const std::vector<ChunkOffset>> chunk_offsets = nullptr)
-      : _column{column}, _chunk_offsets{chunk_offsets} {}
+                      const std::vector<ChunkOffset>> * mapped_chunk_offsets)
+      : _column{column}, _mapped_chunk_offsets{mapped_chunk_offsets} {}
 
   template <typename Functor>
   auto execute_for_all(const Functor & func) const {
-    if (_column.is_nullable() && _chunk_offsets != nullptr) {
-      auto begin = NullableReferencedIterator(_column.values(), _column.null_values(), _chunk_offsets->cbegin());
-      auto end = NullableReferencedIterator(_column.values(), _column.null_values(), _chunk_offsets->cend());
+    if (_column.is_nullable() && _mapped_chunk_offsets != nullptr) {
+      auto begin = NullableReferencedIterator(_column.values(), _column.null_values(), _mapped_chunk_offsets->cbegin());
+      auto end = NullableReferencedIterator(_column.values(), _column.null_values(), _mapped_chunk_offsets->cend());
       return func(begin, end);
     }
 
-    if (_chunk_offsets != nullptr) {
-      auto begin = ReferencedIterator(_column.values(), _chunk_offsets->cbegin());
-      auto end = ReferencedIterator(_column.values(), _chunk_offsets->cend());
+    if (_mapped_chunk_offsets != nullptr) {
+      auto begin = ReferencedIterator(_column.values(), _mapped_chunk_offsets->cbegin());
+      auto end = ReferencedIterator(_column.values(), _mapped_chunk_offsets->cend());
       return func(begin, end);
     }
 
@@ -155,11 +156,11 @@ class ValueColumnIterable
   }
 
   Type type() const {
-    if (_column.is_nullable() && _chunk_offsets != nullptr) {
+    if (_column.is_nullable() && _mapped_chunk_offsets != nullptr) {
       return Type::NullableReferenced;
     }
 
-    if (_chunk_offsets != nullptr) {
+    if (_mapped_chunk_offsets != nullptr) {
       return Type::Referenced;
     }
 
@@ -172,7 +173,7 @@ class ValueColumnIterable
 
  private:
   const ValueColumn<T> & _column;
-  const std::shared_ptr<const std::vector<ChunkOffset>> _chunk_offsets;
+  const std::vector<std::pair<ChunkOffset, ChunkOffset>> * _mapped_chunk_offsets;
 };
 
 }  // namespace opossum
