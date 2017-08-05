@@ -124,8 +124,8 @@ set(
     operators/rollback_records.hpp
     operators/sort.cpp
     operators/sort.hpp
-    operators/new_table_scan.cpp
-    operators/new_table_scan.hpp
+    operators/table_scan.cpp
+    operators/table_scan.hpp
     operators/table_wrapper.cpp
     operators/table_wrapper.hpp
     operators/termfactory.hpp
