@@ -12,10 +12,19 @@
 namespace opossum {
 
 template <typename T>
-struct SortedChunk {
-  SortedChunk() : values{std::make_shared<std::vector<std::pair<RowID, T>>>()} {}
+using MaterializedValue = std::pair<RowID, T>;
 
-  std::shared_ptr<std::vector<std::pair<RowID, T>>> values;
+template <typename T>
+using MaterializedChunk = std::vector<MaterializedValue<T>>;
+
+template <typename T>
+using MaterializedTable = std::vector<std::shared_ptr<MaterializedChunk<T>>>;
+
+template <typename T>
+struct SortedChunk {
+  SortedChunk() : values{std::make_shared<MaterializedChunk<T>>()} {}
+
+  std::shared_ptr<MaterializedChunk<T>> values;
 
   // Used to count the number of entries for each partition from this chunk
   std::map<uint32_t, uint32_t> partition_histogram;
@@ -34,7 +43,7 @@ struct SortedTable {
   // used to count the number of entries for each partition from the whole table
   std::map<uint32_t, uint32_t> partition_histogram;
   std::map<T, uint32_t> value_histogram;
- };
+};
 
 template <typename T>
 class RadixPartitionSort : public ColumnVisitable {
@@ -70,7 +79,7 @@ class RadixPartitionSort : public ColumnVisitable {
      SortContext(ChunkID id) : chunk_id(id) {}
 
      ChunkID chunk_id;
-     std::shared_ptr<std::vector<std::pair<RowID, T>>> sort_output;
+     std::shared_ptr<MaterializedChunk<T>> sort_output;
    };
 
    // Input parameters
@@ -101,16 +110,15 @@ class RadixPartitionSort : public ColumnVisitable {
 
      // Sort functions
    std::shared_ptr<SortedTable<T>> sort_table(std::shared_ptr<const Table> input, const std::string& column_name) {
-     auto sorted_input_chunks_ptr = sort_input_chunks(input, column_name);
-     auto& sorted_input_chunks = *sorted_input_chunks_ptr;
+     auto sorted_input_chunks = sort_input_chunks(input, column_name);
      auto sorted_table = std::make_shared<SortedTable<T>>();
 
      DebugAssert((_partition_count >= 1), "_partition_count is < 1");
 
      if (_partition_count == 1) {
        sorted_table->partitions.resize(1);
-       for (auto& sorted_chunk : sorted_input_chunks) {
-         for (auto& entry : *(sorted_chunk.values)) {
+       for (auto& sorted_chunk : *sorted_input_chunks) {
+         for (auto& entry : *sorted_chunk.values) {
            sorted_table->partitions[0].values->push_back(entry);
          }
        }
@@ -125,7 +133,7 @@ class RadixPartitionSort : public ColumnVisitable {
          }
 
          // Each chunk should prepare additional data to enable partitioning
-         for (auto& sorted_chunk : sorted_input_chunks) {
+         for (auto& sorted_chunk : *sorted_input_chunks) {
            for (uint32_t partition_id = 0; partition_id < _partition_count; partition_id++) {
              sorted_chunk.partition_histogram.insert(std::pair<uint32_t, uint32_t>(partition_id, 0));
              sorted_chunk.prefix.insert(std::pair<uint32_t, uint32_t>(partition_id, 0));
@@ -134,14 +142,14 @@ class RadixPartitionSort : public ColumnVisitable {
            // fill histogram
            // count the number of entries for each partition_id
            // each partition corresponds to a radix
-           for (auto& entry : *(sorted_chunk.values)) {
+           for (auto& entry : *sorted_chunk.values) {
              auto radix = get_radix<T>(entry.second, _partition_count - 1);
              sorted_chunk.partition_histogram[radix]++;
            }
          }
 
          // Each chunk need to sequentially fill _prefix map to actually fill partition of tables in parallel
-         for (auto& sorted_chunk : sorted_input_chunks) {
+         for (auto& sorted_chunk : *sorted_input_chunks) {
            for (uint32_t partition_id = 0; partition_id < _partition_count; ++partition_id) {
              sorted_chunk.prefix[partition_id] = sorted_table->partition_histogram[partition_id];
              sorted_table->partition_histogram[partition_id] += sorted_chunk.partition_histogram[partition_id];
@@ -154,8 +162,8 @@ class RadixPartitionSort : public ColumnVisitable {
          }
 
          // Move each entry into its appropriate partition
-         for (auto& sorted_chunk : sorted_input_chunks) {
-           for (auto& entry : *(sorted_chunk.values)) {
+         for (auto& sorted_chunk : *sorted_input_chunks) {
+           for (auto& entry : *sorted_chunk.values) {
              auto radix = get_radix<T>(entry.second, _partition_count - 1);
              sorted_table->partitions[radix].values->at(sorted_chunk.prefix[radix]++) = entry;
            }
@@ -224,7 +232,7 @@ class RadixPartitionSort : public ColumnVisitable {
    void handle_dictionary_column(BaseColumn& column, std::shared_ptr<ColumnVisitableContext> context) override {
      auto& dictionary_column = dynamic_cast<DictionaryColumn<T>&>(column);
      auto sort_context = std::static_pointer_cast<SortContext>(context);
-     sort_context->sort_output = std::make_shared<std::vector<std::pair<RowID, T>>>();
+     sort_context->sort_output = std::make_shared<MaterializedChunk<T>>();
      auto output = sort_context->sort_output;
      output->resize(column.size());
 
@@ -243,7 +251,7 @@ class RadixPartitionSort : public ColumnVisitable {
      ChunkOffset chunk_offset{0};
      for (ValueID value_id{0}; value_id < dict->size(); value_id++) {
        for (auto& row_id : value_count[value_id]) {
-         output->at(chunk_offset) = std::pair<RowID, T>(row_id, dict->at(value_id));
+         output->at(chunk_offset) = MaterializedValue<T>(row_id, dict->at(value_id));
          chunk_offset++;
        }
      }
@@ -258,7 +266,7 @@ class RadixPartitionSort : public ColumnVisitable {
      auto referenced_column_id = ref_column.referenced_column_id();
      auto sort_context = std::static_pointer_cast<SortContext>(context);
      auto pos_list = ref_column.pos_list();
-     sort_context->sort_output = std::make_shared<std::vector<std::pair<RowID, T>>>();
+     sort_context->sort_output = std::make_shared<MaterializedChunk<T>>();
      auto output = sort_context->sort_output;
      output->resize(ref_column.size());
 
@@ -287,7 +295,7 @@ class RadixPartitionSort : public ColumnVisitable {
          ValueID value_id = d_column->attribute_vector()->get(row_id.chunk_offset);
          value = d_column->dictionary()->at(value_id);
        }
-       output->at(chunk_offset) = (std::pair<RowID, T>(RowID{sort_context->chunk_id, chunk_offset}, value));
+       output->at(chunk_offset) = (MaterializedValue<T>(RowID{sort_context->chunk_id, chunk_offset}, value));
      }
 
      // Sort the values
@@ -346,13 +354,13 @@ class RadixPartitionSort : public ColumnVisitable {
    }
 
   void value_based_table_partitioning(std::shared_ptr<SortedTable<T>> sort_table, std::vector<T>& split_values) {
-     std::vector<std::shared_ptr<std::vector<std::pair<RowID, T>>>> partitions;
+     MaterializedTable<T> partitions;
      partitions.resize(_partition_count);
 
      std::cout << "352" << std::endl;
 
      for(size_t partition = 0; partition < _partition_count; partition++) {
-       partitions[partition] = std::make_shared<std::vector<std::pair<RowID, T>>>();
+       partitions[partition] = std::make_shared<MaterializedChunk<T>>();
      }
 
      // for prefix computation we need to table-wide know how many entries there are for each partition
