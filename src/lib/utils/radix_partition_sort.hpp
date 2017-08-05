@@ -238,6 +238,7 @@ class RadixPartitionSort : public ColumnVisitable {
        value_count[value_ids->get(chunk_offset)].push_back(RowID{sort_context->chunk_id, chunk_offset});
      }
 
+     //std::cout << "241" << std::endl;
      // Append the rows to the sorted chunk
      ChunkOffset chunk_offset{0};
      for (ValueID value_id{0}; value_id < dict->size(); value_id++) {
@@ -246,6 +247,7 @@ class RadixPartitionSort : public ColumnVisitable {
          chunk_offset++;
        }
      }
+     //std::cout << "249" << std::endl;
    }
 
      /**
@@ -346,6 +348,9 @@ class RadixPartitionSort : public ColumnVisitable {
   void value_based_table_partitioning(std::shared_ptr<SortedTable<T>> sort_table, std::vector<T>& split_values) {
      std::vector<std::shared_ptr<std::vector<std::pair<RowID, T>>>> partitions;
      partitions.resize(_partition_count);
+
+     std::cout << "352" << std::endl;
+
      for(size_t partition = 0; partition < _partition_count; partition++) {
        partitions[partition] = std::make_shared<std::vector<std::pair<RowID, T>>>();
      }
@@ -356,7 +361,7 @@ class RadixPartitionSort : public ColumnVisitable {
        sort_table->value_histogram.insert(std::pair<T, uint32_t>(value, 0));
      }
 
-     std::cout << "450" << std::endl;
+     std::cout << "364" << std::endl;
 
      // Each chunk should prepare additional data to enable partitioning
      for (auto& s_chunk : sort_table->partitions) {
@@ -376,7 +381,7 @@ class RadixPartitionSort : public ColumnVisitable {
        }
      }
 
-     std::cout << "470" << std::endl;
+     std::cout << "384" << std::endl;
 
      // Each chunk need to sequentially fill _prefix map to actually fill partition of tables in parallel
      for (auto& s_chunk : sort_table->partitions) {
@@ -393,7 +398,7 @@ class RadixPartitionSort : public ColumnVisitable {
        ++i;
      }
 
-     std::cout << "487" << std::endl;
+     std::cout << "401" << std::endl;
 
      for (auto& s_chunk : sort_table->partitions) {
        for (auto& entry : *(s_chunk.values)) {
@@ -402,7 +407,7 @@ class RadixPartitionSort : public ColumnVisitable {
        }
      }
 
-     std::cout << "496" << std::endl;
+     std::cout << "410" << std::endl;
 
      // Each chunk fills (parallel) partition
      for (auto& s_chunk : sort_table->partitions) {
@@ -420,7 +425,7 @@ class RadixPartitionSort : public ColumnVisitable {
        }
      }
 
-     std::cout << "513" << std::endl;
+     std::cout << "428" << std::endl;
 
      // move result to table
      sort_table->partitions.resize(partitions.size());
@@ -428,7 +433,7 @@ class RadixPartitionSort : public ColumnVisitable {
        sort_table->partitions[index].values = partitions[index];
      }
 
-     std::cout << "522" << std::endl;
+     std::cout << "436" << std::endl;
 
      // Sort partitions (right now std:sort -> but maybe can be replaced with
      // an algorithm more efficient, if subparts are already sorted [InsertionSort?])
@@ -437,7 +442,7 @@ class RadixPartitionSort : public ColumnVisitable {
                  [](auto& value_left, auto& value_right) { return value_left.second < value_right.second; });
      }
 
-     std::cout << "531" << std::endl;
+     std::cout << "445" << std::endl;
    }
 
 
@@ -450,11 +455,12 @@ class RadixPartitionSort : public ColumnVisitable {
      _sorted_left_table = sort_table(_input_table_left, _left_column_name);
      _sorted_right_table = sort_table(_input_table_right, _right_column_name);
 
-     // std::cout << "Table sorting ran through" << std::endl;
+     std::cout << "Table sorting ran through" << std::endl;
 
      if (_op != "=" && _partition_count > 1) {
+       //std::cout << "entering value based partitioning..." << std::endl;
        value_based_partitioning();
-       std::cout << "value based partitioning ran through" << std::endl;
+       //std::cout << "value based partitioning ran through" << std::endl;
      }
    }
 

@@ -247,9 +247,13 @@ class SortMergeJoin::SortMergeJoinImpl : public AbstractJoinOperatorImpl {
   * A run is a series of the same value.
   **/
   size_t _run_length(size_t start_index, std::shared_ptr<std::vector<std::pair<RowID, T>>> values) {
+    if (start_index >= values->size()) {
+      return 0;
+    }
+
     auto& value = values->at(start_index).second;
-    size_t offset = 1u;
-    while (start_index + offset < values->size() && value == values->at(start_index + offset).second) {
+    size_t offset = 1;
+    while (start_index + offset < values->size() && values->at(start_index + offset).second  == value) {
       offset++;
     }
 
@@ -321,7 +325,7 @@ class SortMergeJoin::SortMergeJoinImpl : public AbstractJoinOperatorImpl {
 
     // Parallel join for each partition
     for (size_t partition_number = 0; partition_number < _partition_count; ++partition_number) {
-      jobs.push_back(std::make_shared<JobTask>([this, partition_number]{
+      jobs.push_back(std::make_shared<JobTask>([this, partition_number] {
         this->_join_partition(partition_number);
       }));
       jobs.back()->schedule();
