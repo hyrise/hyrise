@@ -11,7 +11,6 @@
 
 #include "../../lib/operators/abstract_read_only_operator.hpp"
 #include "../../lib/operators/table_scan.hpp"
-#include "../../lib/operators/new_table_scan.hpp"
 #include "../../lib/operators/table_wrapper.hpp"
 #include "../../lib/storage/dictionary_compression.hpp"
 #include "../../lib/storage/table.hpp"
@@ -165,15 +164,6 @@ TEST_F(OperatorsTableScanTest, SingleScanReturnsCorrectRowCount) {
   EXPECT_TABLE_EQ(scan->get_output(), expected_result);
 }
 
-TEST_F(OperatorsTableScanTest, SingleScanReturnsCorrectRowCountNew) {
-  std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_float_filtered2.tbl", 1);
-
-  auto scan = std::make_shared<NewTableScan>(_table_wrapper, ColumnName("a"), ScanType::OpGreaterThanEquals, 1234);
-  scan->execute();
-
-  EXPECT_TABLE_EQ(scan->get_output(), expected_result);
-}
-
 TEST_F(OperatorsTableScanTest, ValueIsNullThrowsException) {
   if (!IS_DEBUG) return;
   auto table_scan = std::make_shared<TableScan>(_table_wrapper, ColumnName("a"), ScanType::OpGreaterThanEquals, NULL_VALUE);
@@ -238,18 +228,6 @@ TEST_F(OperatorsTableScanTest, ScanOnReferenceColumnWithNullValues) {
   scan_1->execute();
 
   auto scan_2 = std::make_shared<TableScan>(scan_1, ColumnName("a"), ScanType::OpGreaterThan, 200);
-  scan_2->execute();
-
-  EXPECT_TABLE_EQ(scan_2->get_output(), expected_result);
-}
-
-TEST_F(OperatorsTableScanTest, ScanOnReferenceColumnWithNullValuesNew) {
-  std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_float_with_null_filtered.tbl", 2);
-
-  auto scan_1 = std::make_shared<NewTableScan>(_table_wrapper_null, ColumnName{"a"}, ScanType::OpGreaterThan, 0);
-  scan_1->execute();
-
-  auto scan_2 = std::make_shared<NewTableScan>(scan_1, ColumnName("a"), ScanType::OpGreaterThan, 200);
   scan_2->execute();
 
   EXPECT_TABLE_EQ(scan_2->get_output(), expected_result);
@@ -332,22 +310,6 @@ TEST_F(OperatorsTableScanTest, ScanWithColumn) {
   std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_int_int_column_parameter.tbl", 1);
 
   auto scan = std::make_shared<TableScan>(_table_wrapper_int3, ColumnName("b"), ScanType::OpEquals, ColumnName("a"));
-  scan->execute();
-  EXPECT_TABLE_EQ(scan->get_output(), expected_result);
-}
-
-TEST_F(OperatorsTableScanTest, ScanWithColumnNew) {
-  std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_int_int_column_parameter.tbl", 1);
-
-  auto scan = std::make_shared<NewTableScan>(_table_wrapper_int3, ColumnName("b"), ScanType::OpEquals, ColumnName("a"));
-  scan->execute();
-  EXPECT_TABLE_EQ(scan->get_output(), expected_result);
-}
-
-TEST_F(OperatorsTableScanTest, ScanWithColumnDifferentTypeNew) {
-  std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_float_column_parameter_filtered.tbl", 1);
-
-  auto scan = std::make_shared<NewTableScan>(_table_wrapper_int_float_part_dict, ColumnName("a"), ScanType::OpGreaterThan, ColumnName("b"));
   scan->execute();
   EXPECT_TABLE_EQ(scan->get_output(), expected_result);
 }

@@ -1,4 +1,4 @@
-#include "new_table_scan.hpp"
+#include "table_scan.hpp"
 
 #include <unordered_map>
 
@@ -123,8 +123,8 @@ class DataColumnScan : public AbstractScan {
   const AllTypeVariant _right_value;
 };
 
-// 1 data column (dictionary, value)
-class ColumnScan : public AbstractScan, public ColumnVisitable {
+// 1 data column
+class SingleColumnScan : public AbstractScan, public ColumnVisitable {
  public:
   struct Context : public ColumnVisitableContext {
     Context(const ChunkID chunk_id, PosList & matches_out) : _chunk_id{chunk_id}, _matches_out{matches_out}{}
@@ -139,7 +139,7 @@ class ColumnScan : public AbstractScan, public ColumnVisitable {
   };
 
  public:
-  ColumnScan(std::shared_ptr<const Table> in_table, const ScanType & scan_type,
+  SingleColumnScan(std::shared_ptr<const Table> in_table, const ScanType & scan_type,
              const ColumnID left_column_id, const AllTypeVariant & right_value)
       : AbstractScan{in_table, scan_type}, _left_column_id{left_column_id}, _right_value{right_value} {}
 
@@ -528,25 +528,25 @@ class ReferenceColumnComparisonScan : public AbstractScan {
 };
 
 
-NewTableScan::NewTableScan(const std::shared_ptr<AbstractOperator> in, const std::string &left_column_name,
+TableScan::TableScan(const std::shared_ptr<AbstractOperator> in, const std::string &left_column_name,
                            const ScanType scan_type, const AllParameterVariant right_parameter,
                            const optional<AllTypeVariant> right_value2)
     : AbstractReadOnlyOperator{in}, _left_column_name{left_column_name}, _scan_type{scan_type},
       _right_parameter{right_parameter}, _right_value2{right_value2} {}
 
-NewTableScan::~NewTableScan() = default;
+TableScan::~TableScan() = default;
 
-const std::string NewTableScan::name() const { return "NewTableScan"; }
+const std::string TableScan::name() const { return "TableScan"; }
 
-uint8_t NewTableScan::num_in_tables() const { return 1; }
+uint8_t TableScan::num_in_tables() const { return 1; }
 
-uint8_t NewTableScan::num_out_tables() const { return 1; }
+uint8_t TableScan::num_out_tables() const { return 1; }
 
-std::shared_ptr<AbstractOperator> NewTableScan::recreate(const std::vector<AllParameterVariant> &args) const {
+std::shared_ptr<AbstractOperator> TableScan::recreate(const std::vector<AllParameterVariant> &args) const {
   return nullptr;
 }
 
-std::shared_ptr<const Table> NewTableScan::on_execute()
+std::shared_ptr<const Table> TableScan::on_execute()
 {
   _in_table = input_table_left();
 
@@ -616,7 +616,7 @@ std::shared_ptr<const Table> NewTableScan::on_execute()
 return _output_table;
 }
 
-void NewTableScan::init_scan()
+void TableScan::init_scan()
 {
   const auto left_column_id = _in_table->column_id_by_name(_left_column_name);
 
@@ -647,7 +647,7 @@ void NewTableScan::init_scan()
   }
 }
 
-void NewTableScan::init_output_table()
+void TableScan::init_output_table()
 {
   _output_table = std::make_shared<Table>();
 

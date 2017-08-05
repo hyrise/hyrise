@@ -27,13 +27,13 @@ namespace opossum {
 
 class AbstractScan;
 
-class NewTableScan : public AbstractReadOnlyOperator {
+class TableScan : public AbstractReadOnlyOperator {
  public:
-  NewTableScan(const std::shared_ptr<AbstractOperator> in, const std::string &left_column_name,
+  TableScan(const std::shared_ptr<AbstractOperator> in, const std::string &left_column_name,
                const ScanType scan_type, const AllParameterVariant right_parameter,
                const optional<AllTypeVariant> right_value2 = nullopt);
 
-  ~NewTableScan();
+  ~TableScan();
 
   const std::string name() const override;
   uint8_t num_in_tables() const override;
