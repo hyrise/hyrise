@@ -69,13 +69,13 @@ class AttributeVectorIterable
   template <typename Functor>
   auto execute_for_all(const Functor & func) const {
     if (_mapped_chunk_offsets != nullptr) {
-      auto begin = ReferencedIterator(*_attribute_vector, _mapped_chunk_offsets->cbegin());
-      auto end = ReferencedIterator(*_attribute_vector, _mapped_chunk_offsets->cend());
+      auto begin = ReferencedIterator(_attribute_vector, _mapped_chunk_offsets->cbegin());
+      auto end = ReferencedIterator(_attribute_vector, _mapped_chunk_offsets->cend());
       return func(begin, end);
     }
 
-    auto begin = Iterator(*_attribute_vector, 0u);
-    auto end = Iterator(*_attribute_vector, _attribute_vector.size());
+    auto begin = Iterator(_attribute_vector, 0u);
+    auto end = Iterator(_attribute_vector, _attribute_vector.size());
     return func(begin, end);
   }
 

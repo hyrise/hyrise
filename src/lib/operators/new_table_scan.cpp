@@ -5,6 +5,7 @@
 #include <boost/hana/type.hpp>
 #include <boost/hana/or.hpp>
 
+#include "storage/iterables/attribute_vector_iterable.hpp"
 #include "storage/iterables/value_column_iterable.hpp"
 #include "storage/iterables/dictionary_column_iterable.hpp"
 #include "storage/iterables/reference_column_iterable.hpp"
@@ -33,16 +34,14 @@ struct Scan {
 
   template <typename LeftIterator, typename RightIterator, typename Comparator>
   void operator()(const Comparator & comparator, LeftIterator left_it, LeftIterator left_end, RightIterator right_it) {
-    // TODO(mjendruk): use correct chunk offset here!
-    auto chunk_offset = ChunkOffset{0u};
-    for (; left_it != left_end; ++left_it, ++right_it, ++chunk_offset) {
+    for (; left_it != left_end; ++left_it, ++right_it) {
       const auto left = *left_it;
       const auto right = *right_it;
       
       if (left.is_null() || right.is_null()) continue;
 
       if (comparator(left.value(), right.value())) {
-        _matches_out.push_back(RowID{_chunk_id, chunk_offset});
+        _matches_out.push_back(RowID{_chunk_id, left.chunk_offset()});
       }
     }
   }
@@ -73,6 +72,15 @@ class AbstractScan {
     left_iterable.execute_for_all([&] (auto left_it, auto left_end) {
       right_iterable.execute_for_all([&] (auto right_it, auto right_end) {
         Scan{chunk_id, matches_out}(_scan_type, left_it, left_end, right_it);
+      });
+    });
+  }
+  
+  template <typename LeftIterable, typename RightIterable, typename Comparator>
+  void _scan(const Comparator & comparator, LeftIterable & left_iterable, RightIterable & right_iterable, const ChunkID chunk_id, PosList & matches_out) {
+    left_iterable.execute_for_all([&] (auto left_it, auto left_end) {
+      right_iterable.execute_for_all([&] (auto right_it, auto right_end) {
+        Scan{chunk_id, matches_out}(comparator, left_it, left_end, right_it);
       });
     });
   }
@@ -119,10 +127,10 @@ class DataColumnScan : public AbstractScan {
 class ColumnScan : public AbstractScan, public ColumnVisitable {
  public:
   struct Context : public ColumnVisitableContext {
-    Context(const ChunkID chunk_id, PosList & matches_out) : _matches_out{matches_out}, _chunk_id{chunk_id} {}
+    Context(const ChunkID chunk_id, PosList & matches_out) : _chunk_id{chunk_id}, _matches_out{matches_out}{}
 
-    Context(const ChunkID chunk_id, PosList & matches_out, std::vector<std::pair<ChunkOffset, ChunkOffset>> mapped_chunk_offsets)
-        : _matches_out{matches_out}, _chunk_id{chunk_id}, _mapped_chunk_offsets{mapped_chunk_offsets} {}
+    Context(const ChunkID chunk_id, PosList & matches_out, std::unique_ptr<std::vector<std::pair<ChunkOffset, ChunkOffset>>> mapped_chunk_offsets)
+        : _chunk_id{chunk_id}, _matches_out{matches_out}, _mapped_chunk_offsets{std::move(mapped_chunk_offsets)} {}
 
     const ChunkID _chunk_id;
     PosList & _matches_out;
@@ -145,7 +153,7 @@ class ColumnScan : public AbstractScan, public ColumnVisitable {
 
     auto context = std::make_shared<Context>(chunk_id, matches_out);
 
-    left_column->visit(*this, context)
+    left_column->visit(*this, context);
 
     return std::move(context->_matches_out);
   }
@@ -158,19 +166,19 @@ class ColumnScan : public AbstractScan, public ColumnVisitable {
     resolve_type(left_column_type, [&] (auto type) {
       using Type = typename decltype(type)::type;
 
-      auto left_column = static_cast<ValueColumn<Type> &>(base_column);
+      auto & left_column = static_cast<ValueColumn<Type> &>(base_column);
 
-      auto left_column_iterable = _create_iterable_from_column(left_column, context->_mapped_chunk_offsets->get());
+      auto left_column_iterable = _create_iterable_from_column(left_column, context->_mapped_chunk_offsets.get());
       auto right_value_iterable = ConstantValueIterable<Type>{_right_value};
 
-      _scan(left_column_iterable, right_value_iterable, chunk_id, context->_matches_out);
+      _scan(left_column_iterable, right_value_iterable, context->_chunk_id, context->_matches_out);
     });
   }
 
-  void handle_dictionary_column(BaseColumn &base_column, std::shared_ptr<ColumnVisitableContext> context) override {
+  void handle_dictionary_column(BaseColumn &base_column, std::shared_ptr<ColumnVisitableContext> base_context) override {
     auto context = std::static_pointer_cast<Context>(base_context);
     auto & matches_out = context->_matches_out;
-    auto left_column = static_cast<const UntypedDictionaryColumn &>(base_column);
+    auto & left_column = static_cast<const UntypedDictionaryColumn &>(base_column);
 
     // TODO(mjendruk): Find a good heuristic for when simply scanning column is faster (dictionary size -> attribute vector size)
 
@@ -206,14 +214,14 @@ class ColumnScan : public AbstractScan, public ColumnVisitable {
     if (_right_value_matches_all(left_column, search_valud_id)) {
       const auto & attribute_vector = *left_column.attribute_vector();
 
-      auto attribute_vector_iterable = AttributeVectorIterable{attribute_vector, context->_mapped_chunk_offsets->get()};
+      auto attribute_vector_iterable = AttributeVectorIterable{attribute_vector, context->_mapped_chunk_offsets.get()};
 
       attribute_vector_iterable.execute_for_all([&] (auto left_it, auto left_end) {
         for (; left_it != left_end; ++left_it) {
           const auto left = *left_it;
           
           if (left.is_null()) continue;
-          matches_out.push_back(RowID{context->_chunk_id, left.chunk_offset});
+          matches_out.push_back(RowID{context->_chunk_id, left.chunk_offset()});
         }
       });
 
@@ -226,7 +234,7 @@ class ColumnScan : public AbstractScan, public ColumnVisitable {
 
     const auto & attribute_vector = *left_column.attribute_vector();
 
-    auto attribute_vector_iterable = AttributeVectorIterable{attribute_vector, context->_mapped_chunk_offsets->get()};
+    auto attribute_vector_iterable = AttributeVectorIterable{attribute_vector, context->_mapped_chunk_offsets.get()};
     auto constant_value_iterable = ConstantValueIterable<ValueID>{search_valud_id};
 
     _resolve_scan_type([&] (auto comparator) {
@@ -236,7 +244,7 @@ class ColumnScan : public AbstractScan, public ColumnVisitable {
 
   void handle_reference_column(ReferenceColumn &left_column, std::shared_ptr<ColumnVisitableContext> base_context) override {
     auto context = std::static_pointer_cast<Context>(base_context);
-    const ChunkID chunk_id = context->chunk_id;
+    const ChunkID chunk_id = context->_chunk_id;
     auto & matches_out = context->_matches_out;
 
     // TODO(mjendruk): Find a good estimates for when it’s better simply iterate over the column
@@ -368,14 +376,16 @@ class ColumnScan : public AbstractScan, public ColumnVisitable {
    * @{
    */
 
-  auto _split_position_list_by_chunk_id(const PosList & pos_list) {
-    auto chunk_offsets_by_chunk_id = std::unordered_map<ChunkID, std::vector<std::pair<ChunkOffset, ChunkOffset>>, std::hash<decltype(ChunkID().t)>>{};
+  using ChunkOffsetsByChunkID = std::unordered_map<ChunkID, std::vector<std::pair<ChunkOffset, ChunkOffset>>, std::hash<decltype(ChunkID().t)>>;
+  
+  ChunkOffsetsByChunkID _split_position_list_by_chunk_id(const PosList & pos_list) {
+    auto chunk_offsets_by_chunk_id = ChunkOffsetsByChunkID{};
 
     for (auto chunk_offset = 0u; chunk_offset < pos_list.size(); ++chunk_offset) {
       const auto row_id = pos_list[chunk_offset];
 
       auto & mapped_chunk_offsets = chunk_offsets_by_chunk_id[row_id.chunk_id];
-      mapped_chunk_offsets->emplace_back(chunk_offset, row_id.chunk_offset);
+      mapped_chunk_offsets.emplace_back(chunk_offset, row_id.chunk_offset);
     }
 
     return chunk_offsets_by_chunk_id;

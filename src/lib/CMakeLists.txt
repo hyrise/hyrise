@@ -124,8 +124,6 @@ set(
     operators/rollback_records.hpp
     operators/sort.cpp
     operators/sort.hpp
-    operators/table_scan.cpp
-    operators/table_scan.hpp
     operators/new_table_scan.cpp
     operators/new_table_scan.hpp
     operators/table_wrapper.cpp

@@ -63,10 +63,9 @@ TEST_F(IterablesTest, ReferencedIteratorExecuteForAll) {
   auto column = chunk.get_column(ColumnID{0u});
   auto int_column = std::dynamic_pointer_cast<ValueColumn<int>>(column);
 
-  auto chunk_offsets = std::vector<ChunkOffset>{0u, 2u, 3u};
-  auto chunk_offsets_ptr = std::make_shared<std::vector<ChunkOffset>>(std::move(chunk_offsets));
+  auto chunk_offsets = std::vector<std::pair<ChunkOffset, ChunkOffset>>{{0u, 0u}, {1u, 2u}, {2u, 3u}};
 
-  auto iterable = ValueColumnIterable<int>{*int_column, chunk_offsets_ptr};
+  auto iterable = ValueColumnIterable<int>{*int_column, &chunk_offsets};
 
   EXPECT_EQ(iterable.type(), ValueColumnIterableType::Referenced);
 
@@ -96,10 +95,9 @@ TEST_F(IterablesTest, NullableReferencedIteratorExecuteForAll) {
   auto column = chunk.get_column(ColumnID{0u});
   auto int_column = std::dynamic_pointer_cast<ValueColumn<int>>(column);
 
-  auto chunk_offsets = std::vector<ChunkOffset>{0u, 2u, 3u};
-  auto chunk_offsets_ptr = std::make_shared<std::vector<ChunkOffset>>(std::move(chunk_offsets));
+  auto chunk_offsets = std::vector<std::pair<ChunkOffset, ChunkOffset>>{{0u, 0u}, {1u, 2u}, {2u, 3u}};
 
-  auto iterable = ValueColumnIterable<int>{*int_column, chunk_offsets_ptr};
+  auto iterable = ValueColumnIterable<int>{*int_column, &chunk_offsets};
 
   EXPECT_EQ(iterable.type(), ValueColumnIterableType::NullableReferenced);
 
@@ -114,9 +112,9 @@ TEST_F(IterablesTest, DictIteratorExecuteForAll) {
   auto & chunk = table->get_chunk(ChunkID{0u});
 
   auto column = chunk.get_column(ColumnID{0u});
-  auto int_column = std::dynamic_pointer_cast<DictionaryColumn<int>>(column);
+  auto dict_column = std::dynamic_pointer_cast<DictionaryColumn<int>>(column);
 
-  auto iterable = DictionaryColumnIterable<int>{*int_column};
+  auto iterable = DictionaryColumnIterable<int>{*dict_column};
 
   EXPECT_EQ(iterable.type(), DictionaryColumnIterableType::Simple);
 
@@ -131,12 +129,11 @@ TEST_F(IterablesTest, DictReferencedIteratorExecuteForAll) {
   auto & chunk = table->get_chunk(ChunkID{0u});
 
   auto column = chunk.get_column(ColumnID{0u});
-  auto int_column = std::dynamic_pointer_cast<DictionaryColumn<int>>(column);
+  auto dict_column = std::dynamic_pointer_cast<DictionaryColumn<int>>(column);
 
-  auto chunk_offsets = std::vector<ChunkOffset>{0u, 2u, 3u};
-  auto chunk_offsets_ptr = std::make_shared<std::vector<ChunkOffset>>(std::move(chunk_offsets));
-
-  auto iterable = DictionaryColumnIterable<int>{*int_column, chunk_offsets_ptr};
+  auto chunk_offsets = std::vector<std::pair<ChunkOffset, ChunkOffset>>{{0u, 0u}, {1u, 2u}, {2u, 3u}};
+  
+  auto iterable = DictionaryColumnIterable<int>{*dict_column, &chunk_offsets};
 
   EXPECT_EQ(iterable.type(), DictionaryColumnIterableType::Referenced);
 

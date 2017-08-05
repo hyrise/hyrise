@@ -29,7 +29,7 @@ class NullableColumnValue {
 
   const T & value() const { return _value; }
   bool is_null() const { return _null_value; }
-  ChunkOffset chunk_offset() { return _chunk_offset; }
+  ChunkOffset chunk_offset() const { return _chunk_offset; }
 
  private:
   const T & _value;

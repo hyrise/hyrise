@@ -58,7 +58,7 @@ class DictionaryColumnIterable
 
    public:
     explicit ReferencedIterator(const Dictionary & dictionary, const BaseAttributeVector & attribute_vector, const ChunkOffsetsIterator & chunk_offsets_it)
-        : _dictionary{dictionary}, _attribute_vector(attribute_vector), _chunk_offsets_it(chunk_offsets_it) {}
+        : _dictionary{dictionary}, _attribute_vector{attribute_vector}, _chunk_offsets_it{chunk_offsets_it} {}
 
     ReferencedIterator& operator++() { ++_chunk_offsets_it; return *this;}
     ReferencedIterator operator++(int) { auto retval = *this; ++(*this); return retval; }
@@ -81,13 +81,13 @@ class DictionaryColumnIterable
 
    private:
     const Dictionary & _dictionary;
-    const BaseAttributeVector * _attribute_vector;
+    const BaseAttributeVector & _attribute_vector;
     ChunkOffsetsIterator _chunk_offsets_it;
   };
 
   DictionaryColumnIterable(const DictionaryColumn<T> & column,
                            const std::vector<std::pair<ChunkOffset, ChunkOffset>> * mapped_chunk_offsets = nullptr)
-      : _column{column}, mapped_chunk_offsets{chunk_offsets} {}
+      : _column{column}, _mapped_chunk_offsets{mapped_chunk_offsets} {}
 
   template <typename Functor>
   auto execute_for_all(const Functor & func) const {

@@ -77,7 +77,7 @@ class ValueColumnIterable
 
    public:
     explicit ReferencedIterator(const ValueVector & values, const ChunkOffsetsIterator & chunk_offsets_it)
-        : _values{values}, _chunk_offsets_it(chunk_offset_it) {}
+        : _values{values}, _chunk_offsets_it{chunk_offsets_it} {}
 
     ReferencedIterator& operator++() { ++_chunk_offsets_it; return *this;}
     ReferencedIterator operator++(int) { auto retval = *this; ++(*this); return retval; }
@@ -123,11 +123,11 @@ class ValueColumnIterable
    private:
     const ValueVector & _values;
     const NullValueVector & _null_values;
-    ChunkOffsetIterator _chunk_offsets_it;
+    ChunkOffsetsIterator _chunk_offsets_it;
   };
 
   ValueColumnIterable(const ValueColumn<T> & column,
-                      const std::vector<ChunkOffset>> * mapped_chunk_offsets)
+                      const std::vector<std::pair<ChunkOffset, ChunkOffset>> * mapped_chunk_offsets = nullptr)
       : _column{column}, _mapped_chunk_offsets{mapped_chunk_offsets} {}
 
   template <typename Functor>
