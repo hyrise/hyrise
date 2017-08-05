@@ -25,13 +25,6 @@ struct Scan {
   Scan(const ChunkID chunk_id, PosList & matches_out)
       : _chunk_id{chunk_id}, _matches_out{matches_out} {}
 
-  template <typename LeftIterator, typename RightIterator>
-  void operator()(const ScanType & scan_type, LeftIterator left_it, LeftIterator left_end, RightIterator right_it) {
-    resolve_operator_type(scan_type, [=] (auto comparator) { 
-      operator()(comparator, left_it, left_end, right_it); 
-    });
-  }
-
   template <typename LeftIterator, typename RightIterator, typename Comparator>
   void operator()(const Comparator & comparator, LeftIterator left_it, LeftIterator left_end, RightIterator right_it) {
     for (; left_it != left_end; ++left_it, ++right_it) {
@@ -71,7 +64,9 @@ class AbstractScan {
   void _scan(LeftIterable & left_iterable, RightIterable & right_iterable, const ChunkID chunk_id, PosList & matches_out) {
     left_iterable.execute_for_all([&] (auto left_it, auto left_end) {
       right_iterable.execute_for_all([&] (auto right_it, auto right_end) {
-        Scan{chunk_id, matches_out}(_scan_type, left_it, left_end, right_it);
+        resolve_operator_type(_scan_type, [&] (auto comparator) {
+          Scan{chunk_id, matches_out}(comparator, left_it, left_end, right_it); 
+        });
       });
     });
   }
