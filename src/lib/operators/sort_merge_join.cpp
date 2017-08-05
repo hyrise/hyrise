@@ -119,7 +119,7 @@ class SortMergeJoin::SortMergeJoinImpl : public AbstractJoinOperatorImpl {
         int start_index = (partition == start.partition) ? start.index : 0;
         int end_index = (partition == end.partition) ? end.index : values.size();
         for (int index = start_index; index < end_index; index++) {
-          action(values[index].second);
+          action(values[index].first);
         }
       }
     }
@@ -144,8 +144,8 @@ class SortMergeJoin::SortMergeJoinImpl : public AbstractJoinOperatorImpl {
     auto output_left = _output_pos_lists_left[partition_number];
     auto output_right = _output_pos_lists_right[partition_number];
 
-    auto& left_value = left_partition.values[left_run.start.index].first;
-    auto& right_value = right_partition.values[right_run.start.index].first;
+    auto& left_value = left_partition.values[left_run.start.index].second;
+    auto& right_value = right_partition.values[right_run.start.index].second;
 
     auto end_of_left_table = _end_of_table(_sorted_left_table);
     auto end_of_right_table = _end_of_table(_sorted_right_table);
@@ -246,10 +246,10 @@ class SortMergeJoin::SortMergeJoinImpl : public AbstractJoinOperatorImpl {
   * Determines the length of the run starting at start_index in the values vector.
   * A run is a series of the same value.
   **/
-  size_t _run_length(size_t start_index, std::vector<std::pair<T, RowID>>& values) {
-    auto& value = values[start_index].first;
+  size_t _run_length(size_t start_index, std::vector<std::pair<RowID, T>>& values) {
+    auto& value = values[start_index].second;
     size_t offset = 1u;
-    while (start_index + offset < values.size() && value == values[start_index + offset].first) {
+    while (start_index + offset < values.size() && value == values[start_index + offset].second) {
       offset++;
     }
 
@@ -273,8 +273,8 @@ class SortMergeJoin::SortMergeJoinImpl : public AbstractJoinOperatorImpl {
     const size_t right_size = right_partition.values.size();
 
     while (left_run_start < left_size && right_run_start < right_size) {
-      auto& left_value = left_partition.values[left_run_start].first;
-      auto& right_value = right_partition.values[right_run_start].first;
+      auto& left_value = left_partition.values[left_run_start].second;
+      auto& right_value = right_partition.values[right_run_start].second;
 
       TableRange left_run(partition_number, left_run_start, left_run_end);
       TableRange right_run(partition_number, right_run_start, right_run_end);
