@@ -57,16 +57,16 @@ class AbstractScan {
 
  protected:
   template <typename Type>
-  auto create_iterable_from_column(ValueColumn<Type> & column) { return ValueColumnIterable<Type>{column}; }
+  auto _create_iterable_from_column(ValueColumn<Type> & column) { return ValueColumnIterable<Type>{column}; }
 
   template <typename Type>
-  auto create_iterable_from_column(DictionaryColumn<Type> & column) { return DictionaryColumnIterable<Type>{column}; }
+  auto _create_iterable_from_column(DictionaryColumn<Type> & column) { return DictionaryColumnIterable<Type>{column}; }
 
   template <typename Type>
-  auto create_iterable_from_column(ReferenceColumn & column) { return ReferenceColumnIterable<Type>{column}; }
+  auto _create_iterable_from_column(ReferenceColumn & column) { return ReferenceColumnIterable<Type>{column}; }
   
   template <typename LeftIterable, typename RightIterable>
-  void scan(LeftIterable & left_iterable, RightIterable & right_iterable, const ChunkID chunk_id, PosList & matches_out) {
+  void _scan(LeftIterable & left_iterable, RightIterable & right_iterable, const ChunkID chunk_id, PosList & matches_out) {
     left_iterable.execute_for_all([&] (auto left_it, auto left_end) {
       right_iterable.execute_for_all([&] (auto right_it, auto right_end) {
         Scan{chunk_id, matches_out}(_scan_type, left_it, left_end, right_it);
@@ -98,14 +98,229 @@ class DataColumnScan : public AbstractScan {
     resolve_column_type(left_column_type, *left_column, [&] (auto type, auto &typed_left_column) {
       using Type = typename decltype(type)::type;
 
-      auto left_column_iterable = create_iterable_from_column(typed_left_column);
+      auto left_column_iterable = _create_iterable_from_column(typed_left_column);
       auto right_value_iterable = ConstantValueIterable<Type>{_right_value};
 
-      scan(left_column_iterable, right_value_iterable, chunk_id, matches_out);
+      _scan(left_column_iterable, right_value_iterable, chunk_id, matches_out);
     });
 
     return matches_out;
   }
+
+ private:
+  const ColumnID _left_column_id;
+  const AllTypeVariant _right_value;
+};
+
+// 1 data column (dictionary, value)
+class ColumnScan : public AbstractScan, public ColumnVisitable {
+ public:
+  struct Context : public ColumnVisitableContext {
+    Context(const ChunkID chunk_id, PosList & matches_out) : _matches_out{matches_out}, _chunk_id{chunk_id} {}
+
+    const ChunkID _chunk_id;
+    PosList & _matches_out;
+  };
+
+ public:
+  ColumnScan(std::shared_ptr<const Table> in_table, const ScanType & scan_type,
+             const ColumnID left_column_id, const AllTypeVariant & right_value)
+      : AbstractScan{in_table, scan_type}, _left_column_id{left_column_id}, _right_value{right_value} {}
+
+  PosList scan_chunk(const ChunkID & chunk_id) override {
+    const auto & chunk = _in_table->get_chunk(chunk_id);
+
+    const auto left_column_type = _in_table->column_type(_left_column_id);
+    const auto left_column = chunk.get_column(_left_column_id);
+
+    auto matches_out = PosList{};
+
+    auto context = std::make_shared<Context>(chunk_id, matches_out);
+
+    left_column->visit(*this, context)
+
+    return std::move(context->_matches_out);
+  }
+
+  void handle_value_column(BaseColumn &base_column, std::shared_ptr<ColumnVisitableContext> base_context) override {
+    auto context = std::static_pointer_cast<Context>(base_context);
+
+    const auto left_column_type = _in_table->column_type(_left_column_id);
+
+    resolve_type(left_column_type, [&] (auto type) {
+      using Type = typename decltype(type)::type;
+
+      auto left_column = static_cast<ValueColumn<Type> &>(base_column);
+
+      auto left_column_iterable = _create_iterable_from_column(left_column);
+      auto right_value_iterable = ConstantValueIterable<Type>{_right_value};
+
+      _scan(left_column_iterable, right_value_iterable, chunk_id, context->_matches_out);
+    });
+  }
+
+  void handle_dictionary_column(BaseColumn &base_column, std::shared_ptr<ColumnVisitableContext> context) override {
+    /**
+     * ValueID value_id; // left value id
+     * Variant value; // right value
+     *
+     * A ValueID value_id from the attribute vector is included in the result iff
+     *
+     * Operator           |  Condition
+     * value_id == value  |  dict.value_by_value_id(dict.lower_bound(value)) == value && value_id == dict.lower_bound(value)
+     * value_id != value  |  dict.value_by_value_id(dict.lower_bound(value)) != value || value_id != dict.lower_bound(value)
+     * value_id <  value  |  value_id < dict.lower_bound(value)
+     * value_id <= value  |  value_id < dict.upper_bound(value)
+     * value_id >  value  |  value_id >= dict.upper_bound(value)
+     * value_id >= value  |  value_id >= dict.lower_bound(value)
+     */
+
+    auto context = std::static_pointer_cast<Context>(base_context);
+    auto & matches_out = context->_matches_out;
+    auto column = static_cast<const UntypedDictionaryColumn &>(base_column);
+
+    const auto search_valud_id = _get_search_value_id(column);
+
+
+    /**
+     * Early outs
+     * Operator          | All                                   | None
+     * value_id == value | !None && unique_values_count == 1     | search_vid == dict.upper_bound(value)
+     * value_id != value | search_vid == dict.upper_bound(value) | !All && unique_values_count == 1 
+     * value_id <  value | search_vid == INVALID_VALUE_ID        | search_vid == 0
+     * value_id <= value | search_vid == INVALID_VALUE_ID        | search_vid == 0
+     * value_id >  value | search_vid == 0                       | search_vid == INVALID_VALUE_ID
+     * value_id >= value | search_vid == 0                       | search_vid == INVALID_VALUE_ID
+     */
+
+    if (_right_value_matches_all(column, search_valud_id)) {
+      const auto attribute_vector = column.attribute_vector();
+
+      for (ChunkOffset chunk_offset = 0u; chunk_offset < attribute_vector.size(); ++chunk_offset) {
+        const auto value_id = attribute_vector.get(chunk_offset);
+
+        if (value_id == NULL_VALUE_ID) continue;
+
+        matches_out.push_back(RowID{context->_chunk_id, chunk_offset});
+      }
+
+      return;
+    }
+
+    if (_right_value_matches_none(column, search_valud_id)) {
+      return;
+    }
+
+    const auto value_id = attribute_vector.get(chunk_offset);
+
+    _resolve_scan_type([&] (auto comparator) {
+      for (ChunkOffset chunk_offset = 0u; chunk_offset < attribute_vector.size(); ++chunk_offset) {
+        const auto value_id = attribute_vector.get(chunk_offset);
+
+        if (value_id == NULL_VALUE_ID) continue;
+
+        if (comparator(value_id, search_valud_id)) {
+          matches_out.push_back(RowID{context->chunk_id, chunk_offset});
+        }
+      }
+    });
+  }
+
+  void handle_reference_column(ReferenceColumn &column, std::shared_ptr<ColumnVisitableContext> context) override {
+
+  }
+
+ private:
+  /**
+   * @defgroup Methods used for handling dictionary columns
+   * @{
+   */
+
+  ValueID _get_search_value_id(const UntypedDictionaryColumn & column) {
+    switch (_scan_type) {
+      case ScanType::OpEquals:
+      case ScanType::OpNotEquals:
+      case ScanType::OpLessThan:
+      case ScanType::OpGreaterThanEquals:
+        return column.lower_bound(_right_value);
+
+      case ScanType::OpLessThanEquals:
+      case ScanType::OpGreaterThan:
+        return column.upper_bound(_right_value);
+
+      default:
+        Fail("Unsupported comparison type encountered");
+        return INVALID_VALUE_ID;
+    }
+  }
+
+  bool _right_value_matches_all(const UntypedDictionaryColumn & column, const ValueID search_valud_id) {
+    switch (_scan_type) {
+      case ScanType::OpEquals:
+        return search_valud_id != column.upper_bound(_right_value) && column.unique_values_count() == size_t{1u};
+
+      case ScanType::OpNotEquals:
+        return search_valud_id == column.upper_bound(_right_value);
+
+      case ScanType::OpLessThan:
+      case ScanType::OpGreaterThanEquals:
+        return search_valud_id == INVALID_VALUE_ID;
+
+      case ScanType::OpLessThanEquals:
+      case ScanType::OpGreaterThan:
+        return search_valud_id == ValueID{0u};
+
+      default:
+        Fail("Unsupported comparison type encountered");
+        return false;
+    }
+  }
+
+  bool _right_value_matches_none(const UntypedDictionaryColumn & column, const ValueID search_valud_id) {
+    switch (_scan_type) {
+      case ScanType::OpEquals:
+        return search_valud_id == column.upper_bound(_right_value);
+
+      case ScanType::OpNotEquals:
+        return search_valud_id == column.upper_bound(_right_value) && column.unique_values_count() == size_t{1u};
+
+      case ScanType::OpLessThan:
+      case ScanType::OpGreaterThanEquals:
+        return search_valud_id == ValueID{0u};
+
+      case ScanType::OpLessThanEquals:
+      case ScanType::OpGreaterThan:
+        return search_valud_id == INVALID_VALUE_ID;
+
+      default:
+        Fail("Unsupported comparison type encountered");
+        return false;
+    }
+  }
+
+  template <typename Functor>
+  void _resolve_scan_type(const Functor & func) {
+    switch (_scan_type) {
+      case ScanType::OpEquals:
+        return func(Equal{});
+
+      case ScanType::OpNotEquals:
+        return func(NotEqual{});
+
+      case ScanType::OpLessThan:
+      case ScanType::OpGreaterThanEquals:
+        return func(Less{});
+
+      case ScanType::OpLessThanEquals:
+      case ScanType::OpGreaterThan:
+        return func(GreaterEqual{});
+
+      default:
+        Fail("Unsupported comparison type encountered");
+    }
+  }
+
+  /**@}*/
 
  private:
   const ColumnID _left_column_id;
@@ -136,7 +351,7 @@ class ReferenceColumnScan : public AbstractScan {
       auto left_column_iterable = ReferenceColumnIterable<Type>(*left_column);
       auto right_value_iterable = ConstantValueIterable<Type>(_right_value);
 
-      scan(left_column_iterable, right_value_iterable, chunk_id, matches_out);
+      _scan(left_column_iterable, right_value_iterable, chunk_id, matches_out);
     });
 
     return matches_out;
@@ -173,10 +388,10 @@ class DataColumnComparisonScan : public AbstractScan {
         constexpr auto both_are_string_columns = left_is_string_column && right_is_string_column;
 
         if constexpr (neither_is_string_column || both_are_string_columns) {
-          auto left_column_iterable = create_iterable_from_column(typed_left_column);
-          auto right_column_iterable = create_iterable_from_column(typed_right_column);
+          auto left_column_iterable = _create_iterable_from_column(typed_left_column);
+          auto right_column_iterable = _create_iterable_from_column(typed_right_column);
 
-          scan(left_column_iterable, right_column_iterable, chunk_id, matches_out);
+          _scan(left_column_iterable, right_column_iterable, chunk_id, matches_out);
         } else {
           Fail("std::string cannot be compared to numerical type!");
         }
@@ -223,10 +438,10 @@ class ReferenceColumnComparisonScan : public AbstractScan {
           using LeftType = typename decltype(left_type)::type;
           using RightType = typename decltype(right_type)::type;
 
-          auto left_column_iterable = create_iterable_from_column<LeftType>(*left_column);
-          auto right_column_iterable = create_iterable_from_column<RightType>(*right_column);
+          auto left_column_iterable = _create_iterable_from_column<LeftType>(*left_column);
+          auto right_column_iterable = _create_iterable_from_column<RightType>(*right_column);
 
-          scan(left_column_iterable, right_column_iterable, chunk_id, matches_out);
+          _scan(left_column_iterable, right_column_iterable, chunk_id, matches_out);
         } else {
           Fail("std::string cannot be compared to numerical type!");
         }
@@ -341,6 +556,8 @@ void NewTableScan::init_scan()
 
   if (is_variant(_right_parameter)) {
     const auto right_value = boost::get<AllTypeVariant>(_right_parameter);
+
+    // TODO(mjendruk): Check if not null
 
     if (_is_reference_table) {
       _scan = std::make_unique<ReferenceColumnScan>(_in_table, _scan_type, left_column_id, right_value);
