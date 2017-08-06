@@ -119,8 +119,9 @@ class RadixPartitionSort : public ColumnVisitable {
 
      if (_partition_count == 1) {
        std::cout << "rp: " << __LINE__ << std::endl;
-       output_table->at(0) = std::make_shared<MaterializedChunk<T>>(input->row_count());
+       output_table->at(0) = std::make_shared<MaterializedChunk<T>>();
        auto output_chunk = output_table->at(0);
+       output_chunk->reserve(input->row_count());
        for (auto& sorted_chunk : *sorted_input_chunks) {
          output_chunk->insert(output_chunk->end(), sorted_chunk->begin(), sorted_chunk->end());
        }
@@ -203,6 +204,8 @@ class RadixPartitionSort : public ColumnVisitable {
     auto column = chunk.get_column(column_id);
     auto context = std::make_shared<SortContext>(chunk_id);
     column->visit(*this, context);
+    DebugAssert(_validate_is_sorted(context->sort_output), "Chunk should be sorted but is not");
+    DebugAssert(chunk.size() == context->sort_output->size(), "Chunk has wrong size");
     return context->sort_output;
   }
 
@@ -494,7 +497,38 @@ class RadixPartitionSort : public ColumnVisitable {
      std::cout << "rp: " << __LINE__ << std::endl;
    }
 
+   bool _validate_is_sorted(std::shared_ptr<MaterializedChunk<T>> chunk) {
+     for(size_t i = 0; i < chunk->size() - 1; i++) {
+       if(chunk->at(i).second > chunk->at(i + 1).second) {
+         return false;
+       }
+     }
 
+     return true;
+   }
+
+   bool _validate_is_sorted(std::shared_ptr<MaterializedTable<T>> table) {
+     for(size_t chunk_number = 0; chunk_number < table->size(); chunk_number++) {
+       if(!_validate_is_sorted(table->at(chunk_number))) {
+         return false;
+       }
+
+       if(chunk_number < table->size() - 1 && table->at(chunk_number + 1)->at(0) > table->at(chunk_number)->back() ) {
+         return false;
+       }
+     }
+
+     return true;
+   }
+
+   bool _validate_size(std::shared_ptr<MaterializedTable<T>> table, size_t size) {
+     size_t total_size = 0;
+     for(auto chunk : *table) {
+       total_size += chunk->size();
+     }
+
+     return total_size == size;
+   }
 
   public:
    void execute() {
@@ -511,6 +545,12 @@ class RadixPartitionSort : public ColumnVisitable {
        value_based_partitioning();
        //std::cout << "value based partitioning ran through" << std::endl;
      }
+
+     DebugAssert(_validate_is_sorted(_output_left), "left output table is not sorted");
+     DebugAssert(_validate_is_sorted(_output_right), "right output table is not sorted");
+
+     DebugAssert(_validate_size(_output_left, _input_table_left->row_count()), "left output has wrong size");
+     DebugAssert(_validate_size(_output_right, _input_table_right->row_count()), "left output has wrong size");
    }
 
    std::pair<std::shared_ptr<MaterializedTable<T>>, std::shared_ptr<MaterializedTable<T>>> get_output() {
