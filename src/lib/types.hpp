@@ -95,4 +95,13 @@ enum class SchedulePriority {
   High = 0     // Schedule task at the beginning of the queue
 };
 
+template <typename T>
+using MaterializedValue = std::pair<RowID, T>;
+
+template <typename T>
+using MaterializedChunk = std::vector<MaterializedValue<T>>;
+
+template <typename T>
+using MaterializedTable = std::vector<std::shared_ptr<MaterializedChunk<T>>>;
+
 }  // namespace opossum
