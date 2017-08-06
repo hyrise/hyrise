@@ -113,7 +113,7 @@ class SortMergeJoin::SortMergeJoinImpl : public AbstractJoinOperatorImpl {
         int start_index = (partition == start.partition) ? start.index : 0;
         int end_index = (partition == end.partition) ? end.index : table->at(partition)->size();
         for (int index = start_index; index < end_index; index++) {
-          action(table->at(partition)->at(index).first);
+          action(table->at(partition)->at(index).row_id);
         }
       }
     }
@@ -138,8 +138,8 @@ class SortMergeJoin::SortMergeJoinImpl : public AbstractJoinOperatorImpl {
     auto output_left = _output_pos_lists_left[partition_number];
     auto output_right = _output_pos_lists_right[partition_number];
 
-    auto& left_value = left_partition->at(left_run.start.index).second;
-    auto& right_value = right_partition->at(right_run.start.index).second;
+    auto& left_value = left_partition->at(left_run.start.index).value;
+    auto& right_value = right_partition->at(right_run.start.index).value;
 
     auto end_of_left_table = _end_of_table(_sorted_left_table);
     auto end_of_right_table = _end_of_table(_sorted_right_table);
@@ -243,9 +243,9 @@ class SortMergeJoin::SortMergeJoinImpl : public AbstractJoinOperatorImpl {
       return 0;
     }
 
-    auto& value = values->at(start_index).second;
+    auto& value = values->at(start_index).value;
     size_t offset = 1;
-    while (start_index + offset < values->size() && values->at(start_index + offset).second  == value) {
+    while (start_index + offset < values->size() && values->at(start_index + offset).value  == value) {
       offset++;
     }
 
@@ -272,8 +272,8 @@ class SortMergeJoin::SortMergeJoinImpl : public AbstractJoinOperatorImpl {
     const size_t right_size = right_partition->size();
 
     while (left_run_start < left_size && right_run_start < right_size) {
-      auto& left_value = left_partition->at(left_run_start).second;
-      auto& right_value = right_partition->at(right_run_start).second;
+      auto& left_value = left_partition->at(left_run_start).value;
+      auto& right_value = right_partition->at(right_run_start).value;
 
       TableRange left_run(partition_number, left_run_start, left_run_end);
       TableRange right_run(partition_number, right_run_start, right_run_end);

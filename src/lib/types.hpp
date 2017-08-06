@@ -96,7 +96,13 @@ enum class SchedulePriority {
 };
 
 template <typename T>
-using MaterializedValue = std::pair<RowID, T>;
+struct MaterializedValue {
+  MaterializedValue() {}
+  MaterializedValue(RowID row, T v) : row_id{row}, value{v} {}
+
+  RowID row_id;
+  T value;
+};
 
 template <typename T>
 using MaterializedChunk = std::vector<MaterializedValue<T>>;
