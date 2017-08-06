@@ -21,9 +21,11 @@ class ReferenceColumnIterable
     using PosListIterator = PosList::const_iterator;
 
    public:
-    explicit Iterator(const std::shared_ptr<const Table> table, const ColumnID column_id, const PosListIterator & pos_list_it)
+    explicit Iterator(const std::shared_ptr<const Table> table, const ColumnID column_id, 
+                      const PosListIterator & begin_pos_list_it, const PosListIterator & pos_list_it)
         : _table{table},
           _column_id{column_id},
+          _begin_pos_list_it{begin_pos_list_it},
           _pos_list_it{pos_list_it} {}
 
     Iterator& operator++() { ++_pos_list_it; return *this;}
@@ -36,7 +38,7 @@ class ReferenceColumnIterable
         return NullableColumnValue<T>{T{}, true, 0u};
 
       const auto chunk_id = _pos_list_it->chunk_id;
-      const auto chunk_offset = _pos_list_it->chunk_offset;
+      const auto & chunk_offset = _pos_list_it->chunk_offset;
 
       auto value_column_it = _value_columns.find(chunk_id);
       if (value_column_it != _value_columns.end()) {
@@ -66,34 +68,38 @@ class ReferenceColumnIterable
     }
 
     auto value_from_value_column(const ValueColumn<T> & column, const ChunkOffset & chunk_offset) const {
+      const auto chunk_offset_into_ref_column = std::distance(_begin_pos_list_it, _pos_list_it);
+
       if (column.is_nullable()) {
         auto is_null = column.null_values()[chunk_offset];
         const auto & value = is_null ? T{} : column.values()[chunk_offset];
-        return NullableColumnValue<T>{value, is_null, 0u};
+        return NullableColumnValue<T>{value, is_null, chunk_offset_into_ref_column};
       }
 
       const auto & value = column.values()[chunk_offset];
-      return NullableColumnValue<T>{value, false, 0u};
+      return NullableColumnValue<T>{value, false, chunk_offset_into_ref_column};
     }
 
     auto value_from_dictionary_column(const DictionaryColumn<T> & column, const ChunkOffset & chunk_offset) const {
+      const auto chunk_offset_into_ref_column = std::distance(_begin_pos_list_it, _pos_list_it);
       auto attribute_vector = column.attribute_vector();
       auto value_id = attribute_vector->get(chunk_offset);
 
       if (value_id == NULL_VALUE_ID) {
-        return NullableColumnValue<T>{T{}, true, 0u};
+        return NullableColumnValue<T>{T{}, true, chunk_offset_into_ref_column};
       }
 
       auto dictionary = column.dictionary();
       const auto & value = (*dictionary)[value_id];
 
-      return NullableColumnValue<T>{value, false, 0u};
+      return NullableColumnValue<T>{value, false, chunk_offset_into_ref_column};
     }
 
    private:
     const std::shared_ptr<const Table> _table;
     const ColumnID _column_id;
 
+    const PosListIterator _begin_pos_list_it;
     PosListIterator _pos_list_it;
 
     mutable std::map<ChunkID, const ValueColumn<T> *> _value_columns;
@@ -107,8 +113,11 @@ class ReferenceColumnIterable
     const auto table = _column.referenced_table();
     const auto column_id = _column.referenced_column_id();
 
-    auto begin = Iterator{table, column_id, _column.pos_list()->begin()};
-    auto end = Iterator{table, column_id, _column.pos_list()->end()};
+    const auto begin_it = _column.pos_list()->begin();
+    const auto end_it = _column.pos_list()->end();
+
+    auto begin = Iterator{table, column_id, begin_it, begin_it};
+    auto end = Iterator{table, column_id, begin_it, end_it};
     return func(begin, end);
   }
 

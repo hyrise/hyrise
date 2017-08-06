@@ -15,7 +15,7 @@ class ColumnValue {
   ChunkOffset chunk_offset() const { return _chunk_offset; }
 
  private:
-  const T & _value;
+  const T _value;
   const ChunkOffset _chunk_offset;
 };
 
@@ -32,7 +32,7 @@ class NullableColumnValue {
   ChunkOffset chunk_offset() const { return _chunk_offset; }
 
  private:
-  const T & _value;
+  const T _value;
   const bool _null_value;
   const ChunkOffset _chunk_offset;
 };

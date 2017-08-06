@@ -565,6 +565,8 @@ std::shared_ptr<const Table> TableScan::on_execute()
 
         auto filtered_pos_lists = std::map<std::shared_ptr<const PosList>, std::shared_ptr<PosList>>{};
 
+        // TODO(mjendruk): implement short cut for pos_list is the same as the scanned column’s
+
         for (ColumnID column_id{0u}; column_id < _in_table->col_count(); ++column_id) {
           auto column_in = chunk_in.get_column(column_id);
 
