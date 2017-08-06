@@ -192,7 +192,7 @@ class SingleColumnScan : public AbstractScan, public ColumnVisitable {
      * value_id >= value  |  value_id >= dict.lower_bound(value)
      */
 
-    const auto search_valud_id = _get_search_value_id(left_column);
+    const auto search_value_id = _get_search_value_id(left_column);
 
     /**
      * Early Outs
@@ -206,7 +206,7 @@ class SingleColumnScan : public AbstractScan, public ColumnVisitable {
      * value_id >= value | search_vid == 0                       | search_vid == INVALID_VALUE_ID
      */
 
-    if (_right_value_matches_all(left_column, search_valud_id)) {
+    if (_right_value_matches_all(left_column, search_value_id)) {
       const auto & attribute_vector = *left_column.attribute_vector();
 
       auto attribute_vector_iterable = AttributeVectorIterable{attribute_vector, context->_mapped_chunk_offsets.get()};
@@ -223,14 +223,14 @@ class SingleColumnScan : public AbstractScan, public ColumnVisitable {
       return;
     }
 
-    if (_right_value_matches_none(left_column, search_valud_id)) {
+    if (_right_value_matches_none(left_column, search_value_id)) {
       return;
     }
 
     const auto & attribute_vector = *left_column.attribute_vector();
 
     auto attribute_vector_iterable = AttributeVectorIterable{attribute_vector, context->_mapped_chunk_offsets.get()};
-    auto constant_value_iterable = ConstantValueIterable<ValueID>{search_valud_id};
+    auto constant_value_iterable = ConstantValueIterable<ValueID>{search_value_id};
 
     _resolve_scan_type([&] (auto comparator) {
       _scan(comparator, attribute_vector_iterable, constant_value_iterable, context->_chunk_id, matches_out);
@@ -297,21 +297,21 @@ class SingleColumnScan : public AbstractScan, public ColumnVisitable {
     }
   }
 
-  bool _right_value_matches_all(const UntypedDictionaryColumn & column, const ValueID search_valud_id) {
+  bool _right_value_matches_all(const UntypedDictionaryColumn & column, const ValueID search_value_id) {
     switch (_scan_type) {
       case ScanType::OpEquals:
-        return search_valud_id != column.upper_bound(_right_value) && column.unique_values_count() == size_t{1u};
+        return search_value_id != column.upper_bound(_right_value) && column.unique_values_count() == size_t{1u};
 
       case ScanType::OpNotEquals:
-        return search_valud_id == column.upper_bound(_right_value);
+        return search_value_id == column.upper_bound(_right_value);
 
       case ScanType::OpLessThan:
-      case ScanType::OpGreaterThanEquals:
-        return search_valud_id == INVALID_VALUE_ID;
-
       case ScanType::OpLessThanEquals:
+        return search_value_id == INVALID_VALUE_ID;
+
+      case ScanType::OpGreaterThanEquals:
       case ScanType::OpGreaterThan:
-        return search_valud_id == ValueID{0u};
+        return search_value_id == ValueID{0u};
 
       default:
         Fail("Unsupported comparison type encountered");
@@ -319,21 +319,21 @@ class SingleColumnScan : public AbstractScan, public ColumnVisitable {
     }
   }
 
-  bool _right_value_matches_none(const UntypedDictionaryColumn & column, const ValueID search_valud_id) {
+  bool _right_value_matches_none(const UntypedDictionaryColumn & column, const ValueID search_value_id) {
     switch (_scan_type) {
       case ScanType::OpEquals:
-        return search_valud_id == column.upper_bound(_right_value);
+        return search_value_id == column.upper_bound(_right_value);
 
       case ScanType::OpNotEquals:
-        return search_valud_id == column.upper_bound(_right_value) && column.unique_values_count() == size_t{1u};
+        return search_value_id == column.upper_bound(_right_value) && column.unique_values_count() == size_t{1u};
 
       case ScanType::OpLessThan:
-      case ScanType::OpGreaterThanEquals:
-        return search_valud_id == ValueID{0u};
-
       case ScanType::OpLessThanEquals:
+        return search_value_id == ValueID{0u};
+
       case ScanType::OpGreaterThan:
-        return search_valud_id == INVALID_VALUE_ID;
+      case ScanType::OpGreaterThanEquals:
+        return search_value_id == INVALID_VALUE_ID;
 
       default:
         Fail("Unsupported comparison type encountered");
@@ -351,11 +351,11 @@ class SingleColumnScan : public AbstractScan, public ColumnVisitable {
         return func(NotEqual{});
 
       case ScanType::OpLessThan:
-      case ScanType::OpGreaterThanEquals:
+      case ScanType::OpLessThanEquals:
         return func(Less{});
 
-      case ScanType::OpLessThanEquals:
       case ScanType::OpGreaterThan:
+      case ScanType::OpGreaterThanEquals:
         return func(GreaterEqual{});
 
       default:
@@ -634,11 +634,13 @@ void TableScan::init_scan()
 
     DebugAssert(!is_null(right_value), "Right value must not be NULL.");
 
-    if (_is_reference_table) {
-      _scan = std::make_unique<ReferenceColumnScan>(_in_table, _scan_type, left_column_id, right_value);
-    } else {
-      _scan = std::make_unique<DataColumnScan>(_in_table, _scan_type, left_column_id, right_value);
-    }
+    _scan = std::make_unique<SingleColumnScan>(_in_table, _scan_type, left_column_id, right_value);
+
+    // if (_is_reference_table) {
+    //   _scan = std::make_unique<ReferenceColumnScan>(_in_table, _scan_type, left_column_id, right_value);
+    // } else {
+    //   _scan = std::make_unique<DataColumnScan>(_in_table, _scan_type, left_column_id, right_value);
+    // }
   } else /* is_column_name(_right_parameter) */ {
     const auto right_column_name = boost::get<ColumnName>(_right_parameter);
     const auto right_column_id = _in_table->column_id_by_name(right_column_name);
