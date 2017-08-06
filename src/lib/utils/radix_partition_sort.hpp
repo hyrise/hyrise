@@ -115,20 +115,26 @@ class RadixPartitionSort : public ColumnVisitable {
      auto output_table = std::make_shared<MaterializedTable<T>>(_partition_count);
      table_statistics.chunk_statistics.resize(sorted_input_chunks->size());
 
+      std::cout << "rp: " << __LINE__ << std::endl;
+
      if (_partition_count == 1) {
+       std::cout << "rp: " << __LINE__ << std::endl;
+       output_table->at(0) = std::make_shared<MaterializedChunk<T>>(input->row_count());
        auto output_chunk = output_table->at(0);
-       output_chunk->resize(input->row_count());
        for (auto& sorted_chunk : *sorted_input_chunks) {
          output_chunk->insert(output_chunk->end(), sorted_chunk->begin(), sorted_chunk->end());
        }
+       std::cout << "rp: " << __LINE__ << std::endl;
      } else {
        // Do radix-partitioning here for _partition_count > 1 partitions
        if (_op == "=") {
+         std::cout << "rp: " << __LINE__ << std::endl;
          // for prefix computation we need to table-wide know how many entries there are for each partition
          for (uint32_t partition_id = 0; partition_id < _partition_count; partition_id++) {
            table_statistics.partition_histogram.insert(std::pair<uint32_t, uint32_t>(partition_id, 0));
          }
 
+         std::cout << "rp: " << __LINE__ << std::endl;
          // Each chunk should prepare additional data to enable partitioning
          for(size_t chunk_number = 0; chunk_number < sorted_input_chunks->size(); chunk_number++){
            auto& chunk_statistics = table_statistics.chunk_statistics[chunk_number];
@@ -148,6 +154,7 @@ class RadixPartitionSort : public ColumnVisitable {
            }
          }
 
+         std::cout << "rp: " << __LINE__ << std::endl;
          // Each chunk needs to sequentially fill _prefix map to actually fill partition of tables in parallel
          for (auto& chunk_statistics : table_statistics.chunk_statistics) {
            for (size_t partition_id = 0; partition_id < _partition_count; ++partition_id) {
@@ -156,11 +163,13 @@ class RadixPartitionSort : public ColumnVisitable {
            }
          }
 
+        std::cout << "rp: " << __LINE__ << std::endl;
          // prepare for parallel access later on
          for (uint32_t partition_id = 0; partition_id < _partition_count; ++partition_id) {
            output_table->at(partition_id)->resize(table_statistics.partition_histogram[partition_id]);
          }
 
+         std::cout << "rp: " << __LINE__ << std::endl;
          // Move each entry into its appropriate partition
          for (size_t chunk_number = 0; chunk_number < sorted_input_chunks->size(); chunk_number++) {
            auto sorted_chunk = sorted_input_chunks->at(chunk_number);
@@ -171,6 +180,8 @@ class RadixPartitionSort : public ColumnVisitable {
              output_table->at(partition_id)->at(chunk_statistics.prefix[partition_id]++) = entry;
            }
          }
+       } else {
+         output_table = sorted_input_chunks;
        }
      }
 
@@ -391,7 +402,7 @@ class RadixPartitionSort : public ColumnVisitable {
        table_statistics.value_histogram.insert(std::pair<T, uint32_t>(value, 0));
      }
 
-     std::cout << __LINE__ << std::endl;
+     std::cout << "rp: " << __LINE__ << std::endl;
 
      // Each chunk should prepare additional data to enable partitioning
      for (size_t chunk_number = 0; chunk_number < table->size(); chunk_number++) {
@@ -414,7 +425,7 @@ class RadixPartitionSort : public ColumnVisitable {
        }
      }
 
-     std::cout << __LINE__ << std::endl;
+     std::cout << "rp: " << __LINE__ << std::endl;
 
      // Each chunk need to sequentially fill _prefix map to actually fill partition of tables in parallel
      for (auto& chunk_statistics : table_statistics.chunk_statistics) {
@@ -431,7 +442,7 @@ class RadixPartitionSort : public ColumnVisitable {
        partition_id++;
      }
 
-     std::cout << __LINE__ << std::endl;
+     std::cout << "rp: " << __LINE__ << std::endl;
 
      for (size_t chunk_number = 0; chunk_number < table->size(); chunk_number++) {
        auto& chunk_statistics = table_statistics.chunk_statistics[chunk_number];
@@ -442,7 +453,7 @@ class RadixPartitionSort : public ColumnVisitable {
        }
      }
 
-     std::cout << __LINE__ << std::endl;
+     std::cout << "rp: " << __LINE__ << std::endl;
 
      // Each chunk fills (parallel) partition
      for (size_t chunk_number = 0; chunk_number < table->size(); chunk_number++) {
@@ -462,7 +473,7 @@ class RadixPartitionSort : public ColumnVisitable {
        }
      }
 
-     std::cout << __LINE__ << std::endl;
+     std::cout << "rp: " << __LINE__ << std::endl;
 
      // move result to table
      table->resize(partitions->size());
@@ -470,7 +481,7 @@ class RadixPartitionSort : public ColumnVisitable {
        table->at(partition_id) = partitions->at(partition_id);
      }
 
-     std::cout << __LINE__ << std::endl;
+     std::cout << "rp: " << __LINE__ << std::endl;
 
      // Sort partitions (right now std:sort -> but maybe can be replaced with
      // an algorithm more efficient, if subparts are already sorted [InsertionSort?])
@@ -480,7 +491,7 @@ class RadixPartitionSort : public ColumnVisitable {
        });
      }
 
-     std::cout << __LINE__ << std::endl;
+     std::cout << "rp: " << __LINE__ << std::endl;
    }
 
 
