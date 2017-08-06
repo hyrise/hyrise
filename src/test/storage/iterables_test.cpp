@@ -7,11 +7,13 @@
 #include "gtest/gtest.h"
 
 #include "../lib/storage/dictionary_column.hpp"
-#include "../lib/storage/iterables/dictionary_column_iterable.hpp"
 #include "../lib/storage/dictionary_compression.hpp"
-#include "../lib/storage/value_column.hpp"
+#include "../lib/storage/iterables/dictionary_column_iterable.hpp"
+#include "../lib/storage/iterables/reference_column_iterable.hpp"
 #include "../lib/storage/iterables/value_column_iterable.hpp"
+#include "../lib/storage/iterables/constant_value_iterable.hpp"
 #include "../lib/storage/table.hpp"
+#include "../lib/storage/value_column.hpp"
 
 namespace opossum {
 
@@ -42,7 +44,7 @@ class IterablesTest : public BaseTest {
   std::shared_ptr<Table> table_with_null;
 };
 
-TEST_F(IterablesTest, IteratorExecuteForAll) {
+TEST_F(IterablesTest, ValueColumnIteratorExecuteForAll) {
   auto & chunk = table->get_chunk(ChunkID{0u});
 
   auto column = chunk.get_column(ColumnID{0u});
@@ -57,7 +59,7 @@ TEST_F(IterablesTest, IteratorExecuteForAll) {
   EXPECT_EQ(sum, 24'825);
 }
 
-TEST_F(IterablesTest, ReferencedIteratorExecuteForAll) {
+TEST_F(IterablesTest, ValueColumnReferencedIteratorExecuteForAll) {
   auto & chunk = table->get_chunk(ChunkID{0u});
 
   auto column = chunk.get_column(ColumnID{0u});
@@ -74,7 +76,7 @@ TEST_F(IterablesTest, ReferencedIteratorExecuteForAll) {
   EXPECT_EQ(sum, 12'480);
 }
 
-TEST_F(IterablesTest, NullableIteratorExecuteForAll) {
+TEST_F(IterablesTest, ValueColumnNullableIteratorExecuteForAll) {
   auto & chunk = table_with_null->get_chunk(ChunkID{0u});
 
   auto column = chunk.get_column(ColumnID{0u});
@@ -89,7 +91,7 @@ TEST_F(IterablesTest, NullableIteratorExecuteForAll) {
   EXPECT_EQ(sum, 13'702);
 }
 
-TEST_F(IterablesTest, NullableReferencedIteratorExecuteForAll) {
+TEST_F(IterablesTest, ValueColumnNullableReferencedIteratorExecuteForAll) {
   auto & chunk = table_with_null->get_chunk(ChunkID{0u});
 
   auto column = chunk.get_column(ColumnID{0u});
@@ -106,7 +108,7 @@ TEST_F(IterablesTest, NullableReferencedIteratorExecuteForAll) {
   EXPECT_EQ(sum, 13'579);
 }
 
-TEST_F(IterablesTest, DictIteratorExecuteForAll) {
+TEST_F(IterablesTest, DictionaryColumnIteratorExecuteForAll) {
   DictionaryCompression::compress_table(*table);
 
   auto & chunk = table->get_chunk(ChunkID{0u});
@@ -123,7 +125,7 @@ TEST_F(IterablesTest, DictIteratorExecuteForAll) {
   EXPECT_EQ(sum, 24'825);
 }
 
-TEST_F(IterablesTest, DictReferencedIteratorExecuteForAll) {
+TEST_F(IterablesTest, DictionaryColumnDictReferencedIteratorExecuteForAll) {
   DictionaryCompression::compress_table(*table);
 
   auto & chunk = table->get_chunk(ChunkID{0u});
@@ -141,5 +143,32 @@ TEST_F(IterablesTest, DictReferencedIteratorExecuteForAll) {
 
   EXPECT_EQ(sum, 12'480);
 }
+
+TEST_F(IterablesTest, ReferenceColumnIteratorExecuteForAll) {
+  auto pos_list = PosList{RowID{ChunkID{0u}, 0u}, RowID{ChunkID{0u}, 3u}, RowID{ChunkID{0u}, 1u}, RowID{ChunkID{0u}, 2u}};
+
+  auto reference_column = std::make_unique<ReferenceColumn>(table, ColumnID{0u}, std::make_shared<PosList>(std::move(pos_list)));
+  
+  auto iterable = ReferenceColumnIterable<int>{*reference_column};
+
+  const auto sum = iterable.execute_for_all(SumUp{});
+
+  EXPECT_EQ(sum, 24'825);
+}
+
+TEST_F(IterablesTest, ConstantValueIteratorExecuteForAll) {
+  auto iterable = ConstantValueIterable<int>{2u};
+
+  const auto sum = iterable.execute_for_all([] (auto it, auto end) {
+    auto sum = 0;
+    for (auto i = 0u; i < 10; ++i) sum += (*it).value();
+    return sum;
+  });
+
+  EXPECT_EQ(sum, 20);
+}
+
+
+
 
 }  // namespace opossum

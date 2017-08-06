@@ -623,7 +623,7 @@ void TableScan::init_scan()
   if (is_variant(_right_parameter)) {
     const auto right_value = boost::get<AllTypeVariant>(_right_parameter);
 
-    // TODO(mjendruk): Check if not null
+    DebugAssert(!is_null(right_value), "Right value must not be NULL.");
 
     if (_is_reference_table) {
       _scan = std::make_unique<ReferenceColumnScan>(_in_table, _scan_type, left_column_id, right_value);
