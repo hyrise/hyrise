@@ -34,4 +34,7 @@ inline bool is_variant(const AllParameterVariant& variant) { return (variant.whi
 // Function to check if AllParameterVariant is ColumnName
 inline bool is_column_name(const AllParameterVariant& variant) { return (variant.which() == 1); }
 
+// Function to check if AllParameterVariant is ColumnName
+inline bool is_placeholder(const AllParameterVariant& variant) { return (variant.which() == 2); }
+
 }  // namespace opossum

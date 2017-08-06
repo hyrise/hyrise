@@ -538,7 +538,14 @@ uint8_t TableScan::num_in_tables() const { return 1; }
 uint8_t TableScan::num_out_tables() const { return 1; }
 
 std::shared_ptr<AbstractOperator> TableScan::recreate(const std::vector<AllParameterVariant> &args) const {
-  return nullptr;
+  // Replace value in the new operator, if it’s a parameter and an argument is available.
+  if (is_placeholder(_right_parameter)) {
+    const auto index = boost::get<ValuePlaceholder>(_right_parameter).index();
+    if (index < args.size()) {
+      return std::make_shared<TableScan>(_input_left->recreate(args), _left_column_name, _scan_type, args[index], _right_value2);
+    }
+  }
+  return std::make_shared<TableScan>(_input_left->recreate(args), _left_column_name, _scan_type, _right_parameter, _right_value2);
 }
 
 std::shared_ptr<const Table> TableScan::on_execute()
