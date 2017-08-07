@@ -64,10 +64,8 @@ set(
     import_export/binary.hpp
     import_export/csv_converter.hpp
     import_export/csv.hpp
-    import_export/csv_non_rfc_parser.cpp
-    import_export/csv_non_rfc_parser.hpp
-    import_export/csv_rfc_parser.cpp
-    import_export/csv_rfc_parser.hpp
+    import_export/csv_parser.cpp
+    import_export/csv_parser.hpp
     import_export/csv_writer.cpp
     import_export/csv_writer.hpp
     network/operator_translator.cpp

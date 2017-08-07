@@ -1,27 +1,21 @@
 #include "import_csv.hpp"
 
+#include <fstream>
 #include <memory>
 #include <string>
 
-#include "import_export/csv_non_rfc_parser.hpp"
-#include "import_export/csv_rfc_parser.hpp"
+#include "import_export/csv_parser.hpp"
 #include "storage/storage_manager.hpp"
 
 #include "utils/assert.hpp"
 
 namespace opossum {
 
-ImportCsv::ImportCsv(const std::string& filename, const optional<std::string> tablename, bool rfc_mode,
-                     size_t buffer_size)
-    : _filename(filename),
-      _tablename(tablename),
-      _rfc_mode(rfc_mode),
-      _buffer_size(buffer_size),
-      _config(CsvConfig{}) {}
+ImportCsv::ImportCsv(const std::string& filename, const optional<std::string> tablename)
+    : _filename(filename), _tablename(tablename), _config(CsvConfig{}) {}
 
-ImportCsv::ImportCsv(const std::string& filename, const CsvConfig& config, const optional<std::string> tablename,
-                     bool rfc_mode, size_t buffer_size)
-    : _filename(filename), _tablename(tablename), _rfc_mode(rfc_mode), _buffer_size(buffer_size), _config(config) {}
+ImportCsv::ImportCsv(const std::string& filename, const CsvConfig& config, const optional<std::string> tablename)
+    : _filename(filename), _tablename(tablename), _config(config) {}
 
 const std::string ImportCsv::name() const { return "ImportCSV"; }
 
@@ -40,14 +34,8 @@ std::shared_ptr<const Table> ImportCsv::on_execute() {
   file.close();
 
   std::shared_ptr<Table> table;
-
-  if (_rfc_mode) {
-    CsvRfcParser parser{_buffer_size, _config};
-    table = parser.parse(_filename);
-  } else {
-    CsvNonRfcParser parser{_buffer_size, _config};
-    table = parser.parse(_filename);
-  }
+  CsvParser parser{_config};
+  table = parser.parse(_filename);
 
   if (_tablename) {
     StorageManager::get().add_table(*_tablename, table);

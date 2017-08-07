@@ -23,7 +23,6 @@ set(
     operators/export_csv_test.cpp
     operators/get_table_test.cpp
     operators/import_binary_test.cpp
-    operators/import_csv_non_rfc_test.cpp
     operators/import_csv_test.cpp
     operators/index_column_scan_test.cpp
     operators/insert_test.cpp
