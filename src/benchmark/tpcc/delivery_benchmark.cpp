@@ -24,6 +24,7 @@
 #include "tpcc/constants.hpp"
 #include "tpcc/helper.hpp"
 
+#include "types.hpp"
 #include "utils/helper.hpp"
 
 namespace opossum {
@@ -205,7 +206,7 @@ class TPCCDeliveryBenchmark : public TPCCBenchmarkFixture {
     auto ts2 = std::make_shared<TableScan>(ts1, ColumnName("OL_D_ID"), ScanType::OpEquals, d_id);
     auto ts3 = std::make_shared<TableScan>(ts2, ColumnName("OL_W_ID"), ScanType::OpEquals, w_id);
     auto val = std::make_shared<Validate>(ts3);
-    auto sum = std::make_shared<Aggregate>(val, std::vector<AggregateDefinition>{{"OL_AMOUNT", Sum}},
+    auto sum = std::make_shared<Aggregate>(val, std::vector<AggregateDefinition>{{"OL_AMOUNT", AggregateFunction::Sum}},
                                            std::vector<std::string>{});
 
     auto t_gt = std::make_shared<OperatorTask>(gt);

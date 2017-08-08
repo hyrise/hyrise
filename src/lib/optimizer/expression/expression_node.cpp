@@ -153,7 +153,9 @@ std::string ExpressionNode::to_expression_string() const {
     Assert(static_cast<bool>(left_child()) && static_cast<bool>(right_child()), "Operator needs both operands");
 
     return left_child()->to_expression_string() + expression_type_to_operator_string.at(_type) +
-           right_child()->to_expression_string();
+            right_child()->to_expression_string();
+  } else if (_type == ExpressionType::FunctionReference) {
+    return _name + "()";
   } else {
     Fail("To generate expression string, ExpressionNodes need to be operators or operands");
   }

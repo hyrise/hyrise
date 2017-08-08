@@ -10,12 +10,14 @@
 #include "operators/aggregate.hpp"
 #include "operators/table_wrapper.hpp"
 
+#include "types.hpp"
+
 namespace opossum {
 
 BENCHMARK_DEFINE_F(BenchmarkBasicFixture, BM_Aggregate)(benchmark::State& state) {
   clear_cache();
 
-  std::vector<AggregateDefinition> aggregates = {{"b", Min}};
+  std::vector<AggregateDefinition> aggregates = {{"b", AggregateFunction::Min}};
   std::vector<std::string> groupby = {"a"};
 
   auto warm_up = std::make_shared<Aggregate>(_table_wrapper_a, aggregates, groupby);
