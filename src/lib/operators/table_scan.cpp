@@ -21,7 +21,7 @@ TableScan::TableScan(const std::shared_ptr<AbstractOperator> in, const std::stri
 
 const std::string &TableScan::column_name() const { return _column_name; }
 
-const ScanType TableScan::scan_type() const { return _scan_type; }
+ScanType TableScan::scan_type() const { return _scan_type; }
 
 const AllParameterVariant &TableScan::value() const { return _value; }
 

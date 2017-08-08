@@ -26,8 +26,8 @@ namespace opossum {
 class ASTToOperatorTranslatorTest : public BaseTest {
  protected:
   void SetUp() override {
-    StorageManager::get().add_table("table_int_float", load_table("src/test/tables/int_float.tbl", 2));
-    StorageManager::get().add_table("table_int_float2", load_table("src/test/tables/int_float2.tbl", 2));
+    StorageManager::get().add_table("table_int_float", load_table("src/test/tables/int_float.tbl", 0));
+    StorageManager::get().add_table("table_int_float2", load_table("src/test/tables/int_float2.tbl", 0));
   }
 
   void TearDown() override { StorageManager::get().reset(); }

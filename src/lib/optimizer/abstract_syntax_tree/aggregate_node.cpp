@@ -43,7 +43,7 @@ const std::vector<std::string>& AggregateNode::groupby_columns() const { return 
 std::string AggregateNode::description() const {
   std::ostringstream s;
 
-  auto stream_aggregate = [&] (const AggregateColumnDefinition& aggregate) {
+  auto stream_aggregate = [&](const AggregateColumnDefinition& aggregate) {
     s << aggregate.expr->to_expression_string();
     if (aggregate.alias) s << "AS \"" << (*aggregate.alias) << "\"";
   };

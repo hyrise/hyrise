@@ -44,11 +44,7 @@ ASTToOperatorTranslator::ASTToOperatorTranslator() {
 const std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::translate_node(
     const std::shared_ptr<AbstractASTNode> &node) const {
   auto it = _operator_factory.find(node->type());
-
-  if (it == _operator_factory.end()) {
-    throw std::runtime_error("No factory for ASTNodeType.");
-  }
-
+  DebugAssert(it != _operator_factory.end(), "No factory for ASTNodeType.");
   return it->second(node);
 }
 
@@ -116,7 +112,7 @@ const std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::translate_aggre
 
   for (const auto &aggregate : aggregates) {
     const auto &expr = aggregate.expr;
-    Assert(expr->type() == ExpressionType::FunctionReference, "Expression is not a function.");
+    DebugAssert(expr->type() == ExpressionType::FunctionReference, "Expression is not a function.");
 
     const auto &func_expr = (expr->expression_list())[0];
 
@@ -129,8 +125,8 @@ const std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::translate_aggre
       need_projection = true;
 
       // TODO(mp): Support more complex expressions.
-      Assert(func_expr->left_child()->is_operand(), "Left child is not a literal or column ref.");
-      Assert(func_expr->right_child()->is_operand(), "Right child is not a literal or column ref.");
+      DebugAssert(func_expr->left_child()->is_operand(), "Left child is not a literal or column ref.");
+      DebugAssert(func_expr->right_child()->is_operand(), "Right child is not a literal or column ref.");
 
       auto alias = "alias" + std::to_string(alias_index);
       alias_index++;
@@ -155,7 +151,8 @@ const std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::translate_aggre
   for (size_t aggregate_idx = 0; aggregate_idx < aggregates.size(); aggregate_idx++) {
     const auto &aggregate = aggregates[aggregate_idx];
 
-    Assert(aggregate.expr->type() == ExpressionType::FunctionReference, "Only functions are supported in Aggregates");
+    DebugAssert(aggregate.expr->type() == ExpressionType::FunctionReference,
+                "Only functions are supported in Aggregates");
     const auto aggregate_function = aggregate_function_to_string.right.at(aggregate.expr->name());
 
     aggregate_definitions.emplace_back(expr_aliases[aggregate_idx], aggregate_function, aggregate.alias);
