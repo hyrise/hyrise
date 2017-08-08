@@ -53,7 +53,7 @@ class SortMergeJoin::SortMergeJoinImpl : public AbstractJoinOperatorImpl {
   SortMergeJoinImpl<T>(SortMergeJoin& sort_merge_join, std::string left_column_name,
                        std::string right_column_name, std::string op, JoinMode mode)
     : _sort_merge_join{sort_merge_join}, _left_column_name{left_column_name}, _right_column_name{right_column_name},
-                                                                        _op{op}, _mode{mode}, _partition_count{1} {
+                                                                        _op{op}, _mode{mode}, _partition_count{2} {
     _output_pos_lists_left.resize(_partition_count);
     _output_pos_lists_right.resize(_partition_count);
   }
