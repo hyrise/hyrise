@@ -37,6 +37,7 @@ class RadixPartitionSort : public ColumnVisitable {
      const auto& right_column_type = _input_table_right->column_type(right_column_id);
 
      DebugAssert(left_column_type == right_column_type, "left and right column types do not match");
+     DebugAssert(left_column_type != "string", "string support has not been implemented yet");
    }
 
   virtual ~RadixPartitionSort() = default;
@@ -97,8 +98,8 @@ class RadixPartitionSort : public ColumnVisitable {
 
   // Radix calculation for arithmetic types
   template <typename T2>
-  typename std::enable_if<std::is_arithmetic<T2>::value, uint32_t>::type get_radix(T2 value, uint32_t radix_bits) {
-    return static_cast<uint32_t>(value) & radix_bits;
+  typename std::enable_if<std::is_arithmetic<T2>::value, uint32_t>::type get_radix(T2 value, uint8_t no_of_bits) {
+    return static_cast<uint32_t>(value) >> (32u - no_of_bits);
   }
 
   // Radix calculation for non-arithmetic types
@@ -170,6 +171,7 @@ class RadixPartitionSort : public ColumnVisitable {
 
            for (auto& entry : *sorted_chunk) {
              auto partition_id = get_radix<T>(entry.value, _partition_count - 1);
+             std::cout << "value: " << entry.value << ", radix: " << partition_id << std::endl;
              output_table->at(partition_id)->at(chunk_statistics.insert_position[partition_id]) = entry;
              chunk_statistics.insert_position[partition_id]++;
            }
@@ -222,10 +224,10 @@ class RadixPartitionSort : public ColumnVisitable {
     auto sorted_table = std::make_shared<MaterializedTable<T>>(input->chunk_count());
 
     // Can be extended to find that value dynamically later on (depending on hardware etc.)
-    const uint32_t job_size_threshold = 10000;
+    const size_t job_size_threshold = 10000;
     std::vector<std::shared_ptr<AbstractTask>> jobs;
 
-    uint32_t job_size = 0;
+    size_t job_size = 0;
     std::vector<ChunkID> chunk_ids;
     for (ChunkID chunk_id{0}; chunk_id < input->chunk_count(); chunk_id++) {
       job_size += input->get_chunk(chunk_id).size();
