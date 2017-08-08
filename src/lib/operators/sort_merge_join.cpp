@@ -408,7 +408,7 @@ class SortMergeJoin::SortMergeJoinImpl : public AbstractJoinOperatorImpl {
     DebugAssert(_partition_count > 0, "partition count is <= 0!");
 
     auto radix_partitioner = RadixPartitionSort<T>(_sort_merge_join._input_left, _sort_merge_join._input_right,
-                              *_sort_merge_join._column_names, _op, _mode, _partition_count);
+                              *_sort_merge_join._column_names, _op == "=", _partition_count);
     // Sort and partition the input tables
     radix_partitioner.execute();
     auto sort_output = radix_partitioner.get_output();
