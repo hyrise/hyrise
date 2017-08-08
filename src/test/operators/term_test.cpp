@@ -4,7 +4,7 @@
 #include "../base_test.hpp"
 #include "gtest/gtest.h"
 
-#include "../../lib/operators/term.hpp"
+#include "operators/expression_evaluator.hpp"
 #include "../../lib/storage/table.hpp"
 
 namespace opossum {

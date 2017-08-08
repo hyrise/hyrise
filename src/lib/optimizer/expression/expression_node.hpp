@@ -51,7 +51,7 @@ class ExpressionNode : public std::enable_shared_from_this<ExpressionNode> {
 
   static std::shared_ptr<ExpressionNode> create_column_reference(const std::string& table_name,
                                                                  const std::string& column_name,
-                                                                 const std::string& alias);
+                                                                 const std::string& alias = "");
 
   static std::shared_ptr<ExpressionNode> create_literal(const AllTypeVariant& value);
 

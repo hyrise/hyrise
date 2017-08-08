@@ -84,7 +84,13 @@ inline std::shared_ptr<OperatorTask> OperatorTranslator::translate(
 
   auto input_task = translate_proto(projection_operator.input_operator());
 
-  auto projection = std::make_shared<Projection>(input_task->get_operator(), column_names);
+  Projection::ColumnExpressions column_expressions;
+  column_expressions.reserve(column_names.size());
+  for (const auto & column_name : column_names) {
+    column_expressions.emplace_back(ExpressionNode::create_column_reference("", column_name));
+  }
+
+  auto projection = std::make_shared<Projection>(input_task->get_operator(), column_expressions);
   auto projection_task = std::make_shared<OperatorTask>(projection);
   input_task->set_as_predecessor_of(projection_task);
   _tasks.push_back(projection_task);
