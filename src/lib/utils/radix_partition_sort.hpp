@@ -108,15 +108,9 @@ class RadixPartitionSort : public ColumnVisitable {
     auto output_table = std::make_shared<MaterializedTable<T>>(1);
     output_table->at(0) = std::make_shared<MaterializedChunk<T>>();
 
-    // Calculate the total space required
-    size_t total_size = 0;
-    for (auto chunk : *input_chunks) {
-      total_size += chunk->size();
-    }
-
     // Reserve the required space and move the data to the output
     auto output_chunk = output_table->at(0);
-    output_chunk->reserve(total_size);
+    output_chunk->reserve(_materialized_table_size(input_chunks));
     for (auto& chunk : *input_chunks) {
       output_chunk->insert(output_chunk->end(), chunk->begin(), chunk->end());
     }
@@ -362,6 +356,10 @@ class RadixPartitionSort : public ColumnVisitable {
   }
 
   // Partitioning in case of Non-Equi-Join
+  /**
+  * Performs the radix partition sort for the non equi case which requires the complete table to be sorted
+  * and not only the partitions in themselves.
+  **/
   std::pair<std::shared_ptr<MaterializedTable<T>>, std::shared_ptr<MaterializedTable<T>>> _non_equi_join_partition(
                   std::shared_ptr<MaterializedTable<T>> input_left, std::shared_ptr<MaterializedTable<T>> input_right) {
     std::cout << "Partitioning for non equi join" << std::endl;
@@ -480,6 +478,9 @@ class RadixPartitionSort : public ColumnVisitable {
     return partitions;
   }
 
+  /**
+  * Determines whether a materialized chunk is sorted in ascending order.
+  **/
   bool _validate_is_sorted(std::shared_ptr<MaterializedChunk<T>> chunk) {
     for (size_t i = 0; i + 1 < chunk->size(); i++) {
       if (chunk->at(i).value > chunk->at(i + 1).value) {
@@ -490,6 +491,9 @@ class RadixPartitionSort : public ColumnVisitable {
     return true;
   }
 
+  /**
+  * Prints out the values of a materialized table.
+  **/
   void print_table(std::shared_ptr<MaterializedTable<T>> table) {
     std::cout << "----" << std::endl;
     for (auto chunk : *table) {
@@ -502,12 +506,13 @@ class RadixPartitionSort : public ColumnVisitable {
 
   bool _validate_is_sorted(std::shared_ptr<MaterializedTable<T>> table, bool inter_chunk_sorting_required) {
     for (size_t chunk_number = 0; chunk_number < table->size(); chunk_number++) {
+      // Every chunk must be sorted in its self
       if (!_validate_is_sorted(table->at(chunk_number))) {
         print_table(table);
         return false;
       }
 
-
+      // Check if this chunks elements are smaller than the next ones
       if (inter_chunk_sorting_required && chunk_number + 1 < table->size() && table->at(chunk_number + 1)->size() > 0
                             && table->at(chunk_number)->size() > 0
                             && table->at(chunk_number)->back().value > table->at(chunk_number + 1)->at(0).value) {
@@ -519,13 +524,16 @@ class RadixPartitionSort : public ColumnVisitable {
     return true;
   }
 
-  bool _validate_size(std::shared_ptr<MaterializedTable<T>> table, size_t size) {
+  /**
+  * Determines the total size of a materialized table.
+  **/
+  size_t _materialized_table_size(std::shared_ptr<MaterializedTable<T>> table) {
     size_t total_size = 0;
     for (auto chunk : *table) {
       total_size += chunk->size();
     }
 
-    return total_size == size;
+    return total_size;
   }
 
  public:
@@ -556,8 +564,10 @@ class RadixPartitionSort : public ColumnVisitable {
     DebugAssert(_validate_is_sorted(_output_left, !_equi_case), "left output table is not sorted");
     DebugAssert(_validate_is_sorted(_output_right, !_equi_case), "right output table is not sorted");
 
-    DebugAssert(_validate_size(_output_left, _input_table_left->row_count()), "left output has wrong size");
-    DebugAssert(_validate_size(_output_right, _input_table_right->row_count()), "right output has wrong size");
+    DebugAssert(_materialized_table_size(_output_left) == _input_table_left->row_count(),
+                "left output has wrong size");
+    DebugAssert(_materialized_table_size(_output_right) == _input_table_right->row_count(),
+                "right output has wrong size");
   }
 
   std::pair<std::shared_ptr<MaterializedTable<T>>, std::shared_ptr<MaterializedTable<T>>> get_output() {
