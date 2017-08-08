@@ -163,35 +163,25 @@ class SortMergeJoin::SortMergeJoinImpl : public AbstractJoinOperatorImpl {
           }
         }
       }
-    }
-
-    // Greater-Join implementation
-    else if (_op == ">") {
+    } else if (_op == ">") {
+      // Greater-Join implementation
       if (left_value > right_value) {
         _emit_combinations(partition_number, left_run.start.to(end_of_left_table), right_run);
-      }
-      if (left_value == right_value) {
+      } else if (left_value == right_value) {
         _emit_combinations(partition_number, left_run.end.to(end_of_left_table), right_run);
       }
-    }
-
-    // Grequal-Join implmentation
-    else if (_op == ">=" && left_value >= right_value) {
+    } else if (_op == ">=" && left_value >= right_value) {
+      // Grequal-Join implmentation
       _emit_combinations(partition_number, left_run.start.to(end_of_left_table), right_run);
-    }
-
-    // Less-Join implementation
-    else if (_op == "<") {
+    } else if (_op == "<") {
+      // Less-Join implementation
       if (left_value < right_value) {
         _emit_combinations(partition_number, left_run, right_run.start.to(end_of_right_table));
-      }
-      if (left_value == right_value) {
+      } else if (left_value == right_value) {
         _emit_combinations(partition_number, left_run, right_run.end.to(end_of_right_table));
       }
-    }
-
-    // Lequal-Join implementation
-    else if (_op == "<=" && left_value <= right_value) {
+    } else if (_op == "<=" && left_value <= right_value) {
+      // Lequal-Join implementation
       _emit_combinations(partition_number, left_run, right_run.start.to(end_of_right_table));
     }
   }
@@ -336,7 +326,7 @@ class SortMergeJoin::SortMergeJoinImpl : public AbstractJoinOperatorImpl {
     auto output = std::make_shared<PosList>();
 
     size_t total_size = 0;
-    for(auto pos_list : pos_lists) {
+    for (auto pos_list : pos_lists) {
       total_size += pos_list->size();
     }
 
