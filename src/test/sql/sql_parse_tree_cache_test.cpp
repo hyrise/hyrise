@@ -2,25 +2,20 @@
 #include <string>
 #include <utility>
 
-#include "../base_test.hpp"
 #include "SQLParser.h"
-#include "gtest/gtest.h"
+#include "SQLParserResult.h"
 
-#include "scheduler/current_scheduler.hpp"
-#include "scheduler/job_task.hpp"
-#include "scheduler/node_queue_scheduler.hpp"
-#include "scheduler/topology.hpp"
+#include "sql_base_test.hpp"
+
+#include "sql/lru_cache.hpp"
 #include "sql/sql_query_cache.hpp"
 #include "sql/sql_query_operator.hpp"
 #include "storage/storage_manager.hpp"
 
-using hsql::SQLParserResult;
-using hsql::SQLParser;
-
 namespace opossum {
 
 // The fixture for testing class GetTable.
-class SQLParseTreeCacheTest : public BaseTest {
+class SQLParseTreeCacheTest : public SQLBaseTest {
  protected:
   void SetUp() override {
     std::shared_ptr<Table> table_a = load_table("src/test/tables/int_float.tbl", 2);
@@ -30,77 +25,51 @@ class SQLParseTreeCacheTest : public BaseTest {
     StorageManager::get().add_table("table_b", std::move(table_b));
 
     parse_tree_cache_hits = 0;
+    query_plan_cache_hits = 0;
   }
 
-  void TearDown() override {
-    CurrentScheduler::set(nullptr);  // Make sure there is no Scheduler anymore
-  }
-
-  std::shared_ptr<OperatorTask> execute_query_task(const std::string& query) {
-    auto op = std::make_shared<SQLQueryOperator>(query);
-    auto task = std::make_shared<OperatorTask>(op);
-    task->execute();
-
-    if (op->parse_tree_cache_hit()) {
-      parse_tree_cache_hits++;
-    }
-    return task;
-  }
-
-  void schedule_query_task(const std::string& query) {
-    auto op = std::make_shared<SQLQueryOperator>(query);
-    auto task = std::make_shared<OperatorTask>(op);
-    task->schedule();
-  }
-
-  size_t parse_tree_cache_hits;
+  void TearDown() override {}
 };
 
 TEST_F(SQLParseTreeCacheTest, SQLParseTreeCacheTest) {
   SQLQueryCache<std::shared_ptr<hsql::SQLParserResult>> cache(2);
-  std::string query1 = "SELECT * FROM test;";
-  std::string query2 = "SELECT * FROM test2;";
 
-  std::shared_ptr<SQLParserResult> result;
+  EXPECT_FALSE(cache.has(Q1));
+  EXPECT_FALSE(cache.has(Q2));
 
-  EXPECT_FALSE(cache.has(query1));
-  EXPECT_FALSE(cache.has(query2));
+  // Parse the query and cache the parse tree.
+  auto result = std::make_shared<hsql::SQLParserResult>();
+  hsql::SQLParser::parseSQLString(Q1.c_str(), result.get());
+  cache.set(Q1, result);
 
-  result.reset(SQLParser::parseSQLString(query1.c_str()));
+  EXPECT_TRUE(cache.has(Q1));
+  EXPECT_FALSE(cache.has(Q2));
 
-  cache.set(query1, result);
-
-  EXPECT_FALSE(cache.has(query2));
-  EXPECT_TRUE(cache.has(query1));
-
-  std::shared_ptr<SQLParserResult> cached = cache.get(query1);
+  auto cached = cache.get(Q1);
   EXPECT_EQ(cached, result);
   EXPECT_EQ(cached->size(), 1u);
 }
 
-TEST_F(SQLParseTreeCacheTest, QueryOperatorParseTreeCache) {
-  SQLQueryCache<std::shared_ptr<hsql::SQLParserResult>>& cache = SQLQueryOperator::get_parse_tree_cache();
-  cache.clear_and_resize(2);
-
-  const std::string q1 = "SELECT * FROM table_a;";
-  const std::string q2 = "SELECT * FROM table_b;";
-  const std::string q3 = "SELECT * FROM table_a WHERE a > 1;";
+// Test query plan cache with LRU implementation.
+TEST_F(SQLParseTreeCacheTest, AutomaticQueryOperatorCacheLRU) {
+  auto &cache = SQLQueryOperator::get_parse_tree_cache();
+  cache.replace_cache_impl<LRUCache<std::string, std::shared_ptr<hsql::SQLParserResult>>>(2);
 
   // Execute the queries in arbitrary order.
-  execute_query_task(q1);
-  execute_query_task(q2);
-  execute_query_task(q1);  // Hit.
-  execute_query_task(q3);
-  execute_query_task(q3);  // Hit.
-  execute_query_task(q1);  // Hit.
-  execute_query_task(q2);
-  execute_query_task(q1);  // Hit.
-  execute_query_task(q3);
-  execute_query_task(q1);  // Hit.
+  execute_query_task(Q1, false);
+  execute_query_task(Q2, false);
+  execute_query_task(Q1, false);  // Hit.
+  execute_query_task(Q3, false);
+  execute_query_task(Q3, false);  // Hit.
+  execute_query_task(Q1, false);  // Hit.
+  execute_query_task(Q2, false);
+  execute_query_task(Q1, false);  // Hit.
+  execute_query_task(Q3, false);
+  execute_query_task(Q1, false);  // Hit.
 
-  EXPECT_TRUE(cache.has(q1));
-  EXPECT_FALSE(cache.has(q2));
-  EXPECT_TRUE(cache.has(q3));
+  EXPECT_TRUE(cache.has(Q1));
+  EXPECT_FALSE(cache.has(Q2));
+  EXPECT_TRUE(cache.has(Q3));
   EXPECT_FALSE(cache.has("SELECT * FROM test;"));
 
   // Check for the expected number of hits.

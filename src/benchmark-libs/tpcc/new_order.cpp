@@ -8,11 +8,11 @@
 #include <utility>
 #include <vector>
 
-#include "all_type_variant.hpp"
-#include "concurrency/commit_context.hpp"
-#include "concurrency/transaction_manager.hpp"
 #include "helper.hpp"
-#include "operators/commit_records.hpp"
+
+#include "concurrency/commit_context.hpp"
+#include "concurrency/transaction_context.hpp"
+#include "concurrency/transaction_manager.hpp"
 #include "operators/get_table.hpp"
 #include "operators/insert.hpp"
 #include "operators/product.hpp"
@@ -21,9 +21,10 @@
 #include "operators/table_wrapper.hpp"
 #include "operators/update.hpp"
 #include "operators/validate.hpp"
-#include "scheduler/abstract_scheduler.hpp"
 #include "scheduler/operator_task.hpp"
 #include "storage/storage_manager.hpp"
+
+#include "all_type_variant.hpp"
 
 namespace tpcc {
 

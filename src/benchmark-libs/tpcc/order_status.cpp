@@ -6,17 +6,19 @@
 #include <string>
 #include <vector>
 
-#include "concurrency/transaction_manager.hpp"
 #include "helper.hpp"
-#include "operators/commit_records.hpp"
+
+#include "concurrency/transaction_context.hpp"
+#include "concurrency/transaction_manager.hpp"
 #include "operators/get_table.hpp"
 #include "operators/limit.hpp"
-#include "operators/print.hpp"
 #include "operators/projection.hpp"
 #include "operators/sort.hpp"
 #include "operators/table_scan.hpp"
 #include "operators/validate.hpp"
-#include "storage/storage_manager.hpp"
+#include "scheduler/operator_task.hpp"
+#include "storage/table.hpp"
+
 #include "types.hpp"
 
 namespace tpcc {

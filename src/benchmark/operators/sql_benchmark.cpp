@@ -1,6 +1,5 @@
 #include <memory>
 #include <string>
-#include <utility>
 
 #include "SQLParser.h"
 #include "benchmark/benchmark.h"

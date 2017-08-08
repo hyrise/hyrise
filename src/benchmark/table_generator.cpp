@@ -1,4 +1,5 @@
 #include "table_generator.hpp"
+
 #include <assert.h>
 #include <fstream>
 #include <memory>
@@ -6,10 +7,14 @@
 #include <string>
 #include <utility>
 #include <vector>
-#include "types.hpp"
 
-#include "storage/value_column.hpp"
 #include "tbb/concurrent_vector.h"
+
+#include "storage/chunk.hpp"
+#include "storage/table.hpp"
+#include "storage/value_column.hpp"
+
+#include "types.hpp"
 
 namespace opossum {
 

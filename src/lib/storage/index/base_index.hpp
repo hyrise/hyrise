@@ -1,15 +1,15 @@
 #pragma once
 
-#include <algorithm>
-#include <exception>
 #include <memory>
 #include <vector>
 
-#include "storage/base_column.hpp"
+#include "all_type_variant.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 
 namespace opossum {
+
+class BaseColumn;
 
 /**
  * BaseIndex is the abstract super class for all index types, e.g. GroupKeyIndex , CompositeGroupKeyIndex,

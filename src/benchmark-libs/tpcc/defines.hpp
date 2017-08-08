@@ -3,8 +3,14 @@
 #include <memory>
 #include <vector>
 
-#include "scheduler/operator_task.hpp"
+namespace opossum {
+
+class OperatorTask;
+
+}  // namespace opossum
 
 namespace tpcc {
+
 using TaskVector = std::vector<std::shared_ptr<opossum::OperatorTask>>;
-}
+
+}  // namespace tpcc

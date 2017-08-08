@@ -1,12 +1,12 @@
 #include <memory>
-#include <string>
-#include <utility>
 
 #include "benchmark/benchmark.h"
 
-#include "../base_fixture.cpp"
+#include "../base_fixture.hpp"
 #include "../table_generator.hpp"
+
 #include "operators/product.hpp"
+#include "operators/table_wrapper.hpp"
 
 namespace opossum {
 

@@ -12,6 +12,8 @@
 #include "sql_query_plan.hpp"
 #include "sql_to_ast_translator.hpp"
 
+#include "utils/assert.hpp"
+
 namespace opossum {
 
 using hsql::SQLStatement;

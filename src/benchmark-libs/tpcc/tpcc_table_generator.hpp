@@ -1,24 +1,31 @@
 #pragma once
 
-#include <time.h>
+#include <ctime>
+
 #include <map>
 #include <memory>
 #include <string>
 #include <vector>
 
-#include "random_generator.hpp"
-#include "storage/storage_manager.hpp"
-#include "storage/table.hpp"
-#include "storage/value_column.hpp"
+#include "tbb/concurrent_vector.h"
+
+#include "benchmark_utilities/abstract_benchmark_table_generator.hpp"
+#include "tpcc_random_generator.hpp"
+
+namespace opossum {
+
+class Table;
+
+}  // namespace opossum
 
 namespace tpcc {
 
-class TableGenerator {
+class TpccTableGenerator : public benchmark_utilities::AbstractBenchmarkTableGenerator {
   // following TPC-C v5.11.0
  public:
-  TableGenerator();
+  explicit TpccTableGenerator(const opossum::ChunkOffset chunk_size = 1'000'000, const size_t warehouse_size = 1);
 
-  virtual ~TableGenerator() = default;
+  virtual ~TpccTableGenerator() = default;
 
   std::shared_ptr<opossum::Table> generate_items_table();
 
@@ -42,28 +49,22 @@ class TableGenerator {
 
   std::shared_ptr<opossum::Table> generate_new_order_table();
 
-  std::shared_ptr<std::map<std::string, std::shared_ptr<opossum::Table>>> generate_all_tables();
+  std::map<std::string, std::shared_ptr<opossum::Table>> generate_all_tables();
 
-  const size_t _chunk_size = 10000;
+  const size_t _warehouse_size;
   const time_t _current_date = std::time(0);
-  const size_t _warehouse_size = 1;
 
  protected:
   template <typename T>
-  tbb::concurrent_vector<T> generate_order_line_column(std::vector<size_t> indices,
-                                                       order_line_counts_type order_line_counts,
-                                                       const std::function<T(std::vector<size_t>)> &generator_function);
+  std::vector<T> generate_inner_order_line_column(std::vector<size_t> indices, order_line_counts_type order_line_counts,
+                                                  const std::function<T(std::vector<size_t>)> &generator_function);
 
   template <typename T>
-  void add_column(std::shared_ptr<opossum::Table> table, std::string name,
-                  std::shared_ptr<std::vector<size_t>> cardinalities,
-                  const std::function<T(std::vector<size_t>)> &generator_function);
+  void add_order_line_column(std::shared_ptr<opossum::Table> table, std::string name,
+                             std::shared_ptr<std::vector<size_t>> cardinalities,
+                             order_line_counts_type order_line_counts,
+                             const std::function<T(std::vector<size_t>)> &generator_function);
 
-  template <typename T>
-  void add_column(std::shared_ptr<opossum::Table> table, std::string name,
-                  std::shared_ptr<std::vector<size_t>> cardinalities, order_line_counts_type order_line_counts,
-                  const std::function<T(std::vector<size_t>)> &generator_function);
-
-  RandomGenerator _random_gen;
+  TpccRandomGenerator _random_gen;
 };
 }  // namespace tpcc
