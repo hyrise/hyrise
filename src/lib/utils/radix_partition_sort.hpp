@@ -98,8 +98,8 @@ class RadixPartitionSort : public ColumnVisitable {
 
   // Radix calculation for arithmetic types
   template <typename T2>
-  typename std::enable_if<std::is_arithmetic<T2>::value, uint32_t>::type get_radix(T2 value, uint8_t no_of_bits) {
-    return static_cast<uint32_t>(value) >> (32u - no_of_bits);
+  typename std::enable_if<std::is_arithmetic<T2>::value, uint32_t>::type get_radix(T2 value, uint8_t radix_bits) {
+    return static_cast<uint32_t>(value) & radix_bits;
   }
 
   // Radix calculation for non-arithmetic types
@@ -514,7 +514,7 @@ class RadixPartitionSort : public ColumnVisitable {
      }
    }
 
-   bool _validate_is_sorted(std::shared_ptr<MaterializedTable<T>> table) {
+   bool _validate_is_sorted(std::shared_ptr<MaterializedTable<T>> table, bool inter_chunk_sorting_required) {
      std::cout << "Validating sortedness" << std::endl;
      for(size_t chunk_number = 0; chunk_number < table->size(); chunk_number++) {
        if(!_validate_is_sorted(table->at(chunk_number))) {
@@ -522,7 +522,8 @@ class RadixPartitionSort : public ColumnVisitable {
          return false;
        }
 
-       if(chunk_number + 1 < table->size() && table->at(chunk_number + 1)->size() > 0
+
+       if(inter_chunk_sorting_required && chunk_number + 1 < table->size() && table->at(chunk_number + 1)->size() > 0
                                 && table->at(chunk_number)->size() > 0
                                 && table->at(chunk_number)->back().value > table->at(chunk_number + 1)->at(0).value) {
          print_table(table);
@@ -558,8 +559,9 @@ class RadixPartitionSort : public ColumnVisitable {
        //std::cout << "value based partitioning ran through" << std::endl;
      }
 
-     DebugAssert(_validate_is_sorted(_output_left), "left output table is not sorted");
-     DebugAssert(_validate_is_sorted(_output_right), "right output table is not sorted");
+     bool inter_chunk_order = (_op != "=");
+     DebugAssert(_validate_is_sorted(_output_left, inter_chunk_order), "left output table is not sorted");
+     DebugAssert(_validate_is_sorted(_output_right, inter_chunk_order), "right output table is not sorted");
 
      std::cout << "finished validating sortedness" << std::endl;
 
