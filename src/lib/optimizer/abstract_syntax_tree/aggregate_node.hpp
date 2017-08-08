@@ -23,7 +23,7 @@ struct AggregateColumnDefinition {
 
 /**
  * This node type is used to describe SELECT lists for statements that have at least one of the following:
- *  - one or more functions in their SELECT list
+ *  - one or more aggregate functions in their SELECT list
  *  - a GROUP BY clause
  */
 class AggregateNode : public AbstractASTNode {

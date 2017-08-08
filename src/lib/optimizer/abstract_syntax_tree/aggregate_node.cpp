@@ -45,7 +45,7 @@ std::string AggregateNode::description() const {
 
   auto stream_aggregate = [&] (const AggregateColumnDefinition & aggregate) {
     s << aggregate.expr->to_expression_string();
-    if (aggregate.alias) s << "AS '" << (*aggregate.alias) << "'";
+    if (aggregate.alias) s << "AS \"" << (*aggregate.alias) << "\"";
   };
 
   auto it = _aggregates.begin();
