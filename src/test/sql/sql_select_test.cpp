@@ -96,7 +96,7 @@ TEST_F(SQLSelectTest, BasicParserSuccessTest) {
   EXPECT_FALSE(parse_result.isValid());
 }
 
-// TODO(mp): enable after new translator has been merged
+// TODO(mp): BLOCKING - enable after new translator has been merged
 TEST_F(SQLSelectTest, DISABLED_SelectWithSchedulerTest) {
   const std::string query =
       "SELECT \"left\".a, \"left\".b, \"right\".a, \"right\".b FROM table_a AS \"left\" INNER JOIN table_b AS "
@@ -158,7 +158,7 @@ const SQLTestParam test_queries[] = {
     SQLTestParam{"SELECT a FROM (SELECT a, b FROM table_a WHERE a > 1 ORDER BY b) WHERE a > 0 ORDER BY a;", 7u, true,
                  "src/test/tables/int.tbl"},
     // JOIN
-    SQLTestParam{"SELECT \"left\".a, \"left\".b, \"right\".a, \"right\".b FROM table_a AS \"left\" JOIN table_b AS"
+    SQLTestParam{"SELECT \"left\".a, \"left\".b, \"right\".a, \"right\".b FROM table_a AS \"left\" JOIN table_b AS "
                  "\"right\" ON a = a;",
                  4u, true, "src/test/tables/joinoperators/int_inner_join.tbl"},
     SQLTestParam{"SELECT * FROM table_a AS \"left\" LEFT JOIN table_b AS \"right\" ON a = a;", 3u, true,

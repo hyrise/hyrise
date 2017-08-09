@@ -59,8 +59,8 @@ class OperatorsAggregateTest : public BaseTest {
     _table_wrapper_1_1_dict->execute();
   }
 
-  void test_output(const std::shared_ptr<AbstractOperator> in, const std::vector<AggregateDefinition> aggregates,
-                   const std::vector<ColumnID> groupby_columns, const std::string &file_name, size_t chunk_size) {
+  void test_output(const std::shared_ptr<AbstractOperator> in, const std::vector<AggregateDefinition> &aggregates,
+                   const std::vector<ColumnID> &groupby_column_ids, const std::string &file_name, size_t chunk_size) {
     // load expected results from file
     std::shared_ptr<Table> expected_result = load_table(file_name, chunk_size);
     EXPECT_NE(expected_result, nullptr) << "Could not load expected result table";
@@ -68,15 +68,15 @@ class OperatorsAggregateTest : public BaseTest {
     // collect possible columns to scan before aggregate
     std::set<ColumnID> ref_columns;
 
-    for (auto const &agg : aggregates) {
+    for (const auto &agg : aggregates) {
       ref_columns.insert(agg.column_id);
     }
 
-    for (auto const &groupby : groupby_columns) {
-      ref_columns.insert(groupby);
+    for (const auto column_id : groupby_column_ids) {
+      ref_columns.insert(column_id);
     }
 
-    EXPECT_NE(ref_columns.size(), 0);
+    EXPECT_NE(ref_columns.size(), 0u);
 
     for (auto &ref : ref_columns) {
       // make one Aggregate w/o ReferenceColumn
@@ -87,7 +87,7 @@ class OperatorsAggregateTest : public BaseTest {
       input->execute();
 
       // build and execute Aggregate
-      auto aggregate = std::make_shared<Aggregate>(input, aggregates, groupby_columns);
+      auto aggregate = std::make_shared<Aggregate>(input, aggregates, groupby_column_ids);
       EXPECT_NE(aggregate, nullptr) << "Could not build Aggregate";
       aggregate->execute();
       EXPECT_TABLE_EQ(aggregate->get_output(), expected_result);

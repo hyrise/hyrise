@@ -77,14 +77,14 @@ class JoinTest : public BaseTest {
   template <typename JoinType>
   void test_join_output(const std::shared_ptr<const AbstractOperator> left,
                         const std::shared_ptr<const AbstractOperator> right,
-                        const std::pair<ColumnID, ColumnID> &column_names, const ScanType scan_type,
-                        const JoinMode mode, const std::string &file_name, size_t chunk_size) {
+                        const std::pair<ColumnID, ColumnID> &column_ids, const ScanType scan_type, const JoinMode mode,
+                        const std::string &file_name, size_t chunk_size) {
     // load expected results from file
     std::shared_ptr<Table> expected_result = load_table(file_name, chunk_size);
     EXPECT_NE(expected_result, nullptr) << "Could not load expected result table";
 
     // build and execute join
-    auto join = std::make_shared<JoinType>(left, right, column_names, scan_type, mode);
+    auto join = std::make_shared<JoinType>(left, right, column_ids, scan_type, mode);
     EXPECT_NE(join, nullptr) << "Could not build Join";
     join->execute();
 

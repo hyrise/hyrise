@@ -110,12 +110,12 @@ void BaseTest::_print_matrix(const BaseTest::Matrix &m) {
         EXPECT_TRUE(is_null(left[row][col]) && is_null(right[row][col]));
       } else if (tleft.column_type(col) == "float") {
         EXPECT_EQ(tright.column_type(col), "float");
-        EXPECT_NEAR(type_cast<float>(left[row][col]), type_cast<float>(right[row][col]), 0.0001) << "Row/Col:" << row
-                                                                                                 << "/" << col;
+        EXPECT_NEAR(type_cast<float>(left[row][col]), type_cast<float>(right[row][col]), 0.0001)
+            << "Row/Col:" << row << "/" << col;
       } else if (tleft.column_type(col) == "double") {
         EXPECT_EQ(tright.column_type(col), "double");
-        EXPECT_NEAR(type_cast<double>(left[row][col]), type_cast<double>(right[row][col]), 0.0001) << "Row/Col:" << row
-                                                                                                   << "/" << col;
+        EXPECT_NEAR(type_cast<double>(left[row][col]), type_cast<double>(right[row][col]), 0.0001)
+            << "Row/Col:" << row << "/" << col;
       } else {
         EXPECT_EQ(left[row][col], right[row][col]) << "Row:" << row + 1 << " Col:" << col + 1;
       }

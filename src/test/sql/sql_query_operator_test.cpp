@@ -50,7 +50,7 @@ TEST_F(SQLQueryOperatorTest, BasicTest) {
   EXPECT_TABLE_EQ(sql_result_task->get_operator()->get_output(), expected_result);
 }
 
-// TODO(mp): enable after new translator has been merged
+// TODO(mp): BLOCKING - enable after new translator has been merged
 TEST_F(SQLQueryOperatorTest, DISABLED_ComplexQueryTest) {
   const std::string query =
       "SELECT \"left\".a, \"left\".b, \"right\".a, \"right\".b FROM table_a AS \"left\" INNER JOIN table_b AS "
@@ -59,7 +59,7 @@ TEST_F(SQLQueryOperatorTest, DISABLED_ComplexQueryTest) {
   auto sql_task = std::make_shared<OperatorTask>(sql_op);
   sql_task->schedule();
 
-  EXPECT_THROW(CurrentScheduler::get()->finish(), std::logic_error);
+  CurrentScheduler::get()->finish();
 
   auto sql_result_task = sql_op->get_result_task();
   auto expected_result = load_table("src/test/tables/joinoperators/int_inner_join.tbl", 1);

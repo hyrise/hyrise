@@ -74,7 +74,6 @@ TEST_F(SQLQueryPlanTest, SQLQueryPlanCloneWithSchedulerTest) {
   // Get the query plan template.
   const SQLQueryPlan& tmpl = op.get_query_plan();
   auto tmpl_tasks = tmpl.tasks();
-  // TODO(mp): enable after new translator has been merged
   ASSERT_EQ(3u, tmpl_tasks.size());
   EXPECT_EQ("GetTable", tmpl_tasks[0]->get_operator()->name());
   EXPECT_EQ("TableScan", tmpl_tasks[1]->get_operator()->name());
