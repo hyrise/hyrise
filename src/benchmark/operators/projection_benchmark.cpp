@@ -18,7 +18,7 @@ class OperatorsProjectionBenchmark : public BenchmarkBasicFixture {
   void SetUp(::benchmark::State& state) override {
     BenchmarkBasicFixture::SetUp(state);
     _column_type = state.range(1);
-    _table_ref = std::make_shared<TableScan>(_table_wrapper_a, "a", ScanType::OpGreaterThanEquals, 0);  // all
+    _table_ref = std::make_shared<TableScan>(_table_wrapper_a, ColumnID{0}, ScanType::OpGreaterThanEquals, 0);  // all
     _table_ref->execute();
 
     _tables.emplace_back(_table_wrapper_a);  // 0
