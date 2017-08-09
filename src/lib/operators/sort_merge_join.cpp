@@ -395,8 +395,6 @@ class SortMergeJoin::SortMergeJoinImpl : public AbstractJoinOperatorImpl {
   * Executes the SortMergeJoin operator
   **/
   std::shared_ptr<const Table> on_execute() {
-    DebugAssert(_partition_count > 0, "partition count is <= 0!");
-
     auto radix_partitioner = RadixPartitionSort<T>(_sort_merge_join._input_left, _sort_merge_join._input_right,
                               *_sort_merge_join._column_names, _op == "=", _partition_count);
     // Sort and partition the input tables

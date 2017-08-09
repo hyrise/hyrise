@@ -135,53 +135,57 @@ class RadixPartitionSort : public ColumnVisitable {
     return total_size;
   }
 
+  std::shared_ptr<MaterializedTable<T>> _partition(std::shared_ptr<MaterializedTable<T>> input_chunks,
+                                                   std::function<size_t(T&)> partitioner) {
+   auto output_table = std::make_shared<MaterializedTable<T>>(_partition_count);
+   TableStatistics table_statistics(input_chunks->size(), _partition_count);
+
+   // Each chunk should prepare additional data to enable partitioning
+   for (size_t chunk_number = 0; chunk_number < input_chunks->size(); chunk_number++) {
+     auto& chunk_statistics = table_statistics.chunk_statistics[chunk_number];
+     auto input_chunk = input_chunks->at(chunk_number);
+
+     // Count the number of entries for each partition
+     for (auto& entry : *input_chunk) {
+       auto partition_id = partitioner(entry.value);
+       chunk_statistics.partition_histogram[partition_id]++;
+     }
+   }
+
+   // Aggregate the chunks histograms to a table histogram and initialize the insert positions for each chunk
+   for (auto& chunk_statistics : table_statistics.chunk_statistics) {
+     for (size_t partition_id = 0; partition_id < _partition_count; partition_id++) {
+       chunk_statistics.insert_position[partition_id] = table_statistics.partition_histogram[partition_id];
+       table_statistics.partition_histogram[partition_id] += chunk_statistics.partition_histogram[partition_id];
+     }
+   }
+
+   // Reserve the appropriate output space for the partitions
+   for (size_t partition_id = 0; partition_id < _partition_count; partition_id++) {
+     auto partition_size = table_statistics.partition_histogram[partition_id];
+     output_table->at(partition_id) = std::make_shared<MaterializedChunk<T>>(partition_size);
+   }
+
+   // Move each entry into its appropriate partition
+   for (size_t chunk_number = 0; chunk_number < input_chunks->size(); chunk_number++) {
+     auto& chunk_statistics = table_statistics.chunk_statistics[chunk_number];
+     for (auto& entry : *input_chunks->at(chunk_number)) {
+       auto partition_id = partitioner(entry.value);
+       output_table->at(partition_id)->at(chunk_statistics.insert_position[partition_id]++) = entry;
+     }
+   }
+
+   return output_table;
+}
+
   /**
   * Performs least significant bit radix partitioning which is used in the equi join case.
   **/
   std::shared_ptr<MaterializedTable<T>> _equi_join_partition(std::shared_ptr<MaterializedTable<T>> input_chunks) {
-    auto output_table = std::make_shared<MaterializedTable<T>>(_partition_count);
-    TableStatistics table_statistics(input_chunks->size(), _partition_count);
-
-    // Each chunk should prepare additional data to enable partitioning
-    for (size_t chunk_number = 0; chunk_number < input_chunks->size(); chunk_number++) {
-      auto& chunk_statistics = table_statistics.chunk_statistics[chunk_number];
-      auto input_chunk = input_chunks->at(chunk_number);
-
-      // Count the number of entries for each partition
-      // Each partition corresponds to a radix value
-      for (auto& entry : *input_chunk) {
-        auto radix = get_radix<T>(entry.value, _partition_count - 1);
-        chunk_statistics.partition_histogram[radix]++;
-      }
-    }
-
-    // Aggregate the chunks histograms to a table histogram and initialize the insert positions for each chunk
-    for (auto& chunk_statistics : table_statistics.chunk_statistics) {
-      for (size_t partition_id = 0; partition_id < _partition_count; partition_id++) {
-        chunk_statistics.insert_position[partition_id] = table_statistics.partition_histogram[partition_id];
-        table_statistics.partition_histogram[partition_id] += chunk_statistics.partition_histogram[partition_id];
-      }
-    }
-
-    // Reserve the appropriate output space for the partitions
-    for (size_t partition_id = 0; partition_id < _partition_count; partition_id++) {
-      auto partition_size = table_statistics.partition_histogram[partition_id];
-      output_table->at(partition_id) = std::make_shared<MaterializedChunk<T>>(partition_size);
-    }
-
-    // Move each entry into its appropriate partition
-    // Since _partition_count is a power of two, the radix bitmask will look like 00...011...1
-    uint32_t radix_bitmask = _partition_count - 1;
-    for (size_t chunk_number = 0; chunk_number < input_chunks->size(); chunk_number++) {
-      auto& chunk_statistics = table_statistics.chunk_statistics[chunk_number];
-      for (auto& entry : *input_chunks->at(chunk_number)) {
-        auto partition_id = get_radix<T>(entry.value, radix_bitmask);
-        output_table->at(partition_id)->at(chunk_statistics.insert_position[partition_id]) = entry;
-        chunk_statistics.insert_position[partition_id]++;
-      }
-    }
-
-    return output_table;
+    auto radix_bitmask = _partition_count - 1;
+    return _partition(input_chunks, [=] (T& value) {
+      return get_radix<T>(value, radix_bitmask);
+    });
   }
 
   /**
@@ -365,7 +369,6 @@ class RadixPartitionSort : public ColumnVisitable {
   **/
   std::pair<std::shared_ptr<MaterializedTable<T>>, std::shared_ptr<MaterializedTable<T>>> _non_equi_join_partition(
                   std::shared_ptr<MaterializedTable<T>> input_left, std::shared_ptr<MaterializedTable<T>> input_right) {
-    std::cout << "Partitioning for non equi join" << std::endl;
     std::vector<std::map<T, size_t>> sample_values(_partition_count);
 
     auto max_value_left = pick_sample_values(sample_values, input_left);
@@ -405,50 +408,9 @@ class RadixPartitionSort : public ColumnVisitable {
 
   std::shared_ptr<MaterializedTable<T>> _range_partition(std::shared_ptr<MaterializedTable<T>> table,
                                                                        std::vector<T>& split_values) {
-    auto partitions = std::make_shared<MaterializedTable<T>>(_partition_count);
-    TableStatistics table_statistics(table->size(), _partition_count);
-
-    // Each chunk should prepare additional data to enable partitioning
-    for (size_t chunk_number = 0; chunk_number < table->size(); chunk_number++) {
-      auto& chunk_statistics = table_statistics.chunk_statistics[chunk_number];
-
-      // Fill histogram
-      for (auto& entry : *table->at(chunk_number)) {
-        auto partition_id = _determine_partition(entry.value, split_values);
-        chunk_statistics.partition_histogram[partition_id]++;
-      }
-    }
-
-    // Aggregate the chunk statistics to table statistics
-    for (auto& chunk_statistics : table_statistics.chunk_statistics) {
-      for (size_t partition_id = 0; partition_id < _partition_count; partition_id++) {
-        chunk_statistics.insert_position[partition_id] = table_statistics.partition_histogram[partition_id];
-        table_statistics.partition_histogram[partition_id] += chunk_statistics.partition_histogram[partition_id];
-      }
-    }
-
-    // prepare for parallel access later on
-    for (size_t partition_id = 0; partition_id < _partition_count; partition_id++) {
-      auto partition_size = table_statistics.partition_histogram[partition_id];
-      partitions->at(partition_id) = std::make_shared<MaterializedChunk<T>>(partition_size);
-    }
-
-    DebugAssert(_materialized_table_size(partitions) == _materialized_table_size(table),
-                "Value based partitioning: input and output table do not have the same size");
-
-    // Move the entries to the appropriate output position
-    // Note: this should be parallelized
-    for (size_t chunk_number = 0; chunk_number < table->size(); chunk_number++) {
-      auto& chunk_statistics = table_statistics.chunk_statistics[chunk_number];
-      for (auto& entry : *table->at(chunk_number)) {
-        auto partition_id = _determine_partition(entry.value, split_values);
-        auto insert_position = chunk_statistics.insert_position[partition_id];
-        partitions->at(partition_id)->at(insert_position) = entry;
-        chunk_statistics.insert_position[partition_id]++;
-      }
-    }
-
-    return partitions;
+    return _partition(table, [this, &split_values](T& value) {
+      return _determine_partition(value, split_values);
+    });
   }
 
   /**
