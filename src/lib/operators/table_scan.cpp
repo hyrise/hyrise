@@ -43,10 +43,12 @@ struct Scan {
   PosList & _matches_out;
 };
 
-class AbstractScan {
+class ColumnScanBase {
  public:
-  AbstractScan(std::shared_ptr<const Table> in_table, const ScanType scan_type) : _in_table{in_table}, _scan_type{scan_type} {}
-  virtual ~AbstractScan() = default;
+  ColumnScanBase(std::shared_ptr<const Table> in_table, const ColumnID left_column_id, const ScanType scan_type)
+      : _in_table{in_table}, _left_column_id{left_column_id}, _scan_type{scan_type} {}
+
+  virtual ~ColumnScanBase() = default;
 
   virtual PosList scan_chunk(const ChunkID & chunk_id) = 0;
 
@@ -82,45 +84,12 @@ class AbstractScan {
 
  protected:
   const std::shared_ptr<const Table> _in_table;
+  const ColumnID _left_column_id;
   const ScanType _scan_type;
 };
 
-
-// 1 data column (dictionary, value)
-class DataColumnScan : public AbstractScan {
- public:
-  DataColumnScan(std::shared_ptr<const Table> in_table, const ScanType & scan_type,
-                 const ColumnID left_column_id, const AllTypeVariant & right_value)
-      : AbstractScan{in_table, scan_type}, _left_column_id{left_column_id}, _right_value{right_value} {}
-
-  PosList scan_chunk(const ChunkID & chunk_id) override {
-    const auto & chunk = _in_table->get_chunk(chunk_id);
-
-    const auto left_column_type = _in_table->column_type(_left_column_id);
-    const auto left_column = chunk.get_column(_left_column_id);
-
-    auto matches_out = PosList{};
-
-    resolve_column_type(left_column_type, *left_column, [&] (auto type, auto &typed_left_column) {
-      using Type = typename decltype(type)::type;
-
-      auto left_column_iterable = _create_iterable_from_column(typed_left_column);
-      auto right_value_iterable = ConstantValueIterable<Type>{_right_value};
-
-      _scan(left_column_iterable, right_value_iterable, chunk_id, matches_out);
-    });
-
-    return matches_out;
-  }
-
- private:
-  const ColumnID _left_column_id;
-  const AllTypeVariant _right_value;
-};
-
-// 1 data column
-class SingleColumnScan : public AbstractScan, public ColumnVisitable {
- public:
+class SingleColumnScanBase : public ColumnScanBase, public ColumnVisitable {
+protected:
   struct Context : public ColumnVisitableContext {
     Context(const ChunkID chunk_id, PosList & matches_out) : _chunk_id{chunk_id}, _matches_out{matches_out}{}
 
@@ -133,25 +102,78 @@ class SingleColumnScan : public AbstractScan, public ColumnVisitable {
     std::unique_ptr<std::vector<std::pair<ChunkOffset, ChunkOffset>>> _mapped_chunk_offsets;
   };
 
- public:
-  SingleColumnScan(std::shared_ptr<const Table> in_table, const ScanType & scan_type,
-             const ColumnID left_column_id, const AllTypeVariant & right_value)
-      : AbstractScan{in_table, scan_type}, _left_column_id{left_column_id}, _right_value{right_value} {}
+public:
+  // Inherit constructors
+  using ColumnScanBase::ColumnScanBase;
 
   PosList scan_chunk(const ChunkID & chunk_id) override {
     const auto & chunk = _in_table->get_chunk(chunk_id);
-
-    const auto left_column_type = _in_table->column_type(_left_column_id);
     const auto left_column = chunk.get_column(_left_column_id);
 
     auto matches_out = PosList{};
-
     auto context = std::make_shared<Context>(chunk_id, matches_out);
 
     left_column->visit(*this, context);
 
     return std::move(context->_matches_out);
   }
+
+  void handle_reference_column(ReferenceColumn &left_column, std::shared_ptr<ColumnVisitableContext> base_context) override {
+    auto context = std::static_pointer_cast<Context>(base_context);
+    const ChunkID chunk_id = context->_chunk_id;
+    auto & matches_out = context->_matches_out;
+
+    // TODO(mjendruk): Find a good estimates for when it’s better simply iterate over the column
+
+    auto chunk_offsets_by_chunk_id = _split_position_list_by_chunk_id(*left_column.pos_list());
+
+    for (auto & pair : chunk_offsets_by_chunk_id) {
+      const auto &chunk_id = pair.first;
+      auto &mapped_chunk_offsets = pair.second;
+
+      const auto &chunk = left_column.referenced_table()->get_chunk(chunk_id);
+      auto referenced_column = chunk.get_column(left_column.referenced_column_id());
+
+      auto mapped_chunk_offsets_ptr = std::make_unique<std::vector<std::pair<ChunkOffset, ChunkOffset>>>(std::move(mapped_chunk_offsets));
+
+      auto new_context = std::make_shared<Context>(chunk_id, matches_out, std::move(mapped_chunk_offsets_ptr));
+      referenced_column->visit(*this, new_context);
+    }
+  }
+
+  // void handle_value_column(BaseColumn &base_column, std::shared_ptr<ColumnVisitableContext> base_context) = 0;
+  // void handle_dictionary_column(BaseColumn &base_column, std::shared_ptr<ColumnVisitableContext> base_context) = 0;
+
+ private:
+  /**
+   * @defgroup Methods used for handling reference columns
+   * @{
+   */
+
+  using ChunkOffsetsByChunkID = std::unordered_map<ChunkID, std::vector<std::pair<ChunkOffset, ChunkOffset>>, std::hash<decltype(ChunkID().t)>>;
+  
+  ChunkOffsetsByChunkID _split_position_list_by_chunk_id(const PosList & pos_list) {
+    auto chunk_offsets_by_chunk_id = ChunkOffsetsByChunkID{};
+
+    for (auto chunk_offset = 0u; chunk_offset < pos_list.size(); ++chunk_offset) {
+      const auto row_id = pos_list[chunk_offset];
+
+      auto & mapped_chunk_offsets = chunk_offsets_by_chunk_id[row_id.chunk_id];
+      mapped_chunk_offsets.emplace_back(chunk_offset, row_id.chunk_offset);
+    }
+
+    return chunk_offsets_by_chunk_id;
+  }
+
+  /**@}*/
+};
+
+// 1 data column
+class SingleColumnScan : public SingleColumnScanBase {
+ public:
+  SingleColumnScan(std::shared_ptr<const Table> in_table, const ColumnID left_column_id,
+                   const ScanType & scan_type, const AllTypeVariant & right_value)
+      : SingleColumnScanBase{in_table, left_column_id, scan_type}, _right_value{right_value} {}
 
   void handle_value_column(BaseColumn &base_column, std::shared_ptr<ColumnVisitableContext> base_context) override {
     auto context = std::static_pointer_cast<Context>(base_context);
@@ -235,29 +257,6 @@ class SingleColumnScan : public AbstractScan, public ColumnVisitable {
     _resolve_scan_type([&] (auto comparator) {
       _scan(comparator, attribute_vector_iterable, constant_value_iterable, context->_chunk_id, matches_out);
     });
-  }
-
-  void handle_reference_column(ReferenceColumn &left_column, std::shared_ptr<ColumnVisitableContext> base_context) override {
-    auto context = std::static_pointer_cast<Context>(base_context);
-    const ChunkID chunk_id = context->_chunk_id;
-    auto & matches_out = context->_matches_out;
-
-    // TODO(mjendruk): Find a good estimates for when it’s better simply iterate over the column
-
-    auto chunk_offsets_by_chunk_id = _split_position_list_by_chunk_id(*left_column.pos_list());
-
-    for (auto & pair : chunk_offsets_by_chunk_id) {
-      const auto &chunk_id = pair.first;
-      auto &mapped_chunk_offsets = pair.second;
-
-      const auto &chunk = left_column.referenced_table()->get_chunk(chunk_id);
-      auto referenced_column = chunk.get_column(left_column.referenced_column_id());
-
-      auto mapped_chunk_offsets_ptr = std::make_unique<std::vector<std::pair<ChunkOffset, ChunkOffset>>>(std::move(mapped_chunk_offsets));
-
-      auto new_context = std::make_shared<Context>(chunk_id, matches_out, std::move(mapped_chunk_offsets_ptr));
-      referenced_column->visit(*this, new_context);
-    }
   }
 
  private:
@@ -366,40 +365,214 @@ class SingleColumnScan : public AbstractScan, public ColumnVisitable {
   /**@}*/
 
  private:
+  const AllTypeVariant _right_value;
+};
+
+// 1 data column
+class LikeColumnScan : public SingleColumnScanBase {
+ public:
+  LikeColumnScan(std::shared_ptr<const Table> in_table, const ColumnID left_column_id, const std::string & right_wildcard)
+      : SingleColumnScanBase{in_table, left_column_id, ScanType::OpLike}, _right_wildcard{right_wildcard} {
+
+    // convert the given SQL-like search term into a c++11 regex to use it for the actual matching
+    auto regex_string = _sqllike_to_regex(_right_wildcard);
+    _regex = std::regex{regex_string, std::regex_constants::icase};  // case insentivity
+  }
+
+  void handle_value_column(BaseColumn &base_column, std::shared_ptr<ColumnVisitableContext> base_context) override {
+    auto context = std::static_pointer_cast<Context>(base_context);
+    auto & matches_out = context->_matches_out;
+    const auto chunk_id = context->_chunk_id;
+
+    auto & left_column = static_cast<const ValueColumn<std::string> &>(base_column);
+
+    auto left_column_iterable = ValueColumnIterable<std::string>{left_column, context->_mapped_chunk_offsets.get()};
+
+    left_column_iterable.execute_for_all([&] (auto left_it, auto left_end) {
+      for (; left_it != left_end; ++left_it) {
+        const auto left = *left_it;
+        
+        if (left.is_null()) continue;
+
+        if (std::regex_match(left.value(), _regex)) {
+          matches_out.push_back(RowID{chunk_id, left.chunk_offset()});
+        }
+      }
+    });
+  }
+
+  void handle_dictionary_column(BaseColumn &base_column, std::shared_ptr<ColumnVisitableContext> base_context) override {
+    auto context = std::static_pointer_cast<Context>(base_context);
+    auto & matches_out = context->_matches_out;
+    const auto chunk_id = context->_chunk_id;
+
+    const auto & left_column = static_cast<const DictionaryColumn<std::string> &>(base_column);
+
+    // TODO(mjendruk): Find a good heuristic for when simply scanning column is faster (dictionary size -> attribute vector size)
+
+    const auto dictionary_matches = _find_matches_in_dictionary(*left_column.dictionary());
+
+    const auto & attribute_vector = *left_column.attribute_vector();
+
+    auto attribute_vector_iterable = AttributeVectorIterable{attribute_vector, context->_mapped_chunk_offsets.get()};
+
+    attribute_vector_iterable.execute_for_all([&] (auto left_it, auto left_end) {
+      for (; left_it != left_end; ++left_it) {
+        const auto left = *left_it;
+        
+        if (left.is_null()) continue;
+
+        if (dictionary_matches[left.value()]) {
+          matches_out.push_back(RowID{chunk_id, left.chunk_offset()});
+        }
+      }
+    });
+  }
+
+ private:
   /**
-   * @defgroup Methods used for handling reference columns
+   * @defgroup Methods used for handling dictionary columns
    * @{
    */
 
-  using ChunkOffsetsByChunkID = std::unordered_map<ChunkID, std::vector<std::pair<ChunkOffset, ChunkOffset>>, std::hash<decltype(ChunkID().t)>>;
-  
-  ChunkOffsetsByChunkID _split_position_list_by_chunk_id(const PosList & pos_list) {
-    auto chunk_offsets_by_chunk_id = ChunkOffsetsByChunkID{};
+  std::vector<bool> _find_matches_in_dictionary(const std::vector<std::string> & dictionary) { 
+    auto dictionary_matches = std::vector<bool>{};
+    dictionary_matches.reserve(dictionary.size());
 
-    for (auto chunk_offset = 0u; chunk_offset < pos_list.size(); ++chunk_offset) {
-      const auto row_id = pos_list[chunk_offset];
-
-      auto & mapped_chunk_offsets = chunk_offsets_by_chunk_id[row_id.chunk_id];
-      mapped_chunk_offsets.emplace_back(chunk_offset, row_id.chunk_offset);
+    for (const auto & value : dictionary) {
+      dictionary_matches.push_back(std::regex_match(value, _regex));
     }
 
-    return chunk_offsets_by_chunk_id;
+    return dictionary_matches;
   }
 
   /**@}*/
 
  private:
-  const ColumnID _left_column_id;
+  static std::string & _replace_all(std::string &str, const std::string &old_value, const std::string &new_value) {
+    std::string::size_type pos = 0;
+    while ((pos = str.find(old_value, pos)) != std::string::npos) {
+      str.replace(pos, old_value.size(), new_value);
+      pos += new_value.size() - old_value.size() + 1;
+    }
+    return str;
+  }
+
+  static std::map<std::string, std::string> _extract_character_ranges(std::string &str) {
+    std::map<std::string, std::string> ranges;
+
+    int rangeID = 0;
+    std::string::size_type startPos = 0;
+    std::string::size_type endPos = 0;
+
+    while ((startPos = str.find("[", startPos)) != std::string::npos &&
+           (endPos = str.find("]", startPos + 1)) != std::string::npos) {
+      std::stringstream ss;
+      ss << "[[" << rangeID << "]]";
+      std::string chars = str.substr(startPos + 1, endPos - startPos - 1);
+      str.replace(startPos, chars.size() + 2, ss.str());
+      rangeID++;
+      startPos += ss.str().size();
+
+      _replace_all(chars, "[", "\\[");
+      _replace_all(chars, "]", "\\]");
+      ranges[ss.str()] = "[" + chars + "]";
+    }
+
+    int open = 0;
+    std::string::size_type searchPos = 0;
+    startPos = 0;
+    endPos = 0;
+    do {
+      startPos = str.find("[", searchPos);
+      endPos = str.find("]", searchPos);
+
+      if (startPos == std::string::npos && endPos == std::string::npos) break;
+
+      if (startPos < endPos || endPos == std::string::npos) {
+        open++;
+        searchPos = startPos + 1;
+      } else {
+        if (open <= 0) {
+          str.replace(endPos, 1, "\\]");
+          searchPos = endPos + 2;
+        } else {
+          open--;
+          searchPos = endPos + 1;
+        }
+      }
+    } while (searchPos < str.size());
+    return ranges;
+  }
+
+  static std::string _sqllike_to_regex(std::string sqllike) {
+    _replace_all(sqllike, ".", "\\.");
+    _replace_all(sqllike, "^", "\\^");
+    _replace_all(sqllike, "$", "\\$");
+    _replace_all(sqllike, "+", "\\+");
+    _replace_all(sqllike, "?", "\\?");
+    _replace_all(sqllike, "(", "\\(");
+    _replace_all(sqllike, ")", "\\)");
+    _replace_all(sqllike, "{", "\\{");
+    _replace_all(sqllike, "}", "\\}");
+    _replace_all(sqllike, "\\", "\\\\");
+    _replace_all(sqllike, "|", "\\|");
+    _replace_all(sqllike, ".", "\\.");
+    _replace_all(sqllike, "*", "\\*");
+    std::map<std::string, std::string> ranges = _extract_character_ranges(sqllike);  // Escapes [ and ] where necessary
+    _replace_all(sqllike, "%", ".*");
+    _replace_all(sqllike, "_", ".");
+    for (auto &range : ranges) {
+      _replace_all(sqllike, range.first, range.second);
+    }
+    return "^" + sqllike + "$";
+  }
+
+ private:
+  const std::string _right_wildcard;
+
+  std::regex _regex;
+};
+
+
+// 1 data column (dictionary, value)
+class DataColumnScan : public ColumnScanBase {
+ public:
+  DataColumnScan(std::shared_ptr<const Table> in_table, const ColumnID left_column_id,
+                 const ScanType & scan_type, const AllTypeVariant & right_value)
+      : ColumnScanBase{in_table, left_column_id, scan_type}, _right_value{right_value} {}
+
+  PosList scan_chunk(const ChunkID & chunk_id) override {
+    const auto & chunk = _in_table->get_chunk(chunk_id);
+
+    const auto left_column_type = _in_table->column_type(_left_column_id);
+    const auto left_column = chunk.get_column(_left_column_id);
+
+    auto matches_out = PosList{};
+
+    resolve_column_type(left_column_type, *left_column, [&] (auto type, auto &typed_left_column) {
+      using Type = typename decltype(type)::type;
+
+      auto left_column_iterable = _create_iterable_from_column(typed_left_column);
+      auto right_value_iterable = ConstantValueIterable<Type>{_right_value};
+
+      _scan(left_column_iterable, right_value_iterable, chunk_id, matches_out);
+    });
+
+    return matches_out;
+  }
+
+ private:
   const AllTypeVariant _right_value;
 };
 
 
 // 1 reference column
-class ReferenceColumnScan : public AbstractScan {
+class ReferenceColumnScan : public ColumnScanBase {
  public:
-  ReferenceColumnScan(std::shared_ptr<const Table> in_table, const ScanType & scan_type,
-                      const ColumnID left_column_id, const AllTypeVariant & right_value)
-      : AbstractScan{in_table, scan_type}, _left_column_id{left_column_id}, _right_value{right_value} {}
+  ReferenceColumnScan(std::shared_ptr<const Table> in_table, const ColumnID left_column_id,
+                      const ScanType & scan_type, const AllTypeVariant & right_value)
+      : ColumnScanBase{in_table, left_column_id, scan_type}, _right_value{right_value} {}
 
   PosList scan_chunk(const ChunkID & chunk_id) override {
     const auto & chunk = _in_table->get_chunk(chunk_id);
@@ -424,17 +597,16 @@ class ReferenceColumnScan : public AbstractScan {
   }
 
  private:
-  const ColumnID _left_column_id;
   const AllTypeVariant _right_value;
 };
 
 
 // 2 data columns (dictionary, value)
-class DataColumnComparisonScan : public AbstractScan {
+class DataColumnComparisonScan : public ColumnScanBase {
  public:
-  DataColumnComparisonScan(std::shared_ptr<const Table> in_table, const ScanType & scan_type,
-                           const ColumnID left_column_id, const ColumnID right_column_id)
-      : AbstractScan{in_table, scan_type}, _left_column_id{left_column_id}, _right_column_id{right_column_id} {}
+  DataColumnComparisonScan(std::shared_ptr<const Table> in_table, const ColumnID left_column_id,
+                           const ScanType & scan_type, const ColumnID right_column_id)
+      : ColumnScanBase{in_table, left_column_id, scan_type}, _right_column_id{right_column_id} {}
 
   PosList scan_chunk(const ChunkID & chunk_id) override {
     const auto & chunk = _in_table->get_chunk(chunk_id);
@@ -468,17 +640,16 @@ class DataColumnComparisonScan : public AbstractScan {
   }
 
  private:
-  const ColumnID _left_column_id;
   const ColumnID _right_column_id;
 };
 
 
 // 2 data columns (dictionary, value)
-class ReferenceColumnComparisonScan : public AbstractScan {
+class ReferenceColumnComparisonScan : public ColumnScanBase {
  public:
-  ReferenceColumnComparisonScan(std::shared_ptr<const Table> in_table, const ScanType & scan_type,
-                                const ColumnID left_column_id, const ColumnID right_column_id)
-      : AbstractScan{in_table, scan_type}, _left_column_id{left_column_id}, _right_column_id{right_column_id} {}
+  ReferenceColumnComparisonScan(std::shared_ptr<const Table> in_table, const ColumnID left_column_id,
+                                const ScanType & scan_type, const ColumnID right_column_id)
+      : ColumnScanBase{in_table, left_column_id, scan_type}, _right_column_id{right_column_id} {}
 
   PosList scan_chunk(const ChunkID & chunk_id) override {
     const auto & chunk = _in_table->get_chunk(chunk_id);
@@ -518,7 +689,6 @@ class ReferenceColumnComparisonScan : public AbstractScan {
   }
 
  private:
-  const ColumnID _left_column_id;
   const ColumnID _right_column_id;
 };
 
@@ -629,26 +799,47 @@ void TableScan::init_scan()
 
   _is_reference_table = first_chunk.get_column(left_column_id)->is_reference_column();
 
+  if (_scan_type == ScanType::OpLike) {
+    const auto left_column_type = _in_table->column_type(left_column_id);
+    DebugAssert((left_column_type == "string"), "LIKE operator only applicable on string columns.");
+
+    /**
+     * LIKE is always executed on with constant value (containing a wildcard)
+     * using a VariableTerm (ColumnName, see term.hpp) is not supported here
+     */
+    DebugAssert(is_variant(_right_parameter), "LIKE only supports ConstantTerms.");
+
+    const auto right_value = boost::get<AllTypeVariant>(_right_parameter);
+
+    DebugAssert(!is_null(right_value), "Right value cannot be NULL.");
+
+    const auto right_wildcard = type_cast<std::string>(right_value);
+
+    _scan = std::make_unique<LikeColumnScan>(_in_table, left_column_id, right_wildcard);
+
+    return;
+  }
+
   if (is_variant(_right_parameter)) {
     const auto right_value = boost::get<AllTypeVariant>(_right_parameter);
 
     DebugAssert(!is_null(right_value), "Right value must not be NULL.");
 
-    _scan = std::make_unique<SingleColumnScan>(_in_table, _scan_type, left_column_id, right_value);
+    _scan = std::make_unique<SingleColumnScan>(_in_table, left_column_id, _scan_type, right_value);
 
     // if (_is_reference_table) {
-    //   _scan = std::make_unique<ReferenceColumnScan>(_in_table, _scan_type, left_column_id, right_value);
+    //   _scan = std::make_unique<ReferenceColumnScan>(_in_table, left_column_id, _scan_type, right_value);
     // } else {
-    //   _scan = std::make_unique<DataColumnScan>(_in_table, _scan_type, left_column_id, right_value);
+    //   _scan = std::make_unique<DataColumnScan>(_in_table, left_column_id, _scan_type, right_value);
     // }
   } else /* is_column_name(_right_parameter) */ {
     const auto right_column_name = boost::get<ColumnName>(_right_parameter);
     const auto right_column_id = _in_table->column_id_by_name(right_column_name);
 
     if (_is_reference_table) {
-      _scan = std::make_unique<ReferenceColumnComparisonScan>(_in_table, _scan_type, left_column_id, right_column_id);
+      _scan = std::make_unique<ReferenceColumnComparisonScan>(_in_table, left_column_id, _scan_type, right_column_id);
     } else {
-      _scan = std::make_unique<DataColumnComparisonScan>(_in_table, _scan_type, left_column_id, right_column_id);
+      _scan = std::make_unique<DataColumnComparisonScan>(_in_table, left_column_id, _scan_type, right_column_id);
     }
   }
 }

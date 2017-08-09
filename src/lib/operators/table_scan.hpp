@@ -25,7 +25,7 @@
 
 namespace opossum {
 
-class AbstractScan;
+class ColumnScanBase;
 
 class TableScan : public AbstractReadOnlyOperator {
  public:
@@ -55,7 +55,7 @@ class TableScan : public AbstractReadOnlyOperator {
 
   std::shared_ptr<const Table> _in_table;
   bool _is_reference_table;
-  std::unique_ptr<AbstractScan> _scan;
+  std::unique_ptr<ColumnScanBase> _scan;
   std::shared_ptr<Table> _output_table;
 };
 
