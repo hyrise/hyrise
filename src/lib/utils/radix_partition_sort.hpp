@@ -51,8 +51,8 @@ class RadixPartitionSort : public ColumnVisitable {
     std::vector<size_t> partition_histogram;
     std::vector<size_t> insert_position;
 
-    std::map<T, uint32_t> value_histogram;
-    std::map<T, uint32_t> prefix_v;
+    //std::map<T, uint32_t> value_histogram;
+    //std::map<T, uint32_t> prefix_v;
   };
 
   /**
@@ -72,7 +72,7 @@ class RadixPartitionSort : public ColumnVisitable {
 
     // used to count the number of entries for each partition from the whole table
     std::vector<size_t> partition_histogram;
-    std::map<T, uint32_t> value_histogram;
+    //std::map<T, uint32_t> value_histogram;
   };
 
   /**
@@ -392,14 +392,26 @@ class RadixPartitionSort : public ColumnVisitable {
     }
     split_values.back() = max_value;
 
-    auto output_left = value_based_table_partitioning(input_left, split_values);
-    auto output_right = value_based_table_partitioning(input_right, split_values);
+    auto output_left = _range_partition(input_left, split_values);
+    auto output_right = _range_partition(input_right, split_values);
 
     return std::pair<std::shared_ptr<MaterializedTable<T>>,
               std::shared_ptr<MaterializedTable<T>>>(output_left, output_right);
   }
 
-  std::shared_ptr<MaterializedTable<T>> value_based_table_partitioning(std::shared_ptr<MaterializedTable<T>> table,
+  /**
+  * Determines in which range a value falls and returns the corresponding partition id.
+  **/
+  size_t _determine_partition(T& value, std::vector<T>& split_values) {
+    for(size_t partition_id = 0; partition_id < _partition_count; partition_id++) {
+      if(value <= split_values[partition_id]) {
+        return partition_id;
+      }
+    }
+    throw std::logic_error("There is no partition for this value");
+  }
+
+  std::shared_ptr<MaterializedTable<T>> _range_partition(std::shared_ptr<MaterializedTable<T>> table,
                                                                        std::vector<T>& split_values) {
     auto partitions = std::make_shared<MaterializedTable<T>>(_partition_count);
     TableStatistics table_statistics(table->size(), _partition_count);
@@ -408,64 +420,39 @@ class RadixPartitionSort : public ColumnVisitable {
     for (size_t chunk_number = 0; chunk_number < table->size(); chunk_number++) {
       auto& chunk_statistics = table_statistics.chunk_statistics[chunk_number];
 
-      // fill histogram
+      // Fill histogram
       for (auto& entry : *table->at(chunk_number)) {
-        for (auto& split_value : split_values) {
-          if (entry.value <= split_value) {
-            chunk_statistics.value_histogram[split_value]++;
-            break;
-          }
-        }
+        auto partition_id = _determine_partition(entry.value, split_values);
+        chunk_statistics.partition_histogram[partition_id]++;
       }
     }
 
-    // Each chunk need to sequentially fill _prefix map to actually fill partition of tables in parallel
+    // Aggregate the chunk statistics to table statistics
     for (auto& chunk_statistics : table_statistics.chunk_statistics) {
-      for (auto& split_value : split_values) {
-        chunk_statistics.prefix_v[split_value] = table_statistics.value_histogram[split_value];
-        table_statistics.value_histogram[split_value] += chunk_statistics.value_histogram[split_value];
+      for (size_t partition_id = 0; partition_id < _partition_count; partition_id++) {
+        chunk_statistics.insert_position[partition_id] = table_statistics.partition_histogram[partition_id];
+        table_statistics.partition_histogram[partition_id] += chunk_statistics.partition_histogram[partition_id];
       }
     }
 
     // prepare for parallel access later on
     for (size_t partition_id = 0; partition_id < _partition_count; partition_id++) {
-      auto partition_size = table_statistics.value_histogram[split_values[partition_id]];
+      auto partition_size = table_statistics.partition_histogram[partition_id];
       partitions->at(partition_id) = std::make_shared<MaterializedChunk<T>>(partition_size);
     }
 
     DebugAssert(_materialized_table_size(partitions) == _materialized_table_size(table),
                 "Value based partitioning: input and output table do not have the same size");
 
-    //std::cout << "rp: " << __LINE__ << std::endl;
-    /*
+    // Move the entries to the appropriate output position
+    // Note: this should be parallelized
     for (size_t chunk_number = 0; chunk_number < table->size(); chunk_number++) {
       auto& chunk_statistics = table_statistics.chunk_statistics[chunk_number];
-      auto chunk_values = table->at(chunk_number);
-      for (auto& entry : *chunk_values) {
-        auto partition_id = get_radix<T>(entry.value, _partition_count - 1);
-        partitions->at(partition_id)->at(chunk_statistics.insert_position[partition_id]++) = entry;
-      }
-    }
-    */
-
-    //std::cout << "rp: " << __LINE__ << std::endl;
-
-    // Each chunk fills (parallel) partition
-    for (size_t chunk_number = 0; chunk_number < table->size(); chunk_number++) {
-      auto& chunk_statistics = table_statistics.chunk_statistics[chunk_number];
-      auto chunk_values = table->at(chunk_number);
-      for (auto& entry : *chunk_values) {
-        size_t partition_id = 0;
-        for (auto& radix : split_values) {
-          if (entry.value <= radix) {
-            auto insert_position = chunk_statistics.prefix_v[radix];
-            DebugAssert(insert_position < partitions->at(partition_id)->size(),
-                        "output partition was sized incorrectly");
-            partitions->at(partition_id)->at(insert_position) = entry;
-            chunk_statistics.prefix_v[radix]++;
-            partition_id++;
-          }
-        }
+      for (auto& entry : *table->at(chunk_number)) {
+        auto partition_id = _determine_partition(entry.value, split_values);
+        auto insert_position = chunk_statistics.insert_position[partition_id];
+        partitions->at(partition_id)->at(insert_position) = entry;
+        chunk_statistics.insert_position[partition_id]++;
       }
     }
 
