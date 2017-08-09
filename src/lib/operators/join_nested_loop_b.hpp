@@ -28,7 +28,7 @@ class JoinNestedLoopB : public AbstractJoinOperator {
  public:
   JoinNestedLoopB(const std::shared_ptr<const AbstractOperator> left,
                   const std::shared_ptr<const AbstractOperator> right,
-                  optional<std::pair<ColumnID, ColumnID>> column_names, const ScanType scan_type, const JoinMode mode);
+                  optional<std::pair<ColumnID, ColumnID>> column_ids, const ScanType scan_type, const JoinMode mode);
 
   const std::string name() const override;
   uint8_t num_in_tables() const override;
@@ -96,8 +96,8 @@ class JoinNestedLoopB : public AbstractJoinOperator {
   void _append_columns_to_output(std::shared_ptr<const Table> input_table, std::shared_ptr<PosList> pos_list);
 
   // Input fields
-  ColumnID _left_column_name;
-  ColumnID _right_column_name;
+  ColumnID _left_column_id;
+  ColumnID _right_column_id;
   ScanType _scan_type;
   JoinMode _mode;
 

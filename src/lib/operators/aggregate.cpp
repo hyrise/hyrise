@@ -38,12 +38,9 @@ std::shared_ptr<const Table> Aggregate::on_execute() {
   auto input_table = input_table_left();
 
   // check for invalid aggregates
-  for (size_t aggregate_index = 0; aggregate_index < _aggregates.size(); ++aggregate_index) {
-    auto column_id = _aggregates[aggregate_index].column_id;
-    auto aggregate = _aggregates[aggregate_index].function;
-
-    if (input_table->column_type(column_id) == "string" &&
-        (aggregate == AggregateFunction::Sum || aggregate == AggregateFunction::Avg)) {
+  for (auto &aggregate : _aggregates) {
+    if (input_table->column_type(aggregate.column_id) == "string" &&
+        (aggregate.function == AggregateFunction::Sum || aggregate.function == AggregateFunction::Avg)) {
       Fail("Aggregate: Cannot calculate SUM or AVG on string column");
     }
   }
@@ -146,18 +143,19 @@ std::shared_ptr<const Table> Aggregate::on_execute() {
       }
     } else {
       ColumnID column_index{0};
-      for (auto &agg : _aggregates) {
-        auto base_column = chunk_in.get_column(agg.column_id);
-        auto type_string = input_table->column_type(agg.column_id);
+      for (const auto &aggregate : _aggregates) {
+        auto base_column = chunk_in.get_column(aggregate.column_id);
+        auto type_string = input_table->column_type(aggregate.column_id);
 
         /*
         Invoke the AggregateVisitor for each aggregate column
         */
-        auto groupby_ctx = std::make_shared<GroupByContext>(input_table, chunk_id, agg.column_id, hash_keys);
+        auto groupby_ctx = std::make_shared<GroupByContext>(input_table, chunk_id, aggregate.column_id, hash_keys);
         std::shared_ptr<ColumnVisitable> builder;
         auto ctx = _contexts_per_column[column_index];
 
-        call_functor_by_column_type<AggregateVisitorCreator>(type_string, builder, ctx, groupby_ctx, agg.function);
+        call_functor_by_column_type<AggregateVisitorCreator>(type_string, builder, ctx, groupby_ctx,
+                                                             aggregate.function);
 
         base_column->visit(*builder, ctx);
         column_index++;
@@ -169,12 +167,13 @@ std::shared_ptr<const Table> Aggregate::on_execute() {
   _output = std::make_shared<Table>();
 
   // add group by columns
-  for (auto column_index : _groupby_column_ids) {
-    _output->add_column_definition(input_table->column_name(column_index), input_table->column_type(column_index));
+  for (const auto column_index : _groupby_column_ids) {
+    const auto &column_type = input_table->column_type(column_index);
+    const auto &column_name = input_table->column_name(column_index);
 
-    _groupby_columns.emplace_back(
-        make_shared_by_column_type<BaseColumn, ValueColumn>(input_table->column_type(column_index)));
+    _output->add_column_definition(column_name, column_type);
 
+    _groupby_columns.emplace_back(make_shared_by_column_type<BaseColumn, ValueColumn>(column_type));
     _out_chunk.add_column(_groupby_columns.back());
   }
 
@@ -199,7 +198,7 @@ std::shared_ptr<const Table> Aggregate::on_execute() {
   Write the aggregated columns to the output
   */
   ColumnID column_index{0};
-  for (auto &aggregate : _aggregates) {
+  for (const auto &aggregate : _aggregates) {
     auto &type_string = input_table_left()->column_type(aggregate.column_id);
 
     call_functor_by_column_type<AggregateWriter>(type_string, *this, column_index, aggregate.function);

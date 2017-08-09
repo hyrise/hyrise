@@ -166,12 +166,11 @@ class TableScan::TableScanImpl : public AbstractReadOnlyOperatorImpl {
     auto output = std::make_shared<Table>();
 
     auto in_table = _in_operator->get_output();
-    ColumnID column_id1, column_id2;
+    ColumnID column_id2;
     T casted_value1;
     optional<T> casted_value2;
     std::string like_regex;
 
-    column_id1 = _column_id;
     if (_is_constant_value_scan) {
       // column_a == 5
       casted_value1 = type_cast<T>(boost::get<AllTypeVariant>(_value));
@@ -234,7 +233,7 @@ class TableScan::TableScanImpl : public AbstractReadOnlyOperatorImpl {
         // LIKE is always executed on with constant value (containing a wildcard)
         // using VariableTerm is not supported here
         DebugAssert(_is_constant_value_scan, "LIKE only supports ConstantTerms and std::string type");
-        const auto column_type = in_table->column_type(column_id1);
+        const auto column_type = in_table->column_type(_column_id);
         DebugAssert((column_type == "string"), "LIKE operator only applicable on string columns");
         break;
       }
@@ -249,13 +248,13 @@ class TableScan::TableScanImpl : public AbstractReadOnlyOperatorImpl {
     jobs.reserve(in_table->chunk_count());
 
     for (ChunkID chunk_id{0}; chunk_id < in_table->chunk_count(); ++chunk_id) {
-      jobs.emplace_back(std::make_shared<JobTask>([&in_table, chunk_id, &output_mutex, &output, &column_id1,
-                                                   &column_id2, &casted_value1, &casted_value2, this]() {
+      jobs.emplace_back(std::make_shared<JobTask>([&in_table, chunk_id, &output_mutex, &output, &column_id2,
+                                                   &casted_value1, &casted_value2, this]() {
         const Chunk &chunk_in = in_table->get_chunk(chunk_id);
         Chunk chunk_out;
 
         std::vector<RowID> matches_in_this_chunk;
-        auto column1 = chunk_in.get_column(column_id1);
+        auto column1 = chunk_in.get_column(_column_id);
 
         tbb::concurrent_vector<T> values;
         auto context = std::make_shared<ScanContext>(in_table, chunk_id, matches_in_this_chunk, values);

@@ -26,7 +26,7 @@ JoinNestedLoopA::JoinNestedLoopA(const std::shared_ptr<const AbstractOperator> l
       "JoinNestedLoopA: this operator does not support Cross Joins, the optimizer should use Product operator.");
   DebugAssert((_mode != JoinMode::Natural), "NestedLoopJoin: this operator currently does not support Natural Joins.");
   DebugAssert(static_cast<bool>(column_ids),
-              "NestedLoopJoin: optional column names are only supported for Cross and Natural Joins.");
+              "NestedLoopJoin: optional column ids are only supported for Cross and Natural Joins.");
 }
 
 const std::string JoinNestedLoopA::name() const { return "JoinNestedLoopA"; }
@@ -41,13 +41,10 @@ std::shared_ptr<AbstractOperator> JoinNestedLoopA::recreate(const std::vector<Al
 }
 
 std::shared_ptr<const Table> JoinNestedLoopA::on_execute() {
-  const auto first_column = _column_ids->first;
-  const auto second_column = _column_ids->second;
-
+  const auto &type_left = input_table_left()->column_type(_column_ids->first);
+  const auto &type_right = input_table_right()->column_type(_column_ids->second);
   _impl = make_unique_by_column_types<AbstractReadOnlyOperatorImpl, JoinNestedLoopAImpl>(
-      input_table_left()->column_type(first_column), input_table_right()->column_type(second_column), _input_left,
-      _input_right, *_column_ids, _scan_type, _mode);
-
+      type_left, type_right, _input_left, _input_right, *_column_ids, _scan_type, _mode);
   return _impl->on_execute();
 }
 

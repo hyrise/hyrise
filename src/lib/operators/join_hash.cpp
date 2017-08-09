@@ -24,7 +24,7 @@ JoinHash::JoinHash(const std::shared_ptr<const AbstractOperator> left,
               "JoinHash: this operator does not support Cross Joins, the optimizer should use Product operator.");
   DebugAssert((_mode != JoinMode::Natural), "JoinHash: this operator currently does not support Natural Joins.");
   DebugAssert(static_cast<bool>(column_ids),
-              "JoinHash: optional column names are only supported for Cross and Natural Joins.");
+              "JoinHash: optional column ids are only supported for Cross and Natural Joins.");
 }
 
 const std::string JoinHash::name() const { return "JoinHash"; }
@@ -537,9 +537,6 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
     auto _right_in_table = _right->get_output();
     auto _left_in_table = _left->get_output();
 
-    auto _left_column_id = _column_ids.first;
-    auto _right_column_id = _column_ids.second;
-
     if (_inputs_swapped) {
       _copy_table_metadata(_right_in_table, _output_table);
       _copy_table_metadata(_left_in_table, _output_table);
@@ -581,8 +578,8 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
     This helps choosing a scheduler node for the radix phase (see below).
     */
     // Scheduler note: parallelize this at some point. Currently, the amount of jobs would be too high
-    auto materialized_left = _materialize_input<LeftType>(_left_in_table, _left_column_id, histograms_left);
-    auto materialized_right = _materialize_input<RightType>(_right_in_table, _right_column_id, histograms_right);
+    auto materialized_left = _materialize_input<LeftType>(_left_in_table, _column_ids.first, histograms_left);
+    auto materialized_right = _materialize_input<RightType>(_right_in_table, _column_ids.second, histograms_right);
 
     // Radix Partitioning phase
     /*
