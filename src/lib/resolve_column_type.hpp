@@ -10,6 +10,7 @@
 #include "storage/dictionary_column.hpp"
 #include "storage/reference_column.hpp"
 #include "storage/value_column.hpp"
+#include "storage/column_visitable.hpp"
 
 namespace opossum {
 
