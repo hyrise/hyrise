@@ -55,6 +55,12 @@ message OperatorVariant {
   }
 }
 
+// Has to be a message so that we can check if it is set or not (not supported on int32 in proto3).
+// https://developers.google.com/protocol-buffers/docs/proto3#default
+message OptionalColumnID {
+  int32 value = 1;
+}
+
 message GetTableOperator {
   string table_name = 1;
 }
@@ -83,8 +89,8 @@ message IndexColumnScanOperator {
 message NestedLoopJoinOperator {
   OperatorVariant left_operator = 1;
   OperatorVariant right_operator = 2;
-  int32 left_column_id = 3;
-  int32 right_column_id = 4;
+  OptionalColumnID left_column_id = 3;
+  OptionalColumnID right_column_id = 4;
   ScanType op = 5;
   enum JoinMode {
     Inner = 0;

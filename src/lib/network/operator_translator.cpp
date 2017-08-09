@@ -144,13 +144,16 @@ inline std::shared_ptr<OperatorTask> OperatorTranslator::translate(
       Fail("Unknown join mode for nested loop join operator in operator_translator");
   }
 
-  std::shared_ptr<JoinNestedLoopA> nested_loop_join;
+  optional<std::pair<ColumnID, ColumnID>> join_columns;
+  if (nested_loop_join_operator.has_left_column_id() && nested_loop_join_operator.has_right_column_id()) {
+    join_columns = std::make_pair(ColumnID{static_cast<uint16_t>(nested_loop_join_operator.left_column_id().value())},
+                                  ColumnID{static_cast<uint16_t>(nested_loop_join_operator.right_column_id().value())});
+  } else {
+    Assert(!nested_loop_join_operator.has_left_column_id() && !nested_loop_join_operator.has_right_column_id(),
+           "Neither or both columns of the join condition have to be specified.");
+  }
 
-  // TODO(anybody): joins without JOIN condition are currently not supported in this translator.
-  auto column_ids = std::make_pair(ColumnID{static_cast<uint16_t>(nested_loop_join_operator.left_column_id())},
-                                   ColumnID{static_cast<uint16_t>(nested_loop_join_operator.right_column_id())});
-  auto join_columns = optional<std::pair<ColumnID, ColumnID>>(column_ids);
-  nested_loop_join = std::make_shared<JoinNestedLoopA>(
+  auto nested_loop_join = std::make_shared<JoinNestedLoopA>(
       input_left_task->get_operator(), input_right_task->get_operator(), join_columns, scan_type, join_mode);
 
   auto nested_loop_join_task = std::make_shared<OperatorTask>(nested_loop_join);
