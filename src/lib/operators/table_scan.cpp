@@ -378,6 +378,7 @@ class SingleColumnScan : public SingleColumnScanBase {
  * This implementation of single column scan does not use any optimizations and
  * scan any column sequentially.
  */
+/*
 class SimpleSingleColumnScan : public ColumnScanBase {
  public:
   SimpleSingleColumnScan(std::shared_ptr<const Table> in_table, const ColumnID left_column_id,
@@ -413,6 +414,7 @@ class SimpleSingleColumnScan : public ColumnScanBase {
  private:
   const AllTypeVariant _right_value;
 };
+*/
 
 /**
  * @brief Implements a column scan using the LIKE operator
