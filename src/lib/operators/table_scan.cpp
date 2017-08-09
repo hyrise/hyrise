@@ -88,6 +88,12 @@ class ColumnScanBase {
   const ScanType _scan_type;
 };
 
+/**
+ * @brief Resolves reference columns
+ *
+ * The position list of reference columns is split by the referenced columns and
+ * then each one is visited separately.
+ */
 class SingleColumnScanBase : public ColumnScanBase, public ColumnVisitable {
 protected:
   struct Context : public ColumnVisitableContext {
@@ -127,6 +133,7 @@ public:
 
     auto chunk_offsets_by_chunk_id = _split_position_list_by_chunk_id(*left_column.pos_list());
 
+    // Visit each referenced column
     for (auto & pair : chunk_offsets_by_chunk_id) {
       const auto &chunk_id = pair.first;
       auto &mapped_chunk_offsets = pair.second;
@@ -169,7 +176,14 @@ public:
   /**@}*/
 };
 
-// 1 data column
+/**
+ * @brief Compares one column to a constant value
+ * 
+ * - Value columns are scanned sequentially
+ * - For dictionary columns, we basically look up the value ID of the constant value in the dictionary
+ *   in order to avoid having to look up each value ID of the attribute vector in the dictionary. This also
+ *   enables us to detect if all or none of the values in the column satisfy the expression.
+ */
 class SingleColumnScan : public SingleColumnScanBase {
  public:
   SingleColumnScan(std::shared_ptr<const Table> in_table, const ColumnID left_column_id,
@@ -369,7 +383,12 @@ class SingleColumnScan : public SingleColumnScanBase {
   const AllTypeVariant _right_value;
 };
 
-// 1 data column
+/**
+ * @brief Scans any column sequentially
+ *
+ * This implementation of single column scan does not use any optimizations and
+ * scan any column sequentially.
+ */
 class SimpleSingleColumnScan : public ColumnScanBase {
  public:
   SimpleSingleColumnScan(std::shared_ptr<const Table> in_table, const ColumnID left_column_id,
@@ -400,7 +419,15 @@ class SimpleSingleColumnScan : public ColumnScanBase {
   const AllTypeVariant _right_value;
 };
 
-// 1 data column
+/**
+ * @brief Implements a column scan using the LIKE operator
+ *
+ * - The only supported type is std::string.
+ * - Value columns are scanned sequentially
+ * - For dictionary columns, we check the values in the dictionary and store the results in a vector
+ *   in order to avoid having to look up each value ID of the attribute vector in the dictionary. This also
+ *   enables us to detect if all or none of the values in the column satisfy the expression.
+ */
 class LikeColumnScan : public SingleColumnScanBase {
  public:
   LikeColumnScan(std::shared_ptr<const Table> in_table, const ColumnID left_column_id, const std::string & right_wildcard)
@@ -443,6 +470,26 @@ class LikeColumnScan : public SingleColumnScanBase {
     // TODO(mjendruk): Find a good heuristic for when simply scanning column is faster (dictionary size -> attribute vector size)
 
     const auto dictionary_matches = _find_matches_in_dictionary(*left_column.dictionary());
+
+    const auto match_count = std::count(dictionary_matches.cbegin(), dictionary_matches.cend(), true);
+
+    if (match_count == dictionary_matches.size()) {
+      auto attribute_vector_iterable = AttributeVectorIterable{attribute_vector, context->_mapped_chunk_offsets.get()};
+
+      attribute_vector_iterable.execute_for_all([&] (auto left_it, auto left_end) {
+        for (; left_it != left_end; ++left_it) {
+          const auto left = *left_it;
+          
+          if (left.is_null()) continue;
+          
+          matches_out.push_back(RowID{chunk_id, left.chunk_offset()});
+        }
+      });
+    }
+
+    if (match_count == 0u) {
+      return;
+    }
 
     const auto & attribute_vector = *left_column.attribute_vector();
 
@@ -567,7 +614,13 @@ class LikeColumnScan : public SingleColumnScanBase {
 };
 
 
-// 2 data columns (dictionary, value)
+/**
+ * @brief Compares two columns to each other
+ * 
+ * Does not support:
+ * - comparison of string columns to numerical columns
+ * - reference columns to data columns (value, dictionary)
+ */
 class ColumnComparisonScan : public ColumnScanBase {
  public:
   ColumnComparisonScan(std::shared_ptr<const Table> in_table, const ColumnID left_column_id,
@@ -682,7 +735,7 @@ std::shared_ptr<const Table> TableScan::on_execute()
 
         auto filtered_pos_lists = std::map<std::shared_ptr<const PosList>, std::shared_ptr<PosList>>{};
 
-        // TODO(mjendruk): implement short cut for pos_list is the same as the scanned column’s
+        // TODO(mjendruk): implement shortcut for pos_list is the same as the scanned column’s
 
         for (ColumnID column_id{0u}; column_id < _in_table->col_count(); ++column_id) {
           auto column_in = chunk_in.get_column(column_id);
@@ -751,7 +804,7 @@ void TableScan::init_scan()
 
     const auto right_value = boost::get<AllTypeVariant>(_right_parameter);
 
-    DebugAssert(!is_null(right_value), "Right value cannot be NULL.");
+    DebugAssert(!is_null(right_value), "Right value must not be NULL.");
 
     const auto right_wildcard = type_cast<std::string>(right_value);
 
