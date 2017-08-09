@@ -370,6 +370,37 @@ class SingleColumnScan : public SingleColumnScanBase {
 };
 
 // 1 data column
+class SimpleSingleColumnScan : public ColumnScanBase {
+ public:
+  SimpleSingleColumnScan(std::shared_ptr<const Table> in_table, const ColumnID left_column_id,
+                         const ScanType & scan_type, const AllTypeVariant & right_value)
+      : ColumnScanBase{in_table, left_column_id, scan_type}, _right_value{right_value} {}
+
+  PosList scan_chunk(const ChunkID & chunk_id) override {
+    const auto & chunk = _in_table->get_chunk(chunk_id);
+
+    const auto left_column_type = _in_table->column_type(_left_column_id);
+    const auto left_column = chunk.get_column(_left_column_id);
+
+    auto matches_out = PosList{};
+
+    resolve_column_type(left_column_type, *left_column, [&] (auto type, auto &typed_left_column) {
+      using Type = typename decltype(type)::type;
+
+      auto left_column_iterable = _create_iterable_from_column<Type>(typed_left_column);
+      auto right_value_iterable = ConstantValueIterable<Type>{_right_value};
+
+      _scan(left_column_iterable, right_value_iterable, chunk_id, matches_out);
+    });
+
+    return matches_out;
+  }
+
+ private:
+  const AllTypeVariant _right_value;
+};
+
+// 1 data column
 class LikeColumnScan : public SingleColumnScanBase {
  public:
   LikeColumnScan(std::shared_ptr<const Table> in_table, const ColumnID left_column_id, const std::string & right_wildcard)
@@ -536,76 +567,10 @@ class LikeColumnScan : public SingleColumnScanBase {
 };
 
 
-// 1 data column (dictionary, value)
-class DataColumnScan : public ColumnScanBase {
- public:
-  DataColumnScan(std::shared_ptr<const Table> in_table, const ColumnID left_column_id,
-                 const ScanType & scan_type, const AllTypeVariant & right_value)
-      : ColumnScanBase{in_table, left_column_id, scan_type}, _right_value{right_value} {}
-
-  PosList scan_chunk(const ChunkID & chunk_id) override {
-    const auto & chunk = _in_table->get_chunk(chunk_id);
-
-    const auto left_column_type = _in_table->column_type(_left_column_id);
-    const auto left_column = chunk.get_column(_left_column_id);
-
-    auto matches_out = PosList{};
-
-    resolve_column_type(left_column_type, *left_column, [&] (auto type, auto &typed_left_column) {
-      using Type = typename decltype(type)::type;
-
-      auto left_column_iterable = _create_iterable_from_column(typed_left_column);
-      auto right_value_iterable = ConstantValueIterable<Type>{_right_value};
-
-      _scan(left_column_iterable, right_value_iterable, chunk_id, matches_out);
-    });
-
-    return matches_out;
-  }
-
- private:
-  const AllTypeVariant _right_value;
-};
-
-
-// 1 reference column
-class ReferenceColumnScan : public ColumnScanBase {
- public:
-  ReferenceColumnScan(std::shared_ptr<const Table> in_table, const ColumnID left_column_id,
-                      const ScanType & scan_type, const AllTypeVariant & right_value)
-      : ColumnScanBase{in_table, left_column_id, scan_type}, _right_value{right_value} {}
-
-  PosList scan_chunk(const ChunkID & chunk_id) override {
-    const auto & chunk = _in_table->get_chunk(chunk_id);
-
-    const auto left_column_type = _in_table->column_type(_left_column_id);
-    const auto left_column = std::dynamic_pointer_cast<ReferenceColumn>(chunk.get_column(_left_column_id));
-
-    DebugAssert(left_column != nullptr, "Left column must be of type ReferenceColumn");
-
-    auto matches_out = PosList{};
-
-    resolve_type(left_column_type, [&] (auto type) {
-      using Type = typename decltype(type)::type;
-
-      auto left_column_iterable = ReferenceColumnIterable<Type>(*left_column);
-      auto right_value_iterable = ConstantValueIterable<Type>(_right_value);
-
-      _scan(left_column_iterable, right_value_iterable, chunk_id, matches_out);
-    });
-
-    return matches_out;
-  }
-
- private:
-  const AllTypeVariant _right_value;
-};
-
-
 // 2 data columns (dictionary, value)
-class DataColumnComparisonScan : public ColumnScanBase {
+class ColumnComparisonScan : public ColumnScanBase {
  public:
-  DataColumnComparisonScan(std::shared_ptr<const Table> in_table, const ColumnID left_column_id,
+  ColumnComparisonScan(std::shared_ptr<const Table> in_table, const ColumnID left_column_id,
                            const ScanType & scan_type, const ColumnID right_column_id)
       : ColumnScanBase{in_table, left_column_id, scan_type}, _right_column_id{right_column_id} {}
 
@@ -621,67 +586,41 @@ class DataColumnComparisonScan : public ColumnScanBase {
 
     resolve_column_type(left_column_type, *left_column, [&] (auto left_type, auto &typed_left_column) {
       resolve_column_type(right_column_type, *right_column, [&] (auto right_type, auto &typed_right_column) {
+        using LeftColumnType = typename std::decay<decltype(typed_right_column)>::type;
+        using RightColumnType = typename std::decay<decltype(typed_right_column)>::type;
+
+        /**
+         * This generic lambda is instantiated for each type (int, long, etc.) and 
+         * each column type (value, dictionary, reference column) per column! 
+         * That’s 3x5 combinations each and 15x15=225 in total. However, not all combinations are valid or possible.
+         * Only data columns (value, dictionary) or reference columns will be compared, as a table with both data and
+         * reference columns is ruled out. Moreover it is not possible to compare strings to any of the four numerical
+         * data types. Therefore, we need to check for these cases and exclude them via the constexpr-if which
+         * reduces the number of combinations to 85.
+         */
+
+        constexpr auto left_is_reference_column = (std::is_same<LeftColumnType, ReferenceColumn>{});
+        constexpr auto right_is_reference_column = (std::is_same<RightColumnType, ReferenceColumn>{});
+
+        constexpr auto neither_is_reference_column = !left_is_reference_column && !right_is_reference_column;
+        constexpr auto both_are_reference_columns = left_is_reference_column && right_is_reference_column;
+
         constexpr auto left_is_string_column = (left_type == hana::type_c<std::string>);
         constexpr auto right_is_string_column = (right_type == hana::type_c<std::string>);
+
         constexpr auto neither_is_string_column = !left_is_string_column && !right_is_string_column;
         constexpr auto both_are_string_columns = left_is_string_column && right_is_string_column;
 
-        if constexpr (neither_is_string_column || both_are_string_columns) {
-          auto left_column_iterable = _create_iterable_from_column(typed_left_column);
-          auto right_column_iterable = _create_iterable_from_column(typed_right_column);
-
-          _scan(left_column_iterable, right_column_iterable, chunk_id, matches_out);
-        } else {
-          Fail("std::string cannot be compared to numerical type!");
-        }
-      });
-    });
-
-    return matches_out;
-  }
-
- private:
-  const ColumnID _right_column_id;
-};
-
-
-// 2 data columns (dictionary, value)
-class ReferenceColumnComparisonScan : public ColumnScanBase {
- public:
-  ReferenceColumnComparisonScan(std::shared_ptr<const Table> in_table, const ColumnID left_column_id,
-                                const ScanType & scan_type, const ColumnID right_column_id)
-      : ColumnScanBase{in_table, left_column_id, scan_type}, _right_column_id{right_column_id} {}
-
-  PosList scan_chunk(const ChunkID & chunk_id) override {
-    const auto & chunk = _in_table->get_chunk(chunk_id);
-    const auto left_column_type = _in_table->column_type(_left_column_id);
-    const auto right_column_type = _in_table->column_type(_right_column_id);
-
-    const auto left_column = std::dynamic_pointer_cast<ReferenceColumn>(chunk.get_column(_left_column_id));
-    const auto right_column = std::dynamic_pointer_cast<ReferenceColumn>(chunk.get_column(_right_column_id));
-
-    DebugAssert(left_column != nullptr, "Left column must be of type ReferenceColumn");
-    DebugAssert(right_column != nullptr, "Right column must be of type ReferenceColumn");
-
-    auto matches_out = PosList{};
-
-    resolve_type(left_column_type, [&] (auto left_type) {
-      resolve_type(right_column_type, [&] (auto right_type) {
-        constexpr auto left_is_string_column = (left_type == hana::type_c<std::string>);
-        constexpr auto right_is_string_column = (right_type == hana::type_c<std::string>);
-        constexpr auto neither_is_string_column = !left_is_string_column && !right_is_string_column;
-        constexpr auto both_are_string_columns = left_is_string_column && right_is_string_column;
-
-        if constexpr (neither_is_string_column || both_are_string_columns) {
+        if constexpr ((neither_is_reference_column || both_are_reference_columns) && (neither_is_string_column || both_are_string_columns)) {
           using LeftType = typename decltype(left_type)::type;
           using RightType = typename decltype(right_type)::type;
 
-          auto left_column_iterable = _create_iterable_from_column<LeftType>(*left_column);
-          auto right_column_iterable = _create_iterable_from_column<RightType>(*right_column);
+          auto left_column_iterable = _create_iterable_from_column<LeftType>(typed_left_column);
+          auto right_column_iterable = _create_iterable_from_column<RightType>(typed_right_column);
 
           _scan(left_column_iterable, right_column_iterable, chunk_id, matches_out);
         } else {
-          Fail("std::string cannot be compared to numerical type!");
+          Fail("Invalid column combination detected!");
         }
       });
     });
@@ -828,20 +767,12 @@ void TableScan::init_scan()
 
     _scan = std::make_unique<SingleColumnScan>(_in_table, left_column_id, _scan_type, right_value);
 
-    // if (_is_reference_table) {
-    //   _scan = std::make_unique<ReferenceColumnScan>(_in_table, left_column_id, _scan_type, right_value);
-    // } else {
-    //   _scan = std::make_unique<DataColumnScan>(_in_table, left_column_id, _scan_type, right_value);
-    // }
+    // _scan = std::make_unique<SimpleSingleColumnScan>(_in_table, left_column_id, _scan_type, right_value);
   } else /* is_column_name(_right_parameter) */ {
     const auto right_column_name = boost::get<ColumnName>(_right_parameter);
     const auto right_column_id = _in_table->column_id_by_name(right_column_name);
 
-    if (_is_reference_table) {
-      _scan = std::make_unique<ReferenceColumnComparisonScan>(_in_table, left_column_id, _scan_type, right_column_id);
-    } else {
-      _scan = std::make_unique<DataColumnComparisonScan>(_in_table, left_column_id, _scan_type, right_column_id);
-    }
+    _scan = std::make_unique<ColumnComparisonScan>(_in_table, left_column_id, _scan_type, right_column_id);
   }
 }
 
