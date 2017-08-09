@@ -33,7 +33,6 @@ class RadixPartitionSort : public ColumnVisitable {
     const auto& right_column_type = _input_table_right->column_type(right_column_id);
 
     DebugAssert(left_column_type == right_column_type, "left and right column types do not match");
-    DebugAssert(left_column_type != "string", "string support has not been implemented yet");
   }
 
   virtual ~RadixPartitionSort() = default;
@@ -44,6 +43,10 @@ class RadixPartitionSort : public ColumnVisitable {
   * be able to pick appropriate value ranges for the partitions.
   **/
   struct ChunkStatistics {
+    ChunkStatistics(size_t partition_count) {
+      partition_histogram.resize(partition_count);
+      insert_position.resize(partition_count);
+    }
     // Used to count the number of entries for each partition from this chunk
     std::vector<size_t> partition_histogram;
     std::vector<size_t> insert_position;
@@ -57,6 +60,14 @@ class RadixPartitionSort : public ColumnVisitable {
   *  and its chunks in order to be able to pick appropriate value ranges for the partitions.
   **/
   struct TableStatistics {
+    TableStatistics(size_t chunk_count, size_t partition_count) {
+      partition_histogram.resize(partition_count);
+      chunk_statistics.reserve(chunk_count);
+      for(size_t i = 0; i < chunk_count; i++) {
+        chunk_statistics.push_back(ChunkStatistics(partition_count));
+      }
+
+    }
     std::vector<ChunkStatistics> chunk_statistics;
 
     // used to count the number of entries for each partition from the whole table
@@ -90,15 +101,15 @@ class RadixPartitionSort : public ColumnVisitable {
 
   // Radix calculation for arithmetic types
   template <typename T2>
-  typename std::enable_if<std::is_arithmetic<T2>::value, uint32_t>::type get_radix(T2 value, uint8_t radix_bits) {
-    return static_cast<uint32_t>(value) & radix_bits;
+  typename std::enable_if<std::is_arithmetic<T2>::value, uint32_t>::type get_radix(T2 value, uint8_t radix_bitmask) {
+    return static_cast<uint32_t>(value) & radix_bitmask;
   }
 
   // Radix calculation for non-arithmetic types
   template <typename T2>
-  typename std::enable_if<!std::is_arithmetic<T2>::value, uint32_t>::type get_radix(T2 value, uint32_t radix_bits) {
+  typename std::enable_if<!std::is_arithmetic<T2>::value, uint32_t>::type get_radix(T2 value, uint32_t radix_bitmask) {
     auto result = reinterpret_cast<const uint32_t*>(value.c_str());
-    return *result & radix_bits;
+    return *result & radix_bitmask;
   }
 
   /**
@@ -119,21 +130,28 @@ class RadixPartitionSort : public ColumnVisitable {
   }
 
   /**
+  * Determines the total size of a materialized table.
+  **/
+  size_t _materialized_table_size(std::shared_ptr<MaterializedTable<T>> table) {
+    size_t total_size = 0;
+    for (auto chunk : *table) {
+      total_size += chunk->size();
+    }
+
+    return total_size;
+  }
+
+  /**
   * Performs least significant bit radix partitioning which is used in the equi join case.
   **/
   std::shared_ptr<MaterializedTable<T>> _equi_join_partition(std::shared_ptr<MaterializedTable<T>> input_chunks) {
     auto output_table = std::make_shared<MaterializedTable<T>>(_partition_count);
-    TableStatistics table_statistics;
-    table_statistics.chunk_statistics.resize(input_chunks->size());
-    table_statistics.partition_histogram.resize(_partition_count);
+    TableStatistics table_statistics(input_chunks->size(), _partition_count);
 
     // Each chunk should prepare additional data to enable partitioning
     for (size_t chunk_number = 0; chunk_number < input_chunks->size(); chunk_number++) {
       auto& chunk_statistics = table_statistics.chunk_statistics[chunk_number];
       auto input_chunk = input_chunks->at(chunk_number);
-
-      chunk_statistics.insert_position.resize(_partition_count);
-      chunk_statistics.partition_histogram.resize(_partition_count);
 
       // Count the number of entries for each partition
       // Each partition corresponds to a radix value
@@ -151,13 +169,14 @@ class RadixPartitionSort : public ColumnVisitable {
       }
     }
 
-    // Reserve the appropriate space for the partitions
+    // Reserve the appropriate output space for the partitions
     for (size_t partition_id = 0; partition_id < _partition_count; partition_id++) {
       auto partition_size = table_statistics.partition_histogram[partition_id];
       output_table->at(partition_id) = std::make_shared<MaterializedChunk<T>>(partition_size);
     }
 
     // Move each entry into its appropriate partition
+    // Since _partition_count is a power of two, the radix bitmask will look like 00...011...1
     uint32_t radix_bitmask = _partition_count - 1;
     for (size_t chunk_number = 0; chunk_number < input_chunks->size(); chunk_number++) {
       auto chunk = input_chunks->at(chunk_number);
@@ -174,7 +193,7 @@ class RadixPartitionSort : public ColumnVisitable {
   }
 
   /**
-  * Sortes all partitions of a materialized table.
+  * Sorts all partitions of a materialized table.
   **/
   void _sort_partitions(std::shared_ptr<MaterializedTable<T>> partitions) {
     for (auto partition : *partitions) {
@@ -203,8 +222,7 @@ class RadixPartitionSort : public ColumnVisitable {
                                             std::shared_ptr<const Table> input, std::string column_name) {
     return std::make_shared<JobTask>([=] {
       for (auto chunk_id : chunks) {
-        auto sorted_chunk = _sort_chunk(input->get_chunk(chunk_id), chunk_id, input->column_id_by_name(column_name));
-        output->at(chunk_id) = sorted_chunk;
+        output->at(chunk_id) = _sort_chunk(input->get_chunk(chunk_id), chunk_id, input->column_id_by_name(column_name));
       }
     });
   }
@@ -329,7 +347,7 @@ class RadixPartitionSort : public ColumnVisitable {
     sort_context->sort_output = output;
   }
 
-  T pick_sample_values(std::vector<std::map<T, uint32_t>>& sample_values, std::shared_ptr<MaterializedTable<T>> table) {
+  T pick_sample_values(std::vector<std::map<T, size_t>>& sample_values, std::shared_ptr<MaterializedTable<T>> table) {
     auto max_value = table->at(0)->at(0).value;
 
     for (size_t chunk_number = 0; chunk_number < table->size(); chunk_number++) {
@@ -340,22 +358,15 @@ class RadixPartitionSort : public ColumnVisitable {
         max_value = chunk_values->back().value;
       }
 
-      // Get samples
-      size_t step_size = chunk_values->size() / _partition_count;
-      DebugAssert((step_size >= 1), "SortMergeJoin value_based_partitioning: step size is <= 0");
-      for (size_t pos = step_size, partition_id = 0; pos < chunk_values->size() - 1; pos += step_size, partition_id++) {
-        if (sample_values[partition_id].count(chunk_values->at(pos).value) == 0) {
-          sample_values[partition_id].insert(std::pair<T, uint32_t>(chunk_values->at(pos).value, 1));
-        } else {
-          sample_values[partition_id].at(chunk_values->at(pos).value)++;
-        }
+      for(size_t partition_id = 0; partition_id < _partition_count; partition_id++) {
+        size_t pos = static_cast<size_t>(chunk_values->size() * (partition_id / static_cast<float>(_partition_count)));
+        sample_values[partition_id][chunk_values->at(pos).value]++;
       }
     }
 
     return max_value;
   }
 
-  // Partitioning in case of Non-Equi-Join
   /**
   * Performs the radix partition sort for the non equi case which requires the complete table to be sorted
   * and not only the partitions in themselves.
@@ -363,7 +374,7 @@ class RadixPartitionSort : public ColumnVisitable {
   std::pair<std::shared_ptr<MaterializedTable<T>>, std::shared_ptr<MaterializedTable<T>>> _non_equi_join_partition(
                   std::shared_ptr<MaterializedTable<T>> input_left, std::shared_ptr<MaterializedTable<T>> input_right) {
     std::cout << "Partitioning for non equi join" << std::endl;
-    std::vector<std::map<T, uint32_t>> sample_values(_partition_count);
+    std::vector<std::map<T, size_t>> sample_values(_partition_count);
 
     auto max_value_left = pick_sample_values(sample_values, input_left);
     auto max_value_right = pick_sample_values(sample_values, input_right);
@@ -391,33 +402,14 @@ class RadixPartitionSort : public ColumnVisitable {
   std::shared_ptr<MaterializedTable<T>> value_based_table_partitioning(std::shared_ptr<MaterializedTable<T>> table,
                                                                        std::vector<T>& split_values) {
     auto partitions = std::make_shared<MaterializedTable<T>>(_partition_count);
-    for (size_t partition_id = 0; partition_id < _partition_count; partition_id++) {
-      partitions->at(partition_id) = std::make_shared<MaterializedChunk<T>>();
-    }
-
-    TableStatistics table_statistics;
-    table_statistics.chunk_statistics.resize(table->size());
-
-    // for prefix computation we need to table-wide know how many entries there are for each partition
-    // right now we expect an equally randomized entryset
-    for (auto& value : split_values) {
-      table_statistics.value_histogram.insert(std::pair<T, uint32_t>(value, 0));
-    }
-
-    std::cout << "rp: " << __LINE__ << std::endl;
+    TableStatistics table_statistics(table->size(), _partition_count);
 
     // Each chunk should prepare additional data to enable partitioning
     for (size_t chunk_number = 0; chunk_number < table->size(); chunk_number++) {
       auto& chunk_statistics = table_statistics.chunk_statistics[chunk_number];
-      auto chunk_values = table->at(chunk_number);
-
-      for (auto& value : split_values) {
-        chunk_statistics.value_histogram.insert(std::pair<T, uint32_t>(value, 0));
-        chunk_statistics.prefix_v.insert(std::pair<T, uint32_t>(value, 0));
-      }
 
       // fill histogram
-      for (auto& entry : *chunk_values) {
+      for (auto& entry : *table->at(chunk_number)) {
         for (auto& split_value : split_values) {
           if (entry.value <= split_value) {
             chunk_statistics.value_histogram[split_value]++;
@@ -426,8 +418,6 @@ class RadixPartitionSort : public ColumnVisitable {
         }
       }
     }
-
-    std::cout << "rp: " << __LINE__ << std::endl;
 
     // Each chunk need to sequentially fill _prefix map to actually fill partition of tables in parallel
     for (auto& chunk_statistics : table_statistics.chunk_statistics) {
@@ -438,14 +428,16 @@ class RadixPartitionSort : public ColumnVisitable {
     }
 
     // prepare for parallel access later on
-    size_t partition_id = 0;
-    for (auto& split_value : split_values) {
-      partitions->at(partition_id)->resize(table_statistics.value_histogram[split_value]);
-      partition_id++;
+    for (size_t partition_id = 0; partition_id < _partition_count; partition_id++) {
+      auto partition_size = table_statistics.value_histogram[split_values[partition_id]];
+      partitions->at(partition_id) = std::make_shared<MaterializedChunk<T>>(partition_size);
     }
 
-    std::cout << "rp: " << __LINE__ << std::endl;
+    DebugAssert(_materialized_table_size(partitions) == _materialized_table_size(table),
+                "Value based partitioning: input and output table do not have the same size");
 
+    //std::cout << "rp: " << __LINE__ << std::endl;
+    /*
     for (size_t chunk_number = 0; chunk_number < table->size(); chunk_number++) {
       auto& chunk_statistics = table_statistics.chunk_statistics[chunk_number];
       auto chunk_values = table->at(chunk_number);
@@ -454,20 +446,22 @@ class RadixPartitionSort : public ColumnVisitable {
         partitions->at(partition_id)->at(chunk_statistics.insert_position[partition_id]++) = entry;
       }
     }
+    */
 
-    std::cout << "rp: " << __LINE__ << std::endl;
+    //std::cout << "rp: " << __LINE__ << std::endl;
 
     // Each chunk fills (parallel) partition
     for (size_t chunk_number = 0; chunk_number < table->size(); chunk_number++) {
       auto& chunk_statistics = table_statistics.chunk_statistics[chunk_number];
       auto chunk_values = table->at(chunk_number);
       for (auto& entry : *chunk_values) {
-        uint32_t partition_id = 0;
+        size_t partition_id = 0;
         for (auto& radix : split_values) {
           if (entry.value <= radix) {
-            std::cout << "s_chunk.prefix_v.size(): " << chunk_statistics.prefix_v.size() << std::endl;
-            std::cout << "radix: " << radix << std::endl;
-            partitions->at(partition_id)->at(chunk_statistics.prefix_v[radix]) = entry;
+            auto insert_position = chunk_statistics.prefix_v[radix];
+            DebugAssert(insert_position < partitions->at(partition_id)->size(),
+                        "output partition was sized incorrectly");
+            partitions->at(partition_id)->at(insert_position) = entry;
             chunk_statistics.prefix_v[radix]++;
             partition_id++;
           }
@@ -522,18 +516,6 @@ class RadixPartitionSort : public ColumnVisitable {
     }
 
     return true;
-  }
-
-  /**
-  * Determines the total size of a materialized table.
-  **/
-  size_t _materialized_table_size(std::shared_ptr<MaterializedTable<T>> table) {
-    size_t total_size = 0;
-    for (auto chunk : *table) {
-      total_size += chunk->size();
-    }
-
-    return total_size;
   }
 
  public:
