@@ -41,3 +41,15 @@ target_link_libraries(
     opossum
     boost_program_options
 )
+
+# Configure Sql_Repl
+add_executable(
+    opossumRepl
+
+    sql_repl.cpp
+    sql_repl.hpp
+)
+target_link_libraries(
+    opossumRepl
+    opossum
+)
