@@ -152,6 +152,29 @@ TEST_F(OperatorsImportCsvTest, ChunkSize) {
   EXPECT_EQ(importer->get_output()->get_chunk(ChunkID{1}).size(), 20U);
 }
 
+TEST_F(OperatorsImportCsvTest, ChunkSizeZero) {
+  // chunk_size is defined as "20" in .meta file
+  auto importer = std::make_shared<ImportCsv>("src/test/csv/float_int_large_chunksize_0.csv");
+  importer->execute();
+
+  // check if chunk_size property is correct
+  EXPECT_EQ(importer->get_output()->chunk_size(), 0U);
+
+  // check if actual chunk_size and chunk_count is correct
+  EXPECT_EQ(importer->get_output()->get_chunk(ChunkID{0}).size(), 0U);
+  EXPECT_EQ(importer->get_output()->chunk_count(), ChunkID{1});
+
+  auto expected_table = std::make_shared<Table>(20);
+  expected_table->add_column("b", "float");
+  expected_table->add_column("a", "int");
+
+  for (int i = 0; i < 100; ++i) {
+    expected_table->append({458.7f, 12345});
+  }
+
+  EXPECT_TABLE_EQ(importer->get_output(), expected_table, true);
+}
+
 TEST_F(OperatorsImportCsvTest, StringEscapingNonRfc) {
   CsvConfig config;
   config.rfc_mode = false;
