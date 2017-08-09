@@ -17,7 +17,7 @@ class TableStatistics;
 
 class PredicateNode : public AbstractASTNode {
  public:
-  PredicateNode(const std::string& column_name, const std::shared_ptr<ExpressionNode> predicate,
+  PredicateNode(const std::string& column_name, const std::shared_ptr<ExpressionNode>& predicate,
                 const ScanType scan_type, const AllParameterVariant value,
                 const optional<AllTypeVariant> value2 = nullopt);
 
@@ -29,12 +29,13 @@ class PredicateNode : public AbstractASTNode {
   const AllParameterVariant& value() const;
   const optional<AllTypeVariant>& value2() const;
 
-  void set_predicate(const std::shared_ptr<ExpressionNode> predicate);
+  void set_predicate(const std::shared_ptr<ExpressionNode>& predicate);
 
-  const std::shared_ptr<TableStatistics> create_statistics_from(std::shared_ptr<AbstractASTNode> parent) const override;
+  const std::shared_ptr<TableStatistics> calculate_statistics_from(
+      const std::shared_ptr<AbstractASTNode>& parent) const override;
 
  private:
-  const std::shared_ptr<TableStatistics> create_statistics() const override;
+  const std::shared_ptr<TableStatistics> _calculate_statistics() const override;
 
   const std::string _column_name;
   std::shared_ptr<ExpressionNode> _predicate;

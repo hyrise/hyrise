@@ -11,7 +11,7 @@
 
 namespace opossum {
 
-PredicateNode::PredicateNode(const std::string& column_name, const std::shared_ptr<ExpressionNode> predicate,
+PredicateNode::PredicateNode(const std::string& column_name, const std::shared_ptr<ExpressionNode>& predicate,
                              const ScanType scan_type, const AllParameterVariant value,
                              const optional<AllTypeVariant> value2)
     : AbstractASTNode(ASTNodeType::Predicate),
@@ -34,7 +34,7 @@ const std::string& PredicateNode::column_name() const { return _column_name; }
 
 const std::shared_ptr<ExpressionNode> PredicateNode::predicate() const { return _predicate; }
 
-void PredicateNode::set_predicate(const std::shared_ptr<ExpressionNode> predicate) { _predicate = predicate; }
+void PredicateNode::set_predicate(const std::shared_ptr<ExpressionNode>& predicate) { _predicate = predicate; }
 
 ScanType PredicateNode::scan_type() const { return _scan_type; }
 
@@ -42,15 +42,15 @@ const AllParameterVariant& PredicateNode::value() const { return _value; }
 
 const optional<AllTypeVariant>& PredicateNode::value2() const { return _value2; }
 
-const std::shared_ptr<TableStatistics> PredicateNode::create_statistics_from(
-    std::shared_ptr<AbstractASTNode> parent) const {
-  return parent->get_or_create_statistics()->predicate_statistics(_column_name, _scan_type, _value, _value2);
+const std::shared_ptr<TableStatistics> PredicateNode::calculate_statistics_from(
+    const std::shared_ptr<AbstractASTNode>& parent) const {
+  return parent->gather_statistics()->predicate_statistics(_column_name, _scan_type, _value, _value2);
 }
 
-const std::shared_ptr<TableStatistics> PredicateNode::create_statistics() const {
+const std::shared_ptr<TableStatistics> PredicateNode::_calculate_statistics() const {
   Assert(static_cast<bool>(left_child()), "Predicate node needs left input");
 
-  return create_statistics_from(left_child());
+  return calculate_statistics_from(left_child());
 }
 
 }  // namespace opossum

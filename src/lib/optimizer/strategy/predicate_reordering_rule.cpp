@@ -12,49 +12,54 @@
 
 namespace opossum {
 
-std::shared_ptr<AbstractASTNode> PredicateReorderingRule::apply_rule(std::shared_ptr<AbstractASTNode> node) {
+const std::shared_ptr<AbstractASTNode> PredicateReorderingRule::apply_to(const std::shared_ptr<AbstractASTNode> node) {
   if (node->type() == ASTNodeType::Predicate) {
     std::vector<std::shared_ptr<PredicateNode>> predicate_nodes;
 
-    while (node->type() == ASTNodeType::Predicate) {
-      predicate_nodes.emplace_back(std::dynamic_pointer_cast<PredicateNode>(node));
-      node = node->left_child();
+    // Gather adjacent PredicateNodes
+    auto current_node = node;
+    while (current_node->type() == ASTNodeType::Predicate) {
+      predicate_nodes.emplace_back(std::dynamic_pointer_cast<PredicateNode>(current_node));
+      current_node = current_node->left_child();
     }
 
-    reorder_predicates(predicate_nodes);
+    // Sort PredicateNodes in descending order with regards to the expected row_count
+    _reorder_predicates(predicate_nodes);
 
-    apply_rule(node);
-    return predicate_nodes.back();
+    // Apply rule recursively to child trees
+    // There can only be a single child since we are looking at a PredicateNode.
+    if (predicate_nodes.back()->left_child()) {
+      predicate_nodes.back()->set_left_child(apply_to(predicate_nodes.back()->left_child()));
+    }
+
+    // Return top-most PredicateNode. This node replaced the input parameter 'node'
+    return predicate_nodes.front();
   } else {
-    if (node->left_child()) apply_rule(node->left_child());
-    if (node->right_child()) apply_rule(node->right_child());
+    // Apply this rule recursively
+    if (node->left_child()) {
+      node->set_left_child(apply_to(node->left_child()));
+    }
+    if (node->right_child()) {
+      node->set_right_child(apply_to(node->right_child()));
+    }
+    return node;
   }
-
-  return node;
 }
 
-const void PredicateReorderingRule::reorder_predicates(std::vector<std::shared_ptr<PredicateNode>>& predicates) const {
-  auto parent = predicates.front()->parent();
+void PredicateReorderingRule::_reorder_predicates(std::vector<std::shared_ptr<PredicateNode>>& predicates) const {
+  // Store original child
   auto child = predicates.back()->left_child();
-  auto is_left = parent && parent->left_child() == predicates.front();
 
+  // Sort in descending order
   std::sort(predicates.begin(), predicates.end(), [&](auto& l, auto& r) {
-    return l->create_statistics_from(child)->row_count() < r->create_statistics_from(child)->row_count();
+    return l->calculate_statistics_from(child)->row_count() > r->calculate_statistics_from(child)->row_count();
   });
 
-  // Embed in AST hierarchy
-  if (parent) {
-    if (is_left) {
-      parent->set_left_child(predicates.back());
-    } else {
-      parent->set_right_child(predicates.back());
-    }
-  }
+  // Ensure that nodes are chained correctly
+  predicates.back()->set_left_child(child);
 
-  predicates.front()->set_left_child(child);
-
-  for (size_t predicate_index = 1; predicate_index < predicates.size(); predicate_index++) {
-    predicates[predicate_index]->set_left_child(predicates[predicate_index - 1]);
+  for (size_t predicate_index = 0; predicate_index < predicates.size() - 1; predicate_index++) {
+    predicates[predicate_index]->set_left_child(predicates[predicate_index + 1]);
   }
 }
 

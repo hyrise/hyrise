@@ -18,17 +18,17 @@ namespace opossum {
 
 ExpressionNode::ExpressionNode(const ExpressionType type, const AllTypeVariant &value,
                                const std::vector<std::shared_ptr<ExpressionNode>> &expression_list,
-                               const std::string &name, const std::string &table, const std::string &alias)
+                               const std::string &name, const std::string &table, const optional<std::string> &alias)
     : _type(type), _value(value), _expression_list(expression_list), _name(name), _table_name(table), _alias(alias) {}
 
 std::shared_ptr<ExpressionNode> ExpressionNode::create_expression(const ExpressionType type) {
   const std::vector<std::shared_ptr<ExpressionNode>> expr_list;
-  return std::make_shared<ExpressionNode>(type, NULL_VALUE, expr_list, "", "", "");
+  return std::make_shared<ExpressionNode>(type, NULL_VALUE, expr_list, "", "");
 }
 
 std::shared_ptr<ExpressionNode> ExpressionNode::create_column_reference(const std::string &table_name,
                                                                         const std::string &column_name,
-                                                                        const std::string &alias) {
+                                                                        const optional<std::string> &alias) {
   const std::vector<std::shared_ptr<ExpressionNode>> expr_list;
   return std::make_shared<ExpressionNode>(ExpressionType::ColumnReference, NULL_VALUE, expr_list, column_name,
                                           table_name, alias);
@@ -36,17 +36,17 @@ std::shared_ptr<ExpressionNode> ExpressionNode::create_column_reference(const st
 
 std::shared_ptr<ExpressionNode> ExpressionNode::create_literal(const AllTypeVariant &value) {
   const std::vector<std::shared_ptr<ExpressionNode>> expr_list;
-  return std::make_shared<ExpressionNode>(ExpressionType::Literal, value, expr_list, "", "", "");
+  return std::make_shared<ExpressionNode>(ExpressionType::Literal, value, expr_list, "", "");
 }
 
 std::shared_ptr<ExpressionNode> ExpressionNode::create_parameter(const AllTypeVariant &value) {
   const std::vector<std::shared_ptr<ExpressionNode>> expr_list;
-  return std::make_shared<ExpressionNode>(ExpressionType::Placeholder, value, expr_list, "", "", "");
+  return std::make_shared<ExpressionNode>(ExpressionType::Placeholder, value, expr_list, "", "");
 }
 
 std::shared_ptr<ExpressionNode> ExpressionNode::create_function_reference(
     const std::string &function_name, const std::vector<std::shared_ptr<ExpressionNode>> &expression_list,
-    const std::string &alias) {
+    const optional<std::string> &alias) {
   return std::make_shared<ExpressionNode>(ExpressionType::FunctionReference, NULL_VALUE, expression_list, function_name,
                                           "", alias);
 }
@@ -93,6 +93,8 @@ bool ExpressionNode::is_arithmetic_operator() const {
 const std::string ExpressionNode::description() const {
   std::ostringstream desc;
 
+  auto temp_alias = alias() ? *alias() : "";
+
   desc << "Expression (" << expression_type_to_string.at(_type) << ")";
 
   switch (_type) {
@@ -100,7 +102,7 @@ const std::string ExpressionNode::description() const {
       desc << "[" << value() << "]";
       break;
     case ExpressionType::ColumnReference:
-      desc << "[Table: " << table_name() << ", Column: " << name() << ", Alias: " << alias() << "]";
+      desc << "[Table: " << table_name() << ", Column: " << name() << ", Alias: " << temp_alias << "]";
       break;
     case ExpressionType::FunctionReference:
       desc << "[" << name() << ": " << std::endl;
@@ -110,7 +112,7 @@ const std::string ExpressionNode::description() const {
       desc << "]";
       break;
     case ExpressionType::Select:
-      desc << "[" << alias() << "]";
+      desc << "[" << temp_alias << "]";
       break;
     default: {}
   }
@@ -130,7 +132,7 @@ const std::string &ExpressionNode::name() const {
   return _name;
 }
 
-const std::string &ExpressionNode::alias() const {
+const optional<std::string> &ExpressionNode::alias() const {
   DebugAssert(_type == ExpressionType::ColumnReference || _type == ExpressionType::FunctionReference ||
                   _type == ExpressionType::Select,
               "Expression " + expression_type_to_string.at(_type) + " does not have an alias");

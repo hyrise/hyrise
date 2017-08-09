@@ -35,28 +35,31 @@ void AbstractASTNode::set_right_child(const std::shared_ptr<AbstractASTNode> &ri
 
 ASTNodeType AbstractASTNode::type() const { return _type; }
 
-const std::shared_ptr<TableStatistics> &AbstractASTNode::statistics() const { return _statistics; }
-void AbstractASTNode::set_statistics(const std::shared_ptr<TableStatistics> statistics) { _statistics = statistics; }
+void AbstractASTNode::set_statistics(const std::shared_ptr<TableStatistics> &statistics) { _statistics = statistics; }
 
-const std::shared_ptr<TableStatistics> AbstractASTNode::get_or_create_statistics() {
+const std::shared_ptr<TableStatistics> AbstractASTNode::gather_statistics() {
   if (_statistics) {
     return _statistics;
   }
 
-  _statistics = create_statistics();
+  _statistics = _calculate_statistics();
   return _statistics;
 }
 
-const std::shared_ptr<TableStatistics> AbstractASTNode::create_statistics_from(
-    std::shared_ptr<AbstractASTNode> parent) const {
-  return parent->get_or_create_statistics();
+const std::shared_ptr<TableStatistics> AbstractASTNode::calculate_statistics_from(
+    const std::shared_ptr<AbstractASTNode> &parent) const {
+  return parent->gather_statistics();
 }
 
 // TODO(mp): This does not support Joins or Unions. Add support for nodes with two children later.
-const std::shared_ptr<TableStatistics> AbstractASTNode::create_statistics() const {
-  Assert(static_cast<bool>(_left_child),
-         "Default create_statistics()-impl requires children, override for special node types");
-  return create_statistics_from(_left_child);
+// This requires changes in the Statistics interface.
+const std::shared_ptr<TableStatistics> AbstractASTNode::_calculate_statistics() const {
+  DebugAssert(static_cast<bool>(_left_child),
+              "Default implementation of _calculate_statistics() requires a left child, override in concrete node "
+              "implementation for different behavior");
+  DebugAssert(!static_cast<bool>(_right_child),
+              "Default implementation of _calculate_statistics() cannot have a right_child for now");
+  return calculate_statistics_from(_left_child);
 }
 
 std::vector<std::string> AbstractASTNode::output_column_names() const {
