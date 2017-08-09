@@ -157,11 +157,11 @@ TEST_F(OperatorsImportCsvTest, ChunkSizeZero) {
   auto importer = std::make_shared<ImportCsv>("src/test/csv/float_int_large_chunksize_0.csv");
   importer->execute();
 
-  // check if chunk_size property is correct
+  // check if chunk_size property is correct (maximum chunk size, 0 for unlimited)
   EXPECT_EQ(importer->get_output()->chunk_size(), 0U);
 
   // check if actual chunk_size and chunk_count is correct
-  EXPECT_EQ(importer->get_output()->get_chunk(ChunkID{0}).size(), 0U);
+  EXPECT_EQ(importer->get_output()->get_chunk(ChunkID{0}).size(), 100U);
   EXPECT_EQ(importer->get_output()->chunk_count(), ChunkID{1});
 
   auto expected_table = std::make_shared<Table>(20);
