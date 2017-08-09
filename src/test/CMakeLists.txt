@@ -23,7 +23,6 @@ set(
     operators/export_csv_test.cpp
     operators/get_table_test.cpp
     operators/import_binary_test.cpp
-    operators/import_csv_non_rfc_test.cpp
     operators/import_csv_test.cpp
     operators/index_column_scan_test.cpp
     operators/insert_test.cpp
@@ -48,6 +47,7 @@ set(
     optimizer/column_statistics_test.cpp
     optimizer/table_statistics_test.cpp
     scheduler/scheduler_test.cpp
+    sql/sql_base_test.cpp
     sql/sql_basic_cache_test.cpp
     sql/sql_expression_translator_test.cpp
     sql/sql_parse_tree_cache_test.cpp

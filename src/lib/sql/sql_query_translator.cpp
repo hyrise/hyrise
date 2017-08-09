@@ -25,6 +25,8 @@
 #include "../operators/table_scan.hpp"
 #include "../operators/union_all.hpp"
 #include "../utils/assert.hpp"
+
+#include "constant_mappings.hpp"
 #include "types.hpp"
 
 #include "SQLParser.h"
@@ -230,11 +232,6 @@ bool SQLQueryTranslator::_translate_group_by(const hsql::GroupByDescription& gro
   }
 
   // Process select list to build aggregate functions.
-  std::map<std::string, AggregateFunction> agg_map = {
-      std::pair<std::string, AggregateFunction>("SUM", Sum),     std::pair<std::string, AggregateFunction>("AVG", Avg),
-      std::pair<std::string, AggregateFunction>("MIN", Min),     std::pair<std::string, AggregateFunction>("MAX", Max),
-      std::pair<std::string, AggregateFunction>("COUNT", Count),
-  };
   for (const auto expr : select_list) {
     if (expr->isType(hsql::kExprFunctionRef)) {
       std::string fun_name(expr->name);
@@ -242,8 +239,8 @@ bool SQLQueryTranslator::_translate_group_by(const hsql::GroupByDescription& gro
       DebugAssert(expr->exprList->size() == 1, "Expect SQL functions to only have single argument.");
       std::string argument = _get_column_name(*expr->exprList->at(0));
 
-      if (agg_map.find(fun_name) != agg_map.end()) {
-//        aggregates.emplace_back(argument, agg_map[fun_name]);
+      if (aggregate_function_to_string.right.find(fun_name) != aggregate_function_to_string.right.end()) {
+        aggregates.emplace_back(argument, aggregate_function_to_string.right.at(fun_name));
         continue;
       }
 

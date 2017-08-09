@@ -8,6 +8,8 @@
 #include <utility>
 #include <vector>
 
+#include "storage/base_attribute_vector.hpp"
+
 #include "resolve_type.hpp"
 #include "utils/assert.hpp"
 

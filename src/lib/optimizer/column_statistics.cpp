@@ -4,7 +4,6 @@
 #include <memory>
 #include <ostream>
 #include <string>
-#include <tuple>
 #include <type_traits>
 #include <utility>
 #include <vector>
@@ -72,7 +71,8 @@ void ColumnStatistics<ColumnType>::initialize_min_max() const {
   auto table_wrapper = std::make_shared<TableWrapper>(table);
   table_wrapper->execute();
 //  const std::string &column_name = table->column_name(_column_id);
-  auto aggregate_args = std::vector<AggregateDefinition>{{_column_id, Min}, {_column_id, Max}};
+  auto aggregate_args =
+      std::vector<AggregateDefinition>{{_column_id, AggregateFunction::Min}, {_column_id, AggregateFunction::Max}};
   auto aggregate = std::make_shared<Aggregate>(table_wrapper, aggregate_args, std::vector<ColumnID>{});
   aggregate->execute();
   auto aggregate_table = aggregate->get_output();

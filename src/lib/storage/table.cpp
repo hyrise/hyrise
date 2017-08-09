@@ -9,12 +9,11 @@
 #include <utility>
 #include <vector>
 
-#include "dictionary_column.hpp"
-#include "utils/assert.hpp"
 #include "value_column.hpp"
 
 #include "resolve_type.hpp"
 #include "types.hpp"
+#include "utils/assert.hpp"
 
 namespace opossum {
 
@@ -81,7 +80,8 @@ ColumnID Table::column_id_by_name(const std::string &column_name) const {
       return column_id;
     }
   }
-  throw std::runtime_error("column " + column_name + " not found");
+  Fail("Column " + column_name + " not found.");
+  return {};
 }
 
 uint32_t Table::chunk_size() const { return _chunk_size; }

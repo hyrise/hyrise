@@ -64,10 +64,8 @@ set(
     import_export/binary.hpp
     import_export/csv_converter.hpp
     import_export/csv.hpp
-    import_export/csv_non_rfc_parser.cpp
-    import_export/csv_non_rfc_parser.hpp
-    import_export/csv_rfc_parser.cpp
-    import_export/csv_rfc_parser.hpp
+    import_export/csv_parser.cpp
+    import_export/csv_parser.hpp
     import_export/csv_writer.cpp
     import_export/csv_writer.hpp
     network/operator_translator.cpp
@@ -139,6 +137,8 @@ set(
     operators/validate.hpp
     optimizer/abstract_syntax_tree/abstract_ast_node.cpp
     optimizer/abstract_syntax_tree/abstract_ast_node.hpp
+    optimizer/abstract_syntax_tree/aggregate_node.cpp
+    optimizer/abstract_syntax_tree/aggregate_node.hpp
     optimizer/abstract_syntax_tree/join_node.cpp
     optimizer/abstract_syntax_tree/join_node.hpp
     optimizer/abstract_syntax_tree/predicate_node.cpp
