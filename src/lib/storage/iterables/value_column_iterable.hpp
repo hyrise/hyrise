@@ -155,6 +155,21 @@ class ValueColumnIterable
     return func(begin, end);
   }
 
+  template <typename Functor>
+  auto execute_for_all_no_mapping(const Functor & func) const {
+    DebugAssert(_mapped_chunk_offsets != nullptr, "Mapped chunk offsets must be a nullptr.");
+
+    if (_column.is_nullable()) {
+      auto begin = NullableIterator(_column.values().cbegin(), _column.values().cbegin(), _column.null_values().cbegin());
+      auto end = NullableIterator(_column.values().cbegin(), _column.values().cend(), _column.null_values().cend());
+      return func(begin, end);
+    }
+
+    auto begin = Iterator(_column.values().cbegin(), _column.values().cbegin());
+    auto end = Iterator(_column.values().cend(), _column.values().cend());
+    return func(begin, end);
+  }
+
   Type type() const {
     if (_column.is_nullable() && _mapped_chunk_offsets != nullptr) {
       return Type::NullableReferenced;

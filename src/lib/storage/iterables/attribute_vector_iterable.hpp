@@ -79,6 +79,15 @@ class AttributeVectorIterable
     return func(begin, end);
   }
 
+  template <typename Functor>
+  auto execute_for_all_no_mapping(const Functor & func) const {
+    DebugAssert(_mapped_chunk_offsets != nullptr, "Mapped chunk offsets must be a nullptr.");
+
+    auto begin = Iterator(_attribute_vector, 0u);
+    auto end = Iterator(_attribute_vector, _attribute_vector.size());
+    return func(begin, end);
+  }
+
  private:
   const BaseAttributeVector & _attribute_vector;
   const std::vector<std::pair<ChunkOffset, ChunkOffset>> * _mapped_chunk_offsets;

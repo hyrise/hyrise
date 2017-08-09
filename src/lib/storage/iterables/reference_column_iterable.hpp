@@ -121,6 +121,11 @@ class ReferenceColumnIterable
     return func(begin, end);
   }
 
+  template <typename Functor>
+  auto execute_for_all_no_mapping(const Functor & func) const {
+    return execute_for_all(func);
+  }
+
  private:
   const ReferenceColumn & _column;
 };
