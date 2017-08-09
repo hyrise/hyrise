@@ -127,16 +127,14 @@ TEST_F(OperatorsAggregateTest, CannotSumStringColumns) {
   auto aggregate = std::make_shared<Aggregate>(_table_wrapper_1_1_string,
                                                std::vector<AggregateDefinition>{{ColumnID{0}, AggregateFunction::Sum}},
                                                std::vector<ColumnID>{ColumnID{0}});
-
-  EXPECT_THROW(aggregate->execute(), std::runtime_error);
+  EXPECT_THROW(aggregate->execute(), std::logic_error);
 }
 
 TEST_F(OperatorsAggregateTest, CannotAvgStringColumns) {
   auto aggregate = std::make_shared<Aggregate>(_table_wrapper_1_1_string,
                                                std::vector<AggregateDefinition>{{ColumnID{0}, AggregateFunction::Avg}},
                                                std::vector<ColumnID>{ColumnID{0}});
-
-  EXPECT_THROW(aggregate->execute(), std::runtime_error);
+  EXPECT_THROW(aggregate->execute(), std::logic_error);
 }
 
 TEST_F(OperatorsAggregateTest, CanCountStringColumns) {
@@ -255,8 +253,8 @@ TEST_F(OperatorsAggregateTest, TwoAggregateSumAvg) {
 }
 
 TEST_F(OperatorsAggregateTest, TwoAggregateSumAvgAlias) {
-  this->test_output(_table_wrapper_1_2,
-                    {{ColumnID{1}, AggregateFunction::Sum, optional<std::string>("sum_b")}, {ColumnID{2}, AggregateFunction::Avg}},
+  this->test_output(_table_wrapper_1_2, {{ColumnID{1}, AggregateFunction::Sum, optional<std::string>("sum_b")},
+                                         {ColumnID{2}, AggregateFunction::Avg}},
                     {ColumnID{0}}, "src/test/tables/aggregateoperator/groupby_int_1gb_2agg/sum_avg_alias.tbl", 1);
 }
 
@@ -424,7 +422,7 @@ TEST_F(OperatorsAggregateTest, JoinThenAggregate) {
                                          JoinMode::Inner);
   join->execute();
 
-  this->test_output(join, {}, {ColumnID{0}, ColumnID{1}}, "src/test/tables/aggregateoperator/join_2gb_0agg/result.tbl",
+  this->test_output(join, {}, {ColumnID{0}, ColumnID{3}}, "src/test/tables/aggregateoperator/join_2gb_0agg/result.tbl",
                     1);
 }
 

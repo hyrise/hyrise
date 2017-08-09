@@ -178,8 +178,7 @@ class TableScan::TableScanImpl : public AbstractReadOnlyOperatorImpl {
       if (_value2) casted_value2 = boost::get<T>(*_value2);
     } else {
       // column_a == column_b
-      ColumnName column_name = boost::get<ColumnName>(_value);
-      column_id2 = in_table->column_id_by_name(column_name);
+      column_id2 = boost::get<ColumnID>(_value);
     }
 
     for (ColumnID column_id{0}; column_id < in_table->col_count(); ++column_id) {

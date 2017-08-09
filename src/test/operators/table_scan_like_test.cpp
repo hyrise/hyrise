@@ -149,8 +149,7 @@ TEST_F(OperatorsTableScanLikeTest, ScanLikeContaining) {
 }
 TEST_F(OperatorsTableScanLikeTest, ScanLikeContainingOnDictColumn) {
   std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_string_like_containing.tbl", 1);
-  auto scan =
-      std::make_shared<TableScan>(_gt_string_dict, ColumnID{1}, ScanType::OpLike, "%schifffahrtsgesellschaft%");
+  auto scan = std::make_shared<TableScan>(_gt_string_dict, ColumnID{1}, ScanType::OpLike, "%schifffahrtsgesellschaft%");
   scan->execute();
   EXPECT_TABLE_EQ(scan->get_output(), expected_result);
 }

@@ -65,13 +65,13 @@ std::shared_ptr<const Table> Aggregate::on_execute() {
   jobs.reserve(input_table->chunk_count());
 
   for (ChunkID chunk_id{0}; chunk_id < input_table->chunk_count(); ++chunk_id) {
-    jobs.emplace_back(std::make_shared<JobTask>([&, chunk_id]() {
+    jobs.emplace_back(std::make_shared<JobTask>([&, chunk_id, groupby_columns]() {
       const Chunk &chunk_in = input_table->get_chunk(chunk_id);
 
       auto hash_keys = std::make_shared<std::vector<AggregateKey>>(chunk_in.size());
 
       // Partition by group columns
-      for (auto column_id : _groupby_columns) {
+      for (auto column_id : groupby_columns) {
         auto base_column = chunk_in.get_column(column_id);
         auto column_type = input_table->column_type(column_id);
 
@@ -174,9 +174,9 @@ std::shared_ptr<const Table> Aggregate::on_execute() {
   // Write the output
   _output = std::make_shared<Table>();
 
-  if (_groupby_columns.size()) {
+  if (!_groupby_columns.empty()) {
     // add group by columns
-    for (ColumnID column_index{0}; column_index < _groupby_columns.size(); ++column_index) {
+    for (auto &column_index : _groupby_columns) {
       _output->add_column_definition(input_table->column_name(column_index), input_table->column_type(column_index));
 
       _group_columns.emplace_back(

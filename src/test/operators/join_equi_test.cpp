@@ -13,7 +13,6 @@
 #include "../../lib/operators/join_hash.hpp"
 #include "../../lib/operators/join_nested_loop_a.hpp"
 #include "../../lib/operators/join_nested_loop_b.hpp"
-#include "../../lib/operators/print.hpp"
 #include "../../lib/operators/table_scan.hpp"
 #include "../../lib/operators/union_all.hpp"
 #include "../../lib/storage/storage_manager.hpp"
@@ -175,7 +174,7 @@ TYPED_TEST(JoinEquiTest, InnerJoinBig) {
 TYPED_TEST(JoinEquiTest, InnerRefJoinFilteredBig) {
   auto scan_c = std::make_shared<TableScan>(this->_table_wrapper_c, ColumnID{0}, ScanType::OpGreaterThanEquals, 0);
   scan_c->execute();
-  auto scan_d = std::make_shared<TableScan>(this->_table_wrapper_d, ColumnID{0}, ScanType::OpGreaterThanEquals, 6);
+  auto scan_d = std::make_shared<TableScan>(this->_table_wrapper_d, ColumnID{1}, ScanType::OpGreaterThanEquals, 6);
   scan_d->execute();
 
   this->template test_join_output<TypeParam>(scan_c, scan_d, std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{1}),

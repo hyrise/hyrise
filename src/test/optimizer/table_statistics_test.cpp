@@ -173,23 +173,24 @@ TEST_F(TableStatisticsTest, BetweenTest) {
 TEST_F(TableStatisticsTest, MultipleColumnTableScans) {
   auto container = check_statistic_with_table_scan(_table_a_with_statistics, ColumnID{2}, ScanType::OpBetween,
                                                    AllParameterVariant(2.), AllTypeVariant(5.));
-  container = check_statistic_with_table_scan(container, ColumnID{0}, ScanType::OpGreaterThanEquals, AllParameterVariant(4));
+  container =
+      check_statistic_with_table_scan(container, ColumnID{0}, ScanType::OpGreaterThanEquals, AllParameterVariant(4));
 }
 
 TEST_F(TableStatisticsTest, NotOverlappingTableScans) {
   /**
    * check that min and max values of columns are set
    */
-  auto container =
-      check_statistic_with_table_scan(_table_a_with_statistics, ColumnID{3}, ScanType::OpEquals, AllParameterVariant("f"));
+  auto container = check_statistic_with_table_scan(_table_a_with_statistics, ColumnID{3}, ScanType::OpEquals,
+                                                   AllParameterVariant("f"));
   check_statistic_with_table_scan(container, ColumnID{3}, ScanType::OpNotEquals, AllParameterVariant("f"));
 
   container = check_statistic_with_table_scan(_table_a_with_statistics, ColumnID{1}, ScanType::OpLessThanEquals,
                                               AllParameterVariant(3.5f));
   check_statistic_with_table_scan(container, ColumnID{1}, ScanType::OpGreaterThan, AllParameterVariant(3.5f));
 
-  container =
-      check_statistic_with_table_scan(_table_a_with_statistics, ColumnID{0}, ScanType::OpLessThan, AllParameterVariant(4));
+  container = check_statistic_with_table_scan(_table_a_with_statistics, ColumnID{0}, ScanType::OpLessThan,
+                                              AllParameterVariant(4));
   container = check_statistic_with_table_scan(container, ColumnID{0}, ScanType::OpGreaterThan, AllParameterVariant(2));
   check_statistic_with_table_scan(container, ColumnID{0}, ScanType::OpEquals, AllParameterVariant(3));
 }

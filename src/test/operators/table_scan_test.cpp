@@ -144,8 +144,8 @@ TEST_F(OperatorsTableScanTest, ScanOnDictColumn) {
   tests[ScanType::OpGreaterThanEquals] = {104, 106, 108, 110, 112, 114, 116, 118, 120, 122, 124};
   tests[ScanType::OpBetween] = {104, 106, 108};
   for (const auto& test : tests) {
-    auto scan = std::make_shared<TableScan>(_table_wrapper_even_dict, ColumnID{0}, test.first, 4,
-                                            optional<AllTypeVariant>(9));
+    auto scan =
+        std::make_shared<TableScan>(_table_wrapper_even_dict, ColumnID{0}, test.first, 4, optional<AllTypeVariant>(9));
     scan->execute();
 
     auto expected_copy = test.second;
@@ -309,7 +309,8 @@ TEST_F(OperatorsTableScanTest, ScanOnWideDictionaryColumn) {
 
   // 2**16 + 1 values require a data type of 32bit.
   const auto table_wrapper_dict_32 = get_table_op_with_n_dict_entries((1 << 16) + 1);
-  auto scan_2 = std::make_shared<opossum::TableScan>(table_wrapper_dict_32, ColumnID{0}, ScanType::OpGreaterThan, 65500);
+  auto scan_2 =
+      std::make_shared<opossum::TableScan>(table_wrapper_dict_32, ColumnID{0}, ScanType::OpGreaterThan, 65500);
   scan_2->execute();
 
   EXPECT_EQ(scan_2->get_output()->row_count(), static_cast<size_t>(37));
