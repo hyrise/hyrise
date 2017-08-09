@@ -18,10 +18,10 @@ boost::bimap<L, R> make_bimap(std::initializer_list<typename boost::bimap<L, R>:
 }
 
 const std::unordered_map<std::string, proto::ScanType> string_to_proto_scan_type = {
-    {"=", opossum::proto::ScanType::OpEquals},        {"!=", opossum::proto::ScanType::OpNotEquals},
-    {"<", opossum::proto::ScanType::OpLessThan},      {"<=", opossum::proto::ScanType::OpLessThanEquals},
-    {">", opossum::proto::ScanType::OpGreaterThan},   {">=", opossum::proto::ScanType::OpGreaterThanEquals},
-    {"BETWEEN", opossum::proto::ScanType::OpBetween}, {"LIKE", opossum::proto::ScanType::OpLike},
+    {"=", proto::ScanType::OpEquals},        {"!=", proto::ScanType::OpNotEquals},
+    {"<", proto::ScanType::OpLessThan},      {"<=", proto::ScanType::OpLessThanEquals},
+    {">", proto::ScanType::OpGreaterThan},   {">=", proto::ScanType::OpGreaterThanEquals},
+    {"BETWEEN", proto::ScanType::OpBetween}, {"LIKE", proto::ScanType::OpLike},
 };
 
 const boost::bimap<ScanType, std::string> scan_type_to_string = make_bimap<ScanType, std::string>({
@@ -103,5 +103,15 @@ const std::unordered_map<JoinMode, std::string> join_mode_to_string = {
     {JoinMode::Cross, "Cross"}, {JoinMode::Inner, "Inner"}, {JoinMode::Left, "Left"}, {JoinMode::Natural, "Natural"},
     {JoinMode::Outer, "Outer"}, {JoinMode::Right, "Right"}, {JoinMode::Self, "Self"},
 };
+
+// TODO(mp): this should be case-insensitive
+const boost::bimap<AggregateFunction, std::string> aggregate_function_to_string =
+    make_bimap<AggregateFunction, std::string>({
+        {AggregateFunction::Min, "MIN"},
+        {AggregateFunction::Max, "MAX"},
+        {AggregateFunction::Sum, "SUM"},
+        {AggregateFunction::Avg, "AVG"},
+        {AggregateFunction::Count, "COUNT"},
+    });
 
 }  // namespace opossum

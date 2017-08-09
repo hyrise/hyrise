@@ -6,14 +6,16 @@
 
 #include "benchmark/benchmark.h"
 
-#include "../lib/operators/difference.hpp"
-#include "../lib/operators/get_table.hpp"
-#include "../lib/operators/projection.hpp"
-#include "../lib/storage/storage_manager.hpp"
-#include "../lib/storage/table.hpp"
-#include "../lib/types.hpp"
-#include "base_fixture.cpp"
+#include "base_fixture.hpp"
 #include "table_generator.hpp"
+
+#include "operators/difference.hpp"
+#include "operators/get_table.hpp"
+#include "operators/projection.hpp"
+#include "storage/storage_manager.hpp"
+#include "storage/table.hpp"
+
+#include "types.hpp"
 
 namespace opossum {
 /**

@@ -7,8 +7,6 @@
 #include <vector>
 
 #include "variable_length_key.hpp"
-#include "variable_length_key_base.hpp"
-#include "variable_length_key_proxy.hpp"
 
 namespace opossum {
 

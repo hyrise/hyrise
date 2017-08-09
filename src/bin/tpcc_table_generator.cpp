@@ -1,17 +1,15 @@
 #include <iostream>
-#include <memory>
 
 #include "operators/export_csv.hpp"
-#include "operators/table_wrapper.hpp"
-
+#include "storage/storage_manager.hpp"
 #include "tpcc/tpcc_table_generator.hpp"
 
 int main() {
   std::cout << "TPCC" << std::endl;
   std::cout << " > Generating tables" << std::endl;
-  auto tables = tpcc::TableGenerator().generate_all_tables();
+  auto tables = tpcc::TpccTableGenerator().generate_all_tables();
 
-  for (auto& pair : *tables) {
+  for (auto& pair : tables) {
     opossum::StorageManager::get().add_table(pair.first, pair.second);
   }
 

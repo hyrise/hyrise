@@ -7,6 +7,8 @@
 #include "abstract_read_only_operator.hpp"
 #include "import_export/csv.hpp"
 
+#include "utils/assert.hpp"
+
 namespace opossum {
 
 /*
@@ -23,28 +25,19 @@ class ImportCsv : public AbstractReadOnlyOperator {
   /*
    * @param filename    Path to the input file.
    * @param tablename   Optional. Name of the table to store/look up in the StorageManager.
-   * @param rfc_mode    If true parse according to RFC 4180 else parse as non-RFC format
-   * @param buffer_size Specifies the amount of data from the input file in bytes that a single task should work on.
    */
-  explicit ImportCsv(const std::string& filename, const optional<std::string> tablename = nullopt, bool rfc_mode = true,
-                     size_t buffer_size = 50 * 1024 * 1024 /*50 MB*/);
+  explicit ImportCsv(const std::string& filename, const optional<std::string> tablename = nullopt);
 
   /*
    * @param filename    Path to the input file.
    * @param config      Csv configuration, e.g. delimiter, separator, etc.
    * @param tablename   Optional. Name of the table to store/look up in the StorageManager.
-   * @param rfc_mode    If true parse according to RFC 4180 else parse as non-RFC format
-   * @param buffer_size Specifies the amount of data from the input file in bytes that a single task should work on.
    */
   explicit ImportCsv(const std::string& filename, const CsvConfig& config,
-                     const optional<std::string> tablename = nullopt, bool rfc_mode = true,
-                     size_t buffer_size = 50 * 1024 * 1024 /*50 MB*/);
+                     const optional<std::string> tablename = nullopt);
 
   // cannot move-assign because of const members
   ImportCsv& operator=(ImportCsv&&) = delete;
-
-  // Returns the table that was created from the csv file.
-  std::shared_ptr<const Table> on_execute() override;
 
   // Name of the operator is "ImportCSV"
   const std::string name() const override;
@@ -56,18 +49,18 @@ class ImportCsv : public AbstractReadOnlyOperator {
   uint8_t num_out_tables() const override;
 
   std::shared_ptr<AbstractOperator> recreate(const std::vector<AllParameterVariant>& args) const override {
-    throw std::runtime_error("Operator " + this->name() + " does not implement recreation.");
+    Fail("Operator " + this->name() + " does not implement recreation.");
+    return {};
   }
 
  protected:
+  // Returns the table that was created from the csv file.
+  std::shared_ptr<const Table> on_execute() override;
+
   // Path to the input file
   const std::string _filename;
   // Name for adding the table to the StorageManager
   const optional<std::string> _tablename;
-  // Parsing mode
-  const bool _rfc_mode;
-  // Number of bytes that a task processes from the input file.
-  const size_t _buffer_size;
   // Csv configuration, e.g. delimiter, separator, etc.
   const CsvConfig _config;
 };

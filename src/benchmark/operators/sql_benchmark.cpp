@@ -1,11 +1,11 @@
 #include <memory>
 #include <string>
-#include <utility>
 
+#include "SQLParser.h"
 #include "benchmark/benchmark.h"
 
-#include "../base_fixture.cpp"
-#include "SQLParser.h"
+#include "../base_fixture.hpp"
+
 #include "sql/sql_query_operator.hpp"
 #include "sql/sql_query_translator.hpp"
 

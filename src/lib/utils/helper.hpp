@@ -9,10 +9,6 @@
 
 namespace opossum {
 
-class Table;
-class TransactionContext;
-class AbstractOperator;
-class OperatorTask;
 template <typename>
 class ValueColumn;
 

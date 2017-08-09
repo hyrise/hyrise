@@ -6,6 +6,7 @@
 
 #include "optimizer/table_statistics.hpp"
 #include "storage/storage_manager.hpp"
+#include "storage/table.hpp"
 
 namespace opossum {
 

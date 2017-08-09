@@ -67,9 +67,7 @@ class SQLSelectTest : public BaseTest, public ::testing::WithParamInterface<SQLT
 
     // Compile the parse result.
     bool success = _translator.translate_parse_result(parse_result);
-    if (!success) {
-      throw std::runtime_error(_translator.get_error_msg());
-    }
+    Assert(success, _translator.get_error_msg());
 
     _plan = _translator.get_query_plan();
   }

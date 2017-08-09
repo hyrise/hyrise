@@ -9,6 +9,7 @@
 #include "network/generated/opossum.grpc.pb.h"
 #pragma GCC diagnostic pop
 
+#include "storage/base_attribute_vector.hpp"
 #include "storage/column_visitable.hpp"
 #include "storage/dictionary_column.hpp"
 #include "storage/reference_column.hpp"

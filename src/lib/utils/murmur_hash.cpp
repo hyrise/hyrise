@@ -1,4 +1,3 @@
-
 #include "murmur_hash.hpp"
 
 namespace opossum {

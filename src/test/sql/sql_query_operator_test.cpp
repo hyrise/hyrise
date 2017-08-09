@@ -23,11 +23,13 @@ class SQLQueryOperatorTest : public BaseTest {
   void SetUp() override {
     CurrentScheduler::set(std::make_shared<NodeQueueScheduler>(Topology::create_fake_numa_topology(8, 4)));
 
-    std::shared_ptr<Table> table_a = load_table("src/test/tables/int_float.tbl", 2);
+    auto table_a = load_table("src/test/tables/int_float.tbl", 2);
     StorageManager::get().add_table("table_a", std::move(table_a));
-
-    std::shared_ptr<Table> table_b = load_table("src/test/tables/int_float2.tbl", 2);
+    auto table_b = load_table("src/test/tables/int_float2.tbl", 2);
     StorageManager::get().add_table("table_b", std::move(table_b));
+
+    SQLQueryOperator::get_query_plan_cache().clear_and_resize(0);
+    SQLQueryOperator::get_parse_tree_cache().clear_and_resize(0);
   }
 
   void TearDown() override {
