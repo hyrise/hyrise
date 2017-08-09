@@ -81,9 +81,9 @@ TYPED_TEST(JoinFullTest, InnerRefJoin) {
   this->_table_wrapper_b->execute();
 
   // scan that returns all rows
-  auto scan_a = std::make_shared<TableScan>(this->_table_wrapper_a, "a", ScanType::OpGreaterThanEquals, 0);
+  auto scan_a = std::make_shared<TableScan>(this->_table_wrapper_a, ColumnID{0}, ScanType::OpGreaterThanEquals, 0);
   scan_a->execute();
-  auto scan_b = std::make_shared<TableScan>(this->_table_wrapper_b, "a", ScanType::OpGreaterThanEquals, 0);
+  auto scan_b = std::make_shared<TableScan>(this->_table_wrapper_b, ColumnID{0}, ScanType::OpGreaterThanEquals, 0);
   scan_b->execute();
 
   this->template test_join_output<TypeParam>(scan_a, scan_b, std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}),
@@ -114,9 +114,9 @@ TYPED_TEST(JoinFullTest, InnerValueDictRefJoin) {
   this->_table_wrapper_b_dict->execute();
 
   // scan that returns all rows
-  auto scan_a = std::make_shared<TableScan>(this->_table_wrapper_a, "a", ScanType::OpGreaterThanEquals, 0);
+  auto scan_a = std::make_shared<TableScan>(this->_table_wrapper_a, ColumnID{0}, ScanType::OpGreaterThanEquals, 0);
   scan_a->execute();
-  auto scan_b = std::make_shared<TableScan>(this->_table_wrapper_b_dict, "a", ScanType::OpGreaterThanEquals, 0);
+  auto scan_b = std::make_shared<TableScan>(this->_table_wrapper_b_dict, ColumnID{0}, ScanType::OpGreaterThanEquals, 0);
   scan_b->execute();
 
   this->template test_join_output<TypeParam>(scan_a, scan_b, std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}),
@@ -129,9 +129,9 @@ TYPED_TEST(JoinFullTest, InnerDictValueRefJoin) {
   this->_table_wrapper_b->execute();
 
   // scan that returns all rows
-  auto scan_a = std::make_shared<TableScan>(this->_table_wrapper_a_dict, "a", ScanType::OpGreaterThanEquals, 0);
+  auto scan_a = std::make_shared<TableScan>(this->_table_wrapper_a_dict, ColumnID{0}, ScanType::OpGreaterThanEquals, 0);
   scan_a->execute();
-  auto scan_b = std::make_shared<TableScan>(this->_table_wrapper_b, "a", ScanType::OpGreaterThanEquals, 0);
+  auto scan_b = std::make_shared<TableScan>(this->_table_wrapper_b, ColumnID{0}, ScanType::OpGreaterThanEquals, 0);
   scan_b->execute();
 
   this->template test_join_output<TypeParam>(scan_a, scan_b, std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}),
@@ -143,9 +143,9 @@ TYPED_TEST(JoinFullTest, InnerRefJoinFiltered) {
   this->_table_wrapper_a->execute();
   this->_table_wrapper_b->execute();
 
-  auto scan_a = std::make_shared<TableScan>(this->_table_wrapper_a, "a", ScanType::OpGreaterThan, 1000);
+  auto scan_a = std::make_shared<TableScan>(this->_table_wrapper_a, ColumnID{0}, ScanType::OpGreaterThan, 1000);
   scan_a->execute();
-  auto scan_b = std::make_shared<TableScan>(this->_table_wrapper_b, "a", ScanType::OpGreaterThanEquals, 0);
+  auto scan_b = std::make_shared<TableScan>(this->_table_wrapper_b, ColumnID{0}, ScanType::OpGreaterThanEquals, 0);
   scan_b->execute();
 
   this->template test_join_output<TypeParam>(scan_a, scan_b, std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}),
@@ -167,9 +167,9 @@ TYPED_TEST(JoinFullTest, InnerRefDictJoin) {
   this->_table_wrapper_b_dict->execute();
 
   // scan that returns all rows
-  auto scan_a = std::make_shared<TableScan>(this->_table_wrapper_a_dict, "a", ScanType::OpGreaterThanEquals, 0);
+  auto scan_a = std::make_shared<TableScan>(this->_table_wrapper_a_dict, ColumnID{0}, ScanType::OpGreaterThanEquals, 0);
   scan_a->execute();
-  auto scan_b = std::make_shared<TableScan>(this->_table_wrapper_b_dict, "a", ScanType::OpGreaterThanEquals, 0);
+  auto scan_b = std::make_shared<TableScan>(this->_table_wrapper_b_dict, ColumnID{0}, ScanType::OpGreaterThanEquals, 0);
   scan_b->execute();
 
   this->template test_join_output<TypeParam>(scan_a, scan_b, std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}),
@@ -181,9 +181,9 @@ TYPED_TEST(JoinFullTest, InnerRefDictJoinFiltered) {
   this->_table_wrapper_a_dict->execute();
   this->_table_wrapper_b_dict->execute();
 
-  auto scan_a = std::make_shared<TableScan>(this->_table_wrapper_a_dict, "a", ScanType::OpGreaterThan, 1000);
+  auto scan_a = std::make_shared<TableScan>(this->_table_wrapper_a_dict, ColumnID{0}, ScanType::OpGreaterThan, 1000);
   scan_a->execute();
-  auto scan_b = std::make_shared<TableScan>(this->_table_wrapper_b_dict, "a", ScanType::OpGreaterThanEquals, 0);
+  auto scan_b = std::make_shared<TableScan>(this->_table_wrapper_b_dict, ColumnID{0}, ScanType::OpGreaterThanEquals, 0);
   scan_b->execute();
 
   this->template test_join_output<TypeParam>(scan_a, scan_b, std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}),
@@ -204,9 +204,9 @@ TYPED_TEST(JoinFullTest, InnerRefJoinFilteredBig) {
   this->_table_wrapper_c->execute();
   this->_table_wrapper_d->execute();
 
-  auto scan_c = std::make_shared<TableScan>(this->_table_wrapper_c, "a", ScanType::OpGreaterThanEquals, 0);
+  auto scan_c = std::make_shared<TableScan>(this->_table_wrapper_c, ColumnID{0}, ScanType::OpGreaterThanEquals, 0);
   scan_c->execute();
-  auto scan_d = std::make_shared<TableScan>(this->_table_wrapper_d, "a", ScanType::OpGreaterThanEquals, 6);
+  auto scan_d = std::make_shared<TableScan>(this->_table_wrapper_d, ColumnID{0}, ScanType::OpGreaterThanEquals, 6);
   scan_d->execute();
 
   this->template test_join_output<TypeParam>(scan_c, scan_d, std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{1}),
@@ -306,7 +306,7 @@ TYPED_TEST(JoinFullTest, JoinOnMixedValueAndDictionaryColumns) {
 
 TYPED_TEST(JoinFullTest, JoinOnMixedValueAndReferenceColumns) {
   // scan that returns all rows
-  auto scan_a = std::make_shared<TableScan>(this->_table_wrapper_a, "a", ScanType::OpGreaterThanEquals, 0);
+  auto scan_a = std::make_shared<TableScan>(this->_table_wrapper_a, ColumnID{0}, ScanType::OpGreaterThanEquals, 0);
   scan_a->execute();
 
   this->template test_join_output<TypeParam>(

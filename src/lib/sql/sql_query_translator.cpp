@@ -222,44 +222,44 @@ bool SQLQueryTranslator::_translate_projection(const std::vector<hsql::Expr*>& e
 bool SQLQueryTranslator::_translate_group_by(const hsql::GroupByDescription& group_by,
                                              const std::vector<hsql::Expr*>& select_list,
                                              const std::shared_ptr<AbstractOperator>& input_op) {
-  std::vector<AggregateDefinition> aggregates;
-  std::vector<std::string> groupby_columns;
-
-  // Process group by columns.
-  for (const auto expr : *group_by.columns) {
-    DebugAssert(expr->isType(hsql::kExprColumnRef), "Expect group by columns to be column references.");
-    groupby_columns.push_back(_get_column_name(*expr));
-  }
-
-  // Process select list to build aggregate functions.
-  for (const auto expr : select_list) {
-    if (expr->isType(hsql::kExprFunctionRef)) {
-      std::string fun_name(expr->name);
-
-      DebugAssert(expr->exprList->size() == 1, "Expect SQL functions to only have single argument.");
-      std::string argument = _get_column_name(*expr->exprList->at(0));
-
-      if (aggregate_function_to_string.right.find(fun_name) != aggregate_function_to_string.right.end()) {
-        aggregates.emplace_back(argument, aggregate_function_to_string.right.at(fun_name));
-        continue;
-      }
-
-      _error_msg = "Unsupported aggregation function. (" + fun_name + ")";
-      return false;
-    }
-
-    // TODO(torpedro): Check that all other columns are in the group by columns.
-  }
-
-  //  auto aggregate = std::make_shared<Aggregate>(input_op, aggregates, groupby_columns);
-  //  _current_root = aggregate;
-
-  // Handle HAVING clause.
-  if (group_by.having != nullptr) {
-    if (!_translate_filter_expr(*group_by.having, _current_root)) {
-      return false;
-    }
-  }
+//  std::vector<AggregateDefinition> aggregates;
+//  std::vector<std::string> groupby_columns;
+//
+//  // Process group by columns.
+//  for (const auto expr : *group_by.columns) {
+//    DebugAssert(expr->isType(hsql::kExprColumnRef), "Expect group by columns to be column references.");
+//    groupby_columns.push_back(_get_column_name(*expr));
+//  }
+//
+//  // Process select list to build aggregate functions.
+//  for (const auto expr : select_list) {
+//    if (expr->isType(hsql::kExprFunctionRef)) {
+//      std::string fun_name(expr->name);
+//
+//      DebugAssert(expr->exprList->size() == 1, "Expect SQL functions to only have single argument.");
+//      std::string argument = _get_column_name(*expr->exprList->at(0));
+//
+//      if (aggregate_function_to_string.right.find(fun_name) != aggregate_function_to_string.right.end()) {
+//        aggregates.emplace_back(argument, aggregate_function_to_string.right.at(fun_name));
+//        continue;
+//      }
+//
+//      _error_msg = "Unsupported aggregation function. (" + fun_name + ")";
+//      return false;
+//    }
+//
+//    // TODO(torpedro): Check that all other columns are in the group by columns.
+//  }
+//
+//  //  auto aggregate = std::make_shared<Aggregate>(input_op, aggregates, groupby_columns);
+//  //  _current_root = aggregate;
+//
+//  // Handle HAVING clause.
+//  if (group_by.having != nullptr) {
+//    if (!_translate_filter_expr(*group_by.having, _current_root)) {
+//      return false;
+//    }
+//  }
 
   return true;
 }
