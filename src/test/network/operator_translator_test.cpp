@@ -523,9 +523,9 @@ TEST_F(OperatorTranslatorTest, DISABLED_NestedLoopJoinModes) {
   join_operation->mutable_left_operator()->mutable_get_table()->set_table_name("table_int_float");
   join_operation->mutable_right_operator()->mutable_get_table()->set_table_name("table_int_float_2");
   join_operation->set_op(proto::ScanType::OpEquals);
-//  TODO(mp): fix and change to ColumnID
-//  join_operation->set_left_column_name("a");
-//  join_operation->set_right_column_name("a");
+  // TODO(mp): fix and change to ColumnID
+  //  join_operation->set_left_column_name("a");
+  //  join_operation->set_right_column_name("a");
 
   auto modes = {proto::NestedLoopJoinOperator::Inner, proto::NestedLoopJoinOperator::Left,
                 proto::NestedLoopJoinOperator::Right, proto::NestedLoopJoinOperator::Outer,
@@ -553,9 +553,9 @@ TEST_F(OperatorTranslatorTest, DISABLED_NestedLoopJoinWithColumns) {
   join_operation->mutable_right_operator()->mutable_get_table()->set_table_name("table_int_float_2");
   join_operation->set_mode(proto::NestedLoopJoinOperator::Left);
   join_operation->set_op(proto::ScanType::OpEquals);
-//  TODO(mp): fix and change to ColumnID
-//  join_operation->set_left_column_name("a");
-//  join_operation->set_right_column_name("a");
+  // TODO(mp): fix and change to ColumnID
+  //  join_operation->set_left_column_name("a");
+  //  join_operation->set_right_column_name("a");
 
   OperatorTranslator translator;
   auto& tasks = translator.build_tasks_from_proto(msg);

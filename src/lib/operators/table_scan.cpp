@@ -15,8 +15,8 @@
 
 namespace opossum {
 
-TableScan::TableScan(const std::shared_ptr<AbstractOperator> in, const ColumnID column_name,
-                     const ScanType scan_type, const AllParameterVariant value, const optional<AllTypeVariant> value2)
+TableScan::TableScan(const std::shared_ptr<AbstractOperator> in, const ColumnID column_name, const ScanType scan_type,
+                     const AllParameterVariant value, const optional<AllTypeVariant> value2)
     : AbstractReadOnlyOperator(in), _column_name(column_name), _scan_type(scan_type), _value(value), _value2(value2) {}
 
 const std::string TableScan::name() const { return "TableScan"; }
@@ -27,8 +27,7 @@ uint8_t TableScan::num_out_tables() const { return 1; }
 
 std::shared_ptr<const Table> TableScan::on_execute() {
   _impl = make_unique_by_column_type<AbstractReadOnlyOperatorImpl, TableScanImpl>(
-      input_table_left()->column_type(_column_name), _input_left, _column_name,
-      _scan_type, _value, _value2);
+      input_table_left()->column_type(_column_name), _input_left, _column_name, _scan_type, _value, _value2);
   return _impl->on_execute();
 }
 

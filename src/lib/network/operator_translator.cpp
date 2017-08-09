@@ -146,18 +146,19 @@ inline std::shared_ptr<OperatorTask> OperatorTranslator::translate(
 
   std::shared_ptr<JoinNestedLoopA> nested_loop_join;
 
-//  if (!nested_loop_join_operator.left_column_name().empty() && !nested_loop_join_operator.right_column_name().empty()) {
-    auto column_names =
-        std::make_pair(ColumnID{nested_loop_join_operator.left_column_name()}, ColumnID{nested_loop_join_operator.right_column_name()});
-    auto join_columns = optional<std::pair<ColumnID, ColumnID>>(column_names);
-    nested_loop_join =
-        std::make_shared<JoinNestedLoopA>(input_left_task->get_operator(), input_right_task->get_operator(),
-                                          join_columns, scan_type, join_mode);
-//  } else {
-//    nested_loop_join =
-//        std::make_shared<JoinNestedLoopA>(input_left_task->get_operator(), input_right_task->get_operator(), nullopt,
-//                                          scan_type, join_mode);
-//  }
+  //  if (!nested_loop_join_operator.left_column_name().empty() &&
+  //  !nested_loop_join_operator.right_column_name().empty()) {
+  auto column_names = std::make_pair(ColumnID{nested_loop_join_operator.left_column_name()},
+                                     ColumnID{nested_loop_join_operator.right_column_name()});
+  auto join_columns = optional<std::pair<ColumnID, ColumnID>>(column_names);
+  nested_loop_join = std::make_shared<JoinNestedLoopA>(
+      input_left_task->get_operator(), input_right_task->get_operator(), join_columns, scan_type, join_mode);
+  //  } else {
+  //    nested_loop_join =
+  //        std::make_shared<JoinNestedLoopA>(input_left_task->get_operator(), input_right_task->get_operator(),
+  //        nullopt,
+  //                                          scan_type, join_mode);
+  //  }
 
   auto nested_loop_join_task = std::make_shared<OperatorTask>(nested_loop_join);
   input_left_task->set_as_predecessor_of(nested_loop_join_task);
@@ -178,7 +179,8 @@ inline std::shared_ptr<OperatorTask> OperatorTranslator::translate(
   const auto value = translate_variant(table_scan_operator.value());
   const auto value2 = translate_optional_variant(table_scan_operator.value2());
 
-  auto table_scan = std::make_shared<TableScan>(input_task->get_operator(), ColumnID{column_name}, scan_type, value, value2);
+  auto table_scan =
+      std::make_shared<TableScan>(input_task->get_operator(), ColumnID{column_name}, scan_type, value, value2);
   auto scan_task = std::make_shared<OperatorTask>(table_scan);
   input_task->set_as_predecessor_of(scan_task);
   _tasks.push_back(scan_task);

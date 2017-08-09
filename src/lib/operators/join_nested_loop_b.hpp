@@ -28,8 +28,7 @@ class JoinNestedLoopB : public AbstractJoinOperator {
  public:
   JoinNestedLoopB(const std::shared_ptr<const AbstractOperator> left,
                   const std::shared_ptr<const AbstractOperator> right,
-                  optional<std::pair<ColumnID, ColumnID>> column_names, const ScanType scan_type,
-                  const JoinMode mode);
+                  optional<std::pair<ColumnID, ColumnID>> column_names, const ScanType scan_type, const JoinMode mode);
 
   const std::string name() const override;
   uint8_t num_in_tables() const override;

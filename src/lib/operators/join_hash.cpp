@@ -17,8 +17,7 @@ namespace opossum {
 
 JoinHash::JoinHash(const std::shared_ptr<const AbstractOperator> left,
                    const std::shared_ptr<const AbstractOperator> right,
-                   optional<std::pair<ColumnID, ColumnID>> column_names, const ScanType scan_type,
-                   const JoinMode mode)
+                   optional<std::pair<ColumnID, ColumnID>> column_names, const ScanType scan_type, const JoinMode mode)
     : AbstractJoinOperator(left, right, column_names, scan_type, mode) {
   DebugAssert((scan_type == ScanType::OpEquals), (std::string("Operator not supported by Hash Join.")));
   DebugAssert((_mode != JoinMode::Cross),
@@ -69,9 +68,8 @@ std::shared_ptr<const Table> JoinHash::on_execute() {
   auto probe_input = probe_operator->get_output();
 
   _impl = make_unique_by_column_types<AbstractReadOnlyOperatorImpl, JoinHashImpl>(
-      build_input->column_type(build_column_name),
-      probe_input->column_type(probe_column_name), build_operator, probe_operator,
-      adjusted_column_names, _scan_type, _mode, inputs_swapped);
+      build_input->column_type(build_column_name), probe_input->column_type(probe_column_name), build_operator,
+      probe_operator, adjusted_column_names, _scan_type, _mode, inputs_swapped);
   return _impl->on_execute();
 }
 
@@ -523,11 +521,11 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
   /*
   Copy the column meta-data from input to output table.
   */
-  static void _copy_table_metadata(const std::shared_ptr<const Table> in_table, const std::shared_ptr<Table> out_table) {
+  static void _copy_table_metadata(const std::shared_ptr<const Table> in_table,
+                                   const std::shared_ptr<Table> out_table) {
     for (ColumnID column_id{0}; column_id < in_table->col_count(); ++column_id) {
       // TODO(anyone): Refine since not all column are nullable
-      out_table->add_column_definition(in_table->column_name(column_id), in_table->column_type(column_id),
-                                       true);
+      out_table->add_column_definition(in_table->column_name(column_id), in_table->column_type(column_id), true);
     }
   }
 

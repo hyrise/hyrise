@@ -10,9 +10,6 @@ AbstractJoinOperator::AbstractJoinOperator(const std::shared_ptr<const AbstractO
                                            const std::shared_ptr<const AbstractOperator> right,
                                            optional<std::pair<ColumnID, ColumnID>> column_names,
                                            const ScanType scan_type, const JoinMode mode)
-    : AbstractReadOnlyOperator(left, right),
-      _scan_type(scan_type),
-      _mode(mode),
-      _column_names(column_names) {}
+    : AbstractReadOnlyOperator(left, right), _scan_type(scan_type), _mode(mode), _column_names(column_names) {}
 
 }  // namespace opossum

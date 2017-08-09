@@ -177,11 +177,10 @@ std::shared_ptr<const Table> Aggregate::on_execute() {
   if (_groupby_columns.size()) {
     // add group by columns
     for (ColumnID column_index{0}; column_index < _groupby_columns.size(); ++column_index) {
-      _output->add_column_definition(input_table->column_name(column_index),
-                                     input_table->column_type(column_index));
+      _output->add_column_definition(input_table->column_name(column_index), input_table->column_type(column_index));
 
-      _group_columns.emplace_back(make_shared_by_column_type<BaseColumn, ValueColumn>(
-          input_table->column_type(column_index)));
+      _group_columns.emplace_back(
+          make_shared_by_column_type<BaseColumn, ValueColumn>(input_table->column_type(column_index)));
 
       _out_chunk.add_column(_group_columns.back());
     }
@@ -240,7 +239,8 @@ void Aggregate::write_aggregate_output(ColumnID column_index) {
   if (_aggregates[column_index].alias) {
     output_column_name = *_aggregates[column_index].alias;
   } else {
-    output_column_name = aggregate_function_to_string.left.at(function) + "(" + input_table_left()->column_name(column_name) + ")";
+    output_column_name =
+        aggregate_function_to_string.left.at(function) + "(" + input_table_left()->column_name(column_name) + ")";
   }
 
   _output->add_column_definition(output_column_name, aggregate_type_name);

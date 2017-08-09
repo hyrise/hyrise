@@ -45,8 +45,7 @@ std::shared_ptr<const Table> JoinNestedLoopA::on_execute() {
   const auto second_column = _column_names->second;
 
   _impl = make_unique_by_column_types<AbstractReadOnlyOperatorImpl, JoinNestedLoopAImpl>(
-      input_table_left()->column_type(first_column),
-      input_table_right()->column_type(second_column), _input_left,
+      input_table_left()->column_type(first_column), input_table_right()->column_type(second_column), _input_left,
       _input_right, *_column_names, _scan_type, _mode);
 
   return _impl->on_execute();
@@ -58,8 +57,7 @@ class JoinNestedLoopA::JoinNestedLoopAImpl : public AbstractJoinOperatorImpl {
  public:
   JoinNestedLoopAImpl(const std::shared_ptr<const AbstractOperator> left,
                       const std::shared_ptr<const AbstractOperator> right,
-                      const std::pair<ColumnID, ColumnID> &column_names, const ScanType scan_type,
-                      const JoinMode mode)
+                      const std::pair<ColumnID, ColumnID> &column_names, const ScanType scan_type, const JoinMode mode)
       : _left_in_table(left->get_output()),
         _right_in_table(right->get_output()),
         _left_column_id(column_names.first),
