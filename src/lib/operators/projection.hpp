@@ -70,5 +70,4 @@ class Projection : public AbstractReadOnlyOperator {
   };
   std::shared_ptr<const Table> on_execute() override;
 };
-
 }  // namespace opossum
