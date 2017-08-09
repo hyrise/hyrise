@@ -12,6 +12,8 @@
 #include "storage/iterables/dictionary_column_iterable.hpp"
 #include "storage/iterables/reference_column_iterable.hpp"
 #include "storage/iterables/constant_value_iterable.hpp"
+#include "storage/column_visitable.hpp"
+#include "storage/base_attribute_vector.hpp"
 #include "utils/binary_operators.hpp"
 #include "resolve_column_type.hpp"
 
