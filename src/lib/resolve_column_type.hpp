@@ -15,6 +15,12 @@ namespace opossum {
 
 namespace hana = boost::hana;
 
+/**
+ * Resolves a column type by passing a hana::type object on to a generic lambda
+ *
+ * @param type is a string representation of any of the supported column types
+ * @param func is generic lambda or similar
+ */
 template <typename Functor>
 void resolve_type(const std::string & type, const Functor & func) {
   hana::for_each(column_types, [&](auto x) {
@@ -25,6 +31,24 @@ void resolve_type(const std::string & type, const Functor & func) {
   });
 }
 
+/**
+ * Resolves a column type by passing a hana::type object and the resolved column on to a generic lambda
+ *
+ * Example:
+ *   resolve_column_type(column_type, base_column, [&] (auto type, auto &typed_column) {
+ *     using Type = typename decltype(left_type)::type;
+ *     using ColumnType = typename std::decay<decltype(typed_column)>::type;
+ *
+ *     constexpr auto is_reference_column = (std::is_same<LeftColumnType, ReferenceColumn>{});
+ *     constexpr auto is_string_column = (left_type == hana::type_c<std::string>);
+ *
+ *     method_expecting_template_type<Type>();
+ *   });
+ *
+ * @param type is a string representation of any of the supported column types
+ * @param func is generic lambda or similar accepting two paramters: a hana::type object and 
+ *   a reference to a specialized column (value, dictionary, reference)
+ */
 template <typename Functor>
 void resolve_column_type(const std::string & type, BaseColumn & column, const Functor & func) {
   hana::for_each(column_types, [&](auto x) {
