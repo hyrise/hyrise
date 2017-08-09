@@ -8,15 +8,16 @@
 #include <vector>
 
 #include "resolve_type.hpp"
+#include "table_materializer.hpp"
 
 namespace opossum {
 
 template <typename T>
-class RadixPartitionSort : public ColumnVisitable {
+class RadixPartitionSort {
  public:
   RadixPartitionSort(const std::shared_ptr<const AbstractOperator> left,
-                        const std::shared_ptr<const AbstractOperator> right,
-                        std::pair<std::string, std::string> column_names, bool equi_case, size_t partition_count)
+                     const std::shared_ptr<const AbstractOperator> right,
+                     std::pair<std::string, std::string> column_names, bool equi_case, size_t partition_count)
     : _left_column_name{column_names.first}, _right_column_name{column_names.second}, _equi_case{equi_case},
       _partition_count{partition_count} {
     DebugAssert(partition_count > 0, "partition_count must be > 0");
@@ -30,6 +31,7 @@ class RadixPartitionSort : public ColumnVisitable {
   virtual ~RadixPartitionSort() = default;
 
  protected:
+  using MatTablePtr = std::shared_ptr<MaterializedTable<T>>;
   /**
   * The ChunkStatistics structure is used to gather statistics regarding a chunks values in order to
   * be able to pick appropriate value ranges for the partitions.
@@ -61,17 +63,6 @@ class RadixPartitionSort : public ColumnVisitable {
     std::vector<ChunkStatistics> chunk_statistics;
   };
 
-  /**
-  * Context for the visitor pattern implementation for column materialization and sorting.
-  **/
-  struct SortContext : ColumnVisitableContext {
-    explicit SortContext(ChunkID id) : chunk_id(id) {}
-
-    // The id of the chunk to be sorted
-    ChunkID chunk_id;
-    std::shared_ptr<MaterializedChunk<T>> sort_output;
-  };
-
   // Input parameters
   std::shared_ptr<const Table> _input_table_left;
   std::shared_ptr<const Table> _input_table_right;
@@ -82,8 +73,8 @@ class RadixPartitionSort : public ColumnVisitable {
   // the partition count should be a power of two, i.e. 1, 2, 4, 8, 16, ...
   size_t _partition_count;
 
-  std::shared_ptr<MaterializedTable<T>> _output_left;
-  std::shared_ptr<MaterializedTable<T>> _output_right;
+  MatTablePtr _output_left;
+  MatTablePtr _output_right;
 
   // Radix calculation for arithmetic types
   template <typename T2>
@@ -99,9 +90,21 @@ class RadixPartitionSort : public ColumnVisitable {
   }
 
   /**
+  * Determines the total size of a materialized table.
+  **/
+  size_t _materialized_table_size(MatTablePtr table) {
+    size_t total_size = 0;
+    for (auto chunk : *table) {
+      total_size += chunk->size();
+    }
+
+    return total_size;
+  }
+
+  /**
   * Concatenates multiple materialized chunks to a single materialized chunk.
   **/
-  std::shared_ptr<MaterializedTable<T>> _concatenate_chunks(std::shared_ptr<MaterializedTable<T>> input_chunks) {
+  MatTablePtr _concatenate_chunks(MatTablePtr input_chunks) {
     auto output_table = std::make_shared<MaterializedTable<T>>(1);
     output_table->at(0) = std::make_shared<MaterializedChunk<T>>();
 
@@ -115,65 +118,52 @@ class RadixPartitionSort : public ColumnVisitable {
     return output_table;
   }
 
-  /**
-  * Determines the total size of a materialized table.
-  **/
-  size_t _materialized_table_size(std::shared_ptr<MaterializedTable<T>> table) {
-    size_t total_size = 0;
-    for (auto chunk : *table) {
-      total_size += chunk->size();
+  MatTablePtr _partition(MatTablePtr input_chunks, std::function<size_t(T&)> partitioner) {
+    auto output_table = std::make_shared<MaterializedTable<T>>(_partition_count);
+    TableStatistics table_statistics(input_chunks->size(), _partition_count);
+
+    // Each chunk should prepare additional data to enable partitioning
+    for (size_t chunk_number = 0; chunk_number < input_chunks->size(); chunk_number++) {
+      auto& chunk_statistics = table_statistics.chunk_statistics[chunk_number];
+      auto input_chunk = input_chunks->at(chunk_number);
+
+      // Count the number of entries for each partition
+      for (auto& entry : *input_chunk) {
+        auto partition_id = partitioner(entry.value);
+        chunk_statistics.partition_histogram[partition_id]++;
+      }
     }
 
-    return total_size;
+    // Aggregate the chunks histograms to a table histogram and initialize the insert positions for each chunk
+    for (auto& chunk_statistics : table_statistics.chunk_statistics) {
+      for (size_t partition_id = 0; partition_id < _partition_count; partition_id++) {
+        chunk_statistics.insert_position[partition_id] = table_statistics.partition_histogram[partition_id];
+        table_statistics.partition_histogram[partition_id] += chunk_statistics.partition_histogram[partition_id];
+      }
+    }
+
+    // Reserve the appropriate output space for the partitions
+    for (size_t partition_id = 0; partition_id < _partition_count; partition_id++) {
+      auto partition_size = table_statistics.partition_histogram[partition_id];
+      output_table->at(partition_id) = std::make_shared<MaterializedChunk<T>>(partition_size);
+    }
+
+    // Move each entry into its appropriate partition
+    for (size_t chunk_number = 0; chunk_number < input_chunks->size(); chunk_number++) {
+      auto& chunk_statistics = table_statistics.chunk_statistics[chunk_number];
+      for (auto& entry : *input_chunks->at(chunk_number)) {
+        auto partition_id = partitioner(entry.value);
+        output_table->at(partition_id)->at(chunk_statistics.insert_position[partition_id]++) = entry;
+      }
+    }
+
+    return output_table;
   }
-
-  std::shared_ptr<MaterializedTable<T>> _partition(std::shared_ptr<MaterializedTable<T>> input_chunks,
-                                                   std::function<size_t(T&)> partitioner) {
-   auto output_table = std::make_shared<MaterializedTable<T>>(_partition_count);
-   TableStatistics table_statistics(input_chunks->size(), _partition_count);
-
-   // Each chunk should prepare additional data to enable partitioning
-   for (size_t chunk_number = 0; chunk_number < input_chunks->size(); chunk_number++) {
-     auto& chunk_statistics = table_statistics.chunk_statistics[chunk_number];
-     auto input_chunk = input_chunks->at(chunk_number);
-
-     // Count the number of entries for each partition
-     for (auto& entry : *input_chunk) {
-       auto partition_id = partitioner(entry.value);
-       chunk_statistics.partition_histogram[partition_id]++;
-     }
-   }
-
-   // Aggregate the chunks histograms to a table histogram and initialize the insert positions for each chunk
-   for (auto& chunk_statistics : table_statistics.chunk_statistics) {
-     for (size_t partition_id = 0; partition_id < _partition_count; partition_id++) {
-       chunk_statistics.insert_position[partition_id] = table_statistics.partition_histogram[partition_id];
-       table_statistics.partition_histogram[partition_id] += chunk_statistics.partition_histogram[partition_id];
-     }
-   }
-
-   // Reserve the appropriate output space for the partitions
-   for (size_t partition_id = 0; partition_id < _partition_count; partition_id++) {
-     auto partition_size = table_statistics.partition_histogram[partition_id];
-     output_table->at(partition_id) = std::make_shared<MaterializedChunk<T>>(partition_size);
-   }
-
-   // Move each entry into its appropriate partition
-   for (size_t chunk_number = 0; chunk_number < input_chunks->size(); chunk_number++) {
-     auto& chunk_statistics = table_statistics.chunk_statistics[chunk_number];
-     for (auto& entry : *input_chunks->at(chunk_number)) {
-       auto partition_id = partitioner(entry.value);
-       output_table->at(partition_id)->at(chunk_statistics.insert_position[partition_id]++) = entry;
-     }
-   }
-
-   return output_table;
-}
 
   /**
   * Performs least significant bit radix partitioning which is used in the equi join case.
   **/
-  std::shared_ptr<MaterializedTable<T>> _radix_partition(std::shared_ptr<MaterializedTable<T>> input_chunks) {
+  MatTablePtr _radix_partition(MatTablePtr input_chunks) {
     auto radix_bitmask = _partition_count - 1;
     return _partition(input_chunks, [=] (T& value) {
       return get_radix<T>(value, radix_bitmask);
@@ -181,161 +171,9 @@ class RadixPartitionSort : public ColumnVisitable {
   }
 
   /**
-  * Sorts all partitions of a materialized table.
+  * Todo
   **/
-  void _sort_partitions(std::shared_ptr<MaterializedTable<T>> partitions) {
-    for (auto partition : *partitions) {
-      std::sort(partition->begin(), partition->end(), [](auto& left, auto& right) {
-        return left.value < right.value;
-      });
-    }
-  }
-
-  /**
-  * Materializes and sorts an input chunk by the specified column in ascending order.
-  **/
-  std::shared_ptr<MaterializedChunk<T>> _sort_chunk(const Chunk& chunk, ChunkID chunk_id, ColumnID column_id) {
-    auto column = chunk.get_column(column_id);
-    auto context = std::make_shared<SortContext>(chunk_id);
-    column->visit(*this, context);
-    DebugAssert(_validate_is_sorted(context->sort_output), "Chunk should be sorted but is not");
-    DebugAssert(chunk.size() == context->sort_output->size(), "Chunk has wrong size");
-    return context->sort_output;
-  }
-
-  /**
-  * Creates a job to sort multiple chunks.
-  **/
-  std::shared_ptr<JobTask> _sort_chunks_job(std::shared_ptr<MaterializedTable<T>> output, std::vector<ChunkID> chunks,
-                                            std::shared_ptr<const Table> input, std::string column_name) {
-    return std::make_shared<JobTask>([=] {
-      for (auto chunk_id : chunks) {
-        output->at(chunk_id) = _sort_chunk(input->get_chunk(chunk_id), chunk_id, input->column_id_by_name(column_name));
-      }
-    });
-  }
-
-  /**
-  * Sorts all the chunks of an input table in parallel by creating multiple jobs that sort multiple chunks.
-  **/
-  std::shared_ptr<MaterializedTable<T>> _sort_input_chunks(std::shared_ptr<const Table> input, std::string column) {
-    auto sorted_table = std::make_shared<MaterializedTable<T>>(input->chunk_count());
-
-    // Can be extended to find that value dynamically later on (depending on hardware etc.)
-    const size_t job_size_threshold = 10000;
-    std::vector<std::shared_ptr<AbstractTask>> jobs;
-
-    size_t job_size = 0;
-    std::vector<ChunkID> chunk_ids;
-    for (ChunkID chunk_id{0}; chunk_id < input->chunk_count(); chunk_id++) {
-      job_size += input->get_chunk(chunk_id).size();
-      chunk_ids.push_back(chunk_id);
-      if (job_size > job_size_threshold || chunk_id == input->chunk_count() - 1) {
-        jobs.push_back(_sort_chunks_job(sorted_table, chunk_ids, input, column));
-        jobs.back()->schedule();
-        job_size = 0;
-        chunk_ids.clear();
-      }
-    }
-
-    CurrentScheduler::wait_for_tasks(jobs);
-
-    return sorted_table;
-  }
-
-  /**
-  * ColumnVisitable implementation to materialize and sort a value column.
-  **/
-  void handle_value_column(BaseColumn& column, std::shared_ptr<ColumnVisitableContext> context) override {
-    auto& value_column = static_cast<ValueColumn<T>&>(column);
-    auto sort_context = std::static_pointer_cast<SortContext>(context);
-    auto output = std::make_shared<MaterializedChunk<T>>(value_column.values().size());
-
-    // Copy over every entry
-    for (ChunkOffset chunk_offset{0}; chunk_offset < value_column.values().size(); chunk_offset++) {
-      RowID row_id{sort_context->chunk_id, chunk_offset};
-      output->at(chunk_offset) = MaterializedValue<T>(row_id, value_column.values()[chunk_offset]);
-    }
-
-    // Sort the entries
-    std::sort(output->begin(), output->end(), [](auto& left, auto& right) { return left.value < right.value; });
-    sort_context->sort_output = output;
-  }
-
-  /**
-  * ColumnVisitable implementaion to materialize and sort a dictionary column.
-  **/
-  void handle_dictionary_column(BaseColumn& column, std::shared_ptr<ColumnVisitableContext> context) override {
-    auto& dictionary_column = dynamic_cast<DictionaryColumn<T>&>(column);
-    auto sort_context = std::static_pointer_cast<SortContext>(context);
-    auto output = std::make_shared<MaterializedChunk<T>>(column.size());
-
-    auto value_ids = dictionary_column.attribute_vector();
-    auto dict = dictionary_column.dictionary();
-
-    // Collect for every value id, the set of rows that this value appeared in
-    // value_count is used as an inverted index
-    auto rows_with_value = std::vector<std::vector<RowID>>(dict->size());
-    for (ChunkOffset chunk_offset{0}; chunk_offset < value_ids->size(); chunk_offset++) {
-      rows_with_value[value_ids->get(chunk_offset)].push_back(RowID{sort_context->chunk_id, chunk_offset});
-    }
-
-    // Now that we know the row ids for every value, we can output all the materialized values in a sorted manner.
-    ChunkOffset chunk_offset{0};
-    for (ValueID value_id{0}; value_id < dict->size(); value_id++) {
-      for (auto& row_id : rows_with_value[value_id]) {
-        output->at(chunk_offset) = MaterializedValue<T>(row_id, dict->at(value_id));
-        chunk_offset++;
-      }
-    }
-
-    sort_context->sort_output = output;
-  }
-
-  /**
-  * Sorts the contents of a reference column into a sorted chunk
-  **/
-  void handle_reference_column(ReferenceColumn& ref_column, std::shared_ptr<ColumnVisitableContext> context) override {
-    auto referenced_table = ref_column.referenced_table();
-    auto referenced_column_id = ref_column.referenced_column_id();
-    auto sort_context = std::static_pointer_cast<SortContext>(context);
-    auto pos_list = ref_column.pos_list();
-    auto output = std::make_shared<MaterializedChunk<T>>(ref_column.size());
-
-    // Retrieve the columns from the referenced table so they only have to be casted once
-    auto v_columns = std::vector<std::shared_ptr<ValueColumn<T>>>(referenced_table->chunk_count());
-    auto d_columns = std::vector<std::shared_ptr<DictionaryColumn<T>>>(referenced_table->chunk_count());
-    for (ChunkID chunk_id{0}; chunk_id < referenced_table->chunk_count(); chunk_id++) {
-      v_columns[chunk_id] = std::dynamic_pointer_cast<ValueColumn<T>>(
-      referenced_table->get_chunk(chunk_id).get_column(referenced_column_id));
-      d_columns[chunk_id] = std::dynamic_pointer_cast<DictionaryColumn<T>>(
-      referenced_table->get_chunk(chunk_id).get_column(referenced_column_id));
-    }
-
-    // Retrieve the values from the referenced columns
-    for (ChunkOffset chunk_offset{0}; chunk_offset < pos_list->size(); chunk_offset++) {
-      const auto& row_id = pos_list->at(chunk_offset);
-
-      // Dereference the value
-      T value;
-      auto& v_column = v_columns[row_id.chunk_id];
-      auto& d_column = d_columns[row_id.chunk_id];
-      DebugAssert(v_column || d_column, "Referenced column is neither value nor dictionary column!");
-      if (v_column) {
-        value = v_column->values()[row_id.chunk_offset];
-      } else {
-        ValueID value_id = d_column->attribute_vector()->get(row_id.chunk_offset);
-        value = d_column->dictionary()->at(value_id);
-      }
-      output->at(chunk_offset) = MaterializedValue<T>(RowID{sort_context->chunk_id, chunk_offset}, value);
-    }
-
-    // Sort the values
-    std::sort(output->begin(), output->end(), [](auto& left, auto& right) { return left.value < right.value; });
-    sort_context->sort_output = output;
-  }
-
-  T pick_sample_values(std::vector<std::map<T, size_t>>& sample_values, std::shared_ptr<MaterializedTable<T>> table) {
+  T pick_sample_values(std::vector<std::map<T, size_t>>& sample_values, MatTablePtr table) {
     auto max_value = table->at(0)->at(0).value;
 
     for (size_t chunk_number = 0; chunk_number < table->size(); chunk_number++) {
@@ -359,8 +197,7 @@ class RadixPartitionSort : public ColumnVisitable {
   * Performs the radix partition sort for the non equi case which requires the complete table to be sorted
   * and not only the partitions in themselves.
   **/
-  std::pair<std::shared_ptr<MaterializedTable<T>>, std::shared_ptr<MaterializedTable<T>>> _range_partition(
-                  std::shared_ptr<MaterializedTable<T>> input_left, std::shared_ptr<MaterializedTable<T>> input_right) {
+  std::pair<MatTablePtr, MatTablePtr> _range_partition(MatTablePtr input_left, MatTablePtr input_right) {
     std::vector<std::map<T, size_t>> sample_values(_partition_count);
 
     auto max_value_left = pick_sample_values(sample_values, input_left);
@@ -392,27 +229,14 @@ class RadixPartitionSort : public ColumnVisitable {
     auto output_left = _partition(input_left, partitioner);
     auto output_right = _partition(input_right, partitioner);
 
-    return std::pair<std::shared_ptr<MaterializedTable<T>>,
-              std::shared_ptr<MaterializedTable<T>>>(output_left, output_right);
-  }
+    return std::pair<MatTablePtr, MatTablePtr>(output_left, output_right);
 
-  /**
-  * Determines whether a materialized chunk is sorted in ascending order.
-  **/
-  bool _validate_is_sorted(std::shared_ptr<MaterializedChunk<T>> chunk) {
-    for (size_t i = 0; i + 1 < chunk->size(); i++) {
-      if (chunk->at(i).value > chunk->at(i + 1).value) {
-        return false;
-      }
-    }
-
-    return true;
   }
 
   /**
   * Prints out the values of a materialized table.
   **/
-  void print_table(std::shared_ptr<MaterializedTable<T>> table) {
+  void print_table(MatTablePtr table) {
     std::cout << "----" << std::endl;
     for (auto chunk : *table) {
       for (auto& row : *chunk) {
@@ -422,41 +246,35 @@ class RadixPartitionSort : public ColumnVisitable {
     }
   }
 
-  bool _validate_is_sorted(std::shared_ptr<MaterializedTable<T>> table, bool inter_chunk_sorting_required) {
-    for (size_t chunk_number = 0; chunk_number < table->size(); chunk_number++) {
-      // Every chunk must be sorted in its self
-      if (!_validate_is_sorted(table->at(chunk_number))) {
-        print_table(table);
-        return false;
-      }
-
-      // Check if this chunks elements are smaller than the next ones
-      if (inter_chunk_sorting_required && chunk_number + 1 < table->size() && table->at(chunk_number + 1)->size() > 0
-                            && table->at(chunk_number)->size() > 0
-                            && table->at(chunk_number)->back().value > table->at(chunk_number + 1)->at(0).value) {
-        print_table(table);
-        return false;
-      }
+  /**
+  * Sorts all partitions of a materialized table.
+  **/
+  void _sort_partitions(MatTablePtr partitions) {
+    for (auto partition : *partitions) {
+      std::sort(partition->begin(), partition->end(), [](auto& left, auto& right) {
+        return left.value < right.value;
+      });
     }
-
-    return true;
   }
 
  public:
+  /**
+  * Executes the partitioning and sorting
+  **/
   void execute() {
-    // Is this really necessary??
     // Sort the chunks of the input tables
-    auto sorted_chunks_left = _sort_input_chunks(_input_table_left, _left_column_name);
-    auto sorted_chunks_right = _sort_input_chunks(_input_table_right, _right_column_name);
+    TableMaterializer<T> table_materializer(true /* sorting enabled */);
+    auto chunks_left = table_materializer.materialize(_input_table_left, _left_column_name);
+    auto chunks_right = table_materializer.materialize(_input_table_right, _right_column_name);
 
     if (_partition_count == 1) {
-      _output_left = _concatenate_chunks(sorted_chunks_left);
-      _output_right = _concatenate_chunks(sorted_chunks_right);
+      _output_left = _concatenate_chunks(chunks_left);
+      _output_right = _concatenate_chunks(chunks_right);
     } else if (_equi_case) {
-      _output_left = _radix_partition(sorted_chunks_left);
-      _output_right = _radix_partition(sorted_chunks_right);
+      _output_left = _radix_partition(chunks_left);
+      _output_right = _radix_partition(chunks_right);
     } else {
-      auto result = _range_partition(sorted_chunks_left, sorted_chunks_right);
+      auto result = _range_partition(chunks_left, chunks_right);
       _output_left = result.first;
       _output_right = result.second;
     }
@@ -466,17 +284,13 @@ class RadixPartitionSort : public ColumnVisitable {
     _sort_partitions(_output_left);
     _sort_partitions(_output_right);
 
-    // Validate the results for simpler testing
-    DebugAssert(_validate_is_sorted(_output_left, !_equi_case), "left output table is not sorted");
-    DebugAssert(_validate_is_sorted(_output_right, !_equi_case), "right output table is not sorted");
-
     DebugAssert(_materialized_table_size(_output_left) == _input_table_left->row_count(),
                 "left output has wrong size");
     DebugAssert(_materialized_table_size(_output_right) == _input_table_right->row_count(),
                 "right output has wrong size");
   }
 
-  std::pair<std::shared_ptr<MaterializedTable<T>>, std::shared_ptr<MaterializedTable<T>>> get_output() {
+  std::pair<MatTablePtr, MatTablePtr> get_output() {
     return std::make_pair(_output_left, _output_right);
   }
 };
