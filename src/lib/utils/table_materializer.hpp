@@ -10,6 +10,10 @@
 
 namespace opossum {
 
+/**
+* Materializes a table for a specific column and sorts it if required. Row-Ids are kept in order to enable
+* the construction of pos lists for the algorithms that are using this class.
+**/
 template <typename T>
 class TableMaterializer : public ColumnVisitable {
  public:
@@ -102,7 +106,6 @@ class TableMaterializer : public ColumnVisitable {
 
     // The result is already sorted because the dictionaries are sorted.
     // Therefore, no additional sorting is required.
-
     materialization_context->output = output;
   }
 
@@ -160,6 +163,7 @@ public:
   std::shared_ptr<MaterializedTable<T>> materialize(std::shared_ptr<const Table> input, std::string column) {
     auto output = std::make_shared<MaterializedTable<T>>(input->chunk_count());
 
+    // TODO: appropriately choose job size
     // Can be extended to find that value dynamically later on (depending on hardware etc.)
     const size_t job_size_threshold = 10000;
     std::vector<std::shared_ptr<AbstractTask>> jobs;

@@ -12,6 +12,18 @@
 
 namespace opossum {
 
+/**
+* Performs radix partitioning for the sort merge join. The radix partitioning algorithm partitions on the basis
+* of the least significant bits of the values because the values there are much more evenly distributed than for the
+* most significant bits. As a result, equal values always get moved to the same partition and the partitions are
+* sorted in themselves but in between the partitions. This is okay for the equi join, because we are only interested
+* in equlity. In the case of a non-equi join however, complete sortedness is required, because join matches exist
+* beyond partition borders. Therefore, the partitioner defaults to a range partitioning algorithm for the non-equi-join.
+* General partitioning process:
+*   -> Input chunks are materialized and sorted. Every value is stored together with its row id.
+*   -> Then, either radix partitioning or range partitioning is performed.
+*   -> At last, the resulting partitions are sorted.
+**/
 template <typename T>
 class RadixPartitionSort {
  public:
@@ -34,7 +46,7 @@ class RadixPartitionSort {
   using MatTablePtr = std::shared_ptr<MaterializedTable<T>>;
   /**
   * The ChunkStatistics structure is used to gather statistics regarding a chunks values in order to
-  * be able to pick appropriate value ranges for the partitions.
+  * be able to appropriately reserve space for the partitioning output.
   **/
   struct ChunkStatistics {
     ChunkStatistics(size_t partition_count) {
@@ -48,7 +60,7 @@ class RadixPartitionSort {
 
   /**
   * The TablelStatistics structure is used to gather statistics regarding the value distribution of a table
-  *  and its chunks in order to be able to pick appropriate value ranges for the partitions.
+  *  and its chunks in order to be able to appropriately reserve space for the partitioning output.
   **/
   struct TableStatistics {
     TableStatistics(size_t chunk_count, size_t partition_count) {
@@ -118,6 +130,10 @@ class RadixPartitionSort {
     return output_table;
   }
 
+  /**
+  * Performs the partitioning on a materialized table using a partitioning function that determines for each
+  * value the appropriate partition id.
+  **/
   MatTablePtr _partition(MatTablePtr input_chunks, std::function<size_t(T&)> partitioner) {
     auto output_table = std::make_shared<MaterializedTable<T>>(_partition_count);
     TableStatistics table_statistics(input_chunks->size(), _partition_count);
@@ -128,6 +144,8 @@ class RadixPartitionSort {
       auto input_chunk = input_chunks->at(chunk_number);
 
       // Count the number of entries for each partition
+      // So the partitioner is called twice in this function for each value
+      // Should we save the results to save time? An array holing the partition id for each value would be needed.
       for (auto& entry : *input_chunk) {
         auto partition_id = partitioner(entry.value);
         chunk_statistics.partition_histogram[partition_id]++;
@@ -149,6 +167,7 @@ class RadixPartitionSort {
     }
 
     // Move each entry into its appropriate partition
+    // TODO: this should be parallelized
     for (size_t chunk_number = 0; chunk_number < input_chunks->size(); chunk_number++) {
       auto& chunk_statistics = table_statistics.chunk_statistics[chunk_number];
       for (auto& entry : *input_chunks->at(chunk_number)) {
@@ -171,7 +190,8 @@ class RadixPartitionSort {
   }
 
   /**
-  * Todo
+  * Picks sample values from a materialized table that are used to determine partition range bounds.
+  * TODO: shitty method signature
   **/
   T pick_sample_values(std::vector<std::map<T, size_t>>& sample_values, MatTablePtr table) {
     auto max_value = table->at(0)->at(0).value;
@@ -259,7 +279,7 @@ class RadixPartitionSort {
 
  public:
   /**
-  * Executes the partitioning and sorting
+  * Executes the partitioning and sorting.
   **/
   void execute() {
     // Sort the chunks of the input tables
@@ -290,6 +310,9 @@ class RadixPartitionSort {
                 "right output has wrong size");
   }
 
+  /**
+  * Gets the output of the patitioning containing the two materialized tables.
+  **/
   std::pair<MatTablePtr, MatTablePtr> get_output() {
     return std::make_pair(_output_left, _output_right);
   }
