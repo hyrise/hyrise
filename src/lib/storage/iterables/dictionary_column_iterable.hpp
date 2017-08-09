@@ -5,6 +5,7 @@
 #include <iterator>
 
 #include "storage/dictionary_column.hpp"
+#include "storage/base_attribute_vector.hpp"
 #include "column_value.hpp"
 
 
