@@ -141,8 +141,9 @@ public:
     }
   }
 
-  // void handle_value_column(BaseColumn &base_column, std::shared_ptr<ColumnVisitableContext> base_context) = 0;
-  // void handle_dictionary_column(BaseColumn &base_column, std::shared_ptr<ColumnVisitableContext> base_context) = 0;
+  // From ColumnVisitable:
+  // virtual void handle_value_column(BaseColumn &base_column, std::shared_ptr<ColumnVisitableContext> base_context) = 0;
+  // virtual void handle_dictionary_column(BaseColumn &base_column, std::shared_ptr<ColumnVisitableContext> base_context) = 0;
 
  private:
   /**
