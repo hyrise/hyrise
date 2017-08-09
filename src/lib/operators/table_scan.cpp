@@ -163,6 +163,8 @@ class SingleColumnScanBase : public ColumnScanBase, public ColumnVisitable {
     for (auto chunk_offset = 0u; chunk_offset < pos_list.size(); ++chunk_offset) {
       const auto row_id = pos_list[chunk_offset];
 
+      if (row_id == NULL_ROW_ID) continue;
+
       auto &mapped_chunk_offsets = chunk_offsets_by_chunk_id[row_id.chunk_id];
       mapped_chunk_offsets.emplace_back(chunk_offset, row_id.chunk_offset);
     }
