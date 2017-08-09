@@ -74,7 +74,7 @@ TEST_F(PredicateReorderingTest, SimpleReorderingTest) {
   auto predicate_node_1 = std::make_shared<PredicateNode>("c2", equals_expression_1, ScanType::OpGreaterThan, 50);
   predicate_node_1->set_left_child(predicate_node_0);
 
-  predicate_node_1->gather_statistics();
+  predicate_node_1->get_statistics();
 
   auto reordered = rule.apply_to(predicate_node_1);
 
@@ -118,7 +118,7 @@ TEST_F(PredicateReorderingTest, MoreComplexReorderingTest) {
   auto predicate_node_2 = std::make_shared<PredicateNode>("c3", equals_expression_2, ScanType::OpGreaterThan, 90);
   predicate_node_2->set_left_child(predicate_node_1);
 
-  predicate_node_2->gather_statistics();
+  predicate_node_2->get_statistics();
 
   auto reordered = rule.apply_to(predicate_node_2);
 
@@ -185,7 +185,7 @@ TEST_F(PredicateReorderingTest, ComplexReorderingTest) {
   auto predicate_node_4 = std::make_shared<PredicateNode>("c2", equals_expression_4, ScanType::OpGreaterThan, 50);
   predicate_node_4->set_left_child(predicate_node_3);
 
-  predicate_node_4->gather_statistics();
+  predicate_node_4->get_statistics();
 
   auto reordered = rule.apply_to(predicate_node_4);
 
@@ -250,7 +250,7 @@ TEST_F(PredicateReorderingTest, TwoReorderings) {
   auto projection_node = std::make_shared<ProjectionNode>(columns);
   projection_node->set_left_child(predicate_node_3);
 
-  projection_node->gather_statistics();
+  projection_node->get_statistics();
 
   auto reordered = rule.apply_to(projection_node);
 
@@ -292,7 +292,7 @@ TEST_F(PredicateReorderingTest, SameOrderingForStoredTable) {
   auto predicate_node_1 = std::make_shared<PredicateNode>("b", equals_expression_1, ScanType::OpGreaterThan, 458.5);
   predicate_node_1->set_left_child(predicate_node_0);
 
-  predicate_node_1->gather_statistics();
+  predicate_node_1->get_statistics();
 
   auto reordered = rule.apply_to(predicate_node_1);
 
@@ -303,7 +303,7 @@ TEST_F(PredicateReorderingTest, SameOrderingForStoredTable) {
   auto predicate_node_3 = std::make_shared<PredicateNode>("a", equals_expression_0, ScanType::OpLessThan, 20);
   predicate_node_3->set_left_child(predicate_node_2);
 
-  predicate_node_3->gather_statistics();
+  predicate_node_3->get_statistics();
 
   auto reordered_1 = rule.apply_to(predicate_node_3);
 

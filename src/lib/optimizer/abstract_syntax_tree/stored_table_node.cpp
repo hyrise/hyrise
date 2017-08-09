@@ -25,7 +25,7 @@ std::vector<std::string> StoredTableNode::output_column_names() const {
   return _output_column_names;
 }
 
-const std::shared_ptr<TableStatistics> StoredTableNode::_calculate_statistics() const {
+const std::shared_ptr<TableStatistics> StoredTableNode::_gather_statistics() const {
   return StorageManager::get().get_table(_table_name)->table_statistics();
 }
 

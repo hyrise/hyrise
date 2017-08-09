@@ -37,29 +37,28 @@ ASTNodeType AbstractASTNode::type() const { return _type; }
 
 void AbstractASTNode::set_statistics(const std::shared_ptr<TableStatistics> &statistics) { _statistics = statistics; }
 
-const std::shared_ptr<TableStatistics> AbstractASTNode::gather_statistics() {
-  if (_statistics) {
-    return _statistics;
+const std::shared_ptr<TableStatistics> AbstractASTNode::get_statistics() {
+  if (!_statistics) {
+    _statistics = _gather_statistics();
   }
 
-  _statistics = _calculate_statistics();
   return _statistics;
 }
 
-const std::shared_ptr<TableStatistics> AbstractASTNode::calculate_statistics_from(
-    const std::shared_ptr<AbstractASTNode> &parent) const {
-  return parent->gather_statistics();
+const std::shared_ptr<TableStatistics> AbstractASTNode::get_statistics_from(
+    const std::shared_ptr<AbstractASTNode> &other_node) const {
+  return other_node->get_statistics();
 }
 
 // TODO(mp): This does not support Joins or Unions. Add support for nodes with two children later.
 // This requires changes in the Statistics interface.
-const std::shared_ptr<TableStatistics> AbstractASTNode::_calculate_statistics() const {
+const std::shared_ptr<TableStatistics> AbstractASTNode::_gather_statistics() const {
   DebugAssert(static_cast<bool>(_left_child),
-              "Default implementation of _calculate_statistics() requires a left child, override in concrete node "
+              "Default implementation of _gather_statistics() requires a left child, override in concrete node "
               "implementation for different behavior");
   DebugAssert(!static_cast<bool>(_right_child),
-              "Default implementation of _calculate_statistics() cannot have a right_child for now");
-  return calculate_statistics_from(_left_child);
+              "Default implementation of _gather_statistics() cannot have a right_child so far");
+  return get_statistics_from(_left_child);
 }
 
 std::vector<std::string> AbstractASTNode::output_column_names() const {

@@ -52,7 +52,7 @@ void PredicateReorderingRule::_reorder_predicates(std::vector<std::shared_ptr<Pr
 
   // Sort in descending order
   std::sort(predicates.begin(), predicates.end(), [&](auto& l, auto& r) {
-    return l->calculate_statistics_from(child)->row_count() > r->calculate_statistics_from(child)->row_count();
+    return l->get_statistics_from(child)->row_count() > r->get_statistics_from(child)->row_count();
   });
 
   // Ensure that nodes are chained correctly

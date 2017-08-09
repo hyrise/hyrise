@@ -31,12 +31,10 @@ class PredicateNode : public AbstractASTNode {
 
   void set_predicate(const std::shared_ptr<ExpressionNode>& predicate);
 
-  const std::shared_ptr<TableStatistics> calculate_statistics_from(
+  const std::shared_ptr<TableStatistics> get_statistics_from(
       const std::shared_ptr<AbstractASTNode>& parent) const override;
 
  private:
-  const std::shared_ptr<TableStatistics> _calculate_statistics() const override;
-
   const std::string _column_name;
   std::shared_ptr<ExpressionNode> _predicate;
   const ScanType _scan_type;
