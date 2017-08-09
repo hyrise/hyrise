@@ -25,14 +25,6 @@ class RadixPartitionSort : public ColumnVisitable {
 
     _input_table_left = left->get_output();
     _input_table_right = right->get_output();
-
-    // Check column_type
-    const auto left_column_id = _input_table_left->column_id_by_name(_left_column_name);
-    const auto right_column_id = _input_table_right->column_id_by_name(_right_column_name);
-    const auto& left_column_type = _input_table_left->column_type(left_column_id);
-    const auto& right_column_type = _input_table_right->column_type(right_column_id);
-
-    DebugAssert(left_column_type == right_column_type, "left and right column types do not match");
   }
 
   virtual ~RadixPartitionSort() = default;
@@ -181,7 +173,7 @@ class RadixPartitionSort : public ColumnVisitable {
   /**
   * Performs least significant bit radix partitioning which is used in the equi join case.
   **/
-  std::shared_ptr<MaterializedTable<T>> _equi_join_partition(std::shared_ptr<MaterializedTable<T>> input_chunks) {
+  std::shared_ptr<MaterializedTable<T>> _radix_partition(std::shared_ptr<MaterializedTable<T>> input_chunks) {
     auto radix_bitmask = _partition_count - 1;
     return _partition(input_chunks, [=] (T& value) {
       return get_radix<T>(value, radix_bitmask);
@@ -367,7 +359,7 @@ class RadixPartitionSort : public ColumnVisitable {
   * Performs the radix partition sort for the non equi case which requires the complete table to be sorted
   * and not only the partitions in themselves.
   **/
-  std::pair<std::shared_ptr<MaterializedTable<T>>, std::shared_ptr<MaterializedTable<T>>> _non_equi_join_partition(
+  std::pair<std::shared_ptr<MaterializedTable<T>>, std::shared_ptr<MaterializedTable<T>>> _range_partition(
                   std::shared_ptr<MaterializedTable<T>> input_left, std::shared_ptr<MaterializedTable<T>> input_right) {
     std::vector<std::map<T, size_t>> sample_values(_partition_count);
 
@@ -387,30 +379,21 @@ class RadixPartitionSort : public ColumnVisitable {
     }
     split_values.back() = max_value;
 
-    auto output_left = _range_partition(input_left, split_values);
-    auto output_right = _range_partition(input_right, split_values);
+    // Implements range partitioning
+    auto partitioner = [this, &split_values](T& value) {
+      for(size_t partition_id = 0; partition_id < _partition_count; partition_id++) {
+        if(value <= split_values[partition_id]) {
+          return partition_id;
+        }
+      }
+      throw std::logic_error("There is no partition for this value");
+    };
+
+    auto output_left = _partition(input_left, partitioner);
+    auto output_right = _partition(input_right, partitioner);
 
     return std::pair<std::shared_ptr<MaterializedTable<T>>,
               std::shared_ptr<MaterializedTable<T>>>(output_left, output_right);
-  }
-
-  /**
-  * Determines in which range a value falls and returns the corresponding partition id.
-  **/
-  size_t _determine_partition(T& value, std::vector<T>& split_values) {
-    for(size_t partition_id = 0; partition_id < _partition_count; partition_id++) {
-      if(value <= split_values[partition_id]) {
-        return partition_id;
-      }
-    }
-    throw std::logic_error("There is no partition for this value");
-  }
-
-  std::shared_ptr<MaterializedTable<T>> _range_partition(std::shared_ptr<MaterializedTable<T>> table,
-                                                                       std::vector<T>& split_values) {
-    return _partition(table, [this, &split_values](T& value) {
-      return _determine_partition(value, split_values);
-    });
   }
 
   /**
@@ -470,10 +453,10 @@ class RadixPartitionSort : public ColumnVisitable {
       _output_left = _concatenate_chunks(sorted_chunks_left);
       _output_right = _concatenate_chunks(sorted_chunks_right);
     } else if (_equi_case) {
-      _output_left = _equi_join_partition(sorted_chunks_left);
-      _output_right = _equi_join_partition(sorted_chunks_right);
+      _output_left = _radix_partition(sorted_chunks_left);
+      _output_right = _radix_partition(sorted_chunks_right);
     } else {
-      auto result = _non_equi_join_partition(sorted_chunks_left, sorted_chunks_right);
+      auto result = _range_partition(sorted_chunks_left, sorted_chunks_right);
       _output_left = result.first;
       _output_right = result.second;
     }
