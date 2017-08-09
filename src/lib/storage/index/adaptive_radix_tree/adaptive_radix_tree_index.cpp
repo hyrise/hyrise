@@ -1,17 +1,19 @@
 #include "adaptive_radix_tree_index.hpp"
-#include "adaptive_radix_tree_nodes.hpp"
 
 #include <algorithm>
 #include <iterator>
 #include <limits>
 #include <memory>
-#include <stdexcept>
 #include <utility>
 #include <vector>
 
+#include "adaptive_radix_tree_nodes.hpp"
+
+#include "storage/base_attribute_vector.hpp"
 #include "storage/base_column.hpp"
 #include "storage/index/base_index.hpp"
 #include "storage/untyped_dictionary_column.hpp"
+
 #include "types.hpp"
 #include "utils/assert.hpp"
 
@@ -80,7 +82,7 @@ std::shared_ptr<Node> AdaptiveRadixTreeIndex::_bulk_insert(
     std::advance(it, values.size());
     auto cap2 = _chunk_offsets.capacity();
     // we are not allowed to change the size of the vector as it would invalidate all our Iterators
-    if (cap != cap2) throw std::length_error("_chunk_offsets capacity changes, all Iterators are invalidated");
+    Assert(cap == cap2, "_chunk_offsets capacity changes, all Iterators are invalidated");
 
     // "it" points to the position after the last inserted ChunkOffset --> this is the upper_bound of the leave
     Iterator upper = it;
@@ -132,11 +134,9 @@ AdaptiveRadixTreeIndex::BinaryComparable::BinaryComparable(ValueID value) : _par
 size_t AdaptiveRadixTreeIndex::BinaryComparable::size() const { return _parts.size(); }
 
 uint8_t AdaptiveRadixTreeIndex::BinaryComparable::operator[](size_t position) const {
-  if (position < _parts.size()) {
-    return _parts[position];
-  } else {
-    throw std::logic_error("BinaryComparable indexed out of bounds");
-  }
+  Assert(position < _parts.size(), "BinaryComparable indexed out of bounds");
+
+  return _parts[position];
 }
 
 bool operator==(const AdaptiveRadixTreeIndex::BinaryComparable &lhs,

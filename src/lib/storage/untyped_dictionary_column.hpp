@@ -3,7 +3,6 @@
 #include <limits>
 #include <memory>
 
-#include "base_attribute_vector.hpp"
 #include "base_column.hpp"
 
 namespace opossum {

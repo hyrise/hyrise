@@ -9,8 +9,6 @@
 
 #include "defines.hpp"
 
-#include "concurrency/transaction_context.hpp"
-
 namespace tpcc {
 
 struct NewOrderOrderLineParams {

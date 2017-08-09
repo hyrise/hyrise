@@ -1,14 +1,17 @@
+#include "join_hash.hpp"
+
 #include <memory>
 #include <numeric>
 #include <string>
 #include <utility>
 #include <vector>
 
-#include "join_hash.hpp"
 #include "product.hpp"
-#include "utils/assert.hpp"
+
+#include "storage/column_visitable.hpp"
 
 #include "resolve_type.hpp"
+#include "utils/assert.hpp"
 
 namespace opossum {
 

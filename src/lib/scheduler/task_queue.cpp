@@ -3,6 +3,8 @@
 #include <memory>
 #include <utility>
 
+#include "abstract_task.hpp"
+
 #include "utils/assert.hpp"
 
 namespace opossum {

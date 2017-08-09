@@ -1,6 +1,5 @@
 #pragma once
 
-#include <iostream>
 #include <map>
 #include <memory>
 #include <string>
@@ -11,9 +10,10 @@
 #include "base_column.hpp"
 #include "dictionary_column.hpp"
 #include "table.hpp"
+#include "value_column.hpp"
+
 #include "types.hpp"
 #include "utils/assert.hpp"
-#include "value_column.hpp"
 
 namespace opossum {
 

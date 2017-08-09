@@ -4,11 +4,13 @@
 #include <string>
 
 #include "all_type_variant.hpp"
-#include "column_visitable.hpp"
 #include "common.hpp"
 #include "types.hpp"
 
 namespace opossum {
+
+class ColumnVisitable;
+class ColumnVisitableContext;
 
 // BaseColumn is the abstract super class for all column types,
 // e.g., ValueColumn, ReferenceColumn

@@ -6,14 +6,16 @@
 #include <utility>
 #include <vector>
 
-#include "storage/base_column.hpp"
-#include "storage/dictionary_column.hpp"
+#include "storage/base_attribute_vector.hpp"
 #include "storage/index/base_index.hpp"
+#include "storage/untyped_dictionary_column.hpp"
+
 #include "types.hpp"
 #include "utils/assert.hpp"
 
 namespace opossum {
 
+class BaseColumn;
 class GroupKeyIndexTest;
 
 /**

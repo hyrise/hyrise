@@ -1,13 +1,10 @@
 #pragma once
 
-#include <atomic>
 #include <functional>
 
 #include "abstract_task.hpp"
 
 namespace opossum {
-
-class Worker;
 
 /**
  * A general purpose Task for any kind of work (i.e. anything that fits into a void()-function) that can be

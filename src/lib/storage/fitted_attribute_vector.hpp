@@ -4,8 +4,10 @@
 #include <memory>
 #include <vector>
 
-#include "../types.hpp"
 #include "base_attribute_vector.hpp"
+
+#include "types.hpp"
+#include "utils/assert.hpp"
 
 namespace opossum {
 

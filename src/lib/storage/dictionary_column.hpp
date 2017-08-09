@@ -11,13 +11,13 @@
 
 #include "untyped_dictionary_column.hpp"
 
+#include "all_type_variant.hpp"
 #include "types.hpp"
 
 namespace opossum {
-template <typename T>
-class ValueColumn;
 
 class BaseAttributeVector;
+class BaseColumn;
 
 // Dictionary is a specific column type that stores all its values in a vector
 template <typename T>

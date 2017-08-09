@@ -5,6 +5,7 @@
 #include "common.hpp"
 
 namespace opossum {
+
 class BaseColumn;
 class ReferenceColumn;
 

@@ -1,8 +1,11 @@
+#include "reference_column.hpp"
+
 #include <memory>
 #include <string>
 #include <utility>
 
-#include "reference_column.hpp"
+#include "column_visitable.hpp"
+
 #include "utils/assert.hpp"
 
 namespace opossum {
