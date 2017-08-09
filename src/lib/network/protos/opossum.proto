@@ -66,7 +66,7 @@ message ProjectionOperator {
 
 message TableScanOperator {
   OperatorVariant input_operator = 1;
-  int32 column_name = 2;
+  int32 column_id = 2;
   ScanType filter_operator = 3;
   Variant value = 4;
   Variant value2 = 5; // not explicitly specified as optional as everything is optional
@@ -74,7 +74,7 @@ message TableScanOperator {
 
 message IndexColumnScanOperator {
   OperatorVariant input_operator = 1;
-  string column_name = 2;
+  int32 column_id = 2;
   ScanType filter_operator = 3;
   Variant value = 4;
   Variant value2 = 5; // not explicitly specified as optional as everything is optional
@@ -83,8 +83,8 @@ message IndexColumnScanOperator {
 message NestedLoopJoinOperator {
   OperatorVariant left_operator = 1;
   OperatorVariant right_operator = 2;
-  int32 left_column_name = 3;
-  int32 right_column_name = 4;
+  int32 left_column_id = 3;
+  int32 right_column_id = 4;
   ScanType op = 5;
   enum JoinMode {
     Inner = 0;
@@ -105,7 +105,7 @@ message ProductOperator { // 2 inputs
 
 message SortOperator {
   OperatorVariant input_operator = 1;
-  string column_name = 2;
+  int32 column_id = 2;
   bool ascending = 3;
   int32 output_chunk_size = 4;
 }

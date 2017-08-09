@@ -83,7 +83,7 @@ TEST_F(OperatorTranslatorTest, ScanTableInt) {
 
   auto msg = proto::OperatorVariant();
   proto::TableScanOperator* table_scan_operator = msg.mutable_table_scan();
-  table_scan_operator->set_column_name(ColumnID{0});
+  table_scan_operator->set_column_id(ColumnID{0});
   table_scan_operator->set_filter_operator(proto::ScanType::OpEquals);
   proto::Variant* variant = table_scan_operator->mutable_value();
   variant->set_value_int(123);
@@ -114,7 +114,7 @@ TEST_F(OperatorTranslatorTest, ScanTableIntBetween) {
 
   auto msg = proto::OperatorVariant();
   proto::TableScanOperator* table_scan_operator = msg.mutable_table_scan();
-  table_scan_operator->set_column_name(ColumnID{0});
+  table_scan_operator->set_column_id(ColumnID{0});
   table_scan_operator->set_filter_operator(proto::ScanType::OpBetween);
   proto::Variant* variant = table_scan_operator->mutable_value();
   variant->set_value_int(122);
@@ -147,7 +147,7 @@ TEST_F(OperatorTranslatorTest, ScanTableString) {
 
   auto msg = proto::OperatorVariant();
   proto::TableScanOperator* table_scan_operator = msg.mutable_table_scan();
-  table_scan_operator->set_column_name(ColumnID{1});
+  table_scan_operator->set_column_id(ColumnID{1});
   table_scan_operator->set_filter_operator(proto::ScanType::OpEquals);
   proto::Variant* variant = table_scan_operator->mutable_value();
   variant->set_value_string("A");
@@ -239,7 +239,7 @@ TEST_F(OperatorTranslatorTest, AscendingSort) {
   auto msg = proto::OperatorVariant();
   proto::SortOperator* sort_operation = msg.mutable_sort();
   sort_operation->mutable_input_operator()->mutable_get_table()->set_table_name("table_int_float");
-  sort_operation->set_column_name("a");
+  sort_operation->set_column_id(ColumnID{0});
   sort_operation->set_ascending(true);
 
   OperatorTranslator translator;
@@ -267,7 +267,7 @@ TEST_F(OperatorTranslatorTest, DescendingSort) {
   auto msg = proto::OperatorVariant();
   proto::SortOperator* sort_operation = msg.mutable_sort();
   sort_operation->mutable_input_operator()->mutable_get_table()->set_table_name("table_int_float");
-  sort_operation->set_column_name("a");
+  sort_operation->set_column_id(ColumnID{0});
   sort_operation->set_ascending(false);
 
   OperatorTranslator translator;
@@ -326,7 +326,7 @@ TEST_F(OperatorTranslatorTest, TableScanAndProjection) {
 
   auto msg = proto::OperatorVariant();
   proto::TableScanOperator* table_scan_operator = msg.mutable_table_scan();
-  table_scan_operator->set_column_name(ColumnID{0});
+  table_scan_operator->set_column_id(ColumnID{0});
   table_scan_operator->set_filter_operator(proto::ScanType::OpEquals);
   proto::Variant* variant = table_scan_operator->mutable_value();
   variant->set_value_int(123);
@@ -490,7 +490,7 @@ TEST_F(OperatorTranslatorTest, IndexColumnScanInt) {
 
   auto msg = proto::OperatorVariant();
   proto::IndexColumnScanOperator* index_column_scan_operator = msg.mutable_index_column_scan();
-  index_column_scan_operator->set_column_name("a");
+  index_column_scan_operator->set_column_id(ColumnID{0});
   index_column_scan_operator->set_filter_operator(proto::ScanType::OpEquals);
   proto::Variant* variant = index_column_scan_operator->mutable_value();
   variant->set_value_int(123);

@@ -24,7 +24,7 @@ class AbstractJoinOperator : public AbstractReadOnlyOperator {
  public:
   AbstractJoinOperator(const std::shared_ptr<const AbstractOperator> left,
                        const std::shared_ptr<const AbstractOperator> right,
-                       optional<std::pair<ColumnID, ColumnID>> column_names, const ScanType scan_type,
+                       optional<std::pair<ColumnID, ColumnID>> column_ids, const ScanType scan_type,
                        const JoinMode mode);
 
   virtual ~AbstractJoinOperator() = default;
@@ -41,7 +41,7 @@ class AbstractJoinOperator : public AbstractReadOnlyOperator {
  protected:
   const ScanType _scan_type;
   const JoinMode _mode;
-  optional<std::pair<ColumnID, ColumnID>> _column_names;
+  optional<std::pair<ColumnID, ColumnID>> _column_ids;
 
   // Some operators need an internal implementation class, mostly in cases where
   // their execute method depends on a template parameter. An example for this is

@@ -5,11 +5,14 @@
 #include <string>
 #include <vector>
 
+#include "sql/ExecuteStatement.h"
+#include "sql/PrepareStatement.h"
+
 #include "operators/abstract_operator.hpp"
 #include "operators/abstract_read_only_operator.hpp"
 #include "scheduler/operator_task.hpp"
 #include "sql/sql_query_cache.hpp"
-#include "sql/sql_query_translator.hpp"
+#include "sql/sql_query_plan.hpp"
 #include "sql/sql_result_operator.hpp"
 
 namespace opossum {

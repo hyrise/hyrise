@@ -74,7 +74,7 @@ TEST_F(SQLQueryOperatorTest, NextTaskTest) {
   auto sql_result_task = sql_op->get_result_task();
 
   // Add sort to the result of the SQL query.
-  auto sort = std::make_shared<Sort>(sql_result_task->get_operator(), "a", true);
+  auto sort = std::make_shared<Sort>(sql_result_task->get_operator(), ColumnID{0}, true);
   auto sort_task = std::make_shared<OperatorTask>(sort);
   sql_result_task->set_as_predecessor_of(sort_task);
 

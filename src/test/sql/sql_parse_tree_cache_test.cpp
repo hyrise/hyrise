@@ -2,6 +2,8 @@
 #include <string>
 #include <utility>
 
+#include "SQLParser.h"
+
 #include "sql_base_test.hpp"
 
 #include "sql/lru_cache.hpp"

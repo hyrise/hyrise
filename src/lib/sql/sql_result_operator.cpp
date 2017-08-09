@@ -1,10 +1,8 @@
-#include "sql_query_operator.hpp"
+#include "sql_result_operator.hpp"
 
 #include <memory>
 #include <string>
 #include <vector>
-
-#include "sql_query_translator.hpp"
 
 #include "SQLParser.h"
 

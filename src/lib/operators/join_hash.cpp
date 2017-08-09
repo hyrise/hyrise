@@ -17,13 +17,13 @@ namespace opossum {
 
 JoinHash::JoinHash(const std::shared_ptr<const AbstractOperator> left,
                    const std::shared_ptr<const AbstractOperator> right,
-                   optional<std::pair<ColumnID, ColumnID>> column_names, const ScanType scan_type, const JoinMode mode)
-    : AbstractJoinOperator(left, right, column_names, scan_type, mode) {
+                   optional<std::pair<ColumnID, ColumnID>> column_ids, const ScanType scan_type, const JoinMode mode)
+    : AbstractJoinOperator(left, right, column_ids, scan_type, mode) {
   DebugAssert((scan_type == ScanType::OpEquals), (std::string("Operator not supported by Hash Join.")));
   DebugAssert((_mode != JoinMode::Cross),
               "JoinHash: this operator does not support Cross Joins, the optimizer should use Product operator.");
   DebugAssert((_mode != JoinMode::Natural), "JoinHash: this operator currently does not support Natural Joins.");
-  DebugAssert(static_cast<bool>(column_names),
+  DebugAssert(static_cast<bool>(column_ids),
               "JoinHash: optional column names are only supported for Cross and Natural Joins.");
 }
 
@@ -37,8 +37,8 @@ std::shared_ptr<const Table> JoinHash::on_execute() {
   std::shared_ptr<const AbstractOperator> build_operator;
   std::shared_ptr<const AbstractOperator> probe_operator;
   bool inputs_swapped;
-  ColumnID build_column_name;
-  ColumnID probe_column_name;
+  ColumnID build_column_id;
+  ColumnID probe_column_id;
 
   /*
   This is the expected implementation for swapping tables:
@@ -52,24 +52,24 @@ std::shared_ptr<const Table> JoinHash::on_execute() {
     inputs_swapped = true;
     build_operator = _input_right;
     probe_operator = _input_left;
-    build_column_name = _column_names->second;
-    probe_column_name = _column_names->first;
+    build_column_id = _column_ids->second;
+    probe_column_id = _column_ids->first;
   } else {
     inputs_swapped = false;
     build_operator = _input_left;
     probe_operator = _input_right;
-    build_column_name = _column_names->first;
-    probe_column_name = _column_names->second;
+    build_column_id = _column_ids->first;
+    probe_column_id = _column_ids->second;
   }
 
-  auto adjusted_column_names = std::make_pair(build_column_name, probe_column_name);
+  auto adjusted_column_ids = std::make_pair(build_column_id, probe_column_id);
 
   auto build_input = build_operator->get_output();
   auto probe_input = probe_operator->get_output();
 
   _impl = make_unique_by_column_types<AbstractReadOnlyOperatorImpl, JoinHashImpl>(
-      build_input->column_type(build_column_name), probe_input->column_type(probe_column_name), build_operator,
-      probe_operator, adjusted_column_names, _scan_type, _mode, inputs_swapped);
+      build_input->column_type(build_column_id), probe_input->column_type(probe_column_id), build_operator,
+      probe_operator, adjusted_column_ids, _scan_type, _mode, inputs_swapped);
   return _impl->on_execute();
 }
 
@@ -81,11 +81,11 @@ template <typename LeftType, typename RightType>
 class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
  public:
   JoinHashImpl(const std::shared_ptr<const AbstractOperator> left, const std::shared_ptr<const AbstractOperator> right,
-               const std::pair<ColumnID, ColumnID> &column_names, const ScanType scan_type, const JoinMode mode,
+               const std::pair<ColumnID, ColumnID> &column_ids, const ScanType scan_type, const JoinMode mode,
                const bool inputs_swapped)
       : _left(left),
         _right(right),
-        _column_names(column_names),
+        _column_ids(column_ids),
         _scan_type(scan_type),
         _mode(mode),
         _inputs_swapped(inputs_swapped),
@@ -98,7 +98,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
 
  protected:
   const std::shared_ptr<const AbstractOperator> _left, _right;
-  const std::pair<ColumnID, ColumnID> _column_names;
+  const std::pair<ColumnID, ColumnID> _column_ids;
   const ScanType _scan_type;
   const JoinMode _mode;
 
@@ -537,8 +537,8 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
     auto _right_in_table = _right->get_output();
     auto _left_in_table = _left->get_output();
 
-    auto _left_column_id = _column_names.first;
-    auto _right_column_id = _column_names.second;
+    auto _left_column_id = _column_ids.first;
+    auto _right_column_id = _column_ids.second;
 
     if (_inputs_swapped) {
       _copy_table_metadata(_right_in_table, _output_table);

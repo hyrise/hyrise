@@ -54,14 +54,14 @@ using AggregateKey = std::vector<AllTypeVariant>;
 
 /**
  * Struct to specify aggregates.
- * Aggregates are defined by the column_name they operate on and the aggregate function they use.
+ * Aggregates are defined by the column_id they operate on and the aggregate function they use.
  * Optionally, an alias can be specified to use as the output name.
  */
 struct AggregateDefinition {
-  AggregateDefinition(const ColumnID column_name, const AggregateFunction function,
+  AggregateDefinition(const ColumnID column_id, const AggregateFunction function,
                       const optional<std::string> &alias = {});
 
-  ColumnID column_name;
+  ColumnID column_id;
   AggregateFunction function;
   optional<std::string> alias;
 };
@@ -72,7 +72,7 @@ struct AggregateDefinition {
 class Aggregate : public AbstractReadOnlyOperator {
  public:
   Aggregate(const std::shared_ptr<AbstractOperator> in, const std::vector<AggregateDefinition> aggregates,
-            const std::vector<ColumnID> groupby_columns);
+            const std::vector<ColumnID> groupby_column_ids);
 
   const std::string name() const override;
   uint8_t num_in_tables() const override;
@@ -140,15 +140,14 @@ class Aggregate : public AbstractReadOnlyOperator {
   }
 
   const std::vector<AggregateDefinition> _aggregates;
-  const std::vector<ColumnID> _groupby_columns;
+  const std::vector<ColumnID> _groupby_column_ids;
 
   std::unique_ptr<AbstractReadOnlyOperatorImpl> _impl;
 
   std::shared_ptr<Table> _output;
   Chunk _out_chunk;
-  std::vector<std::shared_ptr<BaseColumn>> _group_columns;
+  std::vector<std::shared_ptr<BaseColumn>> _groupby_columns;
   std::vector<std::shared_ptr<ColumnVisitableContext>> _contexts_per_column;
-  std::vector<ColumnID> _aggregate_column_ids;
 };
 
 /*
@@ -464,9 +463,10 @@ struct aggregate_traits<
 
 // SUM on floating point numbers
 template <typename ColumnType, AggregateFunction function>
-struct aggregate_traits<ColumnType, function, typename std::enable_if<function == AggregateFunction::Sum &&
-                                                                          std::is_floating_point<ColumnType>::value,
-                                                                      void>::type> {
+struct aggregate_traits<
+    ColumnType, function,
+    typename std::enable_if<function == AggregateFunction::Sum && std::is_floating_point<ColumnType>::value,
+                            void>::type> {
   typedef ColumnType column_type;
   typedef double aggregate_type;
   static constexpr const char *aggregate_type_name = "double";
@@ -474,10 +474,11 @@ struct aggregate_traits<ColumnType, function, typename std::enable_if<function =
 
 // invalid: AVG on non-arithmetic types
 template <typename ColumnType, AggregateFunction function>
-struct aggregate_traits<ColumnType, function, typename std::enable_if<!std::is_arithmetic<ColumnType>::value &&
-                                                                          (function == AggregateFunction::Avg ||
-                                                                           function == AggregateFunction::Sum),
-                                                                      void>::type> {
+struct aggregate_traits<
+    ColumnType, function,
+    typename std::enable_if<!std::is_arithmetic<ColumnType>::value &&
+                                (function == AggregateFunction::Avg || function == AggregateFunction::Sum),
+                            void>::type> {
   typedef ColumnType column_type;
   typedef ColumnType aggregate_type;
   static constexpr const char *aggregate_type_name = "";
