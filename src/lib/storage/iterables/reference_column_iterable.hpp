@@ -5,40 +5,41 @@
 #include <iterator>
 #include <map>
 
-#include "storage/reference_column.hpp"
 #include "column_value.hpp"
-
+#include "storage/reference_column.hpp"
 
 namespace opossum {
 
-
 template <typename T>
-class ReferenceColumnIterable
-{
+class ReferenceColumnIterable {
  public:
-  class Iterator : public std::iterator<std::input_iterator_tag, NullableColumnValue<T>, std::ptrdiff_t, NullableColumnValue<T> *, NullableColumnValue<T>> {
+  class Iterator : public std::iterator<std::input_iterator_tag, NullableColumnValue<T>, std::ptrdiff_t,
+                                        NullableColumnValue<T> *, NullableColumnValue<T>> {
    public:
     using PosListIterator = PosList::const_iterator;
 
    public:
-    explicit Iterator(const std::shared_ptr<const Table> table, const ColumnID column_id, 
-                      const PosListIterator & begin_pos_list_it, const PosListIterator & pos_list_it)
-        : _table{table},
-          _column_id{column_id},
-          _begin_pos_list_it{begin_pos_list_it},
-          _pos_list_it{pos_list_it} {}
+    explicit Iterator(const std::shared_ptr<const Table> table, const ColumnID column_id,
+                      const PosListIterator &begin_pos_list_it, const PosListIterator &pos_list_it)
+        : _table{table}, _column_id{column_id}, _begin_pos_list_it{begin_pos_list_it}, _pos_list_it{pos_list_it} {}
 
-    Iterator& operator++() { ++_pos_list_it; return *this;}
-    Iterator operator++(int) { auto retval = *this; ++(*this); return retval; }
+    Iterator &operator++() {
+      ++_pos_list_it;
+      return *this;
+    }
+    Iterator operator++(int) {
+      auto retval = *this;
+      ++(*this);
+      return retval;
+    }
     bool operator==(Iterator other) const { return _pos_list_it == other._pos_list_it; }
     bool operator!=(Iterator other) const { return !(*this == other); }
 
     auto operator*() const {
-      if (*_pos_list_it == NULL_ROW_ID)
-        return NullableColumnValue<T>{T{}, true, 0u};
+      if (*_pos_list_it == NULL_ROW_ID) return NullableColumnValue<T>{T{}, true, 0u};
 
       const auto chunk_id = _pos_list_it->chunk_id;
-      const auto & chunk_offset = _pos_list_it->chunk_offset;
+      const auto &chunk_offset = _pos_list_it->chunk_offset;
 
       auto value_column_it = _value_columns.find(chunk_id);
       if (value_column_it != _value_columns.end()) {
@@ -50,7 +51,7 @@ class ReferenceColumnIterable
         return value_from_dictionary_column(*(dict_column_it->second), chunk_offset);
       }
 
-      const auto & chunk = _table->get_chunk(chunk_id);
+      const auto &chunk = _table->get_chunk(chunk_id);
       const auto column = chunk.get_column(_column_id);
 
       if (auto value_column = std::dynamic_pointer_cast<const ValueColumn<T>>(column)) {
@@ -67,20 +68,20 @@ class ReferenceColumnIterable
       return NullableColumnValue<T>{T{}, false, 0u};
     }
 
-    auto value_from_value_column(const ValueColumn<T> & column, const ChunkOffset & chunk_offset) const {
+    auto value_from_value_column(const ValueColumn<T> &column, const ChunkOffset &chunk_offset) const {
       const auto chunk_offset_into_ref_column = std::distance(_begin_pos_list_it, _pos_list_it);
 
       if (column.is_nullable()) {
         auto is_null = column.null_values()[chunk_offset];
-        const auto & value = is_null ? T{} : column.values()[chunk_offset];
+        const auto &value = is_null ? T{} : column.values()[chunk_offset];
         return NullableColumnValue<T>{value, is_null, chunk_offset_into_ref_column};
       }
 
-      const auto & value = column.values()[chunk_offset];
+      const auto &value = column.values()[chunk_offset];
       return NullableColumnValue<T>{value, false, chunk_offset_into_ref_column};
     }
 
-    auto value_from_dictionary_column(const DictionaryColumn<T> & column, const ChunkOffset & chunk_offset) const {
+    auto value_from_dictionary_column(const DictionaryColumn<T> &column, const ChunkOffset &chunk_offset) const {
       const auto chunk_offset_into_ref_column = std::distance(_begin_pos_list_it, _pos_list_it);
       auto attribute_vector = column.attribute_vector();
       auto value_id = attribute_vector->get(chunk_offset);
@@ -90,7 +91,7 @@ class ReferenceColumnIterable
       }
 
       auto dictionary = column.dictionary();
-      const auto & value = (*dictionary)[value_id];
+      const auto &value = (*dictionary)[value_id];
 
       return NullableColumnValue<T>{value, false, chunk_offset_into_ref_column};
     }
@@ -106,10 +107,10 @@ class ReferenceColumnIterable
     mutable std::map<ChunkID, const DictionaryColumn<T> *> _dictionary_columns;
   };
 
-  ReferenceColumnIterable(const ReferenceColumn & column) : _column{column} {}
+  ReferenceColumnIterable(const ReferenceColumn &column) : _column{column} {}
 
   template <typename Functor>
-  auto execute_for_all(const Functor & func) const {
+  auto execute_for_all(const Functor &func) const {
     const auto table = _column.referenced_table();
     const auto column_id = _column.referenced_column_id();
 
@@ -122,12 +123,12 @@ class ReferenceColumnIterable
   }
 
   template <typename Functor>
-  auto execute_for_all_no_mapping(const Functor & func) const {
+  auto execute_for_all_no_mapping(const Functor &func) const {
     return execute_for_all(func);
   }
 
  private:
-  const ReferenceColumn & _column;
+  const ReferenceColumn &_column;
 };
 
 }  // namespace opossum

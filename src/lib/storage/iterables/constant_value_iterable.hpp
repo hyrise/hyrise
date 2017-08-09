@@ -4,32 +4,34 @@
 
 #include "all_type_variant.hpp"
 
-
 namespace opossum {
 
-
 template <typename T>
-class ConstantValueIterable
-{
+class ConstantValueIterable {
  public:
   class ColumnValue {
    public:
-    ColumnValue(const T & value) : _value{value} {}
+    ColumnValue(const T& value) : _value{value} {}
 
-    const T & value() const { return _value; }
+    const T& value() const { return _value; }
     bool is_null() const { return false; }
     ChunkOffset chunk_offset() const { return 0u; }
 
    private:
-    const T & _value;
+    const T& _value;
   };
 
-  class Iterator : public std::iterator<std::input_iterator_tag, ColumnValue, std::ptrdiff_t, ColumnValue *, ColumnValue> {
+  class Iterator
+      : public std::iterator<std::input_iterator_tag, ColumnValue, std::ptrdiff_t, ColumnValue*, ColumnValue> {
    public:
-    explicit Iterator(const T & value) : _value{value} {}
+    explicit Iterator(const T& value) : _value{value} {}
 
     Iterator& operator++() { return *this; }
-    Iterator operator++(int) { auto retval = *this; ++(*this); return retval; }
+    Iterator operator++(int) {
+      auto retval = *this;
+      ++(*this);
+      return retval;
+    }
     bool operator==(Iterator other) const { return _value == other._value; }
     bool operator!=(Iterator other) const { return !(*this == other); }
     auto operator*() const { return ColumnValue{_value}; }
@@ -38,18 +40,18 @@ class ConstantValueIterable
     const T _value;
   };
 
-  ConstantValueIterable(const T & value) : _value{value} {}
-  ConstantValueIterable(const AllTypeVariant & value) : _value{type_cast<T>(value)} {}
+  ConstantValueIterable(const T& value) : _value{value} {}
+  ConstantValueIterable(const AllTypeVariant& value) : _value{type_cast<T>(value)} {}
 
   template <typename Functor>
-  auto execute_for_all(const Functor & func) const {
+  auto execute_for_all(const Functor& func) const {
     auto begin = Iterator{_value};
     // TODO(mjendruk): Find a better solution here.
     return func(begin, begin);
   }
 
   template <typename Functor>
-  auto execute_for_all_no_mapping(const Functor & func) const {
+  auto execute_for_all_no_mapping(const Functor& func) const {
     return execute_for_all(func);
   }
 

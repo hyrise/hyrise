@@ -1,6 +1,6 @@
+#include <cstdint>
 #include <limits>
 #include <string>
-#include <cstdint>
 #include <vector>
 
 #include "../base_test.hpp"
@@ -8,17 +8,16 @@
 
 #include "../lib/storage/dictionary_column.hpp"
 #include "../lib/storage/dictionary_compression.hpp"
+#include "../lib/storage/iterables/constant_value_iterable.hpp"
 #include "../lib/storage/iterables/dictionary_column_iterable.hpp"
 #include "../lib/storage/iterables/reference_column_iterable.hpp"
 #include "../lib/storage/iterables/value_column_iterable.hpp"
-#include "../lib/storage/iterables/constant_value_iterable.hpp"
 #include "../lib/storage/table.hpp"
 #include "../lib/storage/value_column.hpp"
 
 namespace opossum {
 
-struct SumUp
-{
+struct SumUp {
   template <typename Iterator>
   uint32_t operator()(Iterator begin, Iterator end) const {
     auto sum = uint32_t{0u};
@@ -45,7 +44,7 @@ class IterablesTest : public BaseTest {
 };
 
 TEST_F(IterablesTest, ValueColumnIteratorExecuteForAll) {
-  auto & chunk = table->get_chunk(ChunkID{0u});
+  auto& chunk = table->get_chunk(ChunkID{0u});
 
   auto column = chunk.get_column(ColumnID{0u});
   auto int_column = std::dynamic_pointer_cast<ValueColumn<int>>(column);
@@ -60,7 +59,7 @@ TEST_F(IterablesTest, ValueColumnIteratorExecuteForAll) {
 }
 
 TEST_F(IterablesTest, ValueColumnReferencedIteratorExecuteForAll) {
-  auto & chunk = table->get_chunk(ChunkID{0u});
+  auto& chunk = table->get_chunk(ChunkID{0u});
 
   auto column = chunk.get_column(ColumnID{0u});
   auto int_column = std::dynamic_pointer_cast<ValueColumn<int>>(column);
@@ -77,7 +76,7 @@ TEST_F(IterablesTest, ValueColumnReferencedIteratorExecuteForAll) {
 }
 
 TEST_F(IterablesTest, ValueColumnNullableIteratorExecuteForAll) {
-  auto & chunk = table_with_null->get_chunk(ChunkID{0u});
+  auto& chunk = table_with_null->get_chunk(ChunkID{0u});
 
   auto column = chunk.get_column(ColumnID{0u});
   auto int_column = std::dynamic_pointer_cast<ValueColumn<int>>(column);
@@ -92,7 +91,7 @@ TEST_F(IterablesTest, ValueColumnNullableIteratorExecuteForAll) {
 }
 
 TEST_F(IterablesTest, ValueColumnNullableReferencedIteratorExecuteForAll) {
-  auto & chunk = table_with_null->get_chunk(ChunkID{0u});
+  auto& chunk = table_with_null->get_chunk(ChunkID{0u});
 
   auto column = chunk.get_column(ColumnID{0u});
   auto int_column = std::dynamic_pointer_cast<ValueColumn<int>>(column);
@@ -111,7 +110,7 @@ TEST_F(IterablesTest, ValueColumnNullableReferencedIteratorExecuteForAll) {
 TEST_F(IterablesTest, DictionaryColumnIteratorExecuteForAll) {
   DictionaryCompression::compress_table(*table);
 
-  auto & chunk = table->get_chunk(ChunkID{0u});
+  auto& chunk = table->get_chunk(ChunkID{0u});
 
   auto column = chunk.get_column(ColumnID{0u});
   auto dict_column = std::dynamic_pointer_cast<DictionaryColumn<int>>(column);
@@ -128,13 +127,13 @@ TEST_F(IterablesTest, DictionaryColumnIteratorExecuteForAll) {
 TEST_F(IterablesTest, DictionaryColumnDictReferencedIteratorExecuteForAll) {
   DictionaryCompression::compress_table(*table);
 
-  auto & chunk = table->get_chunk(ChunkID{0u});
+  auto& chunk = table->get_chunk(ChunkID{0u});
 
   auto column = chunk.get_column(ColumnID{0u});
   auto dict_column = std::dynamic_pointer_cast<DictionaryColumn<int>>(column);
 
   auto chunk_offsets = std::vector<std::pair<ChunkOffset, ChunkOffset>>{{0u, 0u}, {1u, 2u}, {2u, 3u}};
-  
+
   auto iterable = DictionaryColumnIterable<int>{*dict_column, &chunk_offsets};
 
   EXPECT_EQ(iterable.type(), DictionaryColumnIterableType::Referenced);
@@ -145,10 +144,12 @@ TEST_F(IterablesTest, DictionaryColumnDictReferencedIteratorExecuteForAll) {
 }
 
 TEST_F(IterablesTest, ReferenceColumnIteratorExecuteForAll) {
-  auto pos_list = PosList{RowID{ChunkID{0u}, 0u}, RowID{ChunkID{0u}, 3u}, RowID{ChunkID{0u}, 1u}, RowID{ChunkID{0u}, 2u}};
+  auto pos_list =
+      PosList{RowID{ChunkID{0u}, 0u}, RowID{ChunkID{0u}, 3u}, RowID{ChunkID{0u}, 1u}, RowID{ChunkID{0u}, 2u}};
 
-  auto reference_column = std::make_unique<ReferenceColumn>(table, ColumnID{0u}, std::make_shared<PosList>(std::move(pos_list)));
-  
+  auto reference_column =
+      std::make_unique<ReferenceColumn>(table, ColumnID{0u}, std::make_shared<PosList>(std::move(pos_list)));
+
   auto iterable = ReferenceColumnIterable<int>{*reference_column};
 
   const auto sum = iterable.execute_for_all(SumUp{});
@@ -159,7 +160,7 @@ TEST_F(IterablesTest, ReferenceColumnIteratorExecuteForAll) {
 TEST_F(IterablesTest, ConstantValueIteratorExecuteForAll) {
   auto iterable = ConstantValueIterable<int>{2u};
 
-  const auto sum = iterable.execute_for_all([] (auto it, auto end) {
+  const auto sum = iterable.execute_for_all([](auto it, auto end) {
     auto sum = 0;
     for (auto i = 0u; i < 10; ++i) sum += (*it).value();
     return sum;
@@ -167,8 +168,5 @@ TEST_F(IterablesTest, ConstantValueIteratorExecuteForAll) {
 
   EXPECT_EQ(sum, 20);
 }
-
-
-
 
 }  // namespace opossum

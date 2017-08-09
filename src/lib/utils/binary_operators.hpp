@@ -2,42 +2,52 @@
 
 #include <types.hpp>
 
-
 namespace opossum {
 
 struct Less {
   template <typename LeftType, typename RightType>
-  auto operator()(const LeftType & lhs, const RightType & rhs) const { return lhs < rhs; }
+  auto operator()(const LeftType& lhs, const RightType& rhs) const {
+    return lhs < rhs;
+  }
 };
 
 struct LessEqual {
   template <typename LeftType, typename RightType>
-  auto operator()(const LeftType & lhs, const RightType & rhs) const { return lhs <= rhs; }
+  auto operator()(const LeftType& lhs, const RightType& rhs) const {
+    return lhs <= rhs;
+  }
 };
 
 struct Greater {
   template <typename LeftType, typename RightType>
-  auto operator()(const LeftType & lhs, const RightType & rhs) const { return lhs > rhs; }
+  auto operator()(const LeftType& lhs, const RightType& rhs) const {
+    return lhs > rhs;
+  }
 };
 
 struct GreaterEqual {
   template <typename LeftType, typename RightType>
-  auto operator()(const LeftType & lhs, const RightType & rhs) const { return lhs >= rhs; }
+  auto operator()(const LeftType& lhs, const RightType& rhs) const {
+    return lhs >= rhs;
+  }
 };
 
 struct Equal {
   template <typename LeftType, typename RightType>
-  auto operator()(const LeftType & lhs, const RightType & rhs) const { return lhs == rhs; }
+  auto operator()(const LeftType& lhs, const RightType& rhs) const {
+    return lhs == rhs;
+  }
 };
 
 struct NotEqual {
   template <typename LeftType, typename RightType>
-  auto operator()(const LeftType & lhs, const RightType & rhs) const { return lhs != rhs; }
+  auto operator()(const LeftType& lhs, const RightType& rhs) const {
+    return lhs != rhs;
+  }
 };
 
-
 template <typename Functor>
-void resolve_operator_type(const ScanType scan_type, const Functor & func) {
+void resolve_operator_type(const ScanType scan_type, const Functor& func) {
   switch (scan_type) {
     case ScanType::OpEquals:
       func(Equal{});

@@ -3,9 +3,9 @@
 #include <memory>
 #include <sstream>
 #include <string>
+#include <type_traits>
 #include <utility>
 #include <vector>
-#include <type_traits>
 
 #include "tbb/concurrent_vector.h"
 
@@ -22,12 +22,6 @@ class BaseColumn;
 // Dictionary is a specific column type that stores all its values in a vector
 template <typename T>
 class DictionaryColumn : public UntypedDictionaryColumn {
- public:
-  using Type = T;
-
-  template <typename U>
-  static constexpr bool has_type() { return std::is_same<U, T>{}; }
-
  public:
   /**
    * Creates a Dictionary column from a given dictionary and attribute vector.

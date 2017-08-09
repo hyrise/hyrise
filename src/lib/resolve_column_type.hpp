@@ -7,9 +7,9 @@
 #include <utility>
 
 #include "all_type_variant.hpp"
-#include "storage/value_column.hpp"
 #include "storage/dictionary_column.hpp"
 #include "storage/reference_column.hpp"
+#include "storage/value_column.hpp"
 
 namespace opossum {
 
@@ -22,7 +22,7 @@ namespace hana = boost::hana;
  * @param func is generic lambda or similar
  */
 template <typename Functor>
-void resolve_type(const std::string & type, const Functor & func) {
+void resolve_type(const std::string &type, const Functor &func) {
   hana::for_each(column_types, [&](auto x) {
     if (std::string(hana::first(x)) == type) {
       // The + before hana::second - which returns a reference - converts its return value into a value
@@ -46,11 +46,11 @@ void resolve_type(const std::string & type, const Functor & func) {
  *   });
  *
  * @param type is a string representation of any of the supported column types
- * @param func is generic lambda or similar accepting two paramters: a hana::type object and 
+ * @param func is generic lambda or similar accepting two paramters: a hana::type object and
  *   a reference to a specialized column (value, dictionary, reference)
  */
 template <typename Functor>
-void resolve_column_type(const std::string & type, BaseColumn & column, const Functor & func) {
+void resolve_column_type(const std::string &type, BaseColumn &column, const Functor &func) {
   hana::for_each(column_types, [&](auto x) {
     if (std::string(hana::first(x)) == type) {
       // The + before hana::second - which returns a reference - converts its return value
@@ -58,8 +58,8 @@ void resolve_column_type(const std::string & type, BaseColumn & column, const Fu
       using Type = typename decltype(+hana::second(x))::type;
 
       struct Context : public ColumnVisitableContext {
-        Context(const Functor & f) : func{f} {}
-        const Functor & func;
+        Context(const Functor &f) : func{f} {}
+        const Functor &func;
       };
 
       struct Visitable : public ColumnVisitable {
