@@ -47,12 +47,9 @@ class RadixPartitionSort : public ColumnVisitable {
       partition_histogram.resize(partition_count);
       insert_position.resize(partition_count);
     }
-    // Used to count the number of entries for each partition from this chunk
+    // Used to count the number of entries for each partition from a specific chunk
     std::vector<size_t> partition_histogram;
     std::vector<size_t> insert_position;
-
-    //std::map<T, uint32_t> value_histogram;
-    //std::map<T, uint32_t> prefix_v;
   };
 
   /**
@@ -66,13 +63,10 @@ class RadixPartitionSort : public ColumnVisitable {
       for(size_t i = 0; i < chunk_count; i++) {
         chunk_statistics.push_back(ChunkStatistics(partition_count));
       }
-
     }
-    std::vector<ChunkStatistics> chunk_statistics;
-
-    // used to count the number of entries for each partition from the whole table
+    // Used to count the number of entries for each partition from the whole table
     std::vector<size_t> partition_histogram;
-    //std::map<T, uint32_t> value_histogram;
+    std::vector<ChunkStatistics> chunk_statistics;
   };
 
   /**
@@ -179,10 +173,8 @@ class RadixPartitionSort : public ColumnVisitable {
     // Since _partition_count is a power of two, the radix bitmask will look like 00...011...1
     uint32_t radix_bitmask = _partition_count - 1;
     for (size_t chunk_number = 0; chunk_number < input_chunks->size(); chunk_number++) {
-      auto chunk = input_chunks->at(chunk_number);
       auto& chunk_statistics = table_statistics.chunk_statistics[chunk_number];
-
-      for (auto& entry : *chunk) {
+      for (auto& entry : *input_chunks->at(chunk_number)) {
         auto partition_id = get_radix<T>(entry.value, radix_bitmask);
         output_table->at(partition_id)->at(chunk_statistics.insert_position[partition_id]) = entry;
         chunk_statistics.insert_position[partition_id]++;
