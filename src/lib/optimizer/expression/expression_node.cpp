@@ -93,7 +93,7 @@ bool ExpressionNode::is_arithmetic_operator() const {
 const std::string ExpressionNode::description() const {
   std::ostringstream desc;
 
-  auto temp_alias = alias() ? *alias() : "";
+  auto alias_string = alias() ? *alias() : "";
 
   desc << "Expression (" << expression_type_to_string.at(_type) << ")";
 
@@ -102,7 +102,7 @@ const std::string ExpressionNode::description() const {
       desc << "[" << value() << "]";
       break;
     case ExpressionType::ColumnReference:
-      desc << "[Table: " << table_name() << ", Column: " << name() << ", Alias: " << temp_alias << "]";
+      desc << "[Table: " << table_name() << ", Column: " << name() << ", Alias: " << alias_string << "]";
       break;
     case ExpressionType::FunctionReference:
       desc << "[" << name() << ": " << std::endl;
@@ -112,7 +112,7 @@ const std::string ExpressionNode::description() const {
       desc << "]";
       break;
     case ExpressionType::Select:
-      desc << "[" << temp_alias << "]";
+      desc << "[" << alias_string << "]";
       break;
     default: {}
   }
@@ -155,7 +155,7 @@ std::string ExpressionNode::to_expression_string() const {
     Assert(static_cast<bool>(left_child()) && static_cast<bool>(right_child()), "Operator needs both operands");
 
     return left_child()->to_expression_string() + expression_type_to_operator_string.at(_type) +
-            right_child()->to_expression_string();
+           right_child()->to_expression_string();
   } else if (_type == ExpressionType::FunctionReference) {
     return _name + "()";
   } else {
