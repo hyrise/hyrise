@@ -157,7 +157,7 @@ class ValueColumnIterable
 
   template <typename Functor>
   auto execute_for_all_no_mapping(const Functor & func) const {
-    DebugAssert(_mapped_chunk_offsets != nullptr, "Mapped chunk offsets must be a nullptr.");
+    DebugAssert(_mapped_chunk_offsets == nullptr, "Mapped chunk offsets must be a nullptr.");
 
     if (_column.is_nullable()) {
       auto begin = NullableIterator(_column.values().cbegin(), _column.values().cbegin(), _column.null_values().cbegin());

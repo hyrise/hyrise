@@ -81,7 +81,7 @@ class AttributeVectorIterable
 
   template <typename Functor>
   auto execute_for_all_no_mapping(const Functor & func) const {
-    DebugAssert(_mapped_chunk_offsets != nullptr, "Mapped chunk offsets must be a nullptr.");
+    DebugAssert(_mapped_chunk_offsets == nullptr, "Mapped chunk offsets must be a nullptr.");
 
     auto begin = Iterator(_attribute_vector, 0u);
     auto end = Iterator(_attribute_vector, _attribute_vector.size());

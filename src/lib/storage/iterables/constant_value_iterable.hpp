@@ -48,6 +48,11 @@ class ConstantValueIterable
     return func(begin, begin);
   }
 
+  template <typename Functor>
+  auto execute_for_all_no_mapping(const Functor & func) const {
+    return execute_for_all(func);
+  }
+
  private:
   const T _value;
 };
