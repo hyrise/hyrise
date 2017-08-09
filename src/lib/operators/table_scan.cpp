@@ -1,6 +1,8 @@
 #include "table_scan.hpp"
 
+#include <algorithm>
 #include <unordered_map>
+#include <type_traits>
 
 #include <boost/hana/type.hpp>
 #include <boost/hana/or.hpp>
@@ -528,6 +530,11 @@ class LikeColumnScan : public SingleColumnScanBase {
   /**@}*/
 
  private:
+  /**
+   * @defgroup Methods which are used to convert an SQL wildcard into a C++ regex.
+   * @{
+   */
+
   static std::string & _replace_all(std::string &str, const std::string &old_value, const std::string &new_value) {
     std::string::size_type pos = 0;
     while ((pos = str.find(old_value, pos)) != std::string::npos) {
@@ -606,6 +613,8 @@ class LikeColumnScan : public SingleColumnScanBase {
     }
     return "^" + sqllike + "$";
   }
+
+  /**@}*/
 
  private:
   const std::string _right_wildcard;
@@ -730,6 +739,16 @@ std::shared_ptr<const Table> TableScan::on_execute()
 
       Chunk chunk_out;
 
+      /**
+       * matches_out contains a list of row IDs into this chunk. If this is not a reference table, we can
+       * directly use the matches to construct the reference columns of the output. If it is a reference column,
+       * we need to resolve the row IDs so that they reference the physical data columns (value, dictionary) instead, 
+       * since we don’t allow multi-level referencing. To save time and space, we want to share positions lists 
+       * between columns as much as possible. Position lists can be shared between two columns iff 
+       * (a) they point to the same table and 
+       * (b) the reference columns of the input table point to the same positions in the same order 
+       *     (i.e. they share their position list).
+       */
       if (_is_reference_table) {
         const auto & chunk_in = _in_table->get_chunk(chunk_id);
 
