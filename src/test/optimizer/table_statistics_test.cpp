@@ -34,15 +34,15 @@ class TableStatisticsTest : public BaseTest {
    * Predict output size of one TableScan with statistics and compare with actual output size of an actual TableScan.
    */
   TableWithStatistics check_statistic_with_table_scan(const TableWithStatistics& table_with_statistics,
-                                                      const ColumnID column_name, const ScanType scan_type,
+                                                      const ColumnID column_id, const ScanType scan_type,
                                                       const AllParameterVariant value,
                                                       const optional<AllTypeVariant> value2 = nullopt) {
     auto table_wrapper = std::make_shared<TableWrapper>(table_with_statistics.table);
     table_wrapper->execute();
-    auto table_scan = std::make_shared<TableScan>(table_wrapper, column_name, scan_type, value, value2);
+    auto table_scan = std::make_shared<TableScan>(table_wrapper, column_id, scan_type, value, value2);
     table_scan->execute();
     auto post_table_scan_statistics =
-        table_with_statistics.statistics->predicate_statistics(column_name, scan_type, value, value2);
+        table_with_statistics.statistics->predicate_statistics(column_id, scan_type, value, value2);
     TableWithStatistics output;
     output.table = table_scan->get_output();
     output.statistics = post_table_scan_statistics;
@@ -59,10 +59,10 @@ class TableStatisticsTest : public BaseTest {
    * Does not work with ValuePlaceholder of stored procedures.
    */
   template <typename T>
-  void check_column_with_values(const TableWithStatistics& table_with_statistics, const ColumnID column_name,
+  void check_column_with_values(const TableWithStatistics& table_with_statistics, const ColumnID column_id,
                                 const ScanType scan_type, const std::vector<T>& values) {
     for (const auto& value : values) {
-      check_statistic_with_table_scan(table_with_statistics, column_name, scan_type, AllParameterVariant(value));
+      check_statistic_with_table_scan(table_with_statistics, column_id, scan_type, AllParameterVariant(value));
     }
   }
 
@@ -71,10 +71,10 @@ class TableStatisticsTest : public BaseTest {
    * Does not work with ValuePlaceholder of stored procedures.
    */
   template <typename T>
-  void check_column_with_values(const TableWithStatistics& table_with_statistics, const ColumnID column_name,
+  void check_column_with_values(const TableWithStatistics& table_with_statistics, const ColumnID column_id,
                                 const ScanType scan_type, const std::vector<std::pair<T, T>>& values) {
     for (const auto& value_pair : values) {
-      check_statistic_with_table_scan(table_with_statistics, column_name, scan_type,
+      check_statistic_with_table_scan(table_with_statistics, column_id, scan_type,
                                       AllParameterVariant(value_pair.first), AllTypeVariant(value_pair.second));
     }
   }
