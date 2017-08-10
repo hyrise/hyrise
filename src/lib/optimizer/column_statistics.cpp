@@ -90,15 +90,7 @@ ColumnSelectivityResult ColumnStatistics<ColumnType>::estimate_selectivity_for_r
   } else if (maximum < minimum) {
     return {0.f, nullptr};
   }
-  float selectivity;
-  // distinction between integers and decimals
-  // for integers the number of possible integers is used within the inclusive ranges
-  // for decimals the size of the range is used
-  if (std::is_integral<ColumnType>::value) {
-    selectivity = static_cast<float>(maximum - minimum + 1) / static_cast<float>(max() - min() + 1);
-  } else {
-    selectivity = static_cast<float>(maximum - minimum) / static_cast<float>(max() - min());
-  }
+  float selectivity = estimate_selectivity_for_range(minimum, maximum);
   auto column_statistics =
       std::make_shared<ColumnStatistics>(_column_id, selectivity * distinct_count(), minimum, maximum);
   return {selectivity, column_statistics};
