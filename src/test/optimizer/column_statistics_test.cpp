@@ -16,10 +16,10 @@ class ColumnStatisticsTest : public BaseTest {
  protected:
   void SetUp() override {
     _table = load_table("src/test/tables/int_float_double_string.tbl", 0);
-    _column_statistics_int = std::make_shared<ColumnStatistics<int32_t>>(ColumnID(0), _table);
-    _column_statistics_float = std::make_shared<ColumnStatistics<float>>(ColumnID(1), _table);
-    _column_statistics_double = std::make_shared<ColumnStatistics<double>>(ColumnID(2), _table);
-    _column_statistics_string = std::make_shared<ColumnStatistics<std::string>>(ColumnID(3), _table);
+    _column_statistics_int = std::make_shared<ColumnStatistics<int32_t>>(ColumnID{0}, _table);
+    _column_statistics_float = std::make_shared<ColumnStatistics<float>>(ColumnID{1}, _table);
+    _column_statistics_double = std::make_shared<ColumnStatistics<double>>(ColumnID{2}, _table);
+    _column_statistics_string = std::make_shared<ColumnStatistics<std::string>>(ColumnID{3}, _table);
   }
 
   // For single value scans (i.e. all but BETWEEN)

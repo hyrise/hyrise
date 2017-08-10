@@ -15,9 +15,9 @@
 
 namespace opossum {
 
-TableScan::TableScan(const std::shared_ptr<AbstractOperator> in, const std::string &column_name,
-                     const ScanType scan_type, const AllParameterVariant value, const optional<AllTypeVariant> value2)
-    : AbstractReadOnlyOperator(in), _column_name(column_name), _scan_type(scan_type), _value(value), _value2(value2) {}
+TableScan::TableScan(const std::shared_ptr<AbstractOperator> in, const ColumnID column_id, const ScanType scan_type,
+                     const AllParameterVariant value, const optional<AllTypeVariant> value2)
+    : AbstractReadOnlyOperator(in), _column_id(column_id), _scan_type(scan_type), _value(value), _value2(value2) {}
 
 const std::string &TableScan::column_name() const { return _column_name; }
 
@@ -35,8 +35,7 @@ uint8_t TableScan::num_out_tables() const { return 1; }
 
 std::shared_ptr<const Table> TableScan::on_execute() {
   _impl = make_unique_by_column_type<AbstractReadOnlyOperatorImpl, TableScanImpl>(
-      input_table_left()->column_type(input_table_left()->column_id_by_name(_column_name)), _input_left, _column_name,
-      _scan_type, _value, _value2);
+      input_table_left()->column_type(_column_id), _input_left, _column_id, _scan_type, _value, _value2);
   return _impl->on_execute();
 }
 
@@ -54,10 +53,10 @@ std::shared_ptr<AbstractOperator> TableScan::recreate(const std::vector<AllParam
   if (_value.type() == typeid(ValuePlaceholder)) {
     uint16_t index = boost::get<ValuePlaceholder>(_value).index();
     if (index < args.size()) {
-      return std::make_shared<TableScan>(_input_left->recreate(args), _column_name, _scan_type, args[index], _value2);
+      return std::make_shared<TableScan>(_input_left->recreate(args), _column_id, _scan_type, args[index], _value2);
     }
   }
-  return std::make_shared<TableScan>(_input_left->recreate(args), _column_name, _scan_type, _value, _value2);
+  return std::make_shared<TableScan>(_input_left->recreate(args), _column_id, _scan_type, _value, _value2);
 }
 
 std::map<std::string, std::string> TableScan::extract_character_ranges(std::string &str) {
@@ -140,10 +139,10 @@ template <typename T>
 class TableScan::TableScanImpl : public AbstractReadOnlyOperatorImpl {
  public:
   // creates a new table with reference columns
-  TableScanImpl(const std::shared_ptr<const AbstractOperator> in, const std::string &filter_column_name,
-                const ScanType scan_type, const AllParameterVariant value, const optional<AllTypeVariant> value2)
+  TableScanImpl(const std::shared_ptr<const AbstractOperator> in, const ColumnID column_id, const ScanType scan_type,
+                const AllParameterVariant value, const optional<AllTypeVariant> value2)
       : _in_operator(in),
-        _filter_column_name(filter_column_name),
+        _column_id(column_id),
         _scan_type(scan_type),
         _value(value),
         _value2(value2),
@@ -175,20 +174,18 @@ class TableScan::TableScanImpl : public AbstractReadOnlyOperatorImpl {
     auto output = std::make_shared<Table>();
 
     auto in_table = _in_operator->get_output();
-    ColumnID column_id1, column_id2;
+    ColumnID column_id2;
     T casted_value1;
     optional<T> casted_value2;
     std::string like_regex;
 
-    column_id1 = in_table->column_id_by_name(_filter_column_name);
     if (_is_constant_value_scan) {
       // column_a == 5
       casted_value1 = type_cast<T>(boost::get<AllTypeVariant>(_value));
       if (_value2) casted_value2 = type_cast<T>(*_value2);
     } else {
       // column_a == column_b
-      ColumnName column_name = boost::get<ColumnName>(_value);
-      column_id2 = in_table->column_id_by_name(column_name);
+      column_id2 = boost::get<ColumnID>(_value);
     }
 
     for (ColumnID column_id{0}; column_id < in_table->col_count(); ++column_id) {
@@ -244,7 +241,7 @@ class TableScan::TableScanImpl : public AbstractReadOnlyOperatorImpl {
         // LIKE is always executed on with constant value (containing a wildcard)
         // using VariableTerm is not supported here
         DebugAssert(_is_constant_value_scan, "LIKE only supports ConstantTerms and std::string type");
-        const auto column_type = in_table->column_type(column_id1);
+        const auto column_type = in_table->column_type(_column_id);
         DebugAssert((column_type == "string"), "LIKE operator only applicable on string columns");
         break;
       }
@@ -259,13 +256,13 @@ class TableScan::TableScanImpl : public AbstractReadOnlyOperatorImpl {
     jobs.reserve(in_table->chunk_count());
 
     for (ChunkID chunk_id{0}; chunk_id < in_table->chunk_count(); ++chunk_id) {
-      jobs.emplace_back(std::make_shared<JobTask>([&in_table, chunk_id, &output_mutex, &output, &column_id1,
-                                                   &column_id2, &casted_value1, &casted_value2, this]() {
+      jobs.emplace_back(std::make_shared<JobTask>([&in_table, chunk_id, &output_mutex, &output, &column_id2,
+                                                   &casted_value1, &casted_value2, this]() {
         const Chunk &chunk_in = in_table->get_chunk(chunk_id);
         Chunk chunk_out;
 
         std::vector<RowID> matches_in_this_chunk;
-        auto column1 = chunk_in.get_column(column_id1);
+        auto column1 = chunk_in.get_column(_column_id);
 
         tbb::concurrent_vector<T> values;
         auto context = std::make_shared<ScanContext>(in_table, chunk_id, matches_in_this_chunk, values);
@@ -359,8 +356,7 @@ class TableScan::TableScanImpl : public AbstractReadOnlyOperatorImpl {
   class TableScanLikeVisitable;
 
   const std::shared_ptr<const AbstractOperator> _in_operator;
-  std::string _filter_column_name;
-  std::string _op;
+  ColumnID _column_id;
   std::function<bool(T, T)> _value_comparator;
   std::function<bool(ValueID, ValueID, ValueID)> _value_id_comparator;
   ScanType _scan_type;

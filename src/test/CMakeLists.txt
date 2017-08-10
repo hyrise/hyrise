@@ -82,7 +82,7 @@ set(
 set (
     TPCC_TEST_SOURCES
     ${SHARED_SOURCES}
-    tpc/tpcc_ref_test.cpp
+#    tpc/tpcc_ref_test.cpp
 )
 
 # Both opossumTest and opossumAsan link against these

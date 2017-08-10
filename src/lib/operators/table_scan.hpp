@@ -41,7 +41,7 @@ namespace opossum {
  */
 class TableScan : public AbstractReadOnlyOperator {
  public:
-  TableScan(const std::shared_ptr<AbstractOperator> in, const std::string &filter_column_name, const ScanType scan_type,
+  TableScan(const std::shared_ptr<AbstractOperator> in, const ColumnID column_id, const ScanType scan_type,
             const AllParameterVariant value, const optional<AllTypeVariant> value2 = nullopt);
 
   const std::string &column_name() const;
@@ -61,7 +61,7 @@ class TableScan : public AbstractReadOnlyOperator {
   template <typename T>
   class TableScanImpl;
 
-  const std::string _column_name;
+  const ColumnID _column_id;
   const ScanType _scan_type;
   const AllParameterVariant _value;
   const optional<AllTypeVariant> _value2;

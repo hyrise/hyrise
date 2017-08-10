@@ -54,14 +54,14 @@ using AggregateKey = std::vector<AllTypeVariant>;
 
 /**
  * Struct to specify aggregates.
- * Aggregates are defined by the column_name they operate on and the aggregate function they use.
+ * Aggregates are defined by the column_id they operate on and the aggregate function they use.
  * Optionally, an alias can be specified to use as the output name.
  */
 struct AggregateDefinition {
-  AggregateDefinition(const std::string &column_name, const AggregateFunction function,
+  AggregateDefinition(const ColumnID column_id, const AggregateFunction function,
                       const optional<std::string> &alias = {});
 
-  std::string column_name;
+  ColumnID column_id;
   AggregateFunction function;
   optional<std::string> alias;
 };
@@ -72,7 +72,7 @@ struct AggregateDefinition {
 class Aggregate : public AbstractReadOnlyOperator {
  public:
   Aggregate(const std::shared_ptr<AbstractOperator> in, const std::vector<AggregateDefinition> aggregates,
-            const std::vector<std::string> groupby_columns);
+            const std::vector<ColumnID> groupby_column_ids);
 
   const std::vector<AggregateDefinition> &aggregates() const;
   const std::vector<std::string> &groupby_columns() const;
@@ -143,15 +143,14 @@ class Aggregate : public AbstractReadOnlyOperator {
   }
 
   const std::vector<AggregateDefinition> _aggregates;
-  const std::vector<std::string> _groupby_columns;
+  const std::vector<ColumnID> _groupby_column_ids;
 
   std::unique_ptr<AbstractReadOnlyOperatorImpl> _impl;
 
   std::shared_ptr<Table> _output;
   Chunk _out_chunk;
-  std::vector<std::shared_ptr<BaseColumn>> _group_columns;
+  std::vector<std::shared_ptr<BaseColumn>> _groupby_columns;
   std::vector<std::shared_ptr<ColumnVisitableContext>> _contexts_per_column;
-  std::vector<ColumnID> _aggregate_column_ids;
 };
 
 /*
