@@ -15,10 +15,17 @@
 namespace opossum {
 
 /**
-* TODO: SortMergeJoin introductory comment
-* TODO: Comments
-* TODO: The SortMergeJoin is still failing for an edge case that is covered by the JoinFullTest/2.GreaterInnerJoin2 Test
 * TODO: Outer Non Equi Joins
+* TODO: Choose an appropriate number of partitions.
+**/
+/**
+* The sort merge join performs a join on two input tables on specific join columns. For usage notes, see the
+* sort_merge_join.hpp. This is how the join works:
+* -> The input tables are materialized and partitioned to a specified amount of partitions.
+*    /utils/radix_partition_sort.hpp for more info on the partitioning phase.
+* -> The join is performed per partition. For the joining phase, runs of entries with the same value are identified
+*    and handled at once. If a join-match is identified, the corresponding row_ids are noted for the output.
+* -> Using the join result, the output table is built using pos lists referencing the original tables.
 **/
 SortMergeJoin::SortMergeJoin(const std::shared_ptr<const AbstractOperator> left,
                              const std::shared_ptr<const AbstractOperator> right,
@@ -51,7 +58,7 @@ SortMergeJoin::SortMergeJoin(const std::shared_ptr<const AbstractOperator> left,
 }
 
 /**
-** Start of implementation
+** Start of implementation.
 **/
 template <typename T>
 class SortMergeJoin::SortMergeJoinImpl : public AbstractJoinOperatorImpl {
@@ -59,7 +66,9 @@ class SortMergeJoin::SortMergeJoinImpl : public AbstractJoinOperatorImpl {
   SortMergeJoinImpl<T>(SortMergeJoin& sort_merge_join, std::string left_column_name,
                        std::string right_column_name, std::string op, JoinMode mode)
     : _sort_merge_join{sort_merge_join}, _left_column_name{left_column_name}, _right_column_name{right_column_name},
-                                                                        _op{op}, _mode{mode}, _partition_count{2} {
+      _op{op}, _mode{mode} {
+
+    _partition_count = determine_number_of_partitions();
     _output_pos_lists_left.resize(_partition_count);
     _output_pos_lists_right.resize(_partition_count);
   }
@@ -126,6 +135,20 @@ class SortMergeJoin::SortMergeJoinImpl : public AbstractJoinOperatorImpl {
   };
 
   /**
+  * Determines the number of partitions to be used for the join.
+  * The number of partitions must be a power of two, i.e. 1, 2, 4, 8, 16...
+  * TODO(anyone): How should we determine the number of partitions?
+  **/
+  size_t determine_number_of_partitions() {
+    // Get the next lower power of two of the bigger chunk number
+    // Note: this is only provisional. There should be a reasonable calculation here based on hardware stats.
+    size_t chunk_count_left = _sort_merge_join.input_table_left()->chunk_count();
+    size_t chunk_count_right = _sort_merge_join.input_table_right()->chunk_count();
+    size_t max_chunk_count = chunk_count_left > chunk_count_right ? chunk_count_left : chunk_count_right;
+    return static_cast<size_t>(std::pow(2, std::floor(std::log2(max_chunk_count))));
+  }
+
+  /**
   * Gets the table position corresponding to the end of the table, i.e. the last entry of the last partition.
   **/
   TablePosition _end_of_table(std::shared_ptr<MaterializedTable<T>> table) {
@@ -151,6 +174,7 @@ class SortMergeJoin::SortMergeJoinImpl : public AbstractJoinOperatorImpl {
     auto end_of_right_table = _end_of_table(_sorted_right_table);
 
     // Equi-Join implementation
+    // TODO(anyone): Move these to std::functions for a performance improvement (eliminate chained ifs)s
     if (_op == "=") {
       if (left_value == right_value) {
         _emit_combinations(partition_number, left_run, right_run);
@@ -249,7 +273,8 @@ class SortMergeJoin::SortMergeJoinImpl : public AbstractJoinOperatorImpl {
   }
 
   /**
-  * Performs the join on a single partition.
+  * Performs the join on a single partition. Runs of entries with the same value are identified and handled together.
+  * This constitutes the merge phase of the join. The output combinations of row ids are determined by _join_runs.
   **/
   void _join_partition(size_t partition_number) {
     _output_pos_lists_left[partition_number] = std::make_shared<PosList>();
@@ -295,7 +320,7 @@ class SortMergeJoin::SortMergeJoinImpl : public AbstractJoinOperatorImpl {
 
     // There is an edge case in which the last loop run was an "equi hit" and one index
     // reached its maximum size, but one element is potentially still present on the other side.
-    // It is important for "Outer-Joins" to include this element.
+    // It is important for outer joins to include this element.
 
     // The left side has finished -> add the remaining values of the right side
     if (left_run_start == left_size && (_mode == Right || _mode == Outer)) {
@@ -398,7 +423,7 @@ class SortMergeJoin::SortMergeJoinImpl : public AbstractJoinOperatorImpl {
 
  public:
   /**
-  * Executes the SortMergeJoin operator
+  * Executes the SortMergeJoin operator.
   **/
   std::shared_ptr<const Table> on_execute() {
     auto radix_partitioner = RadixPartitionSort<T>(_sort_merge_join._input_left, _sort_merge_join._input_right,
