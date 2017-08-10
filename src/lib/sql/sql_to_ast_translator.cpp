@@ -110,7 +110,7 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_select(const hsq
   }
 
   if (is_aggregate) {
-      current_result_node = _translate_aggregate(select, current_result_node);
+    current_result_node = _translate_aggregate(select, current_result_node);
   } else {
     current_result_node = _translate_projection(*select.selectList, current_result_node);
   }
@@ -288,12 +288,13 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_aggregate(
       aggregate_column_definitions.emplace_back(opossum_expr, alias);
     } else if (column_expr->isType(hsql::kExprColumnRef)) {
       /**
-       * This whole block SQL Validation, check whether column reference in SELECT list of
-       * aggregate appears in  GROUP BY clause
+       * This if block is a SQL conformity check, whether column references in SELECT list of
+       * aggregates appears in GROUP BY clause
        */
 
       // If the item is a column, it has to be in the GROUP BY clause.
-      Assert(group_by != nullptr, "SELECT list of aggregate contains a column, but the query does not have a GROUP BY clause.");
+      Assert(group_by != nullptr,
+             "SELECT list of aggregate contains a column, but the query does not have a GROUP BY clause.");
 
       auto expr_name = column_expr->getName();
 
@@ -305,8 +306,8 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_aggregate(
         }
       }
 
-      Assert(is_in_group_by_clause, std::string("Column '") + expr_name +
-        "' is specified in SELECT list, but not in GROUP BY clause.");
+      Assert(is_in_group_by_clause,
+             std::string("Column '") + expr_name + "' is specified in SELECT list, but not in GROUP BY clause.");
     } else {
       Fail("Unsupported item in projection list for AggregateOperator.");
     }

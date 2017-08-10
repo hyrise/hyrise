@@ -49,7 +49,7 @@ std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::translate_node(
 }
 
 std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::_translate_stored_table_node(
-  const std::shared_ptr<AbstractASTNode> &node) const {
+    const std::shared_ptr<AbstractASTNode> &node) const {
   const auto table_node = std::dynamic_pointer_cast<StoredTableNode>(node);
   return std::make_shared<GetTable>(table_node->table_name());
 }
