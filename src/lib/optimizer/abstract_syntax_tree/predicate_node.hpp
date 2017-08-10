@@ -5,20 +5,19 @@
 #include <unordered_map>
 #include <vector>
 
+#include "abstract_ast_node.hpp"
 #include "all_parameter_variant.hpp"
 #include "all_type_variant.hpp"
 #include "common.hpp"
-
-#include "abstract_ast_node.hpp"
 #include "optimizer/expression/expression_node.hpp"
-
-#include "operators/table_scan.hpp"
 
 namespace opossum {
 
+class TableStatistics;
+
 class PredicateNode : public AbstractASTNode {
  public:
-  PredicateNode(const std::string& column_name, const std::shared_ptr<ExpressionNode> predicate,
+  PredicateNode(const std::string& column_name, const std::shared_ptr<ExpressionNode>& predicate,
                 const ScanType scan_type, const AllParameterVariant value,
                 const optional<AllTypeVariant> value2 = nullopt);
 
@@ -30,7 +29,10 @@ class PredicateNode : public AbstractASTNode {
   const AllParameterVariant& value() const;
   const optional<AllTypeVariant>& value2() const;
 
-  void set_predicate(const std::shared_ptr<ExpressionNode> predicate);
+  void set_predicate(const std::shared_ptr<ExpressionNode>& predicate);
+
+  const std::shared_ptr<TableStatistics> get_statistics_from(
+      const std::shared_ptr<AbstractASTNode>& parent) const override;
 
  private:
   const std::string _column_name;
