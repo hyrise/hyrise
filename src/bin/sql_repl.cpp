@@ -3,7 +3,8 @@
 #include <iostream>
 
 #include "SQLParser.h"
-// #include "operators/import_csv.hpp"
+// #include "storage/storage_manager.hpp"
+// #include "tpcc/tpcc_table_generator.hpp"
 
 namespace opossum {
 
@@ -11,7 +12,7 @@ SqlRepl::SqlRepl(const std::string & prompt, std::istream & in, std::ostream & o
     : _prompt(prompt)
     , _in(in.rdbuf())
     , _out(out.rdbuf())
-    , _commands({"loadtable", "exit"}) {}
+    , _commands({"usage", "help", "loadtpcc", "exit"}) {}
 
 void SqlRepl::repl() {
   for (;;)
@@ -79,6 +80,21 @@ std::string SqlRepl::trim(const std::string & str) {
   size_t last = str.find_last_not_of(' ');
   return str.substr(first, (last - first + 1));
 }
+
+// void SqlRepl::generate_TPCC_table(const std::string & tablename) {
+//   if ("ALL" == tablename)
+//   {
+//     auto tables = tpcc::TpccTableGenerator().generate_all_tables();
+//     for (auto& pair : tables) {
+//       opossum::StorageManager::get().add_table(pair.first, pair.second);
+//     }
+//     return;
+//   }
+
+//   auto tpccGenerator = SqlRepl::get_tpcc_generator(tablename);
+//   auto table = tpccGenerator.generateTable();
+//   opossum::StorageManager::get().add_table(tablename, table);
+// }
 
 }  // namespace opossum
 

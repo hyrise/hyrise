@@ -52,4 +52,5 @@ add_executable(
 target_link_libraries(
     opossumRepl
     opossum
+    tpcc
 )
