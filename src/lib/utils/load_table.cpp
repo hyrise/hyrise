@@ -11,7 +11,7 @@ namespace opossum {
 
 std::shared_ptr<Table> load_table(const std::string &file_name, size_t chunk_size) {
   std::ifstream infile(file_name);
-  Assert(infile.is_open(), "load_table: Could not find file ");
+  Assert(infile.is_open(), "load_table: Could not find file " + file_name);
 
   std::string line;
   std::getline(infile, line);
