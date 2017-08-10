@@ -291,7 +291,7 @@ TEST_F(ColumnStatisticsTest, TwoColumnsLessThanTest) {
   ScanType scan_type = ScanType::OpLessThan;
 
   auto col_stat1 = std::make_shared<ColumnStatistics<int>>(ColumnID(0), 10.f, 1, 20);
-  auto col_stat2 = std::make_shared<ColumnStatistics<int>>(ColumnID(0), 30.f, 11, 40);
+  auto col_stat2 = std::make_shared<ColumnStatistics<int>>(ColumnID(1), 30.f, 11, 40);
 
   auto result1 = col_stat1->estimate_selectivity_for_predicate(scan_type, col_stat2, AllTypeVariant(0));
   auto expected_selectivity = ((10.f / 20.f) * (10.f / 30.f) - 0.5f * 1.f / 30.f) * 0.5f + (10.f / 20.f) +
