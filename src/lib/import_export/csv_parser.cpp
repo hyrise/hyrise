@@ -116,7 +116,7 @@ std::shared_ptr<Table> CsvParser::_process_meta_file(const std::string& filename
 
 bool CsvParser::_find_fields_in_chunk(string_view csv_content, const Table& table, std::vector<size_t>& field_ends) {
   field_ends.clear();
-  if (0 == table.chunk_size() || csv_content.empty()) {
+  if (csv_content.empty()) {
     return false;
   }
 
@@ -125,7 +125,7 @@ bool CsvParser::_find_fields_in_chunk(string_view csv_content, const Table& tabl
   size_t pos, from = 0;
   unsigned int rows = 0, field_count = 1;
   bool in_quotes = false;
-  while (rows < table.chunk_size()) {
+  while (rows < table.chunk_size() || 0 == table.chunk_size()) {
     // Find either of row separator, column delimiter, quote identifier
     pos = csv_content.find_first_of(search_for, from);
     if (std::string::npos == pos) {
