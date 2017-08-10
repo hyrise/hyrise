@@ -92,21 +92,21 @@ set(
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 
 # Configure opossumTest
-add_executable(opossumTest ${OPOSSUM_TEST_SOURCES})
+add_executable(opossumTest EXCLUDE_FROM_ALL ${OPOSSUM_TEST_SOURCES})
 target_link_libraries(opossumTest opossum ${LIBRARIES})
 
 # Configure opossumCoverageApp
-add_executable(opossumCoverage ${OPOSSUM_TEST_SOURCES})
+add_executable(opossumCoverage EXCLUDE_FROM_ALL ${OPOSSUM_TEST_SOURCES})
 target_link_libraries(opossumCoverage opossumCoverageLib ${LIBRARIES} --coverage)
 set_target_properties(opossumCoverage PROPERTIES COMPILE_FLAGS "-fprofile-arcs -ftest-coverage")
 
 # Configure opossumAsanApp
-add_executable(opossumAsan ${OPOSSUM_TEST_SOURCES})
+add_executable(opossumAsan EXCLUDE_FROM_ALL ${OPOSSUM_TEST_SOURCES})
 target_link_libraries(opossumAsan opossumAsanLib ${LIBRARIES} -fsanitize=address)
 set_target_properties(opossumAsan PROPERTIES COMPILE_FLAGS "-fsanitize=address -fno-omit-frame-pointer")
 
 # Configure opossumTestTPCC
-add_executable(opossumTestTPCC ${TPCC_TEST_SOURCES})
+add_executable(opossumTestTPCC EXCLUDE_FROM_ALL ${TPCC_TEST_SOURCES})
 target_link_libraries(opossumTestTPCC opossum ${LIBRARIES})
 
 

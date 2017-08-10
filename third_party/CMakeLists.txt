@@ -1,6 +1,7 @@
 # Build google benchmark
 add_library(
     benchmark
+    EXCLUDE_FROM_ALL
     STATIC
     benchmark_fix/dummy.cc
     benchmark/src/timers.cc
