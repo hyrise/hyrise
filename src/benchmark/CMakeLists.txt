@@ -10,7 +10,7 @@ add_executable(
     operators/product_benchmark.cpp
     operators/projection_benchmark.cpp
     operators/sort_benchmark.cpp
-#    operators/sql_benchmark.cpp
+    operators/sql_benchmark.cpp
     operators/table_scan_benchmark.cpp
     operators/union_all_benchmark.cpp
     table_generator.cpp
@@ -28,9 +28,9 @@ add_executable(
 
     benchmark_main.cpp
     benchmark_template.cpp
-#    tpcc/delivery_benchmark.cpp
-#    tpcc/new_order_benchmark.cpp
-#    tpcc/order_status_benchmark.cpp
+    tpcc/delivery_benchmark.cpp
+    tpcc/new_order_benchmark.cpp
+    tpcc/order_status_benchmark.cpp
     tpcc/tpcc_base_fixture.cpp
     tpcc/tpcc_base_fixture.hpp
 )
