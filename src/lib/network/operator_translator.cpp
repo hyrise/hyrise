@@ -78,24 +78,25 @@ inline ScanType translate_scan_type(const proto::ScanType& scan_type) {
 
 inline std::shared_ptr<OperatorTask> OperatorTranslator::translate(
     const proto::ProjectionOperator& projection_operator) {
-  const auto column_names_field = projection_operator.column_name();
-  auto column_names = std::vector<std::string>(std::begin(column_names_field), std::end(column_names_field));
-  Assert((projection_operator.has_input_operator()), "Missing Input Operator in Projection.");
-
-  auto input_task = translate_proto(projection_operator.input_operator());
-
-  Projection::ColumnExpressions column_expressions;
-  column_expressions.reserve(column_names.size());
-  for (const auto & column_name : column_names) {
-    column_expressions.emplace_back(ExpressionNode::create_column_reference("", column_name));
-  }
-
-  auto projection = std::make_shared<Projection>(input_task->get_operator(), column_expressions);
-  auto projection_task = std::make_shared<OperatorTask>(projection);
-  input_task->set_as_predecessor_of(projection_task);
-  _tasks.push_back(projection_task);
-
-  return projection_task;
+//  const auto column_names_field = projection_operator.column_name();
+//  auto column_names = std::vector<std::string>(std::begin(column_names_field), std::end(column_names_field));
+//  Assert((projection_operator.has_input_operator()), "Missing Input Operator in Projection.");
+//
+//  auto input_task = translate_proto(projection_operator.input_operator());
+//
+//  Projection::ColumnExpressions column_expressions;
+//  column_expressions.reserve(column_names.size());
+//  for (const auto & column_name : column_names) {
+//    column_expressions.emplace_back(ExpressionNode::create_column_reference("", column_name));
+//  }
+//
+//  auto projection = std::make_shared<Projection>(input_task->get_operator(), column_expressions);
+//  auto projection_task = std::make_shared<OperatorTask>(projection);
+//  input_task->set_as_predecessor_of(projection_task);
+//  _tasks.push_back(projection_task);
+//
+//  return projection_task;
+  return {};
 }
 
 inline std::shared_ptr<OperatorTask> OperatorTranslator::translate(const proto::ProductOperator& product_operator) {

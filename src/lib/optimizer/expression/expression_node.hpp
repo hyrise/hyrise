@@ -61,6 +61,11 @@ class ExpressionNode : public std::enable_shared_from_this<ExpressionNode> {
       const std::string& function_name, const std::vector<std::shared_ptr<ExpressionNode>>& expression_list,
       const std::string& alias);
 
+  static std::shared_ptr<ExpressionNode> create_operator(ExpressionType type,
+                                                         const std::shared_ptr<ExpressionNode> &left,
+                                                         const std::shared_ptr<ExpressionNode> &right,
+                                                         const std::string &alias = {});
+
   /*
    * Helper methods for Expression Trees
    */
@@ -84,6 +89,11 @@ class ExpressionNode : public std::enable_shared_from_this<ExpressionNode> {
   // Is +, -, * (arithmetic usage, not SELECT * FROM), /, %, ^
   bool is_arithmetic_operator() const;
 
+  //
+  bool is_binary_operator() const;
+
+  //
+
   /*
    * Getters
    */
@@ -97,8 +107,11 @@ class ExpressionNode : public std::enable_shared_from_this<ExpressionNode> {
 
   const std::vector<std::shared_ptr<ExpressionNode>>& expression_list() const;
 
-  // Expression as string, parse-able by Projection
+  // Expression as string
   std::string to_expression_string() const;
+
+ private:
+  explicit ExpressionNode(const ExpressionType type);
 
  private:
   // the type of the expression

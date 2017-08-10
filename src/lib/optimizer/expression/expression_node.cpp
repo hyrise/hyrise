@@ -51,6 +51,21 @@ std::shared_ptr<ExpressionNode> ExpressionNode::create_function_reference(
                                           "", alias);
 }
 
+std::shared_ptr<ExpressionNode> ExpressionNode::create_operator(ExpressionType type,
+                                                                const std::shared_ptr<ExpressionNode> &left,
+                                                                const std::shared_ptr<ExpressionNode> &right,
+                                                                const std::string &alias) {
+  auto expression = std::make_shared<ExpressionNode>(type, AllTypeVariant(),
+                                                     std::vector<std::shared_ptr<ExpressionNode>>(),
+                                                     "", "", alias);
+  Assert(expression->is_binary_operator(), "Type is not an operator type");
+
+  expression->set_left_child(left);
+  expression->set_right_child(left);
+
+  return expression;
+}
+
 const std::weak_ptr<ExpressionNode> ExpressionNode::parent() const { return _parent; }
 
 void ExpressionNode::clear_parent() { _parent.reset(); }
@@ -85,9 +100,38 @@ void ExpressionNode::print(const uint32_t level, std::ostream &out) const {
 }
 
 bool ExpressionNode::is_arithmetic_operator() const {
-  return _type == ExpressionType::Subtraction || _type == ExpressionType::Addition ||
-         _type == ExpressionType::Multiplication || _type == ExpressionType::Division ||
-         _type == ExpressionType::Modulo || _type == ExpressionType::Power;
+  switch(_type) {
+    case ExpressionType::Subtraction:
+    case ExpressionType::Addition:
+    case ExpressionType::Multiplication:
+    case ExpressionType::Division:
+    case ExpressionType::Modulo:
+    case ExpressionType::Power:
+      return true;
+    default:
+      return false;
+  }
+}
+
+  bool ExpressionNode::is_binary_operator() const {
+  if (is_arithmetic_operator()) return true;
+
+  switch(_type) {
+    case ExpressionType::Equals:
+    case ExpressionType::NotEquals:
+    case ExpressionType::LessThan:
+    case ExpressionType::LessThanEquals:
+    case ExpressionType::GreaterThan:
+    case ExpressionType::GreaterThanEquals:
+    case ExpressionType::Like:
+    case ExpressionType::NotLike:
+    case ExpressionType::And:
+    case ExpressionType::Or:
+    case ExpressionType::Between:
+      return true;
+    default:
+      return false;
+  }
 }
 
 const std::string ExpressionNode::description() const {
@@ -147,7 +191,7 @@ std::string ExpressionNode::to_expression_string() const {
   if (_type == ExpressionType::Literal) {
     return type_cast<std::string>(_value);
   } else if (_type == ExpressionType::ColumnReference) {
-    return "$" + _name;
+    return  _name;
   } else if (is_arithmetic_operator()) {
     // TODO(mp) Should be is_operator() to also support ExpressionType::Equals, ...
     Assert(static_cast<bool>(left_child()) && static_cast<bool>(right_child()), "Operator needs both operands");
@@ -162,6 +206,12 @@ std::string ExpressionNode::to_expression_string() const {
 
   // Should never be reached, but Clang is complaining about missing return statement
   return "";
+}
+
+ExpressionNode::ExpressionNode(const ExpressionType type):
+  _type(type)
+{
+
 }
 
 const std::vector<std::shared_ptr<ExpressionNode>> &ExpressionNode::expression_list() const { return _expression_list; }

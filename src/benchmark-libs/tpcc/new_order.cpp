@@ -21,6 +21,7 @@
 #include "operators/table_wrapper.hpp"
 #include "operators/update.hpp"
 #include "operators/validate.hpp"
+#include "optimizer/expression/expression_node.hpp"
 #include "scheduler/operator_task.hpp"
 #include "storage/storage_manager.hpp"
 
@@ -255,9 +256,11 @@ TaskVector NewOrderRefImpl::get_increment_next_order_id_tasks(const int32_t d_id
   const std::vector<std::string> columns = {"D_NEXT_O_ID"};
   const auto original_rows = std::make_shared<opossum::Projection>(ts2, columns);
 
-  const opossum::Projection::ProjectionDefinitions definitions{
-      opossum::Projection::ProjectionDefinition{std::to_string(d_next_o_id) + "+1", "int", "fix"}};
-  const auto updated_rows = std::make_shared<opossum::Projection>(ts2, definitions);
+  const auto op = opossum::ExpressionNode::create_operator(
+    opossum::ExpressionType::Addition,
+    opossum::ExpressionNode::create_literal(d_next_o_id),
+    opossum::ExpressionNode::create_literal(1));  // NOLINT
+  const auto updated_rows = std::make_shared<opossum::Projection>(ts2, {op});
 
   const auto update = std::make_shared<opossum::Update>("DISTRICT", original_rows, updated_rows);
 

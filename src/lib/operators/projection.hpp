@@ -56,23 +56,7 @@ class Projection : public AbstractReadOnlyOperator {
 
   static std::string evaluate_expression_type(
     const std::shared_ptr<ExpressionNode> & expression,
-    const std::shared_ptr<const Table> & table) {
-
-    if (expression->type() == ExpressionType::Literal) {
-      return type_by_variant_which[expression->value().which()];
-    }
-    if (expression->type() == ExpressionType::ColumnReference) {
-      return table->column_type(table->column_id_by_name(expression->name()));
-    }
-
-    Assert(expression->is_arithmetic_operator(), "Only arithmetic operators supported for expression type evaluation");
-
-    const auto type_left = evaluate_expression_type(expression->left_child(), table);
-    const auto type_right = evaluate_expression_type(expression->right_child(), table);
-
-    Assert(type_left == type_right, "");
-    return type_left;
-  }
+    const std::shared_ptr<const Table> & table);
 
   template<typename T>
   static const tbb::concurrent_vector<T> evaluate_expression(
