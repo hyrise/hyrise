@@ -156,6 +156,9 @@ set(
     optimizer/column_statistics.hpp
     optimizer/expression/expression_node.cpp
     optimizer/expression/expression_node.hpp
+    optimizer/strategy/abstract_rule.hpp
+    optimizer/strategy/predicate_reordering_rule.cpp
+    optimizer/strategy/predicate_reordering_rule.hpp
     optimizer/table_statistics.cpp
     optimizer/table_statistics.hpp
     resolve_type.hpp
@@ -237,6 +240,8 @@ set(
     uid_allocator.hpp
     utils/assert.hpp
     utils/cuckoo_hashtable.hpp
+    utils/load_table.cpp
+    utils/load_table.hpp
     utils/murmur_hash.cpp
     utils/murmur_hash.hpp
 )

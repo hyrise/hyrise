@@ -8,10 +8,11 @@
 #include <utility>
 #include <vector>
 
-#include "../lib/concurrency/transaction_manager.hpp"
-#include "../lib/storage/storage_manager.hpp"
-#include "../lib/storage/table.hpp"
-#include "../lib/type_cast.hpp"
+#include "concurrency/transaction_manager.hpp"
+#include "storage/storage_manager.hpp"
+#include "storage/table.hpp"
+#include "type_cast.hpp"
+#include "utils/load_table.hpp"
 
 namespace opossum {
 
@@ -124,64 +125,8 @@ void BaseTest::_print_matrix(const BaseTest::Matrix &m) {
   return ::testing::AssertionSuccess();
 }
 
-template <typename T>
-std::vector<T> BaseTest::_split(const std::string &str, char delimiter) {
-  std::vector<T> internal;
-  std::stringstream ss(str);
-  std::string tok;
-
-  while (std::getline(ss, tok, delimiter)) {
-    internal.push_back(tok);
-  }
-
-  return internal;
-}
-
 std::shared_ptr<Table> BaseTest::load_table(const std::string &file_name, size_t chunk_size) {
-  std::shared_ptr<Table> test_table = std::make_shared<Table>(chunk_size);
-
-  std::ifstream infile(file_name);
-  Assert(infile.is_open(), "load_table: Could not find file " + file_name);
-
-  std::string line;
-
-  std::getline(infile, line);
-  std::vector<std::string> col_names = _split<std::string>(line, '|');
-  std::getline(infile, line);
-  std::vector<std::string> col_types = _split<std::string>(line, '|');
-
-  auto col_nullable = std::vector<bool>{};
-  for (auto &type : col_types) {
-    auto type_nullable = _split<std::string>(type, '_');
-    type = type_nullable[0];
-
-    auto nullable = type_nullable.size() > 1 && type_nullable[1] == "null";
-    col_nullable.push_back(nullable);
-  }
-
-  for (size_t i = 0; i < col_names.size(); i++) {
-    test_table->add_column(col_names[i], col_types[i], col_nullable[i]);
-  }
-
-  while (std::getline(infile, line)) {
-    std::vector<AllTypeVariant> values = _split<AllTypeVariant>(line, '|');
-
-    for (auto column_id = 0u; column_id < values.size(); ++column_id) {
-      auto &value = values[column_id];
-      auto nullable = col_nullable[column_id];
-
-      if (nullable && (value == AllTypeVariant{"null"})) {
-        value = NULL_VALUE;
-      }
-    }
-
-    test_table->append(values);
-
-    auto &chunk = test_table->get_chunk(static_cast<ChunkID>(test_table->chunk_count() - 1));
-    auto mvcc_cols = chunk.mvcc_columns();
-    mvcc_cols->begin_cids.back() = 0;
-  }
-  return test_table;
+  return opossum::load_table(file_name, chunk_size);
 }
 
 BaseTest::~BaseTest() {

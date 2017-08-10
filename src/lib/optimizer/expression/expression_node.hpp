@@ -42,7 +42,7 @@ class ExpressionNode : public std::enable_shared_from_this<ExpressionNode> {
    */
   ExpressionNode(const ExpressionType type, const AllTypeVariant& value,
                  const std::vector<std::shared_ptr<ExpressionNode>>& expression_list, const std::string& name,
-                 const std::string& table, const std::string& alias);
+                 const std::string& table, const optional<std::string>& alias = nullopt);
 
   /*
    * Factory Methods to create Expressions of specific type
@@ -51,7 +51,7 @@ class ExpressionNode : public std::enable_shared_from_this<ExpressionNode> {
 
   static std::shared_ptr<ExpressionNode> create_column_reference(const std::string& table_name,
                                                                  const std::string& column_name,
-                                                                 const std::string& alias);
+                                                                 const optional<std::string>& alias = nullopt);
 
   static std::shared_ptr<ExpressionNode> create_literal(const AllTypeVariant& value);
 
@@ -59,7 +59,7 @@ class ExpressionNode : public std::enable_shared_from_this<ExpressionNode> {
 
   static std::shared_ptr<ExpressionNode> create_function_reference(
       const std::string& function_name, const std::vector<std::shared_ptr<ExpressionNode>>& expression_list,
-      const std::string& alias);
+      const optional<std::string>& alias = nullopt);
 
   /*
    * Helper methods for Expression Trees
@@ -94,7 +94,7 @@ class ExpressionNode : public std::enable_shared_from_this<ExpressionNode> {
 
   const std::string& name() const;
 
-  const std::string& alias() const;
+  const optional<std::string>& alias() const;
 
   const AllTypeVariant value() const;
 
@@ -123,7 +123,7 @@ class ExpressionNode : public std::enable_shared_from_this<ExpressionNode> {
   // a table name, only used for ColumnReferences
   const std::string _table_name;
   // an alias, used for ColumnReferences, Selects, FunctionReferences
-  const std::string _alias;
+  const optional<std::string> _alias;
 
   std::weak_ptr<ExpressionNode> _parent;
   std::shared_ptr<ExpressionNode> _left_child;

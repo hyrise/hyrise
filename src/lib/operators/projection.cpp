@@ -49,7 +49,7 @@ std::shared_ptr<const Table> Projection::on_execute() {
 
   // Prepare terms and output table for each column to project
   for (auto& definition : _projection_definitions) {
-    output->add_column_definition(std::get<2>(definition), std::get<1>(definition));
+    output->add_column_definition(definition.name, definition.type);
   }
 
   for (ChunkID chunk_id{0}; chunk_id < input_table_left()->chunk_count(); ++chunk_id) {
@@ -60,7 +60,7 @@ std::shared_ptr<const Table> Projection::on_execute() {
       chunk_out.use_mvcc_columns_from(input_table_left()->get_chunk(chunk_id));
     }
     for (auto definition : _projection_definitions) {
-      call_functor_by_column_type<ColumnCreator>(std::get<1>(definition), chunk_out, chunk_id, std::get<0>(definition),
+      call_functor_by_column_type<ColumnCreator>(definition.type, chunk_out, chunk_id, definition.expression,
                                                  input_table_left());
     }
     output->add_chunk(std::move(chunk_out));

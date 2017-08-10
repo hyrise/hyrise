@@ -1,10 +1,13 @@
 #include "predicate_node.hpp"
 
 #include <memory>
+#include <sstream>
 #include <string>
 
 #include "common.hpp"
 #include "constant_mappings.hpp"
+#include "optimizer/table_statistics.hpp"
+#include "utils/assert.hpp"
 
 namespace opossum {
 
@@ -34,12 +37,17 @@ const std::string& PredicateNode::column_name() const { return _column_name; }
 
 const std::shared_ptr<ExpressionNode> PredicateNode::predicate() const { return _predicate; }
 
-void PredicateNode::set_predicate(const std::shared_ptr<ExpressionNode> predicate) { _predicate = predicate; }
+void PredicateNode::set_predicate(const std::shared_ptr<ExpressionNode>& predicate) { _predicate = predicate; }
 
 ScanType PredicateNode::scan_type() const { return _scan_type; }
 
 const AllParameterVariant& PredicateNode::value() const { return _value; }
 
 const optional<AllTypeVariant>& PredicateNode::value2() const { return _value2; }
+
+const std::shared_ptr<TableStatistics> PredicateNode::get_statistics_from(
+    const std::shared_ptr<AbstractASTNode>& parent) const {
+  return parent->get_statistics()->predicate_statistics(_column_name, _scan_type, _value, _value2);
+}
 
 }  // namespace opossum

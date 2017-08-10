@@ -116,7 +116,7 @@ TEST_F(ASTToOperatorTranslatorTest, AggregateNodeNoArithmetics) {
   const auto stored_table_node = std::make_shared<StoredTableNode>("table_int_float");
 
   auto sum_expression = ExpressionNode::create_function_reference(
-      "SUM", {ExpressionNode::create_column_reference("table_int_float", "a", "")}, {});
+      "SUM", {ExpressionNode::create_column_reference("table_int_float", "a")}, {});
   auto aggregate_node =
       std::make_shared<AggregateNode>(std::vector<AggregateColumnDefinition>{AggregateColumnDefinition{
                                           sum_expression, optional<std::string>("sum_of_a")}},
@@ -140,7 +140,7 @@ TEST_F(ASTToOperatorTranslatorTest, AggregateNodeWithArithmetics) {
   const auto stored_table_node = std::make_shared<StoredTableNode>("table_int_float");
 
   // Create expression "b * 2".
-  const auto expr_col_b = ExpressionNode::create_column_reference("table_int_float", "b", "");
+  const auto expr_col_b = ExpressionNode::create_column_reference("table_int_float", "b");
   const auto expr_literal = ExpressionNode::create_literal(2);
   const auto expr_multiplication = ExpressionNode::create_expression(ExpressionType::Multiplication);
   expr_multiplication->set_left_child(expr_col_b);
@@ -184,9 +184,9 @@ TEST_F(ASTToOperatorTranslatorTest, AggregateNodeWithArithmetics) {
   ASSERT_EQ(projection_definitions.size(), 1u);
 
   const auto projection_definition = projection_definitions[0];
-  EXPECT_EQ(std::get<0>(projection_definition), "$b*2");
-  EXPECT_EQ(std::get<1>(projection_definition), "float");
-  EXPECT_EQ(std::get<2>(projection_definition), "alias0");
+  EXPECT_EQ(projection_definition.expression, "$b*2");
+  EXPECT_EQ(projection_definition.type, "float");
+  EXPECT_EQ(projection_definition.name, "alias0");
 }
 
 TEST_F(ASTToOperatorTranslatorTest, MultipleNodesHierarchy) {

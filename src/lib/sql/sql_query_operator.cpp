@@ -196,4 +196,7 @@ SQLQueryCache<std::shared_ptr<hsql::SQLParserResult>>& SQLQueryOperator::get_par
 // Static.
 SQLQueryCache<SQLQueryPlan>& SQLQueryOperator::get_query_plan_cache() { return _query_plan_cache; }
 
+// Static.
+SQLQueryCache<SQLQueryPlan>& SQLQueryOperator::get_prepared_statement_cache() { return _prepared_stmts; }
+
 }  // namespace opossum
