@@ -110,7 +110,7 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_select(const hsq
   }
 
   if (is_aggregate) {
-    current_result_node = _translate_aggregate(select, current_result_node);
+      current_result_node = _translate_aggregate(select, current_result_node);
   } else {
     current_result_node = _translate_projection(*select.selectList, current_result_node);
   }
@@ -243,8 +243,10 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_filter_expr(
   optional<AllTypeVariant> value2;
 
   if (scan_type == ScanType::OpBetween) {
-    const hsql::Expr* left_expr = (*expr.exprList)[0];
-    const hsql::Expr* right_expr = (*expr.exprList)[1];
+    Assert(expr.exprList->size() == 2, "Need two arguments for BETWEEEN");
+
+    const auto* left_expr = (*expr.exprList)[0];
+    const auto* right_expr = (*expr.exprList)[1];
 
     value = translate_literal(*left_expr);
 
@@ -274,31 +276,37 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_aggregate(
   std::vector<AggregateColumnDefinition> aggregate_column_definitions;
   aggregate_column_definitions.reserve(select_list.size());
 
-  for (auto* expr : select_list) {
-    if (expr->isType(hsql::kExprFunctionRef)) {
-      auto opossum_expr = SQLExpressionTranslator().translate_expression(*expr);
+  for (const auto* column_expr : select_list) {
+    if (column_expr->isType(hsql::kExprFunctionRef)) {
+      auto opossum_expr = SQLExpressionTranslator().translate_expression(*column_expr);
 
       optional<std::string> alias;
-      if (expr->alias) {
-        alias = std::string(expr->alias);
+      if (column_expr->alias) {
+        alias = std::string(column_expr->alias);
       }
 
       aggregate_column_definitions.emplace_back(opossum_expr, alias);
-    } else if (expr->isType(hsql::kExprColumnRef)) {
-      // If the item is a column, it has to be in the GROUP BY clause.
-      Assert(group_by != nullptr, "SELECT list contains a column, but the query does not have a GROUP BY clause.");
+    } else if (column_expr->isType(hsql::kExprColumnRef)) {
+      /**
+       * This whole block SQL Validation, check whether column reference in SELECT list of
+       * aggregate appears in  GROUP BY clause
+       */
 
-      auto expr_name = expr->getName();
+      // If the item is a column, it has to be in the GROUP BY clause.
+      Assert(group_by != nullptr, "SELECT list of aggregate contains a column, but the query does not have a GROUP BY clause.");
+
+      auto expr_name = column_expr->getName();
 
       auto is_in_group_by_clause = false;
       for (const auto* groupby_expr : *group_by->columns) {
-        if (*expr_name == *groupby_expr->getName()) {
+        if (strcmp(expr_name, groupby_expr->getName()) == 0) {
           is_in_group_by_clause = true;
           break;
         }
       }
 
-      Assert(is_in_group_by_clause, "Column is specified in SELECT list, but not in GROUP BY clause.");
+      Assert(is_in_group_by_clause, std::string("Column '") + expr_name +
+        "' is specified in SELECT list, but not in GROUP BY clause.");
     } else {
       Fail("Unsupported item in projection list for AggregateOperator.");
     }
@@ -337,10 +345,10 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_aggregate(
 std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_projection(
     const std::vector<hsql::Expr*>& select_list, const std::shared_ptr<AbstractASTNode>& input_node) {
   std::vector<std::string> columns;
-  for (const hsql::Expr* expr : select_list) {
+  for (const auto* expr : select_list) {
     // TODO(mp): expressions
     if (expr->isType(hsql::kExprColumnRef)) {
-      columns.push_back(generate_column_name(*expr, true));
+      columns.emplace_back(generate_column_name(*expr, true));
     } else if (expr->isType(hsql::kExprStar)) {
       // Resolve '*' by getting the output columns of the input node.
       auto input_columns = input_node->output_column_names();
@@ -362,7 +370,7 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_order_by(
     return input_node;
   }
 
-  std::shared_ptr<AbstractASTNode> current_result_node = input_node;
+  auto current_result_node = input_node;
 
   // Go through all the order descriptions and create a sort node for each of them.
   // Iterate in reverse because the sort operator does not support multiple columns,

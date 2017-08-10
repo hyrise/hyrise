@@ -28,57 +28,57 @@ ASTToOperatorTranslator &ASTToOperatorTranslator::get() {
 
 ASTToOperatorTranslator::ASTToOperatorTranslator() {
   _operator_factory[ASTNodeType::StoredTable] =
-      std::bind(&ASTToOperatorTranslator::translate_stored_table_node, this, std::placeholders::_1);
+      std::bind(&ASTToOperatorTranslator::_translate_stored_table_node, this, std::placeholders::_1);
   _operator_factory[ASTNodeType::Predicate] =
-      std::bind(&ASTToOperatorTranslator::translate_predicate_node, this, std::placeholders::_1);
+      std::bind(&ASTToOperatorTranslator::_translate_predicate_node, this, std::placeholders::_1);
   _operator_factory[ASTNodeType::Projection] =
-      std::bind(&ASTToOperatorTranslator::translate_projection_node, this, std::placeholders::_1);
+      std::bind(&ASTToOperatorTranslator::_translate_projection_node, this, std::placeholders::_1);
   _operator_factory[ASTNodeType::Sort] =
-      std::bind(&ASTToOperatorTranslator::translate_sort_node, this, std::placeholders::_1);
+      std::bind(&ASTToOperatorTranslator::_translate_sort_node, this, std::placeholders::_1);
   _operator_factory[ASTNodeType::Join] =
-      std::bind(&ASTToOperatorTranslator::translate_join_node, this, std::placeholders::_1);
+      std::bind(&ASTToOperatorTranslator::_translate_join_node, this, std::placeholders::_1);
   _operator_factory[ASTNodeType::Aggregate] =
-      std::bind(&ASTToOperatorTranslator::translate_aggregate_node, this, std::placeholders::_1);
+      std::bind(&ASTToOperatorTranslator::_translate_aggregate_node, this, std::placeholders::_1);
 }
 
-const std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::translate_node(
+std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::translate_node(
     const std::shared_ptr<AbstractASTNode> &node) const {
-  auto it = _operator_factory.find(node->type());
+  const auto it = _operator_factory.find(node->type());
   DebugAssert(it != _operator_factory.end(), "No factory for ASTNodeType.");
   return it->second(node);
 }
 
-const std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::translate_stored_table_node(
-    const std::shared_ptr<AbstractASTNode> &node) const {
-  auto table_node = std::dynamic_pointer_cast<StoredTableNode>(node);
+std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::_translate_stored_table_node(
+  const std::shared_ptr<AbstractASTNode> &node) const {
+  const auto table_node = std::dynamic_pointer_cast<StoredTableNode>(node);
   return std::make_shared<GetTable>(table_node->table_name());
 }
 
-const std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::translate_predicate_node(
+std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::_translate_predicate_node(
     const std::shared_ptr<AbstractASTNode> &node) const {
-  auto input_operator = translate_node(node->left_child());
+  const auto input_operator = translate_node(node->left_child());
   auto table_scan_node = std::dynamic_pointer_cast<PredicateNode>(node);
   return std::make_shared<TableScan>(input_operator, table_scan_node->column_name(), table_scan_node->scan_type(),
                                      table_scan_node->value(), table_scan_node->value2());
 }
 
-const std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::translate_projection_node(
+std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::_translate_projection_node(
     const std::shared_ptr<AbstractASTNode> &node) const {
-  auto input_operator = translate_node(node->left_child());
+  const auto input_operator = translate_node(node->left_child());
   return std::make_shared<Projection>(input_operator, node->output_column_names());
 }
 
-const std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::translate_sort_node(
+std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::_translate_sort_node(
     const std::shared_ptr<AbstractASTNode> &node) const {
-  auto input_operator = translate_node(node->left_child());
+  const auto input_operator = translate_node(node->left_child());
   auto sort_node = std::dynamic_pointer_cast<SortNode>(node);
   return std::make_shared<Sort>(input_operator, sort_node->column_name(), sort_node->ascending());
 }
 
-const std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::translate_join_node(
+std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::_translate_join_node(
     const std::shared_ptr<AbstractASTNode> &node) const {
-  auto input_left_operator = translate_node(node->left_child());
-  auto input_right_operator = translate_node(node->right_child());
+  const auto input_left_operator = translate_node(node->left_child());
+  const auto input_right_operator = translate_node(node->right_child());
 
   auto join_node = std::dynamic_pointer_cast<JoinNode>(node);
   return std::make_shared<JoinNestedLoopA>(input_left_operator, input_right_operator, join_node->join_column_names(),
@@ -86,14 +86,14 @@ const std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::translate_join_
                                            join_node->prefix_right());
 }
 
-const std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::translate_aggregate_node(
+std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::_translate_aggregate_node(
     const std::shared_ptr<AbstractASTNode> &node) const {
-  auto input_operator = translate_node(node->left_child());
+  const auto input_operator = translate_node(node->left_child());
 
   const auto aggregate_node = std::dynamic_pointer_cast<AggregateNode>(node);
   const auto &aggregates = aggregate_node->aggregates();
 
-  std::shared_ptr<AbstractOperator> out_operator = input_operator;
+  auto out_operator = input_operator;
 
   /**
    * 1. Handle arithmetic expressions in aggregate functions via Projection. Support only one level
@@ -107,35 +107,35 @@ const std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::translate_aggre
 
   auto alias_index = 0;
 
-  // We only need a Projection if we have arithmetic expressions.
-  bool need_projection = false;
+  // We only need a Projection before the aggregate if the function arg is an arithmetic expr.
+  auto need_projection = false;
 
   for (const auto &aggregate : aggregates) {
     const auto &expr = aggregate.expr;
     DebugAssert(expr->type() == ExpressionType::FunctionReference, "Expression is not a function.");
 
-    const auto &func_expr = (expr->expression_list())[0];
+    const auto &function_arg_expr = (expr->expression_list())[0];
 
-    if (func_expr->is_operand()) {
+    if (function_arg_expr->is_operand()) {
       // TODO(tim): column data type is not always float
       // TODO(tim): check if this can be done prettier
-      definitions.emplace_back(func_expr->name(), "float", func_expr->name());
-      expr_aliases.emplace_back(func_expr->name());
-    } else if (func_expr->is_arithmetic_operator()) {
+      definitions.emplace_back(function_arg_expr->name(), "float", function_arg_expr->name());
+      expr_aliases.emplace_back(function_arg_expr->name());
+    } else if (function_arg_expr->is_arithmetic_operator()) {
       need_projection = true;
 
       // TODO(mp): Support more complex expressions.
-      DebugAssert(func_expr->left_child()->is_operand(), "Left child is not a literal or column ref.");
-      DebugAssert(func_expr->right_child()->is_operand(), "Right child is not a literal or column ref.");
+      DebugAssert(function_arg_expr->left_child()->is_operand(), "Left child is not a literal or column ref.");
+      DebugAssert(function_arg_expr->right_child()->is_operand(), "Right child is not a literal or column ref.");
 
-      auto alias = "alias" + std::to_string(alias_index);
+      const auto alias = "alias" + std::to_string(alias_index);
       alias_index++;
 
       // TODO(tim): column data type is not always float
-      definitions.emplace_back(func_expr->to_expression_string(), "float", alias);
+      definitions.emplace_back(function_arg_expr->to_expression_string(), "float", alias);
       expr_aliases.emplace_back(alias);
     } else {
-      Fail("Expression is neither operand nor function.");
+      Fail("Expression is neither operand nor arithmetic expre.");
     }
   }
 
@@ -153,9 +153,9 @@ const std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::translate_aggre
 
     DebugAssert(aggregate.expr->type() == ExpressionType::FunctionReference,
                 "Only functions are supported in Aggregates");
-    const auto aggregate_function = aggregate_function_to_string.right.at(aggregate.expr->name());
+    const auto aggregate_function_type = aggregate_function_to_string.right.at(aggregate.expr->name());
 
-    aggregate_definitions.emplace_back(expr_aliases[aggregate_idx], aggregate_function, aggregate.alias);
+    aggregate_definitions.emplace_back(expr_aliases[aggregate_idx], aggregate_function_type, aggregate.alias);
   }
   out_operator = std::make_shared<Aggregate>(out_operator, aggregate_definitions, aggregate_node->groupby_columns());
 

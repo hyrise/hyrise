@@ -22,19 +22,18 @@ class ASTToOperatorTranslator final : public boost::noncopyable {
  public:
   static ASTToOperatorTranslator &get();
 
-  const std::shared_ptr<AbstractOperator> translate_node(const std::shared_ptr<AbstractASTNode> &node) const;
+  std::shared_ptr<AbstractOperator> translate_node(const std::shared_ptr<AbstractASTNode> &node) const;
 
  private:
   ASTToOperatorTranslator();
 
  private:
-  const std::shared_ptr<AbstractOperator> translate_stored_table_node(
-      const std::shared_ptr<AbstractASTNode> &node) const;
-  const std::shared_ptr<AbstractOperator> translate_predicate_node(const std::shared_ptr<AbstractASTNode> &node) const;
-  const std::shared_ptr<AbstractOperator> translate_projection_node(const std::shared_ptr<AbstractASTNode> &node) const;
-  const std::shared_ptr<AbstractOperator> translate_sort_node(const std::shared_ptr<AbstractASTNode> &node) const;
-  const std::shared_ptr<AbstractOperator> translate_join_node(const std::shared_ptr<AbstractASTNode> &node) const;
-  const std::shared_ptr<AbstractOperator> translate_aggregate_node(const std::shared_ptr<AbstractASTNode> &node) const;
+  std::shared_ptr<AbstractOperator> _translate_stored_table_node(const std::shared_ptr<AbstractASTNode> &node) const;
+  std::shared_ptr<AbstractOperator> _translate_predicate_node(const std::shared_ptr<AbstractASTNode> &node) const;
+  std::shared_ptr<AbstractOperator> _translate_projection_node(const std::shared_ptr<AbstractASTNode> &node) const;
+  std::shared_ptr<AbstractOperator> _translate_sort_node(const std::shared_ptr<AbstractASTNode> &node) const;
+  std::shared_ptr<AbstractOperator> _translate_join_node(const std::shared_ptr<AbstractASTNode> &node) const;
+  std::shared_ptr<AbstractOperator> _translate_aggregate_node(const std::shared_ptr<AbstractASTNode> &node) const;
 
  private:
   std::unordered_map<ASTNodeType, std::function<std::shared_ptr<AbstractOperator>(std::shared_ptr<AbstractASTNode>)>>
