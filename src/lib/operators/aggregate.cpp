@@ -26,7 +26,7 @@ Aggregate::Aggregate(const std::shared_ptr<AbstractOperator> in, const std::vect
 
 const std::vector<AggregateDefinition> &Aggregate::aggregates() const { return _aggregates; }
 
-const std::vector<std::string> &Aggregate::groupby_columns() const { return _groupby_columns; }
+const std::vector<ColumnID> &Aggregate::groupby_columns() const { return _groupby_column_ids; }
 
 const std::string Aggregate::name() const { return "Aggregate"; }
 

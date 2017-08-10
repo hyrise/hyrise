@@ -75,7 +75,7 @@ class Aggregate : public AbstractReadOnlyOperator {
             const std::vector<ColumnID> groupby_column_ids);
 
   const std::vector<AggregateDefinition> &aggregates() const;
-  const std::vector<std::string> &groupby_columns() const;
+  const std::vector<ColumnID> &groupby_columns() const;
 
   const std::string name() const override;
   uint8_t num_in_tables() const override;

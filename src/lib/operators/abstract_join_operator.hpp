@@ -31,9 +31,7 @@ class AbstractJoinOperator : public AbstractReadOnlyOperator {
 
   ScanType scan_type() const;
   JoinMode mode() const;
-  const std::string &prefix_left() const;
-  const std::string &prefix_right() const;
-  const optional<std::pair<std::string, std::string>> &column_names() const;
+  const optional<std::pair<ColumnID, ColumnID>> &column_ids() const;
 
   // copying a operator is not allowed
   AbstractJoinOperator(AbstractJoinOperator const &) = delete;
