@@ -1,7 +1,9 @@
 #include "load_table.hpp"
 
 #include <fstream>
+#include <memory>
 #include <string>
+#include <vector>
 
 #include "storage/table.hpp"
 
