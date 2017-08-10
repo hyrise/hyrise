@@ -132,7 +132,12 @@ class RadixPartitionSort {
 
   /**
   * Performs the partitioning on a materialized table using a partitioning function that determines for each
-  * value the appropriate partition id.
+  * value the appropriate partition id. This is how the partitioning works:
+  * -> Count for each chunk how many of its values belong in each of the partitions using histograms.
+  * -> Aggregate the per-chunk histograms to a historam for the whole table. For each chunk it is noted where
+  *    it will be inserting values in each partition.
+  * -> Reserve the appropriate space for each output partition to avoid ongoing vector resizing.
+  * -> At last, each value of each chunk is moved to the appropriate partition.
   **/
   MatTablePtr _partition(MatTablePtr input_chunks, std::function<size_t(T&)> partitioner) {
     auto output_table = std::make_shared<MaterializedTable<T>>(_partition_count);
@@ -167,7 +172,7 @@ class RadixPartitionSort {
     }
 
     // Move each entry into its appropriate partition
-    // TODO: this should be parallelized
+    // TODO(anyone): parallelize this
     for (size_t chunk_number = 0; chunk_number < input_chunks->size(); chunk_number++) {
       auto& chunk_statistics = table_statistics.chunk_statistics[chunk_number];
       for (auto& entry : *input_chunks->at(chunk_number)) {
@@ -191,9 +196,8 @@ class RadixPartitionSort {
 
   /**
   * Picks sample values from a materialized table that are used to determine partition range bounds.
-  * TODO: shitty method signature
   **/
-  T pick_sample_values(std::vector<std::map<T, size_t>>& sample_values, MatTablePtr table) {
+  void pick_sample_values(std::vector<std::map<T, size_t>>& sample_values, MatTablePtr table) {
     auto max_value = table->at(0)->at(0).value;
 
     for (size_t chunk_number = 0; chunk_number < table->size(); chunk_number++) {
@@ -204,13 +208,11 @@ class RadixPartitionSort {
         max_value = chunk_values->back().value;
       }
 
-      for(size_t partition_id = 0; partition_id < _partition_count; partition_id++) {
+      for(size_t partition_id = 0; partition_id < _partition_count - 1; partition_id++) {
         size_t pos = static_cast<size_t>(chunk_values->size() * (partition_id / static_cast<float>(_partition_count)));
         sample_values[partition_id][chunk_values->at(pos).value]++;
       }
     }
-
-    return max_value;
   }
 
   /**
@@ -220,30 +222,32 @@ class RadixPartitionSort {
   std::pair<MatTablePtr, MatTablePtr> _range_partition(MatTablePtr input_left, MatTablePtr input_right) {
     std::vector<std::map<T, size_t>> sample_values(_partition_count);
 
-    auto max_value_left = pick_sample_values(sample_values, input_left);
-    auto max_value_right = pick_sample_values(sample_values, input_right);
+    pick_sample_values(sample_values, input_left);
+    pick_sample_values(sample_values, input_right);
 
-    auto max_value = std::max(max_value_left, max_value_right);
-
-    // Pick the split values to be the most common sample value for each partition
+    // Pick the split values to be the most common sample value for each partition.
+    // The last partition does not need a split value because it covers all values than are bigger than all split values
     std::vector<T> split_values(_partition_count);
-    for (size_t partition_id = 0; partition_id < _partition_count - 1; partition_id++) {
+    for (size_t partition_id = 0; partition_id < _partition_count - 2; partition_id++) {
     split_values[partition_id] = std::max_element(sample_values[partition_id].begin(),
                                                   sample_values[partition_id].end(),
       [] (auto& a, auto& b) {
         return a.second < b.second;
       })->second;
     }
-    split_values.back() = max_value;
 
     // Implements range partitioning
     auto partitioner = [this, &split_values](T& value) {
+      // Find the first split value that is greater or equal to the entry.
+      // The split values are sorted in ascending order.
       for(size_t partition_id = 0; partition_id < _partition_count; partition_id++) {
         if(value <= split_values[partition_id]) {
           return partition_id;
         }
       }
-      throw std::logic_error("There is no partition for this value");
+
+      // The value is greater than all split values, which means it belongs in the last partition.
+      return _partition_count - 1;
     };
 
     auto output_left = _partition(input_left, partitioner);
