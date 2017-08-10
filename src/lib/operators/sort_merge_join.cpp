@@ -18,6 +18,7 @@ namespace opossum {
 * TODO: SortMergeJoin introductory comment
 * TODO: Comments
 * TODO: The SortMergeJoin is still failing for an edge case that is covered by the JoinFullTest/2.GreaterInnerJoin2 Test
+* TODO: Outer Non Equi Joins
 **/
 SortMergeJoin::SortMergeJoin(const std::shared_ptr<const AbstractOperator> left,
                              const std::shared_ptr<const AbstractOperator> right,

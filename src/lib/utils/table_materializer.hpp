@@ -33,25 +33,15 @@ class TableMaterializer : public ColumnVisitable {
   };
 
   /**
-  * Materializes and sorts an input chunk by the specified column in ascending order.
+  * Creates a job to materialized and sort a chunk.
   **/
-  std::shared_ptr<MaterializedChunk<T>> _materialize_chunk(const Chunk& chunk, ChunkID chunk_id, ColumnID column_id) {
-    auto column = chunk.get_column(column_id);
-    auto context = std::make_shared<MaterializationContext>(chunk_id);
-    column->visit(*this, context);
-    return context->output;
-  }
-
-  /**
-  * Creates a job to sort multiple chunks.
-  **/
-  std::shared_ptr<JobTask> _materialize_chunks_job(std::shared_ptr<MaterializedTable<T>> output,
-                            std::vector<ChunkID> chunks, std::shared_ptr<const Table> input, std::string column_name) {
+  std::shared_ptr<JobTask> _materialize_chunk_job(std::shared_ptr<MaterializedTable<T>> output, ChunkID chunk_id,
+                                                   std::shared_ptr<const Table> input, std::string column_name) {
     return std::make_shared<JobTask>([=] {
-      for (auto chunk_id : chunks) {
-        output->at(chunk_id) = _materialize_chunk(input->get_chunk(chunk_id),
-                                                  chunk_id, input->column_id_by_name(column_name));
-      }
+        auto column = input->get_chunk(chunk_id).get_column(input->column_id_by_name(column_name));
+        auto context = std::make_shared<MaterializationContext>(chunk_id);
+        column->visit(*this, context);
+        output->at(chunk_id) = context->output;
     });
   }
 
@@ -158,27 +148,15 @@ class TableMaterializer : public ColumnVisitable {
 public:
   /**
   * Materializes and sorts all the chunks of an input table in parallel
-  * by creating multiple jobs that sort multiple chunks.
+  * by creating multiple jobs that materialize chunks.
   **/
   std::shared_ptr<MaterializedTable<T>> materialize(std::shared_ptr<const Table> input, std::string column) {
     auto output = std::make_shared<MaterializedTable<T>>(input->chunk_count());
 
-    // TODO: appropriately choose job size
-    // Can be extended to find that value dynamically later on (depending on hardware etc.)
-    const size_t job_size_threshold = 10000;
     std::vector<std::shared_ptr<AbstractTask>> jobs;
-
-    size_t job_size = 0;
-    std::vector<ChunkID> chunk_ids;
     for (ChunkID chunk_id{0}; chunk_id < input->chunk_count(); chunk_id++) {
-      job_size += input->get_chunk(chunk_id).size();
-      chunk_ids.push_back(chunk_id);
-      if (job_size > job_size_threshold || chunk_id == input->chunk_count() - 1) {
-        jobs.push_back(_materialize_chunks_job(output, chunk_ids, input, column));
+        jobs.push_back(_materialize_chunk_job(output, chunk_id, input, column));
         jobs.back()->schedule();
-        job_size = 0;
-        chunk_ids.clear();
-      }
     }
 
     CurrentScheduler::wait_for_tasks(jobs);
