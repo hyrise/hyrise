@@ -37,15 +37,3 @@ target_link_libraries(
     opossum
     boost_program_options
 )
-
-# Configure statistics playground
-add_executable(
-    opossumPlaygroundStatistics
-
-    playgroundStatistics.cpp
-)
-target_link_libraries(
-    opossumPlaygroundStatistics
-    opossum
-    tpcc
-)
