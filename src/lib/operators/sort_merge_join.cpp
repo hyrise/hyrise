@@ -15,8 +15,8 @@
 namespace opossum {
 
 /**
-* TODO: Outer Non Equi Joins
-* TODO: Choose an appropriate number of partitions.
+* TODO(arne.mayer): Outer Non Equi Joins
+* TODO(anyone): Choose an appropriate number of partitions.
 **/
 /**
 * The sort merge join performs a join on two input tables on specific join columns. For usage notes, see the
@@ -174,7 +174,7 @@ class SortMergeJoin::SortMergeJoinImpl : public AbstractJoinOperatorImpl {
     auto end_of_right_table = _end_of_table(_sorted_right_table);
 
     // Equi-Join implementation
-    // TODO(anyone): Move these to std::functions for a performance improvement (eliminate chained ifs)s
+    // TODO(anyone): Move these to std::functions for a performance improvement (eliminate chained ifs)
     if (_op == "=") {
       if (left_value == right_value) {
         _emit_combinations(partition_number, left_run, right_run);
@@ -286,6 +286,9 @@ class SortMergeJoin::SortMergeJoinImpl : public AbstractJoinOperatorImpl {
     size_t left_run_start = 0;
     size_t right_run_start = 0;
 
+    // Note: considering the number of comparisons required to identify a run, is this
+    // actually sensible from a performance standpoint? The alternative would be to just compare every left value
+    // with every right value instead of a left run with a right run.
     auto left_run_end = left_run_start + _run_length(left_run_start, left_partition);
     auto right_run_end = right_run_start + _run_length(right_run_start, right_partition);
 
@@ -356,11 +359,13 @@ class SortMergeJoin::SortMergeJoinImpl : public AbstractJoinOperatorImpl {
   std::shared_ptr<PosList> _concatenate_pos_lists(std::vector<std::shared_ptr<PosList>>& pos_lists) {
     auto output = std::make_shared<PosList>();
 
+    // Determine the required space
     size_t total_size = 0;
     for (auto pos_list : pos_lists) {
       total_size += pos_list->size();
     }
 
+    // Move the entries over the output pos list
     output->reserve(total_size);
     for (auto pos_list : pos_lists) {
       output->insert(output->end(), pos_list->begin(), pos_list->end());

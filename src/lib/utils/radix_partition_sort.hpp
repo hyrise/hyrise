@@ -13,6 +13,9 @@
 namespace opossum {
 
 /**
+* Note: What should this class be named, since it was specifically made for the sort merge join and not for general
+* partitioning? Also, we default to range partition sort instead of radix partitioning for the non equi case.
+*
 * Performs radix partitioning for the sort merge join. The radix partitioning algorithm partitions on the basis
 * of the least significant bits of the values because the values there are much more evenly distributed than for the
 * most significant bits. As a result, equal values always get moved to the same partition and the partitions are
@@ -20,9 +23,9 @@ namespace opossum {
 * in equlity. In the case of a non-equi join however, complete sortedness is required, because join matches exist
 * beyond partition borders. Therefore, the partitioner defaults to a range partitioning algorithm for the non-equi-join.
 * General partitioning process:
-*   -> Input chunks are materialized and sorted. Every value is stored together with its row id.
-*   -> Then, either radix partitioning or range partitioning is performed.
-*   -> At last, the resulting partitions are sorted.
+* -> Input chunks are materialized and sorted. Every value is stored together with its row id.
+* -> Then, either radix partitioning or range partitioning is performed.
+* -> At last, the resulting partitions are sorted.
 **/
 template <typename T>
 class RadixPartitionSort {
@@ -49,7 +52,7 @@ class RadixPartitionSort {
   * be able to appropriately reserve space for the partitioning output.
   **/
   struct ChunkStatistics {
-    ChunkStatistics(size_t partition_count) {
+    explicit ChunkStatistics(size_t partition_count) {
       partition_histogram.resize(partition_count);
       insert_position.resize(partition_count);
     }
@@ -66,7 +69,7 @@ class RadixPartitionSort {
     TableStatistics(size_t chunk_count, size_t partition_count) {
       partition_histogram.resize(partition_count);
       chunk_statistics.reserve(chunk_count);
-      for(size_t i = 0; i < chunk_count; i++) {
+      for (size_t i = 0; i < chunk_count; i++) {
         chunk_statistics.push_back(ChunkStatistics(partition_count));
       }
     }
@@ -171,15 +174,21 @@ class RadixPartitionSort {
       output_table->at(partition_id) = std::make_shared<MaterializedChunk<T>>(partition_size);
     }
 
-    // Move each entry into its appropriate partition
-    // TODO(anyone): parallelize this
+    // Move each entry into its appropriate partition in parallel
+    std::vector<std::shared_ptr<AbstractTask>> jobs;
     for (size_t chunk_number = 0; chunk_number < input_chunks->size(); chunk_number++) {
-      auto& chunk_statistics = table_statistics.chunk_statistics[chunk_number];
-      for (auto& entry : *input_chunks->at(chunk_number)) {
-        auto partition_id = partitioner(entry.value);
-        output_table->at(partition_id)->at(chunk_statistics.insert_position[partition_id]++) = entry;
-      }
+      auto job = std::make_shared<JobTask>([chunk_number, output_table, input_chunks, &table_statistics, &partitioner] {
+        auto& chunk_statistics = table_statistics.chunk_statistics[chunk_number];
+        for (auto& entry : *input_chunks->at(chunk_number)) {
+          auto partition_id = partitioner(entry.value);
+          output_table->at(partition_id)->at(chunk_statistics.insert_position[partition_id]++) = entry;
+        }
+      });
+      jobs.push_back(job);
+      job->schedule();
     }
+
+    CurrentScheduler::wait_for_tasks(jobs);
 
     return output_table;
   }
@@ -208,7 +217,7 @@ class RadixPartitionSort {
         max_value = chunk_values->back().value;
       }
 
-      for(size_t partition_id = 0; partition_id < _partition_count - 1; partition_id++) {
+      for (size_t partition_id = 0; partition_id < _partition_count - 1; partition_id++) {
         size_t pos = static_cast<size_t>(chunk_values->size() * (partition_id / static_cast<float>(_partition_count)));
         sample_values[partition_id][chunk_values->at(pos).value]++;
       }
@@ -240,8 +249,8 @@ class RadixPartitionSort {
     auto partitioner = [this, &split_values](T& value) {
       // Find the first split value that is greater or equal to the entry.
       // The split values are sorted in ascending order.
-      for(size_t partition_id = 0; partition_id < _partition_count; partition_id++) {
-        if(value <= split_values[partition_id]) {
+      for (size_t partition_id = 0; partition_id < _partition_count; partition_id++) {
+        if (value <= split_values[partition_id]) {
           return partition_id;
         }
       }
@@ -254,7 +263,6 @@ class RadixPartitionSort {
     auto output_right = _partition(input_right, partitioner);
 
     return std::pair<MatTablePtr, MatTablePtr>(output_left, output_right);
-
   }
 
   /**

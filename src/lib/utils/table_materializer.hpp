@@ -60,7 +60,7 @@ class TableMaterializer : public ColumnVisitable {
     }
 
     // Sort the entries
-    if(_sort) {
+    if (_sort) {
       std::sort(output->begin(), output->end(), [](auto& left, auto& right) { return left.value < right.value; });
     }
 
@@ -138,14 +138,14 @@ class TableMaterializer : public ColumnVisitable {
     }
 
     // Sort the entries
-    if(_sort) {
+    if (_sort) {
       std::sort(output->begin(), output->end(), [](auto& left, auto& right) { return left.value < right.value; });
     }
 
     materialization_context->output = output;
   }
 
-public:
+ public:
   /**
   * Materializes and sorts all the chunks of an input table in parallel
   * by creating multiple jobs that materialize chunks.
