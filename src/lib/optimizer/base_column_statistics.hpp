@@ -75,7 +75,7 @@ struct ColumnSelectivityResult {
  */
 struct TwoColumnSelectivityResult : public ColumnSelectivityResult {
   TwoColumnSelectivityResult(float selectivity, std::shared_ptr<BaseColumnStatistics> column_stats,
-                               std::shared_ptr<BaseColumnStatistics> second_column_stats)
+                             std::shared_ptr<BaseColumnStatistics> second_column_stats)
       : ColumnSelectivityResult{selectivity, column_stats}, second_column_statistics(second_column_stats) {}
 
   std::shared_ptr<BaseColumnStatistics> second_column_statistics;

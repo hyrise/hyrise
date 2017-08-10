@@ -47,7 +47,7 @@ class ColumnStatistics : public BaseColumnStatistics {
 
   TwoColumnSelectivityResult estimate_selectivity_for_predicate(
       const ScanType scan_type, const std::shared_ptr<BaseColumnStatistics> abstract_value_column_statistics,
-      const optional<AllTypeVariant> &value2) override;
+      const optional<AllTypeVariant> &value2 = nullopt) override;
 
  protected:
   std::ostream &print_to_stream(std::ostream &os) const override;
@@ -66,7 +66,10 @@ class ColumnStatistics : public BaseColumnStatistics {
    * @param new_max: Max for new column statistics.
    * @return Selectivity and new column statistics, if selectivity not 0 or 1.
    */
-  ColumnSelectivityResult estimate_selectivity_for_range(ColumnType new_min, ColumnType new_max);
+  ColumnSelectivityResult estimate_selectivity_for_range_and_create_column_statistics(ColumnType minimum,
+                                                                                      ColumnType maximum);
+
+  float estimate_selectivity_for_range(ColumnType minimum, ColumnType maximum);
 
   /**
    * Estimate selectivity for aggregate with scan type equals and constant value.
