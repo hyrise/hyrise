@@ -146,19 +146,32 @@ class RadixPartitionSort {
     auto output_table = std::make_shared<MaterializedTable<T>>(_partition_count);
     TableStatistics table_statistics(input_chunks->size(), _partition_count);
 
-    // Each chunk should prepare additional data to enable partitioning
+    // Count for every chunk the number of entries for each partition in parallel
+    std::vector<std::shared_ptr<AbstractTask>> histogram_jobs;
     for (size_t chunk_number = 0; chunk_number < input_chunks->size(); chunk_number++) {
       auto& chunk_statistics = table_statistics.chunk_statistics[chunk_number];
       auto input_chunk = input_chunks->at(chunk_number);
 
-      // Count the number of entries for each partition
-      // So the partitioner is called twice in this function for each value
-      // Should we save the results to save time? An array holing the partition id for each value would be needed.
-      for (auto& entry : *input_chunk) {
-        auto partition_id = partitioner(entry.value);
-        chunk_statistics.partition_histogram[partition_id]++;
-      }
+      // Count the number of entries for each partition to be able to reserve the appropriate output space later.
+      // Note: Does this make sense from a performance view?
+      // Alternative 1: Straight up appending the output chunks: Downside: ongoing vector resizing
+      // Alternative 2: Estimating the output sizes using samples. Downside: overestimation (unused reserved space)
+      // and underestimation (vector resizing required)
+      // But then we we would not be able to derive the insert positions based on these counts, which
+      // are important for parallel partitioning
+      auto job = std::make_shared<JobTask>([input_chunk, &chunk_statistics, &partitioner] {
+        for (auto& entry : *input_chunk) {
+          auto partition_id = partitioner(entry.value);
+          chunk_statistics.partition_histogram[partition_id]++;
+        }
+      });
+
+      histogram_jobs.push_back(job);
+      job->schedule();
     }
+
+    CurrentScheduler::wait_for_tasks(histogram_jobs);
+
 
     // Aggregate the chunks histograms to a table histogram and initialize the insert positions for each chunk
     for (auto& chunk_statistics : table_statistics.chunk_statistics) {
@@ -175,7 +188,7 @@ class RadixPartitionSort {
     }
 
     // Move each entry into its appropriate partition in parallel
-    std::vector<std::shared_ptr<AbstractTask>> jobs;
+    std::vector<std::shared_ptr<AbstractTask>> partition_jobs;
     for (size_t chunk_number = 0; chunk_number < input_chunks->size(); chunk_number++) {
       auto job = std::make_shared<JobTask>([chunk_number, output_table, input_chunks, &table_statistics, &partitioner] {
         auto& chunk_statistics = table_statistics.chunk_statistics[chunk_number];
@@ -184,11 +197,11 @@ class RadixPartitionSort {
           output_table->at(partition_id)->at(chunk_statistics.insert_position[partition_id]++) = entry;
         }
       });
-      jobs.push_back(job);
+      partition_jobs.push_back(job);
       job->schedule();
     }
 
-    CurrentScheduler::wait_for_tasks(jobs);
+    CurrentScheduler::wait_for_tasks(partition_jobs);
 
     return output_table;
   }
@@ -207,15 +220,8 @@ class RadixPartitionSort {
   * Picks sample values from a materialized table that are used to determine partition range bounds.
   **/
   void pick_sample_values(std::vector<std::map<T, size_t>>& sample_values, MatTablePtr table) {
-    auto max_value = table->at(0)->at(0).value;
-
     for (size_t chunk_number = 0; chunk_number < table->size(); chunk_number++) {
       auto chunk_values = table->at(chunk_number);
-
-      // Since the chunks are sorted, the maximum values are at the back of them
-      if (max_value < chunk_values->back().value) {
-        max_value = chunk_values->back().value;
-      }
 
       for (size_t partition_id = 0; partition_id < _partition_count - 1; partition_id++) {
         size_t pos = static_cast<size_t>(chunk_values->size() * (partition_id / static_cast<float>(_partition_count)));
@@ -249,6 +255,7 @@ class RadixPartitionSort {
     auto partitioner = [this, &split_values](T& value) {
       // Find the first split value that is greater or equal to the entry.
       // The split values are sorted in ascending order.
+      // Note: can we do this faster? (binary search?)
       for (size_t partition_id = 0; partition_id < _partition_count; partition_id++) {
         if (value <= split_values[partition_id]) {
           return partition_id;
