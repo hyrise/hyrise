@@ -26,6 +26,9 @@
 #include "../operators/union_all.hpp"
 #include "../utils/assert.hpp"
 
+#include "constant_mappings.hpp"
+#include "types.hpp"
+
 #include "SQLParser.h"
 
 using hsql::Expr;
@@ -67,9 +70,11 @@ bool SQLQueryTranslator::translate_statement(const SQLStatement& statement) {
   switch (statement.type()) {
     case hsql::kStmtSelect: {
       const SelectStatement& select = (const SelectStatement&)statement;
-      return _translate_select(select);
-    }
-    case hsql::kStmtPrepare: {
+      if (!_translate_select(select)) {
+        return false;
+      }
+
+      _plan.add_tree_by_root(_current_root);
       return true;
     }
     default:
@@ -96,16 +101,15 @@ bool SQLQueryTranslator::_translate_select(const SelectStatement& select) {
   // Add table scan if applicable.
   if (select.whereClause != nullptr) {
     Expr& where = *select.whereClause;
-    auto input_task = _plan.back();
-
-    if (!_translate_filter_expr(where, input_task)) {
+    auto input_op = _current_root;
+    if (!_translate_filter_expr(where, input_op)) {
       return false;
     }
   }
 
   // Translate GROUP BY & HAVING
   if (select.groupBy != nullptr) {
-    if (!_translate_group_by(*select.groupBy, *select.selectList, _plan.back())) {
+    if (!_translate_group_by(*select.groupBy, *select.selectList, _current_root)) {
       return false;
     }
   }
@@ -113,13 +117,13 @@ bool SQLQueryTranslator::_translate_select(const SelectStatement& select) {
   // Translate SELECT list.
   // Add projection for select list.
   // TODO(torpedro): Handle DISTINCT.
-  if (!_translate_projection(*select.selectList, _plan.back())) {
+  if (!_translate_projection(*select.selectList, _current_root)) {
     return false;
   }
 
   // Translate ORDER BY.
   if (select.order != nullptr) {
-    if (!_translate_order_by(*select.order, _plan.back())) {
+    if (!_translate_order_by(*select.order, _current_root)) {
       return false;
     }
   }
@@ -130,29 +134,29 @@ bool SQLQueryTranslator::_translate_select(const SelectStatement& select) {
 }
 
 bool SQLQueryTranslator::_translate_filter_expr(const hsql::Expr& expr,
-                                                const std::shared_ptr<OperatorTask>& input_task) {
+                                                const std::shared_ptr<AbstractOperator>& input_op) {
   if (!expr.isType(hsql::kExprOperator)) {
     _error_msg = "Filter expression clause has to be of type operator!";
     return false;
   }
 
   // Handle operation types and get the filter op string..
-  std::string filter_op = "";
+  ScanType scan_type;
   switch (expr.opType) {
     case hsql::kOpAnd:
       // Recursively translate the child expressions.
       // This will chain TableScans.
-      if (!_translate_filter_expr(*expr.expr, input_task)) {
+      if (!_translate_filter_expr(*expr.expr, input_op)) {
         return false;
       }
-      if (!_translate_filter_expr(*expr.expr2, _plan.back())) {
+      if (!_translate_filter_expr(*expr.expr2, _current_root)) {
         return false;
       }
       return true;
 
     default:
       // Get the operation string, if possible.
-      if (!_translate_filter_op(expr, &filter_op)) {
+      if (!_translate_filter_op(expr, &scan_type)) {
         _error_msg = "Filter expression clause operator is not supported yet!";
         return false;
       }
@@ -173,26 +177,21 @@ bool SQLQueryTranslator::_translate_filter_expr(const hsql::Expr& expr,
   // Get the value.
   // At this moment the value is expected to be a literal.
   Expr* other_expr = (column_expr == expr.expr) ? expr.expr2 : expr.expr;
-  AllTypeVariant value;
-  if (!_translate_literal(*other_expr, &value)) {
-    _error_msg = "Expected literal in WHERE condition.";
-    return false;
-  }
 
-  if (filter_op.length() == 0 || column_name.length() == 0) {
+  const AllParameterVariant value = translate_literal(*other_expr);
+
+  if (column_name.length() == 0) {
     _error_msg = "Unsupported filter expression!";
     return false;
   }
 
-  auto table_scan = std::make_shared<TableScan>(input_task->get_operator(), ColumnName(column_name), filter_op, value);
-  auto scan_task = std::make_shared<OperatorTask>(table_scan);
-  input_task->set_as_predecessor_of(scan_task);
-  _plan.add_task(scan_task);
+  auto table_scan = std::make_shared<TableScan>(input_op, ColumnName(column_name), scan_type, value);
+  _current_root = table_scan;
   return true;
 }
 
 bool SQLQueryTranslator::_translate_projection(const std::vector<hsql::Expr*>& expr_list,
-                                               const std::shared_ptr<OperatorTask>& input_task) {
+                                               const std::shared_ptr<AbstractOperator>& input_op) {
   std::vector<std::string> columns;
   for (const Expr* expr : expr_list) {
     // At this moment we only support selecting columns in the projection.
@@ -215,40 +214,33 @@ bool SQLQueryTranslator::_translate_projection(const std::vector<hsql::Expr*>& e
     return true;
   }
 
-  auto projection = std::make_shared<Projection>(input_task->get_operator(), columns);
-  auto projection_task = std::make_shared<OperatorTask>(projection);
-  input_task->set_as_predecessor_of(projection_task);
-  _plan.add_task(projection_task);
+  auto projection = std::make_shared<Projection>(input_op, columns);
+  _current_root = projection;
   return true;
 }
 
 bool SQLQueryTranslator::_translate_group_by(const hsql::GroupByDescription& group_by,
                                              const std::vector<hsql::Expr*>& select_list,
-                                             const std::shared_ptr<OperatorTask>& input_task) {
-  std::vector<std::pair<std::string, AggregateFunction>> aggregates;
+                                             const std::shared_ptr<AbstractOperator>& input_op) {
+  std::vector<AggregateDefinition> aggregates;
   std::vector<std::string> groupby_columns;
 
   // Process group by columns.
   for (const auto expr : *group_by.columns) {
     DebugAssert(expr->isType(hsql::kExprColumnRef), "Expect group by columns to be column references.");
-    groupby_columns.push_back(expr->name);
+    groupby_columns.push_back(_get_column_name(*expr));
   }
 
   // Process select list to build aggregate functions.
-  std::map<std::string, AggregateFunction> agg_map = {
-      std::pair<std::string, AggregateFunction>("SUM", Sum),     std::pair<std::string, AggregateFunction>("AVG", Avg),
-      std::pair<std::string, AggregateFunction>("MIN", Min),     std::pair<std::string, AggregateFunction>("MAX", Max),
-      std::pair<std::string, AggregateFunction>("COUNT", Count),
-  };
   for (const auto expr : select_list) {
     if (expr->isType(hsql::kExprFunctionRef)) {
       std::string fun_name(expr->name);
 
       DebugAssert(expr->exprList->size() == 1, "Expect SQL functions to only have single argument.");
-      std::string argument = expr->exprList->at(0)->name;
+      std::string argument = _get_column_name(*expr->exprList->at(0));
 
-      if (agg_map.find(fun_name) != agg_map.end()) {
-        aggregates.emplace_back(argument, agg_map[fun_name]);
+      if (aggregate_function_to_string.right.find(fun_name) != aggregate_function_to_string.right.end()) {
+        aggregates.emplace_back(argument, aggregate_function_to_string.right.at(fun_name));
         continue;
       }
 
@@ -259,14 +251,12 @@ bool SQLQueryTranslator::_translate_group_by(const hsql::GroupByDescription& gro
     // TODO(torpedro): Check that all other columns are in the group by columns.
   }
 
-  auto aggregate = std::make_shared<Aggregate>(input_task->get_operator(), aggregates, groupby_columns);
-  auto aggregate_task = std::make_shared<OperatorTask>(aggregate);
-  input_task->set_as_predecessor_of(aggregate_task);
-  _plan.add_task(aggregate_task);
+  auto aggregate = std::make_shared<Aggregate>(input_op, aggregates, groupby_columns);
+  _current_root = aggregate;
 
   // Handle HAVING clause.
   if (group_by.having != nullptr) {
-    if (!_translate_filter_expr(*group_by.having, _plan.back())) {
+    if (!_translate_filter_expr(*group_by.having, _current_root)) {
       return false;
     }
   }
@@ -275,9 +265,9 @@ bool SQLQueryTranslator::_translate_group_by(const hsql::GroupByDescription& gro
 }
 
 bool SQLQueryTranslator::_translate_order_by(const std::vector<hsql::OrderDescription*> order_list,
-                                             const std::shared_ptr<OperatorTask>& input_task) {
+                                             const std::shared_ptr<AbstractOperator>& input_op) {
   // Make mutable copy.
-  std::shared_ptr<OperatorTask> prev_task = input_task;
+  std::shared_ptr<AbstractOperator> prev_op = input_op;
 
   // Go through all the order descriptions and create sort task for each.
   for (const hsql::OrderDescription* order_desc : order_list) {
@@ -286,12 +276,9 @@ bool SQLQueryTranslator::_translate_order_by(const std::vector<hsql::OrderDescri
     // TODO(torpedro): Check that Expr is actual column ref.
     const std::string name = _get_column_name(expr);
     const bool asc = (order_desc->type == hsql::kOrderAsc);
-    auto sort = std::make_shared<Sort>(prev_task->get_operator(), name, asc);
-    auto sort_task = std::make_shared<OperatorTask>(sort);
-    prev_task->set_as_predecessor_of(sort_task);
-    _plan.add_task(sort_task);
-
-    prev_task = sort_task;
+    auto sort = std::make_shared<Sort>(prev_op, name, asc);
+    _current_root = sort;
+    prev_op = sort;
   }
 
   return true;
@@ -301,8 +288,7 @@ bool SQLQueryTranslator::_translate_table_ref(const hsql::TableRef& table) {
   switch (table.type) {
     case hsql::kTableName: {
       auto get_table = std::make_shared<GetTable>(table.name);
-      auto task = std::make_shared<OperatorTask>(get_table);
-      _plan.add_task(task);
+      _current_root = get_table;
       return true;
     }
     case hsql::kTableSelect: {
@@ -316,18 +302,19 @@ bool SQLQueryTranslator::_translate_table_ref(const hsql::TableRef& table) {
       if (!_translate_table_ref(*join_def.left)) {
         return false;
       }
-      auto left_task = _plan.back();
+      auto left_op = _current_root;
 
       if (!_translate_table_ref(*join_def.right)) {
         return false;
       }
-      auto right_task = _plan.back();
+      auto right_op = _current_root;
 
       // Determine join condition.
       const Expr& condition = *join_def.condition;
-      std::pair<std::string, std::string> columns(condition.expr->name, condition.expr2->name);
-      std::string op;
-      if (!_translate_filter_op(condition, &op)) {
+      std::pair<std::string, std::string> columns(_get_column_name(*condition.expr),
+                                                  _get_column_name(*condition.expr2));
+      ScanType scan_type;
+      if (!_translate_filter_op(condition, &scan_type)) {
         _error_msg = "Can not handle JOIN condition.";
         return false;
       }
@@ -336,22 +323,22 @@ bool SQLQueryTranslator::_translate_table_ref(const hsql::TableRef& table) {
       JoinMode mode;
       switch (join_def.type) {
         case hsql::kJoinInner:
-          mode = Inner;
+          mode = JoinMode::Inner;
           break;
         case hsql::kJoinOuter:
-          mode = Outer;
+          mode = JoinMode::Outer;
           break;
         case hsql::kJoinLeft:
-          mode = Left;
+          mode = JoinMode::Left;
           break;
         case hsql::kJoinRight:
-          mode = Right;
+          mode = JoinMode::Right;
           break;
         case hsql::kJoinNatural:
-          mode = Natural;
+          mode = JoinMode::Natural;
           break;
         case hsql::kJoinCross:
-          mode = Cross;
+          mode = JoinMode::Cross;
           break;
         default:
           _error_msg = "Unable to handle join type.";
@@ -363,12 +350,9 @@ bool SQLQueryTranslator::_translate_table_ref(const hsql::TableRef& table) {
       std::string prefix_right = std::string(join_def.right->getName()) + ".";
 
       // TODO(torpedro): Optimize join type selection.
-      auto join = std::make_shared<JoinNestedLoopA>(left_task->get_operator(), right_task->get_operator(), columns, op,
-                                                    mode, prefix_left, prefix_right);
-      auto task = std::make_shared<OperatorTask>(join);
-      left_task->set_as_predecessor_of(task);
-      right_task->set_as_predecessor_of(task);
-      _plan.add_task(task);
+      auto join =
+          std::make_shared<JoinNestedLoopA>(left_op, right_op, columns, scan_type, mode, prefix_left, prefix_right);
+      _current_root = join;
       return true;
     }
     case hsql::kTableCrossProduct: {
@@ -381,45 +365,44 @@ bool SQLQueryTranslator::_translate_table_ref(const hsql::TableRef& table) {
 }
 
 // static
-bool SQLQueryTranslator::_translate_literal(const hsql::Expr& expr, AllTypeVariant* output) {
+const AllParameterVariant SQLQueryTranslator::translate_literal(const hsql::Expr& expr) {
   switch (expr.type) {
     case hsql::kExprLiteralInt:
-      *output = expr.ival;
-      return true;
+      return AllTypeVariant(expr.ival);
     case hsql::kExprLiteralFloat:
-      *output = expr.fval;
-      return true;
+      return AllTypeVariant(expr.fval);
     case hsql::kExprLiteralString:
-      *output = expr.name;
-      return true;
+      return AllTypeVariant(expr.name);
+    case hsql::kExprParameter:
+      return ValuePlaceholder(expr.ival);
     default:
-      return false;
+      throw std::runtime_error("Error while SQL planning. Expected literal.");
   }
 }
 
 // static
-bool SQLQueryTranslator::_translate_filter_op(const hsql::Expr& expr, std::string* output) {
+bool SQLQueryTranslator::_translate_filter_op(const hsql::Expr& expr, ScanType* output) {
   switch (expr.opType) {
     case hsql::kOpEquals:
-      *output = "=";
+      *output = ScanType::OpEquals;
       return true;
     case hsql::kOpLess:
-      *output = "<";
+      *output = ScanType::OpLessThan;
       return true;
     case hsql::kOpGreater:
-      *output = ">";
+      *output = ScanType::OpGreaterThan;
       return true;
     case hsql::kOpGreaterEq:
-      *output = ">=";
+      *output = ScanType::OpGreaterThanEquals;
       return true;
     case hsql::kOpLessEq:
-      *output = "<=";
+      *output = ScanType::OpLessThanEquals;
       return true;
     case hsql::kOpNotEquals:
-      *output = "!=";
+      *output = ScanType::OpNotEquals;
       return true;
     case hsql::kOpBetween:
-      *output = "BETWEEN";
+      *output = ScanType::OpBetween;
       return true;
     default:
       return false;
@@ -434,11 +417,12 @@ std::string SQLQueryTranslator::_get_column_name(const hsql::Expr& expr) {
   if (expr.isType(hsql::kExprFunctionRef)) {
     name += expr.name;
     name += "(";
-    name += expr.exprList->at(0)->name;
+    name += _get_column_name(*expr.exprList->at(0));
     name += ")";
     return name;
   }
 
+  DebugAssert(expr.isType(hsql::kExprColumnRef), "Expected column reference.");
   if (expr.hasTable()) name += std::string(expr.table) + ".";
   name += expr.name;
   return name;

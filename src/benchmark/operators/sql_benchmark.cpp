@@ -1,11 +1,11 @@
 #include <memory>
 #include <string>
-#include <utility>
 
+#include "SQLParser.h"
 #include "benchmark/benchmark.h"
 
-#include "../base_fixture.cpp"
-#include "SQLParser.h"
+#include "../base_fixture.hpp"
+
 #include "sql/sql_query_operator.hpp"
 #include "sql/sql_query_translator.hpp"
 
@@ -16,9 +16,9 @@ using hsql::SQLParserResult;
 
 class SQLBenchmark : public BenchmarkBasicFixture {
  public:
-  virtual void SetUp(const ::benchmark::State& state) {}
+  void SetUp(::benchmark::State& state) override {}
 
-  virtual void TearDown(const ::benchmark::State& state) {}
+  void TearDown(::benchmark::State& state) override {}
 
   const std::string Q1 = "SELECT * FROM test;";
   const std::string Q2 =
@@ -60,6 +60,15 @@ BENCHMARK_F(SQLBenchmark, BM_SQLTranslationOnlyTranslationQ1)(benchmark::State& 
 
 // Q2
 
+BENCHMARK_F(SQLBenchmark, BM_SQLTranslationTotalQ2)(benchmark::State& state) {
+  while (state.KeepRunning()) {
+    SQLParserResult result;
+    SQLParser::parseSQLString(Q2, &result);
+    SQLQueryTranslator translator;
+    translator.translate_parse_result(result);
+  }
+}
+
 BENCHMARK_F(SQLBenchmark, BM_SQLTranslationOnlyParsingQ2)(benchmark::State& state) {
   while (state.KeepRunning()) {
     SQLParserResult result;
@@ -95,22 +104,38 @@ BENCHMARK_F(SQLBenchmark, BM_SQLTranslationOnlyTranslationQ3)(benchmark::State& 
   }
 }
 
-BENCHMARK_F(SQLBenchmark, BM_Q2QueryOperatorWithoutCache)(benchmark::State& state) {
+BENCHMARK_DEFINE_F(SQLBenchmark, BM_Q2QueryOperatorWithoutCache)(benchmark::State& state) {
   // Disable cache.
   SQLQueryOperator::get_parse_tree_cache().clear_and_resize(0);
+  SQLQueryOperator::get_query_plan_cache().clear_and_resize(0);
   while (state.KeepRunning()) {
     SQLQueryOperator operator_q2(Q2, false);
     operator_q2.execute();
   }
 }
 
-BENCHMARK_F(SQLBenchmark, BM_Q2QueryOperatorWithParseTreeCache)(benchmark::State& state) {
+BENCHMARK_DEFINE_F(SQLBenchmark, BM_Q2QueryOperatorWithParseTreeCache)(benchmark::State& state) {
   // Enable cache.
   SQLQueryOperator::get_parse_tree_cache().clear_and_resize(16);
+  SQLQueryOperator::get_query_plan_cache().clear_and_resize(0);
   while (state.KeepRunning()) {
     SQLQueryOperator operator_q2(Q2, false);
     operator_q2.execute();
   }
 }
+
+BENCHMARK_DEFINE_F(SQLBenchmark, BM_Q2QueryOperatorWithQueryPlanCache)(benchmark::State& state) {
+  // Enable cache.
+  SQLQueryOperator::get_parse_tree_cache().clear_and_resize(0);
+  SQLQueryOperator::get_query_plan_cache().clear_and_resize(16);
+  while (state.KeepRunning()) {
+    SQLQueryOperator operator_q2(Q2, false);
+    operator_q2.execute();
+  }
+}
+
+BENCHMARK_REGISTER_F(SQLBenchmark, BM_Q2QueryOperatorWithoutCache)->Apply(BenchmarkBasicFixture::ChunkSizeIn);
+BENCHMARK_REGISTER_F(SQLBenchmark, BM_Q2QueryOperatorWithParseTreeCache)->Apply(BenchmarkBasicFixture::ChunkSizeIn);
+BENCHMARK_REGISTER_F(SQLBenchmark, BM_Q2QueryOperatorWithQueryPlanCache)->Apply(BenchmarkBasicFixture::ChunkSizeIn);
 
 }  // namespace opossum

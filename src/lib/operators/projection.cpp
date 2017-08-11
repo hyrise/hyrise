@@ -25,6 +25,13 @@ uint8_t Projection::num_in_tables() const { return 1; }
 
 uint8_t Projection::num_out_tables() const { return 1; }
 
+std::shared_ptr<AbstractOperator> Projection::recreate(const std::vector<AllParameterVariant>& args) const {
+  if (!_simple_projection.empty()) {
+    return std::make_shared<Projection>(_input_left->recreate(args), _simple_projection);
+  }
+  return std::make_shared<Projection>(_input_left->recreate(args), _projection_definitions);
+}
+
 std::shared_ptr<const Table> Projection::on_execute() {
   if (!_simple_projection.empty()) {
     for (auto& column : _simple_projection) {
@@ -38,7 +45,7 @@ std::shared_ptr<const Table> Projection::on_execute() {
 
   // Prepare terms and output table for each column to project
   for (auto& definition : _projection_definitions) {
-    output->add_column_definition(std::get<2>(definition), std::get<1>(definition));
+    output->add_column_definition(definition.name, definition.type);
   }
 
   for (ChunkID chunk_id{0}; chunk_id < input_table_left()->chunk_count(); ++chunk_id) {
@@ -49,7 +56,7 @@ std::shared_ptr<const Table> Projection::on_execute() {
       chunk_out.use_mvcc_columns_from(input_table_left()->get_chunk(chunk_id));
     }
     for (auto definition : _projection_definitions) {
-      call_functor_by_column_type<ColumnCreator>(std::get<1>(definition), chunk_out, chunk_id, std::get<0>(definition),
+      call_functor_by_column_type<ColumnCreator>(definition.type, chunk_out, chunk_id, definition.expression,
                                                  input_table_left());
     }
     output->add_chunk(std::move(chunk_out));

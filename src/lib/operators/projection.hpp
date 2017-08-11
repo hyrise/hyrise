@@ -12,6 +12,8 @@
 
 namespace opossum {
 
+struct ProjectionDefinition;
+
 /**
  * Operator to select a subset of the set of all columns found in the table
  *
@@ -20,10 +22,18 @@ namespace opossum {
 class Projection : public AbstractReadOnlyOperator {
  public:
   // Defines one output column
-  // Expression that will be converted into a term composition
-  // Type as String
-  // Name of the new column
-  using ProjectionDefinition = std::tuple<std::string /*Expression*/, std::string /*Type*/, std::string /*Name*/>;
+  struct ProjectionDefinition {
+    // Expression that will be converted into a term composition
+    std::string expression;
+    // Type as String
+    std::string type;
+    // Name of the new column
+    std::string name;
+
+    ProjectionDefinition(std::string expr, std::string type, std::string name)
+        : expression(expr), type(type), name(name) {}
+  };
+
   using ProjectionDefinitions = std::vector<ProjectionDefinition>;
 
   Projection(const std::shared_ptr<const AbstractOperator> in, const ProjectionDefinitions& definitions);
@@ -32,6 +42,8 @@ class Projection : public AbstractReadOnlyOperator {
   const std::string name() const override;
   uint8_t num_in_tables() const override;
   uint8_t num_out_tables() const override;
+
+  std::shared_ptr<AbstractOperator> recreate(const std::vector<AllParameterVariant>& args) const override;
 
  protected:
   ProjectionDefinitions _projection_definitions;

@@ -2,6 +2,7 @@
 
 #include <memory>
 #include <string>
+#include <vector>
 
 #include "abstract_read_only_operator.hpp"
 
@@ -17,6 +18,8 @@ class GetTable : public AbstractReadOnlyOperator {
   uint8_t num_out_tables() const override;
 
   const std::string& table_name() const;
+
+  std::shared_ptr<AbstractOperator> recreate(const std::vector<AllParameterVariant>& args) const override;
 
  protected:
   std::shared_ptr<const Table> on_execute() override;

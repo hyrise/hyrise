@@ -277,19 +277,6 @@ class RadixPartitionSort {
   }
 
   /**
-  * Prints out the values of a materialized table.
-  **/
-  void print_table(MatTablePtr table) {
-    std::cout << "----" << std::endl;
-    for (auto chunk : *table) {
-      for (auto& row : *chunk) {
-        std::cout << row.value << std::endl;
-      }
-      std::cout << "----" << std::endl;
-    }
-  }
-
-  /**
   * Sorts all partitions of a materialized table.
   **/
   void _sort_partitions(MatTablePtr partitions) {

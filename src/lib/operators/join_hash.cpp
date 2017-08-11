@@ -1,26 +1,29 @@
+#include "join_hash.hpp"
+
 #include <memory>
 #include <numeric>
 #include <string>
 #include <utility>
 #include <vector>
 
-#include "join_hash.hpp"
 #include "product.hpp"
-#include "utils/assert.hpp"
+
+#include "storage/column_visitable.hpp"
 
 #include "resolve_type.hpp"
+#include "utils/assert.hpp"
 
 namespace opossum {
 
 JoinHash::JoinHash(const std::shared_ptr<const AbstractOperator> left,
                    const std::shared_ptr<const AbstractOperator> right,
-                   optional<std::pair<std::string, std::string>> column_names, const std::string &op,
+                   optional<std::pair<std::string, std::string>> column_names, const ScanType scan_type,
                    const JoinMode mode, const std::string &prefix_left, const std::string &prefix_right)
-    : AbstractJoinOperator(left, right, column_names, op, mode, prefix_left, prefix_right) {
-  DebugAssert((op == "="), (std::string("Operator not supported by Hash Join: ") + op));
-  DebugAssert((_mode != Cross),
+    : AbstractJoinOperator(left, right, column_names, scan_type, mode, prefix_left, prefix_right) {
+  DebugAssert((scan_type == ScanType::OpEquals), (std::string("Operator not supported by Hash Join.")));
+  DebugAssert((_mode != JoinMode::Cross),
               "JoinHash: this operator does not support Cross Joins, the optimizer should use Product operator.");
-  DebugAssert((_mode != Natural), "JoinHash: this operator currently does not support Natural Joins.");
+  DebugAssert((_mode != JoinMode::Natural), "JoinHash: this operator currently does not support Natural Joins.");
   DebugAssert(static_cast<bool>(column_names),
               "JoinHash: optional column names are only supported for Cross and Natural Joins.");
 }
@@ -44,8 +47,8 @@ std::shared_ptr<const Table> JoinHash::on_execute() {
   (2) else the smaller relation will become build relation, the larger probe relation
   (3) for full outer joins we currently don't have an implementation.
   */
-  if (_mode == Left ||
-      (_mode != Right && (_input_left->get_output()->row_count() > _input_right->get_output()->row_count()))) {
+  if (_mode == JoinMode::Left || (_mode != JoinMode::Right &&
+                                  (_input_left->get_output()->row_count() > _input_right->get_output()->row_count()))) {
     // luckily we don't have to swap the operation itself here, because we only support the commutative Equi Join.
     inputs_swapped = true;
     build_operator = _input_right;
@@ -68,7 +71,7 @@ std::shared_ptr<const Table> JoinHash::on_execute() {
   _impl = make_unique_by_column_types<AbstractReadOnlyOperatorImpl, JoinHashImpl>(
       build_input->column_type(build_input->column_id_by_name(build_column_name)),
       probe_input->column_type(probe_input->column_id_by_name(probe_column_name)), build_operator, probe_operator,
-      adjusted_column_names, _op, _mode, _prefix_left, _prefix_right, inputs_swapped);
+      adjusted_column_names, _scan_type, _mode, _prefix_left, _prefix_right, inputs_swapped);
   return _impl->on_execute();
 }
 
@@ -80,12 +83,12 @@ template <typename LeftType, typename RightType>
 class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
  public:
   JoinHashImpl(const std::shared_ptr<const AbstractOperator> left, const std::shared_ptr<const AbstractOperator> right,
-               const std::pair<std::string, std::string> &column_names, const std::string &op, const JoinMode mode,
+               const std::pair<std::string, std::string> &column_names, const ScanType scan_type, const JoinMode mode,
                const std::string &prefix_left, const std::string &prefix_right, const bool inputs_swapped)
       : _left(left),
         _right(right),
         _column_names(column_names),
-        _op(op),
+        _scan_type(scan_type),
         _mode(mode),
         _prefix_left(prefix_left),
         _prefix_right(prefix_right),
@@ -100,7 +103,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
  protected:
   const std::shared_ptr<const AbstractOperator> _left, _right;
   const std::pair<std::string, std::string> _column_names;
-  const std::string _op;
+  const ScanType _scan_type;
   const JoinMode _mode;
   const std::string _prefix_left;
   const std::string _prefix_right;
@@ -481,7 +484,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
               }
               // We assume that the relations have been swapped previously,
               // so that the outer relation is the probing relation.
-            } else if (_mode == Left || _mode == Right) {
+            } else if (_mode == JoinMode::Left || _mode == JoinMode::Right) {
               pos_list_left_local->emplace_back(RowID{ChunkID{0}, INVALID_CHUNK_OFFSET});
               pos_list_right_local->emplace_back(row.row_id);
             }
@@ -491,7 +494,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
             pos_list_left[current_partition_id] = pos_list_left_local;
             pos_list_right[current_partition_id] = pos_list_right_local;
           }
-        } else if (_mode == Left || _mode == Right) {
+        } else if (_mode == JoinMode::Left || _mode == JoinMode::Right) {
           /*
           We assume that the relations have been swapped previously,
           so that the outer relation is the probing relation.

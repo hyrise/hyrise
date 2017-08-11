@@ -35,11 +35,14 @@ namespace opossum {
 class SortMergeJoin : public AbstractJoinOperator {
  public:
   SortMergeJoin(const std::shared_ptr<const AbstractOperator> left, const std::shared_ptr<const AbstractOperator> right,
-                optional<std::pair<std::string, std::string>> column_names, const std::string& op, const JoinMode mode,
+                optional<std::pair<std::string, std::string>> column_names, const ScanType op, const JoinMode mode,
                 const std::string& prefix_left, const std::string& prefix_right);
 
   std::shared_ptr<const Table> on_execute() override { return _impl->on_execute(); };
-
+  std::shared_ptr<AbstractOperator> recreate(const std::vector<AllParameterVariant> &args) const override {
+    Fail("Operator " + this->name() + " does not implement recreation.");
+    return {};
+  }
   const std::string name() const override { return "SortMergeJoin"; };
   uint8_t num_in_tables() const override { return 2u; };
   uint8_t num_out_tables() const override { return 1u; };

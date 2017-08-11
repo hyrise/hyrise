@@ -72,9 +72,7 @@ std::shared_ptr<const Table> ImportBinary::on_execute() {
   std::ifstream file;
   file.open(_filename, std::ios::binary);
 
-  if (!file.is_open()) {
-    throw std::runtime_error("ImportBinary: Could not find file " + _filename);
-  }
+  Assert(file.is_open(), "ImportBinary: Could not find file " + _filename);
 
   file.exceptions(std::ifstream::failbit | std::ifstream::badbit);
 
@@ -111,7 +109,7 @@ std::pair<std::shared_ptr<Table>, ChunkID> ImportBinary::_read_header(std::ifstr
 
 Chunk ImportBinary::_import_chunk(std::ifstream& file, std::shared_ptr<Table>& table) {
   const auto row_count = _read_value<ChunkOffset>(file);
-  Chunk chunk;
+  Chunk chunk{true};
 
   for (ColumnID column_id{0}; column_id < table->col_count(); ++column_id) {
     chunk.add_column(_import_column(file, row_count, table->column_type(column_id)));
@@ -143,7 +141,8 @@ std::shared_ptr<BaseColumn> ImportBinary::_import_column(std::ifstream& file, Ch
       return _import_dictionary_column<DataType>(file, row_count);
     default:
       // This case happens if the read column type is not a valid BinaryColumnType.
-      throw std::logic_error("Cannot import column: invalid column type");
+      Fail("Cannot import column: invalid column type");
+      return {};
   }
 }
 
@@ -157,7 +156,8 @@ std::shared_ptr<BaseAttributeVector> ImportBinary::_import_attribute_vector(
     case 4:
       return std::make_shared<FittedAttributeVector<uint32_t>>(_read_values<uint32_t>(file, row_count));
     default:
-      throw std::logic_error("Cannot import attribute vector with width: " + std::to_string(attribute_vector_width));
+      Fail("Cannot import attribute vector with width: " + std::to_string(attribute_vector_width));
+      return {};
   }
 }
 

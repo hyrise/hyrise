@@ -5,9 +5,12 @@
 #include <utility>
 #include <vector>
 
+#include "abstract_scheduler.hpp"
 #include "current_scheduler.hpp"
-#include "utils/assert.hpp"
+#include "task_queue.hpp"
 #include "worker.hpp"
+
+#include "utils/assert.hpp"
 
 namespace opossum {
 
@@ -76,10 +79,13 @@ void AbstractTask::join() {
    */
   if (CurrentScheduler::is_set()) {
     auto worker = Worker::get_this_thread_worker();
-    worker->_wait_for_tasks({shared_from_this()});
-  } else {
-    _join_without_replacement_worker();
+    if (worker) {
+      worker->_wait_for_tasks(std::vector<std::shared_ptr<AbstractTask>>({shared_from_this()}));
+      return;
+    }
   }
+
+  _join_without_replacement_worker();
 }
 
 void AbstractTask::_join_without_replacement_worker() {

@@ -7,12 +7,18 @@
 #include <utility>
 #include <vector>
 
+#include "base_column.hpp"
 #include "chunk.hpp"
+
 #include "common.hpp"
 #include "type_cast.hpp"
 #include "types.hpp"
+#include "utils/assert.hpp"
 
 namespace opossum {
+
+class TableStatistics;
+
 // A table is partitioned horizontally into a number of chunks
 class Table {
  public:
@@ -53,6 +59,9 @@ class Table {
 
   // adds a chunk to the table
   void add_chunk(Chunk chunk);
+
+  // Returns a list of all column names.
+  const std::vector<std::string> column_names() const;
 
   // returns the column name of the nth column
   const std::string &column_name(ColumnID column_id) const;
@@ -96,7 +105,8 @@ class Table {
         return get<T>((*chunk.get_column(column_id))[row_number + current_size - row_counter]);
       }
     }
-    throw std::runtime_error("Row does not exist.");
+    Fail("Row does not exist.");
+    return {};
   }
 
   // creates a new chunk and appends it
@@ -110,6 +120,10 @@ class Table {
   RowID calculate_row_id(ChunkID chunk, ChunkOffset offset) const { return RowID{chunk, offset}; }
 
   std::unique_lock<std::mutex> acquire_append_mutex();
+
+  void set_table_statistics(std::shared_ptr<TableStatistics> table_statistics) { _table_statistics = table_statistics; }
+
+  std::shared_ptr<TableStatistics> table_statistics() { return _table_statistics; }
 
  protected:
   // 0 means that the chunk has an unlimited size.
@@ -126,6 +140,8 @@ class Table {
   std::vector<std::string> _column_names;
   std::vector<std::string> _column_types;
   std::vector<bool> _column_nullable;
+
+  std::shared_ptr<TableStatistics> _table_statistics;
 
   std::unique_ptr<std::mutex> _append_mutex;
 };

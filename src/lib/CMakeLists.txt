@@ -59,17 +59,18 @@ set(
     concurrency/transaction_context.hpp
     concurrency/transaction_manager.cpp
     concurrency/transaction_manager.hpp
+    constant_mappings.cpp
+    constant_mappings.hpp
     import_export/binary.hpp
     import_export/csv_converter.hpp
     import_export/csv.hpp
-    import_export/csv_non_rfc_parser.cpp
-    import_export/csv_non_rfc_parser.hpp
-    import_export/csv_rfc_parser.cpp
-    import_export/csv_rfc_parser.hpp
+    import_export/csv_parser.cpp
+    import_export/csv_parser.hpp
     import_export/csv_writer.cpp
     import_export/csv_writer.hpp
     network/operator_translator.cpp
     network/operator_translator.hpp
+    network/opossum.pb.wrapper.hpp
     network/request_handler.cpp
     network/request_handler.hpp
     network/response_builder.hpp
@@ -136,18 +137,28 @@ set(
     operators/update.hpp
     operators/validate.cpp
     operators/validate.hpp
+    optimizer/abstract_syntax_tree/abstract_ast_node.cpp
+    optimizer/abstract_syntax_tree/abstract_ast_node.hpp
+    optimizer/abstract_syntax_tree/aggregate_node.cpp
+    optimizer/abstract_syntax_tree/aggregate_node.hpp
+    optimizer/abstract_syntax_tree/join_node.cpp
+    optimizer/abstract_syntax_tree/join_node.hpp
+    optimizer/abstract_syntax_tree/predicate_node.cpp
+    optimizer/abstract_syntax_tree/predicate_node.hpp
+    optimizer/abstract_syntax_tree/projection_node.cpp
+    optimizer/abstract_syntax_tree/projection_node.hpp
+    optimizer/abstract_syntax_tree/sort_node.cpp
+    optimizer/abstract_syntax_tree/sort_node.hpp
+    optimizer/abstract_syntax_tree/stored_table_node.cpp
+    optimizer/abstract_syntax_tree/stored_table_node.hpp
+    optimizer/base_column_statistics.hpp
+    optimizer/column_statistics.cpp
+    optimizer/column_statistics.hpp
+    optimizer/expression/expression_node.cpp
+    optimizer/expression/expression_node.hpp
+    optimizer/table_statistics.cpp
+    optimizer/table_statistics.hpp
     resolve_type.hpp
-    sql/lru_cache.hpp
-    sql/sql_parse_tree_cache.hpp
-    sql/sql_parse_tree_cache.cpp
-    sql/sql_query_operator.hpp
-    sql/sql_query_operator.cpp
-    sql/sql_query_plan.hpp
-    sql/sql_query_plan.cpp
-    sql/sql_query_translator.hpp
-    sql/sql_query_translator.cpp
-    sql/sql_result_operator.hpp
-    sql/sql_result_operator.cpp
     scheduler/abstract_scheduler.cpp
     scheduler/abstract_scheduler.hpp
     scheduler/abstract_task.cpp
@@ -168,6 +179,18 @@ set(
     scheduler/topology.hpp
     scheduler/worker.cpp
     scheduler/worker.hpp
+    sql/lru_cache.hpp
+    sql/sql_expression_translator.cpp
+    sql/sql_expression_translator.hpp
+    sql/sql_query_cache.hpp
+    sql/sql_query_operator.cpp
+    sql/sql_query_operator.hpp
+    sql/sql_query_plan.cpp
+    sql/sql_query_plan.hpp
+    sql/sql_query_translator.cpp
+    sql/sql_query_translator.hpp
+    sql/sql_result_operator.cpp
+    sql/sql_result_operator.hpp
     storage/base_attribute_vector.hpp
     storage/base_column.hpp
     storage/chunk.cpp
@@ -212,8 +235,10 @@ set(
     type_comparison.hpp
     types.hpp
     uid_allocator.hpp
+    utils/assert.hpp
     utils/cuckoo_hashtable.hpp
     utils/radix_partition_sort.hpp
+    utils/helper.hpp
     utils/murmur_hash.cpp
     utils/murmur_hash.hpp
 )

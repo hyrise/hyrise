@@ -4,9 +4,10 @@
 #include <memory>
 #include <string>
 #include <utility>
+#include <vector>
 
-#include "../storage/reference_column.hpp"
-#include "../storage/table.hpp"
+#include "storage/reference_column.hpp"
+#include "storage/table.hpp"
 
 namespace opossum {
 
@@ -18,6 +19,10 @@ const std::string Limit::name() const { return "Limit"; }
 uint8_t Limit::num_in_tables() const { return 1; }
 
 uint8_t Limit::num_out_tables() const { return 1; }
+
+std::shared_ptr<AbstractOperator> Limit::recreate(const std::vector<AllParameterVariant> &args) const {
+  return std::make_shared<Limit>(_input_left->recreate(args), _num_rows);
+}
 
 std::shared_ptr<const Table> Limit::on_execute() {
   const auto input_table = input_table_left();

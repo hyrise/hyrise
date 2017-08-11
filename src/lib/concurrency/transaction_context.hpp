@@ -5,13 +5,12 @@
 #include <memory>
 #include <vector>
 
-#include "commit_context.hpp"
-
 #include "types.hpp"
 
 namespace opossum {
 
 class AbstractReadWriteOperator;
+class CommitContext;
 
 enum class TransactionPhase { Active, Failed, RolledBack, Committing, Committed };
 
@@ -55,9 +54,9 @@ class TransactionContext {
    * Add an operator to the list of read-write operators.
    * Update must not call this because it consists of a Delete and an Insert, which call this themselves.
    */
-  void register_rw_operator(AbstractReadWriteOperator* op) { _rw_operators.push_back(op); }
+  void register_rw_operator(std::shared_ptr<AbstractReadWriteOperator> op) { _rw_operators.push_back(op); }
 
-  std::vector<AbstractReadWriteOperator*> get_rw_operators() const { return _rw_operators; }
+  std::vector<std::shared_ptr<AbstractReadWriteOperator>> get_rw_operators() const { return _rw_operators; }
 
   /**
    * Update the counter of active operators
@@ -70,7 +69,7 @@ class TransactionContext {
  private:
   const TransactionID _transaction_id;
   const CommitID _last_commit_id;
-  std::vector<AbstractReadWriteOperator*> _rw_operators;
+  std::vector<std::shared_ptr<AbstractReadWriteOperator>> _rw_operators;
 
   std::atomic<TransactionPhase> _phase;
   std::shared_ptr<CommitContext> _commit_context;

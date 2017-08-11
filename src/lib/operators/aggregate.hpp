@@ -11,20 +11,22 @@
 #include <vector>
 
 #include "abstract_read_only_operator.hpp"
-#include "resolve_type.hpp"
+
 #include "scheduler/abstract_task.hpp"
 #include "scheduler/current_scheduler.hpp"
 #include "scheduler/job_task.hpp"
+#include "storage/base_attribute_vector.hpp"
+#include "storage/column_visitable.hpp"
 #include "storage/dictionary_column.hpp"
 #include "storage/reference_column.hpp"
 #include "storage/value_column.hpp"
+
+#include "resolve_type.hpp"
 #include "type_comparison.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 
 namespace opossum {
-
-enum AggregateFunction { Min, Max, Sum, Avg, Count };
 
 /*
 Operator to aggregate columns by certain functions, such as min, max, sum, average, and count. The output is a table
@@ -51,17 +53,31 @@ The key type that is used for the aggregation map.
 using AggregateKey = std::vector<AllTypeVariant>;
 
 /**
+ * Struct to specify aggregates.
+ * Aggregates are defined by the column_name they operate on and the aggregate function they use.
+ * Optionally, an alias can be specified to use as the output name.
+ */
+struct AggregateDefinition {
+  AggregateDefinition(const std::string &column_name, const AggregateFunction function,
+                      const optional<std::string> &alias = {});
+
+  std::string column_name;
+  AggregateFunction function;
+  optional<std::string> alias;
+};
+
+/**
  * Note: Aggregate does not support null values at the moment
  */
 class Aggregate : public AbstractReadOnlyOperator {
  public:
-  Aggregate(const std::shared_ptr<AbstractOperator> in,
-            const std::vector<std::pair<std::string, AggregateFunction>> aggregates,
+  Aggregate(const std::shared_ptr<AbstractOperator> in, const std::vector<AggregateDefinition> aggregates,
             const std::vector<std::string> groupby_columns);
 
   const std::string name() const override;
   uint8_t num_in_tables() const override;
   uint8_t num_out_tables() const override;
+  std::shared_ptr<AbstractOperator> recreate(const std::vector<AllParameterVariant> &args) const override;
 
   // write the aggregated output for a given aggregate column
   template <typename ColumnType, AggregateFunction function>
@@ -76,9 +92,10 @@ class Aggregate : public AbstractReadOnlyOperator {
   */
   // MIN, MAX, SUM write the current aggregated value
   template <typename AggregateType, AggregateFunction func>
-  typename std::enable_if<func == Min || func == Max || func == Sum, void>::type _write_aggregate_values(
-      tbb::concurrent_vector<AggregateType> &values,
-      std::shared_ptr<std::map<AggregateKey, AggregateResult<AggregateType>>> results) {
+  typename std::enable_if<
+      func == AggregateFunction::Min || func == AggregateFunction::Max || func == AggregateFunction::Sum, void>::type
+  _write_aggregate_values(tbb::concurrent_vector<AggregateType> &values,
+                          std::shared_ptr<std::map<AggregateKey, AggregateResult<AggregateType>>> results) {
     for (auto &kv : *results) {
       if (!kv.second.current_aggregate) {
         // this needs to be NULL, as soon as that is implemented!
@@ -91,7 +108,7 @@ class Aggregate : public AbstractReadOnlyOperator {
 
   // COUNT writes the aggregate counter
   template <typename AggregateType, AggregateFunction func>
-  typename std::enable_if<func == Count, void>::type _write_aggregate_values(
+  typename std::enable_if<func == AggregateFunction::Count, void>::type _write_aggregate_values(
       tbb::concurrent_vector<AggregateType> &values,
       std::shared_ptr<std::map<AggregateKey, AggregateResult<AggregateType>>> results) {
     for (auto &kv : *results) {
@@ -101,9 +118,9 @@ class Aggregate : public AbstractReadOnlyOperator {
 
   // AVG writes the calculated average from current aggregate and the aggregate counter
   template <typename AggregateType, AggregateFunction func>
-  typename std::enable_if<func == Avg && std::is_arithmetic<AggregateType>::value, void>::type _write_aggregate_values(
-      tbb::concurrent_vector<AggregateType> &values,
-      std::shared_ptr<std::map<AggregateKey, AggregateResult<AggregateType>>> results) {
+  typename std::enable_if<func == AggregateFunction::Avg && std::is_arithmetic<AggregateType>::value, void>::type
+  _write_aggregate_values(tbb::concurrent_vector<AggregateType> &values,
+                          std::shared_ptr<std::map<AggregateKey, AggregateResult<AggregateType>>> results) {
     for (auto &kv : *results) {
       if (!kv.second.current_aggregate) {
         // this needs to be NULL, as soon as that is implemented!
@@ -116,12 +133,13 @@ class Aggregate : public AbstractReadOnlyOperator {
 
   // AVG is not defined for non-arithmetic types. Avoiding compiler errors.
   template <typename AggregateType, AggregateFunction func>
-  typename std::enable_if<func == Avg && !std::is_arithmetic<AggregateType>::value, void>::type _write_aggregate_values(
-      tbb::concurrent_vector<AggregateType>, std::shared_ptr<std::map<AggregateKey, AggregateResult<AggregateType>>>) {
-    throw std::runtime_error("Invalid aggregate");
+  typename std::enable_if<func == AggregateFunction::Avg && !std::is_arithmetic<AggregateType>::value, void>::type
+  _write_aggregate_values(tbb::concurrent_vector<AggregateType>,
+                          std::shared_ptr<std::map<AggregateKey, AggregateResult<AggregateType>>>) {
+    Fail("Invalid aggregate");
   }
 
-  const std::vector<std::pair<std::string, AggregateFunction>> _aggregates;
+  const std::vector<AggregateDefinition> _aggregates;
   const std::vector<std::string> _groupby_columns;
 
   std::unique_ptr<AbstractReadOnlyOperatorImpl> _impl;
@@ -227,13 +245,11 @@ using AggregateFunctor = std::function<optional<AggregateType>(ColumnType, optio
 
 template <typename ColumnType, typename AggregateType, AggregateFunction function>
 struct AggregateFunctionBuilder {
-  AggregateFunctor<ColumnType, AggregateType> get_aggregate_function() {
-    throw std::runtime_error("Invalid aggregate function");
-  }
+  AggregateFunctor<ColumnType, AggregateType> get_aggregate_function() { Fail("Invalid aggregate function"); }
 };
 
 template <typename ColumnType, typename AggregateType>
-struct AggregateFunctionBuilder<ColumnType, AggregateType, Min> {
+struct AggregateFunctionBuilder<ColumnType, AggregateType, AggregateFunction::Min> {
   AggregateFunctor<ColumnType, AggregateType> get_aggregate_function() {
     return [](ColumnType new_value, optional<AggregateType> current_aggregate) {
       return (!current_aggregate || value_smaller(new_value, *current_aggregate)) ? new_value : *current_aggregate;
@@ -242,7 +258,7 @@ struct AggregateFunctionBuilder<ColumnType, AggregateType, Min> {
 };
 
 template <typename ColumnType, typename AggregateType>
-struct AggregateFunctionBuilder<ColumnType, AggregateType, Max> {
+struct AggregateFunctionBuilder<ColumnType, AggregateType, AggregateFunction::Max> {
   AggregateFunctor<ColumnType, AggregateType> get_aggregate_function() {
     return [](ColumnType new_value, optional<AggregateType> current_aggregate) {
       return (!current_aggregate || value_greater(new_value, *current_aggregate)) ? new_value : *current_aggregate;
@@ -251,7 +267,7 @@ struct AggregateFunctionBuilder<ColumnType, AggregateType, Max> {
 };
 
 template <typename ColumnType, typename AggregateType>
-struct AggregateFunctionBuilder<ColumnType, AggregateType, Sum> {
+struct AggregateFunctionBuilder<ColumnType, AggregateType, AggregateFunction::Sum> {
   AggregateFunctor<ColumnType, AggregateType> get_aggregate_function() {
     return [](ColumnType new_value, optional<AggregateType> current_aggregate) {
       return new_value + (!current_aggregate ? 0 : *current_aggregate);
@@ -260,7 +276,7 @@ struct AggregateFunctionBuilder<ColumnType, AggregateType, Sum> {
 };
 
 template <typename ColumnType, typename AggregateType>
-struct AggregateFunctionBuilder<ColumnType, AggregateType, Avg> {
+struct AggregateFunctionBuilder<ColumnType, AggregateType, AggregateFunction::Avg> {
   AggregateFunctor<ColumnType, AggregateType> get_aggregate_function() {
     return [](ColumnType new_value, optional<AggregateType> current_aggregate) {
       return new_value + (!current_aggregate ? 0 : *current_aggregate);
@@ -269,7 +285,7 @@ struct AggregateFunctionBuilder<ColumnType, AggregateType, Avg> {
 };
 
 template <typename ColumnType, typename AggregateType>
-struct AggregateFunctionBuilder<ColumnType, AggregateType, Count> {
+struct AggregateFunctionBuilder<ColumnType, AggregateType, AggregateFunction::Count> {
   AggregateFunctor<ColumnType, AggregateType> get_aggregate_function() {
     return [](ColumnType, optional<AggregateType> current_aggregate) { return current_aggregate; };
   }
@@ -410,7 +426,7 @@ struct aggregate_traits {
 
 // COUNT on all types
 template <typename ColumnType>
-struct aggregate_traits<ColumnType, Count> {
+struct aggregate_traits<ColumnType, AggregateFunction::Count> {
   typedef ColumnType column_type;
   typedef int64_t aggregate_type;
   static constexpr const char *aggregate_type_name = "long";
@@ -418,7 +434,9 @@ struct aggregate_traits<ColumnType, Count> {
 
 // MIN/MAX on all types
 template <typename ColumnType, AggregateFunction function>
-struct aggregate_traits<ColumnType, function, typename std::enable_if<function == Min || function == Max, void>::type> {
+struct aggregate_traits<
+    ColumnType, function,
+    typename std::enable_if<function == AggregateFunction::Min || function == AggregateFunction::Max, void>::type> {
   typedef ColumnType column_type;
   typedef ColumnType aggregate_type;
   static constexpr const char *aggregate_type_name = "";
@@ -426,8 +444,9 @@ struct aggregate_traits<ColumnType, function, typename std::enable_if<function =
 
 // AVG on arithmetic types
 template <typename ColumnType, AggregateFunction function>
-struct aggregate_traits<ColumnType, function,
-                        typename std::enable_if<function == Avg && std::is_arithmetic<ColumnType>::value, void>::type> {
+struct aggregate_traits<
+    ColumnType, function,
+    typename std::enable_if<function == AggregateFunction::Avg && std::is_arithmetic<ColumnType>::value, void>::type> {
   typedef ColumnType column_type;
   typedef double aggregate_type;
   static constexpr const char *aggregate_type_name = "double";
@@ -435,8 +454,9 @@ struct aggregate_traits<ColumnType, function,
 
 // SUM on integers
 template <typename ColumnType, AggregateFunction function>
-struct aggregate_traits<ColumnType, function,
-                        typename std::enable_if<function == Sum && std::is_integral<ColumnType>::value, void>::type> {
+struct aggregate_traits<
+    ColumnType, function,
+    typename std::enable_if<function == AggregateFunction::Sum && std::is_integral<ColumnType>::value, void>::type> {
   typedef ColumnType column_type;
   typedef int64_t aggregate_type;
   static constexpr const char *aggregate_type_name = "long";
@@ -446,7 +466,8 @@ struct aggregate_traits<ColumnType, function,
 template <typename ColumnType, AggregateFunction function>
 struct aggregate_traits<
     ColumnType, function,
-    typename std::enable_if<function == Sum && std::is_floating_point<ColumnType>::value, void>::type> {
+    typename std::enable_if<function == AggregateFunction::Sum && std::is_floating_point<ColumnType>::value,
+                            void>::type> {
   typedef ColumnType column_type;
   typedef double aggregate_type;
   static constexpr const char *aggregate_type_name = "double";
@@ -454,9 +475,11 @@ struct aggregate_traits<
 
 // invalid: AVG on non-arithmetic types
 template <typename ColumnType, AggregateFunction function>
-struct aggregate_traits<ColumnType, function, typename std::enable_if<!std::is_arithmetic<ColumnType>::value &&
-                                                                          (function == Avg || function == Sum),
-                                                                      void>::type> {
+struct aggregate_traits<
+    ColumnType, function,
+    typename std::enable_if<!std::is_arithmetic<ColumnType>::value &&
+                                (function == AggregateFunction::Avg || function == AggregateFunction::Sum),
+                            void>::type> {
   typedef ColumnType column_type;
   typedef ColumnType aggregate_type;
   static constexpr const char *aggregate_type_name = "";
@@ -496,20 +519,20 @@ class AggregateContextCreator {
   static void run(std::vector<std::shared_ptr<ColumnVisitableContext>> &contexts, ColumnID column_index,
                   AggregateFunction function) {
     switch (function) {
-      case Min:
-        contexts[column_index] = make_aggregate_context<ColumnType, Min>();
+      case AggregateFunction::Min:
+        contexts[column_index] = make_aggregate_context<ColumnType, AggregateFunction::Min>();
         break;
-      case Max:
-        contexts[column_index] = make_aggregate_context<ColumnType, Max>();
+      case AggregateFunction::Max:
+        contexts[column_index] = make_aggregate_context<ColumnType, AggregateFunction::Max>();
         break;
-      case Sum:
-        contexts[column_index] = make_aggregate_context<ColumnType, Sum>();
+      case AggregateFunction::Sum:
+        contexts[column_index] = make_aggregate_context<ColumnType, AggregateFunction::Sum>();
         break;
-      case Avg:
-        contexts[column_index] = make_aggregate_context<ColumnType, Avg>();
+      case AggregateFunction::Avg:
+        contexts[column_index] = make_aggregate_context<ColumnType, AggregateFunction::Avg>();
         break;
-      case Count:
-        contexts[column_index] = make_aggregate_context<ColumnType, Count>();
+      case AggregateFunction::Count:
+        contexts[column_index] = make_aggregate_context<ColumnType, AggregateFunction::Count>();
         break;
     }
   }
@@ -522,20 +545,20 @@ class AggregateVisitorCreator {
   static void run(std::shared_ptr<ColumnVisitable> &builder, std::shared_ptr<ColumnVisitableContext> ctx,
                   std::shared_ptr<GroupByContext> groupby_ctx, AggregateFunction function) {
     switch (function) {
-      case Min:
-        builder = make_aggregate_visitor<ColumnType, Min>(ctx, groupby_ctx);
+      case AggregateFunction::Min:
+        builder = make_aggregate_visitor<ColumnType, AggregateFunction::Min>(ctx, groupby_ctx);
         break;
-      case Max:
-        builder = make_aggregate_visitor<ColumnType, Max>(ctx, groupby_ctx);
+      case AggregateFunction::Max:
+        builder = make_aggregate_visitor<ColumnType, AggregateFunction::Max>(ctx, groupby_ctx);
         break;
-      case Sum:
-        builder = make_aggregate_visitor<ColumnType, Sum>(ctx, groupby_ctx);
+      case AggregateFunction::Sum:
+        builder = make_aggregate_visitor<ColumnType, AggregateFunction::Sum>(ctx, groupby_ctx);
         break;
-      case Avg:
-        builder = make_aggregate_visitor<ColumnType, Avg>(ctx, groupby_ctx);
+      case AggregateFunction::Avg:
+        builder = make_aggregate_visitor<ColumnType, AggregateFunction::Avg>(ctx, groupby_ctx);
         break;
-      case Count:
-        builder = make_aggregate_visitor<ColumnType, Count>(ctx, groupby_ctx);
+      case AggregateFunction::Count:
+        builder = make_aggregate_visitor<ColumnType, AggregateFunction::Count>(ctx, groupby_ctx);
         break;
     }
   }
@@ -547,20 +570,20 @@ class AggregateWriter {
   template <typename ColumnType>
   static void run(Aggregate &aggregate_op, ColumnID column_index, AggregateFunction function) {
     switch (function) {
-      case Min:
-        aggregate_op.write_aggregate_output<ColumnType, Min>(column_index);
+      case AggregateFunction::Min:
+        aggregate_op.write_aggregate_output<ColumnType, AggregateFunction::Min>(column_index);
         break;
-      case Max:
-        aggregate_op.write_aggregate_output<ColumnType, Max>(column_index);
+      case AggregateFunction::Max:
+        aggregate_op.write_aggregate_output<ColumnType, AggregateFunction::Max>(column_index);
         break;
-      case Sum:
-        aggregate_op.write_aggregate_output<ColumnType, Sum>(column_index);
+      case AggregateFunction::Sum:
+        aggregate_op.write_aggregate_output<ColumnType, AggregateFunction::Sum>(column_index);
         break;
-      case Avg:
-        aggregate_op.write_aggregate_output<ColumnType, Avg>(column_index);
+      case AggregateFunction::Avg:
+        aggregate_op.write_aggregate_output<ColumnType, AggregateFunction::Avg>(column_index);
         break;
-      case Count:
-        aggregate_op.write_aggregate_output<ColumnType, Count>(column_index);
+      case AggregateFunction::Count:
+        aggregate_op.write_aggregate_output<ColumnType, AggregateFunction::Count>(column_index);
         break;
     }
   }

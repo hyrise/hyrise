@@ -14,27 +14,27 @@
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-parameter"
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-#include "../../lib/network/generated/opossum.grpc.pb.h"
+#include "network/generated/opossum.grpc.pb.h"
 #pragma GCC diagnostic pop
-#include "../../lib/network/response_builder.hpp"
-#include "../../lib/operators/abstract_operator.hpp"
-#include "../../lib/operators/print.hpp"
-#include "../../lib/operators/table_scan.hpp"
-#include "../../lib/operators/table_wrapper.hpp"
-#include "../../lib/storage/dictionary_compression.hpp"
-#include "../../lib/storage/storage_manager.hpp"
-#include "../../lib/storage/table.hpp"
-#include "../../lib/types.hpp"
+#include "network/response_builder.hpp"
+#include "operators/abstract_operator.hpp"
+#include "operators/print.hpp"
+#include "operators/table_scan.hpp"
+#include "operators/table_wrapper.hpp"
+#include "storage/dictionary_compression.hpp"
+#include "storage/storage_manager.hpp"
+#include "storage/table.hpp"
+
+#include "types.hpp"
+#include "utils/assert.hpp"
 
 namespace {
 std::string load_response(const std::string &file_name) {
-  std::ifstream infile(file_name);
   std::string line;
   std::stringstream response_text;
 
-  if (!infile.is_open()) {
-    throw std::runtime_error("load_response: Could not find file " + file_name);
-  }
+  std::ifstream infile(file_name);
+  opossum::Assert(infile.is_open(), "load_response: Could not find file " + file_name);
 
   while (std::getline(infile, line)) {
     response_text << line << std::endl;
@@ -86,7 +86,7 @@ TEST_F(ResponseBuilderTest, BuildResponseRefColumn) {
   proto::Response response;
   auto expected_result = load_response("src/test/responses/int_float_filtered_a_1234.tbl.rsp");
 
-  auto scan_1 = std::make_shared<TableScan>(_table_wrapper, "a", "=", 1234);
+  auto scan_1 = std::make_shared<TableScan>(_table_wrapper, "a", ScanType::OpEquals, 1234);
   scan_1->execute();
   _builder.build_response(response, scan_1->get_output());
 

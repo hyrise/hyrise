@@ -118,10 +118,12 @@ Contact: firstname.lastname@hpi.de
 ## Contributors
 
 -	Yannick	Bäumer
-- Timo Djürken
+-	Timo	Djürken
+-	Fabian	Dumke
 -	Moritz	Eyssen
 -	Martin	Fischer
 -	Pedro	Flemming
+-	Sven	Ihde
 -	Michael	Janke
 -	Max	Jendruk
 -	Marvin	Keller
@@ -131,6 +133,7 @@ Contact: firstname.lastname@hpi.de
 -	Torben	Meyer
 -	David	Schumann
 -	Daniel	Stolpe
+-	Jonathan	Striebel
 -	Nils	Thamm
 -	Carsten	Walther
 -	Fabian	Wiebe

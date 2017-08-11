@@ -31,13 +31,15 @@ TYPED_TEST_CASE(JoinNotEqualInnerTest, JoinNotEqualInnerTypes);
 // This operator is not supported for the SortMergeJoin
 TYPED_TEST(JoinNotEqualInnerTest, NotEqualInnerJoin) {
   // Joining two Integer Columns
-  this->template test_join_output<TypeParam>(
-      this->_table_wrapper_a, this->_table_wrapper_b, std::pair<std::string, std::string>("a", "a"), "!=", Inner,
-      std::string("left."), std::string("right."), "src/test/tables/joinoperators/int_notequal_inner_join.tbl", 1);
+  this->template test_join_output<TypeParam>(this->_table_wrapper_a, this->_table_wrapper_b,
+                                             std::pair<std::string, std::string>("a", "a"), ScanType::OpNotEquals,
+                                             JoinMode::Inner, std::string("left."), std::string("right."),
+                                             "src/test/tables/joinoperators/int_notequal_inner_join.tbl", 1);
   // Joining two Float Columns
-  this->template test_join_output<TypeParam>(
-      this->_table_wrapper_a, this->_table_wrapper_b, std::pair<std::string, std::string>("b", "b"), "!=", Inner,
-      std::string("left."), std::string("right."), "src/test/tables/joinoperators/float_notequal_inner_join.tbl", 1);
+  this->template test_join_output<TypeParam>(this->_table_wrapper_a, this->_table_wrapper_b,
+                                             std::pair<std::string, std::string>("b", "b"), ScanType::OpNotEquals,
+                                             JoinMode::Inner, std::string("left."), std::string("right."),
+                                             "src/test/tables/joinoperators/float_notequal_inner_join.tbl", 1);
 }
 
 }  // namespace opossum

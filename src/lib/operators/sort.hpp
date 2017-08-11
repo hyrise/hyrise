@@ -20,10 +20,11 @@
 namespace opossum {
 
 /**
- * Operator to sort a table by a single column
+ * Operator to sort a table by a single column. This implements a stable sort, i.e., rows that share the same value will
+ * maintain their relative order.
  * Multi-column sort is not supported yet. For now, you will have to sort by the secondary criterion, then by the first
  *
- * Note: Product does not support null values at the moment
+ * Note: Sort does not support null values at the moment
  */
 class Sort : public AbstractReadOnlyOperator {
  public:
@@ -34,6 +35,7 @@ class Sort : public AbstractReadOnlyOperator {
   const std::string name() const override;
   uint8_t num_in_tables() const override;
   uint8_t num_out_tables() const override;
+  std::shared_ptr<AbstractOperator> recreate(const std::vector<AllParameterVariant> &args) const override;
 
  protected:
   std::shared_ptr<const Table> on_execute() override;

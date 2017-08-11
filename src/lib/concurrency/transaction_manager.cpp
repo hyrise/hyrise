@@ -3,6 +3,11 @@
 #include <memory>
 #include <stdexcept>
 
+#include "commit_context.hpp"
+#include "transaction_context.hpp"
+
+#include "operators/commit_records.hpp"
+#include "scheduler/operator_task.hpp"
 #include "utils/assert.hpp"
 
 namespace opossum {
@@ -61,6 +66,24 @@ void TransactionManager::commit(TransactionContext& context, std::function<void(
 
   // TODO(EVERYONE): update _phase when transaction actually committed?
   context._phase = TransactionPhase::Committed;
+}
+
+void TransactionManager::run_transaction(const std::function<void(std::shared_ptr<TransactionContext>)>& fn) {
+  auto transaction_context = new_transaction_context();
+
+  fn(transaction_context);
+
+  // Commit
+  TransactionManager::get().prepare_commit(*transaction_context);
+
+  auto commit = std::make_shared<CommitRecords>();
+  commit->set_transaction_context(transaction_context);
+
+  auto commit_task = std::make_shared<OperatorTask>(commit);
+  commit_task->schedule();
+  commit_task->join();
+
+  TransactionManager::get().commit(*transaction_context);
 }
 
 /**

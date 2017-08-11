@@ -1,5 +1,4 @@
 #include "adaptive_radix_tree_nodes.hpp"
-#include "adaptive_radix_tree_index.hpp"
 
 #include <algorithm>
 #include <iterator>
@@ -7,10 +6,12 @@
 #include <utility>
 #include <vector>
 
-#include "../../../types.hpp"
-#include "../../base_column.hpp"
-#include "../../untyped_dictionary_column.hpp"
-#include "../base_index.hpp"
+#include "adaptive_radix_tree_index.hpp"
+
+#include "storage/index/base_index.hpp"
+
+#include "types.hpp"
+#include "utils/assert.hpp"
 
 namespace opossum {
 
@@ -95,7 +96,8 @@ BaseIndex::Iterator Node4::end() const {
       return _children[i - 1]->end();
     }
   }
-  throw std::logic_error("Empty _children array in Node4 should never happen");
+  Fail("Empty _children array in Node4 should never happen");
+  return {};
 }
 
 /**
@@ -165,18 +167,16 @@ BaseIndex::Iterator Node16::_delegate_to_child(
 
 BaseIndex::Iterator Node16::lower_bound(const AdaptiveRadixTreeIndex::BinaryComparable &key, size_t depth) const {
   return _delegate_to_child(
-      key, depth,
-      [this](std::iterator_traits<std::array<uint8_t, 16>::iterator>::difference_type partial_key_pos,
-             AdaptiveRadixTreeIndex::BinaryComparable key,
-             size_t depth) { return _children[partial_key_pos]->lower_bound(key, depth); });
+      key, depth, [this](std::iterator_traits<std::array<uint8_t, 16>::iterator>::difference_type partial_key_pos,
+                         AdaptiveRadixTreeIndex::BinaryComparable key,
+                         size_t depth) { return _children[partial_key_pos]->lower_bound(key, depth); });
 }
 
 BaseIndex::Iterator Node16::upper_bound(const AdaptiveRadixTreeIndex::BinaryComparable &key, size_t depth) const {
   return _delegate_to_child(
-      key, depth,
-      [this](std::iterator_traits<std::array<uint8_t, 16>::iterator>::difference_type partial_key_pos,
-             AdaptiveRadixTreeIndex::BinaryComparable key,
-             size_t depth) { return _children[partial_key_pos]->upper_bound(key, depth); });
+      key, depth, [this](std::iterator_traits<std::array<uint8_t, 16>::iterator>::difference_type partial_key_pos,
+                         AdaptiveRadixTreeIndex::BinaryComparable key,
+                         size_t depth) { return _children[partial_key_pos]->upper_bound(key, depth); });
 }
 
 BaseIndex::Iterator Node16::begin() const { return _children[0]->begin(); }
@@ -287,7 +287,8 @@ BaseIndex::Iterator Node48::begin() const {
       return _children[_index_to_child[i]]->begin();
     }
   }
-  throw std::logic_error("Empty _index_to_child array in Node48 should never happen");
+  Fail("Empty _index_to_child array in Node48 should never happen");
+  return {};
 }
 
 BaseIndex::Iterator Node48::end() const {
@@ -296,7 +297,8 @@ BaseIndex::Iterator Node48::end() const {
       return _children[_index_to_child[i]]->begin();
     }
   }
-  throw std::logic_error("Empty _index_to_child array in Node48 should never happen");
+  Fail("Empty _index_to_child array in Node48 should never happen");
+  return {};
 }
 
 /**
@@ -372,7 +374,8 @@ BaseIndex::Iterator Node256::begin() const {
       return _children[i]->begin();
     }
   }
-  throw std::logic_error("Empty _children array in Node256 should never happen");
+  Fail("Empty _children array in Node256 should never happen");
+  return {};
 }
 
 BaseIndex::Iterator Node256::end() const {
@@ -381,7 +384,8 @@ BaseIndex::Iterator Node256::end() const {
       return _children[i]->begin();
     }
   }
-  throw std::logic_error("Empty _children array in Node256 should never happen");
+  Fail("Empty _children array in Node256 should never happen");
+  return {};
 }
 
 Leaf::Leaf(BaseIndex::Iterator &lower, BaseIndex::Iterator &upper) : _begin(lower), _end(upper) {}

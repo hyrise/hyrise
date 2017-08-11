@@ -2,8 +2,11 @@
 
 #include <memory>
 #include <string>
+#include <vector>
 
 #include "abstract_read_write_operator.hpp"
+
+#include "utils/assert.hpp"
 
 namespace opossum {
 
@@ -31,6 +34,10 @@ class Update : public AbstractReadWriteOperator {
 
   const std::string name() const override;
   uint8_t num_in_tables() const override;
+  std::shared_ptr<AbstractOperator> recreate(const std::vector<AllParameterVariant>& args) const override {
+    Fail("Operator " + this->name() + " does not implement recreation.");
+    return {};
+  }
 
  protected:
   std::shared_ptr<const Table> on_execute(std::shared_ptr<TransactionContext> context) override;
@@ -38,7 +45,7 @@ class Update : public AbstractReadWriteOperator {
 
  protected:
   const std::string _table_to_update_name;
-  std::unique_ptr<Delete> _delete;
-  std::unique_ptr<Insert> _insert;
+  std::shared_ptr<Delete> _delete;
+  std::shared_ptr<Insert> _insert;
 };
 }  // namespace opossum

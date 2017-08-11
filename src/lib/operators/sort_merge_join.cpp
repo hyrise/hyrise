@@ -29,15 +29,16 @@ namespace opossum {
 **/
 SortMergeJoin::SortMergeJoin(const std::shared_ptr<const AbstractOperator> left,
                              const std::shared_ptr<const AbstractOperator> right,
-                             optional<std::pair<std::string, std::string>> column_names, const std::string& op,
+                             optional<std::pair<std::string, std::string>> column_names, const ScanType op,
                              const JoinMode mode, const std::string& prefix_left, const std::string& prefix_right)
     : AbstractJoinOperator(left, right, column_names, op, mode, prefix_left, prefix_right) {
   // Validate the parameters
-  DebugAssert(mode != Cross && column_names, "This operator does not support cross joins.");
+  DebugAssert(mode != JoinMode::Cross && column_names, "This operator does not support cross joins.");
   DebugAssert(left != nullptr, "The left input operator is null.");
   DebugAssert(right != nullptr, "The right input operator is null.");
-  DebugAssert(op == "=" || op == "<" || op == ">" || op == "<=" || op == ">=", "unknown operator " + op);
-  DebugAssert(op == "=" || mode == Inner, "Outer joins are only implemented for equi joins.");
+  DebugAssert(op == ScanType::OpEquals || op == ScanType::OpLessThan || op == ScanType::OpGreaterThan ||
+              op == ScanType::OpLessThanEquals || op == ScanType::OpGreaterThanEquals, "Unsupported scan type");
+  DebugAssert(op == ScanType::OpEquals || mode == JoinMode::Inner, "Outer joins are only implemented for equi joins.");
   DebugAssert(static_cast<bool>(column_names), "The column names are not optional for the SortMergeJoin.");
 
   auto left_column_name = column_names->first;
@@ -63,7 +64,7 @@ template <typename T>
 class SortMergeJoin::SortMergeJoinImpl : public AbstractJoinOperatorImpl {
  public:
   SortMergeJoinImpl<T>(SortMergeJoin& sort_merge_join, std::string left_column_name,
-                       std::string right_column_name, std::string op, JoinMode mode)
+                       std::string right_column_name, const ScanType op, JoinMode mode)
     : _sort_merge_join{sort_merge_join}, _left_column_name{left_column_name}, _right_column_name{right_column_name},
       _op{op}, _mode{mode} {
 
@@ -84,7 +85,7 @@ class SortMergeJoin::SortMergeJoinImpl : public AbstractJoinOperatorImpl {
   const std::string _left_column_name;
   const std::string _right_column_name;
 
-  const std::string _op;
+  const ScanType _op;
   const JoinMode _mode;
 
   // the partition count should be a power of two, i.e. 1, 2, 4, 8, 16, ...
@@ -174,7 +175,7 @@ class SortMergeJoin::SortMergeJoinImpl : public AbstractJoinOperatorImpl {
 
     // Equi-Join implementation
     // TODO(anyone): Move these to std::functions for a performance improvement (eliminate chained ifs)
-    if (_op == "=") {
+    if (_op == ScanType::OpEquals) {
       if (left_value == right_value) {
         _emit_combinations(partition_number, left_run, right_run);
       } else {
@@ -182,34 +183,34 @@ class SortMergeJoin::SortMergeJoinImpl : public AbstractJoinOperatorImpl {
         // Add null values when appropriate on the side which index gets increased at the end of one loop run
         if (left_value < right_value) {
           // Check for correct mode
-          if (_mode == Left || _mode == Outer) {
+          if (_mode == JoinMode::Left || _mode == JoinMode::Outer) {
             _emit_right_null_combinations(partition_number, left_run);
           }
         } else {
           // Check for correct mode
-          if (_mode == Right || _mode == Outer) {
+          if (_mode == JoinMode::Right || _mode == JoinMode::Outer) {
             _emit_left_null_combinations(partition_number, right_run);
           }
         }
       }
-    } else if (_op == ">") {
+    } else if (_op == ScanType::OpGreaterThan) {
       // Greater-Join implementation
       if (left_value > right_value) {
         _emit_combinations(partition_number, left_run.start.to(end_of_left_table), right_run);
       } else if (left_value == right_value) {
         _emit_combinations(partition_number, left_run.end.to(end_of_left_table), right_run);
       }
-    } else if (_op == ">=" && left_value >= right_value) {
+    } else if (_op == ScanType::OpGreaterThanEquals && left_value >= right_value) {
       // Grequal-Join implmentation
       _emit_combinations(partition_number, left_run.start.to(end_of_left_table), right_run);
-    } else if (_op == "<") {
+    } else if (_op == ScanType::OpLessThan) {
       // Less-Join implementation
       if (left_value < right_value) {
         _emit_combinations(partition_number, left_run, right_run.start.to(end_of_right_table));
       } else if (left_value == right_value) {
         _emit_combinations(partition_number, left_run, right_run.end.to(end_of_right_table));
       }
-    } else if (_op == "<=" && left_value <= right_value) {
+    } else if (_op == ScanType::OpLessThanEquals && left_value <= right_value) {
       // Lequal-Join implementation
       _emit_combinations(partition_number, left_run, right_run.start.to(end_of_right_table));
     }
@@ -325,12 +326,12 @@ class SortMergeJoin::SortMergeJoinImpl : public AbstractJoinOperatorImpl {
     // It is important for outer joins to include this element.
 
     // The left side has finished -> add the remaining values of the right side
-    if (left_run_start == left_size && (_mode == Right || _mode == Outer)) {
+    if (left_run_start == left_size && (_mode == JoinMode::Right || _mode == JoinMode::Outer)) {
       _emit_left_null_combinations(partition_number, TableRange(partition_number, right_run_start, right_size));
     }
 
     // The right side has finished -> add the remaining values of the left side
-    if (right_run_start == right_size && (_mode == Left || _mode == Outer)) {
+    if (right_run_start == right_size && (_mode == JoinMode::Left || _mode == JoinMode::Outer)) {
       _emit_right_null_combinations(partition_number, TableRange(partition_number, left_run_start, left_size));
     }
   }
@@ -431,7 +432,7 @@ class SortMergeJoin::SortMergeJoinImpl : public AbstractJoinOperatorImpl {
   **/
   std::shared_ptr<const Table> on_execute() {
     auto radix_partitioner = RadixPartitionSort<T>(_sort_merge_join._input_left, _sort_merge_join._input_right,
-                              *_sort_merge_join._column_names, _op == "=", _partition_count);
+                              *_sort_merge_join._column_names, _op == ScanType::OpEquals, _partition_count);
     // Sort and partition the input tables
     radix_partitioner.execute();
     auto sort_output = radix_partitioner.get_output();

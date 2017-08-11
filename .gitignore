@@ -12,6 +12,7 @@ benchmark.json
 *.xcworkspace
 src/lib/network/generated
 .vscode
+*.pyc
 
 # CLion cmake directory
-cmake-build-debug
+cmake-build-*

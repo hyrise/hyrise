@@ -5,6 +5,7 @@
 #include <cstdint>
 #include <limits>
 #include <string>
+#include <tuple>
 #include <vector>
 #include <memory>
 
@@ -95,6 +96,82 @@ enum class SchedulePriority {
   Normal = 1,  // Schedule task at the end of the queue
   High = 0     // Schedule task at the beginning of the queue
 };
+
+// Part of AllParameterVariant to reference parameters that will be replaced later.
+// When stored in an operator, the operator's recreate method can contain functionality
+// that will replace a ValuePlaceholder with an explicit value from a given list of arguments
+class ValuePlaceholder {
+ public:
+  explicit ValuePlaceholder(uint16_t index) : _index(index) {}
+
+  uint16_t index() const { return _index; }
+
+ private:
+  uint16_t _index;
+};
+
+// TODO(anyone): integrate and replace with ExpressionType
+enum class ScanType {
+  OpEquals,
+  OpNotEquals,
+  OpLessThan,
+  OpLessThanEquals,
+  OpGreaterThan,
+  OpGreaterThanEquals,
+  OpBetween,
+  OpLike
+};
+
+enum class ExpressionType {
+  /*Any literal value*/
+  Literal,
+  /*A star as in SELECT * FROM ...*/
+  Star,
+  /*A parameter used in PreparedStatements*/
+  Placeholder,
+  /*A reference to a column*/
+  ColumnReference,
+  /*A reference to a function, such as COUNT, MIN, MAX*/
+  FunctionReference,
+
+  /*A subselect*/
+  Select,
+
+  /*Arithmetic operators*/
+  Addition,
+  Subtraction,
+  Multiplication,
+  Division,
+  Modulo,
+  Power,
+
+  /*Logical operators*/
+  Equals,
+  NotEquals,
+  LessThan,
+  LessThanEquals,
+  GreaterThan,
+  GreaterThanEquals,
+  Like,
+  NotLike,
+  And,
+  Or,
+  Between,
+  Not,
+
+  /*Set operators*/
+  In,
+  Exists,
+
+  /*Others*/
+  IsNull,
+  Case,
+  Hint
+};
+
+enum class JoinMode { Inner, Left, Right, Outer, Cross, Natural, Self };
+
+enum class AggregateFunction { Min, Max, Sum, Avg, Count };
 
 template <typename T>
 struct MaterializedValue {

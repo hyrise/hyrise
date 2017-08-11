@@ -4,9 +4,6 @@
 #include <functional>
 #include <memory>
 
-#include "commit_context.hpp"
-#include "transaction_context.hpp"
-
 #include "types.hpp"
 
 /**
@@ -40,6 +37,9 @@
  */
 
 namespace opossum {
+
+class CommitContext;
+class TransactionContext;
 
 /**
  * The TransactionManager is responsible for a consistent assignment of
@@ -94,6 +94,11 @@ class TransactionManager {
   void commit(TransactionContext &context, std::function<void(TransactionID)> callback = nullptr);
 
   /** @} */
+
+  /**
+   * Helper: Create a transaction context, run a function with it and commit the transaction afterwards
+   */
+  void run_transaction(const std::function<void(std::shared_ptr<TransactionContext>)> &fn);
 
  private:
   TransactionManager();

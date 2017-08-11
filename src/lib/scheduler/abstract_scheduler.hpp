@@ -9,10 +9,8 @@ namespace opossum {
 
 class AbstractTask;
 class CurrentScheduler;
-class JobTask;
 class TaskQueue;
 class Topology;
-class Worker;
 
 class AbstractScheduler {
   friend class CurrentScheduler;

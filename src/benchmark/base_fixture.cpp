@@ -1,51 +1,48 @@
+#include "base_fixture.hpp"
+
 #include <memory>
-#include <string>
-#include <utility>
 #include <vector>
 
 #include "benchmark/benchmark.h"
 
-#include "../lib/operators/table_wrapper.hpp"
-#include "../lib/storage/storage_manager.hpp"
-#include "../lib/storage/table.hpp"
-#include "../lib/types.hpp"
 #include "table_generator.hpp"
+
+#include "operators/table_wrapper.hpp"
+#include "storage/storage_manager.hpp"
+
+#include "types.hpp"
 
 namespace opossum {
 
-// Defining the base fixture class
-class BenchmarkBasicFixture : public benchmark::Fixture {
- public:
-  BenchmarkBasicFixture() {
-    // Generating a test table with generate_table function from table_generator.cpp
+void BenchmarkBasicFixture::SetUp(::benchmark::State& state) {
+  // Generating a test table with generate_table function from table_generator.cpp
+  _chunk_size = static_cast<ChunkID>(state.range(0));
 
-    auto table_generator = std::make_shared<TableGenerator>();
+  auto table_generator = std::make_shared<TableGenerator>();
 
-    auto table = table_generator->get_table();
+  auto table_generator2 = std::make_shared<TableGenerator>();
 
-    auto table_generator2 = std::make_shared<TableGenerator>();
+  _table_wrapper_a = std::make_shared<TableWrapper>(table_generator->get_table(_chunk_size));
+  _table_wrapper_b = std::make_shared<TableWrapper>(table_generator2->get_table(_chunk_size));
+  _table_wrapper_a->execute();
+  _table_wrapper_b->execute();
+}
 
-    auto table2 = table_generator2->get_table();
+void BenchmarkBasicFixture::TearDown(::benchmark::State&) { opossum::StorageManager::get().reset(); }
 
-    _table_wrapper_a = std::make_shared<TableWrapper>(table_generator->get_table());
-    _table_wrapper_b = std::make_shared<TableWrapper>(table_generator2->get_table());
-    _table_wrapper_a->execute();
-    _table_wrapper_b->execute();
+void BenchmarkBasicFixture::ChunkSizeIn(benchmark::internal::Benchmark* b) {
+  for (ChunkID i : {ChunkID(0), ChunkID(10000), ChunkID(100000)}) {
+    b->Args({static_cast<int>(i)});  // i = chunk size
   }
+}
 
-  virtual void TearDown(const ::benchmark::State&) { opossum::StorageManager::get().reset(); }
-
- protected:
-  std::shared_ptr<TableWrapper> _table_wrapper_a;
-  std::shared_ptr<TableWrapper> _table_wrapper_b;
-
-  void clear_cache() {
-    std::vector<int> clear = std::vector<int>();
-    clear.resize(500 * 1000 * 1000, 42);
-    for (uint i = 0; i < clear.size(); i++) {
-      clear[i] += 1;
-    }
-    clear.resize(0);
+void BenchmarkBasicFixture::clear_cache() {
+  std::vector<int> clear = std::vector<int>();
+  clear.resize(500 * 1000 * 1000, 42);
+  for (uint i = 0; i < clear.size(); i++) {
+    clear[i] += 1;
   }
-};
+  clear.resize(0);
+}
+
 }  // namespace opossum

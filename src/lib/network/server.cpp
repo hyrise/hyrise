@@ -1,26 +1,15 @@
 #include "server.hpp"
 
-#include <algorithm>
-#include <atomic>
-#include <csignal>
 #include <iostream>
 #include <memory>
 #include <string>
 #include <thread>
-#include <utility>
-#include <vector>
 
-#include "operators/abstract_operator.hpp"
-#include "operators/get_table.hpp"
-#include "operators/import_csv.hpp"
-#include "operators/print.hpp"
-#include "operators/projection.hpp"
-#include "operators/table_scan.hpp"
-#include "scheduler/job_task.hpp"
+#include "request_handler.hpp"
+#include "server_configuration.hpp"
+
+#include "scheduler/current_scheduler.hpp"
 #include "scheduler/node_queue_scheduler.hpp"
-#include "scheduler/operator_task.hpp"
-#include "storage/storage_manager.hpp"
-#include "storage/table.hpp"
 
 namespace opossum {
 
