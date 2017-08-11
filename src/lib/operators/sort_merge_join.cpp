@@ -45,11 +45,10 @@ SortMergeJoin::SortMergeJoin(const std::shared_ptr<const AbstractOperator> left,
 
   // Check column types
   const auto left_column_id = input_table_left()->column_id_by_name(left_column_name);
-  const auto right_column_id = input_table_right()->column_id_by_name(right_column_name);
   const auto& left_column_type = input_table_left()->column_type(left_column_id);
-  const auto& right_column_type = input_table_right()->column_type(right_column_id);
 
-  DebugAssert(left_column_type == right_column_type,
+  DebugAssert(left_column_type == input_table_right()->column_type(
+                                                          input_table_right()->column_id_by_name(right_column_name)),
               "Left and right column types do not match. The SortMergeJoin requires matching column types");
 
   // Create implementation to compute the join result

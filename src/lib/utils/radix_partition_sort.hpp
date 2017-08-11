@@ -208,6 +208,10 @@ class RadixPartitionSort {
 
   /**
   * Performs least significant bit radix partitioning which is used in the equi join case.
+  * Note: if we used the most significant bits, we could also use this for non-equi joins.
+  * Then, however we would have to deal with skewed partitions. Other ideas:
+  * - hand select the partitioning bits based on statistics.
+  * - consolidate partitions in order to reduce skew.
   **/
   MatTablePtr _radix_partition(MatTablePtr input_chunks) {
     auto radix_bitmask = _partition_count - 1;
