@@ -29,10 +29,6 @@ class AbstractJoinOperator : public AbstractReadOnlyOperator {
 
   virtual ~AbstractJoinOperator() = default;
 
-  // copying a operator is not allowed
-  AbstractJoinOperator(AbstractJoinOperator const &) = delete;
-  AbstractJoinOperator &operator=(const AbstractJoinOperator &) = delete;
-
   // we need to explicitly set the move constructor to default when
   // we overwrite the copy constructor
   AbstractJoinOperator(AbstractJoinOperator &&) = default;

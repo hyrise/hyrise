@@ -44,8 +44,6 @@ class CompositeGroupKeyIndex : public BaseIndex {
   friend class CompositeGroupKeyIndexTest;
 
  public:
-  CompositeGroupKeyIndex(const CompositeGroupKeyIndex &) = delete;
-  CompositeGroupKeyIndex &operator=(const CompositeGroupKeyIndex &) = delete;
   CompositeGroupKeyIndex(CompositeGroupKeyIndex &&) = default;
   CompositeGroupKeyIndex &operator=(CompositeGroupKeyIndex &&) = default;
   ~CompositeGroupKeyIndex() = default;

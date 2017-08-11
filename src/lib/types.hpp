@@ -173,6 +173,16 @@ enum class JoinMode { Inner, Left, Right, Outer, Cross, Natural, Self };
 
 enum class AggregateFunction { Min, Max, Sum, Avg, Count };
 
+class Noncopyable {
+ protected:
+  Noncopyable() = default;
+  Noncopyable(Noncopyable &&) = default;
+  Noncopyable &operator=(Noncopyable &&) = default;
+  ~Noncopyable() = default;
+  Noncopyable(const Noncopyable &) = delete;
+  const Noncopyable &operator=(const Noncopyable &) = delete;
+};
+
 template <typename T>
 struct MaterializedValue {
   MaterializedValue() {}
@@ -187,5 +197,6 @@ using MaterializedChunk = std::vector<MaterializedValue<T>>;
 
 template <typename T>
 using MaterializedTable = std::vector<std::shared_ptr<MaterializedChunk<T>>>;
+
 
 }  // namespace opossum
