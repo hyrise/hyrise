@@ -65,5 +65,6 @@ add_executable(
 target_link_libraries(
     opossumConsole
     opossum
+    tpcc
     readline
 )

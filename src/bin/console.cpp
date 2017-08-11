@@ -4,6 +4,9 @@
 #include <readline/readline.h>
 #include <readline/history.h>
 
+#include "storage/storage_manager.hpp"
+#include "tpcc/tpcc_table_generator.hpp"
+
 namespace {
 
   // Helper functions
@@ -25,6 +28,7 @@ namespace opossum {
 // Command functions declaration
 
 int exit(const std::string &);
+int load_tpcc(const std::string &);
 
 // Console implementation
 
@@ -75,7 +79,7 @@ int Console::_eval(const std::string & input) {
 }
 
 int Console::_eval_command(const CommandFunction & f, const std::string & input) {
-  size_t first = input.find('(');
+  size_t first = input.find('(') + 1;
   size_t last = input.find_last_of(')');
 
   if (std::string::npos == first)
@@ -97,14 +101,33 @@ int exit(const std::string &) {
   return opossum::Console::ReturnCode::Quit;
 }
 
+int load_tpcc(const std::string & tablename) {
+  if (tablename.empty() || "ALL" == tablename)
+  {
+    auto tables = tpcc::TpccTableGenerator().generate_all_tables();
+    for (auto& pair : tables) {
+      opossum::StorageManager::get().add_table(pair.first, pair.second);
+    }
+    return opossum::Console::ReturnCode::Ok;
+  }
+
+  // auto tpccGenerator = SqlRepl::get_tpcc_generator(tablename);
+  // auto table = tpccGenerator.generateTable();
+  // opossum::StorageManager::get().add_table(tablename, table);
+
+  return opossum::Console::ReturnCode::Error;
+}
+
 }  // namespace opossum
 
 int main(int argc, char** argv) {
   using Return = opossum::Console::ReturnCode;
 
   opossum::Console console("> ");
-  int retCode;
 
+  console.register_command("load", opossum::load_tpcc);
+
+  int retCode;
   while ((retCode = console.read()) != Return::Quit) {
     if (retCode == Return::Ok)
     {
