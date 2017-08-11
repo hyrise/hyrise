@@ -96,8 +96,12 @@ std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::_translate_aggregate_
   auto out_operator = input_operator;
 
   /**
-   * 1. Handle arithmetic expressions in aggregate functions via Projection. Support only one level
-   * of arithmetics, i.e. SUM(a*b) is fine SUM(a*b+c) is not
+   * 1. Handle arithmetic expressions in aggregate functions via Projection.
+   * Supports only one level of arithmetics, i.e. SUM(a*b) is fine, but SUM(a*b+c) is not.
+   *
+   * In Hyrise, only Projections are supposed to be able to handle arithmetic expressions.
+   * Therefore, if we encounter an expression within an aggregate function, we have to execute
+   * one or multiple Projections first. The Aggregate will work with the output columns of that Projection.
    */
   std::vector<std::string> expr_aliases;
   expr_aliases.reserve(aggregates.size());
@@ -128,8 +132,15 @@ std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::_translate_aggregate_
       DebugAssert(function_arg_expr->left_child()->is_operand(), "Left child is not a literal or column ref.");
       DebugAssert(function_arg_expr->right_child()->is_operand(), "Right child is not a literal or column ref.");
 
-      const auto alias = "alias" + std::to_string(alias_index);
+      // Generate a temporary column name for the expression.
+      // Make sure that the generated column name is not existing in the input.
+      auto alias = "alias" + std::to_string(alias_index);
       alias_index++;
+
+      while (node->left_child()->has_output_column(alias)) {
+        alias = "alias" + std::to_string(alias_index);
+        alias_index++;
+      }
 
       // TODO(tim): column data type is not always float
       definitions.emplace_back(function_arg_expr->to_expression_string(), "float", alias);

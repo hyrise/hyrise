@@ -28,6 +28,7 @@ class ASTToOperatorTranslatorTest : public BaseTest {
   void SetUp() override {
     StorageManager::get().add_table("table_int_float", load_table("src/test/tables/int_float.tbl", 0));
     StorageManager::get().add_table("table_int_float2", load_table("src/test/tables/int_float2.tbl", 0));
+    StorageManager::get().add_table("table_alias_name", load_table("src/test/tables/table_alias_name.tbl", 0));
   }
 
   void TearDown() override { StorageManager::get().reset(); }
@@ -187,6 +188,52 @@ TEST_F(ASTToOperatorTranslatorTest, AggregateNodeWithArithmetics) {
   EXPECT_EQ(projection_definition.expression, "$b*2");
   EXPECT_EQ(projection_definition.type, "float");
   EXPECT_EQ(projection_definition.name, "alias0");
+}
+
+TEST_F(ASTToOperatorTranslatorTest, AggregateNodeAliasUnique) {
+  const auto stored_table_node = std::make_shared<StoredTableNode>("table_alias_name");
+
+  // Create expression "a * 2".
+  const auto expr_col_a = ExpressionNode::create_column_reference("table_alias_name", "a");
+  const auto expr_literal = ExpressionNode::create_literal(2);
+  const auto expr_multiplication = ExpressionNode::create_expression(ExpressionType::Multiplication);
+  expr_multiplication->set_left_child(expr_col_a);
+  expr_multiplication->set_right_child(expr_literal);
+
+  // Create aggregate with expression "SUM(a * 2)".
+  auto sum_expression = ExpressionNode::create_function_reference("SUM", {expr_multiplication}, {});
+  auto aggregate_node = std::make_shared<AggregateNode>(
+      std::vector<AggregateColumnDefinition>{AggregateColumnDefinition{sum_expression}}, std::vector<std::string>{});
+  aggregate_node->set_left_child(stored_table_node);
+
+  const auto op = ASTToOperatorTranslator::get().translate_node(aggregate_node);
+
+  // Check aggregate operator.
+  const auto aggregate_op = std::dynamic_pointer_cast<Aggregate>(op);
+  ASSERT_TRUE(aggregate_op);
+  ASSERT_EQ(aggregate_op->aggregates().size(), 1u);
+  ASSERT_EQ(aggregate_op->groupby_columns().size(), 0u);
+
+  const auto aggregate_definition = aggregate_op->aggregates()[0];
+  // Make sure that alias0 has not been chosen since it is already existing in the input.
+  EXPECT_EQ(aggregate_definition.column_name, "alias1");
+  EXPECT_EQ(aggregate_definition.function, AggregateFunction::Sum);
+
+  // Check projection operator.
+  // The projection operator is required because we need the arithmetic operation to be calculated first.
+  const auto left_op = aggregate_op->input_left();
+  ASSERT_TRUE(left_op);
+
+  const auto projection_op = std::dynamic_pointer_cast<const Projection>(left_op);
+  ASSERT_TRUE(projection_op);
+
+  const auto projection_definitions = projection_op->projection_definitions();
+  ASSERT_EQ(projection_definitions.size(), 1u);
+
+  const auto projection_definition = projection_definitions[0];
+  EXPECT_EQ(projection_definition.expression, "$a*2");
+  EXPECT_EQ(projection_definition.type, "float");
+  EXPECT_EQ(projection_definition.name, "alias1");
 }
 
 TEST_F(ASTToOperatorTranslatorTest, MultipleNodesHierarchy) {
