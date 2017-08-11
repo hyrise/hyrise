@@ -38,10 +38,6 @@ class AdaptiveRadixTreeIndex : public BaseIndex {
  public:
   explicit AdaptiveRadixTreeIndex(const std::vector<std::shared_ptr<BaseColumn>> &index_columns);
 
-  AdaptiveRadixTreeIndex(const AdaptiveRadixTreeIndex &) = delete;
-
-  AdaptiveRadixTreeIndex &operator=(const AdaptiveRadixTreeIndex &) = delete;
-
   AdaptiveRadixTreeIndex(AdaptiveRadixTreeIndex &&) = default;
 
   AdaptiveRadixTreeIndex &operator=(AdaptiveRadixTreeIndex &&) = default;

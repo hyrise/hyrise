@@ -15,12 +15,9 @@ namespace opossum {
  *
  * Should not be used outside the concurrency module!
  */
-class CommitContext {
+class CommitContext : private Noncopyable {
  public:
   explicit CommitContext(const CommitID commit_id);
-
-  CommitContext(const CommitContext& rhs) = delete;
-  CommitContext& operator=(const CommitContext& rhs) = delete;
 
   CommitID commit_id() const;
 

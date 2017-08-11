@@ -16,7 +16,7 @@ class TaskQueue;
  * To be executed on a separate Thread, fetches and executes tasks until the queue is empty AND the shutdown flag is set
  * Ideally there should be one Worker actively doing work per CPU, but multiple might be active occasionally
  */
-class Worker : public std::enable_shared_from_this<Worker> {
+class Worker : public std::enable_shared_from_this<Worker>, private Noncopyable {
   friend class AbstractTask;
   friend class CurrentScheduler;
   friend class NodeQueueScheduler;
@@ -25,8 +25,6 @@ class Worker : public std::enable_shared_from_this<Worker> {
   static std::shared_ptr<Worker> get_this_thread_worker();
 
   Worker(std::weak_ptr<ProcessingUnit> processing_unit, std::shared_ptr<TaskQueue> queue, WorkerID id, CpuID cpu_id);
-  Worker(const Worker& rhs) = delete;
-  Worker(Worker&& rhs) = delete;
 
   /**
    * Unique ID of a worker. Currently not in use, but really helpful for debugging.

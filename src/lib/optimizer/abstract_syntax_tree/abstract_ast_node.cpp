@@ -15,7 +15,20 @@ AbstractASTNode::AbstractASTNode(ASTNodeType node_type) : _type(node_type) {}
 
 std::shared_ptr<AbstractASTNode> AbstractASTNode::parent() const { return _parent.lock(); }
 
-void AbstractASTNode::clear_parent() { _parent = {}; }
+void AbstractASTNode::clear_parent() {
+  // _parent is a weak_ptr that we need to lock
+  auto parent_ptr = parent();
+  if (!parent_ptr) return;
+
+  if (parent_ptr->_left_child.get() == this) {
+    parent_ptr->set_left_child(nullptr);
+  } else if (parent_ptr->_right_child.get() == this) {
+    parent_ptr->set_right_child(nullptr);
+  } else {
+    Fail("Invalid AST: ASTNode is not child of his parent.");
+  }
+  _parent = {};
+}
 
 const std::shared_ptr<AbstractASTNode> &AbstractASTNode::left_child() const { return _left_child; }
 
