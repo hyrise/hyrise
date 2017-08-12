@@ -21,6 +21,25 @@ namespace {
     return str.substr(first, (last - first + 1));
   }
 
+  std::shared_ptr<opossum::Table> generate_tpcc_table(const std::string & tablename) {
+    if ("ITEM" == tablename) return tpcc::TpccTableGenerator().generate_items_table();
+    if ("WAREHOUSE" == tablename) return tpcc::TpccTableGenerator().generate_warehouse_table();
+    if ("STOCK" == tablename) return tpcc::TpccTableGenerator().generate_stock_table();
+    if ("DISTRICT" == tablename) return tpcc::TpccTableGenerator().generate_district_table();
+    if ("CUSTOMER" == tablename) return tpcc::TpccTableGenerator().generate_customer_table();
+    if ("HISTORY" == tablename) return tpcc::TpccTableGenerator().generate_history_table();
+    if ("NEW-ORDER" == tablename) return tpcc::TpccTableGenerator().generate_new_order_table();
+    if ("ORDER" == tablename) {
+      auto order_line_counts = tpcc::TpccTableGenerator().generate_order_line_counts();
+      return tpcc::TpccTableGenerator().generate_order_table(order_line_counts);
+    }
+    if ("ORDER-LINE" == tablename) {
+      auto order_line_counts = tpcc::TpccTableGenerator().generate_order_line_counts();
+      return tpcc::TpccTableGenerator().generate_order_line_table(order_line_counts);
+    }
+    return nullptr;
+  }
+
 }
 
 namespace opossum {
@@ -36,6 +55,7 @@ Console::Console(const std::string & prompt)
     : _prompt(prompt)
     , _commands() {
       register_command("exit", exit);
+      register_command("load", load_tpcc);
       register_command("loadtpcc", load_tpcc);
     }
 
@@ -98,7 +118,7 @@ int Console::_eval_sql(const std::string & input) {
 // Command functions implementation
 
 int exit(const std::string &) {
-  return opossum::Console::ReturnCode::Quit;
+  return Console::ReturnCode::Quit;
 }
 
 int load_tpcc(const std::string & tablename) {
@@ -106,26 +126,28 @@ int load_tpcc(const std::string & tablename) {
   {
     auto tables = tpcc::TpccTableGenerator().generate_all_tables();
     for (auto& pair : tables) {
-      opossum::StorageManager::get().add_table(pair.first, pair.second);
+      StorageManager::get().add_table(pair.first, pair.second);
     }
-    return opossum::Console::ReturnCode::Ok;
+    return Console::ReturnCode::Ok;
   }
 
-  // auto tpccGenerator = SqlRepl::get_tpcc_generator(tablename);
-  // auto table = tpccGenerator.generateTable();
-  // opossum::StorageManager::get().add_table(tablename, table);
+  auto table = generate_tpcc_table(tablename);
+  if (table == nullptr)
+  {
+    return Console::ReturnCode::Error;
+  }
 
-  return opossum::Console::ReturnCode::Error;
+  opossum::StorageManager::get().add_table(tablename, table);
+  return Console::ReturnCode::Ok;
 }
 
 }  // namespace opossum
+
 
 int main(int argc, char** argv) {
   using Return = opossum::Console::ReturnCode;
 
   opossum::Console console("> ");
-
-  console.register_command("load", opossum::load_tpcc);
 
   int retCode;
   while ((retCode = console.read()) != Return::Quit) {
@@ -137,5 +159,5 @@ int main(int argc, char** argv) {
     }
   }
 
-  std::cout << "Done" << std::endl;
+  std::cout << "Bye" << std::endl;
 }
