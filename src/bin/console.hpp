@@ -27,6 +27,8 @@ class Console
   void setPrompt(const std::string & prompt);
   std::string prompt() const;
 
+  static void out(const std::string & output);
+
  protected:
   int _eval(const std::string & input);
   int _eval_command(const CommandFunction & f, const std::string & command);
