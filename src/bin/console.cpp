@@ -17,7 +17,7 @@ namespace {
     size_t first = str.find_first_not_of(' ');
     if (std::string::npos == first)
     {
-      return str;
+      return "";
     }
     size_t last = str.find_last_not_of(' ');
     return str.substr(first, (last - first + 1));
@@ -65,14 +65,13 @@ int Console::read() {
   char* buffer; // Buffer of line entered by user
 
   buffer = readline(_prompt.c_str()); // Prompt user for input
+  std::string input = trim(std::string(buffer));
 
-  if(strcmp(buffer, "") != 0) { // Only save non-empty commands to history
+  if(!input.empty()) { // Only save non-empty commands to history
     add_history(buffer);
   }
 
-  std::string input(buffer);
   free(buffer); // Free buffer, since readline() allocates new string every time
-  buffer = NULL;
 
   return _eval(input);
 }
@@ -91,14 +90,13 @@ std::string Console::prompt() const {
 
 int Console::_eval(const std::string & input) {
   if (input.empty()) return ReturnCode::Ok;
-  std::string input_trimmed = trim(input);
 
   RegisteredCommands::iterator it;
-  if ((it = _commands.find(input_trimmed.substr(0, input_trimmed.find('(')))) != std::end(_commands)) {
-    return _eval_command(it->second, input_trimmed);
+  if ((it = _commands.find(input.substr(0, input.find('(')))) != std::end(_commands)) {
+    return _eval_command(it->second, input);
   }
 
-  return _eval_sql(input_trimmed);
+  return _eval_sql(input);
 }
 
 int Console::_eval_command(const CommandFunction & f, const std::string & command) {
