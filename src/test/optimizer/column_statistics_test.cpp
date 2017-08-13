@@ -33,7 +33,7 @@ class ColumnStatisticsTest : public BaseTest {
 
   // For single value scans (i.e. all but BETWEEN)
   template <typename T>
-  void predict_selectivities_and_compare(const std::shared_ptr<ColumnStatistics<T>> column_statistic,
+  void predict_selectivities_and_compare(const std::shared_ptr<ColumnStatistics<T>> &column_statistic,
                                          const ScanType scan_type, const std::vector<T> &values,
                                          const std::vector<float> &expected_selectivities) {
     auto expected_selectivities_itr = expected_selectivities.begin();
@@ -45,7 +45,7 @@ class ColumnStatisticsTest : public BaseTest {
 
   // For two column scans (type of value1 is ColumnName)
   template <typename T>
-  void predict_selectivities_and_compare(const std::shared_ptr<Table> table,
+  void predict_selectivities_and_compare(const std::shared_ptr<Table> &table,
                                          const std::vector<std::shared_ptr<ColumnStatistics<T>>> &column_statistics,
                                          const ScanType scan_type) {
     auto table_wrapper = std::make_shared<TableWrapper>(table);
@@ -67,7 +67,7 @@ class ColumnStatisticsTest : public BaseTest {
 
   // For BETWEEN
   template <typename T>
-  void predict_selectivities_and_compare(const std::shared_ptr<ColumnStatistics<T>> column_statistic,
+  void predict_selectivities_and_compare(const std::shared_ptr<ColumnStatistics<T>> &column_statistic,
                                          const ScanType scan_type, const std::vector<std::pair<T, T>> &values,
                                          const std::vector<float> &expected_selectivities) {
     auto expected_selectivities_itr = expected_selectivities.begin();
@@ -80,7 +80,7 @@ class ColumnStatisticsTest : public BaseTest {
 
   template <typename T>
   void predict_selectivities_for_stored_procedures_and_compare(
-      const std::shared_ptr<ColumnStatistics<T>> column_statistic, const ScanType scan_type,
+      const std::shared_ptr<ColumnStatistics<T>> &column_statistic, const ScanType scan_type,
       const std::vector<T> &values2, const std::vector<float> &expected_selectivities) {
     auto expected_selectivities_itr = expected_selectivities.begin();
     for (const auto &value2 : values2) {
