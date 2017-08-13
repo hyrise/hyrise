@@ -53,7 +53,9 @@ class ExpressionNode : public std::enable_shared_from_this<ExpressionNode> {
                                                                  const std::string& table_name = "",
                                                                  const optional<std::string>& alias = nullopt);
 
-  static std::shared_ptr<ExpressionNode> create_literal(const AllTypeVariant& value);
+  static std::shared_ptr<ExpressionNode> create_literal(const AllTypeVariant& value,
+                                                        const optional<std::string>& alias = nullopt);
+
 
   static std::shared_ptr<ExpressionNode> create_parameter(const AllTypeVariant& value);
 

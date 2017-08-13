@@ -26,59 +26,59 @@ class OperatorsUpdateTest : public BaseTest {
 
 void OperatorsUpdateTest::helper(std::shared_ptr<GetTable> table_to_update, std::shared_ptr<GetTable> update_values,
                                  std::shared_ptr<Table> expected_result) {
-//  auto t_context = TransactionManager::get().new_transaction_context();
-//
-//  // Make input left actually referenced. Projection does NOT generate ReferenceColumns.
-//  auto ref_table = std::make_shared<TableScan>(table_to_update, "a", ScanType::OpGreaterThan, 0);
-//  ref_table->set_transaction_context(t_context);
-//  ref_table->execute();
-//
-//  // Save the original number of rows as well as the number of rows that will be updated.
-//  auto original_row_count = ref_table->get_output()->row_count();
-//  auto updated_rows_count = update_values->get_output()->row_count();
-//
-//  std::vector<std::string> column_filter_left = {"a"};
-//  std::vector<std::string> column_filter_right = {"b"};
-//
-//  auto projection1 = std::make_shared<Projection>(ref_table, column_filter_left);
-//  auto projection2 = std::make_shared<Projection>(update_values, column_filter_right);
-//  projection1->set_transaction_context(t_context);
-//  projection2->set_transaction_context(t_context);
-//  projection1->execute();
-//  projection2->execute();
-//
-//  auto update = std::make_shared<Update>("updateTestTable", projection1, projection2);
-//  update->set_transaction_context(t_context);
-//  update->execute();
-//
-//  // MVCC commit.
-//  TransactionManager::get().prepare_commit(*t_context);
-//
-//  auto commit_op = std::make_shared<CommitRecords>();
-//  commit_op->set_transaction_context(t_context);
-//  commit_op->execute();
-//
-//  TransactionManager::get().commit(*t_context);
-//
-//  // Get validated table which should have the same row twice.
-//  t_context = TransactionManager::get().new_transaction_context();
-//  auto validate = std::make_shared<Validate>(table_to_update);
-//  validate->set_transaction_context(t_context);
-//  validate->execute();
-//
-//  EXPECT_TABLE_EQ(validate->get_output(), expected_result);
-//
-//  // The new validated table should have the same number of (valid) rows as before.
-//  EXPECT_EQ(validate->get_output()->row_count(), original_row_count);
-//
-//  // Refresh the table that was updated. It should have the same number of valid rows (approximated) as before.
-//  // Approximation should be exact here because we do not have ti deal with parallelism issues in tests.
-//  auto updated_table = std::make_shared<GetTable>("updateTestTable");
-//  updated_table->execute();
-//  EXPECT_EQ(updated_table->get_output()->approx_valid_row_count(), original_row_count);
-//
-//  // The total row count (valid + invalid) should have increased by the number of rows that were updated.
-//  EXPECT_EQ(updated_table->get_output()->row_count(), original_row_count + updated_rows_count);
+  auto t_context = TransactionManager::get().new_transaction_context();
+
+  // Make input left actually referenced. Projection does NOT generate ReferenceColumns.
+  auto ref_table = std::make_shared<TableScan>(table_to_update, "a", ScanType::OpGreaterThan, 0);
+  ref_table->set_transaction_context(t_context);
+  ref_table->execute();
+
+  // Save the original number of rows as well as the number of rows that will be updated.
+  auto original_row_count = ref_table->get_output()->row_count();
+  auto updated_rows_count = update_values->get_output()->row_count();
+
+  std::vector<std::string> column_filter_left = {"a"};
+  std::vector<std::string> column_filter_right = {"b"};
+
+  auto projection1 = std::make_shared<Projection>(ref_table, Projection::ColumnExpressions({ExpressionNode::create_column_reference("a")}));
+  auto projection2 = std::make_shared<Projection>(ref_table, Projection::ColumnExpressions({ExpressionNode::create_column_reference("b")}));
+  projection1->set_transaction_context(t_context);
+  projection2->set_transaction_context(t_context);
+  projection1->execute();
+  projection2->execute();
+
+  auto update = std::make_shared<Update>("updateTestTable", projection1, projection2);
+  update->set_transaction_context(t_context);
+  update->execute();
+
+  // MVCC commit.
+  TransactionManager::get().prepare_commit(*t_context);
+
+  auto commit_op = std::make_shared<CommitRecords>();
+  commit_op->set_transaction_context(t_context);
+  commit_op->execute();
+
+  TransactionManager::get().commit(*t_context);
+
+  // Get validated table which should have the same row twice.
+  t_context = TransactionManager::get().new_transaction_context();
+  auto validate = std::make_shared<Validate>(table_to_update);
+  validate->set_transaction_context(t_context);
+  validate->execute();
+
+  EXPECT_TABLE_EQ(validate->get_output(), expected_result);
+
+  // The new validated table should have the same number of (valid) rows as before.
+  EXPECT_EQ(validate->get_output()->row_count(), original_row_count);
+
+  // Refresh the table that was updated. It should have the same number of valid rows (approximated) as before.
+  // Approximation should be exact here because we do not have ti deal with parallelism issues in tests.
+  auto updated_table = std::make_shared<GetTable>("updateTestTable");
+  updated_table->execute();
+  EXPECT_EQ(updated_table->get_output()->approx_valid_row_count(), original_row_count);
+
+  // The total row count (valid + invalid) should have increased by the number of rows that were updated.
+  EXPECT_EQ(updated_table->get_output()->row_count(), original_row_count + updated_rows_count);
 }
 
 TEST_F(OperatorsUpdateTest, SelfUpdate) {
@@ -160,37 +160,37 @@ TEST_F(OperatorsUpdateTest, MultipleChunks) {
   helper(gt, gt2, expected_result);
 }
 TEST_F(OperatorsUpdateTest, EmptyChunks) {
-//  auto t = load_table("src/test/tables/int.tbl", 1u);
-//  std::string table_name = "updateTestTable";
-//  StorageManager::get().add_table(table_name, t);
-//
-//  auto t_context = TransactionManager::get().new_transaction_context();
-//
-//  auto gt = std::make_shared<GetTable>(table_name);
-//  gt->execute();
-//
-//  // table scan will produce two leading empty chunks
-//  auto table_scan1 = std::make_shared<TableScan>(gt, "a", ScanType::OpEquals, "12345");
-//  table_scan1->set_transaction_context(t_context);
-//  table_scan1->execute();
-//
-//  Projection::ProjectionDefinitions definitions{Projection::ProjectionDefinition{std::to_string(1), "int", "a"}};
-//  auto updated_rows = std::make_shared<Projection>(table_scan1, definitions);
-//  updated_rows->set_transaction_context(t_context);
-//  updated_rows->execute();
-//
-//  auto update = std::make_shared<Update>(table_name, table_scan1, updated_rows);
-//  update->set_transaction_context(t_context);
-//  // execute will fail, if not checked for leading empty chunks
-//  update->execute();
-//
-//  // MVCC commit.
-//  TransactionManager::get().prepare_commit(*t_context);
-//
-//  auto commit_op = std::make_shared<CommitRecords>();
-//  commit_op->set_transaction_context(t_context);
-//  commit_op->execute();
-//
-//  TransactionManager::get().commit(*t_context);
+  auto t = load_table("src/test/tables/int.tbl", 1u);
+  std::string table_name = "updateTestTable";
+  StorageManager::get().add_table(table_name, t);
+
+  auto t_context = TransactionManager::get().new_transaction_context();
+
+  auto gt = std::make_shared<GetTable>(table_name);
+  gt->execute();
+
+  // table scan will produce two leading empty chunks
+  auto table_scan1 = std::make_shared<TableScan>(gt, "a", ScanType::OpEquals, "12345");
+  table_scan1->set_transaction_context(t_context);
+  table_scan1->execute();
+
+  Projection::ColumnExpressions column_expressions{ExpressionNode::create_literal(1, "a")};
+  auto updated_rows = std::make_shared<Projection>(table_scan1, column_expressions);
+  updated_rows->set_transaction_context(t_context);
+  updated_rows->execute();
+
+  auto update = std::make_shared<Update>(table_name, table_scan1, updated_rows);
+  update->set_transaction_context(t_context);
+  // execute will fail, if not checked for leading empty chunks
+  update->execute();
+
+  // MVCC commit.
+  TransactionManager::get().prepare_commit(*t_context);
+
+  auto commit_op = std::make_shared<CommitRecords>();
+  commit_op->set_transaction_context(t_context);
+  commit_op->execute();
+
+  TransactionManager::get().commit(*t_context);
 }
 }  // namespace opossum

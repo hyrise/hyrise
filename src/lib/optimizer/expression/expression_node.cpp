@@ -34,9 +34,10 @@ std::shared_ptr<ExpressionNode> ExpressionNode::create_column_reference(const st
                                           table_name, alias);
 }
 
-std::shared_ptr<ExpressionNode> ExpressionNode::create_literal(const AllTypeVariant &value) {
+std::shared_ptr<ExpressionNode> ExpressionNode::create_literal(const AllTypeVariant &value,
+                                                               const optional<std::string>& alias) {
   const std::vector<std::shared_ptr<ExpressionNode>> expr_list;
-  return std::make_shared<ExpressionNode>(ExpressionType::Literal, value, expr_list, "", "", "");
+  return std::make_shared<ExpressionNode>(ExpressionType::Literal, value, expr_list, "", "", alias);
 }
 
 std::shared_ptr<ExpressionNode> ExpressionNode::create_parameter(const AllTypeVariant &value) {
