@@ -42,19 +42,6 @@ target_link_libraries(
     boost_program_options
 )
 
-# Configure Sql_Repl
-add_executable(
-    opossumRepl
-
-    sql_repl.cpp
-    sql_repl.hpp
-)
-target_link_libraries(
-    opossumRepl
-    opossum
-    tpcc
-)
-
 # Configure Console
 add_executable(
     opossumConsole
