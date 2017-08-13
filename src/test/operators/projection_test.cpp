@@ -43,6 +43,15 @@ class OperatorsProjectionTest : public BaseTest {
         ExpressionNode::create_column_reference("c")
       ), "sum")};  // NOLINT
 
+    // Projection Expression: (a + b) * c
+    _mul_a_b_c_expr = Projection::ColumnExpressions{ExpressionNode::create_binary_operator(
+      ExpressionType::Multiplication,
+      ExpressionNode::create_binary_operator(
+        ExpressionType::Addition,
+        ExpressionNode::create_column_reference("a"),
+        ExpressionNode::create_column_reference("b")),
+      ExpressionNode::create_column_reference("c"), "mul")};  // NOLINT
+
     _sum_a_b_expr = Projection::ColumnExpressions{ExpressionNode::create_binary_operator(
       ExpressionType::Addition,
       ExpressionNode::create_column_reference("a"),
@@ -66,6 +75,7 @@ class OperatorsProjectionTest : public BaseTest {
 
   Projection::ColumnExpressions _sum_a_b_expr;
   Projection::ColumnExpressions _sum_a_b_c_expr;
+  Projection::ColumnExpressions _mul_a_b_c_expr;
   Projection::ColumnExpressions _a_expr;
   Projection::ColumnExpressions _b_expr;
   Projection::ColumnExpressions _b_a_expr;
@@ -130,7 +140,16 @@ TEST_F(OperatorsProjectionTest, SimpleArithmeticProjection) {
   EXPECT_TABLE_EQ(projection->get_output(), expected_result);
 }
 
-TEST_F(OperatorsProjectionTest, VariableArithmeticProjection) {
+TEST_F(OperatorsProjectionTest, NestedArithmeticProjectionA) {
+  std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_int_int_multiplication.tbl", 2);
+
+  auto projection = std::make_shared<Projection>(_table_wrapper_int, _mul_a_b_c_expr);
+  projection->execute();
+
+  EXPECT_TABLE_EQ(projection->get_output(), expected_result);
+}
+
+TEST_F(OperatorsProjectionTest, NestedArithmeticProjectionB) {
   std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_int_int_addition.tbl", 2);
 
   auto projection = std::make_shared<Projection>(_table_wrapper_int, _sum_a_b_c_expr);
@@ -139,7 +158,7 @@ TEST_F(OperatorsProjectionTest, VariableArithmeticProjection) {
   EXPECT_TABLE_EQ(projection->get_output(), expected_result);
 }
 
-TEST_F(OperatorsProjectionTest, VariableArithmeticWithDictProjection) {
+TEST_F(OperatorsProjectionTest, NestedArithmeticProjectionWithDictA) {
   std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_int_int_addition.tbl", 2);
 
   auto projection = std::make_shared<Projection>(_table_wrapper_int_dict, _sum_a_b_c_expr);
