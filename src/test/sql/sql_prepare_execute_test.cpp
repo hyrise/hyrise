@@ -40,7 +40,7 @@ class SQLPrepareExecuteTest : public BaseTest, public ::testing::WithParamInterf
   }
 };
 
-TEST_P(SQLPrepareExecuteTest, GenericQueryTest) {
+TEST_P(SQLPrepareExecuteTest, DISABLED_GenericQueryTest) {
   const SQLTestParam param = GetParam();
   const std::string query = std::get<0>(param);
   const size_t num_operators = std::get<1>(param);
