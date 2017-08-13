@@ -83,16 +83,17 @@ void ColumnStatistics<ColumnType>::initialize_min_max() const {
 template <typename ColumnType>
 ColumnSelectivityResult ColumnStatistics<ColumnType>::estimate_selectivity_for_range_and_create_column_statistics(
     ColumnType minimum, ColumnType maximum) {
-  minimum = std::max(minimum, min());
-  maximum = std::min(maximum, max());
-  if (minimum == min() && maximum == max()) {
+  // new minimum/maximum of table cannot be smaller/larger than the current minimum/maximum
+  auto common_min = std::max(minimum, min());
+  auto common_max = std::min(maximum, max());
+  if (common_min == min() && common_max == max()) {
     return {1.f, nullptr};
-  } else if (maximum < minimum) {
+  } else if (common_max < common_min) {
     return {0.f, nullptr};
   }
-  float selectivity = estimate_selectivity_for_range(minimum, maximum);
+  float selectivity = estimate_selectivity_for_range(common_min, common_max);
   auto column_statistics =
-      std::make_shared<ColumnStatistics>(_column_id, selectivity * distinct_count(), minimum, maximum);
+      std::make_shared<ColumnStatistics>(_column_id, selectivity * distinct_count(), common_min, common_max);
   return {selectivity, column_statistics};
 }
 
@@ -102,9 +103,10 @@ ColumnSelectivityResult ColumnStatistics<ColumnType>::estimate_selectivity_for_r
 template <>
 ColumnSelectivityResult ColumnStatistics<std::string>::estimate_selectivity_for_range_and_create_column_statistics(
     std::string minimum, std::string maximum) {
-  minimum = std::max(minimum, min());
-  maximum = std::min(maximum, max());
-  if (maximum < minimum) {
+  // new minimum/maximum of table cannot be smaller/larger than the current minimum/maximum
+  auto common_min = std::max(minimum, min());
+  auto common_max = std::min(maximum, max());
+  if (common_min < common_max) {
     return {0.f, nullptr};
   }
   return {1.f, nullptr};
@@ -271,7 +273,7 @@ ColumnSelectivityResult ColumnStatistics<ColumnType>::estimate_selectivity_for_p
 
 template <typename ColumnType>
 TwoColumnSelectivityResult ColumnStatistics<ColumnType>::estimate_selectivity_for_predicate(
-    const ScanType scan_type, const std::shared_ptr<BaseColumnStatistics> base_value_column_statistics,
+    const ScanType scan_type, const std::shared_ptr<BaseColumnStatistics> &base_value_column_statistics,
     const optional<AllTypeVariant> &value2) {
   auto right_stats = std::dynamic_pointer_cast<ColumnStatistics<ColumnType>>(base_value_column_statistics);
   DebugAssert(right_stats != nullptr, "Cannot compare columns of different type");
@@ -330,7 +332,7 @@ TwoColumnSelectivityResult ColumnStatistics<ColumnType>::estimate_selectivity_fo
     case ScanType::OpLessThanEquals: {
       // selectivity calculated by adding up percentages that values are below, in or above overlapping range
       float selectivity = 0.f;
-      // percentage of values on left hand sight which are smaller than overlapping range
+      // percentage of values on left hand side which are smaller than overlapping range
       selectivity += below_left;
       // selectivity of not equal numbers n1, n2 in overlapping range where n1 < n2 is 0.5
       selectivity += (overlapping_ratio_left * overlapping_ratio_right - equal_values_ratio) * 0.5f;
@@ -380,7 +382,7 @@ TwoColumnSelectivityResult ColumnStatistics<ColumnType>::estimate_selectivity_fo
  */
 template <>
 TwoColumnSelectivityResult ColumnStatistics<std::string>::estimate_selectivity_for_predicate(
-    const ScanType scan_type, const std::shared_ptr<BaseColumnStatistics> base_value_column_statistics,
+    const ScanType scan_type, const std::shared_ptr<BaseColumnStatistics> &base_value_column_statistics,
     const optional<AllTypeVariant> &value2) {
   // TODO(anybody) implement special case for strings
   return {1.f, nullptr, nullptr};
