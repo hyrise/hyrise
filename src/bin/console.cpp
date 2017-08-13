@@ -102,7 +102,7 @@ int Console::_eval(const std::string & input) {
 }
 
 int Console::_eval_command(const CommandFunction & f, const std::string & command) {
-  size_t first = command.find('(') + 1;
+  size_t first = command.find('(');
   size_t last = command.find_last_of(')');
 
   if (std::string::npos == first)
@@ -110,7 +110,7 @@ int Console::_eval_command(const CommandFunction & f, const std::string & comman
     return static_cast<int>(f(""));
   }
 
-  std::string arg = command.substr(first, last-first);
+  std::string arg = command.substr(first+1, last-(first+1));
   return static_cast<int>(f(arg));
 }
 
@@ -155,7 +155,7 @@ int exit(const std::string &) {
 int load_tpcc(const std::string & tablename) {
   if (tablename.empty() || "ALL" == tablename)
   {
-    std::cout << "Generating TPCC tables ..." << std::endl;
+    std::cout << "Generating TPCC tables (this might take a while) ..." << std::endl;
     auto tables = tpcc::TpccTableGenerator().generate_all_tables();
     for (auto& pair : tables) {
       StorageManager::get().add_table(pair.first, pair.second);
