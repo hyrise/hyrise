@@ -90,6 +90,7 @@ std::string Console::prompt() const {
 }
 
 int Console::_eval(const std::string & input) {
+  if (input.empty()) return ReturnCode::Ok;
   std::string input_trimmed = trim(input);
 
   RegisteredCommands::iterator it;
@@ -122,14 +123,14 @@ int Console::_eval_sql(const std::string & sql) {
 
   if (!parse_result.isValid())
   {
-    // return "Error: SQL query not valid.";
+    std::cout << "Error: SQL query not valid." << std::endl;
     return 1;
   }
 
   // Compile the parse result.
   if (!translator.translate_parse_result(parse_result))
   {
-    // return "Error while compiling: " + translator.get_error_msg();
+    std::cout << "Error while compiling: " << translator.get_error_msg() << std::endl;
     return 1;
   }
 
@@ -154,6 +155,7 @@ int exit(const std::string &) {
 int load_tpcc(const std::string & tablename) {
   if (tablename.empty() || "ALL" == tablename)
   {
+    std::cout << "Generating TPCC tables ..." << std::endl;
     auto tables = tpcc::TpccTableGenerator().generate_all_tables();
     for (auto& pair : tables) {
       StorageManager::get().add_table(pair.first, pair.second);
@@ -161,6 +163,7 @@ int load_tpcc(const std::string & tablename) {
     return Console::ReturnCode::Ok;
   }
 
+  std::cout << "Generating TPCC table: " << tablename << " ..." << std::endl;
   auto table = generate_tpcc_table(tablename);
   if (table == nullptr)
   {
@@ -189,5 +192,5 @@ int main(int argc, char** argv) {
     }
   }
 
-  std::cout << "Bye" << std::endl;
+  std::cout << "Bye." << std::endl;
 }
