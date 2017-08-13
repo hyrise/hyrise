@@ -6,6 +6,8 @@
 
 #include "storage/storage_manager.hpp"
 #include "tpcc/tpcc_table_generator.hpp"
+#include "sql/sql_query_translator.hpp"
+#include "operators/print.hpp"
 
 namespace {
 
@@ -98,20 +100,48 @@ int Console::_eval(const std::string & input) {
   return _eval_sql(input_trimmed);
 }
 
-int Console::_eval_command(const CommandFunction & f, const std::string & input) {
-  size_t first = input.find('(') + 1;
-  size_t last = input.find_last_of(')');
+int Console::_eval_command(const CommandFunction & f, const std::string & command) {
+  size_t first = command.find('(') + 1;
+  size_t last = command.find_last_of(')');
 
   if (std::string::npos == first)
   {
     return static_cast<int>(f(""));
   }
 
-  std::string arg = input.substr(first, last-first);
+  std::string arg = command.substr(first, last-first);
   return static_cast<int>(f(arg));
 }
 
-int Console::_eval_sql(const std::string & input) {
+int Console::_eval_sql(const std::string & sql) {
+  SQLQueryTranslator translator;
+  SQLQueryPlan plan;
+
+  hsql::SQLParserResult parse_result;
+  hsql::SQLParser::parseSQLString(sql, &parse_result);
+
+  if (!parse_result.isValid())
+  {
+    // return "Error: SQL query not valid.";
+    return 1;
+  }
+
+  // Compile the parse result.
+  if (!translator.translate_parse_result(parse_result))
+  {
+    // return "Error while compiling: " + translator.get_error_msg();
+    return 1;
+  }
+
+  plan = translator.get_query_plan();
+
+  for (const auto& task : plan.tasks()) {
+    task->get_operator()->execute();
+  }
+
+  auto result = plan.tree_roots().back()->get_output();
+  Print::print(result);
+
   return ReturnCode::Ok;
 }
 

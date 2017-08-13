@@ -29,8 +29,8 @@ class Console
 
  protected:
   int _eval(const std::string & input);
-  int _eval_command(const CommandFunction & f, const std::string & input);
-  int _eval_sql(const std::string & input);
+  int _eval_command(const CommandFunction & f, const std::string & command);
+  int _eval_sql(const std::string & sql);
 
   std::string _prompt;
   RegisteredCommands _commands;
