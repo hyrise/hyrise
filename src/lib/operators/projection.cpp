@@ -31,10 +31,10 @@ std::shared_ptr<const Table> Projection::on_execute() {
   // Prepare terms and output table for each column to project
   for (const auto& column_expression : _column_expressions) {
     std::string name;
-    if (column_expression->alias().empty()) {
-      name = column_expression->to_expression_string();
+    if (column_expression->alias()) {
+      name = *column_expression->alias();
     } else {
-      name = column_expression->alias();
+      name = column_expression->to_expression_string();
     }
 
     const auto type = evaluate_expression_type(column_expression,
@@ -65,7 +65,7 @@ std::string Projection::evaluate_expression_type(
   const std::shared_ptr<const Table> & table) {
 
   if (expression->type() == ExpressionType::Literal) {
-    return type_by_variant_which[expression->value().which()];
+    return type_by_all_type_variant_which[expression->value().which()];
   }
   if (expression->type() == ExpressionType::ColumnReference) {
     return table->column_type(table->column_id_by_name(expression->name()));

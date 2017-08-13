@@ -256,7 +256,7 @@ TaskVector NewOrderRefImpl::get_increment_next_order_id_tasks(const int32_t d_id
   const std::vector<std::string> columns = {"D_NEXT_O_ID"};
   const auto original_rows = std::make_shared<opossum::Projection>(ts2, columns);
 
-  const auto op = opossum::ExpressionNode::create_operator(
+  const auto op = opossum::ExpressionNode::create_binary_operator(
     opossum::ExpressionType::Addition,
     opossum::ExpressionNode::create_literal(d_next_o_id),
     opossum::ExpressionNode::create_literal(1));  // NOLINT
