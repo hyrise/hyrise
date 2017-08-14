@@ -14,7 +14,7 @@ class Console
 {
  public:
 
-  using CommandFunction = std::function<int(Console *, const std::string &)>;
+  using CommandFunction = std::function<int(const std::string &)>;
   using RegisteredCommands = std::unordered_map<std::string, CommandFunction>;
 
   enum ReturnCode {
@@ -46,7 +46,11 @@ class Console
   std::ostream _out;
   std::ofstream _log;
 
-  // GNU readline interface to our commands.
+  // Command functions
+  static int exit(const std::string & args);
+  static int load_tpcc(const std::string & args);
+
+  // GNU readline interface to our commands
   static char ** command_completion(const char * text, int start, int end);
   static char * command_generator(const char * text, int state);
 };

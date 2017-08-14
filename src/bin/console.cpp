@@ -15,7 +15,7 @@ namespace {
 
   //
 
-  opossum::Console * instance = nullptr;
+  opossum::Console * _instance = nullptr;
 
   // Helper functions
 
@@ -61,11 +61,6 @@ namespace {
 
 namespace opossum {
 
-// Command functions declaration
-
-int exit(Console *, const std::string &);
-int load_tpcc(Console *, const std::string &);
-
 // Console implementation
 
 Console::Console(const std::string & prompt, const std::string & log_file)
@@ -81,14 +76,14 @@ Console::Console(const std::string & prompt, const std::string & log_file)
   register_command("load", load_tpcc);
   register_command("loadtpcc", load_tpcc);
 
-  instance = this;
+  _instance = this;
 
   out("--- Session start --- " + time_stamp() + "\n", false);
 }
 
 Console::~Console() {
   out("--- Session end --- " + time_stamp() + "\n", false);
-  instance = nullptr;
+  _instance = nullptr;
 }
 
 int Console::read() {
@@ -141,11 +136,11 @@ int Console::_eval_command(const CommandFunction & f, const std::string & comman
 
   if (std::string::npos == first)
   {
-    return static_cast<int>(f(this, ""));
+    return static_cast<int>(f(""));
   }
 
-  std::string arg = command.substr(first+1, last-(first+1));
-  return static_cast<int>(f(this, arg));
+  std::string args = command.substr(first+1, last-(first+1));
+  return static_cast<int>(f(args));
 }
 
 int Console::_eval_sql(const std::string & sql) {
@@ -191,6 +186,37 @@ void Console::out(std::shared_ptr<const Table> table) {
   Print::print(table, 0, _log);
 }
 
+// Command functions
+
+int Console::exit(const std::string &) {
+  return Console::ReturnCode::Quit;
+}
+
+int Console::load_tpcc(const std::string & tablename) {
+  if (tablename.empty() || "ALL" == tablename)
+  {
+    _instance->out("Generating TPCC tables (this might take a while) ...\n");
+    auto tables = tpcc::TpccTableGenerator().generate_all_tables();
+    for (auto& pair : tables) {
+      StorageManager::get().add_table(pair.first, pair.second);
+    }
+    return Console::ReturnCode::Ok;
+  }
+
+  _instance->out("Generating TPCC table: \"" + tablename + "\" ...\n");
+  auto table = generate_tpcc_table(tablename);
+  if (table == nullptr)
+  {
+    _instance->out("Error: No TPCC table named \"" + tablename + "\" available.\n");
+    return Console::ReturnCode::Error;
+  }
+
+  opossum::StorageManager::get().add_table(tablename, table);
+  return Console::ReturnCode::Ok;
+}
+
+// GNU readline interface to our commands
+
 char ** Console::command_completion(const char * text, int start, int end) {
   char ** completion_matches = nullptr;
   if (start == 0)
@@ -202,12 +228,12 @@ char ** Console::command_completion(const char * text, int start, int end) {
 
 char * Console::command_generator(const char * text, int state) {
   static Console::RegisteredCommands::iterator it;
-  auto commands = instance->commands();
+  auto& commands = _instance->_commands;
   if (state == 0) {
-    it = instance->_commands.begin();
+    it = commands.begin();
   }
 
-  while ( it != instance->_commands.end() ) {
+  while ( it != commands.end() ) {
     auto & command = it->first;
     ++it;
     if ( command.find(text) != std::string::npos ) {
@@ -217,35 +243,6 @@ char * Console::command_generator(const char * text, int state) {
     }
   }
   return nullptr;
-}
-
-// Command functions implementation
-
-int exit(Console *, const std::string &) {
-  return Console::ReturnCode::Quit;
-}
-
-int load_tpcc(Console * instance, const std::string & tablename) {
-  if (tablename.empty() || "ALL" == tablename)
-  {
-    instance->out("Generating TPCC tables (this might take a while) ...\n");
-    auto tables = tpcc::TpccTableGenerator().generate_all_tables();
-    for (auto& pair : tables) {
-      StorageManager::get().add_table(pair.first, pair.second);
-    }
-    return Console::ReturnCode::Ok;
-  }
-
-  instance->out("Generating TPCC table: \"" + tablename + "\" ...\n");
-  auto table = generate_tpcc_table(tablename);
-  if (table == nullptr)
-  {
-    instance->out("Error: No TPCC table named \"" + tablename + "\" available.\n");
-    return Console::ReturnCode::Error;
-  }
-
-  opossum::StorageManager::get().add_table(tablename, table);
-  return Console::ReturnCode::Ok;
 }
 
 }  // namespace opossum
