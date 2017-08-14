@@ -71,14 +71,31 @@ const std::string Projection::get_type_of_expression(const std::shared_ptr<Expre
   }
 
   Assert(expression->is_arithmetic_operator(),
-         "Only literals, columns, and arithmetic operators supported for expression type evaluation");
+    "Only literals, columns, and arithmetic operators supported for expression type evaluation");
 
   const auto type_left = get_type_of_expression(expression->left_child(), table);
   const auto type_right = get_type_of_expression(expression->right_child(), table);
 
-  // TODO(anybody): int + float = float etc...
-  // This is currently not supported by `evaluate_expression()` because it is only templated once.
-  Assert(type_left == type_right, "Projection currently only supports expressions with same type on both sides.");
+  /**
+   * Type promotion - int + long is long, etc.
+   * This does a lot of string comparing... :( :(
+   * TODO(anyone): Convert types into enums
+   */
+  auto result_type = type_left;
+  auto type_promotion = [&] (const auto & a, const auto & b, const auto & result) mutable {
+    if ((type_left == a && type_right == b) ||
+        (type_left == b && type_right == a)) {
+      result_type = result;
+    }
+  };
+
+  type_promotion("int", "long", "long");
+  type_promotion("int", "float", "float");
+  type_promotion("int", "double", "double");
+  type_promotion("long", "float", "double");
+  type_promotion("long", "double", "double");
+  type_promotion("float", "double", "double");
+
   return type_left;
 }
 
