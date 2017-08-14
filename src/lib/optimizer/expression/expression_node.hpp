@@ -42,15 +42,14 @@ class ExpressionNode : public std::enable_shared_from_this<ExpressionNode> {
    */
   ExpressionNode(const ExpressionType type, const AllTypeVariant& value,
                  const std::vector<std::shared_ptr<ExpressionNode>>& expression_list, const std::string& name,
-                 const std::string& table, const optional<std::string>& alias = nullopt);
+                 const ColumnID &column_id, const optional<std::string>& alias = nullopt);
 
   /*
    * Factory Methods to create Expressions of specific type
    */
   static std::shared_ptr<ExpressionNode> create_expression(const ExpressionType type);
 
-  static std::shared_ptr<ExpressionNode> create_column_reference(const std::string& table_name,
-                                                                 const std::string& column_name,
+  static std::shared_ptr<ExpressionNode> create_column_reference(const ColumnID column_id,
                                                                  const optional<std::string>& alias = nullopt);
 
   static std::shared_ptr<ExpressionNode> create_literal(const AllTypeVariant& value);
@@ -90,7 +89,7 @@ class ExpressionNode : public std::enable_shared_from_this<ExpressionNode> {
   /*
    * Getters
    */
-  const std::string& table_name() const;
+  const ColumnID& column_id() const;
 
   const std::string& name() const;
 
@@ -118,10 +117,10 @@ class ExpressionNode : public std::enable_shared_from_this<ExpressionNode> {
    */
   const std::vector<std::shared_ptr<ExpressionNode>> _expression_list;
 
-  // a name, which could be a column name or a function name
+  // a name, which could be a function name
   const std::string _name;
-  // a table name, only used for ColumnReferences
-  const std::string _table_name;
+  // a column that might be referenced
+  const ColumnID _column_id;
   // an alias, used for ColumnReferences, Selects, FunctionReferences
   const optional<std::string> _alias;
 

@@ -1,5 +1,6 @@
 #include "aggregate_node.hpp"
 
+#include <algorithm>
 #include <memory>
 #include <sstream>
 #include <string>
@@ -70,5 +71,28 @@ std::string AggregateNode::description() const {
 }
 
 std::vector<ColumnID> AggregateNode::output_column_ids() const { return _output_column_ids; }
+
+bool AggregateNode::find_column_id_for_column_name(std::string & column_name, ColumnID &column_id) {
+  std::vector<ColumnID> matches;
+  for (size_t i = 0; i < _aggregates.size(); i++) {
+    const auto &aggregate_definition = _aggregates[i];
+    if (column_name == aggregate_definition.alias) {
+      matches.emplace_back(ColumnID{i});
+    }
+  }
+
+  if (left_child()->find_column_id_for_column_name(column_name, column_id)) {
+    if (std::find(_groupby_columns.begin(), _groupby_columns.end(), column_id) != _groupby_columns.end()) {
+      matches.emplace_back(column_id);
+    }
+  }
+
+  if (matches.size() != 1) {
+    Fail("Either did not find column name or column name is ambiguous.");
+  }
+
+  column_id = matches[0];
+  return true;
+}
 
 }  // namespace opossum

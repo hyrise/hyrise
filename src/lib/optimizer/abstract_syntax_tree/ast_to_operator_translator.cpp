@@ -98,18 +98,18 @@ std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::_translate_aggregate_
    * 1. Handle arithmetic expressions in aggregate functions via Projection. Support only one level
    * of arithmetics, i.e. SUM(a*b) is fine SUM(a*b+c) is not
    */
-  std::vector<std::string> expr_aliases;
+  std::vector<ColumnID> expr_aliases;
   expr_aliases.reserve(aggregates.size());
 
   Projection::ProjectionDefinitions definitions;
   definitions.reserve(aggregates.size());
 
-  auto alias_index = 0;
-
   // We only need a Projection before the aggregate if the function arg is an arithmetic expr.
   auto need_projection = false;
 
-  for (const auto &aggregate : aggregates) {
+//  for (const auto &aggregate : aggregates) {
+  for (size_t i = 0; i < aggregates.size(); i++) {
+    const auto &aggregate = aggregates[i];
     const auto &expr = aggregate.expr;
     DebugAssert(expr->type() == ExpressionType::FunctionReference, "Expression is not a function.");
 
@@ -119,7 +119,7 @@ std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::_translate_aggregate_
       // TODO(tim): column data type is not always float
       // TODO(tim): check if this can be done prettier
       definitions.emplace_back(function_arg_expr->name(), "float", function_arg_expr->name());
-      expr_aliases.emplace_back(function_arg_expr->name());
+      expr_aliases.emplace_back(ColumnID{i});
     } else if (function_arg_expr->is_arithmetic_operator()) {
       need_projection = true;
 
@@ -127,12 +127,9 @@ std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::_translate_aggregate_
       DebugAssert(function_arg_expr->left_child()->is_operand(), "Left child is not a literal or column ref.");
       DebugAssert(function_arg_expr->right_child()->is_operand(), "Right child is not a literal or column ref.");
 
-      const auto alias = "alias" + std::to_string(alias_index);
-      alias_index++;
-
       // TODO(tim): column data type is not always float
-      definitions.emplace_back(function_arg_expr->to_expression_string(), "float", alias);
-      expr_aliases.emplace_back(alias);
+      definitions.emplace_back(function_arg_expr->to_expression_string(), "float", "someAlias");
+      expr_aliases.emplace_back(ColumnID{i});
     } else {
       Fail("Expression is neither operand nor arithmetic expre.");
     }

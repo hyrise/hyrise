@@ -32,4 +32,10 @@ const std::shared_ptr<TableStatistics> StoredTableNode::_gather_statistics() con
 
 const std::string& StoredTableNode::table_name() const { return _table_name; }
 
+bool StoredTableNode::find_column_id_for_column_name(std::string & column_name, ColumnID &column_id) {
+  auto table = StorageManager::get().get_table(_table_name);
+  column_id = table->column_id_by_name(column_name);
+  return true;
+}
+
 }  // namespace opossum

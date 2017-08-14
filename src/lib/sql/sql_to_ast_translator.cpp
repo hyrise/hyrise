@@ -130,17 +130,14 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_join(const hsql:
   auto right_node = _translate_table_ref(*join.right);
 
   const hsql::Expr& condition = *join.condition;
-  std::pair<std::string, std::string> column_names(generate_column_name(*condition.expr, false),
-                                                   generate_column_name(*condition.expr2, false));
+  std::pair<ColumnID, ColumnID> column_ids(generate_column_id(*condition.expr, left_node),
+                                           generate_column_id(*condition.expr2, right_node));
 
   // Joins currently only support one simple condition (i.e., not multiple conditions).
   auto scan_type = translate_operator_type_to_scan_type(condition.opType);
   auto join_mode = translate_join_type_to_join_mode(join.type);
 
-  std::string prefix_left = std::string(join.left->getName()) + ".";
-  std::string prefix_right = std::string(join.right->getName()) + ".";
-
-  auto join_node = std::make_shared<JoinNode>(column_names, scan_type, join_mode, prefix_left, prefix_right);
+  auto join_node = std::make_shared<JoinNode>(column_ids, scan_type, join_mode);
   join_node->set_left_child(left_node);
   join_node->set_right_child(right_node);
 
@@ -164,32 +161,31 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_table_ref(const 
   }
 }
 
-std::string SQLToASTTranslator::generate_column_name(const hsql::Expr& expr, bool include_table_name) {
-  std::string name;
+ColumnID SQLToASTTranslator::generate_column_id(const hsql::Expr &expr, const std::shared_ptr<AbstractASTNode>& input_node) {
+  ColumnID column_id;
+
+  std::string column_name(expr.name);
 
   // Translate an aggregate function to a string that the Aggregate operator generates.
   if (expr.isType(hsql::kExprFunctionRef)) {
-    name += expr.name;
-    name += "(";
-    name += generate_column_name(*expr.exprList->at(0), include_table_name);
-    name += ")";
-    return name;
+    if (input_node->find_column_id_for_column_name(column_name, column_id)) {
+      return column_id;
+    }
+
+    Fail("Did not find column name " + column_name);
   }
 
   DebugAssert(expr.isType(hsql::kExprColumnRef), "Expected column reference.");
 
-  if (include_table_name && expr.hasTable()) {
-    name += std::string(expr.table) + ".";
+  if (input_node->find_column_id_for_column_name(column_name, column_id)) {
+    return column_id;
   }
 
-  name += expr.name;
-
-  DebugAssert(!name.empty(), "Column name is empty.");
-
-  return name;
+  Fail("Did not find column name " + column_name);
+  return ColumnID{};
 }
 
-AllParameterVariant SQLToASTTranslator::translate_literal(const hsql::Expr& expr) {
+AllParameterVariant SQLToASTTranslator::translate_literal(const hsql::Expr& expr, const optional<std::shared_ptr<AbstractASTNode>>& input_node) {
   switch (expr.type) {
     case hsql::kExprLiteralInt:
       return AllTypeVariant(expr.ival);
@@ -200,7 +196,10 @@ AllParameterVariant SQLToASTTranslator::translate_literal(const hsql::Expr& expr
     case hsql::kExprParameter:
       return ValuePlaceholder(expr.ival);
     case hsql::kExprColumnRef:
-      return ColumnName(generate_column_name(expr, true));
+      if (!input_node) {
+        Fail("Cannot generate ColumnID without input_node");
+      }
+      return generate_column_id(expr, *input_node);
     default:
       Fail("Could not translate literal: expression type not supported.");
       return {};
@@ -237,7 +236,7 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_filter_expr(
         "Unsupported filter: we must have a function or column reference on at least one side of the expression.");
   }
 
-  const auto column_name = generate_column_name(*column_operand_expr, true);
+  const auto column_id = generate_column_id(*column_operand_expr, input_node);
 
   AllParameterVariant value;
   optional<AllTypeVariant> value2;
@@ -248,17 +247,17 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_filter_expr(
     const auto* left_expr = (*expr.exprList)[0];
     const auto* right_expr = (*expr.exprList)[1];
 
-    value = translate_literal(*left_expr);
+    value = translate_literal(*left_expr, input_node);
 
     // TODO(torpedro / mp): TableScan does not support AllParameterVariant as second value.
     // This would be required to prepare BETWEEN.
-    value2 = boost::get<AllTypeVariant>(translate_literal(*right_expr));
+    value2 = boost::get<AllTypeVariant>(translate_literal(*right_expr, input_node));
   } else {
-    value = translate_literal(*value_operand_expr);
+    value = translate_literal(*value_operand_expr, input_node);
   }
 
-  std::shared_ptr<ExpressionNode> expression_node = SQLExpressionTranslator::translate_expression(expr);
-  auto predicate_node = std::make_shared<PredicateNode>(column_name, expression_node, scan_type, value, value2);
+  std::shared_ptr<ExpressionNode> expression_node = SQLExpressionTranslator::translate_expression(expr, input_node);
+  auto predicate_node = std::make_shared<PredicateNode>(column_id, expression_node, scan_type, value, value2);
 
   predicate_node->set_left_child(input_node);
 
@@ -278,7 +277,7 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_aggregate(
 
   for (const auto* column_expr : select_list) {
     if (column_expr->isType(hsql::kExprFunctionRef)) {
-      auto opossum_expr = SQLExpressionTranslator().translate_expression(*column_expr);
+      auto opossum_expr = SQLExpressionTranslator().translate_expression(*column_expr, input_node);
 
       optional<std::string> alias;
       if (column_expr->alias) {
@@ -316,14 +315,14 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_aggregate(
   /**
    * Build GROUP BY
    */
-  std::vector<std::string> groupby_columns;
+  std::vector<ColumnID> groupby_columns;
   if (group_by != nullptr) {
     groupby_columns.reserve(group_by->columns->size());
     for (const auto* groupby_expr : *group_by->columns) {
       DebugAssert(groupby_expr->isType(hsql::kExprColumnRef), "Only column ref GROUP BYs supported atm");
       DebugAssert(groupby_expr->name != nullptr, "hsql::Expr::name needs to be set");
 
-      groupby_columns.emplace_back(generate_column_name(*groupby_expr, true));
+      groupby_columns.emplace_back(generate_column_id(*groupby_expr, input_node));
     }
   }
 
@@ -345,21 +344,24 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_aggregate(
 
 std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_projection(
     const std::vector<hsql::Expr*>& select_list, const std::shared_ptr<AbstractASTNode>& input_node) {
-  std::vector<std::string> columns;
+  std::vector<ColumnID> column_ids;
+  std::vector<std::string> column_names;
   for (const auto* expr : select_list) {
     // TODO(mp): expressions
     if (expr->isType(hsql::kExprColumnRef)) {
-      columns.emplace_back(generate_column_name(*expr, true));
+      column_ids.emplace_back(generate_column_id(*expr, input_node));
+      column_names.emplace_back((*expr).name);
     } else if (expr->isType(hsql::kExprStar)) {
       // Resolve '*' by getting the output columns of the input node.
-      auto input_columns = input_node->output_column_names();
-      columns.insert(columns.end(), input_columns.begin(), input_columns.end());
+//      auto input_columns = input_node->output_column_ids();
+//      column_ids.insert(column_ids.end(), input_columns.begin(), input_columns.end());
+      return input_node;
     } else {
       Fail("Projection only supports columns to be selected.");
     }
   }
 
-  auto projection_node = std::make_shared<ProjectionNode>(columns);
+  auto projection_node = std::make_shared<ProjectionNode>(column_ids, column_names);
   projection_node->set_left_child(input_node);
 
   return projection_node;
@@ -383,7 +385,7 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_order_by(
     // TODO(anybody): handle non-column refs
     DebugAssert(order_expr.isType(hsql::kExprColumnRef), "Can only order by columns for now.");
 
-    const auto column_name = generate_column_name(order_expr, true);
+    const auto column_name = generate_column_id(order_expr, input_node);
     const auto asc = order_description->type == hsql::kOrderAsc;
 
     auto sort_node = std::make_shared<SortNode>(column_name, asc);

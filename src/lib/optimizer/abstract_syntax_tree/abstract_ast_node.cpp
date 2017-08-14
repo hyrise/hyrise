@@ -97,6 +97,21 @@ std::vector<ColumnID> AbstractASTNode::output_column_ids() const {
   return _output_column_ids;
 }
 
+bool AbstractASTNode::find_column_id_for_column_name(std::string & column_name, ColumnID &column_id) {
+  // TODO(Sven): fail if column name is ambiguous
+  if (_left_child) {
+    if (_left_child->find_column_id_for_column_name(column_name, column_id)) {
+      return true;
+    }
+    if (_right_child->find_column_id_for_column_name(column_name, column_id)) {
+      column_id = ColumnID{column_id + _left_child->_output_column_ids.size()};
+      return true;
+    }
+  }
+  Fail("Did not find column_name");
+  return false;
+}
+
 void AbstractASTNode::print(const uint32_t level, std::ostream &out) const {
   out << std::setw(level) << " ";
   out << description() << std::endl;

@@ -70,7 +70,7 @@ TEST_F(OperatorsValidateTest, ProjectedValidate) {
 
   std::shared_ptr<Table> expected_result = load_table("src/test/tables/validate_output_validated_projected.tbl", 2u);
 
-  std::vector<std::string> column_filter = {"c", "a"};
+  std::vector<ColumnID> column_filter = {ColumnID{2}, ColumnID{0}};
   auto projection = std::make_shared<Projection>(_table_wrapper, column_filter);
   projection->set_transaction_context(context);
   projection->execute();

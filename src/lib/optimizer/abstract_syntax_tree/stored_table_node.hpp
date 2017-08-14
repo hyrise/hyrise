@@ -26,6 +26,8 @@ class StoredTableNode : public AbstractASTNode {
 
   const std::string& table_name() const;
 
+  bool find_column_id_for_column_name(std::string & column_name, ColumnID &column_id) override;
+
  private:
   const std::shared_ptr<TableStatistics> _gather_statistics() const override;
   const std::string _table_name;

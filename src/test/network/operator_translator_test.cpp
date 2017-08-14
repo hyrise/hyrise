@@ -178,7 +178,7 @@ TEST_F(OperatorTranslatorTest, Projection) {
 
   auto msg = proto::OperatorVariant();
   proto::ProjectionOperator* projection_operator = msg.mutable_projection();
-  projection_operator->add_column_name("a");
+  projection_operator->add_column_id(0);
   proto::GetTableOperator* get_table_operator = projection_operator->mutable_input_operator()->mutable_get_table();
   get_table_operator->set_table_name("TestTable");
 
@@ -331,7 +331,7 @@ TEST_F(OperatorTranslatorTest, TableScanAndProjection) {
   proto::Variant* variant = table_scan_operator->mutable_value();
   variant->set_value_int(123);
   proto::ProjectionOperator* projection_operator = table_scan_operator->mutable_input_operator()->mutable_projection();
-  projection_operator->add_column_name("a");
+  projection_operator->add_column_id(0);
   proto::GetTableOperator* get_table_operator = projection_operator->mutable_input_operator()->mutable_get_table();
   get_table_operator->set_table_name("TestTable");
 
@@ -596,7 +596,7 @@ TEST_F(OperatorTranslatorTest, DISABLED_NestedLoopJoinWithColumns) {
 TEST_F(OperatorTranslatorTest, ProjectionMissingInput) {
   auto msg = proto::OperatorVariant();
   proto::ProjectionOperator* projection_operator = msg.mutable_projection();
-  projection_operator->add_column_name("a");
+  projection_operator->add_column_id(0);
 
   OperatorTranslator translator;
   EXPECT_THROW(translator.build_tasks_from_proto(msg), std::logic_error);
@@ -605,7 +605,7 @@ TEST_F(OperatorTranslatorTest, ProjectionMissingInput) {
 TEST_F(OperatorTranslatorTest, ProjectionIncompleteInput) {
   auto msg = proto::OperatorVariant();
   proto::ProjectionOperator* projection_operator = msg.mutable_projection();
-  projection_operator->add_column_name("a");
+  projection_operator->add_column_id(0);
   projection_operator->mutable_input_operator();
 
   OperatorTranslator translator;

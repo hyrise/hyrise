@@ -50,7 +50,7 @@ TEST_F(OperatorsProjectionTest, SingleColumn) {
 TEST_F(OperatorsProjectionTest, SingleColumnOldInterface) {
   std::shared_ptr<Table> expected_result = load_table("src/test/tables/int.tbl", 1);
 
-  std::vector<std::string> columns = {"a"};
+  std::vector<ColumnID> columns = {ColumnID{0}};
   auto projection = std::make_shared<Projection>(_table_wrapper, columns);
   projection->execute();
   auto out = projection->get_output();
