@@ -107,8 +107,8 @@ set(
     operators/insert.hpp
     operators/join_hash.cpp
     operators/join_hash.hpp
-    operators/sort_merge_join.cpp
-    operators/sort_merge_join.hpp
+    operators/join_sort_merge.cpp
+    operators/join_sort_merge.hpp
     operators/join_nested_loop_a.cpp
     operators/join_nested_loop_a.hpp
     operators/join_nested_loop_b.cpp

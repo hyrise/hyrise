@@ -30,26 +30,23 @@ namespace opossum {
    *
    * Note: SortMergeJoin does not support null values in the input at the moment.
    * Note: Cross joins are not supported. Use the product operator instead.
-   * Note: Outer joins are only implemented for the equi-join case i.e. the '=" operator.
+   * Note: Outer joins are only implemented for the equi-join case, i.e. the "=" operator.
    */
-class SortMergeJoin : public AbstractJoinOperator {
+class JoinSortMerge : public AbstractJoinOperator {
  public:
-  SortMergeJoin(const std::shared_ptr<const AbstractOperator> left, const std::shared_ptr<const AbstractOperator> right,
+  JoinSortMerge(const std::shared_ptr<const AbstractOperator> left, const std::shared_ptr<const AbstractOperator> right,
                 optional<std::pair<std::string, std::string>> column_names, const ScanType op, const JoinMode mode,
                 const std::string& prefix_left, const std::string& prefix_right);
 
-  std::shared_ptr<const Table> on_execute() override { return _impl->on_execute(); };
-  std::shared_ptr<AbstractOperator> recreate(const std::vector<AllParameterVariant> &args) const override {
-    Fail("Operator " + this->name() + " does not implement recreation.");
-    return {};
-  }
-  const std::string name() const override { return "SortMergeJoin"; };
-  uint8_t num_in_tables() const override { return 2u; };
-  uint8_t num_out_tables() const override { return 1u; };
+  std::shared_ptr<const Table> on_execute() override;
+  std::shared_ptr<AbstractOperator> recreate(const std::vector<AllParameterVariant> &args) const override;
+  const std::string name() const override;
+  uint8_t num_in_tables() const override;
+  uint8_t num_out_tables() const override;
 
  protected:
   template <typename T>
-  class SortMergeJoinImpl;
+  class JoinSortMergeImpl;
 
   std::unique_ptr<AbstractJoinOperatorImpl> _impl;
 };

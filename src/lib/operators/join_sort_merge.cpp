@@ -1,4 +1,4 @@
-#include "sort_merge_join.hpp"
+#include "join_sort_merge.hpp"
 
 #include <algorithm>
 #include <map>
@@ -15,19 +15,19 @@
 namespace opossum {
 
 /**
-* TODO(arne.mayer): Outer Non Equi Joins
+* TODO(arne.mayer): Outer non-equi joins (outer <, <=, >, >=) (Not-equal joins (!=) are not supported)
 * TODO(anyone): Choose an appropriate number of partitions.
 **/
 /**
 * The sort merge join performs a join on two input tables on specific join columns. For usage notes, see the
-* sort_merge_join.hpp. This is how the join works:
+* join_sort_merge.hpp. This is how the join works:
 * -> The input tables are materialized and partitioned to a specified amount of partitions.
 *    /utils/radix_partition_sort.hpp for more info on the partitioning phase.
 * -> The join is performed per partition. For the joining phase, runs of entries with the same value are identified
 *    and handled at once. If a join-match is identified, the corresponding row_ids are noted for the output.
 * -> Using the join result, the output table is built using pos lists referencing the original tables.
 **/
-SortMergeJoin::SortMergeJoin(const std::shared_ptr<const AbstractOperator> left,
+JoinSortMerge::JoinSortMerge(const std::shared_ptr<const AbstractOperator> left,
                              const std::shared_ptr<const AbstractOperator> right,
                              optional<std::pair<std::string, std::string>> column_names, const ScanType op,
                              const JoinMode mode, const std::string& prefix_left, const std::string& prefix_right)
@@ -39,7 +39,7 @@ SortMergeJoin::SortMergeJoin(const std::shared_ptr<const AbstractOperator> left,
   DebugAssert(op == ScanType::OpEquals || op == ScanType::OpLessThan || op == ScanType::OpGreaterThan ||
               op == ScanType::OpLessThanEquals || op == ScanType::OpGreaterThanEquals, "Unsupported scan type");
   DebugAssert(op == ScanType::OpEquals || mode == JoinMode::Inner, "Outer joins are only implemented for equi joins.");
-  DebugAssert(static_cast<bool>(column_names), "The column names are not optional for the SortMergeJoin.");
+  DebugAssert(static_cast<bool>(column_names), "SortMergeJoin currently does not support natural joins.");
 
   auto left_column_name = column_names->first;
   auto right_column_name = column_names->second;
@@ -50,33 +50,46 @@ SortMergeJoin::SortMergeJoin(const std::shared_ptr<const AbstractOperator> left,
 
   DebugAssert(left_column_type == input_table_right()->column_type(
                                                           input_table_right()->column_id_by_name(right_column_name)),
-              "Left and right column types do not match. The SortMergeJoin requires matching column types");
+              "Left and right column types do not match. The sort merge join requires matching column types");
 
   // Create implementation to compute the join result
-  _impl = make_unique_by_column_type<AbstractJoinOperatorImpl, SortMergeJoinImpl>(left_column_type,
+  _impl = make_unique_by_column_type<AbstractJoinOperatorImpl, JoinSortMergeImpl>(left_column_type,
     *this, left_column_name, right_column_name, op, mode);
 }
+
+std::shared_ptr<AbstractOperator> JoinSortMerge::recreate(const std::vector<AllParameterVariant> &args) const {
+  Fail("Operator " + this->name() + " does not implement recreation.");
+  return {};
+}
+
+std::shared_ptr<const Table> JoinSortMerge::on_execute() { return _impl->on_execute(); }
+
+const std::string JoinSortMerge::name() const { return "JoinSortMerge"; }
+
+uint8_t JoinSortMerge::num_in_tables() const { return 2u; }
+
+uint8_t JoinSortMerge::num_out_tables() const { return 1u; }
 
 /**
 ** Start of implementation.
 **/
 template <typename T>
-class SortMergeJoin::SortMergeJoinImpl : public AbstractJoinOperatorImpl {
+class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
  public:
-  SortMergeJoinImpl<T>(SortMergeJoin& sort_merge_join, std::string left_column_name,
+  JoinSortMergeImpl<T>(JoinSortMerge& sort_merge_join, std::string left_column_name,
                        std::string right_column_name, const ScanType op, JoinMode mode)
     : _sort_merge_join{sort_merge_join}, _left_column_name{left_column_name}, _right_column_name{right_column_name},
       _op{op}, _mode{mode} {
 
-    _partition_count = determine_number_of_partitions();
+    _partition_count = _determine_number_of_partitions();
     _output_pos_lists_left.resize(_partition_count);
     _output_pos_lists_right.resize(_partition_count);
   }
 
-  virtual ~SortMergeJoinImpl() = default;
+  virtual ~JoinSortMergeImpl() = default;
 
  protected:
-  SortMergeJoin& _sort_merge_join;
+  JoinSortMerge& _sort_merge_join;
 
   // Contains the materialized sorted input tables
   std::shared_ptr<MaterializedTable<T>> _sorted_left_table;
@@ -88,7 +101,7 @@ class SortMergeJoin::SortMergeJoinImpl : public AbstractJoinOperatorImpl {
   const ScanType _op;
   const JoinMode _mode;
 
-  // the partition count should be a power of two, i.e. 1, 2, 4, 8, 16, ...
+  // the partition count must be a power of two, i.e. 1, 2, 4, 8, 16, ...
   size_t _partition_count;
 
   // Contains the output row ids for each partition
@@ -124,10 +137,10 @@ class SortMergeJoin::SortMergeJoinImpl : public AbstractJoinOperatorImpl {
 
     // Executes the given action for every row id of the table in this range.
     void for_every_row_id(std::shared_ptr<MaterializedTable<T>> table, std::function<void(RowID&)> action) {
-      for (int partition = start.partition; partition <= end.partition; partition++) {
+      for (int partition = start.partition; partition <= end.partition; ++partition) {
         int start_index = (partition == start.partition) ? start.index : 0;
         int end_index = (partition == end.partition) ? end.index : table->at(partition)->size();
-        for (int index = start_index; index < end_index; index++) {
+        for (int index = start_index; index < end_index; ++index) {
           action(table->at(partition)->at(index).row_id);
         }
       }
@@ -139,25 +152,25 @@ class SortMergeJoin::SortMergeJoinImpl : public AbstractJoinOperatorImpl {
   * The number of partitions must be a power of two, i.e. 1, 2, 4, 8, 16...
   * TODO(anyone): How should we determine the number of partitions?
   **/
-  size_t determine_number_of_partitions() {
+  size_t _determine_number_of_partitions() {
     // Get the next lower power of two of the bigger chunk number
     // Note: this is only provisional. There should be a reasonable calculation here based on hardware stats.
     size_t chunk_count_left = _sort_merge_join.input_table_left()->chunk_count();
     size_t chunk_count_right = _sort_merge_join.input_table_right()->chunk_count();
-    size_t max_chunk_count = chunk_count_left > chunk_count_right ? chunk_count_left : chunk_count_right;
-    return static_cast<size_t>(std::pow(2, std::floor(std::log2(max_chunk_count))));
+    return static_cast<size_t>(std::pow(2, std::floor(std::log2(std::max(chunk_count_left, chunk_count_right)))));
   }
 
   /**
   * Gets the table position corresponding to the end of the table, i.e. the last entry of the last partition.
   **/
-  TablePosition _end_of_table(std::shared_ptr<MaterializedTable<T>> table) {
+  static TablePosition _end_of_table(std::shared_ptr<MaterializedTable<T>> table) {
+    DebugAssert(table->size() > 0, "table has no chunks");
     auto last_partition = table->size() - 1;
     return TablePosition(last_partition, table->at(last_partition)->size());
   }
 
   /**
-  * Performs the join for a two runs of a specified partition.
+  * Performs the join for two runs of a specified partition.
   * A run is a series of rows in a partition with the same value.
   **/
   void _join_runs(size_t partition_number, TableRange left_run, TableRange right_run) {
@@ -266,7 +279,7 @@ class SortMergeJoin::SortMergeJoinImpl : public AbstractJoinOperatorImpl {
     auto& value = values->at(start_index).value;
     size_t offset = 1;
     while (start_index + offset < values->size() && values->at(start_index + offset).value  == value) {
-      offset++;
+      ++offset;
     }
 
     return offset;
@@ -380,7 +393,7 @@ class SortMergeJoin::SortMergeJoinImpl : public AbstractJoinOperatorImpl {
   void _add_output_columns(std::shared_ptr<Table> output_table, std::shared_ptr<const Table> input_table,
                           const std::string& prefix, std::shared_ptr<const PosList> pos_list) {
     auto column_count = input_table->col_count();
-    for (ColumnID column_id{0}; column_id < column_count; column_id++) {
+    for (ColumnID column_id{0}; column_id < column_count; ++column_id) {
       // Add the column definition
       auto column_name = prefix + input_table->column_name(column_id);
       auto column_type = input_table->column_type(column_id);
@@ -404,14 +417,14 @@ class SortMergeJoin::SortMergeJoinImpl : public AbstractJoinOperatorImpl {
   }
 
   /**
-  * Turns a pos lists that is pointing to reference column entries into a pos list pointing to the original table.
+  * Turns a pos list that is pointing to reference column entries into a pos list pointing to the original table.
   * This is done because there should not be any reference columns referencing reference columns.
   **/
   std::shared_ptr<PosList> _dereference_pos_list(std::shared_ptr<const Table> input_table, ColumnID column_id,
                                                 std::shared_ptr<const PosList> pos_list) {
     // Get all the input pos lists so that we only have to pointer cast the columns once
     auto input_pos_lists = std::vector<std::shared_ptr<const PosList>>();
-    for (ChunkID chunk_id{0}; chunk_id < input_table->chunk_count(); chunk_id++) {
+    for (ChunkID chunk_id{0}; chunk_id < input_table->chunk_count(); ++chunk_id) {
       auto b_column = input_table->get_chunk(chunk_id).get_column(column_id);
       auto r_column = std::dynamic_pointer_cast<ReferenceColumn>(b_column);
       input_pos_lists.push_back(r_column->pos_list());
@@ -431,8 +444,9 @@ class SortMergeJoin::SortMergeJoinImpl : public AbstractJoinOperatorImpl {
   * Executes the SortMergeJoin operator.
   **/
   std::shared_ptr<const Table> on_execute() {
-    auto radix_partitioner = RadixPartitionSort<T>(_sort_merge_join._input_left, _sort_merge_join._input_right,
-                              *_sort_merge_join._column_names, _op == ScanType::OpEquals, _partition_count);
+    auto radix_partitioner = RadixPartitionSort<T>(_sort_merge_join.input_table_left(),
+                                                  _sort_merge_join.input_table_right(), *_sort_merge_join._column_names,
+                                                  _op == ScanType::OpEquals, _partition_count);
     // Sort and partition the input tables
     radix_partitioner.execute();
     auto sort_output = radix_partitioner.get_output();

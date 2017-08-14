@@ -30,17 +30,14 @@ namespace opossum {
 template <typename T>
 class RadixPartitionSort {
  public:
-  RadixPartitionSort(const std::shared_ptr<const AbstractOperator> left,
-                     const std::shared_ptr<const AbstractOperator> right,
+  RadixPartitionSort(const std::shared_ptr<const Table> left, const std::shared_ptr<const Table> right,
                      std::pair<std::string, std::string> column_names, bool equi_case, size_t partition_count)
-    : _left_column_name{column_names.first}, _right_column_name{column_names.second}, _equi_case{equi_case},
+    : _input_table_left{left}, _input_table_right{right}, _left_column_name{column_names.first},
+      _right_column_name{column_names.second}, _equi_case{equi_case},
       _partition_count{partition_count} {
     DebugAssert(partition_count > 0, "partition_count must be > 0");
     DebugAssert(left != nullptr, "left input operator is null");
     DebugAssert(right != nullptr, "right input operator is null");
-
-    _input_table_left = left->get_output();
-    _input_table_right = right->get_output();
   }
 
   virtual ~RadixPartitionSort() = default;
@@ -48,7 +45,7 @@ class RadixPartitionSort {
  protected:
   using MatTablePtr = std::shared_ptr<MaterializedTable<T>>;
   /**
-  * The ChunkStatistics structure is used to gather statistics regarding a chunks values in order to
+  * The ChunkStatistics structure is used to gather statistics regarding a chunk's values in order to
   * be able to appropriately reserve space for the partitioning output.
   **/
   struct ChunkStatistics {
@@ -62,14 +59,14 @@ class RadixPartitionSort {
   };
 
   /**
-  * The TablelStatistics structure is used to gather statistics regarding the value distribution of a table
+  * The TableStatistics structure is used to gather statistics regarding the value distribution of a table
   *  and its chunks in order to be able to appropriately reserve space for the partitioning output.
   **/
   struct TableStatistics {
     TableStatistics(size_t chunk_count, size_t partition_count) {
       partition_histogram.resize(partition_count);
       chunk_statistics.reserve(chunk_count);
-      for (size_t i = 0; i < chunk_count; i++) {
+      for (size_t i = 0; i < chunk_count; ++i) {
         chunk_statistics.push_back(ChunkStatistics(partition_count));
       }
     }
@@ -93,13 +90,15 @@ class RadixPartitionSort {
 
   // Radix calculation for arithmetic types
   template <typename T2>
-  typename std::enable_if<std::is_arithmetic<T2>::value, uint32_t>::type get_radix(T2 value, uint8_t radix_bitmask) {
+  static typename std::enable_if<std::is_arithmetic<T2>::value, uint32_t>::type get_radix(T2 value,
+                                                                                          uint32_t radix_bitmask) {
     return static_cast<uint32_t>(value) & radix_bitmask;
   }
 
   // Radix calculation for non-arithmetic types
   template <typename T2>
-  typename std::enable_if<!std::is_arithmetic<T2>::value, uint32_t>::type get_radix(T2 value, uint32_t radix_bitmask) {
+  static typename std::enable_if<!std::is_arithmetic<T2>::value, uint32_t>::type get_radix(T2 value,
+                                                                                           uint32_t radix_bitmask) {
     auto result = reinterpret_cast<const uint32_t*>(value.c_str());
     return *result & radix_bitmask;
   }
@@ -107,7 +106,7 @@ class RadixPartitionSort {
   /**
   * Determines the total size of a materialized table.
   **/
-  size_t _materialized_table_size(MatTablePtr table) {
+  static size_t _materialized_table_size(MatTablePtr table) {
     size_t total_size = 0;
     for (auto chunk : *table) {
       total_size += chunk->size();
@@ -119,7 +118,7 @@ class RadixPartitionSort {
   /**
   * Concatenates multiple materialized chunks to a single materialized chunk.
   **/
-  MatTablePtr _concatenate_chunks(MatTablePtr input_chunks) {
+  static MatTablePtr _concatenate_chunks(MatTablePtr input_chunks) {
     auto output_table = std::make_shared<MaterializedTable<T>>(1);
     output_table->at(0) = std::make_shared<MaterializedChunk<T>>();
 
@@ -137,18 +136,18 @@ class RadixPartitionSort {
   * Performs the partitioning on a materialized table using a partitioning function that determines for each
   * value the appropriate partition id. This is how the partitioning works:
   * -> Count for each chunk how many of its values belong in each of the partitions using histograms.
-  * -> Aggregate the per-chunk histograms to a historam for the whole table. For each chunk it is noted where
+  * -> Aggregate the per-chunk histograms to a histogram for the whole table. For each chunk it is noted where
   *    it will be inserting values in each partition.
   * -> Reserve the appropriate space for each output partition to avoid ongoing vector resizing.
   * -> At last, each value of each chunk is moved to the appropriate partition.
   **/
-  MatTablePtr _partition(MatTablePtr input_chunks, std::function<size_t(T&)> partitioner) {
+  MatTablePtr _partition(MatTablePtr input_chunks, std::function<size_t(const T&)> partitioner) {
     auto output_table = std::make_shared<MaterializedTable<T>>(_partition_count);
     TableStatistics table_statistics(input_chunks->size(), _partition_count);
 
     // Count for every chunk the number of entries for each partition in parallel
     std::vector<std::shared_ptr<AbstractTask>> histogram_jobs;
-    for (size_t chunk_number = 0; chunk_number < input_chunks->size(); chunk_number++) {
+    for (size_t chunk_number = 0; chunk_number < input_chunks->size(); ++chunk_number) {
       auto& chunk_statistics = table_statistics.chunk_statistics[chunk_number];
       auto input_chunk = input_chunks->at(chunk_number);
 
@@ -162,7 +161,7 @@ class RadixPartitionSort {
       auto job = std::make_shared<JobTask>([input_chunk, &chunk_statistics, &partitioner] {
         for (auto& entry : *input_chunk) {
           auto partition_id = partitioner(entry.value);
-          chunk_statistics.partition_histogram[partition_id]++;
+          ++chunk_statistics.partition_histogram[partition_id];
         }
       });
 
@@ -175,21 +174,21 @@ class RadixPartitionSort {
 
     // Aggregate the chunks histograms to a table histogram and initialize the insert positions for each chunk
     for (auto& chunk_statistics : table_statistics.chunk_statistics) {
-      for (size_t partition_id = 0; partition_id < _partition_count; partition_id++) {
+      for (size_t partition_id = 0; partition_id < _partition_count; ++partition_id) {
         chunk_statistics.insert_position[partition_id] = table_statistics.partition_histogram[partition_id];
         table_statistics.partition_histogram[partition_id] += chunk_statistics.partition_histogram[partition_id];
       }
     }
 
     // Reserve the appropriate output space for the partitions
-    for (size_t partition_id = 0; partition_id < _partition_count; partition_id++) {
+    for (size_t partition_id = 0; partition_id < _partition_count; ++partition_id) {
       auto partition_size = table_statistics.partition_histogram[partition_id];
       output_table->at(partition_id) = std::make_shared<MaterializedChunk<T>>(partition_size);
     }
 
     // Move each entry into its appropriate partition in parallel
     std::vector<std::shared_ptr<AbstractTask>> partition_jobs;
-    for (size_t chunk_number = 0; chunk_number < input_chunks->size(); chunk_number++) {
+    for (size_t chunk_number = 0; chunk_number < input_chunks->size(); ++chunk_number) {
       auto job = std::make_shared<JobTask>([chunk_number, output_table, input_chunks, &table_statistics, &partitioner] {
         auto& chunk_statistics = table_statistics.chunk_statistics[chunk_number];
         for (auto& entry : *input_chunks->at(chunk_number)) {
@@ -215,7 +214,7 @@ class RadixPartitionSort {
   **/
   MatTablePtr _radix_partition(MatTablePtr input_chunks) {
     auto radix_bitmask = _partition_count - 1;
-    return _partition(input_chunks, [=] (T& value) {
+    return _partition(input_chunks, [=] (const T& value) {
       return get_radix<T>(value, radix_bitmask);
     });
   }
@@ -223,13 +222,13 @@ class RadixPartitionSort {
   /**
   * Picks sample values from a materialized table that are used to determine partition range bounds.
   **/
-  void pick_sample_values(std::vector<std::map<T, size_t>>& sample_values, MatTablePtr table) {
-    for (size_t chunk_number = 0; chunk_number < table->size(); chunk_number++) {
+  void _pick_sample_values(std::vector<std::map<T, size_t>>& sample_values, MatTablePtr table) {
+    for (size_t chunk_number = 0; chunk_number < table->size(); ++chunk_number) {
       auto chunk_values = table->at(chunk_number);
 
-      for (size_t partition_id = 0; partition_id < _partition_count - 1; partition_id++) {
+      for (size_t partition_id = 0; partition_id < _partition_count - 1; ++partition_id) {
         size_t pos = static_cast<size_t>(chunk_values->size() * (partition_id / static_cast<float>(_partition_count)));
-        sample_values[partition_id][chunk_values->at(pos).value]++;
+        ++sample_values[partition_id][chunk_values->at(pos).value];
       }
     }
   }
@@ -241,33 +240,35 @@ class RadixPartitionSort {
   std::pair<MatTablePtr, MatTablePtr> _range_partition(MatTablePtr input_left, MatTablePtr input_right) {
     std::vector<std::map<T, size_t>> sample_values(_partition_count);
 
-    pick_sample_values(sample_values, input_left);
-    pick_sample_values(sample_values, input_right);
+    _pick_sample_values(sample_values, input_left);
+    _pick_sample_values(sample_values, input_right);
 
-    // Pick the split values to be the most common sample value for each partition.
-    // The last partition does not need a split value because it covers all values than are bigger than all split values
+    // Pick the most common sample values for each partition for the split values.
+    // The last partition does not need a split value because it covers all values that are bigger than all split values
     std::vector<T> split_values(_partition_count);
-    for (size_t partition_id = 0; partition_id < _partition_count - 2; partition_id++) {
-    split_values[partition_id] = std::max_element(sample_values[partition_id].begin(),
+    for (size_t partition_id = 0; partition_id < _partition_count - 2; ++partition_id) {
+      // Pick the values with the highest count
+      split_values[partition_id] = std::max_element(sample_values[partition_id].begin(),
                                                   sample_values[partition_id].end(),
-      [] (auto& a, auto& b) {
-        return a.second < b.second;
+        [] (auto& a, auto& b) {
+          return a.second < b.second;
       })->second;
     }
 
     // Implements range partitioning
-    auto partitioner = [this, &split_values](T& value) {
+    auto partition_count = _partition_count;
+    auto partitioner = [partition_count, &split_values](const T& value) {
       // Find the first split value that is greater or equal to the entry.
       // The split values are sorted in ascending order.
       // Note: can we do this faster? (binary search?)
-      for (size_t partition_id = 0; partition_id < _partition_count; partition_id++) {
+      for (size_t partition_id = 0; partition_id < partition_count; ++partition_id) {
         if (value <= split_values[partition_id]) {
           return partition_id;
         }
       }
 
       // The value is greater than all split values, which means it belongs in the last partition.
-      return _partition_count - 1;
+      return partition_count - 1;
     };
 
     auto output_left = _partition(input_left, partitioner);
@@ -321,7 +322,7 @@ class RadixPartitionSort {
   }
 
   /**
-  * Gets the output of the patitioning containing the two materialized tables.
+  * Gets the output of the partitioning containing the two materialized tables.
   **/
   std::pair<MatTablePtr, MatTablePtr> get_output() {
     return std::make_pair(_output_left, _output_right);

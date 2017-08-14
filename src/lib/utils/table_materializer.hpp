@@ -34,7 +34,7 @@ class TableMaterializer : public ColumnVisitable {
   };
 
   /**
-  * Creates a job to materialized and sort a chunk.
+  * Creates a job to materialize and sort a chunk.
   **/
   std::shared_ptr<JobTask> _materialize_chunk_job(std::shared_ptr<MaterializedTable<T>> output, ChunkID chunk_id,
                                                    std::shared_ptr<const Table> input, std::string column_name) {
@@ -55,7 +55,7 @@ class TableMaterializer : public ColumnVisitable {
     auto output = std::make_shared<MaterializedChunk<T>>(value_column.values().size());
 
     // Copy over every entry
-    for (ChunkOffset chunk_offset{0}; chunk_offset < value_column.values().size(); chunk_offset++) {
+    for (ChunkOffset chunk_offset{0}; chunk_offset < value_column.values().size(); ++chunk_offset) {
       RowID row_id{materialization_context->chunk_id, chunk_offset};
       output->at(chunk_offset) = MaterializedValue<T>(row_id, value_column.values()[chunk_offset]);
     }
@@ -82,16 +82,16 @@ class TableMaterializer : public ColumnVisitable {
     // Collect for every value id, the set of rows that this value appeared in
     // value_count is used as an inverted index
     auto rows_with_value = std::vector<std::vector<RowID>>(dict->size());
-    for (ChunkOffset chunk_offset{0}; chunk_offset < value_ids->size(); chunk_offset++) {
+    for (ChunkOffset chunk_offset{0}; chunk_offset < value_ids->size(); ++chunk_offset) {
       rows_with_value[value_ids->get(chunk_offset)].push_back(RowID{materialization_context->chunk_id, chunk_offset});
     }
 
     // Now that we know the row ids for every value, we can output all the materialized values in a sorted manner.
     ChunkOffset chunk_offset{0};
-    for (ValueID value_id{0}; value_id < dict->size(); value_id++) {
+    for (ValueID value_id{0}; value_id < dict->size(); ++value_id) {
       for (auto& row_id : rows_with_value[value_id]) {
         output->at(chunk_offset) = MaterializedValue<T>(row_id, dict->at(value_id));
-        chunk_offset++;
+        ++chunk_offset;
       }
     }
 
@@ -110,18 +110,18 @@ class TableMaterializer : public ColumnVisitable {
     auto pos_list = ref_column.pos_list();
     auto output = std::make_shared<MaterializedChunk<T>>(ref_column.size());
 
-    // Retrieve the columns from the referenced table so they only have to be casted once
+    // Retrieve the columns from the referenced table so they only have to be cast once
     auto v_columns = std::vector<std::shared_ptr<ValueColumn<T>>>(referenced_table->chunk_count());
     auto d_columns = std::vector<std::shared_ptr<DictionaryColumn<T>>>(referenced_table->chunk_count());
-    for (ChunkID chunk_id{0}; chunk_id < referenced_table->chunk_count(); chunk_id++) {
+    for (ChunkID chunk_id{0}; chunk_id < referenced_table->chunk_count(); ++chunk_id) {
       v_columns[chunk_id] = std::dynamic_pointer_cast<ValueColumn<T>>(
-      referenced_table->get_chunk(chunk_id).get_column(referenced_column_id));
+                              referenced_table->get_chunk(chunk_id).get_column(referenced_column_id));
       d_columns[chunk_id] = std::dynamic_pointer_cast<DictionaryColumn<T>>(
-      referenced_table->get_chunk(chunk_id).get_column(referenced_column_id));
+                              referenced_table->get_chunk(chunk_id).get_column(referenced_column_id));
     }
 
     // Retrieve the values from the referenced columns
-    for (ChunkOffset chunk_offset{0}; chunk_offset < pos_list->size(); chunk_offset++) {
+    for (ChunkOffset chunk_offset{0}; chunk_offset < pos_list->size(); ++chunk_offset) {
       const auto& row_id = pos_list->at(chunk_offset);
 
       // Dereference the value
@@ -155,7 +155,7 @@ class TableMaterializer : public ColumnVisitable {
     auto output = std::make_shared<MaterializedTable<T>>(input->chunk_count());
 
     std::vector<std::shared_ptr<AbstractTask>> jobs;
-    for (ChunkID chunk_id{0}; chunk_id < input->chunk_count(); chunk_id++) {
+    for (ChunkID chunk_id{0}; chunk_id < input->chunk_count(); ++chunk_id) {
         jobs.push_back(_materialize_chunk_job(output, chunk_id, input, column));
         jobs.back()->schedule();
     }

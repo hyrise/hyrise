@@ -25,10 +25,10 @@ template <typename T>
 class JoinNotEqualInnerTest : public JoinTest {};
 
 // here we define all Join types
+// This operator is not supported for the SortMergeJoin
 typedef ::testing::Types<JoinNestedLoopA, JoinNestedLoopB> JoinNotEqualInnerTypes;
 TYPED_TEST_CASE(JoinNotEqualInnerTest, JoinNotEqualInnerTypes);
 
-// This operator is not supported for the SortMergeJoin
 TYPED_TEST(JoinNotEqualInnerTest, NotEqualInnerJoin) {
   // Joining two Integer Columns
   this->template test_join_output<TypeParam>(this->_table_wrapper_a, this->_table_wrapper_b,
