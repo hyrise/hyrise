@@ -304,16 +304,6 @@ class RadixPartitionSort {
     }
   }
 
-  void print_table(std::shared_ptr<MaterializedTable<T>> table) {
-    std::cout << "----" << std::endl;
-    for (auto chunk : *table) {
-      for (auto& row : *chunk) {
-        std::cout << row.value << std::endl;
-      }
-      std::cout << "----" << std::endl;
-    }
-  }
-
  public:
   /**
   * Executes the partitioning and sorting.
@@ -323,11 +313,6 @@ class RadixPartitionSort {
     TableMaterializer<T> table_materializer(true /* sorting enabled */);
     auto chunks_left = table_materializer.materialize(_input_table_left, _left_column_name);
     auto chunks_right = table_materializer.materialize(_input_table_right, _right_column_name);
-
-    std::cout << "input left: " << std::endl;
-    print_table(chunks_left);
-    std::cout << "input right: " << std::endl;
-    print_table(chunks_right);
 
     if (_partition_count == 1) {
       _output_left = _concatenate_chunks(chunks_left);
@@ -345,12 +330,6 @@ class RadixPartitionSort {
     // an algorithm more efficient, if subparts are already sorted [InsertionSort?!])
     _sort_partitions(_output_left);
     _sort_partitions(_output_right);
-
-    std::cout << "output left: " << std::endl;
-    print_table(_output_left);
-
-    std::cout << "output right: " << std::endl;
-    print_table(_output_right);
 
     DebugAssert(_materialized_table_size(_output_left) == _input_table_left->row_count(),
                 "left output has wrong size");
