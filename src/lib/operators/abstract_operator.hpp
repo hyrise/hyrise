@@ -7,6 +7,7 @@
 #include "all_parameter_variant.hpp"
 #include "common.hpp"
 #include "storage/table.hpp"
+#include "types.hpp"
 
 namespace opossum {
 
@@ -34,16 +35,12 @@ class TransactionContext;
 //   4. Add an entry in the swith-case of OperatorTranslator::translate_proto() to dispatch calls to the method created
 //      in step 3
 //   5. Write a test in `src/test/network/operator_translator_test.cpp`
-class AbstractOperator {
+class AbstractOperator : private Noncopyable {
  public:
   AbstractOperator(const std::shared_ptr<const AbstractOperator> left = nullptr,
                    const std::shared_ptr<const AbstractOperator> right = nullptr);
 
   virtual ~AbstractOperator() = default;
-
-  // copying a operator is not allowed
-  AbstractOperator(AbstractOperator const &) = delete;
-  AbstractOperator &operator=(const AbstractOperator &) = delete;
 
   // we need to explicitly set the move constructor to default when
   // we overwrite the copy constructor
