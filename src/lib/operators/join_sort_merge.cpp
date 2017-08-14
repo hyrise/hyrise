@@ -340,7 +340,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
 
     // The left side has finished -> add the remaining values of the right side
     if (left_run_start == left_size) {
-      if(_mode == JoinMode::Right || _mode == JoinMode::Outer) {
+      if (_mode == JoinMode::Right || _mode == JoinMode::Outer) {
         _emit_left_null_combinations(partition_number, TableRange(partition_number, right_run_start, right_size));
       }
       if (_op == ScanType::OpGreaterThan || _op == ScanType::OpGreaterThanEquals) {
