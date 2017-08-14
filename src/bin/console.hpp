@@ -28,6 +28,7 @@ class Console
 
   int read();
   void register_command(const std::string & name, const CommandFunction & f);
+  RegisteredCommands commands();
 
   void setPrompt(const std::string & prompt);
   std::string prompt() const;
@@ -44,6 +45,10 @@ class Console
   RegisteredCommands _commands;
   std::ostream _out;
   std::ofstream _log;
+
+  // GNU readline interface to our commands.
+  static char ** command_completion(const char * text, int start, int end);
+  static char * command_generator(const char * text, int state);
 };
 
 }  // namespace opossum

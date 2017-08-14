@@ -13,6 +13,10 @@
 
 namespace {
 
+  //
+
+  opossum::Console * instance = nullptr;
+
   // Helper functions
 
   std::string time_stamp() {
@@ -69,15 +73,22 @@ Console::Console(const std::string & prompt, const std::string & log_file)
   , _commands()
   , _out(std::cout.rdbuf())
   , _log(log_file, std::ios_base::app | std::ios_base::out) {
+
+  // Init readline basics
+  rl_attempted_completion_function = &Console::command_completion;
+
   register_command("exit", exit);
   register_command("load", load_tpcc);
   register_command("loadtpcc", load_tpcc);
+
+  instance = this;
 
   out("--- Session start --- " + time_stamp() + "\n", false);
 }
 
 Console::~Console() {
   out("--- Session end --- " + time_stamp() + "\n", false);
+  instance = nullptr;
 }
 
 int Console::read() {
@@ -97,6 +108,10 @@ int Console::read() {
 
 void Console::register_command(const std::string & name, const CommandFunction & f) {
   _commands[name] = f;
+}
+
+Console::RegisteredCommands Console::commands() {
+  return _commands;
 }
 
 void Console::setPrompt(const std::string & prompt) {
@@ -174,6 +189,34 @@ void Console::out(const std::string & output, bool console_print) {
 void Console::out(std::shared_ptr<const Table> table) {
   Print::print(table, 0, _out);
   Print::print(table, 0, _log);
+}
+
+char ** Console::command_completion(const char * text, int start, int end) {
+  char ** completion_matches = nullptr;
+  if (start == 0)
+  {
+    completion_matches = rl_completion_matches(text, &Console::command_generator);
+  }
+  return completion_matches;
+}
+
+char * Console::command_generator(const char * text, int state) {
+  static Console::RegisteredCommands::iterator it;
+  auto commands = instance->commands();
+  if (state == 0) {
+    it = instance->_commands.begin();
+  }
+
+  while ( it != instance->_commands.end() ) {
+    auto & command = it->first;
+    ++it;
+    if ( command.find(text) != std::string::npos ) {
+      char * completion = new char[command.size()];
+      strcpy(completion, command.c_str());
+      return completion;
+    }
+  }
+  return nullptr;
 }
 
 // Command functions implementation
