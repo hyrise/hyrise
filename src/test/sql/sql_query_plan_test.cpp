@@ -30,7 +30,7 @@ class SQLQueryPlanTest : public BaseTest {
   }
 };
 
-TEST_F(SQLQueryPlanTest, DISABLED_SQLQueryPlanCloneTest) {
+TEST_F(SQLQueryPlanTest, SQLQueryPlanCloneTest) {
   std::string query1 = "SELECT a FROM table_a;";
 
   SQLQueryOperator op(query1, false);
