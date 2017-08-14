@@ -174,31 +174,31 @@ TEST_F(OperatorTranslatorTest, ScanTableString) {
 }
 
 TEST_F(OperatorTranslatorTest, Projection) {
-  //  std::shared_ptr<Table> expected_result = load_table("src/test/tables/int.tbl", 1);
-  //
-  //  auto msg = proto::OperatorVariant();
-  //  proto::ProjectionOperator* projection_operator = msg.mutable_projection();
-  //  projection_operator->add_column_name("a");
-  //  proto::GetTableOperator* get_table_operator = projection_operator->mutable_input_operator()->mutable_get_table();
-  //  get_table_operator->set_table_name("TestTable");
-  //
-  //  OperatorTranslator translator;
-  //  auto& tasks = translator.build_tasks_from_proto(msg);
-  //  auto root_task = translator.root_task();
-  //  ASSERT_EQ(tasks.size(), 2ul);
-  //
-  //  auto get_table_task = tasks.at(0);
-  //  std::shared_ptr<GetTable> get_table = std::dynamic_pointer_cast<GetTable>(get_table_task->get_operator());
-  //  ASSERT_TRUE(get_table);
-  //  get_table->execute();
-  //
-  //  auto projection_task = tasks.at(1);
-  //  auto projection = std::dynamic_pointer_cast<Projection>(projection_task->get_operator());
-  //  ASSERT_TRUE(projection);
-  //  ASSERT_EQ(root_task, projection_task);
-  //  projection->execute();
-  //
-  //  EXPECT_TABLE_EQ(projection->get_output(), expected_result);
+    std::shared_ptr<Table> expected_result = load_table("src/test/tables/int.tbl", 1);
+
+    auto msg = proto::OperatorVariant();
+    proto::ProjectionOperator* projection_operator = msg.mutable_projection();
+    projection_operator->add_column_name("a");
+    proto::GetTableOperator* get_table_operator = projection_operator->mutable_input_operator()->mutable_get_table();
+    get_table_operator->set_table_name("TestTable");
+
+    OperatorTranslator translator;
+    auto& tasks = translator.build_tasks_from_proto(msg);
+    auto root_task = translator.root_task();
+    ASSERT_EQ(tasks.size(), 2ul);
+
+    auto get_table_task = tasks.at(0);
+    std::shared_ptr<GetTable> get_table = std::dynamic_pointer_cast<GetTable>(get_table_task->get_operator());
+    ASSERT_TRUE(get_table);
+    get_table->execute();
+
+    auto projection_task = tasks.at(1);
+    auto projection = std::dynamic_pointer_cast<Projection>(projection_task->get_operator());
+    ASSERT_TRUE(projection);
+    ASSERT_EQ(root_task, projection_task);
+    projection->execute();
+
+    EXPECT_TABLE_EQ(projection->get_output(), expected_result);
 }
 
 TEST_F(OperatorTranslatorTest, Product) {
@@ -324,42 +324,42 @@ TEST_F(OperatorTranslatorTest, UnionOfTables) {
 }
 
 TEST_F(OperatorTranslatorTest, TableScanAndProjection) {
-  //  std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_string_filtered_projected.tbl", 2);
-  //
-  //  auto msg = proto::OperatorVariant();
-  //  proto::TableScanOperator* table_scan_operator = msg.mutable_table_scan();
-  //  table_scan_operator->set_column_name("a");
-  //  table_scan_operator->set_filter_operator(proto::ScanType::OpEquals);
-  //  proto::Variant* variant = table_scan_operator->mutable_value();
-  //  variant->set_value_int(123);
-  //  proto::ProjectionOperator* projection_operator =
-  //  table_scan_operator->mutable_input_operator()->mutable_projection();
-  //  projection_operator->add_column_name("a");
-  //  proto::GetTableOperator* get_table_operator = projection_operator->mutable_input_operator()->mutable_get_table();
-  //  get_table_operator->set_table_name("TestTable");
-  //
-  //  OperatorTranslator translator;
-  //  auto& tasks = translator.build_tasks_from_proto(msg);
-  //  auto root_task = translator.root_task();
-  //  ASSERT_EQ(tasks.size(), 3ul);
-  //
-  //  auto get_table_task = tasks.at(0);
-  //  std::shared_ptr<GetTable> get_table = std::dynamic_pointer_cast<GetTable>(get_table_task->get_operator());
-  //  ASSERT_TRUE(get_table);
-  //  get_table->execute();
-  //
-  //  auto projection_task = tasks.at(1);
-  //  auto projection = std::dynamic_pointer_cast<Projection>(projection_task->get_operator());
-  //  ASSERT_TRUE(projection);
-  //  projection->execute();
-  //
-  //  auto table_scan_task = tasks.at(2);
-  //  auto table_scan = std::dynamic_pointer_cast<TableScan>(table_scan_task->get_operator());
-  //  ASSERT_TRUE(table_scan_task);
-  //  ASSERT_EQ(root_task, table_scan_task);
-  //  table_scan->execute();
-  //
-  //  EXPECT_TABLE_EQ(table_scan->get_output(), expected_result);
+    std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_string_filtered_projected.tbl", 2);
+
+    auto msg = proto::OperatorVariant();
+    proto::TableScanOperator* table_scan_operator = msg.mutable_table_scan();
+    table_scan_operator->set_column_name("a");
+    table_scan_operator->set_filter_operator(proto::ScanType::OpEquals);
+    proto::Variant* variant = table_scan_operator->mutable_value();
+    variant->set_value_int(123);
+    proto::ProjectionOperator* projection_operator =
+    table_scan_operator->mutable_input_operator()->mutable_projection();
+    projection_operator->add_column_name("a");
+    proto::GetTableOperator* get_table_operator = projection_operator->mutable_input_operator()->mutable_get_table();
+    get_table_operator->set_table_name("TestTable");
+
+    OperatorTranslator translator;
+    auto& tasks = translator.build_tasks_from_proto(msg);
+    auto root_task = translator.root_task();
+    ASSERT_EQ(tasks.size(), 3ul);
+
+    auto get_table_task = tasks.at(0);
+    std::shared_ptr<GetTable> get_table = std::dynamic_pointer_cast<GetTable>(get_table_task->get_operator());
+    ASSERT_TRUE(get_table);
+    get_table->execute();
+
+    auto projection_task = tasks.at(1);
+    auto projection = std::dynamic_pointer_cast<Projection>(projection_task->get_operator());
+    ASSERT_TRUE(projection);
+    projection->execute();
+
+    auto table_scan_task = tasks.at(2);
+    auto table_scan = std::dynamic_pointer_cast<TableScan>(table_scan_task->get_operator());
+    ASSERT_TRUE(table_scan_task);
+    ASSERT_EQ(root_task, table_scan_task);
+    table_scan->execute();
+
+    EXPECT_TABLE_EQ(table_scan->get_output(), expected_result);
 }
 
 TEST_F(OperatorTranslatorTest, ImportCsv) {
@@ -587,22 +587,22 @@ TEST_F(OperatorTranslatorTest, DISABLED_NestedLoopJoinWithColumns) {
 }
 
 TEST_F(OperatorTranslatorTest, ProjectionMissingInput) {
-  //  auto msg = proto::OperatorVariant();
-  //  proto::ProjectionOperator* projection_operator = msg.mutable_projection();
-  //  projection_operator->add_column_name("a");
-  //
-  //  OperatorTranslator translator;
-  //  EXPECT_THROW(translator.build_tasks_from_proto(msg), std::logic_error);
+    auto msg = proto::OperatorVariant();
+    proto::ProjectionOperator* projection_operator = msg.mutable_projection();
+    projection_operator->add_column_name("a");
+
+    OperatorTranslator translator;
+    EXPECT_THROW(translator.build_tasks_from_proto(msg), std::logic_error);
 }
 
 TEST_F(OperatorTranslatorTest, ProjectionIncompleteInput) {
-  //  auto msg = proto::OperatorVariant();
-  //  proto::ProjectionOperator* projection_operator = msg.mutable_projection();
-  //  projection_operator->add_column_name("a");
-  //  projection_operator->mutable_input_operator();
-  //
-  //  OperatorTranslator translator;
-  //  EXPECT_THROW(translator.build_tasks_from_proto(msg), std::logic_error);
+    auto msg = proto::OperatorVariant();
+    proto::ProjectionOperator* projection_operator = msg.mutable_projection();
+    projection_operator->add_column_name("a");
+    projection_operator->mutable_input_operator();
+
+    OperatorTranslator translator;
+    EXPECT_THROW(translator.build_tasks_from_proto(msg), std::logic_error);
 }
 
 }  // namespace opossum

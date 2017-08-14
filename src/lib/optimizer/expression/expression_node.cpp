@@ -66,6 +66,11 @@ std::shared_ptr<ExpressionNode> ExpressionNode::create_binary_operator(Expressio
   return expression;
 }
 
+std::shared_ptr<ExpressionNode> ExpressionNode::create_select_all() {
+  return std::make_shared<ExpressionNode>(ExpressionType::Star, AllTypeVariant(),
+                                   std::vector<std::shared_ptr<ExpressionNode>>(), "", "", nullopt);
+}
+
 const std::weak_ptr<ExpressionNode> ExpressionNode::parent() const { return _parent; }
 
 void ExpressionNode::clear_parent() { _parent.reset(); }
