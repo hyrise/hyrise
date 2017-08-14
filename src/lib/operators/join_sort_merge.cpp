@@ -10,7 +10,7 @@
 #include <vector>
 
 #include "resolve_type.hpp"
-#include "../utils/radix_partition_sort.hpp"
+#include "join_sort_merge_utils/radix_partition_sort.hpp"
 
 namespace opossum {
 

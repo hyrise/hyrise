@@ -6,10 +6,25 @@
 #include <utility>
 #include <vector>
 
-#include "../storage/base_attribute_vector.hpp"
+#include "../../storage/base_attribute_vector.hpp"
 #include "resolve_type.hpp"
 
 namespace opossum {
+
+template <typename T>
+struct MaterializedValue {
+  MaterializedValue() {}
+  MaterializedValue(RowID row, T v) : row_id{row}, value{v} {}
+
+  RowID row_id;
+  T value;
+};
+
+template <typename T>
+using MaterializedChunk = std::vector<MaterializedValue<T>>;
+
+template <typename T>
+using MaterializedTable = std::vector<std::shared_ptr<MaterializedChunk<T>>>;
 
 /**
 * Materializes a table for a specific column and sorts it if required. Row-Ids are kept in order to enable

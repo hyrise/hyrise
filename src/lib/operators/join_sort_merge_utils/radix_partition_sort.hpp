@@ -6,7 +6,6 @@
 #include <type_traits>
 #include <utility>
 #include <vector>
-#include <iostream>
 
 #include "resolve_type.hpp"
 #include "table_materializer.hpp"
