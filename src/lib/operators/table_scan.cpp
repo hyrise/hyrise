@@ -34,6 +34,13 @@ uint8_t TableScan::num_in_tables() const { return 1; }
 uint8_t TableScan::num_out_tables() const { return 1; }
 
 std::shared_ptr<const Table> TableScan::on_execute() {
+
+  auto input_left = input_table_left();
+
+  auto column_types = input_left->column_types();
+
+  auto type_string = input_table_left()->column_type(_column_id);
+
   _impl = make_unique_by_column_type<AbstractReadOnlyOperatorImpl, TableScanImpl>(
       input_table_left()->column_type(_column_id), _input_left, _column_id, _scan_type, _value, _value2);
   return _impl->on_execute();

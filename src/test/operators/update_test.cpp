@@ -37,8 +37,8 @@ void OperatorsUpdateTest::helper(std::shared_ptr<GetTable> table_to_update, std:
   auto original_row_count = ref_table->get_output()->row_count();
   auto updated_rows_count = update_values->get_output()->row_count();
 
-  std::vector<std::string> column_filter_left = {"a"};
-  std::vector<std::string> column_filter_right = {"b"};
+  std::vector<ColumnID> column_filter_left = {ColumnID{0}};
+  std::vector<ColumnID> column_filter_right = {ColumnID{1}};
 
   auto projection1 = std::make_shared<Projection>(ref_table, column_filter_left);
   auto projection2 = std::make_shared<Projection>(update_values, column_filter_right);

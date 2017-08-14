@@ -37,14 +37,14 @@ std::shared_ptr<AbstractOperator> Projection::recreate(const std::vector<AllPara
 }
 
 std::shared_ptr<const Table> Projection::on_execute() {
-//  if (!_simple_projection.empty()) {
-//    for (auto& column : _simple_projection) {
+  if (!_simple_projection.empty()) {
+    for (auto& column : _simple_projection) {
 //      auto column_id = input_table_left()->column_id_by_name(column);
-      // TODO(Sven): fix
-//      _projection_definitions.emplace_back(std::string("$") + std::string(column), input_table_left()->column_type(column),
-//                                           column);
-//    }
-//  }
+//       TODO(Sven): fix
+      _projection_definitions.emplace_back(std::string("$") + "a", input_table_left()->column_type(column),
+                                           boost::lexical_cast<std::string>(column));
+    }
+  }
 
   auto output = std::make_shared<Table>();
 

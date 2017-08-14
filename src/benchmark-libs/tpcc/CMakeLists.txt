@@ -4,10 +4,10 @@ set(
     defines.hpp
     helper.cpp
     helper.hpp
-#    new_order.cpp
-#    new_order.hpp
-#    order_status.cpp
-#    order_status.hpp
+    new_order.cpp
+    new_order.hpp
+    order_status.cpp
+    order_status.hpp
     tpcc_random_generator.hpp
     tpcc_table_generator.cpp
 )

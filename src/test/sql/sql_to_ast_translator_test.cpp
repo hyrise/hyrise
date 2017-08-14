@@ -57,11 +57,11 @@ TEST_F(SQLToASTTranslatorTest, SelectStarAllTest) {
   const auto query = "SELECT * FROM table_a;";
   auto result_node = compile_query(query);
 
-  std::vector<std::string> expected_columns{"a", "b"};
-  EXPECT_EQ(expected_columns, result_node->output_column_names());
+  std::vector<ColumnID> expected_columns{ColumnID{0}, ColumnID{1}};
+  EXPECT_EQ(expected_columns, result_node->output_column_ids());
 
   EXPECT_FALSE(result_node->right_child());
-  EXPECT_FALSE(result_node->left_child()->left_child());
+  EXPECT_FALSE(result_node->left_child());
 }
 
 TEST_F(SQLToASTTranslatorTest, DISABLED_ExpressionTest) {
@@ -139,7 +139,7 @@ TEST_F(SQLToASTTranslatorTest, AggregateWithGroupBy) {
 
   const auto aggregate_node = std::dynamic_pointer_cast<AggregateNode>(result_node);
   EXPECT_EQ(aggregate_node->aggregates().size(), 1u);
-  const std::vector<std::string> groupby_columns = {"a"};
+  const std::vector<ColumnID> groupby_columns = {ColumnID{0}};
   EXPECT_EQ(aggregate_node->groupby_columns(), groupby_columns);
   EXPECT_EQ(aggregate_node->aggregates().at(0).alias, std::string("s"));
 
@@ -181,13 +181,13 @@ TEST_F(SQLToASTTranslatorTest, SelectMultipleOrderBy) {
   // The first order by description is executed last (see sort operator for details).
   auto sort_node_1 = std::dynamic_pointer_cast<SortNode>(result_node);
   EXPECT_EQ(sort_node_1->type(), ASTNodeType::Sort);
-  EXPECT_EQ(sort_node_1->column_name(), "a");
+  EXPECT_EQ(sort_node_1->column_id(), ColumnID{0});
   EXPECT_FALSE(sort_node_1->ascending());
   EXPECT_FALSE(sort_node_1->right_child());
 
   auto sort_node_2 = std::dynamic_pointer_cast<SortNode>(sort_node_1->left_child());
   EXPECT_EQ(sort_node_2->type(), ASTNodeType::Sort);
-  EXPECT_EQ(sort_node_2->column_name(), "b");
+  EXPECT_EQ(sort_node_2->column_id(), ColumnID{1});
   EXPECT_TRUE(sort_node_2->ascending());
   EXPECT_FALSE(sort_node_2->right_child());
   // This node has an input node, but we don't care what kind it is in this test.
@@ -200,17 +200,16 @@ TEST_F(SQLToASTTranslatorTest, SelectInnerJoin) {
 
   EXPECT_EQ(result_node->type(), ASTNodeType::Projection);
   auto projection_node = std::dynamic_pointer_cast<ProjectionNode>(result_node);
-  std::vector<std::string> output_columns = {"a.a", "a.b", "b.a", "b.b"};
+  std::vector<std::string> output_columns = {"a", "b", "a", "b"};
+  EXPECT_EQ(projection_node->output_column_ids().size(), 4);
   EXPECT_EQ(projection_node->output_column_names(), output_columns);
 
   EXPECT_EQ(result_node->left_child()->type(), ASTNodeType::Join);
   auto join_node = std::dynamic_pointer_cast<JoinNode>(result_node->left_child());
   EXPECT_EQ(join_node->scan_type(), ScanType::OpEquals);
   EXPECT_EQ(join_node->join_mode(), JoinMode::Inner);
-  EXPECT_EQ(join_node->prefix_left(), "a.");
-  EXPECT_EQ(join_node->prefix_right(), "b.");
-  EXPECT_EQ(join_node->join_column_names()->first, "a");
-  EXPECT_EQ(join_node->join_column_names()->second, "a");
+  EXPECT_EQ(join_node->join_column_ids()->first, ColumnID{0});
+  EXPECT_EQ(join_node->join_column_ids()->second, ColumnID{0});
 }
 
 }  // namespace opossum

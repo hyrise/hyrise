@@ -40,10 +40,12 @@ class SQLExpressionTranslatorTest : public BaseTest {
 
     const auto *statement = parse_result.getStatements().at(0);
 
+    auto predicate_node = std::make_shared<ProjectionNode>(std::vector<ColumnID>(ColumnID{0}), std::vector<std::string>({"a"}));
+
     switch (statement->type()) {
       case hsql::kStmtSelect: {
         const auto *select = static_cast<const hsql::SelectStatement *>(statement);
-        return _translator.translate_expression(*(select->whereClause));
+        return _translator.translate_expression(*(select->whereClause), predicate_node);
       }
       default:
         throw std::runtime_error("Translating statement failed.");
@@ -61,11 +63,13 @@ class SQLExpressionTranslatorTest : public BaseTest {
     const auto *statement = parse_result.getStatements().at(0);
     std::vector<std::shared_ptr<ExpressionNode>> expressions;
 
+    auto predicate_node = std::make_shared<ProjectionNode>(std::vector<ColumnID>(ColumnID{0}), std::vector<std::string>({"a"}));
+
     switch (statement->type()) {
       case hsql::kStmtSelect: {
         const auto *select = static_cast<const hsql::SelectStatement *>(statement);
         for (auto expr : *(select->selectList)) {
-          expressions.emplace_back(_translator.translate_expression(*expr));
+          expressions.emplace_back(_translator.translate_expression(*expr, predicate_node));
         }
         return expressions;
       }

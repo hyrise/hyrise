@@ -111,14 +111,15 @@ TaskVector OrderStatusRefImpl::get_customer_by_name(const std::string c_last, co
    */
   auto gt_customer = std::make_shared<opossum::GetTable>("CUSTOMER");
   auto validate = std::make_shared<opossum::Validate>(gt_customer);
-  auto first_filter = std::make_shared<opossum::TableScan>(validate, "C_LAST", opossum::ScanType::OpEquals, c_last);
+  auto first_filter = std::make_shared<opossum::TableScan>(validate, opossum::ColumnID{5}, opossum::ScanType::OpEquals, c_last);
   auto second_filter =
-      std::make_shared<opossum::TableScan>(first_filter, "C_D_ID", opossum::ScanType::OpEquals, c_d_id);
+      std::make_shared<opossum::TableScan>(first_filter, opossum::ColumnID{1}, opossum::ScanType::OpEquals, c_d_id);
   auto third_filter =
-      std::make_shared<opossum::TableScan>(second_filter, "C_W_ID", opossum::ScanType::OpEquals, c_w_id);
-  std::vector<std::string> columns = {"C_BALANCE", "C_FIRST", "C_MIDDLE", "C_ID"};
+      std::make_shared<opossum::TableScan>(second_filter, opossum::ColumnID{2}, opossum::ScanType::OpEquals, c_w_id);
+//  std::vector<std::string> columns = {"C_BALANCE", "C_FIRST", "C_MIDDLE", "C_ID"};
+  std::vector<opossum::ColumnID> columns = {opossum::ColumnID{18}, opossum::ColumnID{3}, opossum::ColumnID{4}, opossum::ColumnID{0}};
   auto projection = std::make_shared<opossum::Projection>(third_filter, columns);
-  auto sort = std::make_shared<opossum::Sort>(projection, "C_FIRST", true);
+  auto sort = std::make_shared<opossum::Sort>(projection, opossum::ColumnID{3}, true);
 
   auto gt_customer_task = std::make_shared<opossum::OperatorTask>(gt_customer);
   auto validate_task = std::make_shared<opossum::OperatorTask>(validate);
@@ -147,12 +148,13 @@ TaskVector OrderStatusRefImpl::get_customer_by_id(const int c_id, const int c_d_
    */
   auto gt_customer = std::make_shared<opossum::GetTable>("CUSTOMER");
   auto validate = std::make_shared<opossum::Validate>(gt_customer);
-  auto first_filter = std::make_shared<opossum::TableScan>(validate, "C_ID", opossum::ScanType::OpEquals, c_id);
+  auto first_filter = std::make_shared<opossum::TableScan>(validate, opossum::ColumnID{0}, opossum::ScanType::OpEquals, c_id);
   auto second_filter =
-      std::make_shared<opossum::TableScan>(first_filter, "C_D_ID", opossum::ScanType::OpEquals, c_d_id);
+      std::make_shared<opossum::TableScan>(first_filter, opossum::ColumnID{1}, opossum::ScanType::OpEquals, c_d_id);
   auto third_filter =
-      std::make_shared<opossum::TableScan>(second_filter, "C_W_ID", opossum::ScanType::OpEquals, c_w_id);
-  std::vector<std::string> columns = {"C_BALANCE", "C_FIRST", "C_MIDDLE", "C_LAST"};
+      std::make_shared<opossum::TableScan>(second_filter, opossum::ColumnID{2}, opossum::ScanType::OpEquals, c_w_id);
+//  std::vector<std::string> columns = {"C_BALANCE", "C_FIRST", "C_MIDDLE", "C_LAST"};
+  std::vector<opossum::ColumnID> columns = {opossum::ColumnID{18}, opossum::ColumnID{3}, opossum::ColumnID{4}, opossum::ColumnID{5}};
   auto projection = std::make_shared<opossum::Projection>(third_filter, columns);
 
   auto gt_customer_task = std::make_shared<opossum::OperatorTask>(gt_customer);
@@ -181,14 +183,14 @@ TaskVector OrderStatusRefImpl::get_orders(const int o_c_id, const int o_d_id, co
    */
   auto gt_orders = std::make_shared<opossum::GetTable>("ORDER");
   auto validate = std::make_shared<opossum::Validate>(gt_orders);
-  auto first_filter = std::make_shared<opossum::TableScan>(validate, "O_C_ID", opossum::ScanType::OpEquals, o_c_id);
+  auto first_filter = std::make_shared<opossum::TableScan>(validate, opossum::ColumnID{1}, opossum::ScanType::OpEquals, o_c_id);
   auto second_filter =
-      std::make_shared<opossum::TableScan>(first_filter, "O_D_ID", opossum::ScanType::OpEquals, o_d_id);
+      std::make_shared<opossum::TableScan>(first_filter, opossum::ColumnID{2}, opossum::ScanType::OpEquals, o_d_id);
   auto third_filter =
-      std::make_shared<opossum::TableScan>(second_filter, "O_W_ID", opossum::ScanType::OpEquals, o_w_id);
-  std::vector<std::string> columns = {"O_ID", "O_CARRIER_ID", "O_ENTRY_D"};
+      std::make_shared<opossum::TableScan>(second_filter, opossum::ColumnID{3}, opossum::ScanType::OpEquals, o_w_id);
+  std::vector<opossum::ColumnID> columns = {opossum::ColumnID{0}, opossum::ColumnID{5}, opossum::ColumnID{4}};
   auto projection = std::make_shared<opossum::Projection>(third_filter, columns);
-  auto sort = std::make_shared<opossum::Sort>(projection, "O_ID", false);
+  auto sort = std::make_shared<opossum::Sort>(projection, opossum::ColumnID{0}, false);
   auto limit = std::make_shared<opossum::Limit>(sort, 1);
 
   auto gt_orders_task = std::make_shared<opossum::OperatorTask>(gt_orders);
@@ -221,11 +223,11 @@ TaskVector OrderStatusRefImpl::get_order_lines(const int o_id, const int d_id, c
    */
   auto gt_order_lines = std::make_shared<opossum::GetTable>("ORDER-LINE");
   auto validate = std::make_shared<opossum::Validate>(gt_order_lines);
-  auto first_filter = std::make_shared<opossum::TableScan>(validate, "OL_O_ID", opossum::ScanType::OpEquals, o_id);
-  auto second_filter = std::make_shared<opossum::TableScan>(first_filter, "OL_D_ID", opossum::ScanType::OpEquals, d_id);
-  auto third_filter = std::make_shared<opossum::TableScan>(second_filter, "OL_W_ID", opossum::ScanType::OpEquals, w_id);
-  std::vector<std::string> columns = {"OL_I_ID",   "OL_SUPPLY_W_ID", "OL_QUANTITY",
-                                      "OL_AMOUNT", "OL_DELIVERY_D",  "OL_O_ID"};
+  auto first_filter = std::make_shared<opossum::TableScan>(validate, opossum::ColumnID{0}, opossum::ScanType::OpEquals, o_id);
+  auto second_filter = std::make_shared<opossum::TableScan>(first_filter, opossum::ColumnID{1}, opossum::ScanType::OpEquals, d_id);
+  auto third_filter = std::make_shared<opossum::TableScan>(second_filter, opossum::ColumnID{2}, opossum::ScanType::OpEquals, w_id);
+  std::vector<opossum::ColumnID> columns = {opossum::ColumnID{4}, opossum::ColumnID{5}, opossum::ColumnID{7},
+                                            opossum::ColumnID{8}, opossum::ColumnID{6}, opossum::ColumnID{0}};
   auto projection = std::make_shared<opossum::Projection>(third_filter, columns);
 
   auto gt_order_lines_task = std::make_shared<opossum::OperatorTask>(gt_order_lines);

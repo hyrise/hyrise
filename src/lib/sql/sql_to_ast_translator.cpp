@@ -355,6 +355,7 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_projection(
       // Resolve '*' by getting the output columns of the input node.
 //      auto input_columns = input_node->output_column_ids();
 //      column_ids.insert(column_ids.end(), input_columns.begin(), input_columns.end());
+
       return input_node;
     } else {
       Fail("Projection only supports columns to be selected.");
