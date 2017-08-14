@@ -68,7 +68,7 @@ Console::Console(const std::string & prompt, const std::string & log_file)
   : _prompt(prompt)
   , _commands()
   , _out(std::cout.rdbuf())
-  , _log(log_file) {
+  , _log(log_file, std::ios_base::app | std::ios_base::out) {
   register_command("exit", exit);
   register_command("load", load_tpcc);
   register_command("loadtpcc", load_tpcc);
@@ -77,7 +77,7 @@ Console::Console(const std::string & prompt, const std::string & log_file)
 }
 
 Console::~Console() {
-  out("--- Session end --- " + time_stamp() + "\n\n", false);
+  out("--- Session end --- " + time_stamp() + "\n", false);
 }
 
 int Console::read() {
