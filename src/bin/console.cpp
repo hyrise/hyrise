@@ -3,6 +3,8 @@
 #include <iostream>
 #include <readline/readline.h>
 #include <readline/history.h>
+#include <ctime>
+#include <iomanip>
 
 #include "storage/storage_manager.hpp"
 #include "tpcc/tpcc_table_generator.hpp"
@@ -12,6 +14,15 @@
 namespace {
 
   // Helper functions
+
+  std::string time_stamp() {
+    auto t = std::time(nullptr);
+    auto tm = *std::localtime(&t);
+
+    std::ostringstream oss;
+    oss << std::put_time(&tm, "%Y-%m-%d %H:%M:%S");
+    return oss.str();
+  }
 
   std::string trim(const std::string & str) {
     size_t first = str.find_first_not_of(' ');
@@ -48,18 +59,26 @@ namespace opossum {
 
 // Command functions declaration
 
-int exit(const std::string &);
-int load_tpcc(const std::string &);
+int exit(Console *, const std::string &);
+int load_tpcc(Console *, const std::string &);
 
 // Console implementation
 
-Console::Console(const std::string & prompt)
-    : _prompt(prompt)
-    , _commands() {
-      register_command("exit", exit);
-      register_command("load", load_tpcc);
-      register_command("loadtpcc", load_tpcc);
-    }
+Console::Console(const std::string & prompt, const std::string & log_file)
+  : _prompt(prompt)
+  , _commands()
+  , _out(std::cout.rdbuf())
+  , _log(log_file) {
+  register_command("exit", exit);
+  register_command("load", load_tpcc);
+  register_command("loadtpcc", load_tpcc);
+
+  out("--- Session start --- " + time_stamp() + "\n", false);
+}
+
+Console::~Console() {
+  out("--- Session end --- " + time_stamp() + "\n\n", false);
+}
 
 int Console::read() {
   char* buffer; // Buffer of line entered by user
@@ -91,6 +110,8 @@ std::string Console::prompt() const {
 int Console::_eval(const std::string & input) {
   if (input.empty()) return ReturnCode::Ok;
 
+  out(_prompt + input + "\n", false);
+
   RegisteredCommands::iterator it;
   if ((it = _commands.find(input.substr(0, input.find('(')))) != std::end(_commands)) {
     return _eval_command(it->second, input);
@@ -105,11 +126,11 @@ int Console::_eval_command(const CommandFunction & f, const std::string & comman
 
   if (std::string::npos == first)
   {
-    return static_cast<int>(f(""));
+    return static_cast<int>(f(this, ""));
   }
 
   std::string arg = command.substr(first+1, last-(first+1));
-  return static_cast<int>(f(arg));
+  return static_cast<int>(f(this, arg));
 }
 
 int Console::_eval_sql(const std::string & sql) {
@@ -121,14 +142,14 @@ int Console::_eval_sql(const std::string & sql) {
 
   if (!parse_result.isValid())
   {
-    Console::out("Error: SQL query not valid.\n");
+    out("Error: SQL query not valid.\n");
     return 1;
   }
 
   // Compile the parse result.
   if (!translator.translate_parse_result(parse_result))
   {
-    Console::out("Error while compiling: " + translator.get_error_msg() + "\n");
+    out("Error while compiling: " + translator.get_error_msg() + "\n");
     return 1;
   }
 
@@ -138,27 +159,33 @@ int Console::_eval_sql(const std::string & sql) {
     task->get_operator()->execute();
   }
 
-  auto result = plan.tree_roots().back()->get_output();
-  Print::print(result);
+  out(plan.tree_roots().back()->get_output());
 
   return ReturnCode::Ok;
 }
 
-void Console::out(const std::string & output) {
-  std::cout << output;
+void Console::out(const std::string & output, bool console_print) {
+  if (console_print) {
+    _out << output;
+  }
+  _log << output;
 }
 
+void Console::out(std::shared_ptr<const Table> table) {
+  Print::print(table, 0, _out);
+  Print::print(table, 0, _log);
+}
 
 // Command functions implementation
 
-int exit(const std::string &) {
+int exit(Console *, const std::string &) {
   return Console::ReturnCode::Quit;
 }
 
-int load_tpcc(const std::string & tablename) {
+int load_tpcc(Console * instance, const std::string & tablename) {
   if (tablename.empty() || "ALL" == tablename)
   {
-    Console::out("Generating TPCC tables (this might take a while) ...\n");
+    instance->out("Generating TPCC tables (this might take a while) ...\n");
     auto tables = tpcc::TpccTableGenerator().generate_all_tables();
     for (auto& pair : tables) {
       StorageManager::get().add_table(pair.first, pair.second);
@@ -166,11 +193,11 @@ int load_tpcc(const std::string & tablename) {
     return Console::ReturnCode::Ok;
   }
 
-  Console::out("Generating TPCC table: \"" + tablename + "\" ...\n");
+  instance->out("Generating TPCC table: \"" + tablename + "\" ...\n");
   auto table = generate_tpcc_table(tablename);
   if (table == nullptr)
   {
-    Console::out("Error: No TPCC table named \"" + tablename + "\" available.\n");
+    instance->out("Error: No TPCC table named \"" + tablename + "\" available.\n");
     return Console::ReturnCode::Error;
   }
 
@@ -184,7 +211,7 @@ int load_tpcc(const std::string & tablename) {
 int main(int argc, char** argv) {
   using Return = opossum::Console::ReturnCode;
 
-  opossum::Console console("> ");
+  opossum::Console console("> ", "./console.log");
 
   int retCode;
   while ((retCode = console.read()) != Return::Quit) {
@@ -196,5 +223,5 @@ int main(int argc, char** argv) {
     }
   }
 
-  opossum::Console::out("Bye.\n");
+  console.out("Bye.\n");
 }
