@@ -95,6 +95,8 @@ void BaseTest::_print_matrix(const BaseTest::Matrix &m) {
   if (tleft.row_count() != tright.row_count()) {
     _print_matrix(left);
     _print_matrix(right);
+    std::cout << "Got: " << tleft.row_count() << " rows" << std::endl;
+    std::cout << "Expected: " << tright.row_count() << " rows" << std::endl;
     return ::testing::AssertionFailure() << "Number of rows is different.";
   }
 

@@ -6,6 +6,7 @@
 #include <type_traits>
 #include <utility>
 #include <vector>
+#include <iostream>
 
 #include "resolve_type.hpp"
 #include "table_materializer.hpp"
@@ -238,31 +239,33 @@ class RadixPartitionSort {
     for (size_t chunk_number = 0; chunk_number < table->size(); ++chunk_number) {
       auto chunk_values = table->at(chunk_number);
       for (size_t partition_id = 0; partition_id < _partition_count - 1; ++partition_id) {
-        size_t pos = static_cast<size_t>(chunk_values->size() * (partition_id / static_cast<float>(_partition_count)));
-        ++sample_values[partition_id][chunk_values->at(pos).value];
+        auto pos = chunk_values->size() * (partition_id + 1) / static_cast<float>(_partition_count);
+        auto index = static_cast<size_t>(pos);
+        ++sample_values[partition_id][chunk_values->at(index).value];
       }
     }
   }
 
   /**
-  * Performs the radix partition sort for the non equi case which requires the complete table to be sorted
-  * and not only the partitions in themselves.
+  * Performs the radix partition sort for the non-equi case (>, >=, <, <=) which requires the complete table to
+  * be sorted and not only the partitions in themselves.
   **/
   std::pair<MatTablePtr, MatTablePtr> _range_partition(MatTablePtr input_left, MatTablePtr input_right) {
-    std::vector<std::map<T, size_t>> sample_values(_partition_count);
+    std::vector<std::map<T, size_t>> sample_values(_partition_count - 1);
 
     _pick_sample_values(sample_values, input_left);
     _pick_sample_values(sample_values, input_right);
 
     // Pick the most common sample values for each partition for the split values.
     // The last partition does not need a split value because it covers all values that are bigger than all split values
-    // The split values mark the ranges of the partitions.
+    // Note: the split values mark the ranges of the partitions.
     // A split value is the end of a range and the start of the next one.
-    std::vector<T> split_values(_partition_count);
-    for (size_t partition_id = 0; partition_id < _partition_count - 2; ++partition_id) {
+    std::vector<T> split_values(_partition_count - 1);
+    for (size_t partition_id = 0; partition_id < _partition_count - 1; ++partition_id) {
       // Pick the values with the highest count
       split_values[partition_id] = std::max_element(sample_values[partition_id].begin(),
-                                                  sample_values[partition_id].end(),
+                                                    sample_values[partition_id].end(),
+        // second is the count of the value
         [] (auto& a, auto& b) {
           return a.second < b.second;
       })->second;
@@ -274,7 +277,7 @@ class RadixPartitionSort {
       // Find the first split value that is greater or equal to the entry.
       // The split values are sorted in ascending order.
       // Note: can we do this faster? (binary search?)
-      for (size_t partition_id = 0; partition_id < partition_count; ++partition_id) {
+      for (size_t partition_id = 0; partition_id < partition_count - 1; ++partition_id) {
         if (value <= split_values[partition_id]) {
           return partition_id;
         }
@@ -301,6 +304,16 @@ class RadixPartitionSort {
     }
   }
 
+  void print_table(std::shared_ptr<MaterializedTable<T>> table) {
+    std::cout << "----" << std::endl;
+    for (auto chunk : *table) {
+      for (auto& row : *chunk) {
+        std::cout << row.value << std::endl;
+      }
+      std::cout << "----" << std::endl;
+    }
+  }
+
  public:
   /**
   * Executes the partitioning and sorting.
@@ -310,6 +323,11 @@ class RadixPartitionSort {
     TableMaterializer<T> table_materializer(true /* sorting enabled */);
     auto chunks_left = table_materializer.materialize(_input_table_left, _left_column_name);
     auto chunks_right = table_materializer.materialize(_input_table_right, _right_column_name);
+
+    std::cout << "input left: " << std::endl;
+    print_table(chunks_left);
+    std::cout << "input right: " << std::endl;
+    print_table(chunks_right);
 
     if (_partition_count == 1) {
       _output_left = _concatenate_chunks(chunks_left);
@@ -327,6 +345,12 @@ class RadixPartitionSort {
     // an algorithm more efficient, if subparts are already sorted [InsertionSort?!])
     _sort_partitions(_output_left);
     _sort_partitions(_output_right);
+
+    std::cout << "output left: " << std::endl;
+    print_table(_output_left);
+
+    std::cout << "output right: " << std::endl;
+    print_table(_output_right);
 
     DebugAssert(_materialized_table_size(_output_left) == _input_table_left->row_count(),
                 "left output has wrong size");

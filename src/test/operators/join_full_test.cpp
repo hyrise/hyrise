@@ -264,6 +264,14 @@ TYPED_TEST(JoinFullTest, SmallerInnerJoin) {
                                              "src/test/tables/joinoperators/float_smaller_inner_join.tbl", 1);
 }
 
+TYPED_TEST(JoinFullTest, SmallerInnerJoin2) {
+  // Joining two Integer Columns
+  this->template test_join_output<TypeParam>(this->_table_wrapper_j, this->_table_wrapper_i,
+                                             std::pair<std::string, std::string>("a", "a"), ScanType::OpLessThan,
+                                             JoinMode::Inner, std::string("left."), std::string("right."),
+                                             "src/test/tables/joinoperators/int_smaller_inner_join_2.tbl", 1);
+}
+
 TYPED_TEST(JoinFullTest, SmallerEqualInnerJoin) {
   // Joining two Integer Columns
   this->template test_join_output<TypeParam>(this->_table_wrapper_a, this->_table_wrapper_b,
@@ -276,6 +284,15 @@ TYPED_TEST(JoinFullTest, SmallerEqualInnerJoin) {
                                              std::pair<std::string, std::string>("b", "b"), ScanType::OpLessThanEquals,
                                              JoinMode::Inner, std::string("left."), std::string("right."),
                                              "src/test/tables/joinoperators/float_smallerequal_inner_join.tbl", 1);
+}
+
+TYPED_TEST(JoinFullTest, SmallerEqualInnerJoin2) {
+  // Joining two Integer Columns
+  this->template test_join_output<TypeParam>(this->_table_wrapper_j, this->_table_wrapper_i,
+                                             std::pair<std::string, std::string>("a", "a"),
+                                             ScanType::OpLessThanEquals,
+                                             JoinMode::Inner, std::string("left."), std::string("right."),
+                                             "src/test/tables/joinoperators/int_smallerequal_inner_join_2.tbl", 1);
 }
 
 TYPED_TEST(JoinFullTest, GreaterInnerJoin) {
@@ -312,6 +329,15 @@ TYPED_TEST(JoinFullTest, GreaterEqualInnerJoin) {
       this->_table_wrapper_a, this->_table_wrapper_b, std::pair<std::string, std::string>("b", "b"),
       ScanType::OpGreaterThanEquals, JoinMode::Inner, std::string("left."), std::string("right."),
       "src/test/tables/joinoperators/float_greaterequal_inner_join.tbl", 1);
+}
+
+TYPED_TEST(JoinFullTest, GreaterEqualInnerJoin2) {
+  // Joining two Integer Columns
+  this->template test_join_output<TypeParam>(this->_table_wrapper_i, this->_table_wrapper_j,
+                                             std::pair<std::string, std::string>("a", "a"),
+                                             ScanType::OpGreaterThanEquals,
+                                             JoinMode::Inner, std::string("left."), std::string("right."),
+                                             "src/test/tables/joinoperators/int_greaterequal_inner_join_2.tbl", 1);
 }
 
 TYPED_TEST(JoinFullTest, JoinOnMixedValueAndDictionaryColumns) {
