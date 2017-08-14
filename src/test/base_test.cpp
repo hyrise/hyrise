@@ -16,7 +16,7 @@
 namespace opossum {
 
 void BaseTest::EXPECT_TABLE_EQ(const Table &tleft, const Table &tright, bool order_sensitive) {
-    EXPECT_TRUE(_table_equal(tleft, tright, order_sensitive));
+  EXPECT_TRUE(_table_equal(tleft, tright, order_sensitive));
 }
 
 void BaseTest::ASSERT_TABLE_EQ(const Table &tleft, const Table &tright, bool order_sensitive) {

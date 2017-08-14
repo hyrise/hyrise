@@ -12,7 +12,8 @@
 
 namespace opossum {
 
-Projection::Projection(const std::shared_ptr<const AbstractOperator> in, const std::vector<std::shared_ptr<ExpressionNode>> & column_expressions)
+Projection::Projection(const std::shared_ptr<const AbstractOperator> in,
+                       const std::vector<std::shared_ptr<ExpressionNode>>& column_expressions)
     : AbstractReadOnlyOperator(in), _column_expressions(column_expressions) {}
 
 const std::string Projection::name() const { return "Projection"; }
@@ -37,8 +38,7 @@ std::shared_ptr<const Table> Projection::on_execute() {
       name = column_expression->to_expression_string();
     }
 
-    const auto type = evaluate_expression_type(column_expression,
-      input_table_left());
+    const auto type = evaluate_expression_type(column_expression, input_table_left());
 
     output->add_column_definition(name, type);
   }
@@ -52,18 +52,15 @@ std::shared_ptr<const Table> Projection::on_execute() {
     }
     for (ColumnID columnID{0}; columnID < _column_expressions.size(); ++columnID) {
       call_functor_by_column_type<ColumnCreator>(output->column_type(columnID), chunk_out, chunk_id,
-                                                 _column_expressions[columnID],
-                                                 input_table_left());
+                                                 _column_expressions[columnID], input_table_left());
     }
     output->add_chunk(std::move(chunk_out));
   }
   return output;
 }
 
-std::string Projection::evaluate_expression_type(
-  const std::shared_ptr<ExpressionNode> & expression,
-  const std::shared_ptr<const Table> & table) {
-
+std::string Projection::evaluate_expression_type(const std::shared_ptr<ExpressionNode>& expression,
+                                                 const std::shared_ptr<const Table>& table) {
   if (expression->type() == ExpressionType::Literal) {
     return type_by_all_type_variant_which[expression->value().which()];
   }

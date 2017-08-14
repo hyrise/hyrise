@@ -1,7 +1,7 @@
 #pragma once
 
-#include <memory>
 #include <cstdint>
+#include <memory>
 #include <string>
 #include <tuple>
 #include <utility>
@@ -25,7 +25,7 @@ class Projection : public AbstractReadOnlyOperator {
  public:
   using ColumnExpressions = std::vector<std::shared_ptr<ExpressionNode>>;
 
-  Projection(const std::shared_ptr<const AbstractOperator> in, const ColumnExpressions & column_expressions);
+  Projection(const std::shared_ptr<const AbstractOperator> in, const ColumnExpressions& column_expressions);
 
   const std::string name() const override;
   uint8_t num_in_tables() const override;
@@ -39,11 +39,12 @@ class Projection : public AbstractReadOnlyOperator {
   class ColumnCreator {
    public:
     template <typename T>
-    static void run(Chunk& chunk, const ChunkID chunk_id, const std::shared_ptr<ExpressionNode> & expression,
+    static void run(Chunk& chunk, const ChunkID chunk_id, const std::shared_ptr<ExpressionNode>& expression,
                     std::shared_ptr<const Table> input_table_left) {
       // check whether term is a just a simple column and bypass this column
       if (expression->type() == ExpressionType::ColumnReference) {
-        auto bypassed_column = input_table_left->get_chunk(chunk_id).get_column(input_table_left->column_id_by_name(expression->name()));
+        auto bypassed_column =
+            input_table_left->get_chunk(chunk_id).get_column(input_table_left->column_id_by_name(expression->name()));
         return chunk.add_column(bypassed_column);
       }
 
@@ -54,15 +55,13 @@ class Projection : public AbstractReadOnlyOperator {
     }
   };
 
-  static std::string evaluate_expression_type(
-    const std::shared_ptr<ExpressionNode> & expression,
-    const std::shared_ptr<const Table> & table);
+  static std::string evaluate_expression_type(const std::shared_ptr<ExpressionNode>& expression,
+                                              const std::shared_ptr<const Table>& table);
 
-  template<typename T>
-  static const tbb::concurrent_vector<T> evaluate_expression(
-    const std::shared_ptr<ExpressionNode> & expression,
-    const std::shared_ptr<const Table> table,
-    const ChunkID chunk_id) {
+  template <typename T>
+  static const tbb::concurrent_vector<T> evaluate_expression(const std::shared_ptr<ExpressionNode>& expression,
+                                                             const std::shared_ptr<const Table> table,
+                                                             const ChunkID chunk_id) {
     /**
      * Handle Literal
      */
@@ -100,8 +99,8 @@ class Projection : public AbstractReadOnlyOperator {
     tbb::concurrent_vector<T> values;
     values.resize(table->get_chunk(chunk_id).size());
 
-    const auto & left = expression->left_child();
-    const auto & right = expression->right_child();
+    const auto& left = expression->left_child();
+    const auto& right = expression->right_child();
     const auto left_is_literal = left->type() == ExpressionType::Literal;
     const auto right_is_literal = right->type() == ExpressionType::Literal;
 
@@ -122,7 +121,6 @@ class Projection : public AbstractReadOnlyOperator {
       std::transform(right_values.begin(), right_values.end(), values.begin(),
                      [&](T right_value) { return arithmetic_op_fn(left_value, right_value); });
 
-
     } else {
       auto left_values = evaluate_expression<T>(left, table, chunk_id);
       auto right_values = evaluate_expression<T>(right, table, chunk_id);
@@ -134,13 +132,17 @@ class Projection : public AbstractReadOnlyOperator {
     return values;
   }
 
-  template<typename T>
+  template <typename T>
   static std::function<T(const T&, const T&)> get_base_operator_fn(ExpressionType type) {
     switch (type) {
-      case ExpressionType::Addition: return std::plus<T>();
-      case ExpressionType::Subtraction: return std::minus<T>();
-      case ExpressionType::Multiplication: return std::multiplies<T>();
-      case ExpressionType::Division: return std::divides<T>();
+      case ExpressionType::Addition:
+        return std::plus<T>();
+      case ExpressionType::Subtraction:
+        return std::minus<T>();
+      case ExpressionType::Multiplication:
+        return std::multiplies<T>();
+      case ExpressionType::Division:
+        return std::divides<T>();
 
       default:
         Fail("Unknown arithmetic operator");
@@ -148,7 +150,7 @@ class Projection : public AbstractReadOnlyOperator {
     }
   }
 
-  template<typename T>
+  template <typename T>
   static std::function<T(const T&, const T&)> get_operator_fn(ExpressionType type) {
     if (type == ExpressionType::Modulo) return std::modulus<T>();
     return get_base_operator_fn<T>(type);
@@ -166,7 +168,7 @@ class Projection : public AbstractReadOnlyOperator {
  */
 template <>
 inline std::function<std::string(const std::string&, const std::string&)> Projection::get_operator_fn(
-  ExpressionType type) {
+    ExpressionType type) {
   Assert(type == ExpressionType::Addition, "Arithmetic operator except for addition not defined for std::string");
   return std::plus<std::string>();
 }
@@ -179,14 +181,12 @@ inline std::function<std::string(const std::string&, const std::string&)> Projec
  *
  */
 template <>
-inline std::function<float(const float&, const float&)> Projection::get_operator_fn(
-  ExpressionType type) {
+inline std::function<float(const float&, const float&)> Projection::get_operator_fn(ExpressionType type) {
   return get_base_operator_fn<float>(type);
 }
 
 template <>
-inline std::function<double(const double&, const double&)> Projection::get_operator_fn(
-  ExpressionType type) {
+inline std::function<double(const double&, const double&)> Projection::get_operator_fn(ExpressionType type) {
   return get_base_operator_fn<double>(type);
 }
 

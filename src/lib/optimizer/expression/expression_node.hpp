@@ -56,17 +56,16 @@ class ExpressionNode : public std::enable_shared_from_this<ExpressionNode> {
   static std::shared_ptr<ExpressionNode> create_literal(const AllTypeVariant& value,
                                                         const optional<std::string>& alias = nullopt);
 
-
   static std::shared_ptr<ExpressionNode> create_parameter(const AllTypeVariant& value);
 
   static std::shared_ptr<ExpressionNode> create_function_reference(
       const std::string& function_name, const std::vector<std::shared_ptr<ExpressionNode>>& expression_list,
-      const optional<std::string> & alias);
+      const optional<std::string>& alias);
 
   static std::shared_ptr<ExpressionNode> create_binary_operator(ExpressionType type,
-                                                         const std::shared_ptr<ExpressionNode> &left,
-                                                         const std::shared_ptr<ExpressionNode> &right,
-                                                         const optional<std::string> &alias = nullopt);
+                                                                const std::shared_ptr<ExpressionNode>& left,
+                                                                const std::shared_ptr<ExpressionNode>& right,
+                                                                const optional<std::string>& alias = nullopt);
 
   /*
    * Helper methods for Expression Trees

@@ -35,7 +35,7 @@ std::shared_ptr<ExpressionNode> ExpressionNode::create_column_reference(const st
 }
 
 std::shared_ptr<ExpressionNode> ExpressionNode::create_literal(const AllTypeVariant &value,
-                                                               const optional<std::string>& alias) {
+                                                               const optional<std::string> &alias) {
   const std::vector<std::shared_ptr<ExpressionNode>> expr_list;
   return std::make_shared<ExpressionNode>(ExpressionType::Literal, value, expr_list, "", "", alias);
 }
@@ -53,12 +53,11 @@ std::shared_ptr<ExpressionNode> ExpressionNode::create_function_reference(
 }
 
 std::shared_ptr<ExpressionNode> ExpressionNode::create_binary_operator(ExpressionType type,
-                                                                const std::shared_ptr<ExpressionNode> &left,
-                                                                const std::shared_ptr<ExpressionNode> &right,
+                                                                       const std::shared_ptr<ExpressionNode> &left,
+                                                                       const std::shared_ptr<ExpressionNode> &right,
                                                                        const optional<std::string> &alias) {
   auto expression = std::make_shared<ExpressionNode>(type, AllTypeVariant(),
-                                                     std::vector<std::shared_ptr<ExpressionNode>>(),
-                                                     "", "", alias);
+                                                     std::vector<std::shared_ptr<ExpressionNode>>(), "", "", alias);
   Assert(expression->is_binary_operator(), "Type is not an operator type");
 
   expression->set_left_child(left);
@@ -101,7 +100,7 @@ void ExpressionNode::print(const uint32_t level, std::ostream &out) const {
 }
 
 bool ExpressionNode::is_arithmetic_operator() const {
-  switch(_type) {
+  switch (_type) {
     case ExpressionType::Subtraction:
     case ExpressionType::Addition:
     case ExpressionType::Multiplication:
@@ -114,10 +113,10 @@ bool ExpressionNode::is_arithmetic_operator() const {
   }
 }
 
-  bool ExpressionNode::is_binary_operator() const {
+bool ExpressionNode::is_binary_operator() const {
   if (is_arithmetic_operator()) return true;
 
-  switch(_type) {
+  switch (_type) {
     case ExpressionType::Equals:
     case ExpressionType::NotEquals:
     case ExpressionType::LessThan:
@@ -145,7 +144,8 @@ const std::string ExpressionNode::description() const {
       desc << "[" << value() << "]";
       break;
     case ExpressionType::ColumnReference:
-      desc << "[Table: " << table_name() << ", Column: " << name() << ", Alias: " << (_alias ? *_alias : std::string("/")) << "]";
+      desc << "[Table: " << table_name() << ", Column: " << name()
+           << ", Alias: " << (_alias ? *_alias : std::string("/")) << "]";
       break;
     case ExpressionType::FunctionReference:
       desc << "[" << name() << ": " << std::endl;
@@ -175,9 +175,7 @@ const std::string &ExpressionNode::name() const {
   return _name;
 }
 
-const optional<std::string> &ExpressionNode::alias() const {
-  return _alias;
-}
+const optional<std::string> &ExpressionNode::alias() const { return _alias; }
 
 const AllTypeVariant ExpressionNode::value() const {
   DebugAssert(_type == ExpressionType::Literal,
@@ -189,13 +187,13 @@ std::string ExpressionNode::to_expression_string() const {
   if (_type == ExpressionType::Literal) {
     return type_cast<std::string>(_value);
   } else if (_type == ExpressionType::ColumnReference) {
-    return  _name;
+    return _name;
   } else if (is_arithmetic_operator()) {
     // TODO(mp) Should be is_operator() to also support ExpressionType::Equals, ...
     Assert(static_cast<bool>(left_child()) && static_cast<bool>(right_child()), "Operator needs both operands");
 
     return left_child()->to_expression_string() + expression_type_to_operator_string.at(_type) +
-            right_child()->to_expression_string();
+           right_child()->to_expression_string();
   } else if (_type == ExpressionType::FunctionReference) {
     return _name + "()";
   } else {
@@ -206,11 +204,7 @@ std::string ExpressionNode::to_expression_string() const {
   return "";
 }
 
-ExpressionNode::ExpressionNode(const ExpressionType type):
-  _type(type)
-{
-
-}
+ExpressionNode::ExpressionNode(const ExpressionType type) : _type(type) {}
 
 const std::vector<std::shared_ptr<ExpressionNode>> &ExpressionNode::expression_list() const { return _expression_list; }
 

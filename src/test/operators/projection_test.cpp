@@ -35,27 +35,21 @@ class OperatorsProjectionTest : public BaseTest {
 
     // Projection Expression: a + b + c
     _sum_a_b_c_expr = Projection::ColumnExpressions{ExpressionNode::create_binary_operator(
-      ExpressionType::Addition,
-      ExpressionNode::create_column_reference("a"),
-      ExpressionNode::create_binary_operator(
-        ExpressionType::Addition,
-        ExpressionNode::create_column_reference("b"),
-        ExpressionNode::create_column_reference("c")
-      ), "sum")};  // NOLINT
+        ExpressionType::Addition, ExpressionNode::create_column_reference("a"),
+        ExpressionNode::create_binary_operator(ExpressionType::Addition, ExpressionNode::create_column_reference("b"),
+                                               ExpressionNode::create_column_reference("c")),
+        "sum")};  // NOLINT
 
     // Projection Expression: (a + b) * c
     _mul_a_b_c_expr = Projection::ColumnExpressions{ExpressionNode::create_binary_operator(
-      ExpressionType::Multiplication,
-      ExpressionNode::create_binary_operator(
-        ExpressionType::Addition,
-        ExpressionNode::create_column_reference("a"),
-        ExpressionNode::create_column_reference("b")),
-      ExpressionNode::create_column_reference("c"), "mul")};  // NOLINT
+        ExpressionType::Multiplication,
+        ExpressionNode::create_binary_operator(ExpressionType::Addition, ExpressionNode::create_column_reference("a"),
+                                               ExpressionNode::create_column_reference("b")),
+        ExpressionNode::create_column_reference("c"), "mul")};  // NOLINT
 
-    _sum_a_b_expr = Projection::ColumnExpressions{ExpressionNode::create_binary_operator(
-      ExpressionType::Addition,
-      ExpressionNode::create_column_reference("a"),
-      ExpressionNode::create_column_reference("b"), "sum")};  // NOLINT
+    _sum_a_b_expr = Projection::ColumnExpressions{
+        ExpressionNode::create_binary_operator(ExpressionType::Addition, ExpressionNode::create_column_reference("a"),
+                                               ExpressionNode::create_column_reference("b"), "sum")};  // NOLINT
 
     // Projection Expression: a
     _a_expr = Projection::ColumnExpressions{ExpressionNode::create_column_reference("a")};
@@ -70,7 +64,6 @@ class OperatorsProjectionTest : public BaseTest {
     // Projection Expression: a, b
     _a_b_expr = Projection::ColumnExpressions{ExpressionNode::create_column_reference("a"),
                                               ExpressionNode::create_column_reference("b")};
-
   }
 
   Projection::ColumnExpressions _sum_a_b_expr;
@@ -86,8 +79,7 @@ class OperatorsProjectionTest : public BaseTest {
 TEST_F(OperatorsProjectionTest, SingleColumn) {
   std::shared_ptr<Table> expected_result = load_table("src/test/tables/int.tbl", 1);
 
-  auto projection = std::make_shared<Projection>(_table_wrapper,
-  _a_expr);
+  auto projection = std::make_shared<Projection>(_table_wrapper, _a_expr);
   projection->execute();
   auto out = projection->get_output();
   EXPECT_TABLE_EQ(projection->get_output(), expected_result);
@@ -96,12 +88,10 @@ TEST_F(OperatorsProjectionTest, SingleColumn) {
 TEST_F(OperatorsProjectionTest, DoubleProject) {
   std::shared_ptr<Table> expected_result = load_table("src/test/tables/int.tbl", 3);
 
-  auto projection1 = std::make_shared<Projection>(_table_wrapper,
-                                                  _a_expr);
+  auto projection1 = std::make_shared<Projection>(_table_wrapper, _a_expr);
   projection1->execute();
 
-  auto projection2 = std::make_shared<Projection>(projection1,
-                                                  _a_expr);
+  auto projection2 = std::make_shared<Projection>(projection1, _a_expr);
   projection2->execute();
 
   EXPECT_TABLE_EQ(projection2->get_output(), expected_result);
@@ -120,10 +110,9 @@ TEST_F(OperatorsProjectionTest, ConstantArithmeticProjection) {
   std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_int_int_fix_values.tbl", 2);
 
   // 2+2
-  Projection::ColumnExpressions column_expressions{ExpressionNode::create_binary_operator(
-    ExpressionType::Addition,
-    ExpressionNode::create_literal(2),
-    ExpressionNode::create_literal(2), "fix")};  // NOLINT
+  Projection::ColumnExpressions column_expressions{
+      ExpressionNode::create_binary_operator(ExpressionType::Addition, ExpressionNode::create_literal(2),
+                                             ExpressionNode::create_literal(2), "fix")};  // NOLINT
 
   auto projection = std::make_shared<Projection>(_table_wrapper_int, column_expressions);
   projection->execute();
