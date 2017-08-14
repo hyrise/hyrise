@@ -19,11 +19,13 @@ class AttributeVectorIterable {
       ++_index;
       return *this;
     }
+
     Iterator operator++(int) {
       auto retval = *this;
       ++(*this);
       return retval;
     }
+
     bool operator==(Iterator other) const { return _index == other._index; }
     bool operator!=(Iterator other) const { return !(*this == other); }
 
@@ -53,6 +55,7 @@ class AttributeVectorIterable {
       ++_chunk_offsets_it;
       return *this;
     }
+
     ReferencedIterator operator++(int) {
       auto retval = *this;
       ++(*this);
@@ -60,7 +63,6 @@ class AttributeVectorIterable {
     }
 
     bool operator==(ReferencedIterator other) const { return (_chunk_offsets_it == other._chunk_offsets_it); }
-
     bool operator!=(ReferencedIterator other) const { return !(*this == other); }
 
     auto operator*() const {

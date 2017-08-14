@@ -15,6 +15,7 @@
 #include "storage/iterables/dictionary_column_iterable.hpp"
 #include "storage/iterables/reference_column_iterable.hpp"
 #include "storage/iterables/value_column_iterable.hpp"
+#include "storage/iterables/null_value_iterables.hpp"
 #include "utils/binary_operators.hpp"
 
 namespace opossum {
@@ -98,8 +99,8 @@ class SingleColumnScanBase : public ColumnScanBase, public ColumnVisitable {
   };
 
  public:
-  // Inherit constructors
-  using ColumnScanBase::ColumnScanBase;
+  SingleColumnScanBase(std::shared_ptr<const Table> in_table, const ColumnID left_column_id, const ScanType scan_type, const bool skip_null_row_ids = true)
+      : ColumnScanBase{in_table, left_column_id, scan_type}, _skip_null_row_ids{skip_null_row_ids} {}
 
   PosList scan_chunk(const ChunkID &chunk_id) override {
     const auto &chunk = _in_table->get_chunk(chunk_id);
@@ -163,7 +164,7 @@ class SingleColumnScanBase : public ColumnScanBase, public ColumnVisitable {
     for (auto chunk_offset = 0u; chunk_offset < pos_list.size(); ++chunk_offset) {
       const auto row_id = pos_list[chunk_offset];
 
-      if (row_id == NULL_ROW_ID) continue;
+      if (_skip_null_row_ids && row_id == NULL_ROW_ID) continue;
 
       auto &mapped_chunk_offsets = chunk_offsets_by_chunk_id[row_id.chunk_id];
       mapped_chunk_offsets.emplace_back(chunk_offset, row_id.chunk_offset);
@@ -173,6 +174,8 @@ class SingleColumnScanBase : public ColumnScanBase, public ColumnVisitable {
   }
 
   /**@}*/
+ private:
+  const bool _skip_null_row_ids;
 };
 
 /**
@@ -413,15 +416,15 @@ class SimpleSingleColumnScan : public ColumnScanBase {
 
     auto matches_out = PosList{};
 
-    resolve_column_type(left_column_type, *left_column, [&] (auto type, auto &typed_left_column) {
+    resolve_column_type(left_column_type, *left_column, [&](auto type, auto &typed_left_column) {
       using Type = typename decltype(type)::type;
 
       auto left_column_iterable = _create_iterable_from_column<Type>(typed_left_column);
       auto right_value_iterable = ConstantValueIterable<Type>{_right_value};
 
-      left_column_iterable.execute_for_all_no_mapping([&] (auto left_it, auto left_end) {
-        right_value_iterable.execute_for_all_no_mapping([&] (auto right_it, auto right_end) {
-          resolve_operator_type(_scan_type, [&] (auto comparator) {
+      left_column_iterable.execute_for_all_no_mapping([&](auto left_it, auto left_end) {
+        right_value_iterable.execute_for_all_no_mapping([&](auto right_it, auto right_end) {
+          resolve_operator_type(_scan_type, [&](auto comparator) {
             Scan{chunk_id, matches_out}(comparator, left_it, left_end, right_it);
           });
         });
@@ -435,6 +438,127 @@ class SimpleSingleColumnScan : public ColumnScanBase {
   const AllTypeVariant _right_value;
 };
 */
+
+class NullColumnScan : public SingleColumnScanBase {
+public:
+  NullColumnScan(std::shared_ptr<const Table> in_table, const ColumnID left_column_id, const ScanType &scan_type)
+      : SingleColumnScanBase{in_table, left_column_id, scan_type, false} {}
+
+  void handle_value_column(BaseColumn &base_column, std::shared_ptr<ColumnVisitableContext> base_context) override {
+    auto context = std::static_pointer_cast<Context>(base_context);
+    auto &left_column = static_cast<const UntypedValueColumn &>(base_column);
+
+    if (_matches_all(left_column)) {
+      _add_all(*context, left_column.size());
+      return;
+    }
+
+    if (_matches_none(left_column)) {
+      return;
+    }
+
+    DebugAssert(left_column.is_nullable(), "Columns that are not nullable should have been caught by edge case handling.");
+
+    auto left_column_iterable = NullValueValueColumnIterable{left_column.null_values(), context->_mapped_chunk_offsets.get()};
+
+    left_column_iterable.execute_for_all([&](auto left_it, auto left_end) {
+      _scan(left_it, left_end, *context);
+    });
+  }
+
+  void handle_dictionary_column(BaseColumn &base_column, std::shared_ptr<ColumnVisitableContext> base_context) override {
+    auto context = std::static_pointer_cast<Context>(base_context);
+    auto &left_column = static_cast<const UntypedDictionaryColumn &>(base_column);
+
+    auto left_column_iterable = NullValueDictionaryIterable{*left_column.attribute_vector(), context->_mapped_chunk_offsets.get()};
+
+    left_column_iterable.execute_for_all([&](auto left_it, auto left_end) {
+      _scan(left_it, left_end, *context);
+    });
+  }
+
+ private:
+  /**
+   * @defgroup Methods used for handling value columns
+   * @{
+   */
+
+  bool _matches_all(const UntypedValueColumn &column) {
+    switch (_scan_type) {
+      case ScanType::OpEquals:
+        return false;
+
+      case ScanType::OpNotEquals:
+        return !column.is_nullable();
+
+      default:
+        Fail("Unsupported comparison type encountered");
+        return false;
+    }
+  }
+
+  bool _matches_none(const UntypedValueColumn &column) {
+    switch (_scan_type) {
+      case ScanType::OpEquals:
+        return !column.is_nullable();
+
+      case ScanType::OpNotEquals:
+        return false;
+
+      default:
+        Fail("Unsupported comparison type encountered");
+        return false;
+    }
+  }
+
+  void _add_all(Context & context, size_t column_size) {
+    auto &matches_out = context._matches_out;
+    const auto chunk_id = context._chunk_id;
+    const auto &mapped_chunk_offsets = context._mapped_chunk_offsets;
+
+    if (mapped_chunk_offsets) {
+      for (const auto &chunk_offsets : *mapped_chunk_offsets) {
+        matches_out.push_back(RowID{chunk_id, chunk_offsets.first});
+      }
+    } else {
+      for (auto chunk_offset = 0u; chunk_offset < column_size; ++chunk_offset) {
+        matches_out.push_back(RowID{chunk_id, chunk_offset});
+      }
+    }
+  }
+
+  /**@}*/
+
+ private:
+  template <typename Functor>
+  void _resolve_scan_type(const Functor &func) {
+    switch (_scan_type) {
+      case ScanType::OpEquals:
+        return func([](const bool is_null) { return is_null; });
+
+      case ScanType::OpNotEquals:
+        return func([](const bool is_null) { return !is_null; });
+
+      default:
+        Fail("Unsupported comparison type encountered");
+    }
+  }
+
+  template <typename Iterator>
+  void _scan(Iterator left_it, Iterator left_end, Context & context) {
+    auto &matches_out = context._matches_out;
+    const auto chunk_id = context._chunk_id;
+
+    _resolve_scan_type([&](auto comparator) {
+      for (; left_it != left_end; ++left_it) {
+        const auto left = *left_it;
+
+        if (!comparator(left.is_null())) continue;
+        matches_out.push_back(RowID{chunk_id, left.chunk_offset()});
+      }
+    });
+  }
+};
 
 /**
  * @brief Implements a column scan using the LIKE operator
@@ -856,6 +980,12 @@ void TableScan::init_scan() {
 
   if (is_variant(_right_parameter)) {
     const auto right_value = boost::get<AllTypeVariant>(_right_parameter);
+
+    if (is_null(right_value)) {
+      _scan = std::make_unique<NullColumnScan>(_in_table, left_column_id, _scan_type);
+
+      return;
+    }
 
     DebugAssert(!is_null(right_value), "Right value must not be NULL.");
 

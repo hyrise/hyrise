@@ -15,7 +15,6 @@ class ConstantValueIterable {
 
     const T& value() const { return _value; }
     bool is_null() const { return false; }
-    ChunkOffset chunk_offset() const { return 0u; }
 
    private:
     const T& _value;
