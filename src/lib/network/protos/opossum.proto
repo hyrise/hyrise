@@ -67,7 +67,7 @@ message GetTableOperator {
 
 message ProjectionOperator {
   OperatorVariant input_operator = 1;
-  repeated string column_name = 2;
+  repeated int32 column_id = 2;
 }
 
 message TableScanOperator {

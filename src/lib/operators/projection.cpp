@@ -16,12 +16,12 @@ namespace opossum {
 Projection::Projection(const std::shared_ptr<const AbstractOperator> in, const ProjectionDefinitions& columns)
     : AbstractReadOnlyOperator(in), _projection_definitions(columns) {}
 
-Projection::Projection(const std::shared_ptr<const AbstractOperator> in, const std::vector<std::string>& columns)
+Projection::Projection(const std::shared_ptr<const AbstractOperator> in, const std::vector<ColumnID>& columns)
     : AbstractReadOnlyOperator(in), _simple_projection(columns) {}
 
 const Projection::ProjectionDefinitions& Projection::projection_definitions() const { return _projection_definitions; }
 
-const std::vector<std::string>& Projection::simple_projection() const { return _simple_projection; }
+const std::vector<ColumnID>& Projection::simple_projection() const { return _simple_projection; }
 
 const std::string Projection::name() const { return "Projection"; }
 
@@ -37,13 +37,14 @@ std::shared_ptr<AbstractOperator> Projection::recreate(const std::vector<AllPara
 }
 
 std::shared_ptr<const Table> Projection::on_execute() {
-  if (!_simple_projection.empty()) {
-    for (auto& column : _simple_projection) {
-      auto column_id = input_table_left()->column_id_by_name(column);
-      _projection_definitions.emplace_back(std::string("$") + column, input_table_left()->column_type(column_id),
-                                           column);
-    }
-  }
+//  if (!_simple_projection.empty()) {
+//    for (auto& column : _simple_projection) {
+//      auto column_id = input_table_left()->column_id_by_name(column);
+      // TODO(Sven): fix
+//      _projection_definitions.emplace_back(std::string("$") + std::string(column), input_table_left()->column_type(column),
+//                                           column);
+//    }
+//  }
 
   auto output = std::make_shared<Table>();
 

@@ -37,10 +37,10 @@ class Projection : public AbstractReadOnlyOperator {
   using ProjectionDefinitions = std::vector<ProjectionDefinition>;
 
   Projection(const std::shared_ptr<const AbstractOperator> in, const ProjectionDefinitions& definitions);
-  Projection(const std::shared_ptr<const AbstractOperator> in, const std::vector<std::string>& columns);
+  Projection(const std::shared_ptr<const AbstractOperator> in, const std::vector<ColumnID>& columns);
 
   const ProjectionDefinitions& projection_definitions() const;
-  const std::vector<std::string>& simple_projection() const;
+  const std::vector<ColumnID>& simple_projection() const;
 
   const std::string name() const override;
   uint8_t num_in_tables() const override;
@@ -50,7 +50,7 @@ class Projection : public AbstractReadOnlyOperator {
 
  protected:
   ProjectionDefinitions _projection_definitions;
-  std::vector<std::string> _simple_projection;
+  std::vector<ColumnID> _simple_projection;
 
   class ColumnCreator {
    public:

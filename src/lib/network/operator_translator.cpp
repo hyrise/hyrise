@@ -78,13 +78,13 @@ inline ScanType translate_scan_type(const proto::ScanType& scan_type) {
 
 inline std::shared_ptr<OperatorTask> OperatorTranslator::translate(
     const proto::ProjectionOperator& projection_operator) {
-  const auto column_names_field = projection_operator.column_name();
-  auto column_names = std::vector<std::string>(std::begin(column_names_field), std::end(column_names_field));
+  const auto column_ids_field = projection_operator.column_id();
+  auto column_ids = std::vector<ColumnID>(std::begin(column_ids_field), std::end(column_ids_field));
   Assert((projection_operator.has_input_operator()), "Missing Input Operator in Projection.");
 
   auto input_task = translate_proto(projection_operator.input_operator());
 
-  auto projection = std::make_shared<Projection>(input_task->get_operator(), column_names);
+  auto projection = std::make_shared<Projection>(input_task->get_operator(), column_ids);
   auto projection_task = std::make_shared<OperatorTask>(projection);
   input_task->set_as_predecessor_of(projection_task);
   _tasks.push_back(projection_task);

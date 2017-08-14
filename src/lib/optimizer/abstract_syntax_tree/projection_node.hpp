@@ -8,16 +8,18 @@
 
 namespace opossum {
 
+struct ColumnID;
+
 /**
  * Node type to represent common projections, i.e. without any aggregate functionality.
  */
 class ProjectionNode : public AbstractASTNode {
  public:
-  explicit ProjectionNode(const std::vector<std::string>& column_names);
+  explicit ProjectionNode(const std::vector<ColumnID>& column_ids);
 
   std::string description() const override;
 
-  std::vector<std::string> output_column_names() const override;
+  std::vector<ColumnID> output_column_ids() const override;
 };
 
 }  // namespace opossum

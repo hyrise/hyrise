@@ -58,21 +58,21 @@ std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::_translate_predicate_
     const std::shared_ptr<AbstractASTNode> &node) const {
   const auto input_operator = translate_node(node->left_child());
   auto table_scan_node = std::dynamic_pointer_cast<PredicateNode>(node);
-  return std::make_shared<TableScan>(input_operator, table_scan_node->column_name(), table_scan_node->scan_type(),
+  return std::make_shared<TableScan>(input_operator, table_scan_node->column_id(), table_scan_node->scan_type(),
                                      table_scan_node->value(), table_scan_node->value2());
 }
 
 std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::_translate_projection_node(
     const std::shared_ptr<AbstractASTNode> &node) const {
   const auto input_operator = translate_node(node->left_child());
-  return std::make_shared<Projection>(input_operator, node->output_column_names());
+  return std::make_shared<Projection>(input_operator, node->output_column_ids());
 }
 
 std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::_translate_sort_node(
     const std::shared_ptr<AbstractASTNode> &node) const {
   const auto input_operator = translate_node(node->left_child());
   auto sort_node = std::dynamic_pointer_cast<SortNode>(node);
-  return std::make_shared<Sort>(input_operator, sort_node->column_name(), sort_node->ascending());
+  return std::make_shared<Sort>(input_operator, sort_node->column_id(), sort_node->ascending());
 }
 
 std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::_translate_join_node(
@@ -81,9 +81,8 @@ std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::_translate_join_node(
   const auto input_right_operator = translate_node(node->right_child());
 
   auto join_node = std::dynamic_pointer_cast<JoinNode>(node);
-  return std::make_shared<JoinNestedLoopA>(input_left_operator, input_right_operator, join_node->join_column_names(),
-                                           join_node->scan_type(), join_node->join_mode(), join_node->prefix_left(),
-                                           join_node->prefix_right());
+  return std::make_shared<JoinNestedLoopA>(input_left_operator, input_right_operator, join_node->join_column_ids(),
+                                           join_node->scan_type(), join_node->join_mode());
 }
 
 std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::_translate_aggregate_node(

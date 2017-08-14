@@ -8,6 +8,7 @@
 #include "optimizer/expression/expression_node.hpp"
 
 #include "common.hpp"
+#include "types.hpp"
 #include "utils/assert.hpp"
 
 namespace opossum {
@@ -17,28 +18,30 @@ AggregateColumnDefinition::AggregateColumnDefinition(const std::shared_ptr<Expre
     : expr(expr), alias(alias) {}
 
 AggregateNode::AggregateNode(const std::vector<AggregateColumnDefinition>& aggregates,
-                             const std::vector<std::string>& groupby_columns)
+                             const std::vector<ColumnID>& groupby_columns)
     : AbstractASTNode(ASTNodeType::Aggregate), _aggregates(aggregates), _groupby_columns(groupby_columns) {
-  for (const auto& aggregate : aggregates) {
-    std::string alias;
-    if (aggregate.alias) {
-      alias = *aggregate.alias;
-    } else {
-      // If the aggregate function has no alias defined in the query, we simply name it like the function.
-      // This might result in multiple output columns with the same name, but Postgres is doing things the same way.
-      DebugAssert(aggregate.expr->type() == ExpressionType::FunctionReference, "Expression must be a function.");
-      alias = aggregate.expr->name();
-    }
 
-    _output_column_names.emplace_back(alias);
-  }
+  _output_column_ids = groupby_columns;
 
-  _output_column_names = groupby_columns;
+//  for (const auto& aggregate : aggregates) {
+//    std::string alias;
+//    if (aggregate.alias) {
+//      alias = *aggregate.alias;
+//    } else {
+//      // If the aggregate function has no alias defined in the query, we simply name it like the function.
+//      // This might result in multiple output columns with the same name, but Postgres is doing things the same way.
+//      DebugAssert(aggregate.expr->type() == ExpressionType::FunctionReference, "Expression must be a function.");
+//      alias = aggregate.expr->name();
+//    }
+//
+//    _output_column_ids.emplace_back(alias);
+//  }
+
 }
 
 const std::vector<AggregateColumnDefinition>& AggregateNode::aggregates() const { return _aggregates; }
 
-const std::vector<std::string>& AggregateNode::groupby_columns() const { return _groupby_columns; }
+const std::vector<ColumnID>& AggregateNode::groupby_columns() const { return _groupby_columns; }
 
 std::string AggregateNode::description() const {
   std::ostringstream s;
@@ -66,6 +69,6 @@ std::string AggregateNode::description() const {
   return s.str();
 }
 
-std::vector<std::string> AggregateNode::output_column_names() const { return _output_column_names; }
+std::vector<ColumnID> AggregateNode::output_column_ids() const { return _output_column_ids; }
 
 }  // namespace opossum

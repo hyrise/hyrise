@@ -9,6 +9,7 @@
 
 namespace opossum {
 
+struct ColumnID;
 class TableStatistics;
 
 /**
@@ -21,7 +22,7 @@ class StoredTableNode : public AbstractASTNode {
 
   std::string description() const override;
 
-  std::vector<std::string> output_column_names() const override;
+  std::vector<ColumnID> output_column_ids() const override;
 
   const std::string& table_name() const;
 

@@ -14,31 +14,29 @@
 
 namespace opossum {
 
+struct ColumnID;
+
 /**
  * This node type is used to represent any type of Join, including cross products.
  * The idea is that the optimizer is able to change the type of join if it sees fit.
  */
 class JoinNode : public AbstractASTNode {
  public:
-  JoinNode(optional<std::pair<std::string, std::string>> column_names, const ScanType scan_type,
-           const JoinMode join_mode, const std::string &prefix_left, const std::string &prefix_right);
+  JoinNode(optional<std::pair<ColumnID, ColumnID>> column_id, const ScanType scan_type,
+           const JoinMode join_mode);
 
   std::string description() const override;
 
-  std::vector<std::string> output_column_names() const override;
+  std::vector<ColumnID> output_column_ids() const override;
 
-  optional<std::pair<std::string, std::string>> join_column_names() const;
+  optional<std::pair<ColumnID, ColumnID>> join_column_ids() const;
   ScanType scan_type() const;
   JoinMode join_mode() const;
-  const std::string &prefix_left() const;
-  const std::string &prefix_right() const;
 
- private:
-  optional<std::pair<std::string, std::string>> _join_column_names;
+private:
+  optional<std::pair<ColumnID, ColumnID>> _join_column_ids;
   ScanType _scan_type;
   JoinMode _join_mode;
-  std::string _prefix_left;
-  std::string _prefix_right;
 };
 
 }  // namespace opossum

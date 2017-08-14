@@ -2,16 +2,18 @@
 
 #include <string>
 
+#include "types.hpp"
+
 namespace opossum {
 
-SortNode::SortNode(const std::string &column_name, const bool asc)
-    : AbstractASTNode(ASTNodeType::Sort), _column_name(column_name), _ascending(asc) {}
+SortNode::SortNode(const ColumnID &column_id, const bool asc)
+    : AbstractASTNode(ASTNodeType::Sort), _column_id(column_id), _ascending(asc) {}
 
 std::string SortNode::description() const {
-  return "Sort: " + _column_name + " (" + (_ascending ? "asc" : "desc") + ")";
+  return "Sort: " + dynamic_cast<std::string>(_column_id) + " (" + (_ascending ? "asc" : "desc") + ")";
 }
 
-std::string SortNode::column_name() const { return _column_name; }
+ColumnID SortNode::column_id() const { return _column_id; }
 
 bool SortNode::ascending() const { return _ascending; }
 

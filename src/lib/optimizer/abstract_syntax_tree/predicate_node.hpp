@@ -13,6 +13,7 @@
 
 namespace opossum {
 
+struct ColumnID;
 class TableStatistics;
 
 /**
@@ -24,13 +25,13 @@ class TableStatistics;
  */
 class PredicateNode : public AbstractASTNode {
  public:
-  PredicateNode(const std::string& column_name, const std::shared_ptr<ExpressionNode>& predicate,
+  PredicateNode(const ColumnID& column_id, const std::shared_ptr<ExpressionNode>& predicate,
                 const ScanType scan_type, const AllParameterVariant& value,
                 const optional<AllTypeVariant>& value2 = nullopt);
 
   std::string description() const override;
 
-  const std::string& column_name() const;
+  const ColumnID& column_id() const;
   const std::shared_ptr<ExpressionNode> predicate() const;
   ScanType scan_type() const;
   const AllParameterVariant& value() const;
@@ -42,7 +43,7 @@ class PredicateNode : public AbstractASTNode {
       const std::shared_ptr<AbstractASTNode>& parent) const override;
 
  private:
-  const std::string _column_name;
+  const ColumnID _column_id;
   std::shared_ptr<ExpressionNode> _predicate;
   const ScanType _scan_type;
   const AllParameterVariant _value;

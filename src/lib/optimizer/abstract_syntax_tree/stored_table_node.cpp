@@ -15,14 +15,15 @@ StoredTableNode::StoredTableNode(const std::string& table_name)
 
 std::string StoredTableNode::description() const { return "Table: " + _table_name; }
 
-std::vector<std::string> StoredTableNode::output_column_names() const {
+std::vector<ColumnID> StoredTableNode::output_column_ids() const {
   // Cache call to StorageManager.
-  if (_output_column_names.empty()) {
+  if (_output_column_ids.empty()) {
     auto table = StorageManager::get().get_table(_table_name);
-    _output_column_names = table->column_names();
+    // TODO(mp): fix
+//    _output_column_ids = table->column_names();
   }
 
-  return _output_column_names;
+  return _output_column_ids;
 }
 
 const std::shared_ptr<TableStatistics> StoredTableNode::_gather_statistics() const {

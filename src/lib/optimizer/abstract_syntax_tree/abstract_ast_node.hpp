@@ -7,6 +7,7 @@
 
 namespace opossum {
 
+struct ColumnID;
 class TableStatistics;
 
 enum class ASTNodeType { Aggregate, Join, Predicate, Projection, Sort, StoredTable };
@@ -44,7 +45,7 @@ class AbstractASTNode : public std::enable_shared_from_this<AbstractASTNode> {
   virtual const std::shared_ptr<TableStatistics> get_statistics_from(
       const std::shared_ptr<AbstractASTNode> &other_node) const;
 
-  virtual std::vector<std::string> output_column_names() const;
+  virtual std::vector<ColumnID> output_column_ids() const;
 
   void print(const uint32_t level = 0, std::ostream &out = std::cout) const;
   virtual std::string description() const = 0;
@@ -54,7 +55,7 @@ class AbstractASTNode : public std::enable_shared_from_this<AbstractASTNode> {
 
   // Used to easily differentiate between node types without pointer casts.
   ASTNodeType _type;
-  mutable std::vector<std::string> _output_column_names;
+  mutable std::vector<ColumnID> _output_column_ids;
 
  private:
   std::weak_ptr<AbstractASTNode> _parent;
