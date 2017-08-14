@@ -13,9 +13,9 @@
 #include "storage/iterables/attribute_vector_iterable.hpp"
 #include "storage/iterables/constant_value_iterable.hpp"
 #include "storage/iterables/dictionary_column_iterable.hpp"
+#include "storage/iterables/null_value_iterables.hpp"
 #include "storage/iterables/reference_column_iterable.hpp"
 #include "storage/iterables/value_column_iterable.hpp"
-#include "storage/iterables/null_value_iterables.hpp"
 #include "utils/binary_operators.hpp"
 
 namespace opossum {
@@ -99,7 +99,8 @@ class SingleColumnScanBase : public ColumnScanBase, public ColumnVisitable {
   };
 
  public:
-  SingleColumnScanBase(std::shared_ptr<const Table> in_table, const ColumnID left_column_id, const ScanType scan_type, const bool skip_null_row_ids = true)
+  SingleColumnScanBase(std::shared_ptr<const Table> in_table, const ColumnID left_column_id, const ScanType scan_type,
+                       const bool skip_null_row_ids = true)
       : ColumnScanBase{in_table, left_column_id, scan_type}, _skip_null_row_ids{skip_null_row_ids} {}
 
   PosList scan_chunk(const ChunkID &chunk_id) override {
@@ -440,7 +441,7 @@ class SimpleSingleColumnScan : public ColumnScanBase {
 */
 
 class NullColumnScan : public SingleColumnScanBase {
-public:
+ public:
   NullColumnScan(std::shared_ptr<const Table> in_table, const ColumnID left_column_id, const ScanType &scan_type)
       : SingleColumnScanBase{in_table, left_column_id, scan_type, false} {}
 
@@ -457,24 +458,24 @@ public:
       return;
     }
 
-    DebugAssert(left_column.is_nullable(), "Columns that are not nullable should have been caught by edge case handling.");
+    DebugAssert(left_column.is_nullable(),
+                "Columns that are not nullable should have been caught by edge case handling.");
 
-    auto left_column_iterable = NullValueValueColumnIterable{left_column.null_values(), context->_mapped_chunk_offsets.get()};
+    auto left_column_iterable =
+        NullValueValueColumnIterable{left_column.null_values(), context->_mapped_chunk_offsets.get()};
 
-    left_column_iterable.execute_for_all([&](auto left_it, auto left_end) {
-      _scan(left_it, left_end, *context);
-    });
+    left_column_iterable.execute_for_all([&](auto left_it, auto left_end) { _scan(left_it, left_end, *context); });
   }
 
-  void handle_dictionary_column(BaseColumn &base_column, std::shared_ptr<ColumnVisitableContext> base_context) override {
+  void handle_dictionary_column(BaseColumn &base_column,
+                                std::shared_ptr<ColumnVisitableContext> base_context) override {
     auto context = std::static_pointer_cast<Context>(base_context);
     auto &left_column = static_cast<const UntypedDictionaryColumn &>(base_column);
 
-    auto left_column_iterable = NullValueDictionaryIterable{*left_column.attribute_vector(), context->_mapped_chunk_offsets.get()};
+    auto left_column_iterable =
+        NullValueDictionaryIterable{*left_column.attribute_vector(), context->_mapped_chunk_offsets.get()};
 
-    left_column_iterable.execute_for_all([&](auto left_it, auto left_end) {
-      _scan(left_it, left_end, *context);
-    });
+    left_column_iterable.execute_for_all([&](auto left_it, auto left_end) { _scan(left_it, left_end, *context); });
   }
 
  private:
@@ -511,7 +512,7 @@ public:
     }
   }
 
-  void _add_all(Context & context, size_t column_size) {
+  void _add_all(Context &context, size_t column_size) {
     auto &matches_out = context._matches_out;
     const auto chunk_id = context._chunk_id;
     const auto &mapped_chunk_offsets = context._mapped_chunk_offsets;
@@ -545,7 +546,7 @@ public:
   }
 
   template <typename Iterator>
-  void _scan(Iterator left_it, Iterator left_end, Context & context) {
+  void _scan(Iterator left_it, Iterator left_end, Context &context) {
     auto &matches_out = context._matches_out;
     const auto chunk_id = context._chunk_id;
 

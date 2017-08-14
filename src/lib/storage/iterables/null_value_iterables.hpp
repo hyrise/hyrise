@@ -4,14 +4,15 @@
 
 #include "tbb/concurrent_vector.h"
 
-#include "types.hpp"
 #include "storage/base_attribute_vector.hpp"
+#include "types.hpp"
 
 namespace opossum {
 
 class ColumnNullValue {
  public:
-  ColumnNullValue(const bool null_value, const ChunkOffset& chunk_offset) : _null_value{null_value}, _chunk_offset{chunk_offset} {}
+  ColumnNullValue(const bool null_value, const ChunkOffset& chunk_offset)
+      : _null_value{null_value}, _chunk_offset{chunk_offset} {}
 
   bool is_null() const { return false; }
   ChunkOffset chunk_offset() const { return _chunk_offset; }
@@ -23,7 +24,8 @@ class ColumnNullValue {
 
 class NullValueDictionaryIterable {
  public:
-  class Iterator : public std::iterator<std::input_iterator_tag, ColumnNullValue, std::ptrdiff_t, ColumnNullValue*, ColumnNullValue> {
+  class Iterator : public std::iterator<std::input_iterator_tag, ColumnNullValue, std::ptrdiff_t, ColumnNullValue*,
+                                        ColumnNullValue> {
    public:
     explicit Iterator(const BaseAttributeVector& attribute_vector, size_t index)
         : _attribute_vector{attribute_vector}, _index{index} {}
@@ -54,7 +56,8 @@ class NullValueDictionaryIterable {
     size_t _index;
   };
 
-  class ReferencedIterator : public std::iterator<std::input_iterator_tag, ColumnNullValue, std::ptrdiff_t, ColumnNullValue*, ColumnNullValue> {
+  class ReferencedIterator : public std::iterator<std::input_iterator_tag, ColumnNullValue, std::ptrdiff_t,
+                                                  ColumnNullValue*, ColumnNullValue> {
    public:
     using ChunkOffsetsIterator = std::vector<std::pair<ChunkOffset, ChunkOffset>>::const_iterator;
 
@@ -78,9 +81,8 @@ class NullValueDictionaryIterable {
     bool operator!=(ReferencedIterator other) const { return !(*this == other); }
 
     auto operator*() const {
-      if (_chunk_offsets_it->second == INVALID_CHUNK_OFFSET)
-        return ColumnNullValue{true, _chunk_offsets_it->first};
-      
+      if (_chunk_offsets_it->second == INVALID_CHUNK_OFFSET) return ColumnNullValue{true, _chunk_offsets_it->first};
+
       const auto value_id = _attribute_vector.get(_chunk_offsets_it->second);
       const auto is_null = (value_id == NULL_VALUE_ID);
 
@@ -123,10 +125,10 @@ class NullValueDictionaryIterable {
   const std::vector<std::pair<ChunkOffset, ChunkOffset>>* _mapped_chunk_offsets;
 };
 
-
 class NullValueValueColumnIterable {
  public:
-  class Iterator : public std::iterator<std::input_iterator_tag, ColumnNullValue, std::ptrdiff_t, ColumnNullValue*, ColumnNullValue> {
+  class Iterator : public std::iterator<std::input_iterator_tag, ColumnNullValue, std::ptrdiff_t, ColumnNullValue*,
+                                        ColumnNullValue> {
    public:
     using NullValueIterator = tbb::concurrent_vector<bool>::const_iterator;
 
@@ -157,7 +159,8 @@ class NullValueValueColumnIterable {
     NullValueIterator _null_value_it;
   };
 
-  class ReferencedIterator : public std::iterator<std::input_iterator_tag, ColumnNullValue, std::ptrdiff_t, ColumnNullValue*, ColumnNullValue> {
+  class ReferencedIterator : public std::iterator<std::input_iterator_tag, ColumnNullValue, std::ptrdiff_t,
+                                                  ColumnNullValue*, ColumnNullValue> {
    public:
     using NullValueVector = tbb::concurrent_vector<bool>;
     using ChunkOffsetsIterator = std::vector<std::pair<ChunkOffset, ChunkOffset>>::const_iterator;
@@ -183,8 +186,7 @@ class NullValueValueColumnIterable {
     bool operator!=(ReferencedIterator other) const { return !(*this == other); }
 
     auto operator*() const {
-      if (_chunk_offsets_it->second == INVALID_CHUNK_OFFSET)
-        return ColumnNullValue{true, _chunk_offsets_it->first};
+      if (_chunk_offsets_it->second == INVALID_CHUNK_OFFSET) return ColumnNullValue{true, _chunk_offsets_it->first};
 
       return ColumnNullValue{_null_values[_chunk_offsets_it->second], _chunk_offsets_it->first};
     }
