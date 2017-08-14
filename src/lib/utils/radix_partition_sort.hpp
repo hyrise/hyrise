@@ -36,6 +36,8 @@ class RadixPartitionSort {
       _right_column_name{column_names.second}, _equi_case{equi_case},
       _partition_count{partition_count} {
     DebugAssert(partition_count > 0, "partition_count must be > 0");
+    DebugAssert((partition_count & (partition_count - 1)) == 0,
+                "partition_count must be a power of two, i.e. 1, 2, 4, 8...");
     DebugAssert(left != nullptr, "left input operator is null");
     DebugAssert(right != nullptr, "right input operator is null");
   }
@@ -82,7 +84,8 @@ class RadixPartitionSort {
   const std::string _right_column_name;
   bool _equi_case;
 
-  // the partition count should be a power of two, i.e. 1, 2, 4, 8, 16, ...
+  // The partition count must be a power of two, i.e. 1, 2, 4, 8, 16, ...
+  // It is asserted to be a power of two in the constructor.
   size_t _partition_count;
 
   MatTablePtr _output_left;
@@ -213,6 +216,8 @@ class RadixPartitionSort {
   * - consolidate partitions in order to reduce skew.
   **/
   MatTablePtr _radix_partition(MatTablePtr input_chunks) {
+    DebugAssert(_partition_count > 0 && (_partition_count & (_partition_count - 1)) == 0,
+                "_partition_count must be a power of two greater than zero, i.e. 1, 2, 4, 8...");
     auto radix_bitmask = _partition_count - 1;
     return _partition(input_chunks, [=] (const T& value) {
       return get_radix<T>(value, radix_bitmask);

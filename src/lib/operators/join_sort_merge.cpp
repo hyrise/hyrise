@@ -39,7 +39,7 @@ JoinSortMerge::JoinSortMerge(const std::shared_ptr<const AbstractOperator> left,
   DebugAssert(op == ScanType::OpEquals || op == ScanType::OpLessThan || op == ScanType::OpGreaterThan ||
               op == ScanType::OpLessThanEquals || op == ScanType::OpGreaterThanEquals, "Unsupported scan type");
   DebugAssert(op == ScanType::OpEquals || mode == JoinMode::Inner, "Outer joins are only implemented for equi joins.");
-  DebugAssert(static_cast<bool>(column_names), "SortMergeJoin currently does not support natural joins.");
+  DebugAssert(static_cast<bool>(column_names), "JoinSortMerge currently does not support natural joins.");
 
   auto left_column_name = column_names->first;
   auto right_column_name = column_names->second;
