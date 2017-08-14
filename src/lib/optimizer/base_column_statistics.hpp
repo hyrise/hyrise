@@ -4,6 +4,7 @@
 #include <ostream>
 #include <string>
 #include <tuple>
+#include <utility>
 
 #include "all_parameter_variant.hpp"
 #include "common.hpp"
@@ -66,6 +67,8 @@ class BaseColumnStatistics {
  * Return type of selectivity functions for operations on one column.
  */
 struct ColumnSelectivityResult {
+  ColumnSelectivityResult(float p_selectivity, std::shared_ptr<BaseColumnStatistics> &&column_stats)
+      : selectivity(p_selectivity), column_statistics(column_stats) {}
   float selectivity;
   std::shared_ptr<BaseColumnStatistics> column_statistics;
 };
@@ -76,7 +79,7 @@ struct ColumnSelectivityResult {
 struct TwoColumnSelectivityResult : public ColumnSelectivityResult {
   TwoColumnSelectivityResult(float selectivity, std::shared_ptr<BaseColumnStatistics> &&column_stats,
                              std::shared_ptr<BaseColumnStatistics> &&second_column_stats)
-      : ColumnSelectivityResult{selectivity, column_stats}, second_column_statistics(second_column_stats) {}
+      : ColumnSelectivityResult{selectivity, std::move(column_stats)}, second_column_statistics(second_column_stats) {}
 
   std::shared_ptr<BaseColumnStatistics> second_column_statistics;
 };
