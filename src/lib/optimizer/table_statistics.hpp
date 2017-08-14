@@ -55,9 +55,9 @@ class TableStatistics {
   /**
    * Get table statistics for the operator table scan table scan.
    */
-  virtual std::shared_ptr<TableStatistics> predicate_statistics(const ColumnID column_name, const ScanType scan_type,
-                                                                const AllParameterVariant &value,
-                                                                const optional<AllTypeVariant> &value2 = nullopt);
+  std::shared_ptr<TableStatistics> predicate_statistics(const ColumnID column_id, const ScanType scan_type,
+                                                        const AllParameterVariant &value,
+                                                        const optional<AllTypeVariant> &value2 = nullopt);
 
  protected:
   std::shared_ptr<BaseColumnStatistics> column_statistics(const ColumnID column_id);
