@@ -32,17 +32,17 @@ using grpc::CompletionQueue;
 using grpc::Status;
 
 namespace {
-//std::string load_response(const std::string& file_name) {
-//  std::ifstream infile(file_name);
-//  std::string line;
-//  std::stringstream response_text;
-//
-//  while (std::getline(infile, line)) {
-//    response_text << line << std::endl;
-//  }
-//
-//  return response_text.str();
-//}
+std::string load_response(const std::string& file_name) {
+  std::ifstream infile(file_name);
+  std::string line;
+  std::stringstream response_text;
+
+  while (std::getline(infile, line)) {
+    response_text << line << std::endl;
+  }
+
+  return response_text.str();
+}
 }  // namespace
 
 namespace opossum {
@@ -152,21 +152,21 @@ TEST_F(ServerTest, SendNoop) {
   EXPECT_EQ(response->DebugString(), "");
 }
 
-TEST_F(ServerTest, DISABLED_SendAsyncQuery) {
-//  server.start(config, false);
-//
-//  proto::Request request;
-//  auto root_op_variant = request.mutable_root_operator();
-//  auto projection = root_op_variant->mutable_projection();
-//  projection->add_column_name("a");
-//  auto get_table = projection->mutable_input_operator()->mutable_get_table();
-//  get_table->set_table_name(table_name);
-//
-//  auto response = doAsyncRequest(request);
-//
-//  auto expected_result = load_response("src/test/responses/float.tbl.rsp");
-//
-//  EXPECT_EQ(response->DebugString(), expected_result);
+TEST_F(ServerTest, AsyncQuery) {
+  server.start(config, false);
+
+  proto::Request request;
+  auto root_op_variant = request.mutable_root_operator();
+  auto projection = root_op_variant->mutable_projection();
+  projection->add_column_name("a");
+  auto get_table = projection->mutable_input_operator()->mutable_get_table();
+  get_table->set_table_name(table_name);
+
+  auto response = doAsyncRequest(request);
+
+  auto expected_result = load_response("src/test/responses/float.tbl.rsp");
+
+  EXPECT_EQ(response->DebugString(), expected_result);
 }
 
 TEST_F(ServerTest, SendInvalidQuery) {
