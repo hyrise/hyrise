@@ -179,6 +179,7 @@ void Console::out(const std::string & output, bool console_print) {
     _out << output;
   }
   _log << output;
+  _log.flush();
 }
 
 void Console::out(std::shared_ptr<const Table> table) {
