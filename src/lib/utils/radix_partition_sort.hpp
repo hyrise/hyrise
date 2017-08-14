@@ -228,6 +228,13 @@ class RadixPartitionSort {
   * Picks sample values from a materialized table that are used to determine partition range bounds.
   **/
   void _pick_sample_values(std::vector<std::map<T, size_t>>& sample_values, MatTablePtr table) {
+    // Note:
+    // - The materialized chunks are sorted.
+    // - Between the chunks there is no order
+    // - Every chunk can contain values for every partition
+    // - To sample for range border values we look at the position where the values for each partition
+    //   would start if every chunk had an even values distribution for every partition.
+    // - Later, these values are aggregated to determine the actual partition borders
     for (size_t chunk_number = 0; chunk_number < table->size(); ++chunk_number) {
       auto chunk_values = table->at(chunk_number);
       for (size_t partition_id = 0; partition_id < _partition_count - 1; ++partition_id) {
