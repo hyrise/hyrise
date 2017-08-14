@@ -230,7 +230,6 @@ class RadixPartitionSort {
   void _pick_sample_values(std::vector<std::map<T, size_t>>& sample_values, MatTablePtr table) {
     for (size_t chunk_number = 0; chunk_number < table->size(); ++chunk_number) {
       auto chunk_values = table->at(chunk_number);
-
       for (size_t partition_id = 0; partition_id < _partition_count - 1; ++partition_id) {
         size_t pos = static_cast<size_t>(chunk_values->size() * (partition_id / static_cast<float>(_partition_count)));
         ++sample_values[partition_id][chunk_values->at(pos).value];
@@ -250,6 +249,8 @@ class RadixPartitionSort {
 
     // Pick the most common sample values for each partition for the split values.
     // The last partition does not need a split value because it covers all values that are bigger than all split values
+    // The split values mark the ranges of the partitions.
+    // A split value is the end of a range and the start of the next one.
     std::vector<T> split_values(_partition_count);
     for (size_t partition_id = 0; partition_id < _partition_count - 2; ++partition_id) {
       // Pick the values with the highest count
