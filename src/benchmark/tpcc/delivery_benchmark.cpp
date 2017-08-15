@@ -43,7 +43,9 @@ class TPCCDeliveryBenchmark : public TPCCBenchmarkFixture {
     auto ts2 = std::make_shared<TableScan>(ts1, ColumnName("NO_W_ID"), ScanType::OpEquals, w_id);
     auto ts3 = std::make_shared<TableScan>(ts2, ColumnName("NO_O_ID"), ScanType::OpGreaterThan, -1);
     auto val = std::make_shared<Validate>(ts3);
-    auto projection = std::make_shared<Projection>(val, std::vector<std::string>{"NO_O_ID"});
+
+    Projection::ColumnExpressions columns = {ExpressionNode::create_column_reference("NO_O_ID")};
+    auto projection = std::make_shared<Projection>(val, columns);
     auto sort = std::make_shared<Sort>(projection, "NO_O_ID", true, 0);
 
     auto t_gt = std::make_shared<OperatorTask>(gt);
@@ -98,7 +100,9 @@ class TPCCDeliveryBenchmark : public TPCCBenchmarkFixture {
     auto ts2 = std::make_shared<TableScan>(ts1, ColumnName("O_D_ID"), ScanType::OpEquals, d_id);
     auto ts3 = std::make_shared<TableScan>(ts2, ColumnName("O_W_ID"), ScanType::OpEquals, w_id);
     auto val = std::make_shared<Validate>(ts3);
-    auto projection = std::make_shared<Projection>(val, std::vector<std::string>{"O_C_ID"});
+
+    Projection::ColumnExpressions columns = {ExpressionNode::create_column_reference("O_C_ID")};
+    auto projection = std::make_shared<Projection>(val, columns);
 
     auto t_gt = std::make_shared<OperatorTask>(gt);
     auto t_ts1 = std::make_shared<OperatorTask>(ts1);
@@ -128,10 +132,12 @@ class TPCCDeliveryBenchmark : public TPCCBenchmarkFixture {
     auto ts2 = std::make_shared<TableScan>(ts1, ColumnName("O_D_ID"), ScanType::OpEquals, d_id);
     auto ts3 = std::make_shared<TableScan>(ts2, ColumnName("O_W_ID"), ScanType::OpEquals, w_id);
     auto val = std::make_shared<Validate>(ts3);
-    auto projection = std::make_shared<Projection>(val, std::vector<std::string>{"O_CARRIER_ID"});
-    Projection::ProjectionDefinitions definitions{
-        Projection::ProjectionDefinition{std::to_string(o_carrier_id), "int", "O_CARRIER_ID"}};
-    auto updated_rows = std::make_shared<Projection>(val, definitions);
+
+    Projection::ColumnExpressions columns = {ExpressionNode::create_column_reference("O_CARRIER_ID")};
+    auto projection = std::make_shared<Projection>(val, columns);
+
+    Projection::ColumnExpressions values = {ExpressionNode::create_literal(o_carrier_id, {"O_CARRIER_ID"})};
+    auto updated_rows = std::make_shared<Projection>(val, values);
     auto update = std::make_shared<Update>("ORDER", projection, updated_rows);
 
     auto t_gt = std::make_shared<OperatorTask>(gt);
@@ -167,10 +173,13 @@ class TPCCDeliveryBenchmark : public TPCCBenchmarkFixture {
     auto ts2 = std::make_shared<TableScan>(ts1, ColumnName("OL_D_ID"), ScanType::OpEquals, d_id);
     auto ts3 = std::make_shared<TableScan>(ts2, ColumnName("OL_W_ID"), ScanType::OpEquals, w_id);
     auto val = std::make_shared<Validate>(ts3);
-    auto projection = std::make_shared<Projection>(val, std::vector<std::string>{"OL_DELIVERY_D"});
-    Projection::ProjectionDefinitions definitions{
-        Projection::ProjectionDefinition{std::to_string(datetime), "int", "OL_DELIVERY_D"}};
-    auto updated_rows = std::make_shared<Projection>(val, definitions);
+
+    Projection::ColumnExpressions columns = {ExpressionNode::create_column_reference("OL_DELIVERY_D")};
+    auto projection = std::make_shared<Projection>(val, columns);
+
+    Projection::ColumnExpressions values = {
+        ExpressionNode::create_literal(std::to_string(datetime), {"OL_DELIVERY_D"})};
+    auto updated_rows = std::make_shared<Projection>(val, values);
     auto update = std::make_shared<Update>("ORDER-LINE", projection, updated_rows);
 
     auto t_gt = std::make_shared<OperatorTask>(gt);
@@ -237,10 +246,15 @@ class TPCCDeliveryBenchmark : public TPCCBenchmarkFixture {
     auto ts2 = std::make_shared<TableScan>(ts1, ColumnName("C_D_ID"), ScanType::OpEquals, d_id);
     auto ts3 = std::make_shared<TableScan>(ts2, ColumnName("C_W_ID"), ScanType::OpEquals, w_id);
     auto val = std::make_shared<Validate>(ts3);
-    auto projection = std::make_shared<Projection>(val, std::vector<std::string>{"C_BALANCE"});
-    Projection::ProjectionDefinitions definitions{
-        Projection::ProjectionDefinition{"$C_BALANCE+" + std::to_string(ol_total), "float", "C_BALANCE"}};
-    auto updated_rows = std::make_shared<Projection>(val, definitions);
+
+    Projection::ColumnExpressions columns = {ExpressionNode::create_column_reference("C_BALANCE")};
+    auto projection = std::make_shared<Projection>(val, columns);
+
+    auto addition = ExpressionNode::create_binary_operator(ExpressionType::Addition,
+                                                           ExpressionNode::create_column_reference("C_BALANCE"),
+                                                           ExpressionNode::create_literal(ol_total));
+    Projection::ColumnExpressions values = {addition};
+    auto updated_rows = std::make_shared<Projection>(val, values);
     auto update = std::make_shared<Update>("CUSTOMER", projection, updated_rows);
 
     auto t_gt = std::make_shared<OperatorTask>(gt);

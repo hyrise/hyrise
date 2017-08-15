@@ -19,8 +19,6 @@
 
 namespace opossum {
 
-struct ProjectionDefinition;
-
 /**
  * Operator to select a subset of the set of all columns found in the table
  *

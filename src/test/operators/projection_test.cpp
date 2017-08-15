@@ -37,7 +37,8 @@ class OperatorsProjectionTest : public BaseTest {
     _sum_a_b_c_expr = Projection::ColumnExpressions{ExpressionNode::create_binary_operator(
         ExpressionType::Addition, ExpressionNode::create_column_reference("a"),
         ExpressionNode::create_binary_operator(ExpressionType::Addition, ExpressionNode::create_column_reference("b"),
-                                               ExpressionNode::create_column_reference("c")), {"sum"})};
+                                               ExpressionNode::create_column_reference("c")),
+        {"sum"})};
 
     // Projection Expression: (a + b) * c
     _mul_a_b_c_expr = Projection::ColumnExpressions{ExpressionNode::create_binary_operator(
@@ -109,9 +110,8 @@ TEST_F(OperatorsProjectionTest, ConstantArithmeticProjection) {
   std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_int_int_fix_values.tbl", 2);
 
   // 2+2
-  Projection::ColumnExpressions column_expressions{
-      ExpressionNode::create_binary_operator(ExpressionType::Addition, ExpressionNode::create_literal(2),
-                                             ExpressionNode::create_literal(2), {"fix"})};
+  Projection::ColumnExpressions column_expressions{ExpressionNode::create_binary_operator(
+      ExpressionType::Addition, ExpressionNode::create_literal(2), ExpressionNode::create_literal(2), {"fix"})};
 
   auto projection = std::make_shared<Projection>(_table_wrapper_int, column_expressions);
   projection->execute();

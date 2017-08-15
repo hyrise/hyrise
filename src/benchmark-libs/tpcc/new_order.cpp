@@ -260,9 +260,9 @@ TaskVector NewOrderRefImpl::get_increment_next_order_id_tasks(const int32_t d_id
   const auto original_rows = std::make_shared<opossum::Projection>(
       ts2, opossum::Projection::ColumnExpressions({opossum::ExpressionNode::create_column_reference("D_NEXT_O_ID")}));
 
-  const auto op = opossum::ExpressionNode::create_binary_operator(
-      opossum::ExpressionType::Addition, opossum::ExpressionNode::create_literal(d_next_o_id),
-      opossum::ExpressionNode::create_literal(1), {"fix"});
+  const auto op = opossum::ExpressionNode::create_binary_operator(opossum::ExpressionType::Addition,
+                                                                  opossum::ExpressionNode::create_literal(d_next_o_id),
+                                                                  opossum::ExpressionNode::create_literal(1), {"fix"});
   const auto updated_rows = std::make_shared<opossum::Projection>(ts2, opossum::Projection::ColumnExpressions{op});
 
   const auto update = std::make_shared<opossum::Update>("DISTRICT", original_rows, updated_rows);
@@ -449,7 +449,7 @@ TaskVector NewOrderRefImpl::get_update_stock_tasks(const int32_t s_quantity, con
       ts2, opossum::Projection::ColumnExpressions({opossum::ExpressionNode::create_column_reference("S_QUANTITY")}));
 
   const auto updated_rows = std::make_shared<opossum::Projection>(
-      ts2, opossum::Projection::ColumnExpressions({opossum::ExpressionNode::create_literal({s_quantity}, "fix")}));
+      ts2, opossum::Projection::ColumnExpressions({opossum::ExpressionNode::create_literal({s_quantity}, {"fix"})}));
 
   const auto update = std::make_shared<opossum::Update>("STOCK", original_rows, updated_rows);
 
