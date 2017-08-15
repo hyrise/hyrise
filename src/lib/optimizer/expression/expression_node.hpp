@@ -114,9 +114,6 @@ class ExpressionNode : public std::enable_shared_from_this<ExpressionNode> {
   std::string to_expression_string() const;
 
  private:
-  explicit ExpressionNode(const ExpressionType type);
-
- private:
   // the type of the expression
   const ExpressionType _type;
   // the value of an expression, e.g. of a Literal

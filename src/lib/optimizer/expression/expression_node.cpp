@@ -209,8 +209,6 @@ std::string ExpressionNode::to_expression_string() const {
   return "";
 }
 
-ExpressionNode::ExpressionNode(const ExpressionType type) : _type(type) {}
-
 const std::vector<std::shared_ptr<ExpressionNode>> &ExpressionNode::expression_list() const { return _expression_list; }
 
 }  // namespace opossum
