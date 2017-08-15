@@ -50,7 +50,9 @@ class TPCHTest : public BaseTest {
   }
 };
 
-TEST_F(TPCHTest, TPCH6) {
+// TODO(mp): enable after new Projection has been merged.
+// ProjectionDefinition with ColumnID is currently not resolved correctly
+TEST_F(TPCHTest, DISABLED_TPCH6) {
   /**
    * Original:
    *

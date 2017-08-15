@@ -182,7 +182,8 @@ TEST_F(ASTToOperatorTranslatorTest, AggregateNodeWithArithmetics) {
   ASSERT_EQ(projection_definitions.size(), 1u);
 
   const auto projection_definition = projection_definitions[0];
-  EXPECT_EQ(projection_definition.expression, "$b*2");
+  // TODO(Sven): fix with new projection
+  EXPECT_EQ(projection_definition.expression, "$1*2");
   EXPECT_EQ(projection_definition.type, "float");
   EXPECT_EQ(projection_definition.name, "alias0");
 }

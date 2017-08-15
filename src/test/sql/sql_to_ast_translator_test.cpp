@@ -60,11 +60,16 @@ TEST_F(SQLToASTTranslatorTest, SelectStarAllTest) {
   std::vector<ColumnID> expected_columns{ColumnID{0}, ColumnID{1}};
   EXPECT_EQ(expected_columns, result_node->output_column_ids());
 
+  EXPECT_EQ(result_node->type(), ASTNodeType::Projection);
+
+  EXPECT_TRUE(result_node->left_child());
+  EXPECT_EQ(result_node->left_child()->type(), ASTNodeType::StoredTable);
+
   EXPECT_FALSE(result_node->right_child());
-  EXPECT_FALSE(result_node->left_child());
+  EXPECT_FALSE(result_node->left_child()->left_child());
 }
 
-TEST_F(SQLToASTTranslatorTest, DISABLED_ExpressionTest) {
+TEST_F(SQLToASTTranslatorTest, ExpressionTest) {
   const auto query = "SELECT * FROM table_a WHERE a = 1234 + 1";
   auto result_node = compile_query(query);
 

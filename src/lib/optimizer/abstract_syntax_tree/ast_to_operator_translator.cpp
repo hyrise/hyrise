@@ -86,10 +86,10 @@ std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::_translate_join_node(
 }
 
 std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::_translate_aggregate_node(
-    const std::shared_ptr<AbstractASTNode> &node) const {
-  const auto input_operator = translate_node(node->left_child());
+    const std::shared_ptr<AbstractASTNode> &input_node) const {
+  const auto input_operator = translate_node(input_node->left_child());
 
-  const auto aggregate_node = std::dynamic_pointer_cast<AggregateNode>(node);
+  const auto aggregate_node = std::dynamic_pointer_cast<AggregateNode>(input_node);
   const auto &aggregates = aggregate_node->aggregates();
 
   auto out_operator = input_operator;
@@ -118,7 +118,14 @@ std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::_translate_aggregate_
     if (function_arg_expr->is_operand()) {
       // TODO(tim): column data type is not always float
       // TODO(tim): check if this can be done prettier
-      definitions.emplace_back(function_arg_expr->name(), "float", function_arg_expr->name());
+      if (function_arg_expr->type() == ExpressionType::ColumnReference) {
+        auto column_name = input_node->left_child()->output_column_names().at(function_arg_expr->column_id());
+        definitions.emplace_back(column_name, "float", column_name);
+      } else {
+        // Literal
+        definitions.emplace_back(function_arg_expr->name(), "float", function_arg_expr->name());
+      }
+
       expr_aliases.emplace_back(ColumnID{i});
     } else if (function_arg_expr->is_arithmetic_operator()) {
       need_projection = true;
@@ -128,7 +135,8 @@ std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::_translate_aggregate_
       DebugAssert(function_arg_expr->right_child()->is_operand(), "Right child is not a literal or column ref.");
 
       // TODO(tim): column data type is not always float
-      definitions.emplace_back(function_arg_expr->to_expression_string(), "float", "someAlias");
+      // TODO(Sven): correct alias naming after new Projection is merged
+      definitions.emplace_back(function_arg_expr->to_expression_string(), "float", "alias0");
       expr_aliases.emplace_back(ColumnID{i});
     } else {
       Fail("Expression is neither operand nor arithmetic expre.");

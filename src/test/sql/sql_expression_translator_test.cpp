@@ -40,7 +40,8 @@ class SQLExpressionTranslatorTest : public BaseTest {
 
     const auto *statement = parse_result.getStatements().at(0);
 
-    auto predicate_node = std::make_shared<ProjectionNode>(std::vector<ColumnID>(ColumnID{0}), std::vector<std::string>({"a"}));
+    // have some faked AST node that we can use for column lookup. I don't like this approach though
+    auto predicate_node = std::make_shared<ProjectionNode>(std::vector<ColumnID>(ColumnID{0}, ColumnID{1}), std::vector<std::string>({"a", "b"}));
 
     switch (statement->type()) {
       case hsql::kStmtSelect: {
@@ -63,7 +64,8 @@ class SQLExpressionTranslatorTest : public BaseTest {
     const auto *statement = parse_result.getStatements().at(0);
     std::vector<std::shared_ptr<ExpressionNode>> expressions;
 
-    auto predicate_node = std::make_shared<ProjectionNode>(std::vector<ColumnID>(ColumnID{0}), std::vector<std::string>({"a"}));
+    // have some faked AST node that we can use for column lookup. I don't like this approach though
+    auto predicate_node = std::make_shared<ProjectionNode>(std::vector<ColumnID>(ColumnID{0}, ColumnID{1}), std::vector<std::string>({"a", "b"}));
 
     switch (statement->type()) {
       case hsql::kStmtSelect: {
@@ -178,7 +180,7 @@ TEST_F(SQLExpressionTranslatorTest, ExpressionFunction) {
 }
 
 TEST_F(SQLExpressionTranslatorTest, ExpressionComplexFunction) {
-  const auto query = "SELECT SUM(b * c) as d FROM table_a";
+  const auto query = "SELECT SUM(a * b) as d FROM table_a";
   auto expressions = compile_select_expression(query);
 
   ASSERT_EQ(expressions.size(), 1u);

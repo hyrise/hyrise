@@ -22,11 +22,13 @@ class StoredTableNode : public AbstractASTNode {
 
   std::string description() const override;
 
-  std::vector<ColumnID> output_column_ids() const override;
+  const std::vector<ColumnID> output_column_ids() const override;
+  const std::vector<std::string> output_column_names() const override;
 
   const std::string& table_name() const;
 
-  bool find_column_id_for_column_name(std::string & column_name, ColumnID &column_id) override;
+  const optional<ColumnID> find_column_id_for_column_identifier(ColumnIdentifier & column_identifier) const override;
+  const std::string table_identifier() const override;
 
  private:
   const std::shared_ptr<TableStatistics> _gather_statistics() const override;

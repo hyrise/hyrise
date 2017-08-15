@@ -38,11 +38,12 @@ std::shared_ptr<AbstractOperator> Projection::recreate(const std::vector<AllPara
 
 std::shared_ptr<const Table> Projection::on_execute() {
   if (!_simple_projection.empty()) {
-    for (auto& column : _simple_projection) {
+    for (auto& column_id : _simple_projection) {
 //      auto column_id = input_table_left()->column_id_by_name(column);
 //       TODO(Sven): fix
-      _projection_definitions.emplace_back(std::string("$") + "a", input_table_left()->column_type(column),
-                                           boost::lexical_cast<std::string>(column));
+      _projection_definitions.emplace_back(std::string("$") + input_table_left()->column_name(column_id),
+                                           input_table_left()->column_type(column_id),
+                                           input_table_left()->column_name(column_id));
     }
   }
 

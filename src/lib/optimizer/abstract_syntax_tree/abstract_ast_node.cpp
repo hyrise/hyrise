@@ -75,7 +75,29 @@ const std::shared_ptr<TableStatistics> AbstractASTNode::_gather_statistics() con
   return get_statistics_from(_left_child);
 }
 
-std::vector<ColumnID> AbstractASTNode::output_column_ids() const {
+const std::vector<std::string> AbstractASTNode::output_column_names() const {
+  if (_left_child && !_right_child) return _left_child->output_column_names();
+  if (!_left_child && _right_child) return _right_child->output_column_names();
+
+  /**
+   * Rebuild _output_columns when node has both children as there is no way to detect whether one of them has changed
+   */
+  _output_column_names.clear();
+
+  if (_left_child) {
+    const auto &left_output_columns = _left_child->output_column_names();
+    _output_column_names.insert(_output_column_names.end(), left_output_columns.begin(), left_output_columns.end());
+  }
+
+  if (_right_child) {
+    const auto &right_output_columns = _right_child->output_column_names();
+    _output_column_names.insert(_output_column_names.end(), right_output_columns.begin(), right_output_columns.end());
+  }
+
+  return _output_column_names;
+}
+
+const std::vector<ColumnID> AbstractASTNode::output_column_ids() const {
   if (_left_child && !_right_child) return _left_child->output_column_ids();
   if (!_left_child && _right_child) return _right_child->output_column_ids();
 
@@ -97,19 +119,33 @@ std::vector<ColumnID> AbstractASTNode::output_column_ids() const {
   return _output_column_ids;
 }
 
-bool AbstractASTNode::find_column_id_for_column_name(std::string & column_name, ColumnID &column_id) {
-  // TODO(Sven): fail if column name is ambiguous
-  if (_left_child) {
-    if (_left_child->find_column_id_for_column_name(column_name, column_id)) {
-      return true;
+const optional<ColumnID> AbstractASTNode::find_column_id_for_column_identifier(ColumnIdentifier &column_identifier) const {
+  auto found_left = _left_child ? _left_child->find_column_id_for_column_identifier(column_identifier) : nullopt;
+
+  if (_right_child) {
+    auto found_right = _right_child->find_column_id_for_column_identifier(column_identifier);
+
+    if (found_left && found_right) {
+      Fail("Column name " + column_identifier.column_name + " is ambiguous.");
     }
-    if (_right_child->find_column_id_for_column_name(column_name, column_id)) {
-      column_id = ColumnID{column_id + _left_child->_output_column_ids.size()};
-      return true;
+
+    if (found_right) {
+      return ColumnID{*found_right + _left_child->_output_column_ids.size()};
     }
   }
-  Fail("Did not find column_name");
-  return false;
+
+  return found_left;
+}
+
+const std::string AbstractASTNode::table_identifier() const {
+  DebugAssert(_left_child && !_right_child, "Overwrite this function if a class has two children.");
+
+  if (_left_child) {
+    return _left_child->table_identifier();
+  }
+
+  Fail("Node does not have a TableIdentifier.");
+  return "";
 }
 
 void AbstractASTNode::print(const uint32_t level, std::ostream &out) const {

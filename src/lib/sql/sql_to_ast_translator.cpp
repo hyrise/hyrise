@@ -162,26 +162,20 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_table_ref(const 
 }
 
 ColumnID SQLToASTTranslator::generate_column_id(const hsql::Expr &expr, const std::shared_ptr<AbstractASTNode>& input_node) {
-  ColumnID column_id;
-
-  std::string column_name(expr.name);
+  auto table_name = expr.table ? expr.table : "";
+  auto column_name = expr.name ? expr.name : "";
+  ColumnIdentifier column_identifier {table_name, column_name};
 
   // Translate an aggregate function to a string that the Aggregate operator generates.
-  if (expr.isType(hsql::kExprFunctionRef)) {
-    if (input_node->find_column_id_for_column_name(column_name, column_id)) {
-      return column_id;
+  if (expr.isType(hsql::kExprFunctionRef) || expr.isType(hsql::kExprColumnRef)) {
+    auto column_id = input_node->find_column_id_for_column_identifier(column_identifier);
+    if (column_id) {
+      return *column_id;
     }
 
-    Fail("Did not find column name " + column_name);
+    Fail("Did not find column name " + column_identifier.column_name);
   }
 
-  DebugAssert(expr.isType(hsql::kExprColumnRef), "Expected column reference.");
-
-  if (input_node->find_column_id_for_column_name(column_name, column_id)) {
-    return column_id;
-  }
-
-  Fail("Did not find column name " + column_name);
   return ColumnID{};
 }
 
@@ -353,10 +347,11 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_projection(
       column_names.emplace_back((*expr).name);
     } else if (expr->isType(hsql::kExprStar)) {
       // Resolve '*' by getting the output columns of the input node.
-//      auto input_columns = input_node->output_column_ids();
-//      column_ids.insert(column_ids.end(), input_columns.begin(), input_columns.end());
+      auto input_columns = input_node->output_column_ids();
+      column_ids.insert(column_ids.end(), input_columns.begin(), input_columns.end());
 
-      return input_node;
+      auto input_column_names = input_node->output_column_names();
+      column_names.insert(column_names.end(), input_column_names.begin(), input_column_names.end());
     } else {
       Fail("Projection only supports columns to be selected.");
     }

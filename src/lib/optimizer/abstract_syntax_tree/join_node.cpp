@@ -33,7 +33,7 @@ std::string JoinNode::description() const {
   return desc.str();
 }
 
-std::vector<ColumnID> JoinNode::output_column_ids() const {
+const std::vector<ColumnID> JoinNode::output_column_ids() const {
   /**
    * Add respective prefix to column names.
    */

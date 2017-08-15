@@ -22,21 +22,27 @@ AggregateNode::AggregateNode(const std::vector<AggregateColumnDefinition>& aggre
                              const std::vector<ColumnID>& groupby_columns)
     : AbstractASTNode(ASTNodeType::Aggregate), _aggregates(aggregates), _groupby_columns(groupby_columns) {
 
-  _output_column_ids = groupby_columns;
+  for (const auto& aggregate : aggregates) {
+    std::string alias;
+    if (aggregate.alias) {
+      alias = *aggregate.alias;
+    } else {
+      // If the aggregate function has no alias defined in the query, we simply name it like the function.
+      // This might result in multiple output columns with the same name, but Postgres is doing things the same way.
+      DebugAssert(aggregate.expr->type() == ExpressionType::FunctionReference, "Expression must be a function.");
+      alias = aggregate.expr->name();
+    }
 
-//  for (const auto& aggregate : aggregates) {
-//    std::string alias;
-//    if (aggregate.alias) {
-//      alias = *aggregate.alias;
-//    } else {
-//      // If the aggregate function has no alias defined in the query, we simply name it like the function.
-//      // This might result in multiple output columns with the same name, but Postgres is doing things the same way.
-//      DebugAssert(aggregate.expr->type() == ExpressionType::FunctionReference, "Expression must be a function.");
-//      alias = aggregate.expr->name();
-//    }
-//
-//    _output_column_ids.emplace_back(alias);
-//  }
+    _output_column_names.emplace_back(alias);
+
+    _output_column_ids.emplace_back();
+  }
+
+  for (const auto &groupby : groupby_columns) {
+    _output_column_ids.emplace_back(groupby);
+
+    _output_column_names.emplace_back();
+  }
 
 }
 
@@ -49,7 +55,7 @@ std::string AggregateNode::description() const {
 
   auto stream_aggregate = [&](const AggregateColumnDefinition& aggregate) {
     s << aggregate.expr->to_expression_string();
-    if (aggregate.alias) s << "AS \"" << (*aggregate.alias) << "\"";
+    if (aggregate.alias) s << " AS \"" << (*aggregate.alias) << "\"";
   };
 
   auto it = _aggregates.begin();
@@ -70,29 +76,36 @@ std::string AggregateNode::description() const {
   return s.str();
 }
 
-std::vector<ColumnID> AggregateNode::output_column_ids() const { return _output_column_ids; }
+const std::vector<ColumnID> AggregateNode::output_column_ids() const { return _output_column_ids; }
 
-bool AggregateNode::find_column_id_for_column_name(std::string & column_name, ColumnID &column_id) {
-  std::vector<ColumnID> matches;
+const optional<ColumnID> AggregateNode::find_column_id_for_column_identifier(ColumnIdentifier & column_identifier) const {
+  optional<ColumnID> found_aggregate = nullopt;
   for (size_t i = 0; i < _aggregates.size(); i++) {
     const auto &aggregate_definition = _aggregates[i];
-    if (column_name == aggregate_definition.alias) {
-      matches.emplace_back(ColumnID{i});
+    if (column_identifier.column_name == aggregate_definition.alias) {
+      if (!found_aggregate) {
+        found_aggregate = ColumnID{i};
+      } else {
+        Fail("Column name " + column_identifier.column_name + " is ambiguous.");
+      }
     }
   }
 
-  if (left_child()->find_column_id_for_column_name(column_name, column_id)) {
-    if (std::find(_groupby_columns.begin(), _groupby_columns.end(), column_id) != _groupby_columns.end()) {
-      matches.emplace_back(column_id);
-    }
+  /*
+   * TODO(Sven): Add comment
+   */
+  auto found_groupby = left_child() ? left_child()->find_column_id_for_column_identifier(column_identifier) : nullopt;
+
+  if (found_aggregate && found_groupby) {
+    Fail("Column name " + column_identifier.column_name + " is ambiguous.");
   }
 
-  if (matches.size() != 1) {
-    Fail("Either did not find column name or column name is ambiguous.");
-  }
+  if (found_aggregate) return found_aggregate;
+  if (found_groupby) return found_groupby;
 
-  column_id = matches[0];
-  return true;
+  return nullopt;
 }
+
+const std::vector<std::string> AggregateNode::output_column_names() const { return _output_column_names; }
 
 }  // namespace opossum

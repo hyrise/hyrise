@@ -27,7 +27,7 @@ class JoinNode : public AbstractASTNode {
 
   std::string description() const override;
 
-  std::vector<ColumnID> output_column_ids() const override;
+  const std::vector<ColumnID> output_column_ids() const override;
 
   optional<std::pair<ColumnID, ColumnID>> join_column_ids() const;
   ScanType scan_type() const;

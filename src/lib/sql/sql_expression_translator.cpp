@@ -5,6 +5,7 @@
 #include <string>
 #include <unordered_map>
 #include <vector>
+#include <utils/assert.hpp>
 
 #include "constant_mappings.hpp"
 #include "optimizer/expression/expression_node.hpp"
@@ -28,9 +29,10 @@ std::shared_ptr<ExpressionNode> SQLExpressionTranslator::translate_expression(co
       break;
     }
     case hsql::kExprColumnRef: {
-      ColumnID column_id;
-      input_node->find_column_id_for_column_name(name, column_id);
-      node = ExpressionNode::create_column_reference(column_id, alias);
+      ColumnIdentifier column_identifier {table_name, name};
+      auto column_id = input_node->find_column_id_for_column_identifier(column_identifier);
+      if (!column_id) { Fail("Did not find column " + name); }
+      node = ExpressionNode::create_column_reference(*column_id, alias);
       break;
     }
     case hsql::kExprFunctionRef: {

@@ -20,14 +20,12 @@ class ProjectionNode : public AbstractASTNode {
 
   std::string description() const override;
 
-  std::vector<ColumnID> output_column_ids() const override;
+  const std::vector<ColumnID> output_column_ids() const override;
 
-  std::vector<std::string> output_column_names() const;
+  const std::vector<std::string> output_column_names() const override;
 
-  bool find_column_id_for_column_name(std::string & column_name, ColumnID &column_id) override;
+  const optional<ColumnID> find_column_id_for_column_identifier(ColumnIdentifier & column_identifier) const override;
 
-private:
-  const std::vector<std::string> _output_column_names;
 };
 
 }  // namespace opossum
