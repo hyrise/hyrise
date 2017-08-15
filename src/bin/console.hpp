@@ -43,6 +43,7 @@ class Console
 
   std::string _prompt;
   RegisteredCommands _commands;
+  std::vector<std::string> _commands_completion;
   std::ostream _out;
   std::ofstream _log;
 

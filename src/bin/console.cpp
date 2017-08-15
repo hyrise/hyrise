@@ -74,18 +74,19 @@ namespace opossum {
 Console::Console(const std::string & prompt, const std::string & log_file)
   : _prompt(prompt)
   , _commands()
+  , _commands_completion()
   , _out(std::cout.rdbuf())
   , _log(log_file, std::ios_base::app | std::ios_base::out) {
 
   // Init readline basics
   rl_attempted_completion_function = &Console::command_completion;
-  rl_completer_word_break_characters = (char *) " \t\n\"\\'`@$><=;|&{";
+  rl_completer_word_break_characters = (char *) "\t\n\"\\'`@$><=;|&{(";
 
   register_command("exit", exit);
   register_command("load", load_tpcc);
   for (TpccGenerators::iterator it = tpcc_generators.begin(); it != tpcc_generators.end(); ++it)
   {
-    register_command("load(" + it->first + ")", load_tpcc);
+    _commands_completion.push_back("load " + it->first);
   }
 
   _instance = this;
@@ -115,6 +116,7 @@ int Console::read() {
 
 void Console::register_command(const std::string & name, const CommandFunction & f) {
   _commands[name] = f;
+  _commands_completion.push_back(name + " ");
 }
 
 Console::RegisteredCommands Console::commands() {
@@ -135,7 +137,7 @@ int Console::_eval(const std::string & input) {
   out(_prompt + input + "\n", false);
 
   RegisteredCommands::iterator it;
-  if ((it = _commands.find(input.substr(0, input.find('(')))) != std::end(_commands)) {
+  if ((it = _commands.find(input.substr(0, input.find_first_of(" \n")))) != std::end(_commands)) {
     return _eval_command(it->second, input);
   }
 
@@ -143,8 +145,8 @@ int Console::_eval(const std::string & input) {
 }
 
 int Console::_eval_command(const CommandFunction & f, const std::string & command) {
-  size_t first = command.find('(');
-  size_t last = command.find_last_of(')');
+  size_t first = command.find(' ');
+  size_t last = command.find('\n');
 
   if (std::string::npos == first)
   {
@@ -232,23 +234,24 @@ int Console::load_tpcc(const std::string & tablename) {
 
 char ** Console::command_completion(const char * text, int start, int end) {
   char ** completion_matches = nullptr;
+  rl_completion_suppress_append = 1;
+  rl_attempted_completion_over = 1;
   if (start == 0)
   {
     completion_matches = rl_completion_matches(text, &Console::command_generator);
   }
-  rl_attempted_completion_over = 1;
   return completion_matches;
 }
 
 char * Console::command_generator(const char * text, int state) {
-  static Console::RegisteredCommands::iterator it;
-  auto& commands = _instance->_commands;
+  static std::vector<std::string>::iterator it;
+  auto& commands = _instance->_commands_completion;
   if (state == 0) {
     it = commands.begin();
   }
 
   while (it != commands.end()) {
-    auto & command = it->first;
+    auto & command = *it;
     ++it;
     if (command.find(text) != std::string::npos) {
       char * completion = new char[command.size()];
