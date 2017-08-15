@@ -8,13 +8,15 @@
 #include "../base_test.hpp"
 #include "gtest/gtest.h"
 
-#include "../../lib/import_export/binary.hpp"
-#include "../../lib/operators/export_binary.hpp"
-#include "../../lib/operators/table_scan.hpp"
-#include "../../lib/operators/table_wrapper.hpp"
-#include "../../lib/storage/dictionary_compression.hpp"
-#include "../../lib/storage/storage_manager.hpp"
-#include "../../lib/storage/table.hpp"
+#include "import_export/binary.hpp"
+#include "operators/export_binary.hpp"
+#include "operators/table_scan.hpp"
+#include "operators/table_wrapper.hpp"
+#include "storage/dictionary_compression.hpp"
+#include "storage/storage_manager.hpp"
+#include "storage/table.hpp"
+
+#include "utils/assert.hpp"
 
 namespace opossum {
 
@@ -31,15 +33,10 @@ class OperatorsExportBinaryTest : public BaseTest {
 
   bool compare_files(const std::string& original_file, const std::string& created_file) {
     std::ifstream original(original_file);
+    Assert(original.is_open(), "compare_file: Could not find file " + original_file);
+
     std::ifstream created(created_file);
-
-    if (!original.is_open()) {
-      throw std::runtime_error("compare_file: Could not find file " + original_file);
-    }
-
-    if (!created.is_open()) {
-      throw std::runtime_error("compare_file: Could not find file " + created_file);
-    }
+    Assert(created.is_open(), "compare_file: Could not find file " + created_file);
 
     std::istreambuf_iterator<char> iterator_original(original);
     std::istreambuf_iterator<char> iterator_created(created);

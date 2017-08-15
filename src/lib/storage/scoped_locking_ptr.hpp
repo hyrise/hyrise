@@ -2,6 +2,8 @@
 
 #include <shared_mutex>
 
+#include "types.hpp"
+
 namespace opossum {
 
 /**
@@ -13,17 +15,15 @@ namespace opossum {
  * the data structure without locking it.
  */
 template <typename Type, typename LockType>
-class ScopedLockingPtr {
+class ScopedLockingPtr : private Noncopyable {
  public:
   using MutexType = typename LockType::mutex_type;
 
  public:
   ScopedLockingPtr(Type &value, MutexType &mutex) : _value{value}, _lock{mutex} {}
 
-  ScopedLockingPtr(const ScopedLockingPtr<Type, LockType> &) = delete;
   ScopedLockingPtr(ScopedLockingPtr<Type, LockType> &&) = default;
 
-  ScopedLockingPtr<Type, LockType> &operator=(const ScopedLockingPtr<Type, LockType> &) = delete;
   ScopedLockingPtr<Type, LockType> &operator=(ScopedLockingPtr<Type, LockType> &&) = default;
 
   Type &operator*() { return _value; }

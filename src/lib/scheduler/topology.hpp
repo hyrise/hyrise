@@ -8,8 +8,6 @@
 
 namespace opossum {
 
-class AbstractScheduler;
-
 struct TopologyCpu final {
   explicit TopologyCpu(CpuID cpuID) : cpuID(cpuID) {}
 

@@ -1,3 +1,5 @@
+#include "join_nested_loop_a.hpp"
+
 #include <map>
 #include <memory>
 #include <numeric>
@@ -5,11 +7,13 @@
 #include <utility>
 #include <vector>
 
-#include "join_nested_loop_a.hpp"
 #include "product.hpp"
-#include "utils/assert.hpp"
+
+#include "storage/base_attribute_vector.hpp"
+#include "storage/column_visitable.hpp"
 
 #include "resolve_type.hpp"
+#include "utils/assert.hpp"
 
 namespace opossum {
 JoinNestedLoopA::JoinNestedLoopA(const std::shared_ptr<const AbstractOperator> left,

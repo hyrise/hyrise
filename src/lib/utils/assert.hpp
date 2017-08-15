@@ -3,6 +3,7 @@
 #include <boost/preprocessor/stringize.hpp>
 
 #include <exception>
+#include <stdexcept>
 #include <string>
 
 /**
@@ -12,7 +13,7 @@
  *
  * --> Use DebugAssert() whenever a certain invariant must hold, as in
  *
- * int divide(int numerator, int denonimator) {
+ * int divide(int numerator, int denominator) {
  *   DebugAssert(denominator == 0, "Divisions by zero are not allowed");
  *   return numerator / denominator;
  * }
@@ -25,7 +26,7 @@
  *     case 0: //...
  *     case 3: //...
  *     case 17: //...
- *     default: Fail("Illegal paramemeter");
+ *     default: Fail("Illegal parameter");
  * }
  *
  * --> Use Assert() whenever an invariant should be checked even in release builds, either because testing it is
@@ -50,7 +51,7 @@ inline void Fail(const std::string& msg) { throw std::logic_error(msg); }
 #define __FILENAME__ (__FILE__ + SOURCE_PATH_SIZE)
 
 #define DebugAssert(expr, msg) \
-  opossum::Assert(expr, std::string{__FILENAME__} + ":" BOOST_PP_STRINGIZE(__LINE__) " " + msg) //  NOLINT
+  opossum::Assert(expr, std::string{__FILENAME__} + ":" BOOST_PP_STRINGIZE(__LINE__) " " + msg)  //  NOLINT
 
 #else
 

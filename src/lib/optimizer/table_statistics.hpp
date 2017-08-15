@@ -55,11 +55,12 @@ class TableStatistics {
   /**
    * Get table statistics for the operator table scan table scan.
    */
-  std::shared_ptr<TableStatistics> predicate_statistics(const std::string &column_name, const ScanType scan_type,
-                                                        const AllParameterVariant &value,
-                                                        const optional<AllTypeVariant> &value2 = nullopt);
+  virtual std::shared_ptr<TableStatistics> predicate_statistics(const std::string &column_name,
+                                                                const ScanType scan_type,
+                                                                const AllParameterVariant &value,
+                                                                const optional<AllTypeVariant> &value2 = nullopt);
 
- private:
+ protected:
   std::shared_ptr<BaseColumnStatistics> column_statistics(const ColumnID column_id);
 
   // Only available for statistics of tables in the StorageManager.

@@ -4,23 +4,20 @@
 #include <string>
 
 #include "all_type_variant.hpp"
-#include "column_visitable.hpp"
 #include "common.hpp"
 #include "types.hpp"
 
 namespace opossum {
 
+class ColumnVisitable;
+class ColumnVisitableContext;
+
 // BaseColumn is the abstract super class for all column types,
 // e.g., ValueColumn, ReferenceColumn
-class BaseColumn {
+class BaseColumn : private Noncopyable {
  public:
   BaseColumn() = default;
   virtual ~BaseColumn() = default;
-
-  // copying a column is not allowed
-  // copying whole columns is expensive
-  BaseColumn(BaseColumn const &) = delete;
-  BaseColumn &operator=(const BaseColumn &) = delete;
 
   // we need to explicitly set the move constructor to default when
   // we overwrite the copy constructor

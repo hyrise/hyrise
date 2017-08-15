@@ -6,10 +6,11 @@
 #include <vector>
 
 #include "base_attribute_vector.hpp"
-#include "utils/assert.hpp"
+#include "column_visitable.hpp"
 #include "value_column.hpp"
 
 #include "type_cast.hpp"
+#include "utils/assert.hpp"
 
 namespace opossum {
 

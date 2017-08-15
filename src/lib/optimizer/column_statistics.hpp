@@ -3,7 +3,6 @@
 #include <memory>
 #include <ostream>
 #include <string>
-#include <tuple>
 
 #include "all_parameter_variant.hpp"
 #include "base_column_statistics.hpp"
