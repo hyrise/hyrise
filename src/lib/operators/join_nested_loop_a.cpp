@@ -103,13 +103,13 @@ class JoinNestedLoopA::JoinNestedLoopAImpl : public AbstractJoinOperatorImpl {
   virtual ~JoinNestedLoopAImpl() = default;
   /*
   We need to use the Visitor Pattern to identify column types. We therefor store information about the join in this
-  context. Below we have two childs of JoinNestedLoopBContext for BuilderLeft and BuilderRight.
+  context. Below we have two childs of JoinNestedLoopAContext for BuilderLeft and BuilderRight.
   Both have a common constructor interface, but differ in the way they initialize their members.
   */
-  struct JoinNestedLoopBContext : ColumnVisitableContext {
-    JoinNestedLoopBContext() {}
+  struct JoinNestedLoopAContext : ColumnVisitableContext {
+    JoinNestedLoopAContext() {}
 
-    JoinNestedLoopBContext(std::shared_ptr<BaseColumn> coleft, std::shared_ptr<BaseColumn> coright, ChunkID left_id,
+    JoinNestedLoopAContext(std::shared_ptr<BaseColumn> coleft, std::shared_ptr<BaseColumn> coright, ChunkID left_id,
                            ChunkID right_id, std::shared_ptr<PosList> left, std::shared_ptr<PosList> right,
                            JoinMode mode, std::function<bool(LeftType, RightType)> compare,
                            std::shared_ptr<std::map<RowID, bool>> null_value_rows,
@@ -143,11 +143,11 @@ class JoinNestedLoopA::JoinNestedLoopAImpl : public AbstractJoinOperatorImpl {
   };
 
   // separate constructor for use in ReferenceColumn::visit_dereferenced
-  struct JoinNestedLoopBLeftContext : public JoinNestedLoopBContext {
-    JoinNestedLoopBLeftContext(std::shared_ptr<BaseColumn> referenced_column, const std::shared_ptr<const Table>,
+  struct JoinNestedLoopALeftContext : public JoinNestedLoopAContext {
+    JoinNestedLoopALeftContext(std::shared_ptr<BaseColumn> referenced_column, const std::shared_ptr<const Table>,
                                std::shared_ptr<ColumnVisitableContext> base_context, ChunkID chunk_id,
                                std::shared_ptr<std::vector<ChunkOffset>> chunk_offsets) {
-      auto ctx = std::static_pointer_cast<JoinNestedLoopBContext>(base_context);
+      auto ctx = std::static_pointer_cast<JoinNestedLoopAContext>(base_context);
 
       this->column_left = referenced_column;
       this->column_right = ctx->column_right;
@@ -165,11 +165,11 @@ class JoinNestedLoopA::JoinNestedLoopAImpl : public AbstractJoinOperatorImpl {
   };
 
   // separate constructor for use in ReferenceColumn::visit_dereferenced
-  struct JoinNestedLoopBRightContext : public JoinNestedLoopBContext {
-    JoinNestedLoopBRightContext(std::shared_ptr<BaseColumn> referenced_column, const std::shared_ptr<const Table>,
+  struct JoinNestedLoopARightContext : public JoinNestedLoopAContext {
+    JoinNestedLoopARightContext(std::shared_ptr<BaseColumn> referenced_column, const std::shared_ptr<const Table>,
                                 std::shared_ptr<ColumnVisitableContext> base_context, ChunkID chunk_id,
                                 std::shared_ptr<std::vector<ChunkOffset>> chunk_offsets) {
-      auto ctx = std::static_pointer_cast<JoinNestedLoopBContext>(base_context);
+      auto ctx = std::static_pointer_cast<JoinNestedLoopAContext>(base_context);
 
       this->column_left = ctx->column_left;
       this->column_right = referenced_column;
@@ -203,7 +203,7 @@ class JoinNestedLoopA::JoinNestedLoopAImpl : public AbstractJoinOperatorImpl {
   */
   struct BuilderRight : public ColumnVisitable {
     void handle_value_column(BaseColumn &, std::shared_ptr<ColumnVisitableContext> context) override {
-      auto ctx = std::static_pointer_cast<JoinNestedLoopBContext>(context);
+      auto ctx = std::static_pointer_cast<JoinNestedLoopAContext>(context);
 
       auto vc_right = std::static_pointer_cast<ValueColumn<RightType>>(ctx->column_right);
       const auto &right_values = vc_right->values();
@@ -214,7 +214,7 @@ class JoinNestedLoopA::JoinNestedLoopAImpl : public AbstractJoinOperatorImpl {
     }
 
     void handle_dictionary_column(BaseColumn &, std::shared_ptr<ColumnVisitableContext> context) override {
-      auto ctx = std::static_pointer_cast<JoinNestedLoopBContext>(context);
+      auto ctx = std::static_pointer_cast<JoinNestedLoopAContext>(context);
 
       auto dc_right = std::static_pointer_cast<DictionaryColumn<RightType>>(ctx->column_right);
       const auto &right_dictionary = static_cast<const std::vector<RightType> &>(*dc_right->dictionary());
@@ -231,13 +231,13 @@ class JoinNestedLoopA::JoinNestedLoopAImpl : public AbstractJoinOperatorImpl {
 
     void handle_reference_column(ReferenceColumn &ref_column,
                                  std::shared_ptr<ColumnVisitableContext> context) override {
-      ref_column.visit_dereferenced<JoinNestedLoopBRightContext>(*this, context);
+      ref_column.visit_dereferenced<JoinNestedLoopARightContext>(*this, context);
     }
   };
 
   struct BuilderLeft : public ColumnVisitable {
     void handle_value_column(BaseColumn &, std::shared_ptr<ColumnVisitableContext> context) override {
-      auto ctx = std::static_pointer_cast<JoinNestedLoopBContext>(context);
+      auto ctx = std::static_pointer_cast<JoinNestedLoopAContext>(context);
       auto vc_left = std::static_pointer_cast<ValueColumn<LeftType>>(ctx->column_left);
       const auto &left_values = vc_left->values();
 
@@ -251,7 +251,7 @@ class JoinNestedLoopA::JoinNestedLoopAImpl : public AbstractJoinOperatorImpl {
     }
 
     void handle_dictionary_column(BaseColumn &, std::shared_ptr<ColumnVisitableContext> context) override {
-      auto ctx = std::static_pointer_cast<JoinNestedLoopBContext>(context);
+      auto ctx = std::static_pointer_cast<JoinNestedLoopAContext>(context);
       auto dc_left = std::static_pointer_cast<DictionaryColumn<LeftType>>(ctx->column_left);
 
       const auto &left_dictionary = static_cast<const std::vector<LeftType> &>(*dc_left->dictionary());
@@ -270,13 +270,13 @@ class JoinNestedLoopA::JoinNestedLoopAImpl : public AbstractJoinOperatorImpl {
 
     void handle_reference_column(ReferenceColumn &ref_column,
                                  std::shared_ptr<ColumnVisitableContext> context) override {
-      ref_column.visit_dereferenced<JoinNestedLoopBLeftContext>(*this, context);
+      ref_column.visit_dereferenced<JoinNestedLoopALeftContext>(*this, context);
     }
   };
 
   static void perform_join(std::function<LeftType(ChunkOffset)> get_left_column_value,
                            std::function<RightType(ChunkOffset)> get_right_column_value,
-                           std::shared_ptr<JoinNestedLoopBContext> context, const size_t size_left,
+                           std::shared_ptr<JoinNestedLoopAContext> context, const size_t size_left,
                            const size_t size_right) {
     auto &unmatched_rows_map = context->rows_potentially_joined_with_null_values;
     if (context->chunk_offsets_in_left || context->chunk_offsets_in_right) {
@@ -405,7 +405,7 @@ class JoinNestedLoopA::JoinNestedLoopAImpl : public AbstractJoinOperatorImpl {
         auto pos_list_left = std::make_shared<PosList>();
         auto pos_list_right = std::make_shared<PosList>();
 
-        auto context = std::make_shared<JoinNestedLoopBContext>(column_left, column_right, chunk_id_left,
+        auto context = std::make_shared<JoinNestedLoopAContext>(column_left, column_right, chunk_id_left,
                                                                 chunk_id_right, pos_list_left, pos_list_right, _mode,
                                                                 _comparator, rows_potentially_joined_with_null_values);
 
@@ -414,7 +414,7 @@ class JoinNestedLoopA::JoinNestedLoopAImpl : public AbstractJoinOperatorImpl {
 
         // Different length of poslists would lead to corrupt output chunk.
         DebugAssert((pos_list_left->size() == pos_list_right->size()),
-                    "JoinNestedLoopB did generate different number of outputs for Left and Right.");
+                    "JoinNestedLoopA did generate different number of outputs for Left and Right.");
 
         // Skip Chunks without match
         if (pos_list_left->size() == 0) {
@@ -512,7 +512,7 @@ class JoinNestedLoopA::JoinNestedLoopAImpl : public AbstractJoinOperatorImpl {
     }
   }
 
-  static void write_poslists(std::shared_ptr<JoinNestedLoopBContext> context, ChunkOffset row_left,
+  static void write_poslists(std::shared_ptr<JoinNestedLoopAContext> context, ChunkOffset row_left,
                              ChunkOffset row_right) {
     const auto left_chunk_id = context->chunk_id_left;
     const auto right_chunk_id = context->chunk_id_right;
