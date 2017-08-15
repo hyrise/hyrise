@@ -45,14 +45,17 @@ std::shared_ptr<const Table> Projection::on_execute() {
   for (ChunkID chunk_id{0}; chunk_id < input_table_left()->chunk_count(); ++chunk_id) {
     // fill the new table
     Chunk chunk_out;
+
     // if there is mvcc information, we have to link it
     if (input_table_left()->get_chunk(chunk_id).has_mvcc_columns()) {
       chunk_out.use_mvcc_columns_from(input_table_left()->get_chunk(chunk_id));
     }
-    for (ColumnID columnID{0}; columnID < _column_expressions.size(); ++columnID) {
-      call_functor_by_column_type<ColumnCreator>(output->column_type(columnID), chunk_out, chunk_id,
-                                                 _column_expressions[columnID], input_table_left());
+
+    for (auto expression_index = 0u; expression_index < _column_expressions.size(); ++expression_index) {
+      call_functor_by_column_type<ColumnCreator>(output->column_type(ColumnID{expression_index}), chunk_out, chunk_id,
+                                                 _column_expressions[expression_index], input_table_left());
     }
+
     output->add_chunk(std::move(chunk_out));
   }
   return output;

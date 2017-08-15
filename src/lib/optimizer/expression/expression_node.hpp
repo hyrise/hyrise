@@ -51,10 +51,10 @@ class ExpressionNode : public std::enable_shared_from_this<ExpressionNode> {
 
   static std::shared_ptr<ExpressionNode> create_column_reference(const std::string& column_name,
                                                                  const std::string& table_name = "",
-                                                                 const optional<std::string>& alias = nullopt);
+                                                                 const optional<std::string>& alias = {});
 
   static std::shared_ptr<ExpressionNode> create_literal(const AllTypeVariant& value,
-                                                        const optional<std::string>& alias = nullopt);
+                                                        const optional<std::string>& alias = {});
 
   static std::shared_ptr<ExpressionNode> create_parameter(const AllTypeVariant& value);
 
@@ -65,7 +65,7 @@ class ExpressionNode : public std::enable_shared_from_this<ExpressionNode> {
   static std::shared_ptr<ExpressionNode> create_binary_operator(ExpressionType type,
                                                                 const std::shared_ptr<ExpressionNode>& left,
                                                                 const std::shared_ptr<ExpressionNode>& right,
-                                                                const optional<std::string>& alias = nullopt);
+                                                                const optional<std::string>& alias = {});
 
   static std::shared_ptr<ExpressionNode> create_select_all();
 

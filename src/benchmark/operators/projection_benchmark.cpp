@@ -45,10 +45,9 @@ BENCHMARK_DEFINE_F(OperatorsProjectionBenchmark, BM_ProjectionSimple)(benchmark:
 
 BENCHMARK_DEFINE_F(OperatorsProjectionBenchmark, BM_ProjectionVariableTerm)(benchmark::State& state) {
   clear_cache();
-  auto addition =
+  Projection::ColumnExpressions expressions = {
       ExpressionNode::create_binary_operator(ExpressionType::Addition, ExpressionNode::create_column_reference("a"),
-                                             ExpressionNode::create_column_reference("b"));
-  Projection::ColumnExpressions expressions = {addition};
+                                             ExpressionNode::create_column_reference("b"))};
   auto warm_up = std::make_shared<Projection>(_tables[_column_type], expressions);
   warm_up->execute();
   while (state.KeepRunning()) {
@@ -59,9 +58,8 @@ BENCHMARK_DEFINE_F(OperatorsProjectionBenchmark, BM_ProjectionVariableTerm)(benc
 
 BENCHMARK_DEFINE_F(OperatorsProjectionBenchmark, BM_ProjectionConstantTerm)(benchmark::State& state) {
   clear_cache();
-  auto addition = ExpressionNode::create_binary_operator(
-      ExpressionType::Addition, ExpressionNode::create_column_reference("a"), ExpressionNode::create_literal(5));
-  Projection::ColumnExpressions expressions = {addition};
+  Projection::ColumnExpressions expressions = {ExpressionNode::create_binary_operator(
+      ExpressionType::Addition, ExpressionNode::create_column_reference("a"), ExpressionNode::create_literal(5))};
   auto warm_up = std::make_shared<Projection>(_tables[_column_type], expressions);
   warm_up->execute();
   while (state.KeepRunning()) {

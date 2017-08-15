@@ -6,11 +6,12 @@
 #include "../base_test.hpp"
 #include "gtest/gtest.h"
 
-#include "../../lib/operators/projection.hpp"
-#include "../../lib/operators/table_wrapper.hpp"
-#include "../../lib/operators/union_all.hpp"
-#include "../../lib/storage/table.hpp"
-#include "../../lib/types.hpp"
+#include "operators/projection.hpp"
+#include "operators/table_wrapper.hpp"
+#include "operators/union_all.hpp"
+#include "optimizer/expression/expression_node.hpp"
+#include "storage/table.hpp"
+#include "types.hpp"
 
 namespace opossum {
 class OperatorsUnionAllTest : public BaseTest {
@@ -38,16 +39,17 @@ TEST_F(OperatorsUnionAllTest, UnionOfValueTables) {
 }
 
 TEST_F(OperatorsUnionAllTest, UnionOfValueReferenceTables) {
-  //  std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_float_union.tbl", 2);
-  //
-  //  std::vector<std::string> column_filter = {"a", "b"};
-  //  auto projection = std::make_shared<Projection>(_table_wrapper_a, column_filter);
-  //  projection->execute();
-  //
-  //  auto union_all = std::make_shared<UnionAll>(projection, _table_wrapper_b);
-  //  union_all->execute();
-  //
-  //  EXPECT_TABLE_EQ(union_all->get_output(), expected_result);
+  std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_float_union.tbl", 2);
+
+  auto projection = std::make_shared<Projection>(
+      _table_wrapper_a, Projection::ColumnExpressions{ExpressionNode::create_column_reference("a"),
+                                                      ExpressionNode::create_column_reference("b")});
+  projection->execute();
+
+  auto union_all = std::make_shared<UnionAll>(projection, _table_wrapper_b);
+  union_all->execute();
+
+  EXPECT_TABLE_EQ(union_all->get_output(), expected_result);
 }
 
 TEST_F(OperatorsUnionAllTest, ThrowWrongColumnNumberException) {

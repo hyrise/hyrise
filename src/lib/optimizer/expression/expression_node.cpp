@@ -142,6 +142,8 @@ bool ExpressionNode::is_binary_operator() const {
 const std::string ExpressionNode::description() const {
   std::ostringstream desc;
 
+  auto alias_string = _alias ? *_alias : std::string("-");
+
   desc << "Expression (" << expression_type_to_string.at(_type) << ")";
 
   switch (_type) {
@@ -149,8 +151,7 @@ const std::string ExpressionNode::description() const {
       desc << "[" << value() << "]";
       break;
     case ExpressionType::ColumnReference:
-      desc << "[Table: " << table_name() << ", Column: " << name()
-           << ", Alias: " << (_alias ? *_alias : std::string("/")) << "]";
+      desc << "[Table: " << table_name() << ", Column: " << name() << ", Alias: " << alias_string << "]";
       break;
     case ExpressionType::FunctionReference:
       desc << "[" << name() << ": " << std::endl;
@@ -160,7 +161,7 @@ const std::string ExpressionNode::description() const {
       desc << "]";
       break;
     case ExpressionType::Select:
-      desc << "[" << (_alias ? *_alias : std::string("/")) << "]";
+      desc << "[" << alias_string << "]";
       break;
     default: {}
   }

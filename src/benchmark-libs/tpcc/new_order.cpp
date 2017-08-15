@@ -449,7 +449,7 @@ TaskVector NewOrderRefImpl::get_update_stock_tasks(const int32_t s_quantity, con
       ts2, opossum::Projection::ColumnExpressions({opossum::ExpressionNode::create_column_reference("S_QUANTITY")}));
 
   const auto updated_rows = std::make_shared<opossum::Projection>(
-      ts2, opossum::Projection::ColumnExpressions({opossum::ExpressionNode::create_literal({s_quantity}, {"fix"})}));
+      ts2, opossum::Projection::ColumnExpressions({opossum::ExpressionNode::create_literal(s_quantity, {"fix"})}));
 
   const auto update = std::make_shared<opossum::Update>("STOCK", original_rows, updated_rows);
 
