@@ -69,14 +69,12 @@ std::string Projection::evaluate_expression_type(const std::shared_ptr<Expressio
 
   Assert(expression->is_arithmetic_operator(), "Only arithmetic operators supported for expression type evaluation");
 
-  /**
-   * TODO: int + float = float etc...
-   */
-
   const auto type_left = evaluate_expression_type(expression->left_child(), table);
   const auto type_right = evaluate_expression_type(expression->right_child(), table);
 
-  Assert(type_left == type_right, "");
+  // TODO(anybody): int + float = float etc...
+  // This is currently not supported by `evaluate_expression()` because it is only templated once.
+  Assert(type_left == type_right, "Projection currently only supports expressions with same type on both sides.");
   return type_left;
 }
 
