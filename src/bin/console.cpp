@@ -38,23 +38,31 @@ namespace {
     return str.substr(first, (last - first + 1));
   }
 
-  std::shared_ptr<opossum::Table> generate_tpcc_table(const std::string & tablename) {
-    if ("ITEM" == tablename) return tpcc::TpccTableGenerator().generate_items_table();
-    if ("WAREHOUSE" == tablename) return tpcc::TpccTableGenerator().generate_warehouse_table();
-    if ("STOCK" == tablename) return tpcc::TpccTableGenerator().generate_stock_table();
-    if ("DISTRICT" == tablename) return tpcc::TpccTableGenerator().generate_district_table();
-    if ("CUSTOMER" == tablename) return tpcc::TpccTableGenerator().generate_customer_table();
-    if ("HISTORY" == tablename) return tpcc::TpccTableGenerator().generate_history_table();
-    if ("NEW-ORDER" == tablename) return tpcc::TpccTableGenerator().generate_new_order_table();
-    if ("ORDER" == tablename) {
+  using TpccGenerators = std::unordered_map<std::string, std::function<std::shared_ptr<opossum::Table>()>>;
+  TpccGenerators tpcc_generators {
+    {"ITEM", [](){return tpcc::TpccTableGenerator().generate_items_table();}},
+    {"WAREHOUSE", [](){return tpcc::TpccTableGenerator().generate_warehouse_table();}},
+    {"STOCK", [](){return tpcc::TpccTableGenerator().generate_stock_table();}},
+    {"DISTRICT", [](){return tpcc::TpccTableGenerator().generate_district_table();}},
+    {"CUSTOMER", [](){return tpcc::TpccTableGenerator().generate_customer_table();}},
+    {"HISTORY", [](){return tpcc::TpccTableGenerator().generate_history_table();}},
+    {"ORDER", [](){return tpcc::TpccTableGenerator().generate_new_order_table();}},
+    {"NEW-ORDER", [](){
       auto order_line_counts = tpcc::TpccTableGenerator().generate_order_line_counts();
       return tpcc::TpccTableGenerator().generate_order_table(order_line_counts);
-    }
-    if ("ORDER-LINE" == tablename) {
+    }},
+    {"ORDER-LINE", [](){
       auto order_line_counts = tpcc::TpccTableGenerator().generate_order_line_counts();
       return tpcc::TpccTableGenerator().generate_order_line_table(order_line_counts);
+    }}
+  };
+
+  std::shared_ptr<opossum::Table> generate_tpcc_table(const std::string & tablename) {
+    if (tpcc_generators.find(tablename) == tpcc_generators.end())
+    {
+      return nullptr;
     }
-    return nullptr;
+    return tpcc_generators[tablename]();
   }
 
 }
@@ -71,10 +79,14 @@ Console::Console(const std::string & prompt, const std::string & log_file)
 
   // Init readline basics
   rl_attempted_completion_function = &Console::command_completion;
+  rl_completer_word_break_characters = (char *) " \t\n\"\\'`@$><=;|&{";
 
   register_command("exit", exit);
   register_command("load", load_tpcc);
-  register_command("loadtpcc", load_tpcc);
+  for (TpccGenerators::iterator it = tpcc_generators.begin(); it != tpcc_generators.end(); ++it)
+  {
+    register_command("load(" + it->first + ")", load_tpcc);
+  }
 
   _instance = this;
 
@@ -224,6 +236,7 @@ char ** Console::command_completion(const char * text, int start, int end) {
   {
     completion_matches = rl_completion_matches(text, &Console::command_generator);
   }
+  rl_attempted_completion_over = 1;
   return completion_matches;
 }
 
@@ -234,10 +247,10 @@ char * Console::command_generator(const char * text, int state) {
     it = commands.begin();
   }
 
-  while ( it != commands.end() ) {
+  while (it != commands.end()) {
     auto & command = it->first;
     ++it;
-    if ( command.find(text) != std::string::npos ) {
+    if (command.find(text) != std::string::npos) {
       char * completion = new char[command.size()];
       strcpy(completion, command.c_str());
       return completion;
