@@ -147,6 +147,25 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_join(const hsql:
   return join_node;
 }
 
+std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_cross_product(
+    const std::vector<hsql::TableRef*>& tables) {
+  DebugAssert(!tables.empty(), "Cannot translate cross product without tables");
+  auto product = _translate_table_ref(*tables.front());
+
+  for (size_t i = 1; i < tables.size(); i++) {
+    auto next_node = _translate_table_ref(*tables[i]);
+
+    // There shouldn't be a ScanType. Prefixes will be removed in an upcoming PR.
+    auto new_product = std::make_shared<JoinNode>(nullopt, ScanType::OpEquals, JoinMode::Cross, "", "");
+    new_product->set_left_child(product);
+    new_product->set_right_child(next_node);
+
+    product = new_product;
+  }
+
+  return product;
+}
+
 std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_table_ref(const hsql::TableRef& table) {
   switch (table.type) {
     case hsql::kTableName:
@@ -156,8 +175,7 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_table_ref(const 
     case hsql::kTableJoin:
       return _translate_join(*table.join);
     case hsql::kTableCrossProduct:
-      // TODO(anybody)
-      Fail("Unable to translate table cross product.");
+      return _translate_cross_product(*table.list);
     default:
       Fail("Unable to translate source table.");
       return {};

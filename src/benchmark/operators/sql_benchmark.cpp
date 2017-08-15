@@ -26,7 +26,7 @@ class SQLBenchmark : public BenchmarkBasicFixture {
 
     // Add tables to StorageManager.
     // This is required for the translator to get the column names of a table.
-    auto &storage_manager = StorageManager::get();
+    auto& storage_manager = StorageManager::get();
     storage_manager.add_table("customer", load_table("src/test/tables/tpch/customer.tbl", 0));
     storage_manager.add_table("lineitem", load_table("src/test/tables/tpch/lineitem.tbl", 0));
     storage_manager.add_table("orders", load_table("src/test/tables/tpch/orders.tbl", 0));
@@ -118,33 +118,33 @@ class SQLBenchmark : public BenchmarkBasicFixture {
       "  FROM (SELECT * FROM customer WHERE c_custkey < 100 AND c_nationkey=0) t1"
       "  WHERE c_custkey > 10 AND c_nationkey < 10;";
 
-// TODO(mp): enable once translator uses indices for operators
-//  const std::string Q3 =
-//      "SELECT c_custkey, c_name"
-//      "  FROM customer"
-//      "  JOIN orders ON c_custkey = o_custkey"
-//      "  GROUP BY c_custkey, c_name"
-//      "  HAVING COUNT(o_orderkey) >= 100;";
+  // TODO(mp): enable once translator uses indices for operators
+  //  const std::string Q3 =
+  //      "SELECT c_custkey, c_name"
+  //      "  FROM customer"
+  //      "  JOIN orders ON c_custkey = o_custkey"
+  //      "  GROUP BY c_custkey, c_name"
+  //      "  HAVING COUNT(o_orderkey) >= 100;";
 
-//  const std::string Q4 =
-//      "SELECT customer.c_custkey, customer.c_name, COUNT(orderitems.\"orders.o_orderkey\")"
-//      "  FROM customer"
-//      "  JOIN (SELECT * FROM"
-//      "    orders"
-//      "    JOIN lineitem ON o_orderkey = l_orderkey"
-//      "  ) AS orderitems ON c_custkey = orders.o_custkey"
-//      "  GROUP BY customer.c_custkey, customer.c_name"
-//      "  HAVING COUNT(orderitems.\"orders.o_orderkey\") >= 100;";
-//
-//  const std::string Q4Param =
-//      "SELECT customer.c_custkey, customer.c_name, COUNT(orderitems.\"orders.o_orderkey\")"
-//      "  FROM customer"
-//      "  JOIN (SELECT * FROM"
-//      "    orders"
-//      "    JOIN lineitem ON o_orderkey = l_orderkey"
-//      "  ) AS orderitems ON c_custkey = orders.o_custkey"
-//      "  GROUP BY customer.c_custkey, customer.c_name"
-//      "  HAVING COUNT(orderitems.\"orders.o_orderkey\") >= ?;";
+  //  const std::string Q4 =
+  //      "SELECT customer.c_custkey, customer.c_name, COUNT(orderitems.\"orders.o_orderkey\")"
+  //      "  FROM customer"
+  //      "  JOIN (SELECT * FROM"
+  //      "    orders"
+  //      "    JOIN lineitem ON o_orderkey = l_orderkey"
+  //      "  ) AS orderitems ON c_custkey = orders.o_custkey"
+  //      "  GROUP BY customer.c_custkey, customer.c_name"
+  //      "  HAVING COUNT(orderitems.\"orders.o_orderkey\") >= 100;";
+  //
+  //  const std::string Q4Param =
+  //      "SELECT customer.c_custkey, customer.c_name, COUNT(orderitems.\"orders.o_orderkey\")"
+  //      "  FROM customer"
+  //      "  JOIN (SELECT * FROM"
+  //      "    orders"
+  //      "    JOIN lineitem ON o_orderkey = l_orderkey"
+  //      "  ) AS orderitems ON c_custkey = orders.o_custkey"
+  //      "  GROUP BY customer.c_custkey, customer.c_name"
+  //      "  HAVING COUNT(orderitems.\"orders.o_orderkey\") >= ?;";
 };
 
 // Run all benchmarks for Q1.

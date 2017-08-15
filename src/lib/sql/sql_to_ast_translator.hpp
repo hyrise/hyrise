@@ -64,6 +64,8 @@ class SQLToASTTranslator final : public boost::noncopyable {
 
   std::shared_ptr<AbstractASTNode> _translate_join(const hsql::JoinDefinition& select);
 
+  std::shared_ptr<AbstractASTNode> _translate_cross_product(const std::vector<hsql::TableRef*>& tables);
+
  private:
   SQLToASTTranslator() = default;
 };

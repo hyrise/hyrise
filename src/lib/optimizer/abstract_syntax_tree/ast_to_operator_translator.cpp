@@ -8,6 +8,7 @@
 #include "operators/aggregate.hpp"
 #include "operators/get_table.hpp"
 #include "operators/join_nested_loop_a.hpp"
+#include "operators/product.hpp"
 #include "operators/projection.hpp"
 #include "operators/sort.hpp"
 #include "operators/table_scan.hpp"
@@ -81,6 +82,11 @@ std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::_translate_join_node(
   const auto input_right_operator = translate_node(node->right_child());
 
   auto join_node = std::dynamic_pointer_cast<JoinNode>(node);
+
+  if (join_node->join_mode() == JoinMode::Cross) {
+    return std::make_shared<Product>(input_left_operator, input_right_operator, join_node->prefix_left(),
+                                     join_node->prefix_right());
+  }
   return std::make_shared<JoinNestedLoopA>(input_left_operator, input_right_operator, join_node->join_column_names(),
                                            join_node->scan_type(), join_node->join_mode(), join_node->prefix_left(),
                                            join_node->prefix_right());
