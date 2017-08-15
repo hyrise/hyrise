@@ -126,7 +126,8 @@ const SQLTestParam test_queries[] = {
     {"SELECT SUM(b + b) AS sum_b_b FROM table_a;", "src/test/tables/int_float_sum_b_plus_b.tbl"},
 
     // JOIN
-    {"SELECT \"left\".a, \"left\".b, \"right\".a, \"right\".b FROM table_a AS \"left\" JOIN table_b AS \"right\" ON a = a;",
+    {"SELECT \"left\".a, \"left\".b, \"right\".a, \"right\".b FROM table_a AS \"left\" JOIN table_b AS \"right\" ON a "
+     "= a;",
      "src/test/tables/joinoperators/int_inner_join.tbl"},
     {R"(SELECT * FROM table_a AS "left" LEFT JOIN table_b AS "right" ON a = a;)",
      "src/test/tables/joinoperators/int_left_join.tbl"},

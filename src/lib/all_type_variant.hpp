@@ -10,6 +10,7 @@
 #include <boost/variant.hpp>
 
 #include <string>
+#include <vector>
 
 #include "null_value.hpp"
 #include "types.hpp"
@@ -23,6 +24,9 @@ static constexpr auto column_types =
     hana::make_tuple(hana::make_pair("int", hana::type_c<int32_t>), hana::make_pair("long", hana::type_c<int64_t>),
                      hana::make_pair("float", hana::type_c<float>), hana::make_pair("double", hana::type_c<double>),
                      hana::make_pair("string", hana::type_c<std::string>));  // NOLINT
+
+// Resolve the return value of `AllTypeVariant.which()` to the respective type string.
+extern const std::vector<std::string> type_by_all_type_variant_which;
 
 // This holds only the possible data types.
 static constexpr auto types = hana::transform(column_types, hana::second);  // NOLINT

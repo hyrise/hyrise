@@ -51,6 +51,7 @@ target_compile_options(opossumProtobuf PRIVATE -Wno-unused-parameter -Wno-deprec
 set(
     SOURCES
     all_parameter_variant.hpp
+    all_type_variant.cpp
     all_type_variant.hpp
     common.hpp
     concurrency/commit_context.cpp
@@ -127,8 +128,6 @@ set(
     operators/table_scan.hpp
     operators/table_wrapper.cpp
     operators/table_wrapper.hpp
-    operators/termfactory.hpp
-    operators/term.hpp
     operators/union_all.cpp
     operators/union_all.hpp
     operators/update.cpp

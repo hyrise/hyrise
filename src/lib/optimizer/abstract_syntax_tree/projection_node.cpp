@@ -2,11 +2,11 @@
 
 #include <sstream>
 #include <string>
-#include <utils/assert.hpp>
 #include <vector>
 
 #include "common.hpp"
 #include "types.hpp"
+#include "utils/assert.hpp"
 
 namespace opossum {
 
@@ -23,7 +23,7 @@ std::string ProjectionNode::description() const {
   desc << "Projection: ";
 
   for (auto& column : _output_column_ids) {
-    //    TODO(Sven): fix
+    // TODO(Sven): BLOCKING - fix
     desc << " " << column;
   }
 

@@ -4,11 +4,11 @@
 #include <memory>
 #include <string>
 #include <unordered_map>
-#include <utils/assert.hpp>
 #include <vector>
 
 #include "constant_mappings.hpp"
 #include "optimizer/expression/expression_node.hpp"
+#include "utils/assert.hpp"
 
 #include "SQLParser.h"
 
@@ -32,9 +32,11 @@ std::shared_ptr<ExpressionNode> SQLExpressionTranslator::translate_expression(
     case hsql::kExprColumnRef: {
       ColumnIdentifier column_identifier{table_name, name};
       auto column_id = input_node->find_column_id_for_column_identifier(column_identifier);
+
       if (!column_id) {
         Fail("Did not find column " + name);
       }
+
       node = ExpressionNode::create_column_reference(*column_id, alias);
       break;
     }

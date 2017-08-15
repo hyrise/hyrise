@@ -37,7 +37,8 @@ std::shared_ptr<ExpressionNode> ExpressionNode::create_column_reference(const Co
   return std::make_shared<ExpressionNode>(ExpressionType::ColumnReference, NULL_VALUE, expr_list, "", column_id, alias);
 }
 
-std::shared_ptr<ExpressionNode> ExpressionNode::create_literal(const AllTypeVariant &value) {
+std::shared_ptr<ExpressionNode> ExpressionNode::create_literal(const AllTypeVariant &value,
+                                                               const optional<std::string> &alias) {
   const std::vector<std::shared_ptr<ExpressionNode>> expr_list;
   return std::make_shared<ExpressionNode>(ExpressionType::Literal, value, expr_list, "", ColumnID{});
 }
@@ -52,6 +53,25 @@ std::shared_ptr<ExpressionNode> ExpressionNode::create_function_reference(
     const optional<std::string> &alias) {
   return std::make_shared<ExpressionNode>(ExpressionType::FunctionReference, NULL_VALUE, expression_list, function_name,
                                           ColumnID{}, alias);
+}
+
+std::shared_ptr<ExpressionNode> ExpressionNode::create_binary_operator(ExpressionType type,
+                                                                       const std::shared_ptr<ExpressionNode> &left,
+                                                                       const std::shared_ptr<ExpressionNode> &right,
+                                                                       const optional<std::string> &alias) {
+  auto expression = std::make_shared<ExpressionNode>(type, AllTypeVariant(),
+                                                     std::vector<std::shared_ptr<ExpressionNode>>(), "", "", alias);
+  Assert(expression->is_binary_operator(), "Type is not an operator type");
+
+  expression->set_left_child(left);
+  expression->set_right_child(right);
+
+  return expression;
+}
+
+std::shared_ptr<ExpressionNode> ExpressionNode::create_select_all() {
+  return std::make_shared<ExpressionNode>(ExpressionType::Star, AllTypeVariant(),
+                                          std::vector<std::shared_ptr<ExpressionNode>>(), "", "", nullopt);
 }
 
 const std::weak_ptr<ExpressionNode> ExpressionNode::parent() const { return _parent; }
@@ -88,9 +108,38 @@ void ExpressionNode::print(const uint32_t level, std::ostream &out) const {
 }
 
 bool ExpressionNode::is_arithmetic_operator() const {
-  return _type == ExpressionType::Subtraction || _type == ExpressionType::Addition ||
-         _type == ExpressionType::Multiplication || _type == ExpressionType::Division ||
-         _type == ExpressionType::Modulo || _type == ExpressionType::Power;
+  switch (_type) {
+    case ExpressionType::Subtraction:
+    case ExpressionType::Addition:
+    case ExpressionType::Multiplication:
+    case ExpressionType::Division:
+    case ExpressionType::Modulo:
+    case ExpressionType::Power:
+      return true;
+    default:
+      return false;
+  }
+}
+
+bool ExpressionNode::is_binary_operator() const {
+  if (is_arithmetic_operator()) return true;
+
+  switch (_type) {
+    case ExpressionType::Equals:
+    case ExpressionType::NotEquals:
+    case ExpressionType::LessThan:
+    case ExpressionType::LessThanEquals:
+    case ExpressionType::GreaterThan:
+    case ExpressionType::GreaterThanEquals:
+    case ExpressionType::Like:
+    case ExpressionType::NotLike:
+    case ExpressionType::And:
+    case ExpressionType::Or:
+    case ExpressionType::Between:
+      return true;
+    default:
+      return false;
+  }
 }
 
 bool ExpressionNode::is_operand() const {
@@ -100,7 +149,7 @@ bool ExpressionNode::is_operand() const {
 const std::string ExpressionNode::description() const {
   std::ostringstream desc;
 
-  auto alias_string = alias() ? *alias() : "";
+  auto alias_string = _alias ? *_alias : std::string("-");
 
   desc << "Expression (" << expression_type_to_string.at(_type) << ")";
 
@@ -139,11 +188,7 @@ const std::string &ExpressionNode::name() const {
   return _name;
 }
 
-const optional<std::string> &ExpressionNode::alias() const {
-  DebugAssert(_type == ExpressionType::FunctionReference || _type == ExpressionType::Select,
-              "Expression " + expression_type_to_string.at(_type) + " does not have an alias");
-  return _alias;
-}
+const optional<std::string> &ExpressionNode::alias() const { return _alias; }
 
 const AllTypeVariant ExpressionNode::value() const {
   DebugAssert(_type == ExpressionType::Literal,
@@ -155,7 +200,7 @@ std::string ExpressionNode::to_expression_string() const {
   if (_type == ExpressionType::Literal) {
     return type_cast<std::string>(_value);
   } else if (_type == ExpressionType::ColumnReference) {
-    return "$" + boost::lexical_cast<std::string>(_column_id);
+    return boost::lexical_cast<std::string>(_column_id);
   } else if (is_arithmetic_operator()) {
     // TODO(mp) Should be is_operator() to also support ExpressionType::Equals, ...
     Assert(static_cast<bool>(left_child()) && static_cast<bool>(right_child()), "Operator needs both operands");
