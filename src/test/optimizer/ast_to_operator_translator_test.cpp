@@ -80,8 +80,9 @@ TEST_F(ASTToOperatorTranslatorTest, ProjectionNode) {
 
   const auto projection_op = std::dynamic_pointer_cast<Projection>(op);
   ASSERT_TRUE(projection_op);
-  EXPECT_EQ(projection_op->column_expressions(),
-            Projection::ColumnExpressions{ExpressionNode::create_column_reference(ColumnID{0}, {"a"})});
+  EXPECT_EQ(projection_op->column_expressions().size(), 1);
+  EXPECT_EQ(projection_op->column_expressions()[0]->column_id(), ColumnID{0});
+  EXPECT_EQ(*projection_op->column_expressions()[0]->alias(), "a");
 }
 
 TEST_F(ASTToOperatorTranslatorTest, SortNode) {

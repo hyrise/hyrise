@@ -87,10 +87,10 @@ std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::_translate_join_node(
 }
 
 std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::_translate_aggregate_node(
-    const std::shared_ptr<AbstractASTNode> &input_node) const {
-  const auto input_operator = translate_node(input_node->left_child());
+    const std::shared_ptr<AbstractASTNode> &node) const {
+  const auto input_operator = translate_node(node->left_child());
 
-  const auto aggregate_node = std::dynamic_pointer_cast<AggregateNode>(input_node);
+  const auto aggregate_node = std::dynamic_pointer_cast<AggregateNode>(node);
   const auto &aggregates = aggregate_node->aggregates();
 
   auto aggregate_input_operator = input_operator;
@@ -107,6 +107,9 @@ std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::_translate_aggregate_
   // We only need a Projection before the aggregate if the function argument is an arithmetic expression.
   auto need_projection = false;
 
+  // Counter to generate unique aliases for arithmetic expressions.
+  auto alias_index = 0u;
+
   // TODO(tim): is it better to create copies (even though they might not be needed),
   // or iterate twice (if they are needed)?
   for (const auto &aggregate : aggregates) {
@@ -116,6 +119,18 @@ std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::_translate_aggregate_
 
     if (function_arg_expr->is_arithmetic_operator()) {
       need_projection = true;
+
+      // Generate a temporary column name for the expression.
+      // Make sure that the generated column name is not existing in the input.
+      auto alias = "alias" + std::to_string(alias_index);
+      alias_index++;
+
+      while (node->left_child()->has_output_column(alias)) {
+        alias = "alias" + std::to_string(alias_index);
+        alias_index++;
+      }
+
+      function_arg_expr->set_alias(alias);
     }
 
     column_expressions.emplace_back(function_arg_expr);

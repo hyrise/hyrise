@@ -113,6 +113,8 @@ class ExpressionNode : public std::enable_shared_from_this<ExpressionNode> {
 
   const optional<std::string>& alias() const;
 
+  void set_alias(const std::string& alias);
+
   const AllTypeVariant value() const;
 
   const std::vector<std::shared_ptr<ExpressionNode>>& expression_list() const;
@@ -140,7 +142,7 @@ class ExpressionNode : public std::enable_shared_from_this<ExpressionNode> {
   // a column that might be referenced
   const ColumnID _column_id;
   // an alias, used for ColumnReferences, Selects, FunctionReferences
-  const optional<std::string> _alias;
+  optional<std::string> _alias;
 
   std::weak_ptr<ExpressionNode> _parent;
   std::shared_ptr<ExpressionNode> _left_child;

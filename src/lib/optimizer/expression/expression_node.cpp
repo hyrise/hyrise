@@ -1,6 +1,5 @@
 #include "expression_node.hpp"
 
-#include <algorithm>
 #include <iomanip>
 #include <iostream>
 #include <memory>
@@ -44,8 +43,10 @@ std::vector<std::shared_ptr<ExpressionNode>> ExpressionNode::create_column_refer
   column_references.reserve(column_ids.size());
 
   DebugAssert(column_ids.size() == aliases.size(), "There must be the same number of aliases as ColumnIDs.");
-  std::transform(column_ids.begin(), column_ids.end(), aliases.begin(), column_references.begin(),
-                 create_column_reference);
+
+  for (auto column_index = 0u; column_index < column_ids.size(); ++column_index) {
+    column_references.emplace_back(create_column_reference(column_ids[column_index], aliases[column_index]));
+  }
 
   return column_references;
 }
@@ -203,6 +204,8 @@ const std::string &ExpressionNode::name() const {
 
 const optional<std::string> &ExpressionNode::alias() const { return _alias; }
 
+void ExpressionNode::set_alias(const std::string &alias) { _alias = alias; }
+
 const AllTypeVariant ExpressionNode::value() const {
   DebugAssert(_type == ExpressionType::Literal,
               "Expression " + expression_type_to_string.at(_type) + " does not have a value");
@@ -210,22 +213,23 @@ const AllTypeVariant ExpressionNode::value() const {
 }
 
 std::string ExpressionNode::to_string() const {
-  if (_type == ExpressionType::Literal) {
-    return type_cast<std::string>(_value);
-  } else if (_type == ExpressionType::ColumnReference) {
-    return boost::lexical_cast<std::string>(_column_id);
-  } else if (is_arithmetic_operator()) {
-    // TODO(mp) Should be is_operator() to also support ExpressionType::Equals, ...
-    Assert(static_cast<bool>(left_child()) && static_cast<bool>(right_child()), "Operator needs both operands");
-    return left_child()->to_string() + expression_type_to_operator_string.at(_type) + right_child()->to_string();
-  } else if (_type == ExpressionType::FunctionReference) {
-    return _name + "()";
-  } else {
-    Fail("To generate expression string, ExpressionNodes need to be operators or operands");
+  switch (_type) {
+    case ExpressionType::Literal:
+      return type_cast<std::string>(_value);
+    case ExpressionType::ColumnReference:
+      return boost::lexical_cast<std::string>(_column_id);
+    case ExpressionType::FunctionReference:
+      return _name + "()";
+    default:
+      // Handled further down.
+      break;
   }
 
-  // Should never be reached, but Clang is complaining about missing return statement
-  return "";
+  // TODO(mp): Should be is_operator() to also support ExpressionType::Equals, ...
+  Assert(is_arithmetic_operator(), "To generate expression string, ExpressionNodes need to be operators or operands.");
+  Assert(static_cast<bool>(left_child()) && static_cast<bool>(right_child()), "Operator needs both operands.");
+
+  return left_child()->to_string() + expression_type_to_operator_string.at(_type) + right_child()->to_string();
 }
 
 const std::vector<std::shared_ptr<ExpressionNode>> &ExpressionNode::expression_list() const { return _expression_list; }

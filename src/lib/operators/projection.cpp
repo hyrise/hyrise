@@ -35,7 +35,10 @@ std::shared_ptr<const Table> Projection::on_execute() {
     std::string name;
     if (column_expression->alias()) {
       name = *column_expression->alias();
+    } else if (column_expression->type() == ExpressionType::ColumnReference) {
+      name = input_table_left()->column_name(column_expression->column_id());
     } else {
+      // TODO(tim): BLOCKING - make sure that this is not overwriting existing columns.
       name = column_expression->to_string();
     }
 
@@ -69,7 +72,7 @@ const std::string Projection::evaluate_expression_type(const std::shared_ptr<Exp
     return type_by_all_type_variant_which[expression->value().which()];
   }
   if (expression->type() == ExpressionType::ColumnReference) {
-    return table->column_type(table->column_id_by_name(expression->name()));
+    return table->column_type(expression->column_id());
   }
 
   Assert(expression->is_arithmetic_operator(),

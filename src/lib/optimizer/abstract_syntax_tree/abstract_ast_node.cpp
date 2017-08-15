@@ -97,6 +97,11 @@ const std::vector<std::string> AbstractASTNode::output_column_names() const {
   return _output_column_names;
 }
 
+bool AbstractASTNode::has_output_column(const std::string &column_name) const {
+  const auto &column_names = output_column_names();
+  return std::find(column_names.begin(), column_names.end(), column_name) != column_names.end();
+}
+
 const std::vector<ColumnID> AbstractASTNode::output_column_ids() const {
   if (_left_child && !_right_child) return _left_child->output_column_ids();
   if (!_left_child && _right_child) return _right_child->output_column_ids();
