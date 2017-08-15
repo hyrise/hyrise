@@ -50,7 +50,10 @@ class ExpressionNode : public std::enable_shared_from_this<ExpressionNode> {
   static std::shared_ptr<ExpressionNode> create_expression(const ExpressionType type);
 
   static std::shared_ptr<ExpressionNode> create_column_reference(const ColumnID column_id,
-                                                                 const optional<std::string>& alias = nullopt);
+                                                                 const optional<std::string>& alias = {});
+
+  static std::vector<std::shared_ptr<ExpressionNode>> create_column_references(const std::vector<ColumnID>& column_ids,
+                                                                               const std::vector<std::string>& aliases);
 
   /**
    * A literal can have an alias in order to allow queries like `SELECT 1 as one FROM t`.
@@ -104,7 +107,7 @@ class ExpressionNode : public std::enable_shared_from_this<ExpressionNode> {
   /*
    * Getters
    */
-  const ColumnID& column_id() const;
+  const ColumnID column_id() const;
 
   const std::string& name() const;
 
@@ -115,7 +118,7 @@ class ExpressionNode : public std::enable_shared_from_this<ExpressionNode> {
   const std::vector<std::shared_ptr<ExpressionNode>>& expression_list() const;
 
   // Expression as string
-  std::string to_expression_string() const;
+  std::string to_string() const;
 
  private:
   // the type of the expression

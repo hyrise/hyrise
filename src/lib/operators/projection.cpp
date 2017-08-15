@@ -21,6 +21,8 @@ uint8_t Projection::num_in_tables() const { return 1; }
 
 uint8_t Projection::num_out_tables() const { return 1; }
 
+const Projection::ColumnExpressions& Projection::column_expressions() const { return _column_expressions; }
+
 std::shared_ptr<AbstractOperator> Projection::recreate(const std::vector<AllParameterVariant>& args) const {
   return std::make_shared<Projection>(_input_left->recreate(args), _column_expressions);
 }
@@ -34,7 +36,7 @@ std::shared_ptr<const Table> Projection::on_execute() {
     if (column_expression->alias()) {
       name = *column_expression->alias();
     } else {
-      name = column_expression->to_expression_string();
+      name = column_expression->to_string();
     }
 
     const auto type = evaluate_expression_type(column_expression, input_table_left());

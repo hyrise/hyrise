@@ -19,7 +19,7 @@ TableScan::TableScan(const std::shared_ptr<AbstractOperator> in, const ColumnID 
                      const AllParameterVariant value, const optional<AllTypeVariant> value2)
     : AbstractReadOnlyOperator(in), _column_id(column_id), _scan_type(scan_type), _value(value), _value2(value2) {}
 
-const ColumnID &TableScan::column_id() const { return _column_id; }
+const ColumnID TableScan::column_id() const { return _column_id; }
 
 ScanType TableScan::scan_type() const { return _scan_type; }
 

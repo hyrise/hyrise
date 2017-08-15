@@ -63,7 +63,7 @@ class Sort : public AbstractReadOnlyOperator {
 template <typename SortColumnType>
 class Sort::SortImpl : public AbstractReadOnlyOperatorImpl {
  public:
-  SortImpl(const std::shared_ptr<const Table> table_in, const ColumnID &column_id, const bool ascending = true,
+  SortImpl(const std::shared_ptr<const Table> table_in, const ColumnID column_id, const bool ascending = true,
            const size_t output_chunk_size = 0)
       : _table_in(table_in), _column_id(column_id), _ascending(ascending), _output_chunk_size(output_chunk_size) {
     // initialize a structure wich can be sorted by std::sort

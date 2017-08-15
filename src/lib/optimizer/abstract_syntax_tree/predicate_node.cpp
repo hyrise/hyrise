@@ -12,7 +12,7 @@
 
 namespace opossum {
 
-PredicateNode::PredicateNode(const ColumnID& column_id, const std::shared_ptr<ExpressionNode>& predicate,
+PredicateNode::PredicateNode(const ColumnID column_id, const std::shared_ptr<ExpressionNode>& predicate,
                              const ScanType scan_type, const AllParameterVariant& value,
                              const optional<AllTypeVariant>& value2)
     : AbstractASTNode(ASTNodeType::Predicate),
@@ -34,7 +34,7 @@ std::string PredicateNode::description() const {
   return desc.str();
 }
 
-const ColumnID& PredicateNode::column_id() const { return _column_id; }
+const ColumnID PredicateNode::column_id() const { return _column_id; }
 
 const std::shared_ptr<ExpressionNode> PredicateNode::predicate() const { return _predicate; }
 

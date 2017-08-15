@@ -80,7 +80,8 @@ TEST_F(ASTToOperatorTranslatorTest, ProjectionNode) {
 
   const auto projection_op = std::dynamic_pointer_cast<Projection>(op);
   ASSERT_TRUE(projection_op);
-  EXPECT_EQ(projection_op->simple_projection(), std::vector<ColumnID>{ColumnID{0}});
+  EXPECT_EQ(projection_op->column_expressions(),
+            Projection::ColumnExpressions{ExpressionNode::create_column_reference(ColumnID{0}, {"a"})});
 }
 
 TEST_F(ASTToOperatorTranslatorTest, SortNode) {
@@ -179,14 +180,13 @@ TEST_F(ASTToOperatorTranslatorTest, AggregateNodeWithArithmetics) {
   const auto projection_op = std::dynamic_pointer_cast<const Projection>(left_op);
   ASSERT_TRUE(projection_op);
 
-  const auto projection_definitions = projection_op->projection_definitions();
-  ASSERT_EQ(projection_definitions.size(), 1u);
+  const auto column_expressions = projection_op->column_expressions();
+  ASSERT_EQ(column_expressions.size(), 1u);
 
-  const auto projection_definition = projection_definitions[0];
+  const auto column_expression = column_expressions[0];
   // TODO(Sven): fix with new projection
-  EXPECT_EQ(projection_definition.expression, "$1*2");
-  EXPECT_EQ(projection_definition.type, "float");
-  EXPECT_EQ(projection_definition.name, "alias0");
+  EXPECT_EQ(column_expression->to_string(), "1*2");
+  EXPECT_EQ(*column_expression->alias(), "alias0");
 }
 
 TEST_F(ASTToOperatorTranslatorTest, MultipleNodesHierarchy) {

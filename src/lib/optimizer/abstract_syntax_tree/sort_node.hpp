@@ -14,7 +14,7 @@ namespace opossum {
  */
 class SortNode : public AbstractASTNode {
  public:
-  explicit SortNode(const ColumnID &column_id, const bool asc);
+  explicit SortNode(const ColumnID column_id, const bool asc);
 
   std::string description() const override;
 

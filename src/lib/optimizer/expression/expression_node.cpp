@@ -1,5 +1,6 @@
 #include "expression_node.hpp"
 
+#include <algorithm>
 #include <iomanip>
 #include <iostream>
 #include <memory>
@@ -18,7 +19,7 @@ namespace opossum {
 
 ExpressionNode::ExpressionNode(const ExpressionType type, const AllTypeVariant &value,
                                const std::vector<std::shared_ptr<ExpressionNode>> &expression_list,
-                               const std::string &name, const ColumnID &column_id, const optional<std::string> &alias)
+                               const std::string &name, const ColumnID column_id, const optional<std::string> &alias)
     : _type(type),
       _value(value),
       _expression_list(expression_list),
@@ -35,6 +36,18 @@ std::shared_ptr<ExpressionNode> ExpressionNode::create_column_reference(const Co
                                                                         const optional<std::string> &alias) {
   const std::vector<std::shared_ptr<ExpressionNode>> expr_list;
   return std::make_shared<ExpressionNode>(ExpressionType::ColumnReference, NULL_VALUE, expr_list, "", column_id, alias);
+}
+
+std::vector<std::shared_ptr<ExpressionNode>> ExpressionNode::create_column_references(
+    const std::vector<ColumnID> &column_ids, const std::vector<std::string> &aliases) {
+  std::vector<std::shared_ptr<ExpressionNode>> column_references;
+  column_references.reserve(column_ids.size());
+
+  DebugAssert(column_ids.size() == aliases.size(), "There must be the same number of aliases as ColumnIDs.");
+  std::transform(column_ids.begin(), column_ids.end(), aliases.begin(), column_references.begin(),
+                 create_column_reference);
+
+  return column_references;
 }
 
 std::shared_ptr<ExpressionNode> ExpressionNode::create_literal(const AllTypeVariant &value,
@@ -59,8 +72,8 @@ std::shared_ptr<ExpressionNode> ExpressionNode::create_binary_operator(Expressio
                                                                        const std::shared_ptr<ExpressionNode> &left,
                                                                        const std::shared_ptr<ExpressionNode> &right,
                                                                        const optional<std::string> &alias) {
-  auto expression = std::make_shared<ExpressionNode>(type, AllTypeVariant(),
-                                                     std::vector<std::shared_ptr<ExpressionNode>>(), "", "", alias);
+  auto expression = std::make_shared<ExpressionNode>(
+      type, AllTypeVariant(), std::vector<std::shared_ptr<ExpressionNode>>(), "", ColumnID{}, alias);
   Assert(expression->is_binary_operator(), "Type is not an operator type");
 
   expression->set_left_child(left);
@@ -71,7 +84,7 @@ std::shared_ptr<ExpressionNode> ExpressionNode::create_binary_operator(Expressio
 
 std::shared_ptr<ExpressionNode> ExpressionNode::create_select_all() {
   return std::make_shared<ExpressionNode>(ExpressionType::Star, AllTypeVariant(),
-                                          std::vector<std::shared_ptr<ExpressionNode>>(), "", "", nullopt);
+                                          std::vector<std::shared_ptr<ExpressionNode>>(), "", ColumnID{});
 }
 
 const std::weak_ptr<ExpressionNode> ExpressionNode::parent() const { return _parent; }
@@ -176,7 +189,7 @@ const std::string ExpressionNode::description() const {
   return desc.str();
 }
 
-const ColumnID &ExpressionNode::column_id() const {
+const ColumnID ExpressionNode::column_id() const {
   DebugAssert(_type == ExpressionType::ColumnReference,
               "Expression " + expression_type_to_string.at(_type) + " does not have a name");
   return _column_id;
@@ -196,7 +209,7 @@ const AllTypeVariant ExpressionNode::value() const {
   return _value;
 }
 
-std::string ExpressionNode::to_expression_string() const {
+std::string ExpressionNode::to_string() const {
   if (_type == ExpressionType::Literal) {
     return type_cast<std::string>(_value);
   } else if (_type == ExpressionType::ColumnReference) {
@@ -204,9 +217,7 @@ std::string ExpressionNode::to_expression_string() const {
   } else if (is_arithmetic_operator()) {
     // TODO(mp) Should be is_operator() to also support ExpressionType::Equals, ...
     Assert(static_cast<bool>(left_child()) && static_cast<bool>(right_child()), "Operator needs both operands");
-
-    return left_child()->to_expression_string() + expression_type_to_operator_string.at(_type) +
-           right_child()->to_expression_string();
+    return left_child()->to_string() + expression_type_to_operator_string.at(_type) + right_child()->to_string();
   } else if (_type == ExpressionType::FunctionReference) {
     return _name + "()";
   } else {
