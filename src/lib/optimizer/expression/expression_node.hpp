@@ -53,6 +53,9 @@ class ExpressionNode : public std::enable_shared_from_this<ExpressionNode> {
                                                                  const std::string& table_name = "",
                                                                  const optional<std::string>& alias = {});
 
+  /**
+   * A literal can have an alias in order to allow queries like `SELECT 1 as one FROM t`.
+   */
   static std::shared_ptr<ExpressionNode> create_literal(const AllTypeVariant& value,
                                                         const optional<std::string>& alias = {});
 
@@ -92,10 +95,8 @@ class ExpressionNode : public std::enable_shared_from_this<ExpressionNode> {
   // Is +, -, * (arithmetic usage, not SELECT * FROM), /, %, ^
   bool is_arithmetic_operator() const;
 
-  //
+  // Returns true if the expression requires two children.
   bool is_binary_operator() const;
-
-  //
 
   /*
    * Getters

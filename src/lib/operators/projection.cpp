@@ -61,8 +61,8 @@ std::shared_ptr<const Table> Projection::on_execute() {
   return output;
 }
 
-std::string Projection::evaluate_expression_type(const std::shared_ptr<ExpressionNode>& expression,
-                                                 const std::shared_ptr<const Table>& table) {
+const std::string Projection::evaluate_expression_type(const std::shared_ptr<ExpressionNode>& expression,
+                                                       const std::shared_ptr<const Table>& table) {
   if (expression->type() == ExpressionType::Literal) {
     return type_by_all_type_variant_which[expression->value().which()];
   }
@@ -70,7 +70,8 @@ std::string Projection::evaluate_expression_type(const std::shared_ptr<Expressio
     return table->column_type(table->column_id_by_name(expression->name()));
   }
 
-  Assert(expression->is_arithmetic_operator(), "Only arithmetic operators supported for expression type evaluation");
+  Assert(expression->is_arithmetic_operator(),
+         "Only literals, columns, and arithmetic operators supported for expression type evaluation");
 
   const auto type_left = evaluate_expression_type(expression->left_child(), table);
   const auto type_right = evaluate_expression_type(expression->right_child(), table);

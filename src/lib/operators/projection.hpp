@@ -58,8 +58,8 @@ class Projection : public AbstractReadOnlyOperator {
     }
   };
 
-  static std::string evaluate_expression_type(const std::shared_ptr<ExpressionNode>& expression,
-                                              const std::shared_ptr<const Table>& table);
+  static const std::string evaluate_expression_type(const std::shared_ptr<ExpressionNode>& expression,
+                                                    const std::shared_ptr<const Table>& table);
 
   template <typename T>
   static const tbb::concurrent_vector<T> evaluate_expression(const std::shared_ptr<ExpressionNode>& expression,
@@ -97,7 +97,7 @@ class Projection : public AbstractReadOnlyOperator {
      */
     Assert(expression->is_arithmetic_operator(), "Projection only supports literals, column refs and arithmetics");
 
-    const auto arithmetic_op_fn = get_operator_fn<T>(expression->type());
+    const auto arithmetic_operator_function = get_operator_function<T>(expression->type());
 
     tbb::concurrent_vector<T> values;
     values.resize(table->get_chunk(chunk_id).size());
@@ -109,34 +109,38 @@ class Projection : public AbstractReadOnlyOperator {
 
     if (left_is_literal && right_is_literal) {
       std::fill(values.begin(), values.end(),
-                arithmetic_op_fn(boost::get<T>(left->value()), boost::get<T>(right->value())));
+                arithmetic_operator_function(boost::get<T>(left->value()), boost::get<T>(right->value())));
     } else if (right_is_literal) {
       auto left_values = evaluate_expression<T>(left, table, chunk_id);
       auto right_value = boost::get<T>(right->value());
       // apply operator function to both vectors
       std::transform(left_values.begin(), left_values.end(), values.begin(),
-                     [&](T left_value) { return arithmetic_op_fn(left_value, right_value); });
+                     [&](T left_value) { return arithmetic_operator_function(left_value, right_value); });
 
     } else if (left_is_literal) {
       auto right_values = evaluate_expression<T>(right, table, chunk_id);
       auto left_value = boost::get<T>(left->value());
       // apply operator function to both vectors
       std::transform(right_values.begin(), right_values.end(), values.begin(),
-                     [&](T right_value) { return arithmetic_op_fn(left_value, right_value); });
+                     [&](T right_value) { return arithmetic_operator_function(left_value, right_value); });
 
     } else {
       auto left_values = evaluate_expression<T>(left, table, chunk_id);
       auto right_values = evaluate_expression<T>(right, table, chunk_id);
 
       // apply operator function to both vectors
-      std::transform(left_values.begin(), left_values.end(), right_values.begin(), values.begin(), arithmetic_op_fn);
+      std::transform(left_values.begin(), left_values.end(), right_values.begin(), values.begin(),
+                     arithmetic_operator_function);
     }
 
     return values;
   }
 
+  /**
+   * Operators that all numerical types support.
+   */
   template <typename T>
-  static std::function<T(const T&, const T&)> get_base_operator_fn(ExpressionType type) {
+  static std::function<T(const T&, const T&)> get_base_operator_function(ExpressionType type) {
     switch (type) {
       case ExpressionType::Addition:
         return std::plus<T>();
@@ -153,10 +157,13 @@ class Projection : public AbstractReadOnlyOperator {
     }
   }
 
+  /**
+   * Operators that integral types support.
+   */
   template <typename T>
-  static std::function<T(const T&, const T&)> get_operator_fn(ExpressionType type) {
+  static std::function<T(const T&, const T&)> get_operator_function(ExpressionType type) {
     if (type == ExpressionType::Modulo) return std::modulus<T>();
-    return get_base_operator_fn<T>(type);
+    return get_base_operator_function<T>(type);
   }
 
   std::shared_ptr<const Table> on_execute() override;
@@ -170,7 +177,7 @@ class Projection : public AbstractReadOnlyOperator {
  *
  */
 template <>
-inline std::function<std::string(const std::string&, const std::string&)> Projection::get_operator_fn(
+inline std::function<std::string(const std::string&, const std::string&)> Projection::get_operator_function(
     ExpressionType type) {
   Assert(type == ExpressionType::Addition, "Arithmetic operator except for addition not defined for std::string");
   return std::plus<std::string>();
@@ -184,13 +191,13 @@ inline std::function<std::string(const std::string&, const std::string&)> Projec
  *
  */
 template <>
-inline std::function<float(const float&, const float&)> Projection::get_operator_fn(ExpressionType type) {
-  return get_base_operator_fn<float>(type);
+inline std::function<float(const float&, const float&)> Projection::get_operator_function(ExpressionType type) {
+  return get_base_operator_function<float>(type);
 }
 
 template <>
-inline std::function<double(const double&, const double&)> Projection::get_operator_fn(ExpressionType type) {
-  return get_base_operator_fn<double>(type);
+inline std::function<double(const double&, const double&)> Projection::get_operator_function(ExpressionType type) {
+  return get_base_operator_function<double>(type);
 }
 
 }  // namespace opossum
