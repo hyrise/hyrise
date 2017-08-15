@@ -45,7 +45,7 @@ class BaseColumnStatistics {
   /**
    * Predicate selectivity for two columns.
    */
-  virtual TwoColumnSelectivityResult estimate_selectivity_for_predicate(
+  virtual TwoColumnSelectivityResult estimate_selectivity_for_two_column_predicate(
       const ScanType scan_type, const std::shared_ptr<BaseColumnStatistics> &abstract_value_column_statistics,
       const optional<AllTypeVariant> &value2 = nullopt) = 0;
 

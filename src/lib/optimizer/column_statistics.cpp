@@ -97,21 +97,6 @@ ColumnSelectivityResult ColumnStatistics<ColumnType>::estimate_selectivity_for_r
   return {selectivity, column_statistics};
 }
 
-/**
- * Specialization for strings as they cannot be used in subtractions.
- */
-template <>
-ColumnSelectivityResult ColumnStatistics<std::string>::estimate_selectivity_for_range_and_create_column_statistics(
-    std::string minimum, std::string maximum) {
-  // new minimum/maximum of table cannot be smaller/larger than the current minimum/maximum
-  auto common_min = std::max(minimum, min());
-  auto common_max = std::min(maximum, max());
-  if (common_min < common_max) {
-    return {0.f, nullptr};
-  }
-  return {1.f, nullptr};
-}
-
 template <typename ColumnType>
 float ColumnStatistics<ColumnType>::estimate_selectivity_for_range(ColumnType minimum, ColumnType maximum) {
   // distinction between integers and decimals
@@ -129,7 +114,8 @@ float ColumnStatistics<ColumnType>::estimate_selectivity_for_range(ColumnType mi
  */
 template <>
 float ColumnStatistics<std::string>::estimate_selectivity_for_range(std::string minimum, std::string maximum) {
-  return 1.f;
+  // TODO(anyone) implement selectivity for range approximation for column type string.
+  return (maximum < minimum) ? 0.f : 1.f;
 }
 
 template <typename ColumnType>
@@ -272,7 +258,7 @@ ColumnSelectivityResult ColumnStatistics<ColumnType>::estimate_selectivity_for_p
 }
 
 template <typename ColumnType>
-TwoColumnSelectivityResult ColumnStatistics<ColumnType>::estimate_selectivity_for_predicate(
+TwoColumnSelectivityResult ColumnStatistics<ColumnType>::estimate_selectivity_for_two_column_predicate(
     const ScanType scan_type, const std::shared_ptr<BaseColumnStatistics> &base_value_column_statistics,
     const optional<AllTypeVariant> &value2) {
   auto right_stats = std::dynamic_pointer_cast<ColumnStatistics<ColumnType>>(base_value_column_statistics);
@@ -381,7 +367,7 @@ TwoColumnSelectivityResult ColumnStatistics<ColumnType>::estimate_selectivity_fo
  * Specialization for strings as they cannot be used in subtractions.
  */
 template <>
-TwoColumnSelectivityResult ColumnStatistics<std::string>::estimate_selectivity_for_predicate(
+TwoColumnSelectivityResult ColumnStatistics<std::string>::estimate_selectivity_for_two_column_predicate(
     const ScanType scan_type, const std::shared_ptr<BaseColumnStatistics> &base_value_column_statistics,
     const optional<AllTypeVariant> &value2) {
   // TODO(anybody) implement special case for strings
