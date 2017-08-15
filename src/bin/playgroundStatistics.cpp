@@ -10,7 +10,7 @@
 int main() {
   std::cout << "starting main" << std::endl;
 
-  tpcc::TableGenerator generator;
+  tpcc::TpccTableGenerator generator;
 
   std::cout << "starting generate table" << std::endl;
 
