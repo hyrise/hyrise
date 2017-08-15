@@ -74,10 +74,10 @@ TEST_F(AllTypeVariantTest, GetExtractsExactNumericalValue) {
 }
 
 TEST_F(AllTypeVariantTest, MapVariantWhichToType) {
-  EXPECT_EQ(type_by_all_type_variant_which[AllTypeVariant((int32_t)0).which()], "int");
-  EXPECT_EQ(type_by_all_type_variant_which[AllTypeVariant((int64_t)0).which()], "long");
-  EXPECT_EQ(type_by_all_type_variant_which[AllTypeVariant((float)0).which()], "float");
-  EXPECT_EQ(type_by_all_type_variant_which[AllTypeVariant((double)0).which()], "double");
+  EXPECT_EQ(type_by_all_type_variant_which[AllTypeVariant(static_cast<int32_t>(0)).which()], "int");
+  EXPECT_EQ(type_by_all_type_variant_which[AllTypeVariant(static_cast<int64_t>(0)).which()], "long");
+  EXPECT_EQ(type_by_all_type_variant_which[AllTypeVariant(static_cast<float>(0)).which()], "float");
+  EXPECT_EQ(type_by_all_type_variant_which[AllTypeVariant(static_cast<double>(0)).which()], "double");
   EXPECT_EQ(type_by_all_type_variant_which[AllTypeVariant(std::string()).which()], "string");
 }
 

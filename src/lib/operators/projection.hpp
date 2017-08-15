@@ -1,6 +1,9 @@
 #pragma once
 
 #include <cstdint>
+
+#include <algorithm>
+#include <functional>
 #include <memory>
 #include <string>
 #include <tuple>
@@ -15,6 +18,8 @@
 #include "types.hpp"
 
 namespace opossum {
+
+struct ProjectionDefinition;
 
 /**
  * Operator to select a subset of the set of all columns found in the table
@@ -34,7 +39,7 @@ class Projection : public AbstractReadOnlyOperator {
   std::shared_ptr<AbstractOperator> recreate(const std::vector<AllParameterVariant>& args) const override;
 
  protected:
-  std::vector<std::shared_ptr<ExpressionNode>> _column_expressions;
+  ColumnExpressions _column_expressions;
 
   class ColumnCreator {
    public:

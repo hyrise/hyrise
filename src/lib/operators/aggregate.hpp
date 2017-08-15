@@ -134,8 +134,8 @@ class Aggregate : public AbstractReadOnlyOperator {
   // AVG is not defined for non-arithmetic types. Avoiding compiler errors.
   template <typename AggregateType, AggregateFunction func>
   typename std::enable_if<func == AggregateFunction::Avg && !std::is_arithmetic<AggregateType>::value, void>::type
-  _write_aggregate_values(tbb::concurrent_vector<AggregateType>,
-                          std::shared_ptr<std::map<AggregateKey, AggregateResult<AggregateType>>>) {
+      _write_aggregate_values(tbb::concurrent_vector<AggregateType>,
+                              std::shared_ptr<std::map<AggregateKey, AggregateResult<AggregateType>>>) {
     Fail("Invalid aggregate");
   }
 
@@ -464,10 +464,9 @@ struct aggregate_traits<
 
 // SUM on floating point numbers
 template <typename ColumnType, AggregateFunction function>
-struct aggregate_traits<
-    ColumnType, function,
-    typename std::enable_if<function == AggregateFunction::Sum && std::is_floating_point<ColumnType>::value,
-                            void>::type> {
+struct aggregate_traits<ColumnType, function, typename std::enable_if<function == AggregateFunction::Sum &&
+                                                                          std::is_floating_point<ColumnType>::value,
+                                                                      void>::type> {
   typedef ColumnType column_type;
   typedef double aggregate_type;
   static constexpr const char *aggregate_type_name = "double";
@@ -475,11 +474,10 @@ struct aggregate_traits<
 
 // invalid: AVG on non-arithmetic types
 template <typename ColumnType, AggregateFunction function>
-struct aggregate_traits<
-    ColumnType, function,
-    typename std::enable_if<!std::is_arithmetic<ColumnType>::value &&
-                                (function == AggregateFunction::Avg || function == AggregateFunction::Sum),
-                            void>::type> {
+struct aggregate_traits<ColumnType, function, typename std::enable_if<!std::is_arithmetic<ColumnType>::value &&
+                                                                          (function == AggregateFunction::Avg ||
+                                                                           function == AggregateFunction::Sum),
+                                                                      void>::type> {
   typedef ColumnType column_type;
   typedef ColumnType aggregate_type;
   static constexpr const char *aggregate_type_name = "";

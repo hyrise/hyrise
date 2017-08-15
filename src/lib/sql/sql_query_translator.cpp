@@ -192,32 +192,32 @@ bool SQLQueryTranslator::_translate_filter_expr(const hsql::Expr& expr,
 
 bool SQLQueryTranslator::_translate_projection(const std::vector<hsql::Expr*>& expr_list,
                                                const std::shared_ptr<AbstractOperator>& input_op) {
-    Projection::ColumnExpressions column_expressions;
-    for (const Expr* expr : expr_list) {
-      // At this moment we only support selecting columns in the projection.
-      if (!expr->isType(hsql::kExprColumnRef) && !expr->isType(hsql::kExprStar) &&
-          !expr->isType(hsql::kExprFunctionRef)) {
-        _error_msg = "Projection only supports columns to be selected.";
-        return false;
-      }
-
-      if (expr->isType(hsql::kExprStar)) {
-        column_expressions.emplace_back(ExpressionNode::create_select_all());
-        continue;
-      }
-
-      column_expressions.emplace_back(ExpressionNode::create_column_reference(_get_column_name(*expr)));
+  Projection::ColumnExpressions column_expressions;
+  for (const Expr* expr : expr_list) {
+    // At this moment we only support selecting columns in the projection.
+    if (!expr->isType(hsql::kExprColumnRef) && !expr->isType(hsql::kExprStar) &&
+        !expr->isType(hsql::kExprFunctionRef)) {
+      _error_msg = "Projection only supports columns to be selected.";
+      return false;
     }
 
-    // If only * is selected, no projection operator is needed.
-    if (column_expressions.size() == 1 && column_expressions.front()->type() == ExpressionType::Star) {
-      return true;
+    if (expr->isType(hsql::kExprStar)) {
+      column_expressions.emplace_back(ExpressionNode::create_select_all());
+      continue;
     }
 
-    auto projection = std::make_shared<Projection>(input_op, column_expressions);
-    _current_root = projection;
+    column_expressions.emplace_back(ExpressionNode::create_column_reference(_get_column_name(*expr)));
+  }
 
+  // If only * is selected, no projection operator is needed.
+  if (column_expressions.size() == 1 && column_expressions.front()->type() == ExpressionType::Star) {
     return true;
+  }
+
+  auto projection = std::make_shared<Projection>(input_op, column_expressions);
+  _current_root = projection;
+
+  return true;
 }
 
 bool SQLQueryTranslator::_translate_group_by(const hsql::GroupByDescription& group_by,

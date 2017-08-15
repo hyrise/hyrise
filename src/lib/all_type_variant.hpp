@@ -10,6 +10,7 @@
 #include <boost/variant.hpp>
 
 #include <string>
+#include <vector>
 
 #include "null_value.hpp"
 #include "types.hpp"

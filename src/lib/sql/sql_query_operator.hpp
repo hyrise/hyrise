@@ -50,6 +50,8 @@ class SQLQueryOperator : public AbstractOperator {
 
   static SQLQueryCache<SQLQueryPlan>& get_query_plan_cache();
 
+  static SQLQueryCache<SQLQueryPlan>& get_prepared_statement_cache();
+
  protected:
   std::shared_ptr<const Table> on_execute(std::shared_ptr<TransactionContext> context) override;
 

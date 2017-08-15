@@ -176,7 +176,7 @@ TEST_F(OperatorsUpdateTest, EmptyChunks) {
   table_scan1->set_transaction_context(t_context);
   table_scan1->execute();
 
-  Projection::ColumnExpressions column_expressions{ExpressionNode::create_literal(1, "a")};
+  Projection::ColumnExpressions column_expressions{ExpressionNode::create_literal(1, {"a"})};
   auto updated_rows = std::make_shared<Projection>(table_scan1, column_expressions);
   updated_rows->set_transaction_context(t_context);
   updated_rows->execute();

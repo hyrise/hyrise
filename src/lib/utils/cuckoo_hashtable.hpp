@@ -18,7 +18,7 @@ Insert-only implementation of Cuckoo Hash Table. The HashTable is currently only
 where it is a temporary object for probing. There is no need to delete elements in that use case.
 */
 template <typename T>
-class HashTable {
+class HashTable : private Noncopyable {
   static const size_t NUMBER_OF_HASH_FUNCTIONS = 3;
 
  public:
@@ -26,10 +26,6 @@ class HashTable {
     // prepare internal hash tables and fill with empty elements
     _hashtables.resize(NUMBER_OF_HASH_FUNCTIONS, std::vector<std::shared_ptr<HashElement>>(input_table_size));
   }
-
-  // copying a HashTable is not allowed
-  HashTable(const HashTable &) = delete;
-  HashTable &operator=(const HashTable &) = delete;
 
   // we need to explicitly set the move constructor to default when
   // we overwrite the copy constructor

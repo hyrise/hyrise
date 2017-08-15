@@ -262,7 +262,7 @@ TaskVector NewOrderRefImpl::get_increment_next_order_id_tasks(const int32_t d_id
 
   const auto op = opossum::ExpressionNode::create_binary_operator(
       opossum::ExpressionType::Addition, opossum::ExpressionNode::create_literal(d_next_o_id),
-      opossum::ExpressionNode::create_literal(1), "fix");  // NOLINT
+      opossum::ExpressionNode::create_literal(1), {"fix"});
   const auto updated_rows = std::make_shared<opossum::Projection>(ts2, opossum::Projection::ColumnExpressions{op});
 
   const auto update = std::make_shared<opossum::Update>("DISTRICT", original_rows, updated_rows);

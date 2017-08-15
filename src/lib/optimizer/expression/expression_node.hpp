@@ -42,7 +42,7 @@ class ExpressionNode : public std::enable_shared_from_this<ExpressionNode> {
    */
   ExpressionNode(const ExpressionType type, const AllTypeVariant& value,
                  const std::vector<std::shared_ptr<ExpressionNode>>& expression_list, const std::string& name,
-                 const std::string& table, const optional<std::string>& alias);
+                 const std::string& table, const optional<std::string>& alias = {});
 
   /*
    * Factory Methods to create Expressions of specific type

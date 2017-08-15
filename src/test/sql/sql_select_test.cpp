@@ -84,7 +84,7 @@ class SQLSelectTest : public BaseTest, public ::testing::WithParamInterface<SQLT
   SQLQueryPlan _plan;
 };
 
- TEST_F(SQLSelectTest, BasicParserSuccessTest) {
+TEST_F(SQLSelectTest, BasicParserSuccessTest) {
   hsql::SQLParserResult parse_result;
 
   const std::string query = "SELECT * FROM test;";
@@ -96,7 +96,7 @@ class SQLSelectTest : public BaseTest, public ::testing::WithParamInterface<SQLT
   EXPECT_FALSE(parse_result.isValid());
 }
 
- TEST_F(SQLSelectTest, SelectWithSchedulerTest) {
+TEST_F(SQLSelectTest, SelectWithSchedulerTest) {
   const std::string query =
       "SELECT \"left\".a, \"left\".b, \"right\".a, \"right\".b FROM table_a AS \"left\" INNER JOIN table_b AS "
       "\"right\" ON a = a";
@@ -120,7 +120,7 @@ class SQLSelectTest : public BaseTest, public ::testing::WithParamInterface<SQLT
 // Generic test case that will be called with the parameters listed below.
 // Compiles a query and executes it, if specified.
 // Checks the number of operators in the plan and can check the result against a table in a file.
- TEST_P(SQLSelectTest, SQLQueryTest) {
+TEST_P(SQLSelectTest, SQLQueryTest) {
   SQLTestParam param = GetParam();
   std::string query = std::get<0>(param);
   size_t num_operators = std::get<1>(param);
@@ -141,7 +141,7 @@ class SQLSelectTest : public BaseTest, public ::testing::WithParamInterface<SQLT
   }
 }
 
- const SQLTestParam test_queries[] = {
+const SQLTestParam test_queries[] = {
     SQLTestParam{"SELECT * FROM table_a;", 1u, true, "src/test/tables/int_float.tbl"},
     // Table Scans
     SQLTestParam{"SELECT * FROM table_a WHERE a >= 1234;", 2u, true, "src/test/tables/int_float_filtered2.tbl"},
@@ -170,8 +170,7 @@ class SQLSelectTest : public BaseTest, public ::testing::WithParamInterface<SQLT
     SQLTestParam{"SELECT a, b, MAX(c), AVG(d) FROM groupby_int_2gb_2agg GROUP BY a, b;", 3u, true,
                  "src/test/tables/aggregateoperator/groupby_int_2gb_2agg/max_avg.tbl"},
     SQLTestParam{
-        "SELECT a, b, MAX(c), AVG(d) FROM groupby_int_2gb_2agg GROUP BY a, b HAVING MAX(c) >= 10 AND MAX(c) < 40;",
-        5u,
+        "SELECT a, b, MAX(c), AVG(d) FROM groupby_int_2gb_2agg GROUP BY a, b HAVING MAX(c) >= 10 AND MAX(c) < 40;", 5u,
         true, "src/test/tables/aggregateoperator/groupby_int_2gb_2agg/max_avg.tbl"},
 
     SQLTestParam{"SELECT * FROM customer;", 1u, true, ""},

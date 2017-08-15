@@ -23,7 +23,7 @@ ExpressionNode::ExpressionNode(const ExpressionType type, const AllTypeVariant &
 
 std::shared_ptr<ExpressionNode> ExpressionNode::create_expression(const ExpressionType type) {
   const std::vector<std::shared_ptr<ExpressionNode>> expr_list;
-  return std::make_shared<ExpressionNode>(type, NULL_VALUE, expr_list, "", "", "");
+  return std::make_shared<ExpressionNode>(type, NULL_VALUE, expr_list, "", "");
 }
 
 std::shared_ptr<ExpressionNode> ExpressionNode::create_column_reference(const std::string &column_name,
@@ -42,7 +42,7 @@ std::shared_ptr<ExpressionNode> ExpressionNode::create_literal(const AllTypeVari
 
 std::shared_ptr<ExpressionNode> ExpressionNode::create_parameter(const AllTypeVariant &value) {
   const std::vector<std::shared_ptr<ExpressionNode>> expr_list;
-  return std::make_shared<ExpressionNode>(ExpressionType::Placeholder, value, expr_list, "", "", "");
+  return std::make_shared<ExpressionNode>(ExpressionType::Placeholder, value, expr_list, "", "");
 }
 
 std::shared_ptr<ExpressionNode> ExpressionNode::create_function_reference(
@@ -68,7 +68,7 @@ std::shared_ptr<ExpressionNode> ExpressionNode::create_binary_operator(Expressio
 
 std::shared_ptr<ExpressionNode> ExpressionNode::create_select_all() {
   return std::make_shared<ExpressionNode>(ExpressionType::Star, AllTypeVariant(),
-                                   std::vector<std::shared_ptr<ExpressionNode>>(), "", "", nullopt);
+                                          std::vector<std::shared_ptr<ExpressionNode>>(), "", "", nullopt);
 }
 
 const std::weak_ptr<ExpressionNode> ExpressionNode::parent() const { return _parent; }

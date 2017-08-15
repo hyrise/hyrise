@@ -12,8 +12,7 @@
 
 namespace opossum {
 
-Projection::Projection(const std::shared_ptr<const AbstractOperator> in,
-                       const std::vector<std::shared_ptr<ExpressionNode>>& column_expressions)
+Projection::Projection(const std::shared_ptr<const AbstractOperator> in, const ColumnExpressions& column_expressions)
     : AbstractReadOnlyOperator(in), _column_expressions(column_expressions) {}
 
 const std::string Projection::name() const { return "Projection"; }
