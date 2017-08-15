@@ -7,25 +7,25 @@
 #include <utility>
 #include <vector>
 
+#include "base_column.hpp"
 #include "chunk.hpp"
+
 #include "common.hpp"
 #include "type_cast.hpp"
 #include "types.hpp"
+#include "utils/assert.hpp"
 
 namespace opossum {
+
 class TableStatistics;
 
 // A table is partitioned horizontally into a number of chunks
-class Table {
+class Table : private Noncopyable {
  public:
   // creates a table
   // the parameter specifies the maximum chunk size, i.e., partition size
   // default (0) is an unlimited size. A table holds always at least one chunk
   explicit Table(const uint32_t chunk_size = 0);
-
-  // copying a table is not allowed
-  Table(Table const &) = delete;
-  Table &operator=(const Table &) = delete;
 
   // we need to explicitly set the move constructor to default when
   // we overwrite the copy constructor
@@ -101,7 +101,8 @@ class Table {
         return get<T>((*chunk.get_column(column_id))[row_number + current_size - row_counter]);
       }
     }
-    throw std::runtime_error("Row does not exist.");
+    Fail("Row does not exist.");
+    return {};
   }
 
   // creates a new chunk and appends it

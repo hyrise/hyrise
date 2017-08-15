@@ -8,7 +8,7 @@ set(
     new_order.hpp
     order_status.cpp
     order_status.hpp
-    random_generator.hpp
+    tpcc_random_generator.hpp
     tpcc_table_generator.cpp
 )
 

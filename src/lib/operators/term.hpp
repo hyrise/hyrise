@@ -13,6 +13,7 @@
 
 #include "type_cast.hpp"
 #include "types.hpp"
+#include "utils/assert.hpp"
 
 namespace opossum {
 
@@ -175,7 +176,8 @@ class ArithmeticTerm : public AbstractTerm<T> {
     } else if (string_op == "%") {
       return std::modulus<T>();
     } else {
-      throw std::logic_error("Unknown arithmetic operator" + string_op);
+      Fail("Unknown arithmetic operator" + string_op);
+      return {};
     }
   }
 
@@ -195,10 +197,8 @@ class ArithmeticTerm : public AbstractTerm<T> {
 template <>
 inline std::function<std::string(const std::string&, const std::string&)> ArithmeticTerm<std::string>::get_operator(
     const std::string& string_op) {
-  if (string_op == "+") {
-    return std::plus<std::string>();
-  }
-  throw std::logic_error("Arithmetic operator " + string_op + " not defined for std::string");
+  Assert(string_op == "+", "Arithmetic operator " + string_op + " not defined for std::string");
+  return std::plus<std::string>();
 }
 /**
  * Specialized arithmetic operator implementation for float.
@@ -220,7 +220,8 @@ inline std::function<float(const float&, const float&)> ArithmeticTerm<float>::g
   } else if (string_op == "/") {
     return std::divides<float>();
   } else {
-    throw std::logic_error("Unknown arithmetic operator" + string_op);
+    Fail("Unknown arithmetic operator" + string_op);
+    return {};
   }
 }
 /**
@@ -243,7 +244,8 @@ inline std::function<double(const double&, const double&)> ArithmeticTerm<double
   } else if (string_op == "/") {
     return std::divides<double>();
   } else {
-    throw std::logic_error("Unknown arithmetic operator" + string_op);
+    Fail("Unknown arithmetic operator" + string_op);
+    return {};
   }
 }
 

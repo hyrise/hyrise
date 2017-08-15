@@ -4,9 +4,12 @@
 #include <memory>
 #include <vector>
 
+#include "abstract_operator.hpp"
+
 #include "concurrency/transaction_context.hpp"
-#include "operators/abstract_operator.hpp"
 #include "storage/table.hpp"
+
+#include "utils/assert.hpp"
 
 namespace opossum {
 

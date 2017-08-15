@@ -17,12 +17,14 @@
 #endif
 
 #include "abstract_join_operator.hpp"
+
 #include "scheduler/abstract_task.hpp"
 #include "scheduler/current_scheduler.hpp"
 #include "scheduler/job_task.hpp"
 #include "storage/dictionary_column.hpp"
 #include "storage/reference_column.hpp"
 #include "storage/value_column.hpp"
+
 #include "type_comparison.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
@@ -53,7 +55,8 @@ class JoinHash : public AbstractJoinOperator {
   uint8_t num_in_tables() const override;
   uint8_t num_out_tables() const override;
   std::shared_ptr<AbstractOperator> recreate(const std::vector<AllParameterVariant> &args) const override {
-    throw std::runtime_error("Operator " + this->name() + " does not implement recreation.");
+    Fail("Operator " + this->name() + " does not implement recreation.");
+    return {};
   }
 
  protected:

@@ -1,14 +1,15 @@
 #include <memory>
 #include <string>
-#include <utility>
 #include <vector>
 
 #include "benchmark/benchmark.h"
 
-#include "../base_fixture.cpp"
+#include "../base_fixture.hpp"
 #include "../table_generator.hpp"
+
 #include "operators/projection.hpp"
 #include "operators/table_scan.hpp"
+#include "operators/table_wrapper.hpp"
 
 namespace opossum {
 
@@ -24,8 +25,6 @@ class OperatorsProjectionBenchmark : public BenchmarkBasicFixture {
     _tables.emplace_back(_table_wrapper_b);  // 1
     _tables.emplace_back(_table_ref);        // 2
   }
-
-  void TearDown(::benchmark::State& state) override { StorageManager::get().reset(); }
 
  protected:
   std::shared_ptr<TableScan> _table_ref;

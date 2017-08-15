@@ -1,5 +1,6 @@
 #pragma once
 
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -7,6 +8,8 @@
 #include "optimizer/abstract_syntax_tree/abstract_ast_node.hpp"
 
 namespace opossum {
+
+class TableStatistics;
 
 class StoredTableNode : public AbstractASTNode {
  public:
@@ -19,6 +22,7 @@ class StoredTableNode : public AbstractASTNode {
   const std::string& table_name() const;
 
  private:
+  const std::shared_ptr<TableStatistics> _gather_statistics() const override;
   const std::string _table_name;
 };
 

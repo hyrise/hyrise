@@ -11,7 +11,7 @@
 
 #include "base_test.hpp"
 
-#include "import_export/csv_rfc_parser.hpp"
+#include "import_export/csv_parser.hpp"
 #include "storage/storage_manager.hpp"
 
 #include "tpcc/new_order.hpp"
@@ -110,7 +110,7 @@ class TpccRefTest : public BaseTest {
     const auto TABLE_NAMES = {"CUSTOMER",   "DISTRICT", "HISTORY", "ITEM",     "NEW-ORDER",
                               "ORDER-LINE", "ORDER",    "STOCK",   "WAREHOUSE"};
 
-    CsvRfcParser parser(100 * 1000);
+    CsvParser parser;
 
     for (const auto &table_name : TABLE_NAMES) {
       auto table = parser.parse(std::string("./") + table_name + ".csv");

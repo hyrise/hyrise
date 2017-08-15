@@ -1,11 +1,11 @@
 #include <memory>
 #include <string>
-#include <utility>
 
+#include "SQLParser.h"
 #include "benchmark/benchmark.h"
 
-#include "../base_fixture.cpp"
-#include "SQLParser.h"
+#include "../base_fixture.hpp"
+
 #include "sql/sql_query_operator.hpp"
 #include "sql/sql_query_translator.hpp"
 
@@ -16,126 +16,170 @@ using hsql::SQLParserResult;
 
 class SQLBenchmark : public BenchmarkBasicFixture {
  public:
-  void SetUp(::benchmark::State& state) override {}
+  void SetUp(benchmark::State& st) override {
+    // Disable and clear all SQL caches.
+    SQLQueryOperator::get_parse_tree_cache().clear_and_resize(0);
+    SQLQueryOperator::get_query_plan_cache().clear_and_resize(0);
+    SQLQueryOperator::get_prepared_statement_cache().clear();
+  }
 
-  void TearDown(::benchmark::State& state) override {}
+  void TearDown(benchmark::State& st) override {}
 
-  const std::string Q1 = "SELECT * FROM test;";
+  // Run a benchmark that compiles the given SQL query.
+  void BM_CompileQuery(benchmark::State& st, const std::string& query) {
+    while (st.KeepRunning()) {
+      SQLParserResult result;
+      SQLParser::parseSQLString(query, &result);
+      SQLQueryTranslator translator;
+      translator.translate_parse_result(result);
+    }
+  }
+
+  // Run a benchmark that only parses the given SQL query.
+  void BM_ParseQuery(benchmark::State& st, const std::string& query) {
+    while (st.KeepRunning()) {
+      SQLParserResult result;
+      SQLParser::parseSQLString(query, &result);
+    }
+  }
+
+  // Run a benchmark that only plans the given SQL query.
+  void BM_PlanQuery(benchmark::State& st, const std::string& query) {
+    SQLParserResult result;
+    SQLParser::parseSQLString(query, &result);
+    while (st.KeepRunning()) {
+      SQLQueryTranslator translator;
+      translator.translate_parse_result(result);
+    }
+  }
+
+  // Run a benchmark that executes the query operator with the given query.
+  void BM_SQLOperatorQuery(benchmark::State& st, const std::string& query) {
+    while (st.KeepRunning()) {
+      SQLQueryOperator op(query, false);
+      op.execute();
+    }
+  }
+
+  // Run a benchmark that creates a prepared statement with the given query
+  // and measures the execution time of the prepared statement.
+  void BM_PrepareAndExecute(benchmark::State& st, const std::string& query, const std::string& exec_query) {
+    const std::string prepare = "PREPARE cached_query FROM '" + query + "'";
+    SQLQueryOperator op(prepare, false);
+    op.execute();
+
+    while (st.KeepRunning()) {
+      SQLQueryOperator op(exec_query, false);
+      op.execute();
+    }
+  }
+
+  // Run a benchmark that executes the query operator with the given query with enabled parse tree caching.
+  void BM_ParseTreeCache(benchmark::State& st, const std::string& query) {
+    // Enable parse tree cache.
+    SQLQueryOperator::get_parse_tree_cache().clear_and_resize(16);
+
+    while (st.KeepRunning()) {
+      SQLQueryOperator op(query, false);
+      op.execute();
+    }
+  }
+
+  // Run a benchmark that executes the query operator with the given query with enabled query plan caching.
+  void BM_QueryPlanCache(benchmark::State& st, const std::string& query) {
+    // Enable query plan cache.
+    SQLQueryOperator::get_query_plan_cache().clear_and_resize(16);
+
+    while (st.KeepRunning()) {
+      SQLQueryOperator op(query, false);
+      op.execute();
+    }
+  }
+
+  // List of the queries used in benchmarks.
+
+  const std::string QExec = "EXECUTE cached_query;";
+
+  const std::string QExecParam = "EXECUTE cached_query(50);";
+
+  const std::string Q1 = "SELECT * FROM customer;";
+
   const std::string Q2 =
-      "SELECT a, b AS address "
-      "FROM (SELECT * FROM test WHERE c < 100 AND b > 3) t1 "
-      "WHERE a < 10 AND b < 100;";
+      "SELECT c_name, c_custkey"
+      "  FROM (SELECT * FROM customer WHERE c_custkey < 100 AND c_nationkey=0) t1"
+      "  WHERE c_custkey > 10 AND c_nationkey < 10;";
+
   const std::string Q3 =
-      "SELECT \"left\".a, \"left\".b, \"right\".a, \"right\".b "
-      "FROM table_a AS \"left\" JOIN table_b AS \"right\" ON \"left\".a = \"right\".a;";
+      "SELECT c_custkey, c_name"
+      "  FROM customer"
+      "  JOIN orders ON c_custkey = o_custkey"
+      "  GROUP BY c_custkey, c_name"
+      "  HAVING COUNT(o_orderkey) >= 100;";
+
+  const std::string Q4 =
+      "SELECT customer.c_custkey, customer.c_name, COUNT(orderitems.\"orders.o_orderkey\")"
+      "  FROM customer"
+      "  JOIN (SELECT * FROM"
+      "    orders"
+      "    JOIN lineitem ON o_orderkey = l_orderkey"
+      "  ) AS orderitems ON c_custkey = orders.o_custkey"
+      "  GROUP BY customer.c_custkey, customer.c_name"
+      "  HAVING COUNT(orderitems.\"orders.o_orderkey\") >= 100;";
+
+  const std::string Q4Param =
+      "SELECT customer.c_custkey, customer.c_name, COUNT(orderitems.\"orders.o_orderkey\")"
+      "  FROM customer"
+      "  JOIN (SELECT * FROM"
+      "    orders"
+      "    JOIN lineitem ON o_orderkey = l_orderkey"
+      "  ) AS orderitems ON c_custkey = orders.o_custkey"
+      "  GROUP BY customer.c_custkey, customer.c_name"
+      "  HAVING COUNT(orderitems.\"orders.o_orderkey\") >= ?;";
 };
 
-// Q1
+// Run all benchmarks for Q1.
+BENCHMARK_F(SQLBenchmark, BM_CompileQ1)(benchmark::State& st) { BM_CompileQuery(st, Q1); }
+BENCHMARK_F(SQLBenchmark, BM_ParseQ1)(benchmark::State& st) { BM_ParseQuery(st, Q1); }
+BENCHMARK_F(SQLBenchmark, BM_PlanQ1)(benchmark::State& st) { BM_PlanQuery(st, Q1); }
+BENCHMARK_F(SQLBenchmark, BM_SQLOperatorQ1)(benchmark::State& st) { BM_SQLOperatorQuery(st, Q1); }
+BENCHMARK_F(SQLBenchmark, BM_PrepareExecuteQ1)(benchmark::State& st) { BM_PrepareAndExecute(st, Q1, QExec); }
+BENCHMARK_F(SQLBenchmark, BM_ParseTreeCacheQ1)(benchmark::State& st) { BM_ParseTreeCache(st, Q1); }
+BENCHMARK_F(SQLBenchmark, BM_QueryPlanCacheQ1)(benchmark::State& st) { BM_QueryPlanCache(st, Q1); }
 
-BENCHMARK_F(SQLBenchmark, BM_SQLTranslationTotalQ1)(benchmark::State& state) {
-  while (state.KeepRunning()) {
-    SQLParserResult result;
-    SQLParser::parseSQLString(Q1, &result);
-    SQLQueryTranslator translator;
-    translator.translate_parse_result(result);
-  }
+// Run all benchmarks for Q2.
+BENCHMARK_F(SQLBenchmark, BM_CompileQ2)(benchmark::State& st) { BM_CompileQuery(st, Q2); }
+BENCHMARK_F(SQLBenchmark, BM_ParseQ2)(benchmark::State& st) { BM_ParseQuery(st, Q2); }
+BENCHMARK_F(SQLBenchmark, BM_PlanQ2)(benchmark::State& st) { BM_PlanQuery(st, Q2); }
+BENCHMARK_F(SQLBenchmark, BM_SQLOperatorQ2)(benchmark::State& st) { BM_SQLOperatorQuery(st, Q2); }
+BENCHMARK_F(SQLBenchmark, BM_PrepareExecuteQ2)(benchmark::State& st) { BM_PrepareAndExecute(st, Q2, QExec); }
+BENCHMARK_F(SQLBenchmark, BM_ParseTreeCacheQ2)(benchmark::State& st) { BM_ParseTreeCache(st, Q2); }
+BENCHMARK_F(SQLBenchmark, BM_QueryPlanCacheQ2)(benchmark::State& st) { BM_QueryPlanCache(st, Q2); }
+
+// Run all benchmarks for Q3.
+BENCHMARK_F(SQLBenchmark, BM_CompileQ3)(benchmark::State& st) { BM_CompileQuery(st, Q3); }
+BENCHMARK_F(SQLBenchmark, BM_ParseQ3)(benchmark::State& st) { BM_ParseQuery(st, Q3); }
+BENCHMARK_F(SQLBenchmark, BM_PlanQ3)(benchmark::State& st) { BM_PlanQuery(st, Q3); }
+BENCHMARK_F(SQLBenchmark, BM_SQLOperatorQ3)(benchmark::State& st) { BM_SQLOperatorQuery(st, Q3); }
+BENCHMARK_F(SQLBenchmark, BM_PrepareExecuteQ3)(benchmark::State& st) { BM_PrepareAndExecute(st, Q3, QExec); }
+BENCHMARK_F(SQLBenchmark, BM_ParseTreeCacheQ3)(benchmark::State& st) { BM_ParseTreeCache(st, Q3); }
+BENCHMARK_F(SQLBenchmark, BM_QueryPlanCacheQ3)(benchmark::State& st) { BM_QueryPlanCache(st, Q3); }
+
+// Run all benchmarks for Q4.
+BENCHMARK_F(SQLBenchmark, BM_CompileQ4)(benchmark::State& st) { BM_CompileQuery(st, Q4); }
+BENCHMARK_F(SQLBenchmark, BM_ParseQ4)(benchmark::State& st) { BM_ParseQuery(st, Q4); }
+BENCHMARK_F(SQLBenchmark, BM_PlanQ4)(benchmark::State& st) { BM_PlanQuery(st, Q4); }
+BENCHMARK_F(SQLBenchmark, BM_SQLOperatorQ4)(benchmark::State& st) { BM_SQLOperatorQuery(st, Q4); }
+BENCHMARK_F(SQLBenchmark, BM_PrepareExecuteQ4)(benchmark::State& st) { BM_PrepareAndExecute(st, Q4, QExec); }
+BENCHMARK_F(SQLBenchmark, BM_ParseTreeCacheQ4)(benchmark::State& st) { BM_ParseTreeCache(st, Q4); }
+BENCHMARK_F(SQLBenchmark, BM_QueryPlanCacheQ4)(benchmark::State& st) { BM_QueryPlanCache(st, Q4); }
+
+// Benchmark the parsing time of the EXECUTE statement.
+BENCHMARK_F(SQLBenchmark, BM_ParseQExec)(benchmark::State& st) { BM_ParseQuery(st, QExec); }
+
+// Parameterized Prepared Statements.
+BENCHMARK_F(SQLBenchmark, BM_ParseQExecParam)(benchmark::State& st) { BM_ParseQuery(st, QExecParam); }
+BENCHMARK_F(SQLBenchmark, BM_PrepareExecuteQ4Param)(benchmark::State& st) {
+  BM_PrepareAndExecute(st, Q4Param, QExecParam);
 }
-
-BENCHMARK_F(SQLBenchmark, BM_SQLTranslationOnlyParsingQ1)(benchmark::State& state) {
-  while (state.KeepRunning()) {
-    SQLParserResult result;
-    SQLParser::parseSQLString(Q1, &result);
-  }
-}
-
-BENCHMARK_F(SQLBenchmark, BM_SQLTranslationOnlyTranslationQ1)(benchmark::State& state) {
-  SQLParserResult result;
-  SQLParser::parseSQLString(Q1, &result);
-
-  while (state.KeepRunning()) {
-    SQLQueryTranslator translator;
-    translator.translate_parse_result(result);
-  }
-}
-
-// Q2
-
-BENCHMARK_F(SQLBenchmark, BM_SQLTranslationTotalQ2)(benchmark::State& state) {
-  while (state.KeepRunning()) {
-    SQLParserResult result;
-    SQLParser::parseSQLString(Q2, &result);
-    SQLQueryTranslator translator;
-    translator.translate_parse_result(result);
-  }
-}
-
-BENCHMARK_F(SQLBenchmark, BM_SQLTranslationOnlyParsingQ2)(benchmark::State& state) {
-  while (state.KeepRunning()) {
-    SQLParserResult result;
-    SQLParser::parseSQLString(Q2, &result);
-  }
-}
-
-BENCHMARK_F(SQLBenchmark, BM_SQLTranslationOnlyTranslationQ2)(benchmark::State& state) {
-  SQLParserResult result;
-  SQLParser::parseSQLString(Q2, &result);
-
-  while (state.KeepRunning()) {
-    SQLQueryTranslator translator;
-    translator.translate_parse_result(result);
-  }
-}
-
-// Q3
-BENCHMARK_F(SQLBenchmark, BM_SQLTranslationOnlyParsingQ3)(benchmark::State& state) {
-  while (state.KeepRunning()) {
-    SQLParserResult result;
-    SQLParser::parseSQLString(Q3, &result);
-  }
-}
-
-BENCHMARK_F(SQLBenchmark, BM_SQLTranslationOnlyTranslationQ3)(benchmark::State& state) {
-  SQLParserResult result;
-  SQLParser::parseSQLString(Q3, &result);
-
-  while (state.KeepRunning()) {
-    SQLQueryTranslator translator;
-    translator.translate_parse_result(result);
-  }
-}
-
-BENCHMARK_DEFINE_F(SQLBenchmark, BM_Q2QueryOperatorWithoutCache)(benchmark::State& state) {
-  // Disable cache.
-  SQLQueryOperator::get_parse_tree_cache().clear_and_resize(0);
-  SQLQueryOperator::get_query_plan_cache().clear_and_resize(0);
-  while (state.KeepRunning()) {
-    SQLQueryOperator operator_q2(Q2, false);
-    operator_q2.execute();
-  }
-}
-
-BENCHMARK_DEFINE_F(SQLBenchmark, BM_Q2QueryOperatorWithParseTreeCache)(benchmark::State& state) {
-  // Enable cache.
-  SQLQueryOperator::get_parse_tree_cache().clear_and_resize(16);
-  SQLQueryOperator::get_query_plan_cache().clear_and_resize(0);
-  while (state.KeepRunning()) {
-    SQLQueryOperator operator_q2(Q2, false);
-    operator_q2.execute();
-  }
-}
-
-BENCHMARK_DEFINE_F(SQLBenchmark, BM_Q2QueryOperatorWithQueryPlanCache)(benchmark::State& state) {
-  // Enable cache.
-  SQLQueryOperator::get_parse_tree_cache().clear_and_resize(0);
-  SQLQueryOperator::get_query_plan_cache().clear_and_resize(16);
-  while (state.KeepRunning()) {
-    SQLQueryOperator operator_q2(Q2, false);
-    operator_q2.execute();
-  }
-}
-
-BENCHMARK_REGISTER_F(SQLBenchmark, BM_Q2QueryOperatorWithoutCache)->Apply(BenchmarkBasicFixture::ChunkSizeIn);
-BENCHMARK_REGISTER_F(SQLBenchmark, BM_Q2QueryOperatorWithParseTreeCache)->Apply(BenchmarkBasicFixture::ChunkSizeIn);
-BENCHMARK_REGISTER_F(SQLBenchmark, BM_Q2QueryOperatorWithQueryPlanCache)->Apply(BenchmarkBasicFixture::ChunkSizeIn);
 
 }  // namespace opossum

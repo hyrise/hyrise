@@ -1,15 +1,15 @@
 #pragma once
 
-#include <algorithm>
-#include <exception>
 #include <memory>
 #include <vector>
 
-#include "storage/base_column.hpp"
+#include "all_type_variant.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 
 namespace opossum {
+
+class BaseColumn;
 
 /**
  * BaseIndex is the abstract super class for all index types, e.g. GroupKeyIndex , CompositeGroupKeyIndex,
@@ -29,7 +29,7 @@ namespace opossum {
  * We might use the impl-pattern similar to the TableScan, but this will be in a future commit.
  **/
 
-class BaseIndex {
+class BaseIndex : private Noncopyable {
  public:
   // For now we use an iterator over a vector of chunkoffsets as the GroupKeyIndex works like this
   using Iterator = std::vector<ChunkOffset>::const_iterator;
@@ -41,8 +41,6 @@ class BaseIndex {
    */
 
   BaseIndex() = default;
-  BaseIndex(const BaseIndex &) = delete;
-  BaseIndex &operator=(const BaseIndex &) = delete;
   BaseIndex(BaseIndex &&) = default;
   BaseIndex &operator=(BaseIndex &&) = default;
   virtual ~BaseIndex() = default;

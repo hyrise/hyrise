@@ -170,4 +170,16 @@ enum class ExpressionType {
 
 enum class JoinMode { Inner, Left, Right, Outer, Cross, Natural, Self };
 
+enum class AggregateFunction { Min, Max, Sum, Avg, Count };
+
+class Noncopyable {
+ protected:
+  Noncopyable() = default;
+  Noncopyable(Noncopyable &&) = default;
+  Noncopyable &operator=(Noncopyable &&) = default;
+  ~Noncopyable() = default;
+  Noncopyable(const Noncopyable &) = delete;
+  const Noncopyable &operator=(const Noncopyable &) = delete;
+};
+
 }  // namespace opossum
