@@ -224,7 +224,7 @@ TYPED_TEST(JoinFullTest, InnerRefJoinFilteredBig) {
                                              "src/test/tables/joinoperators/int_string_inner_join_filtered.tbl", 1);
 }
 
-TYPED_TEST(JoinFullTest, DISABLED_OuterJoin) {
+TYPED_TEST(JoinFullTest, OuterJoin) {
   this->template test_join_output<TypeParam>(this->_table_wrapper_a, this->_table_wrapper_b,
                                              std::pair<std::string, std::string>("a", "a"), ScanType::OpEquals,
                                              JoinMode::Outer, std::string("left."), std::string("right."),
