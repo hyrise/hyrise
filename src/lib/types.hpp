@@ -7,7 +7,6 @@
 #include <string>
 #include <tuple>
 #include <vector>
-#include <memory>
 
 #include "strong_typedef.hpp"
 

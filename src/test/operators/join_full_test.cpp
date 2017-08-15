@@ -24,7 +24,7 @@ namespace opossum {
 
 /*
 This contains the tests for Join implementations that
-implement all operators, not just "=".
+implement all operators, not just ScanType::OpEquals.
 */
 
 template <typename T>
