@@ -4,7 +4,7 @@
 #include <ostream>
 #include <string>
 
-#include "all_parameter_variant.hpp"
+#include "all_type_variant.hpp"
 #include "base_column_statistics.hpp"
 #include "common.hpp"
 
@@ -44,8 +44,8 @@ class ColumnStatistics : public BaseColumnStatistics {
   ColumnSelectivityResult estimate_selectivity_for_predicate(const ScanType scan_type, const ValuePlaceholder &value,
                                                              const optional<AllTypeVariant> &value2 = nullopt) override;
 
-  TwoColumnSelectivityResult estimate_selectivity_for_predicate(
-      const ScanType scan_type, const std::shared_ptr<BaseColumnStatistics> abstract_value_column_statistics,
+  TwoColumnSelectivityResult estimate_selectivity_for_two_column_predicate(
+      const ScanType scan_type, const std::shared_ptr<BaseColumnStatistics> &abstract_value_column_statistics,
       const optional<AllTypeVariant> &value2 = nullopt) override;
 
  protected:

@@ -4,7 +4,7 @@
 #include <ostream>
 #include <string>
 
-#include "all_parameter_variant.hpp"
+#include "all_type_variant.hpp"
 #include "common.hpp"
 
 namespace opossum {
@@ -45,8 +45,8 @@ class BaseColumnStatistics {
   /**
    * Predicate selectivity for two columns.
    */
-  virtual TwoColumnSelectivityResult estimate_selectivity_for_predicate(
-      const ScanType scan_type, const std::shared_ptr<BaseColumnStatistics> abstract_value_column_statistics,
+  virtual TwoColumnSelectivityResult estimate_selectivity_for_two_column_predicate(
+      const ScanType scan_type, const std::shared_ptr<BaseColumnStatistics> &abstract_value_column_statistics,
       const optional<AllTypeVariant> &value2 = nullopt) = 0;
 
  protected:
@@ -73,8 +73,8 @@ struct ColumnSelectivityResult {
  * Return type of selectivity functions for operations on two columns.
  */
 struct TwoColumnSelectivityResult : public ColumnSelectivityResult {
-  TwoColumnSelectivityResult(float selectivity, std::shared_ptr<BaseColumnStatistics> column_stats,
-                             std::shared_ptr<BaseColumnStatistics> second_column_stats)
+  TwoColumnSelectivityResult(float selectivity, const std::shared_ptr<BaseColumnStatistics> &column_stats,
+                             const std::shared_ptr<BaseColumnStatistics> &second_column_stats)
       : ColumnSelectivityResult{selectivity, column_stats}, second_column_statistics(second_column_stats) {}
 
   std::shared_ptr<BaseColumnStatistics> second_column_statistics;
