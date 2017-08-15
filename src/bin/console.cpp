@@ -162,7 +162,7 @@ int Console::_eval_sql(const std::string & sql) {
   SQLQueryPlan plan;
 
   hsql::SQLParserResult parse_result;
-  hsql::SQLParser::parseSQLString(sql, &parse_result);
+  hsql::SQLParser::parse(sql, &parse_result);
 
   if (!parse_result.isValid())
   {
