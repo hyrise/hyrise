@@ -6,8 +6,7 @@
 
 #include "all_type_variant.hpp"
 #include "base_column_statistics.hpp"
-#include "type_cast.hpp"
-#include "types.hpp"
+#include "common.hpp"
 
 namespace opossum {
 
