@@ -327,7 +327,7 @@ TwoColumnSelectivityResult ColumnStatistics<ColumnType>::estimate_selectivity_fo
       }
       // percentage of values on right hand side which are greater than overlapping range
       selectivity += above_right;
-      // remove percentage of rows, where one value is below and one value above the common value range
+      // remove percentage of rows, where one value is below and one value is above the overlapping range
       selectivity -= below_left * above_right;
 
       auto column_statistics_left =
@@ -349,7 +349,7 @@ TwoColumnSelectivityResult ColumnStatistics<ColumnType>::estimate_selectivity_fo
       }
       // percentage of values on left hand side which are greater than overlapping range
       selectivity += above_left;
-      // remove percentage of rows, where one value is below and one value above the common value range
+      // remove percentage of rows, where one value is below and one value is above the overlapping range
       selectivity -= below_right * above_left;
 
       auto column_statistics_left =
@@ -358,7 +358,7 @@ TwoColumnSelectivityResult ColumnStatistics<ColumnType>::estimate_selectivity_fo
           right_stats->_column_id, overlapping_distinct_count_value, right_stats->min(), max());
       return {selectivity, column_statistics_left, column_statistics_right};
     }
-    // case ScanType::OpBetween not supported for ColumnName as TableScan does not support this
+    // case ScanType::OpBetween is not supported for ColumnName as TableScan does not support this
     default: { return {1.f, nullptr, nullptr}; }
   }
 }
