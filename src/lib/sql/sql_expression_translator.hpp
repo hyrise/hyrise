@@ -15,7 +15,8 @@ namespace opossum {
 
 class SQLExpressionTranslator {
  public:
-  static std::shared_ptr<ExpressionNode> translate_expression(const hsql::Expr& expr, const std::shared_ptr<AbstractASTNode> &input_node);
+  static std::shared_ptr<ExpressionNode> translate_expression(const hsql::Expr& expr,
+                                                              const std::shared_ptr<AbstractASTNode>& input_node);
 };
 
 }  // namespace opossum

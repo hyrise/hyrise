@@ -119,7 +119,8 @@ const std::vector<ColumnID> AbstractASTNode::output_column_ids() const {
   return _output_column_ids;
 }
 
-const optional<ColumnID> AbstractASTNode::find_column_id_for_column_identifier(ColumnIdentifier &column_identifier) const {
+const optional<ColumnID> AbstractASTNode::find_column_id_for_column_identifier(
+    ColumnIdentifier &column_identifier) const {
   auto found_left = _left_child ? _left_child->find_column_id_for_column_identifier(column_identifier) : nullopt;
 
   if (_right_child) {

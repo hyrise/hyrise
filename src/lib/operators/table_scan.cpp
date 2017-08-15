@@ -34,7 +34,6 @@ uint8_t TableScan::num_in_tables() const { return 1; }
 uint8_t TableScan::num_out_tables() const { return 1; }
 
 std::shared_ptr<const Table> TableScan::on_execute() {
-
   auto input_left = input_table_left();
 
   auto column_types = input_left->column_types();

@@ -107,7 +107,7 @@ std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::_translate_aggregate_
   // We only need a Projection before the aggregate if the function arg is an arithmetic expr.
   auto need_projection = false;
 
-//  for (const auto &aggregate : aggregates) {
+  //  for (const auto &aggregate : aggregates) {
   for (size_t i = 0; i < aggregates.size(); i++) {
     const auto &aggregate = aggregates[i];
     const auto &expr = aggregate.expr;

@@ -21,7 +21,6 @@ AggregateColumnDefinition::AggregateColumnDefinition(const std::shared_ptr<Expre
 AggregateNode::AggregateNode(const std::vector<AggregateColumnDefinition>& aggregates,
                              const std::vector<ColumnID>& groupby_columns)
     : AbstractASTNode(ASTNodeType::Aggregate), _aggregates(aggregates), _groupby_columns(groupby_columns) {
-
   for (const auto& aggregate : aggregates) {
     std::string alias;
     if (aggregate.alias) {
@@ -38,12 +37,11 @@ AggregateNode::AggregateNode(const std::vector<AggregateColumnDefinition>& aggre
     _output_column_ids.emplace_back();
   }
 
-  for (const auto &groupby : groupby_columns) {
+  for (const auto& groupby : groupby_columns) {
     _output_column_ids.emplace_back(groupby);
 
     _output_column_names.emplace_back();
   }
-
 }
 
 const std::vector<AggregateColumnDefinition>& AggregateNode::aggregates() const { return _aggregates; }
@@ -78,10 +76,11 @@ std::string AggregateNode::description() const {
 
 const std::vector<ColumnID> AggregateNode::output_column_ids() const { return _output_column_ids; }
 
-const optional<ColumnID> AggregateNode::find_column_id_for_column_identifier(ColumnIdentifier & column_identifier) const {
+const optional<ColumnID> AggregateNode::find_column_id_for_column_identifier(
+    ColumnIdentifier& column_identifier) const {
   optional<ColumnID> found_aggregate = nullopt;
   for (size_t i = 0; i < _aggregates.size(); i++) {
-    const auto &aggregate_definition = _aggregates[i];
+    const auto& aggregate_definition = _aggregates[i];
     if (column_identifier.column_name == aggregate_definition.alias) {
       if (!found_aggregate) {
         found_aggregate = ColumnID{i};

@@ -22,18 +22,18 @@ struct ColumnID;
  */
 class JoinNode : public AbstractASTNode {
  public:
-  JoinNode(optional<std::pair<ColumnID, ColumnID>> column_id, const ScanType scan_type,
-           const JoinMode join_mode);
+  JoinNode(optional<std::pair<ColumnID, ColumnID>> column_id, const ScanType scan_type, const JoinMode join_mode);
 
   std::string description() const override;
 
   const std::vector<ColumnID> output_column_ids() const override;
+  const optional<ColumnID> find_column_id_for_column_identifier(ColumnIdentifier &column_identifier) const override;
 
   optional<std::pair<ColumnID, ColumnID>> join_column_ids() const;
   ScanType scan_type() const;
   JoinMode join_mode() const;
 
-private:
+ private:
   optional<std::pair<ColumnID, ColumnID>> _join_column_ids;
   ScanType _scan_type;
   JoinMode _join_mode;

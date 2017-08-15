@@ -10,8 +10,8 @@
 
 namespace opossum {
 
-StoredTableNode::StoredTableNode(const std::string& table_name)
-    : AbstractASTNode(ASTNodeType::StoredTable), _table_name(table_name) {}
+StoredTableNode::StoredTableNode(const std::string& table_name, optional<std::string> alias)
+    : AbstractASTNode(ASTNodeType::StoredTable), _table_name(table_name), _alias(alias) {}
 
 std::string StoredTableNode::description() const { return "Table: " + _table_name; }
 
@@ -43,14 +43,12 @@ const std::shared_ptr<TableStatistics> StoredTableNode::_gather_statistics() con
 
 const std::string& StoredTableNode::table_name() const { return _table_name; }
 
-const optional<ColumnID> StoredTableNode::find_column_id_for_column_identifier(ColumnIdentifier & column_identifier) const {
+const optional<ColumnID> StoredTableNode::find_column_id_for_column_identifier(
+    ColumnIdentifier& column_identifier) const {
   auto table = StorageManager::get().get_table(_table_name);
   return table->column_id_by_name(column_identifier.column_name);
 }
 
-const std::string StoredTableNode::table_identifier() const {
-  return _table_name;
-}
-
+const std::string StoredTableNode::table_identifier() const { return _alias ? *_alias : _table_name; }
 
 }  // namespace opossum

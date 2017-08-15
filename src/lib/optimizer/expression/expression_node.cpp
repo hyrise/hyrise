@@ -19,7 +19,12 @@ namespace opossum {
 ExpressionNode::ExpressionNode(const ExpressionType type, const AllTypeVariant &value,
                                const std::vector<std::shared_ptr<ExpressionNode>> &expression_list,
                                const std::string &name, const ColumnID &column_id, const optional<std::string> &alias)
-    : _type(type), _value(value), _expression_list(expression_list), _name(name), _column_id(column_id), _alias(alias) {}
+    : _type(type),
+      _value(value),
+      _expression_list(expression_list),
+      _name(name),
+      _column_id(column_id),
+      _alias(alias) {}
 
 std::shared_ptr<ExpressionNode> ExpressionNode::create_expression(const ExpressionType type) {
   const std::vector<std::shared_ptr<ExpressionNode>> expr_list;
@@ -29,8 +34,7 @@ std::shared_ptr<ExpressionNode> ExpressionNode::create_expression(const Expressi
 std::shared_ptr<ExpressionNode> ExpressionNode::create_column_reference(const ColumnID column_id,
                                                                         const optional<std::string> &alias) {
   const std::vector<std::shared_ptr<ExpressionNode>> expr_list;
-  return std::make_shared<ExpressionNode>(ExpressionType::ColumnReference, NULL_VALUE, expr_list, "",
-                                          column_id, alias);
+  return std::make_shared<ExpressionNode>(ExpressionType::ColumnReference, NULL_VALUE, expr_list, "", column_id, alias);
 }
 
 std::shared_ptr<ExpressionNode> ExpressionNode::create_literal(const AllTypeVariant &value) {
@@ -123,7 +127,7 @@ const std::string ExpressionNode::description() const {
   return desc.str();
 }
 
-const ColumnID& ExpressionNode::column_id() const {
+const ColumnID &ExpressionNode::column_id() const {
   DebugAssert(_type == ExpressionType::ColumnReference,
               "Expression " + expression_type_to_string.at(_type) + " does not have a name");
   return _column_id;

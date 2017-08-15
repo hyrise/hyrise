@@ -4,8 +4,8 @@
 #include <memory>
 #include <string>
 #include <unordered_map>
-#include <vector>
 #include <utils/assert.hpp>
+#include <vector>
 
 #include "constant_mappings.hpp"
 #include "optimizer/expression/expression_node.hpp"
@@ -14,7 +14,8 @@
 
 namespace opossum {
 
-std::shared_ptr<ExpressionNode> SQLExpressionTranslator::translate_expression(const hsql::Expr& expr, const std::shared_ptr<AbstractASTNode> &input_node) {
+std::shared_ptr<ExpressionNode> SQLExpressionTranslator::translate_expression(
+    const hsql::Expr& expr, const std::shared_ptr<AbstractASTNode>& input_node) {
   auto table_name = expr.table ? std::string(expr.table) : "";
   auto name = expr.name ? std::string(expr.name) : "";
   auto float_value = expr.fval ? expr.fval : 0;
@@ -29,9 +30,11 @@ std::shared_ptr<ExpressionNode> SQLExpressionTranslator::translate_expression(co
       break;
     }
     case hsql::kExprColumnRef: {
-      ColumnIdentifier column_identifier {table_name, name};
+      ColumnIdentifier column_identifier{table_name, name};
       auto column_id = input_node->find_column_id_for_column_identifier(column_identifier);
-      if (!column_id) { Fail("Did not find column " + name); }
+      if (!column_id) {
+        Fail("Did not find column " + name);
+      }
       node = ExpressionNode::create_column_reference(*column_id, alias);
       break;
     }

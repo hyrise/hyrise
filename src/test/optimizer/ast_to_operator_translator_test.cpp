@@ -58,8 +58,8 @@ TEST_F(ASTToOperatorTranslatorTest, PredicateNodeUnaryScan) {
 
 TEST_F(ASTToOperatorTranslatorTest, PredicateNodeBinaryScan) {
   const auto stored_table_node = std::make_shared<StoredTableNode>("table_int_float");
-  auto predicate_node =
-      std::make_shared<PredicateNode>(ColumnID{0}, nullptr, ScanType::OpBetween, AllParameterVariant(42), AllTypeVariant(1337));
+  auto predicate_node = std::make_shared<PredicateNode>(ColumnID{0}, nullptr, ScanType::OpBetween,
+                                                        AllParameterVariant(42), AllTypeVariant(1337));
   predicate_node->set_left_child(stored_table_node);
   const auto op = ASTToOperatorTranslator::get().translate_node(predicate_node);
 
@@ -73,7 +73,8 @@ TEST_F(ASTToOperatorTranslatorTest, PredicateNodeBinaryScan) {
 
 TEST_F(ASTToOperatorTranslatorTest, ProjectionNode) {
   const auto stored_table_node = std::make_shared<StoredTableNode>("table_int_float");
-  auto projection_node = std::make_shared<ProjectionNode>(std::vector<ColumnID>{ColumnID{0}}, std::vector<std::string>{"a"});
+  auto projection_node =
+      std::make_shared<ProjectionNode>(std::vector<ColumnID>{ColumnID{0}}, std::vector<std::string>{"a"});
   projection_node->set_left_child(stored_table_node);
   const auto op = ASTToOperatorTranslator::get().translate_node(projection_node);
 
@@ -97,8 +98,8 @@ TEST_F(ASTToOperatorTranslatorTest, SortNode) {
 TEST_F(ASTToOperatorTranslatorTest, JoinNode) {
   const auto stored_table_node_left = std::make_shared<StoredTableNode>("table_int_float");
   const auto stored_table_node_right = std::make_shared<StoredTableNode>("table_int_float2");
-  auto join_node = std::make_shared<JoinNode>(std::make_pair(ColumnID{0}, ColumnID{0}), ScanType::OpEquals,
-                                              JoinMode::Outer);
+  auto join_node =
+      std::make_shared<JoinNode>(std::make_pair(ColumnID{0}, ColumnID{0}), ScanType::OpEquals, JoinMode::Outer);
   join_node->set_left_child(stored_table_node_left);
   join_node->set_right_child(stored_table_node_right);
   const auto op = ASTToOperatorTranslator::get().translate_node(join_node);
@@ -113,8 +114,8 @@ TEST_F(ASTToOperatorTranslatorTest, JoinNode) {
 TEST_F(ASTToOperatorTranslatorTest, AggregateNodeNoArithmetics) {
   const auto stored_table_node = std::make_shared<StoredTableNode>("table_int_float");
 
-  auto sum_expression = ExpressionNode::create_function_reference(
-      "SUM", {ExpressionNode::create_column_reference(ColumnID{0})}, {});
+  auto sum_expression =
+      ExpressionNode::create_function_reference("SUM", {ExpressionNode::create_column_reference(ColumnID{0})}, {});
   auto aggregate_node =
       std::make_shared<AggregateNode>(std::vector<AggregateColumnDefinition>{AggregateColumnDefinition{
                                           sum_expression, optional<std::string>("sum_of_a")}},
@@ -190,7 +191,8 @@ TEST_F(ASTToOperatorTranslatorTest, AggregateNodeWithArithmetics) {
 
 TEST_F(ASTToOperatorTranslatorTest, MultipleNodesHierarchy) {
   const auto stored_table_node_left = std::make_shared<StoredTableNode>("table_int_float");
-  auto predicate_node_left = std::make_shared<PredicateNode>(ColumnID{0}, nullptr, ScanType::OpEquals, AllParameterVariant(42));
+  auto predicate_node_left =
+      std::make_shared<PredicateNode>(ColumnID{0}, nullptr, ScanType::OpEquals, AllParameterVariant(42));
   predicate_node_left->set_left_child(stored_table_node_left);
 
   const auto stored_table_node_right = std::make_shared<StoredTableNode>("table_int_float2");
@@ -198,8 +200,8 @@ TEST_F(ASTToOperatorTranslatorTest, MultipleNodesHierarchy) {
       std::make_shared<PredicateNode>(ColumnID{1}, nullptr, ScanType::OpGreaterThan, AllParameterVariant(30.0));
   predicate_node_right->set_left_child(stored_table_node_right);
 
-  auto join_node = std::make_shared<JoinNode>(std::make_pair(ColumnID{0}, ColumnID{0}), ScanType::OpEquals,
-                                              JoinMode::Inner);
+  auto join_node =
+      std::make_shared<JoinNode>(std::make_pair(ColumnID{0}, ColumnID{0}), ScanType::OpEquals, JoinMode::Inner);
   join_node->set_left_child(predicate_node_left);
   join_node->set_right_child(predicate_node_right);
 

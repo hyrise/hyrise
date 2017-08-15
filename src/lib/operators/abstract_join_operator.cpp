@@ -16,8 +16,6 @@ ScanType AbstractJoinOperator::scan_type() const { return _scan_type; }
 
 JoinMode AbstractJoinOperator::mode() const { return _mode; }
 
-const optional<std::pair<ColumnID, ColumnID>> &AbstractJoinOperator::column_ids() const {
-  return _column_ids;
-}
+const optional<std::pair<ColumnID, ColumnID>> &AbstractJoinOperator::column_ids() const { return _column_ids; }
 
 }  // namespace opossum

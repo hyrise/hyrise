@@ -41,7 +41,8 @@ class SQLExpressionTranslatorTest : public BaseTest {
     const auto *statement = parse_result.getStatements().at(0);
 
     // have some faked AST node that we can use for column lookup. I don't like this approach though
-    auto predicate_node = std::make_shared<ProjectionNode>(std::vector<ColumnID>(ColumnID{0}, ColumnID{1}), std::vector<std::string>({"a", "b"}));
+    auto predicate_node = std::make_shared<ProjectionNode>(std::vector<ColumnID>(ColumnID{0}, ColumnID{1}),
+                                                           std::vector<std::string>({"a", "b"}));
 
     switch (statement->type()) {
       case hsql::kStmtSelect: {
@@ -65,7 +66,8 @@ class SQLExpressionTranslatorTest : public BaseTest {
     std::vector<std::shared_ptr<ExpressionNode>> expressions;
 
     // have some faked AST node that we can use for column lookup. I don't like this approach though
-    auto predicate_node = std::make_shared<ProjectionNode>(std::vector<ColumnID>(ColumnID{0}, ColumnID{1}), std::vector<std::string>({"a", "b"}));
+    auto predicate_node = std::make_shared<ProjectionNode>(std::vector<ColumnID>(ColumnID{0}, ColumnID{1}),
+                                                           std::vector<std::string>({"a", "b"}));
 
     switch (statement->type()) {
       case hsql::kStmtSelect: {

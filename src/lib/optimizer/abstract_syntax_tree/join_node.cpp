@@ -50,6 +50,20 @@ const std::vector<ColumnID> JoinNode::output_column_ids() const {
   return _output_column_ids;
 }
 
+const optional<ColumnID> JoinNode::find_column_id_for_column_identifier(ColumnIdentifier &column_identifier) const {
+  if (left_child()->table_identifier() == column_identifier.table_name) {
+    return left_child()->find_column_id_for_column_identifier(column_identifier);
+  }
+  if (right_child()->table_identifier() == column_identifier.table_name) {
+    auto num_left_columns = left_child()->output_column_ids().size();
+    auto found = right_child()->find_column_id_for_column_identifier(column_identifier);
+    if (found) {
+      return ColumnID{(*found) + num_left_columns};
+    }
+  }
+  return nullopt;
+}
+
 optional<std::pair<ColumnID, ColumnID>> JoinNode::join_column_ids() const { return _join_column_ids; }
 
 ScanType JoinNode::scan_type() const { return _scan_type; }

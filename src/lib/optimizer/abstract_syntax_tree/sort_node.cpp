@@ -1,7 +1,7 @@
 #include "sort_node.hpp"
 
-#include <string>
 #include <boost/lexical_cast.hpp>
+#include <string>
 
 #include "types.hpp"
 

@@ -146,8 +146,12 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_join(const hsql:
 
 std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_table_ref(const hsql::TableRef& table) {
   switch (table.type) {
-    case hsql::kTableName:
-      return std::make_shared<StoredTableNode>(table.name);
+    case hsql::kTableName: {
+      auto alias = table.alias ? optional<std::string>(table.alias) : nullopt;
+
+      return std::make_shared<StoredTableNode>(table.name, alias);
+    }
+
     case hsql::kTableSelect:
       return _translate_select(*table.select);
     case hsql::kTableJoin:
@@ -161,10 +165,11 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_table_ref(const 
   }
 }
 
-ColumnID SQLToASTTranslator::generate_column_id(const hsql::Expr &expr, const std::shared_ptr<AbstractASTNode>& input_node) {
+ColumnID SQLToASTTranslator::generate_column_id(const hsql::Expr& expr,
+                                                const std::shared_ptr<AbstractASTNode>& input_node) {
   auto table_name = expr.table ? expr.table : "";
   auto column_name = expr.name ? expr.name : "";
-  ColumnIdentifier column_identifier {table_name, column_name};
+  ColumnIdentifier column_identifier{table_name, column_name};
 
   // Translate an aggregate function to a string that the Aggregate operator generates.
   if (expr.isType(hsql::kExprFunctionRef) || expr.isType(hsql::kExprColumnRef)) {
@@ -179,7 +184,8 @@ ColumnID SQLToASTTranslator::generate_column_id(const hsql::Expr &expr, const st
   return ColumnID{};
 }
 
-AllParameterVariant SQLToASTTranslator::translate_literal(const hsql::Expr& expr, const optional<std::shared_ptr<AbstractASTNode>>& input_node) {
+AllParameterVariant SQLToASTTranslator::translate_literal(
+    const hsql::Expr& expr, const optional<std::shared_ptr<AbstractASTNode>>& input_node) {
   switch (expr.type) {
     case hsql::kExprLiteralInt:
       return AllTypeVariant(expr.ival);

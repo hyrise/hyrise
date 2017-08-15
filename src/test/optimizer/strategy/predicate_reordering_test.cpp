@@ -62,7 +62,8 @@ TEST_F(PredicateReorderingTest, SimpleReorderingTest) {
   greater_than_expression_0->set_left_child(column_reference_expression_0);
   greater_than_expression_0->set_right_child(literal_expression_0);
 
-  auto predicate_node_0 = std::make_shared<PredicateNode>(ColumnID{0}, greater_than_expression_0, ScanType::OpGreaterThan, 10);
+  auto predicate_node_0 =
+      std::make_shared<PredicateNode>(ColumnID{0}, greater_than_expression_0, ScanType::OpGreaterThan, 10);
   predicate_node_0->set_left_child(stored_table_node);
 
   auto greater_than_expression_1 = ExpressionNode::create_expression(ExpressionType::GreaterThan);
@@ -71,7 +72,8 @@ TEST_F(PredicateReorderingTest, SimpleReorderingTest) {
   greater_than_expression_1->set_left_child(column_reference_expression_1);
   greater_than_expression_1->set_right_child(literal_expression_1);
 
-  auto predicate_node_1 = std::make_shared<PredicateNode>(ColumnID{1}, greater_than_expression_1, ScanType::OpGreaterThan, 50);
+  auto predicate_node_1 =
+      std::make_shared<PredicateNode>(ColumnID{1}, greater_than_expression_1, ScanType::OpGreaterThan, 50);
   predicate_node_1->set_left_child(predicate_node_0);
 
   predicate_node_1->get_statistics();
@@ -97,7 +99,8 @@ TEST_F(PredicateReorderingTest, MoreComplexReorderingTest) {
   greater_than_expression_0->set_left_child(column_reference_expression_0);
   greater_than_expression_0->set_right_child(literal_expression_0);
 
-  auto predicate_node_0 = std::make_shared<PredicateNode>(ColumnID{0}, greater_than_expression_0, ScanType::OpGreaterThan, 10);
+  auto predicate_node_0 =
+      std::make_shared<PredicateNode>(ColumnID{0}, greater_than_expression_0, ScanType::OpGreaterThan, 10);
   predicate_node_0->set_left_child(stored_table_node);
 
   auto greater_than_expression_1 = ExpressionNode::create_expression(ExpressionType::GreaterThan);
@@ -106,7 +109,8 @@ TEST_F(PredicateReorderingTest, MoreComplexReorderingTest) {
   greater_than_expression_1->set_left_child(column_reference_expression_1);
   greater_than_expression_1->set_right_child(literal_expression_1);
 
-  auto predicate_node_1 = std::make_shared<PredicateNode>(ColumnID{1}, greater_than_expression_1, ScanType::OpGreaterThan, 50);
+  auto predicate_node_1 =
+      std::make_shared<PredicateNode>(ColumnID{1}, greater_than_expression_1, ScanType::OpGreaterThan, 50);
   predicate_node_1->set_left_child(predicate_node_0);
 
   auto greater_than_expression_2 = ExpressionNode::create_expression(ExpressionType::GreaterThan);
@@ -115,7 +119,8 @@ TEST_F(PredicateReorderingTest, MoreComplexReorderingTest) {
   greater_than_expression_2->set_left_child(column_reference_expression_2);
   greater_than_expression_2->set_right_child(literal_expression_2);
 
-  auto predicate_node_2 = std::make_shared<PredicateNode>(ColumnID{2}, greater_than_expression_2, ScanType::OpGreaterThan, 90);
+  auto predicate_node_2 =
+      std::make_shared<PredicateNode>(ColumnID{2}, greater_than_expression_2, ScanType::OpGreaterThan, 90);
   predicate_node_2->set_left_child(predicate_node_1);
 
   predicate_node_2->get_statistics();
@@ -142,7 +147,8 @@ TEST_F(PredicateReorderingTest, ComplexReorderingTest) {
   greater_than_expression_0->set_left_child(column_reference_expression_0);
   greater_than_expression_0->set_right_child(literal_expression_0);
 
-  auto predicate_node_0 = std::make_shared<PredicateNode>(ColumnID{0}, greater_than_expression_0, ScanType::OpGreaterThan, 10);
+  auto predicate_node_0 =
+      std::make_shared<PredicateNode>(ColumnID{0}, greater_than_expression_0, ScanType::OpGreaterThan, 10);
   predicate_node_0->set_left_child(stored_table_node);
 
   auto greater_than_expression_1 = ExpressionNode::create_expression(ExpressionType::GreaterThan);
@@ -151,7 +157,8 @@ TEST_F(PredicateReorderingTest, ComplexReorderingTest) {
   greater_than_expression_1->set_left_child(column_reference_expression_1);
   greater_than_expression_1->set_right_child(literal_expression_1);
 
-  auto predicate_node_1 = std::make_shared<PredicateNode>(ColumnID{1}, greater_than_expression_1, ScanType::OpGreaterThan, 50);
+  auto predicate_node_1 =
+      std::make_shared<PredicateNode>(ColumnID{1}, greater_than_expression_1, ScanType::OpGreaterThan, 50);
   predicate_node_1->set_left_child(predicate_node_0);
 
   auto greater_than_expression_2 = ExpressionNode::create_expression(ExpressionType::GreaterThan);
@@ -160,7 +167,8 @@ TEST_F(PredicateReorderingTest, ComplexReorderingTest) {
   greater_than_expression_2->set_left_child(column_reference_expression_2);
   greater_than_expression_2->set_right_child(literal_expression_2);
 
-  auto predicate_node_2 = std::make_shared<PredicateNode>(ColumnID{2}, greater_than_expression_2, ScanType::OpGreaterThan, 90);
+  auto predicate_node_2 =
+      std::make_shared<PredicateNode>(ColumnID{2}, greater_than_expression_2, ScanType::OpGreaterThan, 90);
   predicate_node_2->set_left_child(predicate_node_1);
 
   std::vector<std::string> column_names({"c1", "c2"});
@@ -174,7 +182,8 @@ TEST_F(PredicateReorderingTest, ComplexReorderingTest) {
   greater_than_expression_3->set_left_child(column_reference_expression_3);
   greater_than_expression_3->set_right_child(literal_expression_3);
 
-  auto predicate_node_3 = std::make_shared<PredicateNode>(ColumnID{0}, greater_than_expression_3, ScanType::OpGreaterThan, 10);
+  auto predicate_node_3 =
+      std::make_shared<PredicateNode>(ColumnID{0}, greater_than_expression_3, ScanType::OpGreaterThan, 10);
   predicate_node_3->set_left_child(projection_node);
 
   auto greater_than_expression_4 = ExpressionNode::create_expression(ExpressionType::GreaterThan);
@@ -183,7 +192,8 @@ TEST_F(PredicateReorderingTest, ComplexReorderingTest) {
   greater_than_expression_4->set_left_child(column_reference_expression_4);
   greater_than_expression_4->set_right_child(literal_expression_4);
 
-  auto predicate_node_4 = std::make_shared<PredicateNode>(ColumnID{1}, greater_than_expression_4, ScanType::OpGreaterThan, 50);
+  auto predicate_node_4 =
+      std::make_shared<PredicateNode>(ColumnID{1}, greater_than_expression_4, ScanType::OpGreaterThan, 50);
   predicate_node_4->set_left_child(predicate_node_3);
 
   predicate_node_4->get_statistics();
@@ -214,7 +224,8 @@ TEST_F(PredicateReorderingTest, TwoReorderings) {
   greater_than_expression_0->set_left_child(column_reference_expression_0);
   greater_than_expression_0->set_right_child(literal_expression_0);
 
-  auto predicate_node_0 = std::make_shared<PredicateNode>(ColumnID{0}, greater_than_expression_0, ScanType::OpGreaterThan, 10);
+  auto predicate_node_0 =
+      std::make_shared<PredicateNode>(ColumnID{0}, greater_than_expression_0, ScanType::OpGreaterThan, 10);
   predicate_node_0->set_left_child(stored_table_node);
 
   auto greater_than_expression_1 = ExpressionNode::create_expression(ExpressionType::GreaterThan);
@@ -223,7 +234,8 @@ TEST_F(PredicateReorderingTest, TwoReorderings) {
   greater_than_expression_1->set_left_child(column_reference_expression_1);
   greater_than_expression_1->set_right_child(literal_expression_1);
 
-  auto predicate_node_1 = std::make_shared<PredicateNode>(ColumnID{1}, greater_than_expression_1, ScanType::OpGreaterThan, 50);
+  auto predicate_node_1 =
+      std::make_shared<PredicateNode>(ColumnID{1}, greater_than_expression_1, ScanType::OpGreaterThan, 50);
   predicate_node_1->set_left_child(predicate_node_0);
 
   auto sort_node = std::make_shared<SortNode>(ColumnID{0}, true);
@@ -235,7 +247,8 @@ TEST_F(PredicateReorderingTest, TwoReorderings) {
   greater_than_expression_2->set_left_child(column_reference_expression_2);
   greater_than_expression_2->set_right_child(literal_expression_2);
 
-  auto predicate_node_2 = std::make_shared<PredicateNode>(ColumnID{2}, greater_than_expression_2, ScanType::OpGreaterThan, 90);
+  auto predicate_node_2 =
+      std::make_shared<PredicateNode>(ColumnID{2}, greater_than_expression_2, ScanType::OpGreaterThan, 90);
   predicate_node_2->set_left_child(sort_node);
 
   auto greater_than_expression_3 = ExpressionNode::create_expression(ExpressionType::GreaterThan);
@@ -244,7 +257,8 @@ TEST_F(PredicateReorderingTest, TwoReorderings) {
   greater_than_expression_3->set_left_child(column_reference_expression_3);
   greater_than_expression_3->set_right_child(literal_expression_3);
 
-  auto predicate_node_3 = std::make_shared<PredicateNode>(ColumnID{1}, greater_than_expression_3, ScanType::OpGreaterThan, 50);
+  auto predicate_node_3 =
+      std::make_shared<PredicateNode>(ColumnID{1}, greater_than_expression_3, ScanType::OpGreaterThan, 50);
   predicate_node_3->set_left_child(predicate_node_2);
 
   std::vector<std::string> column_names({"c1", "c2"});
@@ -291,7 +305,8 @@ TEST_F(PredicateReorderingTest, SameOrderingForStoredTable) {
   auto predicate_node_0 = std::make_shared<PredicateNode>(ColumnID{0}, less_than_expression, ScanType::OpLessThan, 20);
   predicate_node_0->set_left_child(stored_table_node);
 
-  auto predicate_node_1 = std::make_shared<PredicateNode>(ColumnID{1}, greater_than_expression, ScanType::OpGreaterThan, 458.5);
+  auto predicate_node_1 =
+      std::make_shared<PredicateNode>(ColumnID{1}, greater_than_expression, ScanType::OpGreaterThan, 458.5);
   predicate_node_1->set_left_child(predicate_node_0);
 
   predicate_node_1->get_statistics();
@@ -299,7 +314,8 @@ TEST_F(PredicateReorderingTest, SameOrderingForStoredTable) {
   auto reordered = rule.apply_to(predicate_node_1);
 
   // Setup second AST
-  auto predicate_node_2 = std::make_shared<PredicateNode>(ColumnID{1}, greater_than_expression, ScanType::OpGreaterThan, 458.5);
+  auto predicate_node_2 =
+      std::make_shared<PredicateNode>(ColumnID{1}, greater_than_expression, ScanType::OpGreaterThan, 458.5);
   predicate_node_2->set_left_child(stored_table_node);
 
   auto predicate_node_3 = std::make_shared<PredicateNode>(ColumnID{0}, less_than_expression, ScanType::OpLessThan, 20);

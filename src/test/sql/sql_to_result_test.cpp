@@ -9,6 +9,7 @@
 #include "gtest/gtest.h"
 
 #include "operators/get_table.hpp"
+#include "operators/print.hpp"
 #include "operators/table_scan.hpp"
 #include "optimizer/abstract_syntax_tree/ast_to_operator_translator.hpp"
 #include "scheduler/node_queue_scheduler.hpp"
@@ -93,6 +94,7 @@ TEST_P(SQLToResultTest, SQLQueryTest) {
   CurrentScheduler::schedule_and_wait_for_tasks(tasks);
 
   auto result_table = tasks.back()->get_operator()->get_output();
+
   EXPECT_TABLE_EQ(result_table, expected_result, params.order_sensitive == OrderSensitivity::Sensitive);
 }
 
@@ -124,12 +126,11 @@ const SQLTestParam test_queries[] = {
     {"SELECT SUM(b + b) AS sum_b_b FROM table_a;", "src/test/tables/int_float_sum_b_plus_b.tbl"},
 
     // JOIN
-    {"SELECT \"left\".a, \"left\".b, \"right\".a, \"right\".b FROM table_a AS \"left\" JOIN table_b AS "
-     "\"right\" ON a = a;",
+    {"SELECT \"left\".a, \"left\".b, \"right\".a, \"right\".b FROM table_a AS \"left\" JOIN table_b AS \"right\" ON a = a;",
      "src/test/tables/joinoperators/int_inner_join.tbl"},
-    {"SELECT * FROM table_a AS \"left\" LEFT JOIN table_b AS \"right\" ON a = a;",
+    {R"(SELECT * FROM table_a AS "left" LEFT JOIN table_b AS "right" ON a = a;)",
      "src/test/tables/joinoperators/int_left_join.tbl"},
-    {"SELECT * FROM table_a AS \"left\" INNER JOIN table_b AS \"right\" ON \"left\".a = \"right\".a;",
+    {R"(SELECT * FROM table_a AS "left" INNER JOIN table_b AS "right" ON "left".a = "right".a;)",
      "src/test/tables/joinoperators/int_inner_join.tbl"},
 
     // GROUP BY

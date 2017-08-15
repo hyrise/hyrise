@@ -18,7 +18,7 @@ class TableStatistics;
  */
 class StoredTableNode : public AbstractASTNode {
  public:
-  explicit StoredTableNode(const std::string& table_name);
+  explicit StoredTableNode(const std::string& table_name, optional<std::string> alias = nullopt);
 
   std::string description() const override;
 
@@ -27,12 +27,13 @@ class StoredTableNode : public AbstractASTNode {
 
   const std::string& table_name() const;
 
-  const optional<ColumnID> find_column_id_for_column_identifier(ColumnIdentifier & column_identifier) const override;
+  const optional<ColumnID> find_column_id_for_column_identifier(ColumnIdentifier& column_identifier) const override;
   const std::string table_identifier() const override;
 
  private:
   const std::shared_ptr<TableStatistics> _gather_statistics() const override;
   const std::string _table_name;
+  const optional<std::string> _alias;
 };
 
 }  // namespace opossum
