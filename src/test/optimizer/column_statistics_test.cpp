@@ -44,9 +44,8 @@ class ColumnStatisticsTest : public BaseTest {
   }
 
   // For two column scans (type of value1 is ColumnName)
-  template <typename T>
   void predict_selectivities_and_compare(const std::shared_ptr<Table> &table,
-                                         const std::vector<std::shared_ptr<ColumnStatistics<T>>> &column_statistics,
+                                         const std::vector<std::shared_ptr<BaseColumnStatistics>> &column_statistics,
                                          const ScanType scan_type) {
     auto table_wrapper = std::make_shared<TableWrapper>(table);
     table_wrapper->execute();
@@ -96,7 +95,7 @@ class ColumnStatisticsTest : public BaseTest {
   std::shared_ptr<ColumnStatistics<double>> _column_statistics_double;
   std::shared_ptr<ColumnStatistics<std::string>> _column_statistics_string;
   std::shared_ptr<Table> _table_uniform_distribution;
-  std::vector<std::shared_ptr<ColumnStatistics<int32_t>>> _column_statistics_uniform_columns;
+  std::vector<std::shared_ptr<BaseColumnStatistics>> _column_statistics_uniform_columns;
 
   //  {below min, min, middle, max, above max}
   std::vector<int32_t> _int_values{0, 1, 3, 6, 7};
