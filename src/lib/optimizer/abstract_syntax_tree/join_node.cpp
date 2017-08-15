@@ -10,8 +10,8 @@
 
 namespace opossum {
 
-JoinNode::JoinNode(optional<std::pair<std::string, std::string>> join_column_names, const ScanType scan_type,
-                   const JoinMode join_mode, const std::string &prefix_left, const std::string &prefix_right)
+JoinNode::JoinNode(const JoinMode join_mode, const std::string &prefix_left, const std::string &prefix_right,
+                   optional<std::pair<std::string, std::string>> join_column_names, optional<ScanType> scan_type)
     : AbstractASTNode(ASTNodeType::Join),
       _join_column_names(join_column_names),
       _scan_type(scan_type),
@@ -25,9 +25,9 @@ std::string JoinNode::description() const {
   desc << "Join";
   desc << " [" << join_mode_to_string.at(_join_mode) << "]";
 
-  if (_join_column_names) {
+  if (_join_column_names && _scan_type) {
     desc << " [" << (*_join_column_names).first;
-    desc << " " << scan_type_to_string.left.at(_scan_type);
+    desc << " " << scan_type_to_string.left.at(*_scan_type);
     desc << " " << (*_join_column_names).second << "]";
   }
 
@@ -55,7 +55,7 @@ std::vector<std::string> JoinNode::output_column_names() const {
 
 optional<std::pair<std::string, std::string>> JoinNode::join_column_names() const { return _join_column_names; }
 
-ScanType JoinNode::scan_type() const { return _scan_type; }
+optional<ScanType> JoinNode::scan_type() const { return _scan_type; }
 
 JoinMode JoinNode::join_mode() const { return _join_mode; }
 

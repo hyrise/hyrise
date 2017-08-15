@@ -140,7 +140,7 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_join(const hsql:
   std::string prefix_left = std::string(join.left->getName()) + ".";
   std::string prefix_right = std::string(join.right->getName()) + ".";
 
-  auto join_node = std::make_shared<JoinNode>(column_names, scan_type, join_mode, prefix_left, prefix_right);
+  auto join_node = std::make_shared<JoinNode>(join_mode, prefix_left, prefix_right, column_names, scan_type);
   join_node->set_left_child(left_node);
   join_node->set_right_child(right_node);
 
@@ -155,8 +155,7 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_cross_product(
   for (size_t i = 1; i < tables.size(); i++) {
     auto next_node = _translate_table_ref(*tables[i]);
 
-    // There shouldn't be a ScanType. Prefixes will be removed in an upcoming PR.
-    auto new_product = std::make_shared<JoinNode>(nullopt, ScanType::OpEquals, JoinMode::Cross, "", "");
+    auto new_product = std::make_shared<JoinNode>(JoinMode::Cross, "", "");
     new_product->set_left_child(product);
     new_product->set_right_child(next_node);
 

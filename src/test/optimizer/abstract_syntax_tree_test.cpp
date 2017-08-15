@@ -96,8 +96,8 @@ TEST_F(AbstractSyntaxTreeTest, ChainSameNodesTest) {
 }
 
 TEST_F(AbstractSyntaxTreeTest, TwoInputsTest) {
-  const auto join_node = std::make_shared<JoinNode>(std::pair<std::string, std::string>("col_a", "col_b"),
-                                                    ScanType::OpEquals, JoinMode::Inner, "left", "right");
+  const auto join_node = std::make_shared<JoinNode>(
+      JoinMode::Inner, "left", "right", std::pair<std::string, std::string>("col_a", "col_b"), ScanType::OpEquals);
 
   ASSERT_EQ(join_node->left_child(), nullptr);
   ASSERT_EQ(join_node->right_child(), nullptr);

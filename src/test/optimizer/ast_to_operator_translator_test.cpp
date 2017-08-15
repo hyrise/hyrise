@@ -98,8 +98,8 @@ TEST_F(ASTToOperatorTranslatorTest, SortNode) {
 TEST_F(ASTToOperatorTranslatorTest, JoinNode) {
   const auto stored_table_node_left = std::make_shared<StoredTableNode>("table_int_float");
   const auto stored_table_node_right = std::make_shared<StoredTableNode>("table_int_float2");
-  auto join_node = std::make_shared<JoinNode>(std::make_pair(std::string("a"), std::string("a")), ScanType::OpEquals,
-                                              JoinMode::Outer, "alpha.", "beta.");
+  auto join_node = std::make_shared<JoinNode>(JoinMode::Outer, "alpha.", "beta.",
+                                              std::make_pair(std::string("a"), std::string("a")), ScanType::OpEquals);
   join_node->set_left_child(stored_table_node_left);
   join_node->set_right_child(stored_table_node_right);
   const auto op = ASTToOperatorTranslator::get().translate_node(join_node);
@@ -246,8 +246,8 @@ TEST_F(ASTToOperatorTranslatorTest, MultipleNodesHierarchy) {
       std::make_shared<PredicateNode>("b", nullptr, ScanType::OpGreaterThan, AllParameterVariant(30.0));
   predicate_node_right->set_left_child(stored_table_node_right);
 
-  auto join_node = std::make_shared<JoinNode>(std::make_pair(std::string("a"), std::string("a")), ScanType::OpEquals,
-                                              JoinMode::Inner, "alpha.", "beta.");
+  auto join_node = std::make_shared<JoinNode>(JoinMode::Inner, "alpha.", "beta.",
+                                              std::make_pair(std::string("a"), std::string("a")), ScanType::OpEquals);
   join_node->set_left_child(predicate_node_left);
   join_node->set_right_child(predicate_node_right);
 
