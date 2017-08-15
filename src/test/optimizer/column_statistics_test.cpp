@@ -53,7 +53,7 @@ class ColumnStatisticsTest : public BaseTest {
     for (uint32_t i = 0; i < column_statistics.size(); ++i) {
       for (uint32_t j = 0; j < column_statistics.size() && i != j; ++j) {
         auto result_container =
-            column_statistics[i]->estimate_selectivity_for_predicate(scan_type, column_statistics[j]);
+            column_statistics[i]->estimate_selectivity_for_two_column_predicate(scan_type, column_statistics[j]);
         auto table_scan = std::make_shared<TableScan>(table_wrapper, table->column_name(ColumnID(i)), scan_type,
                                                       ColumnName(table->column_name(ColumnID(j))));
         table_scan->execute();
@@ -292,23 +292,23 @@ TEST_F(ColumnStatisticsTest, TwoColumnsLessThanTest) {
   std::shared_ptr<BaseColumnStatistics> col_stat1 = std::make_shared<ColumnStatistics<int>>(ColumnID(0), 10.f, 1, 20);
   std::shared_ptr<BaseColumnStatistics> col_stat2 = std::make_shared<ColumnStatistics<int>>(ColumnID(1), 30.f, 11, 40);
 
-  auto result1 = col_stat1->estimate_selectivity_for_predicate(scan_type, col_stat2);
+  auto result1 = col_stat1->estimate_selectivity_for_two_column_predicate(scan_type, col_stat2);
   float expected_selectivity = ((10.f / 20.f) * (10.f / 30.f) - 0.5f * 1.f / 30.f) * 0.5f + (10.f / 20.f) +
                               (20.f / 30.f) - (10.f / 20.f) * (20.f / 30.f);
   EXPECT_FLOAT_EQ(result1.selectivity, expected_selectivity);
 
-  auto result2 = col_stat2->estimate_selectivity_for_predicate(scan_type, col_stat1);
+  auto result2 = col_stat2->estimate_selectivity_for_two_column_predicate(scan_type, col_stat1);
   expected_selectivity = ((10.f / 20.f) * (10.f / 30.f) - 0.5f * 1.f / 30.f) * 0.5f;
   EXPECT_FLOAT_EQ(result2.selectivity, expected_selectivity);
 
   std::shared_ptr<BaseColumnStatistics> col_stat3 = std::make_shared<ColumnStatistics<float>>(ColumnID(0), 6.f, 0, 10);
   std::shared_ptr<BaseColumnStatistics> col_stat4 = std::make_shared<ColumnStatistics<float>>(ColumnID(1), 12.f, -10, 30);
 
-  auto result3 = col_stat3->estimate_selectivity_for_predicate(scan_type, col_stat4);
+  auto result3 = col_stat3->estimate_selectivity_for_two_column_predicate(scan_type, col_stat4);
   expected_selectivity = ((10.f / 10.f) * (10.f / 40.f) - 1.f / (4 * 6)) * 0.5f + (20.f / 40.f);
   EXPECT_FLOAT_EQ(result3.selectivity, expected_selectivity);
 
-  auto result4 = col_stat4->estimate_selectivity_for_predicate(scan_type, col_stat3);
+  auto result4 = col_stat4->estimate_selectivity_for_two_column_predicate(scan_type, col_stat3);
   expected_selectivity = ((10.f / 10.f) * (10.f / 40.f) - 1.f / (4 * 6)) * 0.5f + (10.f / 40.f);
   EXPECT_FLOAT_EQ(result4.selectivity, expected_selectivity);
 }
