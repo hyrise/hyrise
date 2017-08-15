@@ -275,8 +275,10 @@ TEST_F(ColumnStatisticsTest, TwoColumnsEqualsTest) {
   EXPECT_FLOAT_EQ(result1.selectivity, expected_selectivity);
   EXPECT_FLOAT_EQ(result2.selectivity, expected_selectivity);
 
-  std::shared_ptr<BaseColumnStatistics> col_stat3 = std::make_shared<ColumnStatistics<float>>(ColumnID(0), 10.f, 0.f, 10.f);
-  std::shared_ptr<BaseColumnStatistics> col_stat4 = std::make_shared<ColumnStatistics<float>>(ColumnID(1), 3.f, -10.f, 20.f);
+  std::shared_ptr<BaseColumnStatistics> col_stat3 =
+      std::make_shared<ColumnStatistics<float>>(ColumnID(0), 10.f, 0.f, 10.f);
+  std::shared_ptr<BaseColumnStatistics> col_stat4 =
+      std::make_shared<ColumnStatistics<float>>(ColumnID(1), 3.f, -10.f, 20.f);
 
   auto result3 = col_stat3->estimate_selectivity_for_predicate(scan_type, col_stat4);
   auto result4 = col_stat4->estimate_selectivity_for_predicate(scan_type, col_stat3);
@@ -294,7 +296,7 @@ TEST_F(ColumnStatisticsTest, TwoColumnsLessThanTest) {
 
   auto result1 = col_stat1->estimate_selectivity_for_predicate(scan_type, col_stat2);
   float expected_selectivity = ((10.f / 20.f) * (10.f / 30.f) - 0.5f * 1.f / 30.f) * 0.5f + (10.f / 20.f) +
-                              (20.f / 30.f) - (10.f / 20.f) * (20.f / 30.f);
+                               (20.f / 30.f) - (10.f / 20.f) * (20.f / 30.f);
   EXPECT_FLOAT_EQ(result1.selectivity, expected_selectivity);
 
   auto result2 = col_stat2->estimate_selectivity_for_predicate(scan_type, col_stat1);
@@ -302,7 +304,8 @@ TEST_F(ColumnStatisticsTest, TwoColumnsLessThanTest) {
   EXPECT_FLOAT_EQ(result2.selectivity, expected_selectivity);
 
   std::shared_ptr<BaseColumnStatistics> col_stat3 = std::make_shared<ColumnStatistics<float>>(ColumnID(0), 6.f, 0, 10);
-  std::shared_ptr<BaseColumnStatistics> col_stat4 = std::make_shared<ColumnStatistics<float>>(ColumnID(1), 12.f, -10, 30);
+  std::shared_ptr<BaseColumnStatistics> col_stat4 =
+      std::make_shared<ColumnStatistics<float>>(ColumnID(1), 12.f, -10, 30);
 
   auto result3 = col_stat3->estimate_selectivity_for_predicate(scan_type, col_stat4);
   expected_selectivity = ((10.f / 10.f) * (10.f / 40.f) - 1.f / (4 * 6)) * 0.5f + (20.f / 40.f);
