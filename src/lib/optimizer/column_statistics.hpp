@@ -4,7 +4,7 @@
 #include <ostream>
 #include <string>
 
-#include "all_parameter_variant.hpp"
+#include "all_type_variant.hpp"
 #include "base_column_statistics.hpp"
 #include "type_cast.hpp"
 #include "types.hpp"
