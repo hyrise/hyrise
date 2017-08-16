@@ -18,7 +18,7 @@ class OperatorsProjectionBenchmark : public BenchmarkBasicFixture {
   void SetUp(::benchmark::State& state) override {
     BenchmarkBasicFixture::SetUp(state);
     _column_type = state.range(1);
-    _table_ref = std::make_shared<TableScan>(_table_wrapper_a, "a", ScanType::OpGreaterThanEquals, 0);  // all
+    _table_ref = std::make_shared<TableScan>(_table_wrapper_a, ColumnID{0}, ScanType::OpGreaterThanEquals, 0);  // all
     _table_ref->execute();
 
     _tables.emplace_back(_table_wrapper_a);  // 0
@@ -34,34 +34,36 @@ class OperatorsProjectionBenchmark : public BenchmarkBasicFixture {
 
 BENCHMARK_DEFINE_F(OperatorsProjectionBenchmark, BM_ProjectionSimple)(benchmark::State& state) {
   clear_cache();
-  Projection::ProjectionDefinitions definitions = {Projection::ProjectionDefinition{"$a", "int", "sum"}};
-  auto warm_up = std::make_shared<Projection>(_tables[_column_type], definitions);
+  Projection::ColumnExpressions expressions = {ExpressionNode::create_column_reference("a")};
+  auto warm_up = std::make_shared<Projection>(_tables[_column_type], expressions);
   warm_up->execute();
   while (state.KeepRunning()) {
-    auto projection = std::make_shared<Projection>(_tables[_column_type], definitions);
+    auto projection = std::make_shared<Projection>(_tables[_column_type], expressions);
     projection->execute();
   }
 }
 
 BENCHMARK_DEFINE_F(OperatorsProjectionBenchmark, BM_ProjectionVariableTerm)(benchmark::State& state) {
   clear_cache();
-  Projection::ProjectionDefinitions definitions = {Projection::ProjectionDefinition{"$a+$b", "int", "sum"}};
-  auto warm_up = std::make_shared<Projection>(_tables[_column_type], definitions);
+  Projection::ColumnExpressions expressions = {
+      ExpressionNode::create_binary_operator(ExpressionType::Addition, ExpressionNode::create_column_reference("a"),
+                                             ExpressionNode::create_column_reference("b"))};
+  auto warm_up = std::make_shared<Projection>(_tables[_column_type], expressions);
   warm_up->execute();
   while (state.KeepRunning()) {
-    auto projection = std::make_shared<Projection>(_tables[_column_type], definitions);
+    auto projection = std::make_shared<Projection>(_tables[_column_type], expressions);
     projection->execute();
   }
 }
 
 BENCHMARK_DEFINE_F(OperatorsProjectionBenchmark, BM_ProjectionConstantTerm)(benchmark::State& state) {
   clear_cache();
-  Projection::ProjectionDefinitions definitions = {Projection::ProjectionDefinition{"$a+5", "int", "sum"}};
-  auto warm_up = std::make_shared<Projection>(_tables[_column_type], definitions);
+  Projection::ColumnExpressions expressions = {ExpressionNode::create_binary_operator(
+      ExpressionType::Addition, ExpressionNode::create_column_reference("a"), ExpressionNode::create_literal(5))};
+  auto warm_up = std::make_shared<Projection>(_tables[_column_type], expressions);
   warm_up->execute();
   while (state.KeepRunning()) {
-    Projection::ProjectionDefinitions definitions = {Projection::ProjectionDefinition{"$a+5", "int", "sum"}};
-    auto projection = std::make_shared<Projection>(_tables[_column_type], definitions);
+    auto projection = std::make_shared<Projection>(_tables[_column_type], expressions);
     projection->execute();
   }
 }

@@ -8,6 +8,9 @@
 #include "SQLParser.h"
 
 #include "all_parameter_variant.hpp"
+#include "optimizer/abstract_syntax_tree/ast_to_operator_translator.hpp"
+#include "sql_query_plan.hpp"
+#include "sql_to_ast_translator.hpp"
 
 #include "utils/assert.hpp"
 
@@ -137,7 +140,7 @@ void SQLQueryOperator::execute_prepared_statement(const ExecuteStatement& execut
   std::vector<AllParameterVariant> arguments;
   if (execute_stmt.parameters != nullptr) {
     for (const hsql::Expr* expr : *execute_stmt.parameters) {
-      arguments.push_back(SQLQueryTranslator::translate_literal(*expr));
+      arguments.push_back(SQLToASTTranslator::translate_literal(*expr));
     }
   }
 
@@ -151,13 +154,13 @@ void SQLQueryOperator::execute_prepared_statement(const ExecuteStatement& execut
 // Translate the statement and append the result plan
 // to the current total query plan (in member _plan).
 void SQLQueryOperator::plan_statement(const SQLStatement& stmt) {
-  SQLQueryTranslator translator;
+  auto result_node = SQLToASTTranslator::get().translate_statement(stmt);
+  auto result_operator = ASTToOperatorTranslator::get().translate_node(result_node);
 
-  if (!translator.translate_statement(stmt)) {
-    throw std::runtime_error(translator.get_error_msg());
-  }
+  SQLQueryPlan query_plan;
+  query_plan.add_tree_by_root(result_operator);
 
-  _plan.append_plan(translator.get_query_plan());
+  _plan.append_plan(query_plan);
 }
 
 // Compiles the given parse result into an operator plan.

@@ -56,7 +56,6 @@ TEST_P(SQLPrepareExecuteTest, GenericQueryTest) {
   const SQLQueryPlan& plan = op->get_query_plan();
 
   ASSERT_EQ(num_trees, plan.num_trees());
-  ASSERT_EQ(num_operators, plan.num_operators());
 
   auto tasks = plan.tasks();
   for (const auto& task : tasks) {
@@ -89,22 +88,6 @@ const SQLTestParam sql_query_tests[] = {
     SQLTestParam{"EXECUTE a4 (1234, 457.9)", 3u, "src/test/tables/int_float_filtered.tbl"},
     SQLTestParam{"EXECUTE a4 (0, 500)", 3u, "src/test/tables/int_float.tbl"},
     SQLTestParam{"EXECUTE a4 (1234, 500)", 3u, "src/test/tables/int_float_filtered2.tbl"},
-
-    // TPC-H schema
-    SQLTestParam{"PREPARE a5 FROM '"
-                 "  SELECT customer.c_custkey, customer.c_name, COUNT(orderitems.\"orders.o_orderkey\")"
-                 "    FROM customer"
-                 "    JOIN (SELECT * FROM "
-                 "      orders"
-                 "      JOIN lineitem ON o_orderkey = l_orderkey"
-                 "      WHERE orders.o_custkey = ?"
-                 "    ) AS orderitems ON c_custkey = orders.o_custkey"
-                 "    GROUP BY customer.c_custkey, customer.c_name"
-                 "    HAVING COUNT(orderitems.\"orders.o_orderkey\") >= ?"
-                 "';",
-                 0u, ""},
-    SQLTestParam{"EXECUTE a5 (0, 20);", 9u, ""}, SQLTestParam{"EXECUTE a5 (0, 21);", 9u, ""},
-    SQLTestParam{"EXECUTE a5 (0, 22);", 9u, ""},
 };
 
 INSTANTIATE_TEST_CASE_P(GenericPrepareExecuteTest, SQLPrepareExecuteTest, ::testing::ValuesIn(sql_query_tests));

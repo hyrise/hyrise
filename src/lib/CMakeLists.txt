@@ -51,6 +51,7 @@ target_compile_options(opossumProtobuf PRIVATE -Wno-unused-parameter -Wno-deprec
 set(
     SOURCES
     all_parameter_variant.hpp
+    all_type_variant.cpp
     all_type_variant.hpp
     common.hpp
     concurrency/commit_context.cpp
@@ -127,8 +128,6 @@ set(
     operators/table_scan.hpp
     operators/table_wrapper.cpp
     operators/table_wrapper.hpp
-    operators/termfactory.hpp
-    operators/term.hpp
     operators/union_all.cpp
     operators/union_all.hpp
     operators/update.cpp
@@ -141,6 +140,8 @@ set(
     optimizer/abstract_syntax_tree/aggregate_node.hpp
     optimizer/abstract_syntax_tree/join_node.cpp
     optimizer/abstract_syntax_tree/join_node.hpp
+    optimizer/abstract_syntax_tree/ast_to_operator_translator.hpp
+    optimizer/abstract_syntax_tree/ast_to_operator_translator.cpp
     optimizer/abstract_syntax_tree/predicate_node.cpp
     optimizer/abstract_syntax_tree/predicate_node.hpp
     optimizer/abstract_syntax_tree/projection_node.cpp
@@ -188,10 +189,10 @@ set(
     sql/sql_query_operator.hpp
     sql/sql_query_plan.cpp
     sql/sql_query_plan.hpp
-    sql/sql_query_translator.cpp
-    sql/sql_query_translator.hpp
     sql/sql_result_operator.cpp
     sql/sql_result_operator.hpp
+    sql/sql_to_ast_translator.cpp
+    sql/sql_to_ast_translator.hpp
     storage/base_attribute_vector.hpp
     storage/base_column.hpp
     storage/chunk.cpp
@@ -238,7 +239,8 @@ set(
     uid_allocator.hpp
     utils/assert.hpp
     utils/cuckoo_hashtable.hpp
-    utils/helper.hpp
+    utils/load_table.cpp
+    utils/load_table.hpp
     utils/murmur_hash.cpp
     utils/murmur_hash.hpp
 )

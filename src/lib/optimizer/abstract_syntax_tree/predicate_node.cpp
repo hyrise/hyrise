@@ -7,15 +7,16 @@
 #include "common.hpp"
 #include "constant_mappings.hpp"
 #include "optimizer/table_statistics.hpp"
+#include "types.hpp"
 #include "utils/assert.hpp"
 
 namespace opossum {
 
-PredicateNode::PredicateNode(const std::string& column_name, const std::shared_ptr<ExpressionNode>& predicate,
-                             const ScanType scan_type, const AllParameterVariant value,
-                             const optional<AllTypeVariant> value2)
+PredicateNode::PredicateNode(const ColumnID column_id, const std::shared_ptr<ExpressionNode>& predicate,
+                             const ScanType scan_type, const AllParameterVariant& value,
+                             const optional<AllTypeVariant>& value2)
     : AbstractASTNode(ASTNodeType::Predicate),
-      _column_name(column_name),
+      _column_id(column_id),
       _predicate(predicate),
       _scan_type(scan_type),
       _value(value),
@@ -24,13 +25,16 @@ PredicateNode::PredicateNode(const std::string& column_name, const std::shared_p
 std::string PredicateNode::description() const {
   std::ostringstream desc;
 
-  // TODO(anyone): correctly print _predicate as soon as it is fully used
-  desc << "Predicate: [" << _column_name << "] [" << scan_type_to_string.left.at(_scan_type) << "] ";
+  desc << "Predicate: '" << _column_id << "' " << scan_type_to_string.left.at(_scan_type);
+  desc << " '" << _value << "'";
+  if (_value2) {
+    desc << " '" << (*_value2) << "";
+  }
 
   return desc.str();
 }
 
-const std::string& PredicateNode::column_name() const { return _column_name; }
+const ColumnID PredicateNode::column_id() const { return _column_id; }
 
 const std::shared_ptr<ExpressionNode> PredicateNode::predicate() const { return _predicate; }
 
@@ -44,7 +48,7 @@ const optional<AllTypeVariant>& PredicateNode::value2() const { return _value2; 
 
 const std::shared_ptr<TableStatistics> PredicateNode::get_statistics_from(
     const std::shared_ptr<AbstractASTNode>& parent) const {
-  return parent->get_statistics()->predicate_statistics(_column_name, _scan_type, _value, _value2);
+  return parent->get_statistics()->predicate_statistics(_column_id, _scan_type, _value, _value2);
 }
 
 }  // namespace opossum

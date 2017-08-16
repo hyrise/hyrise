@@ -29,19 +29,21 @@ struct AggregateColumnDefinition {
 class AggregateNode : public AbstractASTNode {
  public:
   explicit AggregateNode(const std::vector<AggregateColumnDefinition>& aggregates,
-                         const std::vector<std::string>& groupby_columns);
+                         const std::vector<ColumnID>& groupby_columns);
 
   const std::vector<AggregateColumnDefinition>& aggregates() const;
 
-  const std::vector<std::string>& groupby_columns() const;
+  const std::vector<ColumnID>& groupby_columns() const;
 
   std::string description() const override;
 
-  std::vector<std::string> output_column_names() const override;
+  const std::vector<std::string> output_column_names() const override;
+  const std::vector<ColumnID> output_column_ids() const override;
+  const optional<ColumnID> find_column_id_for_column_identifier(ColumnIdentifier& column_identifier) const override;
 
  private:
   std::vector<AggregateColumnDefinition> _aggregates;
-  std::vector<std::string> _groupby_columns;
+  std::vector<ColumnID> _groupby_columns;
 };
 
 }  // namespace opossum

@@ -40,10 +40,14 @@ class SQLExpressionTranslatorTest : public BaseTest {
 
     const auto *statement = parse_result.getStatements().at(0);
 
+    // have some faked AST node that we can use for column lookup. I don't like this approach though
+    auto predicate_node = std::make_shared<ProjectionNode>(std::vector<ColumnID>(ColumnID{0}, ColumnID{1}),
+                                                           std::vector<std::string>({"a", "b"}));
+
     switch (statement->type()) {
       case hsql::kStmtSelect: {
         const auto *select = static_cast<const hsql::SelectStatement *>(statement);
-        return _translator.translate_expression(*(select->whereClause));
+        return _translator.translate_expression(*(select->whereClause), predicate_node);
       }
       default:
         throw std::runtime_error("Translating statement failed.");
@@ -61,11 +65,15 @@ class SQLExpressionTranslatorTest : public BaseTest {
     const auto *statement = parse_result.getStatements().at(0);
     std::vector<std::shared_ptr<ExpressionNode>> expressions;
 
+    // have some faked AST node that we can use for column lookup. I don't like this approach though
+    auto predicate_node = std::make_shared<ProjectionNode>(std::vector<ColumnID>(ColumnID{0}, ColumnID{1}),
+                                                           std::vector<std::string>({"a", "b"}));
+
     switch (statement->type()) {
       case hsql::kStmtSelect: {
         const auto *select = static_cast<const hsql::SelectStatement *>(statement);
         for (auto expr : *(select->selectList)) {
-          expressions.emplace_back(_translator.translate_expression(*expr));
+          expressions.emplace_back(_translator.translate_expression(*expr, predicate_node));
         }
         return expressions;
       }
@@ -174,7 +182,7 @@ TEST_F(SQLExpressionTranslatorTest, ExpressionFunction) {
 }
 
 TEST_F(SQLExpressionTranslatorTest, ExpressionComplexFunction) {
-  const auto query = "SELECT SUM(b * c) as d FROM table_a";
+  const auto query = "SELECT SUM(a * b) as d FROM table_a";
   auto expressions = compile_select_expression(query);
 
   ASSERT_EQ(expressions.size(), 1u);
@@ -201,7 +209,7 @@ TEST_F(SQLExpressionTranslatorTest, ExpressionStringConcatenation) {
   EXPECT_EQ(first->right_child()->type(), ExpressionType::Literal);
 }
 
-// Enable as soon as SQLQueryNodeTranslator is merged
+// Enable as soon as SQLToASTTranslator is merged
 TEST_F(SQLExpressionTranslatorTest, DISABLED_ExpressionIn) {
   const auto query = "SELECT * FROM table_a WHERE a in (SELECT a FROM table_b)";
   auto expression = compile_where_expression(query);
@@ -211,7 +219,7 @@ TEST_F(SQLExpressionTranslatorTest, DISABLED_ExpressionIn) {
   EXPECT_EQ(expression->right_child()->type(), ExpressionType::Select);
 }
 
-// Enable as soon as SQLQueryNodeTranslator is merged
+// Enable as soon as SQLToASTTranslator is merged
 TEST_F(SQLExpressionTranslatorTest, DISABLED_ExpressionExist) {
   const auto query = "SELECT * FROM table_a WHERE EXISTS (SELECT * FROM table_b)";
   auto expression = compile_where_expression(query);

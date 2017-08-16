@@ -42,24 +42,37 @@ class ExpressionNode : public std::enable_shared_from_this<ExpressionNode> {
    */
   ExpressionNode(const ExpressionType type, const AllTypeVariant& value,
                  const std::vector<std::shared_ptr<ExpressionNode>>& expression_list, const std::string& name,
-                 const std::string& table, const optional<std::string>& alias = nullopt);
+                 const ColumnID column_id, const optional<std::string>& alias = {});
 
   /*
    * Factory Methods to create Expressions of specific type
    */
   static std::shared_ptr<ExpressionNode> create_expression(const ExpressionType type);
 
-  static std::shared_ptr<ExpressionNode> create_column_reference(const std::string& table_name,
-                                                                 const std::string& column_name,
-                                                                 const optional<std::string>& alias = nullopt);
+  static std::shared_ptr<ExpressionNode> create_column_reference(const ColumnID column_id,
+                                                                 const optional<std::string>& alias = {});
 
-  static std::shared_ptr<ExpressionNode> create_literal(const AllTypeVariant& value);
+  static std::vector<std::shared_ptr<ExpressionNode>> create_column_references(const std::vector<ColumnID>& column_ids,
+                                                                               const std::vector<std::string>& aliases);
+
+  /**
+   * A literal can have an alias in order to allow queries like `SELECT 1 as one FROM t`.
+   */
+  static std::shared_ptr<ExpressionNode> create_literal(const AllTypeVariant& value,
+                                                        const optional<std::string>& alias = {});
 
   static std::shared_ptr<ExpressionNode> create_parameter(const AllTypeVariant& value);
 
   static std::shared_ptr<ExpressionNode> create_function_reference(
       const std::string& function_name, const std::vector<std::shared_ptr<ExpressionNode>>& expression_list,
-      const optional<std::string>& alias = nullopt);
+      const optional<std::string>& alias);
+
+  static std::shared_ptr<ExpressionNode> create_binary_operator(ExpressionType type,
+                                                                const std::shared_ptr<ExpressionNode>& left,
+                                                                const std::shared_ptr<ExpressionNode>& right,
+                                                                const optional<std::string>& alias = {});
+
+  static std::shared_ptr<ExpressionNode> create_select_all();
 
   /*
    * Helper methods for Expression Trees
@@ -79,26 +92,35 @@ class ExpressionNode : public std::enable_shared_from_this<ExpressionNode> {
    * Methods for debug printing
    */
   void print(const uint32_t level = 0, std::ostream& out = std::cout) const;
+
   const std::string description() const;
 
   // Is +, -, * (arithmetic usage, not SELECT * FROM), /, %, ^
   bool is_arithmetic_operator() const;
 
+  // Returns true if the expression is a literal or column reference.
+  bool is_operand() const;
+
+  // Returns true if the expression requires two children.
+  bool is_binary_operator() const;
+
   /*
    * Getters
    */
-  const std::string& table_name() const;
+  const ColumnID column_id() const;
 
   const std::string& name() const;
 
   const optional<std::string>& alias() const;
 
+  void set_alias(const std::string& alias);
+
   const AllTypeVariant value() const;
 
   const std::vector<std::shared_ptr<ExpressionNode>>& expression_list() const;
 
-  // Expression as string, parse-able by Projection
-  std::string to_expression_string() const;
+  // Expression as string
+  std::string to_string() const;
 
  private:
   // the type of the expression
@@ -115,12 +137,12 @@ class ExpressionNode : public std::enable_shared_from_this<ExpressionNode> {
    */
   const std::vector<std::shared_ptr<ExpressionNode>> _expression_list;
 
-  // a name, which could be a column name or a function name
+  // a name, which could be a function name
   const std::string _name;
-  // a table name, only used for ColumnReferences
-  const std::string _table_name;
+  // a column that might be referenced
+  const ColumnID _column_id;
   // an alias, used for ColumnReferences, Selects, FunctionReferences
-  const optional<std::string> _alias;
+  optional<std::string> _alias;
 
   std::weak_ptr<ExpressionNode> _parent;
   std::shared_ptr<ExpressionNode> _left_child;

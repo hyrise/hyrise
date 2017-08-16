@@ -5,9 +5,11 @@
 #include "benchmark/benchmark.h"
 
 #include "../base_fixture.hpp"
-
+#include "optimizer/abstract_syntax_tree/ast_to_operator_translator.hpp"
 #include "sql/sql_query_operator.hpp"
-#include "sql/sql_query_translator.hpp"
+#include "sql/sql_to_ast_translator.hpp"
+#include "storage/storage_manager.hpp"
+#include "utils/load_table.hpp"
 
 namespace opossum {
 
@@ -21,6 +23,13 @@ class SQLBenchmark : public BenchmarkBasicFixture {
     SQLQueryOperator::get_parse_tree_cache().clear_and_resize(0);
     SQLQueryOperator::get_query_plan_cache().clear_and_resize(0);
     SQLQueryOperator::get_prepared_statement_cache().clear();
+
+    // Add tables to StorageManager.
+    // This is required for the translator to get the column names of a table.
+    auto& storage_manager = StorageManager::get();
+    storage_manager.add_table("customer", load_table("src/test/tables/tpch/customer.tbl", 0));
+    storage_manager.add_table("lineitem", load_table("src/test/tables/tpch/lineitem.tbl", 0));
+    storage_manager.add_table("orders", load_table("src/test/tables/tpch/orders.tbl", 0));
   }
 
   void TearDown(benchmark::State& st) override {}
@@ -30,8 +39,8 @@ class SQLBenchmark : public BenchmarkBasicFixture {
     while (st.KeepRunning()) {
       SQLParserResult result;
       SQLParser::parseSQLString(query, &result);
-      SQLQueryTranslator translator;
-      translator.translate_parse_result(result);
+      auto result_node = SQLToASTTranslator::get().translate_parse_result(result)[0];
+      ASTToOperatorTranslator::get().translate_node(result_node);
     }
   }
 
@@ -48,8 +57,8 @@ class SQLBenchmark : public BenchmarkBasicFixture {
     SQLParserResult result;
     SQLParser::parseSQLString(query, &result);
     while (st.KeepRunning()) {
-      SQLQueryTranslator translator;
-      translator.translate_parse_result(result);
+      auto result_node = SQLToASTTranslator::get().translate_parse_result(result)[0];
+      ASTToOperatorTranslator::get().translate_node(result_node);
     }
   }
 

@@ -8,12 +8,14 @@
 
 #include "constant_mappings.hpp"
 #include "optimizer/expression/expression_node.hpp"
+#include "utils/assert.hpp"
 
 #include "SQLParser.h"
 
 namespace opossum {
 
-std::shared_ptr<ExpressionNode> SQLExpressionTranslator::translate_expression(const hsql::Expr& expr) {
+std::shared_ptr<ExpressionNode> SQLExpressionTranslator::translate_expression(
+    const hsql::Expr& expr, const std::shared_ptr<AbstractASTNode>& input_node) {
   auto table_name = expr.table ? std::string(expr.table) : "";
   auto name = expr.name ? std::string(expr.name) : "";
   auto float_value = expr.fval ? expr.fval : 0;
@@ -27,16 +29,24 @@ std::shared_ptr<ExpressionNode> SQLExpressionTranslator::translate_expression(co
       node = ExpressionNode::create_expression(operator_type);
       break;
     }
-    case hsql::kExprColumnRef:
-      node = ExpressionNode::create_column_reference(table_name, name, alias);
+    case hsql::kExprColumnRef: {
+      ColumnIdentifier column_identifier{table_name, name};
+      auto column_id = input_node->find_column_id_for_column_identifier(column_identifier);
+
+      if (!column_id) {
+        Fail("Did not find column " + name);
+      }
+
+      node = ExpressionNode::create_column_reference(*column_id, alias);
       break;
+    }
     case hsql::kExprFunctionRef: {
       // TODO(mp): Parse Function name to Aggregate Function
       // auto aggregate_function = string_to_aggregate_function.at(name);
 
       std::vector<std::shared_ptr<ExpressionNode>> expression_list;
       for (auto elem : *(expr.exprList)) {
-        expression_list.emplace_back(translate_expression(*elem));
+        expression_list.emplace_back(translate_expression(*elem, input_node));
       }
 
       node = ExpressionNode::create_function_reference(name, expression_list, alias);
@@ -69,19 +79,19 @@ std::shared_ptr<ExpressionNode> SQLExpressionTranslator::translate_expression(co
        *
        * Right now, I cannot estimate the consequences of such a circular reference for the optimizer rules.
        */
-      // TODO(mp): translate as soon as SQLQueryNodeTranslator is merged
+      // TODO(mp): translate as soon as SQLToASTTranslator is merged
       throw std::runtime_error("Selects are not supported yet.");
     default:
       throw std::runtime_error("Unsupported expression type");
   }
 
   if (expr.expr) {
-    auto left = translate_expression(*expr.expr);
+    auto left = translate_expression(*expr.expr, input_node);
     node->set_left_child(left);
   }
 
   if (expr.expr2) {
-    auto right = translate_expression(*expr.expr2);
+    auto right = translate_expression(*expr.expr2, input_node);
     node->set_right_child(right);
   }
 

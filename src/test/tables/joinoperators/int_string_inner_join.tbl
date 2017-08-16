@@ -1,4 +1,4 @@
-left.a|left.b|right.b|right.a
+a|b|b|a
 int|string|string|int
 2|test2|test2|2
 4|test4|test4|4

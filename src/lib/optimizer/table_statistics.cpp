@@ -34,7 +34,7 @@ std::shared_ptr<BaseColumnStatistics> TableStatistics::column_statistics(const C
   return _column_statistics[column_id];
 }
 
-std::shared_ptr<TableStatistics> TableStatistics::predicate_statistics(const std::string &column_name,
+std::shared_ptr<TableStatistics> TableStatistics::predicate_statistics(const ColumnID column_id,
                                                                        const ScanType scan_type,
                                                                        const AllParameterVariant &value,
                                                                        const optional<AllTypeVariant> &value2) {
@@ -54,7 +54,6 @@ std::shared_ptr<TableStatistics> TableStatistics::predicate_statistics(const std
 
   auto table = _table.lock();
   DebugAssert(table != nullptr, "Corresponding table of table statistics is deleted.");
-  const ColumnID column_id = table->column_id_by_name(column_name);
 
   auto old_column_statistics = column_statistics(column_id);
 
@@ -63,8 +62,8 @@ std::shared_ptr<TableStatistics> TableStatistics::predicate_statistics(const std
   ColumnSelectivityResult column_statistics_container{1, nullptr};
 
   // delegate prediction to corresponding column statistics
-  if (value.type() == typeid(ColumnName)) {
-    const ColumnID value_column_id = table->column_id_by_name(boost::get<ColumnName>(value));
+  if (value.type() == typeid(ColumnID)) {
+    const ColumnID value_column_id = get<ColumnID>(value);
     auto old_right_column_stats = column_statistics(value_column_id);
 
     auto two_column_statistics_container =
@@ -76,7 +75,7 @@ std::shared_ptr<TableStatistics> TableStatistics::predicate_statistics(const std
     column_statistics_container = two_column_statistics_container;
 
   } else if (value.type() == typeid(AllTypeVariant)) {
-    auto casted_value = boost::get<AllTypeVariant>(value);
+    auto casted_value = get<AllTypeVariant>(value);
 
     column_statistics_container =
         old_column_statistics->estimate_selectivity_for_predicate(scan_type, casted_value, value2);

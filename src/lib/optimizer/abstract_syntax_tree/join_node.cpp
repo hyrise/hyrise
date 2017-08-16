@@ -7,17 +7,16 @@
 
 #include "common.hpp"
 #include "constant_mappings.hpp"
+#include "types.hpp"
 
 namespace opossum {
 
-JoinNode::JoinNode(optional<std::pair<std::string, std::string>> join_column_names, const ScanType scan_type,
-                   const JoinMode join_mode, const std::string &prefix_left, const std::string &prefix_right)
+JoinNode::JoinNode(optional<std::pair<ColumnID, ColumnID>> join_column_ids, const ScanType scan_type,
+                   const JoinMode join_mode)
     : AbstractASTNode(ASTNodeType::Join),
-      _join_column_names(join_column_names),
+      _join_column_ids(join_column_ids),
       _scan_type(scan_type),
-      _join_mode(join_mode),
-      _prefix_left(prefix_left),
-      _prefix_right(prefix_right) {}
+      _join_mode(join_mode) {}
 
 std::string JoinNode::description() const {
   std::ostringstream desc;
@@ -25,42 +24,50 @@ std::string JoinNode::description() const {
   desc << "Join";
   desc << " [" << join_mode_to_string.at(_join_mode) << "]";
 
-  if (_join_column_names) {
-    desc << " [" << (*_join_column_names).first;
+  if (_join_column_ids) {
+    desc << " [" << (*_join_column_ids).first;
     desc << " " << scan_type_to_string.left.at(_scan_type);
-    desc << " " << (*_join_column_names).second << "]";
+    desc << " " << (*_join_column_ids).second << "]";
   }
-
-  desc << " [" << _prefix_left << " / " << _prefix_right << "]";
 
   return desc.str();
 }
 
-std::vector<std::string> JoinNode::output_column_names() const {
+const std::vector<ColumnID> JoinNode::output_column_ids() const {
   /**
    * Add respective prefix to column names.
    */
-  std::vector<std::string> output_column_names;
+  std::vector<std::string> output_column_ids;
 
-  for (auto &column_name : left_child()->output_column_names()) {
-    output_column_names.push_back(prefix_left() + column_name);
+  for (auto &column_id : left_child()->output_column_ids()) {
+    _output_column_ids.push_back(column_id);
   }
 
-  for (auto &column_name : right_child()->output_column_names()) {
-    output_column_names.push_back(prefix_right() + column_name);
+  for (auto &column_id : right_child()->output_column_ids()) {
+    _output_column_ids.push_back(column_id);
   }
 
-  return output_column_names;
+  return _output_column_ids;
 }
 
-optional<std::pair<std::string, std::string>> JoinNode::join_column_names() const { return _join_column_names; }
+const optional<ColumnID> JoinNode::find_column_id_for_column_identifier(ColumnIdentifier &column_identifier) const {
+  if (left_child()->table_identifier() == column_identifier.table_name) {
+    return left_child()->find_column_id_for_column_identifier(column_identifier);
+  }
+  if (right_child()->table_identifier() == column_identifier.table_name) {
+    auto num_left_columns = left_child()->output_column_ids().size();
+    auto found = right_child()->find_column_id_for_column_identifier(column_identifier);
+    if (found) {
+      return ColumnID{(*found) + num_left_columns};
+    }
+  }
+  return nullopt;
+}
+
+optional<std::pair<ColumnID, ColumnID>> JoinNode::join_column_ids() const { return _join_column_ids; }
 
 ScanType JoinNode::scan_type() const { return _scan_type; }
 
 JoinMode JoinNode::join_mode() const { return _join_mode; }
-
-const std::string &JoinNode::prefix_left() const { return _prefix_left; }
-
-const std::string &JoinNode::prefix_right() const { return _prefix_right; }
 
 }  // namespace opossum

@@ -24,10 +24,18 @@ class AbstractJoinOperator : public AbstractReadOnlyOperator {
  public:
   AbstractJoinOperator(const std::shared_ptr<const AbstractOperator> left,
                        const std::shared_ptr<const AbstractOperator> right,
-                       optional<std::pair<std::string, std::string>> column_names, const ScanType scan_type,
-                       const JoinMode mode, const std::string &prefix_left, const std::string &prefix_right);
+                       optional<std::pair<ColumnID, ColumnID>> column_ids, const ScanType scan_type,
+                       const JoinMode mode);
 
   virtual ~AbstractJoinOperator() = default;
+
+  ScanType scan_type() const;
+  JoinMode mode() const;
+  const optional<std::pair<ColumnID, ColumnID>> &column_ids() const;
+
+  // copying a operator is not allowed
+  AbstractJoinOperator(AbstractJoinOperator const &) = delete;
+  AbstractJoinOperator &operator=(const AbstractJoinOperator &) = delete;
 
   // we need to explicitly set the move constructor to default when
   // we overwrite the copy constructor
@@ -37,9 +45,7 @@ class AbstractJoinOperator : public AbstractReadOnlyOperator {
  protected:
   const ScanType _scan_type;
   const JoinMode _mode;
-  const std::string _prefix_left;
-  const std::string _prefix_right;
-  optional<std::pair<std::string, std::string>> _column_names;
+  optional<std::pair<ColumnID, ColumnID>> _column_ids;
 
   // Some operators need an internal implementation class, mostly in cases where
   // their execute method depends on a template parameter. An example for this is
