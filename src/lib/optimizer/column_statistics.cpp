@@ -268,7 +268,7 @@ TwoColumnSelectivityResult ColumnStatistics<ColumnType>::estimate_selectivity_fo
   auto common_min = std::max(min(), right_stats->min());
   auto common_max = std::min(max(), right_stats->max());
 
-  // calculate percentage of values before, in and above the common value range
+  // calculate ratio of values before, in and above the common value range
   float left_overlapping_ratio = estimate_selectivity_for_range(common_min, common_max);
   float right_overlapping_ratio = right_stats->estimate_selectivity_for_range(common_min, common_max);
 
@@ -287,12 +287,12 @@ TwoColumnSelectivityResult ColumnStatistics<ColumnType>::estimate_selectivity_fo
     right_above = right_stats->estimate_selectivity_for_range(common_max, right_stats->max());
   }
 
-  // calculate percentage of distinct values in common value range
+  // calculate ratio of distinct values in common value range
   auto left_overlapping_distinct_count = left_overlapping_ratio * distinct_count();
   auto right_overlapping_distinct_count = right_overlapping_ratio * right_stats->distinct_count();
 
   float equal_values_ratio;
-  // calculate percentage of rows with equal values
+  // calculate ratio of rows with equal values
   if (left_overlapping_distinct_count < right_overlapping_distinct_count) {
     equal_values_ratio = left_overlapping_ratio / right_stats->distinct_count();
   } else {
@@ -303,18 +303,18 @@ TwoColumnSelectivityResult ColumnStatistics<ColumnType>::estimate_selectivity_fo
   auto estimate_selectivity_for_open_ended_operators = [&](float values_below_ratio, float values_above_ratio,
                                                            ColumnType new_min, ColumnType new_max,
                                                            bool add_equal_values) -> TwoColumnSelectivityResult {
-    // selectivity calculated by adding up percentages that values are below, in or above overlapping range
+    // selectivity calculated by adding up ratios that values are below, in or above overlapping range
     float selectivity = 0.f;
-    // percentage of values on left hand side which are smaller than overlapping range
+    // ratio of values on left hand side which are smaller than overlapping range
     selectivity += values_below_ratio;
     // selectivity of not equal numbers n1, n2 in overlapping range where n1 < n2 is 0.5
     selectivity += (left_overlapping_ratio * right_overlapping_ratio - equal_values_ratio) * 0.5f;
     if (add_equal_values) {
       selectivity += equal_values_ratio;
     }
-    // percentage of values on right hand side which are greater than overlapping range
+    // ratio of values on right hand side which are greater than overlapping range
     selectivity += values_above_ratio;
-    // remove percentage of rows, where one value is below and one value is above the overlapping range
+    // remove ratio of rows, where one value is below and one value is above the overlapping range
     selectivity -= values_below_ratio * values_above_ratio;
 
     auto new_left_column_stats = create_column_stats_for_range_predicate(new_min, new_max).column_statistics;
