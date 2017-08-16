@@ -3,40 +3,17 @@
 #include <iostream>
 #include <readline/readline.h>
 #include <readline/history.h>
-#include <ctime>
-#include <iomanip>
 
 #include "storage/storage_manager.hpp"
 #include "tpcc/tpcc_table_generator.hpp"
 #include "sql/sql_query_translator.hpp"
 #include "operators/print.hpp"
+#include "utils/helper.hpp"
 
 namespace {
 
-  //
-
   opossum::Console * _instance = nullptr;
-
-  // Helper functions
-
-  std::string time_stamp() {
-    auto t = std::time(nullptr);
-    auto tm = *std::localtime(&t);
-
-    std::ostringstream oss;
-    oss << std::put_time(&tm, "%Y-%m-%d %H:%M:%S");
-    return oss.str();
-  }
-
-  std::string trim(const std::string & str) {
-    size_t first = str.find_first_not_of(' ');
-    if (std::string::npos == first)
-    {
-      return "";
-    }
-    size_t last = str.find_last_not_of(' ');
-    return str.substr(first, (last - first + 1));
-  }
+  
 }
 
 namespace opossum {
