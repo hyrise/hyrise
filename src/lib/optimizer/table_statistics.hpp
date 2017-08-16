@@ -60,6 +60,13 @@ class TableStatistics {
                                                                 const AllParameterVariant &value,
                                                                 const optional<AllTypeVariant> &value2 = nullopt);
 
+  /**
+   * Get table statistics for any table scan operator.
+   */
+  virtual std::shared_ptr<TableStatistics> join_statistics(
+      const std::shared_ptr<TableStatistics> &right_table_statistics,
+      const optional<std::pair<std::string, std::string>> column_names, const ScanType scan_type, const JoinMode mode);
+
  protected:
   std::shared_ptr<BaseColumnStatistics> column_statistics(const ColumnID column_id);
 

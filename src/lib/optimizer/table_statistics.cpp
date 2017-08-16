@@ -4,6 +4,8 @@
 #include <memory>
 #include <string>
 #include <vector>
+#include <utility>
+#include <algorithm>
 
 #include "all_parameter_variant.hpp"
 #include "optimizer/base_column_statistics.hpp"
@@ -92,6 +94,20 @@ std::shared_ptr<TableStatistics> TableStatistics::predicate_statistics(const std
     clone->_column_statistics[column_id] = column_statistics_container.column_statistics;
   }
   clone->_row_count *= column_statistics_container.selectivity;
+
+  return clone;
+}
+
+std::shared_ptr<TableStatistics> TableStatistics::join_statistics(
+    const std::shared_ptr<TableStatistics> &right_table_statistics,
+    const optional<std::pair<std::string, std::string>> column_names, const ScanType scan_type, const JoinMode mode) {
+  // create copy of this as this should not be adapted for current join
+  auto clone = std::make_shared<TableStatistics>(*this);
+  auto col_stats_end = clone->_column_statistics.end();
+  clone->_column_statistics.resize(clone->_column_statistics.size() +
+                                   right_table_statistics->_column_statistics.size());
+  std::copy(right_table_statistics->_column_statistics.begin(), right_table_statistics->_column_statistics.end(),
+            col_stats_end);
 
   return clone;
 }
