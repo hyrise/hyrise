@@ -2,13 +2,13 @@
 
 #include <tbb/tbb.h>
 
-#include <iostream>
-#include <memory>
-#include <utility>
-#include <vector>
 #include <ctime>
 #include <iomanip>
+#include <iostream>
+#include <memory>
 #include <string>
+#include <utility>
+#include <vector>
 
 namespace opossum {
 
@@ -32,7 +32,7 @@ std::string time_stamp() {
   return oss.str();
 }
 
-std::string trim(const std::string & str) {
+std::string trim(const std::string& str) {
   size_t first = str.find_first_not_of(' ');
   if (std::string::npos == first) {
     return "";

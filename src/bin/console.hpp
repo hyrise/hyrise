@@ -1,10 +1,10 @@
 #pragma once
 
-#include <string>
-#include <functional>
-#include <unordered_map>
 #include <fstream>
+#include <functional>
 #include <memory>
+#include <string>
+#include <unordered_map>
 #include <vector>
 
 #include "storage/table.hpp"
@@ -13,21 +13,17 @@ namespace opossum {
 
 /*
  * SQL REPL Console for Opossum, built on GNU readline. https://cnswww.cns.cwru.edu/php/chet/readline/rltop.html
- * Can load TPCC tables via "load TABLENAME" command, and can execute SQL statements based on opossum::SqlQueryTranslator.
+ * Can load TPCC tables via "load TABLENAME" command, and can execute SQL statements based on
+ * opossum::SqlQueryTranslator.
  */
 class Console {
  public:
   using CommandFunction = std::function<int(const std::string &)>;
   using RegisteredCommands = std::unordered_map<std::string, CommandFunction>;
 
-  enum ReturnCode {
-    Multiline = -2,
-    Quit = -1,
-    Ok = 0,
-    Error = 1
-  };
+  enum ReturnCode { Multiline = -2, Quit = -1, Ok = 0, Error = 1 };
 
-  explicit Console(const std::string & prompt = "> ", const std::string & log_file = "console.log");
+  explicit Console(const std::string &prompt = "> ", const std::string &log_file = "console.log");
   ~Console();
 
   /*
@@ -43,10 +39,10 @@ class Console {
   /*
    * Register a custom command which can be called from the console.
    */
-  void register_command(const std::string & name, const CommandFunction & f);
+  void register_command(const std::string &name, const CommandFunction &f);
   RegisteredCommands commands();
 
-  void setPrompt(const std::string & prompt);
+  void setPrompt(const std::string &prompt);
   std::string prompt() const;
 
   /*
@@ -55,32 +51,32 @@ class Console {
    * @param output        The text that should be printed.
    * @param console_print If set to false, then \p output gets printed ONLY to the log_file.
    */
-  void out(const std::string & output, bool console_print = true);
+  void out(const std::string &output, bool console_print = true);
   void out(std::shared_ptr<const Table> table);
 
  protected:
   /*
    * Evaluates given input string. Calls either _eval_command or _eval_sql.
    */
-  int _eval(const std::string & input);
+  int _eval(const std::string &input);
 
   /*
    * Evaluates given Console command.
    */
-  int _eval_command(const CommandFunction & f, const std::string & command);
+  int _eval_command(const CommandFunction &f, const std::string &command);
 
   /*
    * Evaluates given SQL statement using opossum::SqlQueryTranslator
    */
-  int _eval_sql(const std::string & sql);
+  int _eval_sql(const std::string &sql);
 
   // Command functions, registered to be called from the Console
-  static int exit(const std::string & args);
-  static int load_tpcc(const std::string & args);
+  static int exit(const std::string &args);
+  static int load_tpcc(const std::string &args);
 
   // GNU readline interface to our commands
-  static char ** command_completion(const char * text, int start, int end);
-  static char * command_generator(const char * text, int state);
+  static char **command_completion(const char *text, int start, int end);
+  static char *command_generator(const char *text, int state);
 
   std::string _prompt;
   std::string _multiline_input;

@@ -1,38 +1,37 @@
 #include "console.hpp"
 
-#include <readline/readline.h>
 #include <readline/history.h>
+#include <readline/readline.h>
 #include <iostream>
 #include <memory>
 #include <string>
 #include <vector>
 
+#include "operators/print.hpp"
+#include "sql/sql_query_translator.hpp"
 #include "storage/storage_manager.hpp"
 #include "tpcc/tpcc_table_generator.hpp"
-#include "sql/sql_query_translator.hpp"
-#include "operators/print.hpp"
 #include "utils/helper.hpp"
 
 namespace {
 
-  opossum::Console * _instance = nullptr;
-
+opossum::Console* _instance = nullptr;
 }
 
 namespace opossum {
 
 // Console implementation
 
-Console::Console(const std::string & prompt, const std::string & log_file)
-  : _prompt(prompt)
-  , _multiline_input("")
-  , _commands()
-  , _commands_completion()
-  , _out(std::cout.rdbuf())
-  , _log(log_file, std::ios_base::app | std::ios_base::out) {
+Console::Console(const std::string& prompt, const std::string& log_file)
+    : _prompt(prompt),
+      _multiline_input(""),
+      _commands(),
+      _commands_completion(),
+      _out(std::cout.rdbuf()),
+      _log(log_file, std::ios_base::app | std::ios_base::out) {
   // Init readline basics, tells readline to use our custom command completion function
   rl_attempted_completion_function = &Console::command_completion;
-  rl_completer_word_break_characters = const_cast<char *>("\t\n\"\\'`@$><=;|&{(");
+  rl_completer_word_break_characters = const_cast<char*>("\t\n\"\\'`@$><=;|&{(");
 
   // Register default commands to Console
   register_command("exit", exit);
@@ -75,7 +74,7 @@ int Console::read() {
   return _eval(input);
 }
 
-int Console::_eval(const std::string & input) {
+int Console::_eval(const std::string& input) {
   if (input.empty() && _multiline_input.empty()) {
     return ReturnCode::Ok;
   }
@@ -91,7 +90,7 @@ int Console::_eval(const std::string & input) {
 
   // Check for multiline-input
   if (input.back() == '\\') {
-    _multiline_input += input.substr(0, input.size()-1);
+    _multiline_input += input.substr(0, input.size() - 1);
     if (_multiline_input.back() != ' ') {
       _multiline_input += ' ';
     }
@@ -109,7 +108,7 @@ int Console::_eval(const std::string & input) {
   return _eval_sql(input);
 }
 
-int Console::_eval_command(const CommandFunction & f, const std::string & command) {
+int Console::_eval_command(const CommandFunction& f, const std::string& command) {
   size_t first = command.find(' ');
   size_t last = command.find('\n');
 
@@ -117,11 +116,11 @@ int Console::_eval_command(const CommandFunction & f, const std::string & comman
     return static_cast<int>(f(""));
   }
 
-  std::string args = command.substr(first+1, last-(first+1));
+  std::string args = command.substr(first + 1, last - (first + 1));
   return static_cast<int>(f(args));
 }
 
-int Console::_eval_sql(const std::string & sql) {
+int Console::_eval_sql(const std::string& sql) {
   SQLQueryTranslator translator;
   SQLQueryPlan plan;
 
@@ -153,24 +152,18 @@ int Console::_eval_sql(const std::string & sql) {
   return ReturnCode::Ok;
 }
 
-void Console::register_command(const std::string & name, const CommandFunction & f) {
+void Console::register_command(const std::string& name, const CommandFunction& f) {
   _commands[name] = f;
   _commands_completion.push_back(name + " ");
 }
 
-Console::RegisteredCommands Console::commands() {
-  return _commands;
-}
+Console::RegisteredCommands Console::commands() { return _commands; }
 
-void Console::setPrompt(const std::string & prompt) {
-  _prompt = prompt;
-}
+void Console::setPrompt(const std::string& prompt) { _prompt = prompt; }
 
-std::string Console::prompt() const {
-  return _prompt;
-}
+std::string Console::prompt() const { return _prompt; }
 
-void Console::out(const std::string & output, bool console_print) {
+void Console::out(const std::string& output, bool console_print) {
   if (console_print) {
     _out << output;
   }
@@ -185,11 +178,9 @@ void Console::out(std::shared_ptr<const Table> table) {
 
 // Command functions
 
-int Console::exit(const std::string &) {
-  return Console::ReturnCode::Quit;
-}
+int Console::exit(const std::string&) { return Console::ReturnCode::Quit; }
 
-int Console::load_tpcc(const std::string & tablename) {
+int Console::load_tpcc(const std::string& tablename) {
   if (tablename.empty() || "ALL" == tablename) {
     _instance->out("Generating TPCC tables (this might take a while) ...\n");
     auto tables = tpcc::TpccTableGenerator().generate_all_tables();
@@ -212,8 +203,8 @@ int Console::load_tpcc(const std::string & tablename) {
 
 // GNU readline interface to our commands
 
-char ** Console::command_completion(const char * text, int start, int end) {
-  char ** completion_matches = nullptr;
+char** Console::command_completion(const char* text, int start, int end) {
+  char** completion_matches = nullptr;
   rl_completion_suppress_append = 1;
   rl_attempted_completion_over = 1;
   if (start == 0) {
@@ -222,7 +213,7 @@ char ** Console::command_completion(const char * text, int start, int end) {
   return completion_matches;
 }
 
-char * Console::command_generator(const char * text, int state) {
+char* Console::command_generator(const char* text, int state) {
   static std::vector<std::string>::iterator it;
   auto& commands = _instance->_commands_completion;
   if (state == 0) {
@@ -230,11 +221,11 @@ char * Console::command_generator(const char * text, int state) {
   }
 
   while (it != commands.end()) {
-    auto & command = *it;
+    auto& command = *it;
     ++it;
     if (command.find(text) != std::string::npos) {
-      char * completion = new char[command.size()];
-      snprintf(completion, command.size()+1, "%s", command.c_str());
+      char* completion = new char[command.size()];
+      snprintf(completion, command.size() + 1, "%s", command.c_str());
       return completion;
     }
   }
@@ -242,7 +233,6 @@ char * Console::command_generator(const char * text, int state) {
 }
 
 }  // namespace opossum
-
 
 int main(int argc, char** argv) {
   using Return = opossum::Console::ReturnCode;

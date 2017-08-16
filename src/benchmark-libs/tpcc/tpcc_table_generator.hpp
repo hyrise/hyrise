@@ -5,8 +5,8 @@
 #include <map>
 #include <memory>
 #include <string>
-#include <vector>
 #include <unordered_map>
+#include <vector>
 
 #include "tbb/concurrent_vector.h"
 
@@ -56,7 +56,7 @@ class TpccTableGenerator : public benchmark_utilities::AbstractBenchmarkTableGen
 
   static TpccTableGeneratorFunctions tpcc_table_generator_functions();
 
-  static std::shared_ptr<opossum::Table> generate_tpcc_table(const std::string & tablename);
+  static std::shared_ptr<opossum::Table> generate_tpcc_table(const std::string &tablename);
 
   const size_t _warehouse_size;
   const time_t _current_date = std::time(0);
