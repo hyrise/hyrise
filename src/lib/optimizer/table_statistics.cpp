@@ -52,9 +52,6 @@ std::shared_ptr<TableStatistics> TableStatistics::predicate_statistics(const Col
     return clone;
   }
 
-  auto table = _table.lock();
-  DebugAssert(table != nullptr, "Corresponding table of table statistics is deleted.");
-
   auto old_column_statistics = column_statistics(column_id);
 
   // create copy of this as this should not be adapted for current table scan
