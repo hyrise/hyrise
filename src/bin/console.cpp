@@ -73,6 +73,7 @@ namespace opossum {
 
 Console::Console(const std::string & prompt, const std::string & log_file)
   : _prompt(prompt)
+  , _multiline_input("")
   , _commands()
   , _commands_completion()
   , _out(std::cout.rdbuf())
@@ -84,8 +85,7 @@ Console::Console(const std::string & prompt, const std::string & log_file)
 
   register_command("exit", exit);
   register_command("load", load_tpcc);
-  for (TpccGenerators::iterator it = tpcc_generators.begin(); it != tpcc_generators.end(); ++it)
-  {
+  for (TpccGenerators::iterator it = tpcc_generators.begin(); it != tpcc_generators.end(); ++it) {
     _commands_completion.push_back("load " + it->first);
   }
 
@@ -132,13 +132,29 @@ std::string Console::prompt() const {
 }
 
 int Console::_eval(const std::string & input) {
-  if (input.empty()) return ReturnCode::Ok;
+  if (input.empty() && _multiline_input.empty()) {
+    return ReturnCode::Ok;
+  }
 
   out(_prompt + input + "\n", false);
 
   RegisteredCommands::iterator it;
   if ((it = _commands.find(input.substr(0, input.find_first_of(" \n")))) != std::end(_commands)) {
     return _eval_command(it->second, input);
+  }
+
+  if (input.back() == '\\') {
+    _multiline_input += input.substr(0, input.size()-1);
+    if (_multiline_input.back() != ' ') {
+      _multiline_input += ' ';
+    }
+    return ReturnCode::Multiline;
+  }
+
+  if (!_multiline_input.empty()) {
+    int retCode = _eval_sql(_multiline_input + input);
+    _multiline_input = "";
+    return retCode;
   }
 
   return _eval_sql(input);
@@ -272,9 +288,10 @@ int main(int argc, char** argv) {
 
   int retCode;
   while ((retCode = console.read()) != Return::Quit) {
-    if (retCode == Return::Ok)
-    {
+    if (retCode == Return::Ok) {
       console.setPrompt("> ");
+    } else if (retCode == Return::Multiline) {
+      console.setPrompt("... ");
     } else {
       console.setPrompt("!> ");
     }

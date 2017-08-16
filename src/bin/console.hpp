@@ -18,6 +18,7 @@ class Console
   using RegisteredCommands = std::unordered_map<std::string, CommandFunction>;
 
   enum ReturnCode {
+    Multiline = -2,
     Quit = -1,
     Ok = 0,
     Error = 1
@@ -41,12 +42,6 @@ class Console
   int _eval_command(const CommandFunction & f, const std::string & command);
   int _eval_sql(const std::string & sql);
 
-  std::string _prompt;
-  RegisteredCommands _commands;
-  std::vector<std::string> _commands_completion;
-  std::ostream _out;
-  std::ofstream _log;
-
   // Command functions
   static int exit(const std::string & args);
   static int load_tpcc(const std::string & args);
@@ -54,6 +49,13 @@ class Console
   // GNU readline interface to our commands
   static char ** command_completion(const char * text, int start, int end);
   static char * command_generator(const char * text, int state);
+
+  std::string _prompt;
+  std::string _multiline_input;
+  RegisteredCommands _commands;
+  std::vector<std::string> _commands_completion;
+  std::ostream _out;
+  std::ofstream _log;
 };
 
 }  // namespace opossum
