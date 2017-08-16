@@ -90,10 +90,11 @@ ColumnSelectivityResult ColumnStatistics<ColumnType>::create_column_stats_for_ra
   auto common_max = std::min(maximum, max());
   if (common_min == min() && common_max == max()) {
     return {1.f, nullptr};
-  } else if (common_max < common_min) {
-    return {0.f, nullptr};
   }
-  float selectivity = estimate_selectivity_for_range(common_min, common_max);
+  float selectivity = 0.f;
+  if (common_max >= common_min) {
+    selectivity = estimate_selectivity_for_range(common_min, common_max);
+  }
   auto column_statistics =
       std::make_shared<ColumnStatistics>(_column_id, selectivity * distinct_count(), common_min, common_max);
   return {selectivity, column_statistics};
@@ -122,11 +123,12 @@ float ColumnStatistics<std::string>::estimate_selectivity_for_range(std::string 
 
 template <typename ColumnType>
 ColumnSelectivityResult ColumnStatistics<ColumnType>::create_column_stats_for_equals_predicate(ColumnType value) {
+  float new_distinct_count = 1.f;
   if (value < min() || value > max()) {
-    return {0.f, nullptr};
+    new_distinct_count = 0.f;
   }
-  auto column_statistics = std::make_shared<ColumnStatistics>(_column_id, 1, value, value);
-  return {1.f / distinct_count(), column_statistics};
+  auto column_statistics = std::make_shared<ColumnStatistics>(_column_id, new_distinct_count, value, value);
+  return {new_distinct_count / distinct_count(), column_statistics};
 }
 
 template <typename ColumnType>

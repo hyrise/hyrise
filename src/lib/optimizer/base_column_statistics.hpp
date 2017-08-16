@@ -53,6 +53,12 @@ class BaseColumnStatistics {
       const ScanType scan_type, const std::shared_ptr<BaseColumnStatistics> &right_base_column_statistics,
       const optional<AllTypeVariant> &value2 = nullopt) = 0;
 
+  /**
+   * Gets distict count of column.
+   * See _distinct_count declaration in column_statistics.hpp for explanation of float type.
+   */
+  virtual float distinct_count() const = 0;
+
  protected:
   /**
    * In order to to call insertion operator on ostream with BaseColumnStatistics with values of ColumnStatistics<T>,

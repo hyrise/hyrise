@@ -48,14 +48,14 @@ class ColumnStatistics : public BaseColumnStatistics {
       const ScanType scan_type, const std::shared_ptr<BaseColumnStatistics> &right_base_column_statistics,
       const optional<AllTypeVariant> &value2 = nullopt) override;
 
- protected:
-  std::ostream &print_to_stream(std::ostream &os) const override;
-
   /**
    * Accessors for class variable optionals. Compute values, if not available.
    * See _distinct_count declaration below for explanation of float type.
    */
-  float distinct_count() const;
+  float distinct_count() const override;
+
+ protected:
+  std::ostream &print_to_stream(std::ostream &os) const override;
   ColumnType min() const;
   ColumnType max() const;
 

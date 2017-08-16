@@ -4,6 +4,7 @@
 #include <ostream>
 #include <string>
 #include <vector>
+#include <utility>
 
 #include "all_parameter_variant.hpp"
 #include "common.hpp"
@@ -64,15 +65,17 @@ class TableStatistics {
    */
   virtual std::shared_ptr<TableStatistics> join_statistics(
       const std::shared_ptr<TableStatistics> &right_table_statistics,
-      const optional<std::pair<std::string, std::string>> column_names, const ScanType scan_type, const JoinMode mode);
+      const optional<std::pair<ColumnID, ColumnID>> column_ids, const ScanType scan_type, const JoinMode mode);
 
  protected:
   std::shared_ptr<BaseColumnStatistics> column_statistics(const ColumnID column_id);
 
+  void create_all_column_statistics();
+
   // Only available for statistics of tables in the StorageManager.
   // This is a weak_ptr, as
   // Table --shared_ptr--> TableStatistics
-  const std::weak_ptr<Table> _table;
+  std::weak_ptr<Table> _table;
 
   // row count is not an integer as it is a predicted value
   // it is multiplied with selectivity factor of a corresponding operator to predict the operator's output
