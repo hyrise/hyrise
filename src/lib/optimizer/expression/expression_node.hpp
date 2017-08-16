@@ -52,8 +52,8 @@ class ExpressionNode : public std::enable_shared_from_this<ExpressionNode> {
   static std::shared_ptr<ExpressionNode> create_column_reference(const ColumnID column_id,
                                                                  const optional<std::string>& alias = {});
 
-  static std::vector<std::shared_ptr<ExpressionNode>> create_column_references(const std::vector<ColumnID>& column_ids,
-                                                                               const std::vector<std::string>& aliases);
+  static std::vector<std::shared_ptr<ExpressionNode>> create_column_references(
+      const std::vector<ColumnID>& column_ids, const std::vector<std::string>& aliases = {});
 
   /**
    * A literal can have an alias in order to allow queries like `SELECT 1 as one FROM t`.
@@ -104,10 +104,9 @@ class ExpressionNode : public std::enable_shared_from_this<ExpressionNode> {
   // Returns true if the expression requires two children.
   bool is_binary_operator() const;
 
-  /*
-   * Getters
-   */
   const ColumnID column_id() const;
+
+  void set_column_id(const ColumnID column_id);
 
   const std::string& name() const;
 
@@ -118,6 +117,8 @@ class ExpressionNode : public std::enable_shared_from_this<ExpressionNode> {
   const AllTypeVariant value() const;
 
   const std::vector<std::shared_ptr<ExpressionNode>>& expression_list() const;
+
+  void set_expression_list(const std::vector<std::shared_ptr<ExpressionNode>>& expression_list);
 
   // Expression as string
   std::string to_string() const;
@@ -135,12 +136,12 @@ class ExpressionNode : public std::enable_shared_from_this<ExpressionNode> {
    * Expression hierarchy.
    * E.g. for CASE one could argue that the THEN case becomes the left child, whereas ELSE becomes the right child.
    */
-  const std::vector<std::shared_ptr<ExpressionNode>> _expression_list;
+  std::vector<std::shared_ptr<ExpressionNode>> _expression_list;
 
   // a name, which could be a function name
   const std::string _name;
   // a column that might be referenced
-  const ColumnID _column_id;
+  ColumnID _column_id;
   // an alias, used for ColumnReferences, Selects, FunctionReferences
   optional<std::string> _alias;
 

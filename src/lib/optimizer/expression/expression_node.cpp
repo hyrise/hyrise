@@ -42,10 +42,17 @@ std::vector<std::shared_ptr<ExpressionNode>> ExpressionNode::create_column_refer
   std::vector<std::shared_ptr<ExpressionNode>> column_references;
   column_references.reserve(column_ids.size());
 
-  DebugAssert(column_ids.size() == aliases.size(), "There must be the same number of aliases as ColumnIDs.");
+  if (aliases.empty()) {
+    for (auto column_index = 0u; column_index < column_ids.size(); ++column_index) {
+      column_references.emplace_back(create_column_reference(column_ids[column_index]));
+    }
+  } else {
+    DebugAssert(column_ids.size() == aliases.size(),
+                "There must be the same number of aliases as ColumnIDs, or none at all.");
 
-  for (auto column_index = 0u; column_index < column_ids.size(); ++column_index) {
-    column_references.emplace_back(create_column_reference(column_ids[column_index], aliases[column_index]));
+    for (auto column_index = 0u; column_index < column_ids.size(); ++column_index) {
+      column_references.emplace_back(create_column_reference(column_ids[column_index], aliases[column_index]));
+    }
   }
 
   return column_references;
@@ -192,8 +199,14 @@ const std::string ExpressionNode::description() const {
 
 const ColumnID ExpressionNode::column_id() const {
   DebugAssert(_type == ExpressionType::ColumnReference,
-              "Expression " + expression_type_to_string.at(_type) + " does not have a name");
+              "Expression " + expression_type_to_string.at(_type) + " does not have a column_id");
   return _column_id;
+}
+
+void ExpressionNode::set_column_id(const ColumnID column_id) {
+  DebugAssert(_type == ExpressionType::ColumnReference,
+              "Expression " + expression_type_to_string.at(_type) + " does not have a column_id");
+  _column_id = column_id;
 }
 
 const std::string &ExpressionNode::name() const {
@@ -233,5 +246,9 @@ std::string ExpressionNode::to_string() const {
 }
 
 const std::vector<std::shared_ptr<ExpressionNode>> &ExpressionNode::expression_list() const { return _expression_list; }
+
+void ExpressionNode::set_expression_list(const std::vector<std::shared_ptr<ExpressionNode>> &expression_list) {
+  _expression_list = expression_list;
+}
 
 }  // namespace opossum

@@ -33,10 +33,14 @@ std::shared_ptr<const Table> Projection::on_execute() {
   // Prepare terms and output table for each column to project
   for (const auto& column_expression : _column_expressions) {
     std::string name;
+
     if (column_expression->alias()) {
       name = *column_expression->alias();
     } else if (column_expression->type() == ExpressionType::ColumnReference) {
       name = input_table_left()->column_name(column_expression->column_id());
+    } else if (column_expression->type() == ExpressionType::FunctionReference) {
+      // TODO(tim): BLOCKING - generate "correct" output name, i.e. SUM(a)
+      name = "test";
     } else {
       // TODO(tim): BLOCKING - make sure that this is not overwriting existing columns.
       name = column_expression->to_string();

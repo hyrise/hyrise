@@ -91,27 +91,19 @@ std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::_translate_aggregate_
   const auto input_operator = translate_node(node->left_child());
 
   const auto aggregate_node = std::dynamic_pointer_cast<AggregateNode>(node);
-  const auto &aggregates = aggregate_node->aggregates();
+  auto aggregates = aggregate_node->aggregates();
+  auto groupby_columns = aggregate_node->groupby_columns();
 
   auto aggregate_input_operator = input_operator;
 
   /**
    * 1. Handle arithmetic expressions in aggregate functions via Projection.
+   *
+   * We only need a Projection before the aggregate if the function argument is an arithmetic expression.
    */
-  std::vector<ColumnID> expr_aliases;
-  expr_aliases.reserve(aggregates.size());
-
-  Projection::ColumnExpressions column_expressions;
-  column_expressions.reserve(aggregates.size());
-
-  // We only need a Projection before the aggregate if the function argument is an arithmetic expression.
   auto need_projection = false;
 
-  // Counter to generate unique aliases for arithmetic expressions.
-  auto alias_index = 0u;
-
-  // TODO(tim): is it better to create copies (even though they might not be needed),
-  // or iterate twice (if they are needed)?
+  // Check if there are any arithmetic expressions.
   for (const auto &aggregate : aggregates) {
     DebugAssert(aggregate.expr->type() == ExpressionType::FunctionReference, "Expression is not a function.");
 
@@ -119,24 +111,40 @@ std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::_translate_aggregate_
 
     if (function_arg_expr->is_arithmetic_operator()) {
       need_projection = true;
-
-      // Generate a temporary column name for the expression.
-      // Make sure that the generated column name is not existing in the input.
-      auto alias = "alias" + std::to_string(alias_index);
-      alias_index++;
-
-      while (node->left_child()->has_output_column(alias)) {
-        alias = "alias" + std::to_string(alias_index);
-        alias_index++;
-      }
-
-      function_arg_expr->set_alias(alias);
+      break;
     }
-
-    column_expressions.emplace_back(function_arg_expr);
   }
 
+  // If there are, create Projection with GROUP BY columns and arithmetic expressions.
   if (need_projection) {
+    // TODO(tim): BLOCKING - these columnref exprs need the original column name.
+    Projection::ColumnExpressions column_expressions = ExpressionNode::create_column_references(groupby_columns);
+    column_expressions.reserve(groupby_columns.size() + aggregates.size());
+
+    // The Projection will only select columns used in the Aggregate, i.e., GROUP BY columns and expressions.
+    // Unused columns are skipped – therefore, the ColumnIDs might change.
+    // In fact, they will be the first columns of the Projection.
+    for (uint16_t column_id = 0u; column_id < groupby_columns.size(); column_id++) {
+      groupby_columns[column_id] = ColumnID{column_id};
+    }
+
+    // Counter to generate unique aliases for arithmetic expressions.
+    auto current_column_id = static_cast<uint16_t>(groupby_columns.size());
+
+    for (auto &aggregate : aggregates) {
+      DebugAssert(aggregate.expr->type() == ExpressionType::FunctionReference, "Expression is not a function.");
+
+      // Add original expression of the function to the Projection.
+      column_expressions.emplace_back((aggregate.expr->expression_list())[0]);
+
+      // Create a ColumnReference expression for the column id of the Projection.
+      const auto column_ref_expr = ExpressionNode::create_column_reference(ColumnID{current_column_id});
+      current_column_id++;
+
+      // Change the expression list of the expression representing the aggregate.
+      aggregate.expr->set_expression_list({column_ref_expr});
+    }
+
     aggregate_input_operator = std::make_shared<Projection>(aggregate_input_operator, column_expressions);
   }
 
@@ -146,18 +154,16 @@ std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::_translate_aggregate_
   std::vector<AggregateDefinition> aggregate_definitions;
   aggregate_definitions.reserve(aggregates.size());
 
-  for (uint16_t aggregate_idx = 0; aggregate_idx < aggregates.size(); aggregate_idx++) {
-    const auto &aggregate = aggregates[aggregate_idx];
-
+  for (const auto &aggregate : aggregates) {
     DebugAssert(aggregate.expr->type() == ExpressionType::FunctionReference,
                 "Only functions are supported in Aggregates");
-    const auto aggregate_function_type = aggregate_function_to_string.right.at(aggregate.expr->name());
 
-    aggregate_definitions.emplace_back(ColumnID{aggregate_idx}, aggregate_function_type, aggregate.alias);
+    const auto aggregate_function_type = aggregate_function_to_string.right.at(aggregate.expr->name());
+    const auto column_id = (aggregate.expr->expression_list())[0]->column_id();
+    aggregate_definitions.emplace_back(column_id, aggregate_function_type, aggregate.alias);
   }
 
-  return std::make_shared<Aggregate>(aggregate_input_operator, aggregate_definitions,
-                                     aggregate_node->groupby_columns());
+  return std::make_shared<Aggregate>(aggregate_input_operator, aggregate_definitions, groupby_columns);
 }
 
 }  // namespace opossum
