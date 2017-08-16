@@ -60,7 +60,7 @@ class Projection : public AbstractReadOnlyOperator {
 
   static const std::string evaluate_expression_type(const std::shared_ptr<ExpressionNode>& expression,
                                                     const std::shared_ptr<const Table>& table);
-  
+
   /**
    * This function evaluates the given expression on a single chunk.
    * It returns a vector containing the materialized values resulting from the expression.
