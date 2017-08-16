@@ -13,7 +13,7 @@
 namespace {
 
   opossum::Console * _instance = nullptr;
-  
+
 }
 
 namespace opossum {
@@ -28,12 +28,16 @@ Console::Console(const std::string & prompt, const std::string & log_file)
   , _out(std::cout.rdbuf())
   , _log(log_file, std::ios_base::app | std::ios_base::out) {
 
-  // Init readline basics
+  // Init readline basics, tells readline to use our custom command completion function
   rl_attempted_completion_function = &Console::command_completion;
   rl_completer_word_break_characters = (char *) "\t\n\"\\'`@$><=;|&{(";
 
+  // Register default commands to Console
   register_command("exit", exit);
   register_command("load", load_tpcc);
+
+  // Register more commands specifically for command completion purposes, e.g.
+  // for TPCC generation, 'load CUSTOMER', 'load DISTRICT', etc
   auto tpcc_generators = tpcc::TpccTableGenerator::tpcc_table_generator_functions();
   for (tpcc::TpccTableGeneratorFunctions::iterator it = tpcc_generators.begin(); it != tpcc_generators.end(); ++it) {
     _commands_completion.push_back("load " + it->first);
@@ -41,44 +45,32 @@ Console::Console(const std::string & prompt, const std::string & log_file)
 
   _instance = this;
 
+  // Timestamp dump only to logfile
   out("--- Session start --- " + time_stamp() + "\n", false);
 }
 
 Console::~Console() {
+  // Timestamp dump only to logfile
   out("--- Session end --- " + time_stamp() + "\n", false);
   _instance = nullptr;
 }
 
 int Console::read() {
-  char* buffer; // Buffer of line entered by user
+  char* buffer;
 
-  buffer = readline(_prompt.c_str()); // Prompt user for input
+  // Prompt user for input
+  buffer = readline(_prompt.c_str());
   std::string input = trim(std::string(buffer));
 
-  if(!input.empty()) { // Only save non-empty commands to history
+  // Only save non-empty commands to history
+  if(!input.empty()) {
     add_history(buffer);
   }
 
-  free(buffer); // Free buffer, since readline() allocates new string every time
+  // Free buffer, since readline() allocates new string every time
+  free(buffer);
 
   return _eval(input);
-}
-
-void Console::register_command(const std::string & name, const CommandFunction & f) {
-  _commands[name] = f;
-  _commands_completion.push_back(name + " ");
-}
-
-Console::RegisteredCommands Console::commands() {
-  return _commands;
-}
-
-void Console::setPrompt(const std::string & prompt) {
-  _prompt = prompt;
-}
-
-std::string Console::prompt() const {
-  return _prompt;
 }
 
 int Console::_eval(const std::string & input) {
@@ -86,13 +78,16 @@ int Console::_eval(const std::string & input) {
     return ReturnCode::Ok;
   }
 
+  // Dump command to logfile (the Console already has it from the input)
   out(_prompt + input + "\n", false);
 
+  // Check if a registered command was entered
   RegisteredCommands::iterator it;
   if ((it = _commands.find(input.substr(0, input.find_first_of(" \n")))) != std::end(_commands)) {
     return _eval_command(it->second, input);
   }
 
+  // Check for multiline-input
   if (input.back() == '\\') {
     _multiline_input += input.substr(0, input.size()-1);
     if (_multiline_input.back() != ' ') {
@@ -101,12 +96,14 @@ int Console::_eval(const std::string & input) {
     return ReturnCode::Multiline;
   }
 
+  // Check for the last command of a multiline-input
   if (!_multiline_input.empty()) {
     int retCode = _eval_sql(_multiline_input + input);
     _multiline_input = "";
     return retCode;
   }
 
+  // If nothing from the above, regard input as SQL query
   return _eval_sql(input);
 }
 
@@ -130,13 +127,14 @@ int Console::_eval_sql(const std::string & sql) {
   hsql::SQLParserResult parse_result;
   hsql::SQLParser::parse(sql, &parse_result);
 
+  // Check if SQL query is valid
   if (!parse_result.isValid())
   {
     out("Error: SQL query not valid.\n");
     return 1;
   }
 
-  // Compile the parse result.
+  // Compile the parse result
   if (!translator.translate_parse_result(parse_result))
   {
     out("Error while compiling: " + translator.get_error_msg() + "\n");
@@ -145,13 +143,32 @@ int Console::_eval_sql(const std::string & sql) {
 
   plan = translator.get_query_plan();
 
+  // Execute query plan
   for (const auto& task : plan.tasks()) {
     task->get_operator()->execute();
   }
 
+  // Print result (to Console and logfile)
   out(plan.tree_roots().back()->get_output());
 
   return ReturnCode::Ok;
+}
+
+void Console::register_command(const std::string & name, const CommandFunction & f) {
+  _commands[name] = f;
+  _commands_completion.push_back(name + " ");
+}
+
+Console::RegisteredCommands Console::commands() {
+  return _commands;
+}
+
+void Console::setPrompt(const std::string & prompt) {
+  _prompt = prompt;
+}
+
+std::string Console::prompt() const {
+  return _prompt;
 }
 
 void Console::out(const std::string & output, bool console_print) {
@@ -236,6 +253,7 @@ int main(int argc, char** argv) {
 
   opossum::Console console("> ", "./console.log");
 
+  // Main REPL loop
   int retCode;
   while ((retCode = console.read()) != Return::Quit) {
     if (retCode == Return::Ok) {
