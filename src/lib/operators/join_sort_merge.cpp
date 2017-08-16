@@ -38,7 +38,7 @@ JoinSortMerge::JoinSortMerge(const std::shared_ptr<const AbstractOperator> left,
   DebugAssert(right != nullptr, "The right input operator is null.");
   DebugAssert(op == ScanType::OpEquals || op == ScanType::OpLessThan || op == ScanType::OpGreaterThan ||
               op == ScanType::OpLessThanEquals || op == ScanType::OpGreaterThanEquals, "Unsupported scan type");
-  DebugAssert(op == ScanType::OpEquals || mode == JoinMode::Inner, "Outer joins are only implemented for equi joins.");
+  //DebugAssert(op == ScanType::OpEquals || mode == JoinMode::Inner, "Outer joins are only implemented for equi joins.");
   DebugAssert(static_cast<bool>(column_names), "JoinSortMerge currently does not support natural joins.");
 
   auto left_column_name = column_names->first;
@@ -299,9 +299,6 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
     size_t left_run_start = 0;
     size_t right_run_start = 0;
 
-    // Note: considering the number of comparisons required to identify a run, is this
-    // actually sensible from a performance standpoint? The alternative would be to just compare every left value
-    // with every right value instead of a left run with a right run.
     auto left_run_end = left_run_start + _run_length(left_run_start, left_partition);
     auto right_run_end = right_run_start + _run_length(right_run_start, right_partition);
 
@@ -340,7 +337,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
 
     // The left side has finished -> add the remaining values of the right side
     if (left_run_start == left_size) {
-      if (_mode == JoinMode::Right || _mode == JoinMode::Outer) {
+      if (_op == ScanType::OpEquals && (_mode == JoinMode::Right || _mode == JoinMode::Outer)) {
         _emit_left_null_combinations(partition_number, TableRange(partition_number, right_run_start, right_size));
       }
       if (_op == ScanType::OpGreaterThan || _op == ScanType::OpGreaterThanEquals) {
@@ -352,7 +349,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
 
     // The right side has finished -> add the remaining values of the left side
     if (right_run_start == right_size) {
-      if (_mode == JoinMode::Left || _mode == JoinMode::Outer) {
+      if (_op == ScanType::OpEquals && (_mode == JoinMode::Left || _mode == JoinMode::Outer)) {
         _emit_right_null_combinations(partition_number, TableRange(partition_number, left_run_start, left_size));
       }
       if (_op == ScanType::OpLessThan || _op == ScanType::OpLessThanEquals) {
@@ -360,6 +357,100 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
         auto right_range = TableRange(TablePosition(partition_number + 1, 0).to(_end_of_table(_sorted_right_table)));
         _emit_combinations(partition_number, left_range, right_range);
       }
+    }
+  }
+
+  T& _table_min_value(std::shared_ptr<MaterializedTable<T>> sorted_table) {
+    DebugAssert(_op != ScanType::OpEquals, "Complete table order is required for _table_min_value which is only " +
+                                           "available in the non-equi case");
+    DebugAssert(sorted_table->size() > 0, "Sorted table is empty");
+
+    for (auto partition : *sorted_table) {
+      if (partition->size() > 0) {
+        return partition->at(0).value;
+      }
+    }
+
+    throw std::logic_error("Every partition is empty");
+  }
+
+  T& _table_max_value(std::shared_ptr<MaterializedTable<T>> sorted_table) {
+    DebugAssert(_op != ScanType::OpEquals, "Complete table order is required for _table_max_value which is only " +
+                                           "available in the non-equi case");
+    DebugAssert(sorted_table->size() > 0, "Sorted table is empty");
+
+    for (size_t partition_id = sorted_table->size() - 1; partition_id >= 0; --partition_id) {
+      if (sorted_table->at(partition_id)->size() > 0) {
+        return sorted_table->at(partition_id)->back().value;
+      }
+    }
+
+    throw std::logic_error("Every partition is empty");
+  }
+
+  void _left_outer_non_equi_join() {
+    auto& left_min_value = _table_min_value(_sorted_right_table);
+    // auto& left_max_value = _sorted_left_table->back()->back();
+    // auto& right_min_value = _sorted_right_table->at(0)->at(0);
+    // auto& right_max_value = _sorted_right_table->back()->back();
+
+    // auto end_of_left_table = _end_of_table(_sorted_left_table);
+    // auto end_of_right_table = _end_of_table(_sorted_right_table);
+
+    // Look for the first rhs value that is bigger than the smallest lhs value
+    if (_op == ScanType::OpLessThan) {
+      for(size_t partition_id = 0; partition_id < _sorted_right_table->size(); ++partition_id) {
+        auto partition = _sorted_right_table->at(partition_id);
+        if (partition->size() > 0 && partition->back().value > left_min_value) {
+          for(size_t index = 0; index < partition->size(); ++index) {
+            if(partition->at(index).value > left_min_value) {
+              // Every rhs value before this index does not have a join partner
+              _emit_left_null_combinations(partition_id, TablePosition(0, 0).to(TablePosition(partition_id, index)));
+              return;
+            }
+          }
+        }
+      }
+    } else if (_op == ScanType::OpLessThanEquals) {
+      // TODO
+    } else if (_op == ScanType::OpGreaterThan) {
+      // TODO
+    } else if (_op == ScanType::OpGreaterThanEquals) {
+      // TODO
+    }
+  }
+
+  void _right_outer_non_equi_join() {
+    // auto& left_min_value = _sorted_left_table->at(0)->at(0);
+    // auto& left_max_value = _sorted_left_table->back()->back();
+    // auto& right_min_value = _sorted_right_table->at(0)->at(0);
+    auto& right_max_value = _table_max_value(_sorted_right_table);
+
+    auto end_of_left_table = _end_of_table(_sorted_left_table);
+    // auto end_of_right_table = _end_of_table(_sorted_right_table);
+
+    if (_op == ScanType::OpLessThan) {
+      // Look for the first lhs value that is not smaller than the biggest rhs value
+      // Note: this sucks
+      for (size_t r_partition_id = 0; r_partition_id < _sorted_left_table->size(); ++r_partition_id) {
+        auto partition_id = _sorted_left_table->size() - 1 - r_partition_id;
+        auto partition = _sorted_left_table->at(partition_id);
+        if (partition->size() > 0 && partition->back().value >= right_max_value) {
+          for(size_t r_index = 0; r_index < partition->size(); ++r_index) {
+            size_t index = partition->size() - 1 - r_index;
+            if(partition->at(index).value >= right_max_value) {
+              _emit_right_null_combinations(partition_id, TablePosition(partition_id, index).to(end_of_left_table));
+              return;
+            }
+          }
+        }
+      }
+    } else if (_op == ScanType::OpLessThanEquals) {
+      // TODO
+    } else if (_op == ScanType::OpGreaterThan) {
+      // TODO
+    } else if (_op == ScanType::OpGreaterThanEquals) {
+      // TODO
     }
   }
 
@@ -378,6 +469,14 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
     }
 
     CurrentScheduler::wait_for_tasks(jobs);
+
+    // Outer joins for the <, <=, >, >= operators
+    if (_op != ScanType::OpEquals && (_mode == JoinMode::Left || _mode == JoinMode::Outer)) {
+      _left_outer_non_equi_join();
+    }
+    if (_op != ScanType::OpEquals && (_mode == JoinMode::Right || _mode == JoinMode::Outer)) {
+      _right_outer_non_equi_join();
+    }
   }
 
   /**
