@@ -444,8 +444,7 @@ TpccTableGeneratorFunctions TpccTableGenerator::tpcc_table_generator_functions()
 
 std::shared_ptr<opossum::Table> TpccTableGenerator::generate_tpcc_table(const std::string & tablename) {
   auto generators = TpccTableGenerator::tpcc_table_generator_functions();
-  if (generators.find(tablename) == generators.end())
-  {
+  if (generators.find(tablename) == generators.end()) {
     return nullptr;
   }
   return generators[tablename]();

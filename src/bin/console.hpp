@@ -5,6 +5,7 @@
 #include <unordered_map>
 #include <fstream>
 #include <memory>
+#include <vector>
 
 #include "storage/table.hpp"
 
@@ -14,10 +15,8 @@ namespace opossum {
  * SQL REPL Console for Opossum, built on GNU readline. https://cnswww.cns.cwru.edu/php/chet/readline/rltop.html
  * Can load TPCC tables via "load TABLENAME" command, and can execute SQL statements based on opossum::SqlQueryTranslator.
  */
-class Console
-{
+class Console {
  public:
-
   using CommandFunction = std::function<int(const std::string &)>;
   using RegisteredCommands = std::unordered_map<std::string, CommandFunction>;
 

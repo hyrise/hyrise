@@ -1,8 +1,11 @@
 #include "console.hpp"
 
-#include <iostream>
 #include <readline/readline.h>
 #include <readline/history.h>
+#include <iostream>
+#include <memory>
+#include <string>
+#include <vector>
 
 #include "storage/storage_manager.hpp"
 #include "tpcc/tpcc_table_generator.hpp"
@@ -27,10 +30,9 @@ Console::Console(const std::string & prompt, const std::string & log_file)
   , _commands_completion()
   , _out(std::cout.rdbuf())
   , _log(log_file, std::ios_base::app | std::ios_base::out) {
-
   // Init readline basics, tells readline to use our custom command completion function
   rl_attempted_completion_function = &Console::command_completion;
-  rl_completer_word_break_characters = (char *) "\t\n\"\\'`@$><=;|&{(";
+  rl_completer_word_break_characters = const_cast<char *>("\t\n\"\\'`@$><=;|&{(");
 
   // Register default commands to Console
   register_command("exit", exit);
@@ -63,7 +65,7 @@ int Console::read() {
   std::string input = trim(std::string(buffer));
 
   // Only save non-empty commands to history
-  if(!input.empty()) {
+  if (!input.empty()) {
     add_history(buffer);
   }
 
@@ -111,8 +113,7 @@ int Console::_eval_command(const CommandFunction & f, const std::string & comman
   size_t first = command.find(' ');
   size_t last = command.find('\n');
 
-  if (std::string::npos == first)
-  {
+  if (std::string::npos == first) {
     return static_cast<int>(f(""));
   }
 
@@ -128,15 +129,13 @@ int Console::_eval_sql(const std::string & sql) {
   hsql::SQLParser::parse(sql, &parse_result);
 
   // Check if SQL query is valid
-  if (!parse_result.isValid())
-  {
+  if (!parse_result.isValid()) {
     out("Error: SQL query not valid.\n");
     return 1;
   }
 
   // Compile the parse result
-  if (!translator.translate_parse_result(parse_result))
-  {
+  if (!translator.translate_parse_result(parse_result)) {
     out("Error while compiling: " + translator.get_error_msg() + "\n");
     return 1;
   }
@@ -191,8 +190,7 @@ int Console::exit(const std::string &) {
 }
 
 int Console::load_tpcc(const std::string & tablename) {
-  if (tablename.empty() || "ALL" == tablename)
-  {
+  if (tablename.empty() || "ALL" == tablename) {
     _instance->out("Generating TPCC tables (this might take a while) ...\n");
     auto tables = tpcc::TpccTableGenerator().generate_all_tables();
     for (auto& pair : tables) {
@@ -203,8 +201,7 @@ int Console::load_tpcc(const std::string & tablename) {
 
   _instance->out("Generating TPCC table: \"" + tablename + "\" ...\n");
   auto table = tpcc::TpccTableGenerator::generate_tpcc_table(tablename);
-  if (table == nullptr)
-  {
+  if (table == nullptr) {
     _instance->out("Error: No TPCC table named \"" + tablename + "\" available.\n");
     return Console::ReturnCode::Error;
   }
@@ -219,8 +216,7 @@ char ** Console::command_completion(const char * text, int start, int end) {
   char ** completion_matches = nullptr;
   rl_completion_suppress_append = 1;
   rl_attempted_completion_over = 1;
-  if (start == 0)
-  {
+  if (start == 0) {
     completion_matches = rl_completion_matches(text, &Console::command_generator);
   }
   return completion_matches;
@@ -238,7 +234,7 @@ char * Console::command_generator(const char * text, int state) {
     ++it;
     if (command.find(text) != std::string::npos) {
       char * completion = new char[command.size()];
-      strcpy(completion, command.c_str());
+      snprintf(completion, command.size()+1, "%s", command.c_str());
       return completion;
     }
   }
