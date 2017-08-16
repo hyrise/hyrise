@@ -474,7 +474,6 @@ class JoinNestedLoopA::JoinNestedLoopAImpl : public AbstractJoinOperatorImpl {
         }
       }
     }
-
     if (_mode == JoinMode::Right || _mode == JoinMode::Outer) {
       for (const auto &elem : *rows_potentially_joined_with_null_values_right) {
         if (elem.second) {
