@@ -20,7 +20,6 @@
 #include "storage/table.hpp"
 
 #include "types.hpp"
-#include "utils/helper.hpp"
 
 namespace tpcc {
 
