@@ -11,7 +11,8 @@
 namespace opossum {
 
 JoinNode::JoinNode(const JoinMode join_mode, const std::string &prefix_left, const std::string &prefix_right,
-                   optional<std::pair<std::string, std::string>> join_column_names, optional<ScanType> scan_type)
+                   const optional<std::pair<std::string, std::string>> &join_column_names,
+                   const optional<ScanType> &scan_type)
     : AbstractASTNode(ASTNodeType::Join),
       _join_column_names(join_column_names),
       _scan_type(scan_type),

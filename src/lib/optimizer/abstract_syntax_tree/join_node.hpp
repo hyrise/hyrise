@@ -21,7 +21,8 @@ namespace opossum {
 class JoinNode : public AbstractASTNode {
  public:
   JoinNode(const JoinMode join_mode, const std::string &prefix_left, const std::string &prefix_right,
-           optional<std::pair<std::string, std::string>> join_column_names = {}, optional<ScanType> scan_type = {});
+           const optional<std::pair<std::string, std::string>> &join_column_names = {},
+           const optional<ScanType> &scan_type = {});
 
   std::string description() const override;
 
