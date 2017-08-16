@@ -37,34 +37,6 @@ namespace {
     size_t last = str.find_last_not_of(' ');
     return str.substr(first, (last - first + 1));
   }
-
-  using TpccGenerators = std::unordered_map<std::string, std::function<std::shared_ptr<opossum::Table>()>>;
-  TpccGenerators tpcc_generators {
-    {"ITEM", [](){return tpcc::TpccTableGenerator().generate_items_table();}},
-    {"WAREHOUSE", [](){return tpcc::TpccTableGenerator().generate_warehouse_table();}},
-    {"STOCK", [](){return tpcc::TpccTableGenerator().generate_stock_table();}},
-    {"DISTRICT", [](){return tpcc::TpccTableGenerator().generate_district_table();}},
-    {"CUSTOMER", [](){return tpcc::TpccTableGenerator().generate_customer_table();}},
-    {"HISTORY", [](){return tpcc::TpccTableGenerator().generate_history_table();}},
-    {"ORDER", [](){return tpcc::TpccTableGenerator().generate_new_order_table();}},
-    {"NEW-ORDER", [](){
-      auto order_line_counts = tpcc::TpccTableGenerator().generate_order_line_counts();
-      return tpcc::TpccTableGenerator().generate_order_table(order_line_counts);
-    }},
-    {"ORDER-LINE", [](){
-      auto order_line_counts = tpcc::TpccTableGenerator().generate_order_line_counts();
-      return tpcc::TpccTableGenerator().generate_order_line_table(order_line_counts);
-    }}
-  };
-
-  std::shared_ptr<opossum::Table> generate_tpcc_table(const std::string & tablename) {
-    if (tpcc_generators.find(tablename) == tpcc_generators.end())
-    {
-      return nullptr;
-    }
-    return tpcc_generators[tablename]();
-  }
-
 }
 
 namespace opossum {
@@ -85,7 +57,8 @@ Console::Console(const std::string & prompt, const std::string & log_file)
 
   register_command("exit", exit);
   register_command("load", load_tpcc);
-  for (TpccGenerators::iterator it = tpcc_generators.begin(); it != tpcc_generators.end(); ++it) {
+  auto tpcc_generators = tpcc::TpccTableGenerator::tpcc_table_generator_functions();
+  for (tpcc::TpccTableGeneratorFunctions::iterator it = tpcc_generators.begin(); it != tpcc_generators.end(); ++it) {
     _commands_completion.push_back("load " + it->first);
   }
 
@@ -235,7 +208,7 @@ int Console::load_tpcc(const std::string & tablename) {
   }
 
   _instance->out("Generating TPCC table: \"" + tablename + "\" ...\n");
-  auto table = generate_tpcc_table(tablename);
+  auto table = tpcc::TpccTableGenerator::generate_tpcc_table(tablename);
   if (table == nullptr)
   {
     _instance->out("Error: No TPCC table named \"" + tablename + "\" available.\n");

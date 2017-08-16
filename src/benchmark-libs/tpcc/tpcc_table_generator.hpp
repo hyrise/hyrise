@@ -6,6 +6,7 @@
 #include <memory>
 #include <string>
 #include <vector>
+#include <unordered_map>
 
 #include "tbb/concurrent_vector.h"
 
@@ -19,6 +20,8 @@ class Table;
 }  // namespace opossum
 
 namespace tpcc {
+
+using TpccTableGeneratorFunctions = std::unordered_map<std::string, std::function<std::shared_ptr<opossum::Table>()>>;
 
 class TpccTableGenerator : public benchmark_utilities::AbstractBenchmarkTableGenerator {
   // following TPC-C v5.11.0
@@ -50,6 +53,10 @@ class TpccTableGenerator : public benchmark_utilities::AbstractBenchmarkTableGen
   std::shared_ptr<opossum::Table> generate_new_order_table();
 
   std::map<std::string, std::shared_ptr<opossum::Table>> generate_all_tables();
+
+  static TpccTableGeneratorFunctions tpcc_table_generator_functions();
+
+  static std::shared_ptr<opossum::Table> generate_tpcc_table(const std::string & tablename);
 
   const size_t _warehouse_size;
   const time_t _current_date = std::time(0);
