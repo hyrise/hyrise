@@ -146,7 +146,7 @@ TEST_F(IterablesTest, DictionaryColumnDictReferencedIteratorExecuteForAll) {
   auto sum = uint32_t{0};
   iterable.execute_for_all(SumUp{sum});
 
-  EXPECT_EQ(sum, 12'480);
+  EXPECT_EQ(sum, 12'480u);
 }
 
 TEST_F(IterablesTest, ReferenceColumnIteratorExecuteForAll) {
@@ -161,7 +161,7 @@ TEST_F(IterablesTest, ReferenceColumnIteratorExecuteForAll) {
   auto sum = uint32_t{0};
   iterable.execute_for_all(SumUp{sum});
 
-  EXPECT_EQ(sum, 24'825);
+  EXPECT_EQ(sum, 24'825u);
 }
 
 TEST_F(IterablesTest, ConstantValueIteratorExecuteForAll) {
@@ -172,7 +172,7 @@ TEST_F(IterablesTest, ConstantValueIteratorExecuteForAll) {
     for (auto i = 0u; i < 10; ++i) sum += (*it).value();
   });
 
-  EXPECT_EQ(sum, 20);
+  EXPECT_EQ(sum, 20u);
 }
 
 }  // namespace opossum
