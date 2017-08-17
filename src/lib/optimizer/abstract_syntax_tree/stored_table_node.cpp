@@ -49,6 +49,8 @@ const optional<ColumnID> StoredTableNode::find_column_id_for_column_identifier(
   return table->column_id_by_name(column_identifier.column_name);
 }
 
-const std::string StoredTableNode::table_identifier() const { return _alias ? *_alias : _table_name; }
+const bool StoredTableNode::manages_table(const std::string& table_name) const {
+  return (_alias == table_name) || (_table_name == table_name);
+}
 
 }  // namespace opossum

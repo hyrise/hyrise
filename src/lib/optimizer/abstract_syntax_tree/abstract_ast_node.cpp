@@ -143,15 +143,11 @@ const optional<ColumnID> AbstractASTNode::find_column_id_for_column_identifier(
   return found_left;
 }
 
-const std::string AbstractASTNode::table_identifier() const {
-  DebugAssert(_left_child && !_right_child, "Overwrite this function if a class has two children.");
-
+const bool AbstractASTNode::manages_table(const std::string &table_name) const {
   if (_left_child) {
-    return _left_child->table_identifier();
+    return _left_child->manages_table(table_name);
   }
-
-  Fail("Node does not have a TableIdentifier.");
-  return "";
+  return false;
 }
 
 void AbstractASTNode::print(const uint32_t level, std::ostream &out) const {

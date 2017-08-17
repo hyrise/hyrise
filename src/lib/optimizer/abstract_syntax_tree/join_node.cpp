@@ -51,10 +51,10 @@ const std::vector<ColumnID> JoinNode::output_column_ids() const {
 }
 
 const optional<ColumnID> JoinNode::find_column_id_for_column_identifier(ColumnIdentifier &column_identifier) const {
-  if (left_child()->table_identifier() == column_identifier.table_name) {
+  if (left_child()->manages_table(column_identifier.table_name)) {
     return left_child()->find_column_id_for_column_identifier(column_identifier);
   }
-  if (right_child()->table_identifier() == column_identifier.table_name) {
+  if (right_child()->manages_table(column_identifier.table_name)) {
     auto num_left_columns = left_child()->output_column_ids().size();
     auto found = right_child()->find_column_id_for_column_identifier(column_identifier);
     if (found) {
@@ -62,6 +62,10 @@ const optional<ColumnID> JoinNode::find_column_id_for_column_identifier(ColumnId
     }
   }
   return nullopt;
+}
+
+const bool JoinNode::manages_table(const std::string &table_name) const {
+  return left_child()->manages_table(table_name) || right_child()->manages_table(table_name);
 }
 
 optional<std::pair<ColumnID, ColumnID>> JoinNode::join_column_ids() const { return _join_column_ids; }

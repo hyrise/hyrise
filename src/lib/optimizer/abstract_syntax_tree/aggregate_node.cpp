@@ -78,9 +78,14 @@ const std::vector<ColumnID> AggregateNode::output_column_ids() const { return _o
 
 const optional<ColumnID> AggregateNode::find_column_id_for_column_identifier(
     ColumnIdentifier& column_identifier) const {
+  /*
+   * Search for ColumnIdentifier in Aggregate columns:
+   * These columns are created by the Aggregate Operator, so we have to look through them here.
+   */
   optional<ColumnID> found_aggregate = nullopt;
   for (size_t i = 0; i < _aggregates.size(); i++) {
     const auto& aggregate_definition = _aggregates[i];
+    // if AggregateDefinition has no alias, column_name will not match
     if (column_identifier.column_name == aggregate_definition.alias) {
       if (!found_aggregate) {
         found_aggregate = ColumnID{i};
@@ -91,7 +96,9 @@ const optional<ColumnID> AggregateNode::find_column_id_for_column_identifier(
   }
 
   /*
-   * TODO(Sven): Add comment
+   * Search for ColumnIdentifier in Group By columns:
+   * These columns have been created by another node. Since Aggregates can only have a single child node,
+   * we just have to check the left_child for the ColumnIdentifier.
    */
   auto found_groupby = left_child() ? left_child()->find_column_id_for_column_identifier(column_identifier) : nullopt;
 
@@ -102,6 +109,7 @@ const optional<ColumnID> AggregateNode::find_column_id_for_column_identifier(
   if (found_aggregate) return found_aggregate;
   if (found_groupby) return found_groupby;
 
+  // ColumnIdentifier has not been found at all
   return nullopt;
 }
 

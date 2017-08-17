@@ -143,9 +143,8 @@ TEST_F(ASTToOperatorTranslatorTest, AggregateNodeWithArithmetics) {
   // Create expression "b * 2".
   const auto expr_col_b = ExpressionNode::create_column_reference(ColumnID{1});
   const auto expr_literal = ExpressionNode::create_literal(2);
-  const auto expr_multiplication = ExpressionNode::create_expression(ExpressionType::Multiplication);
-  expr_multiplication->set_left_child(expr_col_b);
-  expr_multiplication->set_right_child(expr_literal);
+  const auto expr_multiplication =
+      ExpressionNode::create_binary_operator(ExpressionType::Multiplication, expr_col_b, expr_literal);
 
   // Create aggregate with expression "SUM(b * 2)".
   // TODO(tim): Projection cannot handle expression `$a + $b`
@@ -169,7 +168,7 @@ TEST_F(ASTToOperatorTranslatorTest, AggregateNodeWithArithmetics) {
   EXPECT_EQ(aggregate_op->groupby_columns()[0], ColumnID{0});
 
   const auto aggregate_definition = aggregate_op->aggregates()[0];
-  EXPECT_EQ(aggregate_definition.column_id, ColumnID{0});
+  EXPECT_EQ(aggregate_definition.column_id, ColumnID{1});
   EXPECT_EQ(aggregate_definition.function, AggregateFunction::Sum);
   EXPECT_EQ(aggregate_definition.alias, optional<std::string>("sum_of_b_times_two"));
 
@@ -182,12 +181,15 @@ TEST_F(ASTToOperatorTranslatorTest, AggregateNodeWithArithmetics) {
   ASSERT_TRUE(projection_op);
 
   const auto column_expressions = projection_op->column_expressions();
-  ASSERT_EQ(column_expressions.size(), 1u);
+  ASSERT_EQ(column_expressions.size(), 2u);
 
-  const auto column_expression = column_expressions[0];
-  // TODO(Sven): fix with new projection
-  EXPECT_EQ(column_expression->to_string(), "1*2");
-  EXPECT_EQ(*column_expression->alias(), "alias0");
+  const auto column_expression0 = column_expressions[0];
+  EXPECT_EQ(column_expression0->type(), ExpressionType::ColumnReference);
+  EXPECT_EQ(column_expression0->column_id(), ColumnID{0});
+
+  const auto column_expression1 = column_expressions[1];
+  EXPECT_EQ(column_expression1->to_string(), "1*2");
+  EXPECT_EQ(column_expression1->alias(), nullopt);
 }
 
 TEST_F(ASTToOperatorTranslatorTest, MultipleNodesHierarchy) {

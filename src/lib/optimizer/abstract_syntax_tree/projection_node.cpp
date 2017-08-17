@@ -22,8 +22,7 @@ std::string ProjectionNode::description() const {
 
   desc << "Projection: ";
 
-  for (auto& column : _output_column_ids) {
-    // TODO(Sven): BLOCKING - fix
+  for (const auto& column : _output_column_names) {
     desc << " " << column;
   }
 

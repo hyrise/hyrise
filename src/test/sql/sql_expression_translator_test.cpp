@@ -209,7 +209,7 @@ TEST_F(SQLExpressionTranslatorTest, ExpressionStringConcatenation) {
   EXPECT_EQ(first->right_child()->type(), ExpressionType::Literal);
 }
 
-// Enable as soon as SQLToASTTranslator is merged
+// TODO(mp): Subselects are not supported yet
 TEST_F(SQLExpressionTranslatorTest, DISABLED_ExpressionIn) {
   const auto query = "SELECT * FROM table_a WHERE a in (SELECT a FROM table_b)";
   auto expression = compile_where_expression(query);
@@ -219,7 +219,7 @@ TEST_F(SQLExpressionTranslatorTest, DISABLED_ExpressionIn) {
   EXPECT_EQ(expression->right_child()->type(), ExpressionType::Select);
 }
 
-// Enable as soon as SQLToASTTranslator is merged
+// TODO(mp): Subselects are not supported yet
 TEST_F(SQLExpressionTranslatorTest, DISABLED_ExpressionExist) {
   const auto query = "SELECT * FROM table_a WHERE EXISTS (SELECT * FROM table_b)";
   auto expression = compile_where_expression(query);
@@ -228,7 +228,7 @@ TEST_F(SQLExpressionTranslatorTest, DISABLED_ExpressionExist) {
   EXPECT_EQ(expression->left_child()->type(), ExpressionType::Select);
 }
 
-// TODO(mp): implement, not supported yet
+// TODO(mp): implement, CASE not supported yet
 TEST_F(SQLExpressionTranslatorTest, DISABLED_ExpressionCase) {
   const auto query = "SELECT CASE WHEN a = 'something' THEN 'yes' ELSE 'no' END AS a_new FROM table_a";
   auto expressions = compile_select_expression(query);
