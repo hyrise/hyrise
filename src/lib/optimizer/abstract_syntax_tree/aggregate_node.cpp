@@ -20,33 +20,7 @@ AggregateColumnDefinition::AggregateColumnDefinition(const std::shared_ptr<Expre
 
 AggregateNode::AggregateNode(const std::vector<AggregateColumnDefinition>& aggregates,
                              const std::vector<ColumnID>& groupby_columns)
-    : AbstractASTNode(ASTNodeType::Aggregate), _aggregates(aggregates), _groupby_columns(groupby_columns) {
-  /**
-   * Set output column ids and names.
-   */
-  for (const auto groupby_column_id : groupby_columns) {
-    _output_column_ids.emplace_back(groupby_column_id);
-    _output_column_names.emplace_back(left_child()->output_column_names()[groupby_column_id]);
-  }
-
-  for (const auto& aggregate : aggregates) {
-    std::string alias;
-
-    if (aggregate.alias) {
-      alias = *aggregate.alias;
-    } else {
-      // If the aggregate function has no alias defined in the query, we simply name it like the function.
-      // SQL in the standard does not specify a name to be given.
-      // This might result in multiple output columns with the same name (same as Postgres).
-      DebugAssert(aggregate.expr->type() == ExpressionType::FunctionReference, "Expression must be a function.");
-      alias = aggregate.expr->name();
-    }
-
-    _output_column_names.emplace_back(alias);
-    // TODO(tim): BLOCKING - complete, and verify.
-    _output_column_ids.emplace_back();
-  }
-}
+    : AbstractASTNode(ASTNodeType::Aggregate), _aggregates(aggregates), _groupby_columns(groupby_columns) {}
 
 const std::vector<AggregateColumnDefinition>& AggregateNode::aggregates() const { return _aggregates; }
 
@@ -78,7 +52,66 @@ std::string AggregateNode::description() const {
   return s.str();
 }
 
-std::vector<ColumnID> AggregateNode::output_column_ids() const { return _output_column_ids; }
+void AggregateNode::_set_output_information() const {
+  /**
+   * Set output column ids and names.
+   *
+   * The Aggregate operator will put all GROUP BY columns in the output table at the beginning,
+   * so we first handle those, and afterwards add the column information for the aggregate functions.
+   */
+  for (const auto groupby_column_id : _groupby_columns) {
+    _output_column_ids.emplace_back(groupby_column_id);
+    _output_column_names.emplace_back(left_child()->output_column_names()[groupby_column_id]);
+  }
+
+  /**
+   * Find the maximum ColumnID of the GROUP BY columns.
+   * This is required to generate new ColumnIDs for all aggregate functions,
+   * for which new columns will be created by the Aggregate operator.
+   */
+  auto iter = std::max_element(_groupby_columns.cbegin(), _groupby_columns.cend());
+  auto current_column_id = static_cast<uint16_t>(*iter);
+
+  for (const auto& aggregate : _aggregates) {
+    DebugAssert(aggregate.expr->type() == ExpressionType::FunctionReference, "Expression must be a function.");
+
+    std::string alias;
+
+    if (aggregate.alias) {
+      alias = *aggregate.alias;
+    } else {
+      /**
+       * If the aggregate function has no alias defined in the query, we simply parse the expression back to a string.
+       * SQL in the standard does not specify a name to be given.
+       * This might result in multiple output columns with the same name, but we accept that.
+       * Other DBs behave similarly (e.g. MySQL).
+       */
+      alias = aggregate.expr->to_string(left_child());
+    }
+
+    _output_column_names.emplace_back(alias);
+
+    // All AggregateFunctions create a new column, which has to get its own ColumnID.
+    current_column_id++;
+    _output_column_ids.emplace_back(current_column_id);
+  }
+}
+
+std::vector<std::string> AggregateNode::output_column_names() const {
+  if (_output_column_names.empty()) {
+    _set_output_information();
+  }
+
+  return _output_column_names;
+}
+
+std::vector<ColumnID> AggregateNode::output_column_ids() const {
+  if (_output_column_ids.empty()) {
+    _set_output_information();
+  }
+
+  return _output_column_ids;
+}
 
 optional<ColumnID> AggregateNode::find_column_id_for_column_identifier(
     const ColumnIdentifier& column_identifier) const {
@@ -115,7 +148,5 @@ optional<ColumnID> AggregateNode::find_column_id_for_column_identifier(
   // Optional might not be set.
   return column_id_groupby;
 }
-
-std::vector<std::string> AggregateNode::output_column_names() const { return _output_column_names; }
 
 }  // namespace opossum

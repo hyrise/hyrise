@@ -40,9 +40,11 @@ void ProjectionNode::_set_output_information() const {
    */
   DebugAssert(!!left_child(), "ProjectionNode needs a child.");
 
-  // Find the maximum ColumnID of the columns that are projected.
-  // This is required to generate new ColumnIDs in case there are expressions that are not ColumnReferences,
-  // for which the Projection creates new columns.
+  /**
+   * Find the maximum ColumnID of the columns that are projected.
+   * This is required to generate new ColumnIDs in case there are expressions that are not ColumnReferences,
+   * for which the Projection creates new columns.
+   */
   auto iter =
       std::max_element(_column_expressions.cbegin(), _column_expressions.cend(),
                        [](const std::shared_ptr<ExpressionNode>& left, const std::shared_ptr<ExpressionNode>& right) {

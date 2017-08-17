@@ -74,7 +74,7 @@ TEST_F(ASTToOperatorTranslatorTest, PredicateNodeBinaryScan) {
 TEST_F(ASTToOperatorTranslatorTest, ProjectionNode) {
   const auto stored_table_node = std::make_shared<StoredTableNode>("table_int_float");
   const auto expressions = std::vector<std::shared_ptr<ExpressionNode>>{
-    ExpressionNode::create_column_reference(ColumnID{0})
+    ExpressionNode::create_column_reference(ColumnID{0}, {"a"})
   };
   auto projection_node = std::make_shared<ProjectionNode>(expressions);
   projection_node->set_left_child(stored_table_node);

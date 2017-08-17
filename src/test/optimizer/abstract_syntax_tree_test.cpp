@@ -10,12 +10,16 @@
 #include "optimizer/abstract_syntax_tree/predicate_node.hpp"
 #include "optimizer/abstract_syntax_tree/projection_node.hpp"
 #include "optimizer/abstract_syntax_tree/stored_table_node.hpp"
+#include "storage/storage_manager.hpp"
 
 namespace opossum {
 
 class AbstractSyntaxTreeTest : public BaseTest {
  protected:
-  void SetUp() override {}
+  void SetUp() override {
+    StorageManager::get().add_table("a", load_table("src/test/tables/int_float.tbl", 0));
+    StorageManager::get().add_table("b", load_table("src/test/tables/int_float2.tbl", 0));
+  }
 };
 
 TEST_F(AbstractSyntaxTreeTest, ParentTest) {

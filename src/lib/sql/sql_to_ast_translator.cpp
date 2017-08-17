@@ -165,17 +165,24 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_table_ref(const 
   }
 }
 
-ColumnID SQLToASTTranslator::generate_column_id(const hsql::Expr& expr,
+ColumnID SQLToASTTranslator::generate_column_id(const hsql::Expr& hsql_expr,
                                                 const std::shared_ptr<AbstractASTNode>& input_node) {
-  DebugAssert(expr.isType(hsql::kExprFunctionRef) || expr.isType(hsql::kExprColumnRef),
-              "Has to be function or column reference.");
-
-  DebugAssert(expr.name != nullptr, "Expression does not have a name.");
-  auto column_name = expr.name;
+  DebugAssert(hsql_expr.name != nullptr, "Expression does not have a name.");
 
   optional<std::string> table_name;
-  if (expr.table) {
-    table_name = std::string{expr.table};
+  if (hsql_expr.table) {
+    table_name = std::string{hsql_expr.table};
+  }
+
+  std::string column_name;
+  const auto& expr = SQLExpressionTranslator::translate_expression(hsql_expr, input_node);
+
+  if (expr->type() == ExpressionType::ColumnReference) {
+    column_name = input_node->get_column_name_for_column_id(expr->column_id());
+  } else if (expr->type() == ExpressionType::FunctionReference || expr->type() == ExpressionType::Literal) {
+    column_name = expr->to_string(input_node);
+  } else {
+    Fail("Expression has to be function, literal, or column reference.");
   }
 
   return input_node->get_column_id_for_column_identifier({column_name, table_name});

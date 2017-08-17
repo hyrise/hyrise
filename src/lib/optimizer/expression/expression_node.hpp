@@ -12,6 +12,8 @@
 
 namespace opossum {
 
+class AbstractASTNode;
+
 /**
  * The basic idea of this ExpressionNode is to have a representation of SQL Expressions within Hyrise and especially the
  * optimizer.
@@ -110,8 +112,6 @@ class ExpressionNode : public std::enable_shared_from_this<ExpressionNode> {
 
   const std::string& name() const;
 
-  const std::string& get_column_name() const;
-
   const optional<std::string>& alias() const;
 
   void set_alias(const std::string& alias);
@@ -123,7 +123,7 @@ class ExpressionNode : public std::enable_shared_from_this<ExpressionNode> {
   void set_expression_list(const std::vector<std::shared_ptr<ExpressionNode>>& expression_list);
 
   // Expression as string
-  std::string to_string() const;
+  std::string to_string(const std::shared_ptr<AbstractASTNode>& input_node = {}) const;
 
  private:
   // the type of the expression

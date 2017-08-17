@@ -8,6 +8,8 @@
 #include <unordered_map>
 #include <vector>
 
+#include "optimizer/abstract_syntax_tree/abstract_ast_node.hpp"
+
 #include "all_type_variant.hpp"
 #include "common.hpp"
 #include "constant_mappings.hpp"
@@ -225,14 +227,21 @@ const AllTypeVariant ExpressionNode::value() const {
   return _value;
 }
 
-std::string ExpressionNode::to_string() const {
+std::string ExpressionNode::to_string(const std::shared_ptr<AbstractASTNode> &input_node) const {
+  std::string column_name;
   switch (_type) {
     case ExpressionType::Literal:
       return type_cast<std::string>(_value);
     case ExpressionType::ColumnReference:
+      if (input_node != nullptr) {
+        // return input_node->get_column_name_for_column_id(_column_id);
+        column_name = input_node->get_column_name_for_column_id(_column_id);
+        return column_name;
+      }
       return boost::lexical_cast<std::string>(_column_id);
     case ExpressionType::FunctionReference:
-      return _name + "()";
+      // TODO(tim): BLOCKING - explain why exactly this works (probably because of input node)
+      return _expression_list[0]->to_string(input_node);
     default:
       // Handled further down.
       break;
@@ -242,7 +251,8 @@ std::string ExpressionNode::to_string() const {
   Assert(is_arithmetic_operator(), "To generate expression string, ExpressionNodes need to be operators or operands.");
   Assert(static_cast<bool>(left_child()) && static_cast<bool>(right_child()), "Operator needs both operands.");
 
-  return left_child()->to_string() + expression_type_to_operator_string.at(_type) + right_child()->to_string();
+  return left_child()->to_string(input_node) + expression_type_to_operator_string.at(_type) +
+         right_child()->to_string(input_node);
 }
 
 const std::vector<std::shared_ptr<ExpressionNode>> &ExpressionNode::expression_list() const { return _expression_list; }
