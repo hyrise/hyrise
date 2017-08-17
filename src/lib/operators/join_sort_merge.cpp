@@ -362,11 +362,9 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
   }
 
   /**
-  * Determines the smallest value in a sorted materialized table.
+  * Determines the smallest value in a sorted materialized table. It is mandatory that the table is sorted.
   **/
-  T& _table_min_value(MatTablePtr sorted_table) {
-    DebugAssert(_op != ScanType::OpEquals, "Complete table order is required for _table_min_value which is only " +
-                                           "available in the non-equi case");
+  static T& _table_min_value(MatTablePtr sorted_table) {
     DebugAssert(sorted_table->size() > 0, "Sorted table has no partitions");
 
     for (auto partition : *sorted_table) {
@@ -379,11 +377,9 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
   }
 
   /**
-  * Determines the biggest value in a sortd materialized table.
+  * Determines the biggest value in a sortd materialized table. It is mandatory that the table is sorted.
   **/
-  T& _table_max_value(MatTablePtr sorted_table) {
-    DebugAssert(_op != ScanType::OpEquals, "Complete table order is required for _table_max_value which is only " +
-                                           "available in the non-equi case");
+  static T& _table_max_value(MatTablePtr sorted_table) {
     DebugAssert(sorted_table->size() > 0, "Sorted table is empty");
 
     for (size_t partition_id = sorted_table->size() - 1; partition_id >= 0; --partition_id) {
@@ -399,7 +395,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
   * Looks for the first value in a sorted materialized table that fulfills the specified condition.
   * Returns the TablePosition of this element and whether a satisfying element has been found.
   **/
-  std::pair<TablePosition, bool> _first_value_that_satisfies(MatTablePtr sorted_table,
+  static std::pair<TablePosition, bool> _first_value_that_satisfies(MatTablePtr sorted_table,
                                                              std::function<bool(const T&)> condition) {
     for (size_t partition_id = 0; partition_id < sorted_table->size(); ++partition_id) {
       auto partition = sorted_table->at(partition_id);
@@ -419,7 +415,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
   * Looks for the first value in a sorted materialized table that fulfills the specified condition, but searches
   * the table in reverse order. Returns the TablePosition of this element, and a satisfying element has been found.
   **/
-  std::pair<TablePosition, bool> _first_value_that_satisfies_reverse(MatTablePtr sorted_table,
+  static std::pair<TablePosition, bool> _first_value_that_satisfies_reverse(MatTablePtr sorted_table,
                                                                      std::function<bool(const T&)> condition) {
     for (size_t r_partition_id = 0; r_partition_id < sorted_table->size(); ++r_partition_id) {
       auto partition_id = sorted_table->size() - 1 - r_partition_id;
