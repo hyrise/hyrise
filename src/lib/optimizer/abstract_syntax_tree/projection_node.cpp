@@ -1,5 +1,6 @@
 #include "projection_node.hpp"
 
+#include <optimizer/expression/expression_node.hpp>
 #include <sstream>
 #include <string>
 #include <vector>
@@ -8,10 +9,8 @@
 
 namespace opossum {
 
-ProjectionNode::ProjectionNode(const std::vector<std::string>& column_names)
-    : AbstractASTNode(ASTNodeType::Projection) {
-  _output_column_names = column_names;
-}
+ProjectionNode::ProjectionNode(const std::vector<std::shared_ptr<ExpressionNode>>& column_expressions)
+    : AbstractASTNode(ASTNodeType::Projection), _column_expressions(column_expressions) {}
 
 std::string ProjectionNode::description() const {
   std::ostringstream desc;
@@ -26,5 +25,9 @@ std::string ProjectionNode::description() const {
 }
 
 std::vector<std::string> ProjectionNode::output_column_names() const { return _output_column_names; }
+
+const std::vector<std::shared_ptr<ExpressionNode>> ProjectionNode::column_expressions() const {
+  return _column_expressions;
+}
 
 }  // namespace opossum

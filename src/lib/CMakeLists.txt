@@ -127,8 +127,6 @@ set(
     operators/table_scan.hpp
     operators/table_wrapper.cpp
     operators/table_wrapper.hpp
-    operators/termfactory.hpp
-    operators/term.hpp
     operators/union_all.cpp
     operators/union_all.hpp
     operators/update.cpp
