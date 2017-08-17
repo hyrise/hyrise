@@ -47,7 +47,7 @@ void resolve_type(const std::string &type, const Functor &func) {
  *   });
  *
  * @param type is a string representation of any of the supported column types
- * @param func is generic lambda or similar accepting two paramters: a hana::type object and
+ * @param func is generic lambda or similar accepting two parameters: a hana::type object and
  *   a reference to a specialized column (value, dictionary, reference)
  */
 template <typename Functor>
