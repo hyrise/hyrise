@@ -127,10 +127,10 @@ class SingleColumnScanBase : public ColumnScanBase, public ColumnVisitable {
 
     // Visit each referenced column
     for (auto &pair : chunk_offsets_by_chunk_id) {
-      const auto &chunk_id = pair.first;
+      const auto &referenced_chunk_id = pair.first;
       auto &mapped_chunk_offsets = pair.second;
 
-      const auto &chunk = left_column.referenced_table()->get_chunk(chunk_id);
+      const auto &chunk = left_column.referenced_table()->get_chunk(referenced_chunk_id);
       auto referenced_column = chunk.get_column(left_column.referenced_column_id());
 
       auto mapped_chunk_offsets_ptr =
@@ -615,7 +615,7 @@ class LikeColumnScan : public SingleColumnScanBase {
 
     const auto dictionary_matches = _find_matches_in_dictionary(*left_column.dictionary());
 
-    const auto match_count = std::count(dictionary_matches.cbegin(), dictionary_matches.cend(), true);
+    const auto match_count = static_cast<size_t>(std::count(dictionary_matches.cbegin(), dictionary_matches.cend(), true));
 
     const auto &attribute_vector = *left_column.attribute_vector();
     auto attribute_vector_iterable = AttributeVectorIterable{attribute_vector, context->_mapped_chunk_offsets.get()};

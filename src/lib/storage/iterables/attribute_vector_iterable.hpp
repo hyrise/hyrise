@@ -12,11 +12,11 @@ class AttributeVectorIterable {
   class Iterator : public std::iterator<std::input_iterator_tag, NullableColumnValue<ValueID>, std::ptrdiff_t,
                                         NullableColumnValue<ValueID>*, NullableColumnValue<ValueID>> {
    public:
-    explicit Iterator(const BaseAttributeVector& attribute_vector, size_t index)
-        : _attribute_vector{attribute_vector}, _index{index} {}
+    explicit Iterator(const BaseAttributeVector& attribute_vector, ChunkOffset chunk_offset)
+        : _attribute_vector{attribute_vector}, _chunk_offset{chunk_offset} {}
 
     Iterator& operator++() {
-      ++_index;
+      ++_chunk_offset;
       return *this;
     }
 
@@ -26,19 +26,19 @@ class AttributeVectorIterable {
       return retval;
     }
 
-    bool operator==(Iterator other) const { return _index == other._index; }
+    bool operator==(Iterator other) const { return _chunk_offset == other._chunk_offset; }
     bool operator!=(Iterator other) const { return !(*this == other); }
 
     auto operator*() const {
-      const auto value_id = _attribute_vector.get(_index);
+      const auto value_id = _attribute_vector.get(_chunk_offset);
       const auto is_null = (value_id == NULL_VALUE_ID);
 
-      return NullableColumnValue<ValueID>{value_id, is_null, _index};
+      return NullableColumnValue<ValueID>{value_id, is_null, _chunk_offset};
     }
 
    private:
     const BaseAttributeVector& _attribute_vector;
-    size_t _index;
+    ChunkOffset _chunk_offset;
   };
 
   class ReferencedIterator : public std::iterator<std::input_iterator_tag, NullableColumnValue<ValueID>, std::ptrdiff_t,
@@ -84,13 +84,13 @@ class AttributeVectorIterable {
   template <typename Functor>
   auto execute_for_all(const Functor& func) const {
     if (_mapped_chunk_offsets != nullptr) {
-      auto begin = ReferencedIterator(_attribute_vector, _mapped_chunk_offsets->cbegin());
-      auto end = ReferencedIterator(_attribute_vector, _mapped_chunk_offsets->cend());
+      auto begin = ReferencedIterator{_attribute_vector, _mapped_chunk_offsets->cbegin()};
+      auto end = ReferencedIterator{_attribute_vector, _mapped_chunk_offsets->cend()};
       return func(begin, end);
     }
 
-    auto begin = Iterator(_attribute_vector, 0u);
-    auto end = Iterator(_attribute_vector, _attribute_vector.size());
+    auto begin = Iterator{_attribute_vector, 0u};
+    auto end = Iterator{_attribute_vector, static_cast<ChunkOffset>(_attribute_vector.size())};
     return func(begin, end);
   }
 
@@ -98,8 +98,8 @@ class AttributeVectorIterable {
   auto execute_for_all_no_mapping(const Functor& func) const {
     DebugAssert(_mapped_chunk_offsets == nullptr, "Mapped chunk offsets must be a nullptr.");
 
-    auto begin = Iterator(_attribute_vector, 0u);
-    auto end = Iterator(_attribute_vector, _attribute_vector.size());
+    auto begin = Iterator{_attribute_vector, 0u};
+    auto end = Iterator{_attribute_vector, static_cast<ChunkOffset>(_attribute_vector.size())};
     return func(begin, end);
   }
 
