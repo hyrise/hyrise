@@ -3,6 +3,7 @@
 #include <boost/hana/for_each.hpp>
 
 #include <boost/hana/size.hpp>
+#include <functional>
 #include <memory>
 #include <string>
 #include <utility>
@@ -123,23 +124,24 @@ inline std::string type_string_from_all_type_variant(const AllTypeVariant all_ty
   }
 
   // iterate over column_types
-  size_t column_types_index = 1;
+  int column_types_index = 1;
 
-  return hana::fold_left(column_types, std::string(""),
-                         [all_type_variant, &column_types_index](std::string s, auto element) {
-                           // a matching type was found before
-                           if (s.size() != 0) {
-                             return s;
-                           }
+  auto func = [all_type_variant, &column_types_index](std::string s, auto element) {
+    // a matching type was found before
+    if (s.size() != 0) {
+      return s;
+    }
 
-                           if (all_type_variant.which() == column_types_index) {
-                             column_types_index++;
-                             return std::string(hana::first(element));
-                           }
+    if (all_type_variant.which() == column_types_index) {
+      column_types_index++;
+      return std::string(hana::first(element));
+    }
 
-                           column_types_index++;
-                           return std::string("");
-                         });
+    column_types_index++;
+    return std::string("");
+  };
+
+  return hana::fold_left(column_types, std::string(""), func);
 }
 
 }  // namespace opossum
