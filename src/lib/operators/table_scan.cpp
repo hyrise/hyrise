@@ -17,6 +17,7 @@
 #include "storage/iterables/reference_column_iterable.hpp"
 #include "storage/iterables/value_column_iterable.hpp"
 #include "utils/binary_operators.hpp"
+#include "utils/static_if.hpp"
 
 namespace opossum {
 
@@ -369,7 +370,7 @@ class SingleColumnScan : public SingleColumnScanBase {
   }
 
   template <typename Functor>
-  void _resolve_scan_type(const Functor &func) {
+  auto _resolve_scan_type(const Functor &func) {
     switch (_scan_type) {
       case ScanType::OpEquals:
         return func(Equal{});
@@ -812,8 +813,9 @@ class ColumnComparisonScan : public ColumnScanBase {
         constexpr auto both_are_string_columns = left_is_string_column && right_is_string_column;
 
         // Hint: Clang on MacOS does not support nested constexpr-ifs
-        if constexpr((neither_is_reference_column || both_are_reference_columns) &&
-                    (neither_is_string_column || both_are_string_columns)) {
+        static_if<(neither_is_reference_column || both_are_reference_columns) &&
+                  (neither_is_string_column || both_are_string_columns)>([&]() {
+
           using LeftType = typename decltype(left_type)::type;
           using RightType = typename decltype(right_type)::type;
 
@@ -827,9 +829,10 @@ class ColumnComparisonScan : public ColumnScanBase {
               });
             });
           });
-        } else {
+
+        }).else_([&]() {
           Fail("Invalid column combination detected!");
-        }
+        });
       });
     });
 

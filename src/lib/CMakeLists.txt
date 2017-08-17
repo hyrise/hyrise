@@ -251,6 +251,7 @@ set(
     utils/helper.hpp
     utils/murmur_hash.cpp
     utils/murmur_hash.hpp
+    utils/static_if.hpp
 )
 
 set(
