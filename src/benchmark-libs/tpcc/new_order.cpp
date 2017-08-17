@@ -424,7 +424,7 @@ TaskVector NewOrderRefImpl::get_get_stock_info_tasks(const int32_t ol_i_id, cons
                 opossum::ExpressionNode::create_column_reference(opossum::ColumnID{3}),
                 opossum::ExpressionNode::create_column_reference(opossum::ColumnID{4}),
                 opossum::ExpressionNode::create_column_reference(opossum::ColumnID{5}),
-                opossum::ExpressionNode::create_column_reference(opossum::ColumnID{d_id + 5})}));
+                opossum::ExpressionNode::create_column_reference(opossum::ColumnID{static_cast<uint16_t>(d_id + 5)})}));
 
   // Tasks
   auto gt_t = std::make_shared<opossum::OperatorTask>(gt);
