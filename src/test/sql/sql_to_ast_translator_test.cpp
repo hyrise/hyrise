@@ -212,7 +212,7 @@ TEST_F(SQLToASTTranslatorTest, SelectInnerJoin) {
   EXPECT_EQ(result_node->type(), ASTNodeType::Projection);
   auto projection_node = std::dynamic_pointer_cast<ProjectionNode>(result_node);
   std::vector<std::string> output_columns = {"a", "b", "a", "b"};
-  EXPECT_EQ(projection_node->output_column_ids().size(), 4);
+  EXPECT_EQ(projection_node->output_column_ids().size(), 4u);
   EXPECT_EQ(projection_node->output_column_names(), output_columns);
 
   EXPECT_EQ(result_node->left_child()->type(), ASTNodeType::Join);
