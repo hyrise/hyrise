@@ -30,7 +30,7 @@ std::shared_ptr<ExpressionNode> ExpressionNode::create_column_reference(const st
                                                                         const std::string &table_name,
                                                                         const optional<std::string> &alias) {
   const std::vector<std::shared_ptr<ExpressionNode>> expr_list;
-  return std::make_shared<ExpressionNode>(ExpressionType::ColumnReference, NULL_VALUE, expr_list, column_name,
+  return std::make_shared<ExpressionNode>(ExpressionType::ColumnIdentifier, NULL_VALUE, expr_list, column_name,
                                           table_name, alias);
 }
 
@@ -48,8 +48,8 @@ std::shared_ptr<ExpressionNode> ExpressionNode::create_parameter(const AllTypeVa
 std::shared_ptr<ExpressionNode> ExpressionNode::create_function_reference(
     const std::string &function_name, const std::vector<std::shared_ptr<ExpressionNode>> &expression_list,
     const optional<std::string> &alias) {
-  return std::make_shared<ExpressionNode>(ExpressionType::FunctionReference, NULL_VALUE, expression_list, function_name,
-                                          "", alias);
+  return std::make_shared<ExpressionNode>(ExpressionType::FunctionIdentifier, NULL_VALUE, expression_list,
+                                          function_name, "", alias);
 }
 
 std::shared_ptr<ExpressionNode> ExpressionNode::create_binary_operator(ExpressionType type,
@@ -58,7 +58,9 @@ std::shared_ptr<ExpressionNode> ExpressionNode::create_binary_operator(Expressio
                                                                        const optional<std::string> &alias) {
   auto expression = std::make_shared<ExpressionNode>(type, AllTypeVariant(),
                                                      std::vector<std::shared_ptr<ExpressionNode>>(), "", "", alias);
-  Assert(expression->is_binary_operator(), "Type is not an operator type");
+
+  Assert(expression->is_binary_operator(),
+         "Type is not a binary operator type, such as Equals, LessThan, Like, And, etc.");
 
   expression->set_left_child(left);
   expression->set_right_child(right);
@@ -66,7 +68,7 @@ std::shared_ptr<ExpressionNode> ExpressionNode::create_binary_operator(Expressio
   return expression;
 }
 
-std::shared_ptr<ExpressionNode> ExpressionNode::create_select_all() {
+std::shared_ptr<ExpressionNode> ExpressionNode::create_select_star() {
   return std::make_shared<ExpressionNode>(ExpressionType::Star, AllTypeVariant(),
                                           std::vector<std::shared_ptr<ExpressionNode>>(), "", "", nullopt);
 }
@@ -150,10 +152,10 @@ const std::string ExpressionNode::description() const {
     case ExpressionType::Literal:
       desc << "[" << value() << "]";
       break;
-    case ExpressionType::ColumnReference:
+    case ExpressionType::ColumnIdentifier:
       desc << "[Table: " << table_name() << ", Column: " << name() << ", Alias: " << alias_string << "]";
       break;
-    case ExpressionType::FunctionReference:
+    case ExpressionType::FunctionIdentifier:
       desc << "[" << name() << ": " << std::endl;
       for (const auto &expr : expression_list()) {
         desc << expr->description() << ", " << std::endl;
@@ -170,13 +172,13 @@ const std::string ExpressionNode::description() const {
 }
 
 const std::string &ExpressionNode::table_name() const {
-  DebugAssert(_type == ExpressionType::ColumnReference,
-              "Expression other than ColumnReference does not have table_name");
+  DebugAssert(_type == ExpressionType::ColumnIdentifier,
+              "Expression other than ColumnIdentifier does not have table_name");
   return _table_name;
 }
 
 const std::string &ExpressionNode::name() const {
-  DebugAssert(_type == ExpressionType::ColumnReference || _type == ExpressionType::FunctionReference,
+  DebugAssert(_type == ExpressionType::ColumnIdentifier || _type == ExpressionType::FunctionIdentifier,
               "Expression " + expression_type_to_string.at(_type) + " does not have a name");
   return _name;
 }
@@ -192,7 +194,7 @@ const AllTypeVariant ExpressionNode::value() const {
 std::string ExpressionNode::to_expression_string() const {
   if (_type == ExpressionType::Literal) {
     return type_cast<std::string>(_value);
-  } else if (_type == ExpressionType::ColumnReference) {
+  } else if (_type == ExpressionType::ColumnIdentifier) {
     return _name;
   } else if (is_arithmetic_operator()) {
     // TODO(mp) Should be is_operator() to also support ExpressionType::Equals, ...
@@ -200,7 +202,7 @@ std::string ExpressionNode::to_expression_string() const {
 
     return left_child()->to_expression_string() + expression_type_to_operator_string.at(_type) +
            right_child()->to_expression_string();
-  } else if (_type == ExpressionType::FunctionReference) {
+  } else if (_type == ExpressionType::FunctionIdentifier) {
     return _name + "()";
   } else {
     Fail("To generate expression string, ExpressionNodes need to be operators or operands");

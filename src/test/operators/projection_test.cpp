@@ -27,6 +27,9 @@ class OperatorsProjectionTest : public BaseTest {
     _table_wrapper_int = std::make_shared<TableWrapper>(load_table("src/test/tables/int_int_int.tbl", 2));
     _table_wrapper_int->execute();
 
+    _table_wrapper_float = std::make_shared<TableWrapper>(load_table("src/test/tables/float_float_float.tbl", 2));
+    _table_wrapper_float->execute();
+
     std::shared_ptr<Table> test_table_dict = load_table("src/test/tables/int_int_int.tbl", 2);
     DictionaryCompression::compress_table(*test_table_dict);
 
@@ -73,10 +76,10 @@ class OperatorsProjectionTest : public BaseTest {
   Projection::ColumnExpressions _b_expr;
   Projection::ColumnExpressions _b_a_expr;
   Projection::ColumnExpressions _a_b_expr;
-  std::shared_ptr<TableWrapper> _table_wrapper, _table_wrapper_int, _table_wrapper_int_dict;
+  std::shared_ptr<TableWrapper> _table_wrapper, _table_wrapper_int, _table_wrapper_int_dict, _table_wrapper_float;
 };
 
-TEST_F(OperatorsProjectionTest, SingleColumn) {
+TEST_F(OperatorsProjectionTest, SingleColumnInt) {
   std::shared_ptr<Table> expected_result = load_table("src/test/tables/int.tbl", 1);
 
   auto projection = std::make_shared<Projection>(_table_wrapper, _a_expr);
@@ -85,10 +88,31 @@ TEST_F(OperatorsProjectionTest, SingleColumn) {
   EXPECT_TABLE_EQ(projection->get_output(), expected_result);
 }
 
-TEST_F(OperatorsProjectionTest, DoubleProject) {
+TEST_F(OperatorsProjectionTest, DoubleProjectInt) {
   std::shared_ptr<Table> expected_result = load_table("src/test/tables/int.tbl", 3);
 
   auto projection1 = std::make_shared<Projection>(_table_wrapper, _a_expr);
+  projection1->execute();
+
+  auto projection2 = std::make_shared<Projection>(projection1, _a_expr);
+  projection2->execute();
+
+  EXPECT_TABLE_EQ(projection2->get_output(), expected_result);
+}
+
+TEST_F(OperatorsProjectionTest, SingleColumnFloat) {
+  std::shared_ptr<Table> expected_result = load_table("src/test/tables/float.tbl", 1);
+
+  auto projection = std::make_shared<Projection>(_table_wrapper_float, _a_expr);
+  projection->execute();
+  auto out = projection->get_output();
+  EXPECT_TABLE_EQ(projection->get_output(), expected_result);
+}
+
+TEST_F(OperatorsProjectionTest, DoubleProjectFloat) {
+  std::shared_ptr<Table> expected_result = load_table("src/test/tables/float.tbl", 3);
+
+  auto projection1 = std::make_shared<Projection>(_table_wrapper_float, _a_expr);
   projection1->execute();
 
   auto projection2 = std::make_shared<Projection>(projection1, _a_expr);

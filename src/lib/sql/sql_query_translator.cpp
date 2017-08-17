@@ -202,7 +202,7 @@ bool SQLQueryTranslator::_translate_projection(const std::vector<hsql::Expr*>& e
     }
 
     if (expr->isType(hsql::kExprStar)) {
-      column_expressions.emplace_back(ExpressionNode::create_select_all());
+      column_expressions.emplace_back(ExpressionNode::create_select_star());
       continue;
     }
 

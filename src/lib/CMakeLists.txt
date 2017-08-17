@@ -51,7 +51,6 @@ target_compile_options(opossumProtobuf PRIVATE -Wno-unused-parameter -Wno-deprec
 set(
     SOURCES
     all_parameter_variant.hpp
-    all_type_variant.cpp
     all_type_variant.hpp
     common.hpp
     concurrency/commit_context.cpp

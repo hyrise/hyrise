@@ -152,7 +152,7 @@ TEST_F(ServerTest, SendNoop) {
   EXPECT_EQ(response->DebugString(), "");
 }
 
-TEST_F(ServerTest, AsyncQuery) {
+TEST_F(ServerTest, SendAsyncQuery) {
   server.start(config, false);
 
   proto::Request request;

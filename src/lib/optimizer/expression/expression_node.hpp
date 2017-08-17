@@ -70,7 +70,7 @@ class ExpressionNode : public std::enable_shared_from_this<ExpressionNode> {
                                                                 const std::shared_ptr<ExpressionNode>& right,
                                                                 const optional<std::string>& alias = {});
 
-  static std::shared_ptr<ExpressionNode> create_select_all();
+  static std::shared_ptr<ExpressionNode> create_select_star();
 
   /*
    * Helper methods for Expression Trees
