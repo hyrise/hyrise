@@ -55,17 +55,17 @@ class ColumnScanBase {
 
  protected:
   template <typename Type>
-  auto _create_iterable_from_column(ValueColumn<Type> &column) {
+  static auto _create_iterable_from_column(ValueColumn<Type> &column) {
     return ValueColumnIterable<Type>{column};
   }
 
   template <typename Type>
-  auto _create_iterable_from_column(DictionaryColumn<Type> &column) {
+  static auto _create_iterable_from_column(DictionaryColumn<Type> &column) {
     return DictionaryColumnIterable<Type>{column};
   }
 
   template <typename Type>
-  auto _create_iterable_from_column(ReferenceColumn &column) {
+  static auto _create_iterable_from_column(ReferenceColumn &column) {
     return ReferenceColumnIterable<Type>{column};
   }
 
@@ -291,7 +291,7 @@ class SingleColumnScan : public SingleColumnScanBase {
    */
 
   template <typename Type>
-  auto _create_iterable_from_column(ValueColumn<Type> &column,
+  static auto _create_iterable_from_column(ValueColumn<Type> &column,
                                     const std::vector<std::pair<ChunkOffset, ChunkOffset>> *mapped_chunk_offsets) {
     return ValueColumnIterable<Type>{column, mapped_chunk_offsets};
   }
