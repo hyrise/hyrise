@@ -369,18 +369,22 @@ class SingleColumnScan : public SingleColumnScanBase {
   void _resolve_scan_type(const Functor &func) {
     switch (_scan_type) {
       case ScanType::OpEquals:
-        return func(Equal{});
+        func(Equal{});
+        return;
 
       case ScanType::OpNotEquals:
-        return func(NotEqual{});
+        func(NotEqual{});
+        return;
 
       case ScanType::OpLessThan:
       case ScanType::OpLessThanEquals:
-        return func(Less{});
+        func(Less{});
+        return;
 
       case ScanType::OpGreaterThan:
       case ScanType::OpGreaterThanEquals:
-        return func(GreaterEqual{});
+        func(GreaterEqual{});
+        return;
 
       default:
         Fail("Unsupported comparison type encountered");
