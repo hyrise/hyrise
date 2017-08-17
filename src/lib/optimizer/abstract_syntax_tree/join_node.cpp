@@ -1,5 +1,6 @@
 #include "join_node.hpp"
 
+#include <limits>
 #include <sstream>
 #include <string>
 #include <utility>
