@@ -811,6 +811,7 @@ class ColumnComparisonScan : public ColumnScanBase {
         constexpr auto neither_is_string_column = !left_is_string_column && !right_is_string_column;
         constexpr auto both_are_string_columns = left_is_string_column && right_is_string_column;
 
+        // Hint: Clang on MacOS does not support nested constexpr-ifs
         if constexpr((neither_is_reference_column || both_are_reference_columns) &&
                     (neither_is_string_column || both_are_string_columns)) {
           using LeftType = typename decltype(left_type)::type;
