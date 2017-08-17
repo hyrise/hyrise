@@ -44,6 +44,25 @@ TEST_F(AbstractSyntaxTreeTest, ParentTest) {
   ASSERT_EQ(projection_node->parent(), nullptr);
 }
 
+TEST_F(AbstractSyntaxTreeTest, ClearParentTest) {
+  const auto table_node = std::make_shared<StoredTableNode>("a");
+
+  const auto predicate_node = std::make_shared<PredicateNode>("c1", nullptr, ScanType::OpEquals, "a");
+  predicate_node->set_left_child(table_node);
+
+  ASSERT_EQ(table_node->parent(), predicate_node);
+  ASSERT_EQ(predicate_node->left_child(), table_node);
+  ASSERT_EQ(predicate_node->right_child(), nullptr);
+  ASSERT_EQ(predicate_node->parent(), nullptr);
+
+  table_node->clear_parent();
+
+  ASSERT_EQ(table_node->parent(), nullptr);
+  ASSERT_EQ(predicate_node->left_child(), nullptr);
+  ASSERT_EQ(predicate_node->right_child(), nullptr);
+  ASSERT_EQ(predicate_node->parent(), nullptr);
+}
+
 TEST_F(AbstractSyntaxTreeTest, ChainSameNodesTest) {
   const auto table_node = std::make_shared<StoredTableNode>("a");
 

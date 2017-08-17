@@ -18,7 +18,7 @@ std::shared_ptr<ExpressionNode> SQLExpressionTranslator::translate_expression(co
   auto name = expr.name ? std::string(expr.name) : "";
   auto float_value = expr.fval ? expr.fval : 0;
   auto int_value = expr.ival ? expr.ival : 0;
-  auto alias = expr.alias ? expr.alias : "";
+  auto alias = expr.alias ? optional<std::string>(expr.alias) : nullopt;
 
   std::shared_ptr<ExpressionNode> node;
   switch (expr.type) {
