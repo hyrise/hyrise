@@ -232,7 +232,7 @@ ColumnSelectivityResult ColumnStatistics<ColumnType>::estimate_selectivity_for_p
     }
     case ScanType::OpBetween: {
       // since the value2 is known,
-      // first, statistics for the operation <= value are calulated
+      // first, statistics for the operation <= value are calculated
       // then, the open ended selectivity is applied on the result
       DebugAssert(static_cast<bool>(value2), "Operator BETWEEN should get two parameters, second is missing!");
       auto casted_value2 = type_cast<ColumnType>(*value2);
@@ -247,7 +247,7 @@ ColumnSelectivityResult ColumnStatistics<ColumnType>::estimate_selectivity_for_p
       }
       // apply default selectivity for open ended
       output.selectivity *= DEFAULT_OPEN_ENDED_SELECTIVITY;
-      // column statistis have just been created, therefore, cast to the column type cannot fail
+      // column statistics have just been created, therefore, cast to the column type cannot fail
       auto column_statistics = std::dynamic_pointer_cast<ColumnStatistics<ColumnType>>(output.column_statistics);
       *(column_statistics->_distinct_count) *= DEFAULT_OPEN_ENDED_SELECTIVITY;
       return output;
