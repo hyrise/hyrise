@@ -14,7 +14,7 @@
 namespace opossum {
 
 TableStatistics::TableStatistics(const std::shared_ptr<Table> table)
-    : _table(table), _row_count(table->row_count()), _column_statistics(_row_count) {}
+    : _table(table), _row_count(table->row_count()), _column_statistics(table->col_count()) {}
 
 float TableStatistics::row_count() const { return _row_count; }
 
