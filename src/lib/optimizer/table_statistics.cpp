@@ -16,7 +16,7 @@
 namespace opossum {
 
 TableStatistics::TableStatistics(const std::shared_ptr<Table> table)
-    : _table(table), _row_count(table->row_count()), _column_statistics(_row_count) {}
+    : _table(table), _row_count(table->row_count()), _column_statistics(table->col_count()) {}
 
 float TableStatistics::row_count() const { return _row_count; }
 
@@ -123,15 +123,15 @@ std::shared_ptr<TableStatistics> TableStatistics::join_statistics(
 
   // create copy of this as this should not be adapted for current join
   auto clone = std::make_shared<TableStatistics>(*this);
-  auto col_stats_end = clone->_column_statistics.end();
 
   auto right_stats = (mode == JoinMode::Self) ? clone : right_table_statistics;
 
   // copy columns of right input to output
-  clone->_column_statistics.resize(clone->_column_statistics.size() + right_stats->_column_statistics.size());
-  std::copy(right_table_statistics->_column_statistics.begin(), right_stats->_column_statistics.end(), col_stats_end);
+  clone->_column_statistics.resize(_column_statistics.size() + right_stats->_column_statistics.size());
+  auto col_stats_right_begin = clone->_column_statistics.begin() + _column_statistics.size();
+  std::copy(right_stats->_column_statistics.begin(), right_stats->_column_statistics.end(), col_stats_right_begin);
 
-  clone->_row_count *= right_table_statistics->_row_count;
+  clone->_row_count *= right_stats->_row_count;
   if (mode == JoinMode::Cross) {
     return clone;
   }
