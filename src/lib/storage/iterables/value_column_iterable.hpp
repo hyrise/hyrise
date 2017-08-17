@@ -38,7 +38,9 @@ class ValueColumnIterable {
     }
     bool operator==(Iterator other) const { return _value_it == other._value_it; }
     bool operator!=(Iterator other) const { return !(*this == other); }
-    auto operator*() const { return ColumnValue<T>{*_value_it, static_cast<ChunkOffset>(std::distance(_begin_value_it, _value_it))}; }
+    auto operator*() const {
+      return ColumnValue<T>{*_value_it, static_cast<ChunkOffset>(std::distance(_begin_value_it, _value_it))};
+    }
 
    private:
     const ValueIterator _begin_value_it;
@@ -70,7 +72,8 @@ class ValueColumnIterable {
     bool operator!=(NullableIterator other) const { return !(*this == other); }
 
     auto operator*() const {
-      return NullableColumnValue<T>{*_value_it, *_null_value_it, static_cast<ChunkOffset>(std::distance(_begin_value_it, _value_it))};
+      return NullableColumnValue<T>{*_value_it, *_null_value_it,
+                                    static_cast<ChunkOffset>(std::distance(_begin_value_it, _value_it))};
     }
 
    private:
@@ -173,7 +176,8 @@ class ValueColumnIterable {
     }
 
     if (_column.is_nullable()) {
-      auto begin = NullableIterator{_column.values().cbegin(), _column.values().cbegin(), _column.null_values().cbegin()};
+      auto begin =
+          NullableIterator{_column.values().cbegin(), _column.values().cbegin(), _column.null_values().cbegin()};
       auto end = NullableIterator{_column.values().cbegin(), _column.values().cend(), _column.null_values().cend()};
       func(begin, end);
       return;
@@ -189,7 +193,8 @@ class ValueColumnIterable {
     DebugAssert(_mapped_chunk_offsets == nullptr, "Mapped chunk offsets must be a nullptr.");
 
     if (_column.is_nullable()) {
-      auto begin = NullableIterator{_column.values().cbegin(), _column.values().cbegin(), _column.null_values().cbegin()};
+      auto begin =
+          NullableIterator{_column.values().cbegin(), _column.values().cbegin(), _column.null_values().cbegin()};
       auto end = NullableIterator{_column.values().cbegin(), _column.values().cend(), _column.null_values().cend()};
       func(begin, end);
       return;

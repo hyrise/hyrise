@@ -141,13 +141,13 @@ class SingleColumnScanBase : public ColumnScanBase, public ColumnVisitable {
 
   /**
    * From ColumnVisitable:
-   * virtual void handle_value_column(BaseColumn &base_column, 
+   * virtual void handle_value_column(BaseColumn &base_column,
    *                                  std::shared_ptr<ColumnVisitableContext> base_context) = 0;
    *
-   * virtual void handle_dictionary_column(BaseColumn &base_column, 
+   * virtual void handle_dictionary_column(BaseColumn &base_column,
    *                                       std::shared_ptr<ColumnVisitableContext> base_context) = 0;
    */
-  
+
  private:
   /**
    * @defgroup Methods used for handling reference columns
@@ -246,7 +246,7 @@ class SingleColumnScan : public SingleColumnScanBase {
      *
      * Operator          | All                                   | None
      * value_id == value | !None && unique_values_count == 1     | search_vid == dict.upper_bound(value)
-     * value_id != value | search_vid == dict.upper_bound(value) | !All && unique_values_count == 1 
+     * value_id != value | search_vid == dict.upper_bound(value) | !All && unique_values_count == 1
      * value_id <  value | search_vid == INVALID_VALUE_ID        | search_vid == 0
      * value_id <= value | search_vid == INVALID_VALUE_ID        | search_vid == 0
      * value_id >  value | search_vid == 0                       | search_vid == INVALID_VALUE_ID
@@ -291,8 +291,8 @@ class SingleColumnScan : public SingleColumnScanBase {
    */
 
   template <typename Type>
-  static auto _create_iterable_from_column(ValueColumn<Type> &column,
-                                    const std::vector<std::pair<ChunkOffset, ChunkOffset>> *mapped_chunk_offsets) {
+  static auto _create_iterable_from_column(
+      ValueColumn<Type> &column, const std::vector<std::pair<ChunkOffset, ChunkOffset>> *mapped_chunk_offsets) {
     return ValueColumnIterable<Type>{column, mapped_chunk_offsets};
   }
 
@@ -618,7 +618,8 @@ class LikeColumnScan : public SingleColumnScanBase {
 
     const auto dictionary_matches = _find_matches_in_dictionary(*left_column.dictionary());
 
-    const auto match_count = static_cast<size_t>(std::count(dictionary_matches.cbegin(), dictionary_matches.cend(), true));
+    const auto match_count =
+        static_cast<size_t>(std::count(dictionary_matches.cbegin(), dictionary_matches.cend(), true));
 
     const auto &attribute_vector = *left_column.attribute_vector();
     auto attribute_vector_iterable = AttributeVectorIterable{attribute_vector, context->_mapped_chunk_offsets.get()};
@@ -791,10 +792,9 @@ class ColumnComparisonScan : public ColumnScanBase {
       resolve_column_type(right_column_type, *right_column, [&](auto right_type, auto &typed_right_column) {
         using LeftColumnType = typename std::decay<decltype(typed_left_column)>::type;
         using RightColumnType = typename std::decay<decltype(typed_right_column)>::type;
-        
+
         using LeftType = typename decltype(left_type)::type;
         using RightType = typename decltype(right_type)::type;
-
 
         /**
          * This generic lambda is instantiated for each type (int, long, etc.) and

@@ -24,7 +24,8 @@ class DictionaryColumnIterable {
     using Dictionary = std::vector<T>;
 
    public:
-    explicit Iterator(const Dictionary& dictionary, const BaseAttributeVector& attribute_vector, ChunkOffset chunk_offset)
+    explicit Iterator(const Dictionary& dictionary, const BaseAttributeVector& attribute_vector,
+                      ChunkOffset chunk_offset)
         : _dictionary{dictionary}, _attribute_vector(attribute_vector), _chunk_offset{chunk_offset} {}
 
     Iterator& operator++() {
@@ -101,7 +102,8 @@ class DictionaryColumnIterable {
   template <typename Functor>
   void execute_for_all(const Functor& func) const {
     if (_mapped_chunk_offsets != nullptr) {
-      auto begin = ReferencedIterator{*_column.dictionary(), *_column.attribute_vector(), _mapped_chunk_offsets->cbegin()};
+      auto begin =
+          ReferencedIterator{*_column.dictionary(), *_column.attribute_vector(), _mapped_chunk_offsets->cbegin()};
       auto end = ReferencedIterator{*_column.dictionary(), *_column.attribute_vector(), _mapped_chunk_offsets->cend()};
       func(begin, end);
       return;

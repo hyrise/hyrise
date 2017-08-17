@@ -69,7 +69,8 @@ class ReferenceColumnIterable {
     }
 
     auto value_from_value_column(const ValueColumn<T> &column, const ChunkOffset &chunk_offset) const {
-      const auto chunk_offset_into_ref_column = static_cast<ChunkOffset>(std::distance(_begin_pos_list_it, _pos_list_it));
+      const auto chunk_offset_into_ref_column =
+          static_cast<ChunkOffset>(std::distance(_begin_pos_list_it, _pos_list_it));
 
       if (column.is_nullable()) {
         auto is_null = column.null_values()[chunk_offset];
@@ -82,7 +83,8 @@ class ReferenceColumnIterable {
     }
 
     auto value_from_dictionary_column(const DictionaryColumn<T> &column, const ChunkOffset &chunk_offset) const {
-      const auto chunk_offset_into_ref_column = static_cast<ChunkOffset>(std::distance(_begin_pos_list_it, _pos_list_it));
+      const auto chunk_offset_into_ref_column =
+          static_cast<ChunkOffset>(std::distance(_begin_pos_list_it, _pos_list_it));
       auto attribute_vector = column.attribute_vector();
       auto value_id = attribute_vector->get(chunk_offset);
 

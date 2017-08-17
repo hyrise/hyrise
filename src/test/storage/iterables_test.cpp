@@ -28,8 +28,8 @@ struct SumUp {
       _sum += (*begin).value();
     }
   }
-  
-  uint32_t &_sum;
+
+  uint32_t& _sum;
 };
 
 class IterablesTest : public BaseTest {
@@ -52,7 +52,7 @@ TEST_F(IterablesTest, ValueColumnIteratorExecuteForAll) {
   auto iterable = ValueColumnIterable<int>{*int_column};
 
   EXPECT_EQ(iterable.type(), ValueColumnIterableType::Simple);
-  
+
   auto sum = uint32_t{0};
   iterable.execute_for_all(SumUp{sum});
 

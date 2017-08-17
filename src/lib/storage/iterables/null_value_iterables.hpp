@@ -152,7 +152,8 @@ class NullValueValueColumnIterable {
     bool operator!=(Iterator other) const { return !(*this == other); }
 
     auto operator*() const {
-      return ColumnNullValue{*_null_value_it, static_cast<ChunkOffset>(std::distance(_begin_null_value_it, _null_value_it))};
+      return ColumnNullValue{*_null_value_it,
+                             static_cast<ChunkOffset>(std::distance(_begin_null_value_it, _null_value_it))};
     }
 
    private:
