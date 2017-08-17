@@ -106,7 +106,7 @@ optional<ColumnID> JoinNode::find_column_id_for_column_identifier(const ColumnId
     auto column_id = right_child()->find_column_id_for_column_identifier(column_identifier);
     if (column_id) {
       auto column_idx = left_child()->output_column_ids().size() + (*column_id);
-      DebugAssert(column_idx < std::numeric_limits<ColumnID>::max(), "Too many columns for table.");
+      DebugAssert(column_idx < std::numeric_limits<uint16_t>::max(), "Too many columns for table.");
       return ColumnID{static_cast<uint16_t>(column_idx)};
     }
   }
