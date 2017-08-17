@@ -104,7 +104,7 @@ optional<ColumnID> JoinNode::find_column_id_for_column_identifier(const ColumnId
   if (right_child()->manages_table(*column_identifier.table_name)) {
     auto column_id = right_child()->find_column_id_for_column_identifier(column_identifier);
     if (column_id) {
-      auto num_left_columns = static_cast<uint16_t>(left_child()->output_column_ids().size());
+      uint16_t num_left_columns = static_cast<uint16_t>(left_child()->output_column_ids().size());
       return ColumnID{(*column_id) + num_left_columns};
     }
   }
