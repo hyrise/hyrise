@@ -17,10 +17,12 @@ int main() {
   opossum::StorageManager::get().add_table("CUSTOMER", generator.generate_customer_table());
 
   auto table_statistics = opossum::StorageManager::get().get_table("CUSTOMER")->table_statistics();
-  auto stat1 =
-      table_statistics->predicate_statistics(opossum::ColumnID(0), opossum::ScanType::OpEquals, opossum::AllParameterVariant(1)); // "C_ID"
-  auto stat2 = stat1->predicate_statistics(opossum::ColumnID(1), opossum::ScanType::OpNotEquals, opossum::AllParameterVariant(2)); // "C_D_ID"
-  auto stat3 = stat1->predicate_statistics(opossum::ColumnID(1), opossum::ScanType::OpLessThan, opossum::AllParameterVariant(5)); // "C_D_ID"
+  auto stat1 = table_statistics->predicate_statistics(opossum::ColumnID(0), opossum::ScanType::OpEquals,
+                                                      opossum::AllParameterVariant(1));  // "C_ID"
+  auto stat2 = stat1->predicate_statistics(opossum::ColumnID(1), opossum::ScanType::OpNotEquals,
+                                           opossum::AllParameterVariant(2));  // "C_D_ID"
+  auto stat3 = stat1->predicate_statistics(opossum::ColumnID(1), opossum::ScanType::OpLessThan,
+                                           opossum::AllParameterVariant(5));  // "C_D_ID"
   std::cout << "original CUSTOMER table" << std::endl;
   std::cout << *table_statistics << std::endl;
   std::cout << "C_ID = 1" << std::endl;
