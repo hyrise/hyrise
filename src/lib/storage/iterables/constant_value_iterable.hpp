@@ -43,15 +43,15 @@ class ConstantValueIterable {
   ConstantValueIterable(const AllTypeVariant& value) : _value{type_cast<T>(value)} {}
 
   template <typename Functor>
-  auto execute_for_all(const Functor& func) const {
+  void execute_for_all(const Functor& func) const {
     auto begin = Iterator{_value};
     // TODO(mjendruk): Find a better solution here.
-    return func(begin, begin);
+    func(begin, begin);
   }
 
   template <typename Functor>
-  auto execute_for_all_no_mapping(const Functor& func) const {
-    return execute_for_all(func);
+  void execute_for_all_no_mapping(const Functor& func) const {
+    execute_for_all(func);
   }
 
  private:

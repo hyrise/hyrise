@@ -389,6 +389,7 @@ class SingleColumnScan : public SingleColumnScanBase {
 
       default:
         Fail("Unsupported comparison type encountered");
+        return;
     }
   }
 

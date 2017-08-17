@@ -99,25 +99,26 @@ class NullValueDictionaryIterable {
       : _attribute_vector{attribute_vector}, _mapped_chunk_offsets{mapped_chunk_offsets} {}
 
   template <typename Functor>
-  auto execute_for_all(const Functor& func) const {
+  void execute_for_all(const Functor& func) const {
     if (_mapped_chunk_offsets != nullptr) {
       auto begin = ReferencedIterator{_attribute_vector, _mapped_chunk_offsets->cbegin()};
       auto end = ReferencedIterator{_attribute_vector, _mapped_chunk_offsets->cend()};
-      return func(begin, end);
+      func(begin, end);
+      return;
     }
 
     auto begin = Iterator{_attribute_vector, 0u};
     auto end = Iterator{_attribute_vector, static_cast<ChunkOffset>(_attribute_vector.size())};
-    return func(begin, end);
+    func(begin, end);
   }
 
   template <typename Functor>
-  auto execute_for_all_no_mapping(const Functor& func) const {
+  void execute_for_all_no_mapping(const Functor& func) const {
     DebugAssert(_mapped_chunk_offsets == nullptr, "Mapped chunk offsets must be a nullptr.");
 
     auto begin = Iterator{_attribute_vector, 0u};
     auto end = Iterator{_attribute_vector, static_cast<ChunkOffset>(_attribute_vector.size())};
-    return func(begin, end);
+    func(begin, end);
   }
 
  private:
@@ -201,25 +202,25 @@ class NullValueValueColumnIterable {
       : _null_values{null_values}, _mapped_chunk_offsets{mapped_chunk_offsets} {}
 
   template <typename Functor>
-  auto execute_for_all(const Functor& func) const {
+  void execute_for_all(const Functor& func) const {
     if (_mapped_chunk_offsets != nullptr) {
       auto begin = ReferencedIterator{_null_values, _mapped_chunk_offsets->cbegin()};
       auto end = ReferencedIterator{_null_values, _mapped_chunk_offsets->cend()};
-      return func(begin, end);
+      func(begin, end);
     }
 
     auto begin = Iterator{_null_values.cbegin(), _null_values.cbegin()};
     auto end = Iterator{_null_values.cbegin(), _null_values.cend()};
-    return func(begin, end);
+    func(begin, end);
   }
 
   template <typename Functor>
-  auto execute_for_all_no_mapping(const Functor& func) const {
+  void execute_for_all_no_mapping(const Functor& func) const {
     DebugAssert(_mapped_chunk_offsets == nullptr, "Mapped chunk offsets must be a nullptr.");
 
     auto begin = Iterator{_null_values.cbegin(), _null_values.cbegin()};
     auto end = Iterator{_null_values.cbegin(), _null_values.cend()};
-    return func(begin, end);
+    func(begin, end);
   }
 
  private:

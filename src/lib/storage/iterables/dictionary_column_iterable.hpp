@@ -99,25 +99,26 @@ class DictionaryColumnIterable {
       : _column{column}, _mapped_chunk_offsets{mapped_chunk_offsets} {}
 
   template <typename Functor>
-  auto execute_for_all(const Functor& func) const {
+  void execute_for_all(const Functor& func) const {
     if (_mapped_chunk_offsets != nullptr) {
       auto begin = ReferencedIterator{*_column.dictionary(), *_column.attribute_vector(), _mapped_chunk_offsets->cbegin()};
       auto end = ReferencedIterator{*_column.dictionary(), *_column.attribute_vector(), _mapped_chunk_offsets->cend()};
-      return func(begin, end);
+      func(begin, end);
+      return;
     }
 
     auto begin = Iterator{*_column.dictionary(), *_column.attribute_vector(), 0u};
     auto end = Iterator{*_column.dictionary(), *_column.attribute_vector(), static_cast<ChunkOffset>(_column.size())};
-    return func(begin, end);
+    func(begin, end);
   }
 
   template <typename Functor>
-  auto execute_for_all_no_mapping(const Functor& func) const {
+  void execute_for_all_no_mapping(const Functor& func) const {
     DebugAssert(_mapped_chunk_offsets == nullptr, "Mapped chunk offsets must be a nullptr.");
 
     auto begin = Iterator{*_column.dictionary(), *_column.attribute_vector(), 0u};
     auto end = Iterator{*_column.dictionary(), *_column.attribute_vector(), static_cast<ChunkOffset>(_column.size())};
-    return func(begin, end);
+    func(begin, end);
   }
 
   Type type() const {

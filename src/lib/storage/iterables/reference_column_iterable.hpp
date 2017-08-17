@@ -110,7 +110,7 @@ class ReferenceColumnIterable {
   ReferenceColumnIterable(const ReferenceColumn &column) : _column{column} {}
 
   template <typename Functor>
-  auto execute_for_all(const Functor &func) const {
+  void execute_for_all(const Functor &func) const {
     const auto table = _column.referenced_table();
     const auto column_id = _column.referenced_column_id();
 
@@ -119,12 +119,12 @@ class ReferenceColumnIterable {
 
     auto begin = Iterator{table, column_id, begin_it, begin_it};
     auto end = Iterator{table, column_id, begin_it, end_it};
-    return func(begin, end);
+    func(begin, end);
   }
 
   template <typename Functor>
-  auto execute_for_all_no_mapping(const Functor &func) const {
-    return execute_for_all(func);
+  void execute_for_all_no_mapping(const Functor &func) const {
+    execute_for_all(func);
   }
 
  private:

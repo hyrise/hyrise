@@ -19,17 +19,17 @@ namespace opossum {
 
 struct SumUp {
   template <typename Iterator>
-  uint32_t operator()(Iterator begin, Iterator end) const {
-    auto sum = uint32_t{0u};
+  void operator()(Iterator begin, Iterator end) const {
+    _sum = 0u;
 
     for (; begin != end; ++begin) {
       if ((*begin).is_null()) continue;
 
-      sum += (*begin).value();
+      _sum += (*begin).value();
     }
-
-    return sum;
   }
+  
+  uint32_t &_sum;
 };
 
 class IterablesTest : public BaseTest {
@@ -52,8 +52,9 @@ TEST_F(IterablesTest, ValueColumnIteratorExecuteForAll) {
   auto iterable = ValueColumnIterable<int>{*int_column};
 
   EXPECT_EQ(iterable.type(), ValueColumnIterableType::Simple);
-
-  const auto sum = iterable.execute_for_all(SumUp{});
+  
+  auto sum = uint32_t{0};
+  iterable.execute_for_all(SumUp{sum});
 
   EXPECT_EQ(sum, 24'825);
 }
@@ -70,7 +71,8 @@ TEST_F(IterablesTest, ValueColumnReferencedIteratorExecuteForAll) {
 
   EXPECT_EQ(iterable.type(), ValueColumnIterableType::Referenced);
 
-  const auto sum = iterable.execute_for_all(SumUp{});
+  auto sum = uint32_t{0};
+  iterable.execute_for_all(SumUp{sum});
 
   EXPECT_EQ(sum, 12'480);
 }
@@ -85,7 +87,8 @@ TEST_F(IterablesTest, ValueColumnNullableIteratorExecuteForAll) {
 
   EXPECT_EQ(iterable.type(), ValueColumnIterableType::Nullable);
 
-  const auto sum = iterable.execute_for_all(SumUp{});
+  auto sum = uint32_t{0};
+  iterable.execute_for_all(SumUp{sum});
 
   EXPECT_EQ(sum, 13'702);
 }
@@ -102,7 +105,8 @@ TEST_F(IterablesTest, ValueColumnNullableReferencedIteratorExecuteForAll) {
 
   EXPECT_EQ(iterable.type(), ValueColumnIterableType::NullableReferenced);
 
-  const auto sum = iterable.execute_for_all(SumUp{});
+  auto sum = uint32_t{0};
+  iterable.execute_for_all(SumUp{sum});
 
   EXPECT_EQ(sum, 13'579);
 }
@@ -119,7 +123,8 @@ TEST_F(IterablesTest, DictionaryColumnIteratorExecuteForAll) {
 
   EXPECT_EQ(iterable.type(), DictionaryColumnIterableType::Simple);
 
-  const auto sum = iterable.execute_for_all(SumUp{});
+  auto sum = uint32_t{0};
+  iterable.execute_for_all(SumUp{sum});
 
   EXPECT_EQ(sum, 24'825);
 }
@@ -138,7 +143,8 @@ TEST_F(IterablesTest, DictionaryColumnDictReferencedIteratorExecuteForAll) {
 
   EXPECT_EQ(iterable.type(), DictionaryColumnIterableType::Referenced);
 
-  const auto sum = iterable.execute_for_all(SumUp{});
+  auto sum = uint32_t{0};
+  iterable.execute_for_all(SumUp{sum});
 
   EXPECT_EQ(sum, 12'480);
 }
@@ -152,7 +158,8 @@ TEST_F(IterablesTest, ReferenceColumnIteratorExecuteForAll) {
 
   auto iterable = ReferenceColumnIterable<int>{*reference_column};
 
-  const auto sum = iterable.execute_for_all(SumUp{});
+  auto sum = uint32_t{0};
+  iterable.execute_for_all(SumUp{sum});
 
   EXPECT_EQ(sum, 24'825);
 }
@@ -160,10 +167,9 @@ TEST_F(IterablesTest, ReferenceColumnIteratorExecuteForAll) {
 TEST_F(IterablesTest, ConstantValueIteratorExecuteForAll) {
   auto iterable = ConstantValueIterable<int>{2u};
 
-  const auto sum = iterable.execute_for_all([](auto it, auto end) {
-    auto sum = 0;
+  auto sum = 0u;
+  iterable.execute_for_all([&](auto it, auto end) {
     for (auto i = 0u; i < 10; ++i) sum += (*it).value();
-    return sum;
   });
 
   EXPECT_EQ(sum, 20);
