@@ -110,6 +110,8 @@ class ExpressionNode : public std::enable_shared_from_this<ExpressionNode> {
 
   const std::string& name() const;
 
+  const std::string& get_column_name() const;
+
   const optional<std::string>& alias() const;
 
   void set_alias(const std::string& alias);

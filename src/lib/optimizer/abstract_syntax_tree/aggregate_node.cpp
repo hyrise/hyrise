@@ -21,26 +21,30 @@ AggregateColumnDefinition::AggregateColumnDefinition(const std::shared_ptr<Expre
 AggregateNode::AggregateNode(const std::vector<AggregateColumnDefinition>& aggregates,
                              const std::vector<ColumnID>& groupby_columns)
     : AbstractASTNode(ASTNodeType::Aggregate), _aggregates(aggregates), _groupby_columns(groupby_columns) {
+  /**
+   * Set output column ids and names.
+   */
+  for (const auto groupby_column_id : groupby_columns) {
+    _output_column_ids.emplace_back(groupby_column_id);
+    _output_column_names.emplace_back(left_child()->output_column_names()[groupby_column_id]);
+  }
+
   for (const auto& aggregate : aggregates) {
     std::string alias;
+
     if (aggregate.alias) {
       alias = *aggregate.alias;
     } else {
       // If the aggregate function has no alias defined in the query, we simply name it like the function.
-      // This might result in multiple output columns with the same name, but Postgres is doing things the same way.
+      // SQL in the standard does not specify a name to be given.
+      // This might result in multiple output columns with the same name (same as Postgres).
       DebugAssert(aggregate.expr->type() == ExpressionType::FunctionReference, "Expression must be a function.");
       alias = aggregate.expr->name();
     }
 
     _output_column_names.emplace_back(alias);
-
+    // TODO(tim): BLOCKING - complete, and verify.
     _output_column_ids.emplace_back();
-  }
-
-  for (const auto& groupby : groupby_columns) {
-    _output_column_ids.emplace_back(groupby);
-
-    _output_column_names.emplace_back();
   }
 }
 
@@ -74,24 +78,25 @@ std::string AggregateNode::description() const {
   return s.str();
 }
 
-const std::vector<ColumnID> AggregateNode::output_column_ids() const { return _output_column_ids; }
+std::vector<ColumnID> AggregateNode::output_column_ids() const { return _output_column_ids; }
 
-const optional<ColumnID> AggregateNode::find_column_id_for_column_identifier(
-    ColumnIdentifier& column_identifier) const {
+optional<ColumnID> AggregateNode::find_column_id_for_column_identifier(
+    const ColumnIdentifier& column_identifier) const {
+  DebugAssert(!!left_child(), "AggregateNode needs a child.");
+
   /*
    * Search for ColumnIdentifier in Aggregate columns:
    * These columns are created by the Aggregate Operator, so we have to look through them here.
    */
-  optional<ColumnID> found_aggregate = nullopt;
-  for (size_t i = 0; i < _aggregates.size(); i++) {
+  optional<ColumnID> column_id_aggregate;
+  for (uint16_t i = 0; i < _aggregates.size(); i++) {
     const auto& aggregate_definition = _aggregates[i];
-    // if AggregateDefinition has no alias, column_name will not match
+
+    // If AggregateDefinition has no alias, column_name will not match.
     if (column_identifier.column_name == aggregate_definition.alias) {
-      if (!found_aggregate) {
-        found_aggregate = ColumnID{i};
-      } else {
-        Fail("Column name " + column_identifier.column_name + " is ambiguous.");
-      }
+      // Check that we haven't found a match yet.
+      Assert(!column_id_aggregate, "Column name " + column_identifier.column_name + " is ambiguous.");
+      column_id_aggregate = ColumnID{i};
     }
   }
 
@@ -100,19 +105,17 @@ const optional<ColumnID> AggregateNode::find_column_id_for_column_identifier(
    * These columns have been created by another node. Since Aggregates can only have a single child node,
    * we just have to check the left_child for the ColumnIdentifier.
    */
-  auto found_groupby = left_child() ? left_child()->find_column_id_for_column_identifier(column_identifier) : nullopt;
+  auto column_id_groupby = left_child()->find_column_id_for_column_identifier(column_identifier);
+  Assert(!column_id_aggregate || !column_id_groupby, "Column name " + column_identifier.column_name + " is ambiguous.");
 
-  if (found_aggregate && found_groupby) {
-    Fail("Column name " + column_identifier.column_name + " is ambiguous.");
+  if (column_id_aggregate) {
+    return column_id_aggregate;
   }
 
-  if (found_aggregate) return found_aggregate;
-  if (found_groupby) return found_groupby;
-
-  // ColumnIdentifier has not been found at all
-  return nullopt;
+  // Optional might not be set.
+  return column_id_groupby;
 }
 
-const std::vector<std::string> AggregateNode::output_column_names() const { return _output_column_names; }
+std::vector<std::string> AggregateNode::output_column_names() const { return _output_column_names; }
 
 }  // namespace opossum

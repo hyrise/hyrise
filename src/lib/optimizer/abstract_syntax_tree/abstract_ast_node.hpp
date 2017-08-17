@@ -15,8 +15,8 @@ class TableStatistics;
 enum class ASTNodeType { Aggregate, Join, Predicate, Projection, Sort, StoredTable };
 
 struct ColumnIdentifier {
-  std::string table_name;
   std::string column_name;
+  optional<std::string> table_name;
 };
 
 /**
@@ -52,11 +52,14 @@ class AbstractASTNode : public std::enable_shared_from_this<AbstractASTNode> {
   virtual const std::shared_ptr<TableStatistics> get_statistics_from(
       const std::shared_ptr<AbstractASTNode> &other_node) const;
 
-  virtual const std::vector<std::string> output_column_names() const;
-  virtual const std::vector<ColumnID> output_column_ids() const;
+  virtual std::vector<std::string> output_column_names() const;
+  virtual std::vector<ColumnID> output_column_ids() const;
   bool has_output_column(const std::string &column_name) const;
-  virtual const optional<ColumnID> find_column_id_for_column_identifier(ColumnIdentifier &column_identifier) const;
-  virtual const bool manages_table(const std::string &table_name) const;
+
+  ColumnID get_column_id_for_column_identifier(const ColumnIdentifier &column_identifier) const;
+  virtual optional<ColumnID> find_column_id_for_column_identifier(const ColumnIdentifier &column_identifier) const;
+  std::string get_column_name_for_column_id(ColumnID column_id) const;
+  virtual bool manages_table(const std::string &table_name) const;
 
   void print(const uint32_t level = 0, std::ostream &out = std::cout) const;
   virtual std::string description() const = 0;
@@ -66,8 +69,6 @@ class AbstractASTNode : public std::enable_shared_from_this<AbstractASTNode> {
 
   // Used to easily differentiate between node types without pointer casts.
   ASTNodeType _type;
-  mutable std::vector<ColumnID> _output_column_ids;
-  mutable std::vector<std::string> _output_column_names;
 
  private:
   std::weak_ptr<AbstractASTNode> _parent;

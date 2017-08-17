@@ -18,22 +18,25 @@ class TableStatistics;
  */
 class StoredTableNode : public AbstractASTNode {
  public:
-  explicit StoredTableNode(const std::string& table_name, optional<std::string> alias = nullopt);
-
-  std::string description() const override;
-
-  const std::vector<ColumnID> output_column_ids() const override;
-  const std::vector<std::string> output_column_names() const override;
+  explicit StoredTableNode(const std::string& table_name, const optional<std::string>& alias = {});
 
   const std::string& table_name() const;
 
-  const optional<ColumnID> find_column_id_for_column_identifier(ColumnIdentifier& column_identifier) const override;
-  const bool manages_table(const std::string& table_name) const override;
+  std::string description() const override;
+  std::vector<ColumnID> output_column_ids() const override;
+  std::vector<std::string> output_column_names() const override;
+  bool manages_table(const std::string& table_name) const override;
+  optional<ColumnID> find_column_id_for_column_identifier(const ColumnIdentifier& column_identifier) const override;
 
  private:
   const std::shared_ptr<TableStatistics> _gather_statistics() const override;
+
+ private:
   const std::string _table_name;
   const optional<std::string> _alias;
+
+  std::vector<ColumnID> _output_column_ids;
+  std::vector<std::string> _output_column_names;
 };
 
 }  // namespace opossum

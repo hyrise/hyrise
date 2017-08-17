@@ -1,5 +1,6 @@
 #include "abstract_ast_node.hpp"
 
+#include <algorithm>
 #include <iomanip>
 #include <iostream>
 #include <memory>
@@ -75,26 +76,16 @@ const std::shared_ptr<TableStatistics> AbstractASTNode::_gather_statistics() con
   return get_statistics_from(_left_child);
 }
 
-const std::vector<std::string> AbstractASTNode::output_column_names() const {
-  if (_left_child && !_right_child) return _left_child->output_column_names();
-  if (!_left_child && _right_child) return _right_child->output_column_names();
-
+std::vector<std::string> AbstractASTNode::output_column_names() const {
   /**
-   * Rebuild _output_columns when node has both children as there is no way to detect whether one of them has changed
+   * This function has to be overwritten if columns or their order are in any way redefined.
+   * Examples include Projections, Aggregates, and Joins.
+   *
+   * Having two children does not necessarily mean that this function has to be overwritten, though.
+   * In case of UNION, this function is perfectly valid.
    */
-  _output_column_names.clear();
-
-  if (_left_child) {
-    const auto &left_output_columns = _left_child->output_column_names();
-    _output_column_names.insert(_output_column_names.end(), left_output_columns.begin(), left_output_columns.end());
-  }
-
-  if (_right_child) {
-    const auto &right_output_columns = _right_child->output_column_names();
-    _output_column_names.insert(_output_column_names.end(), right_output_columns.begin(), right_output_columns.end());
-  }
-
-  return _output_column_names;
+  DebugAssert(!!_left_child, "Node has no left child and therefore must override this function.");
+  return _left_child->output_column_names();
 }
 
 bool AbstractASTNode::has_output_column(const std::string &column_name) const {
@@ -102,52 +93,57 @@ bool AbstractASTNode::has_output_column(const std::string &column_name) const {
   return std::find(column_names.begin(), column_names.end(), column_name) != column_names.end();
 }
 
-const std::vector<ColumnID> AbstractASTNode::output_column_ids() const {
-  if (_left_child && !_right_child) return _left_child->output_column_ids();
-  if (!_left_child && _right_child) return _right_child->output_column_ids();
-
+std::vector<ColumnID> AbstractASTNode::output_column_ids() const {
   /**
-   * Rebuild _output_columns when node has both children as there is no way to detect whether one of them has changed
+   * This function has to be overwritten if columns or their order are in any way redefined.
+   * Examples include Projections, Aggregates, and Joins.
+   *
+   * Having two children does not necessarily mean that this function has to be overwritten, though.
+   * In case of UNION, this function is perfectly valid.
    */
-  _output_column_ids.clear();
-
-  if (_left_child) {
-    const auto &left_output_columns = _left_child->output_column_ids();
-    _output_column_ids.insert(_output_column_ids.end(), left_output_columns.begin(), left_output_columns.end());
-  }
-
-  if (_right_child) {
-    const auto &right_output_columns = _right_child->output_column_ids();
-    _output_column_ids.insert(_output_column_ids.end(), right_output_columns.begin(), right_output_columns.end());
-  }
-
-  return _output_column_ids;
+  DebugAssert(!!_left_child, "Node has no left child and therefore must override this function.");
+  return _left_child->output_column_ids();
 }
 
-const optional<ColumnID> AbstractASTNode::find_column_id_for_column_identifier(
-    ColumnIdentifier &column_identifier) const {
-  auto found_left = _left_child ? _left_child->find_column_id_for_column_identifier(column_identifier) : nullopt;
+std::string AbstractASTNode::get_column_name_for_column_id(ColumnID column_id) const {
+  const auto &column_ids = output_column_ids();
+  auto iter = std::find(column_ids.cbegin(), column_ids.cend(), column_id);
 
-  if (_right_child) {
-    auto found_right = _right_child->find_column_id_for_column_identifier(column_identifier);
+  DebugAssert(iter != column_ids.cend(), "ColumnID not found.");
 
-    if (found_left && found_right) {
-      Fail("Column name " + column_identifier.column_name + " is ambiguous.");
-    }
-
-    if (found_right) {
-      return ColumnID{*found_right + _left_child->_output_column_ids.size()};
-    }
-  }
-
-  return found_left;
+  auto index = std::distance(column_ids.cbegin(), iter);
+  return output_column_names()[index];
 }
 
-const bool AbstractASTNode::manages_table(const std::string &table_name) const {
-  if (_left_child) {
-    return _left_child->manages_table(table_name);
-  }
-  return false;
+ColumnID AbstractASTNode::get_column_id_for_column_identifier(const ColumnIdentifier &column_identifier) const {
+  const auto column_id = find_column_id_for_column_identifier(column_identifier);
+  DebugAssert(!!column_id, "ColumnIdentifier could not be resolved.");
+  return *column_id;
+}
+
+optional<ColumnID> AbstractASTNode::find_column_id_for_column_identifier(
+    const ColumnIdentifier &column_identifier) const {
+  /**
+   * This function has to be overwritten if columns or their order are in any way redefined.
+   * Examples include Projections, Aggregates, and Joins.
+   *
+   * Having two children does not necessarily mean that this function has to be overwritten, though.
+   * In case of UNION, this function is perfectly valid.
+   */
+  DebugAssert(!!_left_child, "Node has no left child and therefore must override this function.");
+  return _left_child->find_column_id_for_column_identifier(column_identifier);
+}
+
+bool AbstractASTNode::manages_table(const std::string &table_name) const {
+  /**
+   * This function might have to be overwritten if a node can handle different input tables, e.g. a JOIN.
+   *
+   * Having two children does not necessarily mean that this function has to be overwritten, though.
+   * In case of UNION, this function is perfectly valid,
+   * because rows cannot be traced back to its original table after the operator.
+   */
+  DebugAssert(!!_left_child, "Node has no left child and therefore must override this function.");
+  return _left_child->manages_table(table_name);
 }
 
 void AbstractASTNode::print(const uint32_t level, std::ostream &out) const {

@@ -26,8 +26,8 @@ class TableStatisticsMock : public TableStatistics {
   explicit TableStatisticsMock(float row_count) : TableStatistics(std::make_shared<Table>()) { _row_count = row_count; }
 
   std::shared_ptr<TableStatistics> predicate_statistics(const ColumnID column_id, const ScanType scan_type,
-                                                        const AllParameterVariant &value,
-                                                        const optional<AllTypeVariant> &value2) override {
+                                                        const AllParameterVariant& value,
+                                                        const optional<AllTypeVariant>& value2) override {
     if (column_id == ColumnID{0}) {
       return std::make_shared<TableStatisticsMock>(500);
     }
@@ -171,9 +171,9 @@ TEST_F(PredicateReorderingTest, ComplexReorderingTest) {
       std::make_shared<PredicateNode>(ColumnID{2}, greater_than_expression_2, ScanType::OpGreaterThan, 90);
   predicate_node_2->set_left_child(predicate_node_1);
 
-  std::vector<std::string> column_names({"c1", "c2"});
-  std::vector<ColumnID> column_ids({ColumnID{0}, ColumnID{1}});
-  auto projection_node = std::make_shared<ProjectionNode>(column_ids, column_names);
+  const std::vector<ColumnID> column_ids = {ColumnID{0}, ColumnID{1}};
+  const auto& expressions = ExpressionNode::create_column_references(column_ids);
+  const auto projection_node = std::make_shared<ProjectionNode>(expressions);
   projection_node->set_left_child(predicate_node_2);
 
   auto greater_than_expression_3 = ExpressionNode::create_expression(ExpressionType::GreaterThan);
@@ -261,9 +261,9 @@ TEST_F(PredicateReorderingTest, TwoReorderings) {
       std::make_shared<PredicateNode>(ColumnID{1}, greater_than_expression_3, ScanType::OpGreaterThan, 50);
   predicate_node_3->set_left_child(predicate_node_2);
 
-  std::vector<std::string> column_names({"c1", "c2"});
-  std::vector<ColumnID> column_ids({ColumnID{0}, ColumnID{1}});
-  auto projection_node = std::make_shared<ProjectionNode>(column_ids, column_names);
+  const std::vector<ColumnID> column_ids = {ColumnID{0}, ColumnID{1}};
+  const auto& expressions = ExpressionNode::create_column_references(column_ids);
+  const auto projection_node = std::make_shared<ProjectionNode>(expressions);
   projection_node->set_left_child(predicate_node_3);
 
   projection_node->get_statistics();

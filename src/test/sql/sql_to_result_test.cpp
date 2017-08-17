@@ -99,13 +99,13 @@ TEST_P(SQLToResultTest, SQLQueryTest) {
 }
 
 const SQLTestParam test_queries[] = {
-    {"SELECT * FROM table_a;", "src/test/tables/int_float.tbl"},  // 1
+    {"SELECT * FROM table_a;", "src/test/tables/int_float.tbl"},  // 0
 
     // Table Scans
-    {"SELECT * FROM table_b WHERE a = 12345 AND b > 457;", "src/test/tables/int_float2_filtered.tbl"},   // 2
-    {"SELECT * FROM table_a WHERE a >= 1234;", "src/test/tables/int_float_filtered2.tbl"},               // 3
-    {"SELECT * FROM table_a WHERE a >= 1234 AND b < 457.9", "src/test/tables/int_float_filtered.tbl"},   // 4
-    {"SELECT * FROM TestTable WHERE a BETWEEN 122 AND 124", "src/test/tables/int_string_filtered.tbl"},  // 5
+    {"SELECT * FROM table_b WHERE a = 12345 AND b > 457;", "src/test/tables/int_float2_filtered.tbl"},   // 1
+    {"SELECT * FROM table_a WHERE a >= 1234;", "src/test/tables/int_float_filtered2.tbl"},               // 2
+    {"SELECT * FROM table_a WHERE a >= 1234 AND b < 457.9", "src/test/tables/int_float_filtered.tbl"},   // 3
+    {"SELECT * FROM TestTable WHERE a BETWEEN 122 AND 124", "src/test/tables/int_string_filtered.tbl"},  // 4
 
     // Projection
     {"SELECT a FROM table_a;", "src/test/tables/int.tbl"},  // 5
@@ -130,11 +130,20 @@ const SQLTestParam test_queries[] = {
     {"SELECT SUM(b + b) AS sum_b_b FROM table_a;", "src/test/tables/int_float_sum_b_plus_b.tbl"},  // 12
 
     // JOIN
-    {R"(SELECT "left".a, "left".b, "right".a, "right".b FROM table_a AS "left" JOIN table_b AS "right" ON a = a;)",
+    {R"(SELECT "left".a, "left".b, "right".a, "right".b
+        FROM table_a AS "left"
+        JOIN table_b AS "right"
+        ON "left".a = "right".a;)",
      "src/test/tables/joinoperators/int_inner_join.tbl"},  // 13
-    {R"(SELECT * FROM table_a AS "left" LEFT JOIN table_b AS "right" ON a = a;)",
+    {R"(SELECT *
+        FROM table_a AS "left"
+        LEFT JOIN table_b AS "right"
+        ON "left".a = "right".a;)",
      "src/test/tables/joinoperators/int_left_join.tbl"},  // 14
-    {R"(SELECT * FROM table_a AS "left" INNER JOIN table_b AS "right" ON "left".a = "right".a;)",
+    {R"(SELECT *
+        FROM table_a AS "left"
+        INNER JOIN table_b AS "right"
+        ON "left".a = "right".a;)",
      "src/test/tables/joinoperators/int_inner_join.tbl"},  // 15
 
     // GROUP BY
@@ -154,14 +163,12 @@ const SQLTestParam test_queries[] = {
     {"SELECT * FROM customer;", "src/test/tables/tpch/customer.tbl"},                             // 21
     {"SELECT c_custkey, c_name FROM customer;", "src/test/tables/tpch/customer_projection.tbl"},  // 22
 
-    /**
-     * TODO: Reactivate these tests once joins do not prefix their output columns anymore
-     */
     {R"(SELECT customer.c_custkey, customer.c_name, COUNT(orders.o_orderkey)
         FROM customer JOIN orders ON c_custkey = o_custkey
         GROUP BY customer.c_custkey, customer.c_name
         HAVING COUNT(orders.o_orderkey) >= 100;)",
      "src/test/tables/tpch/customer_join_orders.tbl"},  // 23
+
     // TODO(mp): Aliases for Subselects are not supported yet
     //    {R"(SELECT customer.c_custkey, customer.c_name, COUNT(orderitems.o_orderkey)
     //        FROM customer JOIN (

@@ -15,6 +15,7 @@
 #include "optimizer/abstract_syntax_tree/aggregate_node.hpp"
 #include "optimizer/abstract_syntax_tree/join_node.hpp"
 #include "optimizer/abstract_syntax_tree/predicate_node.hpp"
+#include "optimizer/abstract_syntax_tree/projection_node.hpp"
 #include "optimizer/abstract_syntax_tree/sort_node.hpp"
 #include "optimizer/abstract_syntax_tree/stored_table_node.hpp"
 
@@ -65,8 +66,8 @@ std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::_translate_predicate_
 std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::_translate_projection_node(
     const std::shared_ptr<AbstractASTNode> &node) const {
   const auto input_operator = translate_node(node->left_child());
-  return std::make_shared<Projection>(
-      input_operator, ExpressionNode::create_column_references(node->output_column_ids(), node->output_column_names()));
+  auto projection_node = std::dynamic_pointer_cast<ProjectionNode>(node);
+  return std::make_shared<Projection>(input_operator, projection_node->column_expressions());
 }
 
 std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::_translate_sort_node(
