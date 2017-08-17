@@ -4,9 +4,6 @@
 #include <type_traits>
 #include <unordered_map>
 
-#include <boost/hana/or.hpp>
-#include <boost/hana/type.hpp>
-
 #include "resolve_column_type.hpp"
 #include "storage/base_attribute_vector.hpp"
 #include "storage/column_visitable.hpp"
@@ -789,6 +786,9 @@ class ColumnComparisonScan : public ColumnScanBase {
         using LeftColumnType = typename std::decay<decltype(typed_right_column)>::type;
         using RightColumnType = typename std::decay<decltype(typed_right_column)>::type;
 
+        using LeftType = typename decltype(left_type)::type;
+        using RightType = typename decltype(right_type)::type;
+
         /**
          * This generic lambda is instantiated for each type (int, long, etc.) and
          * each column type (value, dictionary, reference column) per column!
@@ -805,17 +805,14 @@ class ColumnComparisonScan : public ColumnScanBase {
         constexpr auto neither_is_reference_column = !left_is_reference_column && !right_is_reference_column;
         constexpr auto both_are_reference_columns = left_is_reference_column && right_is_reference_column;
 
-        constexpr auto left_is_string_column = (left_type == hana::type_c<std::string>);
-        constexpr auto right_is_string_column = (right_type == hana::type_c<std::string>);
+        constexpr auto left_is_string_column = (std::is_same<LeftType, std::string>{});
+        constexpr auto right_is_string_column = (std::is_same<RightType, std::string>{});
 
         constexpr auto neither_is_string_column = !left_is_string_column && !right_is_string_column;
         constexpr auto both_are_string_columns = left_is_string_column && right_is_string_column;
 
         if constexpr((neither_is_reference_column || both_are_reference_columns) &&
                     (neither_is_string_column || both_are_string_columns)) {
-          using LeftType = typename decltype(left_type)::type;
-          using RightType = typename decltype(right_type)::type;
-
           auto left_column_iterable = _create_iterable_from_column<LeftType>(typed_left_column);
           auto right_column_iterable = _create_iterable_from_column<RightType>(typed_right_column);
 

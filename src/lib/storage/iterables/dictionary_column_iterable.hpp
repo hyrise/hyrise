@@ -24,11 +24,11 @@ class DictionaryColumnIterable {
     using Dictionary = std::vector<T>;
 
    public:
-    explicit Iterator(const Dictionary& dictionary, const BaseAttributeVector& attribute_vector, size_t index)
-        : _dictionary{dictionary}, _attribute_vector(attribute_vector), _index{index} {}
+    explicit Iterator(const Dictionary& dictionary, const BaseAttributeVector& attribute_vector, ChunkOffset chunk_offset)
+        : _dictionary{dictionary}, _attribute_vector(attribute_vector), _chunk_offset{chunk_offset} {}
 
     Iterator& operator++() {
-      ++_index;
+      ++_chunk_offset;
       return *this;
     }
     Iterator operator++(int) {
@@ -36,22 +36,22 @@ class DictionaryColumnIterable {
       ++(*this);
       return retval;
     }
-    bool operator==(Iterator other) const { return _index == other._index; }
+    bool operator==(Iterator other) const { return _chunk_offset == other._chunk_offset; }
     bool operator!=(Iterator other) const { return !(*this == other); }
 
     auto operator*() const {
-      const auto value_id = _attribute_vector.get(_index);
+      const auto value_id = _attribute_vector.get(_chunk_offset);
       const auto is_null = (value_id == NULL_VALUE_ID);
 
-      if (is_null) return NullableColumnValue<T>{T{}, is_null, _index};
+      if (is_null) return NullableColumnValue<T>{T{}, is_null, _chunk_offset};
 
-      return NullableColumnValue<T>{_dictionary[value_id], is_null, _index};
+      return NullableColumnValue<T>{_dictionary[value_id], is_null, _chunk_offset};
     }
 
    private:
     const Dictionary& _dictionary;
     const BaseAttributeVector& _attribute_vector;
-    size_t _index;
+    ChunkOffset _chunk_offset;
   };
 
   class ReferencedIterator : public std::iterator<std::input_iterator_tag, NullableColumnValue<T>, std::ptrdiff_t,
@@ -101,14 +101,13 @@ class DictionaryColumnIterable {
   template <typename Functor>
   auto execute_for_all(const Functor& func) const {
     if (_mapped_chunk_offsets != nullptr) {
-      auto begin =
-          ReferencedIterator(*_column.dictionary(), *_column.attribute_vector(), _mapped_chunk_offsets->cbegin());
-      auto end = ReferencedIterator(*_column.dictionary(), *_column.attribute_vector(), _mapped_chunk_offsets->cend());
+      auto begin = ReferencedIterator{*_column.dictionary(), *_column.attribute_vector(), _mapped_chunk_offsets->cbegin()};
+      auto end = ReferencedIterator{*_column.dictionary(), *_column.attribute_vector(), _mapped_chunk_offsets->cend()};
       return func(begin, end);
     }
 
-    auto begin = Iterator(*_column.dictionary(), *_column.attribute_vector(), 0u);
-    auto end = Iterator(*_column.dictionary(), *_column.attribute_vector(), _column.size());
+    auto begin = Iterator{*_column.dictionary(), *_column.attribute_vector(), 0u};
+    auto end = Iterator{*_column.dictionary(), *_column.attribute_vector(), static_cast<ChunkOffset>(_column.size())};
     return func(begin, end);
   }
 
@@ -116,8 +115,8 @@ class DictionaryColumnIterable {
   auto execute_for_all_no_mapping(const Functor& func) const {
     DebugAssert(_mapped_chunk_offsets == nullptr, "Mapped chunk offsets must be a nullptr.");
 
-    auto begin = Iterator(*_column.dictionary(), *_column.attribute_vector(), 0u);
-    auto end = Iterator(*_column.dictionary(), *_column.attribute_vector(), _column.size());
+    auto begin = Iterator{*_column.dictionary(), *_column.attribute_vector(), 0u};
+    auto end = Iterator{*_column.dictionary(), *_column.attribute_vector(), static_cast<ChunkOffset>(_column.size())};
     return func(begin, end);
   }
 
