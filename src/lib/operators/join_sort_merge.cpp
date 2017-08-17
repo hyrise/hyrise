@@ -435,11 +435,11 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
       for (size_t r_partition_id = 0; r_partition_id < _sorted_left_table->size(); ++r_partition_id) {
         auto partition_id = _sorted_left_table->size() - 1 - r_partition_id;
         auto partition = _sorted_left_table->at(partition_id);
-        if (partition->size() > 0 && partition->back().value >= right_max_value) {
+        if (partition->size() > 0 && partition->at(0).value < right_max_value) {
           for(size_t r_index = 0; r_index < partition->size(); ++r_index) {
             size_t index = partition->size() - 1 - r_index;
-            if(partition->at(index).value >= right_max_value) {
-              _emit_right_null_combinations(partition_id, TablePosition(partition_id, index).to(end_of_left_table));
+            if(partition->at(index).value < right_max_value) {
+              _emit_right_null_combinations(partition_id, TablePosition(partition_id, index + 1).to(end_of_left_table));
               return;
             }
           }
