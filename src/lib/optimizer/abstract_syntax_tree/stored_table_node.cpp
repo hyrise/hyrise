@@ -19,8 +19,8 @@ StoredTableNode::StoredTableNode(const std::string& table_name, const optional<s
   auto table = StorageManager::get().get_table(_table_name);
   _output_column_names = table->column_names();
 
-  for (size_t i = 0; i < table->column_names().size(); i++) {
-    _output_column_ids.emplace_back(ColumnID{i});
+  for (uint16_t column_idx = 0u; column_idx < table->column_names().size(); column_idx++) {
+    _output_column_ids.emplace_back(ColumnID{column_idx});
   }
 }
 
