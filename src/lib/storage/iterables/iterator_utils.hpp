@@ -9,8 +9,6 @@ using ChunkOffsetsIterator = std::vector<std::pair<ChunkOffset, ChunkOffset>>::c
 template <typename Derived, typename Value>
 using BaseIterator = boost::iterator_facade<Derived, Value, boost::forward_traversal_tag, Value>;
 
-using BaseIteratorAccess = boost::iterator_core_access;
-
 template <typename Derived, typename Value>
 class BaseReferencedIterator : public BaseIterator<Derived, Value> {
  public:

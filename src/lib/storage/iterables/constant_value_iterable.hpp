@@ -1,8 +1,7 @@
 #pragma once
 
-#include <iterator>
-
 #include "all_type_variant.hpp"
+#include "iterator_utils.hpp"
 
 namespace opossum {
 
@@ -20,20 +19,16 @@ class ConstantValueIterable {
     const T& _value;
   };
 
-  class Iterator
-      : public std::iterator<std::input_iterator_tag, ColumnValue, std::ptrdiff_t, ColumnValue*, ColumnValue> {
+  class Iterator : public BaseIterator<Iterator, ColumnValue>  {
    public:
     explicit Iterator(const T& value) : _value{value} {}
 
-    Iterator& operator++() { return *this; }
-    Iterator operator++(int) {
-      auto retval = *this;
-      ++(*this);
-      return retval;
-    }
-    bool operator==(Iterator other) const { return _value == other._value; }
-    bool operator!=(Iterator other) const { return !(*this == other); }
-    auto operator*() const { return ColumnValue{_value}; }
+   private:
+    friend class boost::iterator_core_access;
+
+    void increment() {}
+    bool equal(const Iterator &other) const { return _value == other._value; }
+    ColumnValue dereference() const { return ColumnValue{_value}; }
 
    private:
     const T _value;
@@ -43,15 +38,15 @@ class ConstantValueIterable {
   explicit ConstantValueIterable(const AllTypeVariant& value) : _value{type_cast<T>(value)} {}
 
   template <typename Functor>
-  void execute_for_all(const Functor& func) const {
+  void execute_for_all_no_mapping(const Functor& func) const {
     auto begin = Iterator{_value};
     // TODO(mjendruk): Find a better solution here.
     func(begin, begin);
   }
 
   template <typename Functor>
-  void execute_for_all_no_mapping(const Functor& func) const {
-    execute_for_all(func);
+  void execute_for_all(const Functor& func) const {
+    execute_for_all_no_mapping(func);
   }
 
  private:

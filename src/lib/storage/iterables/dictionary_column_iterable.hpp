@@ -1,6 +1,5 @@
 #pragma once
 
-#include <iterator>
 #include <utility>
 #include <vector>
 
@@ -30,7 +29,7 @@ class DictionaryColumnIterable {
         : _dictionary{dictionary}, _attribute_vector{attribute_vector}, _chunk_offset{chunk_offset} {}
 
    private:
-    friend class BaseIteratorAccess;
+    friend class boost::iterator_core_access;
 
     void increment() { ++_chunk_offset; }
     bool equal(const Iterator & other) const { return _chunk_offset == other._chunk_offset; }
@@ -63,7 +62,7 @@ class DictionaryColumnIterable {
           _attribute_vector{attribute_vector} {}
 
    private:
-    friend class BaseIteratorAccess;
+    friend class boost::iterator_core_access;
 
     NullableColumnValue<T> dereference() const {
       const auto value_id = _attribute_vector.get(this->index_into_referenced());

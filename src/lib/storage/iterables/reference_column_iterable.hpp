@@ -1,6 +1,5 @@
 #pragma once
 
-#include <iterator>
 #include <map>
 #include <memory>
 #include <utility>
@@ -9,6 +8,7 @@
 #include "tbb/concurrent_vector.h"
 
 #include "column_value.hpp"
+#include "iterator_utils.hpp"
 #include "storage/reference_column.hpp"
 
 namespace opossum {
@@ -26,7 +26,7 @@ class ReferenceColumnIterable {
         : _table{table}, _column_id{column_id}, _begin_pos_list_it{begin_pos_list_it}, _pos_list_it{pos_list_it} {}
 
    private:
-    friend class BaseIteratorAccess;
+    friend class boost::iterator_core_access;
   
     void increment() { ++_pos_list_it; }
 

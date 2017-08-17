@@ -1,12 +1,12 @@
 #pragma once
 
-#include <iterator>
 #include <utility>
 #include <vector>
 
 #include "tbb/concurrent_vector.h"
 
 #include "column_value.hpp"
+#include "iterator_utils.hpp"
 #include "storage/value_column.hpp"
 
 namespace opossum {
@@ -28,7 +28,7 @@ class ValueColumnIterable {
         : _begin_value_it{begin_value_it}, _value_it(value_it) {}
 
    private:
-    friend class BaseIteratorAccess;
+    friend class boost::iterator_core_access;
 
     void increment() { ++_value_it; }
     bool equal(const Iterator & other) const { return _value_it == other._value_it; }
@@ -53,7 +53,7 @@ class ValueColumnIterable {
         : _begin_value_it{begin_value_it}, _value_it(value_it), _null_value_it{null_value_it} {}
 
    private:
-    friend class BaseIteratorAccess;
+    friend class boost::iterator_core_access;
 
     void increment() { 
       ++_value_it;
@@ -83,7 +83,7 @@ class ValueColumnIterable {
           _values{values} {}
 
    private:
-    friend class BaseIteratorAccess;
+    friend class boost::iterator_core_access;
 
     ColumnValue<T> dereference() const { return ColumnValue<T>{_values[this->index_into_referenced()], this->index_of_referencing()}; }
 
@@ -104,7 +104,7 @@ class ValueColumnIterable {
           _null_values{null_values} {}
 
    private:
-    friend class BaseIteratorAccess;
+    friend class boost::iterator_core_access;
     
     NullableColumnValue<T> dereference() const {
       return NullableColumnValue<T>{_values[this->index_into_referenced()], _null_values[this->index_into_referenced()],
