@@ -18,9 +18,9 @@ int main() {
 
   auto table_statistics = opossum::StorageManager::get().get_table("CUSTOMER")->table_statistics();
   auto stat1 =
-      table_statistics->predicate_statistics("C_ID", opossum::ScanType::OpEquals, opossum::AllParameterVariant(1));
-  auto stat2 = stat1->predicate_statistics("C_D_ID", opossum::ScanType::OpNotEquals, opossum::AllParameterVariant(2));
-  auto stat3 = stat1->predicate_statistics("C_D_ID", opossum::ScanType::OpLessThan, opossum::AllParameterVariant(5));
+      table_statistics->predicate_statistics(opossum::ColumnID(0), opossum::ScanType::OpEquals, opossum::AllParameterVariant(1)); // "C_ID"
+  auto stat2 = stat1->predicate_statistics(opossum::ColumnID(1), opossum::ScanType::OpNotEquals, opossum::AllParameterVariant(2)); // "C_D_ID"
+  auto stat3 = stat1->predicate_statistics(opossum::ColumnID(1), opossum::ScanType::OpLessThan, opossum::AllParameterVariant(5)); // "C_D_ID"
   std::cout << "original CUSTOMER table" << std::endl;
   std::cout << *table_statistics << std::endl;
   std::cout << "C_ID = 1" << std::endl;
@@ -31,8 +31,8 @@ int main() {
   std::cout << *stat3 << std::endl;
 
   std::cout << "--- COLUMN Table Scans ---" << std::endl;
-  stat1 = table_statistics->predicate_statistics("C_ID", opossum::ScanType::OpEquals,
-                                                 opossum::AllParameterVariant(opossum::ColumnName("C_D_ID")));
+  stat1 = table_statistics->predicate_statistics(opossum::ColumnID(0), opossum::ScanType::OpEquals,
+                                                 opossum::AllParameterVariant(opossum::ColumnID(1)));
   std::cout << "original CUSTOMER table" << std::endl;
   std::cout << *table_statistics << std::endl;
   std::cout << "C_ID = C_D_ID" << std::endl;

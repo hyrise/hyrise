@@ -379,9 +379,10 @@ TwoColumnSelectivityResult ColumnStatistics<std::string>::estimate_selectivity_f
 template <typename ColumnType>
 std::ostream &ColumnStatistics<ColumnType>::print_to_stream(std::ostream &os) const {
   os << "Col Stats id: " << _column_id << std::endl;
-  os << "  dist. " << _distinct_count << std::endl;
-  os << "  min   " << _min << std::endl;
-  os << "  max   " << _max;
+  os << "  dist.    " << _distinct_count << std::endl;
+  os << "  min      " << _min << std::endl;
+  os << "  max      " << _max << std::endl;
+  os << "  non-null " << _non_null_value_ratio;
   return os;
 }
 
