@@ -24,9 +24,14 @@ ColumnStatistics<ColumnType>::ColumnStatistics(const ColumnID column_id, const s
     : _column_id(column_id), _table(table) {}
 
 template <typename ColumnType>
-ColumnStatistics<ColumnType>::ColumnStatistics(const ColumnID column_id, float distinct_count, ColumnType min,
-                                               ColumnType max)
-    : _column_id(column_id), _table(std::weak_ptr<Table>()), _distinct_count(distinct_count), _min(min), _max(max) {}
+ColumnStatistics<ColumnType>::ColumnStatistics(const ColumnID column_id, float distinct_count, const ColumnType min,
+                                               const ColumnType max, const float null_value_ratio)
+    : BaseColumnStatistics(null_value_ratio),
+      _column_id(column_id),
+      _table(std::weak_ptr<Table>()),
+      _distinct_count(distinct_count),
+      _min(min),
+      _max(max) {}
 
 template <typename ColumnType>
 float ColumnStatistics<ColumnType>::distinct_count() const {
@@ -89,7 +94,7 @@ ColumnSelectivityResult ColumnStatistics<ColumnType>::create_column_stats_for_ra
   auto common_min = std::max(minimum, min());
   auto common_max = std::min(maximum, max());
   if (common_min == min() && common_max == max()) {
-    return {1.f, nullptr};
+    return {_non_null_value_ratio, nullptr};
   }
   float selectivity = 0.f;
   if (common_max >= common_min) {
@@ -97,7 +102,7 @@ ColumnSelectivityResult ColumnStatistics<ColumnType>::create_column_stats_for_ra
   }
   auto column_statistics =
       std::make_shared<ColumnStatistics>(_column_id, selectivity * distinct_count(), common_min, common_max);
-  return {selectivity, column_statistics};
+  return {_non_null_value_ratio * selectivity, column_statistics};
 }
 
 template <typename ColumnType>
@@ -128,16 +133,16 @@ ColumnSelectivityResult ColumnStatistics<ColumnType>::create_column_stats_for_eq
     new_distinct_count = 0.f;
   }
   auto column_statistics = std::make_shared<ColumnStatistics>(_column_id, new_distinct_count, value, value);
-  return {new_distinct_count / distinct_count(), column_statistics};
+  return {_non_null_value_ratio * new_distinct_count / distinct_count(), column_statistics};
 }
 
 template <typename ColumnType>
 ColumnSelectivityResult ColumnStatistics<ColumnType>::create_column_stats_for_unequals_predicate(ColumnType value) {
   if (value < min() || value > max()) {
-    return {1.f, nullptr};
+    return {_non_null_value_ratio, nullptr};
   }
   auto column_statistics = std::make_shared<ColumnStatistics>(_column_id, distinct_count() - 1, min(), max());
-  return {1 - 1.f / distinct_count(), column_statistics};
+  return {_non_null_value_ratio * (1 - 1.f / distinct_count()), column_statistics};
 }
 
 template <typename ColumnType>
@@ -191,7 +196,7 @@ ColumnSelectivityResult ColumnStatistics<ColumnType>::estimate_selectivity_for_p
       auto casted_value2 = type_cast<ColumnType>(*value2);
       return create_column_stats_for_range_predicate(casted_value, casted_value2);
     }
-    default: { return {1.f, nullptr}; }
+    default: { return {_non_null_value_ratio, nullptr}; }
   }
 }
 
@@ -210,7 +215,7 @@ ColumnSelectivityResult ColumnStatistics<std::string>::estimate_selectivity_for_
       return create_column_stats_for_unequals_predicate(casted_value);
     }
     // TODO(anybody) implement other table-scan operators for string.
-    default: { return {1.f, nullptr}; }
+    default: { return {_non_null_value_ratio, nullptr}; }
   }
 }
 
@@ -232,11 +237,11 @@ ColumnSelectivityResult ColumnStatistics<ColumnType>::estimate_selectivity_for_p
     case ScanType::OpGreaterThanEquals: {
       auto column_statistics = std::make_shared<ColumnStatistics>(
           _column_id, distinct_count() * DEFAULT_OPEN_ENDED_SELECTIVITY, min(), max());
-      return {DEFAULT_OPEN_ENDED_SELECTIVITY, column_statistics};
+      return {_non_null_value_ratio * DEFAULT_OPEN_ENDED_SELECTIVITY, column_statistics};
     }
     case ScanType::OpBetween: {
       // since the value2 is known,
-      // first, statistics for the operation <= value are calulated
+      // first, statistics for the operation <= value are calculated
       // then, the open ended selectivity is applied on the result
       DebugAssert(static_cast<bool>(value2), "Operator BETWEEN should get two parameters, second is missing!");
       auto casted_value2 = type_cast<ColumnType>(*value2);
@@ -251,12 +256,12 @@ ColumnSelectivityResult ColumnStatistics<ColumnType>::estimate_selectivity_for_p
       }
       // apply default selectivity for open ended
       output.selectivity *= DEFAULT_OPEN_ENDED_SELECTIVITY;
-      // column statistis have just been created, therefore, cast to the column type cannot fail
+      // column statistics have just been created, therefore, cast to the column type cannot fail
       auto column_statistics = std::dynamic_pointer_cast<ColumnStatistics<ColumnType>>(output.column_statistics);
       *(column_statistics->_distinct_count) *= DEFAULT_OPEN_ENDED_SELECTIVITY;
       return output;
     }
-    default: { return {1.f, nullptr}; }
+    default: { return {_non_null_value_ratio, nullptr}; }
   }
 }
 
@@ -324,7 +329,7 @@ TwoColumnSelectivityResult ColumnStatistics<ColumnType>::estimate_selectivity_fo
     auto new_left_column_stats = create_column_stats_for_range_predicate(new_min, new_max).column_statistics;
     auto new_right_column_stats =
         right_stats->create_column_stats_for_range_predicate(new_min, new_max).column_statistics;
-    return {selectivity, new_left_column_stats, new_right_column_stats};
+    return {_non_null_value_ratio * selectivity, new_left_column_stats, new_right_column_stats};
   };
 
   switch (scan_type) {
@@ -356,7 +361,7 @@ TwoColumnSelectivityResult ColumnStatistics<ColumnType>::estimate_selectivity_fo
       return estimate_selectivity_for_open_ended_operators(right_below, left_above, right_stats->min(), max(), true);
     }
     // case ScanType::OpBetween is not supported for ColumnName as TableScan does not support this
-    default: { return {1.f, nullptr, nullptr}; }
+    default: { return {_non_null_value_ratio, nullptr, nullptr}; }
   }
 }
 
@@ -368,7 +373,7 @@ TwoColumnSelectivityResult ColumnStatistics<std::string>::estimate_selectivity_f
     const ScanType scan_type, const std::shared_ptr<BaseColumnStatistics> &right_base_column_statistics,
     const optional<AllTypeVariant> &value2) {
   // TODO(anybody) implement special case for strings
-  return {1.f, nullptr, nullptr};
+  return {_non_null_value_ratio, nullptr, nullptr};
 }
 
 template <typename ColumnType>

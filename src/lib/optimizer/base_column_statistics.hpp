@@ -23,6 +23,7 @@ struct TwoColumnSelectivityResult;
  */
 class BaseColumnStatistics {
  public:
+  explicit BaseColumnStatistics(const float non_null_value_ratio = 1.f) : _non_null_value_ratio(non_null_value_ratio) {}
   virtual ~BaseColumnStatistics() = default;
 
   /**
@@ -59,7 +60,14 @@ class BaseColumnStatistics {
    */
   virtual float distinct_count() const = 0;
 
+  /**
+   * Adjust non-null value ratio of a column after an outer join.
+   */
+  void apply_non_null_value_ratio(const float non_null_value_ratio) { _non_null_value_ratio *= non_null_value_ratio; }
+
  protected:
+  float _non_null_value_ratio;
+
   /**
    * In order to to call insertion operator on ostream with BaseColumnStatistics with values of ColumnStatistics<T>,
    * std::ostream &operator<< with BaseColumnStatistics calls virtual function print_to_stream

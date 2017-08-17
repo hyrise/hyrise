@@ -35,7 +35,8 @@ class ColumnStatistics : public BaseColumnStatistics {
    * This constructor is used by column statistics when returning a new column statistics from estimate selectivity
    * functions.
    */
-  ColumnStatistics(const ColumnID column_id, float distinct_count, ColumnType min, ColumnType max);
+  ColumnStatistics(const ColumnID column_id, const float distinct_count, const ColumnType min, const ColumnType max,
+                   const float _non_null_value_ratio = 1.f);
   ~ColumnStatistics() override = default;
 
   ColumnSelectivityResult estimate_selectivity_for_predicate(const ScanType scan_type, const AllTypeVariant &value,

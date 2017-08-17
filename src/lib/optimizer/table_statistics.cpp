@@ -127,6 +127,7 @@ std::shared_ptr<TableStatistics> TableStatistics::join_statistics(
 
   auto right_stats = (mode == JoinMode::Self) ? clone : right_table_statistics;
 
+  // copy columns of right input to output
   clone->_column_statistics.resize(clone->_column_statistics.size() + right_stats->_column_statistics.size());
   std::copy(right_table_statistics->_column_statistics.begin(), right_stats->_column_statistics.end(), col_stats_end);
 
@@ -137,8 +138,8 @@ std::shared_ptr<TableStatistics> TableStatistics::join_statistics(
 
   DebugAssert(static_cast<bool>(column_ids), "Column ids required for all non cross-join joins.");
 
-  auto left_col_stats = _column_statistics[column_ids->first];
-  auto right_col_stats = right_stats->_column_statistics[column_ids->second];
+  auto &left_col_stats = _column_statistics[column_ids->first];
+  auto &right_col_stats = right_stats->_column_statistics[column_ids->second];
 
   auto stats_container = left_col_stats->estimate_selectivity_for_two_column_predicate(scan_type, right_col_stats);
   if (!stats_container.column_statistics) {
@@ -152,39 +153,54 @@ std::shared_ptr<TableStatistics> TableStatistics::join_statistics(
 
   ColumnID new_right_column_id{_column_statistics.size() + column_ids->second};
 
+  auto apply_left_outer = [&]() {
+    float null_ratio = 1.f;
+    if (left_col_stats->distinct_count() != 0.f) {
+      null_ratio -= stats_container.column_statistics->distinct_count() / left_col_stats->distinct_count();
+    }
+    clone->_row_count += null_ratio * _row_count;
+
+    // adjust null value ratios in columns of right side
+    for (auto col_itr = clone->_column_statistics.begin() + _column_statistics.size();
+         col_itr != clone->_column_statistics.end(); ++col_itr) {
+      (*col_itr)->apply_non_null_value_ratio(1.f - null_ratio);
+    }
+  };
+  auto apply_right_outer = [&]() {
+    float null_ratio = 1.f;
+    if (right_col_stats->distinct_count() != 0.f) {
+      null_ratio -= stats_container.second_column_statistics->distinct_count() / right_col_stats->distinct_count();
+    }
+    clone->_row_count += null_ratio * right_stats->_row_count;
+
+    // adjust null value ratios in columns of left side
+    for (auto col_itr = clone->_column_statistics.begin();
+         col_itr != clone->_column_statistics.begin() + _column_statistics.size(); ++col_itr) {
+      (*col_itr)->apply_non_null_value_ratio(1.f - null_ratio);
+    }
+  };
+
   switch (mode) {
     case JoinMode::Self:
     case JoinMode::Inner: {
       clone->_column_statistics[column_ids->first] = stats_container.column_statistics;
       clone->_column_statistics[new_right_column_id] = stats_container.second_column_statistics;
+      break;
     }
     case JoinMode::Left: {
       clone->_column_statistics[new_right_column_id] = stats_container.second_column_statistics;
-      float null_ratio = 1.f;
-      if (left_col_stats->distinct_count() != 0.f) {
-        null_ratio -= stats_container.column_statistics->distinct_count() / left_col_stats->distinct_count();
-      }
-      clone->_row_count += null_ratio * _row_count;
+      apply_left_outer();
+      break;
     }
     case JoinMode::Right: {
       clone->_column_statistics[column_ids->first] = stats_container.column_statistics;
-      float null_ratio = 1.f;
-      if (right_col_stats->distinct_count() != 0.f) {
-        null_ratio -= stats_container.column_statistics->distinct_count() / right_col_stats->distinct_count();
-      }
-      clone->_row_count += null_ratio * right_stats->_row_count;
+      apply_right_outer();
+      break;
     }
     case JoinMode::Outer: {
-      float null_ratio = 1.f;
-      if (left_col_stats->distinct_count() != 0.f) {
-        null_ratio -= stats_container.column_statistics->distinct_count() / left_col_stats->distinct_count();
-      }
-      clone->_row_count += null_ratio * _row_count;
-      null_ratio = 1.f;
-      if (right_col_stats->distinct_count() != 0.f) {
-        null_ratio -= stats_container.column_statistics->distinct_count() / right_col_stats->distinct_count();
-      }
-      clone->_row_count += null_ratio * right_stats->_row_count;
+      apply_left_outer();
+      apply_right_outer();
+      break;
     }
     case JoinMode::Natural: {
       Fail("Natural join not possible as column ids are used.");
