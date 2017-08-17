@@ -1,6 +1,8 @@
 #pragma once
 
 #include <iterator>
+#include <utility>
+#include <vector>
 
 #include "tbb/concurrent_vector.h"
 

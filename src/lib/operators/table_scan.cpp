@@ -1,8 +1,13 @@
 #include "table_scan.hpp"
 
 #include <algorithm>
+#include <map>
+#include <memory>
+#include <string>
 #include <type_traits>
 #include <unordered_map>
+#include <utility>
+#include <vector>
 
 #include "resolve_column_type.hpp"
 #include "storage/base_attribute_vector.hpp"
@@ -207,7 +212,7 @@ class SingleColumnScan : public SingleColumnScanBase {
       left_column_iterable.execute_for_all([&](auto left_it, auto left_end) {
         right_value_iterable.execute_for_all([&](auto right_it, auto right_end) {
           resolve_operator_type(_scan_type, [&](auto comparator) {
-            Scan{context->_chunk_id, context->_matches_out}(comparator, left_it, left_end, right_it);
+            Scan{context->_chunk_id, context->_matches_out}(comparator, left_it, left_end, right_it);  // NOLINT
           });
         });
       });
@@ -278,7 +283,7 @@ class SingleColumnScan : public SingleColumnScanBase {
     attribute_vector_iterable.execute_for_all([&](auto left_it, auto left_end) {
       constant_value_iterable.execute_for_all([&](auto right_it, auto right_end) {
         _resolve_scan_type([&](auto comparator) {
-          Scan{chunk_id, matches_out}(comparator, left_it, left_end, right_it);
+          Scan{chunk_id, matches_out}(comparator, left_it, left_end, right_it);  // NOLINT
         });
       });
     });
@@ -820,18 +825,16 @@ class ColumnComparisonScan : public ColumnScanBase {
 
         static_if<(neither_is_reference_column || both_are_reference_columns) &&
                   (neither_is_string_column || both_are_string_columns)>([&](auto f) {
-
           auto left_column_iterable = _create_iterable_from_column<LeftType>(typed_left_column);
           auto right_column_iterable = _create_iterable_from_column<RightType>(typed_right_column);
 
           left_column_iterable.execute_for_all_no_mapping([&](auto left_it, auto left_end) {
             right_column_iterable.execute_for_all_no_mapping([&](auto right_it, auto right_end) {
               resolve_operator_type(_scan_type, [&](auto comparator) {
-                Scan{chunk_id, matches_out}(comparator, left_it, left_end, right_it);
+                Scan{chunk_id, matches_out}(comparator, left_it, left_end, right_it);  // NOLINT
               });
             });
           });
-
         }).else_([&](auto f) {
           Fail("Invalid column combination detected!");
         });
@@ -888,7 +891,6 @@ std::shared_ptr<const Table> TableScan::on_execute() {
 
   for (ChunkID chunk_id{0u}; chunk_id < _in_table->chunk_count(); ++chunk_id) {
     auto job_task = std::make_shared<JobTask>([=, &output_mutex]() {
-
       const auto matches_out = std::make_shared<PosList>(_scan->scan_chunk(chunk_id));
 
       Chunk chunk_out;

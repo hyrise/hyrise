@@ -59,7 +59,7 @@ void resolve_column_type(const std::string &type, BaseColumn &column, const Func
       using Type = typename decltype(+hana::second(x))::type;
 
       struct Context : public ColumnVisitableContext {
-        Context(const Functor &f) : func{f} {}
+        explicit Context(const Functor &f) : func{f} {}
         const Functor &func;
       };
 

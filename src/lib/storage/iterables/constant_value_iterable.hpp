@@ -11,7 +11,7 @@ class ConstantValueIterable {
  public:
   class ColumnValue {
    public:
-    ColumnValue(const T& value) : _value{value} {}
+    explicit ColumnValue(const T& value) : _value{value} {}
 
     const T& value() const { return _value; }
     bool is_null() const { return false; }
@@ -39,8 +39,8 @@ class ConstantValueIterable {
     const T _value;
   };
 
-  ConstantValueIterable(const T& value) : _value{value} {}
-  ConstantValueIterable(const AllTypeVariant& value) : _value{type_cast<T>(value)} {}
+  explicit ConstantValueIterable(const T& value) : _value{value} {}
+  explicit ConstantValueIterable(const AllTypeVariant& value) : _value{type_cast<T>(value)} {}
 
   template <typename Functor>
   void execute_for_all(const Functor& func) const {

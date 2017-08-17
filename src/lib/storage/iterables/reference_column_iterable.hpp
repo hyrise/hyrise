@@ -1,9 +1,12 @@
 #pragma once
 
-#include "tbb/concurrent_vector.h"
-
 #include <iterator>
 #include <map>
+#include <memory>
+#include <utility>
+#include <vector>
+
+#include "tbb/concurrent_vector.h"
 
 #include "column_value.hpp"
 #include "storage/reference_column.hpp"
@@ -109,7 +112,7 @@ class ReferenceColumnIterable {
     mutable std::map<ChunkID, const DictionaryColumn<T> *> _dictionary_columns;
   };
 
-  ReferenceColumnIterable(const ReferenceColumn &column) : _column{column} {}
+  explicit ReferenceColumnIterable(const ReferenceColumn &column) : _column{column} {}
 
   template <typename Functor>
   void execute_for_all(const Functor &func) const {

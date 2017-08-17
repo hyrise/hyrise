@@ -7,16 +7,14 @@
 #include <utility>
 #include <vector>
 
-#include "storage/iterables/value_column_iterable.hpp"
-#include "storage/iterables/dictionary_column_iterable.hpp"
 #include "resolve_type.hpp"
+#include "storage/iterables/dictionary_column_iterable.hpp"
+#include "storage/iterables/value_column_iterable.hpp"
 #include "types.hpp"
 
 namespace opossum {
 
-
-class TableScanVisitableCreatorBase
-{
+class TableScanVisitableCreatorBase {
  public:
   virtual std::unique_ptr<ColumnVisitable> create_visitor() = 0;
 
@@ -105,12 +103,9 @@ template <typename T>
 class TableScanVisitableCreator : public TableScanVisitableCreatorBase {
  public:
   TableScanVisitableCreator(const std::shared_ptr<const Table> in_table, const ColumnID column_id,
-                const ScanType scan_type, const AllParameterVariant value, const optional<AllTypeVariant> value2)
-      : _in_table(in_table),
-        _column_id(column_id),
-        _value(value),
-        _value2(value2),
-        _scan_type(scan_type) {}
+                            const ScanType scan_type, const AllParameterVariant value,
+                            const optional<AllTypeVariant> value2)
+      : _in_table(in_table), _column_id(column_id), _value(value), _value2(value2), _scan_type(scan_type) {}
 
   std::unique_ptr<ColumnVisitable> create_visitor() override {
     if (_scan_type == ScanType::OpLike) {
@@ -151,19 +146,19 @@ class TableScanVisitableCreator : public TableScanVisitableCreatorBase {
       DebugAssert(!is_null(variant_value), "Value cannot be NULL.");
       const auto typed_value = type_cast<T>(variant_value);
 
-      return std::make_unique<TableScanConstantColumnVisitable>(_value_comparator, _value_id_comparator,
-                                                                _scan_type, typed_value, typed_value2);
+      return std::make_unique<TableScanConstantColumnVisitable>(_value_comparator, _value_id_comparator, _scan_type,
+                                                                typed_value, typed_value2);
     } else {
       // Visitable type == Variable
 
-      const auto & column_name = boost::get<ColumnName>(_value);
-      const auto & column_id = _in_table->column_id_by_name(column_name);
+      const auto &column_name = boost::get<ColumnName>(_value);
+      const auto &column_id = _in_table->column_id_by_name(column_name);
 
       return std::make_unique<TableScanVariableColumnVisitable>(_value_comparator, column_id);
     }
   }
 
-private:
+ private:
   void set_comparators(optional<T> typed_value2) {
     /**
      * Definining all possible operators here might appear odd. Chances are, however, that we will not
@@ -233,7 +228,8 @@ private:
 };
 
 struct ScanContext : ColumnVisitableContext {
-  ScanContext(std::shared_ptr<const Table> t, ChunkID c, std::vector<RowID> &mo, std::shared_ptr<std::vector<ChunkOffset>> co = nullptr)
+  ScanContext(std::shared_ptr<const Table> t, ChunkID c, std::vector<RowID> &mo,
+              std::shared_ptr<std::vector<ChunkOffset>> co = nullptr)
       : table_in(t), chunk_id(c), matches_out(mo), chunk_offsets_in(std::move(co)) {}
 
   // constructor for use in ReferenceColumn::visit_dereferenced
@@ -245,7 +241,7 @@ struct ScanContext : ColumnVisitableContext {
         matches_out(std::static_pointer_cast<ScanContext>(base_context)->matches_out),
         chunk_offsets_in(chunk_offsets) {}
 
-  const Chunk & get_chunk() const { return table_in->get_chunk(chunk_id); }
+  const Chunk &get_chunk() const { return table_in->get_chunk(chunk_id); }
 
   const std::shared_ptr<const Table> table_in;
   const ChunkID chunk_id;
@@ -335,8 +331,7 @@ std::shared_ptr<const Table> TableScan::on_execute() {
           std::copy(matches_in_this_chunk.begin(), matches_in_this_chunk.end(), std::back_inserter(*pos_list_out));
         }
 
-        auto ref_col_out =
-            std::make_shared<ReferenceColumn>(referenced_table_out, referenced_column_id, pos_list_out);
+        auto ref_col_out = std::make_shared<ReferenceColumn>(referenced_table_out, referenced_column_id, pos_list_out);
         chunk_out.add_column(ref_col_out);
       }
 
@@ -353,8 +348,7 @@ std::shared_ptr<const Table> TableScan::on_execute() {
   return _output_table;
 }
 
-void TableScan::init_output_table()
-{
+void TableScan::init_output_table() {
   _output_table = std::make_shared<Table>();
 
   for (ColumnID column_id{0}; column_id < _in_table->col_count(); ++column_id) {
@@ -362,9 +356,8 @@ void TableScan::init_output_table()
   }
 }
 
-void TableScan::init_visitor()
-{
-  const auto & column_type = _in_table->column_type(_column_id);
+void TableScan::init_visitor() {
+  const auto &column_type = _in_table->column_type(_column_id);
 
   auto visitable_creator = make_unique_by_column_type<TableScanVisitableCreatorBase, TableScanVisitableCreator>(
       column_type, _in_table, _column_id, _scan_type, _value, _value2);
@@ -475,13 +468,13 @@ class TableScanVisitableCreator<T>::TableScanConstantColumnVisitable : public Co
     const auto &column = static_cast<ValueColumn<T> &>(base_column);
 
     auto &matches_out = context->matches_out;
-    const auto & chunk_id = context->chunk_id;
+    const auto &chunk_id = context->chunk_id;
 
     /**
      * This generic lambda will be compiled four times taking into consideration
      * whether the column is nullable and/or referenced by a reference column.
      */
-    auto scan = [&matches_out, &chunk_id, this] (auto it, auto end) {
+    auto scan = [&matches_out, &chunk_id, this](auto it, auto end) {
       for (; it != end; ++it) {
         /**
          * If the column is not nullable, is_null() always returns false
@@ -620,15 +613,14 @@ class TableScanVisitableCreator<T>::TableScanConstantColumnVisitable : public Co
 template <typename T>
 class TableScanVisitableCreator<T>::TableScanVariableColumnVisitable : public ColumnVisitable {
  public:
-  TableScanVariableColumnVisitable(std::function<bool(T, T)> value_comparator, const ColumnID & column_id2)
+  TableScanVariableColumnVisitable(std::function<bool(T, T)> value_comparator, const ColumnID &column_id2)
       : _value_comparator(value_comparator), _column_id2(column_id2) {}
 
   /**
    * @brief The actual scan
    */
-  struct Scan
-  {
-    Scan(const ChunkID chunk_id, const std::function<bool(T, T)> comparator, std::vector<RowID> & matches_out)
+  struct Scan {
+    Scan(const ChunkID chunk_id, const std::function<bool(T, T)> comparator, std::vector<RowID> &matches_out)
         : _chunk_id{chunk_id}, _comparator{comparator}, _matches_out{matches_out} {}
 
     /**
@@ -649,7 +641,7 @@ class TableScanVisitableCreator<T>::TableScanVariableColumnVisitable : public Co
 
     const ChunkID _chunk_id;
     const std::function<bool(T, T)> _comparator;
-    std::vector<RowID> & _matches_out;
+    std::vector<RowID> &_matches_out;
   };
 
   /**
@@ -659,7 +651,7 @@ class TableScanVisitableCreator<T>::TableScanVariableColumnVisitable : public Co
    */
   template <typename LeftColumnIterable>
   struct RightColumnVisitable : ColumnVisitable {
-    RightColumnVisitable(const LeftColumnIterable & left_column_iterable, const std::function<bool(T, T)> comparator)
+    RightColumnVisitable(const LeftColumnIterable &left_column_iterable, const std::function<bool(T, T)> comparator)
         : _left_column_iterable{left_column_iterable}, _comparator{comparator} {}
 
     void handle_value_column(BaseColumn &base_column, std::shared_ptr<ColumnVisitableContext> base_context) override {
@@ -671,11 +663,13 @@ class TableScanVisitableCreator<T>::TableScanVariableColumnVisitable : public Co
       execute_scan(right_column_iterable, context);
     }
 
-    void handle_reference_column(ReferenceColumn &column, std::shared_ptr<ColumnVisitableContext> base_context) override {
+    void handle_reference_column(ReferenceColumn &column,
+                                 std::shared_ptr<ColumnVisitableContext> base_context) override {
       column.visit_dereferenced<ScanContext>(*this, base_context);
     }
 
-    void handle_dictionary_column(BaseColumn &base_column, std::shared_ptr<ColumnVisitableContext> base_context) override {
+    void handle_dictionary_column(BaseColumn &base_column,
+                                  std::shared_ptr<ColumnVisitableContext> base_context) override {
       auto context = std::static_pointer_cast<ScanContext>(base_context);
 
       const auto &right_column = static_cast<DictionaryColumn<T> &>(base_column);
@@ -689,7 +683,7 @@ class TableScanVisitableCreator<T>::TableScanVariableColumnVisitable : public Co
      * and we are now ready to execute the actual scan.
      */
     template <typename RightColumnIterable>
-    void execute_scan(const RightColumnIterable & right_column_iterable, std::shared_ptr<ScanContext> base_context) {
+    void execute_scan(const RightColumnIterable &right_column_iterable, std::shared_ptr<ScanContext> base_context) {
       auto context = std::static_pointer_cast<ScanContext>(base_context);
 
       const auto chunk_id = context->chunk_id;
@@ -697,14 +691,14 @@ class TableScanVisitableCreator<T>::TableScanVariableColumnVisitable : public Co
 
       auto scan = Scan{chunk_id, _comparator, matches_out};
 
-      _left_column_iterable.execute_for_all([&scan, right_column_iterable] (auto left_it, auto left_end) {
-        right_column_iterable.execute_for_all([&scan, left_it, left_end] (auto right_it, auto right_end) {
+      _left_column_iterable.execute_for_all([&scan, right_column_iterable](auto left_it, auto left_end) {
+        right_column_iterable.execute_for_all([&scan, left_it, left_end](auto right_it, auto right_end) {
           scan(left_it, left_end, right_it, right_end);
         });
       });
     }
 
-    const LeftColumnIterable & _left_column_iterable;
+    const LeftColumnIterable &_left_column_iterable;
     const std::function<bool(T, T)> _comparator;
   };
 
@@ -721,7 +715,8 @@ class TableScanVisitableCreator<T>::TableScanVariableColumnVisitable : public Co
     column.visit_dereferenced<ScanContext>(*this, base_context);
   }
 
-  void handle_dictionary_column(BaseColumn &base_column, std::shared_ptr<ColumnVisitableContext> base_context) override {
+  void handle_dictionary_column(BaseColumn &base_column,
+                                std::shared_ptr<ColumnVisitableContext> base_context) override {
     auto context = std::static_pointer_cast<ScanContext>(base_context);
 
     const auto &left_column = static_cast<DictionaryColumn<T> &>(base_column);
@@ -735,11 +730,10 @@ class TableScanVisitableCreator<T>::TableScanVariableColumnVisitable : public Co
    * are now ready to do the same for the right column.
    */
   template <typename LeftColumnIterable>
-  void visit_right_column(const LeftColumnIterable & left_column_iterable,
-                          std::shared_ptr<ScanContext> context) {
+  void visit_right_column(const LeftColumnIterable &left_column_iterable, std::shared_ptr<ScanContext> context) {
     auto right_column_visitable = RightColumnVisitable<LeftColumnIterable>(left_column_iterable, _value_comparator);
 
-    const auto & chunk_in = context->get_chunk();
+    const auto &chunk_in = context->get_chunk();
     const auto right_column = chunk_in.get_column(_column_id2);
 
     right_column->visit(right_column_visitable, context);

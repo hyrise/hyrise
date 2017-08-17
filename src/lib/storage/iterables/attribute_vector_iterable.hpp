@@ -1,6 +1,8 @@
 #pragma once
 
 #include <iterator>
+#include <utility>
+#include <vector>
 
 #include "column_value.hpp"
 #include "storage/base_attribute_vector.hpp"

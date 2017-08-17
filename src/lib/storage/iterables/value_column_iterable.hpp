@@ -1,9 +1,10 @@
 #pragma once
 
-#include "tbb/concurrent_vector.h"
-
 #include <iterator>
 #include <utility>
+#include <vector>
+
+#include "tbb/concurrent_vector.h"
 
 #include "column_value.hpp"
 #include "storage/value_column.hpp"

@@ -1,5 +1,7 @@
 #pragma once
 
+#include <utility>
+
 namespace opossum {
 
 namespace static_if_detail {

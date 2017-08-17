@@ -1,8 +1,8 @@
 #pragma once
 
-#include "tbb/concurrent_vector.h"
-
 #include <iterator>
+#include <utility>
+#include <vector>
 
 #include "column_value.hpp"
 #include "storage/base_attribute_vector.hpp"
