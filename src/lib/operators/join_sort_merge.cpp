@@ -390,20 +390,20 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
 
   void _left_outer_non_equi_join() {
     auto& left_min_value = _table_min_value(_sorted_right_table);
-    // auto& left_max_value = _sorted_left_table->back()->back();
+    auto& left_max_value = _table_max_value(_sorted_left_table);
     // auto& right_min_value = _sorted_right_table->at(0)->at(0);
     // auto& right_max_value = _sorted_right_table->back()->back();
 
     // auto end_of_left_table = _end_of_table(_sorted_left_table);
-    // auto end_of_right_table = _end_of_table(_sorted_right_table);
+    auto end_of_right_table = _end_of_table(_sorted_right_table);
 
     // Look for the first rhs value that is bigger than the smallest lhs value
     if (_op == ScanType::OpLessThan) {
-      for(size_t partition_id = 0; partition_id < _sorted_right_table->size(); ++partition_id) {
+      for (size_t partition_id = 0; partition_id < _sorted_right_table->size(); ++partition_id) {
         auto partition = _sorted_right_table->at(partition_id);
         if (partition->size() > 0 && partition->back().value > left_min_value) {
-          for(size_t index = 0; index < partition->size(); ++index) {
-            if(partition->at(index).value > left_min_value) {
+          for (size_t index = 0; index < partition->size(); ++index) {
+            if (partition->at(index).value > left_min_value) {
               // Every rhs value before this index does not have a join partner
               _emit_left_null_combinations(partition_id, TablePosition(0, 0).to(TablePosition(partition_id, index)));
               return;
@@ -412,18 +412,56 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
         }
       }
     } else if (_op == ScanType::OpLessThanEquals) {
-      // TODO
+      // Look for the first rhs value that is bigger or equal to the smallest lhs value
+      for (size_t partition_id = 0; partition_id < _sorted_right_table->size(); ++partition_id) {
+        auto partition = _sorted_right_table->at(partition_id);
+        if (partition->size() > 0 && partition->back().value >= left_min_value) {
+          for (size_t index = 0; index < partition->size(); ++index) {
+            if (partition->at(index).value >= left_min_value) {
+              // Every rhs value before this index does not have a join partner
+              _emit_left_null_combinations(partition_id, TablePosition(0, 0).to(TablePosition(partition_id, index)));
+              return;
+            }
+          }
+        }
+      }
     } else if (_op == ScanType::OpGreaterThan) {
-      // TODO
+      // Look for the first rhs value that is not smaller than the biggest lhs value
+      for (size_t r_partition_id = 0; r_partition_id < _sorted_right_table->size(); ++r_partition_id) {
+        auto partition_id = _sorted_right_table->size() - 1 - r_partition_id;
+        auto partition = _sorted_right_table->at(partition_id);
+        if (partition->size() > 0 && partition->at(0).value <= left_max_value) {
+          for (size_t r_index = 0; r_index < partition->size(); ++r_index) {
+            size_t index = partition->size() - 1 - r_index;
+            if (partition->at(index).value < left_max_value) {
+              _emit_left_null_combinations(partition_id, TablePosition(partition_id, index + 1).to(end_of_right_table));
+              return;
+            }
+          }
+        }
+      }
     } else if (_op == ScanType::OpGreaterThanEquals) {
-      // TODO
+      // Look for the first rhs value that is not smaller or equal to the biggest lhs value
+      for (size_t r_partition_id = 0; r_partition_id < _sorted_right_table->size(); ++r_partition_id) {
+        auto partition_id = _sorted_right_table->size() - 1 - r_partition_id;
+        auto partition = _sorted_right_table->at(partition_id);
+        if (partition->size() > 0 && partition->at(0).value <= left_max_value) {
+          for(size_t r_index = 0; r_index < partition->size(); ++r_index) {
+            size_t index = partition->size() - 1 - r_index;
+            if (partition->at(index).value <= left_max_value) {
+              _emit_left_null_combinations(partition_id, TablePosition(partition_id, index + 1).to(end_of_right_table));
+              return;
+            }
+          }
+        }
+      }
     }
   }
 
   void _right_outer_non_equi_join() {
     // auto& left_min_value = _sorted_left_table->at(0)->at(0);
     // auto& left_max_value = _sorted_left_table->back()->back();
-    // auto& right_min_value = _sorted_right_table->at(0)->at(0);
+    auto& right_min_value = _table_min_value(_sorted_right_table);
     auto& right_max_value = _table_max_value(_sorted_right_table);
 
     auto end_of_left_table = _end_of_table(_sorted_left_table);
@@ -431,14 +469,13 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
 
     if (_op == ScanType::OpLessThan) {
       // Look for the first lhs value that is not smaller than the biggest rhs value
-      // Note: this sucks
       for (size_t r_partition_id = 0; r_partition_id < _sorted_left_table->size(); ++r_partition_id) {
         auto partition_id = _sorted_left_table->size() - 1 - r_partition_id;
         auto partition = _sorted_left_table->at(partition_id);
-        if (partition->size() > 0 && partition->at(0).value < right_max_value) {
-          for(size_t r_index = 0; r_index < partition->size(); ++r_index) {
+        if (partition->size() > 0 && partition->at(0).value <= right_max_value) {
+          for (size_t r_index = 0; r_index < partition->size(); ++r_index) {
             size_t index = partition->size() - 1 - r_index;
-            if(partition->at(index).value < right_max_value) {
+            if (partition->at(index).value < right_max_value) {
               _emit_right_null_combinations(partition_id, TablePosition(partition_id, index + 1).to(end_of_left_table));
               return;
             }
@@ -446,11 +483,48 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
         }
       }
     } else if (_op == ScanType::OpLessThanEquals) {
-      // TODO
+      // Look for the first lhs value that is not smaller or equal than the biggest rhs value
+      for (size_t r_partition_id = 0; r_partition_id < _sorted_left_table->size(); ++r_partition_id) {
+        auto partition_id = _sorted_left_table->size() - 1 - r_partition_id;
+        auto partition = _sorted_left_table->at(partition_id);
+        if (partition->size() > 0 && partition->at(0).value <= right_max_value) {
+          for(size_t r_index = 0; r_index < partition->size(); ++r_index) {
+            size_t index = partition->size() - 1 - r_index;
+            if (partition->at(index).value <= right_max_value) {
+              _emit_right_null_combinations(partition_id, TablePosition(partition_id, index + 1).to(end_of_left_table));
+              return;
+            }
+          }
+        }
+      }
     } else if (_op == ScanType::OpGreaterThan) {
-      // TODO
+      // Look for the first lhs value that is bigger or equal to the smallest rhs value
+      for (size_t partition_id = 0; partition_id < _sorted_left_table->size(); ++partition_id) {
+        auto partition = _sorted_left_table->at(partition_id);
+        if (partition->size() > 0 && partition->back().value > right_min_value) {
+          for (size_t index = 0; index < partition->size(); ++index) {
+            if (partition->at(index).value > right_min_value) {
+              // Every lhs value before this index does not have a join partner
+              _emit_right_null_combinations(partition_id, TablePosition(0, 0).to(TablePosition(partition_id, index)));
+              return;
+            }
+          }
+        }
+      }
     } else if (_op == ScanType::OpGreaterThanEquals) {
-      // TODO
+      // Look for the first lhs value that is bigger or equal to the smallest rhs value
+      for (size_t partition_id = 0; partition_id < _sorted_left_table->size(); ++partition_id) {
+        auto partition = _sorted_left_table->at(partition_id);
+        if (partition->size() > 0 && partition->back().value >= right_min_value) {
+          for (size_t index = 0; index < partition->size(); ++index) {
+            if (partition->at(index).value >= right_min_value) {
+              // Every lhs value before this index does not have a join partner
+              _emit_right_null_combinations(partition_id, TablePosition(0, 0).to(TablePosition(partition_id, index)));
+              return;
+            }
+          }
+        }
+      }
     }
   }
 
