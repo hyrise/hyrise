@@ -56,7 +56,7 @@ TEST_F(IterablesTest, ValueColumnIteratorExecuteForAll) {
   auto sum = uint32_t{0};
   iterable.execute_for_all(SumUp{sum});
 
-  EXPECT_EQ(sum, 24'825);
+  EXPECT_EQ(sum, 24'825u);
 }
 
 TEST_F(IterablesTest, ValueColumnReferencedIteratorExecuteForAll) {
@@ -74,7 +74,7 @@ TEST_F(IterablesTest, ValueColumnReferencedIteratorExecuteForAll) {
   auto sum = uint32_t{0};
   iterable.execute_for_all(SumUp{sum});
 
-  EXPECT_EQ(sum, 12'480);
+  EXPECT_EQ(sum, 12'480u);
 }
 
 TEST_F(IterablesTest, ValueColumnNullableIteratorExecuteForAll) {
@@ -90,7 +90,7 @@ TEST_F(IterablesTest, ValueColumnNullableIteratorExecuteForAll) {
   auto sum = uint32_t{0};
   iterable.execute_for_all(SumUp{sum});
 
-  EXPECT_EQ(sum, 13'702);
+  EXPECT_EQ(sum, 13'702u);
 }
 
 TEST_F(IterablesTest, ValueColumnNullableReferencedIteratorExecuteForAll) {
@@ -108,7 +108,7 @@ TEST_F(IterablesTest, ValueColumnNullableReferencedIteratorExecuteForAll) {
   auto sum = uint32_t{0};
   iterable.execute_for_all(SumUp{sum});
 
-  EXPECT_EQ(sum, 13'579);
+  EXPECT_EQ(sum, 13'579u);
 }
 
 TEST_F(IterablesTest, DictionaryColumnIteratorExecuteForAll) {
@@ -126,7 +126,7 @@ TEST_F(IterablesTest, DictionaryColumnIteratorExecuteForAll) {
   auto sum = uint32_t{0};
   iterable.execute_for_all(SumUp{sum});
 
-  EXPECT_EQ(sum, 24'825);
+  EXPECT_EQ(sum, 24'825u);
 }
 
 TEST_F(IterablesTest, DictionaryColumnDictReferencedIteratorExecuteForAll) {
