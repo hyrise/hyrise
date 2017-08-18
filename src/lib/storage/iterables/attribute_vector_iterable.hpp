@@ -5,82 +5,16 @@
 #include <vector>
 
 #include "column_value.hpp"
+#include "iterator_utils.hpp"
 #include "storage/base_attribute_vector.hpp"
 
 namespace opossum {
 
 class AttributeVectorIterable {
  public:
-  class Iterator : public std::iterator<std::input_iterator_tag, NullableColumnValue<ValueID>, std::ptrdiff_t,
-                                        NullableColumnValue<ValueID>*, NullableColumnValue<ValueID>> {
-   public:
-    explicit Iterator(const BaseAttributeVector& attribute_vector, ChunkOffset chunk_offset)
-        : _attribute_vector{attribute_vector}, _chunk_offset{chunk_offset} {}
-
-    Iterator& operator++() {
-      ++_chunk_offset;
-      return *this;
-    }
-
-    Iterator operator++(int) {
-      auto retval = *this;
-      ++(*this);
-      return retval;
-    }
-
-    bool operator==(Iterator other) const { return _chunk_offset == other._chunk_offset; }
-    bool operator!=(Iterator other) const { return !(*this == other); }
-
-    auto operator*() const {
-      const auto value_id = _attribute_vector.get(_chunk_offset);
-      const auto is_null = (value_id == NULL_VALUE_ID);
-
-      return NullableColumnValue<ValueID>{value_id, is_null, _chunk_offset};
-    }
-
-   private:
-    const BaseAttributeVector& _attribute_vector;
-    ChunkOffset _chunk_offset;
-  };
-
-  class ReferencedIterator : public std::iterator<std::input_iterator_tag, NullableColumnValue<ValueID>, std::ptrdiff_t,
-                                                  NullableColumnValue<ValueID>*, NullableColumnValue<ValueID>> {
-   public:
-    using ChunkOffsetsIterator = std::vector<std::pair<ChunkOffset, ChunkOffset>>::const_iterator;
-
-   public:
-    explicit ReferencedIterator(const BaseAttributeVector& attribute_vector,
-                                const ChunkOffsetsIterator& chunk_offsets_it)
-        : _attribute_vector{attribute_vector}, _chunk_offsets_it{chunk_offsets_it} {}
-
-    ReferencedIterator& operator++() {
-      ++_chunk_offsets_it;
-      return *this;
-    }
-
-    ReferencedIterator operator++(int) {
-      auto retval = *this;
-      ++(*this);
-      return retval;
-    }
-
-    bool operator==(ReferencedIterator other) const { return (_chunk_offsets_it == other._chunk_offsets_it); }
-    bool operator!=(ReferencedIterator other) const { return !(*this == other); }
-
-    auto operator*() const {
-      const auto value_id = _attribute_vector.get(_chunk_offsets_it->second);
-      const auto is_null = (value_id == NULL_VALUE_ID);
-
-      return NullableColumnValue<ValueID>{value_id, is_null, _chunk_offsets_it->first};
-    }
-
-   private:
-    const BaseAttributeVector& _attribute_vector;
-    ChunkOffsetsIterator _chunk_offsets_it;
-  };
 
   AttributeVectorIterable(const BaseAttributeVector& attribute_vector,
-                          const std::vector<std::pair<ChunkOffset, ChunkOffset>>* mapped_chunk_offsets = nullptr)
+                          const ChunkOffsetsList* mapped_chunk_offsets = nullptr)
       : _attribute_vector{attribute_vector}, _mapped_chunk_offsets{mapped_chunk_offsets} {}
 
   template <typename Functor>
@@ -109,7 +43,51 @@ class AttributeVectorIterable {
 
  private:
   const BaseAttributeVector& _attribute_vector;
-  const std::vector<std::pair<ChunkOffset, ChunkOffset>>* _mapped_chunk_offsets;
+  const ChunkOffsetsList* _mapped_chunk_offsets;
+
+ private:
+  class Iterator : public BaseIterator<Iterator, NullableColumnValue<ValueID>> {
+   public:
+    explicit Iterator(const BaseAttributeVector& attribute_vector, ChunkOffset chunk_offset)
+        : _attribute_vector{attribute_vector}, _chunk_offset{chunk_offset} {}
+   private:
+    friend class boost::iterator_core_access;
+
+    void increment() { ++_chunk_offset; }
+    bool equal(const Iterator& other) const { return _chunk_offset == other._chunk_offset; }
+
+    NullableColumnValue<ValueID> dereference() const {
+      const auto value_id = _attribute_vector.get(_chunk_offset);
+      const auto is_null = (value_id == NULL_VALUE_ID);
+
+      return NullableColumnValue<ValueID>{value_id, is_null, _chunk_offset};
+    }
+
+   private:
+    const BaseAttributeVector& _attribute_vector;
+    ChunkOffset _chunk_offset;
+  };
+
+  class ReferencedIterator : public BaseReferencedIterator<ReferencedIterator, NullableColumnValue<ValueID>> {
+   public:
+    explicit ReferencedIterator(const BaseAttributeVector& attribute_vector,
+                                const ChunkOffsetsIterator& chunk_offsets_it)
+        : BaseReferencedIterator<ReferencedIterator, NullableColumnValue<ValueID>>{chunk_offsets_it},
+          _attribute_vector{attribute_vector} {}
+
+   private:
+    friend class boost::iterator_core_access;
+
+    NullableColumnValue<ValueID> dereference() const {
+      const auto value_id = _attribute_vector.get(this->index_into_referenced());
+      const auto is_null = (value_id == NULL_VALUE_ID);
+
+      return NullableColumnValue<ValueID>{value_id, is_null, this->index_of_referencing()};
+    }
+
+   private:
+    const BaseAttributeVector& _attribute_vector;
+  };
 };
 
 }  // namespace opossum

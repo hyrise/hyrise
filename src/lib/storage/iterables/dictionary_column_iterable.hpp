@@ -19,67 +19,8 @@ class DictionaryColumnIterable {
   using Type = DictionaryColumnIterableType;
 
  public:
-  class Iterator : public BaseIterator<Iterator, NullableColumnValue<T>> {
-   public:
-    using Dictionary = std::vector<T>;
-
-   public:
-    explicit Iterator(const Dictionary& dictionary, const BaseAttributeVector& attribute_vector,
-                      ChunkOffset chunk_offset)
-        : _dictionary{dictionary}, _attribute_vector{attribute_vector}, _chunk_offset{chunk_offset} {}
-
-   private:
-    friend class boost::iterator_core_access;
-
-    void increment() { ++_chunk_offset; }
-    bool equal(const Iterator & other) const { return _chunk_offset == other._chunk_offset; }
-
-    NullableColumnValue<T> dereference() const {
-      const auto value_id = _attribute_vector.get(_chunk_offset);
-      const auto is_null = (value_id == NULL_VALUE_ID);
-
-      if (is_null) return NullableColumnValue<T>{T{}, is_null, _chunk_offset};
-
-      return NullableColumnValue<T>{_dictionary[value_id], is_null, _chunk_offset};
-    }
-
-   private:
-    const Dictionary& _dictionary;
-    const BaseAttributeVector& _attribute_vector;
-    ChunkOffset _chunk_offset;
-  };
-
-  class ReferencedIterator : public BaseReferencedIterator<ReferencedIterator, NullableColumnValue<T>> {
-   public:
-    using Dictionary = std::vector<T>;
-    using ChunkOffsetsIterator = std::vector<std::pair<ChunkOffset, ChunkOffset>>::const_iterator;
-
-   public:
-    explicit ReferencedIterator(const Dictionary& dictionary, const BaseAttributeVector& attribute_vector,
-                                const ChunkOffsetsIterator& chunk_offsets_it)
-        : BaseReferencedIterator<ReferencedIterator, NullableColumnValue<T>>{chunk_offsets_it},
-          _dictionary{dictionary},
-          _attribute_vector{attribute_vector} {}
-
-   private:
-    friend class boost::iterator_core_access;
-
-    NullableColumnValue<T> dereference() const {
-      const auto value_id = _attribute_vector.get(this->index_into_referenced());
-      const auto is_null = (value_id == NULL_VALUE_ID);
-
-      if (is_null) return NullableColumnValue<T>{T{}, is_null, this->index_of_referencing()};
-
-      return NullableColumnValue<T>{_dictionary[value_id], is_null, this->index_of_referencing()};
-    }
-
-   private:
-    const Dictionary& _dictionary;
-    const BaseAttributeVector& _attribute_vector;
-  };
-
   DictionaryColumnIterable(const DictionaryColumn<T>& column,
-                           const std::vector<std::pair<ChunkOffset, ChunkOffset>>* mapped_chunk_offsets = nullptr)
+                           const ChunkOffsetsList* mapped_chunk_offsets = nullptr)
       : _column{column}, _mapped_chunk_offsets{mapped_chunk_offsets} {}
 
   template <typename Functor>
@@ -113,7 +54,66 @@ class DictionaryColumnIterable {
 
  private:
   const DictionaryColumn<T>& _column;
-  const std::vector<std::pair<ChunkOffset, ChunkOffset>>* _mapped_chunk_offsets;
+  const ChunkOffsetsList* _mapped_chunk_offsets;
+
+ private:
+  class Iterator : public BaseIterator<Iterator, NullableColumnValue<T>> {
+   public:
+    using Dictionary = std::vector<T>;
+
+   public:
+    explicit Iterator(const Dictionary& dictionary, const BaseAttributeVector& attribute_vector,
+                      ChunkOffset chunk_offset)
+        : _dictionary{dictionary}, _attribute_vector{attribute_vector}, _chunk_offset{chunk_offset} {}
+
+   private:
+    friend class boost::iterator_core_access;
+
+    void increment() { ++_chunk_offset; }
+    bool equal(const Iterator & other) const { return _chunk_offset == other._chunk_offset; }
+
+    NullableColumnValue<T> dereference() const {
+      const auto value_id = _attribute_vector.get(_chunk_offset);
+      const auto is_null = (value_id == NULL_VALUE_ID);
+
+      if (is_null) return NullableColumnValue<T>{T{}, is_null, _chunk_offset};
+
+      return NullableColumnValue<T>{_dictionary[value_id], is_null, _chunk_offset};
+    }
+
+   private:
+    const Dictionary& _dictionary;
+    const BaseAttributeVector& _attribute_vector;
+    ChunkOffset _chunk_offset;
+  };
+
+  class ReferencedIterator : public BaseReferencedIterator<ReferencedIterator, NullableColumnValue<T>> {
+   public:
+    using Dictionary = std::vector<T>;
+
+   public:
+    explicit ReferencedIterator(const Dictionary& dictionary, const BaseAttributeVector& attribute_vector,
+                                const ChunkOffsetsIterator& chunk_offsets_it)
+        : BaseReferencedIterator<ReferencedIterator, NullableColumnValue<T>>{chunk_offsets_it},
+          _dictionary{dictionary},
+          _attribute_vector{attribute_vector} {}
+
+   private:
+    friend class boost::iterator_core_access;
+
+    NullableColumnValue<T> dereference() const {
+      const auto value_id = _attribute_vector.get(this->index_into_referenced());
+      const auto is_null = (value_id == NULL_VALUE_ID);
+
+      if (is_null) return NullableColumnValue<T>{T{}, is_null, this->index_of_referencing()};
+
+      return NullableColumnValue<T>{_dictionary[value_id], is_null, this->index_of_referencing()};
+    }
+
+   private:
+    const Dictionary& _dictionary;
+    const BaseAttributeVector& _attribute_vector;
+  };
 };
 
 }  // namespace opossum

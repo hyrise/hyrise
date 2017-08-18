@@ -15,7 +15,7 @@
 #include "storage/iterables/attribute_vector_iterable.hpp"
 #include "storage/iterables/constant_value_iterable.hpp"
 #include "storage/iterables/dictionary_column_iterable.hpp"
-#include "storage/iterables/null_value_iterables.hpp"
+#include "storage/iterables/null_value_vector_iterable.hpp"
 #include "storage/iterables/reference_column_iterable.hpp"
 #include "storage/iterables/value_column_iterable.hpp"
 #include "utils/binary_operators.hpp"
@@ -470,7 +470,7 @@ class NullColumnScan : public SingleColumnScanBase {
                 "Columns that are not nullable should have been caught by edge case handling.");
 
     auto left_column_iterable =
-        NullValueValueColumnIterable{left_column.null_values(), context->_mapped_chunk_offsets.get()};
+        NullValueVectorIterable{left_column.null_values(), context->_mapped_chunk_offsets.get()};
 
     left_column_iterable.execute_for_all([&](auto left_it, auto left_end) { _scan(left_it, left_end, *context); });
   }
@@ -481,7 +481,7 @@ class NullColumnScan : public SingleColumnScanBase {
     auto &left_column = static_cast<const UntypedDictionaryColumn &>(base_column);
 
     auto left_column_iterable =
-        NullValueDictionaryIterable{*left_column.attribute_vector(), context->_mapped_chunk_offsets.get()};
+        AttributeVectorIterable{*left_column.attribute_vector(), context->_mapped_chunk_offsets.get()};
 
     left_column_iterable.execute_for_all([&](auto left_it, auto left_end) { _scan(left_it, left_end, *context); });
   }

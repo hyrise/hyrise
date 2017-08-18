@@ -2,13 +2,45 @@
 
 # include <boost/iterator/iterator_facade.hpp>
 
+
 namespace opossum {
 
-using ChunkOffsetsIterator = std::vector<std::pair<ChunkOffset, ChunkOffset>>::const_iterator;
+using ChunkOffsetsList = std::vector<std::pair<ChunkOffset, ChunkOffset>>;
+using ChunkOffsetsIterator = ChunkOffsetsList::const_iterator;
 
+/**
+ * @brief base class of all iterators used by iterables
+ *
+ * Example Usage
+ *
+ * class Iterator : public BaseIterator<Iterator, Value> {
+ *  private:
+ *   friend class boost::iterator_core_access;  // the following methods need to be accessible by the base class
+ *  
+ *   void increment() { ... }
+ *   bool equal(const Iterator& other) const { return false; }
+ *   Value dereference() const { return Value{}; }
+ * };
+ */
 template <typename Derived, typename Value>
 using BaseIterator = boost::iterator_facade<Derived, Value, boost::forward_traversal_tag, Value>;
 
+/**
+ * @brief base class of all referenced iterators used by iterables
+ *
+ * Example Usage
+ *
+ * class Iterator : public BaseReferencedIterator<Iterator, Value> {
+ *  public:
+ *   Iterator(const ChunkOffsetIterator& chunk_offset_it)
+ *       : BaseReferencedIterator<Iterator, Value>{chunk_offset_it} {}
+ *
+ *  private:
+ *   friend class boost::iterator_core_access;  // the following methods need to be accessible by the base class
+ *
+ *   Value dereference() const { return Value{}; }
+ * };
+ */
 template <typename Derived, typename Value>
 class BaseReferencedIterator : public BaseIterator<Derived, Value> {
  public:

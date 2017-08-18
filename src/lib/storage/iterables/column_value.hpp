@@ -34,4 +34,17 @@ class NullableColumnValue {
   const ChunkOffset _chunk_offset;
 };
 
+class ColumnNullValue {
+ public:
+  ColumnNullValue(const bool null_value, const ChunkOffset& chunk_offset)
+      : _null_value{null_value}, _chunk_offset{chunk_offset} {}
+
+  bool is_null() const { return _null_value; }
+  ChunkOffset chunk_offset() const { return _chunk_offset; }
+
+ private:
+  const bool _null_value;
+  const ChunkOffset _chunk_offset;
+};
+
 }  // namespace opossum

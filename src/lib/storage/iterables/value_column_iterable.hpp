@@ -19,6 +19,68 @@ class ValueColumnIterable {
   using Type = ValueColumnIterableType;
 
  public:
+  ValueColumnIterable(const ValueColumn<T>& column,
+                      const ChunkOffsetsList* mapped_chunk_offsets = nullptr)
+      : _column{column}, _mapped_chunk_offsets{mapped_chunk_offsets} {}
+
+  template <typename Functor>
+  void execute_for_all_no_mapping(const Functor& func) const {
+    DebugAssert(_mapped_chunk_offsets == nullptr, "Mapped chunk offsets must be a nullptr.");
+
+    if (_column.is_nullable()) {
+      auto begin =
+          NullableIterator{_column.values().cbegin(), _column.values().cbegin(), _column.null_values().cbegin()};
+      auto end = NullableIterator{_column.values().cbegin(), _column.values().cend(), _column.null_values().cend()};
+      func(begin, end);
+      return;
+    }
+
+    auto begin = Iterator{_column.values().cbegin(), _column.values().cbegin()};
+    auto end = Iterator{_column.values().cend(), _column.values().cend()};
+    func(begin, end);
+  }
+
+  template <typename Functor>
+  void execute_for_all(const Functor& func) const {
+    if (_mapped_chunk_offsets == nullptr) {
+      execute_for_all_no_mapping(func);
+      return;
+    }
+
+    if (_column.is_nullable()) {
+      auto begin = NullableReferencedIterator{_column.values(), _column.null_values(), _mapped_chunk_offsets->cbegin()};
+      auto end = NullableReferencedIterator{_column.values(), _column.null_values(), _mapped_chunk_offsets->cend()};
+      func(begin, end);
+      return;
+    }
+
+    auto begin = ReferencedIterator{_column.values(), _mapped_chunk_offsets->cbegin()};
+    auto end = ReferencedIterator{_column.values(), _mapped_chunk_offsets->cend()};
+    func(begin, end);
+    return;
+  }
+
+  Type type() const {
+    if (_column.is_nullable() && _mapped_chunk_offsets != nullptr) {
+      return Type::NullableReferenced;
+    }
+
+    if (_mapped_chunk_offsets != nullptr) {
+      return Type::Referenced;
+    }
+
+    if (_column.is_nullable()) {
+      return Type::Nullable;
+    }
+
+    return Type::Simple;
+  }
+
+ private:
+  const ValueColumn<T>& _column;
+  const ChunkOffsetsList* _mapped_chunk_offsets;
+
+ private:
   class Iterator : public BaseIterator<Iterator, ColumnValue<T>> {
    public:
     using ValueIterator = typename tbb::concurrent_vector<T>::const_iterator;
@@ -115,67 +177,6 @@ class ValueColumnIterable {
     const ValueVector& _values;
     const NullValueVector& _null_values;
   };
-
-  ValueColumnIterable(const ValueColumn<T>& column,
-                      const std::vector<std::pair<ChunkOffset, ChunkOffset>>* mapped_chunk_offsets = nullptr)
-      : _column{column}, _mapped_chunk_offsets{mapped_chunk_offsets} {}
-
-  template <typename Functor>
-  void execute_for_all_no_mapping(const Functor& func) const {
-    DebugAssert(_mapped_chunk_offsets == nullptr, "Mapped chunk offsets must be a nullptr.");
-
-    if (_column.is_nullable()) {
-      auto begin =
-          NullableIterator{_column.values().cbegin(), _column.values().cbegin(), _column.null_values().cbegin()};
-      auto end = NullableIterator{_column.values().cbegin(), _column.values().cend(), _column.null_values().cend()};
-      func(begin, end);
-      return;
-    }
-
-    auto begin = Iterator{_column.values().cbegin(), _column.values().cbegin()};
-    auto end = Iterator{_column.values().cend(), _column.values().cend()};
-    func(begin, end);
-  }
-
-  template <typename Functor>
-  void execute_for_all(const Functor& func) const {
-    if (_mapped_chunk_offsets == nullptr) {
-      execute_for_all_no_mapping(func);
-      return;
-    }
-
-    if (_column.is_nullable()) {
-      auto begin = NullableReferencedIterator{_column.values(), _column.null_values(), _mapped_chunk_offsets->cbegin()};
-      auto end = NullableReferencedIterator{_column.values(), _column.null_values(), _mapped_chunk_offsets->cend()};
-      func(begin, end);
-      return;
-    }
-
-    auto begin = ReferencedIterator{_column.values(), _mapped_chunk_offsets->cbegin()};
-    auto end = ReferencedIterator{_column.values(), _mapped_chunk_offsets->cend()};
-    func(begin, end);
-    return;
-  }
-
-  Type type() const {
-    if (_column.is_nullable() && _mapped_chunk_offsets != nullptr) {
-      return Type::NullableReferenced;
-    }
-
-    if (_mapped_chunk_offsets != nullptr) {
-      return Type::Referenced;
-    }
-
-    if (_column.is_nullable()) {
-      return Type::Nullable;
-    }
-
-    return Type::Simple;
-  }
-
- private:
-  const ValueColumn<T>& _column;
-  const std::vector<std::pair<ChunkOffset, ChunkOffset>>* _mapped_chunk_offsets;
 };
 
 }  // namespace opossum
