@@ -55,6 +55,8 @@ class ColumnStatistics : public BaseColumnStatistics {
    */
   float distinct_count() const override;
 
+  std::shared_ptr<BaseColumnStatistics> clone() const override;
+
  protected:
   std::ostream &print_to_stream(std::ostream &os) const override;
   ColumnType min() const;

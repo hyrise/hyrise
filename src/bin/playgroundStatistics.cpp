@@ -91,37 +91,49 @@ void test() {
   auto stats_w2 = stats->predicate_statistics(ColumnID(0), ScanType::OpLessThanEquals, AllTypeVariant(2));
   auto stats_w1 = stats->predicate_statistics(ColumnID(0), ScanType::OpLessThanEquals, AllTypeVariant(1));
 
+  auto stats_w3_b = stats_w4->predicate_statistics(ColumnID(0), ScanType::OpGreaterThanEquals, AllTypeVariant(2));
+
   stats = stats_w1;
 
   std::cout << "simple scan w1" << std::endl;
 
   std::cout << *stats << std::endl << std::endl;
 
-  stats =
-      stats_w2->join_statistics(stats, std::make_pair(ColumnID(0), ColumnID(0)), ScanType::OpEquals, JoinMode::Outer);
+  auto mode = JoinMode::Outer;
 
-  std::cout << "join with w2" << std::endl;
+  //  stats =
+  //      stats_w2->join_statistics(stats, std::make_pair(ColumnID(0), ColumnID(0)), ScanType::OpEquals, mode);
+  //
+  //  std::cout << "join with w2" << std::endl;
+  //
+  //  std::cout << *stats << std::endl << std::endl;
+  //
+  //  stats =
+  //      stats_w3->join_statistics(stats, std::make_pair(ColumnID(0), ColumnID(0)), ScanType::OpEquals, mode);
+  //
+  //  std::cout << "join with w3" << std::endl;
+  //
+  //  std::cout << *stats << std::endl << std::endl;
+  //
+  //  stats =
+  //      stats_w4->join_statistics(stats, std::make_pair(ColumnID(0), ColumnID(0)), ScanType::OpEquals, mode);
+  //
+  //  std::cout << "join with w4" << std::endl;
+  //
+  //  std::cout << *stats << std::endl << std::endl;
+  //
+  //  stats =
+  //      stats_w5->join_statistics(stats, std::make_pair(ColumnID(0), ColumnID(0)), ScanType::OpEquals, mode);
+  //
+  //  std::cout << "join with w5" << std::endl;
+  //
+  //  std::cout << *stats << std::endl << std::endl;
+  //
+  stats = stats_w3->join_statistics(stats_w3_b, std::make_pair(ColumnID(0), ColumnID(0)), ScanType::OpEquals, mode);
 
-  std::cout << *stats << std::endl << std::endl;
+  std::cout << *stats_w3_b << std::endl;
 
-  stats =
-      stats_w3->join_statistics(stats, std::make_pair(ColumnID(0), ColumnID(0)), ScanType::OpEquals, JoinMode::Outer);
-
-  std::cout << "join with w3" << std::endl;
-
-  std::cout << *stats << std::endl << std::endl;
-
-  stats =
-      stats_w4->join_statistics(stats, std::make_pair(ColumnID(0), ColumnID(0)), ScanType::OpEquals, JoinMode::Outer);
-
-  std::cout << "join with w4" << std::endl;
-
-  std::cout << *stats << std::endl << std::endl;
-
-  stats =
-      stats_w5->join_statistics(stats, std::make_pair(ColumnID(0), ColumnID(0)), ScanType::OpEquals, JoinMode::Outer);
-
-  std::cout << "join with w5" << std::endl;
+  std::cout << "join with w3 with w3b" << std::endl;
 
   std::cout << *stats << std::endl << std::endl;
 

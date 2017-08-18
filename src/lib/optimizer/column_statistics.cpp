@@ -69,6 +69,11 @@ ColumnType ColumnStatistics<ColumnType>::max() const {
 }
 
 template <typename ColumnType>
+std::shared_ptr<BaseColumnStatistics> ColumnStatistics<ColumnType>::clone() const {
+  return std::make_shared<ColumnStatistics>(*this);
+}
+
+template <typename ColumnType>
 void ColumnStatistics<ColumnType>::initialize_min_max() const {
   // Calculation is delegated to aggregate operator.
   auto table = _table.lock();
