@@ -5,8 +5,8 @@
 
 #include "tbb/concurrent_vector.h"
 
-#include "column_value.hpp"
-#include "iterator_utils.hpp"
+#include "base_iterables.hpp"
+
 #include "storage/value_column.hpp"
 
 namespace opossum {
@@ -14,57 +14,48 @@ namespace opossum {
 enum class ValueColumnIterableType { NullableReferenced, Referenced, Nullable, Simple };
 
 template <typename T>
-class ValueColumnIterable {
+class ValueColumnIterable : public BaseIndexableIterable<ValueColumnIterable<T>> {
  public:
   using Type = ValueColumnIterableType;
 
  public:
   ValueColumnIterable(const ValueColumn<T>& column, const ChunkOffsetsList* mapped_chunk_offsets = nullptr)
-      : _column{column}, _mapped_chunk_offsets{mapped_chunk_offsets} {}
+      : BaseIndexableIterable<ValueColumnIterable<T>>{mapped_chunk_offsets}, _column{column} {}
 
   template <typename Functor>
-  void execute_for_all_no_mapping(const Functor& func) const {
-    DebugAssert(_mapped_chunk_offsets == nullptr, "Mapped chunk offsets must be a nullptr.");
-
+  void _on_get_iterators_without_indices(const Functor& f) const {
     if (_column.is_nullable()) {
       auto begin =
           NullableIterator{_column.values().cbegin(), _column.values().cbegin(), _column.null_values().cbegin()};
       auto end = NullableIterator{_column.values().cbegin(), _column.values().cend(), _column.null_values().cend()};
-      func(begin, end);
+      f(begin, end);
       return;
     }
 
     auto begin = Iterator{_column.values().cbegin(), _column.values().cbegin()};
     auto end = Iterator{_column.values().cend(), _column.values().cend()};
-    func(begin, end);
+    f(begin, end);
   }
 
   template <typename Functor>
-  void execute_for_all(const Functor& func) const {
-    if (_mapped_chunk_offsets == nullptr) {
-      execute_for_all_no_mapping(func);
-      return;
-    }
-
+  void _on_get_iterators_with_indices(const Functor& f) const {
     if (_column.is_nullable()) {
-      auto begin = NullableIndexedIterator{_column.values(), _column.null_values(), _mapped_chunk_offsets->cbegin()};
-      auto end = NullableIndexedIterator{_column.values(), _column.null_values(), _mapped_chunk_offsets->cend()};
-      func(begin, end);
-      return;
+      auto begin = NullableIndexedIterator{_column.values(), _column.null_values(), this->_mapped_chunk_offsets->cbegin()};
+      auto end = NullableIndexedIterator{_column.values(), _column.null_values(), this->_mapped_chunk_offsets->cend()};
+      f(begin, end);
+    } else {
+      auto begin = IndexedIterator{_column.values(), this->_mapped_chunk_offsets->cbegin()};
+      auto end = IndexedIterator{_column.values(), this->_mapped_chunk_offsets->cend()};
+      f(begin, end);
     }
-
-    auto begin = IndexedIterator{_column.values(), _mapped_chunk_offsets->cbegin()};
-    auto end = IndexedIterator{_column.values(), _mapped_chunk_offsets->cend()};
-    func(begin, end);
-    return;
   }
 
   Type type() const {
-    if (_column.is_nullable() && _mapped_chunk_offsets != nullptr) {
+    if (_column.is_nullable() && this->_mapped_chunk_offsets != nullptr) {
       return Type::NullableReferenced;
     }
 
-    if (_mapped_chunk_offsets != nullptr) {
+    if (this->_mapped_chunk_offsets != nullptr) {
       return Type::Referenced;
     }
 
@@ -77,7 +68,6 @@ class ValueColumnIterable {
 
  private:
   const ValueColumn<T>& _column;
-  const ChunkOffsetsList* _mapped_chunk_offsets;
 
  private:
   class Iterator : public BaseIterator<Iterator, ColumnValue<T>> {

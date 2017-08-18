@@ -1,27 +1,21 @@
 #pragma once
 
-#include "column_value.hpp"
-#include "iterator_utils.hpp"
+#include "base_iterables.hpp"
 
 #include "all_type_variant.hpp"
 
 namespace opossum {
 
 template <typename T>
-class ConstantValueIterable {
+class ConstantValueIterable : public BaseIterable<ConstantValueIterable<T>> {
  public:
   explicit ConstantValueIterable(const T& value) : _value{value} {}
   explicit ConstantValueIterable(const AllTypeVariant& value) : _value{type_cast<T>(value)} {}
 
   template <typename Functor>
-  void execute_for_all_no_mapping(const Functor& func) const {
+  void _on_get_iterators(const Functor& f) const {
     auto it = Iterator{_value};
-    func(it, it);
-  }
-
-  template <typename Functor>
-  void execute_for_all(const Functor& func) const {
-    execute_for_all_no_mapping(func);
+    f(it, it);
   }
 
  private:

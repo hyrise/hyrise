@@ -7,19 +7,19 @@
 
 #include "tbb/concurrent_vector.h"
 
-#include "column_value.hpp"
-#include "iterator_utils.hpp"
+#include "base_iterables.hpp"
+
 #include "storage/reference_column.hpp"
 
 namespace opossum {
 
 template <typename T>
-class ReferenceColumnIterable {
+class ReferenceColumnIterable : public BaseIterable<ReferenceColumnIterable<T>> {
  public:
   explicit ReferenceColumnIterable(const ReferenceColumn &column) : _column{column} {}
 
   template <typename Functor>
-  void execute_for_all_no_mapping(const Functor &func) const {
+  void _on_get_iterators(const Functor &f) const {
     const auto table = _column.referenced_table();
     const auto column_id = _column.referenced_column_id();
 
@@ -28,12 +28,7 @@ class ReferenceColumnIterable {
 
     auto begin = Iterator{table, column_id, begin_it, begin_it};
     auto end = Iterator{table, column_id, begin_it, end_it};
-    func(begin, end);
-  }
-
-  template <typename Functor>
-  void execute_for_all(const Functor &func) const {
-    execute_for_all_no_mapping(func);
+    f(begin, end);
   }
 
  private:

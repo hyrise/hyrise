@@ -4,45 +4,34 @@
 #include <utility>
 #include <vector>
 
-#include "column_value.hpp"
-#include "iterator_utils.hpp"
+#include "base_iterables.hpp"
 #include "storage/base_attribute_vector.hpp"
 
 namespace opossum {
 
-class AttributeVectorIterable {
+class AttributeVectorIterable : public BaseIndexableIterable<AttributeVectorIterable> {
  public:
   AttributeVectorIterable(const BaseAttributeVector& attribute_vector,
                           const ChunkOffsetsList* mapped_chunk_offsets = nullptr)
-      : _attribute_vector{attribute_vector}, _mapped_chunk_offsets{mapped_chunk_offsets} {}
+      : BaseIndexableIterable<AttributeVectorIterable>{mapped_chunk_offsets},
+        _attribute_vector{attribute_vector} {}
 
   template <typename Functor>
-  void execute_for_all(const Functor& func) const {
-    if (_mapped_chunk_offsets != nullptr) {
-      auto begin = IndexedIterator{_attribute_vector, _mapped_chunk_offsets->cbegin()};
-      auto end = IndexedIterator{_attribute_vector, _mapped_chunk_offsets->cend()};
-      func(begin, end);
-      return;
-    }
-
-    auto begin = Iterator{_attribute_vector, 0u};
-    auto end = Iterator{_attribute_vector, static_cast<ChunkOffset>(_attribute_vector.size())};
-    return func(begin, end);
+  void _on_get_iterators_with_indices(const Functor& f) const {
+    auto begin = IndexedIterator{_attribute_vector, _mapped_chunk_offsets->cbegin()};
+    auto end = IndexedIterator{_attribute_vector, _mapped_chunk_offsets->cend()};
+    f(begin, end);
   }
 
   template <typename Functor>
-  void execute_for_all_no_mapping(const Functor& func) const {
-    DebugAssert(_mapped_chunk_offsets == nullptr, "Mapped chunk offsets must be a nullptr.");
-
+  void _on_get_iterators_without_indices(const Functor& f) const {
     auto begin = Iterator{_attribute_vector, 0u};
     auto end = Iterator{_attribute_vector, static_cast<ChunkOffset>(_attribute_vector.size())};
-    func(begin, end);
-    return;
+    f(begin, end);
   }
 
  private:
   const BaseAttributeVector& _attribute_vector;
-  const ChunkOffsetsList* _mapped_chunk_offsets;
 
  private:
   class Iterator : public BaseIterator<Iterator, NullableColumnValue<ValueID>> {

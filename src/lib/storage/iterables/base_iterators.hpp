@@ -2,6 +2,11 @@
 
 #include <boost/iterator/iterator_facade.hpp>
 
+#include "column_value.hpp"
+
+#include "types.hpp"
+
+
 namespace opossum {
 
 using ChunkOffsetsList = std::vector<std::pair<ChunkOffset, ChunkOffset>>;

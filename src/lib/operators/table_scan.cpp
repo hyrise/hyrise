@@ -209,8 +209,8 @@ class SingleColumnScan : public SingleColumnScanBase {
       auto left_column_iterable = _create_iterable_from_column(left_column, context->_mapped_chunk_offsets.get());
       auto right_value_iterable = ConstantValueIterable<Type>{_right_value};
 
-      left_column_iterable.execute_for_all([&](auto left_it, auto left_end) {
-        right_value_iterable.execute_for_all([&](auto right_it, auto right_end) {
+      left_column_iterable.get_iterators([&](auto left_it, auto left_end) {
+        right_value_iterable.get_iterators([&](auto right_it, auto right_end) {
           resolve_operator_type(_scan_type, [&](auto comparator) {
             Scan{context->_chunk_id, context->_matches_out}(comparator, left_it, left_end, right_it);  // NOLINT
           });
@@ -262,7 +262,7 @@ class SingleColumnScan : public SingleColumnScanBase {
     auto attribute_vector_iterable = AttributeVectorIterable{attribute_vector, context->_mapped_chunk_offsets.get()};
 
     if (_right_value_matches_all(left_column, search_value_id)) {
-      attribute_vector_iterable.execute_for_all([&](auto left_it, auto left_end) {
+      attribute_vector_iterable.get_iterators([&](auto left_it, auto left_end) {
         for (; left_it != left_end; ++left_it) {
           const auto left = *left_it;
 
@@ -280,8 +280,8 @@ class SingleColumnScan : public SingleColumnScanBase {
 
     auto constant_value_iterable = ConstantValueIterable<ValueID>{search_value_id};
 
-    attribute_vector_iterable.execute_for_all([&](auto left_it, auto left_end) {
-      constant_value_iterable.execute_for_all([&](auto right_it, auto right_end) {
+    attribute_vector_iterable.get_iterators([&](auto left_it, auto left_end) {
+      constant_value_iterable.get_iterators([&](auto right_it, auto right_end) {
         _resolve_scan_type([&](auto comparator) {
           Scan{chunk_id, matches_out}(comparator, left_it, left_end, right_it);  // NOLINT
         });
@@ -431,8 +431,8 @@ class SimpleSingleColumnScan : public ColumnScanBase {
       auto left_column_iterable = _create_iterable_from_column<Type>(typed_left_column);
       auto right_value_iterable = ConstantValueIterable<Type>{_right_value};
 
-      left_column_iterable.execute_for_all_no_mapping([&](auto left_it, auto left_end) {
-        right_value_iterable.execute_for_all_no_mapping([&](auto right_it, auto right_end) {
+      left_column_iterable.get_iterators_no_indices([&](auto left_it, auto left_end) {
+        right_value_iterable.get_iterators_no_indices([&](auto right_it, auto right_end) {
           resolve_operator_type(_scan_type, [&](auto comparator) {
             Scan{chunk_id, matches_out}(comparator, left_it, left_end, right_it);
           });
@@ -472,7 +472,7 @@ class NullColumnScan : public SingleColumnScanBase {
     auto left_column_iterable =
         NullValueVectorIterable{left_column.null_values(), context->_mapped_chunk_offsets.get()};
 
-    left_column_iterable.execute_for_all([&](auto left_it, auto left_end) { _scan(left_it, left_end, *context); });
+    left_column_iterable.get_iterators([&](auto left_it, auto left_end) { _scan(left_it, left_end, *context); });
   }
 
   void handle_dictionary_column(BaseColumn &base_column,
@@ -483,7 +483,7 @@ class NullColumnScan : public SingleColumnScanBase {
     auto left_column_iterable =
         AttributeVectorIterable{*left_column.attribute_vector(), context->_mapped_chunk_offsets.get()};
 
-    left_column_iterable.execute_for_all([&](auto left_it, auto left_end) { _scan(left_it, left_end, *context); });
+    left_column_iterable.get_iterators([&](auto left_it, auto left_end) { _scan(left_it, left_end, *context); });
   }
 
  private:
@@ -597,7 +597,7 @@ class LikeColumnScan : public SingleColumnScanBase {
 
     auto left_column_iterable = ValueColumnIterable<std::string>{left_column, context->_mapped_chunk_offsets.get()};
 
-    left_column_iterable.execute_for_all([&](auto left_it, auto left_end) {
+    left_column_iterable.get_iterators([&](auto left_it, auto left_end) {
       for (; left_it != left_end; ++left_it) {
         const auto left = *left_it;
 
@@ -630,7 +630,7 @@ class LikeColumnScan : public SingleColumnScanBase {
     auto attribute_vector_iterable = AttributeVectorIterable{attribute_vector, context->_mapped_chunk_offsets.get()};
 
     if (match_count == dictionary_matches.size()) {
-      attribute_vector_iterable.execute_for_all([&](auto left_it, auto left_end) {
+      attribute_vector_iterable.get_iterators([&](auto left_it, auto left_end) {
         for (; left_it != left_end; ++left_it) {
           const auto left = *left_it;
 
@@ -645,7 +645,7 @@ class LikeColumnScan : public SingleColumnScanBase {
       return;
     }
 
-    attribute_vector_iterable.execute_for_all([&](auto left_it, auto left_end) {
+    attribute_vector_iterable.get_iterators([&](auto left_it, auto left_end) {
       for (; left_it != left_end; ++left_it) {
         const auto left = *left_it;
 
@@ -828,8 +828,8 @@ class ColumnComparisonScan : public ColumnScanBase {
           auto left_column_iterable = _create_iterable_from_column<LeftType>(typed_left_column);
           auto right_column_iterable = _create_iterable_from_column<RightType>(typed_right_column);
 
-          left_column_iterable.execute_for_all_no_mapping([&](auto left_it, auto left_end) {
-            right_column_iterable.execute_for_all_no_mapping([&](auto right_it, auto right_end) {
+          left_column_iterable.get_iterators_no_indices([&](auto left_it, auto left_end) {
+            right_column_iterable.get_iterators_no_indices([&](auto right_it, auto right_end) {
               resolve_operator_type(_scan_type, [&](auto comparator) {
                 Scan{chunk_id, matches_out}(comparator, left_it, left_end, right_it);  // NOLINT
               });

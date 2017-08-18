@@ -3,8 +3,7 @@
 #include <utility>
 #include <vector>
 
-#include "column_value.hpp"
-#include "iterator_utils.hpp"
+#include "base_iterables.hpp"
 
 #include "storage/base_attribute_vector.hpp"
 #include "storage/dictionary_column.hpp"
@@ -14,37 +13,30 @@ namespace opossum {
 enum class DictionaryColumnIterableType { Referenced, Simple };
 
 template <typename T>
-class DictionaryColumnIterable {
+class DictionaryColumnIterable : public BaseIndexableIterable<DictionaryColumnIterable<T>> {
  public:
   using Type = DictionaryColumnIterableType;
 
  public:
   DictionaryColumnIterable(const DictionaryColumn<T>& column, const ChunkOffsetsList* mapped_chunk_offsets = nullptr)
-      : _column{column}, _mapped_chunk_offsets{mapped_chunk_offsets} {}
+      : BaseIndexableIterable<DictionaryColumnIterable<T>>{mapped_chunk_offsets}, _column{column} {}
 
   template <typename Functor>
-  void execute_for_all_no_mapping(const Functor& func) const {
-    DebugAssert(_mapped_chunk_offsets == nullptr, "Mapped chunk offsets must be a nullptr.");
-
+  void _on_get_iterators_without_indices(const Functor& f) const {
     auto begin = Iterator{*_column.dictionary(), *_column.attribute_vector(), 0u};
     auto end = Iterator{*_column.dictionary(), *_column.attribute_vector(), static_cast<ChunkOffset>(_column.size())};
-    func(begin, end);
+    f(begin, end);
   }
 
   template <typename Functor>
-  void execute_for_all(const Functor& func) const {
-    if (_mapped_chunk_offsets == nullptr) {
-      execute_for_all_no_mapping(func);
-      return;
-    }
-
-    auto begin = IndexedIterator{*_column.dictionary(), *_column.attribute_vector(), _mapped_chunk_offsets->cbegin()};
-    auto end = IndexedIterator{*_column.dictionary(), *_column.attribute_vector(), _mapped_chunk_offsets->cend()};
-    func(begin, end);
+  void _on_get_iterators_with_indices(const Functor& f) const {
+    auto begin = IndexedIterator{*_column.dictionary(), *_column.attribute_vector(), this->_mapped_chunk_offsets->cbegin()};
+    auto end = IndexedIterator{*_column.dictionary(), *_column.attribute_vector(), this->_mapped_chunk_offsets->cend()};
+    f(begin, end);
   }
 
   Type type() const {
-    if (_mapped_chunk_offsets != nullptr) {
+    if (this->_mapped_chunk_offsets != nullptr) {
       return Type::Referenced;
     }
 
@@ -53,7 +45,6 @@ class DictionaryColumnIterable {
 
  private:
   const DictionaryColumn<T>& _column;
-  const ChunkOffsetsList* _mapped_chunk_offsets;
 
  private:
   class Iterator : public BaseIterator<Iterator, NullableColumnValue<T>> {

@@ -56,7 +56,7 @@ TEST_F(IterablesTest, ValueColumnIteratorExecuteForAll) {
   EXPECT_EQ(iterable.type(), ValueColumnIterableType::Simple);
 
   auto sum = uint32_t{0};
-  iterable.execute_for_all(SumUp{sum});
+  iterable.get_iterators(SumUp{sum});
 
   EXPECT_EQ(sum, 24'825u);
 }
@@ -74,7 +74,7 @@ TEST_F(IterablesTest, ValueColumnReferencedIteratorExecuteForAll) {
   EXPECT_EQ(iterable.type(), ValueColumnIterableType::Referenced);
 
   auto sum = uint32_t{0};
-  iterable.execute_for_all(SumUp{sum});
+  iterable.get_iterators(SumUp{sum});
 
   EXPECT_EQ(sum, 12'480u);
 }
@@ -90,7 +90,7 @@ TEST_F(IterablesTest, ValueColumnNullableIteratorExecuteForAll) {
   EXPECT_EQ(iterable.type(), ValueColumnIterableType::Nullable);
 
   auto sum = uint32_t{0};
-  iterable.execute_for_all(SumUp{sum});
+  iterable.get_iterators(SumUp{sum});
 
   EXPECT_EQ(sum, 13'702u);
 }
@@ -108,7 +108,7 @@ TEST_F(IterablesTest, ValueColumnNullableReferencedIteratorExecuteForAll) {
   EXPECT_EQ(iterable.type(), ValueColumnIterableType::NullableReferenced);
 
   auto sum = uint32_t{0};
-  iterable.execute_for_all(SumUp{sum});
+  iterable.get_iterators(SumUp{sum});
 
   EXPECT_EQ(sum, 13'579u);
 }
@@ -126,7 +126,7 @@ TEST_F(IterablesTest, DictionaryColumnIteratorExecuteForAll) {
   EXPECT_EQ(iterable.type(), DictionaryColumnIterableType::Simple);
 
   auto sum = uint32_t{0};
-  iterable.execute_for_all(SumUp{sum});
+  iterable.get_iterators(SumUp{sum});
 
   EXPECT_EQ(sum, 24'825u);
 }
@@ -146,7 +146,7 @@ TEST_F(IterablesTest, DictionaryColumnDictReferencedIteratorExecuteForAll) {
   EXPECT_EQ(iterable.type(), DictionaryColumnIterableType::Referenced);
 
   auto sum = uint32_t{0};
-  iterable.execute_for_all(SumUp{sum});
+  iterable.get_iterators(SumUp{sum});
 
   EXPECT_EQ(sum, 12'480u);
 }
@@ -161,7 +161,7 @@ TEST_F(IterablesTest, ReferenceColumnIteratorExecuteForAll) {
   auto iterable = ReferenceColumnIterable<int>{*reference_column};
 
   auto sum = uint32_t{0};
-  iterable.execute_for_all(SumUp{sum});
+  iterable.get_iterators(SumUp{sum});
 
   EXPECT_EQ(sum, 24'825u);
 }
@@ -170,7 +170,7 @@ TEST_F(IterablesTest, ConstantValueIteratorExecuteForAll) {
   auto iterable = ConstantValueIterable<int>{2u};
 
   auto sum = 0u;
-  iterable.execute_for_all([&](auto it, auto end) {
+  iterable.get_iterators([&](auto it, auto end) {
     for (auto i = 0u; i < 10; ++i) sum += (*it).value();
   });
 

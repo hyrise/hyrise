@@ -5,43 +5,35 @@
 
 #include "tbb/concurrent_vector.h"
 
-#include "column_value.hpp"
-#include "iterator_utils.hpp"
+#include "base_iterables.hpp"
 
 #include "types.hpp"
 
 namespace opossum {
 
-class NullValueVectorIterable {
+class NullValueVectorIterable : public BaseIndexableIterable<NullValueVectorIterable> {
  public:
   NullValueVectorIterable(const tbb::concurrent_vector<bool>& null_values,
                           const ChunkOffsetsList* mapped_chunk_offsets = nullptr)
-      : _null_values{null_values}, _mapped_chunk_offsets{mapped_chunk_offsets} {}
+      : BaseIndexableIterable<NullValueVectorIterable>{mapped_chunk_offsets},
+        _null_values{null_values} {}
 
   template <typename Functor>
-  void execute_for_all_no_mapping(const Functor& func) const {
-    DebugAssert(_mapped_chunk_offsets == nullptr, "Mapped chunk offsets must be a nullptr.");
-
+  void _on_get_iterators_without_indices(const Functor& f) const {
     auto begin = Iterator{_null_values.cbegin(), _null_values.cbegin()};
     auto end = Iterator{_null_values.cbegin(), _null_values.cend()};
-    func(begin, end);
+    f(begin, end);
   }
 
   template <typename Functor>
-  void execute_for_all(const Functor& func) const {
-    if (_mapped_chunk_offsets == nullptr) {
-      execute_for_all_no_mapping(func);
-      return;
-    }
-
+  void _on_get_iterators_with_indices(const Functor& f) const {
     auto begin = IndexedIterator{_null_values, _mapped_chunk_offsets->cbegin()};
     auto end = IndexedIterator{_null_values, _mapped_chunk_offsets->cend()};
-    func(begin, end);
+    f(begin, end);
   }
 
  private:
   const tbb::concurrent_vector<bool>& _null_values;
-  const ChunkOffsetsList* _mapped_chunk_offsets;
 
  private:
   class Iterator : public BaseIterator<Iterator, ColumnNullValue> {

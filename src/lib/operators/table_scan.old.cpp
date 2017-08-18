@@ -489,7 +489,7 @@ class TableScanVisitableCreator<T>::TableScanConstantColumnVisitable : public Co
 
     auto iterable = ValueColumnIterable<T>{column, context->chunk_offsets_in};
 
-    iterable.execute_for_all(scan);
+    iterable.get_iterators(scan);
   }
 
   void handle_reference_column(ReferenceColumn &column, std::shared_ptr<ColumnVisitableContext> base_context) override {
@@ -691,8 +691,8 @@ class TableScanVisitableCreator<T>::TableScanVariableColumnVisitable : public Co
 
       auto scan = Scan{chunk_id, _comparator, matches_out};
 
-      _left_column_iterable.execute_for_all([&scan, right_column_iterable](auto left_it, auto left_end) {
-        right_column_iterable.execute_for_all([&scan, left_it, left_end](auto right_it, auto right_end) {
+      _left_column_iterable.get_iterators([&scan, right_column_iterable](auto left_it, auto left_end) {
+        right_column_iterable.get_iterators([&scan, left_it, left_end](auto right_it, auto right_end) {
           scan(left_it, left_end, right_it, right_end);
         });
       });
