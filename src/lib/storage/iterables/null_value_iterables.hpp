@@ -6,7 +6,9 @@
 
 #include "tbb/concurrent_vector.h"
 
+#include "iterator_utils.hpp"
 #include "storage/base_attribute_vector.hpp"
+
 #include "types.hpp"
 
 namespace opossum {
@@ -26,27 +28,18 @@ class ColumnNullValue {
 
 class NullValueDictionaryIterable {
  public:
-  class Iterator : public std::iterator<std::input_iterator_tag, ColumnNullValue, std::ptrdiff_t, ColumnNullValue*,
-                                        ColumnNullValue> {
+  class Iterator : public BaseIterator<Iterator, ColumnNullValue> {
    public:
     explicit Iterator(const BaseAttributeVector& attribute_vector, ChunkOffset chunk_offset)
         : _attribute_vector{attribute_vector}, _chunk_offset{chunk_offset} {}
 
-    Iterator& operator++() {
-      ++_chunk_offset;
-      return *this;
-    }
+   private:
+    friend class boost::iterator_core_access;
 
-    Iterator operator++(int) {
-      auto retval = *this;
-      ++(*this);
-      return retval;
-    }
+    void increment() { ++_chunk_offset; }
+    bool equal(const Iterator &other) const { return _chunk_offset == other._chunk_offset; }
 
-    bool operator==(Iterator other) const { return _chunk_offset == other._chunk_offset; }
-    bool operator!=(Iterator other) const { return !(*this == other); }
-
-    auto operator*() const {
+    ColumnNullValue dereference() const {
       const auto value_id = _attribute_vector.get(_chunk_offset);
       const auto is_null = (value_id == NULL_VALUE_ID);
 
@@ -58,37 +51,23 @@ class NullValueDictionaryIterable {
     ChunkOffset _chunk_offset;
   };
 
-  class ReferencedIterator : public std::iterator<std::input_iterator_tag, ColumnNullValue, std::ptrdiff_t,
-                                                  ColumnNullValue*, ColumnNullValue> {
-   public:
-    using ChunkOffsetsIterator = std::vector<std::pair<ChunkOffset, ChunkOffset>>::const_iterator;
-
+  class ReferencedIterator : public BaseReferencedIterator<ReferencedIterator, ColumnNullValue> {
    public:
     explicit ReferencedIterator(const BaseAttributeVector& attribute_vector,
                                 const ChunkOffsetsIterator& chunk_offsets_it)
-        : _attribute_vector{attribute_vector}, _chunk_offsets_it{chunk_offsets_it} {}
+        : BaseReferencedIterator<ReferencedIterator, ColumnNullValue>{chunk_offsets_it},
+          _attribute_vector{attribute_vector} {}
 
-    ReferencedIterator& operator++() {
-      ++_chunk_offsets_it;
-      return *this;
-    }
+   private:
+    friend class boost::iterator_core_access;
 
-    ReferencedIterator operator++(int) {
-      auto retval = *this;
-      ++(*this);
-      return retval;
-    }
+    ColumnNullValue dereference() const {
+      if (this->index_into_referenced() == INVALID_CHUNK_OFFSET) return ColumnNullValue{true, this->index_of_referencing()};
 
-    bool operator==(ReferencedIterator other) const { return (_chunk_offsets_it == other._chunk_offsets_it); }
-    bool operator!=(ReferencedIterator other) const { return !(*this == other); }
-
-    auto operator*() const {
-      if (_chunk_offsets_it->second == INVALID_CHUNK_OFFSET) return ColumnNullValue{true, _chunk_offsets_it->first};
-
-      const auto value_id = _attribute_vector.get(_chunk_offsets_it->second);
+      const auto value_id = _attribute_vector.get(this->index_into_referenced());
       const auto is_null = (value_id == NULL_VALUE_ID);
 
-      return ColumnNullValue{is_null, _chunk_offsets_it->first};
+      return ColumnNullValue{is_null, this->index_of_referencing()};
     }
 
    private:
@@ -100,19 +79,6 @@ class NullValueDictionaryIterable {
                               const std::vector<std::pair<ChunkOffset, ChunkOffset>>* mapped_chunk_offsets = nullptr)
       : _attribute_vector{attribute_vector}, _mapped_chunk_offsets{mapped_chunk_offsets} {}
 
-  template <typename Functor>
-  void execute_for_all(const Functor& func) const {
-    if (_mapped_chunk_offsets != nullptr) {
-      auto begin = ReferencedIterator{_attribute_vector, _mapped_chunk_offsets->cbegin()};
-      auto end = ReferencedIterator{_attribute_vector, _mapped_chunk_offsets->cend()};
-      func(begin, end);
-      return;
-    }
-
-    auto begin = Iterator{_attribute_vector, 0u};
-    auto end = Iterator{_attribute_vector, static_cast<ChunkOffset>(_attribute_vector.size())};
-    func(begin, end);
-  }
 
   template <typename Functor>
   void execute_for_all_no_mapping(const Functor& func) const {
@@ -123,6 +89,19 @@ class NullValueDictionaryIterable {
     func(begin, end);
   }
 
+  template <typename Functor>
+  void execute_for_all(const Functor& func) const {
+    if (_mapped_chunk_offsets == nullptr) {
+      execute_for_all_no_mapping(func);
+      return;
+    }
+
+    auto begin = ReferencedIterator{_attribute_vector, _mapped_chunk_offsets->cbegin()};
+    auto end = ReferencedIterator{_attribute_vector, _mapped_chunk_offsets->cend()};
+    func(begin, end);
+    return;
+  }
+
  private:
   const BaseAttributeVector& _attribute_vector;
   const std::vector<std::pair<ChunkOffset, ChunkOffset>>* _mapped_chunk_offsets;
@@ -130,8 +109,7 @@ class NullValueDictionaryIterable {
 
 class NullValueValueColumnIterable {
  public:
-  class Iterator : public std::iterator<std::input_iterator_tag, ColumnNullValue, std::ptrdiff_t, ColumnNullValue*,
-                                        ColumnNullValue> {
+  class Iterator : public BaseIterator<Iterator, ColumnNullValue> {
    public:
     using NullValueIterator = tbb::concurrent_vector<bool>::const_iterator;
 
@@ -139,21 +117,13 @@ class NullValueValueColumnIterable {
     explicit Iterator(const NullValueIterator& begin_null_value_it, const NullValueIterator& null_value_it)
         : _begin_null_value_it{begin_null_value_it}, _null_value_it{null_value_it} {}
 
-    Iterator& operator++() {
-      ++_null_value_it;
-      return *this;
-    }
+   private:
+    friend class boost::iterator_core_access;
 
-    Iterator operator++(int) {
-      auto retval = *this;
-      ++(*this);
-      return retval;
-    }
+    void increment() { ++_null_value_it; }
+    bool equal(const Iterator &other) const { return _null_value_it == other._null_value_it; }
 
-    bool operator==(Iterator other) const { return _null_value_it == other._null_value_it; }
-    bool operator!=(Iterator other) const { return !(*this == other); }
-
-    auto operator*() const {
+    ColumnNullValue dereference() const {
       return ColumnNullValue{*_null_value_it,
                              static_cast<ChunkOffset>(std::distance(_begin_null_value_it, _null_value_it))};
     }
@@ -163,36 +133,22 @@ class NullValueValueColumnIterable {
     NullValueIterator _null_value_it;
   };
 
-  class ReferencedIterator : public std::iterator<std::input_iterator_tag, ColumnNullValue, std::ptrdiff_t,
-                                                  ColumnNullValue*, ColumnNullValue> {
+  class ReferencedIterator : public BaseReferencedIterator<ReferencedIterator, ColumnNullValue> {
    public:
     using NullValueVector = tbb::concurrent_vector<bool>;
-    using ChunkOffsetsIterator = std::vector<std::pair<ChunkOffset, ChunkOffset>>::const_iterator;
 
    public:
     explicit ReferencedIterator(const NullValueVector& null_values, const ChunkOffsetsIterator& chunk_offsets_it)
-        : _null_values{null_values}, _chunk_offsets_it(chunk_offsets_it) {}
+        : BaseReferencedIterator<ReferencedIterator, ColumnNullValue>{chunk_offsets_it},
+          _null_values{null_values} {}
 
-    ReferencedIterator& operator++() {
-      ++_chunk_offsets_it;
-      return *this;
-    }
-    ReferencedIterator operator++(int) {
-      auto retval = *this;
-      ++(*this);
-      return retval;
-    }
+   private:
+    friend class boost::iterator_core_access;
 
-    bool operator==(ReferencedIterator other) const {
-      return (_chunk_offsets_it == other._chunk_offsets_it) && (&_null_values == &other._null_values);
-    }
+    ColumnNullValue dereference() const {
+      if (this->index_into_referenced() == INVALID_CHUNK_OFFSET) return ColumnNullValue{true, this->index_of_referencing()};
 
-    bool operator!=(ReferencedIterator other) const { return !(*this == other); }
-
-    auto operator*() const {
-      if (_chunk_offsets_it->second == INVALID_CHUNK_OFFSET) return ColumnNullValue{true, _chunk_offsets_it->first};
-
-      return ColumnNullValue{_null_values[_chunk_offsets_it->second], _chunk_offsets_it->first};
+      return ColumnNullValue{_null_values[this->index_into_referenced()], this->index_of_referencing()};
     }
 
    private:
@@ -205,12 +161,8 @@ class NullValueValueColumnIterable {
       : _null_values{null_values}, _mapped_chunk_offsets{mapped_chunk_offsets} {}
 
   template <typename Functor>
-  void execute_for_all(const Functor& func) const {
-    if (_mapped_chunk_offsets != nullptr) {
-      auto begin = ReferencedIterator{_null_values, _mapped_chunk_offsets->cbegin()};
-      auto end = ReferencedIterator{_null_values, _mapped_chunk_offsets->cend()};
-      func(begin, end);
-    }
+  void execute_for_all_no_mapping(const Functor& func) const {
+    DebugAssert(_mapped_chunk_offsets == nullptr, "Mapped chunk offsets must be a nullptr.");
 
     auto begin = Iterator{_null_values.cbegin(), _null_values.cbegin()};
     auto end = Iterator{_null_values.cbegin(), _null_values.cend()};
@@ -218,11 +170,14 @@ class NullValueValueColumnIterable {
   }
 
   template <typename Functor>
-  void execute_for_all_no_mapping(const Functor& func) const {
-    DebugAssert(_mapped_chunk_offsets == nullptr, "Mapped chunk offsets must be a nullptr.");
+  void execute_for_all(const Functor& func) const {
+    if (_mapped_chunk_offsets == nullptr) {
+      execute_for_all_no_mapping(func);
+      return;
+    }
 
-    auto begin = Iterator{_null_values.cbegin(), _null_values.cbegin()};
-    auto end = Iterator{_null_values.cbegin(), _null_values.cend()};
+    auto begin = ReferencedIterator{_null_values, _mapped_chunk_offsets->cbegin()};
+    auto end = ReferencedIterator{_null_values, _mapped_chunk_offsets->cend()};
     func(begin, end);
   }
 
