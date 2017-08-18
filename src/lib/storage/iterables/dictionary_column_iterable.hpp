@@ -18,7 +18,8 @@ class DictionaryColumnIterable : public BaseIndexableIterable<DictionaryColumnIt
   using Type = DictionaryColumnIterableType;
 
  public:
-  DictionaryColumnIterable(const DictionaryColumn<T>& column, const ChunkOffsetsList* mapped_chunk_offsets = nullptr)
+  explicit DictionaryColumnIterable(const DictionaryColumn<T>& column,
+                                    const ChunkOffsetsList* mapped_chunk_offsets = nullptr)
       : BaseIndexableIterable<DictionaryColumnIterable<T>>{mapped_chunk_offsets}, _column{column} {}
 
   template <typename Functor>

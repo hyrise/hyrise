@@ -1,7 +1,5 @@
 #pragma once
 
-#include <vector>
-
 #include "base_iterators.hpp"
 
 #include "utils/assert.hpp"
@@ -58,7 +56,7 @@ class BaseIterable {
 template <typename Derived>
 class BaseIndexableIterable {
  public:
-  BaseIndexableIterable(const ChunkOffsetsList* mapped_chunk_offsets = nullptr)
+  explicit BaseIndexableIterable(const ChunkOffsetsList* mapped_chunk_offsets = nullptr)
       : _mapped_chunk_offsets{mapped_chunk_offsets} {}
 
   template <typename Functor>

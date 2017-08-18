@@ -19,7 +19,7 @@ class ValueColumnIterable : public BaseIndexableIterable<ValueColumnIterable<T>>
   using Type = ValueColumnIterableType;
 
  public:
-  ValueColumnIterable(const ValueColumn<T>& column, const ChunkOffsetsList* mapped_chunk_offsets = nullptr)
+  explicit ValueColumnIterable(const ValueColumn<T>& column, const ChunkOffsetsList* mapped_chunk_offsets = nullptr)
       : BaseIndexableIterable<ValueColumnIterable<T>>{mapped_chunk_offsets}, _column{column} {}
 
   template <typename Functor>

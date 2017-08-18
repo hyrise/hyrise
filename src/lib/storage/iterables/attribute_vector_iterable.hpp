@@ -11,8 +11,8 @@ namespace opossum {
 
 class AttributeVectorIterable : public BaseIndexableIterable<AttributeVectorIterable> {
  public:
-  AttributeVectorIterable(const BaseAttributeVector& attribute_vector,
-                          const ChunkOffsetsList* mapped_chunk_offsets = nullptr)
+  explicit AttributeVectorIterable(const BaseAttributeVector& attribute_vector,
+                                   const ChunkOffsetsList* mapped_chunk_offsets = nullptr)
       : BaseIndexableIterable<AttributeVectorIterable>{mapped_chunk_offsets},
         _attribute_vector{attribute_vector} {}
 

@@ -2,6 +2,9 @@
 
 #include <boost/iterator/iterator_facade.hpp>
 
+#include <vector>
+#include <utility>
+
 #include "column_value.hpp"
 
 #include "types.hpp"

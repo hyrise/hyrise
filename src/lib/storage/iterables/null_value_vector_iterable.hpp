@@ -13,8 +13,8 @@ namespace opossum {
 
 class NullValueVectorIterable : public BaseIndexableIterable<NullValueVectorIterable> {
  public:
-  NullValueVectorIterable(const tbb::concurrent_vector<bool>& null_values,
-                          const ChunkOffsetsList* mapped_chunk_offsets = nullptr)
+  explicit NullValueVectorIterable(const tbb::concurrent_vector<bool>& null_values,
+                                   const ChunkOffsetsList* mapped_chunk_offsets = nullptr)
       : BaseIndexableIterable<NullValueVectorIterable>{mapped_chunk_offsets}, _null_values{null_values} {}
 
   template <typename Functor>
