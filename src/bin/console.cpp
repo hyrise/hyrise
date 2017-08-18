@@ -110,16 +110,16 @@ int Console::_eval(const std::string& input) {
   return _eval_sql(input);
 }
 
-int Console::_eval_command(const CommandFunction& f, const std::string& command) {
+int Console::_eval_command(const CommandFunction& func, const std::string& command) {
   size_t first = command.find(' ');
   size_t last = command.find('\n');
 
   if (std::string::npos == first) {
-    return static_cast<int>(f(""));
+    return static_cast<int>(func(""));
   }
 
   std::string args = command.substr(first + 1, last - (first + 1));
-  return static_cast<int>(f(args));
+  return static_cast<int>(func(args));
 }
 
 int Console::_eval_sql(const std::string& sql) {
