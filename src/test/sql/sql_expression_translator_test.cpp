@@ -17,7 +17,11 @@ namespace opossum {
 
 class SQLExpressionTranslatorTest : public BaseTest {
  protected:
-  void SetUp() override {}
+  void SetUp() override {
+    // We need a base table to be able to lookup column names for ColumnIDs.
+    StorageManager::get().add_table("table_a", load_table("src/test/tables/int_float.tbl", 0));
+    _stored_table_node = std::make_shared<StoredTableNode>("table_a");
+  }
 
   /*
    * The following two functions are quite similar and contain lots of code duplication.
@@ -40,15 +44,10 @@ class SQLExpressionTranslatorTest : public BaseTest {
 
     const auto *statement = parse_result.getStatements().at(0);
 
-    // have some faked AST node that we can use for column lookup. I don't like this approach though
-    const std::vector<ColumnID> column_ids = {ColumnID{0}, ColumnID{1}};
-    const auto &expressions = ExpressionNode::create_column_references(column_ids);
-    auto projection_node = std::make_shared<ProjectionNode>(expressions);
-
     switch (statement->type()) {
       case hsql::kStmtSelect: {
         const auto *select = static_cast<const hsql::SelectStatement *>(statement);
-        return _translator.translate_expression(*(select->whereClause), projection_node);
+        return _translator.translate_expression(*(select->whereClause), _stored_table_node);
       }
       default:
         throw std::runtime_error("Translating statement failed.");
@@ -66,16 +65,11 @@ class SQLExpressionTranslatorTest : public BaseTest {
     const auto *statement = parse_result.getStatements().at(0);
     std::vector<std::shared_ptr<ExpressionNode>> expressions;
 
-    // have some faked AST node that we can use for column lookup. I don't like this approach though
-    const std::vector<ColumnID> column_ids = {ColumnID{0}, ColumnID{1}};
-    const auto &column_expressions = ExpressionNode::create_column_references(column_ids);
-    auto projection_node = std::make_shared<ProjectionNode>(column_expressions);
-
     switch (statement->type()) {
       case hsql::kStmtSelect: {
         const auto *select = static_cast<const hsql::SelectStatement *>(statement);
         for (auto expr : *(select->selectList)) {
-          expressions.emplace_back(_translator.translate_expression(*expr, projection_node));
+          expressions.emplace_back(_translator.translate_expression(*expr, _stored_table_node));
         }
         return expressions;
       }
@@ -85,6 +79,7 @@ class SQLExpressionTranslatorTest : public BaseTest {
   }
 
   SQLExpressionTranslator _translator;
+  std::shared_ptr<AbstractASTNode> _stored_table_node;
 };
 
 TEST_F(SQLExpressionTranslatorTest, ArithmeticExpression) {
