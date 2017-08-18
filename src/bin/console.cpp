@@ -35,6 +35,8 @@ Console::Console(const std::string& prompt, const std::string& log_file)
 
   // Register default commands to Console
   register_command("exit", exit);
+  register_command("quit", exit);
+  register_command("help", help);
   register_command("load", load_tpcc);
 
   // Register more commands specifically for command completion purposes, e.g.
@@ -180,6 +182,21 @@ void Console::out(std::shared_ptr<const Table> table) {
 
 int Console::exit(const std::string&) { return Console::ReturnCode::Quit; }
 
+int Console::help(const std::string&) {
+  _instance->out("HYRISE SQL Interface\n\n");
+  _instance->out("Available commands:\n");
+  _instance->out("  load [TABLENAME] - Load available TPC-C tables, or a specific table if TABLENAME is specified\n");
+  _instance->out("  exit             - Exit the HYRISE Console\n");
+  _instance->out("  quit             - Exit the HYRISE Console\n");
+  _instance->out("  help             - Show this message\n\n");
+  _instance->out("After TPC-C tables are loaded, SQL queries can be executed.\n");
+  _instance->out("Example:\n");
+  _instance->out("SELECT * FROM DISTRICT\n");
+  return Console::ReturnCode::Ok;
+}
+
+// HYRISE SQL Interface
+// Enter load to load the TPC-C tables. Then, you can enter SQL queries. Type help for more information.
 int Console::load_tpcc(const std::string& tablename) {
   if (tablename.empty() || "ALL" == tablename) {
     _instance->out("Generating TPCC tables (this might take a while) ...\n");
@@ -238,6 +255,9 @@ int main(int argc, char** argv) {
   using Return = opossum::Console::ReturnCode;
 
   opossum::Console console("> ", "./console.log");
+
+  console.out("HYRISE SQL Interface\n");
+  console.out("Enter 'load' to load the TPC-C tables. Then, you can enter SQL queries. Type 'help' for more information.\n\n");
 
   // Main REPL loop
   int retCode;
