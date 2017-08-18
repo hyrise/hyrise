@@ -35,15 +35,15 @@ class NullValueVectorIterable {
       return;
     }
 
-    auto begin = ReferencedIterator{_null_values, _mapped_chunk_offsets->cbegin()};
-    auto end = ReferencedIterator{_null_values, _mapped_chunk_offsets->cend()};
+    auto begin = IndexedIterator{_null_values, _mapped_chunk_offsets->cbegin()};
+    auto end = IndexedIterator{_null_values, _mapped_chunk_offsets->cend()};
     func(begin, end);
   }
 
  private:
   const tbb::concurrent_vector<bool>& _null_values;
   const ChunkOffsetsList* _mapped_chunk_offsets;
-  
+
  private:
   class Iterator : public BaseIterator<Iterator, ColumnNullValue> {
    public:
@@ -69,13 +69,13 @@ class NullValueVectorIterable {
     NullValueIterator _null_value_it;
   };
 
-  class ReferencedIterator : public BaseReferencedIterator<ReferencedIterator, ColumnNullValue> {
+  class IndexedIterator : public BaseIndexedIterator<IndexedIterator, ColumnNullValue> {
    public:
     using NullValueVector = tbb::concurrent_vector<bool>;
 
    public:
-    explicit ReferencedIterator(const NullValueVector& null_values, const ChunkOffsetsIterator& chunk_offsets_it)
-        : BaseReferencedIterator<ReferencedIterator, ColumnNullValue>{chunk_offsets_it},
+    explicit IndexedIterator(const NullValueVector& null_values, const ChunkOffsetsIterator& chunk_offsets_it)
+        : BaseIndexedIterator<IndexedIterator, ColumnNullValue>{chunk_offsets_it},
           _null_values{null_values} {}
 
    private:

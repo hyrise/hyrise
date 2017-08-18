@@ -20,8 +20,8 @@ class AttributeVectorIterable {
   template <typename Functor>
   void execute_for_all(const Functor& func) const {
     if (_mapped_chunk_offsets != nullptr) {
-      auto begin = ReferencedIterator{_attribute_vector, _mapped_chunk_offsets->cbegin()};
-      auto end = ReferencedIterator{_attribute_vector, _mapped_chunk_offsets->cend()};
+      auto begin = IndexedIterator{_attribute_vector, _mapped_chunk_offsets->cbegin()};
+      auto end = IndexedIterator{_attribute_vector, _mapped_chunk_offsets->cend()};
       func(begin, end);
       return;
     }
@@ -68,11 +68,11 @@ class AttributeVectorIterable {
     ChunkOffset _chunk_offset;
   };
 
-  class ReferencedIterator : public BaseReferencedIterator<ReferencedIterator, NullableColumnValue<ValueID>> {
+  class IndexedIterator : public BaseIndexedIterator<IndexedIterator, NullableColumnValue<ValueID>> {
    public:
-    explicit ReferencedIterator(const BaseAttributeVector& attribute_vector,
+    explicit IndexedIterator(const BaseAttributeVector& attribute_vector,
                                 const ChunkOffsetsIterator& chunk_offsets_it)
-        : BaseReferencedIterator<ReferencedIterator, NullableColumnValue<ValueID>>{chunk_offsets_it},
+        : BaseIndexedIterator<IndexedIterator, NullableColumnValue<ValueID>>{chunk_offsets_it},
           _attribute_vector{attribute_vector} {}
 
    private:

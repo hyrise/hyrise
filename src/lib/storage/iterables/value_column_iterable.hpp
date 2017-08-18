@@ -48,14 +48,14 @@ class ValueColumnIterable {
     }
 
     if (_column.is_nullable()) {
-      auto begin = NullableReferencedIterator{_column.values(), _column.null_values(), _mapped_chunk_offsets->cbegin()};
-      auto end = NullableReferencedIterator{_column.values(), _column.null_values(), _mapped_chunk_offsets->cend()};
+      auto begin = NullableIndexedIterator{_column.values(), _column.null_values(), _mapped_chunk_offsets->cbegin()};
+      auto end = NullableIndexedIterator{_column.values(), _column.null_values(), _mapped_chunk_offsets->cend()};
       func(begin, end);
       return;
     }
 
-    auto begin = ReferencedIterator{_column.values(), _mapped_chunk_offsets->cbegin()};
-    auto end = ReferencedIterator{_column.values(), _mapped_chunk_offsets->cend()};
+    auto begin = IndexedIterator{_column.values(), _mapped_chunk_offsets->cbegin()};
+    auto end = IndexedIterator{_column.values(), _mapped_chunk_offsets->cend()};
     func(begin, end);
     return;
   }
@@ -135,13 +135,13 @@ class ValueColumnIterable {
     NullValueIterator _null_value_it;
   };
 
-  class ReferencedIterator : public BaseReferencedIterator<ReferencedIterator, ColumnValue<T>> {
+  class IndexedIterator : public BaseIndexedIterator<IndexedIterator, ColumnValue<T>> {
    public:
     using ValueVector = tbb::concurrent_vector<T>;
 
    public:
-    explicit ReferencedIterator(const ValueVector& values, const ChunkOffsetsIterator& chunk_offsets_it)
-        : BaseReferencedIterator<ReferencedIterator, ColumnValue<T>>{chunk_offsets_it},
+    explicit IndexedIterator(const ValueVector& values, const ChunkOffsetsIterator& chunk_offsets_it)
+        : BaseIndexedIterator<IndexedIterator, ColumnValue<T>>{chunk_offsets_it},
           _values{values} {}
 
    private:
@@ -153,15 +153,15 @@ class ValueColumnIterable {
     const ValueVector& _values;
   };
 
-  class NullableReferencedIterator : public BaseReferencedIterator<NullableReferencedIterator, NullableColumnValue<T>> {
+  class NullableIndexedIterator : public BaseIndexedIterator<NullableIndexedIterator, NullableColumnValue<T>> {
    public:
     using ValueVector = tbb::concurrent_vector<T>;
     using NullValueVector = tbb::concurrent_vector<bool>;
 
    public:
-    explicit NullableReferencedIterator(const ValueVector& values, const NullValueVector& null_values,
+    explicit NullableIndexedIterator(const ValueVector& values, const NullValueVector& null_values,
                                         const ChunkOffsetsIterator& chunk_offsets_it)
-        : BaseReferencedIterator<NullableReferencedIterator, NullableColumnValue<T>>{chunk_offsets_it},
+        : BaseIndexedIterator<NullableIndexedIterator, NullableColumnValue<T>>{chunk_offsets_it},
           _values{values},
           _null_values{null_values} {}
 

@@ -30,10 +30,10 @@ using BaseIterator = boost::iterator_facade<Derived, Value, boost::forward_trave
  *
  * Example Usage
  *
- * class Iterator : public BaseReferencedIterator<Iterator, Value> {
+ * class Iterator : public BaseIndexedIterator<Iterator, Value> {
  *  public:
  *   Iterator(const ChunkOffsetIterator& chunk_offset_it)
- *       : BaseReferencedIterator<Iterator, Value>{chunk_offset_it} {}
+ *       : BaseIndexedIterator<Iterator, Value>{chunk_offset_it} {}
  *
  *  private:
  *   friend class boost::iterator_core_access;  // the following methods need to be accessible by the base class
@@ -42,9 +42,9 @@ using BaseIterator = boost::iterator_facade<Derived, Value, boost::forward_trave
  * };
  */
 template <typename Derived, typename Value>
-class BaseReferencedIterator : public BaseIterator<Derived, Value> {
+class BaseIndexedIterator : public BaseIterator<Derived, Value> {
  public:
-  explicit BaseReferencedIterator(const ChunkOffsetsIterator& chunk_offsets_it) : _chunk_offsets_it{chunk_offsets_it} {}
+  explicit BaseIndexedIterator(const ChunkOffsetsIterator& chunk_offsets_it) : _chunk_offsets_it{chunk_offsets_it} {}
 
  protected:
   /**
@@ -61,7 +61,7 @@ class BaseReferencedIterator : public BaseIterator<Derived, Value> {
   friend class boost::iterator_core_access;
 
   void increment() { ++_chunk_offsets_it; }
-  bool equal(const BaseReferencedIterator & other) const { return (_chunk_offsets_it == other._chunk_offsets_it); }
+  bool equal(const BaseIndexedIterator & other) const { return (_chunk_offsets_it == other._chunk_offsets_it); }
 
  private:
   ChunkOffsetsIterator _chunk_offsets_it;

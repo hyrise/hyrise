@@ -39,8 +39,8 @@ class DictionaryColumnIterable {
       return;
     }
 
-    auto begin = ReferencedIterator{*_column.dictionary(), *_column.attribute_vector(), _mapped_chunk_offsets->cbegin()};
-    auto end = ReferencedIterator{*_column.dictionary(), *_column.attribute_vector(), _mapped_chunk_offsets->cend()};
+    auto begin = IndexedIterator{*_column.dictionary(), *_column.attribute_vector(), _mapped_chunk_offsets->cbegin()};
+    auto end = IndexedIterator{*_column.dictionary(), *_column.attribute_vector(), _mapped_chunk_offsets->cend()};
     func(begin, end);
   }
 
@@ -87,14 +87,14 @@ class DictionaryColumnIterable {
     ChunkOffset _chunk_offset;
   };
 
-  class ReferencedIterator : public BaseReferencedIterator<ReferencedIterator, NullableColumnValue<T>> {
+  class IndexedIterator : public BaseIndexedIterator<IndexedIterator, NullableColumnValue<T>> {
    public:
     using Dictionary = std::vector<T>;
 
    public:
-    explicit ReferencedIterator(const Dictionary& dictionary, const BaseAttributeVector& attribute_vector,
+    explicit IndexedIterator(const Dictionary& dictionary, const BaseAttributeVector& attribute_vector,
                                 const ChunkOffsetsIterator& chunk_offsets_it)
-        : BaseReferencedIterator<ReferencedIterator, NullableColumnValue<T>>{chunk_offsets_it},
+        : BaseIndexedIterator<IndexedIterator, NullableColumnValue<T>>{chunk_offsets_it},
           _dictionary{dictionary},
           _attribute_vector{attribute_vector} {}
 
