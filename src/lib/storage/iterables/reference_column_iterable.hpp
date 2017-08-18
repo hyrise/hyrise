@@ -35,7 +35,7 @@ class ReferenceColumnIterable {
   void execute_for_all(const Functor &func) const {
     execute_for_all_no_mapping(func);
   }
- 
+
  private:
   const ReferenceColumn &_column;
 
@@ -51,7 +51,7 @@ class ReferenceColumnIterable {
 
    private:
     friend class boost::iterator_core_access;
-  
+
     void increment() { ++_pos_list_it; }
 
     bool equal(const Iterator &other) const { return _pos_list_it == other._pos_list_it; }

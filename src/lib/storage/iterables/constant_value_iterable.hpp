@@ -28,7 +28,7 @@ class ConstantValueIterable {
   const T _value;
 
  private:
-  class Iterator : public BaseIterator<Iterator, ColumnValue<T>>  {
+  class Iterator : public BaseIterator<Iterator, ColumnValue<T>> {
    public:
     explicit Iterator(const T& value) : _value{value} {}
 
@@ -36,7 +36,7 @@ class ConstantValueIterable {
     friend class boost::iterator_core_access;
 
     void increment() {}
-    bool equal(const Iterator &other) const { return _value == other._value; }
+    bool equal(const Iterator& other) const { return _value == other._value; }
     ColumnValue<T> dereference() const { return ColumnValue<T>{_value, 0u}; }
 
    private:

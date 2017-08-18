@@ -19,8 +19,7 @@ class ValueColumnIterable {
   using Type = ValueColumnIterableType;
 
  public:
-  ValueColumnIterable(const ValueColumn<T>& column,
-                      const ChunkOffsetsList* mapped_chunk_offsets = nullptr)
+  ValueColumnIterable(const ValueColumn<T>& column, const ChunkOffsetsList* mapped_chunk_offsets = nullptr)
       : _column{column}, _mapped_chunk_offsets{mapped_chunk_offsets} {}
 
   template <typename Functor>
@@ -93,7 +92,7 @@ class ValueColumnIterable {
     friend class boost::iterator_core_access;
 
     void increment() { ++_value_it; }
-    bool equal(const Iterator & other) const { return _value_it == other._value_it; }
+    bool equal(const Iterator& other) const { return _value_it == other._value_it; }
 
     ColumnValue<T> dereference() const {
       return ColumnValue<T>{*_value_it, static_cast<ChunkOffset>(std::distance(_begin_value_it, _value_it))};
@@ -117,12 +116,12 @@ class ValueColumnIterable {
    private:
     friend class boost::iterator_core_access;
 
-    void increment() { 
+    void increment() {
       ++_value_it;
-      ++_null_value_it; 
+      ++_null_value_it;
     }
 
-    bool equal(const NullableIterator & other) const { return _value_it == other._value_it; }
+    bool equal(const NullableIterator& other) const { return _value_it == other._value_it; }
 
     NullableColumnValue<T> dereference() const {
       return NullableColumnValue<T>{*_value_it, *_null_value_it,
@@ -141,13 +140,14 @@ class ValueColumnIterable {
 
    public:
     explicit IndexedIterator(const ValueVector& values, const ChunkOffsetsIterator& chunk_offsets_it)
-        : BaseIndexedIterator<IndexedIterator, ColumnValue<T>>{chunk_offsets_it},
-          _values{values} {}
+        : BaseIndexedIterator<IndexedIterator, ColumnValue<T>>{chunk_offsets_it}, _values{values} {}
 
    private:
     friend class boost::iterator_core_access;
 
-    ColumnValue<T> dereference() const { return ColumnValue<T>{_values[this->index_into_referenced()], this->index_of_referencing()}; }
+    ColumnValue<T> dereference() const {
+      return ColumnValue<T>{_values[this->index_into_referenced()], this->index_of_referencing()};
+    }
 
    private:
     const ValueVector& _values;
@@ -160,14 +160,14 @@ class ValueColumnIterable {
 
    public:
     explicit NullableIndexedIterator(const ValueVector& values, const NullValueVector& null_values,
-                                        const ChunkOffsetsIterator& chunk_offsets_it)
+                                     const ChunkOffsetsIterator& chunk_offsets_it)
         : BaseIndexedIterator<NullableIndexedIterator, NullableColumnValue<T>>{chunk_offsets_it},
           _values{values},
           _null_values{null_values} {}
 
    private:
     friend class boost::iterator_core_access;
-    
+
     NullableColumnValue<T> dereference() const {
       return NullableColumnValue<T>{_values[this->index_into_referenced()], _null_values[this->index_into_referenced()],
                                     this->index_of_referencing()};

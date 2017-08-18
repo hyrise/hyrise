@@ -10,13 +10,12 @@
 
 #include "types.hpp"
 
-
 namespace opossum {
 
 class NullValueVectorIterable {
  public:
   NullValueVectorIterable(const tbb::concurrent_vector<bool>& null_values,
-                               const ChunkOffsetsList* mapped_chunk_offsets = nullptr)
+                          const ChunkOffsetsList* mapped_chunk_offsets = nullptr)
       : _null_values{null_values}, _mapped_chunk_offsets{mapped_chunk_offsets} {}
 
   template <typename Functor>
@@ -57,11 +56,11 @@ class NullValueVectorIterable {
     friend class boost::iterator_core_access;
 
     void increment() { ++_null_value_it; }
-    bool equal(const Iterator &other) const { return _null_value_it == other._null_value_it; }
+    bool equal(const Iterator& other) const { return _null_value_it == other._null_value_it; }
 
     ColumnNullValue dereference() const {
       return ColumnNullValue{*_null_value_it,
-                                 static_cast<ChunkOffset>(std::distance(_begin_null_value_it, _null_value_it))};
+                             static_cast<ChunkOffset>(std::distance(_begin_null_value_it, _null_value_it))};
     }
 
    private:
@@ -75,14 +74,14 @@ class NullValueVectorIterable {
 
    public:
     explicit IndexedIterator(const NullValueVector& null_values, const ChunkOffsetsIterator& chunk_offsets_it)
-        : BaseIndexedIterator<IndexedIterator, ColumnNullValue>{chunk_offsets_it},
-          _null_values{null_values} {}
+        : BaseIndexedIterator<IndexedIterator, ColumnNullValue>{chunk_offsets_it}, _null_values{null_values} {}
 
    private:
     friend class boost::iterator_core_access;
 
     ColumnNullValue dereference() const {
-      if (this->index_into_referenced() == INVALID_CHUNK_OFFSET) return ColumnNullValue{true, this->index_of_referencing()};
+      if (this->index_into_referenced() == INVALID_CHUNK_OFFSET)
+        return ColumnNullValue{true, this->index_of_referencing()};
 
       return ColumnNullValue{_null_values[this->index_into_referenced()], this->index_of_referencing()};
     }

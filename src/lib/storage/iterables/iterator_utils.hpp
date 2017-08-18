@@ -1,7 +1,6 @@
 #pragma once
 
-# include <boost/iterator/iterator_facade.hpp>
-
+#include <boost/iterator/iterator_facade.hpp>
 
 namespace opossum {
 
@@ -61,7 +60,7 @@ class BaseIndexedIterator : public BaseIterator<Derived, Value> {
   friend class boost::iterator_core_access;
 
   void increment() { ++_chunk_offsets_it; }
-  bool equal(const BaseIndexedIterator & other) const { return (_chunk_offsets_it == other._chunk_offsets_it); }
+  bool equal(const BaseIndexedIterator& other) const { return (_chunk_offsets_it == other._chunk_offsets_it); }
 
  private:
   ChunkOffsetsIterator _chunk_offsets_it;

@@ -12,7 +12,6 @@ namespace opossum {
 
 class AttributeVectorIterable {
  public:
-
   AttributeVectorIterable(const BaseAttributeVector& attribute_vector,
                           const ChunkOffsetsList* mapped_chunk_offsets = nullptr)
       : _attribute_vector{attribute_vector}, _mapped_chunk_offsets{mapped_chunk_offsets} {}
@@ -50,6 +49,7 @@ class AttributeVectorIterable {
    public:
     explicit Iterator(const BaseAttributeVector& attribute_vector, ChunkOffset chunk_offset)
         : _attribute_vector{attribute_vector}, _chunk_offset{chunk_offset} {}
+
    private:
     friend class boost::iterator_core_access;
 
@@ -70,8 +70,7 @@ class AttributeVectorIterable {
 
   class IndexedIterator : public BaseIndexedIterator<IndexedIterator, NullableColumnValue<ValueID>> {
    public:
-    explicit IndexedIterator(const BaseAttributeVector& attribute_vector,
-                                const ChunkOffsetsIterator& chunk_offsets_it)
+    explicit IndexedIterator(const BaseAttributeVector& attribute_vector, const ChunkOffsetsIterator& chunk_offsets_it)
         : BaseIndexedIterator<IndexedIterator, NullableColumnValue<ValueID>>{chunk_offsets_it},
           _attribute_vector{attribute_vector} {}
 

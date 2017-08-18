@@ -19,8 +19,7 @@ class DictionaryColumnIterable {
   using Type = DictionaryColumnIterableType;
 
  public:
-  DictionaryColumnIterable(const DictionaryColumn<T>& column,
-                           const ChunkOffsetsList* mapped_chunk_offsets = nullptr)
+  DictionaryColumnIterable(const DictionaryColumn<T>& column, const ChunkOffsetsList* mapped_chunk_offsets = nullptr)
       : _column{column}, _mapped_chunk_offsets{mapped_chunk_offsets} {}
 
   template <typename Functor>
@@ -70,7 +69,7 @@ class DictionaryColumnIterable {
     friend class boost::iterator_core_access;
 
     void increment() { ++_chunk_offset; }
-    bool equal(const Iterator & other) const { return _chunk_offset == other._chunk_offset; }
+    bool equal(const Iterator& other) const { return _chunk_offset == other._chunk_offset; }
 
     NullableColumnValue<T> dereference() const {
       const auto value_id = _attribute_vector.get(_chunk_offset);
@@ -93,7 +92,7 @@ class DictionaryColumnIterable {
 
    public:
     explicit IndexedIterator(const Dictionary& dictionary, const BaseAttributeVector& attribute_vector,
-                                const ChunkOffsetsIterator& chunk_offsets_it)
+                             const ChunkOffsetsIterator& chunk_offsets_it)
         : BaseIndexedIterator<IndexedIterator, NullableColumnValue<T>>{chunk_offsets_it},
           _dictionary{dictionary},
           _attribute_vector{attribute_vector} {}

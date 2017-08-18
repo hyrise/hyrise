@@ -4,6 +4,11 @@
 
 namespace opossum {
 
+/**
+ * @defgroup Values returned by iterators from iterables
+ * @{
+ */
+
 template <typename T>
 class ColumnValue {
  public:
@@ -46,5 +51,7 @@ class ColumnNullValue {
   const bool _null_value;
   const ChunkOffset _chunk_offset;
 };
+
+/**@}*/
 
 }  // namespace opossum
