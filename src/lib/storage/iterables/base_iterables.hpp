@@ -23,6 +23,21 @@ namespace opossum {
  * no indices (i.e. a ChunkOffsetsList) have been passed, get_iterators_no_indices
  * can be used. This method won’t instantiate the lambda for indexed iterators, hence,
  * reduces code size.
+ *
+ *
+ * Example Usage
+ *
+ * auto iterable = ValueColumnIterable<int>{value_column};
+ * iterable.get_iterators([&](auto it, auto end) {
+ *   for (; it != end; ++it) {
+ *     auto value = *it;
+ *     
+ *     if (value.is_null()) { ... }
+ *     
+ *     consume(value.value());
+ *   }
+ * });
+ *
  */
 template <typename Derived>
 class BaseIterable {
