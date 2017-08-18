@@ -282,7 +282,7 @@ class SingleColumnScan : public SingleColumnScanBase {
 
     attribute_vector_iterable.get_iterators([&](auto left_it, auto left_end) {
       constant_value_iterable.get_iterators([&](auto right_it, auto right_end) {
-        _resolve_scan_type([&](auto comparator) {
+        this->_resolve_scan_type([&](auto comparator) {
           Scan{chunk_id, matches_out}(comparator, left_it, left_end, right_it);  // NOLINT
         });
       });
@@ -472,7 +472,7 @@ class NullColumnScan : public SingleColumnScanBase {
     auto left_column_iterable =
         NullValueVectorIterable{left_column.null_values(), context->_mapped_chunk_offsets.get()};
 
-    left_column_iterable.get_iterators([&](auto left_it, auto left_end) { _scan(left_it, left_end, *context); });
+    left_column_iterable.get_iterators([&](auto left_it, auto left_end) { this->_scan(left_it, left_end, *context); });
   }
 
   void handle_dictionary_column(BaseColumn &base_column,
@@ -483,7 +483,7 @@ class NullColumnScan : public SingleColumnScanBase {
     auto left_column_iterable =
         AttributeVectorIterable{*left_column.attribute_vector(), context->_mapped_chunk_offsets.get()};
 
-    left_column_iterable.get_iterators([&](auto left_it, auto left_end) { _scan(left_it, left_end, *context); });
+    left_column_iterable.get_iterators([&](auto left_it, auto left_end) { this->_scan(left_it, left_end, *context); });
   }
 
  private:
