@@ -40,7 +40,8 @@ class ValueColumnIterable : public BaseIndexableIterable<ValueColumnIterable<T>>
   template <typename Functor>
   void _on_get_iterators_with_indices(const Functor& f) const {
     if (_column.is_nullable()) {
-      auto begin = NullableIndexedIterator{_column.values(), _column.null_values(), this->_mapped_chunk_offsets->cbegin()};
+      auto begin =
+          NullableIndexedIterator{_column.values(), _column.null_values(), this->_mapped_chunk_offsets->cbegin()};
       auto end = NullableIndexedIterator{_column.values(), _column.null_values(), this->_mapped_chunk_offsets->cend()};
       f(begin, end);
     } else {

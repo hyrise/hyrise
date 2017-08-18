@@ -8,29 +8,27 @@
 
 #include "types.hpp"
 
-
 namespace opossum {
 
 /**
  * @brief base class of all iterables
  *
- * Implements the two methods get_iterators and get_iterators_no_indices, 
+ * Implements the two methods get_iterators and get_iterators_no_indices,
  * which both accept a generic lambda (or similar) and call this lambda
  * passing a begin and end iterator to the underlying data structure
- * as parameters. Depending on this data structure, the generic lambda 
+ * as parameters. Depending on this data structure, the generic lambda
  * may be instantiated for not one but many sets of iterators. For example,
  * the data structure might be accessed via a list of indices or might be
  * nullable or non-nullable.
  *
  * This results in a large amount of code. In cases where one is certain that
- * no indices (i.e. a ChunkOffsetsList) has been passed, get_iterators_no_indices
+ * no indices (i.e. a ChunkOffsetsList) have been passed, get_iterators_no_indices
  * can be used. This method won’t instantiate the lambda for indexed iterators, hence,
- * reducing code size.
+ * reduces code size.
  */
 template <typename Derived>
 class BaseIterable {
  public:
-
   /**
    * @param f is a generic lambda accepting to iterators as parameters
    */
@@ -38,7 +36,7 @@ class BaseIterable {
   void get_iterators(const Functor& f) {
     self()._on_get_iterators(f);
   }
-  
+
   /**
    * Does the same as get_iterators but is needed for a specialization
    * in BaseIndexableIterable
@@ -51,7 +49,7 @@ class BaseIterable {
   }
 
  private:
-  const Derived& self() const { return static_cast<const Derived &>(*this); }
+  const Derived& self() const { return static_cast<const Derived&>(*this); }
 };
 
 /**
@@ -71,20 +69,19 @@ class BaseIndexableIterable {
       self()._on_get_iterators_with_indices(f);
     }
   }
-  
+
   template <typename Functor>
   void get_iterators_no_indices(const Functor& f) const {
-    DebugAssert(_mapped_chunk_offsets == nullptr, "Mapped chunk offsets must be a nullptr.");  
+    DebugAssert(_mapped_chunk_offsets == nullptr, "Mapped chunk offsets must be a nullptr.");
 
     self()._on_get_iterators_without_indices(f);
   }
 
  protected:
   const ChunkOffsetsList* _mapped_chunk_offsets;
-  
- private:
-  const Derived& self() const { return static_cast<const Derived &>(*this); }
-};
 
+ private:
+  const Derived& self() const { return static_cast<const Derived&>(*this); }
+};
 
 }  // namespace opossum

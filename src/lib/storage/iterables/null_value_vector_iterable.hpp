@@ -15,8 +15,7 @@ class NullValueVectorIterable : public BaseIndexableIterable<NullValueVectorIter
  public:
   NullValueVectorIterable(const tbb::concurrent_vector<bool>& null_values,
                           const ChunkOffsetsList* mapped_chunk_offsets = nullptr)
-      : BaseIndexableIterable<NullValueVectorIterable>{mapped_chunk_offsets},
-        _null_values{null_values} {}
+      : BaseIndexableIterable<NullValueVectorIterable>{mapped_chunk_offsets}, _null_values{null_values} {}
 
   template <typename Functor>
   void _on_get_iterators_without_indices(const Functor& f) const {

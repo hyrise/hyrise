@@ -30,7 +30,8 @@ class DictionaryColumnIterable : public BaseIndexableIterable<DictionaryColumnIt
 
   template <typename Functor>
   void _on_get_iterators_with_indices(const Functor& f) const {
-    auto begin = IndexedIterator{*_column.dictionary(), *_column.attribute_vector(), this->_mapped_chunk_offsets->cbegin()};
+    auto begin =
+        IndexedIterator{*_column.dictionary(), *_column.attribute_vector(), this->_mapped_chunk_offsets->cbegin()};
     auto end = IndexedIterator{*_column.dictionary(), *_column.attribute_vector(), this->_mapped_chunk_offsets->cend()};
     f(begin, end);
   }
