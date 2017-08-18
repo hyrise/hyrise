@@ -153,20 +153,29 @@ std::shared_ptr<TableStatistics> TableStatistics::join_statistics(
 
   ColumnID new_right_column_id{_column_statistics.size() + column_ids->second};
 
-  float left_null_value_no =
-      right_col_stats->distinct_count() - stats_container.second_column_statistics->distinct_count();
-  float right_null_value_no = left_col_stats->distinct_count() - stats_container.column_statistics->distinct_count();
+  float left_null_value_no = (1.f - right_col_stats->non_null_value_ratio()) * right_stats->_row_count;
+  if (right_col_stats->distinct_count() != 0.f) {
+    left_null_value_no +=
+        (1.f - stats_container.second_column_statistics->distinct_count() / right_col_stats->distinct_count()) *
+        right_stats->row_count();
+  }
+  float right_null_value_no = (1.f - left_col_stats->non_null_value_ratio()) * _row_count;
+  if (left_col_stats->distinct_count() != 0.f) {
+    right_null_value_no +=
+        (1.f - stats_container.column_statistics->distinct_count() / left_col_stats->distinct_count()) * row_count();
+  }
 
   auto apply_left_outer = [&]() {
     if (right_null_value_no == 0) {
       return;
     }
     // adjust null value ratios in columns of right side
-    float right_non_null_value_ratio = 1.f - right_null_value_no / clone->row_count();
     for (auto col_itr = clone->_column_statistics.begin() + _column_statistics.size();
          col_itr != clone->_column_statistics.end(); ++col_itr) {
       *col_itr = (*col_itr)->clone();
-      (*col_itr)->apply_non_null_value_ratio(right_non_null_value_ratio);
+      float column_null_value_no = (1.f - (*col_itr)->non_null_value_ratio()) * right_stats->_row_count;
+      float right_non_null_value_ratio = 1.f - (column_null_value_no + right_null_value_no) / clone->row_count();
+      (*col_itr)->set_non_null_value_ratio(right_non_null_value_ratio);
     }
   };
   auto apply_right_outer = [&]() {
@@ -174,11 +183,12 @@ std::shared_ptr<TableStatistics> TableStatistics::join_statistics(
       return;
     }
     // adjust null value ratios in columns of left side
-    float left_non_null_value_ratio = 1.f - left_null_value_no / clone->row_count();
     for (auto col_itr = clone->_column_statistics.begin();
          col_itr != clone->_column_statistics.begin() + _column_statistics.size(); ++col_itr) {
       *col_itr = (*col_itr)->clone();
-      (*col_itr)->apply_non_null_value_ratio(left_non_null_value_ratio);
+      float column_null_value_no = (1.f - (*col_itr)->non_null_value_ratio()) * _row_count;
+      float left_non_null_value_ratio = 1.f - (column_null_value_no + left_null_value_no) / clone->row_count();
+      (*col_itr)->set_non_null_value_ratio(left_non_null_value_ratio);
     }
   };
 

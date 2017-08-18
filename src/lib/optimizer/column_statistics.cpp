@@ -313,6 +313,8 @@ TwoColumnSelectivityResult ColumnStatistics<ColumnType>::estimate_selectivity_fo
     equal_values_ratio = right_overlapping_ratio / distinct_count();
   }
 
+  float combined_non_null_ratio = _non_null_value_ratio * right_stats->_non_null_value_ratio;
+
   // used for <, <=, > and >= scan_types
   auto estimate_selectivity_for_open_ended_operators = [&](float values_below_ratio, float values_above_ratio,
                                                            ColumnType new_min, ColumnType new_max,
@@ -334,7 +336,7 @@ TwoColumnSelectivityResult ColumnStatistics<ColumnType>::estimate_selectivity_fo
     auto new_left_column_stats = create_column_stats_for_range_predicate(new_min, new_max).column_statistics;
     auto new_right_column_stats =
         right_stats->create_column_stats_for_range_predicate(new_min, new_max).column_statistics;
-    return {_non_null_value_ratio * selectivity, new_left_column_stats, new_right_column_stats};
+    return {combined_non_null_ratio * selectivity, new_left_column_stats, new_right_column_stats};
   };
 
   switch (scan_type) {
@@ -345,13 +347,13 @@ TwoColumnSelectivityResult ColumnStatistics<ColumnType>::estimate_selectivity_fo
           std::make_shared<ColumnStatistics>(_column_id, overlapping_distinct_count, common_min, common_max);
       auto new_right_column_stats = std::make_shared<ColumnStatistics>(
           right_stats->_column_id, overlapping_distinct_count, common_min, common_max);
-      return {equal_values_ratio, new_left_column_stats, new_right_column_stats};
+      return {combined_non_null_ratio * equal_values_ratio, new_left_column_stats, new_right_column_stats};
     }
     case ScanType::OpNotEquals: {
       auto new_left_column_stats = std::make_shared<ColumnStatistics>(_column_id, distinct_count(), min(), max());
       auto new_right_column_stats = std::make_shared<ColumnStatistics>(
           right_stats->_column_id, right_stats->distinct_count(), right_stats->min(), right_stats->max());
-      return {1.f - equal_values_ratio, new_left_column_stats, new_right_column_stats};
+      return {combined_non_null_ratio * (1.f - equal_values_ratio), new_left_column_stats, new_right_column_stats};
     }
     case ScanType::OpLessThan: {
       return estimate_selectivity_for_open_ended_operators(left_below, right_above, min(), right_stats->max(), false);
@@ -366,7 +368,7 @@ TwoColumnSelectivityResult ColumnStatistics<ColumnType>::estimate_selectivity_fo
       return estimate_selectivity_for_open_ended_operators(right_below, left_above, right_stats->min(), max(), true);
     }
     // case ScanType::OpBetween is not supported for ColumnName as TableScan does not support this
-    default: { return {_non_null_value_ratio, nullptr, nullptr}; }
+    default: { return {combined_non_null_ratio, nullptr, nullptr}; }
   }
 }
 
@@ -378,7 +380,9 @@ TwoColumnSelectivityResult ColumnStatistics<std::string>::estimate_selectivity_f
     const ScanType scan_type, const std::shared_ptr<BaseColumnStatistics> &right_base_column_statistics,
     const optional<AllTypeVariant> &value2) {
   // TODO(anybody) implement special case for strings
-  return {_non_null_value_ratio, nullptr, nullptr};
+  auto right_stats = std::dynamic_pointer_cast<ColumnStatistics<std::string>>(right_base_column_statistics);
+  DebugAssert(right_stats != nullptr, "Cannot compare columns of different type");
+  return {_non_null_value_ratio * right_stats->_non_null_value_ratio, nullptr, nullptr};
 }
 
 template <typename ColumnType>
