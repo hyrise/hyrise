@@ -47,7 +47,7 @@ void resolve_type(const std::string &type, const Functor &func) {
  *   });
  *
  * @param type is a string representation of any of the supported column types
- * @param func is generic lambda or similar accepting two paramters: a hana::type object and
+ * @param func is generic lambda or similar accepting two parameters: a hana::type object and
  *   a reference to a specialized column (value, dictionary, reference)
  */
 template <typename Functor>
@@ -59,7 +59,7 @@ void resolve_column_type(const std::string &type, BaseColumn &column, const Func
       using Type = typename decltype(+hana::second(x))::type;
 
       struct Context : public ColumnVisitableContext {
-        Context(const Functor &f) : func{f} {}
+        explicit Context(const Functor &f) : func{f} {}
         const Functor &func;
       };
 

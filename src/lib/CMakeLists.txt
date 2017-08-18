@@ -221,10 +221,12 @@ set(
     storage/index/group_key/variable_length_key_store.cpp
     storage/index/group_key/variable_length_key_store.hpp
     storage/iterables/attribute_vector_iterable.hpp
+    storage/iterables/base_iterables.hpp
+    storage/iterables/base_iterators.hpp
     storage/iterables/column_value.hpp
     storage/iterables/constant_value_iterable.hpp
     storage/iterables/dictionary_column_iterable.hpp
-    storage/iterables/null_value_iterables.hpp
+    storage/iterables/null_value_vector_iterable.hpp
     storage/iterables/reference_column_iterable.hpp
     storage/iterables/value_column_iterable.hpp
     storage/reference_column.cpp
