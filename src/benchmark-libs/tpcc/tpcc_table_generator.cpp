@@ -421,6 +421,11 @@ std::map<std::string, std::shared_ptr<opossum::Table>> TpccTableGenerator::gener
                                                                  {"NEW-ORDER", std::move(new_order_table)}});
 }
 
+/*
+ * This was introduced originally for the SQL REPL Console to be able to
+ * a) generate a TPC-C table by table name (e.g. ITEM, WAREHOUSE), and
+ * b) have all available table names browsable for the Console auto completion.
+ */
 TpccTableGeneratorFunctions TpccTableGenerator::tpcc_table_generator_functions() {
   TpccTableGeneratorFunctions generators{
       {"ITEM", []() { return tpcc::TpccTableGenerator().generate_items_table(); }},
