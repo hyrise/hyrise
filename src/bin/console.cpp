@@ -227,7 +227,7 @@ int Console::load_tpcc(const std::string& tablename) {
 
 char** Console::command_completion(const char* text, int start, int end) {
   char** completion_matches = nullptr;
-  rl_completion_suppress_append = 1;
+  rl_completion_append_character = '\0';
   rl_attempted_completion_over = 1;
   if (start == 0) {
     completion_matches = rl_completion_matches(text, &Console::command_generator);
