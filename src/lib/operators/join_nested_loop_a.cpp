@@ -463,11 +463,11 @@ class JoinNestedLoopA::JoinNestedLoopAImpl : public AbstractJoinOperatorImpl {
           auto pos_list_right = std::make_shared<PosList>();
 
           pos_list_left->emplace_back(elem.first);
-          pos_list_right->emplace_back(RowID{ChunkID{0}, INVALID_CHUNK_OFFSET});
+          pos_list_right->emplace_back(NULL_ROW_ID);
 
           auto output_chunk = Chunk();
 
-          write_output_chunks(output_chunk, _left_in_table, elem.first.chunk_id, pos_list_left);
+          write_output_chunks(output_chunk, _left_in_table, elem.first.chunk_id, pos_list_left, false);
           write_output_chunks(output_chunk, _right_in_table, elem.first.chunk_id, pos_list_right, true);
 
           _output_table->add_chunk(std::move(output_chunk));
@@ -480,13 +480,13 @@ class JoinNestedLoopA::JoinNestedLoopAImpl : public AbstractJoinOperatorImpl {
           auto pos_list_left = std::make_shared<PosList>();
           auto pos_list_right = std::make_shared<PosList>();
 
-          pos_list_left->emplace_back(RowID{ChunkID{0}, INVALID_CHUNK_OFFSET});
+          pos_list_left->emplace_back(NULL_ROW_ID);
           pos_list_right->emplace_back(elem.first);
 
           auto output_chunk = Chunk();
 
-          write_output_chunks(output_chunk, _left_in_table, elem.first.chunk_id, pos_list_left);
-          write_output_chunks(output_chunk, _right_in_table, elem.first.chunk_id, pos_list_right, true);
+          write_output_chunks(output_chunk, _left_in_table, elem.first.chunk_id, pos_list_left, true);
+          write_output_chunks(output_chunk, _right_in_table, elem.first.chunk_id, pos_list_right, false);
 
           _output_table->add_chunk(std::move(output_chunk));
         }
@@ -500,9 +500,8 @@ class JoinNestedLoopA::JoinNestedLoopAImpl : public AbstractJoinOperatorImpl {
   This method writes the actual output chunks for either the Left or the Right side. It'll write ReferenceColumns for
   all the columns of the input table. The way we currently handle null values forces us to pass in whether there are
   null values in this poslist:
-  Null values are represented by a RowID following the following scheme: RowID{SomeChunkID, INVALID_CHUNK_OFFSET}. When
-  we write the null values for (Left/Right) Outer Joins we simply use a ChunkID=0, which does not necessarily need to
-  exist. Thus we cannot be sure to find an actual column in the input table for that ChunkID.
+  When we write the null values for (Left/Right) Outer Joins we simply use a ChunkID=0, which does not necessarily need
+  to exist. Thus we cannot be sure to find an actual column in the input table for that ChunkID.
   Additionally, we think that the implementation of null values is not final yet and a proper implementation of null
   values might require changes here.
   */
@@ -517,6 +516,7 @@ class JoinNestedLoopA::JoinNestedLoopAImpl : public AbstractJoinOperatorImpl {
       if (null_value) {
         column = std::make_shared<ReferenceColumn>(input_table, column_id, pos_list);
       } else {
+        DebugAssert(chunk_id < input_table->chunk_count(), "Chunk id out of range");
         if (auto ref_col_left =
                 std::dynamic_pointer_cast<ReferenceColumn>(input_table->get_chunk(chunk_id).get_column(column_id))) {
           auto new_pos_list = std::make_shared<PosList>();
