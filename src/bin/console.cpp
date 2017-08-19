@@ -4,12 +4,12 @@
 
 #include <readline/history.h>
 #include <readline/readline.h>
+#include <ctime>
+#include <iomanip>
 #include <iostream>
 #include <memory>
 #include <string>
 #include <vector>
-#include <ctime>
-#include <iomanip>
 
 #include "operators/print.hpp"
 #include "sql/sql_query_translator.hpp"
@@ -18,6 +18,7 @@
 
 namespace {
 
+// Returns a string containing a timestamp of the current date and time
 std::string current_timestamp() {
   auto t = std::time(nullptr);
   auto tm = *std::localtime(&t);
@@ -26,7 +27,7 @@ std::string current_timestamp() {
   oss << std::put_time(&tm, "%Y-%m-%d %H:%M:%S");
   return oss.str();
 }
-}
+}  // namespace
 
 namespace opossum {
 
@@ -151,7 +152,7 @@ int Console::_eval_sql(const std::string& sql) {
   // Execute query plan
   try {
     for (const auto& task : plan.tasks()) {
-      task->get_operator()->execute(); 
+      task->get_operator()->execute();
     }
   } catch (const std::exception& exception) {
     out("Exception thrown while executing query plan:\n  " + std::string(exception.what()) + "\n");
@@ -173,7 +174,9 @@ Console::RegisteredCommands Console::commands() { return _commands; }
 
 void Console::setPrompt(const std::string& prompt) { _prompt = prompt; }
 
-void Console::setLogfile(const std::string& logfile) { _log = std::ofstream(logfile, std::ios_base::app | std::ios_base::out); }
+void Console::setLogfile(const std::string& logfile) {
+  _log = std::ofstream(logfile, std::ios_base::app | std::ios_base::out);
+}
 
 void Console::out(const std::string& output, bool console_print) {
   if (console_print) {
@@ -273,7 +276,8 @@ int main(int argc, char** argv) {
   console.out("--- Session start --- " + current_timestamp() + "\n", false);
 
   console.out("HYRISE SQL Interface\n");
-  console.out("Enter 'load' to load the TPC-C tables. Then, you can enter SQL queries. Type 'help' for more information.\n\n");
+  console.out("Enter 'load' to load the TPC-C tables. Then, you can enter SQL queries.\n");
+  console.out("Type 'help' for more information.\n\n");
 
   // Main REPL loop
   int retCode;

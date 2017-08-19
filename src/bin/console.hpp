@@ -23,7 +23,7 @@ class Console {
 
   enum ReturnCode { Multiline = -2, Quit = -1, Ok = 0, Error = 1 };
 
-  static Console& get();
+  static Console &get();
 
   /*
    * Prompts user for one line of input, evaluates the given input, and prints out the result.

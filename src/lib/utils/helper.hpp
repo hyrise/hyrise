@@ -3,6 +3,7 @@
 #include <tbb/tbb.h>
 
 #include <memory>
+#include <utility>
 
 namespace opossum {
 
