@@ -1,21 +1,33 @@
 #include "console.hpp"
 
+#include <boost/algorithm/string/trim.hpp>
+
 #include <readline/history.h>
 #include <readline/readline.h>
 #include <iostream>
 #include <memory>
 #include <string>
 #include <vector>
+#include <ctime>
+#include <iomanip>
 
 #include "operators/print.hpp"
 #include "sql/sql_query_translator.hpp"
 #include "storage/storage_manager.hpp"
 #include "tpcc/tpcc_table_generator.hpp"
-#include "utils/helper.hpp"
 
 namespace {
 
 opossum::Console* _instance = nullptr;
+
+std::string current_timestamp() {
+  auto t = std::time(nullptr);
+  auto tm = *std::localtime(&t);
+
+  std::ostringstream oss;
+  oss << std::put_time(&tm, "%Y-%m-%d %H:%M:%S");
+  return oss.str();
+}
 }
 
 namespace opossum {
@@ -49,12 +61,12 @@ Console::Console(const std::string& prompt, const std::string& log_file)
   _instance = this;
 
   // Timestamp dump only to logfile
-  out("--- Session start --- " + time_stamp() + "\n", false);
+  out("--- Session start --- " + current_timestamp() + "\n", false);
 }
 
 Console::~Console() {
   // Timestamp dump only to logfile
-  out("--- Session end --- " + time_stamp() + "\n", false);
+  out("--- Session end --- " + current_timestamp() + "\n", false);
   _instance = nullptr;
 }
 
@@ -63,7 +75,8 @@ int Console::read() {
 
   // Prompt user for input
   buffer = readline(_prompt.c_str());
-  std::string input = trim(std::string(buffer));
+  std::string input(buffer);
+  boost::algorithm::trim<std::string>(input);
 
   // Only save non-empty commands to history
   if (!input.empty()) {
