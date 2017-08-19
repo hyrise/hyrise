@@ -18,8 +18,6 @@
 
 namespace {
 
-opossum::Console* _instance = nullptr;
-
 std::string current_timestamp() {
   auto t = std::time(nullptr);
   auto tm = *std::localtime(&t);
@@ -34,13 +32,13 @@ namespace opossum {
 
 // Console implementation
 
-Console::Console(const std::string& prompt, const std::string& log_file)
-    : _prompt(prompt),
+Console::Console()
+    : _prompt("> "),
       _multiline_input(""),
       _commands(),
       _commands_completion(),
       _out(std::cout.rdbuf()),
-      _log(log_file, std::ios_base::app | std::ios_base::out) {
+      _log("console.log", std::ios_base::app | std::ios_base::out) {
   // Init readline basics, tells readline to use our custom command completion function
   rl_attempted_completion_function = &Console::command_completion;
   rl_completer_word_break_characters = const_cast<char*>("\t\n\"\\'`@$><=;|&{(");
@@ -57,17 +55,11 @@ Console::Console(const std::string& prompt, const std::string& log_file)
   for (tpcc::TpccTableGeneratorFunctions::iterator it = tpcc_generators.begin(); it != tpcc_generators.end(); ++it) {
     _commands_completion.push_back("load " + it->first);
   }
-
-  _instance = this;
-
-  // Timestamp dump only to logfile
-  out("--- Session start --- " + current_timestamp() + "\n", false);
 }
 
-Console::~Console() {
-  // Timestamp dump only to logfile
-  out("--- Session end --- " + current_timestamp() + "\n", false);
-  _instance = nullptr;
+Console& Console::get() {
+  static Console instance;
+  return instance;
 }
 
 int Console::read() {
@@ -181,7 +173,7 @@ Console::RegisteredCommands Console::commands() { return _commands; }
 
 void Console::setPrompt(const std::string& prompt) { _prompt = prompt; }
 
-std::string Console::prompt() const { return _prompt; }
+void Console::setLogfile(const std::string& logfile) { _log = std::ofstream(logfile, std::ios_base::app | std::ios_base::out); }
 
 void Console::out(const std::string& output, bool console_print) {
   if (console_print) {
@@ -201,23 +193,23 @@ void Console::out(std::shared_ptr<const Table> table) {
 int Console::exit(const std::string&) { return Console::ReturnCode::Quit; }
 
 int Console::help(const std::string&) {
-  _instance->out("HYRISE SQL Interface\n\n");
-  _instance->out("Available commands:\n");
-  _instance->out("  load [TABLENAME] - Load available TPC-C tables, or a specific table if TABLENAME is specified\n");
-  _instance->out("  exit             - Exit the HYRISE Console\n");
-  _instance->out("  quit             - Exit the HYRISE Console\n");
-  _instance->out("  help             - Show this message\n\n");
-  _instance->out("After TPC-C tables are loaded, SQL queries can be executed.\n");
-  _instance->out("Example:\n");
-  _instance->out("SELECT * FROM DISTRICT\n");
+  auto& console = Console::get();
+  console.out("HYRISE SQL Interface\n\n");
+  console.out("Available commands:\n");
+  console.out("  load [TABLENAME] - Load available TPC-C tables, or a specific table if TABLENAME is specified\n");
+  console.out("  exit             - Exit the HYRISE Console\n");
+  console.out("  quit             - Exit the HYRISE Console\n");
+  console.out("  help             - Show this message\n\n");
+  console.out("After TPC-C tables are loaded, SQL queries can be executed.\n");
+  console.out("Example:\n");
+  console.out("SELECT * FROM DISTRICT\n");
   return Console::ReturnCode::Ok;
 }
 
-// HYRISE SQL Interface
-// Enter load to load the TPC-C tables. Then, you can enter SQL queries. Type help for more information.
 int Console::load_tpcc(const std::string& tablename) {
+  auto& console = Console::get();
   if (tablename.empty() || "ALL" == tablename) {
-    _instance->out("Generating TPCC tables (this might take a while) ...\n");
+    console.out("Generating TPCC tables (this might take a while) ...\n");
     auto tables = tpcc::TpccTableGenerator().generate_all_tables();
     for (auto& pair : tables) {
       StorageManager::get().add_table(pair.first, pair.second);
@@ -225,10 +217,10 @@ int Console::load_tpcc(const std::string& tablename) {
     return Console::ReturnCode::Ok;
   }
 
-  _instance->out("Generating TPCC table: \"" + tablename + "\" ...\n");
+  console.out("Generating TPCC table: \"" + tablename + "\" ...\n");
   auto table = tpcc::TpccTableGenerator::generate_tpcc_table(tablename);
   if (table == nullptr) {
-    _instance->out("Error: No TPCC table named \"" + tablename + "\" available.\n");
+    console.out("Error: No TPCC table named \"" + tablename + "\" available.\n");
     return Console::ReturnCode::Error;
   }
 
@@ -250,7 +242,7 @@ char** Console::command_completion(const char* text, int start, int end) {
 
 char* Console::command_generator(const char* text, int state) {
   static std::vector<std::string>::iterator it;
-  auto& commands = _instance->_commands_completion;
+  auto& commands = Console::get()._commands_completion;
   if (state == 0) {
     it = commands.begin();
   }
@@ -272,7 +264,13 @@ char* Console::command_generator(const char* text, int state) {
 int main(int argc, char** argv) {
   using Return = opossum::Console::ReturnCode;
 
-  opossum::Console console("> ", "./console.log");
+  auto& console = opossum::Console::get();
+
+  console.setPrompt("> ");
+  console.setLogfile("console.log");
+
+  // Timestamp dump only to logfile
+  console.out("--- Session start --- " + current_timestamp() + "\n", false);
 
   console.out("HYRISE SQL Interface\n");
   console.out("Enter 'load' to load the TPC-C tables. Then, you can enter SQL queries. Type 'help' for more information.\n\n");
@@ -290,4 +288,7 @@ int main(int argc, char** argv) {
   }
 
   console.out("Bye.\n");
+
+  // Timestamp dump only to logfile
+  console.out("--- Session end --- " + current_timestamp() + "\n", false);
 }

@@ -23,8 +23,7 @@ class Console {
 
   enum ReturnCode { Multiline = -2, Quit = -1, Ok = 0, Error = 1 };
 
-  explicit Console(const std::string &prompt = "> ", const std::string &log_file = "console.log");
-  ~Console();
+  static Console& get();
 
   /*
    * Prompts user for one line of input, evaluates the given input, and prints out the result.
@@ -42,8 +41,15 @@ class Console {
   void register_command(const std::string &name, const CommandFunction &f);
   RegisteredCommands commands();
 
+  /*
+   * Set prompt which is shown at the beginning of each line.
+   */
   void setPrompt(const std::string &prompt);
-  std::string prompt() const;
+
+  /*
+   * Set logfile path.
+   */
+  void setLogfile(const std::string &logfile);
 
   /*
    * Prints to the log_file (and the console).
@@ -55,6 +61,11 @@ class Console {
   void out(std::shared_ptr<const Table> table);
 
  protected:
+  /*
+   * Non-public constructor, since Console is a Singleton.
+   */
+  Console();
+
   /*
    * Evaluates given input string. Calls either _eval_command or _eval_sql.
    */
