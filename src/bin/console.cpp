@@ -144,8 +144,13 @@ int Console::_eval_sql(const std::string& sql) {
   plan = translator.get_query_plan();
 
   // Execute query plan
-  for (const auto& task : plan.tasks()) {
-    task->get_operator()->execute();
+  try {
+    for (const auto& task : plan.tasks()) {
+      task->get_operator()->execute(); 
+    }
+  } catch (const std::exception& exception) {
+    out("Exception thrown while executing query plan:\n  " + std::string(exception.what()) + "\n");
+    return ReturnCode::Error;
   }
 
   // Print result (to Console and logfile)
