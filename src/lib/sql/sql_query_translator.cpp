@@ -192,7 +192,7 @@ bool SQLQueryTranslator::_translate_filter_expr(const hsql::Expr& expr,
 
 bool SQLQueryTranslator::_translate_projection(const std::vector<hsql::Expr*>& expr_list,
                                                const std::shared_ptr<AbstractOperator>& input_op) {
-  std::vector<std::string> columns;
+  Projection::ColumnExpressions column_expressions;
   for (const Expr* expr : expr_list) {
     // At this moment we only support selecting columns in the projection.
     if (!expr->isType(hsql::kExprColumnRef) && !expr->isType(hsql::kExprStar) &&
@@ -202,20 +202,21 @@ bool SQLQueryTranslator::_translate_projection(const std::vector<hsql::Expr*>& e
     }
 
     if (expr->isType(hsql::kExprStar)) {
-      columns.push_back("*");
+      column_expressions.emplace_back(ExpressionNode::create_select_star());
       continue;
     }
 
-    columns.push_back(_get_column_name(*expr));
+    column_expressions.emplace_back(ExpressionNode::create_column_reference(_get_column_name(*expr)));
   }
 
   // If only * is selected, no projection operator is needed.
-  if (columns.size() == 1 && columns[0].compare("*") == 0) {
+  if (column_expressions.size() == 1 && column_expressions.front()->type() == ExpressionType::Star) {
     return true;
   }
 
-  auto projection = std::make_shared<Projection>(input_op, columns);
+  auto projection = std::make_shared<Projection>(input_op, column_expressions);
   _current_root = projection;
+
   return true;
 }
 

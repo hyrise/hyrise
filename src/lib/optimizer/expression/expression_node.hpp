@@ -42,24 +42,35 @@ class ExpressionNode : public std::enable_shared_from_this<ExpressionNode> {
    */
   ExpressionNode(const ExpressionType type, const AllTypeVariant& value,
                  const std::vector<std::shared_ptr<ExpressionNode>>& expression_list, const std::string& name,
-                 const std::string& table, const optional<std::string>& alias = nullopt);
+                 const std::string& table, const optional<std::string>& alias = {});
 
   /*
    * Factory Methods to create Expressions of specific type
    */
   static std::shared_ptr<ExpressionNode> create_expression(const ExpressionType type);
 
-  static std::shared_ptr<ExpressionNode> create_column_reference(const std::string& table_name,
-                                                                 const std::string& column_name,
-                                                                 const optional<std::string>& alias = nullopt);
+  static std::shared_ptr<ExpressionNode> create_column_reference(const std::string& column_name,
+                                                                 const std::string& table_name = "",
+                                                                 const optional<std::string>& alias = {});
 
-  static std::shared_ptr<ExpressionNode> create_literal(const AllTypeVariant& value);
+  /**
+   * A literal can have an alias in order to allow queries like `SELECT 1 as one FROM t`.
+   */
+  static std::shared_ptr<ExpressionNode> create_literal(const AllTypeVariant& value,
+                                                        const optional<std::string>& alias = {});
 
   static std::shared_ptr<ExpressionNode> create_parameter(const AllTypeVariant& value);
 
   static std::shared_ptr<ExpressionNode> create_function_reference(
       const std::string& function_name, const std::vector<std::shared_ptr<ExpressionNode>>& expression_list,
-      const optional<std::string>& alias = nullopt);
+      const optional<std::string>& alias);
+
+  static std::shared_ptr<ExpressionNode> create_binary_operator(ExpressionType type,
+                                                                const std::shared_ptr<ExpressionNode>& left,
+                                                                const std::shared_ptr<ExpressionNode>& right,
+                                                                const optional<std::string>& alias = {});
+
+  static std::shared_ptr<ExpressionNode> create_select_star();
 
   /*
    * Helper methods for Expression Trees
@@ -84,6 +95,9 @@ class ExpressionNode : public std::enable_shared_from_this<ExpressionNode> {
   // Is +, -, * (arithmetic usage, not SELECT * FROM), /, %, ^
   bool is_arithmetic_operator() const;
 
+  // Returns true if the expression requires two children.
+  bool is_binary_operator() const;
+
   /*
    * Getters
    */
@@ -97,7 +111,7 @@ class ExpressionNode : public std::enable_shared_from_this<ExpressionNode> {
 
   const std::vector<std::shared_ptr<ExpressionNode>>& expression_list() const;
 
-  // Expression as string, parse-able by Projection
+  // Expression as string
   std::string to_expression_string() const;
 
  private:

@@ -28,7 +28,7 @@ std::shared_ptr<ExpressionNode> SQLExpressionTranslator::translate_expression(co
       break;
     }
     case hsql::kExprColumnRef:
-      node = ExpressionNode::create_column_reference(table_name, name, alias);
+      node = ExpressionNode::create_column_reference(name, table_name, alias);
       break;
     case hsql::kExprFunctionRef: {
       // TODO(mp): Parse Function name to Aggregate Function

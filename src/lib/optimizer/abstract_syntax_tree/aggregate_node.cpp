@@ -26,7 +26,7 @@ AggregateNode::AggregateNode(const std::vector<AggregateColumnDefinition>& aggre
     } else {
       // If the aggregate function has no alias defined in the query, we simply name it like the function.
       // This might result in multiple output columns with the same name, but Postgres is doing things the same way.
-      DebugAssert(aggregate.expr->type() == ExpressionType::FunctionReference, "Expression must be a function.");
+      DebugAssert(aggregate.expr->type() == ExpressionType::FunctionIdentifier, "Expression must be a function.");
       alias = aggregate.expr->name();
     }
 

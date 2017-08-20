@@ -37,8 +37,6 @@ set(
     operators/sort_test.cpp
     operators/table_scan_like_test.cpp
     operators/table_scan_test.cpp
-    operators/termfactory_test.cpp
-    operators/term_test.cpp
     operators/union_all_test.cpp
     operators/update_test.cpp
     operators/validate_test.cpp
@@ -86,7 +84,6 @@ set (
 set(
     LIBRARIES
     gtest
-    tpcc
 )
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
@@ -107,7 +104,7 @@ set_target_properties(opossumAsan PROPERTIES COMPILE_FLAGS "-fsanitize=address -
 
 # Configure opossumTestTPCC
 add_executable(opossumTestTPCC ${TPCC_TEST_SOURCES})
-target_link_libraries(opossumTestTPCC opossum ${LIBRARIES})
+target_link_libraries(opossumTestTPCC opossum ${LIBRARIES} tpcc)
 
 
 
