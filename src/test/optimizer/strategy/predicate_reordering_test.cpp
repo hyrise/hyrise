@@ -57,7 +57,7 @@ TEST_F(PredicateReorderingTest, SimpleReorderingTest) {
   stored_table_node->set_statistics(statistics_mock);
 
   auto greater_than_expression_0 = ExpressionNode::create_expression(ExpressionType::GreaterThan);
-  auto column_reference_expression_0 = ExpressionNode::create_column_reference("a", "c1");
+  auto column_reference_expression_0 = ExpressionNode::create_column_reference("c1");
   auto literal_expression_0 = ExpressionNode::create_literal(10);
   greater_than_expression_0->set_left_child(column_reference_expression_0);
   greater_than_expression_0->set_right_child(literal_expression_0);
@@ -66,7 +66,7 @@ TEST_F(PredicateReorderingTest, SimpleReorderingTest) {
   predicate_node_0->set_left_child(stored_table_node);
 
   auto greater_than_expression_1 = ExpressionNode::create_expression(ExpressionType::GreaterThan);
-  auto column_reference_expression_1 = ExpressionNode::create_column_reference("a", "c2");
+  auto column_reference_expression_1 = ExpressionNode::create_column_reference("c2");
   auto literal_expression_1 = ExpressionNode::create_literal(50);
   greater_than_expression_1->set_left_child(column_reference_expression_1);
   greater_than_expression_1->set_right_child(literal_expression_1);
@@ -92,7 +92,7 @@ TEST_F(PredicateReorderingTest, MoreComplexReorderingTest) {
   stored_table_node->set_statistics(statistics_mock);
 
   auto greater_than_expression_0 = ExpressionNode::create_expression(ExpressionType::GreaterThan);
-  auto column_reference_expression_0 = ExpressionNode::create_column_reference("a", "c1");
+  auto column_reference_expression_0 = ExpressionNode::create_column_reference("c1");
   auto literal_expression_0 = ExpressionNode::create_literal(10);
   greater_than_expression_0->set_left_child(column_reference_expression_0);
   greater_than_expression_0->set_right_child(literal_expression_0);
@@ -101,7 +101,7 @@ TEST_F(PredicateReorderingTest, MoreComplexReorderingTest) {
   predicate_node_0->set_left_child(stored_table_node);
 
   auto greater_than_expression_1 = ExpressionNode::create_expression(ExpressionType::GreaterThan);
-  auto column_reference_expression_1 = ExpressionNode::create_column_reference("a", "c2");
+  auto column_reference_expression_1 = ExpressionNode::create_column_reference("c2");
   auto literal_expression_1 = ExpressionNode::create_literal(50);
   greater_than_expression_1->set_left_child(column_reference_expression_1);
   greater_than_expression_1->set_right_child(literal_expression_1);
@@ -110,7 +110,7 @@ TEST_F(PredicateReorderingTest, MoreComplexReorderingTest) {
   predicate_node_1->set_left_child(predicate_node_0);
 
   auto greater_than_expression_2 = ExpressionNode::create_expression(ExpressionType::GreaterThan);
-  auto column_reference_expression_2 = ExpressionNode::create_column_reference("a", "c3");
+  auto column_reference_expression_2 = ExpressionNode::create_column_reference("c3");
   auto literal_expression_2 = ExpressionNode::create_literal(90);
   greater_than_expression_2->set_left_child(column_reference_expression_2);
   greater_than_expression_2->set_right_child(literal_expression_2);
@@ -137,7 +137,7 @@ TEST_F(PredicateReorderingTest, ComplexReorderingTest) {
   stored_table_node->set_statistics(statistics_mock);
 
   auto greater_than_expression_0 = ExpressionNode::create_expression(ExpressionType::GreaterThan);
-  auto column_reference_expression_0 = ExpressionNode::create_column_reference("a", "c1");
+  auto column_reference_expression_0 = ExpressionNode::create_column_reference("c1");
   auto literal_expression_0 = ExpressionNode::create_literal(10);
   greater_than_expression_0->set_left_child(column_reference_expression_0);
   greater_than_expression_0->set_right_child(literal_expression_0);
@@ -146,7 +146,7 @@ TEST_F(PredicateReorderingTest, ComplexReorderingTest) {
   predicate_node_0->set_left_child(stored_table_node);
 
   auto greater_than_expression_1 = ExpressionNode::create_expression(ExpressionType::GreaterThan);
-  auto column_reference_expression_1 = ExpressionNode::create_column_reference("a", "c2");
+  auto column_reference_expression_1 = ExpressionNode::create_column_reference("c2");
   auto literal_expression_1 = ExpressionNode::create_literal(50);
   greater_than_expression_1->set_left_child(column_reference_expression_1);
   greater_than_expression_1->set_right_child(literal_expression_1);
@@ -155,7 +155,7 @@ TEST_F(PredicateReorderingTest, ComplexReorderingTest) {
   predicate_node_1->set_left_child(predicate_node_0);
 
   auto greater_than_expression_2 = ExpressionNode::create_expression(ExpressionType::GreaterThan);
-  auto column_reference_expression_2 = ExpressionNode::create_column_reference("a", "c3");
+  auto column_reference_expression_2 = ExpressionNode::create_column_reference("c3");
   auto literal_expression_2 = ExpressionNode::create_literal(90);
   greater_than_expression_2->set_left_child(column_reference_expression_2);
   greater_than_expression_2->set_right_child(literal_expression_2);
@@ -168,7 +168,7 @@ TEST_F(PredicateReorderingTest, ComplexReorderingTest) {
   projection_node->set_left_child(predicate_node_2);
 
   auto greater_than_expression_3 = ExpressionNode::create_expression(ExpressionType::GreaterThan);
-  auto column_reference_expression_3 = ExpressionNode::create_column_reference("a", "c1");
+  auto column_reference_expression_3 = ExpressionNode::create_column_reference("c1");
   auto literal_expression_3 = ExpressionNode::create_literal(10);
   greater_than_expression_3->set_left_child(column_reference_expression_3);
   greater_than_expression_3->set_right_child(literal_expression_3);
@@ -177,7 +177,7 @@ TEST_F(PredicateReorderingTest, ComplexReorderingTest) {
   predicate_node_3->set_left_child(projection_node);
 
   auto greater_than_expression_4 = ExpressionNode::create_expression(ExpressionType::GreaterThan);
-  auto column_reference_expression_4 = ExpressionNode::create_column_reference("a", "c2");
+  auto column_reference_expression_4 = ExpressionNode::create_column_reference("c2");
   auto literal_expression_4 = ExpressionNode::create_literal(90);
   greater_than_expression_4->set_left_child(column_reference_expression_4);
   greater_than_expression_4->set_right_child(literal_expression_4);
@@ -208,7 +208,7 @@ TEST_F(PredicateReorderingTest, TwoReorderings) {
   stored_table_node->set_statistics(statistics_mock);
 
   auto greater_than_expression_0 = ExpressionNode::create_expression(ExpressionType::GreaterThan);
-  auto column_reference_expression_0 = ExpressionNode::create_column_reference("a", "c1");
+  auto column_reference_expression_0 = ExpressionNode::create_column_reference("c1");
   auto literal_expression_0 = ExpressionNode::create_literal(10);
   greater_than_expression_0->set_left_child(column_reference_expression_0);
   greater_than_expression_0->set_right_child(literal_expression_0);
@@ -217,7 +217,7 @@ TEST_F(PredicateReorderingTest, TwoReorderings) {
   predicate_node_0->set_left_child(stored_table_node);
 
   auto greater_than_expression_1 = ExpressionNode::create_expression(ExpressionType::GreaterThan);
-  auto column_reference_expression_1 = ExpressionNode::create_column_reference("a", "c2");
+  auto column_reference_expression_1 = ExpressionNode::create_column_reference("c2");
   auto literal_expression_1 = ExpressionNode::create_literal(50);
   greater_than_expression_1->set_left_child(column_reference_expression_1);
   greater_than_expression_1->set_right_child(literal_expression_1);
@@ -229,7 +229,7 @@ TEST_F(PredicateReorderingTest, TwoReorderings) {
   sort_node->set_left_child(predicate_node_1);
 
   auto greater_than_expression_2 = ExpressionNode::create_expression(ExpressionType::GreaterThan);
-  auto column_reference_expression_2 = ExpressionNode::create_column_reference("a", "c3");
+  auto column_reference_expression_2 = ExpressionNode::create_column_reference("c3");
   auto literal_expression_2 = ExpressionNode::create_literal(90);
   greater_than_expression_2->set_left_child(column_reference_expression_2);
   greater_than_expression_2->set_right_child(literal_expression_2);
@@ -238,7 +238,7 @@ TEST_F(PredicateReorderingTest, TwoReorderings) {
   predicate_node_2->set_left_child(sort_node);
 
   auto greater_than_expression_3 = ExpressionNode::create_expression(ExpressionType::GreaterThan);
-  auto column_reference_expression_3 = ExpressionNode::create_column_reference("a", "c2");
+  auto column_reference_expression_3 = ExpressionNode::create_column_reference("c2");
   auto literal_expression_3 = ExpressionNode::create_literal(50);
   greater_than_expression_3->set_left_child(column_reference_expression_3);
   greater_than_expression_3->set_right_child(literal_expression_3);
@@ -274,13 +274,13 @@ TEST_F(PredicateReorderingTest, SameOrderingForStoredTable) {
 
   // Setup expressions
   auto less_than_expression = ExpressionNode::create_expression(ExpressionType::LessThan);
-  auto column_reference_expression_0 = ExpressionNode::create_column_reference("table_a", "a");
+  auto column_reference_expression_0 = ExpressionNode::create_column_reference("a");
   auto literal_expression_0 = ExpressionNode::create_literal(20);
   less_than_expression->set_left_child(column_reference_expression_0);
   less_than_expression->set_right_child(literal_expression_0);
 
   auto greater_than_expression = ExpressionNode::create_expression(ExpressionType::GreaterThan);
-  auto column_reference_expression_1 = ExpressionNode::create_column_reference("table_a", "b");
+  auto column_reference_expression_1 = ExpressionNode::create_column_reference("b");
   auto literal_expression_1 = ExpressionNode::create_literal(458.5);
   greater_than_expression->set_left_child(column_reference_expression_1);
   greater_than_expression->set_right_child(literal_expression_1);
