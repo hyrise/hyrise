@@ -25,7 +25,6 @@
 #include "tpcc/helper.hpp"
 
 #include "types.hpp"
-#include "utils/helper.hpp"
 
 namespace opossum {
 
