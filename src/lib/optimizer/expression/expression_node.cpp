@@ -26,12 +26,33 @@ std::shared_ptr<ExpressionNode> ExpressionNode::create_expression(const Expressi
   return std::make_shared<ExpressionNode>(type, NULL_VALUE, expr_list, "", "");
 }
 
-std::shared_ptr<ExpressionNode> ExpressionNode::create_column_reference(const std::string &column_name,
-                                                                        const std::string &table_name,
-                                                                        const optional<std::string> &alias) {
+std::shared_ptr<ExpressionNode> ExpressionNode::create_column_identifier(const std::string &column_name,
+                                                                         const std::string &table_name,
+                                                                         const optional<std::string> &alias) {
   const std::vector<std::shared_ptr<ExpressionNode>> expr_list;
   return std::make_shared<ExpressionNode>(ExpressionType::ColumnIdentifier, NULL_VALUE, expr_list, column_name,
                                           table_name, alias);
+}
+
+std::vector<std::shared_ptr<ExpressionNode>> ExpressionNode::create_column_identifiers(
+    const std::vector<std::string> &column_names, const std::vector<std::string> &aliases) {
+  std::vector<std::shared_ptr<ExpressionNode>> column_references;
+  column_references.reserve(column_names.size());
+
+  if (aliases.empty()) {
+    for (auto column_index = 0u; column_index < column_names.size(); ++column_index) {
+      column_references.emplace_back(create_column_identifier(column_names[column_index]));
+    }
+  } else {
+    DebugAssert(column_names.size() == aliases.size(),
+                "There must be the same number of aliases as ColumnIDs, or none at all.");
+
+    for (auto column_index = 0u; column_index < column_names.size(); ++column_index) {
+      column_references.emplace_back(create_column_identifier(column_names[column_index], aliases[column_index]));
+    }
+  }
+
+  return column_references;
 }
 
 std::shared_ptr<ExpressionNode> ExpressionNode::create_literal(const AllTypeVariant &value,
@@ -142,7 +163,7 @@ bool ExpressionNode::is_binary_operator() const {
 }
 
 bool ExpressionNode::is_operand() const {
-  return _type == ExpressionType::Literal || _type == ExpressionType::ColumnReference;
+  return _type == ExpressionType::Literal || _type == ExpressionType::ColumnIdentifier;
 }
 
 const std::string ExpressionNode::description() const {

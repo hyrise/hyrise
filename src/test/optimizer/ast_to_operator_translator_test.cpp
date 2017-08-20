@@ -74,13 +74,19 @@ TEST_F(ASTToOperatorTranslatorTest, PredicateNodeBinaryScan) {
 
 TEST_F(ASTToOperatorTranslatorTest, ProjectionNode) {
   const auto stored_table_node = std::make_shared<StoredTableNode>("table_int_float");
-  auto projection_node = std::make_shared<ProjectionNode>(std::vector<std::string>{"a"});
+  auto projection_node = std::make_shared<ProjectionNode>(
+      std::vector<std::shared_ptr<ExpressionNode>>{ExpressionNode::create_column_identifier("a")});
   projection_node->set_left_child(stored_table_node);
   const auto op = ASTToOperatorTranslator::get().translate_node(projection_node);
 
   const auto projection_op = std::dynamic_pointer_cast<Projection>(op);
   ASSERT_TRUE(projection_op);
-  EXPECT_EQ(projection_op->simple_projection(), std::vector<std::string>{"a"});
+
+  const auto column_expressions = projection_op->column_expressions();
+  ASSERT_EQ(column_expressions.size(), 1u);
+
+  const auto column_expression = column_expressions[0];
+  EXPECT_EQ(column_expression->type(), ExpressionType::ColumnIdentifier);
 }
 
 TEST_F(ASTToOperatorTranslatorTest, SortNode) {
@@ -116,8 +122,8 @@ TEST_F(ASTToOperatorTranslatorTest, JoinNode) {
 TEST_F(ASTToOperatorTranslatorTest, AggregateNodeNoArithmetics) {
   const auto stored_table_node = std::make_shared<StoredTableNode>("table_int_float");
 
-  auto sum_expression = ExpressionNode::create_function_reference(
-      "SUM", {ExpressionNode::create_column_reference("table_int_float", "a")}, {});
+  auto sum_expression =
+      ExpressionNode::create_function_reference("SUM", {ExpressionNode::create_column_identifier("a")}, {});
   auto aggregate_node =
       std::make_shared<AggregateNode>(std::vector<AggregateColumnDefinition>{AggregateColumnDefinition{
                                           sum_expression, optional<std::string>("sum_of_a")}},
@@ -141,7 +147,7 @@ TEST_F(ASTToOperatorTranslatorTest, AggregateNodeWithArithmetics) {
   const auto stored_table_node = std::make_shared<StoredTableNode>("table_int_float");
 
   // Create expression "b * 2".
-  const auto expr_col_b = ExpressionNode::create_column_reference("table_int_float", "b");
+  const auto expr_col_b = ExpressionNode::create_column_identifier("b");
   const auto expr_literal = ExpressionNode::create_literal(2);
   const auto expr_multiplication = ExpressionNode::create_expression(ExpressionType::Multiplication);
   expr_multiplication->set_left_child(expr_col_b);
@@ -181,20 +187,18 @@ TEST_F(ASTToOperatorTranslatorTest, AggregateNodeWithArithmetics) {
   const auto projection_op = std::dynamic_pointer_cast<const Projection>(left_op);
   ASSERT_TRUE(projection_op);
 
-  const auto projection_definitions = projection_op->projection_definitions();
-  ASSERT_EQ(projection_definitions.size(), 1u);
+  const auto column_expressions = projection_op->column_expressions();
+  ASSERT_EQ(column_expressions.size(), 1u);
 
-  const auto projection_definition = projection_definitions[0];
-  EXPECT_EQ(projection_definition.expression, "$b*2");
-  EXPECT_EQ(projection_definition.type, "float");
-  EXPECT_EQ(projection_definition.name, "alias0");
+  const auto column_expression = column_expressions[0];
+  EXPECT_EQ(column_expression->type(), ExpressionType::Multiplication);
 }
 
 TEST_F(ASTToOperatorTranslatorTest, AggregateNodeAliasUnique) {
   const auto stored_table_node = std::make_shared<StoredTableNode>("table_alias_name");
 
   // Create expression "a * 2".
-  const auto expr_col_a = ExpressionNode::create_column_reference("table_alias_name", "a");
+  const auto expr_col_a = ExpressionNode::create_column_identifier("a");
   const auto expr_literal = ExpressionNode::create_literal(2);
   const auto expr_multiplication = ExpressionNode::create_expression(ExpressionType::Multiplication);
   expr_multiplication->set_left_child(expr_col_a);
@@ -227,13 +231,11 @@ TEST_F(ASTToOperatorTranslatorTest, AggregateNodeAliasUnique) {
   const auto projection_op = std::dynamic_pointer_cast<const Projection>(left_op);
   ASSERT_TRUE(projection_op);
 
-  const auto projection_definitions = projection_op->projection_definitions();
+  const auto projection_definitions = projection_op->column_expressions();
   ASSERT_EQ(projection_definitions.size(), 1u);
 
   const auto projection_definition = projection_definitions[0];
-  EXPECT_EQ(projection_definition.expression, "$a*2");
-  EXPECT_EQ(projection_definition.type, "float");
-  EXPECT_EQ(projection_definition.name, "alias1");
+  EXPECT_EQ(projection_definition->type(), ExpressionType::Multiplication);
 }
 
 TEST_F(ASTToOperatorTranslatorTest, MultipleNodesHierarchy) {

@@ -8,16 +8,23 @@
 
 namespace opossum {
 
+class ExpressionNode;
+
 /**
  * Node type to represent common projections, i.e. without any aggregate functionality.
  */
 class ProjectionNode : public AbstractASTNode {
  public:
-  explicit ProjectionNode(const std::vector<std::string>& column_names);
+  explicit ProjectionNode(const std::vector<std::shared_ptr<ExpressionNode>>& column_expressions);
 
   std::string description() const override;
 
   std::vector<std::string> output_column_names() const override;
+
+  const std::vector<std::shared_ptr<ExpressionNode>> column_expressions() const;
+
+ protected:
+  std::vector<std::shared_ptr<ExpressionNode>> _column_expressions;
 };
 
 }  // namespace opossum

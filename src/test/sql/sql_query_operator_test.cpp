@@ -50,6 +50,7 @@ TEST_F(SQLQueryOperatorTest, BasicTest) {
   EXPECT_TABLE_EQ(sql_result_task->get_operator()->get_output(), expected_result);
 }
 
+// TODO(mp): Fix with upcoming ColumnIDs
 TEST_F(SQLQueryOperatorTest, ComplexQueryTest) {
   const std::string query =
       "SELECT \"left\".a, \"left\".b, \"right\".a, \"right\".b FROM table_a AS \"left\" INNER JOIN table_b AS "

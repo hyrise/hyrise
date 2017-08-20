@@ -18,6 +18,7 @@
 #include "optimizer/abstract_syntax_tree/predicate_node.hpp"
 #include "optimizer/abstract_syntax_tree/sort_node.hpp"
 #include "optimizer/abstract_syntax_tree/stored_table_node.hpp"
+#include "projection_node.hpp"
 
 namespace opossum {
 
@@ -66,7 +67,8 @@ std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::_translate_predicate_
 std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::_translate_projection_node(
     const std::shared_ptr<AbstractASTNode> &node) const {
   const auto input_operator = translate_node(node->left_child());
-  return std::make_shared<Projection>(input_operator, node->output_column_names());
+  const auto projection_node = std::dynamic_pointer_cast<ProjectionNode>(node);
+  return std::make_shared<Projection>(input_operator, projection_node->column_expressions());
 }
 
 std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::_translate_sort_node(
@@ -115,8 +117,10 @@ std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::_translate_aggregate_
   std::vector<std::string> expr_aliases;
   expr_aliases.reserve(aggregates.size());
 
-  Projection::ProjectionDefinitions definitions;
-  definitions.reserve(aggregates.size());
+  //  Projection::ProjectionDefinitions definitions;
+  //  definitions.reserve(aggregates.size());
+
+  Projection::ColumnExpressions expressions;
 
   auto alias_index = 0;
 
@@ -125,14 +129,14 @@ std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::_translate_aggregate_
 
   for (const auto &aggregate : aggregates) {
     const auto &expr = aggregate.expr;
-    DebugAssert(expr->type() == ExpressionType::FunctionReference, "Expression is not a function.");
+    DebugAssert(expr->type() == ExpressionType::FunctionIdentifier, "Expression is not a function.");
 
     const auto &function_arg_expr = (expr->expression_list())[0];
 
     if (function_arg_expr->is_operand()) {
       // TODO(tim): column data type is not always float
       // TODO(tim): check if this can be done prettier
-      definitions.emplace_back(function_arg_expr->name(), "float", function_arg_expr->name());
+      //      definitions.emplace_back(function_arg_expr->name(), "float", function_arg_expr->name());
       expr_aliases.emplace_back(function_arg_expr->name());
     } else if (function_arg_expr->is_arithmetic_operator()) {
       need_projection = true;
@@ -152,7 +156,8 @@ std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::_translate_aggregate_
       }
 
       // TODO(tim): column data type is not always float
-      definitions.emplace_back(function_arg_expr->to_expression_string(), "float", alias);
+      //      definitions.emplace_back(function_arg_expr->to_expression_string(), "float", alias);
+      expressions.emplace_back(function_arg_expr);
       expr_aliases.emplace_back(alias);
     } else {
       Fail("Expression is neither operand nor arithmetic expre.");
@@ -160,7 +165,7 @@ std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::_translate_aggregate_
   }
 
   if (need_projection) {
-    out_operator = std::make_shared<Projection>(out_operator, definitions);
+    out_operator = std::make_shared<Projection>(out_operator, expressions);
   }
 
   /**
@@ -171,7 +176,7 @@ std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::_translate_aggregate_
   for (size_t aggregate_idx = 0; aggregate_idx < aggregates.size(); aggregate_idx++) {
     const auto &aggregate = aggregates[aggregate_idx];
 
-    DebugAssert(aggregate.expr->type() == ExpressionType::FunctionReference,
+    DebugAssert(aggregate.expr->type() == ExpressionType::FunctionIdentifier,
                 "Only functions are supported in Aggregates");
     const auto aggregate_function_type = aggregate_function_to_string.right.at(aggregate.expr->name());
 

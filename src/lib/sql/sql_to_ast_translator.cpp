@@ -1,6 +1,7 @@
 #include "sql_to_ast_translator.hpp"
 
 #include <memory>
+#include <operators/projection.hpp>
 #include <string>
 #include <unordered_map>
 #include <utility>
@@ -362,21 +363,25 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_aggregate(
 
 std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_projection(
     const std::vector<hsql::Expr*>& select_list, const std::shared_ptr<AbstractASTNode>& input_node) {
-  std::vector<std::string> columns;
-  for (const auto* expr : select_list) {
+  Projection::ColumnExpressions column_expressions;
+  for (const auto* hsql_expr : select_list) {
     // TODO(mp): expressions
-    if (expr->isType(hsql::kExprColumnRef)) {
-      columns.emplace_back(generate_column_name(*expr, true));
-    } else if (expr->isType(hsql::kExprStar)) {
-      // Resolve '*' by getting the output columns of the input node.
-      auto input_columns = input_node->output_column_names();
-      columns.insert(columns.end(), input_columns.begin(), input_columns.end());
+    const auto expression = SQLExpressionTranslator::translate_expression(*hsql_expr);
+
+    DebugAssert(expression->type() == ExpressionType::Star || expression->type() == ExpressionType::ColumnIdentifier ||
+                    expression->is_arithmetic_operator(),
+                "Only column references, star-selects, and arithmetic expressions supported for now.");
+
+    if (expression->type() == ExpressionType::Star) {
+      // Resolve `SELECT *` to columns.
+      const auto& column_references = ExpressionNode::create_column_identifiers(input_node->output_column_names());
+      column_expressions.insert(column_expressions.end(), column_references.cbegin(), column_references.cend());
     } else {
-      Fail("Projection only supports columns to be selected.");
+      column_expressions.emplace_back(expression);
     }
   }
 
-  auto projection_node = std::make_shared<ProjectionNode>(columns);
+  auto projection_node = std::make_shared<ProjectionNode>(column_expressions);
   projection_node->set_left_child(input_node);
 
   return projection_node;
