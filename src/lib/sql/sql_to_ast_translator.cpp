@@ -366,18 +366,7 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_projection(
   Projection::ColumnExpressions column_expressions;
   for (const auto* hsql_expr : select_list) {
     // TODO(mp): expressions
-    //    if ()
     const auto expression = SQLExpressionTranslator::translate_expression(*hsql_expr);
-    //    if (expr->isType(hsql::kExprColumnRef)) {
-    //      columns.emplace_back(generate_column_name(*expr, true));
-    //    } else if (expr->isType(hsql::kExprStar)) {
-    //      // Resolve '*' by getting the output columns of the input node.
-    //      auto input_columns = input_node->output_column_names();
-    //      columns.insert(columns.end(), input_columns.begin(), input_columns.end());
-    //    } else {
-    //      Fail("Projection only supports columns to be selected.");
-    //    }
-    //    column_expressions.emplace_back(expression);
 
     DebugAssert(expression->type() == ExpressionType::Star || expression->type() == ExpressionType::ColumnIdentifier ||
                     expression->is_arithmetic_operator(),

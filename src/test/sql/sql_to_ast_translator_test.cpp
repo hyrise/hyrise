@@ -58,7 +58,7 @@ TEST_F(SQLToASTTranslatorTest, SelectStarAllTest) {
   auto result_node = compile_query(query);
 
   std::vector<std::string> expected_columns{"a", "b"};
-  EXPECT_EQ(expected_columns, result_node->output_column_names());
+  EXPECT_EQ(result_node->output_column_names(), expected_columns);
 
   EXPECT_FALSE(result_node->right_child());
   EXPECT_FALSE(result_node->left_child()->left_child());

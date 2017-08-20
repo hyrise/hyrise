@@ -69,6 +69,10 @@ const std::string Projection::get_type_of_expression(const std::shared_ptr<Expre
     return type_string_from_all_type_variant(expression->value());
   }
   if (expression->type() == ExpressionType::ColumnIdentifier) {
+    // TODO(mp): fix with upcoming ColumnIDs
+    if (expression->table_name() != "") {
+      return table->column_type(table->column_id_by_name(expression->table_name() + "." + expression->name()));
+    }
     return table->column_type(table->column_id_by_name(expression->name()));
   }
 
