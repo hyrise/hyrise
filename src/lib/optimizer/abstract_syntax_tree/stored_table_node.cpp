@@ -26,9 +26,9 @@ StoredTableNode::StoredTableNode(const std::string& table_name, const optional<s
 
 std::string StoredTableNode::description() const { return "Table: " + _table_name; }
 
-std::vector<ColumnID> StoredTableNode::output_column_ids() const { return _output_column_ids; }
+const std::vector<ColumnID>& StoredTableNode::output_column_ids() const { return _output_column_ids; }
 
-std::vector<std::string> StoredTableNode::output_column_names() const { return _output_column_names; }
+const std::vector<std::string>& StoredTableNode::output_column_names() const { return _output_column_names; }
 
 const std::shared_ptr<TableStatistics> StoredTableNode::_gather_statistics() const {
   return StorageManager::get().get_table(_table_name)->table_statistics();
@@ -45,5 +45,7 @@ optional<ColumnID> StoredTableNode::find_column_id_for_column_identifier(
 bool StoredTableNode::manages_table(const std::string& table_name) const {
   return _alias == table_name || _table_name == table_name;
 }
+
+void StoredTableNode::_on_child_changed() { Fail("StoredTableNode cannot have children."); }
 
 }  // namespace opossum

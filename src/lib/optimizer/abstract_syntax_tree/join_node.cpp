@@ -35,44 +35,9 @@ std::string JoinNode::description() const {
   return desc.str();
 }
 
-std::vector<ColumnID> JoinNode::output_column_ids() const {
-  /**
-   * Collect the output ColumnIDs of the children on the fly, because the children might change.
-   */
-  DebugAssert(!!left_child() && !!right_child(), "JoinNode must have two children.");
+const std::vector<ColumnID> &JoinNode::output_column_ids() const { return _output_column_ids; }
 
-  std::vector<ColumnID> output_column_ids;
-
-  for (auto column_id : left_child()->output_column_ids()) {
-    output_column_ids.emplace_back(column_id);
-  }
-
-  // Incorporate the offset of the columns of the left table.
-  auto offset_column_id = left_child()->output_column_ids().size();
-  for (auto column_id : right_child()->output_column_ids()) {
-    output_column_ids.emplace_back(offset_column_id + column_id);
-  }
-
-  return output_column_ids;
-}
-
-std::vector<std::string> JoinNode::output_column_names() const {
-  /**
-   * Collect the output column names of the children on the fly, because the children might change.
-   */
-  DebugAssert(!!left_child() && !!right_child(), "JoinNode must have two children.");
-
-  const auto &left_names = left_child()->output_column_names();
-  const auto &right_names = right_child()->output_column_names();
-
-  std::vector<std::string> output_column_names;
-  output_column_names.reserve(left_names.size() + right_names.size());
-
-  output_column_names.insert(output_column_names.end(), left_names.begin(), left_names.end());
-  output_column_names.insert(output_column_names.end(), right_names.begin(), right_names.end());
-
-  return output_column_names;
-}
+const std::vector<std::string> &JoinNode::output_column_names() const { return _output_column_names; }
 
 optional<ColumnID> JoinNode::find_column_id_for_column_identifier(const ColumnIdentifier &column_identifier) const {
   DebugAssert(!!left_child() && !!right_child(), "JoinNode must have two children.");
@@ -124,5 +89,34 @@ optional<std::pair<ColumnID, ColumnID>> JoinNode::join_column_ids() const { retu
 ScanType JoinNode::scan_type() const { return _scan_type; }
 
 JoinMode JoinNode::join_mode() const { return _join_mode; }
+
+void JoinNode::_on_child_changed() {
+  // Only set output information if both children have already been set.
+  if (!left_child() || !right_child()) {
+    return;
+  }
+
+  /**
+   * Collect the output column names of the children on the fly, because the children might change.
+   */
+  const auto &left_names = left_child()->output_column_names();
+  const auto &right_names = right_child()->output_column_names();
+
+  _output_column_names.clear();
+  _output_column_names.reserve(left_names.size() + right_names.size());
+
+  _output_column_names.insert(_output_column_names.end(), left_names.begin(), left_names.end());
+  _output_column_names.insert(_output_column_names.end(), right_names.begin(), right_names.end());
+
+  /**
+   * Collect the output ColumnIDs of the children on the fly, because the children might change.
+   */
+  _output_column_ids.clear();
+  _output_column_ids.reserve(left_child()->output_column_ids().size() + right_child()->output_column_ids().size());
+
+  for (size_t column_idx = 0u; column_idx < _output_column_ids.capacity(); column_idx++) {
+    _output_column_ids.emplace_back(column_idx);
+  }
+}
 
 }  // namespace opossum

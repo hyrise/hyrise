@@ -37,6 +37,8 @@ const std::shared_ptr<AbstractASTNode> &AbstractASTNode::left_child() const { re
 void AbstractASTNode::set_left_child(const std::shared_ptr<AbstractASTNode> &left) {
   _left_child = left;
   if (left) left->_parent = shared_from_this();
+
+  _on_child_changed();
 }
 
 const std::shared_ptr<AbstractASTNode> &AbstractASTNode::right_child() const { return _right_child; }
@@ -46,6 +48,8 @@ void AbstractASTNode::set_right_child(const std::shared_ptr<AbstractASTNode> &ri
 
   _right_child = right;
   if (right) right->_parent = shared_from_this();
+
+  _on_child_changed();
 }
 
 ASTNodeType AbstractASTNode::type() const { return _type; }
@@ -76,7 +80,7 @@ const std::shared_ptr<TableStatistics> AbstractASTNode::_gather_statistics() con
   return get_statistics_from(_left_child);
 }
 
-std::vector<std::string> AbstractASTNode::output_column_names() const {
+const std::vector<std::string> &AbstractASTNode::output_column_names() const {
   /**
    * This function has to be overwritten if columns or their order are in any way redefined.
    * Examples include Projections, Aggregates, and Joins.
@@ -93,7 +97,7 @@ bool AbstractASTNode::has_output_column(const std::string &column_name) const {
   return std::find(column_names.begin(), column_names.end(), column_name) != column_names.end();
 }
 
-std::vector<ColumnID> AbstractASTNode::output_column_ids() const {
+const std::vector<ColumnID> &AbstractASTNode::output_column_ids() const {
   /**
    * This function has to be overwritten if columns or their order are in any way redefined.
    * Examples include Projections, Aggregates, and Joins.

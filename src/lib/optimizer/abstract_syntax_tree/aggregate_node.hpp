@@ -35,19 +35,19 @@ class AggregateNode : public AbstractASTNode {
   const std::vector<ColumnID>& groupby_columns() const;
 
   std::string description() const override;
-  std::vector<std::string> output_column_names() const override;
-  std::vector<ColumnID> output_column_ids() const override;
+  const std::vector<std::string>& output_column_names() const override;
+  const std::vector<ColumnID>& output_column_ids() const override;
   optional<ColumnID> find_column_id_for_column_identifier(const ColumnIdentifier& column_identifier) const override;
 
- private:
-  void _set_output_information() const;
+ protected:
+  void _on_child_changed() override;
 
  private:
   std::vector<AggregateColumnDefinition> _aggregates;
   std::vector<ColumnID> _groupby_columns;
 
-  mutable std::vector<ColumnID> _output_column_ids;
-  mutable std::vector<std::string> _output_column_names;
+  std::vector<ColumnID> _output_column_ids;
+  std::vector<std::string> _output_column_names;
 };
 
 }  // namespace opossum

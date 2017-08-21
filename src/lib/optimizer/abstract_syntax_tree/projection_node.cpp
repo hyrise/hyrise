@@ -33,7 +33,7 @@ const std::vector<std::shared_ptr<ExpressionNode>>& ProjectionNode::column_expre
   return _column_expressions;
 }
 
-void ProjectionNode::_set_output_information() const {
+void ProjectionNode::_on_child_changed() {
   /**
    * Populates `_output_column_names` and `_output_column_ids`.
    * This cannot be done in the constructor because children have to be set to resolve column names.
@@ -80,21 +80,9 @@ void ProjectionNode::_set_output_information() const {
   }
 }
 
-std::vector<ColumnID> ProjectionNode::output_column_ids() const {
-  if (_output_column_ids.empty()) {
-    _set_output_information();
-  }
+const std::vector<ColumnID>& ProjectionNode::output_column_ids() const { return _output_column_ids; }
 
-  return _output_column_ids;
-}
-
-std::vector<std::string> ProjectionNode::output_column_names() const {
-  if (_output_column_names.empty()) {
-    _set_output_information();
-  }
-
-  return _output_column_names;
-}
+const std::vector<std::string>& ProjectionNode::output_column_names() const { return _output_column_names; }
 
 optional<ColumnID> ProjectionNode::find_column_id_for_column_identifier(
     const ColumnIdentifier& column_identifier) const {

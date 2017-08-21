@@ -52,7 +52,9 @@ std::string AggregateNode::description() const {
   return s.str();
 }
 
-void AggregateNode::_set_output_information() const {
+void AggregateNode::_on_child_changed() {
+  // TODO(tim): BLOCKING - debug assert left child
+  // also, when set chiild is called, information must be cleared!
   /**
    * Set output column ids and names.
    *
@@ -97,21 +99,9 @@ void AggregateNode::_set_output_information() const {
   }
 }
 
-std::vector<std::string> AggregateNode::output_column_names() const {
-  if (_output_column_names.empty()) {
-    _set_output_information();
-  }
+const std::vector<std::string>& AggregateNode::output_column_names() const { return _output_column_names; }
 
-  return _output_column_names;
-}
-
-std::vector<ColumnID> AggregateNode::output_column_ids() const {
-  if (_output_column_ids.empty()) {
-    _set_output_information();
-  }
-
-  return _output_column_ids;
-}
+const std::vector<ColumnID>& AggregateNode::output_column_ids() const { return _output_column_ids; }
 
 optional<ColumnID> AggregateNode::find_column_id_for_column_identifier(
     const ColumnIdentifier& column_identifier) const {

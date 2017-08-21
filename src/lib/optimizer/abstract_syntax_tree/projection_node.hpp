@@ -23,17 +23,17 @@ class ProjectionNode : public AbstractASTNode {
   const std::vector<std::shared_ptr<ExpressionNode>>& column_expressions() const;
 
   std::string description() const override;
-  std::vector<ColumnID> output_column_ids() const override;
-  std::vector<std::string> output_column_names() const override;
+  const std::vector<ColumnID>& output_column_ids() const override;
+  const std::vector<std::string>& output_column_names() const override;
   optional<ColumnID> find_column_id_for_column_identifier(const ColumnIdentifier& column_identifier) const override;
 
- private:
-  void _set_output_information() const;
+ protected:
+  void _on_child_changed() override;
 
  private:
   const std::vector<std::shared_ptr<ExpressionNode>> _column_expressions;
-  mutable std::vector<ColumnID> _output_column_ids;
-  mutable std::vector<std::string> _output_column_names;
+  std::vector<ColumnID> _output_column_ids;
+  std::vector<std::string> _output_column_names;
 };
 
 }  // namespace opossum

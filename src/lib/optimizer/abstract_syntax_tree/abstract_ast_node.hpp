@@ -52,8 +52,8 @@ class AbstractASTNode : public std::enable_shared_from_this<AbstractASTNode> {
   virtual const std::shared_ptr<TableStatistics> get_statistics_from(
       const std::shared_ptr<AbstractASTNode> &other_node) const;
 
-  virtual std::vector<std::string> output_column_names() const;
-  virtual std::vector<ColumnID> output_column_ids() const;
+  virtual const std::vector<std::string> &output_column_names() const;
+  virtual const std::vector<ColumnID> &output_column_ids() const;
   bool has_output_column(const std::string &column_name) const;
 
   ColumnID get_column_id_for_column_identifier(const ColumnIdentifier &column_identifier) const;
@@ -65,6 +65,7 @@ class AbstractASTNode : public std::enable_shared_from_this<AbstractASTNode> {
   virtual std::string description() const = 0;
 
  protected:
+  virtual void _on_child_changed(){};
   virtual const std::shared_ptr<TableStatistics> _gather_statistics() const;
 
   // Used to easily differentiate between node types without pointer casts.

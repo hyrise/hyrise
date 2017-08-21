@@ -29,15 +29,21 @@ class JoinNode : public AbstractASTNode {
   JoinMode join_mode() const;
 
   std::string description() const override;
-  std::vector<ColumnID> output_column_ids() const override;
-  std::vector<std::string> output_column_names() const override;
+  const std::vector<ColumnID> &output_column_ids() const override;
+  const std::vector<std::string> &output_column_names() const override;
   bool manages_table(const std::string &table_name) const override;
   optional<ColumnID> find_column_id_for_column_identifier(const ColumnIdentifier &column_identifier) const override;
+
+ protected:
+  void _on_child_changed() override;
 
  private:
   optional<std::pair<ColumnID, ColumnID>> _join_column_ids;
   ScanType _scan_type;
   JoinMode _join_mode;
+
+  std::vector<ColumnID> _output_column_ids;
+  std::vector<std::string> _output_column_names;
 };
 
 }  // namespace opossum
