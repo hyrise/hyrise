@@ -52,6 +52,7 @@ Console::Console()
   register_command("help", help);
   register_command("generate", generate_tpcc);
   register_command("load", load_table);
+  register_command("script", exec_script);
 
   // Register more commands specifically for command completion purposes, e.g.
   // for TPCC generation, 'generate CUSTOMER', 'generate DISTRICT', etc
@@ -210,6 +211,9 @@ int Console::help(const std::string&) {
   console.out("  load FILE TABLENAME  - Load table from disc specified by filepath FILE, store it with name TABLENAME\n");
   console.out("  load(FILE TABLENAME) - Load table from disc specified by filepath FILE, store it with name TABLENAME\n");
   console.out("                         (with filepath completion)\n");
+  console.out("  script SCRIPTFILE    - Execute script specified by SCRIPTFILE\n");
+  console.out("  script(SCRIPTFILE)   - Execute script specified by SCRIPTFILE\n");
+  console.out("                         (with filepath completion)\n");
   console.out("  exit                 - Exit the HYRISE Console\n");
   console.out("  quit                 - Exit the HYRISE Console\n");
   console.out("  help                 - Show this message\n\n");
@@ -264,6 +268,28 @@ int Console::load_table(const std::string& args) {
     return ReturnCode::Error;
   }
 
+  return ReturnCode::Ok;
+}
+
+int Console::exec_script(const std::string& script_file) {
+  auto& console = Console::get();
+  auto filepath = script_file;
+  boost::algorithm::trim(filepath);
+  std::ifstream script(filepath);
+
+  if (!script.good())
+  {
+    console.out("Error: Script file '" + filepath + "' does not exist.\n");
+    return ReturnCode::Error;
+  }
+  
+  console.out("Executing script file: " + filepath + "\n");
+  std::string command;
+  while (std::getline(script, command))
+  {
+    console._eval(command);
+  }
+  console.out("Executing script file done\n");
   return ReturnCode::Ok;
 }
 
