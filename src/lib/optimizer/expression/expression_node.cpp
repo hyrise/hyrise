@@ -234,9 +234,7 @@ std::string ExpressionNode::to_string(const std::shared_ptr<AbstractASTNode> &in
       return type_cast<std::string>(_value);
     case ExpressionType::ColumnReference:
       if (input_node != nullptr) {
-        // return input_node->get_column_name_for_column_id(_column_id);
-        column_name = input_node->get_column_name_for_column_id(_column_id);
-        return column_name;
+        return input_node->output_column_names()[_column_id];
       }
       return boost::lexical_cast<std::string>(_column_id);
     case ExpressionType::FunctionReference:

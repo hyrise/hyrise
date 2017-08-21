@@ -178,7 +178,7 @@ ColumnID SQLToASTTranslator::generate_column_id(const hsql::Expr& hsql_expr,
   const auto& expr = SQLExpressionTranslator::translate_expression(hsql_expr, input_node);
 
   if (expr->type() == ExpressionType::ColumnReference) {
-    column_name = input_node->get_column_name_for_column_id(expr->column_id());
+    column_name = input_node->output_column_names()[expr->column_id()];
   } else if (expr->type() == ExpressionType::FunctionReference || expr->type() == ExpressionType::Literal) {
     column_name = expr->to_string(input_node);
   } else {
@@ -358,7 +358,12 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_projection(
 
     if (expr->type() == ExpressionType::Star) {
       // Resolve `SELECT *` to columns.
-      const auto& column_references = ExpressionNode::create_column_references(input_node->output_column_ids());
+      std::vector<ColumnID> column_ids;
+      for (ColumnID::base_type column_idx = 0u; column_idx < input_node->output_column_ids().size(); column_idx++) {
+        column_ids.emplace_back(column_idx);
+      }
+
+      const auto& column_references = ExpressionNode::create_column_references(column_ids);
       column_expressions.insert(column_expressions.end(), column_references.cbegin(), column_references.cend());
     } else {
       column_expressions.emplace_back(expr);

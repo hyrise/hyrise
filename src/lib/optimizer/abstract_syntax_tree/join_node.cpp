@@ -114,8 +114,8 @@ void JoinNode::_on_child_changed() {
   _output_column_ids.clear();
   _output_column_ids.reserve(left_child()->output_column_ids().size() + right_child()->output_column_ids().size());
 
-  for (size_t column_idx = 0u; column_idx < _output_column_ids.capacity(); column_idx++) {
-    _output_column_ids.emplace_back(column_idx);
+  for (ColumnID column_id{0}; column_id < _output_column_ids.capacity(); column_id++) {
+    _output_column_ids.emplace_back(column_id);
   }
 }
 

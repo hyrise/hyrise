@@ -53,34 +53,35 @@ std::string AggregateNode::description() const {
 }
 
 void AggregateNode::_on_child_changed() {
-  // TODO(tim): BLOCKING - debug assert left child
-  // also, when set chiild is called, information must be cleared!
+  DebugAssert(!!left_child(), "AggregateNode needs a child.");
+
+  _output_column_names.clear();
+  _output_column_ids.clear();
+
+  _output_column_names.reserve(_groupby_columns.size() + _aggregates.size());
+  _output_column_ids.reserve(_groupby_columns.size() + _aggregates.size());
+
   /**
    * Set output column ids and names.
    *
    * The Aggregate operator will put all GROUP BY columns in the output table at the beginning,
    * so we first handle those, and afterwards add the column information for the aggregate functions.
    */
+  ColumnID column_id{0};
   for (const auto groupby_column_id : _groupby_columns) {
-    _output_column_ids.emplace_back(groupby_column_id);
+    _output_column_ids.emplace_back(column_id);
+    column_id++;
+
     _output_column_names.emplace_back(left_child()->output_column_names()[groupby_column_id]);
   }
-
-  /**
-   * Find the maximum ColumnID of the GROUP BY columns.
-   * This is required to generate new ColumnIDs for all aggregate functions,
-   * for which new columns will be created by the Aggregate operator.
-   */
-  auto iter = std::max_element(_groupby_columns.cbegin(), _groupby_columns.cend());
-  auto current_column_id = static_cast<uint16_t>(*iter);
 
   for (const auto& aggregate : _aggregates) {
     DebugAssert(aggregate.expr->type() == ExpressionType::FunctionReference, "Expression must be a function.");
 
-    std::string alias;
+    std::string column_name;
 
     if (aggregate.alias) {
-      alias = *aggregate.alias;
+      column_name = *aggregate.alias;
     } else {
       /**
        * If the aggregate function has no alias defined in the query, we simply parse the expression back to a string.
@@ -88,14 +89,11 @@ void AggregateNode::_on_child_changed() {
        * This might result in multiple output columns with the same name, but we accept that.
        * Other DBs behave similarly (e.g. MySQL).
        */
-      alias = aggregate.expr->to_string(left_child());
+      column_name = aggregate.expr->to_string(left_child());
     }
 
-    _output_column_names.emplace_back(alias);
-
-    // All AggregateFunctions create a new column, which has to get its own ColumnID.
-    current_column_id++;
-    _output_column_ids.emplace_back(current_column_id);
+    _output_column_names.emplace_back(column_name);
+    _output_column_ids.emplace_back(NO_OUTPUT_COLUMN_ID);
   }
 }
 

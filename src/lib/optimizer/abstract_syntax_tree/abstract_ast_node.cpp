@@ -109,16 +109,6 @@ const std::vector<ColumnID> &AbstractASTNode::output_column_ids() const {
   return _left_child->output_column_ids();
 }
 
-std::string AbstractASTNode::get_column_name_for_column_id(ColumnID column_id) const {
-  const auto column_ids = output_column_ids();
-  auto iter = std::find(column_ids.cbegin(), column_ids.cend(), column_id);
-
-  DebugAssert(iter != column_ids.cend(), "ColumnID not found.");
-
-  auto index = std::distance(column_ids.cbegin(), iter);
-  return output_column_names()[index];
-}
-
 ColumnID AbstractASTNode::get_column_id_for_column_identifier(const ColumnIdentifier &column_identifier) const {
   const auto column_id = find_column_id_for_column_identifier(column_identifier);
   DebugAssert(!!column_id, "ColumnIdentifier could not be resolved.");

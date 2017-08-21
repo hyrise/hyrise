@@ -40,17 +40,11 @@ void ProjectionNode::_on_child_changed() {
    */
   DebugAssert(!!left_child(), "ProjectionNode needs a child.");
 
-  /**
-   * Find the maximum ColumnID of the columns that are projected.
-   * This is required to generate new ColumnIDs in case there are expressions that are not ColumnReferences,
-   * for which the Projection creates new columns.
-   */
-  auto iter =
-      std::max_element(_column_expressions.cbegin(), _column_expressions.cend(),
-                       [](const std::shared_ptr<ExpressionNode>& left, const std::shared_ptr<ExpressionNode>& right) {
-                         return left->column_id() < right->column_id();
-                       });
-  auto current_column_id = static_cast<uint16_t>((*iter)->column_id());
+  _output_column_names.clear();
+  _output_column_ids.clear();
+
+  _output_column_names.reserve(_column_expressions.size());
+  _output_column_ids.reserve(_column_expressions.size());
 
   for (const auto& expression : _column_expressions) {
     // If the expression defines an alias, use it as the output column name.
@@ -63,17 +57,17 @@ void ProjectionNode::_on_child_changed() {
       _output_column_ids.emplace_back(expression->column_id());
 
       if (!expression->alias()) {
-        const auto& column_name = left_child()->get_column_name_for_column_id(expression->column_id());
+        const auto& column_name = left_child()->output_column_names()[expression->column_id()];
         _output_column_names.emplace_back(column_name);
       }
+
     } else if (expression->type() == ExpressionType::Literal || expression->is_arithmetic_operator()) {
-      // Generate a new ColumnID.
-      current_column_id++;
-      _output_column_ids.emplace_back(current_column_id);
+      _output_column_ids.emplace_back(NO_OUTPUT_COLUMN_ID);
 
       if (!expression->alias()) {
         _output_column_names.emplace_back(expression->to_string());
       }
+
     } else {
       Fail("Only column references, arithmetic expressions, and literals supported for now.");
     }
