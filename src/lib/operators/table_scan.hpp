@@ -11,12 +11,6 @@
 #include <vector>
 
 #include "abstract_read_only_operator.hpp"
-#include "scheduler/abstract_task.hpp"
-#include "scheduler/current_scheduler.hpp"
-#include "scheduler/job_task.hpp"
-#include "storage/dictionary_column.hpp"
-#include "storage/reference_column.hpp"
-#include "storage/value_column.hpp"
 
 #include "all_parameter_variant.hpp"
 #include "type_cast.hpp"

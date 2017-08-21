@@ -10,14 +10,20 @@
 #include <vector>
 
 #include "resolve_column_type.hpp"
+#include "scheduler/abstract_task.hpp"
+#include "scheduler/current_scheduler.hpp"
+#include "scheduler/job_task.hpp"
 #include "storage/base_attribute_vector.hpp"
 #include "storage/column_visitable.hpp"
+#include "storage/dictionary_column.hpp"
 #include "storage/iterables/attribute_vector_iterable.hpp"
 #include "storage/iterables/constant_value_iterable.hpp"
 #include "storage/iterables/dictionary_column_iterable.hpp"
 #include "storage/iterables/null_value_vector_iterable.hpp"
 #include "storage/iterables/reference_column_iterable.hpp"
 #include "storage/iterables/value_column_iterable.hpp"
+#include "storage/reference_column.hpp"
+#include "storage/value_column.hpp"
 #include "utils/binary_operators.hpp"
 #include "utils/static_if.hpp"
 
