@@ -91,7 +91,7 @@ std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::_translate_join_node(
   }
 
   // Forcing conversion from optional<std::string> to bool
-  DebugAssert(!!join_node->scan_type(), "Cannot translate Join without ScanType");
+  DebugAssert(static_cast<bool>(join_node->scan_type()), "Cannot translate Join without ScanType");
   return std::make_shared<JoinNestedLoopA>(input_left_operator, input_right_operator, join_node->join_column_names(),
                                            *(join_node->scan_type()), join_node->join_mode(), join_node->prefix_left(),
                                            join_node->prefix_right());
@@ -120,7 +120,7 @@ std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::_translate_aggregate_
   Projection::ColumnExpressions expressions;
 
   // We only need a Projection before the aggregate if the function arg is an arithmetic expr.
-  auto need_projection = false;
+  auto needs_projection = false;
 
   for (const auto &aggregate : aggregates) {
     const auto &expr = aggregate.expr;
@@ -133,7 +133,7 @@ std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::_translate_aggregate_
       // TODO(mp): @Tim, is this todo still valid?
       expr_aliases.emplace_back(function_arg_expr->name());
     } else if (function_arg_expr->is_arithmetic_operator()) {
-      need_projection = true;
+      needs_projection = true;
 
       // TODO(mp): Support more complex expressions.
       DebugAssert(function_arg_expr->left_child()->is_operand(), "Left child is not a literal or column ref.");
@@ -151,7 +151,7 @@ std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::_translate_aggregate_
     }
   }
 
-  if (need_projection) {
+  if (needs_projection) {
     out_operator = std::make_shared<Projection>(out_operator, expressions);
   }
 

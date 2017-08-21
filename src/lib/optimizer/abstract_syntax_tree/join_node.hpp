@@ -16,7 +16,7 @@ namespace opossum {
 
 /**
  * This node type is used to represent any type of Join, including cross products.
- * The idea is that the optimizer is able to change the type of join if it sees fit.
+ * The idea is that the optimizer is able to decide on the physical join implementation.
  */
 class JoinNode : public AbstractASTNode {
  public:

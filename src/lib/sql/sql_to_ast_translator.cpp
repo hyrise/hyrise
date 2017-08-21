@@ -231,6 +231,8 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_filter_expr(
 
   // If the expression is a nested expression, recursively resolve.
   // TODO(anybody): implement OR.
+  DebugAssert(expr.opType != hsql::kOpOr, "OR is currently not supported by SQLToASTTranslator");
+
   if (expr.opType == hsql::kOpAnd) {
     auto filter_node = _translate_filter_expr(*expr.expr, input_node);
     return _translate_filter_expr(*expr.expr2, filter_node);
@@ -338,8 +340,8 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_aggregate(
   if (group_by != nullptr) {
     groupby_columns.reserve(group_by->columns->size());
     for (const auto* groupby_expr : *group_by->columns) {
-      DebugAssert(groupby_expr->isType(hsql::kExprColumnRef), "Only column ref GROUP BYs supported atm");
-      DebugAssert(groupby_expr->name != nullptr, "hsql::Expr::name needs to be set");
+      DebugAssert(groupby_expr->isType(hsql::kExprColumnRef), "Only column ref GROUP BYs supported at the moment");
+      DebugAssert(groupby_expr->name != nullptr, "Column name for GROUP BY expression is not set.");
 
       groupby_columns.emplace_back(generate_column_name(*groupby_expr, true));
     }
