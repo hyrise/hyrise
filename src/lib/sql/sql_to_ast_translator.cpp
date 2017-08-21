@@ -1,12 +1,12 @@
 #include "sql_to_ast_translator.hpp"
 
 #include <memory>
-#include <operators/projection.hpp>
 #include <string>
 #include <unordered_map>
 #include <utility>
 #include <vector>
 
+#include "operators/projection.hpp"
 #include "optimizer/abstract_syntax_tree/abstract_ast_node.hpp"
 #include "optimizer/abstract_syntax_tree/aggregate_node.hpp"
 #include "optimizer/abstract_syntax_tree/join_node.hpp"

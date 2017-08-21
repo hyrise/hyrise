@@ -1,12 +1,14 @@
 #include "projection_node.hpp"
 
-#include <optimizer/expression/expression_node.hpp>
+#include <algorithm>
+#include <memory>
 #include <sstream>
 #include <string>
 #include <vector>
-#include <utils/assert.hpp>
 
 #include "common.hpp"
+#include "optimizer/expression/expression_node.hpp"
+#include "utils/assert.hpp"
 
 namespace opossum {
 

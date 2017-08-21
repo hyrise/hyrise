@@ -119,8 +119,6 @@ std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::_translate_aggregate_
 
   Projection::ColumnExpressions expressions;
 
-//  auto alias_index = 0;
-
   // We only need a Projection before the aggregate if the function arg is an arithmetic expr.
   auto need_projection = false;
 
@@ -131,9 +129,8 @@ std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::_translate_aggregate_
     const auto &function_arg_expr = (expr->expression_list())[0];
 
     if (function_arg_expr->is_operand()) {
-      // TODO(tim): column data type is not always float
       // TODO(tim): check if this can be done prettier
-      //      definitions.emplace_back(function_arg_expr->name(), "float", function_arg_expr->name());
+      // TODO(mp): @Tim, is this todo still valid?
       expr_aliases.emplace_back(function_arg_expr->name());
     } else if (function_arg_expr->is_arithmetic_operator()) {
       need_projection = true;
@@ -143,14 +140,14 @@ std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::_translate_aggregate_
       DebugAssert(function_arg_expr->right_child()->is_operand(), "Right child is not a literal or column ref.");
 
       // Generate a temporary column name for the expression.
-      // Make sure that the generated column name is not existing in the input.
+      // Make sure that the generated column name does not exist in the input.
       auto alias = function_arg_expr->to_expression_string();
       DebugAssert(!node->left_child()->has_output_column(alias), "Expression String is already used as ColumnName");
 
       expressions.emplace_back(function_arg_expr);
       expr_aliases.emplace_back(alias);
     } else {
-      Fail("Expression is neither operand nor arithmetic expre.");
+      Fail("Expression is neither operand nor arithmetic expression.");
     }
   }
 
