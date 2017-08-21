@@ -12,11 +12,11 @@
 #include <string>
 #include <vector>
 
+#include "operators/import_csv.hpp"
 #include "operators/print.hpp"
 #include "sql/sql_query_translator.hpp"
 #include "storage/storage_manager.hpp"
 #include "tpcc/tpcc_table_generator.hpp"
-#include "operators/import_csv.hpp"
 
 namespace {
 
@@ -87,9 +87,7 @@ int Console::read() {
   return _eval(input);
 }
 
-int Console::execute_script(const std::string & filepath) {
-  return exec_script(filepath);
-}
+int Console::execute_script(const std::string& filepath) { return exec_script(filepath); }
 
 int Console::_eval(const std::string& input) {
   if (input.empty() && _multiline_input.empty()) {
@@ -179,9 +177,7 @@ int Console::_eval_sql(const std::string& sql) {
   return ReturnCode::Ok;
 }
 
-void Console::register_command(const std::string& name, const CommandFunction& f) {
-  _commands[name] = f;
-}
+void Console::register_command(const std::string& name, const CommandFunction& f) { _commands[name] = f; }
 
 Console::RegisteredCommands Console::commands() { return _commands; }
 
@@ -212,9 +208,12 @@ int Console::help(const std::string&) {
   auto& console = Console::get();
   console.out("HYRISE SQL Interface\n\n");
   console.out("Available commands:\n");
-  console.out("  generate [TABLENAME] - Generate available TPC-C tables, or a specific table if TABLENAME is specified\n");
-  console.out("  load FILE TABLENAME  - Load table from disc specified by filepath FILE, store it with name TABLENAME\n");
-  console.out("  load(FILE TABLENAME) - Load table from disc specified by filepath FILE, store it with name TABLENAME\n");
+  console.out(
+      "  generate [TABLENAME] - Generate available TPC-C tables, or a specific table if TABLENAME is specified\n");
+  console.out(
+      "  load FILE TABLENAME  - Load table from disc specified by filepath FILE, store it with name TABLENAME\n");
+  console.out(
+      "  load(FILE TABLENAME) - Load table from disc specified by filepath FILE, store it with name TABLENAME\n");
   console.out("                         (with filepath completion)\n");
   console.out("  script SCRIPTFILE    - Execute script specified by SCRIPTFILE\n");
   console.out("  script(SCRIPTFILE)   - Execute script specified by SCRIPTFILE\n");
@@ -257,8 +256,7 @@ int Console::load_table(const std::string& args) {
   std::vector<std::string> arguments;
   boost::algorithm::split(arguments, input, boost::is_space());
 
-  if (arguments.size() != 2)
-  {
+  if (arguments.size() != 2) {
     console.out("Usage:\n");
     console.out("  load FILEPATH TABLENAME\n");
     console.out("  load(FILEPATH TABLENAME)\n");
@@ -282,21 +280,18 @@ int Console::exec_script(const std::string& script_file) {
   boost::algorithm::trim(filepath);
   std::ifstream script(filepath);
 
-  if (!script.good())
-  {
+  if (!script.good()) {
     console.out("Error: Script file '" + filepath + "' does not exist.\n");
     return ReturnCode::Error;
   }
-  
+
   console.out("Executing script file: " + filepath + "\n");
   console._verbose = true;
   std::string command;
   int retCode = ReturnCode::Ok;
-  while (std::getline(script, command))
-  {
+  while (std::getline(script, command)) {
     retCode = console._eval(command);
-    if (retCode == ReturnCode::Error || retCode == ReturnCode::Quit)
-    {
+    if (retCode == ReturnCode::Error || retCode == ReturnCode::Quit) {
       break;
     }
   }
@@ -314,10 +309,8 @@ char** Console::command_completion(const char* text, int start, int end) {
   std::string input(text);
   boost::algorithm::split(tokens, input, boost::is_space());
 
-  if (!tokens.empty())
-  {
-    if (tokens.at(0) == "generate")
-    {
+  if (!tokens.empty()) {
+    if (tokens.at(0) == "generate") {
       completion_matches = rl_completion_matches(text, &Console::command_generator_tpcc);
     } else if (start == 0) {
       completion_matches = rl_completion_matches(text, &Console::command_generator);
@@ -391,7 +384,7 @@ int main(int argc, char** argv) {
   // Execute .sql script if specified
   if (argc == 2) {
     retCode = console.execute_script(std::string(argv[1]));
-    // If an error occured during script execution, terminate Console
+    // Terminate Console if an error occured during script execution
     if (retCode == Return::Error) {
       retCode = Return::Quit;
     }

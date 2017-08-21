@@ -35,7 +35,7 @@ class Console {
    */
   int read();
 
-  int execute_script(const std::string & filepath);
+  int execute_script(const std::string &filepath);
 
   /*
    * Register a custom command which can be called from the console.
@@ -94,7 +94,6 @@ class Console {
   static char **command_completion(const char *text, int start, int end);
   static char *command_generator(const char *text, int state);
   static char *command_generator_tpcc(const char *text, int state);
-
 
   std::string _prompt;
   std::string _multiline_input;
