@@ -95,7 +95,7 @@ int Console::_eval(const std::string& input) {
     return ReturnCode::Ok;
   }
 
-  // Dump command to logfile (the Console already has it from the input)
+  // Dump command to logfile, and to the Console if input comes from a script file
   out(_prompt + input + "\n", _verbose);
 
   // Check if a registered command was entered
