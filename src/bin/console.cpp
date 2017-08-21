@@ -190,7 +190,7 @@ int Console::_eval_sql(const std::string& sql) {
   return ReturnCode::Ok;
 }
 
-void Console::register_command(const std::string& name, const CommandFunction& f) { _commands[name] = f; }
+void Console::register_command(const std::string& name, const CommandFunction& func) { _commands[name] = func; }
 
 Console::RegisteredCommands Console::commands() { return _commands; }
 
