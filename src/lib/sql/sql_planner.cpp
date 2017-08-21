@@ -14,10 +14,7 @@ SQLQueryPlan SQLPlanner::plan(const hsql::SQLParserResult& result) {
   SQLQueryPlan plan;
 
   for (const auto& node : result_nodes) {
-    // Call optimizer
     auto optimized = Optimizer::optimize(node);
-
-    // Translate to operators
     auto op = ASTToOperatorTranslator::get().translate_node(optimized);
 
     plan.add_tree_by_root(op);
