@@ -96,7 +96,7 @@ const std::string Projection::get_type_of_expression(const std::shared_ptr<Expre
   type_promotion("long", "double", "double");
   type_promotion("float", "double", "double");
 
-  return type_left;
+  return result_type;
 }
 
 }  // namespace opossum
