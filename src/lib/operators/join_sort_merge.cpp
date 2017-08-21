@@ -170,38 +170,31 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
     return TablePosition(last_partition, table->at(last_partition)->size());
   }
 
+  enum class CompareResult {
+    Less,
+    Greater,
+    Equal
+  };
+
   /**
   * Performs the join for two runs of a specified partition.
   * A run is a series of rows in a partition with the same value.
   **/
-  void _join_runs(size_t partition_number, TableRange left_run, TableRange right_run) {
-    auto left_partition = _sorted_left_table->at(partition_number);
-    auto right_partition = _sorted_right_table->at(partition_number);
-
-    auto output_left = _output_pos_lists_left[partition_number];
-    auto output_right = _output_pos_lists_right[partition_number];
-
-    auto& left_value = left_partition->at(left_run.start.index).value;
-    auto& right_value = right_partition->at(right_run.start.index).value;
-
+  void _join_runs(size_t partition_number, TableRange left_run, TableRange right_run, CompareResult compare) {
     auto end_of_left_table = _end_of_table(_sorted_left_table);
     auto end_of_right_table = _end_of_table(_sorted_right_table);
 
-    // Equi-Join implementation
     // TODO(anyone): Move these to std::functions for a performance improvement (eliminate chained ifs)
+    // Equi-Join implementation
     if (_op == ScanType::OpEquals) {
-      if (left_value == right_value) {
+      if (compare == CompareResult::Equal) {
         _emit_combinations(partition_number, left_run, right_run);
       } else {
-        // No Match found
-        // Add null values when appropriate on the side which index gets increased at the end of one loop run
-        if (left_value < right_value) {
-          // Check for correct mode
+        if (compare == CompareResult::Less) {
           if (_mode == JoinMode::Left || _mode == JoinMode::Outer) {
             _emit_right_null_combinations(partition_number, left_run);
           }
         } else {
-          // Check for correct mode
           if (_mode == JoinMode::Right || _mode == JoinMode::Outer) {
             _emit_left_null_combinations(partition_number, right_run);
           }
@@ -209,34 +202,38 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
       }
     } else if (_op == ScanType::OpNotEquals) {
       // Not-Equals-Join implementation
-      if (left_value > right_value) {
+      if (compare == CompareResult::Greater) {
         _emit_combinations(partition_number, left_run.start.to(end_of_left_table), right_run);
-      } else if (left_value == right_value) {
+      } else if (compare == CompareResult::Equal) {
         _emit_combinations(partition_number, left_run.end.to(end_of_left_table), right_run);
         _emit_combinations(partition_number, left_run, right_run.end.to(end_of_right_table));
-      } else if (left_value < right_value) {
+      } else if (compare == CompareResult::Less) {
         _emit_combinations(partition_number, left_run, right_run.start.to(end_of_right_table));
       }
     } else if (_op == ScanType::OpGreaterThan) {
       // Greater-Join implementation
-      if (left_value > right_value) {
+      if (compare == CompareResult::Greater) {
         _emit_combinations(partition_number, left_run.start.to(end_of_left_table), right_run);
-      } else if (left_value == right_value) {
+      } else if (compare == CompareResult::Equal) {
         _emit_combinations(partition_number, left_run.end.to(end_of_left_table), right_run);
       }
-    } else if (_op == ScanType::OpGreaterThanEquals && left_value >= right_value) {
+    } else if (_op == ScanType::OpGreaterThanEquals) {
       // Grequal-Join implmentation
-      _emit_combinations(partition_number, left_run.start.to(end_of_left_table), right_run);
+      if (compare == CompareResult::Greater || compare == CompareResult::Equal) {
+        _emit_combinations(partition_number, left_run.start.to(end_of_left_table), right_run);
+      }
     } else if (_op == ScanType::OpLessThan) {
       // Less-Join implementation
-      if (left_value < right_value) {
+      if (compare == CompareResult::Less) {
         _emit_combinations(partition_number, left_run, right_run.start.to(end_of_right_table));
-      } else if (left_value == right_value) {
+      } else if (compare == CompareResult::Equal) {
         _emit_combinations(partition_number, left_run, right_run.end.to(end_of_right_table));
       }
-    } else if (_op == ScanType::OpLessThanEquals && left_value <= right_value) {
+    } else if (_op == ScanType::OpLessThanEquals) {
       // Lequal-Join implementation
-      _emit_combinations(partition_number, left_run, right_run.start.to(end_of_right_table));
+      if (compare == CompareResult::Less || compare == CompareResult::Equal) {
+        _emit_combinations(partition_number, left_run, right_run.start.to(end_of_right_table));
+      }
     }
   }
 
@@ -310,31 +307,38 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
     size_t left_run_start = 0;
     size_t right_run_start = 0;
 
-    // Note: considering the number of comparisons required to identify a run, is this
-    // actually sensible from a performance standpoint? The alternative would be to just compare every left value
-    // with every right value instead of a left run with a right run.
     auto left_run_end = left_run_start + _run_length(left_run_start, left_partition);
     auto right_run_end = right_run_start + _run_length(right_run_start, right_partition);
 
     const size_t left_size = left_partition->size();
     const size_t right_size = right_partition->size();
 
+    CompareResult compare_result;
+
     while (left_run_start < left_size && right_run_start < right_size) {
       auto& left_value = left_partition->at(left_run_start).value;
       auto& right_value = right_partition->at(right_run_start).value;
 
+      if (left_value < right_value) {
+        compare_result = CompareResult::Less;
+      } else if (left_value == right_value) {
+        compare_result = CompareResult::Equal;
+      } else if (left_value > right_value) {
+        compare_result = CompareResult::Greater;
+      }
+
       TableRange left_run(partition_number, left_run_start, left_run_end);
       TableRange right_run(partition_number, right_run_start, right_run_end);
-      _join_runs(partition_number, left_run, right_run);
+      _join_runs(partition_number, left_run, right_run, compare_result);
 
       // Advance to the next run on the smaller side or both if equal
-      if (left_value == right_value) {
+      if (compare_result == CompareResult::Equal) {
         // Advance both runs
         left_run_start = left_run_end;
         right_run_start = right_run_end;
         left_run_end = left_run_start + _run_length(left_run_start, left_partition);
         right_run_end = right_run_start + _run_length(right_run_start, right_partition);
-      } else if (left_value < right_value) {
+      } else if (compare_result == CompareResult::Less) {
         // Advance the left run
         left_run_start = left_run_end;
         left_run_end = left_run_start + _run_length(left_run_start, left_partition);
@@ -350,28 +354,10 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
     // It is important for outer joins to include this element.
 
     // The left side has finished -> add the remaining values of the right side
-    if (left_run_start == left_size) {
-      if (_mode == JoinMode::Right || _mode == JoinMode::Outer) {
-        _emit_left_null_combinations(partition_number, TableRange(partition_number, right_run_start, right_size));
-      }
-      if (_op == ScanType::OpGreaterThan || _op == ScanType::OpGreaterThanEquals || _op == ScanType::OpNotEquals) {
-        auto left_range = TableRange(TablePosition(partition_number + 1, 0).to(_end_of_table(_sorted_left_table)));
-        auto right_range = TableRange(partition_number, right_run_start, right_size);
-        _emit_combinations(partition_number, left_range, right_range);
-      }
-    }
 
-    // The right side has finished -> add the remaining values of the left side
-    if (right_run_start == right_size) {
-      if (_mode == JoinMode::Left || _mode == JoinMode::Outer) {
-        _emit_right_null_combinations(partition_number, TableRange(partition_number, left_run_start, left_size));
-      }
-      if (_op == ScanType::OpLessThan || _op == ScanType::OpLessThanEquals || _op == ScanType::OpNotEquals) {
-        auto left_range = TableRange(partition_number, left_run_start, left_size);
-        auto right_range = TableRange(TablePosition(partition_number + 1, 0).to(_end_of_table(_sorted_right_table)));
-        _emit_combinations(partition_number, left_range, right_range);
-      }
-    }
+    auto right_range = TableRange(partition_number, right_run_start, right_size);
+    auto left_range = TableRange(partition_number, left_run_start, left_size);
+    _join_runs(partition_number, left_range, right_range, compare_result);
   }
 
   /**
