@@ -101,6 +101,8 @@ class ExpressionNode : public std::enable_shared_from_this<ExpressionNode> {
   // Returns true if the expression requires two children.
   bool is_binary_operator() const;
 
+  bool is_operand() const;
+
   /*
    * Getters
    */

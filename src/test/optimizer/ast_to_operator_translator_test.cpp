@@ -175,7 +175,7 @@ TEST_F(ASTToOperatorTranslatorTest, AggregateNodeWithArithmetics) {
   EXPECT_EQ(aggregate_op->groupby_columns()[0], "a");
 
   const auto aggregate_definition = aggregate_op->aggregates()[0];
-  EXPECT_EQ(aggregate_definition.column_name, "alias0");
+  EXPECT_EQ(aggregate_definition.column_name, "b*2");
   EXPECT_EQ(aggregate_definition.function, AggregateFunction::Sum);
   EXPECT_EQ(aggregate_definition.alias, optional<std::string>("sum_of_b_times_two"));
 
@@ -220,7 +220,7 @@ TEST_F(ASTToOperatorTranslatorTest, AggregateNodeAliasUnique) {
 
   const auto aggregate_definition = aggregate_op->aggregates()[0];
   // Make sure that alias0 has not been chosen since it is already existing in the input.
-  EXPECT_EQ(aggregate_definition.column_name, "alias1");
+  EXPECT_EQ(aggregate_definition.column_name, "a*2");
   EXPECT_EQ(aggregate_definition.function, AggregateFunction::Sum);
 
   // Check projection operator.

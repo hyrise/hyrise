@@ -117,12 +117,9 @@ std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::_translate_aggregate_
   std::vector<std::string> expr_aliases;
   expr_aliases.reserve(aggregates.size());
 
-  //  Projection::ProjectionDefinitions definitions;
-  //  definitions.reserve(aggregates.size());
-
   Projection::ColumnExpressions expressions;
 
-  auto alias_index = 0;
+//  auto alias_index = 0;
 
   // We only need a Projection before the aggregate if the function arg is an arithmetic expr.
   auto need_projection = false;
@@ -147,16 +144,9 @@ std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::_translate_aggregate_
 
       // Generate a temporary column name for the expression.
       // Make sure that the generated column name is not existing in the input.
-      auto alias = "alias" + std::to_string(alias_index);
-      alias_index++;
+      auto alias = function_arg_expr->to_expression_string();
+      DebugAssert(!node->left_child()->has_output_column(alias), "Expression String is already used as ColumnName");
 
-      while (node->left_child()->has_output_column(alias)) {
-        alias = "alias" + std::to_string(alias_index);
-        alias_index++;
-      }
-
-      // TODO(tim): column data type is not always float
-      //      definitions.emplace_back(function_arg_expr->to_expression_string(), "float", alias);
       expressions.emplace_back(function_arg_expr);
       expr_aliases.emplace_back(alias);
     } else {
