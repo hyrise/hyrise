@@ -208,6 +208,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
         }
       }
     } else if (_op == ScanType::OpNotEquals) {
+      // Not-Equals-Join implementation
       if (left_value > right_value) {
         _emit_combinations(partition_number, left_run.start.to(end_of_left_table), right_run);
       } else if (left_value == right_value) {
