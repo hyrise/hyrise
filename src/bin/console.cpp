@@ -5,6 +5,7 @@
 
 #include <readline/history.h>
 #include <readline/readline.h>
+#include <chrono>
 #include <ctime>
 #include <iomanip>
 #include <iostream>
@@ -161,6 +162,9 @@ int Console::_eval_sql(const std::string& sql) {
 
   plan = translator.get_query_plan();
 
+  // Measure the query plan execution time
+  auto started = std::chrono::high_resolution_clock::now();
+
   // Execute query plan
   try {
     for (const auto& task : plan.tasks()) {
@@ -171,8 +175,17 @@ int Console::_eval_sql(const std::string& sql) {
     return ReturnCode::Error;
   }
 
+  // Measure the query plan execution time
+  auto done = std::chrono::high_resolution_clock::now();
+  auto elapsed_ms = std::chrono::duration<double>(done - started).count();
+
+  auto table = plan.tree_roots().back()->get_output();
+  auto row_count = table->row_count();
+
   // Print result (to Console and logfile)
-  out(plan.tree_roots().back()->get_output());
+  out(table);
+  out("===\n");
+  out(std::to_string(row_count) + " rows (" + std::to_string(elapsed_ms) + " ms)\n");
 
   return ReturnCode::Ok;
 }
