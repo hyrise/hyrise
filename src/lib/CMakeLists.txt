@@ -154,6 +154,8 @@ set(
     optimizer/column_statistics.hpp
     optimizer/expression/expression_node.cpp
     optimizer/expression/expression_node.hpp
+    optimizer/optimizer.cpp
+    optimizer/optimizer.hpp
     optimizer/strategy/abstract_rule.hpp
     optimizer/strategy/predicate_reordering_rule.cpp
     optimizer/strategy/predicate_reordering_rule.hpp
@@ -181,6 +183,8 @@ set(
     scheduler/worker.cpp
     scheduler/worker.hpp
     sql/lru_cache.hpp
+    sql/sql_planner.cpp
+    sql/sql_planner.hpp
     sql/sql_expression_translator.cpp
     sql/sql_expression_translator.hpp
     sql/sql_query_cache.hpp

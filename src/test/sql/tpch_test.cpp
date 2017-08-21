@@ -8,9 +8,8 @@
 #include "gtest/gtest.h"
 
 #include "operators/abstract_operator.hpp"
-#include "optimizer/abstract_syntax_tree/ast_to_operator_translator.hpp"
 #include "scheduler/operator_task.hpp"
-#include "sql/sql_to_ast_translator.hpp"
+#include "sql/sql_planner.hpp"
 #include "storage/storage_manager.hpp"
 
 namespace opossum {
@@ -30,8 +29,7 @@ class TPCHTest : public BaseTest {
       throw std::runtime_error("Query is not valid.");
     }
 
-    auto result_node = SQLToASTTranslator::get().translate_parse_result(parse_result)[0];
-    return ASTToOperatorTranslator::get().translate_node(result_node);
+    return SQLPlanner::plan(parse_result).tree_roots().front();
   }
 
   std::shared_ptr<OperatorTask> schedule_query_and_return_task(const std::string query) {

@@ -10,11 +10,10 @@
 
 #include "operators/get_table.hpp"
 #include "operators/table_scan.hpp"
-#include "optimizer/abstract_syntax_tree/ast_to_operator_translator.hpp"
 #include "scheduler/node_queue_scheduler.hpp"
 #include "scheduler/operator_task.hpp"
 #include "scheduler/topology.hpp"
-#include "sql/sql_to_ast_translator.hpp"
+#include "sql/sql_planner.hpp"
 #include "storage/storage_manager.hpp"
 
 namespace opossum {
@@ -86,8 +85,8 @@ TEST_P(SQLToResultTest, SQLQueryTest) {
   }
 
   // Expect the query to be a single statement.
-  auto result_node = SQLToASTTranslator::get().translate_parse_result(parse_result)[0];
-  auto result_operator = ASTToOperatorTranslator::get().translate_node(result_node);
+  auto plan = SQLPlanner::plan(parse_result);
+  auto result_operator = plan.tree_roots().front();
 
   auto tasks = OperatorTask::make_tasks_from_operator(result_operator);
   CurrentScheduler::schedule_and_wait_for_tasks(tasks);
