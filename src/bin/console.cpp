@@ -87,6 +87,10 @@ int Console::read() {
   return _eval(input);
 }
 
+int Console::execute_script(const std::string & filepath) {
+  return exec_script(filepath);
+}
+
 int Console::_eval(const std::string& input) {
   if (input.empty() && _multiline_input.empty()) {
     return ReturnCode::Ok;
@@ -366,7 +370,6 @@ char* Console::command_generator_tpcc(const char* text, int state) {
 
 int main(int argc, char** argv) {
   using Return = opossum::Console::ReturnCode;
-
   auto& console = opossum::Console::get();
 
   console.setPrompt("> ");
@@ -375,13 +378,35 @@ int main(int argc, char** argv) {
   // Timestamp dump only to logfile
   console.out("--- Session start --- " + current_timestamp() + "\n", false);
 
-  console.out("HYRISE SQL Interface\n");
-  console.out("Enter 'generate' to generate the TPC-C tables. Then, you can enter SQL queries.\n");
-  console.out("Type 'help' for more information.\n\n");
+  int retCode = Return::Ok;
+
+  // Display Usage if too many arguments are provided
+  if (argc > 2) {
+    retCode = Return::Quit;
+    console.out("Usage:\n");
+    console.out("  ./opossumConsole [SCRIPTFILE] - Start the interactive SQL interface.\n");
+    console.out("                                  Execute script if specified by SCRIPTFILE.\n");
+  }
+
+  // Execute .sql script if specified
+  if (argc == 2) {
+    retCode = console.execute_script(std::string(argv[1]));
+    // If an error occured during script execution, terminate Console
+    if (retCode == Return::Error) {
+      retCode = Return::Quit;
+    }
+  }
+
+  // Display welcome message if Console started normally
+  if (argc == 1) {
+    console.out("HYRISE SQL Interface\n");
+    console.out("Enter 'generate' to generate the TPC-C tables. Then, you can enter SQL queries.\n");
+    console.out("Type 'help' for more information.\n\n");
+  }
 
   // Main REPL loop
-  int retCode;
-  while ((retCode = console.read()) != Return::Quit) {
+  while (retCode != Return::Quit) {
+    retCode = console.read();
     if (retCode == Return::Ok) {
       console.setPrompt("> ");
     } else if (retCode == Return::Multiline) {

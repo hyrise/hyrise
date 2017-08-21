@@ -35,6 +35,8 @@ class Console {
    */
   int read();
 
+  int execute_script(const std::string & filepath);
+
   /*
    * Register a custom command which can be called from the console.
    */
