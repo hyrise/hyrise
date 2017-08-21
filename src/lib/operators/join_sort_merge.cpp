@@ -15,7 +15,7 @@
 namespace opossum {
 
 /**
-* TODO(arne.mayer): Outer non-equi joins (outer <, <=, >, >=) (Not-equal joins (!=) are not supported)
+* TODO(arne.mayer): Outer non-equi joins (outer <, <=, >, >=)
 * TODO(anyone): Choose an appropriate number of partitions.
 **/
 /**
@@ -37,7 +37,8 @@ JoinSortMerge::JoinSortMerge(const std::shared_ptr<const AbstractOperator> left,
   DebugAssert(left != nullptr, "The left input operator is null.");
   DebugAssert(right != nullptr, "The right input operator is null.");
   DebugAssert(op == ScanType::OpEquals || op == ScanType::OpLessThan || op == ScanType::OpGreaterThan ||
-              op == ScanType::OpLessThanEquals || op == ScanType::OpGreaterThanEquals, "Unsupported scan type");
+              op == ScanType::OpLessThanEquals || op == ScanType::OpGreaterThanEquals || op == ScanType::OpNotEquals,
+              "Unsupported scan type");
   DebugAssert(op == ScanType::OpEquals || mode == JoinMode::Inner, "Outer joins are only implemented for equi joins.");
   DebugAssert(static_cast<bool>(column_names), "JoinSortMerge currently does not support natural joins.");
 
@@ -205,6 +206,15 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
             _emit_left_null_combinations(partition_number, right_run);
           }
         }
+      }
+    } else if (_op == ScanType::OpNotEquals) {
+      if (left_value > right_value) {
+        _emit_combinations(partition_number, left_run.start.to(end_of_left_table), right_run);
+      } else if (left_value == right_value) {
+        _emit_combinations(partition_number, left_run.end.to(end_of_left_table), right_run);
+        _emit_combinations(partition_number, left_run, right_run.end.to(end_of_right_table));
+      } else if (left_value < right_value) {
+        _emit_combinations(partition_number, left_run, right_run.start.to(end_of_right_table));
       }
     } else if (_op == ScanType::OpGreaterThan) {
       // Greater-Join implementation

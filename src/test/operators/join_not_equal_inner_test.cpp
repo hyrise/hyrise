@@ -13,6 +13,7 @@
 #include "../../lib/operators/join_hash.hpp"
 #include "../../lib/operators/join_nested_loop_a.hpp"
 #include "../../lib/operators/join_nested_loop_b.hpp"
+#include "../../lib/operators/join_sort_merge.hpp"
 #include "../../lib/operators/print.hpp"
 #include "../../lib/operators/table_scan.hpp"
 #include "../../lib/storage/storage_manager.hpp"
@@ -25,8 +26,7 @@ template <typename T>
 class JoinNotEqualInnerTest : public JoinTest {};
 
 // here we define all Join types
-// This operator is not supported for the SortMergeJoin
-typedef ::testing::Types<JoinNestedLoopA, JoinNestedLoopB> JoinNotEqualInnerTypes;
+typedef ::testing::Types<JoinNestedLoopA, JoinNestedLoopB, JoinSortMerge> JoinNotEqualInnerTypes;
 TYPED_TEST_CASE(JoinNotEqualInnerTest, JoinNotEqualInnerTypes);
 
 TYPED_TEST(JoinNotEqualInnerTest, NotEqualInnerJoin) {
