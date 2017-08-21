@@ -100,6 +100,7 @@ class Console {
   std::vector<std::string> _tpcc_commands;
   std::ostream _out;
   std::ofstream _log;
+  bool _verbose;
 };
 
 }  // namespace opossum

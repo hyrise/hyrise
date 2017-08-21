@@ -41,7 +41,8 @@ Console::Console()
       _commands(),
       _tpcc_commands(),
       _out(std::cout.rdbuf()),
-      _log("console.log", std::ios_base::app | std::ios_base::out) {
+      _log("console.log", std::ios_base::app | std::ios_base::out),
+      _verbose(false) {
   // Init readline basics, tells readline to use our custom command completion function
   rl_attempted_completion_function = &Console::command_completion;
   rl_completer_word_break_characters = const_cast<char*>("\t\n\"\\'`@$><=;|&{(");
@@ -92,7 +93,7 @@ int Console::_eval(const std::string& input) {
   }
 
   // Dump command to logfile (the Console already has it from the input)
-  out(_prompt + input + "\n", false);
+  out(_prompt + input + "\n", _verbose);
 
   // Check if a registered command was entered
   RegisteredCommands::iterator it;
@@ -284,13 +285,20 @@ int Console::exec_script(const std::string& script_file) {
   }
   
   console.out("Executing script file: " + filepath + "\n");
+  console._verbose = true;
   std::string command;
+  int retCode = ReturnCode::Ok;
   while (std::getline(script, command))
   {
-    console._eval(command);
+    retCode = console._eval(command);
+    if (retCode == ReturnCode::Error || retCode == ReturnCode::Quit)
+    {
+      break;
+    }
   }
   console.out("Executing script file done\n");
-  return ReturnCode::Ok;
+  console._verbose = false;
+  return retCode;
 }
 
 // GNU readline interface to our commands
