@@ -49,13 +49,13 @@ Console::Console()
   register_command("exit", exit);
   register_command("quit", exit);
   register_command("help", help);
-  register_command("load", load_tpcc);
+  register_command("generate", generate_tpcc);
 
   // Register more commands specifically for command completion purposes, e.g.
-  // for TPCC generation, 'load CUSTOMER', 'load DISTRICT', etc
+  // for TPCC generation, 'generate CUSTOMER', 'generate DISTRICT', etc
   auto tpcc_generators = tpcc::TpccTableGenerator::tpcc_table_generator_functions();
   for (tpcc::TpccTableGeneratorFunctions::iterator it = tpcc_generators.begin(); it != tpcc_generators.end(); ++it) {
-    _tpcc_commands.push_back("load " + it->first);
+    _tpcc_commands.push_back("generate " + it->first);
   }
 }
 
@@ -199,17 +199,17 @@ int Console::help(const std::string&) {
   auto& console = Console::get();
   console.out("HYRISE SQL Interface\n\n");
   console.out("Available commands:\n");
-  console.out("  load [TABLENAME] - Load available TPC-C tables, or a specific table if TABLENAME is specified\n");
-  console.out("  exit             - Exit the HYRISE Console\n");
-  console.out("  quit             - Exit the HYRISE Console\n");
-  console.out("  help             - Show this message\n\n");
-  console.out("After TPC-C tables are loaded, SQL queries can be executed.\n");
+  console.out("  generate [TABLENAME] - Generate available TPC-C tables, or a specific table if TABLENAME is specified\n");
+  console.out("  exit                 - Exit the HYRISE Console\n");
+  console.out("  quit                 - Exit the HYRISE Console\n");
+  console.out("  help                 - Show this message\n\n");
+  console.out("After TPC-C tables are generated, SQL queries can be executed.\n");
   console.out("Example:\n");
   console.out("SELECT * FROM DISTRICT\n");
   return Console::ReturnCode::Ok;
 }
 
-int Console::load_tpcc(const std::string& tablename) {
+int Console::generate_tpcc(const std::string& tablename) {
   auto& console = Console::get();
   if (tablename.empty() || "ALL" == tablename) {
     console.out("Generating TPCC tables (this might take a while) ...\n");
@@ -242,7 +242,7 @@ char** Console::command_completion(const char* text, int start, int end) {
 
   if (!tokens.empty())
   {
-    if (tokens.at(0) == "load")
+    if (tokens.at(0) == "generate")
     {
       completion_matches = rl_completion_matches(text, &Console::command_generator_tpcc);
     } else if (start == 0) {
@@ -306,7 +306,7 @@ int main(int argc, char** argv) {
   console.out("--- Session start --- " + current_timestamp() + "\n", false);
 
   console.out("HYRISE SQL Interface\n");
-  console.out("Enter 'load' to load the TPC-C tables. Then, you can enter SQL queries.\n");
+  console.out("Enter 'generate' to generate the TPC-C tables. Then, you can enter SQL queries.\n");
   console.out("Type 'help' for more information.\n\n");
 
   // Main REPL loop
