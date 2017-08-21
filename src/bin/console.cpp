@@ -1,5 +1,6 @@
 #include "console.hpp"
 
+#include <boost/algorithm/string/split.hpp>
 #include <boost/algorithm/string/trim.hpp>
 
 #include <readline/history.h>
@@ -37,7 +38,7 @@ Console::Console()
     : _prompt("> "),
       _multiline_input(""),
       _commands(),
-      _commands_completion(),
+      _tpcc_commands(),
       _out(std::cout.rdbuf()),
       _log("console.log", std::ios_base::app | std::ios_base::out) {
   // Init readline basics, tells readline to use our custom command completion function
@@ -54,7 +55,7 @@ Console::Console()
   // for TPCC generation, 'load CUSTOMER', 'load DISTRICT', etc
   auto tpcc_generators = tpcc::TpccTableGenerator::tpcc_table_generator_functions();
   for (tpcc::TpccTableGeneratorFunctions::iterator it = tpcc_generators.begin(); it != tpcc_generators.end(); ++it) {
-    _commands_completion.push_back("load " + it->first);
+    _tpcc_commands.push_back("load " + it->first);
   }
 }
 
@@ -167,7 +168,6 @@ int Console::_eval_sql(const std::string& sql) {
 
 void Console::register_command(const std::string& name, const CommandFunction& f) {
   _commands[name] = f;
-  _commands_completion.push_back(name + " ");
 }
 
 Console::RegisteredCommands Console::commands() { return _commands; }
@@ -235,17 +235,47 @@ int Console::load_tpcc(const std::string& tablename) {
 
 char** Console::command_completion(const char* text, int start, int end) {
   char** completion_matches = nullptr;
-  rl_completion_append_character = '\0';
-  rl_attempted_completion_over = 1;
-  if (start == 0) {
-    completion_matches = rl_completion_matches(text, &Console::command_generator);
+
+  std::vector<std::string> tokens;
+  std::string input(text);
+  boost::algorithm::split(tokens, input, boost::is_space());
+
+  if (!tokens.empty())
+  {
+    if (tokens.at(0) == "load")
+    {
+      completion_matches = rl_completion_matches(text, &Console::command_generator_tpcc);
+    } else if (start == 0) {
+      completion_matches = rl_completion_matches(text, &Console::command_generator);
+    }
   }
+
   return completion_matches;
 }
 
 char* Console::command_generator(const char* text, int state) {
+  static RegisteredCommands::iterator it;
+  auto& commands = Console::get()._commands;
+
+  if (state == 0) {
+    it = commands.begin();
+  }
+
+  while (it != commands.end()) {
+    auto& command = it->first;
+    ++it;
+    if (command.find(text) != std::string::npos) {
+      char* completion = new char[command.size()];
+      snprintf(completion, command.size() + 1, "%s", command.c_str());
+      return completion;
+    }
+  }
+  return nullptr;
+}
+
+char* Console::command_generator_tpcc(const char* text, int state) {
   static std::vector<std::string>::iterator it;
-  auto& commands = Console::get()._commands_completion;
+  auto& commands = Console::get()._tpcc_commands;
   if (state == 0) {
     it = commands.begin();
   }

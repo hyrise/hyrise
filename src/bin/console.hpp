@@ -89,11 +89,13 @@ class Console {
   // GNU readline interface to our commands
   static char **command_completion(const char *text, int start, int end);
   static char *command_generator(const char *text, int state);
+  static char *command_generator_tpcc(const char *text, int state);
+
 
   std::string _prompt;
   std::string _multiline_input;
   RegisteredCommands _commands;
-  std::vector<std::string> _commands_completion;
+  std::vector<std::string> _tpcc_commands;
   std::ostream _out;
   std::ofstream _log;
 };
