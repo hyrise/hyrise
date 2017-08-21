@@ -29,6 +29,12 @@ ASTToOperatorTranslator &ASTToOperatorTranslator::get() {
 }
 
 ASTToOperatorTranslator::ASTToOperatorTranslator() {
+  /**
+   * Build a mapping from an ASTNodeType to a function that takes an ASTNode of such type and translates it into a set
+   * of operators and returns the root of them. We prefer this over a virtual AbstractASTNode::translate() call in order
+   * to keep the translation code in one place, i.e., this file.
+   */
+
   _operator_factory[ASTNodeType::StoredTable] =
       std::bind(&ASTToOperatorTranslator::_translate_stored_table_node, this, std::placeholders::_1);
   _operator_factory[ASTNodeType::Predicate] =

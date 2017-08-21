@@ -42,7 +42,15 @@ class SQLToASTTranslator final : public boost::noncopyable {
 
   std::shared_ptr<AbstractASTNode> translate_statement(const hsql::SQLStatement& statement);
 
-  static AllParameterVariant translate_literal(const hsql::Expr& expr);
+  static AllParameterVariant translate_argument(const hsql::Expr& expr);
+
+  /**
+   * This method is currently required to generate a column name for functions.
+   * Functions will be handled in the Aggregate operator and will create a column, that can subsequently be addressed
+   * with this name.
+   *
+   * This method will no longer be required once we change to ColumnIDs.
+   */
   static std::string generate_column_name(const hsql::Expr& expr, bool include_table_name);
 
  protected:

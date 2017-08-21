@@ -140,7 +140,7 @@ void SQLQueryOperator::execute_prepared_statement(const ExecuteStatement& execut
   std::vector<AllParameterVariant> arguments;
   if (execute_stmt.parameters != nullptr) {
     for (const hsql::Expr* expr : *execute_stmt.parameters) {
-      arguments.push_back(SQLToASTTranslator::translate_literal(*expr));
+      arguments.push_back(SQLToASTTranslator::translate_argument(*expr));
     }
   }
 

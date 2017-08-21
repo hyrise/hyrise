@@ -27,7 +27,7 @@
 namespace opossum {
 
 ScanType translate_operator_type_to_scan_type(const hsql::OperatorType operator_type) {
-  const std::unordered_map<const hsql::OperatorType, const ScanType> operator_to_scan_type = {
+  static const std::unordered_map<const hsql::OperatorType, const ScanType> operator_to_scan_type = {
       {hsql::kOpEquals, ScanType::OpEquals},       {hsql::kOpNotEquals, ScanType::OpNotEquals},
       {hsql::kOpGreater, ScanType::OpGreaterThan}, {hsql::kOpGreaterEq, ScanType::OpGreaterThanEquals},
       {hsql::kOpLess, ScanType::OpLessThan},       {hsql::kOpLessEq, ScanType::OpLessThanEquals},
@@ -40,7 +40,7 @@ ScanType translate_operator_type_to_scan_type(const hsql::OperatorType operator_
 }
 
 JoinMode translate_join_type_to_join_mode(const hsql::JoinType join_type) {
-  const std::unordered_map<const hsql::JoinType, const JoinMode> join_type_to_mode = {
+  static const std::unordered_map<const hsql::JoinType, const JoinMode> join_type_to_mode = {
       {hsql::kJoinInner, JoinMode::Inner}, {hsql::kJoinOuter, JoinMode::Outer},     {hsql::kJoinLeft, JoinMode::Left},
       {hsql::kJoinRight, JoinMode::Right}, {hsql::kJoinNatural, JoinMode::Natural}, {hsql::kJoinCross, JoinMode::Cross},
   };
@@ -73,14 +73,14 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::translate_statement(const h
     case hsql::kStmtSelect:
       return _translate_select((const hsql::SelectStatement&)statement);
     default:
-      Fail("Translating statement failed.");
+      Fail("Only SELECT statements are supported as of now.");
       return {};
   }
 }
 
 std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_select(const hsql::SelectStatement& select) {
   // SQL Order of Operations: http://www.bennadel.com/blog/70-sql-query-order-of-operations.htm
-  // 1. FROM clause
+  // 1. FROM clause (incl. JOINs and subselects that are part of this)
   // 2. WHERE clause
   // 3. GROUP BY clause
   // 4. HAVING clause
@@ -103,6 +103,7 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_select(const hsq
   auto is_aggregate = select.groupBy != nullptr;
   if (!is_aggregate) {
     for (auto* expr : *select.selectList) {
+      // TODO(anybody): Only consider aggregate functions here (i.e., SUM, COUNT, etc. - but not CONCAT, ...).
       if (expr->isType(hsql::kExprFunctionRef)) {
         is_aggregate = true;
         break;
@@ -207,7 +208,7 @@ std::string SQLToASTTranslator::generate_column_name(const hsql::Expr& expr, boo
   return name;
 }
 
-AllParameterVariant SQLToASTTranslator::translate_literal(const hsql::Expr& expr) {
+AllParameterVariant SQLToASTTranslator::translate_argument(const hsql::Expr& expr) {
   switch (expr.type) {
     case hsql::kExprLiteralInt:
       return AllTypeVariant(expr.ival);
@@ -241,16 +242,37 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_filter_expr(
   // TODO(anybody): handle IN with join
   const auto scan_type = translate_operator_type_to_scan_type(expr.opType);
 
-  // We accept functions here because we assume they have been translated by Aggregate.
-  // They will be treated as a regular column of the same name.
-  // TODO(mp): this has to change once we have extended HAVING support.
+  /**
+   * We have to determine which side of the expression is a column or function reference.
+   * That's because the WHERE clause could be `a = 5`, but it could also be `5 = a`.
+   * However, it is currently required in the TableScan operator that one side is a column.
+   *
+   * We accept functions here because we assume they have been translated by Aggregate.
+   * They will be treated as a regular column of the same name.
+   * If this assumption is incorrect, the translation will fail because the column won't be found.
+   *
+   * Supported:
+   *   SELECT a, SUM(B) FROM t GROUP BY a HAVING SUM(B) > 0
+   * This query is fine because the expression used in the HAVING clause is part of the SELECT list.
+   * We first translate the SELECT list, which will result in an Aggregate operator that creates a column for the sum.
+   * We can subsequently access that column when we translate the HAVING expression here.
+   *
+   * Unsupported:
+   *   SELECT a, SUM(B) FROM t GROUP BY a HAVING AVG(B) > 0
+   * This query cannot be translated at the moment because the Aggregate does not produce an output column for the AVG.
+   * Therefore, the filter expression cannot be translated, because the TableScan operator is not able to compute
+   * aggregates on its own.
+   *
+   * TODO(anybody): extend support for those HAVING clauses.
+   * One option is to add them to the Aggregate and then use a Projection to remove them from the result.
+   */
   hsql::Expr* column_operand_expr = nullptr;
-  hsql::Expr* value_operand_expr = nullptr;
+  hsql::Expr* argument_expr = nullptr;
   if (expr.expr->isType(hsql::kExprColumnRef) || expr.expr->isType(hsql::kExprFunctionRef)) {
     column_operand_expr = expr.expr;
-    value_operand_expr = expr.expr2;
+    argument_expr = expr.expr2;
   } else {
-    value_operand_expr = expr.expr;
+    argument_expr = expr.expr;
     column_operand_expr = expr.expr2;
     DebugAssert(
         column_operand_expr->isType(hsql::kExprColumnRef) || column_operand_expr->isType(hsql::kExprFunctionRef),
@@ -259,8 +281,8 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_filter_expr(
 
   const auto column_name = generate_column_name(*column_operand_expr, true);
 
-  AllParameterVariant value;
-  optional<AllTypeVariant> value2;
+  AllParameterVariant argument;
+  optional<AllTypeVariant> argument2;
 
   if (scan_type == ScanType::OpBetween) {
     Assert(expr.exprList->size() == 2, "Need two arguments for BETWEEEN");
@@ -268,17 +290,17 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_filter_expr(
     const auto* left_expr = (*expr.exprList)[0];
     const auto* right_expr = (*expr.exprList)[1];
 
-    value = translate_literal(*left_expr);
+    argument = translate_argument(*left_expr);
 
-    // TODO(torpedro / mp): TableScan does not support AllParameterVariant as second value.
-    // This would be required to prepare BETWEEN.
-    value2 = boost::get<AllTypeVariant>(translate_literal(*right_expr));
+    // TODO(anybody): TableScan does not support AllParameterVariant as second value.
+    // This would be required to prepare BETWEEN, or to do a BETWEEN scan for three columns (a BETWEEN b and c).
+    argument2 = boost::get<AllTypeVariant>(translate_argument(*right_expr));
   } else {
-    value = translate_literal(*value_operand_expr);
+    argument = translate_argument(*argument_expr);
   }
 
   std::shared_ptr<ExpressionNode> expression_node = SQLExpressionTranslator::translate_expression(expr);
-  auto predicate_node = std::make_shared<PredicateNode>(column_name, expression_node, scan_type, value, value2);
+  auto predicate_node = std::make_shared<PredicateNode>(column_name, expression_node, scan_type, argument, argument2);
 
   predicate_node->set_left_child(input_node);
 
