@@ -353,7 +353,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
       if (_mode == JoinMode::Right || _mode == JoinMode::Outer) {
         _emit_left_null_combinations(partition_number, TableRange(partition_number, right_run_start, right_size));
       }
-      if (_op == ScanType::OpGreaterThan || _op == ScanType::OpGreaterThanEquals) {
+      if (_op == ScanType::OpGreaterThan || _op == ScanType::OpGreaterThanEquals || _op == ScanType::OpNotEquals) {
         auto left_range = TableRange(TablePosition(partition_number + 1, 0).to(_end_of_table(_sorted_left_table)));
         auto right_range = TableRange(partition_number, right_run_start, right_size);
         _emit_combinations(partition_number, left_range, right_range);
@@ -365,7 +365,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
       if (_mode == JoinMode::Left || _mode == JoinMode::Outer) {
         _emit_right_null_combinations(partition_number, TableRange(partition_number, left_run_start, left_size));
       }
-      if (_op == ScanType::OpLessThan || _op == ScanType::OpLessThanEquals) {
+      if (_op == ScanType::OpLessThan || _op == ScanType::OpLessThanEquals || _op == ScanType::OpNotEquals) {
         auto left_range = TableRange(partition_number, left_run_start, left_size);
         auto right_range = TableRange(TablePosition(partition_number + 1, 0).to(_end_of_table(_sorted_right_table)));
         _emit_combinations(partition_number, left_range, right_range);
