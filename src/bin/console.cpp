@@ -16,6 +16,7 @@
 #include "sql/sql_query_translator.hpp"
 #include "storage/storage_manager.hpp"
 #include "tpcc/tpcc_table_generator.hpp"
+#include "operators/import_csv.hpp"
 
 namespace {
 
@@ -50,6 +51,7 @@ Console::Console()
   register_command("quit", exit);
   register_command("help", help);
   register_command("generate", generate_tpcc);
+  register_command("load", load_table);
 
   // Register more commands specifically for command completion purposes, e.g.
   // for TPCC generation, 'generate CUSTOMER', 'generate DISTRICT', etc
@@ -93,7 +95,7 @@ int Console::_eval(const std::string& input) {
 
   // Check if a registered command was entered
   RegisteredCommands::iterator it;
-  if ((it = _commands.find(input.substr(0, input.find_first_of(" \n")))) != std::end(_commands)) {
+  if ((it = _commands.find(input.substr(0, input.find_first_of(" \n(")))) != std::end(_commands)) {
     return _eval_command(it->second, input);
   }
 
@@ -118,8 +120,13 @@ int Console::_eval(const std::string& input) {
 }
 
 int Console::_eval_command(const CommandFunction& func, const std::string& command) {
-  size_t first = command.find(' ');
-  size_t last = command.find('\n');
+  size_t first = command.find('(');
+  size_t last = command.find(')');
+
+  if (std::string::npos == first) {
+    first = command.find(' ');
+    last = command.find('\n');
+  }
 
   if (std::string::npos == first) {
     return static_cast<int>(func(""));
@@ -200,6 +207,9 @@ int Console::help(const std::string&) {
   console.out("HYRISE SQL Interface\n\n");
   console.out("Available commands:\n");
   console.out("  generate [TABLENAME] - Generate available TPC-C tables, or a specific table if TABLENAME is specified\n");
+  console.out("  load FILE TABLENAME  - Load table from disc specified by filepath FILE, store it with name TABLENAME\n");
+  console.out("  load(FILE TABLENAME) - Load table from disc specified by filepath FILE, store it with name TABLENAME\n");
+  console.out("                         (with filepath completion)\n");
   console.out("  exit                 - Exit the HYRISE Console\n");
   console.out("  quit                 - Exit the HYRISE Console\n");
   console.out("  help                 - Show this message\n\n");
@@ -229,6 +239,32 @@ int Console::generate_tpcc(const std::string& tablename) {
 
   opossum::StorageManager::get().add_table(tablename, table);
   return Console::ReturnCode::Ok;
+}
+
+int Console::load_table(const std::string& args) {
+  auto& console = Console::get();
+  std::string input = args;
+  boost::algorithm::trim<std::string>(input);
+  std::vector<std::string> arguments;
+  boost::algorithm::split(arguments, input, boost::is_space());
+
+  if (arguments.size() != 2)
+  {
+    console.out("Usage:\n");
+    console.out("  load FILEPATH TABLENAME\n");
+    console.out("  load(FILEPATH TABLENAME)\n");
+    return ReturnCode::Error;
+  }
+
+  auto importer = std::make_shared<ImportCsv>(arguments.at(0), arguments.at(1));
+  try {
+    importer->execute();
+  } catch (const std::exception& exception) {
+    console.out("Exception thrown while importing CSV:\n  " + std::string(exception.what()) + "\n");
+    return ReturnCode::Error;
+  }
+
+  return ReturnCode::Ok;
 }
 
 // GNU readline interface to our commands

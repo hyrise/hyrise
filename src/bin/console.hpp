@@ -85,6 +85,7 @@ class Console {
   static int exit(const std::string &args);
   static int help(const std::string &args);
   static int generate_tpcc(const std::string &args);
+  static int load_table(const std::string &args);
 
   // GNU readline interface to our commands
   static char **command_completion(const char *text, int start, int end);
