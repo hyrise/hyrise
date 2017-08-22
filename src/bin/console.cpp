@@ -125,13 +125,8 @@ int Console::_eval(const std::string& input) {
 }
 
 int Console::_eval_command(const CommandFunction& func, const std::string& command) {
-  size_t first = command.find('(');
-  size_t last = command.find(')');
-
-  if (std::string::npos == first) {
-    first = command.find(' ');
-    last = command.find('\n');
-  }
+  size_t first = command.find(' ');
+  size_t last = command.find('\n');
 
   if (std::string::npos == first) {
     return static_cast<int>(func(""));
@@ -225,12 +220,7 @@ int Console::help(const std::string&) {
       "  generate [TABLENAME] - Generate available TPC-C tables, or a specific table if TABLENAME is specified\n");
   console.out(
       "  load FILE TABLENAME  - Load table from disc specified by filepath FILE, store it with name TABLENAME\n");
-  console.out(
-      "  load(FILE TABLENAME) - Load table from disc specified by filepath FILE, store it with name TABLENAME\n");
-  console.out("                         (with filepath completion)\n");
   console.out("  script SCRIPTFILE    - Execute script specified by SCRIPTFILE\n");
-  console.out("  script(SCRIPTFILE)   - Execute script specified by SCRIPTFILE\n");
-  console.out("                         (with filepath completion)\n");
   console.out("  exit                 - Exit the HYRISE Console\n");
   console.out("  quit                 - Exit the HYRISE Console\n");
   console.out("  help                 - Show this message\n\n");
@@ -272,7 +262,6 @@ int Console::load_table(const std::string& args) {
   if (arguments.size() != 2) {
     console.out("Usage:\n");
     console.out("  load FILEPATH TABLENAME\n");
-    console.out("  load(FILEPATH TABLENAME)\n");
     return ReturnCode::Error;
   }
 
@@ -321,20 +310,18 @@ char** Console::command_completion(const char* text, int start, int end) {
   std::string input(rl_line_buffer);
 
   // Remove whitespace duplicates to not get empty tokens after boost::algorithm::split
-  auto both_are_spaces = [](char lhs, char rhs){ return (lhs == rhs) && (lhs == ' '); };
+  auto both_are_spaces = [](char lhs, char rhs) { return (lhs == rhs) && (lhs == ' '); };
   input.erase(std::unique(input.begin(), input.end(), both_are_spaces), input.end());
 
   std::vector<std::string> tokens;
   boost::algorithm::split(tokens, input, boost::is_space());
 
-
   // Choose completion function depending on the input. If it starts with "generate",
   // suggest TPC-C tablenames for completion.
-  const std::string & first_word = tokens.at(0); 
+  const std::string& first_word = tokens.at(0);
   if (first_word == "generate") {
     // Completion only for two words, "generate", and the TABLENAME
-    if (tokens.size() <= 2)
-    {
+    if (tokens.size() <= 2) {
       completion_matches = rl_completion_matches(text, &Console::command_generator_tpcc);
     }
     // Turn off filepath completion for TPC-C table generation
