@@ -100,7 +100,7 @@ int Console::_eval(const std::string& input) {
 
   // Check if a registered command was entered
   RegisteredCommands::iterator it;
-  if ((it = _commands.find(input.substr(0, input.find_first_of(" \n(")))) != std::end(_commands)) {
+  if ((it = _commands.find(input.substr(0, input.find_first_of(" \n")))) != std::end(_commands)) {
     return _eval_command(it->second, input);
   }
 
