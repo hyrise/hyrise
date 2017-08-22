@@ -46,7 +46,7 @@ Console::Console()
       _verbose(false) {
   // Init readline basics, tells readline to use our custom command completion function
   rl_attempted_completion_function = &Console::command_completion;
-  rl_completer_word_break_characters = const_cast<char*>("\t\n\"\\'`@$><=;|&{(");
+  rl_completer_word_break_characters = const_cast<char*>(" \t\n\"\\'`@$><=;|&{(");
 
   // Register default commands to Console
   register_command("exit", exit);
@@ -56,11 +56,11 @@ Console::Console()
   register_command("load", load_table);
   register_command("script", exec_script);
 
-  // Register more commands specifically for command completion purposes, e.g.
-  // for TPCC generation, 'generate CUSTOMER', 'generate DISTRICT', etc
+  // Register words specifically for command completion purposes, e.g.
+  // for TPC-C table generation, 'CUSTOMER', 'DISTRICT', etc
   auto tpcc_generators = tpcc::TpccTableGenerator::tpcc_table_generator_functions();
   for (tpcc::TpccTableGeneratorFunctions::iterator it = tpcc_generators.begin(); it != tpcc_generators.end(); ++it) {
-    _tpcc_commands.push_back("generate " + it->first);
+    _tpcc_commands.push_back(it->first);
   }
 }
 
@@ -318,16 +318,35 @@ int Console::exec_script(const std::string& script_file) {
 char** Console::command_completion(const char* text, int start, int end) {
   char** completion_matches = nullptr;
 
+  std::string input(rl_line_buffer);
+
+  // Remove whitespace duplicates to not get empty tokens after boost::algorithm::split
+  auto both_are_spaces = [](char lhs, char rhs){ return (lhs == rhs) && (lhs == ' '); };
+  input.erase(std::unique(input.begin(), input.end(), both_are_spaces), input.end());
+
   std::vector<std::string> tokens;
-  std::string input(text);
   boost::algorithm::split(tokens, input, boost::is_space());
 
-  if (!tokens.empty()) {
-    if (tokens.at(0) == "generate") {
+
+  // Choose completion function depending on the input. If it starts with "generate",
+  // suggest TPC-C tablenames for completion.
+  const std::string & first_word = tokens.at(0); 
+  if (first_word == "generate") {
+    // Completion only for two words, "generate", and the TABLENAME
+    if (tokens.size() <= 2)
+    {
       completion_matches = rl_completion_matches(text, &Console::command_generator_tpcc);
-    } else if (start == 0) {
-      completion_matches = rl_completion_matches(text, &Console::command_generator);
     }
+    // Turn off filepath completion for TPC-C table generation
+    rl_attempted_completion_over = 1;
+  } else if (first_word == "quit" || first_word == "exit" || first_word == "help") {
+    // Turn off filepath completion
+    rl_attempted_completion_over = 1;
+  } else if ((first_word == "load" || first_word == "script") && tokens.size() > 2) {
+    // Turn off filepath completion after first argument for "load" and "script"
+    rl_attempted_completion_over = 1;
+  } else if (start == 0) {
+    completion_matches = rl_completion_matches(text, &Console::command_generator);
   }
 
   return completion_matches;
