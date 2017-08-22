@@ -52,6 +52,7 @@ using BaseIterator = boost::iterator_facade<Derived, Value, boost::forward_trave
  *  private:
  *   friend class boost::iterator_core_access;  // the following methods need to be accessible by the base class
  *
+ *   // don’t forget to check if index_into_referenced() == INVALID_CHUNK_OFFSET (i.e. NULL)
  *   Value dereference() const { return Value{}; }
  * };
  */
