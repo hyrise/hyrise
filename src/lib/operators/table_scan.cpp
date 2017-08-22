@@ -165,8 +165,7 @@ class SingleColumnScanBase : public ColumnScanBase, public ColumnVisitable {
    * @{
    */
 
-  using ChunkOffsetsByChunkID =
-      std::unordered_map<ChunkID, std::vector<std::pair<ChunkOffset, ChunkOffset>>, std::hash<decltype(ChunkID().t)>>;
+  using ChunkOffsetsByChunkID = std::unordered_map<ChunkID, ChunkOffsetsList, std::hash<decltype(ChunkID().t)>>;
 
   ChunkOffsetsByChunkID _split_position_list_by_chunk_id(const PosList &pos_list) {
     auto chunk_offsets_by_chunk_id = ChunkOffsetsByChunkID{};

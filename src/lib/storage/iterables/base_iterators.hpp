@@ -12,7 +12,9 @@
 
 namespace opossum {
 
+// See table_scan.cpp:170 about how to generate such a list from a reference column
 using ChunkOffsetsList = std::vector<std::pair<ChunkOffset, ChunkOffset>>;
+
 using ChunkOffsetsIterator = ChunkOffsetsList::const_iterator;
 
 /**
@@ -34,6 +36,11 @@ using BaseIterator = boost::iterator_facade<Derived, Value, boost::forward_trave
 
 /**
  * @brief base class of all referenced iterators used by iterables
+ * 
+ * This iterator should be used whenever a reference column is “dereferenced”,
+ * i.e., its underlying value or dictionary column is iterated over.
+ * index_into_referenced is the index into the underlying data structure.
+ * index_of_referencing is the current index in the reference column.
  *
  * Example Usage
  *
