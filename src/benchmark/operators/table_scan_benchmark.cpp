@@ -25,7 +25,8 @@ BENCHMARK_DEFINE_F(BenchmarkBasicFixture, BM_TableScanConstantDict)(benchmark::S
   auto warm_up = std::make_shared<TableScan>(_table_dict_wrapper, ColumnName("a"), ScanType::OpGreaterThanEquals, 7);
   warm_up->execute();
   while (state.KeepRunning()) {
-    auto table_scan = std::make_shared<TableScan>(_table_dict_wrapper, ColumnName("a"), ScanType::OpGreaterThanEquals, 7);
+    auto table_scan =
+        std::make_shared<TableScan>(_table_dict_wrapper, ColumnName("a"), ScanType::OpGreaterThanEquals, 7);
     table_scan->execute();
   }
 }
@@ -48,8 +49,8 @@ BENCHMARK_DEFINE_F(BenchmarkBasicFixture, BM_TableScanVariableDict)(benchmark::S
       std::make_shared<TableScan>(_table_dict_wrapper, ColumnName("a"), ScanType::OpGreaterThanEquals, ColumnName("b"));
   warm_up->execute();
   while (state.KeepRunning()) {
-    auto table_scan =
-        std::make_shared<TableScan>(_table_dict_wrapper, ColumnName("a"), ScanType::OpGreaterThanEquals, ColumnName("b"));
+    auto table_scan = std::make_shared<TableScan>(_table_dict_wrapper, ColumnName("a"), ScanType::OpGreaterThanEquals,
+                                                  ColumnName("b"));
     table_scan->execute();
   }
 }

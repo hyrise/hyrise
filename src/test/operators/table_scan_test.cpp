@@ -288,7 +288,7 @@ TEST_F(OperatorsTableScanTest, ScanWeirdPosList) {
 TEST_F(OperatorsTableScanTest, ScanOnDictColumnValueGreaterThanMaxDictionaryValue) {
   const auto all_rows = std::vector<AllTypeVariant>{100, 102, 104, 106, 108, 110, 112, 114, 116, 118, 120, 122, 124};
   const auto no_rows = std::vector<AllTypeVariant>{};
-  
+
   std::map<ScanType, std::vector<AllTypeVariant>> tests;
   tests[ScanType::OpEquals] = no_rows;
   tests[ScanType::OpNotEquals] = all_rows;
@@ -297,7 +297,7 @@ TEST_F(OperatorsTableScanTest, ScanOnDictColumnValueGreaterThanMaxDictionaryValu
   tests[ScanType::OpGreaterThan] = no_rows;
   tests[ScanType::OpGreaterThanEquals] = no_rows;
   // tests[ScanType::OpBetween] = no_rows;
-  
+
   for (const auto& test : tests) {
     auto scan = std::make_shared<TableScan>(_table_wrapper_even_dict, ColumnName("a"), test.first, 30,
                                             optional<AllTypeVariant>(34));
@@ -310,7 +310,7 @@ TEST_F(OperatorsTableScanTest, ScanOnDictColumnValueGreaterThanMaxDictionaryValu
 TEST_F(OperatorsTableScanTest, ScanOnDictColumnValueLessThanMinDictionaryValue) {
   const auto all_rows = std::vector<AllTypeVariant>{100, 102, 104, 106, 108, 110, 112, 114, 116, 118, 120, 122, 124};
   const auto no_rows = std::vector<AllTypeVariant>{};
-  
+
   std::map<ScanType, std::vector<AllTypeVariant>> tests;
   tests[ScanType::OpEquals] = no_rows;
   tests[ScanType::OpNotEquals] = all_rows;
@@ -319,7 +319,7 @@ TEST_F(OperatorsTableScanTest, ScanOnDictColumnValueLessThanMinDictionaryValue) 
   tests[ScanType::OpGreaterThan] = all_rows;
   tests[ScanType::OpGreaterThanEquals] = all_rows;
   // tests[ScanType::OpBetween] = no_rows;
-  
+
   for (const auto& test : tests) {
     auto scan = std::make_shared<TableScan>(_table_wrapper_even_dict, ColumnName("a"), test.first, -10,
                                             optional<AllTypeVariant>(34));
