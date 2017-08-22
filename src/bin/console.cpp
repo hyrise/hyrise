@@ -19,6 +19,7 @@
 #include "sql/sql_planner.hpp"
 #include "storage/storage_manager.hpp"
 #include "tpcc/tpcc_table_generator.hpp"
+#include "utils/load_table.hpp"
 
 namespace {
 
@@ -149,13 +150,14 @@ int Console::_eval_sql(const std::string& sql) {
     return 1;
   }
 
+  // Compile the parse result
+  plan = SQLPlanner::plan(parse_result);
+
   // Measure the query plan execution time
   auto started = std::chrono::high_resolution_clock::now();
 
   // Execute query plan
   try {
-    // Compile the parse result
-    plan = SQLPlanner::plan(parse_result);
     for (const auto& task : plan.tasks()) {
       task->get_operator()->execute();
     }
@@ -259,11 +261,32 @@ int Console::load_table(const std::string& args) {
     return ReturnCode::Error;
   }
 
-  auto importer = std::make_shared<ImportCsv>(arguments.at(0), arguments.at(1));
-  try {
-    importer->execute();
-  } catch (const std::exception& exception) {
-    console.out("Exception thrown while importing CSV:\n  " + std::string(exception.what()) + "\n");
+  const std::string& filepath = arguments.at(0);
+  const std::string& tablename = arguments.at(1);
+
+  std::vector<std::string> file_parts;
+  boost::algorithm::split(file_parts, filepath, boost::is_any_of("."));
+  const std::string& extension = file_parts.back();
+
+  console.out("Loading " + filepath + " into table \"" + tablename + "\" ...\n");
+  if (extension == "csv") {
+    auto importer = std::make_shared<ImportCsv>(filepath, tablename);
+    try {
+      importer->execute();
+    } catch (const std::exception& exception) {
+      console.out("Exception thrown while importing CSV:\n  " + std::string(exception.what()) + "\n");
+      return ReturnCode::Error;
+    }
+  } else if (extension == "tbl") {
+    try {
+      auto table = opossum::load_table(filepath, 0);
+      StorageManager::get().add_table(tablename, table);
+    } catch (const std::exception& exception) {
+      console.out("Exception thrown while importing TBL:\n  " + std::string(exception.what()) + "\n");
+      return ReturnCode::Error;
+    }
+  } else {
+    console.out("Error: Unsupported file extension '" + extension + "'\n");
     return ReturnCode::Error;
   }
 
