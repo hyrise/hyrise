@@ -4,6 +4,21 @@
 
 namespace opossum {
 
+/**
+ * This imitates C++17 constexpr-ifs
+ *
+ * Example Usage
+ *
+ * static_if<std::is_floating_point<T>{}>([&](auto f) {
+ *   // handle floating point value
+ * }).else([&](auto f) {
+ *   // handle everything else
+ * });
+ *
+ * Taken from:
+ * https://baptiste-wicht.com/posts/2015/07/simulate-static_if-with-c11c14.html
+ */
+
 namespace static_if_detail {
 
 struct Identity {
