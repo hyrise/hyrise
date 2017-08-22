@@ -185,7 +185,7 @@ int Console::_eval_sql(const std::string& sql) {
   // Print result (to Console and logfile)
   out(table);
   out("===\n");
-  out(std::to_string(row_count) + " rows (" + std::to_string(elapsed_ms) + " ms)\n");
+  out(std::to_string(row_count) + " rows (" + std::to_string(elapsed_ms) + " ms wall time)\n");
 
   return ReturnCode::Ok;
 }
