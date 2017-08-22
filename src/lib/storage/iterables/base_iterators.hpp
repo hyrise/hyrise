@@ -2,13 +2,12 @@
 
 #include <boost/iterator/iterator_facade.hpp>
 
-#include <vector>
 #include <utility>
+#include <vector>
 
 #include "column_value.hpp"
 
 #include "types.hpp"
-
 
 namespace opossum {
 
@@ -25,7 +24,7 @@ using ChunkOffsetsIterator = ChunkOffsetsList::const_iterator;
  * class Iterator : public BaseIterator<Iterator, Value> {
  *  private:
  *   friend class boost::iterator_core_access;  // the following methods need to be accessible by the base class
- *  
+ *
  *   void increment() { ... }
  *   bool equal(const Iterator& other) const { return false; }
  *   Value dereference() const { return Value{}; }
@@ -36,7 +35,7 @@ using BaseIterator = boost::iterator_facade<Derived, Value, boost::forward_trave
 
 /**
  * @brief base class of all referenced iterators used by iterables
- * 
+ *
  * This iterator should be used whenever a reference column is “dereferenced”,
  * i.e., its underlying value or dictionary column is iterated over.
  * index_into_referenced is the index into the underlying data structure.

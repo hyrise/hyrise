@@ -31,9 +31,9 @@ namespace opossum {
  * iterable.get_iterators([&](auto it, auto end) {
  *   for (; it != end; ++it) {
  *     auto value = *it;
- *     
+ *
  *     if (value.is_null()) { ... }
- *     
+ *
  *     consume(value.value());
  *   }
  * });

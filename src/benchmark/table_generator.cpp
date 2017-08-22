@@ -11,9 +11,9 @@
 #include "tbb/concurrent_vector.h"
 
 #include "storage/chunk.hpp"
+#include "storage/dictionary_compression.hpp"
 #include "storage/table.hpp"
 #include "storage/value_column.hpp"
-#include "storage/dictionary_compression.hpp"
 
 #include "types.hpp"
 

@@ -13,8 +13,7 @@ class AttributeVectorIterable : public BaseIndexableIterable<AttributeVectorIter
  public:
   explicit AttributeVectorIterable(const BaseAttributeVector& attribute_vector,
                                    const ChunkOffsetsList* mapped_chunk_offsets = nullptr)
-      : BaseIndexableIterable<AttributeVectorIterable>{mapped_chunk_offsets},
-        _attribute_vector{attribute_vector} {}
+      : BaseIndexableIterable<AttributeVectorIterable>{mapped_chunk_offsets}, _attribute_vector{attribute_vector} {}
 
   template <typename Functor>
   void _on_get_iterators_with_indices(const Functor& f) const {

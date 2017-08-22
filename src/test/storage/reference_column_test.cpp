@@ -13,9 +13,9 @@
 #include "../../lib/operators/print.hpp"
 #include "../../lib/operators/table_scan.hpp"
 #include "../../lib/storage/dictionary_compression.hpp"
+#include "../../lib/storage/reference_column.hpp"
 #include "../../lib/storage/storage_manager.hpp"
 #include "../../lib/storage/table.hpp"
-#include "../../lib/storage/reference_column.hpp"
 #include "../../lib/types.hpp"
 
 namespace opossum {

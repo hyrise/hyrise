@@ -10,9 +10,9 @@
 #include "gtest/gtest.h"
 
 #include "../../lib/operators/abstract_read_only_operator.hpp"
+#include "../../lib/operators/print.hpp"
 #include "../../lib/operators/table_scan.hpp"
 #include "../../lib/operators/table_wrapper.hpp"
-#include "../../lib/operators/print.hpp"
 #include "../../lib/storage/dictionary_compression.hpp"
 #include "../../lib/storage/reference_column.hpp"
 #include "../../lib/storage/table.hpp"
@@ -102,12 +102,12 @@ class OperatorsTableScanTest : public BaseTest {
     return table_wrapper;
   }
 
-  std::shared_ptr<const Table> to_reference_column(const std::shared_ptr<const Table> & table) {
+  std::shared_ptr<const Table> to_reference_column(const std::shared_ptr<const Table>& table) {
     auto table_out = std::make_shared<Table>();
-    
+
     auto pos_list = std::make_shared<PosList>();
     pos_list->reserve(table->row_count());
-    
+
     for (auto chunk_id = ChunkID{0u}; chunk_id < table->chunk_count(); ++chunk_id) {
       const auto& chunk = table->get_chunk(chunk_id);
 
@@ -115,13 +115,12 @@ class OperatorsTableScanTest : public BaseTest {
         pos_list->push_back(RowID{chunk_id, chunk_offset});
       }
     }
-    
+
     auto chunk_out = Chunk{};
-    
+
     for (auto column_id = ColumnID{0u}; column_id < table->col_count(); ++column_id) {
       table_out->add_column_definition(table->column_name(column_id), table->column_type(column_id));
-      
-      
+
       auto column_out = std::make_shared<ReferenceColumn>(table, column_id, pos_list);
       chunk_out.add_column(column_out);
     }
@@ -129,56 +128,58 @@ class OperatorsTableScanTest : public BaseTest {
     table_out->add_chunk(std::move(chunk_out));
     return table_out;
   }
-  
+
   std::shared_ptr<const Table> create_reference_table_w_null_row_id(const bool references_dict_column) {
     const auto table = load_table("src/test/tables/int_float_w_null_8_rows.tbl", 4);
-    
+
     if (references_dict_column) {
       DictionaryCompression::compress_table(*table);
     }
-    
-    auto pos_list_a = std::make_shared<PosList>(PosList{RowID{ChunkID{0u}, 1u}, RowID{ChunkID{1u}, 0u}, RowID{ChunkID{0u}, 2u}, RowID{ChunkID{0u}, 3u}});
+
+    auto pos_list_a = std::make_shared<PosList>(
+        PosList{RowID{ChunkID{0u}, 1u}, RowID{ChunkID{1u}, 0u}, RowID{ChunkID{0u}, 2u}, RowID{ChunkID{0u}, 3u}});
     auto ref_column_a = std::make_shared<ReferenceColumn>(table, ColumnID{0u}, pos_list_a);
-    
-    auto pos_list_b = std::make_shared<PosList>(PosList{NULL_ROW_ID, RowID{ChunkID{0u}, 0u}, RowID{ChunkID{1u}, 2u}, RowID{ChunkID{0u}, 1u}});
+
+    auto pos_list_b = std::make_shared<PosList>(
+        PosList{NULL_ROW_ID, RowID{ChunkID{0u}, 0u}, RowID{ChunkID{1u}, 2u}, RowID{ChunkID{0u}, 1u}});
     auto ref_column_b = std::make_shared<ReferenceColumn>(table, ColumnID{1u}, pos_list_b);
-    
+
     auto ref_table = std::make_shared<Table>();
     ref_table->add_column_definition("a", "int", true);
     ref_table->add_column_definition("b", "float", true);
-    
+
     auto chunk = Chunk{};
     chunk.add_column(ref_column_a);
     chunk.add_column(ref_column_b);
-    
+
     ref_table->add_chunk(std::move(chunk));
-    
+
     return ref_table;
   }
-  
+
   void scan_for_null_values(const std::shared_ptr<AbstractOperator> in,
-                            const std::map<ScanType, std::vector<AllTypeVariant>> & tests) {
+                            const std::map<ScanType, std::vector<AllTypeVariant>>& tests) {
     for (const auto& test : tests) {
       const auto scan_type = test.first;
       const auto& expected = test.second;
-      
+
       auto scan = std::make_shared<opossum::TableScan>(in, "b", scan_type, NULL_VALUE);
       scan->execute();
-      
+
       const auto expected_result = std::vector<AllTypeVariant>{{12, 123}};
       ASSERT_COLUMN_EQ(scan->get_output(), ColumnID{0u}, expected);
     }
   }
-  
-  void ASSERT_COLUMN_EQ(std::shared_ptr<const Table> table, const ColumnID & column_id, 
-                        const std::vector<AllTypeVariant> & expected) {
+
+  void ASSERT_COLUMN_EQ(std::shared_ptr<const Table> table, const ColumnID& column_id,
+                        const std::vector<AllTypeVariant>& expected) {
     auto expected_multiset = std::multiset<AllTypeVariant>{expected.cbegin(), expected.cend()};
 
     for (auto chunk_id = ChunkID{0u}; chunk_id < table->chunk_count(); ++chunk_id) {
       const auto& chunk = table->get_chunk(chunk_id);
-      
+
       for (auto chunk_offset = ChunkOffset{0u}; chunk_offset < chunk.size(); ++chunk_offset) {
-        const auto& column = *chunk.get_column(column_id); 
+        const auto& column = *chunk.get_column(column_id);
 
         auto search = expected_multiset.find(column[chunk_offset]);
 
@@ -351,7 +352,7 @@ TEST_F(OperatorsTableScanTest, ScanOnDictWithColumn) {
 TEST_F(OperatorsTableScanTest, ScanOnDictColumnAroundBounds) {
   // scanning for a value that is around the dictionary's bounds
 
-  std::map<ScanType, std::set<int>> tests;
+  std::map<ScanType, std::vector<AllTypeVariant>> tests;
   tests[ScanType::OpEquals] = {100};
   tests[ScanType::OpLessThan] = {};
   tests[ScanType::OpLessThanEquals] = {100};
@@ -365,15 +366,7 @@ TEST_F(OperatorsTableScanTest, ScanOnDictColumnAroundBounds) {
                                                      optional<AllTypeVariant>(10));
     scan->execute();
 
-    auto expected_copy = test.second;
-    for (ChunkID chunk_id{0}; chunk_id < scan->get_output()->chunk_count(); ++chunk_id) {
-      auto& chunk = scan->get_output()->get_chunk(chunk_id);
-      for (ChunkOffset chunk_offset = 0; chunk_offset < chunk.size(); ++chunk_offset) {
-        EXPECT_EQ(expected_copy.erase(type_cast<int>((*chunk.get_column(ColumnID{1}))[chunk_offset])),
-                  static_cast<size_t>(1));
-      }
-    }
-    EXPECT_EQ(expected_copy.size(), 0ull);
+    ASSERT_COLUMN_EQ(scan->get_output(), ColumnID{1}, test.second);
   }
 }
 
@@ -427,79 +420,73 @@ TEST_F(OperatorsTableScanTest, OperatorName) {
 TEST_F(OperatorsTableScanTest, ScanForNullValuesOnValueColumn) {
   auto table_wrapper = std::make_shared<TableWrapper>(load_table("src/test/tables/int_float_w_null_8_rows.tbl", 4));
   table_wrapper->execute();
-  
+
   const auto tests = std::map<ScanType, std::vector<AllTypeVariant>>{
-    {ScanType::OpEquals, {12, 123}},
-    {ScanType::OpNotEquals, {12345, NULL_VALUE, 1234, 12345, 12, 1234}}};
-  
+      {ScanType::OpEquals, {12, 123}}, {ScanType::OpNotEquals, {12345, NULL_VALUE, 1234, 12345, 12, 1234}}};
+
   scan_for_null_values(table_wrapper, tests);
 }
-  
+
 TEST_F(OperatorsTableScanTest, ScanForNullValuesOnDictColumn) {
   auto table = load_table("src/test/tables/int_float_w_null_8_rows.tbl", 4);
   DictionaryCompression::compress_table(*table);
-  
+
   auto table_wrapper = std::make_shared<TableWrapper>(table);
   table_wrapper->execute();
-  
+
   const auto tests = std::map<ScanType, std::vector<AllTypeVariant>>{
-    {ScanType::OpEquals, {12, 123}},
-    {ScanType::OpNotEquals, {12345, NULL_VALUE, 1234, 12345, 12, 1234}}};
-  
+      {ScanType::OpEquals, {12, 123}}, {ScanType::OpNotEquals, {12345, NULL_VALUE, 1234, 12345, 12, 1234}}};
+
   scan_for_null_values(table_wrapper, tests);
 }
-  
+
 TEST_F(OperatorsTableScanTest, ScanForNullValuesOnReferencedValueColumn) {
   auto table = load_table("src/test/tables/int_float_w_null_8_rows.tbl", 4);
 
   auto table_wrapper = std::make_shared<TableWrapper>(to_reference_column(table));
   table_wrapper->execute();
-  
+
   const auto tests = std::map<ScanType, std::vector<AllTypeVariant>>{
-    {ScanType::OpEquals, {12, 123}},
-    {ScanType::OpNotEquals, {12345, NULL_VALUE, 1234, 12345, 12, 1234}}};
-  
+      {ScanType::OpEquals, {12, 123}}, {ScanType::OpNotEquals, {12345, NULL_VALUE, 1234, 12345, 12, 1234}}};
+
   scan_for_null_values(table_wrapper, tests);
 }
-  
+
 TEST_F(OperatorsTableScanTest, ScanForNullValuesOnReferencedDictColumn) {
   auto table = load_table("src/test/tables/int_float_w_null_8_rows.tbl", 4);
   DictionaryCompression::compress_table(*table);
-  
+
   auto table_wrapper = std::make_shared<TableWrapper>(to_reference_column(table));
   table_wrapper->execute();
-  
+
   const auto tests = std::map<ScanType, std::vector<AllTypeVariant>>{
-    {ScanType::OpEquals, {12, 123}},
-    {ScanType::OpNotEquals, {12345, NULL_VALUE, 1234, 12345, 12, 1234}}};
-  
+      {ScanType::OpEquals, {12, 123}}, {ScanType::OpNotEquals, {12345, NULL_VALUE, 1234, 12345, 12, 1234}}};
+
   scan_for_null_values(table_wrapper, tests);
 }
-  
+
 TEST_F(OperatorsTableScanTest, ScanForNullValuesWithNullRowIDOnReferencedValueColumn) {
   auto table = create_reference_table_w_null_row_id(false);
-  
+
   auto table_wrapper = std::make_shared<TableWrapper>(table);
   table_wrapper->execute();
-  
-  const auto tests = std::map<ScanType, std::vector<AllTypeVariant>>{
-    {ScanType::OpEquals, {123, 1234}},
-    {ScanType::OpNotEquals, {12345, NULL_VALUE}}};
-  
+
+  const auto tests = std::map<ScanType, std::vector<AllTypeVariant>>{{ScanType::OpEquals, {123, 1234}},
+                                                                     {ScanType::OpNotEquals, {12345, NULL_VALUE}}};
+
   scan_for_null_values(table_wrapper, tests);
 }
-  
+
 TEST_F(OperatorsTableScanTest, ScanForNullValuesWithNullRowIDOnReferencedDictColumn) {
   auto table = create_reference_table_w_null_row_id(true);
-  
+
   auto table_wrapper = std::make_shared<TableWrapper>(table);
   table_wrapper->execute();
-  
-  const auto tests = std::map<ScanType, std::vector<AllTypeVariant>>{
-    {ScanType::OpEquals, {123, 1234}},
-    {ScanType::OpNotEquals, {12345, NULL_VALUE}}};
-  
+
+  const auto tests = std::map<ScanType, std::vector<AllTypeVariant>>{{ScanType::OpEquals, {123, 1234}},
+                                                                     {ScanType::OpNotEquals, {12345, NULL_VALUE}}};
+
   scan_for_null_values(table_wrapper, tests);
 }
-  
+
 }  // namespace opossum

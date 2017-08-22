@@ -10,9 +10,9 @@
 
 #include "operators/get_table.hpp"
 #include "operators/table_scan.hpp"
+#include "scheduler/current_scheduler.hpp"
 #include "scheduler/node_queue_scheduler.hpp"
 #include "scheduler/topology.hpp"
-#include "scheduler/current_scheduler.hpp"
 #include "sql/sql_query_translator.hpp"
 #include "storage/storage_manager.hpp"
 
