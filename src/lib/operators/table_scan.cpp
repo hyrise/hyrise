@@ -896,6 +896,8 @@ std::shared_ptr<const Table> TableScan::on_execute() {
 
   for (ChunkID chunk_id{0u}; chunk_id < _in_table->chunk_count(); ++chunk_id) {
     auto job_task = std::make_shared<JobTask>([=, &output_mutex]() {
+
+      // The actual scan happens in the sub classes of ColumnScanBase
       const auto matches_out = std::make_shared<PosList>(_scan->scan_chunk(chunk_id));
 
       Chunk chunk_out;
