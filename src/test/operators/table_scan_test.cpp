@@ -129,7 +129,7 @@ class OperatorsTableScanTest : public BaseTest {
     return table_out;
   }
 
-  std::shared_ptr<const Table> create_reference_table_w_null_row_id(const bool references_dict_column) {
+  std::shared_ptr<const Table> create_referencing_table_w_null_row_id(const bool references_dict_column) {
     const auto table = load_table("src/test/tables/int_float_w_null_8_rows.tbl", 4);
 
     if (references_dict_column) {
@@ -500,7 +500,7 @@ TEST_F(OperatorsTableScanTest, ScanForNullValuesOnReferencedDictColumn) {
 }
 
 TEST_F(OperatorsTableScanTest, ScanForNullValuesWithNullRowIDOnReferencedValueColumn) {
-  auto table = create_reference_table_w_null_row_id(false);
+  auto table = create_referencing_table_w_null_row_id(false);
 
   auto table_wrapper = std::make_shared<TableWrapper>(table);
   table_wrapper->execute();
@@ -512,7 +512,7 @@ TEST_F(OperatorsTableScanTest, ScanForNullValuesWithNullRowIDOnReferencedValueCo
 }
 
 TEST_F(OperatorsTableScanTest, ScanForNullValuesWithNullRowIDOnReferencedDictColumn) {
-  auto table = create_reference_table_w_null_row_id(true);
+  auto table = create_referencing_table_w_null_row_id(true);
 
   auto table_wrapper = std::make_shared<TableWrapper>(table);
   table_wrapper->execute();
