@@ -263,28 +263,42 @@ TwoColumnSelectivityResult ColumnStatistics<ColumnType>::estimate_selectivity_fo
   auto right_stats = std::dynamic_pointer_cast<ColumnStatistics<ColumnType>>(right_base_column_statistics);
   DebugAssert(right_stats != nullptr, "Cannot compare columns of different type");
 
-  // for aggregate "col_left < col_right": col_left statistics = this and col_right statistics = right_stats
+  // for predicate "col_left < col_right": col_left statistics = this and col_right statistics = right_stats
 
-  auto common_min = std::max(min(), right_stats->min());
-  auto common_max = std::min(max(), right_stats->max());
+  auto overlapping_range_min = std::max(min(), right_stats->min());
+  auto overlapping_range_max = std::min(max(), right_stats->max());
 
   // calculate ratio of values before, in and above the common value range
-  float left_overlapping_ratio = estimate_selectivity_for_range(common_min, common_max);
-  float right_overlapping_ratio = right_stats->estimate_selectivity_for_range(common_min, common_max);
+  float left_overlapping_ratio = estimate_selectivity_for_range(overlapping_range_min, overlapping_range_max);
+  float right_overlapping_ratio =
+      right_stats->estimate_selectivity_for_range(overlapping_range_min, overlapping_range_max);
 
-  float left_below, left_above, right_below, right_above;
+  float left_below_overlapping_ratio = 0.f;
+  float left_above_overlapping_ratio = 0.f;
+  float right_below_overlapping_ratio = 0.f;
+  float right_above_overlapping_ratio = 0.f;
   if (std::is_integral<ColumnType>::value) {
-    left_below = (min() < common_min) ? estimate_selectivity_for_range(min(), common_min - 1) : 0;
-    left_above = (common_max < max()) ? estimate_selectivity_for_range(common_max + 1, max()) : 0;
-    bool below_min = right_stats->min() < common_min;
-    right_below = below_min ? right_stats->estimate_selectivity_for_range(right_stats->min(), common_min - 1) : 0;
-    bool above_max = common_max < right_stats->max();
-    right_above = above_max ? right_stats->estimate_selectivity_for_range(common_max + 1, right_stats->max()) : 0;
+    if (min() < overlapping_range_min) {
+      left_below_overlapping_ratio = estimate_selectivity_for_range(min(), overlapping_range_min - 1);
+    }
+    if (overlapping_range_max < max()) {
+      left_above_overlapping_ratio = estimate_selectivity_for_range(overlapping_range_max + 1, max());
+    }
+    if (right_stats->min() < overlapping_range_min) {
+      right_below_overlapping_ratio =
+          right_stats->estimate_selectivity_for_range(right_stats->min(), overlapping_range_min - 1);
+    }
+    if (overlapping_range_max < right_stats->max()) {
+      right_above_overlapping_ratio =
+          right_stats->estimate_selectivity_for_range(overlapping_range_max + 1, right_stats->max());
+    }
   } else {
-    left_below = estimate_selectivity_for_range(min(), common_min);
-    left_above = estimate_selectivity_for_range(common_max, max());
-    right_below = right_stats->estimate_selectivity_for_range(right_stats->min(), common_min);
-    right_above = right_stats->estimate_selectivity_for_range(common_max, right_stats->max());
+    left_below_overlapping_ratio = estimate_selectivity_for_range(min(), overlapping_range_min);
+    left_above_overlapping_ratio = estimate_selectivity_for_range(overlapping_range_max, max());
+    right_below_overlapping_ratio =
+        right_stats->estimate_selectivity_for_range(right_stats->min(), overlapping_range_min);
+    right_above_overlapping_ratio =
+        right_stats->estimate_selectivity_for_range(overlapping_range_max, right_stats->max());
   }
 
   // calculate ratio of distinct values in common value range
@@ -327,10 +341,10 @@ TwoColumnSelectivityResult ColumnStatistics<ColumnType>::estimate_selectivity_fo
     case ScanType::OpEquals: {
       auto overlapping_distinct_count = std::min(left_overlapping_distinct_count, right_overlapping_distinct_count);
 
-      auto new_left_column_stats =
-          std::make_shared<ColumnStatistics>(_column_id, overlapping_distinct_count, common_min, common_max);
+      auto new_left_column_stats = std::make_shared<ColumnStatistics>(_column_id, overlapping_distinct_count,
+                                                                      overlapping_range_min, overlapping_range_max);
       auto new_right_column_stats = std::make_shared<ColumnStatistics>(
-          right_stats->_column_id, overlapping_distinct_count, common_min, common_max);
+          right_stats->_column_id, overlapping_distinct_count, overlapping_range_min, overlapping_range_max);
       return {equal_values_ratio, new_left_column_stats, new_right_column_stats};
     }
     case ScanType::OpNotEquals: {
@@ -340,16 +354,20 @@ TwoColumnSelectivityResult ColumnStatistics<ColumnType>::estimate_selectivity_fo
       return {1.f - equal_values_ratio, new_left_column_stats, new_right_column_stats};
     }
     case ScanType::OpLessThan: {
-      return estimate_selectivity_for_open_ended_operators(left_below, right_above, min(), right_stats->max(), false);
+      return estimate_selectivity_for_open_ended_operators(left_below_overlapping_ratio, right_above_overlapping_ratio,
+                                                           min(), right_stats->max(), false);
     }
     case ScanType::OpLessThanEquals: {
-      return estimate_selectivity_for_open_ended_operators(left_below, right_above, min(), right_stats->max(), true);
+      return estimate_selectivity_for_open_ended_operators(left_below_overlapping_ratio, right_above_overlapping_ratio,
+                                                           min(), right_stats->max(), true);
     }
     case ScanType::OpGreaterThan: {
-      return estimate_selectivity_for_open_ended_operators(right_below, left_above, right_stats->min(), max(), false);
+      return estimate_selectivity_for_open_ended_operators(right_below_overlapping_ratio, left_above_overlapping_ratio,
+                                                           right_stats->min(), max(), false);
     }
     case ScanType::OpGreaterThanEquals: {
-      return estimate_selectivity_for_open_ended_operators(right_below, left_above, right_stats->min(), max(), true);
+      return estimate_selectivity_for_open_ended_operators(right_below_overlapping_ratio, left_above_overlapping_ratio,
+                                                           right_stats->min(), max(), true);
     }
     // case ScanType::OpBetween is not supported for ColumnName as TableScan does not support this
     default: { return {1.f, nullptr, nullptr}; }
