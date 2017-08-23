@@ -350,9 +350,12 @@ int Console::exec_script(const std::string& script_file) {
 }
 
 void Console::abort_current_line(int sig) {
-  Console::get().out("\n");                             // Move to a new line
-  rl_on_new_line();                                     // Regenerate the prompt on a newline
-  rl_line_buffer[rl_point = rl_end = rl_mark = 0] = 0;  // Clear the previous text
+  Console::get().out("\n");
+  rl_on_new_line();
+  rl_free_line_state();
+  rl_cleanup_after_signal();
+  RL_UNSETSTATE(RL_STATE_ISEARCH|RL_STATE_NSEARCH|RL_STATE_VIMOTION|RL_STATE_NUMERICARG|RL_STATE_MULTIKEY);
+  rl_line_buffer[rl_point = rl_end /*= rl_mark*/ = 0] = 0;
   rl_redisplay();
 }
 
