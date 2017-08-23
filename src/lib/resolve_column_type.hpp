@@ -37,11 +37,11 @@ void resolve_type(const std::string &type, const Functor &func) {
  *
  * Example:
  *   resolve_column_type(column_type, base_column, [&] (auto type, auto &typed_column) {
- *     using Type = typename decltype(left_type)::type;
+ *     using Type = typename decltype(type)::type;
  *     using ColumnType = typename std::decay<decltype(typed_column)>::type;
  *
  *     constexpr auto is_reference_column = (std::is_same<LeftColumnType, ReferenceColumn>{});
- *     constexpr auto is_string_column = (left_type == hana::type_c<std::string>);
+ *     constexpr auto is_string_column = (std::is_same<Type, std::string>{});
  *
  *     method_expecting_template_type<Type>();
  *   });
