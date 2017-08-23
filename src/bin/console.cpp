@@ -5,6 +5,7 @@
 
 #include <readline/history.h>
 #include <readline/readline.h>
+#include <signal.h>
 #include <chrono>
 #include <ctime>
 #include <iomanip>
@@ -76,6 +77,10 @@ int Console::read() {
 
   // Prompt user for input
   buffer = readline(_prompt.c_str());
+  if (buffer == NULL) {
+    return ReturnCode::Quit;
+  }
+
   std::string input(buffer);
   boost::algorithm::trim<std::string>(input);
 
@@ -200,7 +205,8 @@ int Console::_eval_sql(const std::string& sql) {
   // Print result (to Console and logfile)
   out(table);
   out("===\n");
-  out(std::to_string(row_count) + " rows (PARSE: " + std::to_string(parse_elapsed_ms) + " ms, COMPILE: " + std::to_string(plan_elapsed_ms) + " ms, EXECUTE: " + std::to_string(execution_elapsed_ms) + " ms (wall time))\n");
+  out(std::to_string(row_count) + " rows (PARSE: " + std::to_string(parse_elapsed_ms) + " ms, COMPILE: " +
+      std::to_string(plan_elapsed_ms) + " ms, EXECUTE: " + std::to_string(execution_elapsed_ms) + " ms (wall time))\n");
 
   return ReturnCode::Ok;
 }
@@ -343,6 +349,13 @@ int Console::exec_script(const std::string& script_file) {
   return retCode;
 }
 
+void Console::abort_current_line(int sig) {
+  Console::get().out("\n");  // Move to a new line
+  rl_on_new_line();          // Regenerate the prompt on a newline
+  rl_replace_line("", 0);    // Clear the previous text
+  rl_redisplay();
+}
+
 // GNU readline interface to our commands
 
 char** Console::command_completion(const char* text, int start, int end) {
@@ -424,6 +437,9 @@ char* Console::command_generator_tpcc(const char* text, int state) {
 int main(int argc, char** argv) {
   using Return = opossum::Console::ReturnCode;
   auto& console = opossum::Console::get();
+
+  // Bind CTRL-C to behaviour specified in opossum::Console::abort_current_line
+  signal(SIGINT, &opossum::Console::abort_current_line);
 
   console.setPrompt("> ");
   console.setLogfile("console.log");

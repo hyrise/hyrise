@@ -62,6 +62,9 @@ class Console {
   void out(const std::string &output, bool console_print = true);
   void out(std::shared_ptr<const Table> table);
 
+  // Command function bound to CTRL-C key sequence
+  static void abort_current_line(int sig);
+
  protected:
   /*
    * Non-public constructor, since Console is a Singleton.
