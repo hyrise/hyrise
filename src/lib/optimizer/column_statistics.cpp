@@ -260,6 +260,60 @@ template <typename ColumnType>
 TwoColumnSelectivityResult ColumnStatistics<ColumnType>::estimate_selectivity_for_two_column_predicate(
     const ScanType scan_type, const std::shared_ptr<BaseColumnStatistics> &right_base_column_statistics,
     const optional<AllTypeVariant> &value2) {
+  /**
+   * Calculate expected selectivity by looking at what ratio of values of both columns are in the overlapping value
+   * range of both columns. If the two columns have different min values, then the column with the smaller min value
+   * will have values below the overlapping range. The same applies to values above the overlapping range. If the max
+   * values are not the same, then the column with the larger max value will have values above the overlapping range.
+   *
+   * For the different scan types the appropriate ratios of values below, within and above the overlapping range from
+   * both columns are taken to compute the selectivity.
+   *
+   * Example estimation:
+   *
+   * |  Column name     |  col_left  |  col_right  |
+   * |  Column type     |  int       |  int        |
+   * |  Min value       |  1         |  11         |
+   * |  Max value       |  20        |  40         |
+   * |  Distinct count  |  20        |  15         |
+   *
+   * Overlapping value range: 11 to 20  -->  overlapping_range_min = 11,  overlapping_range_max = 20
+   * left_overlapping_ratio = (20 - 11 + 1) / (20 - 1 + 1) = 1 / 2
+   * right_overlapping_ratio = (20 - 11 + 1) / (40 - 11 + 1) = 1 / 3
+   *
+   * left_below_overlapping_ratio = (10 - 1 + 1) / (20 - 1 + 1) = 1 / 2
+   * left_above_overlapping_ratio = 0 as col_left max value within overlapping range
+   * right_below_overlapping_ratio = (40 - 21 + 1) / (40 - 11 + 1) = 2 / 3
+   * right_above_overlapping_ratio = 0 as col_right min value within overlapping range
+   *
+   * left_overlapping_distinct_count = (1 / 2) * 20 = 10
+   * right_overlapping_distinct_count = (1 / 3) * 15 = 5
+   *
+   * For scan type equals only the ratios of values in the overlapping range is considered as values. If values could
+   * match outside the overlapping range, the range would be false as it would be too small. In order to calculate the
+   * equal value ratio, the column with fewer distinct values within the overlapping range is determined. In this case
+   * this is col_right. Statistics component assumes that for two value sets for the same range the smaller set is
+   * part of the bigger set. Therefore, it assumes that the 5 distinct values within the overlapping range of the right
+   * column also exist in the left column. The equal value ratio is then calculated by multiplying
+   * right_overlapping_ratio (= 1 / 2) with the probability to hit any distinct value of the left column (= 1 / 20):
+   * equal_values_ratio = (1 / 2) * (1 / 20) = (1 / 40)
+   * This is also the selectivity for the scan type equals: (1 / 40) = 2.5 %
+   *
+   * For scan type less the ratios left_below_overlapping_ratio and right_above_overlapping_ratio are also considered as table
+   * entries where the col_left value is below the common range or the col_right value is above it will always be in the
+   * result.
+   * The probability that both values are within the overlapping range and that col_left < col_right is (probability of
+   * col_left != col_right where left and right values are in overlapping range) / 2
+   *
+   * The selectivity for scan type less is the sum of different probabilities: // NOLINT
+   *    prob. that left value is below overlapping range (= 1 / 2) // NOLINT
+   *  + prob. that right value is above overlapping range (= 1 / 3) // NOLINT
+   *  - prob. that left value is below overlapping range and right value is above overlapping range (= 1 / 6) // NOLINT
+   *  + prob. that left value < right value and both values are in common range // NOLINT
+   *                                                                    (= ((1 / 6) - (1 / 20)) / 2 = 7 / 120) // NOLINT
+   *  = 29 / 40 = 72.5 % // NOLINT
+   */
+
   auto right_stats = std::dynamic_pointer_cast<ColumnStatistics<ColumnType>>(right_base_column_statistics);
   DebugAssert(right_stats != nullptr, "Cannot compare columns of different type");
 
