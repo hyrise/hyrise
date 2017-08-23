@@ -1,9 +1,11 @@
 #include "console.hpp"
 
+#include <boost/algorithm/string/split.hpp>
 #include <boost/algorithm/string/trim.hpp>
 
 #include <readline/history.h>
 #include <readline/readline.h>
+#include <chrono>
 #include <ctime>
 #include <iomanip>
 #include <iostream>
@@ -12,6 +14,7 @@
 #include <vector>
 
 #include "SQLParser.h"
+#include "operators/import_csv.hpp"
 #include "operators/print.hpp"
 #include "sql/sql_planner.hpp"
 #include "storage/storage_manager.hpp"
@@ -38,24 +41,27 @@ Console::Console()
     : _prompt("> "),
       _multiline_input(""),
       _commands(),
-      _commands_completion(),
+      _tpcc_commands(),
       _out(std::cout.rdbuf()),
-      _log("console.log", std::ios_base::app | std::ios_base::out) {
+      _log("console.log", std::ios_base::app | std::ios_base::out),
+      _verbose(false) {
   // Init readline basics, tells readline to use our custom command completion function
   rl_attempted_completion_function = &Console::command_completion;
-  rl_completer_word_break_characters = const_cast<char*>("\t\n\"\\'`@$><=;|&{(");
+  rl_completer_word_break_characters = const_cast<char*>(" \t\n\"\\'`@$><=;|&{(");
 
   // Register default commands to Console
   register_command("exit", exit);
   register_command("quit", exit);
   register_command("help", help);
-  register_command("load", load_tpcc);
+  register_command("generate", generate_tpcc);
+  register_command("load", load_table);
+  register_command("script", exec_script);
 
-  // Register more commands specifically for command completion purposes, e.g.
-  // for TPCC generation, 'load CUSTOMER', 'load DISTRICT', etc
+  // Register words specifically for command completion purposes, e.g.
+  // for TPC-C table generation, 'CUSTOMER', 'DISTRICT', etc
   auto tpcc_generators = tpcc::TpccTableGenerator::tpcc_table_generator_functions();
   for (tpcc::TpccTableGeneratorFunctions::iterator it = tpcc_generators.begin(); it != tpcc_generators.end(); ++it) {
-    _commands_completion.push_back("load " + it->first);
+    _tpcc_commands.push_back(it->first);
   }
 }
 
@@ -83,13 +89,15 @@ int Console::read() {
   return _eval(input);
 }
 
+int Console::execute_script(const std::string& filepath) { return exec_script(filepath); }
+
 int Console::_eval(const std::string& input) {
   if (input.empty() && _multiline_input.empty()) {
     return ReturnCode::Ok;
   }
 
-  // Dump command to logfile (the Console already has it from the input)
-  out(_prompt + input + "\n", false);
+  // Dump command to logfile, and to the Console if input comes from a script file
+  out(_prompt + input + "\n", _verbose);
 
   // Check if a registered command was entered
   RegisteredCommands::iterator it;
@@ -141,6 +149,9 @@ int Console::_eval_sql(const std::string& sql) {
     return 1;
   }
 
+  // Measure the query plan execution time
+  auto started = std::chrono::high_resolution_clock::now();
+
   // Execute query plan
   try {
     // Compile the parse result
@@ -153,16 +164,22 @@ int Console::_eval_sql(const std::string& sql) {
     return ReturnCode::Error;
   }
 
+  // Measure the query plan execution time
+  auto done = std::chrono::high_resolution_clock::now();
+  auto elapsed_ms = std::chrono::duration<double>(done - started).count();
+
+  auto table = plan.tree_roots().back()->get_output();
+  auto row_count = table->row_count();
+
   // Print result (to Console and logfile)
-  out(plan.tree_roots().back()->get_output());
+  out(table);
+  out("===\n");
+  out(std::to_string(row_count) + " rows (" + std::to_string(elapsed_ms) + " ms wall time)\n");
 
   return ReturnCode::Ok;
 }
 
-void Console::register_command(const std::string& name, const CommandFunction& f) {
-  _commands[name] = f;
-  _commands_completion.push_back(name + " ");
-}
+void Console::register_command(const std::string& name, const CommandFunction& func) { _commands[name] = func; }
 
 Console::RegisteredCommands Console::commands() { return _commands; }
 
@@ -193,17 +210,21 @@ int Console::help(const std::string&) {
   auto& console = Console::get();
   console.out("HYRISE SQL Interface\n\n");
   console.out("Available commands:\n");
-  console.out("  load [TABLENAME] - Load available TPC-C tables, or a specific table if TABLENAME is specified\n");
-  console.out("  exit             - Exit the HYRISE Console\n");
-  console.out("  quit             - Exit the HYRISE Console\n");
-  console.out("  help             - Show this message\n\n");
-  console.out("After TPC-C tables are loaded, SQL queries can be executed.\n");
+  console.out(
+      "  generate [TABLENAME] - Generate available TPC-C tables, or a specific table if TABLENAME is specified\n");
+  console.out(
+      "  load FILE TABLENAME  - Load table from disc specified by filepath FILE, store it with name TABLENAME\n");
+  console.out("  script SCRIPTFILE    - Execute script specified by SCRIPTFILE\n");
+  console.out("  exit                 - Exit the HYRISE Console\n");
+  console.out("  quit                 - Exit the HYRISE Console\n");
+  console.out("  help                 - Show this message\n\n");
+  console.out("After TPC-C tables are generated, SQL queries can be executed.\n");
   console.out("Example:\n");
   console.out("SELECT * FROM DISTRICT\n");
   return Console::ReturnCode::Ok;
 }
 
-int Console::load_tpcc(const std::string& tablename) {
+int Console::generate_tpcc(const std::string& tablename) {
   auto& console = Console::get();
   if (tablename.empty() || "ALL" == tablename) {
     console.out("Generating TPCC tables (this might take a while) ...\n");
@@ -225,21 +246,116 @@ int Console::load_tpcc(const std::string& tablename) {
   return Console::ReturnCode::Ok;
 }
 
+int Console::load_table(const std::string& args) {
+  auto& console = Console::get();
+  std::string input = args;
+  boost::algorithm::trim<std::string>(input);
+  std::vector<std::string> arguments;
+  boost::algorithm::split(arguments, input, boost::is_space());
+
+  if (arguments.size() != 2) {
+    console.out("Usage:\n");
+    console.out("  load FILEPATH TABLENAME\n");
+    return ReturnCode::Error;
+  }
+
+  auto importer = std::make_shared<ImportCsv>(arguments.at(0), arguments.at(1));
+  try {
+    importer->execute();
+  } catch (const std::exception& exception) {
+    console.out("Exception thrown while importing CSV:\n  " + std::string(exception.what()) + "\n");
+    return ReturnCode::Error;
+  }
+
+  return ReturnCode::Ok;
+}
+
+int Console::exec_script(const std::string& script_file) {
+  auto& console = Console::get();
+  auto filepath = script_file;
+  boost::algorithm::trim(filepath);
+  std::ifstream script(filepath);
+
+  if (!script.good()) {
+    console.out("Error: Script file '" + filepath + "' does not exist.\n");
+    return ReturnCode::Error;
+  }
+
+  console.out("Executing script file: " + filepath + "\n");
+  console._verbose = true;
+  std::string command;
+  int retCode = ReturnCode::Ok;
+  while (std::getline(script, command)) {
+    retCode = console._eval(command);
+    if (retCode == ReturnCode::Error || retCode == ReturnCode::Quit) {
+      break;
+    }
+  }
+  console.out("Executing script file done\n");
+  console._verbose = false;
+  return retCode;
+}
+
 // GNU readline interface to our commands
 
 char** Console::command_completion(const char* text, int start, int end) {
   char** completion_matches = nullptr;
-  rl_completion_append_character = '\0';
-  rl_attempted_completion_over = 1;
-  if (start == 0) {
+
+  std::string input(rl_line_buffer);
+
+  // Remove whitespace duplicates to not get empty tokens after boost::algorithm::split
+  auto both_are_spaces = [](char lhs, char rhs) { return (lhs == rhs) && (lhs == ' '); };
+  input.erase(std::unique(input.begin(), input.end(), both_are_spaces), input.end());
+
+  std::vector<std::string> tokens;
+  boost::algorithm::split(tokens, input, boost::is_space());
+
+  // Choose completion function depending on the input. If it starts with "generate",
+  // suggest TPC-C tablenames for completion.
+  const std::string& first_word = tokens.at(0);
+  if (first_word == "generate") {
+    // Completion only for two words, "generate", and the TABLENAME
+    if (tokens.size() <= 2) {
+      completion_matches = rl_completion_matches(text, &Console::command_generator_tpcc);
+    }
+    // Turn off filepath completion for TPC-C table generation
+    rl_attempted_completion_over = 1;
+  } else if (first_word == "quit" || first_word == "exit" || first_word == "help") {
+    // Turn off filepath completion
+    rl_attempted_completion_over = 1;
+  } else if ((first_word == "load" || first_word == "script") && tokens.size() > 2) {
+    // Turn off filepath completion after first argument for "load" and "script"
+    rl_attempted_completion_over = 1;
+  } else if (start == 0) {
     completion_matches = rl_completion_matches(text, &Console::command_generator);
   }
+
   return completion_matches;
 }
 
 char* Console::command_generator(const char* text, int state) {
+  static RegisteredCommands::iterator it;
+  auto& commands = Console::get()._commands;
+
+  if (state == 0) {
+    it = commands.begin();
+  }
+
+  while (it != commands.end()) {
+    auto& command = it->first;
+    ++it;
+    if (command.find(text) != std::string::npos) {
+      char* completion = new char[command.size()];
+      snprintf(completion, command.size() + 1, "%s", command.c_str());
+      return completion;
+    }
+  }
+  return nullptr;
+}
+
+char* Console::command_generator_tpcc(const char* text, int state) {
   static std::vector<std::string>::iterator it;
-  auto& commands = Console::get()._commands_completion;
+  auto& commands = Console::get()._tpcc_commands;
   if (state == 0) {
     it = commands.begin();
   }
@@ -260,7 +376,6 @@ char* Console::command_generator(const char* text, int state) {
 
 int main(int argc, char** argv) {
   using Return = opossum::Console::ReturnCode;
-
   auto& console = opossum::Console::get();
 
   console.setPrompt("> ");
@@ -269,13 +384,35 @@ int main(int argc, char** argv) {
   // Timestamp dump only to logfile
   console.out("--- Session start --- " + current_timestamp() + "\n", false);
 
-  console.out("HYRISE SQL Interface\n");
-  console.out("Enter 'load' to load the TPC-C tables. Then, you can enter SQL queries.\n");
-  console.out("Type 'help' for more information.\n\n");
+  int retCode = Return::Ok;
+
+  // Display Usage if too many arguments are provided
+  if (argc > 2) {
+    retCode = Return::Quit;
+    console.out("Usage:\n");
+    console.out("  ./opossumConsole [SCRIPTFILE] - Start the interactive SQL interface.\n");
+    console.out("                                  Execute script if specified by SCRIPTFILE.\n");
+  }
+
+  // Execute .sql script if specified
+  if (argc == 2) {
+    retCode = console.execute_script(std::string(argv[1]));
+    // Terminate Console if an error occured during script execution
+    if (retCode == Return::Error) {
+      retCode = Return::Quit;
+    }
+  }
+
+  // Display welcome message if Console started normally
+  if (argc == 1) {
+    console.out("HYRISE SQL Interface\n");
+    console.out("Enter 'generate' to generate the TPC-C tables. Then, you can enter SQL queries.\n");
+    console.out("Type 'help' for more information.\n\n");
+  }
 
   // Main REPL loop
-  int retCode;
-  while ((retCode = console.read()) != Return::Quit) {
+  while (retCode != Return::Quit) {
+    retCode = console.read();
     if (retCode == Return::Ok) {
       console.setPrompt("> ");
     } else if (retCode == Return::Multiline) {
