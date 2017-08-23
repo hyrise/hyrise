@@ -190,15 +190,13 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
     if (_op == ScanType::OpEquals) {
       if (compare == CompareResult::Equal) {
         _emit_combinations(partition_number, left_run, right_run);
-      } else {
-        if (compare == CompareResult::Less) {
-          if (_mode == JoinMode::Left || _mode == JoinMode::Outer) {
-            _emit_right_null_combinations(partition_number, left_run);
-          }
-        } else {
-          if (_mode == JoinMode::Right || _mode == JoinMode::Outer) {
-            _emit_left_null_combinations(partition_number, right_run);
-          }
+      } else if (compare == CompareResult::Less) {
+        if (_mode == JoinMode::Left || _mode == JoinMode::Outer) {
+          _emit_right_null_combinations(partition_number, left_run);
+        }
+      } else if (compare == CompareResult::Greater) {
+        if (_mode == JoinMode::Right || _mode == JoinMode::Outer) {
+          _emit_left_null_combinations(partition_number, right_run);
         }
       }
     } else if (_op == ScanType::OpNotEquals) {
@@ -350,15 +348,14 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
       }
     }
 
-    // There is an edge case in which the last loop run was an "equi hit" and one index
-    // reached its maximum size, but one element is potentially still present on the other side.
-    // It is important for outer joins to include this element.
-
-    // The left side has finished -> add the remaining values of the right side
-
-    auto right_range = TableRange(partition_number, right_run_start, right_size);
-    auto left_range = TableRange(partition_number, left_run_start, left_size);
-    _join_runs(partition_number, left_range, right_range, compare_result);
+    // Join the rest of the unfinished side, which is relevant for outer joins and non-equi joins
+    auto right_rest = TableRange(partition_number, right_run_start, right_size);
+    auto left_rest = TableRange(partition_number, left_run_start, left_size);
+    if (left_run_start < left_size) {
+      _join_runs(partition_number, left_rest, right_rest, CompareResult::Less);
+    } else if (right_run_start < right_size) {
+      _join_runs(partition_number, left_rest, right_rest, CompareResult::Greater);
+    }
   }
 
   /**
