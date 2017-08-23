@@ -101,19 +101,17 @@ void test() {
 
   auto mode = JoinMode::Outer;
 
-  //  stats =
-  //      stats_w2->join_statistics(stats, std::make_pair(ColumnID(0), ColumnID(0)), ScanType::OpEquals, mode);
-  //
-  //  std::cout << "join with w2" << std::endl;
-  //
-  //  std::cout << *stats << std::endl << std::endl;
-  //
-  //  stats =
-  //      stats_w3->join_statistics(stats, std::make_pair(ColumnID(0), ColumnID(0)), ScanType::OpEquals, mode);
-  //
-  //  std::cout << "join with w3" << std::endl;
-  //
-  //  std::cout << *stats << std::endl << std::endl;
+  stats = stats_w2->join_statistics(stats, std::make_pair(ColumnID(0), ColumnID(0)), ScanType::OpEquals, mode);
+
+  std::cout << "join with w2" << std::endl;
+
+  std::cout << *stats << std::endl << std::endl;
+
+  stats = stats->join_statistics(stats_w3, std::make_pair(ColumnID(1), ColumnID(0)), ScanType::OpEquals, mode);
+
+  std::cout << "join with w3" << std::endl;
+
+  std::cout << *stats << std::endl << std::endl;
   //
   //  stats =
   //      stats_w4->join_statistics(stats, std::make_pair(ColumnID(0), ColumnID(0)), ScanType::OpEquals, mode);
@@ -129,13 +127,13 @@ void test() {
   //
   //  std::cout << *stats << std::endl << std::endl;
   //
-  stats = stats_w3->join_statistics(stats_w3_b, std::make_pair(ColumnID(0), ColumnID(0)), ScanType::OpEquals, mode);
-
-  std::cout << *stats_w3_b << std::endl;
-
-  std::cout << "join with w3 with w3b" << std::endl;
-
-  std::cout << *stats << std::endl << std::endl;
+  //  stats = stats_w3->join_statistics(stats_w3_b, std::make_pair(ColumnID(0), ColumnID(0)), ScanType::OpEquals, mode);
+  //
+  //  std::cout << *stats_w3_b << std::endl;
+  //
+  //  std::cout << "join with w3 with w3b" << std::endl;
+  //
+  //  std::cout << *stats << std::endl << std::endl;
 
   //  tpcc::TpccTableGenerator generator;
   //
