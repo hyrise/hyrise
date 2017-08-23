@@ -350,9 +350,9 @@ int Console::exec_script(const std::string& script_file) {
 }
 
 void Console::abort_current_line(int sig) {
-  Console::get().out("\n");  // Move to a new line
-  rl_on_new_line();          // Regenerate the prompt on a newline
-  rl_replace_line("", 0);    // Clear the previous text
+  Console::get().out("\n");                             // Move to a new line
+  rl_on_new_line();                                     // Regenerate the prompt on a newline
+  rl_line_buffer[rl_point = rl_end = rl_mark = 0] = 0;  // Clear the previous text
   rl_redisplay();
 }
 
