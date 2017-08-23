@@ -62,8 +62,8 @@ class Console {
   void out(const std::string &output, bool console_print = true);
   void out(std::shared_ptr<const Table> table);
 
-  // Command function bound to CTRL-C key sequence
-  static void abort_current_line(int sig);
+  // Command function to handle SIGINT (caused by CTRL-C sequence)
+  static void handle_signal(int sig);
 
  protected:
   /*

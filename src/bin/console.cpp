@@ -5,6 +5,7 @@
 
 #include <readline/history.h>
 #include <readline/readline.h>
+#include <setjmp.h>
 #include <signal.h>
 #include <chrono>
 #include <ctime>
@@ -23,6 +24,8 @@
 #include "utils/load_table.hpp"
 
 namespace {
+
+sigjmp_buf jmp_env;
 
 // Returns a string containing a timestamp of the current date and time
 std::string current_timestamp() {
@@ -74,6 +77,9 @@ Console& Console::get() {
 
 int Console::read() {
   char* buffer;
+
+  while (sigsetjmp(jmp_env, 1) != 0)
+    ;
 
   // Prompt user for input
   buffer = readline(_prompt.c_str());
@@ -349,14 +355,11 @@ int Console::exec_script(const std::string& script_file) {
   return retCode;
 }
 
-void Console::abort_current_line(int sig) {
-  Console::get().out("\n");
-  rl_on_new_line();
-  rl_free_line_state();
-  rl_cleanup_after_signal();
-  RL_UNSETSTATE(RL_STATE_ISEARCH|RL_STATE_NSEARCH|RL_STATE_VIMOTION|RL_STATE_NUMERICARG|RL_STATE_MULTIKEY);
-  rl_line_buffer[rl_point = rl_end /*= rl_mark*/ = 0] = 0;
-  rl_redisplay();
+void Console::handle_signal(int sig) {
+  if (sig == SIGINT) {
+    Console::get()._out << "\n";
+    siglongjmp(jmp_env, 1);
+  }
 }
 
 // GNU readline interface to our commands
@@ -441,8 +444,8 @@ int main(int argc, char** argv) {
   using Return = opossum::Console::ReturnCode;
   auto& console = opossum::Console::get();
 
-  // Bind CTRL-C to behaviour specified in opossum::Console::abort_current_line
-  signal(SIGINT, &opossum::Console::abort_current_line);
+  // Bind CTRL-C to behaviour specified in opossum::Console::handle_signal
+  signal(SIGINT, &opossum::Console::handle_signal);
 
   console.setPrompt("> ");
   console.setLogfile("console.log");
