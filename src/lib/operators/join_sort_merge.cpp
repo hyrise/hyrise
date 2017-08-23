@@ -18,6 +18,7 @@ namespace opossum {
 * TODO(arne.mayer): Outer non-equi joins (outer <, <=, >, >=)
 * TODO(anyone): Choose an appropriate number of partitions.
 **/
+
 /**
 * The sort merge join performs a join on two input tables on specific join columns. For usage notes, see the
 * join_sort_merge.hpp. This is how the join works:

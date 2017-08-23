@@ -94,24 +94,30 @@ class TableMaterializer : public ColumnVisitable {
     auto value_ids = dictionary_column.attribute_vector();
     auto dict = dictionary_column.dictionary();
 
-    // Collect for every value id, the set of rows that this value appeared in
-    // value_count is used as an inverted index
-    auto rows_with_value = std::vector<std::vector<RowID>>(dict->size());
-    for (ChunkOffset chunk_offset{0}; chunk_offset < value_ids->size(); ++chunk_offset) {
-      rows_with_value[value_ids->get(chunk_offset)].push_back(RowID{materialization_context->chunk_id, chunk_offset});
-    }
+    if (_sort) {
+      // Works like Bucket Sort
+      // Collect for every value id, the set of rows that this value appeared in
+      // value_count is used as an inverted index
+      auto rows_with_value = std::vector<std::vector<RowID>>(dict->size());
+      for (ChunkOffset chunk_offset{0}; chunk_offset < value_ids->size(); ++chunk_offset) {
+        rows_with_value[value_ids->get(chunk_offset)].push_back(RowID{materialization_context->chunk_id, chunk_offset});
+      }
 
-    // Now that we know the row ids for every value, we can output all the materialized values in a sorted manner.
-    ChunkOffset chunk_offset{0};
-    for (ValueID value_id{0}; value_id < dict->size(); ++value_id) {
-      for (auto& row_id : rows_with_value[value_id]) {
-        output->at(chunk_offset) = MaterializedValue<T>(row_id, dict->at(value_id));
-        ++chunk_offset;
+      // Now that we know the row ids for every value, we can output all the materialized values in a sorted manner.
+      ChunkOffset chunk_offset{0};
+      for (ValueID value_id{0}; value_id < dict->size(); ++value_id) {
+        for (auto& row_id : rows_with_value[value_id]) {
+          output->at(chunk_offset) = MaterializedValue<T>(row_id, dict->at(value_id));
+          ++chunk_offset;
+        }
+      }
+    } else {
+      for (ChunkOffset chunk_offset{0}; chunk_offset < column.size(); ++chunk_offset) {
+        auto row_id = RowID{materialization_context->chunk_id, chunk_offset};
+        output->at(chunk_offset) = MaterializedValue<T>(row_id, dict->at(value_ids->get(chunk_offset)));
       }
     }
 
-    // The result is already sorted because the dictionaries are sorted.
-    // Therefore, no additional sorting is required.
     materialization_context->output = output;
   }
 

@@ -308,8 +308,8 @@ class RadixPartitionSort {
   * Executes the partitioning and sorting.
   **/
   void execute() {
-    // Sort the chunks of the input tables
-    TableMaterializer<T> table_materializer(true /* sorting enabled */);
+    // Sort the chunks of the input tables in the non-equi cases
+    TableMaterializer<T> table_materializer(!_equi_case);
     auto chunks_left = table_materializer.materialize(_input_table_left, _left_column_name);
     auto chunks_right = table_materializer.materialize(_input_table_right, _right_column_name);
 
