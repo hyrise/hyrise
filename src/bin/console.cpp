@@ -145,7 +145,12 @@ int Console::_eval_sql(const std::string& sql) {
   // Measure the query parse time
   auto started = std::chrono::high_resolution_clock::now();
 
-  hsql::SQLParser::parse(sql, &parse_result);
+  try {
+    hsql::SQLParser::parse(sql, &parse_result);
+  } catch (const std::exception& exception) {
+    out("Exception thrown while parsing SQL query:\n  " + std::string(exception.what()) + "\n");
+    return ReturnCode::Error;
+  }
 
   // Measure the query parse time
   auto done = std::chrono::high_resolution_clock::now();
@@ -161,7 +166,12 @@ int Console::_eval_sql(const std::string& sql) {
   started = std::chrono::high_resolution_clock::now();
 
   // Compile the parse result
-  plan = SQLPlanner::plan(parse_result);
+  try {
+    plan = SQLPlanner::plan(parse_result);
+  } catch (const std::exception& exception) {
+    out("Exception thrown while compiling query plan:\n  " + std::string(exception.what()) + "\n");
+    return ReturnCode::Error;
+  }
 
   // Measure the plan compile time
   done = std::chrono::high_resolution_clock::now();
