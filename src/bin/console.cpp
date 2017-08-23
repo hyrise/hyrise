@@ -140,9 +140,16 @@ int Console::_eval_command(const CommandFunction& func, const std::string& comma
 
 int Console::_eval_sql(const std::string& sql) {
   SQLQueryPlan plan;
-
   hsql::SQLParserResult parse_result;
+
+  // Measure the query parse time
+  auto started = std::chrono::high_resolution_clock::now();
+
   hsql::SQLParser::parse(sql, &parse_result);
+
+  // Measure the query parse time
+  auto done = std::chrono::high_resolution_clock::now();
+  auto parse_elapsed_ms = std::chrono::duration<double>(done - started).count();
 
   // Check if SQL query is valid
   if (!parse_result.isValid()) {
@@ -150,11 +157,18 @@ int Console::_eval_sql(const std::string& sql) {
     return 1;
   }
 
+  // Measure the plan compile time
+  started = std::chrono::high_resolution_clock::now();
+
   // Compile the parse result
   plan = SQLPlanner::plan(parse_result);
 
+  // Measure the plan compile time
+  done = std::chrono::high_resolution_clock::now();
+  auto plan_elapsed_ms = std::chrono::duration<double>(done - started).count();
+
   // Measure the query plan execution time
-  auto started = std::chrono::high_resolution_clock::now();
+  started = std::chrono::high_resolution_clock::now();
 
   // Execute query plan
   try {
@@ -167,8 +181,8 @@ int Console::_eval_sql(const std::string& sql) {
   }
 
   // Measure the query plan execution time
-  auto done = std::chrono::high_resolution_clock::now();
-  auto elapsed_ms = std::chrono::duration<double>(done - started).count();
+  done = std::chrono::high_resolution_clock::now();
+  auto execution_elapsed_ms = std::chrono::duration<double>(done - started).count();
 
   auto table = plan.tree_roots().back()->get_output();
   auto row_count = table->row_count();
@@ -176,7 +190,7 @@ int Console::_eval_sql(const std::string& sql) {
   // Print result (to Console and logfile)
   out(table);
   out("===\n");
-  out(std::to_string(row_count) + " rows (" + std::to_string(elapsed_ms) + " ms wall time)\n");
+  out(std::to_string(row_count) + " rows (PARSE: " + std::to_string(parse_elapsed_ms) + " ms, COMPILE: " + std::to_string(plan_elapsed_ms) + " ms, EXECUTE: " + std::to_string(execution_elapsed_ms) + " ms (wall time))\n");
 
   return ReturnCode::Ok;
 }
