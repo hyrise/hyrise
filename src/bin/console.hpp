@@ -13,7 +13,7 @@ namespace opossum {
 
 /*
  * SQL REPL Console for Opossum, built on GNU readline. https://cnswww.cns.cwru.edu/php/chet/readline/rltop.html
- * Can load TPCC tables via "load TABLENAME" command, and can execute SQL statements based on
+ * Can load TPCC tables via "generate TABLENAME" command, and can execute SQL statements based on
  * opossum::SqlQueryTranslator.
  */
 class Console {
@@ -34,6 +34,8 @@ class Console {
    *          ReturnCode::Ok if the input was evaluated/executed correctly.
    */
   int read();
+
+  int execute_script(const std::string &filepath);
 
   /*
    * Register a custom command which can be called from the console.
@@ -84,18 +86,22 @@ class Console {
   // Command functions, registered to be called from the Console
   static int exit(const std::string &args);
   static int help(const std::string &args);
-  static int load_tpcc(const std::string &args);
+  static int generate_tpcc(const std::string &args);
+  static int load_table(const std::string &args);
+  static int exec_script(const std::string &args);
 
   // GNU readline interface to our commands
   static char **command_completion(const char *text, int start, int end);
   static char *command_generator(const char *text, int state);
+  static char *command_generator_tpcc(const char *text, int state);
 
   std::string _prompt;
   std::string _multiline_input;
   RegisteredCommands _commands;
-  std::vector<std::string> _commands_completion;
+  std::vector<std::string> _tpcc_commands;
   std::ostream _out;
   std::ofstream _log;
+  bool _verbose;
 };
 
 }  // namespace opossum
