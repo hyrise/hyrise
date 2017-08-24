@@ -41,8 +41,10 @@ ScanType translate_operator_type_to_scan_type(const hsql::OperatorType operator_
 
 JoinMode translate_join_type_to_join_mode(const hsql::JoinType join_type) {
   static const std::unordered_map<const hsql::JoinType, const JoinMode> join_type_to_mode = {
-      {hsql::kJoinInner, JoinMode::Inner}, {hsql::kJoinOuter, JoinMode::Outer},     {hsql::kJoinLeft, JoinMode::Left},
-      {hsql::kJoinRight, JoinMode::Right}, {hsql::kJoinNatural, JoinMode::Natural}, {hsql::kJoinCross, JoinMode::Cross},
+      {hsql::kJoinInner, JoinMode::Inner},     {hsql::kJoinOuter, JoinMode::Outer},
+      {hsql::kJoinLeft, JoinMode::Left},       {hsql::kJoinLeftOuter, JoinMode::Left},
+      {hsql::kJoinRight, JoinMode::Right},     {hsql::kJoinRightOuter, JoinMode::Right},
+      {hsql::kJoinNatural, JoinMode::Natural}, {hsql::kJoinCross, JoinMode::Cross},
   };
 
   auto it = join_type_to_mode.find(join_type);
