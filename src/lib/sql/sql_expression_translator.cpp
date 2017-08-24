@@ -16,7 +16,6 @@ namespace opossum {
 
 std::shared_ptr<ExpressionNode> SQLExpressionTranslator::translate_expression(
     const hsql::Expr& expr, const std::shared_ptr<AbstractASTNode>& input_node) {
-  auto table_name = expr.table ? std::string(expr.table) : "";
   auto name = expr.name ? std::string(expr.name) : "";
   auto float_value = expr.fval ? expr.fval : 0;
   auto int_value = expr.ival ? expr.ival : 0;
@@ -30,6 +29,10 @@ std::shared_ptr<ExpressionNode> SQLExpressionTranslator::translate_expression(
       break;
     }
     case hsql::kExprColumnRef: {
+      DebugAssert(input_node != nullptr, "Input node needs to be set");
+      DebugAssert(expr.name != nullptr, "hsql::Expr::name needs to be set");
+
+      auto table_name = expr.table != nullptr ? optional<std::string>(std::string(expr.table)) : nullopt;
       ColumnIdentifier column_identifier{name, table_name};
       auto column_id = input_node->get_column_id_for_column_identifier(column_identifier);
       node = ExpressionNode::create_column_reference(column_id, alias);
@@ -91,6 +94,26 @@ std::shared_ptr<ExpressionNode> SQLExpressionTranslator::translate_expression(
   }
 
   return node;
+}
+
+ColumnIdentifier SQLExpressionTranslator::get_column_identifier_for_column_ref(const hsql::Expr &hsql_expr) {
+  DebugAssert(hsql_expr.isType(hsql::kExprColumnRef), "Expression type can't be converted into column identifier");
+  DebugAssert(hsql_expr.name != nullptr, "hsql::Expr::name needs to be set");
+
+  return ColumnIdentifier{hsql_expr.name,
+                          hsql_expr.table == nullptr ? nullopt : optional<std::string>(hsql_expr.table)};
+}
+
+ColumnID SQLExpressionTranslator::get_column_id_for_expression(const hsql::Expr &hsql_expr,
+                                                               const std::shared_ptr<AbstractASTNode> &input_node) {
+  if (hsql_expr.isType(hsql::kExprColumnRef)) {
+    return input_node->get_column_id_for_column_identifier(
+      get_column_identifier_for_column_ref(hsql_expr)
+    );
+  }
+
+  auto expr = translate_expression(hsql_expr, input_node);
+  return input_node->get_column_id_for_expression(expr);
 }
 
 }  // namespace opossum

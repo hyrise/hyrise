@@ -30,13 +30,13 @@ ExpressionNode::ExpressionNode(const ExpressionType type, const AllTypeVariant &
 
 std::shared_ptr<ExpressionNode> ExpressionNode::create_expression(const ExpressionType type) {
   const std::vector<std::shared_ptr<ExpressionNode>> expr_list;
-  return std::make_shared<ExpressionNode>(type, NULL_VALUE, expr_list, "", ColumnID{});
+  return std::make_shared<ExpressionNode>(type, int32_t{0}, expr_list, "", ColumnID{});
 }
 
 std::shared_ptr<ExpressionNode> ExpressionNode::create_column_reference(const ColumnID column_id,
                                                                         const optional<std::string> &alias) {
   const std::vector<std::shared_ptr<ExpressionNode>> expr_list;
-  return std::make_shared<ExpressionNode>(ExpressionType::ColumnReference, NULL_VALUE, expr_list, "", column_id, alias);
+  return std::make_shared<ExpressionNode>(ExpressionType::ColumnReference, int32_t{0}, expr_list, "", column_id, alias);
 }
 
 std::vector<std::shared_ptr<ExpressionNode>> ExpressionNode::create_column_references(
@@ -74,7 +74,7 @@ std::shared_ptr<ExpressionNode> ExpressionNode::create_parameter(const AllTypeVa
 std::shared_ptr<ExpressionNode> ExpressionNode::create_function_reference(
     const std::string &function_name, const std::vector<std::shared_ptr<ExpressionNode>> &expression_list,
     const optional<std::string> &alias) {
-  return std::make_shared<ExpressionNode>(ExpressionType::FunctionReference, NULL_VALUE, expression_list, function_name,
+  return std::make_shared<ExpressionNode>(ExpressionType::FunctionReference, int32_t{0}, expression_list, function_name,
                                           ColumnID{}, alias);
 }
 
@@ -83,7 +83,7 @@ std::shared_ptr<ExpressionNode> ExpressionNode::create_binary_operator(Expressio
                                                                        const std::shared_ptr<ExpressionNode> &right,
                                                                        const optional<std::string> &alias) {
   auto expression = std::make_shared<ExpressionNode>(
-      type, AllTypeVariant(), std::vector<std::shared_ptr<ExpressionNode>>(), "", ColumnID{}, alias);
+      type, int32_t{0}, std::vector<std::shared_ptr<ExpressionNode>>(), "", ColumnID{}, alias);
   Assert(expression->is_binary_operator(), "Type is not an operator type");
 
   expression->set_left_child(left);
@@ -93,7 +93,7 @@ std::shared_ptr<ExpressionNode> ExpressionNode::create_binary_operator(Expressio
 }
 
 std::shared_ptr<ExpressionNode> ExpressionNode::create_select_all() {
-  return std::make_shared<ExpressionNode>(ExpressionType::Star, AllTypeVariant(),
+  return std::make_shared<ExpressionNode>(ExpressionType::Star, int32_t{0},
                                           std::vector<std::shared_ptr<ExpressionNode>>(), "", ColumnID{});
 }
 
@@ -234,6 +234,7 @@ std::string ExpressionNode::to_string(const std::shared_ptr<AbstractASTNode> &in
       return type_cast<std::string>(_value);
     case ExpressionType::ColumnReference:
       if (input_node != nullptr) {
+        DebugAssert(_column_id < input_node->output_column_names().size(), "_column_id out of range");
         return input_node->output_column_names()[_column_id];
       }
       return boost::lexical_cast<std::string>(_column_id);
@@ -257,6 +258,34 @@ const std::vector<std::shared_ptr<ExpressionNode>> &ExpressionNode::expression_l
 
 void ExpressionNode::set_expression_list(const std::vector<std::shared_ptr<ExpressionNode>> &expression_list) {
   _expression_list = expression_list;
+}
+
+bool ExpressionNode::operator==(const ExpressionNode &rhs) const {
+  auto compare_expression_node_ptrs = [] (const auto & ptr_lhs, const auto & ptr_rhs) {
+    if (ptr_lhs && ptr_rhs) {
+      return *ptr_lhs == *ptr_rhs;
+    }
+
+    return ptr_lhs == ptr_rhs;
+  };
+
+  if (!compare_expression_node_ptrs(_left_child, rhs._left_child)) return false;
+  if (!compare_expression_node_ptrs(_right_child, rhs._right_child)) return false;
+
+  if (_expression_list.size() != rhs._expression_list.size()) return false;
+
+  for (size_t expression_list_idx = 0; expression_list_idx < _expression_list.size(); ++expression_list_idx) {
+    if (!compare_expression_node_ptrs(_expression_list[expression_list_idx], rhs._expression_list[expression_list_idx])) {
+      return false;
+    }
+  }
+
+  return
+    _type == rhs._type &&
+      _value == rhs._value &&
+      _name == rhs._name &&
+      _column_id == rhs._column_id &&
+      _alias == rhs._alias;
 }
 
 }  // namespace opossum

@@ -19,7 +19,7 @@ StoredTableNode::StoredTableNode(const std::string& table_name, const optional<s
   auto table = StorageManager::get().get_table(_table_name);
   _output_column_names = table->column_names();
 
-  _output_column_ids.resize(_output_column_names.size(), NO_OUTPUT_COLUMN_ID);
+  _output_column_ids.resize(_output_column_names.size(), INVALID_COLUMN_ID);
 }
 
 std::string StoredTableNode::description() const { return "Table: " + _table_name; }
@@ -36,8 +36,20 @@ const std::string& StoredTableNode::table_name() const { return _table_name; }
 
 optional<ColumnID> StoredTableNode::find_column_id_for_column_identifier(
     const ColumnIdentifier& column_identifier) const {
-  auto table = StorageManager::get().get_table(_table_name);
-  return table->column_id_by_name(column_identifier.column_name);
+
+  if (column_identifier.table_name && !manages_table(*column_identifier.table_name)) {
+    return nullopt;
+  }
+
+  auto &columns = output_column_names();
+  auto iter = std::find(columns.begin(), columns.end(), column_identifier.column_name);
+
+  if (iter == columns.end()){
+    return nullopt;
+  }
+
+  auto idx = std::distance(columns.begin(), iter);
+  return ColumnID{static_cast<ColumnID::base_type>(idx)};
 }
 
 bool StoredTableNode::manages_table(const std::string& table_name) const {

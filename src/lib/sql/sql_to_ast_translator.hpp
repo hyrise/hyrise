@@ -42,8 +42,8 @@ class SQLToASTTranslator final : public boost::noncopyable {
 
   std::shared_ptr<AbstractASTNode> translate_statement(const hsql::SQLStatement& statement);
 
-  static AllParameterVariant translate_literal(const hsql::Expr& expr,
-                                               const optional<std::shared_ptr<AbstractASTNode>>& input_node = nullopt);
+  static AllParameterVariant _translate_operand(const hsql::Expr &expr,
+                                                const optional <std::shared_ptr<AbstractASTNode>> &input_node = nullopt);
   static ColumnID generate_column_id(const hsql::Expr& hsql_expr, const std::shared_ptr<AbstractASTNode>& input_node);
 
  protected:
@@ -51,8 +51,12 @@ class SQLToASTTranslator final : public boost::noncopyable {
 
   std::shared_ptr<AbstractASTNode> _translate_table_ref(const hsql::TableRef& table);
 
-  std::shared_ptr<AbstractASTNode> _translate_filter_expr(const hsql::Expr& expr,
-                                                          const std::shared_ptr<AbstractASTNode>& input_node);
+  std::shared_ptr<AbstractASTNode> _translate_predicate(const hsql::Expr &expr,
+                                                        const std::shared_ptr<AbstractASTNode> &input_node);
+
+  std::shared_ptr<AbstractASTNode> _translate_having(const hsql::Expr &expr,
+                                                     const std::shared_ptr<AbstractASTNode> &aggregate_node,
+                                                        const std::shared_ptr<AbstractASTNode> &input_node);
 
   std::shared_ptr<AbstractASTNode> _translate_aggregate(const hsql::SelectStatement& select,
                                                         const std::shared_ptr<AbstractASTNode>& input_node);

@@ -25,6 +25,8 @@ struct AggregateColumnDefinition {
  * This node type is used to describe SELECT lists for statements that have at least one of the following:
  *  - one or more aggregate functions in their SELECT list
  *  - a GROUP BY clause
+ *
+ *  The order of the output columns is groupby columns followed by aggregate columns
  */
 class AggregateNode : public AbstractASTNode {
  public:
@@ -37,7 +39,10 @@ class AggregateNode : public AbstractASTNode {
   std::string description() const override;
   const std::vector<std::string>& output_column_names() const override;
   const std::vector<ColumnID>& output_column_ids() const override;
+
   optional<ColumnID> find_column_id_for_column_identifier(const ColumnIdentifier& column_identifier) const override;
+
+  optional<ColumnID> find_column_id_for_expression(const std::shared_ptr<ExpressionNode> & expression) const override;
 
  protected:
   void _on_child_changed() override;

@@ -125,6 +125,8 @@ class ExpressionNode : public std::enable_shared_from_this<ExpressionNode> {
   // Expression as string
   std::string to_string(const std::shared_ptr<AbstractASTNode>& input_node = {}) const;
 
+  bool operator==(const ExpressionNode &rhs) const;
+
  private:
   // the type of the expression
   const ExpressionType _type;

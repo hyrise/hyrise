@@ -93,7 +93,7 @@ void AggregateNode::_on_child_changed() {
     }
 
     _output_column_names.emplace_back(column_name);
-    _output_column_ids.emplace_back(NO_OUTPUT_COLUMN_ID);
+    _output_column_ids.emplace_back(INVALID_COLUMN_ID);
   }
 }
 
@@ -105,19 +105,24 @@ optional<ColumnID> AggregateNode::find_column_id_for_column_identifier(
     const ColumnIdentifier& column_identifier) const {
   DebugAssert(!!left_child(), "AggregateNode needs a child.");
 
+  // TODO(mp) Handle column_identifier having a table that is this node's alias
+
   /*
-   * Search for ColumnIdentifier in Aggregate columns:
+   * Search for ColumnIdentifier in Aggregate columns ALIASes, if the column_identifier has no table:
    * These columns are created by the Aggregate Operator, so we have to look through them here.
    */
   optional<ColumnID> column_id_aggregate;
-  for (uint16_t i = 0; i < _aggregates.size(); i++) {
-    const auto& aggregate_definition = _aggregates[i];
+  if (!column_identifier.table_name) {
+    for (uint16_t i = 0; i < _aggregates.size(); i++) {
+      const auto &aggregate_definition = _aggregates[i];
 
-    // If AggregateDefinition has no alias, column_name will not match.
-    if (column_identifier.column_name == aggregate_definition.alias) {
-      // Check that we haven't found a match yet.
-      Assert(!column_id_aggregate, "Column name " + column_identifier.column_name + " is ambiguous.");
-      column_id_aggregate = ColumnID{i};
+      // If AggregateDefinition has no alias, column_name will not match.
+      if (column_identifier.column_name == aggregate_definition.alias) {
+        // Check that we haven't found a match yet.
+        Assert(!column_id_aggregate, "Column name " + column_identifier.column_name + " is ambiguous.");
+        // Aggregate columns come after groupby columns in the Aggregate's output
+        column_id_aggregate = ColumnID{static_cast<ColumnID::base_type>(i + _groupby_columns.size())};
+      }
     }
   }
 
@@ -127,6 +132,11 @@ optional<ColumnID> AggregateNode::find_column_id_for_column_identifier(
    * we just have to check the left_child for the ColumnIdentifier.
    */
   auto column_id_groupby = left_child()->find_column_id_for_column_identifier(column_identifier);
+  if (column_id_groupby) {
+    auto iter = std::find(_groupby_columns.begin(), _groupby_columns.end(), *column_id_groupby);
+    Assert(iter != _groupby_columns.end(), "Requested column identifier is not in GroupBy list");
+  }
+
   Assert(!column_id_aggregate || !column_id_groupby, "Column name " + column_identifier.column_name + " is ambiguous.");
 
   if (column_id_aggregate) {
@@ -135,6 +145,20 @@ optional<ColumnID> AggregateNode::find_column_id_for_column_identifier(
 
   // Optional might not be set.
   return column_id_groupby;
+}
+
+optional<ColumnID> AggregateNode::find_column_id_for_expression(const std::shared_ptr<ExpressionNode> & expression) const {
+  const auto iter = std::find_if(_aggregates.begin(), _aggregates.end(), [&](const auto &rhs) {
+    DebugAssert(!!rhs.expr, "No expr in AggregateColumnDefinition");
+    return *expression == *rhs.expr;
+  });
+
+  if (iter == _aggregates.end()) {
+    return nullopt;
+  }
+
+  const auto idx = std::distance(_aggregates.begin(), iter);
+  return ColumnID{static_cast<ColumnID::base_type>(idx + _groupby_columns.size())};
 }
 
 }  // namespace opossum

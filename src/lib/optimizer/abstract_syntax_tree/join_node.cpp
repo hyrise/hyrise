@@ -44,22 +44,25 @@ optional<ColumnID> JoinNode::find_column_id_for_column_identifier(const ColumnId
 
   // If there is no qualifying table name, search both children.
   if (!column_identifier.table_name) {
-    const auto &left_column_id = left_child()->find_column_id_for_column_identifier(column_identifier);
-    const auto &right_column_id = right_child()->find_column_id_for_column_identifier(column_identifier);
+    const auto left_column_id = left_child()->find_column_id_for_column_identifier(column_identifier);
+    const auto right_column_id = right_child()->find_column_id_for_column_identifier(column_identifier);
 
-    Assert(!left_column_id || !right_column_id, "Column name " + column_identifier.column_name + " is ambiguous.");
+    Assert(static_cast<bool>(left_column_id) ^ static_cast<bool>(right_column_id),
+           "Column name " + column_identifier.column_name + " is ambiguous.");
 
     if (left_column_id) {
       return left_column_id;
     }
 
-    // Optional might not be set.
-    return right_column_id;
+    auto column_idx = left_child()->output_column_ids().size() + (*right_column_id);
+    DebugAssert(column_idx < std::numeric_limits<uint16_t>::max(), "Too many columns for table.");
+
+    return ColumnID{static_cast<ColumnID::base_type>(column_idx)};
   }
 
   // There must not be two tables with the same qualifying name.
-  Assert(!left_child()->manages_table(*column_identifier.table_name) ||
-             !right_child()->manages_table(*column_identifier.table_name),
+  Assert(left_child()->manages_table(*column_identifier.table_name) ^
+             right_child()->manages_table(*column_identifier.table_name),
          "Table name " + *column_identifier.table_name + " is ambiguous.");
 
   // Otherwise only search a children if it manages that qualifier.
@@ -72,11 +75,11 @@ optional<ColumnID> JoinNode::find_column_id_for_column_identifier(const ColumnId
     if (column_id) {
       auto column_idx = left_child()->output_column_ids().size() + (*column_id);
       DebugAssert(column_idx < std::numeric_limits<uint16_t>::max(), "Too many columns for table.");
-      return ColumnID{static_cast<uint16_t>(column_idx)};
+      return ColumnID{static_cast<ColumnID::base_type>(column_idx)};
     }
   }
 
-  return {};
+  return nullopt;
 }
 
 bool JoinNode::manages_table(const std::string &table_name) const {

@@ -62,7 +62,7 @@ void ProjectionNode::_on_child_changed() {
       }
 
     } else if (expression->type() == ExpressionType::Literal || expression->is_arithmetic_operator()) {
-      _output_column_ids.emplace_back(NO_OUTPUT_COLUMN_ID);
+      _output_column_ids.emplace_back(INVALID_COLUMN_ID);
 
       if (!expression->alias()) {
         _output_column_names.emplace_back(expression->to_string());
@@ -80,17 +80,68 @@ const std::vector<std::string>& ProjectionNode::output_column_names() const { re
 
 optional<ColumnID> ProjectionNode::find_column_id_for_column_identifier(
     const ColumnIdentifier& column_identifier) const {
+  /**
+   * The result variable. We make sure the optional is only set once to detect ambiguity in column
+   * references.
+   */
   optional<ColumnID> column_id;
 
-  for (uint16_t column_idx = 0; column_idx < output_column_names().size(); column_idx++) {
-    const auto& name = output_column_names()[column_idx];
-    if (column_identifier.column_name == name) {
+  /**
+   * Look for column_identifier in the input node, if it exists there, check whether one of this node's
+   * _column_expressions match the found column_id.
+   * The fact that the input node contains the column_identifier doesn't necessarily mean that it is the column we're
+   * looking for. E.g: we're looking for column "a" and "a" exists in the previous node, but is NOT projected
+   * by the projection it might still be an ALIAS of the projection.
+   */
+  auto child_column_id = left_child()->find_column_id_for_column_identifier(column_identifier);
+
+  for (ColumnID::base_type column_idx = 0; column_idx < output_column_names().size(); column_idx++) {
+    const auto &column_expression = _column_expressions[column_idx];
+
+    if (child_column_id &&
+        column_expression->type() == ExpressionType::ColumnReference &&
+        column_expression->column_id() == *child_column_id) {
       Assert(!column_id, "Column name " + column_identifier.column_name + " is ambiguous.");
-      column_id = output_column_ids()[column_idx];
+      column_id = ColumnID{column_idx};
+      continue;
+    }
+
+    /**
+     * If the column_identifier we're looking for doesn't refer to a table, i.e. only the ColumnIdentifier::column_name
+     * is set, then it is possible that ColumnIdentifier::column_name refers to either one of the Projection's
+     * ALIASes or column names generated based on arithmetic expressions (i.e. 5+3 -> "5+3").
+     */
+    if (!column_identifier.table_name) {
+      if (column_expression->alias() &&
+          *column_expression->alias() == column_identifier.column_name) {
+        Assert(!column_id, "Column name " + column_identifier.column_name + " is ambiguous.");
+        column_id = ColumnID{column_idx};
+        continue;
+      }
+
+      if (column_expression->to_string() == column_identifier.column_name) {
+        Assert(!column_id, "Column name " + column_identifier.column_name + " is ambiguous.");
+        column_id = ColumnID{column_idx};
+        continue;
+      }
     }
   }
 
   return column_id;
+}
+
+optional<ColumnID> ProjectionNode::find_column_id_for_expression(const std::shared_ptr<ExpressionNode> & expression) const {
+  const auto iter = std::find_if(_column_expressions.begin(), _column_expressions.end(), [&](const auto & rhs) {
+    DebugAssert(!!rhs, "");
+    return *expression == *rhs;
+  });
+
+  if (iter == _column_expressions.end()) {
+    return nullopt;
+  }
+
+  const auto idx = std::distance(_column_expressions.begin(), iter);
+  return ColumnID{static_cast<ColumnID::base_type>(idx)};
 }
 
 }  // namespace opossum

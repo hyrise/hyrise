@@ -10,6 +10,7 @@
 namespace opossum {
 
 struct ColumnID;
+struct ExpressionNode;
 class TableStatistics;
 
 enum class ASTNodeType { Aggregate, Join, Predicate, Projection, Sort, StoredTable };
@@ -58,6 +59,10 @@ class AbstractASTNode : public std::enable_shared_from_this<AbstractASTNode> {
 
   ColumnID get_column_id_for_column_identifier(const ColumnIdentifier &column_identifier) const;
   virtual optional<ColumnID> find_column_id_for_column_identifier(const ColumnIdentifier &column_identifier) const;
+
+  ColumnID get_column_id_for_expression(const std::shared_ptr<ExpressionNode> & expression) const;
+  virtual optional<ColumnID> find_column_id_for_expression(const std::shared_ptr<ExpressionNode> & expression) const;
+
   virtual bool manages_table(const std::string &table_name) const;
 
   void print(const uint32_t level = 0, std::ostream &out = std::cout) const;
