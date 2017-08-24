@@ -4,8 +4,6 @@
 #include <string>
 #include <vector>
 
-#include "sql_query_translator.hpp"
-
 #include "SQLParser.h"
 
 namespace opossum {

@@ -42,6 +42,7 @@ set(
     operators/validate_test.cpp
     operators/validate_visibility_test.cpp
     optimizer/abstract_syntax_tree_test.cpp
+    optimizer/ast_to_operator_translator_test.cpp
     optimizer/column_statistics_test.cpp
     optimizer/strategy/predicate_reordering_test.cpp
     optimizer/table_statistics_test.cpp
@@ -54,7 +55,9 @@ set(
     sql/sql_query_operator_test.cpp
     sql/sql_query_plan_test.cpp
     sql/sql_query_plan_cache_test.cpp
-    sql/sql_select_test.cpp
+    sql/sql_to_ast_translator_test.cpp
+    sql/sql_to_result_test.cpp
+    sql/tpch_test.cpp
     storage/adaptive_radix_tree_index_test.cpp
     storage/chunk_test.cpp
     storage/composite_group_key_index_test.cpp

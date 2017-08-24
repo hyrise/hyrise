@@ -44,6 +44,11 @@ class TableScan : public AbstractReadOnlyOperator {
   TableScan(const std::shared_ptr<AbstractOperator> in, const std::string &filter_column_name, const ScanType scan_type,
             const AllParameterVariant value, const optional<AllTypeVariant> value2 = nullopt);
 
+  const std::string &column_name() const;
+  ScanType scan_type() const;
+  const AllParameterVariant &value() const;
+  const optional<AllTypeVariant> &value2() const;
+
   const std::string name() const override;
   uint8_t num_in_tables() const override;
   uint8_t num_out_tables() const override;

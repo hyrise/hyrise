@@ -38,35 +38,35 @@ class OperatorsProjectionTest : public BaseTest {
 
     // Projection Expression: a + b + c
     _sum_a_b_c_expr = Projection::ColumnExpressions{ExpressionNode::create_binary_operator(
-        ExpressionType::Addition, ExpressionNode::create_column_reference("a"),
-        ExpressionNode::create_binary_operator(ExpressionType::Addition, ExpressionNode::create_column_reference("b"),
-                                               ExpressionNode::create_column_reference("c")),
+        ExpressionType::Addition, ExpressionNode::create_column_identifier("a"),
+        ExpressionNode::create_binary_operator(ExpressionType::Addition, ExpressionNode::create_column_identifier("b"),
+                                               ExpressionNode::create_column_identifier("c")),
         {"sum"})};
 
     // Projection Expression: (a + b) * c
     _mul_a_b_c_expr = Projection::ColumnExpressions{ExpressionNode::create_binary_operator(
         ExpressionType::Multiplication,
-        ExpressionNode::create_binary_operator(ExpressionType::Addition, ExpressionNode::create_column_reference("a"),
-                                               ExpressionNode::create_column_reference("b")),
-        ExpressionNode::create_column_reference("c"), {"mul"})};
+        ExpressionNode::create_binary_operator(ExpressionType::Addition, ExpressionNode::create_column_identifier("a"),
+                                               ExpressionNode::create_column_identifier("b")),
+        ExpressionNode::create_column_identifier("c"), {"mul"})};
 
     _sum_a_b_expr = Projection::ColumnExpressions{
-        ExpressionNode::create_binary_operator(ExpressionType::Addition, ExpressionNode::create_column_reference("a"),
-                                               ExpressionNode::create_column_reference("b"), {"sum"})};
+        ExpressionNode::create_binary_operator(ExpressionType::Addition, ExpressionNode::create_column_identifier("a"),
+                                               ExpressionNode::create_column_identifier("b"), {"sum"})};
 
     // Projection Expression: a
-    _a_expr = Projection::ColumnExpressions{ExpressionNode::create_column_reference("a")};
+    _a_expr = Projection::ColumnExpressions{ExpressionNode::create_column_identifier("a")};
 
     // Projection Expression: b
-    _b_expr = Projection::ColumnExpressions{ExpressionNode::create_column_reference("b")};
+    _b_expr = Projection::ColumnExpressions{ExpressionNode::create_column_identifier("b")};
 
     // Projection Expression: b, a
-    _b_a_expr = Projection::ColumnExpressions{ExpressionNode::create_column_reference("b"),
-                                              ExpressionNode::create_column_reference("a")};
+    _b_a_expr = Projection::ColumnExpressions{ExpressionNode::create_column_identifier("b"),
+                                              ExpressionNode::create_column_identifier("a")};
 
     // Projection Expression: a, b
-    _a_b_expr = Projection::ColumnExpressions{ExpressionNode::create_column_reference("a"),
-                                              ExpressionNode::create_column_reference("b")};
+    _a_b_expr = Projection::ColumnExpressions{ExpressionNode::create_column_identifier("a"),
+                                              ExpressionNode::create_column_identifier("b")};
   }
 
   Projection::ColumnExpressions _sum_a_b_expr;

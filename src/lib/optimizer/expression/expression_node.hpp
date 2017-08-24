@@ -49,9 +49,12 @@ class ExpressionNode : public std::enable_shared_from_this<ExpressionNode> {
    */
   static std::shared_ptr<ExpressionNode> create_expression(const ExpressionType type);
 
-  static std::shared_ptr<ExpressionNode> create_column_reference(const std::string& column_name,
-                                                                 const std::string& table_name = "",
-                                                                 const optional<std::string>& alias = {});
+  static std::shared_ptr<ExpressionNode> create_column_identifier(const std::string& column_name,
+                                                                  const std::string& table_name = "",
+                                                                  const optional<std::string>& alias = {});
+
+  static std::vector<std::shared_ptr<ExpressionNode>> create_column_identifiers(
+      const std::vector<std::string>& column_names, const std::vector<std::string>& aliases = {});
 
   /**
    * A literal can have an alias in order to allow queries like `SELECT 1 as one FROM t`.
@@ -97,6 +100,8 @@ class ExpressionNode : public std::enable_shared_from_this<ExpressionNode> {
 
   // Returns true if the expression requires two children.
   bool is_binary_operator() const;
+
+  bool is_operand() const;
 
   /*
    * Getters

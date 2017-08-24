@@ -8,9 +8,12 @@
 
 namespace opossum {
 
+/**
+ * This node type represents sorting operations as defined in ORDER BY clauses.
+ */
 class SortNode : public AbstractASTNode {
  public:
-  explicit SortNode(const std::string column_name, const bool asc);
+  explicit SortNode(const std::string &column_name, const bool asc);
 
   std::string description() const override;
 

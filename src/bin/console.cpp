@@ -13,9 +13,10 @@
 #include <string>
 #include <vector>
 
+#include "SQLParser.h"
 #include "operators/import_csv.hpp"
 #include "operators/print.hpp"
-#include "sql/sql_query_translator.hpp"
+#include "sql/sql_planner.hpp"
 #include "storage/storage_manager.hpp"
 #include "tpcc/tpcc_table_generator.hpp"
 
@@ -137,7 +138,6 @@ int Console::_eval_command(const CommandFunction& func, const std::string& comma
 }
 
 int Console::_eval_sql(const std::string& sql) {
-  SQLQueryTranslator translator;
   SQLQueryPlan plan;
 
   hsql::SQLParserResult parse_result;
@@ -149,19 +149,13 @@ int Console::_eval_sql(const std::string& sql) {
     return 1;
   }
 
-  // Compile the parse result
-  if (!translator.translate_parse_result(parse_result)) {
-    out("Error while compiling: " + translator.get_error_msg() + "\n");
-    return 1;
-  }
-
-  plan = translator.get_query_plan();
-
   // Measure the query plan execution time
   auto started = std::chrono::high_resolution_clock::now();
 
   // Execute query plan
   try {
+    // Compile the parse result
+    plan = SQLPlanner::plan(parse_result);
     for (const auto& task : plan.tasks()) {
       task->get_operator()->execute();
     }

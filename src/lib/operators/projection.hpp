@@ -34,6 +34,8 @@ class Projection : public AbstractReadOnlyOperator {
   uint8_t num_in_tables() const override;
   uint8_t num_out_tables() const override;
 
+  const ColumnExpressions column_expressions() const;
+
   std::shared_ptr<AbstractOperator> recreate(const std::vector<AllParameterVariant>& args) const override;
 
  protected:
