@@ -10,7 +10,7 @@
 namespace opossum {
 
 struct ColumnID;
-struct ExpressionNode;
+class ExpressionNode;
 class TableStatistics;
 
 enum class ASTNodeType { Aggregate, Join, Predicate, Projection, Sort, StoredTable };
