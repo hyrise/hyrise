@@ -45,9 +45,7 @@ class TableStatisticsMock : public TableStatistics {
 
 class PredicateReorderingTest : public BaseTest {
  protected:
-  void SetUp() override {
-    StorageManager::get().add_table("a", load_table("src/test/tables/int_float.tbl", 0));
-  }
+  void SetUp() override { StorageManager::get().add_table("a", load_table("src/test/tables/int_float.tbl", 0)); }
 };
 
 TEST_F(PredicateReorderingTest, SimpleReorderingTest) {

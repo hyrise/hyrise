@@ -96,10 +96,9 @@ optional<ColumnID> ProjectionNode::find_column_id_for_column_identifier(
   auto child_column_id = left_child()->find_column_id_for_column_identifier(column_identifier);
 
   for (ColumnID::base_type column_idx = 0; column_idx < output_column_names().size(); column_idx++) {
-    const auto &column_expression = _column_expressions[column_idx];
+    const auto& column_expression = _column_expressions[column_idx];
 
-    if (child_column_id &&
-        column_expression->type() == ExpressionType::ColumnReference &&
+    if (child_column_id && column_expression->type() == ExpressionType::ColumnReference &&
         column_expression->column_id() == *child_column_id) {
       Assert(!column_id, "Column name " + column_identifier.column_name + " is ambiguous.");
       column_id = ColumnID{column_idx};
@@ -112,8 +111,7 @@ optional<ColumnID> ProjectionNode::find_column_id_for_column_identifier(
      * ALIASes or column names generated based on arithmetic expressions (i.e. 5+3 -> "5+3").
      */
     if (!column_identifier.table_name) {
-      if (column_expression->alias() &&
-          *column_expression->alias() == column_identifier.column_name) {
+      if (column_expression->alias() && *column_expression->alias() == column_identifier.column_name) {
         Assert(!column_id, "Column name " + column_identifier.column_name + " is ambiguous.");
         column_id = ColumnID{column_idx};
         continue;
@@ -130,8 +128,9 @@ optional<ColumnID> ProjectionNode::find_column_id_for_column_identifier(
   return column_id;
 }
 
-optional<ColumnID> ProjectionNode::find_column_id_for_expression(const std::shared_ptr<ExpressionNode> & expression) const {
-  const auto iter = std::find_if(_column_expressions.begin(), _column_expressions.end(), [&](const auto & rhs) {
+optional<ColumnID> ProjectionNode::find_column_id_for_expression(
+    const std::shared_ptr<ExpressionNode>& expression) const {
+  const auto iter = std::find_if(_column_expressions.begin(), _column_expressions.end(), [&](const auto& rhs) {
     DebugAssert(!!rhs, "");
     return *expression == *rhs;
   });

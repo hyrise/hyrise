@@ -42,7 +42,7 @@ class AggregateNode : public AbstractASTNode {
 
   optional<ColumnID> find_column_id_for_column_identifier(const ColumnIdentifier& column_identifier) const override;
 
-  optional<ColumnID> find_column_id_for_expression(const std::shared_ptr<ExpressionNode> & expression) const override;
+  optional<ColumnID> find_column_id_for_expression(const std::shared_ptr<ExpressionNode>& expression) const override;
 
  protected:
   void _on_child_changed() override;

@@ -60,8 +60,8 @@ class AbstractASTNode : public std::enable_shared_from_this<AbstractASTNode> {
   ColumnID get_column_id_for_column_identifier(const ColumnIdentifier &column_identifier) const;
   virtual optional<ColumnID> find_column_id_for_column_identifier(const ColumnIdentifier &column_identifier) const;
 
-  ColumnID get_column_id_for_expression(const std::shared_ptr<ExpressionNode> & expression) const;
-  virtual optional<ColumnID> find_column_id_for_expression(const std::shared_ptr<ExpressionNode> & expression) const;
+  ColumnID get_column_id_for_expression(const std::shared_ptr<ExpressionNode> &expression) const;
+  virtual optional<ColumnID> find_column_id_for_expression(const std::shared_ptr<ExpressionNode> &expression) const;
 
   virtual bool manages_table(const std::string &table_name) const;
 
@@ -69,7 +69,7 @@ class AbstractASTNode : public std::enable_shared_from_this<AbstractASTNode> {
   virtual std::string description() const = 0;
 
  protected:
-  virtual void _on_child_changed(){}
+  virtual void _on_child_changed() {}
   virtual const std::shared_ptr<TableStatistics> _gather_statistics() const;
 
   // Used to easily differentiate between node types without pointer casts.

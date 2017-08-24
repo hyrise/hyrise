@@ -128,13 +128,14 @@ optional<ColumnID> AbstractASTNode::find_column_id_for_column_identifier(
   return _left_child->find_column_id_for_column_identifier(column_identifier);
 }
 
-ColumnID AbstractASTNode::get_column_id_for_expression(const std::shared_ptr<ExpressionNode> & expression) const {
+ColumnID AbstractASTNode::get_column_id_for_expression(const std::shared_ptr<ExpressionNode> &expression) const {
   const auto column_id = find_column_id_for_expression(expression);
   DebugAssert(!!column_id, "ColumnIdentifier could not be resolved.");
   return *column_id;
 }
 
-optional<ColumnID> AbstractASTNode::find_column_id_for_expression(const std::shared_ptr<ExpressionNode> & expression) const {
+optional<ColumnID> AbstractASTNode::find_column_id_for_expression(
+    const std::shared_ptr<ExpressionNode> &expression) const {
   DebugAssert(!!_left_child, "Node has no left child and therefore must override this function.");
   return _left_child->find_column_id_for_expression(expression);
 }

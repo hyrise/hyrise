@@ -114,7 +114,7 @@ optional<ColumnID> AggregateNode::find_column_id_for_column_identifier(
   optional<ColumnID> column_id_aggregate;
   if (!column_identifier.table_name) {
     for (uint16_t i = 0; i < _aggregates.size(); i++) {
-      const auto &aggregate_definition = _aggregates[i];
+      const auto& aggregate_definition = _aggregates[i];
 
       // If AggregateDefinition has no alias, column_name will not match.
       if (column_identifier.column_name == aggregate_definition.alias) {
@@ -147,8 +147,9 @@ optional<ColumnID> AggregateNode::find_column_id_for_column_identifier(
   return column_id_groupby;
 }
 
-optional<ColumnID> AggregateNode::find_column_id_for_expression(const std::shared_ptr<ExpressionNode> & expression) const {
-  const auto iter = std::find_if(_aggregates.begin(), _aggregates.end(), [&](const auto &rhs) {
+optional<ColumnID> AggregateNode::find_column_id_for_expression(
+    const std::shared_ptr<ExpressionNode>& expression) const {
+  const auto iter = std::find_if(_aggregates.begin(), _aggregates.end(), [&](const auto& rhs) {
     DebugAssert(!!rhs.expr, "No expr in AggregateColumnDefinition");
     return *expression == *rhs.expr;
   });

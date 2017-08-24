@@ -15,7 +15,7 @@
 namespace opossum {
 
 std::shared_ptr<ExpressionNode> SQLExpressionTranslator::translate_expression(
-    const hsql::Expr& expr, const std::shared_ptr<AbstractASTNode>& input_node) {
+    const hsql::Expr &expr, const std::shared_ptr<AbstractASTNode> &input_node) {
   auto name = expr.name ? std::string(expr.name) : "";
   auto float_value = expr.fval ? expr.fval : 0;
   auto int_value = expr.ival ? expr.ival : 0;
@@ -107,9 +107,7 @@ ColumnIdentifier SQLExpressionTranslator::get_column_identifier_for_column_ref(c
 ColumnID SQLExpressionTranslator::get_column_id_for_expression(const hsql::Expr &hsql_expr,
                                                                const std::shared_ptr<AbstractASTNode> &input_node) {
   if (hsql_expr.isType(hsql::kExprColumnRef)) {
-    return input_node->get_column_id_for_column_identifier(
-      get_column_identifier_for_column_ref(hsql_expr)
-    );
+    return input_node->get_column_id_for_column_identifier(get_column_identifier_for_column_ref(hsql_expr));
   }
 
   auto expr = translate_expression(hsql_expr, input_node);

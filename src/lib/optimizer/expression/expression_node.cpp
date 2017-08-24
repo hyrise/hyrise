@@ -82,8 +82,8 @@ std::shared_ptr<ExpressionNode> ExpressionNode::create_binary_operator(Expressio
                                                                        const std::shared_ptr<ExpressionNode> &left,
                                                                        const std::shared_ptr<ExpressionNode> &right,
                                                                        const optional<std::string> &alias) {
-  auto expression = std::make_shared<ExpressionNode>(
-      type, int32_t{0}, std::vector<std::shared_ptr<ExpressionNode>>(), "", ColumnID{}, alias);
+  auto expression = std::make_shared<ExpressionNode>(type, int32_t{0}, std::vector<std::shared_ptr<ExpressionNode>>(),
+                                                     "", ColumnID{}, alias);
   Assert(expression->is_binary_operator(), "Type is not an operator type");
 
   expression->set_left_child(left);
@@ -261,7 +261,7 @@ void ExpressionNode::set_expression_list(const std::vector<std::shared_ptr<Expre
 }
 
 bool ExpressionNode::operator==(const ExpressionNode &rhs) const {
-  auto compare_expression_node_ptrs = [] (const auto & ptr_lhs, const auto & ptr_rhs) {
+  auto compare_expression_node_ptrs = [](const auto &ptr_lhs, const auto &ptr_rhs) {
     if (ptr_lhs && ptr_rhs) {
       return *ptr_lhs == *ptr_rhs;
     }
@@ -275,17 +275,14 @@ bool ExpressionNode::operator==(const ExpressionNode &rhs) const {
   if (_expression_list.size() != rhs._expression_list.size()) return false;
 
   for (size_t expression_list_idx = 0; expression_list_idx < _expression_list.size(); ++expression_list_idx) {
-    if (!compare_expression_node_ptrs(_expression_list[expression_list_idx], rhs._expression_list[expression_list_idx])) {
+    if (!compare_expression_node_ptrs(_expression_list[expression_list_idx],
+                                      rhs._expression_list[expression_list_idx])) {
       return false;
     }
   }
 
-  return
-    _type == rhs._type &&
-      _value == rhs._value &&
-      _name == rhs._name &&
-      _column_id == rhs._column_id &&
-      _alias == rhs._alias;
+  return _type == rhs._type && _value == rhs._value && _name == rhs._name && _column_id == rhs._column_id &&
+         _alias == rhs._alias;
 }
 
 }  // namespace opossum
