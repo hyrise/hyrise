@@ -33,6 +33,7 @@ class ASTToOperatorTranslator final : public boost::noncopyable {
   std::shared_ptr<AbstractOperator> _translate_sort_node(const std::shared_ptr<AbstractASTNode> &node) const;
   std::shared_ptr<AbstractOperator> _translate_join_node(const std::shared_ptr<AbstractASTNode> &node) const;
   std::shared_ptr<AbstractOperator> _translate_aggregate_node(const std::shared_ptr<AbstractASTNode> &node) const;
+  std::shared_ptr<AbstractOperator> _translate_validate_node(const std::shared_ptr<AbstractASTNode> &node) const;
 
   std::unordered_map<ASTNodeType, std::function<std::shared_ptr<AbstractOperator>(std::shared_ptr<AbstractASTNode>)>>
       _operator_factory;
