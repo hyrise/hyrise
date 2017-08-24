@@ -232,7 +232,7 @@ ColumnSelectivityResult ColumnStatistics<ColumnType>::estimate_selectivity_for_p
     }
     case ScanType::OpBetween: {
       // since the value2 is known,
-      // first, statistics for the operation <= value are calulated
+      // first, statistics for the operation <= value are calculated
       // then, the open ended selectivity is applied on the result
       DebugAssert(static_cast<bool>(value2), "Operator BETWEEN should get two parameters, second is missing!");
       auto casted_value2 = type_cast<ColumnType>(*value2);
@@ -247,7 +247,7 @@ ColumnSelectivityResult ColumnStatistics<ColumnType>::estimate_selectivity_for_p
       }
       // apply default selectivity for open ended
       output.selectivity *= DEFAULT_OPEN_ENDED_SELECTIVITY;
-      // column statistis have just been created, therefore, cast to the column type cannot fail
+      // column statistics have just been created, therefore, cast to the column type cannot fail
       auto column_statistics = std::dynamic_pointer_cast<ColumnStatistics<ColumnType>>(output.column_statistics);
       *(column_statistics->_distinct_count) *= DEFAULT_OPEN_ENDED_SELECTIVITY;
       return output;
@@ -260,39 +260,107 @@ template <typename ColumnType>
 TwoColumnSelectivityResult ColumnStatistics<ColumnType>::estimate_selectivity_for_two_column_predicate(
     const ScanType scan_type, const std::shared_ptr<BaseColumnStatistics> &right_base_column_statistics,
     const optional<AllTypeVariant> &value2) {
+  /**
+   * Calculate expected selectivity by looking at what ratio of values of both columns are in the overlapping value
+   * range of both columns. If the two columns have different min values, then the column with the smaller min value
+   * will have values below the overlapping range. The same applies to values above the overlapping range. If the max
+   * values are not the same, then the column with the larger max value will have values above the overlapping range.
+   *
+   * For the different scan types the appropriate ratios of values below, within and above the overlapping range from
+   * both columns are taken to compute the selectivity.
+   *
+   * Example estimation:
+   *
+   * |  Column name     |  col_left  |  col_right  |
+   * |  Column type     |  int       |  int        |
+   * |  Min value       |  1         |  11         |
+   * |  Max value       |  20        |  40         |
+   * |  Distinct count  |  20        |  15         |
+   *
+   * Overlapping value range: 11 to 20  -->  overlapping_range_min = 11,  overlapping_range_max = 20
+   * left_overlapping_ratio = (20 - 11 + 1) / (20 - 1 + 1) = 1 / 2
+   * right_overlapping_ratio = (20 - 11 + 1) / (40 - 11 + 1) = 1 / 3
+   *
+   * left_below_overlapping_ratio = (10 - 1 + 1) / (20 - 1 + 1) = 1 / 2
+   * left_above_overlapping_ratio = 0 as col_left max value within overlapping range
+   * right_below_overlapping_ratio = (40 - 21 + 1) / (40 - 11 + 1) = 2 / 3
+   * right_above_overlapping_ratio = 0 as col_right min value within overlapping range
+   *
+   * left_overlapping_distinct_count = (1 / 2) * 20 = 10
+   * right_overlapping_distinct_count = (1 / 3) * 15 = 5
+   *
+   * For scan type equals only the ratios of values in the overlapping range is considered as values. If values could
+   * match outside the overlapping range, the range would be false as it would be too small. In order to calculate the
+   * equal value ratio, the column with fewer distinct values within the overlapping range is determined. In this case
+   * this is col_right. Statistics component assumes that for two value sets for the same range the smaller set is
+   * part of the bigger set. Therefore, it assumes that the 5 distinct values within the overlapping range of the right
+   * column also exist in the left column. The equal value ratio is then calculated by multiplying
+   * right_overlapping_ratio (= 1 / 2) with the probability to hit any distinct value of the left column (= 1 / 20):
+   * equal_values_ratio = (1 / 2) * (1 / 20) = (1 / 40)
+   * This is also the selectivity for the scan type equals: (1 / 40) = 2.5 %
+   *
+   * For scan type less the ratios left_below_overlapping_ratio and right_above_overlapping_ratio are also considered as table
+   * entries where the col_left value is below the common range or the col_right value is above it will always be in the
+   * result.
+   * The probability that both values are within the overlapping range and that col_left < col_right is (probability of
+   * col_left != col_right where left and right values are in overlapping range) / 2
+   *
+   * The selectivity for scan type less is the sum of different probabilities: // NOLINT
+   *    prob. that left value is below overlapping range (= 1 / 2) // NOLINT
+   *  + prob. that right value is above overlapping range (= 1 / 3) // NOLINT
+   *  - prob. that left value is below overlapping range and right value is above overlapping range (= 1 / 6) // NOLINT
+   *  + prob. that left value < right value and both values are in common range // NOLINT
+   *                                                                    (= ((1 / 6) - (1 / 20)) / 2 = 7 / 120) // NOLINT
+   *  = 29 / 40 = 72.5 % // NOLINT
+   */
+
   auto right_stats = std::dynamic_pointer_cast<ColumnStatistics<ColumnType>>(right_base_column_statistics);
   DebugAssert(right_stats != nullptr, "Cannot compare columns of different type");
 
-  // for aggregate "col_left < col_right": col_left statistics = this and col_right statistics = right_stats
+  // for predicate "col_left < col_right": col_left statistics = this and col_right statistics = right_stats
 
-  auto common_min = std::max(min(), right_stats->min());
-  auto common_max = std::min(max(), right_stats->max());
+  auto overlapping_range_min = std::max(min(), right_stats->min());
+  auto overlapping_range_max = std::min(max(), right_stats->max());
 
-  // calculate percentage of values before, in and above the common value range
-  float left_overlapping_ratio = estimate_selectivity_for_range(common_min, common_max);
-  float right_overlapping_ratio = right_stats->estimate_selectivity_for_range(common_min, common_max);
+  // calculate ratio of values before, in and above the common value range
+  float left_overlapping_ratio = estimate_selectivity_for_range(overlapping_range_min, overlapping_range_max);
+  float right_overlapping_ratio =
+      right_stats->estimate_selectivity_for_range(overlapping_range_min, overlapping_range_max);
 
-  float left_below, left_above, right_below, right_above;
+  float left_below_overlapping_ratio = 0.f;
+  float left_above_overlapping_ratio = 0.f;
+  float right_below_overlapping_ratio = 0.f;
+  float right_above_overlapping_ratio = 0.f;
   if (std::is_integral<ColumnType>::value) {
-    left_below = (min() < common_min) ? estimate_selectivity_for_range(min(), common_min - 1) : 0;
-    left_above = (common_max < max()) ? estimate_selectivity_for_range(common_max + 1, max()) : 0;
-    bool below_min = right_stats->min() < common_min;
-    right_below = below_min ? right_stats->estimate_selectivity_for_range(right_stats->min(), common_min - 1) : 0;
-    bool above_max = common_max < right_stats->max();
-    right_above = above_max ? right_stats->estimate_selectivity_for_range(common_max + 1, right_stats->max()) : 0;
+    if (min() < overlapping_range_min) {
+      left_below_overlapping_ratio = estimate_selectivity_for_range(min(), overlapping_range_min - 1);
+    }
+    if (overlapping_range_max < max()) {
+      left_above_overlapping_ratio = estimate_selectivity_for_range(overlapping_range_max + 1, max());
+    }
+    if (right_stats->min() < overlapping_range_min) {
+      right_below_overlapping_ratio =
+          right_stats->estimate_selectivity_for_range(right_stats->min(), overlapping_range_min - 1);
+    }
+    if (overlapping_range_max < right_stats->max()) {
+      right_above_overlapping_ratio =
+          right_stats->estimate_selectivity_for_range(overlapping_range_max + 1, right_stats->max());
+    }
   } else {
-    left_below = estimate_selectivity_for_range(min(), common_min);
-    left_above = estimate_selectivity_for_range(common_max, max());
-    right_below = right_stats->estimate_selectivity_for_range(right_stats->min(), common_min);
-    right_above = right_stats->estimate_selectivity_for_range(common_max, right_stats->max());
+    left_below_overlapping_ratio = estimate_selectivity_for_range(min(), overlapping_range_min);
+    left_above_overlapping_ratio = estimate_selectivity_for_range(overlapping_range_max, max());
+    right_below_overlapping_ratio =
+        right_stats->estimate_selectivity_for_range(right_stats->min(), overlapping_range_min);
+    right_above_overlapping_ratio =
+        right_stats->estimate_selectivity_for_range(overlapping_range_max, right_stats->max());
   }
 
-  // calculate percentage of distinct values in common value range
+  // calculate ratio of distinct values in common value range
   auto left_overlapping_distinct_count = left_overlapping_ratio * distinct_count();
   auto right_overlapping_distinct_count = right_overlapping_ratio * right_stats->distinct_count();
 
   float equal_values_ratio;
-  // calculate percentage of rows with equal values
+  // calculate ratio of rows with equal values
   if (left_overlapping_distinct_count < right_overlapping_distinct_count) {
     equal_values_ratio = left_overlapping_ratio / right_stats->distinct_count();
   } else {
@@ -303,18 +371,18 @@ TwoColumnSelectivityResult ColumnStatistics<ColumnType>::estimate_selectivity_fo
   auto estimate_selectivity_for_open_ended_operators = [&](float values_below_ratio, float values_above_ratio,
                                                            ColumnType new_min, ColumnType new_max,
                                                            bool add_equal_values) -> TwoColumnSelectivityResult {
-    // selectivity calculated by adding up percentages that values are below, in or above overlapping range
+    // selectivity calculated by adding up ratios that values are below, in or above overlapping range
     float selectivity = 0.f;
-    // percentage of values on left hand side which are smaller than overlapping range
+    // ratio of values on left hand side which are smaller than overlapping range
     selectivity += values_below_ratio;
     // selectivity of not equal numbers n1, n2 in overlapping range where n1 < n2 is 0.5
     selectivity += (left_overlapping_ratio * right_overlapping_ratio - equal_values_ratio) * 0.5f;
     if (add_equal_values) {
       selectivity += equal_values_ratio;
     }
-    // percentage of values on right hand side which are greater than overlapping range
+    // ratio of values on right hand side which are greater than overlapping range
     selectivity += values_above_ratio;
-    // remove percentage of rows, where one value is below and one value is above the overlapping range
+    // remove ratio of rows, where one value is below and one value is above the overlapping range
     selectivity -= values_below_ratio * values_above_ratio;
 
     auto new_left_column_stats = create_column_stats_for_range_predicate(new_min, new_max).column_statistics;
@@ -327,10 +395,10 @@ TwoColumnSelectivityResult ColumnStatistics<ColumnType>::estimate_selectivity_fo
     case ScanType::OpEquals: {
       auto overlapping_distinct_count = std::min(left_overlapping_distinct_count, right_overlapping_distinct_count);
 
-      auto new_left_column_stats =
-          std::make_shared<ColumnStatistics>(_column_id, overlapping_distinct_count, common_min, common_max);
+      auto new_left_column_stats = std::make_shared<ColumnStatistics>(_column_id, overlapping_distinct_count,
+                                                                      overlapping_range_min, overlapping_range_max);
       auto new_right_column_stats = std::make_shared<ColumnStatistics>(
-          right_stats->_column_id, overlapping_distinct_count, common_min, common_max);
+          right_stats->_column_id, overlapping_distinct_count, overlapping_range_min, overlapping_range_max);
       return {equal_values_ratio, new_left_column_stats, new_right_column_stats};
     }
     case ScanType::OpNotEquals: {
@@ -340,16 +408,20 @@ TwoColumnSelectivityResult ColumnStatistics<ColumnType>::estimate_selectivity_fo
       return {1.f - equal_values_ratio, new_left_column_stats, new_right_column_stats};
     }
     case ScanType::OpLessThan: {
-      return estimate_selectivity_for_open_ended_operators(left_below, right_above, min(), right_stats->max(), false);
+      return estimate_selectivity_for_open_ended_operators(left_below_overlapping_ratio, right_above_overlapping_ratio,
+                                                           min(), right_stats->max(), false);
     }
     case ScanType::OpLessThanEquals: {
-      return estimate_selectivity_for_open_ended_operators(left_below, right_above, min(), right_stats->max(), true);
+      return estimate_selectivity_for_open_ended_operators(left_below_overlapping_ratio, right_above_overlapping_ratio,
+                                                           min(), right_stats->max(), true);
     }
     case ScanType::OpGreaterThan: {
-      return estimate_selectivity_for_open_ended_operators(right_below, left_above, right_stats->min(), max(), false);
+      return estimate_selectivity_for_open_ended_operators(right_below_overlapping_ratio, left_above_overlapping_ratio,
+                                                           right_stats->min(), max(), false);
     }
     case ScanType::OpGreaterThanEquals: {
-      return estimate_selectivity_for_open_ended_operators(right_below, left_above, right_stats->min(), max(), true);
+      return estimate_selectivity_for_open_ended_operators(right_below_overlapping_ratio, left_above_overlapping_ratio,
+                                                           right_stats->min(), max(), true);
     }
     // case ScanType::OpBetween is not supported for ColumnName as TableScan does not support this
     default: { return {1.f, nullptr, nullptr}; }
