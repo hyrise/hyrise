@@ -87,8 +87,6 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
     _output_pos_lists_right.resize(_partition_count);
   }
 
-  virtual ~JoinSortMergeImpl() = default;
-
  protected:
   struct TablePosition;
   JoinSortMerge& _sort_merge_join;
