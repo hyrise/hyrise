@@ -420,6 +420,11 @@ TEST_F(OperatorsAggregateTest, SingleAggregateCountWithNull) {
                     "src/test/tables/aggregateoperator/groupby_int_1gb_1agg/count_null.tbl", 1);
 }
 
+TEST_F(OperatorsAggregateTest, OneGroupbyAndNoAggregateWithNull) {
+  this->test_output(_table_wrapper_1_1_null, {}, {std::string("a")},
+                    "src/test/tables/aggregateoperator/groupby_int_1gb_0agg/result_null.tbl", 1);
+}
+
 /**
  * Tests for ReferenceColumns
  */

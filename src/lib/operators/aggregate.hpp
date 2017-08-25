@@ -108,7 +108,7 @@ class Aggregate : public AbstractReadOnlyOperator {
       null_values.push_back(!kv.second.current_aggregate);
 
       if (!kv.second.current_aggregate) {
-        values.emplace_back();
+        values.push_back(AggregateType());
       } else {
         values.push_back(*kv.second.current_aggregate);
       }
@@ -146,7 +146,7 @@ class Aggregate : public AbstractReadOnlyOperator {
       null_values.push_back(!kv.second.current_aggregate);
 
       if (!kv.second.current_aggregate) {
-        values.emplace_back();
+        values.push_back(AggregateType());
       } else {
         values.push_back(*kv.second.current_aggregate / static_cast<AggregateType>(kv.second.aggregate_count));
       }
