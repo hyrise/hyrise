@@ -115,7 +115,7 @@ class RadixPartitionSort {
 
   // Radix calculation for non-arithmetic types
   template <typename T2>
-  static typename std::enable_if<!std::is_arithmetic<T2>::value, uint32_t>::type get_radix(T2 value,
+  static typename std::enable_if<std::is_same<T2, std::string>::value, uint32_t>::type get_radix(T2 value,
                                                                                            uint32_t radix_bitmask) {
     auto result = reinterpret_cast<const uint32_t*>(value.c_str());
     return *result & radix_bitmask;
