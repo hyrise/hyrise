@@ -142,9 +142,9 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
     void for_every_row_id(std::shared_ptr<MaterializedTable<T>> table, std::function<void(RowID&)> action) {
       for (int partition = start.partition; partition <= end.partition; ++partition) {
         int start_index = (partition == start.partition) ? start.index : 0;
-        int end_index = (partition == end.partition) ? end.index : table->at(partition)->size();
+        int end_index = (partition == end.partition) ? end.index : (*table)[partition]->size();
         for (int index = start_index; index < end_index; ++index) {
-          action(table->at(partition)->at(index).row_id);
+          action((*(*table)[partition])[index].row_id);
         }
       }
     }
@@ -169,7 +169,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
   static TablePosition _end_of_table(std::shared_ptr<MaterializedTable<T>> table) {
     DebugAssert(table->size() > 0, "table has no chunks");
     auto last_partition = table->size() - 1;
-    return TablePosition(last_partition, table->at(last_partition)->size());
+    return TablePosition(last_partition, (*table)[last_partition]->size());
   }
 
   /**
@@ -310,8 +310,8 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
     _output_pos_lists_left[partition_number] = std::make_shared<PosList>();
     _output_pos_lists_right[partition_number] = std::make_shared<PosList>();
 
-    auto& left_partition = _sorted_left_table->at(partition_number);
-    auto& right_partition = _sorted_right_table->at(partition_number);
+    auto& left_partition = (*_sorted_left_table)[partition_number];
+    auto& right_partition = (*_sorted_right_table)[partition_number];
 
     size_t left_run_start = 0;
     size_t right_run_start = 0;
@@ -323,8 +323,8 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
     const size_t right_size = right_partition->size();
 
     while (left_run_start < left_size && right_run_start < right_size) {
-      auto& left_value = left_partition->at(left_run_start).value;
-      auto& right_value = right_partition->at(right_run_start).value;
+      auto& left_value = (*left_partition)[left_run_start].value;
+      auto& right_value = (*right_partition)[right_run_start].value;
 
       auto compare_result = _compare(left_value, right_value);
 
@@ -444,7 +444,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
     // Get the row ids that are referenced
     auto new_pos_list = std::make_shared<PosList>();
     for (const auto& row : *pos_list) {
-      new_pos_list->push_back(input_pos_lists.at(row.chunk_id)->at(row.chunk_offset));
+      new_pos_list->push_back((*input_pos_lists[row.chunk_id])[row.chunk_offset]);
     }
 
     return new_pos_list;

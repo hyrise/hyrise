@@ -138,10 +138,10 @@ class RadixPartitionSort {
   **/
   static MatTablePtr _concatenate_chunks(MatTablePtr input_chunks) {
     auto output_table = std::make_shared<MaterializedTable<T>>(1);
-    output_table->at(0) = std::make_shared<MaterializedChunk<T>>();
+    (*output_table)[0] = std::make_shared<MaterializedChunk<T>>();
 
     // Reserve the required space and move the data to the output
-    auto output_chunk = output_table->at(0);
+    auto output_chunk = (*output_table)[0];
     output_chunk->reserve(_materialized_table_size(input_chunks));
     for (auto& chunk : *input_chunks) {
       output_chunk->insert(output_chunk->end(), chunk->begin(), chunk->end());
@@ -167,7 +167,7 @@ class RadixPartitionSort {
     std::vector<std::shared_ptr<AbstractTask>> histogram_jobs;
     for (size_t chunk_number = 0; chunk_number < input_chunks->size(); ++chunk_number) {
       auto& chunk_statistics = table_statistics.chunk_statistics[chunk_number];
-      auto input_chunk = input_chunks->at(chunk_number);
+      auto input_chunk = (*input_chunks)[chunk_number];
 
       // Count the number of entries for each partition to be able to reserve the appropriate output space later.
       // Note: Does this make sense from a performance view?
@@ -201,7 +201,7 @@ class RadixPartitionSort {
     // Reserve the appropriate output space for the partitions
     for (size_t partition_id = 0; partition_id < _partition_count; ++partition_id) {
       auto partition_size = table_statistics.partition_histogram[partition_id];
-      output_table->at(partition_id) = std::make_shared<MaterializedChunk<T>>(partition_size);
+      (*output_table)[partition_id] = std::make_shared<MaterializedChunk<T>>(partition_size);
     }
 
     // Move each entry into its appropriate partition in parallel
@@ -209,9 +209,9 @@ class RadixPartitionSort {
     for (size_t chunk_number = 0; chunk_number < input_chunks->size(); ++chunk_number) {
       auto job = std::make_shared<JobTask>([&] {
         auto& chunk_statistics = table_statistics.chunk_statistics[chunk_number];
-        for (auto& entry : *input_chunks->at(chunk_number)) {
+        for (auto& entry : *(*input_chunks)[chunk_number]) {
           auto partition_id = partitioner(entry.value);
-          output_table->at(partition_id)->at(chunk_statistics.insert_position[partition_id]++) = entry;
+          (*(*output_table)[partition_id])[chunk_statistics.insert_position[partition_id]++] = entry;
         }
       });
       partition_jobs.push_back(job);
@@ -249,11 +249,11 @@ class RadixPartitionSort {
     //   would start if every chunk had an even values distribution for every partition.
     // - Later, these values are aggregated to determine the actual partition borders
     for (size_t chunk_number = 0; chunk_number < table->size(); ++chunk_number) {
-      auto chunk_values = table->at(chunk_number);
+      auto chunk_values = (*table)[chunk_number];
       for (size_t partition_id = 0; partition_id < _partition_count - 1; ++partition_id) {
         auto pos = chunk_values->size() * (partition_id + 1) / static_cast<float>(_partition_count);
         auto index = static_cast<size_t>(pos);
-        ++sample_values[partition_id][chunk_values->at(index).value];
+        ++sample_values[partition_id][(*chunk_values)[index].value];
       }
     }
   }
