@@ -277,9 +277,9 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
       return 0;
     }
 
-    auto& value = values->at(start_index).value;
+    auto& value = (*values)[start_index].value;
     size_t offset = 1;
-    while (start_index + offset < values->size() && values->at(start_index + offset).value  == value) {
+    while (start_index + offset < values->size() && (*values)[start_index + offset].value == value) {
       ++offset;
     }
 
@@ -376,13 +376,13 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
 
     // Determine the required space
     size_t total_size = 0;
-    for (auto pos_list : pos_lists) {
+    for (auto& pos_list : pos_lists) {
       total_size += pos_list->size();
     }
 
     // Move the entries over the output pos list
     output->reserve(total_size);
-    for (auto pos_list : pos_lists) {
+    for (auto& pos_list : pos_lists) {
       output->insert(output->end(), pos_list->begin(), pos_list->end());
     }
 
@@ -450,8 +450,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
                                                   _sort_merge_join.input_table_right(), *_sort_merge_join._column_names,
                                                   _op == ScanType::OpEquals, _partition_count);
     // Sort and partition the input tables
-    radix_partitioner.execute();
-    auto sort_output = radix_partitioner.get_output();
+    auto sort_output = radix_partitioner.execute();
     _sorted_left_table = sort_output.first;
     _sorted_right_table = sort_output.second;
     _end_of_left_table = _end_of_table(_sorted_left_table);

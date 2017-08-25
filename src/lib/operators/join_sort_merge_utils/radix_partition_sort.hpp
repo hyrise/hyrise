@@ -19,13 +19,22 @@ namespace opossum {
 * Performs radix partitioning for the sort merge join. The radix partitioning algorithm partitions on the basis
 * of the least significant bits of the values because the values there are much more evenly distributed than for the
 * most significant bits. As a result, equal values always get moved to the same partition and the partitions are
-* sorted in themselves but in between the partitions. This is okay for the equi join, because we are only interested
-* in equlity. In the case of a non-equi join however, complete sortedness is required, because join matches exist
+* sorted in themselves but not in between the partitions. This is okay for the equi join, because we are only interested
+* in equality. In the case of a non-equi join however, complete sortedness is required, because join matches exist
 * beyond partition borders. Therefore, the partitioner defaults to a range partitioning algorithm for the non-equi-join.
 * General partitioning process:
 * -> Input chunks are materialized and sorted. Every value is stored together with its row id.
 * -> Then, either radix partitioning or range partitioning is performed.
 * -> At last, the resulting partitions are sorted.
+*
+* Radix partitioning example:
+* partition_count = 4
+* bits for partition_count = 2
+*
+*   000001|01
+*   000000|11
+*          ˆ right bits are used for partitioning
+*
 **/
 template <typename T>
 class RadixPartitionSort {
@@ -56,7 +65,13 @@ class RadixPartitionSort {
       insert_position.resize(partition_count);
     }
     // Used to count the number of entries for each partition from a specific chunk
+    // Example partition_histogram[3] = 5
+    // -> 5 values from the chunk belong in partition 3
     std::vector<size_t> partition_histogram;
+
+    // Stores the beginning of the range in partition for this chunk.
+    // Example: instert_position[2] = 4
+    // -> This chunks value for partition 2 are inserted at index 4 and forward.
     std::vector<size_t> insert_position;
   };
 
@@ -307,7 +322,7 @@ class RadixPartitionSort {
   /**
   * Executes the partitioning and sorting.
   **/
-  void execute() {
+  std::pair<MatTablePtr, MatTablePtr> execute() {
     // Sort the chunks of the input tables in the non-equi cases
     TableMaterializer<T> table_materializer(!_equi_case);
     auto chunks_left = table_materializer.materialize(_input_table_left, _left_column_name);
@@ -334,12 +349,7 @@ class RadixPartitionSort {
                 "left output has wrong size");
     DebugAssert(_materialized_table_size(_output_right) == _input_table_right->row_count(),
                 "right output has wrong size");
-  }
 
-  /**
-  * Gets the output of the partitioning containing the two materialized tables.
-  **/
-  std::pair<MatTablePtr, MatTablePtr> get_output() {
     return std::make_pair(_output_left, _output_right);
   }
 };
