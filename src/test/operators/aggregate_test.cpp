@@ -44,6 +44,10 @@ class OperatorsAggregateTest : public BaseTest {
         load_table("src/test/tables/aggregateoperator/groupby_int_2gb_2agg/input.tbl", 2));
     _table_wrapper_2_2->execute();
 
+    _table_wrapper_2_0_null = std::make_shared<TableWrapper>(
+        load_table("src/test/tables/aggregateoperator/groupby_int_2gb_0agg/input_null.tbl", 2));
+    _table_wrapper_2_0_null->execute();
+
     _table_wrapper_1_1_string = std::make_shared<TableWrapper>(
         load_table("src/test/tables/aggregateoperator/groupby_string_1gb_1agg/input.tbl", 2));
     _table_wrapper_1_1_string->execute();
@@ -78,7 +82,9 @@ class OperatorsAggregateTest : public BaseTest {
     ref_columns.insert("");
 
     for (auto const &agg : aggregates) {
-      ref_columns.insert(agg.column_name);
+      if (agg.column_name != "*") {
+        ref_columns.insert(agg.column_name);
+      }
     }
 
     for (auto const &groupby : groupby_columns) {
@@ -110,8 +116,8 @@ class OperatorsAggregateTest : public BaseTest {
   }
 
   std::shared_ptr<TableWrapper> _table_wrapper_1_1, _table_wrapper_1_1_null, _table_wrapper_1_2, _table_wrapper_2_1,
-      _table_wrapper_2_2, _table_wrapper_1_1_string, _table_wrapper_1_1_string_null, _table_wrapper_1_1_dict,
-      _table_wrapper_3_1, _table_wrapper_3_2;
+      _table_wrapper_2_2, _table_wrapper_2_0_null, _table_wrapper_1_1_string, _table_wrapper_1_1_string_null,
+      _table_wrapper_1_1_dict, _table_wrapper_3_1, _table_wrapper_3_2;
 };
 
 TEST_F(OperatorsAggregateTest, NumInputTables) {
@@ -423,6 +429,16 @@ TEST_F(OperatorsAggregateTest, SingleAggregateCountWithNull) {
 TEST_F(OperatorsAggregateTest, OneGroupbyAndNoAggregateWithNull) {
   this->test_output(_table_wrapper_1_1_null, {}, {std::string("a")},
                     "src/test/tables/aggregateoperator/groupby_int_1gb_0agg/result_null.tbl", 1);
+}
+
+TEST_F(OperatorsAggregateTest, OneGroupbyCountStar) {
+  this->test_output(_table_wrapper_1_1_null, {{"*", AggregateFunction::Count}}, {std::string("a")},
+                    "src/test/tables/aggregateoperator/groupby_int_1gb_0agg/count_star.tbl", 1);
+}
+
+TEST_F(OperatorsAggregateTest, TwoGroupbyCountStar) {
+  this->test_output(_table_wrapper_2_0_null, {{"*", AggregateFunction::Count}}, {std::string("a"), std::string("c")},
+                    "src/test/tables/aggregateoperator/groupby_int_2gb_0agg/count_star.tbl", 1);
 }
 
 /**

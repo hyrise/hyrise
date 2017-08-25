@@ -47,7 +47,12 @@ std::shared_ptr<const Table> Aggregate::on_execute() {
 
   // find aggregated column IDs
   std::transform(_aggregates.begin(), _aggregates.end(), std::back_inserter(_aggregate_column_ids),
-                 [&](AggregateDefinition agg_def) { return input_table->column_id_by_name(agg_def.column_name); });
+                 [&](AggregateDefinition agg_def) {
+                   if (agg_def.column_name == "*") {
+                     return CountStarColumnID;
+                   }
+                   return input_table->column_id_by_name(agg_def.column_name);
+                 });
 
   // check for invalid aggregates
   for (size_t aggregate_index = 0; aggregate_index < _aggregates.size(); ++aggregate_index) {
@@ -101,10 +106,18 @@ std::shared_ptr<const Table> Aggregate::on_execute() {
 
   // pre-insert empty maps for each aggregate column
   for (ColumnID column_index{0}; column_index < _contexts_per_column.size(); ++column_index) {
-    auto &type_string = input_table->column_type(_aggregate_column_ids[column_index]);
+    auto column_id = _aggregate_column_ids[column_index];
+    auto function = _aggregates[column_index].function;
 
-    call_functor_by_column_type<AggregateContextCreator>(type_string, _contexts_per_column, column_index,
-                                                         _aggregates[column_index].function);
+    if (column_id == CountStarColumnID && function == AggregateFunction::Count) {
+      /*
+      Special COUNT(*) contexts. "int" is chosen arbitrarily.
+      */
+      call_functor_by_column_type<AggregateContextCreator>("int", _contexts_per_column, column_index, function);
+    } else {
+      auto &type_string = input_table->column_type(column_id);
+      call_functor_by_column_type<AggregateContextCreator>(type_string, _contexts_per_column, column_index, function);
+    }
   }
 
   if (_aggregate_column_ids.empty()) {
@@ -159,6 +172,37 @@ std::shared_ptr<const Table> Aggregate::on_execute() {
     } else {
       ColumnID column_index{0};
       for (auto column_id : _aggregate_column_ids) {
+        auto function = _aggregates[column_index].function;
+
+        /**
+         * Special COUNT(*) implementation.
+         * Because COUNT(*) does not have a specific target column, we use the maximum ColumnID.
+         * We then basically go through the keys_per_chunk map and count the occurences of each group key.
+         * The results are saved in the regular aggregate_count variable so that we don't need a
+         * specific output logic for COUNT(*).
+         */
+        if (column_id == CountStarColumnID && function == AggregateFunction::Count) {
+          // We know the template arguments, so we don't need a visitor
+          auto ctx = std::static_pointer_cast<AggregateContext<int32_t, int64_t>>(_contexts_per_column[column_index]);
+
+          if (!ctx->results) {
+            // create result map for the first time if necessary
+            ctx->results = std::make_shared<std::map<AggregateKey, AggregateResult<int64_t>>>();
+          }
+
+          auto &results = *ctx->results;
+
+          // count occurences for each group key
+          for (const auto &hash_key : *hash_keys) {
+            results[hash_key].aggregate_count++;
+          }
+
+          continue;
+        }
+
+        /*
+        Regular aggregation for every other case
+        */
         auto base_column = chunk_in.get_column(column_id);
         auto type_string = input_table->column_type(column_id);
 
@@ -217,9 +261,18 @@ std::shared_ptr<const Table> Aggregate::on_execute() {
   ColumnID column_index{0};
   for (auto aggregate : _aggregates) {
     auto column_id = _aggregate_column_ids[column_index];
-    auto &type_string = input_table_left()->column_type(column_id);
 
-    call_functor_by_column_type<AggregateWriter>(type_string, *this, column_index, _aggregates[column_index].function);
+    if (column_id == CountStarColumnID) {
+      /*
+      Output column for COUNT(*). "int" type is chosen arbitrarily.
+      */
+      call_functor_by_column_type<AggregateWriter>("int", *this, column_index, _aggregates[column_index].function);
+    } else {
+      auto &type_string = input_table_left()->column_type(column_id);
+
+      call_functor_by_column_type<AggregateWriter>(type_string, *this, column_index,
+                                                   _aggregates[column_index].function);
+    }
 
     column_index++;
   }
