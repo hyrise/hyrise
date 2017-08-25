@@ -327,11 +327,10 @@ TYPED_TEST(JoinFullTest, GreaterEqualInnerJoin) {
 }
 
 TYPED_TEST(JoinFullTest, GreaterEqualOuterJoin) {
-  this->template test_join_output<TypeParam>(this->_table_wrapper_l, this->_table_wrapper_k,
-                                             std::pair<std::string, std::string>("a", "a"),
-                                             ScanType::OpGreaterThanEquals, JoinMode::Outer,
-                                             std::string("left."), std::string("right."),
-                                             "src/test/tables/joinoperators/int_greaterequal_outer_join.tbl", 1);
+  this->template test_join_output<TypeParam>(
+      this->_table_wrapper_l, this->_table_wrapper_k, std::pair<std::string, std::string>("a", "a"),
+      ScanType::OpGreaterThanEquals, JoinMode::Outer, std::string("left."), std::string("right."),
+      "src/test/tables/joinoperators/int_greaterequal_outer_join.tbl", 1);
 }
 
 TYPED_TEST(JoinFullTest, NotEqualInnerJoin) {

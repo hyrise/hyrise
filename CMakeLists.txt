@@ -20,7 +20,7 @@ find_package(Tbb REQUIRED)
 # Include sub-CMakeLists.txt
 add_subdirectory(third_party/)
 add_subdirectory(src)
-add_subdirectory(third_party/googletest)
+add_subdirectory(third_party/googletest EXCLUDE_FROM_ALL)
 
 # Useful for printing all c++ files in a directory:
 # find . -type f -name "*.cpp" -o -name "*.hpp" | cut -c 3- | sort
