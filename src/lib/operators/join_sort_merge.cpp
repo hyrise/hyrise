@@ -212,7 +212,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
         _emit_combinations(partition_number, left_run.end.to(_end_of_left_table), right_run);
       }
     } else if (_op == ScanType::OpGreaterThanEquals) {
-      if (compare_result == CompareResult::Greater || compare == CompareResult::Equal) {
+      if (compare_result == CompareResult::Greater || compare_result == CompareResult::Equal) {
         _emit_combinations(partition_number, left_run.start.to(_end_of_left_table), right_run);
       }
     } else if (_op == ScanType::OpLessThan) {
@@ -222,9 +222,11 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
         _emit_combinations(partition_number, left_run, right_run.end.to(_end_of_right_table));
       }
     } else if (_op == ScanType::OpLessThanEquals) {
-      if (compare_result == CompareResult::Less || compare == CompareResult::Equal) {
+      if (compare_result == CompareResult::Less || compare_result == CompareResult::Equal) {
         _emit_combinations(partition_number, left_run, right_run.start.to(_end_of_right_table));
       }
+    } else {
+      throw std::logic_error("Unknown ScanType");
     }
   }
 
