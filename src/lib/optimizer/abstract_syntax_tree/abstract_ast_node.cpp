@@ -1,5 +1,6 @@
 #include "abstract_ast_node.hpp"
 
+#include <algorithm>
 #include <iomanip>
 #include <iostream>
 #include <memory>
@@ -15,7 +16,20 @@ AbstractASTNode::AbstractASTNode(ASTNodeType node_type) : _type(node_type) {}
 
 std::shared_ptr<AbstractASTNode> AbstractASTNode::parent() const { return _parent.lock(); }
 
-void AbstractASTNode::clear_parent() { _parent = {}; }
+void AbstractASTNode::clear_parent() {
+  // _parent is a weak_ptr that we need to lock
+  auto parent_ptr = parent();
+  if (!parent_ptr) return;
+
+  if (parent_ptr->_left_child.get() == this) {
+    parent_ptr->set_left_child(nullptr);
+  } else if (parent_ptr->_right_child.get() == this) {
+    parent_ptr->set_right_child(nullptr);
+  } else {
+    Fail("Invalid AST: ASTNode is not child of his parent.");
+  }
+  _parent = {};
+}
 
 const std::shared_ptr<AbstractASTNode> &AbstractASTNode::left_child() const { return _left_child; }
 
@@ -83,6 +97,11 @@ std::vector<std::string> AbstractASTNode::output_column_names() const {
   return _output_column_names;
 }
 
+bool AbstractASTNode::has_output_column(const std::string &column_name) const {
+  const auto &column_names = output_column_names();
+  return std::find(column_names.begin(), column_names.end(), column_name) != column_names.end();
+}
+
 void AbstractASTNode::print(const uint32_t level, std::ostream &out) const {
   out << std::setw(level) << " ";
   out << description() << std::endl;
@@ -95,4 +114,5 @@ void AbstractASTNode::print(const uint32_t level, std::ostream &out) const {
     _right_child->print(level + 2, out);
   }
 }
+
 }  // namespace opossum

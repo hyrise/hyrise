@@ -45,3 +45,17 @@ target_link_libraries(
     opossum
     boost_program_options
 )
+
+# Configure Console
+add_executable(
+    opossumConsole
+
+    console.cpp
+    console.hpp
+)
+target_link_libraries(
+    opossumConsole
+    opossum
+    tpcc
+    readline
+)

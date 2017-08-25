@@ -29,7 +29,7 @@ class BaseColumn;
  * We might use the impl-pattern similar to the TableScan, but this will be in a future commit.
  **/
 
-class BaseIndex {
+class BaseIndex : private Noncopyable {
  public:
   // For now we use an iterator over a vector of chunkoffsets as the GroupKeyIndex works like this
   using Iterator = std::vector<ChunkOffset>::const_iterator;
@@ -41,8 +41,6 @@ class BaseIndex {
    */
 
   BaseIndex() = default;
-  BaseIndex(const BaseIndex &) = delete;
-  BaseIndex &operator=(const BaseIndex &) = delete;
   BaseIndex(BaseIndex &&) = default;
   BaseIndex &operator=(BaseIndex &&) = default;
   virtual ~BaseIndex() = default;

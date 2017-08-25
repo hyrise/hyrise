@@ -3,6 +3,7 @@
 #include <boost/hana/for_each.hpp>
 
 #include <boost/hana/size.hpp>
+#include <functional>
 #include <memory>
 #include <string>
 #include <utility>
@@ -90,7 +91,7 @@ void call_functor_by_column_type(const std::string &type, Args &&... args) {
 template <typename T>
 std::string name_of_type() {
   /*
-   * This function returns the name of an Opossum datatype based on the definition in hana_types.
+   * This function returns the name of an Opossum datatype based on the definition in column_types.
    */
   auto func = [](std::string s, auto element) {
     // a matching type was found before
@@ -110,6 +111,37 @@ std::string name_of_type() {
   Assert(type_string.size() > 0, "Trying to parse unknown type which is not part of AllTypeVariant");
 
   return type_string;
+}
+
+inline std::string type_string_from_all_type_variant(const AllTypeVariant all_type_variant) {
+  /*
+   * This function returns the name of an Opossum datatype based on the definition in column_types.
+   */
+
+  // Special case for NullValue data type
+  if (all_type_variant.which() == 0) {
+    return "None";
+  }
+
+  // iterate over column_types
+  int column_types_index = 1;
+
+  auto func = [all_type_variant, &column_types_index](std::string s, auto element) {
+    // a matching type was found before
+    if (s.size() != 0) {
+      return s;
+    }
+
+    if (all_type_variant.which() == column_types_index) {
+      column_types_index++;
+      return std::string(hana::first(element));
+    }
+
+    column_types_index++;
+    return std::string("");
+  };
+
+  return hana::fold_left(column_types, std::string(""), func);
 }
 
 }  // namespace opossum

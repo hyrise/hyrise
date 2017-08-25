@@ -43,6 +43,10 @@ class JoinTest : public BaseTest {
 
     _table_wrapper_h = std::make_shared<TableWrapper>(load_table("src/test/tables/int_int4.tbl", 4));
 
+    _table_wrapper_k = std::make_shared<TableWrapper>(load_table("src/test/tables/int4.tbl", 1));
+
+    _table_wrapper_l = std::make_shared<TableWrapper>(load_table("src/test/tables/int.tbl", 1));
+
     // load and create DictionaryColumn tables
     auto table = load_table("src/test/tables/int_float.tbl", 2);
     DictionaryCompression::compress_chunks(*table, {ChunkID{0}, ChunkID{1}});
@@ -68,6 +72,8 @@ class JoinTest : public BaseTest {
     _table_wrapper_f->execute();
     _table_wrapper_g->execute();
     _table_wrapper_h->execute();
+    _table_wrapper_k->execute();
+    _table_wrapper_l->execute();
     _table_wrapper_a_dict->execute();
     _table_wrapper_b_dict->execute();
     _table_wrapper_c_dict->execute();
@@ -93,8 +99,8 @@ class JoinTest : public BaseTest {
   }
 
   std::shared_ptr<TableWrapper> _table_wrapper_a, _table_wrapper_b, _table_wrapper_c, _table_wrapper_d,
-      _table_wrapper_e, _table_wrapper_f, _table_wrapper_g, _table_wrapper_h, _table_wrapper_a_dict,
-      _table_wrapper_b_dict, _table_wrapper_c_dict;
+      _table_wrapper_e, _table_wrapper_f, _table_wrapper_g, _table_wrapper_h, _table_wrapper_i, _table_wrapper_j,
+      _table_wrapper_k, _table_wrapper_l, _table_wrapper_a_dict, _table_wrapper_b_dict, _table_wrapper_c_dict;
 };
 
 }  // namespace opossum

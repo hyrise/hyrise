@@ -10,7 +10,7 @@
 
 namespace opossum {
 
-StoredTableNode::StoredTableNode(const std::string table_name)
+StoredTableNode::StoredTableNode(const std::string& table_name)
     : AbstractASTNode(ASTNodeType::StoredTable), _table_name(table_name) {}
 
 std::string StoredTableNode::description() const { return "Table: " + _table_name; }

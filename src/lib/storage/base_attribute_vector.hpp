@@ -6,15 +6,10 @@ namespace opossum {
 
 // BaseAttributeVector is the abstract super class for all attribute vectors,
 // e.g., FittedAttributeVector
-class BaseAttributeVector {
+class BaseAttributeVector : private Noncopyable {
  public:
   BaseAttributeVector() = default;
   virtual ~BaseAttributeVector() = default;
-
-  // copying an attribute vector is not allowed
-  // copying whole attribute vectors is expensive
-  BaseAttributeVector(BaseAttributeVector const &) = delete;
-  BaseAttributeVector &operator=(const BaseAttributeVector &) = delete;
 
   // we need to explicitly set the move constructor to default when
   // we overwrite the copy constructor

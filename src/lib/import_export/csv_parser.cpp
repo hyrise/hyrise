@@ -1,6 +1,7 @@
 #include "csv_parser.hpp"
 
 #include <fstream>
+#include <functional>
 #include <list>
 #include <memory>
 #include <string>
@@ -170,7 +171,7 @@ void CsvParser::_parse_into_chunk(string_view csv_chunk, const std::vector<size_
   for (ChunkOffset row_id = 0; row_id < row_count; ++row_id) {
     for (ColumnID column_id{0}; column_id < col_count; ++column_id) {
       const auto end = field_ends.at(row_id * col_count + column_id);
-      auto field = csv_chunk.substr(start, end - start).to_string();
+      auto field = std::string{csv_chunk.substr(start, end - start)};
       start = end + 1;
 
       if (!_csv_config.rfc_mode) {
