@@ -46,6 +46,8 @@ class AbstractASTNode : public std::enable_shared_from_this<AbstractASTNode> {
 
   virtual std::vector<std::string> output_column_names() const;
 
+  bool has_output_column(const std::string &column_name) const;
+
   void print(const uint32_t level = 0, std::ostream &out = std::cout) const;
   virtual std::string description() const = 0;
 

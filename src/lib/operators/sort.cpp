@@ -17,6 +17,10 @@ Sort::Sort(const std::shared_ptr<const AbstractOperator> in, const std::string &
       _ascending(ascending),
       _output_chunk_size(output_chunk_size) {}
 
+const std::string &Sort::sort_column_name() const { return _sort_column_name; }
+
+bool Sort::ascending() const { return _ascending; }
+
 const std::string Sort::name() const { return "Sort"; }
 
 uint8_t Sort::num_in_tables() const { return 1; }
