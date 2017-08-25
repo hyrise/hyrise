@@ -299,7 +299,18 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_filter_expr(
     column_operand_expr = expr.expr;
     argument_expr = expr.expr2;
   } else {
-    // TODO(anybody): think about whether this can be supported as well.
+    /**
+     * TODO(anybody): think about how this can be supported as well.
+     *
+     * * Example:
+     *     SELECT * FROM t WHERE 1 BETWEEN a AND 3
+     *  -> SELECT * FROM t WHERE a <= 1
+     *
+     *     SELECT * FROM t WHERE 3 BETWEEN 1 AND a
+     *  -> SELECT * FROM t WHERE a >= 3
+     *
+     *  The biggest question is how to introduce this in the code nicely.
+     */
     DebugAssert(scan_type != ScanType::OpBetween,
                 "Currently the term left of the BETWEEN expression needs to be a column reference.");
 
