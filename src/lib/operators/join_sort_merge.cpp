@@ -77,8 +77,6 @@ uint8_t JoinSortMerge::num_out_tables() const { return 1u; }
 **/
 template <typename T>
 class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
- protected:
-  struct TableRange;
  public:
   JoinSortMergeImpl<T>(JoinSortMerge& sort_merge_join, std::string left_column_name,
                        std::string right_column_name, const ScanType op, JoinMode mode)
@@ -88,108 +86,22 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
     _partition_count = _determine_number_of_partitions();
     _output_pos_lists_left.resize(_partition_count);
     _output_pos_lists_right.resize(_partition_count);
-
-    _join_case_handlers[ScanType::OpEquals][CompareResult::Equal] =
-      [this](size_t partition, TableRange& left_run, TableRange& right_run){
-        _emit_combinations(partition, left_run, right_run);
-      };
-    _join_case_handlers[ScanType::OpEquals][CompareResult::Less] =
-      [this](size_t partition, TableRange& left_run, TableRange& right_run){
-        if (_mode == JoinMode::Left || _mode == JoinMode::Outer) {
-          _emit_right_null_combinations(partition, left_run);
-        }
-      };
-    _join_case_handlers[ScanType::OpEquals][CompareResult::Greater] =
-      [this](size_t partition, TableRange& left_run, TableRange& right_run){
-        if (_mode == JoinMode::Right || _mode == JoinMode::Outer) {
-          _emit_left_null_combinations(partition, right_run);
-        }
-      };
-    _join_case_handlers[ScanType::OpNotEquals][CompareResult::Equal] =
-      [this](size_t partition, TableRange& left_run, TableRange& right_run){
-        _emit_combinations(partition, left_run.end.to(_end_of_left_table), right_run);
-        _emit_combinations(partition, left_run, right_run.end.to(_end_of_right_table));
-      };
-    _join_case_handlers[ScanType::OpNotEquals][CompareResult::Less] =
-      [this](size_t partition, TableRange& left_run, TableRange& right_run){
-        _emit_combinations(partition, left_run, right_run.start.to(_end_of_right_table));
-      };
-    _join_case_handlers[ScanType::OpNotEquals][CompareResult::Greater] =
-      [this](size_t partition, TableRange& left_run, TableRange& right_run){
-        _emit_combinations(partition, left_run.start.to(_end_of_left_table), right_run);
-      };
-    _join_case_handlers[ScanType::OpLessThan][CompareResult::Equal] =
-      [this](size_t partition, TableRange& left_run, TableRange& right_run){
-        _emit_combinations(partition, left_run, right_run.end.to(_end_of_right_table));
-      };
-    _join_case_handlers[ScanType::OpLessThan][CompareResult::Less] =
-      [this](size_t partition, TableRange& left_run, TableRange& right_run){
-        _emit_combinations(partition, left_run, right_run.start.to(_end_of_right_table));
-      };
-    _join_case_handlers[ScanType::OpLessThan][CompareResult::Greater] =
-      [this](size_t partition, TableRange& left_run, TableRange& right_run){
-        // Do nothing
-      };
-    _join_case_handlers[ScanType::OpLessThanEquals][CompareResult::Equal] =
-      [this](size_t partition, TableRange& left_run, TableRange& right_run){
-        _emit_combinations(partition, left_run, right_run.start.to(_end_of_right_table));
-      };
-    _join_case_handlers[ScanType::OpLessThanEquals][CompareResult::Less] =
-      [this](size_t partition, TableRange& left_run, TableRange& right_run){
-        _emit_combinations(partition, left_run, right_run.start.to(_end_of_right_table));
-      };
-    _join_case_handlers[ScanType::OpLessThanEquals][CompareResult::Greater] =
-      [this](size_t partition, TableRange& left_run, TableRange& right_run){
-        // Do nothing
-      };
-    _join_case_handlers[ScanType::OpGreaterThan][CompareResult::Equal] =
-      [this](size_t partition, TableRange& left_run, TableRange& right_run){
-        _emit_combinations(partition, left_run.end.to(_end_of_left_table), right_run);
-      };
-    _join_case_handlers[ScanType::OpGreaterThan][CompareResult::Less] =
-      [this](size_t partition, TableRange& left_run, TableRange& right_run){
-        // Do nothing
-      };
-    _join_case_handlers[ScanType::OpGreaterThan][CompareResult::Greater] =
-      [this](size_t partition, TableRange& left_run, TableRange& right_run){
-        _emit_combinations(partition, left_run.start.to(_end_of_left_table), right_run);
-      };
-    _join_case_handlers[ScanType::OpGreaterThanEquals][CompareResult::Equal] =
-      [this](size_t partition, TableRange& left_run, TableRange& right_run){
-        _emit_combinations(partition, left_run.start.to(_end_of_left_table), right_run);
-      };
-    _join_case_handlers[ScanType::OpGreaterThanEquals][CompareResult::Less] =
-      [this](size_t partition, TableRange& left_run, TableRange& right_run){
-        // Do nothing
-      };
-    _join_case_handlers[ScanType::OpGreaterThanEquals][CompareResult::Greater] =
-      [this](size_t partition, TableRange& left_run, TableRange& right_run){
-        _emit_combinations(partition, left_run.start.to(_end_of_left_table), right_run);
-      };
   }
 
   virtual ~JoinSortMergeImpl() = default;
 
  protected:
-  struct TablePosition;
-  struct TableRange;
-  enum class CompareResult;
   JoinSortMerge& _sort_merge_join;
 
+  // Contains the materialized sorted input tables
   std::shared_ptr<MaterializedTable<T>> _sorted_left_table;
   std::shared_ptr<MaterializedTable<T>> _sorted_right_table;
-
-  TablePosition _end_of_left_table;
-  TablePosition _end_of_right_table;
 
   const std::string _left_column_name;
   const std::string _right_column_name;
 
   const ScanType _op;
   const JoinMode _mode;
-
-  using JoinCaseHandler = std::function<void(size_t, TableRange&, TableRange&)>;
-  std::map<ScanType, std::map<CompareResult, JoinCaseHandler>> _join_case_handlers;
 
   // the partition count must be a power of two, i.e. 1, 2, 4, 8, 16, ...
   size_t _partition_count;
@@ -199,20 +111,10 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
   std::vector<std::shared_ptr<PosList>> _output_pos_lists_right;
 
   /**
-  * Represents the result of a value comparison.
-  **/
-  enum class CompareResult {
-    Less,
-    Greater,
-    Equal
-  };
-
-  /**
    * The TablePosition is a utility struct that is used to define a specific position in a sorted input table.
   **/
   struct TableRange;
   struct TablePosition {
-    TablePosition() {}
     TablePosition(int partition, int index) : partition{partition}, index{index} {}
 
     int partition;
@@ -267,6 +169,71 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
     DebugAssert(table->size() > 0, "table has no chunks");
     auto last_partition = table->size() - 1;
     return TablePosition(last_partition, table->at(last_partition)->size());
+  }
+
+  enum class CompareResult {
+    Less,
+    Greater,
+    Equal
+  };
+
+  /**
+  * Performs the join for two runs of a specified partition.
+  * A run is a series of rows in a partition with the same value.
+  **/
+  void _join_runs(size_t partition_number, TableRange left_run, TableRange right_run, CompareResult compare) {
+    auto end_of_left_table = _end_of_table(_sorted_left_table);
+    auto end_of_right_table = _end_of_table(_sorted_right_table);
+
+    // TODO(anyone): Move these to std::functions for a performance improvement (eliminate chained ifs)
+    // Equi-Join implementation
+    if (_op == ScanType::OpEquals) {
+      if (compare == CompareResult::Equal) {
+        _emit_combinations(partition_number, left_run, right_run);
+      } else if (compare == CompareResult::Less) {
+        if (_mode == JoinMode::Left || _mode == JoinMode::Outer) {
+          _emit_right_null_combinations(partition_number, left_run);
+        }
+      } else if (compare == CompareResult::Greater) {
+        if (_mode == JoinMode::Right || _mode == JoinMode::Outer) {
+          _emit_left_null_combinations(partition_number, right_run);
+        }
+      }
+    } else if (_op == ScanType::OpNotEquals) {
+      // Not-Equals-Join implementation
+      if (compare == CompareResult::Greater) {
+        _emit_combinations(partition_number, left_run.start.to(end_of_left_table), right_run);
+      } else if (compare == CompareResult::Equal) {
+        _emit_combinations(partition_number, left_run.end.to(end_of_left_table), right_run);
+        _emit_combinations(partition_number, left_run, right_run.end.to(end_of_right_table));
+      } else if (compare == CompareResult::Less) {
+        _emit_combinations(partition_number, left_run, right_run.start.to(end_of_right_table));
+      }
+    } else if (_op == ScanType::OpGreaterThan) {
+      // Greater-Join implementation
+      if (compare == CompareResult::Greater) {
+        _emit_combinations(partition_number, left_run.start.to(end_of_left_table), right_run);
+      } else if (compare == CompareResult::Equal) {
+        _emit_combinations(partition_number, left_run.end.to(end_of_left_table), right_run);
+      }
+    } else if (_op == ScanType::OpGreaterThanEquals) {
+      // Grequal-Join implmentation
+      if (compare == CompareResult::Greater || compare == CompareResult::Equal) {
+        _emit_combinations(partition_number, left_run.start.to(end_of_left_table), right_run);
+      }
+    } else if (_op == ScanType::OpLessThan) {
+      // Less-Join implementation
+      if (compare == CompareResult::Less) {
+        _emit_combinations(partition_number, left_run, right_run.start.to(end_of_right_table));
+      } else if (compare == CompareResult::Equal) {
+        _emit_combinations(partition_number, left_run, right_run.end.to(end_of_right_table));
+      }
+    } else if (_op == ScanType::OpLessThanEquals) {
+      // Lequal-Join implementation
+      if (compare == CompareResult::Less || compare == CompareResult::Equal) {
+        _emit_combinations(partition_number, left_run, right_run.start.to(end_of_right_table));
+      }
+    }
   }
 
   /**
@@ -355,13 +322,13 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
         compare_result = CompareResult::Less;
       } else if (left_value == right_value) {
         compare_result = CompareResult::Equal;
-      } else {
+      } else if (left_value > right_value) {
         compare_result = CompareResult::Greater;
       }
 
       TableRange left_run(partition_number, left_run_start, left_run_end);
       TableRange right_run(partition_number, right_run_start, right_run_end);
-      _join_case_handlers[_op][compare_result](partition_number, left_run, right_run);
+      _join_runs(partition_number, left_run, right_run, compare_result);
 
       // Advance to the next run on the smaller side or both if equal
       if (compare_result == CompareResult::Equal) {
@@ -385,9 +352,9 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
     auto right_rest = TableRange(partition_number, right_run_start, right_size);
     auto left_rest = TableRange(partition_number, left_run_start, left_size);
     if (left_run_start < left_size) {
-      _join_case_handlers[_op][CompareResult::Less](partition_number, left_rest, right_rest);
+      _join_runs(partition_number, left_rest, right_rest, CompareResult::Less);
     } else if (right_run_start < right_size) {
-      _join_case_handlers[_op][CompareResult::Greater](partition_number, left_rest, right_rest);
+      _join_runs(partition_number, left_rest, right_rest, CompareResult::Greater);
     }
   }
 
@@ -494,8 +461,6 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
     auto sort_output = radix_partitioner.get_output();
     _sorted_left_table = sort_output.first;
     _sorted_right_table = sort_output.second;
-    _end_of_left_table = _end_of_table(_sorted_left_table);
-    _end_of_right_table = _end_of_table(_sorted_right_table);
 
     _perform_join();
 
