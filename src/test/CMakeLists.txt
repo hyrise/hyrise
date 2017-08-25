@@ -28,7 +28,6 @@ set(
     operators/insert_test.cpp
     operators/join_equi_test.cpp
     operators/join_full_test.cpp
-    operators/join_not_equal_inner_test.cpp
     operators/join_test.hpp
     operators/limit_test.cpp
     operators/print_test.cpp
@@ -109,6 +108,3 @@ set_target_properties(opossumAsan PROPERTIES COMPILE_FLAGS "-fsanitize=address -
 # Configure opossumTestTPCC
 add_executable(opossumTestTPCC ${TPCC_TEST_SOURCES})
 target_link_libraries(opossumTestTPCC opossum ${LIBRARIES})
-
-
-
