@@ -114,7 +114,7 @@ int Console::_eval(const std::string& input) {
   if (_multiline_input.empty()) {
     // Check if a registered command was entered
     RegisteredCommands::iterator it;
-    if ((it = _commands.find(input.substr(0, input.find_first_of(" \n")))) != std::end(_commands)) {
+    if ((it = _commands.find(input.substr(0, input.find_first_of(" \n;")))) != std::end(_commands)) {
       return _eval_command(it->second, input);
     }
 
@@ -140,14 +140,25 @@ int Console::_eval(const std::string& input) {
 }
 
 int Console::_eval_command(const CommandFunction& func, const std::string& command) {
-  size_t first = command.find(' ');
-  size_t last = command.find('\n');
+  std::string cmd = command;
+  if (command.back() == ';') {
+    cmd = command.substr(0, command.size() - 1);
+  }
+  boost::algorithm::trim<std::string>(cmd);
+
+  size_t first = cmd.find(' ');
+  size_t last = cmd.find('\n');
 
   if (std::string::npos == first) {
     return static_cast<int>(func(""));
   }
 
-  std::string args = command.substr(first + 1, last - (first + 1));
+  std::string args = cmd.substr(first + 1, last - (first + 1));
+
+  // Remove whitespace duplicates in args
+  auto both_are_spaces = [](char lhs, char rhs) { return (lhs == rhs) && (lhs == ' '); };
+  args.erase(std::unique(args.begin(), args.end(), both_are_spaces), args.end());
+
   return static_cast<int>(func(args));
 }
 
