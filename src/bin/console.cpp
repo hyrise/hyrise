@@ -25,6 +25,7 @@
 
 namespace {
 
+// Buffer for program state
 sigjmp_buf jmp_env;
 
 // Returns a string containing a timestamp of the current date and time
@@ -77,9 +78,6 @@ Console& Console::get() {
 
 int Console::read() {
   char* buffer;
-
-  while (sigsetjmp(jmp_env, 1) != 0)
-    ;
 
   // Prompt user for input
   buffer = readline(_prompt.c_str());
@@ -357,7 +355,13 @@ int Console::exec_script(const std::string& script_file) {
 
 void Console::handle_signal(int sig) {
   if (sig == SIGINT) {
-    Console::get()._out << "\n";
+    // Reset console state
+    auto& console = Console::get();
+    console._out << "\n";
+    console._multiline_input = "";
+    console._prompt = "!> ";
+    console._verbose = false;
+    // Restore program state stored in jmp_env set with sigsetjmp(2)
     siglongjmp(jmp_env, 1);
   }
 }
@@ -478,6 +482,10 @@ int main(int argc, char** argv) {
     console.out("Enter 'generate' to generate the TPC-C tables. Then, you can enter SQL queries.\n");
     console.out("Type 'help' for more information.\n\n");
   }
+
+  // Set jmp_env to current program state in preparation for siglongjmp(2)
+  while (sigsetjmp(jmp_env, 1) != 0)
+    ;
 
   // Main REPL loop
   while (retCode != Return::Quit) {
