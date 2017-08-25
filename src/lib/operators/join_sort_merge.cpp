@@ -287,6 +287,19 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
   }
 
   /**
+  * Compares two values and creates a comparison result.
+  **/
+  CompareResult _compare(T left, T right) {
+    if (left < right) {
+      return CompareResult::Less;
+    } else if (left == right) {
+      return CompareResult::Equal;
+    } else {
+      return CompareResult::Greater;
+    }
+  }
+
+  /**
   * Performs the join on a single partition. Runs of entries with the same value are identified and handled together.
   * This constitutes the merge phase of the join. The output combinations of row ids are determined by _join_runs.
   **/
@@ -310,14 +323,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
       auto& left_value = left_partition->at(left_run_start).value;
       auto& right_value = right_partition->at(right_run_start).value;
 
-      CompareResult compare_result;
-      if (left_value < right_value) {
-        compare_result = CompareResult::Less;
-      } else if (left_value == right_value) {
-        compare_result = CompareResult::Equal;
-      } else if (left_value > right_value) {
-        compare_result = CompareResult::Greater;
-      }
+      auto compare_result = _compare(left_value, right_value);
 
       TableRange left_run(partition_number, left_run_start, left_run_end);
       TableRange right_run(partition_number, right_run_start, right_run_end);

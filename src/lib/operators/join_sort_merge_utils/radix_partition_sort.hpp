@@ -176,7 +176,7 @@ class RadixPartitionSort {
       // and underestimation (vector resizing required)
       // But then we we would not be able to derive the insert positions based on these counts, which
       // are important for parallel partitioning
-      auto job = std::make_shared<JobTask>([input_chunk, &chunk_statistics, &partitioner] {
+      auto job = std::make_shared<JobTask>([&] {
         for (auto& entry : *input_chunk) {
           auto partition_id = partitioner(entry.value);
           ++chunk_statistics.partition_histogram[partition_id];
@@ -207,7 +207,7 @@ class RadixPartitionSort {
     // Move each entry into its appropriate partition in parallel
     std::vector<std::shared_ptr<AbstractTask>> partition_jobs;
     for (size_t chunk_number = 0; chunk_number < input_chunks->size(); ++chunk_number) {
-      auto job = std::make_shared<JobTask>([chunk_number, output_table, input_chunks, &table_statistics, &partitioner] {
+      auto job = std::make_shared<JobTask>([&] {
         auto& chunk_statistics = table_statistics.chunk_statistics[chunk_number];
         for (auto& entry : *input_chunks->at(chunk_number)) {
           auto partition_id = partitioner(entry.value);
@@ -231,8 +231,6 @@ class RadixPartitionSort {
   * - consolidate partitions in order to reduce skew.
   **/
   MatTablePtr _radix_partition(MatTablePtr input_chunks) {
-    DebugAssert(_partition_count > 0 && (_partition_count & (_partition_count - 1)) == 0,
-                "_partition_count must be a power of two greater than zero, i.e. 1, 2, 4, 8...");
     auto radix_bitmask = _partition_count - 1;
     return _partition(input_chunks, [=] (const T& value) {
       return get_radix<T>(value, radix_bitmask);
