@@ -108,3 +108,5 @@ set_target_properties(opossumAsan PROPERTIES COMPILE_FLAGS "-fsanitize=address -
 # Configure opossumTestTPCC
 add_executable(opossumTestTPCC ${TPCC_TEST_SOURCES})
 target_link_libraries(opossumTestTPCC opossum ${LIBRARIES})
+
+
