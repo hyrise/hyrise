@@ -139,7 +139,8 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
     TablePosition end;
 
     // Executes the given action for every row id of the table in this range.
-    void for_every_row_id(std::shared_ptr<MaterializedTable<T>> table, std::function<void(RowID&)> action) {
+    template <typename F>
+    void for_every_row_id(std::shared_ptr<MaterializedTable<T>> table, F action) {
       for (size_t partition = start.partition; partition <= end.partition; ++partition) {
         size_t start_index = (partition == start.partition) ? start.index : 0;
         size_t end_index = (partition == end.partition) ? end.index : (*table)[partition]->size();
