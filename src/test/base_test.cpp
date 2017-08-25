@@ -103,9 +103,6 @@ void BaseTest::_print_matrix(const BaseTest::Matrix &m) {
     std::sort(right.begin(), right.end());
   }
 
-  _print_matrix(left);
-  _print_matrix(right);
-
   for (unsigned row = 0; row < left.size(); row++)
     for (ColumnID col{0}; col < left[row].size(); col++) {
       if (is_null(left[row][col]) || is_null(right[row][col])) {

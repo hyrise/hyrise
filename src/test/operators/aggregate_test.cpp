@@ -48,6 +48,10 @@ class OperatorsAggregateTest : public BaseTest {
         load_table("src/test/tables/aggregateoperator/groupby_string_1gb_1agg/input.tbl", 2));
     _table_wrapper_1_1_string->execute();
 
+    _table_wrapper_1_1_string_null = std::make_shared<TableWrapper>(
+        load_table("src/test/tables/aggregateoperator/groupby_string_1gb_1agg/input_null.tbl", 2));
+    _table_wrapper_1_1_string_null->execute();
+
     _table_wrapper_3_1 =
         std::make_shared<TableWrapper>(load_table("src/test/tables/aggregateoperator/join_2gb_0agg/input_a.tbl", 2));
     _table_wrapper_3_1->execute();
@@ -87,7 +91,13 @@ class OperatorsAggregateTest : public BaseTest {
 
       if (ref != "") {
         // also try a TableScan on every involved column
-        input = std::make_shared<TableScan>(in, ref, ScanType::OpGreaterThanEquals, 0);
+        auto column_id = in->get_output()->column_id_by_name(ref);
+        if (in->get_output()->column_type(column_id) == "string") {
+          input = std::make_shared<TableScan>(in, ref, ScanType::OpNotEquals, std::string("something"));
+        } else {
+          input = std::make_shared<TableScan>(in, ref, ScanType::OpGreaterThanEquals, 0);
+        }
+
         input->execute();
       }
 
@@ -100,7 +110,8 @@ class OperatorsAggregateTest : public BaseTest {
   }
 
   std::shared_ptr<TableWrapper> _table_wrapper_1_1, _table_wrapper_1_1_null, _table_wrapper_1_2, _table_wrapper_2_1,
-      _table_wrapper_2_2, _table_wrapper_1_1_string, _table_wrapper_1_1_dict, _table_wrapper_3_1, _table_wrapper_3_2;
+      _table_wrapper_2_2, _table_wrapper_1_1_string, _table_wrapper_1_1_string_null, _table_wrapper_1_1_dict,
+      _table_wrapper_3_1, _table_wrapper_3_2;
 };
 
 TEST_F(OperatorsAggregateTest, NumInputTables) {
@@ -379,10 +390,10 @@ TEST_F(OperatorsAggregateTest, NoGroupbyAndNoAggregate) {
 /**
  * Tests for NULL values
  */
-// TEST_F(OperatorsAggregateTest, CanCountStringColumnsWithNull) {
-//   this->test_output(_table_wrapper_1_1_string, {{"a", AggregateFunction::Count}}, {std::string("a")},
-//                     "src/test/tables/aggregateoperator/groupby_string_1gb_1agg/count_str.tbl", 1);
-// }
+TEST_F(OperatorsAggregateTest, CanCountStringColumnsWithNull) {
+  this->test_output(_table_wrapper_1_1_string_null, {{"b", AggregateFunction::Count}}, {std::string("a")},
+                    "src/test/tables/aggregateoperator/groupby_string_1gb_1agg/count_str_null.tbl", 1);
+}
 
 TEST_F(OperatorsAggregateTest, SingleAggregateMaxWithNull) {
   this->test_output(_table_wrapper_1_1_null, {{"b", AggregateFunction::Max}}, {std::string("a")},
