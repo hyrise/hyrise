@@ -39,6 +39,33 @@ ScanType translate_operator_type_to_scan_type(const hsql::OperatorType operator_
   return it->second;
 }
 
+ScanType get_scan_type_for_reverse_order(const ScanType scan_type) {
+  /**
+     * If we switch the sides for the expressions, we might have to change the operator that is used for the predicate.
+     * This function returns the respective ScanType.
+     *
+     * Example:
+     *     SELECT * FROM t WHERE 1 > a
+     *  -> SELECT * FROM t WHERE a < 1
+     *
+     *    but:
+     *     SELECT * FROM t WHERE 1 = a
+     *  -> SELECT * FROM t WHERE a = 1
+     */
+  static const std::unordered_map<const ScanType, const ScanType> scan_type_for_reverse_order = {
+      {ScanType::OpGreaterThan, ScanType::OpLessThan},
+      {ScanType::OpLessThan, ScanType::OpGreaterThan},
+      {ScanType::OpGreaterThanEquals, ScanType::OpLessThanEquals},
+      {ScanType::OpLessThanEquals, ScanType::OpGreaterThanEquals}};
+
+  auto it = scan_type_for_reverse_order.find(scan_type);
+  if (it != scan_type_for_reverse_order.end()) {
+    return it->second;
+  }
+
+  return scan_type;
+}
+
 JoinMode translate_join_type_to_join_mode(const hsql::JoinType join_type) {
   static const std::unordered_map<const hsql::JoinType, const JoinMode> join_type_to_mode = {
       {hsql::kJoinInner, JoinMode::Inner}, {hsql::kJoinOuter, JoinMode::Outer},     {hsql::kJoinLeft, JoinMode::Left},
@@ -240,7 +267,7 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_filter_expr(
   }
 
   // TODO(anybody): handle IN with join
-  const auto scan_type = translate_operator_type_to_scan_type(expr.opType);
+  auto scan_type = translate_operator_type_to_scan_type(expr.opType);
 
   /**
    * We have to determine which side of the expression is a column or function reference.
@@ -272,11 +299,30 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_filter_expr(
     column_operand_expr = expr.expr;
     argument_expr = expr.expr2;
   } else {
+    /**
+     * TODO(anybody): think about how this can be supported as well.
+     *
+     * * Example:
+     *     SELECT * FROM t WHERE 1 BETWEEN a AND 3
+     *  -> SELECT * FROM t WHERE a <= 1
+     *
+     *     SELECT * FROM t WHERE 3 BETWEEN 1 AND a
+     *  -> SELECT * FROM t WHERE a >= 3
+     *
+     *  The biggest question is how to introduce this in the code nicely.
+     */
+    DebugAssert(scan_type != ScanType::OpBetween,
+                "Currently the term left of the BETWEEN expression needs to be a column reference.");
+
     argument_expr = expr.expr;
     column_operand_expr = expr.expr2;
+
     DebugAssert(
         column_operand_expr->isType(hsql::kExprColumnRef) || column_operand_expr->isType(hsql::kExprFunctionRef),
         "Unsupported filter: we must have a function or column reference on at least one side of the expression.");
+
+    // We might have to change the ScanType when we reverse the sides of the expression.
+    scan_type = get_scan_type_for_reverse_order(scan_type);
   }
 
   const auto column_name = generate_column_name(*column_operand_expr, true);
