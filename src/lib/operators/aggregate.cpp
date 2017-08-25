@@ -185,10 +185,10 @@ std::shared_ptr<const Table> Aggregate::on_execute() {
     // add group by columns
     for (ColumnID column_index{0}; column_index < _groupby_columns.size(); ++column_index) {
       _output->add_column_definition(_groupby_columns[column_index],
-                                     input_table->column_type(groupby_column_ids[column_index]));
+                                     input_table->column_type(groupby_column_ids[column_index]), true);
 
       _group_columns.emplace_back(make_shared_by_column_type<BaseColumn, ValueColumn>(
-          input_table->column_type(groupby_column_ids[column_index])));
+          input_table->column_type(groupby_column_ids[column_index]), true));
 
       _out_chunk.add_column(_group_columns.back());
     }
@@ -250,7 +250,7 @@ void Aggregate::write_aggregate_output(ColumnID column_index) {
     output_column_name = aggregate_function_to_string.left.at(function) + "(" + column_name + ")";
   }
 
-  _output->add_column_definition(output_column_name, aggregate_type_name);
+  _output->add_column_definition(output_column_name, aggregate_type_name, true);
 
   auto col = std::make_shared<ValueColumn<decltype(aggregate_type)>>();
   auto &values = col->values();

@@ -28,6 +28,10 @@ class OperatorsAggregateTest : public BaseTest {
         load_table("src/test/tables/aggregateoperator/groupby_int_1gb_1agg/input.tbl", 2));
     _table_wrapper_1_1->execute();
 
+    _table_wrapper_1_1_null = std::make_shared<TableWrapper>(
+        load_table("src/test/tables/aggregateoperator/groupby_int_1gb_1agg/input_null.tbl", 2));
+    _table_wrapper_1_1_null->execute();
+
     _table_wrapper_1_2 = std::make_shared<TableWrapper>(
         load_table("src/test/tables/aggregateoperator/groupby_int_1gb_2agg/input.tbl", 2));
     _table_wrapper_1_2->execute();
@@ -95,8 +99,8 @@ class OperatorsAggregateTest : public BaseTest {
     }
   }
 
-  std::shared_ptr<TableWrapper> _table_wrapper_1_1, _table_wrapper_1_2, _table_wrapper_2_1, _table_wrapper_2_2,
-      _table_wrapper_1_1_string, _table_wrapper_1_1_dict, _table_wrapper_3_1, _table_wrapper_3_2;
+  std::shared_ptr<TableWrapper> _table_wrapper_1_1, _table_wrapper_1_1_null, _table_wrapper_1_2, _table_wrapper_2_1,
+      _table_wrapper_2_2, _table_wrapper_1_1_string, _table_wrapper_1_1_dict, _table_wrapper_3_1, _table_wrapper_3_2;
 };
 
 TEST_F(OperatorsAggregateTest, NumInputTables) {
@@ -370,6 +374,39 @@ TEST_F(OperatorsAggregateTest, NoGroupbyAndNoAggregate) {
   EXPECT_THROW(std::make_shared<Aggregate>(_table_wrapper_1_1_string, std::vector<AggregateDefinition>{},
                                            std::vector<std::string>{}),
                std::logic_error);
+}
+
+/**
+ * Tests for NULL values
+ */
+// TEST_F(OperatorsAggregateTest, CanCountStringColumnsWithNull) {
+//   this->test_output(_table_wrapper_1_1_string, {{"a", AggregateFunction::Count}}, {std::string("a")},
+//                     "src/test/tables/aggregateoperator/groupby_string_1gb_1agg/count_str.tbl", 1);
+// }
+
+TEST_F(OperatorsAggregateTest, SingleAggregateMaxWithNull) {
+  this->test_output(_table_wrapper_1_1_null, {{"b", AggregateFunction::Max}}, {std::string("a")},
+                    "src/test/tables/aggregateoperator/groupby_int_1gb_1agg/max_null.tbl", 1);
+}
+
+TEST_F(OperatorsAggregateTest, SingleAggregateMinWithNull) {
+  this->test_output(_table_wrapper_1_1_null, {{"b", AggregateFunction::Min}}, {std::string("a")},
+                    "src/test/tables/aggregateoperator/groupby_int_1gb_1agg/min_null.tbl", 1);
+}
+
+TEST_F(OperatorsAggregateTest, SingleAggregateSumWithNull) {
+  this->test_output(_table_wrapper_1_1_null, {{"b", AggregateFunction::Sum}}, {std::string("a")},
+                    "src/test/tables/aggregateoperator/groupby_int_1gb_1agg/sum_null.tbl", 1);
+}
+
+TEST_F(OperatorsAggregateTest, SingleAggregateAvgWithNull) {
+  this->test_output(_table_wrapper_1_1_null, {{"b", AggregateFunction::Avg}}, {std::string("a")},
+                    "src/test/tables/aggregateoperator/groupby_int_1gb_1agg/avg_null.tbl", 1);
+}
+
+TEST_F(OperatorsAggregateTest, SingleAggregateCountWithNull) {
+  this->test_output(_table_wrapper_1_1_null, {{"b", AggregateFunction::Count}}, {std::string("a")},
+                    "src/test/tables/aggregateoperator/groupby_int_1gb_1agg/count_null.tbl", 1);
 }
 
 /**

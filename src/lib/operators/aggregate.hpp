@@ -201,14 +201,44 @@ struct PartitionBuilder : public ColumnVisitable {
     if (context->chunk_offsets_in) {
       // This ValueColumn is referenced by a ReferenceColumn (i.e., is probably filtered). We only return the matching
       // rows within the filtered column, together with their original position
-      for (const ChunkOffset &offset_in_value_column : *(context->chunk_offsets_in)) {
-        (*context->hash_keys)[chunk_offset].emplace_back(values[offset_in_value_column]);
-        chunk_offset++;
+
+      if (column.is_nullable()) {
+        const auto &null_values = column.null_values();
+
+        for (const ChunkOffset &offset_in_value_column : *(context->chunk_offsets_in)) {
+          if (null_values[offset_in_value_column]) {
+            (*context->hash_keys)[chunk_offset].emplace_back(NULL_VALUE);
+          } else {
+            (*context->hash_keys)[chunk_offset].emplace_back(values[offset_in_value_column]);
+          }
+
+          chunk_offset++;
+        }
+      } else {
+        for (const ChunkOffset &offset_in_value_column : *(context->chunk_offsets_in)) {
+          (*context->hash_keys)[chunk_offset].emplace_back(values[offset_in_value_column]);
+          chunk_offset++;
+        }
       }
     } else {
-      for (const auto &value : values) {
-        (*context->hash_keys)[chunk_offset].emplace_back(value);
-        chunk_offset++;
+      if (column.is_nullable()) {
+        const auto &null_values = column.null_values();
+
+        auto value_it = values.cbegin();
+        auto null_value_it = null_values.cbegin();
+
+        for (; value_it != values.cend(); ++value_it, ++null_value_it, ++chunk_offset) {
+          if (*null_value_it) {
+            (*context->hash_keys)[chunk_offset].emplace_back(NULL_VALUE);
+          } else {
+            (*context->hash_keys)[chunk_offset].emplace_back(*value_it);
+          }
+        }
+      } else {
+        for (const auto &value : values) {
+          (*context->hash_keys)[chunk_offset].emplace_back(value);
+          chunk_offset++;
+        }
       }
     }
   }
@@ -255,7 +285,9 @@ template <typename ColumnType, typename AggregateType>
 struct AggregateFunctionBuilder<ColumnType, AggregateType, AggregateFunction::Min> {
   AggregateFunctor<ColumnType, AggregateType> get_aggregate_function() {
     return [](ColumnType new_value, optional<AggregateType> current_aggregate) {
-      return (!current_aggregate || value_smaller(new_value, *current_aggregate)) ? new_value : *current_aggregate;
+      return (!is_null(new_value) && (!current_aggregate || value_smaller(new_value, *current_aggregate)))
+                 ? new_value
+                 : *current_aggregate;
     };
   }
 };
@@ -264,7 +296,9 @@ template <typename ColumnType, typename AggregateType>
 struct AggregateFunctionBuilder<ColumnType, AggregateType, AggregateFunction::Max> {
   AggregateFunctor<ColumnType, AggregateType> get_aggregate_function() {
     return [](ColumnType new_value, optional<AggregateType> current_aggregate) {
-      return (!current_aggregate || value_greater(new_value, *current_aggregate)) ? new_value : *current_aggregate;
+      return (!is_null(new_value) && (!current_aggregate || value_greater(new_value, *current_aggregate)))
+                 ? new_value
+                 : *current_aggregate;
     };
   }
 };
@@ -273,7 +307,7 @@ template <typename ColumnType, typename AggregateType>
 struct AggregateFunctionBuilder<ColumnType, AggregateType, AggregateFunction::Sum> {
   AggregateFunctor<ColumnType, AggregateType> get_aggregate_function() {
     return [](ColumnType new_value, optional<AggregateType> current_aggregate) {
-      return new_value + (!current_aggregate ? 0 : *current_aggregate);
+      return new_value + (!current_aggregate || is_null(new_value) ? 0 : *current_aggregate);
     };
   }
 };
@@ -282,7 +316,7 @@ template <typename ColumnType, typename AggregateType>
 struct AggregateFunctionBuilder<ColumnType, AggregateType, AggregateFunction::Avg> {
   AggregateFunctor<ColumnType, AggregateType> get_aggregate_function() {
     return [](ColumnType new_value, optional<AggregateType> current_aggregate) {
-      return new_value + (!current_aggregate ? 0 : *current_aggregate);
+      return new_value + (!current_aggregate || is_null(new_value) ? 0 : *current_aggregate);
     };
   }
 };
@@ -353,23 +387,61 @@ struct AggregateVisitor : public ColumnVisitable {
       // This ValueColumn is referenced by a ReferenceColumn (i.e., is probably filtered). We only return the matching
       // rows within the filtered column, together with their original position
 
-      for (const ChunkOffset &offset_in_value_column : *(context->groupby_context->chunk_offsets_in)) {
-        results[hash_keys[chunk_offset]].current_aggregate =
-            aggregate_func(values[offset_in_value_column], results[hash_keys[chunk_offset]].current_aggregate);
+      if (column.is_nullable()) {
+        const auto &null_values = column.null_values();
 
-        // increase value counter
-        results[hash_keys[chunk_offset]].aggregate_count++;
-        chunk_offset++;
+        for (const ChunkOffset &offset_in_value_column : *(context->groupby_context->chunk_offsets_in)) {
+          if (null_values[offset_in_value_column]) {
+            // results[hash_keys[chunk_offset]].current_aggregate =
+            //     aggregate_func(NULL_VALUE, results[hash_keys[chunk_offset]].current_aggregate);
+          } else {
+            results[hash_keys[chunk_offset]].current_aggregate =
+                aggregate_func(values[offset_in_value_column], results[hash_keys[chunk_offset]].current_aggregate);
+
+            // increase value counter
+            results[hash_keys[chunk_offset]].aggregate_count++;
+          }
+
+          chunk_offset++;
+        }
+      } else {
+        for (const ChunkOffset &offset_in_value_column : *(context->groupby_context->chunk_offsets_in)) {
+          results[hash_keys[chunk_offset]].current_aggregate =
+              aggregate_func(values[offset_in_value_column], results[hash_keys[chunk_offset]].current_aggregate);
+
+          // increase value counter
+          results[hash_keys[chunk_offset]].aggregate_count++;
+          chunk_offset++;
+        }
       }
     } else {
-      // ChunkOffset chunk_offset = 0;
-      for (const auto &value : values) {
-        results[hash_keys[chunk_offset]].current_aggregate =
-            aggregate_func(value, results[hash_keys[chunk_offset]].current_aggregate);
+      if (column.is_nullable()) {
+        const auto &null_values = column.null_values();
 
-        // increase value counter
-        results[hash_keys[chunk_offset]].aggregate_count++;
-        chunk_offset++;
+        auto value_it = values.cbegin();
+        auto null_value_it = null_values.cbegin();
+
+        for (; value_it != values.cend(); ++value_it, ++null_value_it, ++chunk_offset) {
+          if (*null_value_it) {
+            // results[hash_keys[chunk_offset]].current_aggregate =
+            //     aggregate_func(NULL_VALUE, results[hash_keys[chunk_offset]].current_aggregate);
+          } else {
+            results[hash_keys[chunk_offset]].current_aggregate =
+                aggregate_func(*value_it, results[hash_keys[chunk_offset]].current_aggregate);
+
+            // increase value counter
+            results[hash_keys[chunk_offset]].aggregate_count++;
+          }
+        }
+      } else {
+        for (const auto &value : values) {
+          results[hash_keys[chunk_offset]].current_aggregate =
+              aggregate_func(value, results[hash_keys[chunk_offset]].current_aggregate);
+
+          // increase value counter
+          results[hash_keys[chunk_offset]].aggregate_count++;
+          chunk_offset++;
+        }
       }
     }
   }
@@ -467,9 +539,10 @@ struct aggregate_traits<
 
 // SUM on floating point numbers
 template <typename ColumnType, AggregateFunction function>
-struct aggregate_traits<ColumnType, function, typename std::enable_if<function == AggregateFunction::Sum &&
-                                                                          std::is_floating_point<ColumnType>::value,
-                                                                      void>::type> {
+struct aggregate_traits<
+    ColumnType, function,
+    typename std::enable_if<function == AggregateFunction::Sum && std::is_floating_point<ColumnType>::value,
+                            void>::type> {
   typedef ColumnType column_type;
   typedef double aggregate_type;
   static constexpr const char *aggregate_type_name = "double";
@@ -477,10 +550,11 @@ struct aggregate_traits<ColumnType, function, typename std::enable_if<function =
 
 // invalid: AVG on non-arithmetic types
 template <typename ColumnType, AggregateFunction function>
-struct aggregate_traits<ColumnType, function, typename std::enable_if<!std::is_arithmetic<ColumnType>::value &&
-                                                                          (function == AggregateFunction::Avg ||
-                                                                           function == AggregateFunction::Sum),
-                                                                      void>::type> {
+struct aggregate_traits<
+    ColumnType, function,
+    typename std::enable_if<!std::is_arithmetic<ColumnType>::value &&
+                                (function == AggregateFunction::Avg || function == AggregateFunction::Sum),
+                            void>::type> {
   typedef ColumnType column_type;
   typedef ColumnType aggregate_type;
   static constexpr const char *aggregate_type_name = "";
