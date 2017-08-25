@@ -252,8 +252,7 @@ void Aggregate::write_aggregate_output(ColumnID column_index) {
 
   _output->add_column_definition(output_column_name, aggregate_type_name, true);
 
-  auto col = std::make_shared<ValueColumn<decltype(aggregate_type)>>();
-  auto &values = col->values();
+  auto col = std::make_shared<ValueColumn<decltype(aggregate_type)>>(true);
 
   auto ctx = std::static_pointer_cast<AggregateContext<ColumnType, decltype(aggregate_type)>>(
       _contexts_per_column[column_index]);
@@ -268,7 +267,7 @@ void Aggregate::write_aggregate_output(ColumnID column_index) {
   }
 
   // write aggregated values into the column
-  _write_aggregate_values<decltype(aggregate_type), function>(values, ctx->results);
+  _write_aggregate_values<decltype(aggregate_type), function>(col, ctx->results);
   _out_chunk.add_column(col);
 }
 
