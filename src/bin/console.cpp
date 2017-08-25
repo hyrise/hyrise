@@ -102,6 +102,7 @@ int Console::read() {
 int Console::execute_script(const std::string& filepath) { return exec_script(filepath); }
 
 int Console::_eval(const std::string& input) {
+  // Do nothing if no input was given
   if (input.empty() && _multiline_input.empty()) {
     return ReturnCode::Ok;
   }
@@ -109,30 +110,33 @@ int Console::_eval(const std::string& input) {
   // Dump command to logfile, and to the Console if input comes from a script file
   out(_prompt + input + "\n", _verbose);
 
-  // Check if a registered command was entered
-  RegisteredCommands::iterator it;
-  if ((it = _commands.find(input.substr(0, input.find_first_of(" \n")))) != std::end(_commands)) {
-    return _eval_command(it->second, input);
-  }
-
-  // Check for multiline-input
-  if (input.back() == '\\') {
-    _multiline_input += input.substr(0, input.size() - 1);
-    if (_multiline_input.back() != ' ') {
-      _multiline_input += ' ';
+  // Check if we already are in multiline input
+  if (_multiline_input.empty()) {
+    // Check if a registered command was entered
+    RegisteredCommands::iterator it;
+    if ((it = _commands.find(input.substr(0, input.find_first_of(" \n")))) != std::end(_commands)) {
+      return _eval_command(it->second, input);
     }
-    return ReturnCode::Multiline;
+
+    // Regard query as complete if input is valid and not already in multiline
+    hsql::SQLParserResult parse_result;
+    hsql::SQLParser::parse(input, &parse_result);
+    if (parse_result.isValid()) {
+      return _eval_sql(input);
+    }
   }
 
-  // Check for the last command of a multiline-input
-  if (!_multiline_input.empty()) {
+  // Regard query as complete if last character is semicolon, regardless of multiline or not
+  if (input.back() == ';') {
     int retCode = _eval_sql(_multiline_input + input);
     _multiline_input = "";
     return retCode;
   }
 
-  // If nothing from the above, regard input as SQL query
-  return _eval_sql(input);
+  // If query is not complete(/valid), and the last character is not a semicolon, enter/continue multiline
+  _multiline_input += input;
+  _multiline_input += ' ';
+  return ReturnCode::Multiline;
 }
 
 int Console::_eval_command(const CommandFunction& func, const std::string& command) {
