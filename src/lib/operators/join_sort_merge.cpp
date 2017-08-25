@@ -113,10 +113,10 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
   struct TableRange;
   struct TablePosition {
     TablePosition() {}
-    TablePosition(int partition, int index) : partition{partition}, index{index} {}
+    TablePosition(size_t partition, size_t index) : partition{partition}, index{index} {}
 
-    int partition;
-    int index;
+    size_t partition;
+    size_t index;
 
     TableRange to(TablePosition position) {
       return TableRange(*this, position);
@@ -132,7 +132,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
   **/
   struct TableRange {
     TableRange(TablePosition start_position, TablePosition end_position) : start(start_position), end(end_position) {}
-    TableRange(int partition, int start_index, int end_index)
+    TableRange(size_t partition, size_t start_index, size_t end_index)
       : start{TablePosition(partition, start_index)}, end{TablePosition(partition, end_index)} {}
 
     TablePosition start;
@@ -140,10 +140,10 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
 
     // Executes the given action for every row id of the table in this range.
     void for_every_row_id(std::shared_ptr<MaterializedTable<T>> table, std::function<void(RowID&)> action) {
-      for (int partition = start.partition; partition <= end.partition; ++partition) {
-        int start_index = (partition == start.partition) ? start.index : 0;
-        int end_index = (partition == end.partition) ? end.index : (*table)[partition]->size();
-        for (int index = start_index; index < end_index; ++index) {
+      for (size_t partition = start.partition; partition <= end.partition; ++partition) {
+        size_t start_index = (partition == start.partition) ? start.index : 0;
+        size_t end_index = (partition == end.partition) ? end.index : (*table)[partition]->size();
+        for (size_t index = start_index; index < end_index; ++index) {
           action((*(*table)[partition])[index].row_id);
         }
       }
