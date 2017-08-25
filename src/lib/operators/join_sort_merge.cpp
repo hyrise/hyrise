@@ -88,14 +88,11 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
   }
 
  protected:
-  struct TablePosition;
   JoinSortMerge& _sort_merge_join;
 
   // Contains the materialized sorted input tables
   std::shared_ptr<MaterializedTable<T>> _sorted_left_table;
   std::shared_ptr<MaterializedTable<T>> _sorted_right_table;
-  TablePosition _end_of_left_table;
-  TablePosition _end_of_right_table;
 
   const std::string _left_column_name;
   const std::string _right_column_name;
@@ -125,6 +122,9 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
       return TableRange(*this, position);
     }
   };
+
+  TablePosition _end_of_left_table;
+  TablePosition _end_of_right_table;
 
   /**
     * The TableRange is a utility struct that is used to define ranges of rows in a sorted input table spanning from
@@ -172,6 +172,9 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
     return TablePosition(last_partition, table->at(last_partition)->size());
   }
 
+  /**
+  * Represents the result of a value comparison.
+  **/
   enum class CompareResult {
     Less,
     Greater,
