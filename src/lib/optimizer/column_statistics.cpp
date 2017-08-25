@@ -299,7 +299,8 @@ TwoColumnSelectivityResult ColumnStatistics<ColumnType>::estimate_selectivity_fo
    * equal_values_ratio = (1 / 2) * (1 / 20) = (1 / 40)
    * This is also the selectivity for the scan type equals: (1 / 40) = 2.5 %
    *
-   * For scan type less the ratios left_below_overlapping_ratio and right_above_overlapping_ratio are also considered as table
+   * For scan type less the ratios left_below_overlapping_ratio and right_above_overlapping_ratio are also considered as
+   * table
    * entries where the col_left value is below the common range or the col_right value is above it will always be in the
    * result.
    * The probability that both values are within the overlapping range and that col_left < col_right is (probability of
