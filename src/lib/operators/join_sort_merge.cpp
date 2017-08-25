@@ -41,7 +41,6 @@ JoinSortMerge::JoinSortMerge(const std::shared_ptr<const AbstractOperator> left,
               op == ScanType::OpLessThanEquals || op == ScanType::OpGreaterThanEquals || op == ScanType::OpNotEquals,
               "Unsupported scan type");
   DebugAssert(op == ScanType::OpEquals || mode == JoinMode::Inner, "Outer joins are only implemented for equi joins.");
-  DebugAssert(static_cast<bool>(column_names), "JoinSortMerge currently does not support natural joins.");
 
   auto left_column_name = column_names->first;
   auto right_column_name = column_names->second;
@@ -91,11 +90,14 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
   virtual ~JoinSortMergeImpl() = default;
 
  protected:
+  struct TablePosition;
   JoinSortMerge& _sort_merge_join;
 
   // Contains the materialized sorted input tables
   std::shared_ptr<MaterializedTable<T>> _sorted_left_table;
   std::shared_ptr<MaterializedTable<T>> _sorted_right_table;
+  TablePosition _end_of_left_table;
+  TablePosition _end_of_right_table;
 
   const std::string _left_column_name;
   const std::string _right_column_name;
@@ -115,6 +117,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
   **/
   struct TableRange;
   struct TablePosition {
+    TablePosition() {}
     TablePosition(int partition, int index) : partition{partition}, index{index} {}
 
     int partition;
@@ -181,57 +184,48 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
   * Performs the join for two runs of a specified partition.
   * A run is a series of rows in a partition with the same value.
   **/
-  void _join_runs(size_t partition_number, TableRange left_run, TableRange right_run, CompareResult compare) {
-    auto end_of_left_table = _end_of_table(_sorted_left_table);
-    auto end_of_right_table = _end_of_table(_sorted_right_table);
-
-    // TODO(anyone): Move these to std::functions for a performance improvement (eliminate chained ifs)
-    // Equi-Join implementation
+  void _join_runs(TableRange left_run, TableRange right_run, CompareResult compare_result) {
+    size_t partition_number = left_run.start.partition;
     if (_op == ScanType::OpEquals) {
-      if (compare == CompareResult::Equal) {
+      if (compare_result == CompareResult::Equal) {
         _emit_combinations(partition_number, left_run, right_run);
-      } else if (compare == CompareResult::Less) {
+      } else if (compare_result == CompareResult::Less) {
         if (_mode == JoinMode::Left || _mode == JoinMode::Outer) {
           _emit_right_null_combinations(partition_number, left_run);
         }
-      } else if (compare == CompareResult::Greater) {
+      } else if (compare_result == CompareResult::Greater) {
         if (_mode == JoinMode::Right || _mode == JoinMode::Outer) {
           _emit_left_null_combinations(partition_number, right_run);
         }
       }
     } else if (_op == ScanType::OpNotEquals) {
-      // Not-Equals-Join implementation
-      if (compare == CompareResult::Greater) {
-        _emit_combinations(partition_number, left_run.start.to(end_of_left_table), right_run);
-      } else if (compare == CompareResult::Equal) {
-        _emit_combinations(partition_number, left_run.end.to(end_of_left_table), right_run);
-        _emit_combinations(partition_number, left_run, right_run.end.to(end_of_right_table));
-      } else if (compare == CompareResult::Less) {
-        _emit_combinations(partition_number, left_run, right_run.start.to(end_of_right_table));
+      if (compare_result == CompareResult::Greater) {
+        _emit_combinations(partition_number, left_run.start.to(_end_of_left_table), right_run);
+      } else if (compare_result == CompareResult::Equal) {
+        _emit_combinations(partition_number, left_run.end.to(_end_of_left_table), right_run);
+        _emit_combinations(partition_number, left_run, right_run.end.to(_end_of_right_table));
+      } else if (compare_result == CompareResult::Less) {
+        _emit_combinations(partition_number, left_run, right_run.start.to(_end_of_right_table));
       }
     } else if (_op == ScanType::OpGreaterThan) {
-      // Greater-Join implementation
-      if (compare == CompareResult::Greater) {
-        _emit_combinations(partition_number, left_run.start.to(end_of_left_table), right_run);
-      } else if (compare == CompareResult::Equal) {
-        _emit_combinations(partition_number, left_run.end.to(end_of_left_table), right_run);
+      if (compare_result == CompareResult::Greater) {
+        _emit_combinations(partition_number, left_run.start.to(_end_of_left_table), right_run);
+      } else if (compare_result == CompareResult::Equal) {
+        _emit_combinations(partition_number, left_run.end.to(_end_of_left_table), right_run);
       }
     } else if (_op == ScanType::OpGreaterThanEquals) {
-      // Grequal-Join implmentation
-      if (compare == CompareResult::Greater || compare == CompareResult::Equal) {
-        _emit_combinations(partition_number, left_run.start.to(end_of_left_table), right_run);
+      if (compare_result == CompareResult::Greater || compare == CompareResult::Equal) {
+        _emit_combinations(partition_number, left_run.start.to(_end_of_left_table), right_run);
       }
     } else if (_op == ScanType::OpLessThan) {
-      // Less-Join implementation
-      if (compare == CompareResult::Less) {
-        _emit_combinations(partition_number, left_run, right_run.start.to(end_of_right_table));
-      } else if (compare == CompareResult::Equal) {
-        _emit_combinations(partition_number, left_run, right_run.end.to(end_of_right_table));
+      if (compare_result == CompareResult::Less) {
+        _emit_combinations(partition_number, left_run, right_run.start.to(_end_of_right_table));
+      } else if (compare_result == CompareResult::Equal) {
+        _emit_combinations(partition_number, left_run, right_run.end.to(_end_of_right_table));
       }
     } else if (_op == ScanType::OpLessThanEquals) {
-      // Lequal-Join implementation
-      if (compare == CompareResult::Less || compare == CompareResult::Equal) {
-        _emit_combinations(partition_number, left_run, right_run.start.to(end_of_right_table));
+      if (compare_result == CompareResult::Less || compare == CompareResult::Equal) {
+        _emit_combinations(partition_number, left_run, right_run.start.to(_end_of_right_table));
       }
     }
   }
@@ -312,12 +306,11 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
     const size_t left_size = left_partition->size();
     const size_t right_size = right_partition->size();
 
-    CompareResult compare_result;
-
     while (left_run_start < left_size && right_run_start < right_size) {
       auto& left_value = left_partition->at(left_run_start).value;
       auto& right_value = right_partition->at(right_run_start).value;
 
+      CompareResult compare_result;
       if (left_value < right_value) {
         compare_result = CompareResult::Less;
       } else if (left_value == right_value) {
@@ -328,7 +321,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
 
       TableRange left_run(partition_number, left_run_start, left_run_end);
       TableRange right_run(partition_number, right_run_start, right_run_end);
-      _join_runs(partition_number, left_run, right_run, compare_result);
+      _join_runs(left_run, right_run, compare_result);
 
       // Advance to the next run on the smaller side or both if equal
       if (compare_result == CompareResult::Equal) {
@@ -352,9 +345,9 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
     auto right_rest = TableRange(partition_number, right_run_start, right_size);
     auto left_rest = TableRange(partition_number, left_run_start, left_size);
     if (left_run_start < left_size) {
-      _join_runs(partition_number, left_rest, right_rest, CompareResult::Less);
+      _join_runs(left_rest, right_rest, CompareResult::Less);
     } else if (right_run_start < right_size) {
-      _join_runs(partition_number, left_rest, right_rest, CompareResult::Greater);
+      _join_runs(left_rest, right_rest, CompareResult::Greater);
     }
   }
 
@@ -461,6 +454,8 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
     auto sort_output = radix_partitioner.get_output();
     _sorted_left_table = sort_output.first;
     _sorted_right_table = sort_output.second;
+    _end_of_left_table = _end_of_table(_sorted_left_table);
+    _end_of_right_table = _end_of_table(_sorted_right_table);
 
     _perform_join();
 
