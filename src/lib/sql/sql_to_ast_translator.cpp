@@ -40,9 +40,21 @@ ScanType translate_operator_type_to_scan_type(const hsql::OperatorType operator_
 }
 
 ScanType get_scan_type_for_reverse_order(const ScanType scan_type) {
+  /**
+     * If we switch the sides for the expressions, we might have to change the operator that is used for the predicate.
+     * This function returns the respective ScanType.
+     *
+     * Example:
+     *     SELECT * FROM t WHERE 1 > a
+     *  -> SELECT * FROM t WHERE a < 1
+     *
+     *    but:
+     *     SELECT * FROM t WHERE 1 = a
+     *  -> SELECT * FROM t WHERE a = 1
+     */
   static const std::unordered_map<const ScanType, const ScanType> scan_type_for_reverse_order = {
       {ScanType::OpGreaterThan, ScanType::OpLessThan},
-      {ScanType::OpLessThan, ScanType ::OpGreaterThan},
+      {ScanType::OpLessThan, ScanType::OpGreaterThan},
       {ScanType::OpGreaterThanEquals, ScanType::OpLessThanEquals},
       {ScanType::OpLessThanEquals, ScanType::OpGreaterThanEquals}};
 
@@ -51,7 +63,6 @@ ScanType get_scan_type_for_reverse_order(const ScanType scan_type) {
     return it->second;
   }
 
-  // If we did not find a match, the scan type does not need to change because it is symmetric (e.g. OpEquals).
   return scan_type;
 }
 
@@ -299,17 +310,7 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_filter_expr(
         column_operand_expr->isType(hsql::kExprColumnRef) || column_operand_expr->isType(hsql::kExprFunctionRef),
         "Unsupported filter: we must have a function or column reference on at least one side of the expression.");
 
-    /**
-     * If we switch the sides for the expressions, we might have to change the operator that is used for the predicate.
-     *
-     * Example:
-     *     SELECT * FROM t WHERE 1 = a
-     *  -> SELECT * FROM t WHERE a = 1
-     *
-     *    but:
-     *     SELECT * FROM t WHERE 1 > a
-     *  -> SELECT * FROM t WHERE a < 1
-     */
+    // We might have to change the ScanType when we reverse the sides of the expression.
     scan_type = get_scan_type_for_reverse_order(scan_type);
   }
 
