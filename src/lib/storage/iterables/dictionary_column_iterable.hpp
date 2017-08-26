@@ -81,15 +81,17 @@ class DictionaryColumnIterable : public BaseIndexableIterable<DictionaryColumnIt
     friend class boost::iterator_core_access;
 
     NullableColumnValue<T> dereference() const {
-      if (this->index_into_referenced() == INVALID_CHUNK_OFFSET)
-        return NullableColumnValue<T>{T{}, true, this->index_of_referencing()};
+      const auto& chunk_offsets = this->chunk_offsets();
 
-      const auto value_id = _attribute_vector.get(this->index_into_referenced());
+      if (chunk_offsets.into_referencing == INVALID_CHUNK_OFFSET)
+        return NullableColumnValue<T>{T{}, true, chunk_offsets.into_referencing};
+
+      const auto value_id = _attribute_vector.get(chunk_offsets.into_referenced);
       const auto is_null = (value_id == NULL_VALUE_ID);
 
-      if (is_null) return NullableColumnValue<T>{T{}, true, this->index_of_referencing()};
+      if (is_null) return NullableColumnValue<T>{T{}, true, chunk_offsets.into_referencing};
 
-      return NullableColumnValue<T>{_dictionary[value_id], false, this->index_of_referencing()};
+      return NullableColumnValue<T>{_dictionary[value_id], false, chunk_offsets.into_referencing};
     }
 
    private:

@@ -65,7 +65,7 @@ TEST_F(IterablesTest, ValueColumnReferencedIteratorExecuteForAll) {
   auto column = chunk.get_column(ColumnID{0u});
   auto int_column = std::dynamic_pointer_cast<ValueColumn<int>>(column);
 
-  auto chunk_offsets = std::vector<std::pair<ChunkOffset, ChunkOffset>>{{0u, 0u}, {1u, 2u}, {2u, 3u}};
+  auto chunk_offsets = std::vector<ChunkOffsetMapping>{{0u, 0u}, {1u, 2u}, {2u, 3u}};
 
   auto iterable = ValueColumnIterable<int>{*int_column, &chunk_offsets};
 
@@ -95,7 +95,7 @@ TEST_F(IterablesTest, ValueColumnNullableReferencedIteratorExecuteForAll) {
   auto column = chunk.get_column(ColumnID{0u});
   auto int_column = std::dynamic_pointer_cast<ValueColumn<int>>(column);
 
-  auto chunk_offsets = std::vector<std::pair<ChunkOffset, ChunkOffset>>{{0u, 0u}, {1u, 2u}, {2u, 3u}};
+  auto chunk_offsets = std::vector<ChunkOffsetMapping>{{0u, 0u}, {1u, 2u}, {2u, 3u}};
 
   auto iterable = ValueColumnIterable<int>{*int_column, &chunk_offsets};
 
@@ -129,7 +129,7 @@ TEST_F(IterablesTest, DictionaryColumnDictReferencedIteratorExecuteForAll) {
   auto column = chunk.get_column(ColumnID{0u});
   auto dict_column = std::dynamic_pointer_cast<DictionaryColumn<int>>(column);
 
-  auto chunk_offsets = std::vector<std::pair<ChunkOffset, ChunkOffset>>{{0u, 0u}, {1u, 2u}, {2u, 3u}};
+  auto chunk_offsets = std::vector<ChunkOffsetMapping>{{0u, 0u}, {1u, 2u}, {2u, 3u}};
 
   auto iterable = DictionaryColumnIterable<int>{*dict_column, &chunk_offsets};
 

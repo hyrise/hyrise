@@ -71,10 +71,12 @@ class NullValueVectorIterable : public BaseIndexableIterable<NullValueVectorIter
     friend class boost::iterator_core_access;
 
     ColumnNullValue dereference() const {
-      if (this->index_into_referenced() == INVALID_CHUNK_OFFSET)
-        return ColumnNullValue{true, this->index_of_referencing()};
+      const auto& chunk_offsets = this->chunk_offsets();
 
-      return ColumnNullValue{_null_values[this->index_into_referenced()], this->index_of_referencing()};
+      if (chunk_offsets.into_referencing == INVALID_CHUNK_OFFSET)
+        return ColumnNullValue{true, chunk_offsets.into_referencing};
+
+      return ColumnNullValue{_null_values[chunk_offsets.into_referenced], chunk_offsets.into_referencing};
     }
 
    private:

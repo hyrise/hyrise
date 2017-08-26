@@ -116,10 +116,12 @@ class ValueColumnIterable : public BaseIndexableIterable<ValueColumnIterable<T>>
     friend class boost::iterator_core_access;
 
     ColumnValue<T> dereference() const {
-      if (this->index_into_referenced() == INVALID_CHUNK_OFFSET)
-        return ColumnValue<T>{T{}, this->index_of_referencing()};
+      const auto& chunk_offsets = this->chunk_offsets();
 
-      return ColumnValue<T>{_values[this->index_into_referenced()], this->index_of_referencing()};
+      if (chunk_offsets.into_referencing == INVALID_CHUNK_OFFSET)
+        return ColumnValue<T>{T{}, chunk_offsets.into_referencing};
+
+      return ColumnValue<T>{_values[chunk_offsets.into_referenced], chunk_offsets.into_referencing};
     }
 
    private:
@@ -142,11 +144,13 @@ class ValueColumnIterable : public BaseIndexableIterable<ValueColumnIterable<T>>
     friend class boost::iterator_core_access;
 
     NullableColumnValue<T> dereference() const {
-      if (this->index_into_referenced() == INVALID_CHUNK_OFFSET)
-        return NullableColumnValue<T>{T{}, true, this->index_of_referencing()};
+      const auto& chunk_offsets = this->chunk_offsets();
 
-      return NullableColumnValue<T>{_values[this->index_into_referenced()], _null_values[this->index_into_referenced()],
-                                    this->index_of_referencing()};
+      if (chunk_offsets.into_referencing == INVALID_CHUNK_OFFSET)
+        return NullableColumnValue<T>{T{}, true, chunk_offsets.into_referencing};
+
+      return NullableColumnValue<T>{_values[chunk_offsets.into_referenced], _null_values[chunk_offsets.into_referenced],
+                                    chunk_offsets.into_referencing};
     }
 
    private:

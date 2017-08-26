@@ -39,13 +39,13 @@ class BaseSingleColumnTableScanImpl : public BaseTableScanImpl, public ColumnVis
     Context(const ChunkID chunk_id, PosList &matches_out) : _chunk_id{chunk_id}, _matches_out{matches_out} {}
 
     Context(const ChunkID chunk_id, PosList &matches_out,
-            std::unique_ptr<std::vector<std::pair<ChunkOffset, ChunkOffset>>> mapped_chunk_offsets)
+            std::unique_ptr<ChunkOffsetsList> mapped_chunk_offsets)
         : _chunk_id{chunk_id}, _matches_out{matches_out}, _mapped_chunk_offsets{std::move(mapped_chunk_offsets)} {}
 
     const ChunkID _chunk_id;
     PosList &_matches_out;
 
-    std::unique_ptr<std::vector<std::pair<ChunkOffset, ChunkOffset>>> _mapped_chunk_offsets;
+    std::unique_ptr<ChunkOffsetsList> _mapped_chunk_offsets;
   };
 
  private:

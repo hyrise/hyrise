@@ -83,7 +83,7 @@ void IsNullTableScanImpl::_add_all(Context &context, size_t column_size) {
 
   if (mapped_chunk_offsets) {
     for (const auto &chunk_offsets : *mapped_chunk_offsets) {
-      matches_out.push_back(RowID{chunk_id, chunk_offsets.first});
+      matches_out.push_back(RowID{chunk_id, chunk_offsets.into_referencing});
     }
   } else {
     for (auto chunk_offset = 0u; chunk_offset < column_size; ++chunk_offset) {

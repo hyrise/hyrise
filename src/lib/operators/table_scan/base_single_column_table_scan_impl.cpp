@@ -47,7 +47,7 @@ void BaseSingleColumnTableScanImpl::handle_reference_column(ReferenceColumn &lef
     auto referenced_column = chunk.get_column(left_column.referenced_column_id());
 
     auto mapped_chunk_offsets_ptr =
-        std::make_unique<std::vector<std::pair<ChunkOffset, ChunkOffset>>>(std::move(mapped_chunk_offsets));
+        std::make_unique<ChunkOffsetsList>(std::move(mapped_chunk_offsets));
 
     auto new_context = std::make_shared<Context>(chunk_id, matches_out, std::move(mapped_chunk_offsets_ptr));
     referenced_column->visit(*this, new_context);
@@ -63,7 +63,7 @@ auto BaseSingleColumnTableScanImpl::_split_pos_list_by_chunk_id(const PosList &p
     if (_skip_null_row_ids && row_id == NULL_ROW_ID) continue;
 
     auto &mapped_chunk_offsets = chunk_offsets_by_chunk_id[row_id.chunk_id];
-    mapped_chunk_offsets.emplace_back(chunk_offset, row_id.chunk_offset);
+    mapped_chunk_offsets.push_back({chunk_offset, row_id.chunk_offset});
   }
 
   return chunk_offsets_by_chunk_id;

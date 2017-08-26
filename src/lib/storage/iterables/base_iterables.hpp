@@ -17,12 +17,12 @@ namespace opossum {
  * as parameters. Depending on this data structure, the generic lambda
  * may be instantiated for not one but many sets of iterators. For example,
  * the data structure might be accessed via a list of indices or might be
- * nullable or non-nullable.
+ * nullable or non-nullable. This results in a large amount of code. 
  *
- * This results in a large amount of code. In cases where one is certain that
- * no indices (i.e. a ChunkOffsetsList) have been passed, get_iterators_no_indices
- * can be used. This method won’t instantiate the lambda for indexed iterators, hence,
- * reduce the size of the compiled binary file.
+ * In cases where one is certain that no list of chunk offset mappings
+ * (i.e. a ChunkOffsetsList) have been passed, get_iterators_no_indices 
+ * can be used. This method won’t instantiate the lambda for indexed 
+ * iterators, hence, reduce the size of the compiled binary file.
  *
  *
  * Example Usage

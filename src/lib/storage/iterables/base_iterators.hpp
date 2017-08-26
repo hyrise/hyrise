@@ -11,8 +11,20 @@
 
 namespace opossum {
 
-// See table_scan.cpp:170 about how to generate such a list from a reference column
-using ChunkOffsetsList = std::vector<std::pair<ChunkOffset, ChunkOffset>>;
+/**
+ * Mapping between chunk offset into a reference column and 
+ * its dereferenced counter part, i.e., a reference into the
+ * referenced value or dictionary column.
+ */
+struct ChunkOffsetMapping {
+  const ChunkOffset into_referencing;  // chunk offset into reference column
+  const ChunkOffset into_referenced;  // used to access values in the referenced data column
+};
+
+/**
+ * @brief list of chunk offset mappings
+ */
+using ChunkOffsetsList = std::vector<ChunkOffsetMapping>;
 
 using ChunkOffsetsIterator = ChunkOffsetsList::const_iterator;
 
@@ -61,15 +73,7 @@ class BaseIndexedIterator : public BaseIterator<Derived, Value> {
   explicit BaseIndexedIterator(const ChunkOffsetsIterator& chunk_offsets_it) : _chunk_offsets_it{chunk_offsets_it} {}
 
  protected:
-  /**
-   * @return index / chunk offset of referencing column
-   */
-  const ChunkOffset& index_of_referencing() const { return _chunk_offsets_it->first; }
-
-  /**
-   * @return index / chunk offset into referenced column
-   */
-  const ChunkOffset& index_into_referenced() const { return _chunk_offsets_it->second; }
+  const ChunkOffsetMapping& chunk_offsets() const { return *_chunk_offsets_it; }
 
  private:
   friend class boost::iterator_core_access;
@@ -77,7 +81,7 @@ class BaseIndexedIterator : public BaseIterator<Derived, Value> {
   void increment() { ++_chunk_offsets_it; }
   bool equal(const BaseIndexedIterator& other) const { return (_chunk_offsets_it == other._chunk_offsets_it); }
 
- private:
+ protected:
   ChunkOffsetsIterator _chunk_offsets_it;
 };
 
