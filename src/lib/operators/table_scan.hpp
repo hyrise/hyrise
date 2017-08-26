@@ -1,25 +1,21 @@
 #pragma once
 
-#include <algorithm>
-#include <functional>
-#include <map>
 #include <memory>
-#include <mutex>
-#include <regex>
 #include <string>
-#include <utility>
 #include <vector>
 
 #include "abstract_read_only_operator.hpp"
 
-#include "all_parameter_variant.hpp"
-#include "type_cast.hpp"
-#include "types.hpp"
 #include "utils/assert.hpp"
+
+#include "all_parameter_variant.hpp"
+#include "common.hpp"
+#include "types.hpp"
 
 namespace opossum {
 
-class ColumnScanBase;
+class BaseTableScanImpl;
+class Table;
 
 class TableScan : public AbstractReadOnlyOperator {
  public:
@@ -48,7 +44,7 @@ class TableScan : public AbstractReadOnlyOperator {
 
   std::shared_ptr<const Table> _in_table;
   bool _is_reference_table;
-  std::unique_ptr<ColumnScanBase> _scan;
+  std::unique_ptr<BaseTableScanImpl> _impl;
   std::shared_ptr<Table> _output_table;
 };
 

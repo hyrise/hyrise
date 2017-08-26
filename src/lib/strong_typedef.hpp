@@ -18,7 +18,7 @@
 
 #define STRONG_TYPEDEF(T, D)                                                                                      \
   namespace opossum {                                                                                             \
-  struct D : boost::totally_ordered1<D, boost::totally_ordered2<D, T> > {                                         \
+  struct D : boost::totally_ordered1<D, boost::totally_ordered2<D, T>> {                                          \
     typedef T base_type;                                                                                          \
     T t;                                                                                                          \
     constexpr explicit D(const T& t_) BOOST_NOEXCEPT_IF(boost::has_nothrow_copy_constructor<T>::value) : t(t_) {} \
@@ -42,6 +42,6 @@
   namespace std {                                                                                                 \
   template <>                                                                                                     \
   struct hash<::opossum::D> : public unary_function<::opossum::D, size_t> {                                       \
-    size_t operator()(const ::opossum::D & x) const { return hash<T>{}(x);}                                       \
+    size_t operator()(const ::opossum::D& x) const { return hash<T>{}(x); }                                       \
   };                                                                                                              \
-  }                                                                                                               \
+  }

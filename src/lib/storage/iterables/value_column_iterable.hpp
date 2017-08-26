@@ -45,7 +45,7 @@ class ValueColumnIterable : public BaseIndexableIterable<ValueColumnIterable<T>>
       f(begin, end);
     }
   }
-  
+
  private:
   const ValueColumn<T>& _column;
 
