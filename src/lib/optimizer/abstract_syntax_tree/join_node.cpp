@@ -13,12 +13,15 @@
 
 namespace opossum {
 
-JoinNode::JoinNode(optional<std::pair<ColumnID, ColumnID>> join_column_ids, const ScanType scan_type,
-                   const JoinMode join_mode)
+JoinNode::JoinNode(const JoinMode join_mode, const optional<std::pair<ColumnID, ColumnID>> &join_column_ids,
+                   const optional<opossum::ScanType> &scan_type)
     : AbstractASTNode(ASTNodeType::Join),
+      _join_mode(join_mode),
       _join_column_ids(join_column_ids),
-      _scan_type(scan_type),
-      _join_mode(join_mode) {}
+      _scan_type(scan_type) {
+  DebugAssert(_join_mode == JoinMode::Cross || !!_join_column_ids, "ColumnIDs must be specified for non-cross Joins.");
+  DebugAssert(_join_mode == JoinMode::Cross || !!_scan_type, "ScanType must be specified for non-cross Joins.");
+}
 
 std::string JoinNode::description() const {
   std::ostringstream desc;
@@ -26,9 +29,9 @@ std::string JoinNode::description() const {
   desc << "Join";
   desc << " [" << join_mode_to_string.at(_join_mode) << "]";
 
-  if (_join_column_ids) {
+  if (_join_column_ids && _scan_type) {
     desc << " [" << (*_join_column_ids).first;
-    desc << " " << scan_type_to_string.left.at(_scan_type);
+    desc << " " << scan_type_to_string.left.at(*_scan_type);
     desc << " " << (*_join_column_ids).second << "]";
   }
 
@@ -89,7 +92,7 @@ bool JoinNode::manages_table(const std::string &table_name) const {
 
 optional<std::pair<ColumnID, ColumnID>> JoinNode::join_column_ids() const { return _join_column_ids; }
 
-ScanType JoinNode::scan_type() const { return _scan_type; }
+optional<ScanType> JoinNode::scan_type() const { return _scan_type; }
 
 JoinMode JoinNode::join_mode() const { return _join_mode; }
 

@@ -118,32 +118,33 @@ class SQLBenchmark : public BenchmarkBasicFixture {
       "  FROM (SELECT * FROM customer WHERE c_custkey < 100 AND c_nationkey=0) t1"
       "  WHERE c_custkey > 10 AND c_nationkey < 10;";
 
-  const std::string Q3 =
-      "SELECT c_custkey, c_name"
-      "  FROM customer"
-      "  JOIN orders ON c_custkey = o_custkey"
-      "  GROUP BY c_custkey, c_name"
-      "  HAVING COUNT(o_orderkey) >= 100;";
+  // TODO(mp): enable once translator uses indices for operators
+  //  const std::string Q3 =
+  //      "SELECT c_custkey, c_name"
+  //      "  FROM customer"
+  //      "  JOIN orders ON c_custkey = o_custkey"
+  //      "  GROUP BY c_custkey, c_name"
+  //      "  HAVING COUNT(o_orderkey) >= 100;";
 
-  const std::string Q4 =
-      "SELECT customer.c_custkey, customer.c_name, COUNT(orderitems.\"orders.o_orderkey\")"
-      "  FROM customer"
-      "  JOIN (SELECT * FROM"
-      "    orders"
-      "    JOIN lineitem ON o_orderkey = l_orderkey"
-      "  ) AS orderitems ON c_custkey = orders.o_custkey"
-      "  GROUP BY customer.c_custkey, customer.c_name"
-      "  HAVING COUNT(orderitems.\"orders.o_orderkey\") >= 100;";
-
-  const std::string Q4Param =
-      "SELECT customer.c_custkey, customer.c_name, COUNT(orderitems.\"orders.o_orderkey\")"
-      "  FROM customer"
-      "  JOIN (SELECT * FROM"
-      "    orders"
-      "    JOIN lineitem ON o_orderkey = l_orderkey"
-      "  ) AS orderitems ON c_custkey = orders.o_custkey"
-      "  GROUP BY customer.c_custkey, customer.c_name"
-      "  HAVING COUNT(orderitems.\"orders.o_orderkey\") >= ?;";
+  //  const std::string Q4 =
+  //      "SELECT customer.c_custkey, customer.c_name, COUNT(orderitems.\"orders.o_orderkey\")"
+  //      "  FROM customer"
+  //      "  JOIN (SELECT * FROM"
+  //      "    orders"
+  //      "    JOIN lineitem ON o_orderkey = l_orderkey"
+  //      "  ) AS orderitems ON c_custkey = orders.o_custkey"
+  //      "  GROUP BY customer.c_custkey, customer.c_name"
+  //      "  HAVING COUNT(orderitems.\"orders.o_orderkey\") >= 100;";
+  //
+  //  const std::string Q4Param =
+  //      "SELECT customer.c_custkey, customer.c_name, COUNT(orderitems.\"orders.o_orderkey\")"
+  //      "  FROM customer"
+  //      "  JOIN (SELECT * FROM"
+  //      "    orders"
+  //      "    JOIN lineitem ON o_orderkey = l_orderkey"
+  //      "  ) AS orderitems ON c_custkey = orders.o_custkey"
+  //      "  GROUP BY customer.c_custkey, customer.c_name"
+  //      "  HAVING COUNT(orderitems.\"orders.o_orderkey\") >= ?;";
 };
 
 // Run all benchmarks for Q1.
@@ -164,31 +165,33 @@ BENCHMARK_F(SQLBenchmark, BM_PrepareExecuteQ2)(benchmark::State& st) { BM_Prepar
 BENCHMARK_F(SQLBenchmark, BM_ParseTreeCacheQ2)(benchmark::State& st) { BM_ParseTreeCache(st, Q2); }
 BENCHMARK_F(SQLBenchmark, BM_QueryPlanCacheQ2)(benchmark::State& st) { BM_QueryPlanCache(st, Q2); }
 
+// TODO(mp): enable once translator uses indices for operators
 // Run all benchmarks for Q3.
-BENCHMARK_F(SQLBenchmark, BM_CompileQ3)(benchmark::State& st) { BM_CompileQuery(st, Q3); }
-BENCHMARK_F(SQLBenchmark, BM_ParseQ3)(benchmark::State& st) { BM_ParseQuery(st, Q3); }
-BENCHMARK_F(SQLBenchmark, BM_PlanQ3)(benchmark::State& st) { BM_PlanQuery(st, Q3); }
-BENCHMARK_F(SQLBenchmark, BM_SQLOperatorQ3)(benchmark::State& st) { BM_SQLOperatorQuery(st, Q3); }
-BENCHMARK_F(SQLBenchmark, BM_PrepareExecuteQ3)(benchmark::State& st) { BM_PrepareAndExecute(st, Q3, QExec); }
-BENCHMARK_F(SQLBenchmark, BM_ParseTreeCacheQ3)(benchmark::State& st) { BM_ParseTreeCache(st, Q3); }
-BENCHMARK_F(SQLBenchmark, BM_QueryPlanCacheQ3)(benchmark::State& st) { BM_QueryPlanCache(st, Q3); }
+// BENCHMARK_F(SQLBenchmark, BM_CompileQ3)(benchmark::State& st) { BM_CompileQuery(st, Q3); }
+// BENCHMARK_F(SQLBenchmark, BM_ParseQ3)(benchmark::State& st) { BM_ParseQuery(st, Q3); }
+// BENCHMARK_F(SQLBenchmark, BM_PlanQ3)(benchmark::State& st) { BM_PlanQuery(st, Q3); }
+// BENCHMARK_F(SQLBenchmark, BM_SQLOperatorQ3)(benchmark::State& st) { BM_SQLOperatorQuery(st, Q3); }
+// BENCHMARK_F(SQLBenchmark, BM_PrepareExecuteQ3)(benchmark::State& st) { BM_PrepareAndExecute(st, Q3, QExec); }
+// BENCHMARK_F(SQLBenchmark, BM_ParseTreeCacheQ3)(benchmark::State& st) { BM_ParseTreeCache(st, Q3); }
+// BENCHMARK_F(SQLBenchmark, BM_QueryPlanCacheQ3)(benchmark::State& st) { BM_QueryPlanCache(st, Q3); }
 
 // Run all benchmarks for Q4.
-BENCHMARK_F(SQLBenchmark, BM_CompileQ4)(benchmark::State& st) { BM_CompileQuery(st, Q4); }
-BENCHMARK_F(SQLBenchmark, BM_ParseQ4)(benchmark::State& st) { BM_ParseQuery(st, Q4); }
-BENCHMARK_F(SQLBenchmark, BM_PlanQ4)(benchmark::State& st) { BM_PlanQuery(st, Q4); }
-BENCHMARK_F(SQLBenchmark, BM_SQLOperatorQ4)(benchmark::State& st) { BM_SQLOperatorQuery(st, Q4); }
-BENCHMARK_F(SQLBenchmark, BM_PrepareExecuteQ4)(benchmark::State& st) { BM_PrepareAndExecute(st, Q4, QExec); }
-BENCHMARK_F(SQLBenchmark, BM_ParseTreeCacheQ4)(benchmark::State& st) { BM_ParseTreeCache(st, Q4); }
-BENCHMARK_F(SQLBenchmark, BM_QueryPlanCacheQ4)(benchmark::State& st) { BM_QueryPlanCache(st, Q4); }
+// BENCHMARK_F(SQLBenchmark, BM_CompileQ4)(benchmark::State& st) { BM_CompileQuery(st, Q4); }
+// BENCHMARK_F(SQLBenchmark, BM_ParseQ4)(benchmark::State& st) { BM_ParseQuery(st, Q4); }
+// BENCHMARK_F(SQLBenchmark, BM_PlanQ4)(benchmark::State& st) { BM_PlanQuery(st, Q4); }
+// BENCHMARK_F(SQLBenchmark, BM_SQLOperatorQ4)(benchmark::State& st) { BM_SQLOperatorQuery(st, Q4); }
+// BENCHMARK_F(SQLBenchmark, BM_PrepareExecuteQ4)(benchmark::State& st) { BM_PrepareAndExecute(st, Q4, QExec); }
+// BENCHMARK_F(SQLBenchmark, BM_ParseTreeCacheQ4)(benchmark::State& st) { BM_ParseTreeCache(st, Q4); }
+// BENCHMARK_F(SQLBenchmark, BM_QueryPlanCacheQ4)(benchmark::State& st) { BM_QueryPlanCache(st, Q4); }
 
 // Benchmark the parsing time of the EXECUTE statement.
 BENCHMARK_F(SQLBenchmark, BM_ParseQExec)(benchmark::State& st) { BM_ParseQuery(st, QExec); }
 
 // Parameterized Prepared Statements.
 BENCHMARK_F(SQLBenchmark, BM_ParseQExecParam)(benchmark::State& st) { BM_ParseQuery(st, QExecParam); }
-BENCHMARK_F(SQLBenchmark, BM_PrepareExecuteQ4Param)(benchmark::State& st) {
-  BM_PrepareAndExecute(st, Q4Param, QExecParam);
-}
+// TODO(mp): enable once translator uses indices for operators
+// BENCHMARK_F(SQLBenchmark, BM_PrepareExecuteQ4Param)(benchmark::State& st) {
+//  BM_PrepareAndExecute(st, Q4Param, QExecParam);
+// }
 
 }  // namespace opossum

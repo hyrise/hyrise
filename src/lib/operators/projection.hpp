@@ -47,7 +47,7 @@ class Projection : public AbstractReadOnlyOperator {
     static void run(Chunk& chunk, const ChunkID chunk_id, const std::shared_ptr<ExpressionNode>& expression,
                     std::shared_ptr<const Table> input_table_left) {
       // check whether term is a just a simple column and bypass this column
-      if (expression->type() == ExpressionType::ColumnReference) {
+      if (expression->type() == ExpressionType::ColumnIdentifier) {
         auto bypassed_column = input_table_left->get_chunk(chunk_id).get_column(expression->column_id());
         return chunk.add_column(bypassed_column);
       }
@@ -59,15 +59,21 @@ class Projection : public AbstractReadOnlyOperator {
     }
   };
 
-  static const std::string evaluate_expression_type(const std::shared_ptr<ExpressionNode>& expression,
-                                                    const std::shared_ptr<const Table>& table);
+  static const std::string get_type_of_expression(const std::shared_ptr<ExpressionNode>& expression,
+                                                  const std::shared_ptr<const Table>& table);
 
+  /**
+   * This function evaluates the given expression on a single chunk.
+   * It returns a vector containing the materialized values resulting from the expression.
+   */
   template <typename T>
   static const tbb::concurrent_vector<T> evaluate_expression(const std::shared_ptr<ExpressionNode>& expression,
                                                              const std::shared_ptr<const Table> table,
                                                              const ChunkID chunk_id) {
     /**
      * Handle Literal
+     * This is only used if the Literal represents a constant column, e.g. in 'SELECT 5 FROM table_a'.
+     * On the other hand this is not used for nested arithmetic Expressions, such as 'SELECT a + 5 FROM table_a'.
      */
     if (expression->type() == ExpressionType::Literal) {
       return tbb::concurrent_vector<T>(table->get_chunk(chunk_id).size(), boost::get<T>(expression->value()));
@@ -76,7 +82,7 @@ class Projection : public AbstractReadOnlyOperator {
     /**
      * Handle column reference
      */
-    if (expression->type() == ExpressionType::ColumnReference) {
+    if (expression->type() == ExpressionType::ColumnIdentifier) {
       auto column = table->get_chunk(chunk_id).get_column(expression->column_id());
 
       if (auto value_column = std::dynamic_pointer_cast<ValueColumn<T>>(column)) {
@@ -98,7 +104,7 @@ class Projection : public AbstractReadOnlyOperator {
      */
     Assert(expression->is_arithmetic_operator(), "Projection only supports literals, column refs and arithmetics");
 
-    const auto arithmetic_operator_function = get_operator_function<T>(expression->type());
+    const auto& arithmetic_operator_function = get_operator_function<T>(expression->type());
 
     tbb::concurrent_vector<T> values;
     values.resize(table->get_chunk(chunk_id).size());

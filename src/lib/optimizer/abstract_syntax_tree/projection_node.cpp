@@ -53,7 +53,7 @@ void ProjectionNode::_on_child_changed() {
       _output_column_names.emplace_back(*expression->alias());
     }
 
-    if (expression->type() == ExpressionType::ColumnReference) {
+    if (expression->type() == ExpressionType::ColumnIdentifier) {
       _output_column_ids.emplace_back(expression->column_id());
 
       if (!expression->alias()) {
@@ -98,7 +98,7 @@ optional<ColumnID> ProjectionNode::find_column_id_for_column_identifier(
   for (ColumnID::base_type column_idx = 0; column_idx < output_column_names().size(); column_idx++) {
     const auto& column_expression = _column_expressions[column_idx];
 
-    if (child_column_id && column_expression->type() == ExpressionType::ColumnReference &&
+    if (child_column_id && column_expression->type() == ExpressionType::ColumnIdentifier &&
         column_expression->column_id() == *child_column_id) {
       Assert(!column_id, "Column name " + column_identifier.column_name + " is ambiguous.");
       column_id = ColumnID{column_idx};

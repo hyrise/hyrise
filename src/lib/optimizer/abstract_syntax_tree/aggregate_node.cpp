@@ -19,12 +19,12 @@ AggregateColumnDefinition::AggregateColumnDefinition(const std::shared_ptr<Expre
     : expr(expr), alias(alias) {}
 
 AggregateNode::AggregateNode(const std::vector<AggregateColumnDefinition>& aggregates,
-                             const std::vector<ColumnID>& groupby_columns)
-    : AbstractASTNode(ASTNodeType::Aggregate), _aggregates(aggregates), _groupby_columns(groupby_columns) {}
+                             const std::vector<ColumnID>& groupby_column_ids)
+    : AbstractASTNode(ASTNodeType::Aggregate), _aggregates(aggregates), _groupby_column_ids(groupby_column_ids) {}
 
 const std::vector<AggregateColumnDefinition>& AggregateNode::aggregates() const { return _aggregates; }
 
-const std::vector<ColumnID>& AggregateNode::groupby_columns() const { return _groupby_columns; }
+const std::vector<ColumnID>& AggregateNode::groupby_column_ids() const { return _groupby_column_ids; }
 
 std::string AggregateNode::description() const {
   std::ostringstream s;
@@ -41,9 +41,9 @@ std::string AggregateNode::description() const {
     stream_aggregate(*it);
   }
 
-  if (!_groupby_columns.empty()) {
+  if (!_groupby_column_ids.empty()) {
     s << " GROUP BY [";
-    for (const auto& column_name : _groupby_columns) {
+    for (const auto& column_name : _groupby_column_ids) {
       s << column_name << ", ";
     }
     s << "]";
@@ -58,8 +58,8 @@ void AggregateNode::_on_child_changed() {
   _output_column_names.clear();
   _output_column_ids.clear();
 
-  _output_column_names.reserve(_groupby_columns.size() + _aggregates.size());
-  _output_column_ids.reserve(_groupby_columns.size() + _aggregates.size());
+  _output_column_names.reserve(_groupby_column_ids.size() + _aggregates.size());
+  _output_column_ids.reserve(_groupby_column_ids.size() + _aggregates.size());
 
   /**
    * Set output column ids and names.
@@ -68,7 +68,7 @@ void AggregateNode::_on_child_changed() {
    * so we first handle those, and afterwards add the column information for the aggregate functions.
    */
   ColumnID column_id{0};
-  for (const auto groupby_column_id : _groupby_columns) {
+  for (const auto groupby_column_id : _groupby_column_ids) {
     _output_column_ids.emplace_back(column_id);
     column_id++;
 
@@ -76,7 +76,7 @@ void AggregateNode::_on_child_changed() {
   }
 
   for (const auto& aggregate : _aggregates) {
-    DebugAssert(aggregate.expr->type() == ExpressionType::FunctionReference, "Expression must be a function.");
+    DebugAssert(aggregate.expr->type() == ExpressionType::FunctionIdentifier, "Expression must be a function.");
 
     std::string column_name;
 
@@ -121,7 +121,7 @@ optional<ColumnID> AggregateNode::find_column_id_for_column_identifier(
         // Check that we haven't found a match yet.
         Assert(!column_id_aggregate, "Column name " + column_identifier.column_name + " is ambiguous.");
         // Aggregate columns come after groupby columns in the Aggregate's output
-        column_id_aggregate = ColumnID{static_cast<ColumnID::base_type>(i + _groupby_columns.size())};
+        column_id_aggregate = ColumnID{static_cast<ColumnID::base_type>(i + _groupby_column_ids.size())};
       }
     }
   }
@@ -133,8 +133,8 @@ optional<ColumnID> AggregateNode::find_column_id_for_column_identifier(
    */
   auto column_id_groupby = left_child()->find_column_id_for_column_identifier(column_identifier);
   if (column_id_groupby) {
-    auto iter = std::find(_groupby_columns.begin(), _groupby_columns.end(), *column_id_groupby);
-    Assert(iter != _groupby_columns.end(), "Requested column identifier is not in GroupBy list");
+    auto iter = std::find(_groupby_column_ids.begin(), _groupby_column_ids.end(), *column_id_groupby);
+    Assert(iter != _groupby_column_ids.end(), "Requested column identifier is not in GroupBy list");
   }
 
   Assert(!column_id_aggregate || !column_id_groupby, "Column name " + column_identifier.column_name + " is ambiguous.");
@@ -159,7 +159,7 @@ optional<ColumnID> AggregateNode::find_column_id_for_expression(
   }
 
   const auto idx = std::distance(_aggregates.begin(), iter);
-  return ColumnID{static_cast<ColumnID::base_type>(idx + _groupby_columns.size())};
+  return ColumnID{static_cast<ColumnID::base_type>(idx + _groupby_column_ids.size())};
 }
 
 }  // namespace opossum

@@ -33,27 +33,28 @@ std::shared_ptr<ExpressionNode> ExpressionNode::create_expression(const Expressi
   return std::make_shared<ExpressionNode>(type, int32_t{0}, expr_list, "", ColumnID{});
 }
 
-std::shared_ptr<ExpressionNode> ExpressionNode::create_column_reference(const ColumnID column_id,
-                                                                        const optional<std::string> &alias) {
+std::shared_ptr<ExpressionNode> ExpressionNode::create_column_identifier(const ColumnID column_id,
+                                                                         const optional<std::string> &alias) {
   const std::vector<std::shared_ptr<ExpressionNode>> expr_list;
-  return std::make_shared<ExpressionNode>(ExpressionType::ColumnReference, int32_t{0}, expr_list, "", column_id, alias);
+  return std::make_shared<ExpressionNode>(ExpressionType::ColumnIdentifier, int32_t{0}, expr_list, "", column_id,
+                                          alias);
 }
 
-std::vector<std::shared_ptr<ExpressionNode>> ExpressionNode::create_column_references(
+std::vector<std::shared_ptr<ExpressionNode>> ExpressionNode::create_column_identifiers(
     const std::vector<ColumnID> &column_ids, const std::vector<std::string> &aliases) {
   std::vector<std::shared_ptr<ExpressionNode>> column_references;
   column_references.reserve(column_ids.size());
 
   if (aliases.empty()) {
     for (auto column_index = 0u; column_index < column_ids.size(); ++column_index) {
-      column_references.emplace_back(create_column_reference(column_ids[column_index]));
+      column_references.emplace_back(create_column_identifier(column_ids[column_index]));
     }
   } else {
     DebugAssert(column_ids.size() == aliases.size(),
                 "There must be the same number of aliases as ColumnIDs, or none at all.");
 
     for (auto column_index = 0u; column_index < column_ids.size(); ++column_index) {
-      column_references.emplace_back(create_column_reference(column_ids[column_index], aliases[column_index]));
+      column_references.emplace_back(create_column_identifier(column_ids[column_index], aliases[column_index]));
     }
   }
 
@@ -63,7 +64,7 @@ std::vector<std::shared_ptr<ExpressionNode>> ExpressionNode::create_column_refer
 std::shared_ptr<ExpressionNode> ExpressionNode::create_literal(const AllTypeVariant &value,
                                                                const optional<std::string> &alias) {
   const std::vector<std::shared_ptr<ExpressionNode>> expr_list;
-  return std::make_shared<ExpressionNode>(ExpressionType::Literal, value, expr_list, "", ColumnID{});
+  return std::make_shared<ExpressionNode>(ExpressionType::Literal, value, expr_list, "", ColumnID{}, alias);
 }
 
 std::shared_ptr<ExpressionNode> ExpressionNode::create_parameter(const AllTypeVariant &value) {
@@ -74,8 +75,8 @@ std::shared_ptr<ExpressionNode> ExpressionNode::create_parameter(const AllTypeVa
 std::shared_ptr<ExpressionNode> ExpressionNode::create_function_reference(
     const std::string &function_name, const std::vector<std::shared_ptr<ExpressionNode>> &expression_list,
     const optional<std::string> &alias) {
-  return std::make_shared<ExpressionNode>(ExpressionType::FunctionReference, int32_t{0}, expression_list, function_name,
-                                          ColumnID{}, alias);
+  return std::make_shared<ExpressionNode>(ExpressionType::FunctionIdentifier, int32_t{0}, expression_list,
+                                          function_name, ColumnID{}, alias);
 }
 
 std::shared_ptr<ExpressionNode> ExpressionNode::create_binary_operator(ExpressionType type,
@@ -84,7 +85,8 @@ std::shared_ptr<ExpressionNode> ExpressionNode::create_binary_operator(Expressio
                                                                        const optional<std::string> &alias) {
   auto expression = std::make_shared<ExpressionNode>(type, int32_t{0}, std::vector<std::shared_ptr<ExpressionNode>>(),
                                                      "", ColumnID{}, alias);
-  Assert(expression->is_binary_operator(), "Type is not an operator type");
+  Assert(expression->is_binary_operator(),
+         "Type is not a binary operator type, such as Equals, LessThan, Like, And, etc.");
 
   expression->set_left_child(left);
   expression->set_right_child(right);
@@ -92,7 +94,7 @@ std::shared_ptr<ExpressionNode> ExpressionNode::create_binary_operator(Expressio
   return expression;
 }
 
-std::shared_ptr<ExpressionNode> ExpressionNode::create_select_all() {
+std::shared_ptr<ExpressionNode> ExpressionNode::create_select_star() {
   return std::make_shared<ExpressionNode>(ExpressionType::Star, int32_t{0},
                                           std::vector<std::shared_ptr<ExpressionNode>>(), "", ColumnID{});
 }
@@ -166,7 +168,7 @@ bool ExpressionNode::is_binary_operator() const {
 }
 
 bool ExpressionNode::is_operand() const {
-  return _type == ExpressionType::Literal || _type == ExpressionType::ColumnReference;
+  return _type == ExpressionType::Literal || _type == ExpressionType::ColumnIdentifier;
 }
 
 const std::string ExpressionNode::description() const {
@@ -180,10 +182,10 @@ const std::string ExpressionNode::description() const {
     case ExpressionType::Literal:
       desc << "[" << value() << "]";
       break;
-    case ExpressionType::ColumnReference:
+    case ExpressionType::ColumnIdentifier:
       desc << "[ColumnID: " << column_id() << "]";
       break;
-    case ExpressionType::FunctionReference:
+    case ExpressionType::FunctionIdentifier:
       desc << "[" << name() << ": " << std::endl;
       for (const auto &expr : expression_list()) {
         desc << expr->description() << ", " << std::endl;
@@ -200,19 +202,19 @@ const std::string ExpressionNode::description() const {
 }
 
 const ColumnID ExpressionNode::column_id() const {
-  DebugAssert(_type == ExpressionType::ColumnReference,
+  DebugAssert(_type == ExpressionType::ColumnIdentifier,
               "Expression " + expression_type_to_string.at(_type) + " does not have a column_id");
   return _column_id;
 }
 
 void ExpressionNode::set_column_id(const ColumnID column_id) {
-  DebugAssert(_type == ExpressionType::ColumnReference,
+  DebugAssert(_type == ExpressionType::ColumnIdentifier,
               "Expression " + expression_type_to_string.at(_type) + " does not have a column_id");
   _column_id = column_id;
 }
 
 const std::string &ExpressionNode::name() const {
-  DebugAssert(_type == ExpressionType::FunctionReference,
+  DebugAssert(_type == ExpressionType::FunctionIdentifier,
               "Expression " + expression_type_to_string.at(_type) + " does not have a name");
   return _name;
 }
@@ -232,13 +234,13 @@ std::string ExpressionNode::to_string(const std::shared_ptr<AbstractASTNode> &in
   switch (_type) {
     case ExpressionType::Literal:
       return type_cast<std::string>(_value);
-    case ExpressionType::ColumnReference:
+    case ExpressionType::ColumnIdentifier:
       if (input_node != nullptr) {
         DebugAssert(_column_id < input_node->output_column_names().size(), "_column_id out of range");
         return input_node->output_column_names()[_column_id];
       }
       return boost::lexical_cast<std::string>(_column_id);
-    case ExpressionType::FunctionReference:
+    case ExpressionType::FunctionIdentifier:
       // TODO(tim): BLOCKING - explain why exactly this works (probably because of input node)
       return _expression_list[0]->to_string(input_node);
     default:

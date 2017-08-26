@@ -38,6 +38,7 @@ The install script was tested under macOS (brew) and Ubuntu 16.10 (apt-get).
 - llvm (optional for AddressSanitizer)
 - pkg-config
 - python (>= 2.7) optional
+- readline (>= 7)
 - tbb/libtbb-dev
 - xcode-select --install (macOS)
 

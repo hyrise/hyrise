@@ -42,7 +42,7 @@ TEST_F(OperatorsDifferenceTest, DifferneceOnReferenceTables) {
   std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_float_filtered2.tbl", 2);
 
   Projection::ColumnExpressions column_expressions(
-      {ExpressionNode::create_column_reference(ColumnID{0}), ExpressionNode::create_column_reference(ColumnID{1})});
+      {ExpressionNode::create_column_identifier(ColumnID{0}), ExpressionNode::create_column_identifier(ColumnID{1})});
 
   auto projection1 = std::make_shared<Projection>(_table_wrapper_a, column_expressions);
   projection1->execute();

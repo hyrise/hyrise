@@ -151,7 +151,7 @@ TEST_F(SQLToASTTranslatorTest, AggregateWithGroupBy) {
   const auto aggregate_node = std::dynamic_pointer_cast<AggregateNode>(result_node);
   EXPECT_EQ(aggregate_node->aggregates().size(), 1u);
   const std::vector<ColumnID> groupby_columns = {ColumnID{0}};
-  EXPECT_EQ(aggregate_node->groupby_columns(), groupby_columns);
+  EXPECT_EQ(aggregate_node->groupby_column_ids(), groupby_columns);
   EXPECT_EQ(aggregate_node->aggregates().at(0).alias, std::string("s"));
 
   auto t_node_1 = result_node->left_child();
@@ -175,7 +175,7 @@ TEST_F(SQLToASTTranslatorTest, AggregateWithExpression) {
 
   const auto aggregate_node = std::dynamic_pointer_cast<AggregateNode>(result_node);
   EXPECT_EQ(aggregate_node->aggregates().size(), 2u);
-  EXPECT_EQ(aggregate_node->groupby_columns().size(), 0u);
+  EXPECT_EQ(aggregate_node->groupby_column_ids().size(), 0u);
   EXPECT_EQ(aggregate_node->aggregates().at(0).alias, std::string("s"));
   EXPECT_EQ(aggregate_node->aggregates().at(1).alias, std::string("f"));
 
@@ -211,8 +211,8 @@ TEST_F(SQLToASTTranslatorTest, SelectInnerJoin) {
 
   EXPECT_EQ(result_node->type(), ASTNodeType::Projection);
   auto projection_node = std::dynamic_pointer_cast<ProjectionNode>(result_node);
-  std::vector<std::string> output_columns = {"a", "b", "a", "b"};
   EXPECT_EQ(projection_node->output_column_ids().size(), 4u);
+  std::vector<std::string> output_columns = {"a", "b", "a", "b"};
   EXPECT_EQ(projection_node->output_column_names(), output_columns);
 
   EXPECT_EQ(result_node->left_child()->type(), ASTNodeType::Join);

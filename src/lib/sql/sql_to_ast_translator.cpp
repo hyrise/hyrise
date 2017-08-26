@@ -26,7 +26,7 @@
 namespace opossum {
 
 ScanType translate_operator_type_to_scan_type(const hsql::OperatorType operator_type) {
-  const std::unordered_map<const hsql::OperatorType, const ScanType> operator_to_scan_type = {
+  static const std::unordered_map<const hsql::OperatorType, const ScanType> operator_to_scan_type = {
       {hsql::kOpEquals, ScanType::OpEquals},       {hsql::kOpNotEquals, ScanType::OpNotEquals},
       {hsql::kOpGreater, ScanType::OpGreaterThan}, {hsql::kOpGreaterEq, ScanType::OpGreaterThanEquals},
       {hsql::kOpLess, ScanType::OpLessThan},       {hsql::kOpLessEq, ScanType::OpLessThanEquals},
@@ -38,8 +38,35 @@ ScanType translate_operator_type_to_scan_type(const hsql::OperatorType operator_
   return it->second;
 }
 
+ScanType get_scan_type_for_reverse_order(const ScanType scan_type) {
+  /**
+   * If we switch the sides for the expressions, we might have to change the operator that is used for the predicate.
+   * This function returns the respective ScanType.
+   *
+   * Example:
+   *     SELECT * FROM t WHERE 1 > a
+   *  -> SELECT * FROM t WHERE a < 1
+   *
+   *    but:
+   *     SELECT * FROM t WHERE 1 = a
+   *  -> SELECT * FROM t WHERE a = 1
+   */
+  static const std::unordered_map<const ScanType, const ScanType> scan_type_for_reverse_order = {
+      {ScanType::OpGreaterThan, ScanType::OpLessThan},
+      {ScanType::OpLessThan, ScanType::OpGreaterThan},
+      {ScanType::OpGreaterThanEquals, ScanType::OpLessThanEquals},
+      {ScanType::OpLessThanEquals, ScanType::OpGreaterThanEquals}};
+
+  auto it = scan_type_for_reverse_order.find(scan_type);
+  if (it != scan_type_for_reverse_order.end()) {
+    return it->second;
+  }
+
+  return scan_type;
+}
+
 JoinMode translate_join_type_to_join_mode(const hsql::JoinType join_type) {
-  const std::unordered_map<const hsql::JoinType, const JoinMode> join_type_to_mode = {
+  static const std::unordered_map<const hsql::JoinType, const JoinMode> join_type_to_mode = {
       {hsql::kJoinInner, JoinMode::Inner}, {hsql::kJoinOuter, JoinMode::Outer},     {hsql::kJoinLeft, JoinMode::Left},
       {hsql::kJoinRight, JoinMode::Right}, {hsql::kJoinNatural, JoinMode::Natural}, {hsql::kJoinCross, JoinMode::Cross},
   };
@@ -72,14 +99,14 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::translate_statement(const h
     case hsql::kStmtSelect:
       return _translate_select((const hsql::SelectStatement&)statement);
     default:
-      Fail("Translating statement failed.");
+      Fail("Only SELECT statements are supported as of now.");
       return {};
   }
 }
 
 std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_select(const hsql::SelectStatement& select) {
   // SQL Order of Operations: http://www.bennadel.com/blog/70-sql-query-order-of-operations.htm
-  // 1. FROM clause
+  // 1. FROM clause (incl. JOINs and subselects that are part of this)
   // 2. WHERE clause
   // 3. GROUP BY clause
   // 4. HAVING clause
@@ -102,6 +129,7 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_select(const hsq
   auto is_aggregate = select.groupBy != nullptr;
   if (!is_aggregate) {
     for (auto* expr : *select.selectList) {
+      // TODO(anybody): Only consider aggregate functions here (i.e., SUM, COUNT, etc. - but not CONCAT, ...).
       if (expr->isType(hsql::kExprFunctionRef)) {
         is_aggregate = true;
         break;
@@ -216,11 +244,29 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_join(const hsql:
   auto scan_type = translate_operator_type_to_scan_type(condition.opType);
   auto join_mode = translate_join_type_to_join_mode(join.type);
 
-  auto join_node = std::make_shared<JoinNode>(column_ids, scan_type, join_mode);
+  auto join_node = std::make_shared<JoinNode>(join_mode, column_ids, scan_type);
   join_node->set_left_child(left_node);
   join_node->set_right_child(right_node);
 
   return join_node;
+}
+
+std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_cross_product(
+    const std::vector<hsql::TableRef*>& tables) {
+  DebugAssert(!tables.empty(), "Cannot translate cross product without tables");
+  auto product = _translate_table_ref(*tables.front());
+
+  for (size_t i = 1; i < tables.size(); i++) {
+    auto next_node = _translate_table_ref(*tables[i]);
+
+    auto new_product = std::make_shared<JoinNode>(JoinMode::Cross, nullopt, nullopt);
+    new_product->set_left_child(product);
+    new_product->set_right_child(next_node);
+
+    product = new_product;
+  }
+
+  return product;
 }
 
 std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_table_ref(const hsql::TableRef& table) {
@@ -230,21 +276,19 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_table_ref(const 
 
       return std::make_shared<StoredTableNode>(table.name, alias);
     }
-
     case hsql::kTableSelect:
       return _translate_select(*table.select);
     case hsql::kTableJoin:
       return _translate_join(*table.join);
     case hsql::kTableCrossProduct:
-      // TODO(anybody)
-      Fail("Unable to translate table cross product.");
+      return _translate_cross_product(*table.list);
     default:
       Fail("Unable to translate source table.");
       return {};
   }
 }
 
-AllParameterVariant SQLToASTTranslator::_translate_operand(
+AllParameterVariant SQLToASTTranslator::translate_argument(
     const hsql::Expr& expr, const optional<std::shared_ptr<AbstractASTNode>>& input_node) {
   switch (expr.type) {
     case hsql::kExprLiteralInt:
@@ -270,27 +314,70 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_predicate(
 
   // If the expression is a nested expression, recursively resolve.
   // TODO(anybody): implement OR.
+  DebugAssert(expr.opType != hsql::kOpOr, "OR is currently not supported by SQLToASTTranslator");
+
   if (expr.opType == hsql::kOpAnd) {
     auto filter_node = _translate_predicate(*expr.expr, input_node);
     return _translate_predicate(*expr.expr2, filter_node);
   }
 
   // TODO(anybody): handle IN with join
-  const auto scan_type = translate_operator_type_to_scan_type(expr.opType);
+  auto scan_type = translate_operator_type_to_scan_type(expr.opType);
 
-  // We accept functions here because we assume they have been translated by Aggregate.
-  // They will be treated as a regular column of the same name.
-  // TODO(mp): this has to change once we have extended HAVING support.
+  /**
+   * We have to determine which side of the expression is a column or function reference.
+   * That's because the WHERE clause could be `a = 5`, but it could also be `5 = a`.
+   * However, it is currently required in the TableScan operator that one side is a column.
+   *
+   * We accept functions here because we assume they have been translated by Aggregate.
+   * They will be treated as a regular column of the same name.
+   * If this assumption is incorrect, the translation will fail because the column won't be found.
+   *
+   * Supported:
+   *   SELECT a, SUM(B) FROM t GROUP BY a HAVING SUM(B) > 0
+   * This query is fine because the expression used in the HAVING clause is part of the SELECT list.
+   * We first translate the SELECT list, which will result in an Aggregate operator that creates a column for the sum.
+   * We can subsequently access that column when we translate the HAVING expression here.
+   *
+   * Unsupported:
+   *   SELECT a, SUM(B) FROM t GROUP BY a HAVING AVG(B) > 0
+   * This query cannot be translated at the moment because the Aggregate does not produce an output column for the AVG.
+   * Therefore, the filter expression cannot be translated, because the TableScan operator is not able to compute
+   * aggregates on its own.
+   *
+   * TODO(anybody): extend support for those HAVING clauses.
+   * One option is to add them to the Aggregate and then use a Projection to remove them from the result.
+   */
   hsql::Expr* column_operand_expr = nullptr;
-  hsql::Expr* value_operand_expr = nullptr;
-  if (expr.expr->isType(hsql::kExprColumnRef)) {
+  hsql::Expr* argument_expr = nullptr;
+  if (expr.expr->isType(hsql::kExprColumnRef) || expr.expr->isType(hsql::kExprFunctionRef)) {
     column_operand_expr = expr.expr;
-    value_operand_expr = expr.expr2;
+    argument_expr = expr.expr2;
   } else {
-    Assert(column_operand_expr->isType(hsql::kExprColumnRef),
-           "Unsupported filter: we must have a column reference on at least one side of the expression.");
-    value_operand_expr = expr.expr;
+    /**
+     * TODO(anybody): think about how this can be supported as well.
+     *
+     * * Example:
+     *     SELECT * FROM t WHERE 1 BETWEEN a AND 3
+     *  -> SELECT * FROM t WHERE a <= 1
+     *
+     *     SELECT * FROM t WHERE 3 BETWEEN 1 AND a
+     *  -> SELECT * FROM t WHERE a >= 3
+     *
+     *  The biggest question is how to introduce this in the code nicely.
+     */
+    DebugAssert(scan_type != ScanType::OpBetween,
+                "Currently the term left of the BETWEEN expression needs to be a column reference.");
+
+    argument_expr = expr.expr;
     column_operand_expr = expr.expr2;
+
+    DebugAssert(
+        column_operand_expr->isType(hsql::kExprColumnRef) || column_operand_expr->isType(hsql::kExprFunctionRef),
+        "Unsupported filter: we must have a function or column reference on at least one side of the expression.");
+
+    // We might have to change the ScanType when we reverse the sides of the expression.
+    scan_type = get_scan_type_for_reverse_order(scan_type);
   }
 
   const auto column_operand_column_id =
@@ -305,13 +392,13 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_predicate(
     const auto* left_expr = (*expr.exprList)[0];
     const auto* right_expr = (*expr.exprList)[1];
 
-    value = _translate_operand(*left_expr, input_node);
+    value = translate_argument(*left_expr, input_node);
 
     // TODO(torpedro / mp): TableScan does not support AllParameterVariant as second value.
     // This would be required to prepare BETWEEN.
-    value2 = boost::get<AllTypeVariant>(_translate_operand(*right_expr, input_node));
+    value2 = boost::get<AllTypeVariant>(translate_argument(*right_expr, input_node));
   } else {
-    value = _translate_operand(*value_operand_expr, input_node);
+    value = translate_argument(*argument_expr, input_node);
   }
 
   std::shared_ptr<ExpressionNode> expression_node = SQLExpressionTranslator::translate_expression(expr, input_node);
@@ -326,6 +413,7 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_predicate(
 std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_having(
     const hsql::Expr& expr, const std::shared_ptr<AbstractASTNode>& aggregate_node,
     const std::shared_ptr<AbstractASTNode>& input_node) {
+  // TODO(tim): BLOCKING - copy sections from translate_predicate
   DebugAssert(expr.isType(hsql::kExprOperator), "Filter expression clause has to be of type operator!");
 
   // If the expression is a nested expression, recursively resolve.
@@ -359,8 +447,8 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_having(
       SQLExpressionTranslator::translate_expression(*column_operand_expr, aggregate_node->left_child());
   const auto column_operand_column_id = aggregate_node->get_column_id_for_expression(column_operand_expression);
 
-  AllParameterVariant value;
-  optional<AllTypeVariant> value2;
+  AllParameterVariant argument;
+  optional<AllTypeVariant> argument2;
 
   if (scan_type == ScanType::OpBetween) {
     Assert(expr.exprList->size() == 2, "Need two arguments for BETWEEEN");
@@ -368,19 +456,19 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_having(
     const auto* left_expr = (*expr.exprList)[0];
     const auto* right_expr = (*expr.exprList)[1];
 
-    value = _translate_operand(*left_expr, input_node);
+    argument = translate_argument(*left_expr);
 
-    // TODO(torpedro / mp): TableScan does not support AllParameterVariant as second value.
-    // This would be required to prepare BETWEEN.
-    value2 = boost::get<AllTypeVariant>(_translate_operand(*right_expr, input_node));
+    // TODO(anybody): TableScan does not support AllParameterVariant as second value.
+    // This would be required to prepare BETWEEN, or to do a BETWEEN scan for three columns (a BETWEEN b and c).
+    argument2 = boost::get<AllTypeVariant>(translate_argument(*right_expr));
   } else {
-    value = _translate_operand(*value_operand_expr, input_node);
+    argument = translate_argument(*value_operand_expr);
   }
 
   std::shared_ptr<ExpressionNode> expression_node =
       SQLExpressionTranslator::translate_expression(expr, aggregate_node->left_child());
   auto predicate_node =
-      std::make_shared<PredicateNode>(column_operand_column_id, expression_node, scan_type, value, value2);
+      std::make_shared<PredicateNode>(column_operand_column_id, expression_node, scan_type, argument, argument2);
 
   predicate_node->set_left_child(input_node);
 
@@ -413,7 +501,6 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_aggregate(
        * This if block is only used to conduct an SQL conformity check, whether column references in the SELECT list of
        * aggregates appear in the GROUP BY clause.
        */
-
       Assert(group_by != nullptr,
              "SELECT list of aggregate contains a column, but the query does not have a GROUP BY clause.");
 
@@ -469,7 +556,7 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_projection(
   for (const auto* hsql_expr : select_list) {
     const auto expr = SQLExpressionTranslator::translate_expression(*hsql_expr, input_node);
 
-    DebugAssert(expr->type() == ExpressionType::Star || expr->type() == ExpressionType::ColumnReference ||
+    DebugAssert(expr->type() == ExpressionType::Star || expr->type() == ExpressionType::ColumnIdentifier ||
                     expr->is_arithmetic_operator(),
                 "Only column references, star-selects, and arithmetic expressions supported for now.");
 
@@ -480,7 +567,7 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_projection(
         column_ids.emplace_back(column_idx);
       }
 
-      const auto& column_references = ExpressionNode::create_column_references(column_ids);
+      const auto& column_references = ExpressionNode::create_column_identifiers(column_ids);
       column_expressions.insert(column_expressions.end(), column_references.cbegin(), column_references.cend());
     } else {
       column_expressions.emplace_back(expr);

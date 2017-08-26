@@ -32,7 +32,7 @@ class Sort : public AbstractReadOnlyOperator {
   Sort(const std::shared_ptr<const AbstractOperator> in, const ColumnID column_id, const bool ascending = true,
        const size_t output_chunk_size = 0);
 
-  const ColumnID column_id() const;
+  ColumnID column_id() const;
   bool ascending() const;
 
   const std::string name() const override;
