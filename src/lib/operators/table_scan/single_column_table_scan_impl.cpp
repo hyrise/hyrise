@@ -11,8 +11,6 @@
 #include "storage/iterables/create_iterable_from_column.hpp"
 #include "storage/untyped_dictionary_column.hpp"
 
-#include "utils/binary_operators.hpp"
-
 #include "resolve_column_type.hpp"
 
 namespace opossum {
@@ -38,7 +36,7 @@ void SingleColumnTableScanImpl::handle_value_column(BaseColumn &base_column,
 
     left_column_iterable.get_iterators([&](auto left_it, auto left_end) {
       right_value_iterable.get_iterators([&](auto right_it, auto right_end) {
-        resolve_operator_type(_scan_type, [&](auto comparator) {
+        _resolve_to_operator(_scan_type, [&](auto comparator) {
           TableScanMainLoop{context->_chunk_id, context->_matches_out}(comparator, left_it, left_end, right_it);  // NOLINT
         });
       });
@@ -109,7 +107,7 @@ void SingleColumnTableScanImpl::handle_dictionary_column(BaseColumn &base_column
 
   left_iterable.get_iterators([&](auto left_it, auto left_end) {
     right_iterable.get_iterators([&](auto right_it, auto right_end) {
-      this->_call_with_scan_type([&](auto comparator) {
+      this->_resolve_to_operator_for_dict_column_scan(_scan_type, [&](auto comparator) {
         TableScanMainLoop{chunk_id, matches_out}(comparator, left_it, left_end, right_it);  // NOLINT
       });
     });

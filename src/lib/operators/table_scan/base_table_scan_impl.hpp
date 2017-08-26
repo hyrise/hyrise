@@ -21,7 +21,7 @@ class BaseTableScanImpl {
 
  protected:
   template <typename Functor>
-  void _resolve_operator_type(const ScanType scan_type, const Functor& func) {
+  void _resolve_to_operator(const ScanType scan_type, const Functor& func) {
     switch (scan_type) {
       case ScanType::OpEquals:
         func(std::equal_to<void>{});
