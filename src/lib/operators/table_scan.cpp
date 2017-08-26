@@ -35,7 +35,8 @@ namespace hana = boost::hana;
 /**
  * @brief The actual scan
  */
-struct Scan {
+class Scan {
+ public:
   Scan(const ChunkID chunk_id, PosList &matches_out) : _chunk_id{chunk_id}, _matches_out{matches_out} {}
 
   template <typename LeftIterator, typename RightIterator, typename Comparator>
@@ -52,6 +53,7 @@ struct Scan {
     }
   }
 
+ private:
   const ChunkID _chunk_id;
   PosList &_matches_out;
 };
