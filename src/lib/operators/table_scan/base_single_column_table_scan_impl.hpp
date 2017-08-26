@@ -31,15 +31,6 @@ class BaseSingleColumnTableScanImpl : public BaseTableScanImpl, public ColumnVis
   void handle_reference_column(ReferenceColumn &left_column,
                                std::shared_ptr<ColumnVisitableContext> base_context) override;
 
-  /**
-   * From ColumnVisitable:
-   * virtual void handle_value_column(BaseColumn &base_column,
-   *                                  std::shared_ptr<ColumnVisitableContext> base_context) = 0;
-   *
-   * virtual void handle_dictionary_column(BaseColumn &base_column,
-   *                                       std::shared_ptr<ColumnVisitableContext> base_context) = 0;
-   */
-
  protected:
   /**
    * @brief the context used for the columns’ visitor pattern
