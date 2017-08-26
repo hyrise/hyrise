@@ -135,7 +135,7 @@ class SingleColumnScanBase : public ColumnScanBase, public ColumnVisitable {
 
     // TODO(mjendruk): Find a good estimates for when it’s better simply iterate over the column
 
-    auto chunk_offsets_by_chunk_id = _split_position_list_by_chunk_id(*left_column.pos_list());
+    auto chunk_offsets_by_chunk_id = _split_pos_list_by_chunk_id(*left_column.pos_list());
 
     // Visit each referenced column
     for (auto &pair : chunk_offsets_by_chunk_id) {
@@ -170,7 +170,7 @@ class SingleColumnScanBase : public ColumnScanBase, public ColumnVisitable {
 
   using ChunkOffsetsByChunkID = std::unordered_map<ChunkID, ChunkOffsetsList>;
 
-  ChunkOffsetsByChunkID _split_position_list_by_chunk_id(const PosList &pos_list) {
+  ChunkOffsetsByChunkID _split_pos_list_by_chunk_id(const PosList &pos_list) {
     auto chunk_offsets_by_chunk_id = ChunkOffsetsByChunkID{};
 
     for (auto chunk_offset = 0u; chunk_offset < pos_list.size(); ++chunk_offset) {
