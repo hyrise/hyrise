@@ -109,7 +109,7 @@ void SingleColumnTableScanImpl::handle_dictionary_column(BaseColumn &base_column
 
   left_iterable.get_iterators([&](auto left_it, auto left_end) {
     right_iterable.get_iterators([&](auto right_it, auto right_end) {
-      this->_resolve_scan_type([&](auto comparator) {
+      this->_call_with_scan_type([&](auto comparator) {
         TableScanMainLoop{chunk_id, matches_out}(comparator, left_it, left_end, right_it);  // NOLINT
       });
     });
