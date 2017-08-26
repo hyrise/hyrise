@@ -1,6 +1,7 @@
 #include "table_scan.hpp"
 
 #include <algorithm>
+#include <functional>
 #include <map>
 #include <memory>
 #include <string>
@@ -380,21 +381,21 @@ class SingleColumnScan : public SingleColumnScanBase {
   void _resolve_scan_type(const Functor &func) {
     switch (_scan_type) {
       case ScanType::OpEquals:
-        func(Equal{});
+        func(std::equal_to<void>{});
         return;
 
       case ScanType::OpNotEquals:
-        func(NotEqual{});
+        func(std::not_equal_to<void>{});
         return;
 
       case ScanType::OpLessThan:
       case ScanType::OpLessThanEquals:
-        func(Less{});
+        func(std::less<void>{});
         return;
 
       case ScanType::OpGreaterThan:
       case ScanType::OpGreaterThanEquals:
-        func(GreaterEqual{});
+        func(std::greater_equal<void>{});
         return;
 
       default:

@@ -1,76 +1,36 @@
 #pragma once
 
+#include <functional>
+
 #include <types.hpp>
 
 namespace opossum {
-
-struct Less {
-  template <typename LeftType, typename RightType>
-  auto operator()(const LeftType& lhs, const RightType& rhs) const {
-    return lhs < rhs;
-  }
-};
-
-struct LessEqual {
-  template <typename LeftType, typename RightType>
-  auto operator()(const LeftType& lhs, const RightType& rhs) const {
-    return lhs <= rhs;
-  }
-};
-
-struct Greater {
-  template <typename LeftType, typename RightType>
-  auto operator()(const LeftType& lhs, const RightType& rhs) const {
-    return lhs > rhs;
-  }
-};
-
-struct GreaterEqual {
-  template <typename LeftType, typename RightType>
-  auto operator()(const LeftType& lhs, const RightType& rhs) const {
-    return lhs >= rhs;
-  }
-};
-
-struct Equal {
-  template <typename LeftType, typename RightType>
-  auto operator()(const LeftType& lhs, const RightType& rhs) const {
-    return lhs == rhs;
-  }
-};
-
-struct NotEqual {
-  template <typename LeftType, typename RightType>
-  auto operator()(const LeftType& lhs, const RightType& rhs) const {
-    return lhs != rhs;
-  }
-};
 
 template <typename Functor>
 void resolve_operator_type(const ScanType scan_type, const Functor& func) {
   switch (scan_type) {
     case ScanType::OpEquals:
-      func(Equal{});
+      func(std::equal_to<void>{});
       break;
 
     case ScanType::OpNotEquals:
-      func(NotEqual{});
+      func(std::not_equal_to<void>{});
       break;
 
     case ScanType::OpLessThan:
-      func(Less{});
+      func(std::less<void>{});
       break;
 
     case ScanType::OpLessThanEquals:
-      func(LessEqual{});
+      func(std::less_equal<void>{});
       break;
 
     case ScanType::OpGreaterThan:
-      func(Greater{});
+      func(std::greater<void>{});
       break;
 
     case ScanType::OpGreaterThanEquals:
-      func(GreaterEqual{});
+      func(std::greater_equal<void>{});
       break;
 
     case ScanType::OpBetween:
