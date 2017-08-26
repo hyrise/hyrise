@@ -29,12 +29,12 @@ using ParameterTypesAsMplVector =
 using AllParameterVariant = typename boost::make_variant_over<ParameterTypesAsMplVector>::type;
 
 // Function to check if AllParameterVariant is AllTypeVariant
-inline bool is_variant(const AllParameterVariant& variant) { return (variant.which() == 0); }
+inline bool is_variant(const AllParameterVariant& variant) { return (variant.type() == typeid(AllTypeVariant)); }
 
 // Function to check if AllParameterVariant is ColumnName
-inline bool is_column_name(const AllParameterVariant& variant) { return (variant.which() == 1); }
+inline bool is_column_name(const AllParameterVariant& variant) { return (variant.type() == typeid(ColumnName)); }
 
 // Function to check if AllParameterVariant is ColumnName
-inline bool is_placeholder(const AllParameterVariant& variant) { return (variant.which() == 2); }
+inline bool is_placeholder(const AllParameterVariant& variant) { return (variant.type() == typeid(ValuePlaceholder)); }
 
 }  // namespace opossum
