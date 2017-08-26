@@ -68,7 +68,7 @@ class AttributeVectorIterable : public BaseIndexableIterable<AttributeVectorIter
     NullableColumnValue<ValueID> dereference() const {
       const auto& chunk_offsets = this->chunk_offsets();
 
-      if (chunk_offsets.into_referencing == INVALID_CHUNK_OFFSET)
+      if (chunk_offsets.into_referenced == INVALID_CHUNK_OFFSET)
         return NullableColumnValue<ValueID>{NULL_VALUE_ID, true, chunk_offsets.into_referencing};
 
       const auto value_id = _attribute_vector.get(chunk_offsets.into_referenced);

@@ -118,7 +118,7 @@ class ValueColumnIterable : public BaseIndexableIterable<ValueColumnIterable<T>>
     ColumnValue<T> dereference() const {
       const auto& chunk_offsets = this->chunk_offsets();
 
-      if (chunk_offsets.into_referencing == INVALID_CHUNK_OFFSET)
+      if (chunk_offsets.into_referenced == INVALID_CHUNK_OFFSET)
         return ColumnValue<T>{T{}, chunk_offsets.into_referencing};
 
       return ColumnValue<T>{_values[chunk_offsets.into_referenced], chunk_offsets.into_referencing};
@@ -146,7 +146,7 @@ class ValueColumnIterable : public BaseIndexableIterable<ValueColumnIterable<T>>
     NullableColumnValue<T> dereference() const {
       const auto& chunk_offsets = this->chunk_offsets();
 
-      if (chunk_offsets.into_referencing == INVALID_CHUNK_OFFSET)
+      if (chunk_offsets.into_referenced == INVALID_CHUNK_OFFSET)
         return NullableColumnValue<T>{T{}, true, chunk_offsets.into_referencing};
 
       return NullableColumnValue<T>{_values[chunk_offsets.into_referenced], _null_values[chunk_offsets.into_referenced],

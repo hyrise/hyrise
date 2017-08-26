@@ -77,7 +77,7 @@ class NullValueVectorIterable : public BaseIndexableIterable<NullValueVectorIter
     ColumnNullValue dereference() const {
       const auto& chunk_offsets = this->chunk_offsets();
 
-      if (chunk_offsets.into_referencing == INVALID_CHUNK_OFFSET)
+      if (chunk_offsets.into_referenced == INVALID_CHUNK_OFFSET)
         return ColumnNullValue{true, chunk_offsets.into_referencing};
 
       return ColumnNullValue{_null_values[chunk_offsets.into_referenced], chunk_offsets.into_referencing};
