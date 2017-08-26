@@ -173,7 +173,7 @@ class SingleColumnScanBase : public ColumnScanBase, public ColumnVisitable {
   ChunkOffsetsByChunkID _split_pos_list_by_chunk_id(const PosList &pos_list) {
     auto chunk_offsets_by_chunk_id = ChunkOffsetsByChunkID{};
 
-    for (auto chunk_offset = 0u; chunk_offset < pos_list.size(); ++chunk_offset) {
+    for (auto chunk_offset = ChunkOffset{0u}; chunk_offset < pos_list.size(); ++chunk_offset) {
       const auto row_id = pos_list[chunk_offset];
 
       if (_skip_null_row_ids && row_id == NULL_ROW_ID) continue;
