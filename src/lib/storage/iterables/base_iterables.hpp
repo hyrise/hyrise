@@ -22,7 +22,7 @@ namespace opossum {
  * This results in a large amount of code. In cases where one is certain that
  * no indices (i.e. a ChunkOffsetsList) have been passed, get_iterators_no_indices
  * can be used. This method won’t instantiate the lambda for indexed iterators, hence,
- * reduce code size.
+ * reduce the size of the compiled binary file.
  *
  *
  * Example Usage
