@@ -16,10 +16,10 @@ class Table;
 class ReferenceColumn;
 
 /**
- * @brief Resolves reference columns
+ * @brief The base class of table scan impls that scan a single column
  *
- * The position list of reference columns is split by the referenced columns and
- * then each one is visited separately.
+ * Resolves reference columns. The position list of reference columns 
+ * is split by the referenced columns and then each is visited separately.
  */
 class BaseSingleColumnTableScanImpl : public BaseTableScanImpl, public ColumnVisitable {
  public:
