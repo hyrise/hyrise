@@ -2,12 +2,9 @@
 
 #include <boost/hana/for_each.hpp>
 
-#include <memory>
 #include <string>
-#include <utility>
 
 #include "all_type_variant.hpp"
-#include "storage/column_visitable.hpp"
 #include "storage/dictionary_column.hpp"
 #include "storage/reference_column.hpp"
 #include "storage/value_column.hpp"
@@ -54,40 +51,18 @@ template <typename Functor>
 void resolve_column_type(const std::string &type, BaseColumn &column, const Functor &func) {
   hana::for_each(column_types, [&](auto x) {
     if (std::string(hana::first(x)) == type) {
-      // The + before hana::second - which returns a reference - converts its return value
-      // into a value so that we can access ::type
-      using Type = typename decltype(+hana::second(x))::type;
+      const auto type = hana::second(x);
+      using Type = typename decltype(type)::type;
 
-      struct Context : public ColumnVisitableContext {
-        explicit Context(const Functor &f) : func{f} {}
-        const Functor &func;
-      };
-
-      struct Visitable : public ColumnVisitable {
-        void handle_value_column(BaseColumn &base_column, std::shared_ptr<ColumnVisitableContext> c) override {
-          const auto context = std::static_pointer_cast<Context>(c);
-          auto &column = static_cast<ValueColumn<Type> &>(base_column);
-
-          context->func(hana::type_c<Type>, column);
-        }
-
-        void handle_dictionary_column(BaseColumn &base_column, std::shared_ptr<ColumnVisitableContext> c) override {
-          const auto context = std::static_pointer_cast<Context>(c);
-          auto &column = static_cast<DictionaryColumn<Type> &>(base_column);
-
-          context->func(hana::type_c<Type>, column);
-        }
-
-        void handle_reference_column(ReferenceColumn &column, std::shared_ptr<ColumnVisitableContext> c) override {
-          const auto context = std::static_pointer_cast<Context>(c);
-
-          context->func(hana::type_c<Type>, column);
-        }
-      };
-
-      auto visitable = Visitable{};
-      auto context = std::make_shared<Context>(func);
-      column.visit(visitable, context);
+      if (auto value_column = dynamic_cast<ValueColumn<Type> *>(&column)) {
+        func(type, *value_column);
+      } else if (auto dict_column = dynamic_cast<DictionaryColumn<Type> *>(&column)) {
+        func(type, *dict_column);
+      } else if (auto ref_column = dynamic_cast<ReferenceColumn *>(&column)) {
+        func(type, *ref_column);
+      } else {
+        Fail("Unrecognized column type encountered.");
+      }
     }
   });
 }
