@@ -25,6 +25,19 @@ namespace opossum {
  * iterators, hence, reduce the size of the compiled binary file.
  *
  *
+ * A note on CRTP (curiously recurring template pattern):
+ * 
+ * The iterables use the CRTP, i.e., the different iterable implementations
+ * derive from one of the base iterables and pass themselves on as 
+ * template arguments. The base class can then cast itself into the sub class
+ * and access its methods. The pattern is used here to implicitly define
+ * the interface of a few templated methods. Templated methods cannot be
+ * virtual in C++, so this could not be done with a normal abstract interface.
+ * The advantage is that by locking at these two base iterables, it is clear
+ * what interface to expect from any iterable and it also makes the otherwise
+ * implicit common interface of iterables more explicit.
+ *
+ *
  * Example Usage
  *
  * auto iterable = ValueColumnIterable<int>{value_column};
