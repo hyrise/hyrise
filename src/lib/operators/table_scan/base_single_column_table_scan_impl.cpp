@@ -5,6 +5,7 @@
 
 #include "storage/chunk.hpp"
 #include "storage/dictionary_column.hpp"
+#include "storage/iterables/chunk_offset_mapping.hpp"
 #include "storage/reference_column.hpp"
 #include "storage/table.hpp"
 #include "storage/value_column.hpp"
@@ -34,9 +35,9 @@ void BaseSingleColumnTableScanImpl::handle_reference_column(ReferenceColumn &lef
   const ChunkID chunk_id = context->_chunk_id;
   auto &matches_out = context->_matches_out;
 
-  // TODO(mjendruk): Find a good estimates for when it’s better simply iterate over the column
+  // TODO(mjendruk): Find a good estimates for when it’s better to simply iterate over the column
 
-  auto chunk_offsets_by_chunk_id = _split_pos_list_by_chunk_id(*left_column.pos_list());
+  auto chunk_offsets_by_chunk_id = split_pos_list_by_chunk_id(*left_column.pos_list(), _skip_null_row_ids);
 
   // Visit each referenced column
   for (auto &pair : chunk_offsets_by_chunk_id) {
@@ -52,21 +53,6 @@ void BaseSingleColumnTableScanImpl::handle_reference_column(ReferenceColumn &lef
     auto new_context = std::make_shared<Context>(chunk_id, matches_out, std::move(mapped_chunk_offsets_ptr));
     referenced_column->visit(*this, new_context);
   }
-}
-
-auto BaseSingleColumnTableScanImpl::_split_pos_list_by_chunk_id(const PosList &pos_list) -> ChunkOffsetsByChunkID {
-  auto chunk_offsets_by_chunk_id = ChunkOffsetsByChunkID{};
-
-  for (auto chunk_offset = ChunkOffset{0u}; chunk_offset < pos_list.size(); ++chunk_offset) {
-    const auto row_id = pos_list[chunk_offset];
-
-    if (_skip_null_row_ids && row_id == NULL_ROW_ID) continue;
-
-    auto &mapped_chunk_offsets = chunk_offsets_by_chunk_id[row_id.chunk_id];
-    mapped_chunk_offsets.push_back({chunk_offset, row_id.chunk_offset});
-  }
-
-  return chunk_offsets_by_chunk_id;
 }
 
 }  // namespace opossum

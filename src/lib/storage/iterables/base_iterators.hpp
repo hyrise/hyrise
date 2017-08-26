@@ -5,28 +5,12 @@
 #include <utility>
 #include <vector>
 
+#include "chunk_offset_mapping.hpp"
 #include "column_value.hpp"
 
 #include "types.hpp"
 
 namespace opossum {
-
-/**
- * Mapping between chunk offset into a reference column and 
- * its dereferenced counter part, i.e., a reference into the
- * referenced value or dictionary column.
- */
-struct ChunkOffsetMapping {
-  const ChunkOffset into_referencing;  // chunk offset into reference column
-  const ChunkOffset into_referenced;  // used to access values in the referenced data column
-};
-
-/**
- * @brief list of chunk offset mappings
- */
-using ChunkOffsetsList = std::vector<ChunkOffsetMapping>;
-
-using ChunkOffsetsIterator = ChunkOffsetsList::const_iterator;
 
 /**
  * @brief base class of all iterators used by iterables

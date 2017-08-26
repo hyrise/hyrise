@@ -235,6 +235,8 @@ set(
     storage/iterables/attribute_vector_iterable.hpp
     storage/iterables/base_iterables.hpp
     storage/iterables/base_iterators.hpp
+    storage/iterables/chunk_offset_mapping.cpp
+    storage/iterables/chunk_offset_mapping.hpp
     storage/iterables/column_value.hpp
     storage/iterables/constant_value_iterable.hpp
     storage/iterables/create_iterable_from_column.hpp

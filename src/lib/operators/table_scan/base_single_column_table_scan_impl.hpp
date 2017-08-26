@@ -49,20 +49,7 @@ class BaseSingleColumnTableScanImpl : public BaseTableScanImpl, public ColumnVis
   };
 
  private:
-  /**
-   * @defgroup Methods used for handling reference columns
-   * @{
-   */
-
-  using ChunkOffsetsByChunkID = std::unordered_map<ChunkID, ChunkOffsetsList>;
-
-  // If _skip_null_row_ids == true, the result won’t include row IDs that are equal to NULL_ROW_ID
-  ChunkOffsetsByChunkID _split_pos_list_by_chunk_id(const PosList &pos_list);
-
-  /**@}*/
-
- private:
-  const bool _skip_null_row_ids;
+  const bool _skip_null_row_ids;  // see chunk_offset_mapping.hpp for explanation
 };
 
 }  // namespace opossum
