@@ -10,13 +10,8 @@
 
 namespace opossum {
 
-enum class DictionaryColumnIterableType { Referenced, Simple };
-
 template <typename T>
 class DictionaryColumnIterable : public BaseIndexableIterable<DictionaryColumnIterable<T>> {
- public:
-  using Type = DictionaryColumnIterableType;
-
  public:
   explicit DictionaryColumnIterable(const DictionaryColumn<T>& column,
                                     const ChunkOffsetsList* mapped_chunk_offsets = nullptr)
@@ -35,14 +30,6 @@ class DictionaryColumnIterable : public BaseIndexableIterable<DictionaryColumnIt
         IndexedIterator{*_column.dictionary(), *_column.attribute_vector(), this->_mapped_chunk_offsets->cbegin()};
     auto end = IndexedIterator{*_column.dictionary(), *_column.attribute_vector(), this->_mapped_chunk_offsets->cend()};
     f(begin, end);
-  }
-
-  Type type() const {
-    if (this->_mapped_chunk_offsets != nullptr) {
-      return Type::Referenced;
-    }
-
-    return Type::Simple;
   }
 
  private:

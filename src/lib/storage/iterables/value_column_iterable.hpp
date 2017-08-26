@@ -11,13 +11,8 @@
 
 namespace opossum {
 
-enum class ValueColumnIterableType { NullableReferenced, Referenced, Nullable, Simple };
-
 template <typename T>
 class ValueColumnIterable : public BaseIndexableIterable<ValueColumnIterable<T>> {
- public:
-  using Type = ValueColumnIterableType;
-
  public:
   explicit ValueColumnIterable(const ValueColumn<T>& column, const ChunkOffsetsList* mapped_chunk_offsets = nullptr)
       : BaseIndexableIterable<ValueColumnIterable<T>>{mapped_chunk_offsets}, _column{column} {}
@@ -50,23 +45,7 @@ class ValueColumnIterable : public BaseIndexableIterable<ValueColumnIterable<T>>
       f(begin, end);
     }
   }
-
-  Type type() const {
-    if (_column.is_nullable() && this->_mapped_chunk_offsets != nullptr) {
-      return Type::NullableReferenced;
-    }
-
-    if (this->_mapped_chunk_offsets != nullptr) {
-      return Type::Referenced;
-    }
-
-    if (_column.is_nullable()) {
-      return Type::Nullable;
-    }
-
-    return Type::Simple;
-  }
-
+  
  private:
   const ValueColumn<T>& _column;
 

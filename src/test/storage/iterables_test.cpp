@@ -53,8 +53,6 @@ TEST_F(IterablesTest, ValueColumnIteratorExecuteForAll) {
 
   auto iterable = ValueColumnIterable<int>{*int_column};
 
-  EXPECT_EQ(iterable.type(), ValueColumnIterableType::Simple);
-
   auto sum = uint32_t{0};
   iterable.get_iterators(SumUp{sum});
 
@@ -71,8 +69,6 @@ TEST_F(IterablesTest, ValueColumnReferencedIteratorExecuteForAll) {
 
   auto iterable = ValueColumnIterable<int>{*int_column, &chunk_offsets};
 
-  EXPECT_EQ(iterable.type(), ValueColumnIterableType::Referenced);
-
   auto sum = uint32_t{0};
   iterable.get_iterators(SumUp{sum});
 
@@ -86,8 +82,6 @@ TEST_F(IterablesTest, ValueColumnNullableIteratorExecuteForAll) {
   auto int_column = std::dynamic_pointer_cast<ValueColumn<int>>(column);
 
   auto iterable = ValueColumnIterable<int>{*int_column};
-
-  EXPECT_EQ(iterable.type(), ValueColumnIterableType::Nullable);
 
   auto sum = uint32_t{0};
   iterable.get_iterators(SumUp{sum});
@@ -105,8 +99,6 @@ TEST_F(IterablesTest, ValueColumnNullableReferencedIteratorExecuteForAll) {
 
   auto iterable = ValueColumnIterable<int>{*int_column, &chunk_offsets};
 
-  EXPECT_EQ(iterable.type(), ValueColumnIterableType::NullableReferenced);
-
   auto sum = uint32_t{0};
   iterable.get_iterators(SumUp{sum});
 
@@ -122,8 +114,6 @@ TEST_F(IterablesTest, DictionaryColumnIteratorExecuteForAll) {
   auto dict_column = std::dynamic_pointer_cast<DictionaryColumn<int>>(column);
 
   auto iterable = DictionaryColumnIterable<int>{*dict_column};
-
-  EXPECT_EQ(iterable.type(), DictionaryColumnIterableType::Simple);
 
   auto sum = uint32_t{0};
   iterable.get_iterators(SumUp{sum});
@@ -142,8 +132,6 @@ TEST_F(IterablesTest, DictionaryColumnDictReferencedIteratorExecuteForAll) {
   auto chunk_offsets = std::vector<std::pair<ChunkOffset, ChunkOffset>>{{0u, 0u}, {1u, 2u}, {2u, 3u}};
 
   auto iterable = DictionaryColumnIterable<int>{*dict_column, &chunk_offsets};
-
-  EXPECT_EQ(iterable.type(), DictionaryColumnIterableType::Referenced);
 
   auto sum = uint32_t{0};
   iterable.get_iterators(SumUp{sum});
