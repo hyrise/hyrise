@@ -13,9 +13,14 @@ class Table;
 /**
  * @brief Compares two columns to each other
  *
- * Does not support:
- * - comparison of string columns to numerical columns
- * - reference columns to data columns (value, dictionary)
+ * Supports:
+ * - comparing columns of different numerical data types
+ * - comparing dictionary and value columns
+ * - comparing references columns
+ *
+ * Note: Since we have ruled out the possibility that a table might have
+ *       reference columns and data columns, comparing a reference to a
+ *       data column is not supported.
  */
 class ColumnComparisonTableScanImpl : public BaseTableScanImpl {
  public:
