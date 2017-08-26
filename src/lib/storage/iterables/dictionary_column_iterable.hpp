@@ -87,9 +87,9 @@ class DictionaryColumnIterable : public BaseIndexableIterable<DictionaryColumnIt
       const auto value_id = _attribute_vector.get(this->index_into_referenced());
       const auto is_null = (value_id == NULL_VALUE_ID);
 
-      if (is_null) return NullableColumnValue<T>{T{}, is_null, this->index_of_referencing()};
+      if (is_null) return NullableColumnValue<T>{T{}, true, this->index_of_referencing()};
 
-      return NullableColumnValue<T>{_dictionary[value_id], is_null, this->index_of_referencing()};
+      return NullableColumnValue<T>{_dictionary[value_id], false, this->index_of_referencing()};
     }
 
    private:
