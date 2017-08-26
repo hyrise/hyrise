@@ -54,11 +54,11 @@ class ColumnStatisticsTest : public BaseTest {
     auto table_wrapper = std::make_shared<TableWrapper>(table);
     table_wrapper->execute();
     auto row_count = table->row_count();
-    for (uint32_t i = 0; i < column_statistics.size(); ++i) {
-      for (uint32_t j = 0; j < column_statistics.size() && i != j; ++j) {
-        auto result_container =
-            column_statistics[i]->estimate_selectivity_for_two_column_predicate(scan_type, column_statistics[j]);
-        auto table_scan = std::make_shared<TableScan>(table_wrapper, ColumnID{i}, scan_type, ColumnID{j});
+    for (ColumnID::base_type column_1 = 0; column_1 < column_statistics.size(); ++column_1) {
+      for (ColumnID::base_type column_2 = 0; column_2 < column_statistics.size() && column_1 != column_2; ++column_2) {
+        auto result_container = column_statistics[column_1]->estimate_selectivity_for_two_column_predicate(
+            scan_type, column_statistics[column_2]);
+        auto table_scan = std::make_shared<TableScan>(table_wrapper, ColumnID{column_1}, scan_type, ColumnID{column_2});
         table_scan->execute();
         auto result_row_count = table_scan->get_output()->row_count();
         EXPECT_FLOAT_EQ(result_container.selectivity,
