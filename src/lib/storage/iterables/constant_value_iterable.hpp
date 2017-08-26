@@ -3,6 +3,7 @@
 #include "base_iterables.hpp"
 
 #include "all_type_variant.hpp"
+#include "type_cast.hpp"
 
 namespace opossum {
 

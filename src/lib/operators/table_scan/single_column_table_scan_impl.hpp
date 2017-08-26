@@ -7,8 +7,6 @@
 
 #include "base_single_column_table_scan_impl.hpp"
 
-#include "storage/iterables/value_column_iterable.hpp"
-
 #include "all_type_variant.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
@@ -33,20 +31,6 @@ class SingleColumnTableScanImpl : public BaseSingleColumnTableScanImpl {
   void handle_value_column(BaseColumn &base_column, std::shared_ptr<ColumnVisitableContext> base_context) override;
 
   void handle_dictionary_column(BaseColumn &base_column, std::shared_ptr<ColumnVisitableContext> base_context) override;
-
- private:
-  /**
-   * @defgroup Methods used for handling value columns
-   * @{
-   */
-
-  template <typename Type>
-  static auto _create_iterable_from_column(
-      ValueColumn<Type> &column, const std::vector<std::pair<ChunkOffset, ChunkOffset>> *mapped_chunk_offsets) {
-    return ValueColumnIterable<Type>{column, mapped_chunk_offsets};
-  }
-
-  /**@}*/
 
  private:
   /**

@@ -7,6 +7,7 @@
 #include "table_scan_main_loop.hpp"
 
 #include "storage/chunk.hpp"
+#include "storage/iterables/create_iterable_from_column.hpp"
 #include "storage/table.hpp"
 
 #include "utils/assert.hpp"
@@ -64,8 +65,8 @@ PosList ColumnComparisonTableScanImpl::scan_chunk(const ChunkID &chunk_id) {
 
       static_if<(neither_is_reference_column || both_are_reference_columns) &&
                 (neither_is_string_column || both_are_string_columns)>([&](auto f) {
-        auto left_column_iterable = _create_iterable_from_column<LeftType>(typed_left_column);
-        auto right_column_iterable = _create_iterable_from_column<RightType>(typed_right_column);
+        auto left_column_iterable = create_iterable_from_column<LeftType>(typed_left_column);
+        auto right_column_iterable = create_iterable_from_column<RightType>(typed_right_column);
 
         left_column_iterable.get_iterators_no_indices([&](auto left_it, auto left_end) {
           right_column_iterable.get_iterators_no_indices([&](auto right_it, auto right_end) {

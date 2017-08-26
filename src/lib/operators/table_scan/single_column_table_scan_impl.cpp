@@ -8,6 +8,7 @@
 
 #include "storage/iterables/attribute_vector_iterable.hpp"
 #include "storage/iterables/constant_value_iterable.hpp"
+#include "storage/iterables/create_iterable_from_column.hpp"
 #include "storage/untyped_dictionary_column.hpp"
 
 #include "utils/binary_operators.hpp"
@@ -32,7 +33,7 @@ void SingleColumnTableScanImpl::handle_value_column(BaseColumn &base_column,
 
     auto &left_column = static_cast<ValueColumn<Type> &>(base_column);
 
-    auto left_column_iterable = _create_iterable_from_column(left_column, context->_mapped_chunk_offsets.get());
+    auto left_column_iterable = create_iterable_from_column(left_column, context->_mapped_chunk_offsets.get());
     auto right_value_iterable = ConstantValueIterable<Type>{_right_value};
 
     left_column_iterable.get_iterators([&](auto left_it, auto left_end) {

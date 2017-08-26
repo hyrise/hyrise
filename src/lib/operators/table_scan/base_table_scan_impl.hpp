@@ -4,10 +4,6 @@
 
 #include "types.hpp"
 
-#include "storage/iterables/dictionary_column_iterable.hpp"
-#include "storage/iterables/reference_column_iterable.hpp"
-#include "storage/iterables/value_column_iterable.hpp"
-
 namespace opossum {
 
 class Table;
@@ -20,22 +16,6 @@ class BaseTableScanImpl {
   virtual ~BaseTableScanImpl() = default;
 
   virtual PosList scan_chunk(const ChunkID &chunk_id) = 0;
-
- protected:
-  template <typename Type>
-  static auto _create_iterable_from_column(ValueColumn<Type> &column) {
-    return ValueColumnIterable<Type>{column};
-  }
-
-  template <typename Type>
-  static auto _create_iterable_from_column(DictionaryColumn<Type> &column) {
-    return DictionaryColumnIterable<Type>{column};
-  }
-
-  template <typename Type>
-  static auto _create_iterable_from_column(ReferenceColumn &column) {
-    return ReferenceColumnIterable<Type>{column};
-  }
 
  protected:
   const std::shared_ptr<const Table> _in_table;

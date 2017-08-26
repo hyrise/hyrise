@@ -16,9 +16,11 @@
 
 #include "storage/base_column.hpp"
 #include "storage/chunk.hpp"
+#include "storage/reference_column.hpp"
 #include "storage/table.hpp"
 
 #include "all_parameter_variant.hpp"
+#include "type_cast.hpp"
 #include "utils/assert.hpp"
 
 namespace opossum {
