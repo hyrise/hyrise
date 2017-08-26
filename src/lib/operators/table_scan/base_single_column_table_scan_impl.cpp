@@ -2,6 +2,7 @@
 
 #include <memory>
 #include <unordered_map>
+#include <utility>
 
 #include "storage/chunk.hpp"
 #include "storage/dictionary_column.hpp"

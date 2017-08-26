@@ -1,8 +1,10 @@
 #include "table_scan.hpp"
 
+#include <map>
 #include <memory>
 #include <mutex>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "table_scan/column_comparison_table_scan_impl.hpp"

@@ -37,11 +37,11 @@
     bool operator==(const D& rhs) const { return t == rhs.t; }                                                    \
     bool operator<(const D& rhs) const { return t < rhs.t; }                                                      \
   };                                                                                                              \
-  }                                                                                                               \
+  }  /* NOLINT */                                                                                                 \
                                                                                                                   \
   namespace std {                                                                                                 \
   template <>                                                                                                     \
   struct hash<::opossum::D> : public unary_function<::opossum::D, size_t> {                                       \
     size_t operator()(const ::opossum::D& x) const { return hash<T>{}(x); }                                       \
   };                                                                                                              \
-  }
+  }  // NOLINT
