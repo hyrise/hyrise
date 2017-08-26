@@ -68,7 +68,7 @@ class NullValueVectorIterable : public BaseIndexableIterable<NullValueVectorIter
         : BaseIndexedIterator<IndexedIterator, ColumnNullValue>{chunk_offsets_it}, _null_values{null_values} {}
 
    private:
-    friend class boost::iterator_core_access;
+    friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface
 
     ColumnNullValue dereference() const {
       const auto& chunk_offsets = this->chunk_offsets();

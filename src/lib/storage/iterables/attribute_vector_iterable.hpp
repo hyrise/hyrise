@@ -63,7 +63,7 @@ class AttributeVectorIterable : public BaseIndexableIterable<AttributeVectorIter
           _attribute_vector{attribute_vector} {}
 
    private:
-    friend class boost::iterator_core_access;
+    friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface
 
     NullableColumnValue<ValueID> dereference() const {
       const auto& chunk_offsets = this->chunk_offsets();

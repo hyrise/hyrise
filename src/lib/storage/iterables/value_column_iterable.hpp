@@ -113,7 +113,7 @@ class ValueColumnIterable : public BaseIndexableIterable<ValueColumnIterable<T>>
         : BaseIndexedIterator<IndexedIterator, ColumnValue<T>>{chunk_offsets_it}, _values{values} {}
 
    private:
-    friend class boost::iterator_core_access;
+    friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface
 
     ColumnValue<T> dereference() const {
       const auto& chunk_offsets = this->chunk_offsets();
@@ -141,7 +141,7 @@ class ValueColumnIterable : public BaseIndexableIterable<ValueColumnIterable<T>>
           _null_values{null_values} {}
 
    private:
-    friend class boost::iterator_core_access;
+    friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface
 
     NullableColumnValue<T> dereference() const {
       const auto& chunk_offsets = this->chunk_offsets();
