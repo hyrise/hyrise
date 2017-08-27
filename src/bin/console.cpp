@@ -501,8 +501,8 @@ int main(int argc, char** argv) {
   }
 
   // Set jmp_env to current program state in preparation for siglongjmp(2)
-  while (sigsetjmp(jmp_env, 1) != 0)
-    ;
+  while (sigsetjmp(jmp_env, 1) != 0) {
+  }
 
   // Main REPL loop
   while (retCode != Return::Quit) {
