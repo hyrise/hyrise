@@ -45,7 +45,7 @@ class ReferenceColumnIterable : public BaseIterable<ReferenceColumnIterable<T>> 
         : _table{table}, _column_id{column_id}, _begin_pos_list_it{begin_pos_list_it}, _pos_list_it{pos_list_it} {}
 
    private:
-    friend class boost::iterator_core_access;
+    friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface
 
     void increment() { ++_pos_list_it; }
 

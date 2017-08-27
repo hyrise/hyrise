@@ -48,7 +48,7 @@ class NullValueVectorIterable : public BaseIndexableIterable<NullValueVectorIter
         : _begin_null_value_it{begin_null_value_it}, _null_value_it{null_value_it} {}
 
    private:
-    friend class boost::iterator_core_access;
+    friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface
 
     void increment() { ++_null_value_it; }
     bool equal(const Iterator& other) const { return _null_value_it == other._null_value_it; }

@@ -10,6 +10,9 @@ namespace opossum {
 
 class Table;
 
+/**
+ * @brief the base class of all table scan impls
+ */
 class BaseTableScanImpl {
  public:
   BaseTableScanImpl(std::shared_ptr<const Table> in_table, const ColumnID left_column_id, const ScanType scan_type)

@@ -28,7 +28,7 @@ class ConstantValueIterable : public BaseIterable<ConstantValueIterable<T>> {
     explicit Iterator(const T& value) : _value{value} {}
 
    private:
-    friend class boost::iterator_core_access;
+    friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface
 
     void increment() {}
     bool equal(const Iterator& other) const { return _value == other._value; }

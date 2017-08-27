@@ -39,7 +39,7 @@ class AttributeVectorIterable : public BaseIndexableIterable<AttributeVectorIter
         : _attribute_vector{attribute_vector}, _chunk_offset{chunk_offset} {}
 
    private:
-    friend class boost::iterator_core_access;
+    friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface
 
     void increment() { ++_chunk_offset; }
     bool equal(const Iterator& other) const { return _chunk_offset == other._chunk_offset; }
