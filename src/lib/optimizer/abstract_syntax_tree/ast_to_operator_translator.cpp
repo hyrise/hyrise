@@ -135,8 +135,6 @@ std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::_translate_aggregate_
     const auto &function_arg_expr = (expr->expression_list())[0];
 
     if (function_arg_expr->is_operand()) {
-      // TODO(tim): check if this can be done prettier
-      // TODO(mp): @Tim, is this todo still valid?
       expr_aliases.emplace_back(function_arg_expr->name());
     } else if (function_arg_expr->is_arithmetic_operator()) {
       needs_projection = true;
@@ -166,7 +164,7 @@ std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::_translate_aggregate_
    */
   std::vector<AggregateDefinition> aggregate_definitions;
   aggregate_definitions.reserve(aggregates.size());
-  for (size_t aggregate_idx = 0; aggregate_idx < aggregates.size(); aggregate_idx++) {
+  for (size_t aggregate_idx = 0; aggregate_idx < aggregates.size(); ++aggregate_idx) {
     const auto &aggregate = aggregates[aggregate_idx];
 
     DebugAssert(aggregate.expr->type() == ExpressionType::FunctionIdentifier,

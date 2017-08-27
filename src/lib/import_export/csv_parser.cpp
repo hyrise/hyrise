@@ -1,6 +1,7 @@
 #include "csv_parser.hpp"
 
 #include <fstream>
+#include <functional>
 #include <list>
 #include <memory>
 #include <string>

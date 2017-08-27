@@ -206,6 +206,8 @@ int Console::_eval_sql(const std::string& sql) {
 
   // Execute query plan
   try {
+    // Compile the parse result
+    plan = SQLPlanner::plan(parse_result);
     for (const auto& task : plan.tasks()) {
       task->get_operator()->execute();
     }
