@@ -55,9 +55,9 @@ class DictionaryColumnIterable : public BaseIndexableIterable<DictionaryColumnIt
       const auto value_id = _attribute_vector.get(_chunk_offset);
       const auto is_null = (value_id == NULL_VALUE_ID);
 
-      if (is_null) return NullableColumnValue<T>{T{}, is_null, _chunk_offset};
+      if (is_null) return NullableColumnValue<T>{T{}, true, _chunk_offset};
 
-      return NullableColumnValue<T>{_dictionary[value_id], is_null, _chunk_offset};
+      return NullableColumnValue<T>{_dictionary[value_id], false, _chunk_offset};
     }
 
    private:
