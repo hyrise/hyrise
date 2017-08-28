@@ -16,9 +16,13 @@ namespace opossum {
 
 AggregateNode::AggregateNode(const std::vector<std::shared_ptr<ExpressionNode>>& aggregate_expressions,
                              const std::vector<ColumnID>& groupby_column_ids)
-    : AbstractASTNode(ASTNodeType::Aggregate), _aggregate_expressions(aggregate_expressions), _groupby_column_ids(groupby_column_ids) {}
+    : AbstractASTNode(ASTNodeType::Aggregate),
+      _aggregate_expressions(aggregate_expressions),
+      _groupby_column_ids(groupby_column_ids) {}
 
-const std::vector<std::shared_ptr<ExpressionNode>>& AggregateNode::aggregate_expressions() const { return _aggregate_expressions; }
+const std::vector<std::shared_ptr<ExpressionNode>>& AggregateNode::aggregate_expressions() const {
+  return _aggregate_expressions;
+}
 
 const std::vector<ColumnID>& AggregateNode::groupby_column_ids() const { return _groupby_column_ids; }
 
@@ -132,12 +136,13 @@ optional<ColumnID> AggregateNode::find_column_id_for_column_identifier_name(
   if (column_id_child) {
     const auto iter = std::find(_groupby_column_ids.begin(), _groupby_column_ids.end(), *column_id_child);
     if (iter != _groupby_column_ids.end()) {
-      column_id_groupby = static_cast<ColumnID::base_type>(std::distance(_groupby_column_ids.begin(), iter));
+      column_id_groupby = ColumnID{static_cast<ColumnID::base_type>(std::distance(_groupby_column_ids.begin(), iter))};
     }
   }
 
   // Max one can be set, both not being set is fine, as we are in a find_* method
-  Assert(!column_id_aggregate || !column_id_groupby, "Column name " + column_identifier_name.column_name + " is ambiguous.");
+  Assert(!column_id_aggregate || !column_id_groupby,
+         "Column name " + column_identifier_name.column_name + " is ambiguous.");
 
   if (column_id_aggregate) {
     return column_id_aggregate;
