@@ -152,7 +152,12 @@ void TableScan::init_scan() {
   DebugAssert(_in_table->chunk_count() > 0u, "Input table must contain at least 1 chunk.");
   const auto &first_chunk = _in_table->get_chunk(ChunkID{0u});
 
-  _is_reference_table = first_chunk.get_column(left_column_id)->is_reference_column();
+  _is_reference_table = [&]() {
+    // We assume if one column is a reference column, all are.
+    const auto column = first_chunk.get_column(left_column_id);
+    const auto ref_column = std::dynamic_pointer_cast<ReferenceColumn>(column);
+    return ref_column != nullptr;
+  }();
 
   if (_scan_type == ScanType::OpLike) {
     const auto left_column_type = _in_table->column_type(left_column_id);

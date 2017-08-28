@@ -59,6 +59,4 @@ void ReferenceColumn::copy_value_to_value_column(BaseColumn &, ChunkOffset) cons
   Fail("It is not allowed to copy directly from a reference column");
 }
 
-bool ReferenceColumn::is_reference_column() const { return true; }
-
 }  // namespace opossum

@@ -11,8 +11,6 @@ namespace opossum {
  */
 class BaseValueColumn : public BaseColumn {
  public:
-  bool is_reference_column() const override { return false; }
-
   // returns if columns supports null values
   virtual bool is_nullable() const = 0;
 

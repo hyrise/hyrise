@@ -122,8 +122,6 @@ class ReferenceColumn : public BaseColumn {
   // we cannot always use the materialize method below because sort results might come from different BaseColumns
   void copy_value_to_value_column(BaseColumn &, ChunkOffset) const override;
 
-  bool is_reference_column() const override;
-
  protected:
   // After an operator finishes, its shared_ptr reference to the table gets deleted. Thus, the ReferenceColumns need
   // their own shared_ptrs
