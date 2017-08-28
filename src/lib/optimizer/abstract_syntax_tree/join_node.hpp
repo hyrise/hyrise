@@ -20,7 +20,7 @@ namespace opossum {
  */
 class JoinNode : public AbstractASTNode {
  public:
-  JoinNode(const JoinMode join_mode);
+  explicit JoinNode(const JoinMode join_mode);
 
   JoinNode(const JoinMode join_mode, const std::pair<ColumnID, ColumnID> &join_column_ids, const ScanType scan_type);
 
