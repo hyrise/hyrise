@@ -51,6 +51,7 @@ class ReferenceColumnIterable : public BaseIterable<ReferenceColumnIterable<T>> 
 
     bool equal(const Iterator &other) const { return _pos_list_it == other._pos_list_it; }
 
+    // TODO(anyone): benchmark if using two maps instead doing the dynamic cast every time really is faster.
     NullableColumnValue<T> dereference() const {
       if (*_pos_list_it == NULL_ROW_ID) return NullableColumnValue<T>{T{}, true, 0u};
 
