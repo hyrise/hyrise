@@ -182,7 +182,7 @@ TaskVector NewOrderRefImpl::get_get_customer_and_warehouse_tax_rate_tasks(const 
                 {opossum::ExpressionNode::create_column_identifier(opossum::ColumnID{15}),
                  opossum::ExpressionNode::create_column_identifier(opossum::ColumnID{5}),
                  opossum::ExpressionNode::create_column_identifier(opossum::ColumnID{13}),
-                 opossum::ExpressionNode::create_column_identifier(opossum::ColumnID{29})}));
+                 opossum::ExpressionNode::create_column_identifier(opossum::ColumnID{28})}));
 
   // Tasks
   const auto c_gt_t = std::make_shared<opossum::OperatorTask>(c_gt);
