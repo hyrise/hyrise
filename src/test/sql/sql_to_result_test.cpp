@@ -154,6 +154,8 @@ const SQLTestParam test_queries[] = {
      "src/test/tables/aggregateoperator/groupby_int_2gb_2agg/max_avg.tbl"},
     {"SELECT a, b, MAX(c), AVG(d) FROM groupby_int_2gb_2agg GROUP BY a, b HAVING MAX(c) > 10 AND MAX(c) <= 30;",
      "src/test/tables/aggregateoperator/groupby_int_2gb_2agg/max_avg_having.tbl"},
+    {"SELECT a, b, MAX(c), AVG(d) FROM groupby_int_2gb_2agg GROUP BY a, b HAVING c > 25;",
+     "src/test/tables/aggregateoperator/groupby_int_2gb_2agg/max_avg_having.tbl"},
 
     {"SELECT * FROM customer;", "src/test/tables/tpch/customer.tbl"},
     {"SELECT c_custkey, c_name FROM customer;", "src/test/tables/tpch/customer_projection.tbl"},

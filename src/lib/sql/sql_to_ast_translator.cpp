@@ -256,6 +256,7 @@ AllParameterVariant SQLToASTTranslator::translate_argument(
       return ValuePlaceholder(expr.ival);
     case hsql::kExprColumnRef:
       Assert(!!input_node, "Cannot generate ColumnID without input_node");
+      // TODO(mp) BLOCKING - don't go via expr here, but via column identifier since that's what expr represents
       return SQLExpressionTranslator::get_column_id_for_expression(expr, *input_node);
     default:
       Fail("Could not translate literal: expression type not supported.");
@@ -303,10 +304,10 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_predicate(
    * TODO(anybody): extend support for those HAVING clauses.
    * One option is to add them to the Aggregate and then use a Projection to remove them from the result.
    */
-  hsql::Expr* column_operand_expr = nullptr;
+  hsql::Expr* column_operand_hsql_expr = nullptr;
   hsql::Expr* argument_expr = nullptr;
   if (expr.expr->isType(hsql::kExprColumnRef) || expr.expr->isType(hsql::kExprFunctionRef)) {
-    column_operand_expr = expr.expr;
+    column_operand_hsql_expr = expr.expr;
     argument_expr = expr.expr2;
   } else {
     /**
@@ -325,10 +326,10 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_predicate(
                 "Currently the term left of the BETWEEN expression needs to be a column reference.");
 
     argument_expr = expr.expr;
-    column_operand_expr = expr.expr2;
+    column_operand_hsql_expr = expr.expr2;
 
     DebugAssert(
-        column_operand_expr->isType(hsql::kExprColumnRef) || column_operand_expr->isType(hsql::kExprFunctionRef),
+        column_operand_hsql_expr->isType(hsql::kExprColumnRef) || column_operand_hsql_expr->isType(hsql::kExprFunctionRef),
         "Unsupported filter: we must have a function or column reference on at least one side of the expression.");
 
     // We might have to change the ScanType when we reverse the sides of the expression.
@@ -336,7 +337,7 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_predicate(
   }
 
   const auto column_operand_column_id =
-      SQLExpressionTranslator::get_column_id_for_expression(*column_operand_expr, input_node);
+      SQLExpressionTranslator::get_column_id_for_expression(*column_operand_hsql_expr, input_node);
 
   AllParameterVariant value;
   optional<AllTypeVariant> value2;
@@ -380,22 +381,22 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_having(
   // We accept functions here because we assume they have been translated by Aggregate.
   // They will be treated as a regular column of the same name.
   // TODO(mp): this has to change once we have extended HAVING support.
-  hsql::Expr* column_operand_expr = nullptr;
-  hsql::Expr* value_operand_expr = nullptr;
+  hsql::Expr* column_operand_hsql_expr = nullptr;
+  hsql::Expr* value_operand_hsql_expr = nullptr;
   if (expr.expr->isType(hsql::kExprColumnRef) || expr.expr->isType(hsql::kExprFunctionRef)) {
-    column_operand_expr = expr.expr;
-    value_operand_expr = expr.expr2;
+    column_operand_hsql_expr = expr.expr;
+    value_operand_hsql_expr = expr.expr2;
   } else {
-    value_operand_expr = expr.expr;
-    column_operand_expr = expr.expr2;
+    value_operand_hsql_expr = expr.expr;
+    column_operand_hsql_expr = expr.expr2;
     DebugAssert(
-        column_operand_expr->isType(hsql::kExprColumnRef) || column_operand_expr->isType(hsql::kExprFunctionRef),
+        column_operand_hsql_expr->isType(hsql::kExprColumnRef) || column_operand_hsql_expr->isType(hsql::kExprFunctionRef),
         "Unsupported filter: we must have a function or column reference on at least one side of the expression.");
   }
 
   // TODO(mp) rename
   const auto column_operand_expression =
-      SQLExpressionTranslator::translate_expression(*column_operand_expr, aggregate_node->left_child());
+      SQLExpressionTranslator::translate_expression(*column_operand_hsql_expr, aggregate_node->left_child());
   const auto column_operand_column_id = aggregate_node->get_column_id_for_expression(column_operand_expression);
 
   AllParameterVariant argument;
@@ -413,7 +414,7 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_having(
     // This would be required to prepare BETWEEN, or to do a BETWEEN scan for three columns (a BETWEEN b and c).
     argument2 = boost::get<AllTypeVariant>(translate_argument(*right_expr));
   } else {
-    argument = translate_argument(*value_operand_expr);
+    argument = translate_argument(*value_operand_hsql_expr);
   }
 
   auto predicate_node = std::make_shared<PredicateNode>(column_operand_column_id, scan_type, argument, argument2);
