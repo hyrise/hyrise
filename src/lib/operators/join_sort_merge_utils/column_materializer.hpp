@@ -31,9 +31,9 @@ using MaterializedTable = std::vector<std::shared_ptr<MaterializedChunk<T>>>;
 * the construction of pos lists for the algorithms that are using this class.
 **/
 template <typename T>
-class TableMaterializer : public ColumnVisitable {
+class ColumnMaterializer : public ColumnVisitable {
  public:
-  explicit TableMaterializer(bool sort) : _sort{sort} {};
+  explicit ColumnMaterializer(bool sort) : _sort{sort} {};
 
  protected:
   bool _sort;

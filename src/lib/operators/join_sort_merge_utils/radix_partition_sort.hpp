@@ -8,7 +8,7 @@
 #include <vector>
 
 #include "resolve_type.hpp"
-#include "table_materializer.hpp"
+#include "column_materializer.hpp"
 
 namespace opossum {
 
@@ -323,9 +323,9 @@ class RadixPartitionSort {
   **/
   std::pair<MatTablePtr, MatTablePtr> execute() {
     // Sort the chunks of the input tables in the non-equi cases
-    TableMaterializer<T> table_materializer(!_equi_case);
-    auto chunks_left = table_materializer.materialize(_input_table_left, _left_column_name);
-    auto chunks_right = table_materializer.materialize(_input_table_right, _right_column_name);
+    ColumnMaterializer<T> column_materializer(!_equi_case);
+    auto chunks_left = column_materializer.materialize(_input_table_left, _left_column_name);
+    auto chunks_right = column_materializer.materialize(_input_table_right, _right_column_name);
 
     if (_partition_count == 1) {
       _output_left = _concatenate_chunks(chunks_left);
