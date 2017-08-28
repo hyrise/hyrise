@@ -21,9 +21,7 @@ class AbstractSyntaxTreeTest : public BaseTest {
     StorageManager::get().add_table("b", load_table("src/test/tables/int_float2.tbl", 0));
   }
 
-  void TearDown() override {
-    StorageManager::get().reset();
-  }
+  void TearDown() override { StorageManager::get().reset(); }
 };
 
 TEST_F(AbstractSyntaxTreeTest, ParentTest) {
