@@ -133,6 +133,35 @@ const SQLTestParam test_queries[] = {
         ON t1.a = t3.a)",
      "src/test/tables/joinoperators/int_inner_join_3_tables.tbl"},
 
+    // Make sure that name-to-id-resolving works fine.
+    {R"(SELECT t1.a, t1.b, t2.b, t3.b
+        FROM int_float AS t1
+        INNER JOIN int_float2 AS t2
+        ON t1.a = t2.a
+        INNER JOIN int_string2 AS t3
+        ON t1.a = t3.a)",
+     "src/test/tables/joinoperators/int_inner_join_3_tables_projection.tbl"},
+
+    // TODO(mp): t1.* must be resolved only to columns from t1, not all from input.
+    {R"(SELECT t1.*, t2.b, t3.b
+        FROM int_float AS t1
+        INNER JOIN int_float2 AS t2
+        ON t1.a = t2.a
+        INNER JOIN int_string2 AS t3
+        ON t1.a = t3.a)",
+     "src/test/tables/joinoperators/int_inner_join_3_tables_projection.tbl"},
+
+    // TODO(anybody): uncomment test once filtering after joins works.
+    //    {R"(SELECT *
+    //        FROM int_float AS t1
+    //        INNER JOIN int_float2 AS t2
+    //        ON t1.a = t2.a
+    //        INNER JOIN int_string2 AS t3
+    //        ON t1.a = t3.a
+    //        WHERE t2.b > 457.0
+    //        AND t3.b = 'C')",
+    //     "src/test/tables/joinoperators/int_inner_join_3_tables_filter.tbl"},
+
     // GROUP BY
     {"SELECT a, SUM(b) FROM groupby_int_1gb_1agg GROUP BY a;",
      "src/test/tables/aggregateoperator/groupby_int_1gb_1agg/sum.tbl"},

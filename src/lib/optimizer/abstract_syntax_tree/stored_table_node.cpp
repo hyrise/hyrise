@@ -55,6 +55,21 @@ bool StoredTableNode::manages_table(const std::string& table_name) const {
   return _alias == table_name || _table_name == table_name;
 }
 
+std::vector<ColumnID> StoredTableNode::get_column_ids_for_table(const std::string& table_name) const {
+  if (!manages_table(table_name)) {
+    return {};
+  }
+
+  std::vector<ColumnID> column_ids;
+  column_ids.reserve(output_column_ids().size());
+
+  for (auto column_idx = 0u; column_idx < column_ids.capacity(); ++column_idx) {
+    column_ids.emplace_back(static_cast<ColumnID::base_type>(column_idx));
+  }
+
+  return column_ids;
+}
+
 void StoredTableNode::_on_child_changed() { Fail("StoredTableNode cannot have children."); }
 
 }  // namespace opossum

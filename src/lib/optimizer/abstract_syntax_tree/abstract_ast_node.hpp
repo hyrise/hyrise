@@ -84,6 +84,15 @@ class AbstractASTNode : public std::enable_shared_from_this<AbstractASTNode> {
    */
   virtual bool manages_table(const std::string &table_name) const;
 
+  /**
+   * Returns all ColumnIDs of this node that belong to a table.
+   * @param table_name can be an alias.
+   *
+   * @param table_name
+   * @return
+   */
+  virtual std::vector<ColumnID> get_column_ids_for_table(const std::string &table_name) const;
+
   void print(const uint32_t level = 0, std::ostream &out = std::cout) const;
   virtual std::string description() const = 0;
 

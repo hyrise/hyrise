@@ -62,9 +62,11 @@ std::shared_ptr<ExpressionNode> SQLExpressionTranslator::translate_expression(
     case hsql::kExprParameter:
       node = ExpressionNode::create_parameter(int_value);
       break;
-    case hsql::kExprStar:
-      node = ExpressionNode::create_expression(ExpressionType::Star);
+    case hsql::kExprStar: {
+      const auto table_name = expr.table != nullptr ? std::string(expr.table) : "";
+      node = ExpressionNode::create_select_star(table_name);
       break;
+    }
     case hsql::kExprSelect:
       /**
        * Current problem with Subselect:
