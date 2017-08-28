@@ -53,8 +53,6 @@ void LikeTableScanImpl::handle_dictionary_column(BaseColumn &base_column,
 
   const auto &left_column = static_cast<const DictionaryColumn<std::string> &>(base_column);
 
-  // TODO(mjendruk): Find a good heuristic for when simply scanning column is faster
-
   const auto dictionary_matches = _find_matches_in_dictionary(*left_column.dictionary());
 
   const auto match_count =

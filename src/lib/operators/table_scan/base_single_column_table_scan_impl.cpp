@@ -36,8 +36,6 @@ void BaseSingleColumnTableScanImpl::handle_reference_column(ReferenceColumn &lef
   const ChunkID chunk_id = context->_chunk_id;
   auto &matches_out = context->_matches_out;
 
-  // TODO(mjendruk): Find a good estimates for when it’s better to simply iterate over the column
-
   auto chunk_offsets_by_chunk_id = split_pos_list_by_chunk_id(*left_column.pos_list(), _skip_null_row_ids);
 
   // Visit each referenced column

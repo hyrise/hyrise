@@ -51,9 +51,6 @@ void SingleColumnTableScanImpl::handle_dictionary_column(BaseColumn &base_column
   const auto chunk_id = context->_chunk_id;
   auto &left_column = static_cast<const BaseDictionaryColumn &>(base_column);
 
-  // TODO(mjendruk): Find a good heuristic for when simply scanning column is faster (dictionary size -> attribute
-  // vector size)
-
   /**
    * ValueID value_id; // left value id
    * Variant value; // right value
