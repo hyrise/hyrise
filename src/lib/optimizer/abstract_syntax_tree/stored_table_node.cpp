@@ -34,14 +34,14 @@ const std::shared_ptr<TableStatistics> StoredTableNode::_gather_statistics() con
 
 const std::string& StoredTableNode::table_name() const { return _table_name; }
 
-optional<ColumnID> StoredTableNode::find_column_id_for_column_identifier(
-    const ColumnIdentifier& column_identifier) const {
-  if (column_identifier.table_name && !manages_table(*column_identifier.table_name)) {
+optional<ColumnID> StoredTableNode::find_column_id_for_column_identifier_name(
+    const ColumnIdentifierName& column_identifier_name) const {
+  if (column_identifier_name.table_name && !manages_table(*column_identifier_name.table_name)) {
     return nullopt;
   }
 
   auto& columns = output_column_names();
-  auto iter = std::find(columns.begin(), columns.end(), column_identifier.column_name);
+  auto iter = std::find(columns.begin(), columns.end(), column_identifier_name.column_name);
 
   if (iter == columns.end()) {
     return nullopt;
