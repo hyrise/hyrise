@@ -1,4 +1,5 @@
 #include <memory>
+#include <vector>
 
 #include "gtest/gtest.h"
 
@@ -20,27 +21,18 @@ class ProjectionNodeTest : public BaseTest {
 
     // SELECT c, a, b AS alias_for_b, b+c AS some_addition, a+c [...]
     _projection_node = std::make_shared<ProjectionNode>(std::vector<std::shared_ptr<ExpressionNode>>{
-      ExpressionNode::create_column_identifier(ColumnID{2}),
-      ExpressionNode::create_column_identifier(ColumnID{0}),
-      ExpressionNode::create_column_identifier(ColumnID{1}, "alias_for_b"),
-      ExpressionNode::create_binary_operator(
-        ExpressionType::Addition,
-        ExpressionNode::create_column_identifier(ColumnID{1}),
-        ExpressionNode::create_column_identifier(ColumnID{2}),
-        "some_addition"
-      ),
-      ExpressionNode::create_binary_operator(
-        ExpressionType::Addition,
-        ExpressionNode::create_column_identifier(ColumnID{0}),
-        ExpressionNode::create_column_identifier(ColumnID{2})
-      )
-    });
+        ExpressionNode::create_column_identifier(ColumnID{2}), ExpressionNode::create_column_identifier(ColumnID{0}),
+        ExpressionNode::create_column_identifier(ColumnID{1}, "alias_for_b"),
+        ExpressionNode::create_binary_operator(ExpressionType::Addition,
+                                               ExpressionNode::create_column_identifier(ColumnID{1}),
+                                               ExpressionNode::create_column_identifier(ColumnID{2}), "some_addition"),
+        ExpressionNode::create_binary_operator(ExpressionType::Addition,
+                                               ExpressionNode::create_column_identifier(ColumnID{0}),
+                                               ExpressionNode::create_column_identifier(ColumnID{2}))});
     _projection_node->set_left_child(_stored_table_node);
   }
 
-  void TearDown() override {
-    StorageManager::get().reset();
-  }
+  void TearDown() override { StorageManager::get().reset(); }
 
   std::shared_ptr<StoredTableNode> _stored_table_node;
   std::shared_ptr<ProjectionNode> _projection_node;
@@ -60,23 +52,15 @@ TEST_F(ProjectionNodeTest, ColumnIdForColumnIdentifier) {
 }
 
 TEST_F(ProjectionNodeTest, ColumnIdForExpression) {
-  EXPECT_EQ(_projection_node->get_column_id_for_expression(
-    ExpressionNode::create_column_identifier(ColumnID{0})),
-            0);
-  EXPECT_EQ(_projection_node->get_column_id_for_expression(
-              ExpressionNode::create_binary_operator(
-              ExpressionType::Addition,
-              ExpressionNode::create_column_identifier(ColumnID{1}),
-              ExpressionNode::create_column_identifier(ColumnID{2})
-              )),
-    3);
-  EXPECT_EQ(_projection_node->find_column_id_for_expression(
-              ExpressionNode::create_binary_operator(
-              ExpressionType::Addition,
-              ExpressionNode::create_column_identifier(ColumnID{1}),
-              ExpressionNode::create_column_identifier(ColumnID{1})
-              )),
-    nullopt);
+  EXPECT_EQ(_projection_node->get_column_id_for_expression(ExpressionNode::create_column_identifier(ColumnID{0})), 0);
+  EXPECT_EQ(_projection_node->get_column_id_for_expression(ExpressionNode::create_binary_operator(
+                ExpressionType::Addition, ExpressionNode::create_column_identifier(ColumnID{1}),
+                ExpressionNode::create_column_identifier(ColumnID{2}))),
+            3);
+  EXPECT_EQ(_projection_node->find_column_id_for_expression(ExpressionNode::create_binary_operator(
+                ExpressionType::Addition, ExpressionNode::create_column_identifier(ColumnID{1}),
+                ExpressionNode::create_column_identifier(ColumnID{1}))),
+            nullopt);
 }
 
-}
+}  // namespace opossum

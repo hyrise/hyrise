@@ -33,4 +33,4 @@ TEST_F(StoredTableNodeTest, ColumnIdForColumnIdentifier) {
   EXPECT_EQ(_stored_table_node->find_column_id_for_column_identifier({"b", "garbage"}), nullopt);
 }
 
-}
+}  // namespace opossum
