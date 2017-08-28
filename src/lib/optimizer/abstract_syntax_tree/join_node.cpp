@@ -55,6 +55,10 @@ optional<ColumnID> JoinNode::find_column_id_for_column_identifier(const ColumnId
     const auto left_column_id = left_child()->find_column_id_for_column_identifier(column_identifier);
     const auto right_column_id = right_child()->find_column_id_for_column_identifier(column_identifier);
 
+    if (!left_column_id && !left_column_id) {
+      return nullopt;
+    }
+
     Assert(static_cast<bool>(left_column_id) ^ static_cast<bool>(right_column_id),
            "Column name " + column_identifier.column_name + " is ambiguous.");
 
