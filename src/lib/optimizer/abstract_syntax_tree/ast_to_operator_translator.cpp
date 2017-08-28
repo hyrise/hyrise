@@ -131,7 +131,6 @@ std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::_translate_aggregate_
 
   // If there are, create Projection with GROUP BY columns and arithmetic expressions.
   if (need_projection) {
-    // TODO(tim): BLOCKING - these columnref exprs need the original column name.
     Projection::ColumnExpressions column_expressions = ExpressionNode::create_column_identifiers(groupby_columns);
     column_expressions.reserve(groupby_columns.size() + aggregates.size());
 

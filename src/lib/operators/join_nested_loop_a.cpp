@@ -44,8 +44,8 @@ std::shared_ptr<AbstractOperator> JoinNestedLoopA::recreate(const std::vector<Al
 }
 
 std::shared_ptr<const Table> JoinNestedLoopA::on_execute() {
-  const auto &type_left = input_table_left()->column_type(_column_ids->first);
-  const auto &type_right = input_table_right()->column_type(_column_ids->second);
+  const auto &type_left = input_table_left()->column_type((*_column_ids).first);
+  const auto &type_right = input_table_right()->column_type((*_column_ids).second);
   _impl = make_unique_by_column_types<AbstractReadOnlyOperatorImpl, JoinNestedLoopAImpl>(
       type_left, type_right, _input_left, _input_right, _mode, *_column_ids, *_scan_type);
   return _impl->on_execute();

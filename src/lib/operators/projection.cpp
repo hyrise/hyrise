@@ -38,12 +38,10 @@ std::shared_ptr<const Table> Projection::on_execute() {
       name = *column_expression->alias();
     } else if (column_expression->type() == ExpressionType::ColumnIdentifier) {
       name = input_table_left()->column_name(column_expression->column_id());
-    } else if (column_expression->type() == ExpressionType::FunctionIdentifier) {
-      // TODO(tim): BLOCKING - generate "correct" output name, i.e. SUM(a)
-      name = "test";
-    } else {
-      // TODO(tim): BLOCKING - make sure that this is not overwriting existing columns.
+    } else if (column_expression->is_arithmetic_operator()) {
       name = column_expression->to_string();
+    } else {
+      Fail("Expression type is not supported.");
     }
 
     const auto type = get_type_of_expression(column_expression, input_table_left());
