@@ -39,9 +39,8 @@ TYPED_TEST(JoinFullTest, CrossJoin) {
   //                                            ScanType::OpEquals, Cross,
   //                                            "src/test/tables/joinoperators/int_cross_join.tbl", 1);
 
-  EXPECT_THROW(std::make_shared<TypeParam>(this->_table_wrapper_a, this->_table_wrapper_b,
-                                           std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}), ScanType::OpEquals,
-                                           JoinMode::Cross),
+  EXPECT_THROW(std::make_shared<TypeParam>(this->_table_wrapper_a, this->_table_wrapper_b, JoinMode::Cross,
+                                           std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}), ScanType::OpEquals),
                std::logic_error);
 }
 

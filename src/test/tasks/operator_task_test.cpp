@@ -53,8 +53,8 @@ TEST_F(OperatorTaskTest, SingleDependencyTasksFromOperatorTest) {
 TEST_F(OperatorTaskTest, DoubleDependencyTasksFromOperatorTest) {
   auto gt_a = std::make_shared<GetTable>("table_a");
   auto gt_b = std::make_shared<GetTable>("table_b");
-  auto join = std::make_shared<JoinHash>(gt_a, gt_b, std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}),
-                                         ScanType::OpEquals, JoinMode::Inner);
+  auto join = std::make_shared<JoinHash>(gt_a, gt_b, JoinMode::Inner,
+                                         std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}), ScanType::OpEquals);
 
   auto tasks = OperatorTask::make_tasks_from_operator(join);
   for (auto &task : tasks) {

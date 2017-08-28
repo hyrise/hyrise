@@ -16,15 +16,16 @@
 namespace opossum {
 
 JoinHash::JoinHash(const std::shared_ptr<const AbstractOperator> left,
-                   const std::shared_ptr<const AbstractOperator> right,
-                   optional<std::pair<ColumnID, ColumnID>> column_ids, const ScanType scan_type, const JoinMode mode)
-    : AbstractJoinOperator(left, right, column_ids, scan_type, mode) {
-  DebugAssert((scan_type == ScanType::OpEquals), (std::string("Operator not supported by Hash Join.")));
-  DebugAssert((_mode != JoinMode::Cross),
-              "JoinHash: this operator does not support Cross Joins, the optimizer should use Product operator.");
-  DebugAssert((_mode != JoinMode::Natural), "JoinHash: this operator currently does not support Natural Joins.");
-  DebugAssert(static_cast<bool>(column_ids),
-              "JoinHash: optional column ids are only supported for Cross and Natural Joins.");
+                   const std::shared_ptr<const AbstractOperator> right, const JoinMode mode)
+    : AbstractJoinOperator(left, right, mode) {
+  Fail("Natural and Cross Joins are currently not supported by this operator.");
+}
+
+JoinHash::JoinHash(const std::shared_ptr<const AbstractOperator> left,
+                   const std::shared_ptr<const AbstractOperator> right, const JoinMode mode,
+                   const std::pair<ColumnID, ColumnID> &column_ids, const ScanType scan_type)
+    : AbstractJoinOperator(left, right, mode, column_ids, scan_type) {
+  DebugAssert(scan_type == ScanType::OpEquals, "Operator not supported by Hash Join.");
 }
 
 const std::string JoinHash::name() const { return "JoinHash"; }
@@ -69,7 +70,7 @@ std::shared_ptr<const Table> JoinHash::on_execute() {
 
   _impl = make_unique_by_column_types<AbstractReadOnlyOperatorImpl, JoinHashImpl>(
       build_input->column_type(build_column_id), probe_input->column_type(probe_column_id), build_operator,
-      probe_operator, adjusted_column_ids, _scan_type, _mode, inputs_swapped);
+      probe_operator, _mode, adjusted_column_ids, *_scan_type, inputs_swapped);
   return _impl->on_execute();
 }
 
@@ -81,13 +82,13 @@ template <typename LeftType, typename RightType>
 class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
  public:
   JoinHashImpl(const std::shared_ptr<const AbstractOperator> left, const std::shared_ptr<const AbstractOperator> right,
-               const std::pair<ColumnID, ColumnID> &column_ids, const ScanType scan_type, const JoinMode mode,
+               const JoinMode mode, const std::pair<ColumnID, ColumnID> &column_ids, const ScanType scan_type,
                const bool inputs_swapped)
       : _left(left),
         _right(right),
+        _mode(mode),
         _column_ids(column_ids),
         _scan_type(scan_type),
-        _mode(mode),
         _inputs_swapped(inputs_swapped),
         _output_table(std::make_shared<Table>()) {
     // Setting comparator to Equal Comparison -> That is the only supported comparison type for Hash Joins
@@ -98,9 +99,9 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
 
  protected:
   const std::shared_ptr<const AbstractOperator> _left, _right;
+  const JoinMode _mode;
   const std::pair<ColumnID, ColumnID> _column_ids;
   const ScanType _scan_type;
-  const JoinMode _mode;
 
   const bool _inputs_swapped;
   const std::shared_ptr<Table> _output_table;

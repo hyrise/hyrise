@@ -90,7 +90,7 @@ class JoinTest : public BaseTest {
     EXPECT_NE(expected_result, nullptr) << "Could not load expected result table";
 
     // build and execute join
-    auto join = std::make_shared<JoinType>(left, right, column_ids, scan_type, mode);
+    auto join = std::make_shared<JoinType>(left, right, mode, column_ids, scan_type);
     EXPECT_NE(join, nullptr) << "Could not build Join";
     join->execute();
 

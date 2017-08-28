@@ -95,10 +95,9 @@ std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::_translate_join_node(
     return std::make_shared<Product>(input_left_operator, input_right_operator);
   }
 
-  // Forcing conversion from optional<std::string> to bool
   DebugAssert(static_cast<bool>(join_node->scan_type()), "Cannot translate Join without ScanType");
-  return std::make_shared<JoinNestedLoopA>(input_left_operator, input_right_operator, join_node->join_column_ids(),
-                                           *(join_node->scan_type()), join_node->join_mode());
+  return std::make_shared<JoinNestedLoopA>(input_left_operator, input_right_operator, join_node->join_mode(),
+                                           *(join_node->join_column_ids()), *(join_node->scan_type()));
 }
 
 std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::_translate_aggregate_node(
