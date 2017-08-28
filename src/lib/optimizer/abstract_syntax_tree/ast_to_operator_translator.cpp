@@ -8,6 +8,7 @@
 #include "operators/aggregate.hpp"
 #include "operators/get_table.hpp"
 #include "operators/join_nested_loop_a.hpp"
+#include "operators/product.hpp"
 #include "operators/projection.hpp"
 #include "operators/sort.hpp"
 #include "operators/table_scan.hpp"
@@ -28,6 +29,12 @@ ASTToOperatorTranslator &ASTToOperatorTranslator::get() {
 }
 
 ASTToOperatorTranslator::ASTToOperatorTranslator() {
+  /**
+   * Build a mapping from an ASTNodeType to a function that takes an ASTNode of such type and translates it into a set
+   * of operators and returns the root of them. We prefer this over a virtual AbstractASTNode::translate() call in order
+   * to keep the translation code in one place, i.e., this file.
+   */
+
   _operator_factory[ASTNodeType::StoredTable] =
       std::bind(&ASTToOperatorTranslator::_translate_stored_table_node, this, std::placeholders::_1);
   _operator_factory[ASTNodeType::Predicate] =
@@ -66,7 +73,7 @@ std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::_translate_predicate_
 std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::_translate_projection_node(
     const std::shared_ptr<AbstractASTNode> &node) const {
   const auto input_operator = translate_node(node->left_child());
-  auto projection_node = std::dynamic_pointer_cast<ProjectionNode>(node);
+  const auto projection_node = std::dynamic_pointer_cast<ProjectionNode>(node);
   return std::make_shared<Projection>(input_operator, projection_node->column_expressions());
 }
 
@@ -83,8 +90,15 @@ std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::_translate_join_node(
   const auto input_right_operator = translate_node(node->right_child());
 
   auto join_node = std::dynamic_pointer_cast<JoinNode>(node);
+
+  if (join_node->join_mode() == JoinMode::Cross) {
+    return std::make_shared<Product>(input_left_operator, input_right_operator);
+  }
+
+  // Forcing conversion from optional<std::string> to bool
+  DebugAssert(static_cast<bool>(join_node->scan_type()), "Cannot translate Join without ScanType");
   return std::make_shared<JoinNestedLoopA>(input_left_operator, input_right_operator, join_node->join_column_ids(),
-                                           join_node->scan_type(), join_node->join_mode());
+                                           *(join_node->scan_type()), join_node->join_mode());
 }
 
 std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::_translate_aggregate_node(
@@ -93,7 +107,7 @@ std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::_translate_aggregate_
 
   const auto aggregate_node = std::dynamic_pointer_cast<AggregateNode>(node);
   auto aggregates = aggregate_node->aggregates();
-  auto groupby_columns = aggregate_node->groupby_columns();
+  auto groupby_columns = aggregate_node->groupby_column_ids();
 
   auto aggregate_input_operator = input_operator;
 
@@ -106,7 +120,7 @@ std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::_translate_aggregate_
 
   // Check if there are any arithmetic expressions.
   for (const auto &aggregate : aggregates) {
-    DebugAssert(aggregate.expr->type() == ExpressionType::FunctionReference, "Expression is not a function.");
+    DebugAssert(aggregate.expr->type() == ExpressionType::FunctionIdentifier, "Expression is not a function.");
 
     const auto &function_arg_expr = (aggregate.expr->expression_list())[0];
 
@@ -119,7 +133,7 @@ std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::_translate_aggregate_
   // If there are, create Projection with GROUP BY columns and arithmetic expressions.
   if (need_projection) {
     // TODO(tim): BLOCKING - these columnref exprs need the original column name.
-    Projection::ColumnExpressions column_expressions = ExpressionNode::create_column_references(groupby_columns);
+    Projection::ColumnExpressions column_expressions = ExpressionNode::create_column_identifiers(groupby_columns);
     column_expressions.reserve(groupby_columns.size() + aggregates.size());
 
     // The Projection will only select columns used in the Aggregate, i.e., GROUP BY columns and expressions.
@@ -133,13 +147,13 @@ std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::_translate_aggregate_
     auto current_column_id = static_cast<uint16_t>(groupby_columns.size());
 
     for (auto &aggregate : aggregates) {
-      DebugAssert(aggregate.expr->type() == ExpressionType::FunctionReference, "Expression is not a function.");
+      DebugAssert(aggregate.expr->type() == ExpressionType::FunctionIdentifier, "Expression is not a function.");
 
       // Add original expression of the function to the Projection.
       column_expressions.emplace_back((aggregate.expr->expression_list())[0]);
 
       // Create a ColumnReference expression for the column id of the Projection.
-      const auto column_ref_expr = ExpressionNode::create_column_reference(ColumnID{current_column_id});
+      const auto column_ref_expr = ExpressionNode::create_column_identifier(ColumnID{current_column_id});
       current_column_id++;
 
       // Change the expression list of the expression representing the aggregate.
@@ -156,7 +170,7 @@ std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::_translate_aggregate_
   aggregate_definitions.reserve(aggregates.size());
 
   for (const auto &aggregate : aggregates) {
-    DebugAssert(aggregate.expr->type() == ExpressionType::FunctionReference,
+    DebugAssert(aggregate.expr->type() == ExpressionType::FunctionIdentifier,
                 "Only functions are supported in Aggregates");
 
     const auto aggregate_function_type = aggregate_function_to_string.right.at(aggregate.expr->name());

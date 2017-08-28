@@ -38,7 +38,7 @@ TEST_F(AbstractSyntaxTreeTest, ParentTest) {
   ASSERT_EQ(predicate_node->parent(), nullptr);
 
   const std::vector<ColumnID> column_ids = {ColumnID{0}, ColumnID{1}};
-  const auto& expressions = ExpressionNode::create_column_references(column_ids);
+  const auto& expressions = ExpressionNode::create_column_identifiers(column_ids);
   const auto projection_node = std::make_shared<ProjectionNode>(expressions);
   projection_node->set_left_child(predicate_node);
 
@@ -91,7 +91,7 @@ TEST_F(AbstractSyntaxTreeTest, ChainSameNodesTest) {
   ASSERT_EQ(predicate_node_2->parent(), nullptr);
 
   const std::vector<ColumnID> column_ids = {ColumnID{0}, ColumnID{1}};
-  const auto& expressions = ExpressionNode::create_column_references(column_ids);
+  const auto& expressions = ExpressionNode::create_column_identifiers(column_ids);
   const auto projection_node = std::make_shared<ProjectionNode>(expressions);
   projection_node->set_left_child(predicate_node_2);
 
@@ -102,8 +102,8 @@ TEST_F(AbstractSyntaxTreeTest, ChainSameNodesTest) {
 }
 
 TEST_F(AbstractSyntaxTreeTest, TwoInputsTest) {
-  const auto join_node = std::make_shared<JoinNode>(std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{1}),
-                                                    ScanType::OpEquals, JoinMode::Inner);
+  const auto join_node = std::make_shared<JoinNode>(
+      JoinMode::Inner, std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{1}), ScanType::OpEquals);
 
   ASSERT_EQ(join_node->left_child(), nullptr);
   ASSERT_EQ(join_node->right_child(), nullptr);

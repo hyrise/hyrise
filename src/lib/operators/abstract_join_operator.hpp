@@ -27,20 +27,9 @@ class AbstractJoinOperator : public AbstractReadOnlyOperator {
                        optional<std::pair<ColumnID, ColumnID>> column_ids, const ScanType scan_type,
                        const JoinMode mode);
 
-  virtual ~AbstractJoinOperator() = default;
-
   ScanType scan_type() const;
   JoinMode mode() const;
   const optional<std::pair<ColumnID, ColumnID>> &column_ids() const;
-
-  // copying a operator is not allowed
-  AbstractJoinOperator(AbstractJoinOperator const &) = delete;
-  AbstractJoinOperator &operator=(const AbstractJoinOperator &) = delete;
-
-  // we need to explicitly set the move constructor to default when
-  // we overwrite the copy constructor
-  AbstractJoinOperator(AbstractJoinOperator &&) = default;
-  AbstractJoinOperator &operator=(AbstractJoinOperator &&) = default;
 
  protected:
   const ScanType _scan_type;

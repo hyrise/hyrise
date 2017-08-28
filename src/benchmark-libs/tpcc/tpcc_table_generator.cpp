@@ -421,4 +421,38 @@ std::map<std::string, std::shared_ptr<opossum::Table>> TpccTableGenerator::gener
                                                                  {"NEW-ORDER", std::move(new_order_table)}});
 }
 
+/*
+ * This was introduced originally for the SQL REPL Console to be able to
+ * a) generate a TPC-C table by table name (e.g. ITEM, WAREHOUSE), and
+ * b) have all available table names browsable for the Console auto completion.
+ */
+TpccTableGeneratorFunctions TpccTableGenerator::tpcc_table_generator_functions() {
+  TpccTableGeneratorFunctions generators{
+      {"ITEM", []() { return tpcc::TpccTableGenerator().generate_items_table(); }},
+      {"WAREHOUSE", []() { return tpcc::TpccTableGenerator().generate_warehouse_table(); }},
+      {"STOCK", []() { return tpcc::TpccTableGenerator().generate_stock_table(); }},
+      {"DISTRICT", []() { return tpcc::TpccTableGenerator().generate_district_table(); }},
+      {"CUSTOMER", []() { return tpcc::TpccTableGenerator().generate_customer_table(); }},
+      {"HISTORY", []() { return tpcc::TpccTableGenerator().generate_history_table(); }},
+      {"ORDER", []() { return tpcc::TpccTableGenerator().generate_new_order_table(); }},
+      {"NEW-ORDER",
+       []() {
+         auto order_line_counts = tpcc::TpccTableGenerator().generate_order_line_counts();
+         return tpcc::TpccTableGenerator().generate_order_table(order_line_counts);
+       }},
+      {"ORDER-LINE", []() {
+         auto order_line_counts = tpcc::TpccTableGenerator().generate_order_line_counts();
+         return tpcc::TpccTableGenerator().generate_order_line_table(order_line_counts);
+       }}};
+  return generators;
+}
+
+std::shared_ptr<opossum::Table> TpccTableGenerator::generate_tpcc_table(const std::string &tablename) {
+  auto generators = TpccTableGenerator::tpcc_table_generator_functions();
+  if (generators.find(tablename) == generators.end()) {
+    return nullptr;
+  }
+  return generators[tablename]();
+}
+
 }  // namespace tpcc

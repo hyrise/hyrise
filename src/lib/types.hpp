@@ -144,10 +144,10 @@ enum class ExpressionType {
   Star,
   /*A parameter used in PreparedStatements*/
   Placeholder,
-  /*A reference to a column*/
-  ColumnReference,
-  /*A reference to a function, such as COUNT, MIN, MAX*/
-  FunctionReference,
+  /*An identifier for a column*/
+  ColumnIdentifier,
+  /*An identifier for a function, such as COUNT, MIN, MAX*/
+  FunctionIdentifier,
 
   /*A subselect*/
   Select,

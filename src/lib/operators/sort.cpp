@@ -17,7 +17,7 @@ Sort::Sort(const std::shared_ptr<const AbstractOperator> in, const ColumnID colu
       _ascending(ascending),
       _output_chunk_size(output_chunk_size) {}
 
-const ColumnID Sort::column_id() const { return _column_id; }
+ColumnID Sort::column_id() const { return _column_id; }
 
 bool Sort::ascending() const { return _ascending; }
 

@@ -31,10 +31,10 @@ struct AggregateColumnDefinition {
 class AggregateNode : public AbstractASTNode {
  public:
   explicit AggregateNode(const std::vector<AggregateColumnDefinition>& aggregates,
-                         const std::vector<ColumnID>& groupby_columns);
+                         const std::vector<ColumnID>& groupby_column_ids);
 
   const std::vector<AggregateColumnDefinition>& aggregates() const;
-  const std::vector<ColumnID>& groupby_columns() const;
+  const std::vector<ColumnID>& groupby_column_ids() const;
 
   std::string description() const override;
   const std::vector<std::string>& output_column_names() const override;
@@ -49,7 +49,7 @@ class AggregateNode : public AbstractASTNode {
 
  private:
   std::vector<AggregateColumnDefinition> _aggregates;
-  std::vector<ColumnID> _groupby_columns;
+  std::vector<ColumnID> _groupby_column_ids;
 
   std::vector<ColumnID> _output_column_ids;
   std::vector<std::string> _output_column_names;

@@ -20,7 +20,7 @@ class AbstractASTNode;
  *
  * Similar as for the AST we might have a tree of ExpressionNodes,
  * e.g. 'columnA = 5' would be represented as a root expression with the type ExpressionType::Equals and
- * two child nodes of types ExpressionType::ColumnReference and ExpressionType::Literal.
+ * two child nodes of types ExpressionType::ColumnIdentifier and ExpressionType::Literal.
  *
  * For now we decided to have a single ExpressionNode without further specializations. This goes hand in hand with the
  * approach used in hsql::Expr.
@@ -51,10 +51,10 @@ class ExpressionNode : public std::enable_shared_from_this<ExpressionNode> {
    */
   static std::shared_ptr<ExpressionNode> create_expression(const ExpressionType type);
 
-  static std::shared_ptr<ExpressionNode> create_column_reference(const ColumnID column_id,
-                                                                 const optional<std::string>& alias = {});
+  static std::shared_ptr<ExpressionNode> create_column_identifier(const ColumnID column_id,
+                                                                  const optional<std::string>& alias = {});
 
-  static std::vector<std::shared_ptr<ExpressionNode>> create_column_references(
+  static std::vector<std::shared_ptr<ExpressionNode>> create_column_identifiers(
       const std::vector<ColumnID>& column_ids, const std::vector<std::string>& aliases = {});
 
   /**
@@ -74,7 +74,7 @@ class ExpressionNode : public std::enable_shared_from_this<ExpressionNode> {
                                                                 const std::shared_ptr<ExpressionNode>& right,
                                                                 const optional<std::string>& alias = {});
 
-  static std::shared_ptr<ExpressionNode> create_select_all();
+  static std::shared_ptr<ExpressionNode> create_select_star();
 
   /*
    * Helper methods for Expression Trees
@@ -133,7 +133,7 @@ class ExpressionNode : public std::enable_shared_from_this<ExpressionNode> {
   // the value of an expression, e.g. of a Literal
   const AllTypeVariant _value;
   /*
-   * A list of Expressions used in FunctionReferences and CASE Expressions.
+   * A list of Expressions used in FunctionIdentifiers and CASE Expressions.
    * Not sure if this is the perfect way to go forward, but this is how hsql::Expr handles this.
    *
    * In case there are at most two expressions in this list, one could replace this list with an additional layer in the
@@ -146,7 +146,7 @@ class ExpressionNode : public std::enable_shared_from_this<ExpressionNode> {
   const std::string _name;
   // a column that might be referenced
   ColumnID _column_id;
-  // an alias, used for ColumnReferences, Selects, FunctionReferences
+  // an alias, used for ColumnReferences, Selects, FunctionIdentifiers
   optional<std::string> _alias;
 
   std::weak_ptr<ExpressionNode> _parent;

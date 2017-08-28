@@ -40,6 +40,7 @@ add_custom_command(
 # Protobuf library with overridden deprecated warning
 add_library(
     opossumProtobuf
+    EXCLUDE_FROM_ALL
     STATIC
     network/generated/opossum.pb.cc
     network/generated/opossum.grpc.pb.cc
@@ -51,7 +52,6 @@ target_compile_options(opossumProtobuf PRIVATE -Wno-unused-parameter -Wno-deprec
 set(
     SOURCES
     all_parameter_variant.hpp
-    all_type_variant.cpp
     all_type_variant.hpp
     common.hpp
     concurrency/commit_context.cpp
@@ -155,6 +155,8 @@ set(
     optimizer/column_statistics.hpp
     optimizer/expression/expression_node.cpp
     optimizer/expression/expression_node.hpp
+    optimizer/optimizer.cpp
+    optimizer/optimizer.hpp
     optimizer/strategy/abstract_rule.hpp
     optimizer/strategy/predicate_reordering_rule.cpp
     optimizer/strategy/predicate_reordering_rule.hpp
@@ -182,6 +184,8 @@ set(
     scheduler/worker.cpp
     scheduler/worker.hpp
     sql/lru_cache.hpp
+    sql/sql_planner.cpp
+    sql/sql_planner.hpp
     sql/sql_expression_translator.cpp
     sql/sql_expression_translator.hpp
     sql/sql_query_cache.hpp
@@ -268,7 +272,7 @@ add_library(opossum STATIC ${SOURCES})
 target_link_libraries(opossum ${LIBRARIES})
 
 # Configure the lib used for asan
-add_library(opossumAsanLib STATIC ${SOURCES})
+add_library(opossumAsanLib EXCLUDE_FROM_ALL STATIC ${SOURCES})
 target_link_libraries(
     opossumAsanLib
     ${LIBRARIES}
@@ -277,7 +281,7 @@ target_link_libraries(
 set_target_properties(opossumAsanLib PROPERTIES COMPILE_FLAGS "-fsanitize=address -fno-omit-frame-pointer")
 
 # Configure the lib used for coverage
-add_library(opossumCoverageLib STATIC ${SOURCES})
+add_library(opossumCoverageLib EXCLUDE_FROM_ALL STATIC ${SOURCES})
 target_link_libraries(
     opossumCoverageLib
     ${LIBRARIES}

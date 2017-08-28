@@ -36,9 +36,9 @@ std::shared_ptr<const Table> Projection::on_execute() {
 
     if (column_expression->alias()) {
       name = *column_expression->alias();
-    } else if (column_expression->type() == ExpressionType::ColumnReference) {
+    } else if (column_expression->type() == ExpressionType::ColumnIdentifier) {
       name = input_table_left()->column_name(column_expression->column_id());
-    } else if (column_expression->type() == ExpressionType::FunctionReference) {
+    } else if (column_expression->type() == ExpressionType::FunctionIdentifier) {
       // TODO(tim): BLOCKING - generate "correct" output name, i.e. SUM(a)
       name = "test";
     } else {
@@ -46,8 +46,7 @@ std::shared_ptr<const Table> Projection::on_execute() {
       name = column_expression->to_string();
     }
 
-    const auto type = evaluate_expression_type(column_expression, input_table_left());
-
+    const auto type = get_type_of_expression(column_expression, input_table_left());
     output->add_column_definition(name, type);
   }
 
@@ -70,20 +69,20 @@ std::shared_ptr<const Table> Projection::on_execute() {
   return output;
 }
 
-const std::string Projection::evaluate_expression_type(const std::shared_ptr<ExpressionNode>& expression,
-                                                       const std::shared_ptr<const Table>& table) {
+const std::string Projection::get_type_of_expression(const std::shared_ptr<ExpressionNode>& expression,
+                                                     const std::shared_ptr<const Table>& table) {
   if (expression->type() == ExpressionType::Literal) {
-    return type_by_all_type_variant_which[expression->value().which()];
+    return type_string_from_all_type_variant(expression->value());
   }
-  if (expression->type() == ExpressionType::ColumnReference) {
+  if (expression->type() == ExpressionType::ColumnIdentifier) {
     return table->column_type(expression->column_id());
   }
 
   Assert(expression->is_arithmetic_operator(),
          "Only literals, columns, and arithmetic operators supported for expression type evaluation");
 
-  const auto type_left = evaluate_expression_type(expression->left_child(), table);
-  const auto type_right = evaluate_expression_type(expression->right_child(), table);
+  const auto type_left = get_type_of_expression(expression->left_child(), table);
+  const auto type_right = get_type_of_expression(expression->right_child(), table);
 
   // TODO(anybody): int + float = float etc...
   // This is currently not supported by `evaluate_expression()` because it is only templated once.

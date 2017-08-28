@@ -9,7 +9,6 @@
 #include "gtest/gtest.h"
 
 #include "operators/get_table.hpp"
-#include "operators/print.hpp"
 #include "operators/table_scan.hpp"
 #include "optimizer/abstract_syntax_tree/ast_to_operator_translator.hpp"
 #include "scheduler/node_queue_scheduler.hpp"
@@ -94,80 +93,76 @@ TEST_P(SQLToResultTest, SQLQueryTest) {
   CurrentScheduler::schedule_and_wait_for_tasks(tasks);
 
   auto result_table = tasks.back()->get_operator()->get_output();
-
   EXPECT_TABLE_EQ(result_table, expected_result, params.order_sensitive == OrderSensitivity::Sensitive);
 }
 
 const SQLTestParam test_queries[] = {
-    {"SELECT * FROM table_a;", "src/test/tables/int_float.tbl"},  // 0
+    {"SELECT * FROM table_a;", "src/test/tables/int_float.tbl"},
 
     // Table Scans
-    {"SELECT * FROM table_b WHERE a = 12345 AND b > 457;", "src/test/tables/int_float2_filtered.tbl"},   // 1
-    {"SELECT * FROM table_a WHERE a >= 1234;", "src/test/tables/int_float_filtered2.tbl"},               // 2
-    {"SELECT * FROM table_a WHERE a >= 1234 AND b < 457.9", "src/test/tables/int_float_filtered.tbl"},   // 3
-    {"SELECT * FROM TestTable WHERE a BETWEEN 122 AND 124", "src/test/tables/int_string_filtered.tbl"},  // 4
+    {"SELECT * FROM table_b WHERE a = 12345 AND b > 457;", "src/test/tables/int_float2_filtered.tbl"},
+    {"SELECT * FROM table_a WHERE a >= 1234;", "src/test/tables/int_float_filtered2.tbl"},
+    {"SELECT * FROM table_a WHERE 1234 <= a;", "src/test/tables/int_float_filtered2.tbl"},
+    {"SELECT * FROM table_a WHERE a >= 1234 AND b < 457.9", "src/test/tables/int_float_filtered.tbl"},
+    {"SELECT * FROM TestTable WHERE a BETWEEN 122 AND 124", "src/test/tables/int_string_filtered.tbl"},
 
     // Projection
-    {"SELECT a FROM table_a;", "src/test/tables/int.tbl"},  // 5
+    {"SELECT a FROM table_a;", "src/test/tables/int.tbl"},
 
     // ORDER BY
-    {"SELECT * FROM table_a ORDER BY a DESC;", "src/test/tables/int_float_reverse.tbl",
-     OrderSensitivity::Sensitive},  // 6
-    {"SELECT * FROM table_b ORDER BY a, b;", "src/test/tables/int_float2_sorted.tbl",
-     OrderSensitivity::Sensitive},  // 7
-    {"SELECT * FROM table_b ORDER BY a, b ASC;", "src/test/tables/int_float2_sorted.tbl",
-     OrderSensitivity::Sensitive},                                                                                  // 8
-    {"SELECT a, b FROM table_a ORDER BY a;", "src/test/tables/int_float_sorted.tbl", OrderSensitivity::Sensitive},  // 9
-    {"SELECT * FROM table_c ORDER BY a, b;", "src/test/tables/int_float2_sorted.tbl",
-     OrderSensitivity::Sensitive},  // 10
+    {"SELECT * FROM table_a ORDER BY a DESC;", "src/test/tables/int_float_reverse.tbl", OrderSensitivity::Sensitive},
+    {"SELECT * FROM table_b ORDER BY a, b;", "src/test/tables/int_float2_sorted.tbl", OrderSensitivity::Sensitive},
+    {"SELECT * FROM table_b ORDER BY a, b ASC;", "src/test/tables/int_float2_sorted.tbl", OrderSensitivity::Sensitive},
+    {"SELECT a, b FROM table_a ORDER BY a;", "src/test/tables/int_float_sorted.tbl", OrderSensitivity::Sensitive},
+    {"SELECT * FROM table_c ORDER BY a, b;", "src/test/tables/int_float2_sorted.tbl", OrderSensitivity::Sensitive},
     {"SELECT a FROM (SELECT a, b FROM table_a WHERE a > 1 ORDER BY b) WHERE a > 0 ORDER BY a;",
-     "src/test/tables/int.tbl", OrderSensitivity::Sensitive},  // 11
+     "src/test/tables/int.tbl", OrderSensitivity::Sensitive},
 
     // AGGREGATE
     // TODO(tim): Projection cannot handle expression `$a + $b`
     // because it is not able to handle columns with different data types.
     // Create issue with failing test.
-    {"SELECT SUM(b + b) AS sum_b_b FROM table_a;", "src/test/tables/int_float_sum_b_plus_b.tbl"},  // 12
+    {"SELECT SUM(b + b) AS sum_b_b FROM table_a;", "src/test/tables/int_float_sum_b_plus_b.tbl"},
 
     // JOIN
     {R"(SELECT "left".a, "left".b, "right".a, "right".b
         FROM table_a AS "left"
         JOIN table_b AS "right"
         ON "left".a = "right".a;)",
-     "src/test/tables/joinoperators/int_inner_join.tbl"},  // 13
+     "src/test/tables/joinoperators/int_inner_join.tbl"},
     {R"(SELECT *
         FROM table_a AS "left"
         LEFT JOIN table_b AS "right"
         ON "left".a = "right".a;)",
-     "src/test/tables/joinoperators/int_left_join.tbl"},  // 14
+     "src/test/tables/joinoperators/int_left_join.tbl"},
     {R"(SELECT *
         FROM table_a AS "left"
         INNER JOIN table_b AS "right"
         ON "left".a = "right".a;)",
-     "src/test/tables/joinoperators/int_inner_join.tbl"},  // 15
+     "src/test/tables/joinoperators/int_inner_join.tbl"},
 
     // GROUP BY
     {"SELECT a, SUM(b) FROM groupby_int_1gb_1agg GROUP BY a;",
-     "src/test/tables/aggregateoperator/groupby_int_1gb_1agg/sum.tbl"},  // 16
+     "src/test/tables/aggregateoperator/groupby_int_1gb_1agg/sum.tbl"},
     {"SELECT a, SUM(b), AVG(c) FROM groupby_int_1gb_2agg GROUP BY a;",
-     "src/test/tables/aggregateoperator/groupby_int_1gb_2agg/sum_avg.tbl"},  // 17
+     "src/test/tables/aggregateoperator/groupby_int_1gb_2agg/sum_avg.tbl"},
     {"SELECT a, b, MAX(c), AVG(d) FROM groupby_int_2gb_2agg GROUP BY a, b;",
-     "src/test/tables/aggregateoperator/groupby_int_2gb_2agg/max_avg.tbl"},  // 18
+     "src/test/tables/aggregateoperator/groupby_int_2gb_2agg/max_avg.tbl"},
 
     // HAVING
     {"SELECT a, b, MAX(c), AVG(d) FROM groupby_int_2gb_2agg GROUP BY a, b HAVING MAX(c) >= 10 AND MAX(c) < 40;",
-     "src/test/tables/aggregateoperator/groupby_int_2gb_2agg/max_avg.tbl"},  // 19
+     "src/test/tables/aggregateoperator/groupby_int_2gb_2agg/max_avg.tbl"},
     {"SELECT a, b, MAX(c), AVG(d) FROM groupby_int_2gb_2agg GROUP BY a, b HAVING MAX(c) > 10 AND MAX(c) <= 30;",
-     "src/test/tables/aggregateoperator/groupby_int_2gb_2agg/max_avg_having.tbl"},  // 20
+     "src/test/tables/aggregateoperator/groupby_int_2gb_2agg/max_avg_having.tbl"},
 
-    {"SELECT * FROM customer;", "src/test/tables/tpch/customer.tbl"},                             // 21
-    {"SELECT c_custkey, c_name FROM customer;", "src/test/tables/tpch/customer_projection.tbl"},  // 22
+    {"SELECT * FROM customer;", "src/test/tables/tpch/customer.tbl"},
+    {"SELECT c_custkey, c_name FROM customer;", "src/test/tables/tpch/customer_projection.tbl"},
 
     {R"(SELECT customer.c_custkey, customer.c_name, COUNT(orders.o_orderkey)
         FROM customer JOIN orders ON c_custkey = o_custkey
         GROUP BY customer.c_custkey, customer.c_name
         HAVING COUNT(orders.o_orderkey) >= 100;)",
-     "src/test/tables/tpch/customer_join_orders.tbl"},  // 23
+     "src/test/tables/tpch/customer_join_orders.tbl"},
 
     // TODO(mp): Aliases for Subselects are not supported yet
     //    {R"(SELECT customer.c_custkey, customer.c_name, COUNT(orderitems.o_orderkey)
@@ -177,7 +172,7 @@ const SQLTestParam test_queries[] = {
     //        ON customer.c_custkey = orders.o_custkey
     //        GROUP BY customer.c_custkey, customer.c_name
     //        HAVING COUNT(orderitems.o_orderkey) >= 100;)",
-    //      "src/test/tables/tpch/customer_join_orders_alias.tbl"}, //24
+    //      "src/test/tables/tpch/customer_join_orders_alias.tbl"},
 };
 
 INSTANTIATE_TEST_CASE_P(test_queries, SQLToResultTest, ::testing::ValuesIn(test_queries));

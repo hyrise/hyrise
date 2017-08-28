@@ -8,6 +8,8 @@
 
 #include "all_parameter_variant.hpp"
 #include "common.hpp"
+#include "operators/table_scan.hpp"
+#include "operators/table_wrapper.hpp"
 #include "optimizer/column_statistics.hpp"
 
 namespace opossum {
@@ -15,16 +17,27 @@ namespace opossum {
 class ColumnStatisticsTest : public BaseTest {
  protected:
   void SetUp() override {
-    _table = load_table("src/test/tables/int_float_double_string.tbl", 0);
-    _column_statistics_int = std::make_shared<ColumnStatistics<int32_t>>(ColumnID{0}, _table);
-    _column_statistics_float = std::make_shared<ColumnStatistics<float>>(ColumnID{1}, _table);
-    _column_statistics_double = std::make_shared<ColumnStatistics<double>>(ColumnID{2}, _table);
-    _column_statistics_string = std::make_shared<ColumnStatistics<std::string>>(ColumnID{3}, _table);
+    _table_with_different_column_types = load_table("src/test/tables/int_float_double_string.tbl", 0);
+    _column_statistics_int =
+        std::make_shared<ColumnStatistics<int32_t>>(ColumnID{0}, _table_with_different_column_types);
+    _column_statistics_float =
+        std::make_shared<ColumnStatistics<float>>(ColumnID{1}, _table_with_different_column_types);
+    _column_statistics_double =
+        std::make_shared<ColumnStatistics<double>>(ColumnID{2}, _table_with_different_column_types);
+    _column_statistics_string =
+        std::make_shared<ColumnStatistics<std::string>>(ColumnID{3}, _table_with_different_column_types);
+
+    _table_uniform_distribution = load_table("src/test/tables/int_equal_distribution.tbl", 0);
+    _column_statistics_uniform_columns = {
+        std::make_shared<ColumnStatistics<int32_t>>(ColumnID(0), _table_uniform_distribution),
+        std::make_shared<ColumnStatistics<int32_t>>(ColumnID(1), _table_uniform_distribution),
+        std::make_shared<ColumnStatistics<int32_t>>(ColumnID(2), _table_uniform_distribution),
+        std::make_shared<ColumnStatistics<int32_t>>(ColumnID(3), _table_uniform_distribution)};
   }
 
   // For single value scans (i.e. all but BETWEEN)
   template <typename T>
-  void predict_selectivities_and_compare(const std::shared_ptr<ColumnStatistics<T>> column_statistic,
+  void predict_selectivities_and_compare(const std::shared_ptr<ColumnStatistics<T>> &column_statistic,
                                          const ScanType scan_type, const std::vector<T> &values,
                                          const std::vector<float> &expected_selectivities) {
     auto expected_selectivities_itr = expected_selectivities.begin();
@@ -34,9 +47,29 @@ class ColumnStatisticsTest : public BaseTest {
     }
   }
 
+  // For two column scans (type of value1 is ColumnName)
+  void predict_selectivities_and_compare(const std::shared_ptr<Table> &table,
+                                         const std::vector<std::shared_ptr<BaseColumnStatistics>> &column_statistics,
+                                         const ScanType scan_type) {
+    auto table_wrapper = std::make_shared<TableWrapper>(table);
+    table_wrapper->execute();
+    auto row_count = table->row_count();
+    for (ColumnID::base_type column_1 = 0; column_1 < column_statistics.size(); ++column_1) {
+      for (ColumnID::base_type column_2 = 0; column_2 < column_statistics.size() && column_1 != column_2; ++column_2) {
+        auto result_container = column_statistics[column_1]->estimate_selectivity_for_two_column_predicate(
+            scan_type, column_statistics[column_2]);
+        auto table_scan = std::make_shared<TableScan>(table_wrapper, ColumnID{column_1}, scan_type, ColumnID{column_2});
+        table_scan->execute();
+        auto result_row_count = table_scan->get_output()->row_count();
+        EXPECT_FLOAT_EQ(result_container.selectivity,
+                        static_cast<float>(result_row_count) / static_cast<float>(row_count));
+      }
+    }
+  }
+
   // For BETWEEN
   template <typename T>
-  void predict_selectivities_and_compare(const std::shared_ptr<ColumnStatistics<T>> column_statistic,
+  void predict_selectivities_and_compare(const std::shared_ptr<ColumnStatistics<T>> &column_statistic,
                                          const ScanType scan_type, const std::vector<std::pair<T, T>> &values,
                                          const std::vector<float> &expected_selectivities) {
     auto expected_selectivities_itr = expected_selectivities.begin();
@@ -49,7 +82,7 @@ class ColumnStatisticsTest : public BaseTest {
 
   template <typename T>
   void predict_selectivities_for_stored_procedures_and_compare(
-      const std::shared_ptr<ColumnStatistics<T>> column_statistic, const ScanType scan_type,
+      const std::shared_ptr<ColumnStatistics<T>> &column_statistic, const ScanType scan_type,
       const std::vector<T> &values2, const std::vector<float> &expected_selectivities) {
     auto expected_selectivities_itr = expected_selectivities.begin();
     for (const auto &value2 : values2) {
@@ -59,11 +92,13 @@ class ColumnStatisticsTest : public BaseTest {
     }
   }
 
-  std::shared_ptr<Table> _table;
+  std::shared_ptr<Table> _table_with_different_column_types;
   std::shared_ptr<ColumnStatistics<int32_t>> _column_statistics_int;
   std::shared_ptr<ColumnStatistics<float>> _column_statistics_float;
   std::shared_ptr<ColumnStatistics<double>> _column_statistics_double;
   std::shared_ptr<ColumnStatistics<std::string>> _column_statistics_string;
+  std::shared_ptr<Table> _table_uniform_distribution;
+  std::vector<std::shared_ptr<BaseColumnStatistics>> _column_statistics_uniform_columns;
 
   //  {below min, min, middle, max, above max}
   std::vector<int32_t> _int_values{0, 1, 3, 6, 7};
@@ -228,6 +263,66 @@ TEST_F(ColumnStatisticsTest, StoredProcedureBetweenTest) {
                                                           selectivities_float);
   predict_selectivities_for_stored_procedures_and_compare(_column_statistics_double, scan_type, _double_values,
                                                           selectivities_float);
+}
+
+TEST_F(ColumnStatisticsTest, TwoColumnsEqualsTest) {
+  ScanType scan_type = ScanType::OpEquals;
+
+  auto col_stat1 = std::make_shared<ColumnStatistics<int>>(ColumnID(0), 10.f, 0, 10);
+  auto col_stat2 = std::make_shared<ColumnStatistics<int>>(ColumnID(1), 10.f, -10, 20);
+
+  auto result1 = col_stat1->estimate_selectivity_for_two_column_predicate(scan_type, col_stat2);
+  auto result2 = col_stat2->estimate_selectivity_for_two_column_predicate(scan_type, col_stat1);
+  float expected_selectivity = (11.f / 31.f) / 10.f;
+
+  EXPECT_FLOAT_EQ(result1.selectivity, expected_selectivity);
+  EXPECT_FLOAT_EQ(result2.selectivity, expected_selectivity);
+
+  auto col_stat3 = std::make_shared<ColumnStatistics<float>>(ColumnID(0), 10.f, 0.f, 10.f);
+  auto col_stat4 = std::make_shared<ColumnStatistics<float>>(ColumnID(1), 3.f, -10.f, 20.f);
+
+  auto result3 = col_stat3->estimate_selectivity_for_two_column_predicate(scan_type, col_stat4);
+  auto result4 = col_stat4->estimate_selectivity_for_two_column_predicate(scan_type, col_stat3);
+  expected_selectivity = (10.f / 30.f) / 10.f;
+
+  EXPECT_FLOAT_EQ(result3.selectivity, expected_selectivity);
+  EXPECT_FLOAT_EQ(result4.selectivity, expected_selectivity);
+}
+
+TEST_F(ColumnStatisticsTest, TwoColumnsLessThanTest) {
+  ScanType scan_type = ScanType::OpLessThan;
+
+  auto col_stat1 = std::make_shared<ColumnStatistics<int>>(ColumnID(0), 10.f, 1, 20);
+  auto col_stat2 = std::make_shared<ColumnStatistics<int>>(ColumnID(1), 30.f, 11, 40);
+
+  auto result1 = col_stat1->estimate_selectivity_for_two_column_predicate(scan_type, col_stat2);
+  auto expected_selectivity = ((10.f / 20.f) * (10.f / 30.f) - 0.5f * 1.f / 30.f) * 0.5f + (10.f / 20.f) +
+                              (20.f / 30.f) - (10.f / 20.f) * (20.f / 30.f);
+  EXPECT_FLOAT_EQ(result1.selectivity, expected_selectivity);
+
+  auto result2 = col_stat2->estimate_selectivity_for_two_column_predicate(scan_type, col_stat1);
+  expected_selectivity = ((10.f / 20.f) * (10.f / 30.f) - 0.5f * 1.f / 30.f) * 0.5f;
+  EXPECT_FLOAT_EQ(result2.selectivity, expected_selectivity);
+
+  auto col_stat3 = std::make_shared<ColumnStatistics<float>>(ColumnID(0), 6.f, 0, 10);
+  auto col_stat4 = std::make_shared<ColumnStatistics<float>>(ColumnID(1), 12.f, -10, 30);
+
+  auto result3 = col_stat3->estimate_selectivity_for_two_column_predicate(scan_type, col_stat4);
+  expected_selectivity = ((10.f / 10.f) * (10.f / 40.f) - 1.f / (4 * 6)) * 0.5f + (20.f / 40.f);
+  EXPECT_FLOAT_EQ(result3.selectivity, expected_selectivity);
+
+  auto result4 = col_stat4->estimate_selectivity_for_two_column_predicate(scan_type, col_stat3);
+  expected_selectivity = ((10.f / 10.f) * (10.f / 40.f) - 1.f / (4 * 6)) * 0.5f + (10.f / 40.f);
+  EXPECT_FLOAT_EQ(result4.selectivity, expected_selectivity);
+}
+
+TEST_F(ColumnStatisticsTest, TwoColumnsRealDataTest) {
+  // test selectivity calculations for all scan types and all column combinations of int_equal_distribution.tbl
+  std::vector<ScanType> scan_types{ScanType::OpEquals, ScanType::OpNotEquals, ScanType::OpLessThan,
+                                   ScanType::OpLessThanEquals, ScanType::OpGreaterThan};
+  for (auto scan_type : scan_types) {
+    predict_selectivities_and_compare(_table_uniform_distribution, _column_statistics_uniform_columns, scan_type);
+  }
 }
 
 }  // namespace opossum

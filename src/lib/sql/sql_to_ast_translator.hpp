@@ -42,9 +42,8 @@ class SQLToASTTranslator final : public boost::noncopyable {
 
   std::shared_ptr<AbstractASTNode> translate_statement(const hsql::SQLStatement& statement);
 
-  static AllParameterVariant _translate_operand(const hsql::Expr& expr,
+  static AllParameterVariant translate_argument(const hsql::Expr& expr,
                                                 const optional<std::shared_ptr<AbstractASTNode>>& input_node = nullopt);
-  static ColumnID generate_column_id(const hsql::Expr& hsql_expr, const std::shared_ptr<AbstractASTNode>& input_node);
 
  protected:
   std::shared_ptr<AbstractASTNode> _translate_select(const hsql::SelectStatement& select);
@@ -68,6 +67,8 @@ class SQLToASTTranslator final : public boost::noncopyable {
                                                        const std::shared_ptr<AbstractASTNode>& input_node);
 
   std::shared_ptr<AbstractASTNode> _translate_join(const hsql::JoinDefinition& select);
+
+  std::shared_ptr<AbstractASTNode> _translate_cross_product(const std::vector<hsql::TableRef*>& tables);
 
  private:
   SQLToASTTranslator() = default;

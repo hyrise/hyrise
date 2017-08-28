@@ -42,8 +42,8 @@ TEST_F(OperatorsUnionAllTest, UnionOfValueReferenceTables) {
   std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_float_union.tbl", 2);
 
   auto projection = std::make_shared<Projection>(
-      _table_wrapper_a, Projection::ColumnExpressions{ExpressionNode::create_column_reference(ColumnID{0}),
-                                                      ExpressionNode::create_column_reference(ColumnID{1})});
+      _table_wrapper_a, Projection::ColumnExpressions{ExpressionNode::create_column_identifier(ColumnID{0}),
+                                                      ExpressionNode::create_column_identifier(ColumnID{1})});
   projection->execute();
 
   auto union_all = std::make_shared<UnionAll>(projection, _table_wrapper_b);

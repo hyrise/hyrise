@@ -72,6 +72,7 @@ class Table : private Noncopyable {
   const std::vector<std::string> &column_types() const;
 
   // returns the column with the given name
+  // TODO(mp): BLOCKING - mention that this does not resolve duplicate column names correctly, or fix it.
   ColumnID column_id_by_name(const std::string &column_name) const;
 
   // return the maximum chunk size (cannot exceed ChunkOffset (uint32_t))
