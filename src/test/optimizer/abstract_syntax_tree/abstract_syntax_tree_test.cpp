@@ -21,9 +21,7 @@ class AbstractSyntaxTreeTest : public BaseTest {
     StorageManager::get().add_table("b", load_table("src/test/tables/int_float2.tbl", 0));
   }
 
-  void TearDown() override {
-    StorageManager::get().reset();
-  }
+  void TearDown() override { StorageManager::get().reset(); }
 };
 
 TEST_F(AbstractSyntaxTreeTest, ParentTest) {
@@ -33,7 +31,7 @@ TEST_F(AbstractSyntaxTreeTest, ParentTest) {
   ASSERT_EQ(table_node->right_child(), nullptr);
   ASSERT_EQ(table_node->parent(), nullptr);
 
-  const auto predicate_node = std::make_shared<PredicateNode>(ColumnID{0}, nullptr, ScanType::OpEquals, "a");
+  const auto predicate_node = std::make_shared<PredicateNode>(ColumnID{0}, ScanType::OpEquals, "a");
   predicate_node->set_left_child(table_node);
 
   ASSERT_EQ(table_node->parent(), predicate_node);
@@ -55,7 +53,7 @@ TEST_F(AbstractSyntaxTreeTest, ParentTest) {
 TEST_F(AbstractSyntaxTreeTest, ClearParentTest) {
   const auto table_node = std::make_shared<StoredTableNode>("a");
 
-  const auto predicate_node = std::make_shared<PredicateNode>(ColumnID{0}, nullptr, ScanType::OpEquals, "a");
+  const auto predicate_node = std::make_shared<PredicateNode>(ColumnID{0}, ScanType::OpEquals, "a");
   predicate_node->set_left_child(table_node);
 
   ASSERT_EQ(table_node->parent(), predicate_node);
@@ -78,7 +76,7 @@ TEST_F(AbstractSyntaxTreeTest, ChainSameNodesTest) {
   ASSERT_EQ(table_node->right_child(), nullptr);
   ASSERT_EQ(table_node->parent(), nullptr);
 
-  const auto predicate_node = std::make_shared<PredicateNode>(ColumnID{0}, nullptr, ScanType::OpEquals, "a");
+  const auto predicate_node = std::make_shared<PredicateNode>(ColumnID{0}, ScanType::OpEquals, "a");
   predicate_node->set_left_child(table_node);
 
   ASSERT_EQ(table_node->parent(), predicate_node);
@@ -86,7 +84,7 @@ TEST_F(AbstractSyntaxTreeTest, ChainSameNodesTest) {
   ASSERT_EQ(predicate_node->right_child(), nullptr);
   ASSERT_EQ(predicate_node->parent(), nullptr);
 
-  const auto predicate_node_2 = std::make_shared<PredicateNode>(ColumnID{1}, nullptr, ScanType::OpEquals, "b");
+  const auto predicate_node_2 = std::make_shared<PredicateNode>(ColumnID{1}, ScanType::OpEquals, "b");
   predicate_node_2->set_left_child(predicate_node);
 
   ASSERT_EQ(predicate_node->parent(), predicate_node_2);
