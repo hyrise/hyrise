@@ -81,7 +81,7 @@ int Console::read() {
 
   // Prompt user for input
   buffer = readline(_prompt.c_str());
-  if (buffer == NULL) {
+  if (buffer == nullptr) {
     return ReturnCode::Quit;
   }
 
@@ -149,6 +149,7 @@ int Console::_eval_command(const CommandFunction& func, const std::string& comma
   size_t first = cmd.find(' ');
   size_t last = cmd.find('\n');
 
+  // If no whitespace is found, zero arguments are provided
   if (std::string::npos == first) {
     return static_cast<int>(func(""));
   }
