@@ -71,12 +71,12 @@ class ReferenceColumnIterable : public BaseIterable<ReferenceColumnIterable<T>> 
       const auto column = chunk.get_column(_column_id);
 
       if (auto value_column = std::dynamic_pointer_cast<const ValueColumn<T>>(column)) {
-        _value_columns[chunk_id] = value_column.get();
+        _value_columns[chunk_id] = value_column;
         return _value_from_value_column(*value_column, chunk_offset);
       }
 
       if (auto dict_column = std::dynamic_pointer_cast<const DictionaryColumn<T>>(column)) {
-        _dictionary_columns[chunk_id] = dict_column.get();
+        _dictionary_columns[chunk_id] = dict_column;
         return _value_from_dictionary_column(*dict_column, chunk_offset);
       }
 
@@ -122,8 +122,8 @@ class ReferenceColumnIterable : public BaseIterable<ReferenceColumnIterable<T>> 
     const PosListIterator _begin_pos_list_it;
     PosListIterator _pos_list_it;
 
-    mutable std::map<ChunkID, const ValueColumn<T> *> _value_columns;
-    mutable std::map<ChunkID, const DictionaryColumn<T> *> _dictionary_columns;
+    mutable std::map<ChunkID, std::shared_ptr<const ValueColumn<T>>> _value_columns;
+    mutable std::map<ChunkID, std::shared_ptr<const DictionaryColumn<T>>> _dictionary_columns;
   };
 };
 
