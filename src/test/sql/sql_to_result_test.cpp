@@ -38,9 +38,12 @@ class SQLToResultTest : public BaseTest, public ::testing::WithParamInterface<SQ
     StorageManager::get().add_table("int_float2", load_table("src/test/tables/int_float2.tbl", 2));
     StorageManager::get().add_table("int_float4", load_table("src/test/tables/int_float4.tbl", 2));
     StorageManager::get().add_table("int_string2", load_table("src/test/tables/int_string2.tbl", 2));
-    StorageManager::get().add_table("groupby_int_1gb_1agg", load_table("src/test/tables/aggregateoperator/groupby_int_1gb_1agg/input.tbl", 2));
-    StorageManager::get().add_table("groupby_int_1gb_2agg", load_table("src/test/tables/aggregateoperator/groupby_int_1gb_2agg/input.tbl", 2));
-    StorageManager::get().add_table("groupby_int_2gb_2agg", load_table("src/test/tables/aggregateoperator/groupby_int_2gb_2agg/input.tbl", 2));
+    StorageManager::get().add_table("groupby_int_1gb_1agg",
+                                    load_table("src/test/tables/aggregateoperator/groupby_int_1gb_1agg/input.tbl", 2));
+    StorageManager::get().add_table("groupby_int_1gb_2agg",
+                                    load_table("src/test/tables/aggregateoperator/groupby_int_1gb_2agg/input.tbl", 2));
+    StorageManager::get().add_table("groupby_int_2gb_2agg",
+                                    load_table("src/test/tables/aggregateoperator/groupby_int_2gb_2agg/input.tbl", 2));
 
     // Load TPC-H tables
     StorageManager::get().add_table("customer", load_table("src/test/tables/tpch/customer.tbl", 1));
@@ -91,7 +94,8 @@ const SQLTestParam test_queries[] = {
     // ORDER BY
     {"SELECT * FROM int_float ORDER BY a DESC;", "src/test/tables/int_float_reverse.tbl", OrderSensitivity::Sensitive},
     {"SELECT * FROM int_float2 ORDER BY a, b;", "src/test/tables/int_float2_sorted.tbl", OrderSensitivity::Sensitive},
-    {"SELECT * FROM int_float2 ORDER BY a, b ASC;", "src/test/tables/int_float2_sorted.tbl", OrderSensitivity::Sensitive},
+    {"SELECT * FROM int_float2 ORDER BY a, b ASC;", "src/test/tables/int_float2_sorted.tbl",
+     OrderSensitivity::Sensitive},
     {"SELECT a, b FROM int_float ORDER BY a;", "src/test/tables/int_float_sorted.tbl", OrderSensitivity::Sensitive},
     {"SELECT * FROM int_float4 ORDER BY a, b;", "src/test/tables/int_float2_sorted.tbl", OrderSensitivity::Sensitive},
     {"SELECT a FROM (SELECT a, b FROM int_float WHERE a > 1 ORDER BY b) WHERE a > 0 ORDER BY a;",
