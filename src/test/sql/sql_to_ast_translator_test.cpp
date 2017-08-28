@@ -82,42 +82,42 @@ TEST_F(SQLToASTTranslatorTest, DISABLED_ExpressionTest) {
   EXPECT_EQ(result_node->type(), ASTNodeType::Projection);
   EXPECT_FALSE(result_node->right_child());
 
-  auto ts_node_1 = result_node->left_child();
+  auto ts_node_1 = std::dynamic_pointer_cast<PredicateNode>(result_node->left_child());
   EXPECT_EQ(ts_node_1->type(), ASTNodeType::Predicate);
   EXPECT_FALSE(ts_node_1->right_child());
-
-  auto predicate = std::static_pointer_cast<PredicateNode>(ts_node_1)->predicate();
-  EXPECT_EQ(predicate->type(), ExpressionType::Equals);
+  EXPECT_EQ(ts_node_1->column_id(), ColumnID{0});
+  EXPECT_EQ(ts_node_1->scan_type(), ScanType::OpEquals);
+  // TODO(anybody): once this is implemented, the value side has to be checked.
 }
 
-TEST_F(SQLToASTTranslatorTest, ExpressionStringTest) {
+TEST_F(SQLToASTTranslatorTest, TwoColumnFilter) {
   const auto query = "SELECT * FROM table_a WHERE a = \"b\"";
   auto result_node = compile_query(query);
 
   EXPECT_EQ(result_node->type(), ASTNodeType::Projection);
   EXPECT_FALSE(result_node->right_child());
 
-  auto ts_node_1 = result_node->left_child();
+  auto ts_node_1 = std::static_pointer_cast<PredicateNode>(result_node->left_child());
   EXPECT_EQ(ts_node_1->type(), ASTNodeType::Predicate);
   EXPECT_FALSE(ts_node_1->right_child());
-
-  auto predicate = std::static_pointer_cast<PredicateNode>(ts_node_1)->predicate();
-  EXPECT_EQ(predicate->type(), ExpressionType::Equals);
+  EXPECT_EQ(ts_node_1->scan_type(), ScanType::OpEquals);
+  EXPECT_EQ(ts_node_1->column_id(), ColumnID{0});
+  EXPECT_EQ(ts_node_1->value(), AllParameterVariant{ColumnID{1}});
 }
 
-TEST_F(SQLToASTTranslatorTest, ExpressionStringTest2) {
+TEST_F(SQLToASTTranslatorTest, ExpressionStringTest) {
   const auto query = "SELECT * FROM table_a WHERE a = 'b'";
   auto result_node = compile_query(query);
 
   EXPECT_EQ(result_node->type(), ASTNodeType::Projection);
   EXPECT_FALSE(result_node->right_child());
 
-  auto ts_node_1 = result_node->left_child();
+  auto ts_node_1 = std::static_pointer_cast<PredicateNode>(result_node->left_child());
   EXPECT_EQ(ts_node_1->type(), ASTNodeType::Predicate);
   EXPECT_FALSE(ts_node_1->right_child());
-
-  auto predicate = std::static_pointer_cast<PredicateNode>(ts_node_1)->predicate();
-  EXPECT_EQ(predicate->type(), ExpressionType::Equals);
+  EXPECT_EQ(ts_node_1->column_id(), ColumnID{0});
+  EXPECT_EQ(ts_node_1->scan_type(), ScanType::OpEquals);
+  EXPECT_EQ(ts_node_1->value(), AllParameterVariant{std::string{"b"}});
 }
 
 TEST_F(SQLToASTTranslatorTest, SelectWithAndCondition) {

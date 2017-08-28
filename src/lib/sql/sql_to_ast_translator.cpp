@@ -354,10 +354,7 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_predicate(
     value = translate_argument(*argument_expr, input_node);
   }
 
-  std::shared_ptr<ExpressionNode> expression_node = SQLExpressionTranslator::translate_expression(expr, input_node);
-  auto predicate_node =
-      std::make_shared<PredicateNode>(column_operand_column_id, expression_node, scan_type, value, value2);
-
+  auto predicate_node = std::make_shared<PredicateNode>(column_operand_column_id, scan_type, value, value2);
   predicate_node->set_left_child(input_node);
 
   return predicate_node;
@@ -417,11 +414,7 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_having(
     argument = translate_argument(*value_operand_expr);
   }
 
-  std::shared_ptr<ExpressionNode> expression_node =
-      SQLExpressionTranslator::translate_expression(expr, aggregate_node->left_child());
-  auto predicate_node =
-      std::make_shared<PredicateNode>(column_operand_column_id, expression_node, scan_type, argument, argument2);
-
+  auto predicate_node = std::make_shared<PredicateNode>(column_operand_column_id, scan_type, argument, argument2);
   predicate_node->set_left_child(input_node);
 
   return predicate_node;
