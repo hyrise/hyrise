@@ -3,13 +3,13 @@
 #include <utility>
 #include <vector>
 
-#include "../base_test.hpp"
+#include "base_test.hpp"
 #include "gtest/gtest.h"
 
 #include "optimizer/abstract_syntax_tree/join_node.hpp"
 #include "optimizer/abstract_syntax_tree/predicate_node.hpp"
 #include "optimizer/abstract_syntax_tree/projection_node.hpp"
-#include "optimizer/abstract_syntax_tree/stored_table_node.hpp"
+#include "optimizer/abstract_syntax_tree/stored_table_node_test.hpp"
 #include "storage/storage_manager.hpp"
 
 namespace opossum {
@@ -19,6 +19,10 @@ class AbstractSyntaxTreeTest : public BaseTest {
   void SetUp() override {
     StorageManager::get().add_table("a", load_table("src/test/tables/int_float.tbl", 0));
     StorageManager::get().add_table("b", load_table("src/test/tables/int_float2.tbl", 0));
+  }
+
+  void TearDown() override {
+    StorageManager::get().reset();
   }
 };
 

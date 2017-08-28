@@ -1,4 +1,4 @@
-#include "stored_table_node.hpp"
+#include "stored_table_node_test.hpp"
 
 #include <memory>
 #include <string>

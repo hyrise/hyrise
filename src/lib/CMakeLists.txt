@@ -149,7 +149,7 @@ set(
     optimizer/abstract_syntax_tree/sort_node.cpp
     optimizer/abstract_syntax_tree/sort_node.hpp
     optimizer/abstract_syntax_tree/stored_table_node.cpp
-    optimizer/abstract_syntax_tree/stored_table_node.hpp
+    optimizer/abstract_syntax_tree/stored_table_node_test.hpp
     optimizer/base_column_statistics.hpp
     optimizer/column_statistics.cpp
     optimizer/column_statistics.hpp

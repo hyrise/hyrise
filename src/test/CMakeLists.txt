@@ -41,7 +41,9 @@ set(
     operators/update_test.cpp
     operators/validate_test.cpp
     operators/validate_visibility_test.cpp
-    optimizer/abstract_syntax_tree_test.cpp
+    optimizer/abstract_syntax_tree/abstract_syntax_tree_test.cpp
+    optimizer/abstract_syntax_tree/stored_table_node_test.cpp
+    optimizer/abstract_syntax_tree/projection_node_test.cpp
     optimizer/ast_to_operator_translator_test.cpp
     optimizer/column_statistics_test.cpp
     optimizer/strategy/predicate_reordering_test.cpp

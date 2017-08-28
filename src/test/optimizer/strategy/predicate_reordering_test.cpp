@@ -9,7 +9,7 @@
 #include "optimizer/abstract_syntax_tree/predicate_node.hpp"
 #include "optimizer/abstract_syntax_tree/projection_node.hpp"
 #include "optimizer/abstract_syntax_tree/sort_node.hpp"
-#include "optimizer/abstract_syntax_tree/stored_table_node.hpp"
+#include "optimizer/abstract_syntax_tree/stored_table_node_test.hpp"
 #include "optimizer/strategy/predicate_reordering_rule.hpp"
 #include "optimizer/table_statistics.hpp"
 #include "storage/storage_manager.hpp"

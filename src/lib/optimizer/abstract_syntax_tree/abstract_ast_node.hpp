@@ -62,7 +62,12 @@ class AbstractASTNode : public std::enable_shared_from_this<AbstractASTNode> {
    * AbstractASTNode::find_column_id_for_column_identifier() looks for the @param column_identifier in the columns this
    * node outputs. If it can find it, it will be returned, otherwise nullopt is returned.
    * AbstractASTNode::get_column_id_for_column_identifier() is more strict and will fail, if the
-   * @param column_identifier cannot be found
+   * @param column_identifier cannot be found.
+   *
+   * If a node outputs a column "x" but ALIASes it as, say, "y", these will only find
+   * ColumnIdentifier{"y", nullopt} and NEITHER ColumnIdentifier{"x", "table_name"} nor
+   * ColumnIdentifier{"y", "table_name"}
+   *
    * NOTE: These functions will possibly result in a full recursive traversal of the ancestors of this node.
    */
   ColumnID get_column_id_for_column_identifier(const ColumnIdentifier &column_identifier) const;

@@ -93,13 +93,13 @@ optional<ColumnID> ProjectionNode::find_column_id_for_column_identifier(
    * looking for. E.g: we're looking for column "a" and "a" exists in the previous node, but is NOT projected
    * by the projection it might still be an ALIAS of the projection.
    */
-  auto child_column_id = left_child()->find_column_id_for_column_identifier(column_identifier);
+  const auto child_column_id = left_child()->find_column_id_for_column_identifier(column_identifier);
 
   for (ColumnID::base_type column_idx = 0; column_idx < output_column_names().size(); column_idx++) {
     const auto& column_expression = _column_expressions[column_idx];
 
     if (child_column_id && column_expression->type() == ExpressionType::ColumnIdentifier &&
-        column_expression->column_id() == *child_column_id) {
+        column_expression->column_id() == *child_column_id && !column_expression->alias()) {
       Assert(!column_id, "Column name " + column_identifier.column_name + " is ambiguous.");
       column_id = ColumnID{column_idx};
       continue;
