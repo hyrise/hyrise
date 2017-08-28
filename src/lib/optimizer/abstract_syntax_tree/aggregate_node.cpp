@@ -160,17 +160,35 @@ ColumnID AggregateNode::get_column_id_for_expression(const std::shared_ptr<Expre
 
 optional<ColumnID> AggregateNode::find_column_id_for_expression(
     const std::shared_ptr<ExpressionNode>& expression) const {
-  const auto iter = std::find_if(_aggregate_expressions.begin(), _aggregate_expressions.end(), [&](const auto& rhs) {
+  const auto iter_aggregate_expressions = std::find_if(_aggregate_expressions.begin(), _aggregate_expressions.end(), [&](const auto& rhs) {
     DebugAssert(!!rhs, "Aggregate expressions can not be nullptr!");
     return *expression == *rhs;
   });
 
-  if (iter == _aggregate_expressions.end()) {
+  auto iter_groupby_columns = _groupby_column_ids.end();
+
+  if (expression->type() == ExpressionType::ColumnIdentifier) {
+    iter_groupby_columns = std::find_if(_groupby_column_ids.begin(), _groupby_column_ids.end(), [&](const auto& rhs) {
+      return expression->column_id() == rhs;
+    });
+  }
+
+  auto in_aggregate_expressions = iter_aggregate_expressions != _aggregate_expressions.end();
+  auto in_groupby_columns = iter_groupby_columns != _groupby_column_ids.end();
+
+  if (!in_aggregate_expressions && !in_groupby_columns) {
     return nullopt;
   }
 
-  const auto idx = std::distance(_aggregate_expressions.begin(), iter);
-  return ColumnID{static_cast<ColumnID::base_type>(idx + _groupby_column_ids.size())};
+  Assert(in_aggregate_expressions ^ in_groupby_columns, "expression is ambiguous");
+
+  if (in_aggregate_expressions) {
+    const auto idx = std::distance(_aggregate_expressions.begin(), iter_aggregate_expressions);
+    return ColumnID{static_cast<ColumnID::base_type>(idx + _groupby_column_ids.size())};
+  }
+
+  const auto idx = std::distance(_groupby_column_ids.begin(), iter_groupby_columns);
+  return ColumnID{static_cast<ColumnID::base_type>(idx)};
 }
 
 }  // namespace opossum

@@ -55,10 +55,9 @@ TEST_F(AggregateNodeTest, ColumnIdForColumnIdentifier) {
 }
 
 TEST_F(AggregateNodeTest, ColumnIdForExpression) {
-  // TODO(mp) enable once group by column can be in having
-  //  EXPECT_EQ(_aggregate_node->get_column_id_for_expression(
-  //    ExpressionNode::create_column_identifier(ColumnID{0})
-  //  ), 0);
+  EXPECT_EQ(_aggregate_node->get_column_id_for_expression(
+    ExpressionNode::create_column_identifier(ColumnID{0})
+  ), 0);
 
   // There is no a+b
   EXPECT_EQ(_aggregate_node->find_column_id_for_expression(ExpressionNode::create_binary_operator(
@@ -66,7 +65,7 @@ TEST_F(AggregateNodeTest, ColumnIdForExpression) {
                 ExpressionNode::create_column_identifier(ColumnID{1}))),
             nullopt);
 
-  // There is no SUM(a+b)
+  // But there is SUM(a+b)
   EXPECT_EQ(_aggregate_node->find_column_id_for_expression(ExpressionNode::create_function_reference(
                 "SUM", {ExpressionNode::create_binary_operator(
                            ExpressionType::Addition, ExpressionNode::create_column_identifier(ColumnID{0}),
