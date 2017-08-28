@@ -34,39 +34,21 @@ struct SQLTestParam {
 class SQLToResultTest : public BaseTest, public ::testing::WithParamInterface<SQLTestParam> {
  protected:
   void SetUp() override {
-    std::shared_ptr<Table> table_a = load_table("src/test/tables/int_float.tbl", 2);
-    StorageManager::get().add_table("table_a", std::move(table_a));
-
-    std::shared_ptr<Table> table_b = load_table("src/test/tables/int_float2.tbl", 2);
-    StorageManager::get().add_table("table_b", std::move(table_b));
-
-    std::shared_ptr<Table> table_c = load_table("src/test/tables/int_float4.tbl", 2);
-    StorageManager::get().add_table("table_c", std::move(table_c));
-
-    std::shared_ptr<Table> test_table2 = load_table("src/test/tables/int_string2.tbl", 2);
-    StorageManager::get().add_table("TestTable", test_table2);
-
-    std::shared_ptr<Table> groupby_int_1gb_1agg =
-        load_table("src/test/tables/aggregateoperator/groupby_int_1gb_1agg/input.tbl", 2);
-    StorageManager::get().add_table("groupby_int_1gb_1agg", groupby_int_1gb_1agg);
-
-    std::shared_ptr<Table> groupby_int_1gb_2agg =
-        load_table("src/test/tables/aggregateoperator/groupby_int_1gb_2agg/input.tbl", 2);
-    StorageManager::get().add_table("groupby_int_1gb_2agg", groupby_int_1gb_2agg);
-
-    std::shared_ptr<Table> groupby_int_2gb_2agg =
-        load_table("src/test/tables/aggregateoperator/groupby_int_2gb_2agg/input.tbl", 2);
-    StorageManager::get().add_table("groupby_int_2gb_2agg", groupby_int_2gb_2agg);
+    StorageManager::get().add_table("int_float", load_table("src/test/tables/int_float.tbl", 2));
+    StorageManager::get().add_table("int_float2", load_table("src/test/tables/int_float2.tbl", 2));
+    StorageManager::get().add_table("int_float4", load_table("src/test/tables/int_float4.tbl", 2));
+    StorageManager::get().add_table("int_string2", load_table("src/test/tables/int_string2.tbl", 2));
+    StorageManager::get().add_table("groupby_int_1gb_1agg",
+                                    load_table("src/test/tables/aggregateoperator/groupby_int_1gb_1agg/input.tbl", 2));
+    StorageManager::get().add_table("groupby_int_1gb_2agg",
+                                    load_table("src/test/tables/aggregateoperator/groupby_int_1gb_2agg/input.tbl", 2));
+    StorageManager::get().add_table("groupby_int_2gb_2agg",
+                                    load_table("src/test/tables/aggregateoperator/groupby_int_2gb_2agg/input.tbl", 2));
 
     // Load TPC-H tables
-    std::shared_ptr<Table> customer = load_table("src/test/tables/tpch/customer.tbl", 1);
-    StorageManager::get().add_table("customer", customer);
-
-    std::shared_ptr<Table> orders = load_table("src/test/tables/tpch/orders.tbl", 1);
-    StorageManager::get().add_table("orders", orders);
-
-    std::shared_ptr<Table> lineitem = load_table("src/test/tables/tpch/lineitem.tbl", 1);
-    StorageManager::get().add_table("lineitem", lineitem);
+    StorageManager::get().add_table("customer", load_table("src/test/tables/tpch/customer.tbl", 1));
+    StorageManager::get().add_table("orders", load_table("src/test/tables/tpch/orders.tbl", 1));
+    StorageManager::get().add_table("lineitem", load_table("src/test/tables/tpch/lineitem.tbl", 1));
   }
 };
 
@@ -97,49 +79,59 @@ TEST_P(SQLToResultTest, SQLQueryTest) {
 }
 
 const SQLTestParam test_queries[] = {
-    {"SELECT * FROM table_a;", "src/test/tables/int_float.tbl"},
+    {"SELECT * FROM int_float;", "src/test/tables/int_float.tbl"},
 
     // Table Scans
-    {"SELECT * FROM table_b WHERE a = 12345 AND b > 457;", "src/test/tables/int_float2_filtered.tbl"},
-    {"SELECT * FROM table_a WHERE a >= 1234;", "src/test/tables/int_float_filtered2.tbl"},
-    {"SELECT * FROM table_a WHERE 1234 <= a;", "src/test/tables/int_float_filtered2.tbl"},
-    {"SELECT * FROM table_a WHERE a >= 1234 AND b < 457.9", "src/test/tables/int_float_filtered.tbl"},
-    {"SELECT * FROM TestTable WHERE a BETWEEN 122 AND 124", "src/test/tables/int_string_filtered.tbl"},
+    {"SELECT * FROM int_float2 WHERE a = 12345 AND b > 457;", "src/test/tables/int_float2_filtered.tbl"},
+    {"SELECT * FROM int_float WHERE a >= 1234;", "src/test/tables/int_float_filtered2.tbl"},
+    {"SELECT * FROM int_float WHERE 1234 <= a;", "src/test/tables/int_float_filtered2.tbl"},
+    {"SELECT * FROM int_float WHERE a >= 1234 AND b < 457.9", "src/test/tables/int_float_filtered.tbl"},
+    {"SELECT * FROM int_string2 WHERE a BETWEEN 122 AND 124", "src/test/tables/int_string_filtered.tbl"},
 
     // Projection
-    {"SELECT a FROM table_a;", "src/test/tables/int.tbl"},
+    {"SELECT a FROM int_float;", "src/test/tables/int.tbl"},
 
     // ORDER BY
-    {"SELECT * FROM table_a ORDER BY a DESC;", "src/test/tables/int_float_reverse.tbl", OrderSensitivity::Sensitive},
-    {"SELECT * FROM table_b ORDER BY a, b;", "src/test/tables/int_float2_sorted.tbl", OrderSensitivity::Sensitive},
-    {"SELECT * FROM table_b ORDER BY a, b ASC;", "src/test/tables/int_float2_sorted.tbl", OrderSensitivity::Sensitive},
-    {"SELECT a, b FROM table_a ORDER BY a;", "src/test/tables/int_float_sorted.tbl", OrderSensitivity::Sensitive},
-    {"SELECT * FROM table_c ORDER BY a, b;", "src/test/tables/int_float2_sorted.tbl", OrderSensitivity::Sensitive},
-    {"SELECT a FROM (SELECT a, b FROM table_a WHERE a > 1 ORDER BY b) WHERE a > 0 ORDER BY a;",
+    {"SELECT * FROM int_float ORDER BY a DESC;", "src/test/tables/int_float_reverse.tbl", OrderSensitivity::Sensitive},
+    {"SELECT * FROM int_float2 ORDER BY a, b;", "src/test/tables/int_float2_sorted.tbl", OrderSensitivity::Sensitive},
+    {"SELECT * FROM int_float2 ORDER BY a, b ASC;", "src/test/tables/int_float2_sorted.tbl",
+     OrderSensitivity::Sensitive},
+    {"SELECT a, b FROM int_float ORDER BY a;", "src/test/tables/int_float_sorted.tbl", OrderSensitivity::Sensitive},
+    {"SELECT * FROM int_float4 ORDER BY a, b;", "src/test/tables/int_float2_sorted.tbl", OrderSensitivity::Sensitive},
+    {"SELECT a FROM (SELECT a, b FROM int_float WHERE a > 1 ORDER BY b) WHERE a > 0 ORDER BY a;",
      "src/test/tables/int.tbl", OrderSensitivity::Sensitive},
 
     // AGGREGATE
     // TODO(tim): Projection cannot handle expression `$a + $b`
     // because it is not able to handle columns with different data types.
     // Create issue with failing test.
-    {"SELECT SUM(b + b) AS sum_b_b FROM table_a;", "src/test/tables/int_float_sum_b_plus_b.tbl"},
+    {"SELECT SUM(b + b) AS sum_b_b FROM int_float;", "src/test/tables/int_float_sum_b_plus_b.tbl"},
 
     // JOIN
     {R"(SELECT "left".a, "left".b, "right".a, "right".b
-        FROM table_a AS "left"
-        JOIN table_b AS "right"
+        FROM int_float AS "left"
+        JOIN int_float2 AS "right"
         ON "left".a = "right".a;)",
      "src/test/tables/joinoperators/int_inner_join.tbl"},
     {R"(SELECT *
-        FROM table_a AS "left"
-        LEFT JOIN table_b AS "right"
+        FROM int_float AS "left"
+        LEFT JOIN int_float2 AS "right"
         ON "left".a = "right".a;)",
      "src/test/tables/joinoperators/int_left_join.tbl"},
     {R"(SELECT *
-        FROM table_a AS "left"
-        INNER JOIN table_b AS "right"
+        FROM int_float AS "left"
+        INNER JOIN int_float2 AS "right"
         ON "left".a = "right".a;)",
      "src/test/tables/joinoperators/int_inner_join.tbl"},
+
+    // JOIN multiple tables
+    {R"(SELECT *
+        FROM int_float AS t1
+        INNER JOIN int_float2 AS t2
+        ON t1.a = t2.a
+        INNER JOIN int_string2 AS t3
+        ON t1.a = t3.a)",
+     "src/test/tables/joinoperators/int_inner_join_3_tables.tbl"},
 
     // GROUP BY
     {"SELECT a, SUM(b) FROM groupby_int_1gb_1agg GROUP BY a;",

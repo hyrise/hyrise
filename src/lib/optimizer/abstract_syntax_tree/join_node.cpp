@@ -56,6 +56,7 @@ optional<ColumnID> JoinNode::find_column_id_for_column_identifier_name(
     const auto left_column_id = left_child()->find_column_id_for_column_identifier_name(column_identifier_name);
     const auto right_column_id = right_child()->find_column_id_for_column_identifier_name(column_identifier_name);
 
+    // If neither input table has that column, return.
     if (!left_column_id && !left_column_id) {
       return nullopt;
     }
@@ -73,9 +74,16 @@ optional<ColumnID> JoinNode::find_column_id_for_column_identifier_name(
     return ColumnID{static_cast<ColumnID::base_type>(column_idx)};
   }
 
+  auto left_manages_table = left_child()->manages_table(*column_identifier_name.table_name);
+  auto right_manages_table = right_child()->manages_table(*column_identifier_name.table_name);
+
+  // If neither input table manages the table name, return.
+  if (!left_manages_table && !right_manages_table) {
+    return nullopt;
+  }
+
   // There must not be two tables with the same qualifying name.
-  Assert(left_child()->manages_table(*column_identifier_name.table_name) ^
-             right_child()->manages_table(*column_identifier_name.table_name),
+  Assert(left_manages_table ^ right_manages_table,
          "Table name " + *column_identifier_name.table_name + " is ambiguous.");
 
   // Otherwise only search a children if it manages that qualifier.
