@@ -6,7 +6,7 @@
 #include <readline/history.h>
 #include <readline/readline.h>
 #include <setjmp.h>
-#include <signal.h>
+#include <csignal>
 #include <chrono>
 #include <ctime>
 #include <iomanip>
@@ -467,7 +467,7 @@ int main(int argc, char** argv) {
   auto& console = opossum::Console::get();
 
   // Bind CTRL-C to behaviour specified in opossum::Console::handle_signal
-  signal(SIGINT, &opossum::Console::handle_signal);
+  std::signal(SIGINT, &opossum::Console::handle_signal);
 
   console.setPrompt("> ");
   console.setLogfile("console.log");
