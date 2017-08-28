@@ -16,18 +16,17 @@
 #include "utils/assert.hpp"
 
 namespace opossum {
+
 JoinNestedLoopA::JoinNestedLoopA(const std::shared_ptr<const AbstractOperator> left,
-                                 const std::shared_ptr<const AbstractOperator> right,
-                                 optional<std::pair<ColumnID, ColumnID>> column_ids, const ScanType scan_type,
-                                 const JoinMode mode)
-    : AbstractJoinOperator(left, right, column_ids, scan_type, mode) {
-  DebugAssert(
-      (mode != JoinMode::Cross),
-      "JoinNestedLoopA: this operator does not support Cross Joins, the optimizer should use Product operator.");
-  DebugAssert((_mode != JoinMode::Natural), "NestedLoopJoin: this operator currently does not support Natural Joins.");
-  DebugAssert(static_cast<bool>(column_ids),
-              "NestedLoopJoin: optional column ids are only supported for Cross and Natural Joins.");
+                                 const std::shared_ptr<const AbstractOperator> right, const JoinMode mode)
+    : AbstractJoinOperator(left, right, mode) {
+  Fail("Natural and Cross Joins are currently not supported by this operator.");
 }
+
+JoinNestedLoopA::JoinNestedLoopA(const std::shared_ptr<const AbstractOperator> left,
+                                 const std::shared_ptr<const AbstractOperator> right, const JoinMode mode,
+                                 const std::pair<ColumnID, ColumnID> &column_ids, const ScanType scan_type)
+    : AbstractJoinOperator(left, right, mode, column_ids, scan_type) {}
 
 const std::string JoinNestedLoopA::name() const { return "JoinNestedLoopA"; }
 
@@ -36,15 +35,19 @@ uint8_t JoinNestedLoopA::num_in_tables() const { return 2; }
 uint8_t JoinNestedLoopA::num_out_tables() const { return 1; }
 
 std::shared_ptr<AbstractOperator> JoinNestedLoopA::recreate(const std::vector<AllParameterVariant> &args) const {
-  return std::make_shared<JoinNestedLoopA>(_input_left->recreate(args), _input_right->recreate(args), _column_ids,
-                                           _scan_type, _mode);
+  if (_column_ids && _scan_type) {
+    return std::make_shared<JoinNestedLoopA>(_input_left->recreate(args), _input_right->recreate(args), _mode,
+                                             *_column_ids, *_scan_type);
+  }
+
+  return std::make_shared<JoinNestedLoopA>(_input_left->recreate(args), _input_right->recreate(args), _mode);
 }
 
 std::shared_ptr<const Table> JoinNestedLoopA::on_execute() {
-  const auto &type_left = input_table_left()->column_type(_column_ids->first);
-  const auto &type_right = input_table_right()->column_type(_column_ids->second);
+  const auto &type_left = input_table_left()->column_type((*_column_ids).first);
+  const auto &type_right = input_table_right()->column_type((*_column_ids).second);
   _impl = make_unique_by_column_types<AbstractReadOnlyOperatorImpl, JoinNestedLoopAImpl>(
-      type_left, type_right, _input_left, _input_right, *_column_ids, _scan_type, _mode);
+      type_left, type_right, _input_left, _input_right, _mode, *_column_ids, *_scan_type);
   return _impl->on_execute();
 }
 
@@ -53,14 +56,14 @@ template <typename LeftType, typename RightType>
 class JoinNestedLoopA::JoinNestedLoopAImpl : public AbstractJoinOperatorImpl {
  public:
   JoinNestedLoopAImpl(const std::shared_ptr<const AbstractOperator> left,
-                      const std::shared_ptr<const AbstractOperator> right,
-                      const std::pair<ColumnID, ColumnID> &column_ids, const ScanType scan_type, const JoinMode mode)
+                      const std::shared_ptr<const AbstractOperator> right, const JoinMode mode,
+                      const std::pair<ColumnID, ColumnID> &column_ids, const ScanType scan_type)
       : _left_in_table(left->get_output()),
         _right_in_table(right->get_output()),
+        _mode(mode),
         _left_column_id(column_ids.first),
         _right_column_id(column_ids.second),
         _scan_type(scan_type),
-        _mode(mode),
         _output_table(std::make_shared<Table>()) {
     // Parsing the join operator
     switch (_scan_type) {
@@ -531,9 +534,9 @@ class JoinNestedLoopA::JoinNestedLoopAImpl : public AbstractJoinOperatorImpl {
 
  protected:
   const std::shared_ptr<const Table> _left_in_table, _right_in_table;
+  const JoinMode _mode;
   const ColumnID _left_column_id, _right_column_id;
   const ScanType _scan_type;
-  const JoinMode _mode;
   const std::shared_ptr<Table> _output_table;
   std::function<bool(LeftType, RightType)> _comparator;
 };

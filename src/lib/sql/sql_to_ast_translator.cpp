@@ -154,6 +154,11 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_select(const hsq
 }
 
 std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_join(const hsql::JoinDefinition& join) {
+  const auto join_mode = translate_join_type_to_join_mode(join.type);
+
+  // TODO(anybody): both operator and translator support are missing.
+  DebugAssert(join_mode != JoinMode::Natural, "Natural Joins are currently not supported.");
+
   auto left_node = _translate_table_ref(*join.left);
   auto right_node = _translate_table_ref(*join.right);
 
@@ -189,60 +194,8 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_join(const hsql:
     column_ids = std::make_pair(*left_in_right_node, *right_in_left_node);
   }
 
-  //  if (condition.expr->table != nullptr) {
-  //    if (left_node->manages_table(condition.expr->table)) {
-  //      Assert(!right_node->manages_table(condition.expr->table), "");
-  //      Assert(condition.expr2->table == nullptr || right_node->manages_table(condition.expr2->table), "");
-  //
-  //      switch_mapping = false;
-  //    } else {
-  //      Assert(right_node->manages_table(condition.expr->table), "Table '" + std::string(condition.expr->table) + "'
-  //      not managed by any input node");
-  //
-  //      switch_mapping = true;
-  //    }
-  //  } else {
-  //    if (condition.expr2->table != nullptr) {
-  //      if (left_node->manages_table(condition.expr2->table)) {
-  //        Assert(!right_node->manages_table(condition.expr2->table), "");
-  //        //Assert(condition.expr->table == nullptr || right_node->manages_table(condition.expr->table), "");
-  //
-  //        switch_mapping = true;
-  //      } else {
-  //        Assert(right_node->manages_table(condition.expr2->table), "Table '" + std::string(condition.expr->table) +
-  //        "' not managed by any input node");
-  //
-  //        switch_mapping = false;
-  //      }
-  //    } else {
-  //      auto left_output_columns = left_node->output_column_names();
-  //      auto right_output_columns = right_node->output_column_names();
-  //
-  //      auto left_iter = std::find(left_output_columns.begin(), left_output_columns.end(),
-  //      std::string(condition.expr->name));
-  //      auto right_iter = std::find(right_output_columns.begin(), right_output_columns.end(),
-  //      std::string(condition.expr->name));
-  //
-  //      Assert()
-  //
-  //
-  //    }
-  //  }
-  //
-  //  if (switch_mapping) {
-  //    left_column_id = generate_column_id(*condition.expr2, left_node);
-  //    right_column_id = generate_column_id(*condition.expr, right_node);
-  //  } else {
-  //    left_column_id = generate_column_id(*condition.expr, left_node);
-  //    right_column_id = generate_column_id(*condition.expr2, right_node);
-  ////  }
-  //
-  //  std::pair<ColumnID, ColumnID> column_ids(generate_column_id(*condition.expr, left_node),
-  //                                           generate_column_id(*condition.expr2, right_node));
-
   // Joins currently only support one simple condition (i.e., not multiple conditions).
   auto scan_type = translate_operator_type_to_scan_type(condition.opType);
-  auto join_mode = translate_join_type_to_join_mode(join.type);
 
   auto join_node = std::make_shared<JoinNode>(join_mode, column_ids, scan_type);
   join_node->set_left_child(left_node);
@@ -259,7 +212,7 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_cross_product(
   for (size_t i = 1; i < tables.size(); i++) {
     auto next_node = _translate_table_ref(*tables[i]);
 
-    auto new_product = std::make_shared<JoinNode>(JoinMode::Cross, nullopt, nullopt);
+    auto new_product = std::make_shared<JoinNode>(JoinMode::Cross);
     new_product->set_left_child(product);
     new_product->set_right_child(next_node);
 

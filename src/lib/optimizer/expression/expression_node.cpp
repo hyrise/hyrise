@@ -241,8 +241,7 @@ std::string ExpressionNode::to_string(const std::shared_ptr<AbstractASTNode> &in
       }
       return boost::lexical_cast<std::string>(_column_id);
     case ExpressionType::FunctionIdentifier:
-      // TODO(tim): BLOCKING - explain why exactly this works (probably because of input node)
-      return _expression_list[0]->to_string(input_node);
+      return _name + "(" + _expression_list[0]->to_string(input_node) + ")";
     default:
       // Handled further down.
       break;

@@ -13,14 +13,19 @@
 
 namespace opossum {
 
-JoinNode::JoinNode(const JoinMode join_mode, const optional<std::pair<ColumnID, ColumnID>> &join_column_ids,
-                   const optional<opossum::ScanType> &scan_type)
+JoinNode::JoinNode(const JoinMode join_mode) : AbstractASTNode(ASTNodeType::Join), _join_mode(join_mode) {
+  DebugAssert(join_mode == JoinMode::Cross || join_mode == JoinMode::Natural,
+              "Specified JoinMode must also specify column ids and scan type.");
+}
+
+JoinNode::JoinNode(const JoinMode join_mode, const std::pair<ColumnID, ColumnID> &join_column_ids,
+                   const ScanType scan_type)
     : AbstractASTNode(ASTNodeType::Join),
       _join_mode(join_mode),
       _join_column_ids(join_column_ids),
       _scan_type(scan_type) {
-  DebugAssert(_join_mode == JoinMode::Cross || !!_join_column_ids, "ColumnIDs must be specified for non-cross Joins.");
-  DebugAssert(_join_mode == JoinMode::Cross || !!_scan_type, "ScanType must be specified for non-cross Joins.");
+  DebugAssert(join_mode != JoinMode::Cross && join_mode != JoinMode::Natural,
+              "Specified JoinMode must specify neither column ids nor scan type.");
 }
 
 std::string JoinNode::description() const {

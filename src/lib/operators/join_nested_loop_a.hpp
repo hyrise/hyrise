@@ -34,10 +34,12 @@ namespace opossum {
  */
 class JoinNestedLoopA : public AbstractJoinOperator {
  public:
-  // TODO(tim): BLOCKING - move column_ids optional to end of parameter list
   JoinNestedLoopA(const std::shared_ptr<const AbstractOperator> left,
-                  const std::shared_ptr<const AbstractOperator> right,
-                  optional<std::pair<ColumnID, ColumnID>> column_ids, const ScanType scan_type, const JoinMode mode);
+                  const std::shared_ptr<const AbstractOperator> right, const JoinMode mode);
+
+  JoinNestedLoopA(const std::shared_ptr<const AbstractOperator> left,
+                  const std::shared_ptr<const AbstractOperator> right, const JoinMode mode,
+                  const std::pair<ColumnID, ColumnID> &column_ids, const ScanType scan_type);
 
   std::shared_ptr<const Table> on_execute() override;
 
