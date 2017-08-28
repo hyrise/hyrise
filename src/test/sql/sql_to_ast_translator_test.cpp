@@ -149,10 +149,10 @@ TEST_F(SQLToASTTranslatorTest, AggregateWithGroupBy) {
   EXPECT_FALSE(result_node->right_child());
 
   const auto aggregate_node = std::dynamic_pointer_cast<AggregateNode>(result_node);
-  EXPECT_EQ(aggregate_node->aggregates().size(), 1u);
+  EXPECT_EQ(aggregate_node->aggregate_expressions().size(), 1u);
   const std::vector<ColumnID> groupby_columns = {ColumnID{0}};
   EXPECT_EQ(aggregate_node->groupby_column_ids(), groupby_columns);
-  EXPECT_EQ(aggregate_node->aggregates().at(0).alias, std::string("s"));
+  EXPECT_EQ(aggregate_node->aggregate_expressions().at(0)->alias(), std::string("s"));
 
   auto t_node_1 = result_node->left_child();
   EXPECT_EQ(t_node_1->type(), ASTNodeType::StoredTable);
@@ -174,10 +174,10 @@ TEST_F(SQLToASTTranslatorTest, AggregateWithExpression) {
   EXPECT_FALSE(result_node->right_child());
 
   const auto aggregate_node = std::dynamic_pointer_cast<AggregateNode>(result_node);
-  EXPECT_EQ(aggregate_node->aggregates().size(), 2u);
+  EXPECT_EQ(aggregate_node->aggregate_expressions().size(), 2u);
   EXPECT_EQ(aggregate_node->groupby_column_ids().size(), 0u);
-  EXPECT_EQ(aggregate_node->aggregates().at(0).alias, std::string("s"));
-  EXPECT_EQ(aggregate_node->aggregates().at(1).alias, std::string("f"));
+  EXPECT_EQ(aggregate_node->aggregate_expressions().at(0)->alias(), std::string("s"));
+  EXPECT_EQ(aggregate_node->aggregate_expressions().at(1)->alias(), std::string("f"));
 
   auto t_node_1 = result_node->left_child();
   EXPECT_EQ(t_node_1->type(), ASTNodeType::StoredTable);

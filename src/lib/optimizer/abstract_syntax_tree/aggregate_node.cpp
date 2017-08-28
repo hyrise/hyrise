@@ -14,29 +14,25 @@
 
 namespace opossum {
 
-AggregateColumnDefinition::AggregateColumnDefinition(const std::shared_ptr<ExpressionNode>& expr,
-                                                     const optional<std::string>& alias)
-    : expr(expr), alias(alias) {}
-
-AggregateNode::AggregateNode(const std::vector<AggregateColumnDefinition>& aggregates,
+AggregateNode::AggregateNode(const std::vector<std::shared_ptr<ExpressionNode>>& aggregate_expressions,
                              const std::vector<ColumnID>& groupby_column_ids)
-    : AbstractASTNode(ASTNodeType::Aggregate), _aggregates(aggregates), _groupby_column_ids(groupby_column_ids) {}
+    : AbstractASTNode(ASTNodeType::Aggregate), _aggregate_expressions(aggregate_expressions), _groupby_column_ids(groupby_column_ids) {}
 
-const std::vector<AggregateColumnDefinition>& AggregateNode::aggregates() const { return _aggregates; }
+const std::vector<std::shared_ptr<ExpressionNode>>& AggregateNode::aggregate_expressions() const { return _aggregate_expressions; }
 
 const std::vector<ColumnID>& AggregateNode::groupby_column_ids() const { return _groupby_column_ids; }
 
 std::string AggregateNode::description() const {
   std::ostringstream s;
 
-  auto stream_aggregate = [&](const AggregateColumnDefinition& aggregate) {
-    s << aggregate.expr->to_string();
-    if (aggregate.alias) s << " AS \"" << (*aggregate.alias) << "\"";
+  auto stream_aggregate = [&](const std::shared_ptr<ExpressionNode>& aggregate_expr) {
+    s << aggregate_expr->to_string();
+    if (aggregate_expr->alias()) s << " AS \"" << (*aggregate_expr->alias()) << "\"";
   };
 
-  auto it = _aggregates.begin();
-  if (it != _aggregates.end()) stream_aggregate(*it);
-  for (; it != _aggregates.end(); ++it) {
+  auto it = _aggregate_expressions.begin();
+  if (it != _aggregate_expressions.end()) stream_aggregate(*it);
+  for (; it != _aggregate_expressions.end(); ++it) {
     s << ", ";
     stream_aggregate(*it);
   }
@@ -58,8 +54,8 @@ void AggregateNode::_on_child_changed() {
   _output_column_names.clear();
   _output_column_ids.clear();
 
-  _output_column_names.reserve(_groupby_column_ids.size() + _aggregates.size());
-  _output_column_ids.reserve(_groupby_column_ids.size() + _aggregates.size());
+  _output_column_names.reserve(_groupby_column_ids.size() + _aggregate_expressions.size());
+  _output_column_ids.reserve(_groupby_column_ids.size() + _aggregate_expressions.size());
 
   /**
    * Set output column ids and names.
@@ -75,13 +71,13 @@ void AggregateNode::_on_child_changed() {
     _output_column_names.emplace_back(left_child()->output_column_names()[groupby_column_id]);
   }
 
-  for (const auto& aggregate : _aggregates) {
-    DebugAssert(aggregate.expr->type() == ExpressionType::FunctionIdentifier, "Expression must be a function.");
+  for (const auto& aggregate_expression : _aggregate_expressions) {
+    DebugAssert(aggregate_expression->type() == ExpressionType::FunctionIdentifier, "Expression must be a function.");
 
     std::string column_name;
 
-    if (aggregate.alias) {
-      column_name = *aggregate.alias;
+    if (aggregate_expression->alias()) {
+      column_name = *aggregate_expression->alias();
     } else {
       /**
        * If the aggregate function has no alias defined in the query, we simply parse the expression back to a string.
@@ -89,7 +85,7 @@ void AggregateNode::_on_child_changed() {
        * This might result in multiple output columns with the same name, but we accept that.
        * Other DBs behave similarly (e.g. MySQL).
        */
-      column_name = aggregate.expr->to_string(left_child());
+      column_name = aggregate_expression->to_string(left_child());
     }
 
     _output_column_names.emplace_back(column_name);
@@ -113,11 +109,11 @@ optional<ColumnID> AggregateNode::find_column_id_for_column_identifier(
    */
   optional<ColumnID> column_id_aggregate;
   if (!column_identifier.table_name) {
-    for (uint16_t i = 0; i < _aggregates.size(); i++) {
-      const auto& aggregate_definition = _aggregates[i];
+    for (uint16_t i = 0; i < _aggregate_expressions.size(); i++) {
+      const auto& aggregate_expression = _aggregate_expressions[i];
 
       // If AggregateDefinition has no alias, column_name will not match.
-      if (column_identifier.column_name == aggregate_definition.alias) {
+      if (column_identifier.column_name == aggregate_expression->alias()) {
         // Check that we haven't found a match yet.
         Assert(!column_id_aggregate, "Column name " + column_identifier.column_name + " is ambiguous.");
         // Aggregate columns come after groupby columns in the Aggregate's output
@@ -131,12 +127,16 @@ optional<ColumnID> AggregateNode::find_column_id_for_column_identifier(
    * These columns have been created by another node. Since Aggregates can only have a single child node,
    * we just have to check the left_child for the ColumnIdentifier.
    */
-  auto column_id_groupby = left_child()->find_column_id_for_column_identifier(column_identifier);
-  if (column_id_groupby) {
-    auto iter = std::find(_groupby_column_ids.begin(), _groupby_column_ids.end(), *column_id_groupby);
-    Assert(iter != _groupby_column_ids.end(), "Requested column identifier is not in GroupBy list");
+  optional<ColumnID> column_id_groupby;
+  const auto column_id_child = left_child()->find_column_id_for_column_identifier(column_identifier);
+  if (column_id_child) {
+    const auto iter = std::find(_groupby_column_ids.begin(), _groupby_column_ids.end(), *column_id_child);
+    if (iter != _groupby_column_ids.end()) {
+      column_id_groupby = static_cast<ColumnID::base_type>(std::distance(_groupby_column_ids.begin(), iter));
+    }
   }
 
+  // Max one can be set, both not being set is fine, as we are in a find_* method
   Assert(!column_id_aggregate || !column_id_groupby, "Column name " + column_identifier.column_name + " is ambiguous.");
 
   if (column_id_aggregate) {
@@ -149,16 +149,16 @@ optional<ColumnID> AggregateNode::find_column_id_for_column_identifier(
 
 optional<ColumnID> AggregateNode::find_column_id_for_expression(
     const std::shared_ptr<ExpressionNode>& expression) const {
-  const auto iter = std::find_if(_aggregates.begin(), _aggregates.end(), [&](const auto& rhs) {
-    DebugAssert(!!rhs.expr, "No expr in AggregateColumnDefinition");
-    return *expression == *rhs.expr;
+  const auto iter = std::find_if(_aggregate_expressions.begin(), _aggregate_expressions.end(), [&](const auto& rhs) {
+    DebugAssert(!!rhs, "Aggregate expressions can not be nullptr!");
+    return *expression == *rhs;
   });
 
-  if (iter == _aggregates.end()) {
+  if (iter == _aggregate_expressions.end()) {
     return nullopt;
   }
 
-  const auto idx = std::distance(_aggregates.begin(), iter);
+  const auto idx = std::distance(_aggregate_expressions.begin(), iter);
   return ColumnID{static_cast<ColumnID::base_type>(idx + _groupby_column_ids.size())};
 }
 

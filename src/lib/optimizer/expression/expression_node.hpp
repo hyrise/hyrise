@@ -67,7 +67,7 @@ class ExpressionNode : public std::enable_shared_from_this<ExpressionNode> {
 
   static std::shared_ptr<ExpressionNode> create_function_reference(
       const std::string& function_name, const std::vector<std::shared_ptr<ExpressionNode>>& expression_list,
-      const optional<std::string>& alias);
+      const optional<std::string>& alias = nullopt);
 
   static std::shared_ptr<ExpressionNode> create_binary_operator(ExpressionType type,
                                                                 const std::shared_ptr<ExpressionNode>& left,

@@ -130,7 +130,7 @@ optional<ColumnID> AbstractASTNode::find_column_id_for_column_identifier(
 
 ColumnID AbstractASTNode::get_column_id_for_expression(const std::shared_ptr<ExpressionNode> &expression) const {
   const auto column_id = find_column_id_for_expression(expression);
-  DebugAssert(!!column_id, "ColumnIdentifier could not be resolved.");
+  DebugAssert(!!column_id, "Expression could not be resolved.");
   return *column_id;
 }
 

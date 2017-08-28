@@ -13,14 +13,6 @@ namespace opossum {
 
 class ExpressionNode;
 
-struct AggregateColumnDefinition {
-  explicit AggregateColumnDefinition(const std::shared_ptr<ExpressionNode>& expr,
-                                     const optional<std::string>& alias = {});
-
-  std::shared_ptr<ExpressionNode> expr;
-  optional<std::string> alias;
-};
-
 /**
  * This node type is used to describe SELECT lists for statements that have at least one of the following:
  *  - one or more aggregate functions in their SELECT list
@@ -30,10 +22,10 @@ struct AggregateColumnDefinition {
  */
 class AggregateNode : public AbstractASTNode {
  public:
-  explicit AggregateNode(const std::vector<AggregateColumnDefinition>& aggregates,
+  explicit AggregateNode(const std::vector<std::shared_ptr<ExpressionNode>>& aggregates,
                          const std::vector<ColumnID>& groupby_column_ids);
 
-  const std::vector<AggregateColumnDefinition>& aggregates() const;
+  const std::vector<std::shared_ptr<ExpressionNode>>& aggregate_expressions() const;
   const std::vector<ColumnID>& groupby_column_ids() const;
 
   std::string description() const override;
@@ -48,7 +40,7 @@ class AggregateNode : public AbstractASTNode {
   void _on_child_changed() override;
 
  private:
-  std::vector<AggregateColumnDefinition> _aggregates;
+  std::vector<std::shared_ptr<ExpressionNode>> _aggregate_expressions;
   std::vector<ColumnID> _groupby_column_ids;
 
   std::vector<ColumnID> _output_column_ids;

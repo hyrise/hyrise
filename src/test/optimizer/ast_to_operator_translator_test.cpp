@@ -119,10 +119,10 @@ TEST_F(ASTToOperatorTranslatorTest, AggregateNodeNoArithmetics) {
   const auto stored_table_node = std::make_shared<StoredTableNode>("table_int_float");
 
   auto sum_expression =
-      ExpressionNode::create_function_reference("SUM", {ExpressionNode::create_column_identifier(ColumnID{0})}, {});
+      ExpressionNode::create_function_reference("SUM", {ExpressionNode::create_column_identifier(ColumnID{0})}, "sum_of_a");
+
   auto aggregate_node =
-      std::make_shared<AggregateNode>(std::vector<AggregateColumnDefinition>{AggregateColumnDefinition{
-                                          sum_expression, optional<std::string>("sum_of_a")}},
+      std::make_shared<AggregateNode>(std::vector<std::shared_ptr<ExpressionNode>>{sum_expression},
                                       std::vector<ColumnID>{});
   aggregate_node->set_left_child(stored_table_node);
 
@@ -152,10 +152,9 @@ TEST_F(ASTToOperatorTranslatorTest, AggregateNodeWithArithmetics) {
   // TODO(tim): Projection cannot handle expression `$a + $b`
   // because it is not able to handle columns with different data types.
   // Create issue with failing test.
-  auto sum_expression = ExpressionNode::create_function_reference("SUM", {expr_multiplication}, {});
+  auto sum_expression = ExpressionNode::create_function_reference("SUM", {expr_multiplication}, "sum_of_b_times_two");
   auto aggregate_node =
-      std::make_shared<AggregateNode>(std::vector<AggregateColumnDefinition>{AggregateColumnDefinition{
-                                          sum_expression, optional<std::string>("sum_of_b_times_two")}},
+      std::make_shared<AggregateNode>(std::vector<std::shared_ptr<ExpressionNode>>{sum_expression},
                                       std::vector<ColumnID>{ColumnID{0}});
   aggregate_node->set_left_child(stored_table_node);
 

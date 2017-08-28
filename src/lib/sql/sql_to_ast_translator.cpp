@@ -436,8 +436,8 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_aggregate(
   /**
    * Build Aggregates
    */
-  std::vector<AggregateColumnDefinition> aggregate_column_definitions;
-  aggregate_column_definitions.reserve(select_list.size());
+  std::vector<std::shared_ptr<ExpressionNode>> aggregate_expressions;
+  aggregate_expressions.reserve(select_list.size());
 
   for (const auto* column_expr : select_list) {
     if (column_expr->isType(hsql::kExprFunctionRef)) {
@@ -448,7 +448,7 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_aggregate(
         alias = std::string(column_expr->alias);
       }
 
-      aggregate_column_definitions.emplace_back(opossum_expr, alias);
+      aggregate_expressions.emplace_back(opossum_expr);
     } else if (column_expr->isType(hsql::kExprColumnRef)) {
       /**
        * This if block is only used to conduct an SQL conformity check, whether column references in the SELECT list of
@@ -486,7 +486,7 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_aggregate(
     }
   }
 
-  auto aggregate_node = std::make_shared<AggregateNode>(aggregate_column_definitions, groupby_columns);
+  auto aggregate_node = std::make_shared<AggregateNode>(aggregate_expressions, groupby_columns);
   aggregate_node->set_left_child(input_node);
 
   if (group_by == nullptr || group_by->having == nullptr) {
