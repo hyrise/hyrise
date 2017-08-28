@@ -106,12 +106,9 @@ ColumnIdentifierName SQLExpressionTranslator::get_column_identifier_name_for_col
 
 ColumnID SQLExpressionTranslator::get_column_id_for_expression(const hsql::Expr &hsql_expr,
                                                                const std::shared_ptr<AbstractASTNode> &input_node) {
-  if (hsql_expr.isType(hsql::kExprColumnRef)) {
-    return input_node->get_column_id_for_column_identifier_name(get_column_identifier_name_for_column_ref(hsql_expr));
-  }
+  Assert(hsql_expr.isType(hsql::kExprColumnRef), "Input needs to be column ref");
 
-  auto expr = translate_expression(hsql_expr, input_node);
-  return input_node->get_column_id_for_expression(expr);
+  return input_node->get_column_id_for_column_identifier_name(get_column_identifier_name_for_column_ref(hsql_expr));
 }
 
 }  // namespace opossum

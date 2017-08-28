@@ -152,6 +152,12 @@ optional<ColumnID> AggregateNode::find_column_id_for_column_identifier_name(
   return column_id_groupby;
 }
 
+ColumnID AggregateNode::get_column_id_for_expression(const std::shared_ptr<ExpressionNode> &expression) const {
+  const auto column_id = find_column_id_for_expression(expression);
+  DebugAssert(!!column_id, "Expression could not be resolved.");
+  return *column_id;
+}
+
 optional<ColumnID> AggregateNode::find_column_id_for_expression(
     const std::shared_ptr<ExpressionNode>& expression) const {
   const auto iter = std::find_if(_aggregate_expressions.begin(), _aggregate_expressions.end(), [&](const auto& rhs) {

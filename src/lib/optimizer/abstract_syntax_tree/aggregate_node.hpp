@@ -35,7 +35,18 @@ class AggregateNode : public AbstractASTNode {
   optional<ColumnID> find_column_id_for_column_identifier_name(
       const ColumnIdentifierName& column_identifier_name) const override;
 
-  optional<ColumnID> find_column_id_for_expression(const std::shared_ptr<ExpressionNode>& expression) const override;
+  // @{
+  /**
+   * AbstractASTNode::find_column_id_for_column_identifier() looks for the @param expression in the columns this
+   * node outputs, checking by semantic and NOT by Expression address. If it can find it, it will be returned,
+   * otherwise nullopt is returned.
+   * AbstractASTNode::get_column_id_for_column_identifier() is more strict and will fail, if the
+   * @param expression cannot be found
+   * NOTE: These functions will possibly result in a full recursive traversal of the ancestors of this node.
+   */
+  optional<ColumnID> find_column_id_for_expression(const std::shared_ptr<ExpressionNode>& expression) const;
+  ColumnID get_column_id_for_expression(const std::shared_ptr<ExpressionNode> &expression) const;
+  // @}
 
  protected:
   void _on_child_changed() override;

@@ -256,7 +256,6 @@ AllParameterVariant SQLToASTTranslator::translate_argument(
       return ValuePlaceholder(expr.ival);
     case hsql::kExprColumnRef:
       Assert(!!input_node, "Cannot generate ColumnID without input_node");
-      // TODO(mp) BLOCKING - don't go via expr here, but via column identifier since that's what expr represents
       return SQLExpressionTranslator::get_column_id_for_expression(expr, *input_node);
     default:
       Fail("Could not translate literal: expression type not supported.");
@@ -280,6 +279,7 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_predicate(
   // TODO(anybody): handle IN with join
   auto scan_type = translate_operator_type_to_scan_type(expr.opType);
 
+  // TODO(mp): BLOCKING is this comment still up to date after the split into translate_having/predicate?
   /**
    * We have to determine which side of the expression is a column or function reference.
    * That's because the WHERE clause could be `a = 5`, but it could also be `5 = a`.
@@ -328,9 +328,8 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_predicate(
     argument_expr = expr.expr;
     column_operand_hsql_expr = expr.expr2;
 
-    DebugAssert(
-        column_operand_hsql_expr->isType(hsql::kExprColumnRef) || column_operand_hsql_expr->isType(hsql::kExprFunctionRef),
-        "Unsupported filter: we must have a function or column reference on at least one side of the expression.");
+    DebugAssert(column_operand_hsql_expr->isType(hsql::kExprColumnRef),
+        "Unsupported filter: we must have a column reference on at least one side of the expression.");
 
     // We might have to change the ScanType when we reverse the sides of the expression.
     scan_type = get_scan_type_for_reverse_order(scan_type);
@@ -364,7 +363,7 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_predicate(
 }
 
 std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_having(
-    const hsql::Expr& expr, const std::shared_ptr<AbstractASTNode>& aggregate_node,
+    const hsql::Expr& expr, const std::shared_ptr<AggregateNode>& aggregate_node,
     const std::shared_ptr<AbstractASTNode>& input_node) {
   DebugAssert(expr.isType(hsql::kExprOperator), "Filter expression clause has to be of type operator!");
 

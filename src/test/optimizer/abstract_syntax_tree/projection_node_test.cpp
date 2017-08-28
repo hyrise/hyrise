@@ -51,29 +51,4 @@ TEST_F(ProjectionNodeTest, ColumnIdForColumnIdentifier) {
   EXPECT_EQ(_projection_node->find_column_id_for_column_identifier_name({"some_addition", {"t_b"}}), nullopt);
 }
 
-TEST_F(ProjectionNodeTest, ColumnIdForExpression) {
-  EXPECT_EQ(_projection_node->get_column_id_for_expression(ExpressionNode::create_column_identifier(ColumnID{0})), 1);
-
-  // TODO(mp) Fix once find_column_id_for_expression() ignores aliases
-  EXPECT_EQ(_projection_node->find_column_id_for_expression(ExpressionNode::create_binary_operator(
-                ExpressionType::Addition, ExpressionNode::create_column_identifier(ColumnID{1}),
-                ExpressionNode::create_column_identifier(ColumnID{2}))),
-            nullopt);
-  EXPECT_EQ(_projection_node->get_column_id_for_expression(ExpressionNode::create_binary_operator(
-                ExpressionType::Addition, ExpressionNode::create_column_identifier(ColumnID{1}),
-                ExpressionNode::create_column_identifier(ColumnID{2}), {"some_addition"})),
-            3);
-
-  //
-  EXPECT_EQ(_projection_node->get_column_id_for_expression(ExpressionNode::create_binary_operator(
-                ExpressionType::Addition, ExpressionNode::create_column_identifier(ColumnID{0}),
-                ExpressionNode::create_column_identifier(ColumnID{2}))),
-            4);
-
-  EXPECT_EQ(_projection_node->find_column_id_for_expression(ExpressionNode::create_binary_operator(
-                ExpressionType::Addition, ExpressionNode::create_column_identifier(ColumnID{1}),
-                ExpressionNode::create_column_identifier(ColumnID{1}))),
-            nullopt);
-}
-
 }  // namespace opossum

@@ -129,19 +129,4 @@ optional<ColumnID> ProjectionNode::find_column_id_for_column_identifier_name(
   return column_id;
 }
 
-optional<ColumnID> ProjectionNode::find_column_id_for_expression(
-    const std::shared_ptr<ExpressionNode>& expression) const {
-  const auto iter = std::find_if(_column_expressions.begin(), _column_expressions.end(), [&](const auto& rhs) {
-    DebugAssert(!!rhs, "");
-    return *expression == *rhs;
-  });
-
-  if (iter == _column_expressions.end()) {
-    return nullopt;
-  }
-
-  const auto idx = std::distance(_column_expressions.begin(), iter);
-  return ColumnID{static_cast<ColumnID::base_type>(idx)};
-}
-
 }  // namespace opossum

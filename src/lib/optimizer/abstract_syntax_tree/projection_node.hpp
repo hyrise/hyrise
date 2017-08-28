@@ -29,8 +29,6 @@ class ProjectionNode : public AbstractASTNode {
   optional<ColumnID> find_column_id_for_column_identifier_name(
       const ColumnIdentifierName& column_identifier_name) const override;
 
-  optional<ColumnID> find_column_id_for_expression(const std::shared_ptr<ExpressionNode>& expression) const override;
-
  protected:
   void _on_child_changed() override;
 

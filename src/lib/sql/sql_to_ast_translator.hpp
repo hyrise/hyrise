@@ -15,6 +15,8 @@
 
 namespace opossum {
 
+class AggregateNode;
+
 /**
  * Produces an AST (Abstract Syntax Tree), as defined in optimizer/abstract_syntax_tree, from an hsql::SQLParseResult.
  *
@@ -54,7 +56,7 @@ class SQLToASTTranslator final : public boost::noncopyable {
                                                         const std::shared_ptr<AbstractASTNode>& input_node);
 
   std::shared_ptr<AbstractASTNode> _translate_having(const hsql::Expr& expr,
-                                                     const std::shared_ptr<AbstractASTNode>& aggregate_node,
+                                                     const std::shared_ptr<AggregateNode>& aggregate_node,
                                                      const std::shared_ptr<AbstractASTNode>& input_node);
 
   std::shared_ptr<AbstractASTNode> _translate_aggregate(const hsql::SelectStatement& select,

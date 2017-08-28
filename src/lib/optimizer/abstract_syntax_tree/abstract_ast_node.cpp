@@ -129,18 +129,6 @@ optional<ColumnID> AbstractASTNode::find_column_id_for_column_identifier_name(
   return _left_child->find_column_id_for_column_identifier_name(column_identifier_name);
 }
 
-ColumnID AbstractASTNode::get_column_id_for_expression(const std::shared_ptr<ExpressionNode> &expression) const {
-  const auto column_id = find_column_id_for_expression(expression);
-  DebugAssert(!!column_id, "Expression could not be resolved.");
-  return *column_id;
-}
-
-optional<ColumnID> AbstractASTNode::find_column_id_for_expression(
-    const std::shared_ptr<ExpressionNode> &expression) const {
-  DebugAssert(!!_left_child, "Node has no left child and therefore must override this function.");
-  return _left_child->find_column_id_for_expression(expression);
-}
-
 bool AbstractASTNode::manages_table(const std::string &table_name) const {
   /**
    * This function might have to be overwritten if a node can handle different input tables, e.g. a JOIN.
