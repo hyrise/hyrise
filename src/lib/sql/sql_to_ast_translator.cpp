@@ -366,7 +366,6 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_predicate(
 std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_having(
     const hsql::Expr& expr, const std::shared_ptr<AbstractASTNode>& aggregate_node,
     const std::shared_ptr<AbstractASTNode>& input_node) {
-  // TODO(tim): BLOCKING - copy sections from translate_predicate
   DebugAssert(expr.isType(hsql::kExprOperator), "Filter expression clause has to be of type operator!");
 
   // If the expression is a nested expression, recursively resolve.
