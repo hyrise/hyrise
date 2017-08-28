@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include <iostream>
 #include <limits>
 #include <string>
 #include <tuple>
@@ -72,8 +73,15 @@ class ColumnName {
 
   operator std::string() const { return _name; }
 
+  friend std::ostream &operator<<(std::ostream &o, const ColumnName &column_name) {
+    o << column_name._name;
+    return o;
+  }
+
+  bool operator==(const ColumnName &rhs) const { return _name == rhs._name; }
+
  protected:
-  const std::string _name;
+  std::string _name;
 };
 
 constexpr NodeID INVALID_NODE_ID{std::numeric_limits<NodeID::base_type>::max()};
@@ -107,6 +115,13 @@ class ValuePlaceholder {
 
   uint16_t index() const { return _index; }
 
+  friend std::ostream &operator<<(std::ostream &o, const ValuePlaceholder &placeholder) {
+    o << "?" << placeholder.index();
+    return o;
+  }
+
+  bool operator==(const ValuePlaceholder &rhs) const { return _index == rhs._index; }
+
  private:
   uint16_t _index;
 };
@@ -130,10 +145,10 @@ enum class ExpressionType {
   Star,
   /*A parameter used in PreparedStatements*/
   Placeholder,
-  /*A reference to a column*/
-  ColumnReference,
-  /*A reference to a function, such as COUNT, MIN, MAX*/
-  FunctionReference,
+  /*An identifier for a column*/
+  ColumnIdentifier,
+  /*An identifier for a function, such as COUNT, MIN, MAX*/
+  FunctionIdentifier,
 
   /*A subselect*/
   Select,

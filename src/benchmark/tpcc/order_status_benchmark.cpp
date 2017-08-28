@@ -18,8 +18,6 @@
 #include "tpcc/helper.hpp"
 #include "tpcc/order_status.hpp"
 
-#include "utils/helper.hpp"
-
 namespace opossum {
 
 class TPCCOrderStatusBenchmark : public TPCCBenchmarkFixture {

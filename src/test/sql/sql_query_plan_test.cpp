@@ -74,10 +74,6 @@ TEST_F(SQLQueryPlanTest, SQLQueryPlanCloneWithSchedulerTest) {
   // Get the query plan template.
   const SQLQueryPlan& tmpl = op.get_query_plan();
   auto tmpl_tasks = tmpl.tasks();
-  ASSERT_EQ(3u, tmpl_tasks.size());
-  EXPECT_EQ("GetTable", tmpl_tasks[0]->get_operator()->name());
-  EXPECT_EQ("TableScan", tmpl_tasks[1]->get_operator()->name());
-  EXPECT_EQ("TableScan", tmpl_tasks[2]->get_operator()->name());
 
   // Get a copy and schedule all tasks.
   CurrentScheduler::set(std::make_shared<NodeQueueScheduler>(Topology::create_fake_numa_topology(8, 4)));

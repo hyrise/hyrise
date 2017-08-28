@@ -1,5 +1,6 @@
 #include "abstract_ast_node.hpp"
 
+#include <algorithm>
 #include <iomanip>
 #include <iostream>
 #include <memory>
@@ -96,6 +97,11 @@ std::vector<std::string> AbstractASTNode::output_column_names() const {
   return _output_column_names;
 }
 
+bool AbstractASTNode::has_output_column(const std::string &column_name) const {
+  const auto &column_names = output_column_names();
+  return std::find(column_names.begin(), column_names.end(), column_name) != column_names.end();
+}
+
 void AbstractASTNode::print(const uint32_t level, std::ostream &out) const {
   out << std::setw(level) << " ";
   out << description() << std::endl;
@@ -108,4 +114,5 @@ void AbstractASTNode::print(const uint32_t level, std::ostream &out) const {
     _right_child->print(level + 2, out);
   }
 }
+
 }  // namespace opossum

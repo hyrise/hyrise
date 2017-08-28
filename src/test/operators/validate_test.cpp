@@ -70,8 +70,9 @@ TEST_F(OperatorsValidateTest, ProjectedValidate) {
 
   std::shared_ptr<Table> expected_result = load_table("src/test/tables/validate_output_validated_projected.tbl", 2u);
 
-  std::vector<std::string> column_filter = {"c", "a"};
-  auto projection = std::make_shared<Projection>(_table_wrapper, column_filter);
+  Projection::ColumnExpressions column_expressions(
+      {ExpressionNode::create_column_identifier("c"), ExpressionNode::create_column_identifier("a")});
+  auto projection = std::make_shared<Projection>(_table_wrapper, column_expressions);
   projection->set_transaction_context(context);
   projection->execute();
 

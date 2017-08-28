@@ -18,4 +18,16 @@ AbstractJoinOperator::AbstractJoinOperator(const std::shared_ptr<const AbstractO
       _prefix_right(prefix_right),
       _column_names(column_names) {}
 
+ScanType AbstractJoinOperator::scan_type() const { return _scan_type; }
+
+JoinMode AbstractJoinOperator::mode() const { return _mode; }
+
+const std::string &AbstractJoinOperator::prefix_left() const { return _prefix_left; }
+
+const std::string &AbstractJoinOperator::prefix_right() const { return _prefix_right; }
+
+const optional<std::pair<std::string, std::string>> &AbstractJoinOperator::column_names() const {
+  return _column_names;
+}
+
 }  // namespace opossum

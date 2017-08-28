@@ -14,7 +14,7 @@
 namespace opossum {
 
 TableStatistics::TableStatistics(const std::shared_ptr<Table> table)
-    : _table(table), _row_count(table->row_count()), _column_statistics(_row_count) {}
+    : _table(table), _row_count(table->row_count()), _column_statistics(table->col_count()) {}
 
 float TableStatistics::row_count() const { return _row_count; }
 
@@ -62,7 +62,16 @@ std::shared_ptr<TableStatistics> TableStatistics::predicate_statistics(const std
 
   // delegate prediction to corresponding column statistics
   if (value.type() == typeid(ColumnName)) {
-    // TODO(Fabian, Jonathan) implement estimations for predicates with two columns
+    const ColumnID value_column_id = table->column_id_by_name(boost::get<ColumnName>(value));
+    auto old_right_column_stats = column_statistics(value_column_id);
+
+    auto two_column_statistics_container =
+        old_column_statistics->estimate_selectivity_for_two_column_predicate(scan_type, old_right_column_stats, value2);
+
+    if (two_column_statistics_container.second_column_statistics != nullptr) {
+      clone->_column_statistics[value_column_id] = two_column_statistics_container.second_column_statistics;
+    }
+    column_statistics_container = two_column_statistics_container;
 
   } else if (value.type() == typeid(AllTypeVariant)) {
     auto casted_value = boost::get<AllTypeVariant>(value);
