@@ -418,13 +418,14 @@ TaskVector NewOrderRefImpl::get_get_stock_info_tasks(const int32_t ol_i_id, cons
 
   // "S_QUANTITY", "S_DATA", "S_YTD", "S_ORDER_CNT", "S_REMOTE_CNT", s_dist_xx
   const auto proj = std::make_shared<opossum::Projection>(
-      ts2, opossum::Projection::ColumnExpressions(
-               {opossum::ExpressionNode::create_column_identifier(opossum::ColumnID{2}),
-                opossum::ExpressionNode::create_column_identifier(opossum::ColumnID{16}),
-                opossum::ExpressionNode::create_column_identifier(opossum::ColumnID{13}),
-                opossum::ExpressionNode::create_column_identifier(opossum::ColumnID{14}),
-                opossum::ExpressionNode::create_column_identifier(opossum::ColumnID{15}),
-                opossum::ExpressionNode::create_column_identifier(opossum::ColumnID{static_cast<uint16_t>(d_id + 3)})}));
+      ts2,
+      opossum::Projection::ColumnExpressions({opossum::ExpressionNode::create_column_identifier(opossum::ColumnID{2}),
+                                              opossum::ExpressionNode::create_column_identifier(opossum::ColumnID{16}),
+                                              opossum::ExpressionNode::create_column_identifier(opossum::ColumnID{13}),
+                                              opossum::ExpressionNode::create_column_identifier(opossum::ColumnID{14}),
+                                              opossum::ExpressionNode::create_column_identifier(opossum::ColumnID{15}),
+                                              opossum::ExpressionNode::create_column_identifier(opossum::ColumnID{
+                                                  static_cast<opossum::ColumnID::base_type>(d_id + 2)})}));
 
   // Tasks
   auto gt_t = std::make_shared<opossum::OperatorTask>(gt);
