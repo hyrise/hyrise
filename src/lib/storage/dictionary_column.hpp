@@ -9,7 +9,7 @@
 
 #include "tbb/concurrent_vector.h"
 
-#include "untyped_dictionary_column.hpp"
+#include "base_dictionary_column.hpp"
 
 #include "all_type_variant.hpp"
 #include "types.hpp"
@@ -21,7 +21,7 @@ class BaseColumn;
 
 // Dictionary is a specific column type that stores all its values in a vector
 template <typename T>
-class DictionaryColumn : public UntypedDictionaryColumn {
+class DictionaryColumn : public BaseDictionaryColumn {
  public:
   /**
    * Creates a Dictionary column from a given dictionary and attribute vector.

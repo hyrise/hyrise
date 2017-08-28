@@ -11,7 +11,7 @@
 namespace opossum {
 
 class Table;
-class UntypedValueColumn;
+class BaseValueColumn;
 
 class IsNullTableScanImpl : public BaseSingleColumnTableScanImpl {
  public:
@@ -27,9 +27,9 @@ class IsNullTableScanImpl : public BaseSingleColumnTableScanImpl {
    * @{
    */
 
-  bool _matches_all(const UntypedValueColumn &column);
+  bool _matches_all(const BaseValueColumn &column);
 
-  bool _matches_none(const UntypedValueColumn &column);
+  bool _matches_none(const BaseValueColumn &column);
 
   void _add_all(Context &context, size_t column_size);
 

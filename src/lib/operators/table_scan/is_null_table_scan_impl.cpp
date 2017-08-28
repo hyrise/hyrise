@@ -4,8 +4,8 @@
 
 #include "storage/iterables/attribute_vector_iterable.hpp"
 #include "storage/iterables/null_value_vector_iterable.hpp"
-#include "storage/untyped_dictionary_column.hpp"
-#include "storage/untyped_value_column.hpp"
+#include "storage/base_dictionary_column.hpp"
+#include "storage/base_value_column.hpp"
 
 #include "utils/assert.hpp"
 
@@ -18,7 +18,7 @@ IsNullTableScanImpl::IsNullTableScanImpl(std::shared_ptr<const Table> in_table, 
 void IsNullTableScanImpl::handle_value_column(BaseColumn &base_column,
                                               std::shared_ptr<ColumnVisitableContext> base_context) {
   auto context = std::static_pointer_cast<Context>(base_context);
-  auto &left_column = static_cast<const UntypedValueColumn &>(base_column);
+  auto &left_column = static_cast<const BaseValueColumn &>(base_column);
 
   if (_matches_all(left_column)) {
     _add_all(*context, left_column.size());
@@ -40,7 +40,7 @@ void IsNullTableScanImpl::handle_value_column(BaseColumn &base_column,
 void IsNullTableScanImpl::handle_dictionary_column(BaseColumn &base_column,
                                                    std::shared_ptr<ColumnVisitableContext> base_context) {
   auto context = std::static_pointer_cast<Context>(base_context);
-  auto &left_column = static_cast<const UntypedDictionaryColumn &>(base_column);
+  auto &left_column = static_cast<const BaseDictionaryColumn &>(base_column);
 
   auto left_column_iterable =
       AttributeVectorIterable{*left_column.attribute_vector(), context->_mapped_chunk_offsets.get()};
@@ -48,7 +48,7 @@ void IsNullTableScanImpl::handle_dictionary_column(BaseColumn &base_column,
   left_column_iterable.get_iterators([&](auto left_it, auto left_end) { this->_scan(left_it, left_end, *context); });
 }
 
-bool IsNullTableScanImpl::_matches_all(const UntypedValueColumn &column) {
+bool IsNullTableScanImpl::_matches_all(const BaseValueColumn &column) {
   switch (_scan_type) {
     case ScanType::OpEquals:
       return false;
@@ -62,7 +62,7 @@ bool IsNullTableScanImpl::_matches_all(const UntypedValueColumn &column) {
   }
 }
 
-bool IsNullTableScanImpl::_matches_none(const UntypedValueColumn &column) {
+bool IsNullTableScanImpl::_matches_none(const BaseValueColumn &column) {
   switch (_scan_type) {
     case ScanType::OpEquals:
       return !column.is_nullable();

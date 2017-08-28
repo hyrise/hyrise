@@ -9,7 +9,7 @@
 #include "storage/iterables/attribute_vector_iterable.hpp"
 #include "storage/iterables/constant_value_iterable.hpp"
 #include "storage/iterables/create_iterable_from_column.hpp"
-#include "storage/untyped_dictionary_column.hpp"
+#include "storage/base_dictionary_column.hpp"
 
 #include "resolve_column_type.hpp"
 
@@ -49,7 +49,7 @@ void SingleColumnTableScanImpl::handle_dictionary_column(BaseColumn &base_column
   auto context = std::static_pointer_cast<Context>(base_context);
   auto &matches_out = context->_matches_out;
   const auto chunk_id = context->_chunk_id;
-  auto &left_column = static_cast<const UntypedDictionaryColumn &>(base_column);
+  auto &left_column = static_cast<const BaseDictionaryColumn &>(base_column);
 
   // TODO(mjendruk): Find a good heuristic for when simply scanning column is faster (dictionary size -> attribute
   // vector size)
@@ -114,7 +114,7 @@ void SingleColumnTableScanImpl::handle_dictionary_column(BaseColumn &base_column
   });
 }
 
-ValueID SingleColumnTableScanImpl::_get_search_value_id(const UntypedDictionaryColumn &column) {
+ValueID SingleColumnTableScanImpl::_get_search_value_id(const BaseDictionaryColumn &column) {
   switch (_scan_type) {
     case ScanType::OpEquals:
     case ScanType::OpNotEquals:
@@ -132,7 +132,7 @@ ValueID SingleColumnTableScanImpl::_get_search_value_id(const UntypedDictionaryC
   }
 }
 
-bool SingleColumnTableScanImpl::_right_value_matches_all(const UntypedDictionaryColumn &column,
+bool SingleColumnTableScanImpl::_right_value_matches_all(const BaseDictionaryColumn &column,
                                                          const ValueID search_value_id) {
   switch (_scan_type) {
     case ScanType::OpEquals:
@@ -155,7 +155,7 @@ bool SingleColumnTableScanImpl::_right_value_matches_all(const UntypedDictionary
   }
 }
 
-bool SingleColumnTableScanImpl::_right_value_matches_none(const UntypedDictionaryColumn &column,
+bool SingleColumnTableScanImpl::_right_value_matches_none(const BaseDictionaryColumn &column,
                                                           const ValueID search_value_id) {
   switch (_scan_type) {
     case ScanType::OpEquals:

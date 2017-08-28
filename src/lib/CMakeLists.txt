@@ -256,8 +256,8 @@ set(
     storage/storage_manager.hpp
     storage/table.cpp
     storage/table.hpp
-    storage/untyped_dictionary_column.hpp
-    storage/untyped_value_column.hpp
+    storage/base_dictionary_column.hpp
+    storage/base_value_column.hpp
     storage/value_column.cpp
     storage/value_column.hpp
     tasks/chunk_compression_task.cpp

@@ -7,13 +7,13 @@
 
 #include "tbb/concurrent_vector.h"
 
-#include "untyped_value_column.hpp"
+#include "base_value_column.hpp"
 
 namespace opossum {
 
 // ValueColumn is a specific column type that stores all its values in a vector
 template <typename T>
-class ValueColumn : public UntypedValueColumn {
+class ValueColumn : public BaseValueColumn {
  public:
   explicit ValueColumn(bool nullable = false);
 

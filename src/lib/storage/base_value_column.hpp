@@ -9,7 +9,7 @@ namespace opossum {
  *
  * Exposes all methods of value columns that do not rely on its specific data type.
  */
-class UntypedValueColumn : public BaseColumn {
+class BaseValueColumn : public BaseColumn {
  public:
   bool is_reference_column() const override { return false; }
 

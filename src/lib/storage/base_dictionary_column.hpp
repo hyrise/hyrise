@@ -14,10 +14,10 @@ class BaseAttributeVector;
 // types (uint8_t, uint16_t) since after a down-cast INVALID_VALUE_ID will look like their numeric_limit::max()
 constexpr ValueID INVALID_VALUE_ID{std::numeric_limits<ValueID::base_type>::max()};
 
-// UntypedDictionaryColumn is implemented by DicionaryColumn and offers methods from the DictionaryColumn
+// BaseDictionaryColumn is implemented by DicionaryColumn and offers methods from the DictionaryColumn
 // that are needed for creating indices but that do not depend on the template parameter of the DictionaryColumn,
 // thus allowing the single indexes relying on these methods to be untemplated.
-class UntypedDictionaryColumn : public BaseColumn {
+class BaseDictionaryColumn : public BaseColumn {
  public:
   bool is_reference_column() const override { return false; }
 

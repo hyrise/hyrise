@@ -13,7 +13,7 @@
 
 namespace opossum {
 
-class UntypedDictionaryColumn;
+class BaseDictionaryColumn;
 
 /**
  * @brief Compares one column to a constant value
@@ -38,11 +38,11 @@ class SingleColumnTableScanImpl : public BaseSingleColumnTableScanImpl {
    * @{
    */
 
-  ValueID _get_search_value_id(const UntypedDictionaryColumn &column);
+  ValueID _get_search_value_id(const BaseDictionaryColumn &column);
 
-  bool _right_value_matches_all(const UntypedDictionaryColumn &column, const ValueID search_value_id);
+  bool _right_value_matches_all(const BaseDictionaryColumn &column, const ValueID search_value_id);
 
-  bool _right_value_matches_none(const UntypedDictionaryColumn &column, const ValueID search_value_id);
+  bool _right_value_matches_none(const BaseDictionaryColumn &column, const ValueID search_value_id);
 
   template <typename Functor>
   void _resolve_to_operator_for_dict_column_scan(const ScanType scan_type, const Functor &func) {
