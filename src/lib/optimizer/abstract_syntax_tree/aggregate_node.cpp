@@ -152,7 +152,7 @@ optional<ColumnID> AggregateNode::find_column_id_for_column_identifier_name(
   return column_id_groupby;
 }
 
-ColumnID AggregateNode::get_column_id_for_expression(const std::shared_ptr<ExpressionNode> &expression) const {
+ColumnID AggregateNode::get_column_id_for_expression(const std::shared_ptr<ExpressionNode>& expression) const {
   const auto column_id = find_column_id_for_expression(expression);
   DebugAssert(!!column_id, "Expression could not be resolved.");
   return *column_id;
@@ -160,17 +160,17 @@ ColumnID AggregateNode::get_column_id_for_expression(const std::shared_ptr<Expre
 
 optional<ColumnID> AggregateNode::find_column_id_for_expression(
     const std::shared_ptr<ExpressionNode>& expression) const {
-  const auto iter_aggregate_expressions = std::find_if(_aggregate_expressions.begin(), _aggregate_expressions.end(), [&](const auto& rhs) {
-    DebugAssert(!!rhs, "Aggregate expressions can not be nullptr!");
-    return *expression == *rhs;
-  });
+  const auto iter_aggregate_expressions =
+      std::find_if(_aggregate_expressions.begin(), _aggregate_expressions.end(), [&](const auto& rhs) {
+        DebugAssert(!!rhs, "Aggregate expressions can not be nullptr!");
+        return *expression == *rhs;
+      });
 
   auto iter_groupby_columns = _groupby_column_ids.end();
 
   if (expression->type() == ExpressionType::ColumnIdentifier) {
-    iter_groupby_columns = std::find_if(_groupby_column_ids.begin(), _groupby_column_ids.end(), [&](const auto& rhs) {
-      return expression->column_id() == rhs;
-    });
+    iter_groupby_columns = std::find_if(_groupby_column_ids.begin(), _groupby_column_ids.end(),
+                                        [&](const auto& rhs) { return expression->column_id() == rhs; });
   }
 
   auto in_aggregate_expressions = iter_aggregate_expressions != _aggregate_expressions.end();

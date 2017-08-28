@@ -45,7 +45,7 @@ class AggregateNode : public AbstractASTNode {
    * NOTE: These functions will possibly result in a full recursive traversal of the ancestors of this node.
    */
   optional<ColumnID> find_column_id_for_expression(const std::shared_ptr<ExpressionNode>& expression) const;
-  ColumnID get_column_id_for_expression(const std::shared_ptr<ExpressionNode> &expression) const;
+  ColumnID get_column_id_for_expression(const std::shared_ptr<ExpressionNode>& expression) const;
   // @}
 
  protected:

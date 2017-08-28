@@ -329,7 +329,7 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_predicate(
     column_operand_hsql_expr = expr.expr2;
 
     DebugAssert(column_operand_hsql_expr->isType(hsql::kExprColumnRef),
-        "Unsupported filter: we must have a column reference on at least one side of the expression.");
+                "Unsupported filter: we must have a column reference on at least one side of the expression.");
 
     // We might have to change the ScanType when we reverse the sides of the expression.
     scan_type = get_scan_type_for_reverse_order(scan_type);
@@ -389,7 +389,8 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_having(
     value_operand_hsql_expr = expr.expr;
     column_operand_hsql_expr = expr.expr2;
     DebugAssert(
-        column_operand_hsql_expr->isType(hsql::kExprColumnRef) || column_operand_hsql_expr->isType(hsql::kExprFunctionRef),
+        column_operand_hsql_expr->isType(hsql::kExprColumnRef) ||
+            column_operand_hsql_expr->isType(hsql::kExprFunctionRef),
         "Unsupported filter: we must have a function or column reference on at least one side of the expression.");
   }
 
