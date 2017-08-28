@@ -109,14 +109,15 @@ const std::vector<ColumnID> &AbstractASTNode::output_column_ids() const {
   return _left_child->output_column_ids();
 }
 
-ColumnID AbstractASTNode::get_column_id_for_column_identifier(const ColumnIdentifier &column_identifier) const {
-  const auto column_id = find_column_id_for_column_identifier(column_identifier);
-  DebugAssert(!!column_id, "ColumnIdentifier could not be resolved.");
+ColumnID AbstractASTNode::get_column_id_for_column_identifier_name(
+    const ColumnIdentifierName &column_identifier_name) const {
+  const auto column_id = find_column_id_for_column_identifier_name(column_identifier_name);
+  DebugAssert(!!column_id, "ColumnIdentifierName could not be resolved.");
   return *column_id;
 }
 
-optional<ColumnID> AbstractASTNode::find_column_id_for_column_identifier(
-    const ColumnIdentifier &column_identifier) const {
+optional<ColumnID> AbstractASTNode::find_column_id_for_column_identifier_name(
+    const ColumnIdentifierName &column_identifier_name) const {
   /**
    * This function has to be overwritten if columns or their order are in any way redefined.
    * Examples include Projections, Aggregates, and Joins.
@@ -125,7 +126,7 @@ optional<ColumnID> AbstractASTNode::find_column_id_for_column_identifier(
    * In case of UNION, this function is perfectly valid.
    */
   DebugAssert(!!_left_child, "Node has no left child and therefore must override this function.");
-  return _left_child->find_column_id_for_column_identifier(column_identifier);
+  return _left_child->find_column_id_for_column_identifier_name(column_identifier_name);
 }
 
 ColumnID AbstractASTNode::get_column_id_for_expression(const std::shared_ptr<ExpressionNode> &expression) const {

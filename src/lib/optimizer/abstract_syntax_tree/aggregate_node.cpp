@@ -97,25 +97,25 @@ const std::vector<std::string>& AggregateNode::output_column_names() const { ret
 
 const std::vector<ColumnID>& AggregateNode::output_column_ids() const { return _output_column_ids; }
 
-optional<ColumnID> AggregateNode::find_column_id_for_column_identifier(
-    const ColumnIdentifier& column_identifier) const {
+optional<ColumnID> AggregateNode::find_column_id_for_column_identifier_name(
+    const ColumnIdentifierName& column_identifier_name) const {
   DebugAssert(!!left_child(), "AggregateNode needs a child.");
 
-  // TODO(mp) Handle column_identifier having a table that is this node's alias
+  // TODO(mp) Handle column_identifier_name having a table that is this node's alias
 
   /*
-   * Search for ColumnIdentifier in Aggregate columns ALIASes, if the column_identifier has no table:
+   * Search for ColumnIdentifierName in Aggregate columns ALIASes, if the column_identifier_name has no table:
    * These columns are created by the Aggregate Operator, so we have to look through them here.
    */
   optional<ColumnID> column_id_aggregate;
-  if (!column_identifier.table_name) {
+  if (!column_identifier_name.table_name) {
     for (uint16_t i = 0; i < _aggregate_expressions.size(); i++) {
       const auto& aggregate_expression = _aggregate_expressions[i];
 
       // If AggregateDefinition has no alias, column_name will not match.
-      if (column_identifier.column_name == aggregate_expression->alias()) {
+      if (column_identifier_name.column_name == aggregate_expression->alias()) {
         // Check that we haven't found a match yet.
-        Assert(!column_id_aggregate, "Column name " + column_identifier.column_name + " is ambiguous.");
+        Assert(!column_id_aggregate, "Column name " + column_identifier_name.column_name + " is ambiguous.");
         // Aggregate columns come after groupby columns in the Aggregate's output
         column_id_aggregate = ColumnID{static_cast<ColumnID::base_type>(i + _groupby_column_ids.size())};
       }
@@ -123,12 +123,12 @@ optional<ColumnID> AggregateNode::find_column_id_for_column_identifier(
   }
 
   /*
-   * Search for ColumnIdentifier in Group By columns:
+   * Search for ColumnIdentifierName in Group By columns:
    * These columns have been created by another node. Since Aggregates can only have a single child node,
-   * we just have to check the left_child for the ColumnIdentifier.
+   * we just have to check the left_child for the ColumnIdentifierName.
    */
   optional<ColumnID> column_id_groupby;
-  const auto column_id_child = left_child()->find_column_id_for_column_identifier(column_identifier);
+  const auto column_id_child = left_child()->find_column_id_for_column_identifier_name(column_identifier_name);
   if (column_id_child) {
     const auto iter = std::find(_groupby_column_ids.begin(), _groupby_column_ids.end(), *column_id_child);
     if (iter != _groupby_column_ids.end()) {
@@ -137,7 +137,7 @@ optional<ColumnID> AggregateNode::find_column_id_for_column_identifier(
   }
 
   // Max one can be set, both not being set is fine, as we are in a find_* method
-  Assert(!column_id_aggregate || !column_id_groupby, "Column name " + column_identifier.column_name + " is ambiguous.");
+  Assert(!column_id_aggregate || !column_id_groupby, "Column name " + column_identifier_name.column_name + " is ambiguous.");
 
   if (column_id_aggregate) {
     return column_id_aggregate;

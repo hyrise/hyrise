@@ -173,13 +173,15 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_join(const hsql:
   Assert(condition.expr2 && condition.expr2->type == hsql::kExprColumnRef,
          "Right arg of join condition must be column ref");
 
-  const auto left_column_identifier = SQLExpressionTranslator::get_column_identifier_for_column_ref(*condition.expr);
-  const auto right_column_identifier = SQLExpressionTranslator::get_column_identifier_for_column_ref(*condition.expr2);
+  const auto left_column_identifier_name =
+      SQLExpressionTranslator::get_column_identifier_name_for_column_ref(*condition.expr);
+  const auto right_column_identifier_name =
+      SQLExpressionTranslator::get_column_identifier_name_for_column_ref(*condition.expr2);
 
-  const auto left_in_left_node = left_node->find_column_id_for_column_identifier(left_column_identifier);
-  const auto left_in_right_node = right_node->find_column_id_for_column_identifier(left_column_identifier);
-  const auto right_in_left_node = left_node->find_column_id_for_column_identifier(right_column_identifier);
-  const auto right_in_right_node = right_node->find_column_id_for_column_identifier(right_column_identifier);
+  const auto left_in_left_node = left_node->find_column_id_for_column_identifier_name(left_column_identifier_name);
+  const auto left_in_right_node = right_node->find_column_id_for_column_identifier_name(left_column_identifier_name);
+  const auto right_in_left_node = left_node->find_column_id_for_column_identifier_name(right_column_identifier_name);
+  const auto right_in_right_node = right_node->find_column_id_for_column_identifier_name(right_column_identifier_name);
 
   Assert(static_cast<bool>(left_in_left_node) ^ static_cast<bool>(left_in_right_node),
          "Left operand must be in exactly one of the input nodes");

@@ -33,8 +33,8 @@ std::shared_ptr<ExpressionNode> SQLExpressionTranslator::translate_expression(
       DebugAssert(expr.name != nullptr, "hsql::Expr::name needs to be set");
 
       auto table_name = expr.table != nullptr ? optional<std::string>(std::string(expr.table)) : nullopt;
-      ColumnIdentifier column_identifier{name, table_name};
-      auto column_id = input_node->get_column_id_for_column_identifier(column_identifier);
+      ColumnIdentifierName column_identifier_name{name, table_name};
+      auto column_id = input_node->get_column_id_for_column_identifier_name(column_identifier_name);
       node = ExpressionNode::create_column_identifier(column_id, alias);
       break;
     }
@@ -96,18 +96,18 @@ std::shared_ptr<ExpressionNode> SQLExpressionTranslator::translate_expression(
   return node;
 }
 
-ColumnIdentifier SQLExpressionTranslator::get_column_identifier_for_column_ref(const hsql::Expr &hsql_expr) {
+ColumnIdentifierName SQLExpressionTranslator::get_column_identifier_name_for_column_ref(const hsql::Expr &hsql_expr) {
   DebugAssert(hsql_expr.isType(hsql::kExprColumnRef), "Expression type can't be converted into column identifier");
   DebugAssert(hsql_expr.name != nullptr, "hsql::Expr::name needs to be set");
 
-  return ColumnIdentifier{hsql_expr.name,
-                          hsql_expr.table == nullptr ? nullopt : optional<std::string>(hsql_expr.table)};
+  return ColumnIdentifierName{hsql_expr.name,
+                              hsql_expr.table == nullptr ? nullopt : optional<std::string>(hsql_expr.table)};
 }
 
 ColumnID SQLExpressionTranslator::get_column_id_for_expression(const hsql::Expr &hsql_expr,
                                                                const std::shared_ptr<AbstractASTNode> &input_node) {
   if (hsql_expr.isType(hsql::kExprColumnRef)) {
-    return input_node->get_column_id_for_column_identifier(get_column_identifier_for_column_ref(hsql_expr));
+    return input_node->get_column_id_for_column_identifier_name(get_column_identifier_name_for_column_ref(hsql_expr));
   }
 
   auto expr = translate_expression(hsql_expr, input_node);

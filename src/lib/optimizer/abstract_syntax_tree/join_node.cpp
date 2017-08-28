@@ -47,16 +47,17 @@ const std::vector<ColumnID> &JoinNode::output_column_ids() const { return _outpu
 
 const std::vector<std::string> &JoinNode::output_column_names() const { return _output_column_names; }
 
-optional<ColumnID> JoinNode::find_column_id_for_column_identifier(const ColumnIdentifier &column_identifier) const {
+optional<ColumnID> JoinNode::find_column_id_for_column_identifier_name(
+    const ColumnIdentifierName &column_identifier_name) const {
   DebugAssert(!!left_child() && !!right_child(), "JoinNode must have two children.");
 
   // If there is no qualifying table name, search both children.
-  if (!column_identifier.table_name) {
-    const auto left_column_id = left_child()->find_column_id_for_column_identifier(column_identifier);
-    const auto right_column_id = right_child()->find_column_id_for_column_identifier(column_identifier);
+  if (!column_identifier_name.table_name) {
+    const auto left_column_id = left_child()->find_column_id_for_column_identifier_name(column_identifier_name);
+    const auto right_column_id = right_child()->find_column_id_for_column_identifier_name(column_identifier_name);
 
     Assert(static_cast<bool>(left_column_id) ^ static_cast<bool>(right_column_id),
-           "Column name " + column_identifier.column_name + " is ambiguous.");
+           "Column name " + column_identifier_name.column_name + " is ambiguous.");
 
     if (left_column_id) {
       return left_column_id;
@@ -69,17 +70,17 @@ optional<ColumnID> JoinNode::find_column_id_for_column_identifier(const ColumnId
   }
 
   // There must not be two tables with the same qualifying name.
-  Assert(left_child()->manages_table(*column_identifier.table_name) ^
-             right_child()->manages_table(*column_identifier.table_name),
-         "Table name " + *column_identifier.table_name + " is ambiguous.");
+  Assert(left_child()->manages_table(*column_identifier_name.table_name) ^
+             right_child()->manages_table(*column_identifier_name.table_name),
+         "Table name " + *column_identifier_name.table_name + " is ambiguous.");
 
   // Otherwise only search a children if it manages that qualifier.
-  if (left_child()->manages_table(*column_identifier.table_name)) {
-    return left_child()->find_column_id_for_column_identifier(column_identifier);
+  if (left_child()->manages_table(*column_identifier_name.table_name)) {
+    return left_child()->find_column_id_for_column_identifier_name(column_identifier_name);
   }
 
-  if (right_child()->manages_table(*column_identifier.table_name)) {
-    auto column_id = right_child()->find_column_id_for_column_identifier(column_identifier);
+  if (right_child()->manages_table(*column_identifier_name.table_name)) {
+    auto column_id = right_child()->find_column_id_for_column_identifier_name(column_identifier_name);
     if (column_id) {
       auto column_idx = left_child()->output_column_ids().size() + (*column_id);
       DebugAssert(column_idx < std::numeric_limits<uint16_t>::max(), "Too many columns for table.");
