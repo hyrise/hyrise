@@ -42,7 +42,7 @@ class Expression : public std::enable_shared_from_this<Expression> {
    *
    * We highly suggest using one of the create_*-methods over using this constructor.
    */
-  Expression(ExpressionType type);
+  explicit Expression(ExpressionType type);
 
   /*
    * Factory Methods to create Expressions of specific type
