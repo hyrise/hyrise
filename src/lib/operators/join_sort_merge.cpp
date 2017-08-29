@@ -37,9 +37,11 @@ JoinSortMerge::JoinSortMerge(const std::shared_ptr<const AbstractOperator> left,
   DebugAssert(mode != JoinMode::Cross && column_names, "This operator does not support cross joins.");
   DebugAssert(left != nullptr, "The left input operator is null.");
   DebugAssert(right != nullptr, "The right input operator is null.");
-  DebugAssert(op == ScanType::OpEquals || op == ScanType::OpLessThan || op == ScanType::OpGreaterThan ||
-              op == ScanType::OpLessThanEquals || op == ScanType::OpGreaterThanEquals, "Unsupported scan type");
-  DebugAssert(op == ScanType::OpEquals || mode == JoinMode::Inner, "Outer joins are only implemented for equi joins.");
+  DebugAssert(!(op == ScanType::OpNotEquals && mode != JoinMode::Inner),
+              "Outer joins are not implemented for the not-equal operator");
+  DebugAssert(op == ScanType::OpEquals || op == ScanType::OpNotEquals|| op == ScanType::OpLessThan ||
+              op == ScanType::OpGreaterThan || op == ScanType::OpLessThanEquals || op == ScanType::OpGreaterThanEquals,
+              "Unsupported scan type");
 
   auto left_column_name = column_names->first;
   auto right_column_name = column_names->second;
@@ -355,7 +357,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
     // There is an edge case in which the last loop run was an "equi hit" and one index
     // reached its maximum size, but one element is potentially still present on the other side.
     // It is important for outer joins and non-equi to include this element.
-
+/*
     // The left side has finished -> add the remaining values of the right side
     if (left_run_start == left_size) {
       if (_op == ScanType::OpEquals && (_mode == JoinMode::Right || _mode == JoinMode::Outer)) {
@@ -379,7 +381,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
         _emit_combinations(partition_number, left_range, right_range);
       }
     }
-  }
+  }*/
 
     // Join the rest of the unfinished side, which is relevant for outer joins and non-equi joins
     auto right_rest = TableRange(partition_number, right_run_start, right_size);
@@ -388,6 +390,168 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
       _join_runs(left_rest, right_rest, CompareResult::Less);
     } else if (right_run_start < right_size) {
       _join_runs(left_rest, right_rest, CompareResult::Greater);
+    }
+  }
+
+    /**
+  * Determines the smallest value in a sorted materialized table.
+  **/
+  T& _table_min_value(MatTablePtr sorted_table) {
+    DebugAssert(_op != ScanType::OpEquals, "Complete table order is required for _table_min_value which is only " +
+                                           "available in the non-equi case");
+    DebugAssert(sorted_table->size() > 0, "Sorted table has no partitions");
+
+    for (auto partition : *sorted_table) {
+      if (partition->size() > 0) {
+        return partition->at(0).value;
+      }
+    }
+
+    throw std::logic_error("Every partition is empty");
+  }
+
+  /**
+  * Determines the biggest value in a sortd materialized table.
+  **/
+  T& _table_max_value(MatTablePtr sorted_table) {
+    DebugAssert(_op != ScanType::OpEquals, "Complete table order is required for _table_max_value which is only " +
+                                           "available in the non-equi case");
+    DebugAssert(sorted_table->size() > 0, "Sorted table is empty");
+
+    for (size_t partition_id = sorted_table->size() - 1; partition_id >= 0; --partition_id) {
+      if (sorted_table->at(partition_id)->size() > 0) {
+        return sorted_table->at(partition_id)->back().value;
+      }
+    }
+
+    throw std::logic_error("Every partition is empty");
+  }
+
+  /**
+  * Looks for the first value in a sorted materialized table that fulfills the specified condition.
+  * Returns the TablePosition of this element and whether a satisfying element has been found.
+  **/
+  template <typename Function>
+  std::pair<TablePosition, bool> _first_value_that_satisfies(MatTablePtr sorted_table, Function condition) {
+    for (size_t partition_id = 0; partition_id < sorted_table->size(); ++partition_id) {
+      auto partition = sorted_table->at(partition_id);
+      if (partition->size() > 0 && condition(partition->back().value)) {
+        for (size_t index = 0; index < partition->size(); ++index) {
+          if (condition(partition->at(index).value)) {
+            return std::pair<TablePosition, bool>(TablePosition(partition_id, index), true);
+          }
+        }
+      }
+    }
+
+    return std::pair<TablePosition, bool>(TablePosition(0, 0), false);
+  }
+
+  /**
+  * Looks for the first value in a sorted materialized table that fulfills the specified condition, but searches
+  * the table in reverse order. Returns the TablePosition of this element, and a satisfying element has been found.
+  **/
+  template <typename Function>
+  std::pair<TablePosition, bool> _first_value_that_satisfies_reverse(MatTablePtr sorted_table, Function condition) {
+    for (size_t r_partition_id = 0; r_partition_id < sorted_table->size(); ++r_partition_id) {
+      auto partition_id = sorted_table->size() - 1 - r_partition_id;
+      auto partition = sorted_table->at(partition_id);
+      if (partition->size() > 0 && condition(partition->at(0).value)) {
+        for (size_t r_index = 0; r_index < partition->size(); ++r_index) {
+          size_t index = partition->size() - 1 - r_index;
+          if (condition(partition->at(index).value)) {
+            return std::make_pair(TablePosition(partition_id, index + 1), true);
+          }
+        }
+      }
+    }
+
+    return std::make_pair(TablePosition(0, 0), false);
+  }
+
+  /**
+  * Adds the rows without matches for left outer joins for non-equi operators (<, <=, >, >=)
+  **/
+  void _left_outer_non_equi_join() {
+    auto& left_min_value = _table_min_value(_sorted_right_table);
+    auto& left_max_value = _table_max_value(_sorted_left_table);
+    auto end_of_right_table = _end_of_table(_sorted_right_table);
+
+    if (_op == ScanType::OpLessThan) {
+      // Look for the first rhs value that is bigger than the smallest lhs value.
+      auto result = _first_value_that_satisfies(_sorted_right_table, [&](const T& value) {
+        return value > left_min_value;
+      });
+      if (result.second) {
+        _emit_left_null_combinations(0, TablePosition(0, 0).to(result.first));
+      }
+    } else if (_op == ScanType::OpLessThanEquals) {
+      // Look for the first rhs value that is bigger or equal to the smallest lhs value.
+      auto result = _first_value_that_satisfies(_sorted_right_table, [&](const T& value) {
+        return value >= left_min_value;
+      });
+      if (result.second) {
+        _emit_left_null_combinations(0, TablePosition(0, 0).to(result.first));
+      }
+    } else if (_op == ScanType::OpGreaterThan) {
+      // Look for the first rhs value that is smaller than the biggest lhs value.
+      auto result = _first_value_that_satisfies_reverse(_sorted_right_table, [&](const T& value) {
+        return value < left_max_value;
+      });
+      if (result.second) {
+        _emit_left_null_combinations(0, result.first.to(end_of_right_table));
+      }
+    } else if (_op == ScanType::OpGreaterThanEquals) {
+      // Look for the first rhs value that is smaller or equal to the biggest lhs value.
+      auto result = _first_value_that_satisfies_reverse(_sorted_right_table, [&](const T& value) {
+        return value <= left_max_value;
+      });
+      if (result.second) {
+        _emit_left_null_combinations(0, result.first.to(end_of_right_table));
+      }
+    }
+  }
+
+  /**
+  * Adds the rows without matches for right outer joins for non-equi operators (<, <=, >, >=)
+  **/
+  void _right_outer_non_equi_join() {
+    auto& right_min_value = _table_min_value(_sorted_right_table);
+    auto& right_max_value = _table_max_value(_sorted_right_table);
+    auto end_of_left_table = _end_of_table(_sorted_left_table);
+
+    if (_op == ScanType::OpLessThan) {
+      // Look for the last lhs value that is smaller than the biggest rhs value.
+      auto result = _first_value_that_satisfies_reverse(_sorted_left_table, [&](const T& value) {
+        return value < right_max_value;
+      });
+      if (result.second) {
+        _emit_right_null_combinations(0, result.first.to(end_of_left_table));
+      }
+    } else if (_op == ScanType::OpLessThanEquals) {
+      // Look for the last lhs value that is smaller or equal than the biggest rhs value.
+      auto result = _first_value_that_satisfies_reverse(_sorted_left_table, [&](const T& value) {
+        return value <= right_max_value;
+      });
+      if (result.second) {
+        _emit_right_null_combinations(0, result.first.to(end_of_left_table));
+      }
+    } else if (_op == ScanType::OpGreaterThan) {
+      // Look for the first lhs value that is bigger than the smallest rhs value.
+      auto result = _first_value_that_satisfies(_sorted_left_table, [&](const T& value) {
+        return value > right_min_value;
+      });
+      if (result.second) {
+        _emit_right_null_combinations(0, TablePosition(0, 0).to(result.first));
+      }
+    } else if (_op == ScanType::OpGreaterThanEquals) {
+      // Look for the first lhs value that is bigger or equal to the smallest rhs value.
+      auto result = _first_value_that_satisfies(_sorted_left_table, [&](const T& value) {
+        return value >= right_min_value;
+      });
+      if (result.second) {
+        _emit_right_null_combinations(0, TablePosition(0, 0).to(result.first));
+      }
     }
   }
 
