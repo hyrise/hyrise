@@ -10,6 +10,7 @@
 #include "optimizer/abstract_syntax_tree/stored_table_node.hpp"
 #include "optimizer/expression/expression_node.hpp"
 #include "storage/storage_manager.hpp"
+#include "types.hpp"
 
 namespace opossum {
 
@@ -20,7 +21,7 @@ class AggregateNodeTest : public BaseTest {
 
     _stored_table_node = std::make_shared<StoredTableNode>("t_a");
 
-    // SELECT a, SUM(a+b), SUM(a+c) AS some_sum [...] GROUP BY a, c
+    // SELECT a, c, SUM(a+b), SUM(a+c) AS some_sum [...] GROUP BY a, c
     // Columns are ordered as specified in the SELECT list
     _aggregate_node = std::make_shared<AggregateNode>(
         std::vector<std::shared_ptr<ExpressionNode>>{
@@ -35,7 +36,7 @@ class AggregateNodeTest : public BaseTest {
                                                         ExpressionNode::create_column_identifier(ColumnID{0}),
                                                         ExpressionNode::create_column_identifier(ColumnID{2}))},
                 {std::string("some_sum")})},
-        std::vector<ColumnID>{ColumnID{0}});
+        std::vector<ColumnID>{ColumnID{0}, ColumnID{2}});
     _aggregate_node->set_left_child(_stored_table_node);
   }
 
@@ -50,9 +51,26 @@ TEST_F(AggregateNodeTest, ColumnIdForColumnIdentifier) {
   EXPECT_EQ(_aggregate_node->get_column_id_for_column_identifier_name({"a", {"t_a"}}), 0);
   EXPECT_EQ(_aggregate_node->find_column_id_for_column_identifier_name({"b", nullopt}), nullopt);
   EXPECT_EQ(_aggregate_node->find_column_id_for_column_identifier_name({"b", {"t_a"}}), nullopt);
+  EXPECT_EQ(_aggregate_node->get_column_id_for_column_identifier_name({"c", nullopt}), 1);
+  EXPECT_EQ(_aggregate_node->get_column_id_for_column_identifier_name({"c", {"t_a"}}), 1);
 
-  EXPECT_EQ(_aggregate_node->get_column_id_for_column_identifier_name({"some_sum", nullopt}), 2);
+  EXPECT_EQ(_aggregate_node->get_column_id_for_column_identifier_name({"some_sum", nullopt}), 3);
   EXPECT_EQ(_aggregate_node->find_column_id_for_column_identifier_name({"some_sum", {"t_a"}}), nullopt);
+}
+
+TEST_F(AggregateNodeTest, OriginalGroupByColumnIdsInOutputColumnIds) {
+  const auto &column_ids = _aggregate_node->output_column_ids();
+
+  const auto iter_0 = std::find(column_ids.begin(), column_ids.end(), ColumnID{0});
+  EXPECT_NE(iter_0, column_ids.end());
+  EXPECT_EQ(std::distance(column_ids.begin(), iter_0), 0);
+
+  const auto iter_1 = std::find(column_ids.begin(), column_ids.end(), ColumnID{1});
+  EXPECT_EQ(iter_1, column_ids.end());
+
+  const auto iter_2 = std::find(column_ids.begin(), column_ids.end(), ColumnID{2});
+  EXPECT_NE(iter_2, column_ids.end());
+  EXPECT_EQ(std::distance(column_ids.begin(), iter_2), 1);
 }
 
 TEST_F(AggregateNodeTest, ColumnIdForExpression) {

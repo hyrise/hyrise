@@ -28,9 +28,6 @@ JoinNestedLoopB::JoinNestedLoopB(const std::shared_ptr<const AbstractOperator> l
   DebugAssert(left != nullptr, "JoinNestedLoopB::JoinNestedLoopB: left input operator is null");
   DebugAssert(right != nullptr, "JoinNestedLoopB::JoinNestedLoopB: right input operator is null");
 
-  _left_column_id = column_ids.first;
-  _right_column_id = column_ids.second;
-
   _output = std::make_shared<Table>(0);
   _pos_list_left = std::make_shared<PosList>();
   _pos_list_right = std::make_shared<PosList>();
@@ -119,15 +116,17 @@ void JoinNestedLoopB::_add_outer_join_rows(std::shared_ptr<const Table> outer_si
 }
 
 std::shared_ptr<const Table> JoinNestedLoopB::on_execute() {
+  DebugAssert(static_cast<bool>(_column_ids), "Join columns not specified.");
+
   // Get types and ids of the input columns
-  auto left_column_type = input_table_left()->column_type(_left_column_id);
-  auto right_column_type = input_table_right()->column_type(_right_column_id);
+  auto left_column_type = input_table_left()->column_type((*_column_ids).first);
+  auto right_column_type = input_table_right()->column_type((*_column_ids).second);
 
   // Ensure matching column types for simplicity
   // Joins on non-matching types can be added later.
   DebugAssert((left_column_type == right_column_type), "Column types of join columns do not match.");
 
-  _join_columns(_left_column_id, _right_column_id, left_column_type);
+  _join_columns((*_column_ids).first, (*_column_ids).second, left_column_type);
 
   if (_mode == JoinMode::Left || _mode == JoinMode::Outer) {
     _add_outer_join_rows(input_table_left(), _pos_list_left, _left_match, _pos_list_right);

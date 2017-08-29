@@ -67,11 +67,8 @@ void AggregateNode::_on_child_changed() {
    * The Aggregate operator will put all GROUP BY columns in the output table at the beginning,
    * so we first handle those, and afterwards add the column information for the aggregate functions.
    */
-  ColumnID column_id{0};
   for (const auto groupby_column_id : _groupby_column_ids) {
-    _output_column_ids.emplace_back(column_id);
-    column_id++;
-
+    _output_column_ids.emplace_back(groupby_column_id);
     _output_column_names.emplace_back(left_child()->output_column_names()[groupby_column_id]);
   }
 

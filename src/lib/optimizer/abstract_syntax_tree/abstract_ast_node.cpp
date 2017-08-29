@@ -86,15 +86,10 @@ const std::vector<std::string> &AbstractASTNode::output_column_names() const {
    * Examples include Projections, Aggregates, and Joins.
    *
    * Having two children does not necessarily mean that this function has to be overwritten, though.
-   * In case of UNION, this function is perfectly valid.
+   * In case of UNION this function is perfectly valid.
    */
   DebugAssert(!!_left_child, "Node has no left child and therefore must override this function.");
   return _left_child->output_column_names();
-}
-
-bool AbstractASTNode::has_output_column(const std::string &column_name) const {
-  const auto &column_names = output_column_names();
-  return std::find(column_names.begin(), column_names.end(), column_name) != column_names.end();
 }
 
 const std::vector<ColumnID> &AbstractASTNode::output_column_ids() const {
@@ -103,7 +98,7 @@ const std::vector<ColumnID> &AbstractASTNode::output_column_ids() const {
    * Examples include Projections, Aggregates, and Joins.
    *
    * Having two children does not necessarily mean that this function has to be overwritten, though.
-   * In case of UNION, this function is perfectly valid.
+   * In case of UNION this function is perfectly valid.
    */
   DebugAssert(!!_left_child, "Node has no left child and therefore must override this function.");
   return _left_child->output_column_ids();
@@ -123,7 +118,7 @@ optional<ColumnID> AbstractASTNode::find_column_id_for_column_identifier_name(
    * Examples include Projections, Aggregates, and Joins.
    *
    * Having two children does not necessarily mean that this function has to be overwritten, though.
-   * In case of UNION, this function is perfectly valid.
+   * In case of UNION this function is perfectly valid.
    */
   DebugAssert(!!_left_child, "Node has no left child and therefore must override this function.");
   return _left_child->find_column_id_for_column_identifier_name(column_identifier_name);
@@ -134,7 +129,7 @@ bool AbstractASTNode::manages_table(const std::string &table_name) const {
    * This function might have to be overwritten if a node can handle different input tables, e.g. a JOIN.
    *
    * Having two children does not necessarily mean that this function has to be overwritten, though.
-   * In case of UNION, this function is perfectly valid,
+   * In case of UNION this function is perfectly valid
    * because rows cannot be traced back to its original table after the operator.
    */
   DebugAssert(!!_left_child, "Node has no left child and therefore must override this function.");
@@ -146,7 +141,7 @@ std::vector<ColumnID> AbstractASTNode::get_column_ids_for_table(const std::strin
    * This function might have to be overwritten if a node can handle different input tables, e.g. a JOIN.
    *
    * Having two children does not necessarily mean that this function has to be overwritten, though.
-   * In case of UNION, this function is perfectly valid,
+   * In case of UNION this function is perfectly valid
    * because rows cannot be traced back to its original table after the operator.
    */
   DebugAssert(!!_left_child, "Node has no left child and therefore must override this function.");

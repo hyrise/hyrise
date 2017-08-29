@@ -426,7 +426,7 @@ TwoColumnSelectivityResult ColumnStatistics<ColumnType>::estimate_selectivity_fo
       return estimate_selectivity_for_open_ended_operators(right_below_overlapping_ratio, left_above_overlapping_ratio,
                                                            right_stats->min(), max(), true);
     }
-    // case ScanType::OpBetween is not supported for ColumnName as TableScan does not support this
+    // case ScanType::OpBetween is not supported for ColumnID as TableScan does not support this
     default: { return {1.f, nullptr, nullptr}; }
   }
 }
