@@ -101,7 +101,7 @@ const SQLTestParam test_queries[] = {
     {"SELECT * FROM int_float2 ORDER BY a, b;", "src/test/tables/int_float2_sorted.tbl", OrderSensitivity::Sensitive},
     {"SELECT * FROM int_float2 ORDER BY a, b ASC;", "src/test/tables/int_float2_sorted.tbl",
      OrderSensitivity::Sensitive},
-    {"SELECT a, b FROM int_float ORDER B<Y a;", "src/test/tables/int_float_sorted.tbl", OrderSensitivity::Sensitive},
+    {"SELECT a, b FROM int_float ORDER BY a;", "src/test/tables/int_float_sorted.tbl", OrderSensitivity::Sensitive},
     {"SELECT * FROM int_float4 ORDER BY a, b;", "src/test/tables/int_float2_sorted.tbl", OrderSensitivity::Sensitive},
     {"SELECT a FROM (SELECT a, b FROM int_float WHERE a > 1 ORDER BY b) WHERE a > 0 ORDER BY a;",
      "src/test/tables/int.tbl", OrderSensitivity::Sensitive},
