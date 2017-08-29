@@ -23,12 +23,10 @@ class ProjectionNodeTest : public BaseTest {
     _projection_node = std::make_shared<ProjectionNode>(std::vector<std::shared_ptr<Expression>>{
         Expression::create_column_identifier(ColumnID{2}), Expression::create_column_identifier(ColumnID{0}),
         Expression::create_column_identifier(ColumnID{1}, {"alias_for_b"}),
-        Expression::create_binary_operator(
-            ExpressionType::Addition, Expression::create_column_identifier(ColumnID{1}),
-            Expression::create_column_identifier(ColumnID{2}), {"some_addition"}),
-        Expression::create_binary_operator(ExpressionType::Addition,
-                                               Expression::create_column_identifier(ColumnID{0}),
-                                               Expression::create_column_identifier(ColumnID{2}))});
+        Expression::create_binary_operator(ExpressionType::Addition, Expression::create_column_identifier(ColumnID{1}),
+                                           Expression::create_column_identifier(ColumnID{2}), {"some_addition"}),
+        Expression::create_binary_operator(ExpressionType::Addition, Expression::create_column_identifier(ColumnID{0}),
+                                           Expression::create_column_identifier(ColumnID{2}))});
     _projection_node->set_left_child(_stored_table_node);
   }
 

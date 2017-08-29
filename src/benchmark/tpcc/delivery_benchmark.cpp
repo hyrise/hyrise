@@ -176,8 +176,7 @@ class TPCCDeliveryBenchmark : public TPCCBenchmarkFixture {
     Projection::ColumnExpressions columns = {Expression::create_column_identifier(ColumnID{6})};
     auto projection = std::make_shared<Projection>(val, columns);
 
-    Projection::ColumnExpressions values = {
-        Expression::create_literal(std::to_string(datetime), {"OL_DELIVERY_D"})};
+    Projection::ColumnExpressions values = {Expression::create_literal(std::to_string(datetime), {"OL_DELIVERY_D"})};
     auto updated_rows = std::make_shared<Projection>(val, values);
     auto update = std::make_shared<Update>("ORDER-LINE", projection, updated_rows);
 
@@ -249,9 +248,9 @@ class TPCCDeliveryBenchmark : public TPCCBenchmarkFixture {
     Projection::ColumnExpressions columns = {Expression::create_column_identifier(ColumnID{16})};
     auto projection = std::make_shared<Projection>(val, columns);
 
-    Projection::ColumnExpressions values = {Expression::create_binary_operator(
-        ExpressionType::Addition, Expression::create_column_identifier(ColumnID{16}),
-        Expression::create_literal(ol_total))};
+    Projection::ColumnExpressions values = {
+        Expression::create_binary_operator(ExpressionType::Addition, Expression::create_column_identifier(ColumnID{16}),
+                                           Expression::create_literal(ol_total))};
     auto updated_rows = std::make_shared<Projection>(val, values);
     auto update = std::make_shared<Update>("CUSTOMER", projection, updated_rows);
 

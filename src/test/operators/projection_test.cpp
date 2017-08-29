@@ -39,22 +39,20 @@ class OperatorsProjectionTest : public BaseTest {
     // Projection Expression: a + b + c
     _sum_a_b_c_expr = Projection::ColumnExpressions{Expression::create_binary_operator(
         ExpressionType::Addition, Expression::create_column_identifier(ColumnID{0}),
-        Expression::create_binary_operator(ExpressionType::Addition,
-                                               Expression::create_column_identifier(ColumnID{1}),
-                                               Expression::create_column_identifier(ColumnID{2})),
+        Expression::create_binary_operator(ExpressionType::Addition, Expression::create_column_identifier(ColumnID{1}),
+                                           Expression::create_column_identifier(ColumnID{2})),
         {"sum"})};
 
     // Projection Expression: (a + b) * c
     _mul_a_b_c_expr = Projection::ColumnExpressions{Expression::create_binary_operator(
         ExpressionType::Multiplication,
-        Expression::create_binary_operator(ExpressionType::Addition,
-                                               Expression::create_column_identifier(ColumnID{0}),
-                                               Expression::create_column_identifier(ColumnID{1})),
+        Expression::create_binary_operator(ExpressionType::Addition, Expression::create_column_identifier(ColumnID{0}),
+                                           Expression::create_column_identifier(ColumnID{1})),
         Expression::create_column_identifier(ColumnID{2}), {"mul"})};
 
-    _sum_a_b_expr = Projection::ColumnExpressions{Expression::create_binary_operator(
-        ExpressionType::Addition, Expression::create_column_identifier(ColumnID{0}),
-        Expression::create_column_identifier(ColumnID{1}), {"sum"})};
+    _sum_a_b_expr = Projection::ColumnExpressions{
+        Expression::create_binary_operator(ExpressionType::Addition, Expression::create_column_identifier(ColumnID{0}),
+                                           Expression::create_column_identifier(ColumnID{1}), {"sum"})};
 
     // Projection Expression: a
     _a_expr = Projection::ColumnExpressions{Expression::create_column_identifier(ColumnID{0})};

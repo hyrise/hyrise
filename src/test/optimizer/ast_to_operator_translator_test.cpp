@@ -118,8 +118,8 @@ TEST_F(ASTToOperatorTranslatorTest, JoinNode) {
 TEST_F(ASTToOperatorTranslatorTest, AggregateNodeNoArithmetics) {
   const auto stored_table_node = std::make_shared<StoredTableNode>("table_int_float");
 
-  auto sum_expression = Expression::create_function_reference(
-      "SUM", {Expression::create_column_identifier(ColumnID{0})}, {"sum_of_a"});
+  auto sum_expression =
+      Expression::create_function_reference("SUM", {Expression::create_column_identifier(ColumnID{0})}, {"sum_of_a"});
 
   auto aggregate_node = std::make_shared<AggregateNode>(std::vector<std::shared_ptr<Expression>>{sum_expression},
                                                         std::vector<ColumnID>{});
