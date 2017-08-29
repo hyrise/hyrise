@@ -20,10 +20,6 @@ namespace opossum {
 
 Expression::Expression(ExpressionType type) : _type(type) {}
 
-std::shared_ptr<Expression> Expression::create_expression(const ExpressionType type) {
-  return std::make_shared<Expression>(type);
-}
-
 std::shared_ptr<Expression> Expression::create_column_identifier(const ColumnID column_id,
                                                                  const optional<std::string> &alias) {
   auto expression = std::make_shared<Expression>(ExpressionType::ColumnIdentifier);
@@ -62,16 +58,16 @@ std::shared_ptr<Expression> Expression::create_literal(const AllTypeVariant &val
   return expression;
 }
 
-std::shared_ptr<Expression> Expression::create_parameter(const AllTypeVariant &value) {
+std::shared_ptr<Expression> Expression::create_placeholder(const AllTypeVariant &value) {
   auto expression = std::make_shared<Expression>(ExpressionType::Placeholder);
   expression->_value = value;
   return expression;
 }
 
-std::shared_ptr<Expression> Expression::create_function_reference(
-    const std::string &function_name, const std::vector<std::shared_ptr<Expression>> &expression_list,
-    const optional<std::string> &alias) {
-  auto expression = std::make_shared<Expression>(ExpressionType::FunctionIdentifier);
+std::shared_ptr<Expression> Expression::create_function(
+  const std::string &function_name, const std::vector<std::shared_ptr<Expression>> &expression_list,
+  const optional<std::string> &alias) {
+  auto expression = std::make_shared<Expression>(ExpressionType::Function);
   expression->_name = function_name;
   expression->_expression_list = expression_list;
   expression->_alias = alias;
@@ -185,7 +181,7 @@ const std::string Expression::description() const {
     case ExpressionType::ColumnIdentifier:
       desc << "[ColumnID: " << column_id() << "]";
       break;
-    case ExpressionType::FunctionIdentifier:
+    case ExpressionType::Function:
       desc << "[" << name() << ": " << std::endl;
       for (const auto &expr : expression_list()) {
         desc << expr->description() << ", " << std::endl;
@@ -230,7 +226,7 @@ std::string Expression::to_string(const std::shared_ptr<AbstractASTNode> &input_
         return input_node->output_column_names()[column_id()];
       }
       return boost::lexical_cast<std::string>(column_id());
-    case ExpressionType::FunctionIdentifier:
+    case ExpressionType::Function:
       return name() + "(" + _expression_list[0]->to_string(input_node) + ")";
     default:
       // Handled further down.

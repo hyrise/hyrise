@@ -47,8 +47,6 @@ class Expression : public std::enable_shared_from_this<Expression> {
   /*
    * Factory Methods to create Expressions of specific type
    */
-  static std::shared_ptr<Expression> create_expression(const ExpressionType type);
-
   static std::shared_ptr<Expression> create_column_identifier(const ColumnID column_id,
                                                               const optional<std::string>& alias = nullopt);
 
@@ -59,11 +57,11 @@ class Expression : public std::enable_shared_from_this<Expression> {
   static std::shared_ptr<Expression> create_literal(const AllTypeVariant& value,
                                                     const optional<std::string>& alias = nullopt);
 
-  static std::shared_ptr<Expression> create_parameter(const AllTypeVariant& value);
+  static std::shared_ptr<Expression> create_placeholder(const AllTypeVariant &value);
 
-  static std::shared_ptr<Expression> create_function_reference(
-      const std::string& function_name, const std::vector<std::shared_ptr<Expression>>& expression_list,
-      const optional<std::string>& alias = nullopt);
+  static std::shared_ptr<Expression> create_function(
+    const std::string &function_name, const std::vector<std::shared_ptr<Expression>> &expression_list,
+    const optional <std::string> &alias = nullopt);
 
   static std::shared_ptr<Expression> create_binary_operator(ExpressionType type,
                                                             const std::shared_ptr<Expression>& left,

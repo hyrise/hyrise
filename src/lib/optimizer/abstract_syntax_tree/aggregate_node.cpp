@@ -20,7 +20,7 @@ AggregateNode::AggregateNode(const std::vector<std::shared_ptr<Expression>>& agg
       _aggregate_expressions(aggregate_expressions),
       _groupby_column_ids(groupby_column_ids) {
   for (const auto& expression : aggregate_expressions) {
-    DebugAssert(expression->type() == ExpressionType::FunctionIdentifier, "Aggregate expression must be a function.");
+    DebugAssert(expression->type() == ExpressionType::Function, "Aggregate expression must be a function.");
   }
 }
 
@@ -77,7 +77,7 @@ void AggregateNode::_on_child_changed() {
   }
 
   for (const auto& aggregate_expression : _aggregate_expressions) {
-    DebugAssert(aggregate_expression->type() == ExpressionType::FunctionIdentifier, "Expression must be a function.");
+    DebugAssert(aggregate_expression->type() == ExpressionType::Function, "Expression must be a function.");
 
     std::string column_name;
 
@@ -175,7 +175,7 @@ optional<ColumnID> AggregateNode::find_column_id_for_expression(const std::share
       const auto idx = std::distance(_groupby_column_ids.begin(), iter);
       return ColumnID{static_cast<ColumnID::base_type>(idx)};
     }
-  } else if (expression->type() == ExpressionType::FunctionIdentifier) {
+  } else if (expression->type() == ExpressionType::Function) {
     const auto iter = std::find_if(_aggregate_expressions.begin(), _aggregate_expressions.end(), [&](const auto& rhs) {
       DebugAssert(!!rhs, "Aggregate expressions can not be nullptr!");
       return *expression == *rhs;

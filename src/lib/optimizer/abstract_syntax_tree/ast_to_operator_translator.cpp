@@ -123,7 +123,7 @@ std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::_translate_aggregate_
 
   // Check if there are any arithmetic expressions.
   for (const auto &aggregate_expression : aggregate_expressions) {
-    DebugAssert(aggregate_expression->type() == ExpressionType::FunctionIdentifier, "Expression is not a function.");
+    DebugAssert(aggregate_expression->type() == ExpressionType::Function, "Expression is not a function.");
 
     const auto &function_arg_expr = (aggregate_expression->expression_list())[0];
 
@@ -155,7 +155,7 @@ std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::_translate_aggregate_
     auto current_column_id = static_cast<ColumnID::base_type>(groupby_columns.size());
 
     for (auto &aggregate_expression : aggregate_expressions) {
-      DebugAssert(aggregate_expression->type() == ExpressionType::FunctionIdentifier, "Expression is not a function.");
+      DebugAssert(aggregate_expression->type() == ExpressionType::Function, "Expression is not a function.");
 
       // Add original expression of the function to the Projection.
       column_expressions.emplace_back((aggregate_expression->expression_list())[0]);
@@ -178,7 +178,7 @@ std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::_translate_aggregate_
   aggregate_definitions.reserve(aggregate_expressions.size());
 
   for (const auto &aggregate_expression : aggregate_expressions) {
-    DebugAssert(aggregate_expression->type() == ExpressionType::FunctionIdentifier,
+    DebugAssert(aggregate_expression->type() == ExpressionType::Function,
                 "Only functions are supported in Aggregates");
 
     const auto aggregate_function_type = aggregate_function_to_string.right.at(aggregate_expression->name());

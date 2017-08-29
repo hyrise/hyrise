@@ -173,7 +173,7 @@ TEST_F(SQLExpressionTranslatorTest, ExpressionFunction) {
   EXPECT_EQ(first->left_child(), nullptr);
   EXPECT_EQ(first->right_child(), nullptr);
 
-  EXPECT_EQ(second->type(), ExpressionType::FunctionIdentifier);
+  EXPECT_EQ(second->type(), ExpressionType::Function);
   ASSERT_EQ(second->expression_list().size(), 1u);
   EXPECT_EQ(second->expression_list().at(0)->type(), ExpressionType::ColumnIdentifier);
 }
@@ -185,7 +185,7 @@ TEST_F(SQLExpressionTranslatorTest, ExpressionComplexFunction) {
   ASSERT_EQ(expressions.size(), 1u);
   auto &first = expressions.at(0);
 
-  EXPECT_EQ(first->type(), ExpressionType::FunctionIdentifier);
+  EXPECT_EQ(first->type(), ExpressionType::Function);
   ASSERT_EQ(first->expression_list().size(), 1u);
 
   auto function_expression = first->expression_list().at(0);

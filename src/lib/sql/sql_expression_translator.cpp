@@ -22,10 +22,21 @@ std::shared_ptr<Expression> SQLExpressionTranslator::translate_expression(
   auto alias = expr.alias ? optional<std::string>(expr.alias) : nullopt;
 
   std::shared_ptr<Expression> node;
+  std::shared_ptr<Expression> left;
+  std::shared_ptr<Expression> right;
+
+  if (expr.expr) {
+    left = translate_expression(*expr.expr, input_node);
+  }
+
+  if (expr.expr2) {
+    right = translate_expression(*expr.expr2, input_node);
+  }
+
   switch (expr.type) {
     case hsql::kExprOperator: {
       auto operator_type = operator_type_to_expression_type.at(expr.opType);
-      node = Expression::create_expression(operator_type);
+      node = Expression::create_binary_operator(operator_type, left, right);
       break;
     }
     case hsql::kExprColumnRef: {
@@ -47,7 +58,7 @@ std::shared_ptr<Expression> SQLExpressionTranslator::translate_expression(
         expression_list.emplace_back(translate_expression(*elem, input_node));
       }
 
-      node = Expression::create_function_reference(name, expression_list, alias);
+      node = Expression::create_function(name, expression_list, alias);
       break;
     }
     case hsql::kExprLiteralFloat:
@@ -60,7 +71,7 @@ std::shared_ptr<Expression> SQLExpressionTranslator::translate_expression(
       node = Expression::create_literal(name);
       break;
     case hsql::kExprParameter:
-      node = Expression::create_parameter(int_value);
+      node = Expression::create_placeholder(int_value);
       break;
     case hsql::kExprStar: {
       const auto table_name = expr.table != nullptr ? std::string(expr.table) : "";
@@ -83,16 +94,6 @@ std::shared_ptr<Expression> SQLExpressionTranslator::translate_expression(
       throw std::runtime_error("Selects are not supported yet.");
     default:
       throw std::runtime_error("Unsupported expression type");
-  }
-
-  if (expr.expr) {
-    auto left = translate_expression(*expr.expr, input_node);
-    node->set_left_child(left);
-  }
-
-  if (expr.expr2) {
-    auto right = translate_expression(*expr.expr2, input_node);
-    node->set_right_child(right);
   }
 
   return node;
