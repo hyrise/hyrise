@@ -1,5 +1,7 @@
 #pragma once
 
+#include "tbb/concurrent_vector.h"
+
 #include "base_column.hpp"
 
 namespace opossum {

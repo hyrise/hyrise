@@ -19,7 +19,7 @@ class ReferenceColumn;
 /**
  * @brief The base class of table scan impls that scan a single column
  *
- * Resolves reference columns. The position list of reference columns 
+ * Resolves reference columns. The position list of reference columns
  * is split by the referenced columns and then each is visited separately.
  */
 class BaseSingleColumnTableScanImpl : public BaseTableScanImpl, public ColumnVisitable {
@@ -39,8 +39,7 @@ class BaseSingleColumnTableScanImpl : public BaseTableScanImpl, public ColumnVis
   struct Context : public ColumnVisitableContext {
     Context(const ChunkID chunk_id, PosList &matches_out) : _chunk_id{chunk_id}, _matches_out{matches_out} {}
 
-    Context(const ChunkID chunk_id, PosList &matches_out,
-            std::unique_ptr<ChunkOffsetsList> mapped_chunk_offsets)
+    Context(const ChunkID chunk_id, PosList &matches_out, std::unique_ptr<ChunkOffsetsList> mapped_chunk_offsets)
         : _chunk_id{chunk_id}, _matches_out{matches_out}, _mapped_chunk_offsets{std::move(mapped_chunk_offsets)} {}
 
     const ChunkID _chunk_id;

@@ -3,8 +3,8 @@
 #include <functional>
 #include <memory>
 
-#include "utils/assert.hpp"
 #include "types.hpp"
+#include "utils/assert.hpp"
 
 namespace opossum {
 
@@ -20,7 +20,7 @@ class BaseTableScanImpl {
 
   virtual ~BaseTableScanImpl() = default;
 
-  virtual PosList scan_chunk(const ChunkID &chunk_id) = 0;
+  virtual PosList scan_chunk(const ChunkID& chunk_id) = 0;
 
  protected:
   template <typename Functor>

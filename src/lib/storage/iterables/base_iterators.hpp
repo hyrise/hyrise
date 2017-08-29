@@ -16,10 +16,10 @@ namespace opossum {
  * @brief base class of all iterators used by iterables
  *
  * Why is boost::iterator_core_access a friend class?
- * 
- * Boost’s iterator facade needs access to the three methods listed in the example. 
- * They could be made public, but that’s not really desirable because they are 
- * part of an internal interface and should not be accessed by the user of iterator. 
+ *
+ * Boost’s iterator facade needs access to the three methods listed in the example.
+ * They could be made public, but that’s not really desirable because they are
+ * part of an internal interface and should not be accessed by the user of iterator.
  * This friend class gives the iterator facade access to the methods.
  *
  *

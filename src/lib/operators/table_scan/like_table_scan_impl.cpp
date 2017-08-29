@@ -8,8 +8,11 @@
 #include <string>
 #include <vector>
 
+#include "table_scan_main_loop.hpp"
+
 #include "storage/dictionary_column.hpp"
 #include "storage/iterables/attribute_vector_iterable.hpp"
+#include "storage/iterables/constant_value_iterable.hpp"
 #include "storage/iterables/value_column_iterable.hpp"
 #include "storage/value_column.hpp"
 
@@ -31,18 +34,17 @@ void LikeTableScanImpl::handle_value_column(BaseColumn &base_column,
 
   auto &left_column = static_cast<const ValueColumn<std::string> &>(base_column);
 
-  auto left_column_iterable = ValueColumnIterable<std::string>{left_column, context->_mapped_chunk_offsets.get()};
+  auto left_iterable = ValueColumnIterable<std::string>{left_column, context->_mapped_chunk_offsets.get()};
+  auto right_iterable = ConstantValueIterable<std::regex>{_regex};
 
-  left_column_iterable.get_iterators([&](auto left_it, auto left_end) {
-    for (; left_it != left_end; ++left_it) {
-      const auto left = *left_it;
+  static const auto regex_comparator = [](const std::string& str, const std::regex& regex) {
+    return std::regex_match(str, regex);
+  };
 
-      if (left.is_null()) continue;
-
-      if (std::regex_match(left.value(), _regex)) {
-        matches_out.push_back(RowID{chunk_id, left.chunk_offset()});
-      }
-    }
+  left_iterable.get_iterators([&](auto left_it, auto left_end) {
+    right_iterable.get_iterators([&](auto right_it, auto right_end) {
+      TableScanMainLoop{}(regex_comparator, left_it, left_end, right_it, chunk_id, matches_out);
+    });
   });
 }
 

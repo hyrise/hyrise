@@ -2,10 +2,10 @@
 
 #include <memory>
 
-#include "storage/iterables/attribute_vector_iterable.hpp"
-#include "storage/iterables/null_value_vector_iterable.hpp"
 #include "storage/base_dictionary_column.hpp"
 #include "storage/base_value_column.hpp"
+#include "storage/iterables/attribute_vector_iterable.hpp"
+#include "storage/iterables/null_value_vector_iterable.hpp"
 
 #include "utils/assert.hpp"
 

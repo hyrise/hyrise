@@ -14,7 +14,7 @@ namespace opossum {
  */
 struct ChunkOffsetMapping {
   const ChunkOffset into_referencing;  // chunk offset into reference column
-  const ChunkOffset into_referenced;  // used to access values in the referenced data column
+  const ChunkOffset into_referenced;   // used to access values in the referenced data column
 };
 
 /**

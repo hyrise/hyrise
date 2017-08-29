@@ -6,10 +6,10 @@
 
 #include "table_scan_main_loop.hpp"
 
+#include "storage/base_dictionary_column.hpp"
 #include "storage/iterables/attribute_vector_iterable.hpp"
 #include "storage/iterables/constant_value_iterable.hpp"
 #include "storage/iterables/create_iterable_from_column.hpp"
-#include "storage/base_dictionary_column.hpp"
 
 #include "resolve_column_type.hpp"
 
@@ -23,6 +23,8 @@ SingleColumnTableScanImpl::SingleColumnTableScanImpl(std::shared_ptr<const Table
 void SingleColumnTableScanImpl::handle_value_column(BaseColumn &base_column,
                                                     std::shared_ptr<ColumnVisitableContext> base_context) {
   auto context = std::static_pointer_cast<Context>(base_context);
+  auto &matches_out = context->_matches_out;
+  const auto chunk_id = context->_chunk_id;
 
   const auto left_column_type = _in_table->column_type(_left_column_id);
 
@@ -37,7 +39,7 @@ void SingleColumnTableScanImpl::handle_value_column(BaseColumn &base_column,
     left_column_iterable.get_iterators([&](auto left_it, auto left_end) {
       right_value_iterable.get_iterators([&](auto right_it, auto right_end) {
         _resolve_to_operator(_scan_type, [&](auto comparator) {
-          TableScanMainLoop{context->_chunk_id, context->_matches_out}(comparator, left_it, left_end, right_it);  // NOLINT
+          TableScanMainLoop{}(comparator, left_it, left_end, right_it, chunk_id, matches_out);  // NOLINT
         });
       });
     });
@@ -105,7 +107,7 @@ void SingleColumnTableScanImpl::handle_dictionary_column(BaseColumn &base_column
   left_iterable.get_iterators([&](auto left_it, auto left_end) {
     right_iterable.get_iterators([&](auto right_it, auto right_end) {
       this->_resolve_to_operator_for_dict_column_scan(_scan_type, [&](auto comparator) {
-        TableScanMainLoop{chunk_id, matches_out}(comparator, left_it, left_end, right_it);  // NOLINT
+        TableScanMainLoop{}(comparator, left_it, left_end, right_it, chunk_id, matches_out);  // NOLINT
       });
     });
   });

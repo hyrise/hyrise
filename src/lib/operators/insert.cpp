@@ -6,8 +6,8 @@
 #include <vector>
 
 #include "concurrency/transaction_context.hpp"
-#include "storage/storage_manager.hpp"
 #include "storage/base_dictionary_column.hpp"
+#include "storage/storage_manager.hpp"
 #include "storage/value_column.hpp"
 #include "utils/assert.hpp"
 
