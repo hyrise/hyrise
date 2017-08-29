@@ -8,7 +8,7 @@
 #include <vector>
 
 #include "resolve_type.hpp"
-#include "table_materializer.hpp"
+#include "column_materializer.hpp"
 
 namespace opossum {
 
@@ -19,13 +19,22 @@ namespace opossum {
 * Performs radix partitioning for the sort merge join. The radix partitioning algorithm partitions on the basis
 * of the least significant bits of the values because the values there are much more evenly distributed than for the
 * most significant bits. As a result, equal values always get moved to the same partition and the partitions are
-* sorted in themselves but in between the partitions. This is okay for the equi join, because we are only interested
-* in equlity. In the case of a non-equi join however, complete sortedness is required, because join matches exist
+* sorted in themselves but not in between the partitions. This is okay for the equi join, because we are only interested
+* in equality. In the case of a non-equi join however, complete sortedness is required, because join matches exist
 * beyond partition borders. Therefore, the partitioner defaults to a range partitioning algorithm for the non-equi-join.
 * General partitioning process:
 * -> Input chunks are materialized and sorted. Every value is stored together with its row id.
 * -> Then, either radix partitioning or range partitioning is performed.
 * -> At last, the resulting partitions are sorted.
+*
+* Radix partitioning example:
+* partition_count = 4
+* bits for partition_count = 2
+*
+*   000001|01
+*   000000|11
+*          ˆ right bits are used for partitioning
+*
 **/
 template <typename T>
 class RadixPartitionSort {
@@ -56,7 +65,13 @@ class RadixPartitionSort {
       insert_position.resize(partition_count);
     }
     // Used to count the number of entries for each partition from a specific chunk
+    // Example partition_histogram[3] = 5
+    // -> 5 values from the chunk belong in partition 3
     std::vector<size_t> partition_histogram;
+
+    // Stores the beginning of the range in partition for this chunk.
+    // Example: instert_position[2] = 4
+    // -> This chunks value for partition 2 are inserted at index 4 and forward.
     std::vector<size_t> insert_position;
   };
 
@@ -100,7 +115,7 @@ class RadixPartitionSort {
 
   // Radix calculation for non-arithmetic types
   template <typename T2>
-  static typename std::enable_if<!std::is_arithmetic<T2>::value, uint32_t>::type get_radix(T2 value,
+  static typename std::enable_if<std::is_same<T2, std::string>::value, uint32_t>::type get_radix(T2 value,
                                                                                            uint32_t radix_bitmask) {
     auto result = reinterpret_cast<const uint32_t*>(value.c_str());
     return *result & radix_bitmask;
@@ -123,10 +138,10 @@ class RadixPartitionSort {
   **/
   static MatTablePtr _concatenate_chunks(MatTablePtr input_chunks) {
     auto output_table = std::make_shared<MaterializedTable<T>>(1);
-    output_table->at(0) = std::make_shared<MaterializedChunk<T>>();
+    (*output_table)[0] = std::make_shared<MaterializedChunk<T>>();
 
     // Reserve the required space and move the data to the output
-    auto output_chunk = output_table->at(0);
+    auto output_chunk = (*output_table)[0];
     output_chunk->reserve(_materialized_table_size(input_chunks));
     for (auto& chunk : *input_chunks) {
       output_chunk->insert(output_chunk->end(), chunk->begin(), chunk->end());
@@ -152,7 +167,7 @@ class RadixPartitionSort {
     std::vector<std::shared_ptr<AbstractTask>> histogram_jobs;
     for (size_t chunk_number = 0; chunk_number < input_chunks->size(); ++chunk_number) {
       auto& chunk_statistics = table_statistics.chunk_statistics[chunk_number];
-      auto input_chunk = input_chunks->at(chunk_number);
+      auto input_chunk = (*input_chunks)[chunk_number];
 
       // Count the number of entries for each partition to be able to reserve the appropriate output space later.
       // Note: Does this make sense from a performance view?
@@ -161,7 +176,7 @@ class RadixPartitionSort {
       // and underestimation (vector resizing required)
       // But then we we would not be able to derive the insert positions based on these counts, which
       // are important for parallel partitioning
-      auto job = std::make_shared<JobTask>([input_chunk, &chunk_statistics, &partitioner] {
+      auto job = std::make_shared<JobTask>([&input_chunk, &partitioner, &chunk_statistics] {
         for (auto& entry : *input_chunk) {
           auto partition_id = partitioner(entry.value);
           ++chunk_statistics.partition_histogram[partition_id];
@@ -186,17 +201,18 @@ class RadixPartitionSort {
     // Reserve the appropriate output space for the partitions
     for (size_t partition_id = 0; partition_id < _partition_count; ++partition_id) {
       auto partition_size = table_statistics.partition_histogram[partition_id];
-      output_table->at(partition_id) = std::make_shared<MaterializedChunk<T>>(partition_size);
+      (*output_table)[partition_id] = std::make_shared<MaterializedChunk<T>>(partition_size);
     }
 
     // Move each entry into its appropriate partition in parallel
     std::vector<std::shared_ptr<AbstractTask>> partition_jobs;
     for (size_t chunk_number = 0; chunk_number < input_chunks->size(); ++chunk_number) {
-      auto job = std::make_shared<JobTask>([chunk_number, output_table, input_chunks, &table_statistics, &partitioner] {
+      auto job = std::make_shared<JobTask>([chunk_number, &output_table, &input_chunks,
+                                            &table_statistics, &partitioner] {
         auto& chunk_statistics = table_statistics.chunk_statistics[chunk_number];
-        for (auto& entry : *input_chunks->at(chunk_number)) {
+        for (auto& entry : *(*input_chunks)[chunk_number]) {
           auto partition_id = partitioner(entry.value);
-          output_table->at(partition_id)->at(chunk_statistics.insert_position[partition_id]++) = entry;
+          (*(*output_table)[partition_id])[chunk_statistics.insert_position[partition_id]++] = entry;
         }
       });
       partition_jobs.push_back(job);
@@ -216,8 +232,6 @@ class RadixPartitionSort {
   * - consolidate partitions in order to reduce skew.
   **/
   MatTablePtr _radix_partition(MatTablePtr input_chunks) {
-    DebugAssert(_partition_count > 0 && (_partition_count & (_partition_count - 1)) == 0,
-                "_partition_count must be a power of two greater than zero, i.e. 1, 2, 4, 8...");
     auto radix_bitmask = _partition_count - 1;
     return _partition(input_chunks, [=] (const T& value) {
       return get_radix<T>(value, radix_bitmask);
@@ -236,11 +250,11 @@ class RadixPartitionSort {
     //   would start if every chunk had an even values distribution for every partition.
     // - Later, these values are aggregated to determine the actual partition borders
     for (size_t chunk_number = 0; chunk_number < table->size(); ++chunk_number) {
-      auto chunk_values = table->at(chunk_number);
+      auto chunk_values = (*table)[chunk_number];
       for (size_t partition_id = 0; partition_id < _partition_count - 1; ++partition_id) {
         auto pos = chunk_values->size() * (partition_id + 1) / static_cast<float>(_partition_count);
         auto index = static_cast<size_t>(pos);
-        ++sample_values[partition_id][chunk_values->at(index).value];
+        ++sample_values[partition_id][(*chunk_values)[index].value];
       }
     }
   }
@@ -307,11 +321,11 @@ class RadixPartitionSort {
   /**
   * Executes the partitioning and sorting.
   **/
-  void execute() {
-    // Sort the chunks of the input tables
-    TableMaterializer<T> table_materializer(true /* sorting enabled */);
-    auto chunks_left = table_materializer.materialize(_input_table_left, _left_column_name);
-    auto chunks_right = table_materializer.materialize(_input_table_right, _right_column_name);
+  std::pair<MatTablePtr, MatTablePtr> execute() {
+    // Sort the chunks of the input tables in the non-equi cases
+    ColumnMaterializer<T> column_materializer(!_equi_case);
+    auto chunks_left = column_materializer.materialize(_input_table_left, _left_column_name);
+    auto chunks_right = column_materializer.materialize(_input_table_right, _right_column_name);
 
     if (_partition_count == 1) {
       _output_left = _concatenate_chunks(chunks_left);
@@ -334,12 +348,7 @@ class RadixPartitionSort {
                 "left output has wrong size");
     DebugAssert(_materialized_table_size(_output_right) == _input_table_right->row_count(),
                 "right output has wrong size");
-  }
 
-  /**
-  * Gets the output of the partitioning containing the two materialized tables.
-  **/
-  std::pair<MatTablePtr, MatTablePtr> get_output() {
     return std::make_pair(_output_left, _output_right);
   }
 };

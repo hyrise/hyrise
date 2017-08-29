@@ -517,7 +517,7 @@ class JoinNestedLoopA::JoinNestedLoopAImpl : public AbstractJoinOperatorImpl {
       if (null_value) {
         column = std::make_shared<ReferenceColumn>(input_table, column_id, pos_list);
       } else {
-        DebugAssert(chunk_id < input_table->chunk_count(), "chunk id out of range");
+        DebugAssert(chunk_id < input_table->chunk_count(), "Chunk id out of range");
         if (auto ref_col_left =
                 std::dynamic_pointer_cast<ReferenceColumn>(input_table->get_chunk(chunk_id).get_column(column_id))) {
           auto new_pos_list = std::make_shared<PosList>();

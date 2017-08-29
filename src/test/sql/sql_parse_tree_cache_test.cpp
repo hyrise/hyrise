@@ -2,15 +2,15 @@
 #include <string>
 #include <utility>
 
+#include "SQLParser.h"
+#include "SQLParserResult.h"
+
 #include "sql_base_test.hpp"
 
 #include "sql/lru_cache.hpp"
 #include "sql/sql_query_cache.hpp"
 #include "sql/sql_query_operator.hpp"
 #include "storage/storage_manager.hpp"
-
-using hsql::SQLParserResult;
-using hsql::SQLParser;
 
 namespace opossum {
 
@@ -38,22 +38,22 @@ TEST_F(SQLParseTreeCacheTest, SQLParseTreeCacheTest) {
   EXPECT_FALSE(cache.has(Q2));
 
   // Parse the query and cache the parse tree.
-  std::shared_ptr<SQLParserResult> result = std::make_shared<SQLParserResult>();
-  SQLParser::parseSQLString(Q1.c_str(), result.get());
+  auto result = std::make_shared<hsql::SQLParserResult>();
+  hsql::SQLParser::parseSQLString(Q1.c_str(), result.get());
   cache.set(Q1, result);
 
   EXPECT_TRUE(cache.has(Q1));
   EXPECT_FALSE(cache.has(Q2));
 
-  std::shared_ptr<SQLParserResult> cached = cache.get(Q1);
+  auto cached = cache.get(Q1);
   EXPECT_EQ(cached, result);
   EXPECT_EQ(cached->size(), 1u);
 }
 
 // Test query plan cache with LRU implementation.
 TEST_F(SQLParseTreeCacheTest, AutomaticQueryOperatorCacheLRU) {
-  SQLQueryCache<std::shared_ptr<SQLParserResult>>& cache = SQLQueryOperator::get_parse_tree_cache();
-  cache.replace_cache_impl<LRUCache<std::string, std::shared_ptr<SQLParserResult>>>(2);
+  auto &cache = SQLQueryOperator::get_parse_tree_cache();
+  cache.replace_cache_impl<LRUCache<std::string, std::shared_ptr<hsql::SQLParserResult>>>(2);
 
   // Execute the queries in arbitrary order.
   execute_query_task(Q1, false);

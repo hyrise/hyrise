@@ -370,6 +370,19 @@ TYPED_TEST(JoinFullTest, GreaterEqualInnerJoin2) {
                                              "src/test/tables/joinoperators/int_greaterequal_inner_join_2.tbl", 1);
 }
 
+TYPED_TEST(JoinFullTest, NotEqualInnerJoin) {
+  // Joining two Integer Columns
+  this->template test_join_output<TypeParam>(this->_table_wrapper_a, this->_table_wrapper_b,
+                                             std::pair<std::string, std::string>("a", "a"), ScanType::OpNotEquals,
+                                             JoinMode::Inner, std::string("left."), std::string("right."),
+                                             "src/test/tables/joinoperators/int_notequal_inner_join.tbl", 1);
+  // Joining two Float Columns
+  this->template test_join_output<TypeParam>(this->_table_wrapper_a, this->_table_wrapper_b,
+                                             std::pair<std::string, std::string>("b", "b"), ScanType::OpNotEquals,
+                                             JoinMode::Inner, std::string("left."), std::string("right."),
+                                             "src/test/tables/joinoperators/float_notequal_inner_join.tbl", 1);
+}
+
 TYPED_TEST(JoinFullTest, JoinOnMixedValueAndDictionaryColumns) {
   this->template test_join_output<TypeParam>(this->_table_wrapper_c_dict, this->_table_wrapper_b,
                                              std::pair<std::string, std::string>("a", "a"), ScanType::OpEquals,
