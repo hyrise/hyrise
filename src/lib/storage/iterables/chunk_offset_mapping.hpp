@@ -8,7 +8,7 @@
 namespace opossum {
 
 /**
- * Mapping between chunk offset into a reference column and 
+ * Mapping between chunk offset into a reference column and
  * its dereferenced counter part, i.e., a reference into the
  * referenced value or dictionary column.
  */

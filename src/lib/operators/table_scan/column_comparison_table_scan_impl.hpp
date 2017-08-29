@@ -16,7 +16,7 @@ class Table;
  * Supports:
  * - comparing columns of different numerical data types
  * - comparing dictionary and value columns
- * - comparing references columns
+ * - comparing reference columns
  *
  * Note: Since we have ruled out the possibility that a table might have
  *       reference columns and data columns, comparing a reference to a

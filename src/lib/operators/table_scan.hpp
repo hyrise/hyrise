@@ -38,8 +38,8 @@ class TableScan : public AbstractReadOnlyOperator {
  protected:
   std::shared_ptr<const Table> on_execute() override;
 
-  void init_scan();
-  void init_output_table();
+  void _init_scan();
+  void _init_output_table();
 
  private:
   const std::string _left_column_name;

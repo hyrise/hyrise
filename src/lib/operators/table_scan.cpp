@@ -68,8 +68,8 @@ std::shared_ptr<AbstractOperator> TableScan::recreate(const std::vector<AllParam
 std::shared_ptr<const Table> TableScan::on_execute() {
   _in_table = input_table_left();
 
-  init_scan();
-  init_output_table();
+  _init_scan();
+  _init_output_table();
 
   std::mutex output_mutex;
 
@@ -144,7 +144,7 @@ std::shared_ptr<const Table> TableScan::on_execute() {
   return _output_table;
 }
 
-void TableScan::init_scan() {
+void TableScan::_init_scan() {
   const auto left_column_id = _in_table->column_id_by_name(_left_column_name);
 
   DebugAssert(_in_table->chunk_count() > 0u, "Input table must contain at least 1 chunk.");
@@ -161,11 +161,7 @@ void TableScan::init_scan() {
     const auto left_column_type = _in_table->column_type(left_column_id);
     DebugAssert((left_column_type == "string"), "LIKE operator only applicable on string columns.");
 
-    /**
-     * LIKE is always executed on with constant value (containing a wildcard)
-     * using a VariableTerm (ColumnName, see term.hpp) is not supported here
-     */
-    DebugAssert(is_variant(_right_parameter), "LIKE only supports ConstantTerms.");
+    DebugAssert(is_variant(_right_parameter), "Right parameter must be variant.");
 
     const auto right_value = boost::get<AllTypeVariant>(_right_parameter);
 
@@ -187,8 +183,6 @@ void TableScan::init_scan() {
       return;
     }
 
-    DebugAssert(!is_null(right_value), "Right value must not be NULL.");
-
     _impl = std::make_unique<SingleColumnTableScanImpl>(_in_table, left_column_id, _scan_type, right_value);
   } else /* is_column_name(_right_parameter) */ {
     const auto right_column_name = boost::get<ColumnName>(_right_parameter);
@@ -198,7 +192,7 @@ void TableScan::init_scan() {
   }
 }
 
-void TableScan::init_output_table() {
+void TableScan::_init_output_table() {
   _output_table = std::make_shared<Table>();
 
   for (ColumnID column_id{0}; column_id < _in_table->col_count(); ++column_id) {

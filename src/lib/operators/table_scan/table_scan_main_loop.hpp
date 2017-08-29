@@ -11,7 +11,7 @@ class TableScanMainLoop {
  public:
   TableScanMainLoop(const ChunkID chunk_id, PosList &matches_out) : _chunk_id{chunk_id}, _matches_out{matches_out} {}
 
-  template <typename LeftIterator, typename RightIterator, typename Comparator>
+  template <typename Comparator, typename LeftIterator, typename RightIterator>
   void operator()(const Comparator &comparator, LeftIterator left_it, LeftIterator left_end, RightIterator right_it) {
     for (; left_it != left_end; ++left_it, ++right_it) {
       const auto left = *left_it;

@@ -37,10 +37,10 @@ void resolve_type(const std::string &type, const Functor &func) {
  *     using Type = typename decltype(type)::type;
  *     using ColumnType = typename std::decay<decltype(typed_column)>::type;
  *
- *     constexpr auto is_reference_column = (std::is_same<LeftColumnType, ReferenceColumn>{});
+ *     constexpr auto is_reference_column = (std::is_same<ColumnType, ReferenceColumn>{});
  *     constexpr auto is_string_column = (std::is_same<Type, std::string>{});
  *
- *     method_expecting_template_type<Type>();
+ *     consume_column<Type>(typed_column);
  *   });
  *
  * @param type is a string representation of any of the supported column types
