@@ -113,6 +113,10 @@ std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::_translate_aggregate_
   /**
    * 1. Handle arithmetic expressions in aggregate functions via Projection.
    *
+   * In Hyrise, only Projections are supposed to be able to handle arithmetic expressions.
+   * herefore, if we encounter an expression within an aggregate function, we have to execute a Projection first.
+   * The Aggregate will work with the output columns of that Projection.
+   *
    * We only need a Projection before the aggregate if the function argument is an arithmetic expression.
    */
   auto need_projection = false;
@@ -129,7 +133,13 @@ std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::_translate_aggregate_
     }
   }
 
-  // If there are, create Projection with GROUP BY columns and arithmetic expressions.
+  /**
+   * If there are arithmetic expressions create a Projection with:
+   *
+   *  - arithmetic expressions,
+   *  - columns used in aggregate functions, and
+   *  - GROUP BY columns
+   */
   if (need_projection) {
     Projection::ColumnExpressions column_expressions = ExpressionNode::create_column_identifiers(groupby_columns);
     column_expressions.reserve(groupby_columns.size() + aggregate_expressions.size());

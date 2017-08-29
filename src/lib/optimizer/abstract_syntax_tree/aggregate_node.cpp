@@ -18,7 +18,11 @@ AggregateNode::AggregateNode(const std::vector<std::shared_ptr<ExpressionNode>>&
                              const std::vector<ColumnID>& groupby_column_ids)
     : AbstractASTNode(ASTNodeType::Aggregate),
       _aggregate_expressions(aggregate_expressions),
-      _groupby_column_ids(groupby_column_ids) {}
+      _groupby_column_ids(groupby_column_ids) {
+  for (const auto& expression : aggregate_expressions) {
+    DebugAssert(expression->type() == ExpressionType::FunctionIdentifier, "Aggregate expression must be a function.");
+  }
+}
 
 const std::vector<std::shared_ptr<ExpressionNode>>& AggregateNode::aggregate_expressions() const {
   return _aggregate_expressions;
@@ -105,26 +109,26 @@ optional<ColumnID> AggregateNode::find_column_id_for_column_identifier_name(
   // TODO(mp) Handle column_identifier_name having a table that is this node's alias
 
   /*
-   * Search for ColumnIdentifierName in Aggregate columns ALIASes, if the column_identifier_name has no table:
+   * Search for ColumnIdentifierName in Aggregate columns ALIASes, if the column_identifier_name has no table.
    * These columns are created by the Aggregate Operator, so we have to look through them here.
    */
   optional<ColumnID> column_id_aggregate;
   if (!column_identifier_name.table_name) {
-    for (uint16_t i = 0; i < _aggregate_expressions.size(); i++) {
-      const auto& aggregate_expression = _aggregate_expressions[i];
+    for (auto aggregate_idx = 0u; aggregate_idx < _aggregate_expressions.size(); aggregate_idx++) {
+      const auto& aggregate_expression = _aggregate_expressions[aggregate_idx];
 
       // If AggregateDefinition has no alias, column_name will not match.
       if (column_identifier_name.column_name == aggregate_expression->alias()) {
         // Check that we haven't found a match yet.
         Assert(!column_id_aggregate, "Column name " + column_identifier_name.column_name + " is ambiguous.");
-        // Aggregate columns come after groupby columns in the Aggregate's output
-        column_id_aggregate = ColumnID{static_cast<ColumnID::base_type>(i + _groupby_column_ids.size())};
+        // Aggregate columns come after Group By columns in the Aggregate's output
+        column_id_aggregate = ColumnID{static_cast<ColumnID::base_type>(aggregate_idx + _groupby_column_ids.size())};
       }
     }
   }
 
   /*
-   * Search for ColumnIdentifierName in Group By columns:
+   * Search for ColumnIdentifierName in Group By columns.
    * These columns have been created by another node. Since Aggregates can only have a single child node,
    * we just have to check the left_child for the ColumnIdentifierName.
    */
@@ -157,35 +161,37 @@ ColumnID AggregateNode::get_column_id_for_expression(const std::shared_ptr<Expre
 
 optional<ColumnID> AggregateNode::find_column_id_for_expression(
     const std::shared_ptr<ExpressionNode>& expression) const {
-  const auto iter_aggregate_expressions =
-      std::find_if(_aggregate_expressions.begin(), _aggregate_expressions.end(), [&](const auto& rhs) {
-        DebugAssert(!!rhs, "Aggregate expressions can not be nullptr!");
-        return *expression == *rhs;
-      });
-
-  auto iter_groupby_columns = _groupby_column_ids.end();
-
+  /**
+   * This function does NOT need to check whether an expression is ambiguous.
+   * It is only used when translating the HAVING clause.
+   * If two expressions are equal, they must refer to the same result.
+   * Not checking ambiguity allows perfectly valid queries like:
+   *  SELECT a, MAX(b), MAX(b) FROM t GROUP BY a HAVING MAX(b) > 0
+   */
   if (expression->type() == ExpressionType::ColumnIdentifier) {
-    iter_groupby_columns = std::find_if(_groupby_column_ids.begin(), _groupby_column_ids.end(),
-                                        [&](const auto& rhs) { return expression->column_id() == rhs; });
+    const auto iter = std::find_if(_groupby_column_ids.begin(), _groupby_column_ids.end(),
+                                   [&](const auto& rhs) { return expression->column_id() == rhs; });
+
+    if (iter != _groupby_column_ids.end()) {
+      const auto idx = std::distance(_groupby_column_ids.begin(), iter);
+      return ColumnID{static_cast<ColumnID::base_type>(idx)};
+    }
+  } else if (expression->type() == ExpressionType::FunctionIdentifier) {
+    const auto iter = std::find_if(_aggregate_expressions.begin(), _aggregate_expressions.end(), [&](const auto& rhs) {
+      DebugAssert(!!rhs, "Aggregate expressions can not be nullptr!");
+      return *expression == *rhs;
+    });
+
+    if (iter != _aggregate_expressions.end()) {
+      const auto idx = std::distance(_aggregate_expressions.begin(), iter);
+      return ColumnID{static_cast<ColumnID::base_type>(idx + _groupby_column_ids.size())};
+    }
+  } else {
+    Fail("Expression type is not supported.");
   }
 
-  auto in_aggregate_expressions = iter_aggregate_expressions != _aggregate_expressions.end();
-  auto in_groupby_columns = iter_groupby_columns != _groupby_column_ids.end();
-
-  if (!in_aggregate_expressions && !in_groupby_columns) {
-    return nullopt;
-  }
-
-  Assert(in_aggregate_expressions ^ in_groupby_columns, "expression is ambiguous");
-
-  if (in_aggregate_expressions) {
-    const auto idx = std::distance(_aggregate_expressions.begin(), iter_aggregate_expressions);
-    return ColumnID{static_cast<ColumnID::base_type>(idx + _groupby_column_ids.size())};
-  }
-
-  const auto idx = std::distance(_groupby_column_ids.begin(), iter_groupby_columns);
-  return ColumnID{static_cast<ColumnID::base_type>(idx)};
+  // Return unset optional if expression was not found.
+  return nullopt;
 }
 
 std::vector<ColumnID> AggregateNode::get_column_ids_for_table(const std::string& table_name) const {
@@ -203,8 +209,8 @@ std::vector<ColumnID> AggregateNode::get_column_ids_for_table(const std::string&
     const auto iter = std::find(_groupby_column_ids.begin(), _groupby_column_ids.end(), input_column_id);
 
     if (iter != _groupby_column_ids.end()) {
-      auto column_id = ColumnID{static_cast<ColumnID::base_type>(std::distance(_groupby_column_ids.begin(), iter))};
-      output_column_ids_for_table.emplace_back(column_id);
+      const auto index = std::distance(_groupby_column_ids.begin(), iter);
+      output_column_ids_for_table.emplace_back(static_cast<ColumnID::base_type>(index));
     }
   }
 

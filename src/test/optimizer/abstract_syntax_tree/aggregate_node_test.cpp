@@ -26,10 +26,9 @@ class AggregateNodeTest : public BaseTest {
     _aggregate_node = std::make_shared<AggregateNode>(
         std::vector<std::shared_ptr<ExpressionNode>>{
             ExpressionNode::create_function_reference(
-                "SUM",
-                {ExpressionNode::create_binary_operator(ExpressionType::Addition,
-                                                        ExpressionNode::create_column_identifier(ColumnID{0}),
-                                                        ExpressionNode::create_column_identifier(ColumnID{1}))}),
+                "SUM", {ExpressionNode::create_binary_operator(ExpressionType::Addition,
+                                                               ExpressionNode::create_column_identifier(ColumnID{0}),
+                                                               ExpressionNode::create_column_identifier(ColumnID{1}))}),
             ExpressionNode::create_function_reference(
                 "SUM",
                 {ExpressionNode::create_binary_operator(ExpressionType::Addition,
@@ -76,33 +75,33 @@ TEST_F(AggregateNodeTest, OriginalGroupByColumnIdsInOutputColumnIds) {
 TEST_F(AggregateNodeTest, ColumnIdForExpression) {
   EXPECT_EQ(_aggregate_node->get_column_id_for_expression(ExpressionNode::create_column_identifier(ColumnID{0})), 0);
 
-  // There is no a+b
-  EXPECT_EQ(_aggregate_node->find_column_id_for_expression(ExpressionNode::create_binary_operator(
-                ExpressionType::Addition, ExpressionNode::create_column_identifier(ColumnID{0}),
-                ExpressionNode::create_column_identifier(ColumnID{1}))),
-            nullopt);
+  // "a+b" is not allowed
+  EXPECT_THROW(_aggregate_node->get_column_id_for_expression(ExpressionNode::create_binary_operator(
+                   ExpressionType::Addition, ExpressionNode::create_column_identifier(ColumnID{0}),
+                   ExpressionNode::create_column_identifier(ColumnID{1}))),
+               std::logic_error);
 
-  // But there is SUM(a+b)
+  // There is SUM(a+b)
+  EXPECT_EQ(_aggregate_node->get_column_id_for_expression(ExpressionNode::create_function_reference(
+                "SUM", {ExpressionNode::create_binary_operator(
+                           ExpressionType::Addition, ExpressionNode::create_column_identifier(ColumnID{0}),
+                           ExpressionNode::create_column_identifier(ColumnID{1}))})),
+            2);
+
+  // But there is no SUM(b+c)
   EXPECT_EQ(_aggregate_node->find_column_id_for_expression(ExpressionNode::create_function_reference(
-                "SUM",
-                {ExpressionNode::create_binary_operator(ExpressionType::Addition,
-                                                        ExpressionNode::create_column_identifier(ColumnID{0}),
-                                                        ExpressionNode::create_column_identifier(ColumnID{2}))})),
+                "SUM", {ExpressionNode::create_binary_operator(
+                           ExpressionType::Addition, ExpressionNode::create_column_identifier(ColumnID{1}),
+                           ExpressionNode::create_column_identifier(ColumnID{2}))})),
             nullopt);
 
-  EXPECT_EQ(_aggregate_node->find_column_id_for_expression(ExpressionNode::create_binary_operator(
-                ExpressionType::Addition, ExpressionNode::create_column_identifier(ColumnID{1}),
-                ExpressionNode::create_column_identifier(ColumnID{1}))),
+  // TODO(mp): This expression is currently not found because the alias is missing.
+  // This has to be fixed once expressions do not have an alias anymore.
+  EXPECT_EQ(_aggregate_node->find_column_id_for_expression(ExpressionNode::create_function_reference(
+                "SUM", {ExpressionNode::create_binary_operator(
+                           ExpressionType::Addition, ExpressionNode::create_column_identifier(ColumnID{0}),
+                           ExpressionNode::create_column_identifier(ColumnID{2}))})),
             nullopt);
-
-  // TODO(mp) enable once this is done independent of alias
-  //  EXPECT_EQ(_aggregate_node->get_column_id_for_expression(
-  //    ExpressionNode::create_binary_operator(
-  //      ExpressionType::Addition,
-  //      ExpressionNode::create_column_identifier(ColumnID{0}),
-  //      ExpressionNode::create_column_identifier(ColumnID{2})
-  //    )
-  //  ), 1);
 }
 
 }  // namespace opossum
