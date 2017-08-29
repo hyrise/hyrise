@@ -244,7 +244,7 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_table_ref(const 
 }
 
 AllParameterVariant SQLToASTTranslator::translate_hsql_operand(
-  const hsql::Expr &expr, const optional<std::shared_ptr<AbstractASTNode>> &input_node) {
+    const hsql::Expr& expr, const optional<std::shared_ptr<AbstractASTNode>>& input_node) {
   switch (expr.type) {
     case hsql::kExprLiteralInt:
       return AllTypeVariant(expr.ival);
@@ -264,7 +264,7 @@ AllParameterVariant SQLToASTTranslator::translate_hsql_operand(
 }
 
 std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_where(
-  const hsql::Expr &expr, const std::shared_ptr<AbstractASTNode> &input_node) {
+    const hsql::Expr& expr, const std::shared_ptr<AbstractASTNode>& input_node) {
   DebugAssert(expr.isType(hsql::kExprOperator), "Filter expression clause has to be of type operator!");
 
   // If the expression is a nested expression, recursively resolve.
@@ -276,14 +276,11 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_where(
     return _translate_where(*expr.expr2, filter_node);
   }
 
-  return _translate_predicate(
-    expr,
-    false,
-    [&](const hsql::Expr &hsql_expr) {
-      return SQLExpressionTranslator::get_column_id_for_expression(hsql_expr, input_node);
-    },
-    input_node
-  );
+  return _translate_predicate(expr, false,
+                              [&](const hsql::Expr& hsql_expr) {
+                                return SQLExpressionTranslator::get_column_id_for_expression(hsql_expr, input_node);
+                              },
+                              input_node);
 }
 
 std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_having(
@@ -298,16 +295,13 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_having(
     return _translate_having(*expr.expr2, aggregate_node, filter_node);
   }
 
-  return _translate_predicate(
-    expr,
-    true,
-    [&](const hsql::Expr &hsql_expr) {
-      const auto column_operand_expression =
-        SQLExpressionTranslator::translate_expression(hsql_expr, aggregate_node->left_child());
-      return aggregate_node->get_column_id_for_expression(column_operand_expression);
-    },
-    input_node
-  );
+  return _translate_predicate(expr, true,
+                              [&](const hsql::Expr& hsql_expr) {
+                                const auto column_operand_expression = SQLExpressionTranslator::translate_expression(
+                                    hsql_expr, aggregate_node->left_child());
+                                return aggregate_node->get_column_id_for_expression(column_operand_expression);
+                              },
+                              input_node);
 }
 
 std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_aggregate(
@@ -444,12 +438,10 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_order_by(
   return current_result_node;
 }
 
-std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_predicate(const hsql::Expr &hsql_expr,
-                                                         bool allow_function_columns,
-                                                         const std::function<ColumnID(
-                                                           const hsql::Expr &)> &resolve_column,
-                                                         const std::shared_ptr<AbstractASTNode> & input_node) const
-{
+std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_predicate(
+    const hsql::Expr& hsql_expr, bool allow_function_columns,
+    const std::function<ColumnID(const hsql::Expr&)>& resolve_column,
+    const std::shared_ptr<AbstractASTNode>& input_node) const {
   DebugAssert(hsql_expr.expr != nullptr, "hsql malformed");
 
   /**
@@ -484,9 +476,9 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_predicate(const 
    * TODO(anybody): extend support for those HAVING clauses.
    * One option is to add them to the Aggregate and then use a Projection to remove them from the result.
    */
-  const auto refers_to_column = [allow_function_columns] (const hsql::Expr &hsql_expr) {
+  const auto refers_to_column = [allow_function_columns](const hsql::Expr& hsql_expr) {
     return hsql_expr.isType(hsql::kExprColumnRef) ||
-      (allow_function_columns && hsql_expr.isType(hsql::kExprFunctionRef));
+           (allow_function_columns && hsql_expr.isType(hsql::kExprFunctionRef));
   };
 
   // TODO(anybody): handle IN with join
@@ -499,9 +491,9 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_predicate(const 
    * value_ref_hsql_expr = the expr referring to the value of the scan, e.g. the 5 in `WHERE 5 > p_income`, but also
    * the secondary column p_b in a scan like `WHERE p_a > p_b`
    */
-  const hsql::Expr *value_ref_hsql_expr = nullptr;
+  const hsql::Expr* value_ref_hsql_expr = nullptr;
 
-  optional<AllTypeVariant> value2; // Left uninitialized for predicates that are not BETWEEN
+  optional<AllTypeVariant> value2;  // Left uninitialized for predicates that are not BETWEEN
 
   if (scan_type == ScanType::OpBetween) {
     /**
@@ -555,13 +547,10 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_predicate(const 
    */
   const auto column_id = resolve_column(operands_switched ? *hsql_expr.expr2 : *hsql_expr.expr);
 
-
-
   auto predicate_node = std::make_shared<PredicateNode>(column_id, scan_type, value, value2);
   predicate_node->set_left_child(input_node);
 
   return predicate_node;
 }
-
 
 }  // namespace opossum

@@ -44,16 +44,16 @@ class SQLToASTTranslator final : public boost::noncopyable {
 
   std::shared_ptr<AbstractASTNode> translate_statement(const hsql::SQLStatement& statement);
 
-  static AllParameterVariant translate_hsql_operand(const hsql::Expr &expr,
-                                                    const optional <std::shared_ptr<AbstractASTNode>> &input_node = nullopt);
+  static AllParameterVariant translate_hsql_operand(
+      const hsql::Expr& expr, const optional<std::shared_ptr<AbstractASTNode>>& input_node = nullopt);
 
  protected:
   std::shared_ptr<AbstractASTNode> _translate_select(const hsql::SelectStatement& select);
 
   std::shared_ptr<AbstractASTNode> _translate_table_ref(const hsql::TableRef& table);
 
-  std::shared_ptr<AbstractASTNode> _translate_where(const hsql::Expr &expr,
-                                                    const std::shared_ptr<AbstractASTNode> &input_node);
+  std::shared_ptr<AbstractASTNode> _translate_where(const hsql::Expr& expr,
+                                                    const std::shared_ptr<AbstractASTNode>& input_node);
 
   std::shared_ptr<AbstractASTNode> _translate_having(const hsql::Expr& expr,
                                                      const std::shared_ptr<AggregateNode>& aggregate_node,
@@ -75,10 +75,10 @@ class SQLToASTTranslator final : public boost::noncopyable {
   /**
    * Helper function to avoid code duplication for WHERE and HAVING
    */
-  std::shared_ptr<AbstractASTNode> _translate_predicate(const hsql::Expr &hsql_expr,
-                                       bool allow_function_columns,
-                                       const std::function<ColumnID(const hsql::Expr &)> &resolve_column,
-                                       const std::shared_ptr<AbstractASTNode> & input_node) const;
+  std::shared_ptr<AbstractASTNode> _translate_predicate(
+      const hsql::Expr& hsql_expr, bool allow_function_columns,
+      const std::function<ColumnID(const hsql::Expr&)>& resolve_column,
+      const std::shared_ptr<AbstractASTNode>& input_node) const;
 
  private:
   SQLToASTTranslator() = default;
