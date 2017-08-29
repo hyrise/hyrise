@@ -194,8 +194,8 @@ const SQLTestParam test_queries[] = {
           FROM groupby_int_2gb_2agg_2
           GROUP BY b, d
         )
-        WHERE min_c BETWEEN 10 AND 1000;)",
-     "src/test/tables/aggregateoperator/groupby_int_2gb_2agg/projection.tbl"},
+        WHERE d BETWEEN 20 AND 50 AND min_c > 15;)",
+     "src/test/tables/aggregateoperator/groupby_int_2gb_2agg/max_min_filter_projection.tbl"},
 
     // HAVING
     {"SELECT a, b, MAX(c), AVG(d) FROM groupby_int_2gb_2agg GROUP BY a, b HAVING MAX(c) >= 10 AND MAX(c) < 40;",
