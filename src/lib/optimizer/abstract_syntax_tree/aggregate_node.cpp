@@ -6,7 +6,7 @@
 #include <string>
 #include <vector>
 
-#include "optimizer/expression/expression_node.hpp"
+#include "optimizer/expression/expression.hpp"
 
 #include "common.hpp"
 #include "types.hpp"
@@ -14,17 +14,17 @@
 
 namespace opossum {
 
-AggregateNode::AggregateNode(const std::vector<std::shared_ptr<ExpressionNode>>& aggregate_expressions,
+AggregateNode::AggregateNode(const std::vector<std::shared_ptr<Expression>>& aggregate_expressions,
                              const std::vector<ColumnID>& groupby_column_ids)
     : AbstractASTNode(ASTNodeType::Aggregate),
       _aggregate_expressions(aggregate_expressions),
       _groupby_column_ids(groupby_column_ids) {
   for (const auto& expression : aggregate_expressions) {
-    DebugAssert(expression->type() == ExpressionType::FunctionIdentifier, "Aggregate expression must be a function.");
+    DebugAssert(expression->type() == ExpressionType::Function, "Aggregate expression must be a function.");
   }
 }
 
-const std::vector<std::shared_ptr<ExpressionNode>>& AggregateNode::aggregate_expressions() const {
+const std::vector<std::shared_ptr<Expression>>& AggregateNode::aggregate_expressions() const {
   return _aggregate_expressions;
 }
 
@@ -33,7 +33,7 @@ const std::vector<ColumnID>& AggregateNode::groupby_column_ids() const { return 
 std::string AggregateNode::description() const {
   std::ostringstream s;
 
-  auto stream_aggregate = [&](const std::shared_ptr<ExpressionNode>& aggregate_expr) {
+  auto stream_aggregate = [&](const std::shared_ptr<Expression>& aggregate_expr) {
     s << aggregate_expr->to_string();
     if (aggregate_expr->alias()) s << " AS \"" << (*aggregate_expr->alias()) << "\"";
   };
@@ -77,7 +77,7 @@ void AggregateNode::_on_child_changed() {
   }
 
   for (const auto& aggregate_expression : _aggregate_expressions) {
-    DebugAssert(aggregate_expression->type() == ExpressionType::FunctionIdentifier, "Expression must be a function.");
+    DebugAssert(aggregate_expression->type() == ExpressionType::Function, "Expression must be a function.");
 
     std::string column_name;
 
@@ -153,14 +153,13 @@ optional<ColumnID> AggregateNode::find_column_id_for_column_identifier_name(
   return column_id_groupby;
 }
 
-ColumnID AggregateNode::get_column_id_for_expression(const std::shared_ptr<ExpressionNode>& expression) const {
+ColumnID AggregateNode::get_column_id_for_expression(const std::shared_ptr<Expression>& expression) const {
   const auto column_id = find_column_id_for_expression(expression);
   DebugAssert(!!column_id, "Expression could not be resolved.");
   return *column_id;
 }
 
-optional<ColumnID> AggregateNode::find_column_id_for_expression(
-    const std::shared_ptr<ExpressionNode>& expression) const {
+optional<ColumnID> AggregateNode::find_column_id_for_expression(const std::shared_ptr<Expression>& expression) const {
   /**
    * This function does NOT need to check whether an expression is ambiguous.
    * It is only used when translating the HAVING clause.
@@ -176,7 +175,7 @@ optional<ColumnID> AggregateNode::find_column_id_for_expression(
       const auto idx = std::distance(_groupby_column_ids.begin(), iter);
       return ColumnID{static_cast<ColumnID::base_type>(idx)};
     }
-  } else if (expression->type() == ExpressionType::FunctionIdentifier) {
+  } else if (expression->type() == ExpressionType::Function) {
     const auto iter = std::find_if(_aggregate_expressions.begin(), _aggregate_expressions.end(), [&](const auto& rhs) {
       DebugAssert(!!rhs, "Aggregate expressions can not be nullptr!");
       return *expression == *rhs;

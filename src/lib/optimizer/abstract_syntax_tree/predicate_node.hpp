@@ -9,7 +9,7 @@
 #include "all_parameter_variant.hpp"
 #include "all_type_variant.hpp"
 #include "common.hpp"
-#include "optimizer/expression/expression_node.hpp"
+#include "optimizer/expression/expression.hpp"
 
 namespace opossum {
 

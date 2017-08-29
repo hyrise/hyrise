@@ -15,17 +15,17 @@ namespace opossum {
 class AbstractASTNode;
 
 /**
- * The basic idea of this ExpressionNode is to have a representation of SQL Expressions within Hyrise and especially the
- * optimizer.
+ * The basic idea of Expressions is to have a unified representation of any SQL Expressions within Hyrise
+ * and especially its optimizer.
  *
- * Similar as for the AST we might have a tree of ExpressionNodes,
+ * Expressions are structured as a binary tree
  * e.g. 'columnA = 5' would be represented as a root expression with the type ExpressionType::Equals and
  * two child nodes of types ExpressionType::ColumnIdentifier and ExpressionType::Literal.
  *
- * For now we decided to have a single ExpressionNode without further specializations. This goes hand in hand with the
+ * For now we decided to have a single Expression without further specializations. This goes hand in hand with the
  * approach used in hsql::Expr.
  */
-class ExpressionNode : public std::enable_shared_from_this<ExpressionNode> {
+class Expression : public std::enable_shared_from_this<Expression> {
  public:
   /*
    * This constructor is meant for internal use only and therefor should be private.
@@ -42,51 +42,47 @@ class ExpressionNode : public std::enable_shared_from_this<ExpressionNode> {
    *
    * We highly suggest using one of the create_*-methods over using this constructor.
    */
-  ExpressionNode(const ExpressionType type, const AllTypeVariant& value,
-                 const std::vector<std::shared_ptr<ExpressionNode>>& expression_list, const std::string& name,
-                 const ColumnID column_id, const optional<std::string>& alias = {});
+  Expression(ExpressionType type);
 
   /*
    * Factory Methods to create Expressions of specific type
    */
-  static std::shared_ptr<ExpressionNode> create_expression(const ExpressionType type);
+  static std::shared_ptr<Expression> create_column_identifier(const ColumnID column_id,
+                                                              const optional<std::string>& alias = nullopt);
 
-  static std::shared_ptr<ExpressionNode> create_column_identifier(const ColumnID column_id,
-                                                                  const optional<std::string>& alias = {});
+  static std::vector<std::shared_ptr<Expression>> create_column_identifiers(
+      const std::vector<ColumnID>& column_ids, const optional<std::vector<std::string>>& aliases = nullopt);
 
-  static std::vector<std::shared_ptr<ExpressionNode>> create_column_identifiers(
-      const std::vector<ColumnID>& column_ids, const std::vector<std::string>& aliases = {});
+  // A literal can have an alias in order to allow queries like `SELECT 1 as one FROM t`.
+  static std::shared_ptr<Expression> create_literal(const AllTypeVariant& value,
+                                                    const optional<std::string>& alias = nullopt);
 
+  static std::shared_ptr<Expression> create_placeholder(const AllTypeVariant &value);
+
+  static std::shared_ptr<Expression> create_function(
+    const std::string &function_name, const std::vector<std::shared_ptr<Expression>> &expression_list,
+    const optional <std::string> &alias = nullopt);
+
+  static std::shared_ptr<Expression> create_binary_operator(ExpressionType type,
+                                                            const std::shared_ptr<Expression>& left,
+                                                            const std::shared_ptr<Expression>& right,
+                                                            const optional<std::string>& alias = nullopt);
+
+  static std::shared_ptr<Expression> create_select_star(const std::string& table_name);
+
+  // @{
   /**
-   * A literal can have an alias in order to allow queries like `SELECT 1 as one FROM t`.
+   * Helper methods for Expression Trees, set_left_child() and set_right_child() will set parent
    */
-  static std::shared_ptr<ExpressionNode> create_literal(const AllTypeVariant& value,
-                                                        const optional<std::string>& alias = {});
-
-  static std::shared_ptr<ExpressionNode> create_parameter(const AllTypeVariant& value);
-
-  static std::shared_ptr<ExpressionNode> create_function_reference(
-      const std::string& function_name, const std::vector<std::shared_ptr<ExpressionNode>>& expression_list,
-      const optional<std::string>& alias = nullopt);
-
-  static std::shared_ptr<ExpressionNode> create_binary_operator(ExpressionType type,
-                                                                const std::shared_ptr<ExpressionNode>& left,
-                                                                const std::shared_ptr<ExpressionNode>& right,
-                                                                const optional<std::string>& alias = {});
-
-  static std::shared_ptr<ExpressionNode> create_select_star(const std::string& table_name);
-
-  /*
-   * Helper methods for Expression Trees
-   */
-  const std::weak_ptr<ExpressionNode> parent() const;
+  const std::weak_ptr<Expression> parent() const;
   void clear_parent();
 
-  const std::shared_ptr<ExpressionNode> left_child() const;
-  void set_left_child(const std::shared_ptr<ExpressionNode>& left);
+  const std::shared_ptr<Expression> left_child() const;
+  void set_left_child(const std::shared_ptr<Expression>& left);
 
-  const std::shared_ptr<ExpressionNode> right_child() const;
-  void set_right_child(const std::shared_ptr<ExpressionNode>& right);
+  const std::shared_ptr<Expression> right_child() const;
+  void set_right_child(const std::shared_ptr<Expression>& right);
+  // @}
 
   const ExpressionType type() const;
 
@@ -118,20 +114,21 @@ class ExpressionNode : public std::enable_shared_from_this<ExpressionNode> {
 
   const AllTypeVariant value() const;
 
-  const std::vector<std::shared_ptr<ExpressionNode>>& expression_list() const;
+  const std::vector<std::shared_ptr<Expression>>& expression_list() const;
 
-  void set_expression_list(const std::vector<std::shared_ptr<ExpressionNode>>& expression_list);
+  void set_expression_list(const std::vector<std::shared_ptr<Expression>>& expression_list);
 
   // Expression as string
   std::string to_string(const std::shared_ptr<AbstractASTNode>& input_node = {}) const;
 
-  bool operator==(const ExpressionNode& rhs) const;
+  bool operator==(const Expression& rhs) const;
 
  private:
   // the type of the expression
   const ExpressionType _type;
   // the value of an expression, e.g. of a Literal
-  const AllTypeVariant _value;
+  optional<AllTypeVariant> _value;
+
   /*
    * A list of Expressions used in FunctionIdentifiers and CASE Expressions.
    * Not sure if this is the perfect way to go forward, but this is how hsql::Expr handles this.
@@ -140,18 +137,23 @@ class ExpressionNode : public std::enable_shared_from_this<ExpressionNode> {
    * Expression hierarchy.
    * E.g. for CASE one could argue that the THEN case becomes the left child, whereas ELSE becomes the right child.
    */
-  std::vector<std::shared_ptr<ExpressionNode>> _expression_list;
+  std::vector<std::shared_ptr<Expression>> _expression_list;
 
   // a name, which could be a function name
-  const std::string _name;
+  optional<std::string> _name;
+
   // a column that might be referenced
-  ColumnID _column_id;
+  optional<ColumnID> _column_id;
+
   // an alias, used for ColumnReferences, Selects, FunctionIdentifiers
   optional<std::string> _alias;
 
-  std::weak_ptr<ExpressionNode> _parent;
-  std::shared_ptr<ExpressionNode> _left_child;
-  std::shared_ptr<ExpressionNode> _right_child;
+  // @{
+  // Members for the tree strucutre
+  std::weak_ptr<Expression> _parent;
+  std::shared_ptr<Expression> _left_child;
+  std::shared_ptr<Expression> _right_child;
+  // @}
 };
 
 }  // namespace opossum

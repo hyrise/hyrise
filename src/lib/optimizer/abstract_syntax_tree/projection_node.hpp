@@ -9,7 +9,7 @@
 
 namespace opossum {
 
-class ExpressionNode;
+class Expression;
 struct ColumnID;
 
 /**
@@ -18,9 +18,9 @@ struct ColumnID;
  */
 class ProjectionNode : public AbstractASTNode {
  public:
-  explicit ProjectionNode(const std::vector<std::shared_ptr<ExpressionNode>>& column_expressions);
+  explicit ProjectionNode(const std::vector<std::shared_ptr<Expression>>& column_expressions);
 
-  const std::vector<std::shared_ptr<ExpressionNode>>& column_expressions() const;
+  const std::vector<std::shared_ptr<Expression>>& column_expressions() const;
 
   std::string description() const override;
   const std::vector<ColumnID>& output_column_ids() const override;
@@ -35,7 +35,7 @@ class ProjectionNode : public AbstractASTNode {
   void _on_child_changed() override;
 
  private:
-  const std::vector<std::shared_ptr<ExpressionNode>> _column_expressions;
+  const std::vector<std::shared_ptr<Expression>> _column_expressions;
   std::vector<ColumnID> _output_column_ids;
   std::vector<std::string> _output_column_names;
 };

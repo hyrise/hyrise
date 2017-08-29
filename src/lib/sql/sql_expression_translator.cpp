@@ -7,25 +7,36 @@
 #include <vector>
 
 #include "constant_mappings.hpp"
-#include "optimizer/expression/expression_node.hpp"
+#include "optimizer/expression/expression.hpp"
 #include "utils/assert.hpp"
 
 #include "SQLParser.h"
 
 namespace opossum {
 
-std::shared_ptr<ExpressionNode> SQLExpressionTranslator::translate_expression(
+std::shared_ptr<Expression> SQLExpressionTranslator::translate_expression(
     const hsql::Expr &expr, const std::shared_ptr<AbstractASTNode> &input_node) {
   auto name = expr.name ? std::string(expr.name) : "";
   auto float_value = expr.fval ? expr.fval : 0;
   auto int_value = expr.ival ? expr.ival : 0;
   auto alias = expr.alias ? optional<std::string>(expr.alias) : nullopt;
 
-  std::shared_ptr<ExpressionNode> node;
+  std::shared_ptr<Expression> node;
+  std::shared_ptr<Expression> left;
+  std::shared_ptr<Expression> right;
+
+  if (expr.expr) {
+    left = translate_expression(*expr.expr, input_node);
+  }
+
+  if (expr.expr2) {
+    right = translate_expression(*expr.expr2, input_node);
+  }
+
   switch (expr.type) {
     case hsql::kExprOperator: {
       auto operator_type = operator_type_to_expression_type.at(expr.opType);
-      node = ExpressionNode::create_expression(operator_type);
+      node = Expression::create_binary_operator(operator_type, left, right);
       break;
     }
     case hsql::kExprColumnRef: {
@@ -35,36 +46,36 @@ std::shared_ptr<ExpressionNode> SQLExpressionTranslator::translate_expression(
       auto table_name = expr.table != nullptr ? optional<std::string>(std::string(expr.table)) : nullopt;
       ColumnIdentifierName column_identifier_name{name, table_name};
       auto column_id = input_node->get_column_id_for_column_identifier_name(column_identifier_name);
-      node = ExpressionNode::create_column_identifier(column_id, alias);
+      node = Expression::create_column_identifier(column_id, alias);
       break;
     }
     case hsql::kExprFunctionRef: {
       // TODO(mp): Parse Function name to Aggregate Function
       // auto aggregate_function = string_to_aggregate_function.at(name);
 
-      std::vector<std::shared_ptr<ExpressionNode>> expression_list;
+      std::vector<std::shared_ptr<Expression>> expression_list;
       for (auto elem : *(expr.exprList)) {
         expression_list.emplace_back(translate_expression(*elem, input_node));
       }
 
-      node = ExpressionNode::create_function_reference(name, expression_list, alias);
+      node = Expression::create_function(name, expression_list, alias);
       break;
     }
     case hsql::kExprLiteralFloat:
-      node = ExpressionNode::create_literal(float_value);
+      node = Expression::create_literal(float_value);
       break;
     case hsql::kExprLiteralInt:
-      node = ExpressionNode::create_literal(int_value);
+      node = Expression::create_literal(int_value);
       break;
     case hsql::kExprLiteralString:
-      node = ExpressionNode::create_literal(name);
+      node = Expression::create_literal(name);
       break;
     case hsql::kExprParameter:
-      node = ExpressionNode::create_parameter(int_value);
+      node = Expression::create_placeholder(int_value);
       break;
     case hsql::kExprStar: {
       const auto table_name = expr.table != nullptr ? std::string(expr.table) : "";
-      node = ExpressionNode::create_select_star(table_name);
+      node = Expression::create_select_star(table_name);
       break;
     }
     case hsql::kExprSelect:
@@ -72,9 +83,9 @@ std::shared_ptr<ExpressionNode> SQLExpressionTranslator::translate_expression(
        * Current problem with Subselect:
        *
        * For now we split Expressions and ASTNodes into two separate trees.
-       * The only connection is the PredicateNode that contains an ExpressionNode.
+       * The only connection is the PredicateNode that contains an Expression.
        *
-       * When we translate Subselects, the naive approach would be to add another member to the ExpressionNode,
+       * When we translate Subselects, the naive approach would be to add another member to the Expression,
        * which is a Pointer to the root node of the AST of the Subselect, so usually a ProjectionNode.
        *
        * Right now, I cannot estimate the consequences of such a circular reference for the optimizer rules.
@@ -83,16 +94,6 @@ std::shared_ptr<ExpressionNode> SQLExpressionTranslator::translate_expression(
       throw std::runtime_error("Selects are not supported yet.");
     default:
       throw std::runtime_error("Unsupported expression type");
-  }
-
-  if (expr.expr) {
-    auto left = translate_expression(*expr.expr, input_node);
-    node->set_left_child(left);
-  }
-
-  if (expr.expr2) {
-    auto right = translate_expression(*expr.expr2, input_node);
-    node->set_right_child(right);
   }
 
   return node;

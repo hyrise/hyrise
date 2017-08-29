@@ -130,7 +130,7 @@ enum class ExpressionType {
   /*An identifier for a column*/
   ColumnIdentifier,
   /*An identifier for a function, such as COUNT, MIN, MAX*/
-  FunctionIdentifier,
+  Function,
 
   /*A subselect*/
   Select,

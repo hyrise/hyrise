@@ -11,7 +11,7 @@
 
 namespace opossum {
 
-class ExpressionNode;
+class Expression;
 
 /**
  * This node type is used to describe SELECT lists for statements that have at least one of the following:
@@ -22,10 +22,10 @@ class ExpressionNode;
  */
 class AggregateNode : public AbstractASTNode {
  public:
-  explicit AggregateNode(const std::vector<std::shared_ptr<ExpressionNode>>& aggregates,
+  explicit AggregateNode(const std::vector<std::shared_ptr<Expression>>& aggregates,
                          const std::vector<ColumnID>& groupby_column_ids);
 
-  const std::vector<std::shared_ptr<ExpressionNode>>& aggregate_expressions() const;
+  const std::vector<std::shared_ptr<Expression>>& aggregate_expressions() const;
   const std::vector<ColumnID>& groupby_column_ids() const;
 
   std::string description() const override;
@@ -44,8 +44,8 @@ class AggregateNode : public AbstractASTNode {
    * @param expression cannot be found
    * NOTE: These functions will possibly result in a full recursive traversal of the ancestors of this node.
    */
-  optional<ColumnID> find_column_id_for_expression(const std::shared_ptr<ExpressionNode>& expression) const;
-  ColumnID get_column_id_for_expression(const std::shared_ptr<ExpressionNode>& expression) const;
+  optional<ColumnID> find_column_id_for_expression(const std::shared_ptr<Expression>& expression) const;
+  ColumnID get_column_id_for_expression(const std::shared_ptr<Expression>& expression) const;
   // @}
 
   std::vector<ColumnID> get_column_ids_for_table(const std::string& table_name) const override;
@@ -54,7 +54,7 @@ class AggregateNode : public AbstractASTNode {
   void _on_child_changed() override;
 
  private:
-  std::vector<std::shared_ptr<ExpressionNode>> _aggregate_expressions;
+  std::vector<std::shared_ptr<Expression>> _aggregate_expressions;
   std::vector<ColumnID> _groupby_column_ids;
 
   std::vector<ColumnID> _output_column_ids;

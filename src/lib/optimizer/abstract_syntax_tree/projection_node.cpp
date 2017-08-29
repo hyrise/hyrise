@@ -6,7 +6,7 @@
 #include <string>
 #include <vector>
 
-#include "optimizer/expression/expression_node.hpp"
+#include "optimizer/expression/expression.hpp"
 
 #include "common.hpp"
 #include "types.hpp"
@@ -14,7 +14,7 @@
 
 namespace opossum {
 
-ProjectionNode::ProjectionNode(const std::vector<std::shared_ptr<ExpressionNode>>& column_expressions)
+ProjectionNode::ProjectionNode(const std::vector<std::shared_ptr<Expression>>& column_expressions)
     : AbstractASTNode(ASTNodeType::Projection), _column_expressions(column_expressions) {}
 
 std::string ProjectionNode::description() const {
@@ -29,7 +29,7 @@ std::string ProjectionNode::description() const {
   return desc.str();
 }
 
-const std::vector<std::shared_ptr<ExpressionNode>>& ProjectionNode::column_expressions() const {
+const std::vector<std::shared_ptr<Expression>>& ProjectionNode::column_expressions() const {
   return _column_expressions;
 }
 

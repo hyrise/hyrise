@@ -7,7 +7,7 @@
 
 #include "optimizer/abstract_syntax_tree/projection_node.hpp"
 #include "optimizer/abstract_syntax_tree/stored_table_node.hpp"
-#include "optimizer/expression/expression_node.hpp"
+#include "optimizer/expression/expression.hpp"
 #include "storage/storage_manager.hpp"
 
 namespace opossum {
@@ -20,15 +20,13 @@ class ProjectionNodeTest : public BaseTest {
     _stored_table_node = std::make_shared<StoredTableNode>("t_a");
 
     // SELECT c, a, b AS alias_for_b, b+c AS some_addition, a+c [...]
-    _projection_node = std::make_shared<ProjectionNode>(std::vector<std::shared_ptr<ExpressionNode>>{
-        ExpressionNode::create_column_identifier(ColumnID{2}), ExpressionNode::create_column_identifier(ColumnID{0}),
-        ExpressionNode::create_column_identifier(ColumnID{1}, {"alias_for_b"}),
-        ExpressionNode::create_binary_operator(
-            ExpressionType::Addition, ExpressionNode::create_column_identifier(ColumnID{1}),
-            ExpressionNode::create_column_identifier(ColumnID{2}), {"some_addition"}),
-        ExpressionNode::create_binary_operator(ExpressionType::Addition,
-                                               ExpressionNode::create_column_identifier(ColumnID{0}),
-                                               ExpressionNode::create_column_identifier(ColumnID{2}))});
+    _projection_node = std::make_shared<ProjectionNode>(std::vector<std::shared_ptr<Expression>>{
+        Expression::create_column_identifier(ColumnID{2}), Expression::create_column_identifier(ColumnID{0}),
+        Expression::create_column_identifier(ColumnID{1}, {"alias_for_b"}),
+        Expression::create_binary_operator(ExpressionType::Addition, Expression::create_column_identifier(ColumnID{1}),
+                                           Expression::create_column_identifier(ColumnID{2}), {"some_addition"}),
+        Expression::create_binary_operator(ExpressionType::Addition, Expression::create_column_identifier(ColumnID{0}),
+                                           Expression::create_column_identifier(ColumnID{2}))});
     _projection_node->set_left_child(_stored_table_node);
   }
 

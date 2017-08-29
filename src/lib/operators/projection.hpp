@@ -11,7 +11,7 @@
 #include <vector>
 
 #include "abstract_read_only_operator.hpp"
-#include "optimizer/expression/expression_node.hpp"
+#include "optimizer/expression/expression.hpp"
 #include "storage/chunk.hpp"
 #include "storage/dictionary_column.hpp"
 #include "storage/reference_column.hpp"
@@ -26,7 +26,7 @@ namespace opossum {
  */
 class Projection : public AbstractReadOnlyOperator {
  public:
-  using ColumnExpressions = std::vector<std::shared_ptr<ExpressionNode>>;
+  using ColumnExpressions = std::vector<std::shared_ptr<Expression>>;
 
   Projection(const std::shared_ptr<const AbstractOperator> in, const ColumnExpressions& column_expressions);
 
@@ -44,7 +44,7 @@ class Projection : public AbstractReadOnlyOperator {
   class ColumnCreator {
    public:
     template <typename T>
-    static void run(Chunk& chunk, const ChunkID chunk_id, const std::shared_ptr<ExpressionNode>& expression,
+    static void run(Chunk& chunk, const ChunkID chunk_id, const std::shared_ptr<Expression>& expression,
                     std::shared_ptr<const Table> input_table_left) {
       // check whether term is a just a simple column and bypass this column
       if (expression->type() == ExpressionType::ColumnIdentifier) {
@@ -59,7 +59,7 @@ class Projection : public AbstractReadOnlyOperator {
     }
   };
 
-  static const std::string get_type_of_expression(const std::shared_ptr<ExpressionNode>& expression,
+  static const std::string get_type_of_expression(const std::shared_ptr<Expression>& expression,
                                                   const std::shared_ptr<const Table>& table);
 
   /**
@@ -67,7 +67,7 @@ class Projection : public AbstractReadOnlyOperator {
    * It returns a vector containing the materialized values resulting from the expression.
    */
   template <typename T>
-  static const tbb::concurrent_vector<T> evaluate_expression(const std::shared_ptr<ExpressionNode>& expression,
+  static const tbb::concurrent_vector<T> evaluate_expression(const std::shared_ptr<Expression>& expression,
                                                              const std::shared_ptr<const Table> table,
                                                              const ChunkID chunk_id) {
     /**
