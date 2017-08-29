@@ -188,11 +188,12 @@ class TableScan::TableScanImpl : public AbstractReadOnlyOperatorImpl {
     if (_is_constant_value_scan) {
       // column_a == 5
       casted_value1 = type_cast<T>(boost::get<AllTypeVariant>(_value));
-      if (_value2) casted_value2 = type_cast<T>(*_value2);
     } else {
       // column_a == column_b
       column_id2 = boost::get<ColumnID>(_value);
     }
+
+    if (_value2) casted_value2 = type_cast<T>(*_value2);
 
     for (ColumnID column_id{0}; column_id < in_table->col_count(); ++column_id) {
       output->add_column_definition(in_table->column_name(column_id), in_table->column_type(column_id));

@@ -45,6 +45,8 @@ class SQLToResultTest : public BaseTest, public ::testing::WithParamInterface<SQ
     StorageManager::get().add_table("groupby_int_2gb_2agg",
                                     load_table("src/test/tables/aggregateoperator/groupby_int_2gb_2agg/input.tbl", 2));
 
+    StorageManager::get().add_table("int_int_int", load_table("src/test/tables/int_int_int.tbl", 2));
+
     // Load TPC-H tables
     StorageManager::get().add_table("customer", load_table("src/test/tables/tpch/customer.tbl", 1));
     StorageManager::get().add_table("orders", load_table("src/test/tables/tpch/orders.tbl", 1));
@@ -87,6 +89,7 @@ const SQLTestParam test_queries[] = {
     {"SELECT * FROM int_float WHERE 1234 <= a;", "src/test/tables/int_float_filtered2.tbl"},
     {"SELECT * FROM int_float WHERE a >= 1234 AND b < 457.9", "src/test/tables/int_float_filtered.tbl"},
     {"SELECT * FROM int_string2 WHERE a BETWEEN 122 AND 124", "src/test/tables/int_string_filtered.tbl"},
+    {"SELECT * FROM int_int_int WHERE a BETWEEN b AND 10", "src/test/tables/int_int_int_between_column_literal.tbl"},
 
     // Projection
     {"SELECT a FROM int_float;", "src/test/tables/int.tbl"},
@@ -96,7 +99,7 @@ const SQLTestParam test_queries[] = {
     {"SELECT * FROM int_float2 ORDER BY a, b;", "src/test/tables/int_float2_sorted.tbl", OrderSensitivity::Sensitive},
     {"SELECT * FROM int_float2 ORDER BY a, b ASC;", "src/test/tables/int_float2_sorted.tbl",
      OrderSensitivity::Sensitive},
-    {"SELECT a, b FROM int_float ORDER BY a;", "src/test/tables/int_float_sorted.tbl", OrderSensitivity::Sensitive},
+    {"SELECT a, b FROM int_float ORDER B<Y a;", "src/test/tables/int_float_sorted.tbl", OrderSensitivity::Sensitive},
     {"SELECT * FROM int_float4 ORDER BY a, b;", "src/test/tables/int_float2_sorted.tbl", OrderSensitivity::Sensitive},
     {"SELECT a FROM (SELECT a, b FROM int_float WHERE a > 1 ORDER BY b) WHERE a > 0 ORDER BY a;",
      "src/test/tables/int.tbl", OrderSensitivity::Sensitive},
