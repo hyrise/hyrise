@@ -54,7 +54,9 @@ class AbstractASTNode : public std::enable_shared_from_this<AbstractASTNode> {
       const std::shared_ptr<AbstractASTNode> &other_node) const;
 
   virtual const std::vector<std::string> &output_column_names() const;
-  virtual const std::vector<ColumnID> &output_column_ids() const;
+  // TODO(mp): BLOCKING - docs to mention that this is for testing only
+  virtual const std::vector<ColumnID> &output_column_id_to_input_column_id() const;
+  size_t num_output_columns() const;
 
   // @{
   /**
@@ -90,7 +92,7 @@ class AbstractASTNode : public std::enable_shared_from_this<AbstractASTNode> {
    * @param table_name
    * @return
    */
-  virtual std::vector<ColumnID> get_column_ids_for_table(const std::string &table_name) const;
+  virtual std::vector<ColumnID> get_output_column_ids_for_table(const std::string &table_name) const;
 
   void print(const uint32_t level = 0, std::ostream &out = std::cout) const;
   virtual std::string description() const = 0;

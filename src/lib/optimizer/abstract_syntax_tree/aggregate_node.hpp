@@ -30,7 +30,7 @@ class AggregateNode : public AbstractASTNode {
 
   std::string description() const override;
   const std::vector<std::string>& output_column_names() const override;
-  const std::vector<ColumnID>& output_column_ids() const override;
+  const std::vector<ColumnID>& output_column_id_to_input_column_id() const override;
 
   optional<ColumnID> find_column_id_for_column_identifier_name(
       const ColumnIdentifierName& column_identifier_name) const override;
@@ -48,7 +48,7 @@ class AggregateNode : public AbstractASTNode {
   ColumnID get_column_id_for_expression(const std::shared_ptr<Expression>& expression) const;
   // @}
 
-  std::vector<ColumnID> get_column_ids_for_table(const std::string& table_name) const override;
+  std::vector<ColumnID> get_output_column_ids_for_table(const std::string& table_name) const override;
 
  protected:
   void _on_child_changed() override;
@@ -57,7 +57,7 @@ class AggregateNode : public AbstractASTNode {
   std::vector<std::shared_ptr<Expression>> _aggregate_expressions;
   std::vector<ColumnID> _groupby_column_ids;
 
-  std::vector<ColumnID> _output_column_ids;
+  std::vector<ColumnID> _output_column_id_to_input_column_id;
   std::vector<std::string> _output_column_names;
 };
 

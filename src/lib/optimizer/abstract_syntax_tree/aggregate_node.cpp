@@ -19,7 +19,7 @@ AggregateNode::AggregateNode(const std::vector<std::shared_ptr<Expression>>& agg
     : AbstractASTNode(ASTNodeType::Aggregate),
       _aggregate_expressions(aggregate_expressions),
       _groupby_column_ids(groupby_column_ids) {
-  for (const auto& expression : aggregate_expressions) {
+  for ([[gnu::unused]] const auto& expression : aggregate_expressions) {
     DebugAssert(expression->type() == ExpressionType::Function, "Aggregate expression must be a function.");
   }
 }
@@ -60,10 +60,10 @@ void AggregateNode::_on_child_changed() {
   DebugAssert(!!left_child(), "AggregateNode needs a child.");
 
   _output_column_names.clear();
-  _output_column_ids.clear();
+  _output_column_id_to_input_column_id.clear();
 
   _output_column_names.reserve(_groupby_column_ids.size() + _aggregate_expressions.size());
-  _output_column_ids.reserve(_groupby_column_ids.size() + _aggregate_expressions.size());
+  _output_column_id_to_input_column_id.reserve(_groupby_column_ids.size() + _aggregate_expressions.size());
 
   /**
    * Set output column ids and names.
@@ -72,7 +72,7 @@ void AggregateNode::_on_child_changed() {
    * so we first handle those, and afterwards add the column information for the aggregate functions.
    */
   for (const auto groupby_column_id : _groupby_column_ids) {
-    _output_column_ids.emplace_back(groupby_column_id);
+    _output_column_id_to_input_column_id.emplace_back(groupby_column_id);
     _output_column_names.emplace_back(left_child()->output_column_names()[groupby_column_id]);
   }
 
@@ -94,13 +94,15 @@ void AggregateNode::_on_child_changed() {
     }
 
     _output_column_names.emplace_back(column_name);
-    _output_column_ids.emplace_back(INVALID_COLUMN_ID);
+    _output_column_id_to_input_column_id.emplace_back(INVALID_COLUMN_ID);
   }
 }
 
 const std::vector<std::string>& AggregateNode::output_column_names() const { return _output_column_names; }
 
-const std::vector<ColumnID>& AggregateNode::output_column_ids() const { return _output_column_ids; }
+const std::vector<ColumnID>& AggregateNode::output_column_id_to_input_column_id() const {
+  return _output_column_id_to_input_column_id;
+}
 
 optional<ColumnID> AggregateNode::find_column_id_for_column_identifier_name(
     const ColumnIdentifierName& column_identifier_name) const {
@@ -193,14 +195,14 @@ optional<ColumnID> AggregateNode::find_column_id_for_expression(const std::share
   return nullopt;
 }
 
-std::vector<ColumnID> AggregateNode::get_column_ids_for_table(const std::string& table_name) const {
+std::vector<ColumnID> AggregateNode::get_output_column_ids_for_table(const std::string& table_name) const {
   DebugAssert(!!left_child(), "AggregateNode needs a child.");
 
   if (!left_child()->manages_table(table_name)) {
     return {};
   }
 
-  const auto input_column_ids_for_table = left_child()->get_column_ids_for_table(table_name);
+  const auto input_column_ids_for_table = left_child()->get_output_column_ids_for_table(table_name);
 
   std::vector<ColumnID> output_column_ids_for_table;
 

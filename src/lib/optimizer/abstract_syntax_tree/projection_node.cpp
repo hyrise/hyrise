@@ -35,16 +35,16 @@ const std::vector<std::shared_ptr<Expression>>& ProjectionNode::column_expressio
 
 void ProjectionNode::_on_child_changed() {
   /**
-   * Populates `_output_column_names` and `_output_column_ids`.
+   * Populates `_output_column_names` and `_output_column_id_to_input_column_id`.
    * This cannot be done in the constructor because children have to be set to resolve column names.
    */
   DebugAssert(!!left_child(), "ProjectionNode needs a child.");
 
   _output_column_names.clear();
-  _output_column_ids.clear();
+  _output_column_id_to_input_column_id.clear();
 
   _output_column_names.reserve(_column_expressions.size());
-  _output_column_ids.reserve(_column_expressions.size());
+  _output_column_id_to_input_column_id.reserve(_column_expressions.size());
 
   for (const auto& expression : _column_expressions) {
     // If the expression defines an alias, use it as the output column name.
@@ -54,7 +54,7 @@ void ProjectionNode::_on_child_changed() {
     }
 
     if (expression->type() == ExpressionType::ColumnIdentifier) {
-      _output_column_ids.emplace_back(expression->column_id());
+      _output_column_id_to_input_column_id.emplace_back(expression->column_id());
 
       if (!expression->alias()) {
         const auto& column_name = left_child()->output_column_names()[expression->column_id()];
@@ -62,7 +62,7 @@ void ProjectionNode::_on_child_changed() {
       }
 
     } else if (expression->type() == ExpressionType::Literal || expression->is_arithmetic_operator()) {
-      _output_column_ids.emplace_back(INVALID_COLUMN_ID);
+      _output_column_id_to_input_column_id.emplace_back(INVALID_COLUMN_ID);
 
       if (!expression->alias()) {
         _output_column_names.emplace_back(expression->to_string());
@@ -74,7 +74,9 @@ void ProjectionNode::_on_child_changed() {
   }
 }
 
-const std::vector<ColumnID>& ProjectionNode::output_column_ids() const { return _output_column_ids; }
+const std::vector<ColumnID>& ProjectionNode::output_column_id_to_input_column_id() const {
+  return _output_column_id_to_input_column_id;
+}
 
 const std::vector<std::string>& ProjectionNode::output_column_names() const { return _output_column_names; }
 
@@ -129,24 +131,24 @@ optional<ColumnID> ProjectionNode::find_column_id_for_column_identifier_name(
   return column_id;
 }
 
-std::vector<ColumnID> ProjectionNode::get_column_ids_for_table(const std::string& table_name) const {
+std::vector<ColumnID> ProjectionNode::get_output_column_ids_for_table(const std::string& table_name) const {
   DebugAssert(!!left_child(), "ProjectionNode needs a child.");
 
   if (!left_child()->manages_table(table_name)) {
     return {};
   }
 
-  const auto input_column_ids_for_table = left_child()->get_column_ids_for_table(table_name);
+  const auto input_column_ids_for_table = left_child()->get_output_column_ids_for_table(table_name);
 
-  const auto& all_output_column_ids = output_column_ids();
   std::vector<ColumnID> output_column_ids_for_table;
 
   for (const auto input_column_id : input_column_ids_for_table) {
-    const auto iter = std::find(all_output_column_ids.begin(), all_output_column_ids.end(), input_column_id);
+    const auto iter = std::find(_output_column_id_to_input_column_id.begin(),
+                                _output_column_id_to_input_column_id.end(), input_column_id);
 
-    if (iter != all_output_column_ids.end()) {
+    if (iter != _output_column_id_to_input_column_id.end()) {
       const auto column_id =
-          ColumnID{static_cast<ColumnID::base_type>(std::distance(all_output_column_ids.begin(), iter))};
+          ColumnID{static_cast<ColumnID::base_type>(std::distance(_output_column_id_to_input_column_id.begin(), iter))};
       output_column_ids_for_table.emplace_back(column_id);
     }
   }
