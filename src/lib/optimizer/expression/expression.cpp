@@ -1,4 +1,4 @@
-#include "expression_node.hpp"
+#include "expression.hpp"
 
 #include <iomanip>
 #include <iostream>
@@ -18,8 +18,8 @@
 
 namespace opossum {
 
-ExpressionNode::ExpressionNode(const ExpressionType type, const AllTypeVariant &value,
-                               const std::vector<std::shared_ptr<ExpressionNode>> &expression_list,
+Expression::Expression(const ExpressionType type, const AllTypeVariant &value,
+                               const std::vector<std::shared_ptr<Expression>> &expression_list,
                                const std::string &name, const ColumnID column_id, const optional<std::string> &alias)
     : _type(type),
       _value(value),
@@ -28,21 +28,21 @@ ExpressionNode::ExpressionNode(const ExpressionType type, const AllTypeVariant &
       _column_id(column_id),
       _alias(alias) {}
 
-std::shared_ptr<ExpressionNode> ExpressionNode::create_expression(const ExpressionType type) {
-  const std::vector<std::shared_ptr<ExpressionNode>> expr_list;
-  return std::make_shared<ExpressionNode>(type, int32_t{0}, expr_list, "", ColumnID{});
+std::shared_ptr<Expression> Expression::create_expression(const ExpressionType type) {
+  const std::vector<std::shared_ptr<Expression>> expr_list;
+  return std::make_shared<Expression>(type, int32_t{0}, expr_list, "", ColumnID{});
 }
 
-std::shared_ptr<ExpressionNode> ExpressionNode::create_column_identifier(const ColumnID column_id,
+std::shared_ptr<Expression> Expression::create_column_identifier(const ColumnID column_id,
                                                                          const optional<std::string> &alias) {
-  const std::vector<std::shared_ptr<ExpressionNode>> expr_list;
-  return std::make_shared<ExpressionNode>(ExpressionType::ColumnIdentifier, int32_t{0}, expr_list, "", column_id,
+  const std::vector<std::shared_ptr<Expression>> expr_list;
+  return std::make_shared<Expression>(ExpressionType::ColumnIdentifier, int32_t{0}, expr_list, "", column_id,
                                           alias);
 }
 
-std::vector<std::shared_ptr<ExpressionNode>> ExpressionNode::create_column_identifiers(
+std::vector<std::shared_ptr<Expression>> Expression::create_column_identifiers(
     const std::vector<ColumnID> &column_ids, const std::vector<std::string> &aliases) {
-  std::vector<std::shared_ptr<ExpressionNode>> column_references;
+  std::vector<std::shared_ptr<Expression>> column_references;
   column_references.reserve(column_ids.size());
 
   if (aliases.empty()) {
@@ -61,29 +61,29 @@ std::vector<std::shared_ptr<ExpressionNode>> ExpressionNode::create_column_ident
   return column_references;
 }
 
-std::shared_ptr<ExpressionNode> ExpressionNode::create_literal(const AllTypeVariant &value,
+std::shared_ptr<Expression> Expression::create_literal(const AllTypeVariant &value,
                                                                const optional<std::string> &alias) {
-  const std::vector<std::shared_ptr<ExpressionNode>> expr_list;
-  return std::make_shared<ExpressionNode>(ExpressionType::Literal, value, expr_list, "", ColumnID{}, alias);
+  const std::vector<std::shared_ptr<Expression>> expr_list;
+  return std::make_shared<Expression>(ExpressionType::Literal, value, expr_list, "", ColumnID{}, alias);
 }
 
-std::shared_ptr<ExpressionNode> ExpressionNode::create_parameter(const AllTypeVariant &value) {
-  const std::vector<std::shared_ptr<ExpressionNode>> expr_list;
-  return std::make_shared<ExpressionNode>(ExpressionType::Placeholder, value, expr_list, "", ColumnID{});
+std::shared_ptr<Expression> Expression::create_parameter(const AllTypeVariant &value) {
+  const std::vector<std::shared_ptr<Expression>> expr_list;
+  return std::make_shared<Expression>(ExpressionType::Placeholder, value, expr_list, "", ColumnID{});
 }
 
-std::shared_ptr<ExpressionNode> ExpressionNode::create_function_reference(
-    const std::string &function_name, const std::vector<std::shared_ptr<ExpressionNode>> &expression_list,
+std::shared_ptr<Expression> Expression::create_function_reference(
+    const std::string &function_name, const std::vector<std::shared_ptr<Expression>> &expression_list,
     const optional<std::string> &alias) {
-  return std::make_shared<ExpressionNode>(ExpressionType::FunctionIdentifier, int32_t{0}, expression_list,
+  return std::make_shared<Expression>(ExpressionType::FunctionIdentifier, int32_t{0}, expression_list,
                                           function_name, ColumnID{}, alias);
 }
 
-std::shared_ptr<ExpressionNode> ExpressionNode::create_binary_operator(ExpressionType type,
-                                                                       const std::shared_ptr<ExpressionNode> &left,
-                                                                       const std::shared_ptr<ExpressionNode> &right,
+std::shared_ptr<Expression> Expression::create_binary_operator(ExpressionType type,
+                                                                       const std::shared_ptr<Expression> &left,
+                                                                       const std::shared_ptr<Expression> &right,
                                                                        const optional<std::string> &alias) {
-  auto expression = std::make_shared<ExpressionNode>(type, int32_t{0}, std::vector<std::shared_ptr<ExpressionNode>>(),
+  auto expression = std::make_shared<Expression>(type, int32_t{0}, std::vector<std::shared_ptr<Expression>>(),
                                                      "", ColumnID{}, alias);
   Assert(expression->is_binary_operator(),
          "Type is not a binary operator type, such as Equals, LessThan, Like, And, etc.");
@@ -94,32 +94,32 @@ std::shared_ptr<ExpressionNode> ExpressionNode::create_binary_operator(Expressio
   return expression;
 }
 
-std::shared_ptr<ExpressionNode> ExpressionNode::create_select_star(const std::string &table_name) {
-  return std::make_shared<ExpressionNode>(ExpressionType::Star, int32_t{0},
-                                          std::vector<std::shared_ptr<ExpressionNode>>(), table_name, ColumnID{});
+std::shared_ptr<Expression> Expression::create_select_star(const std::string &table_name) {
+  return std::make_shared<Expression>(ExpressionType::Star, int32_t{0},
+                                          std::vector<std::shared_ptr<Expression>>(), table_name, ColumnID{});
 }
 
-const std::weak_ptr<ExpressionNode> ExpressionNode::parent() const { return _parent; }
+const std::weak_ptr<Expression> Expression::parent() const { return _parent; }
 
-void ExpressionNode::clear_parent() { _parent.reset(); }
+void Expression::clear_parent() { _parent.reset(); }
 
-const std::shared_ptr<ExpressionNode> ExpressionNode::left_child() const { return _left_child; }
+const std::shared_ptr<Expression> Expression::left_child() const { return _left_child; }
 
-void ExpressionNode::set_left_child(const std::shared_ptr<ExpressionNode> &left) {
+void Expression::set_left_child(const std::shared_ptr<Expression> &left) {
   _left_child = left;
   left->_parent = shared_from_this();
 }
 
-const std::shared_ptr<ExpressionNode> ExpressionNode::right_child() const { return _right_child; }
+const std::shared_ptr<Expression> Expression::right_child() const { return _right_child; }
 
-void ExpressionNode::set_right_child(const std::shared_ptr<ExpressionNode> &right) {
+void Expression::set_right_child(const std::shared_ptr<Expression> &right) {
   _right_child = right;
   right->_parent = shared_from_this();
 }
 
-const ExpressionType ExpressionNode::type() const { return _type; }
+const ExpressionType Expression::type() const { return _type; }
 
-void ExpressionNode::print(const uint32_t level, std::ostream &out) const {
+void Expression::print(const uint32_t level, std::ostream &out) const {
   out << std::setw(level) << " ";
   out << description() << std::endl;
 
@@ -132,7 +132,7 @@ void ExpressionNode::print(const uint32_t level, std::ostream &out) const {
   }
 }
 
-bool ExpressionNode::is_arithmetic_operator() const {
+bool Expression::is_arithmetic_operator() const {
   switch (_type) {
     case ExpressionType::Subtraction:
     case ExpressionType::Addition:
@@ -146,7 +146,7 @@ bool ExpressionNode::is_arithmetic_operator() const {
   }
 }
 
-bool ExpressionNode::is_binary_operator() const {
+bool Expression::is_binary_operator() const {
   if (is_arithmetic_operator()) return true;
 
   switch (_type) {
@@ -167,11 +167,11 @@ bool ExpressionNode::is_binary_operator() const {
   }
 }
 
-bool ExpressionNode::is_operand() const {
+bool Expression::is_operand() const {
   return _type == ExpressionType::Literal || _type == ExpressionType::ColumnIdentifier;
 }
 
-const std::string ExpressionNode::description() const {
+const std::string Expression::description() const {
   std::ostringstream desc;
 
   auto alias_string = _alias ? *_alias : std::string("-");
@@ -201,35 +201,35 @@ const std::string ExpressionNode::description() const {
   return desc.str();
 }
 
-const ColumnID ExpressionNode::column_id() const {
+const ColumnID Expression::column_id() const {
   DebugAssert(_type == ExpressionType::ColumnIdentifier,
               "Expression " + expression_type_to_string.at(_type) + " does not have a column_id");
   return _column_id;
 }
 
-void ExpressionNode::set_column_id(const ColumnID column_id) {
+void Expression::set_column_id(const ColumnID column_id) {
   DebugAssert(_type == ExpressionType::ColumnIdentifier,
               "Expression " + expression_type_to_string.at(_type) + " does not have a column_id");
   _column_id = column_id;
 }
 
-const std::string &ExpressionNode::name() const {
+const std::string &Expression::name() const {
   DebugAssert(_type == ExpressionType::FunctionIdentifier || _type == ExpressionType::Star,
               "Expression " + expression_type_to_string.at(_type) + " does not have a name");
   return _name;
 }
 
-const optional<std::string> &ExpressionNode::alias() const { return _alias; }
+const optional<std::string> &Expression::alias() const { return _alias; }
 
-void ExpressionNode::set_alias(const std::string &alias) { _alias = alias; }
+void Expression::set_alias(const std::string &alias) { _alias = alias; }
 
-const AllTypeVariant ExpressionNode::value() const {
+const AllTypeVariant Expression::value() const {
   DebugAssert(_type == ExpressionType::Literal,
               "Expression " + expression_type_to_string.at(_type) + " does not have a value");
   return _value;
 }
 
-std::string ExpressionNode::to_string(const std::shared_ptr<AbstractASTNode> &input_node) const {
+std::string Expression::to_string(const std::shared_ptr<AbstractASTNode> &input_node) const {
   std::string column_name;
   switch (_type) {
     case ExpressionType::Literal:
@@ -248,21 +248,21 @@ std::string ExpressionNode::to_string(const std::shared_ptr<AbstractASTNode> &in
   }
 
   // TODO(mp): Should be is_operator() to also support ExpressionType::Equals, ...
-  Assert(is_arithmetic_operator(), "To generate expression string, ExpressionNodes need to be operators or operands.");
+  Assert(is_arithmetic_operator(), "To generate expression string, Expression need to be operators or operands.");
   Assert(static_cast<bool>(left_child()) && static_cast<bool>(right_child()), "Operator needs both operands.");
 
   return left_child()->to_string(input_node) + expression_type_to_operator_string.at(_type) +
          right_child()->to_string(input_node);
 }
 
-const std::vector<std::shared_ptr<ExpressionNode>> &ExpressionNode::expression_list() const { return _expression_list; }
+const std::vector<std::shared_ptr<Expression>> &Expression::expression_list() const { return _expression_list; }
 
-void ExpressionNode::set_expression_list(const std::vector<std::shared_ptr<ExpressionNode>> &expression_list) {
+void Expression::set_expression_list(const std::vector<std::shared_ptr<Expression>> &expression_list) {
   _expression_list = expression_list;
 }
 
-bool ExpressionNode::operator==(const ExpressionNode &rhs) const {
-  auto compare_expression_node_ptrs = [](const auto &ptr_lhs, const auto &ptr_rhs) {
+bool Expression::operator==(const Expression &rhs) const {
+  auto compare_expression_ptrs = [](const auto &ptr_lhs, const auto &ptr_rhs) {
     if (ptr_lhs && ptr_rhs) {
       return *ptr_lhs == *ptr_rhs;
     }
@@ -270,13 +270,13 @@ bool ExpressionNode::operator==(const ExpressionNode &rhs) const {
     return ptr_lhs == ptr_rhs;
   };
 
-  if (!compare_expression_node_ptrs(_left_child, rhs._left_child)) return false;
-  if (!compare_expression_node_ptrs(_right_child, rhs._right_child)) return false;
+  if (!compare_expression_ptrs(_left_child, rhs._left_child)) return false;
+  if (!compare_expression_ptrs(_right_child, rhs._right_child)) return false;
 
   if (_expression_list.size() != rhs._expression_list.size()) return false;
 
   for (size_t expression_list_idx = 0; expression_list_idx < _expression_list.size(); ++expression_list_idx) {
-    if (!compare_expression_node_ptrs(_expression_list[expression_list_idx],
+    if (!compare_expression_ptrs(_expression_list[expression_list_idx],
                                       rhs._expression_list[expression_list_idx])) {
       return false;
     }

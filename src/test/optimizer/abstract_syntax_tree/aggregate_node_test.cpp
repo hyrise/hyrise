@@ -8,7 +8,7 @@
 
 #include "optimizer/abstract_syntax_tree/aggregate_node.hpp"
 #include "optimizer/abstract_syntax_tree/stored_table_node.hpp"
-#include "optimizer/expression/expression_node.hpp"
+#include "optimizer/expression/expression.hpp"
 #include "storage/storage_manager.hpp"
 #include "types.hpp"
 
@@ -24,16 +24,16 @@ class AggregateNodeTest : public BaseTest {
     // SELECT a, c, SUM(a+b), SUM(a+c) AS some_sum [...] GROUP BY a, c
     // Columns are ordered as specified in the SELECT list
     _aggregate_node = std::make_shared<AggregateNode>(
-        std::vector<std::shared_ptr<ExpressionNode>>{
-            ExpressionNode::create_function_reference(
-                "SUM", {ExpressionNode::create_binary_operator(ExpressionType::Addition,
-                                                               ExpressionNode::create_column_identifier(ColumnID{0}),
-                                                               ExpressionNode::create_column_identifier(ColumnID{1}))}),
-            ExpressionNode::create_function_reference(
+        std::vector<std::shared_ptr<Expression>>{
+            Expression::create_function_reference(
+                "SUM", {Expression::create_binary_operator(ExpressionType::Addition,
+                                                               Expression::create_column_identifier(ColumnID{0}),
+                                                               Expression::create_column_identifier(ColumnID{1}))}),
+            Expression::create_function_reference(
                 "SUM",
-                {ExpressionNode::create_binary_operator(ExpressionType::Addition,
-                                                        ExpressionNode::create_column_identifier(ColumnID{0}),
-                                                        ExpressionNode::create_column_identifier(ColumnID{2}))},
+                {Expression::create_binary_operator(ExpressionType::Addition,
+                                                        Expression::create_column_identifier(ColumnID{0}),
+                                                        Expression::create_column_identifier(ColumnID{2}))},
                 {std::string("some_sum")})},
         std::vector<ColumnID>{ColumnID{0}, ColumnID{2}});
     _aggregate_node->set_left_child(_stored_table_node);
@@ -73,34 +73,34 @@ TEST_F(AggregateNodeTest, OriginalGroupByColumnIdsInOutputColumnIds) {
 }
 
 TEST_F(AggregateNodeTest, ColumnIdForExpression) {
-  EXPECT_EQ(_aggregate_node->get_column_id_for_expression(ExpressionNode::create_column_identifier(ColumnID{0})), 0);
+  EXPECT_EQ(_aggregate_node->get_column_id_for_expression(Expression::create_column_identifier(ColumnID{0})), 0);
 
   // "a+b" is not allowed
-  EXPECT_THROW(_aggregate_node->get_column_id_for_expression(ExpressionNode::create_binary_operator(
-                   ExpressionType::Addition, ExpressionNode::create_column_identifier(ColumnID{0}),
-                   ExpressionNode::create_column_identifier(ColumnID{1}))),
+  EXPECT_THROW(_aggregate_node->get_column_id_for_expression(Expression::create_binary_operator(
+                   ExpressionType::Addition, Expression::create_column_identifier(ColumnID{0}),
+                   Expression::create_column_identifier(ColumnID{1}))),
                std::logic_error);
 
   // There is SUM(a+b)
-  EXPECT_EQ(_aggregate_node->get_column_id_for_expression(ExpressionNode::create_function_reference(
-                "SUM", {ExpressionNode::create_binary_operator(
-                           ExpressionType::Addition, ExpressionNode::create_column_identifier(ColumnID{0}),
-                           ExpressionNode::create_column_identifier(ColumnID{1}))})),
+  EXPECT_EQ(_aggregate_node->get_column_id_for_expression(Expression::create_function_reference(
+                "SUM", {Expression::create_binary_operator(
+                           ExpressionType::Addition, Expression::create_column_identifier(ColumnID{0}),
+                           Expression::create_column_identifier(ColumnID{1}))})),
             2);
 
   // But there is no SUM(b+c)
-  EXPECT_EQ(_aggregate_node->find_column_id_for_expression(ExpressionNode::create_function_reference(
-                "SUM", {ExpressionNode::create_binary_operator(
-                           ExpressionType::Addition, ExpressionNode::create_column_identifier(ColumnID{1}),
-                           ExpressionNode::create_column_identifier(ColumnID{2}))})),
+  EXPECT_EQ(_aggregate_node->find_column_id_for_expression(Expression::create_function_reference(
+                "SUM", {Expression::create_binary_operator(
+                           ExpressionType::Addition, Expression::create_column_identifier(ColumnID{1}),
+                           Expression::create_column_identifier(ColumnID{2}))})),
             nullopt);
 
   // TODO(mp): This expression is currently not found because the alias is missing.
   // This has to be fixed once expressions do not have an alias anymore.
-  EXPECT_EQ(_aggregate_node->find_column_id_for_expression(ExpressionNode::create_function_reference(
-                "SUM", {ExpressionNode::create_binary_operator(
-                           ExpressionType::Addition, ExpressionNode::create_column_identifier(ColumnID{0}),
-                           ExpressionNode::create_column_identifier(ColumnID{2}))})),
+  EXPECT_EQ(_aggregate_node->find_column_id_for_expression(Expression::create_function_reference(
+                "SUM", {Expression::create_binary_operator(
+                           ExpressionType::Addition, Expression::create_column_identifier(ColumnID{0}),
+                           Expression::create_column_identifier(ColumnID{2}))})),
             nullopt);
 }
 

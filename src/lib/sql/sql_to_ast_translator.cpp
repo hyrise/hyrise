@@ -13,7 +13,7 @@
 #include "optimizer/abstract_syntax_tree/projection_node.hpp"
 #include "optimizer/abstract_syntax_tree/sort_node.hpp"
 #include "optimizer/abstract_syntax_tree/stored_table_node.hpp"
-#include "optimizer/expression/expression_node.hpp"
+#include "optimizer/expression/expression.hpp"
 #include "sql/sql_expression_translator.hpp"
 #include "storage/storage_manager.hpp"
 
@@ -312,7 +312,7 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_aggregate(
   /**
    * Build Aggregates
    */
-  std::vector<std::shared_ptr<ExpressionNode>> aggregate_expressions;
+  std::vector<std::shared_ptr<Expression>> aggregate_expressions;
   aggregate_expressions.reserve(select_list.size());
 
   for (const auto* column_expr : select_list) {
@@ -380,7 +380,7 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_aggregate(
 
 std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_projection(
     const std::vector<hsql::Expr*>& select_list, const std::shared_ptr<AbstractASTNode>& input_node) {
-  std::vector<std::shared_ptr<ExpressionNode>> column_expressions;
+  std::vector<std::shared_ptr<Expression>> column_expressions;
 
   for (const auto* hsql_expr : select_list) {
     const auto expr = SQLExpressionTranslator::translate_expression(*hsql_expr, input_node);
@@ -403,7 +403,7 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_projection(
         column_ids = input_node->get_column_ids_for_table(expr->name());
       }
 
-      const auto& column_references = ExpressionNode::create_column_identifiers(column_ids);
+      const auto& column_references = Expression::create_column_identifiers(column_ids);
       column_expressions.insert(column_expressions.end(), column_references.cbegin(), column_references.cend());
     } else {
       column_expressions.emplace_back(expr);

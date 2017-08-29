@@ -75,7 +75,7 @@ TEST_F(ASTToOperatorTranslatorTest, PredicateNodeBinaryScan) {
 TEST_F(ASTToOperatorTranslatorTest, ProjectionNode) {
   const auto stored_table_node = std::make_shared<StoredTableNode>("table_int_float");
   const auto expressions =
-      std::vector<std::shared_ptr<ExpressionNode>>{ExpressionNode::create_column_identifier(ColumnID{0}, {"a"})};
+      std::vector<std::shared_ptr<Expression>>{Expression::create_column_identifier(ColumnID{0}, {"a"})};
   auto projection_node = std::make_shared<ProjectionNode>(expressions);
   projection_node->set_left_child(stored_table_node);
   const auto op = ASTToOperatorTranslator::get().translate_node(projection_node);
@@ -118,10 +118,10 @@ TEST_F(ASTToOperatorTranslatorTest, JoinNode) {
 TEST_F(ASTToOperatorTranslatorTest, AggregateNodeNoArithmetics) {
   const auto stored_table_node = std::make_shared<StoredTableNode>("table_int_float");
 
-  auto sum_expression = ExpressionNode::create_function_reference(
-      "SUM", {ExpressionNode::create_column_identifier(ColumnID{0})}, {"sum_of_a"});
+  auto sum_expression = Expression::create_function_reference(
+      "SUM", {Expression::create_column_identifier(ColumnID{0})}, {"sum_of_a"});
 
-  auto aggregate_node = std::make_shared<AggregateNode>(std::vector<std::shared_ptr<ExpressionNode>>{sum_expression},
+  auto aggregate_node = std::make_shared<AggregateNode>(std::vector<std::shared_ptr<Expression>>{sum_expression},
                                                         std::vector<ColumnID>{});
   aggregate_node->set_left_child(stored_table_node);
 
@@ -142,17 +142,17 @@ TEST_F(ASTToOperatorTranslatorTest, AggregateNodeWithArithmetics) {
   const auto stored_table_node = std::make_shared<StoredTableNode>("table_int_float");
 
   // Create expression "b * 2".
-  const auto expr_col_b = ExpressionNode::create_column_identifier(ColumnID{1});
-  const auto expr_literal = ExpressionNode::create_literal(2);
+  const auto expr_col_b = Expression::create_column_identifier(ColumnID{1});
+  const auto expr_literal = Expression::create_literal(2);
   const auto expr_multiplication =
-      ExpressionNode::create_binary_operator(ExpressionType::Multiplication, expr_col_b, expr_literal);
+      Expression::create_binary_operator(ExpressionType::Multiplication, expr_col_b, expr_literal);
 
   // Create aggregate with expression "SUM(b * 2)".
   // TODO(tim): Projection cannot handle expression `$a + $b`
   // because it is not able to handle columns with different data types.
   // Create issue with failing test.
-  auto sum_expression = ExpressionNode::create_function_reference("SUM", {expr_multiplication}, {"sum_of_b_times_two"});
-  auto aggregate_node = std::make_shared<AggregateNode>(std::vector<std::shared_ptr<ExpressionNode>>{sum_expression},
+  auto sum_expression = Expression::create_function_reference("SUM", {expr_multiplication}, {"sum_of_b_times_two"});
+  auto aggregate_node = std::make_shared<AggregateNode>(std::vector<std::shared_ptr<Expression>>{sum_expression},
                                                         std::vector<ColumnID>{ColumnID{0}});
   aggregate_node->set_left_child(stored_table_node);
 

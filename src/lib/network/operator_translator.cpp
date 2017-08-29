@@ -87,7 +87,7 @@ inline std::shared_ptr<OperatorTask> OperatorTranslator::translate(
   Projection::ColumnExpressions column_expressions;
   column_expressions.reserve(column_ids.size());
   for (const auto column_id : column_ids) {
-    column_expressions.emplace_back(ExpressionNode::create_column_identifier(ColumnID{column_id}));
+    column_expressions.emplace_back(Expression::create_column_identifier(ColumnID{column_id}));
   }
 
   auto projection = std::make_shared<Projection>(input_task->get_operator(), column_expressions);

@@ -70,7 +70,7 @@ TEST_F(SQLToASTTranslatorTest, SelectStarAllTest) {
 }
 
 /*
- * ExpressionNodes are able to handle this kind of expression. However, a PredicateNode needs the parsed expression as
+ * Opossums's Expressions are able to handle this kind of expression. However, a PredicateNode needs the parsed expression as
  * input. And it does not support nested Expressions, such as '1234 + 1'.
  * This is why this test is currently not supported. It will be enabled once we are able to parse these expressions
  * in the translator.

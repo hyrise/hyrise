@@ -8,7 +8,7 @@
 #include "optimizer/abstract_syntax_tree/predicate_node.hpp"
 #include "optimizer/abstract_syntax_tree/projection_node.hpp"
 #include "optimizer/abstract_syntax_tree/stored_table_node.hpp"
-#include "optimizer/expression/expression_node.hpp"
+#include "optimizer/expression/expression.hpp"
 #include "sql/SQLStatement.h"
 #include "sql/sql_expression_translator.hpp"
 #include "storage/storage_manager.hpp"
@@ -34,7 +34,7 @@ class SQLExpressionTranslatorTest : public BaseTest {
    * Hopefully this is fixed once hsql::SQLParser uses Smart Pointers as proposed in #55 in hyrise/sql-parser.
    * TODO(anyone): refactor these two methods
    */
-  std::shared_ptr<ExpressionNode> compile_where_expression(const std::string &query) {
+  std::shared_ptr<Expression> compile_where_expression(const std::string &query) {
     hsql::SQLParserResult parse_result;
     hsql::SQLParser::parseSQLString(query, &parse_result);
 
@@ -54,7 +54,7 @@ class SQLExpressionTranslatorTest : public BaseTest {
     }
   }
 
-  std::vector<std::shared_ptr<ExpressionNode>> compile_select_expression(const std::string &query) {
+  std::vector<std::shared_ptr<Expression>> compile_select_expression(const std::string &query) {
     hsql::SQLParserResult parse_result;
     hsql::SQLParser::parseSQLString(query, &parse_result);
 
@@ -63,7 +63,7 @@ class SQLExpressionTranslatorTest : public BaseTest {
     }
 
     const auto *statement = parse_result.getStatements().at(0);
-    std::vector<std::shared_ptr<ExpressionNode>> expressions;
+    std::vector<std::shared_ptr<Expression>> expressions;
 
     switch (statement->type()) {
       case hsql::kStmtSelect: {

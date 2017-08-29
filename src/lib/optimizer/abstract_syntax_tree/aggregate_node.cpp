@@ -6,7 +6,7 @@
 #include <string>
 #include <vector>
 
-#include "optimizer/expression/expression_node.hpp"
+#include "optimizer/expression/expression.hpp"
 
 #include "common.hpp"
 #include "types.hpp"
@@ -14,7 +14,7 @@
 
 namespace opossum {
 
-AggregateNode::AggregateNode(const std::vector<std::shared_ptr<ExpressionNode>>& aggregate_expressions,
+AggregateNode::AggregateNode(const std::vector<std::shared_ptr<Expression>>& aggregate_expressions,
                              const std::vector<ColumnID>& groupby_column_ids)
     : AbstractASTNode(ASTNodeType::Aggregate),
       _aggregate_expressions(aggregate_expressions),
@@ -24,7 +24,7 @@ AggregateNode::AggregateNode(const std::vector<std::shared_ptr<ExpressionNode>>&
   }
 }
 
-const std::vector<std::shared_ptr<ExpressionNode>>& AggregateNode::aggregate_expressions() const {
+const std::vector<std::shared_ptr<Expression>>& AggregateNode::aggregate_expressions() const {
   return _aggregate_expressions;
 }
 
@@ -33,7 +33,7 @@ const std::vector<ColumnID>& AggregateNode::groupby_column_ids() const { return 
 std::string AggregateNode::description() const {
   std::ostringstream s;
 
-  auto stream_aggregate = [&](const std::shared_ptr<ExpressionNode>& aggregate_expr) {
+  auto stream_aggregate = [&](const std::shared_ptr<Expression>& aggregate_expr) {
     s << aggregate_expr->to_string();
     if (aggregate_expr->alias()) s << " AS \"" << (*aggregate_expr->alias()) << "\"";
   };
@@ -153,14 +153,14 @@ optional<ColumnID> AggregateNode::find_column_id_for_column_identifier_name(
   return column_id_groupby;
 }
 
-ColumnID AggregateNode::get_column_id_for_expression(const std::shared_ptr<ExpressionNode>& expression) const {
+ColumnID AggregateNode::get_column_id_for_expression(const std::shared_ptr<Expression>& expression) const {
   const auto column_id = find_column_id_for_expression(expression);
   DebugAssert(!!column_id, "Expression could not be resolved.");
   return *column_id;
 }
 
 optional<ColumnID> AggregateNode::find_column_id_for_expression(
-    const std::shared_ptr<ExpressionNode>& expression) const {
+    const std::shared_ptr<Expression>& expression) const {
   /**
    * This function does NOT need to check whether an expression is ambiguous.
    * It is only used when translating the HAVING clause.

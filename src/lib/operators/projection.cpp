@@ -67,7 +67,7 @@ std::shared_ptr<const Table> Projection::on_execute() {
   return output;
 }
 
-const std::string Projection::get_type_of_expression(const std::shared_ptr<ExpressionNode>& expression,
+const std::string Projection::get_type_of_expression(const std::shared_ptr<Expression>& expression,
                                                      const std::shared_ptr<const Table>& table) {
   if (expression->type() == ExpressionType::Literal) {
     return type_string_from_all_type_variant(expression->value());
