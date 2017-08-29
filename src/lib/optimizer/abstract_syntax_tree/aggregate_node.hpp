@@ -48,6 +48,8 @@ class AggregateNode : public AbstractASTNode {
   ColumnID get_column_id_for_expression(const std::shared_ptr<ExpressionNode>& expression) const;
   // @}
 
+  std::vector<ColumnID> get_column_ids_for_table(const std::string& table_name) const override;
+
  protected:
   void _on_child_changed() override;
 

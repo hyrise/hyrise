@@ -108,6 +108,43 @@ bool JoinNode::manages_table(const std::string &table_name) const {
   return left_child()->manages_table(table_name) || right_child()->manages_table(table_name);
 }
 
+std::vector<ColumnID> JoinNode::get_column_ids_for_table(const std::string &table_name) const {
+  DebugAssert(!!left_child() && !!right_child(), "JoinNode must have two children.");
+
+  std::vector<ColumnID> input_column_ids_for_table;
+
+  if (left_child()->manages_table(table_name)) {
+    input_column_ids_for_table = left_child()->get_column_ids_for_table(table_name);
+  }
+
+  if (right_child()->manages_table(table_name)) {
+    auto original_right_input_column_ids_for_table = right_child()->get_column_ids_for_table(table_name);
+    input_column_ids_for_table.reserve(input_column_ids_for_table.size() +
+                                       original_right_input_column_ids_for_table.size());
+
+    for (const auto column_id : original_right_input_column_ids_for_table) {
+      auto column_idx = left_child()->output_column_ids().size() + column_id;
+      DebugAssert(column_idx < std::numeric_limits<uint16_t>::max(), "Too many columns for table.");
+      input_column_ids_for_table.emplace_back(ColumnID{static_cast<ColumnID::base_type>(column_idx)});
+    }
+  }
+
+  const auto &all_output_column_ids = output_column_ids();
+  std::vector<ColumnID> output_column_ids_for_table;
+
+  for (const auto input_column_id : input_column_ids_for_table) {
+    const auto iter = std::find(all_output_column_ids.begin(), all_output_column_ids.end(), input_column_id);
+
+    if (iter != all_output_column_ids.end()) {
+      const auto column_id =
+          ColumnID{static_cast<ColumnID::base_type>(std::distance(all_output_column_ids.begin(), iter))};
+      output_column_ids_for_table.emplace_back(column_id);
+    }
+  }
+
+  return output_column_ids_for_table;
+}
+
 optional<std::pair<ColumnID, ColumnID>> JoinNode::join_column_ids() const { return _join_column_ids; }
 
 optional<ScanType> JoinNode::scan_type() const { return _scan_type; }

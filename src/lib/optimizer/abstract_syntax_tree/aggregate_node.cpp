@@ -191,4 +191,27 @@ optional<ColumnID> AggregateNode::find_column_id_for_expression(
   return ColumnID{static_cast<ColumnID::base_type>(idx)};
 }
 
+std::vector<ColumnID> AggregateNode::get_column_ids_for_table(const std::string& table_name) const {
+  DebugAssert(!!left_child(), "AggregateNode needs a child.");
+
+  if (!left_child()->manages_table(table_name)) {
+    return {};
+  }
+
+  const auto input_column_ids_for_table = left_child()->get_column_ids_for_table(table_name);
+
+  std::vector<ColumnID> output_column_ids_for_table;
+
+  for (const auto input_column_id : input_column_ids_for_table) {
+    const auto iter = std::find(_groupby_column_ids.begin(), _groupby_column_ids.end(), input_column_id);
+
+    if (iter != _groupby_column_ids.end()) {
+      auto column_id = ColumnID{static_cast<ColumnID::base_type>(std::distance(_groupby_column_ids.begin(), iter))};
+      output_column_ids_for_table.emplace_back(column_id);
+    }
+  }
+
+  return output_column_ids_for_table;
+}
+
 }  // namespace opossum

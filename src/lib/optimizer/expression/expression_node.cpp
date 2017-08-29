@@ -94,9 +94,9 @@ std::shared_ptr<ExpressionNode> ExpressionNode::create_binary_operator(Expressio
   return expression;
 }
 
-std::shared_ptr<ExpressionNode> ExpressionNode::create_select_star() {
+std::shared_ptr<ExpressionNode> ExpressionNode::create_select_star(const std::string &table_name) {
   return std::make_shared<ExpressionNode>(ExpressionType::Star, int32_t{0},
-                                          std::vector<std::shared_ptr<ExpressionNode>>(), "", ColumnID{});
+                                          std::vector<std::shared_ptr<ExpressionNode>>(), table_name, ColumnID{});
 }
 
 const std::weak_ptr<ExpressionNode> ExpressionNode::parent() const { return _parent; }
@@ -214,7 +214,7 @@ void ExpressionNode::set_column_id(const ColumnID column_id) {
 }
 
 const std::string &ExpressionNode::name() const {
-  DebugAssert(_type == ExpressionType::FunctionIdentifier,
+  DebugAssert(_type == ExpressionType::FunctionIdentifier || _type == ExpressionType::Star,
               "Expression " + expression_type_to_string.at(_type) + " does not have a name");
   return _name;
 }

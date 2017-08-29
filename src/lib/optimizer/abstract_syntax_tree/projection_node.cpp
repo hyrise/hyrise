@@ -129,4 +129,29 @@ optional<ColumnID> ProjectionNode::find_column_id_for_column_identifier_name(
   return column_id;
 }
 
+std::vector<ColumnID> ProjectionNode::get_column_ids_for_table(const std::string& table_name) const {
+  DebugAssert(!!left_child(), "ProjectionNode needs a child.");
+
+  if (!left_child()->manages_table(table_name)) {
+    return {};
+  }
+
+  const auto input_column_ids_for_table = left_child()->get_column_ids_for_table(table_name);
+
+  const auto& all_output_column_ids = output_column_ids();
+  std::vector<ColumnID> output_column_ids_for_table;
+
+  for (const auto input_column_id : input_column_ids_for_table) {
+    const auto iter = std::find(all_output_column_ids.begin(), all_output_column_ids.end(), input_column_id);
+
+    if (iter != all_output_column_ids.end()) {
+      const auto column_id =
+          ColumnID{static_cast<ColumnID::base_type>(std::distance(all_output_column_ids.begin(), iter))};
+      output_column_ids_for_table.emplace_back(column_id);
+    }
+  }
+
+  return output_column_ids_for_table;
+}
+
 }  // namespace opossum
