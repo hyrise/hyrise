@@ -55,7 +55,6 @@ class AbstractASTNode : public std::enable_shared_from_this<AbstractASTNode> {
 
   virtual const std::vector<std::string> &output_column_names() const;
   virtual const std::vector<ColumnID> &output_column_ids() const;
-  bool has_output_column(const std::string &column_name) const;
 
   // @{
   /**

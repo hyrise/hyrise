@@ -47,7 +47,7 @@ class ColumnStatisticsTest : public BaseTest {
     }
   }
 
-  // For two column scans (type of value1 is ColumnName)
+  // For two column scans (type of value1 is ColumnID)
   void predict_selectivities_and_compare(const std::shared_ptr<Table> &table,
                                          const std::vector<std::shared_ptr<BaseColumnStatistics>> &column_statistics,
                                          const ScanType scan_type) {

@@ -152,11 +152,12 @@ inline std::shared_ptr<OperatorTask> OperatorTranslator::translate(
 
   optional<std::pair<ColumnID, ColumnID>> join_columns;
   if (nested_loop_join_operator.has_left_column_id() && nested_loop_join_operator.has_right_column_id()) {
-    join_columns = std::make_pair(ColumnID{static_cast<uint16_t>(nested_loop_join_operator.left_column_id().value())},
-                                  ColumnID{static_cast<uint16_t>(nested_loop_join_operator.right_column_id().value())});
+    join_columns =
+        std::make_pair(ColumnID{static_cast<ColumnID::base_type>(nested_loop_join_operator.left_column_id().value())},
+                       ColumnID{static_cast<ColumnID::base_type>(nested_loop_join_operator.right_column_id().value())});
   } else {
-    Assert(!nested_loop_join_operator.has_left_column_id() && !nested_loop_join_operator.has_right_column_id(),
-           "Neither or both columns of the join condition have to be specified.");
+    DebugAssert(!nested_loop_join_operator.has_left_column_id() && !nested_loop_join_operator.has_right_column_id(),
+                "Neither or both columns of the join condition have to be specified.");
   }
 
   std::shared_ptr<JoinNestedLoopA> nested_loop_join;
@@ -178,7 +179,7 @@ inline std::shared_ptr<OperatorTask> OperatorTranslator::translate(
 
 inline std::shared_ptr<OperatorTask> OperatorTranslator::translate(
     const proto::TableScanOperator& table_scan_operator) {
-  const auto column_id = ColumnID{static_cast<uint16_t>(table_scan_operator.column_id())};
+  const auto column_id = ColumnID{static_cast<ColumnID::base_type>(table_scan_operator.column_id())};
   const auto& scan_type = translate_scan_type(table_scan_operator.filter_operator());
   Assert((table_scan_operator.has_input_operator()), "Missing Input Operator in Table Scan.");
 
@@ -197,7 +198,7 @@ inline std::shared_ptr<OperatorTask> OperatorTranslator::translate(
 
 inline std::shared_ptr<OperatorTask> OperatorTranslator::translate(
     const proto::IndexColumnScanOperator& index_column_scan_operator) {
-  const auto column_id = ColumnID{static_cast<uint16_t>(index_column_scan_operator.column_id())};
+  const auto column_id = ColumnID{static_cast<ColumnID::base_type>(index_column_scan_operator.column_id())};
   const auto& scan_type = translate_scan_type(index_column_scan_operator.filter_operator());
   Assert((index_column_scan_operator.has_input_operator()), "Missing Input Operator in Index Column Scan.");
 
@@ -224,7 +225,7 @@ inline std::shared_ptr<OperatorTask> OperatorTranslator::translate(const proto::
 }
 
 inline std::shared_ptr<OperatorTask> OperatorTranslator::translate(const proto::SortOperator& sort_operator) {
-  const auto column_id = ColumnID{static_cast<uint16_t>(sort_operator.column_id())};
+  const auto column_id = ColumnID{static_cast<ColumnID::base_type>(sort_operator.column_id())};
   const auto ascending = sort_operator.ascending();
   const auto output_chunk_size = sort_operator.output_chunk_size();
   Assert((sort_operator.has_input_operator()), "Missing Input Operator in Sort.");

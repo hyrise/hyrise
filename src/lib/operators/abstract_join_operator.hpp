@@ -19,8 +19,8 @@ namespace opossum {
 
 class AbstractJoinOperator : public AbstractReadOnlyOperator {
  public:
-  // Natural Join is a special case of an inner join without join_columns
-  // Natural and Cross Join do not enforce column_names
+  // Natural Join is a special case of an inner join without join_columns.
+  // Natural and Cross Join do not have an ON clause and therefore neither column ids nor a scan type.
   AbstractJoinOperator(const std::shared_ptr<const AbstractOperator> left,
                        const std::shared_ptr<const AbstractOperator> right, const JoinMode mode);
 

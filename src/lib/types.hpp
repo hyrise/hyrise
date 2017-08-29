@@ -65,23 +65,6 @@ using AttributeVectorWidth = uint8_t;
 
 using PosList = std::vector<RowID>;
 
-class ColumnName {
- public:
-  explicit ColumnName(const std::string &name) : _name(name) {}
-
-  operator std::string() const { return _name; }
-
-  friend std::ostream &operator<<(std::ostream &o, const ColumnName &column_name) {
-    o << column_name._name;
-    return o;
-  }
-
-  bool operator==(const ColumnName &rhs) const { return _name == rhs._name; }
-
- protected:
-  std::string _name;
-};
-
 constexpr NodeID INVALID_NODE_ID{std::numeric_limits<NodeID::base_type>::max()};
 constexpr TaskID INVALID_TASK_ID{std::numeric_limits<TaskID>::max()};
 constexpr CpuID INVALID_CPU_ID{std::numeric_limits<CpuID::base_type>::max()};

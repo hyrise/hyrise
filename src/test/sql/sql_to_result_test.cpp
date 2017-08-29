@@ -44,6 +44,8 @@ class SQLToResultTest : public BaseTest, public ::testing::WithParamInterface<SQ
                                     load_table("src/test/tables/aggregateoperator/groupby_int_1gb_2agg/input.tbl", 2));
     StorageManager::get().add_table("groupby_int_2gb_2agg",
                                     load_table("src/test/tables/aggregateoperator/groupby_int_2gb_2agg/input.tbl", 2));
+    StorageManager::get().add_table("groupby_int_2gb_2agg_2",
+                                    load_table("src/test/tables/aggregateoperator/groupby_int_2gb_2agg/input2.tbl", 2));
 
     // Load TPC-H tables
     StorageManager::get().add_table("customer", load_table("src/test/tables/tpch/customer.tbl", 1));
@@ -100,12 +102,6 @@ const SQLTestParam test_queries[] = {
     {"SELECT * FROM int_float4 ORDER BY a, b;", "src/test/tables/int_float2_sorted.tbl", OrderSensitivity::Sensitive},
     {"SELECT a FROM (SELECT a, b FROM int_float WHERE a > 1 ORDER BY b) WHERE a > 0 ORDER BY a;",
      "src/test/tables/int.tbl", OrderSensitivity::Sensitive},
-
-    // AGGREGATE
-    // TODO(tim): Projection cannot handle expression `$a + $b`
-    // because it is not able to handle columns with different data types.
-    // Create issue with failing test.
-    {"SELECT SUM(b + b) AS sum_b_b FROM int_float;", "src/test/tables/int_float_sum_b_plus_b.tbl"},
 
     // JOIN
     {R"(SELECT "left".a, "left".b, "right".a, "right".b
@@ -181,6 +177,9 @@ const SQLTestParam test_queries[] = {
     //        AND t3.b = 'C')",
     //     "src/test/tables/joinoperators/int_inner_join_3_tables_filter.tbl"},
 
+    // Aggregates
+    {"SELECT SUM(b + b) AS sum_b_b FROM int_float;", "src/test/tables/int_float_sum_b_plus_b.tbl"},
+
     // GROUP BY
     {"SELECT a, SUM(b) FROM groupby_int_1gb_1agg GROUP BY a;",
      "src/test/tables/aggregateoperator/groupby_int_1gb_1agg/sum.tbl"},
@@ -188,6 +187,15 @@ const SQLTestParam test_queries[] = {
      "src/test/tables/aggregateoperator/groupby_int_1gb_2agg/sum_avg.tbl"},
     {"SELECT a, b, MAX(c), AVG(d) FROM groupby_int_2gb_2agg GROUP BY a, b;",
      "src/test/tables/aggregateoperator/groupby_int_2gb_2agg/max_avg.tbl"},
+    // Checks that output of Aggregate can be worked with correctly.
+    {R"(SELECT d, min_c, max_a
+        FROM (
+          SELECT b, d, MAX(a) AS max_a, MIN(c) AS min_c
+          FROM groupby_int_2gb_2agg_2
+          GROUP BY b, d
+        )
+        WHERE min_c BETWEEN 10 AND 1000;)",
+     "src/test/tables/aggregateoperator/groupby_int_2gb_2agg/projection.tbl"},
 
     // HAVING
     {"SELECT a, b, MAX(c), AVG(d) FROM groupby_int_2gb_2agg GROUP BY a, b HAVING MAX(c) >= 10 AND MAX(c) < 40;",

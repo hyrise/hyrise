@@ -59,7 +59,7 @@ using AggregateKey = std::vector<AllTypeVariant>;
  */
 struct AggregateDefinition {
   AggregateDefinition(const ColumnID column_id, const AggregateFunction function,
-                      const optional<std::string> &alias = {});
+                      const optional<std::string> &alias = nullopt);
 
   ColumnID column_id;
   AggregateFunction function;
