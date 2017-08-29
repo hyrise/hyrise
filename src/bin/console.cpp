@@ -5,6 +5,8 @@
 
 #include <readline/history.h>
 #include <readline/readline.h>
+#include <setjmp.h>
+#include <csignal>
 #include <chrono>
 #include <ctime>
 #include <iomanip>
@@ -19,8 +21,12 @@
 #include "sql/sql_planner.hpp"
 #include "storage/storage_manager.hpp"
 #include "tpcc/tpcc_table_generator.hpp"
+#include "utils/load_table.hpp"
 
 namespace {
+
+// Buffer for program state
+sigjmp_buf jmp_env;
 
 // Returns a string containing a timestamp of the current date and time
 std::string current_timestamp() {
@@ -75,6 +81,10 @@ int Console::read() {
 
   // Prompt user for input
   buffer = readline(_prompt.c_str());
+  if (buffer == nullptr) {
+    return ReturnCode::Quit;
+  }
+
   std::string input(buffer);
   boost::algorithm::trim<std::string>(input);
 
@@ -92,6 +102,7 @@ int Console::read() {
 int Console::execute_script(const std::string& filepath) { return exec_script(filepath); }
 
 int Console::_eval(const std::string& input) {
+  // Do nothing if no input was given
   if (input.empty() && _multiline_input.empty()) {
     return ReturnCode::Ok;
   }
@@ -99,49 +110,76 @@ int Console::_eval(const std::string& input) {
   // Dump command to logfile, and to the Console if input comes from a script file
   out(_prompt + input + "\n", _verbose);
 
-  // Check if a registered command was entered
-  RegisteredCommands::iterator it;
-  if ((it = _commands.find(input.substr(0, input.find_first_of(" \n")))) != std::end(_commands)) {
-    return _eval_command(it->second, input);
-  }
-
-  // Check for multiline-input
-  if (input.back() == '\\') {
-    _multiline_input += input.substr(0, input.size() - 1);
-    if (_multiline_input.back() != ' ') {
-      _multiline_input += ' ';
+  // Check if we already are in multiline input
+  if (_multiline_input.empty()) {
+    // Check if a registered command was entered
+    RegisteredCommands::iterator it;
+    if ((it = _commands.find(input.substr(0, input.find_first_of(" \n;")))) != std::end(_commands)) {
+      return _eval_command(it->second, input);
     }
-    return ReturnCode::Multiline;
+
+    // Regard query as complete if input is valid and not already in multiline
+    hsql::SQLParserResult parse_result;
+    hsql::SQLParser::parse(input, &parse_result);
+    if (parse_result.isValid()) {
+      return _eval_sql(input);
+    }
   }
 
-  // Check for the last command of a multiline-input
-  if (!_multiline_input.empty()) {
+  // Regard query as complete if last character is semicolon, regardless of multiline or not
+  if (input.back() == ';') {
     int retCode = _eval_sql(_multiline_input + input);
     _multiline_input = "";
     return retCode;
   }
 
-  // If nothing from the above, regard input as SQL query
-  return _eval_sql(input);
+  // If query is not complete(/valid), and the last character is not a semicolon, enter/continue multiline
+  _multiline_input += input;
+  _multiline_input += ' ';
+  return ReturnCode::Multiline;
 }
 
 int Console::_eval_command(const CommandFunction& func, const std::string& command) {
-  size_t first = command.find(' ');
-  size_t last = command.find('\n');
+  std::string cmd = command;
+  if (command.back() == ';') {
+    cmd = command.substr(0, command.size() - 1);
+  }
+  boost::algorithm::trim<std::string>(cmd);
 
+  size_t first = cmd.find(' ');
+  size_t last = cmd.find('\n');
+
+  // If no whitespace is found, zero arguments are provided
   if (std::string::npos == first) {
     return static_cast<int>(func(""));
   }
 
-  std::string args = command.substr(first + 1, last - (first + 1));
+  std::string args = cmd.substr(first + 1, last - (first + 1));
+
+  // Remove whitespace duplicates in args
+  auto both_are_spaces = [](char lhs, char rhs) { return (lhs == rhs) && (lhs == ' '); };
+  args.erase(std::unique(args.begin(), args.end(), both_are_spaces), args.end());
+
   return static_cast<int>(func(args));
 }
 
 int Console::_eval_sql(const std::string& sql) {
   SQLQueryPlan plan;
-
   hsql::SQLParserResult parse_result;
-  hsql::SQLParser::parse(sql, &parse_result);
+
+  // Measure the query parse time
+  auto started = std::chrono::high_resolution_clock::now();
+
+  try {
+    hsql::SQLParser::parse(sql, &parse_result);
+  } catch (const std::exception& exception) {
+    out("Exception thrown while parsing SQL query:\n  " + std::string(exception.what()) + "\n");
+    return ReturnCode::Error;
+  }
+
+  // Measure the query parse time
+  auto done = std::chrono::high_resolution_clock::now();
+  auto parse_elapsed_ms = std::chrono::duration<double>(done - started).count();
 
   // Check if SQL query is valid
   if (!parse_result.isValid()) {
@@ -149,8 +187,23 @@ int Console::_eval_sql(const std::string& sql) {
     return 1;
   }
 
+  // Measure the plan compile time
+  started = std::chrono::high_resolution_clock::now();
+
+  // Compile the parse result
+  try {
+    plan = SQLPlanner::plan(parse_result);
+  } catch (const std::exception& exception) {
+    out("Exception thrown while compiling query plan:\n  " + std::string(exception.what()) + "\n");
+    return ReturnCode::Error;
+  }
+
+  // Measure the plan compile time
+  done = std::chrono::high_resolution_clock::now();
+  auto plan_elapsed_ms = std::chrono::duration<double>(done - started).count();
+
   // Measure the query plan execution time
-  auto started = std::chrono::high_resolution_clock::now();
+  started = std::chrono::high_resolution_clock::now();
 
   // Execute query plan
   try {
@@ -165,8 +218,8 @@ int Console::_eval_sql(const std::string& sql) {
   }
 
   // Measure the query plan execution time
-  auto done = std::chrono::high_resolution_clock::now();
-  auto elapsed_ms = std::chrono::duration<double>(done - started).count();
+  done = std::chrono::high_resolution_clock::now();
+  auto execution_elapsed_ms = std::chrono::duration<double>(done - started).count();
 
   auto table = plan.tree_roots().back()->get_output();
   auto row_count = table->row_count();
@@ -174,7 +227,8 @@ int Console::_eval_sql(const std::string& sql) {
   // Print result (to Console and logfile)
   out(table);
   out("===\n");
-  out(std::to_string(row_count) + " rows (" + std::to_string(elapsed_ms) + " ms wall time)\n");
+  out(std::to_string(row_count) + " rows (PARSE: " + std::to_string(parse_elapsed_ms) + " ms, COMPILE: " +
+      std::to_string(plan_elapsed_ms) + " ms, EXECUTE: " + std::to_string(execution_elapsed_ms) + " ms (wall time))\n");
 
   return ReturnCode::Ok;
 }
@@ -259,11 +313,32 @@ int Console::load_table(const std::string& args) {
     return ReturnCode::Error;
   }
 
-  auto importer = std::make_shared<ImportCsv>(arguments.at(0), arguments.at(1));
-  try {
-    importer->execute();
-  } catch (const std::exception& exception) {
-    console.out("Exception thrown while importing CSV:\n  " + std::string(exception.what()) + "\n");
+  const std::string& filepath = arguments.at(0);
+  const std::string& tablename = arguments.at(1);
+
+  std::vector<std::string> file_parts;
+  boost::algorithm::split(file_parts, filepath, boost::is_any_of("."));
+  const std::string& extension = file_parts.back();
+
+  console.out("Loading " + filepath + " into table \"" + tablename + "\" ...\n");
+  if (extension == "csv") {
+    auto importer = std::make_shared<ImportCsv>(filepath, tablename);
+    try {
+      importer->execute();
+    } catch (const std::exception& exception) {
+      console.out("Exception thrown while importing CSV:\n  " + std::string(exception.what()) + "\n");
+      return ReturnCode::Error;
+    }
+  } else if (extension == "tbl") {
+    try {
+      auto table = opossum::load_table(filepath, 0);
+      StorageManager::get().add_table(tablename, table);
+    } catch (const std::exception& exception) {
+      console.out("Exception thrown while importing TBL:\n  " + std::string(exception.what()) + "\n");
+      return ReturnCode::Error;
+    }
+  } else {
+    console.out("Error: Unsupported file extension '" + extension + "'\n");
     return ReturnCode::Error;
   }
 
@@ -294,6 +369,19 @@ int Console::exec_script(const std::string& script_file) {
   console.out("Executing script file done\n");
   console._verbose = false;
   return retCode;
+}
+
+void Console::handle_signal(int sig) {
+  if (sig == SIGINT) {
+    // Reset console state
+    auto& console = Console::get();
+    console._out << "\n";
+    console._multiline_input = "";
+    console._prompt = "!> ";
+    console._verbose = false;
+    // Restore program state stored in jmp_env set with sigsetjmp(2)
+    siglongjmp(jmp_env, 1);
+  }
 }
 
 // GNU readline interface to our commands
@@ -378,6 +466,9 @@ int main(int argc, char** argv) {
   using Return = opossum::Console::ReturnCode;
   auto& console = opossum::Console::get();
 
+  // Bind CTRL-C to behaviour specified in opossum::Console::handle_signal
+  std::signal(SIGINT, &opossum::Console::handle_signal);
+
   console.setPrompt("> ");
   console.setLogfile("console.log");
 
@@ -408,6 +499,10 @@ int main(int argc, char** argv) {
     console.out("HYRISE SQL Interface\n");
     console.out("Enter 'generate' to generate the TPC-C tables. Then, you can enter SQL queries.\n");
     console.out("Type 'help' for more information.\n\n");
+  }
+
+  // Set jmp_env to current program state in preparation for siglongjmp(2)
+  while (sigsetjmp(jmp_env, 1) != 0) {
   }
 
   // Main REPL loop
