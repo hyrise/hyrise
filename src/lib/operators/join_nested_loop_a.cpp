@@ -314,7 +314,7 @@ class JoinNestedLoopA::JoinNestedLoopAImpl : public AbstractJoinOperatorImpl {
             if (context->join_mode == JoinMode::Right || context->join_mode == JoinMode::Outer) {
               (*unmatched_rows_map_right)[current_right] = false;
             }
-            if (context->join_mode == JoinMode::Left  || context->join_mode == JoinMode::Outer) {
+            if (context->join_mode == JoinMode::Left || context->join_mode == JoinMode::Outer) {
               (*unmatched_rows_map_left)[current_left] = false;
             }
             write_poslists(context, row_left, row_right);
@@ -463,7 +463,7 @@ class JoinNestedLoopA::JoinNestedLoopAImpl : public AbstractJoinOperatorImpl {
           auto pos_list_right = std::make_shared<PosList>();
 
           pos_list_left->emplace_back(elem.first);
-          pos_list_right->emplace_back(RowID{ChunkID{0}, INVALID_CHUNK_OFFSET});
+          pos_list_right->emplace_back(NULL_ROW_ID);
 
           auto output_chunk = Chunk();
 
@@ -480,7 +480,7 @@ class JoinNestedLoopA::JoinNestedLoopAImpl : public AbstractJoinOperatorImpl {
           auto pos_list_left = std::make_shared<PosList>();
           auto pos_list_right = std::make_shared<PosList>();
 
-          pos_list_left->emplace_back(RowID{ChunkID{0}, INVALID_CHUNK_OFFSET});
+          pos_list_left->emplace_back(NULL_ROW_ID);
           pos_list_right->emplace_back(elem.first);
 
           auto output_chunk = Chunk();
@@ -500,9 +500,8 @@ class JoinNestedLoopA::JoinNestedLoopAImpl : public AbstractJoinOperatorImpl {
   This method writes the actual output chunks for either the Left or the Right side. It'll write ReferenceColumns for
   all the columns of the input table. The way we currently handle null values forces us to pass in whether there are
   null values in this poslist:
-  Null values are represented by a RowID following the following scheme: RowID{SomeChunkID, INVALID_CHUNK_OFFSET}. When
-  we write the null values for (Left/Right) Outer Joins we simply use a ChunkID=0, which does not necessarily need to
-  exist. Thus we cannot be sure to find an actual column in the input table for that ChunkID.
+  When we write the null values for (Left/Right) Outer Joins we simply use a ChunkID=0, which does not necessarily need
+  to exist. Thus we cannot be sure to find an actual column in the input table for that ChunkID.
   Additionally, we think that the implementation of null values is not final yet and a proper implementation of null
   values might require changes here.
   */
