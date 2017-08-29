@@ -147,12 +147,12 @@ std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::_translate_aggregate_
     // The Projection will only select columns used in the Aggregate, i.e., GROUP BY columns and expressions.
     // Unused columns are skipped – therefore, the ColumnIDs might change.
     // In fact, they will be the first columns of the Projection.
-    for (uint16_t column_id = 0u; column_id < groupby_columns.size(); column_id++) {
-      groupby_columns[column_id] = ColumnID{column_id};
+    for (ColumnID column_id{0}; column_id < groupby_columns.size(); column_id++) {
+      groupby_columns[column_id] = column_id;
     }
 
-    // Counter to generate unique aliases for arithmetic expressions.
-    auto current_column_id = static_cast<uint16_t>(groupby_columns.size());
+    // Aggregates will get consecutive ColumnIDs.
+    auto current_column_id = static_cast<ColumnID::base_type>(groupby_columns.size());
 
     for (auto &aggregate_expression : aggregate_expressions) {
       DebugAssert(aggregate_expression->type() == ExpressionType::FunctionIdentifier, "Expression is not a function.");
