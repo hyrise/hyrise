@@ -266,8 +266,8 @@ class RadixPartitionSort {
   * be sorted and not only the partitions in themselves.
   **/
   std::pair<std::shared_ptr<MaterializedColumnList<T>>, std::shared_ptr<MaterializedColumnList<T>>> _range_partition(
-                                                                std::shared_ptr<MaterializedColumnList<T>> input_left,
-                                                                std::shared_ptr<MaterializedColumnList<T>> input_right) {
+                                                              std::shared_ptr<MaterializedColumnList<T>> input_left,
+                                                              std::shared_ptr<MaterializedColumnList<T>> input_right) {
     std::vector<std::map<T, size_t>> sample_values(_partition_count - 1);
 
     _pick_sample_values(sample_values, input_left);
