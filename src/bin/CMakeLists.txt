@@ -14,6 +14,8 @@ target_link_libraries(
 add_executable(
     opossumPlayground
 
+    EXCLUDE_FROM_ALL
+
     playground.cpp
 )
 target_link_libraries(
@@ -22,16 +24,18 @@ target_link_libraries(
 )
 
 # Configure tpccTableGenerator
-add_executable(tpccTableGenerator tpcc_table_generator.cpp)
+add_executable(tpccTableGenerator EXCLUDE_FROM_ALL tpcc_table_generator.cpp)
 target_link_libraries(tpccTableGenerator opossum tpcc)
 
 # Configure tpchTableGenerator
-add_executable(tpchTableGenerator tpch_table_generator.cpp)
+add_executable(tpchTableGenerator EXCLUDE_FROM_ALL tpch_table_generator.cpp)
 target_link_libraries(tpchTableGenerator opossum tpch)
 
 # Configure client
 add_executable(
     opossumClient
+
+    EXCLUDE_FROM_ALL
 
     client.cpp
     client.hpp
@@ -52,4 +56,17 @@ target_link_libraries(
     opossumPlaygroundStatistics
     opossum
     tpcc
+)
+# Configure Console
+add_executable(
+    opossumConsole
+
+    console.cpp
+    console.hpp
+)
+target_link_libraries(
+    opossumConsole
+    opossum
+    tpcc
+    readline
 )

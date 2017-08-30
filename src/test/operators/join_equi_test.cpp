@@ -34,10 +34,10 @@ TYPED_TEST_CASE(JoinEquiTest, JoinEquiTypes);
 
 TYPED_TEST(JoinEquiTest, WrongJoinOperator) {
   if (!IS_DEBUG) return;
-  EXPECT_THROW(std::make_shared<JoinHash>(this->_table_wrapper_a, this->_table_wrapper_b,
-                                          std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}),
-                                          ScanType::OpGreaterThan, JoinMode::Left),
-               std::logic_error);
+  EXPECT_THROW(
+      std::make_shared<JoinHash>(this->_table_wrapper_a, this->_table_wrapper_b, JoinMode::Left,
+                                 std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}), ScanType::OpGreaterThan),
+      std::logic_error);
 }
 
 TYPED_TEST(JoinEquiTest, LeftJoin) {
@@ -213,8 +213,8 @@ TYPED_TEST(JoinEquiTest, MultiJoinOnReferenceLeft) {
   auto scan_c = std::make_shared<TableScan>(this->_table_wrapper_h, ColumnID{0}, ScanType::OpGreaterThanEquals, 0);
   scan_c->execute();
 
-  auto join = std::make_shared<TypeParam>(scan_a, scan_b, std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}),
-                                          ScanType::OpEquals, JoinMode::Inner);
+  auto join = std::make_shared<TypeParam>(scan_a, scan_b, JoinMode::Inner,
+                                          std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}), ScanType::OpEquals);
   join->execute();
 
   this->template test_join_output<TypeParam>(
@@ -231,8 +231,8 @@ TYPED_TEST(JoinEquiTest, MultiJoinOnReferenceRight) {
   auto scan_c = std::make_shared<TableScan>(this->_table_wrapper_h, ColumnID{0}, ScanType::OpGreaterThanEquals, 0);
   scan_c->execute();
 
-  auto join = std::make_shared<TypeParam>(scan_a, scan_b, std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}),
-                                          ScanType::OpEquals, JoinMode::Inner);
+  auto join = std::make_shared<TypeParam>(scan_a, scan_b, JoinMode::Inner,
+                                          std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}), ScanType::OpEquals);
   join->execute();
 
   this->template test_join_output<TypeParam>(
@@ -249,8 +249,8 @@ TYPED_TEST(JoinEquiTest, MultiJoinOnReferenceLeftFiltered) {
   auto scan_c = std::make_shared<TableScan>(this->_table_wrapper_h, ColumnID{0}, ScanType::OpGreaterThanEquals, 0);
   scan_c->execute();
 
-  auto join = std::make_shared<TypeParam>(scan_a, scan_b, std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}),
-                                          ScanType::OpEquals, JoinMode::Inner);
+  auto join = std::make_shared<TypeParam>(scan_a, scan_b, JoinMode::Inner,
+                                          std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}), ScanType::OpEquals);
   join->execute();
 
   this->template test_join_output<TypeParam>(
@@ -259,9 +259,8 @@ TYPED_TEST(JoinEquiTest, MultiJoinOnReferenceLeftFiltered) {
 }
 
 TYPED_TEST(JoinEquiTest, MultiJoinOnValue) {
-  auto join = std::make_shared<TypeParam>(this->_table_wrapper_f, this->_table_wrapper_g,
-                                          std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}), ScanType::OpEquals,
-                                          JoinMode::Inner);
+  auto join = std::make_shared<TypeParam>(this->_table_wrapper_f, this->_table_wrapper_g, JoinMode::Inner,
+                                          std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}), ScanType::OpEquals);
   join->execute();
 
   this->template test_join_output<TypeParam>(
@@ -270,9 +269,8 @@ TYPED_TEST(JoinEquiTest, MultiJoinOnValue) {
 }
 
 TYPED_TEST(JoinEquiTest, MultiJoinOnRefOuter) {
-  auto join = std::make_shared<TypeParam>(this->_table_wrapper_f, this->_table_wrapper_g,
-                                          std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}), ScanType::OpEquals,
-                                          JoinMode::Left);
+  auto join = std::make_shared<TypeParam>(this->_table_wrapper_f, this->_table_wrapper_g, JoinMode::Left,
+                                          std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}), ScanType::OpEquals);
   join->execute();
 
   this->template test_join_output<TypeParam>(
@@ -281,9 +279,9 @@ TYPED_TEST(JoinEquiTest, MultiJoinOnRefOuter) {
 }
 
 TYPED_TEST(JoinEquiTest, MixNestedLoopAAndHash) {
-  auto join = std::make_shared<JoinNestedLoopA>(this->_table_wrapper_f, this->_table_wrapper_g,
-                                                std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}),
-                                                ScanType::OpEquals, JoinMode::Left);
+  auto join =
+      std::make_shared<JoinNestedLoopA>(this->_table_wrapper_f, this->_table_wrapper_g, JoinMode::Left,
+                                        std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}), ScanType::OpEquals);
   join->execute();
 
   this->template test_join_output<TypeParam>(
@@ -292,9 +290,9 @@ TYPED_TEST(JoinEquiTest, MixNestedLoopAAndHash) {
 }
 
 TYPED_TEST(JoinEquiTest, MixNestedLoopBAndHash) {
-  auto join = std::make_shared<JoinNestedLoopB>(this->_table_wrapper_f, this->_table_wrapper_g,
-                                                std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}),
-                                                ScanType::OpEquals, JoinMode::Left);
+  auto join =
+      std::make_shared<JoinNestedLoopB>(this->_table_wrapper_f, this->_table_wrapper_g, JoinMode::Left,
+                                        std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}), ScanType::OpEquals);
   join->execute();
 
   this->template test_join_output<TypeParam>(
@@ -303,21 +301,13 @@ TYPED_TEST(JoinEquiTest, MixNestedLoopBAndHash) {
 }
 
 TYPED_TEST(JoinEquiTest, MixHashAndNestedLoop) {
-  auto join = std::make_shared<JoinHash>(this->_table_wrapper_f, this->_table_wrapper_g,
-                                         std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}), ScanType::OpEquals,
-                                         JoinMode::Left);
+  auto join = std::make_shared<JoinHash>(this->_table_wrapper_f, this->_table_wrapper_g, JoinMode::Left,
+                                         std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}), ScanType::OpEquals);
   join->execute();
 
   this->template test_join_output<TypeParam>(
       join, this->_table_wrapper_h, std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}), ScanType::OpEquals,
       JoinMode::Inner, "src/test/tables/joinoperators/int_inner_multijoin_nlj_hash.tbl", 1);
-}
-
-TYPED_TEST(JoinEquiTest, ColumnsNotOptional) {
-  if (!IS_DEBUG) return;
-  EXPECT_THROW(std::make_shared<TypeParam>(this->_table_wrapper_f, this->_table_wrapper_g, nullopt, ScanType::OpEquals,
-                                           JoinMode::Left),
-               std::logic_error);
 }
 
 // Does not work yet due to problems with RowID implementation (RowIDs need to reference a table)

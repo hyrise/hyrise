@@ -186,11 +186,11 @@ std::shared_ptr<opossum::Table> TpccTableGenerator::generate_customer_table() {
   add_column<int>(table, "C_ID", cardinalities, [&](std::vector<size_t> indices) { return indices[2]; });
   add_column<int>(table, "C_D_ID", cardinalities, [&](std::vector<size_t> indices) { return indices[1]; });
   add_column<int>(table, "C_W_ID", cardinalities, [&](std::vector<size_t> indices) { return indices[0]; });
-  add_column<std::string>(table, "C_LAST", cardinalities,
-                          [&](std::vector<size_t> indices) { return _random_gen.last_name(indices[2]); });
-  add_column<std::string>(table, "C_MIDDLE", cardinalities, [&](std::vector<size_t>) { return "OE"; });
   add_column<std::string>(table, "C_FIRST", cardinalities,
                           [&](std::vector<size_t>) { return _random_gen.astring(8, 16); });
+  add_column<std::string>(table, "C_MIDDLE", cardinalities, [&](std::vector<size_t>) { return "OE"; });
+  add_column<std::string>(table, "C_LAST", cardinalities,
+                          [&](std::vector<size_t> indices) { return _random_gen.last_name(indices[2]); });
   add_column<std::string>(table, "C_STREET_1", cardinalities,
                           [&](std::vector<size_t>) { return _random_gen.astring(10, 20); });
   add_column<std::string>(table, "C_STREET_2", cardinalities,
@@ -264,10 +264,10 @@ std::shared_ptr<opossum::Table> TpccTableGenerator::generate_order_table(
   auto customer_permutation = _random_gen.permutation(0, NUM_CUSTOMERS_PER_DISTRICT);
 
   add_column<int>(table, "O_ID", cardinalities, [&](std::vector<size_t> indices) { return indices[2]; });
-  add_column<int>(table, "O_C_ID", cardinalities,
-                  [&](std::vector<size_t> indices) { return customer_permutation[indices[2]]; });
   add_column<int>(table, "O_D_ID", cardinalities, [&](std::vector<size_t> indices) { return indices[1]; });
   add_column<int>(table, "O_W_ID", cardinalities, [&](std::vector<size_t> indices) { return indices[0]; });
+  add_column<int>(table, "O_C_ID", cardinalities,
+                  [&](std::vector<size_t> indices) { return customer_permutation[indices[2]]; });
   add_column<int>(table, "O_ENTRY_D", cardinalities, [&](std::vector<size_t>) { return _current_date; });
   // TODO(anybody) -1 should be null
 
@@ -419,6 +419,40 @@ std::map<std::string, std::shared_ptr<opossum::Table>> TpccTableGenerator::gener
                                                                  {"ORDER", std::move(order_table)},
                                                                  {"ORDER-LINE", std::move(order_line_table)},
                                                                  {"NEW-ORDER", std::move(new_order_table)}});
+}
+
+/*
+ * This was introduced originally for the SQL REPL Console to be able to
+ * a) generate a TPC-C table by table name (e.g. ITEM, WAREHOUSE), and
+ * b) have all available table names browsable for the Console auto completion.
+ */
+TpccTableGeneratorFunctions TpccTableGenerator::tpcc_table_generator_functions() {
+  TpccTableGeneratorFunctions generators{
+      {"ITEM", []() { return tpcc::TpccTableGenerator().generate_items_table(); }},
+      {"WAREHOUSE", []() { return tpcc::TpccTableGenerator().generate_warehouse_table(); }},
+      {"STOCK", []() { return tpcc::TpccTableGenerator().generate_stock_table(); }},
+      {"DISTRICT", []() { return tpcc::TpccTableGenerator().generate_district_table(); }},
+      {"CUSTOMER", []() { return tpcc::TpccTableGenerator().generate_customer_table(); }},
+      {"HISTORY", []() { return tpcc::TpccTableGenerator().generate_history_table(); }},
+      {"ORDER", []() { return tpcc::TpccTableGenerator().generate_new_order_table(); }},
+      {"NEW-ORDER",
+       []() {
+         auto order_line_counts = tpcc::TpccTableGenerator().generate_order_line_counts();
+         return tpcc::TpccTableGenerator().generate_order_table(order_line_counts);
+       }},
+      {"ORDER-LINE", []() {
+         auto order_line_counts = tpcc::TpccTableGenerator().generate_order_line_counts();
+         return tpcc::TpccTableGenerator().generate_order_line_table(order_line_counts);
+       }}};
+  return generators;
+}
+
+std::shared_ptr<opossum::Table> TpccTableGenerator::generate_tpcc_table(const std::string &tablename) {
+  auto generators = TpccTableGenerator::tpcc_table_generator_functions();
+  if (generators.find(tablename) == generators.end()) {
+    return nullptr;
+  }
+  return generators[tablename]();
 }
 
 }  // namespace tpcc

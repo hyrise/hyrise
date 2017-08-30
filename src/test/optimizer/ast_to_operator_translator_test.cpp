@@ -28,6 +28,7 @@ class ASTToOperatorTranslatorTest : public BaseTest {
   void SetUp() override {
     StorageManager::get().add_table("table_int_float", load_table("src/test/tables/int_float.tbl", 0));
     StorageManager::get().add_table("table_int_float2", load_table("src/test/tables/int_float2.tbl", 0));
+    StorageManager::get().add_table("table_alias_name", load_table("src/test/tables/table_alias_name.tbl", 0));
   }
 
   void TearDown() override { StorageManager::get().reset(); }
@@ -44,7 +45,7 @@ TEST_F(ASTToOperatorTranslatorTest, StoredTableNode) {
 
 TEST_F(ASTToOperatorTranslatorTest, PredicateNodeUnaryScan) {
   const auto stored_table_node = std::make_shared<StoredTableNode>("table_int_float");
-  auto predicate_node = std::make_shared<PredicateNode>(ColumnID{0}, nullptr, ScanType::OpEquals, 42);
+  auto predicate_node = std::make_shared<PredicateNode>(ColumnID{0}, ScanType::OpEquals, 42);
   predicate_node->set_left_child(stored_table_node);
   const auto op = ASTToOperatorTranslator::get().translate_node(predicate_node);
 
@@ -58,8 +59,8 @@ TEST_F(ASTToOperatorTranslatorTest, PredicateNodeUnaryScan) {
 
 TEST_F(ASTToOperatorTranslatorTest, PredicateNodeBinaryScan) {
   const auto stored_table_node = std::make_shared<StoredTableNode>("table_int_float");
-  auto predicate_node = std::make_shared<PredicateNode>(ColumnID{0}, nullptr, ScanType::OpBetween,
-                                                        AllParameterVariant(42), AllTypeVariant(1337));
+  auto predicate_node =
+      std::make_shared<PredicateNode>(ColumnID{0}, ScanType::OpBetween, AllParameterVariant(42), AllTypeVariant(1337));
   predicate_node->set_left_child(stored_table_node);
   const auto op = ASTToOperatorTranslator::get().translate_node(predicate_node);
 
@@ -73,14 +74,15 @@ TEST_F(ASTToOperatorTranslatorTest, PredicateNodeBinaryScan) {
 
 TEST_F(ASTToOperatorTranslatorTest, ProjectionNode) {
   const auto stored_table_node = std::make_shared<StoredTableNode>("table_int_float");
-  auto projection_node =
-      std::make_shared<ProjectionNode>(std::vector<ColumnID>{ColumnID{0}}, std::vector<std::string>{"a"});
+  const auto expressions =
+      std::vector<std::shared_ptr<Expression>>{Expression::create_column_identifier(ColumnID{0}, {"a"})};
+  auto projection_node = std::make_shared<ProjectionNode>(expressions);
   projection_node->set_left_child(stored_table_node);
   const auto op = ASTToOperatorTranslator::get().translate_node(projection_node);
 
   const auto projection_op = std::dynamic_pointer_cast<Projection>(op);
   ASSERT_TRUE(projection_op);
-  EXPECT_EQ(projection_op->column_expressions().size(), 1);
+  EXPECT_EQ(projection_op->column_expressions().size(), 1u);
   EXPECT_EQ(projection_op->column_expressions()[0]->column_id(), ColumnID{0});
   EXPECT_EQ(*projection_op->column_expressions()[0]->alias(), "a");
 }
@@ -101,7 +103,7 @@ TEST_F(ASTToOperatorTranslatorTest, JoinNode) {
   const auto stored_table_node_left = std::make_shared<StoredTableNode>("table_int_float");
   const auto stored_table_node_right = std::make_shared<StoredTableNode>("table_int_float2");
   auto join_node =
-      std::make_shared<JoinNode>(std::make_pair(ColumnID{0}, ColumnID{0}), ScanType::OpEquals, JoinMode::Outer);
+      std::make_shared<JoinNode>(JoinMode::Outer, std::make_pair(ColumnID{0}, ColumnID{0}), ScanType::OpEquals);
   join_node->set_left_child(stored_table_node_left);
   join_node->set_right_child(stored_table_node_right);
   const auto op = ASTToOperatorTranslator::get().translate_node(join_node);
@@ -117,11 +119,10 @@ TEST_F(ASTToOperatorTranslatorTest, AggregateNodeNoArithmetics) {
   const auto stored_table_node = std::make_shared<StoredTableNode>("table_int_float");
 
   auto sum_expression =
-      ExpressionNode::create_function_reference("SUM", {ExpressionNode::create_column_reference(ColumnID{0})}, {});
-  auto aggregate_node =
-      std::make_shared<AggregateNode>(std::vector<AggregateColumnDefinition>{AggregateColumnDefinition{
-                                          sum_expression, optional<std::string>("sum_of_a")}},
-                                      std::vector<ColumnID>{});
+    Expression::create_function("SUM", {Expression::create_column_identifier(ColumnID{0})}, {"sum_of_a"});
+
+  auto aggregate_node = std::make_shared<AggregateNode>(std::vector<std::shared_ptr<Expression>>{sum_expression},
+                                                        std::vector<ColumnID>{});
   aggregate_node->set_left_child(stored_table_node);
 
   const auto op = ASTToOperatorTranslator::get().translate_node(aggregate_node);
@@ -129,7 +130,7 @@ TEST_F(ASTToOperatorTranslatorTest, AggregateNodeNoArithmetics) {
   const auto aggregate_op = std::dynamic_pointer_cast<Aggregate>(op);
   ASSERT_TRUE(aggregate_op);
   ASSERT_EQ(aggregate_op->aggregates().size(), 1u);
-  EXPECT_EQ(aggregate_op->groupby_columns().size(), 0u);
+  EXPECT_EQ(aggregate_op->groupby_column_ids().size(), 0u);
 
   const auto aggregate_definition = aggregate_op->aggregates()[0];
   EXPECT_EQ(aggregate_definition.column_id, ColumnID{0});
@@ -141,21 +142,18 @@ TEST_F(ASTToOperatorTranslatorTest, AggregateNodeWithArithmetics) {
   const auto stored_table_node = std::make_shared<StoredTableNode>("table_int_float");
 
   // Create expression "b * 2".
-  const auto expr_col_b = ExpressionNode::create_column_reference(ColumnID{1});
-  const auto expr_literal = ExpressionNode::create_literal(2);
-  const auto expr_multiplication = ExpressionNode::create_expression(ExpressionType::Multiplication);
-  expr_multiplication->set_left_child(expr_col_b);
-  expr_multiplication->set_right_child(expr_literal);
+  const auto expr_col_b = Expression::create_column_identifier(ColumnID{1});
+  const auto expr_literal = Expression::create_literal(2);
+  const auto expr_multiplication =
+      Expression::create_binary_operator(ExpressionType::Multiplication, expr_col_b, expr_literal);
 
   // Create aggregate with expression "SUM(b * 2)".
   // TODO(tim): Projection cannot handle expression `$a + $b`
   // because it is not able to handle columns with different data types.
   // Create issue with failing test.
-  auto sum_expression = ExpressionNode::create_function_reference("SUM", {expr_multiplication}, {});
-  auto aggregate_node =
-      std::make_shared<AggregateNode>(std::vector<AggregateColumnDefinition>{AggregateColumnDefinition{
-                                          sum_expression, optional<std::string>("sum_of_b_times_two")}},
-                                      std::vector<ColumnID>{ColumnID{0}});
+  auto sum_expression = Expression::create_function("SUM", {expr_multiplication}, {"sum_of_b_times_two"});
+  auto aggregate_node = std::make_shared<AggregateNode>(std::vector<std::shared_ptr<Expression>>{sum_expression},
+                                                        std::vector<ColumnID>{ColumnID{0}});
   aggregate_node->set_left_child(stored_table_node);
 
   const auto op = ASTToOperatorTranslator::get().translate_node(aggregate_node);
@@ -165,11 +163,11 @@ TEST_F(ASTToOperatorTranslatorTest, AggregateNodeWithArithmetics) {
   ASSERT_TRUE(aggregate_op);
   ASSERT_EQ(aggregate_op->aggregates().size(), 1u);
 
-  ASSERT_EQ(aggregate_op->groupby_columns().size(), 1u);
-  EXPECT_EQ(aggregate_op->groupby_columns()[0], ColumnID{0});
+  ASSERT_EQ(aggregate_op->groupby_column_ids().size(), 1u);
+  EXPECT_EQ(aggregate_op->groupby_column_ids()[0], ColumnID{0});
 
   const auto aggregate_definition = aggregate_op->aggregates()[0];
-  EXPECT_EQ(aggregate_definition.column_id, ColumnID{0});
+  EXPECT_EQ(aggregate_definition.column_id, ColumnID{1});
   EXPECT_EQ(aggregate_definition.function, AggregateFunction::Sum);
   EXPECT_EQ(aggregate_definition.alias, optional<std::string>("sum_of_b_times_two"));
 
@@ -182,27 +180,29 @@ TEST_F(ASTToOperatorTranslatorTest, AggregateNodeWithArithmetics) {
   ASSERT_TRUE(projection_op);
 
   const auto column_expressions = projection_op->column_expressions();
-  ASSERT_EQ(column_expressions.size(), 1u);
+  ASSERT_EQ(column_expressions.size(), 2u);
 
-  const auto column_expression = column_expressions[0];
-  // TODO(Sven): fix with new projection
-  EXPECT_EQ(column_expression->to_string(), "1*2");
-  EXPECT_EQ(*column_expression->alias(), "alias0");
+  const auto column_expression0 = column_expressions[0];
+  EXPECT_EQ(column_expression0->type(), ExpressionType::ColumnIdentifier);
+  EXPECT_EQ(column_expression0->column_id(), ColumnID{0});
+
+  const auto column_expression1 = column_expressions[1];
+  EXPECT_EQ(column_expression1->to_string(), "1*2");
+  EXPECT_EQ(column_expression1->alias(), nullopt);
 }
 
 TEST_F(ASTToOperatorTranslatorTest, MultipleNodesHierarchy) {
   const auto stored_table_node_left = std::make_shared<StoredTableNode>("table_int_float");
-  auto predicate_node_left =
-      std::make_shared<PredicateNode>(ColumnID{0}, nullptr, ScanType::OpEquals, AllParameterVariant(42));
+  auto predicate_node_left = std::make_shared<PredicateNode>(ColumnID{0}, ScanType::OpEquals, AllParameterVariant(42));
   predicate_node_left->set_left_child(stored_table_node_left);
 
   const auto stored_table_node_right = std::make_shared<StoredTableNode>("table_int_float2");
   auto predicate_node_right =
-      std::make_shared<PredicateNode>(ColumnID{1}, nullptr, ScanType::OpGreaterThan, AllParameterVariant(30.0));
+      std::make_shared<PredicateNode>(ColumnID{1}, ScanType::OpGreaterThan, AllParameterVariant(30.0));
   predicate_node_right->set_left_child(stored_table_node_right);
 
   auto join_node =
-      std::make_shared<JoinNode>(std::make_pair(ColumnID{0}, ColumnID{0}), ScanType::OpEquals, JoinMode::Inner);
+      std::make_shared<JoinNode>(JoinMode::Inner, std::make_pair(ColumnID{0}, ColumnID{0}), ScanType::OpEquals);
   join_node->set_left_child(predicate_node_left);
   join_node->set_right_child(predicate_node_right);
 

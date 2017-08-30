@@ -19,7 +19,7 @@ TableScan::TableScan(const std::shared_ptr<AbstractOperator> in, const ColumnID 
                      const AllParameterVariant value, const optional<AllTypeVariant> value2)
     : AbstractReadOnlyOperator(in), _column_id(column_id), _scan_type(scan_type), _value(value), _value2(value2) {}
 
-const ColumnID TableScan::column_id() const { return _column_id; }
+ColumnID TableScan::column_id() const { return _column_id; }
 
 ScanType TableScan::scan_type() const { return _scan_type; }
 
@@ -34,12 +34,6 @@ uint8_t TableScan::num_in_tables() const { return 1; }
 uint8_t TableScan::num_out_tables() const { return 1; }
 
 std::shared_ptr<const Table> TableScan::on_execute() {
-  auto input_left = input_table_left();
-
-  auto column_types = input_left->column_types();
-
-  auto type_string = input_table_left()->column_type(_column_id);
-
   _impl = make_unique_by_column_type<AbstractReadOnlyOperatorImpl, TableScanImpl>(
       input_table_left()->column_type(_column_id), _input_left, _column_id, _scan_type, _value, _value2);
   return _impl->on_execute();
@@ -188,11 +182,12 @@ class TableScan::TableScanImpl : public AbstractReadOnlyOperatorImpl {
     if (_is_constant_value_scan) {
       // column_a == 5
       casted_value1 = type_cast<T>(boost::get<AllTypeVariant>(_value));
-      if (_value2) casted_value2 = type_cast<T>(*_value2);
     } else {
       // column_a == column_b
       column_id2 = boost::get<ColumnID>(_value);
     }
+
+    if (_value2) casted_value2 = type_cast<T>(*_value2);
 
     for (ColumnID column_id{0}; column_id < in_table->col_count(); ++column_id) {
       output->add_column_definition(in_table->column_name(column_id), in_table->column_type(column_id));

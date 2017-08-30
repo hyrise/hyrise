@@ -71,7 +71,9 @@ class Table : private Noncopyable {
   // returns the vector of column types
   const std::vector<std::string> &column_types() const;
 
-  // returns the column with the given name
+  // Returns the column with the given name.
+  // This method is intended for debugging purposes only.
+  // It does not verify whether a column name is unambiguous.
   ColumnID column_id_by_name(const std::string &column_name) const;
 
   // return the maximum chunk size (cannot exceed ChunkOffset (uint32_t))

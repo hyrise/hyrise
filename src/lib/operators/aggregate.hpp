@@ -59,7 +59,7 @@ using AggregateKey = std::vector<AllTypeVariant>;
  */
 struct AggregateDefinition {
   AggregateDefinition(const ColumnID column_id, const AggregateFunction function,
-                      const optional<std::string> &alias = {});
+                      const optional<std::string> &alias = nullopt);
 
   ColumnID column_id;
   AggregateFunction function;
@@ -75,7 +75,7 @@ class Aggregate : public AbstractReadOnlyOperator {
             const std::vector<ColumnID> groupby_column_ids);
 
   const std::vector<AggregateDefinition> &aggregates() const;
-  const std::vector<ColumnID> &groupby_columns() const;
+  const std::vector<ColumnID> &groupby_column_ids() const;
 
   const std::string name() const override;
   uint8_t num_in_tables() const override;

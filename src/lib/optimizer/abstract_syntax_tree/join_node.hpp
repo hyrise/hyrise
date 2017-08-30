@@ -14,29 +14,40 @@
 
 namespace opossum {
 
-struct ColumnID;
-
 /**
  * This node type is used to represent any type of Join, including cross products.
- * The idea is that the optimizer is able to change the type of join if it sees fit.
+ * The idea is that the optimizer is able to decide on the physical join implementation.
  */
 class JoinNode : public AbstractASTNode {
  public:
-  JoinNode(optional<std::pair<ColumnID, ColumnID>> column_id, const ScanType scan_type, const JoinMode join_mode);
+  explicit JoinNode(const JoinMode join_mode);
 
-  std::string description() const override;
-
-  const std::vector<ColumnID> output_column_ids() const override;
-  const optional<ColumnID> find_column_id_for_column_identifier(ColumnIdentifier &column_identifier) const override;
+  JoinNode(const JoinMode join_mode, const std::pair<ColumnID, ColumnID> &join_column_ids, const ScanType scan_type);
 
   optional<std::pair<ColumnID, ColumnID>> join_column_ids() const;
-  ScanType scan_type() const;
+  optional<ScanType> scan_type() const;
   JoinMode join_mode() const;
 
+  std::string description() const override;
+  const std::vector<ColumnID> &output_column_id_to_input_column_id() const override;
+  const std::vector<std::string> &output_column_names() const override;
+
+  bool manages_table(const std::string &table_name) const override;
+  std::vector<ColumnID> get_output_column_ids_for_table(const std::string &table_name) const override;
+
+  optional<ColumnID> find_column_id_for_column_identifier_name(
+      const ColumnIdentifierName &column_identifier_name) const override;
+
+ protected:
+  void _on_child_changed() override;
+
  private:
-  optional<std::pair<ColumnID, ColumnID>> _join_column_ids;
-  ScanType _scan_type;
   JoinMode _join_mode;
+  optional<std::pair<ColumnID, ColumnID>> _join_column_ids;
+  optional<ScanType> _scan_type;
+
+  std::vector<ColumnID> _output_column_id_to_input_column_id;
+  std::vector<std::string> _output_column_names;
 };
 
 }  // namespace opossum

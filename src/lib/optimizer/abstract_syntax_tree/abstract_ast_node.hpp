@@ -10,13 +10,14 @@
 namespace opossum {
 
 struct ColumnID;
+class Expression;
 class TableStatistics;
 
 enum class ASTNodeType { Aggregate, Join, Predicate, Projection, Sort, StoredTable };
 
-struct ColumnIdentifier {
-  std::string table_name;
+struct ColumnIdentifierName {
   std::string column_name;
+  optional<std::string> table_name;
 };
 
 /**
@@ -52,22 +53,56 @@ class AbstractASTNode : public std::enable_shared_from_this<AbstractASTNode> {
   virtual const std::shared_ptr<TableStatistics> get_statistics_from(
       const std::shared_ptr<AbstractASTNode> &other_node) const;
 
-  virtual const std::vector<std::string> output_column_names() const;
-  virtual const std::vector<ColumnID> output_column_ids() const;
-  bool has_output_column(const std::string &column_name) const;
-  virtual const optional<ColumnID> find_column_id_for_column_identifier(ColumnIdentifier &column_identifier) const;
-  virtual const std::string table_identifier() const;
+  virtual const std::vector<std::string> &output_column_names() const;
+  // TODO(mp): BLOCKING - docs to mention that this is for testing only
+  virtual const std::vector<ColumnID> &output_column_id_to_input_column_id() const;
+  size_t num_output_columns() const;
+
+  // @{
+  /**
+   * AbstractASTNode::find_column_id_for_column_identifier() looks for the @param column_identifier_name in the columns
+   * this node outputs. If it can find it, it will be returned, otherwise nullopt is returned.
+   * AbstractASTNode::get_column_id_for_column_identifier() is more strict and will fail, if the
+   * @param column_identifier_name cannot be found.
+   *
+   * If a node outputs a column "x" but ALIASes it as, say, "y", these will only find
+   * ColumnIdentifier{"y", nullopt} and NEITHER ColumnIdentifier{"x", "table_name"} nor
+   * ColumnIdentifier{"y", "table_name"}
+   *
+   * NOTE: These functions will possibly result in a full recursive traversal of the ancestors of this node.
+   */
+  ColumnID get_column_id_for_column_identifier_name(const ColumnIdentifierName &column_identifier_name) const;
+  virtual optional<ColumnID> find_column_id_for_column_identifier_name(
+      const ColumnIdentifierName &column_identifier_name) const;
+  // @}
+
+  /**
+   * Checks whether this node or any of its ancestors retrieve the table @param table_name from the StorageManager or
+   * whether it or any of its ancestors assign an ALIAS with the name @param table_name.
+   * Used especially to figure out which of the children of a Join is referenced.
+   * @param table_name
+   * @return
+   */
+  virtual bool manages_table(const std::string &table_name) const;
+
+  /**
+   * Returns all ColumnIDs of this node that belong to a table.
+   * @param table_name can be an alias.
+   *
+   * @param table_name
+   * @return
+   */
+  virtual std::vector<ColumnID> get_output_column_ids_for_table(const std::string &table_name) const;
 
   void print(const uint32_t level = 0, std::ostream &out = std::cout) const;
   virtual std::string description() const = 0;
 
  protected:
+  virtual void _on_child_changed() {}
   virtual const std::shared_ptr<TableStatistics> _gather_statistics() const;
 
   // Used to easily differentiate between node types without pointer casts.
   ASTNodeType _type;
-  mutable std::vector<ColumnID> _output_column_ids;
-  mutable std::vector<std::string> _output_column_names;
 
  private:
   std::weak_ptr<AbstractASTNode> _parent;

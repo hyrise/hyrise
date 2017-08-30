@@ -14,7 +14,6 @@ namespace opossum {
 /**
  * Operator to calculate the cartesian product (unconditional join)
  * This is for demonstration purposes and for supporting the full relational algebra.
- * To avoid ambiguity for instance when doing a self-join, the column names can be prefixed
  *
  * Note: Product does not support null values at the moment
  */

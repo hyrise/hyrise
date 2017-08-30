@@ -26,7 +26,7 @@ Aggregate::Aggregate(const std::shared_ptr<AbstractOperator> in, const std::vect
 
 const std::vector<AggregateDefinition> &Aggregate::aggregates() const { return _aggregates; }
 
-const std::vector<ColumnID> &Aggregate::groupby_columns() const { return _groupby_column_ids; }
+const std::vector<ColumnID> &Aggregate::groupby_column_ids() const { return _groupby_column_ids; }
 
 const std::string Aggregate::name() const { return "Aggregate"; }
 
@@ -171,9 +171,9 @@ std::shared_ptr<const Table> Aggregate::on_execute() {
   _output = std::make_shared<Table>();
 
   // add group by columns
-  for (const auto column_index : _groupby_column_ids) {
-    const auto &column_type = input_table->column_type(column_index);
-    const auto &column_name = input_table->column_name(column_index);
+  for (const auto column_id : _groupby_column_ids) {
+    const auto &column_type = input_table->column_type(column_id);
+    const auto &column_name = input_table->column_name(column_id);
 
     _output->add_column_definition(column_name, column_type);
 

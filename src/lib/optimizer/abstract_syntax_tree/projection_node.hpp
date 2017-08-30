@@ -1,5 +1,6 @@
 #pragma once
 
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -8,23 +9,35 @@
 
 namespace opossum {
 
+class Expression;
 struct ColumnID;
 
 /**
  * Node type to represent common projections, i.e. without any aggregate functionality.
+ * It is, however, responsible to calculate arithmetic expressions.
  */
 class ProjectionNode : public AbstractASTNode {
  public:
-  // output_column_names is needed for alias support
-  explicit ProjectionNode(const std::vector<ColumnID>& column_ids, const std::vector<std::string>& output_column_names);
+  explicit ProjectionNode(const std::vector<std::shared_ptr<Expression>>& column_expressions);
+
+  const std::vector<std::shared_ptr<Expression>>& column_expressions() const;
 
   std::string description() const override;
+  const std::vector<ColumnID>& output_column_id_to_input_column_id() const override;
+  const std::vector<std::string>& output_column_names() const override;
 
-  const std::vector<ColumnID> output_column_ids() const override;
+  optional<ColumnID> find_column_id_for_column_identifier_name(
+      const ColumnIdentifierName& column_identifier_name) const override;
 
-  const std::vector<std::string> output_column_names() const override;
+  std::vector<ColumnID> get_output_column_ids_for_table(const std::string& table_name) const override;
 
-  const optional<ColumnID> find_column_id_for_column_identifier(ColumnIdentifier& column_identifier) const override;
+ protected:
+  void _on_child_changed() override;
+
+ private:
+  const std::vector<std::shared_ptr<Expression>> _column_expressions;
+  std::vector<ColumnID> _output_column_id_to_input_column_id;
+  std::vector<std::string> _output_column_names;
 };
 
 }  // namespace opossum

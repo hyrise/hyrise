@@ -21,7 +21,7 @@
 #include "operators/table_wrapper.hpp"
 #include "operators/update.hpp"
 #include "operators/validate.hpp"
-#include "optimizer/expression/expression_node.hpp"
+#include "optimizer/expression/expression.hpp"
 #include "scheduler/operator_task.hpp"
 #include "storage/storage_manager.hpp"
 #include "types.hpp"
@@ -176,13 +176,12 @@ TaskVector NewOrderRefImpl::get_get_customer_and_warehouse_tax_rate_tasks(const 
   // Both operators should have exactly one row -> Product operator should have smallest overhead.
   const auto join = std::make_shared<opossum::Product>(c_ts3, w_ts);
 
-  // "C_DISCOUNT", "C_LAST", "C_CREDIT", "W_TAX"
   const auto proj = std::make_shared<opossum::Projection>(
-      join, opossum::Projection::ColumnExpressions(
-                {opossum::ExpressionNode::create_column_reference(opossum::ColumnID{15}),
-                 opossum::ExpressionNode::create_column_reference(opossum::ColumnID{5}),
-                 opossum::ExpressionNode::create_column_reference(opossum::ColumnID{13}),
-                 opossum::ExpressionNode::create_column_reference(opossum::ColumnID{29})}));
+      join,
+      opossum::Projection::ColumnExpressions({opossum::Expression::create_column_identifier(opossum::ColumnID{15}),
+                                              opossum::Expression::create_column_identifier(opossum::ColumnID{5}),
+                                              opossum::Expression::create_column_identifier(opossum::ColumnID{13}),
+                                              opossum::Expression::create_column_identifier(opossum::ColumnID{28})}));
 
   // Tasks
   const auto c_gt_t = std::make_shared<opossum::OperatorTask>(c_gt);
@@ -227,11 +226,10 @@ TaskVector NewOrderRefImpl::get_get_district_tasks(const int32_t d_id, const int
   const auto ts1 = std::make_shared<opossum::TableScan>(v, opossum::ColumnID{0}, opossum::ScanType::OpEquals, d_id);
   const auto ts2 = std::make_shared<opossum::TableScan>(ts1, opossum::ColumnID{1}, opossum::ScanType::OpEquals, w_id);
 
-  // "D_NEXT_O_ID", "D_TAX"
   const auto proj = std::make_shared<opossum::Projection>(
       ts2,
-      opossum::Projection::ColumnExpressions({opossum::ExpressionNode::create_column_reference(opossum::ColumnID{10}),
-                                              opossum::ExpressionNode::create_column_reference(opossum::ColumnID{8})}));
+      opossum::Projection::ColumnExpressions({opossum::Expression::create_column_identifier(opossum::ColumnID{10}),
+                                              opossum::Expression::create_column_identifier(opossum::ColumnID{8})}));
 
   // Tasks
   const auto gt_t = std::make_shared<opossum::OperatorTask>(gt);
@@ -263,14 +261,13 @@ TaskVector NewOrderRefImpl::get_increment_next_order_id_tasks(const int32_t d_id
   const auto ts1 = std::make_shared<opossum::TableScan>(v, opossum::ColumnID{0}, opossum::ScanType::OpEquals, d_id);
   const auto ts2 = std::make_shared<opossum::TableScan>(ts1, opossum::ColumnID{1}, opossum::ScanType::OpEquals, d_w_id);
 
-  // "D_NEXT_O_ID"
   const auto original_rows = std::make_shared<opossum::Projection>(
-      ts2, opossum::Projection::ColumnExpressions(
-               {opossum::ExpressionNode::create_column_reference(opossum::ColumnID{10})}));
+      ts2,
+      opossum::Projection::ColumnExpressions({opossum::Expression::create_column_identifier(opossum::ColumnID{10})}));
 
-  const auto op = opossum::ExpressionNode::create_binary_operator(opossum::ExpressionType::Addition,
-                                                                  opossum::ExpressionNode::create_literal(d_next_o_id),
-                                                                  opossum::ExpressionNode::create_literal(1), {"fix"});
+  const auto op = opossum::Expression::create_binary_operator(opossum::ExpressionType::Addition,
+                                                              opossum::Expression::create_literal(d_next_o_id),
+                                                              opossum::Expression::create_literal(1), {"fix"});
   const auto updated_rows = std::make_shared<opossum::Projection>(ts2, opossum::Projection::ColumnExpressions{op});
 
   const auto update = std::make_shared<opossum::Update>("DISTRICT", original_rows, updated_rows);
@@ -376,12 +373,11 @@ TaskVector NewOrderRefImpl::get_get_item_info_tasks(const int32_t ol_i_id) {
   const auto v = std::make_shared<opossum::Validate>(gt);
   const auto ts = std::make_shared<opossum::TableScan>(v, opossum::ColumnID{0}, opossum::ScanType::OpEquals, ol_i_id);
 
-  // "I_PRICE", "I_NAME", "I_DATA"
   const auto proj = std::make_shared<opossum::Projection>(
       ts,
-      opossum::Projection::ColumnExpressions({opossum::ExpressionNode::create_column_reference(opossum::ColumnID{3}),
-                                              opossum::ExpressionNode::create_column_reference(opossum::ColumnID{2}),
-                                              opossum::ExpressionNode::create_column_reference(opossum::ColumnID{4})}));
+      opossum::Projection::ColumnExpressions({opossum::Expression::create_column_identifier(opossum::ColumnID{3}),
+                                              opossum::Expression::create_column_identifier(opossum::ColumnID{2}),
+                                              opossum::Expression::create_column_identifier(opossum::ColumnID{4})}));
 
   // Tasks
   auto gt_t = std::make_shared<opossum::OperatorTask>(gt);
@@ -416,15 +412,14 @@ TaskVector NewOrderRefImpl::get_get_stock_info_tasks(const int32_t ol_i_id, cons
 
   std::string s_dist_xx = d_id < 10 ? "S_DIST_0" + std::to_string(d_id) : "S_DIST_" + std::to_string(d_id);
 
-  // "S_QUANTITY", "S_DATA", "S_YTD", "S_ORDER_CNT", "S_REMOTE_CNT", s_dist_xx
   const auto proj = std::make_shared<opossum::Projection>(
-      ts2, opossum::Projection::ColumnExpressions(
-               {opossum::ExpressionNode::create_column_reference(opossum::ColumnID{2}),
-                opossum::ExpressionNode::create_column_reference(opossum::ColumnID{16}),
-                opossum::ExpressionNode::create_column_reference(opossum::ColumnID{3}),
-                opossum::ExpressionNode::create_column_reference(opossum::ColumnID{4}),
-                opossum::ExpressionNode::create_column_reference(opossum::ColumnID{5}),
-                opossum::ExpressionNode::create_column_reference(opossum::ColumnID{d_id + 5})}));
+      ts2, opossum::Projection::ColumnExpressions({opossum::Expression::create_column_identifier(opossum::ColumnID{2}),
+                                                   opossum::Expression::create_column_identifier(opossum::ColumnID{16}),
+                                                   opossum::Expression::create_column_identifier(opossum::ColumnID{13}),
+                                                   opossum::Expression::create_column_identifier(opossum::ColumnID{14}),
+                                                   opossum::Expression::create_column_identifier(opossum::ColumnID{15}),
+                                                   opossum::Expression::create_column_identifier(opossum::ColumnID{
+                                                       static_cast<opossum::ColumnID::base_type>(d_id + 2)})}));
 
   // Tasks
   auto gt_t = std::make_shared<opossum::OperatorTask>(gt);
@@ -459,13 +454,12 @@ TaskVector NewOrderRefImpl::get_update_stock_tasks(const int32_t s_quantity, con
   const auto ts2 =
       std::make_shared<opossum::TableScan>(ts1, opossum::ColumnID{1}, opossum::ScanType::OpEquals, ol_supply_w_id);
 
-  // "S_QUANTITY"
   const auto original_rows = std::make_shared<opossum::Projection>(
       ts2,
-      opossum::Projection::ColumnExpressions({opossum::ExpressionNode::create_column_reference(opossum::ColumnID{2})}));
+      opossum::Projection::ColumnExpressions({opossum::Expression::create_column_identifier(opossum::ColumnID{2})}));
 
   const auto updated_rows = std::make_shared<opossum::Projection>(
-      ts2, opossum::Projection::ColumnExpressions({opossum::ExpressionNode::create_literal(s_quantity, {"fix"})}));
+      ts2, opossum::Projection::ColumnExpressions({opossum::Expression::create_literal(s_quantity, {"fix"})}));
 
   const auto update = std::make_shared<opossum::Update>("STOCK", original_rows, updated_rows);
 

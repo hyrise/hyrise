@@ -58,7 +58,7 @@ TEST_F(SQLToASTTranslatorTest, SelectStarAllTest) {
   auto result_node = compile_query(query);
 
   std::vector<ColumnID> expected_columns{ColumnID{0}, ColumnID{1}};
-  EXPECT_EQ(expected_columns, result_node->output_column_ids());
+  EXPECT_EQ(expected_columns, result_node->output_column_id_to_input_column_id());
 
   EXPECT_EQ(result_node->type(), ASTNodeType::Projection);
 
@@ -70,7 +70,8 @@ TEST_F(SQLToASTTranslatorTest, SelectStarAllTest) {
 }
 
 /*
- * ExpressionNodes are able to handle this kind of expression. However, a PredicateNode needs the parsed expression as
+ * Opossums's Expressions are able to handle this kind of expression. However, a PredicateNode needs the parsed
+ * expression as
  * input. And it does not support nested Expressions, such as '1234 + 1'.
  * This is why this test is currently not supported. It will be enabled once we are able to parse these expressions
  * in the translator.
@@ -82,42 +83,42 @@ TEST_F(SQLToASTTranslatorTest, DISABLED_ExpressionTest) {
   EXPECT_EQ(result_node->type(), ASTNodeType::Projection);
   EXPECT_FALSE(result_node->right_child());
 
-  auto ts_node_1 = result_node->left_child();
+  auto ts_node_1 = std::dynamic_pointer_cast<PredicateNode>(result_node->left_child());
   EXPECT_EQ(ts_node_1->type(), ASTNodeType::Predicate);
   EXPECT_FALSE(ts_node_1->right_child());
-
-  auto predicate = std::static_pointer_cast<PredicateNode>(ts_node_1)->predicate();
-  EXPECT_EQ(predicate->type(), ExpressionType::Equals);
+  EXPECT_EQ(ts_node_1->column_id(), ColumnID{0});
+  EXPECT_EQ(ts_node_1->scan_type(), ScanType::OpEquals);
+  // TODO(anybody): once this is implemented, the value side has to be checked.
 }
 
-TEST_F(SQLToASTTranslatorTest, ExpressionStringTest) {
+TEST_F(SQLToASTTranslatorTest, TwoColumnFilter) {
   const auto query = "SELECT * FROM table_a WHERE a = \"b\"";
   auto result_node = compile_query(query);
 
   EXPECT_EQ(result_node->type(), ASTNodeType::Projection);
   EXPECT_FALSE(result_node->right_child());
 
-  auto ts_node_1 = result_node->left_child();
+  auto ts_node_1 = std::static_pointer_cast<PredicateNode>(result_node->left_child());
   EXPECT_EQ(ts_node_1->type(), ASTNodeType::Predicate);
   EXPECT_FALSE(ts_node_1->right_child());
-
-  auto predicate = std::static_pointer_cast<PredicateNode>(ts_node_1)->predicate();
-  EXPECT_EQ(predicate->type(), ExpressionType::Equals);
+  EXPECT_EQ(ts_node_1->scan_type(), ScanType::OpEquals);
+  EXPECT_EQ(ts_node_1->column_id(), ColumnID{0});
+  EXPECT_EQ(ts_node_1->value(), AllParameterVariant{ColumnID{1}});
 }
 
-TEST_F(SQLToASTTranslatorTest, ExpressionStringTest2) {
+TEST_F(SQLToASTTranslatorTest, ExpressionStringTest) {
   const auto query = "SELECT * FROM table_a WHERE a = 'b'";
   auto result_node = compile_query(query);
 
   EXPECT_EQ(result_node->type(), ASTNodeType::Projection);
   EXPECT_FALSE(result_node->right_child());
 
-  auto ts_node_1 = result_node->left_child();
+  auto ts_node_1 = std::static_pointer_cast<PredicateNode>(result_node->left_child());
   EXPECT_EQ(ts_node_1->type(), ASTNodeType::Predicate);
   EXPECT_FALSE(ts_node_1->right_child());
-
-  auto predicate = std::static_pointer_cast<PredicateNode>(ts_node_1)->predicate();
-  EXPECT_EQ(predicate->type(), ExpressionType::Equals);
+  EXPECT_EQ(ts_node_1->column_id(), ColumnID{0});
+  EXPECT_EQ(ts_node_1->scan_type(), ScanType::OpEquals);
+  EXPECT_EQ(ts_node_1->value(), AllParameterVariant{std::string{"b"}});
 }
 
 TEST_F(SQLToASTTranslatorTest, SelectWithAndCondition) {
@@ -149,10 +150,10 @@ TEST_F(SQLToASTTranslatorTest, AggregateWithGroupBy) {
   EXPECT_FALSE(result_node->right_child());
 
   const auto aggregate_node = std::dynamic_pointer_cast<AggregateNode>(result_node);
-  EXPECT_EQ(aggregate_node->aggregates().size(), 1u);
+  EXPECT_EQ(aggregate_node->aggregate_expressions().size(), 1u);
   const std::vector<ColumnID> groupby_columns = {ColumnID{0}};
-  EXPECT_EQ(aggregate_node->groupby_columns(), groupby_columns);
-  EXPECT_EQ(aggregate_node->aggregates().at(0).alias, std::string("s"));
+  EXPECT_EQ(aggregate_node->groupby_column_ids(), groupby_columns);
+  EXPECT_EQ(aggregate_node->aggregate_expressions().at(0)->alias(), std::string("s"));
 
   auto t_node_1 = result_node->left_child();
   EXPECT_EQ(t_node_1->type(), ASTNodeType::StoredTable);
@@ -174,10 +175,10 @@ TEST_F(SQLToASTTranslatorTest, AggregateWithExpression) {
   EXPECT_FALSE(result_node->right_child());
 
   const auto aggregate_node = std::dynamic_pointer_cast<AggregateNode>(result_node);
-  EXPECT_EQ(aggregate_node->aggregates().size(), 2u);
-  EXPECT_EQ(aggregate_node->groupby_columns().size(), 0u);
-  EXPECT_EQ(aggregate_node->aggregates().at(0).alias, std::string("s"));
-  EXPECT_EQ(aggregate_node->aggregates().at(1).alias, std::string("f"));
+  EXPECT_EQ(aggregate_node->aggregate_expressions().size(), 2u);
+  EXPECT_EQ(aggregate_node->groupby_column_ids().size(), 0u);
+  EXPECT_EQ(aggregate_node->aggregate_expressions().at(0)->alias(), std::string("s"));
+  EXPECT_EQ(aggregate_node->aggregate_expressions().at(1)->alias(), std::string("f"));
 
   auto t_node_1 = result_node->left_child();
   EXPECT_EQ(t_node_1->type(), ASTNodeType::StoredTable);
@@ -211,8 +212,8 @@ TEST_F(SQLToASTTranslatorTest, SelectInnerJoin) {
 
   EXPECT_EQ(result_node->type(), ASTNodeType::Projection);
   auto projection_node = std::dynamic_pointer_cast<ProjectionNode>(result_node);
+  EXPECT_EQ(projection_node->num_output_columns(), 4u);
   std::vector<std::string> output_columns = {"a", "b", "a", "b"};
-  EXPECT_EQ(projection_node->output_column_ids().size(), 4);
   EXPECT_EQ(projection_node->output_column_names(), output_columns);
 
   EXPECT_EQ(result_node->left_child()->type(), ASTNodeType::Join);

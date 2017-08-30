@@ -16,18 +16,17 @@
 #include "utils/assert.hpp"
 
 namespace opossum {
+
 JoinNestedLoopA::JoinNestedLoopA(const std::shared_ptr<const AbstractOperator> left,
-                                 const std::shared_ptr<const AbstractOperator> right,
-                                 optional<std::pair<ColumnID, ColumnID>> column_ids, const ScanType scan_type,
-                                 const JoinMode mode)
-    : AbstractJoinOperator(left, right, column_ids, scan_type, mode) {
-  DebugAssert(
-      (mode != JoinMode::Cross),
-      "JoinNestedLoopA: this operator does not support Cross Joins, the optimizer should use Product operator.");
-  DebugAssert((_mode != JoinMode::Natural), "NestedLoopJoin: this operator currently does not support Natural Joins.");
-  DebugAssert(static_cast<bool>(column_ids),
-              "NestedLoopJoin: optional column ids are only supported for Cross and Natural Joins.");
+                                 const std::shared_ptr<const AbstractOperator> right, const JoinMode mode)
+    : AbstractJoinOperator(left, right, mode) {
+  Fail("Natural and Cross Joins are currently not supported by this operator.");
 }
+
+JoinNestedLoopA::JoinNestedLoopA(const std::shared_ptr<const AbstractOperator> left,
+                                 const std::shared_ptr<const AbstractOperator> right, const JoinMode mode,
+                                 const std::pair<ColumnID, ColumnID> &column_ids, const ScanType scan_type)
+    : AbstractJoinOperator(left, right, mode, column_ids, scan_type) {}
 
 const std::string JoinNestedLoopA::name() const { return "JoinNestedLoopA"; }
 
@@ -36,15 +35,20 @@ uint8_t JoinNestedLoopA::num_in_tables() const { return 2; }
 uint8_t JoinNestedLoopA::num_out_tables() const { return 1; }
 
 std::shared_ptr<AbstractOperator> JoinNestedLoopA::recreate(const std::vector<AllParameterVariant> &args) const {
-  return std::make_shared<JoinNestedLoopA>(_input_left->recreate(args), _input_right->recreate(args), _column_ids,
-                                           _scan_type, _mode);
+  if (_column_ids && _scan_type) {
+    return std::make_shared<JoinNestedLoopA>(_input_left->recreate(args), _input_right->recreate(args), _mode,
+                                             *_column_ids, *_scan_type);
+  }
+
+  return std::make_shared<JoinNestedLoopA>(_input_left->recreate(args), _input_right->recreate(args), _mode);
 }
 
 std::shared_ptr<const Table> JoinNestedLoopA::on_execute() {
-  const auto &type_left = input_table_left()->column_type(_column_ids->first);
-  const auto &type_right = input_table_right()->column_type(_column_ids->second);
+  DebugAssert(static_cast<bool>(_column_ids), "Join columns not specified.");
+  const auto &type_left = input_table_left()->column_type((*_column_ids).first);
+  const auto &type_right = input_table_right()->column_type((*_column_ids).second);
   _impl = make_unique_by_column_types<AbstractReadOnlyOperatorImpl, JoinNestedLoopAImpl>(
-      type_left, type_right, _input_left, _input_right, *_column_ids, _scan_type, _mode);
+      type_left, type_right, _input_left, _input_right, _mode, *_column_ids, *_scan_type);
   return _impl->on_execute();
 }
 
@@ -53,14 +57,14 @@ template <typename LeftType, typename RightType>
 class JoinNestedLoopA::JoinNestedLoopAImpl : public AbstractJoinOperatorImpl {
  public:
   JoinNestedLoopAImpl(const std::shared_ptr<const AbstractOperator> left,
-                      const std::shared_ptr<const AbstractOperator> right,
-                      const std::pair<ColumnID, ColumnID> &column_ids, const ScanType scan_type, const JoinMode mode)
+                      const std::shared_ptr<const AbstractOperator> right, const JoinMode mode,
+                      const std::pair<ColumnID, ColumnID> &column_ids, const ScanType scan_type)
       : _left_in_table(left->get_output()),
         _right_in_table(right->get_output()),
+        _mode(mode),
         _left_column_id(column_ids.first),
         _right_column_id(column_ids.second),
         _scan_type(scan_type),
-        _mode(mode),
         _output_table(std::make_shared<Table>()) {
     // Parsing the join operator
     switch (_scan_type) {
@@ -96,16 +100,17 @@ class JoinNestedLoopA::JoinNestedLoopAImpl : public AbstractJoinOperatorImpl {
   virtual ~JoinNestedLoopAImpl() = default;
   /*
   We need to use the Visitor Pattern to identify column types. We therefor store information about the join in this
-  context. Below we have two childs of JoinNestedLoopBContext for BuilderLeft and BuilderRight.
+  context. Below we have two childs of JoinNestedLoopAContext for BuilderLeft and BuilderRight.
   Both have a common constructor interface, but differ in the way they initialize their members.
   */
-  struct JoinNestedLoopBContext : ColumnVisitableContext {
-    JoinNestedLoopBContext() {}
+  struct JoinNestedLoopAContext : ColumnVisitableContext {
+    JoinNestedLoopAContext() {}
 
-    JoinNestedLoopBContext(std::shared_ptr<BaseColumn> coleft, std::shared_ptr<BaseColumn> coright, ChunkID left_id,
+    JoinNestedLoopAContext(std::shared_ptr<BaseColumn> coleft, std::shared_ptr<BaseColumn> coright, ChunkID left_id,
                            ChunkID right_id, std::shared_ptr<PosList> left, std::shared_ptr<PosList> right,
                            JoinMode mode, std::function<bool(LeftType, RightType)> compare,
-                           std::shared_ptr<std::map<RowID, bool>> null_value_rows,
+                           std::shared_ptr<std::map<RowID, bool>> null_value_rows_left,
+                           std::shared_ptr<std::map<RowID, bool>> null_value_rows_right,
                            std::shared_ptr<std::vector<ChunkOffset>> filter_left = nullptr,
                            std::shared_ptr<std::vector<ChunkOffset>> filter_right = nullptr)
         : column_left(coleft),
@@ -118,7 +123,8 @@ class JoinNestedLoopA::JoinNestedLoopAImpl : public AbstractJoinOperatorImpl {
           compare_func(compare),
           chunk_offsets_in_left(filter_left),
           chunk_offsets_in_right(filter_right),
-          rows_potentially_joined_with_null_values(null_value_rows) {}
+          rows_potentially_joined_with_null_values_left(null_value_rows_left),
+          rows_potentially_joined_with_null_values_right(null_value_rows_right) {}
 
     std::shared_ptr<BaseColumn> column_left;
     std::shared_ptr<BaseColumn> column_right;
@@ -132,15 +138,16 @@ class JoinNestedLoopA::JoinNestedLoopAImpl : public AbstractJoinOperatorImpl {
     std::function<LeftType(ChunkOffset)> get_left_column_value;
     std::shared_ptr<std::vector<ChunkOffset>> chunk_offsets_in_left;
     std::shared_ptr<std::vector<ChunkOffset>> chunk_offsets_in_right;
-    std::shared_ptr<std::map<RowID, bool>> rows_potentially_joined_with_null_values;
+    std::shared_ptr<std::map<RowID, bool>> rows_potentially_joined_with_null_values_left;
+    std::shared_ptr<std::map<RowID, bool>> rows_potentially_joined_with_null_values_right;
   };
 
   // separate constructor for use in ReferenceColumn::visit_dereferenced
-  struct JoinNestedLoopBLeftContext : public JoinNestedLoopBContext {
-    JoinNestedLoopBLeftContext(std::shared_ptr<BaseColumn> referenced_column, const std::shared_ptr<const Table>,
+  struct JoinNestedLoopALeftContext : public JoinNestedLoopAContext {
+    JoinNestedLoopALeftContext(std::shared_ptr<BaseColumn> referenced_column, const std::shared_ptr<const Table>,
                                std::shared_ptr<ColumnVisitableContext> base_context, ChunkID chunk_id,
                                std::shared_ptr<std::vector<ChunkOffset>> chunk_offsets) {
-      auto ctx = std::static_pointer_cast<JoinNestedLoopBContext>(base_context);
+      auto ctx = std::static_pointer_cast<JoinNestedLoopAContext>(base_context);
 
       this->column_left = referenced_column;
       this->column_right = ctx->column_right;
@@ -152,17 +159,18 @@ class JoinNestedLoopA::JoinNestedLoopAImpl : public AbstractJoinOperatorImpl {
       this->compare_func = ctx->compare_func;
       this->size_left = ctx->size_left;
       this->get_left_column_value = ctx->get_left_column_value;
-      this->rows_potentially_joined_with_null_values = ctx->rows_potentially_joined_with_null_values;
+      this->rows_potentially_joined_with_null_values_left = ctx->rows_potentially_joined_with_null_values_left;
+      this->rows_potentially_joined_with_null_values_right = ctx->rows_potentially_joined_with_null_values_right;
       this->chunk_offsets_in_left = chunk_offsets;
     }
   };
 
   // separate constructor for use in ReferenceColumn::visit_dereferenced
-  struct JoinNestedLoopBRightContext : public JoinNestedLoopBContext {
-    JoinNestedLoopBRightContext(std::shared_ptr<BaseColumn> referenced_column, const std::shared_ptr<const Table>,
+  struct JoinNestedLoopARightContext : public JoinNestedLoopAContext {
+    JoinNestedLoopARightContext(std::shared_ptr<BaseColumn> referenced_column, const std::shared_ptr<const Table>,
                                 std::shared_ptr<ColumnVisitableContext> base_context, ChunkID chunk_id,
                                 std::shared_ptr<std::vector<ChunkOffset>> chunk_offsets) {
-      auto ctx = std::static_pointer_cast<JoinNestedLoopBContext>(base_context);
+      auto ctx = std::static_pointer_cast<JoinNestedLoopAContext>(base_context);
 
       this->column_left = ctx->column_left;
       this->column_right = referenced_column;
@@ -174,7 +182,8 @@ class JoinNestedLoopA::JoinNestedLoopAImpl : public AbstractJoinOperatorImpl {
       this->compare_func = ctx->compare_func;
       this->size_left = ctx->size_left;
       this->get_left_column_value = ctx->get_left_column_value;
-      this->rows_potentially_joined_with_null_values = ctx->rows_potentially_joined_with_null_values;
+      this->rows_potentially_joined_with_null_values_left = ctx->rows_potentially_joined_with_null_values_left;
+      this->rows_potentially_joined_with_null_values_right = ctx->rows_potentially_joined_with_null_values_right;
       this->chunk_offsets_in_left = ctx->chunk_offsets_in_left;
       this->chunk_offsets_in_right = chunk_offsets;
     }
@@ -196,7 +205,7 @@ class JoinNestedLoopA::JoinNestedLoopAImpl : public AbstractJoinOperatorImpl {
   */
   struct BuilderRight : public ColumnVisitable {
     void handle_value_column(BaseColumn &, std::shared_ptr<ColumnVisitableContext> context) override {
-      auto ctx = std::static_pointer_cast<JoinNestedLoopBContext>(context);
+      auto ctx = std::static_pointer_cast<JoinNestedLoopAContext>(context);
 
       auto vc_right = std::static_pointer_cast<ValueColumn<RightType>>(ctx->column_right);
       const auto &right_values = vc_right->values();
@@ -207,7 +216,7 @@ class JoinNestedLoopA::JoinNestedLoopAImpl : public AbstractJoinOperatorImpl {
     }
 
     void handle_dictionary_column(BaseColumn &, std::shared_ptr<ColumnVisitableContext> context) override {
-      auto ctx = std::static_pointer_cast<JoinNestedLoopBContext>(context);
+      auto ctx = std::static_pointer_cast<JoinNestedLoopAContext>(context);
 
       auto dc_right = std::static_pointer_cast<DictionaryColumn<RightType>>(ctx->column_right);
       const auto &right_dictionary = static_cast<const std::vector<RightType> &>(*dc_right->dictionary());
@@ -224,13 +233,13 @@ class JoinNestedLoopA::JoinNestedLoopAImpl : public AbstractJoinOperatorImpl {
 
     void handle_reference_column(ReferenceColumn &ref_column,
                                  std::shared_ptr<ColumnVisitableContext> context) override {
-      ref_column.visit_dereferenced<JoinNestedLoopBRightContext>(*this, context);
+      ref_column.visit_dereferenced<JoinNestedLoopARightContext>(*this, context);
     }
   };
 
   struct BuilderLeft : public ColumnVisitable {
     void handle_value_column(BaseColumn &, std::shared_ptr<ColumnVisitableContext> context) override {
-      auto ctx = std::static_pointer_cast<JoinNestedLoopBContext>(context);
+      auto ctx = std::static_pointer_cast<JoinNestedLoopAContext>(context);
       auto vc_left = std::static_pointer_cast<ValueColumn<LeftType>>(ctx->column_left);
       const auto &left_values = vc_left->values();
 
@@ -244,7 +253,7 @@ class JoinNestedLoopA::JoinNestedLoopAImpl : public AbstractJoinOperatorImpl {
     }
 
     void handle_dictionary_column(BaseColumn &, std::shared_ptr<ColumnVisitableContext> context) override {
-      auto ctx = std::static_pointer_cast<JoinNestedLoopBContext>(context);
+      auto ctx = std::static_pointer_cast<JoinNestedLoopAContext>(context);
       auto dc_left = std::static_pointer_cast<DictionaryColumn<LeftType>>(ctx->column_left);
 
       const auto &left_dictionary = static_cast<const std::vector<LeftType> &>(*dc_left->dictionary());
@@ -263,15 +272,16 @@ class JoinNestedLoopA::JoinNestedLoopAImpl : public AbstractJoinOperatorImpl {
 
     void handle_reference_column(ReferenceColumn &ref_column,
                                  std::shared_ptr<ColumnVisitableContext> context) override {
-      ref_column.visit_dereferenced<JoinNestedLoopBLeftContext>(*this, context);
+      ref_column.visit_dereferenced<JoinNestedLoopALeftContext>(*this, context);
     }
   };
 
   static void perform_join(std::function<LeftType(ChunkOffset)> get_left_column_value,
                            std::function<RightType(ChunkOffset)> get_right_column_value,
-                           std::shared_ptr<JoinNestedLoopBContext> context, const size_t size_left,
+                           std::shared_ptr<JoinNestedLoopAContext> context, const size_t size_left,
                            const size_t size_right) {
-    auto &unmatched_rows_map = context->rows_potentially_joined_with_null_values;
+    auto &unmatched_rows_map_left = context->rows_potentially_joined_with_null_values_left;
+    auto &unmatched_rows_map_right = context->rows_potentially_joined_with_null_values_right;
     if (context->chunk_offsets_in_left || context->chunk_offsets_in_right) {
       // This ValueColumn is referenced by a ReferenceColumn (i.e., is probably filtered). We only return the matching
       // rows within the filtered column, together with their original position
@@ -298,26 +308,27 @@ class JoinNestedLoopA::JoinNestedLoopAImpl : public AbstractJoinOperatorImpl {
           auto current_left = RowID{context->chunk_id_left, row_left};
           if (is_match) {
             // For outer joins we need to mark these rows, since they don't need to be added later on.
-            if (context->join_mode == JoinMode::Right) {
-              (*unmatched_rows_map)[current_right] = false;
-            } else {
-              (*unmatched_rows_map)[current_left] = false;
+            if (context->join_mode == JoinMode::Right || context->join_mode == JoinMode::Outer) {
+              (*unmatched_rows_map_right)[current_right] = false;
+            }
+            if (context->join_mode == JoinMode::Left || context->join_mode == JoinMode::Outer) {
+              (*unmatched_rows_map_left)[current_left] = false;
             }
             write_poslists(context, row_left, row_right);
           } else {
             // If this row combination has been joined previously, don't do anything.
             // If they are not in the unmatched_rows_map, add them here.
-            if (context->join_mode == JoinMode::Right) {
-              if (unmatched_rows_map->find(current_right) == unmatched_rows_map->end()) {
-                (*unmatched_rows_map)[current_right] = true;
+            if (context->join_mode == JoinMode::Right || context->join_mode == JoinMode::Outer) {
+              if (unmatched_rows_map_right->find(current_right) == unmatched_rows_map_right->end()) {
+                (*unmatched_rows_map_right)[current_right] = true;
               }
-            } else {
-              if (unmatched_rows_map->find(current_left) == unmatched_rows_map->end()) {
-                (*unmatched_rows_map)[current_left] = true;
+            }
+            if (context->join_mode == JoinMode::Left || context->join_mode == JoinMode::Outer) {
+              if (unmatched_rows_map_left->find(current_left) == unmatched_rows_map_left->end()) {
+                (*unmatched_rows_map_left)[current_left] = true;
               }
             }
           }
-
           row_right++;
         }
         row_left++;
@@ -331,22 +342,24 @@ class JoinNestedLoopA::JoinNestedLoopAImpl : public AbstractJoinOperatorImpl {
           auto current_left = RowID{context->chunk_id_left, row_left};
           if (is_match) {
             // For outer joins we need to mark these rows, since they don't need to be added later on.
-            if (context->join_mode == JoinMode::Right) {
-              (*unmatched_rows_map)[current_right] = false;
-            } else {
-              (*unmatched_rows_map)[current_left] = false;
+            if (context->join_mode == JoinMode::Right || context->join_mode == JoinMode::Outer) {
+              (*unmatched_rows_map_right)[current_right] = false;
+            }
+            if (context->join_mode == JoinMode::Left || context->join_mode == JoinMode::Outer) {
+              (*unmatched_rows_map_left)[current_left] = false;
             }
             write_poslists(context, row_left, row_right);
           } else {
             // If this row combination has been joined previously, don't do anything.
             // If they are not in the unmatched_rows_map, add them here.
-            if (context->join_mode == JoinMode::Right) {
-              if (unmatched_rows_map->find(current_right) == unmatched_rows_map->end()) {
-                (*unmatched_rows_map)[current_right] = true;
+            if (context->join_mode == JoinMode::Right || context->join_mode == JoinMode::Outer) {
+              if (unmatched_rows_map_right->find(current_right) == unmatched_rows_map_right->end()) {
+                (*unmatched_rows_map_right)[current_right] = true;
               }
-            } else {
-              if (unmatched_rows_map->find(current_left) == unmatched_rows_map->end()) {
-                (*unmatched_rows_map)[current_left] = true;
+            }
+            if (context->join_mode == JoinMode::Left || context->join_mode == JoinMode::Outer) {
+              if (unmatched_rows_map_left->find(current_left) == unmatched_rows_map_left->end()) {
+                (*unmatched_rows_map_left)[current_left] = true;
               }
             }
           }
@@ -371,11 +384,12 @@ class JoinNestedLoopA::JoinNestedLoopAImpl : public AbstractJoinOperatorImpl {
 
     /*
     We need a global map to store information about rows that are matched, resp. unmatched. This is used to implement
-    Left and Right Outer Join. After iterating through all chunks and checking for possible matches, we are going to
+    outer joins. After iterating through all chunks and checking for possible matches, we are going to
     create additional output rows for the missing rows in either the Left or the Right table. A boolean value of true
     indicates those rows that need to be joined with null values.
     */
-    auto rows_potentially_joined_with_null_values = std::make_shared<std::map<RowID, bool>>();
+    auto rows_potentially_joined_with_null_values_left = std::make_shared<std::map<RowID, bool>>();
+    auto rows_potentially_joined_with_null_values_right = std::make_shared<std::map<RowID, bool>>();
 
     // Scan all chunks from left input
     for (ChunkID chunk_id_left = ChunkID{0}; chunk_id_left < _left_in_table->chunk_count(); ++chunk_id_left) {
@@ -390,16 +404,16 @@ class JoinNestedLoopA::JoinNestedLoopAImpl : public AbstractJoinOperatorImpl {
         auto pos_list_left = std::make_shared<PosList>();
         auto pos_list_right = std::make_shared<PosList>();
 
-        auto context = std::make_shared<JoinNestedLoopBContext>(column_left, column_right, chunk_id_left,
-                                                                chunk_id_right, pos_list_left, pos_list_right, _mode,
-                                                                _comparator, rows_potentially_joined_with_null_values);
+        auto context = std::make_shared<JoinNestedLoopAContext>(
+            column_left, column_right, chunk_id_left, chunk_id_right, pos_list_left, pos_list_right, _mode, _comparator,
+            rows_potentially_joined_with_null_values_left, rows_potentially_joined_with_null_values_right);
 
         // Use double visitor to join columns
         column_left->visit(builder_left, context);
 
         // Different length of poslists would lead to corrupt output chunk.
         DebugAssert((pos_list_left->size() == pos_list_right->size()),
-                    "JoinNestedLoopB did generate different number of outputs for Left and Right.");
+                    "JoinNestedLoopA did generate different number of outputs for Left and Right.");
 
         // Skip Chunks without match
         if (pos_list_left->size() == 0) {
@@ -429,24 +443,37 @@ class JoinNestedLoopA::JoinNestedLoopAImpl : public AbstractJoinOperatorImpl {
     reference columns and value/dictionary columns rows.
     An improvement would be to group the missing rows by chunk_id and create a new Chunk per group.
     */
-    if (_mode == JoinMode::Left || _mode == JoinMode::Right) {
-      for (const auto &elem : *rows_potentially_joined_with_null_values) {
+    if (_mode == JoinMode::Left || _mode == JoinMode::Outer) {
+      for (const auto &elem : *rows_potentially_joined_with_null_values_left) {
         if (elem.second) {
           auto pos_list_left = std::make_shared<PosList>();
           auto pos_list_right = std::make_shared<PosList>();
 
-          if (_mode == JoinMode::Left) {
-            pos_list_left->emplace_back(elem.first);
-            pos_list_right->emplace_back(RowID{ChunkID{0}, INVALID_CHUNK_OFFSET});
-          } else if (_mode == JoinMode::Right) {
-            pos_list_left->emplace_back(RowID{ChunkID{0}, INVALID_CHUNK_OFFSET});
-            pos_list_right->emplace_back(elem.first);
-          }
+          pos_list_left->emplace_back(elem.first);
+          pos_list_right->emplace_back(NULL_ROW_ID);
 
           auto output_chunk = Chunk();
 
-          write_output_chunks(output_chunk, _left_in_table, elem.first.chunk_id, pos_list_left);
+          write_output_chunks(output_chunk, _left_in_table, elem.first.chunk_id, pos_list_left, false);
           write_output_chunks(output_chunk, _right_in_table, elem.first.chunk_id, pos_list_right, true);
+
+          _output_table->add_chunk(std::move(output_chunk));
+        }
+      }
+    }
+    if (_mode == JoinMode::Right || _mode == JoinMode::Outer) {
+      for (const auto &elem : *rows_potentially_joined_with_null_values_right) {
+        if (elem.second) {
+          auto pos_list_left = std::make_shared<PosList>();
+          auto pos_list_right = std::make_shared<PosList>();
+
+          pos_list_left->emplace_back(NULL_ROW_ID);
+          pos_list_right->emplace_back(elem.first);
+
+          auto output_chunk = Chunk();
+
+          write_output_chunks(output_chunk, _left_in_table, elem.first.chunk_id, pos_list_left, true);
+          write_output_chunks(output_chunk, _right_in_table, elem.first.chunk_id, pos_list_right, false);
 
           _output_table->add_chunk(std::move(output_chunk));
         }
@@ -460,9 +487,8 @@ class JoinNestedLoopA::JoinNestedLoopAImpl : public AbstractJoinOperatorImpl {
   This method writes the actual output chunks for either the Left or the Right side. It'll write ReferenceColumns for
   all the columns of the input table. The way we currently handle null values forces us to pass in whether there are
   null values in this poslist:
-  Null values are represented by a RowID following the following scheme: RowID{SomeChunkID, INVALID_CHUNK_OFFSET}. When
-  we write the null values for (Left/Right) Outer Joins we simply use a ChunkID=0, which does not necessarily need to
-  exist. Thus we cannot be sure to find an actual column in the input table for that ChunkID.
+  When we write the null values for (Left/Right) Outer Joins we simply use a ChunkID=0, which does not necessarily need
+  to exist. Thus we cannot be sure to find an actual column in the input table for that ChunkID.
   Additionally, we think that the implementation of null values is not final yet and a proper implementation of null
   values might require changes here.
   */
@@ -477,6 +503,7 @@ class JoinNestedLoopA::JoinNestedLoopAImpl : public AbstractJoinOperatorImpl {
       if (null_value) {
         column = std::make_shared<ReferenceColumn>(input_table, column_id, pos_list);
       } else {
+        DebugAssert(chunk_id < input_table->chunk_count(), "Chunk id out of range");
         if (auto ref_col_left =
                 std::dynamic_pointer_cast<ReferenceColumn>(input_table->get_chunk(chunk_id).get_column(column_id))) {
           auto new_pos_list = std::make_shared<PosList>();
@@ -497,7 +524,7 @@ class JoinNestedLoopA::JoinNestedLoopAImpl : public AbstractJoinOperatorImpl {
     }
   }
 
-  static void write_poslists(std::shared_ptr<JoinNestedLoopBContext> context, ChunkOffset row_left,
+  static void write_poslists(std::shared_ptr<JoinNestedLoopAContext> context, ChunkOffset row_left,
                              ChunkOffset row_right) {
     const auto left_chunk_id = context->chunk_id_left;
     const auto right_chunk_id = context->chunk_id_right;
@@ -508,9 +535,9 @@ class JoinNestedLoopA::JoinNestedLoopAImpl : public AbstractJoinOperatorImpl {
 
  protected:
   const std::shared_ptr<const Table> _left_in_table, _right_in_table;
+  const JoinMode _mode;
   const ColumnID _left_column_id, _right_column_id;
   const ScanType _scan_type;
-  const JoinMode _mode;
   const std::shared_ptr<Table> _output_table;
   std::function<bool(LeftType, RightType)> _comparator;
 };

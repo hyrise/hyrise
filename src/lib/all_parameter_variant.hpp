@@ -8,7 +8,7 @@ namespace opossum {
 namespace hana = boost::hana;
 
 /**
- * AllParameterVariant holds either an AllTypeVariant or a ColumnName.
+ * AllParameterVariant holds either an AllTypeVariant, a ColumnID or a Placeholder.
  * It should be used to generalize Opossum operator calls.
  */
 

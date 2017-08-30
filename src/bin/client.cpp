@@ -31,7 +31,8 @@ namespace opossum {
 OpossumClient::OpossumClient(std::shared_ptr<Channel> channel) : _stub(proto::OpossumService::NewStub(channel)) {}
 
 // Assembles the client's payload, sends it and presents the response back from the server.
-void OpossumClient::query(std::string& table_name, ColumnID column_id, proto::ScanType scan_type, std::string& filter) {
+void OpossumClient::query(const std::string& table_name, const ColumnID column_id, const proto::ScanType scan_type,
+                          const std::string& filter) {
   // Data we are sending to the server.
   proto::Request request;
 

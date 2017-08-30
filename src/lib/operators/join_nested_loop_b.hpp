@@ -27,8 +27,11 @@ namespace opossum {
 class JoinNestedLoopB : public AbstractJoinOperator {
  public:
   JoinNestedLoopB(const std::shared_ptr<const AbstractOperator> left,
-                  const std::shared_ptr<const AbstractOperator> right,
-                  optional<std::pair<ColumnID, ColumnID>> column_ids, const ScanType scan_type, const JoinMode mode);
+                  const std::shared_ptr<const AbstractOperator> right, const JoinMode mode);
+
+  JoinNestedLoopB(const std::shared_ptr<const AbstractOperator> left,
+                  const std::shared_ptr<const AbstractOperator> right, const JoinMode mode,
+                  const std::pair<ColumnID, ColumnID>& column_ids, const ScanType scan_type);
 
   const std::string name() const override;
   uint8_t num_in_tables() const override;
@@ -94,12 +97,6 @@ class JoinNestedLoopB : public AbstractJoinOperator {
   std::shared_ptr<PosList> _dereference_pos_list(std::shared_ptr<const Table> input_table, ColumnID column_id,
                                                  std::shared_ptr<const PosList> pos_list);
   void _append_columns_to_output(std::shared_ptr<const Table> input_table, std::shared_ptr<PosList> pos_list);
-
-  // Input fields
-  ColumnID _left_column_id;
-  ColumnID _right_column_id;
-  ScanType _scan_type;
-  JoinMode _mode;
 
   // Output fields
   std::shared_ptr<PosList> _pos_list_left;
