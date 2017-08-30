@@ -178,8 +178,7 @@ std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::_translate_aggregate_
   aggregate_definitions.reserve(aggregate_expressions.size());
 
   for (const auto &aggregate_expression : aggregate_expressions) {
-    DebugAssert(aggregate_expression->type() == ExpressionType::Function,
-                "Only functions are supported in Aggregates");
+    DebugAssert(aggregate_expression->type() == ExpressionType::Function, "Only functions are supported in Aggregates");
 
     const auto aggregate_function_type = aggregate_expression->aggregate_function();
     const auto column_id = (aggregate_expression->expression_list())[0]->column_id();

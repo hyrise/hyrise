@@ -102,7 +102,8 @@ optional<ColumnID> JoinNode::find_column_id_for_column_identifier_name(
     output_column_id = left_child()->num_output_columns() + *right_column_id;
   }
 
-  DebugAssert(_output_column_id_to_input_column_id[output_column_id] == input_column_id, "ColumnID should be in output.");
+  DebugAssert(_output_column_id_to_input_column_id[output_column_id] == input_column_id,
+              "ColumnID should be in output.");
 
   return ColumnID{static_cast<ColumnID::base_type>(output_column_id)};
 }

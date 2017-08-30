@@ -58,11 +58,11 @@ class Expression : public std::enable_shared_from_this<Expression> {
   static std::shared_ptr<Expression> create_literal(const AllTypeVariant& value,
                                                     const optional<std::string>& alias = nullopt);
 
-  static std::shared_ptr<Expression> create_placeholder(const AllTypeVariant &value);
+  static std::shared_ptr<Expression> create_placeholder(const AllTypeVariant& value);
 
   static std::shared_ptr<Expression> create_aggregate_function(
-    AggregateFunction aggregate_function, const std::vector<std::shared_ptr<Expression>> &expression_list,
-    const optional <std::string> &alias = nullopt);
+      AggregateFunction aggregate_function, const std::vector<std::shared_ptr<Expression>>& expression_list,
+      const optional<std::string>& alias = nullopt);
 
   static std::shared_ptr<Expression> create_binary_operator(ExpressionType type,
                                                             const std::shared_ptr<Expression>& left,
@@ -109,7 +109,6 @@ class Expression : public std::enable_shared_from_this<Expression> {
   // Returns true if the expression requires two children.
   bool is_binary_operator() const;
   // @}
-
 
   // @{
   /**
