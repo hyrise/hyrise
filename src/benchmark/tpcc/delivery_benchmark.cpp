@@ -38,13 +38,19 @@ class TPCCDeliveryBenchmark : public TPCCBenchmarkFixture {
      * WHERE no_d_id = :d_id AND no_w_id = :w_id ORDER BY no_o_id ASC;
      */
     auto gt = std::make_shared<GetTable>("NEW-ORDER");
+    // "NO_D_ID"
     auto ts1 = std::make_shared<TableScan>(gt, ColumnID{1}, ScanType::OpEquals, d_id);
+    // "NO_W_ID"
     auto ts2 = std::make_shared<TableScan>(ts1, ColumnID{2}, ScanType::OpEquals, w_id);
+    // "NO_O_ID"
     auto ts3 = std::make_shared<TableScan>(ts2, ColumnID{0}, ScanType::OpGreaterThan, -1);
     auto val = std::make_shared<Validate>(ts3);
 
+    // "NO_O_ID"
     Projection::ColumnExpressions columns = {Expression::create_column_identifier(ColumnID{0})};
     auto projection = std::make_shared<Projection>(val, columns);
+
+    // "NO_O_ID"
     auto sort = std::make_shared<Sort>(projection, ColumnID{0}, true, 0);
 
     auto t_gt = std::make_shared<OperatorTask>(gt);
@@ -72,6 +78,8 @@ class TPCCDeliveryBenchmark : public TPCCBenchmarkFixture {
      * WHERE CURRENT OF c_no;
      */
     auto gt = std::make_shared<GetTable>("NEW-ORDER");
+
+    // "NO_O_ID"
     auto ts1 = std::make_shared<TableScan>(gt, ColumnID{0}, ScanType::OpEquals, no_o_id);
     auto val = std::make_shared<Validate>(ts1);
     auto delete_op = std::make_shared<Delete>("NEW-ORDER", val);
@@ -95,11 +103,18 @@ class TPCCDeliveryBenchmark : public TPCCBenchmarkFixture {
      * WHERE o_id = :no_o_id AND o_d_id = :d_id AND o_w_id = :w_id;
      */
     auto gt = std::make_shared<GetTable>("ORDER");
+
+    // "O_ID"
     auto ts1 = std::make_shared<TableScan>(gt, ColumnID{0}, ScanType::OpEquals, no_o_id);
+
+    // "O_D_ID"
     auto ts2 = std::make_shared<TableScan>(ts1, ColumnID{2}, ScanType::OpEquals, d_id);
+
+    // "O_W_ID"
     auto ts3 = std::make_shared<TableScan>(ts2, ColumnID{3}, ScanType::OpEquals, w_id);
     auto val = std::make_shared<Validate>(ts3);
 
+    // "O_C_ID"
     Projection::ColumnExpressions columns = {Expression::create_column_identifier(ColumnID{1})};
     auto projection = std::make_shared<Projection>(val, columns);
 
@@ -127,12 +142,20 @@ class TPCCDeliveryBenchmark : public TPCCBenchmarkFixture {
      * WHERE o_id = :no_o_id AND o_d_id = :d_id AND o_w_id = :w_id;
      */
     auto gt = std::make_shared<GetTable>("ORDER");
+    // "O_ID"
     auto ts1 = std::make_shared<TableScan>(gt, ColumnID{0}, ScanType::OpEquals, no_o_id);
+
+    // "O_D_ID"
     auto ts2 = std::make_shared<TableScan>(ts1, ColumnID{2}, ScanType::OpEquals, d_id);
+
+    // "O_W_ID"
     auto ts3 = std::make_shared<TableScan>(ts2, ColumnID{3}, ScanType::OpEquals, w_id);
+
     auto val = std::make_shared<Validate>(ts3);
 
+    // "O_CARRIER_ID"
     Projection::ColumnExpressions columns = {Expression::create_column_identifier(ColumnID{5})};
+
     auto projection = std::make_shared<Projection>(val, columns);
 
     Projection::ColumnExpressions values = {Expression::create_literal(o_carrier_id, {"O_CARRIER_ID"})};
@@ -168,11 +191,19 @@ class TPCCDeliveryBenchmark : public TPCCBenchmarkFixture {
      * WHERE ol_o_id = :no_o_id AND ol_d_id = :d_id AND ol_w_id = :w_id;
      */
     auto gt = std::make_shared<GetTable>("ORDER-LINE");
+
+    // "OL_O_ID"
     auto ts1 = std::make_shared<TableScan>(gt, ColumnID{0}, ScanType::OpEquals, no_o_id);
+
+    // "OL_D_ID"
     auto ts2 = std::make_shared<TableScan>(ts1, ColumnID{1}, ScanType::OpEquals, d_id);
+
+    // "OL_W_ID"
     auto ts3 = std::make_shared<TableScan>(ts2, ColumnID{2}, ScanType::OpEquals, w_id);
+
     auto val = std::make_shared<Validate>(ts3);
 
+    // "OL_DELIVERY_D"
     Projection::ColumnExpressions columns = {Expression::create_column_identifier(ColumnID{6})};
     auto projection = std::make_shared<Projection>(val, columns);
 
@@ -209,10 +240,19 @@ class TPCCDeliveryBenchmark : public TPCCBenchmarkFixture {
      * WHERE ol_o_id = :no_o_id AND ol_d_id = :d_id AND ol_w_id = :w_id;
      */
     auto gt = std::make_shared<GetTable>("ORDER-LINE");
+
+    // "OL_O_ID"
     auto ts1 = std::make_shared<TableScan>(gt, ColumnID{0}, ScanType::OpEquals, no_o_id);
+
+    // "OL_D_ID"
     auto ts2 = std::make_shared<TableScan>(ts1, ColumnID{1}, ScanType::OpEquals, d_id);
+
+    // "OL_W_ID"
     auto ts3 = std::make_shared<TableScan>(ts2, ColumnID{2}, ScanType::OpEquals, w_id);
+
     auto val = std::make_shared<Validate>(ts3);
+
+    // "OL_AMOUNT"
     auto sum = std::make_shared<Aggregate>(val, std::vector<AggregateDefinition>{{ColumnID{8}, AggregateFunction::Sum}},
                                            std::vector<ColumnID>{});
 
@@ -240,11 +280,19 @@ class TPCCDeliveryBenchmark : public TPCCBenchmarkFixture {
      * WHERE c_id = :c_id AND c_d_id = :d_id AND c_w_id = :w_id;
      */
     auto gt = std::make_shared<GetTable>("CUSTOMER");
+
+    // "C_ID"
     auto ts1 = std::make_shared<TableScan>(gt, ColumnID{0}, ScanType::OpEquals, c_id);
+
+    // "C_D_ID"
     auto ts2 = std::make_shared<TableScan>(ts1, ColumnID{1}, ScanType::OpEquals, d_id);
+
+    // "C_W_ID"
     auto ts3 = std::make_shared<TableScan>(ts2, ColumnID{2}, ScanType::OpEquals, w_id);
+
     auto val = std::make_shared<Validate>(ts3);
 
+    // "C_BALANCE"
     Projection::ColumnExpressions columns = {Expression::create_column_identifier(ColumnID{16})};
     auto projection = std::make_shared<Projection>(val, columns);
 

@@ -82,7 +82,7 @@ const std::shared_ptr<TableStatistics> AbstractASTNode::_gather_statistics() con
 
 const std::vector<std::string> &AbstractASTNode::output_column_names() const {
   /**
-   * This function has to be overwritten if columns or their order are in any way redefined.
+   * This function has to be overwritten if columns or their order are in any way redefined by this Node.
    * Examples include Projections, Aggregates, and Joins.
    */
   DebugAssert(!!_left_child, "Node has no left child and therefore must override this function.");
@@ -91,7 +91,7 @@ const std::vector<std::string> &AbstractASTNode::output_column_names() const {
 
 const std::vector<ColumnID> &AbstractASTNode::output_column_ids() const {
   /**
-   * This function has to be overwritten if columns or their order are in any way redefined.
+   * This function has to be overwritten if columns or their order are in any way redefined by this Node.
    * Examples include Projections, Aggregates, and Joins.
    */
   DebugAssert(!!_left_child, "Node has no left child and therefore must override this function.");
@@ -108,7 +108,7 @@ ColumnID AbstractASTNode::get_column_id_for_column_identifier_name(
 optional<ColumnID> AbstractASTNode::find_column_id_for_column_identifier_name(
     const ColumnIdentifierName &column_identifier_name) const {
   /**
-   * This function has to be overwritten if columns or their order are in any way redefined.
+   * This function has to be overwritten if columns or their order are in any way redefined by this Node.
    * Examples include Projections, Aggregates, and Joins.
    */
   DebugAssert(!!_left_child, "Node has no left child and therefore must override this function.");

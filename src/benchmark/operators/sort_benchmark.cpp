@@ -13,9 +13,11 @@ namespace opossum {
 BENCHMARK_DEFINE_F(BenchmarkBasicFixture, BM_Sort_ChunkSizeOut)(benchmark::State& state) {
   ChunkID chunk_size_out = static_cast<ChunkID>(state.range(1));
   clear_cache();
+  // "a"
   auto warm_up = std::make_shared<Sort>(_table_wrapper_a, ColumnID{0}, chunk_size_out);
   warm_up->execute();
   while (state.KeepRunning()) {
+    // "a"
     auto sort = std::make_shared<Sort>(_table_wrapper_a, ColumnID{0}, chunk_size_out);
     sort->execute();
   }
