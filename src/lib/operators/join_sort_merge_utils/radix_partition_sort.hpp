@@ -54,7 +54,6 @@ class RadixPartitionSort {
   virtual ~RadixPartitionSort() = default;
 
  protected:
-  using MatTablePtr = std::shared_ptr<MaterializedTable<T>>;
   /**
   * The ChunkStatistics structure is used to gather statistics regarding a chunk's values in order to
   * be able to appropriately reserve space for the partitioning output.
@@ -103,8 +102,8 @@ class RadixPartitionSort {
   // It is asserted to be a power of two in the constructor.
   size_t _partition_count;
 
-  MatTablePtr _output_left;
-  MatTablePtr _output_right;
+  std::shared_ptr<MaterializedColumnList<T>> _output_left;
+  std::shared_ptr<MaterializedColumnList<T>> _output_right;
 
   // Radix calculation for arithmetic types
   template <typename T2>
@@ -122,9 +121,9 @@ class RadixPartitionSort {
   }
 
   /**
-  * Determines the total size of a materialized table.
+  * Determines the total size of a materialized column list.
   **/
-  static size_t _materialized_table_size(MatTablePtr table) {
+  static size_t _materialized_table_size(std::shared_ptr<MaterializedColumnList<T>> table) {
     size_t total_size = 0;
     for (auto chunk : *table) {
       total_size += chunk->size();
@@ -134,11 +133,12 @@ class RadixPartitionSort {
   }
 
   /**
-  * Concatenates multiple materialized chunks to a single materialized chunk.
+  * Concatenates multiple materialized chunks to a single materialized column chunk.
   **/
-  static MatTablePtr _concatenate_chunks(MatTablePtr input_chunks) {
-    auto output_table = std::make_shared<MaterializedTable<T>>(1);
-    (*output_table)[0] = std::make_shared<MaterializedChunk<T>>();
+  static std::shared_ptr<MaterializedColumnList<T>> _concatenate_chunks(
+                                                             std::shared_ptr<MaterializedColumnList<T>> input_chunks) {
+    auto output_table = std::make_shared<MaterializedColumnList<T>>(1);
+    (*output_table)[0] = std::make_shared<MaterializedColumn<T>>();
 
     // Reserve the required space and move the data to the output
     auto output_chunk = (*output_table)[0];
@@ -159,8 +159,9 @@ class RadixPartitionSort {
   * -> Reserve the appropriate space for each output partition to avoid ongoing vector resizing.
   * -> At last, each value of each chunk is moved to the appropriate partition.
   **/
-  MatTablePtr _partition(MatTablePtr input_chunks, std::function<size_t(const T&)> partitioner) {
-    auto output_table = std::make_shared<MaterializedTable<T>>(_partition_count);
+  std::shared_ptr<MaterializedColumnList<T>> _partition(std::shared_ptr<MaterializedColumnList<T>> input_chunks,
+                                                                    std::function<size_t(const T&)> partitioner) {
+    auto output_table = std::make_shared<MaterializedColumnList<T>>(_partition_count);
     TableStatistics table_statistics(input_chunks->size(), _partition_count);
 
     // Count for every chunk the number of entries for each partition in parallel
@@ -201,7 +202,7 @@ class RadixPartitionSort {
     // Reserve the appropriate output space for the partitions
     for (size_t partition_id = 0; partition_id < _partition_count; ++partition_id) {
       auto partition_size = table_statistics.partition_histogram[partition_id];
-      (*output_table)[partition_id] = std::make_shared<MaterializedChunk<T>>(partition_size);
+      (*output_table)[partition_id] = std::make_shared<MaterializedColumn<T>>(partition_size);
     }
 
     // Move each entry into its appropriate partition in parallel
@@ -231,7 +232,7 @@ class RadixPartitionSort {
   * - hand select the partitioning bits based on statistics.
   * - consolidate partitions in order to reduce skew.
   **/
-  MatTablePtr _radix_partition(MatTablePtr input_chunks) {
+  std::shared_ptr<MaterializedColumnList<T>> _radix_partition(std::shared_ptr<MaterializedColumnList<T>> input_chunks) {
     auto radix_bitmask = _partition_count - 1;
     return _partition(input_chunks, [=] (const T& value) {
       return get_radix<T>(value, radix_bitmask);
@@ -241,7 +242,8 @@ class RadixPartitionSort {
   /**
   * Picks sample values from a materialized table that are used to determine partition range bounds.
   **/
-  void _pick_sample_values(std::vector<std::map<T, size_t>>& sample_values, MatTablePtr table) {
+  void _pick_sample_values(std::vector<std::map<T, size_t>>& sample_values,
+                           std::shared_ptr<MaterializedColumnList<T>> table) {
     // Note:
     // - The materialized chunks are sorted.
     // - Between the chunks there is no order
@@ -263,7 +265,9 @@ class RadixPartitionSort {
   * Performs the radix partition sort for the non-equi case (>, >=, <, <=) which requires the complete table to
   * be sorted and not only the partitions in themselves.
   **/
-  std::pair<MatTablePtr, MatTablePtr> _range_partition(MatTablePtr input_left, MatTablePtr input_right) {
+  std::pair<std::shared_ptr<MaterializedColumnList<T>>, std::shared_ptr<MaterializedColumnList<T>>> _range_partition(
+                                                                std::shared_ptr<MaterializedColumnList<T>> input_left,
+                                                                std::shared_ptr<MaterializedColumnList<T>> input_right) {
     std::vector<std::map<T, size_t>> sample_values(_partition_count - 1);
 
     _pick_sample_values(sample_values, input_left);
@@ -303,13 +307,14 @@ class RadixPartitionSort {
     auto output_left = _partition(input_left, partitioner);
     auto output_right = _partition(input_right, partitioner);
 
-    return std::pair<MatTablePtr, MatTablePtr>(output_left, output_right);
+    return std::pair<std::shared_ptr<MaterializedColumnList<T>>,
+                     std::shared_ptr<MaterializedColumnList<T>>>(output_left, output_right);
   }
 
   /**
   * Sorts all partitions of a materialized table.
   **/
-  void _sort_partitions(MatTablePtr partitions) {
+  void _sort_partitions(std::shared_ptr<MaterializedColumnList<T>> partitions) {
     for (auto partition : *partitions) {
       std::sort(partition->begin(), partition->end(), [](auto& left, auto& right) {
         return left.value < right.value;
@@ -321,7 +326,7 @@ class RadixPartitionSort {
   /**
   * Executes the partitioning and sorting.
   **/
-  std::pair<MatTablePtr, MatTablePtr> execute() {
+  std::pair<std::shared_ptr<MaterializedColumnList<T>>, std::shared_ptr<MaterializedColumnList<T>>> execute() {
     // Sort the chunks of the input tables in the non-equi cases
     ColumnMaterializer<T> column_materializer(!_equi_case);
     auto chunks_left = column_materializer.materialize(_input_table_left, _left_column_name);
