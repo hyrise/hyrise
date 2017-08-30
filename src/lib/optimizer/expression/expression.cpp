@@ -64,11 +64,11 @@ std::shared_ptr<Expression> Expression::create_placeholder(const AllTypeVariant 
   return expression;
 }
 
-std::shared_ptr<Expression> Expression::create_function(
-  const std::string &function_name, const std::vector<std::shared_ptr<Expression>> &expression_list,
+std::shared_ptr<Expression> Expression::create_aggregate_function(
+  AggregateFunction aggregate_function, const std::vector<std::shared_ptr<Expression>> &expression_list,
   const optional<std::string> &alias) {
   auto expression = std::make_shared<Expression>(ExpressionType::Function);
-  expression->_name = function_name;
+  expression->_aggregate_function = aggregate_function;
   expression->_expression_list = expression_list;
   expression->_alias = alias;
   return expression;
@@ -208,6 +208,12 @@ const std::string &Expression::name() const {
   return *_name;
 }
 
+AggregateFunction Expression::aggregate_function() const {
+  DebugAssert(_aggregate_function != nullopt,
+              "Expression " + expression_type_to_string.at(_type) + " does not have a aggregate function");
+  return *_aggregate_function;
+}
+
 const optional<std::string> &Expression::alias() const { return _alias; }
 
 const AllTypeVariant Expression::value() const {
@@ -227,7 +233,7 @@ std::string Expression::to_string(const std::shared_ptr<AbstractASTNode> &input_
       }
       return boost::lexical_cast<std::string>(column_id());
     case ExpressionType::Function:
-      return name() + "(" + _expression_list[0]->to_string(input_node) + ")";
+      return aggregate_function_to_string.left.at(aggregate_function()) + "(" + _expression_list[0]->to_string(input_node) + ")";
     default:
       // Handled further down.
       break;

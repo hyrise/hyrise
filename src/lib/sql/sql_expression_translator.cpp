@@ -58,7 +58,11 @@ std::shared_ptr<Expression> SQLExpressionTranslator::translate_expression(
         expression_list.emplace_back(translate_expression(*elem, input_node));
       }
 
-      node = Expression::create_function(name, expression_list, alias);
+      const auto aggregate_function_iter = aggregate_function_to_string.right.find(name);
+      DebugAssert(aggregate_function_iter != aggregate_function_to_string.right.end(),
+                  std::string("No such aggregate function '") + name + "'");
+
+      node = Expression::create_aggregate_function(aggregate_function_iter->second, expression_list, alias);
       break;
     }
     case hsql::kExprLiteralFloat:

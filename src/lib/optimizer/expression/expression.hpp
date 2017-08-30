@@ -44,7 +44,8 @@ class Expression : public std::enable_shared_from_this<Expression> {
    */
   Expression(ExpressionType type);
 
-  /*
+  // @{
+  /**
    * Factory Methods to create Expressions of specific type
    */
   static std::shared_ptr<Expression> create_column_identifier(const ColumnID column_id,
@@ -59,8 +60,8 @@ class Expression : public std::enable_shared_from_this<Expression> {
 
   static std::shared_ptr<Expression> create_placeholder(const AllTypeVariant &value);
 
-  static std::shared_ptr<Expression> create_function(
-    const std::string &function_name, const std::vector<std::shared_ptr<Expression>> &expression_list,
+  static std::shared_ptr<Expression> create_aggregate_function(
+    AggregateFunction aggregate_function, const std::vector<std::shared_ptr<Expression>> &expression_list,
     const optional <std::string> &alias = nullopt);
 
   static std::shared_ptr<Expression> create_binary_operator(ExpressionType type,
@@ -69,6 +70,7 @@ class Expression : public std::enable_shared_from_this<Expression> {
                                                             const optional<std::string>& alias = nullopt);
 
   static std::shared_ptr<Expression> create_select_star(const std::string& table_name);
+  // @}
 
   // @{
   /**
@@ -93,6 +95,11 @@ class Expression : public std::enable_shared_from_this<Expression> {
 
   const std::string description() const;
 
+  // @{
+  /**
+   * Check semantics of the expression
+   */
+
   // Is +, -, * (arithmetic usage, not SELECT * FROM), /, %, ^
   bool is_arithmetic_operator() const;
 
@@ -101,20 +108,20 @@ class Expression : public std::enable_shared_from_this<Expression> {
 
   // Returns true if the expression requires two children.
   bool is_binary_operator() const;
+  // @}
 
+
+  // @{
+  /**
+   * Getters. Only call them if you are sure the type() has such a member
+   */
   const ColumnID column_id() const;
-
-  void set_column_id(const ColumnID column_id);
-
   const std::string& name() const;
-
+  AggregateFunction aggregate_function() const;
   const optional<std::string>& alias() const;
-
-  void set_alias(const std::string& alias);
-
   const AllTypeVariant value() const;
-
   const std::vector<std::shared_ptr<Expression>>& expression_list() const;
+  // @}
 
   void set_expression_list(const std::vector<std::shared_ptr<Expression>>& expression_list);
 
@@ -128,6 +135,8 @@ class Expression : public std::enable_shared_from_this<Expression> {
   const ExpressionType _type;
   // the value of an expression, e.g. of a Literal
   optional<AllTypeVariant> _value;
+
+  optional<AggregateFunction> _aggregate_function;
 
   /*
    * A list of Expressions used in FunctionIdentifiers and CASE Expressions.
