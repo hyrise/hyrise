@@ -66,11 +66,15 @@ class BaseColumnStatistics {
   virtual std::shared_ptr<BaseColumnStatistics> clone() const = 0;
 
   /**
-   * Adjust non-null value ratio of a column after an outer join.
+   * Adjust non-null value ratio of a column after a left/right/full outer join.
    */
   void set_non_null_value_ratio(const float non_null_value_ratio) { _non_null_value_ratio = non_null_value_ratio; }
 
+  void set_null_value_ratio(const float null_value_ratio) { _non_null_value_ratio = 1.f - null_value_ratio; }
+
   float non_null_value_ratio() const { return _non_null_value_ratio; }
+
+  float null_value_ratio() const { return 1.f - _non_null_value_ratio; }
 
  protected:
   float _non_null_value_ratio;

@@ -151,21 +151,21 @@ std::shared_ptr<TableStatistics> TableStatistics::join_statistics(
 
   clone->_row_count *= stats_container.selectivity;
 
-  ColumnID new_right_column_id{_column_statistics.size() + column_ids->second};
+  ColumnID new_right_column_id{static_cast<uint16_t>(_column_statistics.size()) + column_ids->second};
 
-  float left_null_value_no = (1.f - right_col_stats->non_null_value_ratio()) * right_stats->_row_count;
+  float left_null_value_no = right_col_stats->null_value_ratio() * right_stats->_row_count;
   if (right_col_stats->distinct_count() != 0.f) {
     left_null_value_no +=
         (1.f - stats_container.second_column_statistics->distinct_count() / right_col_stats->distinct_count()) *
         right_stats->row_count();
   }
-  float right_null_value_no = (1.f - left_col_stats->non_null_value_ratio()) * _row_count;
+  float right_null_value_no = left_col_stats->null_value_ratio() * _row_count;
   if (left_col_stats->distinct_count() != 0.f) {
     right_null_value_no +=
         (1.f - stats_container.column_statistics->distinct_count() / left_col_stats->distinct_count()) * row_count();
   }
 
-  auto apply_left_outer = [&]() {
+  auto apply_left_outer_join = [&]() {
     if (right_null_value_no == 0) {
       return;
     }
@@ -173,12 +173,12 @@ std::shared_ptr<TableStatistics> TableStatistics::join_statistics(
     for (auto col_itr = clone->_column_statistics.begin() + _column_statistics.size();
          col_itr != clone->_column_statistics.end(); ++col_itr) {
       *col_itr = (*col_itr)->clone();
-      float column_null_value_no = (1.f - (*col_itr)->non_null_value_ratio()) * right_stats->_row_count;
-      float right_non_null_value_ratio = 1.f - (column_null_value_no + right_null_value_no) / clone->row_count();
-      (*col_itr)->set_non_null_value_ratio(right_non_null_value_ratio);
+      float column_null_value_no = (*col_itr)->null_value_ratio() * right_stats->_row_count;
+      float right_null_value_ratio = (column_null_value_no + right_null_value_no) / clone->row_count();
+      (*col_itr)->set_null_value_ratio(right_null_value_ratio);
     }
   };
-  auto apply_right_outer = [&]() {
+  auto apply_right_outer_join = [&]() {
     if (left_null_value_no == 0) {
       return;
     }
@@ -186,9 +186,9 @@ std::shared_ptr<TableStatistics> TableStatistics::join_statistics(
     for (auto col_itr = clone->_column_statistics.begin();
          col_itr != clone->_column_statistics.begin() + _column_statistics.size(); ++col_itr) {
       *col_itr = (*col_itr)->clone();
-      float column_null_value_no = (1.f - (*col_itr)->non_null_value_ratio()) * _row_count;
-      float left_non_null_value_ratio = 1.f - (column_null_value_no + left_null_value_no) / clone->row_count();
-      (*col_itr)->set_non_null_value_ratio(left_non_null_value_ratio);
+      float column_null_value_no = (*col_itr)->null_value_ratio() * _row_count;
+      float left_null_value_ratio = (column_null_value_no + left_null_value_no) / clone->row_count();
+      (*col_itr)->set_null_value_ratio(left_null_value_ratio);
     }
   };
 
@@ -202,20 +202,20 @@ std::shared_ptr<TableStatistics> TableStatistics::join_statistics(
     case JoinMode::Left: {
       clone->_column_statistics[new_right_column_id] = stats_container.second_column_statistics;
       clone->_row_count += right_null_value_no;
-      apply_left_outer();
+      apply_left_outer_join();
       break;
     }
     case JoinMode::Right: {
       clone->_column_statistics[column_ids->first] = stats_container.column_statistics;
       clone->_row_count += left_null_value_no;
-      apply_right_outer();
+      apply_right_outer_join();
       break;
     }
     case JoinMode::Outer: {
       clone->_row_count += right_null_value_no;
       clone->_row_count += left_null_value_no;
-      apply_left_outer();
-      apply_right_outer();
+      apply_left_outer_join();
+      apply_right_outer_join();
       break;
     }
     case JoinMode::Natural: {
