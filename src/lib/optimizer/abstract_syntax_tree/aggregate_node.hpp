@@ -30,17 +30,17 @@ class AggregateNode : public AbstractASTNode {
 
   std::string description() const override;
   const std::vector<std::string>& output_column_names() const override;
-  const std::vector<ColumnID>& output_column_ids() const override;
+  const std::vector<ColumnID>& output_column_id_to_input_column_id() const override;
 
   optional<ColumnID> find_column_id_for_column_identifier_name(
       const ColumnIdentifierName& column_identifier_name) const override;
 
   // @{
   /**
-   * AbstractASTNode::find_column_id_for_column_identifier() looks for the @param expression in the columns this
+   * AggregateNode::find_column_id_for_column_identifier() looks for the @param expression in the columns this
    * node outputs, checking by semantic and NOT by Expression address. If it can find it, it will be returned,
    * otherwise nullopt is returned.
-   * AbstractASTNode::get_column_id_for_column_identifier() is more strict and will fail, if the
+   * AggregateNode::get_column_id_for_column_identifier() is more strict and will fail, if the
    * @param expression cannot be found
    * NOTE: These functions will possibly result in a full recursive traversal of the ancestors of this node.
    */
@@ -48,7 +48,7 @@ class AggregateNode : public AbstractASTNode {
   ColumnID get_column_id_for_expression(const std::shared_ptr<Expression>& expression) const;
   // @}
 
-  std::vector<ColumnID> get_column_ids_for_table(const std::string& table_name) const override;
+  std::vector<ColumnID> get_output_column_ids_for_table(const std::string& table_name) const override;
 
  protected:
   void _on_child_changed() override;
@@ -57,7 +57,7 @@ class AggregateNode : public AbstractASTNode {
   std::vector<std::shared_ptr<Expression>> _aggregate_expressions;
   std::vector<ColumnID> _groupby_column_ids;
 
-  std::vector<ColumnID> _output_column_ids;
+  std::vector<ColumnID> _output_column_id_to_input_column_id;
   std::vector<std::string> _output_column_names;
 };
 

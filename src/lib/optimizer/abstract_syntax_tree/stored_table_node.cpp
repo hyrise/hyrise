@@ -19,12 +19,14 @@ StoredTableNode::StoredTableNode(const std::string& table_name, const optional<s
   auto table = StorageManager::get().get_table(_table_name);
   _output_column_names = table->column_names();
 
-  _output_column_ids.resize(_output_column_names.size(), INVALID_COLUMN_ID);
+  _output_column_id_to_input_column_id.resize(num_output_columns(), INVALID_COLUMN_ID);
 }
 
 std::string StoredTableNode::description() const { return "Table: " + _table_name; }
 
-const std::vector<ColumnID>& StoredTableNode::output_column_ids() const { return _output_column_ids; }
+const std::vector<ColumnID>& StoredTableNode::output_column_id_to_input_column_id() const {
+  return _output_column_id_to_input_column_id;
+}
 
 const std::vector<std::string>& StoredTableNode::output_column_names() const { return _output_column_names; }
 
@@ -55,13 +57,13 @@ bool StoredTableNode::manages_table(const std::string& table_name) const {
   return _alias == table_name || _table_name == table_name;
 }
 
-std::vector<ColumnID> StoredTableNode::get_column_ids_for_table(const std::string& table_name) const {
+std::vector<ColumnID> StoredTableNode::get_output_column_ids_for_table(const std::string& table_name) const {
   if (!manages_table(table_name)) {
     return {};
   }
 
   std::vector<ColumnID> column_ids;
-  column_ids.reserve(output_column_ids().size());
+  column_ids.reserve(num_output_columns());
 
   for (auto column_idx = 0u; column_idx < column_ids.capacity(); ++column_idx) {
     column_ids.emplace_back(static_cast<ColumnID::base_type>(column_idx));

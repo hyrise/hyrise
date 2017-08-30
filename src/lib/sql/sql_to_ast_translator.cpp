@@ -395,12 +395,12 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_projection(
 
       if (expr->name().empty()) {
         // If there is no table qualifier take all columns from the input.
-        for (ColumnID::base_type column_idx = 0u; column_idx < input_node->output_column_ids().size(); column_idx++) {
+        for (ColumnID::base_type column_idx = 0u; column_idx < input_node->num_output_columns(); column_idx++) {
           column_ids.emplace_back(column_idx);
         }
       } else {
         // Otherwise only take columns that belong to that qualifier.
-        column_ids = input_node->get_column_ids_for_table(expr->name());
+        column_ids = input_node->get_output_column_ids_for_table(expr->name());
       }
 
       const auto& column_references = Expression::create_column_identifiers(column_ids);

@@ -89,14 +89,16 @@ const std::vector<std::string> &AbstractASTNode::output_column_names() const {
   return _left_child->output_column_names();
 }
 
-const std::vector<ColumnID> &AbstractASTNode::output_column_ids() const {
+const std::vector<ColumnID> &AbstractASTNode::output_column_id_to_input_column_id() const {
   /**
    * This function has to be overwritten if columns or their order are in any way redefined by this Node.
    * Examples include Projections, Aggregates, and Joins.
    */
   DebugAssert(!!_left_child, "Node has no left child and therefore must override this function.");
-  return _left_child->output_column_ids();
+  return _left_child->output_column_id_to_input_column_id();
 }
+
+size_t AbstractASTNode::num_output_columns() const { return output_column_names().size(); }
 
 ColumnID AbstractASTNode::get_column_id_for_column_identifier_name(
     const ColumnIdentifierName &column_identifier_name) const {
@@ -123,7 +125,7 @@ bool AbstractASTNode::manages_table(const std::string &table_name) const {
   return _left_child->manages_table(table_name);
 }
 
-std::vector<ColumnID> AbstractASTNode::get_column_ids_for_table(const std::string &table_name) const {
+std::vector<ColumnID> AbstractASTNode::get_output_column_ids_for_table(const std::string &table_name) const {
   /**
    * This function might have to be overwritten if a node can handle different input tables, e.g. a JOIN.
    */
@@ -133,7 +135,7 @@ std::vector<ColumnID> AbstractASTNode::get_column_ids_for_table(const std::strin
     return {};
   }
 
-  return _left_child->get_column_ids_for_table(table_name);
+  return _left_child->get_output_column_ids_for_table(table_name);
 }
 
 void AbstractASTNode::print(const uint32_t level, std::ostream &out) const {
