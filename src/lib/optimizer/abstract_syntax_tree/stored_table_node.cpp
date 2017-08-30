@@ -42,8 +42,8 @@ optional<ColumnID> StoredTableNode::find_column_id_for_column_identifier_name(
     return nullopt;
   }
 
-  auto& columns = output_column_names();
-  auto iter = std::find(columns.begin(), columns.end(), column_identifier_name.column_name);
+  const auto& columns = output_column_names();
+  const auto iter = std::find(columns.begin(), columns.end(), column_identifier_name.column_name);
 
   if (iter == columns.end()) {
     return nullopt;

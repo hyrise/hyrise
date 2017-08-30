@@ -36,7 +36,6 @@ const std::vector<std::shared_ptr<Expression>>& ProjectionNode::column_expressio
 void ProjectionNode::_on_child_changed() {
   /**
    * Populates `_output_column_names` and `_output_column_id_to_input_column_id`.
-   * This cannot be done in the constructor because children have to be set to resolve column names.
    */
   DebugAssert(!!left_child(), "ProjectionNode needs a child.");
 

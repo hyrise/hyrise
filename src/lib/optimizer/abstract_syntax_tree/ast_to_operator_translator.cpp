@@ -95,7 +95,8 @@ std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::_translate_join_node(
     return std::make_shared<Product>(input_left_operator, input_right_operator);
   }
 
-  DebugAssert(static_cast<bool>(join_node->scan_type()), "Cannot translate Join without ScanType");
+  DebugAssert(static_cast<bool>(join_node->join_column_ids()), "Cannot translate Join without join column ids.");
+  DebugAssert(static_cast<bool>(join_node->scan_type()), "Cannot translate Join without ScanType.");
   return std::make_shared<JoinNestedLoopA>(input_left_operator, input_right_operator, join_node->join_mode(),
                                            *(join_node->join_column_ids()), *(join_node->scan_type()));
 }
@@ -114,7 +115,7 @@ std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::_translate_aggregate_
    * 1. Handle arithmetic expressions in aggregate functions via Projection.
    *
    * In Hyrise, only Projections are supposed to be able to handle arithmetic expressions.
-   * herefore, if we encounter an expression within an aggregate function, we have to execute a Projection first.
+   * Therefore, if we encounter an expression within an aggregate function, we have to execute a Projection first.
    * The Aggregate will work with the output columns of that Projection.
    *
    * We only need a Projection before the aggregate if the function argument is an arithmetic expression.
@@ -139,6 +140,8 @@ std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::_translate_aggregate_
    *  - arithmetic expressions,
    *  - columns used in aggregate functions, and
    *  - GROUP BY columns
+   *
+   *  TODO(anybody): this might result in the same columns being created multiple times. Improve.
    */
   if (need_projection) {
     Projection::ColumnExpressions column_expressions = Expression::create_column_identifiers(groupby_columns);

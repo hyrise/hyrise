@@ -50,9 +50,6 @@ std::shared_ptr<Expression> SQLExpressionTranslator::translate_expression(
       break;
     }
     case hsql::kExprFunctionRef: {
-      // TODO(mp): Parse Function name to Aggregate Function
-      // auto aggregate_function = string_to_aggregate_function.at(name);
-
       std::vector<std::shared_ptr<Expression>> expression_list;
       for (auto elem : *(expr.exprList)) {
         expression_list.emplace_back(translate_expression(*elem, input_node));
