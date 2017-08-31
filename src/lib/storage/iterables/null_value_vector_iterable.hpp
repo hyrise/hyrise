@@ -17,21 +17,20 @@ namespace opossum {
  */
 class NullValueVectorIterable : public BaseIndexableIterable<NullValueVectorIterable> {
  public:
-  explicit NullValueVectorIterable(const tbb::concurrent_vector<bool>& null_values,
-                                   const ChunkOffsetsList* mapped_chunk_offsets = nullptr)
-      : BaseIndexableIterable<NullValueVectorIterable>{mapped_chunk_offsets}, _null_values{null_values} {}
+  explicit NullValueVectorIterable(const tbb::concurrent_vector<bool>& null_values)
+      : _null_values{null_values} {}
 
   template <typename Functor>
-  void _on_with_iterators_without_indices(const Functor& f) const {
+  void _on_with_iterators(const Functor& f) const {
     auto begin = Iterator{_null_values.cbegin(), _null_values.cbegin()};
     auto end = Iterator{_null_values.cbegin(), _null_values.cend()};
     f(begin, end);
   }
 
   template <typename Functor>
-  void _on_with_iterators_with_indices(const Functor& f) const {
-    auto begin = IndexedIterator{_null_values, _mapped_chunk_offsets->cbegin()};
-    auto end = IndexedIterator{_null_values, _mapped_chunk_offsets->cend()};
+  void _on_with_iterators(const ChunkOffsetsList& mapped_chunk_offsets, const Functor& f) const {
+    auto begin = IndexedIterator{_null_values, mapped_chunk_offsets.cbegin()};
+    auto end = IndexedIterator{_null_values, mapped_chunk_offsets.cend()};
     f(begin, end);
   }
 

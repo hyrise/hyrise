@@ -24,6 +24,7 @@ void SingleColumnTableScanImpl::handle_value_column(BaseColumn &base_column,
                                                     std::shared_ptr<ColumnVisitableContext> base_context) {
   auto context = std::static_pointer_cast<Context>(base_context);
   auto &matches_out = context->_matches_out;
+  const auto &mapped_chunk_offsets = context->_mapped_chunk_offsets;
   const auto chunk_id = context->_chunk_id;
 
   const auto left_column_type = _in_table->column_type(_left_column_id);
@@ -33,10 +34,10 @@ void SingleColumnTableScanImpl::handle_value_column(BaseColumn &base_column,
 
     auto &left_column = static_cast<ValueColumn<Type> &>(base_column);
 
-    auto left_column_iterable = create_iterable_from_column(left_column, context->_mapped_chunk_offsets.get());
+    auto left_column_iterable = create_iterable_from_column(left_column);
     auto right_value_iterable = ConstantValueIterable<Type>{_right_value};
 
-    left_column_iterable.with_iterators([&](auto left_it, auto left_end) {
+    left_column_iterable.with_iterators(mapped_chunk_offsets.get(), [&](auto left_it, auto left_end) {
       right_value_iterable.with_iterators([&](auto right_it, auto right_end) {
         _resolve_to_operator(_scan_type, [&](auto comparator) {
           TableScanMainLoop{}(comparator, left_it, left_end, right_it, chunk_id, matches_out);  // NOLINT
@@ -51,6 +52,7 @@ void SingleColumnTableScanImpl::handle_dictionary_column(BaseColumn &base_column
   auto context = std::static_pointer_cast<Context>(base_context);
   auto &matches_out = context->_matches_out;
   const auto chunk_id = context->_chunk_id;
+  const auto &mapped_chunk_offsets = context->_mapped_chunk_offsets;
   auto &left_column = static_cast<const BaseDictionaryColumn &>(base_column);
 
   /**
@@ -83,10 +85,10 @@ void SingleColumnTableScanImpl::handle_dictionary_column(BaseColumn &base_column
    */
 
   const auto &attribute_vector = *left_column.attribute_vector();
-  auto left_iterable = AttributeVectorIterable{attribute_vector, context->_mapped_chunk_offsets.get()};
+  auto left_iterable = AttributeVectorIterable{attribute_vector};
 
   if (_right_value_matches_all(left_column, search_value_id)) {
-    left_iterable.with_iterators([&](auto left_it, auto left_end) {
+    left_iterable.with_iterators(mapped_chunk_offsets.get(), [&](auto left_it, auto left_end) {
       for (; left_it != left_end; ++left_it) {
         const auto left = *left_it;
 
@@ -104,7 +106,7 @@ void SingleColumnTableScanImpl::handle_dictionary_column(BaseColumn &base_column
 
   auto right_iterable = ConstantValueIterable<ValueID>{search_value_id};
 
-  left_iterable.with_iterators([&](auto left_it, auto left_end) {
+  left_iterable.with_iterators(mapped_chunk_offsets.get(), [&](auto left_it, auto left_end) {
     right_iterable.with_iterators([&](auto right_it, auto right_end) {
       this->_resolve_to_operator_for_dict_column_scan(_scan_type, [&](auto comparator) {
         TableScanMainLoop{}(comparator, left_it, left_end, right_it, chunk_id, matches_out);  // NOLINT

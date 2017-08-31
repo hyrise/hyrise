@@ -11,21 +11,19 @@ namespace opossum {
 
 class AttributeVectorIterable : public BaseIndexableIterable<AttributeVectorIterable> {
  public:
-  explicit AttributeVectorIterable(const BaseAttributeVector& attribute_vector,
-                                   const ChunkOffsetsList* mapped_chunk_offsets = nullptr)
-      : BaseIndexableIterable<AttributeVectorIterable>{mapped_chunk_offsets}, _attribute_vector{attribute_vector} {}
+  explicit AttributeVectorIterable(const BaseAttributeVector& attribute_vector) : _attribute_vector{attribute_vector} {}
 
   template <typename Functor>
-  void _on_with_iterators_with_indices(const Functor& f) const {
-    auto begin = IndexedIterator{_attribute_vector, _mapped_chunk_offsets->cbegin()};
-    auto end = IndexedIterator{_attribute_vector, _mapped_chunk_offsets->cend()};
+  void _on_with_iterators(const Functor& f) const {
+    auto begin = Iterator{_attribute_vector, 0u};
+    auto end = Iterator{_attribute_vector, static_cast<ChunkOffset>(_attribute_vector.size())};
     f(begin, end);
   }
 
   template <typename Functor>
-  void _on_with_iterators_without_indices(const Functor& f) const {
-    auto begin = Iterator{_attribute_vector, 0u};
-    auto end = Iterator{_attribute_vector, static_cast<ChunkOffset>(_attribute_vector.size())};
+  void _on_with_iterators(const ChunkOffsetsList& mapped_chunk_offsets, const Functor& f) const {
+    auto begin = IndexedIterator{_attribute_vector, mapped_chunk_offsets.cbegin()};
+    auto end = IndexedIterator{_attribute_vector, mapped_chunk_offsets.cend()};
     f(begin, end);
   }
 

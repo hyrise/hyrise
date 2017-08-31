@@ -18,6 +18,7 @@ IsNullTableScanImpl::IsNullTableScanImpl(std::shared_ptr<const Table> in_table, 
 void IsNullTableScanImpl::handle_value_column(BaseColumn &base_column,
                                               std::shared_ptr<ColumnVisitableContext> base_context) {
   auto context = std::static_pointer_cast<Context>(base_context);
+  const auto &mapped_chunk_offsets = context->_mapped_chunk_offsets;
   auto &left_column = static_cast<const BaseValueColumn &>(base_column);
 
   if (_matches_all(left_column)) {
@@ -32,20 +33,21 @@ void IsNullTableScanImpl::handle_value_column(BaseColumn &base_column,
   DebugAssert(left_column.is_nullable(),
               "Columns that are not nullable should have been caught by edge case handling.");
 
-  auto left_column_iterable = NullValueVectorIterable{left_column.null_values(), context->_mapped_chunk_offsets.get()};
+  auto left_column_iterable = NullValueVectorIterable{left_column.null_values()};
 
-  left_column_iterable.with_iterators([&](auto left_it, auto left_end) { this->_scan(left_it, left_end, *context); });
+  left_column_iterable.with_iterators(mapped_chunk_offsets.get(), [&](auto left_it, auto left_end) { this->_scan(left_it, left_end, *context); });
 }
 
 void IsNullTableScanImpl::handle_dictionary_column(BaseColumn &base_column,
                                                    std::shared_ptr<ColumnVisitableContext> base_context) {
   auto context = std::static_pointer_cast<Context>(base_context);
+  const auto &mapped_chunk_offsets = context->_mapped_chunk_offsets;
   auto &left_column = static_cast<const BaseDictionaryColumn &>(base_column);
 
   auto left_column_iterable =
-      AttributeVectorIterable{*left_column.attribute_vector(), context->_mapped_chunk_offsets.get()};
+      AttributeVectorIterable{*left_column.attribute_vector()};
 
-  left_column_iterable.with_iterators([&](auto left_it, auto left_end) { this->_scan(left_it, left_end, *context); });
+  left_column_iterable.with_iterators(mapped_chunk_offsets.get(), [&](auto left_it, auto left_end) { this->_scan(left_it, left_end, *context); });
 }
 
 bool IsNullTableScanImpl::_matches_all(const BaseValueColumn &column) {

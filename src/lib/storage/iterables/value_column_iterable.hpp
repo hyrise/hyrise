@@ -14,11 +14,10 @@ namespace opossum {
 template <typename T>
 class ValueColumnIterable : public BaseIndexableIterable<ValueColumnIterable<T>> {
  public:
-  explicit ValueColumnIterable(const ValueColumn<T>& column, const ChunkOffsetsList* mapped_chunk_offsets = nullptr)
-      : BaseIndexableIterable<ValueColumnIterable<T>>{mapped_chunk_offsets}, _column{column} {}
+  explicit ValueColumnIterable(const ValueColumn<T>& column) : _column{column} {}
 
   template <typename Functor>
-  void _on_with_iterators_without_indices(const Functor& f) const {
+  void _on_with_iterators(const Functor& f) const {
     if (_column.is_nullable()) {
       auto begin =
           NullableIterator{_column.values().cbegin(), _column.values().cbegin(), _column.null_values().cbegin()};
@@ -33,15 +32,15 @@ class ValueColumnIterable : public BaseIndexableIterable<ValueColumnIterable<T>>
   }
 
   template <typename Functor>
-  void _on_with_iterators_with_indices(const Functor& f) const {
+  void _on_with_iterators(const ChunkOffsetsList& mapped_chunk_offsets, const Functor& f) const {
     if (_column.is_nullable()) {
       auto begin =
-          NullableIndexedIterator{_column.values(), _column.null_values(), this->_mapped_chunk_offsets->cbegin()};
-      auto end = NullableIndexedIterator{_column.values(), _column.null_values(), this->_mapped_chunk_offsets->cend()};
+          NullableIndexedIterator{_column.values(), _column.null_values(), mapped_chunk_offsets.cbegin()};
+      auto end = NullableIndexedIterator{_column.values(), _column.null_values(), mapped_chunk_offsets.cend()};
       f(begin, end);
     } else {
-      auto begin = IndexedIterator{_column.values(), this->_mapped_chunk_offsets->cbegin()};
-      auto end = IndexedIterator{_column.values(), this->_mapped_chunk_offsets->cend()};
+      auto begin = IndexedIterator{_column.values(), mapped_chunk_offsets.cbegin()};
+      auto end = IndexedIterator{_column.values(), mapped_chunk_offsets.cend()};
       f(begin, end);
     }
   }

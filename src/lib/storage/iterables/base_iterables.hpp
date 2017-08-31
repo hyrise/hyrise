@@ -11,18 +11,16 @@ namespace opossum {
 /**
  * @brief base class of all iterables
  *
- * Implements the two methods with_iterators and with_iterators_no_indices,
- * which both accept a generic lambda (or similar) and call this lambda
- * passing a begin and end iterator to the underlying data structure
- * as parameters. Depending on this data structure, the generic lambda
- * may be instantiated for not one but many sets of iterators. For example,
- * the data structure might be accessed via a list of indices or might be
- * nullable or non-nullable. This results in a large amount of code.
+ * Implements the method with_iterators, which accepts a generic lambda
+ * (or similar) that expects a begin and end iterator to the underlying
+ * data structure as parameters. Depending on this data structure, the
+ * generic lambda may be instantiated for not one but many sets of iterators.
+ * For example, the data structure might be accessed via a list of indices or
+ * might be nullable or non-nullable.
  *
- * In cases where one is certain that no list of chunk offset mappings
- * (i.e. a ChunkOffsetsList) have been passed, with_iterators_no_indices
- * can be used. This method won’t instantiate the lambda for indexed
- * iterators, hence, reduce the size of the compiled binary file.
+ * For convenience, the class also implements the method for_each, which
+ * takes care of iterating over the elements and expects a column value
+ * as the parameter (use const auto& as the parameter declaration!).
  *
  *
  * A note on CRTP (curiously recurring template pattern):
@@ -64,38 +62,13 @@ class BaseIterable {
   }
 
   /**
-   * Does the same as with_iterators but is needed for a specialization
-   * in BaseIndexableIterable
-   *
-   * @param f is a generic lambda accepting two iterators as parameters
-   */
-  template <typename Functor>
-  void with_iterators_no_indices(const Functor& f) {
-    _self()._on_with_iterators(f);
-  }
-
-  /**
-   * @param f is a generic lambda accepting a reference to column value
+   * @param f is a generic lambda accepting a column value (i.e. use const auto&)
    */
   template <typename Functor>
   void for_each(const Functor& f) {
-    _self().with_iterators([&f](auto it, auto end) {
+    with_iterators([&f](auto it, auto end) {
       for (; it != end; ++it) {
-        auto value = *it;
-        f(value);
-      }
-    });
-  }
-
-  /**
-   * @param f is a generic lambda accepting a reference to column value
-   */
-  template <typename Functor>
-  void for_each_no_indices(const Functor& f) {
-    _self().with_iterators_no_indices([&f](auto it, auto end) {
-      for (; it != end; ++it) {
-        auto value = *it;
-        f(value);
+        f(*it);
       }
     });
   }
@@ -106,31 +79,39 @@ class BaseIterable {
 
 /**
  * @brief base class of all indexable iterables
+ *
+ * Extends the interface of BaseIterable by two variants of
+ * with_iterators and for_each. These methods accept in addition
+ * to the generic lambda a mapped chunk offsets (i.e. ChunkOffsetList).
+ * In most cases, this list will be generated from a pos_list of a
+ * reference column (see chunk_offset_mapping.hpp). When such a list is
+ * passed, the used iterators only iterate over the chunk offsets that
+ * were included in the pos_list; everything else is skipped.
  */
 template <typename Derived>
 class BaseIndexableIterable : public BaseIterable<Derived> {
  public:
-  explicit BaseIndexableIterable(const ChunkOffsetsList* mapped_chunk_offsets = nullptr)
-      : _mapped_chunk_offsets{mapped_chunk_offsets} {}
+  using BaseIterable<Derived>::with_iterators;  // needed because of “name hiding”
 
   template <typename Functor>
-  void with_iterators(const Functor& f) const {
-    if (_mapped_chunk_offsets == nullptr) {
-      _self()._on_with_iterators_without_indices(f);
+  void with_iterators(const ChunkOffsetsList* mapped_chunk_offsets, const Functor& f) const {
+    if (mapped_chunk_offsets == nullptr) {
+      _self()._on_with_iterators(f);
     } else {
-      _self()._on_with_iterators_with_indices(f);
+      _self()._on_with_iterators(*mapped_chunk_offsets, f);
     }
   }
 
+  using BaseIterable<Derived>::for_each;  // needed because of “name hiding”
+
   template <typename Functor>
-  void with_iterators_no_indices(const Functor& f) const {
-    DebugAssert(_mapped_chunk_offsets == nullptr, "Mapped chunk offsets must be a nullptr.");
-
-    _self()._on_with_iterators_without_indices(f);
+  void for_each(const ChunkOffsetsList* mapped_chunk_offsets, const Functor& f) {
+    with_iterators(mapped_chunk_offsets, [&f](auto it, auto end) {
+      for (; it != end; ++it) {
+        f(*it);
+      }
+    });
   }
-
- protected:
-  const ChunkOffsetsList* _mapped_chunk_offsets;
 
  private:
   const Derived& _self() const { return static_cast<const Derived&>(*this); }

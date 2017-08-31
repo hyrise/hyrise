@@ -30,18 +30,19 @@ void LikeTableScanImpl::handle_value_column(BaseColumn &base_column,
                                             std::shared_ptr<ColumnVisitableContext> base_context) {
   auto context = std::static_pointer_cast<Context>(base_context);
   auto &matches_out = context->_matches_out;
+  const auto &mapped_chunk_offsets = context->_mapped_chunk_offsets;
   const auto chunk_id = context->_chunk_id;
 
   auto &left_column = static_cast<const ValueColumn<std::string> &>(base_column);
 
-  auto left_iterable = ValueColumnIterable<std::string>{left_column, context->_mapped_chunk_offsets.get()};
+  auto left_iterable = ValueColumnIterable<std::string>{left_column};
   auto right_iterable = ConstantValueIterable<std::regex>{_regex};
 
   static const auto regex_comparator = [](const std::string& str, const std::regex& regex) {
     return std::regex_match(str, regex);
   };
 
-  left_iterable.with_iterators([&](auto left_it, auto left_end) {
+  left_iterable.with_iterators(mapped_chunk_offsets.get(), [&](auto left_it, auto left_end) {
     right_iterable.with_iterators([&](auto right_it, auto right_end) {
       TableScanMainLoop{}(regex_comparator, left_it, left_end, right_it, chunk_id, matches_out);
     });
@@ -52,6 +53,7 @@ void LikeTableScanImpl::handle_dictionary_column(BaseColumn &base_column,
                                                  std::shared_ptr<ColumnVisitableContext> base_context) {
   auto context = std::static_pointer_cast<Context>(base_context);
   auto &matches_out = context->_matches_out;
+  const auto &mapped_chunk_offsets = context->_mapped_chunk_offsets;
   const auto chunk_id = context->_chunk_id;
 
   const auto &left_column = static_cast<const DictionaryColumn<std::string> &>(base_column);
@@ -62,10 +64,10 @@ void LikeTableScanImpl::handle_dictionary_column(BaseColumn &base_column,
       static_cast<size_t>(std::count(dictionary_matches.cbegin(), dictionary_matches.cend(), true));
 
   const auto &attribute_vector = *left_column.attribute_vector();
-  auto attribute_vector_iterable = AttributeVectorIterable{attribute_vector, context->_mapped_chunk_offsets.get()};
+  auto attribute_vector_iterable = AttributeVectorIterable{attribute_vector};
 
   if (match_count == dictionary_matches.size()) {
-    attribute_vector_iterable.with_iterators([&](auto left_it, auto left_end) {
+    attribute_vector_iterable.with_iterators(mapped_chunk_offsets.get(), [&](auto left_it, auto left_end) {
       for (; left_it != left_end; ++left_it) {
         const auto left = *left_it;
 
@@ -80,7 +82,7 @@ void LikeTableScanImpl::handle_dictionary_column(BaseColumn &base_column,
     return;
   }
 
-  attribute_vector_iterable.with_iterators([&](auto left_it, auto left_end) {
+  attribute_vector_iterable.with_iterators(mapped_chunk_offsets.get(), [&](auto left_it, auto left_end) {
     for (; left_it != left_end; ++left_it) {
       const auto left = *left_it;
 

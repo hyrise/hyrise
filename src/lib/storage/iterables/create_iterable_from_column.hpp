@@ -7,14 +7,13 @@
 namespace opossum {
 
 template <typename T>
-auto create_iterable_from_column(const ValueColumn<T>& column, const ChunkOffsetsList* mapped_chunk_offsets = nullptr) {
-  return ValueColumnIterable<T>{column, mapped_chunk_offsets};
+auto create_iterable_from_column(const ValueColumn<T>& column) {
+  return ValueColumnIterable<T>{column};
 }
 
 template <typename T>
-auto create_iterable_from_column(const DictionaryColumn<T>& column,
-                                 const ChunkOffsetsList* mapped_chunk_offsets = nullptr) {
-  return DictionaryColumnIterable<T>{column, mapped_chunk_offsets};
+auto create_iterable_from_column(const DictionaryColumn<T>& column) {
+  return DictionaryColumnIterable<T>{column};
 }
 
 template <typename T>

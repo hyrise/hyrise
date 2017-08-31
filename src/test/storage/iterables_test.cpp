@@ -78,10 +78,10 @@ TEST_F(IterablesTest, ValueColumnReferencedIteratorWithIterators) {
 
   auto chunk_offsets = std::vector<ChunkOffsetMapping>{{0u, 0u}, {1u, 2u}, {2u, 3u}};
 
-  auto iterable = ValueColumnIterable<int>{*int_column, &chunk_offsets};
+  auto iterable = ValueColumnIterable<int>{*int_column};
 
   auto sum = uint32_t{0};
-  iterable.with_iterators(SumUpWithIt{sum});
+  iterable.with_iterators(&chunk_offsets, SumUpWithIt{sum});
 
   EXPECT_EQ(sum, 12'480u);
 }
@@ -108,10 +108,10 @@ TEST_F(IterablesTest, ValueColumnNullableReferencedIteratorWithIterators) {
 
   auto chunk_offsets = std::vector<ChunkOffsetMapping>{{0u, 0u}, {1u, 2u}, {2u, 3u}};
 
-  auto iterable = ValueColumnIterable<int>{*int_column, &chunk_offsets};
+  auto iterable = ValueColumnIterable<int>{*int_column};
 
   auto sum = uint32_t{0};
-  iterable.with_iterators(SumUpWithIt{sum});
+  iterable.with_iterators(&chunk_offsets, SumUpWithIt{sum});
 
   EXPECT_EQ(sum, 13'579u);
 }
@@ -142,10 +142,10 @@ TEST_F(IterablesTest, DictionaryColumnDictReferencedIteratorWithIterators) {
 
   auto chunk_offsets = std::vector<ChunkOffsetMapping>{{0u, 0u}, {1u, 2u}, {2u, 3u}};
 
-  auto iterable = DictionaryColumnIterable<int>{*dict_column, &chunk_offsets};
+  auto iterable = DictionaryColumnIterable<int>{*dict_column};
 
   auto sum = uint32_t{0};
-  iterable.with_iterators(SumUpWithIt{sum});
+  iterable.with_iterators(&chunk_offsets, SumUpWithIt{sum});
 
   EXPECT_EQ(sum, 12'480u);
 }
