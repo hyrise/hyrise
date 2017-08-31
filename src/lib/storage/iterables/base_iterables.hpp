@@ -19,8 +19,9 @@ namespace opossum {
  * might be nullable or non-nullable.
  *
  * For convenience, the class also implements the method for_each, which
- * takes care of iterating over the elements and expects a column value
- * as the parameter (use const auto& as the parameter declaration!).
+ * takes care of iterating over the elements and accepts a generic lambda
+ * that expects a column value as the parameter (use const auto& as the
+ * parameter declaration!).
  *
  *
  * A note on CRTP (curiously recurring template pattern):
