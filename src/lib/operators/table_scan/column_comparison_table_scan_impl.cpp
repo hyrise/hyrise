@@ -69,7 +69,7 @@ PosList ColumnComparisonTableScanImpl::scan_chunk(const ChunkID &chunk_id) {
 
         left_column_iterable.with_iterators([&](auto left_it, auto left_end) {
           right_column_iterable.with_iterators([&](auto right_it, auto right_end) {
-            this->_resolve_to_operator(_scan_type, [&](auto comparator) {
+            this->_with_operator(_scan_type, [&](auto comparator) {
               TableScanMainLoop{}(comparator, left_it, left_end, right_it, chunk_id, matches_out);  // NOLINT
             });
           });

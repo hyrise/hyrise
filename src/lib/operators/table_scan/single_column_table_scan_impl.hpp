@@ -45,7 +45,7 @@ class SingleColumnTableScanImpl : public BaseSingleColumnTableScanImpl {
   bool _right_value_matches_none(const BaseDictionaryColumn &column, const ValueID search_value_id);
 
   template <typename Functor>
-  void _resolve_to_operator_for_dict_column_scan(const ScanType scan_type, const Functor &func) {
+  void _with_operator_for_dict_column_scan(const ScanType scan_type, const Functor &func) {
     switch (scan_type) {
       case ScanType::OpEquals:
         func(std::equal_to<void>{});

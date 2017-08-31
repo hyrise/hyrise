@@ -39,7 +39,7 @@ void SingleColumnTableScanImpl::handle_value_column(BaseColumn &base_column,
 
     left_column_iterable.with_iterators(mapped_chunk_offsets.get(), [&](auto left_it, auto left_end) {
       right_value_iterable.with_iterators([&](auto right_it, auto right_end) {
-        _resolve_to_operator(_scan_type, [&](auto comparator) {
+        _with_operator(_scan_type, [&](auto comparator) {
           TableScanMainLoop{}(comparator, left_it, left_end, right_it, chunk_id, matches_out);  // NOLINT
         });
       });
@@ -108,7 +108,7 @@ void SingleColumnTableScanImpl::handle_dictionary_column(BaseColumn &base_column
 
   left_iterable.with_iterators(mapped_chunk_offsets.get(), [&](auto left_it, auto left_end) {
     right_iterable.with_iterators([&](auto right_it, auto right_end) {
-      this->_resolve_to_operator_for_dict_column_scan(_scan_type, [&](auto comparator) {
+      this->_with_operator_for_dict_column_scan(_scan_type, [&](auto comparator) {
         TableScanMainLoop{}(comparator, left_it, left_end, right_it, chunk_id, matches_out);  // NOLINT
       });
     });
