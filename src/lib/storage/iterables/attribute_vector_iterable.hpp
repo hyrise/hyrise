@@ -16,14 +16,14 @@ class AttributeVectorIterable : public BaseIndexableIterable<AttributeVectorIter
       : BaseIndexableIterable<AttributeVectorIterable>{mapped_chunk_offsets}, _attribute_vector{attribute_vector} {}
 
   template <typename Functor>
-  void _on_get_iterators_with_indices(const Functor& f) const {
+  void _on_with_iterators_with_indices(const Functor& f) const {
     auto begin = IndexedIterator{_attribute_vector, _mapped_chunk_offsets->cbegin()};
     auto end = IndexedIterator{_attribute_vector, _mapped_chunk_offsets->cend()};
     f(begin, end);
   }
 
   template <typename Functor>
-  void _on_get_iterators_without_indices(const Functor& f) const {
+  void _on_with_iterators_without_indices(const Functor& f) const {
     auto begin = Iterator{_attribute_vector, 0u};
     auto end = Iterator{_attribute_vector, static_cast<ChunkOffset>(_attribute_vector.size())};
     f(begin, end);

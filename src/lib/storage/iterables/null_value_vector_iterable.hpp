@@ -22,14 +22,14 @@ class NullValueVectorIterable : public BaseIndexableIterable<NullValueVectorIter
       : BaseIndexableIterable<NullValueVectorIterable>{mapped_chunk_offsets}, _null_values{null_values} {}
 
   template <typename Functor>
-  void _on_get_iterators_without_indices(const Functor& f) const {
+  void _on_with_iterators_without_indices(const Functor& f) const {
     auto begin = Iterator{_null_values.cbegin(), _null_values.cbegin()};
     auto end = Iterator{_null_values.cbegin(), _null_values.cend()};
     f(begin, end);
   }
 
   template <typename Functor>
-  void _on_get_iterators_with_indices(const Functor& f) const {
+  void _on_with_iterators_with_indices(const Functor& f) const {
     auto begin = IndexedIterator{_null_values, _mapped_chunk_offsets->cbegin()};
     auto end = IndexedIterator{_null_values, _mapped_chunk_offsets->cend()};
     f(begin, end);

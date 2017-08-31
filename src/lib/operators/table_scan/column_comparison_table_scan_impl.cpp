@@ -71,8 +71,8 @@ PosList ColumnComparisonTableScanImpl::scan_chunk(const ChunkID &chunk_id) {
          * We can use the no_indices variant here because no ChunkOffsetsList
          * has been passed into create_iterable_from_column
          */
-        left_column_iterable.get_iterators_no_indices([&](auto left_it, auto left_end) {
-          right_column_iterable.get_iterators_no_indices([&](auto right_it, auto right_end) {
+        left_column_iterable.with_iterators_no_indices([&](auto left_it, auto left_end) {
+          right_column_iterable.with_iterators_no_indices([&](auto right_it, auto right_end) {
             this->_resolve_to_operator(_scan_type, [&](auto comparator) {
               TableScanMainLoop{}(comparator, left_it, left_end, right_it, chunk_id, matches_out);  // NOLINT
             });

@@ -18,14 +18,14 @@ class DictionaryColumnIterable : public BaseIndexableIterable<DictionaryColumnIt
       : BaseIndexableIterable<DictionaryColumnIterable<T>>{mapped_chunk_offsets}, _column{column} {}
 
   template <typename Functor>
-  void _on_get_iterators_without_indices(const Functor& f) const {
+  void _on_with_iterators_without_indices(const Functor& f) const {
     auto begin = Iterator{*_column.dictionary(), *_column.attribute_vector(), 0u};
     auto end = Iterator{*_column.dictionary(), *_column.attribute_vector(), static_cast<ChunkOffset>(_column.size())};
     f(begin, end);
   }
 
   template <typename Functor>
-  void _on_get_iterators_with_indices(const Functor& f) const {
+  void _on_with_iterators_with_indices(const Functor& f) const {
     auto begin =
         IndexedIterator{*_column.dictionary(), *_column.attribute_vector(), this->_mapped_chunk_offsets->cbegin()};
     auto end = IndexedIterator{*_column.dictionary(), *_column.attribute_vector(), this->_mapped_chunk_offsets->cend()};

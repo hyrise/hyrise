@@ -18,7 +18,7 @@ class ValueColumnIterable : public BaseIndexableIterable<ValueColumnIterable<T>>
       : BaseIndexableIterable<ValueColumnIterable<T>>{mapped_chunk_offsets}, _column{column} {}
 
   template <typename Functor>
-  void _on_get_iterators_without_indices(const Functor& f) const {
+  void _on_with_iterators_without_indices(const Functor& f) const {
     if (_column.is_nullable()) {
       auto begin =
           NullableIterator{_column.values().cbegin(), _column.values().cbegin(), _column.null_values().cbegin()};
@@ -33,7 +33,7 @@ class ValueColumnIterable : public BaseIndexableIterable<ValueColumnIterable<T>>
   }
 
   template <typename Functor>
-  void _on_get_iterators_with_indices(const Functor& f) const {
+  void _on_with_iterators_with_indices(const Functor& f) const {
     if (_column.is_nullable()) {
       auto begin =
           NullableIndexedIterator{_column.values(), _column.null_values(), this->_mapped_chunk_offsets->cbegin()};

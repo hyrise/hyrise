@@ -36,8 +36,8 @@ void SingleColumnTableScanImpl::handle_value_column(BaseColumn &base_column,
     auto left_column_iterable = create_iterable_from_column(left_column, context->_mapped_chunk_offsets.get());
     auto right_value_iterable = ConstantValueIterable<Type>{_right_value};
 
-    left_column_iterable.get_iterators([&](auto left_it, auto left_end) {
-      right_value_iterable.get_iterators([&](auto right_it, auto right_end) {
+    left_column_iterable.with_iterators([&](auto left_it, auto left_end) {
+      right_value_iterable.with_iterators([&](auto right_it, auto right_end) {
         _resolve_to_operator(_scan_type, [&](auto comparator) {
           TableScanMainLoop{}(comparator, left_it, left_end, right_it, chunk_id, matches_out);  // NOLINT
         });
@@ -86,7 +86,7 @@ void SingleColumnTableScanImpl::handle_dictionary_column(BaseColumn &base_column
   auto left_iterable = AttributeVectorIterable{attribute_vector, context->_mapped_chunk_offsets.get()};
 
   if (_right_value_matches_all(left_column, search_value_id)) {
-    left_iterable.get_iterators([&](auto left_it, auto left_end) {
+    left_iterable.with_iterators([&](auto left_it, auto left_end) {
       for (; left_it != left_end; ++left_it) {
         const auto left = *left_it;
 
@@ -104,8 +104,8 @@ void SingleColumnTableScanImpl::handle_dictionary_column(BaseColumn &base_column
 
   auto right_iterable = ConstantValueIterable<ValueID>{search_value_id};
 
-  left_iterable.get_iterators([&](auto left_it, auto left_end) {
-    right_iterable.get_iterators([&](auto right_it, auto right_end) {
+  left_iterable.with_iterators([&](auto left_it, auto left_end) {
+    right_iterable.with_iterators([&](auto right_it, auto right_end) {
       this->_resolve_to_operator_for_dict_column_scan(_scan_type, [&](auto comparator) {
         TableScanMainLoop{}(comparator, left_it, left_end, right_it, chunk_id, matches_out);  // NOLINT
       });

@@ -19,7 +19,7 @@ class ReferenceColumnIterable : public BaseIterable<ReferenceColumnIterable<T>> 
   explicit ReferenceColumnIterable(const ReferenceColumn &column) : _column{column} {}
 
   template <typename Functor>
-  void _on_get_iterators(const Functor &f) const {
+  void _on_with_iterators(const Functor &f) const {
     const auto table = _column.referenced_table();
     const auto column_id = _column.referenced_column_id();
 

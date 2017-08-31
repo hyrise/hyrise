@@ -14,7 +14,7 @@ class ConstantValueIterable : public BaseIterable<ConstantValueIterable<T>> {
   explicit ConstantValueIterable(const AllTypeVariant& value) : _value{type_cast<T>(value)} {}
 
   template <typename Functor>
-  void _on_get_iterators(const Functor& f) const {
+  void _on_with_iterators(const Functor& f) const {
     auto it = Iterator{_value};
     f(it, it);
   }

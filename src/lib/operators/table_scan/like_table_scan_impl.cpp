@@ -41,8 +41,8 @@ void LikeTableScanImpl::handle_value_column(BaseColumn &base_column,
     return std::regex_match(str, regex);
   };
 
-  left_iterable.get_iterators([&](auto left_it, auto left_end) {
-    right_iterable.get_iterators([&](auto right_it, auto right_end) {
+  left_iterable.with_iterators([&](auto left_it, auto left_end) {
+    right_iterable.with_iterators([&](auto right_it, auto right_end) {
       TableScanMainLoop{}(regex_comparator, left_it, left_end, right_it, chunk_id, matches_out);
     });
   });
@@ -65,7 +65,7 @@ void LikeTableScanImpl::handle_dictionary_column(BaseColumn &base_column,
   auto attribute_vector_iterable = AttributeVectorIterable{attribute_vector, context->_mapped_chunk_offsets.get()};
 
   if (match_count == dictionary_matches.size()) {
-    attribute_vector_iterable.get_iterators([&](auto left_it, auto left_end) {
+    attribute_vector_iterable.with_iterators([&](auto left_it, auto left_end) {
       for (; left_it != left_end; ++left_it) {
         const auto left = *left_it;
 
@@ -80,7 +80,7 @@ void LikeTableScanImpl::handle_dictionary_column(BaseColumn &base_column,
     return;
   }
 
-  attribute_vector_iterable.get_iterators([&](auto left_it, auto left_end) {
+  attribute_vector_iterable.with_iterators([&](auto left_it, auto left_end) {
     for (; left_it != left_end; ++left_it) {
       const auto left = *left_it;
 
