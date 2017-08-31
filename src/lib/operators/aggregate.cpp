@@ -61,10 +61,8 @@ std::shared_ptr<const Table> Aggregate::on_execute() {
 
     if (column_id == CountStarColumnID && aggregate != AggregateFunction::Count) {
       Fail("Aggregate: Asterisk is only valid with COUNT");
-    }
-
-    if (input_table->column_type(column_id) == "string" &&
-        (aggregate == AggregateFunction::Sum || aggregate == AggregateFunction::Avg)) {
+    } else if (input_table->column_type(column_id) == "string" &&
+               (aggregate == AggregateFunction::Sum || aggregate == AggregateFunction::Avg)) {
       Fail("Aggregate: Cannot calculate SUM or AVG on string column");
     }
   }
