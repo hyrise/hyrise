@@ -75,7 +75,7 @@ std::shared_ptr<Expression> SQLExpressionTranslator::translate_expression(
       node = Expression::create_literal(name);
       break;
     case hsql::kExprParameter:
-      node = Expression::create_placeholder(int_value);
+      node = Expression::create_value_placeholder(ValuePlaceholder{static_cast<uint16_t>(int_value)});
       break;
     case hsql::kExprStar: {
       const auto table_name = expr.table != nullptr ? std::string(expr.table) : "";
