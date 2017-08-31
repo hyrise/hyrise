@@ -10,21 +10,21 @@
 #include <vector>
 
 #include "resolve_type.hpp"
-#include "join_sort_merge_utils/radix_partition_sort.hpp"
+#include "join_sort_merge_utils/radix_cluster_sort.hpp"
 
 namespace opossum {
 
 /**
 * TODO(arne.mayer): Outer non-equi joins (outer <, <=, >, >=)
-* TODO(anyone): Choose an appropriate number of partitions.
+* TODO(anyone): Choose an appropriate number of clusters.
 **/
 
 /**
 * The sort merge join performs a join on two input tables on specific join columns. For usage notes, see the
 * join_sort_merge.hpp. This is how the join works:
-* -> The input tables are materialized and partitioned to a specified amount of partitions.
-*    /utils/radix_partition_sort.hpp for more info on the partitioning phase.
-* -> The join is performed per partition. For the joining phase, runs of entries with the same value are identified
+* -> The input tables are materialized and clustered to a specified amount of clusters.
+*    /utils/radix_cluster_sort.hpp for more info on the clustering phase.
+* -> The join is performed per cluster. For the joining phase, runs of entries with the same value are identified
 *    and handled at once. If a join-match is identified, the corresponding row_ids are noted for the output.
 * -> Using the join result, the output table is built using pos lists referencing the original tables.
 **/
@@ -82,9 +82,9 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
     : _sort_merge_join{sort_merge_join}, _left_column_name{left_column_name}, _right_column_name{right_column_name},
       _op{op}, _mode{mode} {
 
-    _partition_count = _determine_number_of_partitions();
-    _output_pos_lists_left.resize(_partition_count);
-    _output_pos_lists_right.resize(_partition_count);
+    _cluster_count = _determine_number_of_clusters();
+    _output_pos_lists_left.resize(_cluster_count);
+    _output_pos_lists_right.resize(_cluster_count);
   }
 
  protected:
@@ -100,10 +100,10 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
   const ScanType _op;
   const JoinMode _mode;
 
-  // the partition count must be a power of two, i.e. 1, 2, 4, 8, 16, ...
-  size_t _partition_count;
+  // the cluster count must be a power of two, i.e. 1, 2, 4, 8, 16, ...
+  size_t _cluster_count;
 
-  // Contains the output row ids for each partition
+  // Contains the output row ids for each cluster
   std::vector<std::shared_ptr<PosList>> _output_pos_lists_left;
   std::vector<std::shared_ptr<PosList>> _output_pos_lists_right;
 
@@ -113,9 +113,9 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
   struct TableRange;
   struct TablePosition {
     TablePosition() {}
-    TablePosition(size_t partition, size_t index) : partition{partition}, index{index} {}
+    TablePosition(size_t cluster, size_t index) : cluster{cluster}, index{index} {}
 
-    size_t partition;
+    size_t cluster;
     size_t index;
 
     TableRange to(TablePosition position) {
@@ -132,8 +132,8 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
   **/
   struct TableRange {
     TableRange(TablePosition start_position, TablePosition end_position) : start(start_position), end(end_position) {}
-    TableRange(size_t partition, size_t start_index, size_t end_index)
-      : start{TablePosition(partition, start_index)}, end{TablePosition(partition, end_index)} {}
+    TableRange(size_t cluster, size_t start_index, size_t end_index)
+      : start{TablePosition(cluster, start_index)}, end{TablePosition(cluster, end_index)} {}
 
     TablePosition start;
     TablePosition end;
@@ -141,22 +141,22 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
     // Executes the given action for every row id of the table in this range.
     template <typename F>
     void for_every_row_id(std::shared_ptr<MaterializedColumnList<T>> table, F action) {
-      for (size_t partition = start.partition; partition <= end.partition; ++partition) {
-        size_t start_index = (partition == start.partition) ? start.index : 0;
-        size_t end_index = (partition == end.partition) ? end.index : (*table)[partition]->size();
+      for (size_t cluster = start.cluster; cluster <= end.cluster; ++cluster) {
+        size_t start_index = (cluster == start.cluster) ? start.index : 0;
+        size_t end_index = (cluster == end.cluster) ? end.index : (*table)[cluster]->size();
         for (size_t index = start_index; index < end_index; ++index) {
-          action((*(*table)[partition])[index].row_id);
+          action((*(*table)[cluster])[index].row_id);
         }
       }
     }
   };
 
   /**
-  * Determines the number of partitions to be used for the join.
-  * The number of partitions must be a power of two, i.e. 1, 2, 4, 8, 16...
-  * TODO(anyone): How should we determine the number of partitions?
+  * Determines the number of clusters to be used for the join.
+  * The number of clusters must be a power of two, i.e. 1, 2, 4, 8, 16...
+  * TODO(anyone): How should we determine the number of clusters?
   **/
-  size_t _determine_number_of_partitions() {
+  size_t _determine_number_of_clusters() {
     // Get the next lower power of two of the bigger chunk number
     // Note: this is only provisional. There should be a reasonable calculation here based on hardware stats.
     size_t chunk_count_left = _sort_merge_join.input_table_left()->chunk_count();
@@ -165,12 +165,12 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
   }
 
   /**
-  * Gets the table position corresponding to the end of the table, i.e. the last entry of the last partition.
+  * Gets the table position corresponding to the end of the table, i.e. the last entry of the last cluster.
   **/
   static TablePosition _end_of_table(std::shared_ptr<MaterializedColumnList<T>> table) {
     DebugAssert(table->size() > 0, "table has no chunks");
-    auto last_partition = table->size() - 1;
-    return TablePosition(last_partition, (*table)[last_partition]->size());
+    auto last_cluster = table->size() - 1;
+    return TablePosition(last_cluster, (*table)[last_cluster]->size());
   }
 
   /**
@@ -183,51 +183,51 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
   };
 
   /**
-  * Performs the join for two runs of a specified partition.
-  * A run is a series of rows in a partition with the same value.
+  * Performs the join for two runs of a specified cluster.
+  * A run is a series of rows in a cluster with the same value.
   **/
   void _join_runs(TableRange left_run, TableRange right_run, CompareResult compare_result) {
-    size_t partition_number = left_run.start.partition;
+    size_t cluster_number = left_run.start.cluster;
     if (_op == ScanType::OpEquals) {
       if (compare_result == CompareResult::Equal) {
-        _emit_combinations(partition_number, left_run, right_run);
+        _emit_combinations(cluster_number, left_run, right_run);
       } else if (compare_result == CompareResult::Less) {
         if (_mode == JoinMode::Left || _mode == JoinMode::Outer) {
-          _emit_right_null_combinations(partition_number, left_run);
+          _emit_right_null_combinations(cluster_number, left_run);
         }
       } else if (compare_result == CompareResult::Greater) {
         if (_mode == JoinMode::Right || _mode == JoinMode::Outer) {
-          _emit_left_null_combinations(partition_number, right_run);
+          _emit_left_null_combinations(cluster_number, right_run);
         }
       }
     } else if (_op == ScanType::OpNotEquals) {
       if (compare_result == CompareResult::Greater) {
-        _emit_combinations(partition_number, left_run.start.to(_end_of_left_table), right_run);
+        _emit_combinations(cluster_number, left_run.start.to(_end_of_left_table), right_run);
       } else if (compare_result == CompareResult::Equal) {
-        _emit_combinations(partition_number, left_run.end.to(_end_of_left_table), right_run);
-        _emit_combinations(partition_number, left_run, right_run.end.to(_end_of_right_table));
+        _emit_combinations(cluster_number, left_run.end.to(_end_of_left_table), right_run);
+        _emit_combinations(cluster_number, left_run, right_run.end.to(_end_of_right_table));
       } else if (compare_result == CompareResult::Less) {
-        _emit_combinations(partition_number, left_run, right_run.start.to(_end_of_right_table));
+        _emit_combinations(cluster_number, left_run, right_run.start.to(_end_of_right_table));
       }
     } else if (_op == ScanType::OpGreaterThan) {
       if (compare_result == CompareResult::Greater) {
-        _emit_combinations(partition_number, left_run.start.to(_end_of_left_table), right_run);
+        _emit_combinations(cluster_number, left_run.start.to(_end_of_left_table), right_run);
       } else if (compare_result == CompareResult::Equal) {
-        _emit_combinations(partition_number, left_run.end.to(_end_of_left_table), right_run);
+        _emit_combinations(cluster_number, left_run.end.to(_end_of_left_table), right_run);
       }
     } else if (_op == ScanType::OpGreaterThanEquals) {
       if (compare_result == CompareResult::Greater || compare_result == CompareResult::Equal) {
-        _emit_combinations(partition_number, left_run.start.to(_end_of_left_table), right_run);
+        _emit_combinations(cluster_number, left_run.start.to(_end_of_left_table), right_run);
       }
     } else if (_op == ScanType::OpLessThan) {
       if (compare_result == CompareResult::Less) {
-        _emit_combinations(partition_number, left_run, right_run.start.to(_end_of_right_table));
+        _emit_combinations(cluster_number, left_run, right_run.start.to(_end_of_right_table));
       } else if (compare_result == CompareResult::Equal) {
-        _emit_combinations(partition_number, left_run, right_run.end.to(_end_of_right_table));
+        _emit_combinations(cluster_number, left_run, right_run.end.to(_end_of_right_table));
       }
     } else if (_op == ScanType::OpLessThanEquals) {
       if (compare_result == CompareResult::Less || compare_result == CompareResult::Equal) {
-        _emit_combinations(partition_number, left_run, right_run.start.to(_end_of_right_table));
+        _emit_combinations(cluster_number, left_run, right_run.start.to(_end_of_right_table));
       }
     } else {
       throw std::logic_error("Unknown ScanType");
@@ -237,19 +237,19 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
   /**
   * Emits a combination of a lhs row id and a rhs row id to the join output.
   **/
-  void _emit_combination(size_t output_partition, const RowID& left, const RowID& right) {
-    _output_pos_lists_left[output_partition]->push_back(left);
-    _output_pos_lists_right[output_partition]->push_back(right);
+  void _emit_combination(size_t output_cluster, const RowID& left, const RowID& right) {
+    _output_pos_lists_left[output_cluster]->push_back(left);
+    _output_pos_lists_right[output_cluster]->push_back(right);
   }
 
   /**
   * Emits all the combinations of row ids from the left table range and the right table range to the join output.
   * I.e. the cross product of the ranges is emitted.
   **/
-  void _emit_combinations(size_t output_partition, TableRange left_range, TableRange right_range) {
+  void _emit_combinations(size_t output_cluster, TableRange left_range, TableRange right_range) {
     left_range.for_every_row_id(_sorted_left_table, [&](RowID& left_row_id) {
       right_range.for_every_row_id(_sorted_right_table, [&](RowID& right_row_id) {
-        this->_emit_combination(output_partition, left_row_id, right_row_id);
+        this->_emit_combination(output_cluster, left_row_id, right_row_id);
       });
     });
   }
@@ -257,18 +257,18 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
   /**
   * Emits all combinations of row ids from the left table range and a NULL value on the right side to the join output.
   **/
-  void _emit_right_null_combinations(size_t output_partition, TableRange left_range) {
+  void _emit_right_null_combinations(size_t output_cluster, TableRange left_range) {
     left_range.for_every_row_id(_sorted_left_table, [&](RowID& left_row_id) {
-      this->_emit_combination(output_partition, left_row_id, NULL_ROW_ID);
+      this->_emit_combination(output_cluster, left_row_id, NULL_ROW_ID);
     });
   }
 
   /**
   * Emits all combinations of row ids from the right table range and a NULL value on the left side to the join output.
   **/
-  void _emit_left_null_combinations(size_t output_partition, TableRange right_range) {
+  void _emit_left_null_combinations(size_t output_cluster, TableRange right_range) {
     right_range.for_every_row_id(_sorted_right_table, [&](RowID& right_row_id) {
-      this->_emit_combination(output_partition, NULL_ROW_ID, right_row_id);
+      this->_emit_combination(output_cluster, NULL_ROW_ID, right_row_id);
     });
   }
 
@@ -304,33 +304,33 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
   }
 
   /**
-  * Performs the join on a single partition. Runs of entries with the same value are identified and handled together.
+  * Performs the join on a single cluster. Runs of entries with the same value are identified and handled together.
   * This constitutes the merge phase of the join. The output combinations of row ids are determined by _join_runs.
   **/
-  void _join_partition(size_t partition_number) {
-    _output_pos_lists_left[partition_number] = std::make_shared<PosList>();
-    _output_pos_lists_right[partition_number] = std::make_shared<PosList>();
+  void _join_cluster(size_t cluster_number) {
+    _output_pos_lists_left[cluster_number] = std::make_shared<PosList>();
+    _output_pos_lists_right[cluster_number] = std::make_shared<PosList>();
 
-    auto& left_partition = (*_sorted_left_table)[partition_number];
-    auto& right_partition = (*_sorted_right_table)[partition_number];
+    auto& left_cluster = (*_sorted_left_table)[cluster_number];
+    auto& right_cluster = (*_sorted_right_table)[cluster_number];
 
     size_t left_run_start = 0;
     size_t right_run_start = 0;
 
-    auto left_run_end = left_run_start + _run_length(left_run_start, left_partition);
-    auto right_run_end = right_run_start + _run_length(right_run_start, right_partition);
+    auto left_run_end = left_run_start + _run_length(left_run_start, left_cluster);
+    auto right_run_end = right_run_start + _run_length(right_run_start, right_cluster);
 
-    const size_t left_size = left_partition->size();
-    const size_t right_size = right_partition->size();
+    const size_t left_size = left_cluster->size();
+    const size_t right_size = right_cluster->size();
 
     while (left_run_start < left_size && right_run_start < right_size) {
-      auto& left_value = (*left_partition)[left_run_start].value;
-      auto& right_value = (*right_partition)[right_run_start].value;
+      auto& left_value = (*left_cluster)[left_run_start].value;
+      auto& right_value = (*right_cluster)[right_run_start].value;
 
       auto compare_result = _compare(left_value, right_value);
 
-      TableRange left_run(partition_number, left_run_start, left_run_end);
-      TableRange right_run(partition_number, right_run_start, right_run_end);
+      TableRange left_run(cluster_number, left_run_start, left_run_end);
+      TableRange right_run(cluster_number, right_run_start, right_run_end);
       _join_runs(left_run, right_run, compare_result);
 
       // Advance to the next run on the smaller side or both if equal
@@ -338,22 +338,22 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
         // Advance both runs
         left_run_start = left_run_end;
         right_run_start = right_run_end;
-        left_run_end = left_run_start + _run_length(left_run_start, left_partition);
-        right_run_end = right_run_start + _run_length(right_run_start, right_partition);
+        left_run_end = left_run_start + _run_length(left_run_start, left_cluster);
+        right_run_end = right_run_start + _run_length(right_run_start, right_cluster);
       } else if (compare_result == CompareResult::Less) {
         // Advance the left run
         left_run_start = left_run_end;
-        left_run_end = left_run_start + _run_length(left_run_start, left_partition);
+        left_run_end = left_run_start + _run_length(left_run_start, left_cluster);
       } else {
         // Advance the right run
         right_run_start = right_run_end;
-        right_run_end = right_run_start + _run_length(right_run_start, right_partition);
+        right_run_end = right_run_start + _run_length(right_run_start, right_cluster);
       }
     }
 
     // Join the rest of the unfinished side, which is relevant for outer joins and non-equi joins
-    auto right_rest = TableRange(partition_number, right_run_start, right_size);
-    auto left_rest = TableRange(partition_number, left_run_start, left_size);
+    auto right_rest = TableRange(cluster_number, right_run_start, right_size);
+    auto left_rest = TableRange(cluster_number, left_run_start, left_size);
     if (left_run_start < left_size) {
       _join_runs(left_rest, right_rest, CompareResult::Less);
     } else if (right_run_start < right_size) {
@@ -362,15 +362,15 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
   }
 
   /**
-  * Performs the join on all partitions in parallel.
+  * Performs the join on all clusters in parallel.
   **/
   void _perform_join() {
     std::vector<std::shared_ptr<AbstractTask>> jobs;
 
-    // Parallel join for each partition
-    for (size_t partition_number = 0; partition_number < _partition_count; ++partition_number) {
-      jobs.push_back(std::make_shared<JobTask>([this, partition_number] {
-        this->_join_partition(partition_number);
+    // Parallel join for each cluster
+    for (size_t cluster_number = 0; cluster_number < _cluster_count; ++cluster_number) {
+      jobs.push_back(std::make_shared<JobTask>([this, cluster_number] {
+        this->_join_cluster(cluster_number);
       }));
       jobs.back()->schedule();
     }
@@ -456,11 +456,11 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
   * Executes the SortMergeJoin operator.
   **/
   std::shared_ptr<const Table> on_execute() {
-    auto radix_partitioner = RadixPartitionSort<T>(_sort_merge_join.input_table_left(),
+    auto radix_clusterer = RadixClusterSort<T>(_sort_merge_join.input_table_left(),
                                                   _sort_merge_join.input_table_right(), *_sort_merge_join._column_names,
-                                                  _op == ScanType::OpEquals, _partition_count);
-    // Sort and partition the input tables
-    auto sort_output = radix_partitioner.execute();
+                                                  _op == ScanType::OpEquals, _cluster_count);
+    // Sort and cluster the input tables
+    auto sort_output = radix_clusterer.execute();
     _sorted_left_table = sort_output.first;
     _sorted_right_table = sort_output.second;
     _end_of_left_table = _end_of_table(_sorted_left_table);
