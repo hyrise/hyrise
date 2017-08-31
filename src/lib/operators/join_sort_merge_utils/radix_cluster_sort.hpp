@@ -52,43 +52,6 @@ class RadixClusterSort {
   virtual ~RadixClusterSort() = default;
 
  protected:
-  /**
-  * The ChunkStatistics structure is used to gather statistics regarding a chunk's values in order to
-  * be able to appropriately reserve space for the clustering output.
-  **/
-  struct ChunkStatistics {
-    explicit ChunkStatistics(size_t cluster_count) {
-      cluster_histogram.resize(cluster_count);
-      insert_position.resize(cluster_count);
-    }
-    // Used to count the number of entries for each cluster from a specific chunk
-    // Example cluster_histogram[3] = 5
-    // -> 5 values from the chunk belong in cluster 3
-    std::vector<size_t> cluster_histogram;
-
-    // Stores the beginning of the range in cluster for this chunk.
-    // Example: instert_position[2] = 4
-    // -> This chunks value for cluster 2 are inserted at index 4 and forward.
-    std::vector<size_t> insert_position;
-  };
-
-  /**
-  * The TableStatistics structure is used to gather statistics regarding the value distribution of a table
-  *  and its chunks in order to be able to appropriately reserve space for the clustering output.
-  **/
-  struct TableStatistics {
-    TableStatistics(size_t chunk_count, size_t cluster_count) {
-      cluster_histogram.resize(cluster_count);
-      chunk_statistics.reserve(chunk_count);
-      for (size_t i = 0; i < chunk_count; ++i) {
-        chunk_statistics.push_back(ChunkStatistics(cluster_count));
-      }
-    }
-    // Used to count the number of entries for each cluster from the whole table
-    std::vector<size_t> cluster_histogram;
-    std::vector<ChunkStatistics> chunk_statistics;
-  };
-
   // Input parameters
   std::shared_ptr<const Table> _input_table_left;
   std::shared_ptr<const Table> _input_table_right;
@@ -160,58 +123,26 @@ class RadixClusterSort {
   std::shared_ptr<MaterializedColumnList<T>> _cluster(std::shared_ptr<MaterializedColumnList<T>> input_chunks,
                                                                     std::function<size_t(const T&)> clusterer) {
     auto output_table = std::make_shared<MaterializedColumnList<T>>(_cluster_count);
-    TableStatistics table_statistics(input_chunks->size(), _cluster_count);
 
-    // Count for every chunk the number of entries for each cluster in parallel
-    std::vector<std::shared_ptr<AbstractTask>> histogram_jobs;
-    for (size_t chunk_number = 0; chunk_number < input_chunks->size(); ++chunk_number) {
-      auto& chunk_statistics = table_statistics.chunk_statistics[chunk_number];
-      auto input_chunk = (*input_chunks)[chunk_number];
+    // a mutex for each cluster for parallel clustering
+    std::vector<std::mutex> cluster_mutexes(_cluster_count);
 
-      // Count the number of entries for each cluster to be able to reserve the appropriate output space later.
-      // Note: Does this make sense from a performance view?
-      // Alternative 1: Straight up appending the output chunks: Downside: ongoing vector resizing
-      // Alternative 2: Estimating the output sizes using samples. Downside: overestimation (unused reserved space)
-      // and underestimation (vector resizing required)
-      // But then we we would not be able to derive the insert positions based on these counts, which
-      // are important for parallel clustering
-      auto job = std::make_shared<JobTask>([&input_chunk, &clusterer, &chunk_statistics] {
-        for (auto& entry : *input_chunk) {
-          auto cluster_id = clusterer(entry.value);
-          ++chunk_statistics.cluster_histogram[cluster_id];
-        }
-      });
-
-      histogram_jobs.push_back(job);
-      job->schedule();
-    }
-
-    CurrentScheduler::wait_for_tasks(histogram_jobs);
-
-
-    // Aggregate the chunks histograms to a table histogram and initialize the insert positions for each chunk
-    for (auto& chunk_statistics : table_statistics.chunk_statistics) {
-      for (size_t cluster_id = 0; cluster_id < _cluster_count; ++cluster_id) {
-        chunk_statistics.insert_position[cluster_id] = table_statistics.cluster_histogram[cluster_id];
-        table_statistics.cluster_histogram[cluster_id] += chunk_statistics.cluster_histogram[cluster_id];
-      }
-    }
-
-    // Reserve the appropriate output space for the clusters
+    // Reserve the appropriate output space for the clusters by assuming a uniform distribution
     for (size_t cluster_id = 0; cluster_id < _cluster_count; ++cluster_id) {
-      auto cluster_size = table_statistics.cluster_histogram[cluster_id];
-      (*output_table)[cluster_id] = std::make_shared<MaterializedColumn<T>>(cluster_size);
+      auto cluster_size = _materialized_table_size(input_chunks) / _cluster_count;
+      (*output_table)[cluster_id] = std::make_shared<MaterializedColumn<T>>();
+      (*output_table)[cluster_id]->reserve(cluster_size);
     }
 
     // Move each entry into its appropriate cluster in parallel
     std::vector<std::shared_ptr<AbstractTask>> cluster_jobs;
     for (size_t chunk_number = 0; chunk_number < input_chunks->size(); ++chunk_number) {
-      auto job = std::make_shared<JobTask>([chunk_number, &output_table, &input_chunks,
-                                            &table_statistics, &clusterer] {
-        auto& chunk_statistics = table_statistics.chunk_statistics[chunk_number];
+      auto job = std::make_shared<JobTask>([chunk_number, &cluster_mutexes, &output_table, &input_chunks, &clusterer] {
         for (auto& entry : *(*input_chunks)[chunk_number]) {
           auto cluster_id = clusterer(entry.value);
-          (*(*output_table)[cluster_id])[chunk_statistics.insert_position[cluster_id]++] = entry;
+          cluster_mutexes[cluster_id].lock();
+          (*output_table)[cluster_id]->push_back(entry);
+          cluster_mutexes[cluster_id].unlock();
         }
       });
       cluster_jobs.push_back(job);
