@@ -51,9 +51,9 @@ class ColumnMaterializer : public ColumnVisitable {
   /**
   * Creates a job to materialize and sort a chunk.
   **/
-  std::shared_ptr<JobTask> _materialize_chunk_job(std::shared_ptr<MaterializedColumnList<T>> output, ChunkID chunk_id,
+  std::shared_ptr<JobTask> _materialize_chunk_job(std::unique_ptr<MaterializedColumnList<T>>& output, ChunkID chunk_id,
                                                    std::shared_ptr<const Table> input, std::string column_name) {
-    return std::make_shared<JobTask>([=] {
+    return std::make_shared<JobTask>([this, &output, &input, &column_name, chunk_id] {
         auto column = input->get_chunk(chunk_id).get_column(input->column_id_by_name(column_name));
         auto context = std::make_shared<MaterializationContext>(chunk_id);
         column->visit(*this, context);
@@ -177,8 +177,8 @@ class ColumnMaterializer : public ColumnVisitable {
   * Materializes and sorts all the chunks of an input table in parallel
   * by creating multiple jobs that materialize chunks.
   **/
-  std::shared_ptr<MaterializedColumnList<T>> materialize(std::shared_ptr<const Table> input, std::string column) {
-    auto output = std::make_shared<MaterializedColumnList<T>>(input->chunk_count());
+  std::unique_ptr<MaterializedColumnList<T>> materialize(std::shared_ptr<const Table> input, std::string column) {
+    auto output = std::make_unique<MaterializedColumnList<T>>(input->chunk_count());
 
     std::vector<std::shared_ptr<AbstractTask>> jobs;
     for (ChunkID chunk_id{0}; chunk_id < input->chunk_count(); ++chunk_id) {

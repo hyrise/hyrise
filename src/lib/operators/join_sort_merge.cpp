@@ -91,8 +91,8 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
   JoinSortMerge& _sort_merge_join;
 
   // Contains the materialized sorted input tables
-  std::shared_ptr<MaterializedColumnList<T>> _sorted_left_table;
-  std::shared_ptr<MaterializedColumnList<T>> _sorted_right_table;
+  std::unique_ptr<MaterializedColumnList<T>> _sorted_left_table;
+  std::unique_ptr<MaterializedColumnList<T>> _sorted_right_table;
 
   const std::string _left_column_name;
   const std::string _right_column_name;
@@ -140,7 +140,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
 
     // Executes the given action for every row id of the table in this range.
     template <typename F>
-    void for_every_row_id(std::shared_ptr<MaterializedColumnList<T>> table, F action) {
+    void for_every_row_id(std::unique_ptr<MaterializedColumnList<T>>& table, F action) {
       for (size_t cluster = start.cluster; cluster <= end.cluster; ++cluster) {
         size_t start_index = (cluster == start.cluster) ? start.index : 0;
         size_t end_index = (cluster == end.cluster) ? end.index : (*table)[cluster]->size();
@@ -167,7 +167,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
   /**
   * Gets the table position corresponding to the end of the table, i.e. the last entry of the last cluster.
   **/
-  static TablePosition _end_of_table(std::shared_ptr<MaterializedColumnList<T>> table) {
+  static TablePosition _end_of_table(std::unique_ptr<MaterializedColumnList<T>>& table) {
     DebugAssert(table->size() > 0, "table has no chunks");
     auto last_cluster = table->size() - 1;
     return TablePosition(last_cluster, (*table)[last_cluster]->size());
@@ -461,8 +461,8 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
                                                   _op == ScanType::OpEquals, _cluster_count);
     // Sort and cluster the input tables
     auto sort_output = radix_clusterer.execute();
-    _sorted_left_table = sort_output.first;
-    _sorted_right_table = sort_output.second;
+    _sorted_left_table = std::move(sort_output.first);
+    _sorted_right_table = std::move(sort_output.second);
     _end_of_left_table = _end_of_table(_sorted_left_table);
     _end_of_right_table = _end_of_table(_sorted_right_table);
 

@@ -63,9 +63,6 @@ class RadixClusterSort {
   // It is asserted to be a power of two in the constructor.
   size_t _cluster_count;
 
-  std::shared_ptr<MaterializedColumnList<T>> _output_left;
-  std::shared_ptr<MaterializedColumnList<T>> _output_right;
-
   // Radix calculation for arithmetic types
   template <typename T2>
   static typename std::enable_if<std::is_arithmetic<T2>::value, uint32_t>::type get_radix(T2 value,
@@ -84,7 +81,7 @@ class RadixClusterSort {
   /**
   * Determines the total size of a materialized column list.
   **/
-  static size_t _materialized_table_size(std::shared_ptr<MaterializedColumnList<T>> table) {
+  static size_t _materialized_table_size(std::unique_ptr<MaterializedColumnList<T>>& table) {
     size_t total_size = 0;
     for (auto chunk : *table) {
       total_size += chunk->size();
@@ -96,9 +93,9 @@ class RadixClusterSort {
   /**
   * Concatenates multiple materialized chunks to a single materialized column chunk.
   **/
-  static std::shared_ptr<MaterializedColumnList<T>> _concatenate_chunks(
-                                                             std::shared_ptr<MaterializedColumnList<T>> input_chunks) {
-    auto output_table = std::make_shared<MaterializedColumnList<T>>(1);
+  static std::unique_ptr<MaterializedColumnList<T>> _concatenate_chunks(
+                                                             std::unique_ptr<MaterializedColumnList<T>>& input_chunks) {
+    auto output_table = std::make_unique<MaterializedColumnList<T>>(1);
     (*output_table)[0] = std::make_shared<MaterializedColumn<T>>();
 
     // Reserve the required space and move the data to the output
@@ -120,9 +117,9 @@ class RadixClusterSort {
   * -> Reserve the appropriate space for each output cluster to avoid ongoing vector resizing.
   * -> At last, each value of each chunk is moved to the appropriate cluster.
   **/
-  std::shared_ptr<MaterializedColumnList<T>> _cluster(std::shared_ptr<MaterializedColumnList<T>> input_chunks,
+  std::unique_ptr<MaterializedColumnList<T>> _cluster(std::unique_ptr<MaterializedColumnList<T>>& input_chunks,
                                                                     std::function<size_t(const T&)> clusterer) {
-    auto output_table = std::make_shared<MaterializedColumnList<T>>(_cluster_count);
+    auto output_table = std::make_unique<MaterializedColumnList<T>>(_cluster_count);
 
     // a mutex for each cluster for parallel clustering
     std::vector<std::mutex> cluster_mutexes(_cluster_count);
@@ -161,7 +158,7 @@ class RadixClusterSort {
   * - hand select the clustering bits based on statistics.
   * - consolidate clusters in order to reduce skew.
   **/
-  std::shared_ptr<MaterializedColumnList<T>> _radix_cluster(std::shared_ptr<MaterializedColumnList<T>> input_chunks) {
+  std::unique_ptr<MaterializedColumnList<T>> _radix_cluster(std::unique_ptr<MaterializedColumnList<T>>& input_chunks) {
     auto radix_bitmask = _cluster_count - 1;
     return _cluster(input_chunks, [=] (const T& value) {
       return get_radix<T>(value, radix_bitmask);
@@ -172,7 +169,7 @@ class RadixClusterSort {
   * Picks sample values from a materialized table that are used to determine cluster range bounds.
   **/
   void _pick_sample_values(std::vector<std::map<T, size_t>>& sample_values,
-                           std::shared_ptr<MaterializedColumnList<T>> table) {
+                           std::unique_ptr<MaterializedColumnList<T>>& table) {
     // Note:
     // - The materialized chunks are sorted.
     // - Between the chunks there is no order
@@ -194,9 +191,9 @@ class RadixClusterSort {
   * Performs the radix cluster sort for the non-equi case (>, >=, <, <=) which requires the complete table to
   * be sorted and not only the clusters in themselves.
   **/
-  std::pair<std::shared_ptr<MaterializedColumnList<T>>, std::shared_ptr<MaterializedColumnList<T>>> _range_cluster(
-                                                              std::shared_ptr<MaterializedColumnList<T>> input_left,
-                                                              std::shared_ptr<MaterializedColumnList<T>> input_right) {
+  std::pair<std::unique_ptr<MaterializedColumnList<T>>, std::unique_ptr<MaterializedColumnList<T>>> _range_cluster(
+                                                              std::unique_ptr<MaterializedColumnList<T>>& input_left,
+                                                              std::unique_ptr<MaterializedColumnList<T>>& input_right) {
     std::vector<std::map<T, size_t>> sample_values(_cluster_count - 1);
 
     _pick_sample_values(sample_values, input_left);
@@ -236,14 +233,14 @@ class RadixClusterSort {
     auto output_left = _cluster(input_left, clusterer);
     auto output_right = _cluster(input_right, clusterer);
 
-    return std::pair<std::shared_ptr<MaterializedColumnList<T>>,
-                     std::shared_ptr<MaterializedColumnList<T>>>(output_left, output_right);
+    return std::pair<std::unique_ptr<MaterializedColumnList<T>>,
+                     std::unique_ptr<MaterializedColumnList<T>>>(std::move(output_left), std::move(output_right));
   }
 
   /**
   * Sorts all clusters of a materialized table.
   **/
-  void _sort_clusters(std::shared_ptr<MaterializedColumnList<T>> clusters) {
+  void _sort_clusters(std::unique_ptr<MaterializedColumnList<T>>& clusters) {
     for (auto cluster : *clusters) {
       std::sort(cluster->begin(), cluster->end(), [](auto& left, auto& right) {
         return left.value < right.value;
@@ -255,35 +252,38 @@ class RadixClusterSort {
   /**
   * Executes the clustering and sorting.
   **/
-  std::pair<std::shared_ptr<MaterializedColumnList<T>>, std::shared_ptr<MaterializedColumnList<T>>> execute() {
+  std::pair<std::unique_ptr<MaterializedColumnList<T>>, std::unique_ptr<MaterializedColumnList<T>>> execute() {
     // Sort the chunks of the input tables in the non-equi cases
     ColumnMaterializer<T> column_materializer(!_equi_case);
     auto chunks_left = column_materializer.materialize(_input_table_left, _left_column_name);
     auto chunks_right = column_materializer.materialize(_input_table_right, _right_column_name);
 
+    std::unique_ptr<MaterializedColumnList<T>> output_left;
+    std::unique_ptr<MaterializedColumnList<T>> output_right;
+
     if (_cluster_count == 1) {
-      _output_left = _concatenate_chunks(chunks_left);
-      _output_right = _concatenate_chunks(chunks_right);
+      output_left = _concatenate_chunks(chunks_left);
+      output_right = _concatenate_chunks(chunks_right);
     } else if (_equi_case) {
-      _output_left = _radix_cluster(chunks_left);
-      _output_right = _radix_cluster(chunks_right);
+      output_left = _radix_cluster(chunks_left);
+      output_right = _radix_cluster(chunks_right);
     } else {
       auto result = _range_cluster(chunks_left, chunks_right);
-      _output_left = result.first;
-      _output_right = result.second;
+      output_left = std::move(result.first);
+      output_right = std::move(result.second);
     }
 
     // Sort each cluster (right now std::sort -> but maybe can be replaced with
     // an algorithm more efficient, if subparts are already sorted [InsertionSort?!])
-    _sort_clusters(_output_left);
-    _sort_clusters(_output_right);
+    _sort_clusters(output_left);
+    _sort_clusters(output_right);
 
-    DebugAssert(_materialized_table_size(_output_left) == _input_table_left->row_count(),
+    DebugAssert(_materialized_table_size(output_left) == _input_table_left->row_count(),
                 "left output has wrong size");
-    DebugAssert(_materialized_table_size(_output_right) == _input_table_right->row_count(),
+    DebugAssert(_materialized_table_size(output_right) == _input_table_right->row_count(),
                 "right output has wrong size");
 
-    return std::make_pair(_output_left, _output_right);
+    return std::make_pair(std::move(output_left), std::move(output_right));
   }
 };
 
