@@ -49,6 +49,12 @@ namespace opossum {
  *   }
  * });
  *
+ * iterable.for_each([&](const auto& value) {
+ *   if (value.is_null()) { ... }
+ *
+ *   consume(value.value());
+ * });
+ *
  */
 template <typename Derived>
 class BaseIterable {
