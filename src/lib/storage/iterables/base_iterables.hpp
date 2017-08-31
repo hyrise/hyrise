@@ -74,6 +74,32 @@ class BaseIterable {
     _self()._on_with_iterators(f);
   }
 
+  /**
+   * @param f is a generic lambda accepting a reference to column value
+   */
+  template <typename Functor>
+  void for_each(const Functor& f) {
+    _self().with_iterators([&f](auto it, auto end) {
+      for (; it != end; ++it) {
+        auto value = *it;
+        f(value);
+      }
+    });
+  }
+
+  /**
+   * @param f is a generic lambda accepting a reference to column value
+   */
+  template <typename Functor>
+  void for_each_no_indices(const Functor& f) {
+    _self().with_iterators_no_indices([&f](auto it, auto end) {
+      for (; it != end; ++it) {
+        auto value = *it;
+        f(value);
+      }
+    });
+  }
+
  private:
   const Derived& _self() const { return static_cast<const Derived&>(*this); }
 };
@@ -82,7 +108,7 @@ class BaseIterable {
  * @brief base class of all indexable iterables
  */
 template <typename Derived>
-class BaseIndexableIterable {
+class BaseIndexableIterable : public BaseIterable<Derived> {
  public:
   explicit BaseIndexableIterable(const ChunkOffsetsList* mapped_chunk_offsets = nullptr)
       : _mapped_chunk_offsets{mapped_chunk_offsets} {}

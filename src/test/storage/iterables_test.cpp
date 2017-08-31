@@ -19,7 +19,7 @@
 
 namespace opossum {
 
-struct SumUp {
+struct SumUpWithIt {
   template <typename Iterator>
   void operator()(Iterator begin, Iterator end) const {
     _sum = 0u;
@@ -29,6 +29,17 @@ struct SumUp {
 
       _sum += (*begin).value();
     }
+  }
+
+  uint32_t& _sum;
+};
+
+struct SumUp {
+  template <typename T>
+  void operator()(const T & value) const {
+      if (value.is_null()) return;
+
+      _sum += value.value();
   }
 
   uint32_t& _sum;
@@ -45,7 +56,7 @@ class IterablesTest : public BaseTest {
   std::shared_ptr<Table> table_with_null;
 };
 
-TEST_F(IterablesTest, ValueColumnIteratorExecuteForAll) {
+TEST_F(IterablesTest, ValueColumnIteratorWithIterators) {
   auto& chunk = table->get_chunk(ChunkID{0u});
 
   auto column = chunk.get_column(ColumnID{0u});
@@ -54,12 +65,12 @@ TEST_F(IterablesTest, ValueColumnIteratorExecuteForAll) {
   auto iterable = ValueColumnIterable<int>{*int_column};
 
   auto sum = uint32_t{0};
-  iterable.with_iterators(SumUp{sum});
+  iterable.with_iterators(SumUpWithIt{sum});
 
   EXPECT_EQ(sum, 24'825u);
 }
 
-TEST_F(IterablesTest, ValueColumnReferencedIteratorExecuteForAll) {
+TEST_F(IterablesTest, ValueColumnReferencedIteratorWithIterators) {
   auto& chunk = table->get_chunk(ChunkID{0u});
 
   auto column = chunk.get_column(ColumnID{0u});
@@ -70,12 +81,12 @@ TEST_F(IterablesTest, ValueColumnReferencedIteratorExecuteForAll) {
   auto iterable = ValueColumnIterable<int>{*int_column, &chunk_offsets};
 
   auto sum = uint32_t{0};
-  iterable.with_iterators(SumUp{sum});
+  iterable.with_iterators(SumUpWithIt{sum});
 
   EXPECT_EQ(sum, 12'480u);
 }
 
-TEST_F(IterablesTest, ValueColumnNullableIteratorExecuteForAll) {
+TEST_F(IterablesTest, ValueColumnNullableIteratorWithIterators) {
   auto& chunk = table_with_null->get_chunk(ChunkID{0u});
 
   auto column = chunk.get_column(ColumnID{0u});
@@ -84,12 +95,12 @@ TEST_F(IterablesTest, ValueColumnNullableIteratorExecuteForAll) {
   auto iterable = ValueColumnIterable<int>{*int_column};
 
   auto sum = uint32_t{0};
-  iterable.with_iterators(SumUp{sum});
+  iterable.with_iterators(SumUpWithIt{sum});
 
   EXPECT_EQ(sum, 13'702u);
 }
 
-TEST_F(IterablesTest, ValueColumnNullableReferencedIteratorExecuteForAll) {
+TEST_F(IterablesTest, ValueColumnNullableReferencedIteratorWithIterators) {
   auto& chunk = table_with_null->get_chunk(ChunkID{0u});
 
   auto column = chunk.get_column(ColumnID{0u});
@@ -100,12 +111,12 @@ TEST_F(IterablesTest, ValueColumnNullableReferencedIteratorExecuteForAll) {
   auto iterable = ValueColumnIterable<int>{*int_column, &chunk_offsets};
 
   auto sum = uint32_t{0};
-  iterable.with_iterators(SumUp{sum});
+  iterable.with_iterators(SumUpWithIt{sum});
 
   EXPECT_EQ(sum, 13'579u);
 }
 
-TEST_F(IterablesTest, DictionaryColumnIteratorExecuteForAll) {
+TEST_F(IterablesTest, DictionaryColumnIteratorWithIterators) {
   DictionaryCompression::compress_table(*table);
 
   auto& chunk = table->get_chunk(ChunkID{0u});
@@ -116,12 +127,12 @@ TEST_F(IterablesTest, DictionaryColumnIteratorExecuteForAll) {
   auto iterable = DictionaryColumnIterable<int>{*dict_column};
 
   auto sum = uint32_t{0};
-  iterable.with_iterators(SumUp{sum});
+  iterable.with_iterators(SumUpWithIt{sum});
 
   EXPECT_EQ(sum, 24'825u);
 }
 
-TEST_F(IterablesTest, DictionaryColumnDictReferencedIteratorExecuteForAll) {
+TEST_F(IterablesTest, DictionaryColumnDictReferencedIteratorWithIterators) {
   DictionaryCompression::compress_table(*table);
 
   auto& chunk = table->get_chunk(ChunkID{0u});
@@ -134,12 +145,12 @@ TEST_F(IterablesTest, DictionaryColumnDictReferencedIteratorExecuteForAll) {
   auto iterable = DictionaryColumnIterable<int>{*dict_column, &chunk_offsets};
 
   auto sum = uint32_t{0};
-  iterable.with_iterators(SumUp{sum});
+  iterable.with_iterators(SumUpWithIt{sum});
 
   EXPECT_EQ(sum, 12'480u);
 }
 
-TEST_F(IterablesTest, ReferenceColumnIteratorExecuteForAll) {
+TEST_F(IterablesTest, ReferenceColumnIteratorWithIterators) {
   auto pos_list =
       PosList{RowID{ChunkID{0u}, 0u}, RowID{ChunkID{0u}, 3u}, RowID{ChunkID{0u}, 1u}, RowID{ChunkID{0u}, 2u}};
 
@@ -149,12 +160,12 @@ TEST_F(IterablesTest, ReferenceColumnIteratorExecuteForAll) {
   auto iterable = ReferenceColumnIterable<int>{*reference_column};
 
   auto sum = uint32_t{0};
-  iterable.with_iterators(SumUp{sum});
+  iterable.with_iterators(SumUpWithIt{sum});
 
   EXPECT_EQ(sum, 24'825u);
 }
 
-TEST_F(IterablesTest, ConstantValueIteratorExecuteForAll) {
+TEST_F(IterablesTest, ConstantValueIteratorWithIterators) {
   auto iterable = ConstantValueIterable<int>{2u};
 
   auto sum = 0u;
@@ -163,6 +174,34 @@ TEST_F(IterablesTest, ConstantValueIteratorExecuteForAll) {
   });
 
   EXPECT_EQ(sum, 20u);
+}
+
+TEST_F(IterablesTest, ValueColumnIteratorForEach) {
+  auto& chunk = table->get_chunk(ChunkID{0u});
+
+  auto column = chunk.get_column(ColumnID{0u});
+  auto int_column = std::dynamic_pointer_cast<ValueColumn<int>>(column);
+
+  auto iterable = ValueColumnIterable<int>{*int_column};
+
+  auto sum = uint32_t{0};
+  iterable.for_each(SumUp{sum});
+
+  EXPECT_EQ(sum, 24'825u);
+}
+
+TEST_F(IterablesTest, ValueColumnNullableIteratorForEach) {
+  auto& chunk = table_with_null->get_chunk(ChunkID{0u});
+
+  auto column = chunk.get_column(ColumnID{0u});
+  auto int_column = std::dynamic_pointer_cast<ValueColumn<int>>(column);
+
+  auto iterable = ValueColumnIterable<int>{*int_column};
+
+  auto sum = uint32_t{0};
+  iterable.for_each(SumUp{sum});
+
+  EXPECT_EQ(sum, 13'702u);
 }
 
 }  // namespace opossum
