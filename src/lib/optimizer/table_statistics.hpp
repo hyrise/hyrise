@@ -34,7 +34,7 @@ class Table;
  * Public TableStatistics functions pass on the parameters to the corresponding column statistics functions.
  * These compute a new ColumnStatistics<> and the predicted selectivity of an operator.
  */
-class TableStatistics {
+class TableStatistics : public std::enable_shared_from_this<TableStatistics> {
  public:
   /**
    * Creates a table statistics from a table.
@@ -61,11 +61,13 @@ class TableStatistics {
                                                                 const optional<AllTypeVariant> &value2 = nullopt);
 
   /**
-   * Get table statistics for any table scan operator.
+   * Get table statistics for any join mode.
    */
   virtual std::shared_ptr<TableStatistics> join_statistics(
-      const std::shared_ptr<TableStatistics> &right_table_statistics,
-      const optional<std::pair<ColumnID, ColumnID>> column_ids, const ScanType scan_type, const JoinMode mode);
+      const std::shared_ptr<TableStatistics> &right_table_statistics, const JoinMode mode);
+  virtual std::shared_ptr<TableStatistics> join_statistics(
+      const std::shared_ptr<TableStatistics> &right_table_statistics, const JoinMode mode,
+      const std::pair<ColumnID, ColumnID> column_ids, const ScanType scan_type);
 
  protected:
   std::shared_ptr<BaseColumnStatistics> column_statistics(const ColumnID column_id);

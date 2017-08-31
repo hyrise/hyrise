@@ -406,6 +406,12 @@ TwoColumnSelectivityResult ColumnStatistics<ColumnType>::estimate_selectivity_fo
     return {combined_non_null_ratio * selectivity, new_left_column_stats, new_right_column_stats};
   };
 
+  // Currently the distinct count is calculated wrongly, if scan type is OpLessThan and overlapping_range_max ==
+  // right_stats->max() or if scan type is OpGreaterThan and overlapping_range_min == right_stats->min() E.g. Left and
+  // right column have the same min and max value of 1 and 2.
+  //
+  // TODO(anyone) Fix this.
+
   switch (scan_type) {
     case ScanType::OpEquals: {
       auto overlapping_distinct_count = std::min(left_overlapping_distinct_count, right_overlapping_distinct_count);

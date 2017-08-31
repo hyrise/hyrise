@@ -115,31 +115,43 @@ std::shared_ptr<TableStatistics> TableStatistics::predicate_statistics(const Col
 }
 
 std::shared_ptr<TableStatistics> TableStatistics::join_statistics(
-    const std::shared_ptr<TableStatistics> &right_table_statistics,
-    const optional<std::pair<ColumnID, ColumnID>> column_ids, const ScanType scan_type, const JoinMode mode) {
+    const std::shared_ptr<TableStatistics> &right_table_statistics, const JoinMode mode) {
+  DebugAssert(mode != JoinMode::Natural, "Natural join not supported by column statistics.");
+  DebugAssert(mode == JoinMode::Cross, "Specified JoinMode must also specify column ids and scan type.");
+
   // create all not yet created column statistics as there is no mapping in table statistics from table to columns
   create_all_column_statistics();
   right_table_statistics->create_all_column_statistics();
 
   // create copy of this as this should not be adapted for current join
-  auto clone = std::make_shared<TableStatistics>(*this);
-
-  auto right_stats = (mode == JoinMode::Self) ? clone : right_table_statistics;
+  auto join_table_stats = std::make_shared<TableStatistics>(*this);
 
   // copy columns of right input to output
-  clone->_column_statistics.resize(_column_statistics.size() + right_stats->_column_statistics.size());
-  auto col_stats_right_begin = clone->_column_statistics.begin() + _column_statistics.size();
-  std::copy(right_stats->_column_statistics.begin(), right_stats->_column_statistics.end(), col_stats_right_begin);
+  join_table_stats->_column_statistics.resize(_column_statistics.size() +
+                                              right_table_statistics->_column_statistics.size());
+  auto col_stats_right_begin = join_table_stats->_column_statistics.begin() + _column_statistics.size();
+  std::copy(right_table_statistics->_column_statistics.begin(), right_table_statistics->_column_statistics.end(),
+            col_stats_right_begin);
 
-  clone->_row_count *= right_stats->_row_count;
-  if (mode == JoinMode::Cross) {
-    return clone;
+  join_table_stats->_row_count *= right_table_statistics->_row_count;
+  return join_table_stats;
+}
+
+std::shared_ptr<TableStatistics> TableStatistics::join_statistics(
+    const std::shared_ptr<TableStatistics> &right_table_statistics, const JoinMode mode,
+    const std::pair<ColumnID, ColumnID> column_ids, const ScanType scan_type) {
+  DebugAssert(mode != JoinMode::Cross && mode != JoinMode::Natural,
+              "Specified JoinMode must specify neither column ids nor scan type.");
+
+  auto right_stats = right_table_statistics;
+  if (mode == JoinMode::Self) {
+    right_stats = shared_from_this();
   }
 
-  DebugAssert(static_cast<bool>(column_ids), "Column ids required for all non cross-join joins.");
+  auto join_table_stats = join_statistics(right_stats, JoinMode::Cross);
 
-  auto &left_col_stats = _column_statistics[column_ids->first];
-  auto &right_col_stats = right_stats->_column_statistics[column_ids->second];
+  auto &left_col_stats = _column_statistics[column_ids.first];
+  auto &right_col_stats = right_stats->_column_statistics[column_ids.second];
 
   auto stats_container = left_col_stats->estimate_selectivity_for_two_column_predicate(scan_type, right_col_stats);
   if (!stats_container.column_statistics) {
@@ -149,9 +161,9 @@ std::shared_ptr<TableStatistics> TableStatistics::join_statistics(
     stats_container.second_column_statistics = right_col_stats;
   }
 
-  clone->_row_count *= stats_container.selectivity;
+  join_table_stats->_row_count *= stats_container.selectivity;
 
-  ColumnID new_right_column_id{static_cast<uint16_t>(_column_statistics.size()) + column_ids->second};
+  ColumnID new_right_column_id{static_cast<uint16_t>(_column_statistics.size()) + column_ids.second};
 
   float left_null_value_no = right_col_stats->null_value_ratio() * right_stats->_row_count;
   if (right_col_stats->distinct_count() != 0.f) {
@@ -170,11 +182,11 @@ std::shared_ptr<TableStatistics> TableStatistics::join_statistics(
       return;
     }
     // adjust null value ratios in columns of right side
-    for (auto col_itr = clone->_column_statistics.begin() + _column_statistics.size();
-         col_itr != clone->_column_statistics.end(); ++col_itr) {
+    for (auto col_itr = join_table_stats->_column_statistics.begin() + _column_statistics.size();
+         col_itr != join_table_stats->_column_statistics.end(); ++col_itr) {
       *col_itr = (*col_itr)->clone();
       float column_null_value_no = (*col_itr)->null_value_ratio() * right_stats->_row_count;
-      float right_null_value_ratio = (column_null_value_no + right_null_value_no) / clone->row_count();
+      float right_null_value_ratio = (column_null_value_no + right_null_value_no) / join_table_stats->row_count();
       (*col_itr)->set_null_value_ratio(right_null_value_ratio);
     }
   };
@@ -183,11 +195,11 @@ std::shared_ptr<TableStatistics> TableStatistics::join_statistics(
       return;
     }
     // adjust null value ratios in columns of left side
-    for (auto col_itr = clone->_column_statistics.begin();
-         col_itr != clone->_column_statistics.begin() + _column_statistics.size(); ++col_itr) {
+    for (auto col_itr = join_table_stats->_column_statistics.begin();
+         col_itr != join_table_stats->_column_statistics.begin() + _column_statistics.size(); ++col_itr) {
       *col_itr = (*col_itr)->clone();
       float column_null_value_no = (*col_itr)->null_value_ratio() * _row_count;
-      float left_null_value_ratio = (column_null_value_no + left_null_value_no) / clone->row_count();
+      float left_null_value_ratio = (column_null_value_no + left_null_value_no) / join_table_stats->row_count();
       (*col_itr)->set_null_value_ratio(left_null_value_ratio);
     }
   };
@@ -195,36 +207,33 @@ std::shared_ptr<TableStatistics> TableStatistics::join_statistics(
   switch (mode) {
     case JoinMode::Self:
     case JoinMode::Inner: {
-      clone->_column_statistics[column_ids->first] = stats_container.column_statistics;
-      clone->_column_statistics[new_right_column_id] = stats_container.second_column_statistics;
+      join_table_stats->_column_statistics[column_ids.first] = stats_container.column_statistics;
+      join_table_stats->_column_statistics[new_right_column_id] = stats_container.second_column_statistics;
       break;
     }
     case JoinMode::Left: {
-      clone->_column_statistics[new_right_column_id] = stats_container.second_column_statistics;
-      clone->_row_count += right_null_value_no;
+      join_table_stats->_column_statistics[new_right_column_id] = stats_container.second_column_statistics;
+      join_table_stats->_row_count += right_null_value_no;
       apply_left_outer_join();
       break;
     }
     case JoinMode::Right: {
-      clone->_column_statistics[column_ids->first] = stats_container.column_statistics;
-      clone->_row_count += left_null_value_no;
+      join_table_stats->_column_statistics[column_ids.first] = stats_container.column_statistics;
+      join_table_stats->_row_count += left_null_value_no;
       apply_right_outer_join();
       break;
     }
     case JoinMode::Outer: {
-      clone->_row_count += right_null_value_no;
-      clone->_row_count += left_null_value_no;
+      join_table_stats->_row_count += right_null_value_no;
+      join_table_stats->_row_count += left_null_value_no;
       apply_left_outer_join();
       apply_right_outer_join();
       break;
     }
-    case JoinMode::Natural: {
-      Fail("Natural join not possible as column ids are used.");
-    }
     default: { Fail("Join mode not implemented."); }
   }
 
-  return clone;
+  return join_table_stats;
 }
 
 }  // namespace opossum
