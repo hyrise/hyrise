@@ -99,6 +99,11 @@ class ColumnMaterializer : public ColumnVisitable {
       // Collect for every value id, the set of rows that this value appeared in
       // value_count is used as an inverted index
       auto rows_with_value = std::vector<std::vector<RowID>>(dict->size());
+
+      // Presize the vectors by assuming a uniform distribution
+      for (size_t index = 0; index < rows_with_value.size(); index++) {
+        rows_with_value[index].resize(value_ids->size() / dict->size());
+      }
       for (ChunkOffset chunk_offset{0}; chunk_offset < value_ids->size(); ++chunk_offset) {
         rows_with_value[value_ids->get(chunk_offset)].push_back(RowID{materialization_context->chunk_id, chunk_offset});
       }
