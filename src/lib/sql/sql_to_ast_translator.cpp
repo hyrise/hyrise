@@ -164,9 +164,19 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_join(const hsql:
 
   const hsql::Expr& condition = *join.condition;
 
-  Assert(condition.type == hsql::kExprOperator, "Join condition must be operator");
-  // Assert(condition.opType == hsql::kOpGreater, "Join condition must be operator"); TODO(moritz) Assert for logical
-  // expr
+  Assert(condition.type == hsql::kExprOperator, "Join condition must be operator.");
+  // The Join operators only support simple comparisons for now.
+  switch (condition.opType) {
+    case hsql::kOpEquals:
+    case hsql::kOpNotEquals:
+    case hsql::kOpLess:
+    case hsql::kOpLessEq:
+    case hsql::kOpGreater:
+    case hsql::kOpGreaterEq:
+      break;
+    default:
+      Fail("Join condition must be a simple comparison operator.");
+  }
   Assert(condition.expr && condition.expr->type == hsql::kExprColumnRef,
          "Left arg of join condition must be column ref");
   Assert(condition.expr2 && condition.expr2->type == hsql::kExprColumnRef,
