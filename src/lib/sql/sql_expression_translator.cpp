@@ -16,20 +16,18 @@ namespace opossum {
 
 std::shared_ptr<Expression> SQLExpressionTranslator::translate_expression(
     const hsql::Expr &expr, const std::shared_ptr<AbstractASTNode> &input_node) {
-  auto name = expr.name ? std::string(expr.name) : "";
-  auto float_value = expr.fval ? expr.fval : 0;
-  auto int_value = expr.ival ? expr.ival : 0;
-  auto alias = expr.alias ? optional<std::string>(expr.alias) : nullopt;
+  auto name = expr.name != nullptr ? std::string(expr.name) : "";
+  auto alias = expr.alias != nullptr ? optional<std::string>(expr.alias) : nullopt;
 
   std::shared_ptr<Expression> node;
   std::shared_ptr<Expression> left;
   std::shared_ptr<Expression> right;
 
-  if (expr.expr) {
+  if (expr.expr != nullptr) {
     left = translate_expression(*expr.expr, input_node);
   }
 
-  if (expr.expr2) {
+  if (expr.expr2 != nullptr) {
     right = translate_expression(*expr.expr2, input_node);
   }
 
@@ -63,19 +61,19 @@ std::shared_ptr<Expression> SQLExpressionTranslator::translate_expression(
       break;
     }
     case hsql::kExprLiteralFloat:
-      node = Expression::create_literal(float_value);
+      node = Expression::create_literal(expr.fval);
       break;
     case hsql::kExprLiteralInt:
-      node = Expression::create_literal(int_value);
+      node = Expression::create_literal(expr.ival);
       break;
     case hsql::kExprLiteralString:
       node = Expression::create_literal(name);
       break;
     case hsql::kExprParameter:
-      node = Expression::create_value_placeholder(ValuePlaceholder{static_cast<uint16_t>(int_value)});
+      node = Expression::create_value_placeholder(ValuePlaceholder{static_cast<uint16_t>(expr.ival)});
       break;
     case hsql::kExprStar: {
-      const auto table_name = expr.table != nullptr ? std::string(expr.table) : "";
+      const auto table_name = expr.table != nullptr ? optional<std::string>(expr.table) : nullopt;
       node = Expression::create_select_star(table_name);
       break;
     }
