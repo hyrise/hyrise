@@ -44,7 +44,8 @@ void LikeTableScanImpl::handle_value_column(BaseColumn &base_column,
 
   left_iterable.with_iterators(mapped_chunk_offsets.get(), [&](auto left_it, auto left_end) {
     right_iterable.with_iterators([&](auto right_it, auto right_end) {
-      TableScanMainLoop{}(regex_comparator, left_it, left_end, right_it, chunk_id, matches_out);
+      TableScanMainLoop scan_loop;
+      scan_loop(regex_comparator, left_it, left_end, right_it, chunk_id, matches_out);
     });
   });
 }
