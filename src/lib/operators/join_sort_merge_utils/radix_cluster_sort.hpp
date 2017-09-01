@@ -52,6 +52,43 @@ class RadixClusterSort {
   virtual ~RadixClusterSort() = default;
 
  protected:
+  /**
+  * The ChunkInformation structure is used to gather statistics regarding a chunk's values in order to
+  * be able to appropriately reserve space for the clustering output.
+  **/
+  struct ChunkInformation {
+   explicit ChunkInformation(size_t cluster_count) {
+     cluster_histogram.resize(cluster_count);
+     insert_position.resize(cluster_count);
+   }
+   // Used to count the number of entries for each cluster from a specific chunk
+   // Example cluster_histogram[3] = 5
+   // -> 5 values from the chunk belong in cluster 3
+   std::vector<size_t> cluster_histogram;
+
+   // Stores the beginning of the range in cluster for this chunk.
+   // Example: insert_position[3] = 5
+   // -> This chunks value for cluster 3 are inserted at index 5 and forward.
+   std::vector<size_t> insert_position;
+  };
+
+  /**
+  * The TableInformation structure is used to gather statistics regarding the value distribution of a table
+  *  and its chunks in order to be able to appropriately reserve space for the clustering output.
+  **/
+  struct TableInformation {
+   TableInformation(size_t chunk_count, size_t cluster_count) {
+     cluster_histogram.resize(cluster_count);
+     chunk_information.reserve(chunk_count);
+     for (size_t i = 0; i < chunk_count; ++i) {
+       chunk_information.push_back(ChunkInformation(cluster_count));
+     }
+   }
+   // Used to count the number of entries for each cluster from the whole table
+   std::vector<size_t> cluster_histogram;
+   std::vector<ChunkInformation> chunk_information;
+  };
+
   // Input parameters
   std::shared_ptr<const Table> _input_table_left;
   std::shared_ptr<const Table> _input_table_right;
@@ -120,26 +157,52 @@ class RadixClusterSort {
   std::unique_ptr<MaterializedColumnList<T>> _cluster(std::unique_ptr<MaterializedColumnList<T>>& input_chunks,
                                                                     std::function<size_t(const T&)> clusterer) {
     auto output_table = std::make_unique<MaterializedColumnList<T>>(_cluster_count);
+    TableInformation table_information(input_chunks->size(), _cluster_count);
 
-    // a mutex for each cluster for parallel clustering
-    std::vector<std::mutex> cluster_mutexes(_cluster_count);
+    // Count for every chunk the number of entries for each cluster in parallel
+    std::vector<std::shared_ptr<AbstractTask>> histogram_jobs;
+    for (size_t chunk_number = 0; chunk_number < input_chunks->size(); ++chunk_number) {
+      auto& chunk_information = table_information.chunk_information[chunk_number];
+      auto input_chunk = (*input_chunks)[chunk_number];
 
-    // Reserve the appropriate output space for the clusters by assuming a uniform distribution
+      // Count the number of entries for each cluster to be able to reserve the appropriate output space later.
+      auto job = std::make_shared<JobTask>([&input_chunk, &clusterer, &chunk_information] {
+        for (auto& entry : *input_chunk) {
+          auto cluster_id = clusterer(entry.value);
+          ++chunk_information.cluster_histogram[cluster_id];
+        }
+      });
+
+      histogram_jobs.push_back(job);
+      job->schedule();
+    }
+
+    CurrentScheduler::wait_for_tasks(histogram_jobs);
+
+
+    // Aggregate the chunks histograms to a table histogram and initialize the insert positions for each chunk
+    for (auto& chunk_information : table_information.chunk_information) {
+      for (size_t cluster_id = 0; cluster_id < _cluster_count; ++cluster_id) {
+        chunk_information.insert_position[cluster_id] = table_information.cluster_histogram[cluster_id];
+        table_information.cluster_histogram[cluster_id] += chunk_information.cluster_histogram[cluster_id];
+      }
+    }
+
+    // Reserve the appropriate output space for the clusters
     for (size_t cluster_id = 0; cluster_id < _cluster_count; ++cluster_id) {
-      auto cluster_size = _materialized_table_size(input_chunks) / _cluster_count;
-      (*output_table)[cluster_id] = std::make_shared<MaterializedColumn<T>>();
-      (*output_table)[cluster_id]->reserve(cluster_size);
+      auto cluster_size = table_information.cluster_histogram[cluster_id];
+      (*output_table)[cluster_id] = std::make_shared<MaterializedColumn<T>>(cluster_size);
     }
 
     // Move each entry into its appropriate cluster in parallel
     std::vector<std::shared_ptr<AbstractTask>> cluster_jobs;
     for (size_t chunk_number = 0; chunk_number < input_chunks->size(); ++chunk_number) {
-      auto job = std::make_shared<JobTask>([chunk_number, &cluster_mutexes, &output_table, &input_chunks, &clusterer] {
+      auto job = std::make_shared<JobTask>([chunk_number, &output_table, &input_chunks,
+                                            &table_information, &clusterer] {
+        auto& chunk_information = table_information.chunk_information[chunk_number];
         for (auto& entry : *(*input_chunks)[chunk_number]) {
           auto cluster_id = clusterer(entry.value);
-          cluster_mutexes[cluster_id].lock();
-          (*output_table)[cluster_id]->push_back(entry);
-          cluster_mutexes[cluster_id].unlock();
+          (*(*output_table)[cluster_id])[chunk_information.insert_position[cluster_id]++] = entry;
         }
       });
       cluster_jobs.push_back(job);
@@ -172,7 +235,7 @@ class RadixClusterSort {
                            std::unique_ptr<MaterializedColumnList<T>>& table) {
     // Note:
     // - The materialized chunks are sorted.
-    // - Between the chunks there is no order
+    // - In between the chunks there is no order
     // - Every chunk can contain values for every cluster
     // - To sample for range border values we look at the position where the values for each cluster
     //   would start if every chunk had an even values distribution for every cluster.
@@ -188,7 +251,7 @@ class RadixClusterSort {
   }
 
   /**
-  * Performs the radix cluster sort for the non-equi case (>, >=, <, <=) which requires the complete table to
+  * Performs the range cluster sort for the non-equi case (>, >=, <, <=, !=) which requires the complete table to
   * be sorted and not only the clusters in themselves.
   **/
   std::pair<std::unique_ptr<MaterializedColumnList<T>>, std::unique_ptr<MaterializedColumnList<T>>> _range_cluster(
