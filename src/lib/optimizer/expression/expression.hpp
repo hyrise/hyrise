@@ -58,7 +58,7 @@ class Expression : public std::enable_shared_from_this<Expression> {
   static std::shared_ptr<Expression> create_literal(const AllTypeVariant& value,
                                                     const optional<std::string>& alias = nullopt);
 
-  static std::shared_ptr<Expression> create_placeholder(const AllTypeVariant& value);
+  static std::shared_ptr<Expression> create_value_placeholder(ValuePlaceholder value_placeholder);
 
   static std::shared_ptr<Expression> create_aggregate_function(
       AggregateFunction aggregate_function, const std::vector<std::shared_ptr<Expression>>& expression_list,
@@ -115,11 +115,12 @@ class Expression : public std::enable_shared_from_this<Expression> {
    * Getters. Only call them if you are sure the type() has such a member
    */
   const ColumnID column_id() const;
-  const std::string& name() const;
+  const std::string& table_name() const;
   AggregateFunction aggregate_function() const;
   const optional<std::string>& alias() const;
   const AllTypeVariant value() const;
   const std::vector<std::shared_ptr<Expression>>& expression_list() const;
+  ValuePlaceholder value_placeholder() const;
   // @}
 
   void set_expression_list(const std::vector<std::shared_ptr<Expression>>& expression_list);
@@ -147,14 +148,15 @@ class Expression : public std::enable_shared_from_this<Expression> {
    */
   std::vector<std::shared_ptr<Expression>> _expression_list;
 
-  // a name, which could be a function name
-  optional<std::string> _name;
+  optional<std::string> _table_name;
 
   // a column that might be referenced
   optional<ColumnID> _column_id;
 
   // an alias, used for ColumnReferences, Selects, FunctionIdentifiers
   optional<std::string> _alias;
+
+  optional<ValuePlaceholder> _value_placeholder;
 
   // @{
   // Members for the tree strucutre
