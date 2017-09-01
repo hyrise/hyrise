@@ -23,6 +23,7 @@ Avoid exception handling. Because Hyrise is not a product, we do not have to rec
 - Use `IS_DEBUG` macro for non-essential checks
 - Be specific: `double a = 3.0;` but `float a = 3.0f;`
 - Use forward declarations whenever possible to reduce compile time
+- We mostly use structs for PODS (plain old data structures). If it has methods, chances are that it is a class.
 
 ## Naming Conventions
 
