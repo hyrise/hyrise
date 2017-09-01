@@ -21,10 +21,10 @@ struct MaterializedValue {
 };
 
 template <typename T>
-using MaterializedChunk = std::vector<MaterializedValue<T>>;
+using MaterializedColumn = std::vector<MaterializedValue<T>>;
 
 template <typename T>
-using MaterializedTable = std::vector<std::shared_ptr<MaterializedChunk<T>>>;
+using MaterializedColumnList = std::vector<std::shared_ptr<MaterializedColumn<T>>>;
 
 /**
 * Materializes a table for a specific column and sorts it if required. Row-Ids are kept in order to enable
@@ -45,15 +45,15 @@ class ColumnMaterializer : public ColumnVisitable {
 
     // The id of the chunk to be materialized
     ChunkID chunk_id;
-    std::shared_ptr<MaterializedChunk<T>> output;
+    std::shared_ptr<MaterializedColumn<T>> output;
   };
 
   /**
   * Creates a job to materialize and sort a chunk.
   **/
-  std::shared_ptr<JobTask> _materialize_chunk_job(std::shared_ptr<MaterializedTable<T>> output, ChunkID chunk_id,
+  std::shared_ptr<JobTask> _materialize_chunk_job(std::unique_ptr<MaterializedColumnList<T>>& output, ChunkID chunk_id,
                                                    std::shared_ptr<const Table> input, std::string column_name) {
-    return std::make_shared<JobTask>([=] {
+    return std::make_shared<JobTask>([this, &output, &input, &column_name, chunk_id] {
         auto column = input->get_chunk(chunk_id).get_column(input->column_id_by_name(column_name));
         auto context = std::make_shared<MaterializationContext>(chunk_id);
         column->visit(*this, context);
@@ -67,7 +67,7 @@ class ColumnMaterializer : public ColumnVisitable {
   void handle_value_column(BaseColumn& column, std::shared_ptr<ColumnVisitableContext> context) override {
     auto& value_column = static_cast<ValueColumn<T>&>(column);
     auto materialization_context = std::static_pointer_cast<MaterializationContext>(context);
-    auto output = std::make_shared<MaterializedChunk<T>>(value_column.values().size());
+    auto output = std::make_shared<MaterializedColumn<T>>(value_column.values().size());
 
     // Copy over every entry
     for (ChunkOffset chunk_offset{0}; chunk_offset < value_column.values().size(); ++chunk_offset) {
@@ -89,7 +89,7 @@ class ColumnMaterializer : public ColumnVisitable {
   void handle_dictionary_column(BaseColumn& column, std::shared_ptr<ColumnVisitableContext> context) override {
     auto& dictionary_column = dynamic_cast<DictionaryColumn<T>&>(column);
     auto materialization_context = std::static_pointer_cast<MaterializationContext>(context);
-    auto output = std::make_shared<MaterializedChunk<T>>(column.size());
+    auto output = std::make_shared<MaterializedColumn<T>>(column.size());
 
     auto value_ids = dictionary_column.attribute_vector();
     auto dict = dictionary_column.dictionary();
@@ -99,6 +99,11 @@ class ColumnMaterializer : public ColumnVisitable {
       // Collect for every value id, the set of rows that this value appeared in
       // value_count is used as an inverted index
       auto rows_with_value = std::vector<std::vector<RowID>>(dict->size());
+
+      // Presize the vectors by assuming a uniform distribution
+      for (size_t index = 0; index < rows_with_value.size(); index++) {
+        rows_with_value[index].resize(value_ids->size() / dict->size());
+      }
       for (ChunkOffset chunk_offset{0}; chunk_offset < value_ids->size(); ++chunk_offset) {
         rows_with_value[value_ids->get(chunk_offset)].push_back(RowID{materialization_context->chunk_id, chunk_offset});
       }
@@ -129,7 +134,7 @@ class ColumnMaterializer : public ColumnVisitable {
     auto referenced_column_id = ref_column.referenced_column_id();
     auto materialization_context = std::static_pointer_cast<MaterializationContext>(context);
     auto pos_list = ref_column.pos_list();
-    auto output = std::make_shared<MaterializedChunk<T>>(ref_column.size());
+    auto output = std::make_shared<MaterializedColumn<T>>(ref_column.size());
 
     // Retrieve the columns from the referenced table so they only have to be cast once
     auto v_columns = std::vector<std::shared_ptr<ValueColumn<T>>>(referenced_table->chunk_count());
@@ -172,8 +177,8 @@ class ColumnMaterializer : public ColumnVisitable {
   * Materializes and sorts all the chunks of an input table in parallel
   * by creating multiple jobs that materialize chunks.
   **/
-  std::shared_ptr<MaterializedTable<T>> materialize(std::shared_ptr<const Table> input, std::string column) {
-    auto output = std::make_shared<MaterializedTable<T>>(input->chunk_count());
+  std::unique_ptr<MaterializedColumnList<T>> materialize(std::shared_ptr<const Table> input, std::string column) {
+    auto output = std::make_unique<MaterializedColumnList<T>>(input->chunk_count());
 
     std::vector<std::shared_ptr<AbstractTask>> jobs;
     for (ChunkID chunk_id{0}; chunk_id < input->chunk_count(); ++chunk_id) {
