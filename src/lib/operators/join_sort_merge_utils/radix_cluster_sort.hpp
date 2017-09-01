@@ -57,19 +57,19 @@ class RadixClusterSort {
   * be able to appropriately reserve space for the clustering output.
   **/
   struct ChunkInformation {
-   explicit ChunkInformation(size_t cluster_count) {
-     cluster_histogram.resize(cluster_count);
-     insert_position.resize(cluster_count);
-   }
-   // Used to count the number of entries for each cluster from a specific chunk
-   // Example cluster_histogram[3] = 5
-   // -> 5 values from the chunk belong in cluster 3
-   std::vector<size_t> cluster_histogram;
+    explicit ChunkInformation(size_t cluster_count) {
+      cluster_histogram.resize(cluster_count);
+      insert_position.resize(cluster_count);
+    }
+    // Used to count the number of entries for each cluster from a specific chunk
+    // Example cluster_histogram[3] = 5
+    // -> 5 values from the chunk belong in cluster 3
+    std::vector<size_t> cluster_histogram;
 
-   // Stores the beginning of the range in cluster for this chunk.
-   // Example: insert_position[3] = 5
-   // -> This chunks value for cluster 3 are inserted at index 5 and forward.
-   std::vector<size_t> insert_position;
+    // Stores the beginning of the range in cluster for this chunk.
+    // Example: insert_position[3] = 5
+    // -> This chunks value for cluster 3 are inserted at index 5 and forward.
+    std::vector<size_t> insert_position;
   };
 
   /**
@@ -77,16 +77,16 @@ class RadixClusterSort {
   *  and its chunks in order to be able to appropriately reserve space for the clustering output.
   **/
   struct TableInformation {
-   TableInformation(size_t chunk_count, size_t cluster_count) {
-     cluster_histogram.resize(cluster_count);
-     chunk_information.reserve(chunk_count);
-     for (size_t i = 0; i < chunk_count; ++i) {
-       chunk_information.push_back(ChunkInformation(cluster_count));
-     }
-   }
-   // Used to count the number of entries for each cluster from the whole table
-   std::vector<size_t> cluster_histogram;
-   std::vector<ChunkInformation> chunk_information;
+    TableInformation(size_t chunk_count, size_t cluster_count) {
+      cluster_histogram.resize(cluster_count);
+      chunk_information.reserve(chunk_count);
+      for (size_t i = 0; i < chunk_count; ++i) {
+        chunk_information.push_back(ChunkInformation(cluster_count));
+      }
+    }
+    // Used to count the number of entries for each cluster from the whole table
+    std::vector<size_t> cluster_histogram;
+    std::vector<ChunkInformation> chunk_information;
   };
 
   // Input parameters
