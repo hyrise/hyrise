@@ -62,6 +62,12 @@ class Console {
   void out(const std::string &output, bool console_print = true);
   void out(std::shared_ptr<const Table> table);
 
+  /*
+   * Handler for SIGINT signal (caused by CTRL-C key sequence).
+   * Resets the Console state and clears the current line.
+   */
+  static void handle_signal(int sig);
+
  protected:
   /*
    * Non-public constructor, since Console is a Singleton.
