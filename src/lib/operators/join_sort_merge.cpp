@@ -365,7 +365,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
     /**
   * Determines the smallest value in a sorted materialized table.
   **/
-  T& _table_min_value(MatTablePtr sorted_table) {
+  T& _table_min_value(std::unique_ptr<MaterializedColumnList<T>>&  sorted_table) {
     DebugAssert(_op != ScanType::OpEquals, "Complete table order is required for _table_min_value which is only " +
                                            "available in the non-equi case");
     DebugAssert(sorted_table->size() > 0, "Sorted table has no partitions");
@@ -382,7 +382,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
   /**
   * Determines the biggest value in a sortd materialized table.
   **/
-  T& _table_max_value(MatTablePtr sorted_table) {
+  T& _table_max_value(std::unique_ptr<MaterializedColumnList<T>>& sorted_table) {
     DebugAssert(_op != ScanType::OpEquals, "Complete table order is required for _table_max_value which is only " +
                                            "available in the non-equi case");
     DebugAssert(sorted_table->size() > 0, "Sorted table is empty");
@@ -401,7 +401,8 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
   * Returns the TablePosition of this element and whether a satisfying element has been found.
   **/
   template <typename Function>
-  std::pair<TablePosition, bool> _first_value_that_satisfies(MatTablePtr sorted_table, Function condition) {
+  std::pair<TablePosition, bool> _first_value_that_satisfies(std::unique_ptr<MaterializedColumnList<T>>& sorted_table,
+                                                             Function condition) {
     for (size_t partition_id = 0; partition_id < sorted_table->size(); ++partition_id) {
       auto partition = sorted_table->at(partition_id);
       if (partition->size() > 0 && condition(partition->back().value)) {
@@ -421,7 +422,9 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
   * the table in reverse order. Returns the TablePosition of this element, and a satisfying element has been found.
   **/
   template <typename Function>
-  std::pair<TablePosition, bool> _first_value_that_satisfies_reverse(MatTablePtr sorted_table, Function condition) {
+  std::pair<TablePosition, bool> _first_value_that_satisfies_reverse(
+                                                            std::unique_ptr<MaterializedColumnList<T>>& sorted_table,
+                                                            Function condition) {
     for (size_t r_partition_id = 0; r_partition_id < sorted_table->size(); ++r_partition_id) {
       auto partition_id = sorted_table->size() - 1 - r_partition_id;
       auto partition = sorted_table->at(partition_id);
@@ -539,6 +542,15 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
     }
 
     CurrentScheduler::wait_for_tasks(jobs);
+
+    // The outer joins for the non-equi cases
+    // Note: Equi outer joins can be integrated into the main algorithm, while these can not.
+    if((_mode == JoinMode::Left || _mode == JoinMode::Outer) && _op != ScanType::OpEquals) {
+      _left_outer_non_equi_join();
+    }
+    if((_mode == JoinMode::Right || _mode == JoinMode::Outer) && _op != ScanType::OpEquals) {
+      _right_outer_non_equi_join();
+    }
   }
 
   /**
