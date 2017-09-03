@@ -32,16 +32,22 @@ class AggregateNode : public AbstractASTNode {
   const std::vector<std::string>& output_column_names() const override;
   const std::vector<ColumnID>& output_column_id_to_input_column_id() const override;
 
-  optional<ColumnID> find_column_id_for_column_identifier_name(
-      const ColumnIdentifierName& column_identifier_name) const override;
+  optional<ColumnID> find_column_id_by_column_identifier_name(
+    const ColumnIdentifierName &column_identifier_name) const override;
 
   // @{
   /**
-   * AggregateNode::find_column_id_for_column_identifier() looks for the @param expression in the columns this
-   * node outputs, checking by semantic and NOT by Expression address. If it can find it, it will be returned,
+   * AggregateNode::find_column_id_for_expression() looks for the @param expression in the columns this
+   * node outputs, checking by semantic and NOT by Expression object's address. If it can find it, it will be returned,
    * otherwise nullopt is returned.
-   * AggregateNode::get_column_id_for_column_identifier() is more strict and will fail, if the
+   * AggregateNode::get_column_id_for_expression() is more strict and will fail, if the
    * @param expression cannot be found
+   *
+   * Since we're using a TableScan added AFTER the actual aggregate to implement HAVING, in a query like
+   * `SELECT MAX(a) FROM t1 GROUP BY b HAVING MAX(a) > 10`
+   * we need get the column that contains the `MAX(a)` in the table produced by the Aggregate. This is what this
+   * funciton is used for.
+   *
    * NOTE: These functions will possibly result in a full recursive traversal of the ancestors of this node.
    */
   optional<ColumnID> find_column_id_for_expression(const std::shared_ptr<Expression>& expression) const;

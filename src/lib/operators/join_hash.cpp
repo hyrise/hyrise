@@ -16,12 +16,6 @@
 namespace opossum {
 
 JoinHash::JoinHash(const std::shared_ptr<const AbstractOperator> left,
-                   const std::shared_ptr<const AbstractOperator> right, const JoinMode mode)
-    : AbstractJoinOperator(left, right, mode) {
-  Fail("Natural and Cross Joins are currently not supported by this operator.");
-}
-
-JoinHash::JoinHash(const std::shared_ptr<const AbstractOperator> left,
                    const std::shared_ptr<const AbstractOperator> right, const JoinMode mode,
                    const std::pair<ColumnID, ColumnID> &column_ids, const ScanType scan_type)
     : AbstractJoinOperator(left, right, mode, column_ids, scan_type) {
@@ -53,14 +47,14 @@ std::shared_ptr<const Table> JoinHash::on_execute() {
     inputs_swapped = true;
     build_operator = _input_right;
     probe_operator = _input_left;
-    build_column_id = (*_column_ids).second;
-    probe_column_id = (*_column_ids).first;
+    build_column_id = _column_ids.second;
+    probe_column_id = _column_ids.first;
   } else {
     inputs_swapped = false;
     build_operator = _input_left;
     probe_operator = _input_right;
-    build_column_id = _column_ids->first;
-    probe_column_id = _column_ids->second;
+    build_column_id = _column_ids.first;
+    probe_column_id = _column_ids.second;
   }
 
   auto adjusted_column_ids = std::make_pair(build_column_id, probe_column_id);
@@ -70,7 +64,7 @@ std::shared_ptr<const Table> JoinHash::on_execute() {
 
   _impl = make_unique_by_column_types<AbstractReadOnlyOperatorImpl, JoinHashImpl>(
       build_input->column_type(build_column_id), probe_input->column_type(probe_column_id), build_operator,
-      probe_operator, _mode, adjusted_column_ids, *_scan_type, inputs_swapped);
+      probe_operator, _mode, adjusted_column_ids, _scan_type, inputs_swapped);
   return _impl->on_execute();
 }
 

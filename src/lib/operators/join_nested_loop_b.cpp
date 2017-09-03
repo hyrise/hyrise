@@ -16,12 +16,6 @@
 namespace opossum {
 
 JoinNestedLoopB::JoinNestedLoopB(const std::shared_ptr<const AbstractOperator> left,
-                                 const std::shared_ptr<const AbstractOperator> right, const JoinMode mode)
-    : AbstractJoinOperator(left, right, mode) {
-  Fail("Natural and Cross Joins are currently not supported by this operator.");
-}
-
-JoinNestedLoopB::JoinNestedLoopB(const std::shared_ptr<const AbstractOperator> left,
                                  const std::shared_ptr<const AbstractOperator> right, const JoinMode mode,
                                  const std::pair<ColumnID, ColumnID>& column_ids, const ScanType scan_type)
     : AbstractJoinOperator(left, right, mode, column_ids, scan_type) {
@@ -116,17 +110,15 @@ void JoinNestedLoopB::_add_outer_join_rows(std::shared_ptr<const Table> outer_si
 }
 
 std::shared_ptr<const Table> JoinNestedLoopB::on_execute() {
-  DebugAssert(static_cast<bool>(_column_ids), "Join columns not specified.");
-
   // Get types and ids of the input columns
-  auto left_column_type = input_table_left()->column_type(_column_ids->first);
-  auto right_column_type = input_table_right()->column_type(_column_ids->second);
+  auto left_column_type = input_table_left()->column_type(_column_ids.first);
+  auto right_column_type = input_table_right()->column_type(_column_ids.second);
 
   // Ensure matching column types for simplicity
   // Joins on non-matching types can be added later.
   DebugAssert((left_column_type == right_column_type), "Column types of join columns do not match.");
 
-  _join_columns(_column_ids->first, _column_ids->second, left_column_type);
+  _join_columns(_column_ids.first, _column_ids.second, left_column_type);
 
   if (_mode == JoinMode::Left || _mode == JoinMode::Outer) {
     _add_outer_join_rows(input_table_left(), _pos_list_left, _left_match, _pos_list_right);
@@ -149,12 +141,8 @@ uint8_t JoinNestedLoopB::num_in_tables() const { return 2u; }
 uint8_t JoinNestedLoopB::num_out_tables() const { return 1u; }
 
 std::shared_ptr<AbstractOperator> JoinNestedLoopB::recreate(const std::vector<AllParameterVariant>& args) const {
-  if (_column_ids && _scan_type) {
     return std::make_shared<JoinNestedLoopB>(_input_left->recreate(args), _input_right->recreate(args), _mode,
-                                             *_column_ids, *_scan_type);
-  }
-
-  return std::make_shared<JoinNestedLoopB>(_input_left->recreate(args), _input_right->recreate(args), _mode);
+                                             _column_ids, _scan_type);
 }
 
 template <typename T>
@@ -165,7 +153,7 @@ JoinNestedLoopB::JoinNestedLoopBImpl<T>::JoinNestedLoopBImpl(JoinNestedLoopB& jo
     return;
   }
 
-  switch (*_join_nested_loop_b._scan_type) {
+  switch (join_nested_loop_b._scan_type) {
     case ScanType::OpEquals: {
       _compare = [](const T& value_left, const T& value_right) -> bool { return value_left == value_right; };
       break;

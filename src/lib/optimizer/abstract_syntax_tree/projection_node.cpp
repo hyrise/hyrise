@@ -79,8 +79,8 @@ const std::vector<ColumnID>& ProjectionNode::output_column_id_to_input_column_id
 
 const std::vector<std::string>& ProjectionNode::output_column_names() const { return _output_column_names; }
 
-optional<ColumnID> ProjectionNode::find_column_id_for_column_identifier_name(
-    const ColumnIdentifierName& column_identifier_name) const {
+optional<ColumnID> ProjectionNode::find_column_id_by_column_identifier_name(
+  const ColumnIdentifierName &column_identifier_name) const {
   /**
    * The result variable. We make sure the optional is only set once to detect ambiguity in column
    * references.
@@ -94,7 +94,7 @@ optional<ColumnID> ProjectionNode::find_column_id_for_column_identifier_name(
    * we're looking for. E.g: we're looking for column "a" and "a" exists in the previous node, but is NOT projected by
    * the projection it might still be an ALIAS of the projection.
    */
-  const auto child_column_id = left_child()->find_column_id_for_column_identifier_name(column_identifier_name);
+  const auto child_column_id = left_child()->find_column_id_by_column_identifier_name(column_identifier_name);
 
   for (ColumnID column_id{0}; column_id < output_column_names().size(); column_id++) {
     const auto& column_expression = _column_expressions[column_id];

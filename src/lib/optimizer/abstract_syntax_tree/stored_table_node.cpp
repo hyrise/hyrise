@@ -36,8 +36,8 @@ const std::shared_ptr<TableStatistics> StoredTableNode::_gather_statistics() con
 
 const std::string& StoredTableNode::table_name() const { return _table_name; }
 
-optional<ColumnID> StoredTableNode::find_column_id_for_column_identifier_name(
-    const ColumnIdentifierName& column_identifier_name) const {
+optional<ColumnID> StoredTableNode::find_column_id_by_column_identifier_name(
+  const ColumnIdentifierName &column_identifier_name) const {
   if (column_identifier_name.table_name && !knows_table(*column_identifier_name.table_name)) {
     return nullopt;
   }

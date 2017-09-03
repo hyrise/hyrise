@@ -43,7 +43,7 @@ std::shared_ptr<Expression> SQLExpressionTranslator::translate_expression(
 
       auto table_name = expr.table != nullptr ? optional<std::string>(std::string(expr.table)) : nullopt;
       ColumnIdentifierName column_identifier_name{name, table_name};
-      auto column_id = input_node->get_column_id_for_column_identifier_name(column_identifier_name);
+      auto column_id = input_node->get_column_id_by_column_identifier_name(column_identifier_name);
       node = Expression::create_column_identifier(column_id, alias);
       break;
     }
@@ -110,7 +110,7 @@ ColumnID SQLExpressionTranslator::get_column_id_for_expression(const hsql::Expr 
                                                                const std::shared_ptr<AbstractASTNode> &input_node) {
   Assert(hsql_expr.isType(hsql::kExprColumnRef), "Input needs to be column ref");
 
-  return input_node->get_column_id_for_column_identifier_name(get_column_identifier_name_for_column_ref(hsql_expr));
+  return input_node->get_column_id_by_column_identifier_name(get_column_identifier_name_for_column_ref(hsql_expr));
 }
 
 }  // namespace opossum

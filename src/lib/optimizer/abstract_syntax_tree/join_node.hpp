@@ -35,8 +35,8 @@ class JoinNode : public AbstractASTNode {
   bool knows_table(const std::string &table_name) const override;
   std::vector<ColumnID> get_output_column_ids_for_table(const std::string &table_name) const override;
 
-  optional<ColumnID> find_column_id_for_column_identifier_name(
-      const ColumnIdentifierName &column_identifier_name) const override;
+  optional<ColumnID> find_column_id_by_column_identifier_name(
+    const ColumnIdentifierName &column_identifier_name) const override;
 
  protected:
   void _on_child_changed() override;

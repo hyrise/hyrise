@@ -50,8 +50,8 @@ const std::vector<ColumnID> &JoinNode::output_column_id_to_input_column_id() con
 
 const std::vector<std::string> &JoinNode::output_column_names() const { return _output_column_names; }
 
-optional<ColumnID> JoinNode::find_column_id_for_column_identifier_name(
-    const ColumnIdentifierName &column_identifier_name) const {
+optional<ColumnID> JoinNode::find_column_id_by_column_identifier_name(
+  const ColumnIdentifierName &column_identifier_name) const {
   DebugAssert(!!left_child() && !!right_child(), "JoinNode must have two children.");
 
   optional<ColumnID> left_column_id;
@@ -59,8 +59,8 @@ optional<ColumnID> JoinNode::find_column_id_for_column_identifier_name(
 
   // If there is no qualifying table name, search both children.
   if (!column_identifier_name.table_name) {
-    left_column_id = left_child()->find_column_id_for_column_identifier_name(column_identifier_name);
-    right_column_id = right_child()->find_column_id_for_column_identifier_name(column_identifier_name);
+    left_column_id = left_child()->find_column_id_by_column_identifier_name(column_identifier_name);
+    right_column_id = right_child()->find_column_id_by_column_identifier_name(column_identifier_name);
   } else {
     // Otherwise only search a children if it manages that qualifier.
     auto left_manages_table = left_child()->knows_table(*column_identifier_name.table_name);
@@ -76,9 +76,9 @@ optional<ColumnID> JoinNode::find_column_id_for_column_identifier_name(
            "Table name " + *column_identifier_name.table_name + " is ambiguous.");
 
     if (left_manages_table) {
-      left_column_id = left_child()->find_column_id_for_column_identifier_name(column_identifier_name);
+      left_column_id = left_child()->find_column_id_by_column_identifier_name(column_identifier_name);
     } else {
-      right_column_id = right_child()->find_column_id_for_column_identifier_name(column_identifier_name);
+      right_column_id = right_child()->find_column_id_by_column_identifier_name(column_identifier_name);
     }
   }
 

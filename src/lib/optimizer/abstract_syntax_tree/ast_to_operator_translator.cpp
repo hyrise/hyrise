@@ -126,8 +126,10 @@ std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::_translate_aggregate_
   for (const auto &aggregate_expression : aggregate_expressions) {
     DebugAssert(aggregate_expression->type() == ExpressionType::Function, "Expression is not a function.");
 
+    // Check whether the expression that is the argument of the aggregate function, e.g. `a+b` in `SUM(a+b)` is, as in
+    // this case, an arithmetic expression and therefore needs a Projection before the aggregate is performed. If all
+    // Aggregates are in the style of `COUNT(b)` or there are just groupby columns, there is no need for a Projection.
     const auto &function_arg_expr = (aggregate_expression->expression_list())[0];
-
     if (function_arg_expr->is_arithmetic_operator()) {
       need_projection = true;
       break;

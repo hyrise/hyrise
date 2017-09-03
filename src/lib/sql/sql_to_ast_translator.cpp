@@ -195,10 +195,10 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_join(const hsql:
    * (left_in_right_node == true). Later we make sure that one and only one of them is true, otherwise we either have
    * ambiguity or the column is simply not existing.
    */
-  const auto left_in_left_node = left_node->find_column_id_for_column_identifier_name(left_column_identifier_name);
-  const auto left_in_right_node = right_node->find_column_id_for_column_identifier_name(left_column_identifier_name);
-  const auto right_in_left_node = left_node->find_column_id_for_column_identifier_name(right_column_identifier_name);
-  const auto right_in_right_node = right_node->find_column_id_for_column_identifier_name(right_column_identifier_name);
+  const auto left_in_left_node = left_node->find_column_id_by_column_identifier_name(left_column_identifier_name);
+  const auto left_in_right_node = right_node->find_column_id_by_column_identifier_name(left_column_identifier_name);
+  const auto right_in_left_node = left_node->find_column_id_by_column_identifier_name(right_column_identifier_name);
+  const auto right_in_right_node = right_node->find_column_id_by_column_identifier_name(right_column_identifier_name);
 
   Assert(static_cast<bool>(left_in_left_node) ^ static_cast<bool>(left_in_right_node),
          "Left operand must be in exactly one of the input nodes");
