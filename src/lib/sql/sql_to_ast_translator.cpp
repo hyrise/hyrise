@@ -188,7 +188,8 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_join(const hsql:
       SQLExpressionTranslator::get_column_identifier_name_for_column_ref(*condition.expr2);
 
   /**
-   * `x_in_y_node` indicates whether the column identifier on the `x` side in the join expression is in the input node on
+   * `x_in_y_node` indicates whether the column identifier on the `x` side in the join expression is in the input node
+   * on
    * the `y` side of the join. So in the query
    * `SELECT * FROM T1 JOIN T2 on person_id == customer_id`
    * We have to check whether `person_id` belongs to T1 (left_in_left_node == true) or to T2

@@ -103,14 +103,14 @@ const std::vector<ColumnID> &AbstractASTNode::output_column_id_to_input_column_i
 size_t AbstractASTNode::output_col_count() const { return output_column_names().size(); }
 
 ColumnID AbstractASTNode::get_column_id_by_column_identifier_name(
-  const ColumnIdentifierName &column_identifier_name) const {
+    const ColumnIdentifierName &column_identifier_name) const {
   const auto column_id = find_column_id_by_column_identifier_name(column_identifier_name);
   DebugAssert(!!column_id, "ColumnIdentifierName could not be resolved.");
   return *column_id;
 }
 
 optional<ColumnID> AbstractASTNode::find_column_id_by_column_identifier_name(
-  const ColumnIdentifierName &column_identifier_name) const {
+    const ColumnIdentifierName &column_identifier_name) const {
   /**
    * This function has to be overwritten if columns or their order are in any way redefined by this Node.
    * Examples include Projections, Aggregates, and Joins.

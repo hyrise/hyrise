@@ -40,7 +40,7 @@ class TPCCDeliveryBenchmark : public TPCCBenchmarkFixture {
     auto gt = std::make_shared<GetTable>("NEW-ORDER");
 
     auto ts1 = std::make_shared<TableScan>(gt, ColumnID{1} /* "NO_D_ID" */, ScanType::OpEquals, d_id);
-    auto ts2 = std::make_shared<TableScan>(ts1, ColumnID{2}  /* "NO_W_ID" */, ScanType::OpEquals, w_id);
+    auto ts2 = std::make_shared<TableScan>(ts1, ColumnID{2} /* "NO_W_ID" */, ScanType::OpEquals, w_id);
     auto ts3 = std::make_shared<TableScan>(ts2, ColumnID{0} /* "NO_O_ID" */, ScanType::OpGreaterThan, -1);
     auto val = std::make_shared<Validate>(ts3);
 
@@ -103,7 +103,6 @@ class TPCCDeliveryBenchmark : public TPCCBenchmarkFixture {
     auto ts2 = std::make_shared<TableScan>(ts1, ColumnID{2} /* "O_D_ID" */, ScanType::OpEquals, d_id);
     auto ts3 = std::make_shared<TableScan>(ts2, ColumnID{3} /* "O_W_ID" */, ScanType::OpEquals, w_id);
     auto val = std::make_shared<Validate>(ts3);
-
 
     Projection::ColumnExpressions columns = {Expression::create_column_identifier(ColumnID{1} /* "O_C_ID" */)};
     auto projection = std::make_shared<Projection>(val, columns);
@@ -177,7 +176,6 @@ class TPCCDeliveryBenchmark : public TPCCBenchmarkFixture {
      */
     auto gt = std::make_shared<GetTable>("ORDER-LINE");
 
-
     auto ts1 = std::make_shared<TableScan>(gt, ColumnID{0} /* "OL_O_ID" */, ScanType::OpEquals, no_o_id);
     auto ts2 = std::make_shared<TableScan>(ts1, ColumnID{1} /* "OL_D_ID" */, ScanType::OpEquals, d_id);
     auto ts3 = std::make_shared<TableScan>(ts2, ColumnID{2} /* "OL_W_ID" */, ScanType::OpEquals, w_id);
@@ -227,8 +225,9 @@ class TPCCDeliveryBenchmark : public TPCCBenchmarkFixture {
 
     auto val = std::make_shared<Validate>(ts3);
 
-    auto sum = std::make_shared<Aggregate>(val, std::vector<AggregateDefinition>{{ColumnID{8} /* "OL_AMOUNT" */, AggregateFunction::Sum}},
-                                           std::vector<ColumnID>{});
+    auto sum = std::make_shared<Aggregate>(
+        val, std::vector<AggregateDefinition>{{ColumnID{8} /* "OL_AMOUNT" */, AggregateFunction::Sum}},
+        std::vector<ColumnID>{});
 
     auto t_gt = std::make_shared<OperatorTask>(gt);
     auto t_ts1 = std::make_shared<OperatorTask>(ts1);
@@ -261,7 +260,7 @@ class TPCCDeliveryBenchmark : public TPCCBenchmarkFixture {
 
     auto val = std::make_shared<Validate>(ts3);
 
-    Projection::ColumnExpressions columns = {Expression::create_column_identifier(ColumnID{16}/* "C_BALANCE" */)};
+    Projection::ColumnExpressions columns = {Expression::create_column_identifier(ColumnID{16} /* "C_BALANCE" */)};
     auto projection = std::make_shared<Projection>(val, columns);
 
     Projection::ColumnExpressions values = {

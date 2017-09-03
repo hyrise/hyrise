@@ -51,7 +51,7 @@ const std::vector<ColumnID> &JoinNode::output_column_id_to_input_column_id() con
 const std::vector<std::string> &JoinNode::output_column_names() const { return _output_column_names; }
 
 optional<ColumnID> JoinNode::find_column_id_by_column_identifier_name(
-  const ColumnIdentifierName &column_identifier_name) const {
+    const ColumnIdentifierName &column_identifier_name) const {
   DebugAssert(!!left_child() && !!right_child(), "JoinNode must have two children.");
 
   optional<ColumnID> left_column_id;
@@ -144,9 +144,9 @@ std::vector<ColumnID> JoinNode::get_output_column_ids_for_table(const std::strin
   return output_column_ids_for_table;
 }
 
-const optional<std::pair<ColumnID, ColumnID>> & JoinNode::join_column_ids() const { return _join_column_ids; }
+const optional<std::pair<ColumnID, ColumnID>> &JoinNode::join_column_ids() const { return _join_column_ids; }
 
-const optional<ScanType> & JoinNode::scan_type() const { return _scan_type; }
+const optional<ScanType> &JoinNode::scan_type() const { return _scan_type; }
 
 JoinMode JoinNode::join_mode() const { return _join_mode; }
 

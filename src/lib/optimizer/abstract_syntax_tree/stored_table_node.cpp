@@ -37,7 +37,7 @@ const std::shared_ptr<TableStatistics> StoredTableNode::_gather_statistics() con
 const std::string& StoredTableNode::table_name() const { return _table_name; }
 
 optional<ColumnID> StoredTableNode::find_column_id_by_column_identifier_name(
-  const ColumnIdentifierName &column_identifier_name) const {
+    const ColumnIdentifierName& column_identifier_name) const {
   if (column_identifier_name.table_name && !knows_table(*column_identifier_name.table_name)) {
     return nullopt;
   }
@@ -53,7 +53,7 @@ optional<ColumnID> StoredTableNode::find_column_id_by_column_identifier_name(
   return ColumnID{static_cast<ColumnID::base_type>(idx)};
 }
 
-bool StoredTableNode::knows_table(const std::string &table_name) const {
+bool StoredTableNode::knows_table(const std::string& table_name) const {
   if (_alias) {
     // If this table was given an ALIAS on retrieval, does it match the queried table name?
     // Example: SELECT * FROM T1 AS some_table

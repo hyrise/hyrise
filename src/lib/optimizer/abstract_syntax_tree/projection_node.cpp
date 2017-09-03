@@ -80,7 +80,7 @@ const std::vector<ColumnID>& ProjectionNode::output_column_id_to_input_column_id
 const std::vector<std::string>& ProjectionNode::output_column_names() const { return _output_column_names; }
 
 optional<ColumnID> ProjectionNode::find_column_id_by_column_identifier_name(
-  const ColumnIdentifierName &column_identifier_name) const {
+    const ColumnIdentifierName& column_identifier_name) const {
   /**
    * The result variable. We make sure the optional is only set once to detect ambiguity in column
    * references.

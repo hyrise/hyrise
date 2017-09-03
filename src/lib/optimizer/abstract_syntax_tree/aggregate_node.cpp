@@ -105,7 +105,7 @@ const std::vector<ColumnID>& AggregateNode::output_column_id_to_input_column_id(
 }
 
 optional<ColumnID> AggregateNode::find_column_id_by_column_identifier_name(
-  const ColumnIdentifierName &column_identifier_name) const {
+    const ColumnIdentifierName& column_identifier_name) const {
   DebugAssert(!!left_child(), "AggregateNode needs a child.");
 
   // TODO(mp) Handle column_identifier_name having a table that is this node's alias

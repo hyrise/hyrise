@@ -19,7 +19,8 @@ class OperatorsProjectionBenchmark : public BenchmarkBasicFixture {
     BenchmarkBasicFixture::SetUp(state);
     _column_type = state.range(1);
 
-    _table_ref = std::make_shared<TableScan>(_table_wrapper_a, ColumnID{0} /* "a" */, ScanType::OpGreaterThanEquals, 0);  // all
+    _table_ref =
+        std::make_shared<TableScan>(_table_wrapper_a, ColumnID{0} /* "a" */, ScanType::OpGreaterThanEquals, 0);  // all
     _table_ref->execute();
 
     _tables.emplace_back(_table_wrapper_a);  // 0
@@ -36,7 +37,7 @@ class OperatorsProjectionBenchmark : public BenchmarkBasicFixture {
 BENCHMARK_DEFINE_F(OperatorsProjectionBenchmark, BM_ProjectionSimple)(benchmark::State& state) {
   clear_cache();
 
-  Projection::ColumnExpressions expressions = {Expression::create_column_identifier(ColumnID{0}/* "a" */)};
+  Projection::ColumnExpressions expressions = {Expression::create_column_identifier(ColumnID{0} /* "a" */)};
   auto warm_up = std::make_shared<Projection>(_tables[_column_type], expressions);
   warm_up->execute();
   while (state.KeepRunning()) {
