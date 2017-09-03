@@ -153,8 +153,8 @@ set(
     optimizer/base_column_statistics.hpp
     optimizer/column_statistics.cpp
     optimizer/column_statistics.hpp
-    optimizer/expression/expression.cpp
-    optimizer/expression/expression.hpp
+    optimizer/expression.cpp
+    optimizer/expression.hpp
     optimizer/optimizer.cpp
     optimizer/optimizer.hpp
     optimizer/strategy/abstract_rule.hpp

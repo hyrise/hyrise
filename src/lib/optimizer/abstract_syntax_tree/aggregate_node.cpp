@@ -6,7 +6,7 @@
 #include <string>
 #include <vector>
 
-#include "optimizer/expression/expression.hpp"
+#include "optimizer/expression.hpp"
 
 #include "common.hpp"
 #include "types.hpp"

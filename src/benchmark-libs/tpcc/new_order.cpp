@@ -21,7 +21,7 @@
 #include "operators/table_wrapper.hpp"
 #include "operators/update.hpp"
 #include "operators/validate.hpp"
-#include "optimizer/expression/expression.hpp"
+#include "optimizer/expression.hpp"
 #include "scheduler/operator_task.hpp"
 #include "storage/storage_manager.hpp"
 #include "types.hpp"

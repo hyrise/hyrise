@@ -7,7 +7,7 @@
 #include <vector>
 
 #include "constant_mappings.hpp"
-#include "optimizer/expression/expression.hpp"
+#include "optimizer/expression.hpp"
 #include "utils/assert.hpp"
 
 #include "SQLParser.h"

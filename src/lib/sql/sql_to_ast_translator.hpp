@@ -11,7 +11,7 @@
 #include "all_parameter_variant.hpp"
 
 #include "optimizer/abstract_syntax_tree/abstract_ast_node.hpp"
-#include "optimizer/expression/expression.hpp"
+#include "optimizer/expression.hpp"
 
 namespace opossum {
 
