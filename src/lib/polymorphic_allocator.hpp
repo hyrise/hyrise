@@ -1,30 +1,28 @@
 #pragma once
 
-#include <experimental/memory_resource>
 #include <memory>
-#include <string>
-#include <type_traits>
-#include <utility>
+#include <boost/container/pmr/polymorphic_allocator.hpp>
 
 namespace opossum {
 
+// We need a wrapper around std::experimental::pmr::polymorphic_allocator because tbb::concurrent_vector still relies on rebind<U>::other (which is deprecated in C++17)
 template <class T>
-class StubPolymorphicAllocator : public std::experimental::pmr::polymorphic_allocator<T> {
+class PolymorphicAllocator : public boost::container::pmr::polymorphic_allocator<T> {
  public:
   template <class U>
   struct rebind {
-    typedef StubPolymorphicAllocator<U> other;
+    typedef PolymorphicAllocator<U> other;
   };
 
-  StubPolymorphicAllocator() {}
+  PolymorphicAllocator() {}
   template <class U>
-  StubPolymorphicAllocator(const std::experimental::pmr::polymorphic_allocator<U>& alloc)
-      : std::experimental::pmr::polymorphic_allocator<T>(alloc) {}
+  PolymorphicAllocator(const boost::container::pmr::polymorphic_allocator<U>& alloc)
+      : boost::container::pmr::polymorphic_allocator<T>(alloc) {}
   template <class U>
-  StubPolymorphicAllocator(const StubPolymorphicAllocator<U>& other)
-      : std::experimental::pmr::polymorphic_allocator<T>(other) {}
-  StubPolymorphicAllocator(std::experimental::pmr::memory_resource* m_resource)
-      : std::experimental::pmr::polymorphic_allocator<T>(m_resource) {}
+  PolymorphicAllocator(const PolymorphicAllocator<U>& other)
+      : boost::container::pmr::polymorphic_allocator<T>(other) {}
+  PolymorphicAllocator(boost::container::pmr::memory_resource* m_resource)
+      : boost::container::pmr::polymorphic_allocator<T>(m_resource) {}
 };
 
 }  // namespace opossum

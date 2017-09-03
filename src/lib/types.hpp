@@ -9,7 +9,7 @@
 #include <vector>
 
 #include "strong_typedef.hpp"
-#include "stub_polymorphic_allocator.hpp"
+#include "polymorphic_allocator.hpp"
 
 namespace opossum {
 
