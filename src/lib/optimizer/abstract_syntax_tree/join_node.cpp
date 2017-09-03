@@ -38,7 +38,7 @@ std::string JoinNode::description() const {
   if (_join_column_ids && _scan_type) {
     desc << " [" << (*_join_column_ids).first;
     desc << " " << scan_type_to_string.left.at(*_scan_type);
-    desc << " " << _join_column_ids->second << "]";
+    desc << " " << (*_join_column_ids).second << "]";
   }
 
   return desc.str();
