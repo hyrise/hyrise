@@ -89,14 +89,12 @@ optional<ColumnID> JoinNode::find_column_id_for_column_identifier_name(
   Assert(static_cast<bool>(left_column_id) ^ static_cast<bool>(right_column_id),
          "Column name " + column_identifier_name.column_name + " is ambiguous.");
 
-  std::vector<ColumnID>::const_iterator iter_begin;
-  std::vector<ColumnID>::const_iterator iter_end;
   ColumnID input_column_id;
   ColumnID output_column_id;
 
   if (left_column_id) {
     input_column_id = *left_column_id;
-    output_column_id = input_column_id;
+    output_column_id = *left_column_id;
   } else {
     input_column_id = *right_column_id;
     output_column_id = left_child()->num_output_columns() + *right_column_id;

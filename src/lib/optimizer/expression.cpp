@@ -89,7 +89,7 @@ std::shared_ptr<Expression> Expression::create_binary_operator(ExpressionType ty
   return expression;
 }
 
-std::shared_ptr<Expression> Expression::create_select_star(const std::string &table_name) {
+std::shared_ptr<Expression> Expression::create_select_star(const optional<std::string> &table_name) {
   auto expression = std::make_shared<Expression>(ExpressionType::Star);
   expression->_table_name = table_name;
   return expression;
@@ -182,7 +182,7 @@ const std::string Expression::description() const {
       desc << "[ColumnID: " << column_id() << "]";
       break;
     case ExpressionType::Function:
-      desc << "[" << table_name() << ": " << std::endl;
+      desc << "[" << aggregate_function_to_string.left.at(aggregate_function()) << ": " << std::endl;
       for (const auto &expr : expression_list()) {
         desc << expr->description() << ", " << std::endl;
       }
@@ -203,14 +203,11 @@ const ColumnID Expression::column_id() const {
   return *_column_id;
 }
 
-const std::string &Expression::table_name() const {
-  DebugAssert(_table_name != nullopt, "Expression " + expression_type_to_string.at(_type) + " does not have a name");
-  return *_table_name;
-}
+const optional<std::string> &Expression::table_name() const { return _table_name; }
 
 AggregateFunction Expression::aggregate_function() const {
   DebugAssert(_aggregate_function != nullopt,
-              "Expression " + expression_type_to_string.at(_type) + " does not have a aggregate function");
+              "Expression " + expression_type_to_string.at(_type) + " does not have an aggregate function");
   return *_aggregate_function;
 }
 
@@ -222,7 +219,8 @@ const AllTypeVariant Expression::value() const {
 }
 
 ValuePlaceholder Expression::value_placeholder() const {
-  DebugAssert(_value_placeholder != nullopt, "Expression " + expression_type_to_string.at(_type) + " does not have a value placeholder");
+  DebugAssert(_value_placeholder != nullopt,
+              "Expression " + expression_type_to_string.at(_type) + " does not have a value placeholder");
   return *_value_placeholder;
 }
 

@@ -164,9 +164,19 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_join(const hsql:
 
   const hsql::Expr& condition = *join.condition;
 
-  Assert(condition.type == hsql::kExprOperator, "Join condition must be operator");
-  // Assert(condition.opType == hsql::kOpGreater, "Join condition must be operator"); TODO(moritz) Assert for logical
-  // expr
+  Assert(condition.type == hsql::kExprOperator, "Join condition must be operator.");
+  // The Join operators only support simple comparisons for now.
+  switch (condition.opType) {
+    case hsql::kOpEquals:
+    case hsql::kOpNotEquals:
+    case hsql::kOpLess:
+    case hsql::kOpLessEq:
+    case hsql::kOpGreater:
+    case hsql::kOpGreaterEq:
+      break;
+    default:
+      Fail("Join condition must be a simple comparison operator.");
+  }
   Assert(condition.expr && condition.expr->type == hsql::kExprColumnRef,
          "Left arg of join condition must be column ref");
   Assert(condition.expr2 && condition.expr2->type == hsql::kExprColumnRef,
@@ -392,14 +402,14 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_projection(
       // Resolve `SELECT *` to columns.
       std::vector<ColumnID> column_ids;
 
-      if (expr->table_name().empty()) {
+      if (!expr->table_name()) {
         // If there is no table qualifier take all columns from the input.
         for (ColumnID::base_type column_idx = 0u; column_idx < input_node->num_output_columns(); column_idx++) {
           column_ids.emplace_back(column_idx);
         }
       } else {
         // Otherwise only take columns that belong to that qualifier.
-        column_ids = input_node->get_output_column_ids_for_table(expr->table_name());
+        column_ids = input_node->get_output_column_ids_for_table(*expr->table_name());
       }
 
       const auto& column_references = Expression::create_column_identifiers(column_ids);
@@ -531,7 +541,7 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_predicate(
     DebugAssert(hsql_expr.expr2 != nullptr, "hsql malformed");
 
     if (!refers_to_column(*hsql_expr.expr)) {
-      Assert(refers_to_column(*hsql_expr.expr2), "Neither expr nor expr2 refers to a column in the input node");
+      Assert(refers_to_column(*hsql_expr.expr2), "One side of the expression has to refer to a column.");
       operands_switched = true;
       scan_type = get_scan_type_for_reverse_order(scan_type);
     }

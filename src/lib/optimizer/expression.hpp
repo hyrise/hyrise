@@ -69,7 +69,7 @@ class Expression : public std::enable_shared_from_this<Expression> {
                                                             const std::shared_ptr<Expression>& right,
                                                             const optional<std::string>& alias = nullopt);
 
-  static std::shared_ptr<Expression> create_select_star(const std::string& table_name);
+  static std::shared_ptr<Expression> create_select_star(const optional<std::string>& table_name);
   // @}
 
   // @{
@@ -115,13 +115,17 @@ class Expression : public std::enable_shared_from_this<Expression> {
    * Getters. Only call them if you are sure the type() has such a member
    */
   const ColumnID column_id() const;
-  const std::string& table_name() const;
   AggregateFunction aggregate_function() const;
-  const optional<std::string>& alias() const;
   const AllTypeVariant value() const;
   const std::vector<std::shared_ptr<Expression>>& expression_list() const;
   ValuePlaceholder value_placeholder() const;
   // @}
+
+  /**
+   * Getters that can be called to check whether a member is set.
+   */
+  const optional<std::string>& table_name() const;
+  const optional<std::string>& alias() const;
 
   void set_expression_list(const std::vector<std::shared_ptr<Expression>>& expression_list);
 

@@ -41,8 +41,7 @@ class StoredTableNode : public AbstractASTNode {
 
  private:
   const std::string _table_name;
-  const optional<std::string>
-      _alias;  // TODO(mp) this should probably go to AbstractASTNode - can't any result have a ALIAS in SQL?
+  const optional<std::string> _alias;
 
   std::vector<ColumnID> _output_column_id_to_input_column_id;
   std::vector<std::string> _output_column_names;
