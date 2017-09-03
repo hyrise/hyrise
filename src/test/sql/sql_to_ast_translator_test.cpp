@@ -220,8 +220,8 @@ TEST_F(SQLToASTTranslatorTest, SelectInnerJoin) {
   auto join_node = std::dynamic_pointer_cast<JoinNode>(result_node->left_child());
   EXPECT_EQ(join_node->scan_type(), ScanType::OpEquals);
   EXPECT_EQ(join_node->join_mode(), JoinMode::Inner);
-  EXPECT_EQ(join_node->join_column_ids()->first, ColumnID{0});
-  EXPECT_EQ(join_node->join_column_ids()->second, ColumnID{0});
+  EXPECT_EQ((*join_node->join_column_ids()).first, ColumnID{0});
+  EXPECT_EQ((*join_node->join_column_ids()).second, ColumnID{0});
 }
 
 }  // namespace opossum
