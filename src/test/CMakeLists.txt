@@ -23,7 +23,6 @@ set(
     operators/export_csv_test.cpp
     operators/get_table_test.cpp
     operators/import_binary_test.cpp
-    operators/import_csv_non_rfc_test.cpp
     operators/import_csv_test.cpp
     operators/index_column_scan_test.cpp
     operators/insert_test.cpp
@@ -38,20 +37,27 @@ set(
     operators/sort_test.cpp
     operators/table_scan_like_test.cpp
     operators/table_scan_test.cpp
-    operators/termfactory_test.cpp
-    operators/term_test.cpp
     operators/union_all_test.cpp
     operators/update_test.cpp
     operators/validate_test.cpp
     operators/validate_visibility_test.cpp
+    optimizer/abstract_syntax_tree_test.cpp
+    optimizer/ast_to_operator_translator_test.cpp
+    optimizer/column_statistics_test.cpp
+    optimizer/strategy/predicate_reordering_test.cpp
+    optimizer/table_statistics_test.cpp
     scheduler/scheduler_test.cpp
+    sql/sql_base_test.cpp
     sql/sql_basic_cache_test.cpp
+    sql/sql_expression_translator_test.cpp
     sql/sql_parse_tree_cache_test.cpp
     sql/sql_prepare_execute_test.cpp
     sql/sql_query_operator_test.cpp
     sql/sql_query_plan_test.cpp
     sql/sql_query_plan_cache_test.cpp
-    sql/sql_select_test.cpp
+    sql/sql_to_ast_translator_test.cpp
+    sql/sql_to_result_test.cpp
+    sql/tpch_test.cpp
     storage/adaptive_radix_tree_index_test.cpp
     storage/chunk_test.cpp
     storage/composite_group_key_index_test.cpp
@@ -81,28 +87,27 @@ set (
 set(
     LIBRARIES
     gtest
-    tpcc
 )
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 
 # Configure opossumTest
-add_executable(opossumTest ${OPOSSUM_TEST_SOURCES})
+add_executable(opossumTest EXCLUDE_FROM_ALL ${OPOSSUM_TEST_SOURCES})
 target_link_libraries(opossumTest opossum ${LIBRARIES})
 
 # Configure opossumCoverageApp
-add_executable(opossumCoverage ${OPOSSUM_TEST_SOURCES})
+add_executable(opossumCoverage EXCLUDE_FROM_ALL ${OPOSSUM_TEST_SOURCES})
 target_link_libraries(opossumCoverage opossumCoverageLib ${LIBRARIES} --coverage)
 set_target_properties(opossumCoverage PROPERTIES COMPILE_FLAGS "-fprofile-arcs -ftest-coverage")
 
 # Configure opossumAsanApp
-add_executable(opossumAsan ${OPOSSUM_TEST_SOURCES})
+add_executable(opossumAsan EXCLUDE_FROM_ALL ${OPOSSUM_TEST_SOURCES})
 target_link_libraries(opossumAsan opossumAsanLib ${LIBRARIES} -fsanitize=address)
 set_target_properties(opossumAsan PROPERTIES COMPILE_FLAGS "-fsanitize=address -fno-omit-frame-pointer")
 
 # Configure opossumTestTPCC
-add_executable(opossumTestTPCC ${TPCC_TEST_SOURCES})
-target_link_libraries(opossumTestTPCC opossum ${LIBRARIES})
+add_executable(opossumTestTPCC EXCLUDE_FROM_ALL ${TPCC_TEST_SOURCES})
+target_link_libraries(opossumTestTPCC opossum ${LIBRARIES} tpcc)
 
 
 

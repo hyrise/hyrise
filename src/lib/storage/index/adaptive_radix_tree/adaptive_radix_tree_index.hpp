@@ -1,19 +1,19 @@
-
 #pragma once
 
-#include <algorithm>
 #include <iterator>
 #include <memory>
 #include <utility>
 #include <vector>
-#include "../../../types.hpp"
-#include "../../base_column.hpp"
-#include "../../untyped_dictionary_column.hpp"
-#include "../base_index.hpp"
+
+#include "storage/index/base_index.hpp"
+
+#include "types.hpp"
 
 namespace opossum {
 
+class BaseColumn;
 class Node;
+class UntypedDictionaryColumn;
 
 /**
  * The AdaptiveRadixTreeIndex (ART) currently works on single DictionaryColumns. Conceptually it also works on
@@ -37,10 +37,6 @@ class AdaptiveRadixTreeIndex : public BaseIndex {
 
  public:
   explicit AdaptiveRadixTreeIndex(const std::vector<std::shared_ptr<BaseColumn>> &index_columns);
-
-  AdaptiveRadixTreeIndex(const AdaptiveRadixTreeIndex &) = delete;
-
-  AdaptiveRadixTreeIndex &operator=(const AdaptiveRadixTreeIndex &) = delete;
 
   AdaptiveRadixTreeIndex(AdaptiveRadixTreeIndex &&) = default;
 

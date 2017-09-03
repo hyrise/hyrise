@@ -1,9 +1,13 @@
 add_executable(
     opossumBenchmark
 
+    EXCLUDE_FROM_ALL
+
     base_fixture.cpp
+    base_fixture.hpp
     benchmark_main.cpp
     benchmark_template.cpp
+    operators/aggregate_benchmark.cpp
     operators/difference_benchmark.cpp
     operators/product_benchmark.cpp
     operators/projection_benchmark.cpp
@@ -24,17 +28,20 @@ target_link_libraries(
 add_executable(
     opossumBenchmarkTPCC
 
+    EXCLUDE_FROM_ALL
+
     benchmark_main.cpp
     benchmark_template.cpp
     tpcc/delivery_benchmark.cpp
-    #tpcc/order_status_benchmark.cpp
-    #tpcc/new_order_benchmark.cpp
-    #tpcc/tpcc_base_fixture.cpp
+    tpcc/new_order_benchmark.cpp
+    tpcc/order_status_benchmark.cpp
+    tpcc/tpcc_base_fixture.cpp
+    tpcc/tpcc_base_fixture.hpp
 )
 
 target_link_libraries(
-        opossumBenchmarkTPCC
-        opossum
-        benchmark
-        tpcc
+    opossumBenchmarkTPCC
+    opossum
+    benchmark
+    tpcc
 )

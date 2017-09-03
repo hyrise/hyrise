@@ -6,8 +6,8 @@
 #include <utility>
 #include <vector>
 
-#include "../storage/reference_column.hpp"
-#include "../storage/table.hpp"
+#include "storage/reference_column.hpp"
+#include "storage/table.hpp"
 
 namespace opossum {
 

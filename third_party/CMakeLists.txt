@@ -1,6 +1,7 @@
 # Build google benchmark
 add_library(
     benchmark
+    EXCLUDE_FROM_ALL
     STATIC
     benchmark_fix/dummy.cc
     benchmark/src/timers.cc
@@ -40,9 +41,9 @@ add_library(
     sql-parser/src/sql/Expr.cpp
     sql-parser/src/sql/PrepareStatement.cpp
     sql-parser/src/sql/SQLStatement.cpp
+    sql-parser/src/sql/statements.cpp
     sql-parser/src/SQLParser.cpp
     sql-parser/src/SQLParserResult.cpp
-    sql-parser/src/sql/statements.cpp
     sql-parser/src/util/sqlhelper.cpp
 )
 

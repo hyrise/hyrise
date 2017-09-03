@@ -8,6 +8,11 @@
 #include "SQLParser.h"
 
 #include "all_parameter_variant.hpp"
+#include "optimizer/abstract_syntax_tree/ast_to_operator_translator.hpp"
+#include "sql_query_plan.hpp"
+#include "sql_to_ast_translator.hpp"
+
+#include "utils/assert.hpp"
 
 namespace opossum {
 
@@ -51,7 +56,15 @@ std::shared_ptr<const Table> SQLQueryOperator::on_execute(std::shared_ptr<Transa
 
   // Schedule all tasks in query plan.
   if (_schedule_plan) {
-    for (const auto& task : _plan.tasks()) {
+    // Add the result task to the end of the query plan.
+    std::vector<std::shared_ptr<OperatorTask>> tasks = _plan.tasks();
+    if (tasks.size() > 0) {
+      _result_op->set_input_operator(tasks.back()->get_operator());
+      tasks.back()->set_as_predecessor_of(_result_task);
+    }
+    tasks.push_back(_result_task);
+
+    for (const auto& task : tasks) {
       task->schedule();
     }
   }
@@ -73,13 +86,6 @@ void SQLQueryOperator::compile_query(const std::string& query) {
 
   // Populates the query plan in _plan.
   compile_parse_result(parse_result);
-
-  // Add the result task to the query plan.
-  if (_plan.size() > 0) {
-    _plan.back()->set_as_predecessor_of(_result_task);
-    _result_op->set_input_operator(_plan.back()->get_operator());
-    _plan.add_task(_result_task);
-  }
 
   // Cache the plan.
   _query_plan_cache.set(_query, _plan);
@@ -118,10 +124,8 @@ void SQLQueryOperator::prepare_statement(const PrepareStatement& prepare_stmt) {
   std::shared_ptr<SQLQueryOperator> op = std::make_shared<SQLQueryOperator>(prepare_stmt.query, false);
   op->execute();
 
-  // Get the plan and pop the SQLResultOperator from the plan.
+  // Get the plan and cache it.
   SQLQueryPlan plan = op->get_query_plan();
-  plan.pop_back();
-
   _prepared_stmts.set(prepare_stmt.name, plan);
 }
 
@@ -136,7 +140,7 @@ void SQLQueryOperator::execute_prepared_statement(const ExecuteStatement& execut
   std::vector<AllParameterVariant> arguments;
   if (execute_stmt.parameters != nullptr) {
     for (const hsql::Expr* expr : *execute_stmt.parameters) {
-      arguments.push_back(SQLQueryTranslator::translate_literal(*expr));
+      arguments.push_back(SQLToASTTranslator::translate_argument(*expr));
     }
   }
 
@@ -144,19 +148,19 @@ void SQLQueryOperator::execute_prepared_statement(const ExecuteStatement& execut
               "Number of arguments in execute statement does not match number of parameters in prepared statement.");
 
   const SQLQueryPlan plan = (*plan_template).recreate(arguments);
-  _plan.append(plan);
+  _plan.append_plan(plan);
 }
 
 // Translate the statement and append the result plan
 // to the current total query plan (in member _plan).
 void SQLQueryOperator::plan_statement(const SQLStatement& stmt) {
-  SQLQueryTranslator translator;
+  auto result_node = SQLToASTTranslator::get().translate_statement(stmt);
+  auto result_operator = ASTToOperatorTranslator::get().translate_node(result_node);
 
-  if (!translator.translate_statement(stmt)) {
-    throw std::runtime_error(translator.get_error_msg());
-  }
+  SQLQueryPlan query_plan;
+  query_plan.add_tree_by_root(result_operator);
 
-  _plan.append(translator.get_query_plan());
+  _plan.append_plan(query_plan);
 }
 
 // Compiles the given parse result into an operator plan.
@@ -191,5 +195,8 @@ SQLQueryCache<std::shared_ptr<hsql::SQLParserResult>>& SQLQueryOperator::get_par
 
 // Static.
 SQLQueryCache<SQLQueryPlan>& SQLQueryOperator::get_query_plan_cache() { return _query_plan_cache; }
+
+// Static.
+SQLQueryCache<SQLQueryPlan>& SQLQueryOperator::get_prepared_statement_cache() { return _prepared_stmts; }
 
 }  // namespace opossum

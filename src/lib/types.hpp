@@ -4,12 +4,14 @@
 #include <boost/serialization/strong_typedef.hpp>
 
 #include <cstdint>
+#include <iostream>
 #include <limits>
 #include <string>
+#include <tuple>
 #include <vector>
 
-#include "strong_typedef.hpp"
 #include "polymorphic_allocator.hpp"
+#include "strong_typedef.hpp"
 
 namespace opossum {
 
@@ -80,8 +82,15 @@ class ColumnName {
 
   operator std::string() const { return _name; }
 
+  friend std::ostream &operator<<(std::ostream &o, const ColumnName &column_name) {
+    o << column_name._name;
+    return o;
+  }
+
+  bool operator==(const ColumnName &rhs) const { return _name == rhs._name; }
+
  protected:
-  const std::string _name;
+  std::string _name;
 };
 
 constexpr NodeID INVALID_NODE_ID{std::numeric_limits<NodeID::base_type>::max()};
@@ -115,10 +124,18 @@ class ValuePlaceholder {
 
   uint16_t index() const { return _index; }
 
+  friend std::ostream &operator<<(std::ostream &o, const ValuePlaceholder &placeholder) {
+    o << "?" << placeholder.index();
+    return o;
+  }
+
+  bool operator==(const ValuePlaceholder &rhs) const { return _index == rhs._index; }
+
  private:
   uint16_t _index;
 };
 
+// TODO(anyone): integrate and replace with ExpressionType
 enum class ScanType {
   OpEquals,
   OpNotEquals,
@@ -130,6 +147,65 @@ enum class ScanType {
   OpLike
 };
 
+enum class ExpressionType {
+  /*Any literal value*/
+  Literal,
+  /*A star as in SELECT * FROM ...*/
+  Star,
+  /*A parameter used in PreparedStatements*/
+  Placeholder,
+  /*An identifier for a column*/
+  ColumnIdentifier,
+  /*An identifier for a function, such as COUNT, MIN, MAX*/
+  FunctionIdentifier,
+
+  /*A subselect*/
+  Select,
+
+  /*Arithmetic operators*/
+  Addition,
+  Subtraction,
+  Multiplication,
+  Division,
+  Modulo,
+  Power,
+
+  /*Logical operators*/
+  Equals,
+  NotEquals,
+  LessThan,
+  LessThanEquals,
+  GreaterThan,
+  GreaterThanEquals,
+  Like,
+  NotLike,
+  And,
+  Or,
+  Between,
+  Not,
+
+  /*Set operators*/
+  In,
+  Exists,
+
+  /*Others*/
+  IsNull,
+  Case,
+  Hint
+};
+
 enum class JoinMode { Inner, Left, Right, Outer, Cross, Natural, Self };
+
+enum class AggregateFunction { Min, Max, Sum, Avg, Count };
+
+class Noncopyable {
+ protected:
+  Noncopyable() = default;
+  Noncopyable(Noncopyable &&) = default;
+  Noncopyable &operator=(Noncopyable &&) = default;
+  ~Noncopyable() = default;
+  Noncopyable(const Noncopyable &) = delete;
+  const Noncopyable &operator=(const Noncopyable &) = delete;
+};
 
 }  // namespace opossum

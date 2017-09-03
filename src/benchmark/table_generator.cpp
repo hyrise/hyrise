@@ -1,4 +1,5 @@
 #include "table_generator.hpp"
+
 #include <assert.h>
 #include <fstream>
 #include <memory>
@@ -6,17 +7,21 @@
 #include <string>
 #include <utility>
 #include <vector>
-#include "types.hpp"
 
-#include "storage/value_column.hpp"
 #include "tbb/concurrent_vector.h"
+
+#include "storage/chunk.hpp"
+#include "storage/table.hpp"
+#include "storage/value_column.hpp"
+
+#include "types.hpp"
 
 namespace opossum {
 
-std::shared_ptr<Table> TableGenerator::get_table() {
-  std::shared_ptr<Table> table = std::make_shared<Table>(_chunk_size);
+std::shared_ptr<Table> TableGenerator::get_table(const ChunkID chunk_size) {
+  std::shared_ptr<Table> table = std::make_shared<Table>(chunk_size);
   std::vector<tbb::concurrent_vector<int>> value_vectors;
-  auto vector_size = _chunk_size > 0 ? _chunk_size : _num_rows;
+  auto vector_size = chunk_size > 0 ? chunk_size : _num_rows;
   /*
    * Generate table layout with column names from 'a' to 'z'.
    * Create a vector for each column.

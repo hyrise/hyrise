@@ -5,11 +5,14 @@
 #include <string>
 #include <vector>
 
+#include "sql/ExecuteStatement.h"
+#include "sql/PrepareStatement.h"
+
 #include "operators/abstract_operator.hpp"
 #include "operators/abstract_read_only_operator.hpp"
 #include "scheduler/operator_task.hpp"
 #include "sql/sql_query_cache.hpp"
-#include "sql/sql_query_translator.hpp"
+#include "sql/sql_query_plan.hpp"
 #include "sql/sql_result_operator.hpp"
 
 namespace opossum {
@@ -49,6 +52,8 @@ class SQLQueryOperator : public AbstractOperator {
   static SQLQueryCache<std::shared_ptr<hsql::SQLParserResult>>& get_parse_tree_cache();
 
   static SQLQueryCache<SQLQueryPlan>& get_query_plan_cache();
+
+  static SQLQueryCache<SQLQueryPlan>& get_prepared_statement_cache();
 
  protected:
   std::shared_ptr<const Table> on_execute(std::shared_ptr<TransactionContext> context) override;

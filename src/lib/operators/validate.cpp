@@ -37,10 +37,13 @@ uint8_t Validate::num_in_tables() const { return 1; }
 uint8_t Validate::num_out_tables() const { return 1; }
 
 std::shared_ptr<const Table> Validate::on_execute() {
-  throw std::logic_error("Validate can't be called without a transaction context.");
+  Fail("Validate can't be called without a transaction context.");
+  return {};
 }
 
-std::shared_ptr<const Table> Validate::on_execute(std::shared_ptr<TransactionContext> transactionContext) {
+std::shared_ptr<const Table> Validate::on_execute(std::shared_ptr<TransactionContext> transaction_context) {
+  DebugAssert(transaction_context != nullptr, "Validate requires a valid TransactionContext.");
+
   const auto _in_table = input_table_left();
   auto output = std::make_shared<Table>();
 
@@ -49,8 +52,8 @@ std::shared_ptr<const Table> Validate::on_execute(std::shared_ptr<TransactionCon
     output->add_column_definition(_in_table->column_name(column_id), _in_table->column_type(column_id));
   }
 
-  const auto our_tid = transactionContext->transaction_id();
-  const auto our_lcid = transactionContext->last_commit_id();
+  const auto our_tid = transaction_context->transaction_id();
+  const auto our_lcid = transaction_context->last_commit_id();
 
   for (ChunkID chunk_id{0}; chunk_id < _in_table->chunk_count(); ++chunk_id) {
     const auto &chunk_in = _in_table->get_chunk(chunk_id);

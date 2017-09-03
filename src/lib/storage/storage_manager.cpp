@@ -6,6 +6,8 @@
 
 #include "operators/export_csv.hpp"
 #include "operators/table_wrapper.hpp"
+#include "optimizer/table_statistics.hpp"
+
 #include "utils/assert.hpp"
 
 namespace opossum {
@@ -21,13 +23,13 @@ void StorageManager::add_table(const std::string &name, std::shared_ptr<Table> t
     Assert(table->get_chunk(chunk_id).has_mvcc_columns(), "Table must have MVCC columns.");
   }
 
+  table->set_table_statistics(std::make_shared<TableStatistics>(table));
   _tables.insert(std::make_pair(name, std::move(table)));
 }
 
 void StorageManager::drop_table(const std::string &name) {
-  if (!_tables.erase(name)) {
-    throw std::out_of_range("table " + name + " does not exist");
-  }
+  auto num_deleted = _tables.erase(name);
+  Assert(num_deleted == 1, "Error deleting table " + name + ": _erase() returned " + std::to_string(num_deleted) + ".");
 }
 
 std::shared_ptr<Table> StorageManager::get_table(const std::string &name) const {
@@ -60,11 +62,11 @@ void StorageManager::export_all_tables_as_csv(const std::string &path) {
     const auto &name = pair.first;
     auto &table = pair.second;
 
-    auto tableWrapper = std::make_shared<TableWrapper>(table);
-    tableWrapper->execute();
+    auto table_wrapper = std::make_shared<TableWrapper>(table);
+    table_wrapper->execute();
 
-    auto exportCsv = std::make_shared<ExportCsv>(tableWrapper, path + "/" + name + ".csv");
-    exportCsv->execute();
+    auto export_csv = std::make_shared<ExportCsv>(table_wrapper, path + "/" + name + ".csv");
+    export_csv->execute();
   }
 }
 

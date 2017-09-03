@@ -5,13 +5,21 @@
 #include <utility>
 #include <vector>
 
+#include "storage/base_attribute_vector.hpp"
+#include "storage/column_visitable.hpp"
+
 namespace opossum {
+
 Sort::Sort(const std::shared_ptr<const AbstractOperator> in, const std::string &sort_column_name, const bool ascending,
            const size_t output_chunk_size)
     : AbstractReadOnlyOperator(in),
       _sort_column_name(sort_column_name),
       _ascending(ascending),
       _output_chunk_size(output_chunk_size) {}
+
+const std::string &Sort::sort_column_name() const { return _sort_column_name; }
+
+bool Sort::ascending() const { return _ascending; }
 
 const std::string Sort::name() const { return "Sort"; }
 

@@ -1,19 +1,20 @@
 #pragma once
 
-#include <functional>
 #include <memory>
 #include <string>
 #include <utility>
 #include <vector>
 
-#include "../../../types.hpp"
-#include "../../untyped_dictionary_column.hpp"
-#include "../base_index.hpp"
 #include "variable_length_key_store.hpp"
+
+#include "storage/index/base_index.hpp"
+
+#include "types.hpp"
 
 namespace opossum {
 
 class CompositeGroupKeyIndexTest;
+class UntypedDictionaryColumn;
 
 /**
  *
@@ -43,8 +44,6 @@ class CompositeGroupKeyIndex : public BaseIndex {
   friend class CompositeGroupKeyIndexTest;
 
  public:
-  CompositeGroupKeyIndex(const CompositeGroupKeyIndex &) = delete;
-  CompositeGroupKeyIndex &operator=(const CompositeGroupKeyIndex &) = delete;
   CompositeGroupKeyIndex(CompositeGroupKeyIndex &&) = default;
   CompositeGroupKeyIndex &operator=(CompositeGroupKeyIndex &&) = default;
   ~CompositeGroupKeyIndex() = default;

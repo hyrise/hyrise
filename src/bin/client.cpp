@@ -30,8 +30,8 @@ namespace opossum {
 OpossumClient::OpossumClient(std::shared_ptr<Channel> channel) : _stub(proto::OpossumService::NewStub(channel)) {}
 
 // Assembles the client's payload, sends it and presents the response back from the server.
-void OpossumClient::query(std::string& table_name, std::string& column_name, proto::ScanType scan_type,
-                          std::string& filter) {
+void OpossumClient::query(const std::string& table_name, const std::string& column_name,
+                          const proto::ScanType scan_type, const std::string& filter) {
   // Data we are sending to the server.
   proto::Request request;
 
@@ -165,7 +165,7 @@ int main(int argc, char** argv) {
   opossum::OpossumClient client(grpc::CreateChannel(address, grpc::InsecureChannelCredentials()));
 
   std::cout << "Sending query to " << address << std::endl;
-  client.query(table_name, column_name, opossum::op_string_to_scan_type.at(filter_op), filter);
+  client.query(table_name, column_name, opossum::string_to_proto_scan_type.at(filter_op), filter);
 
   return 0;
 }

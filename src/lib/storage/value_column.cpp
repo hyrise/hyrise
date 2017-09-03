@@ -7,9 +7,10 @@
 #include <utility>
 #include <vector>
 
-#include "utils/assert.hpp"
+#include "column_visitable.hpp"
 
 #include "type_cast.hpp"
+#include "utils/assert.hpp"
 
 namespace opossum {
 

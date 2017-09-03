@@ -10,10 +10,10 @@
 
 #include "tbb/concurrent_vector.h"
 
-#include "all_type_variant.hpp"
 #include "copyable_atomic.hpp"
-#include "index/base_index.hpp"
 #include "scoped_locking_ptr.hpp"
+
+#include "all_type_variant.hpp"
 #include "types.hpp"
 
 namespace opossum {
@@ -23,7 +23,7 @@ class BaseColumn;
 
 // A chunk is a horizontal partition of a table.
 // It stores the data column by column.
-class Chunk {
+class Chunk : private Noncopyable {
  public:
   static const CommitID MAX_COMMIT_ID;
 
@@ -54,10 +54,6 @@ class Chunk {
   // creates an empty chunk without mvcc columns
   Chunk();
   explicit Chunk(const bool has_mvcc_columns);
-
-  // copying a chunk is not allowed
-  Chunk(const Chunk &) = delete;
-  Chunk &operator=(const Chunk &) = delete;
 
   // we need to explicitly set the move constructor to default when
   // we overwrite the copy constructor

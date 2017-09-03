@@ -8,9 +8,9 @@
 
 #include "network/generated/opossum.grpc.pb.h"
 #pragma GCC diagnostic pop
-#include "network/response_builder.hpp"
 
 namespace opossum {
+
 // Class encompasing the state and logic needed to serve a request.
 class RequestHandler {
  public:

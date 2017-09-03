@@ -7,6 +7,9 @@
 #include <utility>
 #include <vector>
 
+#include "storage/base_attribute_vector.hpp"
+#include "storage/column_visitable.hpp"
+
 #include "resolve_type.hpp"
 
 namespace opossum {

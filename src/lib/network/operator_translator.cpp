@@ -5,7 +5,6 @@
 #include <utility>
 #include <vector>
 
-#include "common.hpp"
 #include "operators/abstract_operator.hpp"
 #include "operators/difference.hpp"
 #include "operators/export_binary.hpp"
@@ -20,6 +19,9 @@
 #include "operators/sort.hpp"
 #include "operators/table_scan.hpp"
 #include "operators/union_all.hpp"
+#include "scheduler/operator_task.hpp"
+
+#include "common.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 
@@ -38,7 +40,8 @@ inline AllTypeVariant translate_variant(const proto::Variant& variant) {
     case proto::Variant::kValueLong:
       return variant.value_long();
     default:
-      throw std::logic_error("Unknown AllTypeVariant in operator_translator");
+      Fail("Unknown AllTypeVariant in operator_translator");
+      return {};
   }
 }
 
@@ -68,7 +71,8 @@ inline ScanType translate_scan_type(const proto::ScanType& scan_type) {
     case proto::ScanType::OpLike:
       return ScanType::OpLike;
     default:
-      throw std::logic_error("Unsupported ScanType.");
+      Fail("Unsupported ScanType.");
+      return {};
   }
 }
 
@@ -80,7 +84,13 @@ inline std::shared_ptr<OperatorTask> OperatorTranslator::translate(
 
   auto input_task = translate_proto(projection_operator.input_operator());
 
-  auto projection = std::make_shared<Projection>(input_task->get_operator(), column_names);
+  Projection::ColumnExpressions column_expressions;
+  column_expressions.reserve(column_names.size());
+  for (const auto& column_name : column_names) {
+    column_expressions.emplace_back(ExpressionNode::create_column_identifier(column_name));
+  }
+
+  auto projection = std::make_shared<Projection>(input_task->get_operator(), column_expressions);
   auto projection_task = std::make_shared<OperatorTask>(projection);
   input_task->set_as_predecessor_of(projection_task);
   _tasks.push_back(projection_task);
@@ -358,11 +368,11 @@ std::shared_ptr<OperatorTask> OperatorTranslator::translate_proto(const proto::O
     case proto::OperatorVariant::kNestedLoopJoin:
       return translate(op.nested_loop_join());
     case proto::OperatorVariant::OPERATOR_NOT_SET:
-      throw std::logic_error(
-          "Operator not set. Missing dependency. Cannot translate proto object to opossum operator.");
+      Fail("Operator not set. Missing dependency. Cannot translate proto object to opossum operator.");
     default:
-      throw std::logic_error("Unknown operator type in operator_translator");
+      Fail("Unknown operator type in operator_translator");
   }
+  return {};
 }
 
 }  // namespace opossum

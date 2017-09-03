@@ -7,13 +7,13 @@
 #include <utility>
 #include <vector>
 
+#include "chunk.hpp"
+#include "dictionary_column.hpp"
+#include "fitted_attribute_vector.hpp"
+#include "table.hpp"
+#include "value_column.hpp"
+
 #include "resolve_type.hpp"
-#include "storage/chunk.hpp"
-#include "storage/dictionary_column.hpp"
-#include "storage/fitted_attribute_vector.hpp"
-#include "storage/storage_manager.hpp"
-#include "storage/table.hpp"
-#include "storage/value_column.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 
@@ -41,9 +41,7 @@ class ColumnCompressor : public ColumnCompressorBase {
   std::shared_ptr<BaseColumn> compress_column(const std::shared_ptr<BaseColumn>& column) override {
     auto value_column = std::dynamic_pointer_cast<const ValueColumn<T>>(column);
 
-    if (!value_column) {
-      throw std::logic_error("Column is either already compressed or type mismatches.");
-    }
+    Assert(value_column != nullptr, "Column is either already compressed or type mismatches.");
 
     // See: https://goo.gl/MCM5rr
     // Create dictionary (enforce unqiueness and sorting)
@@ -127,14 +125,14 @@ void DictionaryCompression::compress_chunk(const std::vector<std::string>& colum
     chunk.replace_column(column_id, dict_column);
   }
 
-  chunk.shrink_mvcc_columns();
+  if (chunk.has_mvcc_columns()) {
+    chunk.shrink_mvcc_columns();
+  }
 }
 
 void DictionaryCompression::compress_chunks(Table& table, const std::vector<ChunkID>& chunk_ids) {
   for (auto chunk_id : chunk_ids) {
-    if (chunk_id >= table.chunk_count()) {
-      throw std::logic_error("Chunk with given ID does not exist.");
-    }
+    Assert(chunk_id < table.chunk_count(), "Chunk with given ID does not exist.");
 
     compress_chunk(table.column_types(), table.get_chunk(chunk_id));
   }

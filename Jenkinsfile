@@ -18,38 +18,31 @@ node {
 
       stage("Linting") {
         sh '''
-          find src -iname *.cpp -o -iname *.hpp | while read line;
-            do
-                if ! python2.7 cpplint.py --verbose=0 --extensions=hpp,cpp --counting=detailed --filter=-legal/copyright,-whitespace/newline,-runtime/references,-build/c++11 --linelength=120 $line >/dev/null 2>/dev/null
-                then
-                    echo "ERROR: Linting error occured. Execute \"tools/lint.sh\" for details!"
-                    exit 1
-                fi
-            done
+          scripts/lint.sh
 
-            if [ $? != 0 ]
-            then
-                exit 1
-            fi
+          if [ $? != 0 ]; then
+            echo "ERROR: Linting error occured. Execute \"scripts/lint.sh\" for details!"
+            exit 1
+          fi
         '''
       }
 
       stage("Build") {
         stage("Build gcc") {
           stage("Build gcc Release") {
-            sh "cd gcc-release && make -j \$(cat /proc/cpuinfo | grep processor | wc -l)"
+            sh "cd gcc-release && make opossumTest opossumAsan -j \$(cat /proc/cpuinfo | grep processor | wc -l)"
           }
           stage("Build gcc Debug") {
-            sh "cd gcc-debug && make -j \$(cat /proc/cpuinfo | grep processor | wc -l)"
+            sh "cd gcc-debug && make opossumTest opossumAsan -j \$(cat /proc/cpuinfo | grep processor | wc -l)"
           }
         }
 
         stage("Build clang") {
           stage("Build clang release") {
-            sh "cd clang-release && make -j \$(cat /proc/cpuinfo | grep processor | wc -l)"
+            sh "cd clang-release && make opossumTest opossumAsan -j \$(cat /proc/cpuinfo | grep processor | wc -l)"
           }
           stage("Build clang debug") {
-            sh "cd clang-debug && make -j \$(cat /proc/cpuinfo | grep processor | wc -l)"
+            sh "cd clang-debug && make opossumTest opossumAsan -j \$(cat /proc/cpuinfo | grep processor | wc -l)"
           }
         }
       }
@@ -97,8 +90,8 @@ node {
 
       stage("TPCC Test") {
           sh "cd clang-debug && make -j \$(cat /proc/cpuinfo | grep processor | wc -l) opossumTestTPCC tpccTableGenerator"
-          sh "./scripts/test_tpcc.sh clang-debug"        
-      }		
+          sh "./scripts/test_tpcc.sh clang-debug"
+      }
 
       stage("Cleanup") {
         // Clean up workspace.
