@@ -98,7 +98,7 @@ const std::vector<ColumnID> &AbstractASTNode::output_column_id_to_input_column_i
   return _left_child->output_column_id_to_input_column_id();
 }
 
-size_t AbstractASTNode::num_output_columns() const { return output_column_names().size(); }
+size_t AbstractASTNode::output_col_count() const { return output_column_names().size(); }
 
 ColumnID AbstractASTNode::get_column_id_for_column_identifier_name(
     const ColumnIdentifierName &column_identifier_name) const {
@@ -117,12 +117,12 @@ optional<ColumnID> AbstractASTNode::find_column_id_for_column_identifier_name(
   return _left_child->find_column_id_for_column_identifier_name(column_identifier_name);
 }
 
-bool AbstractASTNode::manages_table(const std::string &table_name) const {
+bool AbstractASTNode::knows_table(const std::string &table_name) const {
   /**
    * This function might have to be overwritten if a node can handle different input tables, e.g. a JOIN.
    */
   DebugAssert(!!_left_child, "Node has no left child and therefore must override this function.");
-  return _left_child->manages_table(table_name);
+  return _left_child->knows_table(table_name);
 }
 
 std::vector<ColumnID> AbstractASTNode::get_output_column_ids_for_table(const std::string &table_name) const {
@@ -131,7 +131,7 @@ std::vector<ColumnID> AbstractASTNode::get_output_column_ids_for_table(const std
    */
   DebugAssert(!!_left_child, "Node has no left child and therefore must override this function.");
 
-  if (!_left_child->manages_table(table_name)) {
+  if (!_left_child->knows_table(table_name)) {
     return {};
   }
 

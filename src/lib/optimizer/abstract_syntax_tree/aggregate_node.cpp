@@ -198,7 +198,7 @@ optional<ColumnID> AggregateNode::find_column_id_for_expression(const std::share
 std::vector<ColumnID> AggregateNode::get_output_column_ids_for_table(const std::string& table_name) const {
   DebugAssert(!!left_child(), "AggregateNode needs a child.");
 
-  if (!left_child()->manages_table(table_name)) {
+  if (!left_child()->knows_table(table_name)) {
     return {};
   }
 

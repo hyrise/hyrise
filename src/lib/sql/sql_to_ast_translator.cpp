@@ -187,6 +187,14 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_join(const hsql:
   const auto right_column_identifier_name =
       SQLExpressionTranslator::get_column_identifier_name_for_column_ref(*condition.expr2);
 
+  /**
+   * `x_in_y_node` indicates whether the column identifier on the `x` side in the join expression is in the input node on
+   * the `y` side of the join. So in the query
+   * `SELECT * FROM T1 JOIN T2 on person_id == customer_id`
+   * We have to check whether `person_id` belongs to T1 (left_in_left_node == true) or to T2
+   * (left_in_right_node == true). Later we make sure that one and only one of them is true, otherwise we either have
+   * ambiguity or the column is simply not existing.
+   */
   const auto left_in_left_node = left_node->find_column_id_for_column_identifier_name(left_column_identifier_name);
   const auto left_in_right_node = right_node->find_column_id_for_column_identifier_name(left_column_identifier_name);
   const auto right_in_left_node = left_node->find_column_id_for_column_identifier_name(right_column_identifier_name);
@@ -404,7 +412,7 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_projection(
 
       if (!expr->table_name()) {
         // If there is no table qualifier take all columns from the input.
-        for (ColumnID::base_type column_idx = 0u; column_idx < input_node->num_output_columns(); column_idx++) {
+        for (ColumnID::base_type column_idx = 0u; column_idx < input_node->output_col_count(); column_idx++) {
           column_ids.emplace_back(column_idx);
         }
       } else {

@@ -26,7 +26,7 @@ class StoredTableNode : public AbstractASTNode {
   const std::vector<ColumnID>& output_column_id_to_input_column_id() const override;
   const std::vector<std::string>& output_column_names() const override;
 
-  bool manages_table(const std::string& table_name) const override;
+  bool knows_table(const std::string &table_name) const override;
 
   std::vector<ColumnID> get_output_column_ids_for_table(const std::string& table_name) const override;
 

@@ -1,6 +1,7 @@
 #include "join_node.hpp"
 
 #include <limits>
+#include <numeric>
 #include <sstream>
 #include <string>
 #include <utility>
@@ -62,8 +63,8 @@ optional<ColumnID> JoinNode::find_column_id_for_column_identifier_name(
     right_column_id = right_child()->find_column_id_for_column_identifier_name(column_identifier_name);
   } else {
     // Otherwise only search a children if it manages that qualifier.
-    auto left_manages_table = left_child()->manages_table(*column_identifier_name.table_name);
-    auto right_manages_table = right_child()->manages_table(*column_identifier_name.table_name);
+    auto left_manages_table = left_child()->knows_table(*column_identifier_name.table_name);
+    auto right_manages_table = right_child()->knows_table(*column_identifier_name.table_name);
 
     // If neither input table manages the table name, return.
     if (!left_manages_table && !right_manages_table) {
@@ -97,7 +98,7 @@ optional<ColumnID> JoinNode::find_column_id_for_column_identifier_name(
     output_column_id = *left_column_id;
   } else {
     input_column_id = *right_column_id;
-    output_column_id = left_child()->num_output_columns() + *right_column_id;
+    output_column_id = left_child()->output_col_count() + *right_column_id;
   }
 
   DebugAssert(_output_column_id_to_input_column_id[output_column_id] == input_column_id,
@@ -106,16 +107,16 @@ optional<ColumnID> JoinNode::find_column_id_for_column_identifier_name(
   return ColumnID{static_cast<ColumnID::base_type>(output_column_id)};
 }
 
-bool JoinNode::manages_table(const std::string &table_name) const {
+bool JoinNode::knows_table(const std::string &table_name) const {
   DebugAssert(!!left_child() && !!right_child(), "JoinNode must have two children.");
-  return left_child()->manages_table(table_name) || right_child()->manages_table(table_name);
+  return left_child()->knows_table(table_name) || right_child()->knows_table(table_name);
 }
 
 std::vector<ColumnID> JoinNode::get_output_column_ids_for_table(const std::string &table_name) const {
   DebugAssert(!!left_child() && !!right_child(), "JoinNode must have two children.");
 
-  auto left_manages_table = left_child()->manages_table(table_name);
-  auto right_manages_table = right_child()->manages_table(table_name);
+  auto left_manages_table = left_child()->knows_table(table_name);
+  auto right_manages_table = right_child()->knows_table(table_name);
 
   // If neither input table manages the table name, return.
   if (!left_manages_table && !right_manages_table) {
@@ -136,7 +137,7 @@ std::vector<ColumnID> JoinNode::get_output_column_ids_for_table(const std::strin
   const auto input_column_ids_for_table = right_child()->get_output_column_ids_for_table(table_name);
   std::vector<ColumnID> output_column_ids_for_table;
   for (const auto input_column_id : input_column_ids_for_table) {
-    const auto idx = left_child()->num_output_columns() + input_column_id;
+    const auto idx = left_child()->output_col_count() + input_column_id;
     output_column_ids_for_table.emplace_back(static_cast<ColumnID::base_type>(idx));
   }
 
@@ -170,19 +171,15 @@ void JoinNode::_on_child_changed() {
   /**
    * Collect the output ColumnIDs of the children on the fly, because the children might change.
    */
-  const auto num_left_columns = left_child()->num_output_columns();
-  const auto num_right_columns = right_child()->num_output_columns();
+  const auto num_left_columns = left_child()->output_col_count();
+  const auto num_right_columns = right_child()->output_col_count();
 
   _output_column_id_to_input_column_id.clear();
-  _output_column_id_to_input_column_id.reserve(num_left_columns + num_right_columns);
+  _output_column_id_to_input_column_id.resize(num_left_columns + num_right_columns);
 
-  for (ColumnID column_id{0}; column_id < num_left_columns; ++column_id) {
-    _output_column_id_to_input_column_id.emplace_back(column_id);
-  }
-
-  for (ColumnID column_id{0}; column_id < num_right_columns; ++column_id) {
-    _output_column_id_to_input_column_id.emplace_back(column_id);
-  }
+  auto begin = _output_column_id_to_input_column_id.begin();
+  std::iota(begin, begin + num_left_columns, 0);
+  std::iota(begin + num_left_columns, _output_column_id_to_input_column_id.end(), 0);
 }
 
 }  // namespace opossum

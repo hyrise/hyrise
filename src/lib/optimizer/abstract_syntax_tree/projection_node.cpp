@@ -133,7 +133,7 @@ optional<ColumnID> ProjectionNode::find_column_id_for_column_identifier_name(
 std::vector<ColumnID> ProjectionNode::get_output_column_ids_for_table(const std::string& table_name) const {
   DebugAssert(!!left_child(), "ProjectionNode needs a child.");
 
-  if (!left_child()->manages_table(table_name)) {
+  if (!left_child()->knows_table(table_name)) {
     return {};
   }
 
