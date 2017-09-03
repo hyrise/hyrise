@@ -146,7 +146,7 @@ std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::_translate_aggregate_
 
     // The Projection will only select columns used in the Aggregate, i.e., GROUP BY columns and expressions.
     // Unused columns are skipped – therefore, the ColumnIDs might change.
-    // In fact, they will be the first columns of the Projection.
+    // GROUP BY columns will be the first columns of the Projection.
     for (ColumnID column_id{0}; column_id < groupby_columns.size(); column_id++) {
       groupby_columns[column_id] = column_id;
     }

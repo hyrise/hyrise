@@ -119,14 +119,14 @@ std::shared_ptr<const Table> JoinNestedLoopB::on_execute() {
   DebugAssert(static_cast<bool>(_column_ids), "Join columns not specified.");
 
   // Get types and ids of the input columns
-  auto left_column_type = input_table_left()->column_type((*_column_ids).first);
-  auto right_column_type = input_table_right()->column_type((*_column_ids).second);
+  auto left_column_type = input_table_left()->column_type(_column_ids->first);
+  auto right_column_type = input_table_right()->column_type(_column_ids->second);
 
   // Ensure matching column types for simplicity
   // Joins on non-matching types can be added later.
   DebugAssert((left_column_type == right_column_type), "Column types of join columns do not match.");
 
-  _join_columns((*_column_ids).first, (*_column_ids).second, left_column_type);
+  _join_columns(_column_ids->first, _column_ids->second, left_column_type);
 
   if (_mode == JoinMode::Left || _mode == JoinMode::Outer) {
     _add_outer_join_rows(input_table_left(), _pos_list_left, _left_match, _pos_list_right);

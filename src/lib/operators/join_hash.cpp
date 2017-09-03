@@ -59,8 +59,8 @@ std::shared_ptr<const Table> JoinHash::on_execute() {
     inputs_swapped = false;
     build_operator = _input_left;
     probe_operator = _input_right;
-    build_column_id = (*_column_ids).first;
-    probe_column_id = (*_column_ids).second;
+    build_column_id = _column_ids->first;
+    probe_column_id = _column_ids->second;
   }
 
   auto adjusted_column_ids = std::make_pair(build_column_id, probe_column_id);

@@ -86,7 +86,7 @@ optional<ColumnID> ProjectionNode::find_column_id_for_column_identifier_name(
    * The result variable. We make sure the optional is only set once to detect ambiguity in column
    * references.
    */
-  optional<ColumnID> column_id;
+  optional<ColumnID> result_column_id;
 
   /**
    * Look for column_identifier_name in the input node, if it exists there, check whether one of this node's
@@ -97,13 +97,13 @@ optional<ColumnID> ProjectionNode::find_column_id_for_column_identifier_name(
    */
   const auto child_column_id = left_child()->find_column_id_for_column_identifier_name(column_identifier_name);
 
-  for (ColumnID::base_type column_idx = 0; column_idx < output_column_names().size(); column_idx++) {
-    const auto& column_expression = _column_expressions[column_idx];
+  for (ColumnID column_id{0}; column_id < output_column_names().size(); column_id++) {
+    const auto& column_expression = _column_expressions[column_id];
 
     if (child_column_id && column_expression->type() == ExpressionType::ColumnIdentifier &&
         column_expression->column_id() == *child_column_id && !column_expression->alias()) {
-      Assert(!column_id, "Column name " + column_identifier_name.column_name + " is ambiguous.");
-      column_id = ColumnID{column_idx};
+      Assert(!result_column_id, "Column name " + column_identifier_name.column_name + " is ambiguous.");
+      result_column_id = column_id;
       continue;
     }
 
@@ -115,20 +115,20 @@ optional<ColumnID> ProjectionNode::find_column_id_for_column_identifier_name(
      */
     if (!column_identifier_name.table_name) {
       if (column_expression->alias() && *column_expression->alias() == column_identifier_name.column_name) {
-        Assert(!column_id, "Column name " + column_identifier_name.column_name + " is ambiguous.");
-        column_id = ColumnID{column_idx};
+        Assert(!result_column_id, "Column name " + column_identifier_name.column_name + " is ambiguous.");
+        result_column_id = column_id;
         continue;
       }
 
       if (column_expression->to_string() == column_identifier_name.column_name) {
-        Assert(!column_id, "Column name " + column_identifier_name.column_name + " is ambiguous.");
-        column_id = ColumnID{column_idx};
+        Assert(!result_column_id, "Column name " + column_identifier_name.column_name + " is ambiguous.");
+        result_column_id = column_id;
         continue;
       }
     }
   }
 
-  return column_id;
+  return result_column_id;
 }
 
 std::vector<ColumnID> ProjectionNode::get_output_column_ids_for_table(const std::string& table_name) const {

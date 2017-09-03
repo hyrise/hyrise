@@ -65,8 +65,8 @@ std::vector<ColumnID> StoredTableNode::get_output_column_ids_for_table(const std
   std::vector<ColumnID> column_ids;
   column_ids.reserve(num_output_columns());
 
-  for (auto column_idx = 0u; column_idx < column_ids.capacity(); ++column_idx) {
-    column_ids.emplace_back(static_cast<ColumnID::base_type>(column_idx));
+  for (ColumnID column_id{0}; column_id < column_ids.capacity(); ++column_id) {
+    column_ids.emplace_back(column_id);
   }
 
   return column_ids;

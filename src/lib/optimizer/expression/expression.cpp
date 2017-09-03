@@ -39,7 +39,7 @@ std::vector<std::shared_ptr<Expression>> Expression::create_column_identifiers(
       column_references.emplace_back(create_column_identifier(column_id));
     }
   } else {
-    DebugAssert(column_ids.size() == (*aliases).size(), "There must be the same number of aliases as ColumnIDs");
+    DebugAssert(column_ids.size() == aliases->size(), "There must be the same number of aliases as ColumnIDs");
 
     for (auto column_index = 0u; column_index < column_ids.size(); ++column_index) {
       column_references.emplace_back(create_column_identifier(column_ids[column_index], (*aliases)[column_index]));

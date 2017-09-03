@@ -28,7 +28,7 @@ class AbstractASTNode;
 class Expression : public std::enable_shared_from_this<Expression> {
  public:
   /*
-   * This constructor is meant for internal use only and therefor should be private.
+   * This constructor is meant for internal use only and therefore should be private.
    * However, in C++ one is not able to call std::make_shared with a private constructor.
    * The naive approach of befriending std::make_shared does not work here, as the implementation of std::make_shared is
    * compiler-specific and usually relies on internal impl-classes.
@@ -125,8 +125,8 @@ class Expression : public std::enable_shared_from_this<Expression> {
 
   void set_expression_list(const std::vector<std::shared_ptr<Expression>>& expression_list);
 
-  // Expression as string
-  std::string to_string(const std::shared_ptr<AbstractASTNode>& input_node = {}) const;
+  // Expression as string, column names need to be resolved and therefore need a @param input_node
+  std::string to_string(const std::shared_ptr<AbstractASTNode>& input_node = nullptr) const;
 
   bool operator==(const Expression& rhs) const;
 

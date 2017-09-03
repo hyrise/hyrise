@@ -37,7 +37,7 @@ std::string JoinNode::description() const {
   if (_join_column_ids && _scan_type) {
     desc << " [" << (*_join_column_ids).first;
     desc << " " << scan_type_to_string.left.at(*_scan_type);
-    desc << " " << (*_join_column_ids).second << "]";
+    desc << " " << _join_column_ids->second << "]";
   }
 
   return desc.str();
@@ -145,9 +145,9 @@ std::vector<ColumnID> JoinNode::get_output_column_ids_for_table(const std::strin
   return output_column_ids_for_table;
 }
 
-optional<std::pair<ColumnID, ColumnID>> JoinNode::join_column_ids() const { return _join_column_ids; }
+const optional<std::pair<ColumnID, ColumnID>> & JoinNode::join_column_ids() const { return _join_column_ids; }
 
-optional<ScanType> JoinNode::scan_type() const { return _scan_type; }
+const optional<ScanType> & JoinNode::scan_type() const { return _scan_type; }
 
 JoinMode JoinNode::join_mode() const { return _join_mode; }
 
