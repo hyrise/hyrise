@@ -426,15 +426,14 @@ TaskVector NewOrderRefImpl::get_get_stock_info_tasks(const int32_t ol_i_id, cons
 
   std::string s_dist_xx = d_id < 10 ? "S_DIST_0" + std::to_string(d_id) : "S_DIST_" + std::to_string(d_id);
 
-  // "S_QUANTITY", "S_DATA", "S_YTD", "S_ORDER_CNT", "S_REMOTE_CNT", s_dist_xx
   const auto proj = std::make_shared<opossum::Projection>(
-      ts2, opossum::Projection::ColumnExpressions({opossum::Expression::create_column_identifier(opossum::ColumnID{2}),
-                                                   opossum::Expression::create_column_identifier(opossum::ColumnID{16}),
-                                                   opossum::Expression::create_column_identifier(opossum::ColumnID{13}),
-                                                   opossum::Expression::create_column_identifier(opossum::ColumnID{14}),
-                                                   opossum::Expression::create_column_identifier(opossum::ColumnID{15}),
+      ts2, opossum::Projection::ColumnExpressions({opossum::Expression::create_column_identifier(opossum::ColumnID{2} /* "S_QUANTITY" */),
+                                                   opossum::Expression::create_column_identifier(opossum::ColumnID{16} /* "S_DATA" */),
+                                                   opossum::Expression::create_column_identifier(opossum::ColumnID{13} /* "S_YTD" */),
+                                                   opossum::Expression::create_column_identifier(opossum::ColumnID{14} /* "S_ORDER_CNT" */),
+                                                   opossum::Expression::create_column_identifier(opossum::ColumnID{15} /* "S_REMOTE_CNT" */),
                                                    opossum::Expression::create_column_identifier(opossum::ColumnID{
-                                                       static_cast<opossum::ColumnID::base_type>(d_id + 2)})}));
+                                                       static_cast<opossum::ColumnID::base_type>(d_id + 2)} /* s_dist_xx */)}));
 
   // Tasks
   auto gt_t = std::make_shared<opossum::OperatorTask>(gt);
