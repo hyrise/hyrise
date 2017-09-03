@@ -112,15 +112,15 @@ TaskVector OrderStatusRefImpl::get_customer_by_name(const std::string c_last, co
   auto gt_customer = std::make_shared<opossum::GetTable>("CUSTOMER");
   auto validate = std::make_shared<opossum::Validate>(gt_customer);
 
-  // "C_LAST"
+  /* "C_LAST" */
   auto first_filter =
       std::make_shared<opossum::TableScan>(validate, opossum::ColumnID{5}, opossum::ScanType::OpEquals, c_last);
 
-  // "C_D_ID"
+  /* "C_D_ID" */
   auto second_filter =
       std::make_shared<opossum::TableScan>(first_filter, opossum::ColumnID{1}, opossum::ScanType::OpEquals, c_d_id);
 
-  // "C_W_ID"
+  /* "C_W_ID" */
   auto third_filter =
       std::make_shared<opossum::TableScan>(second_filter, opossum::ColumnID{2}, opossum::ScanType::OpEquals, c_w_id);
 
@@ -132,7 +132,7 @@ TaskVector OrderStatusRefImpl::get_customer_by_name(const std::string c_last, co
                                               opossum::Expression::create_column_identifier(opossum::ColumnID{4}),
                                               opossum::Expression::create_column_identifier(opossum::ColumnID{0})}));
 
-  // "C_FIRST"
+  /* "C_FIRST" */
   auto sort = std::make_shared<opossum::Sort>(projection, opossum::ColumnID{1}, true);
 
   auto gt_customer_task = std::make_shared<opossum::OperatorTask>(gt_customer);
@@ -163,15 +163,15 @@ TaskVector OrderStatusRefImpl::get_customer_by_id(const int c_id, const int c_d_
   auto gt_customer = std::make_shared<opossum::GetTable>("CUSTOMER");
   auto validate = std::make_shared<opossum::Validate>(gt_customer);
 
-  // "C_ID"
+  /* "C_ID" */
   auto first_filter =
       std::make_shared<opossum::TableScan>(validate, opossum::ColumnID{0}, opossum::ScanType::OpEquals, c_id);
 
-  // "C_D_ID"
+  /* "C_D_ID" */
   auto second_filter =
       std::make_shared<opossum::TableScan>(first_filter, opossum::ColumnID{1}, opossum::ScanType::OpEquals, c_d_id);
 
-  // "C_W_ID"
+  /* "C_W_ID" */
   auto third_filter =
       std::make_shared<opossum::TableScan>(second_filter, opossum::ColumnID{2}, opossum::ScanType::OpEquals, c_w_id);
 
@@ -210,15 +210,15 @@ TaskVector OrderStatusRefImpl::get_orders(const int o_c_id, const int o_d_id, co
   auto gt_orders = std::make_shared<opossum::GetTable>("ORDER");
   auto validate = std::make_shared<opossum::Validate>(gt_orders);
 
-  // "O_C_ID"
+  /* "O_C_ID" */
   auto first_filter =
       std::make_shared<opossum::TableScan>(validate, opossum::ColumnID{3}, opossum::ScanType::OpEquals, o_c_id);
 
-  // "O_D_ID"
+  /* "O_D_ID" */
   auto second_filter =
       std::make_shared<opossum::TableScan>(first_filter, opossum::ColumnID{1}, opossum::ScanType::OpEquals, o_d_id);
 
-  // "O_W_ID"
+  /* "O_W_ID" */
   auto third_filter =
       std::make_shared<opossum::TableScan>(second_filter, opossum::ColumnID{2}, opossum::ScanType::OpEquals, o_w_id);
 
@@ -229,7 +229,7 @@ TaskVector OrderStatusRefImpl::get_orders(const int o_c_id, const int o_d_id, co
                                               opossum::Expression::create_column_identifier(opossum::ColumnID{5}),
                                               opossum::Expression::create_column_identifier(opossum::ColumnID{4})}));
 
-  // "O_ID"
+  /* "O_ID" */
   auto sort = std::make_shared<opossum::Sort>(projection, opossum::ColumnID{0}, false);
   auto limit = std::make_shared<opossum::Limit>(sort, 1);
 
@@ -264,15 +264,15 @@ TaskVector OrderStatusRefImpl::get_order_lines(const int o_id, const int d_id, c
   auto gt_order_lines = std::make_shared<opossum::GetTable>("ORDER-LINE");
   auto validate = std::make_shared<opossum::Validate>(gt_order_lines);
 
-  // "OL_O_ID"
+  /* "OL_O_ID" */
   auto first_filter =
       std::make_shared<opossum::TableScan>(validate, opossum::ColumnID{0}, opossum::ScanType::OpEquals, o_id);
 
-  // "OL_D_ID"
+  /* "OL_D_ID" */
   auto second_filter =
       std::make_shared<opossum::TableScan>(first_filter, opossum::ColumnID{1}, opossum::ScanType::OpEquals, d_id);
 
-  // "OL_W_ID"
+  /* "OL_W_ID" */
   auto third_filter =
       std::make_shared<opossum::TableScan>(second_filter, opossum::ColumnID{2}, opossum::ScanType::OpEquals, w_id);
 
