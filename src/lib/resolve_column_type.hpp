@@ -25,6 +25,7 @@ void resolve_type(const std::string &type, const Functor &func) {
     if (std::string(hana::first(x)) == type) {
       // The + before hana::second - which returns a reference - converts its return value into a value
       func(+hana::second(x));
+      return;
     }
   });
 }
@@ -63,6 +64,8 @@ void resolve_column_type(const std::string &type, BaseColumn &column, const Func
       } else {
         Fail("Unrecognized column type encountered.");
       }
+
+      return;
     }
   });
 }
