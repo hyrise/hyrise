@@ -307,9 +307,10 @@ void Aggregate::write_aggregate_output(ColumnID column_index) {
     output_column_name = aggregate_function_to_string.left.at(function) + "(" + column_name + ")";
   }
 
-  _output->add_column_definition(output_column_name, aggregate_type_name, true);
+  constexpr bool needs_null = (function != AggregateFunction::Count);
+  _output->add_column_definition(output_column_name, aggregate_type_name, needs_null);
 
-  auto col = std::make_shared<ValueColumn<decltype(aggregate_type)>>(true);
+  auto col = std::make_shared<ValueColumn<decltype(aggregate_type)>>(needs_null);
 
   auto ctx = std::static_pointer_cast<AggregateContext<ColumnType, decltype(aggregate_type)>>(
       _contexts_per_column[column_index]);

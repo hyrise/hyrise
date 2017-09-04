@@ -125,14 +125,11 @@ class Aggregate : public AbstractReadOnlyOperator {
   typename std::enable_if<func == AggregateFunction::Count, void>::type _write_aggregate_values(
       std::shared_ptr<ValueColumn<AggregateType>> column,
       std::shared_ptr<std::map<AggregateKey, AggregateResult<AggregateType>>> results) {
-    DebugAssert(column->is_nullable(), "Aggregate: Output column needs to be nullable");
+    DebugAssert(!column->is_nullable(), "Aggregate: Output column for COUNT shouldn't be nullable");
 
-    // TODO(timo): make column not nullable for COUNT
     auto &values = column->values();
-    auto &null_values = column->null_values();
 
     for (auto &kv : *results) {
-      null_values.push_back(false);
       values.push_back(kv.second.aggregate_count);
     }
   }
