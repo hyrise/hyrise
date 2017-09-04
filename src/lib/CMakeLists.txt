@@ -248,11 +248,14 @@ set(
     utils/load_table.hpp
     utils/murmur_hash.cpp
     utils/murmur_hash.hpp
+    utils/numa_memory_resource.cpp
+    utils/numa_memory_resource.hpp
 )
 
 set(
     LIBRARIES
     opossumProtobuf
+    boost_container
     protobuf
     grpc++
     grpc
@@ -264,7 +267,7 @@ set(
 )
 
 if(${NUMA_FOUND})
-    set(LIBRARIES ${LIBRARIES} ${NUMA_LIBRARY})
+    set(LIBRARIES ${LIBRARIES} ${NUMA_LIBRARY} hpinuma_msource_s)
 endif()
 
 
