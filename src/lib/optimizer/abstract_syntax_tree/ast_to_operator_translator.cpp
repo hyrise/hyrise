@@ -90,7 +90,7 @@ std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::_translate_sort_node(
   std::shared_ptr<AbstractOperator> result_operator;
   const auto &definitions = sort_node->order_by_definitions();
   for (auto it = definitions.rbegin(); it != definitions.rend(); it++) {
-    const auto definition = *it;
+    const auto &definition = *it;
     result_operator = std::make_shared<Sort>(input_operator, definition.column_name, definition.order_by_mode);
     input_operator = result_operator;
   }
