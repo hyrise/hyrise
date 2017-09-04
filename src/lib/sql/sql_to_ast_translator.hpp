@@ -26,6 +26,9 @@ class AggregateNode;
  * An AST can either be handed to the optimizer, once it is added, or it can be directly turned into Operators by
  * the ASTToOperatorTranslator.
  *
+ * This translator resolves column names to indices. For further information check the blog post:
+ * https://medium.com/hyrise/the-gentle-art-of-referring-to-columns-634f057bd810
+ *
  * Refer to sql_to_result_test.cpp for an example of the SQLToASTTranslator in proper action.
  * It is used as a Singleton via SQLToASTTranslator::get().
  *
