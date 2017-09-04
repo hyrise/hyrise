@@ -27,7 +27,7 @@ PosList BaseSingleColumnTableScanImpl::scan_chunk(const ChunkID &chunk_id) {
 
   left_column->visit(*this, context);
 
-  return std::move(context->_matches_out);
+  return _matches_out;
 }
 
 void BaseSingleColumnTableScanImpl::handle_reference_column(ReferenceColumn &left_column,
