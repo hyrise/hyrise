@@ -69,6 +69,12 @@ class OperatorsAggregateTest : public BaseTest {
 
     _table_wrapper_1_1_dict = std::make_shared<TableWrapper>(std::move(test_table));
     _table_wrapper_1_1_dict->execute();
+
+    test_table = load_table("src/test/tables/aggregateoperator/groupby_int_1gb_1agg/input_null.tbl", 2);
+    DictionaryCompression::compress_table(*test_table);
+
+    _table_wrapper_1_1_null_dict = std::make_shared<TableWrapper>(std::move(test_table));
+    _table_wrapper_1_1_null_dict->execute();
   }
 
   void test_output(const std::shared_ptr<AbstractOperator> in, const std::vector<AggregateDefinition> &aggregates,
@@ -117,7 +123,7 @@ class OperatorsAggregateTest : public BaseTest {
 
   std::shared_ptr<TableWrapper> _table_wrapper_1_1, _table_wrapper_1_1_null, _table_wrapper_1_2, _table_wrapper_2_1,
       _table_wrapper_2_2, _table_wrapper_2_0_null, _table_wrapper_1_1_string, _table_wrapper_1_1_string_null,
-      _table_wrapper_1_1_dict, _table_wrapper_3_1, _table_wrapper_3_2;
+      _table_wrapper_1_1_dict, _table_wrapper_1_1_null_dict, _table_wrapper_3_1, _table_wrapper_3_2;
 };
 
 TEST_F(OperatorsAggregateTest, NumInputTables) {
@@ -439,6 +445,31 @@ TEST_F(OperatorsAggregateTest, OneGroupbyCountStar) {
 TEST_F(OperatorsAggregateTest, TwoGroupbyCountStar) {
   this->test_output(_table_wrapper_2_0_null, {{"*", AggregateFunction::Count}}, {std::string("a"), std::string("c")},
                     "src/test/tables/aggregateoperator/groupby_int_2gb_0agg/count_star.tbl", 1);
+}
+
+TEST_F(OperatorsAggregateTest, DictionarySingleAggregateMaxWithNull) {
+  this->test_output(_table_wrapper_1_1_null_dict, {{"b", AggregateFunction::Max}}, {std::string("a")},
+                    "src/test/tables/aggregateoperator/groupby_int_1gb_1agg/max_null.tbl", 1);
+}
+
+TEST_F(OperatorsAggregateTest, DictionarySingleAggregateMinWithNull) {
+  this->test_output(_table_wrapper_1_1_null_dict, {{"b", AggregateFunction::Min}}, {std::string("a")},
+                    "src/test/tables/aggregateoperator/groupby_int_1gb_1agg/min_null.tbl", 1);
+}
+
+TEST_F(OperatorsAggregateTest, DictionarySingleAggregateSumWithNull) {
+  this->test_output(_table_wrapper_1_1_null_dict, {{"b", AggregateFunction::Sum}}, {std::string("a")},
+                    "src/test/tables/aggregateoperator/groupby_int_1gb_1agg/sum_null.tbl", 1);
+}
+
+TEST_F(OperatorsAggregateTest, DictionarySingleAggregateAvgWithNull) {
+  this->test_output(_table_wrapper_1_1_null_dict, {{"b", AggregateFunction::Avg}}, {std::string("a")},
+                    "src/test/tables/aggregateoperator/groupby_int_1gb_1agg/avg_null.tbl", 1);
+}
+
+TEST_F(OperatorsAggregateTest, DictionarySingleAggregateCountWithNull) {
+  this->test_output(_table_wrapper_1_1_null_dict, {{"b", AggregateFunction::Count}}, {std::string("a")},
+                    "src/test/tables/aggregateoperator/groupby_int_1gb_1agg/count_null.tbl", 1);
 }
 
 /**

@@ -279,14 +279,27 @@ struct PartitionBuilder : public ColumnVisitable {
 
     if (context->chunk_offsets_in) {
       for (const ChunkOffset &offset_in_dictionary_column : *(context->chunk_offsets_in)) {
-        (*context->hash_keys)[chunk_offset].emplace_back(dictionary[attribute_vector.get(offset_in_dictionary_column)]);
+        const auto value_id = attribute_vector.get(offset_in_dictionary_column);
+
+        if (value_id == NULL_VALUE_ID) {
+          (*context->hash_keys)[chunk_offset].emplace_back(NULL_VALUE);
+        } else {
+          (*context->hash_keys)[chunk_offset].emplace_back(dictionary[value_id]);
+        }
+
         chunk_offset++;
       }
     } else {
       // This DictionaryColumn has to be scanned in full. We directly insert the results into the list of matching
       // rows.
       for (size_t av_offset = 0; av_offset < column.size(); ++av_offset, ++chunk_offset) {
-        (*context->hash_keys)[chunk_offset].emplace_back(dictionary[attribute_vector.get(av_offset)]);
+        const auto value_id = attribute_vector.get(av_offset);
+
+        if (value_id == NULL_VALUE_ID) {
+          (*context->hash_keys)[chunk_offset].emplace_back(NULL_VALUE);
+        } else {
+          (*context->hash_keys)[chunk_offset].emplace_back(dictionary[value_id]);
+        }
       }
     }
   }
@@ -488,23 +501,37 @@ struct AggregateVisitor : public ColumnVisitable {
 
     if (context->groupby_context->chunk_offsets_in) {
       for (const ChunkOffset &offset_in_dictionary_column : *(context->groupby_context->chunk_offsets_in)) {
-        results[hash_keys[chunk_offset]].current_aggregate =
-            aggregate_func(dictionary[attribute_vector.get(offset_in_dictionary_column)],
-                           results[hash_keys[chunk_offset]].current_aggregate);
+        const auto value_id = attribute_vector.get(offset_in_dictionary_column);
 
-        // increase value counter
-        results[hash_keys[chunk_offset]].aggregate_count++;
+        if (value_id == NULL_VALUE_ID) {
+          // Keep it unchanged or initialize
+          results[hash_keys[chunk_offset]].current_aggregate = results[hash_keys[chunk_offset]].current_aggregate;
+        } else {
+          results[hash_keys[chunk_offset]].current_aggregate =
+              aggregate_func(dictionary[value_id], results[hash_keys[chunk_offset]].current_aggregate);
+
+          // increase value counter
+          results[hash_keys[chunk_offset]].aggregate_count++;
+        }
+
         chunk_offset++;
       }
     } else {
       // This DictionaryColumn has to be scanned in full. We directly insert the results into the list of matching
       // rows.
       for (size_t av_offset = 0; av_offset < column.size(); ++av_offset, ++chunk_offset) {
-        results[hash_keys[chunk_offset]].current_aggregate = aggregate_func(
-            dictionary[attribute_vector.get(av_offset)], results[hash_keys[chunk_offset]].current_aggregate);
+        const auto value_id = attribute_vector.get(av_offset);
 
-        // increase value counter
-        results[hash_keys[chunk_offset]].aggregate_count++;
+        if (value_id == NULL_VALUE_ID) {
+          // Keep it unchanged or initialize
+          results[hash_keys[chunk_offset]].current_aggregate = results[hash_keys[chunk_offset]].current_aggregate;
+        } else {
+          results[hash_keys[chunk_offset]].current_aggregate =
+              aggregate_func(dictionary[value_id], results[hash_keys[chunk_offset]].current_aggregate);
+
+          // increase value counter
+          results[hash_keys[chunk_offset]].aggregate_count++;
+        }
       }
     }
   }
@@ -563,10 +590,9 @@ struct aggregate_traits<
 
 // SUM on floating point numbers
 template <typename ColumnType, AggregateFunction function>
-struct aggregate_traits<
-    ColumnType, function,
-    typename std::enable_if<function == AggregateFunction::Sum && std::is_floating_point<ColumnType>::value,
-                            void>::type> {
+struct aggregate_traits<ColumnType, function, typename std::enable_if<function == AggregateFunction::Sum &&
+                                                                          std::is_floating_point<ColumnType>::value,
+                                                                      void>::type> {
   typedef ColumnType column_type;
   typedef double aggregate_type;
   static constexpr const char *aggregate_type_name = "double";
@@ -574,11 +600,10 @@ struct aggregate_traits<
 
 // invalid: AVG on non-arithmetic types
 template <typename ColumnType, AggregateFunction function>
-struct aggregate_traits<
-    ColumnType, function,
-    typename std::enable_if<!std::is_arithmetic<ColumnType>::value &&
-                                (function == AggregateFunction::Avg || function == AggregateFunction::Sum),
-                            void>::type> {
+struct aggregate_traits<ColumnType, function, typename std::enable_if<!std::is_arithmetic<ColumnType>::value &&
+                                                                          (function == AggregateFunction::Avg ||
+                                                                           function == AggregateFunction::Sum),
+                                                                      void>::type> {
   typedef ColumnType column_type;
   typedef ColumnType aggregate_type;
   static constexpr const char *aggregate_type_name = "";
