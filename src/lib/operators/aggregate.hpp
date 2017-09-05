@@ -364,7 +364,7 @@ struct AggregateFunctionBuilder<ColumnType, AggregateType, AggregateFunction::Av
 template <typename ColumnType, typename AggregateType>
 struct AggregateFunctionBuilder<ColumnType, AggregateType, AggregateFunction::Count> {
   AggregateFunctor<ColumnType, AggregateType> get_aggregate_function() {
-    return [](ColumnType, optional<AggregateType> current_aggregate) { return current_aggregate; };
+    return [](ColumnType, optional<AggregateType> current_aggregate) { return nullopt; };
   }
 };
 
