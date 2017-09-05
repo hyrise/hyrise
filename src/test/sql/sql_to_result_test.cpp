@@ -1,4 +1,3 @@
-
 #include <memory>
 #include <string>
 #include <tuple>
@@ -45,6 +44,8 @@ class SQLToResultTest : public BaseTest, public ::testing::WithParamInterface<SQ
 
     std::shared_ptr<Table> test_table2 = load_table("src/test/tables/int_string2.tbl", 2);
     StorageManager::get().add_table("TestTable", test_table2);
+
+    StorageManager::get().add_table("int_int3", load_table("src/test/tables/int_int3.tbl", 3));
 
     std::shared_ptr<Table> groupby_int_1gb_1agg =
         load_table("src/test/tables/aggregateoperator/groupby_int_1gb_1agg/input.tbl", 2);
@@ -134,6 +135,9 @@ const SQLTestParam test_queries[] = {
      "src/test/tables/joinoperators/int_left_join.tbl"},
     {"SELECT * FROM table_a AS \"left\" INNER JOIN table_b AS \"right\" ON \"left\".a = \"right\".a;",
      "src/test/tables/joinoperators/int_inner_join.tbl"},
+
+    // LIMIT
+    {"SELECT * FROM int_int3 LIMIT 4;", "src/test/tables/int_int3_limit_4.tbl"},
 
     // GROUP BY
     {"SELECT a, SUM(b) FROM groupby_int_1gb_1agg GROUP BY a;",

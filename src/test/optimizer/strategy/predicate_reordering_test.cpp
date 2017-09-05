@@ -226,7 +226,7 @@ TEST_F(PredicateReorderingTest, TwoReorderings) {
   auto predicate_node_1 = std::make_shared<PredicateNode>("c2", greater_than_expression_1, ScanType::OpGreaterThan, 50);
   predicate_node_1->set_left_child(predicate_node_0);
 
-  auto sort_node = std::make_shared<SortNode>("c1", true);
+  auto sort_node = std::make_shared<SortNode>(std::vector<OrderByDefinition>{{"c1", OrderByMode::Ascending}});
   sort_node->set_left_child(predicate_node_1);
 
   auto greater_than_expression_2 = ExpressionNode::create_expression(ExpressionType::GreaterThan);
