@@ -8,7 +8,7 @@
 namespace opossum {
 
 template <typename T>
-class ConstantValueIterable : public BaseIterable<ConstantValueIterable<T>> {
+class ConstantValueIterable : public Iterable<ConstantValueIterable<T>> {
  public:
   explicit ConstantValueIterable(const T& value) : _value{value} {}
   explicit ConstantValueIterable(const AllTypeVariant& value) : _value{type_cast<T>(value)} {}

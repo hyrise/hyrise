@@ -11,7 +11,7 @@
 namespace opossum {
 
 template <typename T>
-class DictionaryColumnIterable : public BaseIndexableIterable<DictionaryColumnIterable<T>> {
+class DictionaryColumnIterable : public IndexableIterable<DictionaryColumnIterable<T>> {
  public:
   explicit DictionaryColumnIterable(const DictionaryColumn<T>& column) : _column{column} {}
 

@@ -14,7 +14,7 @@
 namespace opossum {
 
 template <typename T>
-class ReferenceColumnIterable : public BaseIterable<ReferenceColumnIterable<T>> {
+class ReferenceColumnIterable : public Iterable<ReferenceColumnIterable<T>> {
  public:
   explicit ReferenceColumnIterable(const ReferenceColumn &column) : _column{column} {}
 

@@ -9,7 +9,7 @@
 
 namespace opossum {
 
-class AttributeVectorIterable : public BaseIndexableIterable<AttributeVectorIterable> {
+class AttributeVectorIterable : public IndexableIterable<AttributeVectorIterable> {
  public:
   explicit AttributeVectorIterable(const BaseAttributeVector& attribute_vector) : _attribute_vector{attribute_vector} {}
 

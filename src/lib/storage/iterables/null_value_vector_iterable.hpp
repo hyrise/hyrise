@@ -15,7 +15,7 @@ namespace opossum {
  * This is an iterable for the null value vector of a value column.
  * It is used for example in the IS NULL implementation of the table scan.
  */
-class NullValueVectorIterable : public BaseIndexableIterable<NullValueVectorIterable> {
+class NullValueVectorIterable : public IndexableIterable<NullValueVectorIterable> {
  public:
   explicit NullValueVectorIterable(const tbb::concurrent_vector<bool>& null_values)
       : _null_values{null_values} {}

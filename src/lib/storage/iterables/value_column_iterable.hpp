@@ -12,7 +12,7 @@
 namespace opossum {
 
 template <typename T>
-class ValueColumnIterable : public BaseIndexableIterable<ValueColumnIterable<T>> {
+class ValueColumnIterable : public IndexableIterable<ValueColumnIterable<T>> {
  public:
   explicit ValueColumnIterable(const ValueColumn<T>& column) : _column{column} {}
 
