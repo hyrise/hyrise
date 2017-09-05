@@ -14,6 +14,7 @@
 #include "optimizer/abstract_syntax_tree/projection_node.hpp"
 #include "optimizer/abstract_syntax_tree/sort_node.hpp"
 #include "optimizer/abstract_syntax_tree/stored_table_node.hpp"
+#include "optimizer/abstract_syntax_tree/validate_node.hpp"
 #include "optimizer/expression/expression_node.hpp"
 #include "sql/sql_expression_translator.hpp"
 #include "storage/storage_manager.hpp"
@@ -195,10 +196,17 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_cross_product(
   return product;
 }
 
+std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_get_table_and_validate(const std::string& table_name) {
+  auto stored_table_node = std::make_shared<StoredTableNode>(table_name);
+  auto validate_node = std::make_shared<ValidateNode>();
+  validate_node->set_left_child(stored_table_node);
+  return validate_node;
+}
+
 std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_table_ref(const hsql::TableRef& table) {
   switch (table.type) {
     case hsql::kTableName:
-      return std::make_shared<StoredTableNode>(table.name);
+      return _get_table_and_validate(std::string(table.name));
     case hsql::kTableSelect:
       return _translate_select(*table.select);
     case hsql::kTableJoin:

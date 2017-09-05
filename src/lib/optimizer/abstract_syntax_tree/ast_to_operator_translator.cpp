@@ -12,13 +12,14 @@
 #include "operators/projection.hpp"
 #include "operators/sort.hpp"
 #include "operators/table_scan.hpp"
+#include "operators/validate.hpp"
 #include "optimizer/abstract_syntax_tree/abstract_ast_node.hpp"
 #include "optimizer/abstract_syntax_tree/aggregate_node.hpp"
 #include "optimizer/abstract_syntax_tree/join_node.hpp"
 #include "optimizer/abstract_syntax_tree/predicate_node.hpp"
+#include "optimizer/abstract_syntax_tree/projection_node.hpp"
 #include "optimizer/abstract_syntax_tree/sort_node.hpp"
 #include "optimizer/abstract_syntax_tree/stored_table_node.hpp"
-#include "projection_node.hpp"
 
 namespace opossum {
 
@@ -47,6 +48,8 @@ ASTToOperatorTranslator::ASTToOperatorTranslator() {
       std::bind(&ASTToOperatorTranslator::_translate_join_node, this, std::placeholders::_1);
   _operator_factory[ASTNodeType::Aggregate] =
       std::bind(&ASTToOperatorTranslator::_translate_aggregate_node, this, std::placeholders::_1);
+  _operator_factory[ASTNodeType::Validate] =
+      std::bind(&ASTToOperatorTranslator::_translate_validate_node, this, std::placeholders::_1);
 }
 
 std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::translate_node(
@@ -190,6 +193,12 @@ std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::_translate_aggregate_
   out_operator = std::make_shared<Aggregate>(out_operator, aggregate_definitions, aggregate_node->groupby_columns());
 
   return out_operator;
+}
+
+std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::_translate_validate_node(
+    const std::shared_ptr<AbstractASTNode> &node) const {
+  const auto input_operator = translate_node(node->left_child());
+  return std::make_shared<Validate>(input_operator);
 }
 
 }  // namespace opossum
