@@ -163,7 +163,7 @@ std::shared_ptr<TableStatistics> TableStatistics::join_statistics(
 
   join_table_stats->_row_count *= stats_container.selectivity;
 
-  ColumnID new_right_column_id{static_cast<uint16_t>(_column_statistics.size() + column_ids.second)};
+  ColumnID new_right_column_id{static_cast<ColumnID::base_type>(_column_statistics.size() + column_ids.second)};
 
   float left_null_value_no = right_col_stats->null_value_ratio() * right_stats->_row_count;
   if (right_col_stats->distinct_count() != 0.f) {
