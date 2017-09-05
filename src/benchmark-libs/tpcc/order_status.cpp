@@ -128,7 +128,8 @@ TaskVector OrderStatusRefImpl::get_customer_by_name(const std::string c_last, co
                          opossum::Expression::create_column_identifier(opossum::ColumnID{4} /* "C_MIDDLE" */),
                          opossum::Expression::create_column_identifier(opossum::ColumnID{0} /* "C_ID" */)}));
 
-  auto sort = std::make_shared<opossum::Sort>(projection, opossum::ColumnID{1} /* "C_FIRST" */, true);
+  auto sort = std::make_shared<opossum::Sort>(projection, opossum::ColumnID{1} /* "C_FIRST" */,
+                                              opossum::OrderByMode::Ascending);
 
   auto gt_customer_task = std::make_shared<opossum::OperatorTask>(gt_customer);
   auto validate_task = std::make_shared<opossum::OperatorTask>(validate);
@@ -217,7 +218,8 @@ TaskVector OrderStatusRefImpl::get_orders(const int o_c_id, const int o_d_id, co
                                               opossum::Expression::create_column_identifier(opossum::ColumnID{5}),
                                               opossum::Expression::create_column_identifier(opossum::ColumnID{4})}));
 
-  auto sort = std::make_shared<opossum::Sort>(projection, opossum::ColumnID{0} /* "O_ID" */, false);
+  auto sort =
+      std::make_shared<opossum::Sort>(projection, opossum::ColumnID{0} /* "O_ID" */, opossum::OrderByMode::Descending);
   auto limit = std::make_shared<opossum::Limit>(sort, 1);
 
   auto gt_orders_task = std::make_shared<opossum::OperatorTask>(gt_orders);

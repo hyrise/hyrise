@@ -89,14 +89,14 @@ TEST_F(ASTToOperatorTranslatorTest, ProjectionNode) {
 
 TEST_F(ASTToOperatorTranslatorTest, SortNode) {
   const auto stored_table_node = std::make_shared<StoredTableNode>("table_int_float");
-  auto sort_node = std::make_shared<SortNode>(ColumnID{0}, true);
+  auto sort_node = std::make_shared<SortNode>(std::vector<OrderByDefinition>{{ColumnID{0}, OrderByMode::Ascending}});
   sort_node->set_left_child(stored_table_node);
   const auto op = ASTToOperatorTranslator::get().translate_node(sort_node);
 
   const auto sort_op = std::dynamic_pointer_cast<Sort>(op);
   ASSERT_TRUE(sort_op);
   EXPECT_EQ(sort_op->column_id(), ColumnID{0});
-  EXPECT_EQ(sort_op->ascending(), true);
+  EXPECT_EQ(sort_op->order_by_mode(), OrderByMode::Ascending);
 }
 
 TEST_F(ASTToOperatorTranslatorTest, JoinNode) {

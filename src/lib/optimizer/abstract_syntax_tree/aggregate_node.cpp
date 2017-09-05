@@ -35,21 +35,35 @@ std::string AggregateNode::description() const {
 
   auto stream_aggregate = [&](const std::shared_ptr<Expression>& aggregate_expr) {
     s << aggregate_expr->to_string();
-    if (aggregate_expr->alias()) s << " AS \"" << (*aggregate_expr->alias()) << "\"";
+    if (aggregate_expr->alias()) {
+      s << " AS \"" << (*aggregate_expr->alias()) << "\"";
+    }
   };
 
-  auto it = _aggregate_expressions.begin();
-  if (it != _aggregate_expressions.end()) stream_aggregate(*it);
-  for (; it != _aggregate_expressions.end(); ++it) {
+  auto aggregates_it = _aggregate_expressions.begin();
+  if (aggregates_it != _aggregate_expressions.end()) {
+    stream_aggregate(*aggregates_it);
+    ++aggregates_it;
+  }
+
+  for (; aggregates_it != _aggregate_expressions.end(); ++aggregates_it) {
     s << ", ";
-    stream_aggregate(*it);
+    stream_aggregate(*aggregates_it);
   }
 
   if (!_groupby_column_ids.empty()) {
     s << " GROUP BY [";
-    for (const auto& column_name : _groupby_column_ids) {
-      s << column_name << ", ";
+
+    auto group_by_it = _groupby_column_ids.begin();
+    if (group_by_it != _groupby_column_ids.end()) {
+      s << *group_by_it;
+      ++group_by_it;
     }
+
+    for (; group_by_it != _groupby_column_ids.end(); ++group_by_it) {
+      s << ", " << *group_by_it;
+    }
+
     s << "]";
   }
 

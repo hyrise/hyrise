@@ -240,7 +240,7 @@ TEST_F(OperatorTranslatorTest, AscendingSort) {
   proto::SortOperator* sort_operation = msg.mutable_sort();
   sort_operation->mutable_input_operator()->mutable_get_table()->set_table_name("table_int_float");
   sort_operation->set_column_id(ColumnID{0});
-  sort_operation->set_ascending(true);
+  sort_operation->set_order_by_mode(opossum::proto::SortOperator::Ascending);
 
   OperatorTranslator translator;
   auto& tasks = translator.build_tasks_from_proto(msg);
@@ -268,7 +268,7 @@ TEST_F(OperatorTranslatorTest, DescendingSort) {
   proto::SortOperator* sort_operation = msg.mutable_sort();
   sort_operation->mutable_input_operator()->mutable_get_table()->set_table_name("table_int_float");
   sort_operation->set_column_id(ColumnID{0});
-  sort_operation->set_ascending(false);
+  sort_operation->set_order_by_mode(opossum::proto::SortOperator::Descending);
 
   OperatorTranslator translator;
   auto& tasks = translator.build_tasks_from_proto(msg);

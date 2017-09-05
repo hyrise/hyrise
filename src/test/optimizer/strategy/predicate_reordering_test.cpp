@@ -154,7 +154,7 @@ TEST_F(PredicateReorderingTest, TwoReorderings) {
   auto predicate_node_1 = std::make_shared<PredicateNode>(ColumnID{1}, ScanType::OpGreaterThan, 50);
   predicate_node_1->set_left_child(predicate_node_0);
 
-  auto sort_node = std::make_shared<SortNode>(ColumnID{0}, true);
+  auto sort_node = std::make_shared<SortNode>(std::vector<OrderByDefinition>{{ColumnID{0}, OrderByMode::Ascending}});
   sort_node->set_left_child(predicate_node_1);
 
   auto predicate_node_2 = std::make_shared<PredicateNode>(ColumnID{2}, ScanType::OpGreaterThan, 90);

@@ -10,16 +10,16 @@
 
 namespace opossum {
 
-Sort::Sort(const std::shared_ptr<const AbstractOperator> in, const ColumnID column_id, const bool ascending,
+Sort::Sort(const std::shared_ptr<const AbstractOperator> in, const ColumnID column_id, const OrderByMode order_by_mode,
            const size_t output_chunk_size)
     : AbstractReadOnlyOperator(in),
       _column_id(column_id),
-      _ascending(ascending),
+      _order_by_mode(order_by_mode),
       _output_chunk_size(output_chunk_size) {}
 
 ColumnID Sort::column_id() const { return _column_id; }
 
-bool Sort::ascending() const { return _ascending; }
+OrderByMode Sort::order_by_mode() const { return _order_by_mode; }
 
 const std::string Sort::name() const { return "Sort"; }
 
@@ -28,12 +28,12 @@ uint8_t Sort::num_in_tables() const { return 1; }
 uint8_t Sort::num_out_tables() const { return 1; }
 
 std::shared_ptr<AbstractOperator> Sort::recreate(const std::vector<AllParameterVariant> &args) const {
-  return std::make_shared<Sort>(_input_left->recreate(args), _column_id, _ascending, _output_chunk_size);
+  return std::make_shared<Sort>(_input_left->recreate(args), _column_id, _order_by_mode, _output_chunk_size);
 }
 
 std::shared_ptr<const Table> Sort::on_execute() {
   _impl = make_unique_by_column_type<AbstractReadOnlyOperatorImpl, SortImpl>(
-      input_table_left()->column_type(_column_id), input_table_left(), _column_id, _ascending, _output_chunk_size);
+      input_table_left()->column_type(_column_id), input_table_left(), _column_id, _order_by_mode, _output_chunk_size);
   return _impl->on_execute();
 }
 
