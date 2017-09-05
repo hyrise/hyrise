@@ -173,7 +173,8 @@ class OperatorsTableScanTest : public BaseTest {
 
   void ASSERT_COLUMN_EQ(std::shared_ptr<const Table> table, const ColumnID& column_id,
                         const std::vector<AllTypeVariant>& expected) {
-    auto expected_multiset = std::multiset<AllTypeVariant>{expected.begin(), expected.end()};
+    std::multiset<AllTypeVariant> expected_multiset;
+    std::copy(expected.cbegin(), expected.cend(), expected_multiset.begin());
 
     for (auto chunk_id = ChunkID{0u}; chunk_id < table->chunk_count(); ++chunk_id) {
       const auto& chunk = table->get_chunk(chunk_id);
