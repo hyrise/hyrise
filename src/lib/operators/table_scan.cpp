@@ -38,13 +38,13 @@ TableScan::TableScan(const std::shared_ptr<AbstractOperator> in, const std::stri
 
 TableScan::~TableScan() = default;
 
-const std::string &TableScan::column_name() const { return _left_column_name; }
+const std::string &TableScan::left_column_name() const { return _left_column_name; }
 
 ScanType TableScan::scan_type() const { return _scan_type; }
 
-const AllParameterVariant &TableScan::value() const { return _right_parameter; }
+const AllParameterVariant &TableScan::right_parameter() const { return _right_parameter; }
 
-const optional<AllTypeVariant> &TableScan::value2() const { return _right_value2; }
+const optional<AllTypeVariant> &TableScan::right_value2() const { return _right_value2; }
 
 const std::string TableScan::name() const { return "TableScan"; }
 
