@@ -38,7 +38,7 @@ void SingleColumnTableScanImpl::handle_value_column(BaseColumn &base_column,
     left_column_iterable.with_iterators(mapped_chunk_offsets.get(), [&](auto left_it, auto left_end) {
       right_value_iterable.with_iterators([&](auto right_it, auto right_end) {
         _with_operator(_scan_type, [&](auto comparator) {
-          _binary_scan(comparator, left_it, left_end, right_it, chunk_id, matches_out);
+          this->_binary_scan(comparator, left_it, left_end, right_it, chunk_id, matches_out);
         });
       });
     });
@@ -86,10 +86,9 @@ void SingleColumnTableScanImpl::handle_dictionary_column(BaseColumn &base_column
   auto left_iterable = AttributeVectorIterable{attribute_vector};
 
   if (_right_value_matches_all(left_column, search_value_id)) {
-    static const auto always_true = [](const auto &) { return true; };
-
     left_iterable.with_iterators(mapped_chunk_offsets.get(), [&](auto left_it, auto left_end) {
-      _unary_scan(always_true, left_it, left_end, chunk_id, matches_out);
+      static const auto always_true = [](const auto &) { return true; };
+      this->_unary_scan(always_true, left_it, left_end, chunk_id, matches_out);
     });
 
     return;
@@ -104,7 +103,7 @@ void SingleColumnTableScanImpl::handle_dictionary_column(BaseColumn &base_column
   left_iterable.with_iterators(mapped_chunk_offsets.get(), [&](auto left_it, auto left_end) {
     right_iterable.with_iterators([&](auto right_it, auto right_end) {
       this->_with_operator_for_dict_column_scan(_scan_type, [&](auto comparator) {
-        _binary_scan(comparator, left_it, left_end, right_it, chunk_id, matches_out);
+        this->_binary_scan(comparator, left_it, left_end, right_it, chunk_id, matches_out);
       });
     });
   });

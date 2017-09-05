@@ -68,7 +68,7 @@ PosList ColumnComparisonTableScanImpl::scan_chunk(ChunkID chunk_id) {
         left_column_iterable.with_iterators([&](auto left_it, auto left_end) {
           right_column_iterable.with_iterators([&](auto right_it, auto right_end) {
             this->_with_operator(_scan_type, [&](auto comparator) {
-              _binary_scan(comparator, left_it, left_end, right_it, chunk_id, matches_out);
+              this->_binary_scan(comparator, left_it, left_end, right_it, chunk_id, matches_out);
             });
           });
         });

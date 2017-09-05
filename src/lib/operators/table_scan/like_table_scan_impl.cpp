@@ -43,7 +43,7 @@ void LikeTableScanImpl::handle_value_column(BaseColumn &base_column,
   const auto regex_match = [this](const std::string &str) { return std::regex_match(str, _regex); };
 
   left_iterable.with_iterators(mapped_chunk_offsets.get(), [&](auto left_it, auto left_end) {
-    _unary_scan(regex_match, left_it, left_end, chunk_id, matches_out);
+    this->_unary_scan(regex_match, left_it, left_end, chunk_id, matches_out);
   });
 }
 
@@ -64,10 +64,9 @@ void LikeTableScanImpl::handle_dictionary_column(BaseColumn &base_column,
   auto attribute_vector_iterable = AttributeVectorIterable{attribute_vector};
 
   if (match_count == dictionary_matches.size()) {
-    static const auto always_true = [](const auto &) { return true; };
-
     attribute_vector_iterable.with_iterators(mapped_chunk_offsets.get(), [&](auto left_it, auto left_end) {
-      _unary_scan(always_true, left_it, left_end, chunk_id, matches_out);
+      static const auto always_true = [](const auto &) { return true; };
+      this->_unary_scan(always_true, left_it, left_end, chunk_id, matches_out);
     });
 
     return;
@@ -80,7 +79,7 @@ void LikeTableScanImpl::handle_dictionary_column(BaseColumn &base_column,
   const auto dictionary_lookup = [&dictionary_matches](const ValueID &value) { return dictionary_matches[value]; };
 
   attribute_vector_iterable.with_iterators(mapped_chunk_offsets.get(), [&](auto left_it, auto left_end) {
-    _unary_scan(dictionary_lookup, left_it, left_end, chunk_id, matches_out);
+    this->_unary_scan(dictionary_lookup, left_it, left_end, chunk_id, matches_out);
   });
 }
 
