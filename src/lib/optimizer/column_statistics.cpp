@@ -406,11 +406,18 @@ TwoColumnSelectivityResult ColumnStatistics<ColumnType>::estimate_selectivity_fo
     return {combined_non_null_ratio * selectivity, new_left_column_stats, new_right_column_stats};
   };
 
-  // Currently the distinct count is calculated wrongly, if scan type is OpLessThan and overlapping_range_max ==
-  // right_stats->max() or if scan type is OpGreaterThan and overlapping_range_min == right_stats->min() E.g. Left and
-  // right column have the same min and max value of 1 and 2.
+  // Currently the distinct count. min and max calculation is incorrect, if scan type is OpLessThan or OpGreaterThan and
+  // right column min = left column min or right column max = left column max.
   //
-  // TODO(anyone) Fix this.
+  // E.g. Two integer columns have 3 distinct values and same min and max value of 1 and 3.
+  //
+  // Currently both new left and right column statistics will have the same min and max values of 1 and 3.
+  // However, for scan type OpLessThan, the left column max is actually 2 as there is no possibility for 3 < 3.
+  // Additionally, the right column min is actually 2, as there is no possibility for 1 < 1.
+  // The same also applies for scan type OpGreaterThan vice versa.
+  // The smaller range between min and max values of a column will also lead to a smaller distinct count.
+  //
+  // TODO(Anyone): Fix issue mentioned above.
 
   switch (scan_type) {
     case ScanType::OpEquals: {

@@ -1,12 +1,10 @@
 #include <memory>
-#include <string>
 #include <utility>
 #include <vector>
 
 #include "../base_test.hpp"
 #include "gtest/gtest.h"
 
-#include "common.hpp"
 #include "operators/join_nested_loop_a.hpp"
 #include "operators/table_wrapper.hpp"
 #include "optimizer/table_statistics.hpp"
@@ -79,15 +77,17 @@ TEST_F(TableStatisticsJoinTest, CrossJoinRealDataTest) {
 }
 
 TEST_F(TableStatisticsJoinTest, OuterJoinsRealDataTest) {
-  // test selectivity calculations for all join_modes which can produce null values in the result, scan types and column
-  // combinations of int_equal_distribution.tbl currently, the statistics component generates for a two column predicate
-  // with ScanType::OpLessThan and canType::OpGreaterThan a column statistics with a too high distinct count E.g. two
-  // columns which have the same min and max values of 1 and 3.
-  //
+  // Test selectivity calculations for all join_modes which can produce null values in the result, scan types and column
+  // combinations of int_equal_distribution.tbl
+
+  // Currently, the statistics component produces in some cases for a two column predicate with ScanType::OpLessThan
+  // and ScanType::OpGreaterThan a column statistics with a too high distinct count. (See comment column_statistics.hpp
+  // for details). Null value calculations depend on the calculated distinct counts of the columns. Therefore, tests for
+  // the mentioned scan types with null values are skipped.
+
   std::vector<JoinMode> join_modes{JoinMode::Right, JoinMode::Outer, JoinMode::Left};
-  std::vector<ScanType> scan_types{ScanType::OpEquals, ScanType::OpNotEquals,  // ScanType::OpLessThan,
-                                   ScanType::OpLessThanEquals,
-                                   ScanType::OpGreaterThanEquals};  // ScanType::OpGreaterThan,
+  std::vector<ScanType> scan_types{ScanType::OpEquals, ScanType::OpNotEquals, ScanType::OpLessThanEquals,
+                                   ScanType::OpGreaterThanEquals};  // ScanType::OpLessThan, ScanType::OpGreaterThan,
 
   for (const auto join_mode : join_modes) {
     for (const auto scan_type : scan_types) {
