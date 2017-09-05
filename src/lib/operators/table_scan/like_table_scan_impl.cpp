@@ -9,6 +9,7 @@
 #include <regex>
 #include <sstream>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "storage/dictionary_column.hpp"
@@ -55,10 +56,9 @@ void LikeTableScanImpl::handle_dictionary_column(BaseColumn &base_column,
 
   const auto &left_column = static_cast<const DictionaryColumn<std::string> &>(base_column);
 
-  const auto dictionary_matches = _find_matches_in_dictionary(*left_column.dictionary());
-
-  const auto match_count =
-      static_cast<size_t>(std::count(dictionary_matches.cbegin(), dictionary_matches.cend(), true));
+  const auto result = _find_matches_in_dictionary(*left_column.dictionary());
+  const auto& match_count = result.first;
+  const auto& dictionary_matches = result.second;
 
   const auto &attribute_vector = *left_column.attribute_vector();
   auto attribute_vector_iterable = AttributeVectorIterable{attribute_vector};
@@ -84,15 +84,22 @@ void LikeTableScanImpl::handle_dictionary_column(BaseColumn &base_column,
   });
 }
 
-std::vector<bool> LikeTableScanImpl::_find_matches_in_dictionary(const std::vector<std::string> &dictionary) {
-  auto dictionary_matches = std::vector<bool>{};
+std::pair<size_t, std::vector<bool>> LikeTableScanImpl::_find_matches_in_dictionary(const std::vector<std::string> &dictionary) {
+  auto result = std::pair<size_t, std::vector<bool>>{};
+
+  auto& count = result.first;
+  auto& dictionary_matches = result.second;
+
+  count = 0u;
   dictionary_matches.reserve(dictionary.size());
 
   for (const auto &value : dictionary) {
-    dictionary_matches.push_back(std::regex_match(value, _regex));
+    const auto result = std::regex_match(value, _regex);
+    count += static_cast<size_t>(result);
+    dictionary_matches.push_back(result);
   }
 
-  return dictionary_matches;
+  return result;
 }
 
 std::map<std::string, std::string> LikeTableScanImpl::_extract_character_ranges(std::string &str) {

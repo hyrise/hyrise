@@ -5,6 +5,7 @@
 #include <regex>
 #include <string>
 #include <vector>
+#include <utility>
 
 #include "base_single_column_table_scan_impl.hpp"
 
@@ -38,7 +39,10 @@ class LikeTableScanImpl : public BaseSingleColumnTableScanImpl {
    * @{
    */
 
-  std::vector<bool> _find_matches_in_dictionary(const std::vector<std::string> &dictionary);
+  /**
+   * @returns number of matches and the result of each dictionary entry
+   */
+  std::pair<size_t, std::vector<bool>> _find_matches_in_dictionary(const std::vector<std::string> &dictionary);
 
   /**@}*/
 
