@@ -62,10 +62,10 @@ class AbstractASTNode : public std::enable_shared_from_this<AbstractASTNode> {
 
   // @{
   /**
-   * AbstractASTNode::get_column_id_for_column_identifier_name() looks for the @param column_identifier_name in the
+   * AbstractASTNode::find_column_id_by_column_identifier_name() looks for the @param column_identifier_name in the
    * columns
    * this node outputs. If it can find it, it will be returned, otherwise nullopt is returned.
-   * AbstractASTNode::get_column_id_for_column_identifier_name() is more strict and will fail, if the
+   * AbstractASTNode::get_column_id_by_column_identifier_name() is more strict and will fail, if the
    * @param column_identifier_name cannot be found.
    *
    * If a node outputs a column "x" but ALIASes it as, say, "y", these will only find

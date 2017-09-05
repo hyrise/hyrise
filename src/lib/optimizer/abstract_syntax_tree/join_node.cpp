@@ -62,20 +62,19 @@ optional<ColumnID> JoinNode::find_column_id_by_column_identifier_name(
     left_column_id = left_child()->find_column_id_by_column_identifier_name(column_identifier_name);
     right_column_id = right_child()->find_column_id_by_column_identifier_name(column_identifier_name);
   } else {
-    // Otherwise only search a children if it manages that qualifier.
-    auto left_manages_table = left_child()->knows_table(*column_identifier_name.table_name);
-    auto right_manages_table = right_child()->knows_table(*column_identifier_name.table_name);
+    // Otherwise only search a child if it knows that qualifier.
+    auto left_knows_table = left_child()->knows_table(*column_identifier_name.table_name);
+    auto right_knows_table = right_child()->knows_table(*column_identifier_name.table_name);
 
-    // If neither input table manages the table name, return.
-    if (!left_manages_table && !right_manages_table) {
+    // If neither input table knows the table name, return.
+    if (!left_knows_table && !right_knows_table) {
       return nullopt;
     }
 
     // There must not be two tables with the same qualifying name.
-    Assert(left_manages_table ^ right_manages_table,
-           "Table name " + *column_identifier_name.table_name + " is ambiguous.");
+    Assert(left_knows_table ^ right_knows_table, "Table name " + *column_identifier_name.table_name + " is ambiguous.");
 
-    if (left_manages_table) {
+    if (left_knows_table) {
       left_column_id = left_child()->find_column_id_by_column_identifier_name(column_identifier_name);
     } else {
       right_column_id = right_child()->find_column_id_by_column_identifier_name(column_identifier_name);
@@ -104,7 +103,7 @@ optional<ColumnID> JoinNode::find_column_id_by_column_identifier_name(
   DebugAssert(_output_column_id_to_input_column_id[output_column_id] == input_column_id,
               "ColumnID should be in output.");
 
-  return ColumnID{static_cast<ColumnID::base_type>(output_column_id)};
+  return output_column_id;
 }
 
 bool JoinNode::knows_table(const std::string &table_name) const {
@@ -115,18 +114,18 @@ bool JoinNode::knows_table(const std::string &table_name) const {
 std::vector<ColumnID> JoinNode::get_output_column_ids_for_table(const std::string &table_name) const {
   DebugAssert(!!left_child() && !!right_child(), "JoinNode must have two children.");
 
-  auto left_manages_table = left_child()->knows_table(table_name);
-  auto right_manages_table = right_child()->knows_table(table_name);
+  auto left_knows_table = left_child()->knows_table(table_name);
+  auto right_knows_table = right_child()->knows_table(table_name);
 
-  // If neither input table manages the table name, return.
-  if (!left_manages_table && !right_manages_table) {
+  // If neither input table knows the table name, return.
+  if (!left_knows_table && !right_knows_table) {
     return {};
   }
 
   // There must not be two tables with the same qualifying name.
-  Assert(left_manages_table ^ right_manages_table, "Table name " + table_name + " is ambiguous.");
+  Assert(left_knows_table ^ right_knows_table, "Table name " + table_name + " is ambiguous.");
 
-  if (left_manages_table) {
+  if (left_knows_table) {
     // The ColumnIDs of the left table appear first in `_output_column_id_to_input_column_id`.
     // That means they are at the same position in our output, so we can return them directly.
     return left_child()->get_output_column_ids_for_table(table_name);
