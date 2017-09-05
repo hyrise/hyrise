@@ -41,8 +41,9 @@ class ReferenceColumn : public BaseColumn {
 
   // return generated vector of all values
   template <typename T>
-  const alloc_concurrent_vector<T> materialize_values() const {
-    alloc_concurrent_vector<T> values;
+  const alloc_concurrent_vector<T> materialize_values(
+      const PolymorphicAllocator<size_t> &alloc = PolymorphicAllocator<size_t>()) const {
+    alloc_concurrent_vector<T> values(alloc);
     values.reserve(_pos_list->size());
 
     std::map<ChunkID, std::shared_ptr<ValueColumn<T>>> value_columns;
@@ -109,8 +110,11 @@ class ReferenceColumn : public BaseColumn {
       auto chunk_info = _referenced_table->locate_row(pos);
 
       auto iter = all_chunk_offsets.find(chunk_info.first);
-      if (iter == all_chunk_offsets.end())
-        iter = all_chunk_offsets.emplace(chunk_info.first, std::make_shared<alloc_vector<ChunkOffset>>()).first;
+      if (iter == all_chunk_offsets.end()) {
+        PolymorphicAllocator<ChunkOffset> alloc = _pos_list->get_allocator();
+        auto chunk_offsets = std::make_shared<alloc_vector<ChunkOffset>>(alloc);
+        iter = all_chunk_offsets.emplace(chunk_info.first, chunk_offsets).first;
+      }
 
       iter->second->emplace_back(chunk_info.second);
     }

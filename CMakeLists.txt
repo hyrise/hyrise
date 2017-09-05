@@ -17,6 +17,7 @@ set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -march=native")
 find_package(Numa)
 find_package(Tbb REQUIRED)
 set(PGASUS_WITH_TASKING OFF CACHE BOOL "" FORCE)
+set(PGASUS_REPLACE_MALLOC OFF CACHE BOOL "" FORCE)
 
 # Include sub-CMakeLists.txt
 add_subdirectory(third_party/)

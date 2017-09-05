@@ -28,6 +28,7 @@ class FittedAttributeVector : public BaseAttributeVector {
 
  public:
   explicit FittedAttributeVector(size_t size) : _attributes(size) {}
+  explicit FittedAttributeVector(size_t size, const PolymorphicAllocator<uintX_t>& alloc) : _attributes(size, alloc) {}
 
   // Creates a FittedAttributeVector from given attributes
   explicit FittedAttributeVector(const alloc_vector<uintX_t>& attributes) : _attributes(attributes) {}

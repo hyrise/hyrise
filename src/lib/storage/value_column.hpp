@@ -16,6 +16,7 @@ template <typename T>
 class ValueColumn : public BaseColumn {
  public:
   explicit ValueColumn(bool nullable = false);
+  explicit ValueColumn(const PolymorphicAllocator<T>& alloc, bool nullable = false);
 
   // Create a ValueColumn with the given values
   explicit ValueColumn(alloc_concurrent_vector<T>&& values);

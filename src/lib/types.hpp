@@ -16,13 +16,10 @@
 namespace opossum {
 
 template <typename T>
-using polymorphic_allocator = PolymorphicAllocator<T>;
+using alloc_vector = std::vector<T, PolymorphicAllocator<T>>;
 
 template <typename T>
-using alloc_vector = std::vector<T, polymorphic_allocator<T>>;
-
-template <typename T>
-using alloc_concurrent_vector = tbb::concurrent_vector<T, polymorphic_allocator<T>>;
+using alloc_concurrent_vector = tbb::concurrent_vector<T, PolymorphicAllocator<T>>;
 
 //
 // We use STRONG_TYPEDEF to avoid things like adding chunk ids and value ids.

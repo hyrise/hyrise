@@ -16,7 +16,12 @@ namespace opossum {
 
 template <typename T>
 ValueColumn<T>::ValueColumn(bool nullable) {
-  if (nullable) _null_values = tbb::concurrent_vector<bool>();
+  if (nullable) _null_values = alloc_concurrent_vector<bool>();
+}
+
+template <typename T>
+ValueColumn<T>::ValueColumn(const PolymorphicAllocator<T>& alloc, bool nullable) : _values(alloc) {
+  if (nullable) _null_values = alloc_concurrent_vector<bool>(alloc);
 }
 
 template <typename T>

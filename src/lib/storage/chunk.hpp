@@ -54,6 +54,8 @@ class Chunk : private Noncopyable {
   // creates an empty chunk without mvcc columns
   Chunk();
   explicit Chunk(const bool has_mvcc_columns);
+  explicit Chunk(const PolymorphicAllocator<Chunk> &alloc);
+  explicit Chunk(const PolymorphicAllocator<Chunk> &alloc, const bool has_mvcc_columns);
 
   // we need to explicitly set the move constructor to default when
   // we overwrite the copy constructor
@@ -134,6 +136,7 @@ class Chunk : private Noncopyable {
   bool references_only_one_table() const;
 
  protected:
+  PolymorphicAllocator<Chunk> _alloc;
   alloc_concurrent_vector<std::shared_ptr<BaseColumn>> _columns;
   std::unique_ptr<MvccColumns> _mvcc_columns;
   alloc_vector<std::shared_ptr<BaseIndex>> _indices;
