@@ -319,9 +319,11 @@ template <typename ColumnType, typename AggregateType>
 struct AggregateFunctionBuilder<ColumnType, AggregateType, AggregateFunction::Min> {
   AggregateFunctor<ColumnType, AggregateType> get_aggregate_function() {
     return [](ColumnType new_value, optional<AggregateType> current_aggregate) {
-      return (!is_null(new_value) && (!current_aggregate || value_smaller(new_value, *current_aggregate)))
-                 ? new_value
-                 : *current_aggregate;
+      if (!current_aggregate || value_smaller(new_value, *current_aggregate)) {
+        // New minimum found. Set it if it's not null
+        return is_null(new_value) ? *current_aggregate : new_value;
+      }
+      return *current_aggregate;
     };
   }
 };
@@ -330,9 +332,11 @@ template <typename ColumnType, typename AggregateType>
 struct AggregateFunctionBuilder<ColumnType, AggregateType, AggregateFunction::Max> {
   AggregateFunctor<ColumnType, AggregateType> get_aggregate_function() {
     return [](ColumnType new_value, optional<AggregateType> current_aggregate) {
-      return (!is_null(new_value) && (!current_aggregate || value_greater(new_value, *current_aggregate)))
-                 ? new_value
-                 : *current_aggregate;
+      if (!current_aggregate || value_greater(new_value, *current_aggregate)) {
+        // New maximum found. Set it if it's not null
+        return is_null(new_value) ? *current_aggregate : new_value;
+      }
+      return *current_aggregate;
     };
   }
 };
@@ -341,6 +345,7 @@ template <typename ColumnType, typename AggregateType>
 struct AggregateFunctionBuilder<ColumnType, AggregateType, AggregateFunction::Sum> {
   AggregateFunctor<ColumnType, AggregateType> get_aggregate_function() {
     return [](ColumnType new_value, optional<AggregateType> current_aggregate) {
+      // add new value to sum if it's not null
       return new_value + (!current_aggregate || is_null(new_value) ? 0 : *current_aggregate);
     };
   }
@@ -350,6 +355,7 @@ template <typename ColumnType, typename AggregateType>
 struct AggregateFunctionBuilder<ColumnType, AggregateType, AggregateFunction::Avg> {
   AggregateFunctor<ColumnType, AggregateType> get_aggregate_function() {
     return [](ColumnType new_value, optional<AggregateType> current_aggregate) {
+      // add new value to sum if it's not null
       return new_value + (!current_aggregate || is_null(new_value) ? 0 : *current_aggregate);
     };
   }
