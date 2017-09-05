@@ -11,8 +11,6 @@
 #include <string>
 #include <vector>
 
-#include "table_scan_main_loop.hpp"
-
 #include "storage/dictionary_column.hpp"
 #include "storage/iterables/attribute_vector_iterable.hpp"
 #include "storage/iterables/constant_value_iterable.hpp"
@@ -41,15 +39,10 @@ void LikeTableScanImpl::handle_value_column(BaseColumn &base_column,
   auto left_iterable = ValueColumnIterable<std::string>{left_column};
   auto right_iterable = ConstantValueIterable<std::regex>{_regex};
 
-  static const auto regex_comparator = [](const std::string& str, const std::regex& regex) {
-    return std::regex_match(str, regex);
-  };
+  const auto regex_match = [this](const std::string &str) { return std::regex_match(str, _regex); };
 
   left_iterable.with_iterators(mapped_chunk_offsets.get(), [&](auto left_it, auto left_end) {
-    right_iterable.with_iterators([&](auto right_it, auto right_end) {
-      TableScanMainLoop scan_loop;
-      scan_loop(regex_comparator, left_it, left_end, right_it, chunk_id, matches_out);
-    });
+    _unary_scan(regex_match, left_it, left_end, chunk_id, matches_out);
   });
 }
 
@@ -71,31 +64,23 @@ void LikeTableScanImpl::handle_dictionary_column(BaseColumn &base_column,
   auto attribute_vector_iterable = AttributeVectorIterable{attribute_vector};
 
   if (match_count == dictionary_matches.size()) {
+    static const auto always_true = [](const auto &) { return true; };
+
     attribute_vector_iterable.with_iterators(mapped_chunk_offsets.get(), [&](auto left_it, auto left_end) {
-      for (; left_it != left_end; ++left_it) {
-        const auto left = *left_it;
-
-        if (left.is_null()) continue;
-
-        matches_out.push_back(RowID{chunk_id, left.chunk_offset()});
-      }
+      _unary_scan(always_true, left_it, left_end, chunk_id, matches_out);
     });
+
+    return;
   }
 
   if (match_count == 0u) {
     return;
   }
 
+  const auto dictionary_lookup = [&dictionary_matches](const ValueID &value) { return dictionary_matches[value]; };
+
   attribute_vector_iterable.with_iterators(mapped_chunk_offsets.get(), [&](auto left_it, auto left_end) {
-    for (; left_it != left_end; ++left_it) {
-      const auto left = *left_it;
-
-      if (left.is_null()) continue;
-
-      if (dictionary_matches[left.value()]) {
-        matches_out.push_back(RowID{chunk_id, left.chunk_offset()});
-      }
-    }
+    _unary_scan(dictionary_lookup, left_it, left_end, chunk_id, matches_out);
   });
 }
 

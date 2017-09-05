@@ -4,8 +4,6 @@
 #include <string>
 #include <type_traits>
 
-#include "table_scan_main_loop.hpp"
-
 #include "storage/chunk.hpp"
 #include "storage/iterables/create_iterable_from_column.hpp"
 #include "storage/table.hpp"
@@ -70,7 +68,7 @@ PosList ColumnComparisonTableScanImpl::scan_chunk(ChunkID chunk_id) {
         left_column_iterable.with_iterators([&](auto left_it, auto left_end) {
           right_column_iterable.with_iterators([&](auto right_it, auto right_end) {
             this->_with_operator(_scan_type, [&](auto comparator) {
-              TableScanMainLoop{}(comparator, left_it, left_end, right_it, chunk_id, matches_out);  // NOLINT
+              _binary_scan(comparator, left_it, left_end, right_it, chunk_id, matches_out);
             });
           });
         });

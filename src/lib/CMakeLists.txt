@@ -89,7 +89,6 @@ set(
     operators/table_scan/like_table_scan_impl.hpp
     operators/table_scan/single_column_table_scan_impl.cpp
     operators/table_scan/single_column_table_scan_impl.hpp
-    operators/table_scan/table_scan_main_loop.hpp
     operators/abstract_join_operator.cpp
     operators/abstract_join_operator.hpp
     operators/abstract_operator.cpp

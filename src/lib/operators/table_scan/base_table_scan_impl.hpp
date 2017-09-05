@@ -24,7 +24,7 @@ class BaseTableScanImpl {
 
  protected:
   template <typename Functor>
-  static void _with_operator(const ScanType scan_type, const Functor& func) {
+  static void _with_operator(const ScanType scan_type, const Functor &func) {
     switch (scan_type) {
       case ScanType::OpEquals:
         func(std::equal_to<void>{});
@@ -60,6 +60,42 @@ class BaseTableScanImpl {
         Fail("Unsupported operator.");
     }
   }
+
+  /**
+   * @defgroup The hot loops of the table scan
+   * @{
+   */
+
+  template <typename UnaryFunctor, typename LeftIterator>
+  void _unary_scan(const UnaryFunctor &func, LeftIterator left_it, LeftIterator left_end, const ChunkID chunk_id,
+                   PosList &matches_out) {
+    for (; left_it != left_end; ++left_it) {
+      const auto left = *left_it;
+
+      if (left.is_null()) continue;
+
+      if (func(left.value())) {
+        matches_out.push_back(RowID{chunk_id, left.chunk_offset()});
+      }
+    }
+  }
+
+  template <typename BinaryFunctor, typename LeftIterator, typename RightIterator>
+  void _binary_scan(const BinaryFunctor &func, LeftIterator left_it, LeftIterator left_end, RightIterator right_it,
+                    const ChunkID chunk_id, PosList &matches_out) {
+    for (; left_it != left_end; ++left_it, ++right_it) {
+      const auto left = *left_it;
+      const auto right = *right_it;
+
+      if (left.is_null() || right.is_null()) continue;
+
+      if (func(left.value(), right.value())) {
+        matches_out.push_back(RowID{chunk_id, left.chunk_offset()});
+      }
+    }
+  }
+
+  /**@}*/
 
  protected:
   const std::shared_ptr<const Table> _in_table;
