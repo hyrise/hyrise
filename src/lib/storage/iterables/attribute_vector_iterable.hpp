@@ -4,7 +4,7 @@
 #include <utility>
 #include <vector>
 
-#include "base_iterables.hpp"
+#include "iterables.hpp"
 #include "storage/base_attribute_vector.hpp"
 
 namespace opossum {

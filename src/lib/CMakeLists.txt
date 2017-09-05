@@ -238,7 +238,7 @@ set(
     storage/index/group_key/variable_length_key_store.cpp
     storage/index/group_key/variable_length_key_store.hpp
     storage/iterables/attribute_vector_iterable.hpp
-    storage/iterables/base_iterables.hpp
+    storage/iterables/iterables.hpp
     storage/iterables/base_iterators.hpp
     storage/iterables/chunk_offset_mapping.cpp
     storage/iterables/chunk_offset_mapping.hpp
