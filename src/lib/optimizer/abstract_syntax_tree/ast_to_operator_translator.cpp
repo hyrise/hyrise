@@ -79,9 +79,23 @@ std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::_translate_projection
 
 std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::_translate_sort_node(
     const std::shared_ptr<AbstractASTNode> &node) const {
-  const auto input_operator = translate_node(node->left_child());
-  auto sort_node = std::dynamic_pointer_cast<SortNode>(node);
-  return std::make_shared<Sort>(input_operator, sort_node->column_name(), sort_node->ascending());
+  const auto sort_node = std::dynamic_pointer_cast<SortNode>(node);
+  auto input_operator = translate_node(node->left_child());
+
+  /**
+   * Go through all the order descriptions and create a sort operator for each of them.
+   * Iterate in reverse because the sort operator does not support multiple columns, and instead relies on stable sort.
+   * We therefore sort by the n+1-th column before sorting by the n-th column.
+   */
+  std::shared_ptr<AbstractOperator> result_operator;
+  const auto &definitions = sort_node->order_by_definitions();
+  for (auto it = definitions.rbegin(); it != definitions.rend(); it++) {
+    const auto &definition = *it;
+    result_operator = std::make_shared<Sort>(input_operator, definition.column_name, definition.order_by_mode);
+    input_operator = result_operator;
+  }
+
+  return result_operator;
 }
 
 std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::_translate_join_node(

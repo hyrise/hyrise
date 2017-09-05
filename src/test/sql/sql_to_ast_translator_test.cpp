@@ -41,7 +41,7 @@ class SQLToASTTranslatorTest : public BaseTest {
     StorageManager::get().add_table("lineitem", lineitem);
   }
 
-  std::shared_ptr<AbstractASTNode> compile_query(const std::string &query) {
+  std::shared_ptr<AbstractASTNode> compile_query(const std::string& query) {
     hsql::SQLParserResult parse_result;
     hsql::SQLParser::parseSQLString(query, &parse_result);
 
@@ -178,20 +178,23 @@ TEST_F(SQLToASTTranslatorTest, SelectMultipleOrderBy) {
   const auto query = "SELECT * FROM table_a ORDER BY a DESC, b ASC;";
   auto result_node = compile_query(query);
 
-  // The first order by description is executed last (see sort operator for details).
-  auto sort_node_1 = std::dynamic_pointer_cast<SortNode>(result_node);
-  EXPECT_EQ(sort_node_1->type(), ASTNodeType::Sort);
-  EXPECT_EQ(sort_node_1->column_name(), "a");
-  EXPECT_FALSE(sort_node_1->ascending());
-  EXPECT_FALSE(sort_node_1->right_child());
+  auto sort_node = std::dynamic_pointer_cast<SortNode>(result_node);
+  EXPECT_EQ(sort_node->type(), ASTNodeType::Sort);
 
-  auto sort_node_2 = std::dynamic_pointer_cast<SortNode>(sort_node_1->left_child());
-  EXPECT_EQ(sort_node_2->type(), ASTNodeType::Sort);
-  EXPECT_EQ(sort_node_2->column_name(), "b");
-  EXPECT_TRUE(sort_node_2->ascending());
-  EXPECT_FALSE(sort_node_2->right_child());
-  // This node has an input node, but we don't care what kind it is in this test.
-  EXPECT_TRUE(sort_node_2->left_child());
+  const auto& order_by_definitions = sort_node->order_by_definitions();
+  EXPECT_EQ(order_by_definitions.size(), 2u);
+
+  const auto& definition_1 = order_by_definitions[0];
+  EXPECT_EQ(definition_1.column_name, "a");
+  EXPECT_EQ(definition_1.order_by_mode, OrderByMode::Descending);
+
+  const auto& definition_2 = order_by_definitions[1];
+  EXPECT_EQ(definition_2.column_name, "b");
+  EXPECT_EQ(definition_2.order_by_mode, OrderByMode::Ascending);
+
+  // The sort node has an input node, but we don't care what kind it is in this test.
+  EXPECT_TRUE(sort_node->left_child());
+  EXPECT_FALSE(sort_node->right_child());
 }
 
 TEST_F(SQLToASTTranslatorTest, SelectInnerJoin) {
