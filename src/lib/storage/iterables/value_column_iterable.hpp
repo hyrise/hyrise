@@ -34,8 +34,7 @@ class ValueColumnIterable : public IndexableIterable<ValueColumnIterable<T>> {
   template <typename Functor>
   void _on_with_iterators(const ChunkOffsetsList& mapped_chunk_offsets, const Functor& f) const {
     if (_column.is_nullable()) {
-      auto begin =
-          NullableIndexedIterator{_column.values(), _column.null_values(), mapped_chunk_offsets.cbegin()};
+      auto begin = NullableIndexedIterator{_column.values(), _column.null_values(), mapped_chunk_offsets.cbegin()};
       auto end = NullableIndexedIterator{_column.values(), _column.null_values(), mapped_chunk_offsets.cend()};
       f(begin, end);
     } else {

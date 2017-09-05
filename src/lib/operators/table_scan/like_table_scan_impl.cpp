@@ -57,8 +57,8 @@ void LikeTableScanImpl::handle_dictionary_column(BaseColumn &base_column,
   const auto &left_column = static_cast<const DictionaryColumn<std::string> &>(base_column);
 
   const auto result = _find_matches_in_dictionary(*left_column.dictionary());
-  const auto& match_count = result.first;
-  const auto& dictionary_matches = result.second;
+  const auto &match_count = result.first;
+  const auto &dictionary_matches = result.second;
 
   const auto &attribute_vector = *left_column.attribute_vector();
   auto attribute_vector_iterable = AttributeVectorIterable{attribute_vector};
@@ -84,11 +84,12 @@ void LikeTableScanImpl::handle_dictionary_column(BaseColumn &base_column,
   });
 }
 
-std::pair<size_t, std::vector<bool>> LikeTableScanImpl::_find_matches_in_dictionary(const std::vector<std::string> &dictionary) {
+std::pair<size_t, std::vector<bool>> LikeTableScanImpl::_find_matches_in_dictionary(
+    const std::vector<std::string> &dictionary) {
   auto result = std::pair<size_t, std::vector<bool>>{};
 
-  auto& count = result.first;
-  auto& dictionary_matches = result.second;
+  auto &count = result.first;
+  auto &dictionary_matches = result.second;
 
   count = 0u;
   dictionary_matches.reserve(dictionary.size());

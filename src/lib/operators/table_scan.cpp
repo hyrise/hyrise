@@ -211,10 +211,12 @@ std::shared_ptr<const Table> TableScan::_on_execute_between() {
 
   DebugAssert(static_cast<bool>(_right_value2), "Scan type BETWEEN requires a right_value2");
 
-  auto table_scan1 = std::make_shared<TableScan>(_input_left, _left_column_name, ScanType::OpGreaterThanEquals, _right_parameter);
+  auto table_scan1 =
+      std::make_shared<TableScan>(_input_left, _left_column_name, ScanType::OpGreaterThanEquals, _right_parameter);
   table_scan1->execute();
 
-  auto table_scan2 = std::make_shared<TableScan>(table_scan1, _left_column_name, ScanType::OpLessThanEquals, *_right_value2);
+  auto table_scan2 =
+      std::make_shared<TableScan>(table_scan1, _left_column_name, ScanType::OpLessThanEquals, *_right_value2);
   table_scan2->execute();
 
   return table_scan2->get_output();

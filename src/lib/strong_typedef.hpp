@@ -37,7 +37,7 @@
     bool operator==(const D& rhs) const { return t == rhs.t; }                                                    \
     bool operator<(const D& rhs) const { return t < rhs.t; }                                                      \
   };                                                                                                              \
-  }  /* NOLINT */                                                                                                 \
+  } /* NOLINT */                                                                                                  \
                                                                                                                   \
   namespace std {                                                                                                 \
   template <>                                                                                                     \

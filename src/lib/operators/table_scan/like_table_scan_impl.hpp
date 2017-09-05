@@ -4,8 +4,8 @@
 #include <memory>
 #include <regex>
 #include <string>
-#include <vector>
 #include <utility>
+#include <vector>
 
 #include "base_single_column_table_scan_impl.hpp"
 

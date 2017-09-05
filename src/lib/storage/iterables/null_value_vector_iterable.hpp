@@ -17,8 +17,7 @@ namespace opossum {
  */
 class NullValueVectorIterable : public IndexableIterable<NullValueVectorIterable> {
  public:
-  explicit NullValueVectorIterable(const tbb::concurrent_vector<bool>& null_values)
-      : _null_values{null_values} {}
+  explicit NullValueVectorIterable(const tbb::concurrent_vector<bool>& null_values) : _null_values{null_values} {}
 
   template <typename Functor>
   void _on_with_iterators(const Functor& f) const {

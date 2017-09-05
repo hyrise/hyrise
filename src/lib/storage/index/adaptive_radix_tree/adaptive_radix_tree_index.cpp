@@ -11,8 +11,8 @@
 
 #include "storage/base_attribute_vector.hpp"
 #include "storage/base_column.hpp"
-#include "storage/index/base_index.hpp"
 #include "storage/base_dictionary_column.hpp"
+#include "storage/index/base_index.hpp"
 
 #include "types.hpp"
 #include "utils/assert.hpp"

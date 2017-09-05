@@ -6,8 +6,8 @@
 #include "../base_test.hpp"
 #include "gtest/gtest.h"
 
-#include "../../lib/storage/storage_manager.hpp"
 #include "../../lib/storage/base_dictionary_column.hpp"
+#include "../../lib/storage/storage_manager.hpp"
 #include "../../lib/tasks/chunk_compression_task.hpp"
 
 namespace opossum {

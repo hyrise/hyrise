@@ -36,10 +36,10 @@ struct SumUpWithIt {
 
 struct SumUp {
   template <typename T>
-  void operator()(const T & value) const {
-      if (value.is_null()) return;
+  void operator()(const T& value) const {
+    if (value.is_null()) return;
 
-      _sum += value.value();
+    _sum += value.value();
   }
 
   uint32_t& _sum;

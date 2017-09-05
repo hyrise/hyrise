@@ -24,8 +24,7 @@ class DictionaryColumnIterable : public IndexableIterable<DictionaryColumnIterab
 
   template <typename Functor>
   void _on_with_iterators(const ChunkOffsetsList& mapped_chunk_offsets, const Functor& f) const {
-    auto begin =
-        IndexedIterator{*_column.dictionary(), *_column.attribute_vector(), mapped_chunk_offsets.cbegin()};
+    auto begin = IndexedIterator{*_column.dictionary(), *_column.attribute_vector(), mapped_chunk_offsets.cbegin()};
     auto end = IndexedIterator{*_column.dictionary(), *_column.attribute_vector(), mapped_chunk_offsets.cend()};
     f(begin, end);
   }
