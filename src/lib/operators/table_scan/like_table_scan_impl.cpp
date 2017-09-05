@@ -3,6 +3,7 @@
 #include <boost/algorithm/string/replace.hpp>
 
 #include <algorithm>
+#include <array>
 #include <map>
 #include <memory>
 #include <regex>
@@ -157,25 +158,19 @@ std::map<std::string, std::string> LikeTableScanImpl::_extract_character_ranges(
 }
 
 std::string LikeTableScanImpl::_sqllike_to_regex(std::string sqllike) {
-  boost::replace_all(sqllike, ".", "\\.");
-  boost::replace_all(sqllike, "^", "\\^");
-  boost::replace_all(sqllike, "$", "\\$");
-  boost::replace_all(sqllike, "+", "\\+");
-  boost::replace_all(sqllike, "?", "\\?");
-  boost::replace_all(sqllike, "(", "\\(");
-  boost::replace_all(sqllike, ")", "\\)");
-  boost::replace_all(sqllike, "{", "\\{");
-  boost::replace_all(sqllike, "}", "\\}");
-  boost::replace_all(sqllike, "\\", "\\\\");
-  boost::replace_all(sqllike, "|", "\\|");
-  boost::replace_all(sqllike, ".", "\\.");
-  boost::replace_all(sqllike, "*", "\\*");
+  constexpr auto replace_by = std::array<std::pair<const char *, const char *>, 15u>{{
+      {".", "\\."}, {"^", "\\^"}, {"$", "\\$"}, {"+", "\\+"}, {"?", "\\?"}, {"(", "\\("}, {")", "\\"}, {"{", "\\{"},
+      {"}", "\\}"}, {"\\", "\\\\"}, {"|", "\\|"}, {".", "\\."}, {"*", "\\*"}, {"%", ".*"}, {"_", "."}}};
+
+  for (const auto & pair : replace_by) {
+    boost::replace_all(sqllike, pair.first, pair.second);
+  }
+
   std::map<std::string, std::string> ranges = _extract_character_ranges(sqllike);  // Escapes [ and ] where necessary
-  boost::replace_all(sqllike, "%", ".*");
-  boost::replace_all(sqllike, "_", ".");
   for (auto &range : ranges) {
     boost::replace_all(sqllike, range.first, range.second);
   }
+
   return "^" + sqllike + "$";
 }
 
