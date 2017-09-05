@@ -179,7 +179,7 @@ class OperatorsTableScanTest : public BaseTest {
       for (auto chunk_offset = ChunkOffset{0u}; chunk_offset < chunk.size(); ++chunk_offset) {
         const auto& column = *chunk.get_column(column_id);
 
-        auto search = std::find(expected.begin, expected.end(), column[chunk_offset]);
+        auto search = std::find(expected.begin(), expected.end(), column[chunk_offset]);
 
         ASSERT_TRUE(search != expected.end());
         expected.erase(search);
