@@ -59,7 +59,7 @@ class SQLToResultTest : public BaseTest, public ::testing::WithParamInterface<SQ
 // Generic test case that will be called with the parameters listed below.
 // Compiles a query, optimizes, and executes it.
 // Checks the result against a table in a file.
-TEST_P(SQLToResultTest, DISABLED_SQLQueryTest) {
+TEST_P(SQLToResultTest, SQLQueryTest) {
   SQLTestParam params = GetParam();
 
   auto expected_result = load_table(params.result_table_path, 2);
