@@ -19,7 +19,7 @@ class Table;
 
 class TableScan : public AbstractReadOnlyOperator {
  public:
-  TableScan(const std::shared_ptr<AbstractOperator> in, const std::string& left_column_name, const ScanType scan_type,
+  TableScan(const std::shared_ptr<const AbstractOperator> in, const std::string& left_column_name, const ScanType scan_type,
             const AllParameterVariant right_parameter, const optional<AllTypeVariant> right_value2 = nullopt);
 
   ~TableScan();
@@ -40,6 +40,9 @@ class TableScan : public AbstractReadOnlyOperator {
 
   void _init_scan();
   void _init_output_table();
+
+  // TODO(anyone): This is only a very temporary solution! Whoever reads this first must replace it.
+  std::shared_ptr<const Table> _on_execute_between();
 
  private:
   const std::string _left_column_name;

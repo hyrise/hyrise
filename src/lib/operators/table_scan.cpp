@@ -27,7 +27,7 @@
 
 namespace opossum {
 
-TableScan::TableScan(const std::shared_ptr<AbstractOperator> in, const std::string &left_column_name,
+TableScan::TableScan(const std::shared_ptr<const AbstractOperator> in, const std::string &left_column_name,
                      const ScanType scan_type, const AllParameterVariant right_parameter,
                      const optional<AllTypeVariant> right_value2)
     : AbstractReadOnlyOperator{in},
@@ -66,6 +66,10 @@ std::shared_ptr<AbstractOperator> TableScan::recreate(const std::vector<AllParam
 }
 
 std::shared_ptr<const Table> TableScan::on_execute() {
+  if (auto between_output_table = _on_execute_between()) {
+    return between_output_table;
+  }
+
   _in_table = input_table_left();
 
   _init_scan();
@@ -198,6 +202,22 @@ void TableScan::_init_output_table() {
   for (ColumnID column_id{0}; column_id < _in_table->col_count(); ++column_id) {
     _output_table->add_column_definition(_in_table->column_name(column_id), _in_table->column_type(column_id));
   }
+}
+
+std::shared_ptr<const Table> TableScan::_on_execute_between() {
+  if (_scan_type != ScanType::OpBetween) {
+    return nullptr;
+  }
+
+  DebugAssert(static_cast<bool>(_right_value2), "Scan type BETWEEN requires a right_value2");
+
+  auto table_scan1 = std::make_shared<TableScan>(_input_left, _left_column_name, ScanType::OpGreaterThanEquals, _right_parameter);
+  table_scan1->execute();
+
+  auto table_scan2 = std::make_shared<TableScan>(table_scan1, _left_column_name, ScanType::OpLessThanEquals, *_right_value2);
+  table_scan2->execute();
+
+  return table_scan2->get_output();
 }
 
 }  // namespace opossum
