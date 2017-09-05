@@ -10,6 +10,7 @@
 #include "optimizer/abstract_syntax_tree/abstract_ast_node.hpp"
 #include "optimizer/abstract_syntax_tree/aggregate_node.hpp"
 #include "optimizer/abstract_syntax_tree/join_node.hpp"
+#include "optimizer/abstract_syntax_tree/limit_node.hpp"
 #include "optimizer/abstract_syntax_tree/predicate_node.hpp"
 #include "optimizer/abstract_syntax_tree/projection_node.hpp"
 #include "optimizer/abstract_syntax_tree/sort_node.hpp"
@@ -114,6 +115,7 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_select(const hsq
   // 4. HAVING clause
   // 5. SELECT clause
   // 6. ORDER BY clause
+  // 7. LIMIT clause
 
   auto current_result_node = _translate_table_ref(*select.fromTable);
 
@@ -145,12 +147,14 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_select(const hsq
     current_result_node = _translate_projection(*select.selectList, current_result_node);
   }
 
-  // Translate ORDER BY.
   if (select.order != nullptr) {
     current_result_node = _translate_order_by(*select.order, current_result_node);
   }
 
-  // TODO(torpedro): Translate LIMIT/TOP.
+  // TODO(anybody): Translate TOP.
+  if (select.limit != nullptr) {
+    current_result_node = _translate_limit(*select.limit, current_result_node);
+  }
 
   return current_result_node;
 }
@@ -483,6 +487,13 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_order_by(
   sort_node->set_left_child(input_node);
 
   return sort_node;
+}
+
+std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_limit(
+    const hsql::LimitDescription& limit, const std::shared_ptr<AbstractASTNode>& input_node) {
+  auto limit_node = std::make_shared<LimitNode>(limit.limit);
+  limit_node->set_left_child(input_node);
+  return limit_node;
 }
 
 }  // namespace opossum
