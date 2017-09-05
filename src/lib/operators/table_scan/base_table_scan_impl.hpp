@@ -20,7 +20,7 @@ class BaseTableScanImpl {
 
   virtual ~BaseTableScanImpl() = default;
 
-  virtual PosList scan_chunk(const ChunkID& chunk_id) = 0;
+  virtual PosList scan_chunk(ChunkID chunk_id) = 0;
 
  protected:
   template <typename Functor>

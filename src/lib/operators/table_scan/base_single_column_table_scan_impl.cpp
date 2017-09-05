@@ -18,7 +18,7 @@ BaseSingleColumnTableScanImpl::BaseSingleColumnTableScanImpl(std::shared_ptr<con
                                                              const bool skip_null_row_ids)
     : BaseTableScanImpl{in_table, left_column_id, scan_type}, _skip_null_row_ids{skip_null_row_ids} {}
 
-PosList BaseSingleColumnTableScanImpl::scan_chunk(const ChunkID &chunk_id) {
+PosList BaseSingleColumnTableScanImpl::scan_chunk(ChunkID chunk_id) {
   const auto &chunk = _in_table->get_chunk(chunk_id);
   const auto left_column = chunk.get_column(_left_column_id);
 
