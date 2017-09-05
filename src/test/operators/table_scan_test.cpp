@@ -16,7 +16,7 @@
 #include "../../lib/operators/table_wrapper.hpp"
 #include "../../lib/storage/dictionary_compression.hpp"
 #include "../../lib/storage/reference_column.hpp"
-#include "../../lib/storage/table.hpp"c
+#include "../../lib/storage/table.hpp"
 #include "../../lib/types.hpp"
 
 namespace opossum {
