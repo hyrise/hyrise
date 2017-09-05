@@ -10,6 +10,7 @@
 #include "optimizer/abstract_syntax_tree/abstract_ast_node.hpp"
 #include "optimizer/abstract_syntax_tree/aggregate_node.hpp"
 #include "optimizer/abstract_syntax_tree/join_node.hpp"
+#include "optimizer/abstract_syntax_tree/limit_node.hpp"
 #include "optimizer/abstract_syntax_tree/predicate_node.hpp"
 #include "optimizer/abstract_syntax_tree/projection_node.hpp"
 #include "optimizer/abstract_syntax_tree/sort_node.hpp"
@@ -214,6 +215,16 @@ TEST_F(SQLToASTTranslatorTest, SelectInnerJoin) {
   EXPECT_EQ(join_node->prefix_right(), "b.");
   EXPECT_EQ(join_node->join_column_names()->first, "a");
   EXPECT_EQ(join_node->join_column_names()->second, "a");
+}
+
+TEST_F(SQLToASTTranslatorTest, SelectLimit) {
+  const auto query = "SELECT * FROM table_a LIMIT 2;";
+  auto result_node = compile_query(query);
+
+  EXPECT_EQ(result_node->type(), ASTNodeType::Limit);
+  auto limit_node = std::dynamic_pointer_cast<LimitNode>(result_node);
+  EXPECT_EQ(limit_node->num_rows(), 2u);
+  EXPECT_EQ(limit_node->left_child()->type(), ASTNodeType::Projection);
 }
 
 }  // namespace opossum
