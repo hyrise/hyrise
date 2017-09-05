@@ -20,6 +20,17 @@ struct TwoColumnSelectivityResult;
  * so that the corresponding table statistics functions can delegate all predictions to column statistics.
  * These functions return a column selectivity result object combining the selectivity of the operator
  * and if changed the newly created column statistics.
+ *
+ * The selectivities are calculated with the min, max, distinct count and non-null value of the column ratio in the
+ * derived class. Only the non-null value ratio is stored in the base class to allow access and manipulation of it by
+ * table statistics.
+ * A predicate on a null value will never evaluate to true unless the column is explicitly checked for NULL values
+ * (col_a IS NULL) which is currently not supported.
+ * To start with, null values can be ignored during the calculation of the selectivity. The non-null value ratio can be
+ * interpreted as a second selectivity.
+ * Therefore, the result selectivity is the product of the selectivity of the predicate and the non-null value ratio.
+ * The returned column statistics will always have a non-null value ratio of 1 as currently any predicate removes null
+ * values.
  */
 class BaseColumnStatistics {
  public:
@@ -76,9 +87,8 @@ class BaseColumnStatistics {
   float null_value_ratio() const { return 1.f - _non_null_value_ratio; }
 
  protected:
-  /**
-   * Column statistics uses the non-null value ratio for calculation of selectivity.
-   */
+  // Column statistics uses the non-null value ratio for calculation of selectivity.
+  // Table statistics uses the null value ratio when calculation join statistics.
   float _non_null_value_ratio;
 
   /**

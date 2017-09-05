@@ -25,8 +25,8 @@ ColumnStatistics<ColumnType>::ColumnStatistics(const ColumnID column_id, const s
 
 template <typename ColumnType>
 ColumnStatistics<ColumnType>::ColumnStatistics(const ColumnID column_id, float distinct_count, const ColumnType min,
-                                               const ColumnType max, const float null_value_ratio)
-    : BaseColumnStatistics(null_value_ratio),
+                                               const ColumnType max, const float non_null_value_ratio)
+    : BaseColumnStatistics(non_null_value_ratio),
       _column_id(column_id),
       _table(std::weak_ptr<Table>()),
       _distinct_count(distinct_count),

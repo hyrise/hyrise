@@ -24,10 +24,16 @@ class Table;
  * The initial table statistics is available via function table_statistics() from the corresponding table.
  *
  * TableStatistics will eventually implement a function for each operator, currently supporting only predicates
- * (via predicate_statistics()) from which the expected row count of the corresponding output table can be accessed.
+ * (via predicate_statistics()) and joins (via join_statistics()) from which the expected row count of the corresponding
+ * output table can be accessed.
  *
  * The statistics component assumes a uniform value distribution in columns. If values for predictions are missing
  * (e.g. placeholders in prepared statements), default selectivity values from below are used.
+ * The null value support within statistics component is currently limited. Null value information is stored for every
+ * column. This information is used wherever needed (e.g. in predicates) and also updated (e.g. in outer joins).
+ * However, since the table scan currently does not support null values, this component cannot compute the null value
+ * numbers of a column of the corresponding tables. So currently, statistics component only knows of null values
+ * which were introduced through outer joins.
  *
  * TableStatistics store column statistics as BaseColumnStatistics, which are instances of
  * ColumnStatistics<ColumnType>
@@ -61,13 +67,18 @@ class TableStatistics : public std::enable_shared_from_this<TableStatistics> {
                                                                 const optional<AllTypeVariant> &value2 = nullopt);
 
   /**
-   * Get table statistics for any join mode.
+   * Get table statistics for a cross join. Natural joins are not supported due to usage column ids.
    */
-  virtual std::shared_ptr<TableStatistics> join_statistics(
-      const std::shared_ptr<TableStatistics> &right_table_statistics, const JoinMode mode);
-  virtual std::shared_ptr<TableStatistics> join_statistics(
-      const std::shared_ptr<TableStatistics> &right_table_statistics, const JoinMode mode,
-      const std::pair<ColumnID, ColumnID> column_ids, const ScanType scan_type);
+  virtual std::shared_ptr<TableStatistics> join_statistics(const std::shared_ptr<TableStatistics> &right_table_stats,
+                                                           const JoinMode mode);
+
+  /**
+   * Get table statistics for joins with two column predicate.
+   */
+  virtual std::shared_ptr<TableStatistics> join_statistics(const std::shared_ptr<TableStatistics> &right_table_stats,
+                                                           const JoinMode mode,
+                                                           const std::pair<ColumnID, ColumnID> column_ids,
+                                                           const ScanType scan_type);
 
  protected:
   std::shared_ptr<BaseColumnStatistics> column_statistics(const ColumnID column_id);

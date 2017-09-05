@@ -30,13 +30,13 @@ class ColumnStatistics : public BaseColumnStatistics {
   ColumnStatistics(const ColumnID column_id, const std::weak_ptr<Table> table);
   /**
    * Create a new column statistics object from given parameters.
-   * Distinct count, min and max are set during the creation.
+   * Distinct count, min and max are set during the creation. Non-null value ratio can be optionally set.
    * Therefore, _table is not set as it is only used to calculate min, max and distinct_count.
    * This constructor is used by column statistics when returning a new column statistics from estimate selectivity
    * functions.
    */
   ColumnStatistics(const ColumnID column_id, const float distinct_count, const ColumnType min, const ColumnType max,
-                   const float _non_null_value_ratio = 1.f);
+                   const float non_null_value_ratio = 1.f);
   ~ColumnStatistics() override = default;
 
   ColumnSelectivityResult estimate_selectivity_for_predicate(const ScanType scan_type, const AllTypeVariant &value,
