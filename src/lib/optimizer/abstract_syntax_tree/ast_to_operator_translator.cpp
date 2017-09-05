@@ -8,6 +8,7 @@
 #include "operators/aggregate.hpp"
 #include "operators/get_table.hpp"
 #include "operators/join_nested_loop_a.hpp"
+#include "operators/limit.hpp"
 #include "operators/product.hpp"
 #include "operators/projection.hpp"
 #include "operators/sort.hpp"
@@ -15,6 +16,7 @@
 #include "optimizer/abstract_syntax_tree/abstract_ast_node.hpp"
 #include "optimizer/abstract_syntax_tree/aggregate_node.hpp"
 #include "optimizer/abstract_syntax_tree/join_node.hpp"
+#include "optimizer/abstract_syntax_tree/limit_node.hpp"
 #include "optimizer/abstract_syntax_tree/predicate_node.hpp"
 #include "optimizer/abstract_syntax_tree/projection_node.hpp"
 #include "optimizer/abstract_syntax_tree/sort_node.hpp"
@@ -47,6 +49,8 @@ ASTToOperatorTranslator::ASTToOperatorTranslator() {
       std::bind(&ASTToOperatorTranslator::_translate_join_node, this, std::placeholders::_1);
   _operator_factory[ASTNodeType::Aggregate] =
       std::bind(&ASTToOperatorTranslator::_translate_aggregate_node, this, std::placeholders::_1);
+  _operator_factory[ASTNodeType::Limit] =
+      std::bind(&ASTToOperatorTranslator::_translate_limit_node, this, std::placeholders::_1);
 }
 
 std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::translate_node(
@@ -205,6 +209,13 @@ std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::_translate_aggregate_
   }
 
   return std::make_shared<Aggregate>(aggregate_input_operator, aggregate_definitions, groupby_columns);
+}
+
+std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::_translate_limit_node(
+    const std::shared_ptr<AbstractASTNode> &node) const {
+  const auto input_operator = translate_node(node->left_child());
+  auto limit_node = std::dynamic_pointer_cast<LimitNode>(node);
+  return std::make_shared<Limit>(input_operator, limit_node->num_rows());
 }
 
 }  // namespace opossum

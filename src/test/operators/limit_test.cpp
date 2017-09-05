@@ -7,10 +7,10 @@
 #include "../base_test.hpp"
 #include "gtest/gtest.h"
 
-#include "../../lib/operators/limit.hpp"
-#include "../../lib/operators/table_scan.hpp"
-#include "../../lib/operators/table_wrapper.hpp"
-#include "../../lib/types.hpp"
+#include "operators/limit.hpp"
+#include "operators/table_scan.hpp"
+#include "operators/table_wrapper.hpp"
+#include "types.hpp"
 
 namespace opossum {
 

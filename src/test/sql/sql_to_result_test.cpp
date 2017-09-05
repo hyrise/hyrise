@@ -1,4 +1,3 @@
-
 #include <memory>
 #include <string>
 #include <tuple>
@@ -38,6 +37,7 @@ class SQLToResultTest : public BaseTest, public ::testing::WithParamInterface<SQ
     StorageManager::get().add_table("int_float2", load_table("src/test/tables/int_float2.tbl", 2));
     StorageManager::get().add_table("int_float4", load_table("src/test/tables/int_float4.tbl", 2));
     StorageManager::get().add_table("int_string2", load_table("src/test/tables/int_string2.tbl", 2));
+    StorageManager::get().add_table("int_int3", load_table("src/test/tables/int_int3.tbl", 3));
     StorageManager::get().add_table("groupby_int_1gb_1agg",
                                     load_table("src/test/tables/aggregateoperator/groupby_int_1gb_1agg/input.tbl", 2));
     StorageManager::get().add_table("groupby_int_1gb_2agg",
@@ -105,6 +105,9 @@ const SQLTestParam test_queries[] = {
     {"SELECT * FROM int_float4 ORDER BY a, b;", "src/test/tables/int_float2_sorted.tbl", OrderSensitivity::Sensitive},
     {"SELECT a FROM (SELECT a, b FROM int_float WHERE a > 1 ORDER BY b) WHERE a > 0 ORDER BY a;",
      "src/test/tables/int.tbl", OrderSensitivity::Sensitive},
+
+    // LIMIT
+    {"SELECT * FROM int_int3 LIMIT 4;", "src/test/tables/int_int3_limit_4.tbl"},
 
     // JOIN
     {R"(SELECT "left".a, "left".b, "right".a, "right".b
