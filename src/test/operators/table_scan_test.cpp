@@ -15,7 +15,7 @@
 #include "../../lib/operators/table_wrapper.hpp"
 #include "../../lib/storage/dictionary_compression.hpp"
 #include "../../lib/storage/reference_column.hpp"
-#include "../../lib/storage/table.hpp"
+#include "../../lib/storage/table.hpp"c
 #include "../../lib/types.hpp"
 
 namespace opossum {
@@ -173,7 +173,7 @@ class OperatorsTableScanTest : public BaseTest {
 
   void ASSERT_COLUMN_EQ(std::shared_ptr<const Table> table, const ColumnID& column_id,
                         const std::vector<AllTypeVariant>& expected) {
-    auto expected_multiset = std::multiset<AllTypeVariant>{expected.cbegin(), expected.cend()};
+    auto expected_multiset = std::multiset<AllTypeVariant>{expected.begin(), expected.end()};
 
     for (auto chunk_id = ChunkID{0u}; chunk_id < table->chunk_count(); ++chunk_id) {
       const auto& chunk = table->get_chunk(chunk_id);
