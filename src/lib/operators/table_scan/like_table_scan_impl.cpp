@@ -1,5 +1,7 @@
 #include "like_table_scan_impl.hpp"
 
+#include <boost/algorithm/string/replace.hpp>
+
 #include <algorithm>
 #include <map>
 #include <memory>
@@ -107,16 +109,6 @@ std::vector<bool> LikeTableScanImpl::_find_matches_in_dictionary(const std::vect
   return dictionary_matches;
 }
 
-std::string &LikeTableScanImpl::_replace_all(std::string &str, const std::string &old_value,
-                                             const std::string &new_value) {
-  std::string::size_type pos = 0;
-  while ((pos = str.find(old_value, pos)) != std::string::npos) {
-    str.replace(pos, old_value.size(), new_value);
-    pos += new_value.size() - old_value.size() + 1;
-  }
-  return str;
-}
-
 std::map<std::string, std::string> LikeTableScanImpl::_extract_character_ranges(std::string &str) {
   std::map<std::string, std::string> ranges;
 
@@ -133,8 +125,8 @@ std::map<std::string, std::string> LikeTableScanImpl::_extract_character_ranges(
     rangeID++;
     startPos += ss.str().size();
 
-    _replace_all(chars, "[", "\\[");
-    _replace_all(chars, "]", "\\]");
+    boost::replace_all(chars, "[", "\\[");
+    boost::replace_all(chars, "]", "\\]");
     ranges[ss.str()] = "[" + chars + "]";
   }
 
@@ -165,24 +157,24 @@ std::map<std::string, std::string> LikeTableScanImpl::_extract_character_ranges(
 }
 
 std::string LikeTableScanImpl::_sqllike_to_regex(std::string sqllike) {
-  _replace_all(sqllike, ".", "\\.");
-  _replace_all(sqllike, "^", "\\^");
-  _replace_all(sqllike, "$", "\\$");
-  _replace_all(sqllike, "+", "\\+");
-  _replace_all(sqllike, "?", "\\?");
-  _replace_all(sqllike, "(", "\\(");
-  _replace_all(sqllike, ")", "\\)");
-  _replace_all(sqllike, "{", "\\{");
-  _replace_all(sqllike, "}", "\\}");
-  _replace_all(sqllike, "\\", "\\\\");
-  _replace_all(sqllike, "|", "\\|");
-  _replace_all(sqllike, ".", "\\.");
-  _replace_all(sqllike, "*", "\\*");
+  boost::replace_all(sqllike, ".", "\\.");
+  boost::replace_all(sqllike, "^", "\\^");
+  boost::replace_all(sqllike, "$", "\\$");
+  boost::replace_all(sqllike, "+", "\\+");
+  boost::replace_all(sqllike, "?", "\\?");
+  boost::replace_all(sqllike, "(", "\\(");
+  boost::replace_all(sqllike, ")", "\\)");
+  boost::replace_all(sqllike, "{", "\\{");
+  boost::replace_all(sqllike, "}", "\\}");
+  boost::replace_all(sqllike, "\\", "\\\\");
+  boost::replace_all(sqllike, "|", "\\|");
+  boost::replace_all(sqllike, ".", "\\.");
+  boost::replace_all(sqllike, "*", "\\*");
   std::map<std::string, std::string> ranges = _extract_character_ranges(sqllike);  // Escapes [ and ] where necessary
-  _replace_all(sqllike, "%", ".*");
-  _replace_all(sqllike, "_", ".");
+  boost::replace_all(sqllike, "%", ".*");
+  boost::replace_all(sqllike, "_", ".");
   for (auto &range : ranges) {
-    _replace_all(sqllike, range.first, range.second);
+    boost::replace_all(sqllike, range.first, range.second);
   }
   return "^" + sqllike + "$";
 }

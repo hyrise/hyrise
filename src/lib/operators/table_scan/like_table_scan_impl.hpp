@@ -48,8 +48,6 @@ class LikeTableScanImpl : public BaseSingleColumnTableScanImpl {
    * @{
    */
 
-  static std::string &_replace_all(std::string &str, const std::string &old_value, const std::string &new_value);
-
   static std::map<std::string, std::string> _extract_character_ranges(std::string &str);
 
   static std::string _sqllike_to_regex(std::string sqllike);
