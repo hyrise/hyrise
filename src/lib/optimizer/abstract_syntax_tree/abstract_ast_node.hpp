@@ -13,7 +13,7 @@ struct ColumnID;
 class Expression;
 class TableStatistics;
 
-enum class ASTNodeType { Aggregate, Join, Predicate, Projection, Sort, StoredTable };
+enum class ASTNodeType { Aggregate, Join, Limit, Predicate, Projection, Sort, StoredTable };
 
 struct ColumnIdentifierName {
   std::string column_name;
@@ -54,15 +54,18 @@ class AbstractASTNode : public std::enable_shared_from_this<AbstractASTNode> {
       const std::shared_ptr<AbstractASTNode> &other_node) const;
 
   virtual const std::vector<std::string> &output_column_names() const;
-  // TODO(mp): BLOCKING - docs to mention that this is for testing only
+
+  // This function is public for testing purposes only, otherwise should only be used internally
   virtual const std::vector<ColumnID> &output_column_id_to_input_column_id() const;
-  size_t num_output_columns() const;
+
+  size_t output_col_count() const;
 
   // @{
   /**
-   * AbstractASTNode::find_column_id_for_column_identifier() looks for the @param column_identifier_name in the columns
+   * AbstractASTNode::find_column_id_by_column_identifier_name() looks for the @param column_identifier_name in the
+   * columns
    * this node outputs. If it can find it, it will be returned, otherwise nullopt is returned.
-   * AbstractASTNode::get_column_id_for_column_identifier() is more strict and will fail, if the
+   * AbstractASTNode::get_column_id_by_column_identifier_name() is more strict and will fail, if the
    * @param column_identifier_name cannot be found.
    *
    * If a node outputs a column "x" but ALIASes it as, say, "y", these will only find
@@ -71,8 +74,8 @@ class AbstractASTNode : public std::enable_shared_from_this<AbstractASTNode> {
    *
    * NOTE: These functions will possibly result in a full recursive traversal of the ancestors of this node.
    */
-  ColumnID get_column_id_for_column_identifier_name(const ColumnIdentifierName &column_identifier_name) const;
-  virtual optional<ColumnID> find_column_id_for_column_identifier_name(
+  ColumnID get_column_id_by_column_identifier_name(const ColumnIdentifierName &column_identifier_name) const;
+  virtual optional<ColumnID> find_column_id_by_column_identifier_name(
       const ColumnIdentifierName &column_identifier_name) const;
   // @}
 
@@ -83,10 +86,11 @@ class AbstractASTNode : public std::enable_shared_from_this<AbstractASTNode> {
    * @param table_name
    * @return
    */
-  virtual bool manages_table(const std::string &table_name) const;
+  virtual bool knows_table(const std::string &table_name) const;
 
   /**
-   * Returns all ColumnIDs of this node that belong to a table.
+   * Returns all ColumnIDs of this node that belong to a table. Used for resolving wildcards in queries like
+   * `SELECT T1.*, T2.a FROM T1, T2`
    * @param table_name can be an alias.
    *
    * @param table_name

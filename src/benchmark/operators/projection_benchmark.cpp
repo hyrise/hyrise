@@ -18,7 +18,9 @@ class OperatorsProjectionBenchmark : public BenchmarkBasicFixture {
   void SetUp(::benchmark::State& state) override {
     BenchmarkBasicFixture::SetUp(state);
     _column_type = state.range(1);
-    _table_ref = std::make_shared<TableScan>(_table_wrapper_a, ColumnID{0}, ScanType::OpGreaterThanEquals, 0);  // all
+
+    _table_ref =
+        std::make_shared<TableScan>(_table_wrapper_a, ColumnID{0} /* "a" */, ScanType::OpGreaterThanEquals, 0);  // all
     _table_ref->execute();
 
     _tables.emplace_back(_table_wrapper_a);  // 0
@@ -34,7 +36,8 @@ class OperatorsProjectionBenchmark : public BenchmarkBasicFixture {
 
 BENCHMARK_DEFINE_F(OperatorsProjectionBenchmark, BM_ProjectionSimple)(benchmark::State& state) {
   clear_cache();
-  Projection::ColumnExpressions expressions = {Expression::create_column_identifier(ColumnID{0})};
+
+  Projection::ColumnExpressions expressions = {Expression::create_column_identifier(ColumnID{0} /* "a" */)};
   auto warm_up = std::make_shared<Projection>(_tables[_column_type], expressions);
   warm_up->execute();
   while (state.KeepRunning()) {
@@ -45,6 +48,7 @@ BENCHMARK_DEFINE_F(OperatorsProjectionBenchmark, BM_ProjectionSimple)(benchmark:
 
 BENCHMARK_DEFINE_F(OperatorsProjectionBenchmark, BM_ProjectionVariableTerm)(benchmark::State& state) {
   clear_cache();
+  // "a" + "b"
   Projection::ColumnExpressions expressions = {
       Expression::create_binary_operator(ExpressionType::Addition, Expression::create_column_identifier(ColumnID{0}),
                                          Expression::create_column_identifier(ColumnID{1}))};
@@ -58,6 +62,8 @@ BENCHMARK_DEFINE_F(OperatorsProjectionBenchmark, BM_ProjectionVariableTerm)(benc
 
 BENCHMARK_DEFINE_F(OperatorsProjectionBenchmark, BM_ProjectionConstantTerm)(benchmark::State& state) {
   clear_cache();
+
+  // "a" + 5
   Projection::ColumnExpressions expressions = {Expression::create_binary_operator(
       ExpressionType::Addition, Expression::create_column_identifier(ColumnID{0}), Expression::create_literal(5))};
   auto warm_up = std::make_shared<Projection>(_tables[_column_type], expressions);

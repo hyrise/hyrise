@@ -9,12 +9,14 @@
 #include "operators/aggregate.hpp"
 #include "operators/get_table.hpp"
 #include "operators/join_nested_loop_a.hpp"
+#include "operators/limit.hpp"
 #include "operators/projection.hpp"
 #include "operators/sort.hpp"
 #include "operators/table_scan.hpp"
 #include "optimizer/abstract_syntax_tree/aggregate_node.hpp"
 #include "optimizer/abstract_syntax_tree/ast_to_operator_translator.hpp"
 #include "optimizer/abstract_syntax_tree/join_node.hpp"
+#include "optimizer/abstract_syntax_tree/limit_node.hpp"
 #include "optimizer/abstract_syntax_tree/predicate_node.hpp"
 #include "optimizer/abstract_syntax_tree/projection_node.hpp"
 #include "optimizer/abstract_syntax_tree/sort_node.hpp"
@@ -89,14 +91,14 @@ TEST_F(ASTToOperatorTranslatorTest, ProjectionNode) {
 
 TEST_F(ASTToOperatorTranslatorTest, SortNode) {
   const auto stored_table_node = std::make_shared<StoredTableNode>("table_int_float");
-  auto sort_node = std::make_shared<SortNode>(ColumnID{0}, true);
+  auto sort_node = std::make_shared<SortNode>(std::vector<OrderByDefinition>{{ColumnID{0}, OrderByMode::Ascending}});
   sort_node->set_left_child(stored_table_node);
   const auto op = ASTToOperatorTranslator::get().translate_node(sort_node);
 
   const auto sort_op = std::dynamic_pointer_cast<Sort>(op);
   ASSERT_TRUE(sort_op);
   EXPECT_EQ(sort_op->column_id(), ColumnID{0});
-  EXPECT_EQ(sort_op->ascending(), true);
+  EXPECT_EQ(sort_op->order_by_mode(), OrderByMode::Ascending);
 }
 
 TEST_F(ASTToOperatorTranslatorTest, JoinNode) {
@@ -118,8 +120,8 @@ TEST_F(ASTToOperatorTranslatorTest, JoinNode) {
 TEST_F(ASTToOperatorTranslatorTest, AggregateNodeNoArithmetics) {
   const auto stored_table_node = std::make_shared<StoredTableNode>("table_int_float");
 
-  auto sum_expression =
-    Expression::create_function("SUM", {Expression::create_column_identifier(ColumnID{0})}, {"sum_of_a"});
+  auto sum_expression = Expression::create_aggregate_function(
+      AggregateFunction::Sum, {Expression::create_column_identifier(ColumnID{0})}, {"sum_of_a"});
 
   auto aggregate_node = std::make_shared<AggregateNode>(std::vector<std::shared_ptr<Expression>>{sum_expression},
                                                         std::vector<ColumnID>{});
@@ -151,7 +153,8 @@ TEST_F(ASTToOperatorTranslatorTest, AggregateNodeWithArithmetics) {
   // TODO(tim): Projection cannot handle expression `$a + $b`
   // because it is not able to handle columns with different data types.
   // Create issue with failing test.
-  auto sum_expression = Expression::create_function("SUM", {expr_multiplication}, {"sum_of_b_times_two"});
+  auto sum_expression =
+      Expression::create_aggregate_function(AggregateFunction::Sum, {expr_multiplication}, {"sum_of_b_times_two"});
   auto aggregate_node = std::make_shared<AggregateNode>(std::vector<std::shared_ptr<Expression>>{sum_expression},
                                                         std::vector<ColumnID>{ColumnID{0}});
   aggregate_node->set_left_child(stored_table_node);
@@ -226,6 +229,19 @@ TEST_F(ASTToOperatorTranslatorTest, MultipleNodesHierarchy) {
   const auto get_table_op_right = std::dynamic_pointer_cast<const GetTable>(predicate_op_right->input_left());
   ASSERT_TRUE(get_table_op_right);
   EXPECT_EQ(get_table_op_right->table_name(), "table_int_float2");
+}
+
+TEST_F(ASTToOperatorTranslatorTest, LimitNode) {
+  const auto stored_table_node = std::make_shared<StoredTableNode>("table_int_float");
+
+  const auto num_rows = 2u;
+  auto limit_node = std::make_shared<LimitNode>(num_rows);
+  limit_node->set_left_child(stored_table_node);
+
+  const auto op = ASTToOperatorTranslator::get().translate_node(limit_node);
+  const auto limit_op = std::dynamic_pointer_cast<Limit>(op);
+  ASSERT_TRUE(limit_op);
+  EXPECT_EQ(limit_op->num_rows(), num_rows);
 }
 
 }  // namespace opossum

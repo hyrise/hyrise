@@ -19,7 +19,7 @@ StoredTableNode::StoredTableNode(const std::string& table_name, const optional<s
   auto table = StorageManager::get().get_table(_table_name);
   _output_column_names = table->column_names();
 
-  _output_column_id_to_input_column_id.resize(num_output_columns(), INVALID_COLUMN_ID);
+  _output_column_id_to_input_column_id.resize(output_col_count(), INVALID_COLUMN_ID);
 }
 
 std::string StoredTableNode::description() const { return "Table: " + _table_name; }
@@ -36,14 +36,14 @@ const std::shared_ptr<TableStatistics> StoredTableNode::_gather_statistics() con
 
 const std::string& StoredTableNode::table_name() const { return _table_name; }
 
-optional<ColumnID> StoredTableNode::find_column_id_for_column_identifier_name(
+optional<ColumnID> StoredTableNode::find_column_id_by_column_identifier_name(
     const ColumnIdentifierName& column_identifier_name) const {
-  if (column_identifier_name.table_name && !manages_table(*column_identifier_name.table_name)) {
+  if (column_identifier_name.table_name && !knows_table(*column_identifier_name.table_name)) {
     return nullopt;
   }
 
-  auto& columns = output_column_names();
-  auto iter = std::find(columns.begin(), columns.end(), column_identifier_name.column_name);
+  const auto& columns = output_column_names();
+  const auto iter = std::find(columns.begin(), columns.end(), column_identifier_name.column_name);
 
   if (iter == columns.end()) {
     return nullopt;
@@ -53,20 +53,26 @@ optional<ColumnID> StoredTableNode::find_column_id_for_column_identifier_name(
   return ColumnID{static_cast<ColumnID::base_type>(idx)};
 }
 
-bool StoredTableNode::manages_table(const std::string& table_name) const {
-  return _alias == table_name || _table_name == table_name;
+bool StoredTableNode::knows_table(const std::string& table_name) const {
+  if (_alias) {
+    // If this table was given an ALIAS on retrieval, does it match the queried table name?
+    // Example: SELECT * FROM T1 AS some_table
+    return *_alias == table_name;
+  } else {
+    return _table_name == table_name;
+  }
 }
 
 std::vector<ColumnID> StoredTableNode::get_output_column_ids_for_table(const std::string& table_name) const {
-  if (!manages_table(table_name)) {
+  if (!knows_table(table_name)) {
     return {};
   }
 
   std::vector<ColumnID> column_ids;
-  column_ids.reserve(num_output_columns());
+  column_ids.reserve(output_col_count());
 
-  for (auto column_idx = 0u; column_idx < column_ids.capacity(); ++column_idx) {
-    column_ids.emplace_back(static_cast<ColumnID::base_type>(column_idx));
+  for (ColumnID column_id{0}; column_id < column_ids.capacity(); ++column_id) {
+    column_ids.emplace_back(column_id);
   }
 
   return column_ids;

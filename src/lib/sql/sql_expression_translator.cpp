@@ -7,7 +7,7 @@
 #include <vector>
 
 #include "constant_mappings.hpp"
-#include "optimizer/expression/expression.hpp"
+#include "optimizer/expression.hpp"
 #include "utils/assert.hpp"
 
 #include "SQLParser.h"
@@ -16,20 +16,18 @@ namespace opossum {
 
 std::shared_ptr<Expression> SQLExpressionTranslator::translate_expression(
     const hsql::Expr &expr, const std::shared_ptr<AbstractASTNode> &input_node) {
-  auto name = expr.name ? std::string(expr.name) : "";
-  auto float_value = expr.fval ? expr.fval : 0;
-  auto int_value = expr.ival ? expr.ival : 0;
-  auto alias = expr.alias ? optional<std::string>(expr.alias) : nullopt;
+  auto name = expr.name != nullptr ? std::string(expr.name) : "";
+  auto alias = expr.alias != nullptr ? optional<std::string>(expr.alias) : nullopt;
 
   std::shared_ptr<Expression> node;
   std::shared_ptr<Expression> left;
   std::shared_ptr<Expression> right;
 
-  if (expr.expr) {
+  if (expr.expr != nullptr) {
     left = translate_expression(*expr.expr, input_node);
   }
 
-  if (expr.expr2) {
+  if (expr.expr2 != nullptr) {
     right = translate_expression(*expr.expr2, input_node);
   }
 
@@ -45,36 +43,37 @@ std::shared_ptr<Expression> SQLExpressionTranslator::translate_expression(
 
       auto table_name = expr.table != nullptr ? optional<std::string>(std::string(expr.table)) : nullopt;
       ColumnIdentifierName column_identifier_name{name, table_name};
-      auto column_id = input_node->get_column_id_for_column_identifier_name(column_identifier_name);
+      auto column_id = input_node->get_column_id_by_column_identifier_name(column_identifier_name);
       node = Expression::create_column_identifier(column_id, alias);
       break;
     }
     case hsql::kExprFunctionRef: {
-      // TODO(mp): Parse Function name to Aggregate Function
-      // auto aggregate_function = string_to_aggregate_function.at(name);
-
       std::vector<std::shared_ptr<Expression>> expression_list;
       for (auto elem : *(expr.exprList)) {
         expression_list.emplace_back(translate_expression(*elem, input_node));
       }
 
-      node = Expression::create_function(name, expression_list, alias);
+      const auto aggregate_function_iter = aggregate_function_to_string.right.find(name);
+      DebugAssert(aggregate_function_iter != aggregate_function_to_string.right.end(),
+                  std::string("No such aggregate function '") + name + "'");
+
+      node = Expression::create_aggregate_function(aggregate_function_iter->second, expression_list, alias);
       break;
     }
     case hsql::kExprLiteralFloat:
-      node = Expression::create_literal(float_value);
+      node = Expression::create_literal(expr.fval);
       break;
     case hsql::kExprLiteralInt:
-      node = Expression::create_literal(int_value);
+      node = Expression::create_literal(expr.ival);
       break;
     case hsql::kExprLiteralString:
       node = Expression::create_literal(name);
       break;
     case hsql::kExprParameter:
-      node = Expression::create_placeholder(int_value);
+      node = Expression::create_value_placeholder(ValuePlaceholder{static_cast<uint16_t>(expr.ival)});
       break;
     case hsql::kExprStar: {
-      const auto table_name = expr.table != nullptr ? std::string(expr.table) : "";
+      const auto table_name = expr.table != nullptr ? optional<std::string>(expr.table) : nullopt;
       node = Expression::create_select_star(table_name);
       break;
     }
@@ -111,7 +110,7 @@ ColumnID SQLExpressionTranslator::get_column_id_for_expression(const hsql::Expr 
                                                                const std::shared_ptr<AbstractASTNode> &input_node) {
   Assert(hsql_expr.isType(hsql::kExprColumnRef), "Input needs to be column ref");
 
-  return input_node->get_column_id_for_column_identifier_name(get_column_identifier_name_for_column_ref(hsql_expr));
+  return input_node->get_column_id_by_column_identifier_name(get_column_identifier_name_for_column_ref(hsql_expr));
 }
 
 }  // namespace opossum

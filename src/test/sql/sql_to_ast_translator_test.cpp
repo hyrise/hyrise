@@ -10,6 +10,7 @@
 #include "optimizer/abstract_syntax_tree/abstract_ast_node.hpp"
 #include "optimizer/abstract_syntax_tree/aggregate_node.hpp"
 #include "optimizer/abstract_syntax_tree/join_node.hpp"
+#include "optimizer/abstract_syntax_tree/limit_node.hpp"
 #include "optimizer/abstract_syntax_tree/predicate_node.hpp"
 #include "optimizer/abstract_syntax_tree/projection_node.hpp"
 #include "optimizer/abstract_syntax_tree/sort_node.hpp"
@@ -41,7 +42,7 @@ class SQLToASTTranslatorTest : public BaseTest {
     StorageManager::get().add_table("lineitem", lineitem);
   }
 
-  std::shared_ptr<AbstractASTNode> compile_query(const std::string &query) {
+  std::shared_ptr<AbstractASTNode> compile_query(const std::string& query) {
     hsql::SQLParserResult parse_result;
     hsql::SQLParser::parseSQLString(query, &parse_result);
 
@@ -190,20 +191,23 @@ TEST_F(SQLToASTTranslatorTest, SelectMultipleOrderBy) {
   const auto query = "SELECT * FROM table_a ORDER BY a DESC, b ASC;";
   auto result_node = compile_query(query);
 
-  // The first order by description is executed last (see sort operator for details).
-  auto sort_node_1 = std::dynamic_pointer_cast<SortNode>(result_node);
-  EXPECT_EQ(sort_node_1->type(), ASTNodeType::Sort);
-  EXPECT_EQ(sort_node_1->column_id(), ColumnID{0});
-  EXPECT_FALSE(sort_node_1->ascending());
-  EXPECT_FALSE(sort_node_1->right_child());
+  auto sort_node = std::dynamic_pointer_cast<SortNode>(result_node);
+  EXPECT_EQ(sort_node->type(), ASTNodeType::Sort);
 
-  auto sort_node_2 = std::dynamic_pointer_cast<SortNode>(sort_node_1->left_child());
-  EXPECT_EQ(sort_node_2->type(), ASTNodeType::Sort);
-  EXPECT_EQ(sort_node_2->column_id(), ColumnID{1});
-  EXPECT_TRUE(sort_node_2->ascending());
-  EXPECT_FALSE(sort_node_2->right_child());
-  // This node has an input node, but we don't care what kind it is in this test.
-  EXPECT_TRUE(sort_node_2->left_child());
+  const auto& order_by_definitions = sort_node->order_by_definitions();
+  EXPECT_EQ(order_by_definitions.size(), 2u);
+
+  const auto& definition_1 = order_by_definitions[0];
+  EXPECT_EQ(definition_1.column_id, ColumnID{0});
+  EXPECT_EQ(definition_1.order_by_mode, OrderByMode::Descending);
+
+  const auto& definition_2 = order_by_definitions[1];
+  EXPECT_EQ(definition_2.column_id, ColumnID{1});
+  EXPECT_EQ(definition_2.order_by_mode, OrderByMode::Ascending);
+
+  // The sort node has an input node, but we don't care what kind it is in this test.
+  EXPECT_TRUE(sort_node->left_child());
+  EXPECT_FALSE(sort_node->right_child());
 }
 
 TEST_F(SQLToASTTranslatorTest, SelectInnerJoin) {
@@ -212,7 +216,7 @@ TEST_F(SQLToASTTranslatorTest, SelectInnerJoin) {
 
   EXPECT_EQ(result_node->type(), ASTNodeType::Projection);
   auto projection_node = std::dynamic_pointer_cast<ProjectionNode>(result_node);
-  EXPECT_EQ(projection_node->num_output_columns(), 4u);
+  EXPECT_EQ(projection_node->output_col_count(), 4u);
   std::vector<std::string> output_columns = {"a", "b", "a", "b"};
   EXPECT_EQ(projection_node->output_column_names(), output_columns);
 
@@ -220,8 +224,18 @@ TEST_F(SQLToASTTranslatorTest, SelectInnerJoin) {
   auto join_node = std::dynamic_pointer_cast<JoinNode>(result_node->left_child());
   EXPECT_EQ(join_node->scan_type(), ScanType::OpEquals);
   EXPECT_EQ(join_node->join_mode(), JoinMode::Inner);
-  EXPECT_EQ(join_node->join_column_ids()->first, ColumnID{0});
-  EXPECT_EQ(join_node->join_column_ids()->second, ColumnID{0});
+  EXPECT_EQ((*join_node->join_column_ids()).first, ColumnID{0});
+  EXPECT_EQ((*join_node->join_column_ids()).second, ColumnID{0});
+}
+
+TEST_F(SQLToASTTranslatorTest, SelectLimit) {
+  const auto query = "SELECT * FROM table_a LIMIT 2;";
+  auto result_node = compile_query(query);
+
+  EXPECT_EQ(result_node->type(), ASTNodeType::Limit);
+  auto limit_node = std::dynamic_pointer_cast<LimitNode>(result_node);
+  EXPECT_EQ(limit_node->num_rows(), 2u);
+  EXPECT_EQ(limit_node->left_child()->type(), ASTNodeType::Projection);
 }
 
 }  // namespace opossum

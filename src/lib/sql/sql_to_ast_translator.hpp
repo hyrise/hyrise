@@ -11,7 +11,7 @@
 #include "all_parameter_variant.hpp"
 
 #include "optimizer/abstract_syntax_tree/abstract_ast_node.hpp"
-#include "optimizer/expression/expression.hpp"
+#include "optimizer/expression.hpp"
 
 namespace opossum {
 
@@ -25,6 +25,9 @@ class AggregateNode;
  *
  * An AST can either be handed to the optimizer, once it is added, or it can be directly turned into Operators by
  * the ASTToOperatorTranslator.
+ *
+ * This translator resolves column names to indices. For further information check the blog post:
+ * https://medium.com/hyrise/the-gentle-art-of-referring-to-columns-634f057bd810
  *
  * Refer to sql_to_result_test.cpp for an example of the SQLToASTTranslator in proper action.
  * It is used as a Singleton via SQLToASTTranslator::get().
@@ -71,6 +74,9 @@ class SQLToASTTranslator final : public boost::noncopyable {
   std::shared_ptr<AbstractASTNode> _translate_join(const hsql::JoinDefinition& select);
 
   std::shared_ptr<AbstractASTNode> _translate_cross_product(const std::vector<hsql::TableRef*>& tables);
+
+  std::shared_ptr<AbstractASTNode> _translate_limit(const hsql::LimitDescription& limit,
+                                                    const std::shared_ptr<AbstractASTNode>& input_node);
 
   /**
    * Helper function to avoid code duplication for WHERE and HAVING

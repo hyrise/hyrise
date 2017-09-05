@@ -7,7 +7,7 @@
 
 #include "optimizer/abstract_syntax_tree/projection_node.hpp"
 #include "optimizer/abstract_syntax_tree/stored_table_node.hpp"
-#include "optimizer/expression/expression.hpp"
+#include "optimizer/expression.hpp"
 #include "storage/storage_manager.hpp"
 
 namespace opossum {
@@ -37,16 +37,16 @@ class ProjectionNodeTest : public BaseTest {
 };
 
 TEST_F(ProjectionNodeTest, ColumnIdForColumnIdentifier) {
-  EXPECT_EQ(_projection_node->get_column_id_for_column_identifier_name({"c", nullopt}), 0);
-  EXPECT_EQ(_projection_node->get_column_id_for_column_identifier_name({"c", {"t_a"}}), 0);
-  EXPECT_EQ(_projection_node->get_column_id_for_column_identifier_name({"a", nullopt}), 1);
-  EXPECT_EQ(_projection_node->find_column_id_for_column_identifier_name({"b", nullopt}), nullopt);
-  EXPECT_EQ(_projection_node->find_column_id_for_column_identifier_name({"b", {"t_a"}}), nullopt);
-  EXPECT_EQ(_projection_node->get_column_id_for_column_identifier_name({"alias_for_b", nullopt}), 2);
-  EXPECT_EQ(_projection_node->find_column_id_for_column_identifier_name({"alias_for_b", {"t_a"}}), nullopt);
-  EXPECT_EQ(_projection_node->get_column_id_for_column_identifier_name({"some_addition", nullopt}), 3);
-  EXPECT_EQ(_projection_node->find_column_id_for_column_identifier_name({"some_addition", {"t_a"}}), nullopt);
-  EXPECT_EQ(_projection_node->find_column_id_for_column_identifier_name({"some_addition", {"t_b"}}), nullopt);
+  EXPECT_EQ(_projection_node->get_column_id_by_column_identifier_name({"c", nullopt}), 0);
+  EXPECT_EQ(_projection_node->get_column_id_by_column_identifier_name({"c", {"t_a"}}), 0);
+  EXPECT_EQ(_projection_node->get_column_id_by_column_identifier_name({"a", nullopt}), 1);
+  EXPECT_EQ(_projection_node->find_column_id_by_column_identifier_name({"b", nullopt}), nullopt);
+  EXPECT_EQ(_projection_node->find_column_id_by_column_identifier_name({"b", {"t_a"}}), nullopt);
+  EXPECT_EQ(_projection_node->get_column_id_by_column_identifier_name({"alias_for_b", nullopt}), 2);
+  EXPECT_EQ(_projection_node->find_column_id_by_column_identifier_name({"alias_for_b", {"t_a"}}), nullopt);
+  EXPECT_EQ(_projection_node->get_column_id_by_column_identifier_name({"some_addition", nullopt}), 3);
+  EXPECT_EQ(_projection_node->find_column_id_by_column_identifier_name({"some_addition", {"t_a"}}), nullopt);
+  EXPECT_EQ(_projection_node->find_column_id_by_column_identifier_name({"some_addition", {"t_b"}}), nullopt);
 }
 
 }  // namespace opossum

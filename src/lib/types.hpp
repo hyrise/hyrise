@@ -171,6 +171,8 @@ enum class JoinMode { Inner, Left, Right, Outer, Cross, Natural, Self };
 
 enum class AggregateFunction { Min, Max, Sum, Avg, Count };
 
+enum class OrderByMode { Ascending, Descending };
+
 class Noncopyable {
  protected:
   Noncopyable() = default;

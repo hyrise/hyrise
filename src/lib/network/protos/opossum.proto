@@ -112,7 +112,11 @@ message ProductOperator { // 2 inputs
 message SortOperator {
   OperatorVariant input_operator = 1;
   int32 column_id = 2;
-  bool ascending = 3;
+  enum OrderByMode {
+    Ascending = 0;
+    Descending = 1;
+  }
+  OrderByMode order_by_mode = 3;
   int32 output_chunk_size = 4;
 }
 

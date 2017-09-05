@@ -28,7 +28,7 @@ class AbstractASTNode;
 class Expression : public std::enable_shared_from_this<Expression> {
  public:
   /*
-   * This constructor is meant for internal use only and therefor should be private.
+   * This constructor is meant for internal use only and therefore should be private.
    * However, in C++ one is not able to call std::make_shared with a private constructor.
    * The naive approach of befriending std::make_shared does not work here, as the implementation of std::make_shared is
    * compiler-specific and usually relies on internal impl-classes.
@@ -44,7 +44,8 @@ class Expression : public std::enable_shared_from_this<Expression> {
    */
   explicit Expression(ExpressionType type);
 
-  /*
+  // @{
+  /**
    * Factory Methods to create Expressions of specific type
    */
   static std::shared_ptr<Expression> create_column_identifier(const ColumnID column_id,
@@ -57,18 +58,19 @@ class Expression : public std::enable_shared_from_this<Expression> {
   static std::shared_ptr<Expression> create_literal(const AllTypeVariant& value,
                                                     const optional<std::string>& alias = nullopt);
 
-  static std::shared_ptr<Expression> create_placeholder(const AllTypeVariant &value);
+  static std::shared_ptr<Expression> create_value_placeholder(ValuePlaceholder value_placeholder);
 
-  static std::shared_ptr<Expression> create_function(
-    const std::string &function_name, const std::vector<std::shared_ptr<Expression>> &expression_list,
-    const optional <std::string> &alias = nullopt);
+  static std::shared_ptr<Expression> create_aggregate_function(
+      AggregateFunction aggregate_function, const std::vector<std::shared_ptr<Expression>>& expression_list,
+      const optional<std::string>& alias = nullopt);
 
   static std::shared_ptr<Expression> create_binary_operator(ExpressionType type,
                                                             const std::shared_ptr<Expression>& left,
                                                             const std::shared_ptr<Expression>& right,
                                                             const optional<std::string>& alias = nullopt);
 
-  static std::shared_ptr<Expression> create_select_star(const std::string& table_name);
+  static std::shared_ptr<Expression> create_select_star(const optional<std::string>& table_name);
+  // @}
 
   // @{
   /**
@@ -93,6 +95,11 @@ class Expression : public std::enable_shared_from_this<Expression> {
 
   const std::string description() const;
 
+  // @{
+  /**
+   * Check semantics of the expression
+   */
+
   // Is +, -, * (arithmetic usage, not SELECT * FROM), /, %, ^
   bool is_arithmetic_operator() const;
 
@@ -101,25 +108,29 @@ class Expression : public std::enable_shared_from_this<Expression> {
 
   // Returns true if the expression requires two children.
   bool is_binary_operator() const;
+  // @}
 
+  // @{
+  /**
+   * Getters. Only call them if you are sure the type() has such a member
+   */
   const ColumnID column_id() const;
-
-  void set_column_id(const ColumnID column_id);
-
-  const std::string& name() const;
-
-  const optional<std::string>& alias() const;
-
-  void set_alias(const std::string& alias);
-
+  AggregateFunction aggregate_function() const;
   const AllTypeVariant value() const;
-
   const std::vector<std::shared_ptr<Expression>>& expression_list() const;
+  ValuePlaceholder value_placeholder() const;
+  // @}
+
+  /**
+   * Getters that can be called to check whether a member is set.
+   */
+  const optional<std::string>& table_name() const;
+  const optional<std::string>& alias() const;
 
   void set_expression_list(const std::vector<std::shared_ptr<Expression>>& expression_list);
 
-  // Expression as string
-  std::string to_string(const std::shared_ptr<AbstractASTNode>& input_node = {}) const;
+  // Expression as string, column names need to be resolved and therefore need a @param input_node
+  std::string to_string(const std::shared_ptr<AbstractASTNode>& input_node = nullptr) const;
 
   bool operator==(const Expression& rhs) const;
 
@@ -128,6 +139,8 @@ class Expression : public std::enable_shared_from_this<Expression> {
   const ExpressionType _type;
   // the value of an expression, e.g. of a Literal
   optional<AllTypeVariant> _value;
+
+  optional<AggregateFunction> _aggregate_function;
 
   /*
    * A list of Expressions used in FunctionIdentifiers and CASE Expressions.
@@ -139,14 +152,15 @@ class Expression : public std::enable_shared_from_this<Expression> {
    */
   std::vector<std::shared_ptr<Expression>> _expression_list;
 
-  // a name, which could be a function name
-  optional<std::string> _name;
+  optional<std::string> _table_name;
 
   // a column that might be referenced
   optional<ColumnID> _column_id;
 
   // an alias, used for ColumnReferences, Selects, FunctionIdentifiers
   optional<std::string> _alias;
+
+  optional<ValuePlaceholder> _value_placeholder;
 
   // @{
   // Members for the tree strucutre

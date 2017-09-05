@@ -58,17 +58,17 @@ std::shared_ptr<Expression> Expression::create_literal(const AllTypeVariant &val
   return expression;
 }
 
-std::shared_ptr<Expression> Expression::create_placeholder(const AllTypeVariant &value) {
+std::shared_ptr<Expression> Expression::create_value_placeholder(ValuePlaceholder value_placeholder) {
   auto expression = std::make_shared<Expression>(ExpressionType::Placeholder);
-  expression->_value = value;
+  expression->_value_placeholder = value_placeholder;
   return expression;
 }
 
-std::shared_ptr<Expression> Expression::create_function(
-  const std::string &function_name, const std::vector<std::shared_ptr<Expression>> &expression_list,
-  const optional<std::string> &alias) {
+std::shared_ptr<Expression> Expression::create_aggregate_function(
+    AggregateFunction aggregate_function, const std::vector<std::shared_ptr<Expression>> &expression_list,
+    const optional<std::string> &alias) {
   auto expression = std::make_shared<Expression>(ExpressionType::Function);
-  expression->_name = function_name;
+  expression->_aggregate_function = aggregate_function;
   expression->_expression_list = expression_list;
   expression->_alias = alias;
   return expression;
@@ -89,9 +89,9 @@ std::shared_ptr<Expression> Expression::create_binary_operator(ExpressionType ty
   return expression;
 }
 
-std::shared_ptr<Expression> Expression::create_select_star(const std::string &table_name) {
+std::shared_ptr<Expression> Expression::create_select_star(const optional<std::string> &table_name) {
   auto expression = std::make_shared<Expression>(ExpressionType::Star);
-  expression->_name = table_name;
+  expression->_table_name = table_name;
   return expression;
 }
 
@@ -182,7 +182,7 @@ const std::string Expression::description() const {
       desc << "[ColumnID: " << column_id() << "]";
       break;
     case ExpressionType::Function:
-      desc << "[" << name() << ": " << std::endl;
+      desc << "[" << aggregate_function_to_string.left.at(aggregate_function()) << ": " << std::endl;
       for (const auto &expr : expression_list()) {
         desc << expr->description() << ", " << std::endl;
       }
@@ -203,9 +203,12 @@ const ColumnID Expression::column_id() const {
   return *_column_id;
 }
 
-const std::string &Expression::name() const {
-  DebugAssert(_name != nullopt, "Expression " + expression_type_to_string.at(_type) + " does not have a name");
-  return *_name;
+const optional<std::string> &Expression::table_name() const { return _table_name; }
+
+AggregateFunction Expression::aggregate_function() const {
+  DebugAssert(_aggregate_function != nullopt,
+              "Expression " + expression_type_to_string.at(_type) + " does not have an aggregate function");
+  return *_aggregate_function;
 }
 
 const optional<std::string> &Expression::alias() const { return _alias; }
@@ -213,6 +216,12 @@ const optional<std::string> &Expression::alias() const { return _alias; }
 const AllTypeVariant Expression::value() const {
   DebugAssert(_value != nullopt, "Expression " + expression_type_to_string.at(_type) + " does not have a value");
   return *_value;
+}
+
+ValuePlaceholder Expression::value_placeholder() const {
+  DebugAssert(_value_placeholder != nullopt,
+              "Expression " + expression_type_to_string.at(_type) + " does not have a value placeholder");
+  return *_value_placeholder;
 }
 
 std::string Expression::to_string(const std::shared_ptr<AbstractASTNode> &input_node) const {
@@ -227,7 +236,8 @@ std::string Expression::to_string(const std::shared_ptr<AbstractASTNode> &input_
       }
       return boost::lexical_cast<std::string>(column_id());
     case ExpressionType::Function:
-      return name() + "(" + _expression_list[0]->to_string(input_node) + ")";
+      return aggregate_function_to_string.left.at(aggregate_function()) + "(" +
+             _expression_list[0]->to_string(input_node) + ")";
     default:
       // Handled further down.
       break;
@@ -267,7 +277,7 @@ bool Expression::operator==(const Expression &rhs) const {
     }
   }
 
-  return _type == rhs._type && _value == rhs._value && _name == rhs._name && _column_id == rhs._column_id &&
+  return _type == rhs._type && _value == rhs._value && _table_name == rhs._table_name && _column_id == rhs._column_id &&
          _alias == rhs._alias;
 }
 

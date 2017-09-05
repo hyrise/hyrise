@@ -18,12 +18,6 @@
 namespace opossum {
 
 JoinNestedLoopA::JoinNestedLoopA(const std::shared_ptr<const AbstractOperator> left,
-                                 const std::shared_ptr<const AbstractOperator> right, const JoinMode mode)
-    : AbstractJoinOperator(left, right, mode) {
-  Fail("Natural and Cross Joins are currently not supported by this operator.");
-}
-
-JoinNestedLoopA::JoinNestedLoopA(const std::shared_ptr<const AbstractOperator> left,
                                  const std::shared_ptr<const AbstractOperator> right, const JoinMode mode,
                                  const std::pair<ColumnID, ColumnID> &column_ids, const ScanType scan_type)
     : AbstractJoinOperator(left, right, mode, column_ids, scan_type) {}
@@ -35,20 +29,15 @@ uint8_t JoinNestedLoopA::num_in_tables() const { return 2; }
 uint8_t JoinNestedLoopA::num_out_tables() const { return 1; }
 
 std::shared_ptr<AbstractOperator> JoinNestedLoopA::recreate(const std::vector<AllParameterVariant> &args) const {
-  if (_column_ids && _scan_type) {
-    return std::make_shared<JoinNestedLoopA>(_input_left->recreate(args), _input_right->recreate(args), _mode,
-                                             *_column_ids, *_scan_type);
-  }
-
-  return std::make_shared<JoinNestedLoopA>(_input_left->recreate(args), _input_right->recreate(args), _mode);
+  return std::make_shared<JoinNestedLoopA>(_input_left->recreate(args), _input_right->recreate(args), _mode,
+                                           _column_ids, _scan_type);
 }
 
 std::shared_ptr<const Table> JoinNestedLoopA::on_execute() {
-  DebugAssert(static_cast<bool>(_column_ids), "Join columns not specified.");
-  const auto &type_left = input_table_left()->column_type((*_column_ids).first);
-  const auto &type_right = input_table_right()->column_type((*_column_ids).second);
+  const auto &type_left = input_table_left()->column_type(_column_ids.first);
+  const auto &type_right = input_table_right()->column_type(_column_ids.second);
   _impl = make_unique_by_column_types<AbstractReadOnlyOperatorImpl, JoinNestedLoopAImpl>(
-      type_left, type_right, _input_left, _input_right, _mode, *_column_ids, *_scan_type);
+      type_left, type_right, _input_left, _input_right, _mode, _column_ids, _scan_type);
   return _impl->on_execute();
 }
 

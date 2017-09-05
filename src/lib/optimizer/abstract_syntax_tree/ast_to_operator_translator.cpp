@@ -8,6 +8,7 @@
 #include "operators/aggregate.hpp"
 #include "operators/get_table.hpp"
 #include "operators/join_nested_loop_a.hpp"
+#include "operators/limit.hpp"
 #include "operators/product.hpp"
 #include "operators/projection.hpp"
 #include "operators/sort.hpp"
@@ -15,6 +16,7 @@
 #include "optimizer/abstract_syntax_tree/abstract_ast_node.hpp"
 #include "optimizer/abstract_syntax_tree/aggregate_node.hpp"
 #include "optimizer/abstract_syntax_tree/join_node.hpp"
+#include "optimizer/abstract_syntax_tree/limit_node.hpp"
 #include "optimizer/abstract_syntax_tree/predicate_node.hpp"
 #include "optimizer/abstract_syntax_tree/projection_node.hpp"
 #include "optimizer/abstract_syntax_tree/sort_node.hpp"
@@ -47,6 +49,8 @@ ASTToOperatorTranslator::ASTToOperatorTranslator() {
       std::bind(&ASTToOperatorTranslator::_translate_join_node, this, std::placeholders::_1);
   _operator_factory[ASTNodeType::Aggregate] =
       std::bind(&ASTToOperatorTranslator::_translate_aggregate_node, this, std::placeholders::_1);
+  _operator_factory[ASTNodeType::Limit] =
+      std::bind(&ASTToOperatorTranslator::_translate_limit_node, this, std::placeholders::_1);
 }
 
 std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::translate_node(
@@ -79,9 +83,23 @@ std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::_translate_projection
 
 std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::_translate_sort_node(
     const std::shared_ptr<AbstractASTNode> &node) const {
-  const auto input_operator = translate_node(node->left_child());
-  auto sort_node = std::dynamic_pointer_cast<SortNode>(node);
-  return std::make_shared<Sort>(input_operator, sort_node->column_id(), sort_node->ascending());
+  const auto sort_node = std::dynamic_pointer_cast<SortNode>(node);
+  auto input_operator = translate_node(node->left_child());
+
+  /**
+   * Go through all the order descriptions and create a sort operator for each of them.
+   * Iterate in reverse because the sort operator does not support multiple columns, and instead relies on stable sort.
+   * We therefore sort by the n+1-th column before sorting by the n-th column.
+   */
+  std::shared_ptr<AbstractOperator> result_operator;
+  const auto &definitions = sort_node->order_by_definitions();
+  for (auto it = definitions.rbegin(); it != definitions.rend(); it++) {
+    const auto &definition = *it;
+    result_operator = std::make_shared<Sort>(input_operator, definition.column_id, definition.order_by_mode);
+    input_operator = result_operator;
+  }
+
+  return result_operator;
 }
 
 std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::_translate_join_node(
@@ -95,7 +113,8 @@ std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::_translate_join_node(
     return std::make_shared<Product>(input_left_operator, input_right_operator);
   }
 
-  DebugAssert(static_cast<bool>(join_node->scan_type()), "Cannot translate Join without ScanType");
+  DebugAssert(static_cast<bool>(join_node->join_column_ids()), "Cannot translate Join without join column ids.");
+  DebugAssert(static_cast<bool>(join_node->scan_type()), "Cannot translate Join without ScanType.");
   return std::make_shared<JoinNestedLoopA>(input_left_operator, input_right_operator, join_node->join_mode(),
                                            *(join_node->join_column_ids()), *(join_node->scan_type()));
 }
@@ -114,7 +133,7 @@ std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::_translate_aggregate_
    * 1. Handle arithmetic expressions in aggregate functions via Projection.
    *
    * In Hyrise, only Projections are supposed to be able to handle arithmetic expressions.
-   * herefore, if we encounter an expression within an aggregate function, we have to execute a Projection first.
+   * Therefore, if we encounter an expression within an aggregate function, we have to execute a Projection first.
    * The Aggregate will work with the output columns of that Projection.
    *
    * We only need a Projection before the aggregate if the function argument is an arithmetic expression.
@@ -125,8 +144,10 @@ std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::_translate_aggregate_
   for (const auto &aggregate_expression : aggregate_expressions) {
     DebugAssert(aggregate_expression->type() == ExpressionType::Function, "Expression is not a function.");
 
+    // Check whether the expression that is the argument of the aggregate function, e.g. `a+b` in `SUM(a+b)` is, as in
+    // this case, an arithmetic expression and therefore needs a Projection before the aggregate is performed. If all
+    // Aggregates are in the style of `COUNT(b)` or there are just groupby columns, there is no need for a Projection.
     const auto &function_arg_expr = (aggregate_expression->expression_list())[0];
-
     if (function_arg_expr->is_arithmetic_operator()) {
       need_projection = true;
       break;
@@ -139,6 +160,8 @@ std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::_translate_aggregate_
    *  - arithmetic expressions,
    *  - columns used in aggregate functions, and
    *  - GROUP BY columns
+   *
+   *  TODO(anybody): this might result in the same columns being created multiple times. Improve.
    */
   if (need_projection) {
     Projection::ColumnExpressions column_expressions = Expression::create_column_identifiers(groupby_columns);
@@ -146,7 +169,7 @@ std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::_translate_aggregate_
 
     // The Projection will only select columns used in the Aggregate, i.e., GROUP BY columns and expressions.
     // Unused columns are skipped – therefore, the ColumnIDs might change.
-    // In fact, they will be the first columns of the Projection.
+    // GROUP BY columns will be the first columns of the Projection.
     for (ColumnID column_id{0}; column_id < groupby_columns.size(); column_id++) {
       groupby_columns[column_id] = column_id;
     }
@@ -178,15 +201,21 @@ std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::_translate_aggregate_
   aggregate_definitions.reserve(aggregate_expressions.size());
 
   for (const auto &aggregate_expression : aggregate_expressions) {
-    DebugAssert(aggregate_expression->type() == ExpressionType::Function,
-                "Only functions are supported in Aggregates");
+    DebugAssert(aggregate_expression->type() == ExpressionType::Function, "Only functions are supported in Aggregates");
 
-    const auto aggregate_function_type = aggregate_function_to_string.right.at(aggregate_expression->name());
+    const auto aggregate_function_type = aggregate_expression->aggregate_function();
     const auto column_id = (aggregate_expression->expression_list())[0]->column_id();
     aggregate_definitions.emplace_back(column_id, aggregate_function_type, aggregate_expression->alias());
   }
 
   return std::make_shared<Aggregate>(aggregate_input_operator, aggregate_definitions, groupby_columns);
+}
+
+std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::_translate_limit_node(
+    const std::shared_ptr<AbstractASTNode> &node) const {
+  const auto input_operator = translate_node(node->left_child());
+  auto limit_node = std::dynamic_pointer_cast<LimitNode>(node);
+  return std::make_shared<Limit>(input_operator, limit_node->num_rows());
 }
 
 }  // namespace opossum

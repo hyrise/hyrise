@@ -32,13 +32,13 @@ class JoinNodeTest : public BaseTest {
 };
 
 TEST_F(JoinNodeTest, ColumnIdForColumnIdentifier) {
-  EXPECT_EQ(_join_node->get_column_id_for_column_identifier_name({"a", nullopt}), 0);
-  EXPECT_EQ(_join_node->get_column_id_for_column_identifier_name({"a", {"t_a"}}), 0);
-  EXPECT_EQ(_join_node->find_column_id_for_column_identifier_name({"x", {"t_a"}}), nullopt);
-  EXPECT_EQ(_join_node->get_column_id_for_column_identifier_name({"x", {"t_b"}}), 3);
-  EXPECT_EQ(_join_node->find_column_id_for_column_identifier_name({"x", {"t_a"}}), nullopt);
-  EXPECT_EQ(_join_node->find_column_id_for_column_identifier_name({"z", nullopt}), nullopt);
-  EXPECT_EQ(_join_node->find_column_id_for_column_identifier_name({"z", {"t_z"}}), nullopt);
+  EXPECT_EQ(_join_node->get_column_id_by_column_identifier_name({"a", nullopt}), 0);
+  EXPECT_EQ(_join_node->get_column_id_by_column_identifier_name({"a", {"t_a"}}), 0);
+  EXPECT_EQ(_join_node->find_column_id_by_column_identifier_name({"x", {"t_a"}}), nullopt);
+  EXPECT_EQ(_join_node->get_column_id_by_column_identifier_name({"x", {"t_b"}}), 3);
+  EXPECT_EQ(_join_node->find_column_id_by_column_identifier_name({"x", {"t_a"}}), nullopt);
+  EXPECT_EQ(_join_node->find_column_id_by_column_identifier_name({"z", nullopt}), nullopt);
+  EXPECT_EQ(_join_node->find_column_id_by_column_identifier_name({"z", {"t_z"}}), nullopt);
 }
 
 }  // namespace opossum

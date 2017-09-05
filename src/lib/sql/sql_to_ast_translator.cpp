@@ -9,15 +9,17 @@
 #include "optimizer/abstract_syntax_tree/abstract_ast_node.hpp"
 #include "optimizer/abstract_syntax_tree/aggregate_node.hpp"
 #include "optimizer/abstract_syntax_tree/join_node.hpp"
+#include "optimizer/abstract_syntax_tree/limit_node.hpp"
 #include "optimizer/abstract_syntax_tree/predicate_node.hpp"
 #include "optimizer/abstract_syntax_tree/projection_node.hpp"
 #include "optimizer/abstract_syntax_tree/sort_node.hpp"
 #include "optimizer/abstract_syntax_tree/stored_table_node.hpp"
-#include "optimizer/expression/expression.hpp"
+#include "optimizer/expression.hpp"
 #include "sql/sql_expression_translator.hpp"
 #include "storage/storage_manager.hpp"
 
 #include "all_type_variant.hpp"
+#include "constant_mappings.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 
@@ -112,6 +114,7 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_select(const hsq
   // 4. HAVING clause
   // 5. SELECT clause
   // 6. ORDER BY clause
+  // 7. LIMIT clause
 
   auto current_result_node = _translate_table_ref(*select.fromTable);
 
@@ -143,12 +146,14 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_select(const hsq
     current_result_node = _translate_projection(*select.selectList, current_result_node);
   }
 
-  // Translate ORDER BY.
   if (select.order != nullptr) {
     current_result_node = _translate_order_by(*select.order, current_result_node);
   }
 
-  // TODO(torpedro): Translate LIMIT/TOP.
+  // TODO(anybody): Translate TOP.
+  if (select.limit != nullptr) {
+    current_result_node = _translate_limit(*select.limit, current_result_node);
+  }
 
   return current_result_node;
 }
@@ -164,10 +169,19 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_join(const hsql:
 
   const hsql::Expr& condition = *join.condition;
 
-  // TODO(moritz) is_arithmetic_hsql_expr()
-  Assert(condition.type == hsql::kExprOperator, "Join condition must be operator");
-  // Assert(condition.opType == hsql::kOpGreater, "Join condition must be operator"); TODO(moritz) Assert for logical
-  // expr
+  Assert(condition.type == hsql::kExprOperator, "Join condition must be operator.");
+  // The Join operators only support simple comparisons for now.
+  switch (condition.opType) {
+    case hsql::kOpEquals:
+    case hsql::kOpNotEquals:
+    case hsql::kOpLess:
+    case hsql::kOpLessEq:
+    case hsql::kOpGreater:
+    case hsql::kOpGreaterEq:
+      break;
+    default:
+      Fail("Join condition must be a simple comparison operator.");
+  }
   Assert(condition.expr && condition.expr->type == hsql::kExprColumnRef,
          "Left arg of join condition must be column ref");
   Assert(condition.expr2 && condition.expr2->type == hsql::kExprColumnRef,
@@ -178,10 +192,19 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_join(const hsql:
   const auto right_column_identifier_name =
       SQLExpressionTranslator::get_column_identifier_name_for_column_ref(*condition.expr2);
 
-  const auto left_in_left_node = left_node->find_column_id_for_column_identifier_name(left_column_identifier_name);
-  const auto left_in_right_node = right_node->find_column_id_for_column_identifier_name(left_column_identifier_name);
-  const auto right_in_left_node = left_node->find_column_id_for_column_identifier_name(right_column_identifier_name);
-  const auto right_in_right_node = right_node->find_column_id_for_column_identifier_name(right_column_identifier_name);
+  /**
+   * `x_in_y_node` indicates whether the column identifier on the `x` side in the join expression is in the input node
+   * on
+   * the `y` side of the join. So in the query
+   * `SELECT * FROM T1 JOIN T2 on person_id == customer_id`
+   * We have to check whether `person_id` belongs to T1 (left_in_left_node == true) or to T2
+   * (left_in_right_node == true). Later we make sure that one and only one of them is true, otherwise we either have
+   * ambiguity or the column is simply not existing.
+   */
+  const auto left_in_left_node = left_node->find_column_id_by_column_identifier_name(left_column_identifier_name);
+  const auto left_in_right_node = right_node->find_column_id_by_column_identifier_name(left_column_identifier_name);
+  const auto right_in_left_node = left_node->find_column_id_by_column_identifier_name(right_column_identifier_name);
+  const auto right_in_right_node = right_node->find_column_id_by_column_identifier_name(right_column_identifier_name);
 
   Assert(static_cast<bool>(left_in_left_node) ^ static_cast<bool>(left_in_right_node),
          "Left operand must be in exactly one of the input nodes");
@@ -393,14 +416,14 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_projection(
       // Resolve `SELECT *` to columns.
       std::vector<ColumnID> column_ids;
 
-      if (expr->name().empty()) {
+      if (!expr->table_name()) {
         // If there is no table qualifier take all columns from the input.
-        for (ColumnID::base_type column_idx = 0u; column_idx < input_node->num_output_columns(); column_idx++) {
+        for (ColumnID::base_type column_idx = 0u; column_idx < input_node->output_col_count(); column_idx++) {
           column_ids.emplace_back(column_idx);
         }
       } else {
         // Otherwise only take columns that belong to that qualifier.
-        column_ids = input_node->get_output_column_ids_for_table(expr->name());
+        column_ids = input_node->get_output_column_ids_for_table(*expr->table_name());
       }
 
       const auto& column_references = Expression::create_column_identifiers(column_ids);
@@ -422,27 +445,32 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_order_by(
     return input_node;
   }
 
-  auto current_result_node = input_node;
+  std::vector<OrderByDefinition> order_by_definitions;
+  order_by_definitions.reserve(order_list.size());
 
-  // Go through all the order descriptions and create a sort node for each of them.
-  // Iterate in reverse because the sort operator does not support multiple columns,
-  // and instead relies on stable sort. We therefore sort by the n+1-th column before sorting by the n-th column.
-  for (auto it = order_list.rbegin(); it != order_list.rend(); ++it) {
-    auto order_description = *it;
+  for (const auto& order_description : order_list) {
     const auto& order_expr = *order_description->expr;
 
     // TODO(anybody): handle non-column refs
     DebugAssert(order_expr.isType(hsql::kExprColumnRef), "Can only order by columns for now.");
 
     const auto column_id = SQLExpressionTranslator::get_column_id_for_expression(order_expr, input_node);
-    const auto asc = order_description->type == hsql::kOrderAsc;
+    const auto order_by_mode = order_type_to_order_by_mode.at(order_description->type);
 
-    auto sort_node = std::make_shared<SortNode>(column_id, asc);
-    sort_node->set_left_child(current_result_node);
-    current_result_node = sort_node;
+    order_by_definitions.emplace_back(column_id, order_by_mode);
   }
 
-  return current_result_node;
+  auto sort_node = std::make_shared<SortNode>(order_by_definitions);
+  sort_node->set_left_child(input_node);
+
+  return sort_node;
+}
+
+std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_limit(
+    const hsql::LimitDescription& limit, const std::shared_ptr<AbstractASTNode>& input_node) {
+  auto limit_node = std::make_shared<LimitNode>(limit.limit);
+  limit_node->set_left_child(input_node);
+  return limit_node;
 }
 
 std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_predicate(
@@ -532,7 +560,7 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_predicate(
     DebugAssert(hsql_expr.expr2 != nullptr, "hsql malformed");
 
     if (!refers_to_column(*hsql_expr.expr)) {
-      Assert(refers_to_column(*hsql_expr.expr2), "Neither expr nor expr2 refers to a column in the input node");
+      Assert(refers_to_column(*hsql_expr.expr2), "One side of the expression has to refer to a column.");
       operands_switched = true;
       scan_type = get_scan_type_for_reverse_order(scan_type);
     }

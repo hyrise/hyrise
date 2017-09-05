@@ -24,18 +24,18 @@ class JoinNode : public AbstractASTNode {
 
   JoinNode(const JoinMode join_mode, const std::pair<ColumnID, ColumnID> &join_column_ids, const ScanType scan_type);
 
-  optional<std::pair<ColumnID, ColumnID>> join_column_ids() const;
-  optional<ScanType> scan_type() const;
+  const optional<std::pair<ColumnID, ColumnID>> &join_column_ids() const;
+  const optional<ScanType> &scan_type() const;
   JoinMode join_mode() const;
 
   std::string description() const override;
   const std::vector<ColumnID> &output_column_id_to_input_column_id() const override;
   const std::vector<std::string> &output_column_names() const override;
 
-  bool manages_table(const std::string &table_name) const override;
+  bool knows_table(const std::string &table_name) const override;
   std::vector<ColumnID> get_output_column_ids_for_table(const std::string &table_name) const override;
 
-  optional<ColumnID> find_column_id_for_column_identifier_name(
+  optional<ColumnID> find_column_id_by_column_identifier_name(
       const ColumnIdentifierName &column_identifier_name) const override;
 
  protected:

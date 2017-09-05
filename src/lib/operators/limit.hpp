@@ -17,6 +17,8 @@ class Limit : public AbstractReadOnlyOperator {
   uint8_t num_out_tables() const override;
   std::shared_ptr<AbstractOperator> recreate(const std::vector<AllParameterVariant> &args) const override;
 
+  size_t num_rows() const;
+
  protected:
   std::shared_ptr<const Table> on_execute() override;
 

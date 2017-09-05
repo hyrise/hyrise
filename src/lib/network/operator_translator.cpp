@@ -160,14 +160,9 @@ inline std::shared_ptr<OperatorTask> OperatorTranslator::translate(
                 "Neither or both columns of the join condition have to be specified.");
   }
 
-  std::shared_ptr<JoinNestedLoopA> nested_loop_join;
-  if (join_columns) {
-    nested_loop_join = std::make_shared<JoinNestedLoopA>(
-        input_left_task->get_operator(), input_right_task->get_operator(), join_mode, *join_columns, scan_type);
-  } else {
-    nested_loop_join =
-        std::make_shared<JoinNestedLoopA>(input_left_task->get_operator(), input_right_task->get_operator(), join_mode);
-  }
+  Assert(!!join_columns, "Can't create join without join columns");
+  auto nested_loop_join = std::make_shared<JoinNestedLoopA>(
+      input_left_task->get_operator(), input_right_task->get_operator(), join_mode, *join_columns, scan_type);
 
   auto nested_loop_join_task = std::make_shared<OperatorTask>(nested_loop_join);
   input_left_task->set_as_predecessor_of(nested_loop_join_task);
@@ -226,13 +221,24 @@ inline std::shared_ptr<OperatorTask> OperatorTranslator::translate(const proto::
 
 inline std::shared_ptr<OperatorTask> OperatorTranslator::translate(const proto::SortOperator& sort_operator) {
   const auto column_id = ColumnID{static_cast<ColumnID::base_type>(sort_operator.column_id())};
-  const auto ascending = sort_operator.ascending();
   const auto output_chunk_size = sort_operator.output_chunk_size();
   Assert((sort_operator.has_input_operator()), "Missing Input Operator in Sort.");
 
+  OrderByMode order_by_mode;
+  switch (sort_operator.order_by_mode()) {
+    case proto::SortOperator::Ascending:
+      order_by_mode = OrderByMode::Ascending;
+      break;
+    case proto::SortOperator::Descending:
+      order_by_mode = OrderByMode::Descending;
+      break;
+    default:
+      Fail("Unknown order by mode for operator in operator_translator");
+  }
+
   auto input_task = translate_proto(sort_operator.input_operator());
 
-  auto sort = std::make_shared<Sort>(input_task->get_operator(), column_id, ascending, output_chunk_size);
+  auto sort = std::make_shared<Sort>(input_task->get_operator(), column_id, order_by_mode, output_chunk_size);
   auto sort_task = std::make_shared<OperatorTask>(sort);
   input_task->set_as_predecessor_of(sort_task);
   _tasks.push_back(sort_task);

@@ -6,7 +6,7 @@
 #include <string>
 #include <vector>
 
-#include "optimizer/expression/expression.hpp"
+#include "optimizer/expression.hpp"
 
 #include "common.hpp"
 #include "types.hpp"
@@ -35,21 +35,35 @@ std::string AggregateNode::description() const {
 
   auto stream_aggregate = [&](const std::shared_ptr<Expression>& aggregate_expr) {
     s << aggregate_expr->to_string();
-    if (aggregate_expr->alias()) s << " AS \"" << (*aggregate_expr->alias()) << "\"";
+    if (aggregate_expr->alias()) {
+      s << " AS \"" << (*aggregate_expr->alias()) << "\"";
+    }
   };
 
-  auto it = _aggregate_expressions.begin();
-  if (it != _aggregate_expressions.end()) stream_aggregate(*it);
-  for (; it != _aggregate_expressions.end(); ++it) {
+  auto aggregates_it = _aggregate_expressions.begin();
+  if (aggregates_it != _aggregate_expressions.end()) {
+    stream_aggregate(*aggregates_it);
+    ++aggregates_it;
+  }
+
+  for (; aggregates_it != _aggregate_expressions.end(); ++aggregates_it) {
     s << ", ";
-    stream_aggregate(*it);
+    stream_aggregate(*aggregates_it);
   }
 
   if (!_groupby_column_ids.empty()) {
     s << " GROUP BY [";
-    for (const auto& column_name : _groupby_column_ids) {
-      s << column_name << ", ";
+
+    auto group_by_it = _groupby_column_ids.begin();
+    if (group_by_it != _groupby_column_ids.end()) {
+      s << *group_by_it;
+      ++group_by_it;
     }
+
+    for (; group_by_it != _groupby_column_ids.end(); ++group_by_it) {
+      s << ", " << *group_by_it;
+    }
+
     s << "]";
   }
 
@@ -104,7 +118,7 @@ const std::vector<ColumnID>& AggregateNode::output_column_id_to_input_column_id(
   return _output_column_id_to_input_column_id;
 }
 
-optional<ColumnID> AggregateNode::find_column_id_for_column_identifier_name(
+optional<ColumnID> AggregateNode::find_column_id_by_column_identifier_name(
     const ColumnIdentifierName& column_identifier_name) const {
   DebugAssert(!!left_child(), "AggregateNode needs a child.");
 
@@ -135,7 +149,7 @@ optional<ColumnID> AggregateNode::find_column_id_for_column_identifier_name(
    * we just have to check the left_child for the ColumnIdentifierName.
    */
   optional<ColumnID> column_id_groupby;
-  const auto column_id_child = left_child()->find_column_id_for_column_identifier_name(column_identifier_name);
+  const auto column_id_child = left_child()->find_column_id_by_column_identifier_name(column_identifier_name);
   if (column_id_child) {
     const auto iter = std::find(_groupby_column_ids.begin(), _groupby_column_ids.end(), *column_id_child);
     if (iter != _groupby_column_ids.end()) {
@@ -198,7 +212,7 @@ optional<ColumnID> AggregateNode::find_column_id_for_expression(const std::share
 std::vector<ColumnID> AggregateNode::get_output_column_ids_for_table(const std::string& table_name) const {
   DebugAssert(!!left_child(), "AggregateNode needs a child.");
 
-  if (!left_child()->manages_table(table_name)) {
+  if (!left_child()->knows_table(table_name)) {
     return {};
   }
 
