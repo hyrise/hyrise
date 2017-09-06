@@ -30,10 +30,10 @@ class Sort : public AbstractReadOnlyOperator {
  public:
   // The parameter chunk_size sets the chunk size of the output table, which will always be materialized
   Sort(const std::shared_ptr<const AbstractOperator> in, const std::string &sort_column_name,
-       const bool ascending = true, const size_t output_chunk_size = 0);
+       const OrderByMode order_by_mode = OrderByMode::Ascending, const size_t output_chunk_size = 0);
 
   const std::string &sort_column_name() const;
-  bool ascending() const;
+  OrderByMode order_by_mode() const;
 
   const std::string name() const override;
   uint8_t num_in_tables() const override;
@@ -55,7 +55,7 @@ class Sort : public AbstractReadOnlyOperator {
 
   std::unique_ptr<AbstractReadOnlyOperatorImpl> _impl;
   const std::string _sort_column_name;
-  const bool _ascending;
+  const OrderByMode _order_by_mode;
   const size_t _output_chunk_size;
 };
 
@@ -64,10 +64,10 @@ template <typename SortColumnType>
 class Sort::SortImpl : public AbstractReadOnlyOperatorImpl {
  public:
   SortImpl(const std::shared_ptr<const Table> table_in, const std::string &sort_column_name,
-           const bool ascending = true, const size_t output_chunk_size = 0)
+           const OrderByMode order_by_mode = OrderByMode::Ascending, const size_t output_chunk_size = 0)
       : _table_in(table_in),
         _sort_column_name(sort_column_name),
-        _ascending(ascending),
+        _order_by_mode(order_by_mode),
         _output_chunk_size(output_chunk_size) {
     // initialize a structure wich can be sorted by std::sort
     _row_id_value_vector = std::make_shared<std::vector<std::pair<RowID, SortColumnType>>>();
@@ -80,7 +80,7 @@ class Sort::SortImpl : public AbstractReadOnlyOperatorImpl {
     preparation->execute();
 
     // 2. After we got our ValueRowID Map we sort the map by the value of the pair
-    if (_ascending) {
+    if (_order_by_mode == OrderByMode::Ascending) {
       sort_with_operator<std::less<>>();
     } else {
       sort_with_operator<std::greater<>>();
@@ -106,7 +106,7 @@ class Sort::SortImpl : public AbstractReadOnlyOperatorImpl {
 
   // column to sort by
   const std::string _sort_column_name;
-  const bool _ascending;
+  const OrderByMode _order_by_mode;
   // chunk size of the materialized output
   const size_t _output_chunk_size;
 

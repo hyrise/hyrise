@@ -11,8 +11,8 @@
 
 #include "storage/base_attribute_vector.hpp"
 #include "storage/base_column.hpp"
+#include "storage/base_dictionary_column.hpp"
 #include "storage/index/base_index.hpp"
-#include "storage/untyped_dictionary_column.hpp"
 
 #include "types.hpp"
 #include "utils/assert.hpp"
@@ -20,7 +20,7 @@
 namespace opossum {
 
 AdaptiveRadixTreeIndex::AdaptiveRadixTreeIndex(const std::vector<std::shared_ptr<BaseColumn>> &index_columns)
-    : _index_column(std::dynamic_pointer_cast<UntypedDictionaryColumn>(index_columns.front())) {
+    : _index_column(std::dynamic_pointer_cast<BaseDictionaryColumn>(index_columns.front())) {
   DebugAssert(static_cast<bool>(_index_column), "AdaptiveRadixTree only works with DictionaryColumns for now");
   DebugAssert((index_columns.size() == 1), "AdaptiveRadixTree only works with a single column");
 
