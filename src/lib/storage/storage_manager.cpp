@@ -3,6 +3,7 @@
 #include <memory>
 #include <string>
 #include <utility>
+#include <vector>
 
 #include "operators/export_csv.hpp"
 #include "operators/table_wrapper.hpp"
