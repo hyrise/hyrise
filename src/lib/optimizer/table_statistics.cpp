@@ -178,15 +178,14 @@ std::shared_ptr<TableStatistics> TableStatistics::join_statistics(
    * The selectivity calculation call also returns the new column statistics for columns a and c. Both are identical and
    * have a min, max value of 1, distinct count of 1 and a non-null value ratio of 1.
    * These new column statistics replace the old corresponding column statistics in the output table statistics, if the
-   * join mode allows does not specify to keep all values of a column.
+   * join mode does not specify to keep all values of a column.
    * E.g. the new left column statistics replaces its previous statistics, if join mode is self, inner or right.
    * Vice versa the new right column statistics replaces its previous statistic, if join mode is self, inner or left.
    *
    * For a full outer join, the null values added to columns c and d are the number of null values of column a (= 1)
    * plus the number of non-null values of column a not selected by the predicate (= 1 (value 2 in row 2)).
    * So in total 1 + 1 = 2 null values are added to columns c and d. Column c had already a null value before and,
-   * therefore, has now 1 + 2 = 3 null values. Column d did not have a null value columns and know has 0 + 2 = 2
-   * columns.
+   * therefore, has now 1 + 2 = 3 null values. Column d did not have null values and now has 0 + 2 = 2 null values.
    * The same calculations also needs to be done for the null value numbers in columns a and b. Since all non-null
    * values in column c are selected by the predicate only the null value number of column c needs to be added to
    * columns a and b: 0 + 1 = 1
@@ -208,6 +207,7 @@ std::shared_ptr<TableStatistics> TableStatistics::join_statistics(
     right_stats = shared_from_this();
   }
 
+  // copy column statistics and calculate cross join row count
   auto join_table_stats = join_statistics(right_stats, JoinMode::Cross);
 
   // retrieve the two column statistics which are used by the join predicate
@@ -224,6 +224,7 @@ std::shared_ptr<TableStatistics> TableStatistics::join_statistics(
     stats_container.second_column_statistics = right_col_stats;
   }
 
+  // apply predicate selectivity to cross join
   join_table_stats->_row_count *= stats_container.selectivity;
 
   ColumnID new_right_column_id{static_cast<ColumnID::base_type>(_column_statistics.size() + column_ids.second)};
@@ -250,6 +251,7 @@ std::shared_ptr<TableStatistics> TableStatistics::join_statistics(
     // adjust null value ratios in columns from the right table
     for (auto col_itr = join_table_stats->_column_statistics.begin() + _column_statistics.size();
          col_itr != join_table_stats->_column_statistics.end(); ++col_itr) {
+      // columns need to be copied before changed
       *col_itr = (*col_itr)->clone();
       float column_null_value_no = (*col_itr)->null_value_ratio() * right_stats->_row_count;
       float right_null_value_ratio = (column_null_value_no + right_null_value_no) / join_table_stats->row_count();
@@ -264,6 +266,7 @@ std::shared_ptr<TableStatistics> TableStatistics::join_statistics(
     // adjust null value ratios in columns from the left table
     for (auto col_itr = join_table_stats->_column_statistics.begin();
          col_itr != join_table_stats->_column_statistics.begin() + _column_statistics.size(); ++col_itr) {
+      // columns need to be copied before changed
       *col_itr = (*col_itr)->clone();
       float column_null_value_no = (*col_itr)->null_value_ratio() * _row_count;
       float left_null_value_ratio = (column_null_value_no + left_null_value_no) / join_table_stats->row_count();
