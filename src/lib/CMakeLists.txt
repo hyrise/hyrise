@@ -40,6 +40,7 @@ add_custom_command(
 # Protobuf library with overridden deprecated warning
 add_library(
     opossumProtobuf
+    EXCLUDE_FROM_ALL
     STATIC
     network/generated/opossum.pb.cc
     network/generated/opossum.grpc.pb.cc
@@ -271,7 +272,7 @@ add_library(opossum STATIC ${SOURCES})
 target_link_libraries(opossum ${LIBRARIES})
 
 # Configure the lib used for asan
-add_library(opossumAsanLib STATIC ${SOURCES})
+add_library(opossumAsanLib EXCLUDE_FROM_ALL STATIC ${SOURCES})
 target_link_libraries(
     opossumAsanLib
     ${LIBRARIES}
@@ -280,7 +281,7 @@ target_link_libraries(
 set_target_properties(opossumAsanLib PROPERTIES COMPILE_FLAGS "-fsanitize=address -fno-omit-frame-pointer")
 
 # Configure the lib used for coverage
-add_library(opossumCoverageLib STATIC ${SOURCES})
+add_library(opossumCoverageLib EXCLUDE_FROM_ALL STATIC ${SOURCES})
 target_link_libraries(
     opossumCoverageLib
     ${LIBRARIES}

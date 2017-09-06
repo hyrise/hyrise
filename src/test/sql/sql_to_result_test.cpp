@@ -101,6 +101,7 @@ const SQLTestParam test_queries[] = {
     // Table Scans
     {"SELECT * FROM table_b WHERE a = 12345 AND b > 457;", "src/test/tables/int_float2_filtered.tbl"},
     {"SELECT * FROM table_a WHERE a >= 1234;", "src/test/tables/int_float_filtered2.tbl"},
+    {"SELECT * FROM table_a WHERE 1234 <= a;", "src/test/tables/int_float_filtered2.tbl"},
     {"SELECT * FROM table_a WHERE a >= 1234 AND b < 457.9", "src/test/tables/int_float_filtered.tbl"},
     {"SELECT * FROM TestTable WHERE a BETWEEN 122 AND 124", "src/test/tables/int_string_filtered.tbl"},
 
