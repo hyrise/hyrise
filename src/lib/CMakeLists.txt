@@ -78,6 +78,17 @@ set(
     network/server_configuration.hpp
     network/server.cpp
     network/server.hpp
+    operators/table_scan/base_single_column_table_scan_impl.cpp
+    operators/table_scan/base_single_column_table_scan_impl.hpp
+    operators/table_scan/base_table_scan_impl.hpp
+    operators/table_scan/column_comparison_table_scan_impl.cpp
+    operators/table_scan/column_comparison_table_scan_impl.hpp
+    operators/table_scan/is_null_table_scan_impl.cpp
+    operators/table_scan/is_null_table_scan_impl.hpp
+    operators/table_scan/like_table_scan_impl.cpp
+    operators/table_scan/like_table_scan_impl.hpp
+    operators/table_scan/single_column_table_scan_impl.cpp
+    operators/table_scan/single_column_table_scan_impl.hpp
     operators/abstract_join_operator.cpp
     operators/abstract_join_operator.hpp
     operators/abstract_operator.cpp
@@ -164,6 +175,7 @@ set(
     optimizer/strategy/predicate_reordering_rule.hpp
     optimizer/table_statistics.cpp
     optimizer/table_statistics.hpp
+    resolve_column_type.hpp
     resolve_type.hpp
     scheduler/abstract_scheduler.cpp
     scheduler/abstract_scheduler.hpp
@@ -226,6 +238,18 @@ set(
     storage/index/group_key/variable_length_key_proxy.hpp
     storage/index/group_key/variable_length_key_store.cpp
     storage/index/group_key/variable_length_key_store.hpp
+    storage/iterables/attribute_vector_iterable.hpp
+    storage/iterables/iterables.hpp
+    storage/iterables/base_iterators.hpp
+    storage/iterables/chunk_offset_mapping.cpp
+    storage/iterables/chunk_offset_mapping.hpp
+    storage/iterables/column_value.hpp
+    storage/iterables/constant_value_iterable.hpp
+    storage/iterables/create_iterable_from_column.hpp
+    storage/iterables/dictionary_column_iterable.hpp
+    storage/iterables/null_value_vector_iterable.hpp
+    storage/iterables/reference_column_iterable.hpp
+    storage/iterables/value_column_iterable.hpp
     storage/reference_column.cpp
     storage/reference_column.hpp
     storage/scoped_locking_ptr.hpp
@@ -233,7 +257,8 @@ set(
     storage/storage_manager.hpp
     storage/table.cpp
     storage/table.hpp
-    storage/untyped_dictionary_column.hpp
+    storage/base_dictionary_column.hpp
+    storage/base_value_column.hpp
     storage/value_column.cpp
     storage/value_column.hpp
     tasks/chunk_compression_task.cpp
@@ -249,6 +274,7 @@ set(
     utils/load_table.hpp
     utils/murmur_hash.cpp
     utils/murmur_hash.hpp
+    utils/static_if.hpp
 )
 
 set(
@@ -267,7 +293,6 @@ set(
 if(${NUMA_FOUND})
     set(LIBRARIES ${LIBRARIES} ${NUMA_LIBRARY})
 endif()
-
 
 # Configure the regular opossum library used for tests/server/playground...
 add_library(opossum STATIC ${SOURCES})

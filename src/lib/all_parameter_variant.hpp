@@ -28,4 +28,10 @@ using ParameterTypesAsMplVector =
 // Create boost::variant from mpl vector
 using AllParameterVariant = typename boost::make_variant_over<ParameterTypesAsMplVector>::type;
 
+// Function to check if AllParameterVariant is AllTypeVariant
+inline bool is_variant(const AllParameterVariant& variant) { return (variant.type() == typeid(AllTypeVariant)); }
+
+// Function to check if AllParameterVariant is ColumnName
+inline bool is_placeholder(const AllParameterVariant& variant) { return (variant.type() == typeid(ValuePlaceholder)); }
+
 }  // namespace opossum

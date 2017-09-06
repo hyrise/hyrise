@@ -67,6 +67,7 @@ set(
     storage/composite_group_key_index_test.cpp
     storage/dictionary_column_test.cpp
     storage/group_key_index_test.cpp
+    storage/iterables_test.cpp
     storage/multi_column_index_test.cpp
     storage/reference_column_test.cpp
     storage/single_column_index_test.cpp
