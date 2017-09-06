@@ -11,7 +11,7 @@ namespace opossum {
 // maintenance operator to print a list of table names stored by the StorageManager
 class ShowColumns : public AbstractReadOnlyOperator {
  public:
-  ShowColumns(const std::string& table_name);
+  explicit ShowColumns(const std::string& table_name);
 
   const std::string name() const override;
   uint8_t num_in_tables() const override;
