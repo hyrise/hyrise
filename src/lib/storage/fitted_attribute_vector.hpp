@@ -31,7 +31,7 @@ class FittedAttributeVector : public BaseAttributeVector {
   explicit FittedAttributeVector(size_t size, const PolymorphicAllocator<uintX_t>& alloc) : _attributes(size, alloc) {}
 
   // Creates a FittedAttributeVector from given attributes
-  explicit FittedAttributeVector(const alloc_vector<uintX_t>& attributes) : _attributes(attributes) {}
+  explicit FittedAttributeVector(const pmr_vector<uintX_t>& attributes) : _attributes(attributes) {}
 
   /**
    * Returns the ValueID for a given record
@@ -52,7 +52,7 @@ class FittedAttributeVector : public BaseAttributeVector {
   }
 
   // returns all attributes
-  const alloc_vector<uintX_t>& attributes() const { return _attributes; }
+  const pmr_vector<uintX_t>& attributes() const { return _attributes; }
 
   // returns the number of values
   size_t size() const final { return _attributes.size(); }
@@ -60,6 +60,6 @@ class FittedAttributeVector : public BaseAttributeVector {
   AttributeVectorWidth width() const final { return sizeof(uintX_t); }
 
  private:
-  alloc_vector<uintX_t> _attributes;
+  pmr_vector<uintX_t> _attributes;
 };
 }  // namespace opossum

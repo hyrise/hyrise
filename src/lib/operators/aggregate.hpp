@@ -97,7 +97,7 @@ class Aggregate : public AbstractReadOnlyOperator {
   template <typename AggregateType, AggregateFunction func>
   typename std::enable_if<
       func == AggregateFunction::Min || func == AggregateFunction::Max || func == AggregateFunction::Sum, void>::type
-  _write_aggregate_values(alloc_concurrent_vector<AggregateType> &values,
+  _write_aggregate_values(pmr_concurrent_vector<AggregateType> &values,
                           std::shared_ptr<std::map<AggregateKey, AggregateResult<AggregateType>>> results) {
     for (auto &kv : *results) {
       if (!kv.second.current_aggregate) {
@@ -112,7 +112,7 @@ class Aggregate : public AbstractReadOnlyOperator {
   // COUNT writes the aggregate counter
   template <typename AggregateType, AggregateFunction func>
   typename std::enable_if<func == AggregateFunction::Count, void>::type _write_aggregate_values(
-      alloc_concurrent_vector<AggregateType> &values,
+      pmr_concurrent_vector<AggregateType> &values,
       std::shared_ptr<std::map<AggregateKey, AggregateResult<AggregateType>>> results) {
     for (auto &kv : *results) {
       values.push_back(kv.second.aggregate_count);
@@ -122,7 +122,7 @@ class Aggregate : public AbstractReadOnlyOperator {
   // AVG writes the calculated average from current aggregate and the aggregate counter
   template <typename AggregateType, AggregateFunction func>
   typename std::enable_if<func == AggregateFunction::Avg && std::is_arithmetic<AggregateType>::value, void>::type
-  _write_aggregate_values(alloc_concurrent_vector<AggregateType> &values,
+  _write_aggregate_values(pmr_concurrent_vector<AggregateType> &values,
                           std::shared_ptr<std::map<AggregateKey, AggregateResult<AggregateType>>> results) {
     for (auto &kv : *results) {
       if (!kv.second.current_aggregate) {
@@ -137,7 +137,7 @@ class Aggregate : public AbstractReadOnlyOperator {
   // AVG is not defined for non-arithmetic types. Avoiding compiler errors.
   template <typename AggregateType, AggregateFunction func>
   typename std::enable_if<func == AggregateFunction::Avg && !std::is_arithmetic<AggregateType>::value, void>::type
-      _write_aggregate_values(alloc_concurrent_vector<AggregateType>,
+      _write_aggregate_values(pmr_concurrent_vector<AggregateType>,
                               std::shared_ptr<std::map<AggregateKey, AggregateResult<AggregateType>>>) {
     Fail("Invalid aggregate");
   }
@@ -165,7 +165,7 @@ struct GroupByContext : ColumnVisitableContext {
   // constructor for use in ReferenceColumn::visit_dereferenced
   GroupByContext(std::shared_ptr<BaseColumn>, const std::shared_ptr<const Table> referenced_table,
                  std::shared_ptr<ColumnVisitableContext> base_context, ChunkID chunk_id,
-                 std::shared_ptr<alloc_vector<ChunkOffset>> chunk_offsets)
+                 std::shared_ptr<pmr_vector<ChunkOffset>> chunk_offsets)
       : table_in(referenced_table),
         chunk_id(chunk_id),
         column_id(std::static_pointer_cast<GroupByContext>(base_context)->column_id),
@@ -176,7 +176,7 @@ struct GroupByContext : ColumnVisitableContext {
   ChunkID chunk_id;
   const ColumnID column_id;
   std::shared_ptr<std::vector<AggregateKey>> hash_keys;
-  std::shared_ptr<alloc_vector<ChunkOffset>> chunk_offsets_in;
+  std::shared_ptr<pmr_vector<ChunkOffset>> chunk_offsets_in;
 };
 
 /*
@@ -221,7 +221,7 @@ struct PartitionBuilder : public ColumnVisitable {
     auto context = std::static_pointer_cast<GroupByContext>(base_context);
     const auto &column = static_cast<DictionaryColumn<T> &>(base_column);
     const BaseAttributeVector &attribute_vector = *(column.attribute_vector());
-    const alloc_vector<T> &dictionary = *(column.dictionary());
+    const pmr_vector<T> &dictionary = *(column.dictionary());
 
     if (context->chunk_offsets_in) {
       for (const ChunkOffset &offset_in_dictionary_column : *(context->chunk_offsets_in)) {
@@ -305,7 +305,7 @@ struct AggregateContext : ColumnVisitableContext {
   // constructor for use in ReferenceColumn::visit_dereferenced
   AggregateContext(std::shared_ptr<BaseColumn>, const std::shared_ptr<const Table>,
                    std::shared_ptr<ColumnVisitableContext> base_context, ChunkID chunk_id,
-                   std::shared_ptr<alloc_vector<ChunkOffset>> chunk_offsets)
+                   std::shared_ptr<pmr_vector<ChunkOffset>> chunk_offsets)
       : groupby_context(std::static_pointer_cast<AggregateContext>(base_context)->groupby_context),
         results(std::static_pointer_cast<AggregateContext>(base_context)->results) {
     groupby_context->chunk_id = chunk_id;

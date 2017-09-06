@@ -15,9 +15,9 @@
 namespace opossum {
 
 template <typename T>
-DictionaryColumn<T>::DictionaryColumn(const alloc_vector<T>&& dictionary,
+DictionaryColumn<T>::DictionaryColumn(const pmr_vector<T>&& dictionary,
                                       const std::shared_ptr<BaseAttributeVector>& attribute_vector)
-    : _dictionary(std::make_shared<alloc_vector<T>>(std::move(dictionary))), _attribute_vector(attribute_vector) {}
+    : _dictionary(std::make_shared<pmr_vector<T>>(std::move(dictionary))), _attribute_vector(attribute_vector) {}
 
 template <typename T>
 const AllTypeVariant DictionaryColumn<T>::operator[](const size_t i) const {
@@ -49,7 +49,7 @@ void DictionaryColumn<T>::append(const AllTypeVariant&) {
 }
 
 template <typename T>
-std::shared_ptr<const alloc_vector<T>> DictionaryColumn<T>::dictionary() const {
+std::shared_ptr<const pmr_vector<T>> DictionaryColumn<T>::dictionary() const {
   return _dictionary;
 }
 
@@ -60,8 +60,8 @@ std::shared_ptr<const BaseAttributeVector> DictionaryColumn<T>::attribute_vector
 
 // TODO(anyone): This method is part of an algorithm that hasn’t yet been updated to support null values.
 template <typename T>
-const alloc_concurrent_vector<T> DictionaryColumn<T>::materialize_values() const {
-  alloc_concurrent_vector<T> values(_attribute_vector->size());
+const pmr_concurrent_vector<T> DictionaryColumn<T>::materialize_values() const {
+  pmr_concurrent_vector<T> values(_attribute_vector->size());
 
   for (ChunkOffset chunk_offset = 0; chunk_offset < _attribute_vector->size(); ++chunk_offset) {
     values[chunk_offset] = (*_dictionary)[_attribute_vector->get(chunk_offset)];
@@ -149,9 +149,9 @@ void DictionaryColumn<T>::copy_value_to_value_column(BaseColumn& value_column, C
 
 // TODO(anyone): This method is part of an algorithm that hasn’t yet been updated to support null values.
 template <typename T>
-const std::shared_ptr<alloc_vector<std::pair<RowID, T>>> DictionaryColumn<T>::materialize(
-    ChunkID chunk_id, std::shared_ptr<alloc_vector<ChunkOffset>> offsets) {
-  auto materialized_vector = std::make_shared<alloc_vector<std::pair<RowID, T>>>();
+const std::shared_ptr<pmr_vector<std::pair<RowID, T>>> DictionaryColumn<T>::materialize(
+    ChunkID chunk_id, std::shared_ptr<pmr_vector<ChunkOffset>> offsets) {
+  auto materialized_vector = std::make_shared<pmr_vector<std::pair<RowID, T>>>();
 
   /*
   We only offset if this ValueColumn was referenced by a ReferenceColumn. Thus it might actually be filtered.

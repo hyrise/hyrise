@@ -114,8 +114,8 @@ class JoinNestedLoopA::JoinNestedLoopAImpl : public AbstractJoinOperatorImpl {
                            JoinMode mode, std::function<bool(LeftType, RightType)> compare,
                            std::shared_ptr<std::map<RowID, bool>> null_value_rows_left,
                            std::shared_ptr<std::map<RowID, bool>> null_value_rows_right,
-                           std::shared_ptr<alloc_vector<ChunkOffset>> filter_left = nullptr,
-                           std::shared_ptr<alloc_vector<ChunkOffset>> filter_right = nullptr)
+                           std::shared_ptr<pmr_vector<ChunkOffset>> filter_left = nullptr,
+                           std::shared_ptr<pmr_vector<ChunkOffset>> filter_right = nullptr)
         : column_left(coleft),
           column_right(coright),
           chunk_id_left(left_id),
@@ -139,8 +139,8 @@ class JoinNestedLoopA::JoinNestedLoopAImpl : public AbstractJoinOperatorImpl {
     std::function<bool(LeftType, RightType)> compare_func;
     size_t size_left;
     std::function<LeftType(ChunkOffset)> get_left_column_value;
-    std::shared_ptr<alloc_vector<ChunkOffset>> chunk_offsets_in_left;
-    std::shared_ptr<alloc_vector<ChunkOffset>> chunk_offsets_in_right;
+    std::shared_ptr<pmr_vector<ChunkOffset>> chunk_offsets_in_left;
+    std::shared_ptr<pmr_vector<ChunkOffset>> chunk_offsets_in_right;
     std::shared_ptr<std::map<RowID, bool>> rows_potentially_joined_with_null_values_left;
     std::shared_ptr<std::map<RowID, bool>> rows_potentially_joined_with_null_values_right;
   };
@@ -149,7 +149,7 @@ class JoinNestedLoopA::JoinNestedLoopAImpl : public AbstractJoinOperatorImpl {
   struct JoinNestedLoopALeftContext : public JoinNestedLoopAContext {
     JoinNestedLoopALeftContext(std::shared_ptr<BaseColumn> referenced_column, const std::shared_ptr<const Table>,
                                std::shared_ptr<ColumnVisitableContext> base_context, ChunkID chunk_id,
-                               std::shared_ptr<alloc_vector<ChunkOffset>> chunk_offsets) {
+                               std::shared_ptr<pmr_vector<ChunkOffset>> chunk_offsets) {
       auto ctx = std::static_pointer_cast<JoinNestedLoopAContext>(base_context);
 
       this->column_left = referenced_column;
@@ -172,7 +172,7 @@ class JoinNestedLoopA::JoinNestedLoopAImpl : public AbstractJoinOperatorImpl {
   struct JoinNestedLoopARightContext : public JoinNestedLoopAContext {
     JoinNestedLoopARightContext(std::shared_ptr<BaseColumn> referenced_column, const std::shared_ptr<const Table>,
                                 std::shared_ptr<ColumnVisitableContext> base_context, ChunkID chunk_id,
-                                std::shared_ptr<alloc_vector<ChunkOffset>> chunk_offsets) {
+                                std::shared_ptr<pmr_vector<ChunkOffset>> chunk_offsets) {
       auto ctx = std::static_pointer_cast<JoinNestedLoopAContext>(base_context);
 
       this->column_left = ctx->column_left;
@@ -222,7 +222,7 @@ class JoinNestedLoopA::JoinNestedLoopAImpl : public AbstractJoinOperatorImpl {
       auto ctx = std::static_pointer_cast<JoinNestedLoopAContext>(context);
 
       auto dc_right = std::static_pointer_cast<DictionaryColumn<RightType>>(ctx->column_right);
-      const auto &right_dictionary = static_cast<const alloc_vector<RightType> &>(*dc_right->dictionary());
+      const auto &right_dictionary = static_cast<const pmr_vector<RightType> &>(*dc_right->dictionary());
       const auto &right_attribute_vector = static_cast<const BaseAttributeVector &>(*dc_right->attribute_vector());
 
       // Function to get the value of right column
@@ -259,7 +259,7 @@ class JoinNestedLoopA::JoinNestedLoopAImpl : public AbstractJoinOperatorImpl {
       auto ctx = std::static_pointer_cast<JoinNestedLoopAContext>(context);
       auto dc_left = std::static_pointer_cast<DictionaryColumn<LeftType>>(ctx->column_left);
 
-      const auto &left_dictionary = static_cast<const alloc_vector<LeftType> &>(*dc_left->dictionary());
+      const auto &left_dictionary = static_cast<const pmr_vector<LeftType> &>(*dc_left->dictionary());
       const auto &left_attribute_vector = static_cast<const BaseAttributeVector &>(*dc_left->attribute_vector());
 
       // Size of the current left column
@@ -293,10 +293,10 @@ class JoinNestedLoopA::JoinNestedLoopAImpl : public AbstractJoinOperatorImpl {
       auto chunk_offsets_in_right = context->chunk_offsets_in_right;
 
       if (!chunk_offsets_in_left) {
-        chunk_offsets_in_left = std::make_shared<alloc_vector<ChunkOffset>>(size_left);
+        chunk_offsets_in_left = std::make_shared<pmr_vector<ChunkOffset>>(size_left);
         std::iota(chunk_offsets_in_left->begin(), chunk_offsets_in_left->end(), 0);
       } else if (!chunk_offsets_in_right) {
-        chunk_offsets_in_right = std::make_shared<alloc_vector<ChunkOffset>>(size_right);
+        chunk_offsets_in_right = std::make_shared<pmr_vector<ChunkOffset>>(size_right);
         std::iota(chunk_offsets_in_right->begin(), chunk_offsets_in_right->end(), 0);
       }
 

@@ -35,9 +35,9 @@ class Chunk : private Noncopyable {
     friend class Chunk;
 
    public:
-    alloc_concurrent_vector<copyable_atomic<TransactionID>> tids;  ///< 0 unless locked by a transaction
-    alloc_concurrent_vector<CommitID> begin_cids;                  ///< commit id when record was added
-    alloc_concurrent_vector<CommitID> end_cids;                    ///< commit id when record was deleted
+    pmr_concurrent_vector<copyable_atomic<TransactionID>> tids;  ///< 0 unless locked by a transaction
+    pmr_concurrent_vector<CommitID> begin_cids;                  ///< commit id when record was added
+    pmr_concurrent_vector<CommitID> end_cids;                    ///< commit id when record was deleted
 
    private:
     /**
@@ -137,9 +137,9 @@ class Chunk : private Noncopyable {
 
  protected:
   PolymorphicAllocator<Chunk> _alloc;
-  alloc_concurrent_vector<std::shared_ptr<BaseColumn>> _columns;
+  pmr_concurrent_vector<std::shared_ptr<BaseColumn>> _columns;
   std::unique_ptr<MvccColumns> _mvcc_columns;
-  alloc_vector<std::shared_ptr<BaseIndex>> _indices;
+  pmr_vector<std::shared_ptr<BaseIndex>> _indices;
 };
 
 }  // namespace opossum

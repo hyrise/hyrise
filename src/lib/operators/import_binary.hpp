@@ -143,11 +143,11 @@ class ImportBinary : public AbstractReadOnlyOperator {
 
   // Reads row_count many values from type T and returns them in a vector
   template <typename T>
-  static alloc_vector<T> _read_values(std::ifstream& file, const size_t count);
+  static pmr_vector<T> _read_values(std::ifstream& file, const size_t count);
 
   // Reads row_count many strings from input file. String lengths are encoded in type T.
   template <typename T = StringLength>
-  static alloc_vector<std::string> _read_string_values(std::ifstream& file, const size_t count);
+  static pmr_vector<std::string> _read_string_values(std::ifstream& file, const size_t count);
 
   // Reads a single value of type T from the input file.
   template <typename T>

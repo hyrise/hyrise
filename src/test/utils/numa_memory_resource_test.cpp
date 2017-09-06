@@ -28,7 +28,7 @@ TEST_F(NUMAMemoryResourceTest, BasicAllocate) {
   auto memory_resource = NUMAMemoryResource(2, "test");
   const auto alloc = PolymorphicAllocator<size_t>(&memory_resource);
 
-  const auto vec = alloc_vector<size_t>(1024, alloc);
+  const auto vec = pmr_vector<size_t>(1024, alloc);
 
   EXPECT_EQ(get_node_id_of(vec.data()), 2);
 }
