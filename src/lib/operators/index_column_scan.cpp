@@ -354,7 +354,7 @@ class IndexColumnScan::IndexColumnScanImpl : public AbstractReadOnlyOperatorImpl
   }
 
   std::vector<ChunkOffset> get_pos_list_from_index(std::shared_ptr<BaseIndex> index, T search_value,
-                                                  optional<T> search_value_2) {
+                                                   optional<T> search_value_2) {
     BaseIndex::Iterator lower_bound, upper_bound;
 
     std::vector<ChunkOffset> result;

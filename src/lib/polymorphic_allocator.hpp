@@ -21,7 +21,7 @@ class PolymorphicAllocator : public boost::container::pmr::polymorphic_allocator
       : boost::container::pmr::polymorphic_allocator<T>(alloc) {}
   template <class U>
   PolymorphicAllocator(const PolymorphicAllocator<U>& other) : boost::container::pmr::polymorphic_allocator<T>(other) {}
-   template <class U>
+  template <class U>
   // PolymorphicAllocator(const std::allocator<U>& alloc) {}  // NOLINT(runtime/explicit)
   PolymorphicAllocator(boost::container::pmr::memory_resource* m_resource)  // NOLINT(runtime/explicit)
       : boost::container::pmr::polymorphic_allocator<T>(m_resource) {}
