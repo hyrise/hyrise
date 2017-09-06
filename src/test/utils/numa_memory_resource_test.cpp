@@ -30,7 +30,11 @@ TEST_F(NUMAMemoryResourceTest, BasicAllocate) {
 
   const auto vec = pmr_vector<size_t>(1024, alloc);
 
+#if OPOSSUM_NUMA_SUPPORT
   EXPECT_EQ(get_node_id_of(vec.data()), 2);
+#else
+  EXPECT_EQ(get_node_id_of(vec.data()), 1);
+#endif
 }
 
 }  // namespace opossum
