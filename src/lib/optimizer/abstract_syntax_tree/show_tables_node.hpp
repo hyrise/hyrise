@@ -7,7 +7,7 @@
 namespace opossum {
 
 /**
- * This node type represents the SHOW COLUMNS management command.
+ * This node type represents the SHOW TABLES management command.
  */
 class ShowTablesNode : public AbstractNonOptimizableASTNode {
  public:

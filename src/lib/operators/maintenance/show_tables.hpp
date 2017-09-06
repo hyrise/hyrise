@@ -9,7 +9,7 @@
 
 namespace opossum {
 
-// maintenance operator to retrieve a list of table names from the StorageManager
+// maintenance operator to print a list of table names stored by the StorageManager
 class ShowTables : public AbstractReadOnlyOperator {
  public:
   explicit ShowTables(std::ostream& out = std::cout);
