@@ -255,7 +255,6 @@ set(
 set(
     LIBRARIES
     opossumProtobuf
-    boost_container
     protobuf
     grpc++
     grpc
