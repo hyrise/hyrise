@@ -9,7 +9,7 @@ namespace opossum {
 
 class TableStatistics;
 
-enum class ASTNodeType { Aggregate, Join, Limit, Predicate, Projection, Sort, StoredTable };
+enum class ASTNodeType { Aggregate, Join, Limit, Predicate, Projection, ShowColumns, ShowTables, Sort, StoredTable };
 
 /**
  * Abstract element in an Abstract Syntax Tree.
@@ -23,6 +23,11 @@ enum class ASTNodeType { Aggregate, Join, Limit, Predicate, Projection, Sort, St
 class AbstractASTNode : public std::enable_shared_from_this<AbstractASTNode> {
  public:
   explicit AbstractASTNode(ASTNodeType node_type);
+
+  /**
+   * Returns whether this node shall be considered by the optimizer or not.
+   */
+  virtual bool is_optimizable() const;
 
   /**
    * The _parent is implicitly set in set_left_child/set_right_child.

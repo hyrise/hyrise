@@ -114,6 +114,8 @@ set(
     operators/join_nested_loop_b.hpp
     operators/limit.cpp
     operators/limit.hpp
+    operators/maintenance/show_tables.cpp
+    operators/maintenance/show_tables.hpp
     operators/print.cpp
     operators/print.hpp
     operators/product.cpp
@@ -136,6 +138,8 @@ set(
     operators/validate.hpp
     optimizer/abstract_syntax_tree/abstract_ast_node.cpp
     optimizer/abstract_syntax_tree/abstract_ast_node.hpp
+    optimizer/abstract_syntax_tree/abstract_non_optimizable_ast_node.cpp
+    optimizer/abstract_syntax_tree/abstract_non_optimizable_ast_node.hpp
     optimizer/abstract_syntax_tree/aggregate_node.cpp
     optimizer/abstract_syntax_tree/aggregate_node.hpp
     optimizer/abstract_syntax_tree/ast_to_operator_translator.hpp
@@ -148,6 +152,10 @@ set(
     optimizer/abstract_syntax_tree/predicate_node.hpp
     optimizer/abstract_syntax_tree/projection_node.cpp
     optimizer/abstract_syntax_tree/projection_node.hpp
+    optimizer/abstract_syntax_tree/show_columns_node.cpp
+    optimizer/abstract_syntax_tree/show_columns_node.hpp
+    optimizer/abstract_syntax_tree/show_tables_node.cpp
+    optimizer/abstract_syntax_tree/show_tables_node.hpp
     optimizer/abstract_syntax_tree/sort_node.cpp
     optimizer/abstract_syntax_tree/sort_node.hpp
     optimizer/abstract_syntax_tree/stored_table_node.cpp
