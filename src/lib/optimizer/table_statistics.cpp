@@ -37,8 +37,11 @@ std::shared_ptr<BaseColumnStatistics> TableStatistics::column_statistics(const C
 void TableStatistics::create_all_column_statistics() {
   // table pointer is deleted, if all column statistics are already created
   auto table_nullptr = std::weak_ptr<Table>();
-  // check if _table is null_ptr
-  if (!table_nullptr.owner_before(_table)) {
+  // check if _table == null_ptr:
+  // weak ptr does not allow a comparison to other weak_ptr,
+  // if two weak pointers are not owner before each other, they are the same as there memory addresses are compared in
+  // function owner_before
+  if (!table_nullptr.owner_before(_table) && !_table.owner_before(table_nullptr)) {
     return;
   }
   auto table = _table.lock();

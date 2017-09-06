@@ -21,9 +21,9 @@ struct TwoColumnSelectivityResult;
  * These functions return a column selectivity result object combining the selectivity of the operator
  * and if changed the newly created column statistics.
  *
- * The selectivities are calculated with the min, max, distinct count and non-null value of the column ratio in the
- * derived class. Only the non-null value ratio is stored in the base class to allow access and manipulation of it by
- * table statistics.
+ * The selectivities are calculated with the min, max, distinct count and non-null value ratio of the column in the
+ * derived class. Only the non-null value ratio is stored in the base class to enable easy access and manipulation of it
+ * by table statistics.
  * A predicate on a null value will never evaluate to true unless the column is explicitly checked for NULL values
  * (col_a IS NULL) which is currently not supported.
  * To start with, null values can be ignored during the calculation of the selectivity. The non-null value ratio can be

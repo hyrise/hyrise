@@ -102,7 +102,7 @@ ColumnSelectivityResult ColumnStatistics<ColumnType>::create_column_stats_for_ra
     return {_non_null_value_ratio, nullptr};
   }
   float selectivity = 0.f;
-  if (common_max >= common_min) {
+  if (common_min <= common_max) {
     selectivity = estimate_selectivity_for_range(common_min, common_max);
   }
   auto column_statistics =
