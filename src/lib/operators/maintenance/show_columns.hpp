@@ -8,7 +8,7 @@
 
 namespace opossum {
 
-// maintenance operator to print a list of table names stored by the StorageManager
+// maintenance operator to get column information for a table
 class ShowColumns : public AbstractReadOnlyOperator {
  public:
   explicit ShowColumns(const std::string& table_name);
