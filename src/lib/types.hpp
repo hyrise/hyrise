@@ -15,14 +15,17 @@
 
 namespace opossum {
 
-template <typename T>
-using polymorphic_allocator = PolymorphicAllocator<T>;
+// We use vectors with custom allocators, e.g, to bind the data object to
+// specific NUMA nodes. This is mainly used in the data objects, i.e.,
+// Chunk, ValueColumn, DictionaryColumn, ReferenceColumn and attribute vectors.
+// The PolymorphicAllocator provides an abstraction over several allocation
+// methods by adapting to subclasses of boost::container::pmr::memory_resource.
 
 template <typename T>
-using alloc_vector = std::vector<T, polymorphic_allocator<T>>;
+using pmr_vector = std::vector<T, PolymorphicAllocator<T>>;
 
 template <typename T>
-using alloc_concurrent_vector = tbb::concurrent_vector<T, polymorphic_allocator<T>>;
+using pmr_concurrent_vector = tbb::concurrent_vector<T, PolymorphicAllocator<T>>;
 
 //
 // We use STRONG_TYPEDEF to avoid things like adding chunk ids and value ids.
@@ -74,7 +77,7 @@ using StringLength = uint16_t;     // The length of column value strings must fi
 using ColumnNameLength = uint8_t;  // The length of column names must fit in this type.
 using AttributeVectorWidth = uint8_t;
 
-using PosList = alloc_vector<RowID>;
+using PosList = pmr_vector<RowID>;
 
 class ColumnName {
  public:

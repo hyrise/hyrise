@@ -60,7 +60,7 @@ void _export_values(std::ofstream& ofstream, const std::vector<T, Alloc>& values
 
 // specialized implementation for string values
 template <>
-void _export_values(std::ofstream& ofstream, const opossum::alloc_vector<std::string>& values) {
+void _export_values(std::ofstream& ofstream, const opossum::pmr_vector<std::string>& values) {
   _export_string_values(ofstream, values);
 }
 template <>
@@ -77,7 +77,7 @@ void _export_values(std::ofstream& ofstream, const tbb::concurrent_vector<T, All
 
 // specialized implementation for string values
 template <>
-void _export_values(std::ofstream& ofstream, const opossum::alloc_concurrent_vector<std::string>& values) {
+void _export_values(std::ofstream& ofstream, const opossum::pmr_concurrent_vector<std::string>& values) {
   // TODO(all): could be faster if we directly write the values into the stream without prior conversion
   const auto value_block = std::vector<std::string>{values.begin(), values.end()};
   _export_string_values(ofstream, value_block);

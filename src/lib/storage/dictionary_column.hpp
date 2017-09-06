@@ -26,7 +26,7 @@ class DictionaryColumn : public UntypedDictionaryColumn {
    * Creates a Dictionary column from a given dictionary and attribute vector.
    * See dictionary_compression.cpp for more.
    */
-  explicit DictionaryColumn(const alloc_vector<T>&& dictionary,
+  explicit DictionaryColumn(const pmr_vector<T>&& dictionary,
                             const std::shared_ptr<BaseAttributeVector>& attribute_vector);
 
   // return the value at a certain position. If you want to write efficient operators, back off!
@@ -39,13 +39,13 @@ class DictionaryColumn : public UntypedDictionaryColumn {
   void append(const AllTypeVariant&) override;
 
   // returns an underlying dictionary
-  std::shared_ptr<const alloc_vector<T>> dictionary() const;
+  std::shared_ptr<const pmr_vector<T>> dictionary() const;
 
   // returns an underlying data structure
   std::shared_ptr<const BaseAttributeVector> attribute_vector() const final;
 
   // return a generated vector of all values
-  const alloc_concurrent_vector<T> materialize_values() const;
+  const pmr_concurrent_vector<T> materialize_values() const;
 
   // return the value represented by a given ValueID
   const T& value_by_value_id(ValueID value_id) const;
@@ -81,11 +81,11 @@ class DictionaryColumn : public UntypedDictionaryColumn {
   void copy_value_to_value_column(BaseColumn& value_column, ChunkOffset chunk_offset) const override;
 
   // TODO(anyone): Move this to base column once final optimization is supported by gcc
-  const std::shared_ptr<alloc_vector<std::pair<RowID, T>>> materialize(
-      ChunkID chunk_id, std::shared_ptr<alloc_vector<ChunkOffset>> offsets = nullptr);
+  const std::shared_ptr<pmr_vector<std::pair<RowID, T>>> materialize(
+      ChunkID chunk_id, std::shared_ptr<pmr_vector<ChunkOffset>> offsets = nullptr);
 
  protected:
-  std::shared_ptr<alloc_vector<T>> _dictionary;
+  std::shared_ptr<pmr_vector<T>> _dictionary;
   std::shared_ptr<BaseAttributeVector> _attribute_vector;
 };
 

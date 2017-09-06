@@ -150,14 +150,14 @@ class TableScan::TableScanImpl : public AbstractReadOnlyOperatorImpl {
         _is_constant_value_scan(_value.type() == typeid(AllTypeVariant)) {}
 
   struct ScanContext : ColumnVisitableContext {
-    ScanContext(std::shared_ptr<const Table> t, ChunkID c, alloc_vector<RowID> &mo,
-                const alloc_concurrent_vector<T> &values, std::shared_ptr<alloc_vector<ChunkOffset>> co = nullptr)
+    ScanContext(std::shared_ptr<const Table> t, ChunkID c, pmr_vector<RowID> &mo,
+                const pmr_concurrent_vector<T> &values, std::shared_ptr<pmr_vector<ChunkOffset>> co = nullptr)
         : table_in(t), chunk_id(c), matches_out(mo), values(values), chunk_offsets_in(std::move(co)) {}
 
     // constructor for use in ReferenceColumn::visit_dereferenced
     ScanContext(std::shared_ptr<BaseColumn>, const std::shared_ptr<const Table> referenced_table,
                 std::shared_ptr<ColumnVisitableContext> base_context, ChunkID chunk_id,
-                std::shared_ptr<alloc_vector<ChunkOffset>> chunk_offsets)
+                std::shared_ptr<pmr_vector<ChunkOffset>> chunk_offsets)
         : table_in(referenced_table),
           chunk_id(chunk_id),
           matches_out(std::static_pointer_cast<ScanContext>(base_context)->matches_out),
@@ -166,9 +166,9 @@ class TableScan::TableScanImpl : public AbstractReadOnlyOperatorImpl {
 
     std::shared_ptr<const Table> table_in;
     const ChunkID chunk_id;
-    alloc_vector<RowID> &matches_out;
-    const alloc_concurrent_vector<T> &values;
-    std::shared_ptr<alloc_vector<ChunkOffset>> chunk_offsets_in;
+    pmr_vector<RowID> &matches_out;
+    const pmr_concurrent_vector<T> &values;
+    std::shared_ptr<pmr_vector<ChunkOffset>> chunk_offsets_in;
   };
 
   std::shared_ptr<const Table> on_execute() override {
@@ -264,10 +264,10 @@ class TableScan::TableScanImpl : public AbstractReadOnlyOperatorImpl {
         const Chunk &chunk_in = in_table->get_chunk(chunk_id);
         Chunk chunk_out;
 
-        alloc_vector<RowID> matches_in_this_chunk;
+        pmr_vector<RowID> matches_in_this_chunk;
         auto column1 = chunk_in.get_column(column_id1);
 
-        alloc_concurrent_vector<T> values;
+        pmr_concurrent_vector<T> values;
         auto context = std::make_shared<ScanContext>(in_table, chunk_id, matches_in_this_chunk, values);
 
         // The real tablescan work happens now in the visitables. There are two major types of the Visitables: Column
@@ -423,7 +423,7 @@ class TableScan::TableScanImpl<T>::TableScanLikeVisitable : public ColumnVisitab
     } else {
       // First we try to match to the dictonary so that we only have to match the regex to every unique string
       auto dictonary = column.dictionary();
-      alloc_vector<bool> matches;
+      pmr_vector<bool> matches;
       matches.reserve(dictonary->size());
       for (auto &value : *dictonary) {
         matches.push_back(std::regex_match(value, regex));
