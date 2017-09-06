@@ -70,7 +70,8 @@ class AbstractASTNode : public std::enable_shared_from_this<AbstractASTNode> {
 
   // @{
   /**
-   * These functions are part of the "ColumnID Resolution". See SQLToAstTranslator class comment for a general discussion
+   * These functions are part of the "ColumnID Resolution". See SQLToAstTranslator class comment for a general
+   * discussion
    * on this.
    *
    * AbstractASTNode::find_column_id_by_column_identifier_name() looks for the @param column_identifier_name in the
