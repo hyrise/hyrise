@@ -10,6 +10,7 @@
 #include "optimizer/abstract_syntax_tree/abstract_ast_node.hpp"
 #include "optimizer/abstract_syntax_tree/aggregate_node.hpp"
 #include "optimizer/abstract_syntax_tree/join_node.hpp"
+#include "optimizer/abstract_syntax_tree/limit_node.hpp"
 #include "optimizer/abstract_syntax_tree/predicate_node.hpp"
 #include "optimizer/abstract_syntax_tree/projection_node.hpp"
 #include "optimizer/abstract_syntax_tree/sort_node.hpp"
@@ -19,6 +20,7 @@
 #include "storage/storage_manager.hpp"
 
 #include "all_type_variant.hpp"
+#include "constant_mappings.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 
@@ -41,17 +43,17 @@ ScanType translate_operator_type_to_scan_type(const hsql::OperatorType operator_
 
 ScanType get_scan_type_for_reverse_order(const ScanType scan_type) {
   /**
-     * If we switch the sides for the expressions, we might have to change the operator that is used for the predicate.
-     * This function returns the respective ScanType.
-     *
-     * Example:
-     *     SELECT * FROM t WHERE 1 > a
-     *  -> SELECT * FROM t WHERE a < 1
-     *
-     *    but:
-     *     SELECT * FROM t WHERE 1 = a
-     *  -> SELECT * FROM t WHERE a = 1
-     */
+   * If we switch the sides for the expressions, we might have to change the operator that is used for the predicate.
+   * This function returns the respective ScanType.
+   *
+   * Example:
+   *     SELECT * FROM t WHERE 1 > a
+   *  -> SELECT * FROM t WHERE a < 1
+   *
+   *    but:
+   *     SELECT * FROM t WHERE 1 = a
+   *  -> SELECT * FROM t WHERE a = 1
+   */
   static const std::unordered_map<const ScanType, const ScanType> scan_type_for_reverse_order = {
       {ScanType::OpGreaterThan, ScanType::OpLessThan},
       {ScanType::OpLessThan, ScanType::OpGreaterThan},
@@ -115,6 +117,7 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_select(const hsq
   // 4. HAVING clause
   // 5. SELECT clause
   // 6. ORDER BY clause
+  // 7. LIMIT clause
 
   auto current_result_node = _translate_table_ref(*select.fromTable);
 
@@ -146,12 +149,14 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_select(const hsq
     current_result_node = _translate_projection(*select.selectList, current_result_node);
   }
 
-  // Translate ORDER BY.
   if (select.order != nullptr) {
     current_result_node = _translate_order_by(*select.order, current_result_node);
   }
 
-  // TODO(torpedro): Translate LIMIT/TOP.
+  // TODO(anybody): Translate TOP.
+  if (select.limit != nullptr) {
+    current_result_node = _translate_limit(*select.limit, current_result_node);
+  }
 
   return current_result_node;
 }
@@ -465,27 +470,32 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_order_by(
     return input_node;
   }
 
-  auto current_result_node = input_node;
+  std::vector<OrderByDefinition> order_by_definitions;
+  order_by_definitions.reserve(order_list.size());
 
-  // Go through all the order descriptions and create a sort node for each of them.
-  // Iterate in reverse because the sort operator does not support multiple columns,
-  // and instead relies on stable sort. We therefore sort by the n+1-th column before sorting by the n-th column.
-  for (auto it = order_list.rbegin(); it != order_list.rend(); ++it) {
-    auto order_description = *it;
+  for (const auto& order_description : order_list) {
     const auto& order_expr = *order_description->expr;
 
     // TODO(anybody): handle non-column refs
     DebugAssert(order_expr.isType(hsql::kExprColumnRef), "Can only order by columns for now.");
 
     const auto column_name = generate_column_name(order_expr, true);
-    const auto asc = order_description->type == hsql::kOrderAsc;
+    const auto order_by_mode = order_type_to_order_by_mode.at(order_description->type);
 
-    auto sort_node = std::make_shared<SortNode>(column_name, asc);
-    sort_node->set_left_child(current_result_node);
-    current_result_node = sort_node;
+    order_by_definitions.emplace_back(column_name, order_by_mode);
   }
 
-  return current_result_node;
+  auto sort_node = std::make_shared<SortNode>(order_by_definitions);
+  sort_node->set_left_child(input_node);
+
+  return sort_node;
+}
+
+std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_limit(
+    const hsql::LimitDescription& limit, const std::shared_ptr<AbstractASTNode>& input_node) {
+  auto limit_node = std::make_shared<LimitNode>(limit.limit);
+  limit_node->set_left_child(input_node);
+  return limit_node;
 }
 
 }  // namespace opossum
