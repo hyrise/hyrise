@@ -153,7 +153,7 @@ void ValueColumn<T>::copy_value_to_value_column(BaseColumn& value_column, ChunkO
 template <typename T>
 const std::shared_ptr<pmr_vector<std::pair<RowID, T>>> ValueColumn<T>::materialize(
     ChunkID chunk_id, std::shared_ptr<pmr_vector<ChunkOffset>> offsets) {
-  auto materialized_vector = std::make_shared<pmr_vector<std::pair<RowID, T>>>();
+  auto materialized_vector = std::make_shared<pmr_vector<std::pair<RowID, T>>>(_values.get_allocator());
 
   // we may want to sort offsets first?
   if (offsets) {

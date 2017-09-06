@@ -41,9 +41,8 @@ class ReferenceColumn : public BaseColumn {
 
   // return generated vector of all values
   template <typename T>
-  const pmr_concurrent_vector<T> materialize_values(
-      const PolymorphicAllocator<size_t> &alloc = PolymorphicAllocator<size_t>()) const {
-    pmr_concurrent_vector<T> values(alloc);
+  const pmr_concurrent_vector<T> materialize_values() const {
+    pmr_concurrent_vector<T> values(_pos_list->get_allocator());
     values.reserve(_pos_list->size());
 
     std::map<ChunkID, std::shared_ptr<ValueColumn<T>>> value_columns;
