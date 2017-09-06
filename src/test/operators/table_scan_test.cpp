@@ -1,7 +1,7 @@
-#include <algorithm>
 #include <iostream>
 #include <map>
 #include <memory>
+#include <set>
 #include <string>
 #include <utility>
 #include <vector>
@@ -15,7 +15,7 @@
 #include "../../lib/operators/table_wrapper.hpp"
 #include "../../lib/storage/dictionary_compression.hpp"
 #include "../../lib/storage/reference_column.hpp"
-#include "../../lib/storage/table.hpp"
+#include "../../lib/storage/table.hpp"c
 #include "../../lib/types.hpp"
 
 namespace opossum {
@@ -172,21 +172,23 @@ class OperatorsTableScanTest : public BaseTest {
   }
 
   void ASSERT_COLUMN_EQ(std::shared_ptr<const Table> table, const ColumnID& column_id,
-                        std::vector<AllTypeVariant> expected) {
+                        const std::vector<AllTypeVariant>& expected) {
+    auto expected_multiset = std::multiset<AllTypeVariant>{expected.begin(), expected.end()};
+
     for (auto chunk_id = ChunkID{0u}; chunk_id < table->chunk_count(); ++chunk_id) {
       const auto& chunk = table->get_chunk(chunk_id);
 
       for (auto chunk_offset = ChunkOffset{0u}; chunk_offset < chunk.size(); ++chunk_offset) {
         const auto& column = *chunk.get_column(column_id);
 
-        auto search = std::find(expected.begin(), expected.end(), column[chunk_offset]);
+        auto search = expected_multiset.find(column[chunk_offset]);
 
-        ASSERT_TRUE(search != expected.end());
-        expected.erase(search);
+        ASSERT_TRUE(search != expected_multiset.end());
+        expected_multiset.erase(search);
       }
     }
 
-    ASSERT_EQ(expected.size(), 0u);
+    ASSERT_EQ(expected_multiset.size(), 0u);
   }
 
   std::shared_ptr<TableWrapper> _table_wrapper, _table_wrapper_even_dict;
