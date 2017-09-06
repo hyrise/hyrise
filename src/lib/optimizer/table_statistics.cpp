@@ -159,16 +159,44 @@ std::shared_ptr<TableStatistics> TableStatistics::join_statistics(
    *
    * The calculation of null values is shown by following SQL query: SELECT * FROM TABLE_1 OUTER JOIN TABLE_2 ON a = c
    *
-   *   TABLE_1         TABLE_2          JOIN_TABLE
+   *   TABLE_1         TABLE_2          JOIN_TABLE                    row present in JOIN_TABLE
    *
-   *    a    | b        c    | d         a    | b    | c    | d
-   *   -------------   --------------   --------------------------
-   *    1    | NULL     1    | 30        1    | NULL | 1    | 30
-   *    2    | 10       NULL | 40        2    | 10   | NULL | NULL
-   *    NULL | 20                        NULL | 20   | NULL | NULL
-   *                                     NULL | NULL | NULL | 40
+   *    a    | b        c    | d         a    | b    | c    | d       join mode =   INNER | LEFT  | RIGHT | OUTER
+   *   -------------   --------------   --------------------------                 -------------------------------
+   *    1    | NULL     1    | 30        1    | NULL | 1    | 30                      X   |   X   |   X   |   X
+   *    2    | 10       NULL | 40        2    | 10   | NULL | NULL                        |   X   |       |   X
+   *    NULL | 20                        NULL | 20   | NULL | NULL                        |   X   |       |   X
+   *                                     NULL | NULL | NULL | 40                          |       |   X   |   X
    *
+   * To start with, the cross join row count is calculated: 3 * 2 = 6
+   * Then the predicate selectivity is calculated: 1/2 * left-non-null * right-non-null = 1/2 * 2/3 * 1/2 = 1/6
+   * For an inner join the row count would then be: 6 * 1/6 = 1
    *
+   * The selectivity calculation call also returns the new column statistics for columns a and c. Both are identical and
+   * have a min, max value of 1, distinct count of 1 and a non-null value ratio of 1.
+   * These new column statistics replace the old corresponding column statistics in the output table statistics, if the
+   * join mode allows does not specify to keep all values of a column.
+   * E.g. the new left column statistics replaces its previous statistics, if join mode is self, inner or right.
+   * Vice versa the new right column statistics replaces its previous statistic, if join mode is self, inner or left.
+   *
+   * For a full outer join, the null values added to columns c and d are the number of null values of column a (= 1)
+   * plus the number of non-null values of column a not selected by the predicate (= 1 (value 2 in row 2)).
+   * So in total 1 + 1 = 2 null values are added to columns c and d. Column c had already a null value before and,
+   * therefore, has now 1 + 2 = 3 null values. Column d did not have a null value columns and know has 0 + 2 = 2
+   * columns.
+   * The same calculations also needs to be done for the null value numbers in columns a and b. Since all non-null
+   * values in column c are selected by the predicate only the null value number of column c needs to be added to
+   * columns a and b: 0 + 1 = 1
+   * Columns a and b both have 1 null value before the join and, therefore, both have 1 + 1 = 2 null values after the
+   * join.
+   *
+   * The row count of the join is calculated by taking the row count of the inner join (= 1) and adding the null value
+   * numbers which were added to the columns from the left table (= 1) and the right table (= 2). This results in the
+   * row count for the outer join of 1 + 1 + 2 = 4.
+   *
+   * For a left outer join, the join table would just miss the 4th row. For this join, the number of null values to add
+   * to the right columns would still be 1 + 1 = 2. However, no null values are added to the the left columns.
+   * This results in a row count of 1 + 2 = 3.
    */
 
   // to prevent later checks for self joins the right column statistics is only accessed via new variable right_stats
@@ -197,14 +225,14 @@ std::shared_ptr<TableStatistics> TableStatistics::join_statistics(
 
   ColumnID new_right_column_id{static_cast<ColumnID::base_type>(_column_statistics.size() + column_ids.second)};
 
-  // calculate the current number of null values in columns from the join predicate
-  //
+  // calculate how many null values need to be added to columns from the left table for an outer join
   float left_null_value_no = right_col_stats->null_value_ratio() * right_stats->_row_count;
   if (right_col_stats->distinct_count() != 0.f) {
     left_null_value_no +=
         (1.f - stats_container.second_column_statistics->distinct_count() / right_col_stats->distinct_count()) *
         right_stats->row_count();
   }
+  // calculate how many null values need to be added to columns from the right table for an outer join
   float right_null_value_no = left_col_stats->null_value_ratio() * _row_count;
   if (left_col_stats->distinct_count() != 0.f) {
     right_null_value_no +=
@@ -216,7 +244,7 @@ std::shared_ptr<TableStatistics> TableStatistics::join_statistics(
     if (right_null_value_no == 0) {
       return;
     }
-    // adjust null value ratios in columns coming from the right table
+    // adjust null value ratios in columns from the right table
     for (auto col_itr = join_table_stats->_column_statistics.begin() + _column_statistics.size();
          col_itr != join_table_stats->_column_statistics.end(); ++col_itr) {
       *col_itr = (*col_itr)->clone();
@@ -230,7 +258,7 @@ std::shared_ptr<TableStatistics> TableStatistics::join_statistics(
     if (left_null_value_no == 0) {
       return;
     }
-    // adjust null value ratios in columns coming from the left table
+    // adjust null value ratios in columns from the left table
     for (auto col_itr = join_table_stats->_column_statistics.begin();
          col_itr != join_table_stats->_column_statistics.begin() + _column_statistics.size(); ++col_itr) {
       *col_itr = (*col_itr)->clone();
