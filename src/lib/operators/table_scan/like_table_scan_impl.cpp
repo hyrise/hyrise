@@ -150,11 +150,23 @@ std::map<std::string, std::string> LikeTableScanImpl::_extract_character_ranges(
 }
 
 std::string LikeTableScanImpl::_sqllike_to_regex(std::string sqllike) {
-  constexpr auto replace_by = std::array<std::pair<const char *, const char *>, 15u>{{
-      {".", "\\."}, {"^", "\\^"}, {"$", "\\$"}, {"+", "\\+"}, {"?", "\\?"}, {"(", "\\("}, {")", "\\"}, {"{", "\\{"},
-      {"}", "\\}"}, {"\\", "\\\\"}, {"|", "\\|"}, {".", "\\."}, {"*", "\\*"}, {"%", ".*"}, {"_", "."}}};
+  constexpr auto replace_by = std::array<std::pair<const char *, const char *>, 15u>{{{".", "\\."},
+                                                                                      {"^", "\\^"},
+                                                                                      {"$", "\\$"},
+                                                                                      {"+", "\\+"},
+                                                                                      {"?", "\\?"},
+                                                                                      {"(", "\\("},
+                                                                                      {")", "\\"},
+                                                                                      {"{", "\\{"},
+                                                                                      {"}", "\\}"},
+                                                                                      {"\\", "\\\\"},
+                                                                                      {"|", "\\|"},
+                                                                                      {".", "\\."},
+                                                                                      {"*", "\\*"},
+                                                                                      {"%", ".*"},
+                                                                                      {"_", "."}}};
 
-  for (const auto & pair : replace_by) {
+  for (const auto &pair : replace_by) {
     boost::replace_all(sqllike, pair.first, pair.second);
   }
 

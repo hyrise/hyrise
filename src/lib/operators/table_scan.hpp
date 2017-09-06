@@ -19,9 +19,8 @@ class Table;
 
 class TableScan : public AbstractReadOnlyOperator {
  public:
-  TableScan(const std::shared_ptr<const AbstractOperator> in, ColumnID left_column_id,
-            const ScanType scan_type, const AllParameterVariant right_parameter,
-            const optional<AllTypeVariant> right_value2 = nullopt);
+  TableScan(const std::shared_ptr<const AbstractOperator> in, ColumnID left_column_id, const ScanType scan_type,
+            const AllParameterVariant right_parameter, const optional<AllTypeVariant> right_value2 = nullopt);
 
   ~TableScan();
 

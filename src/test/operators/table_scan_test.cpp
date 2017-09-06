@@ -340,7 +340,8 @@ TEST_F(OperatorsTableScanTest, ScanOnIntValueColumnWithFloatColumnWithNullValues
   auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
   table_wrapper->execute();
 
-  auto scan = std::make_shared<TableScan>(table_wrapper, ColumnID{0} /* "a" */, ScanType::OpGreaterThan, ColumnID{1} /* "b" */);
+  auto scan =
+      std::make_shared<TableScan>(table_wrapper, ColumnID{0} /* "a" */, ScanType::OpGreaterThan, ColumnID{1} /* "b" */);
   scan->execute();
 
   const auto expected = std::vector<AllTypeVariant>{12345, 1234, 12345, 1234};
@@ -353,7 +354,8 @@ TEST_F(OperatorsTableScanTest, ScanOnReferencedIntValueColumnWithFloatColumnWith
   auto table_wrapper = std::make_shared<TableWrapper>(to_referencing_table(table));
   table_wrapper->execute();
 
-  auto scan = std::make_shared<TableScan>(table_wrapper, ColumnID{0} /* "a" */, ScanType::OpGreaterThan, ColumnID{1} /* "b" */);
+  auto scan =
+      std::make_shared<TableScan>(table_wrapper, ColumnID{0} /* "a" */, ScanType::OpGreaterThan, ColumnID{1} /* "b" */);
   scan->execute();
 
   const auto expected = std::vector<AllTypeVariant>{12345, 1234, 12345, 1234};
@@ -367,7 +369,8 @@ TEST_F(OperatorsTableScanTest, ScanOnIntDictColumnWithFloatColumnWithNullValues)
   auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
   table_wrapper->execute();
 
-  auto scan = std::make_shared<TableScan>(table_wrapper, ColumnID{0} /* "a" */, ScanType::OpGreaterThan, ColumnID{1} /* "b" */);
+  auto scan =
+      std::make_shared<TableScan>(table_wrapper, ColumnID{0} /* "a" */, ScanType::OpGreaterThan, ColumnID{1} /* "b" */);
   scan->execute();
 
   const auto expected = std::vector<AllTypeVariant>{12345, 1234, 12345, 1234};
@@ -381,7 +384,8 @@ TEST_F(OperatorsTableScanTest, ScanOnReferencedIntDictColumnWithFloatColumnWithN
   auto table_wrapper = std::make_shared<TableWrapper>(to_referencing_table(table));
   table_wrapper->execute();
 
-  auto scan = std::make_shared<TableScan>(table_wrapper, ColumnID{0} /* "a" */, ScanType::OpGreaterThan, ColumnID{1} /* "b" */);
+  auto scan =
+      std::make_shared<TableScan>(table_wrapper, ColumnID{0} /* "a" */, ScanType::OpGreaterThan, ColumnID{1} /* "b" */);
   scan->execute();
 
   const auto expected = std::vector<AllTypeVariant>{12345, 1234, 12345, 1234};
