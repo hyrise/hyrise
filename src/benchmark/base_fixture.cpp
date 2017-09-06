@@ -24,8 +24,10 @@ void BenchmarkBasicFixture::SetUp(::benchmark::State& state) {
 
   _table_wrapper_a = std::make_shared<TableWrapper>(table_generator->get_table(_chunk_size));
   _table_wrapper_b = std::make_shared<TableWrapper>(table_generator2->get_table(_chunk_size));
+  _table_dict_wrapper = std::make_shared<TableWrapper>(table_generator->get_table(_chunk_size, true));
   _table_wrapper_a->execute();
   _table_wrapper_b->execute();
+  _table_dict_wrapper->execute();
 }
 
 void BenchmarkBasicFixture::TearDown(::benchmark::State&) { opossum::StorageManager::get().reset(); }

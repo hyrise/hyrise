@@ -7,13 +7,13 @@
 
 #include "tbb/concurrent_vector.h"
 
-#include "base_column.hpp"
+#include "base_value_column.hpp"
 
 namespace opossum {
 
 // ValueColumn is a specific column type that stores all its values in a vector
 template <typename T>
-class ValueColumn : public BaseColumn {
+class ValueColumn : public BaseValueColumn {
  public:
   explicit ValueColumn(bool nullable = false);
   explicit ValueColumn(const PolymorphicAllocator<T>& alloc, bool nullable = false);
@@ -35,15 +35,15 @@ class ValueColumn : public BaseColumn {
   pmr_concurrent_vector<T>& values();
 
   // returns if columns supports null values
-  bool is_nullable() const;
+  bool is_nullable() const final;
 
   /**
    * @brief Returns null array
    *
    * Throws exception if is_nullable() returns false
    */
-  const pmr_concurrent_vector<bool>& null_values() const;
-  pmr_concurrent_vector<bool>& null_values();
+  const pmr_concurrent_vector<bool>& null_values() const final;
+  pmr_concurrent_vector<bool>& null_values() final;
 
   // return the number of entries
   size_t size() const override;
