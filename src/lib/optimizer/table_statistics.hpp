@@ -34,6 +34,7 @@ class Table;
  * However, since the table scan currently does not support null values, this component cannot compute the null value
  * numbers of a column of the corresponding tables. So currently, statistics component only knows of null values
  * which were introduced through outer joins.
+ * The statistics component assumes NULL != NULL semantics.
  *
  * TableStatistics store column statistics as BaseColumnStatistics, which are instances of
  * ColumnStatistics<ColumnType>
