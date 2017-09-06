@@ -1,13 +1,13 @@
 #pragma once
 
+#include <tbb/concurrent_vector.h>
+
 #include <cstdint>
 #include <iostream>
 #include <limits>
 #include <string>
 #include <tuple>
 #include <vector>
-
-#include <tbb/concurrent_vector.h>
 
 #include "polymorphic_allocator.hpp"
 #include "strong_typedef.hpp"
@@ -36,7 +36,6 @@ STRONG_TYPEDEF(uint16_t, ColumnID);
 STRONG_TYPEDEF(uint32_t, ValueID);  // Cannot be larger than ChunkOffset
 STRONG_TYPEDEF(uint32_t, NodeID);
 STRONG_TYPEDEF(int32_t, CpuID);
-
 
 namespace opossum {
 
@@ -219,4 +218,3 @@ class Noncopyable {
 };
 
 }  // namespace opossum
-

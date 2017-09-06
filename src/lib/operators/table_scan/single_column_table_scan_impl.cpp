@@ -60,8 +60,10 @@ void SingleColumnTableScanImpl::handle_dictionary_column(BaseColumn &base_column
    * A ValueID value_id from the attribute vector is included in the result iff
    *
    * Operator           |  Condition
-   * value_id == value  |  dict.value_by_value_id(dict.lower_bound(value)) == value && value_id == dict.lower_bound(value)
-   * value_id != value  |  dict.value_by_value_id(dict.lower_bound(value)) != value || value_id != dict.lower_bound(value)
+   * value_id == value  |  dict.value_by_value_id(dict.lower_bound(value)) == value && value_id ==
+   * dict.lower_bound(value)
+   * value_id != value  |  dict.value_by_value_id(dict.lower_bound(value)) != value || value_id !=
+   * dict.lower_bound(value)
    * value_id <  value  |  value_id < dict.lower_bound(value)
    * value_id <= value  |  value_id < dict.upper_bound(value)
    * value_id >  value  |  value_id >= dict.upper_bound(value)

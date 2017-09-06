@@ -223,4 +223,3 @@ std::shared_ptr<const Table> TableScan::_on_execute_between() {
 }
 
 }  // namespace opossum
-
