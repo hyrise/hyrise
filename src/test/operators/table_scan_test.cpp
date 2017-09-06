@@ -1,4 +1,4 @@
-#include <boost/container/set.hpp>
+#include <algorithm>
 #include <iostream>
 #include <map>
 #include <memory>
@@ -172,24 +172,28 @@ class OperatorsTableScanTest : public BaseTest {
   }
 
   void ASSERT_COLUMN_EQ(std::shared_ptr<const Table> table, const ColumnID& column_id,
-                        const std::vector<AllTypeVariant>& expected) {
-    auto expected_multiset = boost::container::multiset<AllTypeVariant>{expected.begin(), expected.end()};
-    // TODO(anyone): This could be an std::multiset, but that fails on the CI server. Probably a bug over there.
-
+                        std::vector<AllTypeVariant> expected) {
     for (auto chunk_id = ChunkID{0u}; chunk_id < table->chunk_count(); ++chunk_id) {
       const auto& chunk = table->get_chunk(chunk_id);
 
       for (auto chunk_offset = ChunkOffset{0u}; chunk_offset < chunk.size(); ++chunk_offset) {
         const auto& column = *chunk.get_column(column_id);
 
-        auto search = expected_multiset.find(column[chunk_offset]);
+        const auto found_value = column[chunk_offset];
+        const auto comparator = [found_value](const AllTypeVariant expected_value) {
+          // returns equivalency, not equality to simulate std::multiset.
+          // multiset cannot be used because it triggers a compiler / lib bug when built in CI
+          return !(found_value < expected_value) && !(expected_value < found_value);
+        };
 
-        ASSERT_TRUE(search != expected_multiset.end());
-        expected_multiset.erase(search);
+        auto search = std::find_if(expected.begin(), expected.end(), comparator);
+
+        ASSERT_TRUE(search != expected.end());
+        expected.erase(search);
       }
     }
 
-    ASSERT_EQ(expected_multiset.size(), 0u);
+    ASSERT_EQ(expected.size(), 0u);
   }
 
   std::shared_ptr<TableWrapper> _table_wrapper, _table_wrapper_even_dict;
