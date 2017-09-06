@@ -227,13 +227,24 @@ inline std::shared_ptr<OperatorTask> OperatorTranslator::translate(const proto::
 
 inline std::shared_ptr<OperatorTask> OperatorTranslator::translate(const proto::SortOperator& sort_operator) {
   const auto& column_name = sort_operator.column_name();
-  const auto ascending = sort_operator.ascending();
   const auto output_chunk_size = sort_operator.output_chunk_size();
   Assert((sort_operator.has_input_operator()), "Missing Input Operator in Sort.");
 
+  OrderByMode order_by_mode;
+  switch (sort_operator.order_by_mode()) {
+    case proto::SortOperator::Ascending:
+      order_by_mode = OrderByMode::Ascending;
+      break;
+    case proto::SortOperator::Descending:
+      order_by_mode = OrderByMode::Descending;
+      break;
+    default:
+      Fail("Unknown order by mode for operator in operator_translator");
+  }
+
   auto input_task = translate_proto(sort_operator.input_operator());
 
-  auto sort = std::make_shared<Sort>(input_task->get_operator(), column_name, ascending, output_chunk_size);
+  auto sort = std::make_shared<Sort>(input_task->get_operator(), column_name, order_by_mode, output_chunk_size);
   auto sort_task = std::make_shared<OperatorTask>(sort);
   input_task->set_as_predecessor_of(sort_task);
   _tasks.push_back(sort_task);

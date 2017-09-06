@@ -9,12 +9,14 @@
 #include "operators/aggregate.hpp"
 #include "operators/get_table.hpp"
 #include "operators/join_nested_loop_a.hpp"
+#include "operators/limit.hpp"
 #include "operators/projection.hpp"
 #include "operators/sort.hpp"
 #include "operators/table_scan.hpp"
 #include "optimizer/abstract_syntax_tree/aggregate_node.hpp"
 #include "optimizer/abstract_syntax_tree/ast_to_operator_translator.hpp"
 #include "optimizer/abstract_syntax_tree/join_node.hpp"
+#include "optimizer/abstract_syntax_tree/limit_node.hpp"
 #include "optimizer/abstract_syntax_tree/predicate_node.hpp"
 #include "optimizer/abstract_syntax_tree/projection_node.hpp"
 #include "optimizer/abstract_syntax_tree/sort_node.hpp"
@@ -51,10 +53,10 @@ TEST_F(ASTToOperatorTranslatorTest, PredicateNodeUnaryScan) {
 
   const auto table_scan_op = std::dynamic_pointer_cast<TableScan>(op);
   ASSERT_TRUE(table_scan_op);
-  EXPECT_EQ(table_scan_op->column_name(), "a");
+  EXPECT_EQ(table_scan_op->left_column_name(), "a");
   EXPECT_EQ(table_scan_op->scan_type(), ScanType::OpEquals);
-  EXPECT_EQ(table_scan_op->value(), AllParameterVariant(42));
-  EXPECT_FALSE(table_scan_op->value2());
+  EXPECT_EQ(table_scan_op->right_parameter(), AllParameterVariant(42));
+  EXPECT_FALSE(table_scan_op->right_value2());
 }
 
 TEST_F(ASTToOperatorTranslatorTest, PredicateNodeBinaryScan) {
@@ -66,10 +68,10 @@ TEST_F(ASTToOperatorTranslatorTest, PredicateNodeBinaryScan) {
 
   const auto table_scan_op = std::dynamic_pointer_cast<TableScan>(op);
   ASSERT_TRUE(table_scan_op);
-  EXPECT_EQ(table_scan_op->column_name(), "a");
+  EXPECT_EQ(table_scan_op->left_column_name(), "a");
   EXPECT_EQ(table_scan_op->scan_type(), ScanType::OpBetween);
-  EXPECT_EQ(table_scan_op->value(), AllParameterVariant(42));
-  EXPECT_EQ(table_scan_op->value2(), AllTypeVariant(1337));
+  EXPECT_EQ(table_scan_op->right_parameter(), AllParameterVariant(42));
+  EXPECT_EQ(table_scan_op->right_value2(), AllTypeVariant(1337));
 }
 
 TEST_F(ASTToOperatorTranslatorTest, ProjectionNode) {
@@ -91,14 +93,14 @@ TEST_F(ASTToOperatorTranslatorTest, ProjectionNode) {
 
 TEST_F(ASTToOperatorTranslatorTest, SortNode) {
   const auto stored_table_node = std::make_shared<StoredTableNode>("table_int_float");
-  auto sort_node = std::make_shared<SortNode>("a", true);
+  auto sort_node = std::make_shared<SortNode>(std::vector<OrderByDefinition>{{"a", OrderByMode::Ascending}});
   sort_node->set_left_child(stored_table_node);
   const auto op = ASTToOperatorTranslator::get().translate_node(sort_node);
 
   const auto sort_op = std::dynamic_pointer_cast<Sort>(op);
   ASSERT_TRUE(sort_op);
   EXPECT_EQ(sort_op->sort_column_name(), "a");
-  EXPECT_EQ(sort_op->ascending(), true);
+  EXPECT_EQ(sort_op->order_by_mode(), OrderByMode::Ascending);
 }
 
 TEST_F(ASTToOperatorTranslatorTest, JoinNode) {
@@ -273,6 +275,19 @@ TEST_F(ASTToOperatorTranslatorTest, MultipleNodesHierarchy) {
   const auto get_table_op_right = std::dynamic_pointer_cast<const GetTable>(predicate_op_right->input_left());
   ASSERT_TRUE(get_table_op_right);
   EXPECT_EQ(get_table_op_right->table_name(), "table_int_float2");
+}
+
+TEST_F(ASTToOperatorTranslatorTest, LimitNode) {
+  const auto stored_table_node = std::make_shared<StoredTableNode>("table_int_float");
+
+  const auto num_rows = 2u;
+  auto limit_node = std::make_shared<LimitNode>(num_rows);
+  limit_node->set_left_child(stored_table_node);
+
+  const auto op = ASTToOperatorTranslator::get().translate_node(limit_node);
+  const auto limit_op = std::dynamic_pointer_cast<Limit>(op);
+  ASSERT_TRUE(limit_op);
+  EXPECT_EQ(limit_op->num_rows(), num_rows);
 }
 
 }  // namespace opossum

@@ -1,3 +1,4 @@
+#include <boost/algorithm/string.hpp>
 #include <memory>
 #include <string>
 #include <utility>
@@ -7,9 +8,11 @@
 #include "SQLParser.h"
 #include "gtest/gtest.h"
 
+#include "constant_mappings.hpp"
 #include "optimizer/abstract_syntax_tree/abstract_ast_node.hpp"
 #include "optimizer/abstract_syntax_tree/aggregate_node.hpp"
 #include "optimizer/abstract_syntax_tree/join_node.hpp"
+#include "optimizer/abstract_syntax_tree/limit_node.hpp"
 #include "optimizer/abstract_syntax_tree/predicate_node.hpp"
 #include "optimizer/abstract_syntax_tree/projection_node.hpp"
 #include "optimizer/abstract_syntax_tree/sort_node.hpp"
@@ -41,7 +44,7 @@ class SQLToASTTranslatorTest : public BaseTest {
     StorageManager::get().add_table("lineitem", lineitem);
   }
 
-  std::shared_ptr<AbstractASTNode> compile_query(const std::string &query) {
+  std::shared_ptr<AbstractASTNode> compile_query(const std::string& query) {
     hsql::SQLParserResult parse_result;
     hsql::SQLParser::parseSQLString(query, &parse_result);
 
@@ -64,6 +67,7 @@ TEST_F(SQLToASTTranslatorTest, SelectStarAllTest) {
   EXPECT_FALSE(result_node->left_child()->left_child());
 }
 
+// TODO(mp): SQLToASTTranslator cannot translate Predicates that contain arithmetic expressions yet.
 TEST_F(SQLToASTTranslatorTest, DISABLED_ExpressionTest) {
   const auto query = "SELECT * FROM table_a WHERE a = 1234 + 1";
   auto result_node = compile_query(query);
@@ -178,20 +182,23 @@ TEST_F(SQLToASTTranslatorTest, SelectMultipleOrderBy) {
   const auto query = "SELECT * FROM table_a ORDER BY a DESC, b ASC;";
   auto result_node = compile_query(query);
 
-  // The first order by description is executed last (see sort operator for details).
-  auto sort_node_1 = std::dynamic_pointer_cast<SortNode>(result_node);
-  EXPECT_EQ(sort_node_1->type(), ASTNodeType::Sort);
-  EXPECT_EQ(sort_node_1->column_name(), "a");
-  EXPECT_FALSE(sort_node_1->ascending());
-  EXPECT_FALSE(sort_node_1->right_child());
+  auto sort_node = std::dynamic_pointer_cast<SortNode>(result_node);
+  EXPECT_EQ(sort_node->type(), ASTNodeType::Sort);
 
-  auto sort_node_2 = std::dynamic_pointer_cast<SortNode>(sort_node_1->left_child());
-  EXPECT_EQ(sort_node_2->type(), ASTNodeType::Sort);
-  EXPECT_EQ(sort_node_2->column_name(), "b");
-  EXPECT_TRUE(sort_node_2->ascending());
-  EXPECT_FALSE(sort_node_2->right_child());
-  // This node has an input node, but we don't care what kind it is in this test.
-  EXPECT_TRUE(sort_node_2->left_child());
+  const auto& order_by_definitions = sort_node->order_by_definitions();
+  EXPECT_EQ(order_by_definitions.size(), 2u);
+
+  const auto& definition_1 = order_by_definitions[0];
+  EXPECT_EQ(definition_1.column_name, "a");
+  EXPECT_EQ(definition_1.order_by_mode, OrderByMode::Descending);
+
+  const auto& definition_2 = order_by_definitions[1];
+  EXPECT_EQ(definition_2.column_name, "b");
+  EXPECT_EQ(definition_2.order_by_mode, OrderByMode::Ascending);
+
+  // The sort node has an input node, but we don't care what kind it is in this test.
+  EXPECT_TRUE(sort_node->left_child());
+  EXPECT_FALSE(sort_node->right_child());
 }
 
 TEST_F(SQLToASTTranslatorTest, SelectInnerJoin) {
@@ -211,6 +218,115 @@ TEST_F(SQLToASTTranslatorTest, SelectInnerJoin) {
   EXPECT_EQ(join_node->prefix_right(), "b.");
   EXPECT_EQ(join_node->join_column_names()->first, "a");
   EXPECT_EQ(join_node->join_column_names()->second, "a");
+}
+
+// Verifies that LEFT/RIGHT JOIN are handled correctly and LEFT/RIGHT OUTER JOIN identically
+TEST_F(SQLToASTTranslatorTest, SelectLeftRightOuterJoins) {
+  using namespace std::string_literals;  // NOLINT (Linter does not know about using namespace)
+
+  for (auto mode : {JoinMode::Left, JoinMode::Right}) {
+    std::string mode_str = boost::to_upper_copy(join_mode_to_string.at(mode));
+    const auto query = "SELECT * FROM table_a AS a "s + mode_str + " JOIN table_b AS b ON a.a = b.a;";
+    auto result_node = compile_query(query);
+
+    EXPECT_EQ(result_node->type(), ASTNodeType::Projection);
+    auto projection_node = std::dynamic_pointer_cast<ProjectionNode>(result_node);
+    std::vector<std::string> output_columns = {"a.a", "a.b", "b.a", "b.b"};
+    EXPECT_EQ(projection_node->output_column_names(), output_columns);
+
+    EXPECT_EQ(result_node->left_child()->type(), ASTNodeType::Join);
+    auto join_node = std::dynamic_pointer_cast<JoinNode>(result_node->left_child());
+    EXPECT_EQ(join_node->scan_type(), ScanType::OpEquals);
+    EXPECT_EQ(join_node->join_mode(), mode);
+    EXPECT_EQ(join_node->prefix_left(), "a.");
+    EXPECT_EQ(join_node->prefix_right(), "b.");
+    EXPECT_EQ(join_node->join_column_names()->first, "a");
+    EXPECT_EQ(join_node->join_column_names()->second, "a");
+
+    // "OUTER" should be translated the exact same way
+    const auto query_outer = "SELECT * FROM table_a AS a "s + mode_str + " OUTER JOIN table_b AS b ON a.a = b.a;";
+    auto result_node_outer = compile_query(query_outer);
+
+    EXPECT_EQ(result_node_outer->type(), ASTNodeType::Projection);
+    auto projection_node_outer = std::dynamic_pointer_cast<ProjectionNode>(result_node_outer);
+    std::vector<std::string> output_columns_outer = {"a.a", "a.b", "b.a", "b.b"};
+    EXPECT_EQ(projection_node_outer->output_column_names(), output_columns_outer);
+
+    EXPECT_EQ(result_node_outer->left_child()->type(), ASTNodeType::Join);
+    auto join_node_outer = std::dynamic_pointer_cast<JoinNode>(result_node_outer->left_child());
+    EXPECT_EQ(join_node_outer->scan_type(), join_node->scan_type());
+    EXPECT_EQ(join_node_outer->join_mode(), join_node->join_mode());
+    EXPECT_EQ(join_node_outer->prefix_left(), join_node->prefix_left());
+    EXPECT_EQ(join_node_outer->prefix_right(), join_node->prefix_right());
+    EXPECT_EQ(join_node_outer->join_column_names()->first, join_node->join_column_names()->first);
+    EXPECT_EQ(join_node_outer->join_column_names()->second, join_node->join_column_names()->second);
+  }
+}
+
+TEST_F(SQLToASTTranslatorTest, SelectOuterJoin) {
+  const auto query = "SELECT * FROM table_a AS a OUTER JOIN table_b AS b ON a.a = b.a;";
+  auto result_node = compile_query(query);
+
+  EXPECT_EQ(result_node->type(), ASTNodeType::Projection);
+  auto projection_node = std::dynamic_pointer_cast<ProjectionNode>(result_node);
+  std::vector<std::string> output_columns = {"a.a", "a.b", "b.a", "b.b"};
+  EXPECT_EQ(projection_node->output_column_names(), output_columns);
+
+  EXPECT_EQ(result_node->left_child()->type(), ASTNodeType::Join);
+  auto join_node = std::dynamic_pointer_cast<JoinNode>(result_node->left_child());
+  EXPECT_EQ(join_node->scan_type(), ScanType::OpEquals);
+  EXPECT_EQ(join_node->join_mode(), JoinMode::Outer);
+  EXPECT_EQ(join_node->prefix_left(), "a.");
+  EXPECT_EQ(join_node->prefix_right(), "b.");
+  EXPECT_EQ(join_node->join_column_names()->first, "a");
+  EXPECT_EQ(join_node->join_column_names()->second, "a");
+}
+
+// TODO(mp): Natural Joins are not translated correctly yet. Resolving matching columns is not implemented so far.
+TEST_F(SQLToASTTranslatorTest, DISABLED_SelectNaturalJoin) {
+  const auto query = "SELECT * FROM table_a AS a NATURAL JOIN table_b AS b;";
+  auto result_node = compile_query(query);
+
+  EXPECT_EQ(result_node->type(), ASTNodeType::Projection);
+  auto projection_node = std::dynamic_pointer_cast<ProjectionNode>(result_node);
+  std::vector<std::string> output_columns = {"a.a", "a.b", "b.a", "b.b"};
+  EXPECT_EQ(projection_node->output_column_names(), output_columns);
+
+  EXPECT_EQ(result_node->left_child()->type(), ASTNodeType::Join);
+  auto join_node = std::dynamic_pointer_cast<JoinNode>(result_node->left_child());
+  EXPECT_EQ(join_node->scan_type(), ScanType::OpEquals);
+  EXPECT_EQ(join_node->join_mode(), JoinMode::Natural);
+  EXPECT_EQ(join_node->prefix_left(), "a.");
+  EXPECT_EQ(join_node->prefix_right(), "b.");
+  EXPECT_EQ(join_node->join_column_names()->first, "a");
+  EXPECT_EQ(join_node->join_column_names()->second, "a");
+}
+
+TEST_F(SQLToASTTranslatorTest, SelectCrossJoin) {
+  const auto query = "SELECT * FROM table_a AS a, table_b AS b WHERE a.a = b.a;";
+  auto result_node = compile_query(query);
+
+  EXPECT_EQ(result_node->type(), ASTNodeType::Projection);
+  auto projection_node = std::dynamic_pointer_cast<ProjectionNode>(result_node);
+  std::vector<std::string> output_columns = {"a", "b", "a", "b"};
+  EXPECT_EQ(projection_node->output_column_names(), output_columns);
+
+  EXPECT_EQ(result_node->left_child()->type(), ASTNodeType::Predicate);
+  EXPECT_EQ(result_node->left_child()->left_child()->type(), ASTNodeType::Join);
+  auto join_node = std::dynamic_pointer_cast<JoinNode>(result_node->left_child()->left_child());
+  EXPECT_FALSE(join_node->scan_type());
+  EXPECT_EQ(join_node->join_mode(), JoinMode::Cross);
+  EXPECT_FALSE(join_node->join_column_names());
+}
+
+TEST_F(SQLToASTTranslatorTest, SelectLimit) {
+  const auto query = "SELECT * FROM table_a LIMIT 2;";
+  auto result_node = compile_query(query);
+
+  EXPECT_EQ(result_node->type(), ASTNodeType::Limit);
+  auto limit_node = std::dynamic_pointer_cast<LimitNode>(result_node);
+  EXPECT_EQ(limit_node->num_rows(), 2u);
+  EXPECT_EQ(limit_node->left_child()->type(), ASTNodeType::Projection);
 }
 
 }  // namespace opossum
