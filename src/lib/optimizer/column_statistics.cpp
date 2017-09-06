@@ -93,13 +93,24 @@ void ColumnStatistics<ColumnType>::initialize_min_max() const {
 }
 
 template <typename ColumnType>
+std::shared_ptr<BaseColumnStatistics> ColumnStatistics<ColumnType>::this_without_null_values() {
+  if (_non_null_value_ratio == 1.f) {
+    return base_shared_from_this();
+  }
+  // this needs to be copied, as the non-null value ratio is changed
+  auto clone = std::make_shared<ColumnStatistics>(*this);
+  clone->_non_null_value_ratio = 1.f;
+  return clone;
+}
+
+template <typename ColumnType>
 ColumnSelectivityResult ColumnStatistics<ColumnType>::create_column_stats_for_range_predicate(ColumnType minimum,
                                                                                               ColumnType maximum) {
   // new minimum/maximum of table cannot be smaller/larger than the current minimum/maximum
   auto common_min = std::max(minimum, min());
   auto common_max = std::min(maximum, max());
   if (common_min == min() && common_max == max()) {
-    return {_non_null_value_ratio, nullptr};
+    return {_non_null_value_ratio, this_without_null_values()};
   }
   float selectivity = 0.f;
   if (common_min <= common_max) {
@@ -144,7 +155,7 @@ ColumnSelectivityResult ColumnStatistics<ColumnType>::create_column_stats_for_eq
 template <typename ColumnType>
 ColumnSelectivityResult ColumnStatistics<ColumnType>::create_column_stats_for_unequals_predicate(ColumnType value) {
   if (value < min() || value > max()) {
-    return {_non_null_value_ratio, nullptr};
+    return {_non_null_value_ratio, base_shared_from_this()};
   }
   auto column_statistics = std::make_shared<ColumnStatistics>(_column_id, distinct_count() - 1, min(), max());
   return {_non_null_value_ratio * (1 - 1.f / distinct_count()), column_statistics};
@@ -201,7 +212,7 @@ ColumnSelectivityResult ColumnStatistics<ColumnType>::estimate_selectivity_for_p
       auto casted_value2 = type_cast<ColumnType>(*value2);
       return create_column_stats_for_range_predicate(casted_value, casted_value2);
     }
-    default: { return {_non_null_value_ratio, nullptr}; }
+    default: { return {_non_null_value_ratio, this_without_null_values()}; }
   }
 }
 
@@ -220,7 +231,7 @@ ColumnSelectivityResult ColumnStatistics<std::string>::estimate_selectivity_for_
       return create_column_stats_for_unequals_predicate(casted_value);
     }
     // TODO(anybody) implement other table-scan operators for string.
-    default: { return {_non_null_value_ratio, nullptr}; }
+    default: { return {_non_null_value_ratio, this_without_null_values()}; }
   }
 }
 
@@ -256,7 +267,7 @@ ColumnSelectivityResult ColumnStatistics<ColumnType>::estimate_selectivity_for_p
         return output;
       }
       // create statistics, if value2 >= max
-      if (output.column_statistics == nullptr) {
+      if (output.column_statistics == this_without_null_values()) {
         output.column_statistics = std::make_shared<ColumnStatistics>(_column_id, distinct_count(), min(), max());
       }
       // apply default selectivity for open ended
@@ -266,7 +277,7 @@ ColumnSelectivityResult ColumnStatistics<ColumnType>::estimate_selectivity_for_p
       *(column_statistics->_distinct_count) *= DEFAULT_OPEN_ENDED_SELECTIVITY;
       return output;
     }
-    default: { return {_non_null_value_ratio, nullptr}; }
+    default: { return {_non_null_value_ratio, this_without_null_values()}; }
   }
 }
 
@@ -452,7 +463,7 @@ TwoColumnSelectivityResult ColumnStatistics<ColumnType>::estimate_selectivity_fo
                                                            right_stats->min(), max(), true);
     }
     // case ScanType::OpBetween is not supported for ColumnID as TableScan does not support this
-    default: { return {combined_non_null_ratio, nullptr, nullptr}; }
+    default: { return {combined_non_null_ratio, this_without_null_values(), right_stats->this_without_null_values()}; }
   }
 }
 
@@ -466,7 +477,8 @@ TwoColumnSelectivityResult ColumnStatistics<std::string>::estimate_selectivity_f
   // TODO(anybody) implement special case for strings
   auto right_stats = std::dynamic_pointer_cast<ColumnStatistics<std::string>>(right_base_column_statistics);
   DebugAssert(right_stats != nullptr, "Cannot compare columns of different type");
-  return {_non_null_value_ratio * right_stats->_non_null_value_ratio, nullptr, nullptr};
+  return {_non_null_value_ratio * right_stats->_non_null_value_ratio, this_without_null_values(),
+          right_stats->this_without_null_values()};
 }
 
 template <typename ColumnType>

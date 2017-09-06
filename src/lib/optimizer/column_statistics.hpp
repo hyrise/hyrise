@@ -63,8 +63,14 @@ class ColumnStatistics : public BaseColumnStatistics {
   ColumnType max() const;
 
   /**
+   * Returns a column statistics identical to this which does not has null values.
+   * @return shared pointer of this or copy of this, if column has null values.
+   */
+  std::shared_ptr<BaseColumnStatistics> this_without_null_values();
+
+  /**
    * Create column statistics and estimate selectivity based on new range.
-   * @return Selectivity and new column statistics, if selectivity not 0 or 1.
+   * @return Selectivity and new column statistics.
    */
   ColumnSelectivityResult create_column_stats_for_range_predicate(ColumnType minimum, ColumnType maximum);
 
@@ -72,21 +78,21 @@ class ColumnStatistics : public BaseColumnStatistics {
    * Estimate selectivity based on new range between new_min and new_max and current range between min and max.
    * @param new_min: Min for new column statistics.
    * @param new_max: Max for new column statistics.
-   * @return Selectivity and new column statistics, if selectivity not 0 or 1.
+   * @return Selectivity and new column statistics.
    */
   float estimate_selectivity_for_range(ColumnType minimum, ColumnType maximum);
 
   /**
    * Create column statistics and estimate selectivity for predicate with scan type equals and constant value.
    * @param value: constant value of aggregate
-   * @return Selectivity and new column statistics, if selectivity not 0 or 1.
+   * @return Selectivity and new column statistics.
    */
   ColumnSelectivityResult create_column_stats_for_equals_predicate(ColumnType value);
 
   /**
    * Create column statistics and estimate selectivity for predicate with scan type not equals and constant value.
    * @param value: constant value of aggregate
-   * @return Selectivity and new column statistics, if selectivity not 0 or 1.
+   * @return Selectivity and new column statistics.
    */
   ColumnSelectivityResult create_column_stats_for_unequals_predicate(ColumnType value);
 

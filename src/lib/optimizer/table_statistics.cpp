@@ -63,9 +63,7 @@ std::shared_ptr<TableStatistics> TableStatistics::predicate_statistics(const Col
                                                                        const optional<AllTypeVariant> &value2) {
   auto _row_count = row_count();
   if (_row_count == 0) {
-    auto clone = std::make_shared<TableStatistics>(*this);
-    clone->_row_count = _row_count;
-    return clone;
+    return shared_from_this();
   }
 
   if (scan_type == ScanType::OpLike) {
@@ -79,7 +77,7 @@ std::shared_ptr<TableStatistics> TableStatistics::predicate_statistics(const Col
 
   // create copy of this as this should not be adapted for current table scan
   auto clone = std::make_shared<TableStatistics>(*this);
-  ColumnSelectivityResult column_statistics_container{1, nullptr};
+  ColumnSelectivityResult column_statistics_container;
 
   // delegate prediction to corresponding column statistics
   if (value.type() == typeid(ColumnID)) {
@@ -89,9 +87,7 @@ std::shared_ptr<TableStatistics> TableStatistics::predicate_statistics(const Col
     auto two_column_statistics_container =
         old_column_statistics->estimate_selectivity_for_two_column_predicate(scan_type, old_right_column_stats, value2);
 
-    if (two_column_statistics_container.second_column_statistics != nullptr) {
-      clone->_column_statistics[value_column_id] = two_column_statistics_container.second_column_statistics;
-    }
+    clone->_column_statistics[value_column_id] = two_column_statistics_container.second_column_statistics;
     column_statistics_container = two_column_statistics_container;
 
   } else if (value.type() == typeid(AllTypeVariant)) {
@@ -109,9 +105,8 @@ std::shared_ptr<TableStatistics> TableStatistics::predicate_statistics(const Col
         old_column_statistics->estimate_selectivity_for_predicate(scan_type, casted_value, value2);
   }
 
-  if (column_statistics_container.column_statistics != nullptr) {
-    clone->_column_statistics[column_id] = column_statistics_container.column_statistics;
-  }
+  clone->_column_statistics[column_id] = column_statistics_container.column_statistics;
+
   clone->_row_count *= column_statistics_container.selectivity;
 
   return clone;
@@ -215,14 +210,6 @@ std::shared_ptr<TableStatistics> TableStatistics::join_statistics(
   auto &right_col_stats = right_stats->_column_statistics[column_ids.second];
 
   auto stats_container = left_col_stats->estimate_selectivity_for_two_column_predicate(scan_type, right_col_stats);
-  // if column statistics did not change, a null pointer is returned
-  // in this case overwrite null pointer with old (but still up to date) column statistics
-  if (!stats_container.column_statistics) {
-    stats_container.column_statistics = left_col_stats;
-  }
-  if (!stats_container.second_column_statistics) {
-    stats_container.second_column_statistics = right_col_stats;
-  }
 
   // apply predicate selectivity to cross join
   join_table_stats->_row_count *= stats_container.selectivity;

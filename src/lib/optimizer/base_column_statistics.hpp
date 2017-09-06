@@ -24,15 +24,15 @@ struct TwoColumnSelectivityResult;
  * The selectivities are calculated with the min, max, distinct count and non-null value ratio of the column in the
  * derived class. Only the non-null value ratio is stored in the base class to enable easy access and manipulation of it
  * by table statistics.
- * A predicate on a null value will never evaluate to true unless the column is explicitly checked for NULL values
- * (col_a IS NULL) which is currently not supported.
+ * A predicate on a null value will never evaluate to true, unless the column is explicitly checked for NULL values
+ * (column IS NULL) which is currently not supported.
  * To start with, null values can be ignored during the calculation of the selectivity. The non-null value ratio can be
  * interpreted as a second selectivity.
  * Therefore, the result selectivity is the product of the selectivity of the predicate and the non-null value ratio.
- * The returned column statistics will always have a non-null value ratio of 1 as currently any predicate removes null
+ * The returned column statistics will always have a non-null value ratio of 1 as currently all predicates remove null
  * values.
  */
-class BaseColumnStatistics {
+class BaseColumnStatistics : public std::enable_shared_from_this<BaseColumnStatistics> {
  public:
   explicit BaseColumnStatistics(const float non_null_value_ratio = 1.f) : _non_null_value_ratio(non_null_value_ratio) {}
   virtual ~BaseColumnStatistics() = default;
@@ -40,7 +40,7 @@ class BaseColumnStatistics {
   /**
    * Estimate selectivity for predicate with constants.
    * Predict result of a table scan with constant values.
-   * @return Selectivity and new column statistics, if selectivity is not 0 or 1.
+   * @return Selectivity and new column statistics.
    */
   virtual ColumnSelectivityResult estimate_selectivity_for_predicate(
       const ScanType scan_type, const AllTypeVariant &value, const optional<AllTypeVariant> &value2 = nullopt) = 0;
@@ -49,7 +49,7 @@ class BaseColumnStatistics {
    * Estimate selectivity for predicate with prepared statements.
    * In comparison to predicates with constants, value is not known yet.
    * Therefore, when necessary, default selectivity values are used for predictions.
-   * @return Selectivity and new column statistics, if selectivity is not 0 or 1.
+   * @return Selectivity and new column statistics.
    */
   virtual ColumnSelectivityResult estimate_selectivity_for_predicate(
       const ScanType scan_type, const ValuePlaceholder &value, const optional<AllTypeVariant> &value2 = nullopt) = 0;
@@ -59,7 +59,7 @@ class BaseColumnStatistics {
    * In comparison to predicates with constants, value is another column.
    * For predicate "col_left < col_right", selectivity is calculated in column statistics of col_left with parameters
    * scan_type = "<" and right_base_column_statistics = col_right statistics.
-   * @return Selectivity and two new column statistics, if selectivity is not 0 or 1.
+   * @return Selectivity and two new column statistics.
    */
   virtual TwoColumnSelectivityResult estimate_selectivity_for_two_column_predicate(
       const ScanType scan_type, const std::shared_ptr<BaseColumnStatistics> &right_base_column_statistics,
@@ -88,8 +88,13 @@ class BaseColumnStatistics {
 
  protected:
   // Column statistics uses the non-null value ratio for calculation of selectivity.
-  // Table statistics uses the null value ratio when calculation join statistics.
+  // Table statistics uses the null value ratio when calculating join statistics.
   float _non_null_value_ratio;
+
+  /**
+   * Enable derived column statistics to return itself as a shared pointer.
+   */
+  std::shared_ptr<BaseColumnStatistics> base_shared_from_this() { return shared_from_this(); }
 
   /**
    * In order to to call insertion operator on ostream with BaseColumnStatistics with values of ColumnStatistics<T>,
