@@ -5,7 +5,7 @@
 #include <utility>
 #include <vector>
 
-#include <tbb/concurrent_vector.h>
+#include "tbb/concurrent_vector.h"
 
 #include "storage/chunk.hpp"
 #include "storage/storage_manager.hpp"
