@@ -1,15 +1,16 @@
 #include "show_tables.hpp"
 
-#include <iostream>
 #include <memory>
 #include <string>
+#include <utility>
 #include <vector>
 
+#include "storage/chunk.hpp"
 #include "storage/storage_manager.hpp"
+#include "storage/table.hpp"
+#include "storage/value_column.hpp"
 
 namespace opossum {
-
-ShowTables::ShowTables(std::ostream& out) : _out(out) {}
 
 uint8_t ShowTables::num_in_tables() const { return 0; }
 
@@ -18,19 +19,23 @@ uint8_t ShowTables::num_out_tables() const { return 0; }
 const std::string ShowTables::name() const { return "ShowTables"; }
 
 std::shared_ptr<AbstractOperator> ShowTables::recreate(const std::vector<AllParameterVariant>& args) const {
-  return std::make_shared<ShowTables>(_out);
+  return std::make_shared<ShowTables>();
 }
 
 std::shared_ptr<const Table> ShowTables::on_execute() {
+  auto table = std::make_shared<Table>();
+  table->add_column_definition("table_name", "string");
+
   const auto table_names = StorageManager::get().table_names();
+  const auto column = std::make_shared<ValueColumn<std::string>>(
+      tbb::concurrent_vector<std::string>(table_names.begin(), table_names.end()));
 
-  for (const auto& table_name : table_names) {
-    _out << " " << table_name << std::endl;
-  }
+  Chunk chunk;
+  chunk.add_column(column);
 
-  _out << std::endl << table_names.size() << " tables." << std::endl;
+  table->add_chunk(std::move(chunk));
 
-  return std::make_shared<Table>();
+  return table;
 }
 
 }  // namespace opossum

@@ -114,6 +114,8 @@ set(
     operators/join_nested_loop_b.hpp
     operators/limit.cpp
     operators/limit.hpp
+    operators/maintenance/show_columns.cpp
+    operators/maintenance/show_columns.hpp
     operators/maintenance/show_tables.cpp
     operators/maintenance/show_tables.hpp
     operators/print.cpp

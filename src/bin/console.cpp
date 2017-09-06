@@ -222,16 +222,13 @@ int Console::_eval_sql(const std::string& sql) {
   auto execution_elapsed_ms = std::chrono::duration<double>(done - started).count();
 
   auto table = plan.tree_roots().back()->get_output();
+  auto row_count = table->row_count();
 
   // Print result (to Console and logfile)
-  if (table->col_count() > 0) {
-    out(table);
-    out("===\n");
-
-    out(std::to_string(table->row_count()) + " rows ");
-  }
-  out("(PARSE: " + std::to_string(parse_elapsed_ms) + " ms, COMPILE: " + std::to_string(plan_elapsed_ms) +
-      " ms, EXECUTE: " + std::to_string(execution_elapsed_ms) + " ms (wall time))\n");
+  out(table);
+  out("===\n");
+  out(std::to_string(row_count) + " rows (PARSE: " + std::to_string(parse_elapsed_ms) + " ms, COMPILE: " +
+      std::to_string(plan_elapsed_ms) + " ms, EXECUTE: " + std::to_string(execution_elapsed_ms) + " ms (wall time))\n");
 
   return ReturnCode::Ok;
 }

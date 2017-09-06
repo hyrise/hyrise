@@ -46,12 +46,6 @@ std::shared_ptr<const Table> Print::on_execute() {
   }
   _out << "|" << std::endl;
 
-  if (_flags & PrintHeaderOnly) {
-    // Return an empty table if all we want is the header.
-    // That way, the console can notice that the table does not need to be printed.
-    return std::make_shared<Table>();
-  }
-
   // print each chunk
   for (ChunkID chunk_id{0}; chunk_id < input_table_left()->chunk_count(); ++chunk_id) {
     auto& chunk = input_table_left()->get_chunk(chunk_id);

@@ -10,6 +10,7 @@
 #include "operators/get_table.hpp"
 #include "operators/join_nested_loop_a.hpp"
 #include "operators/limit.hpp"
+#include "operators/maintenance/show_columns.hpp"
 #include "operators/maintenance/show_tables.hpp"
 #include "operators/print.hpp"
 #include "operators/product.hpp"
@@ -224,9 +225,7 @@ std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::_translate_show_colum
     const std::shared_ptr<AbstractASTNode> &node) const {
   DebugAssert(node->left_child() == nullptr, "ShowColumns should not have an input operator.");
   const auto show_columns_node = std::dynamic_pointer_cast<ShowColumnsNode>(node);
-
-  const auto get_table = std::make_shared<GetTable>(show_columns_node->table_name());
-  return std::make_shared<Print>(get_table, std::cout, PrintHeaderOnly);
+  return std::make_shared<ShowColumns>(show_columns_node->table_name());
 }
 
 }  // namespace opossum
