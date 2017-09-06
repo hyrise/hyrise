@@ -1,3 +1,4 @@
+#include <boost/algorithm/string.hpp>
 #include <memory>
 #include <string>
 #include <utility>
@@ -7,6 +8,7 @@
 #include "SQLParser.h"
 #include "gtest/gtest.h"
 
+#include "constant_mappings.hpp"
 #include "optimizer/abstract_syntax_tree/abstract_ast_node.hpp"
 #include "optimizer/abstract_syntax_tree/aggregate_node.hpp"
 #include "optimizer/abstract_syntax_tree/join_node.hpp"
@@ -214,82 +216,47 @@ TEST_F(SQLToASTTranslatorTest, SelectInnerJoin) {
   EXPECT_EQ(join_node->join_column_names()->second, "a");
 }
 
-// Verifies that LEFT JOIN and LEFT OUTER JOIN are handled identically
-TEST_F(SQLToASTTranslatorTest, SelectLeftOuterJoin) {
-  // Left Join
-  const auto query = "SELECT * FROM table_a AS a LEFT JOIN table_b AS b ON a.a = b.a;";
-  auto result_node = compile_query(query);
+// Verifies that LEFT/RIGHT JOIN are handled correctly and LEFT/RIGHT OUTER JOIN identically
+TEST_F(SQLToASTTranslatorTest, SelectLeftRightOuterJoins) {
+  using namespace std::string_literals;
 
-  EXPECT_EQ(result_node->type(), ASTNodeType::Projection);
-  auto projection_node = std::dynamic_pointer_cast<ProjectionNode>(result_node);
-  std::vector<std::string> output_columns = {"a.a", "a.b", "b.a", "b.b"};
-  EXPECT_EQ(projection_node->output_column_names(), output_columns);
+  for(auto mode : {JoinMode::Left, JoinMode::Right}) {
+    std::string mode_str = boost::to_upper_copy(join_mode_to_string.at(mode));
+    const auto query = "SELECT * FROM table_a AS a "s + mode_str + " JOIN table_b AS b ON a.a = b.a;";
+    auto result_node = compile_query(query);
 
-  EXPECT_EQ(result_node->left_child()->type(), ASTNodeType::Join);
-  auto join_node = std::dynamic_pointer_cast<JoinNode>(result_node->left_child());
-  EXPECT_EQ(join_node->scan_type(), ScanType::OpEquals);
-  EXPECT_EQ(join_node->join_mode(), JoinMode::Left);
-  EXPECT_EQ(join_node->prefix_left(), "a.");
-  EXPECT_EQ(join_node->prefix_right(), "b.");
-  EXPECT_EQ(join_node->join_column_names()->first, "a");
-  EXPECT_EQ(join_node->join_column_names()->second, "a");
+    EXPECT_EQ(result_node->type(), ASTNodeType::Projection);
+    auto projection_node = std::dynamic_pointer_cast<ProjectionNode>(result_node);
+    std::vector<std::string> output_columns = {"a.a", "a.b", "b.a", "b.b"};
+    EXPECT_EQ(projection_node->output_column_names(), output_columns);
 
-  // Left Outer Join
-  const auto query_outer = "SELECT * FROM table_a AS a LEFT OUTER JOIN table_b AS b ON a.a = b.a;";
-  auto result_node_outer = compile_query(query_outer);
+    EXPECT_EQ(result_node->left_child()->type(), ASTNodeType::Join);
+    auto join_node = std::dynamic_pointer_cast<JoinNode>(result_node->left_child());
+    EXPECT_EQ(join_node->scan_type(), ScanType::OpEquals);
+    EXPECT_EQ(join_node->join_mode(), mode);
+    EXPECT_EQ(join_node->prefix_left(), "a.");
+    EXPECT_EQ(join_node->prefix_right(), "b.");
+    EXPECT_EQ(join_node->join_column_names()->first, "a");
+    EXPECT_EQ(join_node->join_column_names()->second, "a");
 
-  EXPECT_EQ(result_node_outer->type(), ASTNodeType::Projection);
-  auto projection_node_outer = std::dynamic_pointer_cast<ProjectionNode>(result_node_outer);
-  std::vector<std::string> output_columns_outer = {"a.a", "a.b", "b.a", "b.b"};
-  EXPECT_EQ(projection_node_outer->output_column_names(), output_columns_outer);
+    // "OUTER" should be translated the exact same way
+    const auto query_outer = "SELECT * FROM table_a AS a "s + mode_str + " OUTER JOIN table_b AS b ON a.a = b.a;";
+    auto result_node_outer = compile_query(query_outer);
 
-  EXPECT_EQ(result_node_outer->left_child()->type(), ASTNodeType::Join);
-  auto join_node_outer = std::dynamic_pointer_cast<JoinNode>(result_node_outer->left_child());
-  EXPECT_EQ(join_node_outer->scan_type(), join_node->scan_type());
-  EXPECT_EQ(join_node_outer->join_mode(), join_node->join_mode());
-  EXPECT_EQ(join_node_outer->prefix_left(), join_node->prefix_left());
-  EXPECT_EQ(join_node_outer->prefix_right(), join_node->prefix_right());
-  EXPECT_EQ(join_node_outer->join_column_names()->first, join_node->join_column_names()->first);
-  EXPECT_EQ(join_node_outer->join_column_names()->second, join_node->join_column_names()->second);
-}
+    EXPECT_EQ(result_node_outer->type(), ASTNodeType::Projection);
+    auto projection_node_outer = std::dynamic_pointer_cast<ProjectionNode>(result_node_outer);
+    std::vector<std::string> output_columns_outer = {"a.a", "a.b", "b.a", "b.b"};
+    EXPECT_EQ(projection_node_outer->output_column_names(), output_columns_outer);
 
-// Verifies that RIGHT JOIN and RIGHT OUTER JOIN are handled identically
-TEST_F(SQLToASTTranslatorTest, SelectRightOuterJoin) {
-  // Right Join
-  const auto query = "SELECT * FROM table_a AS a RIGHT JOIN table_b AS b ON a.a = b.a;";
-  auto result_node = compile_query(query);
-
-  EXPECT_EQ(result_node->type(), ASTNodeType::Projection);
-  auto projection_node = std::dynamic_pointer_cast<ProjectionNode>(result_node);
-  std::vector<std::string> output_columns = {"a.a", "a.b", "b.a", "b.b"};
-  EXPECT_EQ(projection_node->output_column_names(), output_columns);
-
-  EXPECT_EQ(result_node->left_child()->type(), ASTNodeType::Join);
-  auto join_node = std::dynamic_pointer_cast<JoinNode>(result_node->left_child());
-  EXPECT_EQ(join_node->scan_type(), ScanType::OpEquals);
-  EXPECT_EQ(join_node->join_mode(), JoinMode::Right);
-  EXPECT_EQ(join_node->prefix_left(), "a.");
-  EXPECT_EQ(join_node->prefix_right(), "b.");
-  EXPECT_EQ(join_node->join_column_names()->first, "a");
-  EXPECT_EQ(join_node->join_column_names()->second, "a");
-
-  // Right Outer Join
-  const auto query_outer = "SELECT * FROM table_a AS a RIGHT OUTER JOIN table_b AS b ON a.a = b.a;";
-  auto result_node_outer = compile_query(query_outer);
-
-  EXPECT_EQ(result_node_outer->type(), ASTNodeType::Projection);
-  auto projection_node_outer = std::dynamic_pointer_cast<ProjectionNode>(result_node_outer);
-  std::vector<std::string> output_columns_outer = {"a.a", "a.b", "b.a", "b.b"};
-  EXPECT_EQ(projection_node_outer->output_column_names(), output_columns_outer);
-
-  EXPECT_EQ(result_node_outer->left_child()->type(), ASTNodeType::Join);
-  auto join_node_outer = std::dynamic_pointer_cast<JoinNode>(result_node_outer->left_child());
-  EXPECT_EQ(join_node_outer->scan_type(), join_node->scan_type());
-  EXPECT_EQ(join_node_outer->join_mode(), join_node->join_mode());
-  EXPECT_EQ(join_node_outer->prefix_left(), join_node->prefix_left());
-  EXPECT_EQ(join_node_outer->prefix_right(), join_node->prefix_right());
-  EXPECT_EQ(join_node_outer->join_column_names()->first, join_node->join_column_names()->first);
-  EXPECT_EQ(join_node_outer->join_column_names()->second, join_node->join_column_names()->second);
+    EXPECT_EQ(result_node_outer->left_child()->type(), ASTNodeType::Join);
+    auto join_node_outer = std::dynamic_pointer_cast<JoinNode>(result_node_outer->left_child());
+    EXPECT_EQ(join_node_outer->scan_type(), join_node->scan_type());
+    EXPECT_EQ(join_node_outer->join_mode(), join_node->join_mode());
+    EXPECT_EQ(join_node_outer->prefix_left(), join_node->prefix_left());
+    EXPECT_EQ(join_node_outer->prefix_right(), join_node->prefix_right());
+    EXPECT_EQ(join_node_outer->join_column_names()->first, join_node->join_column_names()->first);
+    EXPECT_EQ(join_node_outer->join_column_names()->second, join_node->join_column_names()->second);
+  }
 }
 
 TEST_F(SQLToASTTranslatorTest, SelectOuterJoin) {
