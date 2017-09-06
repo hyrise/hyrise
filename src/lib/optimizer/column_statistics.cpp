@@ -155,7 +155,7 @@ ColumnSelectivityResult ColumnStatistics<ColumnType>::create_column_stats_for_eq
 template <typename ColumnType>
 ColumnSelectivityResult ColumnStatistics<ColumnType>::create_column_stats_for_unequals_predicate(ColumnType value) {
   if (value < min() || value > max()) {
-    return {_non_null_value_ratio, base_shared_from_this()};
+    return {_non_null_value_ratio, this_without_null_values()};
   }
   auto column_statistics = std::make_shared<ColumnStatistics>(_column_id, distinct_count() - 1, min(), max());
   return {_non_null_value_ratio * (1 - 1.f / distinct_count()), column_statistics};
@@ -267,7 +267,7 @@ ColumnSelectivityResult ColumnStatistics<ColumnType>::estimate_selectivity_for_p
         return output;
       }
       // create statistics, if value2 >= max
-      if (output.column_statistics == this_without_null_values()) {
+      if (output.column_statistics == base_shared_from_this()) {
         output.column_statistics = std::make_shared<ColumnStatistics>(_column_id, distinct_count(), min(), max());
       }
       // apply default selectivity for open ended
@@ -417,12 +417,12 @@ TwoColumnSelectivityResult ColumnStatistics<ColumnType>::estimate_selectivity_fo
     return {combined_non_null_ratio * selectivity, new_left_column_stats, new_right_column_stats};
   };
 
-  // Currently the distinct count. min and max calculation is incorrect, if scan type is OpLessThan or OpGreaterThan and
+  // Currently the distinct count, min and max calculation is incorrect, if scan type is OpLessThan or OpGreaterThan and
   // right column min = left column min or right column max = left column max.
   //
   // E.g. Two integer columns have 3 distinct values and same min and max value of 1 and 3.
   //
-  // Currently both new left and right column statistics will have the same min and max values of 1 and 3.
+  // Both new left and right column statistics will have the same min and max values of 1 and 3.
   // However, for scan type OpLessThan, the left column max is actually 2 as there is no possibility for 3 < 3.
   // Additionally, the right column min is actually 2, as there is no possibility for 1 < 1.
   // The same also applies for scan type OpGreaterThan vice versa.

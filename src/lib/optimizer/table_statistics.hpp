@@ -68,7 +68,7 @@ class TableStatistics : public std::enable_shared_from_this<TableStatistics> {
                                                                 const optional<AllTypeVariant> &value2 = nullopt);
 
   /**
-   * Get table statistics for a cross join. Natural joins are not supported due to usage column ids.
+   * Get table statistics for a cross join. Natural joins are not supported due to usage of column ids.
    */
   virtual std::shared_ptr<TableStatistics> join_statistics(const std::shared_ptr<TableStatistics> &right_table_stats,
                                                            const JoinMode mode);
@@ -89,6 +89,7 @@ class TableStatistics : public std::enable_shared_from_this<TableStatistics> {
   // Only available for statistics of tables in the StorageManager.
   // This is a weak_ptr, as
   // Table --shared_ptr--> TableStatistics
+  // not const as table pointer is reset once all column statistics have been created
   std::weak_ptr<Table> _table;
 
   // row count is not an integer as it is a predicted value
