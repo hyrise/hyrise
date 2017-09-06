@@ -9,6 +9,7 @@
 
 #include "operators/get_table.hpp"
 #include "operators/table_scan.hpp"
+#include "scheduler/current_scheduler.hpp"
 #include "scheduler/node_queue_scheduler.hpp"
 #include "scheduler/operator_task.hpp"
 #include "scheduler/topology.hpp"
