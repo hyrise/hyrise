@@ -218,9 +218,9 @@ TEST_F(SQLToASTTranslatorTest, SelectInnerJoin) {
 
 // Verifies that LEFT/RIGHT JOIN are handled correctly and LEFT/RIGHT OUTER JOIN identically
 TEST_F(SQLToASTTranslatorTest, SelectLeftRightOuterJoins) {
-  using namespace std::string_literals;
+  using namespace std::string_literals;  // NOLINT (Linter does not know about using namespace)
 
-  for(auto mode : {JoinMode::Left, JoinMode::Right}) {
+  for (auto mode : {JoinMode::Left, JoinMode::Right}) {
     std::string mode_str = boost::to_upper_copy(join_mode_to_string.at(mode));
     const auto query = "SELECT * FROM table_a AS a "s + mode_str + " JOIN table_b AS b ON a.a = b.a;";
     auto result_node = compile_query(query);
