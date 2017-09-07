@@ -74,6 +74,14 @@ struct AggregateDefinition {
 };
 
 /**
+ * Types that are used for the special COUNT(*) and DISTINCT implementations
+ */
+using CountColumnType = int32_t;
+using CountAggregateType = int64_t;
+using DistinctColumnType = int8_t;
+using DistinctAggregateType = int8_t;
+
+/**
  * Note: Aggregate does not support null values at the moment
  */
 class Aggregate : public AbstractReadOnlyOperator {

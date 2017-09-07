@@ -132,8 +132,8 @@ std::shared_ptr<const Table> Aggregate::on_execute() {
 
     We choose int8_t for column type and aggregate type because it's small.
     */
-    auto ctx = std::make_shared<AggregateContext<int8_t, int8_t>>();
-    ctx->results = std::make_shared<std::map<AggregateKey, AggregateResult<int8_t>>>();
+    auto ctx = std::make_shared<AggregateContext<DistinctColumnType, DistinctAggregateType>>();
+    ctx->results = std::make_shared<std::map<AggregateKey, AggregateResult<DistinctAggregateType>>>();
 
     _contexts_per_column.push_back(ctx);
   }
@@ -165,12 +165,13 @@ std::shared_ptr<const Table> Aggregate::on_execute() {
        * Obviously this implementation is also used for plain GroupBy's.
        */
 
-      auto ctx = std::static_pointer_cast<AggregateContext<int8_t, int8_t>>(_contexts_per_column[0]);
+      auto ctx = std::static_pointer_cast<AggregateContext<DistinctColumnType, DistinctAggregateType>>(
+          _contexts_per_column[0]);
       auto &results = *ctx->results;
       for (auto &chunk : keys_per_chunk) {
         for (auto &keys : *chunk) {
           // insert dummy value to make sure we have the key in our map
-          results[keys] = AggregateResult<int8_t>();
+          results[keys] = AggregateResult<DistinctAggregateType>();
         }
       }
     } else {
@@ -187,11 +188,12 @@ std::shared_ptr<const Table> Aggregate::on_execute() {
          */
         if (column_id == CountStarColumnID && function == AggregateFunction::Count) {
           // We know the template arguments, so we don't need a visitor
-          auto ctx = std::static_pointer_cast<AggregateContext<int32_t, int64_t>>(_contexts_per_column[column_index]);
+          auto ctx = std::static_pointer_cast<AggregateContext<CountColumnType, CountAggregateType>>(
+              _contexts_per_column[column_index]);
 
           if (!ctx->results) {
             // create result map for the first time if necessary
-            ctx->results = std::make_shared<std::map<AggregateKey, AggregateResult<int64_t>>>();
+            ctx->results = std::make_shared<std::map<AggregateKey, AggregateResult<CountAggregateType>>>();
           }
 
           auto &results = *ctx->results;
@@ -251,7 +253,8 @@ std::shared_ptr<const Table> Aggregate::on_execute() {
    * The following loop is used for both, actual GroupBy columns and DISTINCT columns.
    **/
   if (_aggregates.empty()) {
-    auto ctx = std::static_pointer_cast<AggregateContext<int32_t, int64_t>>(_contexts_per_column[0]);
+    auto ctx =
+        std::static_pointer_cast<AggregateContext<DistinctColumnType, DistinctAggregateType>>(_contexts_per_column[0]);
     for (auto &map : *ctx->results) {
       for (size_t group_column_index = 0; group_column_index < map.first.size(); ++group_column_index) {
         _group_columns[group_column_index]->append(map.first[group_column_index]);
