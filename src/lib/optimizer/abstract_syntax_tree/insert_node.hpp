@@ -10,11 +10,11 @@
 namespace opossum {
 
 /**
- * Node type to represent common projections, i.e. without any aggregate functionality.
+ * Node type to represent insertion of rows into a table.
  */
 class InsertNode : public AbstractASTNode {
  public:
-  explicit InsertNode(const std::string table_name /*, const std::shared_ptr<Table> values_to_insert */);
+  explicit InsertNode(const std::string table_name);
 
   std::string description() const override;
 
@@ -22,7 +22,6 @@ class InsertNode : public AbstractASTNode {
 
  protected:
   const std::string _table_name;
-  // const std::shared_ptr<Table> _values_to_insert;
 };
 
 }  // namespace opossum
