@@ -44,11 +44,11 @@ std::shared_ptr<const Table> Aggregate::on_execute() {
   // find group by column IDs
   std::vector<ColumnID> groupby_column_ids;
   std::transform(_groupby_columns.begin(), _groupby_columns.end(), std::back_inserter(groupby_column_ids),
-                 [&](std::string name) { return input_table->column_id_by_name(name); });
+                 [&](const std::string &name) { return input_table->column_id_by_name(name); });
 
   // find aggregated column IDs
   std::transform(_aggregates.begin(), _aggregates.end(), std::back_inserter(_aggregate_column_ids),
-                 [&](AggregateDefinition agg_def) {
+                 [&](const AggregateDefinition &agg_def) {
                    if (agg_def.column_name == "*") {
                      return CountStarColumnID;
                    }

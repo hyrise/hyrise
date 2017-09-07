@@ -617,8 +617,7 @@ struct AggregateTraits<
 template <typename ColumnType, AggregateFunction function>
 struct AggregateTraits<
     ColumnType, function,
-    typename std::enable_if_t<function == AggregateFunction::Sum && std::is_floating_point<ColumnType>::value,
-                            void>> {
+    typename std::enable_if_t<function == AggregateFunction::Sum && std::is_floating_point<ColumnType>::value, void>> {
   typedef ColumnType column_type;
   typedef double aggregate_type;
   static constexpr const char *aggregate_type_name = "double";
@@ -629,8 +628,8 @@ template <typename ColumnType, AggregateFunction function>
 struct AggregateTraits<
     ColumnType, function,
     typename std::enable_if_t<!std::is_arithmetic<ColumnType>::value &&
-                                (function == AggregateFunction::Avg || function == AggregateFunction::Sum),
-                            void>> {
+                                  (function == AggregateFunction::Avg || function == AggregateFunction::Sum),
+                              void>> {
   typedef ColumnType column_type;
   typedef ColumnType aggregate_type;
   static constexpr const char *aggregate_type_name = "";
