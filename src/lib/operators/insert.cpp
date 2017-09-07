@@ -173,7 +173,7 @@ std::shared_ptr<const Table> Insert::on_execute(std::shared_ptr<TransactionConte
 
         // check if we have an input mapping for this column
         if (output_to_input_map[i]) {
-          auto source_column = source_chunk.get_column(*output_to_input_map[i]);
+          source_column = source_chunk.get_column(*output_to_input_map[i]);
         }
 
         typed_column_processors[i]->copy_data(source_column, source_chunk_start_index, target_chunk.get_column(i),

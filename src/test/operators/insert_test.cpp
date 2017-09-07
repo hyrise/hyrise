@@ -121,4 +121,63 @@ TEST_F(OperatorsInsertTest, CompressedChunks) {
   EXPECT_EQ(t->row_count(), 13u);
 }
 
+TEST_F(OperatorsInsertTest, SelfInsertReorderColumns) {
+  auto table_name = "test_table";
+  auto t = load_table("src/test/tables/float_int.tbl", 0u);
+  // Insert Operator works with the Storage Manager, so the test table must also be known to the StorageManager
+  StorageManager::get().add_table(table_name, t);
+
+  auto gt = std::make_shared<GetTable>(table_name);
+  gt->execute();
+
+  std::vector<std::string> mapping{std::string{"a"}, std::string{"b"}};
+  auto ins = std::make_shared<Insert>(table_name, gt, mapping);
+  auto context = std::make_shared<TransactionContext>(1, 1);
+  ins->set_transaction_context(context);
+
+  ins->execute();
+
+  // Check that row has been inserted.
+  EXPECT_EQ(t->get_chunk(ChunkID{0}).size(), 6u);
+  EXPECT_EQ((*t->get_chunk(ChunkID{0}).get_column(ColumnID{1}))[0], AllTypeVariant(12345));
+  EXPECT_EQ((*t->get_chunk(ChunkID{0}).get_column(ColumnID{0}))[0], AllTypeVariant(458.7f));
+
+  EXPECT_EQ((*t->get_chunk(ChunkID{0}).get_column(ColumnID{1}))[3], AllTypeVariant(458));
+  EXPECT_EQ((*t->get_chunk(ChunkID{0}).get_column(ColumnID{0}))[3], AllTypeVariant(12345.0f));
+
+  EXPECT_EQ(t->get_chunk(ChunkID{0}).get_column(ColumnID{0})->size(), 6u);
+  EXPECT_EQ(t->get_chunk(ChunkID{0}).get_column(ColumnID{1})->size(), 6u);
+}
+
+TEST_F(OperatorsInsertTest, SelfInsertColumnSubset) {
+  auto table_name = "test_table";
+  auto t = load_table("src/test/tables/float_int.tbl", 0u);
+  // Insert Operator works with the Storage Manager, so the test table must also be known to the StorageManager
+  StorageManager::get().add_table(table_name, t);
+
+  auto gt = std::make_shared<GetTable>(table_name);
+  gt->execute();
+
+  std::vector<std::string> mapping{std::string{"b"}};
+  auto ins = std::make_shared<Insert>(table_name, gt, mapping);
+  auto context = std::make_shared<TransactionContext>(1, 1);
+  ins->set_transaction_context(context);
+
+  ins->execute();
+
+  // Check that row has been inserted.
+  EXPECT_EQ(t->get_chunk(ChunkID{0}).size(), 6u);
+  EXPECT_EQ((*t->get_chunk(ChunkID{0}).get_column(ColumnID{0}))[0], AllTypeVariant(458.7f));
+  EXPECT_EQ((*t->get_chunk(ChunkID{0}).get_column(ColumnID{1}))[0], AllTypeVariant(12345));
+  
+
+  EXPECT_EQ((*t->get_chunk(ChunkID{0}).get_column(ColumnID{0}))[3], AllTypeVariant(458.7f));
+  EXPECT_EQ((*t->get_chunk(ChunkID{0}).get_column(ColumnID{1}))[3], AllTypeVariant(0));
+  EXPECT_EQ((*t->get_chunk(ChunkID{0}).get_column(ColumnID{1}))[4], AllTypeVariant(0));
+  EXPECT_EQ((*t->get_chunk(ChunkID{0}).get_column(ColumnID{1}))[5], AllTypeVariant(0));
+
+  EXPECT_EQ(t->get_chunk(ChunkID{0}).get_column(ColumnID{0})->size(), 6u);
+  EXPECT_EQ(t->get_chunk(ChunkID{0}).get_column(ColumnID{1})->size(), 6u);
+}
+
 }  // namespace opossum

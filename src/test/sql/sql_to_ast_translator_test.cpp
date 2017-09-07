@@ -340,4 +340,16 @@ TEST_F(SQLToASTTranslatorTest, InsertValues) {
   EXPECT_EQ(insert_node->left_child()->type(), ASTNodeType::Projection);
 }
 
+TEST_F(SQLToASTTranslatorTest, InsertValuesColumnReorder) {
+  const auto query = "INSERT INTO table_a (b, a) VALUES (10, 12.5);";
+  auto result_node = compile_query(query);
+
+  EXPECT_EQ(result_node->type(), ASTNodeType::Insert);
+  auto insert_node = std::dynamic_pointer_cast<InsertNode>(result_node);
+  EXPECT_EQ(insert_node->table_name(), "table_a");
+  EXPECT_EQ(insert_node->insert_columns()[0], "b");
+  EXPECT_EQ(insert_node->insert_columns()[1], "a");
+  EXPECT_EQ(insert_node->left_child()->type(), ASTNodeType::Projection);
+}
+
 }  // namespace opossum
