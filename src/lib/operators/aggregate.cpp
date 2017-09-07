@@ -360,8 +360,8 @@ void Aggregate::write_aggregate_output(ColumnID column_index) {
   auto &column_name = _aggregates[column_index].column_name;
 
   // retrieve type information from the aggregation traits
-  typename aggregate_traits<ColumnType, function>::aggregate_type aggregate_type;
-  std::string aggregate_type_name = std::string(aggregate_traits<ColumnType, function>::aggregate_type_name);
+  typename AggregateTraits<ColumnType, function>::aggregate_type aggregate_type;
+  std::string aggregate_type_name = std::string(AggregateTraits<ColumnType, function>::aggregate_type_name);
 
   if (aggregate_type_name.empty()) {
     // if not specified, it's the input column's type

@@ -573,16 +573,11 @@ Given a ColumnType and AggregateFunction, certain traits like the aggregate type
 can be deduced.
 */
 template <typename ColumnType, AggregateFunction function, class Enable = void>
-struct aggregate_traits {
-  typedef ColumnType column_type;
-  typedef void aggregate_type;
-  static constexpr AggregateFunction func = function;
-  static constexpr const char *aggregate_type_name = "";
-};
+struct AggregateTraits {};
 
 // COUNT on all types
 template <typename ColumnType>
-struct aggregate_traits<ColumnType, AggregateFunction::Count> {
+struct AggregateTraits<ColumnType, AggregateFunction::Count> {
   typedef ColumnType column_type;
   typedef int64_t aggregate_type;
   static constexpr const char *aggregate_type_name = "long";
@@ -590,9 +585,9 @@ struct aggregate_traits<ColumnType, AggregateFunction::Count> {
 
 // MIN/MAX on all types
 template <typename ColumnType, AggregateFunction function>
-struct aggregate_traits<
+struct AggregateTraits<
     ColumnType, function,
-    typename std::enable_if<function == AggregateFunction::Min || function == AggregateFunction::Max, void>::type> {
+    typename std::enable_if_t<function == AggregateFunction::Min || function == AggregateFunction::Max, void>> {
   typedef ColumnType column_type;
   typedef ColumnType aggregate_type;
   static constexpr const char *aggregate_type_name = "";
@@ -600,9 +595,9 @@ struct aggregate_traits<
 
 // AVG on arithmetic types
 template <typename ColumnType, AggregateFunction function>
-struct aggregate_traits<
+struct AggregateTraits<
     ColumnType, function,
-    typename std::enable_if<function == AggregateFunction::Avg && std::is_arithmetic<ColumnType>::value, void>::type> {
+    typename std::enable_if_t<function == AggregateFunction::Avg && std::is_arithmetic<ColumnType>::value, void>> {
   typedef ColumnType column_type;
   typedef double aggregate_type;
   static constexpr const char *aggregate_type_name = "double";
@@ -610,9 +605,9 @@ struct aggregate_traits<
 
 // SUM on integers
 template <typename ColumnType, AggregateFunction function>
-struct aggregate_traits<
+struct AggregateTraits<
     ColumnType, function,
-    typename std::enable_if<function == AggregateFunction::Sum && std::is_integral<ColumnType>::value, void>::type> {
+    typename std::enable_if_t<function == AggregateFunction::Sum && std::is_integral<ColumnType>::value, void>> {
   typedef ColumnType column_type;
   typedef int64_t aggregate_type;
   static constexpr const char *aggregate_type_name = "long";
@@ -620,10 +615,10 @@ struct aggregate_traits<
 
 // SUM on floating point numbers
 template <typename ColumnType, AggregateFunction function>
-struct aggregate_traits<
+struct AggregateTraits<
     ColumnType, function,
-    typename std::enable_if<function == AggregateFunction::Sum && std::is_floating_point<ColumnType>::value,
-                            void>::type> {
+    typename std::enable_if_t<function == AggregateFunction::Sum && std::is_floating_point<ColumnType>::value,
+                            void>> {
   typedef ColumnType column_type;
   typedef double aggregate_type;
   static constexpr const char *aggregate_type_name = "double";
@@ -631,11 +626,11 @@ struct aggregate_traits<
 
 // invalid: AVG on non-arithmetic types
 template <typename ColumnType, AggregateFunction function>
-struct aggregate_traits<
+struct AggregateTraits<
     ColumnType, function,
-    typename std::enable_if<!std::is_arithmetic<ColumnType>::value &&
+    typename std::enable_if_t<!std::is_arithmetic<ColumnType>::value &&
                                 (function == AggregateFunction::Avg || function == AggregateFunction::Sum),
-                            void>::type> {
+                            void>> {
   typedef ColumnType column_type;
   typedef ColumnType aggregate_type;
   static constexpr const char *aggregate_type_name = "";
@@ -646,7 +641,7 @@ Creates an appropriate AggregateContext based on the ColumnType and AggregateFun
 */
 template <typename ColumnType, AggregateFunction function>
 std::shared_ptr<ColumnVisitableContext> make_aggregate_context() {
-  typename aggregate_traits<ColumnType, function>::aggregate_type aggregate_type;
+  typename AggregateTraits<ColumnType, function>::aggregate_type aggregate_type;
 
   return std::make_shared<AggregateContext<ColumnType, decltype(aggregate_type)>>();
 }
@@ -657,7 +652,7 @@ Creates an appropriate AggregateVisitor based on the ColumnType and AggregateFun
 template <typename ColumnType, AggregateFunction function>
 std::shared_ptr<ColumnVisitable> make_aggregate_visitor(std::shared_ptr<ColumnVisitableContext> new_ctx,
                                                         std::shared_ptr<GroupByContext> ctx) {
-  typename aggregate_traits<ColumnType, function>::aggregate_type aggregate_type;
+  typename AggregateTraits<ColumnType, function>::aggregate_type aggregate_type;
 
   auto visitor = std::make_shared<AggregateVisitor<ColumnType, decltype(aggregate_type), function>>();
   std::static_pointer_cast<AggregateContext<ColumnType, decltype(aggregate_type)>>(new_ctx)->groupby_context = ctx;
