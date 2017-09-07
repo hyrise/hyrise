@@ -443,7 +443,7 @@ struct AggregateVisitor : public ColumnVisitable {
         for (const ChunkOffset &offset_in_value_column : *(context->groupby_context->chunk_offsets_in)) {
           if (null_values[offset_in_value_column]) {
             // Keep it unchanged or initialize
-            results[hash_keys[chunk_offset]].current_aggregate = results[hash_keys[chunk_offset]].current_aggregate;
+            results.try_emplace(hash_keys[chunk_offset]);
           } else {
             results[hash_keys[chunk_offset]].current_aggregate =
                 aggregate_func(values[offset_in_value_column], results[hash_keys[chunk_offset]].current_aggregate);
@@ -474,7 +474,7 @@ struct AggregateVisitor : public ColumnVisitable {
         for (; value_it != values.cend(); ++value_it, ++null_value_it, ++chunk_offset) {
           if (*null_value_it) {
             // Keep it unchanged or initialize
-            results[hash_keys[chunk_offset]].current_aggregate = results[hash_keys[chunk_offset]].current_aggregate;
+            results.try_emplace(hash_keys[chunk_offset]);
           } else {
             results[hash_keys[chunk_offset]].current_aggregate =
                 aggregate_func(*value_it, results[hash_keys[chunk_offset]].current_aggregate);
@@ -518,7 +518,7 @@ struct AggregateVisitor : public ColumnVisitable {
 
         if (value_id == NULL_VALUE_ID) {
           // Keep it unchanged or initialize
-          results[hash_keys[chunk_offset]].current_aggregate = results[hash_keys[chunk_offset]].current_aggregate;
+          results.try_emplace(hash_keys[chunk_offset]);
         } else {
           results[hash_keys[chunk_offset]].current_aggregate =
               aggregate_func(dictionary[value_id], results[hash_keys[chunk_offset]].current_aggregate);
@@ -537,7 +537,7 @@ struct AggregateVisitor : public ColumnVisitable {
 
         if (value_id == NULL_VALUE_ID) {
           // Keep it unchanged or initialize
-          results[hash_keys[chunk_offset]].current_aggregate = results[hash_keys[chunk_offset]].current_aggregate;
+          results.try_emplace(hash_keys[chunk_offset]);
         } else {
           results[hash_keys[chunk_offset]].current_aggregate =
               aggregate_func(dictionary[value_id], results[hash_keys[chunk_offset]].current_aggregate);
