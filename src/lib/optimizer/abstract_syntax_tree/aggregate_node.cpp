@@ -45,21 +45,33 @@ std::string AggregateNode::description() const {
 
   auto stream_aggregate = [&](const AggregateColumnDefinition& aggregate) {
     s << aggregate.expr->to_expression_string();
-    if (aggregate.alias) s << "AS \"" << (*aggregate.alias) << "\"";
+    if (aggregate.alias) s << " AS \"" << (*aggregate.alias) << "\"";
   };
 
-  auto it = _aggregates.begin();
-  if (it != _aggregates.end()) stream_aggregate(*it);
-  for (; it != _aggregates.end(); ++it) {
+  auto aggregates_it = _aggregates.begin();
+  if (aggregates_it != _aggregates.end()) {
+    stream_aggregate(*aggregates_it);
+    ++aggregates_it;
+  }
+
+  for (; aggregates_it != _aggregates.end(); ++aggregates_it) {
     s << ", ";
-    stream_aggregate(*it);
+    stream_aggregate(*aggregates_it);
   }
 
   if (!_groupby_columns.empty()) {
     s << " GROUP BY [";
-    for (const auto& column_name : _groupby_columns) {
-      s << column_name << ", ";
+
+    auto group_by_it = _groupby_columns.begin();
+    if (group_by_it != _groupby_columns.end()) {
+      s << *group_by_it;
+      ++group_by_it;
     }
+
+    for (; group_by_it != _groupby_columns.end(); ++group_by_it) {
+      s << ", " << *group_by_it;
+    }
+
     s << "]";
   }
 

@@ -1,4 +1,3 @@
-
 #include <memory>
 #include <string>
 #include <tuple>
@@ -10,6 +9,7 @@
 
 #include "operators/get_table.hpp"
 #include "operators/table_scan.hpp"
+#include "scheduler/current_scheduler.hpp"
 #include "scheduler/node_queue_scheduler.hpp"
 #include "scheduler/operator_task.hpp"
 #include "scheduler/topology.hpp"
@@ -44,6 +44,8 @@ class SQLToResultTest : public BaseTest, public ::testing::WithParamInterface<SQ
 
     std::shared_ptr<Table> test_table2 = load_table("src/test/tables/int_string2.tbl", 2);
     StorageManager::get().add_table("TestTable", test_table2);
+
+    StorageManager::get().add_table("int_int3", load_table("src/test/tables/int_int3.tbl", 3));
 
     std::shared_ptr<Table> groupby_int_1gb_1agg =
         load_table("src/test/tables/aggregateoperator/groupby_int_1gb_1agg/input.tbl", 2);
@@ -101,6 +103,7 @@ const SQLTestParam test_queries[] = {
     // Table Scans
     {"SELECT * FROM table_b WHERE a = 12345 AND b > 457;", "src/test/tables/int_float2_filtered.tbl"},
     {"SELECT * FROM table_a WHERE a >= 1234;", "src/test/tables/int_float_filtered2.tbl"},
+    {"SELECT * FROM table_a WHERE 1234 <= a;", "src/test/tables/int_float_filtered2.tbl"},
     {"SELECT * FROM table_a WHERE a >= 1234 AND b < 457.9", "src/test/tables/int_float_filtered.tbl"},
     {"SELECT * FROM TestTable WHERE a BETWEEN 122 AND 124", "src/test/tables/int_string_filtered.tbl"},
 
@@ -132,6 +135,9 @@ const SQLTestParam test_queries[] = {
      "src/test/tables/joinoperators/int_left_join.tbl"},
     {"SELECT * FROM table_a AS \"left\" INNER JOIN table_b AS \"right\" ON \"left\".a = \"right\".a;",
      "src/test/tables/joinoperators/int_inner_join.tbl"},
+
+    // LIMIT
+    {"SELECT * FROM int_int3 LIMIT 4;", "src/test/tables/int_int3_limit_4.tbl"},
 
     // GROUP BY
     {"SELECT a, SUM(b) FROM groupby_int_1gb_1agg GROUP BY a;",

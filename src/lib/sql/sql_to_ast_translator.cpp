@@ -10,8 +10,11 @@
 #include "optimizer/abstract_syntax_tree/abstract_ast_node.hpp"
 #include "optimizer/abstract_syntax_tree/aggregate_node.hpp"
 #include "optimizer/abstract_syntax_tree/join_node.hpp"
+#include "optimizer/abstract_syntax_tree/limit_node.hpp"
 #include "optimizer/abstract_syntax_tree/predicate_node.hpp"
 #include "optimizer/abstract_syntax_tree/projection_node.hpp"
+#include "optimizer/abstract_syntax_tree/show_columns_node.hpp"
+#include "optimizer/abstract_syntax_tree/show_tables_node.hpp"
 #include "optimizer/abstract_syntax_tree/sort_node.hpp"
 #include "optimizer/abstract_syntax_tree/stored_table_node.hpp"
 #include "optimizer/expression/expression_node.hpp"
@@ -19,6 +22,7 @@
 #include "storage/storage_manager.hpp"
 
 #include "all_type_variant.hpp"
+#include "constant_mappings.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 
@@ -39,10 +43,39 @@ ScanType translate_operator_type_to_scan_type(const hsql::OperatorType operator_
   return it->second;
 }
 
+ScanType get_scan_type_for_reverse_order(const ScanType scan_type) {
+  /**
+   * If we switch the sides for the expressions, we might have to change the operator that is used for the predicate.
+   * This function returns the respective ScanType.
+   *
+   * Example:
+   *     SELECT * FROM t WHERE 1 > a
+   *  -> SELECT * FROM t WHERE a < 1
+   *
+   *    but:
+   *     SELECT * FROM t WHERE 1 = a
+   *  -> SELECT * FROM t WHERE a = 1
+   */
+  static const std::unordered_map<const ScanType, const ScanType> scan_type_for_reverse_order = {
+      {ScanType::OpGreaterThan, ScanType::OpLessThan},
+      {ScanType::OpLessThan, ScanType::OpGreaterThan},
+      {ScanType::OpGreaterThanEquals, ScanType::OpLessThanEquals},
+      {ScanType::OpLessThanEquals, ScanType::OpGreaterThanEquals}};
+
+  auto it = scan_type_for_reverse_order.find(scan_type);
+  if (it != scan_type_for_reverse_order.end()) {
+    return it->second;
+  }
+
+  return scan_type;
+}
+
 JoinMode translate_join_type_to_join_mode(const hsql::JoinType join_type) {
   static const std::unordered_map<const hsql::JoinType, const JoinMode> join_type_to_mode = {
-      {hsql::kJoinInner, JoinMode::Inner}, {hsql::kJoinOuter, JoinMode::Outer},     {hsql::kJoinLeft, JoinMode::Left},
-      {hsql::kJoinRight, JoinMode::Right}, {hsql::kJoinNatural, JoinMode::Natural}, {hsql::kJoinCross, JoinMode::Cross},
+      {hsql::kJoinInner, JoinMode::Inner},     {hsql::kJoinOuter, JoinMode::Outer},
+      {hsql::kJoinLeft, JoinMode::Left},       {hsql::kJoinLeftOuter, JoinMode::Left},
+      {hsql::kJoinRight, JoinMode::Right},     {hsql::kJoinRightOuter, JoinMode::Right},
+      {hsql::kJoinNatural, JoinMode::Natural}, {hsql::kJoinCross, JoinMode::Cross},
   };
 
   auto it = join_type_to_mode.find(join_type);
@@ -72,6 +105,8 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::translate_statement(const h
   switch (statement.type()) {
     case hsql::kStmtSelect:
       return _translate_select((const hsql::SelectStatement&)statement);
+    case hsql::kStmtShow:
+      return _translate_show((const hsql::ShowStatement&)statement);
     default:
       Fail("Only SELECT statements are supported as of now.");
       return {};
@@ -86,6 +121,7 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_select(const hsq
   // 4. HAVING clause
   // 5. SELECT clause
   // 6. ORDER BY clause
+  // 7. LIMIT clause
 
   auto current_result_node = _translate_table_ref(*select.fromTable);
 
@@ -117,12 +153,14 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_select(const hsq
     current_result_node = _translate_projection(*select.selectList, current_result_node);
   }
 
-  // Translate ORDER BY.
   if (select.order != nullptr) {
     current_result_node = _translate_order_by(*select.order, current_result_node);
   }
 
-  // TODO(torpedro): Translate LIMIT/TOP.
+  // TODO(anybody): Translate TOP.
+  if (select.limit != nullptr) {
+    current_result_node = _translate_limit(*select.limit, current_result_node);
+  }
 
   return current_result_node;
 }
@@ -240,7 +278,7 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_filter_expr(
   }
 
   // TODO(anybody): handle IN with join
-  const auto scan_type = translate_operator_type_to_scan_type(expr.opType);
+  auto scan_type = translate_operator_type_to_scan_type(expr.opType);
 
   /**
    * We have to determine which side of the expression is a column or function reference.
@@ -272,11 +310,30 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_filter_expr(
     column_operand_expr = expr.expr;
     argument_expr = expr.expr2;
   } else {
+    /**
+     * TODO(anybody): think about how this can be supported as well.
+     *
+     * * Example:
+     *     SELECT * FROM t WHERE 1 BETWEEN a AND 3
+     *  -> SELECT * FROM t WHERE a <= 1
+     *
+     *     SELECT * FROM t WHERE 3 BETWEEN 1 AND a
+     *  -> SELECT * FROM t WHERE a >= 3
+     *
+     *  The biggest question is how to introduce this in the code nicely.
+     */
+    DebugAssert(scan_type != ScanType::OpBetween,
+                "Currently the term left of the BETWEEN expression needs to be a column reference.");
+
     argument_expr = expr.expr;
     column_operand_expr = expr.expr2;
+
     DebugAssert(
         column_operand_expr->isType(hsql::kExprColumnRef) || column_operand_expr->isType(hsql::kExprFunctionRef),
         "Unsupported filter: we must have a function or column reference on at least one side of the expression.");
+
+    // We might have to change the ScanType when we reverse the sides of the expression.
+    scan_type = get_scan_type_for_reverse_order(scan_type);
   }
 
   const auto column_name = generate_column_name(*column_operand_expr, true);
@@ -417,27 +474,45 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_order_by(
     return input_node;
   }
 
-  auto current_result_node = input_node;
+  std::vector<OrderByDefinition> order_by_definitions;
+  order_by_definitions.reserve(order_list.size());
 
-  // Go through all the order descriptions and create a sort node for each of them.
-  // Iterate in reverse because the sort operator does not support multiple columns,
-  // and instead relies on stable sort. We therefore sort by the n+1-th column before sorting by the n-th column.
-  for (auto it = order_list.rbegin(); it != order_list.rend(); ++it) {
-    auto order_description = *it;
+  for (const auto& order_description : order_list) {
     const auto& order_expr = *order_description->expr;
 
     // TODO(anybody): handle non-column refs
     DebugAssert(order_expr.isType(hsql::kExprColumnRef), "Can only order by columns for now.");
 
     const auto column_name = generate_column_name(order_expr, true);
-    const auto asc = order_description->type == hsql::kOrderAsc;
+    const auto order_by_mode = order_type_to_order_by_mode.at(order_description->type);
 
-    auto sort_node = std::make_shared<SortNode>(column_name, asc);
-    sort_node->set_left_child(current_result_node);
-    current_result_node = sort_node;
+    order_by_definitions.emplace_back(column_name, order_by_mode);
   }
 
-  return current_result_node;
+  auto sort_node = std::make_shared<SortNode>(order_by_definitions);
+  sort_node->set_left_child(input_node);
+
+  return sort_node;
+}
+
+std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_limit(
+    const hsql::LimitDescription& limit, const std::shared_ptr<AbstractASTNode>& input_node) {
+  auto limit_node = std::make_shared<LimitNode>(limit.limit);
+  limit_node->set_left_child(input_node);
+  return limit_node;
+}
+
+std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_show(const hsql::ShowStatement& show_statement) {
+  switch (show_statement.type) {
+    case hsql::ShowType::kShowTables:
+      return std::make_shared<ShowTablesNode>();
+    case hsql::ShowType::kShowColumns:
+      return std::make_shared<ShowColumnsNode>(std::string(show_statement.name));
+    default:
+      Fail("hsql::ShowType is not supported.");
+  }
+
+  return {};
 }
 
 }  // namespace opossum
