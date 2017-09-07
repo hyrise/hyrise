@@ -118,23 +118,19 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_insert(const hsq
   const std::string table_name{insert.tableName};
   auto target_table = StorageManager::get().get_table(table_name);
 
-  Assert(target_table != nullptr, "_translate_insert: Invalid table name");
+  Assert(target_table != nullptr, "Insert: Invalid table name");
 
-  uint16_t column_count = 0;
+  std::vector<std::string> columns;
 
   if (insert.columns != nullptr) {
-    column_count = insert.columns->size();
+    for (auto& column_name : *insert.columns) {
+      columns.emplace_back(column_name);
+    }
   }
-
-  if (column_count == 0) {
-    column_count = target_table->col_count();
-  }
-
-  Assert(column_count == target_table->col_count(), "Column count mismatch");
 
   auto projection_node = _translate_projection(*insert.values, nullptr);
 
-  auto insert_node = std::make_shared<InsertNode>(table_name);
+  auto insert_node = std::make_shared<InsertNode>(table_name, columns);
   insert_node->set_left_child(projection_node);
 
   return insert_node;

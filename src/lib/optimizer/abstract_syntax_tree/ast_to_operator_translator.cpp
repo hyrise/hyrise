@@ -221,7 +221,7 @@ std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::_translate_insert_nod
     const std::shared_ptr<AbstractASTNode> &node) const {
   const auto input_operator = translate_node(node->left_child());
   auto insert_node = std::dynamic_pointer_cast<InsertNode>(node);
-  return std::make_shared<Insert>(insert_node->table_name(), input_operator);
+  return std::make_shared<Insert>(insert_node->table_name(), input_operator, insert_node->insert_columns());
 }
 
 }  // namespace opossum

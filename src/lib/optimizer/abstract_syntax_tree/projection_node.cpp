@@ -8,8 +8,8 @@
 
 #include "common.hpp"
 #include "optimizer/expression/expression_node.hpp"
-#include "utils/assert.hpp"
 #include "type_cast.hpp"
+#include "utils/assert.hpp"
 
 namespace opossum {
 

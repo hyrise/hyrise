@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <memory>
+#include <numeric>
 #include <string>
 #include <vector>
 
@@ -59,6 +60,12 @@ class TypedColumnProcessor : public AbstractTypedColumnProcessor {
 Insert::Insert(const std::string& target_table_name, const std::shared_ptr<AbstractOperator>& values_to_insert)
     : AbstractReadWriteOperator(values_to_insert), _target_table_name(target_table_name) {}
 
+Insert::Insert(const std::string& target_table_name, const std::shared_ptr<AbstractOperator>& values_to_insert,
+               std::vector<std::string> column_mapping)
+    : AbstractReadWriteOperator(values_to_insert),
+      _target_table_name(target_table_name),
+      _column_mapping(column_mapping) {}
+
 const std::string Insert::name() const { return "Insert"; }
 
 uint8_t Insert::num_in_tables() const { return 1; }
@@ -67,6 +74,20 @@ std::shared_ptr<const Table> Insert::on_execute(std::shared_ptr<TransactionConte
   context->register_rw_operator(shared_from_this());
 
   _target_table = StorageManager::get().get_table(_target_table_name);
+
+  std::vector<ColumnID> output_to_input_map(_target_table->col_count());
+  std::iota(output_to_input_map.begin(), output_to_input_map.end(), ColumnID{0});
+
+  if (_column_mapping.size() == 0) {
+    //
+  } else {
+    Assert(_column_mapping.size() == _target_table->col_count(), "Insert: column count mismatch!");
+
+    for (ColumnID input_index{0}; input_index < _column_mapping.size(); ++input_index) {
+      auto output_column_id = _target_table->column_id_by_name(_column_mapping[input_index]);
+      output_to_input_map[output_column_id] = input_index;
+    }
+  }
 
   // These TypedColumnProcessors kind of retrieve the template parameter of the columns.
   auto typed_column_processors = std::vector<std::unique_ptr<AbstractTypedColumnProcessor>>();
@@ -111,8 +132,7 @@ std::shared_ptr<const Table> Insert::on_execute(std::shared_ptr<TransactionConte
       // Resize current chunk to full size.
       auto old_size = current_chunk.size();
       for (ColumnID i{0}; i < current_chunk.col_count(); ++i) {
-        typed_column_processors[i]->resize_vector(current_chunk.get_column(i),
-                                                  old_size + rows_to_insert_this_loop);
+        typed_column_processors[i]->resize_vector(current_chunk.get_column(i), old_size + rows_to_insert_this_loop);
       }
 
       remaining_rows -= rows_to_insert_this_loop;
@@ -146,7 +166,8 @@ std::shared_ptr<const Table> Insert::on_execute(std::shared_ptr<TransactionConte
       const auto& source_chunk = input_table_left()->get_chunk(source_chunk_id);
       auto num_to_insert = std::min(source_chunk.size() - source_chunk_start_index, n);
       for (ColumnID i{0}; i < target_chunk.col_count(); ++i) {
-        auto source_column = source_chunk.get_column(i);
+        // auto source_column = source_chunk.get_column(i);
+        auto source_column = source_chunk.get_column(output_to_input_map[i]);
         typed_column_processors[i]->copy_data(source_column, source_chunk_start_index, target_chunk.get_column(i),
                                               target_start_index, num_to_insert);
       }
