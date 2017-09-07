@@ -109,9 +109,10 @@ std::shared_ptr<const Table> Insert::on_execute(std::shared_ptr<TransactionConte
       current_chunk.grow_mvcc_column_size_by(rows_to_insert_this_loop, Chunk::MAX_COMMIT_ID);
 
       // Resize current chunk to full size.
+      auto old_size = current_chunk.size();
       for (ColumnID i{0}; i < current_chunk.col_count(); ++i) {
         typed_column_processors[i]->resize_vector(current_chunk.get_column(i),
-                                                  current_chunk.size() + rows_to_insert_this_loop);
+                                                  old_size + rows_to_insert_this_loop);
       }
 
       remaining_rows -= rows_to_insert_this_loop;
