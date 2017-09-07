@@ -185,6 +185,7 @@ set(
     optimizer/strategy/predicate_reordering_rule.hpp
     optimizer/table_statistics.cpp
     optimizer/table_statistics.hpp
+    polymorphic_allocator.hpp
     resolve_column_type.hpp
     resolve_type.hpp
     scheduler/abstract_scheduler.cpp
@@ -296,7 +297,7 @@ set(
     pthread
     z
     sqlparser
-
+    boost_container
     ${TBB_LIBRARY}
 )
 

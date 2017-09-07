@@ -1,7 +1,5 @@
 #pragma once
 
-#include "tbb/concurrent_vector.h"
-
 #include "base_column.hpp"
 
 namespace opossum {
@@ -21,7 +19,7 @@ class BaseValueColumn : public BaseColumn {
    *
    * Throws exception if is_nullable() returns false
    */
-  virtual const tbb::concurrent_vector<bool>& null_values() const = 0;
-  virtual tbb::concurrent_vector<bool>& null_values() = 0;
+  virtual const pmr_concurrent_vector<bool>& null_values() const = 0;
+  virtual pmr_concurrent_vector<bool>& null_values() = 0;
 };
 }  // namespace opossum

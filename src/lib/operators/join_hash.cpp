@@ -147,9 +147,9 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
   */
   template <typename T>
   struct ColumnBuilder : public ColumnVisitable {
-    explicit ColumnBuilder(ChunkID chunk_id, std::shared_ptr<std::vector<ChunkOffset>> offsets = nullptr)
+    explicit ColumnBuilder(ChunkID chunk_id, std::shared_ptr<pmr_vector<ChunkOffset>> offsets = nullptr)
         : _chunk_id(chunk_id),
-          _materialized_chunk(std::make_shared<std::vector<std::pair<RowID, T>>>()),
+          _materialized_chunk(std::make_shared<pmr_vector<std::pair<RowID, T>>>()),
           _offsets(offsets) {}
 
     void handle_value_column(BaseColumn &column, std::shared_ptr<ColumnVisitableContext>) override {
@@ -171,10 +171,10 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
       Compare with table scan implemention for further reference.
       */
 
-      std::vector<std::shared_ptr<std::vector<ChunkOffset>>> all_chunk_offsets(referenced_table->chunk_count());
+      std::vector<std::shared_ptr<pmr_vector<ChunkOffset>>> all_chunk_offsets(referenced_table->chunk_count());
 
       for (ChunkID chunk_id{0}; chunk_id < referenced_table->chunk_count(); ++chunk_id) {
-        all_chunk_offsets[chunk_id] = std::make_shared<std::vector<ChunkOffset>>();
+        all_chunk_offsets[chunk_id] = std::make_shared<pmr_vector<ChunkOffset>>();
       }
 
       for (auto &pos : *(ref_column.pos_list())) {
@@ -210,8 +210,8 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
     }
 
     ChunkID _chunk_id;
-    std::shared_ptr<std::vector<std::pair<RowID, T>>> _materialized_chunk;
-    std::shared_ptr<std::vector<ChunkOffset>> _offsets;
+    std::shared_ptr<pmr_vector<std::pair<RowID, T>>> _materialized_chunk;
+    std::shared_ptr<pmr_vector<ChunkOffset>> _offsets;
   };
 
   template <typename T>
@@ -265,7 +265,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
         ColumnBuilder<T> builder = ColumnBuilder<T>(chunk_id);
         column->visit(builder);
 
-        auto const &materialized = static_cast<std::vector<std::pair<RowID, T>> &>(*builder._materialized_chunk);
+        auto const &materialized = static_cast<pmr_vector<std::pair<RowID, T>> &>(*builder._materialized_chunk);
 
         size_t row_id = output_offset;
 
