@@ -119,7 +119,7 @@ std::shared_ptr<const Table> Aggregate::on_execute() {
     // Special COUNT(*) contexts. "int" is chosen arbitrarily.
     const auto type_string = is_count_star_context ? std::string{"int"} : input_table->column_type(column_id);
 
-    resolve_type(type_string, [&](auto type) {
+    resolve_type(type_string, [&, column_index, function](auto type) {
       this->_create_aggregate_context(type, _contexts_per_column[column_index], function);
     });
   }
@@ -274,7 +274,7 @@ std::shared_ptr<const Table> Aggregate::on_execute() {
     const auto type_string =
         (column_id == CountStarColumnID) ? std::string{"int"} : input_table->column_type(column_id);
 
-    resolve_type(type_string, [&](auto type) {
+    resolve_type(type_string, [&, column_index](auto type) {
       this->_write_aggregate_output(type, column_index, _aggregates[column_index].function);
     });
 
