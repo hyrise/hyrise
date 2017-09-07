@@ -9,7 +9,18 @@ namespace opossum {
 
 class TableStatistics;
 
-enum class ASTNodeType { Aggregate, Insert, Join, Limit, Predicate, Projection, ShowColumns, ShowTables, Sort, StoredTable };
+enum class ASTNodeType {
+  Aggregate,
+  Insert,
+  Join,
+  Limit,
+  Predicate,
+  Projection,
+  ShowColumns,
+  ShowTables,
+  Sort,
+  StoredTable
+};
 
 /**
  * Abstract element in an Abstract Syntax Tree.
