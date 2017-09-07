@@ -14,6 +14,8 @@
 #include "optimizer/abstract_syntax_tree/limit_node.hpp"
 #include "optimizer/abstract_syntax_tree/predicate_node.hpp"
 #include "optimizer/abstract_syntax_tree/projection_node.hpp"
+#include "optimizer/abstract_syntax_tree/show_columns_node.hpp"
+#include "optimizer/abstract_syntax_tree/show_tables_node.hpp"
 #include "optimizer/abstract_syntax_tree/sort_node.hpp"
 #include "optimizer/abstract_syntax_tree/stored_table_node.hpp"
 #include "optimizer/expression/expression_node.hpp"
@@ -106,6 +108,8 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::translate_statement(const h
       return _translate_select((const hsql::SelectStatement&)statement);
     case hsql::kStmtInsert:
       return _translate_insert((const hsql::InsertStatement&)statement);
+    case hsql::kStmtShow:
+      return _translate_show((const hsql::ShowStatement&)statement);
     default:
       Fail("Only SELECT statements are supported as of now.");
       return {};
@@ -523,6 +527,19 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_limit(
   auto limit_node = std::make_shared<LimitNode>(limit.limit);
   limit_node->set_left_child(input_node);
   return limit_node;
+}
+
+std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_show(const hsql::ShowStatement& show_statement) {
+  switch (show_statement.type) {
+    case hsql::ShowType::kShowTables:
+      return std::make_shared<ShowTablesNode>();
+    case hsql::ShowType::kShowColumns:
+      return std::make_shared<ShowColumnsNode>(std::string(show_statement.name));
+    default:
+      Fail("hsql::ShowType is not supported.");
+  }
+
+  return {};
 }
 
 }  // namespace opossum

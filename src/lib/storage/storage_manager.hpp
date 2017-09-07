@@ -4,6 +4,7 @@
 #include <map>
 #include <memory>
 #include <string>
+#include <vector>
 
 #include "types.hpp"
 
@@ -28,6 +29,9 @@ class StorageManager : private Noncopyable {
 
   // returns whether the storage manager holds a table with the given name
   bool has_table(const std::string &name) const;
+
+  // returns a list of all table names
+  std::vector<std::string> table_names() const;
 
   // prints the table on the given stream
   void print(std::ostream &out = std::cout) const;

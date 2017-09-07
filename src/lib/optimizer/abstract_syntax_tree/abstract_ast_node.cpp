@@ -14,6 +14,8 @@ namespace opossum {
 
 AbstractASTNode::AbstractASTNode(ASTNodeType node_type) : _type(node_type) {}
 
+bool AbstractASTNode::is_optimizable() const { return true; }
+
 std::shared_ptr<AbstractASTNode> AbstractASTNode::parent() const { return _parent.lock(); }
 
 void AbstractASTNode::clear_parent() {
