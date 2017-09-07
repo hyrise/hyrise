@@ -81,7 +81,7 @@ class DictionaryColumn : public BaseDictionaryColumn {
 
   // TODO(anyone): Move this to base column once final optimization is supported by gcc
   const std::shared_ptr<pmr_vector<std::pair<RowID, T>>> materialize(
-      ChunkID chunk_id, std::shared_ptr<pmr_vector<ChunkOffset>> offsets = nullptr);
+      ChunkID chunk_id, std::shared_ptr<std::vector<ChunkOffset>> offsets = nullptr);
 
  protected:
   std::shared_ptr<pmr_vector<T>> _dictionary;

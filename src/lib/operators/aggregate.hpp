@@ -165,7 +165,7 @@ struct GroupByContext : ColumnVisitableContext {
   // constructor for use in ReferenceColumn::visit_dereferenced
   GroupByContext(std::shared_ptr<BaseColumn>, const std::shared_ptr<const Table> referenced_table,
                  std::shared_ptr<ColumnVisitableContext> base_context, ChunkID chunk_id,
-                 std::shared_ptr<pmr_vector<ChunkOffset>> chunk_offsets)
+                 std::shared_ptr<std::vector<ChunkOffset>> chunk_offsets)
       : table_in(referenced_table),
         chunk_id(chunk_id),
         column_id(std::static_pointer_cast<GroupByContext>(base_context)->column_id),
@@ -176,7 +176,7 @@ struct GroupByContext : ColumnVisitableContext {
   ChunkID chunk_id;
   const ColumnID column_id;
   std::shared_ptr<std::vector<AggregateKey>> hash_keys;
-  std::shared_ptr<pmr_vector<ChunkOffset>> chunk_offsets_in;
+  std::shared_ptr<std::vector<ChunkOffset>> chunk_offsets_in;
 };
 
 /*
@@ -305,7 +305,7 @@ struct AggregateContext : ColumnVisitableContext {
   // constructor for use in ReferenceColumn::visit_dereferenced
   AggregateContext(std::shared_ptr<BaseColumn>, const std::shared_ptr<const Table>,
                    std::shared_ptr<ColumnVisitableContext> base_context, ChunkID chunk_id,
-                   std::shared_ptr<pmr_vector<ChunkOffset>> chunk_offsets)
+                   std::shared_ptr<std::vector<ChunkOffset>> chunk_offsets)
       : groupby_context(std::static_pointer_cast<AggregateContext>(base_context)->groupby_context),
         results(std::static_pointer_cast<AggregateContext>(base_context)->results) {
     groupby_context->chunk_id = chunk_id;

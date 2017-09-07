@@ -150,7 +150,7 @@ void DictionaryColumn<T>::copy_value_to_value_column(BaseColumn& value_column, C
 // TODO(anyone): This method is part of an algorithm that hasn’t yet been updated to support null values.
 template <typename T>
 const std::shared_ptr<pmr_vector<std::pair<RowID, T>>> DictionaryColumn<T>::materialize(
-    ChunkID chunk_id, std::shared_ptr<pmr_vector<ChunkOffset>> offsets) {
+    ChunkID chunk_id, std::shared_ptr<std::vector<ChunkOffset>> offsets) {
   auto materialized_vector = std::make_shared<pmr_vector<std::pair<RowID, T>>>(_dictionary->get_allocator());
 
   /*
