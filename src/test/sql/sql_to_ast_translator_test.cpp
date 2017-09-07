@@ -11,6 +11,7 @@
 #include "constant_mappings.hpp"
 #include "optimizer/abstract_syntax_tree/abstract_ast_node.hpp"
 #include "optimizer/abstract_syntax_tree/aggregate_node.hpp"
+#include "optimizer/abstract_syntax_tree/insert_node.hpp"
 #include "optimizer/abstract_syntax_tree/join_node.hpp"
 #include "optimizer/abstract_syntax_tree/limit_node.hpp"
 #include "optimizer/abstract_syntax_tree/predicate_node.hpp"
@@ -327,6 +328,16 @@ TEST_F(SQLToASTTranslatorTest, SelectLimit) {
   auto limit_node = std::dynamic_pointer_cast<LimitNode>(result_node);
   EXPECT_EQ(limit_node->num_rows(), 2u);
   EXPECT_EQ(limit_node->left_child()->type(), ASTNodeType::Projection);
+}
+
+TEST_F(SQLToASTTranslatorTest, InsertValues) {
+  const auto query = "INSERT INTO table_a VALUES (10, 12.5);";
+  auto result_node = compile_query(query);
+
+  EXPECT_EQ(result_node->type(), ASTNodeType::Insert);
+  auto insert_node = std::dynamic_pointer_cast<InsertNode>(result_node);
+  EXPECT_EQ(insert_node->table_name(), "table_a");
+  EXPECT_EQ(insert_node->left_child()->type(), ASTNodeType::Projection);
 }
 
 }  // namespace opossum

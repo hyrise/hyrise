@@ -38,6 +38,16 @@ class Projection : public AbstractReadOnlyOperator {
 
   std::shared_ptr<AbstractOperator> recreate(const std::vector<AllParameterVariant>& args) const override;
 
+  class DummyTable : public Table {
+   public:
+    DummyTable() : Table(0) {
+      add_column("dummy", "int");
+      append(std::vector<AllTypeVariant>{0});
+    }
+  };
+
+  static std::shared_ptr<Table> dummy_table();
+
  protected:
   ColumnExpressions _column_expressions;
 

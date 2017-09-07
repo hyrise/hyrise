@@ -9,6 +9,7 @@
 #include "operators/projection.hpp"
 #include "optimizer/abstract_syntax_tree/abstract_ast_node.hpp"
 #include "optimizer/abstract_syntax_tree/aggregate_node.hpp"
+#include "optimizer/abstract_syntax_tree/insert_node.hpp"
 #include "optimizer/abstract_syntax_tree/join_node.hpp"
 #include "optimizer/abstract_syntax_tree/limit_node.hpp"
 #include "optimizer/abstract_syntax_tree/predicate_node.hpp"
@@ -103,10 +104,40 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::translate_statement(const h
   switch (statement.type()) {
     case hsql::kStmtSelect:
       return _translate_select((const hsql::SelectStatement&)statement);
+    case hsql::kStmtInsert:
+      return _translate_insert((const hsql::InsertStatement&)statement);
     default:
       Fail("Only SELECT statements are supported as of now.");
       return {};
   }
+}
+
+std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_insert(const hsql::InsertStatement& insert) {
+  Assert(insert.type == hsql::kInsertValues, "Translator currently only supports INSERT with values");
+
+  const std::string table_name{insert.tableName};
+  auto target_table = StorageManager::get().get_table(table_name);
+
+  Assert(target_table != nullptr, "_translate_insert: Invalid table name");
+
+  uint16_t column_count = 0;
+
+  if (insert.columns != nullptr) {
+    column_count = insert.columns->size();
+  }
+
+  if (column_count == 0) {
+    column_count = target_table->col_count();
+  }
+
+  Assert(column_count == target_table->col_count(), "Column count mismatch");
+
+  auto projection_node = _translate_projection(*insert.values, nullptr);
+
+  auto insert_node = std::make_shared<InsertNode>(table_name);
+  insert_node->set_left_child(projection_node);
+
+  return insert_node;
 }
 
 std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_select(const hsql::SelectStatement& select) {
@@ -446,7 +477,7 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_projection(
     const auto expression = SQLExpressionTranslator::translate_expression(*hsql_expr);
 
     DebugAssert(expression->type() == ExpressionType::Star || expression->type() == ExpressionType::ColumnIdentifier ||
-                    expression->is_arithmetic_operator(),
+                    expression->is_arithmetic_operator() || expression->type() == ExpressionType::Literal,
                 "Only column references, star-selects, and arithmetic expressions supported for now.");
 
     if (expression->type() == ExpressionType::Star) {

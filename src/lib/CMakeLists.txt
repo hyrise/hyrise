@@ -153,6 +153,8 @@ set(
     optimizer/abstract_syntax_tree/ast_to_operator_translator.cpp
     optimizer/abstract_syntax_tree/join_node.cpp
     optimizer/abstract_syntax_tree/join_node.hpp
+    optimizer/abstract_syntax_tree/insert_node.cpp
+    optimizer/abstract_syntax_tree/insert_node.hpp
     optimizer/abstract_syntax_tree/limit_node.cpp
     optimizer/abstract_syntax_tree/limit_node.hpp
     optimizer/abstract_syntax_tree/predicate_node.cpp

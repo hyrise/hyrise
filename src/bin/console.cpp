@@ -6,8 +6,8 @@
 #include <readline/history.h>
 #include <readline/readline.h>
 #include <setjmp.h>
-#include <csignal>
 #include <chrono>
+#include <csignal>
 #include <ctime>
 #include <iomanip>
 #include <iostream>
@@ -16,6 +16,8 @@
 #include <vector>
 
 #include "SQLParser.h"
+#include "concurrency/transaction_manager.hpp"
+#include "operators/get_table.hpp"
 #include "operators/import_csv.hpp"
 #include "operators/print.hpp"
 #include "sql/sql_planner.hpp"
@@ -62,6 +64,7 @@ Console::Console()
   register_command("generate", generate_tpcc);
   register_command("load", load_table);
   register_command("script", exec_script);
+  register_command("print", print_table);
 
   // Register words specifically for command completion purposes, e.g.
   // for TPC-C table generation, 'CUSTOMER', 'DISTRICT', etc
@@ -209,8 +212,14 @@ int Console::_eval_sql(const std::string& sql) {
   try {
     // Compile the parse result
     plan = SQLPlanner::plan(parse_result);
+
+    // Get Transaction context
+    auto tx_context = TransactionManager::get().new_transaction_context();
+
     for (const auto& task : plan.tasks()) {
-      task->get_operator()->execute();
+      auto op = task->get_operator();
+      op->set_transaction_context(tx_context);
+      op->execute();
     }
   } catch (const std::exception& exception) {
     out("Exception thrown while executing query plan:\n  " + std::string(exception.what()) + "\n");
@@ -222,10 +231,13 @@ int Console::_eval_sql(const std::string& sql) {
   auto execution_elapsed_ms = std::chrono::duration<double>(done - started).count();
 
   auto table = plan.tree_roots().back()->get_output();
-  auto row_count = table->row_count();
+
+  auto row_count = table ? table->row_count() : 0;
 
   // Print result (to Console and logfile)
-  out(table);
+  if (table) {
+    out(table);
+  }
   out("===\n");
   out(std::to_string(row_count) + " rows (PARSE: " + std::to_string(parse_elapsed_ms) + " ms, COMPILE: " +
       std::to_string(plan_elapsed_ms) + " ms, EXECUTE: " + std::to_string(execution_elapsed_ms) + " ms (wall time))\n");
@@ -339,6 +351,40 @@ int Console::load_table(const std::string& args) {
     }
   } else {
     console.out("Error: Unsupported file extension '" + extension + "'\n");
+    return ReturnCode::Error;
+  }
+
+  return ReturnCode::Ok;
+}
+
+int Console::print_table(const std::string& args) {
+  auto& console = Console::get();
+  std::string input = args;
+  boost::algorithm::trim<std::string>(input);
+  std::vector<std::string> arguments;
+  boost::algorithm::split(arguments, input, boost::is_space());
+
+  if (arguments.size() != 1) {
+    console.out("Usage:\n");
+    console.out("  print TABLENAME\n");
+    return ReturnCode::Error;
+  }
+
+  const std::string& tablename = arguments.at(0);
+
+  auto gt = std::make_shared<GetTable>(tablename);
+  try {
+    gt->execute();
+  } catch (const std::exception& exception) {
+    console.out("Exception thrown while loading table:\n  " + std::string(exception.what()) + "\n");
+    return ReturnCode::Error;
+  }
+
+  auto print = std::make_shared<Print>(gt);
+  try {
+    print->execute();
+  } catch (const std::exception& exception) {
+    console.out("Exception thrown while printing table:\n  " + std::string(exception.what()) + "\n");
     return ReturnCode::Error;
   }
 

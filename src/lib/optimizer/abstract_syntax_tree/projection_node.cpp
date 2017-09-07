@@ -9,6 +9,7 @@
 #include "common.hpp"
 #include "optimizer/expression/expression_node.hpp"
 #include "utils/assert.hpp"
+#include "type_cast.hpp"
 
 namespace opossum {
 
@@ -21,6 +22,8 @@ ProjectionNode::ProjectionNode(const std::vector<std::shared_ptr<ExpressionNode>
                        return expression->name();
                      case ExpressionType::FunctionIdentifier:
                        return expression->to_expression_string();
+                     case ExpressionType::Literal:
+                       return to_string(expression->value());
                      default:
                        Fail("Expression is not a supported type");
                        return "";
