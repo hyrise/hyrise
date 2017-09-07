@@ -1,5 +1,6 @@
 #include "ast_to_operator_translator.hpp"
 
+#include <iostream>
 #include <memory>
 #include <string>
 #include <vector>
@@ -9,6 +10,8 @@
 #include "operators/get_table.hpp"
 #include "operators/join_nested_loop_a.hpp"
 #include "operators/limit.hpp"
+#include "operators/maintenance/show_columns.hpp"
+#include "operators/maintenance/show_tables.hpp"
 #include "operators/product.hpp"
 #include "operators/projection.hpp"
 #include "operators/sort.hpp"
@@ -18,6 +21,7 @@
 #include "optimizer/abstract_syntax_tree/join_node.hpp"
 #include "optimizer/abstract_syntax_tree/limit_node.hpp"
 #include "optimizer/abstract_syntax_tree/predicate_node.hpp"
+#include "optimizer/abstract_syntax_tree/show_columns_node.hpp"
 #include "optimizer/abstract_syntax_tree/sort_node.hpp"
 #include "optimizer/abstract_syntax_tree/stored_table_node.hpp"
 #include "projection_node.hpp"
@@ -37,6 +41,7 @@ ASTToOperatorTranslator::ASTToOperatorTranslator() {
    * to keep the translation code in one place, i.e., this file.
    */
 
+  // SQL operators
   _operator_factory[ASTNodeType::StoredTable] =
       std::bind(&ASTToOperatorTranslator::_translate_stored_table_node, this, std::placeholders::_1);
   _operator_factory[ASTNodeType::Predicate] =
@@ -51,6 +56,12 @@ ASTToOperatorTranslator::ASTToOperatorTranslator() {
       std::bind(&ASTToOperatorTranslator::_translate_aggregate_node, this, std::placeholders::_1);
   _operator_factory[ASTNodeType::Limit] =
       std::bind(&ASTToOperatorTranslator::_translate_limit_node, this, std::placeholders::_1);
+
+  // Maintenance operators
+  _operator_factory[ASTNodeType::ShowTables] =
+      std::bind(&ASTToOperatorTranslator::_translate_show_tables_node, this, std::placeholders::_1);
+  _operator_factory[ASTNodeType::ShowColumns] =
+      std::bind(&ASTToOperatorTranslator::_translate_show_columns_node, this, std::placeholders::_1);
 }
 
 std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::translate_node(
@@ -201,6 +212,19 @@ std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::_translate_limit_node
   const auto input_operator = translate_node(node->left_child());
   auto limit_node = std::dynamic_pointer_cast<LimitNode>(node);
   return std::make_shared<Limit>(input_operator, limit_node->num_rows());
+}
+
+std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::_translate_show_tables_node(
+    const std::shared_ptr<AbstractASTNode> &node) const {
+  DebugAssert(node->left_child() == nullptr, "ShowTables should not have an input operator.");
+  return std::make_shared<ShowTables>();
+}
+
+std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::_translate_show_columns_node(
+    const std::shared_ptr<AbstractASTNode> &node) const {
+  DebugAssert(node->left_child() == nullptr, "ShowColumns should not have an input operator.");
+  const auto show_columns_node = std::dynamic_pointer_cast<ShowColumnsNode>(node);
+  return std::make_shared<ShowColumns>(show_columns_node->table_name());
 }
 
 }  // namespace opossum
