@@ -175,8 +175,8 @@ std::shared_ptr<const Table> Aggregate::on_execute() {
         }
       }
     } else {
-      ColumnID column_index{0};
-      for (auto column_id : _aggregate_column_ids) {
+      for (ColumnID column_index{0}; column_index < _aggregate_column_ids.size(); ++column_index) {
+        auto column_id = _aggregate_column_ids[column_index];
         auto function = _aggregates[column_index].function;
 
         /**
@@ -224,7 +224,6 @@ std::shared_ptr<const Table> Aggregate::on_execute() {
         });
 
         base_column->visit(*builder, ctx);
-        column_index++;
       }
     }
   }
