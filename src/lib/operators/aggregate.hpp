@@ -28,6 +28,8 @@
 
 namespace opossum {
 
+struct GroupByContext;
+
 /*
 Operator to aggregate columns by certain functions, such as min, max, sum, average, and count. The output is a table
  with reference columns. As with most operators we do not guarantee a stable operation with regards to positions -
@@ -103,6 +105,21 @@ class Aggregate : public AbstractReadOnlyOperator {
 
  protected:
   std::shared_ptr<const Table> on_execute() override;
+
+  template <typename ColumnType>
+  static void _create_aggregate_context(boost::hana::basic_type<ColumnType> type,
+                                        std::shared_ptr<ColumnVisitableContext> &aggregate_context,
+                                        AggregateFunction function);
+
+  template <typename ColumnType>
+  static void _create_aggregate_visitor(boost::hana::basic_type<ColumnType> type,
+                                        std::shared_ptr<ColumnVisitable> &builder,
+                                        std::shared_ptr<ColumnVisitableContext> ctx,
+                                        std::shared_ptr<GroupByContext> groupby_ctx, AggregateFunction function);
+
+  template <typename ColumnType>
+  void _write_aggregate_output(boost::hana::basic_type<ColumnType> type,
+                               ColumnID column_index, AggregateFunction function);
 
   /*
   The following template functions write the aggregated values for the different aggregate functions.
@@ -644,86 +661,5 @@ std::shared_ptr<ColumnVisitable> make_aggregate_visitor(std::shared_ptr<ColumnVi
   std::static_pointer_cast<AggregateContext<ColumnType, decltype(aggregate_type)>>(new_ctx)->groupby_context = ctx;
   return visitor;
 }
-
-/*
-The following classes are functors that are used with  call_functor_by_column_type
-*/
-
-// Creates an AggregateContext
-class AggregateContextCreator {
- public:
-  template <typename ColumnType>
-  static void run(std::vector<std::shared_ptr<ColumnVisitableContext>> &contexts, ColumnID column_index,
-                  AggregateFunction function) {
-    switch (function) {
-      case AggregateFunction::Min:
-        contexts[column_index] = make_aggregate_context<ColumnType, AggregateFunction::Min>();
-        break;
-      case AggregateFunction::Max:
-        contexts[column_index] = make_aggregate_context<ColumnType, AggregateFunction::Max>();
-        break;
-      case AggregateFunction::Sum:
-        contexts[column_index] = make_aggregate_context<ColumnType, AggregateFunction::Sum>();
-        break;
-      case AggregateFunction::Avg:
-        contexts[column_index] = make_aggregate_context<ColumnType, AggregateFunction::Avg>();
-        break;
-      case AggregateFunction::Count:
-        contexts[column_index] = make_aggregate_context<ColumnType, AggregateFunction::Count>();
-        break;
-    }
-  }
-};
-
-// Creates and AggregateVisitor
-class AggregateVisitorCreator {
- public:
-  template <typename ColumnType>
-  static void run(std::shared_ptr<ColumnVisitable> &builder, std::shared_ptr<ColumnVisitableContext> ctx,
-                  std::shared_ptr<GroupByContext> groupby_ctx, AggregateFunction function) {
-    switch (function) {
-      case AggregateFunction::Min:
-        builder = make_aggregate_visitor<ColumnType, AggregateFunction::Min>(ctx, groupby_ctx);
-        break;
-      case AggregateFunction::Max:
-        builder = make_aggregate_visitor<ColumnType, AggregateFunction::Max>(ctx, groupby_ctx);
-        break;
-      case AggregateFunction::Sum:
-        builder = make_aggregate_visitor<ColumnType, AggregateFunction::Sum>(ctx, groupby_ctx);
-        break;
-      case AggregateFunction::Avg:
-        builder = make_aggregate_visitor<ColumnType, AggregateFunction::Avg>(ctx, groupby_ctx);
-        break;
-      case AggregateFunction::Count:
-        builder = make_aggregate_visitor<ColumnType, AggregateFunction::Count>(ctx, groupby_ctx);
-        break;
-    }
-  }
-};
-
-// Writes the aggregate output for a given aggregate column
-class AggregateWriter {
- public:
-  template <typename ColumnType>
-  static void run(Aggregate &aggregate_op, ColumnID column_index, AggregateFunction function) {
-    switch (function) {
-      case AggregateFunction::Min:
-        aggregate_op.write_aggregate_output<ColumnType, AggregateFunction::Min>(column_index);
-        break;
-      case AggregateFunction::Max:
-        aggregate_op.write_aggregate_output<ColumnType, AggregateFunction::Max>(column_index);
-        break;
-      case AggregateFunction::Sum:
-        aggregate_op.write_aggregate_output<ColumnType, AggregateFunction::Sum>(column_index);
-        break;
-      case AggregateFunction::Avg:
-        aggregate_op.write_aggregate_output<ColumnType, AggregateFunction::Avg>(column_index);
-        break;
-      case AggregateFunction::Count:
-        aggregate_op.write_aggregate_output<ColumnType, AggregateFunction::Count>(column_index);
-        break;
-    }
-  }
-};
 
 }  // namespace opossum

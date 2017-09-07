@@ -9,6 +9,7 @@
 
 #include "constant_mappings.hpp"
 #include "resolve_type.hpp"
+#include "resolve_column_type.hpp"
 #include "utils/assert.hpp"
 
 namespace opossum {
@@ -113,15 +114,14 @@ std::shared_ptr<const Table> Aggregate::on_execute() {
     auto column_id = _aggregate_column_ids[column_index];
     auto function = _aggregates[column_index].function;
 
-    if (column_id == CountStarColumnID && function == AggregateFunction::Count) {
-      /*
-      Special COUNT(*) contexts. "int" is chosen arbitrarily.
-      */
-      call_functor_by_column_type<AggregateContextCreator>("int", _contexts_per_column, column_index, function);
-    } else {
-      auto &type_string = input_table->column_type(column_id);
-      call_functor_by_column_type<AggregateContextCreator>(type_string, _contexts_per_column, column_index, function);
-    }
+    const auto is_count_star_context = (column_id == CountStarColumnID && function == AggregateFunction::Count);
+
+    // Special COUNT(*) contexts. "int" is chosen arbitrarily.
+    const auto type_string = is_count_star_context ? std::string{"int"} : input_table->column_type(column_id);
+
+    resolve_type(type_string, [&](auto type) {
+      this->_create_aggregate_context(type, _contexts_per_column[column_index], function);
+    });
   }
 
   if (_aggregate_column_ids.empty()) {
@@ -219,8 +219,9 @@ std::shared_ptr<const Table> Aggregate::on_execute() {
         std::shared_ptr<ColumnVisitable> builder;
         auto ctx = _contexts_per_column[column_index];
 
-        call_functor_by_column_type<AggregateVisitorCreator>(type_string, builder, ctx, groupby_ctx,
-                                                             _aggregates[column_index].function);
+        resolve_type(type_string, [&](auto type) {
+          _create_aggregate_visitor(type, builder, ctx, groupby_ctx, _aggregates[column_index].function);
+        });
 
         base_column->visit(*builder, ctx);
         column_index++;
@@ -269,17 +270,12 @@ std::shared_ptr<const Table> Aggregate::on_execute() {
   for (auto aggregate : _aggregates) {
     auto column_id = _aggregate_column_ids[column_index];
 
-    if (column_id == CountStarColumnID) {
-      /*
-      Output column for COUNT(*). "int" type is chosen arbitrarily.
-      */
-      call_functor_by_column_type<AggregateWriter>("int", *this, column_index, _aggregates[column_index].function);
-    } else {
-      auto &type_string = input_table_left()->column_type(column_id);
+    // Output column for COUNT(*). "int" type is chosen arbitrarily.
+    const auto type_string = (column_id == CountStarColumnID) ? std::string{"int"} : input_table->column_type(column_id);
 
-      call_functor_by_column_type<AggregateWriter>(type_string, *this, column_index,
-                                                   _aggregates[column_index].function);
-    }
+    resolve_type(type_string, [&](auto type) {
+      this->_write_aggregate_output(type, column_index, _aggregates[column_index].function);
+    });
 
     column_index++;
   }
@@ -287,6 +283,75 @@ std::shared_ptr<const Table> Aggregate::on_execute() {
   _output->add_chunk(std::move(_out_chunk));
 
   return _output;
+}
+
+template <typename ColumnType>
+void Aggregate::_create_aggregate_context(boost::hana::basic_type<ColumnType> type,
+                                          std::shared_ptr<ColumnVisitableContext> &aggregate_context,
+                                          AggregateFunction function) {
+  switch (function) {
+    case AggregateFunction::Min:
+      aggregate_context = make_aggregate_context<ColumnType, AggregateFunction::Min>();
+      break;
+    case AggregateFunction::Max:
+      aggregate_context = make_aggregate_context<ColumnType, AggregateFunction::Max>();
+      break;
+    case AggregateFunction::Sum:
+      aggregate_context = make_aggregate_context<ColumnType, AggregateFunction::Sum>();
+      break;
+    case AggregateFunction::Avg:
+      aggregate_context = make_aggregate_context<ColumnType, AggregateFunction::Avg>();
+      break;
+    case AggregateFunction::Count:
+      aggregate_context = make_aggregate_context<ColumnType, AggregateFunction::Count>();
+      break;
+  }
+}
+
+template <typename ColumnType>
+void Aggregate::_create_aggregate_visitor(boost::hana::basic_type<ColumnType> type,
+                                          std::shared_ptr<ColumnVisitable> &builder,
+                                          std::shared_ptr<ColumnVisitableContext> ctx,
+                                          std::shared_ptr<GroupByContext> groupby_ctx, AggregateFunction function) {
+  switch (function) {
+    case AggregateFunction::Min:
+      builder = make_aggregate_visitor<ColumnType, AggregateFunction::Min>(ctx, groupby_ctx);
+      break;
+    case AggregateFunction::Max:
+      builder = make_aggregate_visitor<ColumnType, AggregateFunction::Max>(ctx, groupby_ctx);
+      break;
+    case AggregateFunction::Sum:
+      builder = make_aggregate_visitor<ColumnType, AggregateFunction::Sum>(ctx, groupby_ctx);
+      break;
+    case AggregateFunction::Avg:
+      builder = make_aggregate_visitor<ColumnType, AggregateFunction::Avg>(ctx, groupby_ctx);
+      break;
+    case AggregateFunction::Count:
+      builder = make_aggregate_visitor<ColumnType, AggregateFunction::Count>(ctx, groupby_ctx);
+      break;
+  }
+}
+
+template <typename ColumnType>
+void Aggregate::_write_aggregate_output(boost::hana::basic_type<ColumnType> type,
+                                        ColumnID column_index, AggregateFunction function) {
+  switch (function) {
+    case AggregateFunction::Min:
+      write_aggregate_output<ColumnType, AggregateFunction::Min>(column_index);
+      break;
+    case AggregateFunction::Max:
+      write_aggregate_output<ColumnType, AggregateFunction::Max>(column_index);
+      break;
+    case AggregateFunction::Sum:
+      write_aggregate_output<ColumnType, AggregateFunction::Sum>(column_index);
+      break;
+    case AggregateFunction::Avg:
+      write_aggregate_output<ColumnType, AggregateFunction::Avg>(column_index);
+      break;
+    case AggregateFunction::Count:
+      write_aggregate_output<ColumnType, AggregateFunction::Count>(column_index);
+      break;
+  }
 }
 
 template <typename ColumnType, AggregateFunction function>
