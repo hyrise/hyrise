@@ -8,8 +8,8 @@
 #include <vector>
 
 #include "constant_mappings.hpp"
-#include "resolve_type.hpp"
 #include "resolve_column_type.hpp"
+#include "resolve_type.hpp"
 #include "utils/assert.hpp"
 
 namespace opossum {
@@ -271,7 +271,8 @@ std::shared_ptr<const Table> Aggregate::on_execute() {
     auto column_id = _aggregate_column_ids[column_index];
 
     // Output column for COUNT(*). "int" type is chosen arbitrarily.
-    const auto type_string = (column_id == CountStarColumnID) ? std::string{"int"} : input_table->column_type(column_id);
+    const auto type_string =
+        (column_id == CountStarColumnID) ? std::string{"int"} : input_table->column_type(column_id);
 
     resolve_type(type_string, [&](auto type) {
       this->_write_aggregate_output(type, column_index, _aggregates[column_index].function);
@@ -333,8 +334,8 @@ void Aggregate::_create_aggregate_visitor(boost::hana::basic_type<ColumnType> ty
 }
 
 template <typename ColumnType>
-void Aggregate::_write_aggregate_output(boost::hana::basic_type<ColumnType> type,
-                                        ColumnID column_index, AggregateFunction function) {
+void Aggregate::_write_aggregate_output(boost::hana::basic_type<ColumnType> type, ColumnID column_index,
+                                        AggregateFunction function) {
   switch (function) {
     case AggregateFunction::Min:
       write_aggregate_output<ColumnType, AggregateFunction::Min>(column_index);
