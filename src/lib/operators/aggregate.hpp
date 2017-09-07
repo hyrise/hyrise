@@ -32,6 +32,8 @@ namespace opossum {
 Operator to aggregate columns by certain functions, such as min, max, sum, average, and count. The output is a table
  with reference columns. As with most operators we do not guarantee a stable operation with regards to positions -
  i.e. your sorting order.
+
+For implementation details, please check the wiki: https://github.com/hyrise/zweirise/wiki/Aggregate-Operator
 */
 
 /*
