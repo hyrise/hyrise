@@ -263,8 +263,8 @@ TEST_F(SQLToASTTranslatorTest, SelectLeftRightOuterJoins) {
     auto join_node_outer = std::dynamic_pointer_cast<JoinNode>(result_node_outer->left_child());
     EXPECT_EQ(join_node_outer->scan_type(), join_node->scan_type());
     EXPECT_EQ(join_node_outer->join_mode(), join_node->join_mode());
-    EXPECT_EQ(join_node_outer->join_column_ids()->first, (*join_node->join_column_ids()).first);
-    EXPECT_EQ(join_node_outer->join_column_ids()->second, (*join_node->join_column_ids()).second);
+    EXPECT_EQ((*join_node_outer->join_column_ids()).first, (*join_node->join_column_ids()).first);
+    EXPECT_EQ((*join_node_outer->join_column_ids()).second, (*join_node->join_column_ids()).second);
   }
 }
 
