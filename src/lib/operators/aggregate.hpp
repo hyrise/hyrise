@@ -97,7 +97,7 @@ class Aggregate : public AbstractReadOnlyOperator {
   template <typename AggregateType, AggregateFunction func>
   typename std::enable_if<
       func == AggregateFunction::Min || func == AggregateFunction::Max || func == AggregateFunction::Sum, void>::type
-  _write_aggregate_values(tbb::concurrent_vector<AggregateType> &values,
+  _write_aggregate_values(pmr_concurrent_vector<AggregateType> &values,
                           std::shared_ptr<std::map<AggregateKey, AggregateResult<AggregateType>>> results) {
     for (auto &kv : *results) {
       if (!kv.second.current_aggregate) {
@@ -112,7 +112,7 @@ class Aggregate : public AbstractReadOnlyOperator {
   // COUNT writes the aggregate counter
   template <typename AggregateType, AggregateFunction func>
   typename std::enable_if<func == AggregateFunction::Count, void>::type _write_aggregate_values(
-      tbb::concurrent_vector<AggregateType> &values,
+      pmr_concurrent_vector<AggregateType> &values,
       std::shared_ptr<std::map<AggregateKey, AggregateResult<AggregateType>>> results) {
     for (auto &kv : *results) {
       values.push_back(kv.second.aggregate_count);
@@ -122,7 +122,7 @@ class Aggregate : public AbstractReadOnlyOperator {
   // AVG writes the calculated average from current aggregate and the aggregate counter
   template <typename AggregateType, AggregateFunction func>
   typename std::enable_if<func == AggregateFunction::Avg && std::is_arithmetic<AggregateType>::value, void>::type
-  _write_aggregate_values(tbb::concurrent_vector<AggregateType> &values,
+  _write_aggregate_values(pmr_concurrent_vector<AggregateType> &values,
                           std::shared_ptr<std::map<AggregateKey, AggregateResult<AggregateType>>> results) {
     for (auto &kv : *results) {
       if (!kv.second.current_aggregate) {
@@ -137,8 +137,8 @@ class Aggregate : public AbstractReadOnlyOperator {
   // AVG is not defined for non-arithmetic types. Avoiding compiler errors.
   template <typename AggregateType, AggregateFunction func>
   typename std::enable_if<func == AggregateFunction::Avg && !std::is_arithmetic<AggregateType>::value, void>::type
-  _write_aggregate_values(tbb::concurrent_vector<AggregateType>,
-                          std::shared_ptr<std::map<AggregateKey, AggregateResult<AggregateType>>>) {
+      _write_aggregate_values(pmr_concurrent_vector<AggregateType>,
+                              std::shared_ptr<std::map<AggregateKey, AggregateResult<AggregateType>>>) {
     Fail("Invalid aggregate");
   }
 
@@ -220,7 +220,7 @@ struct PartitionBuilder : public ColumnVisitable {
     auto context = std::static_pointer_cast<GroupByContext>(base_context);
     const auto &column = static_cast<DictionaryColumn<T> &>(base_column);
     const BaseAttributeVector &attribute_vector = *(column.attribute_vector());
-    const std::vector<T> &dictionary = *(column.dictionary());
+    const pmr_vector<T> &dictionary = *(column.dictionary());
 
     if (context->chunk_offsets_in) {
       for (const ChunkOffset &offset_in_dictionary_column : *(context->chunk_offsets_in)) {
@@ -384,7 +384,7 @@ struct AggregateVisitor : public ColumnVisitable {
     check_and_init_context(context);
     const auto &column = static_cast<DictionaryColumn<ColumnType> &>(base_column);
     const BaseAttributeVector &attribute_vector = *(column.attribute_vector());
-    const std::vector<ColumnType> &dictionary = *(column.dictionary());
+    const auto &dictionary = *(column.dictionary());
 
     auto &hash_keys = static_cast<std::vector<AggregateKey> &>(*context->groupby_context->hash_keys);
     auto &results = static_cast<std::map<AggregateKey, AggregateResult<AggregateType>> &>(*context->results);

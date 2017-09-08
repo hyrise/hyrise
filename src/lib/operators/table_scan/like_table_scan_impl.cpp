@@ -84,7 +84,7 @@ void LikeTableScanImpl::handle_dictionary_column(BaseColumn &base_column,
 }
 
 std::pair<size_t, std::vector<bool>> LikeTableScanImpl::_find_matches_in_dictionary(
-    const std::vector<std::string> &dictionary) {
+    const pmr_vector<std::string> &dictionary) {
   auto result = std::pair<size_t, std::vector<bool>>{};
 
   auto &count = result.first;

@@ -208,7 +208,7 @@ class JoinNestedLoopA::JoinNestedLoopAImpl : public AbstractJoinOperatorImpl {
       auto ctx = std::static_pointer_cast<JoinNestedLoopAContext>(context);
 
       auto dc_right = std::static_pointer_cast<DictionaryColumn<RightType>>(ctx->column_right);
-      const auto &right_dictionary = static_cast<const std::vector<RightType> &>(*dc_right->dictionary());
+      const auto &right_dictionary = static_cast<const pmr_vector<RightType> &>(*dc_right->dictionary());
       const auto &right_attribute_vector = static_cast<const BaseAttributeVector &>(*dc_right->attribute_vector());
 
       // Function to get the value of right column
@@ -245,7 +245,7 @@ class JoinNestedLoopA::JoinNestedLoopAImpl : public AbstractJoinOperatorImpl {
       auto ctx = std::static_pointer_cast<JoinNestedLoopAContext>(context);
       auto dc_left = std::static_pointer_cast<DictionaryColumn<LeftType>>(ctx->column_left);
 
-      const auto &left_dictionary = static_cast<const std::vector<LeftType> &>(*dc_left->dictionary());
+      const auto &left_dictionary = static_cast<const pmr_vector<LeftType> &>(*dc_left->dictionary());
       const auto &left_attribute_vector = static_cast<const BaseAttributeVector &>(*dc_left->attribute_vector());
 
       // Size of the current left column

@@ -42,7 +42,7 @@ class LikeTableScanImpl : public BaseSingleColumnTableScanImpl {
   /**
    * @returns number of matches and the result of each dictionary entry
    */
-  std::pair<size_t, std::vector<bool>> _find_matches_in_dictionary(const std::vector<std::string> &dictionary);
+  std::pair<size_t, std::vector<bool>> _find_matches_in_dictionary(const pmr_vector<std::string> &dictionary);
 
   /**@}*/
 
