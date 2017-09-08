@@ -20,8 +20,7 @@ namespace opossum {
 
 Expression::Expression(ExpressionType type) : _type(type) {}
 
-std::shared_ptr<Expression> Expression::create_column(const ColumnID column_id,
-                                                                 const optional<std::string> &alias) {
+std::shared_ptr<Expression> Expression::create_column(const ColumnID column_id, const optional<std::string> &alias) {
   auto expression = std::make_shared<Expression>(ExpressionType::Column);
   expression->_column_id = column_id;
   expression->_alias = alias;
@@ -29,8 +28,8 @@ std::shared_ptr<Expression> Expression::create_column(const ColumnID column_id,
   return expression;
 }
 
-std::vector<std::shared_ptr<Expression>> Expression::create_columns(
-    const std::vector<ColumnID> &column_ids, const optional<std::vector<std::string>> &aliases) {
+std::vector<std::shared_ptr<Expression>> Expression::create_columns(const std::vector<ColumnID> &column_ids,
+                                                                    const optional<std::vector<std::string>> &aliases) {
   std::vector<std::shared_ptr<Expression>> column_references;
   column_references.reserve(column_ids.size());
 
@@ -163,9 +162,7 @@ bool Expression::is_binary_operator() const {
   }
 }
 
-bool Expression::is_operand() const {
-  return _type == ExpressionType::Literal || _type == ExpressionType::Column;
-}
+bool Expression::is_operand() const { return _type == ExpressionType::Literal || _type == ExpressionType::Column; }
 
 const std::string Expression::description() const {
   std::ostringstream desc;

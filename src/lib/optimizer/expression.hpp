@@ -49,10 +49,10 @@ class Expression : public std::enable_shared_from_this<Expression> {
    * Factory Methods to create Expressions of specific type
    */
   static std::shared_ptr<Expression> create_column(const ColumnID column_id,
-                                                   const optional <std::string> &alias = nullopt);
+                                                   const optional<std::string>& alias = nullopt);
 
   static std::vector<std::shared_ptr<Expression>> create_columns(
-    const std::vector<ColumnID> &column_ids, const optional <std::vector<std::string>> &aliases = nullopt);
+      const std::vector<ColumnID>& column_ids, const optional<std::vector<std::string>>& aliases = nullopt);
 
   // A literal can have an alias in order to allow queries like `SELECT 1 as one FROM t`.
   static std::shared_ptr<Expression> create_literal(const AllTypeVariant& value,

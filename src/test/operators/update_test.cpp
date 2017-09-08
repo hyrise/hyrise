@@ -37,10 +37,10 @@ void OperatorsUpdateTest::helper(std::shared_ptr<GetTable> table_to_update, std:
   auto original_row_count = ref_table->get_output()->row_count();
   auto updated_rows_count = update_values->get_output()->row_count();
 
-  auto projection1 = std::make_shared<Projection>(
-      ref_table, Projection::ColumnExpressions({Expression::create_column(ColumnID{0})}));
-  auto projection2 = std::make_shared<Projection>(
-      ref_table, Projection::ColumnExpressions({Expression::create_column(ColumnID{1})}));
+  auto projection1 =
+      std::make_shared<Projection>(ref_table, Projection::ColumnExpressions({Expression::create_column(ColumnID{0})}));
+  auto projection2 =
+      std::make_shared<Projection>(ref_table, Projection::ColumnExpressions({Expression::create_column(ColumnID{1})}));
   projection1->set_transaction_context(t_context);
   projection2->set_transaction_context(t_context);
   projection1->execute();

@@ -517,7 +517,7 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_predicate(
    * TODO(anybody): extend support for those HAVING clauses.
    * One option is to add them to the Aggregate and then use a Projection to remove them from the result.
    */
-  const auto refers_to_column = [allow_function_columns](const hsql::Expr &hsql_expr) {
+  const auto refers_to_column = [allow_function_columns](const hsql::Expr& hsql_expr) {
     return hsql_expr.isType(hsql::kExprColumnRef) ||
            (allow_function_columns && hsql_expr.isType(hsql::kExprFunctionRef));
   };
@@ -532,7 +532,7 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_predicate(
    * value_ref_hsql_expr = the expr referring to the value of the scan, e.g. the 5 in `WHERE 5 > p_income`, but also
    * the secondary column p_b in a scan like `WHERE p_a > p_b`
    */
-  const hsql::Expr *value_ref_hsql_expr = nullptr;
+  const hsql::Expr* value_ref_hsql_expr = nullptr;
 
   optional<AllTypeVariant> value2;  // Left uninitialized for predicates that are not BETWEEN
 
@@ -545,8 +545,8 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_predicate(
 
     Assert(hsql_expr.exprList->size() == 2, "Need two arguments for BETWEEEN");
 
-    const auto *expr0 = (*hsql_expr.exprList)[0];
-    const auto *expr1 = (*hsql_expr.exprList)[1];
+    const auto* expr0 = (*hsql_expr.exprList)[0];
+    const auto* expr1 = (*hsql_expr.exprList)[1];
     DebugAssert(expr0 != nullptr && expr1 != nullptr, "hsql malformed");
 
     value_ref_hsql_expr = expr0;

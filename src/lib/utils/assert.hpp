@@ -35,8 +35,8 @@
 
 namespace opossum {
 
-template<typename T>
-inline void Assert(const T & value, const std::string& msg) {
+template <typename T>
+inline void Assert(const T& value, const std::string& msg) {
   if (static_cast<bool>(value)) {
     return;
   }

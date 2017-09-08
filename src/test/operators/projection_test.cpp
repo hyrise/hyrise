@@ -61,12 +61,12 @@ class OperatorsProjectionTest : public BaseTest {
     _b_expr = Projection::ColumnExpressions{Expression::create_column(ColumnID{1})};
 
     // Projection Expression: b, a
-    _b_a_expr = Projection::ColumnExpressions{Expression::create_column(ColumnID{1}),
-                                              Expression::create_column(ColumnID{0})};
+    _b_a_expr =
+        Projection::ColumnExpressions{Expression::create_column(ColumnID{1}), Expression::create_column(ColumnID{0})};
 
     // Projection Expression: a, b
-    _a_b_expr = Projection::ColumnExpressions{Expression::create_column(ColumnID{0}),
-                                              Expression::create_column(ColumnID{1})};
+    _a_b_expr =
+        Projection::ColumnExpressions{Expression::create_column(ColumnID{0}), Expression::create_column(ColumnID{1})};
   }
 
   Projection::ColumnExpressions _sum_a_b_expr;

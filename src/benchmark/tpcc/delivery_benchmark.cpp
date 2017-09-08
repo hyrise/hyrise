@@ -263,9 +263,8 @@ class TPCCDeliveryBenchmark : public TPCCBenchmarkFixture {
     Projection::ColumnExpressions columns = {Expression::create_column(ColumnID{16} /* "C_BALANCE" */)};
     auto projection = std::make_shared<Projection>(val, columns);
 
-    Projection::ColumnExpressions values = {
-        Expression::create_binary_operator(ExpressionType::Addition, Expression::create_column(ColumnID{16}),
-                                           Expression::create_literal(ol_total))};
+    Projection::ColumnExpressions values = {Expression::create_binary_operator(
+        ExpressionType::Addition, Expression::create_column(ColumnID{16}), Expression::create_literal(ol_total))};
     auto updated_rows = std::make_shared<Projection>(val, values);
     auto update = std::make_shared<Update>("CUSTOMER", projection, updated_rows);
 
