@@ -77,6 +77,8 @@ class SQLToASTTranslator final : public boost::noncopyable {
   std::shared_ptr<AbstractASTNode> _translate_limit(const hsql::LimitDescription& limit,
                                                     const std::shared_ptr<AbstractASTNode>& input_node);
 
+  std::shared_ptr<AbstractASTNode> _translate_show(const hsql::ShowStatement& show_statement);
+
  private:
   SQLToASTTranslator() = default;
 };
