@@ -36,7 +36,7 @@ std::shared_ptr<const Table> Projection::on_execute() {
 
     if (column_expression->alias()) {
       name = *column_expression->alias();
-    } else if (column_expression->type() == ExpressionType::ColumnIdentifier) {
+    } else if (column_expression->type() == ExpressionType::Column) {
       name = input_table_left()->column_name(column_expression->column_id());
     } else if (column_expression->is_arithmetic_operator()) {
       name = column_expression->to_string();
@@ -72,7 +72,7 @@ const std::string Projection::get_type_of_expression(const std::shared_ptr<Expre
   if (expression->type() == ExpressionType::Literal) {
     return type_string_from_all_type_variant(expression->value());
   }
-  if (expression->type() == ExpressionType::ColumnIdentifier) {
+  if (expression->type() == ExpressionType::Column) {
     return table->column_type(expression->column_id());
   }
 

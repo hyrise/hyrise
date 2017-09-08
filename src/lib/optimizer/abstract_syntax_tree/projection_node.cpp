@@ -37,7 +37,7 @@ void ProjectionNode::_on_child_changed() {
   /**
    * Populates `_output_column_names` and `_output_column_id_to_input_column_id`.
    */
-  DebugAssert(!!left_child(), "ProjectionNode needs a child.");
+  DebugAssert(left_child(), "ProjectionNode needs a child.");
 
   _output_column_names.clear();
   _output_column_id_to_input_column_id.clear();
@@ -52,7 +52,7 @@ void ProjectionNode::_on_child_changed() {
       _output_column_names.emplace_back(*expression->alias());
     }
 
-    if (expression->type() == ExpressionType::ColumnIdentifier) {
+    if (expression->type() == ExpressionType::Column) {
       _output_column_id_to_input_column_id.emplace_back(expression->column_id());
 
       if (!expression->alias()) {
@@ -80,7 +80,7 @@ const std::vector<ColumnID>& ProjectionNode::output_column_id_to_input_column_id
 const std::vector<std::string>& ProjectionNode::output_column_names() const { return _output_column_names; }
 
 optional<ColumnID> ProjectionNode::find_column_id_by_column_identifier_name(
-    const ColumnIdentifierName& column_identifier_name) const {
+    const NamedColumnReference& column_identifier_name) const {
   /**
    * The result variable. We make sure the optional is only set once to detect ambiguity in column
    * references.
@@ -99,7 +99,7 @@ optional<ColumnID> ProjectionNode::find_column_id_by_column_identifier_name(
   for (ColumnID column_id{0}; column_id < output_column_names().size(); column_id++) {
     const auto& column_expression = _column_expressions[column_id];
 
-    if (child_column_id && column_expression->type() == ExpressionType::ColumnIdentifier &&
+    if (child_column_id && column_expression->type() == ExpressionType::Column &&
         column_expression->column_id() == *child_column_id && !column_expression->alias()) {
       Assert(!result_column_id, "Column name " + column_identifier_name.column_name + " is ambiguous.");
       result_column_id = column_id;
@@ -131,7 +131,7 @@ optional<ColumnID> ProjectionNode::find_column_id_by_column_identifier_name(
 }
 
 std::vector<ColumnID> ProjectionNode::get_output_column_ids_for_table(const std::string& table_name) const {
-  DebugAssert(!!left_child(), "ProjectionNode needs a child.");
+  DebugAssert(left_child(), "ProjectionNode needs a child.");
 
   if (!left_child()->knows_table(table_name)) {
     return {};

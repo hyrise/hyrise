@@ -13,9 +13,9 @@ struct ColumnID;
 class Expression;
 class TableStatistics;
 
-enum class ASTNodeType { Aggregate, Join, Limit, Predicate, Projection, Sort, StoredTable };
+enum class ASTNodeType { Aggregate, Join, Limit, Predicate, Projection, ShowColumns, ShowTables, Sort, StoredTable };
 
-struct ColumnIdentifierName {
+struct NamedColumnReference {
   std::string column_name;
   optional<std::string> table_name;
 };
@@ -31,6 +31,11 @@ struct ColumnIdentifierName {
 class AbstractASTNode : public std::enable_shared_from_this<AbstractASTNode> {
  public:
   explicit AbstractASTNode(ASTNodeType node_type);
+
+  /**
+   * Returns whether this node shall be considered by the optimizer or not.
+   */
+  virtual bool is_optimizable() const;
 
   // @{
   /**
@@ -91,9 +96,9 @@ class AbstractASTNode : public std::enable_shared_from_this<AbstractASTNode> {
    *
    * NOTE: These functions will possibly result in a full recursive traversal of the ancestors of this node.
    */
-  ColumnID get_column_id_by_column_identifier_name(const ColumnIdentifierName &column_identifier_name) const;
+  ColumnID get_column_id_by_column_identifier_name(const NamedColumnReference &column_identifier_name) const;
   virtual optional<ColumnID> find_column_id_by_column_identifier_name(
-      const ColumnIdentifierName &column_identifier_name) const;
+      const NamedColumnReference &column_identifier_name) const;
   // @}
 
   /**

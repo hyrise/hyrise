@@ -51,8 +51,8 @@ const std::vector<ColumnID> &JoinNode::output_column_id_to_input_column_id() con
 const std::vector<std::string> &JoinNode::output_column_names() const { return _output_column_names; }
 
 optional<ColumnID> JoinNode::find_column_id_by_column_identifier_name(
-    const ColumnIdentifierName &column_identifier_name) const {
-  DebugAssert(!!left_child() && !!right_child(), "JoinNode must have two children.");
+    const NamedColumnReference &column_identifier_name) const {
+  DebugAssert(left_child() && right_child(), "JoinNode must have two children.");
 
   optional<ColumnID> left_column_id;
   optional<ColumnID> right_column_id;
@@ -107,12 +107,12 @@ optional<ColumnID> JoinNode::find_column_id_by_column_identifier_name(
 }
 
 bool JoinNode::knows_table(const std::string &table_name) const {
-  DebugAssert(!!left_child() && !!right_child(), "JoinNode must have two children.");
+  DebugAssert(left_child() && right_child(), "JoinNode must have two children.");
   return left_child()->knows_table(table_name) || right_child()->knows_table(table_name);
 }
 
 std::vector<ColumnID> JoinNode::get_output_column_ids_for_table(const std::string &table_name) const {
-  DebugAssert(!!left_child() && !!right_child(), "JoinNode must have two children.");
+  DebugAssert(left_child() && right_child(), "JoinNode must have two children.");
 
   auto left_knows_table = left_child()->knows_table(table_name);
   auto right_knows_table = right_child()->knows_table(table_name);

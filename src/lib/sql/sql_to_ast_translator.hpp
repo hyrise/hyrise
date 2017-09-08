@@ -101,6 +101,8 @@ class SQLToASTTranslator final : public boost::noncopyable {
       const std::function<ColumnID(const hsql::Expr&)>& resolve_column,
       const std::shared_ptr<AbstractASTNode>& input_node) const;
 
+  std::shared_ptr<AbstractASTNode> _translate_show(const hsql::ShowStatement& show_statement);
+
  private:
   SQLToASTTranslator() = default;
 };

@@ -12,6 +12,8 @@
 #include "optimizer/abstract_syntax_tree/limit_node.hpp"
 #include "optimizer/abstract_syntax_tree/predicate_node.hpp"
 #include "optimizer/abstract_syntax_tree/projection_node.hpp"
+#include "optimizer/abstract_syntax_tree/show_columns_node.hpp"
+#include "optimizer/abstract_syntax_tree/show_tables_node.hpp"
 #include "optimizer/abstract_syntax_tree/sort_node.hpp"
 #include "optimizer/abstract_syntax_tree/stored_table_node.hpp"
 #include "optimizer/expression.hpp"
@@ -102,6 +104,8 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::translate_statement(const h
   switch (statement.type()) {
     case hsql::kStmtSelect:
       return _translate_select((const hsql::SelectStatement&)statement);
+    case hsql::kStmtShow:
+      return _translate_show((const hsql::ShowStatement&)statement);
     default:
       Fail("Only SELECT statements are supported as of now.");
       return {};
@@ -280,7 +284,7 @@ AllParameterVariant SQLToASTTranslator::translate_hsql_operand(
     case hsql::kExprParameter:
       return ValuePlaceholder(expr.ival);
     case hsql::kExprColumnRef:
-      Assert(!!input_node, "Cannot generate ColumnID without input_node");
+      Assert(input_node, "Cannot generate ColumnID without input_node");
       return SQLExpressionTranslator::get_column_id_for_expression(expr, *input_node);
     default:
       Fail("Could not translate literal: expression type not supported.");
@@ -410,7 +414,7 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_projection(
   for (const auto* hsql_expr : select_list) {
     const auto expr = SQLExpressionTranslator::translate_expression(*hsql_expr, input_node);
 
-    DebugAssert(expr->type() == ExpressionType::Star || expr->type() == ExpressionType::ColumnIdentifier ||
+    DebugAssert(expr->type() == ExpressionType::Star || expr->type() == ExpressionType::Column ||
                     expr->is_arithmetic_operator(),
                 "Only column references, star-selects, and arithmetic expressions supported for now.");
 
@@ -513,7 +517,7 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_predicate(
    * TODO(anybody): extend support for those HAVING clauses.
    * One option is to add them to the Aggregate and then use a Projection to remove them from the result.
    */
-  const auto refers_to_column = [allow_function_columns](const hsql::Expr& hsql_expr) {
+  const auto refers_to_column = [allow_function_columns](const hsql::Expr &hsql_expr) {
     return hsql_expr.isType(hsql::kExprColumnRef) ||
            (allow_function_columns && hsql_expr.isType(hsql::kExprFunctionRef));
   };
@@ -528,7 +532,7 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_predicate(
    * value_ref_hsql_expr = the expr referring to the value of the scan, e.g. the 5 in `WHERE 5 > p_income`, but also
    * the secondary column p_b in a scan like `WHERE p_a > p_b`
    */
-  const hsql::Expr* value_ref_hsql_expr = nullptr;
+  const hsql::Expr *value_ref_hsql_expr = nullptr;
 
   optional<AllTypeVariant> value2;  // Left uninitialized for predicates that are not BETWEEN
 
@@ -541,8 +545,8 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_predicate(
 
     Assert(hsql_expr.exprList->size() == 2, "Need two arguments for BETWEEEN");
 
-    const auto* expr0 = (*hsql_expr.exprList)[0];
-    const auto* expr1 = (*hsql_expr.exprList)[1];
+    const auto *expr0 = (*hsql_expr.exprList)[0];
+    const auto *expr1 = (*hsql_expr.exprList)[1];
     DebugAssert(expr0 != nullptr && expr1 != nullptr, "hsql malformed");
 
     value_ref_hsql_expr = expr0;
@@ -588,6 +592,19 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_predicate(
   predicate_node->set_left_child(input_node);
 
   return predicate_node;
+}
+
+std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_show(const hsql::ShowStatement& show_statement) {
+  switch (show_statement.type) {
+    case hsql::ShowType::kShowTables:
+      return std::make_shared<ShowTablesNode>();
+    case hsql::ShowType::kShowColumns:
+      return std::make_shared<ShowColumnsNode>(std::string(show_statement.name));
+    default:
+      Fail("hsql::ShowType is not supported.");
+  }
+
+  return {};
 }
 
 }  // namespace opossum

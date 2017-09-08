@@ -71,7 +71,7 @@ std::string AggregateNode::description() const {
 }
 
 void AggregateNode::_on_child_changed() {
-  DebugAssert(!!left_child(), "AggregateNode needs a child.");
+  DebugAssert(left_child(), "AggregateNode needs a child.");
 
   _output_column_names.clear();
   _output_column_id_to_input_column_id.clear();
@@ -119,13 +119,13 @@ const std::vector<ColumnID>& AggregateNode::output_column_id_to_input_column_id(
 }
 
 optional<ColumnID> AggregateNode::find_column_id_by_column_identifier_name(
-    const ColumnIdentifierName& column_identifier_name) const {
-  DebugAssert(!!left_child(), "AggregateNode needs a child.");
+    const NamedColumnReference& column_identifier_name) const {
+  DebugAssert(left_child(), "AggregateNode needs a child.");
 
   // TODO(mp) Handle column_identifier_name having a table that is this node's alias
 
   /*
-   * Search for ColumnIdentifierName in Aggregate columns ALIASes, if the column_identifier_name has no table.
+   * Search for NamedColumnReference in Aggregate columns ALIASes, if the column_identifier_name has no table.
    * These columns are created by the Aggregate Operator, so we have to look through them here.
    */
   optional<ColumnID> column_id_aggregate;
@@ -144,9 +144,9 @@ optional<ColumnID> AggregateNode::find_column_id_by_column_identifier_name(
   }
 
   /*
-   * Search for ColumnIdentifierName in Group By columns.
+   * Search for NamedColumnReference in Group By columns.
    * These columns have been created by another node. Since Aggregates can only have a single child node,
-   * we just have to check the left_child for the ColumnIdentifierName.
+   * we just have to check the left_child for the NamedColumnReference.
    */
   optional<ColumnID> column_id_groupby;
   const auto column_id_child = left_child()->find_column_id_by_column_identifier_name(column_identifier_name);
@@ -171,7 +171,7 @@ optional<ColumnID> AggregateNode::find_column_id_by_column_identifier_name(
 
 ColumnID AggregateNode::get_column_id_for_expression(const std::shared_ptr<Expression>& expression) const {
   const auto column_id = find_column_id_for_expression(expression);
-  DebugAssert(!!column_id, "Expression could not be resolved.");
+  DebugAssert(column_id, "Expression could not be resolved.");
   return *column_id;
 }
 
@@ -183,7 +183,7 @@ optional<ColumnID> AggregateNode::find_column_id_for_expression(const std::share
    * Not checking ambiguity allows perfectly valid queries like:
    *  SELECT a, MAX(b), MAX(b) FROM t GROUP BY a HAVING MAX(b) > 0
    */
-  if (expression->type() == ExpressionType::ColumnIdentifier) {
+  if (expression->type() == ExpressionType::Column) {
     const auto iter = std::find_if(_groupby_column_ids.begin(), _groupby_column_ids.end(),
                                    [&](const auto& rhs) { return expression->column_id() == rhs; });
 
@@ -193,7 +193,7 @@ optional<ColumnID> AggregateNode::find_column_id_for_expression(const std::share
     }
   } else if (expression->type() == ExpressionType::Function) {
     const auto iter = std::find_if(_aggregate_expressions.begin(), _aggregate_expressions.end(), [&](const auto& rhs) {
-      DebugAssert(!!rhs, "Aggregate expressions can not be nullptr!");
+      DebugAssert(rhs, "Aggregate expressions can not be nullptr!");
       return *expression == *rhs;
     });
 
@@ -210,7 +210,7 @@ optional<ColumnID> AggregateNode::find_column_id_for_expression(const std::share
 }
 
 std::vector<ColumnID> AggregateNode::get_output_column_ids_for_table(const std::string& table_name) const {
-  DebugAssert(!!left_child(), "AggregateNode needs a child.");
+  DebugAssert(left_child(), "AggregateNode needs a child.");
 
   if (!left_child()->knows_table(table_name)) {
     return {};

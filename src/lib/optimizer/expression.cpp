@@ -22,7 +22,7 @@ Expression::Expression(ExpressionType type) : _type(type) {}
 
 std::shared_ptr<Expression> Expression::create_column_identifier(const ColumnID column_id,
                                                                  const optional<std::string> &alias) {
-  auto expression = std::make_shared<Expression>(ExpressionType::ColumnIdentifier);
+  auto expression = std::make_shared<Expression>(ExpressionType::Column);
   expression->_column_id = column_id;
   expression->_alias = alias;
 
@@ -164,7 +164,7 @@ bool Expression::is_binary_operator() const {
 }
 
 bool Expression::is_operand() const {
-  return _type == ExpressionType::Literal || _type == ExpressionType::ColumnIdentifier;
+  return _type == ExpressionType::Literal || _type == ExpressionType::Column;
 }
 
 const std::string Expression::description() const {
@@ -178,7 +178,7 @@ const std::string Expression::description() const {
     case ExpressionType::Literal:
       desc << "[" << value() << "]";
       break;
-    case ExpressionType::ColumnIdentifier:
+    case ExpressionType::Column:
       desc << "[ColumnID: " << column_id() << "]";
       break;
     case ExpressionType::Function:
@@ -229,7 +229,7 @@ std::string Expression::to_string(const std::shared_ptr<AbstractASTNode> &input_
   switch (_type) {
     case ExpressionType::Literal:
       return type_cast<std::string>(value());
-    case ExpressionType::ColumnIdentifier:
+    case ExpressionType::Column:
       if (input_node != nullptr) {
         DebugAssert(column_id() < input_node->output_column_names().size(), "_column_id out of range");
         return input_node->output_column_names()[column_id()];

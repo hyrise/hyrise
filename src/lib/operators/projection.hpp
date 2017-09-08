@@ -47,7 +47,7 @@ class Projection : public AbstractReadOnlyOperator {
     static void run(Chunk& chunk, const ChunkID chunk_id, const std::shared_ptr<Expression>& expression,
                     std::shared_ptr<const Table> input_table_left) {
       // check whether term is a just a simple column and bypass this column
-      if (expression->type() == ExpressionType::ColumnIdentifier) {
+      if (expression->type() == ExpressionType::Column) {
         auto bypassed_column = input_table_left->get_chunk(chunk_id).get_column(expression->column_id());
         return chunk.add_column(bypassed_column);
       }
@@ -82,7 +82,7 @@ class Projection : public AbstractReadOnlyOperator {
     /**
      * Handle column reference
      */
-    if (expression->type() == ExpressionType::ColumnIdentifier) {
+    if (expression->type() == ExpressionType::Column) {
       auto column = table->get_chunk(chunk_id).get_column(expression->column_id());
 
       if (auto value_column = std::dynamic_pointer_cast<ValueColumn<T>>(column)) {

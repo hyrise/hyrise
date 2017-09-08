@@ -186,7 +186,7 @@ TEST_F(ASTToOperatorTranslatorTest, AggregateNodeWithArithmetics) {
   ASSERT_EQ(column_expressions.size(), 2u);
 
   const auto column_expression0 = column_expressions[0];
-  EXPECT_EQ(column_expression0->type(), ExpressionType::ColumnIdentifier);
+  EXPECT_EQ(column_expression0->type(), ExpressionType::Column);
   EXPECT_EQ(column_expression0->column_id(), ColumnID{0});
 
   const auto column_expression1 = column_expressions[1];

@@ -130,7 +130,7 @@ enum class ExpressionType {
   /*A parameter used in PreparedStatements*/
   Placeholder,
   /*An identifier for a column*/
-  ColumnIdentifier,
+  Column,
   /*An identifier for a function, such as COUNT, MIN, MAX*/
   Function,
 

@@ -3,6 +3,7 @@
 #include <memory>
 #include <string>
 #include <utility>
+#include <vector>
 
 #include "operators/export_csv.hpp"
 #include "operators/table_wrapper.hpp"
@@ -40,6 +41,17 @@ std::shared_ptr<Table> StorageManager::get_table(const std::string &name) const 
 }
 
 bool StorageManager::has_table(const std::string &name) const { return _tables.count(name); }
+
+std::vector<std::string> StorageManager::table_names() const {
+  std::vector<std::string> table_names;
+  table_names.reserve(_tables.size());
+
+  for (const auto &table_item : _tables) {
+    table_names.emplace_back(table_item.first);
+  }
+
+  return table_names;
+}
 
 void StorageManager::print(std::ostream &out) const {
   out << "==================" << std::endl;

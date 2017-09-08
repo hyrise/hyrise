@@ -160,7 +160,7 @@ inline std::shared_ptr<OperatorTask> OperatorTranslator::translate(
                 "Neither or both columns of the join condition have to be specified.");
   }
 
-  Assert(!!join_columns, "Can't create join without join columns");
+  Assert(join_columns, "Can't create join without join columns");
   auto nested_loop_join = std::make_shared<JoinNestedLoopA>(
       input_left_task->get_operator(), input_right_task->get_operator(), join_mode, *join_columns, scan_type);
 

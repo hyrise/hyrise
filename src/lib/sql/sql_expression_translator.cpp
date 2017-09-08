@@ -42,7 +42,7 @@ std::shared_ptr<Expression> SQLExpressionTranslator::translate_expression(
       DebugAssert(expr.name != nullptr, "hsql::Expr::name needs to be set");
 
       auto table_name = expr.table != nullptr ? optional<std::string>(std::string(expr.table)) : nullopt;
-      ColumnIdentifierName column_identifier_name{name, table_name};
+      NamedColumnReference column_identifier_name{name, table_name};
       auto column_id = input_node->get_column_id_by_column_identifier_name(column_identifier_name);
       node = Expression::create_column_identifier(column_id, alias);
       break;
@@ -98,11 +98,11 @@ std::shared_ptr<Expression> SQLExpressionTranslator::translate_expression(
   return node;
 }
 
-ColumnIdentifierName SQLExpressionTranslator::get_column_identifier_name_for_column_ref(const hsql::Expr &hsql_expr) {
+NamedColumnReference SQLExpressionTranslator::get_column_identifier_name_for_column_ref(const hsql::Expr &hsql_expr) {
   DebugAssert(hsql_expr.isType(hsql::kExprColumnRef), "Expression type can't be converted into column identifier");
   DebugAssert(hsql_expr.name != nullptr, "hsql::Expr::name needs to be set");
 
-  return ColumnIdentifierName{hsql_expr.name,
+  return NamedColumnReference{hsql_expr.name,
                               hsql_expr.table == nullptr ? nullopt : optional<std::string>(hsql_expr.table)};
 }
 
