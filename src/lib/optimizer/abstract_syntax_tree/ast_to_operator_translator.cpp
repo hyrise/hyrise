@@ -175,7 +175,7 @@ std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::_translate_aggregate_
    *  TODO(anybody): this might result in the same columns being created multiple times. Improve.
    */
   if (need_projection) {
-    Projection::ColumnExpressions column_expressions = Expression::create_column_identifiers(groupby_columns);
+    Projection::ColumnExpressions column_expressions = Expression::create_columns(groupby_columns);
     column_expressions.reserve(groupby_columns.size() + aggregate_expressions.size());
 
     // The Projection will only select columns used in the Aggregate, i.e., GROUP BY columns and expressions.
@@ -195,7 +195,7 @@ std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::_translate_aggregate_
       column_expressions.emplace_back((aggregate_expression->expression_list())[0]);
 
       // Create a ColumnReference expression for the column id of the Projection.
-      const auto column_ref_expr = Expression::create_column_identifier(ColumnID{current_column_id});
+      const auto column_ref_expr = Expression::create_column(ColumnID{current_column_id});
       current_column_id++;
 
       // Change the expression list of the expression representing the aggregate.

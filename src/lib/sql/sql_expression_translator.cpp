@@ -44,7 +44,7 @@ std::shared_ptr<Expression> SQLExpressionTranslator::translate_expression(
       auto table_name = expr.table != nullptr ? optional<std::string>(std::string(expr.table)) : nullopt;
       NamedColumnReference column_identifier_name{name, table_name};
       auto column_id = input_node->get_column_id_by_column_identifier_name(column_identifier_name);
-      node = Expression::create_column_identifier(column_id, alias);
+      node = Expression::create_column(column_id, alias);
       break;
     }
     case hsql::kExprFunctionRef: {

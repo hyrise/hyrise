@@ -77,7 +77,7 @@ TEST_F(ASTToOperatorTranslatorTest, PredicateNodeBinaryScan) {
 TEST_F(ASTToOperatorTranslatorTest, ProjectionNode) {
   const auto stored_table_node = std::make_shared<StoredTableNode>("table_int_float");
   const auto expressions =
-      std::vector<std::shared_ptr<Expression>>{Expression::create_column_identifier(ColumnID{0}, {"a"})};
+      std::vector<std::shared_ptr<Expression>>{Expression::create_column(ColumnID{0}, {"a"})};
   auto projection_node = std::make_shared<ProjectionNode>(expressions);
   projection_node->set_left_child(stored_table_node);
   const auto op = ASTToOperatorTranslator::get().translate_node(projection_node);
@@ -121,7 +121,7 @@ TEST_F(ASTToOperatorTranslatorTest, AggregateNodeNoArithmetics) {
   const auto stored_table_node = std::make_shared<StoredTableNode>("table_int_float");
 
   auto sum_expression = Expression::create_aggregate_function(
-      AggregateFunction::Sum, {Expression::create_column_identifier(ColumnID{0})}, {"sum_of_a"});
+      AggregateFunction::Sum, {Expression::create_column(ColumnID{0})}, {"sum_of_a"});
 
   auto aggregate_node = std::make_shared<AggregateNode>(std::vector<std::shared_ptr<Expression>>{sum_expression},
                                                         std::vector<ColumnID>{});
@@ -144,7 +144,7 @@ TEST_F(ASTToOperatorTranslatorTest, AggregateNodeWithArithmetics) {
   const auto stored_table_node = std::make_shared<StoredTableNode>("table_int_float");
 
   // Create expression "b * 2".
-  const auto expr_col_b = Expression::create_column_identifier(ColumnID{1});
+  const auto expr_col_b = Expression::create_column(ColumnID{1});
   const auto expr_literal = Expression::create_literal(2);
   const auto expr_multiplication =
       Expression::create_binary_operator(ExpressionType::Multiplication, expr_col_b, expr_literal);

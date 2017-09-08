@@ -20,7 +20,7 @@ namespace opossum {
 
 Expression::Expression(ExpressionType type) : _type(type) {}
 
-std::shared_ptr<Expression> Expression::create_column_identifier(const ColumnID column_id,
+std::shared_ptr<Expression> Expression::create_column(const ColumnID column_id,
                                                                  const optional<std::string> &alias) {
   auto expression = std::make_shared<Expression>(ExpressionType::Column);
   expression->_column_id = column_id;
@@ -29,20 +29,20 @@ std::shared_ptr<Expression> Expression::create_column_identifier(const ColumnID 
   return expression;
 }
 
-std::vector<std::shared_ptr<Expression>> Expression::create_column_identifiers(
+std::vector<std::shared_ptr<Expression>> Expression::create_columns(
     const std::vector<ColumnID> &column_ids, const optional<std::vector<std::string>> &aliases) {
   std::vector<std::shared_ptr<Expression>> column_references;
   column_references.reserve(column_ids.size());
 
   if (!aliases) {
     for (const auto column_id : column_ids) {
-      column_references.emplace_back(create_column_identifier(column_id));
+      column_references.emplace_back(create_column(column_id));
     }
   } else {
     DebugAssert(column_ids.size() == (*aliases).size(), "There must be the same number of aliases as ColumnIDs");
 
     for (auto column_index = 0u; column_index < column_ids.size(); ++column_index) {
-      column_references.emplace_back(create_column_identifier(column_ids[column_index], (*aliases)[column_index]));
+      column_references.emplace_back(create_column(column_ids[column_index], (*aliases)[column_index]));
     }
   }
 

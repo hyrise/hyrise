@@ -432,7 +432,7 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_projection(
         column_ids = input_node->get_output_column_ids_for_table(*expr->table_name());
       }
 
-      const auto& column_references = Expression::create_column_identifiers(column_ids);
+      const auto& column_references = Expression::create_columns(column_ids);
       column_expressions.insert(column_expressions.end(), column_references.cbegin(), column_references.cend());
     } else {
       column_expressions.emplace_back(expr);
