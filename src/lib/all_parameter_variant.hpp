@@ -31,7 +31,7 @@ using AllParameterVariant = typename boost::make_variant_over<ParameterTypesAsMp
 // Function to check if AllParameterVariant is AllTypeVariant
 inline bool is_variant(const AllParameterVariant& variant) { return (variant.type() == typeid(AllTypeVariant)); }
 
-// Function to check if AllParameterVariant is ColumnName
+// Function to check if AllParameterVariant is a placeholder
 inline bool is_placeholder(const AllParameterVariant& variant) { return (variant.type() == typeid(ValuePlaceholder)); }
 
 }  // namespace opossum
