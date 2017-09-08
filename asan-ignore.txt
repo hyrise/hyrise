@@ -1,2 +1,3 @@
 leak:lt__malloc
+leak:libltdl.so
 
