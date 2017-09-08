@@ -35,9 +35,9 @@ class Chunk : private Noncopyable {
     friend class Chunk;
 
    public:
-    tbb::concurrent_vector<copyable_atomic<TransactionID>> tids;  ///< 0 unless locked by a transaction
-    tbb::concurrent_vector<CommitID> begin_cids;                  ///< commit id when record was added
-    tbb::concurrent_vector<CommitID> end_cids;                    ///< commit id when record was deleted
+    pmr_concurrent_vector<copyable_atomic<TransactionID>> tids;  ///< 0 unless locked by a transaction
+    pmr_concurrent_vector<CommitID> begin_cids;                  ///< commit id when record was added
+    pmr_concurrent_vector<CommitID> end_cids;                    ///< commit id when record was deleted
 
    private:
     /**
@@ -134,9 +134,9 @@ class Chunk : private Noncopyable {
   bool references_only_one_table() const;
 
  protected:
-  tbb::concurrent_vector<std::shared_ptr<BaseColumn>> _columns;
+  pmr_concurrent_vector<std::shared_ptr<BaseColumn>> _columns;
   std::unique_ptr<MvccColumns> _mvcc_columns;
-  std::vector<std::shared_ptr<BaseIndex>> _indices;
+  pmr_vector<std::shared_ptr<BaseIndex>> _indices;
 };
 
 }  // namespace opossum

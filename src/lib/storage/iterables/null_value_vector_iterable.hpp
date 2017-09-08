@@ -3,8 +3,6 @@
 #include <iterator>
 #include <utility>
 
-#include "tbb/concurrent_vector.h"
-
 #include "iterables.hpp"
 
 #include "types.hpp"
@@ -17,7 +15,7 @@ namespace opossum {
  */
 class NullValueVectorIterable : public IndexableIterable<NullValueVectorIterable> {
  public:
-  explicit NullValueVectorIterable(const tbb::concurrent_vector<bool>& null_values) : _null_values{null_values} {}
+  explicit NullValueVectorIterable(const pmr_concurrent_vector<bool>& null_values) : _null_values{null_values} {}
 
   template <typename Functor>
   void _on_with_iterators(const Functor& f) const {
@@ -34,12 +32,12 @@ class NullValueVectorIterable : public IndexableIterable<NullValueVectorIterable
   }
 
  private:
-  const tbb::concurrent_vector<bool>& _null_values;
+  const pmr_concurrent_vector<bool>& _null_values;
 
  private:
   class Iterator : public BaseIterator<Iterator, ColumnNullValue> {
    public:
-    using NullValueIterator = tbb::concurrent_vector<bool>::const_iterator;
+    using NullValueIterator = pmr_concurrent_vector<bool>::const_iterator;
 
    public:
     explicit Iterator(const NullValueIterator& begin_null_value_it, const NullValueIterator& null_value_it)
@@ -63,7 +61,7 @@ class NullValueVectorIterable : public IndexableIterable<NullValueVectorIterable
 
   class IndexedIterator : public BaseIndexedIterator<IndexedIterator, ColumnNullValue> {
    public:
-    using NullValueVector = tbb::concurrent_vector<bool>;
+    using NullValueVector = pmr_concurrent_vector<bool>;
 
    public:
     explicit IndexedIterator(const NullValueVector& null_values, const ChunkOffsetsIterator& chunk_offsets_it)

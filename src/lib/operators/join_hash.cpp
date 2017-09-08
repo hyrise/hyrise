@@ -149,7 +149,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
   struct ColumnBuilder : public ColumnVisitable {
     explicit ColumnBuilder(ChunkID chunk_id, std::shared_ptr<std::vector<ChunkOffset>> offsets = nullptr)
         : _chunk_id(chunk_id),
-          _materialized_chunk(std::make_shared<std::vector<std::pair<RowID, T>>>()),
+          _materialized_chunk(std::make_shared<pmr_vector<std::pair<RowID, T>>>()),
           _offsets(offsets) {}
 
     void handle_value_column(BaseColumn &column, std::shared_ptr<ColumnVisitableContext>) override {
@@ -210,7 +210,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
     }
 
     ChunkID _chunk_id;
-    std::shared_ptr<std::vector<std::pair<RowID, T>>> _materialized_chunk;
+    std::shared_ptr<pmr_vector<std::pair<RowID, T>>> _materialized_chunk;
     std::shared_ptr<std::vector<ChunkOffset>> _offsets;
   };
 
@@ -265,7 +265,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
         ColumnBuilder<T> builder = ColumnBuilder<T>(chunk_id);
         column->visit(builder);
 
-        auto const &materialized = static_cast<std::vector<std::pair<RowID, T>> &>(*builder._materialized_chunk);
+        auto const &materialized = static_cast<pmr_vector<std::pair<RowID, T>> &>(*builder._materialized_chunk);
 
         size_t row_id = output_offset;
 
