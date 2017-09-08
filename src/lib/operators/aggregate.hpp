@@ -264,7 +264,11 @@ struct PartitionBuilder : public ColumnVisitable {
         }
       } else {
         for (const ChunkOffset &offset_in_value_column : *(context->chunk_offsets_in)) {
-          (*context->hash_keys)[chunk_offset].emplace_back(values[offset_in_value_column]);
+          if (offset_in_value_column == INVALID_CHUNK_OFFSET) {
+            (*context->hash_keys)[chunk_offset].emplace_back(NULL_VALUE);
+          } else {
+            (*context->hash_keys)[chunk_offset].emplace_back(values[offset_in_value_column]);
+          }
           chunk_offset++;
         }
       }
@@ -303,6 +307,11 @@ struct PartitionBuilder : public ColumnVisitable {
 
     if (context->chunk_offsets_in) {
       for (const ChunkOffset &offset_in_dictionary_column : *(context->chunk_offsets_in)) {
+        if (offset_in_dictionary_column == INVALID_CHUNK_OFFSET) {
+          (*context->hash_keys)[chunk_offset].emplace_back(NULL_VALUE);
+          continue;
+        }
+
         const auto value_id = attribute_vector.get(offset_in_dictionary_column);
 
         if (value_id == NULL_VALUE_ID) {
@@ -473,11 +482,15 @@ struct AggregateVisitor : public ColumnVisitable {
         }
       } else {
         for (const ChunkOffset &offset_in_value_column : *(context->groupby_context->chunk_offsets_in)) {
-          results[hash_keys[chunk_offset]].current_aggregate =
-              aggregate_func(values[offset_in_value_column], results[hash_keys[chunk_offset]].current_aggregate);
+          if (offset_in_value_column == INVALID_CHUNK_OFFSET) {
+            results.try_emplace(hash_keys[chunk_offset]);
+          } else {
+            results[hash_keys[chunk_offset]].current_aggregate =
+                aggregate_func(values[offset_in_value_column], results[hash_keys[chunk_offset]].current_aggregate);
 
-          // increase value counter
-          results[hash_keys[chunk_offset]].aggregate_count++;
+            // increase value counter
+            results[hash_keys[chunk_offset]].aggregate_count++;
+          }
           chunk_offset++;
         }
       }
@@ -531,7 +544,13 @@ struct AggregateVisitor : public ColumnVisitable {
 
     if (context->groupby_context->chunk_offsets_in) {
       for (const ChunkOffset &offset_in_dictionary_column : *(context->groupby_context->chunk_offsets_in)) {
-        const auto value_id = attribute_vector.get(offset_in_dictionary_column);
+        ValueID value_id;
+
+        if (offset_in_dictionary_column == INVALID_CHUNK_OFFSET) {
+          value_id = NULL_VALUE_ID;
+        } else {
+          value_id = attribute_vector.get(offset_in_dictionary_column);
+        }
 
         if (value_id == NULL_VALUE_ID) {
           // Keep it unchanged or initialize

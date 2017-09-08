@@ -12,6 +12,8 @@
 #include "operators/abstract_read_only_operator.hpp"
 #include "operators/aggregate.hpp"
 #include "operators/join_hash.hpp"
+#include "operators/join_nested_loop_a.hpp"
+#include "operators/print.hpp"
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
 #include "storage/dictionary_compression.hpp"
@@ -55,6 +57,12 @@ class OperatorsAggregateTest : public BaseTest {
     _table_wrapper_1_1_string_null = std::make_shared<TableWrapper>(
         load_table("src/test/tables/aggregateoperator/groupby_string_1gb_1agg/input_null.tbl", 2));
     _table_wrapper_1_1_string_null->execute();
+
+    _table_wrapper_join_1 = std::make_shared<TableWrapper>(load_table("src/test/tables/int4.tbl", 1));
+    _table_wrapper_join_1->execute();
+
+    _table_wrapper_join_2 = std::make_shared<TableWrapper>(load_table("src/test/tables/int.tbl", 1));
+    _table_wrapper_join_2->execute();
 
     _table_wrapper_3_1 =
         std::make_shared<TableWrapper>(load_table("src/test/tables/aggregateoperator/join_2gb_0agg/input_a.tbl", 2));
@@ -124,9 +132,10 @@ class OperatorsAggregateTest : public BaseTest {
     }
   }
 
-  std::shared_ptr<TableWrapper> _table_wrapper_1_1, _table_wrapper_1_1_null, _table_wrapper_1_2, _table_wrapper_2_1,
-      _table_wrapper_2_2, _table_wrapper_2_0_null, _table_wrapper_1_1_string, _table_wrapper_1_1_string_null,
-      _table_wrapper_1_1_dict, _table_wrapper_1_1_null_dict, _table_wrapper_3_1, _table_wrapper_3_2;
+  std::shared_ptr<TableWrapper> _table_wrapper_1_1, _table_wrapper_1_1_null, _table_wrapper_join_1,
+      _table_wrapper_join_2, _table_wrapper_1_2, _table_wrapper_2_1, _table_wrapper_2_2, _table_wrapper_2_0_null,
+      _table_wrapper_1_1_string, _table_wrapper_1_1_string_null, _table_wrapper_1_1_dict, _table_wrapper_1_1_null_dict,
+      _table_wrapper_3_1, _table_wrapper_3_2;
 };
 
 TEST_F(OperatorsAggregateTest, NumInputTables) {
@@ -528,6 +537,18 @@ TEST_F(OperatorsAggregateTest, JoinThenAggregate) {
 
   this->test_output(join, {}, {std::string("left.a"), std::string("right.b")},
                     "src/test/tables/aggregateoperator/join_2gb_0agg/result.tbl", 1);
+}
+
+TEST_F(OperatorsAggregateTest, OuterJoinThenAggregate) {
+  auto join = std::make_shared<JoinNestedLoopA>(_table_wrapper_join_1, _table_wrapper_join_2,
+                                                std::pair<std::string, std::string>("a", "a"), ScanType::OpLessThan,
+                                                JoinMode::Outer, std::string("left."), std::string("right."));
+  join->execute();
+
+  Print(join).execute();
+
+  this->test_output(join, {{"right.a", AggregateFunction::Min}}, {std::string("left.a")},
+                    "src/test/tables/aggregateoperator/groupby_int_1gb_1agg/outer_join.tbl", 1, false);
 }
 
 }  // namespace opossum
