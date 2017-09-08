@@ -117,10 +117,10 @@ std::shared_ptr<const Table> JoinNestedLoopB::on_execute() {
   // Ensure matching column types for simplicity
   // Joins on non-matching types can be added later.
   // TODO(anybody) replace _column_ids.first/second with names
-  DebugAssert((left_column_type == right_column_type), "JoinNestedLoopB::execute: column type \"" + left_column_type +
-                                                           "\" of left column \"" + std::to_string(_column_ids.first) +
-                                                           "\" does not match colum type \"" + right_column_type +
-                                                           "\" of right column \"" + std::to_string(_column_ids.second) + "\"!");
+  DebugAssert((left_column_type == right_column_type),
+              "JoinNestedLoopB::execute: column type \"" + left_column_type + "\" of left column \"" +
+                  std::to_string(_column_ids.first) + "\" does not match colum type \"" + right_column_type +
+                  "\" of right column \"" + std::to_string(_column_ids.second) + "\"!");
 
   _join_columns(_column_ids.first, _column_ids.second, left_column_type);
 
