@@ -14,6 +14,8 @@
 #include "network/generated/opossum.grpc.pb.h"
 #pragma GCC diagnostic pop
 
+#include "types.hpp"
+
 using grpc::Channel;
 using grpc::ClientContext;
 using grpc::Status;
@@ -26,7 +28,7 @@ class OpossumClient {
   explicit OpossumClient(std::shared_ptr<Channel> channel);
 
   // Assembles the client's payload, sends it and presents the response back from the server.
-  void query(const std::string& table_name, const std::string& column_name, const proto::ScanType scan_type,
+  void query(const std::string& table_name, const ColumnID column_id, const proto::ScanType scan_type,
              const std::string& filter);
 
  protected:

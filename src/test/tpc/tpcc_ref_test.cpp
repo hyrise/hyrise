@@ -35,25 +35,25 @@ class OrderStatusTestImpl : public TransactionTestImpl {
 
     auto our_result = _ref_impl.run_transaction(params);
 
-    ASSERT_EQ(sqlite_results.c_id, our_result.c_id);
-    ASSERT_EQ(sqlite_results.c_first, our_result.c_first);
-    ASSERT_EQ(sqlite_results.c_middle, our_result.c_middle);
-    ASSERT_EQ(sqlite_results.c_last, our_result.c_last);
-    ASSERT_FLOAT_EQ(sqlite_results.c_balance, our_result.c_balance);
-    ASSERT_EQ(sqlite_results.o_id, our_result.o_id);
-    ASSERT_EQ(sqlite_results.o_carrier_id, our_result.o_carrier_id);
-    ASSERT_EQ(sqlite_results.o_entry_d, our_result.o_entry_d);
+    EXPECT_EQ(sqlite_results.c_id, our_result.c_id);
+    EXPECT_EQ(sqlite_results.c_first, our_result.c_first);
+    EXPECT_EQ(sqlite_results.c_middle, our_result.c_middle);
+    EXPECT_EQ(sqlite_results.c_last, our_result.c_last);
+    EXPECT_FLOAT_EQ(sqlite_results.c_balance, our_result.c_balance);
+    EXPECT_EQ(sqlite_results.o_id, our_result.o_id);
+    EXPECT_EQ(sqlite_results.o_carrier_id, our_result.o_carrier_id);
+    EXPECT_EQ(sqlite_results.o_entry_d, our_result.o_entry_d);
 
     ASSERT_EQ(sqlite_results.order_lines.size(), our_result.order_lines.size());
     for (size_t l = 0; l < sqlite_results.order_lines.size(); l++) {
       const auto &our_ol = our_result.order_lines[l];
       const auto &sqlite_ol = sqlite_results.order_lines[l];
 
-      ASSERT_EQ(sqlite_ol.ol_supply_w_id, our_ol.ol_supply_w_id);
-      ASSERT_EQ(sqlite_ol.ol_i_id, our_ol.ol_i_id);
-      ASSERT_EQ(sqlite_ol.ol_quantity, our_ol.ol_quantity);
-      ASSERT_FLOAT_EQ(sqlite_ol.ol_amount, our_ol.ol_amount);
-      ASSERT_EQ(sqlite_ol.ol_delivery_d, our_ol.ol_delivery_d);
+      EXPECT_EQ(sqlite_ol.ol_supply_w_id, our_ol.ol_supply_w_id);
+      EXPECT_EQ(sqlite_ol.ol_i_id, our_ol.ol_i_id);
+      EXPECT_EQ(sqlite_ol.ol_quantity, our_ol.ol_quantity);
+      EXPECT_FLOAT_EQ(sqlite_ol.ol_amount, our_ol.ol_amount);
+      EXPECT_EQ(sqlite_ol.ol_delivery_d, our_ol.ol_delivery_d);
     }
   }
 
@@ -69,28 +69,28 @@ class NewOrderTestImpl : public TransactionTestImpl {
 
     auto our_result = _ref_impl.run_transaction(params);
 
-    ASSERT_FLOAT_EQ(sqlite_results.w_tax_rate, our_result.w_tax_rate);
-    ASSERT_FLOAT_EQ(sqlite_results.d_tax_rate, our_result.d_tax_rate);
-    ASSERT_EQ(sqlite_results.d_next_o_id, our_result.d_next_o_id);
-    ASSERT_FLOAT_EQ(sqlite_results.c_discount, our_result.c_discount);
-    ASSERT_EQ(sqlite_results.c_last, our_result.c_last);
-    ASSERT_EQ(sqlite_results.c_credit, our_result.c_credit);
+    EXPECT_FLOAT_EQ(sqlite_results.w_tax_rate, our_result.w_tax_rate);
+    EXPECT_FLOAT_EQ(sqlite_results.d_tax_rate, our_result.d_tax_rate);
+    EXPECT_EQ(sqlite_results.d_next_o_id, our_result.d_next_o_id);
+    EXPECT_FLOAT_EQ(sqlite_results.c_discount, our_result.c_discount);
+    EXPECT_EQ(sqlite_results.c_last, our_result.c_last);
+    EXPECT_EQ(sqlite_results.c_credit, our_result.c_credit);
 
     ASSERT_EQ(sqlite_results.order_lines.size(), our_result.order_lines.size());
     for (size_t l = 0; l < sqlite_results.order_lines.size(); l++) {
       const auto &our_ol = our_result.order_lines[l];
       const auto &sqlite_ol = sqlite_results.order_lines[l];
 
-      ASSERT_FLOAT_EQ(sqlite_ol.i_price, our_ol.i_price);
-      ASSERT_EQ(sqlite_ol.i_name, our_ol.i_name);
-      ASSERT_EQ(sqlite_ol.i_data, our_ol.i_data);
-      ASSERT_EQ(sqlite_ol.s_qty, our_ol.s_qty);
-      ASSERT_EQ(sqlite_ol.s_dist_xx, our_ol.s_dist_xx);
-      ASSERT_EQ(sqlite_ol.s_ytd, our_ol.s_ytd);
-      ASSERT_EQ(sqlite_ol.s_order_cnt, our_ol.s_order_cnt);
-      ASSERT_EQ(sqlite_ol.s_remote_cnt, our_ol.s_remote_cnt);
-      ASSERT_EQ(sqlite_ol.s_data, our_ol.s_data);
-      ASSERT_FLOAT_EQ(sqlite_ol.amount, our_ol.amount);
+      EXPECT_FLOAT_EQ(sqlite_ol.i_price, our_ol.i_price);
+      EXPECT_EQ(sqlite_ol.i_name, our_ol.i_name);
+      EXPECT_EQ(sqlite_ol.i_data, our_ol.i_data);
+      EXPECT_EQ(sqlite_ol.s_qty, our_ol.s_qty);
+      EXPECT_EQ(sqlite_ol.s_dist_xx, our_ol.s_dist_xx);
+      EXPECT_EQ(sqlite_ol.s_ytd, our_ol.s_ytd);
+      EXPECT_EQ(sqlite_ol.s_order_cnt, our_ol.s_order_cnt);
+      EXPECT_EQ(sqlite_ol.s_remote_cnt, our_ol.s_remote_cnt);
+      EXPECT_EQ(sqlite_ol.s_data, our_ol.s_data);
+      EXPECT_FLOAT_EQ(sqlite_ol.amount, our_ol.amount);
     }
   }
 
