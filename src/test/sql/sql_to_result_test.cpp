@@ -47,6 +47,9 @@ class SQLToResultTest : public BaseTest, public ::testing::WithParamInterface<SQ
 
     StorageManager::get().add_table("int_int3", load_table("src/test/tables/int_int3.tbl", 3));
 
+    StorageManager::get().add_table("int_for_delete_1", load_table("src/test/tables/int.tbl", 3));
+    StorageManager::get().add_table("int_for_delete_2", load_table("src/test/tables/int.tbl", 3));
+
     std::shared_ptr<Table> groupby_int_1gb_1agg =
         load_table("src/test/tables/aggregateoperator/groupby_int_1gb_1agg/input.tbl", 2);
     StorageManager::get().add_table("groupby_int_1gb_1agg", groupby_int_1gb_1agg);
@@ -155,6 +158,11 @@ const SQLTestParam test_queries[] = {
 
     {"SELECT * FROM customer;", "src/test/tables/tpch/customer.tbl"},
     {"SELECT c_custkey, c_name FROM customer;", "src/test/tables/tpch/customer_projection.tbl"},
+		
+		// DELETE
+		// TODO(MD): this will only work once SELECT automatically validates (#188)
+		// {"DELETE FROM int_for_delete_1; SELECT * FROM int_for_delete_1", "src/test/tables/int_empty.tbl"},
+		// {"DELETE FROM int_for_delete_2 WHERE a > 1000; SELECT * FROM int_for_delete_2", "src/test/tables/int_deleted.tbl"}
 
     /**
      * TODO: Reactivate these tests once joins do not prefix their output columns anymore
