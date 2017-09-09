@@ -101,7 +101,8 @@ TEST_P(SQLToResultTest, SQLQueryTest) {
     result_operator = tasks.back()->get_operator();
   }
 
-  EXPECT_TABLE_EQ(result_operator->get_output(), expected_result, params.order_sensitive == OrderSensitivity::Sensitive);
+  EXPECT_TABLE_EQ(result_operator->get_output(), expected_result,
+                  params.order_sensitive == OrderSensitivity::Sensitive);
 }
 
 const SQLTestParam test_queries[] = {
