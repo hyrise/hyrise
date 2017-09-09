@@ -11,6 +11,7 @@ class TableStatistics;
 
 enum class ASTNodeType {
   Aggregate,
+  Delete,
   Insert,
   Join,
   Limit,

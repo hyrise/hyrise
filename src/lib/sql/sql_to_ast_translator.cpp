@@ -9,6 +9,7 @@
 #include "operators/projection.hpp"
 #include "optimizer/abstract_syntax_tree/abstract_ast_node.hpp"
 #include "optimizer/abstract_syntax_tree/aggregate_node.hpp"
+#include "optimizer/abstract_syntax_tree/delete_node.hpp"
 #include "optimizer/abstract_syntax_tree/insert_node.hpp"
 #include "optimizer/abstract_syntax_tree/join_node.hpp"
 #include "optimizer/abstract_syntax_tree/limit_node.hpp"
@@ -108,6 +109,8 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::translate_statement(const h
       return _translate_select((const hsql::SelectStatement&)statement);
     case hsql::kStmtInsert:
       return _translate_insert((const hsql::InsertStatement&)statement);
+    case hsql::kStmtDelete:
+      return _translate_delete((const hsql::DeleteStatement&)statement);
     case hsql::kStmtShow:
       return _translate_show((const hsql::ShowStatement&)statement);
     default:
@@ -138,6 +141,18 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_insert(const hsq
   insert_node->set_left_child(projection_node);
 
   return insert_node;
+}
+
+std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_delete(const hsql::DeleteStatement& del) {
+  std::shared_ptr<AbstractASTNode> current_result_node = std::make_shared<StoredTableNode>(del.tableName);
+  if (del.expr) {
+    current_result_node = _translate_filter_expr(*del.expr, current_result_node);
+  }
+
+  auto delete_node = std::make_shared<DeleteNode>(del.tableName);
+  delete_node->set_left_child(current_result_node);
+
+  return delete_node;
 }
 
 std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_select(const hsql::SelectStatement& select) {
