@@ -380,7 +380,7 @@ int Console::print_table(const std::string& args) {
     return ReturnCode::Error;
   }
 
-  auto print = std::make_shared<Print>(gt);
+  auto print = std::make_shared<Print>(gt, std::cout, PrintMvcc);
   try {
     print->execute();
   } catch (const std::exception& exception) {

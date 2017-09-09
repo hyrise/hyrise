@@ -40,9 +40,15 @@ std::shared_ptr<const Table> Print::on_execute() {
   for (ColumnID col{0}; col < input_table_left()->col_count(); ++col) {
     _out << "|" << std::setw(widths[col]) << input_table_left()->column_name(col) << std::setw(0);
   }
+  if (_flags & PrintMvcc) {
+    _out << "||        MVCC        ";
+  }
   _out << "|" << std::endl;
   for (ColumnID col{0}; col < input_table_left()->col_count(); ++col) {
     _out << "|" << std::setw(widths[col]) << input_table_left()->column_type(col) << std::setw(0);
+  }
+  if (_flags & PrintMvcc) {
+    _out << "||_BEGIN|_END  |_TID  ";
   }
   _out << "|" << std::endl;
 
@@ -67,6 +73,23 @@ std::shared_ptr<const Table> Print::on_execute() {
         // well yes, we use BaseColumn::operator[] here, but since Print is not an operation that should
         // be part of a regular query plan, let's keep things simple here
         _out << std::setw(widths[col]) << (*chunk.get_column(col))[row] << "|" << std::setw(0);
+      }
+
+      if (_flags & PrintMvcc && chunk.has_mvcc_columns()) {
+        auto mvcc_columns = chunk.mvcc_columns();
+
+        auto begin = mvcc_columns->begin_cids[row];
+        auto end = mvcc_columns->end_cids[row];
+        auto tid = mvcc_columns->tids[row];
+
+        auto begin_str = begin == Chunk::MAX_COMMIT_ID ? "" : std::to_string(begin);
+        auto end_str = end == Chunk::MAX_COMMIT_ID ? "" : std::to_string(end);
+        auto tid_str = tid == 0 ? "" : std::to_string(tid);
+
+        _out << "|" << std::setw(6) << begin_str << std::setw(0);
+        _out << "|" << std::setw(6) << end_str << std::setw(0);
+        _out << "|" << std::setw(6) << tid_str << std::setw(0);
+        _out << "|";
       }
       _out << std::endl;
     }
