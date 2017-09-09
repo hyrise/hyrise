@@ -7,8 +7,10 @@
 #include "base_test.hpp"
 #include "gtest/gtest.h"
 
+#include "concurrency/transaction_manager.hpp"
 #include "operators/get_table.hpp"
 #include "operators/table_scan.hpp"
+#include "operators/validate.hpp"
 #include "scheduler/current_scheduler.hpp"
 #include "scheduler/node_queue_scheduler.hpp"
 #include "scheduler/operator_task.hpp"
@@ -89,15 +91,17 @@ TEST_P(SQLToResultTest, SQLQueryTest) {
     throw std::runtime_error("Query is not valid.");
   }
 
-  // Expect the query to be a single statement.
   auto plan = SQLPlanner::plan(parse_result);
-  auto result_operator = plan.tree_roots().front();
 
-  auto tasks = OperatorTask::make_tasks_from_operator(result_operator);
-  CurrentScheduler::schedule_and_wait_for_tasks(tasks);
+  std::shared_ptr<const AbstractOperator> result_operator;
 
-  auto result_table = tasks.back()->get_operator()->get_output();
-  EXPECT_TABLE_EQ(result_table, expected_result, params.order_sensitive == OrderSensitivity::Sensitive);
+  for (const auto& root : plan.tree_roots()) {
+    auto tasks = OperatorTask::make_tasks_from_operator(root);
+    CurrentScheduler::schedule_and_wait_for_tasks(tasks);
+    result_operator = tasks.back()->get_operator();
+  }
+
+  EXPECT_TABLE_EQ(result_operator->get_output(), expected_result, params.order_sensitive == OrderSensitivity::Sensitive);
 }
 
 const SQLTestParam test_queries[] = {
@@ -158,11 +162,12 @@ const SQLTestParam test_queries[] = {
 
     {"SELECT * FROM customer;", "src/test/tables/tpch/customer.tbl"},
     {"SELECT c_custkey, c_name FROM customer;", "src/test/tables/tpch/customer_projection.tbl"},
-		
-		// DELETE
-		// TODO(MD): this will only work once SELECT automatically validates (#188)
-		// {"DELETE FROM int_for_delete_1; SELECT * FROM int_for_delete_1", "src/test/tables/int_empty.tbl"},
-		// {"DELETE FROM int_for_delete_2 WHERE a > 1000; SELECT * FROM int_for_delete_2", "src/test/tables/int_deleted.tbl"}
+
+    // DELETE
+    // TODO(MD): this will only work once SELECT automatically validates (#188)
+    // {"DELETE FROM int_for_delete_1; SELECT * FROM int_for_delete_1", "src/test/tables/int_empty.tbl"},
+    // {"DELETE FROM int_for_delete_2 WHERE a > 1000; SELECT * FROM int_for_delete_2",
+    // "src/test/tables/int_deleted.tbl"}
 
     /**
      * TODO: Reactivate these tests once joins do not prefix their output columns anymore
