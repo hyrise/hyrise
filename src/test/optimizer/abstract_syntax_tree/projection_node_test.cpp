@@ -47,6 +47,7 @@ TEST_F(ProjectionNodeTest, ColumnIdForColumnIdentifier) {
   EXPECT_EQ(_projection_node->get_column_id_by_column_identifier_name({"some_addition", nullopt}), 3);
   EXPECT_EQ(_projection_node->find_column_id_by_column_identifier_name({"some_addition", {"t_a"}}), nullopt);
   EXPECT_EQ(_projection_node->find_column_id_by_column_identifier_name({"some_addition", {"t_b"}}), nullopt);
+  EXPECT_EQ(_projection_node->get_column_id_by_column_identifier_name({"a+c", nullopt}), 4);
 }
 
 }  // namespace opossum

@@ -221,20 +221,21 @@ ValuePlaceholder Expression::value_placeholder() const {
   return *_value_placeholder;
 }
 
-std::string Expression::to_string(const std::shared_ptr<AbstractASTNode> &input_node) const {
-  std::string column_name;
+std::string Expression::to_string(const std::vector<std::string> &input_column_names) const {
   switch (_type) {
     case ExpressionType::Literal:
       return type_cast<std::string>(value());
     case ExpressionType::Column:
-      if (input_node != nullptr) {
-        DebugAssert(column_id() < input_node->output_column_names().size(), "_column_id out of range");
-        return input_node->output_column_names()[column_id()];
+      if (!input_column_names.empty()) {
+        DebugAssert(column_id() < input_column_names.size(), std::string("_column_id ")
+                                                                            + std::to_string(column_id())
+                                                                            + " out of range");
+        return input_column_names[column_id()];
       }
-      return boost::lexical_cast<std::string>(column_id());
+      return std::string("ColumnID #" + std::to_string(column_id()));
     case ExpressionType::Function:
       return aggregate_function_to_string.left.at(aggregate_function()) + "(" +
-             _expression_list[0]->to_string(input_node) + ")";
+             _expression_list[0]->to_string(input_column_names) + ")";
     default:
       // Handled further down.
       break;
@@ -244,8 +245,8 @@ std::string Expression::to_string(const std::shared_ptr<AbstractASTNode> &input_
   Assert(is_arithmetic_operator(), "To generate expression string, Expression need to be operators or operands.");
   Assert(static_cast<bool>(left_child()) && static_cast<bool>(right_child()), "Operator needs both operands.");
 
-  return left_child()->to_string(input_node) + expression_type_to_operator_string.at(_type) +
-         right_child()->to_string(input_node);
+  return left_child()->to_string(input_column_names) + expression_type_to_operator_string.at(_type) +
+         right_child()->to_string(input_column_names);
 }
 
 const std::vector<std::shared_ptr<Expression>> &Expression::expression_list() const { return _expression_list; }
