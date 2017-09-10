@@ -107,8 +107,7 @@ size_t AbstractASTNode::output_col_count() const { return output_column_names().
 ColumnID AbstractASTNode::get_column_id_by_column_identifier_name(
     const NamedColumnReference &column_identifier_name) const {
   const auto column_id = find_column_id_by_column_identifier_name(column_identifier_name);
-  DebugAssert(column_id, std::string("NamedColumnReference ") + column_identifier_name.column_name +
-                         " could not be resolved.");
+  DebugAssert(column_id, "NamedColumnReference could not be resolved.");
   return *column_id;
 }
 

@@ -64,7 +64,7 @@ void ProjectionNode::_on_child_changed() {
       _output_column_id_to_input_column_id.emplace_back(INVALID_COLUMN_ID);
 
       if (!expression->alias()) {
-        _output_column_names.emplace_back(expression->to_string(left_child()->output_column_names()));
+        _output_column_names.emplace_back(expression->to_string());
       }
 
     } else {
@@ -119,8 +119,8 @@ optional<ColumnID> ProjectionNode::find_column_id_by_column_identifier_name(
         continue;
       }
 
+      if (column_expression->to_string() == column_identifier_name.column_name) {
         Assert(!result_column_id, "Column name " + column_identifier_name.column_name + " is ambiguous.");
-      if (column_expression->to_string(left_child()->output_column_names()) == column_identifier_name.column_name) {
         result_column_id = column_id;
         continue;
       }
