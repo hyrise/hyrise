@@ -104,7 +104,7 @@ void AggregateNode::_on_child_changed() {
        * This might result in multiple output columns with the same name, but we accept that.
        * Other DBs behave similarly (e.g. MySQL).
        */
-      column_name = aggregate_expression->to_string(left_child());
+      column_name = aggregate_expression->to_string(left_child()->output_column_names());
     }
 
     _output_column_names.emplace_back(column_name);
