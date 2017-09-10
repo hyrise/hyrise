@@ -119,8 +119,8 @@ optional<ColumnID> ProjectionNode::find_column_id_by_column_identifier_name(
         continue;
       }
 
-        Assert(!result_column_id, "Column name " + column_identifier_name.column_name + " is ambiguous.");
       if (column_expression->to_string(left_child()->output_column_names()) == column_identifier_name.column_name) {
+        Assert(!result_column_id, "Column name " + column_identifier_name.column_name + " is ambiguous.");
         result_column_id = column_id;
         continue;
       }
