@@ -243,6 +243,16 @@ void Console::setLogfile(const std::string& logfile) {
   _log = std::ofstream(logfile, std::ios_base::app | std::ios_base::out);
 }
 
+void Console::loadHistory(const std::string& historyFile) {
+  int ret = read_history(historyFile.c_str());
+  out(std::to_string(ret));
+}
+
+void Console::writeHistory(const std::string& historyFile) {
+  int ret = write_history(historyFile.c_str());
+  out(std::to_string(ret));
+}
+
 void Console::out(const std::string& output, bool console_print) {
   if (console_print) {
     _out << output;
@@ -485,6 +495,9 @@ int main(int argc, char** argv) {
     console.out("                                  Execute script if specified by SCRIPTFILE.\n");
   }
 
+  // Load command history
+  console.loadHistory("console.history");
+
   // Execute .sql script if specified
   if (argc == 2) {
     retCode = console.execute_script(std::string(argv[1]));
@@ -517,8 +530,12 @@ int main(int argc, char** argv) {
     }
   }
 
+  // Save command history to file
+  console.writeHistory("console.history");
+
   console.out("Bye.\n");
 
   // Timestamp dump only to logfile
   console.out("--- Session end --- " + current_timestamp() + "\n", false);
+
 }
