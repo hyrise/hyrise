@@ -29,7 +29,7 @@ void OperatorsUpdateTest::helper(std::shared_ptr<GetTable> table_to_update, std:
   auto t_context = TransactionManager::get().new_transaction_context();
 
   // Make input left actually referenced. Projection does NOT generate ReferenceColumns.
-  auto ref_table = std::make_shared<TableScan>(table_to_update, "a", ScanType::OpGreaterThan, 0);
+  auto ref_table = std::make_shared<TableScan>(table_to_update, ColumnID{0}, ScanType::OpGreaterThan, 0);
   ref_table->set_transaction_context(t_context);
   ref_table->execute();
 
@@ -37,10 +37,10 @@ void OperatorsUpdateTest::helper(std::shared_ptr<GetTable> table_to_update, std:
   auto original_row_count = ref_table->get_output()->row_count();
   auto updated_rows_count = update_values->get_output()->row_count();
 
-  auto projection1 = std::make_shared<Projection>(
-      ref_table, Projection::ColumnExpressions({ExpressionNode::create_column_identifier("a")}));
-  auto projection2 = std::make_shared<Projection>(
-      ref_table, Projection::ColumnExpressions({ExpressionNode::create_column_identifier("b")}));
+  auto projection1 =
+      std::make_shared<Projection>(ref_table, Projection::ColumnExpressions({Expression::create_column(ColumnID{0})}));
+  auto projection2 =
+      std::make_shared<Projection>(ref_table, Projection::ColumnExpressions({Expression::create_column(ColumnID{1})}));
   projection1->set_transaction_context(t_context);
   projection2->set_transaction_context(t_context);
   projection1->execute();
@@ -169,11 +169,11 @@ TEST_F(OperatorsUpdateTest, EmptyChunks) {
   gt->execute();
 
   // table scan will produce two leading empty chunks
-  auto table_scan1 = std::make_shared<TableScan>(gt, "a", ScanType::OpEquals, "12345");
+  auto table_scan1 = std::make_shared<TableScan>(gt, ColumnID{0}, ScanType::OpEquals, "12345");
   table_scan1->set_transaction_context(t_context);
   table_scan1->execute();
 
-  Projection::ColumnExpressions column_expressions{ExpressionNode::create_literal(1, {"a"})};
+  Projection::ColumnExpressions column_expressions{Expression::create_literal(1, {"a"})};
   auto updated_rows = std::make_shared<Projection>(table_scan1, column_expressions);
   updated_rows->set_transaction_context(t_context);
   updated_rows->execute();

@@ -186,11 +186,11 @@ std::shared_ptr<opossum::Table> TpccTableGenerator::generate_customer_table() {
   add_column<int>(table, "C_ID", cardinalities, [&](std::vector<size_t> indices) { return indices[2]; });
   add_column<int>(table, "C_D_ID", cardinalities, [&](std::vector<size_t> indices) { return indices[1]; });
   add_column<int>(table, "C_W_ID", cardinalities, [&](std::vector<size_t> indices) { return indices[0]; });
-  add_column<std::string>(table, "C_LAST", cardinalities,
-                          [&](std::vector<size_t> indices) { return _random_gen.last_name(indices[2]); });
-  add_column<std::string>(table, "C_MIDDLE", cardinalities, [&](std::vector<size_t>) { return "OE"; });
   add_column<std::string>(table, "C_FIRST", cardinalities,
                           [&](std::vector<size_t>) { return _random_gen.astring(8, 16); });
+  add_column<std::string>(table, "C_MIDDLE", cardinalities, [&](std::vector<size_t>) { return "OE"; });
+  add_column<std::string>(table, "C_LAST", cardinalities,
+                          [&](std::vector<size_t> indices) { return _random_gen.last_name(indices[2]); });
   add_column<std::string>(table, "C_STREET_1", cardinalities,
                           [&](std::vector<size_t>) { return _random_gen.astring(10, 20); });
   add_column<std::string>(table, "C_STREET_2", cardinalities,
@@ -264,10 +264,10 @@ std::shared_ptr<opossum::Table> TpccTableGenerator::generate_order_table(
   auto customer_permutation = _random_gen.permutation(0, NUM_CUSTOMERS_PER_DISTRICT);
 
   add_column<int>(table, "O_ID", cardinalities, [&](std::vector<size_t> indices) { return indices[2]; });
-  add_column<int>(table, "O_C_ID", cardinalities,
-                  [&](std::vector<size_t> indices) { return customer_permutation[indices[2]]; });
   add_column<int>(table, "O_D_ID", cardinalities, [&](std::vector<size_t> indices) { return indices[1]; });
   add_column<int>(table, "O_W_ID", cardinalities, [&](std::vector<size_t> indices) { return indices[0]; });
+  add_column<int>(table, "O_C_ID", cardinalities,
+                  [&](std::vector<size_t> indices) { return customer_permutation[indices[2]]; });
   add_column<int>(table, "O_ENTRY_D", cardinalities, [&](std::vector<size_t>) { return _current_date; });
   // TODO(anybody) -1 should be null
 

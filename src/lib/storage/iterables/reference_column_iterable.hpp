@@ -5,8 +5,6 @@
 #include <utility>
 #include <vector>
 
-#include "tbb/concurrent_vector.h"
-
 #include "iterables.hpp"
 
 #include "storage/reference_column.hpp"

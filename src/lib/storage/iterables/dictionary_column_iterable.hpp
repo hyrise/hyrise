@@ -35,7 +35,7 @@ class DictionaryColumnIterable : public IndexableIterable<DictionaryColumnIterab
  private:
   class Iterator : public BaseIterator<Iterator, NullableColumnValue<T>> {
    public:
-    using Dictionary = std::vector<T>;
+    using Dictionary = pmr_vector<T>;
 
    public:
     explicit Iterator(const Dictionary& dictionary, const BaseAttributeVector& attribute_vector,
@@ -65,7 +65,7 @@ class DictionaryColumnIterable : public IndexableIterable<DictionaryColumnIterab
 
   class IndexedIterator : public BaseIndexedIterator<IndexedIterator, NullableColumnValue<T>> {
    public:
-    using Dictionary = std::vector<T>;
+    using Dictionary = pmr_vector<T>;
 
    public:
     explicit IndexedIterator(const Dictionary& dictionary, const BaseAttributeVector& attribute_vector,

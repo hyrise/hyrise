@@ -63,14 +63,14 @@ constexpr ColumnID CountStarColumnID{std::numeric_limits<ColumnID::base_type>::m
 
 /**
  * Struct to specify aggregates.
- * Aggregates are defined by the column_name they operate on and the aggregate function they use.
+ * Aggregates are defined by the column_id they operate on and the aggregate function they use.
  * Optionally, an alias can be specified to use as the output name.
  */
 struct AggregateDefinition {
-  AggregateDefinition(const std::string &column_name, const AggregateFunction function,
-                      const optional<std::string> &alias = {});
+  AggregateDefinition(const ColumnID column_id, const AggregateFunction function,
+                      const optional<std::string> &alias = nullopt);
 
-  std::string column_name;
+  ColumnID column_id;
   AggregateFunction function;
   optional<std::string> alias;
 };
@@ -89,10 +89,10 @@ using DistinctAggregateType = int8_t;
 class Aggregate : public AbstractReadOnlyOperator {
  public:
   Aggregate(const std::shared_ptr<AbstractOperator> in, const std::vector<AggregateDefinition> aggregates,
-            const std::vector<std::string> groupby_columns);
+            const std::vector<ColumnID> groupby_column_ids);
 
   const std::vector<AggregateDefinition> &aggregates() const;
-  const std::vector<std::string> &groupby_columns() const;
+  const std::vector<ColumnID> &groupby_column_ids() const;
 
   const std::string name() const override;
   uint8_t num_in_tables() const override;
@@ -191,15 +191,14 @@ class Aggregate : public AbstractReadOnlyOperator {
   }
 
   const std::vector<AggregateDefinition> _aggregates;
-  const std::vector<std::string> _groupby_columns;
+  const std::vector<ColumnID> _groupby_column_ids;
 
   std::unique_ptr<AbstractReadOnlyOperatorImpl> _impl;
 
   std::shared_ptr<Table> _output;
   Chunk _out_chunk;
-  std::vector<std::shared_ptr<BaseColumn>> _group_columns;
+  std::vector<std::shared_ptr<BaseColumn>> _groupby_columns;
   std::vector<std::shared_ptr<ColumnVisitableContext>> _contexts_per_column;
-  std::vector<ColumnID> _aggregate_column_ids;
 };
 
 /*
@@ -303,7 +302,7 @@ struct PartitionBuilder : public ColumnVisitable {
     auto context = std::static_pointer_cast<GroupByContext>(base_context);
     const auto &column = static_cast<DictionaryColumn<T> &>(base_column);
     const BaseAttributeVector &attribute_vector = *(column.attribute_vector());
-    const std::vector<T> &dictionary = *(column.dictionary());
+    const pmr_vector<T> &dictionary = *(column.dictionary());
 
     if (context->chunk_offsets_in) {
       for (const ChunkOffset &offset_in_dictionary_column : *(context->chunk_offsets_in)) {
@@ -537,7 +536,7 @@ struct AggregateVisitor : public ColumnVisitable {
     check_and_init_context(context);
     const auto &column = static_cast<DictionaryColumn<ColumnType> &>(base_column);
     const BaseAttributeVector &attribute_vector = *(column.attribute_vector());
-    const std::vector<ColumnType> &dictionary = *(column.dictionary());
+    const auto &dictionary = *(column.dictionary());
 
     auto &hash_keys = static_cast<std::vector<AggregateKey> &>(*context->groupby_context->hash_keys);
     auto &results = static_cast<std::map<AggregateKey, AggregateResult<AggregateType>> &>(*context->results);
@@ -644,11 +643,10 @@ struct AggregateTraits<
 
 // invalid: AVG on non-arithmetic types
 template <typename ColumnType, AggregateFunction function>
-struct AggregateTraits<
-    ColumnType, function,
-    typename std::enable_if_t<!std::is_arithmetic<ColumnType>::value &&
-                                  (function == AggregateFunction::Avg || function == AggregateFunction::Sum),
-                              void>> {
+struct AggregateTraits<ColumnType, function, typename std::enable_if_t<!std::is_arithmetic<ColumnType>::value &&
+                                                                           (function == AggregateFunction::Avg ||
+                                                                            function == AggregateFunction::Sum),
+                                                                       void>> {
   typedef ColumnType column_type;
   typedef ColumnType aggregate_type;
   static constexpr const char *aggregate_type_name = "";

@@ -30,7 +30,7 @@ class OperatorsProductTest : public BaseTest {
 };
 
 TEST_F(OperatorsProductTest, ValueColumns) {
-  auto product = std::make_shared<Product>(_table_wrapper_a, _table_wrapper_b, "left.", "right.");
+  auto product = std::make_shared<Product>(_table_wrapper_a, _table_wrapper_b);
   product->execute();
 
   std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_float_product.tbl", 3);
@@ -38,10 +38,11 @@ TEST_F(OperatorsProductTest, ValueColumns) {
 }
 
 TEST_F(OperatorsProductTest, ReferenceAndValueColumns) {
-  auto table_scan = std::make_shared<opossum::TableScan>(_table_wrapper_a, "a", ScanType::OpGreaterThanEquals, 1234);
+  auto table_scan =
+      std::make_shared<opossum::TableScan>(_table_wrapper_a, ColumnID{0}, ScanType::OpGreaterThanEquals, 1234);
   table_scan->execute();
 
-  auto product = std::make_shared<Product>(table_scan, _table_wrapper_b, "left.", "right.");
+  auto product = std::make_shared<Product>(table_scan, _table_wrapper_b);
   product->execute();
 
   std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_filtered_float_product.tbl", 3);
