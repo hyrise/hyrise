@@ -69,7 +69,7 @@ class Projection : public AbstractReadOnlyOperator {
         auto null_values = pmr_concurrent_vector<bool>(row_count, true);
         auto values = pmr_concurrent_vector<T>(row_count);
 
-        column = std::make_shared<ValueColumn<T>>(std::move(values), std::move(null_values));        
+        column = std::make_shared<ValueColumn<T>>(std::move(values), std::move(null_values));
       } else {
         auto values = evaluate_expression<T>(expression, input_table_left, chunk_id);
         column = std::make_shared<ValueColumn<T>>(std::move(values));
