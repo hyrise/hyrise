@@ -47,6 +47,7 @@ The install script was tested under macOS (brew) and Ubuntu 16.10 (apt-get).
 - googletest (https://github.com/google/googletest)
 - protoc and gRPC (https://github.com/grpc/grpc)
 - sql-parser (https://github.com/hyrise/sql-parser)
+- pgasus (https://github.com/kateyy/pgasus)
 
 The install script builds protoc and gRPC. For manual compilation:
 
