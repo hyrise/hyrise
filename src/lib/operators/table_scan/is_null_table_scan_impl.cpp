@@ -35,9 +35,8 @@ void IsNullTableScanImpl::handle_value_column(BaseColumn &base_column,
 
   auto left_column_iterable = NullValueVectorIterable{left_column.null_values()};
 
-  left_column_iterable.with_iterators(mapped_chunk_offsets.get(), [&](auto left_it, auto left_end) {
-    this->_scan(left_it, left_end, *context);
-  });
+  left_column_iterable.with_iterators(mapped_chunk_offsets.get(),
+                                      [&](auto left_it, auto left_end) { this->_scan(left_it, left_end, *context); });
 }
 
 void IsNullTableScanImpl::handle_dictionary_column(BaseColumn &base_column,
@@ -48,9 +47,8 @@ void IsNullTableScanImpl::handle_dictionary_column(BaseColumn &base_column,
 
   auto left_column_iterable = AttributeVectorIterable{*left_column.attribute_vector()};
 
-  left_column_iterable.with_iterators(mapped_chunk_offsets.get(), [&](auto left_it, auto left_end) {
-    this->_scan(left_it, left_end, *context);
-  });
+  left_column_iterable.with_iterators(mapped_chunk_offsets.get(),
+                                      [&](auto left_it, auto left_end) { this->_scan(left_it, left_end, *context); });
 }
 
 bool IsNullTableScanImpl::_matches_all(const BaseValueColumn &column) {

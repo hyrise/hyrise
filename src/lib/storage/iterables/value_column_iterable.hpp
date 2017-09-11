@@ -3,8 +3,6 @@
 #include <utility>
 #include <vector>
 
-#include "tbb/concurrent_vector.h"
-
 #include "iterables.hpp"
 
 #include "storage/value_column.hpp"
@@ -50,7 +48,7 @@ class ValueColumnIterable : public IndexableIterable<ValueColumnIterable<T>> {
  private:
   class Iterator : public BaseIterator<Iterator, ColumnValue<T>> {
    public:
-    using ValueIterator = typename tbb::concurrent_vector<T>::const_iterator;
+    using ValueIterator = typename pmr_concurrent_vector<T>::const_iterator;
 
    public:
     explicit Iterator(const ValueIterator& begin_value_it, const ValueIterator& value_it)
@@ -73,8 +71,8 @@ class ValueColumnIterable : public IndexableIterable<ValueColumnIterable<T>> {
 
   class NullableIterator : public BaseIterator<NullableIterator, NullableColumnValue<T>> {
    public:
-    using ValueIterator = typename tbb::concurrent_vector<T>::const_iterator;
-    using NullValueIterator = tbb::concurrent_vector<bool>::const_iterator;
+    using ValueIterator = typename pmr_concurrent_vector<T>::const_iterator;
+    using NullValueIterator = pmr_concurrent_vector<bool>::const_iterator;
 
    public:
     explicit NullableIterator(const ValueIterator& begin_value_it, const ValueIterator& value_it,
@@ -104,7 +102,7 @@ class ValueColumnIterable : public IndexableIterable<ValueColumnIterable<T>> {
 
   class IndexedIterator : public BaseIndexedIterator<IndexedIterator, ColumnValue<T>> {
    public:
-    using ValueVector = tbb::concurrent_vector<T>;
+    using ValueVector = pmr_concurrent_vector<T>;
 
    public:
     explicit IndexedIterator(const ValueVector& values, const ChunkOffsetsIterator& chunk_offsets_it)
@@ -128,8 +126,8 @@ class ValueColumnIterable : public IndexableIterable<ValueColumnIterable<T>> {
 
   class NullableIndexedIterator : public BaseIndexedIterator<NullableIndexedIterator, NullableColumnValue<T>> {
    public:
-    using ValueVector = tbb::concurrent_vector<T>;
-    using NullValueVector = tbb::concurrent_vector<bool>;
+    using ValueVector = pmr_concurrent_vector<T>;
+    using NullValueVector = pmr_concurrent_vector<bool>;
 
    public:
     explicit NullableIndexedIterator(const ValueVector& values, const NullValueVector& null_values,

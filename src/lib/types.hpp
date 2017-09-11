@@ -1,5 +1,7 @@
 #pragma once
 
+#include <tbb/concurrent_vector.h>
+
 #include <cstdint>
 #include <iostream>
 #include <limits>
@@ -7,6 +9,7 @@
 #include <tuple>
 #include <vector>
 
+#include "polymorphic_allocator.hpp"
 #include "strong_typedef.hpp"
 
 /**
@@ -35,6 +38,19 @@ STRONG_TYPEDEF(uint32_t, NodeID);
 STRONG_TYPEDEF(int32_t, CpuID);
 
 namespace opossum {
+
+/** We use vectors with custom allocators, e.g, to bind the data object to
+ * specific NUMA nodes. This is mainly used in the data objects, i.e.,
+ * Chunk, ValueColumn, DictionaryColumn, ReferenceColumn and attribute vectors.
+ * The PolymorphicAllocator provides an abstraction over several allocation
+ * methods by adapting to subclasses of boost::container::pmr::memory_resource.
+ */
+
+template <typename T>
+using pmr_vector = std::vector<T, PolymorphicAllocator<T>>;
+
+template <typename T>
+using pmr_concurrent_vector = tbb::concurrent_vector<T, PolymorphicAllocator<T>>;
 
 using ChunkOffset = uint32_t;
 
@@ -65,29 +81,13 @@ using StringLength = uint16_t;     // The length of column value strings must fi
 using ColumnNameLength = uint8_t;  // The length of column names must fit in this type.
 using AttributeVectorWidth = uint8_t;
 
-using PosList = std::vector<RowID>;
-
-class ColumnName {
- public:
-  explicit ColumnName(const std::string &name) : _name(name) {}
-
-  operator std::string() const { return _name; }
-
-  friend std::ostream &operator<<(std::ostream &o, const ColumnName &column_name) {
-    o << column_name._name;
-    return o;
-  }
-
-  bool operator==(const ColumnName &rhs) const { return _name == rhs._name; }
-
- protected:
-  std::string _name;
-};
+using PosList = pmr_vector<RowID>;
 
 constexpr NodeID INVALID_NODE_ID{std::numeric_limits<NodeID::base_type>::max()};
 constexpr TaskID INVALID_TASK_ID{std::numeric_limits<TaskID>::max()};
 constexpr CpuID INVALID_CPU_ID{std::numeric_limits<CpuID::base_type>::max()};
 constexpr WorkerID INVALID_WORKER_ID{std::numeric_limits<WorkerID>::max()};
+constexpr ColumnID INVALID_COLUMN_ID{std::numeric_limits<ColumnID::base_type>::max()};
 
 constexpr NodeID CURRENT_NODE_ID{std::numeric_limits<NodeID::base_type>::max() - 1};
 
@@ -146,9 +146,9 @@ enum class ExpressionType {
   /*A parameter used in PreparedStatements*/
   Placeholder,
   /*An identifier for a column*/
-  ColumnIdentifier,
+  Column,
   /*An identifier for a function, such as COUNT, MIN, MAX*/
-  FunctionIdentifier,
+  Function,
 
   /*A subselect*/
   Select,

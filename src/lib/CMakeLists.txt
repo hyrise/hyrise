@@ -180,8 +180,8 @@ set(
     optimizer/base_column_statistics.hpp
     optimizer/column_statistics.cpp
     optimizer/column_statistics.hpp
-    optimizer/expression/expression_node.cpp
-    optimizer/expression/expression_node.hpp
+    optimizer/expression.cpp
+    optimizer/expression.hpp
     optimizer/optimizer.cpp
     optimizer/optimizer.hpp
     optimizer/strategy/abstract_rule.hpp
@@ -189,6 +189,7 @@ set(
     optimizer/strategy/predicate_reordering_rule.hpp
     optimizer/table_statistics.cpp
     optimizer/table_statistics.hpp
+    polymorphic_allocator.hpp
     resolve_column_type.hpp
     resolve_type.hpp
     scheduler/abstract_scheduler.cpp
@@ -300,7 +301,7 @@ set(
     pthread
     z
     sqlparser
-
+    boost_container
     ${TBB_LIBRARY}
 )
 

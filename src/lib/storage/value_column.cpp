@@ -16,14 +16,14 @@ namespace opossum {
 
 template <typename T>
 ValueColumn<T>::ValueColumn(bool nullable) {
-  if (nullable) _null_values = tbb::concurrent_vector<bool>();
+  if (nullable) _null_values = pmr_concurrent_vector<bool>();
 }
 
 template <typename T>
-ValueColumn<T>::ValueColumn(tbb::concurrent_vector<T>&& values) : _values(std::move(values)) {}
+ValueColumn<T>::ValueColumn(pmr_concurrent_vector<T>&& values) : _values(std::move(values)) {}
 
 template <typename T>
-ValueColumn<T>::ValueColumn(tbb::concurrent_vector<T>&& values, tbb::concurrent_vector<bool>&& null_values)
+ValueColumn<T>::ValueColumn(pmr_concurrent_vector<T>&& values, pmr_concurrent_vector<bool>&& null_values)
     : _values(std::move(values)), _null_values(std::move(null_values)) {}
 
 template <typename T>
@@ -83,12 +83,12 @@ void ValueColumn<std::string>::append(const AllTypeVariant& val) {
 }
 
 template <typename T>
-const tbb::concurrent_vector<T>& ValueColumn<T>::values() const {
+const pmr_concurrent_vector<T>& ValueColumn<T>::values() const {
   return _values;
 }
 
 template <typename T>
-tbb::concurrent_vector<T>& ValueColumn<T>::values() {
+pmr_concurrent_vector<T>& ValueColumn<T>::values() {
   return _values;
 }
 
@@ -98,14 +98,14 @@ bool ValueColumn<T>::is_nullable() const {
 }
 
 template <typename T>
-const tbb::concurrent_vector<bool>& ValueColumn<T>::null_values() const {
+const pmr_concurrent_vector<bool>& ValueColumn<T>::null_values() const {
   DebugAssert(is_nullable(), "This ValueColumn does not support null values.");
 
   return *_null_values;
 }
 
 template <typename T>
-tbb::concurrent_vector<bool>& ValueColumn<T>::null_values() {
+pmr_concurrent_vector<bool>& ValueColumn<T>::null_values() {
   DebugAssert(is_nullable(), "This ValueColumn does not support null values.");
 
   return *_null_values;
@@ -146,9 +146,9 @@ void ValueColumn<T>::copy_value_to_value_column(BaseColumn& value_column, ChunkO
 
 // TODO(anyone): This method is part of an algorithm that hasn't yet been updated to support null values.
 template <typename T>
-const std::shared_ptr<std::vector<std::pair<RowID, T>>> ValueColumn<T>::materialize(
+const std::shared_ptr<pmr_vector<std::pair<RowID, T>>> ValueColumn<T>::materialize(
     ChunkID chunk_id, std::shared_ptr<std::vector<ChunkOffset>> offsets) {
-  auto materialized_vector = std::make_shared<std::vector<std::pair<RowID, T>>>();
+  auto materialized_vector = std::make_shared<pmr_vector<std::pair<RowID, T>>>(_values.get_allocator());
 
   // we may want to sort offsets first?
   if (offsets) {

@@ -1,4 +1,4 @@
-#include "sql_query_operator.hpp"
+#include "sql_result_operator.hpp"
 
 #include <memory>
 #include <string>

@@ -6,7 +6,7 @@
 #include <string>
 
 #include "common.hpp"
-#include "optimizer/expression/expression_node.hpp"
+#include "optimizer/expression.hpp"
 #include "utils/assert.hpp"
 
 namespace opossum {

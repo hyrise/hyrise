@@ -86,7 +86,7 @@ TEST_F(ResponseBuilderTest, BuildResponseRefColumn) {
   proto::Response response;
   auto expected_result = load_response("src/test/responses/int_float_filtered_a_1234.tbl.rsp");
 
-  auto scan_1 = std::make_shared<TableScan>(_table_wrapper, "a", ScanType::OpEquals, 1234);
+  auto scan_1 = std::make_shared<TableScan>(_table_wrapper, ColumnID{0}, ScanType::OpEquals, 1234);
   scan_1->execute();
   _builder.build_response(response, scan_1->get_output());
 
