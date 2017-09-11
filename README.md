@@ -28,7 +28,7 @@ The install script was tested under macOS (brew) and Ubuntu 17.04 (apt-get).
 - autoconf
 - automake
 - build-essential (linux)
-- boost (>= 1.63.0)
+- boost (>= 1.62.0)
 - clang (>= 3.5.0) optional if gcc is installed
 - clang-format (>= 3.8) optional
 - CMake (>= 3.5)
