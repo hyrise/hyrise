@@ -297,7 +297,7 @@ set(
     pthread
     z
     sqlparser
-    boost_container
+    /usr/local/lib/libboost_container.a
     ${TBB_LIBRARY}
 )
 
