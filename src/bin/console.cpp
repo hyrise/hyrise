@@ -281,6 +281,7 @@ int Console::help(const std::string&) {
   console.out(
       "  load FILE TABLENAME  - Load table from disc specified by filepath FILE, store it with name TABLENAME\n");
   console.out("  script SCRIPTFILE    - Execute script specified by SCRIPTFILE\n");
+  console.out("  print TABLENAME      - Fully prints the given table\n");
   console.out("  exit                 - Exit the HYRISE Console\n");
   console.out("  quit                 - Exit the HYRISE Console\n");
   console.out("  help                 - Show this message\n\n");
