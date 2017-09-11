@@ -535,16 +535,14 @@ TEST_F(OperatorsAggregateTest, JoinThenAggregate) {
                     1);
 }
 
-// TEST_F(OperatorsAggregateTest, OuterJoinThenAggregate) {
-//   auto join = std::make_shared<JoinNestedLoopA>(_table_wrapper_join_1, _table_wrapper_join_2,
-//                                                 std::pair<std::string, std::string>("a", "a"), ScanType::OpLessThan,
-//                                                 JoinMode::Outer, std::string("left."), std::string("right."));
-//   join->execute();
+TEST_F(OperatorsAggregateTest, OuterJoinThenAggregate) {
+  auto join =
+      std::make_shared<JoinNestedLoopA>(_table_wrapper_join_1, _table_wrapper_join_2, JoinMode::Outer,
+                                        std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}), ScanType::OpLessThan);
+  join->execute();
 
-//   Print(join).execute();
-
-//   this->test_output(join, {{"right.a", AggregateFunction::Min}}, {std::string("left.a")},
-//                     "src/test/tables/aggregateoperator/groupby_int_1gb_1agg/outer_join.tbl", 1, false);
-// }
+  this->test_output(join, {{ColumnID{1}, AggregateFunction::Min}}, {ColumnID{0}},
+                    "src/test/tables/aggregateoperator/groupby_int_1gb_1agg/outer_join.tbl", 1, false);
+}
 
 }  // namespace opossum
