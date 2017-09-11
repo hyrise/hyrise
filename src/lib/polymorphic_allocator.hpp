@@ -5,7 +5,8 @@
 
 namespace opossum {
 
-// We use boost::container::pmr::polymorphic_allocator because clang doesn't support std::pmr::polymorphic_allocator yet.
+// We use boost::container::pmr::polymorphic_allocator because clang doesn't support std::pmr::polymorphic_allocator
+// yet.
 // We need a wrapper around std::experimental::pmr::polymorphic_allocator because tbb::concurrent_vector still relies on
 // rebind<U>::other (which is deprecated in C++17).
 // See src/lib/utils/boost_default_memory_resource.cpp for an implementation of a default memory resource.
