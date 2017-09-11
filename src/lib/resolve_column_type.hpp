@@ -15,9 +15,25 @@ namespace hana = boost::hana;
 
 /**
  * Resolves a column type by passing a hana::type object on to a generic lambda
- *
+ * 
  * @param type is a string representation of any of the supported column types
  * @param func is generic lambda or similar
+ *
+ *
+ * Example:
+ *
+ *   template <typename T>
+ *   consume_column_v1();
+ *
+ *   template <typename T>
+ *   consume_column_v2(hana::basic_type<T> type);
+ *
+ *   resolve_column_type(column_type, base_column, [&] (auto type) {
+ *     using Type = typename decltype(type)::type;
+ *     consume_column_v1<Type>();
+ *
+ *     consume_column_v2(type);  // here you don’t have to retrieve the template type `Type`
+ *   });
  */
 template <typename Functor>
 void resolve_type(const std::string &type, const Functor &func) {
@@ -33,7 +49,15 @@ void resolve_type(const std::string &type, const Functor &func) {
 /**
  * Resolves a column type by passing a hana::type object and the resolved column on to a generic lambda
  *
+ * @param type is a string representation of any of the supported column types
+ * @param func is generic lambda or similar accepting two parameters: a hana::type object and
+ *   a reference to a specialized column (value, dictionary, reference)
+ *
+ *
  * Example:
+ *   template <typename T>
+ *   consume_column(BaseColumn &column);
+ *
  *   resolve_column_type(column_type, base_column, [&] (auto type, auto &typed_column) {
  *     using Type = typename decltype(type)::type;
  *     using ColumnType = typename std::decay<decltype(typed_column)>::type;
@@ -43,10 +67,6 @@ void resolve_type(const std::string &type, const Functor &func) {
  *
  *     consume_column<Type>(typed_column);
  *   });
- *
- * @param type is a string representation of any of the supported column types
- * @param func is generic lambda or similar accepting two parameters: a hana::type object and
- *   a reference to a specialized column (value, dictionary, reference)
  */
 template <typename Functor>
 void resolve_column_type(const std::string &type, BaseColumn &column, const Functor &func) {
