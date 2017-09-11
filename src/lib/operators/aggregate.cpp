@@ -367,6 +367,8 @@ void Aggregate::write_aggregate_output(ColumnID column_index) {
   std::string output_column_name;
   if (aggregate.alias) {
     output_column_name = *aggregate.alias;
+  } else if (aggregate.column_id == CountStarID) {
+    output_column_name = "COUNT(*)";
   } else {
     const auto &column_name = input_table_left()->column_name(aggregate.column_id);
     output_column_name = aggregate_function_to_string.left.at(function) + "(" + column_name + ")";

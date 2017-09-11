@@ -215,8 +215,16 @@ std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::_translate_aggregate_
     DebugAssert(aggregate_expression->type() == ExpressionType::Function, "Only functions are supported in Aggregates");
 
     const auto aggregate_function_type = aggregate_expression->aggregate_function();
-    const auto column_id = (aggregate_expression->expression_list())[0]->column_id();
-    aggregate_definitions.emplace_back(column_id, aggregate_function_type, aggregate_expression->alias());
+    const auto root_expr = (aggregate_expression->expression_list())[0];
+
+    if (aggregate_function_type == AggregateFunction::Count && root_expr->type() == ExpressionType::Star) {
+      // COUNT(*) does not specify a ColumnID
+      aggregate_definitions.emplace_back(Aggregate::CountStarID, AggregateFunction::Count,
+                                         aggregate_expression->alias());
+    } else {
+      const auto column_id = root_expr->column_id();
+      aggregate_definitions.emplace_back(column_id, aggregate_function_type, aggregate_expression->alias());
+    }
   }
 
   return std::make_shared<Aggregate>(aggregate_input_operator, aggregate_definitions, groupby_columns);

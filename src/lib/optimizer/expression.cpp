@@ -235,6 +235,8 @@ std::string Expression::to_string(const std::shared_ptr<AbstractASTNode> &input_
     case ExpressionType::Function:
       return aggregate_function_to_string.left.at(aggregate_function()) + "(" +
              _expression_list[0]->to_string(input_node) + ")";
+    case ExpressionType::Star:
+      return std::string("*");
     default:
       // Handled further down.
       break;
