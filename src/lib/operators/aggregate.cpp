@@ -42,26 +42,8 @@ std::shared_ptr<AbstractOperator> Aggregate::recreate(const std::vector<AllParam
 std::shared_ptr<const Table> Aggregate::on_execute() {
   auto input_table = input_table_left();
 
-  // // find group by column IDs
-  // std::vector<ColumnID> groupby_column_ids;
-  // std::transform(_groupby_columns.begin(), _groupby_columns.end(), std::back_inserter(groupby_column_ids),
-  //                [&](const std::string &name) { return input_table->column_id_by_name(name); });
-
-  // // find aggregated column IDs
-  // std::transform(_aggregates.begin(), _aggregates.end(), std::back_inserter(_aggregate_column_ids),
-  //                [&](const AggregateDefinition &agg_def) {
-  //                  if (agg_def.column_name == "*") {
-  //                    return CountStarID;
-  //                  }
-  //                  return input_table->column_id_by_name(agg_def.column_name);
-  //                });
-
   // check for invalid aggregates
   for (const auto &aggregate : _aggregates) {
-    // for (size_t aggregate_index = 0; aggregate_index < _aggregates.size(); ++aggregate_index) {
-    // auto column_id = _aggregate_column_ids[aggregate_index];
-    // auto aggregate = _aggregates[aggregate_index].function;
-
     if (aggregate.column_id == CountStarID) {
       if (aggregate.function != AggregateFunction::Count) {
         Fail("Aggregate: Asterisk is only valid with COUNT");
