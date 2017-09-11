@@ -8,16 +8,12 @@ namespace container {
 namespace pmr {
 
 class default_resource_impl : public memory_resource {
-  public:
+ public:
   virtual ~default_resource_impl() {}
 
-  virtual void* do_allocate(std::size_t bytes, std::size_t alignment) {
-    return std::malloc(bytes);
-  }
+  virtual void* do_allocate(std::size_t bytes, std::size_t alignment) { return std::malloc(bytes); }
 
-  virtual void do_deallocate(void* p, std::size_t bytes, std::size_t alignment) {
-    std::free(p);
-  }
+  virtual void do_deallocate(void* p, std::size_t bytes, std::size_t alignment) { std::free(p); }
 
   virtual bool do_is_equal(const memory_resource& other) const BOOST_NOEXCEPT { return &other == this; }
 } default_resource_instance;
