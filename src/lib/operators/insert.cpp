@@ -43,10 +43,7 @@ class TypedColumnProcessor : public AbstractTypedColumnProcessor {
     DebugAssert(static_cast<bool>(casted_target), "Type mismatch");
     auto& vect = casted_target->values();
 
-    if (!source) {
-      // do nothing. vector is already resized with zeros
-      // todo(timo): NULL value support for this operator
-    } else if (auto casted_source = std::dynamic_pointer_cast<ValueColumn<T>>(source)) {
+    if (auto casted_source = std::dynamic_pointer_cast<ValueColumn<T>>(source)) {
       std::copy_n(casted_source->values().begin() + source_start_index, length, vect.begin() + target_start_index);
       // } else if(auto casted_source = std::dynamic_pointer_cast<ReferenceColumn>(source)){
       // since we have no guarantee that a referenceColumn references only a single other column,
@@ -79,16 +76,16 @@ std::shared_ptr<const Table> Insert::on_execute(std::shared_ptr<TransactionConte
   _target_table = StorageManager::get().get_table(_target_table_name);
 
   // maps output columns to input column IDs (if available)
-  std::vector<optional<ColumnID>> output_to_input_map(_target_table->col_count());
+  std::vector<optional<ColumnID>> output_to_input_remapping(_target_table->col_count());
 
   if (_column_mapping.size() == 0) {
     // no column mapping, which means we have a direct mapping
-    std::iota(output_to_input_map.begin(), output_to_input_map.end(), ColumnID{0});
+    std::iota(output_to_input_remapping.begin(), output_to_input_remapping.end(), ColumnID{0});
   } else {
     // find matching column IDs where possible
     for (ColumnID input_index{0}; input_index < _column_mapping.size(); ++input_index) {
       auto output_column_id = _target_table->column_id_by_name(_column_mapping[input_index]);
-      output_to_input_map[output_column_id] = input_index;
+      output_to_input_remapping[output_column_id] = input_index;
     }
   }
 
@@ -169,15 +166,15 @@ std::shared_ptr<const Table> Insert::on_execute(std::shared_ptr<TransactionConte
       const auto& source_chunk = input_table_left()->get_chunk(source_chunk_id);
       auto num_to_insert = std::min(source_chunk.size() - source_chunk_start_index, n);
       for (ColumnID i{0}; i < target_chunk.col_count(); ++i) {
-        std::shared_ptr<BaseColumn> source_column;
-
-        // check if we have an input mapping for this column
-        if (output_to_input_map[i]) {
-          source_column = source_chunk.get_column(*output_to_input_map[i]);
+        // Check if we have an input mapping for this column
+        // If there is no input for this column, the column should be filled with default values.
+        // Currently, this is already taken care of by `resize_vector`, which inserts default-constructed values.
+        // Since we do not have a concept of "default values" or "NOT NULL" columns, this should be fine for now
+        if (output_to_input_remapping[i]) {
+          auto source_column = source_chunk.get_column(*output_to_input_remapping[i]);
+          typed_column_processors[i]->copy_data(source_column, source_chunk_start_index, target_chunk.get_column(i),
+                                                target_start_index, num_to_insert);
         }
-
-        typed_column_processors[i]->copy_data(source_column, source_chunk_start_index, target_chunk.get_column(i),
-                                              target_start_index, num_to_insert);
       }
       n -= num_to_insert;
       target_start_index += num_to_insert;
