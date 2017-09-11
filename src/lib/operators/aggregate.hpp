@@ -257,7 +257,7 @@ struct PartitionBuilder : public ColumnVisitable {
             (*context->hash_keys)[chunk_offset].emplace_back(values[offset_in_value_column]);
           }
 
-          chunk_offset++;
+          ++chunk_offset;
         }
       } else {
         for (const ChunkOffset &offset_in_value_column : *(context->chunk_offsets_in)) {
@@ -266,7 +266,7 @@ struct PartitionBuilder : public ColumnVisitable {
           } else {
             (*context->hash_keys)[chunk_offset].emplace_back(values[offset_in_value_column]);
           }
-          chunk_offset++;
+          ++chunk_offset;
         }
       }
     } else {
@@ -286,7 +286,7 @@ struct PartitionBuilder : public ColumnVisitable {
       } else {
         for (const auto &value : values) {
           (*context->hash_keys)[chunk_offset].emplace_back(value);
-          chunk_offset++;
+          ++chunk_offset;
         }
       }
     }
@@ -317,12 +317,12 @@ struct PartitionBuilder : public ColumnVisitable {
           (*context->hash_keys)[chunk_offset].emplace_back(dictionary[value_id]);
         }
 
-        chunk_offset++;
+        ++chunk_offset;
       }
     } else {
       // This DictionaryColumn has to be scanned in full. We directly insert the results into the list of matching
       // rows.
-      for (size_t av_offset = 0; av_offset < column.size(); ++av_offset, ++chunk_offset) {
+      for (ChunkOffset av_offset{0}; av_offset < column.size(); ++av_offset, ++chunk_offset) {
         const auto value_id = attribute_vector.get(av_offset);
 
         if (value_id == NULL_VALUE_ID) {
@@ -472,10 +472,10 @@ struct AggregateVisitor : public ColumnVisitable {
                 aggregate_func(values[offset_in_value_column], results[hash_keys[chunk_offset]].current_aggregate);
 
             // increase value counter
-            results[hash_keys[chunk_offset]].aggregate_count++;
+            ++results[hash_keys[chunk_offset]].aggregate_count;
           }
 
-          chunk_offset++;
+          ++chunk_offset;
         }
       } else {
         for (const ChunkOffset &offset_in_value_column : *(context->groupby_context->chunk_offsets_in)) {
@@ -486,9 +486,9 @@ struct AggregateVisitor : public ColumnVisitable {
                 aggregate_func(values[offset_in_value_column], results[hash_keys[chunk_offset]].current_aggregate);
 
             // increase value counter
-            results[hash_keys[chunk_offset]].aggregate_count++;
+            ++results[hash_keys[chunk_offset]].aggregate_count;
           }
-          chunk_offset++;
+          ++chunk_offset;
         }
       }
     } else {
@@ -507,7 +507,7 @@ struct AggregateVisitor : public ColumnVisitable {
                 aggregate_func(*value_it, results[hash_keys[chunk_offset]].current_aggregate);
 
             // increase value counter
-            results[hash_keys[chunk_offset]].aggregate_count++;
+            ++results[hash_keys[chunk_offset]].aggregate_count;
           }
         }
       } else {
@@ -516,8 +516,8 @@ struct AggregateVisitor : public ColumnVisitable {
               aggregate_func(value, results[hash_keys[chunk_offset]].current_aggregate);
 
           // increase value counter
-          results[hash_keys[chunk_offset]].aggregate_count++;
-          chunk_offset++;
+          ++results[hash_keys[chunk_offset]].aggregate_count;
+          ++chunk_offset;
         }
       }
     }
@@ -557,15 +557,15 @@ struct AggregateVisitor : public ColumnVisitable {
               aggregate_func(dictionary[value_id], results[hash_keys[chunk_offset]].current_aggregate);
 
           // increase value counter
-          results[hash_keys[chunk_offset]].aggregate_count++;
+          ++results[hash_keys[chunk_offset]].aggregate_count;
         }
 
-        chunk_offset++;
+        ++chunk_offset;
       }
     } else {
       // This DictionaryColumn has to be scanned in full. We directly insert the results into the list of matching
       // rows.
-      for (size_t av_offset = 0; av_offset < column.size(); ++av_offset, ++chunk_offset) {
+      for (ChunkOffset av_offset{0}; av_offset < column.size(); ++av_offset, ++chunk_offset) {
         const auto value_id = attribute_vector.get(av_offset);
 
         if (value_id == NULL_VALUE_ID) {
@@ -576,7 +576,7 @@ struct AggregateVisitor : public ColumnVisitable {
               aggregate_func(dictionary[value_id], results[hash_keys[chunk_offset]].current_aggregate);
 
           // increase value counter
-          results[hash_keys[chunk_offset]].aggregate_count++;
+          ++results[hash_keys[chunk_offset]].aggregate_count;
         }
       }
     }

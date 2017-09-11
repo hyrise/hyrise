@@ -182,10 +182,10 @@ std::shared_ptr<const Table> Aggregate::on_execute() {
 
           // count occurences for each group key
           for (const auto &hash_key : *hash_keys) {
-            results[hash_key].aggregate_count++;
+            ++results[hash_key].aggregate_count;
           }
 
-          column_index++;
+          ++column_index;
           continue;
         }
 
@@ -204,7 +204,7 @@ std::shared_ptr<const Table> Aggregate::on_execute() {
         });
 
         base_column->visit(*builder, ctx);
-        column_index++;
+        ++column_index;
       }
     }
   }
@@ -255,7 +255,7 @@ std::shared_ptr<const Table> Aggregate::on_execute() {
       this->_write_aggregate_output(type, column_index, aggregate.function);
     });
 
-    column_index++;
+    ++column_index;
   }
 
   _output->add_chunk(std::move(_out_chunk));
