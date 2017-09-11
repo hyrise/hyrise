@@ -446,15 +446,16 @@ TEST_F(OperatorsAggregateTest, OneGroupbyAndNoAggregateWithNull) {
                     "src/test/tables/aggregateoperator/groupby_int_1gb_0agg/result_null.tbl", 1, false);
 }
 
-// TEST_F(OperatorsAggregateTest, OneGroupbyCountStar) {
-//   this->test_output(_table_wrapper_1_1_null, {{"*", AggregateFunction::Count}}, {ColumnID{0}},
-//                     "src/test/tables/aggregateoperator/groupby_int_1gb_0agg/count_star.tbl", 1, false);
-// }
+TEST_F(OperatorsAggregateTest, OneGroupbyCountStar) {
+  this->test_output(_table_wrapper_1_1_null, {{Aggregate::CountStarID, AggregateFunction::Count}}, {ColumnID{0}},
+                    "src/test/tables/aggregateoperator/groupby_int_1gb_0agg/count_star.tbl", 1, false);
+}
 
-// TEST_F(OperatorsAggregateTest, TwoGroupbyCountStar) {
-//   this->test_output(_table_wrapper_2_0_null, {{"*", AggregateFunction::Count}}, {ColumnID{0}, ColumnID{2}},
-//                     "src/test/tables/aggregateoperator/groupby_int_2gb_0agg/count_star.tbl", 1, false);
-// }
+TEST_F(OperatorsAggregateTest, TwoGroupbyCountStar) {
+  this->test_output(_table_wrapper_2_0_null, {{Aggregate::CountStarID, AggregateFunction::Count}},
+                    {ColumnID{0}, ColumnID{2}}, "src/test/tables/aggregateoperator/groupby_int_2gb_0agg/count_star.tbl",
+                    1, false);
+}
 
 TEST_F(OperatorsAggregateTest, DictionarySingleAggregateMaxWithNull) {
   this->test_output(_table_wrapper_1_1_null_dict, {{ColumnID{1}, AggregateFunction::Max}}, {ColumnID{0}},

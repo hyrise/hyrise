@@ -51,7 +51,7 @@ std::shared_ptr<const Table> Aggregate::on_execute() {
   // std::transform(_aggregates.begin(), _aggregates.end(), std::back_inserter(_aggregate_column_ids),
   //                [&](const AggregateDefinition &agg_def) {
   //                  if (agg_def.column_name == "*") {
-  //                    return CountStarColumnID;
+  //                    return CountStarID;
   //                  }
   //                  return input_table->column_id_by_name(agg_def.column_name);
   //                });
@@ -62,7 +62,7 @@ std::shared_ptr<const Table> Aggregate::on_execute() {
     // auto column_id = _aggregate_column_ids[aggregate_index];
     // auto aggregate = _aggregates[aggregate_index].function;
 
-    if (aggregate.column_id == CountStarColumnID) {
+    if (aggregate.column_id == CountStarID) {
       if (aggregate.function != AggregateFunction::Count) {
         Fail("Aggregate: Asterisk is only valid with COUNT");
       }
@@ -116,7 +116,7 @@ std::shared_ptr<const Table> Aggregate::on_execute() {
     auto column_id = _aggregates[column_index].column_id;
     auto function = _aggregates[column_index].function;
 
-    const auto is_count_star_context = (column_id == CountStarColumnID && function == AggregateFunction::Count);
+    const auto is_count_star_context = (column_id == CountStarID && function == AggregateFunction::Count);
 
     // Special COUNT(*) contexts. "int" is chosen arbitrarily.
     const auto type_string = is_count_star_context ? std::string{"int"} : input_table->column_type(column_id);
@@ -179,9 +179,6 @@ std::shared_ptr<const Table> Aggregate::on_execute() {
     } else {
       ColumnID column_index{0};
       for (const auto &aggregate : _aggregates) {
-        auto base_column = chunk_in.get_column(aggregate.column_id);
-        auto type_string = input_table->column_type(aggregate.column_id);
-
         /**
          * Special COUNT(*) implementation.
          * Because COUNT(*) does not have a specific target column, we use the maximum ColumnID.
@@ -189,7 +186,7 @@ std::shared_ptr<const Table> Aggregate::on_execute() {
          * The results are saved in the regular aggregate_count variable so that we don't need a
          * specific output logic for COUNT(*).
          */
-        if (aggregate.column_id == CountStarColumnID && aggregate.function == AggregateFunction::Count) {
+        if (aggregate.column_id == CountStarID && aggregate.function == AggregateFunction::Count) {
           // We know the template arguments, so we don't need a visitor
           auto ctx = std::static_pointer_cast<AggregateContext<CountColumnType, CountAggregateType>>(
               _contexts_per_column[column_index]);
@@ -209,6 +206,9 @@ std::shared_ptr<const Table> Aggregate::on_execute() {
           column_index++;
           continue;
         }
+
+        auto base_column = chunk_in.get_column(aggregate.column_id);
+        auto type_string = input_table->column_type(aggregate.column_id);
 
         /*
         Invoke the AggregateVisitor for each aggregate column
@@ -267,8 +267,7 @@ std::shared_ptr<const Table> Aggregate::on_execute() {
     auto column_id = aggregate.column_id;
 
     // Output column for COUNT(*). "int" type is chosen arbitrarily.
-    const auto type_string =
-        (column_id == CountStarColumnID) ? std::string{"int"} : input_table->column_type(column_id);
+    const auto type_string = (column_id == CountStarID) ? std::string{"int"} : input_table->column_type(column_id);
 
     resolve_type(type_string, [&, column_index](auto type) {
       this->_write_aggregate_output(type, column_index, aggregate.function);
