@@ -193,10 +193,10 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_join(const hsql:
   Assert(condition.expr2 && condition.expr2->type == hsql::kExprColumnRef,
          "Right arg of join condition must be column ref");
 
-  const auto left_column_identifier_name =
-      SQLExpressionTranslator::get_column_identifier_name_for_column_ref(*condition.expr);
-  const auto right_column_identifier_name =
-      SQLExpressionTranslator::get_column_identifier_name_for_column_ref(*condition.expr2);
+  const auto left_named_column_reference =
+      SQLExpressionTranslator::get_named_column_reference_for_column_ref(*condition.expr);
+  const auto right_named_column_reference =
+      SQLExpressionTranslator::get_named_column_reference_for_column_ref(*condition.expr2);
 
   /**
    * `x_in_y_node` indicates whether the column identifier on the `x` side in the join expression is in the input node
@@ -207,10 +207,10 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_join(const hsql:
    * (left_in_right_node == true). Later we make sure that one and only one of them is true, otherwise we either have
    * ambiguity or the column is simply not existing.
    */
-  const auto left_in_left_node = left_node->find_column_id_by_column_identifier_name(left_column_identifier_name);
-  const auto left_in_right_node = right_node->find_column_id_by_column_identifier_name(left_column_identifier_name);
-  const auto right_in_left_node = left_node->find_column_id_by_column_identifier_name(right_column_identifier_name);
-  const auto right_in_right_node = right_node->find_column_id_by_column_identifier_name(right_column_identifier_name);
+  const auto left_in_left_node = left_node->find_column_id_by_named_column_reference(left_named_column_reference);
+  const auto left_in_right_node = right_node->find_column_id_by_named_column_reference(left_named_column_reference);
+  const auto right_in_left_node = left_node->find_column_id_by_named_column_reference(right_named_column_reference);
+  const auto right_in_right_node = right_node->find_column_id_by_named_column_reference(right_named_column_reference);
 
   Assert(static_cast<bool>(left_in_left_node) ^ static_cast<bool>(left_in_right_node),
          "Left operand must be in exactly one of the input nodes");
