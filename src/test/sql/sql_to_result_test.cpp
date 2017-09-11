@@ -202,6 +202,18 @@ const SQLTestParam test_queries[] = {
     {"SELECT COUNT(*) FROM groupby_int_1gb_1agg_null GROUP BY a;",
      "src/test/tables/aggregateoperator/groupby_int_1gb_0agg/count_star.tbl"},
 
+    // Aggregates with NULL
+    {"SELECT MAX(b) FROM groupby_int_1gb_1agg_null GROUP BY a;",
+     "src/test/tables/aggregateoperator/groupby_int_1gb_1agg/max_null.tbl"},
+    {"SELECT MIN(b) FROM groupby_int_1gb_1agg_null GROUP BY a;",
+     "src/test/tables/aggregateoperator/groupby_int_1gb_1agg/min_null.tbl"},
+    {"SELECT SUM(b) FROM groupby_int_1gb_1agg_null GROUP BY a;",
+     "src/test/tables/aggregateoperator/groupby_int_1gb_1agg/sum_null.tbl"},
+    {"SELECT AVG(b) FROM groupby_int_1gb_1agg_null GROUP BY a;",
+     "src/test/tables/aggregateoperator/groupby_int_1gb_1agg/avg_null.tbl"},
+    {"SELECT COUNT(b) FROM groupby_int_1gb_1agg_null GROUP BY a;",
+     "src/test/tables/aggregateoperator/groupby_int_1gb_1agg/count_null.tbl"},
+
     // Checks that output of Aggregate can be worked with correctly.
     {R"(SELECT d, min_c, max_a
         FROM (
