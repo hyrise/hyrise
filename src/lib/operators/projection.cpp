@@ -38,7 +38,7 @@ std::shared_ptr<const Table> Projection::on_execute() {
       name = *column_expression->alias();
     } else if (column_expression->type() == ExpressionType::Column) {
       name = input_table_left()->column_name(column_expression->column_id());
-    } else if (column_expression->is_arithmetic_operator()) {
+    } else if (column_expression->is_arithmetic_operator() || column_expression->type() == ExpressionType::Literal) {
       name = column_expression->to_string();
     } else {
       Fail("Expression type is not supported.");

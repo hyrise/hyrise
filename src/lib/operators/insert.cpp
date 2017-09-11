@@ -64,7 +64,7 @@ Insert::Insert(const std::string& target_table_name, const std::shared_ptr<Abstr
     : AbstractReadWriteOperator(values_to_insert), _target_table_name(target_table_name) {}
 
 Insert::Insert(const std::string& target_table_name, const std::shared_ptr<AbstractOperator>& values_to_insert,
-               std::vector<std::string> column_mapping)
+               const std::vector<std::string>& column_mapping)
     : AbstractReadWriteOperator(values_to_insert),
       _target_table_name(target_table_name),
       _column_mapping(column_mapping) {}
