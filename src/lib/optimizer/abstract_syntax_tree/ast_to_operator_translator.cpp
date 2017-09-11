@@ -219,8 +219,7 @@ std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::_translate_aggregate_
 
     if (aggregate_function_type == AggregateFunction::Count && root_expr->type() == ExpressionType::Star) {
       // COUNT(*) does not specify a ColumnID
-      aggregate_definitions.emplace_back(Aggregate::CountStarID, AggregateFunction::Count,
-                                         aggregate_expression->alias());
+      aggregate_definitions.emplace_back(CountStarID, AggregateFunction::Count, aggregate_expression->alias());
     } else {
       const auto column_id = root_expr->column_id();
       aggregate_definitions.emplace_back(column_id, aggregate_function_type, aggregate_expression->alias());

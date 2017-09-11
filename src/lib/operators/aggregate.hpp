@@ -56,6 +56,9 @@ The key type that is used for the aggregation map.
 */
 using AggregateKey = std::vector<AllTypeVariant>;
 
+// ColumnID representing the '*' when using COUNT(*)
+constexpr ColumnID CountStarID{std::numeric_limits<ColumnID::base_type>::max()};
+
 /**
  * Struct to specify aggregates.
  * Aggregates are defined by the column_id they operate on and the aggregate function they use.
@@ -97,9 +100,6 @@ class Aggregate : public AbstractReadOnlyOperator {
   // write the aggregated output for a given aggregate column
   template <typename ColumnType, AggregateFunction function>
   void write_aggregate_output(ColumnID column_index);
-
-  // ColumnID representing the '*' when using COUNT(*)
-  static constexpr ColumnID CountStarID{std::numeric_limits<ColumnID::base_type>::max()};
 
  protected:
   std::shared_ptr<const Table> on_execute() override;
