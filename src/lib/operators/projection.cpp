@@ -44,8 +44,13 @@ std::shared_ptr<const Table> Projection::on_execute() {
       Fail("Expression type is not supported.");
     }
 
-    const auto type = get_type_of_expression(column_expression, input_table_left());
-    output->add_column_definition(name, type);
+    if (is_null(column_expression->value())) {
+      // in case of a NULL literal, simply add a nullable int column
+      output->add_column_definition(name, "int", true);
+    } else {
+      const auto type = get_type_of_expression(column_expression, input_table_left());
+      output->add_column_definition(name, type);
+    }
   }
 
   for (ChunkID chunk_id{0}; chunk_id < input_table_left()->chunk_count(); ++chunk_id) {

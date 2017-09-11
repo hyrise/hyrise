@@ -23,8 +23,6 @@ class TransactionContext;
 class Insert : public AbstractReadWriteOperator {
  public:
   explicit Insert(const std::string& target_table_name, const std::shared_ptr<AbstractOperator>& values_to_insert);
-  explicit Insert(const std::string& target_table_name, const std::shared_ptr<AbstractOperator>& values_to_insert,
-                  const std::vector<std::string>& column_mapping);
 
   void commit_records(const CommitID cid) override;
   void rollback_records() override;
@@ -45,7 +43,6 @@ class Insert : public AbstractReadWriteOperator {
  private:
   const std::string _target_table_name;
   std::shared_ptr<Table> _target_table;
-  const std::vector<std::string> _column_mapping;
 };
 
 }  // namespace opossum

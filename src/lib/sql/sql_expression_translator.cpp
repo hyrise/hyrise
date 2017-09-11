@@ -69,6 +69,9 @@ std::shared_ptr<Expression> SQLExpressionTranslator::translate_expression(
     case hsql::kExprLiteralString:
       node = Expression::create_literal(name);
       break;
+    case hsql::kExprLiteralNull:
+      node = Expression::create_literal(NULL_VALUE);
+      break;
     case hsql::kExprParameter:
       node = Expression::create_value_placeholder(ValuePlaceholder{static_cast<uint16_t>(expr.ival)});
       break;

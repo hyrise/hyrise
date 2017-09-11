@@ -347,8 +347,6 @@ TEST_F(SQLToASTTranslatorTest, InsertValuesColumnReorder) {
   EXPECT_EQ(result_node->type(), ASTNodeType::Insert);
   auto insert_node = std::dynamic_pointer_cast<InsertNode>(result_node);
   EXPECT_EQ(insert_node->table_name(), "table_a");
-  EXPECT_EQ(insert_node->insert_columns()[0], "b");
-  EXPECT_EQ(insert_node->insert_columns()[1], "a");
   EXPECT_EQ(insert_node->left_child()->type(), ASTNodeType::Projection);
 }
 

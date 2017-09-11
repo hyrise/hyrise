@@ -21,9 +21,11 @@
 #include "optimizer/expression.hpp"
 #include "sql/sql_expression_translator.hpp"
 #include "storage/storage_manager.hpp"
+#include "storage/table.hpp"
 
 #include "all_type_variant.hpp"
 #include "constant_mappings.hpp"
+#include "resolve_column_type.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 
@@ -126,17 +128,40 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_insert(const hsq
 
   Assert(target_table != nullptr, "Insert: Invalid table name");
 
-  std::vector<std::string> columns;
+  // index is the ColumnID for the output (Insert)
+  // value is the ColumnID
+  std::vector<ColumnID> column_out_to_in_remapping(target_table->col_count(), INVALID_COLUMN_ID);
 
-  if (insert.columns != nullptr) {
-    for (auto& column_name : *insert.columns) {
-      columns.emplace_back(column_name);
+  std::shared_ptr<AbstractASTNode> projection_node;
+
+  if (!insert.columns) {
+    // No column order given. Assuming all columns in regular order
+    Assert(insert.values->size() == target_table->col_count(), "Insert: column mismatch");
+
+    projection_node = _translate_projection(*insert.values, nullptr);
+  } else {
+    // Specific columns have been specified. In this case we create a new expression list
+    // for the Projection, so that it contains as many columns as the target table.
+
+    // shared NULL expression for when we need to insert NULL literals
+    auto shared_null = std::shared_ptr<hsql::Expr>(hsql::Expr::makeNullLiteral());
+
+    // pre-fill new projection list with NULLs
+    std::vector<hsql::Expr*> projections(target_table->col_count(), shared_null.get());
+
+    size_t insert_column_index = 0;
+    for (const auto& column_name : *insert.columns) {
+      // retrieve correct ColumnID and insert expression
+      auto column_id = target_table->column_id_by_name(column_name);
+      projections[column_id] = (*insert.values)[insert_column_index];
+
+      ++insert_column_index;
     }
+
+    projection_node = _translate_projection(projections, nullptr);
   }
 
-  auto projection_node = _translate_projection(*insert.values, nullptr);
-
-  auto insert_node = std::make_shared<InsertNode>(table_name, columns);
+  auto insert_node = std::make_shared<InsertNode>(table_name);
   insert_node->set_left_child(projection_node);
 
   return insert_node;
@@ -323,6 +348,8 @@ AllParameterVariant SQLToASTTranslator::translate_hsql_operand(
       return AllTypeVariant(expr.fval);
     case hsql::kExprLiteralString:
       return AllTypeVariant(expr.name);
+    case hsql::kExprLiteralNull:
+      return NULL_VALUE;
     case hsql::kExprParameter:
       return ValuePlaceholder(expr.ival);
     case hsql::kExprColumnRef:

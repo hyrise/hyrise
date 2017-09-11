@@ -62,8 +62,18 @@ class Projection : public AbstractReadOnlyOperator {
         return chunk.add_column(bypassed_column);
       }
 
-      auto values = evaluate_expression<T>(expression, input_table_left, chunk_id);
-      auto column = std::make_shared<ValueColumn<T>>(std::move(values));
+      std::shared_ptr<BaseColumn> column;
+
+      if (expression->is_null_literal()) {
+        auto row_count = input_table_left->get_chunk(chunk_id).size();
+        auto null_values = pmr_concurrent_vector<bool>(row_count, true);
+        auto values = pmr_concurrent_vector<T>(row_count);
+
+        column = std::make_shared<ValueColumn<T>>(std::move(values), std::move(null_values));        
+      } else {
+        auto values = evaluate_expression<T>(expression, input_table_left, chunk_id);
+        column = std::make_shared<ValueColumn<T>>(std::move(values));
+      }
 
       chunk.add_column(column);
     }
