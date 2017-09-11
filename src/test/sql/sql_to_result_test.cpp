@@ -54,6 +54,9 @@ class SQLToResultTest : public BaseTest, public ::testing::WithParamInterface<SQ
     StorageManager::get().add_table("int_for_delete_1", load_table("src/test/tables/int.tbl", 3));
     StorageManager::get().add_table("int_for_delete_2", load_table("src/test/tables/int.tbl", 3));
 
+    StorageManager::get().add_table("int_int_for_insert_1", load_table("src/test/tables/int_int3_limit_1.tbl", 2));
+    StorageManager::get().add_table("int_int_for_insert_2", load_table("src/test/tables/int_int3_limit_1.tbl", 2));
+
     std::shared_ptr<Table> groupby_int_1gb_1agg =
         load_table("src/test/tables/aggregateoperator/groupby_int_1gb_1agg/input.tbl", 2);
     StorageManager::get().add_table("groupby_int_1gb_1agg", groupby_int_1gb_1agg);
@@ -92,10 +95,18 @@ TEST_P(SQLToResultTest, SQLQueryTest) {
 
   auto plan = SQLPlanner::plan(parse_result);
 
-  std::shared_ptr<const AbstractOperator> result_operator;
+  std::shared_ptr<AbstractOperator> result_operator;
+
+  auto tx_context = TransactionManager::get().new_transaction_context();
 
   for (const auto &root : plan.tree_roots()) {
     auto tasks = OperatorTask::make_tasks_from_operator(root);
+
+    for (auto &task : tasks) {
+      task->get_operator()->set_transaction_context(tx_context);
+    }
+
+    // result_operator->set_transaction_context(tx_context);
     CurrentScheduler::schedule_and_wait_for_tasks(tasks);
     result_operator = tasks.back()->get_operator();
   }
@@ -241,6 +252,16 @@ const SQLTestParam test_queries[] = {
     // {"DELETE FROM int_for_delete_1; SELECT * FROM int_for_delete_1", "src/test/tables/int_empty.tbl"},
     // {"DELETE FROM int_for_delete_2 WHERE a > 1000; SELECT * FROM int_for_delete_2",
     // "src/test/tables/int_deleted.tbl"}
+
+    // INSERT
+    {"INSERT INTO int_int_for_insert_1 VALUES (1, 3); SELECT * FROM int_int_for_insert_1;",
+     "src/test/tables/int_int3_limit_2.tbl"},
+
+    {R"(INSERT INTO int_int_for_insert_1 VALUES (1, 3);
+        INSERT INTO int_int_for_insert_1 VALUES (13, 2);
+        INSERT INTO int_int_for_insert_1 VALUES (6, 9);
+        SELECT * FROM int_int_for_insert_1;)",
+     "src/test/tables/int_int3_limit_4.tbl"},
 
     {R"(SELECT customer.c_custkey, customer.c_name, COUNT(orders.o_orderkey)
         FROM customer JOIN orders ON c_custkey = o_custkey
