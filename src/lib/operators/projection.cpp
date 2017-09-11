@@ -44,7 +44,7 @@ std::shared_ptr<const Table> Projection::on_execute() {
       Fail("Expression type is not supported.");
     }
 
-    if (is_null(column_expression->value())) {
+    if (column_expression->is_null_literal()) {
       // in case of a NULL literal, simply add a nullable int column
       output->add_column_definition(name, "int", true);
     } else {
