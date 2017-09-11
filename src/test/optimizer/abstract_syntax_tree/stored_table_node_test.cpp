@@ -23,12 +23,12 @@ class StoredTableNodeTest : public BaseTest {
 };
 
 TEST_F(StoredTableNodeTest, ColumnIdForColumnIdentifier) {
-  EXPECT_EQ(_stored_table_node->get_column_id_by_column_identifier_name({"a", nullopt}), 0);
-  EXPECT_EQ(_stored_table_node->get_column_id_by_column_identifier_name({"a", {"t_a"}}), 0);
-  EXPECT_EQ(_stored_table_node->get_column_id_by_column_identifier_name({"b", {"t_a"}}), 1);
-  EXPECT_EQ(_stored_table_node->find_column_id_by_column_identifier_name({"c", {"t_a"}}), nullopt);
-  EXPECT_EQ(_stored_table_node->find_column_id_by_column_identifier_name({"c", {"garbage"}}), nullopt);
-  EXPECT_EQ(_stored_table_node->find_column_id_by_column_identifier_name({"b", {"garbage"}}), nullopt);
+  EXPECT_EQ(_stored_table_node->get_column_id_by_named_column_reference({"a", nullopt}), 0);
+  EXPECT_EQ(_stored_table_node->get_column_id_by_named_column_reference({"a", {"t_a"}}), 0);
+  EXPECT_EQ(_stored_table_node->get_column_id_by_named_column_reference({"b", {"t_a"}}), 1);
+  EXPECT_EQ(_stored_table_node->find_column_id_by_named_column_reference({"c", {"t_a"}}), nullopt);
+  EXPECT_EQ(_stored_table_node->find_column_id_by_named_column_reference({"c", {"garbage"}}), nullopt);
+  EXPECT_EQ(_stored_table_node->find_column_id_by_named_column_reference({"b", {"garbage"}}), nullopt);
 }
 
 }  // namespace opossum
