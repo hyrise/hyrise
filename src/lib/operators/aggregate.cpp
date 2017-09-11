@@ -206,6 +206,7 @@ std::shared_ptr<const Table> Aggregate::on_execute() {
             results[hash_key].aggregate_count++;
           }
 
+          column_index++;
           continue;
         }
 
@@ -221,6 +222,7 @@ std::shared_ptr<const Table> Aggregate::on_execute() {
         });
 
         base_column->visit(*builder, ctx);
+        column_index++;
       }
     }
   }
@@ -233,9 +235,9 @@ std::shared_ptr<const Table> Aggregate::on_execute() {
     const auto &column_type = input_table->column_type(column_id);
     const auto &column_name = input_table->column_name(column_id);
 
-    _output->add_column_definition(column_name, column_type);
+    _output->add_column_definition(column_name, column_type, true);
 
-    _groupby_columns.emplace_back(make_shared_by_column_type<BaseColumn, ValueColumn>(column_type));
+    _groupby_columns.emplace_back(make_shared_by_column_type<BaseColumn, ValueColumn>(column_type, true));
     _out_chunk.add_column(_groupby_columns.back());
   }
 

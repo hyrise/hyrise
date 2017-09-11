@@ -95,6 +95,9 @@ class OperatorsAggregateTest : public BaseTest {
     // collect possible columns to scan before aggregate
     std::set<ColumnID> ref_columns;
 
+    // this means no prior table scan
+    ref_columns.insert(INVALID_COLUMN_ID);
+
     if (test_references) {
       for (const auto &agg : aggregates) {
         ref_columns.insert(agg.column_id);
@@ -111,9 +114,11 @@ class OperatorsAggregateTest : public BaseTest {
       // make one Aggregate w/o ReferenceColumn
       auto input = in;
 
-      // also try a TableScan on every involved column
-      input = std::make_shared<TableScan>(in, ref, ScanType::OpGreaterThanEquals, 0);
-      input->execute();
+      if (ref != INVALID_COLUMN_ID) {
+        // also try a TableScan on every involved column
+        input = std::make_shared<TableScan>(in, ref, ScanType::OpGreaterThanEquals, 0);
+        input->execute();
+      }
 
       // build and execute Aggregate
       auto aggregate = std::make_shared<Aggregate>(input, aggregates, groupby_column_ids);
