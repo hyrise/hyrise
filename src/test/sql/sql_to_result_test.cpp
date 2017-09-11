@@ -263,6 +263,9 @@ const SQLTestParam test_queries[] = {
         SELECT * FROM int_int_for_insert_1;)",
      "src/test/tables/int_int3_limit_4.tbl"},
 
+     {"INSERT INTO int_int_for_insert_1 (b, a) VALUES (3, 1); SELECT * FROM int_int_for_insert_1;",
+     "src/test/tables/int_int3_limit_2.tbl"},
+
     {R"(SELECT customer.c_custkey, customer.c_name, COUNT(orders.o_orderkey)
         FROM customer JOIN orders ON c_custkey = o_custkey
         GROUP BY customer.c_custkey, customer.c_name
