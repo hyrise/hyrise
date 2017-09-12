@@ -214,7 +214,7 @@ int Console::_eval_sql(const std::string& sql) {
     plan = SQLPlanner::plan(parse_result);
 
     // Get Transaction context
-    auto tx_context = TransactionManager::get().new_transaction_context();
+    static auto tx_context = TransactionManager::get().new_transaction_context();
 
     for (const auto& task : plan.tasks()) {
       auto op = task->get_operator();
