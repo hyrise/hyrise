@@ -419,7 +419,7 @@ TEST_F(SQLToASTTranslatorTest, Update) {
   EXPECT_EQ(expressions[0]->type(), ExpressionType::Column);
   EXPECT_EQ(expressions[0]->column_id(), ColumnID{0});
   EXPECT_EQ(expressions[1]->type(), ExpressionType::Literal);
-  EXPECT_EQ(boost::get<float>(expressions[1]->value()), 3.2);
+  EXPECT_FLOAT_EQ(boost::get<float>(expressions[1]->value()), 3.2);
   EXPECT_TRUE(expressions[1]->alias());
   EXPECT_EQ(*expressions[1]->alias(), "b");
 }
