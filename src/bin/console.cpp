@@ -243,6 +243,18 @@ void Console::setLogfile(const std::string& logfile) {
   _log = std::ofstream(logfile, std::ios_base::app | std::ios_base::out);
 }
 
+void Console::loadHistory(const std::string& historyFile) {
+  if (read_history(historyFile.c_str()) != 0) {
+    out("Error reading history file: " + historyFile + "\n");
+  }
+}
+
+void Console::writeHistory(const std::string& historyFile) {
+  if (write_history(historyFile.c_str()) != 0) {
+    out("Error writing history file: " + historyFile + "\n");
+  }
+}
+
 void Console::out(const std::string& output, bool console_print) {
   if (console_print) {
     _out << output;
@@ -472,6 +484,9 @@ int main(int argc, char** argv) {
   console.setPrompt("> ");
   console.setLogfile("console.log");
 
+  // Load command history
+  console.loadHistory("console.history");
+
   // Timestamp dump only to logfile
   console.out("--- Session start --- " + current_timestamp() + "\n", false);
 
@@ -521,4 +536,7 @@ int main(int argc, char** argv) {
 
   // Timestamp dump only to logfile
   console.out("--- Session end --- " + current_timestamp() + "\n", false);
+
+  // Save command history to file
+  console.writeHistory("console.history");
 }
