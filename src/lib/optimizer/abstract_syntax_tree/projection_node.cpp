@@ -99,6 +99,10 @@ optional<ColumnID> ProjectionNode::find_column_id_by_column_identifier_name(
   for (ColumnID column_id{0}; column_id < output_column_names().size(); column_id++) {
     const auto& column_expression = _column_expressions[column_id];
 
+    /**
+     * Check whether column_identifier_name is _NOT_ ALIASed and projected by this node, e.g. we're looking for
+     * `t1.a` in `SELECT t1.a, t1.b AS c FROM ...
+     */
     if (child_column_id && column_expression->type() == ExpressionType::Column &&
         column_expression->column_id() == *child_column_id && !column_expression->alias()) {
       Assert(!result_column_id, "Column name " + column_identifier_name.column_name + " is ambiguous.");
@@ -113,16 +117,20 @@ optional<ColumnID> ProjectionNode::find_column_id_by_column_identifier_name(
      * "5+3").
      */
     if (!column_identifier_name.table_name) {
-      if (column_expression->alias() && *column_expression->alias() == column_identifier_name.column_name) {
-        Assert(!result_column_id, "Column name " + column_identifier_name.column_name + " is ambiguous.");
-        result_column_id = column_id;
-        continue;
-      }
-
-      if (column_expression->to_string(left_child()->output_column_names()) == column_identifier_name.column_name) {
-        Assert(!result_column_id, "Column name " + column_identifier_name.column_name + " is ambiguous.");
-        result_column_id = column_id;
-        continue;
+      if (column_expression->alias()) {
+        // Check whether `column_identifier_name` is the ALIAS of a column, e.g. `a AS some_a` or `a+b AS sum_ab`
+        if (*column_expression->alias() == column_identifier_name.column_name) {
+          Assert(!result_column_id, "Column name " + column_identifier_name.column_name + " is ambiguous.");
+          result_column_id = column_id;
+          continue;
+        }
+      } else {
+        // Check whether `column_identifier_name` is the generated name of a column, e.g. `a+b` without ALIAS
+        if (column_expression->to_string(left_child()->output_column_names()) == column_identifier_name.column_name) {
+          Assert(!result_column_id, "Column name " + column_identifier_name.column_name + " is ambiguous.");
+          result_column_id = column_id;
+          continue;
+        }
       }
     }
   }
