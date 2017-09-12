@@ -18,6 +18,7 @@
 #include "optimizer/abstract_syntax_tree/show_tables_node.hpp"
 #include "optimizer/abstract_syntax_tree/sort_node.hpp"
 #include "optimizer/abstract_syntax_tree/stored_table_node.hpp"
+#include "optimizer/abstract_syntax_tree/update_node.hpp"
 #include "optimizer/expression.hpp"
 #include "sql/sql_expression_translator.hpp"
 #include "storage/storage_manager.hpp"
@@ -112,10 +113,12 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::translate_statement(const h
       return _translate_insert((const hsql::InsertStatement&)statement);
     case hsql::kStmtDelete:
       return _translate_delete((const hsql::DeleteStatement&)statement);
+    case hsql::kStmtUpdate:
+      return _translate_update((const hsql::UpdateStatement&)statement);
     case hsql::kStmtShow:
       return _translate_show((const hsql::ShowStatement&)statement);
     default:
-      Fail("Only SELECT statements are supported as of now.");
+      Fail("SQL statement type not supported");
       return {};
   }
 }
@@ -194,6 +197,41 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_delete(const hsq
   delete_node->set_left_child(current_result_node);
 
   return delete_node;
+}
+
+std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_update(const hsql::UpdateStatement& update) {
+  std::shared_ptr<AbstractASTNode> current_values_node = _translate_table_ref(*update.table);
+  if (update.where) {
+    current_values_node = _translate_where(*update.where, current_values_node);
+  } else if (std::dynamic_pointer_cast<StoredTableNode>(current_values_node)) {
+    // The update operator wants ReferenceColumns on its left side
+    // TODO(anyone): fix this
+    throw std::runtime_error("Unconditional updates are currently not supported");
+  }
+
+  std::vector<std::shared_ptr<Expression>> update_expressions;
+
+  for (ColumnID::base_type column_idx = 0u; column_idx < current_values_node->output_col_count(); column_idx++) {
+    bool column_gets_updated = false;
+
+    for (auto& sql_expr : *update.updates) {
+      if (current_values_node->output_column_names()[column_idx] == sql_expr->column) {
+        column_gets_updated = true;
+
+        auto expr = SQLExpressionTranslator::translate_expression(*sql_expr->value, current_values_node);
+        expr->set_alias(sql_expr->column);
+        update_expressions.push_back(expr);
+
+        break;
+      }
+    }
+    if (!column_gets_updated) update_expressions.emplace_back(Expression::create_column(ColumnID{column_idx}));
+  }
+
+  std::shared_ptr<AbstractASTNode> update_node = std::make_shared<UpdateNode>((update.table)->name, update_expressions);
+  update_node->set_left_child(current_values_node);
+
+  return update_node;
 }
 
 std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_select(const hsql::SelectStatement& select) {
