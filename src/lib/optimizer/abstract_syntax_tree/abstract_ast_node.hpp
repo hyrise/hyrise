@@ -92,12 +92,12 @@ class AbstractASTNode : public std::enable_shared_from_this<AbstractASTNode> {
    * discussion
    * on this.
    *
-   * AbstractASTNode::find_column_id_by_column_identifier_name() looks for the @param column_identifier_name in the
+   * AbstractASTNode::find_column_id_by_named_column_reference() looks for the @param named_column_reference in the
    * columns that this node outputs. If it can find it, the corresponding ColumnID will be returned, otherwise nullopt
    * is returned.
    *
-   * AbstractASTNode::get_column_id_by_column_identifier_name() is more strict and will fail if the
-   * @param column_identifier_name cannot be found.
+   * AbstractASTNode::get_column_id_by_named_column_reference() is more strict and will fail if the
+   * @param named_column_reference cannot be found.
    *
    * NOTE: As long as - TODO(anybody) - Subquery ALIASES are not supported only the StoredTableNode has to concern
    * itself with the ColumnIdentifierName::table_name, all other nodes are fine searching for
@@ -109,9 +109,9 @@ class AbstractASTNode : public std::enable_shared_from_this<AbstractASTNode> {
    *
    * NOTE: These functions will possibly result in a full recursive traversal of the ancestors of this node.
    */
-  ColumnID get_column_id_by_column_identifier_name(const NamedColumnReference &column_identifier_name) const;
-  virtual optional<ColumnID> find_column_id_by_column_identifier_name(
-      const NamedColumnReference &column_identifier_name) const;
+  ColumnID get_column_id_by_named_column_reference(const NamedColumnReference &named_column_reference) const;
+  virtual optional<ColumnID> find_column_id_by_named_column_reference(
+      const NamedColumnReference &named_column_reference) const;
   // @}
 
   /**

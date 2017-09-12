@@ -54,6 +54,16 @@ class Console {
   void setLogfile(const std::string &logfile);
 
   /*
+   * Load command history from history file.
+   */
+  void loadHistory(const std::string &historyFile);
+
+  /*
+   * Write command history to history file.
+   */
+  void writeHistory(const std::string &historyFile);
+
+  /*
    * Prints to the log_file (and the console).
    *
    * @param output        The text that should be printed.
