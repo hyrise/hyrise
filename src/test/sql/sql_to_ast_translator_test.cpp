@@ -386,4 +386,23 @@ TEST_F(SQLToASTTranslatorTest, InsertValuesIncompleteColumns) {
   EXPECT_TRUE(expressions[1]->is_null_literal());
 }
 
+TEST_F(SQLToASTTranslatorTest, InsertSubquery) {
+  const auto query = "INSERT INTO table_a SELECT a, b FROM table_b;";
+  auto result_node = compile_query(query);
+
+  EXPECT_EQ(result_node->type(), ASTNodeType::Insert);
+  auto insert_node = std::dynamic_pointer_cast<InsertNode>(result_node);
+  EXPECT_EQ(insert_node->table_name(), "table_a");
+  EXPECT_EQ(insert_node->left_child()->type(), ASTNodeType::Projection);
+
+  auto projection = std::dynamic_pointer_cast<ProjectionNode>(insert_node->left_child());
+  EXPECT_NE(projection, nullptr);
+
+  auto expressions = projection->column_expressions();
+  EXPECT_EQ(expressions[0]->type(), ExpressionType::Column);
+  EXPECT_EQ(expressions[0]->column_id(), ColumnID{0});
+  EXPECT_EQ(expressions[1]->type(), ExpressionType::Column);
+  EXPECT_EQ(expressions[1]->column_id(), ColumnID{1});
+}
+
 }  // namespace opossum
