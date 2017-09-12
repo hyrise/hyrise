@@ -65,8 +65,8 @@ std::shared_ptr<Expression> SQLExpressionTranslator::translate_expression(
       break;
     case hsql::kExprLiteralInt: {
       AllTypeVariant value;
-      if((int32_t)expr.ival == expr.ival) {
-        value = (int32_t)expr.ival;
+      if (static_cast<int32_t>(expr.ival) == expr.ival) {
+        value = static_cast<int32_t>(expr.ival);
       } else {
         value = expr.ival;
       }
