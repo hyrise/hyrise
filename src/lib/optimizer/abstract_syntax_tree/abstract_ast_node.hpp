@@ -13,7 +13,19 @@ struct ColumnID;
 class Expression;
 class TableStatistics;
 
-enum class ASTNodeType { Aggregate, Join, Limit, Predicate, Projection, ShowColumns, ShowTables, Sort, StoredTable };
+enum class ASTNodeType {
+  Aggregate,
+  Delete,
+  Insert,
+  Join,
+  Limit,
+  Predicate,
+  Projection,
+  ShowColumns,
+  ShowTables,
+  Sort,
+  StoredTable
+};
 
 struct NamedColumnReference {
   std::string column_name;

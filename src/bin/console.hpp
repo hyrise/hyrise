@@ -105,6 +105,7 @@ class Console {
   static int generate_tpcc(const std::string &args);
   static int load_table(const std::string &args);
   static int exec_script(const std::string &args);
+  static int print_table(const std::string &args);
 
   // GNU readline interface to our commands
   static char **command_completion(const char *text, int start, int end);

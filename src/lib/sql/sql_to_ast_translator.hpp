@@ -93,6 +93,10 @@ class SQLToASTTranslator final : public boost::noncopyable {
   std::shared_ptr<AbstractASTNode> _translate_limit(const hsql::LimitDescription& limit,
                                                     const std::shared_ptr<AbstractASTNode>& input_node);
 
+  std::shared_ptr<AbstractASTNode> _translate_insert(const hsql::InsertStatement& insert);
+
+  std::shared_ptr<AbstractASTNode> _translate_delete(const hsql::DeleteStatement& del);
+
   /**
    * Helper function to avoid code duplication for WHERE and HAVING
    */

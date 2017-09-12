@@ -37,7 +37,6 @@ void ProjectionNode::_on_child_changed() {
   /**
    * Populates `_output_column_names` and `_output_column_id_to_input_column_id`.
    */
-  DebugAssert(left_child(), "ProjectionNode needs a child.");
 
   _output_column_names.clear();
   _output_column_id_to_input_column_id.clear();
@@ -53,6 +52,8 @@ void ProjectionNode::_on_child_changed() {
     }
 
     if (expression->type() == ExpressionType::Column) {
+      DebugAssert(left_child(), "ProjectionNode needs a child.");
+
       _output_column_id_to_input_column_id.emplace_back(expression->column_id());
 
       if (!expression->alias()) {

@@ -38,14 +38,19 @@ std::shared_ptr<const Table> Projection::on_execute() {
       name = *column_expression->alias();
     } else if (column_expression->type() == ExpressionType::Column) {
       name = input_table_left()->column_name(column_expression->column_id());
-    } else if (column_expression->is_arithmetic_operator()) {
+    } else if (column_expression->is_arithmetic_operator() || column_expression->type() == ExpressionType::Literal) {
       name = column_expression->to_string();
     } else {
       Fail("Expression type is not supported.");
     }
 
-    const auto type = get_type_of_expression(column_expression, input_table_left());
-    output->add_column_definition(name, type);
+    if (column_expression->is_null_literal()) {
+      // in case of a NULL literal, simply add a nullable int column
+      output->add_column_definition(name, "int", true);
+    } else {
+      const auto type = get_type_of_expression(column_expression, input_table_left());
+      output->add_column_definition(name, type);
+    }
   }
 
   for (ChunkID chunk_id{0}; chunk_id < input_table_left()->chunk_count(); ++chunk_id) {
@@ -86,6 +91,12 @@ const std::string Projection::get_type_of_expression(const std::shared_ptr<Expre
   // This is currently not supported by `evaluate_expression()` because it is only templated once.
   Assert(type_left == type_right, "Projection currently only supports expressions with same type on both sides.");
   return type_left;
+}
+
+// returns the singleton dummy table used for literal projections
+std::shared_ptr<Table> Projection::dummy_table() {
+  static auto shared_dummy = std::make_shared<DummyTable>();
+  return shared_dummy;
 }
 
 }  // namespace opossum

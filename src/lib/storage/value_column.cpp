@@ -16,7 +16,7 @@ namespace opossum {
 
 template <typename T>
 ValueColumn<T>::ValueColumn(bool nullable) {
-  if (nullable) _null_values = tbb::concurrent_vector<bool>();
+  if (nullable) _null_values = pmr_concurrent_vector<bool>();
 }
 
 template <typename T>

@@ -108,6 +108,9 @@ class Expression : public std::enable_shared_from_this<Expression> {
 
   // Returns true if the expression requires two children.
   bool is_binary_operator() const;
+
+  // Returns true if the expression is a NULL literal.
+  bool is_null_literal() const;
   // @}
 
   // @{

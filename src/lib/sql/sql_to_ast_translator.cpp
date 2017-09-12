@@ -8,6 +8,8 @@
 
 #include "optimizer/abstract_syntax_tree/abstract_ast_node.hpp"
 #include "optimizer/abstract_syntax_tree/aggregate_node.hpp"
+#include "optimizer/abstract_syntax_tree/delete_node.hpp"
+#include "optimizer/abstract_syntax_tree/insert_node.hpp"
 #include "optimizer/abstract_syntax_tree/join_node.hpp"
 #include "optimizer/abstract_syntax_tree/limit_node.hpp"
 #include "optimizer/abstract_syntax_tree/predicate_node.hpp"
@@ -19,9 +21,11 @@
 #include "optimizer/expression.hpp"
 #include "sql/sql_expression_translator.hpp"
 #include "storage/storage_manager.hpp"
+#include "storage/table.hpp"
 
 #include "all_type_variant.hpp"
 #include "constant_mappings.hpp"
+#include "resolve_column_type.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 
@@ -104,12 +108,92 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::translate_statement(const h
   switch (statement.type()) {
     case hsql::kStmtSelect:
       return _translate_select((const hsql::SelectStatement&)statement);
+    case hsql::kStmtInsert:
+      return _translate_insert((const hsql::InsertStatement&)statement);
+    case hsql::kStmtDelete:
+      return _translate_delete((const hsql::DeleteStatement&)statement);
     case hsql::kStmtShow:
       return _translate_show((const hsql::ShowStatement&)statement);
     default:
       Fail("Only SELECT statements are supported as of now.");
       return {};
   }
+}
+
+std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_insert(const hsql::InsertStatement& insert) {
+  const std::string table_name{insert.tableName};
+  auto target_table = StorageManager::get().get_table(table_name);
+
+  Assert(target_table != nullptr, "Insert: Invalid table name");
+
+  std::shared_ptr<AbstractASTNode> current_result_node;
+
+  // Check for SELECT ... INTO .. query
+  if (insert.type == hsql::kInsertSelect) {
+    DebugAssert(insert.select != nullptr, "Insert: no select statement given");
+    current_result_node = _translate_select(*insert.select);
+  }
+
+  if (!insert.columns) {
+    // No column order given. Assuming all columns in regular order.
+    // For SELECT ... INTO we are basically done because can use the above node as input.
+
+    if (insert.type == hsql::kInsertValues) {
+      DebugAssert(insert.values != nullptr, "Insert: no values given");
+
+      // In the case of INSERT ... VALUES (...), simply create a
+      current_result_node = _translate_projection(*insert.values, nullptr);
+    }
+
+    Assert(current_result_node->output_col_count() == target_table->col_count(), "Insert: column mismatch");
+  } else {
+    // Certain columns have been specified. In this case we create a new expression list
+    // for the Projection, so that it contains as many columns as the target table.
+
+    // pre-fill new projection list with NULLs
+    std::vector<std::shared_ptr<Expression>> projections(target_table->col_count(),
+                                                         Expression::create_literal(NULL_VALUE));
+
+    ColumnID insert_column_index{0};
+    for (const auto& column_name : *insert.columns) {
+      // retrieve correct ColumnID from the target table
+      auto column_id = target_table->column_id_by_name(column_name);
+
+      if (insert.type == hsql::kInsertValues) {
+        // when inserting values, simply translate the literal expression
+        projections[column_id] =
+            SQLExpressionTranslator::translate_expression(*(*insert.values)[insert_column_index], nullptr);
+      } else {
+        // when projecting from another table, create a column reference expression
+        projections[column_id] = Expression::create_column(insert_column_index);
+      }
+
+      ++insert_column_index;
+    }
+
+    // create projection and add to the node chain
+    auto projection_node = std::make_shared<ProjectionNode>(projections);
+    projection_node->set_left_child(current_result_node);
+
+    current_result_node = projection_node;
+  }
+
+  auto insert_node = std::make_shared<InsertNode>(table_name);
+  insert_node->set_left_child(current_result_node);
+
+  return insert_node;
+}
+
+std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_delete(const hsql::DeleteStatement& del) {
+  std::shared_ptr<AbstractASTNode> current_result_node = std::make_shared<StoredTableNode>(del.tableName);
+  if (del.expr) {
+    current_result_node = _translate_where(*del.expr, current_result_node);
+  }
+
+  auto delete_node = std::make_shared<DeleteNode>(del.tableName);
+  delete_node->set_left_child(current_result_node);
+
+  return delete_node;
 }
 
 std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_select(const hsql::SelectStatement& select) {
@@ -281,6 +365,8 @@ AllParameterVariant SQLToASTTranslator::translate_hsql_operand(
       return AllTypeVariant(expr.fval);
     case hsql::kExprLiteralString:
       return AllTypeVariant(expr.name);
+    case hsql::kExprLiteralNull:
+      return NULL_VALUE;
     case hsql::kExprParameter:
       return ValuePlaceholder(expr.ival);
     case hsql::kExprColumnRef:
@@ -415,7 +501,7 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_projection(
     const auto expr = SQLExpressionTranslator::translate_expression(*hsql_expr, input_node);
 
     DebugAssert(expr->type() == ExpressionType::Star || expr->type() == ExpressionType::Column ||
-                    expr->is_arithmetic_operator(),
+                    expr->is_arithmetic_operator() || expr->type() == ExpressionType::Literal,
                 "Only column references, star-selects, and arithmetic expressions supported for now.");
 
     if (expr->type() == ExpressionType::Star) {
