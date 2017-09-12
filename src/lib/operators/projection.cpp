@@ -93,6 +93,7 @@ const std::string Projection::get_type_of_expression(const std::shared_ptr<Expre
   return type_left;
 }
 
+// returns the singleton dummy table used for literal projections
 std::shared_ptr<Table> Projection::dummy_table() {
   static auto shared_dummy = std::make_shared<DummyTable>();
   return shared_dummy;
