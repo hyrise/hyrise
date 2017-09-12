@@ -256,15 +256,34 @@ const SQLTestParam test_queries[] = {
     // INSERT
     {"INSERT INTO int_int_for_insert_1 VALUES (1, 3); SELECT * FROM int_int_for_insert_1;",
      "src/test/tables/int_int3_limit_2.tbl"},
+    {"INSERT INTO int_int_for_insert_1 (a, b) VALUES (1, 3); SELECT * FROM int_int_for_insert_1;",
+     "src/test/tables/int_int3_limit_2.tbl"},
+    {"INSERT INTO int_int_for_insert_1 (b, a) VALUES (3, 1); SELECT * FROM int_int_for_insert_1;",
+     "src/test/tables/int_int3_limit_2.tbl"},
 
     {R"(INSERT INTO int_int_for_insert_1 VALUES (1, 3);
-        INSERT INTO int_int_for_insert_1 VALUES (13, 2);
-        INSERT INTO int_int_for_insert_1 VALUES (6, 9);
-        SELECT * FROM int_int_for_insert_1;)",
+     INSERT INTO int_int_for_insert_1 VALUES (13, 2);
+     INSERT INTO int_int_for_insert_1 VALUES (6, 9);
+     SELECT * FROM int_int_for_insert_1;)",
      "src/test/tables/int_int3_limit_4.tbl"},
 
-     {"INSERT INTO int_int_for_insert_1 (b, a) VALUES (3, 1); SELECT * FROM int_int_for_insert_1;",
+    // INSERT ... INTO ... (with literal projection)
+    {R"(INSERT INTO int_int_for_insert_1 SELECT 1, 3 FROM int_int_for_insert_1; 
+        SELECT * FROM int_int_for_insert_1;)",
      "src/test/tables/int_int3_limit_2.tbl"},
+    {R"(INSERT INTO int_int_for_insert_1 (a, b) SELECT 1, 3 FROM int_int_for_insert_1; 
+        SELECT * FROM int_int_for_insert_1;)",
+     "src/test/tables/int_int3_limit_2.tbl"},
+    {R"(INSERT INTO int_int_for_insert_1 (b, a) SELECT 3, 1 FROM int_int_for_insert_1; 
+        SELECT * FROM int_int_for_insert_1;)",
+     "src/test/tables/int_int3_limit_2.tbl"},
+
+    // INSERT ... INTO ... (with regular queries)
+    {R"(INSERT INTO int_int_for_insert_1 SELECT * FROM int_int3 WHERE a = 1 AND b = 3;
+        INSERT INTO int_int_for_insert_1 SELECT * FROM int_int3 WHERE a = 13;
+        INSERT INTO int_int_for_insert_1 (a, b) SELECT a, b FROM int_int3 WHERE a = 6;
+        SELECT * FROM int_int_for_insert_1;)",
+     "src/test/tables/int_int3_limit_4.tbl"},
 
     {R"(SELECT customer.c_custkey, customer.c_name, COUNT(orders.o_orderkey)
         FROM customer JOIN orders ON c_custkey = o_custkey
