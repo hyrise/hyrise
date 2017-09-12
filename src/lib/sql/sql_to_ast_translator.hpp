@@ -97,6 +97,8 @@ class SQLToASTTranslator final : public boost::noncopyable {
 
   std::shared_ptr<AbstractASTNode> _translate_delete(const hsql::DeleteStatement& del);
 
+  std::shared_ptr<AbstractASTNode> _translate_update(const hsql::UpdateStatement& update);
+
   /**
    * Helper function to avoid code duplication for WHERE and HAVING
    */
