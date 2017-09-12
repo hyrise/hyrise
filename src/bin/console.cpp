@@ -244,13 +244,15 @@ void Console::setLogfile(const std::string& logfile) {
 }
 
 void Console::loadHistory(const std::string& historyFile) {
-  int ret = read_history(historyFile.c_str());
-  out(std::to_string(ret));
+  if (read_history(historyFile.c_str()) != 0) {
+    out("Error reading history file: " + historyFile + "\n");
+  }
 }
 
 void Console::writeHistory(const std::string& historyFile) {
-  int ret = write_history(historyFile.c_str());
-  out(std::to_string(ret));
+  if (write_history(historyFile.c_str()) != 0) {
+    out("Error writing history file: " + historyFile + "\n");
+  }
 }
 
 void Console::out(const std::string& output, bool console_print) {
@@ -482,6 +484,9 @@ int main(int argc, char** argv) {
   console.setPrompt("> ");
   console.setLogfile("console.log");
 
+  // Load command history
+  console.loadHistory("console.history");
+
   // Timestamp dump only to logfile
   console.out("--- Session start --- " + current_timestamp() + "\n", false);
 
@@ -494,9 +499,6 @@ int main(int argc, char** argv) {
     console.out("  ./opossumConsole [SCRIPTFILE] - Start the interactive SQL interface.\n");
     console.out("                                  Execute script if specified by SCRIPTFILE.\n");
   }
-
-  // Load command history
-  console.loadHistory("console.history");
 
   // Execute .sql script if specified
   if (argc == 2) {
@@ -530,12 +532,11 @@ int main(int argc, char** argv) {
     }
   }
 
-  // Save command history to file
-  console.writeHistory("console.history");
-
   console.out("Bye.\n");
 
   // Timestamp dump only to logfile
   console.out("--- Session end --- " + current_timestamp() + "\n", false);
 
+  // Save command history to file
+  console.writeHistory("console.history");
 }
