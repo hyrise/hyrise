@@ -162,9 +162,7 @@ bool Expression::is_binary_operator() const {
   }
 }
 
-bool Expression::is_null_literal() const {
-  return _type == ExpressionType::Literal && _value && is_null(*_value);
-}
+bool Expression::is_null_literal() const { return _type == ExpressionType::Literal && _value && is_null(*_value); }
 
 bool Expression::is_operand() const { return _type == ExpressionType::Literal || _type == ExpressionType::Column; }
 
@@ -229,7 +227,7 @@ std::string Expression::to_string(const std::shared_ptr<AbstractASTNode> &input_
   std::string column_name;
   switch (_type) {
     case ExpressionType::Literal:
-      if (is_null(value())) {
+      if (is_null_literal()) {
         return std::string("NULL");
       }
       return type_cast<std::string>(value());

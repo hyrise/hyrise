@@ -52,7 +52,6 @@ class SQLToResultTest : public BaseTest, public ::testing::WithParamInterface<SQ
                                     load_table("src/test/tables/aggregateoperator/groupby_int_2gb_2agg/input2.tbl", 2));
 
     StorageManager::get().add_table("int_for_delete_1", load_table("src/test/tables/int.tbl", 3));
-    StorageManager::get().add_table("int_for_delete_2", load_table("src/test/tables/int.tbl", 3));
 
     StorageManager::get().add_table("int_int_for_insert_1", load_table("src/test/tables/int_int3_limit_1.tbl", 2));
     StorageManager::get().add_table("int_int_for_insert_2", load_table("src/test/tables/int_int3_limit_1.tbl", 2));
@@ -106,7 +105,6 @@ TEST_P(SQLToResultTest, SQLQueryTest) {
       task->get_operator()->set_transaction_context(tx_context);
     }
 
-    // result_operator->set_transaction_context(tx_context);
     CurrentScheduler::schedule_and_wait_for_tasks(tasks);
     result_operator = tasks.back()->get_operator();
   }
