@@ -38,8 +38,8 @@ std::shared_ptr<AbstractOperator> Aggregate::recreate(const std::vector<AllParam
   return std::make_shared<Aggregate>(_input_left->recreate(args), _aggregates, _groupby_column_ids);
 }
 
-std::shared_ptr<const Table> Aggregate::on_execute() {
-  auto input_table = input_table_left();
+std::shared_ptr<const Table> Aggregate::_on_execute() {
+  auto input_table = _input_table_left();
 
   // check for invalid aggregates
   for (auto &aggregate : _aggregates) {
@@ -203,7 +203,7 @@ std::shared_ptr<const Table> Aggregate::on_execute() {
   */
   ColumnID column_index{0};
   for (const auto &aggregate : _aggregates) {
-    auto &type_string = input_table_left()->column_type(aggregate.column_id);
+    auto &type_string = _input_table_left()->column_type(aggregate.column_id);
 
     call_functor_by_column_type<AggregateWriter>(type_string, *this, column_index, aggregate.function);
 
@@ -225,7 +225,7 @@ void Aggregate::write_aggregate_output(ColumnID column_index) {
 
   if (aggregate_type_name.empty()) {
     // if not specified, it's the input column's type
-    aggregate_type_name = input_table_left()->column_type(aggregate.column_id);
+    aggregate_type_name = _input_table_left()->column_type(aggregate.column_id);
   }
 
   // use the alias or generate the name, e.g. MAX(column_a)
@@ -233,7 +233,7 @@ void Aggregate::write_aggregate_output(ColumnID column_index) {
   if (aggregate.alias) {
     output_column_name = *aggregate.alias;
   } else {
-    const auto &column_name = input_table_left()->column_name(aggregate.column_id);
+    const auto &column_name = _input_table_left()->column_name(aggregate.column_id);
     output_column_name = aggregate_function_to_string.left.at(function) + "(" + column_name + ")";
   }
 

@@ -26,7 +26,7 @@ class TableWrapper : public AbstractReadOnlyOperator {
   }
 
  protected:
-  std::shared_ptr<const Table> on_execute() override;
+  std::shared_ptr<const Table> _on_execute() override;
 
   // Table to retrieve
   const std::shared_ptr<const Table> _table;

@@ -31,7 +31,7 @@ class JobTask : public AbstractTask {
   explicit JobTask(const std::function<void()> &fn) : _fn(fn) {}
 
  protected:
-  void on_execute() override;
+  void _on_execute() override;
 
  private:
   std::function<void()> _fn;

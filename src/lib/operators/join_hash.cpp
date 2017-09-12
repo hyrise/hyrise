@@ -28,7 +28,7 @@ uint8_t JoinHash::num_in_tables() const { return 2; }
 
 uint8_t JoinHash::num_out_tables() const { return 1; }
 
-std::shared_ptr<const Table> JoinHash::on_execute() {
+std::shared_ptr<const Table> JoinHash::_on_execute() {
   std::shared_ptr<const AbstractOperator> build_operator;
   std::shared_ptr<const AbstractOperator> probe_operator;
   bool inputs_swapped;
@@ -65,7 +65,7 @@ std::shared_ptr<const Table> JoinHash::on_execute() {
   _impl = make_unique_by_column_types<AbstractReadOnlyOperatorImpl, JoinHashImpl>(
       build_input->column_type(build_column_id), probe_input->column_type(probe_column_id), build_operator,
       probe_operator, _mode, adjusted_column_ids, _scan_type, inputs_swapped);
-  return _impl->on_execute();
+  return _impl->_on_execute();
 }
 
 // currently using 32bit Murmur
@@ -524,7 +524,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
     }
   }
 
-  std::shared_ptr<const Table> on_execute() override {
+  std::shared_ptr<const Table> _on_execute() override {
     /*
     Preparing output table by adding columns from left table.
     */

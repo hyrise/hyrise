@@ -87,7 +87,7 @@ class Aggregate : public AbstractReadOnlyOperator {
   void write_aggregate_output(ColumnID column_index);
 
  protected:
-  std::shared_ptr<const Table> on_execute() override;
+  std::shared_ptr<const Table> _on_execute() override;
 
   /*
   The following template functions write the aggregated values for the different aggregate functions.
