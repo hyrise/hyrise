@@ -32,20 +32,20 @@ void Print::print(std::shared_ptr<const Table> table, uint32_t flags, std::ostre
   Print(table_wrapper, out, flags).execute();
 }
 
-std::shared_ptr<const Table> Print::on_execute() {
-  auto widths = column_string_widths(8, 20, input_table_left());
+std::shared_ptr<const Table> Print::_on_execute() {
+  auto widths = column_string_widths(8, 20, _input_table_left());
 
   // print column headers
   _out << "=== Columns" << std::endl;
-  for (ColumnID col{0}; col < input_table_left()->col_count(); ++col) {
-    _out << "|" << std::setw(widths[col]) << input_table_left()->column_name(col) << std::setw(0);
+  for (ColumnID col{0}; col < _input_table_left()->col_count(); ++col) {
+    _out << "|" << std::setw(widths[col]) << _input_table_left()->column_name(col) << std::setw(0);
   }
   if (_flags & PrintMvcc) {
     _out << "||        MVCC        ";
   }
   _out << "|" << std::endl;
-  for (ColumnID col{0}; col < input_table_left()->col_count(); ++col) {
-    _out << "|" << std::setw(widths[col]) << input_table_left()->column_type(col) << std::setw(0);
+  for (ColumnID col{0}; col < _input_table_left()->col_count(); ++col) {
+    _out << "|" << std::setw(widths[col]) << _input_table_left()->column_type(col) << std::setw(0);
   }
   if (_flags & PrintMvcc) {
     _out << "||_BEGIN|_END  |_TID  ";
@@ -53,8 +53,8 @@ std::shared_ptr<const Table> Print::on_execute() {
   _out << "|" << std::endl;
 
   // print each chunk
-  for (ChunkID chunk_id{0}; chunk_id < input_table_left()->chunk_count(); ++chunk_id) {
-    auto& chunk = input_table_left()->get_chunk(chunk_id);
+  for (ChunkID chunk_id{0}; chunk_id < _input_table_left()->chunk_count(); ++chunk_id) {
+    auto& chunk = _input_table_left()->get_chunk(chunk_id);
     if (chunk.size() == 0 && (_flags & PrintIgnoreEmptyChunks)) {
       continue;
     }
@@ -95,7 +95,7 @@ std::shared_ptr<const Table> Print::on_execute() {
     }
   }
 
-  return input_table_left();
+  return _input_table_left();
 }
 
 // In order to print the table as an actual table, with columns being aligned, we need to calculate the
@@ -109,8 +109,8 @@ std::vector<uint16_t> Print::column_string_widths(uint16_t min, uint16_t max, st
   }
 
   // go over all rows and find the maximum length of the printed representation of a value, up to max
-  for (ChunkID chunk_id{0}; chunk_id < input_table_left()->chunk_count(); ++chunk_id) {
-    auto& chunk = input_table_left()->get_chunk(chunk_id);
+  for (ChunkID chunk_id{0}; chunk_id < _input_table_left()->chunk_count(); ++chunk_id) {
+    auto& chunk = _input_table_left()->get_chunk(chunk_id);
 
     for (ColumnID col{0}; col < chunk.col_count(); ++col) {
       for (size_t row = 0; row < chunk.size(); ++row) {

@@ -23,7 +23,7 @@ uint8_t ImportCsv::num_in_tables() const { return 0; }
 
 uint8_t ImportCsv::num_out_tables() const { return 1; }
 
-std::shared_ptr<const Table> ImportCsv::on_execute() {
+std::shared_ptr<const Table> ImportCsv::_on_execute() {
   if (_tablename && StorageManager::get().has_table(*_tablename)) {
     return StorageManager::get().get_table(*_tablename);
   }

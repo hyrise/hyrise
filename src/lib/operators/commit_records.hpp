@@ -33,6 +33,6 @@ class CommitRecords : public AbstractReadWriteOperator {
   /**
    * Calls commit_records on all read-write operators. Needs to have prepare_commit called first.
    */
-  std::shared_ptr<const Table> on_execute(std::shared_ptr<TransactionContext> context) override;
+  std::shared_ptr<const Table> _on_execute(std::shared_ptr<TransactionContext> context) override;
 };
 }  // namespace opossum

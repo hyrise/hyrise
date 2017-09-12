@@ -36,13 +36,13 @@ class TableScan : public AbstractReadOnlyOperator {
   std::shared_ptr<AbstractOperator> recreate(const std::vector<AllParameterVariant>& args) const override;
 
  protected:
-  std::shared_ptr<const Table> on_execute() override;
+  std::shared_ptr<const Table> _on_execute() override;
 
   void _init_scan();
   void _init_output_table();
 
   // TODO(anyone): This is only a very temporary solution! Whoever reads this first must replace it.
-  std::shared_ptr<const Table> _on_execute_between();
+  std::shared_ptr<const Table> __on_execute_between();
 
  private:
   const ColumnID _left_column_id;

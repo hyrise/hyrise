@@ -204,7 +204,7 @@ class Projection : public AbstractReadOnlyOperator {
     return get_base_operator_function<T>(type);
   }
 
-  std::shared_ptr<const Table> on_execute() override;
+  std::shared_ptr<const Table> _on_execute() override;
 };
 
 /**
