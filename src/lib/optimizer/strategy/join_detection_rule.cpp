@@ -25,20 +25,24 @@ const std::shared_ptr<AbstractASTNode> JoinConditionDetectionRule::apply_to(
       return node;
     }
 
-    auto join_condition = _find_predicate_for_cross_join(node);
+    auto predicate_node = _find_predicate_for_cross_join(node);
 
-    if (join_condition) {
-      // TODO(Sven): implement
-      std::pair<std::string, std::string> column_names(join_condition->left_child()->name(),
-                                                       join_condition->right_child()->name());
-      auto scan_type = ScanType::OpEquals;
+    if (predicate_node) {
+      std::pair<ColumnID, ColumnID> column_ids(predicate_node->column_id(), boost::get<ColumnID>(predicate_node->value()));
+
+      auto scan_type = predicate_node->scan_type();
       auto join_mode = JoinMode::Inner;
 
-      join_node->set_join_column_names(column_names);
-      join_node->set_join_mode(join_mode);
-      join_node->set_scan_type(scan_type);
+      const auto new_join_node = std::make_shared<JoinNode>(join_mode, column_ids, scan_type);
+      // TODO(Sven): what if parent is JoinNode with right child
 
-      return join_node;
+      new_join_node->set_left_child(join_node->left_child());
+      new_join_node->set_right_child(join_node->right_child());
+
+      if (join_node->parent()) {
+        join_node->parent()->set_left_child(new_join_node);
+      }
+      return new_join_node;
     }
   }
 
@@ -56,89 +60,45 @@ const std::shared_ptr<AbstractASTNode> JoinConditionDetectionRule::apply_to(
   return node;
 }
 
-const std::shared_ptr<ExpressionNode> JoinConditionDetectionRule::_find_predicate_for_cross_join(
+const std::shared_ptr<PredicateNode> JoinConditionDetectionRule::_find_predicate_for_cross_join(
     const std::shared_ptr<AbstractASTNode> &cross_join) {
   // TODO(mp): Assume for now that we only have products of two tables. Subselect might need special handling
   DebugAssert(cross_join->left_child() && cross_join->right_child(), "Cross Join must have two children");
-  DebugAssert(cross_join->left_child()->type() == ASTNodeType::StoredTable,
-              "For now children of Cross Join must be StoredTables, left_child is not.");
-  DebugAssert(cross_join->right_child()->type() == ASTNodeType::StoredTable,
-              "For now children of Cross Join must be StoredTables, right_child is not.");
 
-  // TODO(Sven): Fix with ColumnIDs
-  auto left_table = std::dynamic_pointer_cast<StoredTableNode>(cross_join->left_child());
-  auto right_table = std::dynamic_pointer_cast<StoredTableNode>(cross_join->right_child());
+  // TODO(Sven): Fix with ColumnIDs, need to traverse recursively to find table names
+  const auto left_input = cross_join->left_child();
+  const auto right_input = cross_join->right_child();
 
+  // Go up in AST to find corresponding PredicateNode
   auto temp_node = cross_join;
-
   while (temp_node->parent() != nullptr) {
     temp_node = temp_node->parent();
 
     if (temp_node->type() == ASTNodeType::Predicate) {
-      auto predicate = std::dynamic_pointer_cast<PredicateNode>(temp_node);
-      auto expression = predicate->predicate();
+      const auto predicate_node = std::dynamic_pointer_cast<PredicateNode>(temp_node);
 
-      auto join_condition = _find_join_condition(left_table, right_table, predicate, expression);
-      if (join_condition != nullptr) {
+      // TODO(Sven): check type of AllParameterVariant
+      const auto left_column_id = predicate_node->column_id();
+      const auto right_column_id = boost::get<ColumnID>(predicate_node->value());
+
+      const auto left_size = cross_join->left_child()->output_col_count();
+
+      if ((left_column_id < left_size && !(right_column_id < left_size)) || (!(left_column_id < left_size) && right_column_id < left_size)) {
+        std::cout << "found join conition" << std::endl;
+
         // remove predicate from AST
-        if (!predicate->predicate()) {
-          if (predicate->parent()) {
-            predicate->parent()->set_left_child(predicate->left_child());
-          } else {
-            predicate->left_child()->clear_parent();
-          }
+        if (predicate_node->parent()) {
+          predicate_node->parent()->set_left_child(predicate_node->left_child());
         } else {
-          // remove condition from predicate
+          predicate_node->left_child()->clear_parent();
         }
 
-        return join_condition;
+        return predicate_node;
       }
     }
   }
 
   return nullptr;
-}
-
-const std::shared_ptr<ExpressionNode> JoinConditionDetectionRule::_find_join_condition(
-    const std::shared_ptr<StoredTableNode> &left_table, const std::shared_ptr<StoredTableNode> &right_table,
-    const std::shared_ptr<PredicateNode> &predicate, const std::shared_ptr<ExpressionNode> &expression) {
-  if (expression->left_child() && expression->right_child()) {
-    if (expression->left_child()->type() == ExpressionType::ColumnIdentifier &&
-        expression->right_child()->type() == ExpressionType::ColumnIdentifier) {
-      auto &left_column_reference = expression->left_child();
-      auto &right_column_reference = expression->right_child();
-
-      if (_is_join_condition(left_table->table_name(), right_table->table_name(), left_column_reference->table_name(),
-                             right_column_reference->table_name())) {
-        // remove expression from expression tree
-        if (expression->parent()) {
-          expression->clear_parent();
-        } else {
-          predicate->set_predicate(nullptr);
-        }
-
-        return expression;
-      }
-    }
-
-    // Check children of expression for join condition
-    auto potential = _find_join_condition(left_table, right_table, predicate, expression->left_child());
-    if (potential) {
-      return potential;
-    }
-
-    return _find_join_condition(left_table, right_table, predicate, expression->right_child());
-  }
-
-  return nullptr;
-}
-
-bool JoinConditionDetectionRule::_is_join_condition(const std::string &expected_left_table_name,
-                                                    const std::string &expected_right_table_name,
-                                                    const std::string &actual_left_table_name,
-                                                    const std::string &actual_right_table_name) {
-  return (expected_left_table_name == actual_left_table_name && expected_right_table_name == actual_right_table_name) ||
-         (expected_right_table_name == actual_left_table_name && expected_left_table_name == actual_right_table_name);
 }
 
 }  // namespace opossum
