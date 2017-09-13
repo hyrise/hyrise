@@ -132,6 +132,8 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_insert(const hsq
   if (insert.type == hsql::kInsertSelect) {
     DebugAssert(insert.select != nullptr, "Insert: no select statement given");
     current_result_node = _translate_select(*insert.select);
+  } else {
+    current_result_node = std::make_shared<DummyTableNode>();
   }
 
   if (!insert.columns) {
@@ -142,7 +144,7 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_insert(const hsq
       DebugAssert(insert.values != nullptr, "Insert: no values given");
 
       // In the case of INSERT ... VALUES (...), simply create a
-      current_result_node = _translate_projection(*insert.values, nullptr);
+      current_result_node = _translate_projection(*insert.values, current_result_node);
     }
 
     Assert(current_result_node->output_col_count() == target_table->col_count(), "Insert: column mismatch");
