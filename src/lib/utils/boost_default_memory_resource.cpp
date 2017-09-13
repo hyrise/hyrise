@@ -2,6 +2,7 @@
 #include <boost/core/no_exceptions_support.hpp>
 
 #include <cstddef>
+#include <cstdlib>
 
 namespace boost {
 namespace container {
