@@ -213,21 +213,20 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_update(const hsq
   std::vector<std::shared_ptr<Expression>> update_expressions;
   update_expressions.reserve(current_values_node->output_col_count());
 
+  // pre-fill with regular column references
   for (ColumnID column_idx{0}; column_idx < current_values_node->output_col_count(); ++column_idx) {
-    bool column_gets_updated = false;
+    update_expressions.emplace_back(Expression::create_column(column_idx));
+  }
 
-    for (auto& sql_expr : *update.updates) {
-      if (current_values_node->output_column_names()[column_idx] == sql_expr->column) {
-        column_gets_updated = true;
+  // now update with new values
+  for (auto& sql_expr : *update.updates) {
+    const auto column_ref = NamedColumnReference{sql_expr->column, nullopt};
+    auto column_id = current_values_node->find_column_id_by_named_column_reference(column_ref);
+    Assert(column_id, "Update: Could not find column reference");
 
-        auto expr = SQLExpressionTranslator::translate_expression(*sql_expr->value, current_values_node);
-        expr->set_alias(sql_expr->column);
-        update_expressions.push_back(expr);
-
-        break;
-      }
-    }
-    if (!column_gets_updated) update_expressions.emplace_back(Expression::create_column(ColumnID{column_idx}));
+    auto expr = SQLExpressionTranslator::translate_expression(*sql_expr->value, current_values_node);
+    expr->set_alias(sql_expr->column);
+    update_expressions[*column_id] = expr;
   }
 
   std::shared_ptr<AbstractASTNode> update_node = std::make_shared<UpdateNode>((update.table)->name, update_expressions);
