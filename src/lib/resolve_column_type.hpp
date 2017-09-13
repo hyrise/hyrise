@@ -17,7 +17,7 @@ namespace hana = boost::hana;
  * Resolves a column type by passing a hana::type object on to a generic lambda
  * 
  * @param type is a string representation of any of the supported column types
- * @param func is generic lambda or similar
+ * @param func is a generic lambda or similar accepting a hana::type object
  *
  *
  * Example:
@@ -26,7 +26,7 @@ namespace hana = boost::hana;
  *   consume_column_v1();
  *
  *   template <typename T>
- *   consume_column_v2(hana::basic_type<T> type);
+ *   consume_column_v2(hana::basic_type<T> type);  // note: parameter type needs to be hana::basic_type not hana::type!
  *
  *   resolve_column_type(column_type, base_column, [&] (auto type) {
  *     using Type = typename decltype(type)::type;
@@ -50,7 +50,7 @@ void resolve_type(const std::string &type, const Functor &func) {
  * Resolves a column type by passing a hana::type object and the resolved column on to a generic lambda
  *
  * @param type is a string representation of any of the supported column types
- * @param func is generic lambda or similar accepting two parameters: a hana::type object and
+ * @param func is a generic lambda or similar accepting two parameters: a hana::type object and
  *   a reference to a specialized column (value, dictionary, reference)
  *
  *
