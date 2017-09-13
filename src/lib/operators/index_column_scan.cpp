@@ -25,10 +25,10 @@ uint8_t IndexColumnScan::num_in_tables() const { return 1; }
 
 uint8_t IndexColumnScan::num_out_tables() const { return 1; }
 
-std::shared_ptr<const Table> IndexColumnScan::on_execute() {
+std::shared_ptr<const Table> IndexColumnScan::_on_execute() {
   _impl = make_unique_by_column_type<AbstractReadOnlyOperatorImpl, IndexColumnScanImpl>(
-      input_table_left()->column_type(_column_id), _input_left, _column_id, _scan_type, _value, _value2);
-  return _impl->on_execute();
+      _input_table_left()->column_type(_column_id), _input_left, _column_id, _scan_type, _value, _value2);
+  return _impl->_on_execute();
 }
 
 // we need to use the impl pattern because the scan operator of the sort depends on the type of the column
@@ -65,7 +65,7 @@ class IndexColumnScan::IndexColumnScanImpl : public AbstractReadOnlyOperatorImpl
     std::shared_ptr<std::vector<ChunkOffset>> chunk_offsets_in;
   };
 
-  std::shared_ptr<const Table> on_execute() override {
+  std::shared_ptr<const Table> _on_execute() override {
     auto output = std::make_shared<Table>();
 
     auto in_table = _in_operator->get_output();

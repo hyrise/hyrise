@@ -38,6 +38,25 @@ class Projection : public AbstractReadOnlyOperator {
 
   std::shared_ptr<AbstractOperator> recreate(const std::vector<AllParameterVariant>& args) const override;
 
+  /**
+   * The dummy table is used for literal projections that have no input table.
+   * This was introduce to allow queries like INSERT INTO tbl VALUES (1, 2, 3);
+   * Because each INSERT uses a projection as input, the above case needs to project the three
+   * literals (1, 2, 3) without any specific input table. Therefore, this dummy table is used instead.
+   *
+   * The dummy table contains one (value) column with one row. This way, the above projection
+   * contains exactly one row with the given literals.
+   */
+  class DummyTable : public Table {
+   public:
+    DummyTable() : Table(0) {
+      add_column("dummy", "int");
+      append(std::vector<AllTypeVariant>{0});
+    }
+  };
+
+  static std::shared_ptr<Table> dummy_table();
+
  protected:
   ColumnExpressions _column_expressions;
 
@@ -52,8 +71,20 @@ class Projection : public AbstractReadOnlyOperator {
         return chunk.add_column(bypassed_column);
       }
 
-      auto values = evaluate_expression<T>(expression, input_table_left, chunk_id);
-      auto column = std::make_shared<ValueColumn<T>>(std::move(values));
+      std::shared_ptr<BaseColumn> column;
+
+      if (expression->is_null_literal()) {
+        // fill a nullable column with NULLs
+        auto row_count = input_table_left->get_chunk(chunk_id).size();
+        auto null_values = pmr_concurrent_vector<bool>(row_count, true);
+        auto values = pmr_concurrent_vector<T>(row_count);
+
+        column = std::make_shared<ValueColumn<T>>(std::move(values), std::move(null_values));
+      } else {
+        // fill a value column with the specified literal
+        auto values = evaluate_expression<T>(expression, input_table_left, chunk_id);
+        column = std::make_shared<ValueColumn<T>>(std::move(values));
+      }
 
       chunk.add_column(column);
     }
@@ -173,7 +204,7 @@ class Projection : public AbstractReadOnlyOperator {
     return get_base_operator_function<T>(type);
   }
 
-  std::shared_ptr<const Table> on_execute() override;
+  std::shared_ptr<const Table> _on_execute() override;
 };
 
 /**

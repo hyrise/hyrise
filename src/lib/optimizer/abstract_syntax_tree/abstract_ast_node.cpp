@@ -104,22 +104,22 @@ const std::vector<ColumnID> &AbstractASTNode::output_column_id_to_input_column_i
 
 size_t AbstractASTNode::output_col_count() const { return output_column_names().size(); }
 
-ColumnID AbstractASTNode::get_column_id_by_column_identifier_name(
-    const NamedColumnReference &column_identifier_name) const {
-  const auto column_id = find_column_id_by_column_identifier_name(column_identifier_name);
+ColumnID AbstractASTNode::get_column_id_by_named_column_reference(
+    const NamedColumnReference &named_column_reference) const {
+  const auto column_id = find_column_id_by_named_column_reference(named_column_reference);
   DebugAssert(column_id, std::string("NamedColumnReference ") + column_identifier_name.column_name +
                          " could not be resolved.");
   return *column_id;
 }
 
-optional<ColumnID> AbstractASTNode::find_column_id_by_column_identifier_name(
-    const NamedColumnReference &column_identifier_name) const {
+optional<ColumnID> AbstractASTNode::find_column_id_by_named_column_reference(
+    const NamedColumnReference &named_column_reference) const {
   /**
    * This function has to be overwritten if columns or their order are in any way redefined by this Node.
    * Examples include Projections, Aggregates, and Joins.
    */
   DebugAssert(_left_child, "Node has no left child and therefore must override this function.");
-  return _left_child->find_column_id_by_column_identifier_name(column_identifier_name);
+  return _left_child->find_column_id_by_named_column_reference(named_column_reference);
 }
 
 bool AbstractASTNode::knows_table(const std::string &table_name) const {

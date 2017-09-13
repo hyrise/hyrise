@@ -41,7 +41,7 @@ class ChunkCompressionTask : public AbstractTask {
                                 bool check_completion = true);
 
  protected:
-  void on_execute() override;
+  void _on_execute() override;
 
  private:
   /**

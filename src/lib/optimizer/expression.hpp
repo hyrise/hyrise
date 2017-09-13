@@ -69,7 +69,7 @@ class Expression : public std::enable_shared_from_this<Expression> {
                                                             const std::shared_ptr<Expression>& right,
                                                             const optional<std::string>& alias = nullopt);
 
-  static std::shared_ptr<Expression> create_select_star(const optional<std::string>& table_name);
+  static std::shared_ptr<Expression> create_select_star(const optional<std::string>& table_name = {});
   // @}
 
   // @{
@@ -108,6 +108,9 @@ class Expression : public std::enable_shared_from_this<Expression> {
 
   // Returns true if the expression requires two children.
   bool is_binary_operator() const;
+
+  // Returns true if the expression is a NULL literal.
+  bool is_null_literal() const;
   // @}
 
   // @{
@@ -128,6 +131,8 @@ class Expression : public std::enable_shared_from_this<Expression> {
   const optional<std::string>& alias() const;
 
   void set_expression_list(const std::vector<std::shared_ptr<Expression>>& expression_list);
+
+  void set_alias(const std::string& alias);
 
   // Expression as string, column names need to be resolved and therefore need a @param input_node
   std::string to_string(const std::vector<std::string> &input_column_names = {}) const;

@@ -26,7 +26,7 @@ std::shared_ptr<AbstractOperator> ShowColumns::recreate(const std::vector<AllPar
   return std::make_shared<ShowColumns>(_table_name);
 }
 
-std::shared_ptr<const Table> ShowColumns::on_execute() {
+std::shared_ptr<const Table> ShowColumns::_on_execute() {
   auto out_table = std::make_shared<Table>();
   out_table->add_column_definition("column_name", "string");
   out_table->add_column_definition("column_type", "string");

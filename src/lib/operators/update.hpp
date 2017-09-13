@@ -40,7 +40,7 @@ class Update : public AbstractReadWriteOperator {
   }
 
  protected:
-  std::shared_ptr<const Table> on_execute(std::shared_ptr<TransactionContext> context) override;
+  std::shared_ptr<const Table> _on_execute(std::shared_ptr<TransactionContext> context) override;
   bool _execution_input_valid(const std::shared_ptr<TransactionContext>& context) const;
 
  protected:

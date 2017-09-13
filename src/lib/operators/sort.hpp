@@ -41,7 +41,7 @@ class Sort : public AbstractReadOnlyOperator {
   std::shared_ptr<AbstractOperator> recreate(const std::vector<AllParameterVariant> &args) const override;
 
  protected:
-  std::shared_ptr<const Table> on_execute() override;
+  std::shared_ptr<const Table> _on_execute() override;
 
   // The operator is seperated in three different classes. SortImpl is the common templated implementation of the
   // operator. SortImpl* und SortImplMaterializeOutput are extra classes for the visitor pattern. They fulfill a certain
@@ -73,7 +73,7 @@ class Sort::SortImpl : public AbstractReadOnlyOperatorImpl {
     _row_id_value_vector = std::make_shared<std::vector<std::pair<RowID, SortColumnType>>>();
   }
 
-  std::shared_ptr<const Table> on_execute() override {
+  std::shared_ptr<const Table> _on_execute() override {
     // 1. Prepare Sort: Creating rowid-value-Structur
     auto preparation =
         std::make_shared<SortImplMaterializeSortColumn<SortColumnType>>(_table_in, _column_id, _row_id_value_vector);
