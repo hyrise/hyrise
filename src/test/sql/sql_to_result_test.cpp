@@ -240,8 +240,7 @@ const SQLTestParam test_queries[] = {
     // COUNT(*)
     {"SELECT a, COUNT(*) FROM groupby_int_1gb_1agg_null GROUP BY a;",
      "src/test/tables/aggregateoperator/groupby_int_1gb_0agg/count_star.tbl"},
-    // todo(anyone): Remove the alias as soon as #222 is merged
-    {"SELECT COUNT(*), SUM(a+b) AS \"SUM(a+b)\" FROM int_int3;",
+    {"SELECT COUNT(*), SUM(a+b) FROM int_int3;",
      "src/test/tables/aggregateoperator/0gb_2agg/count_sum.tbl"},
     // todo(anyone): Enable as soon as #182 is resolved
     // {"SELECT COUNT(*) FROM groupby_int_1gb_1agg_null GROUP BY a;",
