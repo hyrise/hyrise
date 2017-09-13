@@ -7,7 +7,9 @@
 
 #include "constant_mappings.hpp"
 #include "operators/aggregate.hpp"
+#include "operators/delete.hpp"
 #include "operators/get_table.hpp"
+#include "operators/insert.hpp"
 #include "operators/join_nested_loop_a.hpp"
 #include "operators/limit.hpp"
 #include "operators/maintenance/show_columns.hpp"
@@ -16,8 +18,11 @@
 #include "operators/projection.hpp"
 #include "operators/sort.hpp"
 #include "operators/table_scan.hpp"
+#include "operators/table_wrapper.hpp"
 #include "optimizer/abstract_syntax_tree/abstract_ast_node.hpp"
 #include "optimizer/abstract_syntax_tree/aggregate_node.hpp"
+#include "optimizer/abstract_syntax_tree/delete_node.hpp"
+#include "optimizer/abstract_syntax_tree/insert_node.hpp"
 #include "optimizer/abstract_syntax_tree/join_node.hpp"
 #include "optimizer/abstract_syntax_tree/limit_node.hpp"
 #include "optimizer/abstract_syntax_tree/predicate_node.hpp"
@@ -56,6 +61,10 @@ ASTToOperatorTranslator::ASTToOperatorTranslator() {
       std::bind(&ASTToOperatorTranslator::_translate_aggregate_node, this, std::placeholders::_1);
   _operator_factory[ASTNodeType::Limit] =
       std::bind(&ASTToOperatorTranslator::_translate_limit_node, this, std::placeholders::_1);
+  _operator_factory[ASTNodeType::Insert] =
+      std::bind(&ASTToOperatorTranslator::_translate_insert_node, this, std::placeholders::_1);
+  _operator_factory[ASTNodeType::Delete] =
+      std::bind(&ASTToOperatorTranslator::_translate_delete_node, this, std::placeholders::_1);
 
   // Maintenance operators
   _operator_factory[ASTNodeType::ShowTables] =
@@ -87,7 +96,16 @@ std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::_translate_predicate_
 
 std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::_translate_projection_node(
     const std::shared_ptr<AbstractASTNode> &node) const {
-  const auto input_operator = translate_node(node->left_child());
+  const auto left_child = node->left_child();
+  std::shared_ptr<AbstractOperator> input_operator;
+
+  if (left_child == nullptr) {
+    // Dummy Projection, e.g., for INSERT
+    input_operator = std::make_shared<TableWrapper>(Projection::dummy_table());
+  } else {
+    input_operator = translate_node(node->left_child());
+  }
+
   const auto projection_node = std::dynamic_pointer_cast<ProjectionNode>(node);
   return std::make_shared<Projection>(input_operator, projection_node->column_expressions());
 }
@@ -234,6 +252,20 @@ std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::_translate_limit_node
   const auto input_operator = translate_node(node->left_child());
   auto limit_node = std::dynamic_pointer_cast<LimitNode>(node);
   return std::make_shared<Limit>(input_operator, limit_node->num_rows());
+}
+
+std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::_translate_insert_node(
+    const std::shared_ptr<AbstractASTNode> &node) const {
+  const auto input_operator = translate_node(node->left_child());
+  auto insert_node = std::dynamic_pointer_cast<InsertNode>(node);
+  return std::make_shared<Insert>(insert_node->table_name(), input_operator);
+}
+
+std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::_translate_delete_node(
+    const std::shared_ptr<AbstractASTNode> &node) const {
+  const auto input_operator = translate_node(node->left_child());
+  auto delete_node = std::dynamic_pointer_cast<DeleteNode>(node);
+  return std::make_shared<Delete>(delete_node->table_name(), input_operator);
 }
 
 std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::_translate_show_tables_node(

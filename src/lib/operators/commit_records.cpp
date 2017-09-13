@@ -19,7 +19,7 @@ void CommitRecords::commit_records(const CommitID /*cid*/) {
 
 void CommitRecords::rollback_records() { Fail("CommitRecords cannot be rolled back"); }
 
-std::shared_ptr<const Table> CommitRecords::on_execute(std::shared_ptr<TransactionContext> context) {
+std::shared_ptr<const Table> CommitRecords::_on_execute(std::shared_ptr<TransactionContext> context) {
   for (const auto op : context->get_rw_operators()) {
     op->commit(context->commit_id());
   }

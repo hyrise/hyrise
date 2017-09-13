@@ -33,12 +33,12 @@ std::shared_ptr<AbstractOperator> JoinNestedLoopA::recreate(const std::vector<Al
                                            _column_ids, _scan_type);
 }
 
-std::shared_ptr<const Table> JoinNestedLoopA::on_execute() {
-  const auto &type_left = input_table_left()->column_type(_column_ids.first);
-  const auto &type_right = input_table_right()->column_type(_column_ids.second);
+std::shared_ptr<const Table> JoinNestedLoopA::_on_execute() {
+  const auto &type_left = _input_table_left()->column_type(_column_ids.first);
+  const auto &type_right = _input_table_right()->column_type(_column_ids.second);
   _impl = make_unique_by_column_types<AbstractReadOnlyOperatorImpl, JoinNestedLoopAImpl>(
       type_left, type_right, _input_left, _input_right, _mode, _column_ids, _scan_type);
-  return _impl->on_execute();
+  return _impl->_on_execute();
 }
 
 // We need to use the impl pattern because the join operator depends on the type of the columns
@@ -357,7 +357,7 @@ class JoinNestedLoopA::JoinNestedLoopAImpl : public AbstractJoinOperatorImpl {
     }
   }
 
-  std::shared_ptr<const Table> on_execute() override {
+  std::shared_ptr<const Table> _on_execute() override {
     // Preparing output table by adding columns from left table
 
     for (ColumnID column_id{0}; column_id < _left_in_table->col_count(); ++column_id) {

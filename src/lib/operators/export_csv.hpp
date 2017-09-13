@@ -83,7 +83,7 @@ class ExportCsv : public AbstractReadOnlyOperator {
    *
    *  Returns the input table
    */
-  std::shared_ptr<const Table> on_execute() override;
+  std::shared_ptr<const Table> _on_execute() override;
 
   /*
    * Name of the operator is ExportCsv

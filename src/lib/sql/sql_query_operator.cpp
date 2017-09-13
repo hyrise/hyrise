@@ -50,7 +50,7 @@ bool SQLQueryOperator::parse_tree_cache_hit() const { return _parse_tree_cache_h
 
 bool SQLQueryOperator::query_plan_cache_hit() const { return _query_plan_cache_hit; }
 
-std::shared_ptr<const Table> SQLQueryOperator::on_execute(std::shared_ptr<TransactionContext> context) {
+std::shared_ptr<const Table> SQLQueryOperator::_on_execute(std::shared_ptr<TransactionContext> context) {
   // Compile the query.
   compile_query(_query);
 

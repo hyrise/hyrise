@@ -30,7 +30,7 @@ class AbstractReadWriteOperator : public AbstractOperator,
     DebugAssert(static_cast<bool>(transaction_context), "Probably a bug.");
 
     transaction_context->on_operator_started();
-    _output = on_execute(transaction_context);
+    _output = _on_execute(transaction_context);
     transaction_context->on_operator_finished();
   }
 
@@ -45,7 +45,7 @@ class AbstractReadWriteOperator : public AbstractOperator,
   /**
    * Commits the operator by applying the cid to the mvcc columns for all modified rows and unlocking them. The
    * modifications will be visible as soon as the TransactionManager has completed the commit for this cid.
-   * Unlike on_execute, where failures are expected, the commit operation cannot fail.
+   * Unlike _on_execute, where failures are expected, the commit operation cannot fail.
    */
   virtual void commit_records(const CommitID cid) {}
 
@@ -63,7 +63,7 @@ class AbstractReadWriteOperator : public AbstractOperator,
   virtual void rollback_records() {}
 
   /**
-   * Returns true if a previous call to on_execute produced an error.
+   * Returns true if a previous call to _on_execute produced an error.
    */
   bool execute_failed() const { return _execute_failed; }
 
@@ -76,11 +76,11 @@ class AbstractReadWriteOperator : public AbstractOperator,
    * until commit_records has been called on this operator and the transaction manager has finished committing the
    * respective transaction.
    * The execution may fail if the operator attempts to lock rows that have been locked by other operators.
-   * In that case, execute_failed returns true after on_execute has returned.
+   * In that case, execute_failed returns true after _on_execute has returned.
    *
    * @returns nullptr, since these operators do not create new intermediate results but modify existing tables
    */
-  std::shared_ptr<const Table> on_execute(std::shared_ptr<TransactionContext> context) override = 0;
+  std::shared_ptr<const Table> _on_execute(std::shared_ptr<TransactionContext> context) override = 0;
 
  protected:
   bool _execute_failed;

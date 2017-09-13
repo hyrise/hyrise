@@ -102,7 +102,7 @@ class Aggregate : public AbstractReadOnlyOperator {
   void write_aggregate_output(ColumnID column_index);
 
  protected:
-  std::shared_ptr<const Table> on_execute() override;
+  std::shared_ptr<const Table> _on_execute() override;
 
   template <typename ColumnType>
   static void _create_aggregate_context(boost::hana::basic_type<ColumnType> type,

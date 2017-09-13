@@ -45,15 +45,15 @@ class AggregateNodeTest : public BaseTest {
 };
 
 TEST_F(AggregateNodeTest, ColumnIdForColumnIdentifier) {
-  EXPECT_EQ(_aggregate_node->get_column_id_by_column_identifier_name({"a", nullopt}), 0);
-  EXPECT_EQ(_aggregate_node->get_column_id_by_column_identifier_name({"a", {"t_a"}}), 0);
-  EXPECT_EQ(_aggregate_node->find_column_id_by_column_identifier_name({"b", nullopt}), nullopt);
-  EXPECT_EQ(_aggregate_node->find_column_id_by_column_identifier_name({"b", {"t_a"}}), nullopt);
-  EXPECT_EQ(_aggregate_node->get_column_id_by_column_identifier_name({"c", nullopt}), 1);
-  EXPECT_EQ(_aggregate_node->get_column_id_by_column_identifier_name({"c", {"t_a"}}), 1);
+  EXPECT_EQ(_aggregate_node->get_column_id_by_named_column_reference({"a", nullopt}), 0);
+  EXPECT_EQ(_aggregate_node->get_column_id_by_named_column_reference({"a", {"t_a"}}), 0);
+  EXPECT_EQ(_aggregate_node->find_column_id_by_named_column_reference({"b", nullopt}), nullopt);
+  EXPECT_EQ(_aggregate_node->find_column_id_by_named_column_reference({"b", {"t_a"}}), nullopt);
+  EXPECT_EQ(_aggregate_node->get_column_id_by_named_column_reference({"c", nullopt}), 1);
+  EXPECT_EQ(_aggregate_node->get_column_id_by_named_column_reference({"c", {"t_a"}}), 1);
 
-  EXPECT_EQ(_aggregate_node->get_column_id_by_column_identifier_name({"some_sum", nullopt}), 3);
-  EXPECT_EQ(_aggregate_node->find_column_id_by_column_identifier_name({"some_sum", {"t_a"}}), nullopt);
+  EXPECT_EQ(_aggregate_node->get_column_id_by_named_column_reference({"some_sum", nullopt}), 3);
+  EXPECT_EQ(_aggregate_node->find_column_id_by_named_column_reference({"some_sum", {"t_a"}}), nullopt);
 }
 
 TEST_F(AggregateNodeTest, OriginalGroupByColumnIdsInOutputColumnIds) {
