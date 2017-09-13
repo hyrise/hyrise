@@ -70,7 +70,7 @@ std::shared_ptr<Expression> SQLExpressionTranslator::translate_expression(
       } else {
         value = expr.ival;
       }
-      node = Expression::create_literal(value), alias;
+      node = Expression::create_literal(value, alias);
       break;
     }
     case hsql::kExprLiteralString:

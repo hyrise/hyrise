@@ -117,7 +117,7 @@ optional<ColumnID> ProjectionNode::find_column_id_by_named_column_reference(
      * either one of the Projection's ALIASes or column names generated based on arithmetic expressions (i.e. 5+3 ->
      * "5+3").
      */
-    if (!column_identifier_name.table_name) {
+    if (!named_column_reference.table_name) {
       if (column_expression->alias()) {
         // Check whether `named_column_reference` is the ALIAS of a column, e.g. `a AS some_a` or `a+b AS sum_ab`
         if (*column_expression->alias() == named_column_reference.column_name) {
