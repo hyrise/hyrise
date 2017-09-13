@@ -2,8 +2,6 @@
 #include <string>
 #include <utility>
 #include <vector>
-#include <storage/storage_manager.hpp>
-#include <sql/sql_to_ast_translator.hpp>
 
 #include "base_test.hpp"
 #include "gtest/gtest.h"
@@ -15,13 +13,14 @@
 #include "optimizer/abstract_syntax_tree/stored_table_node.hpp"
 #include "optimizer/expression.hpp"
 #include "optimizer/strategy/join_detection_rule.hpp"
+#include "sql/sql_to_ast_translator.hpp"
+#include "storage/storage_manager.hpp"
 
 namespace opossum {
 
 class JoinDetectionRuleTest : public BaseTest {
  protected:
   void SetUp() override {
-
     StorageManager::get().add_table("a", load_table("src/test/tables/int_float.tbl", 2));
     StorageManager::get().add_table("b", load_table("src/test/tables/int_float.tbl", 2));
     StorageManager::get().add_table("c", load_table("src/test/tables/int_float.tbl", 2));
@@ -41,8 +40,7 @@ TEST_F(JoinDetectionRuleTest, SimpleDetectionTest) {
   cross_join_node->set_left_child(_table_node_a);
   cross_join_node->set_right_child(_table_node_b);
 
-  const auto predicate_node =
-      std::make_shared<PredicateNode>(ColumnID{0}, ScanType::OpEquals, ColumnID{3});
+  const auto predicate_node = std::make_shared<PredicateNode>(ColumnID{0}, ScanType::OpEquals, ColumnID{3});
   predicate_node->set_left_child(cross_join_node);
 
   auto output = _rule.apply_to(predicate_node);
@@ -58,8 +56,7 @@ TEST_F(JoinDetectionRuleTest, SecondDetectionTest) {
   cross_join_node->set_left_child(_table_node_a);
   cross_join_node->set_right_child(_table_node_b);
 
-  const auto predicate_node =
-      std::make_shared<PredicateNode>(ColumnID{0}, ScanType::OpEquals, ColumnID{3});
+  const auto predicate_node = std::make_shared<PredicateNode>(ColumnID{0}, ScanType::OpEquals, ColumnID{3});
   predicate_node->set_left_child(cross_join_node);
 
   const std::vector<std::shared_ptr<Expression>> columns = {Expression::create_column(ColumnID{0})};
@@ -115,13 +112,12 @@ TEST_F(JoinDetectionRuleTest, NoMatchingPredicate) {
 }
 
 TEST_F(JoinDetectionRuleTest, NonCrossJoin) {
-  const auto join_node = std::make_shared<JoinNode>(JoinMode::Inner, std::make_pair(ColumnID{1}, ColumnID{3}),
-                                                    ScanType::OpEquals);
+  const auto join_node =
+      std::make_shared<JoinNode>(JoinMode::Inner, std::make_pair(ColumnID{1}, ColumnID{3}), ScanType::OpEquals);
   join_node->set_left_child(_table_node_a);
   join_node->set_right_child(_table_node_b);
 
-  const auto predicate_node =
-      std::make_shared<PredicateNode>(ColumnID{0}, ScanType::OpEquals, ColumnID{3});
+  const auto predicate_node = std::make_shared<PredicateNode>(ColumnID{0}, ScanType::OpEquals, ColumnID{3});
   predicate_node->set_left_child(join_node);
 
   const std::vector<std::shared_ptr<Expression>> columns = {Expression::create_column(ColumnID{0})};
@@ -146,8 +142,7 @@ TEST_F(JoinDetectionRuleTest, MultipleJoins) {
   join_node2->set_left_child(join_node1);
   join_node2->set_right_child(_table_node_c);
 
-  const auto predicate_node =
-      std::make_shared<PredicateNode>(ColumnID{0}, ScanType::OpEquals, ColumnID{2});
+  const auto predicate_node = std::make_shared<PredicateNode>(ColumnID{0}, ScanType::OpEquals, ColumnID{2});
   predicate_node->set_left_child(join_node2);
 
   const std::vector<std::shared_ptr<Expression>> columns = {Expression::create_column(ColumnID{0})};
@@ -171,7 +166,6 @@ TEST_F(JoinDetectionRuleTest, MultipleJoins) {
 }
 
 TEST_F(JoinDetectionRuleTest, MultipleJoinsSQL) {
-
   hsql::SQLParserResult parse_result;
   hsql::SQLParser::parseSQLString("SELECT * FROM a, b, c WHERE a.a = b.a", &parse_result);
 
@@ -194,9 +188,11 @@ TEST_F(JoinDetectionRuleTest, MultipleJoinsSQL) {
   EXPECT_EQ(output->left_child()->left_child()->left_child()->type(), ASTNodeType::StoredTable);
   EXPECT_EQ(output->left_child()->left_child()->right_child()->type(), ASTNodeType::StoredTable);
 
-  const auto second_table = std::dynamic_pointer_cast<StoredTableNode>(output->left_child()->left_child()->left_child());
+  const auto second_table =
+      std::dynamic_pointer_cast<StoredTableNode>(output->left_child()->left_child()->left_child());
   EXPECT_EQ(second_table->table_name(), "b");
-  const auto third_table = std::dynamic_pointer_cast<StoredTableNode>(output->left_child()->left_child()->right_child());
+  const auto third_table =
+      std::dynamic_pointer_cast<StoredTableNode>(output->left_child()->left_child()->right_child());
   EXPECT_EQ(third_table->table_name(), "c");
 }
 

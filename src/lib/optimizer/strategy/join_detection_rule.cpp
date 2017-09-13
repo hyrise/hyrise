@@ -31,7 +31,8 @@ const std::shared_ptr<AbstractASTNode> JoinConditionDetectionRule::apply_to(
      * When we found a valid Join Condition, we have to rewrite the JoinNode.
      */
     if (predicate_node) {
-      std::pair<ColumnID, ColumnID> column_ids(predicate_node->column_id(), boost::get<ColumnID>(predicate_node->value()));
+      std::pair<ColumnID, ColumnID> column_ids(predicate_node->column_id(),
+                                               boost::get<ColumnID>(predicate_node->value()));
 
       const auto new_join_node = std::make_shared<JoinNode>(JoinMode::Inner, column_ids, predicate_node->scan_type());
       // TODO(Sven): what if parent is JoinNode with right child
@@ -44,13 +45,13 @@ const std::shared_ptr<AbstractASTNode> JoinConditionDetectionRule::apply_to(
       }
 
       /**
-   * Apply rule recursively
-   */
+       * Apply rule recursively
+       */
       if (node->left_child()) {
         apply_to(node->left_child());
-//    if (!node->left_child()) {
-//      return left_node;
-//    }
+        //    if (!node->left_child()) {
+        //      return left_node;
+        //    }
       }
       if (node->right_child()) {
         apply_to(node->right_child());
@@ -114,8 +115,8 @@ const std::shared_ptr<PredicateNode> JoinConditionDetectionRule::_find_predicate
 }
 
 bool JoinConditionDetectionRule::_is_join_condition(ColumnID left, ColumnID right, size_t number_columns_left) {
-  return (left < number_columns_left && !(right < number_columns_left))
-         || (!(left < number_columns_left) && right < number_columns_left);
+  return (left < number_columns_left && !(right < number_columns_left)) ||
+         (!(left < number_columns_left) && right < number_columns_left);
 }
 
 }  // namespace opossum

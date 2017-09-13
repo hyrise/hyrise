@@ -22,15 +22,14 @@ struct ColumnID;
  * =>
  * SELECT * FROM a INNER JOIN b ON a.id = b.id
  *
- * 
+ *
  */
 class JoinConditionDetectionRule : AbstractRule {
  public:
   const std::shared_ptr<AbstractASTNode> apply_to(const std::shared_ptr<AbstractASTNode> node) override;
 
  private:
-  const std::shared_ptr<PredicateNode> _find_predicate_for_cross_join(
-      const std::shared_ptr<JoinNode> &cross_join);
+  const std::shared_ptr<PredicateNode> _find_predicate_for_cross_join(const std::shared_ptr<JoinNode> &cross_join);
 
   bool _is_join_condition(ColumnID left, ColumnID right, size_t number_columns_left);
 };
