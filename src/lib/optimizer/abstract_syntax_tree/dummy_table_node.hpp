@@ -13,7 +13,7 @@ namespace opossum {
  */
 class DummyTableNode : public AbstractASTNode {
  public:
-  explicit DummyTableNode();
+  DummyTableNode();
 
   std::string description() const override;
 
