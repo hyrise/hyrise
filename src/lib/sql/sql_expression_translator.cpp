@@ -34,7 +34,7 @@ std::shared_ptr<Expression> SQLExpressionTranslator::translate_expression(
   switch (expr.type) {
     case hsql::kExprOperator: {
       auto operator_type = operator_type_to_expression_type.at(expr.opType);
-      node = Expression::create_binary_operator(operator_type, left, right);
+      node = Expression::create_binary_operator(operator_type, left, right, alias);
       break;
     }
     case hsql::kExprColumnRef: {
@@ -61,7 +61,7 @@ std::shared_ptr<Expression> SQLExpressionTranslator::translate_expression(
       break;
     }
     case hsql::kExprLiteralFloat:
-      node = Expression::create_literal(expr.fval);
+      node = Expression::create_literal(expr.fval, alias);
       break;
     case hsql::kExprLiteralInt: {
       AllTypeVariant value;
@@ -70,11 +70,11 @@ std::shared_ptr<Expression> SQLExpressionTranslator::translate_expression(
       } else {
         value = expr.ival;
       }
-      node = Expression::create_literal(value);
+      node = Expression::create_literal(value), alias;
       break;
     }
     case hsql::kExprLiteralString:
-      node = Expression::create_literal(name);
+      node = Expression::create_literal(name, alias);
       break;
     case hsql::kExprLiteralNull:
       node = Expression::create_literal(NULL_VALUE);
