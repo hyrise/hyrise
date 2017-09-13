@@ -135,7 +135,7 @@ class Expression : public std::enable_shared_from_this<Expression> {
   void set_alias(const std::string& alias);
 
   // Expression as string, column names need to be resolved and therefore need a @param input_node
-  std::string to_string(const std::shared_ptr<AbstractASTNode>& input_node = nullptr) const;
+  std::string to_string(const std::vector<std::string>& input_column_names = {}) const;
 
   bool operator==(const Expression& rhs) const;
 
@@ -168,7 +168,7 @@ class Expression : public std::enable_shared_from_this<Expression> {
   optional<ValuePlaceholder> _value_placeholder;
 
   // @{
-  // Members for the tree strucutre
+  // Members for the tree structure
   std::weak_ptr<Expression> _parent;
   std::shared_ptr<Expression> _left_child;
   std::shared_ptr<Expression> _right_child;
