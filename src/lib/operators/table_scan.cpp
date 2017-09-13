@@ -27,18 +27,18 @@
 
 namespace opossum {
 
-TableScan::TableScan(const std::shared_ptr<const AbstractOperator> in, const std::string &left_column_name,
+TableScan::TableScan(const std::shared_ptr<const AbstractOperator> in, ColumnID left_column_id,
                      const ScanType scan_type, const AllParameterVariant right_parameter,
                      const optional<AllTypeVariant> right_value2)
     : AbstractReadOnlyOperator{in},
-      _left_column_name{left_column_name},
+      _left_column_id{left_column_id},
       _scan_type{scan_type},
       _right_parameter{right_parameter},
       _right_value2{right_value2} {}
 
 TableScan::~TableScan() = default;
 
-const std::string &TableScan::left_column_name() const { return _left_column_name; }
+ColumnID TableScan::left_column_id() const { return _left_column_id; }
 
 ScanType TableScan::scan_type() const { return _scan_type; }
 
@@ -57,20 +57,20 @@ std::shared_ptr<AbstractOperator> TableScan::recreate(const std::vector<AllParam
   if (is_placeholder(_right_parameter)) {
     const auto index = boost::get<ValuePlaceholder>(_right_parameter).index();
     if (index < args.size()) {
-      return std::make_shared<TableScan>(_input_left->recreate(args), _left_column_name, _scan_type, args[index],
+      return std::make_shared<TableScan>(_input_left->recreate(args), _left_column_id, _scan_type, args[index],
                                          _right_value2);
     }
   }
-  return std::make_shared<TableScan>(_input_left->recreate(args), _left_column_name, _scan_type, _right_parameter,
+  return std::make_shared<TableScan>(_input_left->recreate(args), _left_column_id, _scan_type, _right_parameter,
                                      _right_value2);
 }
 
-std::shared_ptr<const Table> TableScan::on_execute() {
-  if (auto between_output_table = _on_execute_between()) {
+std::shared_ptr<const Table> TableScan::_on_execute() {
+  if (auto between_output_table = __on_execute_between()) {
     return between_output_table;
   }
 
-  _in_table = input_table_left();
+  _in_table = _input_table_left();
 
   _init_scan();
   _init_output_table();
@@ -149,20 +149,18 @@ std::shared_ptr<const Table> TableScan::on_execute() {
 }
 
 void TableScan::_init_scan() {
-  const auto left_column_id = _in_table->column_id_by_name(_left_column_name);
-
   DebugAssert(_in_table->chunk_count() > 0u, "Input table must contain at least 1 chunk.");
   const auto &first_chunk = _in_table->get_chunk(ChunkID{0u});
 
   _is_reference_table = [&]() {
     // We assume if one column is a reference column, all are.
-    const auto column = first_chunk.get_column(left_column_id);
+    const auto column = first_chunk.get_column(_left_column_id);
     const auto ref_column = std::dynamic_pointer_cast<ReferenceColumn>(column);
     return ref_column != nullptr;
   }();
 
   if (_scan_type == ScanType::OpLike) {
-    const auto left_column_type = _in_table->column_type(left_column_id);
+    const auto left_column_type = _in_table->column_type(_left_column_id);
     Assert((left_column_type == "string"), "LIKE operator only applicable on string columns.");
 
     DebugAssert(is_variant(_right_parameter), "Right parameter must be variant.");
@@ -173,7 +171,7 @@ void TableScan::_init_scan() {
 
     const auto right_wildcard = type_cast<std::string>(right_value);
 
-    _impl = std::make_unique<LikeTableScanImpl>(_in_table, left_column_id, right_wildcard);
+    _impl = std::make_unique<LikeTableScanImpl>(_in_table, _left_column_id, right_wildcard);
 
     return;
   }
@@ -182,17 +180,16 @@ void TableScan::_init_scan() {
     const auto right_value = boost::get<AllTypeVariant>(_right_parameter);
 
     if (is_null(right_value)) {
-      _impl = std::make_unique<IsNullTableScanImpl>(_in_table, left_column_id, _scan_type);
+      _impl = std::make_unique<IsNullTableScanImpl>(_in_table, _left_column_id, _scan_type);
 
       return;
     }
 
-    _impl = std::make_unique<SingleColumnTableScanImpl>(_in_table, left_column_id, _scan_type, right_value);
+    _impl = std::make_unique<SingleColumnTableScanImpl>(_in_table, _left_column_id, _scan_type, right_value);
   } else /* is_column_name(_right_parameter) */ {
-    const auto right_column_name = boost::get<ColumnName>(_right_parameter);
-    const auto right_column_id = _in_table->column_id_by_name(right_column_name);
+    const auto right_column_id = boost::get<ColumnID>(_right_parameter);
 
-    _impl = std::make_unique<ColumnComparisonTableScanImpl>(_in_table, left_column_id, _scan_type, right_column_id);
+    _impl = std::make_unique<ColumnComparisonTableScanImpl>(_in_table, _left_column_id, _scan_type, right_column_id);
   }
 }
 
@@ -204,7 +201,7 @@ void TableScan::_init_output_table() {
   }
 }
 
-std::shared_ptr<const Table> TableScan::_on_execute_between() {
+std::shared_ptr<const Table> TableScan::__on_execute_between() {
   if (_scan_type != ScanType::OpBetween) {
     return nullptr;
   }
@@ -212,11 +209,11 @@ std::shared_ptr<const Table> TableScan::_on_execute_between() {
   DebugAssert(static_cast<bool>(_right_value2), "Scan type BETWEEN requires a right_value2");
 
   auto table_scan1 =
-      std::make_shared<TableScan>(_input_left, _left_column_name, ScanType::OpGreaterThanEquals, _right_parameter);
+      std::make_shared<TableScan>(_input_left, _left_column_id, ScanType::OpGreaterThanEquals, _right_parameter);
   table_scan1->execute();
 
   auto table_scan2 =
-      std::make_shared<TableScan>(table_scan1, _left_column_name, ScanType::OpLessThanEquals, *_right_value2);
+      std::make_shared<TableScan>(table_scan1, _left_column_id, ScanType::OpLessThanEquals, *_right_value2);
   table_scan2->execute();
 
   return table_scan2->get_output();

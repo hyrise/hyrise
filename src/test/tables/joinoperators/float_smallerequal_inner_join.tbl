@@ -1,4 +1,4 @@
-left.a|left.b|right.a|right.b
+a|b|a|b
 int|float|int|float
 12345|458.7|123|458.7
 123|456.7|12345|456.7

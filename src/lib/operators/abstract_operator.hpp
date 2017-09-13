@@ -83,10 +83,10 @@ class AbstractOperator : private Noncopyable {
   // abstract method to actually execute the operator
   // execute and get_output are split into two methods to allow for easier
   // asynchronous execution
-  virtual std::shared_ptr<const Table> on_execute(std::shared_ptr<TransactionContext> context) = 0;
+  virtual std::shared_ptr<const Table> _on_execute(std::shared_ptr<TransactionContext> context) = 0;
 
-  std::shared_ptr<const Table> input_table_left() const;
-  std::shared_ptr<const Table> input_table_right() const;
+  std::shared_ptr<const Table> _input_table_left() const;
+  std::shared_ptr<const Table> _input_table_right() const;
 
   // Shared pointers to input operators, can be nullptr.
   std::shared_ptr<const AbstractOperator> _input_left;

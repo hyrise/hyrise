@@ -24,7 +24,7 @@ class SQLResultOperator : public AbstractReadOnlyOperator {
 
   uint8_t num_out_tables() const override;
 
-  std::shared_ptr<const Table> on_execute() override;
+  std::shared_ptr<const Table> _on_execute() override;
 
   // Called by SQLQueryOperator to dynamically set the input operator.
   // Most common operators require the input to be given at construction.

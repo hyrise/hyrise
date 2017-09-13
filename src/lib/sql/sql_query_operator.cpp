@@ -50,7 +50,7 @@ bool SQLQueryOperator::parse_tree_cache_hit() const { return _parse_tree_cache_h
 
 bool SQLQueryOperator::query_plan_cache_hit() const { return _query_plan_cache_hit; }
 
-std::shared_ptr<const Table> SQLQueryOperator::on_execute(std::shared_ptr<TransactionContext> context) {
+std::shared_ptr<const Table> SQLQueryOperator::_on_execute(std::shared_ptr<TransactionContext> context) {
   // Compile the query.
   compile_query(_query);
 
@@ -140,7 +140,7 @@ void SQLQueryOperator::execute_prepared_statement(const ExecuteStatement& execut
   std::vector<AllParameterVariant> arguments;
   if (execute_stmt.parameters != nullptr) {
     for (const hsql::Expr* expr : *execute_stmt.parameters) {
-      arguments.push_back(SQLToASTTranslator::translate_argument(*expr));
+      arguments.push_back(SQLToASTTranslator::translate_hsql_operand(*expr));
     }
   }
 

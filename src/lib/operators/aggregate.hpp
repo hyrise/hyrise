@@ -54,14 +54,14 @@ using AggregateKey = std::vector<AllTypeVariant>;
 
 /**
  * Struct to specify aggregates.
- * Aggregates are defined by the column_name they operate on and the aggregate function they use.
+ * Aggregates are defined by the column_id they operate on and the aggregate function they use.
  * Optionally, an alias can be specified to use as the output name.
  */
 struct AggregateDefinition {
-  AggregateDefinition(const std::string &column_name, const AggregateFunction function,
-                      const optional<std::string> &alias = {});
+  AggregateDefinition(const ColumnID column_id, const AggregateFunction function,
+                      const optional<std::string> &alias = nullopt);
 
-  std::string column_name;
+  ColumnID column_id;
   AggregateFunction function;
   optional<std::string> alias;
 };
@@ -72,10 +72,10 @@ struct AggregateDefinition {
 class Aggregate : public AbstractReadOnlyOperator {
  public:
   Aggregate(const std::shared_ptr<AbstractOperator> in, const std::vector<AggregateDefinition> aggregates,
-            const std::vector<std::string> groupby_columns);
+            const std::vector<ColumnID> groupby_column_ids);
 
   const std::vector<AggregateDefinition> &aggregates() const;
-  const std::vector<std::string> &groupby_columns() const;
+  const std::vector<ColumnID> &groupby_column_ids() const;
 
   const std::string name() const override;
   uint8_t num_in_tables() const override;
@@ -87,7 +87,7 @@ class Aggregate : public AbstractReadOnlyOperator {
   void write_aggregate_output(ColumnID column_index);
 
  protected:
-  std::shared_ptr<const Table> on_execute() override;
+  std::shared_ptr<const Table> _on_execute() override;
 
   /*
   The following template functions write the aggregated values for the different aggregate functions.
@@ -137,21 +137,20 @@ class Aggregate : public AbstractReadOnlyOperator {
   // AVG is not defined for non-arithmetic types. Avoiding compiler errors.
   template <typename AggregateType, AggregateFunction func>
   typename std::enable_if<func == AggregateFunction::Avg && !std::is_arithmetic<AggregateType>::value, void>::type
-      _write_aggregate_values(pmr_concurrent_vector<AggregateType>,
-                              std::shared_ptr<std::map<AggregateKey, AggregateResult<AggregateType>>>) {
+  _write_aggregate_values(pmr_concurrent_vector<AggregateType>,
+                          std::shared_ptr<std::map<AggregateKey, AggregateResult<AggregateType>>>) {
     Fail("Invalid aggregate");
   }
 
   const std::vector<AggregateDefinition> _aggregates;
-  const std::vector<std::string> _groupby_columns;
+  const std::vector<ColumnID> _groupby_column_ids;
 
   std::unique_ptr<AbstractReadOnlyOperatorImpl> _impl;
 
   std::shared_ptr<Table> _output;
   Chunk _out_chunk;
-  std::vector<std::shared_ptr<BaseColumn>> _group_columns;
+  std::vector<std::shared_ptr<BaseColumn>> _groupby_columns;
   std::vector<std::shared_ptr<ColumnVisitableContext>> _contexts_per_column;
-  std::vector<ColumnID> _aggregate_column_ids;
 };
 
 /*

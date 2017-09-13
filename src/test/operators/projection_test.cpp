@@ -36,37 +36,44 @@ class OperatorsProjectionTest : public BaseTest {
     _table_wrapper_int_dict = std::make_shared<TableWrapper>(std::move(test_table_dict));
     _table_wrapper_int_dict->execute();
 
+    _dummy_wrapper = std::make_shared<TableWrapper>(Projection::dummy_table());
+    _dummy_wrapper->execute();
+
     // Projection Expression: a + b + c
-    _sum_a_b_c_expr = Projection::ColumnExpressions{ExpressionNode::create_binary_operator(
-        ExpressionType::Addition, ExpressionNode::create_column_identifier("a"),
-        ExpressionNode::create_binary_operator(ExpressionType::Addition, ExpressionNode::create_column_identifier("b"),
-                                               ExpressionNode::create_column_identifier("c")),
+    _sum_a_b_c_expr = Projection::ColumnExpressions{Expression::create_binary_operator(
+        ExpressionType::Addition, Expression::create_column(ColumnID{0}),
+        Expression::create_binary_operator(ExpressionType::Addition, Expression::create_column(ColumnID{1}),
+                                           Expression::create_column(ColumnID{2})),
         {"sum"})};
 
     // Projection Expression: (a + b) * c
-    _mul_a_b_c_expr = Projection::ColumnExpressions{ExpressionNode::create_binary_operator(
+    _mul_a_b_c_expr = Projection::ColumnExpressions{Expression::create_binary_operator(
         ExpressionType::Multiplication,
-        ExpressionNode::create_binary_operator(ExpressionType::Addition, ExpressionNode::create_column_identifier("a"),
-                                               ExpressionNode::create_column_identifier("b")),
-        ExpressionNode::create_column_identifier("c"), {"mul"})};
+        Expression::create_binary_operator(ExpressionType::Addition, Expression::create_column(ColumnID{0}),
+                                           Expression::create_column(ColumnID{1})),
+        Expression::create_column(ColumnID{2}), {"mul"})};
 
     _sum_a_b_expr = Projection::ColumnExpressions{
-        ExpressionNode::create_binary_operator(ExpressionType::Addition, ExpressionNode::create_column_identifier("a"),
-                                               ExpressionNode::create_column_identifier("b"), {"sum"})};
+        Expression::create_binary_operator(ExpressionType::Addition, Expression::create_column(ColumnID{0}),
+                                           Expression::create_column(ColumnID{1}), {"sum"})};
 
     // Projection Expression: a
-    _a_expr = Projection::ColumnExpressions{ExpressionNode::create_column_identifier("a")};
+    _a_expr = Projection::ColumnExpressions{Expression::create_column(ColumnID{0})};
 
     // Projection Expression: b
-    _b_expr = Projection::ColumnExpressions{ExpressionNode::create_column_identifier("b")};
+    _b_expr = Projection::ColumnExpressions{Expression::create_column(ColumnID{1})};
 
     // Projection Expression: b, a
-    _b_a_expr = Projection::ColumnExpressions{ExpressionNode::create_column_identifier("b"),
-                                              ExpressionNode::create_column_identifier("a")};
+    _b_a_expr =
+        Projection::ColumnExpressions{Expression::create_column(ColumnID{1}), Expression::create_column(ColumnID{0})};
 
     // Projection Expression: a, b
-    _a_b_expr = Projection::ColumnExpressions{ExpressionNode::create_column_identifier("a"),
-                                              ExpressionNode::create_column_identifier("b")};
+    _a_b_expr =
+        Projection::ColumnExpressions{Expression::create_column(ColumnID{0}), Expression::create_column(ColumnID{1})};
+
+    // Projection Expression: 123 AS a, A AS b
+    _literal_expr = Projection::ColumnExpressions{Expression::create_literal(123, std::string("a")),
+                                                  Expression::create_literal(std::string("A"), std::string("b"))};
   }
 
   Projection::ColumnExpressions _sum_a_b_expr;
@@ -76,7 +83,9 @@ class OperatorsProjectionTest : public BaseTest {
   Projection::ColumnExpressions _b_expr;
   Projection::ColumnExpressions _b_a_expr;
   Projection::ColumnExpressions _a_b_expr;
-  std::shared_ptr<TableWrapper> _table_wrapper, _table_wrapper_int, _table_wrapper_int_dict, _table_wrapper_float;
+  Projection::ColumnExpressions _literal_expr;
+  std::shared_ptr<TableWrapper> _table_wrapper, _table_wrapper_int, _table_wrapper_int_dict, _table_wrapper_float,
+      _dummy_wrapper;
 };
 
 TEST_F(OperatorsProjectionTest, SingleColumnInt) {
@@ -134,8 +143,8 @@ TEST_F(OperatorsProjectionTest, ConstantArithmeticProjection) {
   std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_int_int_fix_values.tbl", 2);
 
   // 2+2
-  Projection::ColumnExpressions column_expressions{ExpressionNode::create_binary_operator(
-      ExpressionType::Addition, ExpressionNode::create_literal(2), ExpressionNode::create_literal(2), {"fix"})};
+  Projection::ColumnExpressions column_expressions{Expression::create_binary_operator(
+      ExpressionType::Addition, Expression::create_literal(2), Expression::create_literal(2), {"fix"})};
 
   auto projection = std::make_shared<Projection>(_table_wrapper_int, column_expressions);
   projection->execute();
@@ -183,7 +192,7 @@ TEST_F(OperatorsProjectionTest, VariableArithmeticWithRefProjection) {
   std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_int_int_addition.tbl", 2);
 
   // creates ref_columns
-  auto table_scan = std::make_shared<TableScan>(_table_wrapper_int_dict, "a", ScanType::OpGreaterThan, "0");
+  auto table_scan = std::make_shared<TableScan>(_table_wrapper_int_dict, ColumnID{0}, ScanType::OpGreaterThan, "0");
   table_scan->execute();
 
   auto projection = std::make_shared<Projection>(table_scan, _sum_a_b_c_expr);
@@ -211,7 +220,7 @@ TEST_F(OperatorsProjectionTest, ValueColumnCount) {
 
 // TODO(anyone): refactor test
 TEST_F(OperatorsProjectionTest, ReferenceColumnCount) {
-  auto scan = std::make_shared<opossum::TableScan>(_table_wrapper, "a", ScanType::OpEquals, 1234);
+  auto scan = std::make_shared<opossum::TableScan>(_table_wrapper, ColumnID{0}, ScanType::OpEquals, 1234);
   scan->execute();
 
   auto projection_1 = std::make_shared<opossum::Projection>(scan, _a_b_expr);
@@ -228,6 +237,15 @@ TEST_F(OperatorsProjectionTest, ReferenceColumnCount) {
   projection_3->execute();
   EXPECT_EQ(projection_3->get_output()->col_count(), (u_int)1);
   EXPECT_EQ(projection_3->get_output()->row_count(), (u_int)1);
+}
+
+TEST_F(OperatorsProjectionTest, Literals) {
+  std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_string_filtered.tbl", 1);
+
+  auto projection = std::make_shared<Projection>(_dummy_wrapper, _literal_expr);
+  projection->execute();
+  auto out = projection->get_output();
+  EXPECT_TABLE_EQ(projection->get_output(), expected_result);
 }
 
 TEST_F(OperatorsProjectionTest, NumInputTables) {

@@ -9,7 +9,7 @@
 #include "operators/projection.hpp"
 #include "operators/table_wrapper.hpp"
 #include "operators/union_all.hpp"
-#include "optimizer/expression/expression_node.hpp"
+#include "optimizer/expression.hpp"
 #include "storage/table.hpp"
 #include "types.hpp"
 
@@ -42,8 +42,8 @@ TEST_F(OperatorsUnionAllTest, UnionOfValueReferenceTables) {
   std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_float_union.tbl", 2);
 
   auto projection = std::make_shared<Projection>(
-      _table_wrapper_a, Projection::ColumnExpressions{ExpressionNode::create_column_identifier("a"),
-                                                      ExpressionNode::create_column_identifier("b")});
+      _table_wrapper_a,
+      Projection::ColumnExpressions{Expression::create_column(ColumnID{0}), Expression::create_column(ColumnID{1})});
   projection->execute();
 
   auto union_all = std::make_shared<UnionAll>(projection, _table_wrapper_b);

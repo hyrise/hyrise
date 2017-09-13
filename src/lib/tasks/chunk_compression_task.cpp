@@ -20,7 +20,7 @@ ChunkCompressionTask::ChunkCompressionTask(const std::string& table_name, const 
                                            bool check_completion)
     : _check_completion{check_completion}, _table_name{table_name}, _chunk_ids{chunk_ids} {}
 
-void ChunkCompressionTask::on_execute() {
+void ChunkCompressionTask::_on_execute() {
   auto table = StorageManager::get().get_table(_table_name);
 
   Assert(table != nullptr, "Table does not exist.");

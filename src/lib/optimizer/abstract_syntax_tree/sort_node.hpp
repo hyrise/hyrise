@@ -14,9 +14,9 @@ namespace opossum {
  * Order By items are defined by the column_name they operate on and their sort order.
  */
 struct OrderByDefinition {
-  OrderByDefinition(const std::string &column_name, const OrderByMode order_by_mode);
+  OrderByDefinition(const ColumnID column_id, const OrderByMode order_by_mode);
 
-  std::string column_name;
+  ColumnID column_id;
   OrderByMode order_by_mode;
 };
 

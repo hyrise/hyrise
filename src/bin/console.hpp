@@ -54,6 +54,16 @@ class Console {
   void setLogfile(const std::string &logfile);
 
   /*
+   * Load command history from history file.
+   */
+  void loadHistory(const std::string &historyFile);
+
+  /*
+   * Write command history to history file.
+   */
+  void writeHistory(const std::string &historyFile);
+
+  /*
    * Prints to the log_file (and the console).
    *
    * @param output        The text that should be printed.
@@ -95,6 +105,7 @@ class Console {
   static int generate_tpcc(const std::string &args);
   static int load_table(const std::string &args);
   static int exec_script(const std::string &args);
+  static int print_table(const std::string &args);
 
   // GNU readline interface to our commands
   static char **command_completion(const char *text, int start, int end);

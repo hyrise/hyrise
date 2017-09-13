@@ -10,14 +10,14 @@
 
 namespace opossum {
 
-Sort::Sort(const std::shared_ptr<const AbstractOperator> in, const std::string &sort_column_name,
-           const OrderByMode order_by_mode, const size_t output_chunk_size)
+Sort::Sort(const std::shared_ptr<const AbstractOperator> in, const ColumnID column_id, const OrderByMode order_by_mode,
+           const size_t output_chunk_size)
     : AbstractReadOnlyOperator(in),
-      _sort_column_name(sort_column_name),
+      _column_id(column_id),
       _order_by_mode(order_by_mode),
       _output_chunk_size(output_chunk_size) {}
 
-const std::string &Sort::sort_column_name() const { return _sort_column_name; }
+ColumnID Sort::column_id() const { return _column_id; }
 
 OrderByMode Sort::order_by_mode() const { return _order_by_mode; }
 
@@ -28,14 +28,14 @@ uint8_t Sort::num_in_tables() const { return 1; }
 uint8_t Sort::num_out_tables() const { return 1; }
 
 std::shared_ptr<AbstractOperator> Sort::recreate(const std::vector<AllParameterVariant> &args) const {
-  return std::make_shared<Sort>(_input_left->recreate(args), _sort_column_name, _order_by_mode, _output_chunk_size);
+  return std::make_shared<Sort>(_input_left->recreate(args), _column_id, _order_by_mode, _output_chunk_size);
 }
 
-std::shared_ptr<const Table> Sort::on_execute() {
+std::shared_ptr<const Table> Sort::_on_execute() {
   _impl = make_unique_by_column_type<AbstractReadOnlyOperatorImpl, SortImpl>(
-      input_table_left()->column_type(input_table_left()->column_id_by_name(_sort_column_name)), input_table_left(),
-      _sort_column_name, _order_by_mode, _output_chunk_size);
-  return _impl->on_execute();
+      _input_table_left()->column_type(_column_id), _input_table_left(), _column_id, _order_by_mode,
+      _output_chunk_size);
+  return _impl->_on_execute();
 }
 
 // This class fills the temporary structure to be sorted. Therefore the column to sort by is visited by this class, so
@@ -43,9 +43,9 @@ std::shared_ptr<const Table> Sort::on_execute() {
 template <typename SortColumnType>
 class Sort::SortImplMaterializeSortColumn : public ColumnVisitable {
  public:
-  SortImplMaterializeSortColumn(std::shared_ptr<const Table> in, const std::string &sort_column_name,
+  SortImplMaterializeSortColumn(std::shared_ptr<const Table> in, const ColumnID column_id,
                                 std::shared_ptr<std::vector<std::pair<RowID, SortColumnType>>> id_value_map)
-      : _table_in(in), _sort_column_name(sort_column_name), _row_id_value_vector(id_value_map) {}
+      : _table_in(in), _column_id(column_id), _row_id_value_vector(id_value_map) {}
 
   struct MaterializeSortColumnContext : ColumnVisitableContext {
     MaterializeSortColumnContext(ChunkID c, std::shared_ptr<std::vector<std::pair<RowID, SortColumnType>>> id_value_map)
@@ -69,11 +69,9 @@ class Sort::SortImplMaterializeSortColumn : public ColumnVisitable {
 
   void execute() {
     _row_id_value_vector->reserve(_table_in->row_count());
-    auto sort_column_id = _table_in->column_id_by_name(_sort_column_name);
-
     for (ChunkID chunk_id{0}; chunk_id < _table_in->chunk_count(); chunk_id++) {
       _table_in->get_chunk(chunk_id)
-          .get_column(sort_column_id)
+          .get_column(_column_id)
           ->visit(*this, std::make_shared<MaterializeSortColumnContext>(chunk_id, _row_id_value_vector));
     }
   }
@@ -171,7 +169,7 @@ class Sort::SortImplMaterializeSortColumn : public ColumnVisitable {
   }
 
   const std::shared_ptr<const Table> _table_in;
-  const std::string _sort_column_name;
+  const ColumnID _column_id;
   std::shared_ptr<std::vector<std::pair<RowID, SortColumnType>>> _row_id_value_vector;
 };
 

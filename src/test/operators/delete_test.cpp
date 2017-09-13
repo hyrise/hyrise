@@ -44,7 +44,7 @@ void OperatorsDeleteTest::helper(bool commit) {
   const auto cid = 1u;
 
   // Selects two out of three rows.
-  auto table_scan = std::make_shared<TableScan>(_gt, "b", ScanType::OpGreaterThan, "456.7");
+  auto table_scan = std::make_shared<TableScan>(_gt, ColumnID{0}, ScanType::OpGreaterThan, "456.7");
 
   table_scan->execute();
 
@@ -93,9 +93,9 @@ TEST_F(OperatorsDeleteTest, DetectDirtyWrite) {
   auto t1_context = TransactionManager::get().new_transaction_context();
   auto t2_context = TransactionManager::get().new_transaction_context();
 
-  auto table_scan1 = std::make_shared<TableScan>(_gt, "a", ScanType::OpEquals, "123");
-  auto expected_result = std::make_shared<TableScan>(_gt, "a", ScanType::OpNotEquals, "123");
-  auto table_scan2 = std::make_shared<TableScan>(_gt, "a", ScanType::OpLessThan, "1234");
+  auto table_scan1 = std::make_shared<TableScan>(_gt, ColumnID{1}, ScanType::OpEquals, "123");
+  auto expected_result = std::make_shared<TableScan>(_gt, ColumnID{1}, ScanType::OpNotEquals, "123");
+  auto table_scan2 = std::make_shared<TableScan>(_gt, ColumnID{1}, ScanType::OpLessThan, "1234");
 
   table_scan1->execute();
   expected_result->execute();

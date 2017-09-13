@@ -64,7 +64,7 @@ T ImportBinary::_read_value(std::ifstream& file) {
   return result;
 }
 
-std::shared_ptr<const Table> ImportBinary::on_execute() {
+std::shared_ptr<const Table> ImportBinary::_on_execute() {
   if (_tablename && StorageManager::get().has_table(*_tablename)) {
     return StorageManager::get().get_table(*_tablename);
   }
