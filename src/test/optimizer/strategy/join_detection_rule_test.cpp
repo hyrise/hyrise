@@ -3,6 +3,7 @@
 #include <utility>
 #include <vector>
 #include <storage/storage_manager.hpp>
+#include <sql/sql_to_ast_translator.hpp>
 
 #include "base_test.hpp"
 #include "gtest/gtest.h"
@@ -167,6 +168,36 @@ TEST_F(JoinDetectionRuleTest, MultipleJoins) {
 
   EXPECT_EQ(output->left_child()->left_child()->left_child()->type(), ASTNodeType::StoredTable);
   EXPECT_EQ(output->left_child()->left_child()->right_child()->type(), ASTNodeType::StoredTable);
+}
+
+TEST_F(JoinDetectionRuleTest, MultipleJoinsSQL) {
+
+  hsql::SQLParserResult parse_result;
+  hsql::SQLParser::parseSQLString("SELECT * FROM a, b, c WHERE a.a = b.a", &parse_result);
+
+  auto node = SQLToASTTranslator::get().translate_parse_result(parse_result)[0];
+  auto output = _rule.apply_to(node);
+
+  EXPECT_EQ(output->type(), ASTNodeType::Projection);
+  EXPECT_EQ(output->left_child()->type(), ASTNodeType::Join);
+
+  const auto first_join_node = std::dynamic_pointer_cast<JoinNode>(output->left_child());
+  EXPECT_EQ(first_join_node->join_mode(), JoinMode::Inner);
+
+  const auto first_table = std::dynamic_pointer_cast<StoredTableNode>(output->left_child()->right_child());
+  EXPECT_EQ(first_table->table_name(), "a");
+
+  EXPECT_EQ(output->left_child()->left_child()->type(), ASTNodeType::Join);
+  const auto second_join_node = std::dynamic_pointer_cast<JoinNode>(output->left_child()->left_child());
+  EXPECT_EQ(second_join_node->join_mode(), JoinMode::Cross);
+
+  EXPECT_EQ(output->left_child()->left_child()->left_child()->type(), ASTNodeType::StoredTable);
+  EXPECT_EQ(output->left_child()->left_child()->right_child()->type(), ASTNodeType::StoredTable);
+
+  const auto second_table = std::dynamic_pointer_cast<StoredTableNode>(output->left_child()->left_child()->left_child());
+  EXPECT_EQ(second_table->table_name(), "b");
+  const auto third_table = std::dynamic_pointer_cast<StoredTableNode>(output->left_child()->left_child()->right_child());
+  EXPECT_EQ(third_table->table_name(), "c");
 }
 
 }  // namespace opossum
