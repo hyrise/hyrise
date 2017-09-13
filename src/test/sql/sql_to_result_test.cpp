@@ -58,6 +58,7 @@ class SQLToResultTest : public BaseTest, public ::testing::WithParamInterface<SQ
 
     StorageManager::get().add_table("int_int_for_insert_1", load_table("src/test/tables/int_int3_limit_1.tbl", 2));
     StorageManager::get().add_table("int_int_for_insert_2", load_table("src/test/tables/int_int3_limit_1.tbl", 2));
+    StorageManager::get().add_table("int_int_for_update", load_table("src/test/tables/int_int3_updated.tbl", 2));
 
     std::shared_ptr<Table> groupby_int_1gb_1agg =
         load_table("src/test/tables/aggregateoperator/groupby_int_1gb_1agg/input.tbl", 2);
@@ -129,6 +130,8 @@ const SQLTestParam test_queries[] = {
 
     // Projection
     {"SELECT a FROM int_float;", "src/test/tables/int.tbl"},
+    {"SELECT a as b FROM int_float;", "src/test/tables/int2.tbl"},
+    {"SELECT a, 4+6 as b FROM int_float;", "src/test/tables/int_long_constant.tbl"},
 
     // ORDER BY
     {"SELECT * FROM int_float ORDER BY a DESC;", "src/test/tables/int_float_reverse.tbl", OrderSensitivity::Sensitive},
@@ -142,6 +145,12 @@ const SQLTestParam test_queries[] = {
 
     // LIMIT
     {"SELECT * FROM int_int3 LIMIT 4;", "src/test/tables/int_int3_limit_4.tbl"},
+
+    // PRODUCT
+    {R"(SELECT "left".a, "left".b, "right".a, "right".b
+        FROM int_float AS "left",  int_float2 AS "right"
+        WHERE "left".a = "right".a;)",
+     "src/test/tables/joinoperators/int_inner_join.tbl"},
 
     // JOIN
     {R"(SELECT "left".a, "left".b, "right".a, "right".b
@@ -272,6 +281,11 @@ const SQLTestParam test_queries[] = {
     // {"DELETE FROM int_for_delete_1; SELECT * FROM int_for_delete_1", "src/test/tables/int_empty.tbl"},
     // {"DELETE FROM int_for_delete_2 WHERE a > 1000; SELECT * FROM int_for_delete_2",
     // "src/test/tables/int_deleted.tbl"}
+
+    // UPDATE
+    // TODO(md): see DELETE
+    // {"UPDATE int_int_for_update SET a = a + 1 WHERE b > 10; SELECT * FROM int_int_for_update",
+    // "src/test/tables/int_int3_updated.tbl"},
 
     // INSERT
     {"INSERT INTO int_int_for_insert_1 VALUES (1, 3); SELECT * FROM int_int_for_insert_1;",

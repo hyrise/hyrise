@@ -285,4 +285,6 @@ bool Expression::operator==(const Expression &rhs) const {
          _alias == rhs._alias;
 }
 
+void Expression::set_alias(const std::string &alias) { _alias = alias; }
+
 }  // namespace opossum

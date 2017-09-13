@@ -19,6 +19,7 @@
 #include "operators/sort.hpp"
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
+#include "operators/update.hpp"
 #include "optimizer/abstract_syntax_tree/abstract_ast_node.hpp"
 #include "optimizer/abstract_syntax_tree/aggregate_node.hpp"
 #include "optimizer/abstract_syntax_tree/delete_node.hpp"
@@ -31,6 +32,7 @@
 #include "optimizer/abstract_syntax_tree/show_columns_node.hpp"
 #include "optimizer/abstract_syntax_tree/sort_node.hpp"
 #include "optimizer/abstract_syntax_tree/stored_table_node.hpp"
+#include "optimizer/abstract_syntax_tree/update_node.hpp"
 
 namespace opossum {
 
@@ -68,6 +70,8 @@ ASTToOperatorTranslator::ASTToOperatorTranslator() {
       std::bind(&ASTToOperatorTranslator::_translate_delete_node, this, std::placeholders::_1);
   _operator_factory[ASTNodeType::DummyTable] =
       std::bind(&ASTToOperatorTranslator::_translate_dummy_table_node, this, std::placeholders::_1);
+  _operator_factory[ASTNodeType::Update] =
+      std::bind(&ASTToOperatorTranslator::_translate_update_node, this, std::placeholders::_1);
 
   // Maintenance operators
   _operator_factory[ASTNodeType::ShowTables] =
@@ -261,6 +265,17 @@ std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::_translate_delete_nod
   const auto input_operator = translate_node(node->left_child());
   auto delete_node = std::dynamic_pointer_cast<DeleteNode>(node);
   return std::make_shared<Delete>(delete_node->table_name(), input_operator);
+}
+
+std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::_translate_update_node(
+    const std::shared_ptr<AbstractASTNode> &node) const {
+  const auto input_operator = translate_node(node->left_child());
+  auto update_node = std::dynamic_pointer_cast<UpdateNode>(node);
+
+  auto new_value_exprs = update_node->column_expressions();
+
+  auto projection = std::make_shared<Projection>(input_operator, new_value_exprs);
+  return std::make_shared<Update>(update_node->table_name(), input_operator, projection);
 }
 
 std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::_translate_show_tables_node(
