@@ -206,6 +206,7 @@ std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::_translate_aggregate_
     auto current_column_id = static_cast<ColumnID::base_type>(groupby_columns.size());
 
     for (auto &aggregate_expression : aggregate_expressions) {
+      Assert(aggregate_expression->expression_list().size(), "Aggregate: empty expression list");
       DebugAssert(aggregate_expression->type() == ExpressionType::Function, "Expression is not a function.");
 
       // Do not project for COUNT(*)
@@ -215,7 +216,7 @@ std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::_translate_aggregate_
       }
 
       // Add original expression of the function to the Projection.
-      column_expressions.emplace_back((aggregate_expression->expression_list())[0]);
+      column_expressions.emplace_back(aggregate_expression->expression_list()[0]);
 
       // Create a ColumnReference expression for the column id of the Projection.
       const auto column_ref_expr = Expression::create_column(ColumnID{current_column_id});
