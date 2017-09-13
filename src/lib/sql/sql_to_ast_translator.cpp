@@ -211,9 +211,9 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_update(const hsq
          "Unconditional updates are currently not supported");
 
   std::vector<std::shared_ptr<Expression>> update_expressions;
-  update_expressions->reserve(current_values_node->output_col_count());
+  update_expressions.reserve(current_values_node->output_col_count());
 
-  for (ColumnID column_idx{0}; column_idx < current_values_node->output_col_count(); ++column_idx++) {
+  for (ColumnID column_idx{0}; column_idx < current_values_node->output_col_count(); ++column_idx) {
     bool column_gets_updated = false;
 
     for (auto& sql_expr : *update.updates) {
@@ -550,7 +550,7 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_projection(
 
       if (!expr->table_name()) {
         // If there is no table qualifier take all columns from the input.
-        for (ColumnID column_idx{0}; column_idx < input_node->output_col_count(); ++column_idx++) {
+        for (ColumnID column_idx{0}; column_idx < input_node->output_col_count(); ++column_idx) {
           column_ids.emplace_back(column_idx);
         }
       } else {
