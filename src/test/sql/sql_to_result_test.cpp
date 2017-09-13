@@ -131,7 +131,7 @@ const SQLTestParam test_queries[] = {
     // Projection
     {"SELECT a FROM int_float;", "src/test/tables/int.tbl"},
     {"SELECT a as b FROM int_float;", "src/test/tables/int2.tbl"},
-    {"SELECT a, 4+6 as b FROM int_float;", "src/test/tables/int_long_constant.tbl"},
+    {"SELECT a, 4+6 as b FROM int_float;", "src/test/tables/int_int_constant.tbl"},
 
     // ORDER BY
     {"SELECT * FROM int_float ORDER BY a DESC;", "src/test/tables/int_float_reverse.tbl", OrderSensitivity::Sensitive},
