@@ -7,13 +7,16 @@
 #include "base_test.hpp"
 #include "gtest/gtest.h"
 
+#include "concurrency/transaction_manager.hpp"
 #include "operators/get_table.hpp"
 #include "operators/table_scan.hpp"
+#include "operators/validate.hpp"
 #include "optimizer/abstract_syntax_tree/ast_to_operator_translator.hpp"
 #include "scheduler/current_scheduler.hpp"
 #include "scheduler/node_queue_scheduler.hpp"
 #include "scheduler/operator_task.hpp"
 #include "scheduler/topology.hpp"
+#include "sql/sql_planner.hpp"
 #include "sql/sql_to_ast_translator.hpp"
 #include "storage/storage_manager.hpp"
 
@@ -47,6 +50,27 @@ class SQLToResultTest : public BaseTest, public ::testing::WithParamInterface<SQ
                                     load_table("src/test/tables/aggregateoperator/groupby_int_2gb_2agg/input.tbl", 2));
     StorageManager::get().add_table("groupby_int_2gb_2agg_2",
                                     load_table("src/test/tables/aggregateoperator/groupby_int_2gb_2agg/input2.tbl", 2));
+    StorageManager::get().add_table(
+        "groupby_int_1gb_1agg_null",
+        load_table("src/test/tables/aggregateoperator/groupby_int_1gb_1agg/input_null.tbl", 2));
+
+    StorageManager::get().add_table("int_for_delete_1", load_table("src/test/tables/int.tbl", 3));
+
+    StorageManager::get().add_table("int_int_for_insert_1", load_table("src/test/tables/int_int3_limit_1.tbl", 2));
+    StorageManager::get().add_table("int_int_for_insert_2", load_table("src/test/tables/int_int3_limit_1.tbl", 2));
+    StorageManager::get().add_table("int_int_for_update", load_table("src/test/tables/int_int3_updated.tbl", 2));
+
+    std::shared_ptr<Table> groupby_int_1gb_1agg =
+        load_table("src/test/tables/aggregateoperator/groupby_int_1gb_1agg/input.tbl", 2);
+    StorageManager::get().add_table("groupby_int_1gb_1agg", groupby_int_1gb_1agg);
+
+    std::shared_ptr<Table> groupby_int_1gb_2agg =
+        load_table("src/test/tables/aggregateoperator/groupby_int_1gb_2agg/input.tbl", 2);
+    StorageManager::get().add_table("groupby_int_1gb_2agg", groupby_int_1gb_2agg);
+
+    std::shared_ptr<Table> groupby_int_2gb_2agg =
+        load_table("src/test/tables/aggregateoperator/groupby_int_2gb_2agg/input.tbl", 2);
+    StorageManager::get().add_table("groupby_int_2gb_2agg", groupby_int_2gb_2agg);
 
     StorageManager::get().add_table("int_int_int", load_table("src/test/tables/int_int_int.tbl", 2));
 
@@ -72,15 +96,25 @@ TEST_P(SQLToResultTest, SQLQueryTest) {
     throw std::runtime_error("Query is not valid.");
   }
 
-  // Expect the query to be a single statement.
-  auto result_node = SQLToASTTranslator::get().translate_parse_result(parse_result)[0];
-  auto result_operator = ASTToOperatorTranslator::get().translate_node(result_node);
+  auto plan = SQLPlanner::plan(parse_result);
 
-  auto tasks = OperatorTask::make_tasks_from_operator(result_operator);
-  CurrentScheduler::schedule_and_wait_for_tasks(tasks);
+  std::shared_ptr<AbstractOperator> result_operator;
 
-  auto result_table = tasks.back()->get_operator()->get_output();
-  EXPECT_TABLE_EQ(result_table, expected_result, params.order_sensitive == OrderSensitivity::Sensitive);
+  auto tx_context = TransactionManager::get().new_transaction_context();
+
+  for (const auto &root : plan.tree_roots()) {
+    auto tasks = OperatorTask::make_tasks_from_operator(root);
+
+    for (auto &task : tasks) {
+      task->get_operator()->set_transaction_context(tx_context);
+    }
+
+    CurrentScheduler::schedule_and_wait_for_tasks(tasks);
+    result_operator = tasks.back()->get_operator();
+  }
+
+  EXPECT_TABLE_EQ(result_operator->get_output(), expected_result,
+                  params.order_sensitive == OrderSensitivity::Sensitive);
 }
 
 const SQLTestParam test_queries[] = {
@@ -96,6 +130,8 @@ const SQLTestParam test_queries[] = {
 
     // Projection
     {"SELECT a FROM int_float;", "src/test/tables/int.tbl"},
+    {"SELECT a as b FROM int_float;", "src/test/tables/int2.tbl"},
+    {"SELECT a, 4+6 as b FROM int_float;", "src/test/tables/int_long_constant.tbl"},
 
     // ORDER BY
     {"SELECT * FROM int_float ORDER BY a DESC;", "src/test/tables/int_float_reverse.tbl", OrderSensitivity::Sensitive},
@@ -109,6 +145,12 @@ const SQLTestParam test_queries[] = {
 
     // LIMIT
     {"SELECT * FROM int_int3 LIMIT 4;", "src/test/tables/int_int3_limit_4.tbl"},
+
+    // PRODUCT
+    {R"(SELECT "left".a, "left".b, "right".a, "right".b
+        FROM int_float AS "left",  int_float2 AS "right"
+        WHERE "left".a = "right".a;)",
+     "src/test/tables/joinoperators/int_inner_join.tbl"},
 
     // JOIN
     {R"(SELECT "left".a, "left".b, "right".a, "right".b
@@ -194,6 +236,23 @@ const SQLTestParam test_queries[] = {
      "src/test/tables/aggregateoperator/groupby_int_1gb_2agg/sum_avg.tbl"},
     {"SELECT a, b, MAX(c), AVG(d) FROM groupby_int_2gb_2agg GROUP BY a, b;",
      "src/test/tables/aggregateoperator/groupby_int_2gb_2agg/max_avg.tbl"},
+
+    // COUNT(*)
+    {"SELECT COUNT(*) FROM groupby_int_1gb_1agg_null GROUP BY a;",
+     "src/test/tables/aggregateoperator/groupby_int_1gb_0agg/count_star.tbl"},
+
+    // Aggregates with NULL
+    {"SELECT MAX(b) FROM groupby_int_1gb_1agg_null GROUP BY a;",
+     "src/test/tables/aggregateoperator/groupby_int_1gb_1agg/max_null.tbl"},
+    {"SELECT MIN(b) FROM groupby_int_1gb_1agg_null GROUP BY a;",
+     "src/test/tables/aggregateoperator/groupby_int_1gb_1agg/min_null.tbl"},
+    {"SELECT SUM(b) FROM groupby_int_1gb_1agg_null GROUP BY a;",
+     "src/test/tables/aggregateoperator/groupby_int_1gb_1agg/sum_null.tbl"},
+    {"SELECT AVG(b) FROM groupby_int_1gb_1agg_null GROUP BY a;",
+     "src/test/tables/aggregateoperator/groupby_int_1gb_1agg/avg_null.tbl"},
+    {"SELECT COUNT(b) FROM groupby_int_1gb_1agg_null GROUP BY a;",
+     "src/test/tables/aggregateoperator/groupby_int_1gb_1agg/count_null.tbl"},
+
     // Checks that output of Aggregate can be worked with correctly.
     {R"(SELECT d, min_c, max_a
         FROM (
@@ -203,6 +262,8 @@ const SQLTestParam test_queries[] = {
         )
         WHERE d BETWEEN 20 AND 50 AND min_c > 15;)",
      "src/test/tables/aggregateoperator/groupby_int_2gb_2agg/max_min_filter_projection.tbl"},
+    {"SELECT SUM(b) FROM groupby_int_1gb_1agg",
+     "src/test/tables/aggregateoperator/0gb_1agg/sum.tbl"},
 
     // HAVING
     {"SELECT a, b, MAX(c), AVG(d) FROM groupby_int_2gb_2agg GROUP BY a, b HAVING MAX(c) >= 10 AND MAX(c) < 40;",
@@ -214,6 +275,49 @@ const SQLTestParam test_queries[] = {
 
     {"SELECT * FROM customer;", "src/test/tables/tpch/customer.tbl"},
     {"SELECT c_custkey, c_name FROM customer;", "src/test/tables/tpch/customer_projection.tbl"},
+
+    // DELETE
+    // TODO(MD): this will only work once SELECT automatically validates (#188)
+    // {"DELETE FROM int_for_delete_1; SELECT * FROM int_for_delete_1", "src/test/tables/int_empty.tbl"},
+    // {"DELETE FROM int_for_delete_2 WHERE a > 1000; SELECT * FROM int_for_delete_2",
+    // "src/test/tables/int_deleted.tbl"}
+
+    // UPDATE
+    // TODO(md): see DELETE
+    // {"UPDATE int_int_for_update SET a = a + 1 WHERE b > 10; SELECT * FROM int_int_for_update",
+    // "src/test/tables/int_int3_updated.tbl"},
+
+    // INSERT
+    {"INSERT INTO int_int_for_insert_1 VALUES (1, 3); SELECT * FROM int_int_for_insert_1;",
+     "src/test/tables/int_int3_limit_2.tbl"},
+    {"INSERT INTO int_int_for_insert_1 (a, b) VALUES (1, 3); SELECT * FROM int_int_for_insert_1;",
+     "src/test/tables/int_int3_limit_2.tbl"},
+    {"INSERT INTO int_int_for_insert_1 (b, a) VALUES (3, 1); SELECT * FROM int_int_for_insert_1;",
+     "src/test/tables/int_int3_limit_2.tbl"},
+
+    {R"(INSERT INTO int_int_for_insert_1 VALUES (1, 3);
+     INSERT INTO int_int_for_insert_1 VALUES (13, 2);
+     INSERT INTO int_int_for_insert_1 VALUES (6, 9);
+     SELECT * FROM int_int_for_insert_1;)",
+     "src/test/tables/int_int3_limit_4.tbl"},
+
+    // INSERT ... INTO ... (with literal projection)
+    {R"(INSERT INTO int_int_for_insert_1 SELECT 1, 3 FROM int_int_for_insert_1; 
+        SELECT * FROM int_int_for_insert_1;)",
+     "src/test/tables/int_int3_limit_2.tbl"},
+    {R"(INSERT INTO int_int_for_insert_1 (a, b) SELECT 1, 3 FROM int_int_for_insert_1; 
+        SELECT * FROM int_int_for_insert_1;)",
+     "src/test/tables/int_int3_limit_2.tbl"},
+    {R"(INSERT INTO int_int_for_insert_1 (b, a) SELECT 3, 1 FROM int_int_for_insert_1; 
+        SELECT * FROM int_int_for_insert_1;)",
+     "src/test/tables/int_int3_limit_2.tbl"},
+
+    // INSERT ... INTO ... (with regular queries)
+    {R"(INSERT INTO int_int_for_insert_1 SELECT * FROM int_int3 WHERE a = 1 AND b = 3;
+        INSERT INTO int_int_for_insert_1 SELECT * FROM int_int3 WHERE a = 13;
+        INSERT INTO int_int_for_insert_1 (a, b) SELECT a, b FROM int_int3 WHERE a = 6;
+        SELECT * FROM int_int_for_insert_1;)",
+     "src/test/tables/int_int3_limit_4.tbl"},
 
     {R"(SELECT customer.c_custkey, customer.c_name, COUNT(orders.o_orderkey)
         FROM customer JOIN orders ON c_custkey = o_custkey

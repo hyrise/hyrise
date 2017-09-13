@@ -65,12 +65,12 @@ std::shared_ptr<AbstractOperator> TableScan::recreate(const std::vector<AllParam
                                      _right_value2);
 }
 
-std::shared_ptr<const Table> TableScan::on_execute() {
-  if (auto between_output_table = _on_execute_between()) {
+std::shared_ptr<const Table> TableScan::_on_execute() {
+  if (auto between_output_table = __on_execute_between()) {
     return between_output_table;
   }
 
-  _in_table = input_table_left();
+  _in_table = _input_table_left();
 
   _init_scan();
   _init_output_table();
@@ -201,7 +201,7 @@ void TableScan::_init_output_table() {
   }
 }
 
-std::shared_ptr<const Table> TableScan::_on_execute_between() {
+std::shared_ptr<const Table> TableScan::__on_execute_between() {
   if (_scan_type != ScanType::OpBetween) {
     return nullptr;
   }

@@ -55,7 +55,7 @@ class ImportCsv : public AbstractReadOnlyOperator {
 
  protected:
   // Returns the table that was created from the csv file.
-  std::shared_ptr<const Table> on_execute() override;
+  std::shared_ptr<const Table> _on_execute() override;
 
   // Path to the input file
   const std::string _filename;

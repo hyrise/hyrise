@@ -33,7 +33,7 @@ class AggregateNode;
  * https://medium.com/hyrise/the-gentle-art-of-referring-to-columns-634f057bd810
  *
  * Most of the lifting for this is done in the overrides of
- * AbstractASTNode::{get, find}_column_id_by_column_identifier_name() which Nodes that add, remove or rearrange columns
+ * AbstractASTNode::{get, find}_column_id_by_named_column_reference() which Nodes that add, remove or rearrange columns
  * have to have an implementation of (Projection, Join, ...).
  * The handling of ColumnIdentifierName::table_name is also done in these overrides. StoredTableNode handles table
  * ALIASes and names (`SELECT t1.a, alias_t2.b FROM t1, t2 AS alias_t2`), ProjectionNode ALIASes for Expressions
@@ -92,6 +92,12 @@ class SQLToASTTranslator final : public boost::noncopyable {
 
   std::shared_ptr<AbstractASTNode> _translate_limit(const hsql::LimitDescription& limit,
                                                     const std::shared_ptr<AbstractASTNode>& input_node);
+
+  std::shared_ptr<AbstractASTNode> _translate_insert(const hsql::InsertStatement& insert);
+
+  std::shared_ptr<AbstractASTNode> _translate_delete(const hsql::DeleteStatement& del);
+
+  std::shared_ptr<AbstractASTNode> _translate_update(const hsql::UpdateStatement& update);
 
   /**
    * Helper function to avoid code duplication for WHERE and HAVING

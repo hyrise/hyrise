@@ -162,6 +162,8 @@ bool Expression::is_binary_operator() const {
   }
 }
 
+bool Expression::is_null_literal() const { return _type == ExpressionType::Literal && _value && is_null(*_value); }
+
 bool Expression::is_operand() const { return _type == ExpressionType::Literal || _type == ExpressionType::Column; }
 
 const std::string Expression::description() const {
@@ -225,6 +227,9 @@ std::string Expression::to_string(const std::shared_ptr<AbstractASTNode> &input_
   std::string column_name;
   switch (_type) {
     case ExpressionType::Literal:
+      if (is_null_literal()) {
+        return std::string("NULL");
+      }
       return type_cast<std::string>(value());
     case ExpressionType::Column:
       if (input_node != nullptr) {
@@ -235,6 +240,8 @@ std::string Expression::to_string(const std::shared_ptr<AbstractASTNode> &input_
     case ExpressionType::Function:
       return aggregate_function_to_string.left.at(aggregate_function()) + "(" +
              _expression_list[0]->to_string(input_node) + ")";
+    case ExpressionType::Star:
+      return std::string("*");
     default:
       // Handled further down.
       break;
@@ -277,5 +284,7 @@ bool Expression::operator==(const Expression &rhs) const {
   return _type == rhs._type && _value == rhs._value && _table_name == rhs._table_name && _column_id == rhs._column_id &&
          _alias == rhs._alias;
 }
+
+void Expression::set_alias(const std::string &alias) { _alias = alias; }
 
 }  // namespace opossum

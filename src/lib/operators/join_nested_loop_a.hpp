@@ -38,7 +38,7 @@ class JoinNestedLoopA : public AbstractJoinOperator {
                   const std::shared_ptr<const AbstractOperator> right, const JoinMode mode,
                   const std::pair<ColumnID, ColumnID> &column_ids, const ScanType scan_type);
 
-  std::shared_ptr<const Table> on_execute() override;
+  std::shared_ptr<const Table> _on_execute() override;
 
   const std::string name() const override;
   uint8_t num_in_tables() const override;

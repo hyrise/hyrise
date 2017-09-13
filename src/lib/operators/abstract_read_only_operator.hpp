@@ -18,11 +18,11 @@ class AbstractReadOnlyOperator : public AbstractOperator {
       : AbstractOperator(left, right) {}
 
  protected:
-  std::shared_ptr<const Table> on_execute(std::shared_ptr<TransactionContext> /*context*/) override {
-    return on_execute();
+  std::shared_ptr<const Table> _on_execute(std::shared_ptr<TransactionContext> /*context*/) override {
+    return _on_execute();
   }
 
-  virtual std::shared_ptr<const Table> on_execute() = 0;
+  virtual std::shared_ptr<const Table> _on_execute() = 0;
 
   // Some operators need an internal implementation class, mostly in cases where
   // their execute method depends on a template parameter. An example for this is
@@ -30,7 +30,7 @@ class AbstractReadOnlyOperator : public AbstractOperator {
   class AbstractReadOnlyOperatorImpl {
    public:
     virtual ~AbstractReadOnlyOperatorImpl() = default;
-    virtual std::shared_ptr<const Table> on_execute() = 0;
+    virtual std::shared_ptr<const Table> _on_execute() = 0;
   };
 };
 

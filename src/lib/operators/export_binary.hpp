@@ -29,7 +29,7 @@ class ExportBinary : public AbstractReadOnlyOperator {
    * Executes the export operator
    * @return The table that was also the input
    */
-  std::shared_ptr<const Table> on_execute() final;
+  std::shared_ptr<const Table> _on_execute() final;
 
   /**
    * Name of the operator is ExportBinary

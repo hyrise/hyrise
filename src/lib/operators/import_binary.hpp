@@ -42,7 +42,7 @@ class ImportBinary : public AbstractReadOnlyOperator {
    *
    * ¹ Zero or more chunks
    */
-  std::shared_ptr<const Table> on_execute() final;
+  std::shared_ptr<const Table> _on_execute() final;
 
   // Returns the name of the operator
   const std::string name() const final;

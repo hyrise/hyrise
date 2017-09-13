@@ -38,7 +38,7 @@ class AbstractJoinOperator : public AbstractReadOnlyOperator {
   class AbstractJoinOperatorImpl : public AbstractReadOnlyOperatorImpl {
    public:
     virtual ~AbstractJoinOperatorImpl() = default;
-    virtual std::shared_ptr<const Table> on_execute() = 0;
+    virtual std::shared_ptr<const Table> _on_execute() = 0;
   };
 };
 

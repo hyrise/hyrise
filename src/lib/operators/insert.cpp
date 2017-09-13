@@ -63,7 +63,7 @@ const std::string Insert::name() const { return "Insert"; }
 
 uint8_t Insert::num_in_tables() const { return 1; }
 
-std::shared_ptr<const Table> Insert::on_execute(std::shared_ptr<TransactionContext> context) {
+std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionContext> context) {
   context->register_rw_operator(shared_from_this());
 
   _target_table = StorageManager::get().get_table(_target_table_name);
@@ -77,8 +77,8 @@ std::shared_ptr<const Table> Insert::on_execute(std::shared_ptr<TransactionConte
 
   auto total_rows_to_insert = 0u;
 
-  for (auto i = ChunkID{0}; i < input_table_left()->chunk_count(); i++) {
-    const auto& chunk = input_table_left()->get_chunk(i);
+  for (auto i = ChunkID{0}; i < _input_table_left()->chunk_count(); i++) {
+    const auto& chunk = _input_table_left()->get_chunk(i);
     total_rows_to_insert += chunk.size();
   }
 
@@ -109,9 +109,9 @@ std::shared_ptr<const Table> Insert::on_execute(std::shared_ptr<TransactionConte
       current_chunk.grow_mvcc_column_size_by(rows_to_insert_this_loop, Chunk::MAX_COMMIT_ID);
 
       // Resize current chunk to full size.
+      auto old_size = current_chunk.size();
       for (ColumnID i{0}; i < current_chunk.col_count(); ++i) {
-        typed_column_processors[i]->resize_vector(current_chunk.get_column(i),
-                                                  current_chunk.size() + rows_to_insert_this_loop);
+        typed_column_processors[i]->resize_vector(current_chunk.get_column(i), old_size + rows_to_insert_this_loop);
       }
 
       remaining_rows -= rows_to_insert_this_loop;
@@ -142,7 +142,7 @@ std::shared_ptr<const Table> Insert::on_execute(std::shared_ptr<TransactionConte
 
     // while target chunk is not full
     while (target_start_index != target_chunk.size()) {
-      const auto& source_chunk = input_table_left()->get_chunk(source_chunk_id);
+      const auto& source_chunk = _input_table_left()->get_chunk(source_chunk_id);
       auto num_to_insert = std::min(source_chunk.size() - source_chunk_start_index, n);
       for (ColumnID i{0}; i < target_chunk.col_count(); ++i) {
         auto source_column = source_chunk.get_column(i);
