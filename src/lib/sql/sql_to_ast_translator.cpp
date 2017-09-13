@@ -9,6 +9,7 @@
 #include "optimizer/abstract_syntax_tree/abstract_ast_node.hpp"
 #include "optimizer/abstract_syntax_tree/aggregate_node.hpp"
 #include "optimizer/abstract_syntax_tree/delete_node.hpp"
+#include "optimizer/abstract_syntax_tree/dummy_table_node.hpp"
 #include "optimizer/abstract_syntax_tree/insert_node.hpp"
 #include "optimizer/abstract_syntax_tree/join_node.hpp"
 #include "optimizer/abstract_syntax_tree/limit_node.hpp"
