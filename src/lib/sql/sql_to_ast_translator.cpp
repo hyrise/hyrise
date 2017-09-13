@@ -412,7 +412,7 @@ AllParameterVariant SQLToASTTranslator::translate_hsql_operand(
       Assert(input_node, "Cannot generate ColumnID without input_node");
       return SQLExpressionTranslator::get_column_id_for_expression(expr, *input_node);
     default:
-      Fail("Could not translate literal: expression type not supported.");
+      Fail("Could not translate expression: type not supported.");
       return {};
   }
 }

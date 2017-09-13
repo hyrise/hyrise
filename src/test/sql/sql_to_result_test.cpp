@@ -130,6 +130,8 @@ const SQLTestParam test_queries[] = {
 
     // Projection
     {"SELECT a FROM int_float;", "src/test/tables/int.tbl"},
+    {"SELECT a as b FROM int_float;", "src/test/tables/int2.tbl"},
+    {"SELECT a, 4+6 as b FROM int_float;", "src/test/tables/int_long_constant.tbl"},
 
     // ORDER BY
     {"SELECT * FROM int_float ORDER BY a DESC;", "src/test/tables/int_float_reverse.tbl", OrderSensitivity::Sensitive},
@@ -143,6 +145,12 @@ const SQLTestParam test_queries[] = {
 
     // LIMIT
     {"SELECT * FROM int_int3 LIMIT 4;", "src/test/tables/int_int3_limit_4.tbl"},
+
+    // PRODUCT
+    {R"(SELECT "left".a, "left".b, "right".a, "right".b
+        FROM int_float AS "left",  int_float2 AS "right"
+        WHERE "left".a = "right".a;)",
+     "src/test/tables/joinoperators/int_inner_join.tbl"},
 
     // JOIN
     {R"(SELECT "left".a, "left".b, "right".a, "right".b

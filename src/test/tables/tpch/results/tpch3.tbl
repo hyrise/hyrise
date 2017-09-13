@@ -1,0 +1,5 @@
+l_orderkey|o_orderdate|o_shippriority|revenue
+int|string|int|double
+0|1993-12-17|1|-2.1
+0|1994-03-14|1|-2.1
+0|1995-03-14|1|-2.1

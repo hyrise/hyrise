@@ -1,0 +1,3 @@
+p_partkey|p_name|p_mfgr|p_brand|p_type|p_size|p_container|p_retailsize|p_comment
+int|string|string|string|string|int|string|int|string
+0|Green|-|-|-|0|-|0|-
