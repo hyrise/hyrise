@@ -85,6 +85,9 @@ class AbstractOperator : private Noncopyable {
   // asynchronous execution
   virtual std::shared_ptr<const Table> _on_execute(std::shared_ptr<TransactionContext> context) = 0;
 
+  // method that allows operator-specific cleanups for temporary data
+  virtual void _on_cleanup();
+
   std::shared_ptr<const Table> _input_table_left() const;
   std::shared_ptr<const Table> _input_table_right() const;
 

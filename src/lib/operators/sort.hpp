@@ -17,6 +17,8 @@
 #include "resolve_type.hpp"
 #include "types.hpp"
 
+#include "gtest/gtest_prod.h"
+
 namespace opossum {
 
 /**
@@ -42,6 +44,7 @@ class Sort : public AbstractReadOnlyOperator {
 
  protected:
   std::shared_ptr<const Table> _on_execute() override;
+  void _on_cleanup() override;
 
   // The operator is seperated in three different classes. SortImpl is the common templated implementation of the
   // operator. SortImpl* und SortImplMaterializeOutput are extra classes for the visitor pattern. They fulfill a certain
@@ -57,6 +60,9 @@ class Sort : public AbstractReadOnlyOperator {
   const ColumnID _column_id;
   const OrderByMode _order_by_mode;
   const size_t _output_chunk_size;
+
+ private:
+  FRIEND_TEST(OperatorsSortTest, Cleanup);
 };
 
 // we need to use the impl pattern because the scan operator of the sort depends on the type of the column
