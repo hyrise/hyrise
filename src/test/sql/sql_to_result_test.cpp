@@ -238,8 +238,10 @@ const SQLTestParam test_queries[] = {
      "src/test/tables/aggregateoperator/groupby_int_2gb_2agg/max_avg.tbl"},
 
     // COUNT(*)
-    {"SELECT COUNT(*) FROM groupby_int_1gb_1agg_null GROUP BY a;",
+    {"SELECT a, COUNT(*) FROM groupby_int_1gb_1agg_null GROUP BY a;",
      "src/test/tables/aggregateoperator/groupby_int_1gb_0agg/count_star.tbl"},
+    {"SELECT COUNT(*), SUM(a+b) AS \"SUM(a+b)\" FROM int_int3;",
+     "src/test/tables/aggregateoperator/0gb_2agg/count_sum.tbl"},
 
     // Aggregates with NULL
     {"SELECT MAX(b) FROM groupby_int_1gb_1agg_null GROUP BY a;",
@@ -262,8 +264,7 @@ const SQLTestParam test_queries[] = {
         )
         WHERE d BETWEEN 20 AND 50 AND min_c > 15;)",
      "src/test/tables/aggregateoperator/groupby_int_2gb_2agg/max_min_filter_projection.tbl"},
-    {"SELECT SUM(b) FROM groupby_int_1gb_1agg",
-     "src/test/tables/aggregateoperator/0gb_1agg/sum.tbl"},
+    {"SELECT SUM(b) FROM groupby_int_1gb_1agg", "src/test/tables/aggregateoperator/0gb_1agg/sum.tbl"},
 
     // HAVING
     {"SELECT a, b, MAX(c), AVG(d) FROM groupby_int_2gb_2agg GROUP BY a, b HAVING MAX(c) >= 10 AND MAX(c) < 40;",

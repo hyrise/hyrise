@@ -213,6 +213,12 @@ std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::_translate_aggregate_
     for (auto &aggregate_expression : aggregate_expressions) {
       DebugAssert(aggregate_expression->type() == ExpressionType::Function, "Expression is not a function.");
 
+      // Do not project for COUNT(*)
+      if (aggregate_expression->aggregate_function() == AggregateFunction::Count &&
+          (aggregate_expression->expression_list())[0]->type() == ExpressionType::Star) {
+        continue;
+      }
+
       // Add original expression of the function to the Projection.
       column_expressions.emplace_back((aggregate_expression->expression_list())[0]);
 
