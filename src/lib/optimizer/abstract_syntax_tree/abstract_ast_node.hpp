@@ -24,7 +24,8 @@ enum class ASTNodeType {
   ShowColumns,
   ShowTables,
   Sort,
-  StoredTable
+  StoredTable,
+  Update
 };
 
 struct NamedColumnReference {

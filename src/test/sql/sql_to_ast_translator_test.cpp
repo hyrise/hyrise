@@ -17,6 +17,7 @@
 #include "optimizer/abstract_syntax_tree/predicate_node.hpp"
 #include "optimizer/abstract_syntax_tree/projection_node.hpp"
 #include "optimizer/abstract_syntax_tree/sort_node.hpp"
+#include "optimizer/abstract_syntax_tree/update_node.hpp"
 #include "sql/sql_to_ast_translator.hpp"
 #include "storage/storage_manager.hpp"
 
@@ -403,6 +404,24 @@ TEST_F(SQLToASTTranslatorTest, InsertSubquery) {
   EXPECT_EQ(expressions[0]->column_id(), ColumnID{0});
   EXPECT_EQ(expressions[1]->type(), ExpressionType::Column);
   EXPECT_EQ(expressions[1]->column_id(), ColumnID{1});
+}
+
+TEST_F(SQLToASTTranslatorTest, Update) {
+  const auto query = "UPDATE table_a SET b = 3.2 WHERE a > 1;";
+  auto result_node = compile_query(query);
+
+  EXPECT_EQ(result_node->type(), ASTNodeType::Update);
+  auto update_node = std::dynamic_pointer_cast<UpdateNode>(result_node);
+  EXPECT_EQ(update_node->table_name(), "table_a");
+  EXPECT_EQ(update_node->left_child()->type(), ASTNodeType::Predicate);
+
+  auto expressions = update_node->column_expressions();
+  EXPECT_EQ(expressions[0]->type(), ExpressionType::Column);
+  EXPECT_EQ(expressions[0]->column_id(), ColumnID{0});
+  EXPECT_EQ(expressions[1]->type(), ExpressionType::Literal);
+  EXPECT_FLOAT_EQ(boost::get<float>(expressions[1]->value()), 3.2);
+  EXPECT_TRUE(expressions[1]->alias());
+  EXPECT_EQ(*expressions[1]->alias(), "b");
 }
 
 }  // namespace opossum
