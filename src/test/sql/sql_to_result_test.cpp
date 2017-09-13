@@ -50,6 +50,9 @@ class SQLToResultTest : public BaseTest, public ::testing::WithParamInterface<SQ
                                     load_table("src/test/tables/aggregateoperator/groupby_int_2gb_2agg/input.tbl", 2));
     StorageManager::get().add_table("groupby_int_2gb_2agg_2",
                                     load_table("src/test/tables/aggregateoperator/groupby_int_2gb_2agg/input2.tbl", 2));
+    StorageManager::get().add_table(
+        "groupby_int_1gb_1agg_null",
+        load_table("src/test/tables/aggregateoperator/groupby_int_1gb_1agg/input_null.tbl", 2));
 
     StorageManager::get().add_table("int_for_delete_1", load_table("src/test/tables/int.tbl", 3));
 
@@ -224,6 +227,23 @@ const SQLTestParam test_queries[] = {
      "src/test/tables/aggregateoperator/groupby_int_1gb_2agg/sum_avg.tbl"},
     {"SELECT a, b, MAX(c), AVG(d) FROM groupby_int_2gb_2agg GROUP BY a, b;",
      "src/test/tables/aggregateoperator/groupby_int_2gb_2agg/max_avg.tbl"},
+
+    // COUNT(*)
+    {"SELECT COUNT(*) FROM groupby_int_1gb_1agg_null GROUP BY a;",
+     "src/test/tables/aggregateoperator/groupby_int_1gb_0agg/count_star.tbl"},
+
+    // Aggregates with NULL
+    {"SELECT MAX(b) FROM groupby_int_1gb_1agg_null GROUP BY a;",
+     "src/test/tables/aggregateoperator/groupby_int_1gb_1agg/max_null.tbl"},
+    {"SELECT MIN(b) FROM groupby_int_1gb_1agg_null GROUP BY a;",
+     "src/test/tables/aggregateoperator/groupby_int_1gb_1agg/min_null.tbl"},
+    {"SELECT SUM(b) FROM groupby_int_1gb_1agg_null GROUP BY a;",
+     "src/test/tables/aggregateoperator/groupby_int_1gb_1agg/sum_null.tbl"},
+    {"SELECT AVG(b) FROM groupby_int_1gb_1agg_null GROUP BY a;",
+     "src/test/tables/aggregateoperator/groupby_int_1gb_1agg/avg_null.tbl"},
+    {"SELECT COUNT(b) FROM groupby_int_1gb_1agg_null GROUP BY a;",
+     "src/test/tables/aggregateoperator/groupby_int_1gb_1agg/count_null.tbl"},
+
     // Checks that output of Aggregate can be worked with correctly.
     {R"(SELECT d, min_c, max_a
         FROM (
