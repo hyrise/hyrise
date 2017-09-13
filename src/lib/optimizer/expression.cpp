@@ -232,9 +232,8 @@ std::string Expression::to_string(const std::vector<std::string> &input_column_n
       return type_cast<std::string>(value());
     case ExpressionType::Column:
       if (!input_column_names.empty()) {
-        DebugAssert(column_id() < input_column_names.size(), std::string("_column_id ")
-                                                                            + std::to_string(column_id())
-                                                                            + " out of range");
+        DebugAssert(column_id() < input_column_names.size(),
+                    std::string("_column_id ") + std::to_string(column_id()) + " out of range");
         return input_column_names[column_id()];
       }
       return std::string("ColumnID #" + std::to_string(column_id()));

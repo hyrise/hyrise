@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string>
+#include <vector>
 
 #include "common.hpp"
 #include "optimizer/abstract_syntax_tree/abstract_ast_node.hpp"
@@ -24,7 +25,6 @@ class DummyTableNode : public AbstractASTNode {
       const NamedColumnReference& named_column_reference) const override;
 
   std::vector<ColumnID> get_output_column_ids_for_table(const std::string& table_name) const override;
-
 
  protected:
   void _on_child_changed() override;
