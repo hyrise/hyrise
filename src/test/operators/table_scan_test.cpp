@@ -199,6 +199,13 @@ class OperatorsTableScanTest : public BaseTest {
   std::shared_ptr<TableWrapper> _table_wrapper, _table_wrapper_even_dict;
 };
 
+TEST_F(OperatorsTableScanTest, Cleanup) {
+  auto scan = std::make_shared<TableScan>(_table_wrapper, ColumnID{0}, ScanType::OpGreaterThan, 90000);
+  scan->execute();
+
+  ASSERT_EQ(scan->_impl, nullptr);
+}
+
 TEST_F(OperatorsTableScanTest, DoubleScan) {
   std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_float_filtered.tbl", 2);
 

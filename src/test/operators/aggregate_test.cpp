@@ -134,6 +134,15 @@ class OperatorsAggregateTest : public BaseTest {
       _table_wrapper_3_1, _table_wrapper_3_2;
 };
 
+TEST_F(OperatorsAggregateTest, Cleanup) {
+  auto aggregate = std::make_shared<Aggregate>(_table_wrapper_1_1,
+                                               std::vector<AggregateDefinition>{{ColumnID{1}, AggregateFunction::Max}},
+                                               std::vector<ColumnID>{ColumnID{0}});
+  aggregate->execute();
+
+  ASSERT_EQ(aggregate->_impl, nullptr);
+}
+
 TEST_F(OperatorsAggregateTest, NumInputTables) {
   auto aggregate = std::make_shared<Aggregate>(_table_wrapper_1_1,
                                                std::vector<AggregateDefinition>{{ColumnID{1}, AggregateFunction::Max}},

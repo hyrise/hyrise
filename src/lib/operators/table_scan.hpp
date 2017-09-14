@@ -12,6 +12,8 @@
 #include "common.hpp"
 #include "types.hpp"
 
+#include "gtest/gtest_prod.h"
+
 namespace opossum {
 
 class BaseTableScanImpl;
@@ -55,6 +57,8 @@ class TableScan : public AbstractReadOnlyOperator {
   bool _is_reference_table;
   std::unique_ptr<BaseTableScanImpl> _impl;
   std::shared_ptr<Table> _output_table;
+
+  FRIEND_TEST(OperatorsTableScanTest, Cleanup);
 };
 
 }  // namespace opossum
