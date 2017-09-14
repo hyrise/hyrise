@@ -238,8 +238,13 @@ const SQLTestParam test_queries[] = {
      "src/test/tables/aggregateoperator/groupby_int_2gb_2agg/max_avg.tbl"},
 
     // COUNT(*)
-    {"SELECT COUNT(*) FROM groupby_int_1gb_1agg_null GROUP BY a;",
+    {"SELECT a, COUNT(*) FROM groupby_int_1gb_1agg_null GROUP BY a;",
      "src/test/tables/aggregateoperator/groupby_int_1gb_0agg/count_star.tbl"},
+    {"SELECT COUNT(*), SUM(a+b) FROM int_int3;",
+     "src/test/tables/aggregateoperator/0gb_2agg/count_sum.tbl"},
+    // todo(anyone): Enable as soon as #182 is resolved
+    // {"SELECT COUNT(*) FROM groupby_int_1gb_1agg_null GROUP BY a;",
+    //  "src/test/tables/aggregateoperator/groupby_int_1gb_1agg/count_star.tbl"},
 
     // Aggregates with NULL
     {"SELECT MAX(b) FROM groupby_int_1gb_1agg_null GROUP BY a;",
