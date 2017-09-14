@@ -8,7 +8,6 @@
 #include <vector>
 
 #include "constant_mappings.hpp"
-#include "resolve_column_type.hpp"
 #include "resolve_type.hpp"
 #include "utils/assert.hpp"
 

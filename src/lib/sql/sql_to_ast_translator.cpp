@@ -27,7 +27,6 @@
 
 #include "all_type_variant.hpp"
 #include "constant_mappings.hpp"
-#include "resolve_column_type.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 
