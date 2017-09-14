@@ -64,8 +64,8 @@ TEST_F(OperatorsSortTest, DescendingSortOfOneColumn) {
   EXPECT_TABLE_EQ(sort->get_output(), expected_result, true);
 }
 
-TEST_F(OperatorsSortTest, MultipleColumnSort) {
-  auto table_wrapper = std::make_shared<TableWrapper>(load_table("src/test/tables/int_float2.tbl", 2));
+TEST_F(OperatorsSortTest, MultipleColumnSortIsStable) {
+  auto table_wrapper = std::make_shared<TableWrapper>(load_table("src/test/tables/int_float4.tbl", 2));
   table_wrapper->execute();
 
   std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_float2_sorted.tbl", 2);
@@ -81,15 +81,15 @@ TEST_F(OperatorsSortTest, MultipleColumnSort) {
   EXPECT_TABLE_EQ(sort_after_a->get_output(), expected_result, true);
 }
 
-TEST_F(OperatorsSortTest, MultipleColumnSortIsStable) {
+TEST_F(OperatorsSortTest, MultipleColumnSortIsStableMixedOrder) {
   auto table_wrapper = std::make_shared<TableWrapper>(load_table("src/test/tables/int_float4.tbl", 2));
   table_wrapper->execute();
 
-  std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_float2_sorted.tbl", 2);
+  std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_float2_sorted_mixed.tbl", 2);
 
   // we want the output to be sorted after column a and in second place after column b.
   // So first we sort after column b and then after column a.
-  auto sort_after_b = std::make_shared<Sort>(table_wrapper, ColumnID{1}, OrderByMode::Ascending, 2u);
+  auto sort_after_b = std::make_shared<Sort>(table_wrapper, ColumnID{1}, OrderByMode::Descending, 2u);
   sort_after_b->execute();
 
   auto sort_after_a = std::make_shared<Sort>(sort_after_b, ColumnID{0}, OrderByMode::Ascending, 2u);
