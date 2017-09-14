@@ -63,9 +63,16 @@ std::shared_ptr<Expression> SQLExpressionTranslator::translate_expression(
     case hsql::kExprLiteralFloat:
       node = Expression::create_literal(expr.fval, alias);
       break;
-    case hsql::kExprLiteralInt:
-      node = Expression::create_literal(expr.ival, alias);
+    case hsql::kExprLiteralInt: {
+      AllTypeVariant value;
+      if (static_cast<int32_t>(expr.ival) == expr.ival) {
+        value = static_cast<int32_t>(expr.ival);
+      } else {
+        value = expr.ival;
+      }
+      node = Expression::create_literal(value, alias);
       break;
+    }
     case hsql::kExprLiteralString:
       node = Expression::create_literal(name, alias);
       break;

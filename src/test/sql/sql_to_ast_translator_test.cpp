@@ -345,9 +345,11 @@ TEST_F(SQLToASTTranslatorTest, InsertValues) {
 
   auto expressions = projection->column_expressions();
   EXPECT_EQ(expressions[0]->type(), ExpressionType::Literal);
-  EXPECT_EQ(boost::get<int64_t>(expressions[0]->value()), 10);
+  EXPECT_EQ(boost::get<int32_t>(expressions[0]->value()), 10);
   EXPECT_EQ(expressions[1]->type(), ExpressionType::Literal);
   EXPECT_EQ(boost::get<float>(expressions[1]->value()), 12.5);
+
+  EXPECT_EQ(projection->left_child()->type(), ASTNodeType::DummyTable);
 }
 
 TEST_F(SQLToASTTranslatorTest, InsertValuesColumnReorder) {
@@ -366,7 +368,9 @@ TEST_F(SQLToASTTranslatorTest, InsertValuesColumnReorder) {
   EXPECT_EQ(expressions[0]->type(), ExpressionType::Literal);
   EXPECT_EQ(boost::get<float>(expressions[0]->value()), 12.5);
   EXPECT_EQ(expressions[1]->type(), ExpressionType::Literal);
-  EXPECT_EQ(boost::get<int64_t>(expressions[1]->value()), 10);
+  EXPECT_EQ(boost::get<int32_t>(expressions[1]->value()), 10);
+
+  EXPECT_EQ(projection->left_child()->type(), ASTNodeType::DummyTable);
 }
 
 TEST_F(SQLToASTTranslatorTest, InsertValuesIncompleteColumns) {
@@ -383,8 +387,10 @@ TEST_F(SQLToASTTranslatorTest, InsertValuesIncompleteColumns) {
 
   auto expressions = projection->column_expressions();
   EXPECT_EQ(expressions[0]->type(), ExpressionType::Literal);
-  EXPECT_EQ(boost::get<int64_t>(expressions[0]->value()), 10);
+  EXPECT_EQ(boost::get<int32_t>(expressions[0]->value()), 10);
   EXPECT_TRUE(expressions[1]->is_null_literal());
+
+  EXPECT_EQ(projection->left_child()->type(), ASTNodeType::DummyTable);
 }
 
 TEST_F(SQLToASTTranslatorTest, InsertSubquery) {
