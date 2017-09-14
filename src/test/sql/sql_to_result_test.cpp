@@ -40,6 +40,7 @@ class SQLToResultTest : public BaseTest, public ::testing::WithParamInterface<SQ
     StorageManager::get().add_table("int_float", load_table("src/test/tables/int_float.tbl", 2));
     StorageManager::get().add_table("int_float2", load_table("src/test/tables/int_float2.tbl", 2));
     StorageManager::get().add_table("int_float4", load_table("src/test/tables/int_float4.tbl", 2));
+    StorageManager::get().add_table("int_float6", load_table("src/test/tables/int_float6.tbl", 2));
     StorageManager::get().add_table("int_string2", load_table("src/test/tables/int_string2.tbl", 2));
     StorageManager::get().add_table("int_int3", load_table("src/test/tables/int_int3.tbl", 3));
     StorageManager::get().add_table("groupby_int_1gb_1agg",
@@ -135,8 +136,10 @@ const SQLTestParam test_queries[] = {
 
     // ORDER BY
     {"SELECT * FROM int_float ORDER BY a DESC;", "src/test/tables/int_float_reverse.tbl", OrderSensitivity::Sensitive},
-    {"SELECT * FROM int_float2 ORDER BY a, b;", "src/test/tables/int_float2_sorted.tbl", OrderSensitivity::Sensitive},
-    {"SELECT * FROM int_float2 ORDER BY a, b ASC;", "src/test/tables/int_float2_sorted.tbl",
+    {"SELECT * FROM int_float4 ORDER BY a, b;", "src/test/tables/int_float2_sorted.tbl", OrderSensitivity::Sensitive},
+    {"SELECT * FROM int_float4 ORDER BY a, b ASC;", "src/test/tables/int_float2_sorted.tbl",
+     OrderSensitivity::Sensitive},
+    {"SELECT * FROM int_float4 ORDER BY a, b DESC;", "src/test/tables/int_float2_sorted_mixed.tbl",
      OrderSensitivity::Sensitive},
     {"SELECT a, b FROM int_float ORDER BY a;", "src/test/tables/int_float_sorted.tbl", OrderSensitivity::Sensitive},
     {"SELECT * FROM int_float4 ORDER BY a, b;", "src/test/tables/int_float2_sorted.tbl", OrderSensitivity::Sensitive},
@@ -209,7 +212,7 @@ const SQLTestParam test_queries[] = {
         FROM int_float AS t1
         INNER JOIN int_float2 AS t2
         ON t1.a = t2.a
-        INNER JOIN int_float4 AS t3
+        INNER JOIN int_float6 AS t3
         ON t1.a = t3.a
         INNER JOIN int_string2 AS t4
         ON t1.a = t4.a)",

@@ -48,7 +48,7 @@ struct SumUp {
 class IterablesTest : public BaseTest {
  protected:
   void SetUp() override {
-    table = load_table("src/test/tables/int_float4.tbl", 0u);
+    table = load_table("src/test/tables/int_float6.tbl", 0u);
     table_with_null = load_table("src/test/tables/int_float_with_null.tbl", 0u);
   }
 
