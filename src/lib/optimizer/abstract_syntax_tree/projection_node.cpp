@@ -65,7 +65,7 @@ void ProjectionNode::_on_child_changed() {
       _output_column_id_to_input_column_id.emplace_back(INVALID_COLUMN_ID);
 
       if (!expression->alias()) {
-        _output_column_names.emplace_back(expression->to_string());
+        _output_column_names.emplace_back(expression->to_string(left_child()->output_column_names()));
       }
 
     } else {
@@ -100,6 +100,10 @@ optional<ColumnID> ProjectionNode::find_column_id_by_named_column_reference(
   for (ColumnID column_id{0}; column_id < output_column_names().size(); column_id++) {
     const auto& column_expression = _column_expressions[column_id];
 
+    /**
+     * Check whether column_identifier_name is _NOT_ ALIASed and projected by this node, e.g. we're looking for
+     * `t1.a` in `SELECT t1.a, t1.b AS c FROM ...
+     */
     if (child_column_id && column_expression->type() == ExpressionType::Column &&
         column_expression->column_id() == *child_column_id && !column_expression->alias()) {
       Assert(!result_column_id, "Column name " + named_column_reference.column_name + " is ambiguous.");
@@ -114,16 +118,20 @@ optional<ColumnID> ProjectionNode::find_column_id_by_named_column_reference(
      * "5+3").
      */
     if (!named_column_reference.table_name) {
-      if (column_expression->alias() && *column_expression->alias() == named_column_reference.column_name) {
-        Assert(!result_column_id, "Column name " + named_column_reference.column_name + " is ambiguous.");
-        result_column_id = column_id;
-        continue;
-      }
-
-      if (column_expression->to_string() == named_column_reference.column_name) {
-        Assert(!result_column_id, "Column name " + named_column_reference.column_name + " is ambiguous.");
-        result_column_id = column_id;
-        continue;
+      if (column_expression->alias()) {
+        // Check whether `named_column_reference` is the ALIAS of a column, e.g. `a AS some_a` or `a+b AS sum_ab`
+        if (*column_expression->alias() == named_column_reference.column_name) {
+          Assert(!result_column_id, "Column name " + named_column_reference.column_name + " is ambiguous.");
+          result_column_id = column_id;
+          continue;
+        }
+      } else {
+        // Check whether `named_column_reference` is the generated name of a column, e.g. `a+b` without ALIAS
+        if (column_expression->to_string(left_child()->output_column_names()) == named_column_reference.column_name) {
+          Assert(!result_column_id, "Column name " + named_column_reference.column_name + " is ambiguous.");
+          result_column_id = column_id;
+          continue;
+        }
       }
     }
   }
