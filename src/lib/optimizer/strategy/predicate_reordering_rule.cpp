@@ -9,10 +9,13 @@
 #include "optimizer/abstract_syntax_tree/abstract_ast_node.hpp"
 #include "optimizer/abstract_syntax_tree/predicate_node.hpp"
 #include "optimizer/table_statistics.hpp"
+#include "utils/assert.hpp"
 
 namespace opossum {
 
-const std::shared_ptr<AbstractASTNode> PredicateReorderingRule::apply_to(const std::shared_ptr<AbstractASTNode> node) {
+const std::shared_ptr<AbstractASTNode> PredicateReorderingRule::apply_to(const std::shared_ptr<AbstractASTNode> & node) {
+  auto result_node = node;
+
   if (node->type() == ASTNodeType::Predicate) {
     std::vector<std::shared_ptr<PredicateNode>> predicate_nodes;
 
@@ -26,24 +29,11 @@ const std::shared_ptr<AbstractASTNode> PredicateReorderingRule::apply_to(const s
     // Sort PredicateNodes in descending order with regards to the expected row_count
     _reorder_predicates(predicate_nodes);
 
-    // Apply rule recursively to child trees
-    // There can only be a single child since we are looking at a PredicateNode.
-    if (predicate_nodes.back()->left_child()) {
-      predicate_nodes.back()->set_left_child(apply_to(predicate_nodes.back()->left_child()));
-    }
-
-    // Return top-most PredicateNode. This node replaced the input parameter 'node'
-    return predicate_nodes.front();
-  } else {
-    // Apply this rule recursively
-    if (node->left_child()) {
-      node->set_left_child(apply_to(node->left_child()));
-    }
-    if (node->right_child()) {
-      node->set_right_child(apply_to(node->right_child()));
-    }
-    return node;
+    result_node = predicate_nodes.front();
   }
+
+  apply_to_children(result_node);
+  return result_node;
 }
 
 void PredicateReorderingRule::_reorder_predicates(std::vector<std::shared_ptr<PredicateNode>>& predicates) const {

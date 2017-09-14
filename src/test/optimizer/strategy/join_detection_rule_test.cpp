@@ -1,4 +1,4 @@
-#include <memory>
+  #include <memory>
 #include <string>
 #include <utility>
 #include <vector>
@@ -35,6 +35,24 @@ class JoinDetectionRuleTest : public BaseTest {
 };
 
 TEST_F(JoinDetectionRuleTest, SimpleDetectionTest) {
+  /**
+   * Test that
+   *
+   *   Predicate
+   *  (a.a == b.b)
+   *       |
+   *     Cross
+   *    /     \
+   *   a      b
+   *
+   * gets converted to
+   *
+   *      Join
+   *  (a.a == b.b)
+   *    /     \
+   *   a      b
+   */
+
   // Generate AST
   const auto cross_join_node = std::make_shared<JoinNode>(JoinMode::Cross);
   cross_join_node->set_left_child(_table_node_a);
@@ -51,6 +69,30 @@ TEST_F(JoinDetectionRuleTest, SimpleDetectionTest) {
 }
 
 TEST_F(JoinDetectionRuleTest, SecondDetectionTest) {
+  /**
+   * Test that
+   *
+   *   Projection
+   *     (a.a)
+   *       |
+   *   Predicate
+   *  (a.a == b.b)
+   *       |
+   *     Cross
+   *    /     \
+   *   a      b
+   *
+   * gets converted to
+   *
+   *   Projection
+   *     (a.a)
+   *       |
+   *      Join
+   *  (a.a == b.b)
+   *    /     \
+   *   a      b
+   */
+
   // Generate AST
   const auto cross_join_node = std::make_shared<JoinNode>(JoinMode::Cross);
   cross_join_node->set_left_child(_table_node_a);
@@ -72,6 +114,19 @@ TEST_F(JoinDetectionRuleTest, SecondDetectionTest) {
 }
 
 TEST_F(JoinDetectionRuleTest, NoPredicate) {
+  /**
+   * Test that
+   *
+   *   Projection
+   *     (a.a)
+   *       |
+   *     Cross
+   *    /     \
+   *   a      b
+   *
+   * is not manipulated
+   */
+
   // Generate AST
   const auto cross_join_node = std::make_shared<JoinNode>(JoinMode::Cross);
   cross_join_node->set_left_child(_table_node_a);
@@ -90,6 +145,22 @@ TEST_F(JoinDetectionRuleTest, NoPredicate) {
 }
 
 TEST_F(JoinDetectionRuleTest, NoMatchingPredicate) {
+  /**
+   * Test that
+   *
+   *   Projection
+   *     (a.a)
+   *       |
+   *   Predicate
+   *  (a.a == a.b)
+   *       |
+   *     Cross
+   *    /     \
+   *   a      b
+   *
+   * isn't manipulated.
+   */
+
   // Generate AST
   const auto cross_join_node = std::make_shared<JoinNode>(JoinMode::Cross);
   cross_join_node->set_left_child(_table_node_a);
@@ -112,6 +183,24 @@ TEST_F(JoinDetectionRuleTest, NoMatchingPredicate) {
 }
 
 TEST_F(JoinDetectionRuleTest, NonCrossJoin) {
+  /**
+   * Test that
+   *
+   *   Projection
+   *     (a.a)
+   *       |
+   *   Predicate
+   *  (a.a == a.b)
+   *       |
+   *     Join
+   *  (a.b == b.b)
+   *    /     \
+   *   a      b
+   *
+   * isn't manipulated.
+   */
+
+
   const auto join_node =
       std::make_shared<JoinNode>(JoinMode::Inner, std::make_pair(ColumnID{1}, ColumnID{3}), ScanType::OpEquals);
   join_node->set_left_child(_table_node_a);
@@ -133,7 +222,34 @@ TEST_F(JoinDetectionRuleTest, NonCrossJoin) {
   EXPECT_EQ(output->left_child()->left_child()->right_child()->type(), ASTNodeType::StoredTable);
 }
 
-TEST_F(JoinDetectionRuleTest, MultipleJoins) {
+TEST_F(JoinDetectionRuleTest, MultipleJoins) {  /**
+   * Test that
+   *
+   *       Projection
+   *         (a.a)
+   *           |
+   *        Predicate
+   *      (a.a == b.a)
+   *            |
+   *          Cross
+   *         /     \
+   *     Cross     c
+   *    /     \
+   *   a      b
+   *
+   *   gets converted to
+   *
+   *       Projection
+   *         (a.a)
+   *            |
+   *          Cross
+   *         /     \
+   *      Join     c
+   *  (a.a == b.a)
+   *    /     \
+   *   a      b
+   *
+   */
   const auto join_node1 = std::make_shared<JoinNode>(JoinMode::Cross);
   join_node1->set_left_child(_table_node_a);
   join_node1->set_right_child(_table_node_b);

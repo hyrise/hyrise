@@ -16,7 +16,7 @@
 namespace opossum {
 
 const std::shared_ptr<AbstractASTNode> JoinConditionDetectionRule::apply_to(
-    const std::shared_ptr<AbstractASTNode> node) {
+    const std::shared_ptr<AbstractASTNode> & node) {
   if (node->type() == ASTNodeType::Join) {
     auto join_node = std::dynamic_pointer_cast<JoinNode>(node);
 
@@ -47,15 +47,7 @@ const std::shared_ptr<AbstractASTNode> JoinConditionDetectionRule::apply_to(
       /**
        * Apply rule recursively
        */
-      if (node->left_child()) {
-        apply_to(node->left_child());
-        //    if (!node->left_child()) {
-        //      return left_node;
-        //    }
-      }
-      if (node->right_child()) {
-        apply_to(node->right_child());
-      }
+      apply_to_children(new_join_node);
 
       return new_join_node;
     }
@@ -80,7 +72,7 @@ const std::shared_ptr<AbstractASTNode> JoinConditionDetectionRule::apply_to(
 
 const std::shared_ptr<PredicateNode> JoinConditionDetectionRule::_find_predicate_for_cross_join(
     const std::shared_ptr<JoinNode> &cross_join) {
-  DebugAssert(cross_join->left_child() && cross_join->right_child(), "Cross Join must have two children");
+  Assert(cross_join->left_child() && cross_join->right_child(), "Cross Join must have two children");
 
   // Go up in AST to find corresponding PredicateNode
   std::shared_ptr<AbstractASTNode> node = cross_join;
