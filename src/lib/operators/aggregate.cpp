@@ -263,6 +263,8 @@ std::shared_ptr<const Table> Aggregate::_on_execute() {
   return _output;
 }
 
+void Aggregate::_on_cleanup() { _impl.reset(); }
+
 template <typename ColumnType>
 void Aggregate::_create_aggregate_context(boost::hana::basic_type<ColumnType> type,
                                           std::shared_ptr<ColumnVisitableContext> &aggregate_context,

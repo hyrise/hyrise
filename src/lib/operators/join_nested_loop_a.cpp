@@ -41,6 +41,8 @@ std::shared_ptr<const Table> JoinNestedLoopA::_on_execute() {
   return _impl->_on_execute();
 }
 
+void JoinNestedLoopA::_on_cleanup() { _impl.reset(); }
+
 // We need to use the impl pattern because the join operator depends on the type of the columns
 template <typename LeftType, typename RightType>
 class JoinNestedLoopA::JoinNestedLoopAImpl : public AbstractJoinOperatorImpl {

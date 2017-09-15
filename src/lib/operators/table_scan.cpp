@@ -148,6 +148,8 @@ std::shared_ptr<const Table> TableScan::_on_execute() {
   return _output_table;
 }
 
+void TableScan::_on_cleanup() { _impl.reset(); }
+
 void TableScan::_init_scan() {
   DebugAssert(_in_table->chunk_count() > 0u, "Input table must contain at least 1 chunk.");
   const auto &first_chunk = _in_table->get_chunk(ChunkID{0u});
