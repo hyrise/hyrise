@@ -1,6 +1,7 @@
 #include "numa_memory_resource.hpp"
 
 #include <boost/math/common_factor_rt.hpp>
+#include <string>
 
 #if OPOSSUM_NUMA_SUPPORT
 #define NUMA_MEMORY_RESOURCE_ARENA_SIZE 1LL << 30
