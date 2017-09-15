@@ -22,6 +22,8 @@ ReferenceColumn::ReferenceColumn(const std::shared_ptr<const Table> referenced_t
 }
 
 const AllTypeVariant ReferenceColumn::operator[](const size_t i) const {
+  PerformanceWarning("operator[] used");
+
   auto chunk_info = _pos_list->at(i);
 
   if (chunk_info == NULL_ROW_ID) return NULL_VALUE;

@@ -29,6 +29,7 @@ ValueColumn<T>::ValueColumn(pmr_concurrent_vector<T>&& values, pmr_concurrent_ve
 template <typename T>
 const AllTypeVariant ValueColumn<T>::operator[](const size_t i) const {
   DebugAssert(i != INVALID_CHUNK_OFFSET, "Passed chunk offset must be valid.");
+  PerformanceWarning("operator[] used");
 
   // Columns supports null values and value is null
   if (is_nullable() && (*_null_values).at(i)) {

@@ -119,8 +119,12 @@ std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::_translate_sort_node(
    * Iterate in reverse because the sort operator does not support multiple columns, and instead relies on stable sort.
    * We therefore sort by the n+1-th column before sorting by the n-th column.
    */
+
   std::shared_ptr<AbstractOperator> result_operator;
   const auto &definitions = sort_node->order_by_definitions();
+  if (definitions.size() > 1) {
+    PerformanceWarning("Multiple ORDER BYs are executed one-by-one");
+  }
   for (auto it = definitions.rbegin(); it != definitions.rend(); it++) {
     const auto &definition = *it;
     result_operator = std::make_shared<Sort>(input_operator, definition.column_id, definition.order_by_mode);
@@ -138,6 +142,7 @@ std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::_translate_join_node(
   auto join_node = std::dynamic_pointer_cast<JoinNode>(node);
 
   if (join_node->join_mode() == JoinMode::Cross) {
+    PerformanceWarning("CROSS join used");
     return std::make_shared<Product>(input_left_operator, input_right_operator);
   }
 
