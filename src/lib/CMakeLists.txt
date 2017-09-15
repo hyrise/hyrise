@@ -290,6 +290,7 @@ set(
     utils/assert.hpp
     utils/boost_default_memory_resource.cpp
     utils/cuckoo_hashtable.hpp
+    utils/explicit_template_instantiation.hpp
     utils/load_table.cpp
     utils/load_table.hpp
     utils/murmur_hash.cpp

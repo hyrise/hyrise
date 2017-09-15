@@ -19,6 +19,8 @@ namespace opossum {
 
 namespace hana = boost::hana;
 
+// Attention: If extended, new types need also be added in utils/explicit_template_instantion.hpp
+
 // This holds pairs of all types and their respective string representation
 static constexpr auto column_types =
     hana::make_tuple(hana::make_pair("int", hana::type_c<int32_t>), hana::make_pair("long", hana::type_c<int64_t>),
