@@ -64,7 +64,7 @@ std::unique_ptr<Base> make_unique_by_column_type(const std::string &type, Constr
 }
 
 /**
- * Resolves a two type strings by creating an instance of a templated class and
+ * Resolves two type strings by creating an instance of a templated class and
  * returning it as a unique_ptr of its non-templated base class.
  * It does the same as make_unique_by_column_type but with two type strings.
  *
@@ -112,20 +112,38 @@ std::shared_ptr<Base> make_shared_by_column_type(const std::string &type, Constr
  * @param func is a generic lambda or similar accepting a hana::type object
  *
  *
+ * Note on hana::type (taken from Boost.Hana documentation):
+ *
+ * For subtle reasons having to do with ADL, the actual representation of hana::type is
+ * implementation-defined. In particular, hana::type may be a dependent type, so one
+ * should not attempt to do pattern matching on it. However, one can assume that hana::type
+ * inherits from hana::basic_type, which can be useful when declaring overloaded functions.
+ *
+ * This means that we need to use hana::basic_type as a parameter in methods so that the
+ * underlying type can be deduced from the object.
+ *
+ *
+ * Note on generic lambdas (taken from paragraph 5.1.2/5 of the C++14 Standard Draft n3690):
+ *
+ * For a generic lambda, the closure type has a public inline function call operator member template (14.5.2)
+ * whose template-parameter-list consists of one invented type template-parameter for each occurrence of auto
+ * in the lambda’s parameter-declaration-clause, in order of appearance. Example:
+ *
+ *   auto lambda = [] (auto a) { return a; };
+ *
+ *   class // unnamed {
+ *    public:
+ *     template<typename T>
+ *     auto operator()(T a) const { return a; }
+ *   };
+ *
+ *
  * Example:
  *
  *   template <typename T>
- *   consume_column_v1();
+ *   process_type(hana::basic_type<T> type);  // note: parameter type needs to be hana::basic_type not hana::type!
  *
- *   template <typename T>
- *   consume_column_v2(hana::basic_type<T> type);  // note: parameter type needs to be hana::basic_type not hana::type!
- *
- *   resolve_column_type(column_type, base_column, [&] (auto type) {
- *     using Type = typename decltype(type)::type;
- *     consume_column_v1<Type>();
- *
- *     consume_column_v2(type);  // here you don’t have to retrieve the template type `Type`
- *   });
+ *   resolve_column_type(type_string, [&](auto type) { process_type(type); });
  */
 template <typename Functor>
 void resolve_type(const std::string &type, const Functor &func) {
@@ -147,17 +165,18 @@ void resolve_type(const std::string &type, const Functor &func) {
  *
  *
  * Example:
+ *
  *   template <typename T>
- *   consume_column(BaseColumn &column);
+ *   process_column(hana::basic_type<T> type, ValueColumn<T>& column);
  *
- *   resolve_column_type(column_type, base_column, [&] (auto type, auto &typed_column) {
- *     using Type = typename decltype(type)::type;
- *     using ColumnType = typename std::decay<decltype(typed_column)>::type;
+ *   template <typename T>
+ *   process_column(hana::basic_type<T> type, DictionaryColumn<T>& column);
  *
- *     constexpr auto is_reference_column = (std::is_same<ColumnType, ReferenceColumn>{});
- *     constexpr auto is_string_column = (std::is_same<Type, std::string>{});
+ *   template <typename T>
+ *   process_column(hana::basic_type<T> type, ReferenceColumn& column);
  *
- *     consume_column<Type>(typed_column);
+ *   resolve_column_type(column_type, base_column, [&](auto type, auto &typed_column) {
+ *     process_column(type, typed_column);
  *   });
  */
 template <typename Functor>
