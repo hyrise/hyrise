@@ -20,6 +20,11 @@ ValueColumn<T>::ValueColumn(bool nullable) {
 }
 
 template <typename T>
+ValueColumn<T>::ValueColumn(const PolymorphicAllocator<T>& alloc, bool nullable) : _values(alloc) {
+  if (nullable) _null_values = pmr_concurrent_vector<bool>(alloc);
+}
+
+template <typename T>
 ValueColumn<T>::ValueColumn(pmr_concurrent_vector<T>&& values) : _values(std::move(values)) {}
 
 template <typename T>

@@ -294,6 +294,8 @@ set(
     utils/load_table.hpp
     utils/murmur_hash.cpp
     utils/murmur_hash.hpp
+    utils/numa_memory_resource.cpp
+    utils/numa_memory_resource.hpp
     utils/static_if.hpp
 )
 
@@ -310,7 +312,7 @@ set(
 )
 
 if(${NUMA_FOUND})
-    set(LIBRARIES ${LIBRARIES} ${NUMA_LIBRARY})
+    set(LIBRARIES ${LIBRARIES} ${NUMA_LIBRARY} hpinuma_msource_s)
 endif()
 
 # Configure the regular opossum library used for tests/server/playground...

@@ -80,6 +80,7 @@ set(
     tasks/chunk_compression_task_test.cpp
     tasks/operator_task_test.cpp
     utils/cuckoo_hashtable_test.cpp
+    utils/numa_memory_resource_test.cpp
 )
 
 set (
