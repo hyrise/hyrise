@@ -141,9 +141,18 @@ std::shared_ptr<Base> make_shared_by_column_type(const std::string &type, Constr
  * Example:
  *
  *   template <typename T>
+ *   process_variant(const T& var);
+ *
+ *   template <typename T>
  *   process_type(hana::basic_type<T> type);  // note: parameter type needs to be hana::basic_type not hana::type!
  *
- *   resolve_column_type(type_string, [&](auto type) { process_type(type); });
+ *   resolve_type(type_string, [&](auto type) {
+ *     using Type = typename decltype(type)::type;
+ *     const auto var = type_cast<Type>(variant_from_elsewhere);
+ *     process_variant(var);
+ *
+ *     process_type(type);
+ *   });
  */
 template <typename Functor>
 void resolve_type(const std::string &type, const Functor &func) {
