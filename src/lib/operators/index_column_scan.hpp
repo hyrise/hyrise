@@ -55,6 +55,7 @@ class IndexColumnScan : public AbstractReadOnlyOperator {
 
  protected:
   std::shared_ptr<const Table> _on_execute() override;
+  void _on_cleanup() override;
 
   template <typename T>
   class IndexColumnScanImpl;
