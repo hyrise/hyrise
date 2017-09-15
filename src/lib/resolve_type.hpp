@@ -184,7 +184,7 @@ void resolve_type(const std::string &type, const Functor &func) {
  *   template <typename T>
  *   process_column(hana::basic_type<T> type, ReferenceColumn& column);
  *
- *   resolve_column_type(column_type, base_column, [&](auto type, auto &typed_column) {
+ *   resolve_column_type(column_type, base_column, [&](auto type, auto& typed_column) {
  *     process_column(type, typed_column);
  *   });
  */
