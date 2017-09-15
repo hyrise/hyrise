@@ -60,35 +60,33 @@ class Projection : public AbstractReadOnlyOperator {
  protected:
   ColumnExpressions _column_expressions;
 
-  class ColumnCreator {
-   public:
-    template <typename T>
-    static void run(Chunk& chunk, const ChunkID chunk_id, const std::shared_ptr<Expression>& expression,
-                    std::shared_ptr<const Table> input_table_left) {
-      // check whether term is a just a simple column and bypass this column
-      if (expression->type() == ExpressionType::Column) {
-        auto bypassed_column = input_table_left->get_chunk(chunk_id).get_column(expression->column_id());
-        return chunk.add_column(bypassed_column);
-      }
-
-      std::shared_ptr<BaseColumn> column;
-
-      if (expression->is_null_literal()) {
-        // fill a nullable column with NULLs
-        auto row_count = input_table_left->get_chunk(chunk_id).size();
-        auto null_values = pmr_concurrent_vector<bool>(row_count, true);
-        auto values = pmr_concurrent_vector<T>(row_count);
-
-        column = std::make_shared<ValueColumn<T>>(std::move(values), std::move(null_values));
-      } else {
-        // fill a value column with the specified literal
-        auto values = evaluate_expression<T>(expression, input_table_left, chunk_id);
-        column = std::make_shared<ValueColumn<T>>(std::move(values));
-      }
-
-      chunk.add_column(column);
+  template <typename T>
+  static void create_column(boost::hana::basic_type<T> type, Chunk& chunk, const ChunkID chunk_id,
+                            const std::shared_ptr<Expression>& expression,
+                            std::shared_ptr<const Table> input_table_left) {
+    // check whether term is a just a simple column and bypass this column
+    if (expression->type() == ExpressionType::Column) {
+      auto bypassed_column = input_table_left->get_chunk(chunk_id).get_column(expression->column_id());
+      return chunk.add_column(bypassed_column);
     }
-  };
+
+    std::shared_ptr<BaseColumn> column;
+
+    if (expression->is_null_literal()) {
+      // fill a nullable column with NULLs
+      auto row_count = input_table_left->get_chunk(chunk_id).size();
+      auto null_values = pmr_concurrent_vector<bool>(row_count, true);
+      auto values = pmr_concurrent_vector<T>(row_count);
+
+      column = std::make_shared<ValueColumn<T>>(std::move(values), std::move(null_values));
+    } else {
+      // fill a value column with the specified literal
+      auto values = evaluate_expression<T>(expression, input_table_left, chunk_id);
+      column = std::make_shared<ValueColumn<T>>(std::move(values));
+    }
+
+    chunk.add_column(column);
+  }
 
   static const std::string get_type_of_expression(const std::shared_ptr<Expression>& expression,
                                                   const std::shared_ptr<const Table>& table);

@@ -194,7 +194,6 @@ set(
     optimizer/table_statistics.cpp
     optimizer/table_statistics.hpp
     polymorphic_allocator.hpp
-    resolve_column_type.hpp
     resolve_type.hpp
     scheduler/abstract_scheduler.cpp
     scheduler/abstract_scheduler.hpp

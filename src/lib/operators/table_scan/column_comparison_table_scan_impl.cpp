@@ -11,7 +11,7 @@
 #include "utils/assert.hpp"
 #include "utils/static_if.hpp"
 
-#include "resolve_column_type.hpp"
+#include "resolve_type.hpp"
 
 namespace opossum {
 
