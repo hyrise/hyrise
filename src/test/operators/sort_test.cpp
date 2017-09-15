@@ -25,15 +25,6 @@ class OperatorsSortTest : public BaseTest {
   std::shared_ptr<TableWrapper> _table_wrapper;
 };
 
-TEST_F(OperatorsSortTest, Cleanup) {
-  std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_float_sorted.tbl", 2);
-
-  auto sort = std::make_shared<Sort>(_table_wrapper, ColumnID{0}, OrderByMode::Ascending, 2u);
-  sort->execute();
-
-  ASSERT_EQ(sort->_impl, nullptr);
-}
-
 TEST_F(OperatorsSortTest, AscendingSortOfOneColumn) {
   std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_float_sorted.tbl", 2);
 

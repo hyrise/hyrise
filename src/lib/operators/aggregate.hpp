@@ -26,8 +26,6 @@
 #include "types.hpp"
 #include "utils/assert.hpp"
 
-#include "gtest/gtest_prod.h"
-
 namespace opossum {
 
 struct GroupByContext;
@@ -106,8 +104,6 @@ class Aggregate : public AbstractReadOnlyOperator {
  protected:
   std::shared_ptr<const Table> _on_execute() override;
   void _on_cleanup() override;
-
-  FRIEND_TEST(OperatorsAggregateTest, Cleanup);
 
   template <typename ColumnType>
   static void _create_aggregate_context(boost::hana::basic_type<ColumnType> type,
