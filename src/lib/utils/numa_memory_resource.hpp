@@ -1,8 +1,8 @@
 #pragma once
 
 #include <boost/container/pmr/memory_resource.hpp>
-
 #include <boost/math/common_factor_rt.hpp>
+#include <string>
 
 #if OPOSSUM_NUMA_SUPPORT
 #include <PGASUS/msource/msource.hpp>
