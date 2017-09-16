@@ -476,8 +476,8 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_aggregate(
    * The Aggregate Operator outputs all groupby columns first, and then all aggregates.
    * Therefore we need to work with two different offsets when constructing the projection list.
    */
-  auto aggregate_offset = group_by ? group_by->columns->size() : 0;
-  size_t groupby_offset = 0;
+  auto aggregate_offset = group_by ? ColumnID{group_by->columns->size()} : ColumnID{0};
+  ColumnID groupby_offset{0};
 
   for (const auto* column_expr : select_list) {
     if (column_expr->isType(hsql::kExprFunctionRef)) {
@@ -502,14 +502,11 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_aggregate(
       auto expr_name = column_expr->getName();
 
       auto is_in_group_by_clause = false;
-      size_t groupby_index = 0;
       for (const auto* groupby_expr : *group_by->columns) {
         if (strcmp(expr_name, groupby_expr->getName()) == 0) {
           is_in_group_by_clause = true;
-          groupby_is_projected[groupby_index] = true;
           break;
         }
-        ++groupby_index;
       }
 
       Assert(is_in_group_by_clause,
