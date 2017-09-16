@@ -1,8 +1,10 @@
 #include "abstract_operator.hpp"
 
 #include <memory>
+#include <typeinfo>
 
 #include "concurrency/transaction_context.hpp"
+#include "utils/assert.hpp"
 
 namespace opossum {
 
@@ -19,7 +21,16 @@ void AbstractOperator::execute() {
 }
 
 // returns the result of the operator
-std::shared_ptr<const Table> AbstractOperator::get_output() const { return _output; }
+std::shared_ptr<const Table> AbstractOperator::get_output() const {
+  if (IS_DEBUG && _output && _output->chunk_count() > 1) {
+    // Check that no empty chunks are included in the output. This has been found to degrade performance.
+    // If there is only a single, empty chunk, this is ok.
+    for (auto chunk_id = ChunkID{0}; chunk_id < _output->chunk_count(); ++chunk_id) {
+      DebugAssert(_output->get_chunk(chunk_id).size() > 0, "Empty chunk returned from operator");
+    }
+  }
+  return _output;
+}
 
 std::shared_ptr<const Table> AbstractOperator::_input_table_left() const { return _input_left->get_output(); }
 
