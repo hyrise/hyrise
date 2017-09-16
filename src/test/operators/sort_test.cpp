@@ -7,6 +7,7 @@
 
 #include "../../lib/operators/abstract_read_only_operator.hpp"
 #include "../../lib/operators/sort.hpp"
+#include "../../lib/operators/table_scan.hpp"
 #include "../../lib/operators/table_wrapper.hpp"
 #include "../../lib/storage/storage_manager.hpp"
 #include "../../lib/storage/table.hpp"
@@ -29,6 +30,21 @@ TEST_F(OperatorsSortTest, AscendingSortOfOneColumn) {
   std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_float_sorted.tbl", 2);
 
   auto sort = std::make_shared<Sort>(_table_wrapper, ColumnID{0}, OrderByMode::Ascending, 2u);
+  sort->execute();
+
+  EXPECT_TABLE_EQ(sort->get_output(), expected_result, true);
+}
+
+TEST_F(OperatorsSortTest, AscendingSortOFilteredColumn) {
+  std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_float_filtered_sorted.tbl", 2);
+
+  auto input = std::make_shared<TableWrapper>(load_table("src/test/tables/int_float.tbl", 1));
+  input->execute();
+
+  auto scan = std::make_shared<TableScan>(input, ColumnID{0}, ScanType::OpNotEquals, 123);
+  scan->execute();
+
+  auto sort = std::make_shared<Sort>(scan, ColumnID{0}, OrderByMode::Ascending, 2u);
   sort->execute();
 
   EXPECT_TABLE_EQ(sort->get_output(), expected_result, true);
