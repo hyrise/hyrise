@@ -243,22 +243,21 @@ const SQLTestParam test_queries[] = {
     // COUNT(*)
     {"SELECT a, COUNT(*) FROM groupby_int_1gb_1agg_null GROUP BY a;",
      "src/test/tables/aggregateoperator/groupby_int_1gb_0agg/count_star.tbl"},
-    {"SELECT COUNT(*), SUM(a+b) FROM int_int3;",
-     "src/test/tables/aggregateoperator/0gb_2agg/count_sum.tbl"},
+    {"SELECT COUNT(*), SUM(a+b) FROM int_int3;", "src/test/tables/aggregateoperator/0gb_2agg/count_sum.tbl"},
     // todo(anyone): Enable as soon as #182 is resolved
-    // {"SELECT COUNT(*) FROM groupby_int_1gb_1agg_null GROUP BY a;",
-    //  "src/test/tables/aggregateoperator/groupby_int_1gb_1agg/count_star.tbl"},
+    {"SELECT COUNT(*) FROM groupby_int_1gb_1agg_null GROUP BY a;",
+     "src/test/tables/aggregateoperator/groupby_int_1gb_1agg/count_star.tbl"},
 
     // Aggregates with NULL
-    {"SELECT MAX(b) FROM groupby_int_1gb_1agg_null GROUP BY a;",
+    {"SELECT a, MAX(b) FROM groupby_int_1gb_1agg_null GROUP BY a;",
      "src/test/tables/aggregateoperator/groupby_int_1gb_1agg/max_null.tbl"},
-    {"SELECT MIN(b) FROM groupby_int_1gb_1agg_null GROUP BY a;",
+    {"SELECT a, MIN(b) FROM groupby_int_1gb_1agg_null GROUP BY a;",
      "src/test/tables/aggregateoperator/groupby_int_1gb_1agg/min_null.tbl"},
-    {"SELECT SUM(b) FROM groupby_int_1gb_1agg_null GROUP BY a;",
+    {"SELECT a, SUM(b) FROM groupby_int_1gb_1agg_null GROUP BY a;",
      "src/test/tables/aggregateoperator/groupby_int_1gb_1agg/sum_null.tbl"},
-    {"SELECT AVG(b) FROM groupby_int_1gb_1agg_null GROUP BY a;",
+    {"SELECT a, AVG(b) FROM groupby_int_1gb_1agg_null GROUP BY a;",
      "src/test/tables/aggregateoperator/groupby_int_1gb_1agg/avg_null.tbl"},
-    {"SELECT COUNT(b) FROM groupby_int_1gb_1agg_null GROUP BY a;",
+    {"SELECT a, COUNT(b) FROM groupby_int_1gb_1agg_null GROUP BY a;",
      "src/test/tables/aggregateoperator/groupby_int_1gb_1agg/count_null.tbl"},
 
     // Checks that output of Aggregate can be worked with correctly.
