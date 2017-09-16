@@ -35,7 +35,7 @@ Avoid exception handling. Because Hyrise is not a product, we do not have to rec
 - Choose descriptive names. Avoid `i`, `j`, etc. in loops.
 
 ## Performance Warnings
-- Sometimes, we have convenience functions such as BaseColumn::operator[]) or workarounds (performing multiple stable sorts instead of a single one. Because these might negatively affect the performance, the user should be warned if a query causes one of these slow paths to be chosen. For this, we have the PerformanceWarning() macro defined in assert.hpp.
+- Sometimes, we have convenience functions, such as BaseColumn::operator[], or workarounds, such as performing multiple stable sorts instead of a single one. Because these might negatively affect the performance, the user should be warned if a query causes one of these slow paths to be chosen. For this, we have the PerformanceWarning() macro defined in assert.hpp.
 
 ## Review
 

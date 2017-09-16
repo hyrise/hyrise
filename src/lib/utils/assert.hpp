@@ -57,7 +57,7 @@ inline void Fail(const std::string& msg) { throw std::logic_error(msg); }
 #endif
 
 /**
- * Performance Warnings can be used in places, where slow workarounds are used. This includes BaseColumn[] or the
+ * Performance Warnings can be used in places where slow workarounds are used. This includes BaseColumn[] or the
  * use of a cross join followed by a projection instead of an equijoin.
  *
  * The warnings are printed only once per program execution. This is achieved by using static variables.
