@@ -1,7 +1,6 @@
 #include "abstract_operator.hpp"
 
 #include <memory>
-#include <typeinfo>
 
 #include "concurrency/transaction_context.hpp"
 #include "utils/assert.hpp"
