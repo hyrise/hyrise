@@ -240,6 +240,8 @@ std::string Expression::to_string(const std::shared_ptr<AbstractASTNode> &input_
     case ExpressionType::Function:
       return aggregate_function_to_string.left.at(aggregate_function()) + "(" +
              _expression_list[0]->to_string(input_node) + ")";
+    case ExpressionType::Star:
+      return std::string("*");
     default:
       // Handled further down.
       break;
@@ -282,5 +284,7 @@ bool Expression::operator==(const Expression &rhs) const {
   return _type == rhs._type && _value == rhs._value && _table_name == rhs._table_name && _column_id == rhs._column_id &&
          _alias == rhs._alias;
 }
+
+void Expression::set_alias(const std::string &alias) { _alias = alias; }
 
 }  // namespace opossum

@@ -19,9 +19,11 @@
 #include "operators/sort.hpp"
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
+#include "operators/update.hpp"
 #include "optimizer/abstract_syntax_tree/abstract_ast_node.hpp"
 #include "optimizer/abstract_syntax_tree/aggregate_node.hpp"
 #include "optimizer/abstract_syntax_tree/delete_node.hpp"
+#include "optimizer/abstract_syntax_tree/dummy_table_node.hpp"
 #include "optimizer/abstract_syntax_tree/insert_node.hpp"
 #include "optimizer/abstract_syntax_tree/join_node.hpp"
 #include "optimizer/abstract_syntax_tree/limit_node.hpp"
@@ -30,6 +32,7 @@
 #include "optimizer/abstract_syntax_tree/show_columns_node.hpp"
 #include "optimizer/abstract_syntax_tree/sort_node.hpp"
 #include "optimizer/abstract_syntax_tree/stored_table_node.hpp"
+#include "optimizer/abstract_syntax_tree/update_node.hpp"
 
 namespace opossum {
 
@@ -65,6 +68,10 @@ ASTToOperatorTranslator::ASTToOperatorTranslator() {
       std::bind(&ASTToOperatorTranslator::_translate_insert_node, this, std::placeholders::_1);
   _operator_factory[ASTNodeType::Delete] =
       std::bind(&ASTToOperatorTranslator::_translate_delete_node, this, std::placeholders::_1);
+  _operator_factory[ASTNodeType::DummyTable] =
+      std::bind(&ASTToOperatorTranslator::_translate_dummy_table_node, this, std::placeholders::_1);
+  _operator_factory[ASTNodeType::Update] =
+      std::bind(&ASTToOperatorTranslator::_translate_update_node, this, std::placeholders::_1);
 
   // Maintenance operators
   _operator_factory[ASTNodeType::ShowTables] =
@@ -97,15 +104,7 @@ std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::_translate_predicate_
 std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::_translate_projection_node(
     const std::shared_ptr<AbstractASTNode> &node) const {
   const auto left_child = node->left_child();
-  std::shared_ptr<AbstractOperator> input_operator;
-
-  if (left_child == nullptr) {
-    // Dummy Projection, e.g., for INSERT
-    input_operator = std::make_shared<TableWrapper>(Projection::dummy_table());
-  } else {
-    input_operator = translate_node(node->left_child());
-  }
-
+  const auto input_operator = translate_node(node->left_child());
   const auto projection_node = std::dynamic_pointer_cast<ProjectionNode>(node);
   return std::make_shared<Projection>(input_operator, projection_node->column_expressions());
 }
@@ -233,8 +232,15 @@ std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::_translate_aggregate_
     DebugAssert(aggregate_expression->type() == ExpressionType::Function, "Only functions are supported in Aggregates");
 
     const auto aggregate_function_type = aggregate_expression->aggregate_function();
-    const auto column_id = (aggregate_expression->expression_list())[0]->column_id();
-    aggregate_definitions.emplace_back(column_id, aggregate_function_type, aggregate_expression->alias());
+    const auto root_expr = (aggregate_expression->expression_list())[0];
+
+    if (aggregate_function_type == AggregateFunction::Count && root_expr->type() == ExpressionType::Star) {
+      // COUNT(*) does not specify a ColumnID
+      aggregate_definitions.emplace_back(CountStarID, AggregateFunction::Count, aggregate_expression->alias());
+    } else {
+      const auto column_id = root_expr->column_id();
+      aggregate_definitions.emplace_back(column_id, aggregate_function_type, aggregate_expression->alias());
+    }
   }
 
   return std::make_shared<Aggregate>(aggregate_input_operator, aggregate_definitions, groupby_columns);
@@ -261,6 +267,17 @@ std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::_translate_delete_nod
   return std::make_shared<Delete>(delete_node->table_name(), input_operator);
 }
 
+std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::_translate_update_node(
+    const std::shared_ptr<AbstractASTNode> &node) const {
+  const auto input_operator = translate_node(node->left_child());
+  auto update_node = std::dynamic_pointer_cast<UpdateNode>(node);
+
+  auto new_value_exprs = update_node->column_expressions();
+
+  auto projection = std::make_shared<Projection>(input_operator, new_value_exprs);
+  return std::make_shared<Update>(update_node->table_name(), input_operator, projection);
+}
+
 std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::_translate_show_tables_node(
     const std::shared_ptr<AbstractASTNode> &node) const {
   DebugAssert(node->left_child() == nullptr, "ShowTables should not have an input operator.");
@@ -272,6 +289,13 @@ std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::_translate_show_colum
   DebugAssert(node->left_child() == nullptr, "ShowColumns should not have an input operator.");
   const auto show_columns_node = std::dynamic_pointer_cast<ShowColumnsNode>(node);
   return std::make_shared<ShowColumns>(show_columns_node->table_name());
+}
+
+std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::_translate_dummy_table_node(
+    const std::shared_ptr<AbstractASTNode> &node) const {
+  const auto table_node = std::dynamic_pointer_cast<DummyTableNode>(node);
+
+  return std::make_shared<TableWrapper>(Projection::dummy_table());
 }
 
 }  // namespace opossum

@@ -16,6 +16,7 @@ class TableStatistics;
 enum class ASTNodeType {
   Aggregate,
   Delete,
+  DummyTable,
   Insert,
   Join,
   Limit,
@@ -24,7 +25,8 @@ enum class ASTNodeType {
   ShowColumns,
   ShowTables,
   Sort,
-  StoredTable
+  StoredTable,
+  Update
 };
 
 struct NamedColumnReference {

@@ -22,13 +22,13 @@ In the container, continue with [Building and Tooling](#building-and-tooling).
 
 ## Dependencies
 You can install the dependencies on your own or use the install.sh script which installs all of the following packages.
-The install script was tested under macOS (brew) and Ubuntu 16.10 (apt-get).
+The install script was tested under macOS (brew) and Ubuntu 17.04 (apt-get).
 
 ### Dependencies that can be installed via a package manager
 - autoconf
 - automake
 - build-essential (linux)
-- boost (>= 1.61.0)
+- boost (>= 1.62.0)
 - clang (>= 3.5.0) optional if gcc is installed
 - clang-format (>= 3.8) optional
 - CMake (>= 3.5)

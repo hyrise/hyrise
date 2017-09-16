@@ -159,6 +159,8 @@ set(
     optimizer/abstract_syntax_tree/ast_to_operator_translator.cpp
     optimizer/abstract_syntax_tree/delete_node.cpp
     optimizer/abstract_syntax_tree/delete_node.hpp
+    optimizer/abstract_syntax_tree/dummy_table_node.cpp
+    optimizer/abstract_syntax_tree/dummy_table_node.hpp
     optimizer/abstract_syntax_tree/join_node.cpp
     optimizer/abstract_syntax_tree/join_node.hpp
     optimizer/abstract_syntax_tree/insert_node.cpp
@@ -177,6 +179,8 @@ set(
     optimizer/abstract_syntax_tree/sort_node.hpp
     optimizer/abstract_syntax_tree/stored_table_node.cpp
     optimizer/abstract_syntax_tree/stored_table_node.hpp
+    optimizer/abstract_syntax_tree/update_node.cpp
+    optimizer/abstract_syntax_tree/update_node.hpp
     optimizer/base_column_statistics.hpp
     optimizer/column_statistics.cpp
     optimizer/column_statistics.hpp
@@ -284,6 +288,7 @@ set(
     types.hpp
     uid_allocator.hpp
     utils/assert.hpp
+    utils/boost_default_memory_resource.cpp
     utils/cuckoo_hashtable.hpp
     utils/load_table.cpp
     utils/load_table.hpp
@@ -301,7 +306,6 @@ set(
     pthread
     z
     sqlparser
-    boost_container
     ${TBB_LIBRARY}
 )
 
