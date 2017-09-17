@@ -476,7 +476,7 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_aggregate(
    * The Aggregate Operator outputs all groupby columns first, and then all aggregates.
    * Therefore we need to work with two different offsets when constructing the projection list.
    */
-  auto aggregate_offset = group_by ? ColumnID{group_by->columns->size()} : ColumnID{0};
+  auto aggregate_offset = group_by ? ColumnID{static_cast<uint16_t>(group_by->columns->size())} : ColumnID{0};
   ColumnID groupby_offset{0};
 
   for (const auto* column_expr : select_list) {
