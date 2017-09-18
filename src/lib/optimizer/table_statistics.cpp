@@ -150,14 +150,16 @@ std::shared_ptr<TableStatistics> TableStatistics::join_statistics(
    *
    * The calculation of null values is shown by following SQL query: SELECT * FROM TABLE_1 OUTER JOIN TABLE_2 ON a = c
    *
-   *   TABLE_1         TABLE_2          JOIN_TABLE                    row present in JOIN_TABLE
+   *   TABLE_1         TABLE_2          CROSS_JOIN_TABLE              INNER / LEFT  / RIGHT / OUTER JOIN
    *
-   *    a    | b        c    | d         a    | b    | c    | d       join mode =   INNER | LEFT  | RIGHT | OUTER
-   *   -------------   --------------   --------------------------                 -------------------------------
-   *    1    | NULL     1    | 30        1    | NULL | 1    | 30                      X   |   X   |   X   |   X
-   *    2    | 10       NULL | 40        2    | 10   | NULL | NULL                        |   X   |       |   X
-   *    NULL | 20                        NULL | 20   | NULL | NULL                        |   X   |       |   X
-   *                                     NULL | NULL | NULL | 40                          |       |   X   |   X
+   *    a    | b        c    | d         a    | b    | c    | d        a    | b    | c    | d
+   *   -------------   --------------   --------------------------    --------------------------
+   *    1    | NULL     1    | 30        1    | NULL | 1    | 30       1    | NULL | 1    | 30
+   *    2    | 10       NULL | 40        2    | 10   | 1    | 30
+   *    NULL | 20                        NULL | 20   | 1    | 30      INNER +0 extra rows
+   *                                     1    | NULL | NULL | 40      LEFT  +2 extra rows
+   *                                     2    | 10   | NULL | 40      RIGHT +1 extra rows
+   *                                     NULL | 20   | NULL | 40      OUTER +3 extra rows (the ones from LEFT & RIGHT)
    *
    * To start with, the cross join row count is calculated: 3 * 2 = 6
    * Then the predicate selectivity is calculated: 1/2 * left-non-null * right-non-null = 1/2 * 2/3 * 1/2 = 1/6
