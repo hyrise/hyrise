@@ -32,7 +32,7 @@ class Table;
  * The null value support within statistics component is currently limited. Null value information is stored for every
  * column. This information is used wherever needed (e.g. in predicates) and also updated (e.g. in outer joins).
  * However, since the table scan currently does not support null values, this component cannot compute the null value
- * numbers of a column of the corresponding tables. So currently, statistics component only knows of null values
+ * numbers of a column of the corresponding tables. So currently, the statistics component only knows of null values
  * which were introduced through outer joins.
  * The statistics component assumes NULL != NULL semantics.
  *
@@ -74,7 +74,7 @@ class TableStatistics : public std::enable_shared_from_this<TableStatistics> {
                                                            const JoinMode mode);
 
   /**
-   * Get table statistics for joins with two column predicate.
+   * Get table statistics for joins with two column predicates.
    */
   virtual std::shared_ptr<TableStatistics> join_statistics(const std::shared_ptr<TableStatistics> &right_table_stats,
                                                            const JoinMode mode,
