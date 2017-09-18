@@ -37,8 +37,11 @@ Avoid exception handling. Because Hyrise is not a product, we do not have to rec
 ## Performance Warnings
 - Sometimes, we have convenience functions, such as BaseColumn::operator[], or workarounds, such as performing multiple stable sorts instead of a single one. Because these might negatively affect the performance, the user should be warned if a query causes one of these slow paths to be chosen. For this, we have the PerformanceWarning() macro defined in assert.hpp.
 
-## Review
+## Documentation
+- Most documentation should happen in the code or in the beginning of the header file
+- More complex documentation, such as an explanation of an algorithm that profits from images, can be put in the Wiki. Please make sure to link the Wiki page in the code - otherwise, no one will find it.
 
+# Review
 - Things to look for:
 	- Guidelines (see above)
 	- Is the copy constructor deleted where it makes sense?

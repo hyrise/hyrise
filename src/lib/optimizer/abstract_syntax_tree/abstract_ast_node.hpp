@@ -109,6 +109,8 @@ class AbstractASTNode : public std::enable_shared_from_this<AbstractASTNode> {
    * ColumnIdentifier{"y", "table_name"}
    *
    * NOTE: These functions will possibly result in a full recursive traversal of the ancestors of this node.
+   *
+   * Find more information in our blog: https://medium.com/hyrise/the-gentle-art-of-referring-to-columns-634f057bd810
    */
   ColumnID get_column_id_by_named_column_reference(const NamedColumnReference &named_column_reference) const;
   virtual optional<ColumnID> find_column_id_by_named_column_reference(
