@@ -48,6 +48,7 @@ namespace opossum {
 Console::Console()
     : _prompt("> "),
       _multiline_input(""),
+      _history_file(),
       _commands(),
       _tpcc_commands(),
       _out(std::cout.rdbuf()),
@@ -94,6 +95,12 @@ int Console::read() {
   // Only save non-empty commands to history
   if (!input.empty()) {
     add_history(buffer);
+    // Save command to history file
+    if (!_history_file.empty()) {
+      if (append_history(1, _history_file.c_str()) != 0) {
+        out("Error appending to history file: " + _history_file + "\n");
+      }
+    }
   }
 
   // Free buffer, since readline() allocates new string every time
@@ -255,15 +262,10 @@ void Console::setLogfile(const std::string& logfile) {
   _log = std::ofstream(logfile, std::ios_base::app | std::ios_base::out);
 }
 
-void Console::loadHistory(const std::string& historyFile) {
-  if (read_history(historyFile.c_str()) != 0) {
-    out("Error reading history file: " + historyFile + "\n");
-  }
-}
-
-void Console::writeHistory(const std::string& historyFile) {
-  if (write_history(historyFile.c_str()) != 0) {
-    out("Error writing history file: " + historyFile + "\n");
+void Console::loadHistory(const std::string& history_file) {
+  _history_file = history_file;
+  if (read_history(_history_file.c_str()) != 0) {
+    out("Error reading history file: " + _history_file + "\n");
   }
 }
 
@@ -532,7 +534,7 @@ int main(int argc, char** argv) {
   console.setLogfile("console.log");
 
   // Load command history
-  console.loadHistory("console.history");
+  console.loadHistory(".repl_history");
 
   // Timestamp dump only to logfile
   console.out("--- Session start --- " + current_timestamp() + "\n", false);
@@ -583,7 +585,4 @@ int main(int argc, char** argv) {
 
   // Timestamp dump only to logfile
   console.out("--- Session end --- " + current_timestamp() + "\n", false);
-
-  // Save command history to file
-  console.writeHistory("console.history");
 }

@@ -42,6 +42,7 @@ class Sort : public AbstractReadOnlyOperator {
 
  protected:
   std::shared_ptr<const Table> _on_execute() override;
+  void _on_cleanup() override;
 
   // The operator is seperated in three different classes. SortImpl is the common templated implementation of the
   // operator. SortImpl* und SortImplMaterializeOutput are extra classes for the visitor pattern. They fulfill a certain

@@ -39,6 +39,8 @@ class BaseDictionaryColumn;
  *    | 6 |  1  |  0  |     |     51     |    7    |     0     |
  *    | 7 |  5  |  1  |     |            |         |     7     | ie key '51' can be found at i = 7 in the AV
  *    +---+-----------+     +------------+---------+-----------+
+ *
+ * Find more information about this in our wiki: https://github.com/hyrise/zweirise/wiki/Composite-GroupKey-Index
  */
 class CompositeGroupKeyIndex : public BaseIndex {
   friend class CompositeGroupKeyIndexTest;

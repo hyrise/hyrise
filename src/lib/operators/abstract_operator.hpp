@@ -35,6 +35,9 @@ class TransactionContext;
 //   4. Add an entry in the swith-case of OperatorTranslator::translate_proto() to dispatch calls to the method created
 //      in step 3
 //   5. Write a test in `src/test/network/operator_translator_test.cpp`
+//
+// Find more information about operators in our Wiki: https://github.com/hyrise/zweirise/wiki/operator-concept
+
 class AbstractOperator : private Noncopyable {
  public:
   AbstractOperator(const std::shared_ptr<const AbstractOperator> left = nullptr,
@@ -84,6 +87,11 @@ class AbstractOperator : private Noncopyable {
   // execute and get_output are split into two methods to allow for easier
   // asynchronous execution
   virtual std::shared_ptr<const Table> _on_execute(std::shared_ptr<TransactionContext> context) = 0;
+
+  // method that allows operator-specific cleanups for temporary data.
+  // separate from _on_execute for readability and as a reminder to
+  // clean up after execution (if it makes sense)
+  virtual void _on_cleanup();
 
   std::shared_ptr<const Table> _input_table_left() const;
   std::shared_ptr<const Table> _input_table_right() const;

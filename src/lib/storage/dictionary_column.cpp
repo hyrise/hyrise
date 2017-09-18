@@ -11,6 +11,7 @@
 
 #include "type_cast.hpp"
 #include "utils/assert.hpp"
+#include "utils/performance_warning.hpp"
 
 namespace opossum {
 
@@ -21,6 +22,8 @@ DictionaryColumn<T>::DictionaryColumn(const pmr_vector<T>&& dictionary,
 
 template <typename T>
 const AllTypeVariant DictionaryColumn<T>::operator[](const size_t i) const {
+  PerformanceWarning("operator[] used");
+
   DebugAssert(i != INVALID_CHUNK_OFFSET, "Passed chunk offset must be valid.");
 
   const auto value_id = _attribute_vector->get(i);

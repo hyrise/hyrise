@@ -37,6 +37,7 @@ class TableScan : public AbstractReadOnlyOperator {
 
  protected:
   std::shared_ptr<const Table> _on_execute() override;
+  void _on_cleanup() override;
 
   void _init_scan();
   void _init_output_table();

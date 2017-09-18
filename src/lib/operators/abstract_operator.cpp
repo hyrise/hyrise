@@ -16,6 +16,9 @@ void AbstractOperator::execute() {
   if (transaction_context) transaction_context->on_operator_started();
   _output = _on_execute(transaction_context);
   if (transaction_context) transaction_context->on_operator_finished();
+
+  // release any temporary data if possible
+  _on_cleanup();
 }
 
 // returns the result of the operator
@@ -44,4 +47,7 @@ std::shared_ptr<AbstractOperator> AbstractOperator::mutable_input_right() const 
 std::shared_ptr<const AbstractOperator> AbstractOperator::input_left() const { return _input_left; }
 
 std::shared_ptr<const AbstractOperator> AbstractOperator::input_right() const { return _input_right; }
+
+void AbstractOperator::_on_cleanup() {}
+
 }  // namespace opossum

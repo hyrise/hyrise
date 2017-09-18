@@ -11,12 +11,18 @@
 
 #include "type_cast.hpp"
 #include "utils/assert.hpp"
+#include "utils/performance_warning.hpp"
 
 namespace opossum {
 
 template <typename T>
 ValueColumn<T>::ValueColumn(bool nullable) {
   if (nullable) _null_values = pmr_concurrent_vector<bool>();
+}
+
+template <typename T>
+ValueColumn<T>::ValueColumn(const PolymorphicAllocator<T>& alloc, bool nullable) : _values(alloc) {
+  if (nullable) _null_values = pmr_concurrent_vector<bool>(alloc);
 }
 
 template <typename T>
@@ -29,6 +35,7 @@ ValueColumn<T>::ValueColumn(pmr_concurrent_vector<T>&& values, pmr_concurrent_ve
 template <typename T>
 const AllTypeVariant ValueColumn<T>::operator[](const size_t i) const {
   DebugAssert(i != INVALID_CHUNK_OFFSET, "Passed chunk offset must be valid.");
+  PerformanceWarning("operator[] used");
 
   // Columns supports null values and value is null
   if (is_nullable() && (*_null_values).at(i)) {

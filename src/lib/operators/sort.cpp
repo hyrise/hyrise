@@ -38,6 +38,8 @@ std::shared_ptr<const Table> Sort::_on_execute() {
   return _impl->_on_execute();
 }
 
+void Sort::_on_cleanup() { _impl.reset(); }
+
 // This class fills the temporary structure to be sorted. Therefore the column to sort by is visited by this class, so
 // the values can be copied in the temporary row_id_value vector.
 template <typename SortColumnType>

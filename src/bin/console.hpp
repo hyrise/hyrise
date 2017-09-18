@@ -56,12 +56,7 @@ class Console {
   /*
    * Load command history from history file.
    */
-  void loadHistory(const std::string &historyFile);
-
-  /*
-   * Write command history to history file.
-   */
-  void writeHistory(const std::string &historyFile);
+  void loadHistory(const std::string &history_file);
 
   /*
    * Prints to the log_file (and the console).
@@ -114,6 +109,7 @@ class Console {
 
   std::string _prompt;
   std::string _multiline_input;
+  std::string _history_file;
   RegisteredCommands _commands;
   std::vector<std::string> _tpcc_commands;
   std::ostream _out;

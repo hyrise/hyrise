@@ -9,7 +9,7 @@
 #include "storage/iterables/constant_value_iterable.hpp"
 #include "storage/iterables/create_iterable_from_column.hpp"
 
-#include "resolve_column_type.hpp"
+#include "resolve_type.hpp"
 
 namespace opossum {
 

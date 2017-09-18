@@ -32,6 +32,9 @@ class Table;
  * ColumnStatistics<ColumnType>
  * Public TableStatistics functions pass on the parameters to the corresponding column statistics functions.
  * These compute a new ColumnStatistics<> and the predicted selectivity of an operator.
+ *
+ * Find more information about table statistics in our wiki:
+ * https://github.com/hyrise/zweirise/wiki/potential_statistics
  */
 class TableStatistics {
  public:
