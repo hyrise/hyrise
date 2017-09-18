@@ -2,11 +2,10 @@
 
 #include <memory>
 
-#include "optimizer/abstract_syntax_tree/ast_root_node.hpp"
-
 namespace opossum {
 
 class AbstractASTNode;
+class ASTRootNode;
 
 class AbstractRule {
  public:
