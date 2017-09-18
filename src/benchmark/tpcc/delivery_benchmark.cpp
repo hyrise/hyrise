@@ -245,7 +245,7 @@ class TPCCDeliveryBenchmark : public TPCCBenchmarkFixture {
     return {t_gt, t_ts1, t_ts2, t_ts3, t_val, t_sum};
   }
 
-  inline std::vector<std::shared_ptr<OperatorTask>> update_customer(const double ol_total, const int d_id,
+  inline std::vector<std::shared_ptr<OperatorTask>> update_customer(const float ol_total, const int d_id,
                                                                     const int w_id, const int c_id) {
     /**
      * EXEC SQL UPDATE customer
@@ -331,7 +331,7 @@ BENCHMARK_F(TPCCDeliveryBenchmark, BM_delivery)(benchmark::State& state) {
     tpcc::execute_tasks_with_context(tasks, t_context);
 
     assert(tasks.back()->get_operator()->get_output()->row_count() > 0);
-    auto ol_total = tasks.back()->get_operator()->get_output()->get_value<double>(opossum::ColumnID(0u), 0u);
+    auto ol_total = (float)tasks.back()->get_operator()->get_output()->get_value<double>(opossum::ColumnID(0u), 0u);
     tasks = update_customer(ol_total, d_id, w_id, c_id);
     tpcc::execute_tasks_with_context(tasks, t_context);
 
