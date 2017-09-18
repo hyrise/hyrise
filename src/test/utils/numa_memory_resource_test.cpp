@@ -30,7 +30,7 @@ TEST_F(NUMAMemoryResourceTest, BasicAllocate) {
 #else
   const int numa_node = 1;
 #endif
-  std::cout << numa_node << std::endl;
+
   auto memory_resource = NUMAMemoryResource(numa_node, "test");
   const auto alloc = PolymorphicAllocator<size_t>(&memory_resource);
 
