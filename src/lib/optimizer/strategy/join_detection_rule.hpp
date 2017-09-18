@@ -5,6 +5,8 @@
 #include <vector>
 
 #include "abstract_rule.hpp"
+#include "common.hpp"
+#include "types.hpp"
 
 namespace opossum {
 
@@ -39,7 +41,13 @@ class JoinConditionDetectionRule : public AbstractRule {
   bool apply_to(const std::shared_ptr<AbstractASTNode> &node) override;
 
  private:
-  const std::shared_ptr<PredicateNode> _find_predicate_for_cross_join(const std::shared_ptr<JoinNode> &cross_join);
+  struct JoinCondition {
+    std::shared_ptr<PredicateNode> predicate_node;
+    ColumnID left_column_id;
+    ColumnID right_column_id;
+  };
+
+  optional<JoinCondition> _find_predicate_for_cross_join(const std::shared_ptr<JoinNode> &cross_join);
 
   /**
    * Checks whether a predicate that operates on @param left and @param right is a join condition for a cross

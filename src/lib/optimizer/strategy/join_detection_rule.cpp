@@ -24,11 +24,12 @@ bool JoinConditionDetectionRule::apply_to(const std::shared_ptr<AbstractASTNode>
        * If we find a predicate with a condition that operates on the cross-joined tables,
        * replace the cross join and the predicate with a conditional inner join
        */
-      auto predicate_node = _find_predicate_for_cross_join(cross_join_node);
-      if (predicate_node) {
-        std::pair<ColumnID, ColumnID> column_ids(predicate_node->column_id(),
-                                                 boost::get<ColumnID>(predicate_node->value()));
+      auto join_condition = _find_predicate_for_cross_join(cross_join_node);
+      if (join_condition) {
+        std::pair<ColumnID, ColumnID> column_ids(join_condition->left_column_id,
+                                                 join_condition->right_column_id);
 
+        auto predicate_node = join_condition->predicate_node;
         const auto new_join_node = std::make_shared<JoinNode>(JoinMode::Inner, column_ids, predicate_node->scan_type());
 
         /**
@@ -45,7 +46,7 @@ bool JoinConditionDetectionRule::apply_to(const std::shared_ptr<AbstractASTNode>
   return _apply_to_children(node);
 }
 
-const std::shared_ptr<PredicateNode> JoinConditionDetectionRule::_find_predicate_for_cross_join(
+optional<JoinConditionDetectionRule::JoinCondition> JoinConditionDetectionRule::_find_predicate_for_cross_join(
     const std::shared_ptr<JoinNode> &cross_join) {
   Assert(cross_join->left_child() && cross_join->right_child(), "Cross Join must have two children");
 
@@ -62,7 +63,7 @@ const std::shared_ptr<PredicateNode> JoinConditionDetectionRule::_find_predicate
      * Detecting Join Conditions across other node types may be possible by applying 'Predicate Pushdown' first.
      */
     if (node->type() != ASTNodeType::Join && node->type() != ASTNodeType::Predicate) {
-      return nullptr;
+      return nullopt;
     }
 
     if (node->type() == ASTNodeType::Predicate) {
@@ -78,15 +79,21 @@ const std::shared_ptr<PredicateNode> JoinConditionDetectionRule::_find_predicate
       const auto cross_right_num_cols = cross_join->right_child()->output_col_count();
 
       if (_is_join_condition(predicate_left_column_id, predicate_right_column_id, cross_left_num_cols,
-                             cross_right_num_cols) ||
-          _is_join_condition(predicate_right_column_id, predicate_left_column_id, cross_left_num_cols,
                              cross_right_num_cols)) {
-        return predicate_node;
+        return JoinCondition{predicate_node,
+                predicate_left_column_id,
+                ColumnID{(ColumnID::base_type)(predicate_right_column_id - cross_left_num_cols)}};
+      }
+      if (_is_join_condition(predicate_right_column_id, predicate_left_column_id, cross_left_num_cols,
+                             cross_right_num_cols)) {
+        return JoinCondition{predicate_node,
+                predicate_right_column_id,
+                ColumnID{(ColumnID::base_type)(predicate_left_column_id - cross_left_num_cols)}};
       }
     }
   }
 
-  return nullptr;
+  return nullopt;
 }
 
 bool JoinConditionDetectionRule::_is_join_condition(ColumnID left, ColumnID right, size_t left_num_cols,

@@ -468,6 +468,9 @@ const JoinDetectionTestParam test_queries[] = {
     {"SELECT * FROM a, b WHERE a.a = b.a", 1},
     {"SELECT * FROM a, b, c WHERE a.a = c.a", 1},
     {"SELECT * FROM a, b, c WHERE b.a = c.a", 1},
+    {R"(SELECT "left".a, "left".b, "right".a, "right".b
+      FROM a AS "left",  b AS "right"
+      WHERE "left".a = "right".a;)", 1},
 };
 
 INSTANTIATE_TEST_CASE_P(test_queries, JoinDetectionRuleTest, ::testing::ValuesIn(test_queries));
