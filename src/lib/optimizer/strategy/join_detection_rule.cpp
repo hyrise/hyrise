@@ -26,8 +26,7 @@ bool JoinConditionDetectionRule::apply_to(const std::shared_ptr<AbstractASTNode>
        */
       auto join_condition = _find_predicate_for_cross_join(cross_join_node);
       if (join_condition) {
-        std::pair<ColumnID, ColumnID> column_ids(join_condition->left_column_id,
-                                                 join_condition->right_column_id);
+        std::pair<ColumnID, ColumnID> column_ids(join_condition->left_column_id, join_condition->right_column_id);
 
         auto predicate_node = join_condition->predicate_node;
         const auto new_join_node = std::make_shared<JoinNode>(JoinMode::Inner, column_ids, predicate_node->scan_type());
@@ -80,15 +79,13 @@ optional<JoinConditionDetectionRule::JoinCondition> JoinConditionDetectionRule::
 
       if (_is_join_condition(predicate_left_column_id, predicate_right_column_id, cross_left_num_cols,
                              cross_right_num_cols)) {
-        return JoinCondition{predicate_node,
-                predicate_left_column_id,
-                ColumnID{(ColumnID::base_type)(predicate_right_column_id - cross_left_num_cols)}};
+        return JoinCondition{predicate_node, predicate_left_column_id,
+                             ColumnID{(ColumnID::base_type)(predicate_right_column_id - cross_left_num_cols)}};
       }
       if (_is_join_condition(predicate_right_column_id, predicate_left_column_id, cross_left_num_cols,
                              cross_right_num_cols)) {
-        return JoinCondition{predicate_node,
-                predicate_right_column_id,
-                ColumnID{(ColumnID::base_type)(predicate_left_column_id - cross_left_num_cols)}};
+        return JoinCondition{predicate_node, predicate_right_column_id,
+                             ColumnID{(ColumnID::base_type)(predicate_left_column_id - cross_left_num_cols)}};
       }
     }
   }

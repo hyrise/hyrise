@@ -15,7 +15,7 @@ namespace hana = boost::hana;
 
 /**
  * Resolves a column type by passing a hana::type object on to a generic lambda
- * 
+ *
  * @param type is a string representation of any of the supported column types
  * @param func is a generic lambda or similar accepting a hana::type object
  *
