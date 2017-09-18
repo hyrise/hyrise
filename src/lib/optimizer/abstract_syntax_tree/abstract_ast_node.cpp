@@ -153,13 +153,13 @@ void AbstractASTNode::remove_from_tree() {
   auto parent = _parent.lock();
 
   if (parent) {
-    parent->set_left_child(_left_child); // Note: It's totally fine for _left_child to be a nullptr
+    parent->set_left_child(_left_child);  // Note: It's totally fine for _left_child to be a nullptr
   } else if (_left_child) {
     _left_child->clear_parent();
   }
 }
 
-void AbstractASTNode::replace_in_tree(const std::shared_ptr<AbstractASTNode> & node_to_replace) {
+void AbstractASTNode::replace_in_tree(const std::shared_ptr<AbstractASTNode> &node_to_replace) {
   set_left_child(node_to_replace->left_child());
   set_right_child(node_to_replace->right_child());
 

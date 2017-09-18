@@ -1,4 +1,4 @@
-  #include <memory>
+#include <memory>
 #include <string>
 #include <utility>
 #include <vector>
@@ -200,7 +200,6 @@ TEST_F(JoinDetectionRuleTest, NonCrossJoin) {
    * isn't manipulated.
    */
 
-
   const auto join_node =
       std::make_shared<JoinNode>(JoinMode::Inner, std::make_pair(ColumnID{1}, ColumnID{3}), ScanType::OpEquals);
   join_node->set_left_child(_table_node_a);
@@ -222,7 +221,8 @@ TEST_F(JoinDetectionRuleTest, NonCrossJoin) {
   EXPECT_EQ(output->left_child()->left_child()->right_child()->type(), ASTNodeType::StoredTable);
 }
 
-TEST_F(JoinDetectionRuleTest, MultipleJoins) {  /**
+TEST_F(JoinDetectionRuleTest, MultipleJoins) {
+  /**
    * Test that
    *
    *       Projection

@@ -22,6 +22,7 @@ enum class ASTNodeType {
   Limit,
   Predicate,
   Projection,
+  Root,
   ShowColumns,
   ShowTables,
   Sort,
@@ -146,7 +147,7 @@ class AbstractASTNode : public std::enable_shared_from_this<AbstractASTNode> {
    * Replaces @param node_to_replace with this node.
    * Fails if this node was already part of a tree, i.e. has a parent or children
    */
-  void replace_in_tree(const std::shared_ptr<AbstractASTNode> & node_to_replace);
+  void replace_in_tree(const std::shared_ptr<AbstractASTNode> &node_to_replace);
 
   void print(const uint32_t level = 0, std::ostream &out = std::cout) const;
   virtual std::string description() const = 0;

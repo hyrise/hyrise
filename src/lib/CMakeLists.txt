@@ -155,6 +155,8 @@ set(
     optimizer/abstract_syntax_tree/abstract_non_optimizable_ast_node.hpp
     optimizer/abstract_syntax_tree/aggregate_node.cpp
     optimizer/abstract_syntax_tree/aggregate_node.hpp
+    optimizer/abstract_syntax_tree/ast_root_node.cpp
+    optimizer/abstract_syntax_tree/ast_root_node.hpp
     optimizer/abstract_syntax_tree/ast_to_operator_translator.hpp
     optimizer/abstract_syntax_tree/ast_to_operator_translator.cpp
     optimizer/abstract_syntax_tree/delete_node.cpp
