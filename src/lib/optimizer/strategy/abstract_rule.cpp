@@ -25,7 +25,7 @@ std::shared_ptr<AbstractASTNode> AbstractRule::apply_rule(const std::shared_ptr<
   return optimized_node;
 }
 
-bool AbstractRule::_apply_to_children(const std::shared_ptr<AbstractASTNode> &node) {
+bool AbstractRule::_apply_to_children(std::shared_ptr<AbstractASTNode> node) {
   auto result = false;
 
   // Apply this rule recursively

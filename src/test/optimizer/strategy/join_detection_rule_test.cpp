@@ -459,7 +459,7 @@ TEST_P(JoinDetectionRuleTest, JoinDetectionSQL) {
 
   auto before = _count_cross_joins(node);
   auto output = AbstractRule::apply_rule(_rule, node);
-  auto after = _count_cross_joins(node);
+  auto after = _count_cross_joins(output);
 
   EXPECT_EQ(before - after, params.number_of_detectable_cross_joins);
 }
