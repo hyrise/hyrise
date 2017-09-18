@@ -331,7 +331,8 @@ BENCHMARK_F(TPCCDeliveryBenchmark, BM_delivery)(benchmark::State& state) {
     tpcc::execute_tasks_with_context(tasks, t_context);
 
     assert(tasks.back()->get_operator()->get_output()->row_count() > 0);
-    auto ol_total = (float)tasks.back()->get_operator()->get_output()->get_value<double>(opossum::ColumnID(0u), 0u);
+    auto ol_total =
+        static_cast<float>(tasks.back()->get_operator()->get_output()->get_value<double>(opossum::ColumnID(0u), 0u));
     tasks = update_customer(ol_total, d_id, w_id, c_id);
     tpcc::execute_tasks_with_context(tasks, t_context);
 
