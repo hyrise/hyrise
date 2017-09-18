@@ -63,7 +63,7 @@ class ColumnStatistics : public BaseColumnStatistics {
   ColumnType max() const;
 
   /**
-   * Returns a column statistics identical to this which does not has null values.
+   * Returns a column statistics identical to this which does not have null values.
    * @return shared pointer of this or copy of this, if column has null values.
    */
   std::shared_ptr<BaseColumnStatistics> this_without_null_values();
