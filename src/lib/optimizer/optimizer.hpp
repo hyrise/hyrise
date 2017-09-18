@@ -1,6 +1,7 @@
 #pragma once
 
 #include <memory>
+#include <vector>
 
 #include "optimizer/abstract_syntax_tree/abstract_ast_node.hpp"
 
@@ -14,11 +15,11 @@ class ASTRootNode;
  */
 class Optimizer final {
  public:
-  static const Optimizer & get();
+  static const Optimizer& get();
 
   Optimizer();
 
-  std::shared_ptr<AbstractASTNode> optimize(const std::shared_ptr<AbstractASTNode> & input) const;
+  std::shared_ptr<AbstractASTNode> optimize(const std::shared_ptr<AbstractASTNode>& input) const;
 
  private:
   std::vector<std::shared_ptr<AbstractRule>> _rules;
