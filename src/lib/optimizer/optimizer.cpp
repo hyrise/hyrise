@@ -3,13 +3,12 @@
 #include <memory>
 
 #include "abstract_syntax_tree/ast_root_node.hpp"
-#include "strategy/predicate_reordering_rule.hpp"
 #include "strategy/join_detection_rule.hpp"
 #include "strategy/predicate_reordering_rule.hpp"
 
 namespace opossum {
 
-const Optimizer & Optimizer::get() {
+const Optimizer &Optimizer::get() {
   static Optimizer optimizer;
   return optimizer;
 }
@@ -28,7 +27,7 @@ std::shared_ptr<AbstractASTNode> Optimizer::optimize(const std::shared_ptr<Abstr
   while (true) {
     auto ast_changed = false;
 
-    for (const auto & rule : _rules) {
+    for (const auto &rule : _rules) {
       if (rule->apply_to(root_node)) {
         ast_changed = true;
       }

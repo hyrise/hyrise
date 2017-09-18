@@ -7,9 +7,9 @@
 
 namespace opossum {
 
-std::shared_ptr<AbstractASTNode> AbstractRule::apply_rule(const std::shared_ptr<AbstractRule> & rule,
-                                                              const std::shared_ptr<AbstractASTNode> &input) {
-//  PerformanceWarning("Optimizations should be done by the Optimizer");
+std::shared_ptr<AbstractASTNode> AbstractRule::apply_rule(const std::shared_ptr<AbstractRule> &rule,
+                                                          const std::shared_ptr<AbstractASTNode> &input) {
+  //  PerformanceWarning("Optimizations should be done by the Optimizer");
 
   // Add explicit root node
   const auto root_node = std::make_shared<ASTRootNode>();

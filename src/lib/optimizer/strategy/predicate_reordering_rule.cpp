@@ -13,7 +13,7 @@
 
 namespace opossum {
 
-bool PredicateReorderingRule::apply_to(const std::shared_ptr<AbstractASTNode> &node) {
+bool PredicateReorderingRule::apply_to(const std::shared_ptr<AbstractASTNode>& node) {
   auto reordered = false;
 
   if (node->type() == ASTNodeType::Predicate) {

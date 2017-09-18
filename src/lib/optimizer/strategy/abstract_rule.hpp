@@ -12,8 +12,8 @@ class AbstractRule {
    * Helper method for applying a single rule to an AST. Creates the temorary ASTRootNode and returns its child
    * after applying the rule
    */
-  static std::shared_ptr<AbstractASTNode> apply_rule(const std::shared_ptr<AbstractRule> & rule,
-                                                  const std::shared_ptr<AbstractASTNode> &input);
+  static std::shared_ptr<AbstractASTNode> apply_rule(const std::shared_ptr<AbstractRule> &rule,
+                                                     const std::shared_ptr<AbstractASTNode> &input);
 
   /**
    * This function applies the concrete Optimizer Rule to an AST.
