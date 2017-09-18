@@ -26,7 +26,7 @@ class PerformanceWarningDisabler;
 class PerformanceWarningClass {
   static bool& disabled() {
     // hacky hack that allows us to have state in a header file
-    static bool _disabled;
+    static bool _disabled{false};
     return _disabled;
   }
 
