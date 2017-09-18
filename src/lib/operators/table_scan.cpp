@@ -24,6 +24,7 @@
 #include "all_parameter_variant.hpp"
 #include "type_cast.hpp"
 #include "utils/assert.hpp"
+#include "utils/performance_warning.hpp"
 
 namespace opossum {
 

@@ -10,6 +10,7 @@
 #include "operators/table_wrapper.hpp"
 #include "storage/base_column.hpp"
 #include "type_cast.hpp"
+#include "utils/performance_warning.hpp"
 
 namespace opossum {
 
