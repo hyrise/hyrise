@@ -135,6 +135,19 @@ class AbstractASTNode : public std::enable_shared_from_this<AbstractASTNode> {
    */
   virtual std::vector<ColumnID> get_output_column_ids_for_table(const std::string &table_name) const;
 
+  /**
+   * If a node only has a left child, it is possible to remove this node from the tree, connecting this
+   * node's child with this node's parent.
+   * Fails if this node has two children
+   */
+  void remove_from_tree();
+
+  /**
+   * Replaces @param node_to_replace with this node.
+   * Fails if this node was already part of a tree, i.e. has a parent or children
+   */
+  void replace_in_tree(const std::shared_ptr<AbstractASTNode> & node_to_replace);
+
   void print(const uint32_t level = 0, std::ostream &out = std::cout) const;
   virtual std::string description() const = 0;
 

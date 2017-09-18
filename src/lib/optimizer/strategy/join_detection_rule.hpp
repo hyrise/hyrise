@@ -22,7 +22,9 @@ struct ColumnID;
  * =>
  * SELECT * FROM a INNER JOIN b ON a.id = b.id
  *
- *
+ * Note: Limited first iteration. Will only work on subtrees consisting of Joins and Predicates, so we don't
+ * have to deal with ColumnID re-mappings for now. Projections, Aggregates, etc. amidst Joins and Predicates
+ * should be rare anyway.
  */
 class JoinConditionDetectionRule : AbstractRule {
  public:
@@ -31,7 +33,12 @@ class JoinConditionDetectionRule : AbstractRule {
  private:
   const std::shared_ptr<PredicateNode> _find_predicate_for_cross_join(const std::shared_ptr<JoinNode> &cross_join);
 
-  bool _is_join_condition(ColumnID left, ColumnID right, size_t number_columns_left);
+  /**
+   * Checks whether a predicate that operates on @param left and @param right is a join condition for a cross
+   * join with @param left_num_cols number of columns in its left input and @param right_num_cols in its right input
+   */
+  bool _is_join_condition(ColumnID left, ColumnID right,
+                          size_t left_num_cols, size_t right_num_cols) const;
 };
 
 }  // namespace opossum
