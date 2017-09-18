@@ -40,6 +40,13 @@ void TableStatistics::create_all_column_statistics() {
   }
 }
 
+void TableStatistics::reset_table_ptr() {
+  for (ColumnID column_id{0}; column_id < _column_statistics.size(); ++column_id) {
+    DebugAssert(_column_statistics[column_id], "All column statistics of table statistics have to exist.");
+  }
+  _table.reset();
+}
+
 std::shared_ptr<TableStatistics> TableStatistics::predicate_statistics(const ColumnID column_id,
                                                                        const ScanType scan_type,
                                                                        const AllParameterVariant &value,
@@ -114,9 +121,9 @@ std::shared_ptr<TableStatistics> TableStatistics::join_statistics(
   auto col_stats_right_begin = join_table_stats->_column_statistics.begin() + _column_statistics.size();
   std::copy(right_table_stats->_column_statistics.begin(), right_table_stats->_column_statistics.end(),
             col_stats_right_begin);
-    
+
   // all columns are added, table pointer is deleted for ouput statistics
-  join_table_stats->_table.reset();  //TODO(jonathan) add a function for this that asserts that all colstats exist
+  join_table_stats->reset_table_ptr();
 
   // calculate output size for cross joins
   join_table_stats->_row_count *= right_table_stats->_row_count;
