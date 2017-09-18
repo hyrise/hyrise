@@ -7,6 +7,9 @@
 
 #include "storage/base_attribute_vector.hpp"
 #include "storage/column_visitable.hpp"
+#include "storage/iterables/chunk_offset_mapping.hpp"
+#include "storage/iterables/dictionary_column_iterable.hpp"
+#include "storage/iterables/value_column_iterable.hpp"
 
 namespace opossum {
 
@@ -53,20 +56,14 @@ class Sort::SortImplMaterializeSortColumn : public ColumnVisitable {
     MaterializeSortColumnContext(ChunkID c, std::shared_ptr<std::vector<std::pair<RowID, SortColumnType>>> id_value_map)
         : chunk_id(c), row_id_value_vector(id_value_map) {}
 
-    // constructor for use in ReferenceColumn::visit_dereferenced
-    MaterializeSortColumnContext(std::shared_ptr<ColumnVisitableContext> base_context, ChunkID chunk_id,
-                                 std::shared_ptr<std::vector<ChunkOffset>> chunk_offsets,
-                                 std::shared_ptr<std::vector<RowID>> row_ids)
-        : chunk_id(chunk_id),
-          row_id_value_vector(
-              std::static_pointer_cast<MaterializeSortColumnContext>(base_context)->row_id_value_vector),
-          chunk_offsets_in(chunk_offsets),
-          row_ids_in(row_ids) {}
+    // constructor for handle_reference_column
+    MaterializeSortColumnContext(ChunkID c, std::shared_ptr<std::vector<std::pair<RowID, SortColumnType>>> id_value_map,
+                                 std::unique_ptr<ChunkOffsetsList> mapped_chunk_offsets)
+        : chunk_id(c), row_id_value_vector(id_value_map), _mapped_chunk_offsets{std::move(mapped_chunk_offsets)} {}
 
     const ChunkID chunk_id;
     std::shared_ptr<std::vector<std::pair<RowID, SortColumnType>>> row_id_value_vector;
-    std::shared_ptr<std::vector<ChunkOffset>> chunk_offsets_in;
-    std::shared_ptr<std::vector<RowID>> row_ids_in;
+    std::unique_ptr<ChunkOffsetsList> _mapped_chunk_offsets;
   };
 
   void execute() {
@@ -81,63 +78,37 @@ class Sort::SortImplMaterializeSortColumn : public ColumnVisitable {
   void handle_value_column(BaseColumn &base_column, std::shared_ptr<ColumnVisitableContext> base_context) override {
     auto context = std::static_pointer_cast<MaterializeSortColumnContext>(base_context);
     const auto &column = static_cast<ValueColumn<SortColumnType> &>(base_column);
-    auto values = column.values();
+    const auto &mapped_chunk_offsets = context->_mapped_chunk_offsets;
+
     auto chunk_id = context->chunk_id;
     auto row_id_value_vector = context->row_id_value_vector;
 
-    if (context->chunk_offsets_in) {
-      // This ValueColumn is referenced by a ReferenceColumn (i.e., is probably filtered). We only return the matching
-      // rows within the filtered column, together with their original position
-      auto chunk_offsets = context->chunk_offsets_in;
-      auto row_ids = context->row_ids_in;
-
-      for (size_t i = 0; i < chunk_offsets->size(); i++) {
-        row_id_value_vector->emplace_back(row_ids->at(i), values[chunk_offsets->at(i)]);
+    auto iterable = ValueColumnIterable<SortColumnType>{column};
+    iterable.with_iterators(mapped_chunk_offsets.get(), [&](auto begin, auto end) {
+      for (auto it = begin; it != end; ++it) {
+        const auto value = *it;
+        row_id_value_vector->emplace_back(RowID{chunk_id, value.chunk_offset()}, value.value());
       }
-    } else {
-      // This ValueColumn has to be scanned in full. We directly insert the results into the list of matching rows.
-      for (ChunkOffset row_index = 0; row_index < values.size(); row_index++) {
-        row_id_value_vector->emplace_back(RowID{chunk_id, row_index}, values[row_index]);
-      }
-    }
+    });
   }
 
   void handle_reference_column(ReferenceColumn &column, std::shared_ptr<ColumnVisitableContext> base_context) override {
-    /*
-    The pos_list might be unsorted. In that case, we would have to jump around from chunk to chunk.
-    One-chunk-at-a-time processing should be faster. For this, we place a pair {chunk_offset, original_position}
-    into a vector for each chunk. A potential optimization would be to only do this if the pos_list is really
-    unsorted.
-    */
-    auto referenced_table = column.referenced_table();
-    std::vector<std::shared_ptr<std::vector<ChunkOffset>>> all_chunk_offsets(referenced_table->chunk_count());
-    std::vector<std::shared_ptr<std::vector<RowID>>> row_id_maps(referenced_table->chunk_count());
+    auto context = std::static_pointer_cast<MaterializeSortColumnContext>(base_context);
+    auto chunk_offsets_by_chunk_id = split_pos_list_by_chunk_id(*column.pos_list(), false);
 
-    for (ChunkID chunk_id{0}; chunk_id < referenced_table->chunk_count(); ++chunk_id) {
-      all_chunk_offsets[chunk_id] = std::make_shared<std::vector<ChunkOffset>>();
-      row_id_maps[chunk_id] = std::make_shared<std::vector<RowID>>();
-      for (ChunkOffset row_index = 0; row_index < column.size(); row_index++) {
-        row_id_maps[chunk_id]->emplace_back(RowID{chunk_id, row_index});
-      }
-    }
+    // Visit each referenced column, inspired by TableScan
+    for (auto &pair : chunk_offsets_by_chunk_id) {
+      const auto &referenced_chunk_id = pair.first;
+      auto &mapped_chunk_offsets = pair.second;
 
-    auto pos_list = column.pos_list();
-    auto referenced_column_id = column.referenced_column_id();
+      const auto &chunk = column.referenced_table()->get_chunk(referenced_chunk_id);
+      auto referenced_column = chunk.get_column(column.referenced_column_id());
 
-    for (auto pos : *(pos_list)) {
-      auto chunk_info = referenced_table->locate_row(pos);
-      all_chunk_offsets[chunk_info.first]->emplace_back(chunk_info.second);
-    }
+      auto mapped_chunk_offsets_ptr = std::make_unique<ChunkOffsetsList>(std::move(mapped_chunk_offsets));
 
-    for (ChunkID chunk_id{0}; chunk_id < referenced_table->chunk_count(); ++chunk_id) {
-      if (all_chunk_offsets[chunk_id]->empty()) continue;
-      auto &chunk = referenced_table->get_chunk(chunk_id);
-      auto referenced_column = chunk.get_column(referenced_column_id);
-
-      // visiting the referenced column with the created chunk_offset list
-      auto c = std::make_shared<MaterializeSortColumnContext>(base_context, chunk_id, all_chunk_offsets[chunk_id],
-                                                              row_id_maps[chunk_id]);
-      referenced_column->visit(*this, c);
+      auto new_context = std::make_shared<MaterializeSortColumnContext>(context->chunk_id, context->row_id_value_vector,
+                                                                        std::move(mapped_chunk_offsets_ptr));
+      referenced_column->visit(*this, new_context);
     }
   }
 
@@ -145,29 +116,19 @@ class Sort::SortImplMaterializeSortColumn : public ColumnVisitable {
                                 std::shared_ptr<ColumnVisitableContext> base_context) override {
     auto context = std::static_pointer_cast<MaterializeSortColumnContext>(base_context);
     const auto &column = static_cast<DictionaryColumn<SortColumnType> &>(base_column);
-    auto attribute_vector = column.attribute_vector();
-    auto dictionary = column.dictionary();
+    const auto &mapped_chunk_offsets = context->_mapped_chunk_offsets;
+
     auto chunk_id = context->chunk_id;
     auto row_id_value_vector = context->row_id_value_vector;
 
-    if (context->chunk_offsets_in) {
-      // This DictionaryColumn is referenced by a ReferenceColumn (i.e., is probably filtered). We only return the
-      // matching
-      // rows within the filtered column, together with their original position
-      auto chunk_offsets = context->chunk_offsets_in;
-      auto row_ids = context->row_ids_in;
+    auto iterable = DictionaryColumnIterable<SortColumnType>{column};
 
-      for (size_t i = 0; i < chunk_offsets->size(); i++) {
-        auto value = column.value_by_value_id(attribute_vector->get(chunk_offsets->at(i)));
-        row_id_value_vector->emplace_back(row_ids->at(i), value);
+    iterable.with_iterators(mapped_chunk_offsets.get(), [&](auto begin, auto end) {
+      for (auto it = begin; it != end; ++it) {
+        const auto value = *it;
+        row_id_value_vector->emplace_back(RowID{chunk_id, value.chunk_offset()}, value.value());
       }
-    } else {
-      // This DictionaryColumn has to be scanned in full. We directly insert the results into the list of matching rows.
-      for (ChunkOffset row_index = 0; row_index < attribute_vector->size(); row_index++) {
-        auto value = column.value_by_value_id(attribute_vector->get(row_index));
-        row_id_value_vector->emplace_back(RowID{chunk_id, row_index}, value);
-      }
-    }
+    });
   }
 
   const std::shared_ptr<const Table> _table_in;
