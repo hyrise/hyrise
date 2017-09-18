@@ -78,7 +78,7 @@ class PerformanceWarningDisabler;
 class PerformanceWarningClass {
   static bool& disabled() {
     // hacky hack that allows us to have state in a header file
-    static bool _disabled;
+    static bool _disabled{false};
     return _disabled;
   }
 
@@ -103,12 +103,14 @@ class PerformanceWarningClass {
 };
 
 class PerformanceWarningDisabler {
-bool _previously_disabled;
  public:
   PerformanceWarningDisabler() : _previously_disabled(PerformanceWarningClass::disable()) {}
   ~PerformanceWarningDisabler() {
     if (!_previously_disabled) PerformanceWarningClass::enable();
   }
+
+ private:
+  bool _previously_disabled;
 };
 
 #if IS_DEBUG
