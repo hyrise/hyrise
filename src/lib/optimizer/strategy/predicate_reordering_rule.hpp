@@ -23,11 +23,11 @@ class PredicateNode;
  * others, such as JoinNode or UnionNode.
  */
 class PredicateReorderingRule : public AbstractRule {
- protected:
-  void _apply_to_impl(const std::shared_ptr<AbstractASTNode> &node) override;
+ public:
+  bool apply_to(const std::shared_ptr<AbstractASTNode> &node) override;
 
  private:
-  void _reorder_predicates(std::vector<std::shared_ptr<PredicateNode>> &predicates) const;
+  bool _reorder_predicates(std::vector<std::shared_ptr<PredicateNode>> &predicates) const;
 };
 
 }  // namespace opossum

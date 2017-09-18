@@ -13,7 +13,9 @@
 
 namespace opossum {
 
-void PredicateReorderingRule::_apply_to_impl(const std::shared_ptr<AbstractASTNode>& node) {
+bool PredicateReorderingRule::apply_to(const std::shared_ptr<AbstractASTNode> &node) {
+  auto reordered = false;
+
   if (node->type() == ASTNodeType::Predicate) {
     std::vector<std::shared_ptr<PredicateNode>> predicate_nodes;
 
@@ -25,23 +27,30 @@ void PredicateReorderingRule::_apply_to_impl(const std::shared_ptr<AbstractASTNo
     }
 
     // Sort PredicateNodes in descending order with regards to the expected row_count
-    _reorder_predicates(predicate_nodes);
-
-    _apply_to_children(predicate_nodes.back());
+    reordered = _reorder_predicates(predicate_nodes);
+    reordered |= _apply_to_children(predicate_nodes.back());
   } else {
-    _apply_to_children(node);
+    reordered = _apply_to_children(node);
   }
+
+  return reordered;
 }
 
-void PredicateReorderingRule::_reorder_predicates(std::vector<std::shared_ptr<PredicateNode>>& predicates) const {
+bool PredicateReorderingRule::_reorder_predicates(std::vector<std::shared_ptr<PredicateNode>>& predicates) const {
   // Store original child and parent
   auto child = predicates.back()->left_child();
   auto parent = predicates.front()->parent();
 
-  // Sort in descending order
-  std::sort(predicates.begin(), predicates.end(), [&](auto& l, auto& r) {
+  const auto sort_predicate = [&](auto& l, auto& r) {
     return l->get_statistics_from(child)->row_count() > r->get_statistics_from(child)->row_count();
-  });
+  };
+
+  if (std::is_sorted(predicates.begin(), predicates.end(), sort_predicate)) {
+    return false;
+  }
+
+  // Sort in descending order
+  std::sort(predicates.begin(), predicates.end(), sort_predicate);
 
   // Ensure that nodes are chained correctly
   predicates.back()->set_left_child(child);
@@ -50,6 +59,8 @@ void PredicateReorderingRule::_reorder_predicates(std::vector<std::shared_ptr<Pr
   for (size_t predicate_index = 0; predicate_index < predicates.size() - 1; predicate_index++) {
     predicates[predicate_index]->set_left_child(predicates[predicate_index + 1]);
   }
+
+  return true;
 }
 
 }  // namespace opossum

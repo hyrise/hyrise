@@ -15,7 +15,7 @@
 
 namespace opossum {
 
-void JoinConditionDetectionRule::_apply_to_impl(const std::shared_ptr<AbstractASTNode> &node) {
+bool JoinConditionDetectionRule::apply_to(const std::shared_ptr<AbstractASTNode> &node) {
   if (node->type() == ASTNodeType::Join) {
     // ... "potential"_cross_join_node until this if below
     auto cross_join_node = std::dynamic_pointer_cast<JoinNode>(node);
@@ -36,11 +36,13 @@ void JoinConditionDetectionRule::_apply_to_impl(const std::shared_ptr<AbstractAS
          */
         new_join_node->replace_in_tree(cross_join_node);
         predicate_node->remove_from_tree();
+
+        return true;
       }
     }
   }
 
-  _apply_to_children(node);
+  return _apply_to_children(node);
 }
 
 const std::shared_ptr<PredicateNode> JoinConditionDetectionRule::_find_predicate_for_cross_join(

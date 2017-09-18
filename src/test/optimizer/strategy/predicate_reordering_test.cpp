@@ -45,12 +45,15 @@ class TableStatisticsMock : public TableStatistics {
 
 class PredicateReorderingTest : public BaseTest {
  protected:
-  void SetUp() override { StorageManager::get().add_table("a", load_table("src/test/tables/int_float.tbl", 0)); }
+  void SetUp() override {
+    StorageManager::get().add_table("a", load_table("src/test/tables/int_float.tbl", 0));
+    _rule = std::make_shared<PredicateReorderingRule>();
+  }
+
+  std::shared_ptr<PredicateReorderingRule> _rule;
 };
 
 TEST_F(PredicateReorderingTest, SimpleReorderingTest) {
-  PredicateReorderingRule rule;
-
   auto stored_table_node = std::make_shared<StoredTableNode>("a");
 
   auto statistics_mock = std::make_shared<TableStatisticsMock>();
@@ -64,7 +67,7 @@ TEST_F(PredicateReorderingTest, SimpleReorderingTest) {
 
   predicate_node_1->get_statistics();
 
-  auto reordered = rule.apply_to(predicate_node_1);
+  auto reordered = AbstractRule::apply_rule(_rule, predicate_node_1);
 
   EXPECT_EQ(reordered, predicate_node_0);
   EXPECT_EQ(reordered->left_child(), predicate_node_1);
@@ -72,8 +75,6 @@ TEST_F(PredicateReorderingTest, SimpleReorderingTest) {
 }
 
 TEST_F(PredicateReorderingTest, MoreComplexReorderingTest) {
-  PredicateReorderingRule rule;
-
   auto stored_table_node = std::make_shared<StoredTableNode>("a");
 
   auto statistics_mock = std::make_shared<TableStatisticsMock>();
@@ -90,7 +91,7 @@ TEST_F(PredicateReorderingTest, MoreComplexReorderingTest) {
 
   predicate_node_2->get_statistics();
 
-  auto reordered = rule.apply_to(predicate_node_2);
+  auto reordered = AbstractRule::apply_rule(_rule, predicate_node_2);
 
   EXPECT_EQ(reordered, predicate_node_2);
   EXPECT_EQ(reordered->left_child(), predicate_node_0);
@@ -99,8 +100,6 @@ TEST_F(PredicateReorderingTest, MoreComplexReorderingTest) {
 }
 
 TEST_F(PredicateReorderingTest, ComplexReorderingTest) {
-  PredicateReorderingRule rule;
-
   auto stored_table_node = std::make_shared<StoredTableNode>("a");
 
   auto statistics_mock = std::make_shared<TableStatisticsMock>();
@@ -128,7 +127,7 @@ TEST_F(PredicateReorderingTest, ComplexReorderingTest) {
 
   predicate_node_4->get_statistics();
 
-  auto reordered = rule.apply_to(predicate_node_4);
+  auto reordered = AbstractRule::apply_rule(_rule, predicate_node_4);
 
   EXPECT_EQ(reordered, predicate_node_3);
   EXPECT_EQ(reordered->left_child(), predicate_node_4);
@@ -141,8 +140,6 @@ TEST_F(PredicateReorderingTest, ComplexReorderingTest) {
 }
 
 TEST_F(PredicateReorderingTest, TwoReorderings) {
-  PredicateReorderingRule rule;
-
   auto stored_table_node = std::make_shared<StoredTableNode>("a");
 
   auto statistics_mock = std::make_shared<TableStatisticsMock>();
@@ -170,7 +167,7 @@ TEST_F(PredicateReorderingTest, TwoReorderings) {
 
   projection_node->get_statistics();
 
-  auto reordered = rule.apply_to(projection_node);
+  auto reordered = AbstractRule::apply_rule(_rule, projection_node);
 
   EXPECT_EQ(reordered, projection_node);
   EXPECT_EQ(reordered->left_child(), predicate_node_2);
@@ -186,8 +183,6 @@ TEST_F(PredicateReorderingTest, SameOrderingForStoredTable) {
   std::shared_ptr<Table> table_a = load_table("src/test/tables/int_float4.tbl", 2);
   StorageManager::get().add_table("table_a", std::move(table_a));
 
-  PredicateReorderingRule rule;
-
   auto stored_table_node = std::make_shared<StoredTableNode>("table_a");
 
   // Setup first AST
@@ -199,7 +194,7 @@ TEST_F(PredicateReorderingTest, SameOrderingForStoredTable) {
 
   predicate_node_1->get_statistics();
 
-  auto reordered = rule.apply_to(predicate_node_1);
+  auto reordered = AbstractRule::apply_rule(_rule, predicate_node_1);
 
   // Setup second AST
   auto predicate_node_2 = std::make_shared<PredicateNode>(ColumnID{1}, ScanType::OpGreaterThan, 458.5);
@@ -210,7 +205,7 @@ TEST_F(PredicateReorderingTest, SameOrderingForStoredTable) {
 
   predicate_node_3->get_statistics();
 
-  auto reordered_1 = rule.apply_to(predicate_node_3);
+  auto reordered_1 = AbstractRule::apply_rule(_rule, predicate_node_3);
 
   // Compare members in PredicateNodes to make sure both are ordered the same way.
   auto first_predicate_0 = std::dynamic_pointer_cast<PredicateNode>(reordered);

@@ -36,7 +36,7 @@ struct ColumnID;
  */
 class JoinConditionDetectionRule : public AbstractRule {
  protected:
-  void _apply_to_impl(const std::shared_ptr<AbstractASTNode> &node) override;
+  bool apply_to(const std::shared_ptr<AbstractASTNode> &node) override;
 
  private:
   const std::shared_ptr<PredicateNode> _find_predicate_for_cross_join(const std::shared_ptr<JoinNode> &cross_join);

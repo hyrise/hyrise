@@ -5,21 +5,27 @@
 namespace opossum {
 
 class AbstractASTNode;
-class ASTRootNode;
 
 class AbstractRule {
  public:
   /**
-   * This function applies the concrete Optimizer Rule to an AST.
-   * @param node      the root node of this AST
-   * @return          the new root node of this AST
+   * Helper method for applying a single rule to an AST. Creates the temorary ASTRootNode and returns its child
+   * after applying the rule
    */
-  const std::shared_ptr<AbstractASTNode> apply_to(const std::shared_ptr<AbstractASTNode> &node);
+  static std::shared_ptr<AbstractASTNode> apply_rule(const std::shared_ptr<AbstractRule> & rule,
+                                                  const std::shared_ptr<AbstractASTNode> &input);
+
+  /**
+   * This function applies the concrete Optimizer Rule to an AST.
+   * apply_to() is intended to be called recursively by the concrete rule.
+   * The optimizer will pass the immutable ASTRootNode to this function.
+   * @param root      the root node of this AST
+   * @return whether the rule changed the AST, used to stop the optimizers iteration
+   */
+  virtual bool apply_to(const std::shared_ptr<AbstractASTNode> &root) = 0;
 
  protected:
-  virtual void _apply_to_impl(const std::shared_ptr<AbstractASTNode> &node) = 0;
-
-  void _apply_to_children(const std::shared_ptr<AbstractASTNode> &node);
+  bool _apply_to_children(const std::shared_ptr<AbstractASTNode> &node);
 };
 
 }  // namespace opossum
