@@ -39,7 +39,7 @@ TEST_F(JoinDetectionRuleTest, SimpleDetectionTest) {
    * Test that
    *
    *   Predicate
-   *  (a.a == b.b)
+   *  (a.a == b.a)
    *       |
    *     Cross
    *    /     \
@@ -48,7 +48,7 @@ TEST_F(JoinDetectionRuleTest, SimpleDetectionTest) {
    * gets converted to
    *
    *      Join
-   *  (a.a == b.b)
+   *  (a.a == b.a)
    *    /     \
    *   a      b
    */
@@ -58,7 +58,7 @@ TEST_F(JoinDetectionRuleTest, SimpleDetectionTest) {
   cross_join_node->set_left_child(_table_node_a);
   cross_join_node->set_right_child(_table_node_b);
 
-  const auto predicate_node = std::make_shared<PredicateNode>(ColumnID{0}, ScanType::OpEquals, ColumnID{3});
+  const auto predicate_node = std::make_shared<PredicateNode>(ColumnID{0}, ScanType::OpEquals, ColumnID{2});
   predicate_node->set_left_child(cross_join_node);
 
   auto output = _rule.apply_to(predicate_node);
@@ -76,7 +76,7 @@ TEST_F(JoinDetectionRuleTest, SecondDetectionTest) {
    *     (a.a)
    *       |
    *   Predicate
-   *  (a.a == b.b)
+   *  (a.a == b.a)
    *       |
    *     Cross
    *    /     \
@@ -88,7 +88,7 @@ TEST_F(JoinDetectionRuleTest, SecondDetectionTest) {
    *     (a.a)
    *       |
    *      Join
-   *  (a.a == b.b)
+   *  (a.a == b.a)
    *    /     \
    *   a      b
    */
@@ -98,7 +98,7 @@ TEST_F(JoinDetectionRuleTest, SecondDetectionTest) {
   cross_join_node->set_left_child(_table_node_a);
   cross_join_node->set_right_child(_table_node_b);
 
-  const auto predicate_node = std::make_shared<PredicateNode>(ColumnID{0}, ScanType::OpEquals, ColumnID{3});
+  const auto predicate_node = std::make_shared<PredicateNode>(ColumnID{0}, ScanType::OpEquals, ColumnID{2});
   predicate_node->set_left_child(cross_join_node);
 
   const std::vector<std::shared_ptr<Expression>> columns = {Expression::create_column(ColumnID{0})};
@@ -190,7 +190,7 @@ TEST_F(JoinDetectionRuleTest, NonCrossJoin) {
    *     (a.a)
    *       |
    *   Predicate
-   *  (a.a == a.b)
+   *  (a.a == b.a)
    *       |
    *     Join
    *  (a.b == b.b)
@@ -205,7 +205,7 @@ TEST_F(JoinDetectionRuleTest, NonCrossJoin) {
   join_node->set_left_child(_table_node_a);
   join_node->set_right_child(_table_node_b);
 
-  const auto predicate_node = std::make_shared<PredicateNode>(ColumnID{0}, ScanType::OpEquals, ColumnID{3});
+  const auto predicate_node = std::make_shared<PredicateNode>(ColumnID{0}, ScanType::OpEquals, ColumnID{2});
   predicate_node->set_left_child(join_node);
 
   const std::vector<std::shared_ptr<Expression>> columns = {Expression::create_column(ColumnID{0})};
@@ -276,6 +276,66 @@ TEST_F(JoinDetectionRuleTest, MultipleJoins) {
   EXPECT_EQ(output->left_child()->left_child()->type(), ASTNodeType::Join);
   const auto second_join_node = std::dynamic_pointer_cast<JoinNode>(output->left_child()->left_child());
   EXPECT_EQ(second_join_node->join_mode(), JoinMode::Inner);
+
+  EXPECT_EQ(output->left_child()->left_child()->left_child()->type(), ASTNodeType::StoredTable);
+  EXPECT_EQ(output->left_child()->left_child()->right_child()->type(), ASTNodeType::StoredTable);
+}
+
+TEST_F(JoinDetectionRuleTest, MultipleJoins2) {
+  /**
+   * Test that
+   *
+   *       Projection
+   *         (a.a)
+   *           |
+   *        Predicate
+   *      (a.a == c.a)
+   *            |
+   *          Cross
+   *         /     \
+   *     Cross     c
+   *    /     \
+   *   a      b
+   *
+   *   gets converted to
+   *
+   *       Projection
+   *         (a.a)
+   *            |
+   *          Join
+   *       (a.a == c.a)
+   *         /     \
+   *      Cross     c
+   *    /     \
+   *   a      b
+   *
+   */
+  const auto join_node1 = std::make_shared<JoinNode>(JoinMode::Cross);
+  join_node1->set_left_child(_table_node_a);
+  join_node1->set_right_child(_table_node_b);
+
+  const auto join_node2 = std::make_shared<JoinNode>(JoinMode::Cross);
+  join_node2->set_left_child(join_node1);
+  join_node2->set_right_child(_table_node_c);
+
+  const auto predicate_node = std::make_shared<PredicateNode>(ColumnID{0}, ScanType::OpEquals, ColumnID{4});
+  predicate_node->set_left_child(join_node2);
+
+  const std::vector<std::shared_ptr<Expression>> columns = {Expression::create_column(ColumnID{0})};
+  const auto projection_node = std::make_shared<ProjectionNode>(columns);
+  projection_node->set_left_child(predicate_node);
+
+  auto output = _rule.apply_to(projection_node);
+
+  EXPECT_EQ(output->type(), ASTNodeType::Projection);
+
+  EXPECT_EQ(output->left_child()->type(), ASTNodeType::Join);
+  const auto first_join_node = std::dynamic_pointer_cast<JoinNode>(output->left_child());
+  EXPECT_EQ(first_join_node->join_mode(), JoinMode::Inner);
+
+  EXPECT_EQ(output->left_child()->left_child()->type(), ASTNodeType::Join);
+  const auto second_join_node = std::dynamic_pointer_cast<JoinNode>(output->left_child()->left_child());
+  EXPECT_EQ(second_join_node->join_mode(), JoinMode::Cross);
 
   EXPECT_EQ(output->left_child()->left_child()->left_child()->type(), ASTNodeType::StoredTable);
   EXPECT_EQ(output->left_child()->left_child()->right_child()->type(), ASTNodeType::StoredTable);
