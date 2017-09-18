@@ -18,21 +18,23 @@ struct ColumnID;
 
 /**
  * This optimizer rule tries to find join conditions for cross join.
- * The rule tries to rewrite the corresponding ASTs for the following SQL statements to something that is equivalent :
+ * The rule tries to rewrite the corresponding ASTs for the following SQL statements to an equivalent AST:
  *
  * SELECT * FROM a, b WHERE a.id = b.id;
  * =>
  * SELECT * FROM a INNER JOIN b ON a.id = b.id
  *
- * ### HOW THIS WORKS ###
  *
- * The rule traverses the AST recursively untit it detects a JoinNode that has JoinMode::Cross.
+ *
+ * HOW THIS WORKS
+ *
+ * The rule traverses the AST recursively searching for JoinNodes with JoinMode::Cross.
  * For each Cross Join Node it will look for an appropriate join condition
  * by searching the parent nodes for PredicateNodes. Each PredicateNode is a potential candidate
  * but only those that compare two columns are interesting enough to check.
  * When such a PredicateNode is found, the rule will check whether each ColumnID comes from the left/right input.
  *
- * Note: Limited first iteration. Will only work on subtrees consisting of Joins and Predicates, so we don't
+ * Note: Limited first iteration. This will only work on subtrees consisting of Joins and Predicates, so we don't
  * have to deal with ColumnID re-mappings for now. Projections, Aggregates, etc. amidst Joins and Predicates
  * should be rare anyway.
  */
