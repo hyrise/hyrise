@@ -26,15 +26,16 @@ Avoid exception handling. Because Hyrise is not a product, we do not have to rec
 - We mostly use structs for PODS (plain old data structures). If it has methods, chances are that it is a class.
 
 ## Naming Conventions
-
 - Files: lowercase separated by underscores, e.g., abstract_operator.cpp
 - Types (classes, structs, enums, typedefs, using): CamelCase starting with uppercase letter, e.g., `BaseColumn`
 - Variables: lowercase separated by underscores, e.g., `chunk_size`
 - Functions: lowercase separated by underscores, e.g., `get_num_in_tables()`
 - Private / proctected members / methods: like variables / functions with leading underscore, e.g., `_get_chunks()`
 - Classes that are used only to have a non-templated base class are named `BaseXY` (e.g., BaseColumn), while classes that have multiple differing implementations are named `AbstractXY` (e.g., AbstractOperator)
-
 - Choose descriptive names. Avoid `i`, `j`, etc. in loops.
+
+## Performance Warnings
+- Sometimes, we have convenience functions, such as BaseColumn::operator[], or workarounds, such as performing multiple stable sorts instead of a single one. Because these might negatively affect the performance, the user should be warned if a query causes one of these slow paths to be chosen. For this, we have the PerformanceWarning() macro defined in assert.hpp.
 
 ## Review
 
