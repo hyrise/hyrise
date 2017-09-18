@@ -341,6 +341,45 @@ TEST_F(JoinDetectionRuleTest, MultipleJoins2) {
   EXPECT_EQ(output->left_child()->left_child()->right_child()->type(), ASTNodeType::StoredTable);
 }
 
+TEST_F(JoinDetectionRuleTest, NoOptimizationAcrossProjection) {
+  /**
+   * Test that
+   *
+   *        Predicate
+   *      (a.a == b.a)
+   *           |
+   *       Projection
+   *       (a.a, b.a)
+   *           |
+   *          Cross
+   *         /     \
+   *        a      b
+   *
+   * isn't manipulated.
+   *
+   * (This would be Predicate Pushdown and will be covered by a different Optimizer Rule in the future)
+   *
+   */
+  const auto join_node = std::make_shared<JoinNode>(JoinMode::Cross);
+  join_node->set_left_child(_table_node_a);
+  join_node->set_right_child(_table_node_b);
+
+  const std::vector<std::shared_ptr<Expression>> columns = {Expression::create_column(ColumnID{0}), Expression::create_column(ColumnID{2})};
+  const auto projection_node = std::make_shared<ProjectionNode>(columns);
+  projection_node->set_left_child(join_node);
+
+  const auto predicate_node = std::make_shared<PredicateNode>(ColumnID{0}, ScanType::OpEquals, ColumnID{1});
+  predicate_node->set_left_child(projection_node);
+
+  auto output = _rule.apply_to(predicate_node);
+
+  EXPECT_EQ(output->type(), ASTNodeType::Predicate);
+  EXPECT_EQ(output->left_child()->type(), ASTNodeType::Projection);
+  EXPECT_EQ(output->left_child()->left_child()->type(), ASTNodeType::Join);
+  EXPECT_EQ(output->left_child()->left_child()->left_child()->type(), ASTNodeType::StoredTable);
+  EXPECT_EQ(output->left_child()->left_child()->right_child()->type(), ASTNodeType::StoredTable);
+}
+
 TEST_F(JoinDetectionRuleTest, MultipleJoinsSQL) {
   hsql::SQLParserResult parse_result;
   hsql::SQLParser::parseSQLString("SELECT * FROM a, b, c WHERE a.a = b.a", &parse_result);

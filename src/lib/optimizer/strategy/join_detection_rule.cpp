@@ -17,18 +17,15 @@ namespace opossum {
 
 void JoinConditionDetectionRule::_apply_to_impl(const std::shared_ptr<AbstractASTNode> &node) {
   if (node->type() == ASTNodeType::Join) {
-    std::cout << "Found Join Node" << std::endl;
     // ... "potential"_cross_join_node until this if below
     auto cross_join_node = std::dynamic_pointer_cast<JoinNode>(node);
     if (cross_join_node->join_mode() == JoinMode::Cross) {
-      std::cout << "Found Cross Join Node" << std::endl;
       /**
        * If we find a predicate with a condition that operates on the cross-joined tables,
        * replace the cross join and the predicate with a conditional inner join
        */
       auto predicate_node = _find_predicate_for_cross_join(cross_join_node);
       if (predicate_node) {
-        std::cout << "Found corresponding Predicate Node" << std::endl;
         std::pair<ColumnID, ColumnID> column_ids(predicate_node->column_id(),
                                                  boost::get<ColumnID>(predicate_node->value()));
 
@@ -59,6 +56,8 @@ const std::shared_ptr<PredicateNode> JoinConditionDetectionRule::_find_predicate
      * TODO(anyone)
      * Right now we only support traversing past nodes that do not change the column order and to be 100% safe
      * we make this explicit by only traversing past Joins and Predicates
+     *
+     * Detecting Join Conditions across other node types may be possible by applying 'Predicate Pushdown' first.
      */
     if (node->type() != ASTNodeType::Join && node->type() != ASTNodeType::Predicate) {
       return nullptr;
