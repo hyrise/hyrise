@@ -532,7 +532,7 @@ int main(int argc, char** argv) {
   console.setLogfile("console.log");
 
   // Load command history
-  console.loadHistory("console.history");
+  console.loadHistory(".repl_history");
 
   // Timestamp dump only to logfile
   console.out("--- Session start --- " + current_timestamp() + "\n", false);
@@ -585,5 +585,5 @@ int main(int argc, char** argv) {
   console.out("--- Session end --- " + current_timestamp() + "\n", false);
 
   // Save command history to file
-  console.writeHistory("console.history");
+  console.writeHistory(".repl_history");
 }
