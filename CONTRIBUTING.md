@@ -33,10 +33,13 @@ Avoid exception handling. Because Hyrise is not a product, we do not have to rec
 - Functions: lowercase separated by underscores, e.g., `get_num_in_tables()`
 - Private / proctected members / methods: like variables / functions with leading underscore, e.g., `_get_chunks()`
 - Classes that are used only to have a non-templated base class are named `BaseXY` (e.g., BaseColumn), while classes that have multiple differing implementations are named `AbstractXY` (e.g., AbstractOperator)
-
 - Choose descriptive names. Avoid `i`, `j`, etc. in loops.
 
-## Review
+# Documentation
+- Most documentation should happen in the code or in the beginning of the header file
+- More complex documentation, such as an explanation of an algorithm that profits from images, can be put in the Wiki. Please make sure to link the Wiki page in the code - otherwise, noone will find it.
+
+# Review
 
 - Things to look for:
 	- Guidelines (see above)

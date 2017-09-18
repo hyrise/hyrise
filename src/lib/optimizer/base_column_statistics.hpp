@@ -20,6 +20,9 @@ struct TwoColumnSelectivityResult;
  * so that the corresponding table statistics functions can delegate all predictions to column statistics.
  * These functions return a column selectivity result object combining the selectivity of the operator
  * and if changed the newly created column statistics.
+ *
+ * Find more information about statistics in our Wiki: https://github.com/hyrise/zweirise/wiki/Statistics-Component
+ *                                                     https://github.com/hyrise/zweirise/wiki/gathering_statistics
  */
 class BaseColumnStatistics {
  public:

@@ -35,6 +35,9 @@ class TransactionContext;
 //   4. Add an entry in the swith-case of OperatorTranslator::translate_proto() to dispatch calls to the method created
 //      in step 3
 //   5. Write a test in `src/test/network/operator_translator_test.cpp`
+//
+// Find more information about operators in our Wiki: https://github.com/hyrise/zweirise/wiki/operator-concept
+
 class AbstractOperator : private Noncopyable {
  public:
   AbstractOperator(const std::shared_ptr<const AbstractOperator> left = nullptr,
