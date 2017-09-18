@@ -43,7 +43,7 @@ namespace opossum {
  *
  * Note: JoinHash does not support null values at the moment
  *
- * Find more information in our WIki: https://github.com/hyrise/zweirise/wiki/Sort-Merge-Join
+ * Find more information in our Wiki: https://github.com/hyrise/zweirise/wiki/Radix-Partitioned-and-Hash-Based-Join
  */
 class JoinHash : public AbstractJoinOperator {
  public:
