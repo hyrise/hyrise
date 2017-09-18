@@ -11,6 +11,7 @@
 #include "optimizer/abstract_syntax_tree/sort_node.hpp"
 #include "optimizer/abstract_syntax_tree/stored_table_node.hpp"
 #include "optimizer/strategy/predicate_reordering_rule.hpp"
+#include "optimizer/strategy/strategy_base_test.hpp"
 #include "optimizer/table_statistics.hpp"
 #include "storage/storage_manager.hpp"
 
@@ -43,7 +44,7 @@ class TableStatisticsMock : public TableStatistics {
   }
 };
 
-class PredicateReorderingTest : public BaseTest {
+class PredicateReorderingTest : public StrategyBaseTest {
  protected:
   void SetUp() override {
     StorageManager::get().add_table("a", load_table("src/test/tables/int_float.tbl", 0));
@@ -67,7 +68,7 @@ TEST_F(PredicateReorderingTest, SimpleReorderingTest) {
 
   predicate_node_1->get_statistics();
 
-  auto reordered = AbstractRule::apply_rule(_rule, predicate_node_1);
+  auto reordered = StrategyBaseTest::apply_rule(_rule, predicate_node_1);
 
   EXPECT_EQ(reordered, predicate_node_0);
   EXPECT_EQ(reordered->left_child(), predicate_node_1);
@@ -91,7 +92,7 @@ TEST_F(PredicateReorderingTest, MoreComplexReorderingTest) {
 
   predicate_node_2->get_statistics();
 
-  auto reordered = AbstractRule::apply_rule(_rule, predicate_node_2);
+  auto reordered = StrategyBaseTest::apply_rule(_rule, predicate_node_2);
 
   EXPECT_EQ(reordered, predicate_node_2);
   EXPECT_EQ(reordered->left_child(), predicate_node_0);
@@ -127,7 +128,7 @@ TEST_F(PredicateReorderingTest, ComplexReorderingTest) {
 
   predicate_node_4->get_statistics();
 
-  auto reordered = AbstractRule::apply_rule(_rule, predicate_node_4);
+  auto reordered = StrategyBaseTest::apply_rule(_rule, predicate_node_4);
 
   EXPECT_EQ(reordered, predicate_node_3);
   EXPECT_EQ(reordered->left_child(), predicate_node_4);
@@ -167,7 +168,7 @@ TEST_F(PredicateReorderingTest, TwoReorderings) {
 
   projection_node->get_statistics();
 
-  auto reordered = AbstractRule::apply_rule(_rule, projection_node);
+  auto reordered = StrategyBaseTest::apply_rule(_rule, projection_node);
 
   EXPECT_EQ(reordered, projection_node);
   EXPECT_EQ(reordered->left_child(), predicate_node_2);
@@ -194,7 +195,7 @@ TEST_F(PredicateReorderingTest, SameOrderingForStoredTable) {
 
   predicate_node_1->get_statistics();
 
-  auto reordered = AbstractRule::apply_rule(_rule, predicate_node_1);
+  auto reordered = StrategyBaseTest::apply_rule(_rule, predicate_node_1);
 
   // Setup second AST
   auto predicate_node_2 = std::make_shared<PredicateNode>(ColumnID{1}, ScanType::OpGreaterThan, 458.5);
@@ -205,7 +206,7 @@ TEST_F(PredicateReorderingTest, SameOrderingForStoredTable) {
 
   predicate_node_3->get_statistics();
 
-  auto reordered_1 = AbstractRule::apply_rule(_rule, predicate_node_3);
+  auto reordered_1 = StrategyBaseTest::apply_rule(_rule, predicate_node_3);
 
   // Compare members in PredicateNodes to make sure both are ordered the same way.
   auto first_predicate_0 = std::dynamic_pointer_cast<PredicateNode>(reordered);
