@@ -18,7 +18,15 @@
 
 namespace opossum {
 
-class JoinDetectionRuleTest : public BaseTest {
+struct JoinDetectionTestParam {
+  JoinDetectionTestParam(const std::string &query, const uint8_t number_of_detectable_cross_joins)
+      : query(query), number_of_detectable_cross_joins(number_of_detectable_cross_joins) {}
+
+  const std::string query;
+  const uint8_t number_of_detectable_cross_joins;
+};
+
+class JoinDetectionRuleTest : public BaseTest, public ::testing::WithParamInterface<JoinDetectionTestParam> {
  protected:
   void SetUp() override {
     StorageManager::get().add_table("a", load_table("src/test/tables/int_float.tbl", 2));
@@ -28,6 +36,25 @@ class JoinDetectionRuleTest : public BaseTest {
     _table_node_a = std::make_shared<StoredTableNode>("a");
     _table_node_b = std::make_shared<StoredTableNode>("b");
     _table_node_c = std::make_shared<StoredTableNode>("c");
+  }
+
+  uint8_t _count_cross_joins(const std::shared_ptr<AbstractASTNode> &node) {
+    uint8_t count = 0u;
+    if (node->type() == ASTNodeType::Join) {
+      const auto join_node = std::dynamic_pointer_cast<JoinNode>(node);
+      if (join_node->join_mode() == JoinMode::Cross) {
+        count++;
+      }
+    }
+
+    if (node->left_child()) {
+      count += _count_cross_joins(node->left_child());
+    }
+    if (node->right_child()) {
+      count += _count_cross_joins(node->right_child());
+    }
+
+    return count;
   }
 
   std::shared_ptr<StoredTableNode> _table_node_a, _table_node_b, _table_node_c;
@@ -285,9 +312,9 @@ TEST_F(JoinDetectionRuleTest, MultipleJoins2) {
   /**
    * Test that
    *
-   *       Projection
-   *         (a.a)
-   *           |
+   *        Projection
+   *          (a.a)
+   *            |
    *        Predicate
    *      (a.a == c.a)
    *            |
@@ -364,7 +391,8 @@ TEST_F(JoinDetectionRuleTest, NoOptimizationAcrossProjection) {
   join_node->set_left_child(_table_node_a);
   join_node->set_right_child(_table_node_b);
 
-  const std::vector<std::shared_ptr<Expression>> columns = {Expression::create_column(ColumnID{0}), Expression::create_column(ColumnID{2})};
+  const std::vector<std::shared_ptr<Expression>> columns = {Expression::create_column(ColumnID{0}),
+                                                            Expression::create_column(ColumnID{2})};
   const auto projection_node = std::make_shared<ProjectionNode>(columns);
   projection_node->set_left_child(join_node);
 
@@ -380,35 +408,66 @@ TEST_F(JoinDetectionRuleTest, NoOptimizationAcrossProjection) {
   EXPECT_EQ(output->left_child()->left_child()->right_child()->type(), ASTNodeType::StoredTable);
 }
 
-TEST_F(JoinDetectionRuleTest, MultipleJoinsSQL) {
-  hsql::SQLParserResult parse_result;
-  hsql::SQLParser::parseSQLString("SELECT * FROM a, b, c WHERE a.a = b.a", &parse_result);
+TEST_F(JoinDetectionRuleTest, NoJoinDetectionAcrossProjections) {
+  /**
+   * Test that
+   *
+   *        Predicate
+   *      (a.a == b.a)
+   *           |
+   *       Projection
+   *       (a.a, b.a)
+   *           |
+   *          Cross
+   *         /     \
+   *        a      b
+   *
+   * isn't manipulated.
+   *
+   * (This would be Predicate Pushdown and will be covered by a different Optimizer Rule in the future)
+   *
+   */
+  const auto join_node = std::make_shared<JoinNode>(JoinMode::Cross);
+  join_node->set_left_child(_table_node_a);
+  join_node->set_right_child(_table_node_b);
 
-  auto node = SQLToASTTranslator::get().translate_parse_result(parse_result)[0];
-  auto output = _rule.apply_to(node);
+  const std::vector<std::shared_ptr<Expression>> columns = {Expression::create_column(ColumnID{0}),
+                                                            Expression::create_column(ColumnID{2})};
+  const auto projection_node = std::make_shared<ProjectionNode>(columns);
+  projection_node->set_left_child(join_node);
 
-  EXPECT_EQ(output->type(), ASTNodeType::Projection);
-  EXPECT_EQ(output->left_child()->type(), ASTNodeType::Join);
+  const auto predicate_node = std::make_shared<PredicateNode>(ColumnID{0}, ScanType::OpEquals, ColumnID{1});
+  predicate_node->set_left_child(projection_node);
 
-  const auto first_join_node = std::dynamic_pointer_cast<JoinNode>(output->left_child());
-  EXPECT_EQ(first_join_node->join_mode(), JoinMode::Inner);
+  auto output = _rule.apply_to(predicate_node);
 
-  const auto first_table = std::dynamic_pointer_cast<StoredTableNode>(output->left_child()->right_child());
-  EXPECT_EQ(first_table->table_name(), "a");
-
+  EXPECT_EQ(output->type(), ASTNodeType::Predicate);
+  EXPECT_EQ(output->left_child()->type(), ASTNodeType::Projection);
   EXPECT_EQ(output->left_child()->left_child()->type(), ASTNodeType::Join);
-  const auto second_join_node = std::dynamic_pointer_cast<JoinNode>(output->left_child()->left_child());
-  EXPECT_EQ(second_join_node->join_mode(), JoinMode::Cross);
-
   EXPECT_EQ(output->left_child()->left_child()->left_child()->type(), ASTNodeType::StoredTable);
   EXPECT_EQ(output->left_child()->left_child()->right_child()->type(), ASTNodeType::StoredTable);
-
-  const auto second_table =
-      std::dynamic_pointer_cast<StoredTableNode>(output->left_child()->left_child()->left_child());
-  EXPECT_EQ(second_table->table_name(), "b");
-  const auto third_table =
-      std::dynamic_pointer_cast<StoredTableNode>(output->left_child()->left_child()->right_child());
-  EXPECT_EQ(third_table->table_name(), "c");
 }
+
+TEST_P(JoinDetectionRuleTest, JoinDetectionSQL) {
+  JoinDetectionTestParam params = GetParam();
+
+  hsql::SQLParserResult parse_result;
+  hsql::SQLParser::parseSQLString(params.query, &parse_result);
+  auto node = SQLToASTTranslator::get().translate_parse_result(parse_result)[0];
+
+  auto before = _count_cross_joins(node);
+  auto output = _rule.apply_to(node);
+  auto after = _count_cross_joins(node);
+
+  EXPECT_EQ(before - after, params.number_of_detectable_cross_joins);
+}
+
+const JoinDetectionTestParam test_queries[] = {
+    {"SELECT * FROM a, b WHERE a.a = b.a", 1},
+    {"SELECT * FROM a, b, c WHERE a.a = c.a", 1},
+    {"SELECT * FROM a, b, c WHERE b.a = c.a", 1},
+};
+
+INSTANTIATE_TEST_CASE_P(test_queries, JoinDetectionRuleTest, ::testing::ValuesIn(test_queries));
 
 }  // namespace opossum
