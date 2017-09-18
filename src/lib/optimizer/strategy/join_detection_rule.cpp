@@ -72,6 +72,16 @@ optional<JoinConditionDetectionRule::JoinCondition> JoinConditionDetectionRule::
         continue;
       }
 
+      /**
+       * We have a (Cross)JoinNode and PredicateNode located further up in the tree. Now we have to determine whether
+       * and how they can be merged to a normal Join.
+       * In order to do this, check whether the left column of the Predicate refers to the left input table of the
+       * CrossJoin and the right column of the Predicate to the right input table of the CrossJoin - OR whether there
+       * is left-to-right and right-to_left match.
+       *
+       * IMPORTANT: Since we only traversed nodes that do not change the column order when looking for the Predicate,
+       * we can do this by the simple range check in _is_join_condition()
+       */
       const auto predicate_left_column_id = predicate_node->column_id();
       const auto predicate_right_column_id = boost::get<ColumnID>(predicate_node->value());
       const auto cross_left_num_cols = cross_join->left_child()->output_col_count();
