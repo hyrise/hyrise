@@ -86,10 +86,13 @@ class TableStatistics : public std::enable_shared_from_this<TableStatistics> {
 
   void create_all_column_statistics();
 
+  void reset_table_ptr();
+
   // Only available for statistics of tables in the StorageManager.
   // This is a weak_ptr, as
   // Table --shared_ptr--> TableStatistics
-  // not const as table pointer is reset once all column statistics have been created
+  // not const as table pointer can be reset once all column statistics have been created
+  // (e.g. for composite tables resulting from joins)
   std::weak_ptr<Table> _table;
 
   // row count is not an integer as it is a predicted value
