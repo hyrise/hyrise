@@ -37,7 +37,7 @@ Avoid exception handling. Because Hyrise is not a product, we do not have to rec
 
 # Documentation
 - Most documentation should happen in the code or in the beginning of the header file
-- More complex documentation, such as an explanation of an algorithm that profits from images, can be put in the Wiki. Please make sure to link the Wiki page in the code - otherwise, noone will find it.
+- More complex documentation, such as an explanation of an algorithm that profits from images, can be put in the Wiki. Please make sure to link the Wiki page in the code - otherwise, no one will find it.
 
 # Review
 
