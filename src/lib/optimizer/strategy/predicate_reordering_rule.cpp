@@ -9,10 +9,11 @@
 #include "optimizer/abstract_syntax_tree/abstract_ast_node.hpp"
 #include "optimizer/abstract_syntax_tree/predicate_node.hpp"
 #include "optimizer/table_statistics.hpp"
+#include "utils/assert.hpp"
 
 namespace opossum {
 
-const std::shared_ptr<AbstractASTNode> PredicateReorderingRule::apply_to(const std::shared_ptr<AbstractASTNode> node) {
+void PredicateReorderingRule::_apply_to_impl(const std::shared_ptr<AbstractASTNode>& node) {
   if (node->type() == ASTNodeType::Predicate) {
     std::vector<std::shared_ptr<PredicateNode>> predicate_nodes;
 
@@ -26,29 +27,16 @@ const std::shared_ptr<AbstractASTNode> PredicateReorderingRule::apply_to(const s
     // Sort PredicateNodes in descending order with regards to the expected row_count
     _reorder_predicates(predicate_nodes);
 
-    // Apply rule recursively to child trees
-    // There can only be a single child since we are looking at a PredicateNode.
-    if (predicate_nodes.back()->left_child()) {
-      predicate_nodes.back()->set_left_child(apply_to(predicate_nodes.back()->left_child()));
-    }
-
-    // Return top-most PredicateNode. This node replaced the input parameter 'node'
-    return predicate_nodes.front();
+    _apply_to_children(predicate_nodes.back());
   } else {
-    // Apply this rule recursively
-    if (node->left_child()) {
-      node->set_left_child(apply_to(node->left_child()));
-    }
-    if (node->right_child()) {
-      node->set_right_child(apply_to(node->right_child()));
-    }
-    return node;
+    _apply_to_children(node);
   }
 }
 
 void PredicateReorderingRule::_reorder_predicates(std::vector<std::shared_ptr<PredicateNode>>& predicates) const {
-  // Store original child
+  // Store original child and parent
   auto child = predicates.back()->left_child();
+  auto parent = predicates.front()->parent();
 
   // Sort in descending order
   std::sort(predicates.begin(), predicates.end(), [&](auto& l, auto& r) {
@@ -57,6 +45,7 @@ void PredicateReorderingRule::_reorder_predicates(std::vector<std::shared_ptr<Pr
 
   // Ensure that nodes are chained correctly
   predicates.back()->set_left_child(child);
+  parent->set_left_child(predicates.front());
 
   for (size_t predicate_index = 0; predicate_index < predicates.size() - 1; predicate_index++) {
     predicates[predicate_index]->set_left_child(predicates[predicate_index + 1]);
