@@ -95,6 +95,10 @@ TEST_F(JoinDetectionRuleTest, SimpleDetectionTest) {
   EXPECT_EQ(output->type(), ASTNodeType::Join);
   EXPECT_EQ(output->left_child()->type(), ASTNodeType::StoredTable);
   EXPECT_EQ(output->right_child()->type(), ASTNodeType::StoredTable);
+
+  const auto new_join_node = std::dynamic_pointer_cast<JoinNode>(output);
+  EXPECT_EQ(new_join_node->join_column_ids().value().first, 0);
+  EXPECT_EQ(new_join_node->join_column_ids().value().second, 0);
 }
 
 TEST_F(JoinDetectionRuleTest, SecondDetectionTest) {
@@ -308,6 +312,10 @@ TEST_F(JoinDetectionRuleTest, MultipleJoins) {
 
   EXPECT_EQ(output->left_child()->left_child()->left_child()->type(), ASTNodeType::StoredTable);
   EXPECT_EQ(output->left_child()->left_child()->right_child()->type(), ASTNodeType::StoredTable);
+
+  const auto new_join_node = std::dynamic_pointer_cast<JoinNode>(output->left_child()->left_child());
+  EXPECT_EQ(new_join_node->join_column_ids().value().first, 0);
+  EXPECT_EQ(new_join_node->join_column_ids().value().second, 0);
 }
 
 TEST_F(JoinDetectionRuleTest, MultipleJoins2) {
@@ -332,7 +340,7 @@ TEST_F(JoinDetectionRuleTest, MultipleJoins2) {
    *         (a.a)
    *            |
    *          Join
-   *       (a.a == c.a)
+   *       (c.a == a.a)
    *         /     \
    *      Cross     c
    *    /     \
@@ -347,7 +355,7 @@ TEST_F(JoinDetectionRuleTest, MultipleJoins2) {
   join_node2->set_left_child(join_node1);
   join_node2->set_right_child(_table_node_c);
 
-  const auto predicate_node = std::make_shared<PredicateNode>(ColumnID{0}, ScanType::OpEquals, ColumnID{4});
+  const auto predicate_node = std::make_shared<PredicateNode>(ColumnID{4}, ScanType::OpEquals, ColumnID{0});
   predicate_node->set_left_child(join_node2);
 
   const std::vector<std::shared_ptr<Expression>> columns = {Expression::create_column(ColumnID{0})};
@@ -467,11 +475,7 @@ TEST_P(JoinDetectionRuleTest, JoinDetectionSQL) {
 const JoinDetectionTestParam test_queries[] = {
     {"SELECT * FROM a, b WHERE a.a = b.a", 1},
     {"SELECT * FROM a, b, c WHERE a.a = c.a", 1},
-    {"SELECT * FROM a, b, c WHERE b.a = c.a", 1},
-    {R"(SELECT "left".a, "left".b, "right".a, "right".b
-      FROM a AS "left",  b AS "right"
-      WHERE "left".a = "right".a;)",
-     1},
+    {"SELECT * FROM a, b, c WHERE b.a = c.a", 1}
 };
 
 INSTANTIATE_TEST_CASE_P(test_queries, JoinDetectionRuleTest, ::testing::ValuesIn(test_queries));
