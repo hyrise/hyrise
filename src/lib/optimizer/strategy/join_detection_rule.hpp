@@ -50,8 +50,10 @@ class JoinConditionDetectionRule : public AbstractRule {
   optional<JoinCondition> _find_predicate_for_cross_join(const std::shared_ptr<JoinNode> &cross_join);
 
   /**
-   * Checks whether a predicate that operates on @param left and @param right is a join condition for a cross
-   * join with @param left_num_cols number of columns in its left input and @param right_num_cols in its right input
+   * Used to check whether a Predicate working on the ColumnIDs left and right could be used as a JoinCondition
+   * of a Cross Product joining tables with left_num_cols and right_num_cols respectively.
+   *
+   * left must be in range of [0, left_num_cols) and right in range [left_num_cols, left_num_cols + right_num_cols)
    */
   bool _is_join_condition(ColumnID left, ColumnID right, size_t left_num_cols, size_t right_num_cols) const;
 };
