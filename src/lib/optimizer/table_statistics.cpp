@@ -35,26 +35,9 @@ std::shared_ptr<BaseColumnStatistics> TableStatistics::column_statistics(const C
 }
 
 void TableStatistics::create_all_column_statistics() {
-  // table pointer is deleted, if all column statistics are already created
-  auto table_nullptr = std::weak_ptr<Table>();
-  // check if _table == null_ptr:
-  // weak ptr does not allow a comparison to other weak_ptr,
-  // if two weak pointers are not owner before each other, they are the same as there memory addresses are compared in
-  // function owner_before
-  if (!table_nullptr.owner_before(_table) && !_table.owner_before(table_nullptr)) {
-    return;
-  }
-  auto table = _table.lock();
-  DebugAssert(table != nullptr, "Corresponding table of table statistics is deleted.");
-
   for (ColumnID column_id{0}; column_id < _column_statistics.size(); ++column_id) {
-    if (!_column_statistics[column_id]) {
-      auto column_type = table->column_type(column_id);
-      _column_statistics[column_id] =
-          make_shared_by_column_type<BaseColumnStatistics, ColumnStatistics>(column_type, column_id, _table);
-    }
+    column_statistics(column_id);
   }
-  _table.reset();
 }
 
 std::shared_ptr<TableStatistics> TableStatistics::predicate_statistics(const ColumnID column_id,
@@ -131,6 +114,9 @@ std::shared_ptr<TableStatistics> TableStatistics::join_statistics(
   auto col_stats_right_begin = join_table_stats->_column_statistics.begin() + _column_statistics.size();
   std::copy(right_table_stats->_column_statistics.begin(), right_table_stats->_column_statistics.end(),
             col_stats_right_begin);
+    
+  // all columns are added, table pointer is deleted for ouput statistics
+  join_table_stats->_table.reset();  //TODO(jonathan) add a function for this that asserts that all colstats exist
 
   // calculate output size for cross joins
   join_table_stats->_row_count *= right_table_stats->_row_count;
