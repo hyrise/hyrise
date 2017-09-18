@@ -41,6 +41,8 @@ class Expression : public std::enable_shared_from_this<Expression> {
    * and making the constructor public. For now we decided to follow the latter.
    *
    * We highly suggest using one of the create_*-methods over using this constructor.
+   *
+   * Find more information in our blog: https://medium.com/hyrise/a-matter-of-self-expression-5fea2dd0a72
    */
   explicit Expression(ExpressionType type);
 
