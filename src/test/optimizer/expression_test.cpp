@@ -22,47 +22,30 @@ TEST_F(ExpressionTest, ExpressionToString_Column) {
 }
 
 TEST_F(ExpressionTest, ExpressionToStringSimpleArithmetics) {
-  auto expr = Expression::create_binary_operator(
-    ExpressionType::Subtraction,
-    Expression::create_column(ColumnID{0}),
-    Expression::create_literal(4)
-  );
+  auto expr = Expression::create_binary_operator(ExpressionType::Subtraction, Expression::create_column(ColumnID{0}),
+                                                 Expression::create_literal(4));
   EXPECT_EQ(expr->to_string(_column_names), "a - 4");
 }
 
 TEST_F(ExpressionTest, ExpressionToString_NestedArithmetics) {
   auto expr = Expression::create_binary_operator(
-    ExpressionType::Multiplication,
-    Expression::create_binary_operator(
-      ExpressionType::Subtraction,
-      Expression::create_column(ColumnID{2}),
-      Expression::create_literal(4)
-    ),
-    Expression::create_binary_operator(
       ExpressionType::Multiplication,
-      Expression::create_column(ColumnID{3}),
-      Expression::create_literal("c")
-    )
-  );
+      Expression::create_binary_operator(ExpressionType::Subtraction, Expression::create_column(ColumnID{2}),
+                                         Expression::create_literal(4)),
+      Expression::create_binary_operator(ExpressionType::Multiplication, Expression::create_column(ColumnID{3}),
+                                         Expression::create_literal("c")));
   EXPECT_EQ(expr->to_string(_column_names), "(c - 4) * (d * \"c\")");
 }
 
 TEST_F(ExpressionTest, ExpressionToString_NestedLogical) {
-  auto expr = Expression::create_unary_operator(ExpressionType::Not,
-    Expression::create_binary_operator(
-      ExpressionType::And,
+  auto expr = Expression::create_unary_operator(
+      ExpressionType::Not,
       Expression::create_binary_operator(
-        ExpressionType::GreaterThanEquals,
-        Expression::create_column(ColumnID{2}),
-        Expression::create_literal(4)
-      ),
-      Expression::create_binary_operator(
-        ExpressionType::Or,
-        Expression::create_column(ColumnID{3}),
-        Expression::create_literal(true)
-      )
-    )
-  );
+          ExpressionType::And,
+          Expression::create_binary_operator(ExpressionType::GreaterThanEquals, Expression::create_column(ColumnID{2}),
+                                             Expression::create_literal(4)),
+          Expression::create_binary_operator(ExpressionType::Or, Expression::create_column(ColumnID{3}),
+                                             Expression::create_literal(true))));
   EXPECT_EQ(expr->to_string(_column_names), "NOT ((c >= 4) AND (d OR 1))");
 }
 

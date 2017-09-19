@@ -88,12 +88,11 @@ std::shared_ptr<Expression> Expression::create_binary_operator(ExpressionType ty
   return expression;
 }
 
-std::shared_ptr<Expression> Expression::create_unary_operator(ExpressionType type, const std::shared_ptr<Expression>& input,
-                                                              const optional<std::string> &alias)
-{
+std::shared_ptr<Expression> Expression::create_unary_operator(ExpressionType type,
+                                                              const std::shared_ptr<Expression> &input,
+                                                              const optional<std::string> &alias) {
   auto expression = std::make_shared<Expression>(type);
-  Assert(expression->is_unary_operator(),
-         "Type is not a unary operator such as Not, Exists");
+  Assert(expression->is_unary_operator(), "Type is not a unary operator such as Not, Exists");
   expression->_alias = alias;
 
   expression->set_left_child(input);
@@ -140,9 +139,7 @@ void Expression::print(const uint32_t level, std::ostream &out) const {
   }
 }
 
-bool Expression::is_operator() const {
-  return is_arithmetic_operator() || is_logical_operator();
-}
+bool Expression::is_operator() const { return is_arithmetic_operator() || is_logical_operator(); }
 
 bool Expression::is_arithmetic_operator() const {
   switch (_type) {
@@ -160,18 +157,18 @@ bool Expression::is_arithmetic_operator() const {
 
 bool Expression::is_logical_operator() const {
   switch (_type) {
-      case ExpressionType::Equals:
-      case ExpressionType::NotEquals:
-      case ExpressionType::LessThan:
-      case ExpressionType::LessThanEquals:
-      case ExpressionType::GreaterThan:
-      case ExpressionType::GreaterThanEquals:
-      case ExpressionType::Like:
-      case ExpressionType::NotLike:
-      case ExpressionType::And:
-      case ExpressionType::Or:
-      case ExpressionType::Between:
-      case ExpressionType::Not:
+    case ExpressionType::Equals:
+    case ExpressionType::NotEquals:
+    case ExpressionType::LessThan:
+    case ExpressionType::LessThanEquals:
+    case ExpressionType::GreaterThan:
+    case ExpressionType::GreaterThanEquals:
+    case ExpressionType::Like:
+    case ExpressionType::NotLike:
+    case ExpressionType::And:
+    case ExpressionType::Or:
+    case ExpressionType::Between:
+    case ExpressionType::Not:
       return true;
     default:
       return false;
@@ -303,7 +300,7 @@ std::string Expression::to_string(const std::vector<std::string> &input_column_n
 
   std::string result;
   const auto lhs = left_child()->to_string(input_column_names);
-  const auto & op = expression_type_to_operator_string.at(_type);
+  const auto &op = expression_type_to_operator_string.at(_type);
 
   if (is_binary_operator()) {
     Assert(right_child(), "Binary Operator needs both operands.");

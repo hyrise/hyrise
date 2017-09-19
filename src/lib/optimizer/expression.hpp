@@ -71,8 +71,9 @@ class Expression : public std::enable_shared_from_this<Expression> {
                                                             const std::shared_ptr<Expression>& right,
                                                             const optional<std::string>& alias = nullopt);
 
-  static std::shared_ptr<Expression> create_unary_operator(ExpressionType type, const std::shared_ptr<Expression>& input,
-                                                           const optional<std::string> &alias = nullopt);
+  static std::shared_ptr<Expression> create_unary_operator(ExpressionType type,
+                                                           const std::shared_ptr<Expression>& input,
+                                                           const optional<std::string>& alias = nullopt);
 
   static std::shared_ptr<Expression> create_select_star(const optional<std::string>& table_name = {});
   // @}
