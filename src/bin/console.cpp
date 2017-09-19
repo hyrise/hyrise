@@ -584,6 +584,14 @@ int main(int argc, char** argv) {
     console.out("HYRISE SQL Interface\n");
     console.out("Enter 'generate' to generate the TPC-C tables. Then, you can enter SQL queries.\n");
     console.out("Type 'help' for more information.\n\n");
+
+    console.out("Hyrise is running a ");
+    if (IS_DEBUG) {
+      console.out(ANSI_COLOR_RED "(debug)" ANSI_COLOR_RESET);
+    } else {
+      console.out(ANSI_COLOR_GREEN "(release)" ANSI_COLOR_RESET);
+    }
+    console.out(" build.\n\n");
   }
 
   // Set jmp_env to current program state in preparation for siglongjmp(2)
