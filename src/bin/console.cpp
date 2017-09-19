@@ -592,7 +592,6 @@ int main(int argc, char** argv) {
       console.out(ANSI_COLOR_GREEN "(release)" ANSI_COLOR_RESET);
     }
     console.out(" build.\n\n");
-
   }
 
   // Set jmp_env to current program state in preparation for siglongjmp(2)
