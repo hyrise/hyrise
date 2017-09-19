@@ -118,33 +118,33 @@ class SQLBenchmark : public BenchmarkBasicFixture {
       "  FROM (SELECT * FROM customer WHERE c_custkey < 100 AND c_nationkey=0) t1"
       "  WHERE c_custkey > 10 AND c_nationkey < 10;";
 
-    const std::string Q3 =
-        "SELECT c_custkey, c_name, COUNT(o_orderkey)"
-        "  FROM customer"
-        "  JOIN orders ON c_custkey = o_custkey"
-        "  GROUP BY c_custkey, c_name"
-        "  HAVING COUNT(o_orderkey) >= 100;";
+  const std::string Q3 =
+      "SELECT c_custkey, c_name, COUNT(o_orderkey)"
+      "  FROM customer"
+      "  JOIN orders ON c_custkey = o_custkey"
+      "  GROUP BY c_custkey, c_name"
+      "  HAVING COUNT(o_orderkey) >= 100;";
 
-// TODO(anybody): enable once subquery aliases are supported
-//    const std::string Q4 =
-//      R"(SELECT customer.c_custkey, customer.c_name, COUNT(orderitems.orders.o_orderkey)
-//          FROM customer
-//          JOIN (SELECT * FROM
-//            orders
-//            JOIN lineitem ON o_orderkey = l_orderkey
-//          ) AS orderitems ON c_custkey = orders.o_custkey
-//          GROUP BY customer.c_custkey, customer.c_name
-//          HAVING COUNT(orderitems.orders.o_orderkey) >= 100;)";
-//
-//    const std::string Q4Param =
-//      R"("SELECT customer.c_custkey, customer.c_name, COUNT(orderitems.orders.o_orderkey)
-//          FROM customer
-//          JOIN (SELECT * FROM
-//            orders
-//            JOIN lineitem ON o_orderkey = l_orderkey
-//          ) AS orderitems ON c_custkey = orders.o_custkey
-//          GROUP BY customer.c_custkey, customer.c_name
-//          HAVING COUNT(orderitems.orders.o_orderkey) >= ?;)";
+  // TODO(anybody): enable once subquery aliases are supported
+  //    const std::string Q4 =
+  //      R"(SELECT customer.c_custkey, customer.c_name, COUNT(orderitems.orders.o_orderkey)
+  //          FROM customer
+  //          JOIN (SELECT * FROM
+  //            orders
+  //            JOIN lineitem ON o_orderkey = l_orderkey
+  //          ) AS orderitems ON c_custkey = orders.o_custkey
+  //          GROUP BY customer.c_custkey, customer.c_name
+  //          HAVING COUNT(orderitems.orders.o_orderkey) >= 100;)";
+  //
+  //    const std::string Q4Param =
+  //      R"("SELECT customer.c_custkey, customer.c_name, COUNT(orderitems.orders.o_orderkey)
+  //          FROM customer
+  //          JOIN (SELECT * FROM
+  //            orders
+  //            JOIN lineitem ON o_orderkey = l_orderkey
+  //          ) AS orderitems ON c_custkey = orders.o_custkey
+  //          GROUP BY customer.c_custkey, customer.c_name
+  //          HAVING COUNT(orderitems.orders.o_orderkey) >= ?;)";
 };
 
 // Run all benchmarks for Q1.
