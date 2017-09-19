@@ -75,6 +75,7 @@ class Sort::SortImpl : public AbstractReadOnlyOperatorImpl {
         _output_chunk_size(output_chunk_size) {
     // initialize a structure wich can be sorted by std::sort
     _row_id_value_vector = std::make_shared<std::vector<RowIDValuePair>>();
+    _null_value_rows = std::make_shared<std::vector<RowIDValuePair>>();
   }
 
   std::shared_ptr<const Table> _on_execute() override {
@@ -88,10 +89,15 @@ class Sort::SortImpl : public AbstractReadOnlyOperatorImpl {
       sort_with_operator<std::greater<>>();
     }
 
+    // 2b. Insert null rows at the start if necessary
+    if (_null_value_rows->size()) {
+      _row_id_value_vector->insert(_row_id_value_vector->begin(), _null_value_rows->begin(), _null_value_rows->end());
+    }
+
     // 3. Materialization of the result: We take the sorted ValueRowID Vector, create chunks fill them until they are
     // full and create the next one. Each chunk is filled row by row.
-    auto materialization = std::make_shared<SortImplMaterializeOutput<SortColumnType>>(_table_in, _row_id_value_vector,
-                                                                                       _output_chunk_size);
+    auto materialization = std::make_shared<SortImplMaterializeOutput<SortColumnType>>(
+        _table_in, _row_id_value_vector, _null_value_rows, _output_chunk_size);
     return materialization->execute();
   }
 
@@ -99,6 +105,8 @@ class Sort::SortImpl : public AbstractReadOnlyOperatorImpl {
   void _materialize_sort_column() {
     auto& row_id_value_vector = static_cast<std::vector<RowIDValuePair>&>(*_row_id_value_vector);
     row_id_value_vector.reserve(_table_in->row_count());
+
+    auto& null_value_rows = static_cast<std::vector<RowIDValuePair>&>(*_null_value_rows);
 
     auto type_string = _table_in->column_type(_column_id);
 
@@ -111,7 +119,11 @@ class Sort::SortImpl : public AbstractReadOnlyOperatorImpl {
         auto iterable = create_iterable_from_column<SortColumnType>(typed_column);
 
         iterable.for_each([&](const auto& value) {
-          row_id_value_vector.emplace_back(RowID{chunk_id, value.chunk_offset()}, value.value());
+          if (value.is_null()) {
+            null_value_rows.emplace_back(RowID{chunk_id, value.chunk_offset()}, SortColumnType{});
+          } else {
+            row_id_value_vector.emplace_back(RowID{chunk_id, value.chunk_offset()}, value.value());
+          }
         });
       });
     }
@@ -133,6 +145,7 @@ class Sort::SortImpl : public AbstractReadOnlyOperatorImpl {
   const size_t _output_chunk_size;
 
   std::shared_ptr<std::vector<RowIDValuePair>> _row_id_value_vector;
+  std::shared_ptr<std::vector<RowIDValuePair>> _null_value_rows;
 };
 
 }  // namespace opossum

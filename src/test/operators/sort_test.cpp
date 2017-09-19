@@ -19,11 +19,13 @@ class OperatorsSortTest : public BaseTest {
  protected:
   void SetUp() override {
     _table_wrapper = std::make_shared<TableWrapper>(load_table("src/test/tables/int_float.tbl", 2));
+    _table_wrapper_null = std::make_shared<TableWrapper>(load_table("src/test/tables/int_float_with_null.tbl", 2));
 
     _table_wrapper->execute();
+    _table_wrapper_null->execute();
   }
 
-  std::shared_ptr<TableWrapper> _table_wrapper;
+  std::shared_ptr<TableWrapper> _table_wrapper, _table_wrapper_null;
 };
 
 TEST_F(OperatorsSortTest, AscendingSortOfOneColumn) {
@@ -97,6 +99,24 @@ TEST_F(OperatorsSortTest, MultipleColumnSortIsStableMixedOrder) {
   sort_after_a->execute();
 
   EXPECT_TABLE_EQ(sort_after_a->get_output(), expected_result, true);
+}
+
+TEST_F(OperatorsSortTest, AscendingSortOfOneColumnWithNull) {
+  std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_float_null_sorted_asc.tbl", 2);
+
+  auto sort = std::make_shared<Sort>(_table_wrapper_null, ColumnID{0}, OrderByMode::Ascending, 2u);
+  sort->execute();
+
+  EXPECT_TABLE_EQ(sort->get_output(), expected_result, true);
+}
+
+TEST_F(OperatorsSortTest, DescendingSortOfOneColumnWithNull) {
+  std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_float_null_sorted_desc.tbl", 2);
+
+  auto sort = std::make_shared<Sort>(_table_wrapper_null, ColumnID{0}, OrderByMode::Descending, 2u);
+  sort->execute();
+
+  EXPECT_TABLE_EQ(sort->get_output(), expected_result, true);
 }
 
 }  // namespace opossum
