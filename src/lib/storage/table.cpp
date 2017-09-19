@@ -86,7 +86,7 @@ ColumnID Table::column_id_by_name(const std::string &column_name) const {
 
 uint32_t Table::chunk_size() const { return _chunk_size; }
 
-const std::vector<std::string> Table::column_names() const { return _column_names; }
+const std::vector<std::string> &Table::column_names() const { return _column_names; }
 
 const std::string &Table::column_name(ColumnID column_id) const { return _column_names[column_id]; }
 
@@ -96,6 +96,8 @@ bool Table::column_is_nullable(ColumnID column_id) const { return _column_nullab
 
 const std::vector<std::string> &Table::column_types() const { return _column_types; }
 
+const std::vector<bool> &Table::column_nullables() const { return _column_nullable; }
+
 Chunk &Table::get_chunk(ChunkID chunk_id) { return _chunks[chunk_id]; }
 const Chunk &Table::get_chunk(ChunkID chunk_id) const { return _chunks[chunk_id]; }
 
@@ -104,7 +106,7 @@ void Table::add_chunk(Chunk chunk) {
     // the initial chunk was not used yet
     _chunks.clear();
   }
-  DebugAssert((_chunks.size() == 0 || chunk.col_count() == col_count()),
+  DebugAssert(chunk.col_count() == col_count(),
               std::string("adding chunk with ") + std::to_string(chunk.col_count()) + " columns to table with " +
                   std::to_string(col_count()) + " columns");
   _chunks.emplace_back(std::move(chunk));

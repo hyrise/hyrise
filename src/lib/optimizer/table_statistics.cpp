@@ -32,7 +32,7 @@ std::shared_ptr<BaseColumnStatistics> TableStatistics::column_statistics(const C
   return _column_statistics[column_id];
 }
 
-std::shared_ptr<TableStatistics> TableStatistics::predicate_statistics(const std::string &column_name,
+std::shared_ptr<TableStatistics> TableStatistics::predicate_statistics(const ColumnID column_id,
                                                                        const ScanType scan_type,
                                                                        const AllParameterVariant &value,
                                                                        const optional<AllTypeVariant> &value2) {
@@ -52,7 +52,6 @@ std::shared_ptr<TableStatistics> TableStatistics::predicate_statistics(const std
 
   auto table = _table.lock();
   DebugAssert(table != nullptr, "Corresponding table of table statistics is deleted.");
-  const ColumnID column_id = table->column_id_by_name(column_name);
 
   auto old_column_statistics = column_statistics(column_id);
 
@@ -61,8 +60,8 @@ std::shared_ptr<TableStatistics> TableStatistics::predicate_statistics(const std
   ColumnSelectivityResult column_statistics_container{1, nullptr};
 
   // delegate prediction to corresponding column statistics
-  if (value.type() == typeid(ColumnName)) {
-    const ColumnID value_column_id = table->column_id_by_name(boost::get<ColumnName>(value));
+  if (value.type() == typeid(ColumnID)) {
+    const ColumnID value_column_id = boost::get<ColumnID>(value);
     auto old_right_column_stats = column_statistics(value_column_id);
 
     auto two_column_statistics_container =

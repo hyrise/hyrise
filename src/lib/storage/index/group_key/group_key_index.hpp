@@ -7,8 +7,8 @@
 #include <vector>
 
 #include "storage/base_attribute_vector.hpp"
+#include "storage/base_dictionary_column.hpp"
 #include "storage/index/base_index.hpp"
-#include "storage/untyped_dictionary_column.hpp"
 
 #include "types.hpp"
 #include "utils/assert.hpp"
@@ -39,6 +39,8 @@ class GroupKeyIndexTest;
  *    | 6 |         1 |            |         |  | |------>  0 |
  *    | 7 |         5 |            |         |  |-------->  7 |  ie "inbox" can be found at i = 7 in the AV
  *    +---+-----------+------------+---------+----------------+
+ *
+ * Find more information about this in our Wiki: https://github.com/hyrise/zweirise/wiki/GroupKey-Index
  */
 class GroupKeyIndex : public BaseIndex {
   friend class GroupKeyIndexTest;
@@ -53,7 +55,7 @@ class GroupKeyIndex : public BaseIndex {
   GroupKeyIndex &operator=(GroupKeyIndex &&) = default;
 
   explicit GroupKeyIndex(const std::vector<std::shared_ptr<BaseColumn>> index_columns)
-      : _index_column(std::dynamic_pointer_cast<UntypedDictionaryColumn>(index_columns[0])) {
+      : _index_column(std::dynamic_pointer_cast<BaseDictionaryColumn>(index_columns[0])) {
     DebugAssert(static_cast<bool>(_index_column), "GroupKeyIndex only works with DictionaryColumns");
     DebugAssert((index_columns.size() == 1), "GroupKeyIndex only works with a single column");
 
@@ -132,7 +134,7 @@ class GroupKeyIndex : public BaseIndex {
   }
 
  private:
-  const std::shared_ptr<UntypedDictionaryColumn> _index_column;
+  const std::shared_ptr<BaseDictionaryColumn> _index_column;
   std::vector<std::size_t> _index_offsets;   // maps value-ids to offsets in _index_postings
   std::vector<ChunkOffset> _index_postings;  // records positions in the attribute vector
 };

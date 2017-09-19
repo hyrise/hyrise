@@ -11,34 +11,29 @@
 namespace opossum {
 
 // operator to join two tables using one column of each table
-// output is a table with reference columns, named with prefix left and right
+// output is a table with reference columns
 // to filter by multiple criteria, you can chain the operator
 
 // As with most operators, we do not guarantee a stable operation with regards
 // to positions - i.e., your sorting order might be disturbed
 
-// Natural Join is a special case of an inner join without join_columns
-// Natural and Cross Join do not enforce column_names
+// find more information about joins in our Wiki:
+// https://github.com/hyrise/zweirise/wiki/Operator-Join
 
 class AbstractJoinOperator : public AbstractReadOnlyOperator {
  public:
   AbstractJoinOperator(const std::shared_ptr<const AbstractOperator> left,
-                       const std::shared_ptr<const AbstractOperator> right,
-                       optional<std::pair<std::string, std::string>> column_names, const ScanType scan_type,
-                       const JoinMode mode, const std::string &prefix_left, const std::string &prefix_right);
+                       const std::shared_ptr<const AbstractOperator> right, const JoinMode mode,
+                       const std::pair<ColumnID, ColumnID> &column_ids, const ScanType scan_type);
 
-  ScanType scan_type() const;
   JoinMode mode() const;
-  const std::string &prefix_left() const;
-  const std::string &prefix_right() const;
-  const optional<std::pair<std::string, std::string>> &column_names() const;
+  const std::pair<ColumnID, ColumnID> &column_ids() const;
+  ScanType scan_type() const;
 
  protected:
-  const ScanType _scan_type;
   const JoinMode _mode;
-  const std::string _prefix_left;
-  const std::string _prefix_right;
-  optional<std::pair<std::string, std::string>> _column_names;
+  const std::pair<ColumnID, ColumnID> _column_ids;
+  const ScanType _scan_type;
 
   // Some operators need an internal implementation class, mostly in cases where
   // their execute method depends on a template parameter. An example for this is
@@ -46,7 +41,7 @@ class AbstractJoinOperator : public AbstractReadOnlyOperator {
   class AbstractJoinOperatorImpl : public AbstractReadOnlyOperatorImpl {
    public:
     virtual ~AbstractJoinOperatorImpl() = default;
-    virtual std::shared_ptr<const Table> on_execute() = 0;
+    virtual std::shared_ptr<const Table> _on_execute() = 0;
   };
 };
 

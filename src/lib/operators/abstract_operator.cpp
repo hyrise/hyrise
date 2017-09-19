@@ -14,16 +14,19 @@ void AbstractOperator::execute() {
   auto transaction_context = _transaction_context.lock();
 
   if (transaction_context) transaction_context->on_operator_started();
-  _output = on_execute(transaction_context);
+  _output = _on_execute(transaction_context);
   if (transaction_context) transaction_context->on_operator_finished();
+
+  // release any temporary data if possible
+  _on_cleanup();
 }
 
 // returns the result of the operator
 std::shared_ptr<const Table> AbstractOperator::get_output() const { return _output; }
 
-std::shared_ptr<const Table> AbstractOperator::input_table_left() const { return _input_left->get_output(); }
+std::shared_ptr<const Table> AbstractOperator::_input_table_left() const { return _input_left->get_output(); }
 
-std::shared_ptr<const Table> AbstractOperator::input_table_right() const { return _input_right->get_output(); }
+std::shared_ptr<const Table> AbstractOperator::_input_table_right() const { return _input_right->get_output(); }
 
 std::shared_ptr<TransactionContext> AbstractOperator::transaction_context() const {
   return _transaction_context.lock();
@@ -44,4 +47,7 @@ std::shared_ptr<AbstractOperator> AbstractOperator::mutable_input_right() const 
 std::shared_ptr<const AbstractOperator> AbstractOperator::input_left() const { return _input_left; }
 
 std::shared_ptr<const AbstractOperator> AbstractOperator::input_right() const { return _input_right; }
+
+void AbstractOperator::_on_cleanup() {}
+
 }  // namespace opossum

@@ -24,8 +24,10 @@ std::shared_ptr<AbstractOperator> Limit::recreate(const std::vector<AllParameter
   return std::make_shared<Limit>(_input_left->recreate(args), _num_rows);
 }
 
-std::shared_ptr<const Table> Limit::on_execute() {
-  const auto input_table = input_table_left();
+size_t Limit::num_rows() const { return _num_rows; }
+
+std::shared_ptr<const Table> Limit::_on_execute() {
+  const auto input_table = _input_table_left();
 
   // Create output table and column layout.
   auto output_table = std::make_shared<Table>();

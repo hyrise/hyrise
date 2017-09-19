@@ -41,7 +41,11 @@ set(
     operators/update_test.cpp
     operators/validate_test.cpp
     operators/validate_visibility_test.cpp
-    optimizer/abstract_syntax_tree_test.cpp
+    optimizer/abstract_syntax_tree/abstract_syntax_tree_test.cpp
+    optimizer/abstract_syntax_tree/aggregate_node_test.cpp
+    optimizer/abstract_syntax_tree/join_node_test.cpp
+    optimizer/abstract_syntax_tree/stored_table_node_test.cpp
+    optimizer/abstract_syntax_tree/projection_node_test.cpp
     optimizer/ast_to_operator_translator_test.cpp
     optimizer/column_statistics_test.cpp
     optimizer/strategy/predicate_reordering_test.cpp
@@ -63,6 +67,7 @@ set(
     storage/composite_group_key_index_test.cpp
     storage/dictionary_column_test.cpp
     storage/group_key_index_test.cpp
+    storage/iterables_test.cpp
     storage/multi_column_index_test.cpp
     storage/reference_column_test.cpp
     storage/single_column_index_test.cpp
@@ -75,6 +80,7 @@ set(
     tasks/chunk_compression_task_test.cpp
     tasks/operator_task_test.cpp
     utils/cuckoo_hashtable_test.cpp
+    utils/numa_memory_resource_test.cpp
 )
 
 set (

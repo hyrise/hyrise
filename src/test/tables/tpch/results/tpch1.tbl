@@ -1,0 +1,4 @@
+l_returnflag|l_linestatus|sum_qty|sum_base_price|sum_disc_price|sum_charge|avg_qty|avg_price|avg_disc|count_order
+string|string|double|double|double|double|double|double|double|long
+A|B|3|8|7.56|37.8|1|2.66667|0.0533333|3
+R|B|1|2|1.9|9.5|1|2|0.05|1

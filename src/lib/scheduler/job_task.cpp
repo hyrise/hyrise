@@ -2,6 +2,6 @@
 
 namespace opossum {
 
-void JobTask::on_execute() { _fn(); }
+void JobTask::_on_execute() { _fn(); }
 
 }  // namespace opossum

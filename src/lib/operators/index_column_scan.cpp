@@ -14,10 +14,10 @@
 
 namespace opossum {
 
-IndexColumnScan::IndexColumnScan(const std::shared_ptr<AbstractOperator> in, const std::string &column_name,
+IndexColumnScan::IndexColumnScan(const std::shared_ptr<AbstractOperator> in, const ColumnID column_id,
                                  const ScanType scan_type, const AllTypeVariant value,
                                  const optional<AllTypeVariant> value2)
-    : AbstractReadOnlyOperator(in), _column_name(column_name), _scan_type(scan_type), _value(value), _value2(value2) {}
+    : AbstractReadOnlyOperator(in), _column_id(column_id), _scan_type(scan_type), _value(value), _value2(value2) {}
 
 const std::string IndexColumnScan::name() const { return "IndexColumnScan"; }
 
@@ -25,12 +25,13 @@ uint8_t IndexColumnScan::num_in_tables() const { return 1; }
 
 uint8_t IndexColumnScan::num_out_tables() const { return 1; }
 
-std::shared_ptr<const Table> IndexColumnScan::on_execute() {
+std::shared_ptr<const Table> IndexColumnScan::_on_execute() {
   _impl = make_unique_by_column_type<AbstractReadOnlyOperatorImpl, IndexColumnScanImpl>(
-      input_table_left()->column_type(input_table_left()->column_id_by_name(_column_name)), _input_left, _column_name,
-      _scan_type, _value, _value2);
-  return _impl->on_execute();
+      _input_table_left()->column_type(_column_id), _input_left, _column_id, _scan_type, _value, _value2);
+  return _impl->_on_execute();
 }
+
+void IndexColumnScan::_on_cleanup() { _impl.reset(); }
 
 // we need to use the impl pattern because the scan operator of the sort depends on the type of the column
 template <typename T>
@@ -38,10 +39,10 @@ class IndexColumnScan::IndexColumnScanImpl : public AbstractReadOnlyOperatorImpl
  public:
   // IndexColumnScan currently does not support ScanType::OpLike
   // creates a new table with reference columns
-  IndexColumnScanImpl(const std::shared_ptr<const AbstractOperator> in, const std::string &filter_column_name,
+  IndexColumnScanImpl(const std::shared_ptr<const AbstractOperator> in, const ColumnID column_id,
                       const ScanType scan_type, const AllTypeVariant value, const optional<AllTypeVariant> value2)
       : _in_operator(in),
-        _filter_column_name(filter_column_name),
+        _column_id(column_id),
         _scan_type(scan_type),
         _casted_value(type_cast<T>(value)),
         _casted_value2(value2 ? optional<T>(type_cast<T>(*value2)) : optional<T>(nullopt)) {}
@@ -66,12 +67,10 @@ class IndexColumnScan::IndexColumnScanImpl : public AbstractReadOnlyOperatorImpl
     std::shared_ptr<std::vector<ChunkOffset>> chunk_offsets_in;
   };
 
-  std::shared_ptr<const Table> on_execute() override {
+  std::shared_ptr<const Table> _on_execute() override {
     auto output = std::make_shared<Table>();
 
     auto in_table = _in_operator->get_output();
-    auto filter_column_id = in_table->column_id_by_name(_filter_column_name);
-
     for (ColumnID column_id{0}; column_id < in_table->col_count(); ++column_id) {
       output->add_column_definition(in_table->column_name(column_id), in_table->column_type(column_id));
     }
@@ -140,11 +139,10 @@ class IndexColumnScan::IndexColumnScanImpl : public AbstractReadOnlyOperatorImpl
     jobs.reserve(in_table->chunk_count());
 
     for (ChunkID chunk_id{0}; chunk_id < in_table->chunk_count(); ++chunk_id) {
-      jobs.emplace_back(std::make_shared<JobTask>([&in_table, chunk_id, &output_mutex, &output, &filter_column_id,
-                                                   this]() {
+      jobs.emplace_back(std::make_shared<JobTask>([&in_table, chunk_id, &output_mutex, &output, this]() {
         const Chunk &chunk_in = in_table->get_chunk(chunk_id);
         Chunk chunk_out;
-        auto base_column = chunk_in.get_column(filter_column_id);
+        auto base_column = chunk_in.get_column(_column_id);
         std::vector<RowID> matches_in_this_chunk;
 
         base_column->visit(*this, std::make_shared<ScanContext>(in_table, chunk_id, matches_in_this_chunk));
@@ -261,7 +259,7 @@ class IndexColumnScan::IndexColumnScanImpl : public AbstractReadOnlyOperatorImpl
     // get the indices for this column
     auto in_table = _in_operator->get_output();
     const Chunk &chunk_in = in_table->get_chunk(context->chunk_id);
-    auto col = chunk_in.get_column(in_table->column_id_by_name(_filter_column_name));
+    auto col = chunk_in.get_column(_column_id);
     auto indices = chunk_in.get_indices_for(std::vector<std::shared_ptr<BaseColumn>>{col});
 
     if (!indices.empty()) {
@@ -411,7 +409,7 @@ class IndexColumnScan::IndexColumnScanImpl : public AbstractReadOnlyOperatorImpl
   }
 
   const std::shared_ptr<const AbstractOperator> _in_operator;
-  std::string _filter_column_name;
+  ColumnID _column_id;
   ScanType _scan_type;
   std::function<bool(T)> _value_comparator;
   std::function<bool(ValueID, ValueID, ValueID)> _value_id_comparator;

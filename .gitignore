@@ -1,6 +1,7 @@
 obj/*
 .DS_STORE
 build/*
+build-*/*
 *.make
 Makefile*
 coverage
@@ -14,6 +15,7 @@ src/lib/network/generated
 .vscode
 *.pyc
 console.log
+.repl_history
 
 # CLion cmake directory
 cmake-build-*

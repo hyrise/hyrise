@@ -14,7 +14,7 @@
 namespace opossum {
 
 class CompositeGroupKeyIndexTest;
-class UntypedDictionaryColumn;
+class BaseDictionaryColumn;
 
 /**
  *
@@ -39,6 +39,8 @@ class UntypedDictionaryColumn;
  *    | 6 |  1  |  0  |     |     51     |    7    |     0     |
  *    | 7 |  5  |  1  |     |            |         |     7     | ie key '51' can be found at i = 7 in the AV
  *    +---+-----------+     +------------+---------+-----------+
+ *
+ * Find more information about this in our wiki: https://github.com/hyrise/zweirise/wiki/Composite-GroupKey-Index
  */
 class CompositeGroupKeyIndex : public BaseIndex {
   friend class CompositeGroupKeyIndexTest;
@@ -98,7 +100,7 @@ class CompositeGroupKeyIndex : public BaseIndex {
 
  private:
   // the columns the index is based on
-  std::vector<std::shared_ptr<UntypedDictionaryColumn>> _indexed_columns;
+  std::vector<std::shared_ptr<BaseDictionaryColumn>> _indexed_columns;
 
   // contains concatenated value-ids
   VariableLengthKeyStore _keys;

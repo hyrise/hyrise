@@ -16,16 +16,10 @@
 namespace opossum {
 
 JoinHash::JoinHash(const std::shared_ptr<const AbstractOperator> left,
-                   const std::shared_ptr<const AbstractOperator> right,
-                   optional<std::pair<std::string, std::string>> column_names, const ScanType scan_type,
-                   const JoinMode mode, const std::string &prefix_left, const std::string &prefix_right)
-    : AbstractJoinOperator(left, right, column_names, scan_type, mode, prefix_left, prefix_right) {
-  DebugAssert((scan_type == ScanType::OpEquals), (std::string("Operator not supported by Hash Join.")));
-  DebugAssert((_mode != JoinMode::Cross),
-              "JoinHash: this operator does not support Cross Joins, the optimizer should use Product operator.");
-  DebugAssert((_mode != JoinMode::Natural), "JoinHash: this operator currently does not support Natural Joins.");
-  DebugAssert(static_cast<bool>(column_names),
-              "JoinHash: optional column names are only supported for Cross and Natural Joins.");
+                   const std::shared_ptr<const AbstractOperator> right, const JoinMode mode,
+                   const std::pair<ColumnID, ColumnID> &column_ids, const ScanType scan_type)
+    : AbstractJoinOperator(left, right, mode, column_ids, scan_type) {
+  DebugAssert(scan_type == ScanType::OpEquals, "Operator not supported by Hash Join.");
 }
 
 const std::string JoinHash::name() const { return "JoinHash"; }
@@ -34,12 +28,12 @@ uint8_t JoinHash::num_in_tables() const { return 2; }
 
 uint8_t JoinHash::num_out_tables() const { return 1; }
 
-std::shared_ptr<const Table> JoinHash::on_execute() {
+std::shared_ptr<const Table> JoinHash::_on_execute() {
   std::shared_ptr<const AbstractOperator> build_operator;
   std::shared_ptr<const AbstractOperator> probe_operator;
   bool inputs_swapped;
-  std::string build_column_name;
-  std::string probe_column_name;
+  ColumnID build_column_id;
+  ColumnID probe_column_id;
 
   /*
   This is the expected implementation for swapping tables:
@@ -53,27 +47,28 @@ std::shared_ptr<const Table> JoinHash::on_execute() {
     inputs_swapped = true;
     build_operator = _input_right;
     probe_operator = _input_left;
-    build_column_name = _column_names->second;
-    probe_column_name = _column_names->first;
+    build_column_id = _column_ids.second;
+    probe_column_id = _column_ids.first;
   } else {
     inputs_swapped = false;
     build_operator = _input_left;
     probe_operator = _input_right;
-    build_column_name = _column_names->first;
-    probe_column_name = _column_names->second;
+    build_column_id = _column_ids.first;
+    probe_column_id = _column_ids.second;
   }
 
-  auto adjusted_column_names = std::make_pair(build_column_name, probe_column_name);
+  auto adjusted_column_ids = std::make_pair(build_column_id, probe_column_id);
 
   auto build_input = build_operator->get_output();
   auto probe_input = probe_operator->get_output();
 
   _impl = make_unique_by_column_types<AbstractReadOnlyOperatorImpl, JoinHashImpl>(
-      build_input->column_type(build_input->column_id_by_name(build_column_name)),
-      probe_input->column_type(probe_input->column_id_by_name(probe_column_name)), build_operator, probe_operator,
-      adjusted_column_names, _scan_type, _mode, _prefix_left, _prefix_right, inputs_swapped);
-  return _impl->on_execute();
+      build_input->column_type(build_column_id), probe_input->column_type(probe_column_id), build_operator,
+      probe_operator, _mode, adjusted_column_ids, _scan_type, inputs_swapped);
+  return _impl->_on_execute();
 }
+
+void JoinHash::_on_cleanup() { _impl.reset(); }
 
 // currently using 32bit Murmur
 using Hash = uint32_t;
@@ -83,15 +78,13 @@ template <typename LeftType, typename RightType>
 class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
  public:
   JoinHashImpl(const std::shared_ptr<const AbstractOperator> left, const std::shared_ptr<const AbstractOperator> right,
-               const std::pair<std::string, std::string> &column_names, const ScanType scan_type, const JoinMode mode,
-               const std::string &prefix_left, const std::string &prefix_right, const bool inputs_swapped)
+               const JoinMode mode, const std::pair<ColumnID, ColumnID> &column_ids, const ScanType scan_type,
+               const bool inputs_swapped)
       : _left(left),
         _right(right),
-        _column_names(column_names),
-        _scan_type(scan_type),
         _mode(mode),
-        _prefix_left(prefix_left),
-        _prefix_right(prefix_right),
+        _column_ids(column_ids),
+        _scan_type(scan_type),
         _inputs_swapped(inputs_swapped),
         _output_table(std::make_shared<Table>()) {
     // Setting comparator to Equal Comparison -> That is the only supported comparison type for Hash Joins
@@ -102,11 +95,9 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
 
  protected:
   const std::shared_ptr<const AbstractOperator> _left, _right;
-  const std::pair<std::string, std::string> _column_names;
-  const ScanType _scan_type;
   const JoinMode _mode;
-  const std::string _prefix_left;
-  const std::string _prefix_right;
+  const std::pair<ColumnID, ColumnID> _column_ids;
+  const ScanType _scan_type;
 
   const bool _inputs_swapped;
   const std::shared_ptr<Table> _output_table;
@@ -149,7 +140,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
   struct ColumnBuilder : public ColumnVisitable {
     explicit ColumnBuilder(ChunkID chunk_id, std::shared_ptr<std::vector<ChunkOffset>> offsets = nullptr)
         : _chunk_id(chunk_id),
-          _materialized_chunk(std::make_shared<std::vector<std::pair<RowID, T>>>()),
+          _materialized_chunk(std::make_shared<pmr_vector<std::pair<RowID, T>>>()),
           _offsets(offsets) {}
 
     void handle_value_column(BaseColumn &column, std::shared_ptr<ColumnVisitableContext>) override {
@@ -210,7 +201,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
     }
 
     ChunkID _chunk_id;
-    std::shared_ptr<std::vector<std::pair<RowID, T>>> _materialized_chunk;
+    std::shared_ptr<pmr_vector<std::pair<RowID, T>>> _materialized_chunk;
     std::shared_ptr<std::vector<ChunkOffset>> _offsets;
   };
 
@@ -265,7 +256,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
         ColumnBuilder<T> builder = ColumnBuilder<T>(chunk_id);
         column->visit(builder);
 
-        auto const &materialized = static_cast<std::vector<std::pair<RowID, T>> &>(*builder._materialized_chunk);
+        auto const &materialized = static_cast<pmr_vector<std::pair<RowID, T>> &>(*builder._materialized_chunk);
 
         size_t row_id = output_offset;
 
@@ -527,33 +518,28 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
   /*
   Copy the column meta-data from input to output table.
   */
-  static void _copy_table_metadata(const std::shared_ptr<const Table> in_table, const std::shared_ptr<Table> out_table,
-                                   std::string prefix) {
+  static void _copy_table_metadata(const std::shared_ptr<const Table> in_table,
+                                   const std::shared_ptr<Table> out_table) {
     for (ColumnID column_id{0}; column_id < in_table->col_count(); ++column_id) {
       // TODO(anyone): Refine since not all column are nullable
-      out_table->add_column_definition(prefix + in_table->column_name(column_id), in_table->column_type(column_id),
-                                       true);
+      out_table->add_column_definition(in_table->column_name(column_id), in_table->column_type(column_id), true);
     }
   }
 
-  std::shared_ptr<const Table> on_execute() override {
+  std::shared_ptr<const Table> _on_execute() override {
     /*
     Preparing output table by adding columns from left table.
-    To distinguish betwenn columns from Left and Right, we decided to add a fixed prefix.
     */
 
     auto _right_in_table = _right->get_output();
     auto _left_in_table = _left->get_output();
 
-    auto _left_column_id = _left_in_table->column_id_by_name(_column_names.first);
-    auto _right_column_id = _right_in_table->column_id_by_name(_column_names.second);
-
     if (_inputs_swapped) {
-      _copy_table_metadata(_right_in_table, _output_table, _prefix_left);
-      _copy_table_metadata(_left_in_table, _output_table, _prefix_right);
+      _copy_table_metadata(_right_in_table, _output_table);
+      _copy_table_metadata(_left_in_table, _output_table);
     } else {
-      _copy_table_metadata(_left_in_table, _output_table, _prefix_left);
-      _copy_table_metadata(_right_in_table, _output_table, _prefix_right);
+      _copy_table_metadata(_left_in_table, _output_table);
+      _copy_table_metadata(_right_in_table, _output_table);
     }
 
     // Pre-partitioning
@@ -589,8 +575,8 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
     This helps choosing a scheduler node for the radix phase (see below).
     */
     // Scheduler note: parallelize this at some point. Currently, the amount of jobs would be too high
-    auto materialized_left = _materialize_input<LeftType>(_left_in_table, _left_column_id, histograms_left);
-    auto materialized_right = _materialize_input<RightType>(_right_in_table, _right_column_id, histograms_right);
+    auto materialized_left = _materialize_input<LeftType>(_left_in_table, _column_ids.first, histograms_left);
+    auto materialized_right = _materialize_input<RightType>(_right_in_table, _column_ids.second, histograms_right);
 
     // Radix Partitioning phase
     /*

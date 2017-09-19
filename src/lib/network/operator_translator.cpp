@@ -78,16 +78,16 @@ inline ScanType translate_scan_type(const proto::ScanType& scan_type) {
 
 inline std::shared_ptr<OperatorTask> OperatorTranslator::translate(
     const proto::ProjectionOperator& projection_operator) {
-  const auto column_names_field = projection_operator.column_name();
-  auto column_names = std::vector<std::string>(std::begin(column_names_field), std::end(column_names_field));
+  const auto column_ids_field = projection_operator.column_id();
+  auto column_ids = std::vector<ColumnID>(std::begin(column_ids_field), std::end(column_ids_field));
   Assert((projection_operator.has_input_operator()), "Missing Input Operator in Projection.");
 
   auto input_task = translate_proto(projection_operator.input_operator());
 
   Projection::ColumnExpressions column_expressions;
-  column_expressions.reserve(column_names.size());
-  for (const auto& column_name : column_names) {
-    column_expressions.emplace_back(ExpressionNode::create_column_identifier(column_name));
+  column_expressions.reserve(column_ids.size());
+  for (const auto column_id : column_ids) {
+    column_expressions.emplace_back(Expression::create_column(ColumnID{column_id}));
   }
 
   auto projection = std::make_shared<Projection>(input_task->get_operator(), column_expressions);
@@ -99,16 +99,13 @@ inline std::shared_ptr<OperatorTask> OperatorTranslator::translate(
 }
 
 inline std::shared_ptr<OperatorTask> OperatorTranslator::translate(const proto::ProductOperator& product_operator) {
-  auto& prefix_left = product_operator.prefix_left();
-  auto& prefix_right = product_operator.prefix_right();
   Assert((product_operator.has_left_operator()), "Missing left Operator in Product.");
   Assert((product_operator.has_right_operator()), "Missing right Operator in Product.");
 
   auto input_left_task = translate_proto(product_operator.left_operator());
   auto input_right_task = translate_proto(product_operator.right_operator());
 
-  auto product = std::make_shared<Product>(input_left_task->get_operator(), input_right_task->get_operator(),
-                                           prefix_left, prefix_right);
+  auto product = std::make_shared<Product>(input_left_task->get_operator(), input_right_task->get_operator());
   auto product_task = std::make_shared<OperatorTask>(product);
   input_left_task->set_as_predecessor_of(product_task);
   input_right_task->set_as_predecessor_of(product_task);
@@ -119,8 +116,6 @@ inline std::shared_ptr<OperatorTask> OperatorTranslator::translate(const proto::
 
 inline std::shared_ptr<OperatorTask> OperatorTranslator::translate(
     const proto::NestedLoopJoinOperator& nested_loop_join_operator) {
-  auto& prefix_left = nested_loop_join_operator.prefix_left();
-  auto& prefix_right = nested_loop_join_operator.prefix_right();
   Assert((nested_loop_join_operator.has_left_operator()), "Missing left Operator in Nested Loop Join.");
   Assert((nested_loop_join_operator.has_right_operator()), "Missing right Operator in Nested Loop Join.");
 
@@ -155,20 +150,19 @@ inline std::shared_ptr<OperatorTask> OperatorTranslator::translate(
       Fail("Unknown join mode for nested loop join operator in operator_translator");
   }
 
-  std::shared_ptr<JoinNestedLoopA> nested_loop_join;
-
-  if (!nested_loop_join_operator.left_column_name().empty() && !nested_loop_join_operator.right_column_name().empty()) {
-    auto column_names =
-        std::make_pair(nested_loop_join_operator.left_column_name(), nested_loop_join_operator.right_column_name());
-    auto join_columns = optional<std::pair<std::string, std::string>>(column_names);
-    nested_loop_join =
-        std::make_shared<JoinNestedLoopA>(input_left_task->get_operator(), input_right_task->get_operator(),
-                                          join_columns, scan_type, join_mode, prefix_left, prefix_right);
+  optional<std::pair<ColumnID, ColumnID>> join_columns;
+  if (nested_loop_join_operator.has_left_column_id() && nested_loop_join_operator.has_right_column_id()) {
+    join_columns =
+        std::make_pair(ColumnID{static_cast<ColumnID::base_type>(nested_loop_join_operator.left_column_id().value())},
+                       ColumnID{static_cast<ColumnID::base_type>(nested_loop_join_operator.right_column_id().value())});
   } else {
-    nested_loop_join =
-        std::make_shared<JoinNestedLoopA>(input_left_task->get_operator(), input_right_task->get_operator(), nullopt,
-                                          scan_type, join_mode, prefix_left, prefix_right);
+    DebugAssert(!nested_loop_join_operator.has_left_column_id() && !nested_loop_join_operator.has_right_column_id(),
+                "Neither or both columns of the join condition have to be specified.");
   }
+
+  Assert(join_columns, "Can't create join without join columns");
+  auto nested_loop_join = std::make_shared<JoinNestedLoopA>(
+      input_left_task->get_operator(), input_right_task->get_operator(), join_mode, *join_columns, scan_type);
 
   auto nested_loop_join_task = std::make_shared<OperatorTask>(nested_loop_join);
   input_left_task->set_as_predecessor_of(nested_loop_join_task);
@@ -180,7 +174,7 @@ inline std::shared_ptr<OperatorTask> OperatorTranslator::translate(
 
 inline std::shared_ptr<OperatorTask> OperatorTranslator::translate(
     const proto::TableScanOperator& table_scan_operator) {
-  const auto& column_name = table_scan_operator.column_name();
+  const auto column_id = ColumnID{static_cast<ColumnID::base_type>(table_scan_operator.column_id())};
   const auto& scan_type = translate_scan_type(table_scan_operator.filter_operator());
   Assert((table_scan_operator.has_input_operator()), "Missing Input Operator in Table Scan.");
 
@@ -189,7 +183,7 @@ inline std::shared_ptr<OperatorTask> OperatorTranslator::translate(
   const auto value = translate_variant(table_scan_operator.value());
   const auto value2 = translate_optional_variant(table_scan_operator.value2());
 
-  auto table_scan = std::make_shared<TableScan>(input_task->get_operator(), column_name, scan_type, value, value2);
+  auto table_scan = std::make_shared<TableScan>(input_task->get_operator(), column_id, scan_type, value, value2);
   auto scan_task = std::make_shared<OperatorTask>(table_scan);
   input_task->set_as_predecessor_of(scan_task);
   _tasks.push_back(scan_task);
@@ -199,7 +193,7 @@ inline std::shared_ptr<OperatorTask> OperatorTranslator::translate(
 
 inline std::shared_ptr<OperatorTask> OperatorTranslator::translate(
     const proto::IndexColumnScanOperator& index_column_scan_operator) {
-  const auto& column_name = index_column_scan_operator.column_name();
+  const auto column_id = ColumnID{static_cast<ColumnID::base_type>(index_column_scan_operator.column_id())};
   const auto& scan_type = translate_scan_type(index_column_scan_operator.filter_operator());
   Assert((index_column_scan_operator.has_input_operator()), "Missing Input Operator in Index Column Scan.");
 
@@ -209,7 +203,7 @@ inline std::shared_ptr<OperatorTask> OperatorTranslator::translate(
   const auto value2 = translate_optional_variant(index_column_scan_operator.value2());
 
   auto index_column_scan =
-      std::make_shared<IndexColumnScan>(input_task->get_operator(), column_name, scan_type, value, value2);
+      std::make_shared<IndexColumnScan>(input_task->get_operator(), column_id, scan_type, value, value2);
   auto index_column_scan_task = std::make_shared<OperatorTask>(index_column_scan);
   input_task->set_as_predecessor_of(index_column_scan_task);
   _tasks.push_back(index_column_scan_task);
@@ -226,14 +220,25 @@ inline std::shared_ptr<OperatorTask> OperatorTranslator::translate(const proto::
 }
 
 inline std::shared_ptr<OperatorTask> OperatorTranslator::translate(const proto::SortOperator& sort_operator) {
-  const auto& column_name = sort_operator.column_name();
-  const auto ascending = sort_operator.ascending();
+  const auto column_id = ColumnID{static_cast<ColumnID::base_type>(sort_operator.column_id())};
   const auto output_chunk_size = sort_operator.output_chunk_size();
   Assert((sort_operator.has_input_operator()), "Missing Input Operator in Sort.");
 
+  OrderByMode order_by_mode;
+  switch (sort_operator.order_by_mode()) {
+    case proto::SortOperator::Ascending:
+      order_by_mode = OrderByMode::Ascending;
+      break;
+    case proto::SortOperator::Descending:
+      order_by_mode = OrderByMode::Descending;
+      break;
+    default:
+      Fail("Unknown order by mode for operator in operator_translator");
+  }
+
   auto input_task = translate_proto(sort_operator.input_operator());
 
-  auto sort = std::make_shared<Sort>(input_task->get_operator(), column_name, ascending, output_chunk_size);
+  auto sort = std::make_shared<Sort>(input_task->get_operator(), column_id, order_by_mode, output_chunk_size);
   auto sort_task = std::make_shared<OperatorTask>(sort);
   input_task->set_as_predecessor_of(sort_task);
   _tasks.push_back(sort_task);

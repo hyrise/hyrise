@@ -1,4 +1,4 @@
-#include "sql_query_operator.hpp"
+#include "sql_result_operator.hpp"
 
 #include <memory>
 #include <string>
@@ -18,7 +18,7 @@ uint8_t SQLResultOperator::num_out_tables() const { return 1; }
 
 void SQLResultOperator::set_input_operator(const std::shared_ptr<const AbstractOperator> input) { _input_left = input; }
 
-std::shared_ptr<const Table> SQLResultOperator::on_execute() {
+std::shared_ptr<const Table> SQLResultOperator::_on_execute() {
   if (!_input_left) {
     return std::make_shared<Table>();
   }
