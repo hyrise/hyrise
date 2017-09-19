@@ -180,7 +180,6 @@ void resolve_data_type(const std::string &type_string, const Functor &func) {
  *   template <typename T>
  *   process_column(DictionaryColumn<T>& column);
  *
- *   template <typename T>
  *   process_column(ReferenceColumn& column);
  *
  *   resolve_column_type<T>(base_column, [&](auto& typed_column) {
