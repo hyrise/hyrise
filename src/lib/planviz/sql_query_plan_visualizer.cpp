@@ -31,7 +31,10 @@ void SQLQueryPlanVisualizer::visualize(SQLQueryPlan &plan) {
   // Step 2: Generate png from dot file
   auto cmd = std::string("dot -Tpng:quartz:quartz .queryplan.dot > ") + png_filename;
   auto ret = system(cmd.c_str());
-  Assert(ret == 0, "calling graphviz' dot failed");
+
+  Assert(ret == 0, "Calling graphviz' dot failed. Have you installed graphviz "
+                   "(apt-get install graphviz / brew install graphviz)?");
+  // We do not want to make graphviz a requirement for Hyrise as visualization is just a gimmick
 }
 
 void SQLQueryPlanVisualizer::_visualize_subtree(const std::shared_ptr<const AbstractOperator> &op,

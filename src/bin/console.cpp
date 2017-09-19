@@ -459,7 +459,7 @@ int Console::visualize(const std::string& sql) {
 
   auto cmd = std::string("./scripts/planviz/imgcat.sh ") + SQLQueryPlanVisualizer::png_filename;
   ret = system(cmd.c_str());
-  Assert(ret == 0, "Printing the image using ./scripts/imgcat.sh failed");
+  Assert(ret == 0, "Printing the image using ./scripts/imgcat.sh failed.");
 
   return ReturnCode::Ok;
 }
