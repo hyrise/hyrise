@@ -57,5 +57,11 @@ target_link_libraries(
     opossumConsole
     opossum
     tpcc
-    readline
+    ${READLINE_LIBRARY}
+)
+target_include_directories(
+    opossumConsole
+
+    PUBLIC
+    ${READLINE_INCLUDE_DIR}
 )
