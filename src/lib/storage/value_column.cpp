@@ -140,7 +140,6 @@ void ValueColumn<T>::write_string_representation(std::string& row_string, const 
   row_string += buffer.str();
 }
 
-// TODO(anyone): This method is part of an algorithm that hasn't yet been updated to support null values.
 template <typename T>
 void ValueColumn<T>::copy_value_to_value_column(BaseColumn& value_column, ChunkOffset chunk_offset) const {
   auto& output_column = static_cast<ValueColumn<T>&>(value_column);
