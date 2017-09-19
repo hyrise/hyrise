@@ -20,6 +20,7 @@
 #include "operators/get_table.hpp"
 #include "operators/import_csv.hpp"
 #include "operators/print.hpp"
+#include "planviz/sql_query_plan_visualizer.hpp"
 #include "sql/sql_planner.hpp"
 #include "storage/storage_manager.hpp"
 #include "tpcc/tpcc_table_generator.hpp"
@@ -66,6 +67,7 @@ Console::Console()
   register_command("load", load_table);
   register_command("script", exec_script);
   register_command("print", print_table);
+  register_command("visualize", visualize);
 
   // Register words specifically for command completion purposes, e.g.
   // for TPC-C table generation, 'CUSTOMER', 'DISTRICT', etc
@@ -307,6 +309,7 @@ int Console::help(const std::string&) {
       "  load FILE TABLENAME  - Load table from disc specified by filepath FILE, store it with name TABLENAME\n");
   console.out("  script SCRIPTFILE    - Execute script specified by SCRIPTFILE\n");
   console.out("  print TABLENAME      - Fully prints the given table\n");
+  console.out("  visualize SQL        - Visualizes a SQL query\n");
   console.out("  exit                 - Exit the HYRISE Console\n");
   console.out("  quit                 - Exit the HYRISE Console\n");
   console.out("  help                 - Show this message\n\n");
@@ -413,6 +416,50 @@ int Console::print_table(const std::string& args) {
     console.out("Exception thrown while printing table:\n  " + std::string(exception.what()) + "\n");
     return ReturnCode::Error;
   }
+
+  return ReturnCode::Ok;
+}
+
+int Console::visualize(const std::string& sql) {
+  auto& console = Console::get();
+  SQLQueryPlan plan;
+  hsql::SQLParserResult parse_result;
+
+  try {
+    hsql::SQLParser::parse(sql, &parse_result);
+  } catch (const std::exception& exception) {
+    console.out("Exception thrown while parsing SQL query:\n  " + std::string(exception.what()) + "\n");
+    return ReturnCode::Error;
+  }
+
+  // Check if SQL query is valid
+  if (!parse_result.isValid()) {
+    console.out("Error: SQL query not valid.\n");
+    return 1;
+  }
+
+  // Compile the parse result
+  try {
+    plan = SQLPlanner::plan(parse_result);
+  } catch (const std::exception& exception) {
+    console.out("Exception thrown while compiling query plan:\n  " + std::string(exception.what()) + "\n");
+    return ReturnCode::Error;
+  }
+
+  plan = SQLPlanner::plan(parse_result);
+
+  SQLQueryPlanVisualizer::visualize(plan);
+
+  auto ret = system("./scripts/planviz/is_iterm2.sh");
+  if (ret != 0) {
+    std::string msg{"Currently, only iTerm2 can print the visualization inline. You can find the plan at"};
+    msg += SQLQueryPlanVisualizer::png_filename + "\n";
+    console.out(msg);
+  }
+
+  auto cmd = std::string("./scripts/planviz/imgcat.sh ") + SQLQueryPlanVisualizer::png_filename;
+  ret = system(cmd.c_str());
+  Assert(ret == 0, "Printing the image using ./scripts/imgcat.sh failed");
 
   return ReturnCode::Ok;
 }
