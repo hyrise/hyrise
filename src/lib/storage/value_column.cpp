@@ -147,17 +147,17 @@ void ValueColumn<T>::copy_value_to_value_column(BaseColumn& value_column, ChunkO
   auto& values_out = output_column.values();
 
   if (is_nullable()) {
-    DebugAssert(output_column.is_nullable(), "Target ValueColumn needs to be nullable as well");
+    bool is_null = (*_null_values)[chunk_offset];
 
-    auto& null_values_out = output_column.null_values();
+    DebugAssert(!is_null || output_column.is_nullable(), "Target ValueColumn needs to be nullable as well");
 
-    if ((*_null_values)[chunk_offset]) {
-      null_values_out.push_back(true);
-      values_out.push_back(T{});
-    } else {
-      null_values_out.push_back(false);
-      values_out.push_back(_values[chunk_offset]);
+    if (output_column.is_nullable()) {
+      auto& null_values_out = output_column.null_values();
+      null_values_out.push_back(is_null);
     }
+
+    values_out.push_back(is_null ? T{} : _values[chunk_offset]);
+
   } else {
     values_out.push_back(_values[chunk_offset]);
 
