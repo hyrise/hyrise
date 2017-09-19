@@ -38,9 +38,9 @@ template <typename T>
 class RadixClusterSort {
  public:
   RadixClusterSort(const std::shared_ptr<const Table> left, const std::shared_ptr<const Table> right,
-                     std::pair<std::string, std::string> column_names, bool equi_case, size_t cluster_count)
-    : _input_table_left{left}, _input_table_right{right}, _left_column_name{column_names.first},
-      _right_column_name{column_names.second}, _equi_case{equi_case},
+                     const std::pair<ColumnID, ColumnID>& column_ids, bool equi_case, size_t cluster_count)
+    : _input_table_left{left}, _input_table_right{right}, _left_column_id{column_ids.first},
+      _right_column_id{column_ids.second}, _equi_case{equi_case},
       _cluster_count{cluster_count} {
     DebugAssert(cluster_count > 0, "cluster_count must be > 0");
     DebugAssert((cluster_count & (cluster_count - 1)) == 0,
@@ -92,8 +92,8 @@ class RadixClusterSort {
   // Input parameters
   std::shared_ptr<const Table> _input_table_left;
   std::shared_ptr<const Table> _input_table_right;
-  const std::string _left_column_name;
-  const std::string _right_column_name;
+  const ColumnID _left_column_id;
+  const ColumnID _right_column_id;
   bool _equi_case;
 
   // The cluster count must be a power of two, i.e. 1, 2, 4, 8, 16, ...
@@ -318,8 +318,8 @@ class RadixClusterSort {
   std::pair<std::unique_ptr<MaterializedColumnList<T>>, std::unique_ptr<MaterializedColumnList<T>>> execute() {
     // Sort the chunks of the input tables in the non-equi cases
     ColumnMaterializer<T> column_materializer(!_equi_case);
-    auto chunks_left = column_materializer.materialize(_input_table_left, _left_column_name);
-    auto chunks_right = column_materializer.materialize(_input_table_right, _right_column_name);
+    auto chunks_left = column_materializer.materialize(_input_table_left, _left_column_id);
+    auto chunks_right = column_materializer.materialize(_input_table_right, _right_column_id);
 
     std::unique_ptr<MaterializedColumnList<T>> output_left;
     std::unique_ptr<MaterializedColumnList<T>> output_right;
