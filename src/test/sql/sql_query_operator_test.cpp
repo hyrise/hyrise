@@ -17,7 +17,7 @@
 
 namespace opossum {
 
-// The fixture for testing class SQLQueryOperator.
+// The fixture for testing class GetTable.
 class SQLQueryOperatorTest : public BaseTest {
  protected:
   void SetUp() override {
@@ -47,6 +47,22 @@ TEST_F(SQLQueryOperatorTest, BasicTest) {
 
   auto sql_result_task = sql_op->get_result_task();
   auto expected_result = load_table("src/test/tables/int_float.tbl", 2);
+  EXPECT_TABLE_EQ(sql_result_task->get_operator()->get_output(), expected_result);
+}
+
+// TODO(mp): Fix with upcoming ColumnIDs
+TEST_F(SQLQueryOperatorTest, DISABLED_ComplexQueryTest) {
+  const std::string query =
+      R"(SELECT "left".a, "left".b, "right".a, "right".b
+       FROM table_a AS "left" INNER JOIN table_b AS "right" ON "left".a = "right".a)";
+  auto sql_op = std::make_shared<SQLQueryOperator>(query);
+  auto sql_task = std::make_shared<OperatorTask>(sql_op);
+  sql_task->schedule();
+
+  CurrentScheduler::get()->finish();
+
+  auto sql_result_task = sql_op->get_result_task();
+  auto expected_result = load_table("src/test/tables/joinoperators/int_inner_join.tbl", 1);
   EXPECT_TABLE_EQ(sql_result_task->get_operator()->get_output(), expected_result);
 }
 
