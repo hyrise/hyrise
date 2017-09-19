@@ -264,6 +264,17 @@ void Console::setLogfile(const std::string& logfile) {
 
 void Console::loadHistory(const std::string& history_file) {
   _history_file = history_file;
+
+  // Check if history file exist, create empty history file if not
+  std::ifstream file(_history_file);
+  if (!file.good()) {
+    out("Creating history file: " + _history_file + "\n");
+    if (write_history(_history_file.c_str()) != 0) {
+      out("Error creating history file: " + _history_file + "\n");
+      return;
+    }
+  }
+
   if (read_history(_history_file.c_str()) != 0) {
     out("Error reading history file: " + _history_file + "\n");
   }
