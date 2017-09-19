@@ -132,6 +132,24 @@ TEST_F(OperatorsSortTest, DescendingSortOfOneColumnWithNull) {
   EXPECT_TABLE_EQ(sort->get_output(), expected_result, true);
 }
 
+TEST_F(OperatorsSortTest, AscendingSortOfOneColumnWithNullsLast) {
+  std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_float_null_sorted_asc_nulls_last.tbl", 2);
+
+  auto sort = std::make_shared<Sort>(_table_wrapper_null, ColumnID{0}, OrderByMode::AscendingNullsLast, 2u);
+  sort->execute();
+
+  EXPECT_TABLE_EQ(sort->get_output(), expected_result, true);
+}
+
+TEST_F(OperatorsSortTest, DescendingSortOfOneColumnWithNullsLast) {
+  std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_float_null_sorted_desc_nulls_last.tbl", 2);
+
+  auto sort = std::make_shared<Sort>(_table_wrapper_null, ColumnID{0}, OrderByMode::DescendingNullsLast, 2u);
+  sort->execute();
+
+  EXPECT_TABLE_EQ(sort->get_output(), expected_result, true);
+}
+
 TEST_F(OperatorsSortTest, AscendingSortOfOneDictColumnWithNull) {
   std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_float_null_sorted_asc.tbl", 2);
 

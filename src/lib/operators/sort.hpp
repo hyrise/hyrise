@@ -83,15 +83,21 @@ class Sort::SortImpl : public AbstractReadOnlyOperatorImpl {
     _materialize_sort_column();
 
     // 2. After we got our ValueRowID Map we sort the map by the value of the pair
-    if (_order_by_mode == OrderByMode::Ascending) {
+    if (_order_by_mode == OrderByMode::Ascending || _order_by_mode == OrderByMode::AscendingNullsLast) {
       sort_with_operator<std::less<>>();
     } else {
       sort_with_operator<std::greater<>>();
     }
 
-    // 2b. Insert null rows at the start if necessary
+    // 2b. Insert null rows if necessary
     if (_null_value_rows->size()) {
-      _row_id_value_vector->insert(_row_id_value_vector->begin(), _null_value_rows->begin(), _null_value_rows->end());
+      if (_order_by_mode == OrderByMode::AscendingNullsLast || _order_by_mode == OrderByMode::DescendingNullsLast) {
+        // NULLs last
+        _row_id_value_vector->insert(_row_id_value_vector->end(), _null_value_rows->begin(), _null_value_rows->end());
+      } else {
+        // NULLs first (default behavior)
+        _row_id_value_vector->insert(_row_id_value_vector->begin(), _null_value_rows->begin(), _null_value_rows->end());
+      }
     }
 
     // 3. Materialization of the result: We take the sorted ValueRowID Vector, create chunks fill them until they are

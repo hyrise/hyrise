@@ -189,7 +189,7 @@ enum class JoinMode { Inner, Left, Right, Outer, Cross, Natural, Self };
 
 enum class AggregateFunction { Min, Max, Sum, Avg, Count };
 
-enum class OrderByMode { Ascending, Descending };
+enum class OrderByMode { Ascending, Descending, AscendingNullsLast, DescendingNullsLast };
 
 class Noncopyable {
  protected:
