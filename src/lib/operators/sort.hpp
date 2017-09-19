@@ -103,10 +103,10 @@ class Sort::SortImpl : public AbstractReadOnlyOperatorImpl {
 
   // completely materializes the sort column to create a vector of RowID-Value pairs
   void _materialize_sort_column() {
-    auto& row_id_value_vector = static_cast<std::vector<RowIDValuePair>&>(*_row_id_value_vector);
+    auto& row_id_value_vector = *_row_id_value_vector;
     row_id_value_vector.reserve(_table_in->row_count());
 
-    auto& null_value_rows = static_cast<std::vector<RowIDValuePair>&>(*_null_value_rows);
+    auto& null_value_rows = *_null_value_rows;
 
     auto type_string = _table_in->column_type(_column_id);
 
