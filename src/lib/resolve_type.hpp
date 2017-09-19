@@ -86,7 +86,7 @@ std::unique_ptr<Base> make_unique_by_column_types(const std::string &type1, cons
           using ColumnType1 = typename decltype(+hana::second(x))::type;
           using ColumnType2 = typename decltype(+hana::second(y))::type;
           ret = std::make_unique<Impl<ColumnType1, ColumnType2, TemplateArgs...>>(
-              std::forward<ConstructorArgs>(args)...);
+            std::forward<ConstructorArgs>(args)...);
           return;
         }
       });
@@ -108,7 +108,7 @@ std::shared_ptr<Base> make_shared_by_column_type(const std::string &type, Constr
 /**
  * Resolves a type string by passing a hana::type object on to a generic lambda
  *
- * @param type is a string representation of any of the supported column types
+ * @param type_string is a string representation of any of the supported column types
  * @param func is a generic lambda or similar accepting a hana::type object
  *
  *
@@ -146,7 +146,7 @@ std::shared_ptr<Base> make_shared_by_column_type(const std::string &type, Constr
  *   template <typename T>
  *   process_type(hana::basic_type<T> type);  // note: parameter type needs to be hana::basic_type not hana::type!
  *
- *   resolve_type(type_string, [&](auto type) {
+ *   resolve_data_type(type_string, [&](auto type) {
  *     using Type = typename decltype(type)::type;
  *     const auto var = type_cast<Type>(variant_from_elsewhere);
  *     process_variant(var);
@@ -155,9 +155,9 @@ std::shared_ptr<Base> make_shared_by_column_type(const std::string &type, Constr
  *   });
  */
 template <typename Functor>
-void resolve_type(const std::string &type, const Functor &func) {
+void resolve_data_type(const std::string &type_string, const Functor &func) {
   hana::for_each(column_types, [&](auto x) {
-    if (std::string(hana::first(x)) == type) {
+    if (std::string(hana::first(x)) == type_string) {
       // The + before hana::second - which returns a reference - converts its return value into a value
       func(+hana::second(x));
       return;
@@ -166,9 +166,44 @@ void resolve_type(const std::string &type, const Functor &func) {
 }
 
 /**
+ * Given a BaseColumn and its known DataType, resolve the column implementation and call the lambda
+ *
+ * @param func is a generic lambda or similar accepting a reference to a specialized column (value, dictionary,
+ * reference)
+ *
+ *
+ * Example:
+ *
+ *   template <typename T>
+ *   process_column(ValueColumn<T>& column);
+ *
+ *   template <typename T>
+ *   process_column(DictionaryColumn<T>& column);
+ *
+ *   template <typename T>
+ *   process_column(ReferenceColumn& column);
+ *
+ *   resolve_column_type<T>(base_column, [&](auto& typed_column) {
+ *     process_column(typed_column);
+ *   });
+ */
+template <typename DataType, typename Functor>
+void resolve_column_type(BaseColumn &column, const Functor &func) {
+  if (auto value_column = dynamic_cast<ValueColumn<DataType> *>(&column)) {
+    func(*value_column);
+  } else if (auto dict_column = dynamic_cast<DictionaryColumn<DataType> *>(&column)) {
+    func(*dict_column);
+  } else if (auto ref_column = dynamic_cast<ReferenceColumn *>(&column)) {
+    func(*ref_column);
+  } else {
+    Fail("Unrecognized column type encountered.");
+  }
+}
+
+/**
  * Resolves a type string by passing a hana::type object and the downcasted column on to a generic lambda
  *
- * @param type is a string representation of any of the supported column types
+ * @param type_string is a string representation of any of the supported column types
  * @param func is a generic lambda or similar accepting two parameters: a hana::type object and
  *   a reference to a specialized column (value, dictionary, reference)
  *
@@ -184,29 +219,16 @@ void resolve_type(const std::string &type, const Functor &func) {
  *   template <typename T>
  *   process_column(hana::basic_type<T> type, ReferenceColumn& column);
  *
- *   resolve_column_type(column_type, base_column, [&](auto type, auto& typed_column) {
+ *   resolve_data_and_column_type(column_type, base_column, [&](auto type, auto& typed_column) {
  *     process_column(type, typed_column);
  *   });
  */
 template <typename Functor>
-void resolve_column_type(const std::string &type, BaseColumn &column, const Functor &func) {
-  hana::for_each(column_types, [&](auto x) {
-    if (std::string(hana::first(x)) == type) {
-      const auto type = hana::second(x);
-      using Type = typename decltype(type)::type;
+void resolve_data_and_column_type(const std::string &type_string, BaseColumn &column, const Functor &func) {
+  resolve_data_type(type_string, [&](auto data_type) {
+    using DataType = typename decltype(data_type)::type;
 
-      if (auto value_column = dynamic_cast<ValueColumn<Type> *>(&column)) {
-        func(type, *value_column);
-      } else if (auto dict_column = dynamic_cast<DictionaryColumn<Type> *>(&column)) {
-        func(type, *dict_column);
-      } else if (auto ref_column = dynamic_cast<ReferenceColumn *>(&column)) {
-        func(type, *ref_column);
-      } else {
-        Fail("Unrecognized column type encountered.");
-      }
-
-      return;
-    }
+    resolve_column_type<DataType>(column, [&](auto &typed_column) { func(data_type, typed_column); });
   });
 }
 
