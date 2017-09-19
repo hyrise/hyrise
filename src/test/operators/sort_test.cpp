@@ -9,6 +9,7 @@
 #include "operators/sort.hpp"
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
+#include "storage/dictionary_compression.hpp"
 #include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
 #include "types.hpp"
@@ -21,11 +22,23 @@ class OperatorsSortTest : public BaseTest {
     _table_wrapper = std::make_shared<TableWrapper>(load_table("src/test/tables/int_float.tbl", 2));
     _table_wrapper_null = std::make_shared<TableWrapper>(load_table("src/test/tables/int_float_with_null.tbl", 2));
 
+    auto table = load_table("src/test/tables/int_float.tbl", 2);
+    DictionaryCompression::compress_table(*table);
+
+    auto table_dict = load_table("src/test/tables/int_float_with_null.tbl", 2);
+    DictionaryCompression::compress_table(*table_dict);
+
+    _table_wrapper_dict = std::make_shared<TableWrapper>(std::move(table));
+    _table_wrapper_dict->execute();
+
+    _table_wrapper_null_dict = std::make_shared<TableWrapper>(std::move(table_dict));
+    _table_wrapper_null_dict->execute();
+
     _table_wrapper->execute();
     _table_wrapper_null->execute();
   }
 
-  std::shared_ptr<TableWrapper> _table_wrapper, _table_wrapper_null;
+  std::shared_ptr<TableWrapper> _table_wrapper, _table_wrapper_null, _table_wrapper_dict, _table_wrapper_null_dict;
 };
 
 TEST_F(OperatorsSortTest, AscendingSortOfOneColumn) {
@@ -114,6 +127,42 @@ TEST_F(OperatorsSortTest, DescendingSortOfOneColumnWithNull) {
   std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_float_null_sorted_desc.tbl", 2);
 
   auto sort = std::make_shared<Sort>(_table_wrapper_null, ColumnID{0}, OrderByMode::Descending, 2u);
+  sort->execute();
+
+  EXPECT_TABLE_EQ(sort->get_output(), expected_result, true);
+}
+
+TEST_F(OperatorsSortTest, AscendingSortOfOneDictColumnWithNull) {
+  std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_float_null_sorted_asc.tbl", 2);
+
+  auto sort = std::make_shared<Sort>(_table_wrapper_null_dict, ColumnID{0}, OrderByMode::Ascending, 2u);
+  sort->execute();
+
+  EXPECT_TABLE_EQ(sort->get_output(), expected_result, true);
+}
+
+TEST_F(OperatorsSortTest, DescendingSortOfOneDictColumnWithNull) {
+  std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_float_null_sorted_desc.tbl", 2);
+
+  auto sort = std::make_shared<Sort>(_table_wrapper_null_dict, ColumnID{0}, OrderByMode::Descending, 2u);
+  sort->execute();
+
+  EXPECT_TABLE_EQ(sort->get_output(), expected_result, true);
+}
+
+TEST_F(OperatorsSortTest, AscendingSortOfOneDictColumn) {
+  std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_float_sorted.tbl", 2);
+
+  auto sort = std::make_shared<Sort>(_table_wrapper_dict, ColumnID{0}, OrderByMode::Ascending, 2u);
+  sort->execute();
+
+  EXPECT_TABLE_EQ(sort->get_output(), expected_result, true);
+}
+
+TEST_F(OperatorsSortTest, DescendingSortOfOneDictColumn) {
+  std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_float_reverse.tbl", 2);
+
+  auto sort = std::make_shared<Sort>(_table_wrapper_dict, ColumnID{0}, OrderByMode::Descending, 2u);
   sort->execute();
 
   EXPECT_TABLE_EQ(sort->get_output(), expected_result, true);
