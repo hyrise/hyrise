@@ -96,8 +96,8 @@ class Sort::SortImpl : public AbstractReadOnlyOperatorImpl {
 
     // 3. Materialization of the result: We take the sorted ValueRowID Vector, create chunks fill them until they are
     // full and create the next one. Each chunk is filled row by row.
-    auto materialization = std::make_shared<SortImplMaterializeOutput<SortColumnType>>(
-        _table_in, _row_id_value_vector, _null_value_rows, _output_chunk_size);
+    auto materialization = std::make_shared<SortImplMaterializeOutput<SortColumnType>>(_table_in, _row_id_value_vector,
+                                                                                       _output_chunk_size);
     return materialization->execute();
   }
 
