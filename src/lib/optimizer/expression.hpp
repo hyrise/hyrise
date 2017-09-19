@@ -71,6 +71,9 @@ class Expression : public std::enable_shared_from_this<Expression> {
                                                             const std::shared_ptr<Expression>& right,
                                                             const optional<std::string>& alias = nullopt);
 
+  static std::shared_ptr<Expression> create_unary_operator(ExpressionType type, const std::shared_ptr<Expression>& input,
+                                                           const optional<std::string> &alias = nullopt);
+
   static std::shared_ptr<Expression> create_select_star(const optional<std::string>& table_name = {});
   // @}
 
@@ -102,14 +105,23 @@ class Expression : public std::enable_shared_from_this<Expression> {
    * Check semantics of the expression
    */
 
+  //
+  bool is_operator() const;
+
   // Is +, -, * (arithmetic usage, not SELECT * FROM), /, %, ^
   bool is_arithmetic_operator() const;
+
+  // Is >, >=, AND, OR, NOT
+  bool is_logical_operator() const;
 
   // Returns true if the expression is a literal or column reference.
   bool is_operand() const;
 
   // Returns true if the expression requires two children.
   bool is_binary_operator() const;
+
+  // Returns true if the expression requires one child.
+  bool is_unary_operator() const;
 
   // Returns true if the expression is a NULL literal.
   bool is_null_literal() const;
@@ -136,7 +148,11 @@ class Expression : public std::enable_shared_from_this<Expression> {
 
   void set_alias(const std::string& alias);
 
-  // Expression as string, column names need to be resolved and therefore need a @param input_node
+  /**
+   * Returns the Expression as a string. Not meant to produce pretty outputs. Mostly intended to create column names
+   * for SELECT lists with expressions: `SELECT a > 5 FROM ...`, here, the column name "a > 5" is generated using this
+   * column names need to be resolved and therefore need a @param input_node
+   */
   std::string to_string(const std::vector<std::string>& input_column_names = {}) const;
 
   bool operator==(const Expression& rhs) const;
