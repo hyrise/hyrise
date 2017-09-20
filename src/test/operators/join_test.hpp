@@ -43,7 +43,7 @@ class JoinTest : public BaseTest {
 
     _table_wrapper_h = std::make_shared<TableWrapper>(load_table("src/test/tables/int_int4.tbl", 4));
 
-    _table_wrapper_i = std::make_shared<TableWrapper>(load_table("src/test/tables/int2.tbl", 1));
+    _table_wrapper_i = std::make_shared<TableWrapper>(load_table("src/test/tables/int5.tbl", 1));
 
     _table_wrapper_j = std::make_shared<TableWrapper>(load_table("src/test/tables/int3.tbl", 1));
 

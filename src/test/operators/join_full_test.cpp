@@ -10,7 +10,7 @@
 #include "join_test.hpp"
 
 #include "../../lib/operators/get_table.hpp"
-#include "../../lib/operators/join_hash.hpp"
+#include "../../lib/operators/join_sort_merge.hpp"
 #include "../../lib/operators/join_nested_loop_a.hpp"
 #include "../../lib/operators/join_nested_loop_b.hpp"
 #include "../../lib/operators/table_scan.hpp"
@@ -29,7 +29,7 @@ template <typename T>
 class JoinFullTest : public JoinTest {};
 
 // here we define all Join types
-typedef ::testing::Types<JoinNestedLoopA, JoinNestedLoopB /* , SortMergeJoin */> JoinFullTypes;
+typedef ::testing::Types<JoinNestedLoopA, JoinNestedLoopB, JoinSortMerge> JoinFullTypes;
 TYPED_TEST_CASE(JoinFullTest, JoinFullTypes);
 
 TYPED_TEST(JoinFullTest, CrossJoin) {
@@ -212,7 +212,7 @@ TYPED_TEST(JoinFullTest, InnerRefJoinFilteredBig) {
                                              "src/test/tables/joinoperators/int_string_inner_join_filtered.tbl", 1);
 }
 
-TYPED_TEST(JoinFullTest, DISABLED_OuterJoin) {
+TYPED_TEST(JoinFullTest, OuterJoin) {
   this->template test_join_output<TypeParam>(
       this->_table_wrapper_a, this->_table_wrapper_b, std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}),
       ScanType::OpEquals, JoinMode::Outer, "src/test/tables/joinoperators/int_outer_join.tbl", 1);
