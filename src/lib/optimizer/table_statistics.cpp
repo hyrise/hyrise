@@ -212,18 +212,11 @@ std::shared_ptr<TableStatistics> TableStatistics::join_statistics(
   ColumnID new_right_column_id{static_cast<ColumnID::base_type>(_column_statistics.size() + column_ids.second)};
 
   // calculate how many null values need to be added to columns from the left table for right/outer joins
-  float left_null_value_no = right_col_stats->null_value_ratio() * right_table_stats->_row_count;
-  if (right_col_stats->distinct_count() != 0.f) {
-    left_null_value_no +=
-        (1.f - stats_container.second_column_statistics->distinct_count() / right_col_stats->distinct_count()) *
-        right_table_stats->row_count();
-  }
+  auto left_null_value_no = calculate_added_null_values_for_joins(
+      right_table_stats->row_count(), right_col_stats, stats_container.second_column_statistics->distinct_count());
   // calculate how many null values need to be added to columns from the right table for left/outer joins
-  float right_null_value_no = left_col_stats->null_value_ratio() * _row_count;
-  if (left_col_stats->distinct_count() != 0.f) {
-    right_null_value_no +=
-        (1.f - stats_container.column_statistics->distinct_count() / left_col_stats->distinct_count()) * row_count();
-  }
+  auto right_null_value_no = calculate_added_null_values_for_joins(row_count(), left_col_stats,
+                                                                   stats_container.column_statistics->distinct_count());
 
   // add null values to columns from the right table
   auto apply_left_outer_join = [&]() {
@@ -287,5 +280,15 @@ std::shared_ptr<TableStatistics> TableStatistics::join_statistics(
 
   return join_table_stats;
 }
+
+float TableStatistics::calculate_added_null_values_for_joins(const float row_count,
+                                                             const std::shared_ptr<BaseColumnStatistics> col_stats,
+                                                             const float predicate_column_distinct_count) const {
+  float null_value_no = col_stats->null_value_ratio() * row_count;
+  if (col_stats->distinct_count() != 0.f) {
+    null_value_no += (1.f - predicate_column_distinct_count / col_stats->distinct_count()) * row_count;
+  }
+  return null_value_no;
+};
 
 }  // namespace opossum

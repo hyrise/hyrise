@@ -91,6 +91,10 @@ class TableStatistics : public std::enable_shared_from_this<TableStatistics> {
 
   void reset_table_ptr();
 
+  float calculate_added_null_values_for_joins(const float row_count,
+                                              const std::shared_ptr<BaseColumnStatistics> col_stats,
+                                              const float predicate_column_distinct_count) const;
+
   // Only available for statistics of tables in the StorageManager.
   // This is a weak_ptr, as
   // Table --shared_ptr--> TableStatistics
