@@ -13,6 +13,7 @@
 #include "optimizer/abstract_syntax_tree/stored_table_node.hpp"
 #include "optimizer/expression.hpp"
 #include "optimizer/strategy/join_detection_rule.hpp"
+#include "optimizer/strategy/strategy_base_test.hpp"
 #include "sql/sql_to_ast_translator.hpp"
 #include "storage/storage_manager.hpp"
 
@@ -26,7 +27,7 @@ struct JoinDetectionTestParam {
   const uint8_t number_of_detectable_cross_joins;
 };
 
-class JoinDetectionRuleTest : public BaseTest, public ::testing::WithParamInterface<JoinDetectionTestParam> {
+class JoinDetectionRuleTest : public StrategyBaseTest, public ::testing::WithParamInterface<JoinDetectionTestParam> {
  protected:
   void SetUp() override {
     StorageManager::get().add_table("a", load_table("src/test/tables/int_float.tbl", 2));
@@ -90,7 +91,7 @@ TEST_F(JoinDetectionRuleTest, SimpleDetectionTest) {
   const auto predicate_node = std::make_shared<PredicateNode>(ColumnID{0}, ScanType::OpEquals, ColumnID{2});
   predicate_node->set_left_child(cross_join_node);
 
-  auto output = AbstractRule::apply_rule(_rule, predicate_node);
+  auto output = StrategyBaseTest::apply_rule(_rule, predicate_node);
 
   EXPECT_EQ(output->type(), ASTNodeType::Join);
   EXPECT_EQ(output->left_child()->type(), ASTNodeType::StoredTable);
@@ -138,7 +139,7 @@ TEST_F(JoinDetectionRuleTest, SecondDetectionTest) {
   const auto projection_node = std::make_shared<ProjectionNode>(columns);
   projection_node->set_left_child(predicate_node);
 
-  auto output = AbstractRule::apply_rule(_rule, projection_node);
+  auto output = StrategyBaseTest::apply_rule(_rule, projection_node);
 
   EXPECT_EQ(output->type(), ASTNodeType::Projection);
   EXPECT_EQ(output->left_child()->type(), ASTNodeType::Join);
@@ -169,7 +170,7 @@ TEST_F(JoinDetectionRuleTest, NoPredicate) {
   const auto projection_node = std::make_shared<ProjectionNode>(columns);
   projection_node->set_left_child(cross_join_node);
 
-  auto output = AbstractRule::apply_rule(_rule, projection_node);
+  auto output = StrategyBaseTest::apply_rule(_rule, projection_node);
 
   EXPECT_EQ(output->type(), ASTNodeType::Projection);
   EXPECT_EQ(output->left_child()->type(), ASTNodeType::Join);
@@ -206,7 +207,7 @@ TEST_F(JoinDetectionRuleTest, NoMatchingPredicate) {
   const auto projection_node = std::make_shared<ProjectionNode>(columns);
   projection_node->set_left_child(predicate_node);
 
-  auto output = AbstractRule::apply_rule(_rule, projection_node);
+  auto output = StrategyBaseTest::apply_rule(_rule, projection_node);
 
   EXPECT_EQ(output->type(), ASTNodeType::Projection);
   EXPECT_EQ(output->left_child()->type(), ASTNodeType::Predicate);
@@ -245,7 +246,7 @@ TEST_F(JoinDetectionRuleTest, NonCrossJoin) {
   const auto projection_node = std::make_shared<ProjectionNode>(columns);
   projection_node->set_left_child(predicate_node);
 
-  auto output = AbstractRule::apply_rule(_rule, projection_node);
+  auto output = StrategyBaseTest::apply_rule(_rule, projection_node);
 
   EXPECT_EQ(output->type(), ASTNodeType::Projection);
   EXPECT_EQ(output->left_child()->type(), ASTNodeType::Predicate);
@@ -298,7 +299,7 @@ TEST_F(JoinDetectionRuleTest, MultipleJoins) {
   const auto projection_node = std::make_shared<ProjectionNode>(columns);
   projection_node->set_left_child(predicate_node);
 
-  auto output = AbstractRule::apply_rule(_rule, projection_node);
+  auto output = StrategyBaseTest::apply_rule(_rule, projection_node);
 
   EXPECT_EQ(output->type(), ASTNodeType::Projection);
   EXPECT_EQ(output->left_child()->type(), ASTNodeType::Join);
@@ -362,7 +363,7 @@ TEST_F(JoinDetectionRuleTest, MultipleJoins2) {
   const auto projection_node = std::make_shared<ProjectionNode>(columns);
   projection_node->set_left_child(predicate_node);
 
-  auto output = AbstractRule::apply_rule(_rule, projection_node);
+  auto output = StrategyBaseTest::apply_rule(_rule, projection_node);
 
   EXPECT_EQ(output->type(), ASTNodeType::Projection);
 
@@ -409,7 +410,7 @@ TEST_F(JoinDetectionRuleTest, NoOptimizationAcrossProjection) {
   const auto predicate_node = std::make_shared<PredicateNode>(ColumnID{0}, ScanType::OpEquals, ColumnID{1});
   predicate_node->set_left_child(projection_node);
 
-  auto output = AbstractRule::apply_rule(_rule, predicate_node);
+  auto output = StrategyBaseTest::apply_rule(_rule, predicate_node);
 
   EXPECT_EQ(output->type(), ASTNodeType::Predicate);
   EXPECT_EQ(output->left_child()->type(), ASTNodeType::Projection);
@@ -449,7 +450,7 @@ TEST_F(JoinDetectionRuleTest, NoJoinDetectionAcrossProjections) {
   const auto predicate_node = std::make_shared<PredicateNode>(ColumnID{0}, ScanType::OpEquals, ColumnID{1});
   predicate_node->set_left_child(projection_node);
 
-  auto output = AbstractRule::apply_rule(_rule, predicate_node);
+  auto output = StrategyBaseTest::apply_rule(_rule, predicate_node);
 
   EXPECT_EQ(output->type(), ASTNodeType::Predicate);
   EXPECT_EQ(output->left_child()->type(), ASTNodeType::Projection);
@@ -466,7 +467,7 @@ TEST_P(JoinDetectionRuleTest, JoinDetectionSQL) {
   auto node = SQLToASTTranslator::get().translate_parse_result(parse_result)[0];
 
   auto before = _count_cross_joins(node);
-  auto output = AbstractRule::apply_rule(_rule, node);
+  auto output = StrategyBaseTest::apply_rule(_rule, node);
   auto after = _count_cross_joins(output);
 
   EXPECT_EQ(before - after, params.number_of_detectable_cross_joins);
