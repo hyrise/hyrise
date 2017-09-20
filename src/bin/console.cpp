@@ -219,9 +219,6 @@ int Console::_eval_sql(const std::string& sql) {
 
   // Execute query plan
   try {
-    // Compile the parse result
-    plan = SQLPlanner::plan(parse_result);
-
     // Get Transaction context
     static auto tx_context = TransactionManager::get().new_transaction_context();
 
@@ -446,8 +443,6 @@ int Console::visualize(const std::string& sql) {
     return ReturnCode::Error;
   }
 
-  plan = SQLPlanner::plan(parse_result);
-
   SQLQueryPlanVisualizer::visualize(plan);
 
   auto ret = system("./scripts/planviz/is_iterm2.sh");
@@ -455,6 +450,8 @@ int Console::visualize(const std::string& sql) {
     std::string msg{"Currently, only iTerm2 can print the visualization inline. You can find the plan at"};
     msg += SQLQueryPlanVisualizer::png_filename + "\n";
     console.out(msg);
+
+    return ReturnCode::Ok;
   }
 
   auto cmd = std::string("./scripts/planviz/imgcat.sh ") + SQLQueryPlanVisualizer::png_filename;
