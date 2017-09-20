@@ -193,7 +193,8 @@ std::shared_ptr<TableStatistics> TableStatistics::join_statistics(
 
   // For self joins right_table_stats should be this.
   if (mode == JoinMode::Self) {
-    DebugAssert(this == *right_table_stats, "Self joins should pass the same table as right_table_stats again.");
+    DebugAssert(shared_from_this() == right_table_stats,
+                "Self joins should pass the same table as right_table_stats again.");
   }
 
   // copy column statistics and calculate cross join row count
