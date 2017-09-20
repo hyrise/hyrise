@@ -44,4 +44,16 @@ TEST_F(JoinHashTest, InnerJoinWithNull) {
                              JoinMode::Inner, "src/test/tables/joinoperators/int_float_null_inner.tbl", 1);
 }
 
+TEST_F(JoinHashTest, LeftJoinWithNull) {
+  test_join_output<JoinHash>(_table_wrapper_a_null, _table_wrapper_b,
+                             std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}), ScanType::OpEquals,
+                             JoinMode::Left, "src/test/tables/joinoperators/int_left_join_null.tbl", 1);
+}
+
+TEST_F(JoinHashTest, RightJoinWithNull) {
+  test_join_output<JoinHash>(_table_wrapper_a_null, _table_wrapper_b,
+                             std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}), ScanType::OpEquals,
+                             JoinMode::Right, "src/test/tables/joinoperators/int_right_join_null.tbl", 1);
+}
+
 }  // namespace opossum

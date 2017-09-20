@@ -115,7 +115,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
   */
   template <typename T>
   struct PartitionedElement {
-    PartitionedElement() : row_id(RowID{ChunkID{0}, 0}), partition_hash(0), value(T()) {}
+    PartitionedElement() : row_id(NULL_ROW_ID), partition_hash(0), value(T()) {}
     PartitionedElement(RowID row, Hash hash, T val) : row_id(row), partition_hash(hash), value(val) {}
 
     RowID row_id;
@@ -163,7 +163,9 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
       iterable.with_iterators(mapped_chunk_offsets.get(), [&](auto begin, auto end) {
         for (auto it = begin; it != end; ++it) {
           const auto &value = *it;
-          chunk.emplace_back(RowID{chunk_id, value.chunk_offset()}, value.value());
+          if (!value.is_null()) {
+            chunk.emplace_back(RowID{chunk_id, value.chunk_offset()}, value.value());
+          }
         }
       });
     }
@@ -180,7 +182,9 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
       iterable.with_iterators(mapped_chunk_offsets.get(), [&](auto begin, auto end) {
         for (auto it = begin; it != end; ++it) {
           const auto &value = *it;
-          chunk.emplace_back(RowID{chunk_id, value.chunk_offset()}, value.value());
+          if (!value.is_null()) {
+            chunk.emplace_back(RowID{chunk_id, value.chunk_offset()}, value.value());
+          }
         }
       });
     }
@@ -398,6 +402,11 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
         auto &out = static_cast<Partition<T> &>(*output);
         for (size_t i = input_offset; i < input_offset + input_size; ++i) {
           auto &element = (*materialized)[i];
+
+          if (element.row_id.chunk_offset == INVALID_CHUNK_OFFSET) {
+            continue;
+          }
+
           const size_t radix = (element.partition_hash >> (32 - _radix_bits * (pass + 1))) & mask;
 
           out[output_offsets[radix]++] = element;
@@ -487,12 +496,19 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
 
           for (size_t i = partition_begin; i < partition_end; ++i) {
             auto &row = partition[i];
+
+            if (_mode == JoinMode::Inner && row.row_id.chunk_offset == INVALID_CHUNK_OFFSET) {
+              continue;
+            }
+
             auto row_ids = hashtable->get(row.value);
 
             if (row_ids) {
-              for (auto &row_id : *row_ids) {
-                pos_list_left_local->emplace_back(row_id);
-                pos_list_right_local->emplace_back(row.row_id);
+              for (const auto &row_id : *row_ids) {
+                if (row_id.chunk_offset != INVALID_CHUNK_OFFSET) {
+                  pos_list_left_local->emplace_back(row_id);
+                  pos_list_right_local->emplace_back(row.row_id);
+                }
               }
               // We assume that the relations have been swapped previously,
               // so that the outer relation is the probing relation.
