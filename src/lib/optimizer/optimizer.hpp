@@ -23,6 +23,9 @@ class Optimizer final {
 
  private:
   std::vector<std::shared_ptr<AbstractRule>> _rules;
+
+  // Rather arbitrary right now, atm all rules should be done after one iteration
+  uint32_t _max_num_iterations = 10;
 };
 
 }  // namespace opossum

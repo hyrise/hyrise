@@ -148,7 +148,7 @@ std::vector<ColumnID> AbstractASTNode::get_output_column_ids_for_table(const std
 }
 
 void AbstractASTNode::remove_from_tree() {
-  Assert(!_left_child || !_right_child, "Can't remove a node with two children");
+  Assert(!_right_child, "Can't remove a node with two children");
 
   auto parent = _parent.lock();
 
@@ -160,6 +160,9 @@ void AbstractASTNode::remove_from_tree() {
 }
 
 void AbstractASTNode::replace_in_tree(const std::shared_ptr<AbstractASTNode> &node_to_replace) {
+  Assert(!_left_child && !_right_child && !parent(),
+         "Can't put a Node that's already part of a tree into another tree. Call remove_from_tree() first");
+
   set_left_child(node_to_replace->left_child());
   set_right_child(node_to_replace->right_child());
 

@@ -23,14 +23,15 @@ std::shared_ptr<AbstractASTNode> Optimizer::optimize(const std::shared_ptr<Abstr
   const auto root_node = std::make_shared<ASTRootNode>();
   root_node->set_left_child(input);
 
-  // Apply all optimization over and over until all of them stopped changing the AST
-  while (true) {
+  /**
+   * Apply all optimization over and over until all of them stopped changing the AST or the max number of
+   * iterations is reached
+   */
+  for (uint32_t iter_index = 0; iter_index < _max_num_iterations; ++iter_index) {
     auto ast_changed = false;
 
     for (const auto &rule : _rules) {
-      if (rule->apply_to(root_node)) {
-        ast_changed = true;
-      }
+      ast_changed |= rule->apply_to(root_node);
     }
 
     if (!ast_changed) break;
