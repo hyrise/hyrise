@@ -75,7 +75,8 @@ optional<JoinConditionDetectionRule::JoinCondition> JoinConditionDetectionRule::
       /**
        * We have a (Cross)JoinNode and PredicateNode located further up in the tree. Now we have to determine whether
        * and how they can be merged to a normal Join.
-       * More precisely, we have to determine which columns of the cross joins input tables correspond to the columns used
+       * More precisely, we have to determine which columns of the cross joins input tables correspond to the columns
+       * used
        * in the predicate.
        * In order to do this, check whether the left column of the Predicate refers to the left input table of the
        * CrossJoin and the right column of the Predicate to the right input table of the CrossJoin - OR whether there

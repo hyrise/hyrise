@@ -25,7 +25,7 @@
 #include "tpcc/tpcc_table_generator.hpp"
 #include "utils/load_table.hpp"
 
-#define ANSI_COLOR_RED   "\001\e[0;31m\002"
+#define ANSI_COLOR_RED "\001\e[0;31m\002"
 #define ANSI_COLOR_GREEN "\001\e[0;32m\002"
 #define ANSI_COLOR_RESET "\001\e[0m\002"
 
