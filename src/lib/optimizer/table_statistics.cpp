@@ -218,35 +218,32 @@ std::shared_ptr<TableStatistics> TableStatistics::join_statistics(
   auto right_null_value_no = calculate_added_null_values_for_joins(row_count(), left_col_stats,
                                                                    stats_container.column_statistics->distinct_count());
 
-  // add null values to columns from the right table
-  auto apply_left_outer_join = [&]() {
-    if (right_null_value_no == 0) {
+  auto adjust_null_value_ratio_for_outer_join = [&](
+      float null_value_no, std::vector<std::shared_ptr<BaseColumnStatistics>>::iterator col_begin,
+      std::vector<std::shared_ptr<BaseColumnStatistics>>::iterator col_end, float row_count, float new_row_count) {
+    if (null_value_no == 0) {
       return;
     }
     // adjust null value ratios in columns from the right table
-    for (auto col_itr = join_table_stats->_column_statistics.begin() + _column_statistics.size();
-         col_itr != join_table_stats->_column_statistics.end(); ++col_itr) {
+    for (auto col_itr = col_begin; col_itr != col_end; ++col_itr) {
       // columns need to be copied before changed
       *col_itr = (*col_itr)->clone();
-      float column_null_value_no = (*col_itr)->null_value_ratio() * right_table_stats->_row_count;
-      float right_null_value_ratio = (column_null_value_no + right_null_value_no) / join_table_stats->row_count();
+      float column_null_value_no = (*col_itr)->null_value_ratio() * row_count;
+      float right_null_value_ratio = (column_null_value_no + null_value_no) / new_row_count;
       (*col_itr)->set_null_value_ratio(right_null_value_ratio);
     }
   };
-  // add null values to columns from the left table
+  // add null values to columns from the right table for left outer join
+  auto apply_left_outer_join = [&]() {
+    adjust_null_value_ratio_for_outer_join(
+        right_null_value_no, join_table_stats->_column_statistics.begin() + _column_statistics.size(),
+        join_table_stats->_column_statistics.end(), right_table_stats->row_count(), join_table_stats->row_count());
+  };
+  // add null values to columns from the left table for right outer
   auto apply_right_outer_join = [&]() {
-    if (left_null_value_no == 0) {
-      return;
-    }
-    // adjust null value ratios in columns from the left table
-    for (auto col_itr = join_table_stats->_column_statistics.begin();
-         col_itr != join_table_stats->_column_statistics.begin() + _column_statistics.size(); ++col_itr) {
-      // columns need to be copied before changed
-      *col_itr = (*col_itr)->clone();
-      float column_null_value_no = (*col_itr)->null_value_ratio() * _row_count;
-      float left_null_value_ratio = (column_null_value_no + left_null_value_no) / join_table_stats->row_count();
-      (*col_itr)->set_null_value_ratio(left_null_value_ratio);
-    }
+    adjust_null_value_ratio_for_outer_join(left_null_value_no, join_table_stats->_column_statistics.begin(),
+                                           join_table_stats->_column_statistics.begin() + _column_statistics.size(),
+                                           row_count(), join_table_stats->row_count());
   };
 
   switch (mode) {
@@ -289,6 +286,6 @@ float TableStatistics::calculate_added_null_values_for_joins(const float row_cou
     null_value_no += (1.f - predicate_column_distinct_count / col_stats->distinct_count()) * row_count;
   }
   return null_value_no;
-};
+}
 
 }  // namespace opossum
