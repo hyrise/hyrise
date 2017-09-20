@@ -106,7 +106,7 @@ class Expression : public std::enable_shared_from_this<Expression> {
    * Check semantics of the expression
    */
 
-  //
+  // Is arithmetic or logical operator
   bool is_operator() const;
 
   // Is +, -, * (arithmetic usage, not SELECT * FROM), /, %, ^
@@ -152,7 +152,7 @@ class Expression : public std::enable_shared_from_this<Expression> {
   /**
    * Returns the Expression as a string. Not meant to produce pretty outputs. Mostly intended to create column names
    * for SELECT lists with expressions: `SELECT a > 5 FROM ...`, here, the column name "a > 5" is generated using this
-   * column names need to be resolved and therefore need a @param input_node
+   * method. ColumnIDs need to be resolved to names and therefore need @param input_column_names.
    */
   std::string to_string(const std::vector<std::string>& input_column_names = {}) const;
 

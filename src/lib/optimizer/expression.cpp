@@ -169,6 +169,7 @@ bool Expression::is_logical_operator() const {
     case ExpressionType::Or:
     case ExpressionType::Between:
     case ExpressionType::Not:
+    case ExpressionType::Exists:
       return true;
     default:
       return false;
@@ -294,16 +295,18 @@ std::string Expression::to_string(const std::vector<std::string> &input_column_n
       break;
   }
 
-  Assert(is_operator(), "To generate expression string, Expression need to be operators or operands.");
+  Assert(is_operator(),
+         "To generate expression string, Expressions need to be operators or operands (which are already covered "
+         "further up).");
 
-  Assert(left_child(), "Operator needs left child operands.");
+  Assert(left_child(), "Operator needs left child.");
 
   std::string result;
   const auto lhs = left_child()->to_string(input_column_names);
   const auto &op = expression_type_to_operator_string.at(_type);
 
   if (is_binary_operator()) {
-    Assert(right_child(), "Binary Operator needs both operands.");
+    Assert(right_child(), "Binary Operator needs both children.");
 
     const auto rhs = right_child()->to_string(input_column_names);
     result = lhs + " " + op + " " + rhs;
@@ -313,6 +316,7 @@ std::string Expression::to_string(const std::vector<std::string> &input_column_n
     result = op + " " + lhs;
   }
 
+  // Don't put brackets around root expression, i.e. generate "5+(a*3)" and not "(5+(a*3))"
   if (_parent.lock()) {
     result = "(" + result + ")";
   }

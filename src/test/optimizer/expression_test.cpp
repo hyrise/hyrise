@@ -16,7 +16,7 @@ class ExpressionTest : public BaseTest {
   std::vector<std::string> _column_names = {"a", "b", "c", "d"};
 };
 
-TEST_F(ExpressionTest, ExpressionToString_Column) {
+TEST_F(ExpressionTest, ExpressionToStringColumn) {
   const auto expr = Expression::create_column(ColumnID{1});
   EXPECT_EQ(expr->to_string(_column_names), "b");
 }
@@ -27,7 +27,7 @@ TEST_F(ExpressionTest, ExpressionToStringSimpleArithmetics) {
   EXPECT_EQ(expr->to_string(_column_names), "a - 4");
 }
 
-TEST_F(ExpressionTest, ExpressionToString_NestedArithmetics) {
+TEST_F(ExpressionTest, ExpressionToStringNestedArithmetics) {
   auto expr = Expression::create_binary_operator(
       ExpressionType::Multiplication,
       Expression::create_binary_operator(ExpressionType::Subtraction, Expression::create_column(ColumnID{2}),
@@ -37,7 +37,7 @@ TEST_F(ExpressionTest, ExpressionToString_NestedArithmetics) {
   EXPECT_EQ(expr->to_string(_column_names), "(c - 4) * (d * \"c\")");
 }
 
-TEST_F(ExpressionTest, ExpressionToString_NestedLogical) {
+TEST_F(ExpressionTest, ExpressionToStringNestedLogical) {
   auto expr = Expression::create_unary_operator(
       ExpressionType::Not,
       Expression::create_binary_operator(
