@@ -191,18 +191,17 @@ std::shared_ptr<TableStatistics> TableStatistics::join_statistics(
    * This results in a join result row count of 1 + 2 = 3.
    */
 
-  // to prevent later checks for self joins the right column statistics is only accessed via new variable right_stats
-  auto right_stats = right_table_stats;
+  // For self joins right_table_stats should be this.
   if (mode == JoinMode::Self) {
-    right_stats = shared_from_this();
+    DebugAssert(this == *right_table_stats, "Self joins should pass the same table as right_table_stats again.");
   }
 
   // copy column statistics and calculate cross join row count
-  auto join_table_stats = join_statistics(right_stats, JoinMode::Cross);
+  auto join_table_stats = join_statistics(right_table_stats, JoinMode::Cross);
 
   // retrieve the two column statistics which are used by the join predicate
   auto &left_col_stats = _column_statistics[column_ids.first];
-  auto &right_col_stats = right_stats->_column_statistics[column_ids.second];
+  auto &right_col_stats = right_table_stats->_column_statistics[column_ids.second];
 
   auto stats_container = left_col_stats->estimate_selectivity_for_two_column_predicate(scan_type, right_col_stats);
 
@@ -212,11 +211,11 @@ std::shared_ptr<TableStatistics> TableStatistics::join_statistics(
   ColumnID new_right_column_id{static_cast<ColumnID::base_type>(_column_statistics.size() + column_ids.second)};
 
   // calculate how many null values need to be added to columns from the left table for right/outer joins
-  float left_null_value_no = right_col_stats->null_value_ratio() * right_stats->_row_count;
+  float left_null_value_no = right_col_stats->null_value_ratio() * right_table_stats->_row_count;
   if (right_col_stats->distinct_count() != 0.f) {
     left_null_value_no +=
         (1.f - stats_container.second_column_statistics->distinct_count() / right_col_stats->distinct_count()) *
-        right_stats->row_count();
+        right_table_stats->row_count();
   }
   // calculate how many null values need to be added to columns from the right table for left/outer joins
   float right_null_value_no = left_col_stats->null_value_ratio() * _row_count;
@@ -235,7 +234,7 @@ std::shared_ptr<TableStatistics> TableStatistics::join_statistics(
          col_itr != join_table_stats->_column_statistics.end(); ++col_itr) {
       // columns need to be copied before changed
       *col_itr = (*col_itr)->clone();
-      float column_null_value_no = (*col_itr)->null_value_ratio() * right_stats->_row_count;
+      float column_null_value_no = (*col_itr)->null_value_ratio() * right_table_stats->_row_count;
       float right_null_value_ratio = (column_null_value_no + right_null_value_no) / join_table_stats->row_count();
       (*col_itr)->set_null_value_ratio(right_null_value_ratio);
     }
