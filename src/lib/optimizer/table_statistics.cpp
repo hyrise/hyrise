@@ -212,38 +212,25 @@ std::shared_ptr<TableStatistics> TableStatistics::join_statistics(
   ColumnID new_right_column_id{static_cast<ColumnID::base_type>(_column_statistics.size() + column_ids.second)};
 
   // calculate how many null values need to be added to columns from the left table for right/outer joins
-  auto left_null_value_no = calculate_added_null_values_for_joins(
+  auto left_null_value_no = calculate_added_null_values_for_outer_join(
       right_table_stats->row_count(), right_col_stats, stats_container.second_column_statistics->distinct_count());
   // calculate how many null values need to be added to columns from the right table for left/outer joins
-  auto right_null_value_no = calculate_added_null_values_for_joins(row_count(), left_col_stats,
-                                                                   stats_container.column_statistics->distinct_count());
+  auto right_null_value_no = calculate_added_null_values_for_outer_join(
+      row_count(), left_col_stats, stats_container.column_statistics->distinct_count());
 
-  auto adjust_null_value_ratio_for_outer_join = [&](
-      float null_value_no, std::vector<std::shared_ptr<BaseColumnStatistics>>::iterator col_begin,
-      std::vector<std::shared_ptr<BaseColumnStatistics>>::iterator col_end, float row_count, float new_row_count) {
-    if (null_value_no == 0) {
-      return;
-    }
-    // adjust null value ratios in columns from the right table
-    for (auto col_itr = col_begin; col_itr != col_end; ++col_itr) {
-      // columns need to be copied before changed
-      *col_itr = (*col_itr)->clone();
-      float column_null_value_no = (*col_itr)->null_value_ratio() * row_count;
-      float right_null_value_ratio = (column_null_value_no + null_value_no) / new_row_count;
-      (*col_itr)->set_null_value_ratio(right_null_value_ratio);
-    }
-  };
-  // add null values to columns from the right table for left outer join
+  // prepare two adjust_null_value_ratio_for_outer_join calls, executed in the switch statement below
+
+  // a) add null values to columns from the right table for left outer join
   auto apply_left_outer_join = [&]() {
-    adjust_null_value_ratio_for_outer_join(
-        right_null_value_no, join_table_stats->_column_statistics.begin() + _column_statistics.size(),
-        join_table_stats->_column_statistics.end(), right_table_stats->row_count(), join_table_stats->row_count());
+    adjust_null_value_ratio_for_outer_join(join_table_stats->_column_statistics.begin() + _column_statistics.size(),
+                                           join_table_stats->_column_statistics.end(), right_table_stats->row_count(),
+                                           right_null_value_no, join_table_stats->row_count());
   };
-  // add null values to columns from the left table for right outer
+  // b) add null values to columns from the left table for right outer
   auto apply_right_outer_join = [&]() {
-    adjust_null_value_ratio_for_outer_join(left_null_value_no, join_table_stats->_column_statistics.begin(),
+    adjust_null_value_ratio_for_outer_join(join_table_stats->_column_statistics.begin(),
                                            join_table_stats->_column_statistics.begin() + _column_statistics.size(),
-                                           row_count(), join_table_stats->row_count());
+                                           row_count(), left_null_value_no, join_table_stats->row_count());
   };
 
   switch (mode) {
@@ -278,14 +265,31 @@ std::shared_ptr<TableStatistics> TableStatistics::join_statistics(
   return join_table_stats;
 }
 
-float TableStatistics::calculate_added_null_values_for_joins(const float row_count,
-                                                             const std::shared_ptr<BaseColumnStatistics> col_stats,
-                                                             const float predicate_column_distinct_count) const {
+float TableStatistics::calculate_added_null_values_for_outer_join(const float row_count,
+                                                                  const std::shared_ptr<BaseColumnStatistics> col_stats,
+                                                                  const float predicate_column_distinct_count) const {
   float null_value_no = col_stats->null_value_ratio() * row_count;
   if (col_stats->distinct_count() != 0.f) {
     null_value_no += (1.f - predicate_column_distinct_count / col_stats->distinct_count()) * row_count;
   }
   return null_value_no;
+}
+
+void TableStatistics::adjust_null_value_ratio_for_outer_join(
+    const std::vector<std::shared_ptr<BaseColumnStatistics>>::iterator col_begin,
+    const std::vector<std::shared_ptr<BaseColumnStatistics>>::iterator col_end, const float row_count,
+    const float null_value_no, const float new_row_count) {
+  if (null_value_no == 0) {
+    return;
+  }
+  // adjust null value ratios in columns from the right table
+  for (auto col_itr = col_begin; col_itr != col_end; ++col_itr) {
+    // columns need to be copied before changed, somebody else could use it
+    *col_itr = (*col_itr)->clone();
+    float column_null_value_no = (*col_itr)->null_value_ratio() * row_count;
+    float right_null_value_ratio = (column_null_value_no + null_value_no) / new_row_count;
+    (*col_itr)->set_null_value_ratio(right_null_value_ratio);
+  }
 }
 
 }  // namespace opossum
