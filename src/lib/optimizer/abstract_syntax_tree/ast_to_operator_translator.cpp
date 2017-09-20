@@ -145,7 +145,7 @@ std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::_translate_join_node(
   DebugAssert(static_cast<bool>(join_node->join_column_ids()), "Cannot translate Join without join column ids.");
   DebugAssert(static_cast<bool>(join_node->scan_type()), "Cannot translate Join without ScanType.");
 
-  if (*join_node->scan_type() == ScanType::OpEquals) {
+  if (*join_node->scan_type() == ScanType::OpEquals && join_node->join_mode() != JoinMode::Outer) {
     return std::make_shared<JoinHash>(input_left_operator, input_right_operator, join_node->join_mode(),
                                       *(join_node->join_column_ids()), *(join_node->scan_type()));
   }

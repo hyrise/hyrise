@@ -110,7 +110,7 @@ TEST_F(ASTToOperatorTranslatorTest, JoinNode) {
   join_node->set_right_child(stored_table_node_right);
   const auto op = ASTToOperatorTranslator::get().translate_node(join_node);
 
-  const auto join_op = std::dynamic_pointer_cast<JoinHash>(op);
+  const auto join_op = std::dynamic_pointer_cast<JoinNestedLoopA>(op);
   ASSERT_TRUE(join_op);
   EXPECT_EQ(join_op->column_ids(), join_node->join_column_ids());
   EXPECT_EQ(join_op->scan_type(), ScanType::OpEquals);
