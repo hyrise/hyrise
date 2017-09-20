@@ -184,7 +184,8 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
   **/
   void _join_runs(TableRange left_run, TableRange right_run, CompareResult compare_result) {
     size_t cluster_number = left_run.start.cluster;
-    if (_op == ScanType::OpEquals) {
+    switch (_op) {
+    case ScanType::OpEquals:
       if (compare_result == CompareResult::Equal) {
         _emit_combinations(cluster_number, left_run, right_run);
       } else if (compare_result == CompareResult::Less) {
@@ -196,7 +197,8 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
           _emit_left_null_combinations(cluster_number, right_run);
         }
       }
-    } else if (_op == ScanType::OpNotEquals) {
+      break;
+    case ScanType::OpNotEquals:
       if (compare_result == CompareResult::Greater) {
         _emit_combinations(cluster_number, left_run.start.to(_end_of_left_table), right_run);
       } else if (compare_result == CompareResult::Equal) {
@@ -205,27 +207,32 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
       } else if (compare_result == CompareResult::Less) {
         _emit_combinations(cluster_number, left_run, right_run.start.to(_end_of_right_table));
       }
-    } else if (_op == ScanType::OpGreaterThan) {
+      break;
+    case ScanType::OpGreaterThan:
       if (compare_result == CompareResult::Greater) {
         _emit_combinations(cluster_number, left_run.start.to(_end_of_left_table), right_run);
       } else if (compare_result == CompareResult::Equal) {
         _emit_combinations(cluster_number, left_run.end.to(_end_of_left_table), right_run);
       }
-    } else if (_op == ScanType::OpGreaterThanEquals) {
+      break;
+    case ScanType::OpGreaterThanEquals:
       if (compare_result == CompareResult::Greater || compare_result == CompareResult::Equal) {
         _emit_combinations(cluster_number, left_run.start.to(_end_of_left_table), right_run);
       }
-    } else if (_op == ScanType::OpLessThan) {
+      break;
+    case ScanType::OpLessThan:
       if (compare_result == CompareResult::Less) {
         _emit_combinations(cluster_number, left_run, right_run.start.to(_end_of_right_table));
       } else if (compare_result == CompareResult::Equal) {
         _emit_combinations(cluster_number, left_run, right_run.end.to(_end_of_right_table));
       }
-    } else if (_op == ScanType::OpLessThanEquals) {
+      break;
+    case ScanType::OpLessThanEquals:
       if (compare_result == CompareResult::Less || compare_result == CompareResult::Equal) {
         _emit_combinations(cluster_number, left_run, right_run.start.to(_end_of_right_table));
       }
-    } else {
+      break;
+    default:
       throw std::logic_error("Unknown ScanType");
     }
   }
