@@ -22,5 +22,5 @@ std::shared_ptr<AbstractOperator> GetTable::recreate(const std::vector<AllParame
   return std::make_shared<GetTable>(_name);
 }
 
-std::shared_ptr<const Table> GetTable::on_execute() { return StorageManager::get().get_table(_name); }
+std::shared_ptr<const Table> GetTable::_on_execute() { return StorageManager::get().get_table(_name); }
 }  // namespace opossum

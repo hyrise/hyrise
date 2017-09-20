@@ -71,7 +71,7 @@ std::shared_ptr<TableStatistics> TableStatistics::predicate_statistics(const Col
 
   // delegate prediction to corresponding column statistics
   if (value.type() == typeid(ColumnID)) {
-    const ColumnID value_column_id = get<ColumnID>(value);
+    const ColumnID value_column_id = boost::get<ColumnID>(value);
     auto old_right_column_stats = column_statistics(value_column_id);
 
     auto two_column_statistics_container =

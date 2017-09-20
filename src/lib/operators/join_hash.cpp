@@ -28,7 +28,7 @@ uint8_t JoinHash::num_in_tables() const { return 2; }
 
 uint8_t JoinHash::num_out_tables() const { return 1; }
 
-std::shared_ptr<const Table> JoinHash::on_execute() {
+std::shared_ptr<const Table> JoinHash::_on_execute() {
   std::shared_ptr<const AbstractOperator> build_operator;
   std::shared_ptr<const AbstractOperator> probe_operator;
   bool inputs_swapped;
@@ -65,8 +65,10 @@ std::shared_ptr<const Table> JoinHash::on_execute() {
   _impl = make_unique_by_column_types<AbstractReadOnlyOperatorImpl, JoinHashImpl>(
       build_input->column_type(build_column_id), probe_input->column_type(probe_column_id), build_operator,
       probe_operator, _mode, adjusted_column_ids, _scan_type, inputs_swapped);
-  return _impl->on_execute();
+  return _impl->_on_execute();
 }
+
+void JoinHash::_on_cleanup() { _impl.reset(); }
 
 // currently using 32bit Murmur
 using Hash = uint32_t;
@@ -138,7 +140,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
   struct ColumnBuilder : public ColumnVisitable {
     explicit ColumnBuilder(ChunkID chunk_id, std::shared_ptr<std::vector<ChunkOffset>> offsets = nullptr)
         : _chunk_id(chunk_id),
-          _materialized_chunk(std::make_shared<std::vector<std::pair<RowID, T>>>()),
+          _materialized_chunk(std::make_shared<pmr_vector<std::pair<RowID, T>>>()),
           _offsets(offsets) {}
 
     void handle_value_column(BaseColumn &column, std::shared_ptr<ColumnVisitableContext>) override {
@@ -199,7 +201,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
     }
 
     ChunkID _chunk_id;
-    std::shared_ptr<std::vector<std::pair<RowID, T>>> _materialized_chunk;
+    std::shared_ptr<pmr_vector<std::pair<RowID, T>>> _materialized_chunk;
     std::shared_ptr<std::vector<ChunkOffset>> _offsets;
   };
 
@@ -254,7 +256,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
         ColumnBuilder<T> builder = ColumnBuilder<T>(chunk_id);
         column->visit(builder);
 
-        auto const &materialized = static_cast<std::vector<std::pair<RowID, T>> &>(*builder._materialized_chunk);
+        auto const &materialized = static_cast<pmr_vector<std::pair<RowID, T>> &>(*builder._materialized_chunk);
 
         size_t row_id = output_offset;
 
@@ -524,7 +526,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
     }
   }
 
-  std::shared_ptr<const Table> on_execute() override {
+  std::shared_ptr<const Table> _on_execute() override {
     /*
     Preparing output table by adding columns from left table.
     */

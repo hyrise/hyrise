@@ -36,7 +36,7 @@ class JoinNestedLoopB : public AbstractJoinOperator {
   std::shared_ptr<AbstractOperator> recreate(const std::vector<AllParameterVariant>& args) const override;
 
  protected:
-  std::shared_ptr<const Table> on_execute() override;
+  std::shared_ptr<const Table> _on_execute() override;
 
   struct JoinContext : ColumnVisitableContext {
     JoinContext(std::shared_ptr<BaseColumn> column_left, std::shared_ptr<BaseColumn> column_right,
@@ -60,7 +60,7 @@ class JoinNestedLoopB : public AbstractJoinOperator {
     JoinNestedLoopBImpl<T>(JoinNestedLoopB& join_nested_loop_b);
 
     // AbstractOperatorImpl implementation
-    std::shared_ptr<const Table> on_execute() override;
+    std::shared_ptr<const Table> _on_execute() override;
 
     // ColumnVisitable implementation
     void handle_value_column(BaseColumn& column, std::shared_ptr<ColumnVisitableContext> context) override;

@@ -42,7 +42,7 @@ void OperatorTask::_add_tasks_from_operator(std::shared_ptr<AbstractOperator> op
 
 const std::shared_ptr<AbstractOperator>& OperatorTask::get_operator() const { return _op; }
 
-void OperatorTask::on_execute() {
+void OperatorTask::_on_execute() {
   auto context = _op->transaction_context();
 
   // Do not execute Operators in transaction marked as failed. Not doing so is crucial in order to make sure no other

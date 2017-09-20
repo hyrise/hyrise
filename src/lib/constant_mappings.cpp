@@ -40,7 +40,7 @@ const std::unordered_map<ExpressionType, std::string> expression_type_to_string 
     {ExpressionType::Literal, "Literal"},
     {ExpressionType::Star, "Star"},
     {ExpressionType::Placeholder, "Parameter"},
-    {ExpressionType::ColumnIdentifier, "ColumnIdentifier"},
+    {ExpressionType::Column, "Column"},
     {ExpressionType::Function, "Function"},
     {ExpressionType::Select, "Select"},
     /*Arithmetic operators*/

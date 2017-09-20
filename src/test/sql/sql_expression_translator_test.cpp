@@ -87,7 +87,7 @@ TEST_F(SQLExpressionTranslatorTest, ArithmeticExpression) {
   auto predicate = compile_where_expression(query);
 
   EXPECT_EQ(predicate->type(), ExpressionType::Equals);
-  EXPECT_EQ(predicate->left_child()->type(), ExpressionType::ColumnIdentifier);
+  EXPECT_EQ(predicate->left_child()->type(), ExpressionType::Column);
   EXPECT_EQ(predicate->right_child()->type(), ExpressionType::Addition);
 
   auto plus_expression = predicate->right_child();
@@ -100,8 +100,8 @@ TEST_F(SQLExpressionTranslatorTest, ExpressionColumnReference) {
   auto predicate = compile_where_expression(query);
 
   EXPECT_EQ(predicate->type(), ExpressionType::Equals);
-  EXPECT_EQ(predicate->left_child()->type(), ExpressionType::ColumnIdentifier);
-  EXPECT_EQ(predicate->right_child()->type(), ExpressionType::ColumnIdentifier);
+  EXPECT_EQ(predicate->left_child()->type(), ExpressionType::Column);
+  EXPECT_EQ(predicate->right_child()->type(), ExpressionType::Column);
 }
 
 TEST_F(SQLExpressionTranslatorTest, ExpressionString) {
@@ -109,7 +109,7 @@ TEST_F(SQLExpressionTranslatorTest, ExpressionString) {
   auto predicate = compile_where_expression(query);
 
   EXPECT_EQ(predicate->type(), ExpressionType::Equals);
-  EXPECT_EQ(predicate->left_child()->type(), ExpressionType::ColumnIdentifier);
+  EXPECT_EQ(predicate->left_child()->type(), ExpressionType::Column);
   EXPECT_EQ(predicate->right_child()->type(), ExpressionType::Literal);
 }
 
@@ -118,7 +118,7 @@ TEST_F(SQLExpressionTranslatorTest, ExpressionGreaterThan) {
   auto predicate = compile_where_expression(query);
 
   EXPECT_EQ(predicate->type(), ExpressionType::GreaterThan);
-  EXPECT_EQ(predicate->left_child()->type(), ExpressionType::ColumnIdentifier);
+  EXPECT_EQ(predicate->left_child()->type(), ExpressionType::Column);
   EXPECT_EQ(predicate->right_child()->type(), ExpressionType::Literal);
 }
 
@@ -127,7 +127,7 @@ TEST_F(SQLExpressionTranslatorTest, ExpressionLessThan) {
   auto predicate = compile_where_expression(query);
 
   EXPECT_EQ(predicate->type(), ExpressionType::LessThan);
-  EXPECT_EQ(predicate->left_child()->type(), ExpressionType::ColumnIdentifier);
+  EXPECT_EQ(predicate->left_child()->type(), ExpressionType::Column);
   EXPECT_EQ(predicate->right_child()->type(), ExpressionType::Literal);
 }
 
@@ -136,7 +136,7 @@ TEST_F(SQLExpressionTranslatorTest, ExpressionGreaterEqualsParameter) {
   auto predicate = compile_where_expression(query);
 
   EXPECT_EQ(predicate->type(), ExpressionType::GreaterThanEquals);
-  EXPECT_EQ(predicate->left_child()->type(), ExpressionType::ColumnIdentifier);
+  EXPECT_EQ(predicate->left_child()->type(), ExpressionType::Column);
   EXPECT_EQ(predicate->right_child()->type(), ExpressionType::Placeholder);
 }
 
@@ -145,7 +145,7 @@ TEST_F(SQLExpressionTranslatorTest, ExpressionLessEqualsParameter) {
   auto predicate = compile_where_expression(query);
 
   EXPECT_EQ(predicate->type(), ExpressionType::LessThanEquals);
-  EXPECT_EQ(predicate->left_child()->type(), ExpressionType::ColumnIdentifier);
+  EXPECT_EQ(predicate->left_child()->type(), ExpressionType::Column);
   EXPECT_EQ(predicate->right_child()->type(), ExpressionType::Placeholder);
 }
 
@@ -169,13 +169,13 @@ TEST_F(SQLExpressionTranslatorTest, ExpressionFunction) {
   auto &first = expressions.at(0);
   auto &second = expressions.at(1);
 
-  EXPECT_EQ(first->type(), ExpressionType::ColumnIdentifier);
+  EXPECT_EQ(first->type(), ExpressionType::Column);
   EXPECT_EQ(first->left_child(), nullptr);
   EXPECT_EQ(first->right_child(), nullptr);
 
   EXPECT_EQ(second->type(), ExpressionType::Function);
   ASSERT_EQ(second->expression_list().size(), 1u);
-  EXPECT_EQ(second->expression_list().at(0)->type(), ExpressionType::ColumnIdentifier);
+  EXPECT_EQ(second->expression_list().at(0)->type(), ExpressionType::Column);
 }
 
 TEST_F(SQLExpressionTranslatorTest, ExpressionComplexFunction) {
@@ -190,8 +190,8 @@ TEST_F(SQLExpressionTranslatorTest, ExpressionComplexFunction) {
 
   auto function_expression = first->expression_list().at(0);
   EXPECT_EQ(function_expression->type(), ExpressionType::Multiplication);
-  EXPECT_EQ(function_expression->left_child()->type(), ExpressionType::ColumnIdentifier);
-  EXPECT_EQ(function_expression->right_child()->type(), ExpressionType::ColumnIdentifier);
+  EXPECT_EQ(function_expression->left_child()->type(), ExpressionType::Column);
+  EXPECT_EQ(function_expression->right_child()->type(), ExpressionType::Column);
 }
 
 TEST_F(SQLExpressionTranslatorTest, ExpressionStringConcatenation) {
@@ -212,7 +212,7 @@ TEST_F(SQLExpressionTranslatorTest, DISABLED_ExpressionIn) {
   auto expression = compile_where_expression(query);
 
   EXPECT_EQ(expression->type(), ExpressionType::In);
-  EXPECT_EQ(expression->left_child()->type(), ExpressionType::ColumnIdentifier);
+  EXPECT_EQ(expression->left_child()->type(), ExpressionType::Column);
   EXPECT_EQ(expression->right_child()->type(), ExpressionType::Select);
 }
 

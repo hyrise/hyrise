@@ -19,16 +19,6 @@ namespace opossum {
 
 // ReferenceColumn is a specific column type that stores all its values as position list of a referenced column
 class ReferenceColumn : public BaseColumn {
- protected:
-  // After an operator finishes, its shared_ptr reference to the table gets deleted. Thus, the ReferenceColumns need
-  // their own shared_ptrs
-  const std::shared_ptr<const Table> _referenced_table;
-
-  const ColumnID _referenced_column_id;
-
-  // The position list can be shared amongst multiple columns
-  const std::shared_ptr<const PosList> _pos_list;
-
  public:
   // creates a reference column
   // the parameters specify the positions and the referenced column
@@ -41,8 +31,8 @@ class ReferenceColumn : public BaseColumn {
 
   // return generated vector of all values
   template <typename T>
-  const tbb::concurrent_vector<T> materialize_values() const {
-    tbb::concurrent_vector<T> values;
+  const pmr_concurrent_vector<T> materialize_values() const {
+    pmr_concurrent_vector<T> values(_pos_list->get_allocator());
     values.reserve(_pos_list->size());
 
     std::map<ChunkID, std::shared_ptr<ValueColumn<T>>> value_columns;
@@ -130,6 +120,16 @@ class ReferenceColumn : public BaseColumn {
   // copies one of its own values to a different ValueColumn - mainly used for materialization
   // we cannot always use the materialize method below because sort results might come from different BaseColumns
   void copy_value_to_value_column(BaseColumn &, ChunkOffset) const override;
+
+ protected:
+  // After an operator finishes, its shared_ptr reference to the table gets deleted. Thus, the ReferenceColumns need
+  // their own shared_ptrs
+  const std::shared_ptr<const Table> _referenced_table;
+
+  const ColumnID _referenced_column_id;
+
+  // The position list can be shared amongst multiple columns
+  const std::shared_ptr<const PosList> _pos_list;
 };
 
 }  // namespace opossum

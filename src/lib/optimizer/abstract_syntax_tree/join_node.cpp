@@ -50,21 +50,21 @@ const std::vector<ColumnID> &JoinNode::output_column_id_to_input_column_id() con
 
 const std::vector<std::string> &JoinNode::output_column_names() const { return _output_column_names; }
 
-optional<ColumnID> JoinNode::find_column_id_by_column_identifier_name(
-    const ColumnIdentifierName &column_identifier_name) const {
-  DebugAssert(!!left_child() && !!right_child(), "JoinNode must have two children.");
+optional<ColumnID> JoinNode::find_column_id_by_named_column_reference(
+    const NamedColumnReference &named_column_reference) const {
+  DebugAssert(left_child() && right_child(), "JoinNode must have two children.");
 
   optional<ColumnID> left_column_id;
   optional<ColumnID> right_column_id;
 
   // If there is no qualifying table name, search both children.
-  if (!column_identifier_name.table_name) {
-    left_column_id = left_child()->find_column_id_by_column_identifier_name(column_identifier_name);
-    right_column_id = right_child()->find_column_id_by_column_identifier_name(column_identifier_name);
+  if (!named_column_reference.table_name) {
+    left_column_id = left_child()->find_column_id_by_named_column_reference(named_column_reference);
+    right_column_id = right_child()->find_column_id_by_named_column_reference(named_column_reference);
   } else {
     // Otherwise only search a child if it knows that qualifier.
-    auto left_knows_table = left_child()->knows_table(*column_identifier_name.table_name);
-    auto right_knows_table = right_child()->knows_table(*column_identifier_name.table_name);
+    auto left_knows_table = left_child()->knows_table(*named_column_reference.table_name);
+    auto right_knows_table = right_child()->knows_table(*named_column_reference.table_name);
 
     // If neither input table knows the table name, return.
     if (!left_knows_table && !right_knows_table) {
@@ -72,12 +72,12 @@ optional<ColumnID> JoinNode::find_column_id_by_column_identifier_name(
     }
 
     // There must not be two tables with the same qualifying name.
-    Assert(left_knows_table ^ right_knows_table, "Table name " + *column_identifier_name.table_name + " is ambiguous.");
+    Assert(left_knows_table ^ right_knows_table, "Table name " + *named_column_reference.table_name + " is ambiguous.");
 
     if (left_knows_table) {
-      left_column_id = left_child()->find_column_id_by_column_identifier_name(column_identifier_name);
+      left_column_id = left_child()->find_column_id_by_named_column_reference(named_column_reference);
     } else {
-      right_column_id = right_child()->find_column_id_by_column_identifier_name(column_identifier_name);
+      right_column_id = right_child()->find_column_id_by_named_column_reference(named_column_reference);
     }
   }
 
@@ -87,7 +87,7 @@ optional<ColumnID> JoinNode::find_column_id_by_column_identifier_name(
   }
 
   Assert(static_cast<bool>(left_column_id) ^ static_cast<bool>(right_column_id),
-         "Column name " + column_identifier_name.column_name + " is ambiguous.");
+         "Column name " + named_column_reference.column_name + " is ambiguous.");
 
   ColumnID input_column_id;
   ColumnID output_column_id;
@@ -107,12 +107,12 @@ optional<ColumnID> JoinNode::find_column_id_by_column_identifier_name(
 }
 
 bool JoinNode::knows_table(const std::string &table_name) const {
-  DebugAssert(!!left_child() && !!right_child(), "JoinNode must have two children.");
+  DebugAssert(left_child() && right_child(), "JoinNode must have two children.");
   return left_child()->knows_table(table_name) || right_child()->knows_table(table_name);
 }
 
 std::vector<ColumnID> JoinNode::get_output_column_ids_for_table(const std::string &table_name) const {
-  DebugAssert(!!left_child() && !!right_child(), "JoinNode must have two children.");
+  DebugAssert(left_child() && right_child(), "JoinNode must have two children.");
 
   auto left_knows_table = left_child()->knows_table(table_name);
   auto right_knows_table = right_child()->knows_table(table_name);

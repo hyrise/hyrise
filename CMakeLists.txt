@@ -16,11 +16,20 @@ set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -march=native")
 # Dependencies
 find_package(Numa)
 find_package(Tbb REQUIRED)
+find_package(Readline REQUIRED)
 
 # Include sub-CMakeLists.txt
 add_subdirectory(third_party/)
 add_subdirectory(src)
 add_subdirectory(third_party/googletest EXCLUDE_FROM_ALL)
+
+if(${NUMA_FOUND})
+    set(PGASUS_WITH_TASKING OFF CACHE BOOL "" FORCE)
+    set(PGASUS_REPLACE_MALLOC OFF CACHE BOOL "" FORCE)
+    set(PGASUS_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+    set(PGASUS_BUILD_DOCUMENTATION OFF CACHE BOOL "" FORCE)
+    add_subdirectory(third_party/pgasus)
+endif()
 
 # Useful for printing all c++ files in a directory:
 # find . -type f -name "*.cpp" -o -name "*.hpp" | cut -c 3- | sort

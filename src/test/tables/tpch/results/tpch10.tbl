@@ -1,0 +1,3 @@
+c_custkey|c_name|revenue|c_acctbal|c_phone|n_name|c_address|c_comment
+int|string|double|float|string|string|string|string
+0|Max Mustermann|1.9|10.0|555-123-4567|Germany|Berlin|-

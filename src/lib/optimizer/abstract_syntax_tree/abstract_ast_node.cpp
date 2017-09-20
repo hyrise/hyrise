@@ -15,6 +15,8 @@ namespace opossum {
 
 AbstractASTNode::AbstractASTNode(ASTNodeType node_type) : _type(node_type) {}
 
+bool AbstractASTNode::is_optimizable() const { return true; }
+
 std::shared_ptr<AbstractASTNode> AbstractASTNode::parent() const { return _parent.lock(); }
 
 void AbstractASTNode::clear_parent() {
@@ -87,7 +89,7 @@ const std::vector<std::string> &AbstractASTNode::output_column_names() const {
    * This function has to be overwritten if columns or their order are in any way redefined by this Node.
    * Examples include Projections, Aggregates, and Joins.
    */
-  DebugAssert(!!_left_child, "Node has no left child and therefore must override this function.");
+  DebugAssert(_left_child, "Node has no left child and therefore must override this function.");
   return _left_child->output_column_names();
 }
 
@@ -96,34 +98,35 @@ const std::vector<ColumnID> &AbstractASTNode::output_column_id_to_input_column_i
    * This function has to be overwritten if columns or their order are in any way redefined by this Node.
    * Examples include Projections, Aggregates, and Joins.
    */
-  DebugAssert(!!_left_child, "Node has no left child and therefore must override this function.");
+  DebugAssert(_left_child, "Node has no left child and therefore must override this function.");
   return _left_child->output_column_id_to_input_column_id();
 }
 
 size_t AbstractASTNode::output_col_count() const { return output_column_names().size(); }
 
-ColumnID AbstractASTNode::get_column_id_by_column_identifier_name(
-    const ColumnIdentifierName &column_identifier_name) const {
-  const auto column_id = find_column_id_by_column_identifier_name(column_identifier_name);
-  DebugAssert(!!column_id, "ColumnIdentifierName could not be resolved.");
+ColumnID AbstractASTNode::get_column_id_by_named_column_reference(
+    const NamedColumnReference &named_column_reference) const {
+  const auto column_id = find_column_id_by_named_column_reference(named_column_reference);
+  DebugAssert(column_id,
+              std::string("NamedColumnReference ") + named_column_reference.column_name + " could not be resolved.");
   return *column_id;
 }
 
-optional<ColumnID> AbstractASTNode::find_column_id_by_column_identifier_name(
-    const ColumnIdentifierName &column_identifier_name) const {
+optional<ColumnID> AbstractASTNode::find_column_id_by_named_column_reference(
+    const NamedColumnReference &named_column_reference) const {
   /**
    * This function has to be overwritten if columns or their order are in any way redefined by this Node.
    * Examples include Projections, Aggregates, and Joins.
    */
-  DebugAssert(!!_left_child, "Node has no left child and therefore must override this function.");
-  return _left_child->find_column_id_by_column_identifier_name(column_identifier_name);
+  DebugAssert(_left_child, "Node has no left child and therefore must override this function.");
+  return _left_child->find_column_id_by_named_column_reference(named_column_reference);
 }
 
 bool AbstractASTNode::knows_table(const std::string &table_name) const {
   /**
    * This function might have to be overwritten if a node can handle different input tables, e.g. a JOIN.
    */
-  DebugAssert(!!_left_child, "Node has no left child and therefore must override this function.");
+  DebugAssert(_left_child, "Node has no left child and therefore must override this function.");
   return _left_child->knows_table(table_name);
 }
 
@@ -131,7 +134,7 @@ std::vector<ColumnID> AbstractASTNode::get_output_column_ids_for_table(const std
   /**
    * This function might have to be overwritten if a node can handle different input tables, e.g. a JOIN.
    */
-  DebugAssert(!!_left_child, "Node has no left child and therefore must override this function.");
+  DebugAssert(_left_child, "Node has no left child and therefore must override this function.");
 
   if (!_left_child->knows_table(table_name)) {
     return {};

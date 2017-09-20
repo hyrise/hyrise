@@ -16,8 +16,8 @@
 namespace {
 
 // Writes the content of the vector to the ofstream
-template <typename T>
-void _export_values(std::ofstream& ofstream, const std::vector<T>& values);
+template <typename T, typename Alloc>
+void _export_values(std::ofstream& ofstream, const std::vector<T, Alloc>& values);
 
 /* Writes the given strings to the ofstream. First an array of string lengths is written. After that the string are
  * written without any gaps between them.
@@ -26,8 +26,8 @@ void _export_values(std::ofstream& ofstream, const std::vector<T>& values);
  * this size.
  * This approach is indeed faster than a dynamic approach with a stringstream.
  */
-template <typename T = opossum::StringLength>
-void _export_string_values(std::ofstream& ofstream, const std::vector<std::string>& values) {
+template <typename T = opossum::StringLength, typename Alloc>
+void _export_string_values(std::ofstream& ofstream, const std::vector<std::string, Alloc>& values) {
   std::vector<T> string_lengths(values.size());
   size_t total_length = 0;
 
@@ -53,19 +53,23 @@ void _export_string_values(std::ofstream& ofstream, const std::vector<std::strin
   _export_values(ofstream, buffer);
 }
 
-template <typename T>
-void _export_values(std::ofstream& ofstream, const std::vector<T>& values) {
+template <typename T, typename Alloc>
+void _export_values(std::ofstream& ofstream, const std::vector<T, Alloc>& values) {
   ofstream.write(reinterpret_cast<const char*>(values.data()), values.size() * sizeof(T));
 }
 
 // specialized implementation for string values
 template <>
+void _export_values(std::ofstream& ofstream, const opossum::pmr_vector<std::string>& values) {
+  _export_string_values(ofstream, values);
+}
+template <>
 void _export_values(std::ofstream& ofstream, const std::vector<std::string>& values) {
   _export_string_values(ofstream, values);
 }
 
-template <typename T>
-void _export_values(std::ofstream& ofstream, const tbb::concurrent_vector<T>& values) {
+template <typename T, typename Alloc>
+void _export_values(std::ofstream& ofstream, const tbb::concurrent_vector<T, Alloc>& values) {
   // TODO(all): could be faster if we directly write the values into the stream without prior conversion
   const auto value_block = std::vector<T>{values.begin(), values.end()};
   ofstream.write(reinterpret_cast<const char*>(value_block.data()), value_block.size() * sizeof(T));
@@ -73,7 +77,7 @@ void _export_values(std::ofstream& ofstream, const tbb::concurrent_vector<T>& va
 
 // specialized implementation for string values
 template <>
-void _export_values(std::ofstream& ofstream, const tbb::concurrent_vector<std::string>& values) {
+void _export_values(std::ofstream& ofstream, const opossum::pmr_concurrent_vector<std::string>& values) {
   // TODO(all): could be faster if we directly write the values into the stream without prior conversion
   const auto value_block = std::vector<std::string>{values.begin(), values.end()};
   _export_string_values(ofstream, value_block);
@@ -97,7 +101,7 @@ uint8_t ExportBinary::num_in_tables() const { return 1; }
 
 uint8_t ExportBinary::num_out_tables() const { return 1; }
 
-std::shared_ptr<const Table> ExportBinary::on_execute() {
+std::shared_ptr<const Table> ExportBinary::_on_execute() {
   std::ofstream ofstream;
   ofstream.exceptions(std::ofstream::failbit | std::ofstream::badbit);
   ofstream.open(_filename, std::ios::binary);

@@ -31,11 +31,14 @@ std::shared_ptr<AbstractOperator> Sort::recreate(const std::vector<AllParameterV
   return std::make_shared<Sort>(_input_left->recreate(args), _column_id, _order_by_mode, _output_chunk_size);
 }
 
-std::shared_ptr<const Table> Sort::on_execute() {
+std::shared_ptr<const Table> Sort::_on_execute() {
   _impl = make_unique_by_column_type<AbstractReadOnlyOperatorImpl, SortImpl>(
-      input_table_left()->column_type(_column_id), input_table_left(), _column_id, _order_by_mode, _output_chunk_size);
-  return _impl->on_execute();
+      _input_table_left()->column_type(_column_id), _input_table_left(), _column_id, _order_by_mode,
+      _output_chunk_size);
+  return _impl->_on_execute();
 }
+
+void Sort::_on_cleanup() { _impl.reset(); }
 
 // This class fills the temporary structure to be sorted. Therefore the column to sort by is visited by this class, so
 // the values can be copied in the temporary row_id_value vector.

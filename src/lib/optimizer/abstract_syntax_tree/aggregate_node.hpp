@@ -32,8 +32,8 @@ class AggregateNode : public AbstractASTNode {
   const std::vector<std::string>& output_column_names() const override;
   const std::vector<ColumnID>& output_column_id_to_input_column_id() const override;
 
-  optional<ColumnID> find_column_id_by_column_identifier_name(
-      const ColumnIdentifierName& column_identifier_name) const override;
+  optional<ColumnID> find_column_id_by_named_column_reference(
+      const NamedColumnReference& named_column_reference) const override;
 
   // @{
   /**

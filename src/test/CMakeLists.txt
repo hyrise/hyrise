@@ -68,6 +68,7 @@ set(
     storage/composite_group_key_index_test.cpp
     storage/dictionary_column_test.cpp
     storage/group_key_index_test.cpp
+    storage/iterables_test.cpp
     storage/multi_column_index_test.cpp
     storage/reference_column_test.cpp
     storage/single_column_index_test.cpp
@@ -80,6 +81,7 @@ set(
     tasks/chunk_compression_task_test.cpp
     tasks/operator_task_test.cpp
     utils/cuckoo_hashtable_test.cpp
+    utils/numa_memory_resource_test.cpp
 )
 
 set (

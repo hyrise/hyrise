@@ -1,4 +1,4 @@
-FROM ubuntu:16.10
+FROM ubuntu:17.04
 ENV DEBIAN_FRONTEND noninteractive
 RUN apt-get update \
     && apt-get install -y sudo cmake libboost-all-dev clang-format gcovr python2.7 gcc-6 clang git build-essential llvm libtbb-dev bash-completion man \
@@ -7,3 +7,4 @@ RUN apt-get update \
     && ln -sf /usr/bin/llvm-symbolizer-3.8 /usr/bin/llvm-symbolizer
 
 ENV OPOSSUM_HEADLESS_SETUP=true
+

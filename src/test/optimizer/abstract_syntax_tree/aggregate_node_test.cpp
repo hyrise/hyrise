@@ -27,14 +27,12 @@ class AggregateNodeTest : public BaseTest {
         std::vector<std::shared_ptr<Expression>>{
             Expression::create_aggregate_function(
                 AggregateFunction::Sum,
-                {Expression::create_binary_operator(ExpressionType::Addition,
-                                                    Expression::create_column_identifier(ColumnID{0}),
-                                                    Expression::create_column_identifier(ColumnID{1}))}),
+                {Expression::create_binary_operator(ExpressionType::Addition, Expression::create_column(ColumnID{0}),
+                                                    Expression::create_column(ColumnID{1}))}),
             Expression::create_aggregate_function(
                 AggregateFunction::Sum,
-                {Expression::create_binary_operator(ExpressionType::Addition,
-                                                    Expression::create_column_identifier(ColumnID{0}),
-                                                    Expression::create_column_identifier(ColumnID{2}))},
+                {Expression::create_binary_operator(ExpressionType::Addition, Expression::create_column(ColumnID{0}),
+                                                    Expression::create_column(ColumnID{2}))},
                 {std::string("some_sum")})},
         std::vector<ColumnID>{ColumnID{0}, ColumnID{2}});
     _aggregate_node->set_left_child(_stored_table_node);
@@ -47,15 +45,15 @@ class AggregateNodeTest : public BaseTest {
 };
 
 TEST_F(AggregateNodeTest, ColumnIdForColumnIdentifier) {
-  EXPECT_EQ(_aggregate_node->get_column_id_by_column_identifier_name({"a", nullopt}), 0);
-  EXPECT_EQ(_aggregate_node->get_column_id_by_column_identifier_name({"a", {"t_a"}}), 0);
-  EXPECT_EQ(_aggregate_node->find_column_id_by_column_identifier_name({"b", nullopt}), nullopt);
-  EXPECT_EQ(_aggregate_node->find_column_id_by_column_identifier_name({"b", {"t_a"}}), nullopt);
-  EXPECT_EQ(_aggregate_node->get_column_id_by_column_identifier_name({"c", nullopt}), 1);
-  EXPECT_EQ(_aggregate_node->get_column_id_by_column_identifier_name({"c", {"t_a"}}), 1);
+  EXPECT_EQ(_aggregate_node->get_column_id_by_named_column_reference({"a", nullopt}), 0);
+  EXPECT_EQ(_aggregate_node->get_column_id_by_named_column_reference({"a", {"t_a"}}), 0);
+  EXPECT_EQ(_aggregate_node->find_column_id_by_named_column_reference({"b", nullopt}), nullopt);
+  EXPECT_EQ(_aggregate_node->find_column_id_by_named_column_reference({"b", {"t_a"}}), nullopt);
+  EXPECT_EQ(_aggregate_node->get_column_id_by_named_column_reference({"c", nullopt}), 1);
+  EXPECT_EQ(_aggregate_node->get_column_id_by_named_column_reference({"c", {"t_a"}}), 1);
 
-  EXPECT_EQ(_aggregate_node->get_column_id_by_column_identifier_name({"some_sum", nullopt}), 3);
-  EXPECT_EQ(_aggregate_node->find_column_id_by_column_identifier_name({"some_sum", {"t_a"}}), nullopt);
+  EXPECT_EQ(_aggregate_node->get_column_id_by_named_column_reference({"some_sum", nullopt}), 3);
+  EXPECT_EQ(_aggregate_node->find_column_id_by_named_column_reference({"some_sum", {"t_a"}}), nullopt);
 }
 
 TEST_F(AggregateNodeTest, OriginalGroupByColumnIdsInOutputColumnIds) {
@@ -74,37 +72,34 @@ TEST_F(AggregateNodeTest, OriginalGroupByColumnIdsInOutputColumnIds) {
 }
 
 TEST_F(AggregateNodeTest, ColumnIdForExpression) {
-  EXPECT_EQ(_aggregate_node->get_column_id_for_expression(Expression::create_column_identifier(ColumnID{0})), 0);
+  EXPECT_EQ(_aggregate_node->get_column_id_for_expression(Expression::create_column(ColumnID{0})), 0);
 
   // "a+b" is not allowed
-  EXPECT_THROW(_aggregate_node->get_column_id_for_expression(Expression::create_binary_operator(
-                   ExpressionType::Addition, Expression::create_column_identifier(ColumnID{0}),
-                   Expression::create_column_identifier(ColumnID{1}))),
-               std::logic_error);
+  EXPECT_THROW(
+      _aggregate_node->get_column_id_for_expression(Expression::create_binary_operator(
+          ExpressionType::Addition, Expression::create_column(ColumnID{0}), Expression::create_column(ColumnID{1}))),
+      std::logic_error);
 
   // There is SUM(a+b)
   EXPECT_EQ(_aggregate_node->get_column_id_for_expression(Expression::create_aggregate_function(
                 AggregateFunction::Sum,
-                {Expression::create_binary_operator(ExpressionType::Addition,
-                                                    Expression::create_column_identifier(ColumnID{0}),
-                                                    Expression::create_column_identifier(ColumnID{1}))})),
+                {Expression::create_binary_operator(ExpressionType::Addition, Expression::create_column(ColumnID{0}),
+                                                    Expression::create_column(ColumnID{1}))})),
             2);
 
   // But there is no SUM(b+c)
   EXPECT_EQ(_aggregate_node->find_column_id_for_expression(Expression::create_aggregate_function(
                 AggregateFunction::Sum,
-                {Expression::create_binary_operator(ExpressionType::Addition,
-                                                    Expression::create_column_identifier(ColumnID{1}),
-                                                    Expression::create_column_identifier(ColumnID{2}))})),
+                {Expression::create_binary_operator(ExpressionType::Addition, Expression::create_column(ColumnID{1}),
+                                                    Expression::create_column(ColumnID{2}))})),
             nullopt);
 
   // TODO(mp): This expression is currently not found because the alias is missing.
   // This has to be fixed once expressions do not have an alias anymore.
   EXPECT_EQ(_aggregate_node->find_column_id_for_expression(Expression::create_aggregate_function(
                 AggregateFunction::Sum,
-                {Expression::create_binary_operator(ExpressionType::Addition,
-                                                    Expression::create_column_identifier(ColumnID{0}),
-                                                    Expression::create_column_identifier(ColumnID{2}))})),
+                {Expression::create_binary_operator(ExpressionType::Addition, Expression::create_column(ColumnID{0}),
+                                                    Expression::create_column(ColumnID{2}))})),
             nullopt);
 }
 

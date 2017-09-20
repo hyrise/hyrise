@@ -20,29 +20,28 @@ namespace opossum {
 
 Expression::Expression(ExpressionType type) : _type(type) {}
 
-std::shared_ptr<Expression> Expression::create_column_identifier(const ColumnID column_id,
-                                                                 const optional<std::string> &alias) {
-  auto expression = std::make_shared<Expression>(ExpressionType::ColumnIdentifier);
+std::shared_ptr<Expression> Expression::create_column(const ColumnID column_id, const optional<std::string> &alias) {
+  auto expression = std::make_shared<Expression>(ExpressionType::Column);
   expression->_column_id = column_id;
   expression->_alias = alias;
 
   return expression;
 }
 
-std::vector<std::shared_ptr<Expression>> Expression::create_column_identifiers(
-    const std::vector<ColumnID> &column_ids, const optional<std::vector<std::string>> &aliases) {
+std::vector<std::shared_ptr<Expression>> Expression::create_columns(const std::vector<ColumnID> &column_ids,
+                                                                    const optional<std::vector<std::string>> &aliases) {
   std::vector<std::shared_ptr<Expression>> column_references;
   column_references.reserve(column_ids.size());
 
   if (!aliases) {
     for (const auto column_id : column_ids) {
-      column_references.emplace_back(create_column_identifier(column_id));
+      column_references.emplace_back(create_column(column_id));
     }
   } else {
     DebugAssert(column_ids.size() == (*aliases).size(), "There must be the same number of aliases as ColumnIDs");
 
     for (auto column_index = 0u; column_index < column_ids.size(); ++column_index) {
-      column_references.emplace_back(create_column_identifier(column_ids[column_index], (*aliases)[column_index]));
+      column_references.emplace_back(create_column(column_ids[column_index], (*aliases)[column_index]));
     }
   }
 
@@ -163,9 +162,9 @@ bool Expression::is_binary_operator() const {
   }
 }
 
-bool Expression::is_operand() const {
-  return _type == ExpressionType::Literal || _type == ExpressionType::ColumnIdentifier;
-}
+bool Expression::is_null_literal() const { return _type == ExpressionType::Literal && _value && is_null(*_value); }
+
+bool Expression::is_operand() const { return _type == ExpressionType::Literal || _type == ExpressionType::Column; }
 
 const std::string Expression::description() const {
   std::ostringstream desc;
@@ -178,7 +177,7 @@ const std::string Expression::description() const {
     case ExpressionType::Literal:
       desc << "[" << value() << "]";
       break;
-    case ExpressionType::ColumnIdentifier:
+    case ExpressionType::Column:
       desc << "[ColumnID: " << column_id() << "]";
       break;
     case ExpressionType::Function:
@@ -224,20 +223,25 @@ ValuePlaceholder Expression::value_placeholder() const {
   return *_value_placeholder;
 }
 
-std::string Expression::to_string(const std::shared_ptr<AbstractASTNode> &input_node) const {
-  std::string column_name;
+std::string Expression::to_string(const std::vector<std::string> &input_column_names) const {
   switch (_type) {
     case ExpressionType::Literal:
-      return type_cast<std::string>(value());
-    case ExpressionType::ColumnIdentifier:
-      if (input_node != nullptr) {
-        DebugAssert(column_id() < input_node->output_column_names().size(), "_column_id out of range");
-        return input_node->output_column_names()[column_id()];
+      if (is_null_literal()) {
+        return std::string("NULL");
       }
-      return boost::lexical_cast<std::string>(column_id());
+      return type_cast<std::string>(value());
+    case ExpressionType::Column:
+      if (!input_column_names.empty()) {
+        DebugAssert(column_id() < input_column_names.size(),
+                    std::string("_column_id ") + std::to_string(column_id()) + " out of range");
+        return input_column_names[column_id()];
+      }
+      return std::string("ColumnID #" + std::to_string(column_id()));
     case ExpressionType::Function:
       return aggregate_function_to_string.left.at(aggregate_function()) + "(" +
-             _expression_list[0]->to_string(input_node) + ")";
+             _expression_list[0]->to_string(input_column_names) + ")";
+    case ExpressionType::Star:
+      return std::string("*");
     default:
       // Handled further down.
       break;
@@ -247,8 +251,8 @@ std::string Expression::to_string(const std::shared_ptr<AbstractASTNode> &input_
   Assert(is_arithmetic_operator(), "To generate expression string, Expression need to be operators or operands.");
   Assert(static_cast<bool>(left_child()) && static_cast<bool>(right_child()), "Operator needs both operands.");
 
-  return left_child()->to_string(input_node) + expression_type_to_operator_string.at(_type) +
-         right_child()->to_string(input_node);
+  return left_child()->to_string(input_column_names) + expression_type_to_operator_string.at(_type) +
+         right_child()->to_string(input_column_names);
 }
 
 const std::vector<std::shared_ptr<Expression>> &Expression::expression_list() const { return _expression_list; }
@@ -280,5 +284,7 @@ bool Expression::operator==(const Expression &rhs) const {
   return _type == rhs._type && _value == rhs._value && _table_name == rhs._table_name && _column_id == rhs._column_id &&
          _alias == rhs._alias;
 }
+
+void Expression::set_alias(const std::string &alias) { _alias = alias; }
 
 }  // namespace opossum

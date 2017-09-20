@@ -21,12 +21,12 @@ class ProjectionNodeTest : public BaseTest {
 
     // SELECT c, a, b AS alias_for_b, b+c AS some_addition, a+c [...]
     _projection_node = std::make_shared<ProjectionNode>(std::vector<std::shared_ptr<Expression>>{
-        Expression::create_column_identifier(ColumnID{2}), Expression::create_column_identifier(ColumnID{0}),
-        Expression::create_column_identifier(ColumnID{1}, {"alias_for_b"}),
-        Expression::create_binary_operator(ExpressionType::Addition, Expression::create_column_identifier(ColumnID{1}),
-                                           Expression::create_column_identifier(ColumnID{2}), {"some_addition"}),
-        Expression::create_binary_operator(ExpressionType::Addition, Expression::create_column_identifier(ColumnID{0}),
-                                           Expression::create_column_identifier(ColumnID{2}))});
+        Expression::create_column(ColumnID{2}), Expression::create_column(ColumnID{0}),
+        Expression::create_column(ColumnID{1}, {"alias_for_b"}),
+        Expression::create_binary_operator(ExpressionType::Addition, Expression::create_column(ColumnID{1}),
+                                           Expression::create_column(ColumnID{2}), {"some_addition"}),
+        Expression::create_binary_operator(ExpressionType::Addition, Expression::create_column(ColumnID{0}),
+                                           Expression::create_column(ColumnID{2}))});
     _projection_node->set_left_child(_stored_table_node);
   }
 
@@ -37,16 +37,17 @@ class ProjectionNodeTest : public BaseTest {
 };
 
 TEST_F(ProjectionNodeTest, ColumnIdForColumnIdentifier) {
-  EXPECT_EQ(_projection_node->get_column_id_by_column_identifier_name({"c", nullopt}), 0);
-  EXPECT_EQ(_projection_node->get_column_id_by_column_identifier_name({"c", {"t_a"}}), 0);
-  EXPECT_EQ(_projection_node->get_column_id_by_column_identifier_name({"a", nullopt}), 1);
-  EXPECT_EQ(_projection_node->find_column_id_by_column_identifier_name({"b", nullopt}), nullopt);
-  EXPECT_EQ(_projection_node->find_column_id_by_column_identifier_name({"b", {"t_a"}}), nullopt);
-  EXPECT_EQ(_projection_node->get_column_id_by_column_identifier_name({"alias_for_b", nullopt}), 2);
-  EXPECT_EQ(_projection_node->find_column_id_by_column_identifier_name({"alias_for_b", {"t_a"}}), nullopt);
-  EXPECT_EQ(_projection_node->get_column_id_by_column_identifier_name({"some_addition", nullopt}), 3);
-  EXPECT_EQ(_projection_node->find_column_id_by_column_identifier_name({"some_addition", {"t_a"}}), nullopt);
-  EXPECT_EQ(_projection_node->find_column_id_by_column_identifier_name({"some_addition", {"t_b"}}), nullopt);
+  EXPECT_EQ(_projection_node->get_column_id_by_named_column_reference({"c", nullopt}), 0);
+  EXPECT_EQ(_projection_node->get_column_id_by_named_column_reference({"c", {"t_a"}}), 0);
+  EXPECT_EQ(_projection_node->get_column_id_by_named_column_reference({"a", nullopt}), 1);
+  EXPECT_EQ(_projection_node->find_column_id_by_named_column_reference({"b", nullopt}), nullopt);
+  EXPECT_EQ(_projection_node->find_column_id_by_named_column_reference({"b", {"t_a"}}), nullopt);
+  EXPECT_EQ(_projection_node->get_column_id_by_named_column_reference({"alias_for_b", nullopt}), 2);
+  EXPECT_EQ(_projection_node->find_column_id_by_named_column_reference({"alias_for_b", {"t_a"}}), nullopt);
+  EXPECT_EQ(_projection_node->get_column_id_by_named_column_reference({"some_addition", nullopt}), 3);
+  EXPECT_EQ(_projection_node->find_column_id_by_named_column_reference({"some_addition", {"t_a"}}), nullopt);
+  EXPECT_EQ(_projection_node->find_column_id_by_named_column_reference({"some_addition", {"t_b"}}), nullopt);
+  EXPECT_EQ(_projection_node->get_column_id_by_named_column_reference({"a+c", nullopt}), 4);
 }
 
 }  // namespace opossum

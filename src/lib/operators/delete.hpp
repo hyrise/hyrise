@@ -35,7 +35,7 @@ class Delete : public AbstractReadWriteOperator {
   void finish_commit() override;
 
  protected:
-  std::shared_ptr<const Table> on_execute(std::shared_ptr<TransactionContext> context) override;
+  std::shared_ptr<const Table> _on_execute(std::shared_ptr<TransactionContext> context) override;
 
  private:
   /**

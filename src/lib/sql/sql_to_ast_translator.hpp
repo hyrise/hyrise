@@ -26,9 +26,24 @@ class AggregateNode;
  * An AST can either be handed to the optimizer, once it is added, or it can be directly turned into Operators by
  * the ASTToOperatorTranslator.
  *
- * This translator resolves column names to indices. For further information check the blog post:
+ *
+ * ## ColumnID Resolution
+ *
+ * This translator resolves column names as used by SQL to ColumnIDs. For high level information check the blog post:
  * https://medium.com/hyrise/the-gentle-art-of-referring-to-columns-634f057bd810
  *
+ * Most of the lifting for this is done in the overrides of
+ * AbstractASTNode::{get, find}_column_id_by_named_column_reference() which Nodes that add, remove or rearrange columns
+ * have to have an implementation of (Projection, Join, ...).
+ * The handling of ColumnIdentifierName::table_name is also done in these overrides. StoredTableNode handles table
+ * ALIASes and names (`SELECT t1.a, alias_t2.b FROM t1, t2 AS alias_t2`), ProjectionNode ALIASes for Expressions
+ * (`SELECT a+b AS s [...]`) and AggregateNode ALIASes for AggregateFunctions(`SELECT SUM(a) AS s [...]`)
+ *
+ * To resolve Table wildcards such as `SELECT t1.* FROM t1, [...]` AbstractASTNode::get_output_column_ids_for_table()
+ * is used.
+ *
+ *
+ * ## Usage
  * Refer to sql_to_result_test.cpp for an example of the SQLToASTTranslator in proper action.
  * It is used as a Singleton via SQLToASTTranslator::get().
  *
@@ -78,6 +93,12 @@ class SQLToASTTranslator final : public boost::noncopyable {
   std::shared_ptr<AbstractASTNode> _translate_limit(const hsql::LimitDescription& limit,
                                                     const std::shared_ptr<AbstractASTNode>& input_node);
 
+  std::shared_ptr<AbstractASTNode> _translate_insert(const hsql::InsertStatement& insert);
+
+  std::shared_ptr<AbstractASTNode> _translate_delete(const hsql::DeleteStatement& del);
+
+  std::shared_ptr<AbstractASTNode> _translate_update(const hsql::UpdateStatement& update);
+
   /**
    * Helper function to avoid code duplication for WHERE and HAVING
    */
@@ -85,6 +106,8 @@ class SQLToASTTranslator final : public boost::noncopyable {
       const hsql::Expr& hsql_expr, bool allow_function_columns,
       const std::function<ColumnID(const hsql::Expr&)>& resolve_column,
       const std::shared_ptr<AbstractASTNode>& input_node) const;
+
+  std::shared_ptr<AbstractASTNode> _translate_show(const hsql::ShowStatement& show_statement);
 
  private:
   SQLToASTTranslator() = default;

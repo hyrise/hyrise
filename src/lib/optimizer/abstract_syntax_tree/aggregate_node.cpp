@@ -71,7 +71,7 @@ std::string AggregateNode::description() const {
 }
 
 void AggregateNode::_on_child_changed() {
-  DebugAssert(!!left_child(), "AggregateNode needs a child.");
+  DebugAssert(left_child(), "AggregateNode needs a child.");
 
   _output_column_names.clear();
   _output_column_id_to_input_column_id.clear();
@@ -104,7 +104,7 @@ void AggregateNode::_on_child_changed() {
        * This might result in multiple output columns with the same name, but we accept that.
        * Other DBs behave similarly (e.g. MySQL).
        */
-      column_name = aggregate_expression->to_string(left_child());
+      column_name = aggregate_expression->to_string(left_child()->output_column_names());
     }
 
     _output_column_names.emplace_back(column_name);
@@ -118,25 +118,25 @@ const std::vector<ColumnID>& AggregateNode::output_column_id_to_input_column_id(
   return _output_column_id_to_input_column_id;
 }
 
-optional<ColumnID> AggregateNode::find_column_id_by_column_identifier_name(
-    const ColumnIdentifierName& column_identifier_name) const {
-  DebugAssert(!!left_child(), "AggregateNode needs a child.");
+optional<ColumnID> AggregateNode::find_column_id_by_named_column_reference(
+    const NamedColumnReference& named_column_reference) const {
+  DebugAssert(left_child(), "AggregateNode needs a child.");
 
-  // TODO(mp) Handle column_identifier_name having a table that is this node's alias
+  // TODO(mp) Handle named_column_reference having a table that is this node's alias
 
   /*
-   * Search for ColumnIdentifierName in Aggregate columns ALIASes, if the column_identifier_name has no table.
+   * Search for NamedColumnReference in Aggregate columns ALIASes, if the named_column_reference has no table.
    * These columns are created by the Aggregate Operator, so we have to look through them here.
    */
   optional<ColumnID> column_id_aggregate;
-  if (!column_identifier_name.table_name) {
+  if (!named_column_reference.table_name) {
     for (auto aggregate_idx = 0u; aggregate_idx < _aggregate_expressions.size(); aggregate_idx++) {
       const auto& aggregate_expression = _aggregate_expressions[aggregate_idx];
 
       // If AggregateDefinition has no alias, column_name will not match.
-      if (column_identifier_name.column_name == aggregate_expression->alias()) {
+      if (named_column_reference.column_name == aggregate_expression->alias()) {
         // Check that we haven't found a match yet.
-        Assert(!column_id_aggregate, "Column name " + column_identifier_name.column_name + " is ambiguous.");
+        Assert(!column_id_aggregate, "Column name " + named_column_reference.column_name + " is ambiguous.");
         // Aggregate columns come after Group By columns in the Aggregate's output
         column_id_aggregate = ColumnID{static_cast<ColumnID::base_type>(aggregate_idx + _groupby_column_ids.size())};
       }
@@ -144,12 +144,12 @@ optional<ColumnID> AggregateNode::find_column_id_by_column_identifier_name(
   }
 
   /*
-   * Search for ColumnIdentifierName in Group By columns.
+   * Search for NamedColumnReference in Group By columns.
    * These columns have been created by another node. Since Aggregates can only have a single child node,
-   * we just have to check the left_child for the ColumnIdentifierName.
+   * we just have to check the left_child for the NamedColumnReference.
    */
   optional<ColumnID> column_id_groupby;
-  const auto column_id_child = left_child()->find_column_id_by_column_identifier_name(column_identifier_name);
+  const auto column_id_child = left_child()->find_column_id_by_named_column_reference(named_column_reference);
   if (column_id_child) {
     const auto iter = std::find(_groupby_column_ids.begin(), _groupby_column_ids.end(), *column_id_child);
     if (iter != _groupby_column_ids.end()) {
@@ -159,7 +159,7 @@ optional<ColumnID> AggregateNode::find_column_id_by_column_identifier_name(
 
   // Max one can be set, both not being set is fine, as we are in a find_* method
   Assert(!column_id_aggregate || !column_id_groupby,
-         "Column name " + column_identifier_name.column_name + " is ambiguous.");
+         "Column name " + named_column_reference.column_name + " is ambiguous.");
 
   if (column_id_aggregate) {
     return column_id_aggregate;
@@ -171,7 +171,7 @@ optional<ColumnID> AggregateNode::find_column_id_by_column_identifier_name(
 
 ColumnID AggregateNode::get_column_id_for_expression(const std::shared_ptr<Expression>& expression) const {
   const auto column_id = find_column_id_for_expression(expression);
-  DebugAssert(!!column_id, "Expression could not be resolved.");
+  DebugAssert(column_id, "Expression could not be resolved.");
   return *column_id;
 }
 
@@ -183,7 +183,7 @@ optional<ColumnID> AggregateNode::find_column_id_for_expression(const std::share
    * Not checking ambiguity allows perfectly valid queries like:
    *  SELECT a, MAX(b), MAX(b) FROM t GROUP BY a HAVING MAX(b) > 0
    */
-  if (expression->type() == ExpressionType::ColumnIdentifier) {
+  if (expression->type() == ExpressionType::Column) {
     const auto iter = std::find_if(_groupby_column_ids.begin(), _groupby_column_ids.end(),
                                    [&](const auto& rhs) { return expression->column_id() == rhs; });
 
@@ -193,7 +193,7 @@ optional<ColumnID> AggregateNode::find_column_id_for_expression(const std::share
     }
   } else if (expression->type() == ExpressionType::Function) {
     const auto iter = std::find_if(_aggregate_expressions.begin(), _aggregate_expressions.end(), [&](const auto& rhs) {
-      DebugAssert(!!rhs, "Aggregate expressions can not be nullptr!");
+      DebugAssert(rhs, "Aggregate expressions can not be nullptr!");
       return *expression == *rhs;
     });
 
@@ -210,7 +210,7 @@ optional<ColumnID> AggregateNode::find_column_id_for_expression(const std::share
 }
 
 std::vector<ColumnID> AggregateNode::get_output_column_ids_for_table(const std::string& table_name) const {
-  DebugAssert(!!left_child(), "AggregateNode needs a child.");
+  DebugAssert(left_child(), "AggregateNode needs a child.");
 
   if (!left_child()->knows_table(table_name)) {
     return {};

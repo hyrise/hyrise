@@ -40,7 +40,7 @@ TEST_F(AbstractSyntaxTreeTest, ParentTest) {
   ASSERT_EQ(predicate_node->parent(), nullptr);
 
   const std::vector<ColumnID> column_ids = {ColumnID{0}, ColumnID{1}};
-  const auto& expressions = Expression::create_column_identifiers(column_ids);
+  const auto& expressions = Expression::create_columns(column_ids);
   const auto projection_node = std::make_shared<ProjectionNode>(expressions);
   projection_node->set_left_child(predicate_node);
 
@@ -93,7 +93,7 @@ TEST_F(AbstractSyntaxTreeTest, ChainSameNodesTest) {
   ASSERT_EQ(predicate_node_2->parent(), nullptr);
 
   const std::vector<ColumnID> column_ids = {ColumnID{0}, ColumnID{1}};
-  const auto& expressions = Expression::create_column_identifiers(column_ids);
+  const auto& expressions = Expression::create_columns(column_ids);
   const auto projection_node = std::make_shared<ProjectionNode>(expressions);
   projection_node->set_left_child(predicate_node_2);
 
