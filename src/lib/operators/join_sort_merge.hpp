@@ -37,6 +37,7 @@ class JoinSortMerge : public AbstractJoinOperator {
                 const JoinMode mode, const std::pair<ColumnID, ColumnID>& column_ids, const ScanType op);
 
   std::shared_ptr<const Table> _on_execute() override;
+  void _on_cleanup() override;
   std::shared_ptr<AbstractOperator> recreate(const std::vector<AllParameterVariant> &args) const override;
   const std::string name() const override;
   uint8_t num_in_tables() const override;

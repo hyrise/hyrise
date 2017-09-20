@@ -59,6 +59,8 @@ std::shared_ptr<AbstractOperator> JoinSortMerge::recreate(const std::vector<AllP
 
 std::shared_ptr<const Table> JoinSortMerge::_on_execute() { return _impl->_on_execute(); }
 
+void JoinSortMerge::_on_cleanup() { _impl.reset(); }
+
 const std::string JoinSortMerge::name() const { return "JoinSortMerge"; }
 
 uint8_t JoinSortMerge::num_in_tables() const { return 2u; }
