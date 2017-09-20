@@ -187,7 +187,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
     switch (_op) {
     case ScanType::OpEquals:
       if (compare_result == CompareResult::Equal) {
-        _emit_combinations(cluster_number, left_run, right_run);
+        _emit_all_combinations(cluster_number, left_run, right_run);
       } else if (compare_result == CompareResult::Less) {
         if (_mode == JoinMode::Left || _mode == JoinMode::Outer) {
           _emit_right_null_combinations(cluster_number, left_run);
@@ -200,36 +200,36 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
       break;
     case ScanType::OpNotEquals:
       if (compare_result == CompareResult::Greater) {
-        _emit_combinations(cluster_number, left_run.start.to(_end_of_left_table), right_run);
+        _emit_all_combinations(cluster_number, left_run.start.to(_end_of_left_table), right_run);
       } else if (compare_result == CompareResult::Equal) {
-        _emit_combinations(cluster_number, left_run.end.to(_end_of_left_table), right_run);
-        _emit_combinations(cluster_number, left_run, right_run.end.to(_end_of_right_table));
+        _emit_all_combinations(cluster_number, left_run.end.to(_end_of_left_table), right_run);
+        _emit_all_combinations(cluster_number, left_run, right_run.end.to(_end_of_right_table));
       } else if (compare_result == CompareResult::Less) {
-        _emit_combinations(cluster_number, left_run, right_run.start.to(_end_of_right_table));
+        _emit_all_combinations(cluster_number, left_run, right_run.start.to(_end_of_right_table));
       }
       break;
     case ScanType::OpGreaterThan:
       if (compare_result == CompareResult::Greater) {
-        _emit_combinations(cluster_number, left_run.start.to(_end_of_left_table), right_run);
+        _emit_all_combinations(cluster_number, left_run.start.to(_end_of_left_table), right_run);
       } else if (compare_result == CompareResult::Equal) {
-        _emit_combinations(cluster_number, left_run.end.to(_end_of_left_table), right_run);
+        _emit_all_combinations(cluster_number, left_run.end.to(_end_of_left_table), right_run);
       }
       break;
     case ScanType::OpGreaterThanEquals:
       if (compare_result == CompareResult::Greater || compare_result == CompareResult::Equal) {
-        _emit_combinations(cluster_number, left_run.start.to(_end_of_left_table), right_run);
+        _emit_all_combinations(cluster_number, left_run.start.to(_end_of_left_table), right_run);
       }
       break;
     case ScanType::OpLessThan:
       if (compare_result == CompareResult::Less) {
-        _emit_combinations(cluster_number, left_run, right_run.start.to(_end_of_right_table));
+        _emit_all_combinations(cluster_number, left_run, right_run.start.to(_end_of_right_table));
       } else if (compare_result == CompareResult::Equal) {
-        _emit_combinations(cluster_number, left_run, right_run.end.to(_end_of_right_table));
+        _emit_all_combinations(cluster_number, left_run, right_run.end.to(_end_of_right_table));
       }
       break;
     case ScanType::OpLessThanEquals:
       if (compare_result == CompareResult::Less || compare_result == CompareResult::Equal) {
-        _emit_combinations(cluster_number, left_run, right_run.start.to(_end_of_right_table));
+        _emit_all_combinations(cluster_number, left_run, right_run.start.to(_end_of_right_table));
       }
       break;
     default:
@@ -240,7 +240,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
   /**
   * Emits a combination of a lhs row id and a rhs row id to the join output.
   **/
-  void _emit_combination(size_t output_cluster, const RowID& left, const RowID& right) {
+  void _emit_combination(size_t output_cluster, RowID left, RowID right) {
     _output_pos_lists_left[output_cluster]->push_back(left);
     _output_pos_lists_right[output_cluster]->push_back(right);
   }
@@ -249,9 +249,9 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
   * Emits all the combinations of row ids from the left table range and the right table range to the join output.
   * I.e. the cross product of the ranges is emitted.
   **/
-  void _emit_combinations(size_t output_cluster, TableRange left_range, TableRange right_range) {
-    left_range.for_every_row_id(_sorted_left_table, [&](RowID& left_row_id) {
-      right_range.for_every_row_id(_sorted_right_table, [&](RowID& right_row_id) {
+  void _emit_all_combinations(size_t output_cluster, TableRange left_range, TableRange right_range) {
+    left_range.for_every_row_id(_sorted_left_table, [&](RowID left_row_id) {
+      right_range.for_every_row_id(_sorted_right_table, [&](RowID right_row_id) {
         this->_emit_combination(output_cluster, left_row_id, right_row_id);
       });
     });
@@ -261,7 +261,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
   * Emits all combinations of row ids from the left table range and a NULL value on the right side to the join output.
   **/
   void _emit_right_null_combinations(size_t output_cluster, TableRange left_range) {
-    left_range.for_every_row_id(_sorted_left_table, [&](RowID& left_row_id) {
+    left_range.for_every_row_id(_sorted_left_table, [&](RowID left_row_id) {
       this->_emit_combination(output_cluster, left_row_id, NULL_ROW_ID);
     });
   }
@@ -270,7 +270,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
   * Emits all combinations of row ids from the right table range and a NULL value on the left side to the join output.
   **/
   void _emit_left_null_combinations(size_t output_cluster, TableRange right_range) {
-    right_range.for_every_row_id(_sorted_right_table, [&](RowID& right_row_id) {
+    right_range.for_every_row_id(_sorted_right_table, [&](RowID right_row_id) {
       this->_emit_combination(output_cluster, NULL_ROW_ID, right_row_id);
     });
   }
@@ -284,13 +284,12 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
       return 0;
     }
 
-    auto& value = (*values)[start_index].value;
-    size_t offset = 1;
-    while (start_index + offset < values->size() && (*values)[start_index + offset].value == value) {
-      ++offset;
-    }
+    auto start_position = values->begin() + start_index;
+    auto result = std::upper_bound(start_position, values->end(), *start_position, [](const auto& a, const auto& b) {
+      return a.value < b.value;
+    });
 
-    return offset;
+    return result - start_position;
   }
 
   /**
