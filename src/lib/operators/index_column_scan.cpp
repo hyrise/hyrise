@@ -197,7 +197,7 @@ class IndexColumnScan::IndexColumnScanImpl : public AbstractReadOnlyOperatorImpl
           if (output->get_chunk(ChunkID{0}).size() == 0) {
             output->get_chunk(ChunkID{0}) = std::move(chunk_out);
           } else if (chunk_out.size() > 0) {
-            output->add_chunk(std::move(chunk_out));
+            output->emplace_chunk(std::move(chunk_out));
           }
         }
       }));

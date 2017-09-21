@@ -140,7 +140,7 @@ std::shared_ptr<const Table> TableScan::_on_execute() {
       if (_output_table->get_chunk(ChunkID{0}).size() == 0) {
         _output_table->get_chunk(ChunkID{0}) = std::move(chunk_out);
       } else if (chunk_out.size() > 0) {
-        _output_table->add_chunk(std::move(chunk_out));
+        _output_table->emplace_chunk(std::move(chunk_out));
       }
     });
 

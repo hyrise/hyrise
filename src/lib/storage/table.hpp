@@ -54,7 +54,7 @@ class Table : private Noncopyable {
   const Chunk &get_chunk(ChunkID chunk_id) const;
 
   // adds a chunk to the table
-  void add_chunk(Chunk chunk);
+  void emplace_chunk(Chunk chunk);
 
   // Returns a list of all column names.
   const std::vector<std::string> &column_names() const;
