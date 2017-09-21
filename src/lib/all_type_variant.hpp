@@ -85,8 +85,15 @@ static const auto NULL_VALUE = AllTypeVariant{};
 
 /**
  * @defgroup Macros for explicitly instantiating template classes
+ *
+ * In order to improve compile times, we explicitly instantiate
+ * template classes which are going to be used with column types.
+ * Because we do not want any redundant lists of column types spread
+ * across the code base, we use EXPLICITLY_INSTANTIATE_COLUMN_TYPES.
+ *
  * @{
  */
+
 #define EXPLICIT_INSTANTIATION(r, template_class, type) \
   template class template_class<type>;
 
