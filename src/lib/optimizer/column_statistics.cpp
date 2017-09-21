@@ -16,7 +16,6 @@
 #include "table_statistics.hpp"
 #include "type_cast.hpp"
 #include "types.hpp"
-#include "utils/explicit_template_instantiation.hpp"
 
 namespace opossum {
 

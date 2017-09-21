@@ -11,7 +11,6 @@
 
 #include "type_cast.hpp"
 #include "utils/assert.hpp"
-#include "utils/explicit_template_instantiation.hpp"
 
 namespace opossum {
 
