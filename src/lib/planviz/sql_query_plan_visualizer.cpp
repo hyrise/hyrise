@@ -46,7 +46,7 @@ void SQLQueryPlanVisualizer::_visualize_subtree(const std::shared_ptr<const Abst
   if (op->get_output()) {
     file << "\\n"
          << op->performance_data().walltime_ns << " ns\",penwidth="
-         << static_cast<int>(std::fmax(1, std::ceil(std::log10(op->performance_data().walltime_ns) / 2)));
+         << static_cast<uint8_t>(std::fmax(1, std::ceil(std::log10(op->performance_data().walltime_ns) / 2)));
   } else {
     file << "\"";
   }
@@ -71,7 +71,7 @@ void SQLQueryPlanVisualizer::_visualize_dataflow(const std::shared_ptr<const Abs
   if (const auto &output = from->get_output()) {
     // the input operator was executed, print the number of rows
     file << "[label=\" " << std::to_string(output->row_count()) << " row(s)\""
-         << ",penwidth=" << static_cast<int>(std::fmax(1, std::ceil(std::log10(output->row_count()) / 2))) << "]";
+         << ",penwidth=" << static_cast<uint8_t>(std::fmax(1, std::ceil(std::log10(output->row_count()) / 2))) << "]";
   }
 
   file << std::endl;

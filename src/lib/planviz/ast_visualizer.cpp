@@ -59,15 +59,15 @@ void ASTVisualizer::_visualize_subtree(const std::shared_ptr<AbstractASTNode> &n
 void ASTVisualizer::_visualize_dataflow(const std::shared_ptr<AbstractASTNode> &from,
                                         const std::shared_ptr<AbstractASTNode> &to, std::ofstream &file) {
   float row_count, row_percentage = 100.0f;
-  int penwidth;
+  uint8_t pen_width;
 
   try {
     row_count = from->get_statistics()->row_count();
-    penwidth = std::fmax(1, std::ceil(std::log10(row_count) / 2));
+    pen_width = std::fmax(1, std::ceil(std::log10(row_count) / 2));
   } catch (...) {
     // statistics don't exist for this edge
     row_count = NAN;
-    penwidth = 1;
+    pen_width = 1;
   }
 
   if (from->left_child()) {
@@ -78,6 +78,7 @@ void ASTVisualizer::_visualize_dataflow(const std::shared_ptr<AbstractASTNode> &
       }
       row_percentage = 100 * row_count / input_count;
     } catch (...) {
+      // Couldn't create statistics. Using default value of 100%
     }
   }
 
@@ -87,7 +88,7 @@ void ASTVisualizer::_visualize_dataflow(const std::shared_ptr<AbstractASTNode> &
   } else {
     file << "no est.";
   }
-  file << "\",penwidth=" << static_cast<int>(penwidth) << "]" << std::endl;
+  file << "\",penwidth=" << pen_width << "]" << std::endl;
 }
 
 }  // namespace opossum
