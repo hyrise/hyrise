@@ -14,6 +14,7 @@
 #include <memory>
 #include <string>
 #include <vector>
+#include <regex>
 
 #include "SQLParser.h"
 #include "concurrency/transaction_manager.hpp"
@@ -297,13 +298,25 @@ void Console::out(const std::string& output, bool console_print) {
   if (console_print) {
     _out << output;
   }
-  _log << output;
-  _log.flush();
+  log(output);
 }
 
 void Console::out(std::shared_ptr<const Table> table) {
   Print::print(table, 0, _out);
   Print::print(table, 0, _log);
+}
+
+void Console::log(const std::string& output) {
+  auto sanitize = [](const std::string & input) {
+    // matches any characters that need to be escaped in RegEx except for '|'
+    std::regex specialChars { R"([-[\]{}()*+?.,\^$#\s])" };
+    return std::regex_replace( input, specialChars, R"(\$&)" );
+  };
+
+  // Remove coloring commands and escape sequences before writing to logfile
+  std::regex expression { "(" + sanitize("\e[31m|\e[32m|\e[0m|\001|\002") + ")" };
+  _log << std::regex_replace(output, expression, "");
+  _log.flush();
 }
 
 // Command functions

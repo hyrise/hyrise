@@ -68,6 +68,13 @@ class Console {
   void out(std::shared_ptr<const Table> table);
 
   /*
+   * Prints to the log_file, removing coloring commands and escape sequences.
+   *
+   * @param output The text that should be printed.
+   */
+  void log(const std::string &output);
+
+  /*
    * Handler for SIGINT signal (caused by CTRL-C key sequence).
    * Resets the Console state and clears the current line.
    */
