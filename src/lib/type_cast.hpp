@@ -24,7 +24,7 @@ constexpr auto index_of(Sequence const &sequence, T const &element) {
   return decltype(size)::value;
 }
 
-}  // namespace
+}  // namespace detail
 
 // Retrieves the value stored in an AllTypeVariant without conversion
 template <typename T>

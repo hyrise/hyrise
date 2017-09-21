@@ -63,7 +63,7 @@ using TypesAsMplVector = decltype(hana::to<hana::ext::boost::mpl::vector_tag>(ty
 // Creates boost::variant from mpl vector
 using AllTypeVariant = typename boost::make_variant_over<detail::TypesAsMplVector>::type;
 
-} // namespace
+} // namespace detail
 
 static constexpr auto types = detail::types;
 static constexpr auto types_including_null = detail::types_including_null;
