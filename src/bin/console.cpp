@@ -49,6 +49,22 @@ std::string current_timestamp() {
   oss << std::put_time(&tm, "%Y-%m-%d %H:%M:%S");
   return oss.str();
 }
+
+// Removes the coloring commands (e.g. '\e[31m') from input, to have a clean logfile.
+// If remove_rl_codes_only is true, then it only removes the Readline specific escape sequences '\001' and '\002'
+std::string remove_coloring(const std::string& input, bool remove_rl_codes_only = false) {
+  // matches any characters that need to be escaped in RegEx except for '|'
+  std::regex specialChars { R"([-[\]{}()*+?.,\^$#\s])" };
+  std::string sequences = "\e[31m|\e[32m|\e[0m|\001|\002";
+  if (remove_rl_codes_only) {
+    sequences = "\001|\002";
+  }
+  std::string sanitized_sequences = std::regex_replace( sequences, specialChars, R"(\$&)" );
+
+  // Remove coloring commands and escape sequences before writing to logfile
+  std::regex expression { "(" + sanitized_sequences + ")" };
+  return std::regex_replace(input, expression, "");
+}
 }  // namespace
 
 namespace opossum {
@@ -129,7 +145,7 @@ int Console::_eval(const std::string& input) {
   }
 
   // Dump command to logfile, and to the Console if input comes from a script file
-  out(_prompt + input + "\n", _verbose);
+  out(remove_coloring(_prompt + input + "\n", true), _verbose);
 
   // Check if we already are in multiline input
   if (_multiline_input.empty()) {
@@ -298,25 +314,13 @@ void Console::out(const std::string& output, bool console_print) {
   if (console_print) {
     _out << output;
   }
-  log(output);
+  _log << remove_coloring(output);
+  _log.flush();
 }
 
 void Console::out(std::shared_ptr<const Table> table) {
   Print::print(table, 0, _out);
   Print::print(table, 0, _log);
-}
-
-void Console::log(const std::string& output) {
-  auto sanitize = [](const std::string & input) {
-    // matches any characters that need to be escaped in RegEx except for '|'
-    std::regex specialChars { R"([-[\]{}()*+?.,\^$#\s])" };
-    return std::regex_replace( input, specialChars, R"(\$&)" );
-  };
-
-  // Remove coloring commands and escape sequences before writing to logfile
-  std::regex expression { "(" + sanitize("\e[31m|\e[32m|\e[0m|\001|\002") + ")" };
-  _log << std::regex_replace(output, expression, "");
-  _log.flush();
 }
 
 // Command functions
