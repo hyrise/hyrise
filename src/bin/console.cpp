@@ -145,6 +145,7 @@ int Console::_eval(const std::string& input) {
   }
 
   // Dump command to logfile, and to the Console if input comes from a script file
+  // Also remove Readline specific escape sequences ('\001' and '\002') to make it look normal
   out(remove_coloring(_prompt + input + "\n", true), _verbose);
 
   // Check if we already are in multiline input
@@ -314,6 +315,7 @@ void Console::out(const std::string& output, bool console_print) {
   if (console_print) {
     _out << output;
   }
+  // Remove coloring commands like '\e[32m' when writing to logfile
   _log << remove_coloring(output);
   _log.flush();
 }
