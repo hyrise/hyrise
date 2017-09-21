@@ -50,10 +50,15 @@ static constexpr auto type_strings = hana::make_tuple("int", "long", "float", "d
  */
 static constexpr auto column_types_as_tuples = hana::zip(type_strings, types);
 
-auto to_pair = [](auto tuple) { return hana::make_pair(hana::at_c<0>(tuple), hana::at_c<1>(tuple)); };  // NOLINT
+struct to_pair {
+  template <typename T>
+  constexpr auto operator()(T tuple) {
+    return hana::make_pair(hana::at_c<0>(tuple), hana::at_c<1>(tuple));  // NOLINT
+  }
+};
 
 // Converts the tuples into pairs
-static constexpr auto column_types = hana::transform(column_types_as_tuples, to_pair);  // NOLINT
+static constexpr auto column_types = hana::transform(column_types_as_tuples, to_pair{});  // NOLINT
 
 // Prepends NullValue to tuple of types
 static constexpr auto types_including_null = hana::prepend(types, hana::type_c<NullValue>);
