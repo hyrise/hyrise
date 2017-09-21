@@ -83,8 +83,7 @@ void ASTVisualizer::_visualize_dataflow(const std::shared_ptr<AbstractASTNode> &
 
   file << reinterpret_cast<uintptr_t>(from.get()) << " -> " << reinterpret_cast<uintptr_t>(to.get()) << "[label=\" ";
   if (!isnan(row_count)) {
-    file << std::setprecision(1)  // TODO make this work
-         << std::to_string(row_count) << " row(s) | " << std::to_string(row_percentage) << "% estd.";
+    file << std::fixed << std::setprecision(1) << row_count << " row(s) | " << row_percentage << "% estd.";
   } else {
     file << "no est.";
   }
