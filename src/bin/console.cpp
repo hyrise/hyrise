@@ -20,8 +20,12 @@
 #include "operators/get_table.hpp"
 #include "operators/import_csv.hpp"
 #include "operators/print.hpp"
+#include "optimizer/abstract_syntax_tree/ast_to_operator_translator.hpp"
+#include "optimizer/optimizer.hpp"
+#include "planviz/ast_visualizer.hpp"
 #include "planviz/sql_query_plan_visualizer.hpp"
 #include "sql/sql_planner.hpp"
+#include "sql/sql_to_ast_translator.hpp"
 #include "storage/storage_manager.hpp"
 #include "tpcc/tpcc_table_generator.hpp"
 #include "utils/load_table.hpp"
@@ -217,20 +221,7 @@ int Console::_eval_sql(const std::string& sql) {
   // Measure the query plan execution time
   started = std::chrono::high_resolution_clock::now();
 
-  // Execute query plan
-  try {
-    // Get Transaction context
-    static auto tx_context = TransactionManager::get().new_transaction_context();
-
-    for (const auto& task : plan.tasks()) {
-      auto op = task->get_operator();
-      op->set_transaction_context(tx_context);
-      op->execute();
-    }
-  } catch (const std::exception& exception) {
-    out("Exception thrown while executing query plan:\n  " + std::string(exception.what()) + "\n");
-    return ReturnCode::Error;
-  }
+  if (_execute_plan(plan) == ReturnCode::Error) return ReturnCode::Error;
 
   // Measure the query plan execution time
   done = std::chrono::high_resolution_clock::now();
@@ -248,6 +239,23 @@ int Console::_eval_sql(const std::string& sql) {
   out(std::to_string(row_count) + " rows (PARSE: " + std::to_string(parse_elapsed_ms) + " ms, COMPILE: " +
       std::to_string(plan_elapsed_ms) + " ms, EXECUTE: " + std::to_string(execution_elapsed_ms) + " ms (wall time))\n");
 
+  return ReturnCode::Ok;
+}
+
+int Console::_execute_plan(const SQLQueryPlan& plan) {
+  try {
+    // Get Transaction context
+    static auto tx_context = TransactionManager::get().new_transaction_context();
+
+    for (const auto& task : plan.tasks()) {
+      auto op = task->get_operator();
+      op->set_transaction_context(tx_context);
+      op->execute();
+    }
+  } catch (const std::exception& exception) {
+    out("Exception thrown while executing query plan:\n  " + std::string(exception.what()) + "\n");
+    return ReturnCode::Error;
+  }
   return ReturnCode::Ok;
 }
 
@@ -304,12 +312,15 @@ int Console::help(const std::string&) {
       "  generate [TABLENAME] - Generate available TPC-C tables, or a specific table if TABLENAME is specified\n");
   console.out(
       "  load FILE TABLENAME  - Load table from disc specified by filepath FILE, store it with name TABLENAME\n");
-  console.out("  script SCRIPTFILE    - Execute script specified by SCRIPTFILE\n");
-  console.out("  print TABLENAME      - Fully prints the given table\n");
-  console.out("  visualize SQL        - Visualizes a SQL query\n");
-  console.out("  exit                 - Exit the HYRISE Console\n");
-  console.out("  quit                 - Exit the HYRISE Console\n");
-  console.out("  help                 - Show this message\n\n");
+  console.out("  script SCRIPTFILE       - Execute script specified by SCRIPTFILE\n");
+  console.out("  print TABLENAME         - Fully prints the given table\n");
+  console.out("  visualize [options] SQL - Visualizes a SQL query\n");
+  console.out("             noexec          - without executing the query\n");
+  console.out("             ast             - print the raw abstract syntax tree\n");
+  console.out("             astopt          - print the optimized abstract syntax tree\n");
+  console.out("  exit                    - Exit the HYRISE Console\n");
+  console.out("  quit                    - Exit the HYRISE Console\n");
+  console.out("  help                    - Show this message\n\n");
   console.out("After TPC-C tables are generated, SQL queries can be executed.\n");
   console.out("Example:\n");
   console.out("SELECT * FROM DISTRICT\n");
@@ -417,7 +428,19 @@ int Console::print_table(const std::string& args) {
   return ReturnCode::Ok;
 }
 
-int Console::visualize(const std::string& sql) {
+int Console::visualize(const std::string& input) {
+  auto first_word = input.substr(0, input.find_first_of(" \n"));
+  std::string mode, sql, png_filename;
+  if (first_word == "noexec" || first_word == "ast" || first_word == "astopt") {
+    mode = first_word;
+  }
+
+  if (!mode.empty()) {
+    sql = input.substr(input.find_first_of(" \n"), input.size());
+  } else {
+    sql = input;
+  }
+
   auto& console = Console::get();
   SQLQueryPlan plan;
   hsql::SQLParserResult parse_result;
@@ -435,26 +458,49 @@ int Console::visualize(const std::string& sql) {
     return 1;
   }
 
-  // Compile the parse result
-  try {
-    plan = SQLPlanner::plan(parse_result);
-  } catch (const std::exception& exception) {
-    console.out("Exception thrown while compiling query plan:\n  " + std::string(exception.what()) + "\n");
-    return ReturnCode::Error;
-  }
+  if (mode == "ast" || mode == "astopt") {
+    try {
+      auto ast_roots = SQLToASTTranslator::get().translate_parse_result(parse_result);
 
-  SQLQueryPlanVisualizer::visualize(plan);
+      if (mode == "astopt") {
+        for (auto& root : ast_roots) {
+          root = Optimizer::optimize(root);
+        }
+      }
+
+      ASTVisualizer::visualize(ast_roots);
+      png_filename = ASTVisualizer::png_filename;
+    } catch (const std::exception& exception) {
+      console.out("Exception while creating AST:\n  " + std::string(exception.what()) + "\n");
+      return ReturnCode::Error;
+    }
+  } else {
+    // Compile the parse result
+    try {
+      plan = SQLPlanner::plan(parse_result);
+    } catch (const std::exception& exception) {
+      console.out("Exception thrown while compiling query plan:\n  " + std::string(exception.what()) + "\n");
+      return ReturnCode::Error;
+    }
+
+    if (mode != "noexec") {
+      if (console._execute_plan(plan) == ReturnCode::Error) return ReturnCode::Error;
+    }
+
+    SQLQueryPlanVisualizer::visualize(plan);
+    png_filename = SQLQueryPlanVisualizer::png_filename;
+  }
 
   auto ret = system("./scripts/planviz/is_iterm2.sh");
   if (ret != 0) {
     std::string msg{"Currently, only iTerm2 can print the visualization inline. You can find the plan at"};
-    msg += SQLQueryPlanVisualizer::png_filename + "\n";
+    msg += png_filename + "\n";
     console.out(msg);
 
     return ReturnCode::Ok;
   }
 
-  auto cmd = std::string("./scripts/planviz/imgcat.sh ") + SQLQueryPlanVisualizer::png_filename;
+  auto cmd = std::string("./scripts/planviz/imgcat.sh ") + png_filename;
   ret = system(cmd.c_str());
   Assert(ret == 0, "Printing the image using ./scripts/imgcat.sh failed.");
 

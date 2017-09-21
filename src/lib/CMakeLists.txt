@@ -193,6 +193,8 @@ set(
     optimizer/strategy/predicate_reordering_rule.hpp
     optimizer/table_statistics.cpp
     optimizer/table_statistics.hpp
+    planviz/ast_visualizer.cpp
+    planviz/ast_visualizer.hpp
     planviz/sql_query_plan_visualizer.cpp
     planviz/sql_query_plan_visualizer.hpp
     polymorphic_allocator.hpp

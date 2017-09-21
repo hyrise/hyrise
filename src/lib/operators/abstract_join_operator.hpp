@@ -29,6 +29,7 @@ class AbstractJoinOperator : public AbstractReadOnlyOperator {
   JoinMode mode() const;
   const std::pair<ColumnID, ColumnID> &column_ids() const;
   ScanType scan_type() const;
+  const std::string description() const override;
 
  protected:
   const JoinMode _mode;

@@ -18,6 +18,8 @@ console.log
 .repl_history
 .queryplan.dot
 .queryplan.png
+.ast.dot
+.ast.png
 
 # CLion cmake directory
 cmake-build-*
