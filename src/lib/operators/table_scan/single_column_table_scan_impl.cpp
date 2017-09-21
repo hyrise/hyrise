@@ -27,7 +27,7 @@ void SingleColumnTableScanImpl::handle_value_column(BaseColumn &base_column,
 
   const auto left_column_type = _in_table->column_type(_left_column_id);
 
-  resolve_type(left_column_type, [&](auto type) {
+  resolve_data_type(left_column_type, [&](auto type) {
     using Type = typename decltype(type)::type;
 
     auto &left_column = static_cast<ValueColumn<Type> &>(base_column);
