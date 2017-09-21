@@ -35,7 +35,8 @@ namespace detail {
 #define COLUMN_TYPES (int32_t)(int64_t)(float)(double)(std::string)
 
 // Extends to hana::make_tuple(hana::type_c<int32_t>, hana::type_c<int64_t>, ...);
-static constexpr auto types = hana::make_tuple(BOOST_PP_SEQ_ENUM(BOOST_PP_SEQ_TRANSFORM(EXPAND_TO_HANA_TYPE, _, COLUMN_TYPES)));
+static constexpr auto types =
+    hana::make_tuple(BOOST_PP_SEQ_ENUM(BOOST_PP_SEQ_TRANSFORM(EXPAND_TO_HANA_TYPE, _, COLUMN_TYPES)));
 
 static constexpr auto type_strings = hana::make_tuple("int", "long", "float", "double", "string");
 
@@ -49,10 +50,10 @@ static constexpr auto type_strings = hana::make_tuple("int", "long", "float", "d
  */
 static constexpr auto column_types_as_tuples = hana::zip(type_strings, types);
 
-auto to_pair = [](auto tuple) { return hana::make_pair(hana::at_c<0>(tuple), hana::at_c<1>(tuple)); };
+auto to_pair = [](auto tuple) { return hana::make_pair(hana::at_c<0>(tuple), hana::at_c<1>(tuple)); };  // NOLINT
 
 // Converts the tuples into pairs
-static constexpr auto column_types = hana::transform(column_types_as_tuples, to_pair);
+static constexpr auto column_types = hana::transform(column_types_as_tuples, to_pair);  // NOLINT
 
 // Prepends NullValue to tuple of types
 static constexpr auto types_including_null = hana::prepend(types, hana::type_c<NullValue>);
@@ -63,7 +64,7 @@ using TypesAsMplVector = decltype(hana::to<hana::ext::boost::mpl::vector_tag>(ty
 // Creates boost::variant from mpl vector
 using AllTypeVariant = typename boost::make_variant_over<detail::TypesAsMplVector>::type;
 
-} // namespace detail
+}  // namespace detail
 
 static constexpr auto types = detail::types;
 static constexpr auto types_including_null = detail::types_including_null;
