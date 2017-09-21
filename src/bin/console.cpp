@@ -30,6 +30,10 @@
 #include "tpcc/tpcc_table_generator.hpp"
 #include "utils/load_table.hpp"
 
+#define ANSI_COLOR_RED   "\001\e[0;31m\002"
+#define ANSI_COLOR_GREEN "\001\e[0;32m\002"
+#define ANSI_COLOR_RESET "\001\e[0m\002"
+
 namespace {
 
 // Buffer for program state
@@ -263,7 +267,13 @@ void Console::register_command(const std::string& name, const CommandFunction& f
 
 Console::RegisteredCommands Console::commands() { return _commands; }
 
-void Console::setPrompt(const std::string& prompt) { _prompt = prompt; }
+void Console::setPrompt(const std::string& prompt) {
+  if (IS_DEBUG) {
+    _prompt = ANSI_COLOR_RED "(debug)" ANSI_COLOR_RESET + prompt;
+  } else {
+    _prompt = ANSI_COLOR_GREEN "(release)" ANSI_COLOR_RESET + prompt;
+  }
+}
 
 void Console::setLogfile(const std::string& logfile) {
   _log = std::ofstream(logfile, std::ios_base::app | std::ios_base::out);
@@ -539,7 +549,7 @@ void Console::handle_signal(int sig) {
     auto& console = Console::get();
     console._out << "\n";
     console._multiline_input = "";
-    console._prompt = "!> ";
+    console.setPrompt("!> ");
     console._verbose = false;
     // Restore program state stored in jmp_env set with sigsetjmp(2)
     siglongjmp(jmp_env, 1);
