@@ -118,33 +118,33 @@ class SQLBenchmark : public BenchmarkBasicFixture {
       "  FROM (SELECT * FROM customer WHERE c_custkey < 100 AND c_nationkey=0) t1"
       "  WHERE c_custkey > 10 AND c_nationkey < 10;";
 
-  // TODO(mp): enable once translator uses indices for operators
-  //  const std::string Q3 =
-  //      "SELECT c_custkey, c_name"
-  //      "  FROM customer"
-  //      "  JOIN orders ON c_custkey = o_custkey"
-  //      "  GROUP BY c_custkey, c_name"
-  //      "  HAVING COUNT(o_orderkey) >= 100;";
+  const std::string Q3 =
+      "SELECT c_custkey, c_name, COUNT(o_orderkey)"
+      "  FROM customer"
+      "  JOIN orders ON c_custkey = o_custkey"
+      "  GROUP BY c_custkey, c_name"
+      "  HAVING COUNT(o_orderkey) >= 100;";
 
-  //  const std::string Q4 =
-  //      "SELECT customer.c_custkey, customer.c_name, COUNT(orderitems.\"orders.o_orderkey\")"
-  //      "  FROM customer"
-  //      "  JOIN (SELECT * FROM"
-  //      "    orders"
-  //      "    JOIN lineitem ON o_orderkey = l_orderkey"
-  //      "  ) AS orderitems ON c_custkey = orders.o_custkey"
-  //      "  GROUP BY customer.c_custkey, customer.c_name"
-  //      "  HAVING COUNT(orderitems.\"orders.o_orderkey\") >= 100;";
+  // TODO(anybody): enable once subquery aliases are supported
+  //    const std::string Q4 =
+  //      R"(SELECT customer.c_custkey, customer.c_name, COUNT(orderitems.orders.o_orderkey)
+  //          FROM customer
+  //          JOIN (SELECT * FROM
+  //            orders
+  //            JOIN lineitem ON o_orderkey = l_orderkey
+  //          ) AS orderitems ON c_custkey = orders.o_custkey
+  //          GROUP BY customer.c_custkey, customer.c_name
+  //          HAVING COUNT(orderitems.orders.o_orderkey) >= 100;)";
   //
-  //  const std::string Q4Param =
-  //      "SELECT customer.c_custkey, customer.c_name, COUNT(orderitems.\"orders.o_orderkey\")"
-  //      "  FROM customer"
-  //      "  JOIN (SELECT * FROM"
-  //      "    orders"
-  //      "    JOIN lineitem ON o_orderkey = l_orderkey"
-  //      "  ) AS orderitems ON c_custkey = orders.o_custkey"
-  //      "  GROUP BY customer.c_custkey, customer.c_name"
-  //      "  HAVING COUNT(orderitems.\"orders.o_orderkey\") >= ?;";
+  //    const std::string Q4Param =
+  //      R"("SELECT customer.c_custkey, customer.c_name, COUNT(orderitems.orders.o_orderkey)
+  //          FROM customer
+  //          JOIN (SELECT * FROM
+  //            orders
+  //            JOIN lineitem ON o_orderkey = l_orderkey
+  //          ) AS orderitems ON c_custkey = orders.o_custkey
+  //          GROUP BY customer.c_custkey, customer.c_name
+  //          HAVING COUNT(orderitems.orders.o_orderkey) >= ?;)";
 };
 
 // Run all benchmarks for Q1.
@@ -165,16 +165,16 @@ BENCHMARK_F(SQLBenchmark, BM_PrepareExecuteQ2)(benchmark::State& st) { BM_Prepar
 BENCHMARK_F(SQLBenchmark, BM_ParseTreeCacheQ2)(benchmark::State& st) { BM_ParseTreeCache(st, Q2); }
 BENCHMARK_F(SQLBenchmark, BM_QueryPlanCacheQ2)(benchmark::State& st) { BM_QueryPlanCache(st, Q2); }
 
-// TODO(mp): enable once translator uses indices for operators
 // Run all benchmarks for Q3.
-// BENCHMARK_F(SQLBenchmark, BM_CompileQ3)(benchmark::State& st) { BM_CompileQuery(st, Q3); }
-// BENCHMARK_F(SQLBenchmark, BM_ParseQ3)(benchmark::State& st) { BM_ParseQuery(st, Q3); }
-// BENCHMARK_F(SQLBenchmark, BM_PlanQ3)(benchmark::State& st) { BM_PlanQuery(st, Q3); }
-// BENCHMARK_F(SQLBenchmark, BM_SQLOperatorQ3)(benchmark::State& st) { BM_SQLOperatorQuery(st, Q3); }
-// BENCHMARK_F(SQLBenchmark, BM_PrepareExecuteQ3)(benchmark::State& st) { BM_PrepareAndExecute(st, Q3, QExec); }
-// BENCHMARK_F(SQLBenchmark, BM_ParseTreeCacheQ3)(benchmark::State& st) { BM_ParseTreeCache(st, Q3); }
-// BENCHMARK_F(SQLBenchmark, BM_QueryPlanCacheQ3)(benchmark::State& st) { BM_QueryPlanCache(st, Q3); }
+BENCHMARK_F(SQLBenchmark, BM_CompileQ3)(benchmark::State& st) { BM_CompileQuery(st, Q3); }
+BENCHMARK_F(SQLBenchmark, BM_ParseQ3)(benchmark::State& st) { BM_ParseQuery(st, Q3); }
+BENCHMARK_F(SQLBenchmark, BM_PlanQ3)(benchmark::State& st) { BM_PlanQuery(st, Q3); }
+BENCHMARK_F(SQLBenchmark, BM_SQLOperatorQ3)(benchmark::State& st) { BM_SQLOperatorQuery(st, Q3); }
+BENCHMARK_F(SQLBenchmark, BM_PrepareExecuteQ3)(benchmark::State& st) { BM_PrepareAndExecute(st, Q3, QExec); }
+BENCHMARK_F(SQLBenchmark, BM_ParseTreeCacheQ3)(benchmark::State& st) { BM_ParseTreeCache(st, Q3); }
+BENCHMARK_F(SQLBenchmark, BM_QueryPlanCacheQ3)(benchmark::State& st) { BM_QueryPlanCache(st, Q3); }
 
+// TODO(anybody): enable once subquery aliases are supported
 // Run all benchmarks for Q4.
 // BENCHMARK_F(SQLBenchmark, BM_CompileQ4)(benchmark::State& st) { BM_CompileQuery(st, Q4); }
 // BENCHMARK_F(SQLBenchmark, BM_ParseQ4)(benchmark::State& st) { BM_ParseQuery(st, Q4); }

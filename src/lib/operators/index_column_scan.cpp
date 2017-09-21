@@ -31,6 +31,8 @@ std::shared_ptr<const Table> IndexColumnScan::_on_execute() {
   return _impl->_on_execute();
 }
 
+void IndexColumnScan::_on_cleanup() { _impl.reset(); }
+
 // we need to use the impl pattern because the scan operator of the sort depends on the type of the column
 template <typename T>
 class IndexColumnScan::IndexColumnScanImpl : public AbstractReadOnlyOperatorImpl, public ColumnVisitable {

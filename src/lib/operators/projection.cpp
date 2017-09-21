@@ -39,7 +39,7 @@ std::shared_ptr<const Table> Projection::_on_execute() {
     } else if (column_expression->type() == ExpressionType::Column) {
       name = _input_table_left()->column_name(column_expression->column_id());
     } else if (column_expression->is_arithmetic_operator() || column_expression->type() == ExpressionType::Literal) {
-      name = column_expression->to_string();
+      name = column_expression->to_string(_input_table_left()->column_names());
     } else {
       Fail("Expression type is not supported.");
     }
@@ -63,12 +63,15 @@ std::shared_ptr<const Table> Projection::_on_execute() {
     }
 
     for (uint16_t expression_index = 0u; expression_index < _column_expressions.size(); ++expression_index) {
-      call_functor_by_column_type<ColumnCreator>(output->column_type(ColumnID{expression_index}), chunk_out, chunk_id,
-                                                 _column_expressions[expression_index], _input_table_left());
+      resolve_data_type(output->column_type(ColumnID{expression_index}), [&](auto type) {
+        create_column(type, chunk_out, chunk_id, this->_column_expressions[expression_index],
+                      this->_input_table_left());
+      });
     }
 
     output->add_chunk(std::move(chunk_out));
   }
+
   return output;
 }
 

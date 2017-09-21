@@ -1,6 +1,7 @@
 #include "abstract_operator.hpp"
 
 #include <memory>
+#include <string>
 
 #include "concurrency/transaction_context.hpp"
 #include "utils/assert.hpp"
@@ -17,6 +18,9 @@ void AbstractOperator::execute() {
   if (transaction_context) transaction_context->on_operator_started();
   _output = _on_execute(transaction_context);
   if (transaction_context) transaction_context->on_operator_finished();
+
+  // release any temporary data if possible
+  _on_cleanup();
 }
 
 // returns the result of the operator
@@ -30,6 +34,8 @@ std::shared_ptr<const Table> AbstractOperator::get_output() const {
   }
   return _output;
 }
+
+const std::string AbstractOperator::description() const { return name(); }
 
 std::shared_ptr<const Table> AbstractOperator::_input_table_left() const { return _input_left->get_output(); }
 
@@ -54,4 +60,7 @@ std::shared_ptr<AbstractOperator> AbstractOperator::mutable_input_right() const 
 std::shared_ptr<const AbstractOperator> AbstractOperator::input_left() const { return _input_left; }
 
 std::shared_ptr<const AbstractOperator> AbstractOperator::input_right() const { return _input_right; }
+
+void AbstractOperator::_on_cleanup() {}
+
 }  // namespace opossum

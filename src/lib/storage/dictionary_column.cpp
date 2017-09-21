@@ -11,6 +11,7 @@
 
 #include "type_cast.hpp"
 #include "utils/assert.hpp"
+#include "utils/performance_warning.hpp"
 
 namespace opossum {
 
@@ -21,6 +22,8 @@ DictionaryColumn<T>::DictionaryColumn(const pmr_vector<T>&& dictionary,
 
 template <typename T>
 const AllTypeVariant DictionaryColumn<T>::operator[](const size_t i) const {
+  PerformanceWarning("operator[] used");
+
   DebugAssert(i != INVALID_CHUNK_OFFSET, "Passed chunk offset must be valid.");
 
   const auto value_id = _attribute_vector->get(i);
@@ -137,14 +140,21 @@ void DictionaryColumn<T>::write_string_representation(std::string& row_string, c
   row_string += buffer.str();
 }
 
-// TODO(anyone): This method is part of an algorithm that hasn’t yet been updated to support null values.
 template <typename T>
 void DictionaryColumn<T>::copy_value_to_value_column(BaseColumn& value_column, ChunkOffset chunk_offset) const {
   auto& output_column = static_cast<ValueColumn<T>&>(value_column);
   auto& values_out = output_column.values();
 
-  auto value = value_by_value_id(_attribute_vector->get(chunk_offset));
-  values_out.push_back(value);
+  auto value_id = _attribute_vector->get(chunk_offset);
+
+  if (output_column.is_nullable()) {
+    output_column.null_values().push_back(value_id == NULL_VALUE_ID);
+    values_out.push_back(value_id == NULL_VALUE_ID ? T{} : value_by_value_id(value_id));
+  } else {
+    DebugAssert(value_id != NULL_VALUE_ID, "Target column needs to be nullable");
+
+    values_out.push_back(value_by_value_id(value_id));
+  }
 }
 
 // TODO(anyone): This method is part of an algorithm that hasn’t yet been updated to support null values.

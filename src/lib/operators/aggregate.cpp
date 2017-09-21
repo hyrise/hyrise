@@ -8,7 +8,6 @@
 #include <vector>
 
 #include "constant_mappings.hpp"
-#include "resolve_column_type.hpp"
 #include "resolve_type.hpp"
 #include "utils/assert.hpp"
 
@@ -103,7 +102,7 @@ std::shared_ptr<const Table> Aggregate::_on_execute() {
     // Special COUNT(*) contexts. "int" is chosen arbitrarily.
     const auto type_string = is_count_star_context ? std::string{"int"} : input_table->column_type(column_id);
 
-    resolve_type(type_string, [&, column_index, function](auto type) {
+    resolve_data_type(type_string, [&, column_index, function](auto type) {
       this->_create_aggregate_context(type, _contexts_per_column[column_index], function);
     });
   }
@@ -199,7 +198,7 @@ std::shared_ptr<const Table> Aggregate::_on_execute() {
         std::shared_ptr<ColumnVisitable> builder;
         auto ctx = _contexts_per_column[column_index];
 
-        resolve_type(type_string, [&](auto type) {
+        resolve_data_type(type_string, [&](auto type) {
           _create_aggregate_visitor(type, builder, ctx, groupby_ctx, aggregate.function);
         });
 
@@ -251,7 +250,7 @@ std::shared_ptr<const Table> Aggregate::_on_execute() {
     // Output column for COUNT(*). "int" type is chosen arbitrarily.
     const auto type_string = (column_id == CountStarID) ? std::string{"int"} : input_table->column_type(column_id);
 
-    resolve_type(type_string, [&, column_index](auto type) {
+    resolve_data_type(type_string, [&, column_index](auto type) {
       this->_write_aggregate_output(type, column_index, aggregate.function);
     });
 
@@ -262,6 +261,8 @@ std::shared_ptr<const Table> Aggregate::_on_execute() {
 
   return _output;
 }
+
+void Aggregate::_on_cleanup() { _impl.reset(); }
 
 template <typename ColumnType>
 void Aggregate::_create_aggregate_context(boost::hana::basic_type<ColumnType> type,

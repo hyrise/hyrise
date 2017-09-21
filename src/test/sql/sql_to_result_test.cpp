@@ -40,6 +40,7 @@ class SQLToResultTest : public BaseTest, public ::testing::WithParamInterface<SQ
     StorageManager::get().add_table("int_float", load_table("src/test/tables/int_float.tbl", 2));
     StorageManager::get().add_table("int_float2", load_table("src/test/tables/int_float2.tbl", 2));
     StorageManager::get().add_table("int_float4", load_table("src/test/tables/int_float4.tbl", 2));
+    StorageManager::get().add_table("int_float6", load_table("src/test/tables/int_float6.tbl", 2));
     StorageManager::get().add_table("int_string2", load_table("src/test/tables/int_string2.tbl", 2));
     StorageManager::get().add_table("int_int3", load_table("src/test/tables/int_int3.tbl", 3));
     StorageManager::get().add_table("groupby_int_1gb_1agg",
@@ -131,12 +132,14 @@ const SQLTestParam test_queries[] = {
     // Projection
     {"SELECT a FROM int_float;", "src/test/tables/int.tbl"},
     {"SELECT a as b FROM int_float;", "src/test/tables/int2.tbl"},
-    {"SELECT a, 4+6 as b FROM int_float;", "src/test/tables/int_long_constant.tbl"},
+    {"SELECT a, 4+6 as b FROM int_float;", "src/test/tables/int_int_constant.tbl"},
 
     // ORDER BY
     {"SELECT * FROM int_float ORDER BY a DESC;", "src/test/tables/int_float_reverse.tbl", OrderSensitivity::Sensitive},
-    {"SELECT * FROM int_float2 ORDER BY a, b;", "src/test/tables/int_float2_sorted.tbl", OrderSensitivity::Sensitive},
-    {"SELECT * FROM int_float2 ORDER BY a, b ASC;", "src/test/tables/int_float2_sorted.tbl",
+    {"SELECT * FROM int_float4 ORDER BY a, b;", "src/test/tables/int_float2_sorted.tbl", OrderSensitivity::Sensitive},
+    {"SELECT * FROM int_float4 ORDER BY a, b ASC;", "src/test/tables/int_float2_sorted.tbl",
+     OrderSensitivity::Sensitive},
+    {"SELECT * FROM int_float4 ORDER BY a, b DESC;", "src/test/tables/int_float2_sorted_mixed.tbl",
      OrderSensitivity::Sensitive},
     {"SELECT a, b FROM int_float ORDER BY a;", "src/test/tables/int_float_sorted.tbl", OrderSensitivity::Sensitive},
     {"SELECT * FROM int_float4 ORDER BY a, b;", "src/test/tables/int_float2_sorted.tbl", OrderSensitivity::Sensitive},
@@ -209,7 +212,7 @@ const SQLTestParam test_queries[] = {
         FROM int_float AS t1
         INNER JOIN int_float2 AS t2
         ON t1.a = t2.a
-        INNER JOIN int_float4 AS t3
+        INNER JOIN int_float6 AS t3
         ON t1.a = t3.a
         INNER JOIN int_string2 AS t4
         ON t1.a = t4.a)",
@@ -238,19 +241,23 @@ const SQLTestParam test_queries[] = {
      "src/test/tables/aggregateoperator/groupby_int_2gb_2agg/max_avg.tbl"},
 
     // COUNT(*)
-    {"SELECT COUNT(*) FROM groupby_int_1gb_1agg_null GROUP BY a;",
+    {"SELECT a, COUNT(*) FROM groupby_int_1gb_1agg_null GROUP BY a;",
      "src/test/tables/aggregateoperator/groupby_int_1gb_0agg/count_star.tbl"},
+    {"SELECT COUNT(*), SUM(a+b) FROM int_int3;", "src/test/tables/aggregateoperator/0gb_2agg/count_sum.tbl"},
+    // todo(anyone): Enable as soon as #182 is resolved
+    {"SELECT COUNT(*) FROM groupby_int_1gb_1agg_null GROUP BY a;",
+     "src/test/tables/aggregateoperator/groupby_int_1gb_1agg/count_star.tbl"},
 
     // Aggregates with NULL
-    {"SELECT MAX(b) FROM groupby_int_1gb_1agg_null GROUP BY a;",
+    {"SELECT a, MAX(b) FROM groupby_int_1gb_1agg_null GROUP BY a;",
      "src/test/tables/aggregateoperator/groupby_int_1gb_1agg/max_null.tbl"},
-    {"SELECT MIN(b) FROM groupby_int_1gb_1agg_null GROUP BY a;",
+    {"SELECT a, MIN(b) FROM groupby_int_1gb_1agg_null GROUP BY a;",
      "src/test/tables/aggregateoperator/groupby_int_1gb_1agg/min_null.tbl"},
-    {"SELECT SUM(b) FROM groupby_int_1gb_1agg_null GROUP BY a;",
+    {"SELECT a, SUM(b) FROM groupby_int_1gb_1agg_null GROUP BY a;",
      "src/test/tables/aggregateoperator/groupby_int_1gb_1agg/sum_null.tbl"},
-    {"SELECT AVG(b) FROM groupby_int_1gb_1agg_null GROUP BY a;",
+    {"SELECT a, AVG(b) FROM groupby_int_1gb_1agg_null GROUP BY a;",
      "src/test/tables/aggregateoperator/groupby_int_1gb_1agg/avg_null.tbl"},
-    {"SELECT COUNT(b) FROM groupby_int_1gb_1agg_null GROUP BY a;",
+    {"SELECT a, COUNT(b) FROM groupby_int_1gb_1agg_null GROUP BY a;",
      "src/test/tables/aggregateoperator/groupby_int_1gb_1agg/count_null.tbl"},
 
     // Checks that output of Aggregate can be worked with correctly.
@@ -262,8 +269,7 @@ const SQLTestParam test_queries[] = {
         )
         WHERE d BETWEEN 20 AND 50 AND min_c > 15;)",
      "src/test/tables/aggregateoperator/groupby_int_2gb_2agg/max_min_filter_projection.tbl"},
-    {"SELECT SUM(b) FROM groupby_int_1gb_1agg",
-     "src/test/tables/aggregateoperator/0gb_1agg/sum.tbl"},
+    {"SELECT SUM(b) FROM groupby_int_1gb_1agg", "src/test/tables/aggregateoperator/0gb_1agg/sum.tbl"},
 
     // HAVING
     {"SELECT a, b, MAX(c), AVG(d) FROM groupby_int_2gb_2agg GROUP BY a, b HAVING MAX(c) >= 10 AND MAX(c) < 40;",

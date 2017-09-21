@@ -24,6 +24,7 @@
 #include "all_parameter_variant.hpp"
 #include "type_cast.hpp"
 #include "utils/assert.hpp"
+#include "utils/performance_warning.hpp"
 
 namespace opossum {
 
@@ -152,6 +153,8 @@ std::shared_ptr<const Table> TableScan::_on_execute() {
   return _output_table;
 }
 
+void TableScan::_on_cleanup() { _impl.reset(); }
+
 void TableScan::_init_scan() {
   DebugAssert(_in_table->chunk_count() > 0u, "Input table must contain at least 1 chunk.");
   const auto &first_chunk = _in_table->get_chunk(ChunkID{0u});
@@ -211,6 +214,7 @@ std::shared_ptr<const Table> TableScan::__on_execute_between() {
   }
 
   DebugAssert(static_cast<bool>(_right_value2), "Scan type BETWEEN requires a right_value2");
+  PerformanceWarning("TableScan executes BETWEEN as two separate selects");
 
   auto table_scan1 =
       std::make_shared<TableScan>(_input_left, _left_column_id, ScanType::OpGreaterThanEquals, _right_parameter);

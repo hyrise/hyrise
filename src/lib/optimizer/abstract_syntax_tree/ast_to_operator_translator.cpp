@@ -33,6 +33,7 @@
 #include "optimizer/abstract_syntax_tree/sort_node.hpp"
 #include "optimizer/abstract_syntax_tree/stored_table_node.hpp"
 #include "optimizer/abstract_syntax_tree/update_node.hpp"
+#include "utils/performance_warning.hpp"
 
 namespace opossum {
 
@@ -119,8 +120,12 @@ std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::_translate_sort_node(
    * Iterate in reverse because the sort operator does not support multiple columns, and instead relies on stable sort.
    * We therefore sort by the n+1-th column before sorting by the n-th column.
    */
+
   std::shared_ptr<AbstractOperator> result_operator;
   const auto &definitions = sort_node->order_by_definitions();
+  if (definitions.size() > 1) {
+    PerformanceWarning("Multiple ORDER BYs are executed one-by-one");
+  }
   for (auto it = definitions.rbegin(); it != definitions.rend(); it++) {
     const auto &definition = *it;
     result_operator = std::make_shared<Sort>(input_operator, definition.column_id, definition.order_by_mode);
@@ -138,6 +143,7 @@ std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::_translate_join_node(
   auto join_node = std::dynamic_pointer_cast<JoinNode>(node);
 
   if (join_node->join_mode() == JoinMode::Cross) {
+    PerformanceWarning("CROSS join used");
     return std::make_shared<Product>(input_left_operator, input_right_operator);
   }
 
@@ -206,10 +212,17 @@ std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::_translate_aggregate_
     auto current_column_id = static_cast<ColumnID::base_type>(groupby_columns.size());
 
     for (auto &aggregate_expression : aggregate_expressions) {
+      Assert(aggregate_expression->expression_list().size(), "Aggregate: empty expression list");
       DebugAssert(aggregate_expression->type() == ExpressionType::Function, "Expression is not a function.");
 
+      // Do not project for COUNT(*)
+      if (aggregate_expression->aggregate_function() == AggregateFunction::Count &&
+          (aggregate_expression->expression_list())[0]->type() == ExpressionType::Star) {
+        continue;
+      }
+
       // Add original expression of the function to the Projection.
-      column_expressions.emplace_back((aggregate_expression->expression_list())[0]);
+      column_expressions.emplace_back(aggregate_expression->expression_list()[0]);
 
       // Create a ColumnReference expression for the column id of the Projection.
       const auto column_ref_expr = Expression::create_column(ColumnID{current_column_id});

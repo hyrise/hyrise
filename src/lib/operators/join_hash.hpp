@@ -42,13 +42,13 @@ namespace opossum {
  * i.e., your sorting order might be disturbed.
  *
  * Note: JoinHash does not support null values at the moment
+ *
+ * Find more information in our Wiki: https://github.com/hyrise/zweirise/wiki/Radix-Partitioned-and-Hash-Based-Join
  */
 class JoinHash : public AbstractJoinOperator {
  public:
   JoinHash(const std::shared_ptr<const AbstractOperator> left, const std::shared_ptr<const AbstractOperator> right,
            const JoinMode mode, const std::pair<ColumnID, ColumnID> &column_ids, const ScanType scan_type);
-
-  std::shared_ptr<const Table> _on_execute() override;
 
   const std::string name() const override;
   uint8_t num_in_tables() const override;
@@ -59,6 +59,9 @@ class JoinHash : public AbstractJoinOperator {
   }
 
  protected:
+  std::shared_ptr<const Table> _on_execute() override;
+  void _on_cleanup() override;
+
   std::unique_ptr<AbstractReadOnlyOperatorImpl> _impl;
 
   template <typename LeftType, typename RightType>

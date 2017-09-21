@@ -41,6 +41,8 @@ class Expression : public std::enable_shared_from_this<Expression> {
    * and making the constructor public. For now we decided to follow the latter.
    *
    * We highly suggest using one of the create_*-methods over using this constructor.
+   *
+   * Find more information in our blog: https://medium.com/hyrise/a-matter-of-self-expression-5fea2dd0a72
    */
   explicit Expression(ExpressionType type);
 
@@ -68,6 +70,10 @@ class Expression : public std::enable_shared_from_this<Expression> {
                                                             const std::shared_ptr<Expression>& left,
                                                             const std::shared_ptr<Expression>& right,
                                                             const optional<std::string>& alias = nullopt);
+
+  static std::shared_ptr<Expression> create_unary_operator(ExpressionType type,
+                                                           const std::shared_ptr<Expression>& input,
+                                                           const optional<std::string>& alias = nullopt);
 
   static std::shared_ptr<Expression> create_select_star(const optional<std::string>& table_name = {});
   // @}
@@ -100,14 +106,23 @@ class Expression : public std::enable_shared_from_this<Expression> {
    * Check semantics of the expression
    */
 
+  // Is arithmetic or logical operator
+  bool is_operator() const;
+
   // Is +, -, * (arithmetic usage, not SELECT * FROM), /, %, ^
   bool is_arithmetic_operator() const;
+
+  // Is >, >=, AND, OR, NOT
+  bool is_logical_operator() const;
 
   // Returns true if the expression is a literal or column reference.
   bool is_operand() const;
 
   // Returns true if the expression requires two children.
   bool is_binary_operator() const;
+
+  // Returns true if the expression requires one child.
+  bool is_unary_operator() const;
 
   // Returns true if the expression is a NULL literal.
   bool is_null_literal() const;
@@ -134,8 +149,12 @@ class Expression : public std::enable_shared_from_this<Expression> {
 
   void set_alias(const std::string& alias);
 
-  // Expression as string, column names need to be resolved and therefore need a @param input_node
-  std::string to_string(const std::shared_ptr<AbstractASTNode>& input_node = nullptr) const;
+  /**
+   * Returns the Expression as a string. Not meant to produce pretty outputs. Mostly intended to create column names
+   * for SELECT lists with expressions: `SELECT a > 5 FROM ...`, here, the column name "a > 5" is generated using this
+   * method. ColumnIDs need to be resolved to names and therefore need @param input_column_names.
+   */
+  std::string to_string(const std::vector<std::string>& input_column_names = {}) const;
 
   bool operator==(const Expression& rhs) const;
 
@@ -168,7 +187,7 @@ class Expression : public std::enable_shared_from_this<Expression> {
   optional<ValuePlaceholder> _value_placeholder;
 
   // @{
-  // Members for the tree strucutre
+  // Members for the tree structure
   std::weak_ptr<Expression> _parent;
   std::shared_ptr<Expression> _left_child;
   std::shared_ptr<Expression> _right_child;

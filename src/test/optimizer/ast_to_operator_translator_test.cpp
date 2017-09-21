@@ -189,7 +189,7 @@ TEST_F(ASTToOperatorTranslatorTest, AggregateNodeWithArithmetics) {
   EXPECT_EQ(column_expression0->column_id(), ColumnID{0});
 
   const auto column_expression1 = column_expressions[1];
-  EXPECT_EQ(column_expression1->to_string(), "1*2");
+  EXPECT_EQ(column_expression1->to_string(), "ColumnID #1 * 2");
   EXPECT_EQ(column_expression1->alias(), nullopt);
 }
 

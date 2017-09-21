@@ -150,16 +150,24 @@ TEST_F(SQLToASTTranslatorTest, AggregateWithGroupBy) {
   const auto query = "SELECT a, SUM(b) AS s FROM table_a GROUP BY a;";
   const auto result_node = compile_query(query);
 
-  EXPECT_EQ(result_node->type(), ASTNodeType::Aggregate);
+  EXPECT_EQ(result_node->type(), ASTNodeType::Projection);
   EXPECT_FALSE(result_node->right_child());
 
-  const auto aggregate_node = std::dynamic_pointer_cast<AggregateNode>(result_node);
+  const auto projection_node = std::dynamic_pointer_cast<ProjectionNode>(result_node);
+  EXPECT_NE(projection_node, nullptr);
+  EXPECT_EQ(projection_node->column_expressions().size(), 2u);
+  EXPECT_EQ(projection_node->output_column_names().size(), 2u);
+  EXPECT_EQ(projection_node->output_column_names()[0], std::string("a"));
+  EXPECT_EQ(projection_node->output_column_names()[1], std::string("s"));
+
+  const auto aggregate_node = std::dynamic_pointer_cast<AggregateNode>(result_node->left_child());
+  EXPECT_NE(aggregate_node, nullptr);
   EXPECT_EQ(aggregate_node->aggregate_expressions().size(), 1u);
   const std::vector<ColumnID> groupby_columns = {ColumnID{0}};
   EXPECT_EQ(aggregate_node->groupby_column_ids(), groupby_columns);
   EXPECT_EQ(aggregate_node->aggregate_expressions().at(0)->alias(), std::string("s"));
 
-  auto t_node_1 = result_node->left_child();
+  auto t_node_1 = aggregate_node->left_child();
   EXPECT_EQ(t_node_1->type(), ASTNodeType::StoredTable);
   EXPECT_FALSE(t_node_1->left_child());
   EXPECT_FALSE(t_node_1->right_child());
@@ -175,16 +183,23 @@ TEST_F(SQLToASTTranslatorTest, AggregateWithExpression) {
   const auto query = "SELECT SUM(a+b) AS s, SUM(a*b) as f FROM table_a";
   const auto result_node = compile_query(query);
 
-  EXPECT_EQ(result_node->type(), ASTNodeType::Aggregate);
+  EXPECT_EQ(result_node->type(), ASTNodeType::Projection);
   EXPECT_FALSE(result_node->right_child());
 
-  const auto aggregate_node = std::dynamic_pointer_cast<AggregateNode>(result_node);
+  const auto projection_node = std::dynamic_pointer_cast<ProjectionNode>(result_node);
+  EXPECT_NE(projection_node, nullptr);
+  EXPECT_EQ(projection_node->column_expressions().size(), 2u);
+  EXPECT_EQ(projection_node->output_column_names().size(), 2u);
+  EXPECT_EQ(projection_node->output_column_names()[0], std::string("s"));
+  EXPECT_EQ(projection_node->output_column_names()[1], std::string("f"));
+
+  const auto aggregate_node = std::dynamic_pointer_cast<AggregateNode>(result_node->left_child());
   EXPECT_EQ(aggregate_node->aggregate_expressions().size(), 2u);
   EXPECT_EQ(aggregate_node->groupby_column_ids().size(), 0u);
   EXPECT_EQ(aggregate_node->aggregate_expressions().at(0)->alias(), std::string("s"));
   EXPECT_EQ(aggregate_node->aggregate_expressions().at(1)->alias(), std::string("f"));
 
-  auto t_node_1 = result_node->left_child();
+  auto t_node_1 = aggregate_node->left_child();
   EXPECT_EQ(t_node_1->type(), ASTNodeType::StoredTable);
   EXPECT_FALSE(t_node_1->left_child());
   EXPECT_FALSE(t_node_1->right_child());
@@ -345,7 +360,7 @@ TEST_F(SQLToASTTranslatorTest, InsertValues) {
 
   auto expressions = projection->column_expressions();
   EXPECT_EQ(expressions[0]->type(), ExpressionType::Literal);
-  EXPECT_EQ(boost::get<int64_t>(expressions[0]->value()), 10);
+  EXPECT_EQ(boost::get<int32_t>(expressions[0]->value()), 10);
   EXPECT_EQ(expressions[1]->type(), ExpressionType::Literal);
   EXPECT_EQ(boost::get<float>(expressions[1]->value()), 12.5);
 
@@ -368,7 +383,7 @@ TEST_F(SQLToASTTranslatorTest, InsertValuesColumnReorder) {
   EXPECT_EQ(expressions[0]->type(), ExpressionType::Literal);
   EXPECT_EQ(boost::get<float>(expressions[0]->value()), 12.5);
   EXPECT_EQ(expressions[1]->type(), ExpressionType::Literal);
-  EXPECT_EQ(boost::get<int64_t>(expressions[1]->value()), 10);
+  EXPECT_EQ(boost::get<int32_t>(expressions[1]->value()), 10);
 
   EXPECT_EQ(projection->left_child()->type(), ASTNodeType::DummyTable);
 }
@@ -387,7 +402,7 @@ TEST_F(SQLToASTTranslatorTest, InsertValuesIncompleteColumns) {
 
   auto expressions = projection->column_expressions();
   EXPECT_EQ(expressions[0]->type(), ExpressionType::Literal);
-  EXPECT_EQ(boost::get<int64_t>(expressions[0]->value()), 10);
+  EXPECT_EQ(boost::get<int32_t>(expressions[0]->value()), 10);
   EXPECT_TRUE(expressions[1]->is_null_literal());
 
   EXPECT_EQ(projection->left_child()->type(), ASTNodeType::DummyTable);
