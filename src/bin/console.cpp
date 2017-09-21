@@ -30,9 +30,9 @@
 #include "tpcc/tpcc_table_generator.hpp"
 #include "utils/load_table.hpp"
 
-#define ANSI_COLOR_RED   "\001\e[0;31m\002"
-#define ANSI_COLOR_GREEN "\001\e[0;32m\002"
-#define ANSI_COLOR_RESET "\001\e[0m\002"
+#define ANSI_COLOR_RED   "\x1b[31m"
+#define ANSI_COLOR_GREEN "\x1b[32m"
+#define ANSI_COLOR_RESET "\x1b[0m"
 
 namespace {
 
@@ -328,7 +328,6 @@ int Console::help(const std::string&) {
   console.out("             noexec          - without executing the query\n");
   console.out("             ast             - print the raw abstract syntax tree\n");
   console.out("             astopt          - print the optimized abstract syntax tree\n");
-  console.out("  exit                    - Exit the HYRISE Console\n");
   console.out("  quit                    - Exit the HYRISE Console\n");
   console.out("  help                    - Show this message\n\n");
   console.out("After TPC-C tables are generated, SQL queries can be executed.\n");
@@ -674,6 +673,14 @@ int main(int argc, char** argv) {
     console.out("HYRISE SQL Interface\n");
     console.out("Enter 'generate' to generate the TPC-C tables. Then, you can enter SQL queries.\n");
     console.out("Type 'help' for more information.\n\n");
+
+    console.out("Hyrise is running a ");
+    if (IS_DEBUG) {
+      console.out(ANSI_COLOR_RED "(debug)" ANSI_COLOR_RESET);
+    } else {
+      console.out(ANSI_COLOR_GREEN "(release)" ANSI_COLOR_RESET);
+    }
+    console.out(" build.\n\n");
   }
 
   // Set jmp_env to current program state in preparation for siglongjmp(2)
