@@ -12,9 +12,9 @@
 #include <iomanip>
 #include <iostream>
 #include <memory>
+#include <regex>
 #include <string>
 #include <vector>
-#include <regex>
 
 #include "SQLParser.h"
 #include "concurrency/transaction_manager.hpp"
@@ -27,11 +27,11 @@
 #include "tpcc/tpcc_table_generator.hpp"
 #include "utils/load_table.hpp"
 
-#define ANSI_COLOR_RED   "\e[31m"
+#define ANSI_COLOR_RED "\e[31m"
 #define ANSI_COLOR_GREEN "\e[32m"
 #define ANSI_COLOR_RESET "\e[0m"
 
-#define ANSI_COLOR_RED_RL   "\001\e[31m\002"
+#define ANSI_COLOR_RED_RL "\001\e[31m\002"
 #define ANSI_COLOR_GREEN_RL "\001\e[32m\002"
 #define ANSI_COLOR_RESET_RL "\001\e[0m\002"
 
@@ -54,15 +54,15 @@ std::string current_timestamp() {
 // If remove_rl_codes_only is true, then it only removes the Readline specific escape sequences '\001' and '\002'
 std::string remove_coloring(const std::string& input, bool remove_rl_codes_only = false) {
   // matches any characters that need to be escaped in RegEx except for '|'
-  std::regex specialChars { R"([-[\]{}()*+?.,\^$#\s])" };
+  std::regex specialChars{R"([-[\]{}()*+?.,\^$#\s])"};
   std::string sequences = "\e[31m|\e[32m|\e[0m|\001|\002";
   if (remove_rl_codes_only) {
     sequences = "\001|\002";
   }
-  std::string sanitized_sequences = std::regex_replace( sequences, specialChars, R"(\$&)" );
+  std::string sanitized_sequences = std::regex_replace(sequences, specialChars, R"(\$&)");
 
   // Remove coloring commands and escape sequences before writing to logfile
-  std::regex expression { "(" + sanitized_sequences + ")" };
+  std::regex expression{"(" + sanitized_sequences + ")"};
   return std::regex_replace(input, expression, "");
 }
 }  // namespace
