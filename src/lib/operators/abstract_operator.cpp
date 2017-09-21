@@ -29,7 +29,8 @@ std::shared_ptr<const Table> AbstractOperator::get_output() const {
     // Check that no empty chunks are included in the output. This has been found to degrade performance.
     // If there is only a single, empty chunk, this is ok.
     for (auto chunk_id = ChunkID{0}; chunk_id < _output->chunk_count(); ++chunk_id) {
-      DebugAssert(_output->get_chunk(chunk_id).size() > 0, "Empty chunk returned from operator");
+      DebugAssert(_output->get_chunk(chunk_id).size() > 0,
+                  std::string("Empty chunk returned from operator ") + description());
     }
   }
   return _output;
