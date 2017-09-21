@@ -57,6 +57,7 @@ class AbstractOperator : private Noncopyable {
   std::shared_ptr<const Table> get_output() const;
 
   virtual const std::string name() const = 0;
+  virtual const std::string description() const;
 
   // returns the number of input tables, range of values is [0, 2]
   virtual uint8_t num_in_tables() const = 0;
