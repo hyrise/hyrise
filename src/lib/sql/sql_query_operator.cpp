@@ -155,7 +155,7 @@ void SQLQueryOperator::execute_prepared_statement(const ExecuteStatement& execut
 // to the current total query plan (in member _plan).
 void SQLQueryOperator::plan_statement(const SQLStatement& stmt) {
   auto result_node = SQLToASTTranslator::get().translate_statement(stmt);
-  auto result_operator = ASTToOperatorTranslator::get().translate_node(result_node);
+  auto result_operator = ASTToOperatorTranslator{}.translate_node(result_node);
 
   SQLQueryPlan query_plan;
   query_plan.add_tree_by_root(result_operator);

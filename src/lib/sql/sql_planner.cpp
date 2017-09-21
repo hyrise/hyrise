@@ -7,15 +7,17 @@
 
 namespace opossum {
 
-SQLQueryPlan SQLPlanner::plan(const hsql::SQLParserResult& result) {
+SQLQueryPlan SQLPlanner::plan(const hsql::SQLParserResult& result,
+                              const std::shared_ptr<TransactionContext>& transaction_context) {
   // Translate to AST
   auto result_nodes = SQLToASTTranslator::get().translate_parse_result(result);
 
-  SQLQueryPlan plan;
+  ASTToOperatorTranslator translator{transaction_context};
+  SQLQueryPlan plan{};
 
   for (const auto& node : result_nodes) {
     auto optimized = Optimizer::optimize(node);
-    auto op = ASTToOperatorTranslator::get().translate_node(optimized);
+    auto op = translator.translate_node(optimized);
 
     plan.add_tree_by_root(op);
   }

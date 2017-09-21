@@ -3,10 +3,13 @@
 #include <boost/noncopyable.hpp>
 
 #include "SQLParserResult.h"
+
 #include "operators/abstract_operator.hpp"
 #include "sql_query_plan.hpp"
 
 namespace opossum {
+
+class TransactionContext;
 
 /**
  * This class wraps the translation of a parse result to an Operator tree.
@@ -18,7 +21,8 @@ namespace opossum {
  */
 class SQLPlanner final : public boost::noncopyable {
  public:
-  static SQLQueryPlan plan(const hsql::SQLParserResult& result);
+  static SQLQueryPlan plan(const hsql::SQLParserResult& result,
+                           const std::shared_ptr<TransactionContext>& transaction_context = nullptr);
 };
 
 }  // namespace opossum

@@ -40,7 +40,7 @@ class SQLBenchmark : public BenchmarkBasicFixture {
       SQLParserResult result;
       SQLParser::parseSQLString(query, &result);
       auto result_node = SQLToASTTranslator::get().translate_parse_result(result)[0];
-      ASTToOperatorTranslator::get().translate_node(result_node);
+      ASTToOperatorTranslator{}.translate_node(result_node);
     }
   }
 
@@ -58,7 +58,7 @@ class SQLBenchmark : public BenchmarkBasicFixture {
     SQLParser::parseSQLString(query, &result);
     while (st.KeepRunning()) {
       auto result_node = SQLToASTTranslator::get().translate_parse_result(result)[0];
-      ASTToOperatorTranslator::get().translate_node(result_node);
+      ASTToOperatorTranslator{}.translate_node(result_node);
     }
   }
 

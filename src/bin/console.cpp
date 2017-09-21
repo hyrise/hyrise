@@ -208,7 +208,8 @@ int Console::_eval_sql(const std::string& sql) {
 
   // Compile the parse result
   try {
-    plan = SQLPlanner::plan(parse_result);
+    static auto tx_context = TransactionManager::get().new_transaction_context();
+    plan = SQLPlanner::plan(parse_result, tx_context);
   } catch (const std::exception& exception) {
     out("Exception thrown while compiling query plan:\n  " + std::string(exception.what()) + "\n");
     return ReturnCode::Error;
@@ -223,12 +224,8 @@ int Console::_eval_sql(const std::string& sql) {
 
   // Execute query plan
   try {
-    // Get Transaction context
-    static auto tx_context = TransactionManager::get().new_transaction_context();
-
     for (const auto& task : plan.tasks()) {
       auto op = task->get_operator();
-      op->set_transaction_context(tx_context);
       op->execute();
     }
   } catch (const std::exception& exception) {
