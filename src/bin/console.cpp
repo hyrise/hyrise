@@ -26,9 +26,13 @@
 #include "tpcc/tpcc_table_generator.hpp"
 #include "utils/load_table.hpp"
 
-#define ANSI_COLOR_RED   "\001\e[0;31m\002"
-#define ANSI_COLOR_GREEN "\001\e[0;32m\002"
-#define ANSI_COLOR_RESET "\001\e[0m\002"
+#define ANSI_COLOR_RED   "\e[31m"
+#define ANSI_COLOR_GREEN "\e[32m"
+#define ANSI_COLOR_RESET "\e[0m"
+
+#define ANSI_COLOR_RED_RL   "\001\e[31m\002"
+#define ANSI_COLOR_GREEN_RL "\001\e[32m\002"
+#define ANSI_COLOR_RESET_RL "\001\e[0m\002"
 
 namespace {
 
@@ -261,9 +265,9 @@ Console::RegisteredCommands Console::commands() { return _commands; }
 
 void Console::setPrompt(const std::string& prompt) {
   if (IS_DEBUG) {
-    _prompt = ANSI_COLOR_RED "(debug)" ANSI_COLOR_RESET + prompt;
+    _prompt = ANSI_COLOR_RED_RL "(debug)" ANSI_COLOR_RESET_RL + prompt;
   } else {
-    _prompt = ANSI_COLOR_GREEN "(release)" ANSI_COLOR_RESET + prompt;
+    _prompt = ANSI_COLOR_GREEN_RL "(release)" ANSI_COLOR_RESET_RL + prompt;
   }
 }
 
