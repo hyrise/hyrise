@@ -20,6 +20,7 @@
 #include "operators/get_table.hpp"
 #include "operators/import_csv.hpp"
 #include "operators/print.hpp"
+#include "utils/table_printer.hpp"
 #include "sql/sql_planner.hpp"
 #include "storage/storage_manager.hpp"
 #include "tpcc/tpcc_table_generator.hpp"
@@ -299,8 +300,10 @@ void Console::out(const std::string& output, bool console_print) {
 }
 
 void Console::out(std::shared_ptr<const Table> table) {
-  Print::print(table, 0, _out);
-  Print::print(table, 0, _log);
+  // Print::print(table, 0, _out);
+  // Print::print(table, 0, _log);
+  TablePrinter(table, _out, false).print();
+  TablePrinter(table, _log, false).print();
 }
 
 // Command functions

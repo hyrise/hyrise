@@ -27,11 +27,13 @@ class Print : public AbstractReadOnlyOperator {
   static void print(std::shared_ptr<const Table> table, uint32_t flags = 0, std::ostream& out = std::cout);
 
  protected:
-  std::vector<uint16_t> column_string_widths(uint16_t min, uint16_t max, std::shared_ptr<const Table> t) const;
+  std::vector<uint16_t> _column_string_widths(uint16_t min, uint16_t max, std::shared_ptr<const Table> t) const;
+  void _print_row(const Chunk & chunk, const size_t row);
   std::shared_ptr<const Table> _on_execute() override;
 
   // stream to print the result
   std::ostream& _out;
   uint32_t _flags;
+  std::vector<uint16_t> _widths;
 };
 }  // namespace opossum

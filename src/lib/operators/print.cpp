@@ -33,22 +33,49 @@ void Print::print(std::shared_ptr<const Table> table, uint32_t flags, std::ostre
   Print(table_wrapper, out, flags).execute();
 }
 
+void Print::_print_row(const Chunk & chunk, const size_t row) {
+  _out << "|";
+  for (ColumnID col{0}; col < chunk.col_count(); ++col) {
+    // well yes, we use BaseColumn::operator[] here, but since Print is not an operation that should
+    // be part of a regular query plan, let's keep things simple here
+    _out << std::setw(_widths[col]) << (*chunk.get_column(col))[row] << "|" << std::setw(0);
+  }
+
+  if (_flags & PrintMvcc && chunk.has_mvcc_columns()) {
+    auto mvcc_columns = chunk.mvcc_columns();
+
+    auto begin = mvcc_columns->begin_cids[row];
+    auto end = mvcc_columns->end_cids[row];
+    auto tid = mvcc_columns->tids[row];
+
+    auto begin_str = begin == Chunk::MAX_COMMIT_ID ? "" : std::to_string(begin);
+    auto end_str = end == Chunk::MAX_COMMIT_ID ? "" : std::to_string(end);
+    auto tid_str = tid == 0 ? "" : std::to_string(tid);
+
+    _out << "|" << std::setw(6) << begin_str << std::setw(0);
+    _out << "|" << std::setw(6) << end_str << std::setw(0);
+    _out << "|" << std::setw(6) << tid_str << std::setw(0);
+    _out << "|";
+  }
+  _out << std::endl;
+}
+
 std::shared_ptr<const Table> Print::_on_execute() {
   PerformanceWarningDisabler pwd;
 
-  auto widths = column_string_widths(8, 20, _input_table_left());
+  _widths = _column_string_widths(8, 20, _input_table_left());
 
   // print column headers
   _out << "=== Columns" << std::endl;
   for (ColumnID col{0}; col < _input_table_left()->col_count(); ++col) {
-    _out << "|" << std::setw(widths[col]) << _input_table_left()->column_name(col) << std::setw(0);
+    _out << "|" << std::setw(_widths[col]) << _input_table_left()->column_name(col) << std::setw(0);
   }
   if (_flags & PrintMvcc) {
     _out << "||        MVCC        ";
   }
   _out << "|" << std::endl;
   for (ColumnID col{0}; col < _input_table_left()->col_count(); ++col) {
-    _out << "|" << std::setw(widths[col]) << _input_table_left()->column_type(col) << std::setw(0);
+    _out << "|" << std::setw(_widths[col]) << _input_table_left()->column_type(col) << std::setw(0);
   }
   if (_flags & PrintMvcc) {
     _out << "||_BEGIN|_END  |_TID  ";
@@ -71,30 +98,7 @@ std::shared_ptr<const Table> Print::_on_execute() {
 
     // print the rows in the chunk
     for (size_t row = 0; row < chunk.size(); ++row) {
-      _out << "|";
-      for (ColumnID col{0}; col < chunk.col_count(); ++col) {
-        // well yes, we use BaseColumn::operator[] here, but since Print is not an operation that should
-        // be part of a regular query plan, let's keep things simple here
-        _out << std::setw(widths[col]) << (*chunk.get_column(col))[row] << "|" << std::setw(0);
-      }
-
-      if (_flags & PrintMvcc && chunk.has_mvcc_columns()) {
-        auto mvcc_columns = chunk.mvcc_columns();
-
-        auto begin = mvcc_columns->begin_cids[row];
-        auto end = mvcc_columns->end_cids[row];
-        auto tid = mvcc_columns->tids[row];
-
-        auto begin_str = begin == Chunk::MAX_COMMIT_ID ? "" : std::to_string(begin);
-        auto end_str = end == Chunk::MAX_COMMIT_ID ? "" : std::to_string(end);
-        auto tid_str = tid == 0 ? "" : std::to_string(tid);
-
-        _out << "|" << std::setw(6) << begin_str << std::setw(0);
-        _out << "|" << std::setw(6) << end_str << std::setw(0);
-        _out << "|" << std::setw(6) << tid_str << std::setw(0);
-        _out << "|";
-      }
-      _out << std::endl;
+      _print_row(chunk, row);
     }
   }
 
@@ -104,7 +108,7 @@ std::shared_ptr<const Table> Print::_on_execute() {
 // In order to print the table as an actual table, with columns being aligned, we need to calculate the
 // number of characters in the printed representation of each column
 // `min` and `max` can be used to limit the width of the columns - however, every column fits at least the column's name
-std::vector<uint16_t> Print::column_string_widths(uint16_t min, uint16_t max, std::shared_ptr<const Table> t) const {
+std::vector<uint16_t> Print::_column_string_widths(uint16_t min, uint16_t max, std::shared_ptr<const Table> t) const {
   std::vector<uint16_t> widths(t->col_count());
   // calculate the length of the column name
   for (ColumnID col{0}; col < t->col_count(); ++col) {
