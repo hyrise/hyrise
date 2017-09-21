@@ -104,8 +104,15 @@ const std::unordered_map<hsql::OrderType, OrderByMode> order_type_to_order_by_mo
 };
 
 const std::unordered_map<ExpressionType, std::string> expression_type_to_operator_string = {
-    {ExpressionType::Addition, "+"}, {ExpressionType::Subtraction, "-"}, {ExpressionType::Multiplication, "*"},
-    {ExpressionType::Division, "/"}, {ExpressionType::Modulo, "%"},      {ExpressionType::Power, "^"},
+    {ExpressionType::Addition, "+"},       {ExpressionType::Subtraction, "-"},
+    {ExpressionType::Multiplication, "*"}, {ExpressionType::Division, "/"},
+    {ExpressionType::Modulo, "%"},         {ExpressionType::Power, "^"},
+    {ExpressionType::Equals, "="},         {ExpressionType::NotEquals, "!="},
+    {ExpressionType::LessThan, "<"},       {ExpressionType::LessThanEquals, "<="},
+    {ExpressionType::GreaterThan, ">"},    {ExpressionType::GreaterThanEquals, ">="},
+    {ExpressionType::Like, "LIKE"},        {ExpressionType::NotLike, "NOT LIKE"},
+    {ExpressionType::And, "AND"},          {ExpressionType::Or, "OR"},
+    {ExpressionType::Between, "BETWEEN"},  {ExpressionType::Not, "NOT"},
 };
 
 const std::unordered_map<JoinMode, std::string> join_mode_to_string = {
