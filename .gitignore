@@ -15,7 +15,9 @@ src/lib/network/generated
 .vscode
 *.pyc
 console.log
-console.history
+.repl_history
+.queryplan.dot
+.queryplan.png
 
 # CLion cmake directory
 cmake-build-*

@@ -24,8 +24,6 @@ namespace opossum {
  * Operator to sort a table by a single column. This implements a stable sort, i.e., rows that share the same value will
  * maintain their relative order.
  * Multi-column sort is not supported yet. For now, you will have to sort by the secondary criterion, then by the first
- *
- * Note: Sort does not support null values at the moment
  */
 class Sort : public AbstractReadOnlyOperator {
  public:

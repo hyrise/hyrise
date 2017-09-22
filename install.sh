@@ -46,7 +46,7 @@ if echo $REPLY | grep -E '^[Yy]$' > /dev/null; then
             if sudo apt-get update >/dev/null; then
                 if sudo apt-get install -y libboost-all-dev clang-format gcovr python2.7 gcc-6 clang llvm libnuma-dev libnuma1 libtbb-dev build-essential autoconf libtool cmake libreadline-dev; then
                     if git submodule update --init --recursive; then
-                        if CPPFLAGS="-Wno-deprecated-declarations" CFLAGS="-Wno-deprecated-declarations -Wno-implicit-function-declaration -Wno-shift-negative-value" make static -j $(sysctl -n hw.ncpu) --directory=third_party/grpc REQUIRE_CUSTOM_LIBRARIES_opt=true; then
+                        if CPPFLAGS="-Wno-deprecated-declarations" CFLAGS="-Wno-deprecated-declarations -Wno-implicit-function-declaration -Wno-shift-negative-value" make static -j $(nproc) --directory=third_party/grpc REQUIRE_CUSTOM_LIBRARIES_opt=true; then
                             echo "Installation successful"
                         else
                             echo "Error during gRPC installation."

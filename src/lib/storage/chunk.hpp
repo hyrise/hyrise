@@ -23,6 +23,8 @@ class BaseColumn;
 
 // A chunk is a horizontal partition of a table.
 // It stores the data column by column.
+//
+// Find more information about this in our wiki: https://github.com/hyrise/zweirise/wiki/chunk-concept
 class Chunk : private Noncopyable {
  public:
   static const CommitID MAX_COMMIT_ID;

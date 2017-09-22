@@ -25,16 +25,18 @@ int get_node_id_of(const void* ptr) {
 class NUMAMemoryResourceTest : public BaseTest {};
 
 TEST_F(NUMAMemoryResourceTest, BasicAllocate) {
-  auto memory_resource = NUMAMemoryResource(2, "test");
+#if OPOSSUM_NUMA_SUPPORT
+  const int numa_node = numa_max_node();
+#else
+  const int numa_node = 1;
+#endif
+
+  auto memory_resource = NUMAMemoryResource(numa_node, "test");
   const auto alloc = PolymorphicAllocator<size_t>(&memory_resource);
 
   const auto vec = pmr_vector<size_t>(1024, alloc);
 
-#if OPOSSUM_NUMA_SUPPORT
-  EXPECT_EQ(get_node_id_of(vec.data()), 2);
-#else
-  EXPECT_EQ(get_node_id_of(vec.data()), 1);
-#endif
+  EXPECT_EQ(get_node_id_of(vec.data()), numa_node);
 }
 
 }  // namespace opossum
