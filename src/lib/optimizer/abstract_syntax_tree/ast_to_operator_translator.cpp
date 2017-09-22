@@ -20,6 +20,7 @@
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
 #include "operators/update.hpp"
+#include "operators/validate.hpp"
 #include "optimizer/abstract_syntax_tree/abstract_ast_node.hpp"
 #include "optimizer/abstract_syntax_tree/aggregate_node.hpp"
 #include "optimizer/abstract_syntax_tree/delete_node.hpp"
@@ -33,6 +34,7 @@
 #include "optimizer/abstract_syntax_tree/sort_node.hpp"
 #include "optimizer/abstract_syntax_tree/stored_table_node.hpp"
 #include "optimizer/abstract_syntax_tree/update_node.hpp"
+#include "optimizer/abstract_syntax_tree/validate_node.hpp"
 #include "utils/performance_warning.hpp"
 
 namespace opossum {
@@ -254,6 +256,14 @@ std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::_translate_update_nod
   return op;
 }
 
+std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::_translate_validate_node(
+    const std::shared_ptr<AbstractASTNode>& node) const {
+  const auto input_operator = translate_node(node->left_child());
+  auto op = std::make_shared<Validate>(input_operator);
+  op->set_transaction_context(_transaction_context);
+  return op;
+}
+
 std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::_translate_show_tables_node(
     const std::shared_ptr<AbstractASTNode>& node) const {
   DebugAssert(node->left_child() == nullptr, "ShowTables should not have an input operator.");
@@ -300,6 +310,8 @@ std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::_translate_by_node_ty
       return _translate_dummy_table_node(node);
     case ASTNodeType::Update:
       return _translate_update_node(node);
+    case ASTNodeType::Validate:
+      return _translate_validate_node(node);
 
     // Maintenance operators
     case ASTNodeType::ShowTables:

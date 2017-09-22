@@ -55,6 +55,7 @@ class AggregateNode;
  */
 class SQLToASTTranslator final : public boost::noncopyable {
  public:
+  // TODO(mjendruk): remove singleton
   static SQLToASTTranslator& get();
 
   // Translates the given SQL result.
@@ -108,6 +109,8 @@ class SQLToASTTranslator final : public boost::noncopyable {
       const std::shared_ptr<AbstractASTNode>& input_node) const;
 
   std::shared_ptr<AbstractASTNode> _translate_show(const hsql::ShowStatement& show_statement);
+
+  std::shared_ptr<AbstractASTNode> _validate_node(const std::shared_ptr<AbstractASTNode>& input_node);
 
  private:
   SQLToASTTranslator() = default;

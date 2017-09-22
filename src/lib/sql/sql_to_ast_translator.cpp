@@ -20,6 +20,7 @@
 #include "optimizer/abstract_syntax_tree/sort_node.hpp"
 #include "optimizer/abstract_syntax_tree/stored_table_node.hpp"
 #include "optimizer/abstract_syntax_tree/update_node.hpp"
+#include "optimizer/abstract_syntax_tree/validate_node.hpp"
 #include "optimizer/expression.hpp"
 #include "sql/sql_expression_translator.hpp"
 #include "storage/storage_manager.hpp"
@@ -196,7 +197,7 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_delete(const hsq
   }
 
   auto delete_node = std::make_shared<DeleteNode>(del.tableName);
-  delete_node->set_left_child(current_result_node);
+  delete_node->set_left_child(_validate_node(current_result_node));
 
   return delete_node;
 }
@@ -206,6 +207,7 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_update(const hsq
   if (update.where) {
     current_values_node = _translate_where(*update.where, current_values_node);
   }
+  current_values_node = _validate_node(current_values_node);
 
   // The update operator wants ReferenceColumns on its left side
   // TODO(anyone): fix this
@@ -286,7 +288,7 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_select(const hsq
     current_result_node = _translate_limit(*select.limit, current_result_node);
   }
 
-  return current_result_node;
+  return _validate_node(current_result_node);
 }
 
 std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_join(const hsql::JoinDefinition& join) {
@@ -751,6 +753,12 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_show(const hsql:
   }
 
   return {};
+}
+
+std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_validate_node(const std::shared_ptr<AbstractASTNode>& input_node) {
+  auto validate_node = std::make_shared<ValidateNode>();
+  validate_node->set_left_child(input_node);
+  return validate_node;
 }
 
 }  // namespace opossum
