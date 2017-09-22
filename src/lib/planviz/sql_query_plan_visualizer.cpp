@@ -12,12 +12,11 @@
 
 namespace opossum {
 
-const std::string SQLQueryPlanVisualizer::png_filename{"./.queryplan.png"};  // NOLINT
-
-void SQLQueryPlanVisualizer::visualize(const SQLQueryPlan &plan) {
+void SQLQueryPlanVisualizer::visualize(const SQLQueryPlan &plan, const std::string &dot_filename,
+                                       const std::string &img_filename) {
   // Step 1: Generate graphviz dot file
   std::ofstream file;
-  file.open(".queryplan.dot");
+  file.open(dot_filename);
   file << "digraph {" << std::endl;
   file << "rankdir=BT" << std::endl;
   file << "bgcolor=transparent" << std::endl;
@@ -30,7 +29,7 @@ void SQLQueryPlanVisualizer::visualize(const SQLQueryPlan &plan) {
   file.close();
 
   // Step 2: Generate png from dot file
-  auto cmd = std::string("dot -Tpng .queryplan.dot > ") + png_filename;
+  auto cmd = std::string("dot -Tpng " + dot_filename + " > ") + img_filename;
   auto ret = system(cmd.c_str());
 
   Assert(ret == 0,

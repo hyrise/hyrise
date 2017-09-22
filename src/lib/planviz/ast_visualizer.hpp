@@ -11,9 +11,8 @@ namespace opossum {
 
 class ASTVisualizer {
  public:
-  static const std::string png_filename;
-
-  static void visualize(const std::vector<std::shared_ptr<AbstractASTNode>> &ast_roots);
+  static void visualize(const std::vector<std::shared_ptr<AbstractASTNode>> &ast_roots, const std::string &dot_filename,
+                        const std::string &img_filename);
 
  protected:
   static void _visualize_subtree(const std::shared_ptr<AbstractASTNode> &node, std::ofstream &file);

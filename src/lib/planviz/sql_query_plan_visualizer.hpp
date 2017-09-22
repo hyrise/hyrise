@@ -10,9 +10,8 @@ namespace opossum {
 
 class SQLQueryPlanVisualizer {
  public:
-  static const std::string png_filename;
-
-  static void visualize(const SQLQueryPlan &plan);
+  static void visualize(const SQLQueryPlan &plan, const std::string &dot_filename,
+                        const std::string &img_filename);
 
  protected:
   static void _visualize_subtree(const std::shared_ptr<const AbstractOperator> &op, std::ofstream &file);

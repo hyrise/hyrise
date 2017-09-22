@@ -15,12 +15,11 @@
 
 namespace opossum {
 
-const std::string ASTVisualizer::png_filename{"./.ast.png"};  // NOLINT
-
-void ASTVisualizer::visualize(const std::vector<std::shared_ptr<AbstractASTNode>> &ast_roots) {
+void ASTVisualizer::visualize(const std::vector<std::shared_ptr<AbstractASTNode>> &ast_roots,
+                              const std::string &dot_filename, const std::string &img_filename) {
   // Step 1: Generate graphviz dot file
   std::ofstream file;
-  file.open(".ast.dot");
+  file.open(dot_filename);
   file << "digraph {" << std::endl;
   file << "rankdir=BT" << std::endl;
   file << "bgcolor=transparent" << std::endl;
@@ -33,7 +32,7 @@ void ASTVisualizer::visualize(const std::vector<std::shared_ptr<AbstractASTNode>
   file.close();
 
   // Step 2: Generate png from dot file
-  auto cmd = std::string("dot -Tpng .ast.dot > ") + png_filename;
+  auto cmd = std::string("dot -Tpng " + dot_filename + " > ") + img_filename;
   auto ret = system(cmd.c_str());
 
   Assert(ret == 0,
@@ -59,7 +58,7 @@ void ASTVisualizer::_visualize_subtree(const std::shared_ptr<AbstractASTNode> &n
 void ASTVisualizer::_visualize_dataflow(const std::shared_ptr<AbstractASTNode> &from,
                                         const std::shared_ptr<AbstractASTNode> &to, std::ofstream &file) {
   float row_count, row_percentage = 100.0f;
-  uint8_t pen_width;
+  uint32_t pen_width;
 
   try {
     row_count = from->get_statistics()->row_count();

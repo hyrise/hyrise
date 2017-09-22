@@ -85,8 +85,8 @@ std::unique_ptr<Base> make_unique_by_column_types(const std::string &type1, cons
         if (std::string(hana::first(y)) == type2) {
           using ColumnType1 = typename decltype(+hana::second(x))::type;
           using ColumnType2 = typename decltype(+hana::second(y))::type;
-          ret = std::make_unique<Impl<ColumnType1, ColumnType2, TemplateArgs...>>(
-              std::forward<ConstructorArgs>(args)...);
+          ret =
+              std::make_unique<Impl<ColumnType1, ColumnType2, TemplateArgs...>>(std::forward<ConstructorArgs>(args)...);
           return;
         }
       });
