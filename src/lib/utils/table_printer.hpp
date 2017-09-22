@@ -29,7 +29,7 @@ protected:
   const std::shared_ptr<const Table> _table;
   std::ostream& _out;
   std::vector<uint16_t> _widths;
-  size_t rows_printed;
+  size_t _rows_printed;
   bool _ignore_empty_chunks;
   bool _has_mvcc;
 };
