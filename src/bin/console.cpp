@@ -272,7 +272,7 @@ int Console::_eval_sql(const std::string& sql) {
     out(table);
   }
   out("===\n");
-  out(std::to_string(row_count) + " rows (PARSE: " + std::to_string(parse_elapsed_ms) + " ms, COMPILE: " +
+  out(std::to_string(row_count) + " rows total (PARSE: " + std::to_string(parse_elapsed_ms) + " ms, COMPILE: " +
       std::to_string(plan_elapsed_ms) + " ms, EXECUTE: " + std::to_string(execution_elapsed_ms) + " ms (wall time))\n");
 
   return ReturnCode::Ok;
@@ -322,10 +322,11 @@ void Console::out(const std::string& output, bool console_print) {
 }
 
 void Console::out(std::shared_ptr<const Table> table) {
-  // Print::print(table, 0, _out);
-  // Print::print(table, 0, _log);
-  TablePrinter(table, _out, false).print();
-  TablePrinter(table, _log, false).print();
+  TablePrinter printer(table, _out, false);
+  printer.print_header();
+  printer.print(RowID{}, 10);
+
+  // TablePrinter(table, _log, false).print();
 }
 
 // Command functions

@@ -18,12 +18,12 @@ class TablePrinter {
  public:
   explicit TablePrinter(std::shared_ptr<const Table> table, std::ostream& out = std::cout, bool ignore_empty_chunks = false);
 
-  void print();
-  // void print_incremental(size_t row_count = 1);
+  void print_header();
+  RowID print(const RowID & row_id, const size_t rows);
 
 protected:
-  void _print_header();
-  void _print_row(const Chunk & chunk, const size_t row);
+  void _print_chunk_header(const ChunkID chunk_id);
+  void _print_row(const RowID & row_id);
   std::vector<uint16_t> _column_string_widths(uint16_t min, uint16_t max, std::shared_ptr<const Table> t) const;
 
   const std::shared_ptr<const Table> _table;

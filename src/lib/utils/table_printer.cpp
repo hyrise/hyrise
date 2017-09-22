@@ -24,31 +24,7 @@ TablePrinter::TablePrinter(std::shared_ptr<const Table> table, std::ostream& out
   }
 }
 
-void TablePrinter::print() {
-  _print_header();  
-
-  // print each chunk
-  for (ChunkID chunk_id{0}; chunk_id < _table->chunk_count(); ++chunk_id) {
-    auto& chunk = _table->get_chunk(chunk_id);
-    if (chunk.size() == 0 && (_ignore_empty_chunks)) {
-      continue;
-    }
-
-    _out << "=== Chunk " << chunk_id << " === " << std::endl;
-
-    if (chunk.size() == 0) {
-      _out << "Empty chunk." << std::endl;
-      continue;
-    }
-
-    // print the rows in the chunk
-    for (size_t row = 0; row < chunk.size(); ++row) {
-      _print_row(chunk, row);
-    }
-  }
-}
-
-void TablePrinter::_print_header() {
+void TablePrinter::print_header() {
   _out << "=== Columns" << std::endl;
   for (ColumnID col{0}; col < _table->col_count(); ++col) {
     _out << "|" << std::setw(_widths[col]) << _table->column_name(col) << std::setw(0);
@@ -66,8 +42,58 @@ void TablePrinter::_print_header() {
   _out << "|" << std::endl;
 }
 
-void TablePrinter::_print_row(const Chunk & chunk, const size_t row) {
+RowID TablePrinter::print(const RowID & row_id, const size_t rows) {
+  RowID row = row_id;
+
+  size_t rows_printed = 0;
+  while (rows_printed < rows) {
+    if (row.chunk_id >= _table->chunk_count()) {
+      return RowID{};
+    }
+
+    uint32_t chunk_size = _table->get_chunk(row.chunk_id).size();
+
+    if (row.chunk_offset == 0) {
+      _print_chunk_header(row.chunk_id);
+    }
+
+    if (chunk_size == 0) {
+      row = RowID{ChunkID{row.chunk_id + 1}, ChunkOffset{0}};
+      continue;
+    }
+
+    _print_row(row);
+
+    row = RowID{ChunkID{row.chunk_id}, ChunkOffset{row.chunk_offset + 1}};
+    if (row.chunk_offset >= chunk_size) {
+      row = RowID{ChunkID{row.chunk_id + 1}, ChunkOffset{0}};
+    }
+
+    ++rows_printed;
+  }
+
+  return row;
+}
+
+void TablePrinter::_print_chunk_header(const ChunkID chunk_id) {
+  auto& chunk = _table->get_chunk(chunk_id);
+  if (chunk.size() == 0 && (_ignore_empty_chunks)) {
+    return;
+  }
+
+  _out << "=== Chunk " << chunk_id << " === " << std::endl;
+
+  if (chunk.size() == 0) {
+    _out << "Empty chunk." << std::endl;
+    return;
+  }
+}
+
+void TablePrinter::_print_row(const RowID & row_id) {
   PerformanceWarningDisabler pwd;
+
+  auto& chunk = _table->get_chunk(row_id.chunk_id);
+  ChunkOffset row = row_id.chunk_offset;
 
   _out << "|";
   for (ColumnID col{0}; col < chunk.col_count(); ++col) {
@@ -93,13 +119,13 @@ void TablePrinter::_print_row(const Chunk & chunk, const size_t row) {
     _out << "|";
   }
   _out << std::endl;
-  ++_rows_printed;
 }
 
 // In order to print the table as an actual table, with columns being aligned, we need to calculate the
-// number of characters in the TablePrintered representation of each column
+// number of characters in the printed representation of each column
 // `min` and `max` can be used to limit the width of the columns - however, every column fits at least the column's name
 std::vector<uint16_t> TablePrinter::_column_string_widths(uint16_t min, uint16_t max, std::shared_ptr<const Table> t) const {
+  PerformanceWarningDisabler pwd;
   std::vector<uint16_t> widths(t->col_count());
   // calculate the length of the column name
   for (ColumnID col{0}; col < t->col_count(); ++col) {
