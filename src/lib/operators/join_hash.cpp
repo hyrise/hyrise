@@ -9,9 +9,7 @@
 #include "product.hpp"
 
 #include "storage/column_visitable.hpp"
-#include "storage/iterables/chunk_offset_mapping.hpp"
-#include "storage/iterables/dictionary_column_iterable.hpp"
-#include "storage/iterables/value_column_iterable.hpp"
+#include "storage/iterables/create_iterable_from_column.hpp"
 
 #include "resolve_type.hpp"
 #include "utils/assert.hpp"
@@ -136,100 +134,6 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
     std::vector<size_t> partition_offsets;
   };
 
-  /*
-  Visitor approach for materialization of columns
-  */
-  template <typename T>
-  struct ColumnBuilder : public ColumnVisitable {
-    explicit ColumnBuilder(ChunkID chunk_id, std::shared_ptr<std::vector<ChunkOffset>> offsets = nullptr)
-        : _chunk_id(chunk_id),
-          _materialized_chunk(std::make_shared<pmr_vector<std::pair<RowID, T>>>()),
-          _offsets(offsets) {}
-
-    void execute(std::shared_ptr<BaseColumn> column) {
-      auto context = std::make_shared<Context>(_chunk_id);
-      column->visit(*this, context);
-    }
-
-    void handle_value_column(BaseColumn &column, std::shared_ptr<ColumnVisitableContext> base_context) override {
-      auto context = std::static_pointer_cast<Context>(base_context);
-      const auto chunk_id = context->_chunk_id;
-      const auto &mapped_chunk_offsets = context->_mapped_chunk_offsets;
-
-      auto &vc_column = static_cast<ValueColumn<T> &>(column);
-      auto &chunk = static_cast<pmr_vector<std::pair<RowID, T>> &>(*_materialized_chunk);
-
-      auto iterable = ValueColumnIterable<T>{vc_column};
-      iterable.with_iterators(mapped_chunk_offsets.get(), [&](auto begin, auto end) {
-        for (auto it = begin; it != end; ++it) {
-          const auto &value = *it;
-          if (!value.is_null()) {
-            chunk.emplace_back(RowID{chunk_id, value.chunk_offset()}, value.value());
-          }
-        }
-      });
-    }
-
-    void handle_dictionary_column(BaseColumn &column, std::shared_ptr<ColumnVisitableContext> base_context) override {
-      auto context = std::static_pointer_cast<Context>(base_context);
-      const auto chunk_id = context->_chunk_id;
-      const auto &mapped_chunk_offsets = context->_mapped_chunk_offsets;
-
-      auto &dict_column = static_cast<DictionaryColumn<T> &>(column);
-      auto &chunk = static_cast<pmr_vector<std::pair<RowID, T>> &>(*_materialized_chunk);
-
-      auto iterable = DictionaryColumnIterable<T>{dict_column};
-      iterable.with_iterators(mapped_chunk_offsets.get(), [&](auto begin, auto end) {
-        for (auto it = begin; it != end; ++it) {
-          const auto &value = *it;
-          if (!value.is_null()) {
-            chunk.emplace_back(RowID{chunk_id, value.chunk_offset()}, value.value());
-          }
-        }
-      });
-    }
-
-    void handle_reference_column(ReferenceColumn &ref_column,
-                                 std::shared_ptr<ColumnVisitableContext> base_context) override {
-      auto context = std::static_pointer_cast<Context>(base_context);
-      const ChunkID chunk_id = context->_chunk_id;
-
-      auto chunk_offsets_by_chunk_id = split_pos_list_by_chunk_id(*ref_column.pos_list(), true);
-
-      // Visit each referenced column
-      for (auto &pair : chunk_offsets_by_chunk_id) {
-        const auto &referenced_chunk_id = pair.first;
-        auto &mapped_chunk_offsets = pair.second;
-
-        const auto &chunk = ref_column.referenced_table()->get_chunk(referenced_chunk_id);
-        auto referenced_column = chunk.get_column(ref_column.referenced_column_id());
-
-        auto mapped_chunk_offsets_ptr = std::make_unique<ChunkOffsetsList>(std::move(mapped_chunk_offsets));
-
-        auto new_context = std::make_shared<Context>(chunk_id, std::move(mapped_chunk_offsets_ptr));
-        referenced_column->visit(*this, new_context);
-      }
-    }
-
-    ChunkID _chunk_id;
-    std::shared_ptr<pmr_vector<std::pair<RowID, T>>> _materialized_chunk;
-    std::shared_ptr<std::vector<ChunkOffset>> _offsets;
-
-   protected:
-    /**
-     * @brief the context used for the columns' visitor pattern
-     */
-    struct Context : public ColumnVisitableContext {
-      explicit Context(const ChunkID chunk_id) : _chunk_id{chunk_id} {}
-
-      Context(const ChunkID chunk_id, std::unique_ptr<ChunkOffsetsList> mapped_chunk_offsets)
-          : _chunk_id{chunk_id}, _mapped_chunk_offsets{std::move(mapped_chunk_offsets)} {}
-
-      const ChunkID _chunk_id;
-      std::unique_ptr<ChunkOffsetsList> _mapped_chunk_offsets;
-    };
-  };
-
   template <typename T>
   std::shared_ptr<Partition<T>> _materialize_input(const std::shared_ptr<const Table> in_table, ColumnID column_id,
                                                    std::vector<std::shared_ptr<std::vector<size_t>>> &histograms) {
@@ -277,12 +181,21 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
 
         auto &histogram = static_cast<std::vector<size_t> &>(*histograms[chunk_id]);
 
+        auto materialized_chunk = std::make_shared<pmr_vector<std::pair<RowID, T>>>();
+
         // Materialize the chunk
-        ColumnBuilder<T> builder = ColumnBuilder<T>(chunk_id);
-        builder.execute(column);
+        resolve_column_type<T>(*column, [&](auto &typed_column) {
+          auto iterable = create_iterable_from_column<T>(typed_column);
+          auto &materialized = *materialized_chunk;
 
-        auto const &materialized = static_cast<pmr_vector<std::pair<RowID, T>> &>(*builder._materialized_chunk);
+          iterable.for_each([&, chunk_id](const auto &value) {
+            if (!value.is_null()) {
+              materialized.emplace_back(RowID{chunk_id, value.chunk_offset()}, value.value());
+            }
+          });
+        });
 
+        const auto &materialized = *materialized_chunk;
         size_t row_id = output_offset;
 
         /*
