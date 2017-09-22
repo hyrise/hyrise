@@ -19,6 +19,7 @@
 #include "concurrency/transaction_manager.hpp"
 #include "operators/get_table.hpp"
 #include "operators/import_csv.hpp"
+#include "operators/commit_records.hpp"
 #include "operators/print.hpp"
 #include "planviz/sql_query_plan_visualizer.hpp"
 #include "sql/sql_planner.hpp"
@@ -203,13 +204,14 @@ int Console::_eval_sql(const std::string& sql) {
     return 1;
   }
 
+  auto transaction_context = TransactionManager::get().new_transaction_context();
+
   // Measure the plan compile time
   started = std::chrono::high_resolution_clock::now();
 
   // Compile the parse result
   try {
-    static auto tx_context = TransactionManager::get().new_transaction_context();
-    plan = SQLPlanner::plan(parse_result, tx_context);
+    plan = SQLPlanner::plan(parse_result, transaction_context);
   } catch (const std::exception& exception) {
     out("Exception thrown while compiling query plan:\n  " + std::string(exception.what()) + "\n");
     return ReturnCode::Error;
@@ -248,6 +250,15 @@ int Console::_eval_sql(const std::string& sql) {
   out("===\n");
   out(std::to_string(row_count) + " rows (PARSE: " + std::to_string(parse_elapsed_ms) + " ms, COMPILE: " +
       std::to_string(plan_elapsed_ms) + " ms, EXECUTE: " + std::to_string(execution_elapsed_ms) + " ms (wall time))\n");
+
+  // Commit
+  TransactionManager::get().prepare_commit(*transaction_context);
+
+  auto commit = std::make_shared<CommitRecords>();
+  commit->set_transaction_context(transaction_context);
+  commit->execute();
+
+  TransactionManager::get().commit(*transaction_context);
 
   return ReturnCode::Ok;
 }

@@ -74,7 +74,7 @@ void TransactionManager::run_transaction(const std::function<void(std::shared_pt
   fn(transaction_context);
 
   // Commit
-  TransactionManager::get().prepare_commit(*transaction_context);
+  this->prepare_commit(*transaction_context);
 
   auto commit = std::make_shared<CommitRecords>();
   commit->set_transaction_context(transaction_context);
@@ -83,7 +83,7 @@ void TransactionManager::run_transaction(const std::function<void(std::shared_pt
   commit_task->schedule();
   commit_task->join();
 
-  TransactionManager::get().commit(*transaction_context);
+  this->commit(*transaction_context);
 }
 
 /**
