@@ -12,7 +12,7 @@
 namespace opossum {
 
 #if OPOSSUM_NUMA_SUPPORT
-NUMAMemoryResource::NUMAMemoryResource(int node_id, const std::string &name)
+NUMAMemoryResource::NUMAMemoryResource(int node_id, const std::string& name)
     : _mem_source(numa::MemSource::create(node_id, NUMA_MEMORY_RESOURCE_ARENA_SIZE, name.c_str())) {}
 
 void* NUMAMemoryResource::do_allocate(std::size_t bytes, std::size_t alignment) {
@@ -30,9 +30,11 @@ bool NUMAMemoryResource::do_is_equal(const memory_resource& other) const noexcep
   }
 }
 
+int NUMAMemoryResource::get_node_id() const { return _mem_source->getPhysicalNode(); }
+
 #else
 
-NUMAMemoryResource::NUMAMemoryResource(int node_id, const std::string &name) {}
+NUMAMemoryResource::NUMAMemoryResource(int node_id, const std::string& name) {}
 
 void* NUMAMemoryResource::do_allocate(std::size_t bytes, std::size_t alignment) {
   return boost::container::pmr::get_default_resource()->allocate(bytes, alignment);
@@ -43,6 +45,8 @@ void NUMAMemoryResource::do_deallocate(void* p, std::size_t bytes, std::size_t a
 }
 
 bool NUMAMemoryResource::do_is_equal(const memory_resource& other) const noexcept { return true; }
+
+int NUMAMemoryResource::get_node_id() const { return -1; }
 #endif
 
 static NUMAMemoryResource default_resource = NUMAMemoryResource(1, "default");

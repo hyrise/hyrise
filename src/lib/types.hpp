@@ -102,6 +102,7 @@ constexpr ValueID NULL_VALUE_ID{std::numeric_limits<ValueID::base_type>::max()};
 
 // The Scheduler currently supports just these 2 priorities, subject to change.
 enum class SchedulePriority {
+  Unstealable = 2,  // Schedule task at the end of the queue with disabled workstealing
   Normal = 1,  // Schedule task at the end of the queue
   High = 0     // Schedule task at the beginning of the queue
 };

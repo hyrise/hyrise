@@ -12,13 +12,15 @@ namespace opossum {
 
 class NUMAMemoryResource : public boost::container::pmr::memory_resource {
  public:
-  NUMAMemoryResource(int node_id, const std::string &name);
+  NUMAMemoryResource(int node_id, const std::string& name);
 
   virtual void* do_allocate(std::size_t bytes, std::size_t alignment);
 
   virtual void do_deallocate(void* p, std::size_t bytes, std::size_t alignment);
 
   virtual bool do_is_equal(const memory_resource& other) const noexcept;
+
+  int get_node_id() const;
 
   static NUMAMemoryResource* get_default_resource();
 

@@ -52,12 +52,36 @@ class Chunk : private Noncopyable {
     std::shared_mutex _mutex;
   };
 
+  struct AccessCounter {
+    friend class Chunk;
+
+   public:
+    explicit AccessCounter(VariantAllocator<uint64_t> alloc) : _history(_capacity, alloc) {}
+
+    void increment() { _counter++; }
+    void increment(uint64_t value) { _counter.fetch_add(value); }
+
+    void process() { _history.push_back(_counter); }
+
+    alloc_ring_buffer<uint64_t> &history() { return _history; }
+    const alloc_ring_buffer<uint64_t> &history() const { return _history; }
+
+    uint64_t history_sample(std::chrono::milliseconds lookback) const;
+
+    uint64_t counter() const { return _counter; }
+
+   private:
+    const size_t _capacity = 100;
+    std::atomic<std::uint64_t> _counter{0};
+    alloc_ring_buffer<uint64_t> _history;
+  };
+
  public:
   // creates an empty chunk without mvcc columns
   Chunk();
   explicit Chunk(const bool has_mvcc_columns);
   explicit Chunk(const PolymorphicAllocator<Chunk> &alloc);
-  explicit Chunk(const PolymorphicAllocator<Chunk> &alloc, const bool has_mvcc_columns);
+  explicit Chunk(const PolymorphicAllocator<Chunk> &alloc, const bool has_mvcc_columns = false, const bool has_access_counter = false);
 
   // we need to explicitly set the move constructor to default when
   // we overwrite the copy constructor
@@ -93,6 +117,7 @@ class Chunk : private Noncopyable {
   std::shared_ptr<BaseColumn> get_column(ColumnID column_id) const;
 
   bool has_mvcc_columns() const;
+  bool has_access_counter() const;
 
   /**
    * The locking pointer locks the columns non-exclusively
@@ -135,12 +160,17 @@ class Chunk : private Noncopyable {
     return index;
   }
 
+  void migrate(boost::container::pmr::memory_resource* alloc);
+
+  std::shared_ptr<AccessCounter> access_counter() const { return _access_counter; }
+
   bool references_only_one_table() const;
 
  protected:
   PolymorphicAllocator<Chunk> _alloc;
   pmr_concurrent_vector<std::shared_ptr<BaseColumn>> _columns;
   std::unique_ptr<MvccColumns> _mvcc_columns;
+  std::unique_ptr<AccessCounter> _access_counter;
   pmr_vector<std::shared_ptr<BaseIndex>> _indices;
 };
 

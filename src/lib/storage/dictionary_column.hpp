@@ -83,6 +83,8 @@ class DictionaryColumn : public BaseDictionaryColumn {
   const std::shared_ptr<pmr_vector<std::pair<RowID, T>>> materialize(
       ChunkID chunk_id, std::shared_ptr<std::vector<ChunkOffset>> offsets = nullptr);
 
+  std::shared_ptr<BaseColumn> migrate(const PolymorphicAllocator<size_t>& alloc) const override;
+
  protected:
   std::shared_ptr<pmr_vector<T>> _dictionary;
   std::shared_ptr<BaseAttributeVector> _attribute_vector;

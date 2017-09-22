@@ -61,6 +61,8 @@ class ValueColumn : public BaseValueColumn {
   const std::shared_ptr<pmr_vector<std::pair<RowID, T>>> materialize(
       ChunkID chunk_id, std::shared_ptr<std::vector<ChunkOffset>> offsets = nullptr);
 
+  std::shared_ptr<BaseColumn> migrate(const PolymorphicAllocator<size_t>& alloc) const override;
+
  protected:
   pmr_concurrent_vector<T> _values;
   optional<pmr_concurrent_vector<bool>> _null_values;

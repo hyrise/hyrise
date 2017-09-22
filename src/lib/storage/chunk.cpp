@@ -22,11 +22,10 @@ Chunk::Chunk() : Chunk(PolymorphicAllocator<Chunk>(), false) {}
 
 Chunk::Chunk(const bool has_mvcc_columns) : Chunk(PolymorphicAllocator<Chunk>(), has_mvcc_columns) {}
 
-Chunk::Chunk(const PolymorphicAllocator<Chunk>& alloc) : Chunk(alloc, false) {}
-
-Chunk::Chunk(const PolymorphicAllocator<Chunk>& alloc, const bool has_mvcc_columns)
+Chunk::Chunk(const PolymorphicAllocator<Chunk>& alloc, const bool has_mvcc_columns, const bool has_access_counter)
     : _alloc(alloc), _columns(alloc), _indices(alloc) {
   if (has_mvcc_columns) _mvcc_columns = std::make_unique<MvccColumns>();
+  if (has_access_counter) _access_counter = std::make_unique<AccessCounter>();
 }
 
 void Chunk::add_column(std::shared_ptr<BaseColumn> column) {
@@ -86,6 +85,7 @@ void Chunk::use_mvcc_columns_from(const Chunk& chunk) {
 }
 
 bool Chunk::has_mvcc_columns() const { return _mvcc_columns != nullptr; }
+bool Chunk::has_access_counter() const { return _access_counter != nullptr; }
 
 SharedScopedLockingPtr<Chunk::MvccColumns> Chunk::mvcc_columns() {
   DebugAssert((has_mvcc_columns()), "Chunk does not have mvcc columns");
@@ -107,6 +107,10 @@ void Chunk::shrink_mvcc_columns() {
   _mvcc_columns->tids.shrink_to_fit();
   _mvcc_columns->begin_cids.shrink_to_fit();
   _mvcc_columns->end_cids.shrink_to_fit();
+}
+
+std::shared_ptr<AccessCounter> Chunk::access_counter() {
+  return _access_counter;
 }
 
 std::vector<std::shared_ptr<BaseIndex>> Chunk::get_indices_for(
@@ -136,5 +140,21 @@ bool Chunk::references_only_one_table() const {
 
   return true;
 }
+
+
+void Chunk::migrate(boost::container::pmr::memory_resource* memsource) {
+  if (_indices.size() > 0) {
+    Fail("Cannot copy Chunk with Indices.");
+  }
+
+  _alloc = PolymorphicAllocator(memsource);
+  alloc_concurrent_vector<std::shared_ptr<BaseColumn>> new_columns(_alloc);
+  for (size_t i = 0; i < _columns.size(); i++) {
+    new_columns.push_back(_columns.at(i)->copy(_alloc));
+    // std::cout << "Migrated column " << i << std::endl;
+  }
+  _columns = std::move(new_columns);
+}
+
 
 }  // namespace opossum

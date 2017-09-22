@@ -272,6 +272,8 @@ set(
     storage/iterables/null_value_vector_iterable.hpp
     storage/iterables/reference_column_iterable.hpp
     storage/iterables/value_column_iterable.hpp
+    storage/numa_placement_manager.cpp
+    storage/numa_placement_manager.hpp
     storage/reference_column.cpp
     storage/reference_column.hpp
     storage/scoped_locking_ptr.hpp
@@ -285,6 +287,8 @@ set(
     storage/value_column.hpp
     tasks/chunk_compression_task.cpp
     tasks/chunk_compression_task.hpp
+    tasks/chunk_migration_task.cpp
+    tasks/chunk_migration_task.hpp
     type_cast.cpp
     type_cast.hpp
     type_comparison.hpp
@@ -293,12 +297,15 @@ set(
     utils/assert.hpp
     utils/boost_default_memory_resource.cpp
     utils/cuckoo_hashtable.hpp
+    utils/fastrand.hpp
     utils/load_table.cpp
     utils/load_table.hpp
     utils/murmur_hash.cpp
     utils/murmur_hash.hpp
     utils/numa_memory_resource.cpp
     utils/numa_memory_resource.hpp
+    utils/pausable_loop_thread.cpp
+    utils/pausable_loop_thread.hpp
     utils/static_if.hpp
 )
 

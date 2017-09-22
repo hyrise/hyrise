@@ -59,6 +59,13 @@ class FittedAttributeVector : public BaseAttributeVector {
 
   AttributeVectorWidth width() const final { return sizeof(uintX_t); }
 
+  std::shared_ptr<BaseAttributeVector> migrate(const PolymorphicAllocator& alloc) const final {
+    alloc_vector<uintX_t> new_attributes(_attributes, alloc);
+    const auto new_attribute_vector =
+        std::allocate_shared<FittedAttributeVector<uintX_t>>(alloc, std::move(new_attributes));
+    return new_attribute_vector;
+  }
+
  private:
   pmr_vector<uintX_t> _attributes;
 };
