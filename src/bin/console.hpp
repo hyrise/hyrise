@@ -101,6 +101,7 @@ class Console {
   static int load_table(const std::string &args);
   static int exec_script(const std::string &args);
   static int print_table(const std::string &args);
+  static int visualize(const std::string &sql);
 
   // GNU readline interface to our commands
   static char **command_completion(const char *text, int start, int end);

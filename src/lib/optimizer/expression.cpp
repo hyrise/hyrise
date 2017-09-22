@@ -88,6 +88,18 @@ std::shared_ptr<Expression> Expression::create_binary_operator(ExpressionType ty
   return expression;
 }
 
+std::shared_ptr<Expression> Expression::create_unary_operator(ExpressionType type,
+                                                              const std::shared_ptr<Expression> &input,
+                                                              const optional<std::string> &alias) {
+  auto expression = std::make_shared<Expression>(type);
+  Assert(expression->is_unary_operator(), "Type is not a unary operator such as Not, Exists");
+  expression->_alias = alias;
+
+  expression->set_left_child(input);
+
+  return expression;
+}
+
 std::shared_ptr<Expression> Expression::create_select_star(const optional<std::string> &table_name) {
   auto expression = std::make_shared<Expression>(ExpressionType::Star);
   expression->_table_name = table_name;
@@ -127,6 +139,8 @@ void Expression::print(const uint32_t level, std::ostream &out) const {
   }
 }
 
+bool Expression::is_operator() const { return is_arithmetic_operator() || is_logical_operator(); }
+
 bool Expression::is_arithmetic_operator() const {
   switch (_type) {
     case ExpressionType::Subtraction:
@@ -135,6 +149,27 @@ bool Expression::is_arithmetic_operator() const {
     case ExpressionType::Division:
     case ExpressionType::Modulo:
     case ExpressionType::Power:
+      return true;
+    default:
+      return false;
+  }
+}
+
+bool Expression::is_logical_operator() const {
+  switch (_type) {
+    case ExpressionType::Equals:
+    case ExpressionType::NotEquals:
+    case ExpressionType::LessThan:
+    case ExpressionType::LessThanEquals:
+    case ExpressionType::GreaterThan:
+    case ExpressionType::GreaterThanEquals:
+    case ExpressionType::Like:
+    case ExpressionType::NotLike:
+    case ExpressionType::And:
+    case ExpressionType::Or:
+    case ExpressionType::Between:
+    case ExpressionType::Not:
+    case ExpressionType::Exists:
       return true;
     default:
       return false;
@@ -156,6 +191,16 @@ bool Expression::is_binary_operator() const {
     case ExpressionType::And:
     case ExpressionType::Or:
     case ExpressionType::Between:
+      return true;
+    default:
+      return false;
+  }
+}
+
+bool Expression::is_unary_operator() const {
+  switch (_type) {
+    case ExpressionType::Not:
+    case ExpressionType::Exists:
       return true;
     default:
       return false;
@@ -229,6 +274,9 @@ std::string Expression::to_string(const std::vector<std::string> &input_column_n
       if (is_null_literal()) {
         return std::string("NULL");
       }
+      if (value().type() == typeid(std::string)) {
+        return "\"" + boost::get<std::string>(value()) + "\"";
+      }
       return type_cast<std::string>(value());
     case ExpressionType::Column:
       if (!input_column_names.empty()) {
@@ -247,12 +295,33 @@ std::string Expression::to_string(const std::vector<std::string> &input_column_n
       break;
   }
 
-  // TODO(mp): Should be is_operator() to also support ExpressionType::Equals, ...
-  Assert(is_arithmetic_operator(), "To generate expression string, Expression need to be operators or operands.");
-  Assert(static_cast<bool>(left_child()) && static_cast<bool>(right_child()), "Operator needs both operands.");
+  Assert(is_operator(),
+         "To generate expression string, Expressions need to be operators or operands (which are already covered "
+         "further up).");
 
-  return left_child()->to_string(input_column_names) + expression_type_to_operator_string.at(_type) +
-         right_child()->to_string(input_column_names);
+  Assert(left_child(), "Operator needs left child.");
+
+  std::string result;
+  const auto lhs = left_child()->to_string(input_column_names);
+  const auto &op = expression_type_to_operator_string.at(_type);
+
+  if (is_binary_operator()) {
+    Assert(right_child(), "Binary Operator needs both children.");
+
+    const auto rhs = right_child()->to_string(input_column_names);
+    result = lhs + " " + op + " " + rhs;
+  } else {
+    Assert(!right_child(), "Unary Operator can only have left child.");
+
+    result = op + " " + lhs;
+  }
+
+  // Don't put brackets around root expression, i.e. generate "5+(a*3)" and not "(5+(a*3))"
+  if (_parent.lock()) {
+    result = "(" + result + ")";
+  }
+
+  return result;
 }
 
 const std::vector<std::shared_ptr<Expression>> &Expression::expression_list() const { return _expression_list; }
