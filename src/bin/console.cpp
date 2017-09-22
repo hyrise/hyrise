@@ -12,6 +12,7 @@
 #include <iomanip>
 #include <iostream>
 #include <memory>
+#include <regex>
 #include <string>
 #include <vector>
 
@@ -27,9 +28,13 @@
 #include "tpcc/tpcc_table_generator.hpp"
 #include "utils/load_table.hpp"
 
-#define ANSI_COLOR_RED   "\001\e[0;31m\002"
-#define ANSI_COLOR_GREEN "\001\e[0;32m\002"
-#define ANSI_COLOR_RESET "\001\e[0m\002"
+#define ANSI_COLOR_RED "\e[31m"
+#define ANSI_COLOR_GREEN "\e[32m"
+#define ANSI_COLOR_RESET "\e[0m"
+
+#define ANSI_COLOR_RED_RL "\001\e[31m\002"
+#define ANSI_COLOR_GREEN_RL "\001\e[32m\002"
+#define ANSI_COLOR_RESET_RL "\001\e[0m\002"
 
 namespace {
 
@@ -44,6 +49,22 @@ std::string current_timestamp() {
   std::ostringstream oss;
   oss << std::put_time(&tm, "%Y-%m-%d %H:%M:%S");
   return oss.str();
+}
+
+// Removes the coloring commands (e.g. '\e[31m') from input, to have a clean logfile.
+// If remove_rl_codes_only is true, then it only removes the Readline specific escape sequences '\001' and '\002'
+std::string remove_coloring(const std::string& input, bool remove_rl_codes_only = false) {
+  // matches any characters that need to be escaped in RegEx except for '|'
+  std::regex specialChars{R"([-[\]{}()*+?.,\^$#\s])"};
+  std::string sequences = "\e[31m|\e[32m|\e[0m|\001|\002";
+  if (remove_rl_codes_only) {
+    sequences = "\001|\002";
+  }
+  std::string sanitized_sequences = std::regex_replace(sequences, specialChars, R"(\$&)");
+
+  // Remove coloring commands and escape sequences before writing to logfile
+  std::regex expression{"(" + sanitized_sequences + ")"};
+  return std::regex_replace(input, expression, "");
 }
 }  // namespace
 
@@ -125,7 +146,8 @@ int Console::_eval(const std::string& input) {
   }
 
   // Dump command to logfile, and to the Console if input comes from a script file
-  out(_prompt + input + "\n", _verbose);
+  // Also remove Readline specific escape sequences ('\001' and '\002') to make it look normal
+  out(remove_coloring(_prompt + input + "\n", true), _verbose);
 
   // Check if we already are in multiline input
   if (_multiline_input.empty()) {
@@ -269,9 +291,9 @@ Console::RegisteredCommands Console::commands() { return _commands; }
 
 void Console::setPrompt(const std::string& prompt) {
   if (IS_DEBUG) {
-    _prompt = ANSI_COLOR_RED "(debug)" ANSI_COLOR_RESET + prompt;
+    _prompt = ANSI_COLOR_RED_RL "(debug)" ANSI_COLOR_RESET_RL + prompt;
   } else {
-    _prompt = ANSI_COLOR_GREEN "(release)" ANSI_COLOR_RESET + prompt;
+    _prompt = ANSI_COLOR_GREEN_RL "(release)" ANSI_COLOR_RESET_RL + prompt;
   }
 }
 
@@ -301,7 +323,8 @@ void Console::out(const std::string& output, bool console_print) {
   if (console_print) {
     _out << output;
   }
-  _log << output;
+  // Remove coloring commands like '\e[32m' when writing to logfile
+  _log << remove_coloring(output);
   _log.flush();
 }
 
