@@ -24,6 +24,39 @@ TablePrinter::TablePrinter(std::shared_ptr<const Table> table, std::ostream& out
   }
 }
 
+RowID TablePrinter::print(const RowID & row_id, const size_t rows) {
+  RowID row = row_id;
+
+  size_t rows_printed = 0;
+  while (rows_printed < rows) {
+    if (row.chunk_id >= _table->chunk_count()) {
+      return NULL_ROW_ID;
+    }
+
+    uint32_t chunk_size = _table->get_chunk(row.chunk_id).size();
+
+    if (row.chunk_offset == 0) {
+      _print_chunk_header(row.chunk_id);
+
+      if (chunk_size == 0) {
+        row = RowID{ChunkID{row.chunk_id + 1}, ChunkOffset{0}};
+        continue;
+      }
+    }
+
+    _print_row(row);
+
+    row = RowID{ChunkID{row.chunk_id}, ChunkOffset{row.chunk_offset + 1}};
+    if (row.chunk_offset >= chunk_size) {
+      row = RowID{ChunkID{row.chunk_id + 1}, ChunkOffset{0}};
+    }
+
+    ++rows_printed;
+  }
+
+  return row;
+}
+
 void TablePrinter::print_header() {
   _out << "=== Columns" << std::endl;
   for (ColumnID col{0}; col < _table->col_count(); ++col) {
@@ -42,37 +75,8 @@ void TablePrinter::print_header() {
   _out << "|" << std::endl;
 }
 
-RowID TablePrinter::print(const RowID & row_id, const size_t rows) {
-  RowID row = row_id;
-
-  size_t rows_printed = 0;
-  while (rows_printed < rows) {
-    if (row.chunk_id >= _table->chunk_count()) {
-      return RowID{};
-    }
-
-    uint32_t chunk_size = _table->get_chunk(row.chunk_id).size();
-
-    if (row.chunk_offset == 0) {
-      _print_chunk_header(row.chunk_id);
-    }
-
-    if (chunk_size == 0) {
-      row = RowID{ChunkID{row.chunk_id + 1}, ChunkOffset{0}};
-      continue;
-    }
-
-    _print_row(row);
-
-    row = RowID{ChunkID{row.chunk_id}, ChunkOffset{row.chunk_offset + 1}};
-    if (row.chunk_offset >= chunk_size) {
-      row = RowID{ChunkID{row.chunk_id + 1}, ChunkOffset{0}};
-    }
-
-    ++rows_printed;
-  }
-
-  return row;
+void TablePrinter::print_abort() {
+  _out << "...\n";
 }
 
 void TablePrinter::_print_chunk_header(const ChunkID chunk_id) {

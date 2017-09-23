@@ -1,10 +1,7 @@
 #pragma once
 
 #include <fstream>
-// #include <functional>
 #include <memory>
-// #include <string>
-// #include <unordered_map>
 #include <vector>
 
 #include "storage/table.hpp"
@@ -18,8 +15,9 @@ class TablePrinter {
  public:
   explicit TablePrinter(std::shared_ptr<const Table> table, std::ostream& out = std::cout, bool ignore_empty_chunks = false);
 
-  void print_header();
   RowID print(const RowID & row_id, const size_t rows);
+  void print_header();
+  void print_abort();
 
 protected:
   void _print_chunk_header(const ChunkID chunk_id);

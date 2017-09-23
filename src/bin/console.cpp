@@ -6,6 +6,7 @@
 #include <readline/history.h>
 #include <readline/readline.h>
 #include <setjmp.h>
+#include <termios.h>
 #include <chrono>
 #include <csignal>
 #include <ctime>
@@ -38,6 +39,13 @@
 
 namespace {
 
+enum Console_key_input {
+  CONTINUE,
+  CONTINUE_PAGE,
+  PAUSE,
+  ABORT
+};
+
 // Buffer for program state
 sigjmp_buf jmp_env;
 
@@ -65,6 +73,44 @@ std::string remove_coloring(const std::string& input, bool remove_rl_codes_only 
   // Remove coloring commands and escape sequences before writing to logfile
   std::regex expression{"(" + sanitized_sequences + ")"};
   return std::regex_replace(input, expression, "");
+}
+
+int getch()
+{
+  int ch;
+  struct termios oldt, newt;
+  // store old settings
+  tcgetattr(STDIN_FILENO, &oldt);
+  newt = oldt;
+  newt.c_lflag &= ~(ICANON | ECHO); // make one change to old settings in new settings
+  // apply new settings
+  tcsetattr(STDIN_FILENO, TCSANOW, &newt);
+  ch = getchar();
+  // reapply old settings
+  tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
+  return ch;
+}
+
+Console_key_input key_input() {
+  switch(getch()) {
+    // Arrow keys consist of three consecutive characters, PAGE UP/DOWN of four
+    case '\033': {
+      getch(); // Irrelevant char
+      switch(getch()) { // Determine which arrow key or PAGE UP/DOWN is pressed
+        case 'A': return PAUSE; // Arrow up
+        case 'B': return CONTINUE; // Arrow down
+        case 'C': return PAUSE; // Arrow right
+        case 'D': return PAUSE; // Arrow left
+        case '6': { // PAGE DOWN
+          getch(); // Irrelevant char
+          return CONTINUE_PAGE;
+        }
+        default: return ABORT;
+      }
+    }
+    case '\n': return CONTINUE;
+    default: return ABORT;
+  }
 }
 }  // namespace
 
@@ -324,9 +370,37 @@ void Console::out(const std::string& output, bool console_print) {
 void Console::out(std::shared_ptr<const Table> table) {
   TablePrinter printer(table, _out, false);
   printer.print_header();
-  printer.print(RowID{}, 10);
+  auto row_id = RowID{};
+  int rows, cols;
+  rl_get_screen_size(&rows, &cols);
+  --rows;
 
-  // TablePrinter(table, _log, false).print();
+  while (!(row_id == NULL_ROW_ID)) {
+    row_id = printer.print(row_id, rows);
+    rows = 2;
+    if (!(row_id == NULL_ROW_ID)) {
+      switch (key_input()) {
+        case CONTINUE: {
+          rows = 1;
+          break;
+        }
+        case CONTINUE_PAGE: {
+          rl_get_screen_size(&rows, &cols);
+          --rows;
+          break;
+        }
+        case PAUSE: {
+          rows = 0;
+          break;
+        }
+        case ABORT: {
+          printer.print_abort();
+          row_id = NULL_ROW_ID;
+          break;
+        }
+      }
+    }
+  }
 }
 
 // Command functions
