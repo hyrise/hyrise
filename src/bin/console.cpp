@@ -39,7 +39,7 @@
 
 namespace {
 
-enum Console_key_input {
+enum PaginationCommand {
   CONTINUE,
   CONTINUE_PAGE,
   PAUSE,
@@ -75,8 +75,8 @@ std::string remove_coloring(const std::string& input, bool remove_rl_codes_only 
   return std::regex_replace(input, expression, "");
 }
 
-int getch()
-{
+// This waits for the user to press a key, then returns the first character code of the pressed key in the buffer
+int getch() {
   int ch;
   struct termios oldt, newt;
   // store old settings
@@ -91,18 +91,23 @@ int getch()
   return ch;
 }
 
-Console_key_input key_input() {
+// Waits for the user to press a key then returns a PaginationCommand according to which key was pressed
+PaginationCommand user_input_pagination() {
   switch(getch()) {
     // Arrow keys consist of three consecutive characters, PAGE UP/DOWN of four
     case '\033': {
-      getch(); // Irrelevant char
+      getch(); // Remove irrelevant char from buffer
       switch(getch()) { // Determine which arrow key or PAGE UP/DOWN is pressed
         case 'A': return PAUSE; // Arrow up
         case 'B': return CONTINUE; // Arrow down
         case 'C': return PAUSE; // Arrow right
         case 'D': return PAUSE; // Arrow left
+        case '5': { // PAGE UP
+          getch(); // Remove irrelevant char from buffer
+          return PAUSE;
+        }
         case '6': { // PAGE DOWN
-          getch(); // Irrelevant char
+          getch(); // Remove irrelevant char from buffer
           return CONTINUE_PAGE;
         }
         default: return ABORT;
@@ -370,16 +375,22 @@ void Console::out(const std::string& output, bool console_print) {
 void Console::out(std::shared_ptr<const Table> table) {
   TablePrinter printer(table, _out, false);
   printer.print_header();
+
   auto row_id = RowID{};
   int rows, cols;
-  rl_get_screen_size(&rows, &cols);
-  --rows;
 
+  // Determine how many rows can be printed on the first page
+  rl_get_screen_size(&rows, &cols);
+  // Print 5 rows less than screen size initially to still have the header visible
+  if (rows > 5) { rows = rows - 5; }
+
+  // Print more rows until NULL_ROW_ID is reached, either by completing the table, or by the user aborting
   while (!(row_id == NULL_ROW_ID)) {
     row_id = printer.print(row_id, rows);
-    rows = 2;
+
+    // If end of table not reached, prompt the user for a pagination command
     if (!(row_id == NULL_ROW_ID)) {
-      switch (key_input()) {
+      switch (user_input_pagination()) {
         case CONTINUE: {
           rows = 1;
           break;
