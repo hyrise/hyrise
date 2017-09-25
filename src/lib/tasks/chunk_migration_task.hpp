@@ -12,10 +12,10 @@ class Chunk;
 class ChunkMigrationTask : public AbstractTask {
  public:
   explicit ChunkMigrationTask(const std::string& table_name, const ChunkID chunk_id, int node_id);
-  explicit ChunkMigrationTask(const std::string& table_name, const alloc_vector<ChunkID>& chunk_ids, int node_id);
+  explicit ChunkMigrationTask(const std::string& table_name, const std::vector<ChunkID>& chunk_ids, int node_id);
 
  protected:
-  void on_execute() override;
+  void _on_execute() override;
 
  private:
   /**
@@ -28,6 +28,6 @@ class ChunkMigrationTask : public AbstractTask {
  private:
   const std::string _table_name;
   const int _node_id;
-  const alloc_vector<ChunkID> _chunk_ids;
+  const std::vector<ChunkID> _chunk_ids;
 };
 }  // namespace opossum

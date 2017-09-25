@@ -52,7 +52,7 @@ std::vector<double> scale(const std::vector<double>& container) {
   if (sum == 0) {
     return std::vector<double>(container.size(), 0.0);
   }
-  std::vector<U> result(container.size());
+  std::vector<double> result(container.size());
   for (size_t i = 0; i < container.size(); i++) {
     result[i] = container[i] / sum;
   }
@@ -84,7 +84,7 @@ HotNodeSet find_hot_nodes(const std::vector<double>& node_chunk) {
   std::vector<NodeID> hot_nodes;
   std::vector<NodeID> cold_nodes;
 
-  for (size_t i = 0; i < node_chunk.size(); i++) {
+  for (NodeID i = NodeID(0); static_cast<size_t>(i) < node_chunk.size(); i++) {
     double a = node_chunk[i];
     double hottness = (a - avg_tasks);
     node_hottness[i] = a;
@@ -131,7 +131,7 @@ std::vector<ChunkInfo> find_hot_chunks(const StorageManager& storage_manager, st
   for (const auto& table_name : storage_manager.table_names()) {
     const auto& table = *storage_manager.get_table(table_name);
     const auto chunk_count = table.chunk_count();
-    for (ChunkID i = 0; i < chunk_count; i++) {
+    for (ChunkID i = ChunkID(0); static_cast<size_t>(i) < chunk_count; i++) {
       const auto& chunk = table.get_chunk(i);
       if (chunk_is_completed(chunk, table.chunk_size())) {
         const double hottness = static_cast<double>(chunk.access_counter()->history_sample(lookback));

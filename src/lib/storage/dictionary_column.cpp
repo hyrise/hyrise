@@ -186,7 +186,7 @@ const std::shared_ptr<pmr_vector<std::pair<RowID, T>>> DictionaryColumn<T>::mate
 }
 
 template <typename T>
-std::shared_ptr<BaseColumn> DictionaryColumn<T>::migrate(const PolymorphicAllocator<size_t>& alloc) const override {
+std::shared_ptr<BaseColumn> DictionaryColumn<T>::migrate(const PolymorphicAllocator<size_t>& alloc) const {
   const auto new_attribute_vector = _attribute_vector->migrate(alloc);
   return std::allocate_shared<DictionaryColumn<T>>(alloc, _dictionary, new_attribute_vector);
 }

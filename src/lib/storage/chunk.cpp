@@ -109,10 +109,6 @@ void Chunk::shrink_mvcc_columns() {
   _mvcc_columns->end_cids.shrink_to_fit();
 }
 
-std::shared_ptr<AccessCounter> Chunk::access_counter() {
-  return _access_counter;
-}
-
 std::vector<std::shared_ptr<BaseIndex>> Chunk::get_indices_for(
     const std::vector<std::shared_ptr<BaseColumn>>& columns) const {
   auto result = std::vector<std::shared_ptr<BaseIndex>>();
@@ -147,11 +143,10 @@ void Chunk::migrate(boost::container::pmr::memory_resource* memsource) {
     Fail("Cannot copy Chunk with Indices.");
   }
 
-  _alloc = PolymorphicAllocator(memsource);
-  alloc_concurrent_vector<std::shared_ptr<BaseColumn>> new_columns(_alloc);
+  _alloc = PolymorphicAllocator<size_t>(memsource);
+  pmr_concurrent_vector<std::shared_ptr<BaseColumn>> new_columns(_alloc);
   for (size_t i = 0; i < _columns.size(); i++) {
-    new_columns.push_back(_columns.at(i)->copy(_alloc));
-    // std::cout << "Migrated column " << i << std::endl;
+    new_columns.push_back(_columns.at(i)->migrate(_alloc));
   }
   _columns = std::move(new_columns);
 }

@@ -7,17 +7,18 @@
 
 #include "storage/numa_placement_manager.hpp"
 #include "storage/storage_manager.hpp"
+#include "storage/table.hpp"
 
 namespace opossum {
 
 ChunkMigrationTask::ChunkMigrationTask(const std::string& table_name, const ChunkID chunk_id, int node_id)
     : _table_name(table_name), _node_id(node_id), _chunk_ids({chunk_id}) {}
 
-ChunkMigrationTask::ChunkMigrationTask(const std::string& table_name, const alloc_vector<ChunkID>& chunk_ids,
+ChunkMigrationTask::ChunkMigrationTask(const std::string& table_name, const std::vector<ChunkID>& chunk_ids,
                                        int node_id)
     : _table_name(table_name), _node_id(node_id), _chunk_ids(chunk_ids) {}
 
-void ChunkMigrationTask::on_execute() {
+void ChunkMigrationTask::_on_execute() {
   auto table = StorageManager::get().get_table(_table_name);
 
   if (!table) {

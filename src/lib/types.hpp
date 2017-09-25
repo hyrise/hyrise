@@ -1,6 +1,7 @@
 #pragma once
 
 #include <tbb/concurrent_vector.h>
+#include <boost/circular_buffer.hpp>
 
 #include <cstdint>
 #include <iostream>
@@ -51,6 +52,9 @@ using pmr_vector = std::vector<T, PolymorphicAllocator<T>>;
 
 template <typename T>
 using pmr_concurrent_vector = tbb::concurrent_vector<T, PolymorphicAllocator<T>>;
+
+template <typename T>
+using pmr_ring_buffer = boost::circular_buffer<T, PolymorphicAllocator<T>>;
 
 using ChunkOffset = uint32_t;
 

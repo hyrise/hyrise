@@ -72,7 +72,11 @@ void Worker::operator()() {
     if (!task) {
       // Simple work stealing without explicitly transferring data between nodes.
       auto work_stealing_successful = false;
-      for (auto& queue : { scheduler->queues().at(Priority::Normal), scheduler->queues().at(Priority::High) }) {
+      const auto queues = { 
+        scheduler->queues().at(static_cast<size_t>(SchedulePriority::High)), 
+        scheduler->queues().at(static_cast<size_t>(SchedulePriority::Normal)) 
+      };
+      for (auto& queue : queues) {
         if (queue == _queue) {
           continue;
         }

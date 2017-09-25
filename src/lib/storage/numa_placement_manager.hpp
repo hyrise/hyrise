@@ -7,13 +7,14 @@
 #include <iostream>
 #include <memory>
 #include <mutex>
+#include <numeric>
 #include <ostream>
 #include <stdexcept>
 #include <string>
 #include <thread>
 #include <vector>
 
-#include "allocator.hpp"
+#include "polymorphic_allocator.hpp"
 #include "scheduler/current_scheduler.hpp"
 #include "scheduler/node_queue_scheduler.hpp"
 #include "scheduler/topology.hpp"
@@ -37,32 +38,26 @@ class NUMAPlacementManager {
   explicit NUMAPlacementManager(std::shared_ptr<Topology> topology);
 
   NUMAMemoryResource* get_memsource(int node_id);
-  {
-    if (node_id < 0 || node_id >= static_cast<int>(_topology->nodes().size())) {
-      throw std::range_error("node_id is out of bounds");
-    }
-    return get_allocator<T>(static_cast<size_t>(node_id));
-  }
 
-  template <typename T>
-  std::shared_ptr<alloc_vector<T>> migrate(const std::shared_ptr<alloc_vector<T>>& v, PolymorphicAllocator<T> alloc) {
-    return std::allocate_shared<alloc_vector<T>>(alloc, v, alloc);
-  }
+  // template <typename T>
+  // std::shared_ptr<pmr_vector<T>> migrate(const std::shared_ptr<pmr_vector<T>>& v, PolymorphicAllocator<T> alloc) {
+  //   return std::allocate_shared<pmr_vector<T>>(alloc, v, alloc);
+  // }
 
-  template <typename T>
-  std::shared_ptr<alloc_vector<T>> migrate(const std::shared_ptr<alloc_vector<T>>& v, size_t node_id) {
-    const auto alloc = get_allocator<T>(node_id);
-    return migrate<T>(v, alloc);
-  }
+  // template <typename T>
+  // std::shared_ptr<pmr_vector<T>> migrate(const std::shared_ptr<pmr_vector<T>>& v, size_t node_id) {
+  //   const auto alloc = get_allocator<T>(node_id);
+  //   return migrate<T>(v, alloc);
+  // }
 
-  template <typename T>
-  alloc_vector<std::shared_ptr<T>> migrate(const alloc_vector<std::shared_ptr<T>>& v, PolymorphicAllocator<T> alloc) {
-    alloc_vector<std::shared_ptr<T>> result(v.size(), alloc);
-    for (size_t i = 0; i < v.size(); i++) {
-      result.at(i) = std::allocate_shared<T>(alloc, v.at(i));
-    }
-    return result;
-  }
+  // template <typename T>
+  // pmr_vector<std::shared_ptr<T>> migrate(const pmr_vector<std::shared_ptr<T>>& v, PolymorphicAllocator<T> alloc) {
+  //   pmr_vector<std::shared_ptr<T>> result(v.size(), alloc);
+  //   for (size_t i = 0; i < v.size(); i++) {
+  //     result.at(i) = std::allocate_shared<T>(alloc, v.at(i));
+  //   }
+  //   return result;
+  // }
 
   const std::shared_ptr<Topology>& topology() const;
 
@@ -83,7 +78,7 @@ class NUMAPlacementManager {
   static std::shared_ptr<NUMAPlacementManager> _instance;
 
   std::shared_ptr<Topology> _topology;
-  alloc_vector<NUMAMemoryResource> memsources;
+  pmr_vector<NUMAMemoryResource> memsources;
   size_t node_counter = 0;
 
   std::unique_ptr<PausableLoopThread> collector_thread;

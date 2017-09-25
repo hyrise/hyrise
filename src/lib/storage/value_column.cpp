@@ -194,8 +194,8 @@ const std::shared_ptr<pmr_vector<std::pair<RowID, T>>> ValueColumn<T>::materiali
 }
 
 template <typename T>
-std::shared_ptr<BaseColumn> ValueColumn<T>::migrate(const PolymorphicAllocator<size_t>& alloc) const override {
-  alloc_concurrent_vector<T> new_values(_values, alloc);
+std::shared_ptr<BaseColumn> ValueColumn<T>::migrate(const PolymorphicAllocator<size_t>& alloc) const {
+  pmr_concurrent_vector<T> new_values(_values, alloc);
   return std::allocate_shared<ValueColumn<T>>(alloc, std::move(new_values), alloc);
 }
 

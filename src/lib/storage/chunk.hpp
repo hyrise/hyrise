@@ -56,15 +56,15 @@ class Chunk : private Noncopyable {
     friend class Chunk;
 
    public:
-    explicit AccessCounter(VariantAllocator<uint64_t> alloc) : _history(_capacity, alloc) {}
+    explicit AccessCounter(const PolymorphicAllocator<uint64_t>& alloc) : _history(_capacity, alloc) {}
 
     void increment() { _counter++; }
     void increment(uint64_t value) { _counter.fetch_add(value); }
 
     void process() { _history.push_back(_counter); }
 
-    alloc_ring_buffer<uint64_t> &history() { return _history; }
-    const alloc_ring_buffer<uint64_t> &history() const { return _history; }
+    pmr_ring_buffer<uint64_t> &history() { return _history; }
+    const pmr_ring_buffer<uint64_t> &history() const { return _history; }
 
     uint64_t history_sample(std::chrono::milliseconds lookback) const;
 
@@ -73,7 +73,7 @@ class Chunk : private Noncopyable {
    private:
     const size_t _capacity = 100;
     std::atomic<std::uint64_t> _counter{0};
-    alloc_ring_buffer<uint64_t> _history;
+    pmr_ring_buffer<uint64_t> _history;
   };
 
  public:
@@ -170,7 +170,7 @@ class Chunk : private Noncopyable {
   PolymorphicAllocator<Chunk> _alloc;
   pmr_concurrent_vector<std::shared_ptr<BaseColumn>> _columns;
   std::unique_ptr<MvccColumns> _mvcc_columns;
-  std::unique_ptr<AccessCounter> _access_counter;
+  std::shared_ptr<AccessCounter> _access_counter;
   pmr_vector<std::shared_ptr<BaseIndex>> _indices;
 };
 
