@@ -25,7 +25,7 @@ namespace opossum {
 enum class OrderSensitivity { Sensitive, Insensitive };
 
 struct SQLTestParam {
-  SQLTestParam(const std::string &query, const std::string &result_table_path,
+  SQLTestParam(const std::string& query, const std::string& result_table_path,
                OrderSensitivity orderSensitivity = OrderSensitivity::Insensitive)
       : query(query), result_table_path(result_table_path), order_sensitive(orderSensitivity) {}
 
@@ -103,10 +103,10 @@ TEST_P(SQLToResultTest, SQLQueryTest) {
 
   auto tx_context = TransactionManager::get().new_transaction_context();
 
-  for (const auto &root : plan.tree_roots()) {
+  for (const auto& root : plan.tree_roots()) {
     auto tasks = OperatorTask::make_tasks_from_operator(root);
 
-    for (auto &task : tasks) {
+    for (auto& task : tasks) {
       task->get_operator()->set_transaction_context(tx_context);
     }
 
@@ -247,6 +247,9 @@ const SQLTestParam test_queries[] = {
     // todo(anyone): Enable as soon as #182 is resolved
     {"SELECT COUNT(*) FROM groupby_int_1gb_1agg_null GROUP BY a;",
      "src/test/tables/aggregateoperator/groupby_int_1gb_1agg/count_star.tbl"},
+
+    // case insensitivity
+    {"SELECT Sum(b + b) AS sum_b_b FROM int_float;", "src/test/tables/int_float_sum_b_plus_b.tbl"},
 
     // Aggregates with NULL
     {"SELECT a, MAX(b) FROM groupby_int_1gb_1agg_null GROUP BY a;",
