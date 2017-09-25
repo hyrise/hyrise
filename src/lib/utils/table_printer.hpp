@@ -3,6 +3,7 @@
 #include <fstream>
 #include <limits>
 #include <memory>
+#include <string>
 #include <vector>
 
 #include "storage/table.hpp"

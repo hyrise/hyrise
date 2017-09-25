@@ -1,8 +1,12 @@
 #include "table_printer.hpp"
 
+#include <algorithm>
 #include <iomanip>
 #include <iostream>
+#include <limits>
+#include <memory>
 #include <string>
+#include <vector>
 
 #include "utils/performance_warning.hpp"
 
