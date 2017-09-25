@@ -75,7 +75,8 @@ TEST_F(TableStatisticsJoinTest, InnerJoinTest) {
   std::vector<ScanType> scan_types{ScanType::OpEquals,         ScanType::OpNotEquals,   ScanType::OpLessThan,
                                    ScanType::OpLessThanEquals, ScanType::OpGreaterThan, ScanType::OpGreaterThanEquals};
 
-  // cached row_counts
+  // 3 dimensional table of cached row count results
+  // [ join_modes index ][ scan_types index ][ column combination index = 4 * col1_index + col2_index ]
   const std::vector<std::vector<std::vector<uint32_t>>> row_counts{
       {
           {5400, 5400, 5400, 5400, 5400, 10800, 10800, 4320, 5400, 10800, 16200, 6480, 5400, 4320, 6480, 6480},
@@ -143,7 +144,8 @@ TEST_F(TableStatisticsJoinTest, OuterJoinsTest) {
   std::vector<ScanType> scan_types{ScanType::OpEquals, ScanType::OpNotEquals, ScanType::OpLessThanEquals,
                                    ScanType::OpGreaterThanEquals};  // ScanType::OpLessThan, ScanType::OpGreaterThan,
 
-  // cached row counts
+  // 3 dimensional table of cached row count results
+  // [ join_modes index ][ scan_types index ][ column combination index = 4 * col1_index + col2_index ]
   const std::vector<std::vector<std::vector<uint32_t>>> row_counts{
       {
           {5400, 5400, 5400, 5400, 5490, 10800, 10800, 4428, 5520, 10860, 16200, 6588, 5430, 4380, 6480, 6480},

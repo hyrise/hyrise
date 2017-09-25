@@ -333,45 +333,45 @@ TEST_F(ColumnStatisticsTest, NonNullRatioOneColumnTest) {
 
   auto scan_type = ScanType::OpEquals;
   auto result = _column_statistics_int->estimate_selectivity_for_predicate(scan_type, AllTypeVariant(1));
-  EXPECT_EQ(result.selectivity, 0.75f / 6.f);
+  EXPECT_FLOAT_EQ(result.selectivity, 0.75f / 6.f);
   result = _column_statistics_float->estimate_selectivity_for_predicate(scan_type, AllTypeVariant(2.f));
-  EXPECT_EQ(result.selectivity, 0.5f / 6.f);
+  EXPECT_FLOAT_EQ(result.selectivity, 0.5f / 6.f);
   result = _column_statistics_string->estimate_selectivity_for_predicate(scan_type, AllTypeVariant("a"));
-  EXPECT_EQ(result.selectivity, 0.f);
+  EXPECT_FLOAT_EQ(result.selectivity, 0.f);
 
   scan_type = ScanType::OpNotEquals;
   result = _column_statistics_int->estimate_selectivity_for_predicate(scan_type, AllTypeVariant(1));
-  EXPECT_EQ(result.selectivity, 0.75f * 5.f / 6.f);
+  EXPECT_FLOAT_EQ(result.selectivity, 0.75f * 5.f / 6.f);
   result = _column_statistics_float->estimate_selectivity_for_predicate(scan_type, AllTypeVariant(2.f));
-  EXPECT_EQ(result.selectivity, 0.5f * 5.f / 6.f);
+  EXPECT_FLOAT_EQ(result.selectivity, 0.5f * 5.f / 6.f);
   result = _column_statistics_string->estimate_selectivity_for_predicate(scan_type, AllTypeVariant("a"));
-  EXPECT_EQ(result.selectivity, 0.f);
+  EXPECT_FLOAT_EQ(result.selectivity, 0.f);
 
   scan_type = ScanType::OpLessThan;
   result = _column_statistics_int->estimate_selectivity_for_predicate(scan_type, AllTypeVariant(3));
-  EXPECT_EQ(result.selectivity, 0.75f * 2.f / 6.f);
+  EXPECT_FLOAT_EQ(result.selectivity, 0.75f * 2.f / 6.f);
   result = _column_statistics_float->estimate_selectivity_for_predicate(scan_type, AllTypeVariant(3.f));
-  EXPECT_EQ(result.selectivity, 0.5f * 2.f / 5.f);
+  EXPECT_FLOAT_EQ(result.selectivity, 0.5f * 2.f / 5.f);
   result = _column_statistics_string->estimate_selectivity_for_predicate(scan_type, AllTypeVariant("c"));
-  EXPECT_EQ(result.selectivity, 0.f);
+  EXPECT_FLOAT_EQ(result.selectivity, 0.f);
 
   scan_type = ScanType::OpGreaterThanEquals;
   result = _column_statistics_int->estimate_selectivity_for_predicate(scan_type, AllTypeVariant(3));
-  EXPECT_EQ(result.selectivity, 0.75f * 4.f / 6.f);
+  EXPECT_FLOAT_EQ(result.selectivity, 0.75f * 4.f / 6.f);
   result = _column_statistics_float->estimate_selectivity_for_predicate(scan_type, AllTypeVariant(3.f));
-  EXPECT_EQ(result.selectivity, 0.5f * 3.f / 5.f);
+  EXPECT_FLOAT_EQ(result.selectivity, 0.5f * 3.f / 5.f);
   result = _column_statistics_string->estimate_selectivity_for_predicate(scan_type, AllTypeVariant("c"));
-  EXPECT_EQ(result.selectivity, 0.f);
+  EXPECT_FLOAT_EQ(result.selectivity, 0.f);
 
   scan_type = ScanType::OpBetween;
   result = _column_statistics_int->estimate_selectivity_for_predicate(scan_type, AllTypeVariant(2), AllTypeVariant(4));
-  EXPECT_EQ(result.selectivity, 0.75f * 3.f / 6.f);
+  EXPECT_FLOAT_EQ(result.selectivity, 0.75f * 3.f / 6.f);
   result =
       _column_statistics_float->estimate_selectivity_for_predicate(scan_type, AllTypeVariant(4.f), AllTypeVariant(6.f));
-  EXPECT_EQ(result.selectivity, 0.5f * 2.f / 5.f);
+  EXPECT_FLOAT_EQ(result.selectivity, 0.5f * 2.f / 5.f);
   result = _column_statistics_string->estimate_selectivity_for_predicate(scan_type, AllTypeVariant("c"),
                                                                          AllTypeVariant("d"));
-  EXPECT_EQ(result.selectivity, 0.f);
+  EXPECT_FLOAT_EQ(result.selectivity, 0.f);
 }
 
 TEST_F(ColumnStatisticsTest, NonNullRatioTwoColumnTest) {
@@ -385,11 +385,11 @@ TEST_F(ColumnStatisticsTest, NonNullRatioTwoColumnTest) {
 
   auto scan_type = ScanType::OpEquals;
   auto result = stats_0->estimate_selectivity_for_two_column_predicate(scan_type, stats_1);
-  EXPECT_EQ(result.selectivity, 0.9f * 0.8f * 0.5f / 3.f);
+  EXPECT_FLOAT_EQ(result.selectivity, 0.9f * 0.8f * 0.5f / 3.f);
 
   scan_type = ScanType::OpLessThan;
   result = stats_1->estimate_selectivity_for_two_column_predicate(scan_type, stats_2);
-  EXPECT_EQ(result.selectivity, 0.8f * 0.85f * (1.f / 3.f + 1.f / 3.f * 1.f / 2.f));
+  EXPECT_FLOAT_EQ(result.selectivity, 0.8f * 0.85f * (1.f / 3.f + 1.f / 3.f * 1.f / 2.f));
 }
 
 }  // namespace opossum
