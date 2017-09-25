@@ -535,13 +535,7 @@ int Console::print_table(const std::string& args) {
     return ReturnCode::Error;
   }
 
-  auto print = std::make_shared<Print>(gt, std::cout);
-  try {
-    print->execute();
-  } catch (const std::exception& exception) {
-    console.out("Exception thrown while printing table:\n  " + std::string(exception.what()) + "\n");
-    return ReturnCode::Error;
-  }
+  console.out(gt->get_output());
 
   return ReturnCode::Ok;
 }
