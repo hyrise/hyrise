@@ -1,12 +1,13 @@
 #include "tpcc_base_fixture.hpp"
 
 #include <iostream>
+#include <memory>
 #include <vector>
 
-#include "storage/storage_manager.hpp"
 #include "scheduler/current_scheduler.hpp"
 #include "scheduler/node_queue_scheduler.hpp"
 #include "scheduler/topology.hpp"
+#include "storage/storage_manager.hpp"
 
 namespace opossum {
 
