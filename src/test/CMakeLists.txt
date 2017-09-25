@@ -82,6 +82,7 @@ set(
     tasks/operator_task_test.cpp
     utils/cuckoo_hashtable_test.cpp
     utils/numa_memory_resource_test.cpp
+    utils/table_printer_test.cpp
 )
 
 set (

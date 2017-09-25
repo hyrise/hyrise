@@ -58,7 +58,7 @@ protected:
    *
    * @returns Vector containing the column widths.
    */
-  std::vector<uint16_t> _column_string_widths(uint16_t min, uint16_t max, std::shared_ptr<const Table> t) const;
+  std::vector<uint16_t> _column_string_widths(uint16_t min, uint16_t max) const;
 
   const std::shared_ptr<const Table> _table;
   std::ostream& _out;

@@ -10,7 +10,7 @@ namespace opossum {
 
 TablePrinter::TablePrinter(std::shared_ptr<const Table> table, std::ostream& out, bool ignore_empty_chunks)
     : _table(table), _out(out), _rows_printed(0), _closing(""), _ignore_empty_chunks(ignore_empty_chunks), _has_mvcc(false) {
-  _widths = _column_string_widths(8, 20, _table);
+  _widths = _column_string_widths(8, 20);
   
   for (ChunkID chunk_id{0}; chunk_id < _table->chunk_count(); ++chunk_id) {
     if (_table->get_chunk(chunk_id).has_mvcc_columns()) {
@@ -132,12 +132,12 @@ void TablePrinter::_print_row(const RowID & row_id) {
 // In order to print the table as an actual table, with columns being aligned, we need to calculate the
 // number of characters in the printed representation of each column
 // `min` and `max` can be used to limit the width of the columns - however, every column fits at least the column's name
-std::vector<uint16_t> TablePrinter::_column_string_widths(uint16_t min, uint16_t max, std::shared_ptr<const Table> t) const {
+std::vector<uint16_t> TablePrinter::_column_string_widths(uint16_t min, uint16_t max) const {
   PerformanceWarningDisabler pwd;
-  std::vector<uint16_t> widths(t->col_count());
+  std::vector<uint16_t> widths(_table->col_count());
   // calculate the length of the column name
-  for (ColumnID col{0}; col < t->col_count(); ++col) {
-    widths[col] = std::max(min, static_cast<uint16_t>(to_string(t->column_name(col)).size()));
+  for (ColumnID col{0}; col < _table->col_count(); ++col) {
+    widths[col] = std::max(min, static_cast<uint16_t>(to_string(_table->column_name(col)).size()));
   }
 
   // go over all rows and find the maximum length of the printed representation of a value, up to max
