@@ -1,9 +1,9 @@
 #pragma once
 
 #include <fstream>
+#include <limits>
 #include <memory>
 #include <vector>
-#include <limits>
 
 #include "storage/table.hpp"
 
@@ -14,7 +14,8 @@ namespace opossum {
  */
 class TablePrinter {
  public:
-  explicit TablePrinter(std::shared_ptr<const Table> table, std::ostream& out = std::cout, bool ignore_empty_chunks = false);
+  explicit TablePrinter(std::shared_ptr<const Table> table, std::ostream& out = std::cout,
+                        bool ignore_empty_chunks = false);
 
   /*
    * Prints out specified number of rows starting from a specified RowID.
@@ -25,7 +26,7 @@ class TablePrinter {
    *
    * @returns The RowID which follows the last printed row. Returns NULL_ROW_ID if the last row was printed.
    */
-  RowID print(const RowID & row_id = RowID{}, const size_t rows = std::numeric_limits<size_t>::max());
+  RowID print(const RowID& row_id = RowID{}, const size_t rows = std::numeric_limits<size_t>::max());
 
   /*
    * Prints out the table header.
@@ -36,9 +37,9 @@ class TablePrinter {
    * Prints the closing previously specified by set_closing, the default is an empty string.
    */
   void print_closing();
-  void set_closing(const std::string & closing);
+  void set_closing(const std::string& closing);
 
-protected:
+ protected:
   /*
    * Prints the chunk header of the given ChunkID, and "Empty chunk" if chunk is empty.
    * Does not print anything if chunk is empty and _ignore_empty_chunks==true;
@@ -48,7 +49,7 @@ protected:
   /*
    * Prints the row of the given RowID.
    */
-  void _print_row(const RowID & row_id);
+  void _print_row(const RowID& row_id);
 
   /*
    * Calculates the number of characters in the printed representation of each column.

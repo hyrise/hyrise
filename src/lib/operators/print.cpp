@@ -34,7 +34,6 @@ void Print::print(std::shared_ptr<const Table> table, bool ignore_empty_chunks, 
   Print(table_wrapper, out, ignore_empty_chunks).execute();
 }
 
-
 std::shared_ptr<const Table> Print::_on_execute() {
   TablePrinter printer(_input_table_left(), _out, _ignore_empty_chunks);
   printer.print();

@@ -22,12 +22,12 @@
 #include "operators/get_table.hpp"
 #include "operators/import_csv.hpp"
 #include "operators/print.hpp"
-#include "utils/table_printer.hpp"
 #include "planviz/sql_query_plan_visualizer.hpp"
 #include "sql/sql_planner.hpp"
 #include "storage/storage_manager.hpp"
 #include "tpcc/tpcc_table_generator.hpp"
 #include "utils/load_table.hpp"
+#include "utils/table_printer.hpp"
 
 #define ANSI_COLOR_RED "\e[31m"
 #define ANSI_COLOR_GREEN "\e[32m"
@@ -39,12 +39,7 @@
 
 namespace {
 
-enum PaginationCommand {
-  CONTINUE,
-  CONTINUE_PAGE,
-  PAUSE,
-  ABORT
-};
+enum PaginationCommand { CONTINUE, CONTINUE_PAGE, PAUSE, ABORT };
 
 // Buffer for program state
 sigjmp_buf jmp_env;
@@ -82,7 +77,7 @@ int getch() {
   // store old settings
   tcgetattr(STDIN_FILENO, &oldt);
   newt = oldt;
-  newt.c_lflag &= ~(ICANON | ECHO); // make one change to old settings in new settings
+  newt.c_lflag &= ~(ICANON | ECHO);  // make one change to old settings in new settings
   // apply new settings
   tcsetattr(STDIN_FILENO, TCSANOW, &newt);
   ch = getchar();
@@ -93,28 +88,35 @@ int getch() {
 
 // Waits for the user to press a key then returns a PaginationCommand according to which key was pressed
 PaginationCommand user_input_pagination() {
-  switch(getch()) {
+  switch (getch()) {
     // Arrow keys consist of three consecutive characters, PAGE UP/DOWN of four
     case '\033': {
-      getch(); // Remove irrelevant char from buffer
-      switch(getch()) { // Determine which arrow key or PAGE UP/DOWN is pressed
-        case 'A': return PAUSE; // Arrow up
-        case 'B': return CONTINUE; // Arrow down
-        case 'C': return PAUSE; // Arrow right
-        case 'D': return PAUSE; // Arrow left
-        case '5': { // PAGE UP
-          getch(); // Remove irrelevant char from buffer
+      getch();            // Remove irrelevant char from buffer
+      switch (getch()) {  // Determine which arrow key or PAGE UP/DOWN is pressed
+        case 'A':
+          return PAUSE;  // Arrow up
+        case 'B':
+          return CONTINUE;  // Arrow down
+        case 'C':
+          return PAUSE;  // Arrow right
+        case 'D':
+          return PAUSE;  // Arrow left
+        case '5': {      // PAGE UP
+          getch();       // Remove irrelevant char from buffer
           return PAUSE;
         }
-        case '6': { // PAGE DOWN
-          getch(); // Remove irrelevant char from buffer
+        case '6': {  // PAGE DOWN
+          getch();   // Remove irrelevant char from buffer
           return CONTINUE_PAGE;
         }
-        default: return ABORT;
+        default:
+          return ABORT;
       }
     }
-    case '\n': return CONTINUE;
-    default: return ABORT;
+    case '\n':
+      return CONTINUE;
+    default:
+      return ABORT;
   }
 }
 }  // namespace
@@ -383,7 +385,9 @@ void Console::out(std::shared_ptr<const Table> table) {
   rl_get_screen_size(&rows, &cols);
 
   // Print 5 rows less than screen size initially to still have the header visible
-  if (rows > 5) { rows = rows - 5; }
+  if (rows > 5) {
+    rows = rows - 5;
+  }
 
   // Print more rows until NULL_ROW_ID is reached, either by completing the table, or by the user aborting
   while (!(row_id == NULL_ROW_ID)) {

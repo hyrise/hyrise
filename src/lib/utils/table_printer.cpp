@@ -9,9 +9,14 @@
 namespace opossum {
 
 TablePrinter::TablePrinter(std::shared_ptr<const Table> table, std::ostream& out, bool ignore_empty_chunks)
-    : _table(table), _out(out), _rows_printed(0), _closing(""), _ignore_empty_chunks(ignore_empty_chunks), _has_mvcc(false) {
+    : _table(table),
+      _out(out),
+      _rows_printed(0),
+      _closing(""),
+      _ignore_empty_chunks(ignore_empty_chunks),
+      _has_mvcc(false) {
   _widths = _column_string_widths(8, 20);
-  
+
   for (ChunkID chunk_id{0}; chunk_id < _table->chunk_count(); ++chunk_id) {
     if (_table->get_chunk(chunk_id).has_mvcc_columns()) {
       _has_mvcc = true;
@@ -20,7 +25,7 @@ TablePrinter::TablePrinter(std::shared_ptr<const Table> table, std::ostream& out
   }
 }
 
-RowID TablePrinter::print(const RowID & row_id, const size_t rows) {
+RowID TablePrinter::print(const RowID& row_id, const size_t rows) {
   RowID row = row_id;
 
   if (rows == std::numeric_limits<size_t>::max()) {
@@ -75,13 +80,9 @@ void TablePrinter::print_header() {
   _out << "|" << std::endl;
 }
 
-void TablePrinter::print_closing() {
-  _out << _closing << std::endl;
-}
+void TablePrinter::print_closing() { _out << _closing << std::endl; }
 
-void TablePrinter::set_closing(const std::string & closing) {
-  _closing = closing;
-}
+void TablePrinter::set_closing(const std::string& closing) { _closing = closing; }
 
 void TablePrinter::_print_chunk_header(const ChunkID chunk_id) {
   auto& chunk = _table->get_chunk(chunk_id);
@@ -97,7 +98,7 @@ void TablePrinter::_print_chunk_header(const ChunkID chunk_id) {
   }
 }
 
-void TablePrinter::_print_row(const RowID & row_id) {
+void TablePrinter::_print_row(const RowID& row_id) {
   PerformanceWarningDisabler pwd;
 
   auto& chunk = _table->get_chunk(row_id.chunk_id);

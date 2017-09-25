@@ -5,10 +5,10 @@
 #include "../base_test.hpp"
 #include "gtest/gtest.h"
 
-#include "../../lib/utils/table_printer.hpp"
 #include "../../lib/operators/get_table.hpp"
 #include "../../lib/storage/storage_manager.hpp"
 #include "../../lib/storage/table.hpp"
+#include "../../lib/utils/table_printer.hpp"
 
 namespace opossum {
 
