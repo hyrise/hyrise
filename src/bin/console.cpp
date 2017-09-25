@@ -381,6 +381,7 @@ void Console::out(std::shared_ptr<const Table> table) {
 
   // Determine how many rows can be printed on the first page
   rl_get_screen_size(&rows, &cols);
+
   // Print 5 rows less than screen size initially to still have the header visible
   if (rows > 5) { rows = rows - 5; }
 
@@ -388,7 +389,9 @@ void Console::out(std::shared_ptr<const Table> table) {
   while (!(row_id == NULL_ROW_ID)) {
     row_id = printer.print(row_id, rows);
 
-    // If end of table not reached, prompt the user for a pagination command
+    _out << "Press ARROW DOWN for next line, PAGE DOWN for next page.";
+
+    // If end of table is not reached, prompt the user for a pagination command
     if (!(row_id == NULL_ROW_ID)) {
       switch (user_input_pagination()) {
         case CONTINUE: {
@@ -405,13 +408,17 @@ void Console::out(std::shared_ptr<const Table> table) {
           break;
         }
         case ABORT: {
-          printer.print_abort();
+          printer.set_closing("...");
           row_id = NULL_ROW_ID;
           break;
         }
       }
     }
+
+    // Remove the instruction line printed before
+    rl_clear_visible_line();
   }
+  printer.print_closing();
 }
 
 // Command functions
