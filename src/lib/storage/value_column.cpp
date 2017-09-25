@@ -11,12 +11,18 @@
 
 #include "type_cast.hpp"
 #include "utils/assert.hpp"
+#include "utils/performance_warning.hpp"
 
 namespace opossum {
 
 template <typename T>
 ValueColumn<T>::ValueColumn(bool nullable) {
   if (nullable) _null_values = pmr_concurrent_vector<bool>();
+}
+
+template <typename T>
+ValueColumn<T>::ValueColumn(const PolymorphicAllocator<T>& alloc, bool nullable) : _values(alloc) {
+  if (nullable) _null_values = pmr_concurrent_vector<bool>(alloc);
 }
 
 template <typename T>
@@ -29,6 +35,7 @@ ValueColumn<T>::ValueColumn(pmr_concurrent_vector<T>&& values, pmr_concurrent_ve
 template <typename T>
 const AllTypeVariant ValueColumn<T>::operator[](const size_t i) const {
   DebugAssert(i != INVALID_CHUNK_OFFSET, "Passed chunk offset must be valid.");
+  PerformanceWarning("operator[] used");
 
   // Columns supports null values and value is null
   if (is_nullable() && (*_null_values).at(i)) {
@@ -135,13 +142,31 @@ void ValueColumn<T>::write_string_representation(std::string& row_string, const 
   row_string += buffer.str();
 }
 
-// TODO(anyone): This method is part of an algorithm that hasn't yet been updated to support null values.
 template <typename T>
 void ValueColumn<T>::copy_value_to_value_column(BaseColumn& value_column, ChunkOffset chunk_offset) const {
   auto& output_column = static_cast<ValueColumn<T>&>(value_column);
+
   auto& values_out = output_column.values();
 
-  values_out.push_back(_values[chunk_offset]);
+  if (is_nullable()) {
+    bool is_null = (*_null_values)[chunk_offset];
+
+    DebugAssert(!is_null || output_column.is_nullable(), "Target ValueColumn needs to be nullable as well");
+
+    if (output_column.is_nullable()) {
+      auto& null_values_out = output_column.null_values();
+      null_values_out.push_back(is_null);
+    }
+
+    values_out.push_back(is_null ? T{} : _values[chunk_offset]);
+
+  } else {
+    values_out.push_back(_values[chunk_offset]);
+
+    if (output_column.is_nullable()) {
+      output_column.null_values().push_back(false);
+    }
+  }
 }
 
 // TODO(anyone): This method is part of an algorithm that hasn't yet been updated to support null values.

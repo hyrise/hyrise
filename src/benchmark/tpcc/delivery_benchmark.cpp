@@ -100,11 +100,11 @@ class TPCCDeliveryBenchmark : public TPCCBenchmarkFixture {
     auto gt = std::make_shared<GetTable>("ORDER");
 
     auto ts1 = std::make_shared<TableScan>(gt, ColumnID{0} /* "O_ID" */, ScanType::OpEquals, no_o_id);
-    auto ts2 = std::make_shared<TableScan>(ts1, ColumnID{2} /* "O_D_ID" */, ScanType::OpEquals, d_id);
-    auto ts3 = std::make_shared<TableScan>(ts2, ColumnID{3} /* "O_W_ID" */, ScanType::OpEquals, w_id);
+    auto ts2 = std::make_shared<TableScan>(ts1, ColumnID{1} /* "O_D_ID" */, ScanType::OpEquals, d_id);
+    auto ts3 = std::make_shared<TableScan>(ts2, ColumnID{2} /* "O_W_ID" */, ScanType::OpEquals, w_id);
     auto val = std::make_shared<Validate>(ts3);
 
-    Projection::ColumnExpressions columns = {Expression::create_column(ColumnID{1} /* "O_C_ID" */)};
+    Projection::ColumnExpressions columns = {Expression::create_column(ColumnID{3} /* "O_C_ID" */)};
     auto projection = std::make_shared<Projection>(val, columns);
 
     auto t_gt = std::make_shared<OperatorTask>(gt);
@@ -133,8 +133,8 @@ class TPCCDeliveryBenchmark : public TPCCBenchmarkFixture {
     auto gt = std::make_shared<GetTable>("ORDER");
 
     auto ts1 = std::make_shared<TableScan>(gt, ColumnID{0} /* "O_ID" */, ScanType::OpEquals, no_o_id);
-    auto ts2 = std::make_shared<TableScan>(ts1, ColumnID{2} /* "O_D_ID" */, ScanType::OpEquals, d_id);
-    auto ts3 = std::make_shared<TableScan>(ts2, ColumnID{3} /* "O_W_ID" */, ScanType::OpEquals, w_id);
+    auto ts2 = std::make_shared<TableScan>(ts1, ColumnID{1} /* "O_D_ID" */, ScanType::OpEquals, d_id);
+    auto ts3 = std::make_shared<TableScan>(ts2, ColumnID{2} /* "O_W_ID" */, ScanType::OpEquals, w_id);
 
     auto val = std::make_shared<Validate>(ts3);
 
@@ -245,7 +245,7 @@ class TPCCDeliveryBenchmark : public TPCCBenchmarkFixture {
     return {t_gt, t_ts1, t_ts2, t_ts3, t_val, t_sum};
   }
 
-  inline std::vector<std::shared_ptr<OperatorTask>> update_customer(const double ol_total, const int d_id,
+  inline std::vector<std::shared_ptr<OperatorTask>> update_customer(const float ol_total, const int d_id,
                                                                     const int w_id, const int c_id) {
     /**
      * EXEC SQL UPDATE customer
@@ -331,7 +331,8 @@ BENCHMARK_F(TPCCDeliveryBenchmark, BM_delivery)(benchmark::State& state) {
     tpcc::execute_tasks_with_context(tasks, t_context);
 
     assert(tasks.back()->get_operator()->get_output()->row_count() > 0);
-    auto ol_total = tasks.back()->get_operator()->get_output()->get_value<double>(opossum::ColumnID(0u), 0u);
+    auto ol_total =
+        static_cast<float>(tasks.back()->get_operator()->get_output()->get_value<double>(opossum::ColumnID(0u), 0u));
     tasks = update_customer(ol_total, d_id, w_id, c_id);
     tpcc::execute_tasks_with_context(tasks, t_context);
 

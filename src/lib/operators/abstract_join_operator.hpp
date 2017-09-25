@@ -17,6 +17,9 @@ namespace opossum {
 // As with most operators, we do not guarantee a stable operation with regards
 // to positions - i.e., your sorting order might be disturbed
 
+// find more information about joins in our Wiki:
+// https://github.com/hyrise/zweirise/wiki/Operator-Join
+
 class AbstractJoinOperator : public AbstractReadOnlyOperator {
  public:
   AbstractJoinOperator(const std::shared_ptr<const AbstractOperator> left,

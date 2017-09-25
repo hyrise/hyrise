@@ -69,10 +69,10 @@ node {
 
       stage("ASAN") {
         stage("asan Release") {
-          sh "./clang-release/opossumAsan"
+          sh "LSAN_OPTIONS=suppressions=asan-ignore.txt ./clang-release/opossumAsan"
         }
         stage("asan Debug") {
-          sh "./clang-debug/opossumAsan"
+          sh "LSAN_OPTIONS=suppressions=asan-ignore.txt ./clang-debug/opossumAsan"
         }
       }
 

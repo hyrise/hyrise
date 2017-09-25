@@ -43,6 +43,10 @@ class JoinTest : public BaseTest {
 
     _table_wrapper_h = std::make_shared<TableWrapper>(load_table("src/test/tables/int_int4.tbl", 4));
 
+    _table_wrapper_i = std::make_shared<TableWrapper>(load_table("src/test/tables/int5.tbl", 1));
+
+    _table_wrapper_j = std::make_shared<TableWrapper>(load_table("src/test/tables/int3.tbl", 1));
+
     _table_wrapper_k = std::make_shared<TableWrapper>(load_table("src/test/tables/int4.tbl", 1));
 
     _table_wrapper_l = std::make_shared<TableWrapper>(load_table("src/test/tables/int.tbl", 1));
@@ -72,6 +76,8 @@ class JoinTest : public BaseTest {
     _table_wrapper_f->execute();
     _table_wrapper_g->execute();
     _table_wrapper_h->execute();
+    _table_wrapper_i->execute();
+    _table_wrapper_j->execute();
     _table_wrapper_k->execute();
     _table_wrapper_l->execute();
     _table_wrapper_a_dict->execute();

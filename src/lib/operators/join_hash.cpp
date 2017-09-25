@@ -68,6 +68,8 @@ std::shared_ptr<const Table> JoinHash::_on_execute() {
   return _impl->_on_execute();
 }
 
+void JoinHash::_on_cleanup() { _impl.reset(); }
+
 // currently using 32bit Murmur
 using Hash = uint32_t;
 
