@@ -94,7 +94,7 @@ class ColumnStatistics : public BaseColumnStatistics {
    * @param value: constant value of aggregate
    * @return Selectivity and new column statistics.
    */
-  ColumnSelectivityResult create_column_stats_for_unequals_predicate(ColumnType value);
+  ColumnSelectivityResult create_column_stats_for_not_equals_predicate(ColumnType value);
 
   /**
    * Calcute min and max values from table.

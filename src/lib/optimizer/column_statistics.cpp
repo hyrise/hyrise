@@ -153,7 +153,7 @@ ColumnSelectivityResult ColumnStatistics<ColumnType>::create_column_stats_for_eq
 }
 
 template <typename ColumnType>
-ColumnSelectivityResult ColumnStatistics<ColumnType>::create_column_stats_for_unequals_predicate(ColumnType value) {
+ColumnSelectivityResult ColumnStatistics<ColumnType>::create_column_stats_for_not_equals_predicate(ColumnType value) {
   if (value < min() || value > max()) {
     return {_non_null_value_ratio, this_without_null_values()};
   }
@@ -171,7 +171,7 @@ ColumnSelectivityResult ColumnStatistics<ColumnType>::estimate_selectivity_for_p
       return create_column_stats_for_equals_predicate(casted_value);
     }
     case ScanType::OpNotEquals: {
-      return create_column_stats_for_unequals_predicate(casted_value);
+      return create_column_stats_for_not_equals_predicate(casted_value);
     }
     case ScanType::OpLessThan: {
       // distinction between integers and decimals
@@ -228,7 +228,7 @@ ColumnSelectivityResult ColumnStatistics<std::string>::estimate_selectivity_for_
       return create_column_stats_for_equals_predicate(casted_value);
     }
     case ScanType::OpNotEquals: {
-      return create_column_stats_for_unequals_predicate(casted_value);
+      return create_column_stats_for_not_equals_predicate(casted_value);
     }
     // TODO(anybody) implement other table-scan operators for string.
     default: { return {_non_null_value_ratio, this_without_null_values()}; }
