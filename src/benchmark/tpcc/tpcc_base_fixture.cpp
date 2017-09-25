@@ -4,6 +4,9 @@
 #include <vector>
 
 #include "storage/storage_manager.hpp"
+#include "scheduler/current_scheduler.hpp"
+#include "scheduler/node_queue_scheduler.hpp"
+#include "scheduler/topology.hpp"
 
 namespace opossum {
 
@@ -17,12 +20,12 @@ TPCCBenchmarkFixture::TPCCBenchmarkFixture()
   // We currently run the benchmarks without a scheduler because there are problems when it is activated.
   // The Sort in TPCCDeliveryBenchmark-BM_delivery crashes because of a access @0 in a vector of length 0
   // TODO(mp): investigate and fix.
-  // CurrentScheduler::set(std::make_shared<NodeQueueScheduler>(Topology::create_fake_numa_topology(4, 2)));
+  CurrentScheduler::set(std::make_shared<NodeQueueScheduler>(Topology::create_fake_numa_topology(4, 2)));
 }
 
 void TPCCBenchmarkFixture::TearDown(::benchmark::State&) {
   StorageManager::get().reset();
-  // CurrentScheduler::set(nullptr);
+  CurrentScheduler::set(nullptr);
 }
 
 void TPCCBenchmarkFixture::SetUp(::benchmark::State&) {
