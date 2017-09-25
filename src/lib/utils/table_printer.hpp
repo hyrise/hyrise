@@ -17,7 +17,8 @@ class TablePrinter {
 
   RowID print(const RowID & row_id, const size_t rows);
   void print_header();
-  void print_abort();
+  void print_closing();
+  void set_closing(const std::string & closing);
 
 protected:
   void _print_chunk_header(const ChunkID chunk_id);
@@ -28,6 +29,7 @@ protected:
   std::ostream& _out;
   std::vector<uint16_t> _widths;
   size_t _rows_printed;
+  std::string _closing;
   bool _ignore_empty_chunks;
   bool _has_mvcc;
 };
