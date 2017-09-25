@@ -90,7 +90,7 @@ class Console {
   int _eval_command(const CommandFunction &func, const std::string &command);
 
   /*
-   * Evaluates given SQL statement using opossum::SqlQueryTranslator
+   * Evaluates given SQL statement using opossum::SqlQueryTranslator.
    */
   int _eval_sql(const std::string &sql);
 

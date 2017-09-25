@@ -1,14 +1,9 @@
 #include "table_printer.hpp"
 
-// #include <algorithm>
 #include <iomanip>
 #include <iostream>
-// #include <memory>
 #include <string>
-// #include <vector>
 
-// #include "storage/base_column.hpp"
-// #include "type_cast.hpp"
 #include "utils/performance_warning.hpp"
 
 namespace opossum {

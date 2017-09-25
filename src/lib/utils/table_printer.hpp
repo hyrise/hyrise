@@ -10,20 +10,54 @@
 namespace opossum {
 
 /*
- * 
+ * Class to print a table as a whole or line by line.
  */
 class TablePrinter {
  public:
   explicit TablePrinter(std::shared_ptr<const Table> table, std::ostream& out = std::cout, bool ignore_empty_chunks = false);
 
+  /*
+   * Prints out specified number of rows starting from a specified RowID.
+   * Default parameters make it print out the whole table.
+   *
+   * @param row_id The RowID to begin from.
+   * @param rows   The number of rows to print. If set to maximum of size_t, print the whole table.
+   *
+   * @returns The RowID which follows the last printed row. Returns NULL_ROW_ID if the last row was printed.
+   */
   RowID print(const RowID & row_id = RowID{}, const size_t rows = std::numeric_limits<size_t>::max());
+
+  /*
+   * Prints out the table header.
+   */
   void print_header();
+
+  /*
+   * Prints the closing previously specified by set_closing, the default is an empty string.
+   */
   void print_closing();
   void set_closing(const std::string & closing);
 
 protected:
+  /*
+   * Prints the chunk header of the given ChunkID, and "Empty chunk" if chunk is empty.
+   * Does not print anything if chunk is empty and _ignore_empty_chunks==true;
+   */
   void _print_chunk_header(const ChunkID chunk_id);
+
+  /*
+   * Prints the row of the given RowID.
+   */
   void _print_row(const RowID & row_id);
+
+  /*
+   * Calculates the number of characters in the printed representation of each column.
+   *
+   * @param min Minimum width of each column.
+   * @param max Maximum width of each column (though every column fits at least its name).
+   *
+   * @returns Vector containing the column widths.
+   */
   std::vector<uint16_t> _column_string_widths(uint16_t min, uint16_t max, std::shared_ptr<const Table> t) const;
 
   const std::shared_ptr<const Table> _table;
