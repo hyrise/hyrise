@@ -20,6 +20,7 @@ TablePrinter::TablePrinter(std::shared_ptr<const Table> table, std::ostream& out
   for (ChunkID chunk_id{0}; chunk_id < _table->chunk_count(); ++chunk_id) {
     if (_table->get_chunk(chunk_id).has_mvcc_columns()) {
       _has_mvcc = true;
+      break;
     }
   }
 }
@@ -27,8 +28,12 @@ TablePrinter::TablePrinter(std::shared_ptr<const Table> table, std::ostream& out
 RowID TablePrinter::print(const RowID & row_id, const size_t rows) {
   RowID row = row_id;
 
+  if (rows == std::numeric_limits<size_t>::max()) {
+    print_header();
+  }
+
   size_t rows_printed = 0;
-  while (rows_printed < rows) {
+  while (rows_printed < rows || rows == std::numeric_limits<size_t>::max()) {
     if (row.chunk_id >= _table->chunk_count()) {
       return NULL_ROW_ID;
     }

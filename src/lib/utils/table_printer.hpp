@@ -3,6 +3,7 @@
 #include <fstream>
 #include <memory>
 #include <vector>
+#include <limits>
 
 #include "storage/table.hpp"
 
@@ -15,7 +16,7 @@ class TablePrinter {
  public:
   explicit TablePrinter(std::shared_ptr<const Table> table, std::ostream& out = std::cout, bool ignore_empty_chunks = false);
 
-  RowID print(const RowID & row_id, const size_t rows);
+  RowID print(const RowID & row_id = RowID{}, const size_t rows = std::numeric_limits<size_t>::max());
   void print_header();
   void print_closing();
   void set_closing(const std::string & closing);
