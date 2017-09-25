@@ -106,6 +106,7 @@ std::shared_ptr<BaseColumnStatistics> ColumnStatistics<ColumnType>::this_without
 template <typename ColumnType>
 ColumnSelectivityResult ColumnStatistics<ColumnType>::create_column_stats_for_range_predicate(ColumnType minimum,
                                                                                               ColumnType maximum) {
+  // NOTE: minimum can be greater than maximum
   // new minimum/maximum of table cannot be smaller/larger than the current minimum/maximum
   auto common_min = std::max(minimum, min());
   auto common_max = std::min(maximum, max());
@@ -113,6 +114,7 @@ ColumnSelectivityResult ColumnStatistics<ColumnType>::create_column_stats_for_ra
     return {_non_null_value_ratio, this_without_null_values()};
   }
   float selectivity = 0.f;
+  // estimate_selectivity_for_range function expects that the minimum must not be greater than the maximum
   if (common_min <= common_max) {
     selectivity = estimate_selectivity_for_range(common_min, common_max);
   }
@@ -123,6 +125,7 @@ ColumnSelectivityResult ColumnStatistics<ColumnType>::create_column_stats_for_ra
 
 template <typename ColumnType>
 float ColumnStatistics<ColumnType>::estimate_selectivity_for_range(ColumnType minimum, ColumnType maximum) {
+  // minimum must be smaller or equal than maximum
   // distinction between integers and decimals
   // for integers the number of possible integers is used within the inclusive ranges
   // for decimals the size of the range is used
