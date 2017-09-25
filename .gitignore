@@ -19,5 +19,10 @@ console.log
 .queryplan.dot
 .queryplan.png
 
+# Ignore generated TPC{CH} tables.
+# Intentionally only for root dir, tests contain csv we check in
+/*.csv
+/*.csv.meta
+
 # CLion cmake directory
 cmake-build-*
