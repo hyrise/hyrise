@@ -95,7 +95,7 @@ void ColumnStatistics<ColumnType>::initialize_min_max() const {
 template <typename ColumnType>
 std::shared_ptr<BaseColumnStatistics> ColumnStatistics<ColumnType>::this_without_null_values() {
   if (_non_null_value_ratio == 1.f) {
-    return base_shared_from_this();
+    return shared_from_this();
   }
   // this needs to be copied, as the non-null value ratio is changed
   auto clone = std::make_shared<ColumnStatistics>(*this);
@@ -270,7 +270,7 @@ ColumnSelectivityResult ColumnStatistics<ColumnType>::estimate_selectivity_for_p
         return output;
       }
       // create statistics, if value2 >= max
-      if (output.column_statistics == base_shared_from_this()) {
+      if (output.column_statistics == shared_from_this()) {
         output.column_statistics = std::make_shared<ColumnStatistics>(_column_id, distinct_count(), min(), max());
       }
       // apply default selectivity for open ended
@@ -420,7 +420,7 @@ TwoColumnSelectivityResult ColumnStatistics<ColumnType>::estimate_selectivity_fo
     return {combined_non_null_ratio * selectivity, new_left_column_stats, new_right_column_stats};
   };
 
-  // Currently the distinct count, min and max calculation is incorrect, if scan type is OpLessThan or OpGreaterThan and
+  // Currently the distinct count, min and max calculation is incorrect if scan type is OpLessThan or OpGreaterThan and
   // right column min = left column min or right column max = left column max.
   //
   // E.g. Two integer columns have 3 distinct values and same min and max value of 1 and 3.

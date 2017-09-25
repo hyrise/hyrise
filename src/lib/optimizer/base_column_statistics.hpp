@@ -97,11 +97,6 @@ class BaseColumnStatistics : public std::enable_shared_from_this<BaseColumnStati
   float _non_null_value_ratio;
 
   /**
-   * Enable derived column statistics to return itself as a shared pointer.
-   */
-  std::shared_ptr<BaseColumnStatistics> base_shared_from_this() { return shared_from_this(); }
-
-  /**
    * In order to to call insertion operator on ostream with BaseColumnStatistics with values of ColumnStatistics<T>,
    * std::ostream &operator<< with BaseColumnStatistics calls virtual function print_to_stream
    * This approach allows printing ColumnStatistics<T> without the need to cast BaseColumnStatistics to
