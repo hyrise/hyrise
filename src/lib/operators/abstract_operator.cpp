@@ -1,6 +1,7 @@
 #include "abstract_operator.hpp"
 
 #include <memory>
+#include <string>
 
 #include "concurrency/transaction_context.hpp"
 
@@ -23,6 +24,8 @@ void AbstractOperator::execute() {
 
 // returns the result of the operator
 std::shared_ptr<const Table> AbstractOperator::get_output() const { return _output; }
+
+const std::string AbstractOperator::description() const { return name(); }
 
 std::shared_ptr<const Table> AbstractOperator::_input_table_left() const { return _input_left->get_output(); }
 
