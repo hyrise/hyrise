@@ -55,7 +55,7 @@ std::shared_ptr<Expression> SQLExpressionTranslator::translate_expression(
 
       const auto aggregate_function_iter = aggregate_function_to_string.right.find(name);
       DebugAssert(aggregate_function_iter != aggregate_function_to_string.right.end(),
-                  std::string("No such aggregate function '") + name + "' - try upper case");
+                  std::string("No such aggregate function '") + name + "'");
 
       node = Expression::create_aggregate_function(aggregate_function_iter->second, expression_list, alias);
       break;
