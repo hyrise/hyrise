@@ -194,9 +194,8 @@ class IndexColumnScan::IndexColumnScanImpl : public AbstractReadOnlyOperatorImpl
 
         {
           std::lock_guard<std::mutex> lock(output_mutex);
-          if (output->get_chunk(ChunkID{0}).size() == 0) {
-            output->get_chunk(ChunkID{0}) = std::move(chunk_out);
-          } else if (chunk_out.size() > 0) {
+
+          if (chunk_out.size() > 0 || output->get_chunk(ChunkID{0}).size() == 0) {
             output->emplace_chunk(std::move(chunk_out));
           }
         }

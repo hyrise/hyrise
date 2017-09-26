@@ -106,9 +106,7 @@ std::shared_ptr<const Table> Validate::_on_execute(std::shared_ptr<TransactionCo
       }
     }
 
-    if (output->get_chunk(ChunkID{0}).size() == 0) {
-      output->get_chunk(ChunkID{0}) = std::move(chunk_out);
-    } else if (chunk_out.size() > 0) {
+    if (chunk_out.size() > 0 || output->get_chunk(ChunkID{0}).size() == 0) {
       output->emplace_chunk(std::move(chunk_out));
     }
   }
