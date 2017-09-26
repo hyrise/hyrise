@@ -467,11 +467,8 @@ int Console::visualize(const std::string& input) {
     mode = first_word;
   }
 
-  if (!mode.empty()) {
-    sql = input.substr(input.find_first_of(" \n"), input.size());
-  } else {
-    sql = input;
-  }
+  sql = input.substr(mode.size(), input.size());
+  // Removes mode from sql string. If no mode is set, does nothing.
 
   auto& console = Console::get();
   SQLQueryPlan plan;
