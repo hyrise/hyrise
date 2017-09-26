@@ -1,4 +1,5 @@
 #include "console.hpp"
+#include "table_printer.hpp"
 
 #include <boost/algorithm/string/split.hpp>
 #include <boost/algorithm/string/trim.hpp>
@@ -27,7 +28,6 @@
 #include "storage/storage_manager.hpp"
 #include "tpcc/tpcc_table_generator.hpp"
 #include "utils/load_table.hpp"
-#include "utils/table_printer.hpp"
 
 #define ANSI_COLOR_RED "\e[31m"
 #define ANSI_COLOR_GREEN "\e[32m"

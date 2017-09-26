@@ -50,8 +50,10 @@ target_link_libraries(
 add_executable(
     opossumConsole
 
-    console.cpp
-    console.hpp
+    console/console.cpp
+    console/console.hpp
+    console/table_printer.cpp
+    console/table_printer.hpp
 )
 target_link_libraries(
     opossumConsole

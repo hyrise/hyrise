@@ -300,8 +300,6 @@ set(
     utils/numa_memory_resource.cpp
     utils/numa_memory_resource.hpp
     utils/static_if.hpp
-    utils/table_printer.cpp
-    utils/table_printer.hpp
 )
 
 set(
