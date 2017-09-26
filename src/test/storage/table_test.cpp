@@ -1,6 +1,8 @@
 #include <limits>
 #include <string>
 #include <vector>
+#include <utility>
+#include <memory>
 
 #include "../base_test.hpp"
 #include "gtest/gtest.h"
