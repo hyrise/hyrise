@@ -18,9 +18,6 @@ TPCCBenchmarkFixture::TPCCBenchmarkFixture()
   std::cout << "Generating tables (this might take a couple of minutes)..." << std::endl;
   // Generating TPCC tables
   _tpcc_tables = _gen.generate_all_tables();
-  // We currently run the benchmarks without a scheduler because there are problems when it is activated.
-  // The Sort in TPCCDeliveryBenchmark-BM_delivery crashes because of a access @0 in a vector of length 0
-  // TODO(mp): investigate and fix.
   CurrentScheduler::set(std::make_shared<NodeQueueScheduler>(Topology::create_fake_numa_topology(4, 2)));
 }
 
