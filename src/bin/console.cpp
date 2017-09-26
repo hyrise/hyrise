@@ -422,6 +422,7 @@ void Console::out(std::shared_ptr<const Table> table) {
     // Remove the instruction line printed before
     rl_clear_visible_line();
   }
+  // If we aborted printing, the closing is set to "...", otherwise "".
   printer.print_closing();
 }
 
