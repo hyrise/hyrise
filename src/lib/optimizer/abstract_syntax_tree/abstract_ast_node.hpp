@@ -74,9 +74,9 @@ class AbstractASTNode : public std::enable_shared_from_this<AbstractASTNode> {
    * These functions provide access to statistics for this particular node.
    *
    * AbstractASTNode::derive_statistics_from() calculates new statistics for this node with regards to some @param
-   * other_node. The other node does not necessarily needs to be the direct parent. E.g. consider an optimizer rule that
-   * tries to reorder nodes based on some statistics. In that case it will call this function for all the nodes that
-   * shall be reordered with the same reference node.
+   * other_node. The other node does not necessarily needs to be a direct child node. E.g. consider an optimizer rule
+   * that tries to reorder nodes based on some statistics. In that case it will call this function for all the nodes
+   * that shall be reordered with the same reference node.
    *
    * Inheriting nodes are free to override AbstractASTNode::derive_statistics_from().
    */
