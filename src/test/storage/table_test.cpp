@@ -1,15 +1,15 @@
 #include <limits>
-#include <string>
-#include <vector>
-#include <utility>
 #include <memory>
+#include <string>
+#include <utility>
+#include <vector>
 
 #include "../base_test.hpp"
 #include "gtest/gtest.h"
 
+#include "../lib/resolve_type.hpp"
 #include "../lib/storage/dictionary_column.hpp"
 #include "../lib/storage/table.hpp"
-#include "../lib/resolve_type.hpp"
 
 namespace opossum {
 

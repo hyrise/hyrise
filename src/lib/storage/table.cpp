@@ -106,9 +106,9 @@ void Table::emplace_chunk(Chunk chunk) {
     // the initial chunk was not used yet
     _chunks.clear();
   }
-  DebugAssert(chunk.col_count() == col_count(),
-              std::string("adding chunk with ") + std::to_string(chunk.col_count()) + " columns to table with " +
-                  std::to_string(col_count()) + " columns");
+  DebugAssert(chunk.col_count() == col_count(), std::string("adding chunk with ") + std::to_string(chunk.col_count()) +
+                                                    " columns to table with " + std::to_string(col_count()) +
+                                                    " columns");
   _chunks.emplace_back(std::move(chunk));
 }
 

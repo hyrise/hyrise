@@ -534,7 +534,7 @@ TaskVector NewOrderRefImpl::get_create_order_line_tasks(const int32_t ol_o_id, c
   chunk.add_column(create_single_value_column<int32_t>(ol_quantity));
   chunk.add_column(create_single_value_column<float>(ol_amount));
   chunk.add_column(create_single_value_column<std::string>(ol_dist_info));
-    new_table->emplace_chunk(std::move(chunk));
+  new_table->emplace_chunk(std::move(chunk));
 
   auto tw = std::make_shared<opossum::TableWrapper>(new_table);
   const auto insert = std::make_shared<opossum::Insert>(target_table_name, tw);
