@@ -32,13 +32,14 @@ namespace detail {
 #define EXPAND_TO_HANA_TYPE(s, data, elem) \
   boost::hana::type_c<elem>
 
-#define COLUMN_TYPES (int32_t)(int64_t)(float)(double)(std::string)
+// clang-format off
+#define COLUMN_TYPES                                  (int32_t) (int64_t) (float)  (double)  (std::string)
+static constexpr auto type_strings = hana::make_tuple("int",    "long",   "float", "double", "string"     );
+// clang-format on
 
 // Extends to hana::make_tuple(hana::type_c<int32_t>, hana::type_c<int64_t>, ...);
 static constexpr auto types =
     hana::make_tuple(BOOST_PP_SEQ_ENUM(BOOST_PP_SEQ_TRANSFORM(EXPAND_TO_HANA_TYPE, _, COLUMN_TYPES)));
-
-static constexpr auto type_strings = hana::make_tuple("int", "long", "float", "double", "string");
 
 /**
  * Holds pairs of all types and their respective string representation.
