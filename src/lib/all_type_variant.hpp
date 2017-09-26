@@ -33,8 +33,8 @@ namespace detail {
   boost::hana::type_c<elem>
 
 // clang-format off
-#define COLUMN_TYPES                                  (int32_t) (int64_t) (float)  (double)  (std::string)
-static constexpr auto type_strings = hana::make_tuple("int",    "long",   "float", "double", "string"     );
+#define COLUMN_TYPES                                  (int32_t) (int64_t) (float)  (double)  (std::string)    // NOLINT
+static constexpr auto type_strings = hana::make_tuple("int",    "long",   "float", "double", "string"     );  // NOLINT
 // clang-format on
 
 // Extends to hana::make_tuple(hana::type_c<int32_t>, hana::type_c<int64_t>, ...);
