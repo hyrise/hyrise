@@ -25,14 +25,14 @@ void AbstractOperator::execute() {
 
 // returns the result of the operator
 std::shared_ptr<const Table> AbstractOperator::get_output() const {
-  if (IS_DEBUG && _output && _output->chunk_count() > 1) {
-    // Check that no empty chunks are included in the output. This has been found to degrade performance.
-    // If there is only a single, empty chunk, this is ok.
+  DebugAssert([]() {
+    if (_output->chunk_count() <= 1) return true;
     for (auto chunk_id = ChunkID{0}; chunk_id < _output->chunk_count(); ++chunk_id) {
-      DebugAssert(_output->get_chunk(chunk_id).size() > 0,
-                  std::string("Empty chunk returned from operator ") + description());
+      if (_output->get_chunk(chunk_id).size() > 0) return false;
     }
-  }
+    return true;
+  }(), "Empty chunk returned from operator " + description());
+
   return _output;
 }
 
