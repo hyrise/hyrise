@@ -22,6 +22,7 @@
 #include "storage/table.hpp"
 
 #include "all_parameter_variant.hpp"
+#include "constant_mappings.hpp"
 #include "type_cast.hpp"
 #include "utils/assert.hpp"
 #include "utils/performance_warning.hpp"
@@ -48,6 +49,21 @@ const AllParameterVariant &TableScan::right_parameter() const { return _right_pa
 const optional<AllTypeVariant> &TableScan::right_value2() const { return _right_value2; }
 
 const std::string TableScan::name() const { return "TableScan"; }
+
+const std::string TableScan::description() const {
+  std::string column_name = std::string("Col #") + std::to_string(_left_column_id);
+
+  if (_input_table_left()) column_name = _input_table_left()->column_name(_left_column_id);
+
+  std::string predicate_string;
+  if (_scan_type == ScanType::OpBetween) {
+    predicate_string = to_string(_right_parameter) + " and " + to_string(*_right_value2);
+  } else {
+    predicate_string = to_string(_right_parameter);
+  }
+
+  return name() + "\\n(" + column_name + " " + scan_type_to_string.left.at(_scan_type) + " " + predicate_string + ")";
+}
 
 uint8_t TableScan::num_in_tables() const { return 1; }
 
