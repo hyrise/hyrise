@@ -149,7 +149,7 @@ float ColumnStatistics<std::string>::estimate_selectivity_for_range(std::string 
 
 template <typename ColumnType>
 ColumnSelectivityResult ColumnStatistics<ColumnType>::_create_column_stats_for_equals_predicate(ColumnType value) {
-  DebugAssert(distinct_count() != 0, "Distinct count = 0");
+  DebugAssert(distinct_count() > 0, "Distinct count has to be greater zero");
   float new_distinct_count = 1.f;
   if (value < _get_or_calculate_min() || value > _get_or_calculate_max()) {
     new_distinct_count = 0.f;
@@ -160,7 +160,7 @@ ColumnSelectivityResult ColumnStatistics<ColumnType>::_create_column_stats_for_e
 
 template <typename ColumnType>
 ColumnSelectivityResult ColumnStatistics<ColumnType>::_create_column_stats_for_not_equals_predicate(ColumnType value) {
-  DebugAssert(distinct_count() != 0, "Distinct count = 0");
+  DebugAssert(distinct_count() > 0, "Distinct count has to be greater zero");
   if (value < _get_or_calculate_min() || value > _get_or_calculate_max()) {
     return {_non_null_value_ratio, _this_without_null_values()};
   }

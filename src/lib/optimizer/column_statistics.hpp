@@ -70,7 +70,7 @@ class ColumnStatistics : public BaseColumnStatistics {
 
   /**
    * Create column statistics and estimate selectivity based on new range.
-   * @param minimum, maximum: Min and max for new column statistics. Note: Mininum can be greater than maximum.
+   * @param minimum, maximum: Min and max for new column statistics. Note: Minimum can be greater than maximum.
    * @return Selectivity and new column statistics.
    */
   ColumnSelectivityResult _create_column_stats_for_range_predicate(ColumnType minimum, ColumnType maximum);
