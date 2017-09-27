@@ -48,7 +48,7 @@ class BaseColumnStatistics : public std::enable_shared_from_this<BaseColumnStati
    * @return Selectivity and new column statistics.
    */
   virtual ColumnSelectivityResult estimate_selectivity_for_predicate(
-      const ScanType scan_type, const AllTypeVariant &value, const optional<AllTypeVariant> &value2 = nullopt) = 0;
+      const ScanType scan_type, const AllTypeVariant& value, const optional<AllTypeVariant>& value2 = nullopt) = 0;
 
   /**
    * Estimate selectivity for predicate with prepared statements.
@@ -57,7 +57,7 @@ class BaseColumnStatistics : public std::enable_shared_from_this<BaseColumnStati
    * @return Selectivity and new column statistics.
    */
   virtual ColumnSelectivityResult estimate_selectivity_for_predicate(
-      const ScanType scan_type, const ValuePlaceholder &value, const optional<AllTypeVariant> &value2 = nullopt) = 0;
+      const ScanType scan_type, const ValuePlaceholder& value, const optional<AllTypeVariant>& value2 = nullopt) = 0;
 
   /**
    * Estimate selectivity for predicate on columns.
@@ -67,8 +67,8 @@ class BaseColumnStatistics : public std::enable_shared_from_this<BaseColumnStati
    * @return Selectivity and two new column statistics.
    */
   virtual TwoColumnSelectivityResult estimate_selectivity_for_two_column_predicate(
-      const ScanType scan_type, const std::shared_ptr<BaseColumnStatistics> &right_base_column_statistics,
-      const optional<AllTypeVariant> &value2 = nullopt) = 0;
+      const ScanType scan_type, const std::shared_ptr<BaseColumnStatistics>& right_base_column_statistics,
+      const optional<AllTypeVariant>& value2 = nullopt) = 0;
 
   /**
    * Gets distict count of column.
@@ -102,8 +102,8 @@ class BaseColumnStatistics : public std::enable_shared_from_this<BaseColumnStati
    * This approach allows printing ColumnStatistics<T> without the need to cast BaseColumnStatistics to
    * ColumnStatistics<T>.
    */
-  virtual std::ostream &_print_to_stream(std::ostream &os) const = 0;
-  friend std::ostream &operator<<(std::ostream &os, BaseColumnStatistics &obj);
+  virtual std::ostream& _print_to_stream(std::ostream& os) const = 0;
+  friend std::ostream& operator<<(std::ostream& os, BaseColumnStatistics& obj);
 };
 
 /**
@@ -118,13 +118,13 @@ struct ColumnSelectivityResult {
  * Return type of selectivity functions for operations on two columns.
  */
 struct TwoColumnSelectivityResult : public ColumnSelectivityResult {
-  TwoColumnSelectivityResult(float selectivity, const std::shared_ptr<BaseColumnStatistics> &column_stats,
-                             const std::shared_ptr<BaseColumnStatistics> &second_column_stats)
+  TwoColumnSelectivityResult(float selectivity, const std::shared_ptr<BaseColumnStatistics>& column_stats,
+                             const std::shared_ptr<BaseColumnStatistics>& second_column_stats)
       : ColumnSelectivityResult{selectivity, column_stats}, second_column_statistics(second_column_stats) {}
 
   std::shared_ptr<BaseColumnStatistics> second_column_statistics;
 };
 
-inline std::ostream &operator<<(std::ostream &os, BaseColumnStatistics &obj) { return obj._print_to_stream(os); }
+inline std::ostream& operator<<(std::ostream& os, BaseColumnStatistics& obj) { return obj._print_to_stream(os); }
 
 }  // namespace opossum

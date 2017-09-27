@@ -55,7 +55,7 @@ class TableStatistics : public std::enable_shared_from_this<TableStatistics> {
    * Table statistics should not be copied by other actors.
    * Copy constructor not private as copy is used by make_shared.
    */
-  TableStatistics(const TableStatistics &table_statistics) = default;
+  TableStatistics(const TableStatistics& table_statistics) = default;
 
   /**
    * Returns the expected row_count of the output of the corresponding operator.
@@ -67,23 +67,21 @@ class TableStatistics : public std::enable_shared_from_this<TableStatistics> {
    * Get table statistics for the operator table scan table scan.
    */
   virtual std::shared_ptr<TableStatistics> predicate_statistics(const ColumnID column_id, const ScanType scan_type,
-                                                                const AllParameterVariant &value,
-                                                                const optional<AllTypeVariant> &value2 = nullopt);
+                                                                const AllParameterVariant& value,
+                                                                const optional<AllTypeVariant>& value2 = nullopt);
 
   /**
    * Get table statistics for a cross join.
    */
   virtual std::shared_ptr<TableStatistics> generate_cross_join_statistics(
-          const std::shared_ptr<TableStatistics> &right_table_stats);
+      const std::shared_ptr<TableStatistics>& right_table_stats);
 
   /**
    * Get table statistics for joins with two column predicates.
    */
   virtual std::shared_ptr<TableStatistics> generate_predicated_join_statistics(
-          const std::shared_ptr<TableStatistics> &right_table_stats,
-          const JoinMode mode,
-          const std::pair<ColumnID, ColumnID> column_ids,
-          const ScanType scan_type);
+      const std::shared_ptr<TableStatistics>& right_table_stats, const JoinMode mode,
+      const std::pair<ColumnID, ColumnID> column_ids, const ScanType scan_type);
 
  protected:
   std::shared_ptr<BaseColumnStatistics> _get_or_generate_column_statistics(const ColumnID column_id);
@@ -100,9 +98,9 @@ class TableStatistics : public std::enable_shared_from_this<TableStatistics> {
                                                     const float predicate_column_distinct_count) const;
 
   void _adjust_null_value_ratio_for_outer_join(
-          const std::vector<std::shared_ptr<BaseColumnStatistics>>::iterator col_begin,
-          const std::vector<std::shared_ptr<BaseColumnStatistics>>::iterator col_end, const float row_count,
-          const float null_value_no, const float new_row_count);
+      const std::vector<std::shared_ptr<BaseColumnStatistics>>::iterator col_begin,
+      const std::vector<std::shared_ptr<BaseColumnStatistics>>::iterator col_end, const float row_count,
+      const float null_value_no, const float new_row_count);
 
   // Only available for statistics of tables in the StorageManager.
   // This is a weak_ptr, as
@@ -118,13 +116,13 @@ class TableStatistics : public std::enable_shared_from_this<TableStatistics> {
 
   std::vector<std::shared_ptr<BaseColumnStatistics>> _column_statistics;
 
-  friend std::ostream &operator<<(std::ostream &os, TableStatistics &obj);
+  friend std::ostream& operator<<(std::ostream& os, TableStatistics& obj);
 };
 
-inline std::ostream &operator<<(std::ostream &os, TableStatistics &obj) {
+inline std::ostream& operator<<(std::ostream& os, TableStatistics& obj) {
   os << "Table Stats " << std::endl;
   os << " row count: " << obj._row_count;
-  for (const auto &statistics : obj._column_statistics) {
+  for (const auto& statistics : obj._column_statistics) {
     if (statistics) os << std::endl << " " << *statistics;
   }
   return os;

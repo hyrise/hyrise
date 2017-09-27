@@ -39,15 +39,15 @@ class ColumnStatistics : public BaseColumnStatistics {
                    const float non_null_value_ratio = 1.f);
   ~ColumnStatistics() override = default;
 
-  ColumnSelectivityResult estimate_selectivity_for_predicate(const ScanType scan_type, const AllTypeVariant &value,
-                                                             const optional<AllTypeVariant> &value2 = nullopt) override;
+  ColumnSelectivityResult estimate_selectivity_for_predicate(const ScanType scan_type, const AllTypeVariant& value,
+                                                             const optional<AllTypeVariant>& value2 = nullopt) override;
 
-  ColumnSelectivityResult estimate_selectivity_for_predicate(const ScanType scan_type, const ValuePlaceholder &value,
-                                                             const optional<AllTypeVariant> &value2 = nullopt) override;
+  ColumnSelectivityResult estimate_selectivity_for_predicate(const ScanType scan_type, const ValuePlaceholder& value,
+                                                             const optional<AllTypeVariant>& value2 = nullopt) override;
 
   TwoColumnSelectivityResult estimate_selectivity_for_two_column_predicate(
-      const ScanType scan_type, const std::shared_ptr<BaseColumnStatistics> &right_base_column_statistics,
-      const optional<AllTypeVariant> &value2 = nullopt) override;
+      const ScanType scan_type, const std::shared_ptr<BaseColumnStatistics>& right_base_column_statistics,
+      const optional<AllTypeVariant>& value2 = nullopt) override;
 
   /**
    * Accessors for class variable optionals. Compute values, if not available.
@@ -58,7 +58,7 @@ class ColumnStatistics : public BaseColumnStatistics {
   std::shared_ptr<BaseColumnStatistics> clone() const override;
 
  protected:
-  std::ostream &_print_to_stream(std::ostream &os) const override;
+  std::ostream& _print_to_stream(std::ostream& os) const override;
   ColumnType min() const;
   ColumnType max() const;
 
@@ -120,7 +120,7 @@ class ColumnStatistics : public BaseColumnStatistics {
 };
 
 template <typename ColumnType>
-inline std::ostream &operator<<(std::ostream &os, const opossum::optional<ColumnType> &obj) {
+inline std::ostream& operator<<(std::ostream& os, const opossum::optional<ColumnType>& obj) {
   if (obj) {
     return os << *obj;
   } else {

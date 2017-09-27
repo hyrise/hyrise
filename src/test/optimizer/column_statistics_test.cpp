@@ -37,19 +37,19 @@ class ColumnStatisticsTest : public BaseTest {
 
   // For single value scans (i.e. all but BETWEEN)
   template <typename T>
-  void predict_selectivities_and_compare(const std::shared_ptr<ColumnStatistics<T>> &column_statistic,
-                                         const ScanType scan_type, const std::vector<T> &values,
-                                         const std::vector<float> &expected_selectivities) {
+  void predict_selectivities_and_compare(const std::shared_ptr<ColumnStatistics<T>>& column_statistic,
+                                         const ScanType scan_type, const std::vector<T>& values,
+                                         const std::vector<float>& expected_selectivities) {
     auto expected_selectivities_itr = expected_selectivities.begin();
-    for (const auto &value : values) {
+    for (const auto& value : values) {
       auto result_container = column_statistic->estimate_selectivity_for_predicate(scan_type, AllTypeVariant(value));
       EXPECT_FLOAT_EQ(result_container.selectivity, *expected_selectivities_itr++);
     }
   }
 
   // For two column scans (type of value1 is ColumnID)
-  void predict_selectivities_and_compare(const std::shared_ptr<Table> &table,
-                                         const std::vector<std::shared_ptr<BaseColumnStatistics>> &column_statistics,
+  void predict_selectivities_and_compare(const std::shared_ptr<Table>& table,
+                                         const std::vector<std::shared_ptr<BaseColumnStatistics>>& column_statistics,
                                          const ScanType scan_type) {
     auto table_wrapper = std::make_shared<TableWrapper>(table);
     table_wrapper->execute();
@@ -69,11 +69,11 @@ class ColumnStatisticsTest : public BaseTest {
 
   // For BETWEEN
   template <typename T>
-  void predict_selectivities_and_compare(const std::shared_ptr<ColumnStatistics<T>> &column_statistic,
-                                         const ScanType scan_type, const std::vector<std::pair<T, T>> &values,
-                                         const std::vector<float> &expected_selectivities) {
+  void predict_selectivities_and_compare(const std::shared_ptr<ColumnStatistics<T>>& column_statistic,
+                                         const ScanType scan_type, const std::vector<std::pair<T, T>>& values,
+                                         const std::vector<float>& expected_selectivities) {
     auto expected_selectivities_itr = expected_selectivities.begin();
-    for (const auto &value_pair : values) {
+    for (const auto& value_pair : values) {
       auto result_container = column_statistic->estimate_selectivity_for_predicate(
           scan_type, AllTypeVariant(value_pair.first), AllTypeVariant(value_pair.second));
       EXPECT_FLOAT_EQ(result_container.selectivity, *expected_selectivities_itr++);
@@ -82,10 +82,10 @@ class ColumnStatisticsTest : public BaseTest {
 
   template <typename T>
   void predict_selectivities_for_stored_procedures_and_compare(
-      const std::shared_ptr<ColumnStatistics<T>> &column_statistic, const ScanType scan_type,
-      const std::vector<T> &values2, const std::vector<float> &expected_selectivities) {
+      const std::shared_ptr<ColumnStatistics<T>>& column_statistic, const ScanType scan_type,
+      const std::vector<T>& values2, const std::vector<float>& expected_selectivities) {
     auto expected_selectivities_itr = expected_selectivities.begin();
-    for (const auto &value2 : values2) {
+    for (const auto& value2 : values2) {
       auto result_container =
           column_statistic->estimate_selectivity_for_predicate(scan_type, ValuePlaceholder(0), AllTypeVariant(value2));
       EXPECT_FLOAT_EQ(result_container.selectivity, *expected_selectivities_itr++);

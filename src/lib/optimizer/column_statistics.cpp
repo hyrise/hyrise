@@ -166,7 +166,7 @@ ColumnSelectivityResult ColumnStatistics<ColumnType>::create_column_stats_for_no
 
 template <typename ColumnType>
 ColumnSelectivityResult ColumnStatistics<ColumnType>::estimate_selectivity_for_predicate(
-    const ScanType scan_type, const AllTypeVariant &value, const optional<AllTypeVariant> &value2) {
+    const ScanType scan_type, const AllTypeVariant& value, const optional<AllTypeVariant>& value2) {
   auto casted_value = type_cast<ColumnType>(value);
 
   switch (scan_type) {
@@ -224,7 +224,7 @@ ColumnSelectivityResult ColumnStatistics<ColumnType>::estimate_selectivity_for_p
  */
 template <>
 ColumnSelectivityResult ColumnStatistics<std::string>::estimate_selectivity_for_predicate(
-    const ScanType scan_type, const AllTypeVariant &value, const optional<AllTypeVariant> &value2) {
+    const ScanType scan_type, const AllTypeVariant& value, const optional<AllTypeVariant>& value2) {
   auto casted_value = type_cast<std::string>(value);
   switch (scan_type) {
     case ScanType::OpEquals: {
@@ -240,7 +240,7 @@ ColumnSelectivityResult ColumnStatistics<std::string>::estimate_selectivity_for_
 
 template <typename ColumnType>
 ColumnSelectivityResult ColumnStatistics<ColumnType>::estimate_selectivity_for_predicate(
-    const ScanType scan_type, const ValuePlaceholder &value, const optional<AllTypeVariant> &value2) {
+    const ScanType scan_type, const ValuePlaceholder& value, const optional<AllTypeVariant>& value2) {
   switch (scan_type) {
     case ScanType::OpEquals: {
       auto column_statistics = std::make_shared<ColumnStatistics>(_column_id, 1, min(), max());
@@ -286,8 +286,8 @@ ColumnSelectivityResult ColumnStatistics<ColumnType>::estimate_selectivity_for_p
 
 template <typename ColumnType>
 TwoColumnSelectivityResult ColumnStatistics<ColumnType>::estimate_selectivity_for_two_column_predicate(
-    const ScanType scan_type, const std::shared_ptr<BaseColumnStatistics> &right_base_column_statistics,
-    const optional<AllTypeVariant> &value2) {
+    const ScanType scan_type, const std::shared_ptr<BaseColumnStatistics>& right_base_column_statistics,
+    const optional<AllTypeVariant>& value2) {
   /**
    * Calculate expected selectivity by looking at what ratio of values of both columns are in the overlapping value
    * range of both columns. If the two columns have different min values, then the column with the smaller min value
@@ -477,8 +477,8 @@ TwoColumnSelectivityResult ColumnStatistics<ColumnType>::estimate_selectivity_fo
  */
 template <>
 TwoColumnSelectivityResult ColumnStatistics<std::string>::estimate_selectivity_for_two_column_predicate(
-    const ScanType scan_type, const std::shared_ptr<BaseColumnStatistics> &right_base_column_statistics,
-    const optional<AllTypeVariant> &value2) {
+    const ScanType scan_type, const std::shared_ptr<BaseColumnStatistics>& right_base_column_statistics,
+    const optional<AllTypeVariant>& value2) {
   // TODO(anybody) implement special case for strings
   auto right_stats = std::dynamic_pointer_cast<ColumnStatistics<std::string>>(right_base_column_statistics);
   DebugAssert(right_stats != nullptr, "Cannot compare columns of different type");
@@ -487,7 +487,7 @@ TwoColumnSelectivityResult ColumnStatistics<std::string>::estimate_selectivity_f
 }
 
 template <typename ColumnType>
-std::ostream &ColumnStatistics<ColumnType>::_print_to_stream(std::ostream &os) const {
+std::ostream& ColumnStatistics<ColumnType>::_print_to_stream(std::ostream& os) const {
   os << "Col Stats id: " << _column_id << std::endl;
   os << "  dist.    " << _distinct_count << std::endl;
   os << "  min      " << _min << std::endl;
