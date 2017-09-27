@@ -282,10 +282,6 @@ const SQLTestParam test_queries[] = {
     {"SELECT a, b, MAX(c), AVG(d) FROM groupby_int_2gb_2agg GROUP BY a, b HAVING b > 457 AND a = 12345;",
      "src/test/tables/aggregateoperator/groupby_int_2gb_2agg/having_on_gb.tbl"},
 
-    // HAVING w/o mentioning in the SELECT list
-    {"SELECT a, b, AVG(d) FROM groupby_int_2gb_2agg GROUP BY a, b HAVING MAX(c) > 10 AND MAX(c) <= 30;",
-     "src/test/tables/aggregateoperator/groupby_int_2gb_2agg/avg_having.tbl"},
-
     {"SELECT * FROM customer;", "src/test/tables/tpch/customer.tbl"},
     {"SELECT c_custkey, c_name FROM customer;", "src/test/tables/tpch/customer_projection.tbl"},
 
