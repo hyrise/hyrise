@@ -48,7 +48,7 @@ namespace hana = boost::hana;
  *   impl->execute();
  */
 template <class Base, template <typename...> class Impl, class... TemplateArgs, typename... ConstructorArgs>
-std::unique_ptr<Base> make_unique_by_column_type(const std::string &type, ConstructorArgs &&... args) {
+std::unique_ptr<Base> make_unique_by_column_type(const std::string& type, ConstructorArgs&&... args) {
   std::unique_ptr<Base> ret = nullptr;
   hana::for_each(column_types, [&](auto x) {
     if (std::string(hana::first(x)) == type) {
@@ -76,8 +76,8 @@ std::unique_ptr<Base> make_unique_by_column_type(const std::string &type, Constr
  *       http://stackoverflow.com/questions/41769851/gcc-causes-segfault-for-lambda-captured-parameter-pack
  */
 template <class Base, template <typename...> class Impl, class... TemplateArgs, typename... ConstructorArgs>
-std::unique_ptr<Base> make_unique_by_column_types(const std::string &type1, const std::string &type2,
-                                                  ConstructorArgs &&... args) {
+std::unique_ptr<Base> make_unique_by_column_types(const std::string& type1, const std::string& type2,
+                                                  ConstructorArgs&&... args) {
   std::unique_ptr<Base> ret = nullptr;
   hana::for_each(column_types, [&ret, &type1, &type2, &args...](auto x) {
     if (std::string(hana::first(x)) == type1) {
@@ -85,8 +85,8 @@ std::unique_ptr<Base> make_unique_by_column_types(const std::string &type1, cons
         if (std::string(hana::first(y)) == type2) {
           using ColumnType1 = typename decltype(+hana::second(x))::type;
           using ColumnType2 = typename decltype(+hana::second(y))::type;
-          ret = std::make_unique<Impl<ColumnType1, ColumnType2, TemplateArgs...>>(
-            std::forward<ConstructorArgs>(args)...);
+          ret =
+              std::make_unique<Impl<ColumnType1, ColumnType2, TemplateArgs...>>(std::forward<ConstructorArgs>(args)...);
           return;
         }
       });
@@ -101,7 +101,7 @@ std::unique_ptr<Base> make_unique_by_column_types(const std::string &type1, cons
  * Convenience function. Calls make_unique_by_column_type and casts the result into a shared_ptr.
  */
 template <class Base, template <typename...> class impl, class... TemplateArgs, class... ConstructorArgs>
-std::shared_ptr<Base> make_shared_by_column_type(const std::string &type, ConstructorArgs &&... args) {
+std::shared_ptr<Base> make_shared_by_column_type(const std::string& type, ConstructorArgs&&... args) {
   return make_unique_by_column_type<Base, impl, TemplateArgs...>(type, std::forward<ConstructorArgs>(args)...);
 }
 
@@ -155,7 +155,7 @@ std::shared_ptr<Base> make_shared_by_column_type(const std::string &type, Constr
  *   });
  */
 template <typename Functor>
-void resolve_data_type(const std::string &type_string, const Functor &func) {
+void resolve_data_type(const std::string& type_string, const Functor& func) {
   hana::for_each(column_types, [&](auto x) {
     if (std::string(hana::first(x)) == type_string) {
       // The + before hana::second - which returns a reference - converts its return value into a value
@@ -187,12 +187,12 @@ void resolve_data_type(const std::string &type_string, const Functor &func) {
  *   });
  */
 template <typename DataType, typename Functor>
-void resolve_column_type(BaseColumn &column, const Functor &func) {
-  if (auto value_column = dynamic_cast<ValueColumn<DataType> *>(&column)) {
+void resolve_column_type(BaseColumn& column, const Functor& func) {
+  if (auto value_column = dynamic_cast<ValueColumn<DataType>*>(&column)) {
     func(*value_column);
-  } else if (auto dict_column = dynamic_cast<DictionaryColumn<DataType> *>(&column)) {
+  } else if (auto dict_column = dynamic_cast<DictionaryColumn<DataType>*>(&column)) {
     func(*dict_column);
-  } else if (auto ref_column = dynamic_cast<ReferenceColumn *>(&column)) {
+  } else if (auto ref_column = dynamic_cast<ReferenceColumn*>(&column)) {
     func(*ref_column);
   } else {
     Fail("Unrecognized column type encountered.");
@@ -223,11 +223,11 @@ void resolve_column_type(BaseColumn &column, const Functor &func) {
  *   });
  */
 template <typename Functor>
-void resolve_data_and_column_type(const std::string &type_string, BaseColumn &column, const Functor &func) {
+void resolve_data_and_column_type(const std::string& type_string, BaseColumn& column, const Functor& func) {
   resolve_data_type(type_string, [&](auto data_type) {
     using DataType = typename decltype(data_type)::type;
 
-    resolve_column_type<DataType>(column, [&](auto &typed_column) { func(data_type, typed_column); });
+    resolve_column_type<DataType>(column, [&](auto& typed_column) { func(data_type, typed_column); });
   });
 }
 
@@ -259,7 +259,7 @@ std::string type_string_from_type() {
 /**
  * This function returns the name of an Opossum datatype based on the definition in column_types.
  */
-inline std::string type_string_from_all_type_variant(const AllTypeVariant &all_type_variant) {
+inline std::string type_string_from_all_type_variant(const AllTypeVariant& all_type_variant) {
   // Special case for NullValue data type
   if (all_type_variant.which() == 0) {
     return "None";

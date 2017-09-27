@@ -1,6 +1,6 @@
 #!/bin/bash
 
-format_cmd="clang-format -i -style=file '{}'"
+format_cmd="clang-format-3.8 -i -style=file '{}'"
 
 if [ "${1}" = "all" ]; then
     find src -iname "*.cpp" -o -iname "*.hpp" | xargs -I{} sh -c "${format_cmd}"

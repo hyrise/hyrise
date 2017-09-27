@@ -243,7 +243,7 @@ TEST_F(TPCHTest, TPCH6) {
   /**
    * Original:
    *
-   * SELECT SUM(L_EXTENDEDPRICE*L_DISCOUNT) AS REVENUE
+   * SELECT sum(L_EXTENDEDPRICE*L_DISCOUNT) AS REVENUE
    * FROM LINEITEM
    * WHERE L_SHIPDATE >= '1994-01-01' AND L_SHIPDATE < dateadd(yy, 1, cast('1994-01-01' as datetime))
    * AND L_DISCOUNT BETWEEN .06 - 0.01 AND .06 + 0.01 AND L_QUANTITY < 24
@@ -253,10 +253,9 @@ TEST_F(TPCHTest, TPCH6) {
    *    a. use strings as data type for now
    *    b. pre-calculate date operation
    *  2. arithmetic expressions with constants are not resolved automatically yet, so pre-calculate them as well
-   *  3. 'SUM' must be upper-case so far
    */
   const auto query =
-      R"(SELECT SUM(l_extendedprice*l_discount) AS REVENUE
+      R"(SELECT sum(l_extendedprice*l_discount) AS REVENUE
       FROM lineitem
       WHERE l_shipdate >= '1994-01-01' AND l_shipdate < '1995-01-01'
       AND l_discount BETWEEN .05 AND .07 AND l_quantity < 24;)";
@@ -555,10 +554,9 @@ TEST_F(TPCHTest, DISABLED_TPCH13) {
    *  1. Random values are hardcoded
    *  2. Variable binding in alias not supported by SQLParser
    *    a. removed it
-   *  3. 'COUNT' must be upper-case for now
    */
   const auto query =
-      R"(SELECT c_count, COUNT(*) as custdist FROM (SELECT c_custkey, count(o_orderkey)
+      R"(SELECT c_count, count(*) as custdist FROM (SELECT c_custkey, count(o_orderkey)
       FROM customer left outer join orders on c_custkey = o_custkey AND o_comment not like '%[WORD1]%[WORD2]%'
       GROUP BY c_custkey) as c_orders GROUP BY c_count ORDER BY custdist DESC, c_count DESC;)";
   const auto expected_result = load_table("src/test/tables/tpch/results/tpch13.tbl", 2);
