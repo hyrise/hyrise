@@ -12,9 +12,8 @@
 
 namespace opossum {
 
-TablePrinter::TablePrinter(std::shared_ptr<const Table> table, std::ostream& out, bool ignore_empty_chunks)
+TablePrinter::TablePrinter(std::shared_ptr<const Table> table, bool ignore_empty_chunks)
     : _table(table),
-      _out(out),
       _rows_printed(0),
       _closing(""),
       _ignore_empty_chunks(ignore_empty_chunks),
@@ -67,24 +66,24 @@ RowID TablePrinter::print(const RowID& row_id, const size_t rows) {
 }
 
 void TablePrinter::print_header() {
-  _out << "=== Columns" << std::endl;
+  std::cout << "=== Columns" << std::endl;
   for (ColumnID col{0}; col < _table->col_count(); ++col) {
-    _out << "|" << std::setw(_widths[col]) << _table->column_name(col) << std::setw(0);
+    std::cout << "|" << std::setw(_widths[col]) << _table->column_name(col) << std::setw(0);
   }
   if (_has_mvcc) {
-    _out << "||        MVCC        ";
+    std::cout << "||        MVCC        ";
   }
-  _out << "|" << std::endl;
+  std::cout << "|" << std::endl;
   for (ColumnID col{0}; col < _table->col_count(); ++col) {
-    _out << "|" << std::setw(_widths[col]) << _table->column_type(col) << std::setw(0);
+    std::cout << "|" << std::setw(_widths[col]) << _table->column_type(col) << std::setw(0);
   }
   if (_has_mvcc) {
-    _out << "||_BEGIN|_END  |_TID  ";
+    std::cout << "||_BEGIN|_END  |_TID  ";
   }
-  _out << "|" << std::endl;
+  std::cout << "|" << std::endl;
 }
 
-void TablePrinter::print_closing() { _out << _closing << std::endl; }
+void TablePrinter::print_closing() { std::cout << _closing << std::endl; }
 
 void TablePrinter::set_closing(const std::string& closing) { _closing = closing; }
 
@@ -94,10 +93,10 @@ void TablePrinter::_print_chunk_header(const ChunkID chunk_id) {
     return;
   }
 
-  _out << "=== Chunk " << chunk_id << " === " << std::endl;
+  std::cout << "=== Chunk " << chunk_id << " === " << std::endl;
 
   if (chunk.size() == 0) {
-    _out << "Empty chunk." << std::endl;
+    std::cout << "Empty chunk." << std::endl;
     return;
   }
 }
@@ -108,11 +107,11 @@ void TablePrinter::_print_row(const RowID& row_id) {
   auto& chunk = _table->get_chunk(row_id.chunk_id);
   ChunkOffset row = row_id.chunk_offset;
 
-  _out << "|";
+  std::cout << "|";
   for (ColumnID col{0}; col < chunk.col_count(); ++col) {
     // well yes, we use BaseColumn::operator[] here, but since print is not an operation that should
     // be part of a regular query plan, let's keep things simple here
-    _out << std::setw(_widths[col]) << (*chunk.get_column(col))[row] << "|" << std::setw(0);
+    std::cout << std::setw(_widths[col]) << (*chunk.get_column(col))[row] << "|" << std::setw(0);
   }
 
   if (_has_mvcc) {
@@ -126,12 +125,12 @@ void TablePrinter::_print_row(const RowID& row_id) {
     auto end_str = end == Chunk::MAX_COMMIT_ID ? "" : std::to_string(end);
     auto tid_str = tid == 0 ? "" : std::to_string(tid);
 
-    _out << "|" << std::setw(6) << begin_str << std::setw(0);
-    _out << "|" << std::setw(6) << end_str << std::setw(0);
-    _out << "|" << std::setw(6) << tid_str << std::setw(0);
-    _out << "|";
+    std::cout << "|" << std::setw(6) << begin_str << std::setw(0);
+    std::cout << "|" << std::setw(6) << end_str << std::setw(0);
+    std::cout << "|" << std::setw(6) << tid_str << std::setw(0);
+    std::cout << "|";
   }
-  _out << std::endl;
+  std::cout << std::endl;
 }
 
 // In order to print the table as an actual table, with columns being aligned, we need to calculate the

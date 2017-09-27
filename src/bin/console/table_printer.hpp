@@ -1,6 +1,5 @@
 #pragma once
 
-#include <fstream>
 #include <limits>
 #include <memory>
 #include <string>
@@ -15,8 +14,7 @@ namespace opossum {
  */
 class TablePrinter {
  public:
-  explicit TablePrinter(std::shared_ptr<const Table> table, std::ostream& out = std::cout,
-                        bool ignore_empty_chunks = false);
+  explicit TablePrinter(std::shared_ptr<const Table> table, bool ignore_empty_chunks = false);
 
   /*
    * Prints out specified number of rows starting from a specified RowID.
@@ -63,7 +61,6 @@ class TablePrinter {
   std::vector<uint16_t> _column_string_widths(uint16_t min, uint16_t max) const;
 
   const std::shared_ptr<const Table> _table;
-  std::ostream& _out;
   std::vector<uint16_t> _widths;
   size_t _rows_printed;
   std::string _closing;

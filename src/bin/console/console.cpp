@@ -7,7 +7,7 @@
 #include <readline/history.h>
 #include <readline/readline.h>
 #include <setjmp.h>
-#include <termios.h>
+// #include <termios.h>
 #include <chrono>
 #include <csignal>
 #include <ctime>
@@ -39,7 +39,7 @@
 
 namespace {
 
-enum PaginationCommand { CONTINUE, CONTINUE_PAGE, PAUSE, ABORT };
+// enum PaginationCommand { CONTINUE, CONTINUE_PAGE, PAUSE, ABORT };
 
 // Buffer for program state
 sigjmp_buf jmp_env;
@@ -70,55 +70,55 @@ std::string remove_coloring(const std::string& input, bool remove_rl_codes_only 
   return std::regex_replace(input, expression, "");
 }
 
-// This waits for the user to press a key, then returns the first character code of the pressed key in the buffer
-int getch() {
-  int ch;
-  struct termios oldt, newt;
-  // store old settings
-  tcgetattr(STDIN_FILENO, &oldt);
-  newt = oldt;
-  newt.c_lflag &= ~(ICANON | ECHO);  // make one change to old settings in new settings
-  // apply new settings
-  tcsetattr(STDIN_FILENO, TCSANOW, &newt);
-  ch = getchar();
-  // reapply old settings
-  tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
-  return ch;
-}
+// // This waits for the user to press a key, then returns the first character code of the pressed key in the buffer
+// int getch() {
+//   int ch;
+//   struct termios oldt, newt;
+//   // store old settings
+//   tcgetattr(STDIN_FILENO, &oldt);
+//   newt = oldt;
+//   newt.c_lflag &= ~(ICANON | ECHO);  // make one change to old settings in new settings
+//   // apply new settings
+//   tcsetattr(STDIN_FILENO, TCSANOW, &newt);
+//   ch = getchar();
+//   // reapply old settings
+//   tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
+//   return ch;
+// }
 
-// Waits for the user to press a key then returns a PaginationCommand according to which key was pressed
-PaginationCommand user_input_pagination() {
-  switch (getch()) {
-    // Arrow keys consist of three consecutive characters, PAGE UP/DOWN of four
-    case '\033': {
-      getch();            // Remove irrelevant char from buffer
-      switch (getch()) {  // Determine which arrow key or PAGE UP/DOWN is pressed
-        case 'A':
-          return PAUSE;  // Arrow up
-        case 'B':
-          return CONTINUE;  // Arrow down
-        case 'C':
-          return PAUSE;  // Arrow right
-        case 'D':
-          return PAUSE;  // Arrow left
-        case '5': {      // PAGE UP
-          getch();       // Remove irrelevant char from buffer
-          return PAUSE;
-        }
-        case '6': {  // PAGE DOWN
-          getch();   // Remove irrelevant char from buffer
-          return CONTINUE_PAGE;
-        }
-        default:
-          return ABORT;
-      }
-    }
-    case '\n':
-      return CONTINUE;
-    default:
-      return ABORT;
-  }
-}
+// // Waits for the user to press a key then returns a PaginationCommand according to which key was pressed
+// PaginationCommand user_input_pagination() {
+//   switch (getch()) {
+//     // Arrow keys consist of three consecutive characters, PAGE UP/DOWN of four
+//     case '\033': {
+//       getch();            // Remove irrelevant char from buffer
+//       switch (getch()) {  // Determine which arrow key or PAGE UP/DOWN is pressed
+//         case 'A':
+//           return PAUSE;  // Arrow up
+//         case 'B':
+//           return CONTINUE;  // Arrow down
+//         case 'C':
+//           return PAUSE;  // Arrow right
+//         case 'D':
+//           return PAUSE;  // Arrow left
+//         case '5': {      // PAGE UP
+//           getch();       // Remove irrelevant char from buffer
+//           return PAUSE;
+//         }
+//         case '6': {  // PAGE DOWN
+//           getch();   // Remove irrelevant char from buffer
+//           return CONTINUE_PAGE;
+//         }
+//         default:
+//           return ABORT;
+//       }
+//     }
+//     case '\n':
+//       return CONTINUE;
+//     default:
+//       return ABORT;
+//   }
+// }
 }  // namespace
 
 namespace opossum {
@@ -375,55 +375,56 @@ void Console::out(const std::string& output, bool console_print) {
 }
 
 void Console::out(std::shared_ptr<const Table> table) {
-  TablePrinter printer(table, _out, false);
-  printer.print_header();
+  TablePrinter printer(table, false).paginate();
+  // TablePrinter printer(table, _out, false);
+  // printer.print_header();
 
-  auto row_id = RowID{};
-  int rows, cols;
+  // auto row_id = RowID{};
+  // int rows, cols;
 
-  // Determine how many rows can be printed on the first page
-  rl_get_screen_size(&rows, &cols);
+  // // Determine how many rows can be printed on the first page
+  // rl_get_screen_size(&rows, &cols);
 
-  // Print 5 rows less than screen size initially to still have the header visible
-  if (rows > 5) {
-    rows = rows - 5;
-  }
+  // // Print 5 rows less than screen size initially to still have the header visible
+  // if (rows > 5) {
+  //   rows = rows - 5;
+  // }
 
-  // Print more rows until NULL_ROW_ID is reached, either by completing the table, or by the user aborting
-  while (!(row_id == NULL_ROW_ID)) {
-    row_id = printer.print(row_id, rows);
+  // // Print more rows until NULL_ROW_ID is reached, either by completing the table, or by the user aborting
+  // while (!(row_id == NULL_ROW_ID)) {
+  //   row_id = printer.print(row_id, rows);
 
-    _out << "Press ARROW DOWN for next line, PAGE DOWN for next page.";
+  //   _out << "Press ARROW DOWN for next line, PAGE DOWN for next page.";
 
-    // If end of table is not reached, prompt the user for a pagination command
-    if (!(row_id == NULL_ROW_ID)) {
-      switch (user_input_pagination()) {
-        case CONTINUE: {
-          rows = 1;
-          break;
-        }
-        case CONTINUE_PAGE: {
-          rl_get_screen_size(&rows, &cols);
-          --rows;
-          break;
-        }
-        case PAUSE: {
-          rows = 0;
-          break;
-        }
-        case ABORT: {
-          printer.set_closing("...");
-          row_id = NULL_ROW_ID;
-          break;
-        }
-      }
-    }
+  //   // If end of table is not reached, prompt the user for a pagination command
+  //   if (!(row_id == NULL_ROW_ID)) {
+  //     switch (user_input_pagination()) {
+  //       case CONTINUE: {
+  //         rows = 1;
+  //         break;
+  //       }
+  //       case CONTINUE_PAGE: {
+  //         rl_get_screen_size(&rows, &cols);
+  //         --rows;
+  //         break;
+  //       }
+  //       case PAUSE: {
+  //         rows = 0;
+  //         break;
+  //       }
+  //       case ABORT: {
+  //         printer.set_closing("...");
+  //         row_id = NULL_ROW_ID;
+  //         break;
+  //       }
+  //     }
+  //   }
 
-    // Remove the instruction line printed before
-    rl_clear_visible_line();
-  }
-  // If we aborted printing, the closing is set to "...", otherwise "".
-  printer.print_closing();
+  //   // Remove the instruction line printed before
+  //   rl_clear_visible_line();
+  // }
+  // // If we aborted printing, the closing is set to "...", otherwise "".
+  // printer.print_closing();
 }
 
 // Command functions

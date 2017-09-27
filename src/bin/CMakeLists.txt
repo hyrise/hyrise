@@ -59,6 +59,7 @@ target_link_libraries(
     opossumConsole
     opossum
     tpcc
+    ncurses
     ${READLINE_LIBRARY}
 )
 target_include_directories(
