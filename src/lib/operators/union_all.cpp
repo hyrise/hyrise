@@ -51,7 +51,7 @@ std::shared_ptr<const Table> UnionAll::_on_execute() {
       }
 
       // adding newly filled chunk to the output table
-      output->add_chunk(std::move(chunk_output));
+      output->emplace_chunk(std::move(chunk_output));
     }
   }
 

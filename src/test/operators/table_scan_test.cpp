@@ -79,7 +79,7 @@ class OperatorsTableScanTest : public BaseTest {
     chunk.add_column(col_a);
     chunk.add_column(col_b);
 
-    table->add_chunk(std::move(chunk));
+    table->emplace_chunk(std::move(chunk));
     auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
     table_wrapper->execute();
     return table_wrapper;
@@ -125,7 +125,7 @@ class OperatorsTableScanTest : public BaseTest {
       chunk_out.add_column(column_out);
     }
 
-    table_out->add_chunk(std::move(chunk_out));
+    table_out->emplace_chunk(std::move(chunk_out));
     return table_out;
   }
 
@@ -152,7 +152,7 @@ class OperatorsTableScanTest : public BaseTest {
     chunk.add_column(ref_column_a);
     chunk.add_column(ref_column_b);
 
-    ref_table->add_chunk(std::move(chunk));
+    ref_table->emplace_chunk(std::move(chunk));
 
     return ref_table;
   }

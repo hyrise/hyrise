@@ -419,7 +419,7 @@ class JoinNestedLoopA::JoinNestedLoopAImpl : public AbstractJoinOperatorImpl {
         // Add columns from right table to output chunk
         write_output_chunks(output_chunk, _right_in_table, chunk_id_right, pos_list_right);
 
-        _output_table->add_chunk(std::move(output_chunk));
+        _output_table->emplace_chunk(std::move(output_chunk));
       }
     }
 
@@ -448,7 +448,7 @@ class JoinNestedLoopA::JoinNestedLoopAImpl : public AbstractJoinOperatorImpl {
           write_output_chunks(output_chunk, _left_in_table, elem.first.chunk_id, pos_list_left, false);
           write_output_chunks(output_chunk, _right_in_table, elem.first.chunk_id, pos_list_right, true);
 
-          _output_table->add_chunk(std::move(output_chunk));
+          _output_table->emplace_chunk(std::move(output_chunk));
         }
       }
     }
@@ -466,7 +466,7 @@ class JoinNestedLoopA::JoinNestedLoopAImpl : public AbstractJoinOperatorImpl {
           write_output_chunks(output_chunk, _left_in_table, elem.first.chunk_id, pos_list_left, true);
           write_output_chunks(output_chunk, _right_in_table, elem.first.chunk_id, pos_list_right, false);
 
-          _output_table->add_chunk(std::move(output_chunk));
+          _output_table->emplace_chunk(std::move(output_chunk));
         }
       }
     }
