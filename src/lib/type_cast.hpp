@@ -9,7 +9,7 @@
 
 #include <string>
 
-#include "all_type_variant.hpp"
+#include "all_parameter_variant.hpp"
 
 namespace opossum {
 
@@ -69,6 +69,6 @@ enable_if<std::is_integral<T>, T> type_cast(const AllTypeVariant &value) {
   }
 }
 
-std::string to_string(const AllTypeVariant &x);
+std::string to_string(const AllParameterVariant &x);
 
 }  // namespace opossum

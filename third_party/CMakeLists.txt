@@ -4,19 +4,20 @@ add_library(
     EXCLUDE_FROM_ALL
     STATIC
     benchmark_fix/dummy.cc
-    benchmark/src/timers.cc
-    benchmark/src/sleep.cc
-    benchmark/src/reporter.cc
-    benchmark/src/complexity.cc
-    benchmark/src/colorprint.cc
-    benchmark/src/sysinfo.cc
-    benchmark/src/json_reporter.cc
-    benchmark/src/commandlineflags.cc
     benchmark/src/benchmark.cc
-    benchmark/src/string_util.cc
     benchmark/src/benchmark_register.cc
+    benchmark/src/colorprint.cc
+    benchmark/src/commandlineflags.cc
+    benchmark/src/complexity.cc
     benchmark/src/console_reporter.cc
+    benchmark/src/counter.cc
     benchmark/src/csv_reporter.cc
+    benchmark/src/json_reporter.cc
+    benchmark/src/reporter.cc
+    benchmark/src/sleep.cc
+    benchmark/src/string_util.cc
+    benchmark/src/sysinfo.cc
+    benchmark/src/timers.cc
 )
 
 target_compile_options(

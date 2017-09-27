@@ -12,7 +12,7 @@ GetTable::GetTable(const std::string& name) : _name(name) {}
 
 const std::string GetTable::name() const { return "GetTable"; }
 
-const std::string GetTable::description() const { return std::string("GetTable(") + table_name() + ")"; }
+const std::string GetTable::description() const { return name() + "\\n(" + table_name() + ")"; }
 
 uint8_t GetTable::num_in_tables() const { return 0; }
 

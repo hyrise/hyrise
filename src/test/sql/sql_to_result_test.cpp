@@ -25,7 +25,7 @@ namespace opossum {
 enum class OrderSensitivity { Sensitive, Insensitive };
 
 struct SQLTestParam {
-  SQLTestParam(const std::string &query, const std::string &result_table_path,
+  SQLTestParam(const std::string& query, const std::string& result_table_path,
                OrderSensitivity orderSensitivity = OrderSensitivity::Insensitive)
       : query(query), result_table_path(result_table_path), order_sensitive(orderSensitivity) {}
 
@@ -103,10 +103,10 @@ TEST_P(SQLToResultTest, SQLQueryTest) {
 
   auto tx_context = TransactionManager::get().new_transaction_context();
 
-  for (const auto &root : plan.tree_roots()) {
+  for (const auto& root : plan.tree_roots()) {
     auto tasks = OperatorTask::make_tasks_from_operator(root);
 
-    for (auto &task : tasks) {
+    for (auto& task : tasks) {
       task->get_operator()->set_transaction_context(tx_context);
     }
 
@@ -218,16 +218,16 @@ const SQLTestParam test_queries[] = {
         ON t1.a = t4.a)",
      "src/test/tables/joinoperators/int_inner_join_4_tables_projection.tbl"},
 
-    // TODO(anybody): uncomment test once filtering after joins works.
-    //    {R"(SELECT *
-    //        FROM int_float AS t1
-    //        INNER JOIN int_float2 AS t2
-    //        ON t1.a = t2.a
-    //        INNER JOIN int_string2 AS t3
-    //        ON t1.a = t3.a
-    //        WHERE t2.b > 457.0
-    //        AND t3.b = 'C')",
-    //     "src/test/tables/joinoperators/int_inner_join_3_tables_filter.tbl"},
+    // Join three tables and perform a scan
+    {R"(SELECT *
+        FROM int_float AS t1
+        INNER JOIN int_float2 AS t2
+        ON t1.a = t2.a
+        INNER JOIN int_string2 AS t3
+        ON t1.a = t3.a
+        WHERE t2.b > 457.0
+        AND t3.b = 'C')",
+     "src/test/tables/joinoperators/int_inner_join_3_tables_filter.tbl"},
 
     // Aggregates
     {"SELECT SUM(b + b) AS sum_b_b FROM int_float;", "src/test/tables/int_float_sum_b_plus_b.tbl"},
@@ -247,6 +247,9 @@ const SQLTestParam test_queries[] = {
     // todo(anyone): Enable as soon as #182 is resolved
     {"SELECT COUNT(*) FROM groupby_int_1gb_1agg_null GROUP BY a;",
      "src/test/tables/aggregateoperator/groupby_int_1gb_1agg/count_star.tbl"},
+
+    // case insensitivity
+    {"SELECT Sum(b + b) AS sum_b_b FROM int_float;", "src/test/tables/int_float_sum_b_plus_b.tbl"},
 
     // Aggregates with NULL
     {"SELECT a, MAX(b) FROM groupby_int_1gb_1agg_null GROUP BY a;",
