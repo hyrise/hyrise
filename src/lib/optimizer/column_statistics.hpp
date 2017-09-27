@@ -59,8 +59,8 @@ class ColumnStatistics : public BaseColumnStatistics {
 
  protected:
   std::ostream& _print_to_stream(std::ostream& os) const override;
-  ColumnType min() const;
-  ColumnType max() const;
+  ColumnType _get_or_calculate_min() const;
+  ColumnType _get_or_calculate_max() const;
 
   /**
    * Returns a column statistics identical to this which does not have null values.
@@ -87,19 +87,19 @@ class ColumnStatistics : public BaseColumnStatistics {
    * @param value: constant value of aggregate
    * @return Selectivity and new column statistics.
    */
-  ColumnSelectivityResult create_column_stats_for_equals_predicate(ColumnType value);
+  ColumnSelectivityResult _create_column_stats_for_equals_predicate(ColumnType value);
 
   /**
    * Create column statistics and estimate selectivity for predicate with scan type not equals and constant value.
    * @param value: constant value of aggregate
    * @return Selectivity and new column statistics.
    */
-  ColumnSelectivityResult create_column_stats_for_not_equals_predicate(ColumnType value);
+  ColumnSelectivityResult _create_column_stats_for_not_equals_predicate(ColumnType value);
 
   /**
    * Calcute min and max values from table.
    */
-  void initialize_min_max() const;
+  void _initialize_min_max() const;
 
   const ColumnID _column_id;
 
