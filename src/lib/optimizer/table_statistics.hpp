@@ -71,34 +71,38 @@ class TableStatistics : public std::enable_shared_from_this<TableStatistics> {
                                                                 const optional<AllTypeVariant> &value2 = nullopt);
 
   /**
-   * Get table statistics for a cross join. Natural joins are not supported due to usage of column ids.
+   * Get table statistics for a cross join.
    */
-  virtual std::shared_ptr<TableStatistics> join_statistics(const std::shared_ptr<TableStatistics> &right_table_stats,
-                                                           const JoinMode mode);
+  virtual std::shared_ptr<TableStatistics> generate_cross_join_statistics(
+          const std::shared_ptr<TableStatistics> &right_table_stats);
 
   /**
    * Get table statistics for joins with two column predicates.
    */
-  virtual std::shared_ptr<TableStatistics> join_statistics(const std::shared_ptr<TableStatistics> &right_table_stats,
-                                                           const JoinMode mode,
-                                                           const std::pair<ColumnID, ColumnID> column_ids,
-                                                           const ScanType scan_type);
+  virtual std::shared_ptr<TableStatistics> generate_predicated_join_statistics(
+          const std::shared_ptr<TableStatistics> &right_table_stats,
+          const JoinMode mode,
+          const std::pair<ColumnID, ColumnID> column_ids,
+          const ScanType scan_type);
 
  protected:
-  std::shared_ptr<BaseColumnStatistics> get_or_generate_column_statistics(const ColumnID column_id);
+  std::shared_ptr<BaseColumnStatistics> _get_or_generate_column_statistics(const ColumnID column_id);
 
-  void create_all_column_statistics();
+  void _create_all_column_statistics();
 
-  void reset_table_ptr();
+  /**
+   * Resets the pointer variable _table after checking that the table is no longer needed.
+   */
+  void _reset_table_ptr();
 
-  float calculate_added_null_values_for_outer_join(const float row_count,
-                                                   const std::shared_ptr<BaseColumnStatistics> col_stats,
-                                                   const float predicate_column_distinct_count) const;
+  float _calculate_added_null_values_for_outer_join(const float row_count,
+                                                    const std::shared_ptr<BaseColumnStatistics> col_stats,
+                                                    const float predicate_column_distinct_count) const;
 
-  void adjust_null_value_ratio_for_outer_join(
-      const std::vector<std::shared_ptr<BaseColumnStatistics>>::iterator col_begin,
-      const std::vector<std::shared_ptr<BaseColumnStatistics>>::iterator col_end, const float row_count,
-      const float null_value_no, const float new_row_count);
+  void _adjust_null_value_ratio_for_outer_join(
+          const std::vector<std::shared_ptr<BaseColumnStatistics>>::iterator col_begin,
+          const std::vector<std::shared_ptr<BaseColumnStatistics>>::iterator col_end, const float row_count,
+          const float null_value_no, const float new_row_count);
 
   // Only available for statistics of tables in the StorageManager.
   // This is a weak_ptr, as

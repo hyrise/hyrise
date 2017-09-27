@@ -20,20 +20,6 @@ TableStatistics::TableStatistics(const std::shared_ptr<Table> table)
 
 float TableStatistics::row_count() const { return _row_count; }
 
-std::shared_ptr<BaseColumnStatistics> TableStatistics::get_or_generate_column_statistics(const ColumnID column_id) {
-  if (_column_statistics[column_id]) {
-    return _column_statistics[column_id];
-  }
-
-  auto table = _table.lock();
-  DebugAssert(table != nullptr, "Corresponding table of table statistics is deleted.");
-  auto column_type = table->column_type(column_id);
-  auto column_statistics =
-      make_shared_by_column_type<BaseColumnStatistics, ColumnStatistics>(column_type, column_id, _table);
-  _column_statistics[column_id] = column_statistics;
-  return _column_statistics[column_id];
-}
-
 std::shared_ptr<TableStatistics> TableStatistics::predicate_statistics(const ColumnID column_id,
                                                                        const ScanType scan_type,
                                                                        const AllParameterVariant &value,
@@ -50,7 +36,7 @@ std::shared_ptr<TableStatistics> TableStatistics::predicate_statistics(const Col
     return clone;
   }
 
-  auto old_column_statistics = get_or_generate_column_statistics(column_id);
+  auto old_column_statistics = _get_or_generate_column_statistics(column_id);
 
   // create copy of this as this should not be adapted for current table scan
   auto clone = std::make_shared<TableStatistics>(*this);
@@ -59,7 +45,7 @@ std::shared_ptr<TableStatistics> TableStatistics::predicate_statistics(const Col
   // delegate prediction to corresponding column statistics
   if (value.type() == typeid(ColumnID)) {
     const ColumnID value_column_id = boost::get<ColumnID>(value);
-    auto old_right_column_stats = get_or_generate_column_statistics(value_column_id);
+    auto old_right_column_stats = _get_or_generate_column_statistics(value_column_id);
 
     auto two_column_statistics_container =
         old_column_statistics->estimate_selectivity_for_two_column_predicate(scan_type, old_right_column_stats, value2);
@@ -89,16 +75,14 @@ std::shared_ptr<TableStatistics> TableStatistics::predicate_statistics(const Col
   return clone;
 }
 
-std::shared_ptr<TableStatistics> TableStatistics::join_statistics(
-    const std::shared_ptr<TableStatistics> &right_table_stats, const JoinMode mode) {
-  DebugAssert(mode != JoinMode::Natural, "Natural join not supported by column statistics.");
-  DebugAssert(mode == JoinMode::Cross, "Specified JoinMode must also specify column ids and scan type.");
+std::shared_ptr<TableStatistics> TableStatistics::generate_cross_join_statistics(
+        const std::shared_ptr<TableStatistics> &right_table_stats) {
 
   // create all not yet created column statistics as there is no mapping in join table statistics from table to columns
   // A join result can consist of columns of two different tables. Therefore, the reference to the table cannot be
   // stored within the table statistics but instead in the column statistics.
-  create_all_column_statistics();
-  right_table_stats->create_all_column_statistics();
+  _create_all_column_statistics();
+  right_table_stats->_create_all_column_statistics();
 
   // create copy of this as this should not be adapted for current join
   auto join_table_stats = std::make_shared<TableStatistics>(*this);
@@ -110,16 +94,16 @@ std::shared_ptr<TableStatistics> TableStatistics::join_statistics(
             col_stats_right_begin);
 
   // all columns are added, table pointer is deleted for output statistics
-  join_table_stats->reset_table_ptr();
+  join_table_stats->_reset_table_ptr();
 
   // calculate output size for cross joins
   join_table_stats->_row_count *= right_table_stats->_row_count;
   return join_table_stats;
 }
 
-std::shared_ptr<TableStatistics> TableStatistics::join_statistics(
-    const std::shared_ptr<TableStatistics> &right_table_stats, const JoinMode mode,
-    const std::pair<ColumnID, ColumnID> column_ids, const ScanType scan_type) {
+std::shared_ptr<TableStatistics> TableStatistics::generate_predicated_join_statistics(
+        const std::shared_ptr<TableStatistics> &right_table_stats, const JoinMode mode,
+        const std::pair<ColumnID, ColumnID> column_ids, const ScanType scan_type) {
   DebugAssert(mode != JoinMode::Cross && mode != JoinMode::Natural,
               "Specified JoinMode must specify neither column ids nor scan type.");
 
@@ -185,7 +169,7 @@ std::shared_ptr<TableStatistics> TableStatistics::join_statistics(
   }
 
   // copy column statistics and calculate cross join row count
-  auto join_table_stats = join_statistics(right_table_stats, JoinMode::Cross);
+  auto join_table_stats = generate_cross_join_statistics(right_table_stats);
 
   // retrieve the two column statistics which are used by the join predicate
   auto &left_col_stats = _column_statistics[column_ids.first];
@@ -199,25 +183,26 @@ std::shared_ptr<TableStatistics> TableStatistics::join_statistics(
   ColumnID new_right_column_id{static_cast<ColumnID::base_type>(_column_statistics.size() + column_ids.second)};
 
   // calculate how many null values need to be added to columns from the left table for right/outer joins
-  auto left_null_value_no = calculate_added_null_values_for_outer_join(
-      right_table_stats->row_count(), right_col_stats, stats_container.second_column_statistics->distinct_count());
+  auto left_null_value_no = _calculate_added_null_values_for_outer_join(
+          right_table_stats->row_count(), right_col_stats, stats_container.second_column_statistics->distinct_count());
   // calculate how many null values need to be added to columns from the right table for left/outer joins
-  auto right_null_value_no = calculate_added_null_values_for_outer_join(
-      row_count(), left_col_stats, stats_container.column_statistics->distinct_count());
+  auto right_null_value_no = _calculate_added_null_values_for_outer_join(
+          row_count(), left_col_stats, stats_container.column_statistics->distinct_count());
 
-  // prepare two adjust_null_value_ratio_for_outer_join calls, executed in the switch statement below
+  // prepare two _adjust_null_value_ratio_for_outer_join calls, executed in the switch statement below
 
   // a) add null values to columns from the right table for left outer join
   auto apply_left_outer_join = [&]() {
-    adjust_null_value_ratio_for_outer_join(join_table_stats->_column_statistics.begin() + _column_statistics.size(),
-                                           join_table_stats->_column_statistics.end(), right_table_stats->row_count(),
-                                           right_null_value_no, join_table_stats->row_count());
+      _adjust_null_value_ratio_for_outer_join(join_table_stats->_column_statistics.begin() + _column_statistics.size(),
+                                              join_table_stats->_column_statistics.end(),
+                                              right_table_stats->row_count(),
+                                              right_null_value_no, join_table_stats->row_count());
   };
   // b) add null values to columns from the left table for right outer
   auto apply_right_outer_join = [&]() {
-    adjust_null_value_ratio_for_outer_join(join_table_stats->_column_statistics.begin(),
-                                           join_table_stats->_column_statistics.begin() + _column_statistics.size(),
-                                           row_count(), left_null_value_no, join_table_stats->row_count());
+      _adjust_null_value_ratio_for_outer_join(join_table_stats->_column_statistics.begin(),
+                                              join_table_stats->_column_statistics.begin() + _column_statistics.size(),
+                                              row_count(), left_null_value_no, join_table_stats->row_count());
   };
 
   switch (mode) {
@@ -252,22 +237,36 @@ std::shared_ptr<TableStatistics> TableStatistics::join_statistics(
   return join_table_stats;
 }
 
-void TableStatistics::create_all_column_statistics() {
+std::shared_ptr<BaseColumnStatistics> TableStatistics::_get_or_generate_column_statistics(const ColumnID column_id) {
+  if (_column_statistics[column_id]) {
+    return _column_statistics[column_id];
+  }
+
+  auto table = _table.lock();
+  DebugAssert(table != nullptr, "Corresponding table of table statistics is deleted.");
+  auto column_type = table->column_type(column_id);
+  auto column_statistics =
+          make_shared_by_column_type<BaseColumnStatistics, ColumnStatistics>(column_type, column_id, _table);
+  _column_statistics[column_id] = column_statistics;
+  return _column_statistics[column_id];
+}
+
+void TableStatistics::_create_all_column_statistics() {
   for (ColumnID column_id{0}; column_id < _column_statistics.size(); ++column_id) {
-    get_or_generate_column_statistics(column_id);
+    _get_or_generate_column_statistics(column_id);
   }
 }
 
-void TableStatistics::reset_table_ptr() {
+void TableStatistics::_reset_table_ptr() {
   for (ColumnID column_id{0}; column_id < _column_statistics.size(); ++column_id) {
     DebugAssert(_column_statistics[column_id], "All column statistics of table statistics have to exist.");
   }
   _table.reset();
 }
 
-float TableStatistics::calculate_added_null_values_for_outer_join(const float row_count,
-                                                                  const std::shared_ptr<BaseColumnStatistics> col_stats,
-                                                                  const float predicate_column_distinct_count) const {
+float TableStatistics::_calculate_added_null_values_for_outer_join(const float row_count,
+                                                                   const std::shared_ptr<BaseColumnStatistics> col_stats,
+                                                                   const float predicate_column_distinct_count) const {
   float null_value_no = col_stats->null_value_ratio() * row_count;
   if (col_stats->distinct_count() != 0.f) {
     null_value_no += (1.f - predicate_column_distinct_count / col_stats->distinct_count()) * row_count;
@@ -275,10 +274,10 @@ float TableStatistics::calculate_added_null_values_for_outer_join(const float ro
   return null_value_no;
 }
 
-void TableStatistics::adjust_null_value_ratio_for_outer_join(
-    const std::vector<std::shared_ptr<BaseColumnStatistics>>::iterator col_begin,
-    const std::vector<std::shared_ptr<BaseColumnStatistics>>::iterator col_end, const float row_count,
-    const float null_value_no, const float new_row_count) {
+void TableStatistics::_adjust_null_value_ratio_for_outer_join(
+        const std::vector<std::shared_ptr<BaseColumnStatistics>>::iterator col_begin,
+        const std::vector<std::shared_ptr<BaseColumnStatistics>>::iterator col_end, const float row_count,
+        const float null_value_no, const float new_row_count) {
   if (null_value_no == 0) {
     return;
   }

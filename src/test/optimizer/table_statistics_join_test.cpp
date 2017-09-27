@@ -38,8 +38,9 @@ class TableStatisticsJoinTest : public BaseTest {
     for (ColumnID::base_type column_1 = 0; column_1 < table_with_statistics.table->col_count(); ++column_1) {
       for (ColumnID::base_type column_2 = 0; column_2 < table_with_statistics.table->col_count(); ++column_2) {
         auto column_ids = std::make_pair(ColumnID{column_1}, ColumnID{column_2});
-        auto join_stats = table_with_statistics.statistics->join_statistics(table_with_statistics.statistics, mode,
-                                                                            column_ids, scan_type);
+        auto join_stats = table_with_statistics.statistics->generate_predicated_join_statistics(
+                table_with_statistics.statistics, mode,
+                column_ids, scan_type);
         auto join = std::make_shared<JoinNestedLoopA>(table_wrapper, table_wrapper, mode, column_ids, scan_type);
         join->execute();
         auto result = join->get_output();
@@ -57,8 +58,9 @@ class TableStatisticsJoinTest : public BaseTest {
     for (ColumnID::base_type column_1 = 0; column_1 < table_with_statistics.table->col_count(); ++column_1) {
       for (ColumnID::base_type column_2 = 0; column_2 < table_with_statistics.table->col_count(); ++column_2) {
         auto column_ids = std::make_pair(ColumnID{column_1}, ColumnID{column_2});
-        auto join_stats = table_with_statistics.statistics->join_statistics(table_with_statistics.statistics, mode,
-                                                                            column_ids, scan_type);
+        auto join_stats = table_with_statistics.statistics->generate_predicated_join_statistics(
+                table_with_statistics.statistics, mode,
+                column_ids, scan_type);
         auto cached_row_count = row_counts.at(table_with_statistics.table->col_count() * column_1 + column_2);
         EXPECT_FLOAT_EQ(cached_row_count, join_stats->row_count());
       }
@@ -127,7 +129,7 @@ TEST_F(TableStatisticsJoinTest, DISABLED_InnerJoinRealDataTest) {
 TEST_F(TableStatisticsJoinTest, CrossJoinTest) {
   auto table_row_count = _table_uniform_distribution_with_stats.table->row_count();
   auto table_stats = _table_uniform_distribution_with_stats.statistics;
-  auto join_stats = table_stats->join_statistics(table_stats, JoinMode::Cross);
+  auto join_stats = table_stats->generate_cross_join_statistics(table_stats);
   EXPECT_FLOAT_EQ(join_stats->row_count(), table_row_count * table_row_count);
 }
 
