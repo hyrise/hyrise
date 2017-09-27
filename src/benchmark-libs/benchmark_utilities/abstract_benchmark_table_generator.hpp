@@ -117,7 +117,7 @@ class AbstractBenchmarkTableGenerator {
           if (is_first_column) {
             opossum::Chunk chunk(true);
             chunk.add_column(value_column);
-            table->add_chunk(std::move(chunk));
+            table->emplace_chunk(std::move(chunk));
           } else {
             opossum::ChunkID chunk_id{static_cast<uint32_t>(row_index / _chunk_size)};
             auto &chunk = table->get_chunk(chunk_id);
@@ -140,7 +140,7 @@ class AbstractBenchmarkTableGenerator {
       if (is_first_column) {
         opossum::Chunk chunk(true);
         chunk.add_column(value_column);
-        table->add_chunk(std::move(chunk));
+        table->emplace_chunk(std::move(chunk));
       } else {
         opossum::ChunkID chunk_id{static_cast<uint32_t>(row_index / _chunk_size)};
         auto &chunk = table->get_chunk(chunk_id);
