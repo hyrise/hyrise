@@ -47,7 +47,7 @@ TEST_P(SQLPrepareExecuteTest, GenericQueryTest) {
   const size_t num_trees = (num_operators > 0) ? 1u : 0u;
   const std::string expected_result_file = std::get<2>(param);
 
-  auto op = std::make_shared<SQLQueryOperator>(query, false);
+  auto op = std::make_shared<SQLQueryOperator>(query, false, true);
   op->execute();
 
   ASSERT_FALSE(op->parse_tree_cache_hit());

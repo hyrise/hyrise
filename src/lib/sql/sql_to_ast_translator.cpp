@@ -40,7 +40,7 @@ ScanType translate_operator_type_to_scan_type(const hsql::OperatorType operator_
       {hsql::kOpEquals, ScanType::OpEquals},       {hsql::kOpNotEquals, ScanType::OpNotEquals},
       {hsql::kOpGreater, ScanType::OpGreaterThan}, {hsql::kOpGreaterEq, ScanType::OpGreaterThanEquals},
       {hsql::kOpLess, ScanType::OpLessThan},       {hsql::kOpLessEq, ScanType::OpLessThanEquals},
-      {hsql::kOpBetween, ScanType::OpBetween},     {hsql::kOpLike, ScanType::OpLike},
+    {hsql::kOpBetween, ScanType::OpBetween},     {hsql::kOpLike, ScanType::OpLike},
   };
 
   auto it = operator_to_scan_type.find(operator_type);
@@ -86,11 +86,6 @@ JoinMode translate_join_type_to_join_mode(const hsql::JoinType join_type) {
   auto it = join_type_to_mode.find(join_type);
   DebugAssert(it != join_type_to_mode.end(), "Unable to handle join type.");
   return it->second;
-}
-
-SQLToASTTranslator& SQLToASTTranslator::get() {
-  static SQLToASTTranslator instance;
-  return instance;
 }
 
 std::vector<std::shared_ptr<AbstractASTNode>> SQLToASTTranslator::translate_parse_result(
@@ -195,9 +190,10 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_delete(const hsq
   if (del.expr) {
     current_result_node = _translate_where(*del.expr, current_result_node);
   }
+  current_result_node = _validate_node(current_result_node);
 
   auto delete_node = std::make_shared<DeleteNode>(del.tableName);
-  delete_node->set_left_child(_validate_node(current_result_node));
+  delete_node->set_left_child(current_result_node);
 
   return delete_node;
 }
@@ -756,6 +752,8 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_show(const hsql:
 }
 
 std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_validate_node(const std::shared_ptr<AbstractASTNode>& input_node) {
+  if (!_validate) return input_node;
+
   auto validate_node = std::make_shared<ValidateNode>();
   validate_node->set_left_child(input_node);
   return validate_node;

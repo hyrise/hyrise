@@ -18,7 +18,6 @@ class TransactionContext;
 class ASTToOperatorTranslator final : public boost::noncopyable {
  public:
   ASTToOperatorTranslator() = default;
-  ASTToOperatorTranslator(std::shared_ptr<TransactionContext> context);
 
   std::shared_ptr<AbstractOperator> translate_node(const std::shared_ptr<AbstractASTNode>& node) const;
 
@@ -44,9 +43,6 @@ class ASTToOperatorTranslator final : public boost::noncopyable {
   // Maintenance operators
   std::shared_ptr<AbstractOperator> _translate_show_tables_node(const std::shared_ptr<AbstractASTNode>& node) const;
   std::shared_ptr<AbstractOperator> _translate_show_columns_node(const std::shared_ptr<AbstractASTNode>& node) const;
-
- private:
-  std::shared_ptr<TransactionContext> _transaction_context;
 };
 
 }  // namespace opossum

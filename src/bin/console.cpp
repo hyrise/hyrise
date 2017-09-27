@@ -237,11 +237,13 @@ int Console::_eval_sql(const std::string& sql) {
 
   // Compile the parse result
   try {
-    plan = SQLPlanner::plan(parse_result, transaction_context);
+    plan = SQLPlanner::plan(parse_result, true);
   } catch (const std::exception& exception) {
     out("Exception thrown while compiling query plan:\n  " + std::string(exception.what()) + "\n");
     return ReturnCode::Error;
   }
+
+  plan.set_transaction_context(transaction_context);
 
   // Measure the plan compile time
   done = std::chrono::high_resolution_clock::now();
@@ -497,7 +499,7 @@ int Console::visualize(const std::string& input) {
 
   if (mode == "ast" || mode == "astopt") {
     try {
-      auto ast_roots = SQLToASTTranslator::get().translate_parse_result(parse_result);
+      auto ast_roots = SQLToASTTranslator{}.translate_parse_result(parse_result);
 
       if (mode == "astopt") {
         for (auto& root : ast_roots) {

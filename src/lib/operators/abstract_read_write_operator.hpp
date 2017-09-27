@@ -26,12 +26,11 @@ class AbstractReadWriteOperator : public AbstractOperator,
       : AbstractOperator(left, right), _execute_failed{false} {}
 
   void execute() override {
-    auto transaction_context = _transaction_context.lock();
-    DebugAssert(static_cast<bool>(transaction_context), "Probably a bug.");
+    DebugAssert(
+        static_cast<bool>(_transaction_context),
+        "AbstractReadWriteOperator::execute() should never be called without having set the transaction context.");
 
-    transaction_context->on_operator_started();
-    _output = _on_execute(transaction_context);
-    transaction_context->on_operator_finished();
+    AbstractOperator::execute();
   }
 
   /**

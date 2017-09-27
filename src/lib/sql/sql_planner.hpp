@@ -21,8 +21,7 @@ class TransactionContext;
  */
 class SQLPlanner final : public boost::noncopyable {
  public:
-  static SQLQueryPlan plan(const hsql::SQLParserResult& result,
-                           const std::shared_ptr<TransactionContext>& transaction_context = nullptr);
+  static SQLQueryPlan plan(const hsql::SQLParserResult& result, bool validate = true);
 };
 
 }  // namespace opossum

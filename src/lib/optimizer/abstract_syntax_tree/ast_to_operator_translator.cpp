@@ -39,9 +39,6 @@
 
 namespace opossum {
 
-ASTToOperatorTranslator::ASTToOperatorTranslator(std::shared_ptr<TransactionContext> context)
-    : _transaction_context{std::move(context)} {}
-
 std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::translate_node(
     const std::shared_ptr<AbstractASTNode>& node) const {
   return _translate_by_node_type(node->type(), node);
@@ -229,18 +226,14 @@ std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::_translate_insert_nod
     const std::shared_ptr<AbstractASTNode>& node) const {
   const auto input_operator = translate_node(node->left_child());
   auto insert_node = std::dynamic_pointer_cast<InsertNode>(node);
-  auto op = std::make_shared<Insert>(insert_node->table_name(), input_operator);
-  op->set_transaction_context(_transaction_context);
-  return op;
+  return std::make_shared<Insert>(insert_node->table_name(), input_operator);
 }
 
 std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::_translate_delete_node(
     const std::shared_ptr<AbstractASTNode>& node) const {
   const auto input_operator = translate_node(node->left_child());
   auto delete_node = std::dynamic_pointer_cast<DeleteNode>(node);
-  auto op = std::make_shared<Delete>(delete_node->table_name(), input_operator);
-  op->set_transaction_context(_transaction_context);
-  return op;
+  return std::make_shared<Delete>(delete_node->table_name(), input_operator);
 }
 
 std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::_translate_update_node(
@@ -251,17 +244,13 @@ std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::_translate_update_nod
   auto new_value_exprs = update_node->column_expressions();
 
   auto projection = std::make_shared<Projection>(input_operator, new_value_exprs);
-  auto op = std::make_shared<Update>(update_node->table_name(), input_operator, projection);
-  op->set_transaction_context(_transaction_context);
-  return op;
+  return std::make_shared<Update>(update_node->table_name(), input_operator, projection);
 }
 
 std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::_translate_validate_node(
     const std::shared_ptr<AbstractASTNode>& node) const {
   const auto input_operator = translate_node(node->left_child());
-  auto op = std::make_shared<Validate>(input_operator);
-  op->set_transaction_context(_transaction_context);
-  return op;
+  return std::make_shared<Validate>(input_operator);
 }
 
 std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::_translate_show_tables_node(

@@ -27,9 +27,10 @@ namespace opossum {
 // be retrieved by calling get_query_plan(). This is useful if you would like to manually
 // modify the query plan before execution or use a different execution/scheduling approach
 // than the default. This is also used for testing and benchmarking purposes.
+// TODO(mjendruk): Why is this an operator?
 class SQLQueryOperator : public AbstractOperator {
  public:
-  explicit SQLQueryOperator(const std::string& query, bool schedule_plan = true);
+  explicit SQLQueryOperator(const std::string& query, bool schedule_plan = true, bool skip_validation = false);
 
   const std::string name() const override;
 
@@ -91,6 +92,9 @@ class SQLQueryOperator : public AbstractOperator {
 
   // True, if the generated plan will automatically be scheduled by the operator.
   const bool _schedule_plan;
+  
+  // True, if the SQLToASTTranslator won’t add validate nodes
+  const bool _skip_validation;
 
   // True, if the parse tree was obtained from the cache.
   bool _parse_tree_cache_hit;

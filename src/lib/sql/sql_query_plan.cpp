@@ -68,6 +68,12 @@ SQLQueryPlan SQLQueryPlan::recreate(const std::vector<AllParameterVariant>& argu
   return new_plan;
 }
 
+void SQLQueryPlan::set_transaction_context(std::shared_ptr<TransactionContext> context) {
+  for (const auto& root : _roots) {
+    root->set_transaction_context_recursively(context);
+  }
+}
+
 void SQLQueryPlan::set_num_parameters(uint16_t num_parameters) { _num_parameters = num_parameters; }
 
 uint16_t SQLQueryPlan::num_parameters() const { return _num_parameters; }

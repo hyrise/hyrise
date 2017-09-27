@@ -39,7 +39,7 @@ class SQLQueryOperatorTest : public BaseTest {
 
 TEST_F(SQLQueryOperatorTest, BasicTest) {
   const std::string query = "SELECT * FROM table_a;";
-  auto sql_op = std::make_shared<SQLQueryOperator>(query);
+  auto sql_op = std::make_shared<SQLQueryOperator>(query, true, true);
   auto sql_task = std::make_shared<OperatorTask>(sql_op);
   sql_task->schedule();
 
@@ -53,7 +53,7 @@ TEST_F(SQLQueryOperatorTest, BasicTest) {
 TEST_F(SQLQueryOperatorTest, NextTaskTest) {
   const std::string query = "SELECT a, b FROM table_a;";
 
-  auto sql_op = std::make_shared<SQLQueryOperator>(query);
+  auto sql_op = std::make_shared<SQLQueryOperator>(query, true, true);
   auto sql_task = std::make_shared<OperatorTask>(sql_op);
   auto sql_result_task = sql_op->get_result_task();
 
@@ -76,7 +76,7 @@ TEST_F(SQLQueryOperatorTest, NextTaskTest) {
 TEST_F(SQLQueryOperatorTest, NextAdHocTaskTest) {
   const std::string query = "SELECT a, b FROM table_a;";
 
-  auto sql_op = std::make_shared<SQLQueryOperator>(query);
+  auto sql_op = std::make_shared<SQLQueryOperator>(query, true, true);
   auto sql_task = std::make_shared<OperatorTask>(sql_op);
   auto result_task = sql_op->get_result_task();
   auto result_operator = result_task->get_operator();

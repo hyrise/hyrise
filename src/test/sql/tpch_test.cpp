@@ -47,7 +47,7 @@ class TPCHTest : public BaseTest {
       throw std::runtime_error("Query is not valid.");
     }
 
-    auto result_node = SQLToASTTranslator::get().translate_parse_result(parse_result)[0];
+    auto result_node = SQLToASTTranslator{false}.translate_parse_result(parse_result)[0];
     return ASTToOperatorTranslator{}.translate_node(result_node);
   }
 

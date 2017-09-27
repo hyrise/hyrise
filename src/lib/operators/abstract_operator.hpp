@@ -47,8 +47,8 @@ class AbstractOperator : private Noncopyable {
 
   // we need to explicitly set the move constructor to default when
   // we overwrite the copy constructor
-  AbstractOperator(AbstractOperator &&) = default;
-  AbstractOperator &operator=(AbstractOperator &&) = default;
+  AbstractOperator(AbstractOperator&&) = default;
+  AbstractOperator& operator=(AbstractOperator&&) = default;
 
   // Overriding implementations need to call on_operator_started/finished() on the _transaction_context as well
   virtual void execute();
@@ -66,13 +66,16 @@ class AbstractOperator : private Noncopyable {
   virtual uint8_t num_out_tables() const = 0;
 
   std::shared_ptr<TransactionContext> transaction_context() const;
-  void set_transaction_context(std::weak_ptr<TransactionContext> transaction_context);
+  void set_transaction_context(std::shared_ptr<TransactionContext> transaction_context);
+
+  // Calls set_transaction_context on itself and both input operators recursively
+  void set_transaction_context_recursively(std::shared_ptr<TransactionContext> transaction_context);
 
   // Returns a new instance of the same operator with the same configuration.
   // The given arguments are used to replace the ValuePlaceholder objects within the new operator, if applicable.
   // Recursively recreates the input operators and passes the argument list along.
   // An operator needs to implement this method in order to be cacheable.
-  virtual std::shared_ptr<AbstractOperator> recreate(const std::vector<AllParameterVariant> &args) const = 0;
+  virtual std::shared_ptr<AbstractOperator> recreate(const std::vector<AllParameterVariant>& args) const = 0;
 
   // Get the input operators.
   std::shared_ptr<const AbstractOperator> input_left() const;
@@ -86,7 +89,7 @@ class AbstractOperator : private Noncopyable {
   struct PerformanceData {
     uint64_t walltime_ns = 0;  // time spent in nanoseconds executing this operator
   };
-  const AbstractOperator::PerformanceData &performance_data() const;
+  const AbstractOperator::PerformanceData& performance_data() const;
 
  protected:
   // abstract method to actually execute the operator
@@ -109,7 +112,7 @@ class AbstractOperator : private Noncopyable {
   // Is nullptr until the operator is executed
   std::shared_ptr<const Table> _output;
 
-  std::weak_ptr<TransactionContext> _transaction_context;
+  std::shared_ptr<TransactionContext> _transaction_context;
 
   PerformanceData _performance_data;
 };

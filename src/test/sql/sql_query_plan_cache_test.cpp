@@ -38,7 +38,7 @@ TEST_F(SQLQueryPlanCacheTest, SQLQueryPlanCacheTest) {
   EXPECT_FALSE(cache.has(Q2));
 
   // Execute a query and cache its plan.
-  SQLQueryOperator op(Q1, false);
+  SQLQueryOperator op(Q1, false, true);
   op.execute();
   cache.set(Q1, op.get_query_plan());
 

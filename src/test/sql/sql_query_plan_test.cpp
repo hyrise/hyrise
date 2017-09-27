@@ -33,7 +33,7 @@ class SQLQueryPlanTest : public BaseTest {
 TEST_F(SQLQueryPlanTest, SQLQueryPlanCloneTest) {
   std::string query1 = "SELECT a FROM table_a;";
 
-  SQLQueryOperator op(query1, false);
+  SQLQueryOperator op(query1, false, true);
   op.execute();
 
   // Get the query plan.
@@ -68,7 +68,7 @@ TEST_F(SQLQueryPlanTest, SQLQueryPlanCloneWithSchedulerTest) {
   std::string query1 = "SELECT * FROM table_a WHERE a >= 1234 AND b < 457.9;";
 
   // Generate query plan.
-  SQLQueryOperator op(query1, false);
+  SQLQueryOperator op(query1, false, true);
   op.execute();
 
   // Get the query plan template.

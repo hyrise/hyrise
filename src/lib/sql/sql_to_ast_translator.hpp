@@ -55,8 +55,10 @@ class AggregateNode;
  */
 class SQLToASTTranslator final : public boost::noncopyable {
  public:
-  // TODO(mjendruk): remove singleton
-  static SQLToASTTranslator& get();
+  /**
+   * @param validate If set to false, does not add validate nodes to the resulting tree.
+   */
+  constexpr SQLToASTTranslator(bool validate = true) : _validate{validate} {}
 
   // Translates the given SQL result.
   std::vector<std::shared_ptr<AbstractASTNode>> translate_parse_result(const hsql::SQLParserResult& result);
@@ -113,7 +115,7 @@ class SQLToASTTranslator final : public boost::noncopyable {
   std::shared_ptr<AbstractASTNode> _validate_node(const std::shared_ptr<AbstractASTNode>& input_node);
 
  private:
-  SQLToASTTranslator() = default;
+  const bool _validate;
 };
 
 }  // namespace opossum

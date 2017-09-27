@@ -97,7 +97,7 @@ TEST_P(SQLToResultTest, SQLQueryTest) {
     throw std::runtime_error("Query is not valid.");
   }
 
-  auto plan = SQLPlanner::plan(parse_result);
+  auto plan = SQLPlanner::plan(parse_result, false);
 
   std::shared_ptr<AbstractOperator> result_operator;
 

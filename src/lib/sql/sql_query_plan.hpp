@@ -9,6 +9,8 @@
 
 namespace opossum {
 
+class TransactionContext;
+
 // The SQLQueryPlan holds the operator trees that were generated from an SQL query.
 // Contains a list of operators trees accessible by their roots.
 // In SQL each operator tree corresponds to a single statement.
@@ -42,6 +44,9 @@ class SQLQueryPlan {
   // Recreates the query plan with a new and equivalent set of operator trees.
   // The given list of arguments is passed to the recreate method of all operators to replace ValuePlaceholders.
   SQLQueryPlan recreate(const std::vector<AllParameterVariant>& arguments = {}) const;
+
+  // Calls set_transaction_context_recursively on all roots.
+  void set_transaction_context(std::shared_ptr<TransactionContext> context);
 
   // Set the number of parameters that this query plan contains.
   void set_num_parameters(uint16_t num_parameters);
