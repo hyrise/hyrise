@@ -93,7 +93,7 @@ void ColumnStatistics<ColumnType>::initialize_min_max() const {
 }
 
 template <typename ColumnType>
-std::shared_ptr<BaseColumnStatistics> ColumnStatistics<ColumnType>::this_without_null_values() {
+std::shared_ptr<BaseColumnStatistics> ColumnStatistics<ColumnType>::_this_without_null_values() {
   if (_non_null_value_ratio == 1.f) {
     return shared_from_this();
   }
@@ -104,14 +104,14 @@ std::shared_ptr<BaseColumnStatistics> ColumnStatistics<ColumnType>::this_without
 }
 
 template <typename ColumnType>
-ColumnSelectivityResult ColumnStatistics<ColumnType>::create_column_stats_for_range_predicate(ColumnType minimum,
-                                                                                              ColumnType maximum) {
+ColumnSelectivityResult ColumnStatistics<ColumnType>::_create_column_stats_for_range_predicate(ColumnType minimum,
+                                                                                               ColumnType maximum) {
   // NOTE: minimum can be greater than maximum
   // new minimum/maximum of table cannot be smaller/larger than the current minimum/maximum
   auto common_min = std::max(minimum, min());
   auto common_max = std::min(maximum, max());
   if (common_min == min() && common_max == max()) {
-    return {_non_null_value_ratio, this_without_null_values()};
+    return {_non_null_value_ratio, _this_without_null_values()};
   }
   float selectivity = 0.f;
   // estimate_selectivity_for_range function expects that the minimum must not be greater than the maximum
@@ -158,7 +158,7 @@ ColumnSelectivityResult ColumnStatistics<ColumnType>::create_column_stats_for_eq
 template <typename ColumnType>
 ColumnSelectivityResult ColumnStatistics<ColumnType>::create_column_stats_for_not_equals_predicate(ColumnType value) {
   if (value < min() || value > max()) {
-    return {_non_null_value_ratio, this_without_null_values()};
+    return {_non_null_value_ratio, _this_without_null_values()};
   }
   auto column_statistics = std::make_shared<ColumnStatistics>(_column_id, distinct_count() - 1, min(), max());
   return {_non_null_value_ratio * (1 - 1.f / distinct_count()), column_statistics};
@@ -181,7 +181,7 @@ ColumnSelectivityResult ColumnStatistics<ColumnType>::estimate_selectivity_for_p
       // for integers "< value" means that the new max is value <= value - 1
       // for decimals "< value" means that the new max is value <= value - ε
       if (std::is_integral<ColumnType>::value) {
-        return create_column_stats_for_range_predicate(min(), casted_value - 1);
+        return _create_column_stats_for_range_predicate(min(), casted_value - 1);
       }
 // intentionally no break
 // if ColumnType is a floating point number,
@@ -191,14 +191,14 @@ ColumnSelectivityResult ColumnStatistics<ColumnType>::estimate_selectivity_for_p
 #endif
     }
     case ScanType::OpLessThanEquals: {
-      return create_column_stats_for_range_predicate(min(), casted_value);
+      return _create_column_stats_for_range_predicate(min(), casted_value);
     }
     case ScanType::OpGreaterThan: {
       // distinction between integers and decimals
       // for integers "> value" means that the new min value is >= value + 1
       // for decimals "> value" means that the new min value is >= value + ε
       if (std::is_integral<ColumnType>::value) {
-        return create_column_stats_for_range_predicate(casted_value + 1, max());
+        return _create_column_stats_for_range_predicate(casted_value + 1, max());
       }
 // intentionally no break
 // if ColumnType is a floating point number,
@@ -208,14 +208,14 @@ ColumnSelectivityResult ColumnStatistics<ColumnType>::estimate_selectivity_for_p
 #endif
     }
     case ScanType::OpGreaterThanEquals: {
-      return create_column_stats_for_range_predicate(casted_value, max());
+      return _create_column_stats_for_range_predicate(casted_value, max());
     }
     case ScanType::OpBetween: {
       DebugAssert(static_cast<bool>(value2), "Operator BETWEEN should get two parameters, second is missing!");
       auto casted_value2 = type_cast<ColumnType>(*value2);
-      return create_column_stats_for_range_predicate(casted_value, casted_value2);
+      return _create_column_stats_for_range_predicate(casted_value, casted_value2);
     }
-    default: { return {_non_null_value_ratio, this_without_null_values()}; }
+    default: { return {_non_null_value_ratio, _this_without_null_values()}; }
   }
 }
 
@@ -234,7 +234,7 @@ ColumnSelectivityResult ColumnStatistics<std::string>::estimate_selectivity_for_
       return create_column_stats_for_not_equals_predicate(casted_value);
     }
     // TODO(anybody) implement other table-scan operators for string.
-    default: { return {_non_null_value_ratio, this_without_null_values()}; }
+    default: { return {_non_null_value_ratio, _this_without_null_values()}; }
   }
 }
 
@@ -264,7 +264,7 @@ ColumnSelectivityResult ColumnStatistics<ColumnType>::estimate_selectivity_for_p
       // then, the open ended selectivity is applied on the result
       DebugAssert(static_cast<bool>(value2), "Operator BETWEEN should get two parameters, second is missing!");
       auto casted_value2 = type_cast<ColumnType>(*value2);
-      ColumnSelectivityResult output = create_column_stats_for_range_predicate(min(), casted_value2);
+      ColumnSelectivityResult output = _create_column_stats_for_range_predicate(min(), casted_value2);
       // return, if value2 < min
       if (output.selectivity == 0.f) {
         return output;
@@ -280,7 +280,7 @@ ColumnSelectivityResult ColumnStatistics<ColumnType>::estimate_selectivity_for_p
       *(column_statistics->_distinct_count) *= DEFAULT_OPEN_ENDED_SELECTIVITY;
       return output;
     }
-    default: { return {_non_null_value_ratio, this_without_null_values()}; }
+    default: { return {_non_null_value_ratio, _this_without_null_values()}; }
   }
 }
 
@@ -414,9 +414,9 @@ TwoColumnSelectivityResult ColumnStatistics<ColumnType>::estimate_selectivity_fo
     // remove ratio of rows, where one value is below and one value is above the overlapping range
     selectivity -= values_below_ratio * values_above_ratio;
 
-    auto new_left_column_stats = create_column_stats_for_range_predicate(new_min, new_max).column_statistics;
+    auto new_left_column_stats = _create_column_stats_for_range_predicate(new_min, new_max).column_statistics;
     auto new_right_column_stats =
-        right_stats->create_column_stats_for_range_predicate(new_min, new_max).column_statistics;
+        right_stats->_create_column_stats_for_range_predicate(new_min, new_max).column_statistics;
     return {combined_non_null_ratio * selectivity, new_left_column_stats, new_right_column_stats};
   };
 
@@ -466,7 +466,9 @@ TwoColumnSelectivityResult ColumnStatistics<ColumnType>::estimate_selectivity_fo
                                                            right_stats->min(), max(), true);
     }
     // case ScanType::OpBetween is not supported for ColumnID as TableScan does not support this
-    default: { return {combined_non_null_ratio, this_without_null_values(), right_stats->this_without_null_values()}; }
+    default: {
+      return {combined_non_null_ratio, _this_without_null_values(), right_stats->_this_without_null_values()};
+    }
   }
 }
 
@@ -480,12 +482,12 @@ TwoColumnSelectivityResult ColumnStatistics<std::string>::estimate_selectivity_f
   // TODO(anybody) implement special case for strings
   auto right_stats = std::dynamic_pointer_cast<ColumnStatistics<std::string>>(right_base_column_statistics);
   DebugAssert(right_stats != nullptr, "Cannot compare columns of different type");
-  return {_non_null_value_ratio * right_stats->_non_null_value_ratio, this_without_null_values(),
-          right_stats->this_without_null_values()};
+  return {_non_null_value_ratio * right_stats->_non_null_value_ratio, _this_without_null_values(),
+          right_stats->_this_without_null_values()};
 }
 
 template <typename ColumnType>
-std::ostream &ColumnStatistics<ColumnType>::print_to_stream(std::ostream &os) const {
+std::ostream &ColumnStatistics<ColumnType>::_print_to_stream(std::ostream &os) const {
   os << "Col Stats id: " << _column_id << std::endl;
   os << "  dist.    " << _distinct_count << std::endl;
   os << "  min      " << _min << std::endl;

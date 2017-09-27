@@ -58,7 +58,7 @@ class ColumnStatistics : public BaseColumnStatistics {
   std::shared_ptr<BaseColumnStatistics> clone() const override;
 
  protected:
-  std::ostream &print_to_stream(std::ostream &os) const override;
+  std::ostream &_print_to_stream(std::ostream &os) const override;
   ColumnType min() const;
   ColumnType max() const;
 
@@ -66,14 +66,14 @@ class ColumnStatistics : public BaseColumnStatistics {
    * Returns a column statistics identical to this which does not have null values.
    * @return shared pointer of this or copy of this, if column has null values.
    */
-  std::shared_ptr<BaseColumnStatistics> this_without_null_values();
+  std::shared_ptr<BaseColumnStatistics> _this_without_null_values();
 
   /**
    * Create column statistics and estimate selectivity based on new range.
    * @param minimum, maximum: Min and max for new column statistics. Note: Mininum can be greater than maximum.
    * @return Selectivity and new column statistics.
    */
-  ColumnSelectivityResult create_column_stats_for_range_predicate(ColumnType minimum, ColumnType maximum);
+  ColumnSelectivityResult _create_column_stats_for_range_predicate(ColumnType minimum, ColumnType maximum);
 
   /**
    * Estimate selectivity based on new and current range between min and max.

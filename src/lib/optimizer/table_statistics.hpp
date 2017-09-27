@@ -85,7 +85,7 @@ class TableStatistics : public std::enable_shared_from_this<TableStatistics> {
                                                            const ScanType scan_type);
 
  protected:
-  std::shared_ptr<BaseColumnStatistics> column_statistics(const ColumnID column_id);
+  std::shared_ptr<BaseColumnStatistics> get_or_generate_column_statistics(const ColumnID column_id);
 
   void create_all_column_statistics();
 

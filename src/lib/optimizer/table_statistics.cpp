@@ -20,7 +20,7 @@ TableStatistics::TableStatistics(const std::shared_ptr<Table> table)
 
 float TableStatistics::row_count() const { return _row_count; }
 
-std::shared_ptr<BaseColumnStatistics> TableStatistics::column_statistics(const ColumnID column_id) {
+std::shared_ptr<BaseColumnStatistics> TableStatistics::get_or_generate_column_statistics(const ColumnID column_id) {
   if (_column_statistics[column_id]) {
     return _column_statistics[column_id];
   }
@@ -32,19 +32,6 @@ std::shared_ptr<BaseColumnStatistics> TableStatistics::column_statistics(const C
       make_shared_by_column_type<BaseColumnStatistics, ColumnStatistics>(column_type, column_id, _table);
   _column_statistics[column_id] = column_statistics;
   return _column_statistics[column_id];
-}
-
-void TableStatistics::create_all_column_statistics() {
-  for (ColumnID column_id{0}; column_id < _column_statistics.size(); ++column_id) {
-    column_statistics(column_id);
-  }
-}
-
-void TableStatistics::reset_table_ptr() {
-  for (ColumnID column_id{0}; column_id < _column_statistics.size(); ++column_id) {
-    DebugAssert(_column_statistics[column_id], "All column statistics of table statistics have to exist.");
-  }
-  _table.reset();
 }
 
 std::shared_ptr<TableStatistics> TableStatistics::predicate_statistics(const ColumnID column_id,
@@ -63,7 +50,7 @@ std::shared_ptr<TableStatistics> TableStatistics::predicate_statistics(const Col
     return clone;
   }
 
-  auto old_column_statistics = column_statistics(column_id);
+  auto old_column_statistics = get_or_generate_column_statistics(column_id);
 
   // create copy of this as this should not be adapted for current table scan
   auto clone = std::make_shared<TableStatistics>(*this);
@@ -72,7 +59,7 @@ std::shared_ptr<TableStatistics> TableStatistics::predicate_statistics(const Col
   // delegate prediction to corresponding column statistics
   if (value.type() == typeid(ColumnID)) {
     const ColumnID value_column_id = boost::get<ColumnID>(value);
-    auto old_right_column_stats = column_statistics(value_column_id);
+    auto old_right_column_stats = get_or_generate_column_statistics(value_column_id);
 
     auto two_column_statistics_container =
         old_column_statistics->estimate_selectivity_for_two_column_predicate(scan_type, old_right_column_stats, value2);
@@ -122,7 +109,7 @@ std::shared_ptr<TableStatistics> TableStatistics::join_statistics(
   std::copy(right_table_stats->_column_statistics.begin(), right_table_stats->_column_statistics.end(),
             col_stats_right_begin);
 
-  // all columns are added, table pointer is deleted for ouput statistics
+  // all columns are added, table pointer is deleted for output statistics
   join_table_stats->reset_table_ptr();
 
   // calculate output size for cross joins
@@ -263,6 +250,19 @@ std::shared_ptr<TableStatistics> TableStatistics::join_statistics(
   }
 
   return join_table_stats;
+}
+
+void TableStatistics::create_all_column_statistics() {
+  for (ColumnID column_id{0}; column_id < _column_statistics.size(); ++column_id) {
+    get_or_generate_column_statistics(column_id);
+  }
+}
+
+void TableStatistics::reset_table_ptr() {
+  for (ColumnID column_id{0}; column_id < _column_statistics.size(); ++column_id) {
+    DebugAssert(_column_statistics[column_id], "All column statistics of table statistics have to exist.");
+  }
+  _table.reset();
 }
 
 float TableStatistics::calculate_added_null_values_for_outer_join(const float row_count,

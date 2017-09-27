@@ -102,7 +102,7 @@ class BaseColumnStatistics : public std::enable_shared_from_this<BaseColumnStati
    * This approach allows printing ColumnStatistics<T> without the need to cast BaseColumnStatistics to
    * ColumnStatistics<T>.
    */
-  virtual std::ostream &print_to_stream(std::ostream &os) const = 0;
+  virtual std::ostream &_print_to_stream(std::ostream &os) const = 0;
   friend std::ostream &operator<<(std::ostream &os, BaseColumnStatistics &obj);
 };
 
@@ -125,6 +125,6 @@ struct TwoColumnSelectivityResult : public ColumnSelectivityResult {
   std::shared_ptr<BaseColumnStatistics> second_column_statistics;
 };
 
-inline std::ostream &operator<<(std::ostream &os, BaseColumnStatistics &obj) { return obj.print_to_stream(os); }
+inline std::ostream &operator<<(std::ostream &os, BaseColumnStatistics &obj) { return obj._print_to_stream(os); }
 
 }  // namespace opossum
