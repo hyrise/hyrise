@@ -7,7 +7,7 @@
 
 namespace opossum {
 
-SQLQueryPlan SQLPlanner::plan(const hsql::SQLParserResult& result, bool validate) {  
+SQLQueryPlan SQLPlanner::plan(const hsql::SQLParserResult& result, bool validate) {
   // Translate to AST
   auto result_nodes = SQLToASTTranslator{validate}.translate_parse_result(result);
 

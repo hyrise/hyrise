@@ -125,7 +125,8 @@ std::shared_ptr<SQLParserResult> SQLQueryOperator::parse_query(const std::string
 // Translates the query that is supposed to be prepared and saves it
 // in the prepared statement cache by its name.
 void SQLQueryOperator::prepare_statement(const PrepareStatement& prepare_stmt) {
-  std::shared_ptr<SQLQueryOperator> op = std::make_shared<SQLQueryOperator>(prepare_stmt.query, false, _skip_validation);
+  std::shared_ptr<SQLQueryOperator> op =
+      std::make_shared<SQLQueryOperator>(prepare_stmt.query, false, _skip_validation);
   op->execute();
 
   // Get the plan and cache it.
