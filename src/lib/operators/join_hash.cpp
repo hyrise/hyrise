@@ -647,7 +647,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
         write_output_chunks(output_chunk, _left_in_table, left, ref_col_left);
         write_output_chunks(output_chunk, _right_in_table, right, ref_col_right);
       }
-      _output_table->add_chunk(std::move(output_chunk));
+      _output_table->emplace_chunk(std::move(output_chunk));
     }
 
     return _output_table;
