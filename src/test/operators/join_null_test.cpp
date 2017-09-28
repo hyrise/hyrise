@@ -11,8 +11,7 @@
 
 #include "operators/get_table.hpp"
 #include "operators/join_hash.hpp"
-#include "operators/join_nested_loop_a.hpp"
-#include "operators/join_nested_loop_b.hpp"
+#include "operators/join_sort_merge.hpp"
 #include "operators/table_scan.hpp"
 #include "operators/union_all.hpp"
 #include "storage/storage_manager.hpp"
@@ -22,10 +21,11 @@
 namespace opossum {
 
 /*
-This contains the tests for the Hash Join implementation.
+This contains the tests for null value support for join implementations.
 */
 
-class JoinHashTest : public JoinTest {
+template <typename T>
+class JoinNullTest : public JoinTest {
  protected:
   void SetUp() override {
     JoinTest::SetUp();
@@ -38,20 +38,23 @@ class JoinHashTest : public JoinTest {
   std::shared_ptr<TableWrapper> _table_wrapper_a_null;
 };
 
-TEST_F(JoinHashTest, InnerJoinWithNull) {
-  test_join_output<JoinHash>(_table_wrapper_a, _table_wrapper_a_null,
+using JoinNullTypes = ::testing::Types<JoinHash, JoinSortMerge>;
+TYPED_TEST_CASE(JoinNullTest, JoinNullTypes);
+
+TYPED_TEST(JoinNullTest, InnerJoinWithNull) {
+  this->template test_join_output<TypeParam>(this->_table_wrapper_a, this->_table_wrapper_a_null,
                              std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}), ScanType::OpEquals,
                              JoinMode::Inner, "src/test/tables/joinoperators/int_float_null_inner.tbl", 1);
 }
 
-TEST_F(JoinHashTest, LeftJoinWithNull) {
-  test_join_output<JoinHash>(_table_wrapper_a_null, _table_wrapper_b,
+TYPED_TEST(JoinNullTest, LeftJoinWithNull) {
+  this->template test_join_output<TypeParam>(this->_table_wrapper_a_null, this->_table_wrapper_b,
                              std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}), ScanType::OpEquals,
                              JoinMode::Left, "src/test/tables/joinoperators/int_left_join_null.tbl", 1);
 }
 
-TEST_F(JoinHashTest, RightJoinWithNull) {
-  test_join_output<JoinHash>(_table_wrapper_a_null, _table_wrapper_b,
+TYPED_TEST(JoinNullTest, RightJoinWithNull) {
+  this->template test_join_output<TypeParam>(this->_table_wrapper_a_null, this->_table_wrapper_b,
                              std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}), ScanType::OpEquals,
                              JoinMode::Right, "src/test/tables/joinoperators/int_right_join_null.tbl", 1);
 }

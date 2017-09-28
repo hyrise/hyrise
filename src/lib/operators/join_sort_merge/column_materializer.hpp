@@ -8,6 +8,7 @@
 
 #include "../../storage/base_attribute_vector.hpp"
 #include "resolve_type.hpp"
+#include "../../types.hpp"
 
 namespace opossum {
 
@@ -87,12 +88,15 @@ class ColumnMaterializer : public ColumnVisitable {
   void handle_value_column(BaseColumn& column, std::shared_ptr<ColumnVisitableContext> context) override {
     auto& value_column = static_cast<ValueColumn<T>&>(column);
     auto materialization_context = std::static_pointer_cast<MaterializationContext>(context);
-    auto output = std::make_shared<MaterializedColumn<T>>(value_column.values().size());
+    auto output = std::make_shared<MaterializedColumn<T>>();
 
     // Copy over every entry
     for (ChunkOffset chunk_offset{0}; chunk_offset < value_column.values().size(); ++chunk_offset) {
       RowID row_id{materialization_context->chunk_id, chunk_offset};
-      (*output)[chunk_offset] = MaterializedValue<T>(row_id, value_column.values()[chunk_offset]);
+      // Null values are skipped
+      if (!value_column.is_nullable() || !value_column.null_values()[chunk_offset]) {
+        output->push_back(MaterializedValue<T>(row_id, value_column.values()[chunk_offset]));
+      }
     }
 
     // Sort the entries
@@ -109,7 +113,9 @@ class ColumnMaterializer : public ColumnVisitable {
   void handle_dictionary_column(BaseColumn& column, std::shared_ptr<ColumnVisitableContext> context) override {
     auto& dictionary_column = dynamic_cast<DictionaryColumn<T>&>(column);
     auto materialization_context = std::static_pointer_cast<MaterializationContext>(context);
-    auto output = std::make_shared<MaterializedColumn<T>>(column.size());
+
+    // The output size is not known because null values are going to be skipped
+    auto output = std::make_shared<MaterializedColumn<T>>();
 
     auto value_ids = dictionary_column.attribute_vector();
     auto dict = dictionary_column.dictionary();
@@ -124,22 +130,32 @@ class ColumnMaterializer : public ColumnVisitable {
       for (size_t index = 0; index < rows_with_value.size(); index++) {
         rows_with_value[index].resize(value_ids->size() / dict->size());
       }
+
+      // Collect the rows for each value id
       for (ChunkOffset chunk_offset{0}; chunk_offset < value_ids->size(); ++chunk_offset) {
-        rows_with_value[value_ids->get(chunk_offset)].push_back(RowID{materialization_context->chunk_id, chunk_offset});
+        auto value_id = value_ids->get(chunk_offset);
+
+        // Skip null values
+        if (value_id != NULL_VALUE_ID) {
+          rows_with_value[value_id].push_back(RowID{materialization_context->chunk_id, chunk_offset});
+        }
       }
 
       // Now that we know the row ids for every value, we can output all the materialized values in a sorted manner.
       ChunkOffset chunk_offset{0};
       for (ValueID value_id{0}; value_id < dict->size(); ++value_id) {
         for (auto& row_id : rows_with_value[value_id]) {
-          (*output)[chunk_offset] = MaterializedValue<T>(row_id, (*dict)[value_id]);
+          output->push_back(MaterializedValue<T>(row_id, (*dict)[value_id]));
           ++chunk_offset;
         }
       }
     } else {
       for (ChunkOffset chunk_offset{0}; chunk_offset < column.size(); ++chunk_offset) {
         auto row_id = RowID{materialization_context->chunk_id, chunk_offset};
-        (*output)[chunk_offset] = MaterializedValue<T>(row_id, (*dict)[value_ids->get(chunk_offset)]);
+        auto value_id = value_ids->get(chunk_offset);
+        if (value_id != NULL_VALUE_ID) {
+          output->push_back(MaterializedValue<T>(row_id, (*dict)[value_id]));
+        }
       }
     }
 
@@ -154,7 +170,9 @@ class ColumnMaterializer : public ColumnVisitable {
     auto referenced_column_id = ref_column.referenced_column_id();
     auto materialization_context = std::static_pointer_cast<MaterializationContext>(context);
     auto pos_list = ref_column.pos_list();
-    auto output = std::make_shared<MaterializedColumn<T>>(ref_column.size());
+
+    // The output size is not known because null values are going to be skipped
+    auto output = std::make_shared<MaterializedColumn<T>>();
 
     // Retrieve the columns from the referenced table so they only have to be cast once
     auto v_columns = std::vector<std::shared_ptr<ValueColumn<T>>>(referenced_table->chunk_count());
@@ -170,6 +188,11 @@ class ColumnMaterializer : public ColumnVisitable {
     for (ChunkOffset chunk_offset{0}; chunk_offset < pos_list->size(); ++chunk_offset) {
       const auto& row_id = (*pos_list)[chunk_offset];
 
+      // Skip null values
+      if (row_id == NULL_ROW_ID) {
+        continue;
+      }
+
       // Dereference the value
       T value;
       auto& v_column = v_columns[row_id.chunk_id];
@@ -177,11 +200,14 @@ class ColumnMaterializer : public ColumnVisitable {
       DebugAssert(v_column || d_column, "Referenced column is neither value nor dictionary column!");
       if (v_column) {
         value = v_column->values()[row_id.chunk_offset];
+        output->push_back(MaterializedValue<T>(RowID{materialization_context->chunk_id, chunk_offset}, value));
       } else {
         ValueID value_id = d_column->attribute_vector()->get(row_id.chunk_offset);
-        value = d_column->dictionary()->at(value_id);
+        if (value_id != NULL_VALUE_ID) {
+          value = d_column->dictionary()->at(value_id);
+          output->push_back(MaterializedValue<T>(RowID{materialization_context->chunk_id, chunk_offset}, value));
+        }
       }
-      (*output)[chunk_offset] = MaterializedValue<T>(RowID{materialization_context->chunk_id, chunk_offset}, value);
     }
 
     // Sort the entries

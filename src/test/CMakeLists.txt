@@ -28,7 +28,7 @@ set(
     operators/insert_test.cpp
     operators/join_equi_test.cpp
     operators/join_full_test.cpp
-    operators/join_hash_test.cpp
+    operators/join_null_test.cpp
     operators/join_test.hpp
     operators/limit_test.cpp
     operators/print_test.cpp
