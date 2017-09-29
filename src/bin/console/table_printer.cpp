@@ -1,9 +1,10 @@
 #include "table_printer.hpp"
 
+#include <ncurses.h>
+#include <inttypes.h>
 #include <algorithm>
 #include <iomanip>
 #include <iostream>
-#include <limits>
 #include <memory>
 #include <string>
 #include <vector>
@@ -28,15 +29,54 @@ TablePrinter::TablePrinter(std::shared_ptr<const Table> table, bool ignore_empty
   }
 }
 
+void TablePrinter::paginate() {
+
+  // Init curses
+  initscr();
+  clear();
+  // cbreak();
+  keypad(stdscr, TRUE);
+  curs_set(0);
+
+  getmaxyx(stdscr, _size_y, _size_x);
+
+  // int rowcount = _table->row_count();;
+
+  print_header();
+
+  auto start_row = RowID{};
+  _print_screen(start_row);
+
+  int ch;
+  while ((ch = getch()) != 'q') {
+    switch (ch) {
+      case KEY_DOWN: {
+        start_row = _next_row(start_row);
+        _print_screen(start_row);
+        break;
+      }
+      case KEY_UP: {
+        start_row = RowID{};
+        _print_screen(start_row);
+        break;
+      }
+      case KEY_NPAGE: {
+        break;
+      }
+      case KEY_PPAGE: {
+        break;
+      }
+    }
+  }
+
+  endwin();
+}
+
 RowID TablePrinter::print(const RowID& row_id, const size_t rows) {
   RowID row = row_id;
 
-  if (rows == std::numeric_limits<size_t>::max()) {
-    print_header();
-  }
-
   size_t rows_printed = 0;
-  while (rows_printed < rows || rows == std::numeric_limits<size_t>::max()) {
+  while (rows_printed < rows) {
     if (row.chunk_id >= _table->chunk_count()) {
       return NULL_ROW_ID;
     }
@@ -65,22 +105,48 @@ RowID TablePrinter::print(const RowID& row_id, const size_t rows) {
   return row;
 }
 
+RowID TablePrinter::_next_row(const RowID& row_id) {
+  const ChunkID chunk_id = row_id.chunk_id;
+
+  RowID next_row_id;
+  if (row_id.chunk_offset < _table->get_chunk(chunk_id).size()) {
+    next_row_id = RowID{ChunkID{chunk_id}, ChunkOffset{row_id.chunk_offset + 1}};
+  } else {
+    if (chunk_id == _table->chunk_count()) {
+      return NULL_ROW_ID;
+    }
+    next_row_id = RowID{ChunkID{chunk_id + 1}, ChunkOffset{0}};
+  }
+
+  return next_row_id;
+}
+
 void TablePrinter::print_header() {
-  std::cout << "=== Columns" << std::endl;
+  // std::cout << "=== Columns" << std::endl;
+  printw("=== Columns");
+  _end_line();
   for (ColumnID col{0}; col < _table->col_count(); ++col) {
-    std::cout << "|" << std::setw(_widths[col]) << _table->column_name(col) << std::setw(0);
+    // std::cout << "|" << std::setw(_widths[col]) << _table->column_name(col) << std::setw(0);
+    printw("|%-*s", _widths[col], _table->column_name(col).c_str());
   }
   if (_has_mvcc) {
-    std::cout << "||        MVCC        ";
+    // std::cout << "||        MVCC        ";
+    printw("||        MVCC        ");
   }
-  std::cout << "|" << std::endl;
+  // std::cout << "|" << std::endl;
+  printw("|");
+  _end_line();
   for (ColumnID col{0}; col < _table->col_count(); ++col) {
-    std::cout << "|" << std::setw(_widths[col]) << _table->column_type(col) << std::setw(0);
+    // std::cout << "|" << std::setw(_widths[col]) << _table->column_type(col) << std::setw(0);
+    printw("|%-*s", _widths[col], _table->column_type(col).c_str());
   }
   if (_has_mvcc) {
-    std::cout << "||_BEGIN|_END  |_TID  ";
+    // std::cout << "||_BEGIN|_END  |_TID  ";
+    printw("||_BEGIN|_END  |_TID  ");
   }
-  std::cout << "|" << std::endl;
+  // std::cout << "|" << std::endl;
+  printw("|");
+  _end_line();
 }
 
 void TablePrinter::print_closing() { std::cout << _closing << std::endl; }
@@ -93,12 +159,30 @@ void TablePrinter::_print_chunk_header(const ChunkID chunk_id) {
     return;
   }
 
-  std::cout << "=== Chunk " << chunk_id << " === " << std::endl;
+  // std::cout << "=== Chunk " << chunk_id << " === " << std::endl;
+  printw("=== Chunk %" PRIu32 " === ", (uint32_t) chunk_id);
+  _end_line();
 
   if (chunk.size() == 0) {
-    std::cout << "Empty chunk." << std::endl;
+    // std::cout << "Empty chunk." << std::endl;
+    printw("Empty chunk.");
+    _end_line();
     return;
   }
+}
+
+void TablePrinter::_print_screen(const RowID& start_row_id) {
+  clear();
+  _rows_printed = 0;
+
+  auto row_id = start_row_id;
+
+  while (_rows_printed < _size_y) {
+    _print_row(row_id);
+    row_id = _next_row(row_id);
+  }
+
+  refresh();
 }
 
 void TablePrinter::_print_row(const RowID& row_id) {
@@ -107,11 +191,21 @@ void TablePrinter::_print_row(const RowID& row_id) {
   auto& chunk = _table->get_chunk(row_id.chunk_id);
   ChunkOffset row = row_id.chunk_offset;
 
-  std::cout << "|";
+  if (row == 0) {
+    _print_chunk_header(row_id.chunk_id);
+
+    if (chunk.size() == 0) {
+      return;
+    }
+  }
+
+  // std::cout << "|";
+  printw("|");
   for (ColumnID col{0}; col < chunk.col_count(); ++col) {
     // well yes, we use BaseColumn::operator[] here, but since print is not an operation that should
     // be part of a regular query plan, let's keep things simple here
-    std::cout << std::setw(_widths[col]) << (*chunk.get_column(col))[row] << "|" << std::setw(0);
+    // std::cout << std::setw(_widths[col]) << (*chunk.get_column(col))[row] << "|" << std::setw(0);
+    printw("%-*s%s", _widths[col], boost::lexical_cast<std::string>((*chunk.get_column(col))[row]).c_str(), "|");
   }
 
   if (_has_mvcc) {
@@ -125,12 +219,22 @@ void TablePrinter::_print_row(const RowID& row_id) {
     auto end_str = end == Chunk::MAX_COMMIT_ID ? "" : std::to_string(end);
     auto tid_str = tid == 0 ? "" : std::to_string(tid);
 
-    std::cout << "|" << std::setw(6) << begin_str << std::setw(0);
-    std::cout << "|" << std::setw(6) << end_str << std::setw(0);
-    std::cout << "|" << std::setw(6) << tid_str << std::setw(0);
-    std::cout << "|";
+    // std::cout << "|" << std::setw(6) << begin_str << std::setw(0);
+    printw("|%-6s", begin_str.c_str());
+    // std::cout << "|" << std::setw(6) << end_str << std::setw(0);
+    printw("|%-6s", end_str.c_str());
+    // std::cout << "|" << std::setw(6) << tid_str << std::setw(0);
+    printw("|%-6s", tid_str.c_str());
+    // std::cout << "|";
+    printw("|");
   }
-  std::cout << std::endl;
+  // std::cout << std::endl;
+  _end_line();
+}
+
+void TablePrinter::_end_line() {
+  printw("\n");
+  ++_rows_printed;
 }
 
 // In order to print the table as an actual table, with columns being aligned, we need to calculate the

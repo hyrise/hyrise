@@ -375,7 +375,8 @@ void Console::out(const std::string& output, bool console_print) {
 }
 
 void Console::out(std::shared_ptr<const Table> table) {
-  TablePrinter printer(table, false).paginate();
+  TablePrinter printer(table, false);
+  printer.paginate();
   // TablePrinter printer(table, _out, false);
   // printer.print_header();
 

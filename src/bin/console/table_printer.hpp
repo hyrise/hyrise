@@ -1,6 +1,5 @@
 #pragma once
 
-#include <limits>
 #include <memory>
 #include <string>
 #include <vector>
@@ -16,6 +15,8 @@ class TablePrinter {
  public:
   explicit TablePrinter(std::shared_ptr<const Table> table, bool ignore_empty_chunks = false);
 
+  void paginate();
+
   /*
    * Prints out specified number of rows starting from a specified RowID.
    * Default parameters make it print out the whole table.
@@ -25,7 +26,7 @@ class TablePrinter {
    *
    * @returns The RowID which follows the last printed row. Returns NULL_ROW_ID if the last row was printed.
    */
-  RowID print(const RowID& row_id = RowID{}, const size_t rows = std::numeric_limits<size_t>::max());
+  RowID print(const RowID& row_id, const size_t rows);
 
   /*
    * Prints out the table header.
@@ -46,9 +47,21 @@ class TablePrinter {
   void _print_chunk_header(const ChunkID chunk_id);
 
   /*
+   *
+   */
+  void _print_screen(const RowID& start_row_id);
+
+  /*
    * Prints the row of the given RowID.
    */
   void _print_row(const RowID& row_id);
+
+  RowID _next_row(const RowID& row_id);
+
+  /*
+   *
+   */
+  void _end_line();
 
   /*
    * Calculates the number of characters in the printed representation of each column.
@@ -66,6 +79,8 @@ class TablePrinter {
   std::string _closing;
   bool _ignore_empty_chunks;
   bool _has_mvcc;
+  size_t _size_x;
+  size_t _size_y;
 };
 
 }  // namespace opossum
