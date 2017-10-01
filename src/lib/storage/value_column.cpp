@@ -193,10 +193,6 @@ const std::shared_ptr<pmr_vector<std::pair<RowID, T>>> ValueColumn<T>::materiali
   return materialized_vector;
 }
 
-template class ValueColumn<int32_t>;
-template class ValueColumn<int64_t>;
-template class ValueColumn<float>;
-template class ValueColumn<double>;
-template class ValueColumn<std::string>;
+EXPLICITLY_INSTANTIATE_COLUMN_TYPES(ValueColumn);
 
 }  // namespace opossum
