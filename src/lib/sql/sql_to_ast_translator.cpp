@@ -460,10 +460,44 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_having(
                               input_node);
 }
 
+/**
+ * Retrieves all aggregate functions used by the HAVING clause.
+ * This is use by _translate_having to add missing aggregations to the Aggregate operator.
+ */
+std::vector<std::shared_ptr<Expression>> SQLToASTTranslator::_retrieve_having_aggregates(
+    const hsql::Expr& expr, const std::shared_ptr<AbstractASTNode>& input_node) {
+  std::vector<std::shared_ptr<Expression>> expressions;
+
+  if (expr.type == hsql::kExprFunctionRef) {
+    // We found an aggregate function. Translate and add to the list
+    auto translated = SQLExpressionTranslator::translate_expression(expr, input_node);
+
+    if (translated->type() == ExpressionType::Function) {
+      expressions.emplace_back(translated);
+    }
+
+    return expressions;
+  }
+
+  // Check for more aggregate functions recursively
+  if (expr.expr) {
+    auto left_expressions = _retrieve_having_aggregates(*expr.expr, input_node);
+    expressions.insert(expressions.end(), left_expressions.begin(), left_expressions.end());
+  }
+
+  if (expr.expr2) {
+    auto right_expressions = _retrieve_having_aggregates(*expr.expr2, input_node);
+    expressions.insert(expressions.end(), right_expressions.begin(), right_expressions.end());
+  }
+
+  return expressions;
+}
+
 std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_aggregate(
     const hsql::SelectStatement& select, const std::shared_ptr<AbstractASTNode>& input_node) {
   const auto& select_list = *select.selectList;
   const auto* group_by = select.groupBy;
+  const auto has_having = (group_by && group_by->having);
 
   /**
    * Build Aggregates
@@ -530,25 +564,38 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_aggregate(
     }
   }
 
+  /**
+   * Check for HAVING now, because it might contain more aggregations
+   */
+  if (has_having) {
+    // retrieve all aggregates in the having clause
+    auto having_expressions = _retrieve_having_aggregates(*group_by->having, input_node);
+
+    for (auto having_expr : having_expressions) {
+      // see if the having expression is included in the aggregation
+      auto result = std::find_if(aggregate_expressions.begin(), aggregate_expressions.end(),
+                                 [having_expr](const auto& expr) { return *expr == *having_expr; });
+
+      if (result == aggregate_expressions.end()) {
+        // expression not found! add to the other aggregations
+        aggregate_expressions.push_back(having_expr);
+      }
+    }
+  }
+
   auto aggregate_node = std::make_shared<AggregateNode>(aggregate_expressions, groupby_columns);
   aggregate_node->set_left_child(input_node);
 
   // Create a projection node for the correct column order
   auto projection_node = std::make_shared<ProjectionNode>(projections);
 
-  if (group_by == nullptr || group_by->having == nullptr) {
-    projection_node->set_left_child(aggregate_node);
-    return projection_node;
-  }
+  if (has_having) {
+    auto having_node = _translate_having(*group_by->having, aggregate_node, aggregate_node);
 
-  /**
-   * Build HAVING
-   */
-  // TODO(mp): Support HAVING clauses with aggregates different to the ones in the select list.
-  // The HAVING clause may contain aggregates that are not part of the select list.
-  // In that case, a succeeding table scan will not be able to filter because the column will not be part of the table.
-  auto having_node = _translate_having(*group_by->having, aggregate_node, aggregate_node);
-  projection_node->set_left_child(having_node);
+    projection_node->set_left_child(having_node);
+  } else {
+    projection_node->set_left_child(aggregate_node);
+  }
 
   return projection_node;
 }
