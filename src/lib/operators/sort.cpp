@@ -114,7 +114,7 @@ class Sort::SortImplMaterializeOutput {
       for (ColumnID column_id{0}; column_id < output->col_count(); column_id++) {
         chunk_out.add_column(std::move(column_vectors[column_id]));
       }
-      output->add_chunk(std::move(chunk_out));
+      output->emplace_chunk(std::move(chunk_out));
     }
 
     return output;

@@ -68,7 +68,7 @@ std::shared_ptr<const Table> Update::_on_execute(std::shared_ptr<TransactionCont
       chunk.add_column(std::make_shared<ReferenceColumn>(table_to_update, column_id, pos_list));
     }
 
-    insert_table->add_chunk(std::move(chunk));
+    insert_table->emplace_chunk(std::move(chunk));
   }
 
   // 2. Replace the columns to update in insert_table with the updated data from input_table_right

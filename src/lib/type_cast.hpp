@@ -9,13 +9,13 @@
 
 #include <string>
 
-#include "all_type_variant.hpp"
+#include "all_parameter_variant.hpp"
 
 namespace opossum {
 
 namespace hana = boost::hana;
 
-namespace {
+namespace detail {
 
 // Returns the index of type T in an Iterable
 template <typename Sequence, typename T>
@@ -24,21 +24,7 @@ constexpr auto index_of(Sequence const &sequence, T const &element) {
   return decltype(size)::value;
 }
 
-// Negates a type trait
-template <bool Condition>
-struct _neg : public std::true_type {};
-
-template <>
-struct _neg<true> : public std::false_type {};
-
-template <typename Condition>
-struct neg : public _neg<Condition::value> {};
-
-// Wrapper that makes std::enable_if a bit more readable
-template <typename Condition, typename Type = void>
-using enable_if = typename std::enable_if<Condition::value, Type>::type;
-
-}  // namespace
+}  // namespace detail
 
 // Retrieves the value stored in an AllTypeVariant without conversion
 template <typename T>
@@ -51,16 +37,16 @@ const T &get(const AllTypeVariant &value) {
 
 // Template specialization for everything but integral types
 template <typename T>
-enable_if<neg<std::is_integral<T>>, T> type_cast(const AllTypeVariant &value) {
-  if (value.which() == index_of(types_including_null, hana::type_c<T>)) return get<T>(value);
+std::enable_if_t<!std::is_integral<T>::value, T> type_cast(const AllTypeVariant &value) {
+  if (value.which() == detail::index_of(types_including_null, hana::type_c<T>)) return get<T>(value);
 
   return boost::lexical_cast<T>(value);
 }
 
 // Template specialization for integral types
 template <typename T>
-enable_if<std::is_integral<T>, T> type_cast(const AllTypeVariant &value) {
-  if (value.which() == index_of(types_including_null, hana::type_c<T>)) return get<T>(value);
+std::enable_if_t<std::is_integral<T>::value, T> type_cast(const AllTypeVariant &value) {
+  if (value.which() == detail::index_of(types_including_null, hana::type_c<T>)) return get<T>(value);
 
   try {
     return boost::lexical_cast<T>(value);
@@ -69,6 +55,6 @@ enable_if<std::is_integral<T>, T> type_cast(const AllTypeVariant &value) {
   }
 }
 
-std::string to_string(const AllTypeVariant &x);
+std::string to_string(const AllParameterVariant &x);
 
 }  // namespace opossum

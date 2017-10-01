@@ -83,6 +83,11 @@ class AbstractOperator : private Noncopyable {
   std::shared_ptr<AbstractOperator> mutable_input_left() const;
   std::shared_ptr<AbstractOperator> mutable_input_right() const;
 
+  struct PerformanceData {
+    uint64_t walltime_ns = 0;  // time spent in nanoseconds executing this operator
+  };
+  const AbstractOperator::PerformanceData &performance_data() const;
+
  protected:
   // abstract method to actually execute the operator
   // execute and get_output are split into two methods to allow for easier
@@ -105,6 +110,8 @@ class AbstractOperator : private Noncopyable {
   std::shared_ptr<const Table> _output;
 
   std::weak_ptr<TransactionContext> _transaction_context;
+
+  PerformanceData _performance_data;
 };
 
 }  // namespace opossum

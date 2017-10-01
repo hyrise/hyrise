@@ -1,5 +1,7 @@
 #include "sql_expression_translator.hpp"
 
+#include <algorithm>
+#include <cctype>
 #include <iostream>
 #include <memory>
 #include <string>
@@ -15,7 +17,7 @@
 namespace opossum {
 
 std::shared_ptr<Expression> SQLExpressionTranslator::translate_expression(
-    const hsql::Expr &expr, const std::shared_ptr<AbstractASTNode> &input_node) {
+    const hsql::Expr& expr, const std::shared_ptr<AbstractASTNode>& input_node) {
   auto name = expr.name != nullptr ? std::string(expr.name) : "";
   auto alias = expr.alias != nullptr ? optional<std::string>(expr.alias) : nullopt;
 
@@ -52,6 +54,9 @@ std::shared_ptr<Expression> SQLExpressionTranslator::translate_expression(
       for (auto elem : *(expr.exprList)) {
         expression_list.emplace_back(translate_expression(*elem, input_node));
       }
+
+      // convert to upper-case to find mapping
+      std::transform(name.begin(), name.end(), name.begin(), [](unsigned char c) { return std::toupper(c); });
 
       const auto aggregate_function_iter = aggregate_function_to_string.right.find(name);
       DebugAssert(aggregate_function_iter != aggregate_function_to_string.right.end(),
@@ -108,7 +113,7 @@ std::shared_ptr<Expression> SQLExpressionTranslator::translate_expression(
   return node;
 }
 
-NamedColumnReference SQLExpressionTranslator::get_named_column_reference_for_column_ref(const hsql::Expr &hsql_expr) {
+NamedColumnReference SQLExpressionTranslator::get_named_column_reference_for_column_ref(const hsql::Expr& hsql_expr) {
   DebugAssert(hsql_expr.isType(hsql::kExprColumnRef), "Expression type can't be converted into column identifier");
   DebugAssert(hsql_expr.name != nullptr, "hsql::Expr::name needs to be set");
 
@@ -116,8 +121,8 @@ NamedColumnReference SQLExpressionTranslator::get_named_column_reference_for_col
                               hsql_expr.table == nullptr ? nullopt : optional<std::string>(hsql_expr.table)};
 }
 
-ColumnID SQLExpressionTranslator::get_column_id_for_expression(const hsql::Expr &hsql_expr,
-                                                               const std::shared_ptr<AbstractASTNode> &input_node) {
+ColumnID SQLExpressionTranslator::get_column_id_for_expression(const hsql::Expr& hsql_expr,
+                                                               const std::shared_ptr<AbstractASTNode>& input_node) {
   Assert(hsql_expr.isType(hsql::kExprColumnRef), "Input needs to be column ref");
 
   return input_node->get_column_id_by_named_column_reference(get_named_column_reference_for_column_ref(hsql_expr));

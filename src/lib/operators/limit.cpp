@@ -63,7 +63,7 @@ std::shared_ptr<const Table> Limit::_on_execute() {
     }
 
     i += output_chunk_row_count;
-    output_table->add_chunk(std::move(output_chunk));
+    output_table->emplace_chunk(std::move(output_chunk));
   }
 
   return output_table;
