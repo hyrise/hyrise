@@ -17,12 +17,6 @@ class TablePrinter {
 
   void paginate();
 
-  /*
-   * Prints the closing previously specified by set_closing, the default is an empty string.
-   */
-  void print_closing();
-  void set_closing(const std::string& closing);
-
  protected:
   /*
    * Prints out the table header.
@@ -69,7 +63,6 @@ class TablePrinter {
   const std::shared_ptr<const Table> _table;
   std::vector<uint16_t> _widths;
   size_t _rows_printed;
-  std::string _closing;
   bool _print_column_header;
   bool _has_mvcc;
   size_t _size_x;

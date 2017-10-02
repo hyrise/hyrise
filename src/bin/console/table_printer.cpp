@@ -16,7 +16,6 @@ namespace opossum {
 TablePrinter::TablePrinter(std::shared_ptr<const Table> table)
     : _table(table),
       _rows_printed(0),
-      _closing(""),
       _print_column_header(true),
       _has_mvcc(false) {
   _widths = _column_string_widths(8, 20);
@@ -34,16 +33,14 @@ void TablePrinter::paginate() {
   // Init curses
   initscr();
   clear();
-  // cbreak();
   noecho();
   keypad(stdscr, TRUE);
   curs_set(0);
 
   getmaxyx(stdscr, _size_y, _size_x);
+
   // Last line on the screen should show instructions
   --_size_y;
-
-  // int rowcount = _table->row_count();;
 
   _print_column_header = true;
   auto start_row = RowID{};
@@ -188,36 +185,25 @@ RowID TablePrinter::_last_page_start_row() {
 }
 
 void TablePrinter::_print_header() {
-  // std::cout << "=== Columns" << std::endl;
   printw("=== Columns");
   _end_line();
   for (ColumnID col{0}; col < _table->col_count(); ++col) {
-    // std::cout << "|" << std::setw(_widths[col]) << _table->column_name(col) << std::setw(0);
     printw("|%-*s", _widths[col], _table->column_name(col).c_str());
   }
   if (_has_mvcc) {
-    // std::cout << "||        MVCC        ";
     printw("||        MVCC        ");
   }
-  // std::cout << "|" << std::endl;
   printw("|");
   _end_line();
   for (ColumnID col{0}; col < _table->col_count(); ++col) {
-    // std::cout << "|" << std::setw(_widths[col]) << _table->column_type(col) << std::setw(0);
     printw("|%-*s", _widths[col], _table->column_type(col).c_str());
   }
   if (_has_mvcc) {
-    // std::cout << "||_BEGIN|_END  |_TID  ";
     printw("||_BEGIN|_END  |_TID  ");
   }
-  // std::cout << "|" << std::endl;
   printw("|");
   _end_line();
 }
-
-void TablePrinter::print_closing() { std::cout << _closing << std::endl; }
-
-void TablePrinter::set_closing(const std::string& closing) { _closing = closing; }
 
 void TablePrinter::_print_chunk_header(const ChunkID chunk_id) {
   printw("=== Chunk %" PRIu32 " === ", (uint32_t) chunk_id);
@@ -282,12 +268,10 @@ void TablePrinter::_print_row(const RowID& row_id) {
     _print_chunk_header(row_id.chunk_id);
   }
 
-  // std::cout << "|";
   printw("|");
   for (ColumnID col{0}; col < chunk.col_count(); ++col) {
     // well yes, we use BaseColumn::operator[] here, but since print is not an operation that should
     // be part of a regular query plan, let's keep things simple here
-    // std::cout << std::setw(_widths[col]) << (*chunk.get_column(col))[row] << "|" << std::setw(0);
     printw("%-*s%s", _widths[col], boost::lexical_cast<std::string>((*chunk.get_column(col))[row]).c_str(), "|");
   }
 
@@ -302,16 +286,11 @@ void TablePrinter::_print_row(const RowID& row_id) {
     auto end_str = end == Chunk::MAX_COMMIT_ID ? "" : std::to_string(end);
     auto tid_str = tid == 0 ? "" : std::to_string(tid);
 
-    // std::cout << "|" << std::setw(6) << begin_str << std::setw(0);
     printw("|%-6s", begin_str.c_str());
-    // std::cout << "|" << std::setw(6) << end_str << std::setw(0);
     printw("|%-6s", end_str.c_str());
-    // std::cout << "|" << std::setw(6) << tid_str << std::setw(0);
     printw("|%-6s", tid_str.c_str());
-    // std::cout << "|";
     printw("|");
   }
-  // std::cout << std::endl;
   _end_line();
 }
 
