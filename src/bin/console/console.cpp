@@ -1,5 +1,4 @@
 #include "console.hpp"
-#include "table_printer.hpp"
 
 #include <boost/algorithm/string/split.hpp>
 #include <boost/algorithm/string/trim.hpp>
@@ -25,6 +24,7 @@
 #include "planviz/sql_query_plan_visualizer.hpp"
 #include "sql/sql_planner.hpp"
 #include "storage/storage_manager.hpp"
+#include "table_printer.hpp"
 #include "tpcc/tpcc_table_generator.hpp"
 #include "utils/load_table.hpp"
 

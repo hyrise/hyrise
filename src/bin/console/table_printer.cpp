@@ -201,7 +201,7 @@ void TablePrinter::_print_header() {
 }
 
 void TablePrinter::_print_chunk_header(const ChunkID chunk_id) {
-  printw("=== Chunk %" PRIu32 " === ", (uint32_t)chunk_id);
+  printw("=== Chunk %" PRIu32 " === ", Use static_cast<uint32_t>(chunk_id));
   _end_line();
 }
 
