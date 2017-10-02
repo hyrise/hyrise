@@ -15,9 +15,9 @@ namespace opossum {
 
 TablePrinter::TablePrinter(std::shared_ptr<const Table> table)
     : _table(table),
-      _rows_printed(0),
+      _has_mvcc(false),
       _print_column_header(true),
-      _has_mvcc(false) {
+      _rows_printed(0) {
   _widths = _column_string_widths(8, 20);
 
   for (ChunkID chunk_id{0}; chunk_id < _table->chunk_count(); ++chunk_id) {
