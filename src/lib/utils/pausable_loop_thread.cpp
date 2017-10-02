@@ -1,10 +1,10 @@
+#include "pausable_loop_thread.hpp"
+
 #include <chrono>
 #include <condition_variable>
 #include <functional>
 #include <mutex>
 #include <thread>
-
-#include "pausable_loop_thread.hpp"
 
 namespace opossum {
 
@@ -27,26 +27,18 @@ PausableLoopThread::PausableLoopThread(std::chrono::milliseconds loop_sleep, std
   });
 }
 
-void PausableLoopThread::pause() {
-  std::lock_guard<std::mutex> lk(m);
-  isPaused = true;
-}
+void PausableLoopThread::pause() { isPaused = true; }
 
 void PausableLoopThread::resume() {
-  {
-    std::lock_guard<std::mutex> lk(m);
-    isPaused = false;
-  }
+  isPaused = false;
   cv.notify_one();
 }
 
 void PausableLoopThread::finish() {
-  {
-    std::lock_guard<std::mutex> lk(m);
-    isPaused = true;
-    shutdownFlag = true;
-  }
+  isPaused = true;
+  shutdownFlag = true;
   cv.notify_one();
   loop_thread.join();
 }
+
 }  // namespace opossum

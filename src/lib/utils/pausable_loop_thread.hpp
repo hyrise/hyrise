@@ -1,3 +1,4 @@
+#include <atomic>
 #include <chrono>
 #include <condition_variable>
 #include <functional>
@@ -16,8 +17,8 @@ struct PausableLoopThread {
   void finish();
 
  private:
-  bool isPaused = true;
-  bool shutdownFlag = false;
+  std::atomic_bool isPaused{true};
+  std::atomic_bool shutdownFlag{false};
   std::mutex m;
   std::condition_variable cv;
   std::thread loop_thread;

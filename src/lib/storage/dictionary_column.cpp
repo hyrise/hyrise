@@ -21,6 +21,11 @@ DictionaryColumn<T>::DictionaryColumn(const pmr_vector<T>&& dictionary,
     : _dictionary(std::make_shared<pmr_vector<T>>(std::move(dictionary))), _attribute_vector(attribute_vector) {}
 
 template <typename T>
+DictionaryColumn<T>::DictionaryColumn(const std::shared_ptr<pmr_vector<T>>& dictionary,
+                                      const std::shared_ptr<BaseAttributeVector>& attribute_vector)
+    : _dictionary(dictionary), _attribute_vector(attribute_vector) {}
+
+template <typename T>
 const AllTypeVariant DictionaryColumn<T>::operator[](const size_t i) const {
   PerformanceWarning("operator[] used");
 
@@ -188,7 +193,9 @@ const std::shared_ptr<pmr_vector<std::pair<RowID, T>>> DictionaryColumn<T>::mate
 template <typename T>
 std::shared_ptr<BaseColumn> DictionaryColumn<T>::migrate(const PolymorphicAllocator<size_t>& alloc) const {
   const auto new_attribute_vector = _attribute_vector->migrate(alloc);
-  return std::allocate_shared<DictionaryColumn<T>>(alloc, _dictionary, new_attribute_vector);
+  const pmr_vector<T> new_dictionary(*_dictionary, alloc);
+  return std::allocate_shared<DictionaryColumn<T>>(
+      alloc, std::allocate_shared<pmr_vector<T>>(alloc, std::move(new_dictionary)), new_attribute_vector);
 }
 
 template class DictionaryColumn<int32_t>;

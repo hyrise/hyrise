@@ -289,6 +289,10 @@ set(
     tasks/chunk_compression_task.hpp
     tasks/chunk_migration_task.cpp
     tasks/chunk_migration_task.hpp
+    tasks/chunk_metrics_collection_task.cpp
+    tasks/chunk_metrics_collection_task.hpp
+    tasks/migration_preparation_task.cpp
+    tasks/migration_preparation_task.hpp
     type_cast.cpp
     type_cast.hpp
     type_comparison.hpp

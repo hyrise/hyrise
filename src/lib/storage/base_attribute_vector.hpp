@@ -1,5 +1,7 @@
 #pragma once
 
+#include <memory>
+
 #include "types.hpp"
 
 namespace opossum {
@@ -27,6 +29,6 @@ class BaseAttributeVector : private Noncopyable {
   // returns the width of the values in bytes
   virtual AttributeVectorWidth width() const = 0;
 
-  virtual std::shared_ptr<BaseAttributeVector> migrate(const PolymorphicAllocator<size_t>& alloc) const = 0;
+  virtual std::shared_ptr<BaseAttributeVector> migrate(const PolymorphicAllocator<size_t> &alloc) const = 0;
 };
 }  // namespace opossum

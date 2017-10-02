@@ -25,7 +25,7 @@ Chunk::Chunk(const bool has_mvcc_columns) : Chunk(PolymorphicAllocator<Chunk>(),
 Chunk::Chunk(const PolymorphicAllocator<Chunk>& alloc, const bool has_mvcc_columns, const bool has_access_counter)
     : _alloc(alloc), _columns(alloc), _indices(alloc) {
   if (has_mvcc_columns) _mvcc_columns = std::make_unique<MvccColumns>();
-  if (has_access_counter) _access_counter = std::make_unique<AccessCounter>();
+  if (has_access_counter) _access_counter = std::allocate_shared<AccessCounter>(alloc, alloc);
 }
 
 void Chunk::add_column(std::shared_ptr<BaseColumn> column) {
@@ -137,7 +137,6 @@ bool Chunk::references_only_one_table() const {
   return true;
 }
 
-
 void Chunk::migrate(boost::container::pmr::memory_resource* memsource) {
   if (_indices.size() > 0) {
     Fail("Cannot copy Chunk with Indices.");
@@ -151,5 +150,6 @@ void Chunk::migrate(boost::container::pmr::memory_resource* memsource) {
   _columns = std::move(new_columns);
 }
 
+const PolymorphicAllocator<Chunk>& Chunk::get_allocator() const { return _alloc; }
 
 }  // namespace opossum

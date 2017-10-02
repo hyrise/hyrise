@@ -196,7 +196,12 @@ const std::shared_ptr<pmr_vector<std::pair<RowID, T>>> ValueColumn<T>::materiali
 template <typename T>
 std::shared_ptr<BaseColumn> ValueColumn<T>::migrate(const PolymorphicAllocator<size_t>& alloc) const {
   pmr_concurrent_vector<T> new_values(_values, alloc);
-  return std::allocate_shared<ValueColumn<T>>(alloc, std::move(new_values), alloc);
+  if (is_nullable()) {
+    pmr_concurrent_vector<bool> new_null_values(_null_values.value(), alloc);
+    return std::allocate_shared<ValueColumn<T>>(alloc, std::move(new_values), std::move(new_null_values));
+  } else {
+    return std::allocate_shared<ValueColumn<T>>(alloc, std::move(new_values));
+  }
 }
 
 template class ValueColumn<int32_t>;

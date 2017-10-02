@@ -40,7 +40,7 @@ void ChunkMigrationTask::_on_execute() {
     }
 
     // std::cout << "Starting migration " << _table_name << " " << chunk_id << std::endl;
-    chunk.migrate(NUMAPlacementManager::get()->get_allocator<size_t>(_node_id));
+    chunk.migrate(NUMAPlacementManager::get()->get_memsource(_node_id));
     // std::cout << "Completed migration " << _table_name << " " << chunk_id << std::endl;
   }
 }

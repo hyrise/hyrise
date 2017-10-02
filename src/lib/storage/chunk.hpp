@@ -52,11 +52,14 @@ class Chunk : private Noncopyable {
     std::shared_mutex _mutex;
   };
 
+  /**
+   * Data structure for storing chunk access times
+   */
   struct AccessCounter {
     friend class Chunk;
 
    public:
-    explicit AccessCounter(const PolymorphicAllocator<uint64_t>& alloc) : _history(_capacity, alloc) {}
+    explicit AccessCounter(const PolymorphicAllocator<uint64_t> &alloc) : _history(_capacity, alloc) {}
 
     void increment() { _counter++; }
     void increment(uint64_t value) { _counter.fetch_add(value); }
@@ -81,7 +84,8 @@ class Chunk : private Noncopyable {
   Chunk();
   explicit Chunk(const bool has_mvcc_columns);
   explicit Chunk(const PolymorphicAllocator<Chunk> &alloc);
-  explicit Chunk(const PolymorphicAllocator<Chunk> &alloc, const bool has_mvcc_columns = false, const bool has_access_counter = false);
+  explicit Chunk(const PolymorphicAllocator<Chunk> &alloc, const bool has_mvcc_columns = false,
+                 const bool has_access_counter = false);
 
   // we need to explicitly set the move constructor to default when
   // we overwrite the copy constructor
@@ -160,11 +164,15 @@ class Chunk : private Noncopyable {
     return index;
   }
 
-  void migrate(boost::container::pmr::memory_resource* alloc);
+  void migrate(boost::container::pmr::memory_resource *alloc);
 
   std::shared_ptr<AccessCounter> access_counter() const { return _access_counter; }
 
   bool references_only_one_table() const;
+
+  size_t byte_size() const { return 0; }
+
+  const PolymorphicAllocator<Chunk> &get_allocator() const;
 
  protected:
   PolymorphicAllocator<Chunk> _alloc;
