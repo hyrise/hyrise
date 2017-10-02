@@ -36,6 +36,7 @@ void TablePrinter::paginate() {
   initscr();
   clear();
   // cbreak();
+  noecho();
   keypad(stdscr, TRUE);
   curs_set(0);
 
@@ -52,30 +53,8 @@ void TablePrinter::paginate() {
   int ch;
   while ((ch = getch()) != 'q') {
     switch (ch) {
-      case 'g':
-      case '<': {
-        _print_column_header = true;
-        start_row = RowID{};
-
-        next_page_row = _print_screen(start_row);
-        break;
-      }
-
-      case 'G':
-      case '>': {
-        start_row = _last_page_start_row();
-
-        if (start_row == NULL_ROW_ID){
-          start_row = RowID{};
-          _print_column_header = true;
-        } else {
-          _print_column_header = false;
-        }
-
-        next_page_row = _print_screen(start_row);
-        break;
-      }
-
+      case 'j':
+      case KEY_ENTER:
       case KEY_DOWN: {
         if (next_page_row == NULL_ROW_ID) {
           break;
@@ -90,6 +69,7 @@ void TablePrinter::paginate() {
         break;
       }
 
+      case 'k':
       case KEY_UP: {
         start_row = _previous_row(start_row);
 
@@ -123,6 +103,32 @@ void TablePrinter::paginate() {
         {
           start_row = RowID{};
           _print_column_header = true;
+        }
+
+        next_page_row = _print_screen(start_row);
+        break;
+      }
+
+      case 'g':
+      case '<':
+      case KEY_HOME: {
+        _print_column_header = true;
+        start_row = RowID{};
+
+        next_page_row = _print_screen(start_row);
+        break;
+      }
+
+      case 'G':
+      case '>':
+      case KEY_END: {
+        start_row = _last_page_start_row();
+
+        if (start_row == NULL_ROW_ID){
+          start_row = RowID{};
+          _print_column_header = true;
+        } else {
+          _print_column_header = false;
         }
 
         next_page_row = _print_screen(start_row);
@@ -244,6 +250,8 @@ RowID TablePrinter::_print_screen(const RowID& start_row_id) {
       break;
     }
   }
+
+  printw("Press 'q' to quit. ARROW KEYS, PAGE UP/DOWN, for navigation. 'h' for help/list of all commands.\n");
 
   refresh();
   return row_id;
