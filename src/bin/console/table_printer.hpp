@@ -13,7 +13,7 @@ namespace opossum {
  */
 class TablePrinter {
  public:
-  explicit TablePrinter(std::shared_ptr<const Table> table, bool ignore_empty_chunks = false);
+  explicit TablePrinter(std::shared_ptr<const Table> table);
 
   void paginate();
 
@@ -70,7 +70,6 @@ class TablePrinter {
   std::vector<uint16_t> _widths;
   size_t _rows_printed;
   std::string _closing;
-  bool _ignore_empty_chunks;
   bool _print_column_header;
   bool _has_mvcc;
   size_t _size_x;

@@ -13,11 +13,10 @@
 
 namespace opossum {
 
-TablePrinter::TablePrinter(std::shared_ptr<const Table> table, bool ignore_empty_chunks)
+TablePrinter::TablePrinter(std::shared_ptr<const Table> table)
     : _table(table),
       _rows_printed(0),
       _closing(""),
-      _ignore_empty_chunks(ignore_empty_chunks),
       _print_column_header(true),
       _has_mvcc(false) {
   _widths = _column_string_widths(8, 20);
@@ -221,21 +220,8 @@ void TablePrinter::print_closing() { std::cout << _closing << std::endl; }
 void TablePrinter::set_closing(const std::string& closing) { _closing = closing; }
 
 void TablePrinter::_print_chunk_header(const ChunkID chunk_id) {
-  auto& chunk = _table->get_chunk(chunk_id);
-  if (chunk.size() == 0 && (_ignore_empty_chunks)) {
-    return;
-  }
-
-  // std::cout << "=== Chunk " << chunk_id << " === " << std::endl;
   printw("=== Chunk %" PRIu32 " === ", (uint32_t) chunk_id);
   _end_line();
-
-  if (chunk.size() == 0) {
-    // std::cout << "Empty chunk." << std::endl;
-    printw("Empty chunk.");
-    _end_line();
-    return;
-  }
 }
 
 RowID TablePrinter::_print_screen(const RowID& start_row_id) {
@@ -294,10 +280,6 @@ void TablePrinter::_print_row(const RowID& row_id) {
 
   if (row == 0) {
     _print_chunk_header(row_id.chunk_id);
-
-    if (chunk.size() == 0) {
-      return;
-    }
   }
 
   // std::cout << "|";
