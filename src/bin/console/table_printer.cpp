@@ -1,7 +1,7 @@
 #include "table_printer.hpp"
 
-#include <ncurses.h>
 #include <inttypes.h>
+#include <ncurses.h>
 #include <algorithm>
 #include <iomanip>
 #include <iostream>
@@ -14,10 +14,7 @@
 namespace opossum {
 
 TablePrinter::TablePrinter(std::shared_ptr<const Table> table)
-    : _table(table),
-      _has_mvcc(false),
-      _print_column_header(true),
-      _rows_printed(0) {
+    : _table(table), _has_mvcc(false), _print_column_header(true), _rows_printed(0) {
   _widths = _column_string_widths(8, 20);
 
   for (ChunkID chunk_id{0}; chunk_id < _table->chunk_count(); ++chunk_id) {
@@ -29,7 +26,6 @@ TablePrinter::TablePrinter(std::shared_ptr<const Table> table)
 }
 
 void TablePrinter::paginate() {
-
   // Init curses
   initscr();
   clear();
@@ -55,7 +51,7 @@ void TablePrinter::paginate() {
           break;
         }
 
-        if (!_print_column_header){
+        if (!_print_column_header) {
           start_row = _next_row(start_row);
         }
         _print_column_header = false;
@@ -68,7 +64,7 @@ void TablePrinter::paginate() {
       case KEY_UP: {
         start_row = _previous_row(start_row);
 
-        if (start_row == NULL_ROW_ID){
+        if (start_row == NULL_ROW_ID) {
           start_row = RowID{};
           _print_column_header = true;
         }
@@ -94,8 +90,7 @@ void TablePrinter::paginate() {
       case KEY_PPAGE: {
         start_row = _previous_page(start_row);
 
-        if (start_row == NULL_ROW_ID)
-        {
+        if (start_row == NULL_ROW_ID) {
           start_row = RowID{};
           _print_column_header = true;
         }
@@ -119,7 +114,7 @@ void TablePrinter::paginate() {
       case KEY_END: {
         start_row = _last_page_start_row();
 
-        if (start_row == NULL_ROW_ID){
+        if (start_row == NULL_ROW_ID) {
           start_row = RowID{};
           _print_column_header = true;
         } else {
@@ -206,7 +201,7 @@ void TablePrinter::_print_header() {
 }
 
 void TablePrinter::_print_chunk_header(const ChunkID chunk_id) {
-  printw("=== Chunk %" PRIu32 " === ", (uint32_t) chunk_id);
+  printw("=== Chunk %" PRIu32 " === ", (uint32_t)chunk_id);
   _end_line();
 }
 
@@ -235,7 +230,7 @@ RowID TablePrinter::_print_screen(const RowID& start_row_id) {
 }
 
 void TablePrinter::_print_help_screen() {
-  WINDOW * help_screen = newwin(0,0,0,0);
+  WINDOW* help_screen = newwin(0, 0, 0, 0);
 
   wclear(help_screen);
 
