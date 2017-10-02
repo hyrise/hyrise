@@ -18,6 +18,7 @@ TablePrinter::TablePrinter(std::shared_ptr<const Table> table, bool ignore_empty
       _rows_printed(0),
       _closing(""),
       _ignore_empty_chunks(ignore_empty_chunks),
+      _print_column_header(true),
       _has_mvcc(false) {
   _widths = _column_string_widths(8, 20);
 
@@ -44,59 +45,87 @@ void TablePrinter::paginate() {
 
   // int rowcount = _table->row_count();;
 
-  bool print_header = true;
+  _print_column_header = true;
   auto start_row = RowID{};
-  auto next_page_row = _print_screen(start_row, print_header);
+  auto next_page_row = _print_screen(start_row);
 
   int ch;
   while ((ch = getch()) != 'q') {
     switch (ch) {
+      case 'g':
+      case '<': {
+        _print_column_header = true;
+        start_row = RowID{};
+
+        next_page_row = _print_screen(start_row);
+        break;
+      }
+
+      case 'G':
+      case '>': {
+        start_row = _last_page_start_row();
+
+        if (start_row == NULL_ROW_ID){
+          start_row = RowID{};
+          _print_column_header = true;
+        } else {
+          _print_column_header = false;
+        }
+
+        next_page_row = _print_screen(start_row);
+        break;
+      }
+
       case KEY_DOWN: {
         if (next_page_row == NULL_ROW_ID) {
           break;
         }
 
-        if (print_header){
-          print_header = false;
-        } else {
+        if (!_print_column_header){
           start_row = _next_row(start_row);
         }
+        _print_column_header = false;
 
         next_page_row = _print_screen(start_row);
         break;
       }
+
       case KEY_UP: {
         start_row = _previous_row(start_row);
 
         if (start_row == NULL_ROW_ID){
           start_row = RowID{};
-          print_header = true;
+          _print_column_header = true;
         }
 
-        next_page_row = _print_screen(start_row, print_header);
+        next_page_row = _print_screen(start_row);
         break;
       }
+
+      case ' ':
       case KEY_NPAGE: {
         if (next_page_row == NULL_ROW_ID) {
           break;
         }
 
-        print_header = false;
+        _print_column_header = false;
         start_row = next_page_row;
 
         next_page_row = _print_screen(start_row);
         break;
       }
+
+      case 'b':
       case KEY_PPAGE: {
         start_row = _previous_page(start_row);
 
         if (start_row == NULL_ROW_ID)
         {
           start_row = RowID{};
-          print_header = true;
+          _print_column_header = true;
         }
 
-        next_page_row = _print_screen(start_row, print_header);
+        next_page_row = _print_screen(start_row);
         break;
       }
     }
@@ -116,7 +145,7 @@ RowID TablePrinter::_next_row(const RowID& row_id) {
       return NULL_ROW_ID;
     }
   }
-  
+
   return RowID{new_chunk_id, new_chunk_offset};
 }
 
@@ -139,6 +168,13 @@ RowID TablePrinter::_previous_page(const RowID& row_id) {
     start_row = _previous_row(start_row);
   }
   return start_row;
+}
+
+RowID TablePrinter::_last_page_start_row() {
+  ChunkID chunk_id = ChunkID{_table->chunk_count() - 1};
+  ChunkOffset chunk_offset = ChunkOffset{_table->get_chunk(chunk_id).size()};
+
+  return _previous_page(RowID{chunk_id, chunk_offset});
 }
 
 void TablePrinter::_print_header() {
@@ -191,11 +227,11 @@ void TablePrinter::_print_chunk_header(const ChunkID chunk_id) {
   }
 }
 
-RowID TablePrinter::_print_screen(const RowID& start_row_id, const bool print_header) {
+RowID TablePrinter::_print_screen(const RowID& start_row_id) {
   clear();
   _rows_printed = 0;
 
-  if (print_header) {
+  if (_print_column_header) {
     _print_header();
   }
 

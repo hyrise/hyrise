@@ -38,7 +38,7 @@ class TablePrinter {
   /*
    *
    */
-  RowID _print_screen(const RowID& start_row_id, const bool print_header = false);
+  RowID _print_screen(const RowID& start_row_id);
 
   /*
    * Prints the row of the given RowID.
@@ -48,6 +48,7 @@ class TablePrinter {
   RowID _next_row(const RowID& row_id);
   RowID _previous_row(const RowID& row_id);
   RowID _previous_page(const RowID& row_id);
+  RowID _last_page_start_row();
 
   /*
    *
@@ -69,6 +70,7 @@ class TablePrinter {
   size_t _rows_printed;
   std::string _closing;
   bool _ignore_empty_chunks;
+  bool _print_column_header;
   bool _has_mvcc;
   size_t _size_x;
   size_t _size_y;
