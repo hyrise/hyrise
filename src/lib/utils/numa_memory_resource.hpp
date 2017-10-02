@@ -27,8 +27,8 @@ class NUMAMemoryResource : public boost::container::pmr::memory_resource {
  private:
 #if OPOSSUM_NUMA_SUPPORT
   const numa::MemSource _mem_source;
-#endif
   const size_t _alignment = 1;
+#endif
 };
 
 }  // namespace opossum

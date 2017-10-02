@@ -50,6 +50,21 @@ TEST_F(OperatorsSortTest, AscendingSortOfOneColumn) {
   EXPECT_TABLE_EQ(sort->get_output(), expected_result, true);
 }
 
+TEST_F(OperatorsSortTest, AscendingSortOFilteredColumn) {
+  std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_float_filtered_sorted.tbl", 2);
+
+  auto input = std::make_shared<TableWrapper>(load_table("src/test/tables/int_float.tbl", 1));
+  input->execute();
+
+  auto scan = std::make_shared<TableScan>(input, ColumnID{0}, ScanType::OpNotEquals, 123);
+  scan->execute();
+
+  auto sort = std::make_shared<Sort>(scan, ColumnID{0}, OrderByMode::Ascending, 2u);
+  sort->execute();
+
+  EXPECT_TABLE_EQ(sort->get_output(), expected_result, true);
+}
+
 TEST_F(OperatorsSortTest, AscendingSortOfOneColumnWithoutChunkSize) {
   std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_float_sorted.tbl", 2);
 

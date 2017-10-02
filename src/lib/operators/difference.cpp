@@ -117,7 +117,7 @@ std::shared_ptr<const Table> Difference::_on_execute() {
       }
     }
     if (out_chunk.size() > 0) {
-      output->add_chunk(std::move(out_chunk));
+      output->emplace_chunk(std::move(out_chunk));
     }
   }
 

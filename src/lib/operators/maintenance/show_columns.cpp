@@ -50,7 +50,7 @@ std::shared_ptr<const Table> ShowColumns::_on_execute() {
       tbb::concurrent_vector<int32_t>(column_nullables.begin(), column_nullables.end()));
   chunk.add_column(vc_nullables);
 
-  out_table->add_chunk(std::move(chunk));
+  out_table->emplace_chunk(std::move(chunk));
 
   return out_table;
 }

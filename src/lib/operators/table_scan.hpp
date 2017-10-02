@@ -30,6 +30,7 @@ class TableScan : public AbstractReadOnlyOperator {
   const optional<AllTypeVariant>& right_value2() const;
 
   const std::string name() const override;
+  const std::string description() const override;
   uint8_t num_in_tables() const override;
   uint8_t num_out_tables() const override;
 

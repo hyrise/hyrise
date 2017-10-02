@@ -23,7 +23,7 @@ PredicateNode::PredicateNode(const ColumnID column_id, const ScanType scan_type,
 std::string PredicateNode::description() const {
   std::ostringstream desc;
 
-  desc << "Predicate: '" << _column_id << "' " << scan_type_to_string.left.at(_scan_type);
+  desc << "Predicate: Col #" << _column_id << " " << scan_type_to_string.left.at(_scan_type);
   desc << " '" << _value << "'";
   if (_value2) {
     desc << " '" << (*_value2) << "";

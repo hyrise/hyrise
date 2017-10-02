@@ -198,10 +198,6 @@ std::shared_ptr<BaseColumn> DictionaryColumn<T>::migrate(const PolymorphicAlloca
       alloc, std::allocate_shared<pmr_vector<T>>(alloc, std::move(new_dictionary)), new_attribute_vector);
 }
 
-template class DictionaryColumn<int32_t>;
-template class DictionaryColumn<int64_t>;
-template class DictionaryColumn<float>;
-template class DictionaryColumn<double>;
-template class DictionaryColumn<std::string>;
+EXPLICITLY_INSTANTIATE_COLUMN_TYPES(DictionaryColumn);
 
 }  // namespace opossum

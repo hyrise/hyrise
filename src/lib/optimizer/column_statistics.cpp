@@ -451,10 +451,6 @@ std::ostream &ColumnStatistics<ColumnType>::print_to_stream(std::ostream &os) co
   return os;
 }
 
-template class ColumnStatistics<int32_t>;
-template class ColumnStatistics<int64_t>;
-template class ColumnStatistics<float>;
-template class ColumnStatistics<double>;
-template class ColumnStatistics<std::string>;
+EXPLICITLY_INSTANTIATE_COLUMN_TYPES(ColumnStatistics);
 
 }  // namespace opossum
