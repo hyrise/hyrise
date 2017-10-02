@@ -18,28 +18,17 @@ class TablePrinter {
   void paginate();
 
   /*
-   * Prints out specified number of rows starting from a specified RowID.
-   * Default parameters make it print out the whole table.
-   *
-   * @param row_id The RowID to begin from.
-   * @param rows   The number of rows to print. If set to maximum of size_t, print the whole table.
-   *
-   * @returns The RowID which follows the last printed row. Returns NULL_ROW_ID if the last row was printed.
-   */
-  RowID print(const RowID& row_id, const size_t rows);
-
-  /*
-   * Prints out the table header.
-   */
-  void print_header();
-
-  /*
    * Prints the closing previously specified by set_closing, the default is an empty string.
    */
   void print_closing();
   void set_closing(const std::string& closing);
 
  protected:
+  /*
+   * Prints out the table header.
+   */
+  void _print_header();
+
   /*
    * Prints the chunk header of the given ChunkID, and "Empty chunk" if chunk is empty.
    * Does not print anything if chunk is empty and _ignore_empty_chunks==true;
@@ -49,7 +38,7 @@ class TablePrinter {
   /*
    *
    */
-  void _print_screen(const RowID& start_row_id);
+  void _print_screen(const RowID& start_row_id, const bool print_header = false);
 
   /*
    * Prints the row of the given RowID.
@@ -57,6 +46,7 @@ class TablePrinter {
   void _print_row(const RowID& row_id);
 
   RowID _next_row(const RowID& row_id);
+  RowID _previous_row(const RowID& row_id);
 
   /*
    *
