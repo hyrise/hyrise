@@ -54,7 +54,6 @@ void TablePrinter::paginate() {
   while ((ch = getch()) != 'q') {
     switch (ch) {
       case 'j':
-      case KEY_ENTER:
       case KEY_DOWN: {
         if (next_page_row == NULL_ROW_ID) {
           break;
@@ -132,6 +131,12 @@ void TablePrinter::paginate() {
         }
 
         next_page_row = _print_screen(start_row);
+        break;
+      }
+
+      case 'h': {
+        _print_help_screen();
+        _print_screen(start_row);
         break;
       }
     }
@@ -251,10 +256,34 @@ RowID TablePrinter::_print_screen(const RowID& start_row_id) {
     }
   }
 
-  printw("Press 'q' to quit. ARROW KEYS, PAGE UP/DOWN, for navigation. 'h' for help/list of all commands.\n");
+  printw("Press 'q' to quit. ARROW KEYS, PAGE UP/DOWN, for navigation. 'h' for list of all commands.\n");
 
   refresh();
   return row_id;
+}
+
+void TablePrinter::_print_help_screen() {
+  WINDOW * help_screen = newwin(0,0,0,0);
+
+  wclear(help_screen);
+
+  wprintw(help_screen, "\n\n");
+  wprintw(help_screen, "  Available commands:\n\n");
+  wprintw(help_screen, "  %-17s- Move down one line.\n", "ARROW DOWN, j");
+  wprintw(help_screen, "  %-17s- Move up one line.\n\n", "ARROW UP, k");
+  wprintw(help_screen, "  %-17s- Move down one page.\n", "PAGE DOWN, SPACE");
+  wprintw(help_screen, "  %-17s- Move up one page.\n\n", "PAGE UP, b");
+  wprintw(help_screen, "  %-17s- Go to first line.\n", "HOME, g, <");
+  wprintw(help_screen, "  %-17s- Go to last line.\n\n", "END, G, >");
+  wprintw(help_screen, "  %-17s- Quit.\n", "q");
+
+  wrefresh(help_screen);
+
+  int ch;
+  while ((ch = getch()) != 'q') {
+  }
+
+  delwin(help_screen);
 }
 
 void TablePrinter::_print_row(const RowID& row_id) {

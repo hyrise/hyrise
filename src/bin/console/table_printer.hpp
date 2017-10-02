@@ -39,6 +39,7 @@ class TablePrinter {
    *
    */
   RowID _print_screen(const RowID& start_row_id);
+  void _print_help_screen();
 
   /*
    * Prints the row of the given RowID.
