@@ -60,7 +60,7 @@ std::shared_ptr<Table> CsvParser::parse(const std::string& filename) {
   }
 
   for (auto& chunk : chunks) {
-    table->add_chunk(std::move(chunk));
+    table->emplace_chunk(std::move(chunk));
   }
 
   return table;
