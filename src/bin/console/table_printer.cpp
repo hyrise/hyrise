@@ -46,33 +46,57 @@ void TablePrinter::paginate() {
 
   bool print_header = true;
   auto start_row = RowID{};
-  _print_screen(start_row, print_header);
+  auto next_page_row = _print_screen(start_row, print_header);
 
   int ch;
   while ((ch = getch()) != 'q') {
     switch (ch) {
       case KEY_DOWN: {
+        if (next_page_row == NULL_ROW_ID) {
+          break;
+        }
+
         if (print_header){
           print_header = false;
         } else {
           start_row = _next_row(start_row);
         }
-        _print_screen(start_row, print_header);
+
+        next_page_row = _print_screen(start_row);
         break;
       }
       case KEY_UP: {
         start_row = _previous_row(start_row);
+
         if (start_row == NULL_ROW_ID){
           start_row = RowID{};
           print_header = true;
         }
-        _print_screen(start_row, print_header);
+
+        next_page_row = _print_screen(start_row, print_header);
         break;
       }
       case KEY_NPAGE: {
+        if (next_page_row == NULL_ROW_ID) {
+          break;
+        }
+
+        print_header = false;
+        start_row = next_page_row;
+
+        next_page_row = _print_screen(start_row);
         break;
       }
       case KEY_PPAGE: {
+        start_row = _previous_page(start_row);
+
+        if (start_row == NULL_ROW_ID)
+        {
+          start_row = RowID{};
+          print_header = true;
+        }
+
+        next_page_row = _print_screen(start_row, print_header);
         break;
       }
     }
@@ -82,22 +106,24 @@ void TablePrinter::paginate() {
 }
 
 RowID TablePrinter::_next_row(const RowID& row_id) {
-  const ChunkID chunk_id = row_id.chunk_id;
+  ChunkID new_chunk_id = row_id.chunk_id;
+  ChunkOffset new_chunk_offset = ChunkOffset{row_id.chunk_offset + 1};
 
-  RowID next_row_id;
-  if (row_id.chunk_offset < _table->get_chunk(chunk_id).size()) {
-    next_row_id = RowID{ChunkID{chunk_id}, ChunkOffset{row_id.chunk_offset + 1}};
-  } else {
-    if (chunk_id == _table->chunk_count()) {
+  if (new_chunk_offset >= _table->get_chunk(new_chunk_id).size()) {
+    new_chunk_id = ChunkID{new_chunk_id + 1};
+    new_chunk_offset = ChunkOffset{0u};
+    if (new_chunk_id >= _table->chunk_count()) {
       return NULL_ROW_ID;
     }
-    next_row_id = RowID{ChunkID{chunk_id + 1}, ChunkOffset{0}};
   }
-
-  return next_row_id;
+  
+  return RowID{new_chunk_id, new_chunk_offset};
 }
 
 RowID TablePrinter::_previous_row(const RowID& row_id) {
+  if (row_id == NULL_ROW_ID) {
+    return NULL_ROW_ID;
+  }
   if (row_id.chunk_offset == 0u) {
     if (row_id.chunk_id == 0u) {
       return NULL_ROW_ID;
@@ -105,6 +131,14 @@ RowID TablePrinter::_previous_row(const RowID& row_id) {
     return RowID{ChunkID{row_id.chunk_id - 1}, ChunkOffset{row_id.chunk_offset}};
   }
   return RowID{ChunkID{row_id.chunk_id}, ChunkOffset{row_id.chunk_offset - 1}};
+}
+
+RowID TablePrinter::_previous_page(const RowID& row_id) {
+  RowID start_row = row_id;
+  for (size_t i = 0; i < _size_y; ++i) {
+    start_row = _previous_row(start_row);
+  }
+  return start_row;
 }
 
 void TablePrinter::_print_header() {
@@ -157,7 +191,7 @@ void TablePrinter::_print_chunk_header(const ChunkID chunk_id) {
   }
 }
 
-void TablePrinter::_print_screen(const RowID& start_row_id, const bool print_header) {
+RowID TablePrinter::_print_screen(const RowID& start_row_id, const bool print_header) {
   clear();
   _rows_printed = 0;
 
@@ -170,9 +204,13 @@ void TablePrinter::_print_screen(const RowID& start_row_id, const bool print_hea
   while (_rows_printed < _size_y) {
     _print_row(row_id);
     row_id = _next_row(row_id);
+    if (row_id == NULL_ROW_ID) {
+      break;
+    }
   }
 
   refresh();
+  return row_id;
 }
 
 void TablePrinter::_print_row(const RowID& row_id) {

@@ -38,7 +38,7 @@ class TablePrinter {
   /*
    *
    */
-  void _print_screen(const RowID& start_row_id, const bool print_header = false);
+  RowID _print_screen(const RowID& start_row_id, const bool print_header = false);
 
   /*
    * Prints the row of the given RowID.
@@ -47,6 +47,7 @@ class TablePrinter {
 
   RowID _next_row(const RowID& row_id);
   RowID _previous_row(const RowID& row_id);
+  RowID _previous_page(const RowID& row_id);
 
   /*
    *
