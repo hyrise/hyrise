@@ -59,15 +59,15 @@ class Chunk : private Noncopyable {
     friend class Chunk;
 
    public:
-    explicit AccessCounter(const PolymorphicAllocator<uint64_t> &alloc) : _history(_capacity, alloc) {}
+    explicit AccessCounter(const PolymorphicAllocator<uint64_t>& alloc) : _history(_capacity, alloc) {}
 
     void increment() { _counter++; }
     void increment(uint64_t value) { _counter.fetch_add(value); }
 
     void process() { _history.push_back(_counter); }
 
-    pmr_ring_buffer<uint64_t> &history() { return _history; }
-    const pmr_ring_buffer<uint64_t> &history() const { return _history; }
+    pmr_ring_buffer<uint64_t>& history() { return _history; }
+    const pmr_ring_buffer<uint64_t>& history() const { return _history; }
 
     uint64_t history_sample(std::chrono::milliseconds lookback) const;
 
@@ -83,14 +83,16 @@ class Chunk : private Noncopyable {
   // creates an empty chunk without mvcc columns
   Chunk();
   explicit Chunk(const bool has_mvcc_columns);
-  explicit Chunk(const PolymorphicAllocator<Chunk> &alloc);
-  explicit Chunk(const PolymorphicAllocator<Chunk> &alloc, const bool has_mvcc_columns = false,
+  explicit Chunk(const PolymorphicAllocator<Chunk>& alloc);
+  explicit Chunk(const PolymorphicAllocator<Chunk>& alloc, const std::shared_ptr<AccessCounter> access_counter,
+                 const bool has_mvcc_columns = false);
+  explicit Chunk(const PolymorphicAllocator<Chunk>& alloc, const bool has_mvcc_columns = false,
                  const bool has_access_counter = false);
 
   // we need to explicitly set the move constructor to default when
   // we overwrite the copy constructor
-  Chunk(Chunk &&) = default;
-  Chunk &operator=(Chunk &&) = default;
+  Chunk(Chunk&&) = default;
+  Chunk& operator=(Chunk&&) = default;
 
   // adds a column to the "right" of the chunk
   void add_column(std::shared_ptr<BaseColumn> column);
@@ -152,19 +154,19 @@ class Chunk : private Noncopyable {
   /**
    * Reuse mvcc from other chunk
    */
-  void use_mvcc_columns_from(const Chunk &chunk);
+  void use_mvcc_columns_from(const Chunk& chunk);
 
   std::vector<std::shared_ptr<BaseIndex>> get_indices_for(
-      const std::vector<std::shared_ptr<BaseColumn>> &columns) const;
+      const std::vector<std::shared_ptr<BaseColumn>>& columns) const;
 
   template <typename Index>
-  std::shared_ptr<BaseIndex> create_index(const std::vector<std::shared_ptr<BaseColumn>> &index_columns) {
+  std::shared_ptr<BaseIndex> create_index(const std::vector<std::shared_ptr<BaseColumn>>& index_columns) {
     auto index = std::make_shared<Index>(index_columns);
     _indices.emplace_back(index);
     return index;
   }
 
-  void migrate(boost::container::pmr::memory_resource *alloc);
+  void migrate(boost::container::pmr::memory_resource* alloc);
 
   std::shared_ptr<AccessCounter> access_counter() const { return _access_counter; }
 
@@ -172,7 +174,7 @@ class Chunk : private Noncopyable {
 
   size_t byte_size() const { return 0; }
 
-  const PolymorphicAllocator<Chunk> &get_allocator() const;
+  const PolymorphicAllocator<Chunk>& get_allocator() const;
 
  protected:
   PolymorphicAllocator<Chunk> _alloc;

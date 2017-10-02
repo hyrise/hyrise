@@ -10,15 +10,8 @@ uint64_t rdtsc() {
 
 namespace opossum {
 
-ProxyChunkConst::ProxyChunkConst(const Chunk &chunk) : _chunk(chunk), begin_rdtsc(rdtsc()) {}
+ProxyChunk::ProxyChunk(const Chunk& chunk) : _chunk(chunk), begin_rdtsc(rdtsc()) {}
 
-ProxyChunkConst::~ProxyChunkConst() {
-  if (const auto access_counter = _chunk.access_counter()) {
-    access_counter->increment(rdtsc() - begin_rdtsc);
-  }
-}
-
-ProxyChunk::ProxyChunk(Chunk &chunk) : _chunk(chunk), begin_rdtsc(rdtsc()) {}
 ProxyChunk::~ProxyChunk() {
   if (const auto access_counter = _chunk.access_counter()) {
     access_counter->increment(rdtsc() - begin_rdtsc);

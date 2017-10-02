@@ -18,6 +18,7 @@
 
 #include "storage/base_column.hpp"
 #include "storage/chunk.hpp"
+#include "storage/proxy_chunk.hpp"
 #include "storage/reference_column.hpp"
 #include "storage/table.hpp"
 
@@ -44,9 +45,9 @@ ColumnID TableScan::left_column_id() const { return _left_column_id; }
 
 ScanType TableScan::scan_type() const { return _scan_type; }
 
-const AllParameterVariant &TableScan::right_parameter() const { return _right_parameter; }
+const AllParameterVariant& TableScan::right_parameter() const { return _right_parameter; }
 
-const optional<AllTypeVariant> &TableScan::right_value2() const { return _right_value2; }
+const optional<AllTypeVariant>& TableScan::right_value2() const { return _right_value2; }
 
 const std::string TableScan::name() const { return "TableScan"; }
 
@@ -69,7 +70,7 @@ uint8_t TableScan::num_in_tables() const { return 1; }
 
 uint8_t TableScan::num_out_tables() const { return 1; }
 
-std::shared_ptr<AbstractOperator> TableScan::recreate(const std::vector<AllParameterVariant> &args) const {
+std::shared_ptr<AbstractOperator> TableScan::recreate(const std::vector<AllParameterVariant>& args) const {
   // Replace value in the new operator, if it’s a parameter and an argument is available.
   if (is_placeholder(_right_parameter)) {
     const auto index = boost::get<ValuePlaceholder>(_right_parameter).index();
@@ -99,10 +100,11 @@ std::shared_ptr<const Table> TableScan::_on_execute() {
 
   for (ChunkID chunk_id{0u}; chunk_id < _in_table->chunk_count(); ++chunk_id) {
     auto job_task = std::make_shared<JobTask>([=, &output_mutex]() {
+      const auto chunk_guard = _in_table->get_chunk_with_access_counting(chunk_id);
       // The actual scan happens in the sub classes of ColumnScanBase
       const auto matches_out = std::make_shared<PosList>(_impl->scan_chunk(chunk_id));
 
-      Chunk chunk_out;
+      Chunk chunk_out(chunk_guard->get_allocator(), chunk_guard->access_counter());
 
       /**
        * matches_out contains a list of row IDs into this chunk. If this is not a reference table, we can
@@ -115,7 +117,7 @@ std::shared_ptr<const Table> TableScan::_on_execute() {
        *     (i.e. they share their position list).
        */
       if (_is_reference_table) {
-        const auto &chunk_in = _in_table->get_chunk(chunk_id);
+        const auto& chunk_in = _in_table->get_chunk(chunk_id);
 
         auto filtered_pos_lists = std::map<std::shared_ptr<const PosList>, std::shared_ptr<PosList>>{};
 
@@ -130,13 +132,13 @@ std::shared_ptr<const Table> TableScan::_on_execute() {
           const auto table_out = ref_column_in->referenced_table();
           const auto column_id_out = ref_column_in->referenced_column_id();
 
-          auto &filtered_pos_list = filtered_pos_lists[pos_list_in];
+          auto& filtered_pos_list = filtered_pos_lists[pos_list_in];
 
           if (!filtered_pos_list) {
             filtered_pos_list = std::make_shared<PosList>();
             filtered_pos_list->reserve(matches_out->size());
 
-            for (const auto &match : *matches_out) {
+            for (const auto& match : *matches_out) {
               const auto row_id = (*pos_list_in)[match.chunk_offset];
               filtered_pos_list->push_back(row_id);
             }
@@ -171,7 +173,7 @@ void TableScan::_on_cleanup() { _impl.reset(); }
 
 void TableScan::_init_scan() {
   DebugAssert(_in_table->chunk_count() > 0u, "Input table must contain at least 1 chunk.");
-  const auto &first_chunk = _in_table->get_chunk(ChunkID{0u});
+  const auto& first_chunk = _in_table->get_chunk(ChunkID{0u});
 
   _is_reference_table = [&]() {
     // We assume if one column is a reference column, all are.

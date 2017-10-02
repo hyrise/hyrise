@@ -276,6 +276,8 @@ set(
     storage/iterables/value_column_iterable.hpp
     storage/numa_placement_manager.cpp
     storage/numa_placement_manager.hpp
+    storage/proxy_chunk.cpp
+    storage/proxy_chunk.hpp
     storage/reference_column.cpp
     storage/reference_column.hpp
     storage/scoped_locking_ptr.hpp
