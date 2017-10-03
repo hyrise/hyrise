@@ -106,7 +106,7 @@ std::shared_ptr<BaseColumnStatistics> ColumnStatistics<ColumnType>::_this_withou
 template <typename ColumnType>
 ColumnSelectivityResult ColumnStatistics<ColumnType>::_create_column_stats_for_range_predicate(ColumnType minimum,
                                                                                                ColumnType maximum) {
-  // NOTE: minimum can be greater than maximum
+  // NOTE: minimum can be greater than maximum (e.g. a predicate >= 2 on a column with only values of 1)
   // new minimum/maximum of table cannot be smaller/larger than the current minimum/maximum
   auto common_min = std::max(minimum, _get_or_calculate_min());
   auto common_max = std::min(maximum, _get_or_calculate_max());

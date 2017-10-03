@@ -26,8 +26,8 @@ struct TwoColumnSelectivityResult;
  * by table statistics.
  * A predicate on a null value will never evaluate to true, unless the column is explicitly checked for NULL values
  * (column IS NULL) which is currently not supported.
- * To start with, null values can be ignored during the calculation of the selectivity. The non-null value ratio can be
- * interpreted as a second selectivity.
+ * To start with the calculation of a predicate's selectivity, null values can be ignored during the calculation of the
+ * selectivity. The non-null value ratio can be interpreted as a second selectivity.
  * Therefore, the result selectivity is the product of the selectivity of the predicate and the non-null value ratio.
  * The returned column statistics will always have a non-null value ratio of 1 as currently all predicates remove null
  * values.

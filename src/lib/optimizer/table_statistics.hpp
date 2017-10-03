@@ -29,11 +29,10 @@ class Table;
  *
  * The statistics component assumes a uniform value distribution in columns. If values for predictions are missing
  * (e.g. placeholders in prepared statements), default selectivity values from below are used.
- * The null value support within statistics component is currently limited. Null value information is stored for every
- * column. This information is used wherever needed (e.g. in predicates) and also updated (e.g. in outer joins).
- * However, since the table scan currently does not support null values, this component cannot compute the null value
- * numbers of a column of the corresponding tables. So currently, the statistics component only knows of null values
- * which were introduced through outer joins.
+ * The null value support within the statistics component is currently limited. Null value information is stored for
+ * every column. This information is used wherever needed (e.g. in predicates) and also updated (e.g. in outer joins).
+ * However, this component cannot compute the null value numbers of a column of the corresponding tables. So currently,
+ * the statistics component only knows of null values which were introduced through outer joins.
  * The statistics component assumes NULL != NULL semantics.
  *
  * TableStatistics store column statistics as BaseColumnStatistics, which are instances of
@@ -64,20 +63,20 @@ class TableStatistics : public std::enable_shared_from_this<TableStatistics> {
   float row_count() const;
 
   /**
-   * Get table statistics for the operator table scan table scan.
+   * Generate table statistics for the operator table scan table scan.
    */
   virtual std::shared_ptr<TableStatistics> predicate_statistics(const ColumnID column_id, const ScanType scan_type,
                                                                 const AllParameterVariant& value,
                                                                 const optional<AllTypeVariant>& value2 = nullopt);
 
   /**
-   * Get table statistics for a cross join.
+   * Generate table statistics for a cross join.
    */
-  virtual std::shared_ptr<TableStatistics> generate_cross_join_statistics(
+  virtual std::shared_ptr<TableStatistics> generate_cross_join_statistics (
       const std::shared_ptr<TableStatistics>& right_table_stats);
 
   /**
-   * Get table statistics for joins with two column predicates.
+   * Generate table statistics for joins with two column predicates.
    */
   virtual std::shared_ptr<TableStatistics> generate_predicated_join_statistics(
       const std::shared_ptr<TableStatistics>& right_table_stats, const JoinMode mode,
@@ -89,14 +88,32 @@ class TableStatistics : public std::enable_shared_from_this<TableStatistics> {
   void _create_all_column_statistics();
 
   /**
-   * Resets the pointer variable _table after checking that the table is no longer needed.
+   * Resets the pointer variable _table after checking that the table is no longer needed. If the pointer is null, all
+   * column statistics have been created. This check is useful during generation of join statistics as then all column
+   * statistics have to be created.
    */
   void _reset_table_ptr();
 
+  /**
+   * Calculates how many null values are added to the columns of table 2 when outer joining with table 1.
+   * @param row_count: row count of table 1
+   * @param col_stats: column statistics of column x from table 1 used in the join predicate
+   * @param predicate_column_distinct_count: distinct count of column x after join was performed
+   * @return Number of additional null values for columns of table 2.
+   */
   float _calculate_added_null_values_for_outer_join(const float row_count,
                                                     const std::shared_ptr<BaseColumnStatistics> col_stats,
                                                     const float predicate_column_distinct_count) const;
 
+  /**
+   * Adjusts the null-value ratio of column statistics during outer joins. The column statistics are passed via
+   * iterators from a vector specifying which column statistics should be adjusted.
+   * @param col_begin: iterator pointing to the first column statistics within a vector to be adjusted
+   * @param col_end: iterator pointing to the next column statistics after the last column statistics to be adjusted
+   * @param row_count: row count of the columns before the join
+   * @param null_value_no: number of null-values to add to each column
+   * @param new_row_count: row count of the new join table
+   */
   void _adjust_null_value_ratio_for_outer_join(
       const std::vector<std::shared_ptr<BaseColumnStatistics>>::iterator col_begin,
       const std::vector<std::shared_ptr<BaseColumnStatistics>>::iterator col_end, const float row_count,

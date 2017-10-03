@@ -103,8 +103,8 @@ std::shared_ptr<TableStatistics> TableStatistics::generate_cross_join_statistics
 std::shared_ptr<TableStatistics> TableStatistics::generate_predicated_join_statistics(
     const std::shared_ptr<TableStatistics>& right_table_stats, const JoinMode mode,
     const std::pair<ColumnID, ColumnID> column_ids, const ScanType scan_type) {
-  DebugAssert(mode != JoinMode::Cross && mode != JoinMode::Natural,
-              "Specified JoinMode must specify neither column ids nor scan type.");
+  DebugAssert(mode != JoinMode::Cross, "Use function generate_cross_join_statistics for cross joins.");
+  DebugAssert(mode != JoinMode::Natural, "Natural joins are not supported by statistics component.");
 
   /**
    * The approach to calculate the join table statistics is to split the join into a cross join followed by a predicate.
@@ -115,7 +115,7 @@ std::shared_ptr<TableStatistics> TableStatistics::generate_predicated_join_stati
    *
    * For left/right/outer joins the occurring null values will result in changed null value ratios in partial/all column
    * statistics of the join statistics.
-   * To calculate the changed ratios the new total number of null values in a column as well as the join table row count
+   * To calculate the changed ratios, the new total number of null values in a column as well as the join table row count
    * are necessary. Remember that statistics component assumes NULL != NULL semantics.
    *
    * The calculation of null values is shown by following SQL query: SELECT * FROM TABLE_1 OUTER JOIN TABLE_2 ON a = c
@@ -131,9 +131,12 @@ std::shared_ptr<TableStatistics> TableStatistics::generate_predicated_join_stati
    *                                     2    | 10   | NULL | 40      RIGHT +1 extra rows
    *                                     NULL | 20   | NULL | 40      OUTER +3 extra rows (the ones from LEFT & RIGHT)
    *
-   * To start with, the cross join row count is calculated: 3 * 2 = 6
-   * Then the predicate selectivity is calculated: 1/2 * left-non-null * right-non-null = 1/2 * 2/3 * 1/2 = 1/6
-   * For an inner join, the row count would then be: 6 * 1/6 = 1
+   * First, the cross join row count is calculated: 3 * 2 = 6
+   * Then, the selectivity for non-null values is calculated: 1/2 (50% of the non-null values from column a match the
+   * value 1 from column c)
+   * Next, the predicate selectivity is calculated: non-null predicate selectivity * left-non-null * right-non-null
+   * = 1/2 * 2/3 * 1/2 = 1/6
+   * For an inner join, the row count would then be: row count * predicate selectivity = 6 * 1/6 = 1
    *
    * The selectivity calculation call also returns the new column statistics for columns a and c. Both are identical and
    * have a min, max value of 1, distinct count of 1 and a non-null value ratio of 1.
