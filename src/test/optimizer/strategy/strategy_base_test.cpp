@@ -10,8 +10,8 @@
 
 namespace opossum {
 
-std::shared_ptr<AbstractASTNode> StrategyBaseTest::apply_rule(const std::shared_ptr<AbstractRule> &rule,
-                                                              const std::shared_ptr<AbstractASTNode> &input) {
+std::shared_ptr<AbstractASTNode> StrategyBaseTest::apply_rule(const std::shared_ptr<AbstractRule>& rule,
+                                                              const std::shared_ptr<AbstractASTNode>& input) {
   // Add explicit root node
   const auto root_node = std::make_shared<ASTRootNode>();
   root_node->set_left_child(input);

@@ -15,7 +15,7 @@
 
 namespace opossum {
 
-bool JoinConditionDetectionRule::apply_to(const std::shared_ptr<AbstractASTNode> &node) {
+bool JoinConditionDetectionRule::apply_to(const std::shared_ptr<AbstractASTNode>& node) {
   if (node->type() == ASTNodeType::Join) {
     // ... "potential"_cross_join_node until this if below
     auto cross_join_node = std::dynamic_pointer_cast<JoinNode>(node);
@@ -46,7 +46,7 @@ bool JoinConditionDetectionRule::apply_to(const std::shared_ptr<AbstractASTNode>
 }
 
 optional<JoinConditionDetectionRule::JoinCondition> JoinConditionDetectionRule::_find_predicate_for_cross_join(
-    const std::shared_ptr<JoinNode> &cross_join) {
+    const std::shared_ptr<JoinNode>& cross_join) {
   Assert(cross_join->left_child() && cross_join->right_child(), "Cross Join must have two children");
 
   // Go up in AST to find corresponding PredicateNode

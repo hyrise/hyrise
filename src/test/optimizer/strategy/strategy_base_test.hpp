@@ -18,8 +18,8 @@ class StrategyBaseTest : public BaseTest {
    * Helper method for applying a single rule to an AST. Creates the temporary ASTRootNode and returns its child
    * after applying the rule
    */
-  std::shared_ptr<AbstractASTNode> apply_rule(const std::shared_ptr<AbstractRule> &rule,
-                                              const std::shared_ptr<AbstractASTNode> &input);
+  std::shared_ptr<AbstractASTNode> apply_rule(const std::shared_ptr<AbstractRule>& rule,
+                                              const std::shared_ptr<AbstractASTNode>& input);
 };
 
 }  // namespace opossum

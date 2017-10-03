@@ -8,7 +8,7 @@
 
 namespace opossum {
 
-const Optimizer &Optimizer::get() {
+const Optimizer& Optimizer::get() {
   static Optimizer optimizer;
   return optimizer;
 }
@@ -18,8 +18,9 @@ Optimizer::Optimizer() {
   _rules.emplace_back(std::make_shared<JoinConditionDetectionRule>());
 }
 
-std::shared_ptr<AbstractASTNode> Optimizer::optimize(const std::shared_ptr<AbstractASTNode> &input) const {
-  // Add explicit root node
+std::shared_ptr<AbstractASTNode> Optimizer::optimize(const std::shared_ptr<AbstractASTNode>& input) const {
+  // Add explicit root node, so the rules can freely change the tree below it without having to maintain a root node
+  // to return to the Optimizer
   const auto root_node = std::make_shared<ASTRootNode>();
   root_node->set_left_child(input);
 
@@ -30,7 +31,7 @@ std::shared_ptr<AbstractASTNode> Optimizer::optimize(const std::shared_ptr<Abstr
   for (uint32_t iter_index = 0; iter_index < _max_num_iterations; ++iter_index) {
     auto ast_changed = false;
 
-    for (const auto &rule : _rules) {
+    for (const auto& rule : _rules) {
       ast_changed |= rule->apply_to(root_node);
     }
 

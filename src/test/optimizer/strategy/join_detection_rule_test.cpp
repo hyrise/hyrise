@@ -20,7 +20,7 @@
 namespace opossum {
 
 struct JoinDetectionTestParam {
-  JoinDetectionTestParam(const std::string &query, const uint8_t number_of_detectable_cross_joins)
+  JoinDetectionTestParam(const std::string& query, const uint8_t number_of_detectable_cross_joins)
       : query(query), number_of_detectable_cross_joins(number_of_detectable_cross_joins) {}
 
   const std::string query;
@@ -41,7 +41,7 @@ class JoinDetectionRuleTest : public StrategyBaseTest, public ::testing::WithPar
     _rule = std::make_shared<JoinConditionDetectionRule>();
   }
 
-  uint8_t _count_cross_joins(const std::shared_ptr<AbstractASTNode> &node) {
+  uint8_t _count_cross_joins(const std::shared_ptr<AbstractASTNode>& node) {
     uint8_t count = 0u;
     if (node->type() == ASTNodeType::Join) {
       const auto join_node = std::dynamic_pointer_cast<JoinNode>(node);
@@ -93,13 +93,11 @@ TEST_F(JoinDetectionRuleTest, SimpleDetectionTest) {
 
   auto output = StrategyBaseTest::apply_rule(_rule, predicate_node);
 
-  EXPECT_EQ(output->type(), ASTNodeType::Join);
+  // Verfication of the new JOIN
+  ASSERT_INNER_JOIN_NODE(output, ScanType::OpEquals, ColumnID{0}, ColumnID{0});
+
   EXPECT_EQ(output->left_child()->type(), ASTNodeType::StoredTable);
   EXPECT_EQ(output->right_child()->type(), ASTNodeType::StoredTable);
-
-  const auto new_join_node = std::dynamic_pointer_cast<JoinNode>(output);
-  EXPECT_EQ(new_join_node->join_column_ids().value().first, 0);
-  EXPECT_EQ(new_join_node->join_column_ids().value().second, 0);
 }
 
 TEST_F(JoinDetectionRuleTest, SecondDetectionTest) {
@@ -142,15 +140,12 @@ TEST_F(JoinDetectionRuleTest, SecondDetectionTest) {
   auto output = StrategyBaseTest::apply_rule(_rule, projection_node);
 
   EXPECT_EQ(output->type(), ASTNodeType::Projection);
-  ASSERT_EQ(output->left_child()->type(), ASTNodeType::Join);
 
-  auto output_join_node = std::dynamic_pointer_cast<JoinNode>(output->left_child());
+  // Verfication of the new JOIN
+  ASSERT_INNER_JOIN_NODE(output->left_child(), ScanType::OpEquals, ColumnID{0}, ColumnID{0});
 
-  EXPECT_EQ(output_join_node->scan_type(), ScanType::OpEquals);
-  EXPECT_EQ(output_join_node->join_column_ids(), std::make_pair(ColumnID{0}, ColumnID{0}));
-  EXPECT_EQ(output_join_node->left_child()->type(), ASTNodeType::StoredTable);
-  EXPECT_EQ(output_join_node->right_child()->type(), ASTNodeType::StoredTable);
-
+  EXPECT_EQ(output->left_child()->left_child()->type(), ASTNodeType::StoredTable);
+  EXPECT_EQ(output->left_child()->right_child()->type(), ASTNodeType::StoredTable);
 }
 
 TEST_F(JoinDetectionRuleTest, NoPredicate) {
@@ -179,7 +174,9 @@ TEST_F(JoinDetectionRuleTest, NoPredicate) {
   auto output = StrategyBaseTest::apply_rule(_rule, projection_node);
 
   EXPECT_EQ(output->type(), ASTNodeType::Projection);
-  EXPECT_EQ(output->left_child()->type(), ASTNodeType::Join);
+
+  ASSERT_CROSS_JOIN_NODE(output->left_child());
+
   EXPECT_EQ(output->left_child()->left_child()->type(), ASTNodeType::StoredTable);
   EXPECT_EQ(output->left_child()->right_child()->type(), ASTNodeType::StoredTable);
 }
@@ -217,7 +214,7 @@ TEST_F(JoinDetectionRuleTest, NoMatchingPredicate) {
 
   EXPECT_EQ(output->type(), ASTNodeType::Projection);
   EXPECT_EQ(output->left_child()->type(), ASTNodeType::Predicate);
-  EXPECT_EQ(output->left_child()->left_child()->type(), ASTNodeType::Join);
+  ASSERT_CROSS_JOIN_NODE(output->left_child()->left_child());
   EXPECT_EQ(output->left_child()->left_child()->left_child()->type(), ASTNodeType::StoredTable);
   EXPECT_EQ(output->left_child()->left_child()->right_child()->type(), ASTNodeType::StoredTable);
 }
@@ -241,7 +238,7 @@ TEST_F(JoinDetectionRuleTest, NonCrossJoin) {
    */
 
   const auto join_node =
-      std::make_shared<JoinNode>(JoinMode::Inner, std::make_pair(ColumnID{1}, ColumnID{3}), ScanType::OpEquals);
+      std::make_shared<JoinNode>(JoinMode::Inner, std::make_pair(ColumnID{1}, ColumnID{1}), ScanType::OpEquals);
   join_node->set_left_child(_table_node_a);
   join_node->set_right_child(_table_node_b);
 
@@ -256,7 +253,7 @@ TEST_F(JoinDetectionRuleTest, NonCrossJoin) {
 
   EXPECT_EQ(output->type(), ASTNodeType::Projection);
   EXPECT_EQ(output->left_child()->type(), ASTNodeType::Predicate);
-  EXPECT_EQ(output->left_child()->left_child()->type(), ASTNodeType::Join);
+  ASSERT_INNER_JOIN_NODE(output->left_child()->left_child(), ScanType::OpEquals, ColumnID{1}, ColumnID{1});
   EXPECT_EQ(output->left_child()->left_child()->left_child()->type(), ASTNodeType::StoredTable);
   EXPECT_EQ(output->left_child()->left_child()->right_child()->type(), ASTNodeType::StoredTable);
 }
@@ -308,21 +305,16 @@ TEST_F(JoinDetectionRuleTest, MultipleJoins) {
   auto output = StrategyBaseTest::apply_rule(_rule, projection_node);
 
   EXPECT_EQ(output->type(), ASTNodeType::Projection);
-  EXPECT_EQ(output->left_child()->type(), ASTNodeType::Join);
+  ASSERT_EQ(output->left_child()->type(), ASTNodeType::Join);
 
   const auto first_join_node = std::dynamic_pointer_cast<JoinNode>(output->left_child());
   EXPECT_EQ(first_join_node->join_mode(), JoinMode::Cross);
 
-  EXPECT_EQ(output->left_child()->left_child()->type(), ASTNodeType::Join);
-  const auto second_join_node = std::dynamic_pointer_cast<JoinNode>(output->left_child()->left_child());
-  EXPECT_EQ(second_join_node->join_mode(), JoinMode::Inner);
+  // Verfication of the new JOIN
+  ASSERT_INNER_JOIN_NODE(output->left_child()->left_child(), ScanType::OpEquals, ColumnID{0}, ColumnID{0});
 
   EXPECT_EQ(output->left_child()->left_child()->left_child()->type(), ASTNodeType::StoredTable);
   EXPECT_EQ(output->left_child()->left_child()->right_child()->type(), ASTNodeType::StoredTable);
-
-  const auto new_join_node = std::dynamic_pointer_cast<JoinNode>(output->left_child()->left_child());
-  EXPECT_EQ(new_join_node->join_column_ids().value().first, 0);
-  EXPECT_EQ(new_join_node->join_column_ids().value().second, 0);
 }
 
 TEST_F(JoinDetectionRuleTest, MultipleJoins2) {
@@ -373,9 +365,8 @@ TEST_F(JoinDetectionRuleTest, MultipleJoins2) {
 
   EXPECT_EQ(output->type(), ASTNodeType::Projection);
 
-  EXPECT_EQ(output->left_child()->type(), ASTNodeType::Join);
-  const auto first_join_node = std::dynamic_pointer_cast<JoinNode>(output->left_child());
-  EXPECT_EQ(first_join_node->join_mode(), JoinMode::Inner);
+  // Verfication of the new JOIN
+  ASSERT_INNER_JOIN_NODE(output->left_child(), ScanType::OpEquals, ColumnID{0}, ColumnID{0});
 
   EXPECT_EQ(output->left_child()->left_child()->type(), ASTNodeType::Join);
   const auto second_join_node = std::dynamic_pointer_cast<JoinNode>(output->left_child()->left_child());
@@ -420,7 +411,7 @@ TEST_F(JoinDetectionRuleTest, NoOptimizationAcrossProjection) {
 
   EXPECT_EQ(output->type(), ASTNodeType::Predicate);
   EXPECT_EQ(output->left_child()->type(), ASTNodeType::Projection);
-  EXPECT_EQ(output->left_child()->left_child()->type(), ASTNodeType::Join);
+  ASSERT_CROSS_JOIN_NODE(output->left_child()->left_child());
   EXPECT_EQ(output->left_child()->left_child()->left_child()->type(), ASTNodeType::StoredTable);
   EXPECT_EQ(output->left_child()->left_child()->right_child()->type(), ASTNodeType::StoredTable);
 }
@@ -460,7 +451,9 @@ TEST_F(JoinDetectionRuleTest, NoJoinDetectionAcrossProjections) {
 
   EXPECT_EQ(output->type(), ASTNodeType::Predicate);
   EXPECT_EQ(output->left_child()->type(), ASTNodeType::Projection);
-  EXPECT_EQ(output->left_child()->left_child()->type(), ASTNodeType::Join);
+
+  ASSERT_EQ(output->left_child()->left_child()->type(), ASTNodeType::Join);
+
   EXPECT_EQ(output->left_child()->left_child()->left_child()->type(), ASTNodeType::StoredTable);
   EXPECT_EQ(output->left_child()->left_child()->right_child()->type(), ASTNodeType::StoredTable);
 }

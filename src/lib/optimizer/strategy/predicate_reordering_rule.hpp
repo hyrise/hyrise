@@ -24,10 +24,10 @@ class PredicateNode;
  */
 class PredicateReorderingRule : public AbstractRule {
  public:
-  bool apply_to(const std::shared_ptr<AbstractASTNode> &node) override;
+  bool apply_to(const std::shared_ptr<AbstractASTNode>& node) override;
 
  private:
-  bool _reorder_predicates(std::vector<std::shared_ptr<PredicateNode>> &predicates) const;
+  bool _reorder_predicates(std::vector<std::shared_ptr<PredicateNode>>& predicates) const;
 };
 
 }  // namespace opossum

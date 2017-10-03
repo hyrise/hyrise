@@ -62,11 +62,11 @@ class AbstractASTNode : public std::enable_shared_from_this<AbstractASTNode> {
   std::shared_ptr<AbstractASTNode> parent() const;
   void clear_parent();
 
-  const std::shared_ptr<AbstractASTNode> &left_child() const;
-  void set_left_child(const std::shared_ptr<AbstractASTNode> &left);
+  const std::shared_ptr<AbstractASTNode>& left_child() const;
+  void set_left_child(const std::shared_ptr<AbstractASTNode>& left);
 
-  const std::shared_ptr<AbstractASTNode> &right_child() const;
-  void set_right_child(const std::shared_ptr<AbstractASTNode> &right);
+  const std::shared_ptr<AbstractASTNode>& right_child() const;
+  void set_right_child(const std::shared_ptr<AbstractASTNode>& right);
   // @}
 
   ASTNodeType type() const;
@@ -82,13 +82,13 @@ class AbstractASTNode : public std::enable_shared_from_this<AbstractASTNode> {
    *
    * Inheriting nodes are free to override AbstractASTNode::derive_statistics_from().
    */
-  void set_statistics(const std::shared_ptr<TableStatistics> &statistics);
+  void set_statistics(const std::shared_ptr<TableStatistics>& statistics);
   const std::shared_ptr<TableStatistics> get_statistics();
   virtual const std::shared_ptr<TableStatistics> derive_statistics_from(
-      const std::shared_ptr<AbstractASTNode> &other_node) const;
+      const std::shared_ptr<AbstractASTNode>& other_node) const;
   // @}
 
-  virtual const std::vector<std::string> &output_column_names() const;
+  virtual const std::vector<std::string>& output_column_names() const;
 
   /**
    * This function is public for testing purposes only, otherwise should only be used internally
@@ -96,7 +96,7 @@ class AbstractASTNode : public std::enable_shared_from_this<AbstractASTNode> {
    * Every node will output a list of column and all nodes except StoredTableNode take a list of columns as input from
    * their predecessor.
    */
-  virtual const std::vector<ColumnID> &output_column_id_to_input_column_id() const;
+  virtual const std::vector<ColumnID>& output_column_id_to_input_column_id() const;
 
   size_t output_col_count() const;
 
@@ -125,9 +125,9 @@ class AbstractASTNode : public std::enable_shared_from_this<AbstractASTNode> {
    *
    * Find more information in our blog: https://medium.com/hyrise/the-gentle-art-of-referring-to-columns-634f057bd810
    */
-  ColumnID get_column_id_by_named_column_reference(const NamedColumnReference &named_column_reference) const;
+  ColumnID get_column_id_by_named_column_reference(const NamedColumnReference& named_column_reference) const;
   virtual optional<ColumnID> find_column_id_by_named_column_reference(
-      const NamedColumnReference &named_column_reference) const;
+      const NamedColumnReference& named_column_reference) const;
   // @}
 
   /**
@@ -137,7 +137,7 @@ class AbstractASTNode : public std::enable_shared_from_this<AbstractASTNode> {
    *
    * Used especially to figure out which of the children of a Join is referenced.
    */
-  virtual bool knows_table(const std::string &table_name) const;
+  virtual bool knows_table(const std::string& table_name) const;
 
   /**
    * This function is part of the "ColumnID Resolution". See SQLToAstTranslator class comment for a general discussion
@@ -148,7 +148,7 @@ class AbstractASTNode : public std::enable_shared_from_this<AbstractASTNode> {
    *
    * @param table_name can be an alias.
    */
-  virtual std::vector<ColumnID> get_output_column_ids_for_table(const std::string &table_name) const;
+  virtual std::vector<ColumnID> get_output_column_ids_for_table(const std::string& table_name) const;
 
   /**
    * If a node only has a left child, it is possible to remove this node from the tree, connecting this
@@ -161,9 +161,9 @@ class AbstractASTNode : public std::enable_shared_from_this<AbstractASTNode> {
    * Replaces @param node_to_replace with this node.
    * Fails if this node was already part of a tree, i.e. has a parent or children
    */
-  void replace_in_tree(const std::shared_ptr<AbstractASTNode> &node_to_replace);
+  void replace_in_tree(const std::shared_ptr<AbstractASTNode>& node_to_replace);
 
-  void print(const uint32_t level = 0, std::ostream &out = std::cout) const;
+  void print(const uint32_t level = 0, std::ostream& out = std::cout) const;
   virtual std::string description() const = 0;
 
  protected:
