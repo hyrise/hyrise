@@ -27,8 +27,8 @@ class StoredTableNode : public AbstractASTNode {
   const std::vector<std::string>& output_column_names() const override;
 
   std::shared_ptr<TableStatistics> derive_statistics_from(
-    const std::shared_ptr<AbstractASTNode>& left_child = nullptr,
-    const std::shared_ptr<AbstractASTNode>& right_child = nullptr) const override;
+      const std::shared_ptr<AbstractASTNode>& left_child = nullptr,
+      const std::shared_ptr<AbstractASTNode>& right_child = nullptr) const override;
 
   bool knows_table(const std::string& table_name) const override;
 

@@ -219,8 +219,8 @@ const SQLTestParam test_queries[] = {
      "src/test/tables/joinoperators/int_inner_join_4_tables_projection.tbl"},
 
     // Join three tables and perform a scan
-  // TODO(anybody) can't be optimized due to lack of join statistics right now
-    //{R"(SELECT *
+    // TODO(anybody) can't be optimized due to lack of join statistics right now
+    // {R"(SELECT *
     //    FROM int_float AS t1
     //    INNER JOIN int_float2 AS t2
     //    ON t1.a = t2.a

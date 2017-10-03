@@ -76,7 +76,7 @@ std::shared_ptr<TableStatistics> AbstractASTNode::derive_statistics_from(
     const std::shared_ptr<AbstractASTNode>& left_child, const std::shared_ptr<AbstractASTNode>& right_child) const {
   DebugAssert(static_cast<bool>(_left_child),
               "Default implementation of derive_statistics_from() requires a left child, override in concrete node "
-                "implementation for different behavior");
+              "implementation for different behavior");
   DebugAssert(!static_cast<bool>(_right_child),
               "Default implementation of derive_statistics_from() cannot have a right_child");
 
