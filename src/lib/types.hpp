@@ -1,6 +1,6 @@
 #pragma once
 
-#include <boost/serialization/strong_typedef.hpp>
+#include <tbb/concurrent_vector.h>
 
 #include <cstdint>
 #include <iostream>
@@ -9,27 +9,49 @@
 #include <tuple>
 #include <vector>
 
+#include "polymorphic_allocator.hpp"
 #include "strong_typedef.hpp"
+
+/**
+ * We use STRONG_TYPEDEF to avoid things like adding chunk ids and value ids.
+ * Because implicit constructors are deleted, you cannot initialize a ChunkID
+ * like this
+ *   ChunkID x = 3;
+ * but need to use
+ *   ChunkID x{3}; or
+ *   auto x = ChunkID{3};
+ *
+ * WorkerID, TaskID, CommitID, and TransactionID are used in std::atomics and
+ * therefore need to be trivially copyable. That's currently not possible with
+ * the strong typedef (as far as I know).
+ *
+ * TODO(anyone): Also, strongly typing ChunkOffset causes a lot of errors in
+ * the group key and adaptive radix tree implementations. Unfortunately, I
+ * wasn’t able to properly resolve these issues because I am not familiar with
+ * the code there
+ */
+
+STRONG_TYPEDEF(uint32_t, ChunkID);
+STRONG_TYPEDEF(uint16_t, ColumnID);
+STRONG_TYPEDEF(uint32_t, ValueID);  // Cannot be larger than ChunkOffset
+STRONG_TYPEDEF(uint32_t, NodeID);
+STRONG_TYPEDEF(int32_t, CpuID);
 
 namespace opossum {
 
-//
-// We use STRONG_TYPEDEF to avoid things like adding chunk ids and value ids.
-// Because implicit constructors are deleted, you cannot initialize a ChunkID
-// like this
-//   ChunkId x = 3;
-// but need to use
-//   ChunkId x{3};
-//
-// WorkerID, TaskID, CommitID, and TransactionID are used in std::atomics and
-// therefore need to be trivially copyable. That's currently not possible with
-// the strong typedef (as far as I know).
-// TODO(anyone): Also, strongly typing ChunkOffset causes a lot of errors in
-// the group key and adaptive radix tree implementations. Unfortunately, I
-// wasn't able to properly resolve these issues because I am not familiar with
-// the code there
+/** We use vectors with custom allocators, e.g, to bind the data object to
+ * specific NUMA nodes. This is mainly used in the data objects, i.e.,
+ * Chunk, ValueColumn, DictionaryColumn, ReferenceColumn and attribute vectors.
+ * The PolymorphicAllocator provides an abstraction over several allocation
+ * methods by adapting to subclasses of boost::container::pmr::memory_resource.
+ */
 
-STRONG_TYPEDEF(uint32_t, ChunkID);
+template <typename T>
+using pmr_vector = std::vector<T, PolymorphicAllocator<T>>;
+
+template <typename T>
+using pmr_concurrent_vector = tbb::concurrent_vector<T, PolymorphicAllocator<T>>;
+
 using ChunkOffset = uint32_t;
 
 struct RowID {
@@ -47,12 +69,8 @@ struct RowID {
   }
 };
 
-STRONG_TYPEDEF(uint16_t, ColumnID);
-STRONG_TYPEDEF(uint32_t, ValueID);  // Cannot be larger than ChunkOffset
 using WorkerID = uint32_t;
-STRONG_TYPEDEF(uint32_t, NodeID);
 using TaskID = uint32_t;
-STRONG_TYPEDEF(int32_t, CpuID);
 
 // When changing these to 64-bit types, reading and writing to them might not be atomic anymore.
 // Among others, the validate operator might break when another operator is simultaneously writing begin or end CIDs.
@@ -63,29 +81,13 @@ using StringLength = uint16_t;     // The length of column value strings must fi
 using ColumnNameLength = uint8_t;  // The length of column names must fit in this type.
 using AttributeVectorWidth = uint8_t;
 
-using PosList = std::vector<RowID>;
-
-class ColumnName {
- public:
-  explicit ColumnName(const std::string &name) : _name(name) {}
-
-  operator std::string() const { return _name; }
-
-  friend std::ostream &operator<<(std::ostream &o, const ColumnName &column_name) {
-    o << column_name._name;
-    return o;
-  }
-
-  bool operator==(const ColumnName &rhs) const { return _name == rhs._name; }
-
- protected:
-  std::string _name;
-};
+using PosList = pmr_vector<RowID>;
 
 constexpr NodeID INVALID_NODE_ID{std::numeric_limits<NodeID::base_type>::max()};
 constexpr TaskID INVALID_TASK_ID{std::numeric_limits<TaskID>::max()};
 constexpr CpuID INVALID_CPU_ID{std::numeric_limits<CpuID::base_type>::max()};
 constexpr WorkerID INVALID_WORKER_ID{std::numeric_limits<WorkerID>::max()};
+constexpr ColumnID INVALID_COLUMN_ID{std::numeric_limits<ColumnID::base_type>::max()};
 
 constexpr NodeID CURRENT_NODE_ID{std::numeric_limits<NodeID::base_type>::max() - 1};
 
@@ -144,9 +146,9 @@ enum class ExpressionType {
   /*A parameter used in PreparedStatements*/
   Placeholder,
   /*An identifier for a column*/
-  ColumnIdentifier,
+  Column,
   /*An identifier for a function, such as COUNT, MIN, MAX*/
-  FunctionIdentifier,
+  Function,
 
   /*A subselect*/
   Select,
@@ -186,6 +188,8 @@ enum class ExpressionType {
 enum class JoinMode { Inner, Left, Right, Outer, Cross, Natural, Self };
 
 enum class AggregateFunction { Min, Max, Sum, Avg, Count };
+
+enum class OrderByMode { Ascending, Descending, AscendingNullsLast, DescendingNullsLast };
 
 class Noncopyable {
  protected:

@@ -3,9 +3,9 @@
 #include "../base_test.hpp"
 #include "gtest/gtest.h"
 
-#include "../lib/all_parameter_variant.hpp"
-#include "../lib/type_cast.hpp"
-#include "../lib/types.hpp"
+#include "all_parameter_variant.hpp"
+#include "type_cast.hpp"
+#include "types.hpp"
 
 namespace opossum {
 
@@ -13,41 +13,41 @@ class AllParameterVariantTest : public BaseTest {};
 
 TEST_F(AllParameterVariantTest, getCurrentType) {
   {
-    AllParameterVariant parameter(ColumnName("column_name"));
-    EXPECT_EQ(parameter.type(), typeid(ColumnName));
+    AllParameterVariant parameter(ColumnID{0});
+    EXPECT_EQ(parameter.type(), typeid(ColumnID));
     EXPECT_NE(parameter.type(), typeid(AllTypeVariant));
   }
   {
     AllParameterVariant parameter("string");
-    EXPECT_NE(parameter.type(), typeid(ColumnName));
+    EXPECT_NE(parameter.type(), typeid(ColumnID));
     EXPECT_EQ(parameter.type(), typeid(AllTypeVariant));
   }
   {
     AllParameterVariant parameter(static_cast<int32_t>(123));
-    EXPECT_NE(parameter.type(), typeid(ColumnName));
+    EXPECT_NE(parameter.type(), typeid(ColumnID));
     EXPECT_EQ(parameter.type(), typeid(AllTypeVariant));
   }
   {
     AllParameterVariant parameter(static_cast<int64_t>(123456789l));
-    EXPECT_NE(parameter.type(), typeid(ColumnName));
+    EXPECT_NE(parameter.type(), typeid(ColumnID));
     EXPECT_EQ(parameter.type(), typeid(AllTypeVariant));
   }
   {
     AllParameterVariant parameter(123.4f);
-    EXPECT_NE(parameter.type(), typeid(ColumnName));
+    EXPECT_NE(parameter.type(), typeid(ColumnID));
     EXPECT_EQ(parameter.type(), typeid(AllTypeVariant));
   }
   {
     AllParameterVariant parameter(123.4);
-    EXPECT_NE(parameter.type(), typeid(ColumnName));
+    EXPECT_NE(parameter.type(), typeid(ColumnID));
     EXPECT_EQ(parameter.type(), typeid(AllTypeVariant));
   }
 }
 
 TEST_F(AllParameterVariantTest, getCurrentValue) {
   {
-    AllParameterVariant parameter(ColumnName("column_name"));
-    EXPECT_EQ(static_cast<std::string>(boost::get<ColumnName>(parameter)), "column_name");
+    AllParameterVariant parameter(ColumnID{0});
+    EXPECT_EQ(static_cast<std::uint16_t>(boost::get<ColumnID>(parameter)), static_cast<std::uint16_t>(0u));
   }
   {
     AllParameterVariant parameter("string");

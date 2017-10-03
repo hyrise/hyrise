@@ -7,6 +7,7 @@
 #include <unordered_map>
 #include <vector>
 
+#include "sql/sql_query_plan.hpp"
 #include "storage/table.hpp"
 
 namespace opossum {
@@ -54,6 +55,11 @@ class Console {
   void setLogfile(const std::string &logfile);
 
   /*
+   * Load command history from history file.
+   */
+  void loadHistory(const std::string &history_file);
+
+  /*
    * Prints to the log_file (and the console).
    *
    * @param output        The text that should be printed.
@@ -89,12 +95,20 @@ class Console {
    */
   int _eval_sql(const std::string &sql);
 
+  /*
+   * Executes the given SQL plan
+   */
+  int _execute_plan(const SQLQueryPlan &plan);
+
   // Command functions, registered to be called from the Console
   static int exit(const std::string &args);
   static int help(const std::string &args);
   static int generate_tpcc(const std::string &args);
   static int load_table(const std::string &args);
   static int exec_script(const std::string &args);
+  static int print_table(const std::string &args);
+
+  static int visualize(const std::string &input);
 
   // GNU readline interface to our commands
   static char **command_completion(const char *text, int start, int end);
@@ -103,6 +117,7 @@ class Console {
 
   std::string _prompt;
   std::string _multiline_input;
+  std::string _history_file;
   RegisteredCommands _commands;
   std::vector<std::string> _tpcc_commands;
   std::ostream _out;

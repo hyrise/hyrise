@@ -1,4 +1,4 @@
-left.a|left.b|right.left.a|right.left.b|right.right.a|right.right.b
+a|b|a|b|a|b
 int|int|int|int|int|int
 6|7|6|16|6|9
 7|1|7|0|7|1

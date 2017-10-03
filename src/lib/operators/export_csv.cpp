@@ -22,7 +22,7 @@ const std::string ExportCsv::name() const { return "ExportCSV"; }
 uint8_t ExportCsv::num_in_tables() const { return 1; }
 uint8_t ExportCsv::num_out_tables() const { return 1; }
 
-std::shared_ptr<const Table> ExportCsv::on_execute() {
+std::shared_ptr<const Table> ExportCsv::_on_execute() {
   CsvConfig config{};
   _generate_meta_info_file(_input_left->get_output(), _filename + config.meta_file_extension);
   _generate_content_file(_input_left->get_output(), _filename);

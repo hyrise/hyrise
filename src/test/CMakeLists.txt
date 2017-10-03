@@ -9,6 +9,8 @@ set(
 set(
     OPOSSUM_TEST_SOURCES
     ${SHARED_SOURCES}
+    sql/sql_base_test.cpp
+    sql/sql_sqlite_runner_test.cpp
     # concurrency/commit_context_test.cpp
     # concurrency/transaction_manager_test.cpp
     # lib/AllParameterVariant_test.cpp
@@ -28,6 +30,7 @@ set(
     # operators/insert_test.cpp
     # operators/join_equi_test.cpp
     # operators/join_full_test.cpp
+    # operators/join_hash_test.cpp
     # operators/join_test.hpp
     # operators/limit_test.cpp
     # operators/print_test.cpp
@@ -41,13 +44,18 @@ set(
     # operators/update_test.cpp
     # operators/validate_test.cpp
     # operators/validate_visibility_test.cpp
-    # optimizer/abstract_syntax_tree_test.cpp
+    # optimizer/abstract_syntax_tree/abstract_syntax_tree_test.cpp
+    # optimizer/abstract_syntax_tree/aggregate_node_test.cpp
+    # optimizer/abstract_syntax_tree/join_node_test.cpp
+    # optimizer/abstract_syntax_tree/stored_table_node_test.cpp
+    # optimizer/abstract_syntax_tree/projection_node_test.cpp
     # optimizer/ast_to_operator_translator_test.cpp
     # optimizer/column_statistics_test.cpp
+    # optimizer/expression_test.cpp
     # optimizer/strategy/predicate_reordering_test.cpp
     # optimizer/table_statistics_test.cpp
     # scheduler/scheduler_test.cpp
-    sql/sql_base_test.cpp
+    # sql/sql_base_test.cpp
     # sql/sql_basic_cache_test.cpp
     # sql/sql_expression_translator_test.cpp
     # sql/sql_parse_tree_cache_test.cpp
@@ -57,13 +65,13 @@ set(
     # sql/sql_query_plan_cache_test.cpp
     # sql/sql_to_ast_translator_test.cpp
     # sql/sql_to_result_test.cpp
-    sql/sql_sqlite_runner_test.cpp
     # sql/tpch_test.cpp
     # storage/adaptive_radix_tree_index_test.cpp
     # storage/chunk_test.cpp
     # storage/composite_group_key_index_test.cpp
     # storage/dictionary_column_test.cpp
     # storage/group_key_index_test.cpp
+    # storage/iterables_test.cpp
     # storage/multi_column_index_test.cpp
     # storage/reference_column_test.cpp
     # storage/single_column_index_test.cpp
@@ -76,6 +84,7 @@ set(
     # tasks/chunk_compression_task_test.cpp
     # tasks/operator_task_test.cpp
     # utils/cuckoo_hashtable_test.cpp
+    # utils/numa_memory_resource_test.cpp
 )
 
 set (
@@ -90,6 +99,18 @@ set(
     gtest
 )
 
+# Build special ASAN version of googletest
+include_directories(../../third_party/googletest/googletest/)
+
+set(
+    GTEST_SOURCES
+    ../../third_party/googletest/googletest/src/gtest-all.cc
+)
+add_library(gtestAsan EXCLUDE_FROM_ALL STATIC ${GTEST_SOURCES})
+set_target_properties(gtestAsan PROPERTIES SUFFIX "_asan")
+set_target_properties(gtestAsan PROPERTIES COMPILE_FLAGS "-fsanitize=address -fno-omit-frame-pointer")
+
+
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 
 # Configure opossumTest
@@ -103,7 +124,7 @@ set_target_properties(opossumCoverage PROPERTIES COMPILE_FLAGS "-fprofile-arcs -
 
 # Configure opossumAsanApp
 add_executable(opossumAsan EXCLUDE_FROM_ALL ${OPOSSUM_TEST_SOURCES})
-target_link_libraries(opossumAsan opossumAsanLib ${LIBRARIES} -fsanitize=address)
+target_link_libraries(opossumAsan opossumAsanLib gtestAsan -fsanitize=address)
 set_target_properties(opossumAsan PROPERTIES COMPILE_FLAGS "-fsanitize=address -fno-omit-frame-pointer")
 
 # Configure opossumTestTPCC

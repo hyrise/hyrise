@@ -19,13 +19,13 @@ class ColumnStatisticsTest : public BaseTest {
   void SetUp() override {
     _table_with_different_column_types = load_table("src/test/tables/int_float_double_string.tbl", 0);
     _column_statistics_int =
-        std::make_shared<ColumnStatistics<int32_t>>(ColumnID(0), _table_with_different_column_types);
+        std::make_shared<ColumnStatistics<int32_t>>(ColumnID{0}, _table_with_different_column_types);
     _column_statistics_float =
-        std::make_shared<ColumnStatistics<float>>(ColumnID(1), _table_with_different_column_types);
+        std::make_shared<ColumnStatistics<float>>(ColumnID{1}, _table_with_different_column_types);
     _column_statistics_double =
-        std::make_shared<ColumnStatistics<double>>(ColumnID(2), _table_with_different_column_types);
+        std::make_shared<ColumnStatistics<double>>(ColumnID{2}, _table_with_different_column_types);
     _column_statistics_string =
-        std::make_shared<ColumnStatistics<std::string>>(ColumnID(3), _table_with_different_column_types);
+        std::make_shared<ColumnStatistics<std::string>>(ColumnID{3}, _table_with_different_column_types);
 
     _table_uniform_distribution = load_table("src/test/tables/int_equal_distribution.tbl", 0);
     _column_statistics_uniform_columns = {
@@ -47,19 +47,18 @@ class ColumnStatisticsTest : public BaseTest {
     }
   }
 
-  // For two column scans (type of value1 is ColumnName)
+  // For two column scans (type of value1 is ColumnID)
   void predict_selectivities_and_compare(const std::shared_ptr<Table> &table,
                                          const std::vector<std::shared_ptr<BaseColumnStatistics>> &column_statistics,
                                          const ScanType scan_type) {
     auto table_wrapper = std::make_shared<TableWrapper>(table);
     table_wrapper->execute();
     auto row_count = table->row_count();
-    for (uint32_t i = 0; i < column_statistics.size(); ++i) {
-      for (uint32_t j = 0; j < column_statistics.size() && i != j; ++j) {
-        auto result_container =
-            column_statistics[i]->estimate_selectivity_for_two_column_predicate(scan_type, column_statistics[j]);
-        auto table_scan = std::make_shared<TableScan>(table_wrapper, table->column_name(ColumnID(i)), scan_type,
-                                                      ColumnName(table->column_name(ColumnID(j))));
+    for (ColumnID::base_type column_1 = 0; column_1 < column_statistics.size(); ++column_1) {
+      for (ColumnID::base_type column_2 = 0; column_2 < column_statistics.size() && column_1 != column_2; ++column_2) {
+        auto result_container = column_statistics[column_1]->estimate_selectivity_for_two_column_predicate(
+            scan_type, column_statistics[column_2]);
+        auto table_scan = std::make_shared<TableScan>(table_wrapper, ColumnID{column_1}, scan_type, ColumnID{column_2});
         table_scan->execute();
         auto result_row_count = table_scan->get_output()->row_count();
         EXPECT_FLOAT_EQ(result_container.selectivity,

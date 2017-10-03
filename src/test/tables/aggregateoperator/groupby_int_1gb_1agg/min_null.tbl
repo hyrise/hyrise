@@ -1,0 +1,7 @@
+a|MIN(b)
+int_null|float_null
+12345|456.7
+123|458.7
+12|350.7
+null|5.0
+100|null

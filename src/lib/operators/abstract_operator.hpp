@@ -35,6 +35,9 @@ class TransactionContext;
 //   4. Add an entry in the swith-case of OperatorTranslator::translate_proto() to dispatch calls to the method created
 //      in step 3
 //   5. Write a test in `src/test/network/operator_translator_test.cpp`
+//
+// Find more information about operators in our Wiki: https://github.com/hyrise/zweirise/wiki/operator-concept
+
 class AbstractOperator : private Noncopyable {
  public:
   AbstractOperator(const std::shared_ptr<const AbstractOperator> left = nullptr,
@@ -54,6 +57,7 @@ class AbstractOperator : private Noncopyable {
   std::shared_ptr<const Table> get_output() const;
 
   virtual const std::string name() const = 0;
+  virtual const std::string description() const;
 
   // returns the number of input tables, range of values is [0, 2]
   virtual uint8_t num_in_tables() const = 0;
@@ -79,14 +83,24 @@ class AbstractOperator : private Noncopyable {
   std::shared_ptr<AbstractOperator> mutable_input_left() const;
   std::shared_ptr<AbstractOperator> mutable_input_right() const;
 
+  struct PerformanceData {
+    uint64_t walltime_ns = 0;  // time spent in nanoseconds executing this operator
+  };
+  const AbstractOperator::PerformanceData &performance_data() const;
+
  protected:
   // abstract method to actually execute the operator
   // execute and get_output are split into two methods to allow for easier
   // asynchronous execution
-  virtual std::shared_ptr<const Table> on_execute(std::shared_ptr<TransactionContext> context) = 0;
+  virtual std::shared_ptr<const Table> _on_execute(std::shared_ptr<TransactionContext> context) = 0;
 
-  std::shared_ptr<const Table> input_table_left() const;
-  std::shared_ptr<const Table> input_table_right() const;
+  // method that allows operator-specific cleanups for temporary data.
+  // separate from _on_execute for readability and as a reminder to
+  // clean up after execution (if it makes sense)
+  virtual void _on_cleanup();
+
+  std::shared_ptr<const Table> _input_table_left() const;
+  std::shared_ptr<const Table> _input_table_right() const;
 
   // Shared pointers to input operators, can be nullptr.
   std::shared_ptr<const AbstractOperator> _input_left;
@@ -96,6 +110,8 @@ class AbstractOperator : private Noncopyable {
   std::shared_ptr<const Table> _output;
 
   std::weak_ptr<TransactionContext> _transaction_context;
+
+  PerformanceData _performance_data;
 };
 
 }  // namespace opossum

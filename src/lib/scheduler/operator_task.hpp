@@ -25,7 +25,7 @@ class OperatorTask : public AbstractTask {
   const std::shared_ptr<AbstractOperator>& get_operator() const;
 
  protected:
-  void on_execute() override;
+  void _on_execute() override;
 
   /**
    * Create tasks recursively. Called by `make_tasks_from_operator`.

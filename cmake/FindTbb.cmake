@@ -1,4 +1,4 @@
-# Find the numa policy library.
+# Find the Intel Thread Building Blocks library.
 # Output variables:
 #  TBB_INCLUDE_DIR : e.g., /usr/include/.
 #  TBB_LIBRARY     : Library path of Intel Threading Building Blocks library

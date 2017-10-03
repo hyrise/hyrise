@@ -20,26 +20,34 @@ namespace opossum {
  */
 class JoinNode : public AbstractASTNode {
  public:
-  JoinNode(const JoinMode join_mode, const std::string &prefix_left, const std::string &prefix_right,
-           const optional<std::pair<std::string, std::string>> &join_column_names = {},
-           const optional<ScanType> &scan_type = {});
+  explicit JoinNode(const JoinMode join_mode);
+
+  JoinNode(const JoinMode join_mode, const std::pair<ColumnID, ColumnID> &join_column_ids, const ScanType scan_type);
+
+  const optional<std::pair<ColumnID, ColumnID>> &join_column_ids() const;
+  const optional<ScanType> &scan_type() const;
+  JoinMode join_mode() const;
 
   std::string description() const override;
+  const std::vector<ColumnID> &output_column_id_to_input_column_id() const override;
+  const std::vector<std::string> &output_column_names() const override;
 
-  std::vector<std::string> output_column_names() const override;
+  bool knows_table(const std::string &table_name) const override;
+  std::vector<ColumnID> get_output_column_ids_for_table(const std::string &table_name) const override;
 
-  optional<std::pair<std::string, std::string>> join_column_names() const;
-  optional<ScanType> scan_type() const;
-  JoinMode join_mode() const;
-  const std::string &prefix_left() const;
-  const std::string &prefix_right() const;
+  optional<ColumnID> find_column_id_by_named_column_reference(
+      const NamedColumnReference &named_column_reference) const override;
+
+ protected:
+  void _on_child_changed() override;
 
  private:
-  optional<std::pair<std::string, std::string>> _join_column_names;
-  optional<ScanType> _scan_type;
   JoinMode _join_mode;
-  std::string _prefix_left;
-  std::string _prefix_right;
+  optional<std::pair<ColumnID, ColumnID>> _join_column_ids;
+  optional<ScanType> _scan_type;
+
+  std::vector<ColumnID> _output_column_id_to_input_column_id;
+  std::vector<std::string> _output_column_names;
 };
 
 }  // namespace opossum

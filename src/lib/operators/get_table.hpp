@@ -14,6 +14,7 @@ class GetTable : public AbstractReadOnlyOperator {
   explicit GetTable(const std::string& name);
 
   const std::string name() const override;
+  const std::string description() const override;
   uint8_t num_in_tables() const override;
   uint8_t num_out_tables() const override;
 
@@ -22,7 +23,7 @@ class GetTable : public AbstractReadOnlyOperator {
   std::shared_ptr<AbstractOperator> recreate(const std::vector<AllParameterVariant>& args) const override;
 
  protected:
-  std::shared_ptr<const Table> on_execute() override;
+  std::shared_ptr<const Table> _on_execute() override;
 
   // name of the table to retrieve
   const std::string _name;

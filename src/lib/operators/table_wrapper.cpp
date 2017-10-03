@@ -13,5 +13,5 @@ uint8_t TableWrapper::num_in_tables() const { return 1; }
 
 uint8_t TableWrapper::num_out_tables() const { return 1; }
 
-std::shared_ptr<const Table> TableWrapper::on_execute() { return _table; }
+std::shared_ptr<const Table> TableWrapper::_on_execute() { return _table; }
 }  // namespace opossum
