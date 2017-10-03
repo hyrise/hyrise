@@ -42,15 +42,11 @@ bool PredicateReorderingRule::_reorder_predicates(std::vector<std::shared_ptr<Pr
   auto parent = predicates.front()->parent();
 
   const auto sort_predicate = [&](auto& l, auto& r) {
-    return l->get_statistics_from(child)->row_count() > r->get_statistics_from(child)->row_count();
+    return l->derive_statistics_from(child)->row_count() > r->derive_statistics_from(child)->row_count();
   };
-  // Sort in descending order
-  std::sort(predicates.begin(), predicates.end(), sort_predicate);
 
   // Sort in descending order
-  std::sort(predicates.begin(), predicates.end(), [&](auto& l, auto& r) {
-    return l->derive_statistics_from(child)->row_count() > r->derive_statistics_from(child)->row_count();
-  });
+  std::sort(predicates.begin(), predicates.end(), sort_predicate);
 
   if (std::is_sorted(predicates.begin(), predicates.end(), sort_predicate)) {
     return false;

@@ -73,14 +73,14 @@ TEST_F(JoinDetectionRuleTest, SimpleDetectionTest) {
    *       |
    *     Cross
    *    /     \
-   *   a      b
+   *   a       b
    *
    * gets converted to
    *
    *      Join
    *  (a.a == b.a)
    *    /     \
-   *   a      b
+   *   a       b
    */
 
   // Generate AST
@@ -114,7 +114,7 @@ TEST_F(JoinDetectionRuleTest, SecondDetectionTest) {
    *       |
    *     Cross
    *    /     \
-   *   a      b
+   *   a       b
    *
    * gets converted to
    *
@@ -124,7 +124,7 @@ TEST_F(JoinDetectionRuleTest, SecondDetectionTest) {
    *      Join
    *  (a.a == b.a)
    *    /     \
-   *   a      b
+   *   a       b
    */
 
   // Generate AST
@@ -142,9 +142,15 @@ TEST_F(JoinDetectionRuleTest, SecondDetectionTest) {
   auto output = StrategyBaseTest::apply_rule(_rule, projection_node);
 
   EXPECT_EQ(output->type(), ASTNodeType::Projection);
-  EXPECT_EQ(output->left_child()->type(), ASTNodeType::Join);
-  EXPECT_EQ(output->left_child()->left_child()->type(), ASTNodeType::StoredTable);
-  EXPECT_EQ(output->left_child()->right_child()->type(), ASTNodeType::StoredTable);
+  ASSERT_EQ(output->left_child()->type(), ASTNodeType::Join);
+
+  auto output_join_node = std::dynamic_pointer_cast<JoinNode>(output->left_child());
+
+  EXPECT_EQ(output_join_node->scan_type(), ScanType::OpEquals);
+  EXPECT_EQ(output_join_node->join_column_ids(), std::make_pair(ColumnID{0}, ColumnID{0}));
+  EXPECT_EQ(output_join_node->left_child()->type(), ASTNodeType::StoredTable);
+  EXPECT_EQ(output_join_node->right_child()->type(), ASTNodeType::StoredTable);
+
 }
 
 TEST_F(JoinDetectionRuleTest, NoPredicate) {
@@ -156,7 +162,7 @@ TEST_F(JoinDetectionRuleTest, NoPredicate) {
    *       |
    *     Cross
    *    /     \
-   *   a      b
+   *   a       b
    *
    * is not manipulated
    */
@@ -190,7 +196,7 @@ TEST_F(JoinDetectionRuleTest, NoMatchingPredicate) {
    *       |
    *     Cross
    *    /     \
-   *   a      b
+   *   a       b
    *
    * isn't manipulated.
    */
@@ -229,7 +235,7 @@ TEST_F(JoinDetectionRuleTest, NonCrossJoin) {
    *     Join
    *  (a.b == b.b)
    *    /     \
-   *   a      b
+   *   a       b
    *
    * isn't manipulated.
    */
@@ -267,9 +273,9 @@ TEST_F(JoinDetectionRuleTest, MultipleJoins) {
    *            |
    *          Cross
    *         /     \
-   *     Cross     c
+   *     Cross      c
    *    /     \
-   *   a      b
+   *   a       b
    *
    *   gets converted to
    *
@@ -278,10 +284,10 @@ TEST_F(JoinDetectionRuleTest, MultipleJoins) {
    *            |
    *          Cross
    *         /     \
-   *      Join     c
+   *      Join      c
    *  (a.a == b.a)
    *    /     \
-   *   a      b
+   *   a       b
    *
    */
   const auto join_node1 = std::make_shared<JoinNode>(JoinMode::Cross);
@@ -331,9 +337,9 @@ TEST_F(JoinDetectionRuleTest, MultipleJoins2) {
    *            |
    *          Cross
    *         /     \
-   *     Cross     c
+   *     Cross      c
    *    /     \
-   *   a      b
+   *   a       b
    *
    *   gets converted to
    *
@@ -345,7 +351,7 @@ TEST_F(JoinDetectionRuleTest, MultipleJoins2) {
    *         /     \
    *      Cross     c
    *    /     \
-   *   a      b
+   *   a       b
    *
    */
   const auto join_node1 = std::make_shared<JoinNode>(JoinMode::Cross);
@@ -391,7 +397,7 @@ TEST_F(JoinDetectionRuleTest, NoOptimizationAcrossProjection) {
    *           |
    *          Cross
    *         /     \
-   *        a      b
+   *        a       b
    *
    * isn't manipulated.
    *
@@ -431,7 +437,7 @@ TEST_F(JoinDetectionRuleTest, NoJoinDetectionAcrossProjections) {
    *           |
    *          Cross
    *         /     \
-   *        a      b
+   *        a       b
    *
    * isn't manipulated.
    *
