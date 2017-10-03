@@ -30,7 +30,10 @@ const std::vector<ColumnID>& StoredTableNode::output_column_id_to_input_column_i
 
 const std::vector<std::string>& StoredTableNode::output_column_names() const { return _output_column_names; }
 
-const std::shared_ptr<TableStatistics> StoredTableNode::_gather_statistics() const {
+std::shared_ptr<TableStatistics> StoredTableNode::derive_statistics_from(
+  const std::shared_ptr<AbstractASTNode>& left_child,
+  const std::shared_ptr<AbstractASTNode>& right_child) const {
+  DebugAssert(!left_child && !right_child, "StoredTableNode must be leaf");
   return StorageManager::get().get_table(_table_name)->table_statistics();
 }
 

@@ -32,6 +32,9 @@ class JoinNode : public AbstractASTNode {
   const std::vector<ColumnID> &output_column_id_to_input_column_id() const override;
   const std::vector<std::string> &output_column_names() const override;
 
+  std::shared_ptr<TableStatistics> derive_statistics_from(
+    const std::shared_ptr<AbstractASTNode>& left_child, const std::shared_ptr<AbstractASTNode>& right_child) const override;
+
   bool knows_table(const std::string &table_name) const override;
   std::vector<ColumnID> get_output_column_ids_for_table(const std::string &table_name) const override;
 

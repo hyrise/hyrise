@@ -66,26 +66,21 @@ void AbstractASTNode::set_statistics(const std::shared_ptr<TableStatistics>& sta
 
 const std::shared_ptr<TableStatistics> AbstractASTNode::get_statistics() {
   if (!_statistics) {
-    _statistics = _gather_statistics();
+    _statistics = derive_statistics_from(left_child(), right_child());
   }
 
   return _statistics;
 }
 
-const std::shared_ptr<TableStatistics> AbstractASTNode::derive_statistics_from(
-    const std::shared_ptr<AbstractASTNode>& other_node) const {
-  return other_node->get_statistics();
-}
-
-// TODO(mp): This does not support Joins or Unions. Add support for nodes with two children later.
-// This requires changes in the Statistics interface.
-const std::shared_ptr<TableStatistics> AbstractASTNode::_gather_statistics() const {
+std::shared_ptr<TableStatistics> AbstractASTNode::derive_statistics_from(
+    const std::shared_ptr<AbstractASTNode>& left_child, const std::shared_ptr<AbstractASTNode>& right_child) const {
   DebugAssert(static_cast<bool>(_left_child),
-              "Default implementation of _gather_statistics() requires a left child, override in concrete node "
-              "implementation for different behavior");
+              "Default implementation of derive_statistics_from() requires a left child, override in concrete node "
+                "implementation for different behavior");
   DebugAssert(!static_cast<bool>(_right_child),
-              "Default implementation of _gather_statistics() cannot have a right_child so far");
-  return derive_statistics_from(_left_child);
+              "Default implementation of derive_statistics_from() cannot have a right_child");
+
+  return left_child->get_statistics();
 }
 
 const std::vector<std::string>& AbstractASTNode::output_column_names() const {

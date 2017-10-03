@@ -40,9 +40,10 @@ const AllParameterVariant& PredicateNode::value() const { return _value; }
 
 const optional<AllTypeVariant>& PredicateNode::value2() const { return _value2; }
 
-const std::shared_ptr<TableStatistics> PredicateNode::derive_statistics_from(
-    const std::shared_ptr<AbstractASTNode>& parent) const {
-  return parent->get_statistics()->predicate_statistics(_column_id, _scan_type, _value, _value2);
+std::shared_ptr<TableStatistics> PredicateNode::derive_statistics_from(
+    const std::shared_ptr<AbstractASTNode>& left_child, const std::shared_ptr<AbstractASTNode>& right_child) const {
+  DebugAssert(left_child && !right_child, "PredicateNode need left_child and no right_child");
+  return left_child->get_statistics()->predicate_statistics(_column_id, _scan_type, _value, _value2);
 }
 
 }  // namespace opossum

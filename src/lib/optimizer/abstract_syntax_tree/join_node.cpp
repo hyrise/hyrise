@@ -10,6 +10,7 @@
 #include "common.hpp"
 #include "constant_mappings.hpp"
 #include "types.hpp"
+#include "optimizer/table_statistics.hpp"
 #include "utils/assert.hpp"
 
 namespace opossum {
@@ -104,6 +105,13 @@ optional<ColumnID> JoinNode::find_column_id_by_named_column_reference(
               "ColumnID should be in output.");
 
   return output_column_id;
+}
+
+std::shared_ptr<TableStatistics> JoinNode::derive_statistics_from(
+  const std::shared_ptr<AbstractASTNode>& left_child, const std::shared_ptr<AbstractASTNode>& right_child) const {
+  Fail("Join statistics not available yet"); // TODO(anyone) fix once join statistics are in
+  return nullptr;
+  // return left_child->get_statistics()->join_...
 }
 
 bool JoinNode::knows_table(const std::string &table_name) const {
