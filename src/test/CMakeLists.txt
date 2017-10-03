@@ -28,6 +28,7 @@ set(
     operators/insert_test.cpp
     operators/join_equi_test.cpp
     operators/join_full_test.cpp
+    operators/join_hash_test.cpp
     operators/join_test.hpp
     operators/limit_test.cpp
     operators/print_test.cpp
@@ -48,7 +49,11 @@ set(
     optimizer/abstract_syntax_tree/projection_node_test.cpp
     optimizer/ast_to_operator_translator_test.cpp
     optimizer/column_statistics_test.cpp
+<<<<<<< HEAD
     optimizer/strategy/join_detection_rule_test.cpp
+=======
+    optimizer/expression_test.cpp
+>>>>>>> d40126aa43fed0d45416fe07fe95333d4f401d8d
     optimizer/strategy/predicate_reordering_test.cpp
     optimizer/strategy/strategy_base_test.cpp
     optimizer/table_statistics_test.cpp
@@ -97,6 +102,18 @@ set(
     gtest
 )
 
+# Build special ASAN version of googletest
+include_directories(../../third_party/googletest/googletest/)
+
+set(
+    GTEST_SOURCES
+    ../../third_party/googletest/googletest/src/gtest-all.cc
+)
+add_library(gtestAsan EXCLUDE_FROM_ALL STATIC ${GTEST_SOURCES})
+set_target_properties(gtestAsan PROPERTIES SUFFIX "_asan")
+set_target_properties(gtestAsan PROPERTIES COMPILE_FLAGS "-fsanitize=address -fno-omit-frame-pointer")
+
+
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 
 # Configure opossumTest
@@ -110,7 +127,7 @@ set_target_properties(opossumCoverage PROPERTIES COMPILE_FLAGS "-fprofile-arcs -
 
 # Configure opossumAsanApp
 add_executable(opossumAsan EXCLUDE_FROM_ALL ${OPOSSUM_TEST_SOURCES})
-target_link_libraries(opossumAsan opossumAsanLib ${LIBRARIES} -fsanitize=address)
+target_link_libraries(opossumAsan opossumAsanLib gtestAsan -fsanitize=address)
 set_target_properties(opossumAsan PROPERTIES COMPILE_FLAGS "-fsanitize=address -fno-omit-frame-pointer")
 
 # Configure opossumTestTPCC

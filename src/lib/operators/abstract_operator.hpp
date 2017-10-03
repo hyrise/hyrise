@@ -57,6 +57,7 @@ class AbstractOperator : private Noncopyable {
   std::shared_ptr<const Table> get_output() const;
 
   virtual const std::string name() const = 0;
+  virtual const std::string description() const;
 
   // returns the number of input tables, range of values is [0, 2]
   virtual uint8_t num_in_tables() const = 0;
@@ -82,6 +83,11 @@ class AbstractOperator : private Noncopyable {
   std::shared_ptr<AbstractOperator> mutable_input_left() const;
   std::shared_ptr<AbstractOperator> mutable_input_right() const;
 
+  struct PerformanceData {
+    uint64_t walltime_ns = 0;  // time spent in nanoseconds executing this operator
+  };
+  const AbstractOperator::PerformanceData &performance_data() const;
+
  protected:
   // abstract method to actually execute the operator
   // execute and get_output are split into two methods to allow for easier
@@ -104,6 +110,8 @@ class AbstractOperator : private Noncopyable {
   std::shared_ptr<const Table> _output;
 
   std::weak_ptr<TransactionContext> _transaction_context;
+
+  PerformanceData _performance_data;
 };
 
 }  // namespace opossum

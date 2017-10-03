@@ -80,7 +80,7 @@ std::shared_ptr<const Table> ImportBinary::_on_execute() {
   ChunkID chunk_count;
   std::tie(table, chunk_count) = _read_header(file);
   for (ChunkID chunk_id{0}; chunk_id < chunk_count; ++chunk_id) {
-    table->add_chunk(_import_chunk(file, table));
+    table->emplace_chunk(_import_chunk(file, table));
   }
 
   if (_tablename) {

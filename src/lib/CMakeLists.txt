@@ -119,6 +119,8 @@ set(
     operators/insert.hpp
     operators/join_hash.cpp
     operators/join_hash.hpp
+    operators/join_sort_merge.cpp
+    operators/join_sort_merge.hpp
     operators/join_nested_loop_a.cpp
     operators/join_nested_loop_a.hpp
     operators/join_nested_loop_b.cpp
@@ -198,6 +200,10 @@ set(
     optimizer/strategy/predicate_reordering_rule.hpp
     optimizer/table_statistics.cpp
     optimizer/table_statistics.hpp
+    planviz/ast_visualizer.cpp
+    planviz/ast_visualizer.hpp
+    planviz/sql_query_plan_visualizer.cpp
+    planviz/sql_query_plan_visualizer.hpp
     polymorphic_allocator.hpp
     resolve_type.hpp
     scheduler/abstract_scheduler.cpp

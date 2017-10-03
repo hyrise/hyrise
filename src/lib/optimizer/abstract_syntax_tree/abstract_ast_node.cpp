@@ -72,7 +72,7 @@ const std::shared_ptr<TableStatistics> AbstractASTNode::get_statistics() {
   return _statistics;
 }
 
-const std::shared_ptr<TableStatistics> AbstractASTNode::get_statistics_from(
+const std::shared_ptr<TableStatistics> AbstractASTNode::derive_statistics_from(
     const std::shared_ptr<AbstractASTNode> &other_node) const {
   return other_node->get_statistics();
 }
@@ -85,7 +85,7 @@ const std::shared_ptr<TableStatistics> AbstractASTNode::_gather_statistics() con
               "implementation for different behavior");
   DebugAssert(!static_cast<bool>(_right_child),
               "Default implementation of _gather_statistics() cannot have a right_child so far");
-  return get_statistics_from(_left_child);
+  return derive_statistics_from(_left_child);
 }
 
 const std::vector<std::string> &AbstractASTNode::output_column_names() const {

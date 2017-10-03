@@ -7,6 +7,7 @@
 #include <unordered_map>
 #include <vector>
 
+#include "sql/sql_query_plan.hpp"
 #include "storage/table.hpp"
 
 namespace opossum {
@@ -94,6 +95,11 @@ class Console {
    */
   int _eval_sql(const std::string &sql);
 
+  /*
+   * Executes the given SQL plan
+   */
+  int _execute_plan(const SQLQueryPlan &plan);
+
   // Command functions, registered to be called from the Console
   static int exit(const std::string &args);
   static int help(const std::string &args);
@@ -101,6 +107,8 @@ class Console {
   static int load_table(const std::string &args);
   static int exec_script(const std::string &args);
   static int print_table(const std::string &args);
+
+  static int visualize(const std::string &input);
 
   // GNU readline interface to our commands
   static char **command_completion(const char *text, int start, int end);

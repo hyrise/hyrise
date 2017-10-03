@@ -35,7 +35,7 @@ std::shared_ptr<const Table> ShowTables::_on_execute() {
   Chunk chunk;
   chunk.add_column(column);
 
-  table->add_chunk(std::move(chunk));
+  table->emplace_chunk(std::move(chunk));
 
   return table;
 }

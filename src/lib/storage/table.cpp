@@ -117,14 +117,14 @@ const Chunk &Table::get_chunk(ChunkID chunk_id) const {
   return _chunks[chunk_id];
 }
 
-void Table::add_chunk(Chunk chunk) {
-  if (_chunks.size() == 1 && _chunks.back().col_count() == 0) {
+void Table::emplace_chunk(Chunk chunk) {
+  if (_chunks.size() == 1 && (_chunks.back().col_count() == 0 || _chunks.back().size() == 0)) {
     // the initial chunk was not used yet
     _chunks.clear();
   }
-  DebugAssert(chunk.col_count() == col_count(),
-              std::string("adding chunk with ") + std::to_string(chunk.col_count()) + " columns to table with " +
-                  std::to_string(col_count()) + " columns");
+  DebugAssert(chunk.col_count() == col_count(), std::string("adding chunk with ") + std::to_string(chunk.col_count()) +
+                                                    " columns to table with " + std::to_string(col_count()) +
+                                                    " columns");
   _chunks.emplace_back(std::move(chunk));
 }
 

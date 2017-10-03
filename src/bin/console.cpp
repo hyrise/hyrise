@@ -12,6 +12,7 @@
 #include <iomanip>
 #include <iostream>
 #include <memory>
+#include <regex>
 #include <string>
 #include <vector>
 
@@ -20,14 +21,23 @@
 #include "operators/get_table.hpp"
 #include "operators/import_csv.hpp"
 #include "operators/print.hpp"
+#include "optimizer/abstract_syntax_tree/ast_to_operator_translator.hpp"
+#include "optimizer/optimizer.hpp"
+#include "planviz/ast_visualizer.hpp"
+#include "planviz/sql_query_plan_visualizer.hpp"
 #include "sql/sql_planner.hpp"
+#include "sql/sql_to_ast_translator.hpp"
 #include "storage/storage_manager.hpp"
 #include "tpcc/tpcc_table_generator.hpp"
 #include "utils/load_table.hpp"
 
-#define ANSI_COLOR_RED "\001\e[0;31m\002"
-#define ANSI_COLOR_GREEN "\001\e[0;32m\002"
-#define ANSI_COLOR_RESET "\001\e[0m\002"
+#define ANSI_COLOR_RED "\e[31m"
+#define ANSI_COLOR_GREEN "\e[32m"
+#define ANSI_COLOR_RESET "\e[0m"
+
+#define ANSI_COLOR_RED_RL "\001\e[31m\002"
+#define ANSI_COLOR_GREEN_RL "\001\e[32m\002"
+#define ANSI_COLOR_RESET_RL "\001\e[0m\002"
 
 namespace {
 
@@ -42,6 +52,22 @@ std::string current_timestamp() {
   std::ostringstream oss;
   oss << std::put_time(&tm, "%Y-%m-%d %H:%M:%S");
   return oss.str();
+}
+
+// Removes the coloring commands (e.g. '\e[31m') from input, to have a clean logfile.
+// If remove_rl_codes_only is true, then it only removes the Readline specific escape sequences '\001' and '\002'
+std::string remove_coloring(const std::string& input, bool remove_rl_codes_only = false) {
+  // matches any characters that need to be escaped in RegEx except for '|'
+  std::regex specialChars{R"([-[\]{}()*+?.,\^$#\s])"};
+  std::string sequences = "\e[31m|\e[32m|\e[0m|\001|\002";
+  if (remove_rl_codes_only) {
+    sequences = "\001|\002";
+  }
+  std::string sanitized_sequences = std::regex_replace(sequences, specialChars, R"(\$&)");
+
+  // Remove coloring commands and escape sequences before writing to logfile
+  std::regex expression{"(" + sanitized_sequences + ")"};
+  return std::regex_replace(input, expression, "");
 }
 }  // namespace
 
@@ -70,6 +96,7 @@ Console::Console()
   register_command("load", load_table);
   register_command("script", exec_script);
   register_command("print", print_table);
+  register_command("visualize", visualize);
 
   // Register words specifically for command completion purposes, e.g.
   // for TPC-C table generation, 'CUSTOMER', 'DISTRICT', etc
@@ -122,7 +149,8 @@ int Console::_eval(const std::string& input) {
   }
 
   // Dump command to logfile, and to the Console if input comes from a script file
-  out(_prompt + input + "\n", _verbose);
+  // Also remove Readline specific escape sequences ('\001' and '\002') to make it look normal
+  out(remove_coloring(_prompt + input + "\n", true), _verbose);
 
   // Check if we already are in multiline input
   if (_multiline_input.empty()) {
@@ -219,23 +247,7 @@ int Console::_eval_sql(const std::string& sql) {
   // Measure the query plan execution time
   started = std::chrono::high_resolution_clock::now();
 
-  // Execute query plan
-  try {
-    // Compile the parse result
-    plan = SQLPlanner::plan(parse_result);
-
-    // Get Transaction context
-    static auto tx_context = TransactionManager::get().new_transaction_context();
-
-    for (const auto& task : plan.tasks()) {
-      auto op = task->get_operator();
-      op->set_transaction_context(tx_context);
-      op->execute();
-    }
-  } catch (const std::exception& exception) {
-    out("Exception thrown while executing query plan:\n  " + std::string(exception.what()) + "\n");
-    return ReturnCode::Error;
-  }
+  if (_execute_plan(plan) == ReturnCode::Error) return ReturnCode::Error;
 
   // Measure the query plan execution time
   done = std::chrono::high_resolution_clock::now();
@@ -256,15 +268,32 @@ int Console::_eval_sql(const std::string& sql) {
   return ReturnCode::Ok;
 }
 
+int Console::_execute_plan(const SQLQueryPlan& plan) {
+  try {
+    // Get Transaction context
+    static auto tx_context = TransactionManager::get().new_transaction_context();
+
+    for (const auto& task : plan.tasks()) {
+      auto op = task->get_operator();
+      op->set_transaction_context(tx_context);
+      op->execute();
+    }
+  } catch (const std::exception& exception) {
+    out("Exception thrown while executing query plan:\n  " + std::string(exception.what()) + "\n");
+    return ReturnCode::Error;
+  }
+  return ReturnCode::Ok;
+}
+
 void Console::register_command(const std::string& name, const CommandFunction& func) { _commands[name] = func; }
 
 Console::RegisteredCommands Console::commands() { return _commands; }
 
 void Console::setPrompt(const std::string& prompt) {
   if (IS_DEBUG) {
-    _prompt = ANSI_COLOR_RED "(debug)" ANSI_COLOR_RESET + prompt;
+    _prompt = ANSI_COLOR_RED_RL "(debug)" ANSI_COLOR_RESET_RL + prompt;
   } else {
-    _prompt = ANSI_COLOR_GREEN "(release)" ANSI_COLOR_RESET + prompt;
+    _prompt = ANSI_COLOR_GREEN_RL "(release)" ANSI_COLOR_RESET_RL + prompt;
   }
 }
 
@@ -294,7 +323,8 @@ void Console::out(const std::string& output, bool console_print) {
   if (console_print) {
     _out << output;
   }
-  _log << output;
+  // Remove coloring commands like '\e[32m' when writing to logfile
+  _log << remove_coloring(output);
   _log.flush();
 }
 
@@ -315,11 +345,14 @@ int Console::help(const std::string&) {
       "  generate [TABLENAME] - Generate available TPC-C tables, or a specific table if TABLENAME is specified\n");
   console.out(
       "  load FILE TABLENAME  - Load table from disc specified by filepath FILE, store it with name TABLENAME\n");
-  console.out("  script SCRIPTFILE    - Execute script specified by SCRIPTFILE\n");
-  console.out("  print TABLENAME      - Fully prints the given table\n");
-  console.out("  exit                 - Exit the HYRISE Console\n");
-  console.out("  quit                 - Exit the HYRISE Console\n");
-  console.out("  help                 - Show this message\n\n");
+  console.out("  script SCRIPTFILE       - Execute script specified by SCRIPTFILE\n");
+  console.out("  print TABLENAME         - Fully prints the given table\n");
+  console.out("  visualize [options] SQL - Visualizes a SQL query\n");
+  console.out("             noexec          - without executing the query\n");
+  console.out("             ast             - print the raw abstract syntax tree\n");
+  console.out("             astopt          - print the optimized abstract syntax tree\n");
+  console.out("  quit                    - Exit the HYRISE Console\n");
+  console.out("  help                    - Show this message\n\n");
   console.out("After TPC-C tables are generated, SQL queries can be executed.\n");
   console.out("Example:\n");
   console.out("SELECT * FROM DISTRICT\n");
@@ -423,6 +456,84 @@ int Console::print_table(const std::string& args) {
     console.out("Exception thrown while printing table:\n  " + std::string(exception.what()) + "\n");
     return ReturnCode::Error;
   }
+
+  return ReturnCode::Ok;
+}
+
+int Console::visualize(const std::string& input) {
+  auto first_word = input.substr(0, input.find_first_of(" \n"));
+  std::string mode, sql, dot_filename, img_filename;
+  if (first_word == "noexec" || first_word == "ast" || first_word == "astopt") {
+    mode = first_word;
+  }
+
+  sql = input.substr(mode.size(), input.size());
+  // Removes mode from sql string. If no mode is set, does nothing.
+
+  auto& console = Console::get();
+  SQLQueryPlan plan;
+  hsql::SQLParserResult parse_result;
+
+  try {
+    hsql::SQLParser::parse(sql, &parse_result);
+  } catch (const std::exception& exception) {
+    console.out("Exception thrown while parsing SQL query:\n  " + std::string(exception.what()) + "\n");
+    return ReturnCode::Error;
+  }
+
+  // Check if SQL query is valid
+  if (!parse_result.isValid()) {
+    console.out("Error: SQL query not valid.\n");
+    return 1;
+  }
+
+  if (mode == "ast" || mode == "astopt") {
+    try {
+      auto ast_roots = SQLToASTTranslator::get().translate_parse_result(parse_result);
+
+      if (mode == "astopt") {
+        for (auto& root : ast_roots) {
+          root = Optimizer::optimize(root);
+        }
+      }
+
+      dot_filename = "." + mode + ".dot";
+      img_filename = mode + ".png";
+      ASTVisualizer::visualize(ast_roots, dot_filename, img_filename);
+    } catch (const std::exception& exception) {
+      console.out("Exception while creating AST:\n  " + std::string(exception.what()) + "\n");
+      return ReturnCode::Error;
+    }
+  } else {
+    // Compile the parse result
+    try {
+      plan = SQLPlanner::plan(parse_result);
+    } catch (const std::exception& exception) {
+      console.out("Exception thrown while compiling query plan:\n  " + std::string(exception.what()) + "\n");
+      return ReturnCode::Error;
+    }
+
+    if (mode != "noexec") {
+      if (console._execute_plan(plan) == ReturnCode::Error) return ReturnCode::Error;
+    }
+
+    dot_filename = ".queryplan.dot";
+    img_filename = "queryplan.png";
+    SQLQueryPlanVisualizer::visualize(plan, dot_filename, img_filename);
+  }
+
+  auto ret = system("./scripts/planviz/is_iterm2.sh");
+  if (ret != 0) {
+    std::string msg{"Currently, only iTerm2 can print the visualization inline. You can find the plan at "};
+    msg += dot_filename + "\n";
+    console.out(msg);
+
+    return ReturnCode::Ok;
+  }
+
+  auto cmd = std::string("./scripts/planviz/imgcat.sh ") + img_filename;
+  ret = system(cmd.c_str());
+  Assert(ret == 0, "Printing the image using ./scripts/imgcat.sh failed.");
 
   return ReturnCode::Ok;
 }
