@@ -40,7 +40,7 @@ add_custom_command(
 # Protobuf library with overridden deprecated warning
 add_library(
     opossumProtobuf
-    EXCLUDE_FROM_ALL
+
     STATIC
     network/generated/opossum.pb.cc
     network/generated/opossum.grpc.pb.cc

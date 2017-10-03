@@ -20,7 +20,7 @@ find_package(Readline REQUIRED)
 
 # Include sub-CMakeLists.txt
 add_subdirectory(third_party/)
-add_subdirectory(third_party/googletest EXCLUDE_FROM_ALL)
+add_subdirectory(third_party/googletest)
 add_subdirectory(src)
 
 if(${NUMA_FOUND})
