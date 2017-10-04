@@ -37,19 +37,19 @@ class ColumnStatisticsTest : public BaseTest {
 
   // For single value scans (i.e. all but BETWEEN)
   template <typename T>
-  void predict_selectivities_and_compare(const std::shared_ptr<ColumnStatistics<T>> &column_statistic,
-                                         const ScanType scan_type, const std::vector<T> &values,
-                                         const std::vector<float> &expected_selectivities) {
+  void predict_selectivities_and_compare(const std::shared_ptr<ColumnStatistics<T>>& column_statistic,
+                                         const ScanType scan_type, const std::vector<T>& values,
+                                         const std::vector<float>& expected_selectivities) {
     auto expected_selectivities_itr = expected_selectivities.begin();
-    for (const auto &value : values) {
+    for (const auto& value : values) {
       auto result_container = column_statistic->estimate_selectivity_for_predicate(scan_type, AllTypeVariant(value));
       EXPECT_FLOAT_EQ(result_container.selectivity, *expected_selectivities_itr++);
     }
   }
 
   // For two column scans (type of value1 is ColumnID)
-  void predict_selectivities_and_compare(const std::shared_ptr<Table> &table,
-                                         const std::vector<std::shared_ptr<BaseColumnStatistics>> &column_statistics,
+  void predict_selectivities_and_compare(const std::shared_ptr<Table>& table,
+                                         const std::vector<std::shared_ptr<BaseColumnStatistics>>& column_statistics,
                                          const ScanType scan_type) {
     auto table_wrapper = std::make_shared<TableWrapper>(table);
     table_wrapper->execute();
@@ -69,11 +69,11 @@ class ColumnStatisticsTest : public BaseTest {
 
   // For BETWEEN
   template <typename T>
-  void predict_selectivities_and_compare(const std::shared_ptr<ColumnStatistics<T>> &column_statistic,
-                                         const ScanType scan_type, const std::vector<std::pair<T, T>> &values,
-                                         const std::vector<float> &expected_selectivities) {
+  void predict_selectivities_and_compare(const std::shared_ptr<ColumnStatistics<T>>& column_statistic,
+                                         const ScanType scan_type, const std::vector<std::pair<T, T>>& values,
+                                         const std::vector<float>& expected_selectivities) {
     auto expected_selectivities_itr = expected_selectivities.begin();
-    for (const auto &value_pair : values) {
+    for (const auto& value_pair : values) {
       auto result_container = column_statistic->estimate_selectivity_for_predicate(
           scan_type, AllTypeVariant(value_pair.first), AllTypeVariant(value_pair.second));
       EXPECT_FLOAT_EQ(result_container.selectivity, *expected_selectivities_itr++);
@@ -82,10 +82,10 @@ class ColumnStatisticsTest : public BaseTest {
 
   template <typename T>
   void predict_selectivities_for_stored_procedures_and_compare(
-      const std::shared_ptr<ColumnStatistics<T>> &column_statistic, const ScanType scan_type,
-      const std::vector<T> &values2, const std::vector<float> &expected_selectivities) {
+      const std::shared_ptr<ColumnStatistics<T>>& column_statistic, const ScanType scan_type,
+      const std::vector<T>& values2, const std::vector<float>& expected_selectivities) {
     auto expected_selectivities_itr = expected_selectivities.begin();
-    for (const auto &value2 : values2) {
+    for (const auto& value2 : values2) {
       auto result_container =
           column_statistic->estimate_selectivity_for_predicate(scan_type, ValuePlaceholder(0), AllTypeVariant(value2));
       EXPECT_FLOAT_EQ(result_container.selectivity, *expected_selectivities_itr++);
@@ -323,6 +323,73 @@ TEST_F(ColumnStatisticsTest, TwoColumnsRealDataTest) {
   for (auto scan_type : scan_types) {
     predict_selectivities_and_compare(_table_uniform_distribution, _column_statistics_uniform_columns, scan_type);
   }
+}
+
+TEST_F(ColumnStatisticsTest, NonNullRatioOneColumnTest) {
+  // null value ratio of 0 not tested here, since this is done in all other tests
+  _column_statistics_int->set_null_value_ratio(0.25f);   // non-null value ratio: 0.75
+  _column_statistics_float->set_null_value_ratio(0.5f);  // non-null value ratio: 0.5
+  _column_statistics_string->set_null_value_ratio(1.f);  // non-null value ratio: 0
+
+  auto scan_type = ScanType::OpEquals;
+  auto result = _column_statistics_int->estimate_selectivity_for_predicate(scan_type, AllTypeVariant(1));
+  EXPECT_FLOAT_EQ(result.selectivity, 0.75f / 6.f);
+  result = _column_statistics_float->estimate_selectivity_for_predicate(scan_type, AllTypeVariant(2.f));
+  EXPECT_FLOAT_EQ(result.selectivity, 0.5f / 6.f);
+  result = _column_statistics_string->estimate_selectivity_for_predicate(scan_type, AllTypeVariant("a"));
+  EXPECT_FLOAT_EQ(result.selectivity, 0.f);
+
+  scan_type = ScanType::OpNotEquals;
+  result = _column_statistics_int->estimate_selectivity_for_predicate(scan_type, AllTypeVariant(1));
+  EXPECT_FLOAT_EQ(result.selectivity, 0.75f * 5.f / 6.f);
+  result = _column_statistics_float->estimate_selectivity_for_predicate(scan_type, AllTypeVariant(2.f));
+  EXPECT_FLOAT_EQ(result.selectivity, 0.5f * 5.f / 6.f);
+  result = _column_statistics_string->estimate_selectivity_for_predicate(scan_type, AllTypeVariant("a"));
+  EXPECT_FLOAT_EQ(result.selectivity, 0.f);
+
+  scan_type = ScanType::OpLessThan;
+  result = _column_statistics_int->estimate_selectivity_for_predicate(scan_type, AllTypeVariant(3));
+  EXPECT_FLOAT_EQ(result.selectivity, 0.75f * 2.f / 6.f);
+  result = _column_statistics_float->estimate_selectivity_for_predicate(scan_type, AllTypeVariant(3.f));
+  EXPECT_FLOAT_EQ(result.selectivity, 0.5f * 2.f / 5.f);
+  result = _column_statistics_string->estimate_selectivity_for_predicate(scan_type, AllTypeVariant("c"));
+  EXPECT_FLOAT_EQ(result.selectivity, 0.f);
+
+  scan_type = ScanType::OpGreaterThanEquals;
+  result = _column_statistics_int->estimate_selectivity_for_predicate(scan_type, AllTypeVariant(3));
+  EXPECT_FLOAT_EQ(result.selectivity, 0.75f * 4.f / 6.f);
+  result = _column_statistics_float->estimate_selectivity_for_predicate(scan_type, AllTypeVariant(3.f));
+  EXPECT_FLOAT_EQ(result.selectivity, 0.5f * 3.f / 5.f);
+  result = _column_statistics_string->estimate_selectivity_for_predicate(scan_type, AllTypeVariant("c"));
+  EXPECT_FLOAT_EQ(result.selectivity, 0.f);
+
+  scan_type = ScanType::OpBetween;
+  result = _column_statistics_int->estimate_selectivity_for_predicate(scan_type, AllTypeVariant(2), AllTypeVariant(4));
+  EXPECT_FLOAT_EQ(result.selectivity, 0.75f * 3.f / 6.f);
+  result =
+      _column_statistics_float->estimate_selectivity_for_predicate(scan_type, AllTypeVariant(4.f), AllTypeVariant(6.f));
+  EXPECT_FLOAT_EQ(result.selectivity, 0.5f * 2.f / 5.f);
+  result = _column_statistics_string->estimate_selectivity_for_predicate(scan_type, AllTypeVariant("c"),
+                                                                         AllTypeVariant("d"));
+  EXPECT_FLOAT_EQ(result.selectivity, 0.f);
+}
+
+TEST_F(ColumnStatisticsTest, NonNullRatioTwoColumnTest) {
+  auto stats_0 = _column_statistics_uniform_columns[0];  // values from 0 to 5
+  auto stats_1 = _column_statistics_uniform_columns[1];  // values from 0 to 2
+  auto stats_2 = _column_statistics_uniform_columns[2];  // values from 1 to 2
+
+  stats_0->set_null_value_ratio(0.1);   // non-null value ratio: 0.9
+  stats_1->set_null_value_ratio(0.2);   // non-null value ratio: 0.8
+  stats_2->set_null_value_ratio(0.15);  // non-null value ratio: 0.85
+
+  auto scan_type = ScanType::OpEquals;
+  auto result = stats_0->estimate_selectivity_for_two_column_predicate(scan_type, stats_1);
+  EXPECT_FLOAT_EQ(result.selectivity, 0.9f * 0.8f * 0.5f / 3.f);
+
+  scan_type = ScanType::OpLessThan;
+  result = stats_1->estimate_selectivity_for_two_column_predicate(scan_type, stats_2);
+  EXPECT_FLOAT_EQ(result.selectivity, 0.8f * 0.85f * (1.f / 3.f + 1.f / 3.f * 1.f / 2.f));
 }
 
 }  // namespace opossum

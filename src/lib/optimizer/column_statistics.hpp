@@ -30,67 +30,76 @@ class ColumnStatistics : public BaseColumnStatistics {
   ColumnStatistics(const ColumnID column_id, const std::weak_ptr<Table> table);
   /**
    * Create a new column statistics object from given parameters.
-   * Distinct count, min and max are set during the creation.
+   * Distinct count, min and max are set during the creation. Non-null value ratio can be optionally set.
    * Therefore, _table is not set as it is only used to calculate min, max and distinct_count.
    * This constructor is used by column statistics when returning a new column statistics from estimate selectivity
    * functions.
    */
-  ColumnStatistics(const ColumnID column_id, float distinct_count, ColumnType min, ColumnType max);
+  ColumnStatistics(const ColumnID column_id, const float distinct_count, const ColumnType min, const ColumnType max,
+                   const float non_null_value_ratio = 1.f);
   ~ColumnStatistics() override = default;
 
-  ColumnSelectivityResult estimate_selectivity_for_predicate(const ScanType scan_type, const AllTypeVariant &value,
-                                                             const optional<AllTypeVariant> &value2 = nullopt) override;
+  ColumnSelectivityResult estimate_selectivity_for_predicate(const ScanType scan_type, const AllTypeVariant& value,
+                                                             const optional<AllTypeVariant>& value2 = nullopt) override;
 
-  ColumnSelectivityResult estimate_selectivity_for_predicate(const ScanType scan_type, const ValuePlaceholder &value,
-                                                             const optional<AllTypeVariant> &value2 = nullopt) override;
+  ColumnSelectivityResult estimate_selectivity_for_predicate(const ScanType scan_type, const ValuePlaceholder& value,
+                                                             const optional<AllTypeVariant>& value2 = nullopt) override;
 
   TwoColumnSelectivityResult estimate_selectivity_for_two_column_predicate(
-      const ScanType scan_type, const std::shared_ptr<BaseColumnStatistics> &right_base_column_statistics,
-      const optional<AllTypeVariant> &value2 = nullopt) override;
-
- protected:
-  std::ostream &print_to_stream(std::ostream &os) const override;
+      const ScanType scan_type, const std::shared_ptr<BaseColumnStatistics>& right_base_column_statistics,
+      const optional<AllTypeVariant>& value2 = nullopt) override;
 
   /**
    * Accessors for class variable optionals. Compute values, if not available.
    * See _distinct_count declaration below for explanation of float type.
    */
-  float distinct_count() const;
-  ColumnType min() const;
-  ColumnType max() const;
+  float distinct_count() const override;
+
+  std::shared_ptr<BaseColumnStatistics> clone() const override;
+
+ protected:
+  std::ostream& _print_to_stream(std::ostream& os) const override;
+  ColumnType _get_or_calculate_min() const;
+  ColumnType _get_or_calculate_max() const;
+
+  /**
+   * Returns a column statistics identical to this which does not have null values.
+   * @return shared pointer of this or copy of this, if column has null values.
+   */
+  std::shared_ptr<BaseColumnStatistics> _this_without_null_values();
 
   /**
    * Create column statistics and estimate selectivity based on new range.
-   * @return Selectivity and new column statistics, if selectivity not 0 or 1.
+   * @param minimum, maximum: Min and max for new column statistics. Note: Minimum can be greater than maximum.
+   * @return Selectivity and new column statistics.
    */
-  ColumnSelectivityResult create_column_stats_for_range_predicate(ColumnType minimum, ColumnType maximum);
+  ColumnSelectivityResult _create_column_stats_for_range_predicate(ColumnType minimum, ColumnType maximum);
 
   /**
-   * Estimate selectivity based on new range between new_min and new_max and current range between min and max.
-   * @param new_min: Min for new column statistics.
-   * @param new_max: Max for new column statistics.
-   * @return Selectivity and new column statistics, if selectivity not 0 or 1.
+   * Estimate selectivity based on new and current range between min and max.
+   * @param minimum, maximum: Min and max for new range. Minimum must be smaller or equal to maximum.
+   * @return Selectivity.
    */
   float estimate_selectivity_for_range(ColumnType minimum, ColumnType maximum);
 
   /**
    * Create column statistics and estimate selectivity for predicate with scan type equals and constant value.
    * @param value: constant value of aggregate
-   * @return Selectivity and new column statistics, if selectivity not 0 or 1.
+   * @return Selectivity and new column statistics.
    */
-  ColumnSelectivityResult create_column_stats_for_equals_predicate(ColumnType value);
+  ColumnSelectivityResult _create_column_stats_for_equals_predicate(ColumnType value);
 
   /**
    * Create column statistics and estimate selectivity for predicate with scan type not equals and constant value.
    * @param value: constant value of aggregate
-   * @return Selectivity and new column statistics, if selectivity not 0 or 1.
+   * @return Selectivity and new column statistics.
    */
-  ColumnSelectivityResult create_column_stats_for_unequals_predicate(ColumnType value);
+  ColumnSelectivityResult _create_column_stats_for_not_equals_predicate(ColumnType value);
 
   /**
    * Calcute min and max values from table.
    */
-  void initialize_min_max() const;
+  void _initialize_min_max() const;
 
   const ColumnID _column_id;
 
@@ -111,7 +120,7 @@ class ColumnStatistics : public BaseColumnStatistics {
 };
 
 template <typename ColumnType>
-inline std::ostream &operator<<(std::ostream &os, const opossum::optional<ColumnType> &obj) {
+inline std::ostream& operator<<(std::ostream& os, const opossum::optional<ColumnType>& obj) {
   if (obj) {
     return os << *obj;
   } else {
