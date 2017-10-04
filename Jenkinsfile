@@ -30,19 +30,19 @@ node {
       stage("Build") {
         stage("Build gcc") {
           stage("Build gcc Release") {
-            sh "cd gcc-release && make opossumTest opossumAsan -j \$(cat /proc/cpuinfo | grep processor | wc -l)"
+            sh "cd gcc-release && make all opossumAsan -j \$(cat /proc/cpuinfo | grep processor | wc -l)"
           }
           stage("Build gcc Debug") {
-            sh "cd gcc-debug && make opossumTest opossumAsan -j \$(cat /proc/cpuinfo | grep processor | wc -l)"
+            sh "cd gcc-debug && make all opossumAsan -j \$(cat /proc/cpuinfo | grep processor | wc -l)"
           }
         }
 
         stage("Build clang") {
           stage("Build clang release") {
-            sh "cd clang-release && make opossumTest opossumAsan -j \$(cat /proc/cpuinfo | grep processor | wc -l)"
+            sh "cd clang-release && make all opossumAsan -j \$(cat /proc/cpuinfo | grep processor | wc -l)"
           }
           stage("Build clang debug") {
-            sh "cd clang-debug && make opossumTest opossumAsan -j \$(cat /proc/cpuinfo | grep processor | wc -l)"
+            sh "cd clang-debug && make all opossumAsan -j \$(cat /proc/cpuinfo | grep processor | wc -l)"
           }
         }
       }
