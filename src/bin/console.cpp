@@ -493,7 +493,7 @@ int Console::visualize(const std::string& input) {
 
       if (mode == "astopt") {
         for (auto& root : ast_roots) {
-          root = Optimizer::optimize(root);
+          root = Optimizer::get().optimize(root);
         }
       }
 
