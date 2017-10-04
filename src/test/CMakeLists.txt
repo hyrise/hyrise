@@ -49,8 +49,10 @@ set(
     optimizer/abstract_syntax_tree/projection_node_test.cpp
     optimizer/ast_to_operator_translator_test.cpp
     optimizer/column_statistics_test.cpp
+    optimizer/strategy/join_detection_rule_test.cpp
     optimizer/expression_test.cpp
     optimizer/strategy/predicate_reordering_test.cpp
+    optimizer/strategy/strategy_base_test.cpp
     optimizer/table_statistics_test.cpp
     scheduler/scheduler_test.cpp
     sql/sql_base_test.cpp
