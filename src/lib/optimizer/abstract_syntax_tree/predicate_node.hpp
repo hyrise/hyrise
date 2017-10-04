@@ -35,8 +35,9 @@ class PredicateNode : public AbstractASTNode {
   const AllParameterVariant& value() const;
   const optional<AllTypeVariant>& value2() const;
 
-  const std::shared_ptr<TableStatistics> get_statistics_from(
-      const std::shared_ptr<AbstractASTNode>& parent) const override;
+  std::shared_ptr<TableStatistics> derive_statistics_from(
+      const std::shared_ptr<AbstractASTNode>& left_child,
+      const std::shared_ptr<AbstractASTNode>& right_child = nullptr) const override;
 
  private:
   const ColumnID _column_id;

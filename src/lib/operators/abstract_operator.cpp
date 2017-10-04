@@ -5,6 +5,7 @@
 #include <string>
 
 #include "concurrency/transaction_context.hpp"
+#include "utils/assert.hpp"
 
 namespace opossum {
 
@@ -29,7 +30,17 @@ void AbstractOperator::execute() {
 }
 
 // returns the result of the operator
-std::shared_ptr<const Table> AbstractOperator::get_output() const { return _output; }
+std::shared_ptr<const Table> AbstractOperator::get_output() const {
+  DebugAssert([&]() {
+    if (_output->chunk_count() <= ChunkID{1}) return true;
+    for (auto chunk_id = ChunkID{0}; chunk_id < _output->chunk_count(); ++chunk_id) {
+      if (_output->get_chunk(chunk_id).size() < 1) return true;
+    }
+    return true;
+  }(), "Empty chunk returned from operator " + description());
+
+  return _output;
+}
 
 const std::string AbstractOperator::description() const { return name(); }
 

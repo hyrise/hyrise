@@ -69,7 +69,7 @@ std::shared_ptr<const Table> Projection::_on_execute() {
       });
     }
 
-    output->add_chunk(std::move(chunk_out));
+    output->emplace_chunk(std::move(chunk_out));
   }
 
   return output;
