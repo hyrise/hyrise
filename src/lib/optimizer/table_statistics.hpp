@@ -72,7 +72,7 @@ class TableStatistics : public std::enable_shared_from_this<TableStatistics> {
   /**
    * Generate table statistics for a cross join.
    */
-  virtual std::shared_ptr<TableStatistics> generate_cross_join_statistics (
+  virtual std::shared_ptr<TableStatistics> generate_cross_join_statistics(
       const std::shared_ptr<TableStatistics>& right_table_stats);
 
   /**
