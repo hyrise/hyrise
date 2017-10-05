@@ -1,5 +1,12 @@
 #include "sqlite_wrapper.hpp"
 
+#include <memory>
+#include <fstream>
+#include <string>
+#include <vector>
+
+#include "utils/load_table.hpp"
+
 namespace opossum {
 
 SqliteWrapper::SqliteWrapper() {
@@ -16,21 +23,61 @@ SqliteWrapper::~SqliteWrapper() {
 }
 
 void SqliteWrapper::create_table_from_tbl(const std::string & file, const std::string & tablename) {
-  // char *err_msg;
-  // char const *sql = "CREATE TABLE table_a(a INT, b REAL);"
-  //   "INSERT INTO table_a VALUES (12345, 458.7);"
-  //   "INSERT INTO table_a VALUES (123, 456.7);"
-  //   "INSERT INTO table_a VALUES (1234, 457.7);";
+  char *err_msg;
+  std::ifstream infile(file);
+  Assert(infile.is_open(), "SqliteWrapper: Could not find file " + file);
 
-  // int rc = sqlite3_exec(_db, sql, 0, 0, &err_msg);
+  std::string line;
+  std::getline(infile, line);
+  std::vector<std::string> col_names = _split<std::string>(line, '|');
+  std::getline(infile, line);
+  std::vector<std::string> col_types;
 
-  // if (rc != SQLITE_OK ) {
-  //   fprintf(stderr, "Failed to create table\n");
-  //   fprintf(stderr, "SQL error: %s\n", err_msg);
-  //   sqlite3_free(err_msg);
-  // } else {
-  //   fprintf(stdout, "Table table_a created successfully\n");
-  // }
+  for (std::string type : _split<std::string>(line, '|')) {
+    if (type == "int") {
+      col_types.push_back("INT");
+    } else if (type == "float") {
+      col_types.push_back("REAL");
+    } else if (type == "string") {
+      col_types.push_back("TEXT");
+    } else {
+      DebugAssert(false, "SqliteWrapper: column type " + type + " not supported.");
+    }
+  }
+
+  std::stringstream query;
+  query << "CREATE TABLE " << tablename << "(";
+  for (size_t i = 0; i < col_names.size(); i++) {
+    query << col_names[i] << " " << col_types[i];
+
+    if ((i + 1) < col_names.size()) {
+      query << ", ";
+    }
+  }
+  query << ");";
+
+  while (std::getline(infile, line)) {
+    query << "INSERT INTO " << tablename << " VALUES (";
+    std::vector<std::string> values = _split<std::string>(line, '|');
+    for (size_t i = 0; i < values.size(); i++) {
+      query << values[i];
+      
+      if ((i + 1) < values.size()) {
+        query << ", ";
+      }
+    }
+    query << ");";
+  }
+
+  int rc = sqlite3_exec(_db, query.str().c_str(), 0, 0, &err_msg);
+
+  if (rc != SQLITE_OK ) {
+    std::cerr << "Failed to create table" << std::endl;
+    std::cerr << "SQL error: " << err_msg << std::endl;
+    sqlite3_free(err_msg);
+  } else {
+    std::cout << "Table " << tablename << " created successfully" << std::endl;
+  }
 }
 
 std::shared_ptr<Table> SqliteWrapper::execute_query(const std::string & sql_query) {
