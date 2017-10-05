@@ -143,7 +143,7 @@ const SQLTestParam test_queries[] = {
      OrderSensitivity::Sensitive},
     {"SELECT a, b FROM int_float ORDER BY a;", "src/test/tables/int_float_sorted.tbl", OrderSensitivity::Sensitive},
     {"SELECT * FROM int_float4 ORDER BY a, b;", "src/test/tables/int_float2_sorted.tbl", OrderSensitivity::Sensitive},
-    {"SELECT a FROM (SELECT a, b FROM int_float WHERE a > 1 ORDER BY b) WHERE a > 0 ORDER BY a;",
+    {"SELECT a FROM (SELECT a, b FROM int_float WHERE a > 1 ORDER BY b) AS sub WHERE a > 0 ORDER BY a;",
      "src/test/tables/int.tbl", OrderSensitivity::Sensitive},
 
     // LIMIT
@@ -270,7 +270,7 @@ const SQLTestParam test_queries[] = {
           SELECT b, d, MAX(a) AS max_a, MIN(c) AS min_c
           FROM groupby_int_2gb_2agg_2
           GROUP BY b, d
-        )
+        ) AS sub
         WHERE d BETWEEN 20 AND 50 AND min_c > 15;)",
      "src/test/tables/aggregateoperator/groupby_int_2gb_2agg/max_min_filter_projection.tbl"},
     {"SELECT SUM(b) FROM groupby_int_1gb_1agg", "src/test/tables/aggregateoperator/0gb_1agg/sum.tbl"},

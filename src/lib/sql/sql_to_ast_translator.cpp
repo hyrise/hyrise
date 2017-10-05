@@ -379,22 +379,28 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_cross_product(
 }
 
 std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_table_ref(const hsql::TableRef& table) {
+  auto alias = table.alias ? optional<std::string>(table.alias) : nullopt;
+  std::shared_ptr<AbstractASTNode> node;
   switch (table.type) {
-    case hsql::kTableName: {
-      auto alias = table.alias ? optional<std::string>(table.alias) : nullopt;
-
-      return std::make_shared<StoredTableNode>(table.name, alias);
-    }
+    case hsql::kTableName:
+      node = std::make_shared<StoredTableNode>(table.name);
+      break;
     case hsql::kTableSelect:
-      return _translate_select(*table.select);
+      node = _translate_select(*table.select);
+      if (!alias) throw std::runtime_error("Every derived table must have its own alias");
+      break;
     case hsql::kTableJoin:
-      return _translate_join(*table.join);
+      node = _translate_join(*table.join);
+      break;
     case hsql::kTableCrossProduct:
-      return _translate_cross_product(*table.list);
+      node = _translate_cross_product(*table.list);
+      break;
     default:
       Fail("Unable to translate source table.");
       return {};
   }
+  node->set_alias(alias);
+  return node;
 }
 
 AllParameterVariant SQLToASTTranslator::translate_hsql_operand(
