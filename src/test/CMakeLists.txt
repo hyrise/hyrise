@@ -10,7 +10,7 @@ set(
     OPOSSUM_TEST_SOURCES
     ${SHARED_SOURCES}
     sql/sql_base_test.cpp
-    sql/sql_sqlite_runner_test.cpp
+    sql/sqlite_testrunner/sql_sqlite_runner_test.cpp
     # concurrency/commit_context_test.cpp
     # concurrency/transaction_manager_test.cpp
     # lib/AllParameterVariant_test.cpp
@@ -97,6 +97,7 @@ set (
 set(
     LIBRARIES
     gtest
+    sqlite3
 )
 
 # Build special ASAN version of googletest
