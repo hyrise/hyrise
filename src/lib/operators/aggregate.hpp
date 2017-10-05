@@ -3,6 +3,7 @@
 #include <limits>
 #include <map>
 #include <memory>
+#include <set>
 #include <string>
 #include <utility>
 #include <vector>
@@ -39,13 +40,14 @@ For implementation details, please check the wiki: https://github.com/hyrise/zwe
 Current aggregated value and the number of rows that were used.
 The latter is used for AVG and COUNT.
 */
-template <typename T>
+template <typename AggregateType, typename DataType>
 class AggregateResult {
  public:
   AggregateResult() {}
 
-  optional<T> current_aggregate;
+  optional<AggregateType> current_aggregate;
   size_t aggregate_count = 0;
+  std::set<DataType> distinct_values;
 };
 
 /*
@@ -125,11 +127,11 @@ class Aggregate : public AbstractReadOnlyOperator {
   They are separate and templated to avoid compiler errors for invalid type/function combinations.
   */
   // MIN, MAX, SUM write the current aggregated value
-  template <typename AggregateType, AggregateFunction func>
+  template <typename ColumnType, typename AggregateType, AggregateFunction func>
   typename std::enable_if<
       func == AggregateFunction::Min || func == AggregateFunction::Max || func == AggregateFunction::Sum, void>::type
   _write_aggregate_values(std::shared_ptr<ValueColumn<AggregateType>> column,
-                          std::shared_ptr<std::map<AggregateKey, AggregateResult<AggregateType>>> results) {
+                          std::shared_ptr<std::map<AggregateKey, AggregateResult<AggregateType, ColumnType>>> results) {
     DebugAssert(column->is_nullable(), "Aggregate: Output column needs to be nullable");
 
     auto& values = column->values();
@@ -147,10 +149,10 @@ class Aggregate : public AbstractReadOnlyOperator {
   }
 
   // COUNT writes the aggregate counter
-  template <typename AggregateType, AggregateFunction func>
+  template <typename ColumnType, typename AggregateType, AggregateFunction func>
   typename std::enable_if<func == AggregateFunction::Count, void>::type _write_aggregate_values(
       std::shared_ptr<ValueColumn<AggregateType>> column,
-      std::shared_ptr<std::map<AggregateKey, AggregateResult<AggregateType>>> results) {
+      std::shared_ptr<std::map<AggregateKey, AggregateResult<AggregateType, ColumnType>>> results) {
     DebugAssert(!column->is_nullable(), "Aggregate: Output column for COUNT shouldn't be nullable");
 
     auto& values = column->values();
@@ -160,11 +162,25 @@ class Aggregate : public AbstractReadOnlyOperator {
     }
   }
 
+  // COUNT(DISTINCT) writes the number of distinct values
+  template <typename ColumnType, typename AggregateType, AggregateFunction func>
+  typename std::enable_if<func == AggregateFunction::CountDistinct, void>::type _write_aggregate_values(
+      std::shared_ptr<ValueColumn<AggregateType>> column,
+      std::shared_ptr<std::map<AggregateKey, AggregateResult<AggregateType, ColumnType>>> results) {
+    DebugAssert(!column->is_nullable(), "Aggregate: Output column for COUNT shouldn't be nullable");
+
+    auto& values = column->values();
+
+    for (auto& kv : *results) {
+      values.push_back(kv.second.distinct_values.size());
+    }
+  }
+
   // AVG writes the calculated average from current aggregate and the aggregate counter
-  template <typename AggregateType, AggregateFunction func>
+  template <typename ColumnType, typename AggregateType, AggregateFunction func>
   typename std::enable_if<func == AggregateFunction::Avg && std::is_arithmetic<AggregateType>::value, void>::type
   _write_aggregate_values(std::shared_ptr<ValueColumn<AggregateType>> column,
-                          std::shared_ptr<std::map<AggregateKey, AggregateResult<AggregateType>>> results) {
+                          std::shared_ptr<std::map<AggregateKey, AggregateResult<AggregateType, ColumnType>>> results) {
     DebugAssert(column->is_nullable(), "Aggregate: Output column needs to be nullable");
 
     auto& values = column->values();
@@ -182,10 +198,10 @@ class Aggregate : public AbstractReadOnlyOperator {
   }
 
   // AVG is not defined for non-arithmetic types. Avoiding compiler errors.
-  template <typename AggregateType, AggregateFunction func>
+  template <typename ColumnType, typename AggregateType, AggregateFunction func>
   typename std::enable_if<func == AggregateFunction::Avg && !std::is_arithmetic<AggregateType>::value, void>::type
   _write_aggregate_values(std::shared_ptr<ValueColumn<AggregateType>>,
-                          std::shared_ptr<std::map<AggregateKey, AggregateResult<AggregateType>>>) {
+                          std::shared_ptr<std::map<AggregateKey, AggregateResult<AggregateType, ColumnType>>>) {
     Fail("Invalid aggregate");
   }
 
@@ -292,6 +308,13 @@ struct AggregateFunctionBuilder<ColumnType, AggregateType, AggregateFunction::Co
   }
 };
 
+template <typename ColumnType, typename AggregateType>
+struct AggregateFunctionBuilder<ColumnType, AggregateType, AggregateFunction::CountDistinct> {
+  AggregateFunctor<ColumnType, AggregateType> get_aggregate_function() {
+    return [](ColumnType, optional<AggregateType> current_aggregate) { return nullopt; };
+  }
+};
+
 /*
 Visitor context for the AggregateVisitor.
 */
@@ -311,7 +334,7 @@ struct AggregateContext : ColumnVisitableContext {
   }
 
   std::shared_ptr<GroupByContext> groupby_context;
-  std::shared_ptr<std::map<AggregateKey, AggregateResult<AggregateType>>> results;
+  std::shared_ptr<std::map<AggregateKey, AggregateResult<AggregateType, ColumnType>>> results;
 };
 
 /*
@@ -325,6 +348,14 @@ struct AggregateTraits {};
 // COUNT on all types
 template <typename ColumnType>
 struct AggregateTraits<ColumnType, AggregateFunction::Count> {
+  typedef ColumnType column_type;
+  typedef int64_t aggregate_type;
+  static constexpr const char* aggregate_type_name = "long";
+};
+
+// COUNT(DISTINCT) on all types
+template <typename ColumnType>
+struct AggregateTraits<ColumnType, AggregateFunction::CountDistinct> {
   typedef ColumnType column_type;
   typedef int64_t aggregate_type;
   static constexpr const char* aggregate_type_name = "long";

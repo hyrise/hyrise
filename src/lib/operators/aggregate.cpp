@@ -48,7 +48,7 @@ void Aggregate::_aggregate_column(ChunkID chunk_id, ColumnID column_index, BaseC
   auto& ctx = *std::static_pointer_cast<AggregateContext<DataType, AggregateType>>(_contexts_per_column[column_index]);
 
   if (!ctx.results) {
-    ctx.results = std::make_shared<std::map<AggregateKey, AggregateResult<AggregateType>>>();
+    ctx.results = std::make_shared<std::map<AggregateKey, AggregateResult<AggregateType, DataType>>>();
   }
 
   auto& results = *ctx.results;
@@ -69,6 +69,10 @@ void Aggregate::_aggregate_column(ChunkID chunk_id, ColumnID column_index, BaseC
 
         // increase value counter
         ++results[(*hash_keys)[chunk_offset]].aggregate_count;
+
+        if (function == AggregateFunction::CountDistinct) {
+          results[(*hash_keys)[chunk_offset]].distinct_values.insert(value.value());
+        }
       }
 
       ++chunk_offset;
@@ -167,7 +171,8 @@ std::shared_ptr<const Table> Aggregate::_on_execute() {
     We choose int8_t for column type and aggregate type because it's small.
     */
     auto ctx = std::make_shared<AggregateContext<DistinctColumnType, DistinctAggregateType>>();
-    ctx->results = std::make_shared<std::map<AggregateKey, AggregateResult<DistinctAggregateType>>>();
+    ctx->results =
+        std::make_shared<std::map<AggregateKey, AggregateResult<DistinctAggregateType, DistinctColumnType>>>();
 
     _contexts_per_column.push_back(ctx);
   }
@@ -205,7 +210,7 @@ std::shared_ptr<const Table> Aggregate::_on_execute() {
       for (auto& chunk : _keys_per_chunk) {
         for (auto& keys : *chunk) {
           // insert dummy value to make sure we have the key in our map
-          results[keys] = AggregateResult<DistinctAggregateType>();
+          results[keys] = AggregateResult<DistinctAggregateType, DistinctColumnType>();
         }
       }
     } else {
@@ -225,7 +230,8 @@ std::shared_ptr<const Table> Aggregate::_on_execute() {
 
           if (!ctx->results) {
             // create result map for the first time if necessary
-            ctx->results = std::make_shared<std::map<AggregateKey, AggregateResult<CountAggregateType>>>();
+            ctx->results =
+                std::make_shared<std::map<AggregateKey, AggregateResult<CountAggregateType, CountColumnType>>>();
           }
 
           auto& results = *ctx->results;
@@ -264,6 +270,9 @@ std::shared_ptr<const Table> Aggregate::_on_execute() {
               break;
             case AggregateFunction::Count:
               _aggregate_column<DataType, AggregateFunction::Count>(chunk_id, column_index, *base_column);
+              break;
+            case AggregateFunction::CountDistinct:
+              _aggregate_column<DataType, AggregateFunction::CountDistinct>(chunk_id, column_index, *base_column);
               break;
           }
         });
@@ -349,6 +358,9 @@ void Aggregate::_create_aggregate_context(boost::hana::basic_type<ColumnType> ty
     case AggregateFunction::Count:
       aggregate_context = make_aggregate_context<ColumnType, AggregateFunction::Count>();
       break;
+    case AggregateFunction::CountDistinct:
+      aggregate_context = make_aggregate_context<ColumnType, AggregateFunction::CountDistinct>();
+      break;
   }
 }
 
@@ -370,6 +382,9 @@ void Aggregate::_write_aggregate_output(boost::hana::basic_type<ColumnType> type
       break;
     case AggregateFunction::Count:
       write_aggregate_output<ColumnType, AggregateFunction::Count>(column_index);
+      break;
+    case AggregateFunction::CountDistinct:
+      write_aggregate_output<ColumnType, AggregateFunction::CountDistinct>(column_index);
       break;
   }
 }
@@ -398,7 +413,7 @@ void Aggregate::write_aggregate_output(ColumnID column_index) {
     output_column_name = aggregate_function_to_string.left.at(function) + "(" + column_name + ")";
   }
 
-  constexpr bool needs_null = (function != AggregateFunction::Count);
+  constexpr bool needs_null = (function != AggregateFunction::Count && function != AggregateFunction::CountDistinct);
   _output->add_column_definition(output_column_name, aggregate_type_name, needs_null);
 
   auto col = std::make_shared<ValueColumn<decltype(aggregate_type)>>(needs_null);
@@ -416,7 +431,7 @@ void Aggregate::write_aggregate_output(ColumnID column_index) {
   }
 
   // write aggregated values into the column
-  _write_aggregate_values<decltype(aggregate_type), function>(col, ctx->results);
+  _write_aggregate_values<ColumnType, decltype(aggregate_type), function>(col, ctx->results);
   _out_chunk.add_column(col);
 }
 
