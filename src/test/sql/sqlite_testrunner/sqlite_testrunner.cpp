@@ -6,6 +6,8 @@
 #include <iostream>
 #include <memory>
 #include <string>
+#include <utility>
+#include <vector>
 
 #include "SQLParser.h"
 #include "base_test.hpp"
