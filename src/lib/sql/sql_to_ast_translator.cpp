@@ -520,17 +520,17 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_aggregate(
   ColumnID groupby_offset{0};
 
   for (const auto* column_expr : select_list) {
+    optional<std::string> alias;
+    if (column_expr->alias) {
+      alias = std::string(column_expr->alias);
+    }
+
     if (column_expr->isType(hsql::kExprFunctionRef)) {
       auto opossum_expr = SQLExpressionTranslator().translate_expression(*column_expr, input_node);
 
-      optional<std::string> alias;
-      if (column_expr->alias) {
-        alias = std::string(column_expr->alias);
-      }
-
       aggregate_expressions.emplace_back(opossum_expr);
 
-      projections.push_back(Expression::create_column(ColumnID{aggregate_offset++}));
+      projections.push_back(Expression::create_column(ColumnID{aggregate_offset++}, alias));
     } else if (column_expr->isType(hsql::kExprColumnRef)) {
       /**
        * This if block is only used to conduct an SQL conformity check, whether column references in the SELECT list of
@@ -552,7 +552,7 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_aggregate(
       Assert(is_in_group_by_clause,
              std::string("Column '") + expr_name + "' is specified in SELECT list, but not in GROUP BY clause.");
 
-      projections.push_back(Expression::create_column(ColumnID{groupby_offset++}));
+      projections.push_back(Expression::create_column(ColumnID{groupby_offset++}, alias));
     } else {
       Fail("Unsupported item in projection list for AggregateOperator.");
     }
