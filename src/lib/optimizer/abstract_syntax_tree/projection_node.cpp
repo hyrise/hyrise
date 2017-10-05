@@ -88,6 +88,16 @@ optional<ColumnID> ProjectionNode::find_column_id_by_named_column_reference(
    */
   optional<ColumnID> result_column_id;
 
+  auto named_column_reference_without_local_alias = named_column_reference;
+  if (named_column_reference.table_name && _table_alias) {
+    if (*named_column_reference.table_name == *_table_alias) {
+      // The used table name is the alias of this table. Remove id from the NamedColumnReference for further search
+      named_column_reference_without_local_alias.table_name = nullopt;
+    } else {
+      return {};
+    }
+  }
+
   /**
    * Look for named_column_reference in the input node, if it exists there, check whether one of this node's
    * _column_expressions match the found column_id.
@@ -95,7 +105,8 @@ optional<ColumnID> ProjectionNode::find_column_id_by_named_column_reference(
    * we're looking for. E.g: we're looking for column "a" and "a" exists in the previous node, but is NOT projected by
    * the projection it might still be an ALIAS of the projection.
    */
-  const auto child_column_id = left_child()->find_column_id_by_named_column_reference(named_column_reference);
+  const auto child_column_id =
+      left_child()->find_column_id_by_named_column_reference(named_column_reference_without_local_alias);
 
   for (ColumnID column_id{0}; column_id < output_column_names().size(); column_id++) {
     const auto& column_expression = _column_expressions[column_id];
@@ -106,7 +117,8 @@ optional<ColumnID> ProjectionNode::find_column_id_by_named_column_reference(
      */
     if (child_column_id && column_expression->type() == ExpressionType::Column &&
         column_expression->column_id() == *child_column_id && !column_expression->alias()) {
-      Assert(!result_column_id, "Column name " + named_column_reference.column_name + " is ambiguous.");
+      Assert(!result_column_id,
+             "Column name " + named_column_reference_without_local_alias.column_name + " is ambiguous.");
       result_column_id = column_id;
       continue;
     }
@@ -117,18 +129,21 @@ optional<ColumnID> ProjectionNode::find_column_id_by_named_column_reference(
      * either one of the Projection's ALIASes or column names generated based on arithmetic expressions (i.e. 5+3 ->
      * "5+3").
      */
-    if (!named_column_reference.table_name) {
+    if (!named_column_reference_without_local_alias.table_name) {
       if (column_expression->alias()) {
         // Check whether `named_column_reference` is the ALIAS of a column, e.g. `a AS some_a` or `a+b AS sum_ab`
-        if (*column_expression->alias() == named_column_reference.column_name) {
-          Assert(!result_column_id, "Column name " + named_column_reference.column_name + " is ambiguous.");
+        if (*column_expression->alias() == named_column_reference_without_local_alias.column_name) {
+          Assert(!result_column_id,
+                 "Column name " + named_column_reference_without_local_alias.column_name + " is ambiguous.");
           result_column_id = column_id;
           continue;
         }
       } else {
         // Check whether `named_column_reference` is the generated name of a column, e.g. `a+b` without ALIAS
-        if (column_expression->to_string(left_child()->output_column_names()) == named_column_reference.column_name) {
-          Assert(!result_column_id, "Column name " + named_column_reference.column_name + " is ambiguous.");
+        if (column_expression->to_string(left_child()->output_column_names()) ==
+            named_column_reference_without_local_alias.column_name) {
+          Assert(!result_column_id,
+                 "Column name " + named_column_reference_without_local_alias.column_name + " is ambiguous.");
           result_column_id = column_id;
           continue;
         }
@@ -142,8 +157,12 @@ optional<ColumnID> ProjectionNode::find_column_id_by_named_column_reference(
 std::vector<ColumnID> ProjectionNode::get_output_column_ids_for_table(const std::string& table_name) const {
   DebugAssert(left_child(), "ProjectionNode needs a child.");
 
-  if (!left_child()->knows_table(table_name)) {
+  if (!knows_table(table_name)) {
     return {};
+  }
+
+  if (_table_alias && *_table_alias == table_name) {
+    return get_output_column_ids();
   }
 
   const auto input_column_ids_for_table = left_child()->get_output_column_ids_for_table(table_name);

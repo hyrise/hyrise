@@ -145,6 +145,14 @@ class AbstractASTNode : public std::enable_shared_from_this<AbstractASTNode> {
    * This function is part of the "ColumnID Resolution". See SQLToAstTranslator class comment for a general discussion
    * on this.
    *
+   * Returns all ColumnIDs of this node
+   */
+  virtual std::vector<ColumnID> get_output_column_ids() const;
+
+  /**
+   * This function is part of the "ColumnID Resolution". See SQLToAstTranslator class comment for a general discussion
+   * on this.
+   *
    * Returns all ColumnIDs of this node that belong to a table. Used for resolving wildcards in queries like
    * `SELECT T1.*, T2.a FROM T1, T2`
    *
@@ -165,6 +173,12 @@ class AbstractASTNode : public std::enable_shared_from_this<AbstractASTNode> {
    */
   void replace_in_tree(const std::shared_ptr<AbstractASTNode>& node_to_replace);
 
+  /**
+   * Sets the table alias for this subtree, see _table_alias for details.
+   * This is not part of the constructor because it is only used in SQLToASTTranslator::_translate_table_ref.
+   */
+  void set_alias(const optional<std::string>& table_alias);
+
   void print(const uint32_t level = 0, std::ostream& out = std::cout) const;
   virtual std::string description() const = 0;
 
@@ -173,6 +187,11 @@ class AbstractASTNode : public std::enable_shared_from_this<AbstractASTNode> {
 
   // Used to easily differentiate between node types without pointer casts.
   ASTNodeType _type;
+
+  // Each subtree can be a subselect. A subselect can be given an alias:
+  // SELECT y.* FROM (SELECT * FROM x) AS y
+  // The alias applies to all nodes above the node where it is set until a new alias is set
+  optional<std::string> _table_alias;
 
  private:
   std::weak_ptr<AbstractASTNode> _parent;
