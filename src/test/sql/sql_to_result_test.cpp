@@ -249,7 +249,7 @@ const SQLTestParam test_queries[] = {
      "src/test/tables/aggregateoperator/groupby_int_1gb_1agg/count_star.tbl"},
 
     // COUNT(DISTINCT)
-    {"SELECT a, COUNT(DISTINCT b) AS \"COUNT(DISTINCT b)\" FROM groupby_int_1gb_1agg_null GROUP BY a;",
+    {"SELECT a, COUNT(DISTINCT b) FROM groupby_int_1gb_1agg_null GROUP BY a;",
      "src/test/tables/aggregateoperator/groupby_int_1gb_1agg/count_distinct_null.tbl"},
 
     // case insensitivity

@@ -1,4 +1,4 @@
-a|COUNT DISTINCT(b)
+a|COUNT(DISTINCT b)
 int|long
 12345|2
 123|1

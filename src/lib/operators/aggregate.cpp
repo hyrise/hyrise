@@ -379,7 +379,12 @@ void Aggregate::write_aggregate_output(ColumnID column_index) {
     output_column_name = "COUNT(*)";
   } else {
     const auto& column_name = _input_table_left()->column_name(aggregate.column_id);
-    output_column_name = aggregate_function_to_string.left.at(function) + "(" + column_name + ")";
+
+    if (aggregate.function == AggregateFunction::CountDistinct) {
+      output_column_name = std::string("COUNT(DISTINCT ") + column_name + ")";
+    } else {
+      output_column_name = aggregate_function_to_string.left.at(function) + "(" + column_name + ")";
+    }
   }
 
   constexpr bool needs_null = (function != AggregateFunction::Count && function != AggregateFunction::CountDistinct);
