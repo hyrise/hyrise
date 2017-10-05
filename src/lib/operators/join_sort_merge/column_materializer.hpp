@@ -8,7 +8,7 @@
 
 #include "../../storage/base_attribute_vector.hpp"
 #include "resolve_type.hpp"
-#include "../../types.hpp"
+#include "types.hpp"
 
 namespace opossum {
 
@@ -30,6 +30,7 @@ using MaterializedColumnList = std::vector<std::shared_ptr<MaterializedColumn<T>
 /**
 * Materializes a table for a specific column and sorts it if required. Row-Ids are kept in order to enable
 * the construction of pos lists for the algorithms that are using this class.
+* Note: null values are skipped and do not appear in the output.
 **/
 template <typename T>
 class ColumnMaterializer : public ColumnVisitable {
@@ -89,13 +90,14 @@ class ColumnMaterializer : public ColumnVisitable {
     auto& value_column = static_cast<ValueColumn<T>&>(column);
     auto materialization_context = std::static_pointer_cast<MaterializationContext>(context);
     auto output = std::make_shared<MaterializedColumn<T>>();
+    output->reserve(value_column.values().size());
 
     // Copy over every entry
     for (ChunkOffset chunk_offset{0}; chunk_offset < value_column.values().size(); ++chunk_offset) {
       RowID row_id{materialization_context->chunk_id, chunk_offset};
       // Null values are skipped
       if (!value_column.is_nullable() || !value_column.null_values()[chunk_offset]) {
-        output->push_back(MaterializedValue<T>(row_id, value_column.values()[chunk_offset]));
+        output->emplace_back(row_id, value_column.values()[chunk_offset]);
       }
     }
 
@@ -113,9 +115,8 @@ class ColumnMaterializer : public ColumnVisitable {
   void handle_dictionary_column(BaseColumn& column, std::shared_ptr<ColumnVisitableContext> context) override {
     auto& dictionary_column = dynamic_cast<DictionaryColumn<T>&>(column);
     auto materialization_context = std::static_pointer_cast<MaterializationContext>(context);
-
-    // The output size is not known because null values are going to be skipped
     auto output = std::make_shared<MaterializedColumn<T>>();
+    output->reserve(column.size());
 
     auto value_ids = dictionary_column.attribute_vector();
     auto dict = dictionary_column.dictionary();
@@ -145,7 +146,7 @@ class ColumnMaterializer : public ColumnVisitable {
       ChunkOffset chunk_offset{0};
       for (ValueID value_id{0}; value_id < dict->size(); ++value_id) {
         for (auto& row_id : rows_with_value[value_id]) {
-          output->push_back(MaterializedValue<T>(row_id, (*dict)[value_id]));
+          output->emplace_back(row_id, (*dict)[value_id]);
           ++chunk_offset;
         }
       }
@@ -154,7 +155,7 @@ class ColumnMaterializer : public ColumnVisitable {
         auto row_id = RowID{materialization_context->chunk_id, chunk_offset};
         auto value_id = value_ids->get(chunk_offset);
         if (value_id != NULL_VALUE_ID) {
-          output->push_back(MaterializedValue<T>(row_id, (*dict)[value_id]));
+          output->emplace_back(row_id, (*dict)[value_id]);
         }
       }
     }
@@ -170,9 +171,8 @@ class ColumnMaterializer : public ColumnVisitable {
     auto referenced_column_id = ref_column.referenced_column_id();
     auto materialization_context = std::static_pointer_cast<MaterializationContext>(context);
     auto pos_list = ref_column.pos_list();
-
-    // The output size is not known because null values are going to be skipped
     auto output = std::make_shared<MaterializedColumn<T>>();
+    output->reserve(ref_column.size());
 
     // Retrieve the columns from the referenced table so they only have to be cast once
     auto v_columns = std::vector<std::shared_ptr<ValueColumn<T>>>(referenced_table->chunk_count());
@@ -200,12 +200,12 @@ class ColumnMaterializer : public ColumnVisitable {
       DebugAssert(v_column || d_column, "Referenced column is neither value nor dictionary column!");
       if (v_column) {
         value = v_column->values()[row_id.chunk_offset];
-        output->push_back(MaterializedValue<T>(RowID{materialization_context->chunk_id, chunk_offset}, value));
+        output->emplace_back(RowID{materialization_context->chunk_id, chunk_offset}, value);
       } else {
         ValueID value_id = d_column->attribute_vector()->get(row_id.chunk_offset);
         if (value_id != NULL_VALUE_ID) {
           value = d_column->dictionary()->at(value_id);
-          output->push_back(MaterializedValue<T>(RowID{materialization_context->chunk_id, chunk_offset}, value));
+          output->emplace_back(RowID{materialization_context->chunk_id, chunk_offset}, value);
         }
       }
     }
