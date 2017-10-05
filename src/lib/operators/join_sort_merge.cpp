@@ -40,7 +40,8 @@ JoinSortMerge::JoinSortMerge(const std::shared_ptr<const AbstractOperator> left,
                   op == ScanType::OpLessThanEquals || op == ScanType::OpGreaterThanEquals ||
                   op == ScanType::OpNotEquals,
               "Unsupported scan type");
-  DebugAssert(op == ScanType::OpEquals || mode == JoinMode::Inner, "Outer joins are only implemented for equi joins.");
+  DebugAssert(op != ScanType::OpNotEquals || mode == JoinMode::Inner,
+              "Outer joins are not implemented for not-equals joins.");
 }
 
 std::shared_ptr<AbstractOperator> JoinSortMerge::recreate(const std::vector<AllParameterVariant>& args) const {
