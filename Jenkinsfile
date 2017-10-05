@@ -1,6 +1,6 @@
 node {
 
-  def oppossumCI = docker.image('hyrise/opossum-ci:16.10');
+  def oppossumCI = docker.image('hyrise/opossum-ci:17.04');
   oppossumCI.pull()
   oppossumCI.inside("-u 0:0") {
 
@@ -69,10 +69,10 @@ node {
 
       stage("ASAN") {
         stage("asan Release") {
-          sh "./clang-release/opossumAsan"
+          sh "LSAN_OPTIONS=suppressions=asan-ignore.txt ./clang-release/opossumAsan"
         }
         stage("asan Debug") {
-          sh "./clang-debug/opossumAsan"
+          sh "LSAN_OPTIONS=suppressions=asan-ignore.txt ./clang-debug/opossumAsan"
         }
       }
 

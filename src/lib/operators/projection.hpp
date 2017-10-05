@@ -11,7 +11,7 @@
 #include <vector>
 
 #include "abstract_read_only_operator.hpp"
-#include "optimizer/expression/expression_node.hpp"
+#include "optimizer/expression.hpp"
 #include "storage/chunk.hpp"
 #include "storage/dictionary_column.hpp"
 #include "storage/reference_column.hpp"
@@ -26,7 +26,7 @@ namespace opossum {
  */
 class Projection : public AbstractReadOnlyOperator {
  public:
-  using ColumnExpressions = std::vector<std::shared_ptr<ExpressionNode>>;
+  using ColumnExpressions = std::vector<std::shared_ptr<Expression>>;
 
   Projection(const std::shared_ptr<const AbstractOperator> in, const ColumnExpressions& column_expressions);
 
@@ -34,33 +34,61 @@ class Projection : public AbstractReadOnlyOperator {
   uint8_t num_in_tables() const override;
   uint8_t num_out_tables() const override;
 
-  const ColumnExpressions column_expressions() const;
+  const ColumnExpressions& column_expressions() const;
 
   std::shared_ptr<AbstractOperator> recreate(const std::vector<AllParameterVariant>& args) const override;
+
+  /**
+   * The dummy table is used for literal projections that have no input table.
+   * This was introduce to allow queries like INSERT INTO tbl VALUES (1, 2, 3);
+   * Because each INSERT uses a projection as input, the above case needs to project the three
+   * literals (1, 2, 3) without any specific input table. Therefore, this dummy table is used instead.
+   *
+   * The dummy table contains one (value) column with one row. This way, the above projection
+   * contains exactly one row with the given literals.
+   */
+  class DummyTable : public Table {
+   public:
+    DummyTable() : Table(0) {
+      add_column("dummy", "int");
+      append(std::vector<AllTypeVariant>{0});
+    }
+  };
+
+  static std::shared_ptr<Table> dummy_table();
 
  protected:
   ColumnExpressions _column_expressions;
 
-  class ColumnCreator {
-   public:
-    template <typename T>
-    static void run(Chunk& chunk, const ChunkID chunk_id, const std::shared_ptr<ExpressionNode>& expression,
-                    std::shared_ptr<const Table> input_table_left) {
-      // check whether term is a just a simple column and bypass this column
-      if (expression->type() == ExpressionType::ColumnIdentifier) {
-        auto bypassed_column =
-            input_table_left->get_chunk(chunk_id).get_column(input_table_left->column_id_by_name(expression->name()));
-        return chunk.add_column(bypassed_column);
-      }
-
-      auto values = evaluate_expression<T>(expression, input_table_left, chunk_id);
-      auto column = std::make_shared<ValueColumn<T>>(std::move(values));
-
-      chunk.add_column(column);
+  template <typename T>
+  static void create_column(boost::hana::basic_type<T> type, Chunk& chunk, const ChunkID chunk_id,
+                            const std::shared_ptr<Expression>& expression,
+                            std::shared_ptr<const Table> input_table_left) {
+    // check whether term is a just a simple column and bypass this column
+    if (expression->type() == ExpressionType::Column) {
+      auto bypassed_column = input_table_left->get_chunk(chunk_id).get_column(expression->column_id());
+      return chunk.add_column(bypassed_column);
     }
-  };
 
-  static const std::string get_type_of_expression(const std::shared_ptr<ExpressionNode>& expression,
+    std::shared_ptr<BaseColumn> column;
+
+    if (expression->is_null_literal()) {
+      // fill a nullable column with NULLs
+      auto row_count = input_table_left->get_chunk(chunk_id).size();
+      auto null_values = pmr_concurrent_vector<bool>(row_count, true);
+      auto values = pmr_concurrent_vector<T>(row_count);
+
+      column = std::make_shared<ValueColumn<T>>(std::move(values), std::move(null_values));
+    } else {
+      // fill a value column with the specified literal
+      auto values = evaluate_expression<T>(expression, input_table_left, chunk_id);
+      column = std::make_shared<ValueColumn<T>>(std::move(values));
+    }
+
+    chunk.add_column(column);
+  }
+
+  static const std::string get_type_of_expression(const std::shared_ptr<Expression>& expression,
                                                   const std::shared_ptr<const Table>& table);
 
   /**
@@ -68,7 +96,7 @@ class Projection : public AbstractReadOnlyOperator {
    * It returns a vector containing the materialized values resulting from the expression.
    */
   template <typename T>
-  static const tbb::concurrent_vector<T> evaluate_expression(const std::shared_ptr<ExpressionNode>& expression,
+  static const tbb::concurrent_vector<T> evaluate_expression(const std::shared_ptr<Expression>& expression,
                                                              const std::shared_ptr<const Table> table,
                                                              const ChunkID chunk_id) {
     /**
@@ -83,8 +111,8 @@ class Projection : public AbstractReadOnlyOperator {
     /**
      * Handle column reference
      */
-    if (expression->type() == ExpressionType::ColumnIdentifier) {
-      auto column = table->get_chunk(chunk_id).get_column(table->column_id_by_name(expression->name()));
+    if (expression->type() == ExpressionType::Column) {
+      auto column = table->get_chunk(chunk_id).get_column(expression->column_id());
 
       if (auto value_column = std::dynamic_pointer_cast<ValueColumn<T>>(column)) {
         // values are copied
@@ -174,7 +202,7 @@ class Projection : public AbstractReadOnlyOperator {
     return get_base_operator_function<T>(type);
   }
 
-  std::shared_ptr<const Table> on_execute() override;
+  std::shared_ptr<const Table> _on_execute() override;
 };
 
 /**

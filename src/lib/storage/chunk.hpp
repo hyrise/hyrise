@@ -23,6 +23,8 @@ class BaseColumn;
 
 // A chunk is a horizontal partition of a table.
 // It stores the data column by column.
+//
+// Find more information about this in our wiki: https://github.com/hyrise/zweirise/wiki/chunk-concept
 class Chunk : private Noncopyable {
  public:
   static const CommitID MAX_COMMIT_ID;
@@ -35,9 +37,9 @@ class Chunk : private Noncopyable {
     friend class Chunk;
 
    public:
-    tbb::concurrent_vector<copyable_atomic<TransactionID>> tids;  ///< 0 unless locked by a transaction
-    tbb::concurrent_vector<CommitID> begin_cids;                  ///< commit id when record was added
-    tbb::concurrent_vector<CommitID> end_cids;                    ///< commit id when record was deleted
+    pmr_concurrent_vector<copyable_atomic<TransactionID>> tids;  ///< 0 unless locked by a transaction
+    pmr_concurrent_vector<CommitID> begin_cids;                  ///< commit id when record was added
+    pmr_concurrent_vector<CommitID> end_cids;                    ///< commit id when record was deleted
 
    private:
     /**
@@ -54,6 +56,8 @@ class Chunk : private Noncopyable {
   // creates an empty chunk without mvcc columns
   Chunk();
   explicit Chunk(const bool has_mvcc_columns);
+  explicit Chunk(const PolymorphicAllocator<Chunk> &alloc);
+  explicit Chunk(const PolymorphicAllocator<Chunk> &alloc, const bool has_mvcc_columns);
 
   // we need to explicitly set the move constructor to default when
   // we overwrite the copy constructor
@@ -134,9 +138,10 @@ class Chunk : private Noncopyable {
   bool references_only_one_table() const;
 
  protected:
-  tbb::concurrent_vector<std::shared_ptr<BaseColumn>> _columns;
+  PolymorphicAllocator<Chunk> _alloc;
+  pmr_concurrent_vector<std::shared_ptr<BaseColumn>> _columns;
   std::unique_ptr<MvccColumns> _mvcc_columns;
-  std::vector<std::shared_ptr<BaseIndex>> _indices;
+  pmr_vector<std::shared_ptr<BaseIndex>> _indices;
 };
 
 }  // namespace opossum

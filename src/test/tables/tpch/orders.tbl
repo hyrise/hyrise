@@ -1,3 +1,6 @@
 o_orderkey|o_custkey|o_orderstatus|o_totalprice|o_orderdate|o_orderpriority|o_clerk|o_shippriority|o_comment
 int|int|string|float|string|string|string|int|string
-0|0|X|12.3|24-12-2017|A|B|1|-
+0|0|X|12.3|2017-12-24|A|B|1|-
+0|0|X|12.3|1995-03-14|A|B|1|-
+0|0|X|12.3|1994-03-14|A|B|1|-
+0|0|X|12.3|1993-12-17|A|B|1|-

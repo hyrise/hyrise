@@ -11,24 +11,31 @@
 
 #include "type_cast.hpp"
 #include "utils/assert.hpp"
+#include "utils/performance_warning.hpp"
 
 namespace opossum {
 
 template <typename T>
 ValueColumn<T>::ValueColumn(bool nullable) {
-  if (nullable) _null_values = tbb::concurrent_vector<bool>();
+  if (nullable) _null_values = pmr_concurrent_vector<bool>();
 }
 
 template <typename T>
-ValueColumn<T>::ValueColumn(tbb::concurrent_vector<T>&& values) : _values(std::move(values)) {}
+ValueColumn<T>::ValueColumn(const PolymorphicAllocator<T>& alloc, bool nullable) : _values(alloc) {
+  if (nullable) _null_values = pmr_concurrent_vector<bool>(alloc);
+}
 
 template <typename T>
-ValueColumn<T>::ValueColumn(tbb::concurrent_vector<T>&& values, tbb::concurrent_vector<bool>&& null_values)
+ValueColumn<T>::ValueColumn(pmr_concurrent_vector<T>&& values) : _values(std::move(values)) {}
+
+template <typename T>
+ValueColumn<T>::ValueColumn(pmr_concurrent_vector<T>&& values, pmr_concurrent_vector<bool>&& null_values)
     : _values(std::move(values)), _null_values(std::move(null_values)) {}
 
 template <typename T>
 const AllTypeVariant ValueColumn<T>::operator[](const size_t i) const {
   DebugAssert(i != INVALID_CHUNK_OFFSET, "Passed chunk offset must be valid.");
+  PerformanceWarning("operator[] used");
 
   // Columns supports null values and value is null
   if (is_nullable() && (*_null_values).at(i)) {
@@ -83,12 +90,12 @@ void ValueColumn<std::string>::append(const AllTypeVariant& val) {
 }
 
 template <typename T>
-const tbb::concurrent_vector<T>& ValueColumn<T>::values() const {
+const pmr_concurrent_vector<T>& ValueColumn<T>::values() const {
   return _values;
 }
 
 template <typename T>
-tbb::concurrent_vector<T>& ValueColumn<T>::values() {
+pmr_concurrent_vector<T>& ValueColumn<T>::values() {
   return _values;
 }
 
@@ -98,14 +105,14 @@ bool ValueColumn<T>::is_nullable() const {
 }
 
 template <typename T>
-const tbb::concurrent_vector<bool>& ValueColumn<T>::null_values() const {
+const pmr_concurrent_vector<bool>& ValueColumn<T>::null_values() const {
   DebugAssert(is_nullable(), "This ValueColumn does not support null values.");
 
   return *_null_values;
 }
 
 template <typename T>
-tbb::concurrent_vector<bool>& ValueColumn<T>::null_values() {
+pmr_concurrent_vector<bool>& ValueColumn<T>::null_values() {
   DebugAssert(is_nullable(), "This ValueColumn does not support null values.");
 
   return *_null_values;
@@ -135,20 +142,38 @@ void ValueColumn<T>::write_string_representation(std::string& row_string, const 
   row_string += buffer.str();
 }
 
-// TODO(anyone): This method is part of an algorithm that hasn't yet been updated to support null values.
 template <typename T>
 void ValueColumn<T>::copy_value_to_value_column(BaseColumn& value_column, ChunkOffset chunk_offset) const {
   auto& output_column = static_cast<ValueColumn<T>&>(value_column);
+
   auto& values_out = output_column.values();
 
-  values_out.push_back(_values[chunk_offset]);
+  if (is_nullable()) {
+    bool is_null = (*_null_values)[chunk_offset];
+
+    DebugAssert(!is_null || output_column.is_nullable(), "Target ValueColumn needs to be nullable as well");
+
+    if (output_column.is_nullable()) {
+      auto& null_values_out = output_column.null_values();
+      null_values_out.push_back(is_null);
+    }
+
+    values_out.push_back(is_null ? T{} : _values[chunk_offset]);
+
+  } else {
+    values_out.push_back(_values[chunk_offset]);
+
+    if (output_column.is_nullable()) {
+      output_column.null_values().push_back(false);
+    }
+  }
 }
 
 // TODO(anyone): This method is part of an algorithm that hasn't yet been updated to support null values.
 template <typename T>
-const std::shared_ptr<std::vector<std::pair<RowID, T>>> ValueColumn<T>::materialize(
+const std::shared_ptr<pmr_vector<std::pair<RowID, T>>> ValueColumn<T>::materialize(
     ChunkID chunk_id, std::shared_ptr<std::vector<ChunkOffset>> offsets) {
-  auto materialized_vector = std::make_shared<std::vector<std::pair<RowID, T>>>();
+  auto materialized_vector = std::make_shared<pmr_vector<std::pair<RowID, T>>>(_values.get_allocator());
 
   // we may want to sort offsets first?
   if (offsets) {
@@ -168,10 +193,6 @@ const std::shared_ptr<std::vector<std::pair<RowID, T>>> ValueColumn<T>::material
   return materialized_vector;
 }
 
-template class ValueColumn<int32_t>;
-template class ValueColumn<int64_t>;
-template class ValueColumn<float>;
-template class ValueColumn<double>;
-template class ValueColumn<std::string>;
+EXPLICITLY_INSTANTIATE_COLUMN_TYPES(ValueColumn);
 
 }  // namespace opossum

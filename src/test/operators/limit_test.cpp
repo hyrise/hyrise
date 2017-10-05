@@ -7,10 +7,10 @@
 #include "../base_test.hpp"
 #include "gtest/gtest.h"
 
-#include "../../lib/operators/limit.hpp"
-#include "../../lib/operators/table_scan.hpp"
-#include "../../lib/operators/table_wrapper.hpp"
-#include "../../lib/types.hpp"
+#include "operators/limit.hpp"
+#include "operators/table_scan.hpp"
+#include "operators/table_wrapper.hpp"
+#include "types.hpp"
 
 namespace opossum {
 
@@ -70,7 +70,7 @@ TEST_F(OperatorsLimitTest, Limit1ValueColumn) {
 
 TEST_F(OperatorsLimitTest, Limit1ReferenceColumn) {
   // Filter accepts all rows in table.
-  auto table_scan = std::make_shared<TableScan>(_table_wrapper, "a", ScanType::OpGreaterThan, -1);
+  auto table_scan = std::make_shared<TableScan>(_table_wrapper, ColumnID{0}, ScanType::OpGreaterThan, -1);
   table_scan->execute();
   _input_operator = table_scan;
   test_limit_1();
@@ -83,7 +83,7 @@ TEST_F(OperatorsLimitTest, Limit2ValueColumn) {
 
 TEST_F(OperatorsLimitTest, Limit2ReferenceColumn) {
   // Filter accepts all rows in table.
-  auto table_scan = std::make_shared<TableScan>(_table_wrapper, "a", ScanType::OpGreaterThan, -1);
+  auto table_scan = std::make_shared<TableScan>(_table_wrapper, ColumnID{0}, ScanType::OpGreaterThan, -1);
   table_scan->execute();
   _input_operator = table_scan;
   test_limit_2();
@@ -96,7 +96,7 @@ TEST_F(OperatorsLimitTest, Limit4ValueColumn) {
 
 TEST_F(OperatorsLimitTest, Limit4ReferenceColumn) {
   // Filter accepts all rows in table.
-  auto table_scan = std::make_shared<TableScan>(_table_wrapper, "a", ScanType::OpGreaterThan, -1);
+  auto table_scan = std::make_shared<TableScan>(_table_wrapper, ColumnID{0}, ScanType::OpGreaterThan, -1);
   table_scan->execute();
   _input_operator = table_scan;
   test_limit_4();
@@ -109,7 +109,7 @@ TEST_F(OperatorsLimitTest, Limit10ValueColumn) {
 
 TEST_F(OperatorsLimitTest, Limit10ReferenceColumn) {
   // Filter accepts all rows in table.
-  auto table_scan = std::make_shared<TableScan>(_table_wrapper, "a", ScanType::OpGreaterThan, -1);
+  auto table_scan = std::make_shared<TableScan>(_table_wrapper, ColumnID{0}, ScanType::OpGreaterThan, -1);
   table_scan->execute();
   _input_operator = table_scan;
   test_limit_10();

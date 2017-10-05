@@ -18,9 +18,14 @@ namespace opossum {
 
 const CommitID Chunk::MAX_COMMIT_ID = std::numeric_limits<CommitID>::max();
 
-Chunk::Chunk() : Chunk{false} {}
+Chunk::Chunk() : Chunk(PolymorphicAllocator<Chunk>(), false) {}
 
-Chunk::Chunk(const bool has_mvcc_columns) {
+Chunk::Chunk(const bool has_mvcc_columns) : Chunk(PolymorphicAllocator<Chunk>(), has_mvcc_columns) {}
+
+Chunk::Chunk(const PolymorphicAllocator<Chunk>& alloc) : Chunk(alloc, false) {}
+
+Chunk::Chunk(const PolymorphicAllocator<Chunk>& alloc, const bool has_mvcc_columns)
+    : _alloc(alloc), _columns(alloc), _indices(alloc) {
   if (has_mvcc_columns) _mvcc_columns = std::make_unique<MvccColumns>();
 }
 

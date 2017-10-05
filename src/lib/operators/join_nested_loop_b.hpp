@@ -27,9 +27,8 @@ namespace opossum {
 class JoinNestedLoopB : public AbstractJoinOperator {
  public:
   JoinNestedLoopB(const std::shared_ptr<const AbstractOperator> left,
-                  const std::shared_ptr<const AbstractOperator> right,
-                  optional<std::pair<std::string, std::string>> column_names, const ScanType scan_type,
-                  const JoinMode mode, const std::string& prefix_left = "", const std::string& prefix_right = "");
+                  const std::shared_ptr<const AbstractOperator> right, const JoinMode mode,
+                  const std::pair<ColumnID, ColumnID>& column_ids, const ScanType scan_type);
 
   const std::string name() const override;
   uint8_t num_in_tables() const override;
@@ -37,7 +36,7 @@ class JoinNestedLoopB : public AbstractJoinOperator {
   std::shared_ptr<AbstractOperator> recreate(const std::vector<AllParameterVariant>& args) const override;
 
  protected:
-  std::shared_ptr<const Table> on_execute() override;
+  std::shared_ptr<const Table> _on_execute() override;
 
   struct JoinContext : ColumnVisitableContext {
     JoinContext(std::shared_ptr<BaseColumn> column_left, std::shared_ptr<BaseColumn> column_right,
@@ -61,7 +60,7 @@ class JoinNestedLoopB : public AbstractJoinOperator {
     JoinNestedLoopBImpl<T>(JoinNestedLoopB& join_nested_loop_b);
 
     // AbstractOperatorImpl implementation
-    std::shared_ptr<const Table> on_execute() override;
+    std::shared_ptr<const Table> _on_execute() override;
 
     // ColumnVisitable implementation
     void handle_value_column(BaseColumn& column, std::shared_ptr<ColumnVisitableContext> context) override;
@@ -94,14 +93,7 @@ class JoinNestedLoopB : public AbstractJoinOperator {
   void _join_columns(ColumnID left_column_id, ColumnID right_column_id, std::string left_column_type);
   std::shared_ptr<PosList> _dereference_pos_list(std::shared_ptr<const Table> input_table, ColumnID column_id,
                                                  std::shared_ptr<const PosList> pos_list);
-  void _append_columns_to_output(std::shared_ptr<const Table> input_table, std::shared_ptr<PosList> pos_list,
-                                 std::string prefix);
-
-  // Input fields
-  std::string _left_column_name;
-  std::string _right_column_name;
-  ScanType _scan_type;
-  JoinMode _mode;
+  void _append_columns_to_output(std::shared_ptr<const Table> input_table, std::shared_ptr<PosList> pos_list);
 
   // Output fields
   std::shared_ptr<PosList> _pos_list_left;

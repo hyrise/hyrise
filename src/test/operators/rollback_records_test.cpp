@@ -34,7 +34,7 @@ TEST_F(OperatorsRollbackRecordsTest, RollbackDelete) {
   // Get and scan table to make columns referenced.
   auto gt = std::make_shared<GetTable>(table_name);
   gt->execute();
-  auto table_scan = std::make_shared<TableScan>(gt, "a", ScanType::OpGreaterThanEquals, "0");
+  auto table_scan = std::make_shared<TableScan>(gt, ColumnID{0}, ScanType::OpGreaterThanEquals, "0");
   table_scan->execute();
 
   auto delete_op = std::make_shared<Delete>(table_name, table_scan);

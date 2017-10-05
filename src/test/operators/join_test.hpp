@@ -43,7 +43,7 @@ class JoinTest : public BaseTest {
 
     _table_wrapper_h = std::make_shared<TableWrapper>(load_table("src/test/tables/int_int4.tbl", 4));
 
-    _table_wrapper_i = std::make_shared<TableWrapper>(load_table("src/test/tables/int2.tbl", 1));
+    _table_wrapper_i = std::make_shared<TableWrapper>(load_table("src/test/tables/int5.tbl", 1));
 
     _table_wrapper_j = std::make_shared<TableWrapper>(load_table("src/test/tables/int3.tbl", 1));
 
@@ -89,15 +89,14 @@ class JoinTest : public BaseTest {
   template <typename JoinType>
   void test_join_output(const std::shared_ptr<const AbstractOperator> left,
                         const std::shared_ptr<const AbstractOperator> right,
-                        const std::pair<std::string, std::string> &column_names, const ScanType scan_type,
-                        const JoinMode mode, const std::string &prefix_left, const std::string &prefix_right,
+                        const std::pair<ColumnID, ColumnID> &column_ids, const ScanType scan_type, const JoinMode mode,
                         const std::string &file_name, size_t chunk_size) {
     // load expected results from file
     std::shared_ptr<Table> expected_result = load_table(file_name, chunk_size);
     EXPECT_NE(expected_result, nullptr) << "Could not load expected result table";
 
     // build and execute join
-    auto join = std::make_shared<JoinType>(left, right, column_names, scan_type, mode, prefix_left, prefix_right);
+    auto join = std::make_shared<JoinType>(left, right, mode, column_ids, scan_type);
     EXPECT_NE(join, nullptr) << "Could not build Join";
     join->execute();
 

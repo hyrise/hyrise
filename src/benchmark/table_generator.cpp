@@ -11,6 +11,7 @@
 #include "tbb/concurrent_vector.h"
 
 #include "storage/chunk.hpp"
+#include "storage/dictionary_compression.hpp"
 #include "storage/table.hpp"
 #include "storage/value_column.hpp"
 
@@ -18,7 +19,7 @@
 
 namespace opossum {
 
-std::shared_ptr<Table> TableGenerator::get_table(const ChunkID chunk_size) {
+std::shared_ptr<Table> TableGenerator::get_table(const ChunkID chunk_size, const bool compress) {
   std::shared_ptr<Table> table = std::make_shared<Table>(chunk_size);
   std::vector<tbb::concurrent_vector<int>> value_vectors;
   auto vector_size = chunk_size > 0 ? chunk_size : _num_rows;
@@ -44,7 +45,7 @@ std::shared_ptr<Table> TableGenerator::get_table(const ChunkID chunk_size) {
         chunk.add_column(std::make_shared<ValueColumn<int>>(std::move(value_vectors[j])));
         value_vectors[j] = tbb::concurrent_vector<int>(vector_size);
       }
-      table->add_chunk(std::move(chunk));
+      table->emplace_chunk(std::move(chunk));
       chunk = Chunk();
     }
     /*
@@ -61,8 +62,13 @@ std::shared_ptr<Table> TableGenerator::get_table(const ChunkID chunk_size) {
     for (size_t j = 0; j < _num_columns; j++) {
       chunk.add_column(std::make_shared<ValueColumn<int>>(std::move(value_vectors[j])));
     }
-    table->add_chunk(std::move(chunk));
+    table->emplace_chunk(std::move(chunk));
   }
+
+  if (compress) {
+    DictionaryCompression::compress_table(*table);
+  }
+
   return table;
 }
 }  // namespace opossum

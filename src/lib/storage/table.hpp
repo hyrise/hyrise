@@ -53,11 +53,11 @@ class Table : private Noncopyable {
   Chunk &get_chunk(ChunkID chunk_id);
   const Chunk &get_chunk(ChunkID chunk_id) const;
 
-  // adds a chunk to the table
-  void add_chunk(Chunk chunk);
+  // Adds a chunk to the table. If the first chunk is empty, it is replaced.
+  void emplace_chunk(Chunk chunk);
 
   // Returns a list of all column names.
-  const std::vector<std::string> column_names() const;
+  const std::vector<std::string> &column_names() const;
 
   // returns the column name of the nth column
   const std::string &column_name(ColumnID column_id) const;
@@ -71,7 +71,12 @@ class Table : private Noncopyable {
   // returns the vector of column types
   const std::vector<std::string> &column_types() const;
 
-  // returns the column with the given name
+  // returns the vector of column nullables
+  const std::vector<bool> &column_nullables() const;
+
+  // Returns the column with the given name.
+  // This method is intended for debugging purposes only.
+  // It does not verify whether a column name is unambiguous.
   ColumnID column_id_by_name(const std::string &column_name) const;
 
   // return the maximum chunk size (cannot exceed ChunkOffset (uint32_t))

@@ -16,26 +16,11 @@
 namespace opossum {
 
 JoinNestedLoopB::JoinNestedLoopB(const std::shared_ptr<const AbstractOperator> left,
-                                 const std::shared_ptr<const AbstractOperator> right,
-                                 optional<std::pair<std::string, std::string>> column_names, const ScanType scan_type,
-                                 const JoinMode mode, const std::string& prefix_left, const std::string& prefix_right)
-    : AbstractJoinOperator(left, right, column_names, scan_type, mode, prefix_left, prefix_right),
-      _scan_type{scan_type},
-      _mode{mode} {
-  DebugAssert(
-      (mode != JoinMode::Cross),
-      "JoinNestedLoopA: this operator does not support Cross Joins, the optimizer should use Product operator.");
+                                 const std::shared_ptr<const AbstractOperator> right, const JoinMode mode,
+                                 const std::pair<ColumnID, ColumnID>& column_ids, const ScanType scan_type)
+    : AbstractJoinOperator(left, right, mode, column_ids, scan_type) {
   DebugAssert(left != nullptr, "JoinNestedLoopB::JoinNestedLoopB: left input operator is null");
   DebugAssert(right != nullptr, "JoinNestedLoopB::JoinNestedLoopB: right input operator is null");
-
-  // Check optional column names
-  // Per definition either two names are specified or none
-  if (column_names) {
-    _left_column_name = column_names->first;
-    _right_column_name = column_names->second;
-  } else {
-    Fail("JoinNestedLoopB::JoinNestedLoopB: No columns specified for join operator");
-  }
 
   _output = std::make_shared<Table>(0);
   _pos_list_left = std::make_shared<PosList>();
@@ -66,11 +51,11 @@ std::shared_ptr<PosList> JoinNestedLoopB::_dereference_pos_list(std::shared_ptr<
 }
 
 void JoinNestedLoopB::_append_columns_to_output(std::shared_ptr<const Table> input_table,
-                                                std::shared_ptr<PosList> pos_list, std::string prefix) {
+                                                std::shared_ptr<PosList> pos_list) {
   // Append each column of the input column to the output
   for (ColumnID column_id{0}; column_id < input_table->col_count(); column_id++) {
     // Add the column meta data
-    _output->add_column_definition(prefix + input_table->column_name(column_id), input_table->column_type(column_id));
+    _output->add_column_definition(input_table->column_name(column_id), input_table->column_type(column_id));
 
     // Check whether the column consists of reference columns
     const auto r_column =
@@ -92,11 +77,11 @@ void JoinNestedLoopB::_append_columns_to_output(std::shared_ptr<const Table> inp
 void JoinNestedLoopB::_join_columns(ColumnID left_column_id, ColumnID right_column_id, std::string left_column_type) {
   auto impl = make_shared_by_column_type<ColumnVisitable, JoinNestedLoopBImpl>(left_column_type, *this);
   // For each combination of chunks from both input tables call visitor pattern to actually perform the join.
-  for (ChunkID chunk_id_left = ChunkID{0}; chunk_id_left < input_table_left()->chunk_count(); ++chunk_id_left) {
-    for (ChunkID chunk_id_right = ChunkID{0}; chunk_id_right < input_table_right()->chunk_count(); ++chunk_id_right) {
-      auto& chunk_left = input_table_left()->get_chunk(chunk_id_left);
+  for (ChunkID chunk_id_left = ChunkID{0}; chunk_id_left < _input_table_left()->chunk_count(); ++chunk_id_left) {
+    for (ChunkID chunk_id_right = ChunkID{0}; chunk_id_right < _input_table_right()->chunk_count(); ++chunk_id_right) {
+      auto& chunk_left = _input_table_left()->get_chunk(chunk_id_left);
       auto column_left = chunk_left.get_column(left_column_id);
-      auto& chunk_right = input_table_right()->get_chunk(chunk_id_right);
+      auto& chunk_right = _input_table_right()->get_chunk(chunk_id_right);
       auto column_right = chunk_right.get_column(right_column_id);
 
       auto context = std::make_shared<JoinContext>(column_left, column_right, chunk_id_left, chunk_id_right, _mode);
@@ -124,32 +109,31 @@ void JoinNestedLoopB::_add_outer_join_rows(std::shared_ptr<const Table> outer_si
   }
 }
 
-std::shared_ptr<const Table> JoinNestedLoopB::on_execute() {
+std::shared_ptr<const Table> JoinNestedLoopB::_on_execute() {
   // Get types and ids of the input columns
-  auto left_column_id = input_table_left()->column_id_by_name(_left_column_name);
-  auto right_column_id = input_table_right()->column_id_by_name(_right_column_name);
-  auto left_column_type = input_table_left()->column_type(left_column_id);
-  auto right_column_type = input_table_right()->column_type(right_column_id);
+  auto left_column_type = _input_table_left()->column_type(_column_ids.first);
+  auto right_column_type = _input_table_right()->column_type(_column_ids.second);
 
   // Ensure matching column types for simplicity
   // Joins on non-matching types can be added later.
+  // TODO(anybody) replace _column_ids.first/second with names
   DebugAssert((left_column_type == right_column_type),
               "JoinNestedLoopB::execute: column type \"" + left_column_type + "\" of left column \"" +
-                  _left_column_name + "\" does not match colum type \"" + right_column_type + "\" of right column \"" +
-                  _right_column_name + "\"!");
+                  std::to_string(_column_ids.first) + "\" does not match colum type \"" + right_column_type +
+                  "\" of right column \"" + std::to_string(_column_ids.second) + "\"!");
 
-  _join_columns(left_column_id, right_column_id, left_column_type);
+  _join_columns(_column_ids.first, _column_ids.second, left_column_type);
 
   if (_mode == JoinMode::Left || _mode == JoinMode::Outer) {
-    _add_outer_join_rows(input_table_left(), _pos_list_left, _left_match, _pos_list_right);
+    _add_outer_join_rows(_input_table_left(), _pos_list_left, _left_match, _pos_list_right);
   }
 
   if (_mode == JoinMode::Right || _mode == JoinMode::Outer) {
-    _add_outer_join_rows(input_table_right(), _pos_list_right, _right_match, _pos_list_left);
+    _add_outer_join_rows(_input_table_right(), _pos_list_right, _right_match, _pos_list_left);
   }
 
-  _append_columns_to_output(input_table_left(), _pos_list_left, _prefix_left);
-  _append_columns_to_output(input_table_right(), _pos_list_right, _prefix_right);
+  _append_columns_to_output(_input_table_left(), _pos_list_left);
+  _append_columns_to_output(_input_table_right(), _pos_list_right);
 
   return _output;
 }
@@ -161,8 +145,8 @@ uint8_t JoinNestedLoopB::num_in_tables() const { return 2u; }
 uint8_t JoinNestedLoopB::num_out_tables() const { return 1u; }
 
 std::shared_ptr<AbstractOperator> JoinNestedLoopB::recreate(const std::vector<AllParameterVariant>& args) const {
-  return std::make_shared<JoinNestedLoopB>(_input_left->recreate(args), _input_right->recreate(args), _column_names,
-                                           _scan_type, _mode, _prefix_left, _prefix_right);
+  return std::make_shared<JoinNestedLoopB>(_input_left->recreate(args), _input_right->recreate(args), _mode,
+                                           _column_ids, _scan_type);
 }
 
 template <typename T>
@@ -173,7 +157,7 @@ JoinNestedLoopB::JoinNestedLoopBImpl<T>::JoinNestedLoopBImpl(JoinNestedLoopB& jo
     return;
   }
 
-  switch (_join_nested_loop_b._scan_type) {
+  switch (join_nested_loop_b._scan_type) {
     case ScanType::OpEquals: {
       _compare = [](const T& value_left, const T& value_right) -> bool { return value_left == value_right; };
       break;
@@ -204,7 +188,7 @@ JoinNestedLoopB::JoinNestedLoopBImpl<T>::JoinNestedLoopBImpl(JoinNestedLoopB& jo
 }
 
 template <typename T>
-std::shared_ptr<const Table> JoinNestedLoopB::JoinNestedLoopBImpl<T>::on_execute() {
+std::shared_ptr<const Table> JoinNestedLoopB::JoinNestedLoopBImpl<T>::_on_execute() {
   return _join_nested_loop_b._output;
 }
 
@@ -220,9 +204,9 @@ void JoinNestedLoopB::JoinNestedLoopBImpl<T>::_match_values(const T& value_left,
                                                             std::shared_ptr<JoinContext> context, bool reverse_order) {
   bool values_match = reverse_order ? _compare(value_right, value_left) : _compare(value_left, value_right);
   if (values_match) {
-    RowID left_row_id = _join_nested_loop_b.input_table_left()->calculate_row_id(
+    RowID left_row_id = _join_nested_loop_b._input_table_left()->calculate_row_id(
         context->_left_chunk_id, reverse_order ? right_chunk_offset : left_chunk_offset);
-    RowID right_row_id = _join_nested_loop_b.input_table_right()->calculate_row_id(
+    RowID right_row_id = _join_nested_loop_b._input_table_right()->calculate_row_id(
         context->_right_chunk_id, reverse_order ? left_chunk_offset : right_chunk_offset);
 
     if (context->_mode == JoinMode::Left || context->_mode == JoinMode::Outer) {

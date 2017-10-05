@@ -32,6 +32,9 @@ class Table;
  * ColumnStatistics<ColumnType>
  * Public TableStatistics functions pass on the parameters to the corresponding column statistics functions.
  * These compute a new ColumnStatistics<> and the predicted selectivity of an operator.
+ *
+ * Find more information about table statistics in our wiki:
+ * https://github.com/hyrise/zweirise/wiki/potential_statistics
  */
 class TableStatistics {
  public:
@@ -55,8 +58,7 @@ class TableStatistics {
   /**
    * Get table statistics for the operator table scan table scan.
    */
-  virtual std::shared_ptr<TableStatistics> predicate_statistics(const std::string &column_name,
-                                                                const ScanType scan_type,
+  virtual std::shared_ptr<TableStatistics> predicate_statistics(const ColumnID column_id, const ScanType scan_type,
                                                                 const AllParameterVariant &value,
                                                                 const optional<AllTypeVariant> &value2 = nullopt);
 

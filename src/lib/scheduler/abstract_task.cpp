@@ -97,7 +97,7 @@ void AbstractTask::execute() {
   DebugAssert(!(_started.exchange(true)), "Possible bug: Trying to execute the same task twice");
   DebugAssert(is_ready(), "Task must not be executed before its dependencies are done");
 
-  on_execute();
+  _on_execute();
 
   for (auto& successor : _successors) {
     successor->_on_predecessor_done();

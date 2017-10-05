@@ -34,10 +34,10 @@ namespace opossum {
 class JoinSortMerge : public AbstractJoinOperator {
  public:
   JoinSortMerge(const std::shared_ptr<const AbstractOperator> left, const std::shared_ptr<const AbstractOperator> right,
-                optional<std::pair<std::string, std::string>> column_names, const ScanType op, const JoinMode mode,
-                const std::string& prefix_left, const std::string& prefix_right);
+                const JoinMode mode, const std::pair<ColumnID, ColumnID>& column_ids, const ScanType op);
 
-  std::shared_ptr<const Table> on_execute() override;
+  std::shared_ptr<const Table> _on_execute() override;
+  void _on_cleanup() override;
   std::shared_ptr<AbstractOperator> recreate(const std::vector<AllParameterVariant> &args) const override;
   const std::string name() const override;
   uint8_t num_in_tables() const override;

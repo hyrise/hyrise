@@ -22,13 +22,13 @@ In the container, continue with [Building and Tooling](#building-and-tooling).
 
 ## Dependencies
 You can install the dependencies on your own or use the install.sh script which installs all of the following packages.
-The install script was tested under macOS (brew) and Ubuntu 16.10 (apt-get).
+The install script was tested under macOS (brew) and Ubuntu 17.04 (apt-get).
 
 ### Dependencies that can be installed via a package manager
 - autoconf
 - automake
 - build-essential (linux)
-- boost (>= 1.61.0)
+- boost (>= 1.62.0)
 - clang (>= 3.5.0) optional if gcc is installed
 - clang-format (>= 3.8) optional
 - CMake (>= 3.5)
@@ -47,6 +47,7 @@ The install script was tested under macOS (brew) and Ubuntu 16.10 (apt-get).
 - googletest (https://github.com/google/googletest)
 - protoc and gRPC (https://github.com/grpc/grpc)
 - sql-parser (https://github.com/hyrise/sql-parser)
+- pgasus (https://github.com/kateyy/pgasus)
 
 The install script builds protoc and gRPC. For manual compilation:
 
@@ -80,7 +81,7 @@ To configure a build directory for a release build make sure it is empty and cal
 
 ### Test
 Calling `make opossumTest` from the build directory builds all available tests.
-The binary can be executed with `./<YourBuildDirectory/>opossumTest`.
+The binary can be executed with `./<YourBuildDirectory>/opossumTest`.
 Note, that the tests/asan/etc need to be executed from the project root in order for table-files to be found.
 
 ### Coverage
@@ -94,6 +95,7 @@ It will fail on the first detected memory error and will print a summary.
 To convert addresses to actual source code locations, make sure llvm-symbolizer is installed (included in the llvm package) and is available in `$PATH`.
 To specify a custom location for the symbolizer, set `$ASAN_SYMBOLIZER_PATH` to the path of the executable.
 This seems to work out of the box on macOS - If not, make sure to have llvm installed.
+The binary can be executed with `LSAN_OPTIONS=suppressions=asan-ignore.txt ./<YourBuildDirectory>/opossumAsan`.
 
 ## Naming convention for gtest macros:
 

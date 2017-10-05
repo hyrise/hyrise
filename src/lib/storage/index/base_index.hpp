@@ -27,6 +27,9 @@ class BaseColumn;
  * Instead, each index is able to return an index for the lower and one for the upper bound of the requested value(s).
  * As each index has a different way of iterating over its data structures, it has to implement its iterator as well.
  * We might use the impl-pattern similar to the TableScan, but this will be in a future commit.
+ *
+ * Find more information about this in our wiki: https://github.com/hyrise/zweirise/wiki/BaseIndex and
+ *                                               https://github.com/hyrise/zweirise/wiki/Indexes
  **/
 
 class BaseIndex : private Noncopyable {

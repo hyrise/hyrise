@@ -13,7 +13,7 @@ namespace opossum {
 
 class BaseColumn;
 class Node;
-class UntypedDictionaryColumn;
+class BaseDictionaryColumn;
 
 /**
  * The AdaptiveRadixTreeIndex (ART) currently works on single DictionaryColumns. Conceptually it also works on
@@ -26,6 +26,8 @@ class UntypedDictionaryColumn;
  * partial keys to positions in the array of the child-pointers
  *
  * The full specification of an ART can be found in the following paper: https://db.in.tum.de/~leis/papers/ART.pdf
+ *
+ * Find more information about this in our wiki: https://github.com/hyrise/zweirise/wiki/AdaptiveRadixTree-(ART)-Index
  *
  */
 class AdaptiveRadixTreeIndex : public BaseIndex {
@@ -80,7 +82,7 @@ class AdaptiveRadixTreeIndex : public BaseIndex {
 
   std::vector<std::shared_ptr<BaseColumn>> _get_index_columns() const;
 
-  const std::shared_ptr<UntypedDictionaryColumn> _index_column;
+  const std::shared_ptr<BaseDictionaryColumn> _index_column;
   std::vector<ChunkOffset> _chunk_offsets;
   std::shared_ptr<Node> _root;
 };

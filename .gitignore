@@ -1,6 +1,7 @@
 obj/*
 .DS_STORE
 build/*
+build-*/*
 *.make
 Makefile*
 coverage
@@ -14,6 +15,16 @@ src/lib/network/generated
 .vscode
 *.pyc
 console.log
+.repl_history
+.queryplan.dot
+.queryplan.png
+.ast.dot
+.ast.png
+
+# Ignore generated TPC{CH} tables.
+# Intentionally only for root dir, tests contain csv we check in
+/*.csv
+/*.csv.meta
 
 # CLion cmake directory
 cmake-build-*

@@ -28,10 +28,14 @@
 
 namespace opossum {
 
+struct GroupByContext;
+
 /*
 Operator to aggregate columns by certain functions, such as min, max, sum, average, and count. The output is a table
  with reference columns. As with most operators we do not guarantee a stable operation with regards to positions -
  i.e. your sorting order.
+
+For implementation details, please check the wiki: https://github.com/hyrise/zweirise/wiki/Aggregate-Operator
 */
 
 /*
@@ -52,19 +56,30 @@ The key type that is used for the aggregation map.
 */
 using AggregateKey = std::vector<AllTypeVariant>;
 
+// ColumnID representing the '*' when using COUNT(*)
+constexpr ColumnID CountStarID{std::numeric_limits<ColumnID::base_type>::max()};
+
 /**
  * Struct to specify aggregates.
- * Aggregates are defined by the column_name they operate on and the aggregate function they use.
+ * Aggregates are defined by the column_id they operate on and the aggregate function they use.
  * Optionally, an alias can be specified to use as the output name.
  */
 struct AggregateDefinition {
-  AggregateDefinition(const std::string &column_name, const AggregateFunction function,
-                      const optional<std::string> &alias = {});
+  AggregateDefinition(const ColumnID column_id, const AggregateFunction function,
+                      const optional<std::string> &alias = nullopt);
 
-  std::string column_name;
+  ColumnID column_id;
   AggregateFunction function;
   optional<std::string> alias;
 };
+
+/**
+ * Types that are used for the special COUNT(*) and DISTINCT implementations
+ */
+using CountColumnType = int32_t;
+using CountAggregateType = int64_t;
+using DistinctColumnType = int8_t;
+using DistinctAggregateType = int8_t;
 
 /**
  * Note: Aggregate does not support null values at the moment
@@ -72,10 +87,10 @@ struct AggregateDefinition {
 class Aggregate : public AbstractReadOnlyOperator {
  public:
   Aggregate(const std::shared_ptr<AbstractOperator> in, const std::vector<AggregateDefinition> aggregates,
-            const std::vector<std::string> groupby_columns);
+            const std::vector<ColumnID> groupby_column_ids);
 
   const std::vector<AggregateDefinition> &aggregates() const;
-  const std::vector<std::string> &groupby_columns() const;
+  const std::vector<ColumnID> &groupby_column_ids() const;
 
   const std::string name() const override;
   uint8_t num_in_tables() const override;
@@ -87,7 +102,23 @@ class Aggregate : public AbstractReadOnlyOperator {
   void write_aggregate_output(ColumnID column_index);
 
  protected:
-  std::shared_ptr<const Table> on_execute() override;
+  std::shared_ptr<const Table> _on_execute() override;
+  void _on_cleanup() override;
+
+  template <typename ColumnType>
+  static void _create_aggregate_context(boost::hana::basic_type<ColumnType> type,
+                                        std::shared_ptr<ColumnVisitableContext> &aggregate_context,
+                                        AggregateFunction function);
+
+  template <typename ColumnType>
+  static void _create_aggregate_visitor(boost::hana::basic_type<ColumnType> type,
+                                        std::shared_ptr<ColumnVisitable> &builder,
+                                        std::shared_ptr<ColumnVisitableContext> ctx,
+                                        std::shared_ptr<GroupByContext> groupby_ctx, AggregateFunction function);
+
+  template <typename ColumnType>
+  void _write_aggregate_output(boost::hana::basic_type<ColumnType> type, ColumnID column_index,
+                               AggregateFunction function);
 
   /*
   The following template functions write the aggregated values for the different aggregate functions.
@@ -97,23 +128,33 @@ class Aggregate : public AbstractReadOnlyOperator {
   template <typename AggregateType, AggregateFunction func>
   typename std::enable_if<
       func == AggregateFunction::Min || func == AggregateFunction::Max || func == AggregateFunction::Sum, void>::type
-  _write_aggregate_values(tbb::concurrent_vector<AggregateType> &values,
+  _write_aggregate_values(std::shared_ptr<ValueColumn<AggregateType>> column,
                           std::shared_ptr<std::map<AggregateKey, AggregateResult<AggregateType>>> results) {
+    DebugAssert(column->is_nullable(), "Aggregate: Output column needs to be nullable");
+
+    auto &values = column->values();
+    auto &null_values = column->null_values();
+
     for (auto &kv : *results) {
+      null_values.push_back(!kv.second.current_aggregate);
+
       if (!kv.second.current_aggregate) {
-        // this needs to be NULL, as soon as that is implemented!
-        values.push_back(0);
-        continue;
+        values.push_back(AggregateType());
+      } else {
+        values.push_back(*kv.second.current_aggregate);
       }
-      values.push_back(*kv.second.current_aggregate);
     }
   }
 
   // COUNT writes the aggregate counter
   template <typename AggregateType, AggregateFunction func>
   typename std::enable_if<func == AggregateFunction::Count, void>::type _write_aggregate_values(
-      tbb::concurrent_vector<AggregateType> &values,
+      std::shared_ptr<ValueColumn<AggregateType>> column,
       std::shared_ptr<std::map<AggregateKey, AggregateResult<AggregateType>>> results) {
+    DebugAssert(!column->is_nullable(), "Aggregate: Output column for COUNT shouldn't be nullable");
+
+    auto &values = column->values();
+
     for (auto &kv : *results) {
       values.push_back(kv.second.aggregate_count);
     }
@@ -122,36 +163,41 @@ class Aggregate : public AbstractReadOnlyOperator {
   // AVG writes the calculated average from current aggregate and the aggregate counter
   template <typename AggregateType, AggregateFunction func>
   typename std::enable_if<func == AggregateFunction::Avg && std::is_arithmetic<AggregateType>::value, void>::type
-  _write_aggregate_values(tbb::concurrent_vector<AggregateType> &values,
+  _write_aggregate_values(std::shared_ptr<ValueColumn<AggregateType>> column,
                           std::shared_ptr<std::map<AggregateKey, AggregateResult<AggregateType>>> results) {
+    DebugAssert(column->is_nullable(), "Aggregate: Output column needs to be nullable");
+
+    auto &values = column->values();
+    auto &null_values = column->null_values();
+
     for (auto &kv : *results) {
+      null_values.push_back(!kv.second.current_aggregate);
+
       if (!kv.second.current_aggregate) {
-        // this needs to be NULL, as soon as that is implemented!
-        values.push_back(0);
-        continue;
+        values.push_back(AggregateType());
+      } else {
+        values.push_back(*kv.second.current_aggregate / static_cast<AggregateType>(kv.second.aggregate_count));
       }
-      values.push_back(*kv.second.current_aggregate / static_cast<AggregateType>(kv.second.aggregate_count));
     }
   }
 
   // AVG is not defined for non-arithmetic types. Avoiding compiler errors.
   template <typename AggregateType, AggregateFunction func>
   typename std::enable_if<func == AggregateFunction::Avg && !std::is_arithmetic<AggregateType>::value, void>::type
-      _write_aggregate_values(tbb::concurrent_vector<AggregateType>,
-                              std::shared_ptr<std::map<AggregateKey, AggregateResult<AggregateType>>>) {
+  _write_aggregate_values(std::shared_ptr<ValueColumn<AggregateType>>,
+                          std::shared_ptr<std::map<AggregateKey, AggregateResult<AggregateType>>>) {
     Fail("Invalid aggregate");
   }
 
   const std::vector<AggregateDefinition> _aggregates;
-  const std::vector<std::string> _groupby_columns;
+  const std::vector<ColumnID> _groupby_column_ids;
 
   std::unique_ptr<AbstractReadOnlyOperatorImpl> _impl;
 
   std::shared_ptr<Table> _output;
   Chunk _out_chunk;
-  std::vector<std::shared_ptr<BaseColumn>> _group_columns;
+  std::vector<std::shared_ptr<BaseColumn>> _groupby_columns;
   std::vector<std::shared_ptr<ColumnVisitableContext>> _contexts_per_column;
-  std::vector<ColumnID> _aggregate_column_ids;
 };
 
 /*
@@ -201,14 +247,48 @@ struct PartitionBuilder : public ColumnVisitable {
     if (context->chunk_offsets_in) {
       // This ValueColumn is referenced by a ReferenceColumn (i.e., is probably filtered). We only return the matching
       // rows within the filtered column, together with their original position
-      for (const ChunkOffset &offset_in_value_column : *(context->chunk_offsets_in)) {
-        (*context->hash_keys)[chunk_offset].emplace_back(values[offset_in_value_column]);
-        chunk_offset++;
+
+      if (column.is_nullable()) {
+        const auto &null_values = column.null_values();
+
+        for (const ChunkOffset &offset_in_value_column : *(context->chunk_offsets_in)) {
+          if (null_values[offset_in_value_column]) {
+            (*context->hash_keys)[chunk_offset].emplace_back(NULL_VALUE);
+          } else {
+            (*context->hash_keys)[chunk_offset].emplace_back(values[offset_in_value_column]);
+          }
+
+          ++chunk_offset;
+        }
+      } else {
+        for (const ChunkOffset &offset_in_value_column : *(context->chunk_offsets_in)) {
+          if (offset_in_value_column == INVALID_CHUNK_OFFSET) {
+            (*context->hash_keys)[chunk_offset].emplace_back(NULL_VALUE);
+          } else {
+            (*context->hash_keys)[chunk_offset].emplace_back(values[offset_in_value_column]);
+          }
+          ++chunk_offset;
+        }
       }
     } else {
-      for (const auto &value : values) {
-        (*context->hash_keys)[chunk_offset].emplace_back(value);
-        chunk_offset++;
+      if (column.is_nullable()) {
+        const auto &null_values = column.null_values();
+
+        auto value_it = values.cbegin();
+        auto null_value_it = null_values.cbegin();
+
+        for (; value_it != values.cend(); ++value_it, ++null_value_it, ++chunk_offset) {
+          if (*null_value_it) {
+            (*context->hash_keys)[chunk_offset].emplace_back(NULL_VALUE);
+          } else {
+            (*context->hash_keys)[chunk_offset].emplace_back(*value_it);
+          }
+        }
+      } else {
+        for (const auto &value : values) {
+          (*context->hash_keys)[chunk_offset].emplace_back(value);
+          ++chunk_offset;
+        }
       }
     }
   }
@@ -221,18 +301,36 @@ struct PartitionBuilder : public ColumnVisitable {
     auto context = std::static_pointer_cast<GroupByContext>(base_context);
     const auto &column = static_cast<DictionaryColumn<T> &>(base_column);
     const BaseAttributeVector &attribute_vector = *(column.attribute_vector());
-    const std::vector<T> &dictionary = *(column.dictionary());
+    const pmr_vector<T> &dictionary = *(column.dictionary());
 
     if (context->chunk_offsets_in) {
       for (const ChunkOffset &offset_in_dictionary_column : *(context->chunk_offsets_in)) {
-        (*context->hash_keys)[chunk_offset].emplace_back(dictionary[attribute_vector.get(offset_in_dictionary_column)]);
-        chunk_offset++;
+        if (offset_in_dictionary_column == INVALID_CHUNK_OFFSET) {
+          (*context->hash_keys)[chunk_offset].emplace_back(NULL_VALUE);
+          continue;
+        }
+
+        const auto value_id = attribute_vector.get(offset_in_dictionary_column);
+
+        if (value_id == NULL_VALUE_ID) {
+          (*context->hash_keys)[chunk_offset].emplace_back(NULL_VALUE);
+        } else {
+          (*context->hash_keys)[chunk_offset].emplace_back(dictionary[value_id]);
+        }
+
+        ++chunk_offset;
       }
     } else {
       // This DictionaryColumn has to be scanned in full. We directly insert the results into the list of matching
       // rows.
-      for (size_t av_offset = 0; av_offset < column.size(); ++av_offset, ++chunk_offset) {
-        (*context->hash_keys)[chunk_offset].emplace_back(dictionary[attribute_vector.get(av_offset)]);
+      for (ChunkOffset av_offset{0}; av_offset < column.size(); ++av_offset, ++chunk_offset) {
+        const auto value_id = attribute_vector.get(av_offset);
+
+        if (value_id == NULL_VALUE_ID) {
+          (*context->hash_keys)[chunk_offset].emplace_back(NULL_VALUE);
+        } else {
+          (*context->hash_keys)[chunk_offset].emplace_back(dictionary[value_id]);
+        }
       }
     }
   }
@@ -255,7 +353,11 @@ template <typename ColumnType, typename AggregateType>
 struct AggregateFunctionBuilder<ColumnType, AggregateType, AggregateFunction::Min> {
   AggregateFunctor<ColumnType, AggregateType> get_aggregate_function() {
     return [](ColumnType new_value, optional<AggregateType> current_aggregate) {
-      return (!current_aggregate || value_smaller(new_value, *current_aggregate)) ? new_value : *current_aggregate;
+      if (!current_aggregate || value_smaller(new_value, *current_aggregate)) {
+        // New minimum found
+        return new_value;
+      }
+      return *current_aggregate;
     };
   }
 };
@@ -264,7 +366,11 @@ template <typename ColumnType, typename AggregateType>
 struct AggregateFunctionBuilder<ColumnType, AggregateType, AggregateFunction::Max> {
   AggregateFunctor<ColumnType, AggregateType> get_aggregate_function() {
     return [](ColumnType new_value, optional<AggregateType> current_aggregate) {
-      return (!current_aggregate || value_greater(new_value, *current_aggregate)) ? new_value : *current_aggregate;
+      if (!current_aggregate || value_greater(new_value, *current_aggregate)) {
+        // New maximum found
+        return new_value;
+      }
+      return *current_aggregate;
     };
   }
 };
@@ -273,6 +379,7 @@ template <typename ColumnType, typename AggregateType>
 struct AggregateFunctionBuilder<ColumnType, AggregateType, AggregateFunction::Sum> {
   AggregateFunctor<ColumnType, AggregateType> get_aggregate_function() {
     return [](ColumnType new_value, optional<AggregateType> current_aggregate) {
+      // add new value to sum
       return new_value + (!current_aggregate ? 0 : *current_aggregate);
     };
   }
@@ -282,6 +389,7 @@ template <typename ColumnType, typename AggregateType>
 struct AggregateFunctionBuilder<ColumnType, AggregateType, AggregateFunction::Avg> {
   AggregateFunctor<ColumnType, AggregateType> get_aggregate_function() {
     return [](ColumnType new_value, optional<AggregateType> current_aggregate) {
+      // add new value to sum
       return new_value + (!current_aggregate ? 0 : *current_aggregate);
     };
   }
@@ -290,7 +398,7 @@ struct AggregateFunctionBuilder<ColumnType, AggregateType, AggregateFunction::Av
 template <typename ColumnType, typename AggregateType>
 struct AggregateFunctionBuilder<ColumnType, AggregateType, AggregateFunction::Count> {
   AggregateFunctor<ColumnType, AggregateType> get_aggregate_function() {
-    return [](ColumnType, optional<AggregateType> current_aggregate) { return current_aggregate; };
+    return [](ColumnType, optional<AggregateType> current_aggregate) { return nullopt; };
   }
 };
 
@@ -353,23 +461,65 @@ struct AggregateVisitor : public ColumnVisitable {
       // This ValueColumn is referenced by a ReferenceColumn (i.e., is probably filtered). We only return the matching
       // rows within the filtered column, together with their original position
 
-      for (const ChunkOffset &offset_in_value_column : *(context->groupby_context->chunk_offsets_in)) {
-        results[hash_keys[chunk_offset]].current_aggregate =
-            aggregate_func(values[offset_in_value_column], results[hash_keys[chunk_offset]].current_aggregate);
+      if (column.is_nullable()) {
+        const auto &null_values = column.null_values();
 
-        // increase value counter
-        results[hash_keys[chunk_offset]].aggregate_count++;
-        chunk_offset++;
+        for (const ChunkOffset &offset_in_value_column : *(context->groupby_context->chunk_offsets_in)) {
+          if (null_values[offset_in_value_column]) {
+            // Keep it unchanged or initialize
+            results.try_emplace(hash_keys[chunk_offset]);
+          } else {
+            results[hash_keys[chunk_offset]].current_aggregate =
+                aggregate_func(values[offset_in_value_column], results[hash_keys[chunk_offset]].current_aggregate);
+
+            // increase value counter
+            ++results[hash_keys[chunk_offset]].aggregate_count;
+          }
+
+          ++chunk_offset;
+        }
+      } else {
+        for (const ChunkOffset &offset_in_value_column : *(context->groupby_context->chunk_offsets_in)) {
+          if (offset_in_value_column == INVALID_CHUNK_OFFSET) {
+            results.try_emplace(hash_keys[chunk_offset]);
+          } else {
+            results[hash_keys[chunk_offset]].current_aggregate =
+                aggregate_func(values[offset_in_value_column], results[hash_keys[chunk_offset]].current_aggregate);
+
+            // increase value counter
+            ++results[hash_keys[chunk_offset]].aggregate_count;
+          }
+          ++chunk_offset;
+        }
       }
     } else {
-      // ChunkOffset chunk_offset = 0;
-      for (const auto &value : values) {
-        results[hash_keys[chunk_offset]].current_aggregate =
-            aggregate_func(value, results[hash_keys[chunk_offset]].current_aggregate);
+      if (column.is_nullable()) {
+        const auto &null_values = column.null_values();
 
-        // increase value counter
-        results[hash_keys[chunk_offset]].aggregate_count++;
-        chunk_offset++;
+        auto value_it = values.cbegin();
+        auto null_value_it = null_values.cbegin();
+
+        for (; value_it != values.cend(); ++value_it, ++null_value_it, ++chunk_offset) {
+          if (*null_value_it) {
+            // Keep it unchanged or initialize
+            results.try_emplace(hash_keys[chunk_offset]);
+          } else {
+            results[hash_keys[chunk_offset]].current_aggregate =
+                aggregate_func(*value_it, results[hash_keys[chunk_offset]].current_aggregate);
+
+            // increase value counter
+            ++results[hash_keys[chunk_offset]].aggregate_count;
+          }
+        }
+      } else {
+        for (const auto &value : values) {
+          results[hash_keys[chunk_offset]].current_aggregate =
+              aggregate_func(value, results[hash_keys[chunk_offset]].current_aggregate);
+
+          // increase value counter
+          ++results[hash_keys[chunk_offset]].aggregate_count;
+          ++chunk_offset;
+        }
       }
     }
   }
@@ -385,30 +535,50 @@ struct AggregateVisitor : public ColumnVisitable {
     check_and_init_context(context);
     const auto &column = static_cast<DictionaryColumn<ColumnType> &>(base_column);
     const BaseAttributeVector &attribute_vector = *(column.attribute_vector());
-    const std::vector<ColumnType> &dictionary = *(column.dictionary());
+    const auto &dictionary = *(column.dictionary());
 
     auto &hash_keys = static_cast<std::vector<AggregateKey> &>(*context->groupby_context->hash_keys);
     auto &results = static_cast<std::map<AggregateKey, AggregateResult<AggregateType>> &>(*context->results);
 
     if (context->groupby_context->chunk_offsets_in) {
       for (const ChunkOffset &offset_in_dictionary_column : *(context->groupby_context->chunk_offsets_in)) {
-        results[hash_keys[chunk_offset]].current_aggregate =
-            aggregate_func(dictionary[attribute_vector.get(offset_in_dictionary_column)],
-                           results[hash_keys[chunk_offset]].current_aggregate);
+        ValueID value_id;
 
-        // increase value counter
-        results[hash_keys[chunk_offset]].aggregate_count++;
-        chunk_offset++;
+        if (offset_in_dictionary_column == INVALID_CHUNK_OFFSET) {
+          value_id = NULL_VALUE_ID;
+        } else {
+          value_id = attribute_vector.get(offset_in_dictionary_column);
+        }
+
+        if (value_id == NULL_VALUE_ID) {
+          // Keep it unchanged or initialize
+          results.try_emplace(hash_keys[chunk_offset]);
+        } else {
+          results[hash_keys[chunk_offset]].current_aggregate =
+              aggregate_func(dictionary[value_id], results[hash_keys[chunk_offset]].current_aggregate);
+
+          // increase value counter
+          ++results[hash_keys[chunk_offset]].aggregate_count;
+        }
+
+        ++chunk_offset;
       }
     } else {
       // This DictionaryColumn has to be scanned in full. We directly insert the results into the list of matching
       // rows.
-      for (size_t av_offset = 0; av_offset < column.size(); ++av_offset, ++chunk_offset) {
-        results[hash_keys[chunk_offset]].current_aggregate = aggregate_func(
-            dictionary[attribute_vector.get(av_offset)], results[hash_keys[chunk_offset]].current_aggregate);
+      for (ChunkOffset av_offset{0}; av_offset < column.size(); ++av_offset, ++chunk_offset) {
+        const auto value_id = attribute_vector.get(av_offset);
 
-        // increase value counter
-        results[hash_keys[chunk_offset]].aggregate_count++;
+        if (value_id == NULL_VALUE_ID) {
+          // Keep it unchanged or initialize
+          results.try_emplace(hash_keys[chunk_offset]);
+        } else {
+          results[hash_keys[chunk_offset]].current_aggregate =
+              aggregate_func(dictionary[value_id], results[hash_keys[chunk_offset]].current_aggregate);
+
+          // increase value counter
+          ++results[hash_keys[chunk_offset]].aggregate_count;
+        }
       }
     }
   }
@@ -420,16 +590,11 @@ Given a ColumnType and AggregateFunction, certain traits like the aggregate type
 can be deduced.
 */
 template <typename ColumnType, AggregateFunction function, class Enable = void>
-struct aggregate_traits {
-  typedef ColumnType column_type;
-  typedef void aggregate_type;
-  static constexpr AggregateFunction func = function;
-  static constexpr const char *aggregate_type_name = "";
-};
+struct AggregateTraits {};
 
 // COUNT on all types
 template <typename ColumnType>
-struct aggregate_traits<ColumnType, AggregateFunction::Count> {
+struct AggregateTraits<ColumnType, AggregateFunction::Count> {
   typedef ColumnType column_type;
   typedef int64_t aggregate_type;
   static constexpr const char *aggregate_type_name = "long";
@@ -437,9 +602,9 @@ struct aggregate_traits<ColumnType, AggregateFunction::Count> {
 
 // MIN/MAX on all types
 template <typename ColumnType, AggregateFunction function>
-struct aggregate_traits<
+struct AggregateTraits<
     ColumnType, function,
-    typename std::enable_if<function == AggregateFunction::Min || function == AggregateFunction::Max, void>::type> {
+    typename std::enable_if_t<function == AggregateFunction::Min || function == AggregateFunction::Max, void>> {
   typedef ColumnType column_type;
   typedef ColumnType aggregate_type;
   static constexpr const char *aggregate_type_name = "";
@@ -447,9 +612,9 @@ struct aggregate_traits<
 
 // AVG on arithmetic types
 template <typename ColumnType, AggregateFunction function>
-struct aggregate_traits<
+struct AggregateTraits<
     ColumnType, function,
-    typename std::enable_if<function == AggregateFunction::Avg && std::is_arithmetic<ColumnType>::value, void>::type> {
+    typename std::enable_if_t<function == AggregateFunction::Avg && std::is_arithmetic<ColumnType>::value, void>> {
   typedef ColumnType column_type;
   typedef double aggregate_type;
   static constexpr const char *aggregate_type_name = "double";
@@ -457,9 +622,9 @@ struct aggregate_traits<
 
 // SUM on integers
 template <typename ColumnType, AggregateFunction function>
-struct aggregate_traits<
+struct AggregateTraits<
     ColumnType, function,
-    typename std::enable_if<function == AggregateFunction::Sum && std::is_integral<ColumnType>::value, void>::type> {
+    typename std::enable_if_t<function == AggregateFunction::Sum && std::is_integral<ColumnType>::value, void>> {
   typedef ColumnType column_type;
   typedef int64_t aggregate_type;
   static constexpr const char *aggregate_type_name = "long";
@@ -467,9 +632,9 @@ struct aggregate_traits<
 
 // SUM on floating point numbers
 template <typename ColumnType, AggregateFunction function>
-struct aggregate_traits<ColumnType, function, typename std::enable_if<function == AggregateFunction::Sum &&
-                                                                          std::is_floating_point<ColumnType>::value,
-                                                                      void>::type> {
+struct AggregateTraits<
+    ColumnType, function,
+    typename std::enable_if_t<function == AggregateFunction::Sum && std::is_floating_point<ColumnType>::value, void>> {
   typedef ColumnType column_type;
   typedef double aggregate_type;
   static constexpr const char *aggregate_type_name = "double";
@@ -477,10 +642,10 @@ struct aggregate_traits<ColumnType, function, typename std::enable_if<function =
 
 // invalid: AVG on non-arithmetic types
 template <typename ColumnType, AggregateFunction function>
-struct aggregate_traits<ColumnType, function, typename std::enable_if<!std::is_arithmetic<ColumnType>::value &&
-                                                                          (function == AggregateFunction::Avg ||
-                                                                           function == AggregateFunction::Sum),
-                                                                      void>::type> {
+struct AggregateTraits<ColumnType, function, typename std::enable_if_t<!std::is_arithmetic<ColumnType>::value &&
+                                                                           (function == AggregateFunction::Avg ||
+                                                                            function == AggregateFunction::Sum),
+                                                                       void>> {
   typedef ColumnType column_type;
   typedef ColumnType aggregate_type;
   static constexpr const char *aggregate_type_name = "";
@@ -491,7 +656,7 @@ Creates an appropriate AggregateContext based on the ColumnType and AggregateFun
 */
 template <typename ColumnType, AggregateFunction function>
 std::shared_ptr<ColumnVisitableContext> make_aggregate_context() {
-  typename aggregate_traits<ColumnType, function>::aggregate_type aggregate_type;
+  typename AggregateTraits<ColumnType, function>::aggregate_type aggregate_type;
 
   return std::make_shared<AggregateContext<ColumnType, decltype(aggregate_type)>>();
 }
@@ -502,92 +667,11 @@ Creates an appropriate AggregateVisitor based on the ColumnType and AggregateFun
 template <typename ColumnType, AggregateFunction function>
 std::shared_ptr<ColumnVisitable> make_aggregate_visitor(std::shared_ptr<ColumnVisitableContext> new_ctx,
                                                         std::shared_ptr<GroupByContext> ctx) {
-  typename aggregate_traits<ColumnType, function>::aggregate_type aggregate_type;
+  typename AggregateTraits<ColumnType, function>::aggregate_type aggregate_type;
 
   auto visitor = std::make_shared<AggregateVisitor<ColumnType, decltype(aggregate_type), function>>();
   std::static_pointer_cast<AggregateContext<ColumnType, decltype(aggregate_type)>>(new_ctx)->groupby_context = ctx;
   return visitor;
 }
-
-/*
-The following classes are functors that are used with  call_functor_by_column_type
-*/
-
-// Creates an AggregateContext
-class AggregateContextCreator {
- public:
-  template <typename ColumnType>
-  static void run(std::vector<std::shared_ptr<ColumnVisitableContext>> &contexts, ColumnID column_index,
-                  AggregateFunction function) {
-    switch (function) {
-      case AggregateFunction::Min:
-        contexts[column_index] = make_aggregate_context<ColumnType, AggregateFunction::Min>();
-        break;
-      case AggregateFunction::Max:
-        contexts[column_index] = make_aggregate_context<ColumnType, AggregateFunction::Max>();
-        break;
-      case AggregateFunction::Sum:
-        contexts[column_index] = make_aggregate_context<ColumnType, AggregateFunction::Sum>();
-        break;
-      case AggregateFunction::Avg:
-        contexts[column_index] = make_aggregate_context<ColumnType, AggregateFunction::Avg>();
-        break;
-      case AggregateFunction::Count:
-        contexts[column_index] = make_aggregate_context<ColumnType, AggregateFunction::Count>();
-        break;
-    }
-  }
-};
-
-// Creates and AggregateVisitor
-class AggregateVisitorCreator {
- public:
-  template <typename ColumnType>
-  static void run(std::shared_ptr<ColumnVisitable> &builder, std::shared_ptr<ColumnVisitableContext> ctx,
-                  std::shared_ptr<GroupByContext> groupby_ctx, AggregateFunction function) {
-    switch (function) {
-      case AggregateFunction::Min:
-        builder = make_aggregate_visitor<ColumnType, AggregateFunction::Min>(ctx, groupby_ctx);
-        break;
-      case AggregateFunction::Max:
-        builder = make_aggregate_visitor<ColumnType, AggregateFunction::Max>(ctx, groupby_ctx);
-        break;
-      case AggregateFunction::Sum:
-        builder = make_aggregate_visitor<ColumnType, AggregateFunction::Sum>(ctx, groupby_ctx);
-        break;
-      case AggregateFunction::Avg:
-        builder = make_aggregate_visitor<ColumnType, AggregateFunction::Avg>(ctx, groupby_ctx);
-        break;
-      case AggregateFunction::Count:
-        builder = make_aggregate_visitor<ColumnType, AggregateFunction::Count>(ctx, groupby_ctx);
-        break;
-    }
-  }
-};
-
-// Writes the aggregate output for a given aggregate column
-class AggregateWriter {
- public:
-  template <typename ColumnType>
-  static void run(Aggregate &aggregate_op, ColumnID column_index, AggregateFunction function) {
-    switch (function) {
-      case AggregateFunction::Min:
-        aggregate_op.write_aggregate_output<ColumnType, AggregateFunction::Min>(column_index);
-        break;
-      case AggregateFunction::Max:
-        aggregate_op.write_aggregate_output<ColumnType, AggregateFunction::Max>(column_index);
-        break;
-      case AggregateFunction::Sum:
-        aggregate_op.write_aggregate_output<ColumnType, AggregateFunction::Sum>(column_index);
-        break;
-      case AggregateFunction::Avg:
-        aggregate_op.write_aggregate_output<ColumnType, AggregateFunction::Avg>(column_index);
-        break;
-      case AggregateFunction::Count:
-        aggregate_op.write_aggregate_output<ColumnType, AggregateFunction::Count>(column_index);
-        break;
-    }
-  }
-};
 
 }  // namespace opossum

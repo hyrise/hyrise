@@ -32,6 +32,11 @@ include_directories(
     ${TBB_INCLUDE_DIR}
 )
 
+if (${NUMA_FOUND})
+    include_directories(${PROJECT_SOURCE_DIR}/third_party/pgasus/include)
+    include_directories(${PROJECT_BINARY_DIR}/third_party/pgasus/src)
+endif()
+
 link_directories(
     ${PROJECT_SOURCE_DIR}/third_party/grpc/libs/opt/
     ${PROJECT_SOURCE_DIR}/third_party/grpc/libs/opt/protobuf

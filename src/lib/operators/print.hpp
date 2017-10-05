@@ -8,7 +8,7 @@
 #include "abstract_read_only_operator.hpp"
 
 namespace opossum {
-enum PrintFlags { PrintIgnoreEmptyChunks = 1 << 0 };
+enum PrintFlags { PrintIgnoreEmptyChunks = 1 << 0, PrintMvcc = 1 << 1 };
 
 /**
  * operator to print the table with its data
@@ -28,7 +28,7 @@ class Print : public AbstractReadOnlyOperator {
 
  protected:
   std::vector<uint16_t> column_string_widths(uint16_t min, uint16_t max, std::shared_ptr<const Table> t) const;
-  std::shared_ptr<const Table> on_execute() override;
+  std::shared_ptr<const Table> _on_execute() override;
 
   // stream to print the result
   std::ostream& _out;

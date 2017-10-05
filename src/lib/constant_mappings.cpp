@@ -5,6 +5,7 @@
 #include <unordered_map>
 
 #include "sql/Expr.h"
+#include "sql/SelectStatement.h"
 
 namespace opossum {
 
@@ -39,8 +40,8 @@ const std::unordered_map<ExpressionType, std::string> expression_type_to_string 
     {ExpressionType::Literal, "Literal"},
     {ExpressionType::Star, "Star"},
     {ExpressionType::Placeholder, "Parameter"},
-    {ExpressionType::ColumnIdentifier, "ColumnIdentifier"},
-    {ExpressionType::FunctionIdentifier, "FunctionIdentifier"},
+    {ExpressionType::Column, "Column"},
+    {ExpressionType::Function, "Function"},
     {ExpressionType::Select, "Select"},
     /*Arithmetic operators*/
     {ExpressionType::Addition, "Addition"},
@@ -71,6 +72,10 @@ const std::unordered_map<ExpressionType, std::string> expression_type_to_string 
     {ExpressionType::Hint, "Hint"},
 };
 
+const std::unordered_map<OrderByMode, std::string> order_by_mode_to_string = {
+    {OrderByMode::Ascending, "Ascending"}, {OrderByMode::Descending, "Descending"},
+};
+
 const std::unordered_map<hsql::OperatorType, ExpressionType> operator_type_to_expression_type = {
     {hsql::kOpPlus, ExpressionType::Addition},
     {hsql::kOpMinus, ExpressionType::Subtraction},
@@ -94,9 +99,20 @@ const std::unordered_map<hsql::OperatorType, ExpressionType> operator_type_to_ex
     {hsql::kOpOr, ExpressionType::Or},
 };
 
+const std::unordered_map<hsql::OrderType, OrderByMode> order_type_to_order_by_mode = {
+    {hsql::kOrderAsc, OrderByMode::Ascending}, {hsql::kOrderDesc, OrderByMode::Descending},
+};
+
 const std::unordered_map<ExpressionType, std::string> expression_type_to_operator_string = {
-    {ExpressionType::Addition, "+"}, {ExpressionType::Subtraction, "-"}, {ExpressionType::Multiplication, "*"},
-    {ExpressionType::Division, "/"}, {ExpressionType::Modulo, "%"},      {ExpressionType::Power, "^"},
+    {ExpressionType::Addition, "+"},       {ExpressionType::Subtraction, "-"},
+    {ExpressionType::Multiplication, "*"}, {ExpressionType::Division, "/"},
+    {ExpressionType::Modulo, "%"},         {ExpressionType::Power, "^"},
+    {ExpressionType::Equals, "="},         {ExpressionType::NotEquals, "!="},
+    {ExpressionType::LessThan, "<"},       {ExpressionType::LessThanEquals, "<="},
+    {ExpressionType::GreaterThan, ">"},    {ExpressionType::GreaterThanEquals, ">="},
+    {ExpressionType::Like, "LIKE"},        {ExpressionType::NotLike, "NOT LIKE"},
+    {ExpressionType::And, "AND"},          {ExpressionType::Or, "OR"},
+    {ExpressionType::Between, "BETWEEN"},  {ExpressionType::Not, "NOT"},
 };
 
 const std::unordered_map<JoinMode, std::string> join_mode_to_string = {

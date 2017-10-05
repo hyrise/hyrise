@@ -46,7 +46,7 @@ class HashTable : private Noncopyable {
       }
     }
     auto element =
-        std::make_shared<HashElement>(HashElement{value, std::make_shared<PosList>(std::vector<RowID>{row_id})});
+        std::make_shared<HashElement>(HashElement{value, std::make_shared<PosList>(pmr_vector<RowID>{row_id})});
     place(element, 0, 0);
   }
 
