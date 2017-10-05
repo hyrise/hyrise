@@ -255,66 +255,6 @@ struct AggregateFunctionBuilder {
   AggregateFunctor<ColumnType, AggregateType> get_aggregate_function() { Fail("Invalid aggregate function"); }
 };
 
-template <typename ColumnType, typename AggregateType>
-struct AggregateFunctionBuilder<ColumnType, AggregateType, AggregateFunction::Min> {
-  AggregateFunctor<ColumnType, AggregateType> get_aggregate_function() {
-    return [](ColumnType new_value, optional<AggregateType> current_aggregate) {
-      if (!current_aggregate || value_smaller(new_value, *current_aggregate)) {
-        // New minimum found
-        return new_value;
-      }
-      return *current_aggregate;
-    };
-  }
-};
-
-template <typename ColumnType, typename AggregateType>
-struct AggregateFunctionBuilder<ColumnType, AggregateType, AggregateFunction::Max> {
-  AggregateFunctor<ColumnType, AggregateType> get_aggregate_function() {
-    return [](ColumnType new_value, optional<AggregateType> current_aggregate) {
-      if (!current_aggregate || value_greater(new_value, *current_aggregate)) {
-        // New maximum found
-        return new_value;
-      }
-      return *current_aggregate;
-    };
-  }
-};
-
-template <typename ColumnType, typename AggregateType>
-struct AggregateFunctionBuilder<ColumnType, AggregateType, AggregateFunction::Sum> {
-  AggregateFunctor<ColumnType, AggregateType> get_aggregate_function() {
-    return [](ColumnType new_value, optional<AggregateType> current_aggregate) {
-      // add new value to sum
-      return new_value + (!current_aggregate ? 0 : *current_aggregate);
-    };
-  }
-};
-
-template <typename ColumnType, typename AggregateType>
-struct AggregateFunctionBuilder<ColumnType, AggregateType, AggregateFunction::Avg> {
-  AggregateFunctor<ColumnType, AggregateType> get_aggregate_function() {
-    return [](ColumnType new_value, optional<AggregateType> current_aggregate) {
-      // add new value to sum
-      return new_value + (!current_aggregate ? 0 : *current_aggregate);
-    };
-  }
-};
-
-template <typename ColumnType, typename AggregateType>
-struct AggregateFunctionBuilder<ColumnType, AggregateType, AggregateFunction::Count> {
-  AggregateFunctor<ColumnType, AggregateType> get_aggregate_function() {
-    return [](ColumnType, optional<AggregateType> current_aggregate) { return nullopt; };
-  }
-};
-
-template <typename ColumnType, typename AggregateType>
-struct AggregateFunctionBuilder<ColumnType, AggregateType, AggregateFunction::CountDistinct> {
-  AggregateFunctor<ColumnType, AggregateType> get_aggregate_function() {
-    return [](ColumnType, optional<AggregateType> current_aggregate) { return nullopt; };
-  }
-};
-
 /*
 Visitor context for the AggregateVisitor.
 */
