@@ -51,6 +51,14 @@ target_compile_options(opossumProtobuf PRIVATE -Wno-unused-parameter -Wno-deprec
 # Sources and libraries shared among the different builds of the lib
 set(
     SOURCES
+
+    # These need to go first so that they are destructed last.
+    # See https://github.com/hyrise/zweirise/issues/252 for details
+    utils/boost_default_memory_resource.cpp
+    utils/numa_memory_resource.cpp
+    utils/numa_memory_resource.hpp
+
+    # All other files come here.
     all_parameter_variant.hpp
     all_type_variant.hpp
     common.hpp
@@ -298,14 +306,11 @@ set(
     types.hpp
     uid_allocator.hpp
     utils/assert.hpp
-    utils/boost_default_memory_resource.cpp
     utils/cuckoo_hashtable.hpp
     utils/load_table.cpp
     utils/load_table.hpp
     utils/murmur_hash.cpp
     utils/murmur_hash.hpp
-    utils/numa_memory_resource.cpp
-    utils/numa_memory_resource.hpp
     utils/static_if.hpp
 )
 
