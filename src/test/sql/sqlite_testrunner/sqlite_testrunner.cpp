@@ -2,10 +2,10 @@
 #include <boost/algorithm/string/split.hpp>
 #include <boost/algorithm/string/trim.hpp>
 
-#include <memory>
-#include <string>
 #include <fstream>
 #include <iostream>
+#include <memory>
+#include <string>
 
 #include "SQLParser.h"
 #include "base_test.hpp"
@@ -15,8 +15,8 @@
 #include "scheduler/current_scheduler.hpp"
 #include "scheduler/operator_task.hpp"
 #include "sql/sql_planner.hpp"
-#include "storage/storage_manager.hpp"
 #include "sqlite_wrapper.hpp"
+#include "storage/storage_manager.hpp"
 
 namespace opossum {
 
@@ -26,12 +26,16 @@ class SQLiteTestRunner : public BaseTest {
     std::ifstream file("src/test/sql/sqlite_testrunner/sqlite_testrunner.tables");
     std::string line;
     while (std::getline(file, line)) {
-      if (line.empty()) { continue; }
+      if (line.empty()) {
+        continue;
+      }
 
       std::vector<std::string> args;
       boost::algorithm::split(args, line, boost::is_space());
 
-      if (args.size() != 2) { continue; }
+      if (args.size() != 2) {
+        continue;
+      }
 
       std::string table_file = args.at(0);
       std::string table_name = args.at(1);
@@ -49,9 +53,10 @@ class SQLiteTestRunner : public BaseTest {
 TEST_F(SQLiteTestRunner, CompareToSQLiteTestRunner) {
   std::ifstream file("src/test/sql/sqlite_testrunner/sqlite_testrunner.testqueries");
   std::string query;
-  while (std::getline(file, query))
-  {
-    if (query.empty()) { continue; }
+  while (std::getline(file, query)) {
+    if (query.empty()) {
+      continue;
+    }
 
     hsql::SQLParserResult parse_result;
     hsql::SQLParser::parseSQLString(query, &parse_result);
