@@ -42,8 +42,8 @@ link_directories(
     ${PROJECT_SOURCE_DIR}/third_party/grpc/libs/opt/protobuf
 )
 
-add_subdirectory(benchmark-libs EXCLUDE_FROM_ALL)
+add_subdirectory(benchmark-libs)
 add_subdirectory(benchmark)
 add_subdirectory(bin)
 add_subdirectory(lib)
-add_subdirectory(test EXCLUDE_FROM_ALL)
+add_subdirectory(test)
