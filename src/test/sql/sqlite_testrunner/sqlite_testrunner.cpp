@@ -1,4 +1,7 @@
 
+#include <boost/algorithm/string/split.hpp>
+#include <boost/algorithm/string/trim.hpp>
+
 #include <memory>
 #include <string>
 #include <fstream>
@@ -17,28 +20,38 @@
 
 namespace opossum {
 
-class SQLSQLiteRunnerTest : public BaseTest {
+class SQLiteTestRunner : public BaseTest {
  protected:
   void SetUp() override {
-    std::shared_ptr<Table> table_a = load_table("src/test/tables/int_float.tbl", 2);
-    StorageManager::get().add_table("table_a", std::move(table_a));
+    std::ifstream file("src/test/sql/sqlite_testrunner/sqlite_testrunner.tables");
+    std::string line;
+    while (std::getline(file, line)) {
+      if (line.empty()) { continue; }
 
-    std::shared_ptr<Table> table_b = load_table("src/test/tables/int_float2.tbl", 2);
-    StorageManager::get().add_table("table_b", std::move(table_b));
+      std::vector<std::string> args;
+      boost::algorithm::split(args, line, boost::is_space());
+
+      if (args.size() != 2) { continue; }
+
+      std::string table_file = args.at(0);
+      std::string table_name = args.at(1);
+
+      _sqlite.create_table_from_tbl(table_file, table_name);
+
+      std::shared_ptr<Table> table = load_table(table_file, 0);
+      StorageManager::get().add_table(table_name, std::move(table));
+    }
   }
 
   SqliteWrapper _sqlite;
 };
 
-TEST_F(SQLSQLiteRunnerTest, CompareToSQLiteTestRunner) {
-  std::shared_ptr<Table> table_a = load_table("src/test/tables/int_float.tbl", 2);
-
-  std::ifstream file("src/test/sql/sqlite_testrunner/sql_sqlite_runner_test.testqueries");
+TEST_F(SQLiteTestRunner, CompareToSQLiteTestRunner) {
+  std::ifstream file("src/test/sql/sqlite_testrunner/sqlite_testrunner.testqueries");
   std::string query;
   while (std::getline(file, query))
   {
     if (query.empty()) { continue; }
-    std::cout << query << std::endl;
 
     hsql::SQLParserResult parse_result;
     hsql::SQLParser::parseSQLString(query, &parse_result);

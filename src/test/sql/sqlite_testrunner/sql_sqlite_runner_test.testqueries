@@ -1,4 +1,0 @@
-SELECT * FROM table_a;
-SELECT * FROM table_b;
-
-SELECT * FROM table_b;

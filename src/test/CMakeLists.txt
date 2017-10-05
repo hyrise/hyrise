@@ -10,7 +10,7 @@ set(
     OPOSSUM_TEST_SOURCES
     ${SHARED_SOURCES}
     sql/sql_base_test.cpp
-    sql/sqlite_testrunner/sql_sqlite_runner_test.cpp
+    sql/sqlite_testrunner/sqlite_testrunner.cpp
     sql/sqlite_testrunner/sqlite_wrapper.cpp
     sql/sqlite_testrunner/sqlite_wrapper.hpp
     # concurrency/commit_context_test.cpp
