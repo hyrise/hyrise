@@ -352,14 +352,4 @@ struct AggregateTraits<ColumnType, function, typename std::enable_if_t<!std::is_
   static constexpr const char* aggregate_type_name = "";
 };
 
-/*
-Creates an appropriate AggregateContext based on the ColumnType and AggregateFunction
-*/
-template <typename ColumnType, AggregateFunction function>
-std::shared_ptr<ColumnVisitableContext> make_aggregate_context() {
-  typename AggregateTraits<ColumnType, function>::aggregate_type aggregate_type;
-
-  return std::make_shared<AggregateContext<ColumnType, decltype(aggregate_type)>>();
-}
-
 }  // namespace opossum
