@@ -18,13 +18,17 @@ class TableStatistics;
  */
 class StoredTableNode : public AbstractASTNode {
  public:
-  explicit StoredTableNode(const std::string& table_name, const optional<std::string>& alias = {});
+  explicit StoredTableNode(const std::string& table_name, const optional<std::string>& alias = nullopt);
 
   const std::string& table_name() const;
 
   std::string description() const override;
   const std::vector<ColumnID>& output_column_id_to_input_column_id() const override;
   const std::vector<std::string>& output_column_names() const override;
+
+  std::shared_ptr<TableStatistics> derive_statistics_from(
+      const std::shared_ptr<AbstractASTNode>& left_child = nullptr,
+      const std::shared_ptr<AbstractASTNode>& right_child = nullptr) const override;
 
   bool knows_table(const std::string& table_name) const override;
 
@@ -35,9 +39,6 @@ class StoredTableNode : public AbstractASTNode {
 
  protected:
   void _on_child_changed() override;
-
- private:
-  const std::shared_ptr<TableStatistics> _gather_statistics() const override;
 
  private:
   const std::string _table_name;

@@ -2,6 +2,7 @@
 
 #include <limits>
 #include <numeric>
+#include <memory>
 #include <sstream>
 #include <string>
 #include <utility>
@@ -9,6 +10,7 @@
 
 #include "common.hpp"
 #include "constant_mappings.hpp"
+#include "optimizer/table_statistics.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 
@@ -19,7 +21,7 @@ JoinNode::JoinNode(const JoinMode join_mode) : AbstractASTNode(ASTNodeType::Join
               "Specified JoinMode must also specify column ids and scan type.");
 }
 
-JoinNode::JoinNode(const JoinMode join_mode, const std::pair<ColumnID, ColumnID> &join_column_ids,
+JoinNode::JoinNode(const JoinMode join_mode, const std::pair<ColumnID, ColumnID>& join_column_ids,
                    const ScanType scan_type)
     : AbstractASTNode(ASTNodeType::Join),
       _join_mode(join_mode),
@@ -44,14 +46,14 @@ std::string JoinNode::description() const {
   return desc.str();
 }
 
-const std::vector<ColumnID> &JoinNode::output_column_id_to_input_column_id() const {
+const std::vector<ColumnID>& JoinNode::output_column_id_to_input_column_id() const {
   return _output_column_id_to_input_column_id;
 }
 
-const std::vector<std::string> &JoinNode::output_column_names() const { return _output_column_names; }
+const std::vector<std::string>& JoinNode::output_column_names() const { return _output_column_names; }
 
 optional<ColumnID> JoinNode::find_column_id_by_named_column_reference(
-    const NamedColumnReference &named_column_reference) const {
+    const NamedColumnReference& named_column_reference) const {
   DebugAssert(left_child() && right_child(), "JoinNode must have two children.");
 
   optional<ColumnID> left_column_id;
@@ -106,12 +108,19 @@ optional<ColumnID> JoinNode::find_column_id_by_named_column_reference(
   return output_column_id;
 }
 
-bool JoinNode::knows_table(const std::string &table_name) const {
+std::shared_ptr<TableStatistics> JoinNode::derive_statistics_from(
+    const std::shared_ptr<AbstractASTNode>& left_child, const std::shared_ptr<AbstractASTNode>& right_child) const {
+  Fail("Join statistics not available yet");  // TODO(anyone) fix once join statistics are in
+  return nullptr;
+  // return left_child->get_statistics()->join_...
+}
+
+bool JoinNode::knows_table(const std::string& table_name) const {
   DebugAssert(left_child() && right_child(), "JoinNode must have two children.");
   return left_child()->knows_table(table_name) || right_child()->knows_table(table_name);
 }
 
-std::vector<ColumnID> JoinNode::get_output_column_ids_for_table(const std::string &table_name) const {
+std::vector<ColumnID> JoinNode::get_output_column_ids_for_table(const std::string& table_name) const {
   DebugAssert(left_child() && right_child(), "JoinNode must have two children.");
 
   auto left_knows_table = left_child()->knows_table(table_name);
@@ -143,9 +152,9 @@ std::vector<ColumnID> JoinNode::get_output_column_ids_for_table(const std::strin
   return output_column_ids_for_table;
 }
 
-const optional<std::pair<ColumnID, ColumnID>> &JoinNode::join_column_ids() const { return _join_column_ids; }
+const optional<std::pair<ColumnID, ColumnID>>& JoinNode::join_column_ids() const { return _join_column_ids; }
 
-const optional<ScanType> &JoinNode::scan_type() const { return _scan_type; }
+const optional<ScanType>& JoinNode::scan_type() const { return _scan_type; }
 
 JoinMode JoinNode::join_mode() const { return _join_mode; }
 
@@ -158,8 +167,8 @@ void JoinNode::_on_child_changed() {
   /**
    * Collect the output column names of the children on the fly, because the children might change.
    */
-  const auto &left_names = left_child()->output_column_names();
-  const auto &right_names = right_child()->output_column_names();
+  const auto& left_names = left_child()->output_column_names();
+  const auto& right_names = right_child()->output_column_names();
 
   _output_column_names.clear();
   _output_column_names.reserve(left_names.size() + right_names.size());
