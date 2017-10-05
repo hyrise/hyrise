@@ -9,9 +9,11 @@
 #include "../base_test.hpp"
 #include "gtest/gtest.h"
 
-#include "../lib/common.hpp"
-#include "../lib/storage/index/group_key/variable_length_key_store.hpp"
-#include "../lib/types.hpp"
+#include "storage/index/group_key/variable_length_key_proxy.hpp"
+#include "storage/index/group_key/variable_length_key_store.hpp"
+
+#include "common.hpp"
+#include "types.hpp"
 
 namespace opossum {
 
@@ -187,14 +189,15 @@ TEST_F(VariableLengthKeyStoreTest, WriteAccessViaBracketsOperator) {
 }
 
 TEST_F(VariableLengthKeyStoreTest, WriteNonFittingKeys) {
+  if (!IS_DEBUG) return;
   // _store is created with 4 bytes per entry
   auto short_key = VariableLengthKey(sizeof(uint16_t));
   auto long_key = VariableLengthKey(sizeof(uint64_t));
 
-  EXPECT_THROW(_store[0] = short_key, std::runtime_error);
-  EXPECT_THROW(_store[0] = long_key, std::runtime_error);
-  EXPECT_THROW(*_store.begin() = short_key, std::runtime_error);
-  EXPECT_THROW(*_store.begin() = long_key, std::runtime_error);
+  EXPECT_THROW(_store[0] = short_key, std::logic_error);
+  EXPECT_THROW(_store[0] = long_key, std::logic_error);
+  EXPECT_THROW(*_store.begin() = short_key, std::logic_error);
+  EXPECT_THROW(*_store.begin() = long_key, std::logic_error);
 }
 
 }  // namespace opossum

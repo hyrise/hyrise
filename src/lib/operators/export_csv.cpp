@@ -7,8 +7,11 @@
 
 #include "import_export/csv.hpp"
 #include "import_export/csv_writer.hpp"
+#include "storage/base_attribute_vector.hpp"
 #include "storage/dictionary_column.hpp"
 #include "storage/reference_column.hpp"
+
+#include "resolve_type.hpp"
 
 namespace opossum {
 
@@ -19,8 +22,9 @@ const std::string ExportCsv::name() const { return "ExportCSV"; }
 uint8_t ExportCsv::num_in_tables() const { return 1; }
 uint8_t ExportCsv::num_out_tables() const { return 1; }
 
-std::shared_ptr<const Table> ExportCsv::on_execute() {
-  _generate_meta_info_file(_input_left->get_output(), _filename + csv::meta_file_extension);
+std::shared_ptr<const Table> ExportCsv::_on_execute() {
+  CsvConfig config{};
+  _generate_meta_info_file(_input_left->get_output(), _filename + config.meta_file_extension);
   _generate_content_file(_input_left->get_output(), _filename);
 
   return _input_left->get_output();
@@ -35,7 +39,7 @@ void ExportCsv::_generate_meta_info_file(const std::shared_ptr<const Table> &tab
   writer.write_line({"ChunkSize", "", static_cast<int64_t>(table->chunk_size())});
 
   // Column Types
-  for (ColumnID col_id = 0u; col_id < table->col_count(); ++col_id) {
+  for (ColumnID col_id{0}; col_id < table->col_count(); ++col_id) {
     writer.write_line({"ColumnType", table->column_name(col_id), table->column_type(col_id)});
   }
 }
@@ -56,7 +60,7 @@ void ExportCsv::_generate_content_file(const std::shared_ptr<const Table> &table
 
   // Create visitors for every column, so that we do not have to do that more than once.
   std::vector<std::shared_ptr<ColumnVisitable>> visitors(table->col_count());
-  for (ColumnID col_id = 0; col_id < table->col_count(); ++col_id) {
+  for (ColumnID col_id{0}; col_id < table->col_count(); ++col_id) {
     auto visitor = make_shared_by_column_type<ColumnVisitable, ExportCsvVisitor>(table->column_type(col_id));
     visitors[col_id] = std::move(visitor);
   }
@@ -69,11 +73,11 @@ void ExportCsv::_generate_content_file(const std::shared_ptr<const Table> &table
    * This is a lot of iterating, but to convert a column-based table to a row-based representation
    * takes some effort.
    */
-  for (ChunkID chunk_id = 0; chunk_id < table->chunk_count(); ++chunk_id) {
+  for (ChunkID chunk_id{0}; chunk_id < table->chunk_count(); ++chunk_id) {
     auto &chunk = table->get_chunk(chunk_id);
     for (ChunkOffset row = 0; row < chunk.size(); ++row) {
       context->currentRow = row;
-      for (ColumnID col_id = 0; col_id < table->col_count(); ++col_id) {
+      for (ColumnID col_id{0}; col_id < table->col_count(); ++col_id) {
         chunk.get_column(col_id)->visit(*(visitors[col_id]), context);
       }
       writer.end_line();

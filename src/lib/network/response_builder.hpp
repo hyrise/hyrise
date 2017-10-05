@@ -3,11 +3,20 @@
 #include <memory>
 #include <string>
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-parameter"
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include "network/generated/opossum.grpc.pb.h"
+#pragma GCC diagnostic pop
+
+#include "storage/base_attribute_vector.hpp"
 #include "storage/column_visitable.hpp"
 #include "storage/dictionary_column.hpp"
 #include "storage/reference_column.hpp"
 #include "storage/value_column.hpp"
+
+#include "resolve_type.hpp"
+#include "type_cast.hpp"
 
 namespace opossum {
 
@@ -25,7 +34,7 @@ class ResponseBuilder {
     }
 
     // Iterate a column chunk by chunk and apply a typed ColumnVisitor, then the next column etc.
-    for (size_t column_index = 0, column_count = table->col_count(); column_index < column_count; ++column_index) {
+    for (ColumnID column_index{0}, column_count{table->col_count()}; column_index < column_count; ++column_index) {
       const auto& type = table->column_type(column_index);
 
       // Register column type and name
@@ -35,7 +44,7 @@ class ResponseBuilder {
       auto visitor = make_unique_by_column_type<ColumnVisitable, ResponseBuilderVisitor>(type);
       uint32_t row_index = 0u;
       // Visit a specific column chunk by chunk
-      for (ChunkID chunk_id = 0; chunk_id < table->chunk_count(); ++chunk_id) {
+      for (ChunkID chunk_id{0}; chunk_id < table->chunk_count(); ++chunk_id) {
         const auto& chunk = table->get_chunk(chunk_id);
         if (chunk.size() == 0) {
           continue;

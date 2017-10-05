@@ -1,19 +1,23 @@
+#include "export_binary.hpp"
+
 #include <cstring>
 #include <fstream>
 #include <memory>
 #include <string>
 #include <vector>
 
-#include "../import_export/binary.hpp"
-#include "../types.hpp"
-#include "export_binary.hpp"
+#include "import_export/binary.hpp"
 #include "storage/reference_column.hpp"
+
+#include "resolve_type.hpp"
+#include "type_cast.hpp"
+#include "types.hpp"
 
 namespace {
 
 // Writes the content of the vector to the ofstream
-template <typename T>
-void _export_values(std::ofstream& ofstream, const std::vector<T>& values);
+template <typename T, typename Alloc>
+void _export_values(std::ofstream& ofstream, const std::vector<T, Alloc>& values);
 
 /* Writes the given strings to the ofstream. First an array of string lengths is written. After that the string are
  * written without any gaps between them.
@@ -22,8 +26,8 @@ void _export_values(std::ofstream& ofstream, const std::vector<T>& values);
  * this size.
  * This approach is indeed faster than a dynamic approach with a stringstream.
  */
-template <typename T = opossum::StringLength>
-void _export_string_values(std::ofstream& ofstream, const std::vector<std::string>& values) {
+template <typename T = opossum::StringLength, typename Alloc>
+void _export_string_values(std::ofstream& ofstream, const std::vector<std::string, Alloc>& values) {
   std::vector<T> string_lengths(values.size());
   size_t total_length = 0;
 
@@ -49,19 +53,23 @@ void _export_string_values(std::ofstream& ofstream, const std::vector<std::strin
   _export_values(ofstream, buffer);
 }
 
-template <typename T>
-void _export_values(std::ofstream& ofstream, const std::vector<T>& values) {
+template <typename T, typename Alloc>
+void _export_values(std::ofstream& ofstream, const std::vector<T, Alloc>& values) {
   ofstream.write(reinterpret_cast<const char*>(values.data()), values.size() * sizeof(T));
 }
 
 // specialized implementation for string values
 template <>
+void _export_values(std::ofstream& ofstream, const opossum::pmr_vector<std::string>& values) {
+  _export_string_values(ofstream, values);
+}
+template <>
 void _export_values(std::ofstream& ofstream, const std::vector<std::string>& values) {
   _export_string_values(ofstream, values);
 }
 
-template <typename T>
-void _export_values(std::ofstream& ofstream, const tbb::concurrent_vector<T>& values) {
+template <typename T, typename Alloc>
+void _export_values(std::ofstream& ofstream, const tbb::concurrent_vector<T, Alloc>& values) {
   // TODO(all): could be faster if we directly write the values into the stream without prior conversion
   const auto value_block = std::vector<T>{values.begin(), values.end()};
   ofstream.write(reinterpret_cast<const char*>(value_block.data()), value_block.size() * sizeof(T));
@@ -69,7 +77,7 @@ void _export_values(std::ofstream& ofstream, const tbb::concurrent_vector<T>& va
 
 // specialized implementation for string values
 template <>
-void _export_values(std::ofstream& ofstream, const tbb::concurrent_vector<std::string>& values) {
+void _export_values(std::ofstream& ofstream, const opossum::pmr_concurrent_vector<std::string>& values) {
   // TODO(all): could be faster if we directly write the values into the stream without prior conversion
   const auto value_block = std::vector<std::string>{values.begin(), values.end()};
   _export_string_values(ofstream, value_block);
@@ -93,15 +101,15 @@ uint8_t ExportBinary::num_in_tables() const { return 1; }
 
 uint8_t ExportBinary::num_out_tables() const { return 1; }
 
-std::shared_ptr<const Table> ExportBinary::on_execute() {
+std::shared_ptr<const Table> ExportBinary::_on_execute() {
   std::ofstream ofstream;
   ofstream.exceptions(std::ofstream::failbit | std::ofstream::badbit);
   ofstream.open(_filename, std::ios::binary);
 
   const auto table = _input_left->get_output();
   _write_header(table, ofstream);
-  for (ChunkID chunkID = 0; chunkID < table->chunk_count(); chunkID++) {
-    _write_chunk(table, ofstream, chunkID);
+  for (ChunkID chunk_id{0}; chunk_id < table->chunk_count(); chunk_id++) {
+    _write_chunk(table, ofstream, chunk_id);
   }
 
   return _input_left->get_output();
@@ -116,7 +124,7 @@ void ExportBinary::_write_header(const std::shared_ptr<const Table>& table, std:
   std::vector<std::string> column_names(table->col_count());
 
   // Transform column types and copy column names in order to write them to the file.
-  for (ColumnID column_id = 0; column_id < table->col_count(); ++column_id) {
+  for (ColumnID column_id{0}; column_id < table->col_count(); ++column_id) {
     column_types[column_id] = table->column_type(column_id);
     column_names[column_id] = table->column_name(column_id);
   }
@@ -132,7 +140,7 @@ void ExportBinary::_write_chunk(const std::shared_ptr<const Table>& table, std::
   _export_value(ofstream, static_cast<ChunkOffset>(chunk.size()));
 
   // Iterating over all columns of this chunk and exporting them
-  for (ColumnID col_id = 0; col_id < chunk.col_count(); col_id++) {
+  for (ColumnID col_id{0}; col_id < chunk.col_count(); col_id++) {
     auto visitor = make_unique_by_column_type<ColumnVisitable, ExportBinaryVisitor>(table->column_type(col_id));
     chunk.get_column(col_id)->visit(*visitor, context);
   }
@@ -144,7 +152,7 @@ void ExportBinary::ExportBinaryVisitor<T>::handle_value_column(BaseColumn& base_
   auto context = std::static_pointer_cast<ExportContext>(base_context);
   const auto& column = static_cast<ValueColumn<T>&>(base_column);
 
-  _export_value(context->ofstream, binary::ColumnType::value_column);
+  _export_value(context->ofstream, BinaryColumnType::value_column);
   _export_values(context->ofstream, column.values());
 }
 
@@ -154,7 +162,7 @@ void ExportBinary::ExportBinaryVisitor<T>::handle_reference_column(
   auto context = std::static_pointer_cast<ExportContext>(base_context);
 
   // We materialize reference columns and save them as value columns
-  _export_value(context->ofstream, binary::ColumnType::value_column);
+  _export_value(context->ofstream, BinaryColumnType::value_column);
 
   // Unfortunately, we have to iterate over all values of the reference column
   // to materialize its contents. Then we can write them to the file
@@ -170,7 +178,7 @@ void ExportBinary::ExportBinaryVisitor<std::string>::handle_reference_column(
   auto context = std::static_pointer_cast<ExportContext>(base_context);
 
   // We materialize reference columns and save them as value columns
-  _export_value(context->ofstream, binary::ColumnType::value_column);
+  _export_value(context->ofstream, BinaryColumnType::value_column);
 
   // If there is no data, we can skip all of the coming steps.
   if (ref_column.size() == 0) return;
@@ -196,7 +204,7 @@ void ExportBinary::ExportBinaryVisitor<T>::handle_dictionary_column(
   auto context = std::static_pointer_cast<ExportContext>(base_context);
   const auto& column = static_cast<DictionaryColumn<T>&>(base_column);
 
-  _export_value(context->ofstream, binary::ColumnType::dictionary_column);
+  _export_value(context->ofstream, BinaryColumnType::dictionary_column);
   _export_value(context->ofstream, static_cast<const AttributeVectorWidth>(column.attribute_vector()->width()));
 
   // Write the dictionary size and dictionary

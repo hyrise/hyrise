@@ -4,8 +4,9 @@
 #include <string>
 #include <utility>
 
-#include "../concurrency/transaction_context.hpp"
-#include "../storage/reference_column.hpp"
+#include "concurrency/transaction_context.hpp"
+#include "storage/reference_column.hpp"
+#include "utils/assert.hpp"
 
 namespace opossum {
 
@@ -27,8 +28,7 @@ bool is_row_visible(CommitID our_tid, CommitID our_lcid, ChunkOffset chunk_offse
 
 }  // namespace
 
-Validate::Validate(const std::shared_ptr<AbstractOperator> in)
-    : AbstractReadOnlyOperator(in), _in_table(in->get_output()), _output(std::make_shared<Table>()) {}
+Validate::Validate(const std::shared_ptr<AbstractOperator> in) : AbstractReadOnlyOperator(in) {}
 
 const std::string Validate::name() const { return "Validate"; }
 
@@ -36,33 +36,37 @@ uint8_t Validate::num_in_tables() const { return 1; }
 
 uint8_t Validate::num_out_tables() const { return 1; }
 
-std::shared_ptr<const Table> Validate::on_execute() {
-  throw std::runtime_error("Validate can't be called without a transaction context.");
+std::shared_ptr<const Table> Validate::_on_execute() {
+  Fail("Validate can't be called without a transaction context.");
+  return {};
 }
 
-std::shared_ptr<const Table> Validate::on_execute(std::shared_ptr<TransactionContext> transactionContext) {
+std::shared_ptr<const Table> Validate::_on_execute(std::shared_ptr<TransactionContext> transaction_context) {
+  DebugAssert(transaction_context != nullptr, "Validate requires a valid TransactionContext.");
+
+  const auto _in_table = _input_table_left();
   auto output = std::make_shared<Table>();
 
   // Save column structure.
-  for (size_t column_id = 0; column_id < _in_table->col_count(); ++column_id) {
-    output->add_column(_in_table->column_name(column_id), _in_table->column_type(column_id), false);
+  for (ColumnID column_id{0}; column_id < _in_table->col_count(); ++column_id) {
+    output->add_column_definition(_in_table->column_name(column_id), _in_table->column_type(column_id));
   }
 
-  const auto our_tid = transactionContext->transaction_id();
-  const auto our_lcid = transactionContext->last_commit_id();
+  const auto our_tid = transaction_context->transaction_id();
+  const auto our_lcid = transaction_context->last_commit_id();
 
-  for (ChunkID chunk_id = 0; chunk_id < _in_table->chunk_count(); ++chunk_id) {
+  for (ChunkID chunk_id{0}; chunk_id < _in_table->chunk_count(); ++chunk_id) {
     const auto &chunk_in = _in_table->get_chunk(chunk_id);
 
     auto chunk_out = Chunk{};
     auto pos_list_out = std::make_shared<PosList>();
     auto referenced_table = std::shared_ptr<const Table>();
-    const auto ref_col_in = std::dynamic_pointer_cast<ReferenceColumn>(chunk_in.get_column(0));
+    const auto ref_col_in = std::dynamic_pointer_cast<ReferenceColumn>(chunk_in.get_column(ColumnID{0}));
 
     // If the columns in this chunk reference a column, build a poslist for a reference column.
     if (ref_col_in) {
-      if (!chunk_in.references_only_one_table())
-        throw std::logic_error("Input to Validate contains a Chunk referencing more than one table.");
+      DebugAssert(chunk_in.references_only_one_table(),
+                  "Input to Validate contains a Chunk referencing more than one table.");
 
       // Check all rows in the old poslist and put them in pos_list_out if they are visible.
       referenced_table = ref_col_in->referenced_table();
@@ -76,7 +80,7 @@ std::shared_ptr<const Table> Validate::on_execute(std::shared_ptr<TransactionCon
       }
 
       // Construct the actual ReferenceColumn objects and add them to the chunk.
-      for (size_t column_id = 0; column_id < chunk_in.col_count(); ++column_id) {
+      for (ColumnID column_id{0}; column_id < chunk_in.col_count(); ++column_id) {
         const auto column = std::static_pointer_cast<ReferenceColumn>(chunk_in.get_column(column_id));
         const auto referenced_column_id = column->referenced_column_id();
         auto ref_col_out = std::make_shared<ReferenceColumn>(referenced_table, referenced_column_id, pos_list_out);
@@ -96,13 +100,15 @@ std::shared_ptr<const Table> Validate::on_execute(std::shared_ptr<TransactionCon
       }
 
       // Create actual ReferenceColumn objects.
-      for (size_t column_id = 0; column_id < chunk_in.col_count(); ++column_id) {
+      for (ColumnID column_id{0}; column_id < chunk_in.col_count(); ++column_id) {
         auto ref_col_out = std::make_shared<ReferenceColumn>(referenced_table, column_id, pos_list_out);
         chunk_out.add_column(ref_col_out);
       }
     }
 
-    output->add_chunk(std::move(chunk_out));
+    if (chunk_out.size() > 0 || output->get_chunk(ChunkID{0}).size() == 0) {
+      output->emplace_chunk(std::move(chunk_out));
+    }
   }
   return output;
 }

@@ -8,6 +8,7 @@
 
 #include "abstract_operator.hpp"
 #include "abstract_read_only_operator.hpp"
+
 #include "import_export/binary.hpp"
 #include "storage/base_column.hpp"
 #include "storage/column_visitable.hpp"
@@ -15,12 +16,16 @@
 #include "storage/reference_column.hpp"
 #include "storage/value_column.hpp"
 
+#include "utils/assert.hpp"
+
 namespace opossum {
 
 /*
  * This operator reads a Opossum binary file and creates a table from that input.
  * If parameter tablename provided, the imported table is stored in the StorageManager. If a table with this name
  * already exists, it is returned and no import is performed.
+ *
+ * Note: ImportBinary does not support null values at the moment
  */
 class ImportBinary : public AbstractReadOnlyOperator {
  public:
@@ -37,7 +42,7 @@ class ImportBinary : public AbstractReadOnlyOperator {
    *
    * ¹ Zero or more chunks
    */
-  std::shared_ptr<const Table> on_execute() final;
+  std::shared_ptr<const Table> _on_execute() final;
 
   // Returns the name of the operator
   const std::string name() const final;
@@ -47,6 +52,11 @@ class ImportBinary : public AbstractReadOnlyOperator {
 
   // This operator has one table as output.
   uint8_t num_out_tables() const final;
+
+  std::shared_ptr<AbstractOperator> recreate(const std::vector<AllParameterVariant>& args) const override {
+    Fail("Operator " + this->name() + " does not implement recreation.");
+    return {};
+  }
 
  private:
   /*
@@ -133,11 +143,11 @@ class ImportBinary : public AbstractReadOnlyOperator {
 
   // Reads row_count many values from type T and returns them in a vector
   template <typename T>
-  static std::vector<T> _read_values(std::ifstream& file, const size_t count);
+  static pmr_vector<T> _read_values(std::ifstream& file, const size_t count);
 
   // Reads row_count many strings from input file. String lengths are encoded in type T.
   template <typename T = StringLength>
-  static std::vector<std::string> _read_string_values(std::ifstream& file, const size_t count);
+  static pmr_vector<std::string> _read_string_values(std::ifstream& file, const size_t count);
 
   // Reads a single value of type T from the input file.
   template <typename T>

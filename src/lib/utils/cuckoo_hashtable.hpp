@@ -5,9 +5,11 @@
 #include <utility>
 #include <vector>
 
-#include "../types.hpp"
 #include "murmur_hash.hpp"
+
 #include "type_comparison.hpp"
+#include "types.hpp"
+#include "utils/assert.hpp"
 
 namespace opossum {
 
@@ -16,7 +18,7 @@ Insert-only implementation of Cuckoo Hash Table. The HashTable is currently only
 where it is a temporary object for probing. There is no need to delete elements in that use case.
 */
 template <typename T>
-class HashTable {
+class HashTable : private Noncopyable {
   static const size_t NUMBER_OF_HASH_FUNCTIONS = 3;
 
  public:
@@ -24,10 +26,6 @@ class HashTable {
     // prepare internal hash tables and fill with empty elements
     _hashtables.resize(NUMBER_OF_HASH_FUNCTIONS, std::vector<std::shared_ptr<HashElement>>(input_table_size));
   }
-
-  // copying a HashTable is not allowed
-  HashTable(const HashTable &) = delete;
-  HashTable &operator=(const HashTable &) = delete;
 
   // we need to explicitly set the move constructor to default when
   // we overwrite the copy constructor
@@ -48,7 +46,7 @@ class HashTable {
       }
     }
     auto element =
-        std::make_shared<HashElement>(HashElement{value, std::make_shared<PosList>(std::vector<RowID>{row_id})});
+        std::make_shared<HashElement>(HashElement{value, std::make_shared<PosList>(pmr_vector<RowID>{row_id})});
     place(element, 0, 0);
   }
 
@@ -87,14 +85,13 @@ class HashTable {
   called before stopping and declaring presence of cycle
   */
   void place(std::shared_ptr<HashElement> element, int hash_function, size_t iterations) {
-    if (iterations == _input_table_size) {
-      /*
-      We were not able to reproduce this case with the current setting (3 hash functions). With 3 hash functions the
-      hash table will have a maximum load of 33%, which should be less enough to avoid cycles at all. In theory there
-      shouldn't be any cycles up to a load of 91%, comp. http://www.ru.is/faculty/ulfar/CuckooHash.pdf
-      */
-      throw std::runtime_error("There is a cycle in Cuckoo. Need to rehash with different hash functions");
-    }
+    /*
+    We were not able to reproduce this case with the current setting (3 hash functions). With 3 hash functions the
+    hash table will have a maximum load of 33%, which should be less enough to avoid cycles at all. In theory there
+    shouldn't be any cycles up to a load of 91%, comp. http://www.ru.is/faculty/ulfar/CuckooHash.pdf
+    */
+    Assert((iterations != _input_table_size),
+           "There is a cycle in Cuckoo. Need to rehash with different hash functions");
 
     /*
     Check if another element is already present at the position.

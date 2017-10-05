@@ -2,6 +2,7 @@
 
 #include <atomic>
 #include <condition_variable>
+#include <functional>
 #include <memory>
 #include <mutex>
 #include <string>
@@ -16,7 +17,7 @@ class Worker;
 /**
  * Base class for anything that can be scheduled by the Scheduler and gets executed by a Worker.
  *
- * Derive and implement logic in on_execute()
+ * Derive and implement logic in _on_execute()
  */
 class AbstractTask : public std::enable_shared_from_this<AbstractTask> {
   friend class Worker;
@@ -100,7 +101,7 @@ class AbstractTask : public std::enable_shared_from_this<AbstractTask> {
   void execute();
 
  protected:
-  virtual void on_execute() = 0;
+  virtual void _on_execute() = 0;
 
  private:
   /**
@@ -140,10 +141,8 @@ class AbstractTask : public std::enable_shared_from_this<AbstractTask> {
   // Purely for debugging purposes, in order to be able to identify tasks after they have been scheduled
   std::string _description;
 
-#if IS_DEBUG
   // To make sure a task is never executed twice
   std::atomic_bool _started{false};
-#endif
 };
 
 }  // namespace opossum

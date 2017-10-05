@@ -43,7 +43,8 @@ void OperatorsDeleteTest::helper(bool commit) {
   auto transaction_context = std::make_shared<TransactionContext>(1u, 1u);
   const auto cid = 1u;
 
-  auto table_scan = std::make_shared<TableScan>(_gt, "b", ">", "456.7");
+  // Selects two out of three rows.
+  auto table_scan = std::make_shared<TableScan>(_gt, ColumnID{0}, ScanType::OpGreaterThan, "456.7");
 
   table_scan->execute();
 
@@ -52,27 +53,36 @@ void OperatorsDeleteTest::helper(bool commit) {
 
   delete_op->execute();
 
-  EXPECT_EQ(_table->get_chunk(0u).mvcc_columns()->tids.at(0u), transaction_context->transaction_id());
-  EXPECT_EQ(_table->get_chunk(0u).mvcc_columns()->tids.at(1u), 0u);
-  EXPECT_EQ(_table->get_chunk(0u).mvcc_columns()->tids.at(2u), transaction_context->transaction_id());
+  EXPECT_EQ(_table->get_chunk(ChunkID{0}).mvcc_columns()->tids.at(0u), transaction_context->transaction_id());
+  EXPECT_EQ(_table->get_chunk(ChunkID{0}).mvcc_columns()->tids.at(1u), 0u);
+  EXPECT_EQ(_table->get_chunk(ChunkID{0}).mvcc_columns()->tids.at(2u), transaction_context->transaction_id());
+
+  // Table has three rows initially.
+  EXPECT_EQ(_table->approx_valid_row_count(), 3u);
 
   auto expected_end_cid = cid;
   if (commit) {
-    delete_op->commit_records(cid);
+    delete_op->commit(cid);
+
+    // Delete successful, one row left.
+    EXPECT_EQ(_table->approx_valid_row_count(), 1u);
   } else {
     delete_op->rollback_records();
     expected_end_cid = Chunk::MAX_COMMIT_ID;
+
+    // Delete rolled back, three rows left.
+    EXPECT_EQ(_table->approx_valid_row_count(), 3u);
   }
 
-  EXPECT_EQ(_table->get_chunk(0u).mvcc_columns()->end_cids.at(0u), expected_end_cid);
-  EXPECT_EQ(_table->get_chunk(0u).mvcc_columns()->end_cids.at(1u), Chunk::MAX_COMMIT_ID);
-  EXPECT_EQ(_table->get_chunk(0u).mvcc_columns()->end_cids.at(2u), expected_end_cid);
+  EXPECT_EQ(_table->get_chunk(ChunkID{0}).mvcc_columns()->end_cids.at(0u), expected_end_cid);
+  EXPECT_EQ(_table->get_chunk(ChunkID{0}).mvcc_columns()->end_cids.at(1u), Chunk::MAX_COMMIT_ID);
+  EXPECT_EQ(_table->get_chunk(ChunkID{0}).mvcc_columns()->end_cids.at(2u), expected_end_cid);
 
   auto expected_tid = commit ? transaction_context->transaction_id() : 0u;
 
-  EXPECT_EQ(_table->get_chunk(0u).mvcc_columns()->tids.at(0u), expected_tid);
-  EXPECT_EQ(_table->get_chunk(0u).mvcc_columns()->tids.at(1u), 0u);
-  EXPECT_EQ(_table->get_chunk(0u).mvcc_columns()->tids.at(2u), expected_tid);
+  EXPECT_EQ(_table->get_chunk(ChunkID{0}).mvcc_columns()->tids.at(0u), expected_tid);
+  EXPECT_EQ(_table->get_chunk(ChunkID{0}).mvcc_columns()->tids.at(1u), 0u);
+  EXPECT_EQ(_table->get_chunk(ChunkID{0}).mvcc_columns()->tids.at(2u), expected_tid);
 }
 
 TEST_F(OperatorsDeleteTest, ExecuteAndCommit) { helper(true); }
@@ -83,16 +93,16 @@ TEST_F(OperatorsDeleteTest, DetectDirtyWrite) {
   auto t1_context = TransactionManager::get().new_transaction_context();
   auto t2_context = TransactionManager::get().new_transaction_context();
 
-  auto table_scan1 = std::make_shared<TableScan>(_gt, "a", "=", "123");
-  auto expected_result = std::make_shared<TableScan>(_gt, "a", "!=", "123");
-  auto table_scan2 = std::make_shared<TableScan>(_gt, "a", "<=", "1234");
+  auto table_scan1 = std::make_shared<TableScan>(_gt, ColumnID{1}, ScanType::OpEquals, "123");
+  auto expected_result = std::make_shared<TableScan>(_gt, ColumnID{1}, ScanType::OpNotEquals, "123");
+  auto table_scan2 = std::make_shared<TableScan>(_gt, ColumnID{1}, ScanType::OpLessThan, "1234");
 
   table_scan1->execute();
   expected_result->execute();
   table_scan2->execute();
 
   EXPECT_EQ(table_scan1->get_output()->chunk_count(), 1u);
-  EXPECT_EQ(table_scan1->get_output()->get_chunk(0).col_count(), 2u);
+  EXPECT_EQ(table_scan1->get_output()->get_chunk(ChunkID{0}).col_count(), 2u);
 
   auto delete_op1 = std::make_shared<Delete>(_table_name, table_scan1);
   delete_op1->set_transaction_context(t1_context);
@@ -109,7 +119,7 @@ TEST_F(OperatorsDeleteTest, DetectDirtyWrite) {
   // MVCC commit.
   TransactionManager::get().prepare_commit(*t1_context);
 
-  delete_op1->commit_records(t1_context->commit_id());
+  delete_op1->commit(t1_context->commit_id());
 
   TransactionManager::get().commit(*t1_context);
 
@@ -141,7 +151,7 @@ TEST_F(OperatorsDeleteTest, UpdateAfterDeleteFails) {
 
   delete_op->execute();
   TransactionManager::get().prepare_commit(*t1_context);
-  delete_op->commit_records(t1_context->commit_id());
+  delete_op->commit(t1_context->commit_id());
   EXPECT_FALSE(delete_op->execute_failed());
 
   // this update tries to update the values that have been deleted in another transaction and should fail.

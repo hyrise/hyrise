@@ -7,8 +7,6 @@
 #include <vector>
 
 #include "variable_length_key.hpp"
-#include "variable_length_key_base.hpp"
-#include "variable_length_key_proxy.hpp"
 
 namespace opossum {
 
@@ -128,9 +126,7 @@ class VariableLengthKeyStore {
     template <typename OtherProxy,
               typename = typename std::enable_if<std::is_convertible<OtherProxy, Proxy>::value>::type>
     IteratorBase(const IteratorBase<OtherProxy> &other)  // NOLINT(runtime/explicit)
-        : _bytes_per_key(other._bytes_per_key),
-          _key_alignment(other._key_alignment),
-          _data(other._data) {}
+        : _bytes_per_key(other._bytes_per_key), _key_alignment(other._key_alignment), _data(other._data) {}
 
    private:
     /**

@@ -5,7 +5,9 @@
 #include <vector>
 
 #include "abstract_read_only_operator.hpp"
+
 #include "types.hpp"
+#include "utils/assert.hpp"
 
 namespace opossum {
 
@@ -22,14 +24,14 @@ class Validate : public AbstractReadOnlyOperator {
   const std::string name() const override;
   uint8_t num_in_tables() const override;
   uint8_t num_out_tables() const override;
+  std::shared_ptr<AbstractOperator> recreate(const std::vector<AllParameterVariant> &args) const override {
+    Fail("Operator " + this->name() + " does not implement recreation.");
+    return {};
+  }
 
  protected:
-  std::shared_ptr<const Table> on_execute(std::shared_ptr<TransactionContext> transactionContext) override;
-  std::shared_ptr<const Table> on_execute() override;
-
- protected:
-  const std::shared_ptr<const Table> _in_table;
-  std::shared_ptr<Table> _output;
+  std::shared_ptr<const Table> _on_execute(std::shared_ptr<TransactionContext> transaction_context) override;
+  std::shared_ptr<const Table> _on_execute() override;
 };
 
 }  // namespace opossum

@@ -3,6 +3,13 @@
 #include <memory>
 #include <stdexcept>
 
+#include "commit_context.hpp"
+#include "transaction_context.hpp"
+
+#include "operators/commit_records.hpp"
+#include "scheduler/operator_task.hpp"
+#include "utils/assert.hpp"
+
 namespace opossum {
 
 TransactionManager& TransactionManager::get() {
@@ -29,34 +36,28 @@ std::shared_ptr<TransactionContext> TransactionManager::new_transaction_context(
 }
 
 void TransactionManager::rollback(TransactionContext& context) {
-  if (context._phase != TransactionPhase::Active) {
-    throw std::logic_error("TransactionContext can only be rolled back when active.");
-  }
+  DebugAssert((context._phase == TransactionPhase::Active), "TransactionContext can only be rolled back when active.");
 
   context._phase = TransactionPhase::RolledBack;
 }
 
 void TransactionManager::fail(TransactionContext& context) {
-  if (context._phase != TransactionPhase::Active) {
-    throw std::logic_error("TransactionContext can only fail when active.");
-  }
+  DebugAssert((context._phase == TransactionPhase::Active), "TransactionContext can only fail when active.");
 
   context._phase = TransactionPhase::Failed;
 }
 
 void TransactionManager::prepare_commit(TransactionContext& context) {
-  if (context._phase != TransactionPhase::Active) {
-    throw std::logic_error("TransactionContext can only be prepared for committing when active.");
-  }
+  DebugAssert((context._phase == TransactionPhase::Active),
+              "TransactionContext can only be prepared for committing when active.");
 
   context._commit_context = _new_commit_context();
   context._phase = TransactionPhase::Committing;
 }
 
 void TransactionManager::commit(TransactionContext& context, std::function<void(TransactionID)> callback) {
-  if (context._phase != TransactionPhase::Committing) {
-    throw std::logic_error("TransactionContext can only be committed after prepare_commit has been called.");
-  }
+  DebugAssert((context._phase == TransactionPhase::Committing),
+              "TransactionContext can only be committed after prepare_commit has been called.");
 
   auto commit_context = context._commit_context;
 
@@ -65,6 +66,24 @@ void TransactionManager::commit(TransactionContext& context, std::function<void(
 
   // TODO(EVERYONE): update _phase when transaction actually committed?
   context._phase = TransactionPhase::Committed;
+}
+
+void TransactionManager::run_transaction(const std::function<void(std::shared_ptr<TransactionContext>)>& fn) {
+  auto transaction_context = new_transaction_context();
+
+  fn(transaction_context);
+
+  // Commit
+  TransactionManager::get().prepare_commit(*transaction_context);
+
+  auto commit = std::make_shared<CommitRecords>();
+  commit->set_transaction_context(transaction_context);
+
+  auto commit_task = std::make_shared<OperatorTask>(commit);
+  commit_task->schedule();
+  commit_task->join();
+
+  TransactionManager::get().commit(*transaction_context);
 }
 
 /**
@@ -101,7 +120,7 @@ std::shared_ptr<CommitContext> TransactionManager::_new_commit_context() {
      */
     success = std::atomic_compare_exchange_strong(&_last_commit_context, &current_context, next_context);
 
-    if (!success) throw std::logic_error("Invariant violated.");
+    Assert(success, "Invariant violated.");
   }
 
   return next_context;

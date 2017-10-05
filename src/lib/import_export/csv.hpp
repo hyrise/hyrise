@@ -1,19 +1,22 @@
 #pragma once
 
 namespace opossum {
-namespace csv {
 
 /*
- * Predefined characters used for the csv file.
+ * Predefined characters used for the csv file
  */
 
-constexpr char delimiter = '\n';
-constexpr char separator = ',';
-constexpr char quote = '"';
-constexpr char escape = '"';
-constexpr char delimiter_escape = '\\';
+struct CsvConfig {
+  char delimiter = '\n';
+  char separator = ',';
+  char quote = '"';
+  char escape = '"';
+  char delimiter_escape = '\\';
 
-constexpr auto meta_file_extension = ".meta";
+  const char *meta_file_extension = ".meta";
 
-}  // namespace csv
+  // Indicator whether the Csv follows RFC 4180. (see https://tools.ietf.org/html/rfc4180)
+  bool rfc_mode = true;
+};
+
 }  // namespace opossum

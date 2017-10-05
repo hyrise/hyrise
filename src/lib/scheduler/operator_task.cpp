@@ -2,6 +2,7 @@
 
 #include <memory>
 #include <utility>
+#include <vector>
 
 #include "concurrency/transaction_manager.hpp"
 
@@ -15,9 +16,33 @@
 namespace opossum {
 OperatorTask::OperatorTask(std::shared_ptr<AbstractOperator> op) : _op(std::move(op)) {}
 
-const std::shared_ptr<AbstractOperator> &OperatorTask::get_operator() const { return _op; }
+const std::vector<std::shared_ptr<OperatorTask>> OperatorTask::make_tasks_from_operator(
+    std::shared_ptr<AbstractOperator> op) {
+  std::vector<std::shared_ptr<OperatorTask>> tasks;
+  OperatorTask::_add_tasks_from_operator(op, tasks);
+  return tasks;
+}
 
-void OperatorTask::on_execute() {
+void OperatorTask::_add_tasks_from_operator(std::shared_ptr<AbstractOperator> op,
+                                            std::vector<std::shared_ptr<OperatorTask>>& tasks) {
+  auto task = std::make_shared<OperatorTask>(op);
+
+  if (auto left = op->mutable_input_left()) {
+    OperatorTask::_add_tasks_from_operator(left, tasks);
+    tasks.back()->set_as_predecessor_of(task);
+  }
+
+  if (auto right = op->mutable_input_right()) {
+    OperatorTask::_add_tasks_from_operator(right, tasks);
+    tasks.back()->set_as_predecessor_of(task);
+  }
+
+  tasks.push_back(task);
+}
+
+const std::shared_ptr<AbstractOperator>& OperatorTask::get_operator() const { return _op; }
+
+void OperatorTask::_on_execute() {
   auto context = _op->transaction_context();
 
   // Do not execute Operators in transaction marked as failed. Not doing so is crucial in order to make sure no other

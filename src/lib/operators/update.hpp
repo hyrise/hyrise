@@ -2,8 +2,11 @@
 
 #include <memory>
 #include <string>
+#include <vector>
 
 #include "abstract_read_write_operator.hpp"
+
+#include "utils/assert.hpp"
 
 namespace opossum {
 
@@ -19,6 +22,8 @@ class Insert;
  * data that is used to update the rows specified by the first table.
  *
  * Assumption: The input has been validated before.
+ *
+ * Note: Update does not support null values at the moment
  */
 class Update : public AbstractReadWriteOperator {
  public:
@@ -27,19 +32,20 @@ class Update : public AbstractReadWriteOperator {
 
   ~Update();
 
-  void commit_records(const CommitID cid) override;
-  void rollback_records() override;
-
   const std::string name() const override;
   uint8_t num_in_tables() const override;
+  std::shared_ptr<AbstractOperator> recreate(const std::vector<AllParameterVariant>& args) const override {
+    Fail("Operator " + this->name() + " does not implement recreation.");
+    return {};
+  }
 
  protected:
-  std::shared_ptr<const Table> on_execute(std::shared_ptr<TransactionContext> context) override;
+  std::shared_ptr<const Table> _on_execute(std::shared_ptr<TransactionContext> context) override;
   bool _execution_input_valid(const std::shared_ptr<TransactionContext>& context) const;
 
  protected:
   const std::string _table_to_update_name;
-  std::unique_ptr<Delete> _delete;
-  std::unique_ptr<Insert> _insert;
+  std::shared_ptr<Delete> _delete;
+  std::shared_ptr<Insert> _insert;
 };
 }  // namespace opossum

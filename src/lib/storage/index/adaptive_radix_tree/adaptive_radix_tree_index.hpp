@@ -1,19 +1,19 @@
-
 #pragma once
 
-#include <algorithm>
 #include <iterator>
 #include <memory>
 #include <utility>
 #include <vector>
-#include "../../../types.hpp"
-#include "../../base_column.hpp"
-#include "../../untyped_dictionary_column.hpp"
-#include "../base_index.hpp"
+
+#include "storage/index/base_index.hpp"
+
+#include "types.hpp"
 
 namespace opossum {
 
+class BaseColumn;
 class Node;
+class BaseDictionaryColumn;
 
 /**
  * The AdaptiveRadixTreeIndex (ART) currently works on single DictionaryColumns. Conceptually it also works on
@@ -27,6 +27,8 @@ class Node;
  *
  * The full specification of an ART can be found in the following paper: https://db.in.tum.de/~leis/papers/ART.pdf
  *
+ * Find more information about this in our wiki: https://github.com/hyrise/zweirise/wiki/AdaptiveRadixTree-(ART)-Index
+ *
  */
 class AdaptiveRadixTreeIndex : public BaseIndex {
   friend class AdaptiveRadixTreeIndexTest;
@@ -37,10 +39,6 @@ class AdaptiveRadixTreeIndex : public BaseIndex {
 
  public:
   explicit AdaptiveRadixTreeIndex(const std::vector<std::shared_ptr<BaseColumn>> &index_columns);
-
-  AdaptiveRadixTreeIndex(const AdaptiveRadixTreeIndex &) = delete;
-
-  AdaptiveRadixTreeIndex &operator=(const AdaptiveRadixTreeIndex &) = delete;
 
   AdaptiveRadixTreeIndex(AdaptiveRadixTreeIndex &&) = default;
 
@@ -84,7 +82,7 @@ class AdaptiveRadixTreeIndex : public BaseIndex {
 
   std::vector<std::shared_ptr<BaseColumn>> _get_index_columns() const;
 
-  const std::shared_ptr<UntypedDictionaryColumn> _index_column;
+  const std::shared_ptr<BaseDictionaryColumn> _index_column;
   std::vector<ChunkOffset> _chunk_offsets;
   std::shared_ptr<Node> _root;
 };

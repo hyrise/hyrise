@@ -1,4 +1,5 @@
 #include "table_generator.hpp"
+
 #include <assert.h>
 #include <fstream>
 #include <memory>
@@ -6,23 +7,29 @@
 #include <string>
 #include <utility>
 #include <vector>
-#include "types.hpp"
 
 #include "tbb/concurrent_vector.h"
 
+#include "storage/chunk.hpp"
+#include "storage/dictionary_compression.hpp"
+#include "storage/table.hpp"
+#include "storage/value_column.hpp"
+
+#include "types.hpp"
+
 namespace opossum {
 
-std::shared_ptr<Table> TableGenerator::get_table() {
-  std::shared_ptr<Table> table = std::make_shared<Table>(_chunk_size);
+std::shared_ptr<Table> TableGenerator::get_table(const ChunkID chunk_size, const bool compress) {
+  std::shared_ptr<Table> table = std::make_shared<Table>(chunk_size);
   std::vector<tbb::concurrent_vector<int>> value_vectors;
-  auto vector_size = _chunk_size > 0 ? _chunk_size : _num_rows;
+  auto vector_size = chunk_size > 0 ? chunk_size : _num_rows;
   /*
    * Generate table layout with column names from 'a' to 'z'.
    * Create a vector for each column.
    */
   for (size_t i = 0; i < _num_columns; i++) {
     auto column_name = std::string(1, static_cast<char>(static_cast<int>('a') + i));
-    table->add_column(column_name, "int", false);
+    table->add_column_definition(column_name, "int");
     value_vectors.emplace_back(tbb::concurrent_vector<int>(vector_size));
   }
   auto chunk = Chunk();
@@ -38,7 +45,7 @@ std::shared_ptr<Table> TableGenerator::get_table() {
         chunk.add_column(std::make_shared<ValueColumn<int>>(std::move(value_vectors[j])));
         value_vectors[j] = tbb::concurrent_vector<int>(vector_size);
       }
-      table->add_chunk(std::move(chunk));
+      table->emplace_chunk(std::move(chunk));
       chunk = Chunk();
     }
     /*
@@ -55,8 +62,13 @@ std::shared_ptr<Table> TableGenerator::get_table() {
     for (size_t j = 0; j < _num_columns; j++) {
       chunk.add_column(std::make_shared<ValueColumn<int>>(std::move(value_vectors[j])));
     }
-    table->add_chunk(std::move(chunk));
+    table->emplace_chunk(std::move(chunk));
   }
+
+  if (compress) {
+    DictionaryCompression::compress_table(*table);
+  }
+
   return table;
 }
 }  // namespace opossum

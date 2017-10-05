@@ -1,13 +1,11 @@
 #pragma once
 
+#include <atomic>
 #include <memory>
 #include <thread>
 #include <vector>
 
 #include "abstract_scheduler.hpp"
-#include "task_queue.hpp"
-#include "uid_allocator.hpp"
-#include "worker.hpp"
 
 namespace opossum {
 
@@ -74,8 +72,10 @@ namespace opossum {
  * [1] http://frankdenneman.nl/2016/07/13/numa-deep-dive-4-local-memory-optimization/
  */
 
-class Topology;
 class ProcessingUnit;
+class TaskQueue;
+class Topology;
+class UidAllocator;
 
 /**
  * Schedules Tasks
@@ -104,7 +104,7 @@ class NodeQueueScheduler : public AbstractScheduler {
                 SchedulePriority priority = SchedulePriority::Normal) override;
 
  private:
-  std::atomic<TaskID> _task_counter{0};
+  std::atomic<TaskID> _task_counter{TaskID{0}};
   std::shared_ptr<UidAllocator> _worker_id_allocator;
   std::vector<std::shared_ptr<TaskQueue>> _queues;
   std::vector<std::shared_ptr<ProcessingUnit>> _processing_units;

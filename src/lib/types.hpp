@@ -1,35 +1,59 @@
 #pragma once
 
-#include <boost/hana/ext/boost/mpl/vector.hpp>
-#include <boost/hana/for_each.hpp>
-#include <boost/hana/integral_constant.hpp>
-#include <boost/hana/map.hpp>
-#include <boost/hana/not_equal.hpp>
-#include <boost/hana/pair.hpp>
-#include <boost/hana/second.hpp>
-#include <boost/hana/size.hpp>
-#include <boost/hana/take_while.hpp>
-#include <boost/hana/transform.hpp>
-#include <boost/hana/tuple.hpp>
-#include <boost/hana/type.hpp>
-#include <boost/hana/zip.hpp>
-#include <boost/lexical_cast.hpp>
-#include <boost/variant.hpp>
+#include <tbb/concurrent_vector.h>
 
-#include <algorithm>
 #include <cstdint>
+#include <iostream>
 #include <limits>
-#include <memory>
 #include <string>
-#include <utility>
+#include <tuple>
 #include <vector>
+
+#include "polymorphic_allocator.hpp"
+#include "strong_typedef.hpp"
+
+/**
+ * We use STRONG_TYPEDEF to avoid things like adding chunk ids and value ids.
+ * Because implicit constructors are deleted, you cannot initialize a ChunkID
+ * like this
+ *   ChunkID x = 3;
+ * but need to use
+ *   ChunkID x{3}; or
+ *   auto x = ChunkID{3};
+ *
+ * WorkerID, TaskID, CommitID, and TransactionID are used in std::atomics and
+ * therefore need to be trivially copyable. That's currently not possible with
+ * the strong typedef (as far as I know).
+ *
+ * TODO(anyone): Also, strongly typing ChunkOffset causes a lot of errors in
+ * the group key and adaptive radix tree implementations. Unfortunately, I
+ * wasn’t able to properly resolve these issues because I am not familiar with
+ * the code there
+ */
+
+STRONG_TYPEDEF(uint32_t, ChunkID);
+STRONG_TYPEDEF(uint16_t, ColumnID);
+STRONG_TYPEDEF(uint32_t, ValueID);  // Cannot be larger than ChunkOffset
+STRONG_TYPEDEF(uint32_t, NodeID);
+STRONG_TYPEDEF(int32_t, CpuID);
 
 namespace opossum {
 
-namespace hana = boost::hana;
+/** We use vectors with custom allocators, e.g, to bind the data object to
+ * specific NUMA nodes. This is mainly used in the data objects, i.e.,
+ * Chunk, ValueColumn, DictionaryColumn, ReferenceColumn and attribute vectors.
+ * The PolymorphicAllocator provides an abstraction over several allocation
+ * methods by adapting to subclasses of boost::container::pmr::memory_resource.
+ */
 
-using ChunkID = uint32_t;
+template <typename T>
+using pmr_vector = std::vector<T, PolymorphicAllocator<T>>;
+
+template <typename T>
+using pmr_concurrent_vector = tbb::concurrent_vector<T, PolymorphicAllocator<T>>;
+
 using ChunkOffset = uint32_t;
+
 struct RowID {
   ChunkID chunk_id;
   ChunkOffset chunk_offset;
@@ -38,17 +62,15 @@ struct RowID {
   bool operator<(const RowID &rhs) const {
     return std::tie(chunk_id, chunk_offset) < std::tie(rhs.chunk_id, rhs.chunk_offset);
   }
+
+  // Useful when comparing a row ID to NULL_ROW_ID
+  bool operator==(const RowID &rhs) const {
+    return std::tie(chunk_id, chunk_offset) == std::tie(rhs.chunk_id, rhs.chunk_offset);
+  }
 };
 
-// used to represent NULL values
-constexpr ChunkOffset INVALID_CHUNK_OFFSET = std::numeric_limits<ChunkOffset>::max();
-
-using ColumnID = uint16_t;
-using ValueID = uint32_t;  // Cannot be larger than ChunkOffset
 using WorkerID = uint32_t;
-using NodeID = uint32_t;
 using TaskID = uint32_t;
-using CpuID = uint32_t;
 
 // When changing these to 64-bit types, reading and writing to them might not be atomic anymore.
 // Among others, the validate operator might break when another operator is simultaneously writing begin or end CIDs.
@@ -59,24 +81,24 @@ using StringLength = uint16_t;     // The length of column value strings must fi
 using ColumnNameLength = uint8_t;  // The length of column names must fit in this type.
 using AttributeVectorWidth = uint8_t;
 
-using PosList = std::vector<RowID>;
+using PosList = pmr_vector<RowID>;
 
-class ColumnName {
- public:
-  explicit ColumnName(const std::string &name) : _name(name) {}
+constexpr NodeID INVALID_NODE_ID{std::numeric_limits<NodeID::base_type>::max()};
+constexpr TaskID INVALID_TASK_ID{std::numeric_limits<TaskID>::max()};
+constexpr CpuID INVALID_CPU_ID{std::numeric_limits<CpuID::base_type>::max()};
+constexpr WorkerID INVALID_WORKER_ID{std::numeric_limits<WorkerID>::max()};
+constexpr ColumnID INVALID_COLUMN_ID{std::numeric_limits<ColumnID::base_type>::max()};
 
-  operator std::string() const { return _name; }
+constexpr NodeID CURRENT_NODE_ID{std::numeric_limits<NodeID::base_type>::max() - 1};
 
- protected:
-  const std::string _name;
-};
+// Used to represent NULL values
+constexpr ChunkOffset INVALID_CHUNK_OFFSET{std::numeric_limits<ChunkOffset>::max()};
 
-constexpr NodeID INVALID_NODE_ID = std::numeric_limits<NodeID>::max();
-constexpr TaskID INVALID_TASK_ID = std::numeric_limits<TaskID>::max();
-constexpr CpuID INVALID_CPU_ID = std::numeric_limits<CpuID>::max();
-constexpr WorkerID INVALID_WORKER_ID = std::numeric_limits<WorkerID>::max();
+// ... in ReferenceColumns
+const RowID NULL_ROW_ID = RowID{ChunkID{0u}, INVALID_CHUNK_OFFSET};  // TODO(anyone): Couldn’t use constexpr here
 
-constexpr NodeID CURRENT_NODE_ID = std::numeric_limits<NodeID>::max() - 1;
+// ... in DictionaryColumns
+constexpr ValueID NULL_VALUE_ID{std::numeric_limits<ValueID::base_type>::max()};
 
 // The Scheduler currently supports just these 2 priorities, subject to change.
 enum class SchedulePriority {
@@ -84,188 +106,99 @@ enum class SchedulePriority {
   High = 0     // Schedule task at the beginning of the queue
 };
 
-/**
- * Only the following lines are needed wherever AllTypeVariant is used.
- * This could be one header file.
- * @{
- */
+// Part of AllParameterVariant to reference parameters that will be replaced later.
+// When stored in an operator, the operator's recreate method can contain functionality
+// that will replace a ValuePlaceholder with an explicit value from a given list of arguments
+class ValuePlaceholder {
+ public:
+  explicit ValuePlaceholder(uint16_t index) : _index(index) {}
 
-// This holds pairs of all types and their respective string representation
-static constexpr auto column_types =
-    hana::make_tuple(hana::make_pair("int", hana::type_c<int32_t>), hana::make_pair("long", hana::type_c<int64_t>),
-                     hana::make_pair("float", hana::type_c<float>), hana::make_pair("double", hana::type_c<double>),
-                     hana::make_pair("string", hana::type_c<std::string>));
+  uint16_t index() const { return _index; }
 
-// This holds only the possible data types.
-static constexpr auto types = hana::transform(column_types, hana::second);
-
-// Convert tuple to mpl vector
-using TypesAsMplVector = decltype(hana::to<hana::ext::boost::mpl::vector_tag>(types));
-
-// Create boost::variant from mpl vector
-using AllTypeVariant = typename boost::make_variant_over<TypesAsMplVector>::type;
-
-/** @} */
-
-/**
- * AllParameterVariant holds either an AllTypeVariant or a ColumnName.
- * It should be used to generalize Opossum operator calls.
- */
-static auto parameter_types = hana::make_tuple(hana::make_pair("AllTypeVariant", AllTypeVariant(123)),
-                                               hana::make_pair("ColumnName", ColumnName("column_name")));
-
-// convert tuple of all types to sequence by first extracting the prototypes only and then applying decltype_
-static auto parameter_types_as_hana_sequence =
-    hana::transform(hana::transform(parameter_types, hana::second), hana::decltype_);
-// convert hana sequence to mpl vector
-using ParameterTypesAsMplVector =
-    decltype(hana::to<hana::ext::boost::mpl::vector_tag>(parameter_types_as_hana_sequence));
-// create boost::variant from mpl vector
-using AllParameterVariant = typename boost::make_variant_over<ParameterTypesAsMplVector>::type;
-
-/**
- * This is everything needed for type_cast
- * @{
- */
-
-namespace {
-
-// Returns the index of type T in an Iterable
-template <typename Sequence, typename T>
-constexpr auto index_of(Sequence const &sequence, T const &element) {
-  constexpr auto size = decltype(hana::size(hana::take_while(sequence, hana::not_equal.to(element)))){};
-  return decltype(size)::value;
-}
-
-// Negates a type trait
-template <bool Condition>
-struct _neg : public std::true_type {};
-
-template <>
-struct _neg<true> : public std::false_type {};
-
-template <typename Condition>
-struct neg : public _neg<Condition::value> {};
-
-// Wrapper that makes std::enable_if a bit more readable
-template <typename Condition, typename Type = void>
-using enable_if = typename std::enable_if<Condition::value, Type>::type;
-
-}  // namespace
-
-// Retrieves the value stored in an AllTypeVariant without conversion
-template <typename T>
-const T &get(const AllTypeVariant &value) {
-  static_assert(hana::contains(types, hana::type_c<T>), "Type not in AllTypeVariant");
-  return boost::get<T>(value);
-}
-
-// cast methods - from variant to specific type
-
-// Template specialization for everything but integral types
-template <typename T>
-enable_if<neg<std::is_integral<T>>, T> type_cast(const AllTypeVariant &value) {
-  if (value.which() == index_of(types, hana::type_c<T>)) return get<T>(value);
-
-  return boost::lexical_cast<T>(value);
-}
-
-// Template specialization for integral types
-template <typename T>
-enable_if<std::is_integral<T>, T> type_cast(const AllTypeVariant &value) {
-  if (value.which() == index_of(types, hana::type_c<T>)) return get<T>(value);
-
-  try {
-    return boost::lexical_cast<T>(value);
-  } catch (...) {
-    return boost::numeric_cast<T>(boost::lexical_cast<double>(value));
+  friend std::ostream &operator<<(std::ostream &o, const ValuePlaceholder &placeholder) {
+    o << "?" << placeholder.index();
+    return o;
   }
-}
 
-std::string to_string(const AllTypeVariant &x);
+  bool operator==(const ValuePlaceholder &rhs) const { return _index == rhs._index; }
 
-/** @} */
+ private:
+  uint16_t _index;
+};
 
-/**
- * This is everything needed for make_*_by_column_type to work.
- * It needs to include the AllVariantType header and could also
- * be moved into a separate header.
- * @{
- */
+// TODO(anyone): integrate and replace with ExpressionType
+enum class ScanType {
+  OpEquals,
+  OpNotEquals,
+  OpLessThan,
+  OpLessThanEquals,
+  OpGreaterThan,
+  OpGreaterThanEquals,
+  OpBetween,
+  OpLike
+};
 
-template <class base, template <typename...> class impl, class... TemplateArgs, typename... ConstructorArgs>
-std::unique_ptr<base> make_unique_by_column_type(const std::string &type, ConstructorArgs &&... args) {
-  std::unique_ptr<base> ret = nullptr;
-  hana::for_each(column_types, [&](auto x) {
-    if (std::string(hana::first(x)) == type) {
-      // The + before hana::second - which returns a reference - converts its return value
-      // into a value so that we can access ::type
-      using column_type = typename decltype(+hana::second(x))::type;
-      ret = std::make_unique<impl<column_type, TemplateArgs...>>(std::forward<ConstructorArgs>(args)...);
-      return;
-    }
-  });
-  if (IS_DEBUG && !ret) throw std::runtime_error("unknown type " + type);
-  return ret;
-}
+enum class ExpressionType {
+  /*Any literal value*/
+  Literal,
+  /*A star as in SELECT * FROM ...*/
+  Star,
+  /*A parameter used in PreparedStatements*/
+  Placeholder,
+  /*An identifier for a column*/
+  Column,
+  /*An identifier for a function, such as COUNT, MIN, MAX*/
+  Function,
 
-/**
- * We need to pass parameter packs explicitly for GCC due to the following bug:
- * http://stackoverflow.com/questions/41769851/gcc-causes-segfault-for-lambda-captured-parameter-pack
- */
-template <class base, template <typename...> class impl, class... TemplateArgs, typename... ConstructorArgs>
-std::unique_ptr<base> make_unique_by_column_types(const std::string &type1, const std::string &type2,
-                                                  ConstructorArgs &&... args) {
-  std::unique_ptr<base> ret = nullptr;
-  hana::for_each(column_types, [&ret, &type1, &type2, &args...](auto x) {
-    if (std::string(hana::first(x)) == type1) {
-      hana::for_each(column_types, [&ret, &type2, &args...](auto y) {
-        if (std::string(hana::first(y)) == type2) {
-          using column_type1 = typename decltype(+hana::second(x))::type;
-          using column_type2 = typename decltype(+hana::second(y))::type;
-          ret = std::make_unique<impl<column_type1, column_type2, TemplateArgs...>>(
-              std::forward<ConstructorArgs>(args)...);
-          return;
-        }
-      });
-      return;
-    }
-  });
-  if (IS_DEBUG && !ret) throw std::runtime_error("unknown type " + type1 + " or " + type2);
-  return ret;
-}
+  /*A subselect*/
+  Select,
 
-template <class base, template <typename...> class impl, class... TemplateArgs, class... ConstructorArgs>
-std::shared_ptr<base> make_shared_by_column_type(const std::string &type, ConstructorArgs &&... args) {
-  return make_unique_by_column_type<base, impl, TemplateArgs...>(type, std::forward<ConstructorArgs>(args)...);
-}
+  /*Arithmetic operators*/
+  Addition,
+  Subtraction,
+  Multiplication,
+  Division,
+  Modulo,
+  Power,
 
-template <typename Functor, typename... Args>
-void call_functor_by_column_type(const std::string &type, Args &&... args) {
-  // In some cases, we want to call a function depending on the type of a column. Here we do not want to create an
-  // object that would require an untemplated base class. Instead, we can create a functor class and have a templated
-  // "run" method. E.g.:
+  /*Logical operators*/
+  Equals,
+  NotEquals,
+  LessThan,
+  LessThanEquals,
+  GreaterThan,
+  GreaterThanEquals,
+  Like,
+  NotLike,
+  And,
+  Or,
+  Between,
+  Not,
 
-  // class MyFunctor {
-  // public:
-  //   template <typename T>
-  //   static void run(int some_arg, int other_arg) {
-  //     std::cout << "Column type is " << typeid(T).name() << ", args are " << some_arg << " and " << other_arg <<
-  //     std::endl;
-  //   }
-  // };
-  //
-  // std::string column_type = "int";
-  // call_functor_by_column_type<MyFunctor>(column_type, 2, 3);
+  /*Set operators*/
+  In,
+  Exists,
 
-  hana::for_each(column_types, [&](auto x) {
-    if (std::string(hana::first(x)) == type) {
-      using column_type = typename decltype(+hana::second(x))::type;
-      Functor::template run<column_type>(std::forward<Args>(args)...);
-    }
-  });
-}
+  /*Others*/
+  IsNull,
+  Case,
+  Hint
+};
 
-/** @} */
+enum class JoinMode { Inner, Left, Right, Outer, Cross, Natural, Self };
+
+enum class AggregateFunction { Min, Max, Sum, Avg, Count };
+
+enum class OrderByMode { Ascending, Descending, AscendingNullsLast, DescendingNullsLast };
+
+class Noncopyable {
+ protected:
+  Noncopyable() = default;
+  Noncopyable(Noncopyable &&) = default;
+  Noncopyable &operator=(Noncopyable &&) = default;
+  ~Noncopyable() = default;
+  Noncopyable(const Noncopyable &) = delete;
+  const Noncopyable &operator=(const Noncopyable &) = delete;
+};
 
 }  // namespace opossum

@@ -1,0 +1,3 @@
+ps_partkey|ps_suppkey|ps_availqty|ps_supplycost|ps_comment
+int|int|int|float|string
+0|0|0|0.0|-

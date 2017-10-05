@@ -1,52 +1,40 @@
 #pragma once
 
-#include <functional>
-#include <map>
 #include <memory>
 #include <string>
 #include <utility>
 #include <vector>
 
 #include "abstract_read_only_operator.hpp"
-#include "storage/reference_column.hpp"
+#include "types.hpp"
 
 namespace opossum {
 
 // operator to join two tables using one column of each table
-// output is a table with reference columns, named with prefix left and right
+// output is a table with reference columns
 // to filter by multiple criteria, you can chain the operator
 
 // As with most operators, we do not guarantee a stable operation with regards
 // to positions - i.e., your sorting order might be disturbed
 
-// Natural Join is a special case of an inner join without join_columns
-// Natural and Cross Join do not enforce column_names
-enum JoinMode { Inner, Left, Right, Outer, Cross, Natural, Self };
+// find more information about joins in our Wiki:
+// https://github.com/hyrise/zweirise/wiki/Operator-Join
 
 class AbstractJoinOperator : public AbstractReadOnlyOperator {
  public:
   AbstractJoinOperator(const std::shared_ptr<const AbstractOperator> left,
-                       const std::shared_ptr<const AbstractOperator> right,
-                       optional<std::pair<std::string, std::string>> column_names, const std::string &op,
-                       const JoinMode mode, const std::string &prefix_left, const std::string &prefix_right);
+                       const std::shared_ptr<const AbstractOperator> right, const JoinMode mode,
+                       const std::pair<ColumnID, ColumnID> &column_ids, const ScanType scan_type);
 
-  virtual ~AbstractJoinOperator() = default;
-
-  // copying a operator is not allowed
-  AbstractJoinOperator(AbstractJoinOperator const &) = delete;
-  AbstractJoinOperator &operator=(const AbstractJoinOperator &) = delete;
-
-  // we need to explicitly set the move constructor to default when
-  // we overwrite the copy constructor
-  AbstractJoinOperator(AbstractJoinOperator &&) = default;
-  AbstractJoinOperator &operator=(AbstractJoinOperator &&) = default;
+  JoinMode mode() const;
+  const std::pair<ColumnID, ColumnID> &column_ids() const;
+  ScanType scan_type() const;
+  const std::string description() const override;
 
  protected:
-  const std::string _op;
   const JoinMode _mode;
-  const std::string _prefix_left;
-  const std::string _prefix_right;
-  optional<std::pair<std::string, std::string>> _column_names;
+  const std::pair<ColumnID, ColumnID> _column_ids;
+  const ScanType _scan_type;
 
   // Some operators need an internal implementation class, mostly in cases where
   // their execute method depends on a template parameter. An example for this is
@@ -54,7 +42,7 @@ class AbstractJoinOperator : public AbstractReadOnlyOperator {
   class AbstractJoinOperatorImpl : public AbstractReadOnlyOperatorImpl {
    public:
     virtual ~AbstractJoinOperatorImpl() = default;
-    virtual std::shared_ptr<const Table> on_execute() = 0;
+    virtual std::shared_ptr<const Table> _on_execute() = 0;
   };
 };
 

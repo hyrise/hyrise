@@ -1,9 +1,13 @@
-#include "adaptive_radix_tree_index.hpp"
-
+#include <array>
+#include <functional>
 #include <iterator>
 #include <memory>
 #include <utility>
 #include <vector>
+
+#include "adaptive_radix_tree_index.hpp"
+
+#include "types.hpp"
 
 namespace opossum {
 
@@ -18,15 +22,11 @@ using Iterator = std::vector<ChunkOffset>::const_iterator;
  *
  */
 
-class Node {
+class Node : private Noncopyable {
  public:
   Node() = default;
 
   virtual ~Node() = default;
-
-  Node(const Node &) = delete;
-
-  Node &operator=(const Node &) = delete;
 
   virtual Iterator lower_bound(const AdaptiveRadixTreeIndex::BinaryComparable &key, size_t depth) const = 0;
 

@@ -1,0 +1,4 @@
+# Leaks in libtool-libtldl
+leak:lt__malloc
+leak:libltdl.so
+

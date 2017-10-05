@@ -9,29 +9,26 @@
 #include "../base_test.hpp"
 #include "gtest/gtest.h"
 
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wunused-parameter"
-#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-#include "../../lib/network/generated/opossum.pb.h"
-#pragma GCC diagnostic pop
-#include "../../lib/network/operator_translator.hpp"
-#include "../../lib/operators/abstract_operator.hpp"
-#include "../../lib/operators/difference.hpp"
-#include "../../lib/operators/export_binary.hpp"
-#include "../../lib/operators/export_csv.hpp"
-#include "../../lib/operators/get_table.hpp"
-#include "../../lib/operators/import_csv.hpp"
-#include "../../lib/operators/index_column_scan.hpp"
-#include "../../lib/operators/join_nested_loop_a.hpp"
-#include "../../lib/operators/print.hpp"
-#include "../../lib/operators/product.hpp"
-#include "../../lib/operators/projection.hpp"
-#include "../../lib/operators/sort.hpp"
-#include "../../lib/operators/table_scan.hpp"
-#include "../../lib/operators/union_all.hpp"
-#include "../../lib/storage/storage_manager.hpp"
-#include "../../lib/storage/table.hpp"
-#include "../../lib/types.hpp"
+#include "network/operator_translator.hpp"
+#include "network/opossum.pb.wrapper.hpp"
+#include "operators/abstract_operator.hpp"
+#include "operators/difference.hpp"
+#include "operators/export_binary.hpp"
+#include "operators/export_csv.hpp"
+#include "operators/get_table.hpp"
+#include "operators/import_csv.hpp"
+#include "operators/index_column_scan.hpp"
+#include "operators/join_nested_loop_a.hpp"
+#include "operators/print.hpp"
+#include "operators/product.hpp"
+#include "operators/projection.hpp"
+#include "operators/sort.hpp"
+#include "operators/table_scan.hpp"
+#include "operators/union_all.hpp"
+#include "scheduler/operator_task.hpp"
+#include "storage/storage_manager.hpp"
+#include "storage/table.hpp"
+#include "types.hpp"
 
 namespace opossum {
 
@@ -86,8 +83,8 @@ TEST_F(OperatorTranslatorTest, ScanTableInt) {
 
   auto msg = proto::OperatorVariant();
   proto::TableScanOperator* table_scan_operator = msg.mutable_table_scan();
-  table_scan_operator->set_column_name("a");
-  table_scan_operator->set_filter_operator("=");
+  table_scan_operator->set_column_id(ColumnID{0});
+  table_scan_operator->set_filter_operator(proto::ScanType::OpEquals);
   proto::Variant* variant = table_scan_operator->mutable_value();
   variant->set_value_int(123);
   proto::GetTableOperator* get_table_operator = table_scan_operator->mutable_input_operator()->mutable_get_table();
@@ -117,8 +114,8 @@ TEST_F(OperatorTranslatorTest, ScanTableIntBetween) {
 
   auto msg = proto::OperatorVariant();
   proto::TableScanOperator* table_scan_operator = msg.mutable_table_scan();
-  table_scan_operator->set_column_name("a");
-  table_scan_operator->set_filter_operator("BETWEEN");
+  table_scan_operator->set_column_id(ColumnID{0});
+  table_scan_operator->set_filter_operator(proto::ScanType::OpBetween);
   proto::Variant* variant = table_scan_operator->mutable_value();
   variant->set_value_int(122);
   proto::Variant* variant2 = table_scan_operator->mutable_value2();
@@ -150,8 +147,8 @@ TEST_F(OperatorTranslatorTest, ScanTableString) {
 
   auto msg = proto::OperatorVariant();
   proto::TableScanOperator* table_scan_operator = msg.mutable_table_scan();
-  table_scan_operator->set_column_name("b");
-  table_scan_operator->set_filter_operator("=");
+  table_scan_operator->set_column_id(ColumnID{1});
+  table_scan_operator->set_filter_operator(proto::ScanType::OpEquals);
   proto::Variant* variant = table_scan_operator->mutable_value();
   variant->set_value_string("A");
   proto::GetTableOperator* get_table_operator = table_scan_operator->mutable_input_operator()->mutable_get_table();
@@ -181,7 +178,7 @@ TEST_F(OperatorTranslatorTest, Projection) {
 
   auto msg = proto::OperatorVariant();
   proto::ProjectionOperator* projection_operator = msg.mutable_projection();
-  projection_operator->add_column_name("a");
+  projection_operator->add_column_id(0);
   proto::GetTableOperator* get_table_operator = projection_operator->mutable_input_operator()->mutable_get_table();
   get_table_operator->set_table_name("TestTable");
 
@@ -210,9 +207,7 @@ TEST_F(OperatorTranslatorTest, Product) {
   auto msg = proto::OperatorVariant();
   proto::ProductOperator* product_operation = msg.mutable_product();
   product_operation->mutable_left_operator()->mutable_get_table()->set_table_name("table_a");
-  product_operation->set_prefix_left("left.");
   product_operation->mutable_right_operator()->mutable_get_table()->set_table_name("table_b");
-  product_operation->set_prefix_right("right.");
 
   OperatorTranslator translator;
   auto& tasks = translator.build_tasks_from_proto(msg);
@@ -244,8 +239,8 @@ TEST_F(OperatorTranslatorTest, AscendingSort) {
   auto msg = proto::OperatorVariant();
   proto::SortOperator* sort_operation = msg.mutable_sort();
   sort_operation->mutable_input_operator()->mutable_get_table()->set_table_name("table_int_float");
-  sort_operation->set_column_name("a");
-  sort_operation->set_ascending(true);
+  sort_operation->set_column_id(ColumnID{0});
+  sort_operation->set_order_by_mode(opossum::proto::SortOperator::Ascending);
 
   OperatorTranslator translator;
   auto& tasks = translator.build_tasks_from_proto(msg);
@@ -272,8 +267,8 @@ TEST_F(OperatorTranslatorTest, DescendingSort) {
   auto msg = proto::OperatorVariant();
   proto::SortOperator* sort_operation = msg.mutable_sort();
   sort_operation->mutable_input_operator()->mutable_get_table()->set_table_name("table_int_float");
-  sort_operation->set_column_name("a");
-  sort_operation->set_ascending(false);
+  sort_operation->set_column_id(ColumnID{0});
+  sort_operation->set_order_by_mode(opossum::proto::SortOperator::Descending);
 
   OperatorTranslator translator;
   auto& tasks = translator.build_tasks_from_proto(msg);
@@ -331,12 +326,12 @@ TEST_F(OperatorTranslatorTest, TableScanAndProjection) {
 
   auto msg = proto::OperatorVariant();
   proto::TableScanOperator* table_scan_operator = msg.mutable_table_scan();
-  table_scan_operator->set_column_name("a");
-  table_scan_operator->set_filter_operator("=");
+  table_scan_operator->set_column_id(ColumnID{0});
+  table_scan_operator->set_filter_operator(proto::ScanType::OpEquals);
   proto::Variant* variant = table_scan_operator->mutable_value();
   variant->set_value_int(123);
   proto::ProjectionOperator* projection_operator = table_scan_operator->mutable_input_operator()->mutable_projection();
-  projection_operator->add_column_name("a");
+  projection_operator->add_column_id(0);
   proto::GetTableOperator* get_table_operator = projection_operator->mutable_input_operator()->mutable_get_table();
   get_table_operator->set_table_name("TestTable");
 
@@ -495,8 +490,8 @@ TEST_F(OperatorTranslatorTest, IndexColumnScanInt) {
 
   auto msg = proto::OperatorVariant();
   proto::IndexColumnScanOperator* index_column_scan_operator = msg.mutable_index_column_scan();
-  index_column_scan_operator->set_column_name("a");
-  index_column_scan_operator->set_filter_operator("=");
+  index_column_scan_operator->set_column_id(ColumnID{0});
+  index_column_scan_operator->set_filter_operator(proto::ScanType::OpEquals);
   proto::Variant* variant = index_column_scan_operator->mutable_value();
   variant->set_value_int(123);
   proto::GetTableOperator* get_table_operator =
@@ -526,12 +521,17 @@ TEST_F(OperatorTranslatorTest, DISABLED_NestedLoopJoinModes) {
   auto msg = proto::OperatorVariant();
   proto::NestedLoopJoinOperator* join_operation = msg.mutable_nested_loop_join();
   join_operation->mutable_left_operator()->mutable_get_table()->set_table_name("table_int_float");
-  join_operation->set_prefix_left("left");
   join_operation->mutable_right_operator()->mutable_get_table()->set_table_name("table_int_float_2");
-  join_operation->set_prefix_right("right");
-  join_operation->set_op("=");
-  join_operation->set_left_column_name("a");
-  join_operation->set_right_column_name("a");
+  join_operation->set_op(proto::ScanType::OpEquals);
+
+  auto proto_column_id_left = proto::OptionalColumnID();
+  proto_column_id_left.set_value(0);
+
+  auto proto_column_id_right = proto::OptionalColumnID();
+  proto_column_id_left.set_value(0);
+
+  join_operation->set_allocated_left_column_id(&proto_column_id_left);
+  join_operation->set_allocated_right_column_id(&proto_column_id_right);
 
   auto modes = {proto::NestedLoopJoinOperator::Inner, proto::NestedLoopJoinOperator::Left,
                 proto::NestedLoopJoinOperator::Right, proto::NestedLoopJoinOperator::Outer,
@@ -556,13 +556,18 @@ TEST_F(OperatorTranslatorTest, DISABLED_NestedLoopJoinWithColumns) {
   auto msg = proto::OperatorVariant();
   proto::NestedLoopJoinOperator* join_operation = msg.mutable_nested_loop_join();
   join_operation->mutable_left_operator()->mutable_get_table()->set_table_name("table_int_float");
-  join_operation->set_prefix_left("left");
   join_operation->mutable_right_operator()->mutable_get_table()->set_table_name("table_int_float_2");
-  join_operation->set_prefix_right("right");
   join_operation->set_mode(proto::NestedLoopJoinOperator::Left);
-  join_operation->set_op("=");
-  join_operation->set_left_column_name("a");
-  join_operation->set_right_column_name("a");
+  join_operation->set_op(proto::ScanType::OpEquals);
+
+  auto proto_column_id_left = proto::OptionalColumnID();
+  proto_column_id_left.set_value(0);
+
+  auto proto_column_id_right = proto::OptionalColumnID();
+  proto_column_id_left.set_value(0);
+
+  join_operation->set_allocated_left_column_id(&proto_column_id_left);
+  join_operation->set_allocated_right_column_id(&proto_column_id_right);
 
   OperatorTranslator translator;
   auto& tasks = translator.build_tasks_from_proto(msg);
@@ -591,20 +596,20 @@ TEST_F(OperatorTranslatorTest, DISABLED_NestedLoopJoinWithColumns) {
 TEST_F(OperatorTranslatorTest, ProjectionMissingInput) {
   auto msg = proto::OperatorVariant();
   proto::ProjectionOperator* projection_operator = msg.mutable_projection();
-  projection_operator->add_column_name("a");
+  projection_operator->add_column_id(0);
 
   OperatorTranslator translator;
-  EXPECT_THROW(translator.build_tasks_from_proto(msg), std::runtime_error);
+  EXPECT_THROW(translator.build_tasks_from_proto(msg), std::logic_error);
 }
 
 TEST_F(OperatorTranslatorTest, ProjectionIncompleteInput) {
   auto msg = proto::OperatorVariant();
   proto::ProjectionOperator* projection_operator = msg.mutable_projection();
-  projection_operator->add_column_name("a");
+  projection_operator->add_column_id(0);
   projection_operator->mutable_input_operator();
 
   OperatorTranslator translator;
-  EXPECT_THROW(translator.build_tasks_from_proto(msg), std::runtime_error);
+  EXPECT_THROW(translator.build_tasks_from_proto(msg), std::logic_error);
 }
 
 }  // namespace opossum

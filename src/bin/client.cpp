@@ -18,6 +18,10 @@
 #include <memory>
 #include <string>
 
+#include "constant_mappings.hpp"
+#include "types.hpp"
+#include "utils/assert.hpp"
+
 namespace po = boost::program_options;
 
 namespace opossum {
@@ -27,19 +31,19 @@ namespace opossum {
 OpossumClient::OpossumClient(std::shared_ptr<Channel> channel) : _stub(proto::OpossumService::NewStub(channel)) {}
 
 // Assembles the client's payload, sends it and presents the response back from the server.
-void OpossumClient::query(std::string& table_name, std::string& column_name, std::string& filter_op,
-                          std::string& filter) {
+void OpossumClient::query(const std::string& table_name, const ColumnID column_id, const proto::ScanType scan_type,
+                          const std::string& filter) {
   // Data we are sending to the server.
   proto::Request request;
 
   proto::GetTableOperator* get_table = nullptr;
   auto root_op_variant = request.mutable_root_operator();
 
-  if (!column_name.empty() && !filter_op.empty() && !filter.empty()) {
+  if (!filter.empty()) {
     // Init a TableScan (protobuf allocates and manages the needed resources)
     proto::TableScanOperator* table_scan = root_op_variant->mutable_table_scan();
-    table_scan->set_column_name(column_name);
-    table_scan->set_filter_operator(filter_op);
+    table_scan->set_column_id(column_id);
+    table_scan->set_filter_operator(scan_type);
     proto::Variant* variant = table_scan->mutable_value();
     variant->set_value_int(std::stoi(filter));
     // Add a GetTable operator as input operator for TableScan
@@ -89,7 +93,7 @@ void OpossumClient::print_variant(const proto::Variant& variant) const {
       std::cout << variant.value_long();
       break;
     default:
-      throw std::runtime_error("Unknown AllTypeVariant in operator_translator");
+      Fail("Unknown AllTypeVariant in operator_translator");
   }
   std::cout << std::setw(0);
 }
@@ -131,13 +135,13 @@ int main(int argc, char** argv) {
   options("help", "print help message");
   options("table_name", po::value<std::string>(), "opossum table name (required)");
   options("address", po::value<std::string>()->default_value("0.0.0.0:50051"), "IP:PORT");
-  options("column_name", po::value<std::string>()->default_value(""), "column name for table scan");
+  options("column_id", po::value<opossum::ColumnID>()->default_value(opossum::ColumnID{0}), "column id for table scan");
   options("filter_op", po::value<std::string>()->default_value(""), "filter operation for table scan, e.g. = > >= ...");
   options("filter_val", po::value<std::string>()->default_value(""), "filter value for table scan");
 
   po::positional_options_description pd;
   pd.add("table_name", 1);
-  pd.add("column_name", 1);
+  pd.add("column_id", 1);
   pd.add("filter_op", 1);
   pd.add("filter_val", 1);
 
@@ -152,7 +156,7 @@ int main(int argc, char** argv) {
 
   auto address = variables["address"].as<std::string>();
   auto table_name = variables["table_name"].as<std::string>();
-  auto column_name = variables["column_name"].as<std::string>();
+  auto column_id = variables["column_id"].as<opossum::ColumnID>();
   auto filter_op = variables["filter_op"].as<std::string>();
   auto filter = variables["filter_val"].as<std::string>();
 
@@ -162,7 +166,7 @@ int main(int argc, char** argv) {
   opossum::OpossumClient client(grpc::CreateChannel(address, grpc::InsecureChannelCredentials()));
 
   std::cout << "Sending query to " << address << std::endl;
-  client.query(table_name, column_name, filter_op, filter);
+  client.query(table_name, column_id, opossum::string_to_proto_scan_type.at(filter_op), filter);
 
   return 0;
 }

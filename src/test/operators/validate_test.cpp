@@ -24,7 +24,7 @@ class OperatorsValidateTest : public BaseTest {
   void SetUp() override {
     std::shared_ptr<Table> test_table = load_table("src/test/tables/validate_input.tbl", 2u);
     set_all_records_visible(*test_table);
-    set_record_invisible_for(*test_table, RowID{1u, 0u}, 2u);
+    set_record_invisible_for(*test_table, RowID{ChunkID{1}, 0u}, 2u);
 
     _table_wrapper = std::make_shared<TableWrapper>(std::move(test_table));
 
@@ -38,7 +38,7 @@ class OperatorsValidateTest : public BaseTest {
 };
 
 void OperatorsValidateTest::set_all_records_visible(Table& table) {
-  for (auto chunk_id = 0u; chunk_id < table.chunk_count(); ++chunk_id) {
+  for (ChunkID chunk_id{0}; chunk_id < table.chunk_count(); ++chunk_id) {
     auto& chunk = table.get_chunk(chunk_id);
     auto mvcc_columns = chunk.mvcc_columns();
 
@@ -70,8 +70,9 @@ TEST_F(OperatorsValidateTest, ProjectedValidate) {
 
   std::shared_ptr<Table> expected_result = load_table("src/test/tables/validate_output_validated_projected.tbl", 2u);
 
-  std::vector<std::string> column_filter = {"c", "a"};
-  auto projection = std::make_shared<Projection>(_table_wrapper, column_filter);
+  Projection::ColumnExpressions column_expressions(
+      {Expression::create_column(ColumnID{2}), Expression::create_column(ColumnID{0})});
+  auto projection = std::make_shared<Projection>(_table_wrapper, column_expressions);
   projection->set_transaction_context(context);
   projection->execute();
 

@@ -6,6 +6,7 @@
 #include <grpc/support/log.h>
 #include <chrono>
 #include <csignal>
+#include <fstream>
 #include <memory>
 #include <string>
 #include <utility>
@@ -18,9 +19,11 @@
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include "network/generated/opossum.grpc.pb.h"
 #pragma GCC diagnostic pop
+
 #include "network/server.hpp"
+#include "network/server_configuration.hpp"
+#include "scheduler/topology.hpp"
 #include "storage/storage_manager.hpp"
-#include "storage/table.hpp"
 
 using grpc::Channel;
 using grpc::ClientAsyncResponseReader;
@@ -149,13 +152,13 @@ TEST_F(ServerTest, SendNoop) {
   EXPECT_EQ(response->DebugString(), "");
 }
 
-TEST_F(ServerTest, SendAsyncQuery) {
+TEST_F(ServerTest, AsyncQuery) {
   server.start(config, false);
 
   proto::Request request;
   auto root_op_variant = request.mutable_root_operator();
   auto projection = root_op_variant->mutable_projection();
-  projection->add_column_name("a");
+  projection->add_column_id(0);
   auto get_table = projection->mutable_input_operator()->mutable_get_table();
   get_table->set_table_name(table_name);
 

@@ -7,12 +7,12 @@
 #include <array>
 #include <atomic>
 #include <memory>
-#include <vector>
 
-#include "abstract_task.hpp"
 #include "types.hpp"
 
 namespace opossum {
+
+class AbstractTask;
 
 /**
  * Holds a queue of AbstractTasks, usually one of these exists per node

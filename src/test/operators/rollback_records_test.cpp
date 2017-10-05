@@ -8,6 +8,7 @@
 #include "../../lib/operators/delete.hpp"
 #include "../../lib/operators/get_table.hpp"
 #include "../../lib/operators/rollback_records.hpp"
+#include "../../lib/operators/table_scan.hpp"
 #include "../../lib/operators/validate.hpp"
 #include "../../lib/storage/storage_manager.hpp"
 #include "../../lib/storage/table.hpp"
@@ -33,7 +34,7 @@ TEST_F(OperatorsRollbackRecordsTest, RollbackDelete) {
   // Get and scan table to make columns referenced.
   auto gt = std::make_shared<GetTable>(table_name);
   gt->execute();
-  auto table_scan = std::make_shared<TableScan>(gt, "a", ">=", "0");
+  auto table_scan = std::make_shared<TableScan>(gt, ColumnID{0}, ScanType::OpGreaterThanEquals, "0");
   table_scan->execute();
 
   auto delete_op = std::make_shared<Delete>(table_name, table_scan);
@@ -41,7 +42,7 @@ TEST_F(OperatorsRollbackRecordsTest, RollbackDelete) {
   delete_op->execute();
 
   for (int i = 0; i < 3; i++) {
-    EXPECT_EQ(gt->get_output()->get_chunk(0).mvcc_columns()->tids[i], t_context->transaction_id());
+    EXPECT_EQ(gt->get_output()->get_chunk(ChunkID{0}).mvcc_columns()->tids[i], t_context->transaction_id());
   }
 
   auto rollback_op = std::make_shared<RollbackRecords>();
@@ -49,7 +50,7 @@ TEST_F(OperatorsRollbackRecordsTest, RollbackDelete) {
   rollback_op->execute();
 
   for (int i = 0; i < 3; i++) {
-    EXPECT_EQ(gt->get_output()->get_chunk(0).mvcc_columns()->tids[i], 0u);
+    EXPECT_EQ(gt->get_output()->get_chunk(ChunkID{0}).mvcc_columns()->tids[i], 0u);
   }
 
   // Get validated table which should not have any deleted rows.

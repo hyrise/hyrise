@@ -4,7 +4,9 @@
 #include <string>
 #include <vector>
 
+#include "all_type_variant.hpp"
 #include "csv.hpp"
+#include "type_cast.hpp"
 #include "types.hpp"
 
 namespace opossum {
@@ -15,12 +17,12 @@ class CsvWriter {
    * Creates a new CsvWriter with the given file as output file.
    * @param file The file to output the csv to.
    */
-  explicit CsvWriter(const std::string& file);
+  explicit CsvWriter(const std::string& file, const CsvConfig& config = {});
 
   template <typename T>
   void write(const T& value) {
     if (_current_col_count > 0) {
-      _stream << csv::separator;
+      _stream << _config.separator;
     }
     _write_value(value);
     ++this->_current_col_count;
@@ -44,7 +46,8 @@ class CsvWriter {
   void _write_value(const T& value);
 
   std::ofstream _stream;
-  ColumnID _current_col_count = 0;
+  ColumnID _current_col_count{0};
+  CsvConfig _config;
 };
 
 template <typename T>
@@ -62,9 +65,9 @@ inline void CsvWriter::_write_value<std::string>(const std::string& value) {
    * this behaviour to either general quoting or checking for "illegal"
    * characters.
    */
-  _stream << csv::quote;
+  _stream << _config.quote;
   _stream << escape(value);
-  _stream << csv::quote;
+  _stream << _config.quote;
 }
 
 template <>

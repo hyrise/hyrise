@@ -3,8 +3,7 @@
 #include <memory>
 #include <vector>
 
-#include "abstract_task.hpp"
-#include "worker.hpp"
+#include "abstract_scheduler.hpp"
 
 namespace opossum {
 
@@ -19,24 +18,4 @@ void CurrentScheduler::set(const std::shared_ptr<AbstractScheduler>& instance) {
 
 bool CurrentScheduler::is_set() { return !!_instance; }
 
-void CurrentScheduler::wait_for_tasks(const std::vector<std::shared_ptr<AbstractTask>>& tasks) {
-#if IS_DEBUG
-  for (auto& task : tasks) {
-    if (!task->is_scheduled()) {
-      throw std::runtime_error("Schedule tasks before joining them");
-    }
-  }
-#endif
-
-  /**
-   * In case wait_for_tasks() is called from a Task being executed in a Worker, block that worker, otherwise just
-   * join the tasks
-   */
-  auto worker = Worker::get_this_thread_worker();
-  if (worker) {
-    worker->_wait_for_tasks(tasks);
-  } else {
-    for (auto& task : tasks) task->join();
-  }
-}
 }  // namespace opossum

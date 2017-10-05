@@ -9,10 +9,8 @@ namespace opossum {
 
 class AbstractTask;
 class CurrentScheduler;
-class JobTask;
 class TaskQueue;
 class Topology;
-class Worker;
 
 class AbstractScheduler {
   friend class CurrentScheduler;
@@ -33,7 +31,7 @@ class AbstractScheduler {
 
   virtual const std::vector<std::shared_ptr<TaskQueue>>& queues() const = 0;
 
-  virtual void schedule(std::shared_ptr<AbstractTask> task, uint32_t preferred_node_id = CURRENT_NODE_ID,
+  virtual void schedule(std::shared_ptr<AbstractTask> task, NodeID preferred_node_id = CURRENT_NODE_ID,
                         SchedulePriority priority = SchedulePriority::Normal) = 0;
 
  protected:

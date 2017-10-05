@@ -41,11 +41,13 @@ TEST_F(OperatorsDifferenceTest, DifferenceOnValueTables) {
 TEST_F(OperatorsDifferenceTest, DifferneceOnReferenceTables) {
   std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_float_filtered2.tbl", 2);
 
-  std::vector<std::string> column_filter = {"a", "b"};
-  auto projection1 = std::make_shared<Projection>(_table_wrapper_a, column_filter);
+  Projection::ColumnExpressions column_expressions(
+      {Expression::create_column(ColumnID{0}), Expression::create_column(ColumnID{1})});
+
+  auto projection1 = std::make_shared<Projection>(_table_wrapper_a, column_expressions);
   projection1->execute();
 
-  auto projection2 = std::make_shared<Projection>(_table_wrapper_b, column_filter);
+  auto projection2 = std::make_shared<Projection>(_table_wrapper_b, column_expressions);
   projection2->execute();
 
   auto difference = std::make_shared<Difference>(projection1, projection2);
@@ -55,6 +57,7 @@ TEST_F(OperatorsDifferenceTest, DifferneceOnReferenceTables) {
 }
 
 TEST_F(OperatorsDifferenceTest, ThrowWrongColumnNumberException) {
+  if (!IS_DEBUG) return;
   auto table_wrapper_c = std::make_shared<TableWrapper>(load_table("src/test/tables/int.tbl", 2));
   table_wrapper_c->execute();
 
@@ -64,6 +67,7 @@ TEST_F(OperatorsDifferenceTest, ThrowWrongColumnNumberException) {
 }
 
 TEST_F(OperatorsDifferenceTest, ThrowWrongColumnOrderException) {
+  if (!IS_DEBUG) return;
   _table_wrapper_a->execute();
 
   auto table_wrapper_d = std::make_shared<TableWrapper>(load_table("src/test/tables/float_int.tbl", 2));

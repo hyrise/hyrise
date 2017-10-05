@@ -5,6 +5,7 @@
 #include <ostream>
 #include <utility>
 
+#include "variable_length_key_proxy.hpp"
 #include "variable_length_key_store.hpp"
 
 namespace opossum {

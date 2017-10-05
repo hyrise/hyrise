@@ -1,16 +1,20 @@
 #pragma once
 
+#include <iostream>
 #include <map>
 #include <memory>
 #include <string>
+#include <vector>
 
-#include "table.hpp"
+#include "types.hpp"
 
 namespace opossum {
 
+class Table;
+
 // The StorageManager is a singleton that maintains all tables
 // by mapping table names to table instances.
-class StorageManager {
+class StorageManager : private Noncopyable {
  public:
   static StorageManager &get();
 
@@ -26,14 +30,18 @@ class StorageManager {
   // returns whether the storage manager holds a table with the given name
   bool has_table(const std::string &name) const;
 
+  // returns a list of all table names
+  std::vector<std::string> table_names() const;
+
   // prints the table on the given stream
   void print(std::ostream &out = std::cout) const;
 
   // deletes the entire StorageManager and creates a new one, used especially in tests
   static void reset();
 
-  StorageManager(StorageManager const &) = delete;
-  StorageManager &operator=(const StorageManager &) = delete;
+  // For debugging purposes mostly, dump all tables as csv
+  void export_all_tables_as_csv(const std::string &path);
+
   StorageManager(StorageManager &&) = delete;
 
  protected:

@@ -4,9 +4,6 @@
 #include <functional>
 #include <memory>
 
-#include "commit_context.hpp"
-#include "transaction_context.hpp"
-
 #include "types.hpp"
 
 /**
@@ -41,13 +38,16 @@
 
 namespace opossum {
 
+class CommitContext;
+class TransactionContext;
+
 /**
  * The TransactionManager is responsible for a consistent assignment of
  * transaction and commit ids. It also keeps track of the last commit id
  * which represents the current global visibility of records.
  * The TransactionManager is thread-safe.
  */
-class TransactionManager {
+class TransactionManager : private Noncopyable {
  public:
   static TransactionManager &get();
   static void reset();
@@ -95,12 +95,15 @@ class TransactionManager {
 
   /** @} */
 
+  /**
+   * Helper: Create a transaction context, run a function with it and commit the transaction afterwards
+   */
+  void run_transaction(const std::function<void(std::shared_ptr<TransactionContext>)> &fn);
+
  private:
   TransactionManager();
 
-  TransactionManager(TransactionManager const &) = delete;
   TransactionManager(TransactionManager &&) = delete;
-  TransactionManager &operator=(const TransactionManager &) = delete;
   TransactionManager &operator=(TransactionManager &&) = delete;
 
   std::shared_ptr<CommitContext> _new_commit_context();

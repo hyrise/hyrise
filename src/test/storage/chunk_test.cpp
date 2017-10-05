@@ -4,6 +4,7 @@
 #include "gtest/gtest.h"
 
 #include "../lib/common.hpp"
+#include "../lib/resolve_type.hpp"
 #include "../lib/storage/base_column.hpp"
 #include "../lib/storage/chunk.hpp"
 #include "../lib/types.hpp"
@@ -54,7 +55,7 @@ TEST_F(StorageChunkTest, RetrieveColumn) {
   c.add_column(vc_str);
   c.append({2, "two"});
 
-  auto base_col = c.get_column(0);
+  auto base_col = c.get_column(ColumnID{0});
   EXPECT_EQ(base_col->size(), 4u);
 }
 
@@ -62,7 +63,7 @@ TEST_F(StorageChunkTest, UnknownColumnType) {
   // Exception will only be thrown in debug builds
   if (IS_DEBUG) {
     auto wrapper = []() { make_shared_by_column_type<BaseColumn, ValueColumn>("weird_type"); };
-    EXPECT_THROW(wrapper(), std::runtime_error);
+    EXPECT_THROW(wrapper(), std::logic_error);
   }
 }
 

@@ -7,26 +7,33 @@
 #include <utility>
 #include <vector>
 
+#include "base_column.hpp"
 #include "chunk.hpp"
 #include "index/group_key/group_key_index.hpp"
 #include "reference_column.hpp"
-#include "value_column.hpp"
+
+#include "utils/assert.hpp"
 
 namespace opossum {
 
 const CommitID Chunk::MAX_COMMIT_ID = std::numeric_limits<CommitID>::max();
 
-Chunk::Chunk() : Chunk{false} {}
+Chunk::Chunk() : Chunk(PolymorphicAllocator<Chunk>(), false) {}
 
-Chunk::Chunk(const bool has_mvcc_columns) {
+Chunk::Chunk(const bool has_mvcc_columns) : Chunk(PolymorphicAllocator<Chunk>(), has_mvcc_columns) {}
+
+Chunk::Chunk(const PolymorphicAllocator<Chunk>& alloc) : Chunk(alloc, false) {}
+
+Chunk::Chunk(const PolymorphicAllocator<Chunk>& alloc, const bool has_mvcc_columns)
+    : _alloc(alloc), _columns(alloc), _indices(alloc) {
   if (has_mvcc_columns) _mvcc_columns = std::make_unique<MvccColumns>();
 }
 
 void Chunk::add_column(std::shared_ptr<BaseColumn> column) {
   // The added column must have the same size as the chunk.
-  if (IS_DEBUG && _columns.size() > 0 && size() != column->size()) {
-    throw std::runtime_error("Trying to add column with mismatching size to chunk");
-  }
+  DebugAssert((_columns.size() <= 0 || size() == column->size()),
+              "Trying to add column with mismatching size to chunk");
+
   if (_columns.size() == 0 && has_mvcc_columns()) grow_mvcc_column_size_by(column->size(), 0);
 
   _columns.push_back(column);
@@ -41,10 +48,8 @@ void Chunk::append(std::vector<AllTypeVariant> values) {
   if (has_mvcc_columns()) grow_mvcc_column_size_by(1u, Chunk::MAX_COMMIT_ID);
 
   // The added values, i.e., a new row, must have the same number of attribues as the table.
-  if (IS_DEBUG && _columns.size() != values.size()) {
-    throw std::runtime_error("append: number of columns (" + to_string(_columns.size()) +
-                             ") does not match value list (" + to_string(values.size()) + ")");
-  }
+  DebugAssert((_columns.size() == values.size()), ("append: number of columns (" + to_string(_columns.size()) +
+                                                   ") does not match value list (" + to_string(values.size()) + ")"));
 
   auto column_it = _columns.cbegin();
   auto value_it = values.begin();
@@ -61,7 +66,7 @@ uint16_t Chunk::col_count() const { return _columns.size(); }
 
 uint32_t Chunk::size() const {
   if (_columns.empty()) return 0;
-  auto first_column = get_column(0u);
+  auto first_column = get_column(ColumnID{0});
   return first_column->size();
 }
 
@@ -83,31 +88,19 @@ void Chunk::use_mvcc_columns_from(const Chunk& chunk) {
 bool Chunk::has_mvcc_columns() const { return _mvcc_columns != nullptr; }
 
 SharedScopedLockingPtr<Chunk::MvccColumns> Chunk::mvcc_columns() {
-#ifdef IS_DEBUG
-  if (!has_mvcc_columns()) {
-    std::logic_error("Chunk does not have mvcc columns");
-  }
-#endif
+  DebugAssert((has_mvcc_columns()), "Chunk does not have mvcc columns");
 
   return {*_mvcc_columns, _mvcc_columns->_mutex};
 }
 
 SharedScopedLockingPtr<const Chunk::MvccColumns> Chunk::mvcc_columns() const {
-#ifdef IS_DEBUG
-  if (!has_mvcc_columns()) {
-    std::logic_error("Chunk does not have mvcc columns");
-  }
-#endif
+  DebugAssert((has_mvcc_columns()), "Chunk does not have mvcc columns");
 
   return {*_mvcc_columns, _mvcc_columns->_mutex};
 }
 
 void Chunk::shrink_mvcc_columns() {
-#ifdef IS_DEBUG
-  if (!has_mvcc_columns()) {
-    std::logic_error("Chunk does not have mvcc columns.");
-  }
-#endif
+  DebugAssert((has_mvcc_columns()), "Chunk does not have mvcc columns");
 
   std::unique_lock<std::shared_mutex> lock{_mvcc_columns->_mutex};
 
@@ -127,11 +120,11 @@ std::vector<std::shared_ptr<BaseIndex>> Chunk::get_indices_for(
 bool Chunk::references_only_one_table() const {
   if (this->col_count() == 0) return false;
 
-  auto first_column = std::dynamic_pointer_cast<ReferenceColumn>(this->get_column(0));
+  auto first_column = std::dynamic_pointer_cast<ReferenceColumn>(this->get_column(ColumnID{0}));
   auto first_referenced_table = first_column->referenced_table();
   auto first_pos_list = first_column->pos_list();
 
-  for (auto i = 1u; i < this->col_count(); ++i) {
+  for (ColumnID i{1}; i < this->col_count(); ++i) {
     const auto column = std::dynamic_pointer_cast<ReferenceColumn>(this->get_column(i));
 
     if (column == nullptr) return false;

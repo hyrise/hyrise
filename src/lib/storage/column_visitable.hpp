@@ -3,9 +3,9 @@
 #include <memory>
 
 #include "common.hpp"
-#include "types.hpp"
 
 namespace opossum {
+
 class BaseColumn;
 class ReferenceColumn;
 

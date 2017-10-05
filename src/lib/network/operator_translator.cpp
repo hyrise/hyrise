@@ -5,23 +5,25 @@
 #include <utility>
 #include <vector>
 
-#include "../common.hpp"
-#include "../operators/abstract_join_operator.hpp"
-#include "../operators/abstract_operator.hpp"
-#include "../operators/difference.hpp"
-#include "../operators/export_binary.hpp"
-#include "../operators/export_csv.hpp"
-#include "../operators/get_table.hpp"
-#include "../operators/import_csv.hpp"
-#include "../operators/index_column_scan.hpp"
-#include "../operators/join_nested_loop_a.hpp"
-#include "../operators/print.hpp"
-#include "../operators/product.hpp"
-#include "../operators/projection.hpp"
-#include "../operators/sort.hpp"
-#include "../operators/table_scan.hpp"
-#include "../operators/union_all.hpp"
-#include "../types.hpp"
+#include "operators/abstract_operator.hpp"
+#include "operators/difference.hpp"
+#include "operators/export_binary.hpp"
+#include "operators/export_csv.hpp"
+#include "operators/get_table.hpp"
+#include "operators/import_csv.hpp"
+#include "operators/index_column_scan.hpp"
+#include "operators/join_nested_loop_a.hpp"
+#include "operators/print.hpp"
+#include "operators/product.hpp"
+#include "operators/projection.hpp"
+#include "operators/sort.hpp"
+#include "operators/table_scan.hpp"
+#include "operators/union_all.hpp"
+#include "scheduler/operator_task.hpp"
+
+#include "common.hpp"
+#include "types.hpp"
+#include "utils/assert.hpp"
 
 namespace opossum {
 
@@ -38,7 +40,8 @@ inline AllTypeVariant translate_variant(const proto::Variant& variant) {
     case proto::Variant::kValueLong:
       return variant.value_long();
     default:
-      throw std::runtime_error("Unknown AllTypeVariant in operator_translator");
+      Fail("Unknown AllTypeVariant in operator_translator");
+      return {};
   }
 }
 
@@ -49,16 +52,45 @@ inline optional<AllTypeVariant> translate_optional_variant(const proto::Variant&
     return translate_variant(variant);
 }
 
+inline ScanType translate_scan_type(const proto::ScanType& scan_type) {
+  switch (scan_type) {
+    case proto::ScanType::OpEquals:
+      return ScanType::OpEquals;
+    case proto::ScanType::OpNotEquals:
+      return ScanType::OpNotEquals;
+    case proto::ScanType::OpLessThan:
+      return ScanType::OpLessThan;
+    case proto::ScanType::OpLessThanEquals:
+      return ScanType::OpLessThanEquals;
+    case proto::ScanType::OpGreaterThan:
+      return ScanType::OpGreaterThan;
+    case proto::ScanType::OpGreaterThanEquals:
+      return ScanType::OpGreaterThanEquals;
+    case proto::ScanType::OpBetween:
+      return ScanType::OpBetween;
+    case proto::ScanType::OpLike:
+      return ScanType::OpLike;
+    default:
+      Fail("Unsupported ScanType.");
+      return {};
+  }
+}
+
 inline std::shared_ptr<OperatorTask> OperatorTranslator::translate(
     const proto::ProjectionOperator& projection_operator) {
-  const auto column_names_field = projection_operator.column_name();
-  auto column_names = std::vector<std::string>(std::begin(column_names_field), std::end(column_names_field));
-  if (!projection_operator.has_input_operator()) {
-    throw std::runtime_error("Missing Input Operator in Projection.");
-  }
+  const auto column_ids_field = projection_operator.column_id();
+  auto column_ids = std::vector<ColumnID>(std::begin(column_ids_field), std::end(column_ids_field));
+  Assert((projection_operator.has_input_operator()), "Missing Input Operator in Projection.");
+
   auto input_task = translate_proto(projection_operator.input_operator());
 
-  auto projection = std::make_shared<Projection>(input_task->get_operator(), column_names);
+  Projection::ColumnExpressions column_expressions;
+  column_expressions.reserve(column_ids.size());
+  for (const auto column_id : column_ids) {
+    column_expressions.emplace_back(Expression::create_column(ColumnID{column_id}));
+  }
+
+  auto projection = std::make_shared<Projection>(input_task->get_operator(), column_expressions);
   auto projection_task = std::make_shared<OperatorTask>(projection);
   input_task->set_as_predecessor_of(projection_task);
   _tasks.push_back(projection_task);
@@ -67,20 +99,13 @@ inline std::shared_ptr<OperatorTask> OperatorTranslator::translate(
 }
 
 inline std::shared_ptr<OperatorTask> OperatorTranslator::translate(const proto::ProductOperator& product_operator) {
-  auto& prefix_left = product_operator.prefix_left();
-  auto& prefix_right = product_operator.prefix_right();
+  Assert((product_operator.has_left_operator()), "Missing left Operator in Product.");
+  Assert((product_operator.has_right_operator()), "Missing right Operator in Product.");
 
-  if (!product_operator.has_left_operator()) {
-    throw std::runtime_error("Missing Left Operator in Product.");
-  }
   auto input_left_task = translate_proto(product_operator.left_operator());
-  if (!product_operator.has_right_operator()) {
-    throw std::runtime_error("Missing Right Operator in Product.");
-  }
   auto input_right_task = translate_proto(product_operator.right_operator());
 
-  auto product = std::make_shared<Product>(input_left_task->get_operator(), input_right_task->get_operator(),
-                                           prefix_left, prefix_right);
+  auto product = std::make_shared<Product>(input_left_task->get_operator(), input_right_task->get_operator());
   auto product_task = std::make_shared<OperatorTask>(product);
   input_left_task->set_as_predecessor_of(product_task);
   input_right_task->set_as_predecessor_of(product_task);
@@ -91,18 +116,12 @@ inline std::shared_ptr<OperatorTask> OperatorTranslator::translate(const proto::
 
 inline std::shared_ptr<OperatorTask> OperatorTranslator::translate(
     const proto::NestedLoopJoinOperator& nested_loop_join_operator) {
-  auto& prefix_left = nested_loop_join_operator.prefix_left();
-  auto& prefix_right = nested_loop_join_operator.prefix_right();
+  Assert((nested_loop_join_operator.has_left_operator()), "Missing left Operator in Nested Loop Join.");
+  Assert((nested_loop_join_operator.has_right_operator()), "Missing right Operator in Nested Loop Join.");
 
-  if (!nested_loop_join_operator.has_left_operator()) {
-    throw std::runtime_error("Missing Left Operator in Nested Loop Join.");
-  }
-  if (!nested_loop_join_operator.has_right_operator()) {
-    throw std::runtime_error("Missing Right Operator in Nested Loop Join.");
-  }
   auto input_left_task = translate_proto(nested_loop_join_operator.left_operator());
   auto input_right_task = translate_proto(nested_loop_join_operator.right_operator());
-  auto& op = nested_loop_join_operator.op();
+  const auto& scan_type = translate_scan_type(nested_loop_join_operator.op());
 
   JoinMode join_mode;
   switch (nested_loop_join_operator.mode()) {
@@ -128,23 +147,22 @@ inline std::shared_ptr<OperatorTask> OperatorTranslator::translate(
       join_mode = JoinMode::Self;
       break;
     default:
-      throw std::runtime_error("Unknown join mode for nested loop join operator in operator_translator");
+      Fail("Unknown join mode for nested loop join operator in operator_translator");
   }
 
-  std::shared_ptr<JoinNestedLoopA> nested_loop_join;
-
-  if (!nested_loop_join_operator.left_column_name().empty() && !nested_loop_join_operator.right_column_name().empty()) {
-    auto column_names =
-        std::make_pair(nested_loop_join_operator.left_column_name(), nested_loop_join_operator.right_column_name());
-    auto join_columns = optional<std::pair<std::string, std::string>>(column_names);
-    nested_loop_join =
-        std::make_shared<JoinNestedLoopA>(input_left_task->get_operator(), input_right_task->get_operator(),
-                                          join_columns, op, join_mode, prefix_left, prefix_right);
+  optional<std::pair<ColumnID, ColumnID>> join_columns;
+  if (nested_loop_join_operator.has_left_column_id() && nested_loop_join_operator.has_right_column_id()) {
+    join_columns =
+        std::make_pair(ColumnID{static_cast<ColumnID::base_type>(nested_loop_join_operator.left_column_id().value())},
+                       ColumnID{static_cast<ColumnID::base_type>(nested_loop_join_operator.right_column_id().value())});
   } else {
-    nested_loop_join =
-        std::make_shared<JoinNestedLoopA>(input_left_task->get_operator(), input_right_task->get_operator(), nullopt,
-                                          op, join_mode, prefix_left, prefix_right);
+    DebugAssert(!nested_loop_join_operator.has_left_column_id() && !nested_loop_join_operator.has_right_column_id(),
+                "Neither or both columns of the join condition have to be specified.");
   }
+
+  Assert(join_columns, "Can't create join without join columns");
+  auto nested_loop_join = std::make_shared<JoinNestedLoopA>(
+      input_left_task->get_operator(), input_right_task->get_operator(), join_mode, *join_columns, scan_type);
 
   auto nested_loop_join_task = std::make_shared<OperatorTask>(nested_loop_join);
   input_left_task->set_as_predecessor_of(nested_loop_join_task);
@@ -156,17 +174,16 @@ inline std::shared_ptr<OperatorTask> OperatorTranslator::translate(
 
 inline std::shared_ptr<OperatorTask> OperatorTranslator::translate(
     const proto::TableScanOperator& table_scan_operator) {
-  const auto& column_name = table_scan_operator.column_name();
-  const auto& filter_op = table_scan_operator.filter_operator();
-  if (!table_scan_operator.has_input_operator()) {
-    throw std::runtime_error("Missing Input Operator in Table Scan.");
-  }
+  const auto column_id = ColumnID{static_cast<ColumnID::base_type>(table_scan_operator.column_id())};
+  const auto& scan_type = translate_scan_type(table_scan_operator.filter_operator());
+  Assert((table_scan_operator.has_input_operator()), "Missing Input Operator in Table Scan.");
+
   auto input_task = translate_proto(table_scan_operator.input_operator());
 
   const auto value = translate_variant(table_scan_operator.value());
   const auto value2 = translate_optional_variant(table_scan_operator.value2());
 
-  auto table_scan = std::make_shared<TableScan>(input_task->get_operator(), column_name, filter_op, value, value2);
+  auto table_scan = std::make_shared<TableScan>(input_task->get_operator(), column_id, scan_type, value, value2);
   auto scan_task = std::make_shared<OperatorTask>(table_scan);
   input_task->set_as_predecessor_of(scan_task);
   _tasks.push_back(scan_task);
@@ -176,18 +193,17 @@ inline std::shared_ptr<OperatorTask> OperatorTranslator::translate(
 
 inline std::shared_ptr<OperatorTask> OperatorTranslator::translate(
     const proto::IndexColumnScanOperator& index_column_scan_operator) {
-  const auto& column_name = index_column_scan_operator.column_name();
-  const auto& filter_operator = index_column_scan_operator.filter_operator();
-  if (!index_column_scan_operator.has_input_operator()) {
-    throw std::runtime_error("Missing Input Operator in Index Column Scan.");
-  }
+  const auto column_id = ColumnID{static_cast<ColumnID::base_type>(index_column_scan_operator.column_id())};
+  const auto& scan_type = translate_scan_type(index_column_scan_operator.filter_operator());
+  Assert((index_column_scan_operator.has_input_operator()), "Missing Input Operator in Index Column Scan.");
+
   auto input_task = translate_proto(index_column_scan_operator.input_operator());
 
   const auto value = translate_variant(index_column_scan_operator.value());
   const auto value2 = translate_optional_variant(index_column_scan_operator.value2());
 
   auto index_column_scan =
-      std::make_shared<IndexColumnScan>(input_task->get_operator(), column_name, filter_operator, value, value2);
+      std::make_shared<IndexColumnScan>(input_task->get_operator(), column_id, scan_type, value, value2);
   auto index_column_scan_task = std::make_shared<OperatorTask>(index_column_scan);
   input_task->set_as_predecessor_of(index_column_scan_task);
   _tasks.push_back(index_column_scan_task);
@@ -204,15 +220,25 @@ inline std::shared_ptr<OperatorTask> OperatorTranslator::translate(const proto::
 }
 
 inline std::shared_ptr<OperatorTask> OperatorTranslator::translate(const proto::SortOperator& sort_operator) {
-  const auto& column_name = sort_operator.column_name();
-  const auto ascending = sort_operator.ascending();
+  const auto column_id = ColumnID{static_cast<ColumnID::base_type>(sort_operator.column_id())};
   const auto output_chunk_size = sort_operator.output_chunk_size();
-  if (!sort_operator.has_input_operator()) {
-    throw std::runtime_error("Missing Input Operator in Sort.");
+  Assert((sort_operator.has_input_operator()), "Missing Input Operator in Sort.");
+
+  OrderByMode order_by_mode;
+  switch (sort_operator.order_by_mode()) {
+    case proto::SortOperator::Ascending:
+      order_by_mode = OrderByMode::Ascending;
+      break;
+    case proto::SortOperator::Descending:
+      order_by_mode = OrderByMode::Descending;
+      break;
+    default:
+      Fail("Unknown order by mode for operator in operator_translator");
   }
+
   auto input_task = translate_proto(sort_operator.input_operator());
 
-  auto sort = std::make_shared<Sort>(input_task->get_operator(), column_name, ascending, output_chunk_size);
+  auto sort = std::make_shared<Sort>(input_task->get_operator(), column_id, order_by_mode, output_chunk_size);
   auto sort_task = std::make_shared<OperatorTask>(sort);
   input_task->set_as_predecessor_of(sort_task);
   _tasks.push_back(sort_task);
@@ -221,13 +247,10 @@ inline std::shared_ptr<OperatorTask> OperatorTranslator::translate(const proto::
 }
 
 inline std::shared_ptr<OperatorTask> OperatorTranslator::translate(const proto::UnionAllOperator& union_all_operator) {
-  if (!union_all_operator.has_input_operator1()) {
-    throw std::runtime_error("Missing Input Operator 1 in Union All.");
-  }
+  Assert((union_all_operator.has_input_operator1()), "Missing Input Operator 1 in Union All.");
+  Assert((union_all_operator.has_input_operator2()), "Missing Input Operator 2 in Union All.");
+
   auto input_task1 = translate_proto(union_all_operator.input_operator1());
-  if (!union_all_operator.has_input_operator2()) {
-    throw std::runtime_error("Missing Input Operator 2 in Union All.");
-  }
   auto input_task2 = translate_proto(union_all_operator.input_operator2());
 
   auto union_all = std::make_shared<UnionAll>(input_task1->get_operator(), input_task2->get_operator());
@@ -241,12 +264,9 @@ inline std::shared_ptr<OperatorTask> OperatorTranslator::translate(const proto::
 
 inline std::shared_ptr<OperatorTask> OperatorTranslator::translate(
     const proto::DifferenceOperator& difference_operator) {
-  if (!difference_operator.has_left_operator()) {
-    throw std::runtime_error("Missing Left Operator in Difference.");
-  }
-  if (!difference_operator.has_right_operator()) {
-    throw std::runtime_error("Missing Right Operator in Difference.");
-  }
+  Assert((difference_operator.has_left_operator()), "Missing left Operator in Difference.");
+  Assert((difference_operator.has_right_operator()), "Missing right Operator in Difference.");
+
   auto input_left_task = translate_proto(difference_operator.left_operator());
   auto input_right_task = translate_proto(difference_operator.right_operator());
 
@@ -277,10 +297,8 @@ inline std::shared_ptr<OperatorTask> OperatorTranslator::translate(
   const auto& directory = export_csv_operator.directory();
   const auto& filename = export_csv_operator.filename();
   const auto& full_filename = directory + "/" + filename;
+  Assert((export_csv_operator.has_input_operator()), "Missing Input Operator in Export CSV.");
 
-  if (!export_csv_operator.has_input_operator()) {
-    throw std::runtime_error("Missing Input Operator in Export CSV.");
-  }
   auto input_task = translate_proto(export_csv_operator.input_operator());
   auto export_csv = std::make_shared<ExportCsv>(input_task->get_operator(), full_filename);
   auto export_csv_task = std::make_shared<OperatorTask>(export_csv);
@@ -294,9 +312,8 @@ inline std::shared_ptr<OperatorTask> OperatorTranslator::translate(
 inline std::shared_ptr<OperatorTask> OperatorTranslator::translate(
     const proto::ExportBinaryOperator& export_binary_operator) {
   const auto& filename = export_binary_operator.filename();
-  if (!export_binary_operator.has_input_operator()) {
-    throw std::runtime_error("Missing Input Operator in Export Binary.");
-  }
+  Assert((export_binary_operator.has_input_operator()), "Missing Input Operator in Export Binary.");
+
   auto input_task = translate_proto(export_binary_operator.input_operator());
   auto export_binary = std::make_shared<ExportBinary>(input_task->get_operator(), filename);
   auto export_binary_task = std::make_shared<OperatorTask>(export_binary);
@@ -308,9 +325,8 @@ inline std::shared_ptr<OperatorTask> OperatorTranslator::translate(
 }
 
 inline std::shared_ptr<OperatorTask> OperatorTranslator::translate(const proto::PrintOperator& print_operator) {
-  if (!print_operator.has_input_operator()) {
-    throw std::runtime_error("Missing Input Operator in Print.");
-  }
+  Assert((print_operator.has_input_operator()), "Missing Input Operator in Print.");
+
   auto input_task = translate_proto(print_operator.input_operator());
   auto print = std::make_shared<Print>(input_task->get_operator());
   auto print_task = std::make_shared<OperatorTask>(print);
@@ -357,11 +373,11 @@ std::shared_ptr<OperatorTask> OperatorTranslator::translate_proto(const proto::O
     case proto::OperatorVariant::kNestedLoopJoin:
       return translate(op.nested_loop_join());
     case proto::OperatorVariant::OPERATOR_NOT_SET:
-      throw std::runtime_error(
-          "Operator not set. Missing dependency. Cannot translate proto object to opossum operator.");
+      Fail("Operator not set. Missing dependency. Cannot translate proto object to opossum operator.");
     default:
-      throw std::runtime_error("Unknown operator type in operator_translator");
+      Fail("Unknown operator type in operator_translator");
   }
+  return {};
 }
 
 }  // namespace opossum

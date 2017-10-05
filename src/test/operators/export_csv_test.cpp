@@ -7,13 +7,15 @@
 #include "../base_test.hpp"
 #include "gtest/gtest.h"
 
-#include "../../lib/import_export/csv.hpp"
-#include "../../lib/operators/export_csv.hpp"
-#include "../../lib/operators/table_scan.hpp"
-#include "../../lib/operators/table_wrapper.hpp"
-#include "../../lib/storage/dictionary_compression.hpp"
-#include "../../lib/storage/storage_manager.hpp"
-#include "../../lib/storage/table.hpp"
+#include "import_export/csv.hpp"
+#include "operators/export_csv.hpp"
+#include "operators/table_scan.hpp"
+#include "operators/table_wrapper.hpp"
+#include "storage/dictionary_compression.hpp"
+#include "storage/storage_manager.hpp"
+#include "storage/table.hpp"
+
+#include "utils/assert.hpp"
 
 namespace opossum {
 
@@ -38,6 +40,7 @@ class OperatorsExportCsvTest : public BaseTest {
 
   bool compare_file(const std::string& filename, const std::string& expected_content) {
     std::ifstream t(filename);
+    Assert(t.is_open(), "compare_file: Could not find file " + filename);
 
     std::string content((std::istreambuf_iterator<char>(t)), std::istreambuf_iterator<char>());
 
@@ -55,7 +58,7 @@ class OperatorsExportCsvTest : public BaseTest {
 
   std::shared_ptr<Table> table;
   const std::string filename = "/tmp/export_test.csv";
-  const std::string meta_filename = filename + csv::meta_file_extension;
+  const std::string meta_filename = filename + CsvConfig{}.meta_file_extension;
 };
 
 TEST_F(OperatorsExportCsvTest, SingleChunkAndMetaInfo) {
@@ -110,7 +113,7 @@ TEST_F(OperatorsExportCsvTest, DictionaryColumn) {
   table->append({1, "Hallo", 3.5f});
   table->append({1, "Hallo3", 3.55f});
 
-  DictionaryCompression::compress_chunks(*table, {0u});
+  DictionaryCompression::compress_chunks(*table, {ChunkID{0}});
 
   auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
   table_wrapper->execute();
@@ -132,7 +135,7 @@ TEST_F(OperatorsExportCsvTest, ReferenceColumn) {
 
   auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
   table_wrapper->execute();
-  auto scan = std::make_shared<TableScan>(table_wrapper, "a", "<", 5);
+  auto scan = std::make_shared<TableScan>(table_wrapper, ColumnID{0}, ScanType::OpLessThan, 5);
   scan->execute();
   auto ex = std::make_shared<opossum::ExportCsv>(scan, filename);
   ex->execute();

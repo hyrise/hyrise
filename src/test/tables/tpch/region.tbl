@@ -1,0 +1,3 @@
+r_regionkey|r_name|r_comment
+int|string|string
+0|ASIA|-

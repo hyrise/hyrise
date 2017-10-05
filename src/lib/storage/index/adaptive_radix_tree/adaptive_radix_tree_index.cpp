@@ -1,25 +1,28 @@
 #include "adaptive_radix_tree_index.hpp"
-#include "adaptive_radix_tree_nodes.hpp"
 
 #include <algorithm>
 #include <iterator>
 #include <limits>
 #include <memory>
-#include <stdexcept>
 #include <utility>
 #include <vector>
 
-#include "../../../types.hpp"
-#include "../../base_column.hpp"
-#include "../../untyped_dictionary_column.hpp"
-#include "../base_index.hpp"
+#include "adaptive_radix_tree_nodes.hpp"
+
+#include "storage/base_attribute_vector.hpp"
+#include "storage/base_column.hpp"
+#include "storage/base_dictionary_column.hpp"
+#include "storage/index/base_index.hpp"
+
+#include "types.hpp"
+#include "utils/assert.hpp"
 
 namespace opossum {
 
 AdaptiveRadixTreeIndex::AdaptiveRadixTreeIndex(const std::vector<std::shared_ptr<BaseColumn>> &index_columns)
-    : _index_column(std::dynamic_pointer_cast<UntypedDictionaryColumn>(index_columns.front())) {
-  if (!_index_column) throw std::runtime_error("AdaptiveRadixTree only works with DictionaryColumns for now");
-  if (index_columns.size() != 1) throw std::runtime_error("AdaptiveRadixTree only works with a single column");
+    : _index_column(std::dynamic_pointer_cast<BaseDictionaryColumn>(index_columns.front())) {
+  DebugAssert(static_cast<bool>(_index_column), "AdaptiveRadixTree only works with DictionaryColumns for now");
+  DebugAssert((index_columns.size() == 1), "AdaptiveRadixTree only works with a single column");
 
   // for each valueID in the attribute vector, create a pair consisting of a BinaryComparable of this valueID and its
   // ChunkOffset (needed for bulk-inserting)
@@ -57,7 +60,7 @@ BaseIndex::Iterator AdaptiveRadixTreeIndex::_cend() const { return _chunk_offset
 
 std::shared_ptr<Node> AdaptiveRadixTreeIndex::_bulk_insert(
     const std::vector<std::pair<BinaryComparable, ChunkOffset>> &values) {
-  if (values.empty()) throw std::runtime_error("Index on empty column is not defined");
+  DebugAssert(!(values.empty()), "Index on empty column is not defined");
   _chunk_offsets.reserve(values.size());
   Iterator begin = _chunk_offsets.cbegin();
   return _bulk_insert(values, static_cast<size_t>(0u), begin);
@@ -79,7 +82,7 @@ std::shared_ptr<Node> AdaptiveRadixTreeIndex::_bulk_insert(
     std::advance(it, values.size());
     auto cap2 = _chunk_offsets.capacity();
     // we are not allowed to change the size of the vector as it would invalidate all our Iterators
-    if (cap != cap2) throw std::length_error("_chunk_offsets capacity changes, all Iterators are invalidated");
+    Assert(cap == cap2, "_chunk_offsets capacity changes, all Iterators are invalidated");
 
     // "it" points to the position after the last inserted ChunkOffset --> this is the upper_bound of the leave
     Iterator upper = it;
@@ -131,11 +134,9 @@ AdaptiveRadixTreeIndex::BinaryComparable::BinaryComparable(ValueID value) : _par
 size_t AdaptiveRadixTreeIndex::BinaryComparable::size() const { return _parts.size(); }
 
 uint8_t AdaptiveRadixTreeIndex::BinaryComparable::operator[](size_t position) const {
-  if (position < _parts.size()) {
-    return _parts[position];
-  } else {
-    throw std::runtime_error("BinaryComparable indexed out of bounds");
-  }
+  Assert(position < _parts.size(), "BinaryComparable indexed out of bounds");
+
+  return _parts[position];
 }
 
 bool operator==(const AdaptiveRadixTreeIndex::BinaryComparable &lhs,

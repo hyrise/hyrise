@@ -1,11 +1,15 @@
 #include "chunk_compression_task.hpp"
 
-#include <memory>
 #include <string>
 #include <vector>
 
+#include "storage/chunk.hpp"
 #include "storage/dictionary_compression.hpp"
 #include "storage/storage_manager.hpp"
+#include "storage/table.hpp"
+
+#include "types.hpp"
+#include "utils/assert.hpp"
 
 namespace opossum {
 
@@ -16,22 +20,18 @@ ChunkCompressionTask::ChunkCompressionTask(const std::string& table_name, const 
                                            bool check_completion)
     : _check_completion{check_completion}, _table_name{table_name}, _chunk_ids{chunk_ids} {}
 
-void ChunkCompressionTask::on_execute() {
+void ChunkCompressionTask::_on_execute() {
   auto table = StorageManager::get().get_table(_table_name);
 
-  if (!table) {
-    throw std::logic_error("Table does not exist.");
-  }
+  Assert(table != nullptr, "Table does not exist.");
 
   for (auto chunk_id : _chunk_ids) {
-    if (chunk_id >= table->chunk_count()) {
-      throw std::logic_error("Chunk with given ID does not exist.");
-    }
+    Assert(chunk_id < table->chunk_count(), "Chunk with given ID does not exist.");
 
     auto& chunk = table->get_chunk(chunk_id);
 
     if (_check_completion && !chunk_is_completed(chunk, table->chunk_size())) {
-      throw std::logic_error("Chunk is not completed and thus can’t be compressed.");
+      Fail("Chunk is not completed and thus can’t be compressed.");
     }
 
     DictionaryCompression::compress_chunk(table->column_types(), chunk);

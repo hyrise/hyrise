@@ -1,14 +1,15 @@
 #pragma once
 
-#include <algorithm>
-#include <exception>
 #include <memory>
 #include <vector>
 
-#include "../../types.hpp"
-#include "../base_column.hpp"
+#include "all_type_variant.hpp"
+#include "types.hpp"
+#include "utils/assert.hpp"
 
 namespace opossum {
+
+class BaseColumn;
 
 /**
  * BaseIndex is the abstract super class for all index types, e.g. GroupKeyIndex , CompositeGroupKeyIndex,
@@ -26,9 +27,12 @@ namespace opossum {
  * Instead, each index is able to return an index for the lower and one for the upper bound of the requested value(s).
  * As each index has a different way of iterating over its data structures, it has to implement its iterator as well.
  * We might use the impl-pattern similar to the TableScan, but this will be in a future commit.
+ *
+ * Find more information about this in our wiki: https://github.com/hyrise/zweirise/wiki/BaseIndex and
+ *                                               https://github.com/hyrise/zweirise/wiki/Indexes
  **/
 
-class BaseIndex {
+class BaseIndex : private Noncopyable {
  public:
   // For now we use an iterator over a vector of chunkoffsets as the GroupKeyIndex works like this
   using Iterator = std::vector<ChunkOffset>::const_iterator;
@@ -40,8 +44,6 @@ class BaseIndex {
    */
 
   BaseIndex() = default;
-  BaseIndex(const BaseIndex &) = delete;
-  BaseIndex &operator=(const BaseIndex &) = delete;
   BaseIndex(BaseIndex &&) = default;
   BaseIndex &operator=(BaseIndex &&) = default;
   virtual ~BaseIndex() = default;
@@ -79,10 +81,9 @@ class BaseIndex {
    * @return An Iterator on the position of the first element equal or greater then provided values.
    */
   Iterator lower_bound(const std::vector<AllTypeVariant> &values) const {
-    if (_get_index_columns().size() < values.size()) {
-      throw std::runtime_error(
-          "BaseIndex: The amount of queried columns has to be less or equal to the number of indexed columns.");
-    }
+    DebugAssert((_get_index_columns().size() >= values.size()),
+                "BaseIndex: The amount of queried columns has to be less or equal to the number of indexed columns.");
+
     return _lower_bound(values);
   }
 
@@ -98,10 +99,9 @@ class BaseIndex {
    * @return An Iterator on the position of the first element greater then provided values.
    */
   Iterator upper_bound(const std::vector<AllTypeVariant> &values) const {
-    if (_get_index_columns().size() < values.size()) {
-      throw std::runtime_error(
-          "BaseIndex: The amount of queried columns has to be less or equal to the number of indexed columns.");
-    }
+    DebugAssert((_get_index_columns().size() >= values.size()),
+                "BaseIndex: The amount of queried columns has to be less or equal to the number of indexed columns.");
+
     return _upper_bound(values);
   }
 
