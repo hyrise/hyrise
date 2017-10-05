@@ -245,9 +245,12 @@ const SQLTestParam test_queries[] = {
     {"SELECT a, COUNT(*) FROM groupby_int_1gb_1agg_null GROUP BY a;",
      "src/test/tables/aggregateoperator/groupby_int_1gb_0agg/count_star.tbl"},
     {"SELECT COUNT(*), SUM(a+b) FROM int_int3;", "src/test/tables/aggregateoperator/0gb_2agg/count_sum.tbl"},
-    // todo(anyone): Enable as soon as #182 is resolved
     {"SELECT COUNT(*) FROM groupby_int_1gb_1agg_null GROUP BY a;",
      "src/test/tables/aggregateoperator/groupby_int_1gb_1agg/count_star.tbl"},
+
+    // COUNT(DISTINCT)
+    {"SELECT a, COUNT(DISTINCT b) AS \"COUNT(DISTINCT b)\" FROM groupby_int_1gb_1agg_null GROUP BY a;",
+     "src/test/tables/aggregateoperator/groupby_int_1gb_1agg/count_distinct_null.tbl"},
 
     // case insensitivity
     {"SELECT Sum(b + b) AS sum_b_b FROM int_float;", "src/test/tables/int_float_sum_b_plus_b.tbl"},

@@ -55,6 +55,9 @@ std::shared_ptr<Expression> SQLExpressionTranslator::translate_expression(
         expression_list.emplace_back(translate_expression(*elem, input_node));
       }
 
+      // This is currently for aggregate functions only, hence checking for arguments
+      DebugAssert(expression_list.size(), "Aggregate functions must have arguments");
+
       // convert to upper-case to find mapping
       std::transform(name.begin(), name.end(), name.begin(), [](unsigned char c) { return std::toupper(c); });
 
@@ -62,7 +65,13 @@ std::shared_ptr<Expression> SQLExpressionTranslator::translate_expression(
       DebugAssert(aggregate_function_iter != aggregate_function_to_string.right.end(),
                   std::string("No such aggregate function '") + name + "'");
 
-      node = Expression::create_aggregate_function(aggregate_function_iter->second, expression_list, alias);
+      auto aggregate_function = aggregate_function_iter->second;
+
+      if (aggregate_function == AggregateFunction::Count && expr.distinct) {
+        aggregate_function = AggregateFunction::CountDistinct;
+      }
+
+      node = Expression::create_aggregate_function(aggregate_function, expression_list, alias);
       break;
     }
     case hsql::kExprLiteralFloat:
