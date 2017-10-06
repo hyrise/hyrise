@@ -20,7 +20,7 @@ SqliteWrapper::SqliteWrapper() {
 
 SqliteWrapper::~SqliteWrapper() { sqlite3_close(_db); }
 
-void SqliteWrapper::create_table_from_tbl(const std::string& file, const std::string& tablename) {
+void SqliteWrapper::create_table_from_tbl(const std::string& file, const std::string& table_name) {
   char* err_msg;
   std::ifstream infile(file);
   Assert(infile.is_open(), "SqliteWrapper: Could not find file " + file);
@@ -44,7 +44,7 @@ void SqliteWrapper::create_table_from_tbl(const std::string& file, const std::st
   }
 
   std::stringstream query;
-  query << "CREATE TABLE " << tablename << "(";
+  query << "CREATE TABLE " << table_name << "(";
   for (size_t i = 0; i < col_names.size(); i++) {
     query << col_names[i] << " " << col_types[i];
 
@@ -55,7 +55,7 @@ void SqliteWrapper::create_table_from_tbl(const std::string& file, const std::st
   query << ");";
 
   while (std::getline(infile, line)) {
-    query << "INSERT INTO " << tablename << " VALUES (";
+    query << "INSERT INTO " << table_name << " VALUES (";
     std::vector<std::string> values = _split<std::string>(line, '|');
     for (size_t i = 0; i < values.size(); i++) {
       query << values[i];
@@ -74,7 +74,7 @@ void SqliteWrapper::create_table_from_tbl(const std::string& file, const std::st
     std::cerr << "SQL error: " << err_msg << std::endl;
     sqlite3_free(err_msg);
   } else {
-    std::cout << "Table " << tablename << " created successfully" << std::endl;
+    std::cout << "Table " << table_name << " created successfully" << std::endl;
   }
 }
 

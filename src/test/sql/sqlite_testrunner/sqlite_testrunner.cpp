@@ -74,6 +74,8 @@ TEST_F(SQLiteTestRunner, CompareToSQLiteTestRunner) {
     auto tasks = OperatorTask::make_tasks_from_operator(result_operator);
     CurrentScheduler::schedule_and_wait_for_tasks(tasks);
 
+    std::cout << "Testing query: " << query << " ..." << std::endl;
+
     auto result_table = tasks.back()->get_operator()->get_output();
     auto sqlite_result_table = _sqlite.execute_query(query);
 
