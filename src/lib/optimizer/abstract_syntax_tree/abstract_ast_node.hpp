@@ -22,6 +22,7 @@ enum class ASTNodeType {
   Limit,
   Predicate,
   Projection,
+  Root,
   ShowColumns,
   ShowTables,
   Sort,
@@ -61,11 +62,11 @@ class AbstractASTNode : public std::enable_shared_from_this<AbstractASTNode> {
   std::shared_ptr<AbstractASTNode> parent() const;
   void clear_parent();
 
-  const std::shared_ptr<AbstractASTNode> &left_child() const;
-  void set_left_child(const std::shared_ptr<AbstractASTNode> &left);
+  const std::shared_ptr<AbstractASTNode>& left_child() const;
+  void set_left_child(const std::shared_ptr<AbstractASTNode>& left);
 
-  const std::shared_ptr<AbstractASTNode> &right_child() const;
-  void set_right_child(const std::shared_ptr<AbstractASTNode> &right);
+  const std::shared_ptr<AbstractASTNode>& right_child() const;
+  void set_right_child(const std::shared_ptr<AbstractASTNode>& right);
   // @}
 
   ASTNodeType type() const;
@@ -74,20 +75,22 @@ class AbstractASTNode : public std::enable_shared_from_this<AbstractASTNode> {
   /**
    * These functions provide access to statistics for this particular node.
    *
-   * AbstractASTNode::derive_statistics_from() calculates new statistics for this node with regards to some @param
-   * other_node. The other node does not necessarily needs to be a direct child node. E.g. consider an optimizer rule
+   * AbstractASTNode::derive_statistics_from() calculates new statistics for this node as they would appear if
+   * left_child and right_child WERE its children. This works for the actual children of this node during the lazy
+   * initialization in get_statistics() as well as e.g. in an optimizer rule
    * that tries to reorder nodes based on some statistics. In that case it will call this function for all the nodes
    * that shall be reordered with the same reference node.
    *
    * Inheriting nodes are free to override AbstractASTNode::derive_statistics_from().
    */
-  void set_statistics(const std::shared_ptr<TableStatistics> &statistics);
+  void set_statistics(const std::shared_ptr<TableStatistics>& statistics);
   const std::shared_ptr<TableStatistics> get_statistics();
-  virtual const std::shared_ptr<TableStatistics> derive_statistics_from(
-      const std::shared_ptr<AbstractASTNode> &other_node) const;
+  virtual std::shared_ptr<TableStatistics> derive_statistics_from(
+      const std::shared_ptr<AbstractASTNode>& left_child,
+      const std::shared_ptr<AbstractASTNode>& right_child = nullptr) const;
   // @}
 
-  virtual const std::vector<std::string> &output_column_names() const;
+  virtual const std::vector<std::string>& output_column_names() const;
 
   /**
    * This function is public for testing purposes only, otherwise should only be used internally
@@ -95,7 +98,7 @@ class AbstractASTNode : public std::enable_shared_from_this<AbstractASTNode> {
    * Every node will output a list of column and all nodes except StoredTableNode take a list of columns as input from
    * their predecessor.
    */
-  virtual const std::vector<ColumnID> &output_column_id_to_input_column_id() const;
+  virtual const std::vector<ColumnID>& output_column_id_to_input_column_id() const;
 
   size_t output_col_count() const;
 
@@ -124,9 +127,9 @@ class AbstractASTNode : public std::enable_shared_from_this<AbstractASTNode> {
    *
    * Find more information in our blog: https://medium.com/hyrise/the-gentle-art-of-referring-to-columns-634f057bd810
    */
-  ColumnID get_column_id_by_named_column_reference(const NamedColumnReference &named_column_reference) const;
+  ColumnID get_column_id_by_named_column_reference(const NamedColumnReference& named_column_reference) const;
   virtual optional<ColumnID> find_column_id_by_named_column_reference(
-      const NamedColumnReference &named_column_reference) const;
+      const NamedColumnReference& named_column_reference) const;
   // @}
 
   /**
@@ -136,7 +139,7 @@ class AbstractASTNode : public std::enable_shared_from_this<AbstractASTNode> {
    *
    * Used especially to figure out which of the children of a Join is referenced.
    */
-  virtual bool knows_table(const std::string &table_name) const;
+  virtual bool knows_table(const std::string& table_name) const;
 
   /**
    * This function is part of the "ColumnID Resolution". See SQLToAstTranslator class comment for a general discussion
@@ -147,14 +150,26 @@ class AbstractASTNode : public std::enable_shared_from_this<AbstractASTNode> {
    *
    * @param table_name can be an alias.
    */
-  virtual std::vector<ColumnID> get_output_column_ids_for_table(const std::string &table_name) const;
+  virtual std::vector<ColumnID> get_output_column_ids_for_table(const std::string& table_name) const;
 
-  void print(const uint32_t level = 0, std::ostream &out = std::cout) const;
+  /**
+   * If a node only has a left child, it is possible to remove this node from the tree, connecting this
+   * node's child with this node's parent.
+   * Fails if this node has two children
+   */
+  void remove_from_tree();
+
+  /**
+   * Replaces @param node_to_replace with this node.
+   * Fails if this node was already part of a tree, i.e. has a parent or children
+   */
+  void replace_in_tree(const std::shared_ptr<AbstractASTNode>& node_to_replace);
+
+  void print(const uint32_t level = 0, std::ostream& out = std::cout) const;
   virtual std::string description() const = 0;
 
  protected:
   virtual void _on_child_changed() {}
-  virtual const std::shared_ptr<TableStatistics> _gather_statistics() const;
 
   // Used to easily differentiate between node types without pointer casts.
   ASTNodeType _type;
