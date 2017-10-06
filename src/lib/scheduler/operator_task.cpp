@@ -8,9 +8,9 @@
 
 #include "operators/abstract_operator.hpp"
 #include "operators/abstract_read_write_operator.hpp"
-#include "operators/rollback_records.hpp"
 
 #include "scheduler/processing_unit.hpp"
+#include "scheduler/job_task.hpp"
 #include "scheduler/worker.hpp"
 
 namespace opossum {
@@ -56,8 +56,12 @@ void OperatorTask::_on_execute() {
    * If it failed, wait for the remaining active tasks to finish and schedule a Rollback
    */
   auto rw_operator = std::dynamic_pointer_cast<AbstractReadWriteOperator>(_op);
-  if (rw_operator && rw_operator->execute_failed() && context) {
-    TransactionManager::get().fail(*context);
+  if (rw_operator && rw_operator->execute_failed()) {
+    Assert(context != nullptr, "Read/Write operator cannot have been executed without a context.");
+
+    const auto success = context->mark_as_failed();
+
+    if (!success) return;
 
     // It's possible that there is no worker on the current thread, e.g. when the task is run in a task
     auto worker = Worker::get_this_thread_worker();
@@ -70,10 +74,12 @@ void OperatorTask::_on_execute() {
 
     context->wait_for_active_operators_to_finish();
 
-    auto rollback_records = std::make_shared<RollbackRecords>();
-    rollback_records->set_transaction_context(context);
+    auto rollback_operators = [context]() {
+      context->rollback_operators();
+      context->mark_as_rolled_back();
+    };
 
-    std::make_shared<OperatorTask>(rollback_records)->schedule(CURRENT_NODE_ID, SchedulePriority::High);
+    std::make_shared<JobTask>(rollback_operators)->schedule(CURRENT_NODE_ID, SchedulePriority::High);
   }
 }
 }  // namespace opossum

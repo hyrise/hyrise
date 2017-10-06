@@ -43,13 +43,14 @@ class CurrentScheduler {
 
 template <typename TaskType>
 void CurrentScheduler::wait_for_tasks(const std::vector<std::shared_ptr<TaskType>>& tasks) {
-  if (IS_DEBUG) {
+  DebugAssert(([&]() {
     for (auto& task : tasks) {
       if (!task->is_scheduled()) {
-        Fail("Schedule tasks before joining them");
+        return false;
       }
     }
-  }
+    return true;
+  }()), "Schedule tasks before joining them");
 
   /**
    * In case wait_for_tasks() is called from a Task being executed in a Worker, block that worker, otherwise just

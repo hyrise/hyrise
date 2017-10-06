@@ -6,6 +6,7 @@
 
 #include "types.hpp"
 
+// TODO(mjendruk): Update this comment!
 /**
  * MVCC overview
  *
@@ -61,46 +62,15 @@ class TransactionManager : private Noncopyable {
   std::shared_ptr<TransactionContext> new_transaction_context();
 
   /**
-   * @defgroup Lifetime management of transactions
-   * @{
-   */
-
-  /**
-   * Sets transaction phase to "rolled back"
-   */
-  void rollback(TransactionContext &context);
-
-  /**
-   * Sets transaction phase to "failed"
-   */
-  void fail(TransactionContext &context);
-
-  /**
-   * Creates new commit context and assigns commit id
-   * Sets transaction phase to “committing”
-   * After calling this function, transaction cannot be
-   * rolled back anymore.
-   */
-  void prepare_commit(TransactionContext &context);
-
-  /**
-   * Tries to commit transaction and all following
-   * transactions marked as “pending”. Marks transaction
-   * as pending if there are uncommitted transaction with
-   * a smaller commit id.
+   * Helper: Executes an std::function object within a context and commits or rolls it back afterwards.
    *
-   * @param callback called when transaction is committed
-   */
-  void commit(TransactionContext &context, std::function<void(TransactionID)> callback = nullptr);
-
-  /** @} */
-
-  /**
-   * Helper: Create a transaction context, run a function with it and commit the transaction afterwards
+   * Call TransactionContext::mark_as_failed() if transaction should be rolled back.
    */
   void run_transaction(const std::function<void(std::shared_ptr<TransactionContext>)> &fn);
 
  private:
+  friend class TransactionContext;
+
   TransactionManager();
 
   TransactionManager(TransactionManager &&) = delete;

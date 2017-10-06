@@ -44,8 +44,8 @@ void AbstractOperator::set_transaction_context(std::shared_ptr<TransactionContex
 void AbstractOperator::set_transaction_context_recursively(std::shared_ptr<TransactionContext> transaction_context) {
   set_transaction_context(transaction_context);
 
-  if (input_left()) mutable_input_left()->set_transaction_context_recursively(transaction_context);
-  if (input_right()) mutable_input_right()->set_transaction_context_recursively(transaction_context);
+  if (auto left = mutable_input_left()) left->set_transaction_context_recursively(transaction_context);
+  if (auto right = mutable_input_right()) right->set_transaction_context_recursively(transaction_context);
 }
 
 std::shared_ptr<AbstractOperator> AbstractOperator::mutable_input_left() const {

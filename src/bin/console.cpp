@@ -18,7 +18,7 @@
 
 #include "SQLParser.h"
 #include "concurrency/transaction_manager.hpp"
-#include "operators/commit_records.hpp"
+#include "concurrency/transaction_context.hpp"
 #include "operators/get_table.hpp"
 #include "operators/import_csv.hpp"
 #include "operators/print.hpp"
@@ -102,7 +102,7 @@ Console::Console()
   // Register words specifically for command completion purposes, e.g.
   // for TPC-C table generation, 'CUSTOMER', 'DISTRICT', etc
   auto tpcc_generators = tpcc::TpccTableGenerator::tpcc_table_generator_functions();
-  for (tpcc::TpccTableGeneratorFunctions::iterator it = tpcc_generators.begin(); it != tpcc_generators.end(); ++it) {
+  for (auto it = tpcc_generators.begin(); it != tpcc_generators.end(); ++it) {
     _tpcc_commands.push_back(it->first);
   }
 }
@@ -270,14 +270,12 @@ int Console::_eval_sql(const std::string& sql) {
   out(std::to_string(row_count) + " rows (PARSE: " + std::to_string(parse_elapsed_ms) + " ms, COMPILE: " +
       std::to_string(plan_elapsed_ms) + " ms, EXECUTE: " + std::to_string(execution_elapsed_ms) + " ms (wall time))\n");
 
+  // TODO(mjendruk): Wait for all tasks to finish.
+  
   // Commit
-  TransactionManager::get().prepare_commit(*transaction_context);
-
-  auto commit = std::make_shared<CommitRecords>();
-  commit->set_transaction_context(transaction_context);
-  commit->execute();
-
-  TransactionManager::get().commit(*transaction_context);
+  transaction_context->prepare_commit();
+  transaction_context->commit_operators();
+  transaction_context->commit();
 
   return ReturnCode::Ok;
 }
@@ -285,8 +283,7 @@ int Console::_eval_sql(const std::string& sql) {
 int Console::_execute_plan(const SQLQueryPlan& plan) {
   try {
     for (const auto& task : plan.tasks()) {
-      auto op = task->get_operator();
-      op->execute();
+      task->schedule();
     }
   } catch (const std::exception& exception) {
     out("Exception thrown while executing query plan:\n  " + std::string(exception.what()) + "\n");

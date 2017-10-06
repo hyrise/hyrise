@@ -21,21 +21,14 @@ class Delete : public AbstractReadWriteOperator {
  public:
   explicit Delete(const std::string& table_name, const std::shared_ptr<const AbstractOperator>& values_to_delete);
 
-  void commit_records(const CommitID cid) override;
-  void rollback_records() override;
-
   const std::string name() const override;
   uint8_t num_in_tables() const override;
 
-  std::shared_ptr<AbstractOperator> recreate(const std::vector<AllParameterVariant>& args) const override {
-    Fail("Operator " + this->name() + " does not implement recreation.");
-    return {};
-  }
-
-  void finish_commit() override;
-
  protected:
   std::shared_ptr<const Table> _on_execute(std::shared_ptr<TransactionContext> context) override;
+  void _on_commit_records(const CommitID cid) override;
+  void _finish_commit() override;
+  void _on_rollback_records() override;
 
  private:
   /**

@@ -12,7 +12,14 @@ namespace opossum {
 class AbstractReadWriteOperator;
 class CommitContext;
 
-enum class TransactionPhase { Active, Failed, RolledBack, Committing, Committed };
+enum class TransactionPhase {
+  Active,
+  Failed,
+  RolledBack,
+  Committing,
+  Pending,
+  Committed
+};
 
 /**
  * @brief Representation of a transaction
@@ -51,20 +58,97 @@ class TransactionContext {
   std::shared_ptr<CommitContext> commit_context();
 
   /**
+   * @defgroup Lifetime management
+   * @{
+   */
+
+  /**
+   * Sets the transaction phase to Failed.
+   * Should be called if an operator fails.
+   *
+   * @returns false if it is already in phase Failed.
+   */
+  bool mark_as_failed();
+
+  /**
+   * Sets the transaction phase to RolledBack.
+   * All registered operators need to have been
+   * rolled back in advance.
+   *
+   * @returns false if it is already in phase RolledBack.
+   */
+  bool mark_as_rolled_back();
+
+  /**
+   * Sets transaction phase to Committing.
+   * Creates a new commit context and assigns a new commit id.
+   * All operators within this context must be finished and
+   * none of the registered operators should have failed when
+   * calling this function.
+   *
+   * @returns false if it is already in phase Committing.
+   */
+  bool prepare_commit();
+
+  /**
+   * Sets transaction phase to Pending.
+   * Tries to commit transaction and all following
+   * transactions also marked as “pending”. If there are
+   * uncommitted transaction with a smaller commit id, it
+   * will be committed after those.
+   *
+   * @param callback called when transaction is committed
+   * @returns false if is already in phase Pending.
+   */
+  bool commit(std::function<void(TransactionID)> callback = nullptr);
+
+  /**@}*/
+
+  /**
+   * @defgroup Read/Write operator helpers
+   *
+   * This methods call commit_records() / rollback_records()
+   * on all registered, i.e. previously executed read/write,
+   * operators. These methods can be scheduled by wrapping
+   * them in a JobTask. If commits and rollbacks should happen
+   * individually for each operator, rw_operators() can be
+   * called to retrieve a list of all registered operators.
+   *
+   * Note: These methods were previously wrapped in classes
+   *       of type AbstractReadWriteOperators
+   *
+   * @{
+   */
+
+  void commit_operators();
+  void rollback_operators();
+
+  /**@}*/
+
+  /**
    * Add an operator to the list of read-write operators.
    * Update must not call this because it consists of a Delete and an Insert, which call this themselves.
    */
   void register_rw_operator(std::shared_ptr<AbstractReadWriteOperator> op) { _rw_operators.push_back(op); }
 
-  std::vector<std::shared_ptr<AbstractReadWriteOperator>> get_rw_operators() const { return _rw_operators; }
+  std::vector<std::shared_ptr<AbstractReadWriteOperator>> rw_operators() const { return _rw_operators; }
 
   /**
-   * Update the counter of active operators
+   * @defgroup Update the counter of active operators
+   * @{
    */
   void on_operator_started();
   void on_operator_finished();
+  /**@}*/
 
   void wait_for_active_operators_to_finish() const;
+
+ private:
+  /**
+   * Throws an exception if the transition fails and
+   * has not been already in the target phase.
+   */
+  bool _transition(TransactionPhase from_phase, TransactionPhase to_phase);
 
  private:
   const TransactionID _transaction_id;

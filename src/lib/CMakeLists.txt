@@ -94,11 +94,10 @@ set(
     operators/abstract_operator.cpp
     operators/abstract_operator.hpp
     operators/abstract_read_only_operator.hpp
+    operators/abstract_read_write_operator.cpp
     operators/abstract_read_write_operator.hpp
     operators/aggregate.cpp
     operators/aggregate.hpp
-    operators/commit_records.cpp
-    operators/commit_records.hpp
     operators/delete.cpp
     operators/delete.hpp
     operators/difference.cpp
@@ -137,8 +136,6 @@ set(
     operators/product.hpp
     operators/projection.cpp
     operators/projection.hpp
-    operators/rollback_records.cpp
-    operators/rollback_records.hpp
     operators/sort.cpp
     operators/sort.hpp
     operators/table_scan.cpp
