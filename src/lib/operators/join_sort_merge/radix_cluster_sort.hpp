@@ -344,11 +344,6 @@ class RadixClusterSort {
     _sort_clusters(output_left);
     _sort_clusters(output_right);
 
-    DebugAssert(_materialized_table_size(output_left) == _input_table_left->row_count(),
-                "left output has wrong size");
-    DebugAssert(_materialized_table_size(output_right) == _input_table_right->row_count(),
-                "right output has wrong size");
-
     return std::make_pair(std::move(output_left), std::move(output_right));
   }
 };
