@@ -17,10 +17,10 @@ void AbstractReadWriteOperator::execute() {
 
   Assert(_state == ReadWriteOperatorState::Pending, "Operator needs to have state Pending in order to be executed.");
   AbstractOperator::execute();
-  
+
   if (_state == ReadWriteOperatorState::Failed)
     return;
-    
+
   _state = ReadWriteOperatorState::Executed;
 }
 
@@ -35,8 +35,8 @@ void AbstractReadWriteOperator::commit_records(const CommitID cid) {
 }
 
 void AbstractReadWriteOperator::rollback_records() {
-  Assert(_state == ReadWriteOperatorState::Failed,
-         "Operator needs to have state Failed in order to be rolled back.");
+  Assert(_state == ReadWriteOperatorState::Failed || _state == ReadWriteOperatorState::Executed,
+         "Operator needs to have state Failed or Executed in order to be rolled back.");
 
   _on_rollback_records();
 

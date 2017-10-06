@@ -98,6 +98,9 @@ Console::Console()
   register_command("script", exec_script);
   register_command("print", print_table);
   register_command("visualize", visualize);
+  register_command("begin", std::bind(&Console::begin_transaction, this, std::placeholders::_1));
+  register_command("rollback", std::bind(&Console::rollback_transaction, this, std::placeholders::_1));
+  register_command("commit", std::bind(&Console::commit_transaction, this, std::placeholders::_1));
 
   // Register words specifically for command completion purposes, e.g.
   // for TPC-C table generation, 'CUSTOMER', 'DISTRICT', etc
@@ -230,8 +233,6 @@ int Console::_eval_sql(const std::string& sql) {
     return 1;
   }
 
-  auto transaction_context = TransactionManager::get().new_transaction_context();
-
   // Measure the plan compile time
   started = std::chrono::high_resolution_clock::now();
 
@@ -243,16 +244,25 @@ int Console::_eval_sql(const std::string& sql) {
     return ReturnCode::Error;
   }
 
-  plan.set_transaction_context(transaction_context);
-
   // Measure the plan compile time
   done = std::chrono::high_resolution_clock::now();
   auto plan_elapsed_ms = std::chrono::duration<double>(done - started).count();
 
+  const auto auto_commit = (_tcontext == nullptr);
+  auto transaction_context = auto_commit ? TransactionManager::get().new_transaction_context() : _tcontext;
+
+  plan.set_transaction_context(transaction_context);
+
   // Measure the query plan execution time
   started = std::chrono::high_resolution_clock::now();
 
-  if (_execute_plan(plan) == ReturnCode::Error) return ReturnCode::Error;
+  if (_execute_plan(plan) == ReturnCode::Error) {
+    out("Execution failed and the transaction has been rolled back.");
+    transaction_context->rollback_operators();
+    transaction_context->mark_as_rolled_back();
+    _tcontext = nullptr;
+    return ReturnCode::Error;
+  }
 
   // Measure the query plan execution time
   done = std::chrono::high_resolution_clock::now();
@@ -271,11 +281,19 @@ int Console::_eval_sql(const std::string& sql) {
       std::to_string(plan_elapsed_ms) + " ms, EXECUTE: " + std::to_string(execution_elapsed_ms) + " ms (wall time))\n");
 
   // TODO(mjendruk): Wait for all tasks to finish.
-  
+
   // Commit
-  transaction_context->prepare_commit();
-  transaction_context->commit_operators();
-  transaction_context->commit();
+  if (transaction_context->phase() == TransactionPhase::Failed) {
+    out("An operator failed and the transaction has been rolled back.");
+    _tcontext = nullptr;
+    return ReturnCode::Error;
+  }
+
+  if (auto_commit) {
+    transaction_context->prepare_commit();
+    transaction_context->commit_operators();
+    transaction_context->commit();
+  }
 
   return ReturnCode::Ok;
 }
@@ -582,6 +600,48 @@ void Console::handle_signal(int sig) {
     // Restore program state stored in jmp_env set with sigsetjmp(2)
     siglongjmp(jmp_env, 1);
   }
+}
+
+int Console::begin_transaction(const std::string& input) {
+  if (_tcontext != nullptr) {
+    const auto tid = std::to_string(_tcontext->transaction_id());
+    out("There is already an active transaction (" + tid + "). Type `rollback` or `commit` before beginning a new transaction.\n");
+    return ReturnCode::Error;
+  }
+
+  _tcontext = TransactionManager::get().new_transaction_context();
+
+  const auto tid = std::to_string(_tcontext->transaction_id());
+  out("New transaction (" + tid + ") started.\n");
+  return ReturnCode::Ok;
+}
+
+int Console::rollback_transaction(const std::string& input) {
+  if (_tcontext == nullptr) {
+    out("Console is an auto-commit mode. Type `begin` to start a manual transaction.\n");
+    return ReturnCode::Error;
+  }
+
+  _tcontext->mark_as_failed();
+  _tcontext->rollback_operators();
+  _tcontext->mark_as_rolled_back();
+  _tcontext = nullptr;
+  out("Transaction has been rolled back.\n");
+  return ReturnCode::Ok;
+}
+
+int Console::commit_transaction(const std::string& input) {
+    if (_tcontext == nullptr) {
+    out("Console is an auto-commit mode. Type `begin` to start a manual transaction.\n");
+    return ReturnCode::Error;
+  }
+
+  _tcontext->prepare_commit();
+  _tcontext->commit_operators();
+  _tcontext->commit();
+  _tcontext = nullptr;
+  out("Transaction has been committed.\n");
+  return ReturnCode::Ok;
 }
 
 // GNU readline interface to our commands

@@ -12,6 +12,8 @@
 
 namespace opossum {
 
+class TransactionContext;
+
 /*
  * SQL REPL Console for Opossum, built on GNU readline. https://cnswww.cns.cwru.edu/php/chet/readline/rltop.html
  * Can load TPCC tables via "generate TABLENAME" command, and can execute SQL statements based on
@@ -110,6 +112,10 @@ class Console {
 
   static int visualize(const std::string& input);
 
+  int begin_transaction(const std::string& input);
+  int rollback_transaction(const std::string& input);
+  int commit_transaction(const std::string& input);
+
   // GNU readline interface to our commands
   static char** command_completion(const char* text, int start, int end);
   static char* command_generator(const char* text, int state);
@@ -123,6 +129,8 @@ class Console {
   std::ostream _out;
   std::ofstream _log;
   bool _verbose;
+
+  std::shared_ptr<TransactionContext> _tcontext;
 };
 
 }  // namespace opossum
