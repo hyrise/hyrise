@@ -17,6 +17,7 @@ set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -march=native")
 find_package(Numa)
 find_package(Tbb REQUIRED)
 find_package(Readline REQUIRED)
+find_package(Sqlite3 REQUIRED)
 
 # Include sub-CMakeLists.txt
 add_subdirectory(third_party/)
