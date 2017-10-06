@@ -13,8 +13,8 @@ SqliteWrapper::SqliteWrapper() {
   int rc = sqlite3_open(":memory:", &_db);
 
   if (rc != SQLITE_OK) {
-    std::cerr << "Cannot open database: " << sqlite3_errmsg(_db) << std::endl;
     sqlite3_close(_db);
+    throw std::runtime_error("Cannot open database: " + std::string(sqlite3_errmsg(_db)) + "\n");
   }
 }
 
@@ -70,11 +70,8 @@ void SqliteWrapper::create_table_from_tbl(const std::string& file, const std::st
   int rc = sqlite3_exec(_db, query.str().c_str(), 0, 0, &err_msg);
 
   if (rc != SQLITE_OK) {
-    std::cerr << "Failed to create table" << std::endl;
-    std::cerr << "SQL error: " << err_msg << std::endl;
     sqlite3_free(err_msg);
-  } else {
-    std::cout << "Table " << table_name << " created successfully" << std::endl;
+    throw std::runtime_error("Failed to create table. SQL error: " + std::string(err_msg) + "\n");
   }
 }
 
@@ -86,9 +83,7 @@ std::shared_ptr<Table> SqliteWrapper::execute_query(const std::string& sql_query
   int rc = sqlite3_prepare_v2(_db, sql_query.c_str(), -1, &result_row, 0);
 
   if (rc != SQLITE_OK) {
-    std::cerr << "Failed to execute query \"" << sql_query << "\": " << sqlite3_errmsg(_db) << std::endl;
-
-    return result_table;
+    throw std::runtime_error("Failed to execute query \"" + sql_query + "\": " + std::string(sqlite3_errmsg(_db)) + "\n");
   }
 
   if ((rc = sqlite3_step(result_row)) == SQLITE_ROW) {
@@ -126,7 +121,9 @@ void SqliteWrapper::_create_columns(std::shared_ptr<Table> table, sqlite3_stmt* 
 
       case SQLITE_NULL:
       case SQLITE_BLOB:
-      default: { col_type = ""; }
+      default: {
+        throw std::runtime_error("Column type not supported.");
+      }
     }
     table->add_column(col_name, col_type);
   }
@@ -154,7 +151,9 @@ void SqliteWrapper::_add_row(std::shared_ptr<Table> table, sqlite3_stmt* result_
 
       case SQLITE_NULL:
       case SQLITE_BLOB:
-      default: { row.push_back(AllTypeVariant{}); }
+      default: {
+        throw std::runtime_error("Column type not supported.");
+      }
     }
   }
 

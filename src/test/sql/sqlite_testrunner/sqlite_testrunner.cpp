@@ -63,11 +63,17 @@ TEST_F(SQLiteTestRunner, CompareToSQLiteTestRunner) {
     hsql::SQLParserResult parse_result;
     hsql::SQLParser::parseSQLString(query, &parse_result);
 
+    EXPECT_TRUE(parse_result.isValid());
     if (!parse_result.isValid()) {
-      throw std::runtime_error("Query is not valid.");
+      continue;
     }
 
     // Expect the query to be a single statement.
+    EXPECT_EQ(parse_result.size(), 1u);
+    if (parse_result.size() != 1u) {
+      continue;
+    }
+
     auto plan = SQLPlanner::plan(parse_result);
     auto result_operator = plan.tree_roots().front();
 
