@@ -85,7 +85,14 @@ TEST_F(SQLiteTestRunner, CompareToSQLiteTestRunner) {
     auto result_table = tasks.back()->get_operator()->get_output();
     auto sqlite_result_table = _sqlite.execute_query(query);
 
-    EXPECT_TABLE_EQ(result_table, sqlite_result_table, true);
+    bool order_sensitive = false;
+
+    if (parse_result.getStatement(0)->is(hsql::kStmtSelect)) {
+      auto select_statement = dynamic_cast<const hsql::SelectStatement*>(parse_result.getStatement(0));
+      order_sensitive = (select_statement->order != nullptr);
+    }
+
+    EXPECT_TABLE_EQ(result_table, sqlite_result_table, order_sensitive);
   }
 }
 
