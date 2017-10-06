@@ -13,10 +13,14 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}) # Put binaries into root
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib) # Put libraries into their own dir
 set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -march=native")
 
+# Require NCurses over Curses
+set(CURSES_NEED_NCURSES TRUE)
+
 # Dependencies
 find_package(Numa)
 find_package(Tbb REQUIRED)
 find_package(Readline REQUIRED)
+find_package(Curses REQUIRED)
 
 # Include sub-CMakeLists.txt
 add_subdirectory(third_party/)
