@@ -28,7 +28,7 @@ class SQLiteTestRunner : public BaseTest {
     std::ifstream file("src/test/sql/sqlite_testrunner/sqlite_testrunner.tables");
     std::string line;
     while (std::getline(file, line)) {
-      if (line.empty() || line.substr(0, 2) == "\\\\") {
+      if (line.empty()) {
         continue;
       }
 
@@ -56,7 +56,7 @@ TEST_F(SQLiteTestRunner, CompareToSQLiteTestRunner) {
   std::ifstream file("src/test/sql/sqlite_testrunner/sqlite_testrunner.testqueries");
   std::string query;
   while (std::getline(file, query)) {
-    if (query.empty() || query.substr(0, 2) == "\\\\") {
+    if (query.empty() || query.substr(0, 2) == "--") {
       continue;
     }
 
