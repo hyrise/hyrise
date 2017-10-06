@@ -621,12 +621,15 @@ int Console::rollback_transaction(const std::string& input) {
     out("Console is an auto-commit mode. Type `begin` to start a manual transaction.\n");
     return ReturnCode::Error;
   }
-
+  
   _tcontext->mark_as_failed();
   _tcontext->rollback_operators();
   _tcontext->mark_as_rolled_back();
-  _tcontext = nullptr;
-  out("Transaction has been rolled back.\n");
+
+  const auto tid = std::to_string(_tcontext->transaction_id());
+  out("Transaction (" + tid + ") has been rolled back.\n");
+  
+   _tcontext = nullptr;
   return ReturnCode::Ok;
 }
 
@@ -639,8 +642,11 @@ int Console::commit_transaction(const std::string& input) {
   _tcontext->prepare_commit();
   _tcontext->commit_operators();
   _tcontext->commit();
-  _tcontext = nullptr;
-  out("Transaction has been committed.\n");
+  
+  const auto tid = std::to_string(_tcontext->transaction_id());
+  out("Transaction (" + tid + ") has been committed.\n");
+  
+   _tcontext = nullptr;
   return ReturnCode::Ok;
 }
 
