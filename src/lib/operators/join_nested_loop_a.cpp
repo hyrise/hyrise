@@ -395,9 +395,11 @@ class JoinNestedLoopA::JoinNestedLoopAImpl : public AbstractJoinOperatorImpl {
         auto pos_list_left = std::make_shared<PosList>();
         auto pos_list_right = std::make_shared<PosList>();
 
-        auto context = std::make_shared<JoinNestedLoopAContext>(
-            column_left, column_right, chunk_id_left, chunk_id_right, pos_list_left, pos_list_right, _mode, _comparator,
-            rows_potentially_joined_with_null_values_left, rows_potentially_joined_with_null_values_right);
+        auto context = std::make_shared<JoinNestedLoopAContext>(column_left, column_right, chunk_id_left,
+                                                                chunk_id_right, pos_list_left, pos_list_right, _mode,
+                                                                _comparator,
+                                                                rows_potentially_joined_with_null_values_left,
+                                                                rows_potentially_joined_with_null_values_right);
 
         // Use double visitor to join columns
         column_left->visit(builder_left, context);
