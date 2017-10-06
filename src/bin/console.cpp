@@ -251,6 +251,10 @@ int Console::_eval_sql(const std::string& sql) {
   const auto auto_commit = (_tcontext == nullptr);
   auto transaction_context = auto_commit ? TransactionManager::get().new_transaction_context() : _tcontext;
 
+  const auto tid = std::to_string(transaction_context->transaction_id());
+  const auto lcid = std::to_string(transaction_context->last_commit_id());
+  out("Active transaction (tid: " + tid + ", lcid: " + lcid + ")\n");
+
   plan.set_transaction_context(transaction_context);
 
   // Measure the query plan execution time
@@ -621,14 +625,14 @@ int Console::rollback_transaction(const std::string& input) {
     out("Console is an auto-commit mode. Type `begin` to start a manual transaction.\n");
     return ReturnCode::Error;
   }
-  
+
   _tcontext->mark_as_failed();
   _tcontext->rollback_operators();
   _tcontext->mark_as_rolled_back();
 
   const auto tid = std::to_string(_tcontext->transaction_id());
   out("Transaction (" + tid + ") has been rolled back.\n");
-  
+
    _tcontext = nullptr;
   return ReturnCode::Ok;
 }
@@ -642,10 +646,10 @@ int Console::commit_transaction(const std::string& input) {
   _tcontext->prepare_commit();
   _tcontext->commit_operators();
   _tcontext->commit();
-  
+
   const auto tid = std::to_string(_tcontext->transaction_id());
   out("Transaction (" + tid + ") has been committed.\n");
-  
+
    _tcontext = nullptr;
   return ReturnCode::Ok;
 }
