@@ -12,7 +12,7 @@ namespace opossum {
  */
 class ValidateNode : public AbstractASTNode {
  public:
-  explicit ValidateNode();
+  ValidateNode();
 
   std::string description() const override;
 };
