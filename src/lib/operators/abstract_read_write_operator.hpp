@@ -14,17 +14,17 @@
 namespace opossum {
 
 enum class ReadWriteOperatorState {
-  Pending,
-  Executed,
-  Failed,
-  RolledBack,
-  Committed
+  Pending,     // The operator has been instantiated.
+  Executed,    // Execution succeeded.
+  Failed,      // Execution failed.
+  RolledBack,  // Changes have been rolled back.
+  Committed    // Changes have been committed.
 };
 
 /**
- * AbstractReadWriteOperator is the superclass for all operators that need write access to tables.
- * It mainly provides the commit_records and rollback_records methods, which are used by the CommitRecords
- * and RollbackRecords operators, respectively.
+ * AbstractReadWriteOperator is the superclass of all operators that need write access to tables.
+ * It mainly provides the commit_records and rollback_records methods,
+ * which are used to commit and rollback changes respectively.
  */
 class AbstractReadWriteOperator : public AbstractOperator,
                                   public std::enable_shared_from_this<AbstractReadWriteOperator> {
@@ -68,7 +68,6 @@ class AbstractReadWriteOperator : public AbstractOperator,
    *
    * @returns nullptr, since these operators do not create new intermediate results but modify existing tables
    */
-  // TODO(mjendruk): _state needs to be set to executed or failed
   std::shared_ptr<const Table> _on_execute(std::shared_ptr<TransactionContext> context) override = 0;
 
   /**
@@ -84,8 +83,17 @@ class AbstractReadWriteOperator : public AbstractOperator,
    */
   virtual void _finish_commit() {}
 
+  /**
+   * Called by rollback_records.
+   */
   virtual void _on_rollback_records() = 0;
 
+  /**
+   * This method is used in sub classes in their _on_execute() method.
+   *
+   * If the execution fails, because for example some records have already been locked,
+   * mark_as_failed() is called to signal to AbstractReadWriteOperator that the exeuction failed.
+   */
   void mark_as_failed();
 
  private:
