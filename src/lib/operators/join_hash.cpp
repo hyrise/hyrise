@@ -9,6 +9,7 @@
 #include "product.hpp"
 
 #include "storage/column_visitable.hpp"
+#include "storage/iterables/create_iterable_from_column.hpp"
 
 #include "resolve_type.hpp"
 #include "utils/assert.hpp"
@@ -112,7 +113,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
   */
   template <typename T>
   struct PartitionedElement {
-    PartitionedElement() : row_id(RowID{ChunkID{0}, 0}), partition_hash(0), value(T()) {}
+    PartitionedElement() : row_id(NULL_ROW_ID), partition_hash(0), value(T()) {}
     PartitionedElement(RowID row, Hash hash, T val) : row_id(row), partition_hash(hash), value(val) {}
 
     RowID row_id;
@@ -131,78 +132,6 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
   struct RadixContainer {
     std::shared_ptr<Partition<T>> elements;
     std::vector<size_t> partition_offsets;
-  };
-
-  /*
-  Visitor approach for materialization of columns
-  */
-  template <typename T>
-  struct ColumnBuilder : public ColumnVisitable {
-    explicit ColumnBuilder(ChunkID chunk_id, std::shared_ptr<std::vector<ChunkOffset>> offsets = nullptr)
-        : _chunk_id(chunk_id),
-          _materialized_chunk(std::make_shared<pmr_vector<std::pair<RowID, T>>>()),
-          _offsets(offsets) {}
-
-    void handle_value_column(BaseColumn &column, std::shared_ptr<ColumnVisitableContext>) override {
-      auto &vc_column = static_cast<ValueColumn<T> &>(column);
-      _materialized_chunk = vc_column.materialize(_chunk_id, _offsets);
-    }
-    void handle_dictionary_column(BaseColumn &column, std::shared_ptr<ColumnVisitableContext>) override {
-      auto &dict_column = static_cast<DictionaryColumn<T> &>(column);
-      _materialized_chunk = dict_column.materialize(_chunk_id, _offsets);
-    }
-    void handle_reference_column(ReferenceColumn &ref_column, std::shared_ptr<ColumnVisitableContext>) override {
-      const auto referenced_table = ref_column.referenced_table();
-
-      /*
-      The pos_list might be unsorted. In that case, we would have to jump around from chunk to chunk.
-      One-chunk-at-a-time processing should be faster. For this, we place a pair {chunk_offset, original_position}
-      into a vector for each chunk. A potential optimization would be to only do this if the pos_list is really
-      unsorted.
-      Compare with table scan implemention for further reference.
-      */
-
-      std::vector<std::shared_ptr<std::vector<ChunkOffset>>> all_chunk_offsets(referenced_table->chunk_count());
-
-      for (ChunkID chunk_id{0}; chunk_id < referenced_table->chunk_count(); ++chunk_id) {
-        all_chunk_offsets[chunk_id] = std::make_shared<std::vector<ChunkOffset>>();
-      }
-
-      for (auto &pos : *(ref_column.pos_list())) {
-        all_chunk_offsets[pos.chunk_id]->emplace_back(pos.chunk_offset);
-      }
-
-      for (ChunkID chunk_id{0}; chunk_id < referenced_table->chunk_count(); ++chunk_id) {
-        if (all_chunk_offsets[chunk_id]->empty()) {
-          continue;
-        }
-        auto &chunk = referenced_table->get_chunk(chunk_id);
-        auto referenced_column = chunk.get_column(ref_column.referenced_column_id());
-
-        ColumnBuilder<T> builder = ColumnBuilder<T>(chunk_id, all_chunk_offsets[chunk_id]);
-        referenced_column->visit(builder);
-
-        auto new_materialized_chunk = builder._materialized_chunk;
-
-        /*
-        We want to get the whole ReferenceColumn chunk, even if it actually consists of several Value or
-        DictionaryColumn chunks.
-        That's why we need to store intermediate results and append to the result vector.
-        */
-        if (_materialized_chunk) {
-          _materialized_chunk->reserve(_materialized_chunk->size() + new_materialized_chunk->size());
-          _materialized_chunk->insert(std::end(*_materialized_chunk), std::begin(*new_materialized_chunk),
-                                      std::end(*new_materialized_chunk));
-
-        } else {
-          _materialized_chunk = new_materialized_chunk;
-        }
-      }
-    }
-
-    ChunkID _chunk_id;
-    std::shared_ptr<pmr_vector<std::pair<RowID, T>>> _materialized_chunk;
-    std::shared_ptr<std::vector<ChunkOffset>> _offsets;
   };
 
   template <typename T>
@@ -252,12 +181,21 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
 
         auto &histogram = static_cast<std::vector<size_t> &>(*histograms[chunk_id]);
 
+        auto materialized_chunk = std::make_shared<pmr_vector<std::pair<RowID, T>>>();
+
         // Materialize the chunk
-        ColumnBuilder<T> builder = ColumnBuilder<T>(chunk_id);
-        column->visit(builder);
+        resolve_column_type<T>(*column, [&](auto &typed_column) {
+          auto iterable = create_iterable_from_column<T>(typed_column);
+          auto &materialized = *materialized_chunk;
 
-        auto const &materialized = static_cast<pmr_vector<std::pair<RowID, T>> &>(*builder._materialized_chunk);
+          iterable.for_each([&, chunk_id](const auto &value) {
+            if (!value.is_null()) {
+              materialized.emplace_back(RowID{chunk_id, value.chunk_offset()}, value.value());
+            }
+          });
+        });
 
+        const auto &materialized = *materialized_chunk;
         size_t row_id = output_offset;
 
         /*
@@ -377,6 +315,11 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
         auto &out = static_cast<Partition<T> &>(*output);
         for (size_t i = input_offset; i < input_offset + input_size; ++i) {
           auto &element = (*materialized)[i];
+
+          if (element.row_id.chunk_offset == INVALID_CHUNK_OFFSET) {
+            continue;
+          }
+
           const size_t radix = (element.partition_hash >> (32 - _radix_bits * (pass + 1))) & mask;
 
           out[output_offsets[radix]++] = element;
@@ -466,12 +409,19 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
 
           for (size_t i = partition_begin; i < partition_end; ++i) {
             auto &row = partition[i];
+
+            if (_mode == JoinMode::Inner && row.row_id.chunk_offset == INVALID_CHUNK_OFFSET) {
+              continue;
+            }
+
             auto row_ids = hashtable->get(row.value);
 
             if (row_ids) {
-              for (auto &row_id : *row_ids) {
-                pos_list_left_local->emplace_back(row_id);
-                pos_list_right_local->emplace_back(row.row_id);
+              for (const auto &row_id : *row_ids) {
+                if (row_id.chunk_offset != INVALID_CHUNK_OFFSET) {
+                  pos_list_left_local->emplace_back(row_id);
+                  pos_list_right_local->emplace_back(row.row_id);
+                }
               }
               // We assume that the relations have been swapped previously,
               // so that the outer relation is the probing relation.
@@ -647,7 +597,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
         write_output_chunks(output_chunk, _left_in_table, left, ref_col_left);
         write_output_chunks(output_chunk, _right_in_table, right, ref_col_right);
       }
-      _output_table->add_chunk(std::move(output_chunk));
+      _output_table->emplace_chunk(std::move(output_chunk));
     }
 
     return _output_table;

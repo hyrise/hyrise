@@ -257,7 +257,7 @@ std::shared_ptr<const Table> Aggregate::_on_execute() {
     ++column_index;
   }
 
-  _output->add_chunk(std::move(_out_chunk));
+  _output->emplace_chunk(std::move(_out_chunk));
 
   return _output;
 }

@@ -8,7 +8,8 @@
 
 #include "operators/aggregate.hpp"
 #include "operators/get_table.hpp"
-#include "operators/join_nested_loop_a.hpp"
+#include "operators/join_hash.hpp"
+#include "operators/join_sort_merge.hpp"
 #include "operators/limit.hpp"
 #include "operators/projection.hpp"
 #include "operators/sort.hpp"
@@ -109,7 +110,7 @@ TEST_F(ASTToOperatorTranslatorTest, JoinNode) {
   join_node->set_right_child(stored_table_node_right);
   const auto op = ASTToOperatorTranslator{}.translate_node(join_node);
 
-  const auto join_op = std::dynamic_pointer_cast<JoinNestedLoopA>(op);
+  const auto join_op = std::dynamic_pointer_cast<JoinSortMerge>(op);
   ASSERT_TRUE(join_op);
   EXPECT_EQ(join_op->column_ids(), join_node->join_column_ids());
   EXPECT_EQ(join_op->scan_type(), ScanType::OpEquals);
@@ -210,7 +211,7 @@ TEST_F(ASTToOperatorTranslatorTest, MultipleNodesHierarchy) {
 
   const auto op = ASTToOperatorTranslator{}.translate_node(join_node);
 
-  const auto join_op = std::dynamic_pointer_cast<const JoinNestedLoopA>(op);
+  const auto join_op = std::dynamic_pointer_cast<const JoinHash>(op);
   ASSERT_TRUE(join_op);
 
   const auto predicate_op_left = std::dynamic_pointer_cast<const TableScan>(join_op->input_left());

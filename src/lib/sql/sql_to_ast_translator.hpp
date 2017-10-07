@@ -114,6 +114,9 @@ class SQLToASTTranslator final : public boost::noncopyable {
 
   std::shared_ptr<AbstractASTNode> _validate_node(const std::shared_ptr<AbstractASTNode>& input_node);
 
+  std::vector<std::shared_ptr<Expression>> _retrieve_having_aggregates(
+      const hsql::Expr& expr, const std::shared_ptr<AbstractASTNode>& input_node);
+
  private:
   const bool _validate;
 };

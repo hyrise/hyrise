@@ -74,7 +74,7 @@ TYPED_TEST(OperatorsIndexColumnScanTest, DoubleScanOffsetPosition) {
   auto scan2 = std::make_shared<IndexColumnScan>(scan1, ColumnID{1}, ScanType::OpEquals, 118);
   scan2->execute();
 
-  auto& chunk = scan2->get_output()->get_chunk(ChunkID{1});
+  auto& chunk = scan2->get_output()->get_chunk(ChunkID{0});
   EXPECT_EQ(type_cast<int>((*chunk.get_column(ColumnID{0}))[0]), 18);
   EXPECT_EQ(type_cast<int>((*chunk.get_column(ColumnID{1}))[0]), 118);
 }

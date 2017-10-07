@@ -153,7 +153,9 @@ std::shared_ptr<const Table> TableScan::_on_execute() {
       }
 
       std::lock_guard<std::mutex> lock(output_mutex);
-      _output_table->add_chunk(std::move(chunk_out));
+      if (chunk_out.size() > 0 || _output_table->get_chunk(ChunkID{0}).size() == 0) {
+        _output_table->emplace_chunk(std::move(chunk_out));
+      }
     });
 
     jobs.push_back(job_task);

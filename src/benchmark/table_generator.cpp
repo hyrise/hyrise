@@ -45,7 +45,7 @@ std::shared_ptr<Table> TableGenerator::get_table(const ChunkID chunk_size, const
         chunk.add_column(std::make_shared<ValueColumn<int>>(std::move(value_vectors[j])));
         value_vectors[j] = tbb::concurrent_vector<int>(vector_size);
       }
-      table->add_chunk(std::move(chunk));
+      table->emplace_chunk(std::move(chunk));
       chunk = Chunk();
     }
     /*
@@ -62,7 +62,7 @@ std::shared_ptr<Table> TableGenerator::get_table(const ChunkID chunk_size, const
     for (size_t j = 0; j < _num_columns; j++) {
       chunk.add_column(std::make_shared<ValueColumn<int>>(std::move(value_vectors[j])));
     }
-    table->add_chunk(std::move(chunk));
+    table->emplace_chunk(std::move(chunk));
   }
 
   if (compress) {

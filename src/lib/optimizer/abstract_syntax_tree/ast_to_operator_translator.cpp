@@ -10,7 +10,8 @@
 #include "operators/delete.hpp"
 #include "operators/get_table.hpp"
 #include "operators/insert.hpp"
-#include "operators/join_nested_loop_a.hpp"
+#include "operators/join_hash.hpp"
+#include "operators/join_sort_merge.hpp"
 #include "operators/limit.hpp"
 #include "operators/maintenance/show_columns.hpp"
 #include "operators/maintenance/show_tables.hpp"
@@ -105,7 +106,13 @@ std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::_translate_join_node(
 
   DebugAssert(static_cast<bool>(join_node->join_column_ids()), "Cannot translate Join without join column ids.");
   DebugAssert(static_cast<bool>(join_node->scan_type()), "Cannot translate Join without ScanType.");
-  return std::make_shared<JoinNestedLoopA>(input_left_operator, input_right_operator, join_node->join_mode(),
+
+  if (*join_node->scan_type() == ScanType::OpEquals && join_node->join_mode() != JoinMode::Outer) {
+    return std::make_shared<JoinHash>(input_left_operator, input_right_operator, join_node->join_mode(),
+                                      *(join_node->join_column_ids()), *(join_node->scan_type()));
+  }
+
+  return std::make_shared<JoinSortMerge>(input_left_operator, input_right_operator, join_node->join_mode(),
                                            *(join_node->join_column_ids()), *(join_node->scan_type()));
 }
 
