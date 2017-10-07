@@ -13,7 +13,6 @@ namespace opossum {
 Delete::Delete(const std::string& table_name, const std::shared_ptr<const AbstractOperator>& values_to_delete)
     : AbstractReadWriteOperator{values_to_delete}, _table_name{table_name} {}
 
-
 const std::string Delete::name() const { return "Delete"; }
 
 uint8_t Delete::num_in_tables() const { return 1u; }
@@ -42,8 +41,8 @@ std::shared_ptr<const Table> Delete::_on_execute(std::shared_ptr<TransactionCont
 
       auto expected = 0u;
       // Actual row lock for delete happens here
-      const auto success = referenced_chunk.mvcc_columns()->tids[row_id.chunk_offset].compare_exchange_strong(
-          expected, _transaction_id);
+      const auto success =
+          referenced_chunk.mvcc_columns()->tids[row_id.chunk_offset].compare_exchange_strong(expected, _transaction_id);
 
       // the row is already locked and the transaction needs to be rolled back
       if (!success) {

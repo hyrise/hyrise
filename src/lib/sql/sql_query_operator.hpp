@@ -92,7 +92,7 @@ class SQLQueryOperator : public AbstractOperator {
 
   // True, if the generated plan will automatically be scheduled by the operator.
   const bool _schedule_plan;
-  
+
   // True, if the SQLToASTTranslator won’t add validate nodes
   const bool _skip_validation;
 

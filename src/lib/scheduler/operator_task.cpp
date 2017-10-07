@@ -9,8 +9,8 @@
 #include "operators/abstract_operator.hpp"
 #include "operators/abstract_read_write_operator.hpp"
 
-#include "scheduler/processing_unit.hpp"
 #include "scheduler/job_task.hpp"
+#include "scheduler/processing_unit.hpp"
 #include "scheduler/worker.hpp"
 
 namespace opossum {

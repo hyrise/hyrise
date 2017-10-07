@@ -40,7 +40,7 @@ ScanType translate_operator_type_to_scan_type(const hsql::OperatorType operator_
       {hsql::kOpEquals, ScanType::OpEquals},       {hsql::kOpNotEquals, ScanType::OpNotEquals},
       {hsql::kOpGreater, ScanType::OpGreaterThan}, {hsql::kOpGreaterEq, ScanType::OpGreaterThanEquals},
       {hsql::kOpLess, ScanType::OpLessThan},       {hsql::kOpLessEq, ScanType::OpLessThanEquals},
-    {hsql::kOpBetween, ScanType::OpBetween},     {hsql::kOpLike, ScanType::OpLike},
+      {hsql::kOpBetween, ScanType::OpBetween},     {hsql::kOpLike, ScanType::OpLike},
   };
 
   auto it = operator_to_scan_type.find(operator_type);
@@ -751,7 +751,8 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_show(const hsql:
   return {};
 }
 
-std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_validate_node(const std::shared_ptr<AbstractASTNode>& input_node) {
+std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_validate_node(
+    const std::shared_ptr<AbstractASTNode>& input_node) {
   if (!_validate) return input_node;
 
   auto validate_node = std::make_shared<ValidateNode>();

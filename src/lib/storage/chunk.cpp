@@ -72,7 +72,7 @@ uint32_t Chunk::size() const {
 
 void Chunk::grow_mvcc_column_size_by(size_t delta, CommitID begin_cid) {
   auto mvcc_columns = this->mvcc_columns();
-  
+
   mvcc_columns->tids.grow_to_at_least(size() + delta);
   mvcc_columns->begin_cids.grow_to_at_least(size() + delta, begin_cid);
   mvcc_columns->end_cids.grow_to_at_least(size() + delta, MAX_COMMIT_ID);

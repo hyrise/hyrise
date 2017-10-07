@@ -56,13 +56,13 @@ class Chunk : private Noncopyable {
   // creates an empty chunk without mvcc columns
   Chunk();
   explicit Chunk(const bool has_mvcc_columns);
-  explicit Chunk(const PolymorphicAllocator<Chunk> &alloc);
-  explicit Chunk(const PolymorphicAllocator<Chunk> &alloc, const bool has_mvcc_columns);
+  explicit Chunk(const PolymorphicAllocator<Chunk>& alloc);
+  explicit Chunk(const PolymorphicAllocator<Chunk>& alloc, const bool has_mvcc_columns);
 
   // we need to explicitly set the move constructor to default when
   // we overwrite the copy constructor
-  Chunk(Chunk &&) = default;
-  Chunk &operator=(Chunk &&) = default;
+  Chunk(Chunk&&) = default;
+  Chunk& operator=(Chunk&&) = default;
 
   // adds a column to the "right" of the chunk
   void add_column(std::shared_ptr<BaseColumn> column);
@@ -126,13 +126,13 @@ class Chunk : private Noncopyable {
    * so that they are effectively shared between the two
    * chunks. This is used in the Projection class.
    */
-  void use_mvcc_columns_from(const Chunk &chunk);
+  void use_mvcc_columns_from(const Chunk& chunk);
 
   std::vector<std::shared_ptr<BaseIndex>> get_indices_for(
-      const std::vector<std::shared_ptr<BaseColumn>> &columns) const;
+      const std::vector<std::shared_ptr<BaseColumn>>& columns) const;
 
   template <typename Index>
-  std::shared_ptr<BaseIndex> create_index(const std::vector<std::shared_ptr<BaseColumn>> &index_columns) {
+  std::shared_ptr<BaseIndex> create_index(const std::vector<std::shared_ptr<BaseColumn>>& index_columns) {
     auto index = std::make_shared<Index>(index_columns);
     _indices.emplace_back(index);
     return index;

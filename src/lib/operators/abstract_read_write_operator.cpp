@@ -6,7 +6,8 @@ AbstractReadWriteOperator::AbstractReadWriteOperator(const std::shared_ptr<const
                                                      const std::shared_ptr<const AbstractOperator> right)
     : AbstractOperator(left, right), _state{ReadWriteOperatorState::Pending} {}
 
-std::shared_ptr<AbstractOperator> AbstractReadWriteOperator::recreate(const std::vector<AllParameterVariant>& args) const {
+std::shared_ptr<AbstractOperator> AbstractReadWriteOperator::recreate(
+    const std::vector<AllParameterVariant>& args) const {
   Fail("Operator " + this->name() + " does not implement recreation.");
   return {};
 }
@@ -18,15 +19,13 @@ void AbstractReadWriteOperator::execute() {
   Assert(_state == ReadWriteOperatorState::Pending, "Operator needs to have state Pending in order to be executed.");
   AbstractOperator::execute();
 
-  if (_state == ReadWriteOperatorState::Failed)
-    return;
+  if (_state == ReadWriteOperatorState::Failed) return;
 
   _state = ReadWriteOperatorState::Executed;
 }
 
 void AbstractReadWriteOperator::commit_records(const CommitID cid) {
-  Assert(_state == ReadWriteOperatorState::Executed,
-         "Operator needs to have state Executed in order to be committed.");
+  Assert(_state == ReadWriteOperatorState::Executed, "Operator needs to have state Executed in order to be committed.");
 
   _on_commit_records(cid);
   _finish_commit();
@@ -47,9 +46,7 @@ bool AbstractReadWriteOperator::execute_failed() const {
   return _state == ReadWriteOperatorState::Failed || _state == ReadWriteOperatorState::RolledBack;
 }
 
-ReadWriteOperatorState AbstractReadWriteOperator::state() const {
-  return _state;
-}
+ReadWriteOperatorState AbstractReadWriteOperator::state() const { return _state; }
 
 uint8_t AbstractReadWriteOperator::num_out_tables() const { return 0; };
 
