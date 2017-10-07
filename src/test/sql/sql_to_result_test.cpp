@@ -128,6 +128,9 @@ const SQLTestParam test_queries[] = {
     {"SELECT * FROM int_float WHERE a >= 1234 AND b < 457.9", "src/test/tables/int_float_filtered.tbl"},
     {"SELECT * FROM int_string2 WHERE a BETWEEN 122 AND 124", "src/test/tables/int_string_filtered.tbl"},
     {"SELECT * FROM int_int_int WHERE a BETWEEN b AND 10", "src/test/tables/int_int_int_between_column_literal.tbl"},
+    {"SELECT * FROM int_float4 WHERE a > 12345 OR b < 351.0", "src/test/tables/int_float4_or_0.tbl"},
+    {"SELECT * FROM int_float4 WHERE a > 12345 OR (a <= 123 AND b > 400.0)", "src/test/tables/int_float4_or_1.tbl"},
+    {"SELECT * FROM int_float4 WHERE a > 12345 OR b < 351.0 OR (b > 457.0 AND b < 458.0)", "src/test/tables/int_float4_or_2.tbl"},
 
     // Projection
     {"SELECT a FROM int_float;", "src/test/tables/int.tbl"},

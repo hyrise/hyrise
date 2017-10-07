@@ -114,7 +114,7 @@ std::shared_ptr<const Table> TableScan::_on_execute() {
        * (b) the reference columns of the input table point to the same positions in the same order
        *     (i.e. they share their position list).
        */
-      if (_is_reference_table) {
+      if (_in_table->get_type() == TableType::References) {
         const auto &chunk_in = _in_table->get_chunk(chunk_id);
 
         auto filtered_pos_lists = std::map<std::shared_ptr<const PosList>, std::shared_ptr<PosList>>{};
@@ -171,14 +171,6 @@ void TableScan::_on_cleanup() { _impl.reset(); }
 
 void TableScan::_init_scan() {
   DebugAssert(_in_table->chunk_count() > 0u, "Input table must contain at least 1 chunk.");
-  const auto &first_chunk = _in_table->get_chunk(ChunkID{0u});
-
-  _is_reference_table = [&]() {
-    // We assume if one column is a reference column, all are.
-    const auto column = first_chunk.get_column(_left_column_id);
-    const auto ref_column = std::dynamic_pointer_cast<ReferenceColumn>(column);
-    return ref_column != nullptr;
-  }();
 
   if (_scan_type == ScanType::OpLike) {
     const auto left_column_type = _in_table->column_type(_left_column_id);

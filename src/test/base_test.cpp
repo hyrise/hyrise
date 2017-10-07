@@ -83,11 +83,18 @@ void BaseTest::_print_matrix(const BaseTest::Matrix& m) {
 ::testing::AssertionResult BaseTest::_table_equal(const Table& tleft, const Table& tright, bool order_sensitive) {
   Matrix left = _table_to_matrix(tleft);
   Matrix right = _table_to_matrix(tright);
+
+  const auto print_tables = [&]() {
+    std::cout << "== Tables are not equal ==" << std::endl;
+    _print_matrix(left);
+    _print_matrix(right);
+    std::cout << "==========================" << std::endl;
+  };
+
   // compare schema of tables
   //  - column count
   if (tleft.col_count() != tright.col_count()) {
-    _print_matrix(left);
-    _print_matrix(right);
+    print_tables();
     return ::testing::AssertionFailure() << "Number of columns is different.";
   }
   //  - column names and types
@@ -97,6 +104,7 @@ void BaseTest::_print_matrix(const BaseTest::Matrix& m) {
       std::cout << "Column with ID " << col_id << " is different" << std::endl;
       std::cout << "Got: " << tleft.column_name(col_id) << " (" << tleft.column_type(col_id) << ")" << std::endl;
       std::cout << "Expected: " << tright.column_name(col_id) << " (" << tright.column_type(col_id) << ")" << std::endl;
+      print_tables();
       return ::testing::AssertionFailure() << "Table schema is different.";
     }
   }
@@ -104,10 +112,9 @@ void BaseTest::_print_matrix(const BaseTest::Matrix& m) {
   // compare content of tables
   //  - row count for fast failure
   if (tleft.row_count() != tright.row_count()) {
-    _print_matrix(left);
-    _print_matrix(right);
     std::cout << "Got: " << tleft.row_count() << " rows" << std::endl;
     std::cout << "Expected: " << tright.row_count() << " rows" << std::endl;
+    print_tables();
     return ::testing::AssertionFailure() << "Number of rows is different.";
   }
 
@@ -137,6 +144,10 @@ void BaseTest::_print_matrix(const BaseTest::Matrix& m) {
         EXPECT_EQ(left[row][col], right[row][col]) << "Row:" << row + 1 << " Col:" << col + 1;
       }
     }
+
+  if (::testing::Test::HasFailure()) {
+    print_tables();
+  }
 
   return ::testing::AssertionSuccess();
 }

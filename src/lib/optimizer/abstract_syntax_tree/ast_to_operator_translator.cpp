@@ -20,6 +20,7 @@
 #include "operators/sort.hpp"
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
+#include "operators/union_unique.hpp"
 #include "operators/update.hpp"
 #include "optimizer/abstract_syntax_tree/abstract_ast_node.hpp"
 #include "optimizer/abstract_syntax_tree/aggregate_node.hpp"
@@ -33,6 +34,7 @@
 #include "optimizer/abstract_syntax_tree/show_columns_node.hpp"
 #include "optimizer/abstract_syntax_tree/sort_node.hpp"
 #include "optimizer/abstract_syntax_tree/stored_table_node.hpp"
+#include "optimizer/abstract_syntax_tree/union_node.hpp"
 #include "optimizer/abstract_syntax_tree/update_node.hpp"
 #include "utils/performance_warning.hpp"
 
@@ -74,6 +76,8 @@ ASTToOperatorTranslator::ASTToOperatorTranslator() {
       std::bind(&ASTToOperatorTranslator::_translate_dummy_table_node, this, std::placeholders::_1);
   _operator_factory[ASTNodeType::Update] =
       std::bind(&ASTToOperatorTranslator::_translate_update_node, this, std::placeholders::_1);
+  _operator_factory[ASTNodeType::Union] =
+      std::bind(&ASTToOperatorTranslator::_translate_union_node, this, std::placeholders::_1);
 
   // Maintenance operators
   _operator_factory[ASTNodeType::ShowTables] =
@@ -296,6 +300,22 @@ std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::_translate_update_nod
 
   auto projection = std::make_shared<Projection>(input_operator, new_value_exprs);
   return std::make_shared<Update>(update_node->table_name(), input_operator, projection);
+}
+
+std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::_translate_union_node(
+  const std::shared_ptr<AbstractASTNode> &node
+) const {
+  const auto union_node = std::dynamic_pointer_cast<UnionNode>(node);
+
+  const auto input_operator_left = translate_node(node->left_child());
+  const auto input_operator_right = translate_node(node->right_child());
+
+  switch (union_node->union_mode()) {
+    case UnionMode::Unique: return std::make_shared<UnionUnique>(input_operator_left, input_operator_right); break;
+    default:
+      Fail("UnionMode not supported");
+  }
+  return nullptr; // Shouldn't be reached, but makes compilers happy
 }
 
 std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::_translate_show_tables_node(

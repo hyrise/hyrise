@@ -19,6 +19,7 @@
 #include "optimizer/abstract_syntax_tree/show_tables_node.hpp"
 #include "optimizer/abstract_syntax_tree/sort_node.hpp"
 #include "optimizer/abstract_syntax_tree/stored_table_node.hpp"
+#include "optimizer/abstract_syntax_tree/union_node.hpp"
 #include "optimizer/abstract_syntax_tree/update_node.hpp"
 #include "optimizer/expression.hpp"
 #include "sql/sql_expression_translator.hpp"
@@ -423,9 +424,15 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_where(
     const hsql::Expr& expr, const std::shared_ptr<AbstractASTNode>& input_node) {
   DebugAssert(expr.isType(hsql::kExprOperator), "Filter expression clause has to be of type operator!");
 
-  // If the expression is a nested expression, recursively resolve.
-  // TODO(anybody): implement OR.
-  DebugAssert(expr.opType != hsql::kOpOr, "OR is currently not supported by SQLToASTTranslator");
+  /**
+   * If the expression is a nested expression, recursively resolve
+   */
+  if (expr.opType == hsql::kOpOr) {
+    auto union_unique_node = std::make_shared<UnionNode>(UnionMode::Unique);
+    union_unique_node->set_left_child(_translate_where(*expr.expr, input_node));
+    union_unique_node->set_right_child(_translate_where(*expr.expr2, input_node));
+    return union_unique_node;
+  }
 
   if (expr.opType == hsql::kOpAnd) {
     auto filter_node = _translate_where(*expr.expr, input_node);

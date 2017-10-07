@@ -5,10 +5,11 @@
 #include <utility>
 #include <vector>
 
-#include "../lib/storage/dictionary_compression.hpp"
-#include "../lib/storage/table.hpp"
-#include "../lib/storage/value_column.hpp"
-#include "../lib/types.hpp"
+#include "operators/abstract_operator.hpp"
+#include "storage/dictionary_compression.hpp"
+#include "storage/table.hpp"
+#include "storage/value_column.hpp"
+#include "types.hpp"
 
 #include "gtest/gtest.h"
 
@@ -56,6 +57,12 @@ class BaseTest : public ::testing::Test {
     auto vector_values = tbb::concurrent_vector<T>(values.begin(), values.end());
     auto value_column = std::make_shared<ValueColumn<T>>(std::move(vector_values));
     return DictionaryCompression::compress_column(type, value_column);
+  }
+
+  void _execute_all(const std::vector<std::shared_ptr<AbstractOperator>> & operators) {
+    for (auto & op : operators) {
+      op->execute();
+    }
   }
 
  public:
