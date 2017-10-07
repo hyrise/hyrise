@@ -26,7 +26,7 @@ Chunk::Chunk(const PolymorphicAllocator<Chunk>& alloc) : Chunk(alloc, false) {}
 
 Chunk::Chunk(const PolymorphicAllocator<Chunk>& alloc, const bool has_mvcc_columns)
     : _alloc(alloc), _columns(alloc), _indices(alloc) {
-  if (has_mvcc_columns) _mvcc_columns = std::make_unique<MvccColumns>();
+  if (has_mvcc_columns) _mvcc_columns = std::make_shared<MvccColumns>();
 }
 
 void Chunk::add_column(std::shared_ptr<BaseColumn> column) {
@@ -71,18 +71,16 @@ uint32_t Chunk::size() const {
 }
 
 void Chunk::grow_mvcc_column_size_by(size_t delta, CommitID begin_cid) {
-  _mvcc_columns->tids.grow_to_at_least(size() + delta);
-  _mvcc_columns->begin_cids.grow_to_at_least(size() + delta, begin_cid);
-  _mvcc_columns->end_cids.grow_to_at_least(size() + delta, MAX_COMMIT_ID);
+  auto mvcc_columns = this->mvcc_columns();
+  
+  mvcc_columns->tids.grow_to_at_least(size() + delta);
+  mvcc_columns->begin_cids.grow_to_at_least(size() + delta, begin_cid);
+  mvcc_columns->end_cids.grow_to_at_least(size() + delta, MAX_COMMIT_ID);
 }
 
 void Chunk::use_mvcc_columns_from(const Chunk& chunk) {
-  _mvcc_columns = std::make_unique<MvccColumns>();
-
-  auto mvcc_columns = chunk.mvcc_columns();
-  _mvcc_columns->begin_cids = mvcc_columns->begin_cids;
-  _mvcc_columns->end_cids = mvcc_columns->end_cids;
-  _mvcc_columns->tids.grow_by(_mvcc_columns->tids.size());
+  Assert(chunk.has_mvcc_columns(), "Passed chunk needs to have mvcc columns.");
+  _mvcc_columns = chunk._mvcc_columns;
 }
 
 bool Chunk::has_mvcc_columns() const { return _mvcc_columns != nullptr; }
