@@ -17,8 +17,8 @@
 #include <vector>
 
 #include "SQLParser.h"
-#include "concurrency/transaction_manager.hpp"
 #include "concurrency/transaction_context.hpp"
+#include "concurrency/transaction_manager.hpp"
 #include "operators/get_table.hpp"
 #include "operators/import_csv.hpp"
 #include "operators/print.hpp"
@@ -367,16 +367,17 @@ int Console::exit(const std::string&) { return Console::ReturnCode::Quit; }
 int Console::help(const std::string&) {
   out("HYRISE SQL Interface\n\n");
   out("Available commands:\n");
-  out(
-      "  generate [TABLENAME] - Generate available TPC-C tables, or a specific table if TABLENAME is specified\n");
-  out(
-      "  load FILE TABLENAME  - Load table from disc specified by filepath FILE, store it with name TABLENAME\n");
+  out("  generate [TABLENAME] - Generate available TPC-C tables, or a specific table if TABLENAME is specified\n");
+  out("  load FILE TABLENAME  - Load table from disc specified by filepath FILE, store it with name TABLENAME\n");
   out("  script SCRIPTFILE       - Execute script specified by SCRIPTFILE\n");
-  out("  print TABLENAME         - Fully prints the given table\n");
-  out("  visualize [options] SQL - Visualizes a SQL query\n");
+  out("  print TABLENAME         - Fully print the given table (including MVCC columns)\n");
+  out("  visualize [options] SQL - Visualize a SQL query\n");
   out("             noexec          - without executing the query\n");
   out("             ast             - print the raw abstract syntax tree\n");
   out("             astopt          - print the optimized abstract syntax tree\n");
+  out("  begin                - Manually create a new transaction (Auto-commit is active unless begin is called)\n");
+  out("  rollback             - Roll back a manually created transaction\n");
+  out("  commit               - Commit a manually created transaction\n");
   out("  quit                    - Exit the HYRISE Console\n");
   out("  help                    - Show this message\n\n");
   out("After TPC-C tables are generated, SQL queries can be executed.\n");
@@ -623,7 +624,8 @@ void Console::handle_signal(int sig) {
 int Console::begin_transaction(const std::string& input) {
   if (_tcontext != nullptr) {
     const auto tid = std::to_string(_tcontext->transaction_id());
-    out("There is already an active transaction (" + tid + "). Type `rollback` or `commit` before beginning a new transaction.\n");
+    out("There is already an active transaction (" + tid + "). ");
+    out("Type `rollback` or `commit` before beginning a new transaction.\n");
     return ReturnCode::Error;
   }
 
@@ -647,12 +649,12 @@ int Console::rollback_transaction(const std::string& input) {
   const auto tid = std::to_string(_tcontext->transaction_id());
   out("Transaction (" + tid + ") has been rolled back.\n");
 
-   _tcontext = nullptr;
+  _tcontext = nullptr;
   return ReturnCode::Ok;
 }
 
 int Console::commit_transaction(const std::string& input) {
-    if (_tcontext == nullptr) {
+  if (_tcontext == nullptr) {
     out("Console is an auto-commit mode. Type `begin` to start a manual transaction.\n");
     return ReturnCode::Error;
   }
@@ -664,7 +666,7 @@ int Console::commit_transaction(const std::string& input) {
   const auto tid = std::to_string(_tcontext->transaction_id());
   out("Transaction (" + tid + ") has been committed.\n");
 
-   _tcontext = nullptr;
+  _tcontext = nullptr;
   return ReturnCode::Ok;
 }
 
