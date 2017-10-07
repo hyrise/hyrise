@@ -28,7 +28,7 @@ set(
     operators/insert_test.cpp
     operators/join_equi_test.cpp
     operators/join_full_test.cpp
-    operators/join_hash_test.cpp
+    operators/join_null_test.cpp
     operators/join_test.hpp
     operators/limit_test.cpp
     operators/print_test.cpp
@@ -68,6 +68,9 @@ set(
     sql/sql_to_ast_translator_test.cpp
     sql/sql_to_result_test.cpp
     sql/tpch_test.cpp
+    sql/sqlite_testrunner/sqlite_testrunner.cpp
+    sql/sqlite_testrunner/sqlite_wrapper.cpp
+    sql/sqlite_testrunner/sqlite_wrapper.hpp
     storage/adaptive_radix_tree_index_test.cpp
     storage/chunk_test.cpp
     storage/composite_group_key_index_test.cpp
@@ -99,6 +102,7 @@ set (
 set(
     LIBRARIES
     gtest
+    sqlite3
 )
 
 # Build special ASAN version of googletest
@@ -112,6 +116,11 @@ add_library(gtestAsan EXCLUDE_FROM_ALL STATIC ${GTEST_SOURCES})
 set_target_properties(gtestAsan PROPERTIES SUFFIX "_asan")
 set_target_properties(gtestAsan PROPERTIES COMPILE_FLAGS "-fsanitize=address -fno-omit-frame-pointer")
 
+set(
+    LIBRARIES_ASAN
+    gtestAsan
+    sqlite3
+)
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 
@@ -126,7 +135,7 @@ set_target_properties(opossumCoverage PROPERTIES COMPILE_FLAGS "-fprofile-arcs -
 
 # Configure opossumAsanApp
 add_executable(opossumAsan EXCLUDE_FROM_ALL ${OPOSSUM_TEST_SOURCES})
-target_link_libraries(opossumAsan opossumAsanLib gtestAsan -fsanitize=address)
+target_link_libraries(opossumAsan opossumAsanLib ${LIBRARIES_ASAN} -fsanitize=address)
 set_target_properties(opossumAsan PROPERTIES COMPILE_FLAGS "-fsanitize=address -fno-omit-frame-pointer")
 
 # Configure opossumTestTPCC
