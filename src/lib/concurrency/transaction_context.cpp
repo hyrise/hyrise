@@ -87,8 +87,14 @@ bool TransactionContext::commit(std::function<void(TransactionID)> callback) {
     return true;
   }()), "All read/write operators need to have been committed.");
 
-  _commit_context->make_pending(_transaction_id, [this, callback](auto transaction_id) {
-    this->_transition(TransactionPhase::Pending, TransactionPhase::Committed);
+
+  auto context_weak_ptr = this->weak_from_this();
+  _commit_context->make_pending(_transaction_id, [context_weak_ptr, callback](auto transaction_id) {
+    // If the transaction context still exists, set its phase to Committed.
+    if (auto context_ptr = context_weak_ptr.lock()) {
+      context_ptr->_transition(TransactionPhase::Pending, TransactionPhase::Committed);
+    }
+
     if (callback) callback(transaction_id);
   });
 

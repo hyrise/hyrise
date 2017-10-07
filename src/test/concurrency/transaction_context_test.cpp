@@ -197,6 +197,9 @@ TEST_F(TransactionContextTest, CallbackFiresWhenCommitted) {
 
   EXPECT_TRUE(context_1_committed);
   EXPECT_TRUE(context_2_committed);
+
+  EXPECT_EQ(context_1->phase(), TransactionPhase::Committed);
+  EXPECT_EQ(context_2->phase(), TransactionPhase::Committed);
 }
 
 }  // namespace opossum
