@@ -62,7 +62,7 @@ void OperatorsDeleteTest::helper(bool commit) {
 
   auto expected_end_cid = cid;
   if (commit) {
-    delete_op->commit(cid);
+    delete_op->commit_records(cid);
 
     // Delete successful, one row left.
     EXPECT_EQ(_table->approx_valid_row_count(), 1u);
@@ -117,11 +117,11 @@ TEST_F(OperatorsDeleteTest, DetectDirtyWrite) {
   EXPECT_TRUE(delete_op2->execute_failed());
 
   // MVCC commit.
-  TransactionManager::get().prepare_commit(*t1_context);
+  t1_context->prepare_commit();
 
-  delete_op1->commit(t1_context->commit_id());
+  delete_op1->commit_records(t1_context->commit_id());
 
-  TransactionManager::get().commit(*t1_context);
+  t1_context->commit();
 
   // Get validated table which should have only one row deleted.
   auto t_context = TransactionManager::get().new_transaction_context();
@@ -150,8 +150,10 @@ TEST_F(OperatorsDeleteTest, UpdateAfterDeleteFails) {
   delete_op->set_transaction_context(t1_context);
 
   delete_op->execute();
-  TransactionManager::get().prepare_commit(*t1_context);
-  delete_op->commit(t1_context->commit_id());
+
+  t1_context->prepare_commit();
+  delete_op->commit_records(t1_context->commit_id());
+
   EXPECT_FALSE(delete_op->execute_failed());
 
   // this update tries to update the values that have been deleted in another transaction and should fail.

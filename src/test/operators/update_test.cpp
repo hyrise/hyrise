@@ -6,7 +6,6 @@
 #include "gtest/gtest.h"
 
 #include "../../lib/concurrency/transaction_manager.hpp"
-#include "../../lib/operators/commit_records.hpp"
 #include "../../lib/operators/get_table.hpp"
 #include "../../lib/operators/projection.hpp"
 #include "../../lib/operators/table_scan.hpp"
@@ -51,13 +50,9 @@ void OperatorsUpdateTest::helper(std::shared_ptr<GetTable> table_to_update, std:
   update->execute();
 
   // MVCC commit.
-  TransactionManager::get().prepare_commit(*t_context);
-
-  auto commit_op = std::make_shared<CommitRecords>();
-  commit_op->set_transaction_context(t_context);
-  commit_op->execute();
-
-  TransactionManager::get().commit(*t_context);
+  t_context->prepare_commit();
+  t_context->commit_operators();
+  t_context->commit();
 
   // Get validated table which should have the same row twice.
   t_context = TransactionManager::get().new_transaction_context();
@@ -184,12 +179,8 @@ TEST_F(OperatorsUpdateTest, EmptyChunks) {
   update->execute();
 
   // MVCC commit.
-  TransactionManager::get().prepare_commit(*t_context);
-
-  auto commit_op = std::make_shared<CommitRecords>();
-  commit_op->set_transaction_context(t_context);
-  commit_op->execute();
-
-  TransactionManager::get().commit(*t_context);
+  t_context->prepare_commit();
+  t_context->commit_operators();
+  t_context->commit();
 }
 }  // namespace opossum
