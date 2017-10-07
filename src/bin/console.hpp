@@ -103,14 +103,13 @@ class Console {
   int _execute_plan(const SQLQueryPlan& plan);
 
   // Command functions, registered to be called from the Console
-  static int exit(const std::string& args);
-  static int help(const std::string& args);
-  static int generate_tpcc(const std::string& args);
-  static int load_table(const std::string& args);
-  static int exec_script(const std::string& args);
-  static int print_table(const std::string& args);
-
-  static int visualize(const std::string& input);
+  int exit(const std::string& args);
+  int help(const std::string& args);
+  int generate_tpcc(const std::string& args);
+  int load_table(const std::string& args);
+  int exec_script(const std::string& args);
+  int print_table(const std::string& args);
+  int visualize(const std::string& input);
 
   int begin_transaction(const std::string& input);
   int rollback_transaction(const std::string& input);

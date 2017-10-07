@@ -19,7 +19,7 @@ class CommitContext;
  *  | Active |
  *  +--------+
  *      |
- *   Execute operators----------------+
+ *   Execute operators ---------------+
  *      |                             |
  *      | IF (an operator failed)     | ELSE
  *      |                             |

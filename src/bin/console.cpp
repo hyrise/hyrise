@@ -90,14 +90,14 @@ Console::Console()
   rl_completer_word_break_characters = const_cast<char*>(" \t\n\"\\'`@$><=;|&{(");
 
   // Register default commands to Console
-  register_command("exit", exit);
-  register_command("quit", exit);
-  register_command("help", help);
-  register_command("generate", generate_tpcc);
-  register_command("load", load_table);
-  register_command("script", exec_script);
-  register_command("print", print_table);
-  register_command("visualize", visualize);
+  register_command("exit", std::bind(&Console::exit, this, std::placeholders::_1));
+  register_command("quit", std::bind(&Console::exit, this, std::placeholders::_1));
+  register_command("help", std::bind(&Console::help, this, std::placeholders::_1));
+  register_command("generate", std::bind(&Console::generate_tpcc, this, std::placeholders::_1));
+  register_command("load", std::bind(&Console::load_table, this, std::placeholders::_1));
+  register_command("script", std::bind(&Console::exec_script, this, std::placeholders::_1));
+  register_command("print", std::bind(&Console::print_table, this, std::placeholders::_1));
+  register_command("visualize", std::bind(&Console::visualize, this, std::placeholders::_1));
   register_command("begin", std::bind(&Console::begin_transaction, this, std::placeholders::_1));
   register_command("rollback", std::bind(&Console::rollback_transaction, this, std::placeholders::_1));
   register_command("commit", std::bind(&Console::commit_transaction, this, std::placeholders::_1));
@@ -284,8 +284,6 @@ int Console::_eval_sql(const std::string& sql) {
   out(std::to_string(row_count) + " rows (PARSE: " + std::to_string(parse_elapsed_ms) + " ms, COMPILE: " +
       std::to_string(plan_elapsed_ms) + " ms, EXECUTE: " + std::to_string(execution_elapsed_ms) + " ms (wall time))\n");
 
-  // TODO(mjendruk): Wait for all tasks to finish.
-
   // Commit
   if (transaction_context->phase() == TransactionPhase::Failed) {
     out("An operator failed and the transaction has been rolled back.");
@@ -367,31 +365,29 @@ void Console::out(std::shared_ptr<const Table> table) {
 int Console::exit(const std::string&) { return Console::ReturnCode::Quit; }
 
 int Console::help(const std::string&) {
-  auto& console = Console::get();
-  console.out("HYRISE SQL Interface\n\n");
-  console.out("Available commands:\n");
-  console.out(
+  out("HYRISE SQL Interface\n\n");
+  out("Available commands:\n");
+  out(
       "  generate [TABLENAME] - Generate available TPC-C tables, or a specific table if TABLENAME is specified\n");
-  console.out(
+  out(
       "  load FILE TABLENAME  - Load table from disc specified by filepath FILE, store it with name TABLENAME\n");
-  console.out("  script SCRIPTFILE       - Execute script specified by SCRIPTFILE\n");
-  console.out("  print TABLENAME         - Fully prints the given table\n");
-  console.out("  visualize [options] SQL - Visualizes a SQL query\n");
-  console.out("             noexec          - without executing the query\n");
-  console.out("             ast             - print the raw abstract syntax tree\n");
-  console.out("             astopt          - print the optimized abstract syntax tree\n");
-  console.out("  quit                    - Exit the HYRISE Console\n");
-  console.out("  help                    - Show this message\n\n");
-  console.out("After TPC-C tables are generated, SQL queries can be executed.\n");
-  console.out("Example:\n");
-  console.out("SELECT * FROM DISTRICT\n");
+  out("  script SCRIPTFILE       - Execute script specified by SCRIPTFILE\n");
+  out("  print TABLENAME         - Fully prints the given table\n");
+  out("  visualize [options] SQL - Visualizes a SQL query\n");
+  out("             noexec          - without executing the query\n");
+  out("             ast             - print the raw abstract syntax tree\n");
+  out("             astopt          - print the optimized abstract syntax tree\n");
+  out("  quit                    - Exit the HYRISE Console\n");
+  out("  help                    - Show this message\n\n");
+  out("After TPC-C tables are generated, SQL queries can be executed.\n");
+  out("Example:\n");
+  out("SELECT * FROM DISTRICT\n");
   return Console::ReturnCode::Ok;
 }
 
 int Console::generate_tpcc(const std::string& tablename) {
-  auto& console = Console::get();
   if (tablename.empty() || "ALL" == tablename) {
-    console.out("Generating TPCC tables (this might take a while) ...\n");
+    out("Generating TPCC tables (this might take a while) ...\n");
     auto tables = tpcc::TpccTableGenerator().generate_all_tables();
     for (auto& pair : tables) {
       StorageManager::get().add_table(pair.first, pair.second);
@@ -399,10 +395,10 @@ int Console::generate_tpcc(const std::string& tablename) {
     return Console::ReturnCode::Ok;
   }
 
-  console.out("Generating TPCC table: \"" + tablename + "\" ...\n");
+  out("Generating TPCC table: \"" + tablename + "\" ...\n");
   auto table = tpcc::TpccTableGenerator::generate_tpcc_table(tablename);
   if (table == nullptr) {
-    console.out("Error: No TPCC table named \"" + tablename + "\" available.\n");
+    out("Error: No TPCC table named \"" + tablename + "\" available.\n");
     return Console::ReturnCode::Error;
   }
 
@@ -411,15 +407,14 @@ int Console::generate_tpcc(const std::string& tablename) {
 }
 
 int Console::load_table(const std::string& args) {
-  auto& console = Console::get();
   std::string input = args;
   boost::algorithm::trim<std::string>(input);
   std::vector<std::string> arguments;
   boost::algorithm::split(arguments, input, boost::is_space());
 
   if (arguments.size() != 2) {
-    console.out("Usage:\n");
-    console.out("  load FILEPATH TABLENAME\n");
+    out("Usage:\n");
+    out("  load FILEPATH TABLENAME\n");
     return ReturnCode::Error;
   }
 
@@ -430,13 +425,13 @@ int Console::load_table(const std::string& args) {
   boost::algorithm::split(file_parts, filepath, boost::is_any_of("."));
   const std::string& extension = file_parts.back();
 
-  console.out("Loading " + filepath + " into table \"" + tablename + "\" ...\n");
+  out("Loading " + filepath + " into table \"" + tablename + "\" ...\n");
   if (extension == "csv") {
     auto importer = std::make_shared<ImportCsv>(filepath, tablename);
     try {
       importer->execute();
     } catch (const std::exception& exception) {
-      console.out("Exception thrown while importing CSV:\n  " + std::string(exception.what()) + "\n");
+      out("Exception thrown while importing CSV:\n  " + std::string(exception.what()) + "\n");
       return ReturnCode::Error;
     }
   } else if (extension == "tbl") {
@@ -444,11 +439,11 @@ int Console::load_table(const std::string& args) {
       auto table = opossum::load_table(filepath, 0);
       StorageManager::get().add_table(tablename, table);
     } catch (const std::exception& exception) {
-      console.out("Exception thrown while importing TBL:\n  " + std::string(exception.what()) + "\n");
+      out("Exception thrown while importing TBL:\n  " + std::string(exception.what()) + "\n");
       return ReturnCode::Error;
     }
   } else {
-    console.out("Error: Unsupported file extension '" + extension + "'\n");
+    out("Error: Unsupported file extension '" + extension + "'\n");
     return ReturnCode::Error;
   }
 
@@ -456,15 +451,14 @@ int Console::load_table(const std::string& args) {
 }
 
 int Console::print_table(const std::string& args) {
-  auto& console = Console::get();
   std::string input = args;
   boost::algorithm::trim<std::string>(input);
   std::vector<std::string> arguments;
   boost::algorithm::split(arguments, input, boost::is_space());
 
   if (arguments.size() != 1) {
-    console.out("Usage:\n");
-    console.out("  print TABLENAME\n");
+    out("Usage:\n");
+    out("  print TABLENAME\n");
     return ReturnCode::Error;
   }
 
@@ -474,7 +468,7 @@ int Console::print_table(const std::string& args) {
   try {
     gt->execute();
   } catch (const std::exception& exception) {
-    console.out("Exception thrown while loading table:\n  " + std::string(exception.what()) + "\n");
+    out("Exception thrown while loading table:\n  " + std::string(exception.what()) + "\n");
     return ReturnCode::Error;
   }
 
@@ -482,7 +476,7 @@ int Console::print_table(const std::string& args) {
   try {
     print->execute();
   } catch (const std::exception& exception) {
-    console.out("Exception thrown while printing table:\n  " + std::string(exception.what()) + "\n");
+    out("Exception thrown while printing table:\n  " + std::string(exception.what()) + "\n");
     return ReturnCode::Error;
   }
 
@@ -499,20 +493,19 @@ int Console::visualize(const std::string& input) {
   sql = input.substr(mode.size(), input.size());
   // Removes mode from sql string. If no mode is set, does nothing.
 
-  auto& console = Console::get();
   SQLQueryPlan plan;
   hsql::SQLParserResult parse_result;
 
   try {
     hsql::SQLParser::parse(sql, &parse_result);
   } catch (const std::exception& exception) {
-    console.out("Exception thrown while parsing SQL query:\n  " + std::string(exception.what()) + "\n");
+    out("Exception thrown while parsing SQL query:\n  " + std::string(exception.what()) + "\n");
     return ReturnCode::Error;
   }
 
   // Check if SQL query is valid
   if (!parse_result.isValid()) {
-    console.out("Error: SQL query not valid.\n");
+    out("Error: SQL query not valid.\n");
     return 1;
   }
 
@@ -530,7 +523,7 @@ int Console::visualize(const std::string& input) {
       img_filename = mode + ".png";
       ASTVisualizer::visualize(ast_roots, dot_filename, img_filename);
     } catch (const std::exception& exception) {
-      console.out("Exception while creating AST:\n  " + std::string(exception.what()) + "\n");
+      out("Exception while creating AST:\n  " + std::string(exception.what()) + "\n");
       return ReturnCode::Error;
     }
   } else {
@@ -538,12 +531,34 @@ int Console::visualize(const std::string& input) {
     try {
       plan = SQLPlanner::plan(parse_result);
     } catch (const std::exception& exception) {
-      console.out("Exception thrown while compiling query plan:\n  " + std::string(exception.what()) + "\n");
+      out("Exception thrown while compiling query plan:\n  " + std::string(exception.what()) + "\n");
       return ReturnCode::Error;
     }
 
     if (mode != "noexec") {
-      if (console._execute_plan(plan) == ReturnCode::Error) return ReturnCode::Error;
+      const auto auto_commit = (_tcontext == nullptr);
+      auto transaction_context = auto_commit ? TransactionManager::get().new_transaction_context() : _tcontext;
+
+      plan.set_transaction_context(transaction_context);
+
+      if (_execute_plan(plan) == ReturnCode::Error) {
+        transaction_context->rollback_operators();
+        transaction_context->mark_as_rolled_back();
+        _tcontext = nullptr;
+        return ReturnCode::Error;
+      }
+
+      if (transaction_context->phase() == TransactionPhase::Failed) {
+        out("An operator failed and the transaction has been rolled back.");
+        _tcontext = nullptr;
+        return ReturnCode::Error;
+      }
+
+      if (auto_commit) {
+        transaction_context->prepare_commit();
+        transaction_context->commit_operators();
+        transaction_context->commit();
+      }
     }
 
     dot_filename = ".queryplan.dot";
@@ -555,7 +570,7 @@ int Console::visualize(const std::string& input) {
   if (ret != 0) {
     std::string msg{"Currently, only iTerm2 can print the visualization inline. You can find the plan at "};
     msg += dot_filename + "\n";
-    console.out(msg);
+    out(msg);
 
     return ReturnCode::Ok;
   }
@@ -568,28 +583,27 @@ int Console::visualize(const std::string& input) {
 }
 
 int Console::exec_script(const std::string& script_file) {
-  auto& console = Console::get();
   auto filepath = script_file;
   boost::algorithm::trim(filepath);
   std::ifstream script(filepath);
 
   if (!script.good()) {
-    console.out("Error: Script file '" + filepath + "' does not exist.\n");
+    out("Error: Script file '" + filepath + "' does not exist.\n");
     return ReturnCode::Error;
   }
 
-  console.out("Executing script file: " + filepath + "\n");
-  console._verbose = true;
+  out("Executing script file: " + filepath + "\n");
+  _verbose = true;
   std::string command;
   int retCode = ReturnCode::Ok;
   while (std::getline(script, command)) {
-    retCode = console._eval(command);
+    retCode = _eval(command);
     if (retCode == ReturnCode::Error || retCode == ReturnCode::Quit) {
       break;
     }
   }
-  console.out("Executing script file done\n");
-  console._verbose = false;
+  out("Executing script file done\n");
+  _verbose = false;
   return retCode;
 }
 
