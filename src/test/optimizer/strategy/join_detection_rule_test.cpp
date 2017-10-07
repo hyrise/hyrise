@@ -463,7 +463,7 @@ TEST_P(JoinDetectionRuleTest, JoinDetectionSQL) {
 
   hsql::SQLParserResult parse_result;
   hsql::SQLParser::parseSQLString(params.query, &parse_result);
-  auto node = SQLToASTTranslator::get().translate_parse_result(parse_result)[0];
+  auto node = SQLToASTTranslator{false}.translate_parse_result(parse_result)[0];
 
   auto before = _count_cross_joins(node);
   auto output = StrategyBaseTest::apply_rule(_rule, node);

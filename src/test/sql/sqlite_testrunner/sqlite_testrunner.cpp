@@ -74,7 +74,7 @@ TEST_F(SQLiteTestRunner, CompareToSQLiteTestRunner) {
       continue;
     }
 
-    auto plan = SQLPlanner::plan(parse_result);
+    auto plan = SQLPlanner::plan(parse_result, false);
     auto result_operator = plan.tree_roots().front();
 
     auto tasks = OperatorTask::make_tasks_from_operator(result_operator);
