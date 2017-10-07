@@ -6,7 +6,6 @@
 
 #include "types.hpp"
 
-// TODO(mjendruk): Update this comment!
 /**
  * MVCC overview
  *
@@ -14,27 +13,24 @@
  * http://15721.courses.cs.cmu.edu/spring2016/papers/schwalb-imdm2014.pdf
  *
  * Conceptually, the idea is that each row has additional columns which are used to mark rows as locked for a
- * transaction, and to describe when the row was created and deleted to ensure correct visibility. These vectors are
- * written to by AbstractReadWriteOperators, of which there are mainly Insert, Update and Delete,
- * as well as CommitRecords and RollbackRecords.
+ * transaction and to describe when the row was created and deleted to ensure correct visibility. These vectors are
+ * written to by AbstractReadWriteOperators, i.e., Insert, Update and Delete.
  *
  * Rows invisible for the current transaction are filtered by the Validate operator.
-
- * The CommitRecords operator must be run at the end of each transaction. To complete the process of making changes
- visible,
- * TransactionManager::commit must be called.
  *
  * ReadWriteOperators can fail if they detect conflicting writes by other operators. In that case, the transaction must
- * be rolled back by running the RollbackRecords operator.
+ * be rolled back. All executed read/write operators’ rollback_records() method needs to called and the transaction be
+ * marked as rolled back.
  *
  * The TransactionManager is a thread-safe singleton that hands out TransactionContexts with monotonically increasing
- * IDs and ensures all transactions are committed in the correct order. It also holds a global _last_commit_id, which is
- * the commit id of the last transaction that has been committed. When creating a new TransactionContext, it will get
- * get the current _last_commit_id and thus "see" all inserts and deletes that happened up until that commit ID.
+ * IDs and ensures all transactions are committed in the correct order. It also holds a global last commit ID, which is
+ * the commit ID of the last transaction that has been committed. When a new transaction context is created, it retains
+ * a copy of the current last commit ID, which represents a snaphot of the database. The last commit ID together with
+ * the MVCC columns is used to filter out any changes made after the creation transaction context.
  *
  * TransactionContext contains data used by a transaction, mainly its ID, the last commit ID explained above, and,
  * when it enters the commit phase, the TransactionManager gives it a CommitContext, which contains
- * a new commit ID that the CommitRecords operator uses to make its changes visible to others.
+ * a new commit ID that is used to make its changes visible to others.
  */
 
 namespace opossum {
@@ -62,9 +58,14 @@ class TransactionManager : private Noncopyable {
   std::shared_ptr<TransactionContext> new_transaction_context();
 
   /**
-   * Helper: Executes an std::function object within a context and commits or rolls it back afterwards.
+   * Helper: Executes a function object within a context and commits or rolls it back afterwards.
    *
-   * Call TransactionContext::mark_as_failed() if transaction should be rolled back.
+   * It calls TransactionContext::rollback_operators() and TransactionContext::commit_operators()
+   * and therefore shouldn’t be used when a scheduler is active. Instead, each operator’s rollback
+   * or committing should be schedule separately, for example by using JobTask.
+   *
+   * Usage: Call TransactionContext::mark_as_failed() within the
+   *        function object if transaction should be rolled back.
    */
   void run_transaction(const std::function<void(std::shared_ptr<TransactionContext>)> &fn);
 

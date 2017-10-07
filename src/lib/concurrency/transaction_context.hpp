@@ -12,13 +12,41 @@ namespace opossum {
 class AbstractReadWriteOperator;
 class CommitContext;
 
+/**
+ * Overview of the different transaction phases
+ *
+ *  +--------+
+ *  | Active |
+ *  +--------+
+ *      |
+ *   Execute operators----------------+
+ *      |                             |
+ *      | IF (an operator failed)     | ELSE
+ *      |                             |
+ *  +--------+                     +------------+
+ *  | Failed |                     | Committing |
+ *  +--------+                     +------------+
+ *      |                             |
+ *   Rollback operators             Commit operators
+ *      |                             |
+ *  +------------+                 +---------+
+ *  | RolledBack |                 | Pending |
+ *  +------------+                 +---------+
+ *                                    |
+ *                                  Wait for all previous
+ *                                  transaction to be committed
+ *                                    |
+ *                                 +-----------+
+ *                                 | Committed |
+ *                                 +-----------+
+ */
 enum class TransactionPhase {
-  Active,
-  Failed,
-  RolledBack,
-  Committing,
-  Pending,
-  Committed
+  Active,      // Transaction has just been created. Operators may be executed.
+  Failed,      // One of the operators failed. Transaction needs to be rolled back.
+  RolledBack,  // Transaction has been rolled back.
+  Committing,  // Commit ID has been assigned. Operators may commit records.
+  Pending,     // Transaction has been marked as pending and is ready to be committed.
+  Committed    // Transaction has been committed.
 };
 
 /**
