@@ -184,8 +184,8 @@ class Aggregate : public AbstractReadOnlyOperator {
   // AVG is not defined for non-arithmetic types. Avoiding compiler errors.
   template <typename AggregateType, AggregateFunction func>
   typename std::enable_if<func == AggregateFunction::Avg && !std::is_arithmetic<AggregateType>::value, void>::type
-      _write_aggregate_values(std::shared_ptr<ValueColumn<AggregateType>>,
-                              std::shared_ptr<std::map<AggregateKey, AggregateResult<AggregateType>>>) {
+  _write_aggregate_values(std::shared_ptr<ValueColumn<AggregateType>>,
+                          std::shared_ptr<std::map<AggregateKey, AggregateResult<AggregateType>>>) {
     Fail("Invalid aggregate");
   }
 
