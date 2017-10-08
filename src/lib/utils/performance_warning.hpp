@@ -61,7 +61,7 @@ class PerformanceWarningDisabler {
 #if IS_DEBUG
 #define PerformanceWarning(text)                                                                 \
   {                                                                                              \
-    static PerformanceWarningClass warn(std::string(text) + " at " + std::string{__FILENAME__} + \ // NOLINT
+    static PerformanceWarningClass warn(std::string(text) + " at " + std::string(__FILENAME__) + \
                                         ":" BOOST_PP_STRINGIZE(__LINE__));                       \
   }  // NOLINT
 #else
