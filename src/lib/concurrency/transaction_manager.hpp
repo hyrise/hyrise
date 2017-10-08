@@ -49,7 +49,7 @@ class TransactionContext;
  */
 class TransactionManager : private Noncopyable {
  public:
-  static TransactionManager &get();
+  static TransactionManager& get();
   static void reset();
 
   TransactionID next_transaction_id() const;
@@ -68,12 +68,12 @@ class TransactionManager : private Noncopyable {
   /**
    * Sets transaction phase to "rolled back"
    */
-  void rollback(TransactionContext &context);
+  void rollback(TransactionContext& context);
 
   /**
    * Sets transaction phase to "failed"
    */
-  void fail(TransactionContext &context);
+  void fail(TransactionContext& context);
 
   /**
    * Creates new commit context and assigns commit id
@@ -81,7 +81,7 @@ class TransactionManager : private Noncopyable {
    * After calling this function, transaction cannot be
    * rolled back anymore.
    */
-  void prepare_commit(TransactionContext &context);
+  void prepare_commit(TransactionContext& context);
 
   /**
    * Tries to commit transaction and all following
@@ -91,20 +91,20 @@ class TransactionManager : private Noncopyable {
    *
    * @param callback called when transaction is committed
    */
-  void commit(TransactionContext &context, std::function<void(TransactionID)> callback = nullptr);
+  void commit(TransactionContext& context, std::function<void(TransactionID)> callback = nullptr);
 
   /** @} */
 
   /**
    * Helper: Create a transaction context, run a function with it and commit the transaction afterwards
    */
-  void run_transaction(const std::function<void(std::shared_ptr<TransactionContext>)> &fn);
+  void run_transaction(const std::function<void(std::shared_ptr<TransactionContext>)>& fn);
 
  private:
   TransactionManager();
 
-  TransactionManager(TransactionManager &&) = delete;
-  TransactionManager &operator=(TransactionManager &&) = delete;
+  TransactionManager(TransactionManager&&) = delete;
+  TransactionManager& operator=(TransactionManager&&) = delete;
 
   std::shared_ptr<CommitContext> _new_commit_context();
   void _increment_last_commit_id(std::shared_ptr<CommitContext> context);

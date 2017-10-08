@@ -18,7 +18,7 @@ namespace opossum {
 
 JoinHash::JoinHash(const std::shared_ptr<const AbstractOperator> left,
                    const std::shared_ptr<const AbstractOperator> right, const JoinMode mode,
-                   const std::pair<ColumnID, ColumnID> &column_ids, const ScanType scan_type)
+                   const std::pair<ColumnID, ColumnID>& column_ids, const ScanType scan_type)
     : AbstractJoinOperator(left, right, mode, column_ids, scan_type) {
   DebugAssert(scan_type == ScanType::OpEquals, "Operator not supported by Hash Join.");
 }
@@ -79,7 +79,7 @@ template <typename LeftType, typename RightType>
 class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
  public:
   JoinHashImpl(const std::shared_ptr<const AbstractOperator> left, const std::shared_ptr<const AbstractOperator> right,
-               const JoinMode mode, const std::pair<ColumnID, ColumnID> &column_ids, const ScanType scan_type,
+               const JoinMode mode, const std::pair<ColumnID, ColumnID>& column_ids, const ScanType scan_type,
                const bool inputs_swapped)
       : _left(left),
         _right(right),
@@ -136,7 +136,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
 
   template <typename T>
   std::shared_ptr<Partition<T>> _materialize_input(const std::shared_ptr<const Table> in_table, ColumnID column_id,
-                                                   std::vector<std::shared_ptr<std::vector<size_t>>> &histograms) {
+                                                   std::vector<std::shared_ptr<std::vector<size_t>>>& histograms) {
     // list of all elements that will be partitioned
     auto elements = std::make_shared<Partition<T>>();
     elements->resize(in_table->row_count());
@@ -174,28 +174,28 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
         // Get information from work queue
         auto output_offset = chunk_offsets[chunk_id];
         auto column = in_table->get_chunk(chunk_id).get_column(column_id);
-        auto &output = static_cast<Partition<T> &>(*elements);
+        auto& output = static_cast<Partition<T>&>(*elements);
 
         // prepare histogram
         histograms[chunk_id] = std::make_shared<std::vector<size_t>>(num_partitions);
 
-        auto &histogram = static_cast<std::vector<size_t> &>(*histograms[chunk_id]);
+        auto& histogram = static_cast<std::vector<size_t>&>(*histograms[chunk_id]);
 
         auto materialized_chunk = std::make_shared<pmr_vector<std::pair<RowID, T>>>();
 
         // Materialize the chunk
-        resolve_column_type<T>(*column, [&](auto &typed_column) {
+        resolve_column_type<T>(*column, [&](auto& typed_column) {
           auto iterable = create_iterable_from_column<T>(typed_column);
-          auto &materialized = *materialized_chunk;
+          auto& materialized = *materialized_chunk;
 
-          iterable.for_each([&, chunk_id](const auto &value) {
+          iterable.for_each([&, chunk_id](const auto& value) {
             if (!value.is_null()) {
               materialized.emplace_back(RowID{chunk_id, value.chunk_offset()}, value.value());
             }
           });
         });
 
-        const auto &materialized = *materialized_chunk;
+        const auto& materialized = *materialized_chunk;
         size_t row_id = output_offset;
 
         /*
@@ -207,7 +207,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
         if (auto ref_column = std::dynamic_pointer_cast<ReferenceColumn>(column)) {
           // hash and add to the other elements
           ChunkOffset offset = 0;
-          for (auto &&elem : materialized) {
+          for (auto&& elem : materialized) {
             output[row_id] = PartitionedElement<T>{RowID{chunk_id, offset}, murmur2<T>(elem.second, seed), elem.second};
 
             const Hash radix = (output[row_id].partition_hash >> (32 - _radix_bits * (pass + 1))) & mask;
@@ -218,7 +218,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
           }
         } else {
           // hash and add to the other elements
-          for (auto &&elem : materialized) {
+          for (auto&& elem : materialized) {
             output[row_id] = PartitionedElement<T>{elem.first, murmur2<T>(elem.second, seed), elem.second};
 
             const Hash radix = (output[row_id].partition_hash >> (32 - _radix_bits * (pass + 1))) & mask;
@@ -239,7 +239,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
   template <typename T>
   RadixContainer<T> _partition_radix_parallel(std::shared_ptr<Partition<T>> materialized,
                                               std::shared_ptr<std::vector<size_t>> chunk_offsets,
-                                              std::vector<std::shared_ptr<std::vector<size_t>>> &histograms) {
+                                              std::vector<std::shared_ptr<std::vector<size_t>>>& histograms) {
     // fan-out
     const size_t num_partitions = 1 << _radix_bits;
 
@@ -251,7 +251,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
     auto output = std::make_shared<Partition<T>>();
     output->resize(materialized->size());
 
-    auto &offsets = static_cast<std::vector<size_t> &>(*chunk_offsets);
+    auto& offsets = static_cast<std::vector<size_t>&>(*chunk_offsets);
 
     RadixContainer<T> radix_output;
     radix_output.elements = output;
@@ -260,7 +260,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
     // use histograms to calculate partition offsets
     for (ChunkID chunk_id{0}; chunk_id < offsets.size(); ++chunk_id) {
       size_t local_sum = 0;
-      auto &histogram = static_cast<std::vector<size_t> &>(*histograms[chunk_id]);
+      auto& histogram = static_cast<std::vector<size_t>&>(*histograms[chunk_id]);
 
       for (size_t partition_id = 0; partition_id < num_partitions; ++partition_id) {
         // update local prefix sum
@@ -312,9 +312,9 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
           input_size = materialized->size() - input_offset;
         }
 
-        auto &out = static_cast<Partition<T> &>(*output);
+        auto& out = static_cast<Partition<T>&>(*output);
         for (size_t i = input_offset; i < input_offset + input_size; ++i) {
-          auto &element = (*materialized)[i];
+          auto& element = (*materialized)[i];
 
           if (element.row_id.chunk_offset == INVALID_CHUNK_OFFSET) {
             continue;
@@ -336,17 +336,17 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
   /*
   Build all the hash tables for the partitions of Left. We parallelize this process for all partitions of Left
   */
-  void _build(const RadixContainer<LeftType> &radix_container,
-              std::vector<std::shared_ptr<HashTable<LeftType>>> &hashtables) {
+  void _build(const RadixContainer<LeftType>& radix_container,
+              std::vector<std::shared_ptr<HashTable<LeftType>>>& hashtables) {
     std::vector<std::shared_ptr<AbstractTask>> jobs;
     jobs.reserve(radix_container.partition_offsets.size() - 1);
 
     for (size_t current_partition_id = 0; current_partition_id < (radix_container.partition_offsets.size() - 1);
          ++current_partition_id) {
       jobs.emplace_back(std::make_shared<JobTask>([&]() {
-        auto &partition_left = static_cast<Partition<LeftType> &>(*radix_container.elements);
-        const auto &partition_left_begin = radix_container.partition_offsets[current_partition_id];
-        const auto &partition_left_end = radix_container.partition_offsets[current_partition_id + 1];
+        auto& partition_left = static_cast<Partition<LeftType>&>(*radix_container.elements);
+        const auto& partition_left_begin = radix_container.partition_offsets[current_partition_id];
+        const auto& partition_left_end = radix_container.partition_offsets[current_partition_id + 1];
         const auto partition_size = partition_left_end - partition_left_begin;
 
         // Prune empty partitions, so that we don't have too many empty hash tables
@@ -357,7 +357,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
         auto hashtable = std::make_shared<HashTable<LeftType>>(partition_size);
 
         for (size_t i = partition_left_begin; i < partition_left_end; ++i) {
-          auto &element = partition_left[i];
+          auto& element = partition_left[i];
           hashtable->put(element.value, element.row_id);
         }
 
@@ -374,10 +374,10 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
   with the values in the hash table. Since Left and Right are hashed using the same hash function, we can reduce the
   number of hash tables that need to be looked into to just 1.
   */
-  void _probe(const RadixContainer<RightType> &radix_container,
-              const std::vector<std::shared_ptr<HashTable<LeftType>>> &hashtables,
-              std::vector<std::shared_ptr<PosList>> &pos_list_left,
-              std::vector<std::shared_ptr<PosList>> &pos_list_right) {
+  void _probe(const RadixContainer<RightType>& radix_container,
+              const std::vector<std::shared_ptr<HashTable<LeftType>>>& hashtables,
+              std::vector<std::shared_ptr<PosList>>& pos_list_left,
+              std::vector<std::shared_ptr<PosList>>& pos_list_right) {
     std::vector<std::shared_ptr<AbstractTask>> jobs;
     jobs.reserve(radix_container.partition_offsets.size() - 1);
 
@@ -393,9 +393,9 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
          ++current_partition_id) {
       jobs.emplace_back(std::make_shared<JobTask>([&]() {
         // Get information from work queue
-        auto &partition = static_cast<Partition<RightType> &>(*radix_container.elements);
-        const auto &partition_begin = radix_container.partition_offsets[current_partition_id];
-        const auto &partition_end = radix_container.partition_offsets[current_partition_id + 1];
+        auto& partition = static_cast<Partition<RightType>&>(*radix_container.elements);
+        const auto& partition_begin = radix_container.partition_offsets[current_partition_id];
+        const auto& partition_end = radix_container.partition_offsets[current_partition_id + 1];
 
         // Skip empty partitions to avoid empty output chunks
         if ((partition_end - partition_begin) == 0) {
@@ -403,12 +403,12 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
         }
 
         if (hashtables[current_partition_id]) {
-          auto &hashtable = hashtables.at(current_partition_id);
+          auto& hashtable = hashtables.at(current_partition_id);
           auto pos_list_left_local = std::make_shared<PosList>();
           auto pos_list_right_local = std::make_shared<PosList>();
 
           for (size_t i = partition_begin; i < partition_end; ++i) {
-            auto &row = partition[i];
+            auto& row = partition[i];
 
             if (_mode == JoinMode::Inner && row.row_id.chunk_offset == INVALID_CHUNK_OFFSET) {
               continue;
@@ -417,7 +417,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
             auto row_ids = hashtable->get(row.value);
 
             if (row_ids) {
-              for (const auto &row_id : *row_ids) {
+              for (const auto& row_id : *row_ids) {
                 if (row_id.chunk_offset != INVALID_CHUNK_OFFSET) {
                   pos_list_left_local->emplace_back(row_id);
                   pos_list_right_local->emplace_back(row.row_id);
@@ -449,7 +449,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
           auto pos_list_right_local = std::make_shared<PosList>();
 
           for (size_t i = partition_begin; i < partition_end; ++i) {
-            auto &row = partition[i];
+            auto& row = partition[i];
             pos_list_left_local->emplace_back(RowID{ChunkID{0}, INVALID_CHUNK_OFFSET});
             pos_list_right_local->emplace_back(row.row_id);
           }
@@ -578,8 +578,8 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
             : false;
 
     for (size_t i = 0; i < left_pos_lists.size(); i++) {
-      auto &left = left_pos_lists[i];
-      auto &right = right_pos_lists[i];
+      auto& left = left_pos_lists[i];
+      auto& right = right_pos_lists[i];
 
       if (!right && !left) {
         continue;
@@ -603,7 +603,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
     return _output_table;
   }
 
-  static void write_output_chunks(Chunk &output_chunk, const std::shared_ptr<const Table> input_table,
+  static void write_output_chunks(Chunk& output_chunk, const std::shared_ptr<const Table> input_table,
                                   std::shared_ptr<PosList> pos_list, bool is_ref_column) {
     // Add columns from input table to output chunk
     for (ColumnID column_id{0}; column_id < input_table->col_count(); ++column_id) {
@@ -624,7 +624,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
 
         // Get the row ids that are referenced
         auto new_pos_list = std::make_shared<PosList>();
-        for (const auto &row : *pos_list) {
+        for (const auto& row : *pos_list) {
           new_pos_list->push_back(input_pos_lists.at(row.chunk_id)->at(row.chunk_offset));
         }
         column = std::make_shared<ReferenceColumn>(ref_col->referenced_table(), ref_col->referenced_column_id(),

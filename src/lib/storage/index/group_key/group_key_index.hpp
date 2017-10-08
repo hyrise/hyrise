@@ -48,11 +48,11 @@ class GroupKeyIndex : public BaseIndex {
  public:
   GroupKeyIndex() = delete;
 
-  GroupKeyIndex(const GroupKeyIndex &) = delete;
-  GroupKeyIndex &operator=(const GroupKeyIndex &) = delete;
+  GroupKeyIndex(const GroupKeyIndex&) = delete;
+  GroupKeyIndex& operator=(const GroupKeyIndex&) = delete;
 
-  GroupKeyIndex(GroupKeyIndex &&) = default;
-  GroupKeyIndex &operator=(GroupKeyIndex &&) = default;
+  GroupKeyIndex(GroupKeyIndex&&) = default;
+  GroupKeyIndex& operator=(GroupKeyIndex&&) = default;
 
   explicit GroupKeyIndex(const std::vector<std::shared_ptr<BaseColumn>> index_columns)
       : _index_column(std::dynamic_pointer_cast<BaseDictionaryColumn>(index_columns[0])) {
@@ -93,14 +93,14 @@ class GroupKeyIndex : public BaseIndex {
   }
 
  private:
-  Iterator _lower_bound(const std::vector<AllTypeVariant> &values) const final {
+  Iterator _lower_bound(const std::vector<AllTypeVariant>& values) const final {
     DebugAssert((values.size() == 1), "Group Key Index expects only one input value");
 
     ValueID value_id = _index_column->lower_bound(*values.begin());
     return _get_postings_iterator_at(value_id);
   };
 
-  Iterator _upper_bound(const std::vector<AllTypeVariant> &values) const final {
+  Iterator _upper_bound(const std::vector<AllTypeVariant>& values) const final {
     DebugAssert((values.size() == 1), "Group Key Index expects only one input value");
 
     ValueID value_id = _index_column->upper_bound(*values.begin());

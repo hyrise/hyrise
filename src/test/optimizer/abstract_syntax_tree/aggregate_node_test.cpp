@@ -57,7 +57,7 @@ TEST_F(AggregateNodeTest, ColumnIdForColumnIdentifier) {
 }
 
 TEST_F(AggregateNodeTest, OriginalGroupByColumnIdsInOutputColumnIds) {
-  const auto &column_ids = _aggregate_node->output_column_id_to_input_column_id();
+  const auto& column_ids = _aggregate_node->output_column_id_to_input_column_id();
 
   const auto iter_0 = std::find(column_ids.begin(), column_ids.end(), ColumnID{0});
   EXPECT_NE(iter_0, column_ids.end());

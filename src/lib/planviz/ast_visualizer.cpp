@@ -15,8 +15,8 @@
 
 namespace opossum {
 
-void ASTVisualizer::visualize(const std::vector<std::shared_ptr<AbstractASTNode>> &ast_roots,
-                              const std::string &dot_filename, const std::string &img_filename) {
+void ASTVisualizer::visualize(const std::vector<std::shared_ptr<AbstractASTNode>>& ast_roots,
+                              const std::string& dot_filename, const std::string& img_filename) {
   // Step 1: Generate graphviz dot file
   std::ofstream file;
   file.open(dot_filename);
@@ -25,7 +25,7 @@ void ASTVisualizer::visualize(const std::vector<std::shared_ptr<AbstractASTNode>
   file << "bgcolor=transparent" << std::endl;
   file << "node [color=white,fontcolor=white,shape=parallelogram]" << std::endl;
   file << "edge [color=white,fontcolor=white]" << std::endl;
-  for (const auto &root : ast_roots) {
+  for (const auto& root : ast_roots) {
     _visualize_subtree(root, file);
   }
   file << "}" << std::endl;
@@ -41,7 +41,7 @@ void ASTVisualizer::visualize(const std::vector<std::shared_ptr<AbstractASTNode>
   // We do not want to make graphviz a requirement for Hyrise as visualization is just a gimmick
 }
 
-void ASTVisualizer::_visualize_subtree(const std::shared_ptr<AbstractASTNode> &node, std::ofstream &file) {
+void ASTVisualizer::_visualize_subtree(const std::shared_ptr<AbstractASTNode>& node, std::ofstream& file) {
   file << reinterpret_cast<uintptr_t>(node.get()) << "[label=\"" << node->description() << "\"]" << std::endl;
 
   if (node->left_child()) {
@@ -55,8 +55,8 @@ void ASTVisualizer::_visualize_subtree(const std::shared_ptr<AbstractASTNode> &n
   }
 }
 
-void ASTVisualizer::_visualize_dataflow(const std::shared_ptr<AbstractASTNode> &from,
-                                        const std::shared_ptr<AbstractASTNode> &to, std::ofstream &file) {
+void ASTVisualizer::_visualize_dataflow(const std::shared_ptr<AbstractASTNode>& from,
+                                        const std::shared_ptr<AbstractASTNode>& to, std::ofstream& file) {
   float row_count, row_percentage = 100.0f;
   uint32_t pen_width;
 

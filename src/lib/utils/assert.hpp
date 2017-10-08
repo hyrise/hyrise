@@ -55,4 +55,3 @@ inline void Fail(const std::string& msg) { throw std::logic_error(msg); }
 #else
 #define DebugAssert(expr, msg)
 #endif
-

@@ -1,8 +1,8 @@
 #include "join_node.hpp"
 
 #include <limits>
-#include <numeric>
 #include <memory>
+#include <numeric>
 #include <sstream>
 #include <string>
 #include <utility>
