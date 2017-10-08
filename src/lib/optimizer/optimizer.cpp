@@ -14,7 +14,7 @@ const Optimizer& Optimizer::get() {
 }
 
 Optimizer::Optimizer() {
-  _rules.emplace_back(std::make_shared<PredicateReorderingRule>());
+  //_rules.emplace_back(std::make_shared<PredicateReorderingRule>());
   _rules.emplace_back(std::make_shared<JoinConditionDetectionRule>());
 }
 
