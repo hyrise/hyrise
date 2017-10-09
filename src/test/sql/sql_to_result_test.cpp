@@ -143,7 +143,7 @@ const SQLTestParam test_queries[] = {
      OrderSensitivity::Sensitive},
     {"SELECT a, b FROM int_float ORDER BY a;", "src/test/tables/int_float_sorted.tbl", OrderSensitivity::Sensitive},
     {"SELECT * FROM int_float4 ORDER BY a, b;", "src/test/tables/int_float2_sorted.tbl", OrderSensitivity::Sensitive},
-    {"SELECT a FROM (SELECT a, b FROM int_float WHERE a > 1 ORDER BY b) WHERE a > 0 ORDER BY a;",
+    {"SELECT a FROM (SELECT a, b FROM int_float WHERE a > 1 ORDER BY b) AS sub WHERE sub.a > 0 ORDER BY a;",
      "src/test/tables/int.tbl", OrderSensitivity::Sensitive},
 
     // LIMIT
@@ -220,14 +220,14 @@ const SQLTestParam test_queries[] = {
 
     // Join three tables and perform a scan
     {R"(SELECT *
-        FROM int_float AS t1
-        INNER JOIN int_float2 AS t2
-        ON t1.a = t2.a
-        INNER JOIN int_string2 AS t3
-        ON t1.a = t3.a
-        WHERE t2.b > 457.0
-        AND t3.b = 'C')",
-     "src/test/tables/joinoperators/int_inner_join_3_tables_filter.tbl"},
+       FROM int_float AS t1
+       INNER JOIN int_float2 AS t2
+       ON t1.a = t2.a
+       INNER JOIN int_string2 AS t3
+       ON t1.a = t3.a
+       WHERE t2.b > 457.0
+       AND t3.b = 'C')",
+    "src/test/tables/joinoperators/int_inner_join_3_tables_filter.tbl"},
 
     // Aggregates
     {"SELECT SUM(b + b) AS sum_b_b FROM int_float;", "src/test/tables/int_float_sum_b_plus_b.tbl"},
@@ -264,12 +264,12 @@ const SQLTestParam test_queries[] = {
      "src/test/tables/aggregateoperator/groupby_int_1gb_1agg/count_null.tbl"},
 
     // Checks that output of Aggregate can be worked with correctly.
-    {R"(SELECT d, min_c, max_a
+    {R"(SELECT d, sub.min_c, max_a
         FROM (
           SELECT b, d, MAX(a) AS max_a, MIN(c) AS min_c
           FROM groupby_int_2gb_2agg_2
           GROUP BY b, d
-        )
+        ) AS sub
         WHERE d BETWEEN 20 AND 50 AND min_c > 15;)",
      "src/test/tables/aggregateoperator/groupby_int_2gb_2agg/max_min_filter_projection.tbl"},
     {"SELECT SUM(b) FROM groupby_int_1gb_1agg", "src/test/tables/aggregateoperator/0gb_1agg/sum.tbl"},
@@ -338,15 +338,14 @@ const SQLTestParam test_queries[] = {
         HAVING COUNT(orders.o_orderkey) >= 100;)",
      "src/test/tables/tpch/customer_join_orders.tbl"},
 
-    // TODO(mp): Aliases for Subselects are not supported yet
-    //    {R"(SELECT customer.c_custkey, customer.c_name, COUNT(orderitems.o_orderkey)
-    //        FROM customer JOIN (
-    //          SELECT * FROM orders JOIN lineitem ON o_orderkey = l_orderkey
-    //        ) AS orderitems
-    //        ON customer.c_custkey = orders.o_custkey
-    //        GROUP BY customer.c_custkey, customer.c_name
-    //        HAVING COUNT(orderitems.o_orderkey) >= 100;)",
-    //      "src/test/tables/tpch/customer_join_orders_alias.tbl"},
+    {R"(SELECT customer.c_custkey, customer.c_name, COUNT(orderitems.o_orderkey)
+       FROM customer JOIN (
+         SELECT * FROM orders JOIN lineitem ON o_orderkey = l_orderkey
+       ) AS orderitems
+       ON customer.c_custkey = orderitems.o_custkey
+       GROUP BY customer.c_custkey, customer.c_name
+       HAVING COUNT(orderitems.o_orderkey) >= 100;)",
+     "src/test/tables/tpch/customer_join_orders_alias.tbl"},
 };
 
 INSTANTIATE_TEST_CASE_P(test_queries, SQLToResultTest, ::testing::ValuesIn(test_queries));

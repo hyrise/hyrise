@@ -125,4 +125,18 @@ TEST_F(AbstractSyntaxTreeTest, TwoInputsTest) {
   ASSERT_EQ(table_b_node->parent(), join_node);
 }
 
+TEST_F(AbstractSyntaxTreeTest, AliasedSubqueryTest) {
+  const auto table_node = std::make_shared<StoredTableNode>("a");
+  const auto predicate_node = std::make_shared<PredicateNode>(ColumnID{0}, ScanType::OpEquals, "a");
+  predicate_node->set_left_child(table_node);
+  predicate_node->set_alias(std::string("foo"));
+
+  ASSERT_TRUE(predicate_node->knows_table("foo"));
+  ASSERT_FALSE(predicate_node->knows_table("a"));
+
+  ASSERT_EQ(predicate_node->get_column_id_by_named_column_reference({"b"}), ColumnID{1});
+  ASSERT_EQ(predicate_node->get_column_id_by_named_column_reference({"b", {"foo"}}), ColumnID{1});
+  ASSERT_EQ(predicate_node->find_column_id_by_named_column_reference({"b", {"a"}}), nullopt);
+}
+
 }  // namespace opossum

@@ -22,6 +22,7 @@ enum class ASTNodeType {
   Limit,
   Predicate,
   Projection,
+  Root,
   ShowColumns,
   ShowTables,
   Sort,
@@ -32,6 +33,8 @@ enum class ASTNodeType {
 struct NamedColumnReference {
   std::string column_name;
   optional<std::string> table_name;
+
+  std::string as_string() const;
 };
 
 /**
@@ -61,21 +64,35 @@ class AbstractASTNode : public std::enable_shared_from_this<AbstractASTNode> {
   std::shared_ptr<AbstractASTNode> parent() const;
   void clear_parent();
 
-  const std::shared_ptr<AbstractASTNode> &left_child() const;
-  void set_left_child(const std::shared_ptr<AbstractASTNode> &left);
+  const std::shared_ptr<AbstractASTNode>& left_child() const;
+  void set_left_child(const std::shared_ptr<AbstractASTNode>& left);
 
-  const std::shared_ptr<AbstractASTNode> &right_child() const;
-  void set_right_child(const std::shared_ptr<AbstractASTNode> &right);
+  const std::shared_ptr<AbstractASTNode>& right_child() const;
+  void set_right_child(const std::shared_ptr<AbstractASTNode>& right);
   // @}
 
   ASTNodeType type() const;
 
-  void set_statistics(const std::shared_ptr<TableStatistics> &statistics);
+  // @{
+  /**
+   * These functions provide access to statistics for this particular node.
+   *
+   * AbstractASTNode::derive_statistics_from() calculates new statistics for this node as they would appear if
+   * left_child and right_child WERE its children. This works for the actual children of this node during the lazy
+   * initialization in get_statistics() as well as e.g. in an optimizer rule
+   * that tries to reorder nodes based on some statistics. In that case it will call this function for all the nodes
+   * that shall be reordered with the same reference node.
+   *
+   * Inheriting nodes are free to override AbstractASTNode::derive_statistics_from().
+   */
+  void set_statistics(const std::shared_ptr<TableStatistics>& statistics);
   const std::shared_ptr<TableStatistics> get_statistics();
-  virtual const std::shared_ptr<TableStatistics> get_statistics_from(
-      const std::shared_ptr<AbstractASTNode> &other_node) const;
+  virtual std::shared_ptr<TableStatistics> derive_statistics_from(
+      const std::shared_ptr<AbstractASTNode>& left_child,
+      const std::shared_ptr<AbstractASTNode>& right_child = nullptr) const;
+  // @}
 
-  virtual const std::vector<std::string> &output_column_names() const;
+  virtual const std::vector<std::string>& output_column_names() const;
 
   /**
    * This function is public for testing purposes only, otherwise should only be used internally
@@ -83,7 +100,7 @@ class AbstractASTNode : public std::enable_shared_from_this<AbstractASTNode> {
    * Every node will output a list of column and all nodes except StoredTableNode take a list of columns as input from
    * their predecessor.
    */
-  virtual const std::vector<ColumnID> &output_column_id_to_input_column_id() const;
+  virtual const std::vector<ColumnID>& output_column_id_to_input_column_id() const;
 
   size_t output_col_count() const;
 
@@ -100,10 +117,6 @@ class AbstractASTNode : public std::enable_shared_from_this<AbstractASTNode> {
    * AbstractASTNode::get_column_id_by_named_column_reference() is more strict and will fail if the
    * @param named_column_reference cannot be found.
    *
-   * NOTE: As long as - TODO(anybody) - Subquery ALIASES are not supported only the StoredTableNode has to concern
-   * itself with the ColumnIdentifierName::table_name, all other nodes are fine searching for
-   * ColumnIdentifierName::
-   *
    * NOTE: If a node outputs a column "x" but ALIASes it as, say, "y", these two functions will only find
    * ColumnIdentifier{"y", nullopt} and NEITHER ColumnIdentifier{"x", "table_name"} nor
    * ColumnIdentifier{"y", "table_name"}
@@ -112,19 +125,36 @@ class AbstractASTNode : public std::enable_shared_from_this<AbstractASTNode> {
    *
    * Find more information in our blog: https://medium.com/hyrise/the-gentle-art-of-referring-to-columns-634f057bd810
    */
-  ColumnID get_column_id_by_named_column_reference(const NamedColumnReference &named_column_reference) const;
+  ColumnID get_column_id_by_named_column_reference(const NamedColumnReference& named_column_reference) const;
   virtual optional<ColumnID> find_column_id_by_named_column_reference(
-      const NamedColumnReference &named_column_reference) const;
+      const NamedColumnReference& named_column_reference) const;
   // @}
 
   /**
    * Checks whether this node or any of its ancestors retrieve the table @param table_name from the StorageManager
-   * (or - TODO(anybody) - once subquery ALIASES are implemented whether it or any of its ancestors assign an ALIAS
-   * with the name  @param table_name.)
+   * or as an alias of a subquery.
    *
    * Used especially to figure out which of the children of a Join is referenced.
+   *
+   * The standard requires subqueries (known as derived tables) to have an alias. The original name(s) of the table(s)
+   * that became part of that subselect are not accessible anymore once an alias is given.
+   *
+   *        <table reference> ::=
+   *            <table name> [ [ AS ] <correlation name>
+   *                [ <left paren> <derived column list> <right paren> ] ]
+   *          | <derived table> [ AS ] <correlation name>
+   *                [ <left paren> <derived column list> <right paren> ]
+   *          | <joined table>
    */
-  virtual bool knows_table(const std::string &table_name) const;
+  virtual bool knows_table(const std::string& table_name) const;
+
+  /**
+   * This function is part of the "ColumnID Resolution". See SQLToAstTranslator class comment for a general discussion
+   * on this.
+   *
+   * Returns all ColumnIDs of this node, i.e., a vector with [0, output_col_count)
+   */
+  virtual std::vector<ColumnID> get_output_column_ids() const;
 
   /**
    * This function is part of the "ColumnID Resolution". See SQLToAstTranslator class comment for a general discussion
@@ -135,17 +165,45 @@ class AbstractASTNode : public std::enable_shared_from_this<AbstractASTNode> {
    *
    * @param table_name can be an alias.
    */
-  virtual std::vector<ColumnID> get_output_column_ids_for_table(const std::string &table_name) const;
+  virtual std::vector<ColumnID> get_output_column_ids_for_table(const std::string& table_name) const;
 
-  void print(const uint32_t level = 0, std::ostream &out = std::cout) const;
+  /**
+   * If a node only has a left child, it is possible to remove this node from the tree, connecting this
+   * node's child with this node's parent.
+   * Fails if this node has two children
+   */
+  void remove_from_tree();
+
+  /**
+   * Replaces @param node_to_replace with this node.
+   * Fails if this node was already part of a tree, i.e. has a parent or children
+   */
+  void replace_in_tree(const std::shared_ptr<AbstractASTNode>& node_to_replace);
+
+  /**
+   * Sets the table alias for this subtree, see _table_alias for details.
+   * This is not part of the constructor because it is only used in SQLToASTTranslator::_translate_table_ref.
+   */
+  void set_alias(const optional<std::string>& table_alias);
+
+  void print(const uint32_t level = 0, std::ostream& out = std::cout) const;
   virtual std::string description() const = 0;
 
  protected:
   virtual void _on_child_changed() {}
-  virtual const std::shared_ptr<TableStatistics> _gather_statistics() const;
 
   // Used to easily differentiate between node types without pointer casts.
   ASTNodeType _type;
+
+  // Each subtree can be a subselect. A subselect can be given an alias:
+  // SELECT y.* FROM (SELECT * FROM x) AS y
+  // The alias applies to all nodes above the node where it is set until a new alias is set
+  optional<std::string> _table_alias;
+
+  // If named_column_reference.table_name is the alias set for this subtree, remove the table_name so that we
+  // only operatore on the column name. If an alias for this subtree is set, but this reference does not match
+  // it, the reference cannot be resolved (see knows_table) and nullopt is returned.
+  optional<NamedColumnReference> _resolve_local_alias(const NamedColumnReference &named_column_reference) const;
 
  private:
   std::weak_ptr<AbstractASTNode> _parent;

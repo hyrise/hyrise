@@ -9,6 +9,7 @@
 #include "operators/sort.hpp"
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
+#include "operators/union_all.hpp"
 #include "storage/dictionary_compression.hpp"
 #include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
@@ -200,5 +201,27 @@ TEST_F(OperatorsSortTest, DescendingSortOfOneDictColumn) {
 
   EXPECT_TABLE_EQ(sort->get_output(), expected_result, true);
 }
+
+TEST_F(OperatorsSortTest, SortTableWithRefandValueColumns) {
+  auto table_wrapper1 = std::make_shared<TableWrapper>(load_table("src/test/tables/int_float.tbl", 2));
+  auto table_wrapper2 = std::make_shared<TableWrapper>(load_table("src/test/tables/int_float2.tbl", 2));
+  table_wrapper1->execute();
+  table_wrapper2->execute();
+
+  auto ts2 = std::make_shared<TableScan>(table_wrapper2, ColumnID{0}, ScanType::OpGreaterThan, 12);
+  ts2->execute();
+
+  auto union_all = std::make_shared<UnionAll>(table_wrapper1, ts2);
+  union_all->execute();
+
+  EXPECT_TABLE_EQ(union_all->get_output(), load_table("src/test/tables/int_float__int_float2_filtered__union.tbl", 2));
+
+  auto sort = std::make_shared<Sort>(union_all, ColumnID{1});
+  sort->execute();
+
+  EXPECT_TABLE_EQ(sort->get_output(),
+                  load_table("src/test/tables/int_float__int_float2_filtered__union__sorted.tbl", 0), true);
+}
+
 
 }  // namespace opossum

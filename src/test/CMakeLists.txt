@@ -49,8 +49,11 @@ set(
     optimizer/abstract_syntax_tree/projection_node_test.cpp
     optimizer/ast_to_operator_translator_test.cpp
     optimizer/column_statistics_test.cpp
+    optimizer/strategy/join_detection_rule_test.cpp
     optimizer/expression_test.cpp
     optimizer/strategy/predicate_reordering_test.cpp
+    optimizer/strategy/strategy_base_test.cpp
+    optimizer/table_statistics_join_test.cpp
     optimizer/table_statistics_test.cpp
     scheduler/scheduler_test.cpp
     sql/sql_base_test.cpp
@@ -64,6 +67,9 @@ set(
     sql/sql_to_ast_translator_test.cpp
     sql/sql_to_result_test.cpp
     sql/tpch_test.cpp
+    sql/sqlite_testrunner/sqlite_testrunner.cpp
+    sql/sqlite_testrunner/sqlite_wrapper.cpp
+    sql/sqlite_testrunner/sqlite_wrapper.hpp
     storage/adaptive_radix_tree_index_test.cpp
     storage/chunk_test.cpp
     storage/composite_group_key_index_test.cpp
@@ -95,6 +101,7 @@ set (
 set(
     LIBRARIES
     gtest
+    sqlite3
 )
 
 # Build special ASAN version of googletest
@@ -108,11 +115,16 @@ add_library(gtestAsan EXCLUDE_FROM_ALL STATIC ${GTEST_SOURCES})
 set_target_properties(gtestAsan PROPERTIES SUFFIX "_asan")
 set_target_properties(gtestAsan PROPERTIES COMPILE_FLAGS "-fsanitize=address -fno-omit-frame-pointer")
 
+set(
+    LIBRARIES_ASAN
+    gtestAsan
+    sqlite3
+)
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 
 # Configure opossumTest
-add_executable(opossumTest EXCLUDE_FROM_ALL ${OPOSSUM_TEST_SOURCES})
+add_executable(opossumTest ${OPOSSUM_TEST_SOURCES})
 target_link_libraries(opossumTest opossum ${LIBRARIES})
 
 # Configure opossumCoverageApp
@@ -122,11 +134,11 @@ set_target_properties(opossumCoverage PROPERTIES COMPILE_FLAGS "-fprofile-arcs -
 
 # Configure opossumAsanApp
 add_executable(opossumAsan EXCLUDE_FROM_ALL ${OPOSSUM_TEST_SOURCES})
-target_link_libraries(opossumAsan opossumAsanLib gtestAsan -fsanitize=address)
+target_link_libraries(opossumAsan opossumAsanLib ${LIBRARIES_ASAN} -fsanitize=address)
 set_target_properties(opossumAsan PROPERTIES COMPILE_FLAGS "-fsanitize=address -fno-omit-frame-pointer")
 
 # Configure opossumTestTPCC
-add_executable(opossumTestTPCC EXCLUDE_FROM_ALL ${TPCC_TEST_SOURCES})
+add_executable(opossumTestTPCC ${TPCC_TEST_SOURCES})
 target_link_libraries(opossumTestTPCC opossum ${LIBRARIES} tpcc)
 
 
