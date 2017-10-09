@@ -32,9 +32,9 @@ void SqliteWrapper::create_table_from_tbl(const std::string& file, const std::st
   std::vector<std::string> col_types;
 
   for (std::string type : _split<std::string>(line, '|')) {
-    if (type == "int") {
+    if (type == "int" || type == "long") {
       col_types.push_back("INT");
-    } else if (type == "float") {
+    } else if (type == "float" || type == "double") {
       col_types.push_back("REAL");
     } else if (type == "string") {
       col_types.push_back("TEXT");
