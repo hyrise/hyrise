@@ -50,7 +50,7 @@ class SQLiteTestRunner : public BaseTest {
     }
   }
 
-  SqliteWrapper _sqlite;
+  SQLiteWrapper _sqlite;
 };
 
 TEST_F(SQLiteTestRunner, CompareToSQLiteTestRunner) {

@@ -12,7 +12,7 @@
 
 namespace opossum {
 
-SqliteWrapper::SqliteWrapper() {
+SQLiteWrapper::SQLiteWrapper() {
   int rc = sqlite3_open(":memory:", &_db);
 
   if (rc != SQLITE_OK) {
@@ -21,12 +21,12 @@ SqliteWrapper::SqliteWrapper() {
   }
 }
 
-SqliteWrapper::~SqliteWrapper() { sqlite3_close(_db); }
+SQLiteWrapper::~SQLiteWrapper() { sqlite3_close(_db); }
 
-void SqliteWrapper::create_table_from_tbl(const std::string& file, const std::string& table_name) {
+void SQLiteWrapper::create_table_from_tbl(const std::string& file, const std::string& table_name) {
   char* err_msg;
   std::ifstream infile(file);
-  Assert(infile.is_open(), "SqliteWrapper: Could not find file " + file);
+  Assert(infile.is_open(), "SQLiteWrapper: Could not find file " + file);
 
   std::string line;
   std::getline(infile, line);
@@ -42,7 +42,7 @@ void SqliteWrapper::create_table_from_tbl(const std::string& file, const std::st
     } else if (type == "string") {
       col_types.push_back("TEXT");
     } else {
-      DebugAssert(false, "SqliteWrapper: column type " + type + " not supported.");
+      DebugAssert(false, "SQLiteWrapper: column type " + type + " not supported.");
     }
   }
 
@@ -82,7 +82,7 @@ void SqliteWrapper::create_table_from_tbl(const std::string& file, const std::st
   }
 }
 
-std::shared_ptr<Table> SqliteWrapper::execute_query(const std::string& sql_query) {
+std::shared_ptr<Table> SQLiteWrapper::execute_query(const std::string& sql_query) {
   sqlite3_stmt* result_row;
   bool create_column_headers = true;
 
@@ -111,7 +111,7 @@ std::shared_ptr<Table> SqliteWrapper::execute_query(const std::string& sql_query
   return result_table;
 }
 
-void SqliteWrapper::_create_columns(std::shared_ptr<Table> table, sqlite3_stmt* result_row, int column_count) {
+void SQLiteWrapper::_create_columns(std::shared_ptr<Table> table, sqlite3_stmt* result_row, int column_count) {
   for (int i = 0; i < column_count; ++i) {
     std::string col_name = sqlite3_column_name(result_row, i);
     std::string col_type;
@@ -139,7 +139,7 @@ void SqliteWrapper::_create_columns(std::shared_ptr<Table> table, sqlite3_stmt* 
   }
 }
 
-void SqliteWrapper::_add_row(std::shared_ptr<Table> table, sqlite3_stmt* result_row, int column_count) {
+void SQLiteWrapper::_add_row(std::shared_ptr<Table> table, sqlite3_stmt* result_row, int column_count) {
   std::vector<AllTypeVariant> row;
 
   for (int i = 0; i < column_count; ++i) {
