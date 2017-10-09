@@ -263,6 +263,12 @@ const SQLTestParam test_queries[] = {
     {"SELECT a, COUNT(b) FROM groupby_int_1gb_1agg_null GROUP BY a;",
      "src/test/tables/aggregateoperator/groupby_int_1gb_1agg/count_null.tbl"},
 
+    // Aggregates with aliases
+    {"SELECT a AS c, MAX(b) FROM groupby_int_1gb_1agg_null GROUP BY a;",
+     "src/test/tables/aggregateoperator/groupby_int_1gb_1agg/max_null_alias.tbl"},
+    {"SELECT a AS c, MAX(b) FROM groupby_int_1gb_1agg_null GROUP BY c;",
+     "src/test/tables/aggregateoperator/groupby_int_1gb_1agg/max_null_alias.tbl"},
+
     // Checks that output of Aggregate can be worked with correctly.
     {R"(SELECT d, sub.min_c, max_a
         FROM (
