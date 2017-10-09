@@ -496,7 +496,7 @@ std::vector<std::shared_ptr<Expression>> SQLToASTTranslator::_retrieve_having_ag
 std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_aggregate(
     const hsql::SelectStatement& select, const std::shared_ptr<AbstractASTNode>& input_node) {
   /**
-   * This function puts creates the following structure:
+   * This function creates the following node structure:
    *
    * input_node -> aggregate_node -> {having_node}* -> projection_node
    *
