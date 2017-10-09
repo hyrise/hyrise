@@ -5,6 +5,7 @@
 #include <iostream>
 #include <memory>
 #include <numeric>
+#include <sstream>
 #include <string>
 #include <vector>
 
@@ -223,6 +224,13 @@ optional<NamedColumnReference> AbstractASTNode::resolve_local_alias(const NamedC
     }
   }
   return reference;
+}
+
+std::string NamedColumnReference::as_string() const {
+  std::stringstream ss;
+  if (table_name) ss << *table_name << ".";
+  ss << column_name;
+  return ss.str();
 }
 
 }  // namespace opossum

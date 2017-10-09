@@ -41,4 +41,19 @@ TEST_F(JoinNodeTest, ColumnIdForColumnIdentifier) {
   EXPECT_EQ(_join_node->find_column_id_by_named_column_reference({"z", {"t_z"}}), nullopt);
 }
 
+TEST_F(JoinNodeTest, AliasedSubqueryTest) {
+  const auto join_node_with_alias = std::make_shared<JoinNode>(*_join_node);
+  join_node_with_alias->set_alias({"foo"});
+
+  ASSERT_TRUE(join_node_with_alias->knows_table("foo"));
+  ASSERT_FALSE(join_node_with_alias->knows_table("t_a"));
+  ASSERT_FALSE(join_node_with_alias->knows_table("t_b"));
+
+  ASSERT_EQ(join_node_with_alias->get_column_id_by_named_column_reference({"a"}), ColumnID{0});
+  ASSERT_EQ(join_node_with_alias->get_column_id_by_named_column_reference({"a", {"foo"}}), ColumnID{0});
+  ASSERT_EQ(join_node_with_alias->find_column_id_by_named_column_reference({"a", {"t_a"}}), nullopt);
+  ASSERT_EQ(join_node_with_alias->find_column_id_by_named_column_reference({"a", {"t_b"}}), nullopt);
+  ASSERT_EQ(join_node_with_alias->get_column_id_by_named_column_reference({"x", {"foo"}}), ColumnID{3});
+}
+
 }  // namespace opossum

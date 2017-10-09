@@ -338,9 +338,11 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_join(const hsql:
   const auto right_in_right_node = right_node->find_column_id_by_named_column_reference(right_named_column_reference);
 
   Assert(static_cast<bool>(left_in_left_node) ^ static_cast<bool>(left_in_right_node),
-         "Left operand must be in exactly one of the input nodes");
+         std::string("Left operand ") + left_named_column_reference.as_string() +
+             " must be in exactly one of the input nodes");
   Assert(static_cast<bool>(right_in_left_node) ^ static_cast<bool>(right_in_right_node),
-         "Right operand must be in exactly one of the input nodes");
+         std::string("Right operand ") + right_named_column_reference.as_string() +
+             " must be in exactly one of the input nodes");
 
   std::pair<ColumnID, ColumnID> column_ids;
 

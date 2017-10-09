@@ -33,6 +33,8 @@ enum class ASTNodeType {
 struct NamedColumnReference {
   std::string column_name;
   optional<std::string> table_name;
+
+  std::string as_string() const;
 };
 
 /**
