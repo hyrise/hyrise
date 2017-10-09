@@ -386,7 +386,8 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
                                            "available in the non-equi case");
     DebugAssert(sorted_table->size() > 0, "Sorted table is empty");
 
-    for (size_t partition_id = sorted_table->size() - 1; partition_id >= 0; --partition_id) {
+    for (size_t r_partition_id = 0; r_partition_id < sorted_table->size(); ++r_partition_id) {
+      auto partition_id = sorted_table->size() - r_partition_id - 1;
       if (sorted_table->at(partition_id)->size() > 0) {
         return sorted_table->at(partition_id)->back().value;
       }
