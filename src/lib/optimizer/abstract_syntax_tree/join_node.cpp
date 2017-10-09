@@ -110,9 +110,15 @@ optional<ColumnID> JoinNode::find_column_id_by_named_column_reference(
 
 std::shared_ptr<TableStatistics> JoinNode::derive_statistics_from(
     const std::shared_ptr<AbstractASTNode>& left_child, const std::shared_ptr<AbstractASTNode>& right_child) const {
-  Fail("Join statistics not available yet");  // TODO(anyone) fix once join statistics are in
-  return nullptr;
-  // return left_child->get_statistics()->join_...
+  if (_join_mode == JoinMode::Cross) {
+    return left_child->get_statistics()->generate_cross_join_statistics(right_child->get_statistics());
+  } else {
+    Assert(_join_column_ids,
+           "Only cross joins and joins with join column ids supported for generating join statistics");
+    Assert(_scan_type, "Only cross joins and joins with scan type supported for generating join statistics");
+    return left_child->get_statistics()->generate_predicated_join_statistics(
+      right_child->get_statistics(), _join_mode, *_join_column_ids, *_scan_type);
+  }
 }
 
 bool JoinNode::knows_table(const std::string& table_name) const {

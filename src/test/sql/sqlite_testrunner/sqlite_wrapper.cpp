@@ -58,7 +58,11 @@ void SqliteWrapper::create_table_from_tbl(const std::string& file, const std::st
     query << "INSERT INTO " << table_name << " VALUES (";
     std::vector<std::string> values = _split<std::string>(line, '|');
     for (size_t i = 0; i < values.size(); i++) {
-      query << values[i];
+      if (col_types[i] == "TEXT") {
+        query << "'" << values[i] << "'";
+      } else {
+        query << values[i];
+      }
 
       if ((i + 1) < values.size()) {
         query << ", ";
