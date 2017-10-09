@@ -566,23 +566,20 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_aggregate(
     groupby_columns.reserve(group_by->columns->size());
     for (const auto* groupby_hsql_expr : *group_by->columns) {
       if (!groupby_hsql_expr->isType(hsql::kExprColumnRef)) {
-        throw std::runtime_error("Grouping on complex expressions is not yet supported.");
+        Fail("Grouping on complex expressions is not yet supported.");
       }
 
-      // The GROUP BY expression may have an alias that was set in this aggregate
+      // Some of the GROUP BY expressions may be aliases that were set in this aggregate node. Because the
+      // ProjectionNode that maps these aliases will only be added later, we will have to search the projections
+      // by hand here in order to find the column ids for GROUP BY.
       bool found_aliased_column = false;
       for (const auto& projection : projections) {
         if (projection->alias() && *projection->alias() == groupby_hsql_expr->name) {
-          if (projection->type() == ExpressionType::Column) {
-            // Ok, that was easy. It is just referring to another column.
-            groupby_columns.emplace_back(projection->column_id());
-            found_aliased_column = true;
-            break;
-          } else {
-            // It is something like SELECT a+a AS b FROM x GROUP BY b
-            // Screw this. We'll deal with it if someone actually needs it.
-            throw std::runtime_error("Grouping on complex expressions is not yet supported.");
-          }
+          Assert(projection->type() == ExpressionType::Column,
+                 "Grouping on complex expressions is not yet supported.");
+          groupby_columns.emplace_back(projection->column_id());
+          found_aliased_column = true;
+          break;
         }
       }
       if (found_aliased_column) continue;
