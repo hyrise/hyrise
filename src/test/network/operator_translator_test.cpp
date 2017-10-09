@@ -30,6 +30,11 @@
 #include "storage/table.hpp"
 #include "types.hpp"
 
+/*
+ *  NOTE: Tests in this file are not covered by ASAN/UBSAN in the CI Pipeline.
+ *  This is because GRPC seems to introduce known UB that would cause the pipeline to fail.
+ */
+
 namespace opossum {
 
 class OperatorTranslatorTest : public BaseTest {

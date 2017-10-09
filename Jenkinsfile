@@ -69,10 +69,11 @@ node {
 
       stage("ASAN") {
         stage("asan Release") {
-          sh "LSAN_OPTIONS=suppressions=asan-ignore.txt ./clang-release/opossumAsan --gtest_filter=-ServerTest.*"
+          sh "LSAN_OPTIONS=suppressions=asan-ignore.txt ./clang-release/opossumAsan --gtest_filter=-ServerTest.*,-OperatorTranslatorTest.*"
+          // Excluding the network layer because grpc introduces known UB that cannot be filtered easily
         }
         stage("asan Debug") {
-          sh "LSAN_OPTIONS=suppressions=asan-ignore.txt ./clang-debug/opossumAsan --gtest_filter=-ServerTest.*"
+          sh "LSAN_OPTIONS=suppressions=asan-ignore.txt ./clang-debug/opossumAsan --gtest_filter=-ServerTest.*,-OperatorTranslatorTest.*"
         }
       }
 
