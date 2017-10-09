@@ -20,7 +20,7 @@ SELECT * FROM int_float4 ORDER BY a, b ASC;
 SELECT * FROM int_float4 ORDER BY a, b DESC;
 SELECT a, b FROM int_float ORDER BY a;
 SELECT * FROM int_float4 ORDER BY a, b;
-SELECT a FROM (SELECT a, b FROM int_float WHERE a > 1 ORDER BY b) WHERE a > 0 ORDER BY a;
+SELECT a FROM (SELECT a, b FROM int_float WHERE a > 1 ORDER BY b) AS sub WHERE sub.a > 0 ORDER BY a;
 
 -- LIMIT
 SELECT * FROM int_int3 LIMIT 4;
@@ -73,7 +73,7 @@ SELECT Sum(b + b) AS sum_b_b FROM int_float;
 -- SELECT a, COUNT(b) FROM groupby_int_1gb_1agg_null GROUP BY a;
 
 -- Checks that output of Aggregate can be worked with correctly.
-SELECT d, min_c, max_a FROM ( SELECT b, d, MAX(a) AS max_a, MIN(c) AS min_c FROM groupby_int_2gb_2agg_2 GROUP BY b, d ) WHERE d BETWEEN 20 AND 50 AND min_c > 15;
+SELECT d, sub.min_c, max_a FROM ( SELECT b, d, MAX(a) AS max_a, MIN(c) AS min_c FROM groupby_int_2gb_2agg_2 GROUP BY b, d ) AS sub WHERE d BETWEEN 20 AND 50 AND min_c > 15;
 
 -- HAVING
 SELECT a, b, MAX(c), AVG(d) FROM groupby_int_2gb_2agg GROUP BY a, b HAVING MAX(c) >= 10 AND MAX(c) < 40;
