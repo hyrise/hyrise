@@ -121,7 +121,7 @@ optional<ColumnID> AbstractASTNode::find_column_id_by_named_column_reference(
    */
   DebugAssert(_left_child, "Node has no left child and therefore must override this function.");
 
-  auto named_column_reference_without_local_alias = resolve_local_alias(named_column_reference);
+  auto named_column_reference_without_local_alias = _resolve_local_alias(named_column_reference);
   if (!named_column_reference_without_local_alias) {
     return {};
   } else {
@@ -142,11 +142,8 @@ bool AbstractASTNode::knows_table(const std::string& table_name) const {
 }
 
 std::vector<ColumnID> AbstractASTNode::get_output_column_ids() const {
-  std::vector<ColumnID> column_ids;
-  column_ids.resize(output_col_count());
-
+  std::vector<ColumnID> column_ids(output_col_count());
   std::iota(column_ids.begin(), column_ids.end(), 0);
-
   return column_ids;
 }
 
@@ -212,7 +209,7 @@ void AbstractASTNode::print(const uint32_t level, std::ostream& out) const {
   }
 }
 
-optional<NamedColumnReference> AbstractASTNode::resolve_local_alias(const NamedColumnReference& reference) const {
+optional<NamedColumnReference> AbstractASTNode::_resolve_local_alias(const NamedColumnReference &reference) const {
   if (reference.table_name && _table_alias) {
     if (*reference.table_name == *_table_alias) {
       // The used table name is the alias of this table. Remove id from the NamedColumnReference for further search

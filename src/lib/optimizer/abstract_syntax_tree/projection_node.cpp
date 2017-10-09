@@ -88,7 +88,7 @@ optional<ColumnID> ProjectionNode::find_column_id_by_named_column_reference(
    */
   optional<ColumnID> result_column_id;
 
-  auto named_column_reference_without_local_alias = resolve_local_alias(named_column_reference);
+  auto named_column_reference_without_local_alias = _resolve_local_alias(named_column_reference);
   if (!named_column_reference_without_local_alias) {
     return {};
   }
