@@ -525,7 +525,7 @@ int Console::visualize(const std::string& input) {
   auto ret = system("./scripts/planviz/is_iterm2.sh");
   if (ret != 0) {
     std::string msg{"Currently, only iTerm2 can print the visualization inline. You can find the plan at "};
-    msg += dot_filename + "\n";
+    msg += img_filename + "\n";
     console.out(msg);
 
     return ReturnCode::Ok;
