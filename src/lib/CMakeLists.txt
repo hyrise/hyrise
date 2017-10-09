@@ -334,9 +334,9 @@ add_library(opossumAsanLib EXCLUDE_FROM_ALL STATIC ${SOURCES})
 target_link_libraries(
     opossumAsanLib
     ${LIBRARIES}
-    -fsanitize=address
+    -fsanitize=address,undefined -fno-sanitize-recover=all
 )
-set_target_properties(opossumAsanLib PROPERTIES COMPILE_FLAGS "-fsanitize=address -fno-omit-frame-pointer")
+set_target_properties(opossumAsanLib PROPERTIES COMPILE_FLAGS "-fsanitize=address,undefined -fno-sanitize-recover=all -fno-omit-frame-pointer")
 
 # Configure the lib used for coverage
 add_library(opossumCoverageLib EXCLUDE_FROM_ALL STATIC ${SOURCES})
