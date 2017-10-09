@@ -54,15 +54,15 @@ TEST_F(ProjectionNodeTest, AliasedSubqueryTest) {
   const auto projection_node_with_alias = std::make_shared<ProjectionNode>(*_projection_node);
   projection_node_with_alias->set_alias({"foo"});
 
-  ASSERT_TRUE(projection_node_with_alias->knows_table("foo"));
-  ASSERT_FALSE(projection_node_with_alias->knows_table("t_a"));
+  EXPECT_TRUE(projection_node_with_alias->knows_table("foo"));
+  EXPECT_FALSE(projection_node_with_alias->knows_table("t_a"));
 
-  ASSERT_EQ(projection_node_with_alias->get_column_id_by_named_column_reference({"c"}), ColumnID{0});
-  ASSERT_EQ(projection_node_with_alias->get_column_id_by_named_column_reference({"c", {"foo"}}), ColumnID{0});
-  ASSERT_EQ(projection_node_with_alias->find_column_id_by_named_column_reference({"c", {"t_a"}}), nullopt);
-  ASSERT_EQ(projection_node_with_alias->find_column_id_by_named_column_reference({"a", {"t_b"}}), nullopt);
-  ASSERT_EQ(projection_node_with_alias->find_column_id_by_named_column_reference({"b"}), nullopt);
-  ASSERT_EQ(projection_node_with_alias->find_column_id_by_named_column_reference({"b", {"t_a"}}), nullopt);
+  EXPECT_EQ(projection_node_with_alias->get_column_id_by_named_column_reference({"c"}), ColumnID{0});
+  EXPECT_EQ(projection_node_with_alias->get_column_id_by_named_column_reference({"c", {"foo"}}), ColumnID{0});
+  EXPECT_EQ(projection_node_with_alias->find_column_id_by_named_column_reference({"c", {"t_a"}}), nullopt);
+  EXPECT_EQ(projection_node_with_alias->find_column_id_by_named_column_reference({"a", {"t_b"}}), nullopt);
+  EXPECT_EQ(projection_node_with_alias->find_column_id_by_named_column_reference({"b"}), nullopt);
+  EXPECT_EQ(projection_node_with_alias->find_column_id_by_named_column_reference({"b", {"t_a"}}), nullopt);
   EXPECT_EQ(projection_node_with_alias->get_column_id_by_named_column_reference({"alias_for_b", nullopt}), 2);
   EXPECT_EQ(projection_node_with_alias->get_column_id_by_named_column_reference({"alias_for_b", {"foo"}}), 2);
   EXPECT_EQ(projection_node_with_alias->find_column_id_by_named_column_reference({"alias_for_b", {"t_a"}}), nullopt);

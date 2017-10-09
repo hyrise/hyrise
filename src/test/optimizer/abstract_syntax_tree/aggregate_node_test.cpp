@@ -107,12 +107,12 @@ TEST_F(AggregateNodeTest, AliasedSubqueryTest) {
   const auto aggregate_node_with_alias = std::make_shared<AggregateNode>(*_aggregate_node);
   aggregate_node_with_alias->set_alias(std::string("foo"));
 
-  ASSERT_TRUE(aggregate_node_with_alias->knows_table("foo"));
-  ASSERT_FALSE(aggregate_node_with_alias->knows_table("t_a"));
+  EXPECT_TRUE(aggregate_node_with_alias->knows_table("foo"));
+  EXPECT_FALSE(aggregate_node_with_alias->knows_table("t_a"));
 
-  ASSERT_EQ(aggregate_node_with_alias->get_column_id_by_named_column_reference({"a"}), ColumnID{0});
-  ASSERT_EQ(aggregate_node_with_alias->get_column_id_by_named_column_reference({"a", {"foo"}}), ColumnID{0});
-  ASSERT_EQ(aggregate_node_with_alias->find_column_id_by_named_column_reference({"a", {"t_a"}}), nullopt);
+  EXPECT_EQ(aggregate_node_with_alias->get_column_id_by_named_column_reference({"a"}), ColumnID{0});
+  EXPECT_EQ(aggregate_node_with_alias->get_column_id_by_named_column_reference({"a", {"foo"}}), ColumnID{0});
+  EXPECT_EQ(aggregate_node_with_alias->find_column_id_by_named_column_reference({"a", {"t_a"}}), nullopt);
   EXPECT_EQ(aggregate_node_with_alias->get_column_id_by_named_column_reference({"some_sum", nullopt}), ColumnID{3});
   EXPECT_EQ(aggregate_node_with_alias->get_column_id_by_named_column_reference({"some_sum", {"foo"}}), ColumnID{3});
   EXPECT_EQ(aggregate_node_with_alias->find_column_id_by_named_column_reference({"some_sum", {"t_a"}}), nullopt);
