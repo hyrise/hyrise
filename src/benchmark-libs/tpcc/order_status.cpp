@@ -37,7 +37,7 @@ std::string OrderStatusParams::to_string() const {
   return s.str();
 }
 
-OrderStatusResult AbstractOrderStatusImpl::run_transaction(const OrderStatusParams &params) {
+OrderStatusResult AbstractOrderStatusImpl::run_transaction(const OrderStatusParams& params) {
   OrderStatusResult result;
 
   opossum::TransactionManager::get().run_transaction([&](std::shared_ptr<opossum::TransactionContext> t_context) {
@@ -290,11 +290,11 @@ TaskVector OrderStatusRefImpl::get_order_lines(const int o_id, const int d_id, c
 
 namespace nlohmann {
 
-void adl_serializer<tpcc::OrderStatusParams>::to_json(nlohmann::json &j, const tpcc::OrderStatusParams &v) {
+void adl_serializer<tpcc::OrderStatusParams>::to_json(nlohmann::json& j, const tpcc::OrderStatusParams& v) {
   throw "Not implemented";
 }
 
-void adl_serializer<tpcc::OrderStatusParams>::from_json(const nlohmann::json &j, tpcc::OrderStatusParams &v) {
+void adl_serializer<tpcc::OrderStatusParams>::from_json(const nlohmann::json& j, tpcc::OrderStatusParams& v) {
   v.c_w_id = j["c_w_id"];
   v.c_d_id = j["c_d_id"];
 
@@ -307,11 +307,11 @@ void adl_serializer<tpcc::OrderStatusParams>::from_json(const nlohmann::json &j,
   }
 }
 
-void adl_serializer<tpcc::OrderStatusOrderLine>::to_json(nlohmann::json &j, const tpcc::OrderStatusOrderLine &v) {
+void adl_serializer<tpcc::OrderStatusOrderLine>::to_json(nlohmann::json& j, const tpcc::OrderStatusOrderLine& v) {
   throw "Not implemented";
 }
 
-void adl_serializer<tpcc::OrderStatusOrderLine>::from_json(const nlohmann::json &j, tpcc::OrderStatusOrderLine &v) {
+void adl_serializer<tpcc::OrderStatusOrderLine>::from_json(const nlohmann::json& j, tpcc::OrderStatusOrderLine& v) {
   v.ol_supply_w_id = j["ol_supply_w_id"];
   v.ol_i_id = j["ol_i_id"];
   v.ol_quantity = j["ol_quantity"];
@@ -319,11 +319,11 @@ void adl_serializer<tpcc::OrderStatusOrderLine>::from_json(const nlohmann::json 
   v.ol_delivery_d = j["ol_delivery_d"];
 }
 
-void adl_serializer<tpcc::OrderStatusResult>::to_json(nlohmann::json &j, const tpcc::OrderStatusResult &v) {
+void adl_serializer<tpcc::OrderStatusResult>::to_json(nlohmann::json& j, const tpcc::OrderStatusResult& v) {
   throw "Not implemented";
 }
 
-void adl_serializer<tpcc::OrderStatusResult>::from_json(const nlohmann::json &j, tpcc::OrderStatusResult &v) {
+void adl_serializer<tpcc::OrderStatusResult>::from_json(const nlohmann::json& j, tpcc::OrderStatusResult& v) {
   v.c_id = j["c_id"];
   v.c_first = j["c_first"];
   v.c_middle = j["c_middle"];
@@ -335,7 +335,7 @@ void adl_serializer<tpcc::OrderStatusResult>::from_json(const nlohmann::json &j,
 
   const auto iter = j.find("order_lines");
   if (iter != j.end()) {
-    for (const auto &j_ol : *iter) {
+    for (const auto& j_ol : *iter) {
       tpcc::OrderStatusOrderLine ol = j_ol;
       v.order_lines.emplace_back(ol);
     }

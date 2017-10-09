@@ -12,8 +12,8 @@
 
 namespace opossum {
 
-void SQLQueryPlanVisualizer::visualize(const SQLQueryPlan &plan, const std::string &dot_filename,
-                                       const std::string &img_filename) {
+void SQLQueryPlanVisualizer::visualize(const SQLQueryPlan& plan, const std::string& dot_filename,
+                                       const std::string& img_filename) {
   // Step 1: Generate graphviz dot file
   std::ofstream file;
   file.open(dot_filename);
@@ -22,7 +22,7 @@ void SQLQueryPlanVisualizer::visualize(const SQLQueryPlan &plan, const std::stri
   file << "bgcolor=transparent" << std::endl;
   file << "node [color=white,fontcolor=white,shape=rectangle]" << std::endl;
   file << "edge [color=white,fontcolor=white]" << std::endl;
-  for (const auto &root : plan.tree_roots()) {
+  for (const auto& root : plan.tree_roots()) {
     _visualize_subtree(root, file);
   }
   file << "}" << std::endl;
@@ -38,8 +38,8 @@ void SQLQueryPlanVisualizer::visualize(const SQLQueryPlan &plan, const std::stri
   // We do not want to make graphviz a requirement for Hyrise as visualization is just a gimmick
 }
 
-void SQLQueryPlanVisualizer::_visualize_subtree(const std::shared_ptr<const AbstractOperator> &op,
-                                                std::ofstream &file) {
+void SQLQueryPlanVisualizer::_visualize_subtree(const std::shared_ptr<const AbstractOperator>& op,
+                                                std::ofstream& file) {
   file << reinterpret_cast<uintptr_t>(op.get()) << "[label=\"" << op->description();
 
   if (op->get_output()) {
@@ -62,12 +62,12 @@ void SQLQueryPlanVisualizer::_visualize_subtree(const std::shared_ptr<const Abst
   }
 }
 
-void SQLQueryPlanVisualizer::_visualize_dataflow(const std::shared_ptr<const AbstractOperator> &from,
-                                                 const std::shared_ptr<const AbstractOperator> &to,
-                                                 std::ofstream &file) {
+void SQLQueryPlanVisualizer::_visualize_dataflow(const std::shared_ptr<const AbstractOperator>& from,
+                                                 const std::shared_ptr<const AbstractOperator>& to,
+                                                 std::ofstream& file) {
   file << reinterpret_cast<uintptr_t>(from.get()) << " -> " << reinterpret_cast<uintptr_t>(to.get());
 
-  if (const auto &output = from->get_output()) {
+  if (const auto& output = from->get_output()) {
     // the input operator was executed, print the number of rows
     file << "[label=\" " << std::to_string(output->row_count()) << " row(s)\""
          << ",penwidth=" << static_cast<uint32_t>(std::fmax(1, std::ceil(std::log10(output->row_count()) / 2))) << "]";

@@ -42,7 +42,7 @@ TEST_F(OperatorTaskTest, SingleDependencyTasksFromOperatorTest) {
   auto ts = std::make_shared<TableScan>(gt, ColumnID{0}, ScanType::OpEquals, 1234);
 
   auto tasks = OperatorTask::make_tasks_from_operator(ts);
-  for (auto &task : tasks) {
+  for (auto& task : tasks) {
     task->schedule();
   }
 
@@ -57,7 +57,7 @@ TEST_F(OperatorTaskTest, DoubleDependencyTasksFromOperatorTest) {
                                          std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}), ScanType::OpEquals);
 
   auto tasks = OperatorTask::make_tasks_from_operator(join);
-  for (auto &task : tasks) {
+  for (auto& task : tasks) {
     task->schedule();
   }
 

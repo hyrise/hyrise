@@ -11,7 +11,7 @@
 
 namespace opossum {
 
-DeleteNode::DeleteNode(const std::string &table_name) : AbstractASTNode(ASTNodeType::Delete), _table_name(table_name) {}
+DeleteNode::DeleteNode(const std::string& table_name) : AbstractASTNode(ASTNodeType::Delete), _table_name(table_name) {}
 
 std::string DeleteNode::description() const {
   std::ostringstream desc;
@@ -21,6 +21,6 @@ std::string DeleteNode::description() const {
   return desc.str();
 }
 
-const std::string &DeleteNode::table_name() const { return _table_name; }
+const std::string& DeleteNode::table_name() const { return _table_name; }
 
 }  // namespace opossum

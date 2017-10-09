@@ -12,7 +12,7 @@ namespace opossum {
 
 namespace {
 
-bool is_row_visible(CommitID our_tid, CommitID our_lcid, ChunkOffset chunk_offset, const Chunk::MvccColumns &columns) {
+bool is_row_visible(CommitID our_tid, CommitID our_lcid, ChunkOffset chunk_offset, const Chunk::MvccColumns& columns) {
   const auto row_tid = columns.tids[chunk_offset].load();
   const auto begin_cid = columns.begin_cids[chunk_offset];
   const auto end_cid = columns.end_cids[chunk_offset];
@@ -56,7 +56,7 @@ std::shared_ptr<const Table> Validate::_on_execute(std::shared_ptr<TransactionCo
   const auto our_lcid = transaction_context->last_commit_id();
 
   for (ChunkID chunk_id{0}; chunk_id < _in_table->chunk_count(); ++chunk_id) {
-    const auto &chunk_in = _in_table->get_chunk(chunk_id);
+    const auto& chunk_in = _in_table->get_chunk(chunk_id);
 
     auto chunk_out = Chunk{};
     auto pos_list_out = std::make_shared<PosList>();
@@ -71,7 +71,7 @@ std::shared_ptr<const Table> Validate::_on_execute(std::shared_ptr<TransactionCo
       // Check all rows in the old poslist and put them in pos_list_out if they are visible.
       referenced_table = ref_col_in->referenced_table();
       for (auto row_id : *ref_col_in->pos_list()) {
-        const auto &referenced_chunk = referenced_table->get_chunk(row_id.chunk_id);
+        const auto& referenced_chunk = referenced_table->get_chunk(row_id.chunk_id);
 
         auto mvcc_columns = referenced_chunk.mvcc_columns();
         if (is_row_visible(our_tid, our_lcid, row_id.chunk_offset, *mvcc_columns)) {
