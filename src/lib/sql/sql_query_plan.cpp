@@ -42,7 +42,7 @@ void SQLQueryPlan::append_plan(const SQLQueryPlan& other_plan) {
 
 void SQLQueryPlan::clear() { _roots.clear(); }
 
-std::vector<std::shared_ptr<OperatorTask>> SQLQueryPlan::tasks() const {
+std::vector<std::shared_ptr<OperatorTask>> SQLQueryPlan::create_tasks() const {
   std::vector<std::shared_ptr<OperatorTask>> tasks;
 
   for (const auto& root : _roots) {

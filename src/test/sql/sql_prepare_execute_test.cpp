@@ -57,7 +57,7 @@ TEST_P(SQLPrepareExecuteTest, GenericQueryTest) {
 
   ASSERT_EQ(num_trees, plan.num_trees());
 
-  auto tasks = plan.tasks();
+  auto tasks = plan.create_tasks();
   for (const auto& task : tasks) {
     task->execute();
   }

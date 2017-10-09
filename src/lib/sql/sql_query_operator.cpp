@@ -61,7 +61,7 @@ std::shared_ptr<const Table> SQLQueryOperator::_on_execute(std::shared_ptr<Trans
   // Schedule all tasks in query plan.
   if (_schedule_plan) {
     // Add the result task to the end of the query plan.
-    std::vector<std::shared_ptr<OperatorTask>> tasks = _plan.tasks();
+    std::vector<std::shared_ptr<OperatorTask>> tasks = _plan.create_tasks();
     if (tasks.size() > 0) {
       _result_op->set_input_operator(tasks.back()->get_operator());
       tasks.back()->set_as_predecessor_of(_result_task);

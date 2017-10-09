@@ -302,7 +302,7 @@ int Console::_eval_sql(const std::string& sql) {
 
 int Console::_execute_plan(const SQLQueryPlan& plan) {
   try {
-    for (const auto& task : plan.tasks()) {
+    for (const auto& task : plan.create_tasks()) {
       task->schedule();
     }
   } catch (const std::exception& exception) {

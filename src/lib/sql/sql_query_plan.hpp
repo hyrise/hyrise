@@ -35,9 +35,8 @@ class SQLQueryPlan {
   // Remove all trees from the current plan.
   void clear();
 
-  // TODO(mjendruk): Rename (looks like getter)
   // Wrap all operator trees in tasks and return them.
-  std::vector<std::shared_ptr<OperatorTask>> tasks() const;
+  std::vector<std::shared_ptr<OperatorTask>> create_tasks() const;
 
   // Returns the root nodes of all operator trees in the plan.
   const std::vector<std::shared_ptr<AbstractOperator>>& tree_roots() const;
