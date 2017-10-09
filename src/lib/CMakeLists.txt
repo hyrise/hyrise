@@ -1,53 +1,3 @@
-# Configure protobuf and grpc
-add_custom_command(
-    OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/network/generated
-    COMMAND [ -d ${CMAKE_CURRENT_SOURCE_DIR}/network/generated ] || mkdir ${CMAKE_CURRENT_SOURCE_DIR}/network/generated
-)
-
-add_custom_command(
-    OUTPUT
-        ${CMAKE_CURRENT_SOURCE_DIR}/network/generated/opossum.grpc.pb.cc
-        ${CMAKE_CURRENT_SOURCE_DIR}/network/generated/opossum.grpc.pb.h
-    COMMAND
-        ${PROJECT_SOURCE_DIR}/third_party/grpc/bins/opt/protobuf/protoc
-            --grpc_out=./network/generated
-            --plugin=protoc-gen-grpc=${PROJECT_SOURCE_DIR}/third_party/grpc/bins/opt/grpc_cpp_plugin
-            -I=\"./network/protos/\"
-            ./network/protos/opossum.proto
-    DEPENDS
-        ${CMAKE_CURRENT_SOURCE_DIR}/network/generated
-        ./network/protos/opossum.proto
-    WORKING_DIRECTORY
-        ${CMAKE_CURRENT_SOURCE_DIR}
-)
-
-add_custom_command(
-    OUTPUT
-        ${CMAKE_CURRENT_SOURCE_DIR}/network/generated/opossum.pb.cc
-        ${CMAKE_CURRENT_SOURCE_DIR}/network/generated/opossum.pb.h
-    COMMAND
-        ${PROJECT_SOURCE_DIR}/third_party/grpc/bins/opt/protobuf/protoc
-            --cpp_out=./network/generated
-            -I=\"./network/protos/\"
-            ./network/protos/opossum.proto
-    DEPENDS
-        ${CMAKE_CURRENT_SOURCE_DIR}/network/generated
-        ./network/protos/opossum.proto
-    WORKING_DIRECTORY
-        ${CMAKE_CURRENT_SOURCE_DIR}
-)
-
-# Protobuf library with overridden deprecated warning
-add_library(
-    opossumProtobuf
-
-    STATIC
-    network/generated/opossum.pb.cc
-    network/generated/opossum.grpc.pb.cc
-)
-
-target_compile_options(opossumProtobuf PRIVATE -Wno-unused-parameter -Wno-deprecated-declarations)
-
 # Sources and libraries shared among the different builds of the lib
 set(
     SOURCES
@@ -69,15 +19,6 @@ set(
     import_export/csv_parser.hpp
     import_export/csv_writer.cpp
     import_export/csv_writer.hpp
-    network/operator_translator.cpp
-    network/operator_translator.hpp
-    network/opossum.pb.wrapper.hpp
-    network/request_handler.cpp
-    network/request_handler.hpp
-    network/response_builder.hpp
-    network/server_configuration.hpp
-    network/server.cpp
-    network/server.hpp
     operators/table_scan/base_single_column_table_scan_impl.cpp
     operators/table_scan/base_single_column_table_scan_impl.hpp
     operators/table_scan/base_table_scan_impl.hpp
@@ -311,10 +252,6 @@ set(
 
 set(
     LIBRARIES
-    opossumProtobuf
-    protobuf
-    grpc++
-    grpc
     pthread
     z
     sqlparser
