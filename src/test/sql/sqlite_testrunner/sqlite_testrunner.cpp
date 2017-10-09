@@ -13,6 +13,7 @@
 #include "base_test.hpp"
 #include "gtest/gtest.h"
 
+#include "concurrency/transaction_manager.hpp"
 #include "operators/print.hpp"
 #include "scheduler/current_scheduler.hpp"
 #include "scheduler/operator_task.hpp"
@@ -28,7 +29,7 @@ class SQLiteTestRunner : public BaseTest {
     std::ifstream file("src/test/sql/sqlite_testrunner/sqlite_testrunner.tables");
     std::string line;
     while (std::getline(file, line)) {
-      if (line.empty()) {
+      if (line.empty() || line.substr(0, 2) == "//") {
         continue;
       }
 
@@ -60,6 +61,8 @@ TEST_F(SQLiteTestRunner, CompareToSQLiteTestRunner) {
       continue;
     }
 
+    std::cout << "Testing query: " << query << " ..." << std::endl;
+
     hsql::SQLParserResult parse_result;
     hsql::SQLParser::parseSQLString(query, &parse_result);
 
@@ -68,21 +71,22 @@ TEST_F(SQLiteTestRunner, CompareToSQLiteTestRunner) {
       continue;
     }
 
-    // Expect the query to be a single statement.
-    EXPECT_EQ(parse_result.size(), 1u);
-    if (parse_result.size() != 1u) {
-      continue;
+    auto plan = SQLPlanner::plan(parse_result);
+    std::shared_ptr<AbstractOperator> result_operator;
+
+    auto tx_context = TransactionManager::get().new_transaction_context();
+    for (const auto& root : plan.tree_roots()) {
+      auto tasks = OperatorTask::make_tasks_from_operator(root);
+
+      for (auto& task : tasks) {
+        task->get_operator()->set_transaction_context(tx_context);
+      }
+
+      CurrentScheduler::schedule_and_wait_for_tasks(tasks);
+      result_operator = tasks.back()->get_operator();
     }
 
-    auto plan = SQLPlanner::plan(parse_result);
-    auto result_operator = plan.tree_roots().front();
-
-    auto tasks = OperatorTask::make_tasks_from_operator(result_operator);
-    CurrentScheduler::schedule_and_wait_for_tasks(tasks);
-
-    std::cout << "Testing query: " << query << " ..." << std::endl;
-
-    auto result_table = tasks.back()->get_operator()->get_output();
+    auto result_table = result_operator->get_output();
     auto sqlite_result_table = _sqlite.execute_query(query);
 
     bool order_sensitive = false;
@@ -92,7 +96,7 @@ TEST_F(SQLiteTestRunner, CompareToSQLiteTestRunner) {
       order_sensitive = (select_statement->order != nullptr);
     }
 
-    EXPECT_TABLE_EQ(result_table, sqlite_result_table, order_sensitive);
+    EXPECT_TABLE_EQ(result_table, sqlite_result_table, order_sensitive, false);
   }
 }
 

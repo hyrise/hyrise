@@ -1,2 +1,24 @@
 src/test/tables/int_float.tbl int_float
 src/test/tables/int_float2.tbl int_float2
+src/test/tables/int_float4.tbl int_float4
+src/test/tables/int_float6.tbl int_float6
+src/test/tables/int_string2.tbl int_string2
+src/test/tables/int_int3.tbl int_int3
+
+src/test/tables/aggregateoperator/groupby_int_1gb_1agg/input.tbl groupby_int_1gb_1agg
+src/test/tables/aggregateoperator/groupby_int_1gb_2agg/input.tbl groupby_int_1gb_2agg
+src/test/tables/aggregateoperator/groupby_int_2gb_2agg/input.tbl groupby_int_2gb_2agg
+src/test/tables/aggregateoperator/groupby_int_2gb_2agg/input2.tbl groupby_int_2gb_2agg_2
+// src/test/tables/aggregateoperator/groupby_int_1gb_1agg/input_null.tbl groupby_int_1gb_1agg_null
+
+src/test/tables/int.tbl int_for_delete_1
+src/test/tables/int_int3_limit_1.tbl int_int_for_insert_1
+src/test/tables/int_int3_limit_1.tbl int_int_for_insert_2
+src/test/tables/int_int3_updated.tbl int_int_for_update
+src/test/tables/int_int_int.tbl int_int_int
+
+src/test/tables/tpch/customer.tbl customer
+src/test/tables/tpch/orders.tbl orders
+src/test/tables/tpch/lineitem.tbl lineitem
+
+// src/test/tables/int_float_with_null.tbl int_float_null
