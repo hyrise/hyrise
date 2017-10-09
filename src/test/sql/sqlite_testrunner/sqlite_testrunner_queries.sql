@@ -95,22 +95,21 @@ SELECT c_custkey, c_name FROM customer;
 -- UPDATE int_int_for_update SET a = a + 1 WHERE b > 10; SELECT * FROM int_int_for_update;
 
 -- INSERT
--- TODO: Add support for multiple statements at once
--- INSERT INTO int_int_for_insert_1 VALUES (1, 3); SELECT * FROM int_int_for_insert_1;
--- INSERT INTO int_int_for_insert_1 (a, b) VALUES (1, 3); SELECT * FROM int_int_for_insert_1;
--- INSERT INTO int_int_for_insert_1 (b, a) VALUES (3, 1); SELECT * FROM int_int_for_insert_1;
+INSERT INTO int_int_for_insert_1 VALUES (1, 3); SELECT * FROM int_int_for_insert_1;
+INSERT INTO int_int_for_insert_1 (a, b) VALUES (1, 3); SELECT * FROM int_int_for_insert_1;
+INSERT INTO int_int_for_insert_1 (b, a) VALUES (3, 1); SELECT * FROM int_int_for_insert_1;
 
--- INSERT INTO int_int_for_insert_1 VALUES (1, 3); INSERT INTO int_int_for_insert_1 VALUES (13, 2); INSERT INTO int_int_for_insert_1 VALUES (6, 9); SELECT * FROM int_int_for_insert_1;
+INSERT INTO int_int_for_insert_1 VALUES (1, 3); INSERT INTO int_int_for_insert_1 VALUES (13, 2); INSERT INTO int_int_for_insert_1 VALUES (6, 9); SELECT * FROM int_int_for_insert_1;
 
 -- INSERT ... INTO ... (with literal projection)
--- INSERT INTO int_int_for_insert_1 SELECT 1, 3 FROM int_int_for_insert_1; SELECT * FROM int_int_for_insert_1;
--- INSERT INTO int_int_for_insert_1 (a, b) SELECT 1, 3 FROM int_int_for_insert_1; SELECT * FROM int_int_for_insert_1;
--- INSERT INTO int_int_for_insert_1 (b, a) SELECT 3, 1 FROM int_int_for_insert_1; SELECT * FROM int_int_for_insert_1;
+INSERT INTO int_int_for_insert_1 SELECT 1, 3 FROM int_int_for_insert_1; SELECT * FROM int_int_for_insert_1;
+INSERT INTO int_int_for_insert_1 (a, b) SELECT 1, 3 FROM int_int_for_insert_1; SELECT * FROM int_int_for_insert_1;
+INSERT INTO int_int_for_insert_1 (b, a) SELECT 3, 1 FROM int_int_for_insert_1; SELECT * FROM int_int_for_insert_1;
 
 -- INSERT ... INTO ... (with regular queries)
--- INSERT INTO int_int_for_insert_1 SELECT * FROM int_int3 WHERE a = 1 AND b = 3; INSERT INTO int_int_for_insert_1 SELECT * FROM int_int3 WHERE a = 13; INSERT INTO int_int_for_insert_1 (a, b) SELECT a, b FROM int_int3 WHERE a = 6; SELECT * FROM int_int_for_insert_1;
+INSERT INTO int_int_for_insert_1 SELECT * FROM int_int3 WHERE a = 1 AND b = 3; INSERT INTO int_int_for_insert_1 SELECT * FROM int_int3 WHERE a = 13; INSERT INTO int_int_for_insert_1 (a, b) SELECT a, b FROM int_int3 WHERE a = 6; SELECT * FROM int_int_for_insert_1;
 
--- TODO: Multiple statement support
+-- TODO: Fails
 -- SELECT customer.c_custkey, customer.c_name, COUNT(orders.o_orderkey) FROM customer JOIN orders ON c_custkey = o_custkey GROUP BY customer.c_custkey, customer.c_name HAVING COUNT(orders.o_orderkey) >= 100;
 
 -- TODO(mp): Aliases for Subselects are not supported yet

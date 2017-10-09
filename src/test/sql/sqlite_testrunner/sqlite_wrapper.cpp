@@ -1,5 +1,8 @@
 #include "sqlite_wrapper.hpp"
 
+#include <boost/algorithm/string/split.hpp>
+#include <boost/algorithm/string/trim.hpp>
+
 #include <fstream>
 #include <memory>
 #include <string>
@@ -81,23 +84,27 @@ void SqliteWrapper::create_table_from_tbl(const std::string& file, const std::st
 
 std::shared_ptr<Table> SqliteWrapper::execute_query(const std::string& sql_query) {
   sqlite3_stmt* result_row;
+  bool create_column_headers = true;
 
   auto result_table = std::make_shared<Table>();
 
-  int rc = sqlite3_prepare_v2(_db, sql_query.c_str(), -1, &result_row, 0);
+  std::vector<std::string> queries;
+  boost::algorithm::split(queries, sql_query, boost::is_any_of(";"));
 
-  if (rc != SQLITE_OK) {
-    throw std::runtime_error("Failed to execute query \"" + sql_query + "\": " + std::string(sqlite3_errmsg(_db)) +
-                             "\n");
-  }
+  for (auto & query : queries) {
+    int rc = sqlite3_prepare_v2(_db, query.c_str(), -1, &result_row, 0);
 
-  if ((rc = sqlite3_step(result_row)) == SQLITE_ROW) {
-    int column_count = sqlite3_column_count(result_row);
-    _create_columns(result_table, result_row, column_count);
+    if (rc != SQLITE_OK) {
+      throw std::runtime_error("Failed to execute query \"" + query + "\": " + std::string(sqlite3_errmsg(_db)) + "\n");
+    }
 
-    do {
-      _add_row(result_table, result_row, column_count);
-    } while ((rc = sqlite3_step(result_row)) == SQLITE_ROW);
+    while ((rc = sqlite3_step(result_row)) == SQLITE_ROW) {
+      if (create_column_headers) {
+        _create_columns(result_table, result_row, sqlite3_column_count(result_row));
+        create_column_headers = false;
+      }
+      _add_row(result_table, result_row, sqlite3_column_count(result_row));
+    }
   }
 
   sqlite3_finalize(result_row);
