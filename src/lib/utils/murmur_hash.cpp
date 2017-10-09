@@ -1,5 +1,7 @@
 #include "murmur_hash.hpp"
 
+#include <cstring>
+
 namespace opossum {
 
 //-----------------------------------------------------------------------------
@@ -33,7 +35,7 @@ unsigned int MurmurHash2(const void *key, int len, unsigned int seed) {
 
   while (len >= 4) {
     unsigned int k;
-    memcpy(&k, data, sizeof(k));
+    std::memcpy(&k, data, sizeof(k));
 
     k *= m;
     k ^= k >> r;

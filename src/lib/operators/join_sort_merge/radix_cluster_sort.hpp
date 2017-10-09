@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <cstring>
 #include <map>
 #include <memory>
 #include <string>
@@ -112,7 +113,7 @@ class RadixClusterSort {
   static typename std::enable_if<std::is_same<T2, std::string>::value, uint32_t>::type get_radix(T2 value,
                                                                                            uint32_t radix_bitmask) {
     uint32_t radix;
-    memcpy(&radix, value.c_str(), std::min(value.size(), sizeof(radix)));
+    std::memcpy(&radix, value.c_str(), std::min(value.size(), sizeof(radix)));
     return radix & radix_bitmask;
   }
 
