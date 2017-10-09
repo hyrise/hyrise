@@ -56,7 +56,7 @@ TEST_F(SQLiteTestRunner, CompareToSQLiteTestRunner) {
   std::ifstream file("src/test/sql/sqlite_testrunner/sqlite_testrunner.testqueries");
   std::string query;
   while (std::getline(file, query)) {
-    if (query.empty()) {
+    if (query.empty() || query.substr(0, 2) == "--") {
       continue;
     }
 
