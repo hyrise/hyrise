@@ -111,8 +111,9 @@ class RadixClusterSort {
   template <typename T2>
   static typename std::enable_if<std::is_same<T2, std::string>::value, uint32_t>::type get_radix(T2 value,
                                                                                            uint32_t radix_bitmask) {
-    auto result = reinterpret_cast<const uint32_t*>(value.c_str());
-    return *result & radix_bitmask;
+    uint32_t radix;
+    memcpy(&radix, value.c_str(), std::min(value.size(), sizeof(radix)));
+    return radix & radix_bitmask;
   }
 
   /**

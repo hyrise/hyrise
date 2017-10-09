@@ -32,7 +32,8 @@ unsigned int MurmurHash2(const void *key, int len, unsigned int seed) {
   const unsigned char *data = (const unsigned char *)key;
 
   while (len >= 4) {
-    unsigned int k = *(unsigned int *)data;
+    unsigned int k;
+    memcpy(&k, data, sizeof(k));
 
     k *= m;
     k ^= k >> r;
