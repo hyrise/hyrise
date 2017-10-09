@@ -122,14 +122,9 @@ optional<ColumnID> AggregateNode::find_column_id_by_named_column_reference(
     const NamedColumnReference& named_column_reference) const {
   DebugAssert(left_child(), "AggregateNode needs a child.");
 
-  auto named_column_reference_without_local_alias = named_column_reference;
-  if (named_column_reference.table_name && _table_alias) {
-    if (*named_column_reference.table_name == *_table_alias) {
-      // The used table name is the alias of this table. Remove id from the NamedColumnReference for further search
-      named_column_reference_without_local_alias.table_name = nullopt;
-    } else {
-      return {};
-    }
+  auto named_column_reference_without_local_alias = resolve_local_alias(named_column_reference);
+  if (!named_column_reference_without_local_alias) {
+    return {};
   }
 
   /*
@@ -137,15 +132,15 @@ optional<ColumnID> AggregateNode::find_column_id_by_named_column_reference(
    * These columns are created by the Aggregate Operator, so we have to look through them here.
    */
   optional<ColumnID> column_id_aggregate;
-  if (!named_column_reference_without_local_alias.table_name) {
+  if (!named_column_reference_without_local_alias->table_name) {
     for (auto aggregate_idx = 0u; aggregate_idx < _aggregate_expressions.size(); aggregate_idx++) {
       const auto& aggregate_expression = _aggregate_expressions[aggregate_idx];
 
       // If AggregateDefinition has no alias, column_name will not match.
-      if (named_column_reference_without_local_alias.column_name == aggregate_expression->alias()) {
+      if (named_column_reference_without_local_alias->column_name == aggregate_expression->alias()) {
         // Check that we haven't found a match yet.
         Assert(!column_id_aggregate,
-               "Column name " + named_column_reference_without_local_alias.column_name + " is ambiguous.");
+               "Column name " + named_column_reference_without_local_alias->column_name + " is ambiguous.");
         // Aggregate columns come after Group By columns in the Aggregate's output
         column_id_aggregate = ColumnID{static_cast<ColumnID::base_type>(aggregate_idx + _groupby_column_ids.size())};
       }
@@ -159,7 +154,7 @@ optional<ColumnID> AggregateNode::find_column_id_by_named_column_reference(
    */
   optional<ColumnID> column_id_groupby;
   const auto column_id_child =
-      left_child()->find_column_id_by_named_column_reference(named_column_reference_without_local_alias);
+      left_child()->find_column_id_by_named_column_reference(*named_column_reference_without_local_alias);
   if (column_id_child) {
     const auto iter = std::find(_groupby_column_ids.begin(), _groupby_column_ids.end(), *column_id_child);
     if (iter != _groupby_column_ids.end()) {
@@ -169,7 +164,7 @@ optional<ColumnID> AggregateNode::find_column_id_by_named_column_reference(
 
   // Max one can be set, both not being set is fine, as we are in a find_* method
   Assert(!column_id_aggregate || !column_id_groupby,
-         "Column name " + named_column_reference_without_local_alias.column_name + " is ambiguous.");
+         "Column name " + named_column_reference_without_local_alias->column_name + " is ambiguous.");
 
   if (column_id_aggregate) {
     return column_id_aggregate;

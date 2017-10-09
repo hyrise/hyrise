@@ -387,7 +387,7 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_table_ref(const 
       break;
     case hsql::kTableSelect:
       node = _translate_select(*table.select);
-      if (!alias) throw std::runtime_error("Every derived table must have its own alias");
+      Assert(alias, "Every derived table must have its own alias");
       break;
     case hsql::kTableJoin:
       node = _translate_join(*table.join);
