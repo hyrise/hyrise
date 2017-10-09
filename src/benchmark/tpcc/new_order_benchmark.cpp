@@ -14,7 +14,7 @@ namespace opossum {
 
 class TPCCNewOrderBenchmark : public TPCCBenchmarkFixture {
  public:
-  void benchmark_new_order(benchmark::State &state, tpcc::AbstractNewOrderImpl &impl) {
+  void benchmark_new_order(benchmark::State& state, tpcc::AbstractNewOrderImpl& impl) {
     clear_cache();
 
     while (state.KeepRunning()) {
@@ -27,7 +27,7 @@ class TPCCNewOrderBenchmark : public TPCCBenchmarkFixture {
       params.order_lines.reserve(_random_gen.random_number(tpcc::MIN_ORDER_LINE_COUNT, tpcc::MAX_ORDER_LINE_COUNT));
 
       for (size_t ol = 0; ol < params.order_lines.size(); ol++) {
-        auto &order_line = params.order_lines[ol];
+        auto& order_line = params.order_lines[ol];
         order_line.w_id = static_cast<int32_t>(_random_gen.random_number(0, _gen._warehouse_size - 1));
         order_line.i_id = static_cast<int32_t>(_random_gen.random_number(0, tpcc::NUM_ITEMS - 1));
         order_line.qty = static_cast<int32_t>(_random_gen.random_number(1, tpcc::MAX_ORDER_LINE_QUANTITY));
@@ -41,6 +41,6 @@ class TPCCNewOrderBenchmark : public TPCCBenchmarkFixture {
   tpcc::NewOrderRefImpl _ref_impl;
 };
 
-BENCHMARK_F(TPCCNewOrderBenchmark, BM_TPCC_NewOrder)(benchmark::State &state) { benchmark_new_order(state, _ref_impl); }
+BENCHMARK_F(TPCCNewOrderBenchmark, BM_TPCC_NewOrder)(benchmark::State& state) { benchmark_new_order(state, _ref_impl); }
 
 }  // namespace opossum

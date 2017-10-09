@@ -25,11 +25,11 @@ struct OrderByDefinition {
  */
 class SortNode : public AbstractASTNode {
  public:
-  explicit SortNode(const std::vector<OrderByDefinition> &order_by_definitions);
+  explicit SortNode(const std::vector<OrderByDefinition>& order_by_definitions);
 
   std::string description() const override;
 
-  const std::vector<OrderByDefinition> &order_by_definitions() const;
+  const std::vector<OrderByDefinition>& order_by_definitions() const;
 
  private:
   const std::vector<OrderByDefinition> _order_by_definitions;

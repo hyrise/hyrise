@@ -53,7 +53,7 @@ class AbstractBenchmarkTableGenerator {
   template <typename T>
   void add_column(std::shared_ptr<opossum::Table> table, std::string name,
                   std::shared_ptr<std::vector<size_t>> cardinalities,
-                  const std::function<std::vector<T>(std::vector<size_t>)> &generator_function) {
+                  const std::function<std::vector<T>(std::vector<size_t>)>& generator_function) {
     /**
      * We have to add Chunks when we add the first column.
      * This has to be done after the first column was created and added,
@@ -107,7 +107,7 @@ class AbstractBenchmarkTableGenerator {
        * and iterate it to add to the output column.
        */
       auto values = generator_function(indices);
-      for (T &value : values) {
+      for (T& value : values) {
         column.push_back(value);
 
         // write output chunks if column size has reached chunk_size
@@ -120,7 +120,7 @@ class AbstractBenchmarkTableGenerator {
             table->emplace_chunk(std::move(chunk));
           } else {
             opossum::ChunkID chunk_id{static_cast<uint32_t>(row_index / _chunk_size)};
-            auto &chunk = table->get_chunk(chunk_id);
+            auto& chunk = table->get_chunk(chunk_id);
             chunk.add_column(value_column);
           }
 
@@ -143,7 +143,7 @@ class AbstractBenchmarkTableGenerator {
         table->emplace_chunk(std::move(chunk));
       } else {
         opossum::ChunkID chunk_id{static_cast<uint32_t>(row_index / _chunk_size)};
-        auto &chunk = table->get_chunk(chunk_id);
+        auto& chunk = table->get_chunk(chunk_id);
         chunk.add_column(value_column);
       }
     }
@@ -163,7 +163,7 @@ class AbstractBenchmarkTableGenerator {
   template <typename T>
   void add_column(std::shared_ptr<opossum::Table> table, std::string name,
                   std::shared_ptr<std::vector<size_t>> cardinalities,
-                  const std::function<T(std::vector<size_t>)> &generator_function) {
+                  const std::function<T(std::vector<size_t>)>& generator_function) {
     const std::function<std::vector<T>(std::vector<size_t>)> wrapped_generator_function =
         [generator_function](std::vector<size_t> indices) { return std::vector<T>({generator_function(indices)}); };
     add_column(table, name, cardinalities, wrapped_generator_function);

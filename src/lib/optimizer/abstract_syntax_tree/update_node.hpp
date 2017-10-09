@@ -14,14 +14,14 @@ namespace opossum {
  */
 class UpdateNode : public AbstractASTNode {
  public:
-  explicit UpdateNode(const std::string &table_name,
-                      const std::vector<std::shared_ptr<Expression>> &column_expressions);
+  explicit UpdateNode(const std::string& table_name,
+                      const std::vector<std::shared_ptr<Expression>>& column_expressions);
 
   std::string description() const override;
 
-  const std::string &table_name() const;
+  const std::string& table_name() const;
 
-  const std::vector<std::shared_ptr<Expression>> &column_expressions() const;
+  const std::vector<std::shared_ptr<Expression>>& column_expressions() const;
 
  protected:
   const std::string _table_name;

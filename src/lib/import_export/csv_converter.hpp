@@ -26,7 +26,7 @@ class AbstractCsvConverter {
   virtual ~AbstractCsvConverter() = default;
 
   // Converts value to the underlying data type and saves it at the given position.
-  virtual void insert(const std::string &value, ChunkOffset position) = 0;
+  virtual void insert(const std::string& value, ChunkOffset position) = 0;
 
   // Returns the Column which contains the previously converted values.
   // After the call of finish, no other operation should be called.
@@ -37,7 +37,7 @@ class AbstractCsvConverter {
    * The operation is in-place and does not create a new string object.
    * Field must be a valid csv field.
    */
-  static void unescape(std::string &field, const CsvConfig &config = {}) {
+  static void unescape(std::string& field, const CsvConfig& config = {}) {
     // String does not contain escaping if it is not surrounded with quotes
     if (field.empty() || field.front() != config.quote) return;
 
@@ -67,9 +67,9 @@ class AbstractCsvConverter {
 template <typename T>
 class CsvConverter : public AbstractCsvConverter {
  public:
-  explicit CsvConverter(ChunkOffset size, const CsvConfig &config = {}) : _parsed_values(size), _config(config) {}
+  explicit CsvConverter(ChunkOffset size, const CsvConfig& config = {}) : _parsed_values(size), _config(config) {}
 
-  void insert(const std::string &value, ChunkOffset position) override {
+  void insert(const std::string& value, ChunkOffset position) override {
     _parsed_values[position] = _get_conversion_function()(value);
   }
 
@@ -82,34 +82,34 @@ class CsvConverter : public AbstractCsvConverter {
    * The assumption is that only csv fields of type string must be unescaped because other types cannot contain special
    * csv characters.
    */
-  std::function<T(const std::string &)> _get_conversion_function();
+  std::function<T(const std::string&)> _get_conversion_function();
   tbb::concurrent_vector<T> _parsed_values;
   CsvConfig _config;
 };
 
 template <>
-inline std::function<int(const std::string &)> CsvConverter<int>::_get_conversion_function() {
-  return [](const std::string &str) { return std::stoi(str); };
+inline std::function<int(const std::string&)> CsvConverter<int>::_get_conversion_function() {
+  return [](const std::string& str) { return std::stoi(str); };
 }
 
 template <>
-inline std::function<int64_t(const std::string &)> CsvConverter<int64_t>::_get_conversion_function() {
-  return [](const std::string &str) { return static_cast<int64_t>(std::stoll(str)); };
+inline std::function<int64_t(const std::string&)> CsvConverter<int64_t>::_get_conversion_function() {
+  return [](const std::string& str) { return static_cast<int64_t>(std::stoll(str)); };
 }
 
 template <>
-inline std::function<float(const std::string &)> CsvConverter<float>::_get_conversion_function() {
-  return [](const std::string &str) { return std::stof(str); };
+inline std::function<float(const std::string&)> CsvConverter<float>::_get_conversion_function() {
+  return [](const std::string& str) { return std::stof(str); };
 }
 
 template <>
-inline std::function<double(const std::string &)> CsvConverter<double>::_get_conversion_function() {
-  return [](const std::string &str) { return std::stod(str); };
+inline std::function<double(const std::string&)> CsvConverter<double>::_get_conversion_function() {
+  return [](const std::string& str) { return std::stod(str); };
 }
 
 template <>
-inline std::function<std::string(const std::string &)> CsvConverter<std::string>::_get_conversion_function() {
-  return [this](const std::string &str) {
+inline std::function<std::string(const std::string&)> CsvConverter<std::string>::_get_conversion_function() {
+  return [this](const std::string& str) {
     std::string copy = str;
     unescape(copy, _config);
     return copy;

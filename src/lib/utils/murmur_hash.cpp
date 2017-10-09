@@ -18,7 +18,7 @@ namespace opossum {
 // 2. It will not produce the same results on little-endian and big-endian
 //    machines.
 
-unsigned int MurmurHash2(const void *key, int len, unsigned int seed) {
+unsigned int MurmurHash2(const void* key, int len, unsigned int seed) {
   // 'm' and 'r' are mixing constants generated offline.
   // They're not really 'magic', they just happen to work well.
 
@@ -31,7 +31,7 @@ unsigned int MurmurHash2(const void *key, int len, unsigned int seed) {
 
   // Mix 4 bytes at a time into the hash
 
-  const unsigned char *data = (const unsigned char *)key;
+  const unsigned char* data = (const unsigned char*)key;
 
   while (len >= 4) {
     unsigned int k;

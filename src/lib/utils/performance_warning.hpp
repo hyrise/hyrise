@@ -31,11 +31,9 @@ class PerformanceWarningClass {
   }
 
  public:
-  explicit PerformanceWarningClass(const std::string &text) {
+  explicit PerformanceWarningClass(const std::string& text) {
     if (PerformanceWarningClass::disabled()) return;
-    std::cout << "[PERF] " << text
-              << "\n\tPerformance can be affected. This warning is only shown once."
-              << std::endl;
+    std::cout << "[PERF] " << text << "\n\tPerformance can be affected. This warning is only shown once." << std::endl;
   }
 
  protected:
@@ -51,7 +49,8 @@ class PerformanceWarningClass {
 };
 
 class PerformanceWarningDisabler {
-bool _previously_disabled;
+  bool _previously_disabled;
+
  public:
   PerformanceWarningDisabler() : _previously_disabled(PerformanceWarningClass::disable()) {}
   ~PerformanceWarningDisabler() {
@@ -60,10 +59,11 @@ bool _previously_disabled;
 };
 
 #if IS_DEBUG
-#define PerformanceWarning(text)\
-  {\
-    static PerformanceWarningClass warn(std::string(text) + " at " +\
-      std::string{__FILENAME__} + ":" BOOST_PP_STRINGIZE(__LINE__)); }  // NOLINT
+#define PerformanceWarning(text)                                                                 \
+  {                                                                                              \
+    static PerformanceWarningClass warn(std::string(text) + " at " + std::string(__FILENAME__) + \
+                                        ":" BOOST_PP_STRINGIZE(__LINE__));                       \
+  }  // NOLINT
 #else
 #define PerformanceWarning(text)
 #endif

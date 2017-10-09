@@ -11,11 +11,11 @@ namespace opossum {
  */
 class ShowColumnsNode : public AbstractNonOptimizableASTNode {
  public:
-  explicit ShowColumnsNode(const std::string &table_name);
+  explicit ShowColumnsNode(const std::string& table_name);
 
   std::string description() const override;
 
-  const std::string &table_name() const;
+  const std::string& table_name() const;
 
  private:
   const std::string _table_name;

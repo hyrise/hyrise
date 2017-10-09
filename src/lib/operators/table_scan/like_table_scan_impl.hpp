@@ -27,11 +27,11 @@ class Table;
 class LikeTableScanImpl : public BaseSingleColumnTableScanImpl {
  public:
   LikeTableScanImpl(std::shared_ptr<const Table> in_table, const ColumnID left_column_id,
-                    const std::string &right_wildcard);
+                    const std::string& right_wildcard);
 
-  void handle_value_column(BaseColumn &base_column, std::shared_ptr<ColumnVisitableContext> base_context) override;
+  void handle_value_column(BaseColumn& base_column, std::shared_ptr<ColumnVisitableContext> base_context) override;
 
-  void handle_dictionary_column(BaseColumn &base_column, std::shared_ptr<ColumnVisitableContext> base_context) override;
+  void handle_dictionary_column(BaseColumn& base_column, std::shared_ptr<ColumnVisitableContext> base_context) override;
 
  private:
   /**
@@ -42,7 +42,7 @@ class LikeTableScanImpl : public BaseSingleColumnTableScanImpl {
   /**
    * @returns number of matches and the result of each dictionary entry
    */
-  std::pair<size_t, std::vector<bool>> _find_matches_in_dictionary(const pmr_vector<std::string> &dictionary);
+  std::pair<size_t, std::vector<bool>> _find_matches_in_dictionary(const pmr_vector<std::string>& dictionary);
 
   /**@}*/
 
@@ -52,7 +52,7 @@ class LikeTableScanImpl : public BaseSingleColumnTableScanImpl {
    * @{
    */
 
-  static std::map<std::string, std::string> _extract_character_ranges(std::string &str);
+  static std::map<std::string, std::string> _extract_character_ranges(std::string& str);
 
   static std::string _sqllike_to_regex(std::string sqllike);
 

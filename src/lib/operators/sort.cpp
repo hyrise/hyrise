@@ -30,7 +30,7 @@ uint8_t Sort::num_in_tables() const { return 1; }
 
 uint8_t Sort::num_out_tables() const { return 1; }
 
-std::shared_ptr<AbstractOperator> Sort::recreate(const std::vector<AllParameterVariant> &args) const {
+std::shared_ptr<AbstractOperator> Sort::recreate(const std::vector<AllParameterVariant>& args) const {
   return std::make_shared<Sort>(_input_left->recreate(args), _column_id, _order_by_mode, _output_chunk_size);
 }
 

@@ -13,8 +13,8 @@ class BaseAttributeVector : private Noncopyable {
 
   // we need to explicitly set the move constructor to default when
   // we overwrite the copy constructor
-  BaseAttributeVector(BaseAttributeVector &&) = default;
-  BaseAttributeVector &operator=(BaseAttributeVector &&) = default;
+  BaseAttributeVector(BaseAttributeVector&&) = default;
+  BaseAttributeVector& operator=(BaseAttributeVector&&) = default;
 
   virtual ValueID get(const size_t i) const = 0;
 

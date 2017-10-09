@@ -57,7 +57,7 @@ class AbstractOrderStatusImpl {
   virtual TaskVector get_orders(const int c_id, const int c_d_id, const int c_w_id) = 0;
   virtual TaskVector get_order_lines(const int o_id, const int d_id, const int w_id) = 0;
 
-  OrderStatusResult run_transaction(const OrderStatusParams &params);
+  OrderStatusResult run_transaction(const OrderStatusParams& params);
 };
 
 class OrderStatusRefImpl : public AbstractOrderStatusImpl {
@@ -75,20 +75,20 @@ namespace nlohmann {
 
 template <>
 struct adl_serializer<tpcc::OrderStatusParams> {
-  static void to_json(nlohmann::json &j, const tpcc::OrderStatusParams &v);
-  static void from_json(const nlohmann::json &j, tpcc::OrderStatusParams &v);
+  static void to_json(nlohmann::json& j, const tpcc::OrderStatusParams& v);
+  static void from_json(const nlohmann::json& j, tpcc::OrderStatusParams& v);
 };
 
 template <>
 struct adl_serializer<tpcc::OrderStatusOrderLine> {
-  static void to_json(nlohmann::json &j, const tpcc::OrderStatusOrderLine &v);
-  static void from_json(const nlohmann::json &j, tpcc::OrderStatusOrderLine &v);
+  static void to_json(nlohmann::json& j, const tpcc::OrderStatusOrderLine& v);
+  static void from_json(const nlohmann::json& j, tpcc::OrderStatusOrderLine& v);
 };
 
 template <>
 struct adl_serializer<tpcc::OrderStatusResult> {
-  static void to_json(nlohmann::json &j, const tpcc::OrderStatusResult &v);
-  static void from_json(const nlohmann::json &j, tpcc::OrderStatusResult &v);
+  static void to_json(nlohmann::json& j, const tpcc::OrderStatusResult& v);
+  static void from_json(const nlohmann::json& j, tpcc::OrderStatusResult& v);
 };
 
 }  // namespace nlohmann
