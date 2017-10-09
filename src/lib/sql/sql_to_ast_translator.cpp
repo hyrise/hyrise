@@ -336,9 +336,11 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_join(const hsql:
   const auto right_in_right_node = right_node->find_column_id_by_named_column_reference(right_named_column_reference);
 
   Assert(static_cast<bool>(left_in_left_node) ^ static_cast<bool>(left_in_right_node),
-         "Left operand must be in exactly one of the input nodes");
+         std::string("Left operand ") + left_named_column_reference.as_string() +
+             " must be in exactly one of the input nodes");
   Assert(static_cast<bool>(right_in_left_node) ^ static_cast<bool>(right_in_right_node),
-         "Right operand must be in exactly one of the input nodes");
+         std::string("Right operand ") + right_named_column_reference.as_string() +
+             " must be in exactly one of the input nodes");
 
   std::pair<ColumnID, ColumnID> column_ids;
 
@@ -377,22 +379,28 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_cross_product(
 }
 
 std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_table_ref(const hsql::TableRef& table) {
+  auto alias = table.alias ? optional<std::string>(table.alias) : nullopt;
+  std::shared_ptr<AbstractASTNode> node;
   switch (table.type) {
-    case hsql::kTableName: {
-      auto alias = table.alias ? optional<std::string>(table.alias) : nullopt;
-
-      return std::make_shared<StoredTableNode>(table.name, alias);
-    }
+    case hsql::kTableName:
+      node = std::make_shared<StoredTableNode>(table.name);
+      break;
     case hsql::kTableSelect:
-      return _translate_select(*table.select);
+      node = _translate_select(*table.select);
+      Assert(alias, "Every derived table must have its own alias");
+      break;
     case hsql::kTableJoin:
-      return _translate_join(*table.join);
+      node = _translate_join(*table.join);
+      break;
     case hsql::kTableCrossProduct:
-      return _translate_cross_product(*table.list);
+      node = _translate_cross_product(*table.list);
+      break;
     default:
       Fail("Unable to translate source table.");
       return {};
   }
+  node->set_alias(alias);
+  return node;
 }
 
 AllParameterVariant SQLToASTTranslator::translate_hsql_operand(
