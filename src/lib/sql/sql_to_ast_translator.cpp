@@ -495,13 +495,20 @@ std::vector<std::shared_ptr<Expression>> SQLToASTTranslator::_retrieve_having_ag
 
 std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_aggregate(
     const hsql::SelectStatement& select, const std::shared_ptr<AbstractASTNode>& input_node) {
+  /**
+   * This function puts creates the following structure:
+   *
+   * input_node -> aggregate_node -> {having_node}* -> projection_node
+   *
+   * The aggregate_node creates aggregate and groupby columns, the having_nodes apply the predicates in the optional
+   * HAVING clause and the projection_node establishes the correct column order (since AggregateNode outputs all groupby
+   * columns first and then all aggregate columns)
+   */
+
   const auto& select_list = *select.selectList;
   const auto* group_by = select.groupBy;
   const auto has_having = (group_by && group_by->having);
 
-  /**
-   * Build Aggregates
-   */
   std::vector<std::shared_ptr<Expression>> projections;
   std::vector<std::shared_ptr<Expression>> aggregate_expressions;
   aggregate_expressions.reserve(select_list.size());
@@ -552,7 +559,7 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_aggregate(
   }
 
   /**
-   * Build GROUP BY
+   * Collect the ColumnIDs to GROUP BY
    */
   std::vector<ColumnID> groupby_columns;
   if (group_by != nullptr) {
@@ -592,7 +599,7 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_aggregate(
     // retrieve all aggregates in the having clause
     auto having_expressions = _retrieve_having_aggregates(*group_by->having, input_node);
 
-    for (auto having_expr : having_expressions) {
+    for (const auto& having_expr : having_expressions) {
       // see if the having expression is included in the aggregation
       auto result = std::find_if(aggregate_expressions.begin(), aggregate_expressions.end(),
                                  [having_expr](const auto& expr) { return *expr == *having_expr; });
@@ -612,7 +619,6 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_aggregate(
 
   if (has_having) {
     auto having_node = _translate_having(*group_by->having, aggregate_node, aggregate_node);
-
     projection_node->set_left_child(having_node);
   } else {
     projection_node->set_left_child(aggregate_node);
