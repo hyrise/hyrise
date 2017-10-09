@@ -18,7 +18,7 @@ class TableStatistics;
  */
 class StoredTableNode : public AbstractASTNode {
  public:
-  explicit StoredTableNode(const std::string& table_name, const optional<std::string>& alias = nullopt);
+  explicit StoredTableNode(const std::string& table_name);
 
   const std::string& table_name() const;
 
@@ -42,7 +42,6 @@ class StoredTableNode : public AbstractASTNode {
 
  private:
   const std::string _table_name;
-  const optional<std::string> _alias;
 
   std::vector<ColumnID> _output_column_id_to_input_column_id;
   std::vector<std::string> _output_column_names;
