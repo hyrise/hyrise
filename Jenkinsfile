@@ -27,42 +27,22 @@ node {
         '''
       }
 
-      stage("Build") {
-        stage("Build clang") {
-          stage("Build clang debug") {
-            sh "cd clang-debug && make all opossumCoverage opossumAsan -j \$(cat /proc/cpuinfo | grep processor | wc -l)"
-          }
-          stage("Build clang release") {
-            sh "cd clang-release && make all opossumCoverage opossumAsan -j \$(cat /proc/cpuinfo | grep processor | wc -l)"
-          }
+      stage("Build and Test") {
+        stage("clang-debug") {
+          sh "cd clang-debug && make all opossumCoverage opossumAsan -j \$(cat /proc/cpuinfo | grep processor | wc -l)"
+          sh "./clang-debug/opossumTest"
         }
-        stage("Build gcc") {
-          stage("Build gcc debug") {
-            sh "cd gcc-debug && make all opossumCoverage opossumAsan -j \$(cat /proc/cpuinfo | grep processor | wc -l)"
-          }
-          stage("Build gcc release") {
-            sh "cd gcc-release && make all opossumCoverage opossumAsan -j \$(cat /proc/cpuinfo | grep processor | wc -l)"
-          }
+        stage("clang-release") {
+          sh "cd clang-release && make all opossumCoverage opossumAsan -j \$(cat /proc/cpuinfo | grep processor | wc -l)"
+          sh "./clang-release/opossumTest"
         }
-      }
-
-      stage("Test") {
-        stage("Test gcc") {
-          stage("Test gcc Release") {
-            sh "./gcc-release/opossumTest"
-          }
-          stage("Test gcc Debug") {
-            sh "./gcc-debug/opossumTest"
-          }
+        stage("gcc-debug") {
+          sh "cd gcc-debug && make all opossumCoverage opossumAsan -j \$(cat /proc/cpuinfo | grep processor | wc -l)"
+          sh "./gcc-debug/opossumTest"
         }
-
-        stage("Test clang") {
-          stage("Test clang Release") {
-            sh "./clang-release/opossumTest"
-          }
-          stage("Test clang Debug") {
-            sh "./clang-debug/opossumTest"
-          }
+        stage("gcc-release") {
+          sh "cd gcc-release && make all opossumCoverage opossumAsan -j \$(cat /proc/cpuinfo | grep processor | wc -l)"
+          sh "./gcc-release/opossumTest"
         }
       }
 
