@@ -80,6 +80,7 @@ void SQLiteWrapper::create_table_from_tbl(const std::string& file, const std::st
   if (rc != SQLITE_OK) {
     auto msg = std::string(err_msg);
     sqlite3_free(err_msg);
+    sqlite3_close(_db);
     throw std::runtime_error("Failed to create table. SQL error: " + msg + "\n");
   }
 }
@@ -105,6 +106,7 @@ std::shared_ptr<Table> SQLiteWrapper::execute_query(const std::string& sql_query
 
     if (rc != SQLITE_OK) {
       sqlite3_finalize(result_row);
+      sqlite3_close(_db);
       throw std::runtime_error("Failed to execute query \"" + query + "\": " + std::string(sqlite3_errmsg(_db)) + "\n");
     }
 
@@ -116,6 +118,7 @@ std::shared_ptr<Table> SQLiteWrapper::execute_query(const std::string& sql_query
 
   if (rc != SQLITE_OK) {
     sqlite3_finalize(result_row);
+    sqlite3_close(_db);
     throw std::runtime_error("Failed to execute query \"" + select_query + "\": " + std::string(sqlite3_errmsg(_db)) +
                              "\n");
   }
@@ -167,7 +170,11 @@ void SQLiteWrapper::_create_columns(std::shared_ptr<Table> table, sqlite3_stmt* 
         }
 
         case SQLITE_BLOB:
-        default: { throw std::runtime_error("Column type not supported."); }
+        default: {
+          sqlite3_finalize(result_row);
+          sqlite3_close(_db);
+          throw std::runtime_error("Column type not supported.");
+        }
       }
     }
     no_result = false;
@@ -206,7 +213,11 @@ void SQLiteWrapper::_add_row(std::shared_ptr<Table> table, sqlite3_stmt* result_
       }
 
       case SQLITE_BLOB:
-      default: { throw std::runtime_error("Column type not supported."); }
+        default: {
+          sqlite3_finalize(result_row);
+          sqlite3_close(_db);
+          throw std::runtime_error("Column type not supported.");
+        }
     }
   }
 
