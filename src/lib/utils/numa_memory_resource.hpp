@@ -12,7 +12,7 @@ namespace opossum {
 
 class NUMAMemoryResource : public boost::container::pmr::memory_resource {
  public:
-  NUMAMemoryResource(int node_id, const std::string &name);
+  NUMAMemoryResource(int node_id, const std::string& name);
 
   virtual void* do_allocate(std::size_t bytes, std::size_t alignment);
 

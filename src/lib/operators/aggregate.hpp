@@ -66,7 +66,7 @@ constexpr ColumnID CountStarID{std::numeric_limits<ColumnID::base_type>::max()};
  */
 struct AggregateDefinition {
   AggregateDefinition(const ColumnID column_id, const AggregateFunction function,
-                      const optional<std::string> &alias = nullopt);
+                      const optional<std::string>& alias = nullopt);
 
   ColumnID column_id;
   AggregateFunction function;
@@ -89,13 +89,13 @@ class Aggregate : public AbstractReadOnlyOperator {
   Aggregate(const std::shared_ptr<AbstractOperator> in, const std::vector<AggregateDefinition> aggregates,
             const std::vector<ColumnID> groupby_column_ids);
 
-  const std::vector<AggregateDefinition> &aggregates() const;
-  const std::vector<ColumnID> &groupby_column_ids() const;
+  const std::vector<AggregateDefinition>& aggregates() const;
+  const std::vector<ColumnID>& groupby_column_ids() const;
 
   const std::string name() const override;
   uint8_t num_in_tables() const override;
   uint8_t num_out_tables() const override;
-  std::shared_ptr<AbstractOperator> recreate(const std::vector<AllParameterVariant> &args) const override;
+  std::shared_ptr<AbstractOperator> recreate(const std::vector<AllParameterVariant>& args) const override;
 
   // write the aggregated output for a given aggregate column
   template <typename ColumnType, AggregateFunction function>
@@ -107,12 +107,12 @@ class Aggregate : public AbstractReadOnlyOperator {
 
   template <typename ColumnType>
   static void _create_aggregate_context(boost::hana::basic_type<ColumnType> type,
-                                        std::shared_ptr<ColumnVisitableContext> &aggregate_context,
+                                        std::shared_ptr<ColumnVisitableContext>& aggregate_context,
                                         AggregateFunction function);
 
   template <typename ColumnType>
   static void _create_aggregate_visitor(boost::hana::basic_type<ColumnType> type,
-                                        std::shared_ptr<ColumnVisitable> &builder,
+                                        std::shared_ptr<ColumnVisitable>& builder,
                                         std::shared_ptr<ColumnVisitableContext> ctx,
                                         std::shared_ptr<GroupByContext> groupby_ctx, AggregateFunction function);
 
@@ -132,10 +132,10 @@ class Aggregate : public AbstractReadOnlyOperator {
                           std::shared_ptr<std::map<AggregateKey, AggregateResult<AggregateType>>> results) {
     DebugAssert(column->is_nullable(), "Aggregate: Output column needs to be nullable");
 
-    auto &values = column->values();
-    auto &null_values = column->null_values();
+    auto& values = column->values();
+    auto& null_values = column->null_values();
 
-    for (auto &kv : *results) {
+    for (auto& kv : *results) {
       null_values.push_back(!kv.second.current_aggregate);
 
       if (!kv.second.current_aggregate) {
@@ -153,9 +153,9 @@ class Aggregate : public AbstractReadOnlyOperator {
       std::shared_ptr<std::map<AggregateKey, AggregateResult<AggregateType>>> results) {
     DebugAssert(!column->is_nullable(), "Aggregate: Output column for COUNT shouldn't be nullable");
 
-    auto &values = column->values();
+    auto& values = column->values();
 
-    for (auto &kv : *results) {
+    for (auto& kv : *results) {
       values.push_back(kv.second.aggregate_count);
     }
   }
@@ -167,10 +167,10 @@ class Aggregate : public AbstractReadOnlyOperator {
                           std::shared_ptr<std::map<AggregateKey, AggregateResult<AggregateType>>> results) {
     DebugAssert(column->is_nullable(), "Aggregate: Output column needs to be nullable");
 
-    auto &values = column->values();
-    auto &null_values = column->null_values();
+    auto& values = column->values();
+    auto& null_values = column->null_values();
 
-    for (auto &kv : *results) {
+    for (auto& kv : *results) {
       null_values.push_back(!kv.second.current_aggregate);
 
       if (!kv.second.current_aggregate) {
@@ -184,8 +184,8 @@ class Aggregate : public AbstractReadOnlyOperator {
   // AVG is not defined for non-arithmetic types. Avoiding compiler errors.
   template <typename AggregateType, AggregateFunction func>
   typename std::enable_if<func == AggregateFunction::Avg && !std::is_arithmetic<AggregateType>::value, void>::type
-  _write_aggregate_values(std::shared_ptr<ValueColumn<AggregateType>>,
-                          std::shared_ptr<std::map<AggregateKey, AggregateResult<AggregateType>>>) {
+      _write_aggregate_values(std::shared_ptr<ValueColumn<AggregateType>>,
+                              std::shared_ptr<std::map<AggregateKey, AggregateResult<AggregateType>>>) {
     Fail("Invalid aggregate");
   }
 
@@ -239,19 +239,19 @@ struct PartitionBuilder : public ColumnVisitable {
   */
   ChunkOffset chunk_offset;
 
-  void handle_value_column(BaseColumn &base_column, std::shared_ptr<ColumnVisitableContext> base_context) {
+  void handle_value_column(BaseColumn& base_column, std::shared_ptr<ColumnVisitableContext> base_context) {
     auto context = std::static_pointer_cast<GroupByContext>(base_context);
-    const auto &column = static_cast<ValueColumn<T> &>(base_column);
-    const auto &values = column.values();
+    const auto& column = static_cast<ValueColumn<T>&>(base_column);
+    const auto& values = column.values();
 
     if (context->chunk_offsets_in) {
       // This ValueColumn is referenced by a ReferenceColumn (i.e., is probably filtered). We only return the matching
       // rows within the filtered column, together with their original position
 
       if (column.is_nullable()) {
-        const auto &null_values = column.null_values();
+        const auto& null_values = column.null_values();
 
-        for (const ChunkOffset &offset_in_value_column : *(context->chunk_offsets_in)) {
+        for (const ChunkOffset& offset_in_value_column : *(context->chunk_offsets_in)) {
           if (null_values[offset_in_value_column]) {
             (*context->hash_keys)[chunk_offset].emplace_back(NULL_VALUE);
           } else {
@@ -261,7 +261,7 @@ struct PartitionBuilder : public ColumnVisitable {
           ++chunk_offset;
         }
       } else {
-        for (const ChunkOffset &offset_in_value_column : *(context->chunk_offsets_in)) {
+        for (const ChunkOffset& offset_in_value_column : *(context->chunk_offsets_in)) {
           if (offset_in_value_column == INVALID_CHUNK_OFFSET) {
             (*context->hash_keys)[chunk_offset].emplace_back(NULL_VALUE);
           } else {
@@ -272,7 +272,7 @@ struct PartitionBuilder : public ColumnVisitable {
       }
     } else {
       if (column.is_nullable()) {
-        const auto &null_values = column.null_values();
+        const auto& null_values = column.null_values();
 
         auto value_it = values.cbegin();
         auto null_value_it = null_values.cbegin();
@@ -285,7 +285,7 @@ struct PartitionBuilder : public ColumnVisitable {
           }
         }
       } else {
-        for (const auto &value : values) {
+        for (const auto& value : values) {
           (*context->hash_keys)[chunk_offset].emplace_back(value);
           ++chunk_offset;
         }
@@ -293,18 +293,18 @@ struct PartitionBuilder : public ColumnVisitable {
     }
   }
 
-  void handle_reference_column(ReferenceColumn &column, std::shared_ptr<ColumnVisitableContext> base_context) {
+  void handle_reference_column(ReferenceColumn& column, std::shared_ptr<ColumnVisitableContext> base_context) {
     column.visit_dereferenced<GroupByContext>(*this, base_context);
   }
 
-  void handle_dictionary_column(BaseColumn &base_column, std::shared_ptr<ColumnVisitableContext> base_context) {
+  void handle_dictionary_column(BaseColumn& base_column, std::shared_ptr<ColumnVisitableContext> base_context) {
     auto context = std::static_pointer_cast<GroupByContext>(base_context);
-    const auto &column = static_cast<DictionaryColumn<T> &>(base_column);
-    const BaseAttributeVector &attribute_vector = *(column.attribute_vector());
-    const pmr_vector<T> &dictionary = *(column.dictionary());
+    const auto& column = static_cast<DictionaryColumn<T>&>(base_column);
+    const BaseAttributeVector& attribute_vector = *(column.attribute_vector());
+    const pmr_vector<T>& dictionary = *(column.dictionary());
 
     if (context->chunk_offsets_in) {
-      for (const ChunkOffset &offset_in_dictionary_column : *(context->chunk_offsets_in)) {
+      for (const ChunkOffset& offset_in_dictionary_column : *(context->chunk_offsets_in)) {
         if (offset_in_dictionary_column == INVALID_CHUNK_OFFSET) {
           (*context->hash_keys)[chunk_offset].emplace_back(NULL_VALUE);
           continue;
@@ -448,23 +448,23 @@ struct AggregateVisitor : public ColumnVisitable {
     }
   }
 
-  void handle_value_column(BaseColumn &base_column, std::shared_ptr<ColumnVisitableContext> base_context) {
+  void handle_value_column(BaseColumn& base_column, std::shared_ptr<ColumnVisitableContext> base_context) {
     auto context = std::static_pointer_cast<AggregateContext<ColumnType, AggregateType>>(base_context);
     check_and_init_context(context);
-    const auto &column = static_cast<ValueColumn<ColumnType> &>(base_column);
-    const auto &values = column.values();
+    const auto& column = static_cast<ValueColumn<ColumnType>&>(base_column);
+    const auto& values = column.values();
 
-    auto &hash_keys = static_cast<std::vector<AggregateKey> &>(*context->groupby_context->hash_keys);
-    auto &results = static_cast<std::map<AggregateKey, AggregateResult<AggregateType>> &>(*context->results);
+    auto& hash_keys = static_cast<std::vector<AggregateKey>&>(*context->groupby_context->hash_keys);
+    auto& results = static_cast<std::map<AggregateKey, AggregateResult<AggregateType>>&>(*context->results);
 
     if (context->groupby_context->chunk_offsets_in) {
       // This ValueColumn is referenced by a ReferenceColumn (i.e., is probably filtered). We only return the matching
       // rows within the filtered column, together with their original position
 
       if (column.is_nullable()) {
-        const auto &null_values = column.null_values();
+        const auto& null_values = column.null_values();
 
-        for (const ChunkOffset &offset_in_value_column : *(context->groupby_context->chunk_offsets_in)) {
+        for (const ChunkOffset& offset_in_value_column : *(context->groupby_context->chunk_offsets_in)) {
           if (null_values[offset_in_value_column]) {
             // Keep it unchanged or initialize
             results.try_emplace(hash_keys[chunk_offset]);
@@ -479,7 +479,7 @@ struct AggregateVisitor : public ColumnVisitable {
           ++chunk_offset;
         }
       } else {
-        for (const ChunkOffset &offset_in_value_column : *(context->groupby_context->chunk_offsets_in)) {
+        for (const ChunkOffset& offset_in_value_column : *(context->groupby_context->chunk_offsets_in)) {
           if (offset_in_value_column == INVALID_CHUNK_OFFSET) {
             results.try_emplace(hash_keys[chunk_offset]);
           } else {
@@ -494,7 +494,7 @@ struct AggregateVisitor : public ColumnVisitable {
       }
     } else {
       if (column.is_nullable()) {
-        const auto &null_values = column.null_values();
+        const auto& null_values = column.null_values();
 
         auto value_it = values.cbegin();
         auto null_value_it = null_values.cbegin();
@@ -512,7 +512,7 @@ struct AggregateVisitor : public ColumnVisitable {
           }
         }
       } else {
-        for (const auto &value : values) {
+        for (const auto& value : values) {
           results[hash_keys[chunk_offset]].current_aggregate =
               aggregate_func(value, results[hash_keys[chunk_offset]].current_aggregate);
 
@@ -524,24 +524,24 @@ struct AggregateVisitor : public ColumnVisitable {
     }
   }
 
-  void handle_reference_column(ReferenceColumn &column, std::shared_ptr<ColumnVisitableContext> base_context) {
+  void handle_reference_column(ReferenceColumn& column, std::shared_ptr<ColumnVisitableContext> base_context) {
     auto context = std::static_pointer_cast<AggregateContext<ColumnType, AggregateType>>(base_context);
     check_and_init_context(context);
     column.visit_dereferenced<AggregateContext<ColumnType, AggregateType>>(*this, base_context);
   }
 
-  void handle_dictionary_column(BaseColumn &base_column, std::shared_ptr<ColumnVisitableContext> base_context) {
+  void handle_dictionary_column(BaseColumn& base_column, std::shared_ptr<ColumnVisitableContext> base_context) {
     auto context = std::static_pointer_cast<AggregateContext<ColumnType, AggregateType>>(base_context);
     check_and_init_context(context);
-    const auto &column = static_cast<DictionaryColumn<ColumnType> &>(base_column);
-    const BaseAttributeVector &attribute_vector = *(column.attribute_vector());
-    const auto &dictionary = *(column.dictionary());
+    const auto& column = static_cast<DictionaryColumn<ColumnType>&>(base_column);
+    const BaseAttributeVector& attribute_vector = *(column.attribute_vector());
+    const auto& dictionary = *(column.dictionary());
 
-    auto &hash_keys = static_cast<std::vector<AggregateKey> &>(*context->groupby_context->hash_keys);
-    auto &results = static_cast<std::map<AggregateKey, AggregateResult<AggregateType>> &>(*context->results);
+    auto& hash_keys = static_cast<std::vector<AggregateKey>&>(*context->groupby_context->hash_keys);
+    auto& results = static_cast<std::map<AggregateKey, AggregateResult<AggregateType>>&>(*context->results);
 
     if (context->groupby_context->chunk_offsets_in) {
-      for (const ChunkOffset &offset_in_dictionary_column : *(context->groupby_context->chunk_offsets_in)) {
+      for (const ChunkOffset& offset_in_dictionary_column : *(context->groupby_context->chunk_offsets_in)) {
         ValueID value_id;
 
         if (offset_in_dictionary_column == INVALID_CHUNK_OFFSET) {
@@ -597,7 +597,7 @@ template <typename ColumnType>
 struct AggregateTraits<ColumnType, AggregateFunction::Count> {
   typedef ColumnType column_type;
   typedef int64_t aggregate_type;
-  static constexpr const char *aggregate_type_name = "long";
+  static constexpr const char* aggregate_type_name = "long";
 };
 
 // MIN/MAX on all types
@@ -607,7 +607,7 @@ struct AggregateTraits<
     typename std::enable_if_t<function == AggregateFunction::Min || function == AggregateFunction::Max, void>> {
   typedef ColumnType column_type;
   typedef ColumnType aggregate_type;
-  static constexpr const char *aggregate_type_name = "";
+  static constexpr const char* aggregate_type_name = "";
 };
 
 // AVG on arithmetic types
@@ -617,7 +617,7 @@ struct AggregateTraits<
     typename std::enable_if_t<function == AggregateFunction::Avg && std::is_arithmetic<ColumnType>::value, void>> {
   typedef ColumnType column_type;
   typedef double aggregate_type;
-  static constexpr const char *aggregate_type_name = "double";
+  static constexpr const char* aggregate_type_name = "double";
 };
 
 // SUM on integers
@@ -627,7 +627,7 @@ struct AggregateTraits<
     typename std::enable_if_t<function == AggregateFunction::Sum && std::is_integral<ColumnType>::value, void>> {
   typedef ColumnType column_type;
   typedef int64_t aggregate_type;
-  static constexpr const char *aggregate_type_name = "long";
+  static constexpr const char* aggregate_type_name = "long";
 };
 
 // SUM on floating point numbers
@@ -637,7 +637,7 @@ struct AggregateTraits<
     typename std::enable_if_t<function == AggregateFunction::Sum && std::is_floating_point<ColumnType>::value, void>> {
   typedef ColumnType column_type;
   typedef double aggregate_type;
-  static constexpr const char *aggregate_type_name = "double";
+  static constexpr const char* aggregate_type_name = "double";
 };
 
 // invalid: AVG on non-arithmetic types
@@ -648,7 +648,7 @@ struct AggregateTraits<ColumnType, function, typename std::enable_if_t<!std::is_
                                                                        void>> {
   typedef ColumnType column_type;
   typedef ColumnType aggregate_type;
-  static constexpr const char *aggregate_type_name = "";
+  static constexpr const char* aggregate_type_name = "";
 };
 
 /*

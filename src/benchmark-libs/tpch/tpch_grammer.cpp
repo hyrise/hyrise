@@ -54,7 +54,7 @@ std::string TpchGrammar::random_text(std::streampos min_size) {
   return text.str();
 }
 
-std::string TpchGrammar::random_word(const std::vector<std::string> &word_vector) {
+std::string TpchGrammar::random_word(const std::vector<std::string>& word_vector) {
   auto i = _random_gen.random_number(0, word_vector.size() - 1);
   return word_vector[i];
 }

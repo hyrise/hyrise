@@ -1,8 +1,8 @@
 #include "join_node.hpp"
 
 #include <limits>
-#include <numeric>
 #include <memory>
+#include <numeric>
 #include <sstream>
 #include <string>
 #include <utility>
@@ -56,17 +56,25 @@ optional<ColumnID> JoinNode::find_column_id_by_named_column_reference(
     const NamedColumnReference& named_column_reference) const {
   DebugAssert(left_child() && right_child(), "JoinNode must have two children.");
 
+  auto named_column_reference_without_local_alias = _resolve_local_alias(named_column_reference);
+  if (!named_column_reference_without_local_alias) {
+    return {};
+  }
+
   optional<ColumnID> left_column_id;
   optional<ColumnID> right_column_id;
 
-  // If there is no qualifying table name, search both children.
-  if (!named_column_reference.table_name) {
-    left_column_id = left_child()->find_column_id_by_named_column_reference(named_column_reference);
-    right_column_id = right_child()->find_column_id_by_named_column_reference(named_column_reference);
+  // If there is no qualifying table name or this table's alias is used, search both children.
+  if (!named_column_reference_without_local_alias->table_name ||
+      (_table_alias && *_table_alias == named_column_reference_without_local_alias->table_name)) {
+    left_column_id =
+        left_child()->find_column_id_by_named_column_reference(*named_column_reference_without_local_alias);
+    right_column_id =
+        right_child()->find_column_id_by_named_column_reference(*named_column_reference_without_local_alias);
   } else {
     // Otherwise only search a child if it knows that qualifier.
-    auto left_knows_table = left_child()->knows_table(*named_column_reference.table_name);
-    auto right_knows_table = right_child()->knows_table(*named_column_reference.table_name);
+    auto left_knows_table = left_child()->knows_table(*named_column_reference_without_local_alias->table_name);
+    auto right_knows_table = right_child()->knows_table(*named_column_reference_without_local_alias->table_name);
 
     // If neither input table knows the table name, return.
     if (!left_knows_table && !right_knows_table) {
@@ -74,12 +82,15 @@ optional<ColumnID> JoinNode::find_column_id_by_named_column_reference(
     }
 
     // There must not be two tables with the same qualifying name.
-    Assert(left_knows_table ^ right_knows_table, "Table name " + *named_column_reference.table_name + " is ambiguous.");
+    Assert(left_knows_table ^ right_knows_table,
+           "Table name " + *named_column_reference_without_local_alias->table_name + " is ambiguous.");
 
     if (left_knows_table) {
-      left_column_id = left_child()->find_column_id_by_named_column_reference(named_column_reference);
+      left_column_id =
+          left_child()->find_column_id_by_named_column_reference(*named_column_reference_without_local_alias);
     } else {
-      right_column_id = right_child()->find_column_id_by_named_column_reference(named_column_reference);
+      right_column_id =
+          right_child()->find_column_id_by_named_column_reference(*named_column_reference_without_local_alias);
     }
   }
 
@@ -89,7 +100,7 @@ optional<ColumnID> JoinNode::find_column_id_by_named_column_reference(
   }
 
   Assert(static_cast<bool>(left_column_id) ^ static_cast<bool>(right_column_id),
-         "Column name " + named_column_reference.column_name + " is ambiguous.");
+         "Column name " + named_column_reference_without_local_alias->column_name + " is ambiguous.");
 
   ColumnID input_column_id;
   ColumnID output_column_id;
@@ -123,11 +134,24 @@ std::shared_ptr<TableStatistics> JoinNode::derive_statistics_from(
 
 bool JoinNode::knows_table(const std::string& table_name) const {
   DebugAssert(left_child() && right_child(), "JoinNode must have two children.");
-  return left_child()->knows_table(table_name) || right_child()->knows_table(table_name);
+  if (_table_alias) {
+    return *_table_alias == table_name;
+  } else {
+    return left_child()->knows_table(table_name) || right_child()->knows_table(table_name);
+  }
 }
 
 std::vector<ColumnID> JoinNode::get_output_column_ids_for_table(const std::string& table_name) const {
   DebugAssert(left_child() && right_child(), "JoinNode must have two children.");
+
+  if (_table_alias) {
+    if (*_table_alias == table_name) {
+      return get_output_column_ids();
+    } else {
+      // if the join is an aliased subquery, we cannot access the individual tables anymore.
+      return {};
+    }
+  }
 
   auto left_knows_table = left_child()->knows_table(table_name);
   auto right_knows_table = right_child()->knows_table(table_name);

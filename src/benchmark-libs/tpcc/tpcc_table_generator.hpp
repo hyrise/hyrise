@@ -56,7 +56,7 @@ class TpccTableGenerator : public benchmark_utilities::AbstractBenchmarkTableGen
 
   static TpccTableGeneratorFunctions tpcc_table_generator_functions();
 
-  static std::shared_ptr<opossum::Table> generate_tpcc_table(const std::string &tablename);
+  static std::shared_ptr<opossum::Table> generate_tpcc_table(const std::string& tablename);
 
   const size_t _warehouse_size;
   const time_t _current_date = std::time(0);
@@ -64,13 +64,13 @@ class TpccTableGenerator : public benchmark_utilities::AbstractBenchmarkTableGen
  protected:
   template <typename T>
   std::vector<T> generate_inner_order_line_column(std::vector<size_t> indices, order_line_counts_type order_line_counts,
-                                                  const std::function<T(std::vector<size_t>)> &generator_function);
+                                                  const std::function<T(std::vector<size_t>)>& generator_function);
 
   template <typename T>
   void add_order_line_column(std::shared_ptr<opossum::Table> table, std::string name,
                              std::shared_ptr<std::vector<size_t>> cardinalities,
                              order_line_counts_type order_line_counts,
-                             const std::function<T(std::vector<size_t>)> &generator_function);
+                             const std::function<T(std::vector<size_t>)>& generator_function);
 
   TpccRandomGenerator _random_gen;
 };

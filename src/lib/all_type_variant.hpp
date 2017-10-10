@@ -10,9 +10,9 @@
 #include <boost/mpl/push_front.hpp>
 #include <boost/variant.hpp>
 
-#include <boost/preprocessor/seq/transform.hpp>
-#include <boost/preprocessor/seq/for_each.hpp>
 #include <boost/preprocessor/seq/enum.hpp>
+#include <boost/preprocessor/seq/for_each.hpp>
+#include <boost/preprocessor/seq/transform.hpp>
 
 #include <cstdint>
 #include <string>
@@ -21,16 +21,13 @@
 #include "null_value.hpp"
 #include "types.hpp"
 
-
-
 namespace opossum {
 
 namespace hana = boost::hana;
 
 namespace detail {
 
-#define EXPAND_TO_HANA_TYPE(s, data, elem) \
-  boost::hana::type_c<elem>
+#define EXPAND_TO_HANA_TYPE(s, data, elem) boost::hana::type_c<elem>
 
 // clang-format off
 #define COLUMN_TYPES                                  (int32_t) (int64_t) (float)  (double)  (std::string)    // NOLINT
@@ -101,8 +98,7 @@ static const auto NULL_VALUE = AllTypeVariant{};
  * @{
  */
 
-#define EXPLICIT_INSTANTIATION(r, template_class, type) \
-  template class template_class<type>;
+#define EXPLICIT_INSTANTIATION(r, template_class, type) template class template_class<type>;
 
 // Explicitly instantiates the given template class for all types in COLUMN_TYPES
 #define EXPLICITLY_INSTANTIATE_COLUMN_TYPES(template_class) \

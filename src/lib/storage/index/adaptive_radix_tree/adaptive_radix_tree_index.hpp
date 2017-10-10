@@ -38,11 +38,11 @@ class AdaptiveRadixTreeIndex : public BaseIndex {
   friend class AdaptiveRadixTreeIndexTest_BinaryComparableFromChunkOffset_Test;
 
  public:
-  explicit AdaptiveRadixTreeIndex(const std::vector<std::shared_ptr<BaseColumn>> &index_columns);
+  explicit AdaptiveRadixTreeIndex(const std::vector<std::shared_ptr<BaseColumn>>& index_columns);
 
-  AdaptiveRadixTreeIndex(AdaptiveRadixTreeIndex &&) = default;
+  AdaptiveRadixTreeIndex(AdaptiveRadixTreeIndex&&) = default;
 
-  AdaptiveRadixTreeIndex &operator=(AdaptiveRadixTreeIndex &&) = default;
+  AdaptiveRadixTreeIndex& operator=(AdaptiveRadixTreeIndex&&) = default;
 
   virtual ~AdaptiveRadixTreeIndex() = default;
 
@@ -67,18 +67,18 @@ class AdaptiveRadixTreeIndex : public BaseIndex {
   };
 
  private:
-  Iterator _lower_bound(const std::vector<AllTypeVariant> &values) const final;
+  Iterator _lower_bound(const std::vector<AllTypeVariant>& values) const final;
 
-  Iterator _upper_bound(const std::vector<AllTypeVariant> &values) const final;
+  Iterator _upper_bound(const std::vector<AllTypeVariant>& values) const final;
 
   Iterator _cbegin() const final;
 
   Iterator _cend() const final;
 
-  std::shared_ptr<Node> _bulk_insert(const std::vector<std::pair<BinaryComparable, ChunkOffset>> &values);
+  std::shared_ptr<Node> _bulk_insert(const std::vector<std::pair<BinaryComparable, ChunkOffset>>& values);
 
-  std::shared_ptr<Node> _bulk_insert(const std::vector<std::pair<BinaryComparable, ChunkOffset>> &values, size_t depth,
-                                     Iterator &it);
+  std::shared_ptr<Node> _bulk_insert(const std::vector<std::pair<BinaryComparable, ChunkOffset>>& values, size_t depth,
+                                     Iterator& it);
 
   std::vector<std::shared_ptr<BaseColumn>> _get_index_columns() const;
 
@@ -87,6 +87,6 @@ class AdaptiveRadixTreeIndex : public BaseIndex {
   std::shared_ptr<Node> _root;
 };
 
-bool operator==(const AdaptiveRadixTreeIndex::BinaryComparable &lhs,
-                const AdaptiveRadixTreeIndex::BinaryComparable &rhs);
+bool operator==(const AdaptiveRadixTreeIndex::BinaryComparable& lhs,
+                const AdaptiveRadixTreeIndex::BinaryComparable& rhs);
 }  // namespace opossum

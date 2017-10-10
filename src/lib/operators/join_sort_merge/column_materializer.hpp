@@ -57,10 +57,10 @@ class ColumnMaterializer : public ColumnVisitable {
                                                              ChunkID chunk_id, std::shared_ptr<const Table> input,
                                                              ColumnID column_id) {
     return std::make_shared<JobTask>([this, &output, &input, &column_id, chunk_id] {
-        auto column = input->get_chunk(chunk_id).get_column(column_id);
-        auto context = std::make_shared<MaterializationContext>(chunk_id);
-        column->visit(*this, context);
-        (*output)[chunk_id] = context->output;
+      auto column = input->get_chunk(chunk_id).get_column(column_id);
+      auto context = std::make_shared<MaterializationContext>(chunk_id);
+      column->visit(*this, context);
+      (*output)[chunk_id] = context->output;
     });
   }
 
@@ -74,8 +74,8 @@ class ColumnMaterializer : public ColumnVisitable {
 
     std::vector<std::shared_ptr<AbstractTask>> jobs;
     for (ChunkID chunk_id{0}; chunk_id < input->chunk_count(); ++chunk_id) {
-        jobs.push_back(_create_chunk_materialization_job(output, chunk_id, input, column_id));
-        jobs.back()->schedule();
+      jobs.push_back(_create_chunk_materialization_job(output, chunk_id, input, column_id));
+      jobs.back()->schedule();
     }
 
     CurrentScheduler::wait_for_tasks(jobs);
@@ -179,9 +179,9 @@ class ColumnMaterializer : public ColumnVisitable {
     auto d_columns = std::vector<std::shared_ptr<DictionaryColumn<T>>>(referenced_table->chunk_count());
     for (ChunkID chunk_id{0}; chunk_id < referenced_table->chunk_count(); ++chunk_id) {
       v_columns[chunk_id] = std::dynamic_pointer_cast<ValueColumn<T>>(
-                              referenced_table->get_chunk(chunk_id).get_column(referenced_column_id));
+          referenced_table->get_chunk(chunk_id).get_column(referenced_column_id));
       d_columns[chunk_id] = std::dynamic_pointer_cast<DictionaryColumn<T>>(
-                              referenced_table->get_chunk(chunk_id).get_column(referenced_column_id));
+          referenced_table->get_chunk(chunk_id).get_column(referenced_column_id));
     }
 
     // Retrieve the values from the referenced columns

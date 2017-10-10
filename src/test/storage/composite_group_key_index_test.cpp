@@ -24,13 +24,13 @@ opossum::VariableLengthKey create_key(uint16_t value) {
   return result;
 }
 
-std::vector<opossum::VariableLengthKey> to_vector(const opossum::VariableLengthKeyStore &keys) {
+std::vector<opossum::VariableLengthKey> to_vector(const opossum::VariableLengthKeyStore& keys) {
   auto result = std::vector<opossum::VariableLengthKey>(keys.size());
   std::copy(keys.cbegin(), keys.cend(), result.begin());
   return result;
 }
 
-testing::AssertionResult is_contained_in(opossum::ChunkOffset value, const std::set<opossum::ChunkOffset> &set) {
+testing::AssertionResult is_contained_in(opossum::ChunkOffset value, const std::set<opossum::ChunkOffset>& set) {
   if (set.find(value) == set.end()) {
     return testing::AssertionFailure() << testing::PrintToString(set) << " does not contain " << value;
   } else {
@@ -38,10 +38,10 @@ testing::AssertionResult is_contained_in(opossum::ChunkOffset value, const std::
   }
 }
 
-void EXPECT_POSITION_LIST_EQ(const std::vector<std::set<opossum::ChunkOffset>> &expected,
-                             const std::vector<opossum::ChunkOffset> &actual) {
+void EXPECT_POSITION_LIST_EQ(const std::vector<std::set<opossum::ChunkOffset>>& expected,
+                             const std::vector<opossum::ChunkOffset>& actual) {
   std::set<opossum::ChunkOffset> distinct_expected_positions = {};
-  for (const auto &expection_for_position : expected) {
+  for (const auto& expection_for_position : expected) {
     distinct_expected_positions.insert(expection_for_position.begin(), expection_for_position.end());
   }
 
@@ -89,14 +89,14 @@ class CompositeGroupKeyIndexTest : public BaseTest {
    * private scope. In order to minimize the friend classes of CompositeGroupKeyIndex the fixture
    * is used as proxy. Since the variables are set in setup(), references are not possible.
    */
-  VariableLengthKeyStore *_keys_int_str;
-  VariableLengthKeyStore *_keys_str_int;
+  VariableLengthKeyStore* _keys_int_str;
+  VariableLengthKeyStore* _keys_str_int;
 
-  std::vector<ChunkOffset> *_offsets_int_str;
-  std::vector<ChunkOffset> *_offsets_str_int;
+  std::vector<ChunkOffset>* _offsets_int_str;
+  std::vector<ChunkOffset>* _offsets_str_int;
 
-  std::vector<ChunkOffset> *_position_list_int_str;
-  std::vector<ChunkOffset> *_position_list_str_int;
+  std::vector<ChunkOffset>* _position_list_int_str;
+  std::vector<ChunkOffset>* _position_list_str_int;
 };
 
 TEST_F(CompositeGroupKeyIndexTest, ConcatenatedKeys) {

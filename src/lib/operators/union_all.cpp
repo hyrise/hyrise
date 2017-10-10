@@ -39,7 +39,7 @@ std::shared_ptr<const Table> UnionAll::_on_execute() {
   }
 
   // add positions to output by iterating over both input tables
-  for (const auto &input : (const std::shared_ptr<const Table>[]){_input_table_left(), _input_table_right()}) {
+  for (const auto& input : (const std::shared_ptr<const Table>[]){_input_table_left(), _input_table_right()}) {
     // iterating over all chunks of table input
     for (ChunkID in_chunk_id{0}; in_chunk_id < input->chunk_count(); in_chunk_id++) {
       // creating empty chunk to add columns with positions

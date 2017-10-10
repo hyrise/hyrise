@@ -29,7 +29,7 @@ std::shared_ptr<const Table> Difference::_on_execute() {
 
   // copy column definition from _input_table_left() to output table
   for (ColumnID column_id{0}; column_id < _input_table_left()->col_count(); ++column_id) {
-    auto &column_type = _input_table_left()->column_type(column_id);
+    auto& column_type = _input_table_left()->column_type(column_id);
     DebugAssert((column_type == _input_table_right()->column_type(column_id)),
                 "Input tables must have same column order and column types");
     // add column definition to output table
@@ -42,7 +42,7 @@ std::shared_ptr<const Table> Difference::_on_execute() {
 
   // Iterating over all chunks and for each chunk over all columns
   for (ChunkID chunk_id{0}; chunk_id < _input_table_right()->chunk_count(); chunk_id++) {
-    const Chunk &chunk = _input_table_right()->get_chunk(chunk_id);
+    const Chunk& chunk = _input_table_right()->get_chunk(chunk_id);
     // creating a temporary row representation with strings to be filled column wise
     auto string_row_vector = std::vector<std::string>(chunk.size());
     for (ColumnID column_id{0}; column_id < _input_table_right()->col_count(); column_id++) {
@@ -61,7 +61,7 @@ std::shared_ptr<const Table> Difference::_on_execute() {
 
   // Iterating over all chunks and for each chunk over all columns
   for (ChunkID chunk_id{0}; chunk_id < _input_table_left()->chunk_count(); chunk_id++) {
-    const Chunk &in_chunk = _input_table_left()->get_chunk(chunk_id);
+    const Chunk& in_chunk = _input_table_left()->get_chunk(chunk_id);
     Chunk out_chunk;
 
     // creating a map to share pos_lists (see table_scan.hpp)
@@ -84,7 +84,7 @@ std::shared_ptr<const Table> Difference::_on_execute() {
       }
 
       // automatically creates the entry if it does not exist
-      std::shared_ptr<PosList> &pos_list_out = out_pos_list_map[in_pos_list];
+      std::shared_ptr<PosList>& pos_list_out = out_pos_list_map[in_pos_list];
 
       if (!pos_list_out) {
         pos_list_out = std::make_shared<PosList>();
