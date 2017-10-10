@@ -19,6 +19,7 @@ console.log
 .queryplan.png
 .ast.dot
 .ast.png
+compile_times.txt
 
 # Ignore generated TPC{CH} tables.
 # Intentionally only for root dir, tests contain csv we check in
