@@ -638,7 +638,11 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
         // Get the row ids that are referenced
         auto new_pos_list = std::make_shared<PosList>();
         for (const auto& row : *pos_list) {
-          new_pos_list->push_back(input_pos_lists.at(row.chunk_id)->at(row.chunk_offset));
+          if (row.chunk_offset == INVALID_CHUNK_OFFSET) {
+            new_pos_list->push_back(row);
+          } else {
+            new_pos_list->push_back(input_pos_lists.at(row.chunk_id)->at(row.chunk_offset));
+          }
         }
         column = std::make_shared<ReferenceColumn>(ref_col->referenced_table(), ref_col->referenced_column_id(),
                                                    new_pos_list);
