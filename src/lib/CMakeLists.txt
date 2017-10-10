@@ -1,6 +1,22 @@
 # Sources and libraries shared among the different builds of the lib
 set(
     SOURCES
+
+    # We moved some expensive files to the top, so that when running in parallel, the most expensive tasks are started first.
+    operators/join_nested_loop_a.cpp
+    operators/join_nested_loop_a.hpp
+    operators/join_hash.cpp
+    operators/join_hash.hpp
+    operators/join_sort_merge.cpp
+    operators/join_sort_merge.hpp
+    operators/index_column_scan.cpp
+    operators/index_column_scan.hpp
+    operators/aggregate.cpp
+    operators/aggregate.hpp
+    operators/table_scan/column_comparison_table_scan_impl.cpp
+    operators/table_scan/column_comparison_table_scan_impl.hpp
+
+    # Here comes the rest...
     all_parameter_variant.hpp
     all_type_variant.hpp
     common.hpp
@@ -22,8 +38,6 @@ set(
     operators/table_scan/base_single_column_table_scan_impl.cpp
     operators/table_scan/base_single_column_table_scan_impl.hpp
     operators/table_scan/base_table_scan_impl.hpp
-    operators/table_scan/column_comparison_table_scan_impl.cpp
-    operators/table_scan/column_comparison_table_scan_impl.hpp
     operators/table_scan/is_null_table_scan_impl.cpp
     operators/table_scan/is_null_table_scan_impl.hpp
     operators/table_scan/like_table_scan_impl.cpp
@@ -36,8 +50,6 @@ set(
     operators/abstract_operator.hpp
     operators/abstract_read_only_operator.hpp
     operators/abstract_read_write_operator.hpp
-    operators/aggregate.cpp
-    operators/aggregate.hpp
     operators/commit_records.cpp
     operators/commit_records.hpp
     operators/delete.cpp
@@ -54,16 +66,8 @@ set(
     operators/import_binary.hpp
     operators/import_csv.cpp
     operators/import_csv.hpp
-    operators/index_column_scan.cpp
-    operators/index_column_scan.hpp
     operators/insert.cpp
     operators/insert.hpp
-    operators/join_hash.cpp
-    operators/join_hash.hpp
-    operators/join_sort_merge.cpp
-    operators/join_sort_merge.hpp
-    operators/join_nested_loop_a.cpp
-    operators/join_nested_loop_a.hpp
     operators/join_nested_loop_b.cpp
     operators/join_nested_loop_b.hpp
     operators/limit.cpp
