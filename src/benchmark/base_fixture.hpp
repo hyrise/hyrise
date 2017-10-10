@@ -19,6 +19,11 @@ class BenchmarkBasicFixture : public benchmark::Fixture {
  protected:
   void clear_cache();
 
+
+
+
+
+
  protected:
   std::shared_ptr<TableWrapper> _table_wrapper_a;
   std::shared_ptr<TableWrapper> _table_wrapper_b;
@@ -26,4 +31,4 @@ class BenchmarkBasicFixture : public benchmark::Fixture {
   ChunkID _chunk_size;
 };
 
-}  // namespace opossum
+}
