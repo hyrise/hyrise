@@ -24,6 +24,7 @@ void ASTVisualizer::visualize(const std::vector<std::shared_ptr<AbstractASTNode>
   file << "digraph {" << std::endl;
   file << "rankdir=BT" << std::endl;
   file << "bgcolor=transparent" << std::endl;
+  file << "ratio=0.5" << std::endl;
   file << "node [color=white,fontcolor=white,shape=parallelogram]" << std::endl;
   file << "edge [color=white,fontcolor=white]" << std::endl;
   for (const auto& root : ast_roots) {

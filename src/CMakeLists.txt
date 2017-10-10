@@ -21,8 +21,6 @@ add_compile_options(-std=c++1z -pthread -Wno-error=unused-parameter -Wall -Werro
 include_directories(
     ${PROJECT_SOURCE_DIR}/third_party/benchmark/include
     ${PROJECT_SOURCE_DIR}/third_party/googletest/googletest/include
-    ${PROJECT_SOURCE_DIR}/third_party/grpc/include
-    ${PROJECT_SOURCE_DIR}/third_party/grpc/third_party/protobuf/src
     ${PROJECT_SOURCE_DIR}/third_party/json
     ${PROJECT_SOURCE_DIR}/third_party/sql-parser/src
 
@@ -36,11 +34,6 @@ if (${NUMA_FOUND})
     include_directories(${PROJECT_SOURCE_DIR}/third_party/pgasus/include)
     include_directories(${PROJECT_BINARY_DIR}/third_party/pgasus/src)
 endif()
-
-link_directories(
-    ${PROJECT_SOURCE_DIR}/third_party/grpc/libs/opt/
-    ${PROJECT_SOURCE_DIR}/third_party/grpc/libs/opt/protobuf
-)
 
 add_subdirectory(benchmark-libs)
 add_subdirectory(benchmark)
