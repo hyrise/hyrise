@@ -6,8 +6,6 @@ node {
 
     try {
       stage("Setup") {
-        sh "env"
-        sh "sleep 100"
         checkout scm
         sh "./install.sh"
         sh "sudo apt-get install ccache"
