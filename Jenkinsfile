@@ -44,7 +44,7 @@ node {
           stage("gcc-debug") {
             sh "cd gcc-debug && make all -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
             sh "./gcc-debug/opossumTest"
-          }
+          },
           stage("asan Debug") {
             sh "LSAN_OPTIONS=suppressions=asan-ignore.txt ./clang-debug/opossumAsan"
           }
