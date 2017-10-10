@@ -10,7 +10,7 @@ node {
       }
 
       stage("Setup") {
-        sh "echo $CCACHE_DIR"
+        sh "echo $CCACHE_DIR "
         sh "sleep 100"
         checkout scm
         sh "./install.sh"
