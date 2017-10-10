@@ -30,12 +30,11 @@ node {
       }
 
       stage("Build and Test") {
-//        stage("clang-release") {
-//          // not running this in parallel so that we don't waste CPU time if the build is broken anyway
-//          sh "cd clang-release && make all opossumAsan -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
-//          sh "./clang-release/opossumTest"
-//        }
-        failFast true
+        stage("clang-release") {
+          // not running this in parallel so that we don't waste CPU time if the build is broken anyway
+          sh "cd clang-release && make all opossumAsan -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
+          sh "./clang-release/opossumTest"
+        }
         parallel {
           stage("clang-debug") {
             sh "cd clang-debug && make all opossumCoverage opossumAsan -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 5))"
@@ -52,7 +51,6 @@ node {
         }
       }
 
-      failFast true
       parallel {
         stage("asan Release") {
           sh "LSAN_OPTIONS=suppressions=asan-ignore.txt ./clang-release/opossumAsan"
