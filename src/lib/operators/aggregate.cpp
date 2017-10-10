@@ -247,27 +247,27 @@ std::shared_ptr<const Table> Aggregate::_on_execute() {
         Invoke correct aggregator for each column
         */
 
-        resolve_data_type(type_string, [&, aggregate](auto type) {
+        resolve_data_type(type_string, [&, this, aggregate](auto type) {
           using DataType = typename decltype(type)::type;
 
           switch (aggregate.function) {
             case AggregateFunction::Min:
-              _aggregate_column<DataType, AggregateFunction::Min>(chunk_id, column_index, *base_column);
+              this->_aggregate_column<DataType, AggregateFunction::Min>(chunk_id, column_index, *base_column);
               break;
             case AggregateFunction::Max:
-              _aggregate_column<DataType, AggregateFunction::Max>(chunk_id, column_index, *base_column);
+              this->_aggregate_column<DataType, AggregateFunction::Max>(chunk_id, column_index, *base_column);
               break;
             case AggregateFunction::Sum:
-              _aggregate_column<DataType, AggregateFunction::Sum>(chunk_id, column_index, *base_column);
+              this->_aggregate_column<DataType, AggregateFunction::Sum>(chunk_id, column_index, *base_column);
               break;
             case AggregateFunction::Avg:
-              _aggregate_column<DataType, AggregateFunction::Avg>(chunk_id, column_index, *base_column);
+              this->_aggregate_column<DataType, AggregateFunction::Avg>(chunk_id, column_index, *base_column);
               break;
             case AggregateFunction::Count:
-              _aggregate_column<DataType, AggregateFunction::Count>(chunk_id, column_index, *base_column);
+              this->_aggregate_column<DataType, AggregateFunction::Count>(chunk_id, column_index, *base_column);
               break;
             case AggregateFunction::CountDistinct:
-              _aggregate_column<DataType, AggregateFunction::CountDistinct>(chunk_id, column_index, *base_column);
+              this->_aggregate_column<DataType, AggregateFunction::CountDistinct>(chunk_id, column_index, *base_column);
               break;
           }
         });
