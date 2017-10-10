@@ -29,14 +29,7 @@ if echo $REPLY | grep -E '^[Yy]$' > /dev/null; then
             # clang-format is keg-only and needs to be explicitly symlinked into /usr/local
             ln -s /usr/local/Cellar/clang-format\@3.8/3.8.0/bin/clang-format /usr/local/bin/clang-format-3.8
 
-            if git submodule update --init --recursive; then
-                if CPPFLAGS="-Wno-deprecated-declarations" CFLAGS="-Wno-deprecated-declarations -Wno-implicit-function-declaration -Wno-shift-negative-value" make static -j $(sysctl -n hw.ncpu) --directory=third_party/grpc REQUIRE_CUSTOM_LIBRARIES_opt=true; then
-                    echo "Installation successful"
-                else
-                    echo "Error during gRPC installation."
-                    exit 1
-                fi
-            else
+            if ! git submodule update --init --recursive; then
                 echo "Error during installation."
                 exit 1
             fi
@@ -49,14 +42,7 @@ if echo $REPLY | grep -E '^[Yy]$' > /dev/null; then
             echo "Installing dependencies (this may take a while)..."
             if sudo apt-get update >/dev/null; then
                 if sudo apt-get install -y libboost-all-dev clang-format-3.8 gcovr python2.7 gcc-6 clang llvm libnuma-dev libnuma1 libtbb-dev build-essential autoconf libtool cmake libreadline-dev libsqlite3-dev parallel; then
-                    if git submodule update --init --recursive; then
-                        if CPPFLAGS="-Wno-deprecated-declarations" CFLAGS="-Wno-deprecated-declarations -Wno-implicit-function-declaration -Wno-shift-negative-value" make static -j $(nproc) --directory=third_party/grpc REQUIRE_CUSTOM_LIBRARIES_opt=true; then
-                            echo "Installation successful"
-                        else
-                            echo "Error during gRPC installation."
-                            exit 1
-                        fi
-                    else
+                    if ! git submodule update --init --recursive; then
                         echo "Error during installation."
                         exit 1
                     fi

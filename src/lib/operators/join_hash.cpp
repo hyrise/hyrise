@@ -136,7 +136,8 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
 
   template <typename T>
   std::shared_ptr<Partition<T>> _materialize_input(const std::shared_ptr<const Table> in_table, ColumnID column_id,
-                                                   std::vector<std::shared_ptr<std::vector<size_t>>>& histograms) {
+                                                   std::vector<std::shared_ptr<std::vector<size_t>>>& histograms,
+                                                   bool keep_nulls = false) {
     // list of all elements that will be partitioned
     auto elements = std::make_shared<Partition<T>>();
     elements->resize(in_table->row_count());
@@ -184,12 +185,12 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
         auto materialized_chunk = std::make_shared<pmr_vector<std::pair<RowID, T>>>();
 
         // Materialize the chunk
-        resolve_column_type<T>(*column, [&](auto& typed_column) {
+        resolve_column_type<T>(*column, [&, chunk_id, keep_nulls](auto& typed_column) {
           auto iterable = create_iterable_from_column<T>(typed_column);
           auto& materialized = *materialized_chunk;
 
-          iterable.for_each([&, chunk_id](const auto& value) {
-            if (!value.is_null()) {
+          iterable.for_each([&, chunk_id, keep_nulls](const auto& value) {
+            if (!value.is_null() || keep_nulls) {
               materialized.emplace_back(RowID{chunk_id, value.chunk_offset()}, value.value());
             }
           });
@@ -239,7 +240,8 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
   template <typename T>
   RadixContainer<T> _partition_radix_parallel(std::shared_ptr<Partition<T>> materialized,
                                               std::shared_ptr<std::vector<size_t>> chunk_offsets,
-                                              std::vector<std::shared_ptr<std::vector<size_t>>>& histograms) {
+                                              std::vector<std::shared_ptr<std::vector<size_t>>>& histograms,
+                                              bool keep_nulls = false) {
     // fan-out
     const size_t num_partitions = 1 << _radix_bits;
 
@@ -316,7 +318,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
         for (size_t i = input_offset; i < input_offset + input_size; ++i) {
           auto& element = (*materialized)[i];
 
-          if (element.row_id.chunk_offset == INVALID_CHUNK_OFFSET) {
+          if (!keep_nulls && element.row_id.chunk_offset == INVALID_CHUNK_OFFSET) {
             continue;
           }
 
@@ -492,6 +494,13 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
       _copy_table_metadata(_right_in_table, _output_table);
     }
 
+    /*
+     * This flag is used in the materialization and probing phases.
+     * When dealing with an OUTER join, we need to make sure that we keep the NULL values for the outer relation.
+     * In the current implementation, the relation on the right is always the outer relation.
+     */
+    auto keep_nulls = (_mode == JoinMode::Left || _mode == JoinMode::Right);
+
     // Pre-partitioning
     // Save chunk offsets into the input relation
     size_t left_chunk_count = _left_in_table->chunk_count();
@@ -526,7 +535,9 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
     */
     // Scheduler note: parallelize this at some point. Currently, the amount of jobs would be too high
     auto materialized_left = _materialize_input<LeftType>(_left_in_table, _column_ids.first, histograms_left);
-    auto materialized_right = _materialize_input<RightType>(_right_in_table, _column_ids.second, histograms_right);
+    // 'keep_nulls' makes sure that the relation on the right materializes NULL values when executing an OUTER join.
+    auto materialized_right =
+        _materialize_input<RightType>(_right_in_table, _column_ids.second, histograms_right, keep_nulls);
 
     // Radix Partitioning phase
     /*
@@ -540,7 +551,9 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
     */
     // Scheduler note: parallelize this at some point. Currently, the amount of jobs would be too high
     auto radix_left = _partition_radix_parallel<LeftType>(materialized_left, left_chunk_offsets, histograms_left);
-    auto radix_right = _partition_radix_parallel<RightType>(materialized_right, right_chunk_offsets, histograms_right);
+    // 'keep_nulls' makes sure that the relation on the right keeps NULL values when executing an OUTER join.
+    auto radix_right =
+        _partition_radix_parallel<RightType>(materialized_right, right_chunk_offsets, histograms_right, keep_nulls);
 
     // Build phase
     std::vector<std::shared_ptr<HashTable<LeftType>>> hashtables;
@@ -625,7 +638,11 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
         // Get the row ids that are referenced
         auto new_pos_list = std::make_shared<PosList>();
         for (const auto& row : *pos_list) {
-          new_pos_list->push_back(input_pos_lists.at(row.chunk_id)->at(row.chunk_offset));
+          if (row.chunk_offset == INVALID_CHUNK_OFFSET) {
+            new_pos_list->push_back(row);
+          } else {
+            new_pos_list->push_back(input_pos_lists.at(row.chunk_id)->at(row.chunk_offset));
+          }
         }
         column = std::make_shared<ReferenceColumn>(ref_col->referenced_table(), ref_col->referenced_column_id(),
                                                    new_pos_list);
