@@ -7,7 +7,7 @@ node {
   oppossumCI.inside("-u 0:0 -v /mnt/ccache:/ccache -e \"CCACHE_DIR=/ccache\" -e \"CCACHE_CPP2=yes\" -e \"CACHE_MAXSIZE=10GB\"") {
 
     try {
-//      failFast true
+      failFast true
 
       stage("Setup") {
         checkout scm
@@ -33,26 +33,26 @@ node {
 
       stage("Build and Test") {
         stage("clang-debug") {
-          sh "cd clang-debug && make all opossumCoverage opossumAsan -j \$(( $(cat /proc/cpuinfo | grep processor | wc -l) / 5))"
+          sh "cd clang-debug && make all opossumCoverage opossumAsan -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 5))"
           sh "./clang-debug/opossumTest"
         }
-//        parallel {
+        parallel {
           stage("clang-release") {
-            sh "cd clang-release && make all opossumAsan -j \$(( $(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
+            sh "cd clang-release && make all opossumAsan -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
             sh "./clang-release/opossumTest"
           }
           stage("gcc-debug") {
-            sh "cd gcc-debug && make all -j \$(( $(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
+            sh "cd gcc-debug && make all -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
             sh "./gcc-debug/opossumTest"
           }
           stage("gcc-release") {
-            sh "cd gcc-release && make all -j \$(( $(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
+            sh "cd gcc-release && make all -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
             sh "./gcc-release/opossumTest"
           }
-//        }
+        }
       }
 
-//      parallel {
+      parallel {
         stage("asan Release") {
           sh "LSAN_OPTIONS=suppressions=asan-ignore.txt ./clang-release/opossumAsan"
         }
@@ -76,7 +76,7 @@ node {
             sh "cd clang-release && make -j \$(cat /proc/cpuinfo | grep processor | wc -l) opossumTestTPCC tpccTableGenerator"
             sh "./scripts/test_tpcc.sh clang-release"
         }
-//      }
+      }
 
       stage("Cleanup") {
         // Clean up workspace.
