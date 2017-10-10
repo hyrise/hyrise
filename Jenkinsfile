@@ -37,7 +37,7 @@ node {
         }
         parallel clangDebug: {
           stage("clang-debug") {
-            sh "cd clang-debug && make all opossumCoverage opossumAsan -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 5))"
+            sh "cd clang-debug && make all opossumCoverage opossumAsan -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
             sh "./clang-debug/opossumTest"
           }
         }, gccDebug: {
