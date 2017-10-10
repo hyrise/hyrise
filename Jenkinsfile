@@ -32,11 +32,11 @@ node {
       }
 
       stage("Build and Test") {
-          stage("clang-debug") {
-            sh "cd clang-debug && make all opossumCoverage opossumAsan -j \$(( $(cat /proc/cpuinfo | grep processor | wc -l) / 5))"
-            sh "./clang-debug/opossumTest"
-          }
-        parallel {
+        stage("clang-debug") {
+          sh "cd clang-debug && make all opossumCoverage opossumAsan -j \$(( $(cat /proc/cpuinfo | grep processor | wc -l) / 5))"
+          sh "./clang-debug/opossumTest"
+        }
+//        parallel {
           stage("clang-release") {
             sh "cd clang-release && make all opossumAsan -j \$(( $(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
             sh "./clang-release/opossumTest"
@@ -49,10 +49,10 @@ node {
             sh "cd gcc-release && make all -j \$(( $(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
             sh "./gcc-release/opossumTest"
           }
-        }
+//        }
       }
 
-      parallel {
+//      parallel {
         stage("asan Release") {
           sh "LSAN_OPTIONS=suppressions=asan-ignore.txt ./clang-release/opossumAsan"
         }
@@ -76,7 +76,7 @@ node {
             sh "cd clang-release && make -j \$(cat /proc/cpuinfo | grep processor | wc -l) opossumTestTPCC tpccTableGenerator"
             sh "./scripts/test_tpcc.sh clang-release"
         }
-      }
+//      }
 
       stage("Cleanup") {
         // Clean up workspace.
