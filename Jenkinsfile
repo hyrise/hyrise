@@ -35,7 +35,7 @@ node {
           sh "cd clang-release && make all opossumAsan -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
           sh "./clang-release/opossumTest"
         }
-        parallel clangDebug: {
+        parallel failFast:true, clangDebug: {
           stage("clang-debug") {
             sh "cd clang-debug && make all opossumCoverage opossumAsan -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
             sh "./clang-debug/opossumTest"
@@ -44,6 +44,9 @@ node {
           stage("gcc-debug") {
             sh "cd gcc-debug && make all -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
             sh "./gcc-debug/opossumTest"
+          }
+          stage("asan Debug") {
+            sh "LSAN_OPTIONS=suppressions=asan-ignore.txt ./clang-debug/opossumAsan"
           }
         }, gccRelease: {
           stage("gcc-release") {
@@ -56,15 +59,9 @@ node {
               sh "./scripts/test_tpcc.sh clang-release"
           }
         }
-      }
-
-      parallel asanRelease: {
+      }, asanRelease: {
         stage("asan Release") {
           sh "LSAN_OPTIONS=suppressions=asan-ignore.txt ./clang-release/opossumAsan"
-        }
-      }, asanDebug: {
-        stage("asan Debug") {
-          sh "LSAN_OPTIONS=suppressions=asan-ignore.txt ./clang-debug/opossumAsan"
         }
       }, coverage: {
         stage("Coverage") {
