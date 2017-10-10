@@ -32,7 +32,7 @@ class SQLiteTestRunner : public BaseTest {
     std::ifstream file("src/test/sql/sqlite_testrunner/sqlite_testrunner.tables");
     std::string line;
     while (std::getline(file, line)) {
-      if (line.empty() || line.substr(0, 2) == "//") {
+      if (line.empty()) {
         continue;
       }
 

@@ -99,16 +99,15 @@ void BaseTest::_print_matrix(const BaseTest::Matrix& m) {
     right_col_type = tright.column_type(col_id);
     // This is needed for the SQLiteTestrunner, since SQLite does not differentiate between float/double, and int/long.
     if (!strict_types) {
-      if (left_col_type == "float" || left_col_type == "double") {
+      if (left_col_type == "double") {
         left_col_type = "float";
-      }
-      if (right_col_type == "float" || right_col_type == "double") {
-        right_col_type = "float";
-      }
-      if (left_col_type == "int" || left_col_type == "long") {
+      } else if (left_col_type == "long") {
         left_col_type = "int";
       }
-      if (right_col_type == "int" || right_col_type == "long") {
+
+      if (right_col_type == "double") {
+        right_col_type = "float";
+      } else if (right_col_type == "long") {
         right_col_type = "int";
       }
     }
