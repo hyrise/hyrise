@@ -29,7 +29,7 @@ if echo $REPLY | grep -E '^[Yy]$' > /dev/null; then
             # clang-format is keg-only and needs to be explicitly symlinked into /usr/local
             ln -s /usr/local/Cellar/clang-format\@3.8/3.8.0/bin/clang-format /usr/local/bin/clang-format-3.8
 
-            if ! git submodule update --init --recursive; then
+            if ! git submodule update --init --recursive --depth=1; then
                 echo "Error during installation."
                 exit 1
             fi
@@ -42,7 +42,7 @@ if echo $REPLY | grep -E '^[Yy]$' > /dev/null; then
             echo "Installing dependencies (this may take a while)..."
             if sudo apt-get update >/dev/null; then
                 if sudo apt-get install -y libboost-all-dev clang-format-3.8 gcovr python2.7 gcc-6 clang llvm libnuma-dev libnuma1 libtbb-dev build-essential autoconf libtool cmake libreadline-dev libsqlite3-dev; then
-                    if ! git submodule update --init --recursive; then
+                    if ! git submodule update --init --recursive --depth=1; then
                         echo "Error during installation."
                         exit 1
                     fi
