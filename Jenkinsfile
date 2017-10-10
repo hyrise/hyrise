@@ -33,15 +33,15 @@ node {
           sh "./clang-debug/opossumTest"
         }
         stage("clang-release") {
-          sh "cd clang-release && make all opossumCoverage opossumAsan -j \$(cat /proc/cpuinfo | grep processor | wc -l)"
+          sh "cd clang-release && make all opossumAsan -j \$(cat /proc/cpuinfo | grep processor | wc -l)"
           sh "./clang-release/opossumTest"
         }
         stage("gcc-debug") {
-          sh "cd gcc-debug && make all opossumCoverage opossumAsan -j \$(cat /proc/cpuinfo | grep processor | wc -l)"
+          sh "cd gcc-debug && make all -j \$(cat /proc/cpuinfo | grep processor | wc -l)"
           sh "./gcc-debug/opossumTest"
         }
         stage("gcc-release") {
-          sh "cd gcc-release && make all opossumCoverage opossumAsan -j \$(cat /proc/cpuinfo | grep processor | wc -l)"
+          sh "cd gcc-release && make all -j \$(cat /proc/cpuinfo | grep processor | wc -l)"
           sh "./gcc-release/opossumTest"
         }
       }
