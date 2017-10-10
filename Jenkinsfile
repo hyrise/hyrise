@@ -7,8 +7,6 @@ node {
   oppossumCI.inside("-u 0:0 -v /mnt/ccache:/ccache -e \"CCACHE_DIR=/ccache\" -e \"CCACHE_CPP2=yes\" -e \"CACHE_MAXSIZE=10GB\"") {
 
     try {
-      failFast true
-
       stage("Setup") {
         checkout scm
         sh "./install.sh"
