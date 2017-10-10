@@ -35,16 +35,17 @@ node {
           sh "cd clang-release && make all opossumAsan -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
           sh "./clang-release/opossumTest"
         }
-        parallel {
-          failFast: true
+        parallel clangDebug: {
           stage("clang-debug") {
             sh "cd clang-debug && make all opossumCoverage opossumAsan -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 5))"
             sh "./clang-debug/opossumTest"
           }
+        }, gccDebug: {
           stage("gcc-debug") {
             sh "cd gcc-debug && make all -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
             sh "./gcc-debug/opossumTest"
           }
+        }, gccRelease: {
           stage("gcc-release") {
             sh "cd gcc-release && make all -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
             sh "./gcc-release/opossumTest"
@@ -52,15 +53,15 @@ node {
         }
       }
 
-      parallel {
-        failFast: true
+      parallel asanRelease: {
         stage("asan Release") {
           sh "LSAN_OPTIONS=suppressions=asan-ignore.txt ./clang-release/opossumAsan"
         }
+      }, asanDebug: {
         stage("asan Debug") {
           sh "LSAN_OPTIONS=suppressions=asan-ignore.txt ./clang-debug/opossumAsan"
         }
-
+      }, coverage: {
         stage("Coverage") {
           sh "./scripts/coverage.sh clang-debug"
           publishHTML (target: [
@@ -72,7 +73,7 @@ node {
             reportName: "RCov Report"
           ])
         }
-
+      }, tpcc: {
         stage("TPCC Test") {
             sh "cd clang-release && make -j \$(cat /proc/cpuinfo | grep processor | wc -l) opossumTestTPCC tpccTableGenerator"
             sh "./scripts/test_tpcc.sh clang-release"
