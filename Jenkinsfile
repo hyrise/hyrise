@@ -2,9 +2,13 @@ node {
 
   def oppossumCI = docker.image('hyrise/opossum-ci:17.04');
   oppossumCI.pull()
-  oppossumCI.inside("-u 0:0") {
+  oppossumCI.inside("-u 0:0 -v ccache:/ccache") {
 
     try {
+      stage("Test") {
+        sh "echo hallo >> /ccache/test.txt"
+        sh "cat /ccache/test.txt"
+      }
 
       stage("Setup") {
         checkout scm
