@@ -71,7 +71,7 @@ node {
 
       stage("TPCC Test") {
           sh "cd clang-release && make -j \$(cat /proc/cpuinfo | grep processor | wc -l) opossumTestTPCC tpccTableGenerator"
-          sh "./scripts/test_tpcc.sh clang-debug"
+          sh "./scripts/test_tpcc.sh clang-release"
       }
 
       stage("Cleanup") {
