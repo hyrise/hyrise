@@ -1,4 +1,5 @@
 SELECT * FROM int_float;
+SELECT * FROM int_float_null;
 
 -- Table Scans
 SELECT * FROM int_float2 WHERE a = 12345 AND b > 457;
@@ -58,19 +59,19 @@ SELECT a, SUM(b), AVG(c) FROM groupby_int_1gb_2agg GROUP BY a;
 SELECT a, b, MAX(c), AVG(d) FROM groupby_int_2gb_2agg GROUP BY a, b;
 
 -- COUNT(*)
--- SELECT a, COUNT(*) FROM groupby_int_1gb_1agg_null GROUP BY a;
+SELECT a, COUNT(*) FROM groupby_int_1gb_1agg_null GROUP BY a;
 SELECT COUNT(*), SUM(a + b) FROM int_int3;
---SELECT COUNT(*) FROM groupby_int_1gb_1agg_null GROUP BY a;
+SELECT COUNT(*) FROM groupby_int_1gb_1agg_null GROUP BY a;
 
 -- Case insensitivity
 SELECT Sum(b + b) AS sum_b_b FROM int_float;
 
 -- Aggregates with NULL
--- SELECT a, MAX(b) FROM groupby_int_1gb_1agg_null GROUP BY a;
--- SELECT a, MIN(b) FROM groupby_int_1gb_1agg_null GROUP BY a;
--- SELECT a, SUM(b) FROM groupby_int_1gb_1agg_null GROUP BY a;
--- SELECT a, AVG(b) FROM groupby_int_1gb_1agg_null GROUP BY a;
--- SELECT a, COUNT(b) FROM groupby_int_1gb_1agg_null GROUP BY a;
+SELECT a, MAX(b) FROM groupby_int_1gb_1agg_null GROUP BY a;
+SELECT a, MIN(b) FROM groupby_int_1gb_1agg_null GROUP BY a;
+SELECT a, SUM(b) FROM groupby_int_1gb_1agg_null GROUP BY a;
+SELECT a, AVG(b) FROM groupby_int_1gb_1agg_null GROUP BY a;
+SELECT a, COUNT(b) FROM groupby_int_1gb_1agg_null GROUP BY a;
 
 -- Checks that output of Aggregate can be worked with correctly.
 SELECT d, sub.min_c, max_a FROM ( SELECT b, d, MAX(a) AS max_a, MIN(c) AS min_c FROM groupby_int_2gb_2agg_2 GROUP BY b, d ) AS sub WHERE d BETWEEN 20 AND 50 AND min_c > 15;

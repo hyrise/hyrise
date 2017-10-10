@@ -25,7 +25,10 @@ namespace opossum {
 
 class SQLiteTestRunner : public BaseTest {
  protected:
-  void SetUp() override {
+  void _set_up() {
+    StorageManager::get().reset();
+    _sqlite.reset(new SQLiteWrapper());
+
     std::ifstream file("src/test/sql/sqlite_testrunner/sqlite_testrunner.tables");
     std::string line;
     while (std::getline(file, line)) {
@@ -43,14 +46,14 @@ class SQLiteTestRunner : public BaseTest {
       std::string table_file = args.at(0);
       std::string table_name = args.at(1);
 
-      _sqlite.create_table_from_tbl(table_file, table_name);
+      _sqlite->create_table_from_tbl(table_file, table_name);
 
       std::shared_ptr<Table> table = load_table(table_file, 0);
       StorageManager::get().add_table(table_name, std::move(table));
     }
   }
 
-  SQLiteWrapper _sqlite;
+  std::unique_ptr<SQLiteWrapper> _sqlite;
 };
 
 TEST_F(SQLiteTestRunner, CompareToSQLiteTestRunner) {
@@ -60,6 +63,8 @@ TEST_F(SQLiteTestRunner, CompareToSQLiteTestRunner) {
     if (query.empty() || query.substr(0, 2) == "--") {
       continue;
     }
+
+    _set_up();
 
     std::cout << "Testing query: " << query << " ..." << std::endl;
 
@@ -72,7 +77,6 @@ TEST_F(SQLiteTestRunner, CompareToSQLiteTestRunner) {
     }
 
     auto plan = SQLPlanner::plan(parse_result);
-    std::shared_ptr<AbstractOperator> result_operator;
 
     auto tx_context = TransactionManager::get().new_transaction_context();
     for (const auto& root : plan.tree_roots()) {
@@ -83,11 +87,10 @@ TEST_F(SQLiteTestRunner, CompareToSQLiteTestRunner) {
       }
 
       CurrentScheduler::schedule_and_wait_for_tasks(tasks);
-      result_operator = tasks.back()->get_operator();
     }
 
-    auto result_table = result_operator->get_output();
-    auto sqlite_result_table = _sqlite.execute_query(query);
+    auto result_table = plan.tree_roots().back()->get_output();
+    auto sqlite_result_table = _sqlite->execute_query(query);
 
     bool order_sensitive = false;
 

@@ -34,12 +34,13 @@ void SQLiteWrapper::create_table_from_tbl(const std::string& file, const std::st
   std::getline(infile, line);
   std::vector<std::string> col_types;
 
-  for (std::string type : _split<std::string>(line, '|')) {
-    if (type == "int" || type == "long") {
+  for (const std::string & type : _split<std::string>(line, '|')) {
+    std::string actual_type = _split<std::string>(type, '_')[0];
+    if (actual_type == "int" || actual_type == "long") {
       col_types.push_back("INT");
-    } else if (type == "float" || type == "double") {
+    } else if (actual_type == "float" || actual_type == "double") {
       col_types.push_back("REAL");
-    } else if (type == "string") {
+    } else if (actual_type == "string") {
       col_types.push_back("TEXT");
     } else {
       DebugAssert(false, "SQLiteWrapper: column type " + type + " not supported.");
@@ -84,27 +85,42 @@ void SQLiteWrapper::create_table_from_tbl(const std::string& file, const std::st
 
 std::shared_ptr<Table> SQLiteWrapper::execute_query(const std::string& sql_query) {
   sqlite3_stmt* result_row;
-  bool create_column_headers = true;
 
   auto result_table = std::make_shared<Table>();
 
   std::vector<std::string> queries;
   boost::algorithm::split(queries, sql_query, boost::is_any_of(";"));
 
-  for (auto & query : queries) {
-    int rc = sqlite3_prepare_v2(_db, query.c_str(), -1, &result_row, 0);
+  queries.erase( std::remove_if( queries.begin(), queries.end(), [](std::string const& query) { return query.empty(); }), queries.end());
+
+  // We need to split the queries such that we only create columns/add rows from the final SELECT query
+  std::vector<std::string> queries_before_select(queries.begin(), queries.end() - 1);
+  std::string select_query = queries.back();
+
+  int rc;
+  for (const auto & query : queries_before_select) {
+    rc = sqlite3_prepare_v2(_db, query.c_str(), -1, &result_row, 0);
 
     if (rc != SQLITE_OK) {
       throw std::runtime_error("Failed to execute query \"" + query + "\": " + std::string(sqlite3_errmsg(_db)) + "\n");
     }
 
-    while ((rc = sqlite3_step(result_row)) == SQLITE_ROW) {
-      if (create_column_headers) {
-        _create_columns(result_table, result_row, sqlite3_column_count(result_row));
-        create_column_headers = false;
-      }
-      _add_row(result_table, result_row, sqlite3_column_count(result_row));
+    while ((rc = sqlite3_step(result_row)) != SQLITE_DONE) {
     }
+  }
+
+  rc = sqlite3_prepare_v2(_db, select_query.c_str(), -1, &result_row, 0);
+
+  if (rc != SQLITE_OK) {
+    throw std::runtime_error("Failed to execute query \"" + select_query + "\": " + std::string(sqlite3_errmsg(_db)) + "\n");
+  }
+
+  _create_columns(result_table, result_row, sqlite3_column_count(result_row));
+
+  sqlite3_reset(result_row);
+
+  while ((rc = sqlite3_step(result_row)) == SQLITE_ROW) {
+    _add_row(result_table, result_row, sqlite3_column_count(result_row));
   }
 
   sqlite3_finalize(result_row);
@@ -112,30 +128,50 @@ std::shared_ptr<Table> SQLiteWrapper::execute_query(const std::string& sql_query
 }
 
 void SQLiteWrapper::_create_columns(std::shared_ptr<Table> table, sqlite3_stmt* result_row, int column_count) {
-  for (int i = 0; i < column_count; ++i) {
-    std::string col_name = sqlite3_column_name(result_row, i);
-    std::string col_type;
-    switch (sqlite3_column_type(result_row, i)) {
-      case SQLITE_INTEGER: {
-        col_type = "int";
-        break;
+  std::vector<bool> col_nullable(column_count, false);
+  std::vector<std::string> col_types(column_count, "");
+  std::vector<std::string> col_names(column_count, "");
+
+  bool no_result = true;
+  int rc;
+  while ((rc = sqlite3_step(result_row)) == SQLITE_ROW) {
+    for (int i = 0; i < column_count; ++i) {
+      if (no_result) {
+        col_names[i] = sqlite3_column_name(result_row, i);
       }
 
-      case SQLITE_FLOAT: {
-        col_type = "float";
-        break;
-      }
+      switch (sqlite3_column_type(result_row, i)) {
+        case SQLITE_INTEGER: {
+          col_types[i] = "int";
+          break;
+        }
 
-      case SQLITE_TEXT: {
-        col_type = "string";
-        break;
-      }
+        case SQLITE_FLOAT: {
+          col_types[i] = "float";
+          break;
+        }
 
-      case SQLITE_NULL:
-      case SQLITE_BLOB:
-      default: { throw std::runtime_error("Column type not supported."); }
+        case SQLITE_TEXT: {
+          col_types[i] = "string";
+          break;
+        }
+
+        case SQLITE_NULL: {
+          col_nullable[i] = true;
+          break;
+        }
+
+        case SQLITE_BLOB:
+        default: { throw std::runtime_error("Column type not supported."); }
+      }
     }
-    table->add_column(col_name, col_type);
+    no_result = false;
+  }
+
+  if (!no_result) {
+    for (int i = 0; i < column_count; ++i) {
+      table->add_column(col_names[i], col_types[i], col_nullable[i]);
+    }
   }
 }
 
@@ -159,7 +195,11 @@ void SQLiteWrapper::_add_row(std::shared_ptr<Table> table, sqlite3_stmt* result_
         break;
       }
 
-      case SQLITE_NULL:
+      case SQLITE_NULL: {
+        row.push_back(NULL_VALUE);
+        break;
+      }
+
       case SQLITE_BLOB:
       default: { throw std::runtime_error("Column type not supported."); }
     }
