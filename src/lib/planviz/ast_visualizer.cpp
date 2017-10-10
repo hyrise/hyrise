@@ -1,5 +1,6 @@
 #include "ast_visualizer.hpp"
 
+#include <boost/algorithm/string.hpp>
 #include <cmath>
 #include <cstdlib>
 #include <fstream>
@@ -23,6 +24,7 @@ void ASTVisualizer::visualize(const std::vector<std::shared_ptr<AbstractASTNode>
   file << "digraph {" << std::endl;
   file << "rankdir=BT" << std::endl;
   file << "bgcolor=transparent" << std::endl;
+  file << "ratio=0.5" << std::endl;
   file << "node [color=white,fontcolor=white,shape=parallelogram]" << std::endl;
   file << "edge [color=white,fontcolor=white]" << std::endl;
   for (const auto& root : ast_roots) {
@@ -42,7 +44,8 @@ void ASTVisualizer::visualize(const std::vector<std::shared_ptr<AbstractASTNode>
 }
 
 void ASTVisualizer::_visualize_subtree(const std::shared_ptr<AbstractASTNode>& node, std::ofstream& file) {
-  file << reinterpret_cast<uintptr_t>(node.get()) << "[label=\"" << node->description() << "\"]" << std::endl;
+  file << reinterpret_cast<uintptr_t>(node.get()) << "[label=\""
+       << boost::replace_all_copy(node->description(), "\"", "\\\"") << "\"]" << std::endl;
 
   if (node->left_child()) {
     _visualize_dataflow(node->left_child(), node, file);

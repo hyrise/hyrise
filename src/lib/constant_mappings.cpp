@@ -18,13 +18,6 @@ boost::bimap<L, R> make_bimap(std::initializer_list<typename boost::bimap<L, R>:
   return boost::bimap<L, R>(list.begin(), list.end());
 }
 
-const std::unordered_map<std::string, proto::ScanType> string_to_proto_scan_type = {
-    {"=", proto::ScanType::OpEquals},        {"!=", proto::ScanType::OpNotEquals},
-    {"<", proto::ScanType::OpLessThan},      {"<=", proto::ScanType::OpLessThanEquals},
-    {">", proto::ScanType::OpGreaterThan},   {">=", proto::ScanType::OpGreaterThanEquals},
-    {"BETWEEN", proto::ScanType::OpBetween}, {"LIKE", proto::ScanType::OpLike},
-};
-
 const boost::bimap<ScanType, std::string> scan_type_to_string = make_bimap<ScanType, std::string>({
     {ScanType::OpEquals, "="},
     {ScanType::OpNotEquals, "!="},

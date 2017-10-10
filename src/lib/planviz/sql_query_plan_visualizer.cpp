@@ -1,5 +1,6 @@
 #include "sql_query_plan_visualizer.hpp"
 
+#include <boost/algorithm/string.hpp>
 #include <cmath>
 #include <cstdlib>
 #include <fstream>
@@ -20,6 +21,7 @@ void SQLQueryPlanVisualizer::visualize(const SQLQueryPlan& plan, const std::stri
   file << "digraph {" << std::endl;
   file << "rankdir=BT" << std::endl;
   file << "bgcolor=transparent" << std::endl;
+  file << "ratio=0.5" << std::endl;
   file << "node [color=white,fontcolor=white,shape=rectangle]" << std::endl;
   file << "edge [color=white,fontcolor=white]" << std::endl;
   for (const auto& root : plan.tree_roots()) {
@@ -40,7 +42,8 @@ void SQLQueryPlanVisualizer::visualize(const SQLQueryPlan& plan, const std::stri
 
 void SQLQueryPlanVisualizer::_visualize_subtree(const std::shared_ptr<const AbstractOperator>& op,
                                                 std::ofstream& file) {
-  file << reinterpret_cast<uintptr_t>(op.get()) << "[label=\"" << op->description();
+  file << reinterpret_cast<uintptr_t>(op.get()) << "[label=\""
+       << boost::replace_all_copy(op->description(), "\"", "\\\"");
 
   if (op->get_output()) {
     file << "\\n"
