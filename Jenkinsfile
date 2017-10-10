@@ -30,15 +30,16 @@ node {
       }
 
       stage("Build and Test") {
-        stage("clang-debug") {
-          sh "cd clang-debug && make all opossumCoverage opossumAsan -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 5))"
-          sh "./clang-debug/opossumTest"
-        }
+//        stage("clang-release") {
+//          // not running this in parallel so that we don't waste CPU time if the build is broken anyway
+//          sh "cd clang-release && make all opossumAsan -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
+//          sh "./clang-release/opossumTest"
+//        }
         failFast true
         parallel {
-          stage("clang-release") {
-            sh "cd clang-release && make all opossumAsan -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
-            sh "./clang-release/opossumTest"
+          stage("clang-debug") {
+            sh "cd clang-debug && make all opossumCoverage opossumAsan -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 5))"
+            sh "./clang-debug/opossumTest"
           }
           stage("gcc-debug") {
             sh "cd gcc-debug && make all -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
