@@ -35,7 +35,7 @@ node {
           sh "cd clang-release && make all opossumAsan -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
           sh "./clang-release/opossumTest"
         }
-        parallel failFast:true, clangDebug: {
+        parallel clangDebug: {
           stage("clang-debug") {
             sh "cd clang-debug && make all opossumCoverage opossumAsan -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
             sh "./clang-debug/opossumTest"
