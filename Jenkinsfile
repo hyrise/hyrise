@@ -2,7 +2,7 @@ node {
 
   def oppossumCI = docker.image('hyrise/opossum-ci:17.04');
   oppossumCI.pull()
-  oppossumCI.inside("-u 0:0 -v ccache:/ccache -e \"CCACHE_DIR=/ccache\" -e\"CCACHE_CPP2=yes\"") {
+  oppossumCI.inside("-u 0:0 -v ccache:/ccache -e \"CCACHE_DIR=/ccache\" -e \"CCACHE_CPP2=yes\"") {
 
     try {
       stage("Setup") {
