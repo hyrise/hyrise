@@ -261,9 +261,8 @@ int Console::_eval_sql(const std::string& sql) {
   started = std::chrono::high_resolution_clock::now();
 
   if (_execute_plan(plan) == ReturnCode::Error) {
+    transaction_context->rollback();
     out("Execution failed and the transaction has been rolled back.");
-    transaction_context->rollback_operators();
-    transaction_context->mark_as_rolled_back();
     _tcontext = nullptr;
     return ReturnCode::Error;
   }
@@ -285,15 +284,13 @@ int Console::_eval_sql(const std::string& sql) {
       std::to_string(plan_elapsed_ms) + " ms, EXECUTE: " + std::to_string(execution_elapsed_ms) + " ms (wall time))\n");
 
   // Commit
-  if (transaction_context->phase() == TransactionPhase::Failed) {
+  if (transaction_context->aborted()) {
     out("An operator failed and the transaction has been rolled back.");
     _tcontext = nullptr;
     return ReturnCode::Error;
   }
 
   if (auto_commit) {
-    transaction_context->prepare_commit();
-    transaction_context->commit_operators();
     transaction_context->commit();
   }
 
@@ -543,21 +540,18 @@ int Console::visualize(const std::string& input) {
       plan.set_transaction_context(transaction_context);
 
       if (_execute_plan(plan) == ReturnCode::Error) {
-        transaction_context->rollback_operators();
-        transaction_context->mark_as_rolled_back();
+        transaction_context->rollback();
         _tcontext = nullptr;
         return ReturnCode::Error;
       }
 
-      if (transaction_context->phase() == TransactionPhase::Failed) {
+      if (transaction_context->aborted()) {
         out("An operator failed and the transaction has been rolled back.");
         _tcontext = nullptr;
         return ReturnCode::Error;
       }
 
       if (auto_commit) {
-        transaction_context->prepare_commit();
-        transaction_context->commit_operators();
         transaction_context->commit();
       }
     }
@@ -642,9 +636,7 @@ int Console::rollback_transaction(const std::string& input) {
     return ReturnCode::Error;
   }
 
-  _tcontext->mark_as_failed();
-  _tcontext->rollback_operators();
-  _tcontext->mark_as_rolled_back();
+  _tcontext->rollback();
 
   const auto tid = std::to_string(_tcontext->transaction_id());
   out("Transaction (" + tid + ") has been rolled back.\n");
@@ -659,8 +651,6 @@ int Console::commit_transaction(const std::string& input) {
     return ReturnCode::Error;
   }
 
-  _tcontext->prepare_commit();
-  _tcontext->commit_operators();
   _tcontext->commit();
 
   const auto tid = std::to_string(_tcontext->transaction_id());

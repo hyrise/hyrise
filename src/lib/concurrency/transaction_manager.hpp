@@ -64,7 +64,7 @@ class TransactionManager : private Noncopyable {
    * and therefore shouldn’t be used when a scheduler is active. Instead, each operator’s rollback
    * or committing should be schedule separately, for example by using JobTask.
    *
-   * Usage: Call TransactionContext::mark_as_failed() within the
+   * Usage: Call TransactionContext::rollback() within the
    *        function object if transaction should be rolled back.
    */
   void run_transaction(const std::function<void(std::shared_ptr<TransactionContext>)> &fn);

@@ -38,16 +38,9 @@ void TransactionManager::run_transaction(const std::function<void(std::shared_pt
 
   fn(transaction_context);
 
-  if (transaction_context->phase() == TransactionPhase::Failed) {
-    transaction_context->rollback_operators();
-    transaction_context->mark_as_rolled_back();
-  } else if (transaction_context->phase() == TransactionPhase::Active) {
-    transaction_context->prepare_commit();
-    transaction_context->commit_operators();
-    transaction_context->commit();
-  } else {
-    Fail("TransactionContext returned in invalid state.");
-  }
+  if (transaction_context->aborted()) return;
+  
+  transaction_context->commit();
 }
 
 /**
