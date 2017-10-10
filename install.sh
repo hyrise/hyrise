@@ -41,12 +41,14 @@ if echo $REPLY | grep -E '^[Yy]$' > /dev/null; then
         if cat /etc/lsb-release | grep DISTRIB_ID | grep Ubuntu >/dev/null; then
             echo "Installing dependencies (this may take a while)..."
             if sudo apt-get update >/dev/null; then
-                if sudo apt-get install -y libboost-all-dev clang-format-3.8 gcovr python2.7 gcc-6 clang llvm libnuma-dev libnuma1 libtbb-dev build-essential autoconf libtool cmake libreadline-dev libsqlite3-dev; then
-                    if ! git submodule update --init --recursive; then
-                        echo "Error during installation."
-                        exit 1
-                    fi
-                else
+                sudo apt-get install -y libboost-all-dev clang-format-3.8 gcovr python2.7 gcc-6 clang llvm libnuma-dev libnuma1 libtbb-dev build-essential autoconf libtool cmake libreadline-dev libsqlite3-dev &
+
+                if ! git submodule update --init --recursive; then
+                    echo "Error during installation."
+                    exit 1
+                fi
+
+                if $! then
                     echo "Error during installation."
                     exit 1
                 fi
