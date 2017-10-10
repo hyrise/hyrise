@@ -34,6 +34,7 @@ node {
           sh "cd clang-debug && make all opossumCoverage opossumAsan -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 5))"
           sh "./clang-debug/opossumTest"
         }
+        failFast true
         parallel {
           stage("clang-release") {
             sh "cd clang-release && make all opossumAsan -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
@@ -50,6 +51,7 @@ node {
         }
       }
 
+      failFast true
       parallel {
         stage("asan Release") {
           sh "LSAN_OPTIONS=suppressions=asan-ignore.txt ./clang-release/opossumAsan"
