@@ -48,6 +48,7 @@ if echo $REPLY | grep -E '^[Yy]$' > /dev/null; then
                     exit 1
                 fi
 
+                wait
                 if $! then
                     echo "Error during installation."
                     exit 1
