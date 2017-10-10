@@ -2,7 +2,9 @@ node {
 
   def oppossumCI = docker.image('hyrise/opossum-ci:17.04');
   oppossumCI.pull()
-  oppossumCI.inside("-u 0:0 -v ccache:/ccache -e \"CCACHE_DIR=/ccache\" -e \"CCACHE_CPP2=yes\" -e \"CACHE_MAXSIZE=10GB\"") {
+  // create ccache volume using:
+  // docker volume create --driver local --opt type=tmpfs --opt device=tmpfs --opt o=size=10g --name ccachetmpfs
+  oppossumCI.inside("-u 0:0 -v ccachetmpfs:/ccache -e \"CCACHE_DIR=/ccache\" -e \"CCACHE_CPP2=yes\" -e \"CACHE_MAXSIZE=10GB\"") {
 
     try {
       stage("Setup") {
