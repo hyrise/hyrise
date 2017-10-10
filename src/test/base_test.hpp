@@ -33,12 +33,15 @@ class BaseTest : public ::testing::Test {
  protected:
   // compares two tables with regard to the schema and content
   // but ignores the internal representation (chunk size, column type)
-  static ::testing::AssertionResult _table_equal(const Table& tleft, const Table& tright, bool order_sensitive = false, bool strict_types = true);
+  static ::testing::AssertionResult _table_equal(const Table& tleft, const Table& tright, bool order_sensitive = false,
+                                                 bool strict_types = true);
 
   // creates a opossum table based from a file
   static std::shared_ptr<Table> load_table(const std::string& file_name, size_t chunk_size);
-  static void EXPECT_TABLE_EQ(const Table& tleft, const Table& tright, bool order_sensitive = false, bool strict_types = true);
-  static void ASSERT_TABLE_EQ(const Table& tleft, const Table& tright, bool order_sensitive = false, bool strict_types = true);
+  static void EXPECT_TABLE_EQ(const Table& tleft, const Table& tright, bool order_sensitive = false,
+                              bool strict_types = true);
+  static void ASSERT_TABLE_EQ(const Table& tleft, const Table& tright, bool order_sensitive = false,
+                              bool strict_types = true);
 
   static void EXPECT_TABLE_EQ(std::shared_ptr<const Table> tleft, std::shared_ptr<const Table> tright,
                               bool order_sensitive = false, bool strict_types = true);

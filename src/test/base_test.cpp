@@ -80,7 +80,8 @@ void BaseTest::_print_matrix(const BaseTest::Matrix& m) {
   std::cout << "-------------" << std::endl;
 }
 
-::testing::AssertionResult BaseTest::_table_equal(const Table& tleft, const Table& tright, bool order_sensitive, bool strict_types) {
+::testing::AssertionResult BaseTest::_table_equal(const Table& tleft, const Table& tright, bool order_sensitive,
+                                                  bool strict_types) {
   Matrix left = _table_to_matrix(tleft);
   Matrix right = _table_to_matrix(tright);
   // compare schema of tables
@@ -111,8 +112,7 @@ void BaseTest::_print_matrix(const BaseTest::Matrix& m) {
         right_col_type = "int";
       }
     }
-    if (left_col_type != right_col_type ||
-        tleft.column_name(col_id) != tright.column_name(col_id)) {
+    if (left_col_type != right_col_type || tleft.column_name(col_id) != tright.column_name(col_id)) {
       std::cout << "Column with ID " << col_id << " is different" << std::endl;
       std::cout << "Got: " << tleft.column_name(col_id) << " (" << tleft.column_type(col_id) << ")" << std::endl;
       std::cout << "Expected: " << tright.column_name(col_id) << " (" << tright.column_type(col_id) << ")" << std::endl;

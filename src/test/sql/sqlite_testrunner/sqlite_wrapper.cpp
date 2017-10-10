@@ -34,7 +34,7 @@ void SQLiteWrapper::create_table_from_tbl(const std::string& file, const std::st
   std::getline(infile, line);
   std::vector<std::string> col_types;
 
-  for (const std::string & type : _split<std::string>(line, '|')) {
+  for (const std::string& type : _split<std::string>(line, '|')) {
     std::string actual_type = _split<std::string>(type, '_')[0];
     if (actual_type == "int" || actual_type == "long") {
       col_types.push_back("INT");
@@ -91,14 +91,15 @@ std::shared_ptr<Table> SQLiteWrapper::execute_query(const std::string& sql_query
   std::vector<std::string> queries;
   boost::algorithm::split(queries, sql_query, boost::is_any_of(";"));
 
-  queries.erase( std::remove_if( queries.begin(), queries.end(), [](std::string const& query) { return query.empty(); }), queries.end());
+  queries.erase(std::remove_if(queries.begin(), queries.end(), [](std::string const& query) { return query.empty(); }),
+                queries.end());
 
   // We need to split the queries such that we only create columns/add rows from the final SELECT query
   std::vector<std::string> queries_before_select(queries.begin(), queries.end() - 1);
   std::string select_query = queries.back();
 
   int rc;
-  for (const auto & query : queries_before_select) {
+  for (const auto& query : queries_before_select) {
     rc = sqlite3_prepare_v2(_db, query.c_str(), -1, &result_row, 0);
 
     if (rc != SQLITE_OK) {
@@ -112,7 +113,8 @@ std::shared_ptr<Table> SQLiteWrapper::execute_query(const std::string& sql_query
   rc = sqlite3_prepare_v2(_db, select_query.c_str(), -1, &result_row, 0);
 
   if (rc != SQLITE_OK) {
-    throw std::runtime_error("Failed to execute query \"" + select_query + "\": " + std::string(sqlite3_errmsg(_db)) + "\n");
+    throw std::runtime_error("Failed to execute query \"" + select_query + "\": " + std::string(sqlite3_errmsg(_db)) +
+                             "\n");
   }
 
   _create_columns(result_table, result_row, sqlite3_column_count(result_row));
