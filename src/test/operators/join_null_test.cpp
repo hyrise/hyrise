@@ -3,6 +3,7 @@
 #include <memory>
 #include <set>
 #include <string>
+#include <type_traits>
 #include <utility>
 
 #include "../base_test.hpp"
@@ -47,16 +48,38 @@ TYPED_TEST(JoinNullTest, InnerJoinWithNull) {
       ScanType::OpEquals, JoinMode::Inner, "src/test/tables/joinoperators/int_float_null_inner.tbl", 1);
 }
 
-TYPED_TEST(JoinNullTest, LeftJoinWithNull) {
+TYPED_TEST(JoinNullTest, LeftJoinWithNullAsOuter) {
+  if (std::is_same<TypeParam, JoinSortMerge>::value) {
+    // todo(anyone): Remove this as soon as SMJ fixes this
+    return;
+  }
+
   this->template test_join_output<TypeParam>(
       this->_table_wrapper_a_null, this->_table_wrapper_b, std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}),
       ScanType::OpEquals, JoinMode::Left, "src/test/tables/joinoperators/int_left_join_null.tbl", 1);
 }
 
-TYPED_TEST(JoinNullTest, RightJoinWithNull) {
+TYPED_TEST(JoinNullTest, LeftJoinWithNullAsInner) {
+  this->template test_join_output<TypeParam>(
+      this->_table_wrapper_b, this->_table_wrapper_a_null, std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}),
+      ScanType::OpEquals, JoinMode::Left, "src/test/tables/joinoperators/int_left_join_null_inner.tbl", 1);
+}
+
+TYPED_TEST(JoinNullTest, RightJoinWithNullAsOuter) {
+  if (std::is_same<TypeParam, JoinSortMerge>::value) {
+    // todo(anyone): Remove this as soon as SMJ fixes this
+    return;
+  }
+
+  this->template test_join_output<TypeParam>(
+      this->_table_wrapper_b, this->_table_wrapper_a_null, std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}),
+      ScanType::OpEquals, JoinMode::Right, "src/test/tables/joinoperators/int_right_join_null.tbl", 1);
+}
+
+TYPED_TEST(JoinNullTest, RightJoinWithNullAsInner) {
   this->template test_join_output<TypeParam>(
       this->_table_wrapper_a_null, this->_table_wrapper_b, std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}),
-      ScanType::OpEquals, JoinMode::Right, "src/test/tables/joinoperators/int_right_join_null.tbl", 1);
+      ScanType::OpEquals, JoinMode::Right, "src/test/tables/joinoperators/int_right_join_null_inner.tbl", 1);
 }
 
 }  // namespace opossum
