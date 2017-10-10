@@ -34,15 +34,18 @@ node {
         sh "cd clang-release && make all opossumAsan -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
         sh "./clang-release/opossumTest"
       }
-      
+
       parallel clangDebug: {
-        stage("clang-debug") {
+        stage("clang-debug+asan") {
           sh "cd clang-debug && make all opossumCoverage opossumAsan -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
-          sh "./clang-debug/opossumTest"
-          sh "LSAN_OPTIONS=suppressions=asan-ignore.txt ./clang-debug/opossumAsan"
+          parallel clangDebugTest: {
+            sh "./clang-debug/opossumTest"
+          }, clangDebugAsan: {
+            sh "LSAN_OPTIONS=suppressions=asan-ignore.txt ./clang-debug/opossumAsan"
+          }
         }
       }, gccDebug: {
-        stage("gcc-debug+asan") {
+        stage("gcc-debug") {
           sh "cd gcc-debug && make all -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
           sh "./gcc-debug/opossumTest"
         }
@@ -57,7 +60,7 @@ node {
             sh "./scripts/test_tpcc.sh clang-release"
         }
       }, asanRelease: {
-        stage("asan Release") {
+        stage("clang-release:asan") {
           sh "LSAN_OPTIONS=suppressions=asan-ignore.txt ./clang-release/opossumAsan"
         }
       }, coverage: {
