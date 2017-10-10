@@ -6,8 +6,9 @@ node {
 
     try {
       environment {
-        CCACHE_DIR=/ccache
+        CCACHE_DIR='/ccache'
       }
+
       stage("Setup") {
         checkout scm
         sh "./install.sh"
