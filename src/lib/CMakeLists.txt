@@ -253,7 +253,6 @@ set(
 set(
     LIBRARIES
     pthread
-    z
     sqlparser
     ${TBB_LIBRARY}
 )
