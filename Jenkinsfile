@@ -10,6 +10,8 @@ node {
       }
 
       stage("Setup") {
+        echo $CCACHE_DIR
+        sleep 100
         checkout scm
         sh "./install.sh"
         sh "sudo apt-get install ccache"
