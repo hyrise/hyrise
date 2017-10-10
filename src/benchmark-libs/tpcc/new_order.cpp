@@ -30,7 +30,7 @@
 
 namespace tpcc {
 
-NewOrderResult AbstractNewOrderImpl::run_transaction(const NewOrderParams &params) {
+NewOrderResult AbstractNewOrderImpl::run_transaction(const NewOrderParams& params) {
   NewOrderResult result;
   std::vector<opossum::AllTypeVariant> row;
 
@@ -81,7 +81,7 @@ NewOrderResult AbstractNewOrderImpl::run_transaction(const NewOrderParams &param
     execute_tasks_with_context(create_new_order_tasks, t_context);
 
     for (size_t ol_idx = 0; ol_idx < params.order_lines.size(); ol_idx++) {
-      const auto &order_line_params = params.order_lines[ol_idx];
+      const auto& order_line_params = params.order_lines[ol_idx];
 
       NewOrderOrderLineResult order_line;
 
@@ -507,7 +507,7 @@ TaskVector NewOrderRefImpl::get_create_order_line_tasks(const int32_t ol_o_id, c
                                                         const int32_t ol_w_id, const int32_t ol_number,
                                                         const int32_t ol_i_id, const int32_t ol_supply_w_id,
                                                         const int32_t ol_delivery_d, const int32_t ol_quantity,
-                                                        const float ol_amount, const std::string &ol_dist_info) {
+                                                        const float ol_amount, const std::string& ol_dist_info) {
   /**
    *  INSERT INTO order_line (ol_o_id, ol_d_id, ol_w_id, ol_number,
    *  ol_i_id, ol_supply_w_id, ol_quantity, ol_amount, ol_dist_info)
@@ -549,40 +549,40 @@ TaskVector NewOrderRefImpl::get_create_order_line_tasks(const int32_t ol_o_id, c
 
 namespace nlohmann {
 
-void adl_serializer<tpcc::NewOrderParams>::to_json(nlohmann::json &j, const tpcc::NewOrderParams &v) {
+void adl_serializer<tpcc::NewOrderParams>::to_json(nlohmann::json& j, const tpcc::NewOrderParams& v) {
   throw "Not implemented";
 }
 
-void adl_serializer<tpcc::NewOrderParams>::from_json(const nlohmann::json &j, tpcc::NewOrderParams &v) {
+void adl_serializer<tpcc::NewOrderParams>::from_json(const nlohmann::json& j, tpcc::NewOrderParams& v) {
   v.w_id = j["w_id"];
   v.d_id = j["d_id"];
   v.c_id = j["c_id"];
   v.o_entry_d = j["o_entry_d"];
 
   v.order_lines.reserve(j["order_lines"].size());
-  for (const auto &ol_j : j["order_lines"]) {
+  for (const auto& ol_j : j["order_lines"]) {
     tpcc::NewOrderOrderLineParams order_line_params = ol_j;
     v.order_lines.emplace_back(order_line_params);
   }
 }
 
-void adl_serializer<tpcc::NewOrderOrderLineParams>::to_json(nlohmann::json &j, const tpcc::NewOrderOrderLineParams &v) {
+void adl_serializer<tpcc::NewOrderOrderLineParams>::to_json(nlohmann::json& j, const tpcc::NewOrderOrderLineParams& v) {
   throw "Not implemented";
 }
 
-void adl_serializer<tpcc::NewOrderOrderLineParams>::from_json(const nlohmann::json &j,
-                                                              tpcc::NewOrderOrderLineParams &v) {
+void adl_serializer<tpcc::NewOrderOrderLineParams>::from_json(const nlohmann::json& j,
+                                                              tpcc::NewOrderOrderLineParams& v) {
   v.i_id = j["i_id"];
   v.w_id = j["w_id"];
   v.qty = j["qty"];
 }
 
-void adl_serializer<tpcc::NewOrderOrderLineResult>::to_json(nlohmann::json &j, const tpcc::NewOrderOrderLineResult &v) {
+void adl_serializer<tpcc::NewOrderOrderLineResult>::to_json(nlohmann::json& j, const tpcc::NewOrderOrderLineResult& v) {
   throw "Not implemented";
 }
 
-void adl_serializer<tpcc::NewOrderOrderLineResult>::from_json(const nlohmann::json &j,
-                                                              tpcc::NewOrderOrderLineResult &v) {
+void adl_serializer<tpcc::NewOrderOrderLineResult>::from_json(const nlohmann::json& j,
+                                                              tpcc::NewOrderOrderLineResult& v) {
   v.i_price = j["i_price"];
   v.i_name = j["i_name"];
   v.i_data = j["i_data"];
@@ -596,11 +596,11 @@ void adl_serializer<tpcc::NewOrderOrderLineResult>::from_json(const nlohmann::js
   v.amount = j["amount"];
 }
 
-void adl_serializer<tpcc::NewOrderResult>::to_json(nlohmann::json &j, const tpcc::NewOrderResult &v) {
+void adl_serializer<tpcc::NewOrderResult>::to_json(nlohmann::json& j, const tpcc::NewOrderResult& v) {
   throw "Not implemented";
 }
 
-void adl_serializer<tpcc::NewOrderResult>::from_json(const nlohmann::json &j, tpcc::NewOrderResult &v) {
+void adl_serializer<tpcc::NewOrderResult>::from_json(const nlohmann::json& j, tpcc::NewOrderResult& v) {
   v.w_tax_rate = j["w_tax_rate"];
   v.d_tax_rate = j["d_tax_rate"];
   v.d_next_o_id = j["d_next_o_id"];
@@ -609,7 +609,7 @@ void adl_serializer<tpcc::NewOrderResult>::from_json(const nlohmann::json &j, tp
   v.c_credit = j["c_credit"];
 
   v.order_lines.reserve(j["order_lines"].size());
-  for (const auto &ol_j : j["order_lines"]) {
+  for (const auto& ol_j : j["order_lines"]) {
     tpcc::NewOrderOrderLineResult order_line = ol_j;
     v.order_lines.emplace_back(order_line);
   }

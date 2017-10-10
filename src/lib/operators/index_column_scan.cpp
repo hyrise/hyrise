@@ -48,7 +48,7 @@ class IndexColumnScan::IndexColumnScanImpl : public AbstractReadOnlyOperatorImpl
         _casted_value2(value2 ? optional<T>(type_cast<T>(*value2)) : optional<T>(nullopt)) {}
 
   struct ScanContext : ColumnVisitableContext {
-    ScanContext(std::shared_ptr<const Table> t, ChunkID c, std::vector<RowID> &mo,
+    ScanContext(std::shared_ptr<const Table> t, ChunkID c, std::vector<RowID>& mo,
                 std::shared_ptr<std::vector<ChunkOffset>> co = nullptr)
         : table_in(t), chunk_id(c), matches_out(mo), chunk_offsets_in(std::move(co)) {}
 
@@ -63,7 +63,7 @@ class IndexColumnScan::IndexColumnScanImpl : public AbstractReadOnlyOperatorImpl
 
     std::shared_ptr<const Table> table_in;
     const ChunkID chunk_id;
-    std::vector<RowID> &matches_out;
+    std::vector<RowID>& matches_out;
     std::shared_ptr<std::vector<ChunkOffset>> chunk_offsets_in;
   };
 
@@ -140,7 +140,7 @@ class IndexColumnScan::IndexColumnScanImpl : public AbstractReadOnlyOperatorImpl
 
     for (ChunkID chunk_id{0}; chunk_id < in_table->chunk_count(); ++chunk_id) {
       jobs.emplace_back(std::make_shared<JobTask>([&in_table, chunk_id, &output_mutex, &output, this]() {
-        const Chunk &chunk_in = in_table->get_chunk(chunk_id);
+        const Chunk& chunk_in = in_table->get_chunk(chunk_id);
         Chunk chunk_out;
         auto base_column = chunk_in.get_column(_column_id);
         std::vector<RowID> matches_in_this_chunk;
@@ -179,7 +179,7 @@ class IndexColumnScan::IndexColumnScanImpl : public AbstractReadOnlyOperatorImpl
           }
 
           // automatically creates the entry if it does not exist
-          std::shared_ptr<PosList> &pos_list_out = filtered_pos_lists[pos_list_in];
+          std::shared_ptr<PosList>& pos_list_out = filtered_pos_lists[pos_list_in];
 
           if (!pos_list_out) {
             pos_list_out = std::make_shared<PosList>();
@@ -208,16 +208,16 @@ class IndexColumnScan::IndexColumnScanImpl : public AbstractReadOnlyOperatorImpl
     return output;
   }
 
-  void handle_value_column(BaseColumn &base_column, std::shared_ptr<ColumnVisitableContext> base_context) override {
+  void handle_value_column(BaseColumn& base_column, std::shared_ptr<ColumnVisitableContext> base_context) override {
     auto context = std::static_pointer_cast<ScanContext>(base_context);
-    const auto &column = static_cast<ValueColumn<T> &>(base_column);
-    const auto &values = column.values();
-    auto &matches_out = context->matches_out;
+    const auto& column = static_cast<ValueColumn<T>&>(base_column);
+    const auto& values = column.values();
+    auto& matches_out = context->matches_out;
 
     if (context->chunk_offsets_in) {
       // This ValueColumn is referenced by a ReferenceColumn (i.e., is probably filtered). We only return the matching
       // rows within the filtered column, together with their original position
-      for (const ChunkOffset &offset_in_value_column : *(context->chunk_offsets_in)) {
+      for (const ChunkOffset& offset_in_value_column : *(context->chunk_offsets_in)) {
         if (_value_comparator(values[offset_in_value_column])) {
           matches_out.emplace_back(RowID{context->chunk_id, offset_in_value_column});
         }
@@ -225,18 +225,18 @@ class IndexColumnScan::IndexColumnScanImpl : public AbstractReadOnlyOperatorImpl
     } else {
       // This ValueColumn has to be scanned in full. We directly insert the results into the list of matching rows.
       ChunkOffset chunk_offset = 0;
-      for (const auto &value : values) {
+      for (const auto& value : values) {
         if (_value_comparator(value)) matches_out.emplace_back(RowID{context->chunk_id, chunk_offset});
         chunk_offset++;
       }
     }
   }
 
-  void handle_reference_column(ReferenceColumn &column, std::shared_ptr<ColumnVisitableContext> base_context) override {
+  void handle_reference_column(ReferenceColumn& column, std::shared_ptr<ColumnVisitableContext> base_context) override {
     column.visit_dereferenced<ScanContext>(*this, base_context);
   }
 
-  void handle_dictionary_column(BaseColumn &base_column,
+  void handle_dictionary_column(BaseColumn& base_column,
                                 std::shared_ptr<ColumnVisitableContext> base_context) override {
     /*
      ValueID x;
@@ -256,12 +256,12 @@ class IndexColumnScan::IndexColumnScanImpl : public AbstractReadOnlyOperatorImpl
      */
 
     auto context = std::static_pointer_cast<ScanContext>(base_context);
-    const auto &column = static_cast<DictionaryColumn<T> &>(base_column);
-    auto &matches_out = context->matches_out;
+    const auto& column = static_cast<DictionaryColumn<T>&>(base_column);
+    auto& matches_out = context->matches_out;
 
     // get the indices for this column
     auto in_table = _in_operator->get_output();
-    const Chunk &chunk_in = in_table->get_chunk(context->chunk_id);
+    const Chunk& chunk_in = in_table->get_chunk(context->chunk_id);
     auto col = chunk_in.get_column(_column_id);
     auto indices = chunk_in.get_indices_for(std::vector<std::shared_ptr<BaseColumn>>{col});
 
@@ -334,10 +334,10 @@ class IndexColumnScan::IndexColumnScanImpl : public AbstractReadOnlyOperatorImpl
         search_vid = INVALID_VALUE_ID;
       }
 
-      const BaseAttributeVector &attribute_vector = *(column.attribute_vector());
+      const BaseAttributeVector& attribute_vector = *(column.attribute_vector());
 
       if (context->chunk_offsets_in) {
-        for (const ChunkOffset &offset_in_dictionary_column : *(context->chunk_offsets_in)) {
+        for (const ChunkOffset& offset_in_dictionary_column : *(context->chunk_offsets_in)) {
           if (_value_id_comparator(attribute_vector.get(offset_in_dictionary_column), search_vid, search_vid2)) {
             matches_out.emplace_back(RowID{context->chunk_id, offset_in_dictionary_column});
           }

@@ -20,7 +20,7 @@ uint8_t Limit::num_in_tables() const { return 1; }
 
 uint8_t Limit::num_out_tables() const { return 1; }
 
-std::shared_ptr<AbstractOperator> Limit::recreate(const std::vector<AllParameterVariant> &args) const {
+std::shared_ptr<AbstractOperator> Limit::recreate(const std::vector<AllParameterVariant>& args) const {
   return std::make_shared<Limit>(_input_left->recreate(args), _num_rows);
 }
 
@@ -37,7 +37,7 @@ std::shared_ptr<const Table> Limit::_on_execute() {
 
   ChunkID chunk_id{0};
   for (size_t i = 0; i < _num_rows && chunk_id < input_table->chunk_count(); chunk_id++) {
-    const auto &input_chunk = input_table->get_chunk(chunk_id);
+    const auto& input_chunk = input_table->get_chunk(chunk_id);
     Chunk output_chunk;
 
     size_t output_chunk_row_count = std::min<size_t>(input_chunk.size(), _num_rows - i);

@@ -19,8 +19,8 @@ constexpr ValueID INVALID_VALUE_ID{std::numeric_limits<ValueID::base_type>::max(
 // thus allowing the single indexes relying on these methods to be untemplated.
 class BaseDictionaryColumn : public BaseColumn {
  public:
-  virtual ValueID lower_bound(const AllTypeVariant &value) const = 0;
-  virtual ValueID upper_bound(const AllTypeVariant &value) const = 0;
+  virtual ValueID lower_bound(const AllTypeVariant& value) const = 0;
+  virtual ValueID upper_bound(const AllTypeVariant& value) const = 0;
   virtual size_t unique_values_count() const = 0;
   virtual std::shared_ptr<const BaseAttributeVector> attribute_vector() const = 0;
 };

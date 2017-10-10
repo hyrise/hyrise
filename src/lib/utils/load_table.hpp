@@ -10,7 +10,7 @@ namespace opossum {
 class Table;
 
 template <typename T>
-std::vector<T> _split(const std::string &str, char delimiter) {
+std::vector<T> _split(const std::string& str, char delimiter) {
   std::vector<T> internal;
   std::stringstream ss(str);
   std::string tok;
@@ -22,6 +22,6 @@ std::vector<T> _split(const std::string &str, char delimiter) {
   return internal;
 }
 
-std::shared_ptr<Table> load_table(const std::string &file_name, size_t chunk_size);
+std::shared_ptr<Table> load_table(const std::string& file_name, size_t chunk_size);
 
 }  // namespace opossum

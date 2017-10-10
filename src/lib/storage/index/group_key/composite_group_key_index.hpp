@@ -46,15 +46,15 @@ class CompositeGroupKeyIndex : public BaseIndex {
   friend class CompositeGroupKeyIndexTest;
 
  public:
-  CompositeGroupKeyIndex(CompositeGroupKeyIndex &&) = default;
-  CompositeGroupKeyIndex &operator=(CompositeGroupKeyIndex &&) = default;
+  CompositeGroupKeyIndex(CompositeGroupKeyIndex&&) = default;
+  CompositeGroupKeyIndex& operator=(CompositeGroupKeyIndex&&) = default;
   ~CompositeGroupKeyIndex() = default;
 
-  explicit CompositeGroupKeyIndex(const std::vector<std::shared_ptr<BaseColumn>> &indexed_columns);
+  explicit CompositeGroupKeyIndex(const std::vector<std::shared_ptr<BaseColumn>>& indexed_columns);
 
  private:
-  Iterator _lower_bound(const std::vector<AllTypeVariant> &values) const final;
-  Iterator _upper_bound(const std::vector<AllTypeVariant> &values) const final;
+  Iterator _lower_bound(const std::vector<AllTypeVariant>& values) const final;
+  Iterator _upper_bound(const std::vector<AllTypeVariant>& values) const final;
   Iterator _cbegin() const final;
   Iterator _cend() const final;
   std::vector<std::shared_ptr<BaseColumn>> _get_index_columns() const final;
@@ -89,14 +89,14 @@ class CompositeGroupKeyIndex : public BaseIndex {
    *
    * @returns a VariableLengthKey created based on the given values
    */
-  VariableLengthKey _create_composite_key(const std::vector<AllTypeVariant> &values, bool is_upper_bound) const;
+  VariableLengthKey _create_composite_key(const std::vector<AllTypeVariant>& values, bool is_upper_bound) const;
 
   /**
    *
    * @returns an iterator pointing to the first ChunkOffset in the position-vector
    * that belongs to the given VariableLengthKey
    */
-  Iterator _get_position_iterator_for_key(const VariableLengthKey &key) const;
+  Iterator _get_position_iterator_for_key(const VariableLengthKey& key) const;
 
  private:
   // the columns the index is based on
