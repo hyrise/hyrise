@@ -29,7 +29,7 @@
 #include "utils/assert.hpp"
 
 namespace {
-std::string load_response(const std::string &file_name) {
+std::string load_response(const std::string& file_name) {
   std::string line;
   std::stringstream response_text;
 

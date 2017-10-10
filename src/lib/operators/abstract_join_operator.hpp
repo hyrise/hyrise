@@ -24,10 +24,10 @@ class AbstractJoinOperator : public AbstractReadOnlyOperator {
  public:
   AbstractJoinOperator(const std::shared_ptr<const AbstractOperator> left,
                        const std::shared_ptr<const AbstractOperator> right, const JoinMode mode,
-                       const std::pair<ColumnID, ColumnID> &column_ids, const ScanType scan_type);
+                       const std::pair<ColumnID, ColumnID>& column_ids, const ScanType scan_type);
 
   JoinMode mode() const;
-  const std::pair<ColumnID, ColumnID> &column_ids() const;
+  const std::pair<ColumnID, ColumnID>& column_ids() const;
   ScanType scan_type() const;
   const std::string description() const override;
 

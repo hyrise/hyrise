@@ -42,21 +42,21 @@ using JoinNullTypes = ::testing::Types<JoinHash, JoinSortMerge>;
 TYPED_TEST_CASE(JoinNullTest, JoinNullTypes);
 
 TYPED_TEST(JoinNullTest, InnerJoinWithNull) {
-  this->template test_join_output<TypeParam>(this->_table_wrapper_a, this->_table_wrapper_a_null,
-                             std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}), ScanType::OpEquals,
-                             JoinMode::Inner, "src/test/tables/joinoperators/int_float_null_inner.tbl", 1);
+  this->template test_join_output<TypeParam>(
+      this->_table_wrapper_a, this->_table_wrapper_a_null, std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}),
+      ScanType::OpEquals, JoinMode::Inner, "src/test/tables/joinoperators/int_float_null_inner.tbl", 1);
 }
 
 TYPED_TEST(JoinNullTest, LeftJoinWithNull) {
-  this->template test_join_output<TypeParam>(this->_table_wrapper_a_null, this->_table_wrapper_b,
-                             std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}), ScanType::OpEquals,
-                             JoinMode::Left, "src/test/tables/joinoperators/int_left_join_null.tbl", 1);
+  this->template test_join_output<TypeParam>(
+      this->_table_wrapper_a_null, this->_table_wrapper_b, std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}),
+      ScanType::OpEquals, JoinMode::Left, "src/test/tables/joinoperators/int_left_join_null.tbl", 1);
 }
 
 TYPED_TEST(JoinNullTest, RightJoinWithNull) {
-  this->template test_join_output<TypeParam>(this->_table_wrapper_a_null, this->_table_wrapper_b,
-                             std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}), ScanType::OpEquals,
-                             JoinMode::Right, "src/test/tables/joinoperators/int_right_join_null.tbl", 1);
+  this->template test_join_output<TypeParam>(
+      this->_table_wrapper_a_null, this->_table_wrapper_b, std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}),
+      ScanType::OpEquals, JoinMode::Right, "src/test/tables/joinoperators/int_right_join_null.tbl", 1);
 }
 
 }  // namespace opossum
