@@ -494,8 +494,11 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
       _copy_table_metadata(_right_in_table, _output_table);
     }
 
-    // Flag for materialization and probing of the outer relation.
-    // When processing the outer relation we need to NULLs if this is an OUTER join.
+    /*
+     * This flag is used in the materialization and probing phases.
+     * When dealing with an OUTER join, we need to make sure that we keep the NULL values for the outer relation.
+     * In the current implementation, the relation on the right is always the outer relation.
+     */
     auto keep_nulls = (_mode == JoinMode::Left || _mode == JoinMode::Right);
 
     // Pre-partitioning
@@ -532,6 +535,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
     */
     // Scheduler note: parallelize this at some point. Currently, the amount of jobs would be too high
     auto materialized_left = _materialize_input<LeftType>(_left_in_table, _column_ids.first, histograms_left);
+    // 'keep_nulls' makes sure that the relation on the right materializes NULL values when executing an OUTER join.
     auto materialized_right =
         _materialize_input<RightType>(_right_in_table, _column_ids.second, histograms_right, keep_nulls);
 
@@ -547,6 +551,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
     */
     // Scheduler note: parallelize this at some point. Currently, the amount of jobs would be too high
     auto radix_left = _partition_radix_parallel<LeftType>(materialized_left, left_chunk_offsets, histograms_left);
+    // 'keep_nulls' makes sure that the relation on the right keeps NULL values when executing an OUTER join.
     auto radix_right =
         _partition_radix_parallel<RightType>(materialized_right, right_chunk_offsets, histograms_right, keep_nulls);
 
