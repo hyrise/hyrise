@@ -78,8 +78,9 @@ void SQLiteWrapper::create_table_from_tbl(const std::string& file, const std::st
   int rc = sqlite3_exec(_db, query.str().c_str(), 0, 0, &err_msg);
 
   if (rc != SQLITE_OK) {
+    auto msg = std::string(err_msg);
     sqlite3_free(err_msg);
-    throw std::runtime_error("Failed to create table. SQL error: " + std::string(err_msg) + "\n");
+    throw std::runtime_error("Failed to create table. SQL error: " + msg + "\n");
   }
 }
 
@@ -103,6 +104,7 @@ std::shared_ptr<Table> SQLiteWrapper::execute_query(const std::string& sql_query
     rc = sqlite3_prepare_v2(_db, query.c_str(), -1, &result_row, 0);
 
     if (rc != SQLITE_OK) {
+      sqlite3_finalize(result_row);
       throw std::runtime_error("Failed to execute query \"" + query + "\": " + std::string(sqlite3_errmsg(_db)) + "\n");
     }
 
@@ -113,6 +115,7 @@ std::shared_ptr<Table> SQLiteWrapper::execute_query(const std::string& sql_query
   rc = sqlite3_prepare_v2(_db, select_query.c_str(), -1, &result_row, 0);
 
   if (rc != SQLITE_OK) {
+    sqlite3_finalize(result_row);
     throw std::runtime_error("Failed to execute query \"" + select_query + "\": " + std::string(sqlite3_errmsg(_db)) +
                              "\n");
   }
