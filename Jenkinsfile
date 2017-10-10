@@ -2,13 +2,9 @@ node {
 
   def oppossumCI = docker.image('hyrise/opossum-ci:17.04');
   oppossumCI.pull()
-  oppossumCI.inside("-u 0:0 -v ccache:/ccache") {
+  oppossumCI.inside("-u 0:0 -v ccache:/ccache -e "CCACHE_DIR=/ccache") {
 
     try {
-      environment {
-        CCACHE_DIR='/ccache'
-      }
-
       stage("Setup") {
         sh "env"
         sh "sleep 100"
