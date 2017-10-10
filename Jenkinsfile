@@ -50,6 +50,11 @@ node {
             sh "cd gcc-release && make all -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
             sh "./gcc-release/opossumTest"
           }
+        }, tpcc: {
+          stage("TPCC Test") {
+              sh "cd clang-release && make -j \$(cat /proc/cpuinfo | grep processor | wc -l) opossumTestTPCC tpccTableGenerator"
+              sh "./scripts/test_tpcc.sh clang-release"
+          }
         }
       }
 
@@ -72,11 +77,6 @@ node {
             reportFiles: 'index.html',
             reportName: "RCov Report"
           ])
-        }
-      }, tpcc: {
-        stage("TPCC Test") {
-            sh "cd clang-release && make -j \$(cat /proc/cpuinfo | grep processor | wc -l) opossumTestTPCC tpccTableGenerator"
-            sh "./scripts/test_tpcc.sh clang-release"
         }
       }
 
