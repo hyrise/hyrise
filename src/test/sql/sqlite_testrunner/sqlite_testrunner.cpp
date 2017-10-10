@@ -66,12 +66,10 @@ TEST_F(SQLiteTestRunner, CompareToSQLiteTestRunner) {
 
     _set_up();
 
-    std::cout << "Testing query: " << query << " ..." << std::endl;
-
     hsql::SQLParserResult parse_result;
     hsql::SQLParser::parseSQLString(query, &parse_result);
 
-    EXPECT_TRUE(parse_result.isValid());
+    EXPECT_TRUE(parse_result.isValid()) << "Query not valid: " << query;
     if (!parse_result.isValid()) {
       continue;
     }
@@ -99,7 +97,7 @@ TEST_F(SQLiteTestRunner, CompareToSQLiteTestRunner) {
       order_sensitive = (select_statement->order != nullptr);
     }
 
-    EXPECT_TABLE_EQ(result_table, sqlite_result_table, order_sensitive, false);
+    EXPECT_TRUE(_table_equal(*result_table, *sqlite_result_table, order_sensitive, false)) << "Query failed: " << query;
   }
 }
 
