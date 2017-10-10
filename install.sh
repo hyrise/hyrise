@@ -49,7 +49,8 @@ if echo $REPLY | grep -E '^[Yy]$' > /dev/null; then
                 fi
 
                 wait
-                if $? then
+                apt=$?
+                if [ $apt -ne 0 ] then
                     echo "Error during installation."
                     exit 1
                 fi
