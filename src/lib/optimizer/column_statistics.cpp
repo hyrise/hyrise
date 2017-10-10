@@ -88,8 +88,16 @@ void ColumnStatistics<ColumnType>::_initialize_min_max() const {
   aggregate->execute();
 
   auto aggregate_table = aggregate->get_output();
-  _min = aggregate_table->template get_value<ColumnType>(ColumnID{0}, 0);
-  _max = aggregate_table->template get_value<ColumnType>(ColumnID{1}, 0);
+
+  auto min_column =
+      std::static_pointer_cast<ValueColumn<ColumnType>>(aggregate_table->get_chunk(ChunkID{0}).get_column(ColumnID{0}));
+  DebugAssert(min_column != nullptr, "MIN column in aggregate is not a ValueColumn");
+  _min = min_column->values()[0];
+
+  auto max_column =
+      std::static_pointer_cast<ValueColumn<ColumnType>>(aggregate_table->get_chunk(ChunkID{0}).get_column(ColumnID{1}));
+  DebugAssert(max_column != nullptr, "MAX column in aggregate is not a ValueColumn");
+  _max = max_column->values()[0];
 }
 
 template <typename ColumnType>
