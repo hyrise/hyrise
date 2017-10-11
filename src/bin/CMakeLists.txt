@@ -47,8 +47,8 @@ add_executable(
 
     console/console.cpp
     console/console.hpp
-    console/table_printer.cpp
-    console/table_printer.hpp
+    console/pagination.cpp
+    console/pagination.hpp
 )
 target_link_libraries(
     opossumConsole

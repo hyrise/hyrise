@@ -1,4 +1,4 @@
-#include "table_printer.hpp"
+#include "pagination.hpp"
 
 #include <ncurses.h>
 #include <string>
@@ -6,7 +6,7 @@
 
 namespace opossum {
 
-TablePrinter::TablePrinter(std::stringstream &input)
+Pagination::Pagination(std::stringstream &input)
   : _lines() {
   std::string line;
   while (std::getline(input, line, '\n')) {
@@ -14,7 +14,7 @@ TablePrinter::TablePrinter(std::stringstream &input)
   }
 }
 
-void TablePrinter::paginate() {
+void Pagination::display() {
   // Init curses
   initscr();
   clear();
@@ -116,7 +116,7 @@ void TablePrinter::paginate() {
   endwin();
 }
 
-void TablePrinter::_print_page(size_t first_line) {
+void Pagination::_print_page(size_t first_line) {
   clear();
 
   for (size_t i = first_line; i < first_line + _size_y; ++i) {
@@ -132,7 +132,7 @@ void TablePrinter::_print_page(size_t first_line) {
   refresh();
 }
 
-void TablePrinter::_print_help_screen() {
+void Pagination::_print_help_screen() {
   WINDOW* help_screen = newwin(0, 0, 0, 0);
 
   wclear(help_screen);

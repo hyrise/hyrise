@@ -7,18 +7,18 @@
 namespace opossum {
 
 /*
- * Class to print a table using pagination in style of the UNIX 'less' command.
+ * Class to display a given stringstream input using pagination in style of the UNIX 'less' command.
  */
-class TablePrinter {
+class Pagination {
  public:
-  explicit TablePrinter(std::stringstream &input);
+  explicit Pagination(std::stringstream &input);
 
   /*
    * Opens a ncurses environment in which the content is printed.
    * User can navigate through the table with the keyboard (ARROW KEYS, PAGE UP/DOWN, etc.),
    * and quit by pressing 'q'.
    */
-  void paginate();
+  void display();
 
  protected:
   /*

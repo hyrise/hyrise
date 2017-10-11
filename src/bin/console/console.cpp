@@ -28,7 +28,7 @@
 #include "sql/sql_planner.hpp"
 #include "sql/sql_to_ast_translator.hpp"
 #include "storage/storage_manager.hpp"
-#include "table_printer.hpp"
+#include "pagination.hpp"
 #include "tpcc/tpcc_table_generator.hpp"
 #include "utils/load_table.hpp"
 
@@ -331,9 +331,8 @@ void Console::out(const std::string& output, bool console_print) {
 
 void Console::out(std::shared_ptr<const Table> table) {
   std::stringstream stream;
-  Print::print(table, 0, stream);
-  TablePrinter printer(stream);
-  printer.paginate();
+  Print::print(table, PrintMvcc, stream);
+  Pagination(stream).display();
 }
 
 // Command functions
