@@ -23,12 +23,12 @@
 #include "operators/print.hpp"
 #include "optimizer/abstract_syntax_tree/ast_to_operator_translator.hpp"
 #include "optimizer/optimizer.hpp"
+#include "pagination.hpp"
 #include "planviz/ast_visualizer.hpp"
 #include "planviz/sql_query_plan_visualizer.hpp"
 #include "sql/sql_planner.hpp"
 #include "sql/sql_to_ast_translator.hpp"
 #include "storage/storage_manager.hpp"
-#include "pagination.hpp"
 #include "tpcc/tpcc_table_generator.hpp"
 #include "utils/load_table.hpp"
 

@@ -1,8 +1,8 @@
 #pragma once
 
+#include <sstream>
 #include <string>
 #include <vector>
-#include <sstream>
 
 namespace opossum {
 
@@ -11,7 +11,7 @@ namespace opossum {
  */
 class Pagination {
  public:
-  explicit Pagination(std::stringstream &input);
+  explicit Pagination(std::stringstream& input);
 
   /*
    * Opens a ncurses environment in which the content is printed.
