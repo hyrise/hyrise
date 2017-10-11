@@ -1,16 +1,20 @@
 #include "tpcc_table_generator.hpp"
 
 #include <functional>
+#include <future>
 #include <iomanip>
 #include <map>
 #include <memory>
 #include <sstream>
 #include <string>
+#include <thread>
 #include <utility>
 #include <vector>
 
 #include "constants.hpp"
-
+#include "scheduler/current_scheduler.hpp"
+#include "scheduler/node_queue_scheduler.hpp"
+#include "scheduler/topology.hpp"
 #include "storage/chunk.hpp"
 #include "storage/dictionary_compression.hpp"
 #include "storage/table.hpp"
@@ -27,6 +31,8 @@ TpccTableGenerator::TpccTableGenerator(const opossum::ChunkOffset chunk_size, co
       _random_gen(TpccRandomGenerator()) {}
 
 std::shared_ptr<opossum::Table> TpccTableGenerator::generate_items_table() {
+  opossum::CurrentScheduler::set(
+      std::make_shared<opossum::NodeQueueScheduler>(opossum::Topology::create_numa_topology(10)));
   auto table = std::make_shared<opossum::Table>(_chunk_size);
 
   auto cardinalities = std::make_shared<std::vector<size_t>>(std::initializer_list<size_t>{NUM_ITEMS});
@@ -399,26 +405,28 @@ std::shared_ptr<opossum::Table> TpccTableGenerator::generate_new_order_table() {
 }
 
 std::map<std::string, std::shared_ptr<opossum::Table>> TpccTableGenerator::generate_all_tables() {
-  auto item_table = generate_items_table();
-  auto warehouse_table = generate_warehouse_table();
-  auto stock_table = generate_stock_table();
-  auto district_table = generate_district_table();
-  auto customer_table = generate_customer_table();
-  auto history_table = generate_history_table();
-  auto order_line_counts = generate_order_line_counts();
-  auto order_table = generate_order_table(order_line_counts);
-  auto order_line_table = generate_order_line_table(order_line_counts);
-  auto new_order_table = generate_new_order_table();
+  std::vector<std::thread> threads;
+  auto item_table = std::async(std::launch::async, &TpccTableGenerator::generate_items_table, this);
+  auto warehouse_table = std::async(std::launch::async, &TpccTableGenerator::generate_warehouse_table, this);
+  auto stock_table = std::async(std::launch::async, &TpccTableGenerator::generate_stock_table, this);
+  auto district_table = std::async(std::launch::async, &TpccTableGenerator::generate_district_table, this);
+  auto customer_table = std::async(std::launch::async, &TpccTableGenerator::generate_customer_table, this);
+  auto history_table = std::async(std::launch::async, &TpccTableGenerator::generate_history_table, this);
+  auto order_line_counts = std::async(std::launch::async, &TpccTableGenerator::generate_order_line_counts, this).get();
+  auto order_table = std::async(std::launch::async, &TpccTableGenerator::generate_order_table, this, order_line_counts);
+  auto order_line_table =
+      std::async(std::launch::async, &TpccTableGenerator::generate_order_line_table, this, order_line_counts);
+  auto new_order_table = std::async(std::launch::async, &TpccTableGenerator::generate_new_order_table, this);
 
-  return std::map<std::string, std::shared_ptr<opossum::Table>>({{"ITEM", std::move(item_table)},
-                                                                 {"WAREHOUSE", std::move(warehouse_table)},
-                                                                 {"STOCK", std::move(stock_table)},
-                                                                 {"DISTRICT", std::move(district_table)},
-                                                                 {"CUSTOMER", std::move(customer_table)},
-                                                                 {"HISTORY", std::move(history_table)},
-                                                                 {"ORDER", std::move(order_table)},
-                                                                 {"ORDER-LINE", std::move(order_line_table)},
-                                                                 {"NEW-ORDER", std::move(new_order_table)}});
+  return std::map<std::string, std::shared_ptr<opossum::Table>>({{"ITEM", item_table.get()},
+                                                                 {"WAREHOUSE", warehouse_table.get()},
+                                                                 {"STOCK", stock_table.get()},
+                                                                 {"DISTRICT", district_table.get()},
+                                                                 {"CUSTOMER", customer_table.get()},
+                                                                 {"HISTORY", history_table.get()},
+                                                                 {"ORDER", order_table.get()},
+                                                                 {"ORDER-LINE", order_line_table.get()},
+                                                                 {"NEW-ORDER", new_order_table.get()}});
 }
 
 /*

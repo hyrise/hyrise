@@ -8,6 +8,7 @@
 #include "operators/export_csv.hpp"
 #include "operators/table_wrapper.hpp"
 #include "optimizer/table_statistics.hpp"
+#include "scheduler/job_task.hpp"
 
 #include "utils/assert.hpp"
 
@@ -70,16 +71,25 @@ void StorageManager::print(std::ostream& out) const {
 void StorageManager::reset() { get() = StorageManager(); }
 
 void StorageManager::export_all_tables_as_csv(const std::string& path) {
+  auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
+  jobs.reserve(_tables.size());
+
   for (auto& pair : _tables) {
-    const auto& name = pair.first;
-    auto& table = pair.second;
+    auto job_task = std::make_shared<JobTask>([pair, &path]() {
+      const auto& name = pair.first;
+      auto& table = pair.second;
 
-    auto table_wrapper = std::make_shared<TableWrapper>(table);
-    table_wrapper->execute();
+      auto table_wrapper = std::make_shared<TableWrapper>(table);
+      table_wrapper->execute();
 
-    auto export_csv = std::make_shared<ExportCsv>(table_wrapper, path + "/" + name + ".csv");
-    export_csv->execute();
+      auto export_csv = std::make_shared<ExportCsv>(table_wrapper, path + "/" + name + ".csv");
+      export_csv->execute();
+    });
+    jobs.push_back(job_task);
+    job_task->schedule();
   }
+
+  for (auto& job : jobs) job->join();
 }
 
 }  // namespace opossum
