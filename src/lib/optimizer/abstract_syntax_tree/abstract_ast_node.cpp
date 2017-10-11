@@ -17,6 +17,12 @@ AbstractASTNode::AbstractASTNode(ASTNodeType node_type) : _type(node_type) {}
 
 bool AbstractASTNode::is_optimizable() const { return true; }
 
+ASTChildSide AbstractASTNode::get_child_side() const {
+  auto parent = this->parent();
+  Assert(parent, "get_child_side() can only be called on node with a parent");
+  return parent->left_child() == shared_from_this() ? ASTChildSide::Left : ASTChildSide::Right;
+}
+
 std::shared_ptr<AbstractASTNode> AbstractASTNode::parent() const { return _parent.lock(); }
 
 void AbstractASTNode::clear_parent() {
@@ -58,6 +64,14 @@ void AbstractASTNode::set_right_child(const std::shared_ptr<AbstractASTNode>& ri
   if (right) right->_parent = shared_from_this();
 
   _on_child_changed();
+}
+
+void AbstractASTNode::set_child(ASTChildSide side, const std::shared_ptr<AbstractASTNode>& child) {
+  if (side == ASTChildSide::Left) {
+    set_left_child(child);
+  } else {
+    set_right_child(child);
+  }
 }
 
 ASTNodeType AbstractASTNode::type() const { return _type; }

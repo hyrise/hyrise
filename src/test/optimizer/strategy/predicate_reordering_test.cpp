@@ -11,6 +11,7 @@
 #include "optimizer/abstract_syntax_tree/join_node.hpp"
 #include "optimizer/abstract_syntax_tree/sort_node.hpp"
 #include "optimizer/abstract_syntax_tree/stored_table_node.hpp"
+#include "optimizer/column_statistics.hpp"
 #include "optimizer/strategy/predicate_reordering_rule.hpp"
 #include "optimizer/strategy/strategy_base_test.hpp"
 #include "optimizer/table_statistics.hpp"
@@ -18,6 +19,8 @@
 
 #include "utils/assert.hpp"
 #include "utils/ast_printer.hpp" // TODO(moritz) Remove for PR
+
+#include "optimizer/abstract_syntax_tree/mock_table_node.hpp"
 
 namespace opossum {
 
@@ -231,30 +234,32 @@ TEST_F(PredicateReorderingTest, PredicatesAsRightChild) {
    * predicates to the parent (the cross node in this case). This test checks whether the attachment happens as the
    * correct child.
    *
-   *          ____Cross_____
-   *         /              \
-   *  Predicate_0(b)     Predicate_2(b)
-   *        |                |
-   *  Predicate_1(a)     Predicate_3(a)
-   *        |                |
-   *     Table_0         Predicate_4(c)
-   *                         |
-   *                      Table_1
+   *             _______Cross________
+   *            /                    \
+   *  Predicate_0(a > 80)     Predicate_2(b > 90)
+   *           |                     |
+   *  Predicate_1(a > 60)     Predicate_3(a > 50)
+   *           |                     |
+   *        Table_0           Predicate_4(c > 30)
+   *                                 |
+   *                               Table_1
    */
 
-  StorageManager::get().add_table("table_a", load_table("src/test/tables/int_int_int.tbl", 2));
-  auto statistics_mock = std::make_shared<TableStatisticsMock>();
+  /**
+   * The mocked table has one column of int32_ts with the value range 0..100
+   */
+  auto column_statistics = std::make_shared<ColumnStatistics<int32_t>>(ColumnID{0}, 100.0f, 0.0f, 100.0f);
+  auto table_statistics = std::make_shared<TableStatistics>(100,
+                                                            std::vector<std::shared_ptr<BaseColumnStatistics>>{column_statistics});
 
   auto cross_node = std::make_shared<JoinNode>(JoinMode::Cross);
-  auto predicate_0 = std::make_shared<PredicateNode>(ColumnID{1}, ScanType::OpGreaterThan, 100);
-  auto predicate_1 = std::make_shared<PredicateNode>(ColumnID{0}, ScanType::OpGreaterThan, 50);
-  auto predicate_2 = std::make_shared<PredicateNode>(ColumnID{1}, ScanType::OpGreaterThan, 50);
+  auto predicate_0 = std::make_shared<PredicateNode>(ColumnID{0}, ScanType::OpGreaterThan, 80);
+  auto predicate_1 = std::make_shared<PredicateNode>(ColumnID{0}, ScanType::OpGreaterThan, 60);
+  auto predicate_2 = std::make_shared<PredicateNode>(ColumnID{0}, ScanType::OpGreaterThan, 90);
   auto predicate_3 = std::make_shared<PredicateNode>(ColumnID{0}, ScanType::OpGreaterThan, 50);
-  auto predicate_4 = std::make_shared<PredicateNode>(ColumnID{2}, ScanType::OpGreaterThan, 50);
-  auto table_0 = std::make_shared<StoredTableNode>("table_a");
-  table_0->set_statistics(statistics_mock);
-  auto table_1 = std::make_shared<StoredTableNode>("table_a");
-  table_0->set_statistics(statistics_mock);
+  auto predicate_4 = std::make_shared<PredicateNode>(ColumnID{0}, ScanType::OpGreaterThan, 30);
+  auto table_0 = std::make_shared<MockTableNode>(table_statistics);
+  auto table_1 = std::make_shared<MockTableNode>(table_statistics);
 
   predicate_1->set_left_child(table_0);
   predicate_0->set_left_child(predicate_1);

@@ -50,6 +50,7 @@ class TableStatistics : public std::enable_shared_from_this<TableStatistics> {
    * This should only be done by the storage manager when adding a table to storage manager.
    */
   explicit TableStatistics(const std::shared_ptr<Table> table);
+
   /**
    * Table statistics should not be copied by other actors.
    * Copy constructor not private as copy is used by make_shared.
@@ -57,10 +58,18 @@ class TableStatistics : public std::enable_shared_from_this<TableStatistics> {
   TableStatistics(const TableStatistics& table_statistics) = default;
 
   /**
+   * Create the TableStatistics by explicitly specifying its underlying data
+   */
+  TableStatistics(float row_count,
+                  const std::vector<std::shared_ptr<BaseColumnStatistics>> & column_statistics);
+
+  /**
    * Returns the expected row_count of the output of the corresponding operator.
    * See _distinct_count declaration below or explanation of float type.
    */
   float row_count() const;
+
+  const std::vector<std::shared_ptr<BaseColumnStatistics>> & column_statistics() const;
 
   /**
    * Generate table statistics for the operator table scan table scan.
