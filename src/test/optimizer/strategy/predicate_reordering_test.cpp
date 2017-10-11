@@ -269,11 +269,7 @@ TEST_F(PredicateReorderingTest, PredicatesAsRightChild) {
   cross_node->set_left_child(predicate_0);
   cross_node->set_right_child(predicate_2);
 
-  ASTPrinter::print(cross_node);
-
   const auto reordered = StrategyBaseTest::apply_rule(_rule, cross_node);
-
-  ASTPrinter::print(reordered);
 
   EXPECT_EQ(reordered, cross_node);
   EXPECT_EQ(reordered->left_child(), predicate_1);

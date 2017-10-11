@@ -9,9 +9,11 @@
 
 #include "operators/abstract_operator.hpp"
 #include "optimizer/abstract_syntax_tree/ast_to_operator_translator.hpp"
+#include "optimizer/optimizer.hpp"
 #include "scheduler/operator_task.hpp"
 #include "sql/sql_to_ast_translator.hpp"
 #include "storage/storage_manager.hpp"
+#include "utils/ast_printer.hpp" // TODO(moritz) remove for PR
 
 namespace opossum {
 
@@ -48,7 +50,10 @@ class TPCHTest : public BaseTest {
     }
 
     auto result_node = SQLToASTTranslator::get().translate_parse_result(parse_result)[0];
-    return ASTToOperatorTranslator::get().translate_node(result_node);
+    ASTPrinter::print(result_node);
+    auto optimized_root = Optimizer::get().optimize(result_node);
+    ASTPrinter::print(result_node);
+    return ASTToOperatorTranslator::get().translate_node(optimized_root);
   }
 
   std::shared_ptr<OperatorTask> schedule_query_and_return_task(const std::string query) {
@@ -264,7 +269,7 @@ TEST_F(TPCHTest, TPCH6) {
 }
 
 // Enable once OR is supported in WHERE condition
-TEST_F(TPCHTest, DISABLED_TPCH7) {
+TEST_F(TPCHTest, TPCH7) {
   /**
    * Original:
    *
@@ -274,7 +279,7 @@ TEST_F(TPCHTest, DISABLED_TPCH7) {
    *       n1.n_name as supp_nation,
    *       n2.n_name as cust_nation,
    *       extract(year FROM l_shipdate) as l_year,
-   *       l_extendedprice * (1 - l_discount) as volume
+   *       l_extendedprice * (1.0 - l_discount) as volume
    *   FROM supplier, lineitem, orders, customer, nation n1, nation n2
    *   WHERE
    *       s_suppkey = l_suppkey
@@ -300,14 +305,43 @@ TEST_F(TPCHTest, DISABLED_TPCH7) {
    *    a. Use full date instead
    */
   const auto query =
-      R"(SELECT supp_nation, cust_nation, l_year, SUM(volume) as revenue FROM (SELECT n1.n_name as supp_nation,
-      n2.n_name as cust_nation, l_shipdate as l_year, l_extendedprice * (1 - l_discount) as volume
-      FROM supplier, lineitem, orders, customer, nation n1, nation n2 WHERE s_suppkey = l_suppkey AND
-      o_orderkey = l_orderkey AND c_custkey = o_custkey AND s_nationkey = n1.n_nationkey AND
-      c_nationkey = n2.n_nationkey AND ((n1.n_name = 'GERMANY' AND n2.n_name = 'FRANCE') or
-      (n1.n_name = 'FRANCE' AND n2.n_name = 'GERMANY')) AND l_shipdate between '1995-01-01' AND
-      '1996-12-31') as shipping GROUP BY supp_nation, cust_nation, l_year
-      ORDER BY supp_nation, cust_nation, l_year;)";
+      R"(
+        SELECT
+          supp_nation,
+          cust_nation,
+          l_year,
+          SUM(volume) as revenue
+        FROM (SELECT
+                n1.n_name as supp_nation,
+                n2.n_name as cust_nation,
+                l_shipdate as l_year,
+                l_extendedprice * (1.0 - l_discount) as volume
+              FROM
+                supplier,
+                lineitem,
+                orders,
+                customer,
+                nation n1,
+                nation n2
+              WHERE
+                s_suppkey = l_suppkey AND
+                o_orderkey = l_orderkey AND
+                c_custkey = o_custkey AND
+                s_nationkey = n1.n_nationkey AND
+                c_nationkey = n2.n_nationkey AND
+                ((n1.n_name = 'GERMANY' AND n2.n_name = 'FRANCE') OR
+                 (n1.n_name = 'FRANCE' AND n2.n_name = 'GERMANY')) AND
+                l_shipdate between '1995-01-01' AND '1996-12-31'
+          ) as shipping
+        GROUP BY
+          supp_nation,
+          cust_nation,
+          l_year
+        ORDER BY
+          supp_nation,
+          cust_nation,
+          l_year;
+      )";
   const auto expected_result = load_table("src/test/tables/tpch/results/tpch7.tbl", 2);
   execute_and_check(query, expected_result, true);
 }
