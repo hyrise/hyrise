@@ -330,7 +330,9 @@ void Console::out(const std::string& output, bool console_print) {
 }
 
 void Console::out(std::shared_ptr<const Table> table) {
-  TablePrinter printer(table);
+  std::stringstream stream;
+  Print::print(table, 0, stream);
+  TablePrinter printer(stream);
   printer.paginate();
 }
 
