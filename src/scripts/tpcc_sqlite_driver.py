@@ -324,6 +324,14 @@ def run_sqlite(distribution):
     with open(tpcc_input_path) as tpcc_input_file:
         tpcc_input = json.load(tpcc_input_file)
 
+    cur.executescript("""
+        -- These are not the official indexes.
+
+        CREATE INDEX idx_stock ON stock (s_i_id, s_w_id);
+        CREATE INDEX idx_i_id ON item (i_id);
+
+    """)
+
     transaction_dispatch = {
         "NewOrder": process_new_order,
         "OrderStatus": process_order_status,
