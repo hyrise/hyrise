@@ -29,8 +29,8 @@ class HashTable : private Noncopyable {
 
   // we need to explicitly set the move constructor to default when
   // we overwrite the copy constructor
-  HashTable(HashTable &&) = default;
-  HashTable &operator=(HashTable &&) = default;
+  HashTable(HashTable&&) = default;
+  HashTable& operator=(HashTable&&) = default;
 
   /*
   Insert a new element into hashtable
@@ -99,7 +99,7 @@ class HashTable : private Noncopyable {
     If no, we can simply add the ned eleemnt.
     */
     auto position = hash(hash_function, element->value);
-    auto &hashtable = _hashtables[hash_function];
+    auto& hashtable = _hashtables[hash_function];
 
     auto old_element = hashtable[position];
     if (old_element != nullptr) {

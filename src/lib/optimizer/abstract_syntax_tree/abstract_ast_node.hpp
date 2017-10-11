@@ -39,6 +39,8 @@ enum class ASTChildSide {
 struct NamedColumnReference {
   std::string column_name;
   optional<std::string> table_name;
+
+  std::string as_string() const;
 };
 
 /**
@@ -131,10 +133,6 @@ class AbstractASTNode : public std::enable_shared_from_this<AbstractASTNode> {
    * AbstractASTNode::get_column_id_by_named_column_reference() is more strict and will fail if the
    * @param named_column_reference cannot be found.
    *
-   * NOTE: As long as - TODO(anybody) - Subquery ALIASES are not supported only the StoredTableNode has to concern
-   * itself with the ColumnIdentifierName::table_name, all other nodes are fine searching for
-   * ColumnIdentifierName::
-   *
    * NOTE: If a node outputs a column "x" but ALIASes it as, say, "y", these two functions will only find
    * ColumnIdentifier{"y", nullopt} and NEITHER ColumnIdentifier{"x", "table_name"} nor
    * ColumnIdentifier{"y", "table_name"}
@@ -150,12 +148,29 @@ class AbstractASTNode : public std::enable_shared_from_this<AbstractASTNode> {
 
   /**
    * Checks whether this node or any of its ancestors retrieve the table @param table_name from the StorageManager
-   * (or - TODO(anybody) - once subquery ALIASES are implemented whether it or any of its ancestors assign an ALIAS
-   * with the name  @param table_name.)
+   * or as an alias of a subquery.
    *
    * Used especially to figure out which of the children of a Join is referenced.
+   *
+   * The standard requires subqueries (known as derived tables) to have an alias. The original name(s) of the table(s)
+   * that became part of that subselect are not accessible anymore once an alias is given.
+   *
+   *        <table reference> ::=
+   *            <table name> [ [ AS ] <correlation name>
+   *                [ <left paren> <derived column list> <right paren> ] ]
+   *          | <derived table> [ AS ] <correlation name>
+   *                [ <left paren> <derived column list> <right paren> ]
+   *          | <joined table>
    */
   virtual bool knows_table(const std::string& table_name) const;
+
+  /**
+   * This function is part of the "ColumnID Resolution". See SQLToAstTranslator class comment for a general discussion
+   * on this.
+   *
+   * Returns all ColumnIDs of this node, i.e., a vector with [0, output_col_count)
+   */
+  virtual std::vector<ColumnID> get_output_column_ids() const;
 
   /**
    * This function is part of the "ColumnID Resolution". See SQLToAstTranslator class comment for a general discussion
@@ -181,6 +196,12 @@ class AbstractASTNode : public std::enable_shared_from_this<AbstractASTNode> {
    */
   void replace_in_tree(const std::shared_ptr<AbstractASTNode>& node_to_replace);
 
+  /**
+   * Sets the table alias for this subtree, see _table_alias for details.
+   * This is not part of the constructor because it is only used in SQLToASTTranslator::_translate_table_ref.
+   */
+  void set_alias(const optional<std::string>& table_alias);
+
   void print(const uint32_t level = 0, std::ostream& out = std::cout) const;
   virtual std::string description() const = 0;
 
@@ -189,6 +210,16 @@ class AbstractASTNode : public std::enable_shared_from_this<AbstractASTNode> {
 
   // Used to easily differentiate between node types without pointer casts.
   ASTNodeType _type;
+
+  // Each subtree can be a subselect. A subselect can be given an alias:
+  // SELECT y.* FROM (SELECT * FROM x) AS y
+  // The alias applies to all nodes above the node where it is set until a new alias is set
+  optional<std::string> _table_alias;
+
+  // If named_column_reference.table_name is the alias set for this subtree, remove the table_name so that we
+  // only operatore on the column name. If an alias for this subtree is set, but this reference does not match
+  // it, the reference cannot be resolved (see knows_table) and nullopt is returned.
+  optional<NamedColumnReference> _resolve_local_alias(const NamedColumnReference &named_column_reference) const;
 
  private:
   std::weak_ptr<AbstractASTNode> _parent;

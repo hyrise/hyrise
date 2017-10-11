@@ -36,8 +36,8 @@ class GroupKeyIndexTest : public BaseTest {
    * private scope. In order to minimize the friend classes of CompositeGroupKeyIndex the fixture
    * is used as proxy. Since the variables are set in setup() references are not possible.
    */
-  std::vector<std::size_t> *index_offsets;
-  std::vector<ChunkOffset> *index_postings;
+  std::vector<std::size_t>* index_offsets;
+  std::vector<ChunkOffset>* index_postings;
 };
 
 TEST_F(GroupKeyIndexTest, IndexOffsets) {

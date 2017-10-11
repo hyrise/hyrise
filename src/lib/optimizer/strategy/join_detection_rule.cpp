@@ -16,7 +16,7 @@
 namespace opossum {
 
 std::string JoinConditionDetectionRule::name() const {
-  return "Predicate Reordering Rule";
+  return "Join Detection Rule";
 }
 
 bool JoinConditionDetectionRule::apply_to(const std::shared_ptr<AbstractASTNode>& node) {

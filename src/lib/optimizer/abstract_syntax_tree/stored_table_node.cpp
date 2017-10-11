@@ -11,8 +11,8 @@
 
 namespace opossum {
 
-StoredTableNode::StoredTableNode(const std::string& table_name, const optional<std::string>& alias)
-    : AbstractASTNode(ASTNodeType::StoredTable), _table_name(table_name), _alias(alias) {
+StoredTableNode::StoredTableNode(const std::string& table_name)
+    : AbstractASTNode(ASTNodeType::StoredTable), _table_name(table_name) {
   /**
    * Initialize output information.
    */
@@ -56,10 +56,10 @@ optional<ColumnID> StoredTableNode::find_column_id_by_named_column_reference(
 }
 
 bool StoredTableNode::knows_table(const std::string& table_name) const {
-  if (_alias) {
+  if (_table_alias) {
     // If this table was given an ALIAS on retrieval, does it match the queried table name?
     // Example: SELECT * FROM T1 AS some_table
-    return *_alias == table_name;
+    return *_table_alias == table_name;
   } else {
     return _table_name == table_name;
   }
@@ -68,6 +68,10 @@ bool StoredTableNode::knows_table(const std::string& table_name) const {
 std::vector<ColumnID> StoredTableNode::get_output_column_ids_for_table(const std::string& table_name) const {
   if (!knows_table(table_name)) {
     return {};
+  }
+
+  if (_table_alias && *_table_alias == table_name) {
+    return get_output_column_ids();
   }
 
   std::vector<ColumnID> column_ids;

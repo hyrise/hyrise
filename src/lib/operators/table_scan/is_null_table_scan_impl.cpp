@@ -12,14 +12,14 @@
 namespace opossum {
 
 IsNullTableScanImpl::IsNullTableScanImpl(std::shared_ptr<const Table> in_table, const ColumnID left_column_id,
-                                         const ScanType &scan_type)
+                                         const ScanType& scan_type)
     : BaseSingleColumnTableScanImpl{in_table, left_column_id, scan_type, false} {}
 
-void IsNullTableScanImpl::handle_value_column(BaseColumn &base_column,
+void IsNullTableScanImpl::handle_value_column(BaseColumn& base_column,
                                               std::shared_ptr<ColumnVisitableContext> base_context) {
   auto context = std::static_pointer_cast<Context>(base_context);
-  const auto &mapped_chunk_offsets = context->_mapped_chunk_offsets;
-  auto &left_column = static_cast<const BaseValueColumn &>(base_column);
+  const auto& mapped_chunk_offsets = context->_mapped_chunk_offsets;
+  auto& left_column = static_cast<const BaseValueColumn&>(base_column);
 
   if (_matches_all(left_column)) {
     _add_all(*context, left_column.size());
@@ -39,11 +39,11 @@ void IsNullTableScanImpl::handle_value_column(BaseColumn &base_column,
                                       [&](auto left_it, auto left_end) { this->_scan(left_it, left_end, *context); });
 }
 
-void IsNullTableScanImpl::handle_dictionary_column(BaseColumn &base_column,
+void IsNullTableScanImpl::handle_dictionary_column(BaseColumn& base_column,
                                                    std::shared_ptr<ColumnVisitableContext> base_context) {
   auto context = std::static_pointer_cast<Context>(base_context);
-  const auto &mapped_chunk_offsets = context->_mapped_chunk_offsets;
-  auto &left_column = static_cast<const BaseDictionaryColumn &>(base_column);
+  const auto& mapped_chunk_offsets = context->_mapped_chunk_offsets;
+  auto& left_column = static_cast<const BaseDictionaryColumn&>(base_column);
 
   auto left_column_iterable = AttributeVectorIterable{*left_column.attribute_vector()};
 
@@ -51,7 +51,7 @@ void IsNullTableScanImpl::handle_dictionary_column(BaseColumn &base_column,
                                       [&](auto left_it, auto left_end) { this->_scan(left_it, left_end, *context); });
 }
 
-bool IsNullTableScanImpl::_matches_all(const BaseValueColumn &column) {
+bool IsNullTableScanImpl::_matches_all(const BaseValueColumn& column) {
   switch (_scan_type) {
     case ScanType::OpEquals:
       return false;
@@ -65,7 +65,7 @@ bool IsNullTableScanImpl::_matches_all(const BaseValueColumn &column) {
   }
 }
 
-bool IsNullTableScanImpl::_matches_none(const BaseValueColumn &column) {
+bool IsNullTableScanImpl::_matches_none(const BaseValueColumn& column) {
   switch (_scan_type) {
     case ScanType::OpEquals:
       return !column.is_nullable();
@@ -79,13 +79,13 @@ bool IsNullTableScanImpl::_matches_none(const BaseValueColumn &column) {
   }
 }
 
-void IsNullTableScanImpl::_add_all(Context &context, size_t column_size) {
-  auto &matches_out = context._matches_out;
+void IsNullTableScanImpl::_add_all(Context& context, size_t column_size) {
+  auto& matches_out = context._matches_out;
   const auto chunk_id = context._chunk_id;
-  const auto &mapped_chunk_offsets = context._mapped_chunk_offsets;
+  const auto& mapped_chunk_offsets = context._mapped_chunk_offsets;
 
   if (mapped_chunk_offsets) {
-    for (const auto &chunk_offsets : *mapped_chunk_offsets) {
+    for (const auto& chunk_offsets : *mapped_chunk_offsets) {
       matches_out.push_back(RowID{chunk_id, chunk_offsets.into_referencing});
     }
   } else {

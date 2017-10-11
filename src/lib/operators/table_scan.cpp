@@ -44,9 +44,9 @@ ColumnID TableScan::left_column_id() const { return _left_column_id; }
 
 ScanType TableScan::scan_type() const { return _scan_type; }
 
-const AllParameterVariant &TableScan::right_parameter() const { return _right_parameter; }
+const AllParameterVariant& TableScan::right_parameter() const { return _right_parameter; }
 
-const optional<AllTypeVariant> &TableScan::right_value2() const { return _right_value2; }
+const optional<AllTypeVariant>& TableScan::right_value2() const { return _right_value2; }
 
 const std::string TableScan::name() const { return "TableScan"; }
 
@@ -69,7 +69,7 @@ uint8_t TableScan::num_in_tables() const { return 1; }
 
 uint8_t TableScan::num_out_tables() const { return 1; }
 
-std::shared_ptr<AbstractOperator> TableScan::recreate(const std::vector<AllParameterVariant> &args) const {
+std::shared_ptr<AbstractOperator> TableScan::recreate(const std::vector<AllParameterVariant>& args) const {
   // Replace value in the new operator, if it’s a parameter and an argument is available.
   if (is_placeholder(_right_parameter)) {
     const auto index = boost::get<ValuePlaceholder>(_right_parameter).index();
@@ -130,13 +130,13 @@ std::shared_ptr<const Table> TableScan::_on_execute() {
           const auto table_out = ref_column_in->referenced_table();
           const auto column_id_out = ref_column_in->referenced_column_id();
 
-          auto &filtered_pos_list = filtered_pos_lists[pos_list_in];
+          auto& filtered_pos_list = filtered_pos_lists[pos_list_in];
 
           if (!filtered_pos_list) {
             filtered_pos_list = std::make_shared<PosList>();
             filtered_pos_list->reserve(matches_out->size());
 
-            for (const auto &match : *matches_out) {
+            for (const auto& match : *matches_out) {
               const auto row_id = (*pos_list_in)[match.chunk_offset];
               filtered_pos_list->push_back(row_id);
             }

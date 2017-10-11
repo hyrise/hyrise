@@ -13,11 +13,11 @@ namespace opossum {
  */
 class DeleteNode : public AbstractASTNode {
  public:
-  explicit DeleteNode(const std::string &table_name);
+  explicit DeleteNode(const std::string& table_name);
 
   std::string description() const override;
 
-  const std::string &table_name() const;
+  const std::string& table_name() const;
 
  protected:
   const std::string _table_name;
