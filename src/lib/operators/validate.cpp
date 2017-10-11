@@ -93,7 +93,8 @@ std::shared_ptr<const Table> Validate::_on_execute(std::shared_ptr<TransactionCo
       const auto mvcc_columns = chunk_in.mvcc_columns();
 
       // Generate pos_list_out.
-      for (auto i = 0u; i < chunk_in.size(); i++) {
+      auto chunk_size = chunk_in.size();  // The compiler fails to optimize this in the for clause :(
+      for (auto i = 0u; i < chunk_size; i++) {
         if (is_row_visible(our_tid, our_lcid, i, *mvcc_columns)) {
           pos_list_out->emplace_back(RowID{chunk_id, i});
         }
