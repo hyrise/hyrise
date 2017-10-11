@@ -9,5 +9,5 @@ find src \( -iname "*.cpp" -o -iname "*.hpp" \) -print0 | parallel --null --no-n
 #             |      |        |                 |          Get the return code of the first pipeline item (here: cpplint)
 #             |      |        |                 Removes the prints for files without errors
 #             |      |        Regular call of cpplint with options
-#             |      Runs the following in parallel, using 50% of the available cores
+#             |      Runs the following in parallel
 #             Finds all .cpp and .hpp files, separated by \0
