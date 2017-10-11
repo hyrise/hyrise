@@ -5,10 +5,10 @@
 #include <utility>
 #include <vector>
 
-#include "scheduler/job_task.hpp"
 #include "operators/export_csv.hpp"
 #include "operators/table_wrapper.hpp"
 #include "optimizer/table_statistics.hpp"
+#include "scheduler/job_task.hpp"
 
 #include "utils/assert.hpp"
 

@@ -31,7 +31,8 @@ TpccTableGenerator::TpccTableGenerator(const opossum::ChunkOffset chunk_size, co
       _random_gen(TpccRandomGenerator()) {}
 
 std::shared_ptr<opossum::Table> TpccTableGenerator::generate_items_table() {
-  opossum::CurrentScheduler::set(std::make_shared<opossum::NodeQueueScheduler>(opossum::Topology::create_numa_topology(10)));
+  opossum::CurrentScheduler::set(
+      std::make_shared<opossum::NodeQueueScheduler>(opossum::Topology::create_numa_topology(10)));
   auto table = std::make_shared<opossum::Table>(_chunk_size);
 
   auto cardinalities = std::make_shared<std::vector<size_t>>(std::initializer_list<size_t>{NUM_ITEMS});

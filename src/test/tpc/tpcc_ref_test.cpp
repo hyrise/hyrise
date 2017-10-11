@@ -4,12 +4,12 @@
 #include <assert.h>
 #include <array>
 #include <fstream>
+#include <future>
 #include <memory>
 #include <string>
+#include <thread>
 #include <unordered_map>
 #include <vector>
-#include <thread>
-#include <future>
 
 #include "gtest/gtest.h"
 
