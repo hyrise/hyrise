@@ -13,6 +13,10 @@
 
 namespace opossum {
 
+std::string PredicateReorderingRule::name() const {
+  return "Predicate Reordering Rule";
+}
+
 bool PredicateReorderingRule::apply_to(const std::shared_ptr<AbstractASTNode>& node) {
   auto reordered = false;
 
@@ -27,7 +31,9 @@ bool PredicateReorderingRule::apply_to(const std::shared_ptr<AbstractASTNode>& n
     }
 
     // Sort PredicateNodes in descending order with regards to the expected row_count
-    reordered = _reorder_predicates(predicate_nodes);
+    if (predicate_nodes.size() > 1) {
+      reordered = _reorder_predicates(predicate_nodes);
+    }
     reordered |= _apply_to_children(predicate_nodes.back());
   } else {
     reordered = _apply_to_children(node);

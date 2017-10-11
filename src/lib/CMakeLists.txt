@@ -302,6 +302,8 @@ set(
     types.hpp
     uid_allocator.hpp
     utils/assert.hpp
+    utils/ast_printer.cpp
+    utils/ast_printer.hpp
     utils/boost_default_memory_resource.cpp
     utils/cuckoo_hashtable.hpp
     utils/load_table.cpp

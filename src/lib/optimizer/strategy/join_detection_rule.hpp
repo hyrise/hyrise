@@ -39,7 +39,8 @@ struct ColumnID;
  * should be rare anyway.
  */
 class JoinConditionDetectionRule : public AbstractRule {
- protected:
+ public:
+  std::string name() const override;
   bool apply_to(const std::shared_ptr<AbstractASTNode>& node) override;
 
  private:

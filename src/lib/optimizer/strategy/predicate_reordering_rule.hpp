@@ -24,6 +24,7 @@ class PredicateNode;
  */
 class PredicateReorderingRule : public AbstractRule {
  public:
+  std::string name() const override;
   bool apply_to(const std::shared_ptr<AbstractASTNode>& node) override;
 
  private:

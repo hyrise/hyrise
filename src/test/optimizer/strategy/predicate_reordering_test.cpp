@@ -8,6 +8,7 @@
 
 #include "optimizer/abstract_syntax_tree/predicate_node.hpp"
 #include "optimizer/abstract_syntax_tree/projection_node.hpp"
+#include "optimizer/abstract_syntax_tree/join_node.hpp"
 #include "optimizer/abstract_syntax_tree/sort_node.hpp"
 #include "optimizer/abstract_syntax_tree/stored_table_node.hpp"
 #include "optimizer/strategy/predicate_reordering_rule.hpp"
@@ -16,6 +17,7 @@
 #include "storage/storage_manager.hpp"
 
 #include "utils/assert.hpp"
+#include "utils/ast_printer.hpp" // TODO(moritz) Remove for PR
 
 namespace opossum {
 
@@ -220,6 +222,61 @@ TEST_F(PredicateReorderingTest, SameOrderingForStoredTable) {
   EXPECT_EQ(second_predicate_0->column_id(), second_predicate_1->column_id());
   EXPECT_EQ(second_predicate_0->scan_type(), second_predicate_1->scan_type());
   EXPECT_EQ(second_predicate_0->value(), second_predicate_1->value());
+}
+
+TEST_F(PredicateReorderingTest, PredicatesAsRightChild) {
+  /**
+   * Check that Reordering predicates works if a predicate chain is both on the left and right side of a node.
+   * This is particularly interesting because the PredicateReorderingRule needs to re-attach the ordered chain of
+   * predicates to the parent (the cross node in this case). This test checks whether the attachment happens as the
+   * correct child.
+   *
+   *          ____Cross_____
+   *         /              \
+   *  Predicate_0(b)     Predicate_2(b)
+   *        |                |
+   *  Predicate_1(a)     Predicate_3(a)
+   *        |                |
+   *     Table_0         Predicate_4(c)
+   *                         |
+   *                      Table_1
+   */
+
+  StorageManager::get().add_table("table_a", load_table("src/test/tables/int_int_int.tbl", 2));
+  auto statistics_mock = std::make_shared<TableStatisticsMock>();
+
+  auto cross_node = std::make_shared<JoinNode>(JoinMode::Cross);
+  auto predicate_0 = std::make_shared<PredicateNode>(ColumnID{1}, ScanType::OpGreaterThan, 100);
+  auto predicate_1 = std::make_shared<PredicateNode>(ColumnID{0}, ScanType::OpGreaterThan, 50);
+  auto predicate_2 = std::make_shared<PredicateNode>(ColumnID{1}, ScanType::OpGreaterThan, 50);
+  auto predicate_3 = std::make_shared<PredicateNode>(ColumnID{0}, ScanType::OpGreaterThan, 50);
+  auto predicate_4 = std::make_shared<PredicateNode>(ColumnID{2}, ScanType::OpGreaterThan, 50);
+  auto table_0 = std::make_shared<StoredTableNode>("table_a");
+  table_0->set_statistics(statistics_mock);
+  auto table_1 = std::make_shared<StoredTableNode>("table_a");
+  table_0->set_statistics(statistics_mock);
+
+  predicate_1->set_left_child(table_0);
+  predicate_0->set_left_child(predicate_1);
+  predicate_4->set_left_child(table_1);
+  predicate_3->set_left_child(predicate_4);
+  predicate_2->set_left_child(predicate_3);
+  cross_node->set_left_child(predicate_0);
+  cross_node->set_right_child(predicate_2);
+
+  ASTPrinter::print(cross_node);
+
+  const auto reordered = StrategyBaseTest::apply_rule(_rule, cross_node);
+
+  ASTPrinter::print(reordered);
+
+  EXPECT_EQ(reordered, cross_node);
+  EXPECT_EQ(reordered->left_child(), predicate_1);
+  EXPECT_EQ(reordered->left_child()->left_child(), predicate_0);
+  EXPECT_EQ(reordered->left_child()->left_child()->left_child(), table_0);
+  EXPECT_EQ(reordered->right_child(), predicate_4);
+  EXPECT_EQ(reordered->right_child()->left_child(), predicate_3);
+  EXPECT_EQ(reordered->right_child()->left_child()->left_child(), predicate_2);
 }
 
 }  // namespace opossum
