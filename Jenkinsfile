@@ -38,42 +38,48 @@ node {
         '''
       }
 
-      stage("clang-release") {
-        // not running this in parallel so that we don't waste CPU time if the build is broken anyway
-        sh "cd clang-release && make all opossumAsan -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
-        sh "./clang-release/opossumTest"
+      parallel clangRelease: {
+        stage("clang-release") {
+          sh "export CCACHE_BASEDIR=`pwd`; cd clang-release && make all -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
+          sh "./clang-release/opossumTest"
+        }
+      }, clangDebug: {
+        stage("clang-debug") {
+          sh "export CCACHE_BASEDIR=`pwd`; cd clang-debug && make all -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
+        }
       }
 
       parallel clangDebug: {
-        stage("clang-debug+asan") {
-          sh "cd clang-debug && make all opossumCoverage opossumAsan -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
-          parallel clangDebugTest: {
-            sh "./clang-debug/opossumTest"
-          }, clangDebugAsan: {
-            sh "LSAN_OPTIONS=suppressions=asan-ignore.txt ./clang-debug/opossumAsan"
-          }
+        stage("clang-debug:test") {
+          sh "./clang-debug/opossumTest"
+        }
+      }, clangDebugAsan: {
+        stage("clang-debug:asan") {
+        sh "export CCACHE_BASEDIR=`pwd`; cd clang-debug && make opossumAsan -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
+          sh "LSAN_OPTIONS=suppressions=asan-ignore.txt ./clang-debug/opossumAsan"
         }
       }, gccDebug: {
         stage("gcc-debug") {
-          sh "cd gcc-debug && make all -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
+          sh "export CCACHE_BASEDIR=`pwd`; cd gcc-debug && make all -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
           sh "./gcc-debug/opossumTest"
         }
       }, gccRelease: {
         stage("gcc-release") {
-          sh "cd gcc-release && make all -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
+          sh "export CCACHE_BASEDIR=`pwd`; cd gcc-release && make all -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
           sh "./gcc-release/opossumTest"
         }
       }, tpcc: {
         stage("TPCC Test") {
-            sh "cd clang-release && make -j \$(cat /proc/cpuinfo | grep processor | wc -l) opossumTestTPCC tpccTableGenerator"
             sh "./scripts/test_tpcc.sh clang-release"
         }
       }, asanRelease: {
         stage("clang-release:asan") {
+          sh "export CCACHE_BASEDIR=`pwd`; cd clang-release && make opossumAsan -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
           sh "LSAN_OPTIONS=suppressions=asan-ignore.txt ./clang-release/opossumAsan"
         }
       }, coverage: {
         stage("Coverage") {
+          sh "export CCACHE_BASEDIR=`pwd`; cd clang-debug && make opossumCoverage -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
           sh "./scripts/coverage.sh clang-debug"
           publishHTML (target: [
             allowMissing: false,
