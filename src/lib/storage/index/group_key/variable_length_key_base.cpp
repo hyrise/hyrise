@@ -25,12 +25,12 @@ std::pair<uintX_t, uintX_t> shift_left_with_borrow(uintX_t value, opossum::Compo
 
 namespace opossum {
 
-VariableLengthKeyBase::VariableLengthKeyBase(VariableLengthKeyWord *data, CompositeKeyLength size)
+VariableLengthKeyBase::VariableLengthKeyBase(VariableLengthKeyWord* data, CompositeKeyLength size)
     : _data(data), _size(size) {}
 
-VariableLengthKeyBase &VariableLengthKeyBase::operator|=(uint64_t rhs) {
+VariableLengthKeyBase& VariableLengthKeyBase::operator|=(uint64_t rhs) {
   static_assert(std::is_same<VariableLengthKeyWord, uint8_t>::value, "Changes for new word type required.");
-  auto raw_rhs = reinterpret_cast<VariableLengthKeyWord *>(&rhs);
+  auto raw_rhs = reinterpret_cast<VariableLengthKeyWord*>(&rhs);
   auto operation_width = std::min(static_cast<CompositeKeyLength>(sizeof(rhs)), _size);
   for (CompositeKeyLength i = 0; i < operation_width; ++i) {
     _data[i] |= raw_rhs[i];
@@ -38,7 +38,7 @@ VariableLengthKeyBase &VariableLengthKeyBase::operator|=(uint64_t rhs) {
   return *this;
 }
 
-VariableLengthKeyBase &VariableLengthKeyBase::operator<<=(CompositeKeyLength shift) {
+VariableLengthKeyBase& VariableLengthKeyBase::operator<<=(CompositeKeyLength shift) {
   static_assert(std::is_same<VariableLengthKeyWord, uint8_t>::value, "Changes for new word type required.");
   const auto byte_shift = shift / CHAR_BIT;
   const auto bit_shift = shift % CHAR_BIT;
@@ -58,7 +58,7 @@ VariableLengthKeyBase &VariableLengthKeyBase::operator<<=(CompositeKeyLength shi
   return *this;
 }
 
-VariableLengthKeyBase &VariableLengthKeyBase::shift_and_set(uint64_t value, uint8_t bits_to_set) {
+VariableLengthKeyBase& VariableLengthKeyBase::shift_and_set(uint64_t value, uint8_t bits_to_set) {
   uint64_t mask = 0xFFFFFFFFFFFFFFFF;
   // shifting is undefined if right operand is greater than or equal to the number of bits of left operand
   if (bits_to_set < sizeof(uint64_t) * CHAR_BIT) {
@@ -70,13 +70,13 @@ VariableLengthKeyBase &VariableLengthKeyBase::shift_and_set(uint64_t value, uint
   return *this;
 }
 
-bool operator==(const VariableLengthKeyBase &lhs, const VariableLengthKeyBase &rhs) {
+bool operator==(const VariableLengthKeyBase& lhs, const VariableLengthKeyBase& rhs) {
   return lhs._size == rhs._size && std::memcmp(lhs._data, rhs._data, lhs._size) == 0;
 }
 
-bool operator!=(const VariableLengthKeyBase &lhs, const VariableLengthKeyBase &rhs) { return !(lhs == rhs); }
+bool operator!=(const VariableLengthKeyBase& lhs, const VariableLengthKeyBase& rhs) { return !(lhs == rhs); }
 
-bool operator<(const VariableLengthKeyBase &lhs, const VariableLengthKeyBase &rhs) {
+bool operator<(const VariableLengthKeyBase& lhs, const VariableLengthKeyBase& rhs) {
   static_assert(std::is_same<VariableLengthKeyWord, uint8_t>::value, "Changes for new word type required.");
   if (lhs._size != rhs._size) return lhs._size < rhs._size;
 
@@ -91,15 +91,15 @@ bool operator<(const VariableLengthKeyBase &lhs, const VariableLengthKeyBase &rh
   return false;
 }
 
-bool operator<=(const VariableLengthKeyBase &lhs, const VariableLengthKeyBase &rhs) { return lhs < rhs || lhs == rhs; }
+bool operator<=(const VariableLengthKeyBase& lhs, const VariableLengthKeyBase& rhs) { return lhs < rhs || lhs == rhs; }
 
-bool operator>(const VariableLengthKeyBase &lhs, const VariableLengthKeyBase &rhs) { return !(lhs <= rhs); }
+bool operator>(const VariableLengthKeyBase& lhs, const VariableLengthKeyBase& rhs) { return !(lhs <= rhs); }
 
-bool operator>=(const VariableLengthKeyBase &lhs, const VariableLengthKeyBase &rhs) { return !(lhs < rhs); }
+bool operator>=(const VariableLengthKeyBase& lhs, const VariableLengthKeyBase& rhs) { return !(lhs < rhs); }
 
-std::ostream &operator<<(std::ostream &os, const VariableLengthKeyBase &key) {
+std::ostream& operator<<(std::ostream& os, const VariableLengthKeyBase& key) {
   os << std::hex << std::setfill('0');
-  auto raw_data = reinterpret_cast<uint8_t *>(key._data);
+  auto raw_data = reinterpret_cast<uint8_t*>(key._data);
   for (CompositeKeyLength i = 1; i <= key._size; ++i) {
     os << std::setw(2) << +raw_data[key._size - i];
     if (i != key._size) os << ' ';

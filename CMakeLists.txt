@@ -17,10 +17,11 @@ set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -march=native")
 find_package(Numa)
 find_package(Tbb REQUIRED)
 find_package(Readline REQUIRED)
+find_package(Sqlite3 REQUIRED)
 
 # Include sub-CMakeLists.txt
 add_subdirectory(third_party/)
-add_subdirectory(third_party/googletest EXCLUDE_FROM_ALL)
+add_subdirectory(third_party/googletest)
 add_subdirectory(src)
 
 if(${NUMA_FOUND})

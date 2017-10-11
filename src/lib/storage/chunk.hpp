@@ -69,7 +69,7 @@ class Chunk : private Noncopyable {
     pmr_ring_buffer<uint64_t>& history() { return _history; }
     const pmr_ring_buffer<uint64_t>& history() const { return _history; }
 
-    uint64_t history_sample(std::chrono::milliseconds lookback) const;
+    uint64_t history_sample(size_t lookback) const;
 
     uint64_t counter() const { return _counter; }
 

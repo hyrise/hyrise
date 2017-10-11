@@ -15,7 +15,7 @@
 
 namespace opossum {
 
-ExportCsv::ExportCsv(const std::shared_ptr<const AbstractOperator> in, const std::string &filename)
+ExportCsv::ExportCsv(const std::shared_ptr<const AbstractOperator> in, const std::string& filename)
     : AbstractReadOnlyOperator(in), _filename(filename) {}
 
 const std::string ExportCsv::name() const { return "ExportCSV"; }
@@ -30,7 +30,7 @@ std::shared_ptr<const Table> ExportCsv::_on_execute() {
   return _input_left->get_output();
 }
 
-void ExportCsv::_generate_meta_info_file(const std::shared_ptr<const Table> &table, const std::string &meta_file) {
+void ExportCsv::_generate_meta_info_file(const std::shared_ptr<const Table>& table, const std::string& meta_file) {
   CsvWriter writer(meta_file);
   // Write header line
   writer.write_line({"PropertyType", "Key", "Value"});
@@ -44,7 +44,7 @@ void ExportCsv::_generate_meta_info_file(const std::shared_ptr<const Table> &tab
   }
 }
 
-void ExportCsv::_generate_content_file(const std::shared_ptr<const Table> &table, const std::string &csv_file) {
+void ExportCsv::_generate_content_file(const std::shared_ptr<const Table>& table, const std::string& csv_file) {
   /*
    * A naively exported csv file is a materialized file in row format.
    * This offers some advantages, but also disadvantages.
@@ -74,7 +74,7 @@ void ExportCsv::_generate_content_file(const std::shared_ptr<const Table> &table
    * takes some effort.
    */
   for (ChunkID chunk_id{0}; chunk_id < table->chunk_count(); ++chunk_id) {
-    auto &chunk = table->get_chunk(chunk_id);
+    auto& chunk = table->get_chunk(chunk_id);
     for (ChunkOffset row = 0; row < chunk.size(); ++row) {
       context->currentRow = row;
       for (ColumnID col_id{0}; col_id < table->col_count(); ++col_id) {
@@ -87,23 +87,23 @@ void ExportCsv::_generate_content_file(const std::shared_ptr<const Table> &table
 
 template <typename T>
 class ExportCsv::ExportCsvVisitor : public ColumnVisitable {
-  void handle_value_column(BaseColumn &base_column, std::shared_ptr<ColumnVisitableContext> base_context) final {
+  void handle_value_column(BaseColumn& base_column, std::shared_ptr<ColumnVisitableContext> base_context) final {
     auto context = std::static_pointer_cast<ExportCsv::ExportCsvContext>(base_context);
-    const auto &column = static_cast<ValueColumn<T> &>(base_column);
+    const auto& column = static_cast<ValueColumn<T>&>(base_column);
 
     context->csvWriter.write(column.values()[context->currentRow]);
   }
 
-  void handle_reference_column(ReferenceColumn &ref_column,
+  void handle_reference_column(ReferenceColumn& ref_column,
                                std::shared_ptr<ColumnVisitableContext> base_context) final {
     auto context = std::static_pointer_cast<ExportCsv::ExportCsvContext>(base_context);
 
     context->csvWriter.write(ref_column[context->currentRow]);
   }
 
-  void handle_dictionary_column(BaseColumn &base_column, std::shared_ptr<ColumnVisitableContext> base_context) final {
+  void handle_dictionary_column(BaseColumn& base_column, std::shared_ptr<ColumnVisitableContext> base_context) final {
     auto context = std::static_pointer_cast<ExportCsv::ExportCsvContext>(base_context);
-    const auto &column = static_cast<DictionaryColumn<T> &>(base_column);
+    const auto& column = static_cast<DictionaryColumn<T>&>(base_column);
 
     context->csvWriter.write((*column.dictionary())[(column.attribute_vector()->get(context->currentRow))]);
   }

@@ -185,7 +185,7 @@ std::shared_ptr<opossum::Table> TpchTableGenerator::generate_customers_table() {
 TpchTableGenerator::order_lines_type TpchTableGenerator::generate_order_lines() {
   const size_t total_orders_per_customer = NUM_ORDERS_PER_CUSTOMER * _scale_factor * NUM_CUSTOMERS;
   std::vector<std::vector<OrderLine>> all_order_lines(total_orders_per_customer);
-  for (auto &order_lines_per_order : all_order_lines) {
+  for (auto& order_lines_per_order : all_order_lines) {
     size_t order_lines_size = _random_gen.random_number(1, 7);
     order_lines_per_order.resize(order_lines_size);
     size_t order_i = &order_lines_per_order - &all_order_lines[0];
@@ -194,7 +194,7 @@ TpchTableGenerator::order_lines_type TpchTableGenerator::generate_order_lines() 
     size_t orderkey = order_i / 8 * 32 + order_i % 8;
     size_t orderdate = _random_gen.random_number(_startdate, _enddate - 151 * _one_day);
     size_t linenumber = 0;
-    for (auto &order_line : order_lines_per_order) {
+    for (auto& order_line : order_lines_per_order) {
       order_line.orderkey = orderkey;
       order_line.partkey = _random_gen.random_number(0, _scale_factor * NUM_PARTS - 1);
       order_line.linenumber = linenumber;
@@ -245,7 +245,7 @@ std::shared_ptr<opossum::Table> TpchTableGenerator::generate_orders_table(
 
   add_column<float>(table, "O_TOTALPRICE", cardinalities, [&](std::vector<size_t> indices) {
     float sum = 0.f;
-    for (auto &order_line : order_lines->at(indices[0])) {
+    for (auto& order_line : order_lines->at(indices[0])) {
       sum += order_line.extendedprice * (1 + order_line.tax) * (1 - order_line.discount);
     }
     return sum;
@@ -276,7 +276,7 @@ std::shared_ptr<opossum::Table> TpchTableGenerator::generate_lineitems_table(
   auto table = std::make_shared<opossum::Table>(_chunk_size);
   size_t table_size = 0;
   std::vector<OrderLine> flattened_orderlines;
-  for (const auto &order_lines_per_order : *order_lines) {
+  for (const auto& order_lines_per_order : *order_lines) {
     table_size += order_lines_per_order.size();
     flattened_orderlines.insert(flattened_orderlines.end(), order_lines_per_order.begin(), order_lines_per_order.end());
   }

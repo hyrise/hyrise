@@ -88,22 +88,43 @@ uint32_t Table::chunk_size() const { return _chunk_size; }
 
 const std::vector<std::string>& Table::column_names() const { return _column_names; }
 
-const std::string& Table::column_name(ColumnID column_id) const { return _column_names[column_id]; }
+const std::string& Table::column_name(ColumnID column_id) const {
+  DebugAssert(column_id < _column_names.size(), "ColumnID " + std::to_string(column_id) + " out of range");
+  return _column_names[column_id];
+}
 
-const std::string& Table::column_type(ColumnID column_id) const { return _column_types[column_id]; }
+const std::string& Table::column_type(ColumnID column_id) const {
+  DebugAssert(column_id < _column_names.size(), "ColumnID " + std::to_string(column_id) + " out of range");
+  return _column_types[column_id];
+}
 
-bool Table::column_is_nullable(ColumnID column_id) const { return _column_nullable[column_id]; }
+bool Table::column_is_nullable(ColumnID column_id) const {
+  DebugAssert(column_id < _column_names.size(), "ColumnID " + std::to_string(column_id) + " out of range");
+  return _column_nullable[column_id];
+}
 
 const std::vector<std::string>& Table::column_types() const { return _column_types; }
 
 const std::vector<bool>& Table::column_nullables() const { return _column_nullable; }
 
-Chunk& Table::get_chunk(ChunkID chunk_id) { return _chunks[chunk_id]; }
-const Chunk& Table::get_chunk(ChunkID chunk_id) const { return _chunks[chunk_id]; }
+Chunk& Table::get_chunk(ChunkID chunk_id) {
+  DebugAssert(chunk_id < _chunks.size(), "ChunkID " + std::to_string(chunk_id) + " out of range");
+  return _chunks[chunk_id];
+}
 
-ProxyChunk Table::get_chunk_with_access_counting(ChunkID chunk_id) { return ProxyChunk(_chunks.at(chunk_id)); }
+const Chunk& Table::get_chunk(ChunkID chunk_id) const {
+  DebugAssert(chunk_id < _chunks.size(), "ChunkID " + std::to_string(chunk_id) + " out of range");
+  return _chunks[chunk_id];
+}
+
+ProxyChunk Table::get_chunk_with_access_counting(ChunkID chunk_id) {
+  DebugAssert(chunk_id < _chunks.size(), "ChunkID " + std::to_string(chunk_id) + " out of range");
+  return ProxyChunk(_chunks[chunk_id]);
+}
+
 const ProxyChunk Table::get_chunk_with_access_counting(ChunkID chunk_id) const {
-  return ProxyChunk(_chunks.at(chunk_id));
+  DebugAssert(chunk_id < _chunks.size(), "ChunkID " + std::to_string(chunk_id) + " out of range");
+  return ProxyChunk(_chunks[chunk_id]);
 }
 
 void Table::emplace_chunk(Chunk chunk) {

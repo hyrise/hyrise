@@ -10,9 +10,9 @@
 #include "join_test.hpp"
 
 #include "../../lib/operators/get_table.hpp"
-#include "../../lib/operators/join_sort_merge.hpp"
 #include "../../lib/operators/join_nested_loop_a.hpp"
 #include "../../lib/operators/join_nested_loop_b.hpp"
+#include "../../lib/operators/join_sort_merge.hpp"
 #include "../../lib/operators/table_scan.hpp"
 #include "../../lib/storage/storage_manager.hpp"
 #include "../../lib/storage/table.hpp"
@@ -248,10 +248,9 @@ TYPED_TEST(JoinFullTest, SmallerInnerJoin) {
 
 TYPED_TEST(JoinFullTest, SmallerInnerJoin2) {
   // Joining two Integer Columns
-  this->template test_join_output<TypeParam>(this->_table_wrapper_j, this->_table_wrapper_i,
-                                             std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}),
-                                             ScanType::OpLessThan, JoinMode::Inner,
-                                             "src/test/tables/joinoperators/int_smaller_inner_join_2.tbl", 1);
+  this->template test_join_output<TypeParam>(
+      this->_table_wrapper_j, this->_table_wrapper_i, std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}),
+      ScanType::OpLessThan, JoinMode::Inner, "src/test/tables/joinoperators/int_smaller_inner_join_2.tbl", 1);
 }
 
 TYPED_TEST(JoinFullTest, DISABLED_SmallerOuterJoin) {
@@ -277,8 +276,7 @@ TYPED_TEST(JoinFullTest, SmallerEqualInnerJoin2) {
   // Joining two Integer Columns
   this->template test_join_output<TypeParam>(this->_table_wrapper_j, this->_table_wrapper_i,
                                              std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}),
-                                             ScanType::OpLessThanEquals,
-                                             JoinMode::Inner,
+                                             ScanType::OpLessThanEquals, JoinMode::Inner,
                                              "src/test/tables/joinoperators/int_smallerequal_inner_join_2.tbl", 1);
 }
 
@@ -302,10 +300,9 @@ TYPED_TEST(JoinFullTest, GreaterInnerJoin) {
 
 TYPED_TEST(JoinFullTest, GreaterInnerJoin2) {
   // Joining two Integer Columns
-  this->template test_join_output<TypeParam>(this->_table_wrapper_i, this->_table_wrapper_j,
-                                             std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}),
-                                             ScanType::OpGreaterThan, JoinMode::Inner,
-                                             "src/test/tables/joinoperators/int_greater_inner_join_2.tbl", 1);
+  this->template test_join_output<TypeParam>(
+      this->_table_wrapper_i, this->_table_wrapper_j, std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}),
+      ScanType::OpGreaterThan, JoinMode::Inner, "src/test/tables/joinoperators/int_greater_inner_join_2.tbl", 1);
 }
 
 TYPED_TEST(JoinFullTest, DISABLED_GreaterOuterJoin) {

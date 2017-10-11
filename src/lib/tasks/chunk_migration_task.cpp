@@ -39,9 +39,9 @@ void ChunkMigrationTask::_on_execute() {
       return;
     }
 
-    // std::cout << "Starting migration " << _table_name << " " << chunk_id << std::endl;
+    std::cout << "Starting migration " << _table_name << " " << chunk_id << std::endl;
     chunk.migrate(NUMAPlacementManager::get()->get_memsource(_node_id));
-    // std::cout << "Completed migration " << _table_name << " " << chunk_id << std::endl;
+    std::cout << "Completed migration " << _table_name << " " << chunk_id << std::endl;
   }
 }
 

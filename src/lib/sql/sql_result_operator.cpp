@@ -25,7 +25,7 @@ std::shared_ptr<const Table> SQLResultOperator::_on_execute() {
   return _input_left->get_output();
 }
 
-std::shared_ptr<AbstractOperator> SQLResultOperator::recreate(const std::vector<AllParameterVariant> &args) const {
+std::shared_ptr<AbstractOperator> SQLResultOperator::recreate(const std::vector<AllParameterVariant>& args) const {
   auto op = std::make_shared<SQLResultOperator>();
   op->set_input_operator(_input_left->recreate(args));
   return op;

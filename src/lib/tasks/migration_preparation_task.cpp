@@ -24,8 +24,18 @@
 #define LOOKBACK std::chrono::seconds(7)
 #define IMBALANCE_THRESHOLD 0.1
 #define MIGRATION_COUNT 3
+#define COUNTER_HISTORY_INTERVAL std::chrono::milliseconds(100)
 
 namespace opossum {
+
+template <class T>
+void print_vector(const std::vector<T>& vec, std::string prefix = "", std::string sep = " ") {
+  std::cout << prefix;
+  for (const auto& a : vec) {
+    std::cout << sep << a;
+  }
+  std::cout << std::endl;
+}
 
 struct HotNodeSet {
   double imbalance;
@@ -145,13 +155,14 @@ int get_node_id(const PolymorphicAllocator<size_t>& alloc) {
 std::vector<ChunkInfo> find_hot_chunks(const StorageManager& storage_manager, std::chrono::seconds lookback) {
   std::vector<ChunkInfo> chunk_infos;
   double sum_hottness = 0.0;
+  size_t lookback_samples = std::chrono::duration_cast<std::chrono::milliseconds>(lookback).count() / COUNTER_HISTORY_INTERVAL.count();
   for (const auto& table_name : storage_manager.table_names()) {
     const auto& table = *storage_manager.get_table(table_name);
     const auto chunk_count = table.chunk_count();
     for (ChunkID i = ChunkID(0); i < chunk_count; i++) {
       const auto& chunk = table.get_chunk(i);
-      if (chunk_is_completed(chunk, table.chunk_size())) {
-        const double hottness = static_cast<double>(chunk.access_counter()->history_sample(lookback));
+      if (chunk_is_completed(chunk, table.chunk_size()) && chunk.has_access_counter()) {
+        const double hottness = static_cast<double>(chunk.access_counter()->history_sample(lookback_samples));
         sum_hottness += hottness;
         chunk_infos.emplace_back(ChunkInfo{.table_name = table_name,
                                            .id = i,
@@ -165,6 +176,14 @@ std::vector<ChunkInfo> find_hot_chunks(const StorageManager& storage_manager, st
   return chunk_infos;
 }
 
+std::vector<size_t> count_chunks_by_node(const std::vector<ChunkInfo>& chunk_infos, size_t node_count) {
+  std::vector<size_t> result(node_count);
+  for (const auto chunk_info : chunk_infos) {
+    result.at(chunk_info.node)++;
+  }
+  return result;
+}
+
 MigrationPreparationTask::MigrationPreparationTask() {}
 
 void MigrationPreparationTask::_on_execute() {
@@ -173,6 +192,10 @@ void MigrationPreparationTask::_on_execute() {
   auto hot_chunks = find_hot_chunks(StorageManager::get(), LOOKBACK);
   size_t chunk_counter = 0;
   HotNodeSet hot_nodes = find_hot_nodes(get_node_hottness(hot_chunks, topology->nodes().size()));
+
+  std::cout << "Imbalance: " << hot_nodes.imbalance << std::endl;
+  print_vector(hot_nodes.node_hottness, "Hotnesses: ");
+  print_vector(count_chunks_by_node(hot_chunks, topology->nodes().size()), "Chunk counts: ");
 
   if (hot_nodes.imbalance > IMBALANCE_THRESHOLD && hot_nodes.cold_nodes.size() > 0) {
     std::vector<ChunkInfo> migration_candidates;
@@ -192,8 +215,8 @@ void MigrationPreparationTask::_on_execute() {
       const auto target_node = hot_nodes.cold_nodes.at(chunk_counter % hot_nodes.cold_nodes.size());
       const auto task =
           std::make_shared<ChunkMigrationTask>(migration_chunk.table_name, migration_chunk.id, target_node);
-      // std::cout << "Migrating " << migration_chunk.table_name << " (" << migration_chunk.id << ") "
-      //           << migration_chunk.node << " -> " << target_node << std::endl;
+      std::cout << "Migrating " << migration_chunk.table_name << " (" << migration_chunk.id << ") "
+                << migration_chunk.node << " -> " << target_node << std::endl;
       task->schedule(target_node, SchedulePriority::Unstealable);
       jobs.push_back(task);
       chunk_counter++;

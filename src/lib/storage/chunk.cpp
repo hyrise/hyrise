@@ -1,4 +1,4 @@
-#include <chrono>
+#include <algorithm>
 #include <iomanip>
 #include <iterator>
 #include <limits>
@@ -15,17 +15,15 @@
 
 #include "utils/assert.hpp"
 
-#define COUNTER_HISTORY_INTERVAL std::chrono::milliseconds(100)
-
 namespace opossum {
 
 const CommitID Chunk::MAX_COMMIT_ID = std::numeric_limits<CommitID>::max();
 
-uint64_t Chunk::AccessCounter::history_sample(std::chrono::milliseconds lookback) const {
-  int _lookback = lookback.count() / (COUNTER_HISTORY_INTERVAL).count();
-  if (history().size() < 2) return {};
+uint64_t Chunk::AccessCounter::history_sample(size_t lookback) const {
+  if (history().size() < 2 && lookback == 0) return 0;
   const auto last = history().back();
-  const auto prelast = history().at(std::max(0, (int)history().size() - _lookback));
+  const auto prelast_index = std::max(0l, static_cast<int64_t>(history().size()) - static_cast<int64_t>(lookback));
+  const auto prelast = history().at(prelast_index);
   return last - prelast;
 }
 

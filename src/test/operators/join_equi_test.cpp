@@ -11,9 +11,9 @@
 
 #include "../../lib/operators/get_table.hpp"
 #include "../../lib/operators/join_hash.hpp"
-#include "../../lib/operators/join_sort_merge.hpp"
 #include "../../lib/operators/join_nested_loop_a.hpp"
 #include "../../lib/operators/join_nested_loop_b.hpp"
+#include "../../lib/operators/join_sort_merge.hpp"
 #include "../../lib/operators/table_scan.hpp"
 #include "../../lib/operators/union_all.hpp"
 #include "../../lib/storage/storage_manager.hpp"
@@ -309,6 +309,50 @@ TYPED_TEST(JoinEquiTest, MixHashAndNestedLoop) {
   this->template test_join_output<TypeParam>(
       join, this->_table_wrapper_h, std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}), ScanType::OpEquals,
       JoinMode::Inner, "src/test/tables/joinoperators/int_inner_multijoin_nlj_hash.tbl", 1);
+}
+
+// TODO(anyone): https://github.com/hyrise/zweirise/issues/306
+TYPED_TEST(JoinEquiTest, DISABLED_RightJoinRefColumn) {
+  // scan that returns all rows
+  auto scan_a = std::make_shared<TableScan>(this->_table_wrapper_a, ColumnID{0}, ScanType::OpGreaterThanEquals, 0);
+  scan_a->execute();
+
+  this->template test_join_output<TypeParam>(
+      scan_a, this->_table_wrapper_b, std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}), ScanType::OpEquals,
+      JoinMode::Right, "src/test/tables/joinoperators/int_right_join.tbl", 1);
+}
+
+// TODO(anyone): https://github.com/hyrise/zweirise/issues/306
+TYPED_TEST(JoinEquiTest, DISABLED_LeftJoinRefColumn) {
+  // scan that returns all rows
+  auto scan_b = std::make_shared<TableScan>(this->_table_wrapper_b, ColumnID{0}, ScanType::OpGreaterThanEquals, 0);
+  scan_b->execute();
+
+  this->template test_join_output<TypeParam>(
+      this->_table_wrapper_a, scan_b, std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}), ScanType::OpEquals,
+      JoinMode::Left, "src/test/tables/joinoperators/int_left_join.tbl", 1);
+}
+
+// TODO(anyone): https://github.com/hyrise/zweirise/issues/306
+TYPED_TEST(JoinEquiTest, DISABLED_RightJoinEmptyRefColumn) {
+  // scan that returns no rows
+  auto scan_a = std::make_shared<TableScan>(this->_table_wrapper_a, ColumnID{0}, ScanType::OpEquals, 0);
+  scan_a->execute();
+
+  this->template test_join_output<TypeParam>(
+      scan_a, this->_table_wrapper_b, std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}), ScanType::OpEquals,
+      JoinMode::Right, "src/test/tables/joinoperators/int_join_empty.tbl", 1);
+}
+
+// TODO(anyone): https://github.com/hyrise/zweirise/issues/306
+TYPED_TEST(JoinEquiTest, DISABLED_LeftJoinEmptyRefColumn) {
+  // scan that returns no rows
+  auto scan_b = std::make_shared<TableScan>(this->_table_wrapper_b, ColumnID{0}, ScanType::OpEquals, 0);
+  scan_b->execute();
+
+  this->template test_join_output<TypeParam>(
+      this->_table_wrapper_a, scan_b, std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}), ScanType::OpEquals,
+      JoinMode::Left, "src/test/tables/joinoperators/int_join_empty.tbl", 1);
 }
 
 // Does not work yet due to problems with RowID implementation (RowIDs need to reference a table)

@@ -1,8 +1,6 @@
 add_executable(
     opossumBenchmark
 
-    EXCLUDE_FROM_ALL
-
     base_fixture.cpp
     base_fixture.hpp
     benchmark_main.cpp
@@ -27,8 +25,6 @@ target_link_libraries(
 
 add_executable(
     opossumBenchmarkTPCC
-
-    EXCLUDE_FROM_ALL
 
     benchmark_main.cpp
     benchmark_template.cpp

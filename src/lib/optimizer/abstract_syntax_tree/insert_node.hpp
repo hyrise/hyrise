@@ -18,7 +18,7 @@ class InsertNode : public AbstractASTNode {
 
   std::string description() const override;
 
-  const std::string &table_name() const;
+  const std::string& table_name() const;
 
  protected:
   const std::string _table_name;

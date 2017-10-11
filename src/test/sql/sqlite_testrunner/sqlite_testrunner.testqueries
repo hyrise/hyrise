@@ -1,0 +1,6 @@
+SELECT * FROM int_float;
+SELECT * FROM int_float WHERE a >= 1234;
+SELECT * FROM int_float WHERE 1234 <= a;
+SELECT * FROM int_float WHERE a >= 1234 AND b < 457.9;
+
+SELECT * FROM int_float2;

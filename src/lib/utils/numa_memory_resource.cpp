@@ -49,7 +49,4 @@ bool NUMAMemoryResource::do_is_equal(const memory_resource& other) const noexcep
 int NUMAMemoryResource::get_node_id() const { return -1; }
 #endif
 
-static NUMAMemoryResource default_resource = NUMAMemoryResource(1, "default");
-
-NUMAMemoryResource* NUMAMemoryResource::get_default_resource() { return &default_resource; }
 }  // namespace opossum
