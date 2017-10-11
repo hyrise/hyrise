@@ -4,17 +4,22 @@ RUN apt-get update \
     && apt-get install -y \
         bash-completion \
         build-essential \
+        ccache \
         clang \
-        clang-format \
+        clang-format-3.8 \
         cmake \
         gcc-6 \
         gcovr \
         git \
         libboost-all-dev \
+        libnuma-dev \
+        libnuma1 \
         libreadline-dev \
+        libsqlite3-dev \
         libtbb-dev \
         llvm \
         man \
+        parallel \
         python2.7 \
         sudo \
     && apt-get clean \
