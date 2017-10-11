@@ -1,11 +1,15 @@
 #include <json.hpp>
 
+#undef NDEBUG
+#include <assert.h>
 #include <array>
 #include <fstream>
 #include <memory>
 #include <string>
 #include <unordered_map>
 #include <vector>
+#include <thread>
+#include <future>
 
 #include "gtest/gtest.h"
 
@@ -125,19 +129,28 @@ class TpccRefTest : public BaseTest {
 };
 
 TEST_F(TpccRefTest, SimulationScenario) {
-  // Load input
-  auto json_simulation_file = std::ifstream("tpcc_test_requests.json");
-  assert(json_simulation_file.is_open());
+  auto simulation_input_async = std::async(std::launch::async, []() {
+    // Load input
+    auto json_simulation_file = std::ifstream("tpcc_test_requests.json");
+    assert(json_simulation_file.is_open());
 
-  auto simulation_input = nlohmann::json{};
-  json_simulation_file >> simulation_input;
+    auto simulation_input = nlohmann::json{};
+    json_simulation_file >> simulation_input;
+    return simulation_input;
+  });
 
-  // Load output
-  auto json_results_file = std::ifstream("tpcc_test_results.json");
-  assert(json_results_file.is_open());
+  auto simulation_results_async = std::async(std::launch::async, []() {
+    // Load output
+    auto json_results_file = std::ifstream("tpcc_test_results.json");
+    assert(json_results_file.is_open());
 
-  auto simulation_results = nlohmann::json{};
-  json_results_file >> simulation_results;
+    auto simulation_results = nlohmann::json{};
+    json_results_file >> simulation_results;
+    return simulation_results;
+  });
+
+  auto simulation_input = simulation_input_async.get();
+  auto simulation_results = simulation_results_async.get();
 
   assert(simulation_results.size() == simulation_input.size());
 
