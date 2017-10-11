@@ -15,6 +15,7 @@ RUN apt-get update \
         libtbb-dev \
         llvm \
         man \
+        parallel \
         python2.7 \
         sudo \
     && apt-get clean \
