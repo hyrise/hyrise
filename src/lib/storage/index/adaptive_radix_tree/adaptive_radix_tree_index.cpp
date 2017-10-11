@@ -19,7 +19,7 @@
 
 namespace opossum {
 
-AdaptiveRadixTreeIndex::AdaptiveRadixTreeIndex(const std::vector<std::shared_ptr<BaseColumn>> &index_columns)
+AdaptiveRadixTreeIndex::AdaptiveRadixTreeIndex(const std::vector<std::shared_ptr<BaseColumn>>& index_columns)
     : _index_column(std::dynamic_pointer_cast<BaseDictionaryColumn>(index_columns.front())) {
   DebugAssert(static_cast<bool>(_index_column), "AdaptiveRadixTree only works with DictionaryColumns for now");
   DebugAssert((index_columns.size() == 1), "AdaptiveRadixTree only works with a single column");
@@ -35,7 +35,7 @@ AdaptiveRadixTreeIndex::AdaptiveRadixTreeIndex(const std::vector<std::shared_ptr
   _root = _bulk_insert(pairs_to_insert);
 }
 
-BaseIndex::Iterator AdaptiveRadixTreeIndex::_lower_bound(const std::vector<AllTypeVariant> &values) const {
+BaseIndex::Iterator AdaptiveRadixTreeIndex::_lower_bound(const std::vector<AllTypeVariant>& values) const {
   assert(values.size() == 1);
   ValueID valueID = _index_column->lower_bound(values[0]);
   if (valueID == INVALID_VALUE_ID) {
@@ -44,7 +44,7 @@ BaseIndex::Iterator AdaptiveRadixTreeIndex::_lower_bound(const std::vector<AllTy
   return _root->lower_bound(BinaryComparable(valueID), 0);
 }
 
-BaseIndex::Iterator AdaptiveRadixTreeIndex::_upper_bound(const std::vector<AllTypeVariant> &values) const {
+BaseIndex::Iterator AdaptiveRadixTreeIndex::_upper_bound(const std::vector<AllTypeVariant>& values) const {
   assert(values.size() == 1);
   ValueID valueID = _index_column->upper_bound(values[0]);
   if (valueID == INVALID_VALUE_ID) {
@@ -59,7 +59,7 @@ BaseIndex::Iterator AdaptiveRadixTreeIndex::_cbegin() const { return _chunk_offs
 BaseIndex::Iterator AdaptiveRadixTreeIndex::_cend() const { return _chunk_offsets.cend(); }
 
 std::shared_ptr<Node> AdaptiveRadixTreeIndex::_bulk_insert(
-    const std::vector<std::pair<BinaryComparable, ChunkOffset>> &values) {
+    const std::vector<std::pair<BinaryComparable, ChunkOffset>>& values) {
   DebugAssert(!(values.empty()), "Index on empty column is not defined");
   _chunk_offsets.reserve(values.size());
   Iterator begin = _chunk_offsets.cbegin();
@@ -67,16 +67,16 @@ std::shared_ptr<Node> AdaptiveRadixTreeIndex::_bulk_insert(
 }
 
 std::shared_ptr<Node> AdaptiveRadixTreeIndex::_bulk_insert(
-    const std::vector<std::pair<BinaryComparable, ChunkOffset>> &values, size_t depth, BaseIndex::Iterator &it) {
+    const std::vector<std::pair<BinaryComparable, ChunkOffset>>& values, size_t depth, BaseIndex::Iterator& it) {
   // This is the anchor of the recursion: if all values have the same key, create a leaf.
-  if (std::all_of(values.begin(), values.end(), [&values](const std::pair<BinaryComparable, ChunkOffset> &pair) {
+  if (std::all_of(values.begin(), values.end(), [&values](const std::pair<BinaryComparable, ChunkOffset>& pair) {
         return values.front().first == pair.first;
       })) {
     // copy the Iterator in the _chunk_offsets - vector --> this is the lower_bound of the leaf
     Iterator lower = it;
     // insert the ChunkOffsets into the vector and push the Iterator further
     auto cap = _chunk_offsets.capacity();
-    for (const auto &pair : values) {
+    for (const auto& pair : values) {
       _chunk_offsets.emplace_back(pair.second);
     }
     std::advance(it, values.size());
@@ -91,7 +91,7 @@ std::shared_ptr<Node> AdaptiveRadixTreeIndex::_bulk_insert(
 
   // radix-partition on the depths-byte into 256 partitions
   std::array<std::vector<std::pair<BinaryComparable, ChunkOffset>>, std::numeric_limits<uint8_t>::max() + 1> partitions;
-  for (const auto &pair : values) {
+  for (const auto& pair : values) {
     partitions[pair.first[depth]].emplace_back(pair);
   }
 
@@ -139,8 +139,8 @@ uint8_t AdaptiveRadixTreeIndex::BinaryComparable::operator[](size_t position) co
   return _parts[position];
 }
 
-bool operator==(const AdaptiveRadixTreeIndex::BinaryComparable &lhs,
-                const AdaptiveRadixTreeIndex::BinaryComparable &rhs) {
+bool operator==(const AdaptiveRadixTreeIndex::BinaryComparable& lhs,
+                const AdaptiveRadixTreeIndex::BinaryComparable& rhs) {
   if (lhs.size() != rhs.size()) return false;
   for (size_t i = 0; i < lhs.size(); ++i) {
     if (lhs[i] != rhs[i]) return false;

@@ -22,7 +22,7 @@ namespace opossum {
 
 class TPCCOrderStatusBenchmark : public TPCCBenchmarkFixture {
  public:
-  void benchmark_get_customer_by_name(benchmark::State &state, tpcc::AbstractOrderStatusImpl &impl) {
+  void benchmark_get_customer_by_name(benchmark::State& state, tpcc::AbstractOrderStatusImpl& impl) {
     clear_cache();
     auto c_last = _random_gen.last_name(2000);
     auto c_d_id = _random_gen.random_number(1, 10);
@@ -36,7 +36,7 @@ class TPCCOrderStatusBenchmark : public TPCCBenchmarkFixture {
     }
   }
 
-  void benchmark_get_customer_by_id(benchmark::State &state, tpcc::AbstractOrderStatusImpl &impl) {
+  void benchmark_get_customer_by_id(benchmark::State& state, tpcc::AbstractOrderStatusImpl& impl) {
     clear_cache();
     auto c_last = _random_gen.last_name(2000);
     auto c_d_id = _random_gen.random_number(1, 10);
@@ -51,7 +51,7 @@ class TPCCOrderStatusBenchmark : public TPCCBenchmarkFixture {
     }
   }
 
-  void benchmark_get_order(benchmark::State &state, tpcc::AbstractOrderStatusImpl &impl) {
+  void benchmark_get_order(benchmark::State& state, tpcc::AbstractOrderStatusImpl& impl) {
     clear_cache();
 
     auto c_d_id = _random_gen.random_number(1, 10);
@@ -66,7 +66,7 @@ class TPCCOrderStatusBenchmark : public TPCCBenchmarkFixture {
     }
   }
 
-  void benchmark_get_order_line(benchmark::State &state, tpcc::AbstractOrderStatusImpl &impl) {
+  void benchmark_get_order_line(benchmark::State& state, tpcc::AbstractOrderStatusImpl& impl) {
     clear_cache();
     auto c_last = _random_gen.last_name(2000);
     auto c_d_id = _random_gen.random_number(1, 10);
@@ -80,7 +80,7 @@ class TPCCOrderStatusBenchmark : public TPCCBenchmarkFixture {
     }
   }
 
-  void benchmark_order_status(benchmark::State &state, tpcc::AbstractOrderStatusImpl &impl) {
+  void benchmark_order_status(benchmark::State& state, tpcc::AbstractOrderStatusImpl& impl) {
     clear_cache();
 
     while (state.KeepRunning()) {
@@ -105,24 +105,24 @@ class TPCCOrderStatusBenchmark : public TPCCBenchmarkFixture {
   tpcc::OrderStatusRefImpl _ref_impl;
 };
 
-BENCHMARK_F(TPCCOrderStatusBenchmark, BM_TPCC_OrderStatus_GetCustomerByName)(benchmark::State &state) {
+BENCHMARK_F(TPCCOrderStatusBenchmark, BM_TPCC_OrderStatus_GetCustomerByName)(benchmark::State& state) {
   benchmark_get_customer_by_name(state, _ref_impl);
 }
 
-BENCHMARK_F(TPCCOrderStatusBenchmark, BM_TPCC_OrderStatus_GetCustomerById)(benchmark::State &state) {
+BENCHMARK_F(TPCCOrderStatusBenchmark, BM_TPCC_OrderStatus_GetCustomerById)(benchmark::State& state) {
   benchmark_get_customer_by_id(state, _ref_impl);
 }
 
-BENCHMARK_F(TPCCOrderStatusBenchmark, BM_TPCC_OrderStatus_GetOrder)(benchmark::State &state) {
+BENCHMARK_F(TPCCOrderStatusBenchmark, BM_TPCC_OrderStatus_GetOrder)(benchmark::State& state) {
   benchmark_get_order(state, _ref_impl);
 }
 
 // skip due to long execution times
-BENCHMARK_F(TPCCOrderStatusBenchmark, BM_TPCC_OrderStatus_GetOrderLine)(benchmark::State &state) {
+BENCHMARK_F(TPCCOrderStatusBenchmark, BM_TPCC_OrderStatus_GetOrderLine)(benchmark::State& state) {
   benchmark_get_order_line(state, _ref_impl);
 }
 
-BENCHMARK_F(TPCCOrderStatusBenchmark, BM_TPCC_OrderStatus)(benchmark::State &state) {
+BENCHMARK_F(TPCCOrderStatusBenchmark, BM_TPCC_OrderStatus)(benchmark::State& state) {
   benchmark_order_status(state, _ref_impl);
 }
 

@@ -2,7 +2,7 @@
 add_executable(
     opossumServer
 
-    server_main.cpp
+    server.cpp
 )
 target_link_libraries(
     opossumServer

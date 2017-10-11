@@ -21,6 +21,7 @@ find_package(Numa)
 find_package(Tbb REQUIRED)
 find_package(Readline REQUIRED)
 find_package(Curses REQUIRED)
+find_package(Sqlite3 REQUIRED)
 
 # Include sub-CMakeLists.txt
 add_subdirectory(third_party/)

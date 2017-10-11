@@ -7,8 +7,8 @@
 #include <utility>
 #include <vector>
 
-#include "resolve_type.hpp"
 #include "column_materializer.hpp"
+#include "resolve_type.hpp"
 
 namespace opossum {
 
@@ -38,13 +38,15 @@ template <typename T>
 class RadixClusterSort {
  public:
   RadixClusterSort(const std::shared_ptr<const Table> left, const std::shared_ptr<const Table> right,
-                     const std::pair<ColumnID, ColumnID>& column_ids, bool equi_case, size_t cluster_count)
-    : _input_table_left{left}, _input_table_right{right}, _left_column_id{column_ids.first},
-      _right_column_id{column_ids.second}, _equi_case{equi_case},
-      _cluster_count{cluster_count} {
+                   const std::pair<ColumnID, ColumnID>& column_ids, bool equi_case, size_t cluster_count)
+      : _input_table_left{left},
+        _input_table_right{right},
+        _left_column_id{column_ids.first},
+        _right_column_id{column_ids.second},
+        _equi_case{equi_case},
+        _cluster_count{cluster_count} {
     DebugAssert(cluster_count > 0, "cluster_count must be > 0");
-    DebugAssert((cluster_count & (cluster_count - 1)) == 0,
-                "cluster_count must be a power of two, i.e. 1, 2, 4, 8...");
+    DebugAssert((cluster_count & (cluster_count - 1)) == 0, "cluster_count must be a power of two, i.e. 1, 2, 4, 8...");
     DebugAssert(left != nullptr, "left input operator is null");
     DebugAssert(right != nullptr, "right input operator is null");
   }
@@ -109,8 +111,8 @@ class RadixClusterSort {
 
   // Radix calculation for non-arithmetic types
   template <typename T2>
-  static typename std::enable_if<std::is_same<T2, std::string>::value, uint32_t>::type get_radix(T2 value,
-                                                                                           uint32_t radix_bitmask) {
+  static typename std::enable_if<std::is_same<T2, std::string>::value, uint32_t>::type get_radix(
+      T2 value, uint32_t radix_bitmask) {
     auto result = reinterpret_cast<const uint32_t*>(value.c_str());
     return *result & radix_bitmask;
   }
@@ -131,7 +133,7 @@ class RadixClusterSort {
   * Concatenates multiple materialized columns to a single materialized column.
   **/
   static std::unique_ptr<MaterializedColumnList<T>> _concatenate_chunks(
-                                                             std::unique_ptr<MaterializedColumnList<T>>& input_chunks) {
+      std::unique_ptr<MaterializedColumnList<T>>& input_chunks) {
     auto output_table = std::make_unique<MaterializedColumnList<T>>(1);
     (*output_table)[0] = std::make_shared<MaterializedColumn<T>>();
 
@@ -155,7 +157,7 @@ class RadixClusterSort {
   * -> At last, each value of each chunk is moved to the appropriate cluster.
   **/
   std::unique_ptr<MaterializedColumnList<T>> _cluster(std::unique_ptr<MaterializedColumnList<T>>& input_chunks,
-                                                                    std::function<size_t(const T&)> clusterer) {
+                                                      std::function<size_t(const T&)> clusterer) {
     auto output_table = std::make_unique<MaterializedColumnList<T>>(_cluster_count);
     TableInformation table_information(input_chunks->size(), _cluster_count);
 
@@ -179,7 +181,6 @@ class RadixClusterSort {
 
     CurrentScheduler::wait_for_tasks(histogram_jobs);
 
-
     // Aggregate the chunks histograms to a table histogram and initialize the insert positions for each chunk
     for (auto& chunk_information : table_information.chunk_information) {
       for (size_t cluster_id = 0; cluster_id < _cluster_count; ++cluster_id) {
@@ -197,17 +198,17 @@ class RadixClusterSort {
     // Move each entry into its appropriate cluster in parallel
     std::vector<std::shared_ptr<AbstractTask>> cluster_jobs;
     for (size_t chunk_number = 0; chunk_number < input_chunks->size(); ++chunk_number) {
-      auto job = std::make_shared<JobTask>([chunk_number, &output_table, &input_chunks,
-                                            &table_information, &clusterer] {
-        auto& chunk_information = table_information.chunk_information[chunk_number];
-        for (auto& entry : *(*input_chunks)[chunk_number]) {
-          auto cluster_id = clusterer(entry.value);
-          auto& output_cluster = *(*output_table)[cluster_id];
-          auto& insert_position = chunk_information.insert_position[cluster_id];
-          output_cluster[insert_position] = entry;
-          ++insert_position;
-        }
-      });
+      auto job =
+          std::make_shared<JobTask>([chunk_number, &output_table, &input_chunks, &table_information, &clusterer] {
+            auto& chunk_information = table_information.chunk_information[chunk_number];
+            for (auto& entry : *(*input_chunks)[chunk_number]) {
+              auto cluster_id = clusterer(entry.value);
+              auto& output_cluster = *(*output_table)[cluster_id];
+              auto& insert_position = chunk_information.insert_position[cluster_id];
+              output_cluster[insert_position] = entry;
+              ++insert_position;
+            }
+          });
       cluster_jobs.push_back(job);
       job->schedule();
     }
@@ -226,9 +227,7 @@ class RadixClusterSort {
   **/
   std::unique_ptr<MaterializedColumnList<T>> _radix_cluster(std::unique_ptr<MaterializedColumnList<T>>& input_chunks) {
     auto radix_bitmask = _cluster_count - 1;
-    return _cluster(input_chunks, [=] (const T& value) {
-      return get_radix<T>(value, radix_bitmask);
-    });
+    return _cluster(input_chunks, [=](const T& value) { return get_radix<T>(value, radix_bitmask); });
   }
 
   /**
@@ -259,8 +258,7 @@ class RadixClusterSort {
   * right table in a pair.
   **/
   std::pair<std::unique_ptr<MaterializedColumnList<T>>, std::unique_ptr<MaterializedColumnList<T>>> _range_cluster(
-                                                              std::unique_ptr<MaterializedColumnList<T>>& input_left,
-                                                              std::unique_ptr<MaterializedColumnList<T>>& input_right) {
+      std::unique_ptr<MaterializedColumnList<T>>& input_left, std::unique_ptr<MaterializedColumnList<T>>& input_right) {
     std::vector<std::map<T, size_t>> sample_values(_cluster_count - 1);
 
     _pick_sample_values(sample_values, input_left);
@@ -273,12 +271,10 @@ class RadixClusterSort {
     std::vector<T> split_values(_cluster_count - 1);
     for (size_t cluster_id = 0; cluster_id < _cluster_count - 1; ++cluster_id) {
       // Pick the values with the highest count
-      split_values[cluster_id] = std::max_element(sample_values[cluster_id].begin(),
-                                                  sample_values[cluster_id].end(),
-        // second is the count of the value
-        [] (auto& a, auto& b) {
-          return a.second < b.second;
-      })->second;
+      split_values[cluster_id] = std::max_element(sample_values[cluster_id].begin(), sample_values[cluster_id].end(),
+                                                  // second is the count of the value
+                                                  [](auto& a, auto& b) { return a.second < b.second; })
+                                     ->second;
     }
 
     // Implements range clustering
@@ -308,9 +304,7 @@ class RadixClusterSort {
   **/
   void _sort_clusters(std::unique_ptr<MaterializedColumnList<T>>& clusters) {
     for (auto cluster : *clusters) {
-      std::sort(cluster->begin(), cluster->end(), [](auto& left, auto& right) {
-        return left.value < right.value;
-      });
+      std::sort(cluster->begin(), cluster->end(), [](auto& left, auto& right) { return left.value < right.value; });
     }
   }
 
@@ -343,11 +337,6 @@ class RadixClusterSort {
     // an algorithm more efficient, if subparts are already sorted [InsertionSort?!])
     _sort_clusters(output_left);
     _sort_clusters(output_right);
-
-    DebugAssert(_materialized_table_size(output_left) == _input_table_left->row_count(),
-                "left output has wrong size");
-    DebugAssert(_materialized_table_size(output_right) == _input_table_right->row_count(),
-                "right output has wrong size");
 
     return std::make_pair(std::move(output_left), std::move(output_right));
   }

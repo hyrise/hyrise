@@ -34,7 +34,7 @@ class SQLExpressionTranslatorTest : public BaseTest {
    * Hopefully this is fixed once hsql::SQLParser uses Smart Pointers as proposed in #55 in hyrise/sql-parser.
    * TODO(anyone): refactor these two methods
    */
-  std::shared_ptr<Expression> compile_where_expression(const std::string &query) {
+  std::shared_ptr<Expression> compile_where_expression(const std::string& query) {
     hsql::SQLParserResult parse_result;
     hsql::SQLParser::parseSQLString(query, &parse_result);
 
@@ -42,11 +42,11 @@ class SQLExpressionTranslatorTest : public BaseTest {
       throw std::runtime_error("Query is not valid.");
     }
 
-    const auto *statement = parse_result.getStatements().at(0);
+    const auto* statement = parse_result.getStatements().at(0);
 
     switch (statement->type()) {
       case hsql::kStmtSelect: {
-        const auto *select = static_cast<const hsql::SelectStatement *>(statement);
+        const auto* select = static_cast<const hsql::SelectStatement*>(statement);
         return _translator.translate_expression(*(select->whereClause), _stored_table_node);
       }
       default:
@@ -54,7 +54,7 @@ class SQLExpressionTranslatorTest : public BaseTest {
     }
   }
 
-  std::vector<std::shared_ptr<Expression>> compile_select_expression(const std::string &query) {
+  std::vector<std::shared_ptr<Expression>> compile_select_expression(const std::string& query) {
     hsql::SQLParserResult parse_result;
     hsql::SQLParser::parseSQLString(query, &parse_result);
 
@@ -62,12 +62,12 @@ class SQLExpressionTranslatorTest : public BaseTest {
       throw std::runtime_error("Query is not valid.");
     }
 
-    const auto *statement = parse_result.getStatements().at(0);
+    const auto* statement = parse_result.getStatements().at(0);
     std::vector<std::shared_ptr<Expression>> expressions;
 
     switch (statement->type()) {
       case hsql::kStmtSelect: {
-        const auto *select = static_cast<const hsql::SelectStatement *>(statement);
+        const auto* select = static_cast<const hsql::SelectStatement*>(statement);
         for (auto expr : *(select->selectList)) {
           expressions.emplace_back(_translator.translate_expression(*expr, _stored_table_node));
         }
@@ -154,7 +154,7 @@ TEST_F(SQLExpressionTranslatorTest, ExpressionStar) {
   auto expressions = compile_select_expression(query);
 
   ASSERT_EQ(expressions.size(), 1u);
-  auto &first = expressions.at(0);
+  auto& first = expressions.at(0);
 
   EXPECT_EQ(first->type(), ExpressionType::Star);
   EXPECT_EQ(first->left_child(), nullptr);
@@ -166,8 +166,8 @@ TEST_F(SQLExpressionTranslatorTest, ExpressionFunction) {
   auto expressions = compile_select_expression(query);
 
   ASSERT_EQ(expressions.size(), 2u);
-  auto &first = expressions.at(0);
-  auto &second = expressions.at(1);
+  auto& first = expressions.at(0);
+  auto& second = expressions.at(1);
 
   EXPECT_EQ(first->type(), ExpressionType::Column);
   EXPECT_EQ(first->left_child(), nullptr);
@@ -183,7 +183,7 @@ TEST_F(SQLExpressionTranslatorTest, ExpressionComplexFunction) {
   auto expressions = compile_select_expression(query);
 
   ASSERT_EQ(expressions.size(), 1u);
-  auto &first = expressions.at(0);
+  auto& first = expressions.at(0);
 
   EXPECT_EQ(first->type(), ExpressionType::Function);
   ASSERT_EQ(first->expression_list().size(), 1u);
@@ -199,7 +199,7 @@ TEST_F(SQLExpressionTranslatorTest, ExpressionStringConcatenation) {
   auto expressions = compile_select_expression(query);
 
   EXPECT_EQ(expressions.size(), 1u);
-  auto &first = expressions.at(0);
+  auto& first = expressions.at(0);
 
   EXPECT_EQ(first->type(), ExpressionType::Addition);
   EXPECT_EQ(first->left_child()->type(), ExpressionType::Literal);

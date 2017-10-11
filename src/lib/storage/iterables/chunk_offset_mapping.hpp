@@ -31,6 +31,6 @@ using ChunkOffsetsByChunkID = std::unordered_map<ChunkID, ChunkOffsetsList>;
  * any row that contains a null value is automatically excluded from the result because
  * a value compared to NULL is undefined.
  */
-ChunkOffsetsByChunkID split_pos_list_by_chunk_id(const PosList &pos_list, bool skip_null_row_ids = true);
+ChunkOffsetsByChunkID split_pos_list_by_chunk_id(const PosList& pos_list, bool skip_null_row_ids = true);
 
 }  // namespace opossum
