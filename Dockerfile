@@ -1,3 +1,5 @@
+# https://github.com/hyrise/zweirise/wiki/Docker-Image
+
 FROM ubuntu:17.04
 ENV DEBIAN_FRONTEND noninteractive
 RUN apt-get update \
