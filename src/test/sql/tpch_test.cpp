@@ -50,9 +50,9 @@ class TPCHTest : public BaseTest {
     }
 
     auto result_node = SQLToASTTranslator::get().translate_parse_result(parse_result)[0];
-    ASTPrinter::print(result_node);
-    auto optimized_root = Optimizer::get().optimize(result_node);
-    ASTPrinter::print(result_node);
+//    ASTPrinter::print(result_node);
+//    auto optimized_root = Optimizer::get().optimize(result_node);
+//    ASTPrinter::print(result_node);
     return ASTToOperatorTranslator::get().translate_node(optimized_root);
   }
 
@@ -269,7 +269,7 @@ TEST_F(TPCHTest, TPCH6) {
 }
 
 // Enable once OR is supported in WHERE condition
-TEST_F(TPCHTest, TPCH7) {
+TEST_F(TPCHTest, DISABLED_TPCH7) {
   /**
    * Original:
    *
