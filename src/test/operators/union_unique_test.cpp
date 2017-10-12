@@ -38,8 +38,8 @@ TEST_F(UnionUniqueTest, SelfUnionSimple) {
   /**
    * Just an early check we're actually getting some results here
    */
-  ASSERT_EQ(table_scan_a_op->get_output()->row_count(), 4);
-  ASSERT_EQ(table_scan_b_op->get_output()->row_count(), 4);
+  ASSERT_EQ(table_scan_a_op->get_output()->row_count(), 4u);
+  ASSERT_EQ(table_scan_b_op->get_output()->row_count(), 4u);
 
   auto union_unique_op = std::make_shared<UnionUnique>(table_scan_a_op, table_scan_a_op);
   union_unique_op->execute();
