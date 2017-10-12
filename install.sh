@@ -15,7 +15,7 @@ if echo $REPLY | grep -E '^[Yy]$' > /dev/null; then
             # python2.7 is preinstalled on macOS
             # check, for each programme individually with brew, whether it is already installed
             # due to brew issues on MacOS after system upgrade
-            for formula in boost cmake gcc clang-format@3.8 gcovr tbb pkg-config readline sqlite3 parallel graphviz; do
+            for formula in boost cmake gcc clang-format@3.8 gcovr tbb pkg-config readline sqlite3 parallel; do
                 # if brew formula is installed
                 if brew ls --versions $formula > /dev/null; then
                     continue
@@ -41,7 +41,7 @@ if echo $REPLY | grep -E '^[Yy]$' > /dev/null; then
         if cat /etc/lsb-release | grep DISTRIB_ID | grep Ubuntu >/dev/null; then
             echo "Installing dependencies (this may take a while)..."
             if sudo apt-get update >/dev/null; then
-                sudo apt-get install --no-install-recommends -y libboost-all-dev clang-format-3.8 gcovr python2.7 gcc-6 clang llvm libnuma-dev libnuma1 libtbb-dev build-essential cmake libreadline-dev libsqlite3-dev parallel graphviz &
+                sudo apt-get install --no-install-recommends -y libboost-all-dev clang-format-3.8 gcovr python2.7 gcc-6 clang llvm libnuma-dev libnuma1 libtbb-dev build-essential cmake libreadline-dev libsqlite3-dev parallel &
 
                 if ! git submodule update --jobs 5 --init --recursive; then
                     echo "Error during installation."
