@@ -465,10 +465,10 @@ int Console::visualize(const std::string& input) {
 
   // Check if graphviz is installed. We do not want to make graphviz a requirement for Hyrise
   // as visualization is just a gimmick
-  auto cmd = std::string("dot -V");
-  if (!system(cmd.c_str())) {
+  auto checkCmd = std::string("dot -V > /dev/null 2>&1");
+  if (system(checkCmd.c_str())) {
     console.out("Calling graphviz' dot failed. Have you installed graphviz "
-                "(apt-get install graphviz / brew install graphviz)?");
+                "(apt-get install graphviz / brew install graphviz)?\n");
     return ReturnCode::Error;
   }
 
