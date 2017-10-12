@@ -1,5 +1,9 @@
 #pragma once
 
+#include <memory>
+#include <string>
+#include <vector>
+
 #include "operators/abstract_read_only_operator.hpp"
 
 namespace opossum {
@@ -85,4 +89,4 @@ class UnionUnique : public AbstractReadOnlyOperator {
   // Returning the referenced table from a "verify" function may seem odd, but eliminates the need to compute it twice
   std::shared_ptr<const Table> _verify_input_and_get_referenced_table() const;
 };
-}
+}  // namespace opossum

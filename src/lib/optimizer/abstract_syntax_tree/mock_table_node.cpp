@@ -1,5 +1,9 @@
 #include "mock_table_node.hpp"
 
+#include <memory>
+#include <string>
+#include <vector>
+
 #include "optimizer/table_statistics.hpp"
 #include "utils/assert.hpp"
 
@@ -41,4 +45,4 @@ std::vector<ColumnID> MockTableNode::get_output_column_ids_for_table(const std::
 void MockTableNode::_on_child_changed() { Fail("MockTableNode cannot have children."); }
 
 std::string MockTableNode::description() const { return "MockTable"; }
-}
+}  // namespace opossum

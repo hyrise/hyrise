@@ -1,3 +1,5 @@
+#include <memory>
+
 #include "base_test.hpp"
 
 #include "operators/get_table.hpp"
@@ -97,4 +99,4 @@ TEST_F(UnionUniqueTest, SelfUnionOverlappingRangesMultipleColumns) {
 
   EXPECT_TABLE_EQ(union_unique_op->get_output(), load_table("src/test/tables/int_float4_overlapping_ranges.tbl", 0));
 }
-}
+}  // namespace opossum

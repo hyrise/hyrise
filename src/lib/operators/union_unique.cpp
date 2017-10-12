@@ -1,5 +1,11 @@
 #include "union_unique.hpp"
 
+#include <utility>
+#include <memory>
+#include <string>
+#include <algorithm>
+#include <vector>
+
 #include "storage/chunk.hpp"
 #include "storage/reference_column.hpp"
 #include "storage/table.hpp"
@@ -144,4 +150,4 @@ std::shared_ptr<const Table> UnionUnique::_verify_input_and_get_referenced_table
 
   return referenced_table;
 }
-}
+}  // namespace opossum
