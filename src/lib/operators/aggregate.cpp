@@ -59,7 +59,7 @@ void Aggregate::_aggregate_column(ChunkID chunk_id, ColumnID column_index, BaseC
 
   auto& results = *context.results;
 
-  resolve_column_type<DataType>(base_column, [&, aggregator, chunk_id, column_index](auto& typed_column) {
+  resolve_column_type<DataType>(base_column, [&, aggregator, chunk_id, column_index](const auto& typed_column) {
     auto iterable = create_iterable_from_column<DataType>(typed_column);
 
     ChunkOffset chunk_offset{0};
