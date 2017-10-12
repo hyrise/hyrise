@@ -23,7 +23,7 @@ std::shared_ptr<AbstractASTNode> Optimizer::optimize(const std::shared_ptr<Abstr
   // to return to the Optimizer
   const auto root_node = std::make_shared<ASTRootNode>();
   root_node->set_left_child(input);
-  
+
   /**
    * Apply all optimization over and over until all of them stopped changing the AST or the max number of
    * iterations is reached

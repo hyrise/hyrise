@@ -23,6 +23,51 @@ namespace opossum {
  *      - have the same column layout
  *  This means simple OR statements like the one above can be performed, but the Operator will fail gracefully
  *  when working on input tables that are the result of a JOIN.
+ *
+ * ## Example
+ *  Table T0
+ *  == Columns ==
+ *  a   | b
+ *  int | int
+ *  == Chunk 0 ==
+ *  1   | 2
+ *  3   | 4
+ *  == Chunk 1 ==
+ *  1   | 2
+ *  4   | 6
+ *
+ *  Table T1
+ *  == Columns ==
+ *  c
+ *  ref T0.a
+ *  == Chunk 0 ==
+ *  RowID{0, 0}
+ *  RowID{0, 0}
+ *  RowID{1, 0}
+ *  RowID{0, 1}
+ *
+ *  Table T2
+ *  == Columns ==
+ *  c
+ *  ref T0.a
+ *  == Chunk 0 ==
+ *  RowID{1, 0}
+ *  RowID{1, 0}
+ *  RowID{0, 1}
+ *  == Chunk 1 ==
+ *  RowID{1, 1}
+ *  RowID{0, 1}
+ *
+ *
+ *  Table UnionUnique(T1, T2)
+ *  == Columns ==
+ *  c
+ *  ref T0.a
+ *  == Chunk 0 ==
+ *  RowID{0, 0}
+ *  RowID{0, 1}
+ *  RowID{1, 0}
+ *
  */
 class UnionUnique : public AbstractReadOnlyOperator {
  public:
