@@ -583,7 +583,8 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_aggregate(
       bool found_aliased_column = false;
       for (const auto& projection : projections) {
         if (projection->alias() && *projection->alias() == groupby_hsql_expr->name) {
-          Assert(projection->type() == ExpressionType::Column, "Grouping on complex expressions is not yet supported.");
+          Assert(projection->type() == ExpressionType::Column,
+                 "Grouping on complex expressions is not yet supported.");
           groupby_columns.emplace_back(projection->column_id());
           found_aliased_column = true;
           break;

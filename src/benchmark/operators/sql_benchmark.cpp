@@ -126,7 +126,7 @@ class SQLBenchmark : public BenchmarkBasicFixture {
       "  HAVING COUNT(o_orderkey) >= 100;";
 
   const std::string Q4 =
-      R"(SELECT customer.c_custkey, customer.c_name, COUNT(orderitems.orders.o_orderkey)
+    R"(SELECT customer.c_custkey, customer.c_name, COUNT(orderitems.orders.o_orderkey)
         FROM customer
         JOIN (SELECT * FROM
           orders
@@ -136,7 +136,7 @@ class SQLBenchmark : public BenchmarkBasicFixture {
         HAVING COUNT(orderitems.orders.o_orderkey) >= 100;)";
 
   const std::string Q4Param =
-      R"(SELECT customer.c_custkey, customer.c_name, COUNT(orderitems.orders.o_orderkey)
+    R"(SELECT customer.c_custkey, customer.c_name, COUNT(orderitems.orders.o_orderkey)
         FROM customer
         JOIN (SELECT * FROM
           orders
