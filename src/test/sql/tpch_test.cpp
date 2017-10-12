@@ -50,10 +50,7 @@ class TPCHTest : public BaseTest {
     }
 
     auto result_node = SQLToASTTranslator::get().translate_parse_result(parse_result)[0];
-    //    ASTPrinter::print(result_node);
-    //    auto optimized_root = Optimizer::get().optimize(result_node);
-    //    ASTPrinter::print(result_node);
-    return ASTToOperatorTranslator::get().translate_node(optimized_root);
+    return ASTToOperatorTranslator::get().translate_node(result_node);
   }
 
   std::shared_ptr<OperatorTask> schedule_query_and_return_task(const std::string query) {
