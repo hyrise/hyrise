@@ -5,13 +5,10 @@
 
 namespace opossum {
 
-MockTableNode::MockTableNode(const std::shared_ptr<TableStatistics> & statistics):
-  AbstractASTNode(ASTNodeType::Mock)
-{
+MockTableNode::MockTableNode(const std::shared_ptr<TableStatistics>& statistics) : AbstractASTNode(ASTNodeType::Mock) {
   set_statistics(statistics);
 
-  for (size_t column_statistics_idx = 0;
-       column_statistics_idx < statistics->column_statistics().size();
+  for (size_t column_statistics_idx = 0; column_statistics_idx < statistics->column_statistics().size();
        ++column_statistics_idx) {
     _output_column_names.emplace_back("MockCol" + std::to_string(column_statistics_idx));
   }
@@ -26,7 +23,7 @@ const std::vector<ColumnID>& MockTableNode::output_column_id_to_input_column_id(
 const std::vector<std::string>& MockTableNode::output_column_names() const { return _output_column_names; }
 
 optional<ColumnID> MockTableNode::find_column_id_by_named_column_reference(
-  const NamedColumnReference& named_column_reference) const {
+    const NamedColumnReference& named_column_reference) const {
   Fail("Operation not supported on MockTableNodes");
   return INVALID_COLUMN_ID;
 }
@@ -43,8 +40,5 @@ std::vector<ColumnID> MockTableNode::get_output_column_ids_for_table(const std::
 
 void MockTableNode::_on_child_changed() { Fail("MockTableNode cannot have children."); }
 
-std::string MockTableNode::description() const {
-  return "MockTable";
-}
-
+std::string MockTableNode::description() const { return "MockTable"; }
 }

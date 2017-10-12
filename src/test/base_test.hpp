@@ -62,8 +62,8 @@ class BaseTest : public ::testing::Test {
     return DictionaryCompression::compress_column(type, value_column);
   }
 
-  void _execute_all(const std::vector<std::shared_ptr<AbstractOperator>> & operators) {
-    for (auto & op : operators) {
+  void _execute_all(const std::vector<std::shared_ptr<AbstractOperator>>& operators) {
+    for (auto& op : operators) {
       op->execute();
     }
   }

@@ -1,7 +1,7 @@
 #pragma once
 
-#include "types.hpp"
 #include "optimizer/abstract_syntax_tree/abstract_ast_node.hpp"
+#include "types.hpp"
 
 namespace opossum {
 
@@ -16,5 +16,4 @@ class UnionNode : public AbstractASTNode {
  private:
   UnionMode _union_mode;
 };
-
 }

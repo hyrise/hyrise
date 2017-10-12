@@ -1,8 +1,8 @@
 #include "base_test.hpp"
 
-#include "operators/union_unique.hpp"
 #include "operators/get_table.hpp"
 #include "operators/table_scan.hpp"
+#include "operators/union_unique.hpp"
 #include "storage/storage_manager.hpp"
 
 namespace opossum {
@@ -16,9 +16,7 @@ class UnionUniqueTest : public BaseTest {
     StorageManager::get().add_table("int_float4", load_table("src/test/tables/int_float4.tbl", 3));
   }
 
-  void TearDown() override {
-    StorageManager::get().reset();
-  }
+  void TearDown() override { StorageManager::get().reset(); }
 
   std::shared_ptr<Table> _table_10_ints;
 };
@@ -99,7 +97,4 @@ TEST_F(UnionUniqueTest, SelfUnionOverlappingRangesMultipleColumns) {
 
   EXPECT_TABLE_EQ(union_unique_op->get_output(), load_table("src/test/tables/int_float4_overlapping_ranges.tbl", 0));
 }
-
-
-
 }

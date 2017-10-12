@@ -14,9 +14,7 @@ class AbstractASTNode;
  */
 class ASTPrinter {
  public:
-  static void print(const std::shared_ptr<AbstractASTNode> & node,
-                    std::vector<bool> levels = {},
+  static void print(const std::shared_ptr<AbstractASTNode>& node, std::vector<bool> levels = {},
                     std::ostream& out = std::cout);
 };
-
 }

@@ -4,7 +4,7 @@
 
 namespace opossum {
 
-void ASTPrinter::print(const std::shared_ptr<AbstractASTNode> & node, std::vector<bool> levels, std::ostream& out) {
+void ASTPrinter::print(const std::shared_ptr<AbstractASTNode>& node, std::vector<bool> levels, std::ostream& out) {
   const auto max_level = levels.empty() ? 0 : levels.size() - 1;
   for (size_t level = 0; level < max_level; ++level) {
     if (levels[level]) {
@@ -31,5 +31,4 @@ void ASTPrinter::print(const std::shared_ptr<AbstractASTNode> & node, std::vecto
 
   levels.pop_back();
 }
-
 }

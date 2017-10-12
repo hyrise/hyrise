@@ -5,9 +5,9 @@
 namespace opossum {
 
 // TODO(moritz): Auxiliary code. Keep in src/test?
-class MockTableNode: public AbstractASTNode {
+class MockTableNode : public AbstractASTNode {
  public:
-  explicit MockTableNode(const std::shared_ptr<TableStatistics> & statistics);
+  explicit MockTableNode(const std::shared_ptr<TableStatistics>& statistics);
 
   const std::vector<ColumnID>& output_column_id_to_input_column_id() const override;
   const std::vector<std::string>& output_column_names() const override;
@@ -17,7 +17,7 @@ class MockTableNode: public AbstractASTNode {
   std::vector<ColumnID> get_output_column_ids_for_table(const std::string& table_name) const override;
 
   optional<ColumnID> find_column_id_by_named_column_reference(
-    const NamedColumnReference& named_column_reference) const override;
+      const NamedColumnReference& named_column_reference) const override;
 
   std::string description() const override;
 
@@ -28,5 +28,4 @@ class MockTableNode: public AbstractASTNode {
   std::vector<ColumnID> _output_column_id_to_input_column_id;
   std::vector<std::string> _output_column_names;
 };
-
 }

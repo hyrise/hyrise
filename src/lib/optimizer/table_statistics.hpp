@@ -60,8 +60,7 @@ class TableStatistics : public std::enable_shared_from_this<TableStatistics> {
   /**
    * Create the TableStatistics by explicitly specifying its underlying data
    */
-  TableStatistics(float row_count,
-                  const std::vector<std::shared_ptr<BaseColumnStatistics>> & column_statistics);
+  TableStatistics(float row_count, const std::vector<std::shared_ptr<BaseColumnStatistics>>& column_statistics);
 
   /**
    * Returns the expected row_count of the output of the corresponding operator.
@@ -69,7 +68,7 @@ class TableStatistics : public std::enable_shared_from_this<TableStatistics> {
    */
   float row_count() const;
 
-  const std::vector<std::shared_ptr<BaseColumnStatistics>> & column_statistics() const;
+  const std::vector<std::shared_ptr<BaseColumnStatistics>>& column_statistics() const;
 
   /**
    * Generate table statistics for the operator table scan table scan.

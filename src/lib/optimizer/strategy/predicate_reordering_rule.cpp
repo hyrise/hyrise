@@ -13,9 +13,7 @@
 
 namespace opossum {
 
-std::string PredicateReorderingRule::name() const {
-  return "Predicate Reordering Rule";
-}
+std::string PredicateReorderingRule::name() const { return "Predicate Reordering Rule"; }
 
 bool PredicateReorderingRule::apply_to(const std::shared_ptr<AbstractASTNode>& node) {
   auto reordered = false;

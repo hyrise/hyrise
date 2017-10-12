@@ -6,9 +6,9 @@
 #include "../../base_test.hpp"
 #include "gtest/gtest.h"
 
+#include "optimizer/abstract_syntax_tree/join_node.hpp"
 #include "optimizer/abstract_syntax_tree/predicate_node.hpp"
 #include "optimizer/abstract_syntax_tree/projection_node.hpp"
-#include "optimizer/abstract_syntax_tree/join_node.hpp"
 #include "optimizer/abstract_syntax_tree/sort_node.hpp"
 #include "optimizer/abstract_syntax_tree/stored_table_node.hpp"
 #include "optimizer/column_statistics.hpp"
@@ -18,7 +18,7 @@
 #include "storage/storage_manager.hpp"
 
 #include "utils/assert.hpp"
-#include "utils/ast_printer.hpp" // TODO(moritz) Remove for PR
+#include "utils/ast_printer.hpp"  // TODO(moritz) Remove for PR
 
 #include "optimizer/abstract_syntax_tree/mock_table_node.hpp"
 
@@ -249,8 +249,8 @@ TEST_F(PredicateReorderingTest, PredicatesAsRightChild) {
    * The mocked table has one column of int32_ts with the value range 0..100
    */
   auto column_statistics = std::make_shared<ColumnStatistics<int32_t>>(ColumnID{0}, 100.0f, 0.0f, 100.0f);
-  auto table_statistics = std::make_shared<TableStatistics>(100,
-                                                            std::vector<std::shared_ptr<BaseColumnStatistics>>{column_statistics});
+  auto table_statistics =
+      std::make_shared<TableStatistics>(100, std::vector<std::shared_ptr<BaseColumnStatistics>>{column_statistics});
 
   auto cross_node = std::make_shared<JoinNode>(JoinMode::Cross);
   auto predicate_0 = std::make_shared<PredicateNode>(ColumnID{0}, ScanType::OpGreaterThan, 80);

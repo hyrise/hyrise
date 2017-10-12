@@ -13,7 +13,7 @@
 #include "scheduler/operator_task.hpp"
 #include "sql/sql_to_ast_translator.hpp"
 #include "storage/storage_manager.hpp"
-#include "utils/ast_printer.hpp" // TODO(moritz) remove for PR
+#include "utils/ast_printer.hpp"  // TODO(moritz) remove for PR
 
 namespace opossum {
 
@@ -50,9 +50,9 @@ class TPCHTest : public BaseTest {
     }
 
     auto result_node = SQLToASTTranslator::get().translate_parse_result(parse_result)[0];
-//    ASTPrinter::print(result_node);
-//    auto optimized_root = Optimizer::get().optimize(result_node);
-//    ASTPrinter::print(result_node);
+    //    ASTPrinter::print(result_node);
+    //    auto optimized_root = Optimizer::get().optimize(result_node);
+    //    ASTPrinter::print(result_node);
     return ASTToOperatorTranslator::get().translate_node(optimized_root);
   }
 

@@ -303,19 +303,20 @@ std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::_translate_update_nod
 }
 
 std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::_translate_union_node(
-  const std::shared_ptr<AbstractASTNode> &node
-) const {
+    const std::shared_ptr<AbstractASTNode>& node) const {
   const auto union_node = std::dynamic_pointer_cast<UnionNode>(node);
 
   const auto input_operator_left = translate_node(node->left_child());
   const auto input_operator_right = translate_node(node->right_child());
 
   switch (union_node->union_mode()) {
-    case UnionMode::Unique: return std::make_shared<UnionUnique>(input_operator_left, input_operator_right); break;
+    case UnionMode::Unique:
+      return std::make_shared<UnionUnique>(input_operator_left, input_operator_right);
+      break;
     default:
       Fail("UnionMode not supported");
   }
-  return nullptr; // Shouldn't be reached, but makes compilers happy
+  return nullptr;  // Shouldn't be reached, but makes compilers happy
 }
 
 std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::_translate_show_tables_node(

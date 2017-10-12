@@ -23,7 +23,8 @@ class TableStatistics;
 class Table : private Noncopyable {
  public:
   // Creates a new table that has the same layout (column-{types, names}) as the input table
-  static std::shared_ptr<Table> create_with_layout_from(const std::shared_ptr<const Table> & in_table, const uint32_t chunk_size = 0);
+  static std::shared_ptr<Table> create_with_layout_from(const std::shared_ptr<const Table>& in_table,
+                                                        const uint32_t chunk_size = 0);
 
   // creates a table
   // the parameter specifies the maximum chunk size, i.e., partition size
