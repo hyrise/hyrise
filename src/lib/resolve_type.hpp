@@ -188,7 +188,7 @@ void resolve_data_type(const std::string& type_string, const Functor& func) {
  */
 template <typename DataType, typename Functor,
           typename BaseColumnT>  // BaseColumnT allows column to be const and non-const
-std::enable_if_t<std::is_base_of_v<BaseColumn, std::decay_t<BaseColumnT>>>
+std::enable_if_t<std::is_base_of<BaseColumn, std::decay_t<BaseColumnT>>::value>
     /*void*/ resolve_column_type(BaseColumnT& column, const Functor& func) {
   using ValueColumnPtr = typename std::conditional_t<std::is_const<BaseColumnT>::value, const ValueColumn<DataType>*,
                                                      ValueColumn<DataType>*>;
@@ -233,7 +233,7 @@ std::enable_if_t<std::is_base_of_v<BaseColumn, std::decay_t<BaseColumnT>>>
  *   });
  */
 template <typename Functor, typename BaseColumnT>  // BaseColumnT allows column to be const and non-const
-std::enable_if_t<std::is_base_of_v<BaseColumn, std::decay_t<BaseColumnT>>>
+std::enable_if_t<std::is_base_of<BaseColumn, std::decay_t<BaseColumnT>>::value>
     /*void*/ resolve_data_and_column_type(const std::string& type_string, BaseColumnT& column, const Functor& func) {
   resolve_data_type(type_string, [&](auto data_type) {
     using DataType = typename decltype(data_type)::type;
