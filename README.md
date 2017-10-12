@@ -97,6 +97,10 @@ To specify a custom location for the symbolizer, set `$ASAN_SYMBOLIZER_PATH` to 
 This seems to work out of the box on macOS - If not, make sure to have llvm installed.
 The binary can be executed with `LSAN_OPTIONS=suppressions=asan-ignore.txt ./<YourBuildDirectory>/opossumAsan`.
 
+### Compile Times
+When trying to optimize the time spend building the project, it is often helpful to have an idea how much time is spent where.
+`scripts/compile_time.sh` helps with that. Get usage instructions by running it without any arguments.
+
 ## Naming convention for gtest macros:
 
 TEST(ModuleNameClassNameTest, TestName), e.g., TEST(OperatorsGetTableTest, RowCount)

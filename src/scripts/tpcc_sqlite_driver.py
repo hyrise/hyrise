@@ -36,6 +36,7 @@ import json
 from sqlitedriver import TXN_QUERIES as tpcc_queries
 from tpcc_constants import *
 import math
+import threading
 
 TPCC_TABLES = {
     ("WAREHOUSE","WAREHOUSE"),
@@ -101,12 +102,7 @@ def init_db():
 
 
 def dump_db(cur):
-    def dump_table(cur, directory, table_name, file_prefix):
-        csv_path = "{}/RESULT_{}.csv".format(directory, file_prefix)
-
-        execute_sql(cur, "SELECT * FROM {}".format(table_name))
-        rows = cur.fetchall()
-
+    def dump_table(rows, table_name, file_prefix):
         print('Dumping {} Rows from \'{}\''.format(len(rows), table_name))
 
         with open(csv_path, 'w') as csv_file:
@@ -115,8 +111,18 @@ def dump_db(cur):
             for row in rows:
                 csv_writer.writerow(row)
 
+    dump_threads = []
     for (file_prefix, table_name) in TPCC_TABLES:
-        dump_table(cur, ".", table_name, file_prefix)
+        csv_path = "./RESULT_{}.csv".format(file_prefix)
+
+        execute_sql(cur, "SELECT * FROM {}".format(table_name))
+        rows = cur.fetchall()
+
+        t = threading.Thread(target=dump_table, args=(rows, table_name, file_prefix))
+        t.start()
+        dump_threads.append(t)
+    for thread in dump_threads:
+        t.join()
 
 def process_new_order(cur, params):
     new_order_queries = tpcc_queries["NEW_ORDER"]
@@ -317,6 +323,14 @@ def run_sqlite(distribution):
 
     with open(tpcc_input_path) as tpcc_input_file:
         tpcc_input = json.load(tpcc_input_file)
+
+    cur.executescript("""
+        -- These are not the official indexes.
+
+        CREATE INDEX idx_stock ON stock (s_i_id, s_w_id);
+        CREATE INDEX idx_i_id ON item (i_id);
+
+    """)
 
     transaction_dispatch = {
         "NewOrder": process_new_order,
