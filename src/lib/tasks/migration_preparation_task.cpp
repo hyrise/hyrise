@@ -20,7 +20,6 @@
 #include "storage/numa_placement_manager.hpp"
 #include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
-#include "utils/fastrand.hpp"
 #include "utils/numa_memory_resource.hpp"
 
 namespace opossum {
