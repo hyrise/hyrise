@@ -1,5 +1,7 @@
 #pragma once
 
+#if OPOSSUM_NUMA_SUPPORT
+
 #include <chrono>
 
 #include "scheduler/abstract_task.hpp"
@@ -17,3 +19,5 @@ class MigrationPreparationTask : public AbstractTask {
   const NUMAPlacementManagerOptions _options;
 };
 }  // namespace opossum
+
+#endif

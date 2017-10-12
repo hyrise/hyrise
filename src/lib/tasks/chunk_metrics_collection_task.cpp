@@ -1,5 +1,7 @@
 #include "chunk_metrics_collection_task.hpp"
 
+#if OPOSSUM_NUMA_SUPPORT
+
 #include <memory>
 #include <string>
 #include <vector>
@@ -26,3 +28,5 @@ void ChunkMetricsCollectionTask::_on_execute() {
 }
 
 }  // namespace opossum
+
+#endif

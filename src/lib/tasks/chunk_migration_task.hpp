@@ -1,5 +1,7 @@
 #pragma once
 
+#if OPOSSUM_NUMA_SUPPORT
+
 #include <string>
 #include <vector>
 
@@ -31,3 +33,5 @@ class ChunkMigrationTask : public AbstractTask {
   const std::vector<ChunkID> _chunk_ids;
 };
 }  // namespace opossum
+
+#endif

@@ -1,13 +1,17 @@
 #pragma once
 
+#include <boost/container/pmr/memory_resource.hpp>
 #include <chrono>
 #include <memory>
 #include <vector>
 
 #include "polymorphic_allocator.hpp"
 #include "scheduler/topology.hpp"
+
+#if OPOSSUM_NUMA_SUPPORT
 #include "utils/numa_memory_resource.hpp"
 #include "utils/pausable_loop_thread.hpp"
+#endif
 
 namespace opossum {
 
@@ -28,21 +32,15 @@ class NUMAPlacementManager {
   static bool is_set();
   static int get_node_id_of(void* ptr);
 
-  explicit NUMAPlacementManager(std::shared_ptr<Topology> topology,
+  explicit NUMAPlacementManager(const std::shared_ptr<Topology> topology,
                                 const NUMAPlacementManagerOptions options = NUMAPlacementManagerOptions());
 
-  NUMAMemoryResource* get_memsource(int node_id);
+  boost::container::pmr::memory_resource* get_memsource(int node_id);
 
   const std::shared_ptr<Topology>& topology() const;
 
-  void resume() {
-    collector_thread->resume();
-    migration_thread->resume();
-  }
-  void pause() {
-    collector_thread->pause();
-    migration_thread->pause();
-  }
+  void resume();
+  void pause();
 
   NUMAPlacementManager(NUMAPlacementManager const&) = delete;
   NUMAPlacementManager& operator=(const NUMAPlacementManager&) = delete;
@@ -51,12 +49,13 @@ class NUMAPlacementManager {
  protected:
   static std::shared_ptr<NUMAPlacementManager> _instance;
 
-  std::shared_ptr<Topology> _topology;
-  std::vector<NUMAMemoryResource> memsources;
-
+  const std::shared_ptr<Topology> _topology;
   const NUMAPlacementManagerOptions _options;
 
+#if OPOSSUM_NUMA_SUPPORT
+  std::vector<NUMAMemoryResource> memsources;
   std::unique_ptr<PausableLoopThread> collector_thread;
   std::unique_ptr<PausableLoopThread> migration_thread;
+#endif
 };
 }  // namespace opossum

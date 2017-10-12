@@ -1,5 +1,7 @@
 #include "chunk_migration_task.hpp"
 
+#if OPOSSUM_NUMA_SUPPORT
+
 #include <iostream>
 #include <memory>
 #include <string>
@@ -60,3 +62,5 @@ bool ChunkMigrationTask::chunk_is_completed(const Chunk& chunk, const uint32_t m
 }
 
 }  // namespace opossum
+
+#endif

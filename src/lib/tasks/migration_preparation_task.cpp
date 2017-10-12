@@ -1,5 +1,7 @@
 #include "migration_preparation_task.hpp"
 
+#if OPOSSUM_NUMA_SUPPORT
+
 #include <numa.h>
 #include <algorithm>
 #include <chrono>
@@ -224,3 +226,5 @@ void MigrationPreparationTask::_on_execute() {
 }
 
 }  // namespace opossum
+
+#endif
