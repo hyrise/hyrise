@@ -20,7 +20,7 @@ namespace opossum {
 const CommitID Chunk::MAX_COMMIT_ID = std::numeric_limits<CommitID>::max();
 
 uint64_t Chunk::AccessCounter::history_sample(size_t lookback) const {
-  if (history().size() < 2 && lookback == 0) return 0;
+  if (history().size() < 2 || lookback == 0) return 0;
   const auto last = history().back();
   const auto prelast_index = std::max(0l, static_cast<int64_t>(history().size()) - static_cast<int64_t>(lookback));
   const auto prelast = history().at(prelast_index);

@@ -13,8 +13,8 @@ namespace opossum {
 
 struct NUMAPlacementManagerOptions {
   std::chrono::milliseconds counter_history_interval = std::chrono::milliseconds(100);
-  std::chrono::milliseconds migration_interval = std::chrono::milliseconds(10);
-  std::chrono::milliseconds counter_history_range = std::chrono::milliseconds(7);
+  std::chrono::milliseconds migration_interval = std::chrono::seconds(10);
+  std::chrono::milliseconds counter_history_range = std::chrono::seconds(7);
   size_t migration_count = 3;
   double imbalance_threshold = 0.1;
 };
