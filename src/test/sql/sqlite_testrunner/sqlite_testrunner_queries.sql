@@ -116,3 +116,4 @@ INSERT INTO int_int_for_insert_1 SELECT * FROM int_int3 WHERE a = 1 AND b = 3; I
 -- TODO: Fails
 -- SELECT customer.c_custkey, customer.c_name, COUNT(orders.o_orderkey) FROM customer JOIN orders ON c_custkey = o_custkey GROUP BY customer.c_custkey, customer.c_name HAVING COUNT(orders.o_orderkey) >= 100;
 -- SELECT customer.c_custkey, customer.c_name, COUNT(orderitems.o_orderkey) FROM customer JOIN ( SELECT * FROM orders JOIN lineitem ON o_orderkey = l_orderkey ) AS orderitems ON customer.c_custkey = orderitems.o_custkey GROUP BY customer.c_custkey, customer.c_name HAVING COUNT(orderitems.o_orderkey) >= 100;
+-- SELECT a, b, MAX(c), AVG(d) FROM groupby_int_2gb_2agg GROUP BY a, b HAVING b > 457 OR b = 1234 OR b = 12345;

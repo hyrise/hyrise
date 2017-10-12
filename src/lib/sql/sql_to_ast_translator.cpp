@@ -459,8 +459,13 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_having(
     const std::shared_ptr<AbstractASTNode>& input_node) {
   DebugAssert(expr.isType(hsql::kExprOperator), "Filter expression clause has to be of type operator!");
 
-  // If the expression is a nested expression, recursively resolve.
-  // TODO(anybody): implement OR.
+  if (expr.opType == hsql::kOpOr) {
+    auto union_unique_node = std::make_shared<UnionNode>(UnionMode::Unique);
+    union_unique_node->set_left_child(_translate_having(*expr.expr, aggregate_node, input_node));
+    union_unique_node->set_right_child(_translate_having(*expr.expr2, aggregate_node, input_node));
+    return union_unique_node;
+  }
+
   if (expr.opType == hsql::kOpAnd) {
     auto filter_node = _translate_having(*expr.expr, aggregate_node, input_node);
     return _translate_having(*expr.expr2, aggregate_node, filter_node);
