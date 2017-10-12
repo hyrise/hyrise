@@ -4,8 +4,9 @@
 #include <numa.h>
 #endif
 
-#include <algorithm>
 #include <boost/container/pmr/memory_resource.hpp>
+
+#include <algorithm>
 #include <chrono>
 #include <cstdio>
 #include <memory>
