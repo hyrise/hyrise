@@ -40,7 +40,7 @@ std::shared_ptr<AbstractOperator> Aggregate::recreate(const std::vector<AllParam
 }
 
 template <typename DataType, AggregateFunction function>
-void Aggregate::_aggregate_column(ChunkID chunk_id, ColumnID column_index, BaseColumn& base_column) {
+void Aggregate::_aggregate_column(ChunkID chunk_id, ColumnID column_index, const BaseColumn& base_column) {
   using AggregateType = typename AggregateTraits<DataType, function>::aggregate_type;
 
   auto aggregator = AggregateFunctionBuilder<DataType, AggregateType, function>().get_aggregate_function();
@@ -50,25 +50,34 @@ void Aggregate::_aggregate_column(ChunkID chunk_id, ColumnID column_index, BaseC
     _contexts_per_column[column_index] = std::make_shared<AggregateContext<DataType, AggregateType>>();
   }
 
-  auto& ctx = *std::static_pointer_cast<AggregateContext<DataType, AggregateType>>(_contexts_per_column[column_index]);
+  auto& context =
+      *std::static_pointer_cast<AggregateContext<DataType, AggregateType>>(_contexts_per_column[column_index]);
 
-  if (!ctx.results) {
-    ctx.results = std::make_shared<std::map<AggregateKey, AggregateResult<AggregateType, DataType>>>();
+  if (!context.results) {
+    context.results = std::make_shared<std::map<AggregateKey, AggregateResult<AggregateType, DataType>>>();
   }
 
-  auto& results = *ctx.results;
+  auto& results = *context.results;
 
-  resolve_column_type<DataType>(base_column, [&, aggregator, chunk_id, column_index](auto& typed_column) {
+  resolve_column_type<DataType>(base_column, [&, aggregator, chunk_id, column_index](const auto& typed_column) {
     auto iterable = create_iterable_from_column<DataType>(typed_column);
 
     ChunkOffset chunk_offset{0};
 
     auto hash_keys = _keys_per_chunk[chunk_id];
 
+    // Now that all relevant types have been resolved, we can iterate over the column and build the aggregations.
     iterable.for_each([&, aggregator](const auto& value) {
       if (value.is_null()) {
+        /**
+         * If the value is NULL, the current aggregate value does not change.
+         * However, if we do not have a result entry for the current hash key, i.e., group value, 
+         * we need to insert an empty AggregateResult into the results.
+         * Hence, the try_emplace with no constructing arguments.
+         */
         results.try_emplace((*hash_keys)[chunk_offset]);
       } else {
+        // If we have a value, use the aggregator lambda to update the current aggregate value for this group
         results[(*hash_keys)[chunk_offset]].current_aggregate =
             aggregator(value.value(), results[(*hash_keys)[chunk_offset]].current_aggregate);
 
@@ -76,6 +85,7 @@ void Aggregate::_aggregate_column(ChunkID chunk_id, ColumnID column_index, BaseC
         ++results[(*hash_keys)[chunk_offset]].aggregate_count;
 
         if (function == AggregateFunction::CountDistinct) {
+          // for the case of CountDistinct, insert this value into the set to keep track of distinct values
           results[(*hash_keys)[chunk_offset]].distinct_values.insert(value.value());
         }
       }
