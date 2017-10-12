@@ -58,7 +58,6 @@ namespace opossum {
  *  RowID{1, 1}
  *  RowID{0, 1}
  *
- *
  *  Table UnionUnique(T1, T2)
  *  == Columns ==
  *  c
