@@ -21,11 +21,6 @@
 #include "utils/fastrand.hpp"
 #include "utils/numa_memory_resource.hpp"
 
-#define LOOKBACK std::chrono::seconds(7)
-#define IMBALANCE_THRESHOLD 0.1
-#define MIGRATION_COUNT 3
-#define COUNTER_HISTORY_INTERVAL std::chrono::milliseconds(100)
-
 namespace opossum {
 
 template <class T>
@@ -152,10 +147,11 @@ int get_node_id(const PolymorphicAllocator<size_t>& alloc) {
   return -1;
 }
 
-std::vector<ChunkInfo> find_hot_chunks(const StorageManager& storage_manager, std::chrono::seconds lookback) {
+std::vector<ChunkInfo> find_hot_chunks(const StorageManager& storage_manager, const std::chrono::milliseconds& lookback,
+                                       const std::chrono::milliseconds& counter_history_interval) {
   std::vector<ChunkInfo> chunk_infos;
   double sum_hottness = 0.0;
-  size_t lookback_samples = std::chrono::duration_cast<std::chrono::milliseconds>(lookback).count() / COUNTER_HISTORY_INTERVAL.count();
+  size_t lookback_samples = lookback.count() / counter_history_interval.count();
   for (const auto& table_name : storage_manager.table_names()) {
     const auto& table = *storage_manager.get_table(table_name);
     const auto chunk_count = table.chunk_count();
@@ -184,12 +180,13 @@ std::vector<size_t> count_chunks_by_node(const std::vector<ChunkInfo>& chunk_inf
   return result;
 }
 
-MigrationPreparationTask::MigrationPreparationTask() {}
+MigrationPreparationTask::MigrationPreparationTask(const NUMAPlacementManagerOptions& options) : _options(options) {}
 
 void MigrationPreparationTask::_on_execute() {
   const auto topology = std::dynamic_pointer_cast<NodeQueueScheduler>(CurrentScheduler::get())->topology();
 
-  auto hot_chunks = find_hot_chunks(StorageManager::get(), LOOKBACK);
+  auto hot_chunks =
+      find_hot_chunks(StorageManager::get(), _options.counter_history_range, _options.counter_history_interval);
   size_t chunk_counter = 0;
   HotNodeSet hot_nodes = find_hot_nodes(get_node_hottness(hot_chunks, topology->nodes().size()));
 
@@ -197,13 +194,13 @@ void MigrationPreparationTask::_on_execute() {
   print_vector(hot_nodes.node_hottness, "Hotnesses: ");
   print_vector(count_chunks_by_node(hot_chunks, topology->nodes().size()), "Chunk counts: ");
 
-  if (hot_nodes.imbalance > IMBALANCE_THRESHOLD && hot_nodes.cold_nodes.size() > 0) {
+  if (hot_nodes.imbalance > _options.imbalance_threshold && hot_nodes.cold_nodes.size() > 0) {
     std::vector<ChunkInfo> migration_candidates;
     for (const auto& hot_chunk : hot_chunks) {
       if (hot_chunk.node < 0 || contains(hot_nodes.hot_nodes, static_cast<NodeID>(hot_chunk.node))) {
         migration_candidates.push_back(hot_chunk);
       }
-      if (migration_candidates.size() >= MIGRATION_COUNT) {
+      if (migration_candidates.size() >= _options.migration_count) {
         break;
       }
     }

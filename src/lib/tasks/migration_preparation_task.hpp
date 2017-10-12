@@ -1,14 +1,19 @@
 #pragma once
 
+#include <chrono>
+
 #include "scheduler/abstract_task.hpp"
+#include "storage/numa_placement_manager.hpp"
 
 namespace opossum {
 
 class MigrationPreparationTask : public AbstractTask {
  public:
-  MigrationPreparationTask();
+  explicit MigrationPreparationTask(const NUMAPlacementManagerOptions& options);
 
  protected:
   void _on_execute() override;
+
+  const NUMAPlacementManagerOptions _options;
 };
-}
+}  // namespace opossum

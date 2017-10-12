@@ -12,9 +12,6 @@
 #include "tasks/chunk_metrics_collection_task.hpp"
 #include "tasks/migration_preparation_task.hpp"
 
-#define COUNTER_HISTORY_INTERVAL std::chrono::milliseconds(100)
-#define MIGRATION_INTERVAL std::chrono::seconds(10)
-
 namespace opossum {
 
 std::shared_ptr<NUMAPlacementManager> NUMAPlacementManager::_instance;
@@ -25,21 +22,23 @@ void NUMAPlacementManager::set(const std::shared_ptr<NUMAPlacementManager>& inst
 
 bool NUMAPlacementManager::is_set() { return !!_instance; }
 
-NUMAPlacementManager::NUMAPlacementManager(std::shared_ptr<Topology> topology) : _topology(topology) {
+NUMAPlacementManager::NUMAPlacementManager(std::shared_ptr<Topology> topology,
+                                           const NUMAPlacementManagerOptions options)
+    : _topology(topology), _options(options) {
   for (size_t i = 0; i < _topology->nodes().size(); i++) {
     char msource_name[8];
     std::snprintf(msource_name, sizeof(msource_name), "numa_%03lu", i);
     memsources.push_back(NUMAMemoryResource(i, std::string(msource_name)));
   }
 
-  collector_thread = std::make_unique<PausableLoopThread>(COUNTER_HISTORY_INTERVAL, [](size_t counter) {
+  collector_thread = std::make_unique<PausableLoopThread>(_options.counter_history_interval, [](size_t) {
     const auto task = std::make_shared<ChunkMetricsCollectionTask>();
     task->schedule();
     task->join();
   });
 
-  migration_thread = std::make_unique<PausableLoopThread>(MIGRATION_INTERVAL, [](size_t) {
-    const auto task = std::make_shared<MigrationPreparationTask>();
+  migration_thread = std::make_unique<PausableLoopThread>(_options.migration_interval, [this](size_t) {
+    const auto task = std::make_shared<MigrationPreparationTask>(_options);
     task->schedule();
     task->join();
   });
