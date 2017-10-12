@@ -190,13 +190,13 @@ template <typename DataType, typename Functor,
           typename BaseColumnT>  // BaseColumnT allows column to be const and non-const
 std::enable_if_t<std::is_base_of_v<BaseColumn, std::decay_t<BaseColumnT>>>
     /*void*/ resolve_column_type(BaseColumnT& column, const Functor& func) {
-  using ValueColumnPtr =
-      typename std::conditional_t<std::is_const_v<BaseColumnT>, const ValueColumn<DataType>*, ValueColumn<DataType>*>;
+  using ValueColumnPtr = typename std::conditional_t<std::is_const<BaseColumnT>::value, const ValueColumn<DataType>*,
+                                                     ValueColumn<DataType>*>;
   using DictionaryColumnPtr =
-      typename std::conditional_t<std::is_const_v<BaseColumnT>, const DictionaryColumn<DataType>*,
+      typename std::conditional_t<std::is_const<BaseColumnT>::value, const DictionaryColumn<DataType>*,
                                   DictionaryColumn<DataType>*>;
   using ReferenceColumnPtr =
-      typename std::conditional_t<std::is_const_v<BaseColumnT>, const ReferenceColumn*, ReferenceColumn*>;
+      typename std::conditional_t<std::is_const<BaseColumnT>::value, const ReferenceColumn*, ReferenceColumn*>;
 
   if (auto value_column = dynamic_cast<ValueColumnPtr>(&column)) {
     func(*value_column);
