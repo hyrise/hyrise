@@ -43,8 +43,6 @@ set(
     optimizer/abstract_syntax_tree/abstract_syntax_tree_test.cpp
     optimizer/abstract_syntax_tree/aggregate_node_test.cpp
     optimizer/abstract_syntax_tree/join_node_test.cpp
-    optimizer/abstract_syntax_tree/mock_table_node.cpp
-    optimizer/abstract_syntax_tree/mock_table_node.hpp
     optimizer/abstract_syntax_tree/stored_table_node_test.cpp
     optimizer/abstract_syntax_tree/projection_node_test.cpp
     optimizer/ast_to_operator_translator_test.cpp

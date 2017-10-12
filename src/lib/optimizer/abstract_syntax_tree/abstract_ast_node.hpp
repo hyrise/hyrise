@@ -200,7 +200,7 @@ class AbstractASTNode : public std::enable_shared_from_this<AbstractASTNode> {
    */
   void set_alias(const optional<std::string>& table_alias);
 
-  void print(const uint32_t level = 0, std::ostream& out = std::cout) const;
+  void print(std::ostream& out = std::cout, std::vector<bool> levels = {}) const;
   virtual std::string description() const = 0;
 
  protected:

@@ -4,7 +4,9 @@
 
 namespace opossum {
 
-// TODO(moritz): Auxiliary code. Keep in src/test?
+/**
+ * Node that represents a table that has no data backing it, but provides (mocked) statistics
+ */
 class MockTableNode : public AbstractASTNode {
  public:
   explicit MockTableNode(const std::shared_ptr<TableStatistics>& statistics);

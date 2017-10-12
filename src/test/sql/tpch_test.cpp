@@ -13,7 +13,6 @@
 #include "scheduler/operator_task.hpp"
 #include "sql/sql_to_ast_translator.hpp"
 #include "storage/storage_manager.hpp"
-#include "utils/ast_printer.hpp"  // TODO(moritz) remove for PR
 
 namespace opossum {
 

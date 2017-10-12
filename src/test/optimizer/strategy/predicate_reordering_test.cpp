@@ -18,7 +18,6 @@
 #include "storage/storage_manager.hpp"
 
 #include "utils/assert.hpp"
-#include "utils/ast_printer.hpp"  // TODO(moritz) Remove for PR
 
 #include "optimizer/abstract_syntax_tree/mock_table_node.hpp"
 

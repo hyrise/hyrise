@@ -154,7 +154,7 @@ TableType Table::get_type() const {
   const auto ref_column = std::dynamic_pointer_cast<ReferenceColumn>(column);
 
   if (ref_column != nullptr) {
-// In debug mode we're pedantic and check whether all chunks and columns are either reference or values
+// In debug mode we're pedantic and check whether all columns in all chunks are Reference Columns
 #if IS_DEBUG
     for (ChunkID::base_type chunk_idx = 0; chunk_idx < chunk_count(); ++chunk_idx) {
       for (ColumnID::base_type column_idx = 0; column_idx < col_count(); ++column_idx) {
@@ -166,7 +166,7 @@ TableType Table::get_type() const {
 #endif
     return TableType::References;
   } else {
-// In debug mode we're pedantic and check whether all chunks and columns are either reference or values
+// In debug mode we're pedantic and check whether all columns in all chunks are Value/Dict Columns
 #if IS_DEBUG
     for (ChunkID::base_type chunk_idx = 0; chunk_idx < chunk_count(); ++chunk_idx) {
       for (ColumnID::base_type column_idx = 0; column_idx < col_count(); ++column_idx) {
