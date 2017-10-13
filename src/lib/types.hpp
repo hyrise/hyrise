@@ -59,12 +59,12 @@ struct RowID {
   ChunkOffset chunk_offset;
 
   // Joins need to use RowIDs as keys for maps.
-  bool operator<(const RowID &rhs) const {
+  bool operator<(const RowID& rhs) const {
     return std::tie(chunk_id, chunk_offset) < std::tie(rhs.chunk_id, rhs.chunk_offset);
   }
 
   // Useful when comparing a row ID to NULL_ROW_ID
-  bool operator==(const RowID &rhs) const {
+  bool operator==(const RowID& rhs) const {
     return std::tie(chunk_id, chunk_offset) == std::tie(rhs.chunk_id, rhs.chunk_offset);
   }
 };
@@ -115,12 +115,12 @@ class ValuePlaceholder {
 
   uint16_t index() const { return _index; }
 
-  friend std::ostream &operator<<(std::ostream &o, const ValuePlaceholder &placeholder) {
+  friend std::ostream& operator<<(std::ostream& o, const ValuePlaceholder& placeholder) {
     o << "?" << placeholder.index();
     return o;
   }
 
-  bool operator==(const ValuePlaceholder &rhs) const { return _index == rhs._index; }
+  bool operator==(const ValuePlaceholder& rhs) const { return _index == rhs._index; }
 
  private:
   uint16_t _index;
@@ -187,18 +187,18 @@ enum class ExpressionType {
 
 enum class JoinMode { Inner, Left, Right, Outer, Cross, Natural, Self };
 
-enum class AggregateFunction { Min, Max, Sum, Avg, Count };
+enum class AggregateFunction { Min, Max, Sum, Avg, Count, CountDistinct };
 
 enum class OrderByMode { Ascending, Descending, AscendingNullsLast, DescendingNullsLast };
 
 class Noncopyable {
  protected:
   Noncopyable() = default;
-  Noncopyable(Noncopyable &&) = default;
-  Noncopyable &operator=(Noncopyable &&) = default;
+  Noncopyable(Noncopyable&&) = default;
+  Noncopyable& operator=(Noncopyable&&) = default;
   ~Noncopyable() = default;
-  Noncopyable(const Noncopyable &) = delete;
-  const Noncopyable &operator=(const Noncopyable &) = delete;
+  Noncopyable(const Noncopyable&) = delete;
+  const Noncopyable& operator=(const Noncopyable&) = delete;
 };
 
 }  // namespace opossum

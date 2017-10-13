@@ -85,8 +85,8 @@ class OperatorsAggregateTest : public BaseTest {
     _table_wrapper_1_1_null_dict->execute();
   }
 
-  void test_output(const std::shared_ptr<AbstractOperator> in, const std::vector<AggregateDefinition> &aggregates,
-                   const std::vector<ColumnID> &groupby_column_ids, const std::string &file_name, size_t chunk_size,
+  void test_output(const std::shared_ptr<AbstractOperator> in, const std::vector<AggregateDefinition>& aggregates,
+                   const std::vector<ColumnID>& groupby_column_ids, const std::string& file_name, size_t chunk_size,
                    bool test_references = true) {
     // load expected results from file
     std::shared_ptr<Table> expected_result = load_table(file_name, chunk_size);
@@ -99,7 +99,7 @@ class OperatorsAggregateTest : public BaseTest {
     ref_columns.insert(INVALID_COLUMN_ID);
 
     if (test_references) {
-      for (const auto &agg : aggregates) {
+      for (const auto& agg : aggregates) {
         ref_columns.insert(agg.column_id);
       }
 
@@ -110,7 +110,7 @@ class OperatorsAggregateTest : public BaseTest {
 
     EXPECT_NE(ref_columns.size(), 0u);
 
-    for (auto &ref : ref_columns) {
+    for (auto& ref : ref_columns) {
       // make one Aggregate w/o ReferenceColumn
       auto input = in;
 
@@ -203,6 +203,11 @@ TEST_F(OperatorsAggregateTest, SingleAggregateCount) {
                     "src/test/tables/aggregateoperator/groupby_int_1gb_1agg/count.tbl", 1);
 }
 
+TEST_F(OperatorsAggregateTest, SingleAggregateCountDistinct) {
+  this->test_output(_table_wrapper_1_1, {{ColumnID{1}, AggregateFunction::CountDistinct}}, {ColumnID{0}},
+                    "src/test/tables/aggregateoperator/groupby_int_1gb_1agg/count_distinct.tbl", 1);
+}
+
 TEST_F(OperatorsAggregateTest, StringSingleAggregateMax) {
   this->test_output(_table_wrapper_1_1_string, {{ColumnID{1}, AggregateFunction::Max}}, {ColumnID{0}},
                     "src/test/tables/aggregateoperator/groupby_string_1gb_1agg/max.tbl", 1);
@@ -289,10 +294,9 @@ TEST_F(OperatorsAggregateTest, TwoAggregateSumAvg) {
 }
 
 TEST_F(OperatorsAggregateTest, TwoAggregateSumAvgAlias) {
-  this->test_output(
-      _table_wrapper_1_2,
-      {{ColumnID{1}, AggregateFunction::Sum, optional<std::string>("sum_b")}, {ColumnID{2}, AggregateFunction::Avg}},
-      {ColumnID{0}}, "src/test/tables/aggregateoperator/groupby_int_1gb_2agg/sum_avg_alias.tbl", 1);
+  this->test_output(_table_wrapper_1_2, {{ColumnID{1}, AggregateFunction::Sum, optional<std::string>("sum_b")},
+                                         {ColumnID{2}, AggregateFunction::Avg}},
+                    {ColumnID{0}}, "src/test/tables/aggregateoperator/groupby_int_1gb_2agg/sum_avg_alias.tbl", 1);
 }
 
 TEST_F(OperatorsAggregateTest, TwoAggregateSumSum) {

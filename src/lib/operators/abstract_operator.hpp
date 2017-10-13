@@ -25,17 +25,6 @@ class TransactionContext;
 //
 // Operators shall not be executed twice.
 //
-// In order to use new operators in server mode, the following steps have to be performed:
-//   1. Add a new Operator definition in Protobuf file: `src/lib/network/protos/opossum.proto` and add it to the
-//      enumeration in `OperatorVariant` in this file
-//   2. The header- and cpp-files for protocol buffer operators will be generated/updated when the opossum lib is built
-//   3. Add a method to class OperatorTranslator in `src/lib/network/operator_translator.cpp` and
-//      `src/lib/network/operator_translator.hpp` that transforms the protocol buffer objects into the corresponding
-//      opossum operator
-//   4. Add an entry in the swith-case of OperatorTranslator::translate_proto() to dispatch calls to the method created
-//      in step 3
-//   5. Write a test in `src/test/network/operator_translator_test.cpp`
-//
 // Find more information about operators in our Wiki: https://github.com/hyrise/zweirise/wiki/operator-concept
 
 class AbstractOperator : private Noncopyable {

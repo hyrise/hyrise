@@ -20,20 +20,20 @@ class ScopedLockingPtr : private Noncopyable {
   using MutexType = typename LockType::mutex_type;
 
  public:
-  ScopedLockingPtr(Type &value, MutexType &mutex) : _value{value}, _lock{mutex} {}
+  ScopedLockingPtr(Type& value, MutexType& mutex) : _value{value}, _lock{mutex} {}
 
-  ScopedLockingPtr(ScopedLockingPtr<Type, LockType> &&) = default;
+  ScopedLockingPtr(ScopedLockingPtr<Type, LockType>&&) = default;
 
-  ScopedLockingPtr<Type, LockType> &operator=(ScopedLockingPtr<Type, LockType> &&) = default;
+  ScopedLockingPtr<Type, LockType>& operator=(ScopedLockingPtr<Type, LockType>&&) = default;
 
-  Type &operator*() { return _value; }
-  const Type &operator*() const { return _value; }
+  Type& operator*() { return _value; }
+  const Type& operator*() const { return _value; }
 
-  Type *operator->() { return &_value; }
-  const Type *operator->() const { return &_value; }
+  Type* operator->() { return &_value; }
+  const Type* operator->() const { return &_value; }
 
  private:
-  Type &_value;
+  Type& _value;
   LockType _lock;
 };
 

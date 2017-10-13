@@ -5,7 +5,6 @@
 #include "../base_test.hpp"
 #include "gtest/gtest.h"
 
-#include "network/response_builder.hpp"
 #include "operators/sort.hpp"
 #include "scheduler/current_scheduler.hpp"
 #include "scheduler/job_task.hpp"
@@ -39,7 +38,7 @@ class SQLQueryOperatorTest : public BaseTest {
 
 TEST_F(SQLQueryOperatorTest, BasicTest) {
   const std::string query = "SELECT * FROM table_a;";
-  auto sql_op = std::make_shared<SQLQueryOperator>(query, true, true);
+  auto sql_op = std::make_shared<SQLQueryOperator>(query, true, false);
   auto sql_task = std::make_shared<OperatorTask>(sql_op);
   sql_task->schedule();
 
@@ -53,7 +52,7 @@ TEST_F(SQLQueryOperatorTest, BasicTest) {
 TEST_F(SQLQueryOperatorTest, NextTaskTest) {
   const std::string query = "SELECT a, b FROM table_a;";
 
-  auto sql_op = std::make_shared<SQLQueryOperator>(query, true, true);
+  auto sql_op = std::make_shared<SQLQueryOperator>(query, true, false);
   auto sql_task = std::make_shared<OperatorTask>(sql_op);
   auto sql_result_task = sql_op->get_result_task();
 
@@ -70,34 +69,6 @@ TEST_F(SQLQueryOperatorTest, NextTaskTest) {
 
   auto expected_result = load_table("src/test/tables/int_float_sorted.tbl", 2);
   EXPECT_TABLE_EQ(sort->get_output(), expected_result, true);
-}
-
-// Similar to how it's done in request_handler.cpp
-TEST_F(SQLQueryOperatorTest, NextAdHocTaskTest) {
-  const std::string query = "SELECT a, b FROM table_a;";
-
-  auto sql_op = std::make_shared<SQLQueryOperator>(query, true, true);
-  auto sql_task = std::make_shared<OperatorTask>(sql_op);
-  auto result_task = sql_op->get_result_task();
-  auto result_operator = result_task->get_operator();
-
-  auto materialize_job = std::make_shared<opossum::JobTask>([this, result_operator]() {
-    // These lines are executed by the opossum scheduler
-    auto table = result_operator->get_output();
-    // Materialize and fill response
-    proto::Response response;
-    ResponseBuilder response_builder;
-    response_builder.build_response(response, std::move(table));
-
-    // send_response();
-  });
-  result_task->set_as_predecessor_of(materialize_job);
-
-  // Schedule.
-  materialize_job->schedule();
-  sql_task->schedule();
-
-  CurrentScheduler::get()->finish();
 }
 
 }  // namespace opossum

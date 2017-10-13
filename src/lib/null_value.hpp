@@ -28,8 +28,8 @@ inline bool operator<(const NullValue&, const NullValue&) { return false; }
 #if !defined(BOOST_NO_IOSTREAM)
 
 BOOST_TEMPLATED_STREAM_TEMPLATE(E, T)
-inline BOOST_TEMPLATED_STREAM(ostream, E, T) & operator<<(BOOST_TEMPLATED_STREAM(ostream, E, T) & out,
-                                                          const opossum::NullValue&) {
+inline BOOST_TEMPLATED_STREAM(ostream, E, T)& operator<<(BOOST_TEMPLATED_STREAM(ostream, E, T) & out,
+                                                         const opossum::NullValue&) {
   out << "NULL";
   return out;
 }

@@ -52,7 +52,7 @@ TEST_F(SQLParseTreeCacheTest, SQLParseTreeCacheTest) {
 
 // Test query plan cache with LRU implementation.
 TEST_F(SQLParseTreeCacheTest, AutomaticQueryOperatorCacheLRU) {
-  auto &cache = SQLQueryOperator::get_parse_tree_cache();
+  auto& cache = SQLQueryOperator::get_parse_tree_cache();
   cache.replace_cache_impl<LRUCache<std::string, std::shared_ptr<hsql::SQLParserResult>>>(2);
 
   // Execute the queries in arbitrary order.

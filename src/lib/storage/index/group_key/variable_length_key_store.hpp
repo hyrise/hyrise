@@ -125,15 +125,17 @@ class VariableLengthKeyStore {
      */
     template <typename OtherProxy,
               typename = typename std::enable_if<std::is_convertible<OtherProxy, Proxy>::value>::type>
-    IteratorBase(const IteratorBase<OtherProxy> &other)  // NOLINT(runtime/explicit)
-        : _bytes_per_key(other._bytes_per_key), _key_alignment(other._key_alignment), _data(other._data) {}
+    IteratorBase(const IteratorBase<OtherProxy>& other)  // NOLINT(runtime/explicit)
+        : _bytes_per_key(other._bytes_per_key),
+          _key_alignment(other._key_alignment),
+          _data(other._data) {}
 
    private:
     /**
      * Creates new iterator pointing to given address.
      */
     explicit IteratorBase(CompositeKeyLength bytes_per_key, CompositeKeyLength key_alignment,
-                          VariableLengthKeyWord *data)
+                          VariableLengthKeyWord* data)
         : _bytes_per_key(bytes_per_key), _key_alignment(key_alignment), _data(data) {}
 
     void increment() { _data += _key_alignment; }
@@ -146,7 +148,7 @@ class VariableLengthKeyStore {
      * Check for equality between any combination of iterator and const_iterator
      */
     template <typename OtherProxy>
-    bool equal(const IteratorBase<OtherProxy> &other) const {
+    bool equal(const IteratorBase<OtherProxy>& other) const {
       return _data == other._data && _bytes_per_key == other._bytes_per_key;
     }
 
@@ -154,14 +156,14 @@ class VariableLengthKeyStore {
      * Calculate distance between any combination of iterator and const_iterator
      */
     template <typename OtherProxy>
-    std::ptrdiff_t distance_to(const IteratorBase<OtherProxy> &other) const {
+    std::ptrdiff_t distance_to(const IteratorBase<OtherProxy>& other) const {
       return (other._data - _data) / _key_alignment;
     }
 
    private:
     CompositeKeyLength _bytes_per_key;
     CompositeKeyLength _key_alignment;
-    VariableLengthKeyWord *_data;
+    VariableLengthKeyWord* _data;
   };
 };
 

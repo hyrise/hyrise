@@ -1,0 +1,7 @@
+a|COUNT(DISTINCT b)
+int_null|long
+null|3
+12|1
+100|0
+123|1
+12345|2
