@@ -15,6 +15,7 @@ RUN apt-get update \
         git \
         libboost-all-dev \
         libnuma-dev \
+        libncurses5-dev \
         libnuma1 \
         libreadline-dev \
         libsqlite3-dev \
