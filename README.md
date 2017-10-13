@@ -1,4 +1,5 @@
 [![Build Status](https://ares.epic.hpi.uni-potsdam.de/jenkins/buildStatus/icon?job=Hyrise/zweirise/master)](https://ares.epic.hpi.uni-potsdam.de/jenkins/job/Hyrise/job/zweirise/)
+[![Coverage Status](https://ares.epic.hpi.uni-potsdam.de/jenkins_coverage_badge)](https://ares.epic.hpi.uni-potsdam.de/jenkins_coverage_badge)
 
 # Hyrise v2 (Codename OpossumDB)
 
