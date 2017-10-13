@@ -90,6 +90,12 @@ node {
             reportName: "RCov Report"
           ])
         }
+      },
+
+      post {
+        always {
+            archive 'coverage_badge.svg'
+        }
       }
 
       stage("Cleanup") {
