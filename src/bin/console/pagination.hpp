@@ -14,7 +14,7 @@ class Pagination {
   explicit Pagination(std::stringstream& input);
 
   /*
-   * Opens a ncurses environment in which the content is printed.
+   * Opens an ncurses environment in which the content is printed.
    * User can navigate through the table with the keyboard (ARROW KEYS, PAGE UP/DOWN, etc.),
    * and quit by pressing 'q'.
    */

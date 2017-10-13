@@ -32,9 +32,9 @@ void Pagination::display() {
   bool reprint = false;
   _print_page(current_line);
 
-  int ch;
-  while ((ch = getch()) != 'q') {
-    switch (ch) {
+  int key_pressed;
+  while ((key_pressed = getch()) != 'q') {
+    switch (key_pressed) {
       case 'j':
       case KEY_DOWN: {
         if ((current_line + _size_y) < line_count) {
@@ -148,8 +148,8 @@ void Pagination::_print_help_screen() {
 
   wrefresh(help_screen);
 
-  int ch;
-  while ((ch = getch()) != 'q') {
+  int key_pressed;
+  while ((key_pressed = getch()) != 'q') {
   }
 
   delwin(help_screen);
