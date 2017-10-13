@@ -275,10 +275,22 @@ target_link_libraries(
 set_target_properties(opossumAsanLib PROPERTIES COMPILE_FLAGS "-fsanitize=address -fno-omit-frame-pointer")
 
 # Configure the lib used for coverage
+if(APPLE)
 add_library(opossumCoverageLib EXCLUDE_FROM_ALL STATIC ${SOURCES})
 target_link_libraries(
     opossumCoverageLib
     ${LIBRARIES}
     --coverage
 )
+endif()
+if(UNIX AND NOT APPLE)
+add_library(opossumCoverageLib EXCLUDE_FROM_ALL STATIC ${SOURCES})
+target_link_libraries(
+    opossumCoverageLib
+    ${LIBRARIES}
+    --coverage
+    -lgcov
+)
+endif()
+
 set_target_properties(opossumCoverageLib PROPERTIES COMPILE_FLAGS "-fprofile-arcs -ftest-coverage")
