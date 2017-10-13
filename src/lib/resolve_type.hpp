@@ -186,17 +186,16 @@ void resolve_data_type(const std::string& type_string, const Functor& func) {
  *     process_column(typed_column);
  *   });
  */
-template <typename DataType, typename Functor,
-          typename BaseColumnT>  // BaseColumnT allows column to be const and non-const
-std::enable_if_t<std::is_base_of<BaseColumn, std::decay_t<BaseColumnT>>::value>
-    /*void*/ resolve_column_type(BaseColumnT& column, const Functor& func) {
-  using ValueColumnPtr = typename std::conditional_t<std::is_const<BaseColumnT>::value, const ValueColumn<DataType>*,
-                                                     ValueColumn<DataType>*>;
-  using DictionaryColumnPtr =
-      typename std::conditional_t<std::is_const<BaseColumnT>::value, const DictionaryColumn<DataType>*,
-                                  DictionaryColumn<DataType>*>;
-  using ReferenceColumnPtr =
-      typename std::conditional_t<std::is_const<BaseColumnT>::value, const ReferenceColumn*, ReferenceColumn*>;
+template <typename In, typename Out>
+using Const_out_if_const_in = std::conditional_t<std::is_const<In>::value, const Out, Out>;
+
+template <typename DataType, typename BaseColumnType, typename Functor>
+// BaseColumnType allows column to be const and non-const
+std::enable_if_t<std::is_same<BaseColumn, std::remove_const_t<BaseColumnType>>::value>
+    /*void*/ resolve_column_type(BaseColumnType& column, const Functor& func) {
+  using ValueColumnPtr = Const_out_if_const_in<BaseColumnType, ValueColumn<DataType>*>;
+  using DictionaryColumnPtr = Const_out_if_const_in<BaseColumnType, DictionaryColumn<DataType>*>;
+  using ReferenceColumnPtr = Const_out_if_const_in<BaseColumnType, ReferenceColumn*>;
 
   if (auto value_column = dynamic_cast<ValueColumnPtr>(&column)) {
     func(*value_column);
@@ -233,7 +232,7 @@ std::enable_if_t<std::is_base_of<BaseColumn, std::decay_t<BaseColumnT>>::value>
  *   });
  */
 template <typename Functor, typename BaseColumnT>  // BaseColumnT allows column to be const and non-const
-std::enable_if_t<std::is_base_of<BaseColumn, std::decay_t<BaseColumnT>>::value>
+std::enable_if_t<std::is_same<BaseColumn, std::remove_const_t<BaseColumnT>>::value>
     /*void*/ resolve_data_and_column_type(const std::string& type_string, BaseColumnT& column, const Functor& func) {
   resolve_data_type(type_string, [&](auto data_type) {
     using DataType = typename decltype(data_type)::type;
