@@ -30,7 +30,7 @@ namespace opossum {
 // TODO(mjendruk): Why is this an operator?
 class SQLQueryOperator : public AbstractOperator {
  public:
-  explicit SQLQueryOperator(const std::string& query, bool schedule_plan = true, bool skip_validation = false);
+  explicit SQLQueryOperator(const std::string& query, bool schedule_plan = true, bool validate = true);
 
   const std::string name() const override;
 
@@ -93,8 +93,8 @@ class SQLQueryOperator : public AbstractOperator {
   // True, if the generated plan will automatically be scheduled by the operator.
   const bool _schedule_plan;
 
-  // True, if the SQLToASTTranslator won’t add validate nodes
-  const bool _skip_validation;
+  // True, if the SQLToASTTranslator adds validation nodes.
+  const bool _validate;
 
   // True, if the parse tree was obtained from the cache.
   bool _parse_tree_cache_hit;

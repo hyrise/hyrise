@@ -20,7 +20,7 @@ TransactionContext::TransactionContext(const TransactionID transaction_id, const
 TransactionContext::~TransactionContext() {
   DebugAssert(([this]() {
     auto an_operator_failed = false;;
-    for (const auto op : _rw_operators) {
+    for (const auto& op : _rw_operators) {
       if (op->state() != ReadWriteOperatorState::Failed) {
         an_operator_failed = true;
         break;
@@ -59,7 +59,7 @@ bool TransactionContext::rollback() {
 
   if (!success) return false;
 
-  for (const auto op : _rw_operators) {
+  for (const auto& op : _rw_operators) {
     op->rollback_records();
   }
 
@@ -73,7 +73,7 @@ bool TransactionContext::commit(std::function<void(TransactionID)> callback) {
 
   if (!success) return false;
 
-  for (const auto op : _rw_operators) {
+  for (const auto& op : _rw_operators) {
     op->commit_records(commit_id());
   }
 
@@ -96,7 +96,7 @@ bool TransactionContext::_abort() {
 
 void TransactionContext::_mark_as_rolled_back() {
   DebugAssert(([this]() {
-    for (const auto op : _rw_operators) {
+    for (const auto& op : _rw_operators) {
       if (op->state() != ReadWriteOperatorState::RolledBack) return false;
     }
     return true;
@@ -114,7 +114,7 @@ bool TransactionContext::_prepare_commit() {
   if (!success) return false;
 
   DebugAssert(([this]() {
-    for (const auto op : _rw_operators) {
+    for (const auto& op : _rw_operators) {
       if (op->state() != ReadWriteOperatorState::Executed) return false;
     }
     return true;
@@ -128,7 +128,7 @@ bool TransactionContext::_prepare_commit() {
 
 void TransactionContext::_mark_as_pending_and_try_commit(std::function<void(TransactionID)> callback) {
   DebugAssert(([this]() {
-    for (const auto op : _rw_operators) {
+    for (const auto& op : _rw_operators) {
       if (op->state() != ReadWriteOperatorState::Committed) return false;
     }
     return true;

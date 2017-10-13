@@ -33,7 +33,7 @@ SQLQueryCache<SQLQueryPlan> SQLQueryOperator::_query_plan_cache(0);
 SQLQueryOperator::SQLQueryOperator(const std::string& query, bool schedule_plan, bool skip_validation)
     : _query(query),
       _schedule_plan(schedule_plan),
-      _skip_validation(skip_validation),
+      _validate(skip_validation),
       _parse_tree_cache_hit(false),
       _query_plan_cache_hit(false) {
   _result_op = std::make_shared<SQLResultOperator>();
@@ -126,7 +126,7 @@ std::shared_ptr<SQLParserResult> SQLQueryOperator::parse_query(const std::string
 // in the prepared statement cache by its name.
 void SQLQueryOperator::prepare_statement(const PrepareStatement& prepare_stmt) {
   std::shared_ptr<SQLQueryOperator> op =
-      std::make_shared<SQLQueryOperator>(prepare_stmt.query, false, _skip_validation);
+      std::make_shared<SQLQueryOperator>(prepare_stmt.query, false, _validate);
   op->execute();
 
   // Get the plan and cache it.
@@ -159,7 +159,7 @@ void SQLQueryOperator::execute_prepared_statement(const ExecuteStatement& execut
 // Translate the statement and append the result plan
 // to the current total query plan (in member _plan).
 void SQLQueryOperator::plan_statement(const SQLStatement& stmt) {
-  auto result_node = SQLToASTTranslator{!_skip_validation}.translate_statement(stmt);
+  auto result_node = SQLToASTTranslator{_validate}.translate_statement(stmt);
   auto result_operator = ASTToOperatorTranslator{}.translate_node(result_node);
 
   SQLQueryPlan query_plan;
@@ -190,7 +190,7 @@ void SQLQueryOperator::compile_parse_result(std::shared_ptr<SQLParserResult> res
 }
 
 std::shared_ptr<AbstractOperator> SQLQueryOperator::recreate(const std::vector<AllParameterVariant>& args) const {
-  return std::make_shared<SQLQueryOperator>(_query, _schedule_plan, _skip_validation);
+  return std::make_shared<SQLQueryOperator>(_query, _schedule_plan, _validate);
 }
 
 // Static.
