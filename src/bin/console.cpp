@@ -280,13 +280,13 @@ int Console::_eval_sql(const std::string& sql) {
   out(std::to_string(row_count) + " rows (PARSE: " + std::to_string(parse_elapsed_ms) + " ms, COMPILE: " +
       std::to_string(plan_elapsed_ms) + " ms, EXECUTE: " + std::to_string(execution_elapsed_ms) + " ms (wall time))\n");
 
-  // Commit
   if (transaction_context->aborted()) {
     out("An operator failed and the transaction has been rolled back.");
     _explicitly_created_transaction_context = nullptr;
     return ReturnCode::Error;
   }
 
+  // Commit
   if (auto_commit) {
     transaction_context->commit();
   }
