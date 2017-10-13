@@ -187,7 +187,7 @@ enum class ExpressionType {
 
 enum class JoinMode { Inner, Left, Right, Outer, Cross, Natural, Self };
 
-enum class AggregateFunction { Min, Max, Sum, Avg, Count };
+enum class AggregateFunction { Min, Max, Sum, Avg, Count, CountDistinct };
 
 enum class OrderByMode { Ascending, Descending, AscendingNullsLast, DescendingNullsLast };
 

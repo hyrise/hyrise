@@ -203,6 +203,11 @@ TEST_F(OperatorsAggregateTest, SingleAggregateCount) {
                     "src/test/tables/aggregateoperator/groupby_int_1gb_1agg/count.tbl", 1);
 }
 
+TEST_F(OperatorsAggregateTest, SingleAggregateCountDistinct) {
+  this->test_output(_table_wrapper_1_1, {{ColumnID{1}, AggregateFunction::CountDistinct}}, {ColumnID{0}},
+                    "src/test/tables/aggregateoperator/groupby_int_1gb_1agg/count_distinct.tbl", 1);
+}
+
 TEST_F(OperatorsAggregateTest, StringSingleAggregateMax) {
   this->test_output(_table_wrapper_1_1_string, {{ColumnID{1}, AggregateFunction::Max}}, {ColumnID{0}},
                     "src/test/tables/aggregateoperator/groupby_string_1gb_1agg/max.tbl", 1);
