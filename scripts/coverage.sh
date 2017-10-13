@@ -12,7 +12,7 @@ if [ -z "$2" ]
     ./$1/opossumCoverage && rm -fr coverage; mkdir coverage && gcovr -s -r . --exclude="(.*types*.|.*test*.|.*\.pb\.|third_party)" --html --html-details -o coverage/index.html
 else
     coverage_percent=$(./$1/opossumCoverage && rm -fr coverage; mkdir coverage && gcovr -s -r . --exclude="(.*types*.|.*test*.|.*\.pb\.|third_party)" --html --html-details -o coverage/index.html | grep lines: | sed -e 's/lines: //; s/% .*$//')
-
+    echo $coverage_percent
     if (( $(bc <<< "$coverage_percent >= 90") ))
     then
         color="brightgreen"
