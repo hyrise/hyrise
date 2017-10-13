@@ -120,7 +120,7 @@ class Aggregate : public AbstractReadOnlyOperator {
                                AggregateFunction function);
 
   template <typename DataType, AggregateFunction function>
-  void _aggregate_column(ChunkID chunk_id, ColumnID column_index, BaseColumn& base_column);
+  void _aggregate_column(ChunkID chunk_id, ColumnID column_index, const BaseColumn& base_column);
 
   /*
   The following template functions write the aggregated values for the different aggregate functions.

@@ -40,7 +40,7 @@ std::shared_ptr<AbstractOperator> Aggregate::recreate(const std::vector<AllParam
 }
 
 template <typename DataType, AggregateFunction function>
-void Aggregate::_aggregate_column(ChunkID chunk_id, ColumnID column_index, BaseColumn& base_column) {
+void Aggregate::_aggregate_column(ChunkID chunk_id, ColumnID column_index, const BaseColumn& base_column) {
   using AggregateType = typename AggregateTraits<DataType, function>::aggregate_type;
 
   auto aggregator = AggregateFunctionBuilder<DataType, AggregateType, function>().get_aggregate_function();
