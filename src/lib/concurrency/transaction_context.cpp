@@ -17,6 +17,25 @@ TransactionContext::TransactionContext(const TransactionID transaction_id, const
       _phase{TransactionPhase::Active},
       _num_active_operators{0} {}
 
+TransactionContext::~TransactionContext() {
+  DebugAssert(([this]() {
+    auto an_operator_failed = false;;
+    for (const auto op : _rw_operators) {
+      if (op->state() != ReadWriteOperatorState::Failed) {
+        an_operator_failed = true;
+        break;
+      }
+    }
+
+    const auto is_rolled_back = _phase == TransactionPhase::RolledBack;
+    return (!an_operator_failed || is_rolled_back);
+  }()), "A registered operator failed but transaction has been rolled back.");
+
+  const auto has_registered_operators = _rw_operators.size() > 0u;
+  const auto committed_or_rolled_back = _phase == TransactionPhase::Committed || _phase == TransactionPhase::RolledBack;
+  DebugAssert(!has_registered_operators || committed_or_rolled_back, "Has registered operators but has neither been committed nor rolled back.");
+}
+
 TransactionID TransactionContext::transaction_id() const { return _transaction_id; }
 CommitID TransactionContext::last_commit_id() const { return _last_commit_id; }
 

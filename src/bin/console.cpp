@@ -101,6 +101,7 @@ Console::Console()
   register_command("begin", std::bind(&Console::begin_transaction, this, std::placeholders::_1));
   register_command("rollback", std::bind(&Console::rollback_transaction, this, std::placeholders::_1));
   register_command("commit", std::bind(&Console::commit_transaction, this, std::placeholders::_1));
+  register_command("txinfo", std::bind(&Console::print_transaction_info, this, std::placeholders::_1));
 
   // Register words specifically for command completion purposes, e.g.
   // for TPC-C table generation, 'CUSTOMER', 'DISTRICT', etc
@@ -248,12 +249,8 @@ int Console::_eval_sql(const std::string& sql) {
   done = std::chrono::high_resolution_clock::now();
   auto plan_elapsed_ms = std::chrono::duration<double>(done - started).count();
 
-  const auto auto_commit = (_tcontext == nullptr);
-  auto transaction_context = auto_commit ? TransactionManager::get().new_transaction_context() : _tcontext;
-
-  const auto tid = std::to_string(transaction_context->transaction_id());
-  const auto lcid = std::to_string(transaction_context->last_commit_id());
-  out("Active transaction (tid: " + tid + ", lcid: " + lcid + ")\n");
+  const auto auto_commit = (_explicitly_created_transaction_context == nullptr);
+  auto transaction_context = auto_commit ? TransactionManager::get().new_transaction_context() : _explicitly_created_transaction_context;
 
   plan.set_transaction_context(transaction_context);
 
@@ -263,7 +260,7 @@ int Console::_eval_sql(const std::string& sql) {
   if (_execute_plan(plan) == ReturnCode::Error) {
     transaction_context->rollback();
     out("Execution failed and the transaction has been rolled back.");
-    _tcontext = nullptr;
+    _explicitly_created_transaction_context = nullptr;
     return ReturnCode::Error;
   }
 
@@ -286,7 +283,7 @@ int Console::_eval_sql(const std::string& sql) {
   // Commit
   if (transaction_context->aborted()) {
     out("An operator failed and the transaction has been rolled back.");
-    _tcontext = nullptr;
+    _explicitly_created_transaction_context = nullptr;
     return ReturnCode::Error;
   }
 
@@ -375,6 +372,7 @@ int Console::help(const std::string&) {
   out("  begin                - Manually create a new transaction (Auto-commit is active unless begin is called)\n");
   out("  rollback             - Roll back a manually created transaction\n");
   out("  commit               - Commit a manually created transaction\n");
+  out("  txinfo               - Print information on the current transaction\n");
   out("  quit                    - Exit the HYRISE Console\n");
   out("  help                    - Show this message\n\n");
   out("After TPC-C tables are generated, SQL queries can be executed.\n");
@@ -534,20 +532,20 @@ int Console::visualize(const std::string& input) {
     }
 
     if (mode != "noexec") {
-      const auto auto_commit = (_tcontext == nullptr);
-      auto transaction_context = auto_commit ? TransactionManager::get().new_transaction_context() : _tcontext;
+      const auto auto_commit = (_explicitly_created_transaction_context == nullptr);
+      auto transaction_context = auto_commit ? TransactionManager::get().new_transaction_context() : _explicitly_created_transaction_context;
 
       plan.set_transaction_context(transaction_context);
 
       if (_execute_plan(plan) == ReturnCode::Error) {
         transaction_context->rollback();
-        _tcontext = nullptr;
+        _explicitly_created_transaction_context = nullptr;
         return ReturnCode::Error;
       }
 
       if (transaction_context->aborted()) {
         out("An operator failed and the transaction has been rolled back.");
-        _tcontext = nullptr;
+        _explicitly_created_transaction_context = nullptr;
         return ReturnCode::Error;
       }
 
@@ -616,47 +614,59 @@ void Console::handle_signal(int sig) {
 }
 
 int Console::begin_transaction(const std::string& input) {
-  if (_tcontext != nullptr) {
-    const auto tid = std::to_string(_tcontext->transaction_id());
-    out("There is already an active transaction (" + tid + "). ");
+  if (_explicitly_created_transaction_context != nullptr) {
+    const auto transaction_id = std::to_string(_explicitly_created_transaction_context->transaction_id());
+    out("There is already an active transaction (" + transaction_id + "). ");
     out("Type `rollback` or `commit` before beginning a new transaction.\n");
     return ReturnCode::Error;
   }
 
-  _tcontext = TransactionManager::get().new_transaction_context();
+  _explicitly_created_transaction_context = TransactionManager::get().new_transaction_context();
 
-  const auto tid = std::to_string(_tcontext->transaction_id());
-  out("New transaction (" + tid + ") started.\n");
+  const auto transaction_id = std::to_string(_explicitly_created_transaction_context->transaction_id());
+  out("New transaction (" + transaction_id + ") started.\n");
   return ReturnCode::Ok;
 }
 
 int Console::rollback_transaction(const std::string& input) {
-  if (_tcontext == nullptr) {
+  if (_explicitly_created_transaction_context == nullptr) {
     out("Console is in auto-commit mode. Type `begin` to start a manual transaction.\n");
     return ReturnCode::Error;
   }
 
-  _tcontext->rollback();
+  _explicitly_created_transaction_context->rollback();
 
-  const auto tid = std::to_string(_tcontext->transaction_id());
-  out("Transaction (" + tid + ") has been rolled back.\n");
+  const auto transaction_id = std::to_string(_explicitly_created_transaction_context->transaction_id());
+  out("Transaction (" + transaction_id + ") has been rolled back.\n");
 
-  _tcontext = nullptr;
+  _explicitly_created_transaction_context = nullptr;
   return ReturnCode::Ok;
 }
 
 int Console::commit_transaction(const std::string& input) {
-  if (_tcontext == nullptr) {
+  if (_explicitly_created_transaction_context == nullptr) {
     out("Console is in auto-commit mode. Type `begin` to start a manual transaction.\n");
     return ReturnCode::Error;
   }
 
-  _tcontext->commit();
+  _explicitly_created_transaction_context->commit();
 
-  const auto tid = std::to_string(_tcontext->transaction_id());
-  out("Transaction (" + tid + ") has been committed.\n");
+  const auto transaction_id = std::to_string(_explicitly_created_transaction_context->transaction_id());
+  out("Transaction (" + transaction_id + ") has been committed.\n");
 
-  _tcontext = nullptr;
+  _explicitly_created_transaction_context = nullptr;
+  return ReturnCode::Ok;
+}
+
+int Console::print_transaction_info(const std::string& input) {
+  if (_explicitly_created_transaction_context == nullptr) {
+    out("Console is in auto-commit mode. Type `begin` to start a manual transaction.\n");
+    return ReturnCode::Error;
+  }
+
+  const auto transaction_id = std::to_string(_explicitly_created_transaction_context->transaction_id());
+  const auto last_commit_id = std::to_string(_explicitly_created_transaction_context->last_commit_id());
+  out("Active transaction: { transaction id = " + transaction_id + ", last commit id = " + last_commit_id + " }\n");
   return ReturnCode::Ok;
 }
 

@@ -114,6 +114,7 @@ class Console {
   int begin_transaction(const std::string& input);
   int rollback_transaction(const std::string& input);
   int commit_transaction(const std::string& input);
+  int print_transaction_info(const std::string& input);
 
   // GNU readline interface to our commands
   static char** command_completion(const char* text, int start, int end);
@@ -129,7 +130,7 @@ class Console {
   std::ofstream _log;
   bool _verbose;
 
-  std::shared_ptr<TransactionContext> _tcontext;
+  std::shared_ptr<TransactionContext> _explicitly_created_transaction_context;
 };
 
 }  // namespace opossum

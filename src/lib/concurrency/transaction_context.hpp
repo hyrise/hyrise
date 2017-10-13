@@ -52,7 +52,7 @@ class TransactionContext : public std::enable_shared_from_this<TransactionContex
 
  public:
   TransactionContext(const TransactionID transaction_id, const CommitID last_commit_id);
-  ~TransactionContext() = default;
+  ~TransactionContext();
 
   /**
    * The transaction id used among others to lock records in tables.
