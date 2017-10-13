@@ -117,10 +117,6 @@ TEST_F(OperatorsDeleteTest, DetectDirtyWrite) {
   EXPECT_TRUE(delete_op2->execute_failed());
 
   // MVCC commit.
-  t1_context->prepare_commit();
-
-  delete_op1->commit_records(t1_context->commit_id());
-
   t1_context->commit();
 
   // Get validated table which should have only one row deleted.
@@ -150,9 +146,8 @@ TEST_F(OperatorsDeleteTest, UpdateAfterDeleteFails) {
   delete_op->set_transaction_context(t1_context);
 
   delete_op->execute();
-
-  t1_context->prepare_commit();
-  delete_op->commit_records(t1_context->commit_id());
+  
+  t1_context->commit();
 
   EXPECT_FALSE(delete_op->execute_failed());
 

@@ -50,8 +50,6 @@ void OperatorsUpdateTest::helper(std::shared_ptr<GetTable> table_to_update, std:
   update->execute();
 
   // MVCC commit.
-  t_context->prepare_commit();
-  t_context->commit_operators();
   t_context->commit();
 
   // Get validated table which should have the same row twice.
@@ -179,8 +177,6 @@ TEST_F(OperatorsUpdateTest, EmptyChunks) {
   update->execute();
 
   // MVCC commit.
-  t_context->prepare_commit();
-  t_context->commit_operators();
   t_context->commit();
 }
 }  // namespace opossum

@@ -1,3 +1,4 @@
+#include <functional>
 #include <limits>
 #include <memory>
 #include <string>
@@ -7,6 +8,7 @@
 #include "../base_test.hpp"
 #include "gtest/gtest.h"
 
+#include "operators/abstract_read_write_operator.hpp"
 #include "concurrency/transaction_context.hpp"
 #include "concurrency/transaction_manager.hpp"
 #include "types.hpp"
@@ -22,44 +24,62 @@ class TransactionContextTest : public BaseTest {
   TransactionManager& manager() { return TransactionManager::get(); }
 };
 
+/**
+ * @brief Helper operator.
+ *
+ * It calls the functor between a context’s assignment of a commit ID and it final commit.
+ */
+class CommitFuncOp : public AbstractReadWriteOperator {
+ public:
+  CommitFuncOp(std::function<void()> func) : _func{func} {}
+
+  const std::string name() const override { return "CommitOp"; }
+  uint8_t num_in_tables() const override { return 0u; }
+
+ protected:
+  std::shared_ptr<const Table> _on_execute(std::shared_ptr<TransactionContext> context) override {
+    context->register_rw_operator(shared_from_this());
+    return nullptr;
+  }
+
+  void _on_commit_records(const CommitID cid) override {
+    _func();
+  }
+
+  void _on_rollback_records() override {}
+
+ private:
+  std::function<void()> _func;
+};
+
 TEST_F(TransactionContextTest, CommitShouldCommitAllFollowingPendingTransactions) {
   auto context_1 = manager().new_transaction_context();
   auto context_2 = manager().new_transaction_context();
 
   const auto prev_last_commit_id = manager().last_commit_id();
 
-  context_2->commit();
+  auto try_commit_context_2 = [&]() {
+    context_2->commit();
 
-  EXPECT_EQ(prev_last_commit_id, manager().last_commit_id());
+    EXPECT_EQ(prev_last_commit_id, manager().last_commit_id());
+  };
+  
+  auto commit_op = std::make_shared<CommitFuncOp>(try_commit_context_2);
+  commit_op->set_transaction_context(context_1);
+  commit_op->execute();
 
+  /**
+   * Execution order
+   *
+   * - context_1 gets commit ID
+   * - context_2 gets commit ID
+   * - context_2 tries to commit, but needs to wait for context_1
+   * - context_1 commits, followed by context_2
+   *
+   */
   context_1->commit();
 
   EXPECT_EQ(context_2->commit_id(), manager().last_commit_id());
-}
-
-// Until the commit context is committed and the last commit id incremented,
-// the commit context is held in a single linked list of shared_ptrs and hence not deleted.
-TEST_F(TransactionContextTest, CommitContextGetsOnlyDeletedAfterCommitting) {
-  auto context_1 = manager().new_transaction_context();
-  auto context_2 = manager().new_transaction_context();
-
-  context_2->commit();
-  
-  auto commit_context_2 = std::weak_ptr<CommitContext>(context_2->commit_context());
-  context_2 = nullptr;
-  
-  EXPECT_FALSE(commit_context_2.expired());
-
-  context_1->commit();
-  
-  auto commit_context_1 = std::weak_ptr<CommitContext>(context_1->commit_context());
-  context_1 = nullptr;
-
-  auto context_3 = manager().new_transaction_context();
-  context_3->commit();
-
-  EXPECT_TRUE(commit_context_1.expired());
-  EXPECT_TRUE(commit_context_2.expired());
 }
 
 TEST_F(TransactionContextTest, CallbackFiresWhenCommitted) {
@@ -73,9 +93,6 @@ TEST_F(TransactionContextTest, CallbackFiresWhenCommitted) {
   auto callback_2 = [&context_2_committed](TransactionID) { context_2_committed = true; };
 
   context_2->commit(callback_2);
-
-  EXPECT_FALSE(context_2_committed);
-
   context_1->commit(callback_1);
 
   EXPECT_TRUE(context_1_committed);
