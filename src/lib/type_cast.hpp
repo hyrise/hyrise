@@ -36,6 +36,7 @@ const T& get(const AllTypeVariant& value) {
 // cast methods - from variant to specific type
 
 // Template specialization for everything but integral types
+// If you get ubsan errors here, it is because of an outdated boost version.
 template <typename T>
 std::enable_if_t<!std::is_integral<T>::value, T> type_cast(const AllTypeVariant& value) {
   if (value.which() == detail::index_of(types_including_null, hana::type_c<T>)) return get<T>(value);
