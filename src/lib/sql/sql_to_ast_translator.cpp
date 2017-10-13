@@ -190,7 +190,7 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_delete(const hsq
   if (del.expr) {
     current_result_node = _translate_where(*del.expr, current_result_node);
   }
-  current_result_node = _validate_node(current_result_node);
+  current_result_node = _validate_if_active(current_result_node);
 
   auto delete_node = std::make_shared<DeleteNode>(del.tableName);
   delete_node->set_left_child(current_result_node);
@@ -203,7 +203,7 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_update(const hsq
   if (update.where) {
     current_values_node = _translate_where(*update.where, current_values_node);
   }
-  current_values_node = _validate_node(current_values_node);
+  current_values_node = _validate_if_active(current_values_node);
 
   // The update operator wants ReferenceColumns on its left side
   // TODO(anyone): fix this
@@ -278,13 +278,15 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_select(const hsq
   if (select.order != nullptr) {
     current_result_node = _translate_order_by(*select.order, current_result_node);
   }
+  
+  current_result_node = _validate_if_active(current_result_node);
 
   // TODO(anybody): Translate TOP.
   if (select.limit != nullptr) {
     current_result_node = _translate_limit(*select.limit, current_result_node);
   }
 
-  return _validate_node(current_result_node);
+  return current_result_node;
 }
 
 std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_join(const hsql::JoinDefinition& join) {
@@ -806,7 +808,7 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_show(const hsql:
   return {};
 }
 
-std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_validate_node(
+std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_validate_if_active(
     const std::shared_ptr<AbstractASTNode>& input_node) {
   if (!_validate) return input_node;
 

@@ -238,7 +238,7 @@ int Console::_eval_sql(const std::string& sql) {
 
   // Compile the parse result
   try {
-    plan = SQLPlanner::plan(parse_result, true);
+    plan = SQLPlanner::plan(parse_result);
   } catch (const std::exception& exception) {
     out("Exception thrown while compiling query plan:\n  " + std::string(exception.what()) + "\n");
     return ReturnCode::Error;
@@ -632,7 +632,7 @@ int Console::begin_transaction(const std::string& input) {
 
 int Console::rollback_transaction(const std::string& input) {
   if (_tcontext == nullptr) {
-    out("Console is an auto-commit mode. Type `begin` to start a manual transaction.\n");
+    out("Console is in auto-commit mode. Type `begin` to start a manual transaction.\n");
     return ReturnCode::Error;
   }
 
@@ -647,7 +647,7 @@ int Console::rollback_transaction(const std::string& input) {
 
 int Console::commit_transaction(const std::string& input) {
   if (_tcontext == nullptr) {
-    out("Console is an auto-commit mode. Type `begin` to start a manual transaction.\n");
+    out("Console is in auto-commit mode. Type `begin` to start a manual transaction.\n");
     return ReturnCode::Error;
   }
 

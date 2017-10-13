@@ -53,7 +53,7 @@ ReadWriteOperatorState AbstractReadWriteOperator::state() const { return _state;
 
 uint8_t AbstractReadWriteOperator::num_out_tables() const { return 0; }
 
-void AbstractReadWriteOperator::mark_as_failed() {
+void AbstractReadWriteOperator::_mark_as_failed() {
   Assert(_state == ReadWriteOperatorState::Pending, "Operator can only be marked as failed if pending.");
 
   _state = ReadWriteOperatorState::Failed;

@@ -9,8 +9,6 @@
 
 namespace opossum {
 
-class TransactionContext;
-
 /**
  * This class wraps the translation of a parse result to an Operator tree.
  * This includes four steps:

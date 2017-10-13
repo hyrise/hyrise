@@ -46,7 +46,7 @@ std::shared_ptr<const Table> Delete::_on_execute(std::shared_ptr<TransactionCont
 
       // the row is already locked and the transaction needs to be rolled back
       if (!success) {
-        mark_as_failed();
+        _mark_as_failed();
         return nullptr;
       }
     }

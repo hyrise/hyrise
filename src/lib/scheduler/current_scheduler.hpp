@@ -50,7 +50,7 @@ void CurrentScheduler::wait_for_tasks(const std::vector<std::shared_ptr<TaskType
       }
     }
     return true;
-  }()), "Schedule tasks before joining them");
+  }()), "In order to wait for a task’s completion, it needs to have been scheduled first.");
 
   /**
    * In case wait_for_tasks() is called from a Task being executed in a Worker, block that worker, otherwise just

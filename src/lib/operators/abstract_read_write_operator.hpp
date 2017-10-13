@@ -94,7 +94,7 @@ class AbstractReadWriteOperator : public AbstractOperator,
    * If the execution fails, because for example some records have already been locked,
    * mark_as_failed() is called to signal to AbstractReadWriteOperator that the exeuction failed.
    */
-  void mark_as_failed();
+  void _mark_as_failed();
 
  private:
   ReadWriteOperatorState _state;

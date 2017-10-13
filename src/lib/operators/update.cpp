@@ -94,7 +94,7 @@ std::shared_ptr<const Table> Update::_on_execute(std::shared_ptr<TransactionCont
   _delete->execute();
 
   if (_delete->execute_failed()) {
-    mark_as_failed();
+    _mark_as_failed();
     return nullptr;
   }
 
