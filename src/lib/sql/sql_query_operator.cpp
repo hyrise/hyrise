@@ -30,10 +30,10 @@ SQLQueryCache<std::shared_ptr<hsql::SQLParserResult>> SQLQueryOperator::_parse_t
 SQLQueryCache<SQLQueryPlan> SQLQueryOperator::_prepared_stmts(1024);
 SQLQueryCache<SQLQueryPlan> SQLQueryOperator::_query_plan_cache(0);
 
-SQLQueryOperator::SQLQueryOperator(const std::string& query, bool schedule_plan, bool skip_validation)
+SQLQueryOperator::SQLQueryOperator(const std::string& query, bool schedule_plan, bool validate)
     : _query(query),
       _schedule_plan(schedule_plan),
-      _validate(skip_validation),
+      _validate(validate),
       _parse_tree_cache_hit(false),
       _query_plan_cache_hit(false) {
   _result_op = std::make_shared<SQLResultOperator>();
