@@ -90,14 +90,9 @@ node {
             reportFiles: 'index.html',
             reportName: "RCov Report"
           ])
+          archiveArtifacts artifacts: 'coverage_badge.svg', fingerprint: true
         }
       },
-
-      post {
-        always {
-            archive 'coverage_badge.svg'
-        }
-      }
 
       stage("Cleanup") {
         // Clean up workspace.
