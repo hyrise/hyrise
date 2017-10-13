@@ -46,7 +46,7 @@ class TransactionContext;
  */
 class TransactionManager : private Noncopyable {
  public:
-  static TransactionManager &get();
+  static TransactionManager& get();
   static void reset();
 
   TransactionID next_transaction_id() const;
@@ -67,15 +67,15 @@ class TransactionManager : private Noncopyable {
    * Usage: Call TransactionContext::rollback() within the
    *        function object if transaction should be rolled back.
    */
-  void run_transaction(const std::function<void(std::shared_ptr<TransactionContext>)> &fn);
+  void run_transaction(const std::function<void(std::shared_ptr<TransactionContext>)>& fn);
 
  private:
   friend class TransactionContext;
 
   TransactionManager();
 
-  TransactionManager(TransactionManager &&) = delete;
-  TransactionManager &operator=(TransactionManager &&) = delete;
+  TransactionManager(TransactionManager&&) = delete;
+  TransactionManager& operator=(TransactionManager&&) = delete;
 
   std::shared_ptr<CommitContext> _new_commit_context();
   void _increment_last_commit_id(std::shared_ptr<CommitContext> context);

@@ -227,7 +227,7 @@ const SQLTestParam test_queries[] = {
        ON t1.a = t3.a
        WHERE t2.b > 457.0
        AND t3.b = 'C')",
-    "src/test/tables/joinoperators/int_inner_join_3_tables_filter.tbl"},
+     "src/test/tables/joinoperators/int_inner_join_3_tables_filter.tbl"},
 
     // Aggregates
     {"SELECT SUM(b + b) AS sum_b_b FROM int_float;", "src/test/tables/int_float_sum_b_plus_b.tbl"},

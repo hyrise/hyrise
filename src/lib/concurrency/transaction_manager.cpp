@@ -39,7 +39,7 @@ void TransactionManager::run_transaction(const std::function<void(std::shared_pt
   fn(transaction_context);
 
   if (transaction_context->aborted()) return;
-  
+
   transaction_context->commit();
 }
 

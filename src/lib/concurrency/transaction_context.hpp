@@ -47,7 +47,7 @@ enum class TransactionPhase {
 /**
  * @brief Representation of a transaction
  */
-class TransactionContext : public std::enable_shared_from_this<TransactionContext>{
+class TransactionContext : public std::enable_shared_from_this<TransactionContext> {
   friend class TransactionManager;
 
  public:

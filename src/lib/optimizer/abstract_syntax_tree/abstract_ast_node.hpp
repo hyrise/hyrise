@@ -204,7 +204,7 @@ class AbstractASTNode : public std::enable_shared_from_this<AbstractASTNode> {
   // If named_column_reference.table_name is the alias set for this subtree, remove the table_name so that we
   // only operatore on the column name. If an alias for this subtree is set, but this reference does not match
   // it, the reference cannot be resolved (see knows_table) and nullopt is returned.
-  optional<NamedColumnReference> _resolve_local_alias(const NamedColumnReference &named_column_reference) const;
+  optional<NamedColumnReference> _resolve_local_alias(const NamedColumnReference& named_column_reference) const;
 
  private:
   std::weak_ptr<AbstractASTNode> _parent;

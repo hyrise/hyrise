@@ -146,7 +146,7 @@ TEST_F(OperatorsDeleteTest, UpdateAfterDeleteFails) {
   delete_op->set_transaction_context(t1_context);
 
   delete_op->execute();
-  
+
   t1_context->commit();
 
   EXPECT_FALSE(delete_op->execute_failed());

@@ -79,12 +79,12 @@ std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::_translate_sort_node(
    */
 
   std::shared_ptr<AbstractOperator> result_operator;
-  const auto &definitions = sort_node->order_by_definitions();
+  const auto& definitions = sort_node->order_by_definitions();
   if (definitions.size() > 1) {
     PerformanceWarning("Multiple ORDER BYs are executed one-by-one");
   }
   for (auto it = definitions.rbegin(); it != definitions.rend(); it++) {
-    const auto &definition = *it;
+    const auto& definition = *it;
     result_operator = std::make_shared<Sort>(input_operator, definition.column_id, definition.order_by_mode);
     input_operator = result_operator;
   }
@@ -113,7 +113,7 @@ std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::_translate_join_node(
   }
 
   return std::make_shared<JoinSortMerge>(input_left_operator, input_right_operator, join_node->join_mode(),
-                                           *(join_node->join_column_ids()), *(join_node->scan_type()));
+                                         *(join_node->join_column_ids()), *(join_node->scan_type()));
 }
 
 std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::_translate_aggregate_node(
@@ -138,13 +138,13 @@ std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::_translate_aggregate_
   auto need_projection = false;
 
   // Check if there are any arithmetic expressions.
-  for (const auto &aggregate_expression : aggregate_expressions) {
+  for (const auto& aggregate_expression : aggregate_expressions) {
     DebugAssert(aggregate_expression->type() == ExpressionType::Function, "Expression is not a function.");
 
     // Check whether the expression that is the argument of the aggregate function, e.g. `a+b` in `SUM(a+b)` is, as in
     // this case, an arithmetic expression and therefore needs a Projection before the aggregate is performed. If all
     // Aggregates are in the style of `COUNT(b)` or there are just groupby columns, there is no need for a Projection.
-    const auto &function_arg_expr = (aggregate_expression->expression_list())[0];
+    const auto& function_arg_expr = (aggregate_expression->expression_list())[0];
     if (function_arg_expr->is_arithmetic_operator()) {
       need_projection = true;
       break;
@@ -174,7 +174,7 @@ std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::_translate_aggregate_
     // Aggregates will get consecutive ColumnIDs.
     auto current_column_id = static_cast<ColumnID::base_type>(groupby_columns.size());
 
-    for (auto &aggregate_expression : aggregate_expressions) {
+    for (auto& aggregate_expression : aggregate_expressions) {
       Assert(aggregate_expression->expression_list().size(), "Aggregate: empty expression list");
       DebugAssert(aggregate_expression->type() == ExpressionType::Function, "Expression is not a function.");
 
@@ -204,7 +204,7 @@ std::shared_ptr<AbstractOperator> ASTToOperatorTranslator::_translate_aggregate_
   std::vector<AggregateDefinition> aggregate_definitions;
   aggregate_definitions.reserve(aggregate_expressions.size());
 
-  for (const auto &aggregate_expression : aggregate_expressions) {
+  for (const auto& aggregate_expression : aggregate_expressions) {
     DebugAssert(aggregate_expression->type() == ExpressionType::Function, "Only functions are supported in Aggregates");
 
     const auto aggregate_function_type = aggregate_expression->aggregate_function();

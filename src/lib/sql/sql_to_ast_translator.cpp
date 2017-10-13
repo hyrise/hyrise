@@ -278,7 +278,7 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_select(const hsq
   if (select.order != nullptr) {
     current_result_node = _translate_order_by(*select.order, current_result_node);
   }
-  
+
   current_result_node = _validate_if_active(current_result_node);
 
   // TODO(anybody): Translate TOP.

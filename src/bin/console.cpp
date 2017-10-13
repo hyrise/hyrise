@@ -250,7 +250,8 @@ int Console::_eval_sql(const std::string& sql) {
   auto plan_elapsed_ms = std::chrono::duration<double>(done - started).count();
 
   const auto auto_commit = (_explicitly_created_transaction_context == nullptr);
-  auto transaction_context = auto_commit ? TransactionManager::get().new_transaction_context() : _explicitly_created_transaction_context;
+  auto transaction_context =
+      auto_commit ? TransactionManager::get().new_transaction_context() : _explicitly_created_transaction_context;
 
   plan.set_transaction_context(transaction_context);
 
@@ -533,7 +534,8 @@ int Console::visualize(const std::string& input) {
 
     if (mode != "noexec") {
       const auto auto_commit = (_explicitly_created_transaction_context == nullptr);
-      auto transaction_context = auto_commit ? TransactionManager::get().new_transaction_context() : _explicitly_created_transaction_context;
+      auto transaction_context =
+          auto_commit ? TransactionManager::get().new_transaction_context() : _explicitly_created_transaction_context;
 
       plan.set_transaction_context(transaction_context);
 

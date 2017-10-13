@@ -287,7 +287,7 @@ class TPCCDeliveryBenchmark : public TPCCBenchmarkFixture {
 
     return {t_gt, t_ts1, t_ts2, t_ts3, t_val, t_projection, t_updated_rows, t_update};
   }
-  
+
   inline std::shared_ptr<JobTask> commit_operators_task(std::shared_ptr<TransactionContext> context) const {
     return std::make_shared<JobTask>([context]() { context->commit_operators(); });
   }
@@ -336,11 +336,11 @@ BENCHMARK_F(TPCCDeliveryBenchmark, BM_delivery)(benchmark::State& state) {
 
     // Commit transaction.
     t_context->prepare_commit();
-    
+
     auto commit_task = commit_operators_task(t_context);
     commit_task->schedule();
     commit_task->join();
-    
+
     t_context->commit();
   }
 }

@@ -4,8 +4,8 @@
 #include <stdexcept>
 
 #include "commit_context.hpp"
-#include "transaction_manager.hpp"
 #include "operators/abstract_read_write_operator.hpp"
+#include "transaction_manager.hpp"
 
 #include "utils/assert.hpp"
 
@@ -19,7 +19,7 @@ TransactionContext::TransactionContext(const TransactionID transaction_id, const
 
 TransactionContext::~TransactionContext() {
   DebugAssert(([this]() {
-    auto an_operator_failed = false;;
+    auto an_operator_failed = false;
     for (const auto& op : _rw_operators) {
       if (op->state() != ReadWriteOperatorState::Failed) {
         an_operator_failed = true;
@@ -33,7 +33,8 @@ TransactionContext::~TransactionContext() {
 
   const auto has_registered_operators = _rw_operators.size() > 0u;
   const auto committed_or_rolled_back = _phase == TransactionPhase::Committed || _phase == TransactionPhase::RolledBack;
-  DebugAssert(!has_registered_operators || committed_or_rolled_back, "Has registered operators but has neither been committed nor rolled back.");
+  DebugAssert(!has_registered_operators || committed_or_rolled_back,
+              "Has registered operators but has neither been committed nor rolled back.");
 }
 
 TransactionID TransactionContext::transaction_id() const { return _transaction_id; }
@@ -128,11 +129,12 @@ bool TransactionContext::_prepare_commit() {
 
 void TransactionContext::_mark_as_pending_and_try_commit(std::function<void(TransactionID)> callback) {
   DebugAssert(([this]() {
-    for (const auto& op : _rw_operators) {
-      if (op->state() != ReadWriteOperatorState::Committed) return false;
-    }
-    return true;
-  }()), "All read/write operators need to have been committed.");
+                for (const auto& op : _rw_operators) {
+                  if (op->state() != ReadWriteOperatorState::Committed) return false;
+                }
+                return true;
+              }()),
+              "All read/write operators need to have been committed.");
 
   auto context_weak_ptr = std::weak_ptr<TransactionContext>{this->shared_from_this()};
   _commit_context->make_pending(_transaction_id, [context_weak_ptr, callback](auto transaction_id) {
@@ -164,7 +166,8 @@ void TransactionContext::_wait_for_active_operators_to_finish() const {
   _active_operators_cv.wait(lock, [&] { return _num_active_operators != 0; });
 }
 
-bool TransactionContext::_transition(TransactionPhase from_phase, TransactionPhase to_phase, TransactionPhase end_phase) {
+bool TransactionContext::_transition(TransactionPhase from_phase, TransactionPhase to_phase,
+                                     TransactionPhase end_phase) {
   auto expected = from_phase;
   const auto success = _phase.compare_exchange_strong(expected, to_phase);
 

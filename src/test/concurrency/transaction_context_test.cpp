@@ -8,9 +8,9 @@
 #include "../base_test.hpp"
 #include "gtest/gtest.h"
 
-#include "operators/abstract_read_write_operator.hpp"
 #include "concurrency/transaction_context.hpp"
 #include "concurrency/transaction_manager.hpp"
+#include "operators/abstract_read_write_operator.hpp"
 #include "types.hpp"
 
 namespace opossum {
@@ -42,9 +42,7 @@ class CommitFuncOp : public AbstractReadWriteOperator {
     return nullptr;
   }
 
-  void _on_commit_records(const CommitID cid) override {
-    _func();
-  }
+  void _on_commit_records(const CommitID cid) override { _func(); }
 
   void _on_rollback_records() override {}
 
@@ -63,7 +61,7 @@ TEST_F(TransactionContextTest, CommitShouldCommitAllFollowingPendingTransactions
 
     EXPECT_EQ(prev_last_commit_id, manager().last_commit_id());
   };
-  
+
   auto commit_op = std::make_shared<CommitFuncOp>(try_commit_context_2);
   commit_op->set_transaction_context(context_1);
   commit_op->execute();
