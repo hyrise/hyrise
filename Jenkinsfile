@@ -79,7 +79,7 @@ node {
         }
       }, coverage: {
         stage("Coverage") {
-          sh "export CCACHE_BASEDIR=`pwd`; cd clang-debug && make opossumCoverage -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
+          sh "export CCACHE_BASEDIR=`pwd`; cd gcc-debug && make opossumCoverage -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
           sh "./scripts/coverage.sh gcc-debug"
           publishHTML (target: [
             allowMissing: false,
