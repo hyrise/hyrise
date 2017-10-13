@@ -89,10 +89,10 @@ node {
             reportDir: 'coverage',
             reportFiles: 'index.html',
             reportName: "RCov Report"
-          ]),
-          archiveArtifacts artifacts: 'coverage_badge.svg', fingerprint: true
+          ])
         }
       },
+      archiveArtifacts artifacts: 'coverage_badge.svg',
 
       stage("Cleanup") {
         // Clean up workspace.
