@@ -93,7 +93,7 @@ node {
           ])
         }
       },
-      archiveArtifacts artifacts('coverage_badge.svg'),
+      archiveArtifacts artifacts('coverage_badge.svg')
 
       stage("Cleanup") {
         // Clean up workspace.
