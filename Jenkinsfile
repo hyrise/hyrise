@@ -24,6 +24,7 @@ node {
         mkdir clang-release && cd clang-release && cmake -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ .. &\
         mkdir gcc-debug && cd gcc-debug && cmake -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++ .. &\
         mkdir gcc-release && cd gcc-release && cmake -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++ .. &\
+        mkdir gcc-release-coverage && cd gcc-release-coverage && cmake -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++ .. &\
         wait"
       }
 
@@ -79,8 +80,8 @@ node {
         }
       }, coverage: {
         stage("Coverage") {
-          sh "export CCACHE_BASEDIR=`pwd`; cd clang-debug && make opossumCoverage -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
-          sh "./scripts/coverage.sh clang-debug true"
+          sh "export CCACHE_BASEDIR=`pwd`; cd gcc-release-coverage && make opossumCoverage -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
+          sh "./scripts/coverage.sh gcc-release-coverage true"
           publishHTML (target: [
             allowMissing: false,
             alwaysLinkToLastBuild: false,
