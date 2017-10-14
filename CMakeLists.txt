@@ -19,6 +19,9 @@ find_package(Tbb REQUIRED)
 find_package(Readline REQUIRED)
 find_package(Sqlite3 REQUIRED)
 
+#
+include(cmake/helpers.cmake)
+
 # Include sub-CMakeLists.txt
 add_subdirectory(third_party/)
 add_subdirectory(third_party/googletest)

@@ -23,11 +23,11 @@ target_link_libraries(
 
 # Configure tpccTableGenerator
 add_executable(tpccTableGenerator tpcc_table_generator.cpp)
-target_link_libraries(tpccTableGenerator opossum tpcc)
+target_link_libraries(tpccTableGenerator opossum opossumAux)
 
 # Configure tpchTableGenerator
 add_executable(tpchTableGenerator tpch_table_generator.cpp)
-target_link_libraries(tpchTableGenerator opossum tpch)
+target_link_libraries(tpchTableGenerator opossum opossumAux)
 
 # Configure client
 add_executable(
@@ -51,7 +51,7 @@ add_executable(
 target_link_libraries(
     opossumConsole
     opossum
-    tpcc
+    opossumAux
     ${READLINE_LIBRARY}
 )
 target_include_directories(

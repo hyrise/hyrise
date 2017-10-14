@@ -1,4 +1,4 @@
-# This file is loosely related to src/benchmark-libs/constants.hpp and contains constants specified in the
+# This file is loosely related to src/auxlib/tpcc/constants.hpp and contains constants specified in the
 # TPCC benchmark
 # These constants are used for TPCC request generation for the opossumTestTPCC-Suite
 

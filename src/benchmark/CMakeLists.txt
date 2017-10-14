@@ -20,6 +20,7 @@ add_executable(
 target_link_libraries(
     opossumBenchmark
     opossum
+    opossumAux
     benchmark
 )
 
@@ -33,11 +34,12 @@ add_executable(
     tpcc/order_status_benchmark.cpp
     tpcc/tpcc_base_fixture.cpp
     tpcc/tpcc_base_fixture.hpp
+    tpch/tpch_benchmark.cpp
 )
 
 target_link_libraries(
     opossumBenchmarkTPCC
     opossum
+    opossumAux
     benchmark
-    tpcc
 )

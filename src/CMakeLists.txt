@@ -29,7 +29,7 @@ include_directories(
     ${PROJECT_SOURCE_DIR}/third_party/json
     ${PROJECT_SOURCE_DIR}/third_party/sql-parser/src
 
-    ${PROJECT_SOURCE_DIR}/src/benchmark-libs/
+    ${PROJECT_SOURCE_DIR}/src/auxlib/
     ${PROJECT_SOURCE_DIR}/src/lib/
 
     ${TBB_INCLUDE_DIR}
@@ -40,7 +40,7 @@ if (${NUMA_FOUND})
     include_directories(${PROJECT_BINARY_DIR}/third_party/pgasus/src)
 endif()
 
-add_subdirectory(benchmark-libs)
+add_subdirectory(auxlib)
 add_subdirectory(benchmark)
 add_subdirectory(bin)
 add_subdirectory(lib)
