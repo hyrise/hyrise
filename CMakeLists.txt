@@ -2,6 +2,18 @@ cmake_minimum_required(VERSION 3.5 FATAL_ERROR)
 
 project(OpossumDB)
 
+if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
+    if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 7.2)
+        message(FATAL_ERROR "Your GCC version ${CMAKE_CXX_COMPILER_VERSION} is too old.")
+    endif()
+elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang" OR "${CMAKE_CXX_COMPILER_ID}" STREQUAL "AppleClang")
+    if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 4.0)
+        message(FATAL_ERROR "Your clang version ${CMAKE_CXX_COMPILER_VERSION} is too old.")
+    endif()
+else()
+    message(WARNING "You are using an unsupported compiler (${CMAKE_CXX_COMPILER_ID})! Compilation has only been tested with Clang and GCC.")
+endif()
+
 # Set default build type
 if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE "Debug")
@@ -30,18 +42,6 @@ if(${NUMA_FOUND})
     set(PGASUS_BUILD_TESTS OFF CACHE BOOL "" FORCE)
     set(PGASUS_BUILD_DOCUMENTATION OFF CACHE BOOL "" FORCE)
     add_subdirectory(third_party/pgasus)
-endif()
-
-if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
-    if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 7.2)
-        message(FATAL_ERROR "Your GCC version ${CMAKE_CXX_COMPILER_VERSION} is too old.")
-    endif()
-elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang" OR "${CMAKE_CXX_COMPILER_ID}" STREQUAL "AppleClang")
-    if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 4.0)
-        message(FATAL_ERROR "Your clang version ${CMAKE_CXX_COMPILER_VERSION} is too old.")
-    endif()
-else()
-    message(WARNING "You are using an unsupported compiler (${CMAKE_CXX_COMPILER_ID})! Compilation has only been tested with Clang and GCC.")
 endif()
 
 # Useful for printing all c++ files in a directory:
