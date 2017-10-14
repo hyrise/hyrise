@@ -45,4 +45,4 @@
     size_t operator()(const ::opossum::D& x) const { return hash<T>{}(x); }                                       \
   };                                                                                                              \
   } /* NOLINT */                                                                                                  \
-  static_assert(true, "End STRONG_TYPEDEF with a semicolon")
+  static_assert(true, "End call of macro with a semicolon")
