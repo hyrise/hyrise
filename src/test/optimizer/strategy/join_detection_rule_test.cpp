@@ -474,7 +474,7 @@ const JoinDetectionTestParam test_queries[] = {{__LINE__, "SELECT * FROM a, b WH
                                                {__LINE__, "SELECT * FROM a, b, c WHERE a.a = c.a", 1},
                                                {__LINE__, "SELECT * FROM a, b, c WHERE b.a = c.a", 1}};
 
-auto formatter = [](const testing::TestParamInfo<class JoinDetectionTestParam> info) {
+auto formatter = [](const testing::TestParamInfo<struct JoinDetectionTestParam> info) {
   return std::to_string(info.param.line);
 };
 INSTANTIATE_TEST_CASE_P(test_queries, JoinDetectionRuleTest, ::testing::ValuesIn(test_queries), formatter);

@@ -93,7 +93,7 @@ const SQLTestParam test_queries[] = {
        HAVING COUNT(orderitems.o_orderkey) >= 100;)",
      "src/test/tables/tpch/customer_join_orders_alias.tbl"}};
 
-auto formatter = [](const testing::TestParamInfo<class SQLTestParam> info) { return std::to_string(info.param.line); };
+auto formatter = [](const testing::TestParamInfo<struct SQLTestParam> info) { return std::to_string(info.param.line); };
 INSTANTIATE_TEST_CASE_P(test_queries, SQLToResultTest, ::testing::ValuesIn(test_queries), formatter);
 
 }  // namespace opossum
