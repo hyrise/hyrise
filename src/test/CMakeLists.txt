@@ -129,7 +129,7 @@ set_target_properties(opossumTest PROPERTIES COMPILE_FLAGS "-Wno-gnu-zero-variad
 # Configure opossumCoverageApp
 add_executable(opossumCoverage EXCLUDE_FROM_ALL ${OPOSSUM_TEST_SOURCES})
 target_link_libraries(opossumCoverage opossumCoverageLib ${LIBRARIES} --coverage)
-set_target_properties(opossumCoverage PROPERTIES COMPILE_FLAGS "-fprofile-arcs -ftest-coverag -Wno-gnu-zero-variadic-macro-arguments")
+set_target_properties(opossumCoverage PROPERTIES COMPILE_FLAGS "-fprofile-arcs -ftest-coverage -Wno-gnu-zero-variadic-macro-arguments")
 
 # Configure opossumAsanApp
 add_executable(opossumAsan EXCLUDE_FROM_ALL ${OPOSSUM_TEST_SOURCES})
