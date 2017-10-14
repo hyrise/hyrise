@@ -21,11 +21,12 @@ Inside of the container, run `./install.sh` to download the required submodules.
 :whale:
 
 ## Dependencies
-You can install the dependencies on your own or use the install.sh script which installs all of the following packages and submodules.
+You can install the dependencies on your own or use the install.sh script which installs all of the therein listed dependencies and submodules.
 The install script was tested under macOS (brew) and Ubuntu 17.04 (apt-get).
 
 ### Dependencies that can be installed via a package manager
-Check install.sh for `brew install` or `apt-get install`, depending on your platform. We generally use the most recent version of gcc, clang, and boost. Older versions may work, but are neither tested nor supported.
+For a list of these check install.sh for `brew install` or `apt-get install`, depending on your platform. As compilers, we generally use the most recent version of gcc and clang. 
+Older versions may work, but are neither tested nor supported.
 
 ### Dependencies that are integrated in our build process via git submodules
 - benchmark (https://github.com/google/benchmark)
