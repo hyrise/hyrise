@@ -1,16 +1,15 @@
 # https://github.com/hyrise/zweirise/wiki/Docker-Image
 
-FROM ubuntu:17.04
+FROM ubuntu:17.10
 ENV DEBIAN_FRONTEND noninteractive
 RUN apt-get update \
     && apt-get install -y \
         bash-completion \
         build-essential \
         ccache \
-        clang \
+        clang-5.0 \
         clang-format-3.8 \
         cmake \
-        gcc-6 \
         gcovr \
         git \
         $(apt-cache search --names-only '^libboost1.[0-9]+-all-dev$' | sort | tail -n 1 | cut -f1 -d' ') \
