@@ -261,24 +261,24 @@ if(${NUMA_FOUND})
     set(LIBRARIES ${LIBRARIES} ${NUMA_LIBRARY} hpinuma_msource_s)
 endif()
 
-# Configure the regular opossum library used for tests/server/playground...
-add_library(opossum STATIC ${SOURCES})
-target_link_libraries(opossum ${LIBRARIES})
+# Configure the regular hyrise library used for tests/server/playground...
+add_library(hyrise STATIC ${SOURCES})
+target_link_libraries(hyrise ${LIBRARIES})
 
 # Configure the lib used for asan
-add_library(opossumAsanLib EXCLUDE_FROM_ALL STATIC ${SOURCES})
+add_library(hyriseAsanLib EXCLUDE_FROM_ALL STATIC ${SOURCES})
 target_link_libraries(
-    opossumAsanLib
+    hyriseAsanLib
     ${LIBRARIES}
     -fsanitize=address
 )
-set_target_properties(opossumAsanLib PROPERTIES COMPILE_FLAGS "-fsanitize=address -fno-omit-frame-pointer")
+set_target_properties(hyriseAsanLib PROPERTIES COMPILE_FLAGS "-fsanitize=address -fno-omit-frame-pointer")
 
 # Configure the lib used for coverage
-add_library(opossumCoverageLib EXCLUDE_FROM_ALL STATIC ${SOURCES})
+add_library(hyriseCoverageLib EXCLUDE_FROM_ALL STATIC ${SOURCES})
 target_link_libraries(
-    opossumCoverageLib
+    hyriseCoverageLib
     ${LIBRARIES}
     --coverage
 )
-set_target_properties(opossumCoverageLib PROPERTIES COMPILE_FLAGS "-fprofile-arcs -ftest-coverage")
+set_target_properties(hyriseCoverageLib PROPERTIES COMPILE_FLAGS "-fprofile-arcs -ftest-coverage")
