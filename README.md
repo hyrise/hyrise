@@ -35,7 +35,6 @@ Older versions may work, but are neither tested nor supported.
 - pgasus (https://github.com/kateyy/pgasus)
 
 ## Building and Tooling
-
 It is highly recommended to perform out-of-source builds, i.e., creating a separate directory for the build.
 Advisable names for this directory would be `cmake-build-{debug,release}`, depending on the build type.
 Within this directory call `cmake ..` to configure the build.
