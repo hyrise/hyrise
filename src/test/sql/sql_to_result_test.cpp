@@ -25,13 +25,10 @@ namespace opossum {
 enum class OrderSensitivity { Sensitive, Insensitive };
 
 struct SQLTestParam {
-  SQLTestParam(const std::string& query, const std::string& result_table_path,
-               OrderSensitivity orderSensitivity = OrderSensitivity::Insensitive)
-      : query(query), result_table_path(result_table_path), order_sensitive(orderSensitivity) {}
-
+  const uint32_t line;
   const std::string query;
   const std::string result_table_path;
-  const OrderSensitivity order_sensitive;
+  const OrderSensitivity order_sensitive = OrderSensitivity::Insensitive;
 };
 
 class SQLToResultTest : public BaseTest, public ::testing::WithParamInterface<SQLTestParam> {
@@ -81,22 +78,22 @@ TEST_P(SQLToResultTest, SQLQueryTest) {
 }
 
 const SQLTestParam test_queries[] = {
-    {R"(SELECT customer.c_custkey, customer.c_name, COUNT(orders.o_orderkey)
+    {__LINE__, R"(SELECT customer.c_custkey, customer.c_name, COUNT(orders.o_orderkey)
         FROM customer JOIN orders ON c_custkey = o_custkey
         GROUP BY customer.c_custkey, customer.c_name
         HAVING COUNT(orders.o_orderkey) >= 100;)",
      "src/test/tables/tpch/customer_join_orders.tbl"},
 
-    {R"(SELECT customer.c_custkey, customer.c_name, COUNT(orderitems.o_orderkey)
+    {__LINE__, R"(SELECT customer.c_custkey, customer.c_name, COUNT(orderitems.o_orderkey)
        FROM customer JOIN (
          SELECT * FROM orders JOIN lineitem ON o_orderkey = l_orderkey
        ) AS orderitems
        ON customer.c_custkey = orderitems.o_custkey
        GROUP BY customer.c_custkey, customer.c_name
        HAVING COUNT(orderitems.o_orderkey) >= 100;)",
-     "src/test/tables/tpch/customer_join_orders_alias.tbl"},
-};
+     "src/test/tables/tpch/customer_join_orders_alias.tbl"}};
 
-INSTANTIATE_TEST_CASE_P(test_queries, SQLToResultTest, ::testing::ValuesIn(test_queries));
+auto formatter = [](const testing::TestParamInfo<class SQLTestParam> info) { return std::to_string(info.param.line); };
+INSTANTIATE_TEST_CASE_P(test_queries, SQLToResultTest, ::testing::ValuesIn(test_queries), formatter);
 
 }  // namespace opossum
