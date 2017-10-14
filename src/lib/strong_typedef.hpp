@@ -44,4 +44,7 @@
   struct hash<::opossum::D> : public unary_function<::opossum::D, size_t> {                                       \
     size_t operator()(const ::opossum::D& x) const { return hash<T>{}(x); }                                       \
   };                                                                                                              \
-  }  // NOLINT
+  } /* NOLINT */                                                                                                  \
+  void();
+
+// The void(); at the end prevents "error: extra ';' [-Werror=pedantic]" when using STRONG_TYPEDEF(int, bla);
