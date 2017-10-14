@@ -18,10 +18,8 @@ docker-compose run --rm opossum
 ```
 :whale:
 
-In the container, continue with [Building and Tooling](#building-and-tooling).
-
 ## Dependencies
-You can install the dependencies on your own or use the install.sh script which installs all of the following packages.
+You can install the dependencies on your own or use the install.sh script which installs all of the following packages and submodules.
 The install script was tested under macOS (brew) and Ubuntu 17.04 (apt-get).
 
 ### Dependencies that can be installed via a package manager
@@ -30,16 +28,8 @@ Check install.sh for `brew install` or `apt-get install`, depending on your plat
 ### Dependencies that are integrated in our build process via git submodules
 - benchmark (https://github.com/google/benchmark)
 - googletest (https://github.com/google/googletest)
-- protoc and gRPC (https://github.com/grpc/grpc)
 - sql-parser (https://github.com/hyrise/sql-parser)
 - pgasus (https://github.com/kateyy/pgasus)
-
-The install script builds protoc and gRPC. For manual compilation:
-
-Compile via `CPPFLAGS="-Wno-deprecated-declarations" CFLAGS="-Wno-deprecated-declarations -Wno-implicit-function-declaration -Wno-shift-negative-value" make static --directory=third_party/grpc REQUIRE_CUSTOM_LIBRARIES_opt=true`.
-
-The installation guide on [github](https://github.com/grpc/grpc/blob/master/INSTALL.md#build-from-source)
-
 
 ## Building and Tooling
 
