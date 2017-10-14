@@ -57,7 +57,7 @@ TEST_F(ReferenceColumnTest, IsImmutable) {
 TEST_F(ReferenceColumnTest, RetrievesValues) {
   // PosList with (0, 0), (0, 1), (0, 2)
   auto pos_list = std::make_shared<PosList>(
-      std::initializer_list<RowID>({RowId{ChunkID{0}, 0}, RowId{ChunkID{0}, 1}, RowId{ChunkID{0}, 2}}));
+      std::initializer_list<RowID>({RowID{ChunkID{0}, 0}, RowID{ChunkID{0}, 1}, RowID{ChunkID{0}, 2}}));
   auto ref_column = ReferenceColumn(_test_table, ColumnID{0}, pos_list);
 
   auto& column = *(_test_table->get_chunk(ChunkID{0}).get_column(ColumnID{0}));
@@ -70,7 +70,7 @@ TEST_F(ReferenceColumnTest, RetrievesValues) {
 TEST_F(ReferenceColumnTest, RetrievesValuesOutOfOrder) {
   // PosList with (0, 1), (0, 2), (0, 0)
   auto pos_list = std::make_shared<PosList>(
-      std::initializer_list<RowID>({RowId{ChunkID{0}, 1}, RowId{ChunkID{0}, 2}, RowId{ChunkID{0}, 0}}));
+      std::initializer_list<RowID>({RowID{ChunkID{0}, 1}, RowID{ChunkID{0}, 2}, RowID{ChunkID{0}, 0}}));
   auto ref_column = ReferenceColumn(_test_table, ColumnID{0}, pos_list);
 
   auto& column = *(_test_table->get_chunk(ChunkID{0}).get_column(ColumnID{0}));
@@ -83,7 +83,7 @@ TEST_F(ReferenceColumnTest, RetrievesValuesOutOfOrder) {
 TEST_F(ReferenceColumnTest, RetrievesValuesFromChunks) {
   // PosList with (0, 2), (1, 0), (1, 1)
   auto pos_list = std::make_shared<PosList>(
-      std::initializer_list<RowID>({RowId{ChunkID{0}, 2}, RowId{ChunkID{1}, 0}, RowId{ChunkID{1}, 1}}));
+      std::initializer_list<RowID>({RowID{ChunkID{0}, 2}, RowID{ChunkID{1}, 0}, RowID{ChunkID{1}, 1}}));
   auto ref_column = ReferenceColumn(_test_table, ColumnID{0}, pos_list);
 
   auto& column_1 = *(_test_table->get_chunk(ChunkID{0}).get_column(ColumnID{0}));
@@ -97,8 +97,8 @@ TEST_F(ReferenceColumnTest, RetrievesValuesFromChunks) {
 TEST_F(ReferenceColumnTest, RetrieveNullValueFromNullRowID) {
   // PosList with (0, 0), (0, 1), NULL_ROW_ID, (0, 2)
   auto pos_list = std::make_shared<PosList>(
-      std::initializer_list<RowID>({RowId{ChunkID{0u}, ChunkOffset{0u}}, RowId{ChunkID{0u}, ChunkOffset{1u}},
-                                    NULL_ROW_ID, RowId{ChunkID{0u}, ChunkOffset{2u}}}));
+      std::initializer_list<RowID>({RowID{ChunkID{0u}, ChunkOffset{0u}}, RowID{ChunkID{0u}, ChunkOffset{1u}},
+                                    NULL_ROW_ID, RowID{ChunkID{0u}, ChunkOffset{2u}}}));
 
   auto ref_column = ReferenceColumn(_test_table, ColumnID{0u}, pos_list);
 
