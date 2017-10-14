@@ -56,7 +56,7 @@ node {
       }, clangDebugAsan: {
         stage("clang-debug:asan") {
         sh "export CCACHE_BASEDIR=`pwd`; cd clang-debug && make opossumAsan -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
-          sh "LSAN_OPTIONS=suppressions=asan-ignore.txt ./clang-debug/opossumAsan"
+          sh "LSAN_OPTIONS=suppressions=asan-ignore.txt UBSAN_OPTIONS=suppressions=ubsan-ignore.supp ./clang-debug/opossumAsan"
         }
       }, gccDebug: {
         stage("gcc-debug") {
