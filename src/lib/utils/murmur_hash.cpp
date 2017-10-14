@@ -50,10 +50,14 @@ unsigned int MurmurHash2(const void* key, int len, unsigned int seed) {
   switch (len) {
     case 3:
       h ^= data[2] << 16;
+#if __has_cpp_attribute(fallthrough)
       [[fallthrough]];
+#endif
     case 2:
       h ^= data[1] << 8;
+#if __has_cpp_attribute(fallthrough)
       [[fallthrough]];
+#endif
     case 1:
       h ^= data[0];
       h *= m;
