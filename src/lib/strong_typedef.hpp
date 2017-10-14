@@ -45,6 +45,4 @@
     size_t operator()(const ::opossum::D& x) const { return hash<T>{}(x); }                                       \
   };                                                                                                              \
   } /* NOLINT */                                                                                                  \
-  void();
-
-// The void(); at the end prevents "error: extra ';' [-Werror=pedantic]" when using STRONG_TYPEDEF(int, bla);
+  static_assert(true, "End STRONG_TYPEDEF with a semicolon")
