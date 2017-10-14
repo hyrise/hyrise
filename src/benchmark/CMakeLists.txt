@@ -34,7 +34,6 @@ add_executable(
     tpcc/order_status_benchmark.cpp
     tpcc/tpcc_base_fixture.cpp
     tpcc/tpcc_base_fixture.hpp
-    tpch/tpch_benchmark.cpp
 )
 
 target_link_libraries(
