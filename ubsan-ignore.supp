@@ -1,3 +1,3 @@
 # /usr/include/boost/lexical_cast/detail/converter_lexical_streams.hpp:235:43: runtime error: downcast of address 0x7ffe358d7de8 which does not point to an object of type 'buffer_t' (aka 'basic_unlockedbuf<std::basic_streambuf<char, char_traits<char> >, char>')
 # fixed in Boost 1.63
-fun:*shl_input_streamable*
+object-size:*shl_input_streamable*
