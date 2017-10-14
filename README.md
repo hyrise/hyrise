@@ -25,22 +25,7 @@ You can install the dependencies on your own or use the install.sh script which 
 The install script was tested under macOS (brew) and Ubuntu 17.04 (apt-get).
 
 ### Dependencies that can be installed via a package manager
-- autoconf
-- automake
-- build-essential (linux)
-- boost (>= 1.62.0)
-- clang (>= 3.5.0) optional if gcc is installed
-- clang-format (>= 3.8) optional
-- CMake (>= 3.5)
-- gcc (>= 6.1) optional if clang is installed
-- gcovr (>= 3.2) optional
-- libtool
-- llvm (optional for AddressSanitizer)
-- pkg-config
-- python (>= 2.7) optional
-- readline (>= 7)
-- tbb/libtbb-dev
-- xcode-select --install (macOS)
+Check install.sh for `brew install` or `apt-get install`, depending on your platform. We generally use the most recent version of gcc, clang, and boost. Older versions may work, but are neither tested nor supported.
 
 ### Dependencies that are integrated in our build process via git submodules
 - benchmark (https://github.com/google/benchmark)
