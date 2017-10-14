@@ -13,7 +13,7 @@ RUN apt-get update \
         gcc-6 \
         gcovr \
         git \
-        libboost-all-dev \
+        $(apt-cache search --names-only '^libboost1.[0-9]+-all-dev$' | sort | tail -n 1 | cut -f1 -d' ') \
         libnuma-dev \
         libnuma1 \
         libreadline-dev \
