@@ -76,7 +76,6 @@ TEST_F(TPCHTest, TPCH1) {
 
 // Enable once we support Subselects in WHERE condition
 TEST_F(TPCHTest, DISABLED_TPCH2) {
-
   const auto expected_result = load_table("src/test/tables/tpch/results/tpch2.tbl", 2);
   execute_and_check(tpch_queries[1], expected_result, true);
 }
