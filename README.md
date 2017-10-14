@@ -16,6 +16,8 @@ You can start the container via
 ```
 docker-compose run --rm opossum
 ```
+
+Inside of the container, run `./install.sh` to download the required submodules.
 :whale:
 
 ## Dependencies
