@@ -53,7 +53,7 @@ class TPCHTest : public BaseTest {
     if (optimize) {
       result_node = Optimizer::get().optimize(result_node);
     }
-    
+
     return ASTToOperatorTranslator::get().translate_node(result_node);
   }
 
