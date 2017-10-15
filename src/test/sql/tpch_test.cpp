@@ -9,6 +9,7 @@
 
 #include "operators/abstract_operator.hpp"
 #include "optimizer/abstract_syntax_tree/ast_to_operator_translator.hpp"
+#include "optimizer/optimizer.hpp"
 #include "scheduler/operator_task.hpp"
 #include "sql/sql_to_ast_translator.hpp"
 #include "storage/storage_manager.hpp"
