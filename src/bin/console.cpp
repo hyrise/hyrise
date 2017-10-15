@@ -31,13 +31,13 @@
 #include "tpcc/tpcc_table_generator.hpp"
 #include "utils/load_table.hpp"
 
-#define ANSI_COLOR_RED "\e[31m"
-#define ANSI_COLOR_GREEN "\e[32m"
-#define ANSI_COLOR_RESET "\e[0m"
+#define ANSI_COLOR_RED "\x1B[31m"
+#define ANSI_COLOR_GREEN "\x1B[32m"
+#define ANSI_COLOR_RESET "\x1B[0m"
 
-#define ANSI_COLOR_RED_RL "\001\e[31m\002"
-#define ANSI_COLOR_GREEN_RL "\001\e[32m\002"
-#define ANSI_COLOR_RESET_RL "\001\e[0m\002"
+#define ANSI_COLOR_RED_RL "\001\x1B[31m\002"
+#define ANSI_COLOR_GREEN_RL "\001\x1B[32m\002"
+#define ANSI_COLOR_RESET_RL "\001\x1B[0m\002"
 
 namespace {
 
@@ -54,12 +54,12 @@ std::string current_timestamp() {
   return oss.str();
 }
 
-// Removes the coloring commands (e.g. '\e[31m') from input, to have a clean logfile.
+// Removes the coloring commands (e.g. '\x1B[31m') from input, to have a clean logfile.
 // If remove_rl_codes_only is true, then it only removes the Readline specific escape sequences '\001' and '\002'
 std::string remove_coloring(const std::string& input, bool remove_rl_codes_only = false) {
   // matches any characters that need to be escaped in RegEx except for '|'
   std::regex specialChars{R"([-[\]{}()*+?.,\^$#\s])"};
-  std::string sequences = "\e[31m|\e[32m|\e[0m|\001|\002";
+  std::string sequences = "\x1B[31m|\x1B[32m|\x1B[0m|\001|\002";
   if (remove_rl_codes_only) {
     sequences = "\001|\002";
   }
@@ -323,7 +323,7 @@ void Console::out(const std::string& output, bool console_print) {
   if (console_print) {
     _out << output;
   }
-  // Remove coloring commands like '\e[32m' when writing to logfile
+  // Remove coloring commands like '\x1B[32m' when writing to logfile
   _log << remove_coloring(output);
   _log.flush();
 }
