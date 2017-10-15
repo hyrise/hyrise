@@ -49,9 +49,9 @@ void ReferenceColumn::visit(ColumnVisitable& visitable, std::shared_ptr<ColumnVi
 // writes the length and value at the chunk_offset to the end off row_string
 void ReferenceColumn::write_string_representation(std::string& row_string, const ChunkOffset chunk_offset) const {
   // retrieving the chunk_id for the given chunk_offset
-  auto chunk_info = _referenced_table->locate_row((*_pos_list).at(chunk_offset));
+  auto row_id = (*_pos_list).at(chunk_offset);
   // call the equivalent function of the referenced value column
-  _referenced_table->get_chunk(chunk_info.first)
+  _referenced_table->get_chunk(row_id.chunk_id)
       .get_column(_referenced_column_id)
       ->write_string_representation(row_string, chunk_offset);
 }
