@@ -677,8 +677,8 @@ int main(int argc, char** argv) {
   if (argc > 2) {
     retCode = Return::Quit;
     console.out("Usage:\n");
-    console.out("  ./opossumConsole [SCRIPTFILE] - Start the interactive SQL interface.\n");
-    console.out("                                  Execute script if specified by SCRIPTFILE.\n");
+    console.out("  ./hyriseConsole [SCRIPTFILE] - Start the interactive SQL interface.\n");
+    console.out("                                 Execute script if specified by SCRIPTFILE.\n");
   }
 
   // Execute .sql script if specified
