@@ -110,9 +110,8 @@ set(
     GTEST_SOURCES
     ../../third_party/googletest/googletest/src/gtest-all.cc
 )
-add_library(gtestSanitizers EXCLUDE_FROM_ALL STATIC ${GTEST_SOURCES})
+add_sanitizer_library(gtestSanitizers "${GTEST_SOURCES}" "")
 set_target_properties(gtestSanitizers PROPERTIES SUFFIX "_sanitizers")
-set_target_properties(gtestSanitizers PROPERTIES COMPILE_FLAGS "-fsanitize=address -fno-omit-frame-pointer")
 
 set(
     LIBRARIES_SANITIZERS
@@ -124,17 +123,10 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 
 # Configure hyriseTest
 add_executable(hyriseTest ${HYRISE_TEST_SOURCES})
-target_link_libraries(hyriseTest hyrise ${LIBRARIES})
+target_link_libraries(hyriseTest hyrise hyriseBenchmarkLib ${LIBRARIES})
 
-# Configure hyriseCoverageApp
-add_executable(hyriseCoverage EXCLUDE_FROM_ALL ${HYRISE_TEST_SOURCES})
-target_link_libraries(hyriseCoverage hyriseCoverageLib ${LIBRARIES} --coverage)
-set_target_properties(hyriseCoverage PROPERTIES COMPILE_FLAGS "-fprofile-arcs -ftest-coverage")
-
-# Configure hyriseSanitizersApp
-add_executable(hyriseSanitizers EXCLUDE_FROM_ALL ${HYRISE_TEST_SOURCES})
-target_link_libraries(hyriseSanitizers hyriseSanitizersLib ${LIBRARIES_SANITIZERS} -fsanitize=address)
-set_target_properties(hyriseSanitizers PROPERTIES COMPILE_FLAGS "-fsanitize=address -fno-omit-frame-pointer")
+add_coverage_executable(hyriseCoverage "${HYRISE_TEST_SOURCES}" "hyriseCoverageLib hyriseBenchmarkCoverageLib ${LIBRARIES}")
+add_sanitizer_executable(hyriseSanitizers "${HYRISE_TEST_SOURCES}" "hyriseSanitizerLib hyriseBenchmarkSanitizerLib ${LIBRARIES_SANITIZERS}")
 
 # Configure hyriseTestTPCC
 add_executable(hyriseTestTPCC ${TPCC_TEST_SOURCES})
