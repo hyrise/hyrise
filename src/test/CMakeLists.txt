@@ -101,20 +101,20 @@ set(
     sqlite3
 )
 
-# Build special ASAN version of googletest
+# Build special sanitizer version of googletest
 include_directories(../../third_party/googletest/googletest/)
 
 set(
     GTEST_SOURCES
     ../../third_party/googletest/googletest/src/gtest-all.cc
 )
-add_library(gtestAsan EXCLUDE_FROM_ALL STATIC ${GTEST_SOURCES})
-set_target_properties(gtestAsan PROPERTIES SUFFIX "_asan")
-set_target_properties(gtestAsan PROPERTIES COMPILE_FLAGS "-fsanitize=address -fno-omit-frame-pointer")
+add_library(gtestSanitizers EXCLUDE_FROM_ALL STATIC ${GTEST_SOURCES})
+set_target_properties(gtestSanitizers PROPERTIES SUFFIX "_sanitizers")
+set_target_properties(gtestSanitizers PROPERTIES COMPILE_FLAGS "-fsanitize=address -fno-omit-frame-pointer")
 
 set(
-    LIBRARIES_ASAN
-    gtestAsan
+    LIBRARIES_SANITIZERS
+    gtestSanitizers
     sqlite3
 )
 
@@ -131,7 +131,7 @@ set_target_properties(hyriseCoverage PROPERTIES COMPILE_FLAGS "-fprofile-arcs -f
 
 # Configure hyriseSanitizersApp
 add_executable(hyriseSanitizers EXCLUDE_FROM_ALL ${HYRISE_TEST_SOURCES})
-target_link_libraries(hyriseSanitizers hyriseSanitizersLib ${LIBRARIES_ASAN} -fsanitize=address)
+target_link_libraries(hyriseSanitizers hyriseSanitizersLib ${LIBRARIES_SANITIZERS} -fsanitize=address)
 set_target_properties(hyriseSanitizers PROPERTIES COMPILE_FLAGS "-fsanitize=address -fno-omit-frame-pointer")
 
 # Configure hyriseTestTPCC

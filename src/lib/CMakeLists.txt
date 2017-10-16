@@ -265,14 +265,14 @@ endif()
 add_library(hyrise STATIC ${SOURCES})
 target_link_libraries(hyrise ${LIBRARIES})
 
-# Configure the lib used for asan
-add_library(hyriseAsanLib EXCLUDE_FROM_ALL STATIC ${SOURCES})
+# Configure the lib used for sanitizers
+add_library(hyriseSanitizersLib EXCLUDE_FROM_ALL STATIC ${SOURCES})
 target_link_libraries(
-    hyriseAsanLib
+    hyriseSanitizersLib
     ${LIBRARIES}
     -fsanitize=address
 )
-set_target_properties(hyriseAsanLib PROPERTIES COMPILE_FLAGS "-fsanitize=address -fno-omit-frame-pointer")
+set_target_properties(hyriseSanitizersLib PROPERTIES COMPILE_FLAGS "-fsanitize=address -fno-omit-frame-pointer")
 
 # Configure the lib used for coverage
 add_library(hyriseCoverageLib EXCLUDE_FROM_ALL STATIC ${SOURCES})
