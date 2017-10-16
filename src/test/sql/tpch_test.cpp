@@ -103,7 +103,7 @@ INSTANTIATE_TEST_CASE_P(TPCHTestInstances, TPCHTest, ::testing::Values(
   // 18, /* Enable once we support OR in WHERE condition */
   // 19, /* Enable once we support Subselects in WHERE condition */
   // 20 /* Enable once we support Exists and Subselect in WHERE condition */
-));
+),);
 // clang-format on
 
 }  // namespace opossum

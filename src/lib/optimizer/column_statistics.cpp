@@ -197,9 +197,7 @@ ColumnSelectivityResult ColumnStatistics<ColumnType>::estimate_selectivity_for_p
 // intentionally no break
 // if ColumnType is a floating point number,
 // OpLessThanEquals behaviour is expected instead of OpLessThan
-#if __has_cpp_attribute(fallthrough)
       [[fallthrough]];
-#endif
     }
     case ScanType::OpLessThanEquals: {
       return _create_column_stats_for_range_predicate(_get_or_calculate_min(), casted_value);
@@ -214,9 +212,7 @@ ColumnSelectivityResult ColumnStatistics<ColumnType>::estimate_selectivity_for_p
 // intentionally no break
 // if ColumnType is a floating point number,
 // OpGreaterThanEquals behaviour is expected instead of OpGreaterThan
-#if __has_cpp_attribute(fallthrough)
       [[fallthrough]];
-#endif
     }
     case ScanType::OpGreaterThanEquals: {
       return _create_column_stats_for_range_predicate(casted_value, _get_or_calculate_max());

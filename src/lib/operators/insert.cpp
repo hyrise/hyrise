@@ -168,7 +168,7 @@ std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionCont
       // tbb::concurrent_vector::grow_to_at_least(n, t)" does not work with atomics, since their copy constructor is
       // deleted.
       target_chunk.mvcc_columns()->tids[i] = context->transaction_id();
-      _inserted_rows.emplace_back(_target_table->calculate_row_id(target_chunk_id, i));
+      _inserted_rows.emplace_back(RowID{target_chunk_id, i});
     }
 
     input_offset += curr_num_rows_to_insert;

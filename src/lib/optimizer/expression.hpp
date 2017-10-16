@@ -92,7 +92,7 @@ class Expression : public std::enable_shared_from_this<Expression> {
   void set_right_child(const std::shared_ptr<Expression>& right);
   // @}
 
-  const ExpressionType type() const;
+  ExpressionType type() const;
 
   /*
    * Methods for debug printing
