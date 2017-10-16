@@ -41,9 +41,7 @@ if echo $REPLY | grep -E '^[Yy]$' > /dev/null; then
         if cat /etc/lsb-release | grep DISTRIB_ID | grep Ubuntu >/dev/null; then
             echo "Installing dependencies (this may take a while)..."
             if sudo apt-get update >/dev/null; then
-                # When updating this, consider updating the Dockerfile and pushing a new image
-                # https://github.com/hyrise/zweirise/wiki/Docker-Image
-                sudo apt-get install --no-install-recommends -y libboost-all-dev clang-format-3.8 gcovr python2.7 gcc-6 clang llvm libnuma-dev libnuma1 libtbb-dev build-essential cmake libreadline-dev libncurses5-dev libsqlite3-dev parallel &
+                sudo apt-get install --no-install-recommends -y libboost-all-dev clang-5.0 clang-format-3.8 gcovr python2.7 gcc-7 llvm libnuma-dev libnuma1 libtbb-dev build-essential cmake libreadline-dev libncurses5-dev libsqlite3-dev parallel &
 
                 if ! git submodule update --jobs 5 --init --recursive; then
                     echo "Error during installation."

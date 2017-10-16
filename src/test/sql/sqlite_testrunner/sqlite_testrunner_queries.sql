@@ -63,6 +63,9 @@ SELECT a, COUNT(*) FROM groupby_int_1gb_1agg_null GROUP BY a;
 SELECT COUNT(*), SUM(a + b) FROM int_int3;
 SELECT COUNT(*) FROM groupby_int_1gb_1agg_null GROUP BY a;
 
+-- COUNT(DISTINCT)
+SELECT a, COUNT(DISTINCT b) FROM groupby_int_1gb_1agg_null GROUP BY a;
+
 -- Case insensitivity
 SELECT Sum(b + b) AS sum_b_b FROM int_float;
 

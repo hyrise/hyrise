@@ -193,9 +193,9 @@ template <typename DataType, typename BaseColumnType, typename Functor>
 // BaseColumnType allows column to be const and non-const
 std::enable_if_t<std::is_same<BaseColumn, std::remove_const_t<BaseColumnType>>::value>
     /*void*/ resolve_column_type(BaseColumnType& column, const Functor& func) {
-  using ValueColumnPtr = Const_out_if_const_in<BaseColumnType, ValueColumn<DataType>*>;
-  using DictionaryColumnPtr = Const_out_if_const_in<BaseColumnType, DictionaryColumn<DataType>*>;
-  using ReferenceColumnPtr = Const_out_if_const_in<BaseColumnType, ReferenceColumn*>;
+  using ValueColumnPtr = Const_out_if_const_in<BaseColumnType, ValueColumn<DataType>>*;
+  using DictionaryColumnPtr = Const_out_if_const_in<BaseColumnType, DictionaryColumn<DataType>>*;
+  using ReferenceColumnPtr = Const_out_if_const_in<BaseColumnType, ReferenceColumn>*;
 
   if (auto value_column = dynamic_cast<ValueColumnPtr>(&column)) {
     func(*value_column);
