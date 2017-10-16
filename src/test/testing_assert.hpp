@@ -26,4 +26,4 @@ void ASSERT_INNER_JOIN_NODE(const std::shared_ptr<AbstractASTNode>& node, ScanTy
                             ColumnID right_column_id);
 
 void ASSERT_CROSS_JOIN_NODE(const std::shared_ptr<AbstractASTNode>& node);
-}
+}  // namespace opossum

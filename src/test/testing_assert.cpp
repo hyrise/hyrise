@@ -1,5 +1,11 @@
 #include "testing_assert.hpp"
 
+#include <algorithm>
+#include <memory>
+#include <utility>
+#include <string>
+#include <vector>
+
 #include "all_type_variant.hpp"
 #include "optimizer/abstract_syntax_tree/abstract_ast_node.hpp"
 #include "optimizer/abstract_syntax_tree/join_node.hpp"
@@ -8,26 +14,24 @@
 
 namespace {
 
-using namespace opossum;
+using Matrix = std::vector<std::vector<opossum::AllTypeVariant>>;
 
-using Matrix = std::vector<std::vector<AllTypeVariant>>;
-
-Matrix _table_to_matrix(const Table& t) {
+Matrix _table_to_matrix(const opossum::Table& t) {
   // initialize matrix with table sizes
-  Matrix matrix(t.row_count(), std::vector<AllTypeVariant>(t.col_count()));
+  Matrix matrix(t.row_count(), std::vector<opossum::AllTypeVariant>(t.col_count()));
 
   // set values
   unsigned row_offset = 0;
-  for (ChunkID chunk_id{0}; chunk_id < t.chunk_count(); chunk_id++) {
-    const Chunk& chunk = t.get_chunk(chunk_id);
+  for (opossum::ChunkID chunk_id{0}; chunk_id < t.chunk_count(); chunk_id++) {
+    const opossum::Chunk& chunk = t.get_chunk(chunk_id);
 
     // an empty table's chunk might be missing actual columns
     if (chunk.size() == 0) continue;
 
-    for (ColumnID col_id{0}; col_id < t.col_count(); ++col_id) {
-      std::shared_ptr<BaseColumn> column = chunk.get_column(col_id);
+    for (opossum::ColumnID col_id{0}; col_id < t.col_count(); ++col_id) {
+      std::shared_ptr<opossum::BaseColumn> column = chunk.get_column(col_id);
 
-      for (ChunkOffset chunk_offset = 0; chunk_offset < chunk.size(); ++chunk_offset) {
+      for (opossum::ChunkOffset chunk_offset = 0; chunk_offset < chunk.size(); ++chunk_offset) {
         matrix[row_offset + chunk_offset][col_id] = (*column)[chunk_offset];
       }
     }
@@ -40,14 +44,14 @@ Matrix _table_to_matrix(const Table& t) {
 void _print_matrix(const Matrix& m) {
   std::cout << "-------------" << std::endl;
   for (unsigned row = 0; row < m.size(); row++) {
-    for (ColumnID col{0}; col < m[row].size(); col++) {
+    for (opossum::ColumnID col{0}; col < m[row].size(); col++) {
       std::cout << std::setw(8) << m[row][col] << " ";
     }
     std::cout << std::endl;
   }
   std::cout << "-------------" << std::endl;
 }
-}
+}  // namespace
 
 namespace opossum {
 
@@ -172,4 +176,4 @@ void ASSERT_INNER_JOIN_NODE(const std::shared_ptr<AbstractASTNode>& node, ScanTy
 }
 
 void ASSERT_CROSS_JOIN_NODE(const std::shared_ptr<AbstractASTNode>& node) {}
-}
+}  // namespace opossum

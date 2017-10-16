@@ -4,7 +4,6 @@
 #include <vector>
 
 #include "base_test.hpp"
-#include "base_test.hpp"
 #include "gtest/gtest.h"
 
 #include "optimizer/abstract_syntax_tree/abstract_ast_node.hpp"
