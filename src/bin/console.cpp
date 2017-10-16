@@ -494,7 +494,7 @@ int Console::visualize(const std::string& input) {
   // Check if SQL query is valid
   if (!parse_result.isValid()) {
     console.out("Error: SQL query not valid.\n");
-    return 1;
+    return ReturnCode::Error;
   }
 
   if (mode == "ast" || mode == "astopt") {

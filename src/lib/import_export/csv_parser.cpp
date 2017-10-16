@@ -70,6 +70,8 @@ std::shared_ptr<Table> CsvParser::_process_meta_file(const std::string& filename
   const char delimiter = '\n';
   const char separator = ',';
 
+  const auto NullableColumnType = std::string("NullableColumnType");
+
   std::ifstream metafile{filename};
   std::string content{std::istreambuf_iterator<char>(metafile), {}};
 
@@ -93,9 +95,17 @@ std::shared_ptr<Table> CsvParser::_process_meta_file(const std::string& filename
   // read column info
   while ((pos = content.find(delimiter)) != std::string::npos) {
     auto row = content.substr(0, pos);
+    bool is_nullable = false;
 
-    // skip field
-    row.erase(0, row.find(separator) + 1);
+    // read PropertyType and check if it is nullable
+    auto property_type_pos = row.find(separator);
+    auto property_type = row.substr(0, property_type_pos);
+    AbstractCsvConverter::unescape(property_type);
+    row.erase(0, property_type_pos + 1);
+
+    if (property_type == NullableColumnType) {
+      is_nullable = true;
+    }
 
     // read column name
     auto row_pos = row.find(separator);
@@ -109,7 +119,8 @@ std::shared_ptr<Table> CsvParser::_process_meta_file(const std::string& filename
     AbstractCsvConverter::unescape(column_type);
 
     content.erase(0, pos + 1);
-    table->add_column_definition(column_name, column_type);
+
+    table->add_column_definition(column_name, column_type, is_nullable);
   }
 
   return table;
@@ -163,8 +174,8 @@ void CsvParser::_parse_into_chunk(string_view csv_chunk, const std::vector<size_
   const auto row_count = field_ends.size() / col_count;
   std::vector<std::unique_ptr<AbstractCsvConverter>> converters;
   for (ColumnID column_id{0}; column_id < col_count; ++column_id) {
-    converters.emplace_back(make_unique_by_column_type<AbstractCsvConverter, CsvConverter>(table.column_type(column_id),
-                                                                                           row_count, _csv_config));
+    converters.emplace_back(make_unique_by_column_type<AbstractCsvConverter, CsvConverter>(
+            table.column_type(column_id), row_count, _csv_config, table.column_is_nullable(column_id)));
   }
 
   size_t start = 0;

@@ -7,7 +7,9 @@
 #include <string>
 #include <utility>
 #include <vector>
+#include <limits>
 
+#include "all_type_variant.hpp"
 #include "csv.hpp"
 #include "storage/base_column.hpp"
 #include "storage/value_column.hpp"
@@ -67,13 +69,26 @@ class AbstractCsvConverter {
 template <typename T>
 class CsvConverter : public AbstractCsvConverter {
  public:
-  explicit CsvConverter(ChunkOffset size, const CsvConfig& config = {}) : _parsed_values(size), _config(config) {}
+  explicit CsvConverter(ChunkOffset size, const CsvConfig& config = {}, bool is_nullable = false)
+          : _parsed_values(size), _null_values(size, false), _is_nullable(is_nullable), _config(config) {}
 
   void insert(const std::string& value, ChunkOffset position) override {
-    _parsed_values[position] = _get_conversion_function()(value);
+
+    if (_is_nullable && value == _null_string) {
+      _parsed_values[position] = T{};
+      _null_values[position] = true;
+    } else {
+      _parsed_values[position] = _get_conversion_function()(value);
+    }
   }
 
-  std::unique_ptr<BaseColumn> finish() override { return std::make_unique<ValueColumn<T>>(std::move(_parsed_values)); }
+  std::unique_ptr<BaseColumn> finish() override {
+    if (_is_nullable) {
+      return std::make_unique<ValueColumn<T>>(std::move(_parsed_values), std::move(_null_values));
+    } else {
+      return std::make_unique<ValueColumn<T>>(std::move(_parsed_values));
+    }
+  }
 
  private:
   /*
@@ -84,7 +99,10 @@ class CsvConverter : public AbstractCsvConverter {
    */
   std::function<T(const std::string&)> _get_conversion_function();
   tbb::concurrent_vector<T> _parsed_values;
+  tbb::concurrent_vector<bool> _null_values;
+  const bool _is_nullable;
   CsvConfig _config;
+  const std::string _null_string = "NULL";
 };
 
 template <>
