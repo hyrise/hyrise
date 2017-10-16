@@ -7,7 +7,7 @@ set(
 )
 
 set(
-    OPOSSUM_TEST_SOURCES
+    HYRISE_TEST_SOURCES
     ${SHARED_SOURCES}
     concurrency/commit_context_test.cpp
     concurrency/transaction_manager_test.cpp
@@ -94,49 +94,47 @@ set (
     tpc/tpcc_ref_test.cpp
 )
 
-# Both opossumTest and opossumAsan link against these
+# Both hyriseTest and hyriseSanitizers link against these
 set(
     LIBRARIES
     gtest
     sqlite3
 )
 
-# Build special ASAN version of googletest
+# Build special sanitizer version of googletest
 include_directories(../../third_party/googletest/googletest/)
 
 set(
     GTEST_SOURCES
     ../../third_party/googletest/googletest/src/gtest-all.cc
 )
-add_library(gtestAsan EXCLUDE_FROM_ALL STATIC ${GTEST_SOURCES})
-set_target_properties(gtestAsan PROPERTIES SUFFIX "_asan")
-set_target_properties(gtestAsan PROPERTIES COMPILE_FLAGS "-fsanitize=address -fno-omit-frame-pointer")
+add_library(gtestSanitizers EXCLUDE_FROM_ALL STATIC ${GTEST_SOURCES})
+set_target_properties(gtestSanitizers PROPERTIES SUFFIX "_sanitizers")
+set_target_properties(gtestSanitizers PROPERTIES COMPILE_FLAGS "-fsanitize=address -fno-omit-frame-pointer")
 
 set(
-    LIBRARIES_ASAN
-    gtestAsan
+    LIBRARIES_SANITIZERS
+    gtestSanitizers
     sqlite3
 )
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 
-# Configure opossumTest
-add_executable(opossumTest ${OPOSSUM_TEST_SOURCES})
-target_link_libraries(opossumTest opossum ${LIBRARIES})
+# Configure hyriseTest
+add_executable(hyriseTest ${HYRISE_TEST_SOURCES})
+target_link_libraries(hyriseTest hyrise ${LIBRARIES})
 
-# Configure opossumCoverageApp
-add_executable(opossumCoverage EXCLUDE_FROM_ALL ${OPOSSUM_TEST_SOURCES})
-target_link_libraries(opossumCoverage opossumCoverageLib ${LIBRARIES} --coverage)
-set_target_properties(opossumCoverage PROPERTIES COMPILE_FLAGS "-fprofile-arcs -ftest-coverage")
+# Configure hyriseCoverageApp
+add_executable(hyriseCoverage EXCLUDE_FROM_ALL ${HYRISE_TEST_SOURCES})
+target_link_libraries(hyriseCoverage hyriseCoverageLib ${LIBRARIES} --coverage)
+set_target_properties(hyriseCoverage PROPERTIES COMPILE_FLAGS "-fprofile-arcs -ftest-coverage")
 
-# Configure opossumAsanApp
-add_executable(opossumAsan EXCLUDE_FROM_ALL ${OPOSSUM_TEST_SOURCES})
-target_link_libraries(opossumAsan opossumAsanLib ${LIBRARIES_ASAN} -fsanitize=address)
-set_target_properties(opossumAsan PROPERTIES COMPILE_FLAGS "-fsanitize=address -fno-omit-frame-pointer")
+# Configure hyriseSanitizersApp
+add_executable(hyriseSanitizers EXCLUDE_FROM_ALL ${HYRISE_TEST_SOURCES})
+target_link_libraries(hyriseSanitizers hyriseSanitizersLib ${LIBRARIES_SANITIZERS} -fsanitize=address)
+set_target_properties(hyriseSanitizers PROPERTIES COMPILE_FLAGS "-fsanitize=address -fno-omit-frame-pointer")
 
-# Configure opossumTestTPCC
-add_executable(opossumTestTPCC ${TPCC_TEST_SOURCES})
-target_link_libraries(opossumTestTPCC opossum ${LIBRARIES} tpcc)
-
-
-
+# Configure hyriseTestTPCC
+add_executable(hyriseTestTPCC ${TPCC_TEST_SOURCES})
+target_link_libraries(hyriseTestTPCC hyrise ${LIBRARIES} tpcc)
+add_dependencies(hyriseTestTPCC tpccTableGenerator)

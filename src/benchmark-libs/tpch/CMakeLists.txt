@@ -8,7 +8,7 @@ set(
 
 set(
     LIBRARIES
-    opossum
+    hyrise
 )
 
 # Configure the tpch library
