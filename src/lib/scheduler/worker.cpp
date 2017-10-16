@@ -103,7 +103,7 @@ void Worker::operator()() {
 }
 
 void Worker::_set_affinity() {
-#if OPOSSUM_NUMA_SUPPORT
+#if HYRISE_NUMA_SUPPORT
   cpu_set_t cpuset;
   CPU_ZERO(&cpuset);
   CPU_SET(_cpu_id, &cpuset);

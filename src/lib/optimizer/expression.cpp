@@ -124,7 +124,7 @@ void Expression::set_right_child(const std::shared_ptr<Expression>& right) {
   right->_parent = shared_from_this();
 }
 
-const ExpressionType Expression::type() const { return _type; }
+ExpressionType Expression::type() const { return _type; }
 
 void Expression::print(const uint32_t level, std::ostream& out) const {
   out << std::setw(level) << " ";

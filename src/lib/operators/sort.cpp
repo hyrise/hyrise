@@ -94,14 +94,14 @@ class Sort::SortImplMaterializeOutput {
       // The last chunk might not be completely filled, so we have to check if we got out of range.
       for (ChunkOffset chunk_offset_out = 0; chunk_offset_out < _output_chunk_size && row_index < output_row_count;
            chunk_offset_out++) {
-        auto row_id_in = _table_in->locate_row(_row_id_value_vector->at(row_index).first);
+        auto row_id_in = _row_id_value_vector->at(row_index).first;
         for (ColumnID column_id{0}; column_id < output->col_count(); column_id++) {
           // The actual value is added by visiting the input column, which then calls a function on the output column to
           // copy the value
-          auto column = _table_in->get_chunk(row_id_in.first).get_column(column_id);
-          auto chunk_offset_in = row_id_in.second;
+          auto column = _table_in->get_chunk(row_id_in.chunk_id).get_column(column_id);
+          auto chunk_offset_in = row_id_in.chunk_offset;
           if (auto reference_column = std::dynamic_pointer_cast<ReferenceColumn>(column)) {
-            auto pos = reference_column->pos_list()->operator[](row_id_in.second);
+            auto pos = reference_column->pos_list()->operator[](row_id_in.chunk_offset);
             column = reference_column->referenced_table()
                          ->get_chunk(pos.chunk_id)
                          .get_column(reference_column->referenced_column_id());
