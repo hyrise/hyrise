@@ -459,7 +459,7 @@ int Console::print_table(const std::string& args) {
     return ReturnCode::Error;
   }
 
-  console.out(gt->get_output());
+  console.out(gt->get_output(), PrintMvcc);
 
   return ReturnCode::Ok;
 }
