@@ -122,7 +122,7 @@ class ColumnStatistics : public BaseColumnStatistics {
 };
 
 template <typename ColumnType>
-inline std::ostream& operator<<(std::ostream& os, const opossum::std::optional<ColumnType>& obj) {
+inline std::ostream& operator<<(std::ostream& os, const std::optional<ColumnType>& obj) {
   if (obj) {
     return os << *obj;
   } else {
