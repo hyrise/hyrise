@@ -4,7 +4,7 @@
 | ---------------- | ------------- | -------- | ----------------------- |
 | build-essential  | any           |    Linux |                      No |
 | boost            | >= 1.63.0     |    All   |                      No |
-| clang            | >= 5          |    All   |   Yes, if gcc installed |
+| clang            | >= 4          |    All   |   Yes, if gcc installed |
 | clang-format     | 3.8           |    All   |        Yes (formatting) |
 | cmake            | 3.5           |    All   |                      No |
 | gcc              | 7.2           |    All   | Yes, if clang installed |
