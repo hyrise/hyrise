@@ -60,7 +60,7 @@ void Aggregate::_aggregate_column(ChunkID chunk_id, ColumnID column_index, const
   auto& results = *context.results;
   auto& hash_keys = _keys_per_chunk[chunk_id];
 
-  resolve_column_type<DataType>(base_column, [&results, &hash_keys, &aggregator](const auto& typed_column) {
+  resolve_column_type<DataType>(base_column, [&results, &hash_keys, aggregator](const auto& typed_column) {
     auto iterable = create_iterable_from_column<DataType>(typed_column);
 
     ChunkOffset chunk_offset{0};
