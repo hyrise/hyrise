@@ -6,10 +6,12 @@ RUN apt-get update \
     && apt-get install -y \
         bash-completion \
         build-essential \
+        bc \
         ccache \
         clang-5.0 \
         clang-format-3.8 \
         cmake \
+        curl \
         gcovr \
         git \
         libboost-all-dev \
