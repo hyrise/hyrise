@@ -1,6 +1,7 @@
 #pragma once
 
 #include <boost/lexical_cast.hpp>
+#include <string>
 
 #include "all_type_variant.hpp"
 #include "types.hpp"

@@ -1,5 +1,7 @@
 #include "all_parameter_variant.hpp"
 
+#include <string>
+
 namespace opossum {
   std::string to_string(const AllParameterVariant& x) {
     if (is_placeholder(x)) {
