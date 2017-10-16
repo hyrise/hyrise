@@ -29,6 +29,9 @@ if echo $REPLY | grep -E '^[Yy]$' > /dev/null; then
             # clang-format is keg-only and needs to be explicitly symlinked into /usr/local
             ln -s /usr/local/Cellar/clang-format\@3.8/3.8.0/bin/clang-format /usr/local/bin/clang-format-3.8
 
+            # Needed for proper building under macOS
+            xcode-select --install
+
             if ! git submodule update --jobs 5 --init --recursive; then
                 echo "Error during installation."
                 exit 1
