@@ -42,7 +42,7 @@ node {
       parallel clangRelease: {
         stage("clang-release") {
           sh "export CCACHE_BASEDIR=`pwd`; cd clang-release && make all -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
-          sh "./clang-release/opossumTest"
+          sh "./clang-release/hyriseTest"
         }
       }, clangDebug: {
         stage("clang-debug") {
@@ -52,35 +52,35 @@ node {
 
       parallel clangDebug: {
         stage("clang-debug:test") {
-          sh "./clang-debug/opossumTest"
+          sh "./clang-debug/hyriseTest"
         }
       }, clangDebugAsan: {
-        stage("clang-debug:asan") {
-        sh "export CCACHE_BASEDIR=`pwd`; cd clang-debug && make opossumAsan -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
-          sh "LSAN_OPTIONS=suppressions=asan-ignore.txt UBSAN_OPTIONS=suppressions=ubsan-ignore.supp ./clang-debug/opossumAsan"
+        stage("clang-debug:sanitizers") {
+        sh "export CCACHE_BASEDIR=`pwd`; cd clang-debug && make hyriseSanitizers -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
+          sh "LSAN_OPTIONS=suppressions=asan-ignore.txt ./clang-debug/hyriseSanitizers"
         }
       }, gccDebug: {
         stage("gcc-debug") {
           sh "export CCACHE_BASEDIR=`pwd`; cd gcc-debug && make all -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
-          sh "./gcc-debug/opossumTest"
+          sh "./gcc-debug/hyriseTest"
         }
       }, gccRelease: {
         stage("gcc-release") {
           sh "export CCACHE_BASEDIR=`pwd`; cd gcc-release && make all -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
-          sh "./gcc-release/opossumTest"
+          sh "./gcc-release/hyriseTest"
         }
       }, tpcc: {
         stage("TPCC Test") {
             sh "./scripts/test_tpcc.sh clang-release"
         }
-      }, asanRelease: {
-        stage("clang-release:asan") {
-          sh "export CCACHE_BASEDIR=`pwd`; cd clang-release && make opossumAsan -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
-          sh "LSAN_OPTIONS=suppressions=asan-ignore.txt ./clang-release/opossumAsan"
+      }, clangReleaseAsan: {
+        stage("clang-release:sanitizers") {
+          sh "export CCACHE_BASEDIR=`pwd`; cd clang-release && make hyriseSanitizers -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
+          sh "LSAN_OPTIONS=suppressions=asan-ignore.txt ./clang-release/hyriseSanitizers"
         }
       }, coverage: {
         stage("Coverage") {
-          sh "export CCACHE_BASEDIR=`pwd`; cd gcc-release-coverage && make opossumCoverage -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
+          sh "export CCACHE_BASEDIR=`pwd`; cd gcc-release-coverage && make hyriseCoverage -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
           sh "./scripts/coverage.sh gcc-release-coverage"
           publishHTML (target: [
             allowMissing: false,

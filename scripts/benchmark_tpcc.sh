@@ -6,4 +6,4 @@ if [ -z "$1" ]
     exit 1
 fi
 
-./$1/opossumBenchmarkTPCC --benchmark_format=json > benchmark_tpcc.json
+./$1/hyriseBenchmarkTPCC --benchmark_format=json > benchmark_tpcc.json

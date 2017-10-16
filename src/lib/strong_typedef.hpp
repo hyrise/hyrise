@@ -44,4 +44,5 @@
   struct hash<::opossum::D> : public unary_function<::opossum::D, size_t> {                                       \
     size_t operator()(const ::opossum::D& x) const { return hash<T>{}(x); }                                       \
   };                                                                                                              \
-  }  // NOLINT
+  } /* NOLINT */                                                                                                  \
+  static_assert(true, "End call of macro with a semicolon")

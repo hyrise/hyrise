@@ -204,10 +204,8 @@ void JoinNestedLoopB::JoinNestedLoopBImpl<T>::_match_values(const T& value_left,
                                                             std::shared_ptr<JoinContext> context, bool reverse_order) {
   bool values_match = reverse_order ? _compare(value_right, value_left) : _compare(value_left, value_right);
   if (values_match) {
-    RowID left_row_id = _join_nested_loop_b._input_table_left()->calculate_row_id(
-        context->_left_chunk_id, reverse_order ? right_chunk_offset : left_chunk_offset);
-    RowID right_row_id = _join_nested_loop_b._input_table_right()->calculate_row_id(
-        context->_right_chunk_id, reverse_order ? left_chunk_offset : right_chunk_offset);
+    RowID left_row_id = {context->_left_chunk_id, reverse_order ? right_chunk_offset : left_chunk_offset};
+    RowID right_row_id = {context->_right_chunk_id, reverse_order ? left_chunk_offset : right_chunk_offset};
 
     if (context->_mode == JoinMode::Left || context->_mode == JoinMode::Outer) {
       // For inner joins, the list of matched values is not needed and is not maintained
@@ -264,9 +262,9 @@ const T& JoinNestedLoopB::JoinNestedLoopBImpl<T>::_resolve_reference(ReferenceCo
   // TODO(anyone): This can be replaced by operator[] once gcc optimizes properly
   auto& ref_table = ref_column.referenced_table();
   auto& pos_list = ref_column.pos_list();
-  const auto& row_location = ref_table->locate_row(pos_list->at(chunk_offset));
-  const auto& referenced_chunk_id = row_location.first;
-  const auto& referenced_chunk_offset = row_location.second;
+  const auto& row_id = pos_list->at(chunk_offset);
+  const auto& referenced_chunk_id = row_id.chunk_id;
+  const auto& referenced_chunk_offset = row_id.chunk_offset;
   const auto& referenced_chunk = ref_table->get_chunk(referenced_chunk_id);
   const auto& referenced_column = referenced_chunk.get_column(ref_column.referenced_column_id());
 

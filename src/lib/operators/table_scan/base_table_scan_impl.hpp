@@ -52,9 +52,11 @@ class BaseTableScanImpl {
 
       case ScanType::OpBetween:
         Fail("This method should only be called when ScanType::OpBetween has been ruled out.");
+        break;
 
       case ScanType::OpLike:
         Fail("This method should only be called when ScanType::OpLike has been ruled out.");
+        break;
 
       default:
         Fail("Unsupported operator.");
