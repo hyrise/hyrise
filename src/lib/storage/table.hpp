@@ -113,13 +113,6 @@ class Table : private Noncopyable {
   // creates a new chunk and appends it
   void create_new_chunk();
 
-  // returns the number of the chunk and the position in the chunk for a given row
-  // TODO(md): this would be a nice place to use structured bindings once they are supported by the compilers
-  std::pair<ChunkID, ChunkOffset> locate_row(RowID row) const { return {row.chunk_id, row.chunk_offset}; }
-
-  // calculates the row id from a given chunk and the chunk offset
-  RowID calculate_row_id(ChunkID chunk, ChunkOffset offset) const { return RowID{chunk, offset}; }
-
   std::unique_lock<std::mutex> acquire_append_mutex();
 
   void set_table_statistics(std::shared_ptr<TableStatistics> table_statistics) { _table_statistics = table_statistics; }

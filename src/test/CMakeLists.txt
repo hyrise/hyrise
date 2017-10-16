@@ -137,6 +137,3 @@ set_target_properties(hyriseSanitizers PROPERTIES COMPILE_FLAGS "-fsanitize=addr
 # Configure hyriseTestTPCC
 add_executable(hyriseTestTPCC ${TPCC_TEST_SOURCES})
 target_link_libraries(hyriseTestTPCC hyrise ${LIBRARIES} tpcc)
-
-
-
