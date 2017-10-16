@@ -110,7 +110,7 @@ set(
 )
 add_library(gtestSanitizers EXCLUDE_FROM_ALL STATIC ${GTEST_SOURCES})
 set_target_properties(gtestSanitizers PROPERTIES SUFFIX "_sanitizers")
-set_target_properties(gtestSanitizers PROPERTIES COMPILE_FLAGS "-fsanitize=address -fno-omit-frame-pointer")
+set_target_properties(gtestSanitizers PROPERTIES COMPILE_FLAGS "-fsanitize=address,undefined -fno-sanitize-recover=all -fno-omit-frame-pointer")
 
 set(
     LIBRARIES_SANITIZERS
@@ -132,7 +132,7 @@ set_target_properties(hyriseCoverage PROPERTIES COMPILE_FLAGS "-fprofile-arcs -f
 # Configure hyriseSanitizersApp
 add_executable(hyriseSanitizers EXCLUDE_FROM_ALL ${HYRISE_TEST_SOURCES})
 target_link_libraries(hyriseSanitizers hyriseSanitizersLib ${LIBRARIES_SANITIZERS} -fsanitize=address)
-set_target_properties(hyriseSanitizers PROPERTIES COMPILE_FLAGS "-fsanitize=address -fno-omit-frame-pointer")
+set_target_properties(hyriseSanitizers PROPERTIES COMPILE_FLAGS "-fsanitize=address,undefined -fno-sanitize-recover=all -fno-omit-frame-pointer")
 
 # Configure hyriseTestTPCC
 add_executable(hyriseTestTPCC ${TPCC_TEST_SOURCES})
