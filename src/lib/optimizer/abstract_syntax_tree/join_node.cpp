@@ -2,13 +2,13 @@
 
 #include <limits>
 #include <memory>
+#include <optional>
 #include <numeric>
 #include <sstream>
 #include <string>
 #include <utility>
 #include <vector>
 
-#include "common.hpp"
 #include "constant_mappings.hpp"
 #include "optimizer/table_statistics.hpp"
 #include "types.hpp"
@@ -52,7 +52,7 @@ const std::vector<ColumnID>& JoinNode::output_column_id_to_input_column_id() con
 
 const std::vector<std::string>& JoinNode::output_column_names() const { return _output_column_names; }
 
-optional<ColumnID> JoinNode::find_column_id_by_named_column_reference(
+std::optional<ColumnID> JoinNode::find_column_id_by_named_column_reference(
     const NamedColumnReference& named_column_reference) const {
   DebugAssert(left_child() && right_child(), "JoinNode must have two children.");
 
@@ -61,8 +61,8 @@ optional<ColumnID> JoinNode::find_column_id_by_named_column_reference(
     return {};
   }
 
-  optional<ColumnID> left_column_id;
-  optional<ColumnID> right_column_id;
+  std::optional<ColumnID> left_column_id;
+  std::optional<ColumnID> right_column_id;
 
   // If there is no qualifying table name or this table's alias is used, search both children.
   if (!named_column_reference_without_local_alias->table_name ||
@@ -182,9 +182,9 @@ std::vector<ColumnID> JoinNode::get_output_column_ids_for_table(const std::strin
   return output_column_ids_for_table;
 }
 
-const optional<std::pair<ColumnID, ColumnID>>& JoinNode::join_column_ids() const { return _join_column_ids; }
+const std::optional<std::pair<ColumnID, ColumnID>>& JoinNode::join_column_ids() const { return _join_column_ids; }
 
-const optional<ScanType>& JoinNode::scan_type() const { return _scan_type; }
+const std::optional<ScanType>& JoinNode::scan_type() const { return _scan_type; }
 
 JoinMode JoinNode::join_mode() const { return _join_mode; }
 

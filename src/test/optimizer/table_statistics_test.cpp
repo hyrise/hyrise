@@ -1,13 +1,12 @@
 #include <memory>
+#include <optional>
 #include <string>
 #include <utility>
 #include <vector>
 
 #include "../base_test.hpp"
 #include "gtest/gtest.h"
-
 #include "all_parameter_variant.hpp"
-#include "common.hpp"
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
 #include "optimizer/table_statistics.hpp"
@@ -36,7 +35,7 @@ class TableStatisticsTest : public BaseTest {
   TableWithStatistics check_statistic_with_table_scan(const TableWithStatistics& table_with_statistics,
                                                       const ColumnID column_id, const ScanType scan_type,
                                                       const AllParameterVariant value,
-                                                      const optional<AllTypeVariant> value2 = nullopt) {
+                                                      const std::optional<AllTypeVariant> value2 = nullopt) {
     auto table_wrapper = std::make_shared<TableWrapper>(table_with_statistics.table);
     table_wrapper->execute();
     auto table_scan = std::make_shared<TableScan>(table_wrapper, column_id, scan_type, value, value2);

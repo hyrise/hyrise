@@ -4,6 +4,7 @@
 #include <iomanip>
 #include <iostream>
 #include <memory>
+#include <optional>
 #include <numeric>
 #include <sstream>
 #include <string>
@@ -113,7 +114,7 @@ ColumnID AbstractASTNode::get_column_id_by_named_column_reference(
   return *column_id;
 }
 
-optional<ColumnID> AbstractASTNode::find_column_id_by_named_column_reference(
+std::optional<ColumnID> AbstractASTNode::find_column_id_by_named_column_reference(
     const NamedColumnReference& named_column_reference) const {
   /**
    * This function has to be overwritten if columns or their order are in any way redefined by this Node.
@@ -194,7 +195,7 @@ void AbstractASTNode::replace_in_tree(const std::shared_ptr<AbstractASTNode>& no
   }
 }
 
-void AbstractASTNode::set_alias(const optional<std::string>& table_alias) { _table_alias = table_alias; }
+void AbstractASTNode::set_alias(const std::optional<std::string>& table_alias) { _table_alias = table_alias; }
 
 void AbstractASTNode::print(const uint32_t level, std::ostream& out) const {
   out << std::setw(level) << " ";
@@ -209,7 +210,7 @@ void AbstractASTNode::print(const uint32_t level, std::ostream& out) const {
   }
 }
 
-optional<NamedColumnReference> AbstractASTNode::_resolve_local_alias(const NamedColumnReference &reference) const {
+std::optional<NamedColumnReference> AbstractASTNode::_resolve_local_alias(const NamedColumnReference &reference) const {
   if (reference.table_name && _table_alias) {
     if (*reference.table_name == *_table_alias) {
       // The used table name is the alias of this table. Remove id from the NamedColumnReference for further search

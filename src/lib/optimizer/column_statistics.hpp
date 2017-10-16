@@ -1,12 +1,12 @@
 #pragma once
 
 #include <memory>
+#include <optional>
 #include <ostream>
 #include <string>
 
 #include "all_type_variant.hpp"
 #include "base_column_statistics.hpp"
-#include "common.hpp"
 
 namespace opossum {
 
@@ -40,14 +40,14 @@ class ColumnStatistics : public BaseColumnStatistics {
   ~ColumnStatistics() override = default;
 
   ColumnSelectivityResult estimate_selectivity_for_predicate(const ScanType scan_type, const AllTypeVariant& value,
-                                                             const optional<AllTypeVariant>& value2 = nullopt) override;
+                                                             const std::optional<AllTypeVariant>& value2 = nullopt) override;
 
   ColumnSelectivityResult estimate_selectivity_for_predicate(const ScanType scan_type, const ValuePlaceholder& value,
-                                                             const optional<AllTypeVariant>& value2 = nullopt) override;
+                                                             const std::optional<AllTypeVariant>& value2 = nullopt) override;
 
   TwoColumnSelectivityResult estimate_selectivity_for_two_column_predicate(
       const ScanType scan_type, const std::shared_ptr<BaseColumnStatistics>& right_base_column_statistics,
-      const optional<AllTypeVariant>& value2 = nullopt) override;
+      const std::optional<AllTypeVariant>& value2 = nullopt) override;
 
   /**
    * Accessors for class variable optionals. Compute values, if not available.
@@ -113,14 +113,14 @@ class ColumnStatistics : public BaseColumnStatistics {
   // distinct count is not an integer as it can be a predicted value
   // it is multiplied with selectivity of a corresponding operator to predict the operator's output distinct count
   // precision is lost, if row count is rounded
-  mutable optional<float> _distinct_count;
+  mutable std::optional<float> _distinct_count;
 
-  mutable optional<ColumnType> _min;
-  mutable optional<ColumnType> _max;
+  mutable std::optional<ColumnType> _min;
+  mutable std::optional<ColumnType> _max;
 };
 
 template <typename ColumnType>
-inline std::ostream& operator<<(std::ostream& os, const opossum::optional<ColumnType>& obj) {
+inline std::ostream& operator<<(std::ostream& os, const opossum::std::optional<ColumnType>& obj) {
   if (obj) {
     return os << *obj;
   } else {

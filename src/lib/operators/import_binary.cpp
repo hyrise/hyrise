@@ -5,6 +5,7 @@
 #include <cstdint>
 #include <fstream>
 #include <memory>
+#include <optional>
 #include <numeric>
 #include <string>
 #include <utility>
@@ -18,7 +19,7 @@
 
 namespace opossum {
 
-ImportBinary::ImportBinary(const std::string& filename, const optional<std::string> tablename)
+ImportBinary::ImportBinary(const std::string& filename, const std::optional<std::string> tablename)
     : _filename(filename), _tablename(tablename) {}
 
 const std::string ImportBinary::name() const { return "ImportBinary"; }

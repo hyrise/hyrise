@@ -3,6 +3,7 @@
 #include <iomanip>
 #include <iostream>
 #include <memory>
+#include <optional>
 #include <sstream>
 #include <string>
 #include <unordered_map>
@@ -11,7 +12,6 @@
 #include "optimizer/abstract_syntax_tree/abstract_ast_node.hpp"
 
 #include "all_type_variant.hpp"
-#include "common.hpp"
 #include "constant_mappings.hpp"
 #include "type_cast.hpp"
 #include "utils/assert.hpp"
@@ -20,7 +20,7 @@ namespace opossum {
 
 Expression::Expression(ExpressionType type) : _type(type) {}
 
-std::shared_ptr<Expression> Expression::create_column(const ColumnID column_id, const optional<std::string>& alias) {
+std::shared_ptr<Expression> Expression::create_column(const ColumnID column_id, const std::optional<std::string>& alias) {
   auto expression = std::make_shared<Expression>(ExpressionType::Column);
   expression->_column_id = column_id;
   expression->_alias = alias;
@@ -29,7 +29,7 @@ std::shared_ptr<Expression> Expression::create_column(const ColumnID column_id, 
 }
 
 std::vector<std::shared_ptr<Expression>> Expression::create_columns(const std::vector<ColumnID>& column_ids,
-                                                                    const optional<std::vector<std::string>>& aliases) {
+                                                                    const std::optional<std::vector<std::string>>& aliases) {
   std::vector<std::shared_ptr<Expression>> column_references;
   column_references.reserve(column_ids.size());
 
@@ -49,7 +49,7 @@ std::vector<std::shared_ptr<Expression>> Expression::create_columns(const std::v
 }
 
 std::shared_ptr<Expression> Expression::create_literal(const AllTypeVariant& value,
-                                                       const optional<std::string>& alias) {
+                                                       const std::optional<std::string>& alias) {
   auto expression = std::make_shared<Expression>(ExpressionType::Literal);
   expression->_alias = alias;
   expression->_value = value;
@@ -65,7 +65,7 @@ std::shared_ptr<Expression> Expression::create_value_placeholder(ValuePlaceholde
 
 std::shared_ptr<Expression> Expression::create_aggregate_function(
     AggregateFunction aggregate_function, const std::vector<std::shared_ptr<Expression>>& expression_list,
-    const optional<std::string>& alias) {
+    const std::optional<std::string>& alias) {
   auto expression = std::make_shared<Expression>(ExpressionType::Function);
   expression->_aggregate_function = aggregate_function;
   expression->_expression_list = expression_list;
@@ -76,7 +76,7 @@ std::shared_ptr<Expression> Expression::create_aggregate_function(
 std::shared_ptr<Expression> Expression::create_binary_operator(ExpressionType type,
                                                                const std::shared_ptr<Expression>& left,
                                                                const std::shared_ptr<Expression>& right,
-                                                               const optional<std::string>& alias) {
+                                                               const std::optional<std::string>& alias) {
   auto expression = std::make_shared<Expression>(type);
   Assert(expression->is_binary_operator(),
          "Type is not a binary operator type, such as Equals, LessThan, Like, And, etc.");
@@ -90,7 +90,7 @@ std::shared_ptr<Expression> Expression::create_binary_operator(ExpressionType ty
 
 std::shared_ptr<Expression> Expression::create_unary_operator(ExpressionType type,
                                                               const std::shared_ptr<Expression>& input,
-                                                              const optional<std::string>& alias) {
+                                                              const std::optional<std::string>& alias) {
   auto expression = std::make_shared<Expression>(type);
   Assert(expression->is_unary_operator(), "Type is not a unary operator such as Not, Exists");
   expression->_alias = alias;
@@ -100,7 +100,7 @@ std::shared_ptr<Expression> Expression::create_unary_operator(ExpressionType typ
   return expression;
 }
 
-std::shared_ptr<Expression> Expression::create_select_star(const optional<std::string>& table_name) {
+std::shared_ptr<Expression> Expression::create_select_star(const std::optional<std::string>& table_name) {
   auto expression = std::make_shared<Expression>(ExpressionType::Star);
   expression->_table_name = table_name;
   return expression;
@@ -247,7 +247,7 @@ const ColumnID Expression::column_id() const {
   return *_column_id;
 }
 
-const optional<std::string>& Expression::table_name() const { return _table_name; }
+const std::optional<std::string>& Expression::table_name() const { return _table_name; }
 
 AggregateFunction Expression::aggregate_function() const {
   DebugAssert(_aggregate_function != nullopt,
@@ -255,7 +255,7 @@ AggregateFunction Expression::aggregate_function() const {
   return *_aggregate_function;
 }
 
-const optional<std::string>& Expression::alias() const { return _alias; }
+const std::optional<std::string>& Expression::alias() const { return _alias; }
 
 const AllTypeVariant Expression::value() const {
   DebugAssert(_value != nullopt, "Expression " + expression_type_to_string.at(_type) + " does not have a value");

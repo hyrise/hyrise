@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <map>
 #include <memory>
+#include <optional>
 #include <string>
 #include <utility>
 #include <vector>
@@ -16,7 +17,7 @@ namespace opossum {
 
 IndexColumnScan::IndexColumnScan(const std::shared_ptr<AbstractOperator> in, const ColumnID column_id,
                                  const ScanType scan_type, const AllTypeVariant value,
-                                 const optional<AllTypeVariant> value2)
+                                 const std::optional<AllTypeVariant> value2)
     : AbstractReadOnlyOperator(in), _column_id(column_id), _scan_type(scan_type), _value(value), _value2(value2) {}
 
 const std::string IndexColumnScan::name() const { return "IndexColumnScan"; }
@@ -40,12 +41,12 @@ class IndexColumnScan::IndexColumnScanImpl : public AbstractReadOnlyOperatorImpl
   // IndexColumnScan currently does not support ScanType::OpLike
   // creates a new table with reference columns
   IndexColumnScanImpl(const std::shared_ptr<const AbstractOperator> in, const ColumnID column_id,
-                      const ScanType scan_type, const AllTypeVariant value, const optional<AllTypeVariant> value2)
+                      const ScanType scan_type, const AllTypeVariant value, const std::optional<AllTypeVariant> value2)
       : _in_operator(in),
         _column_id(column_id),
         _scan_type(scan_type),
         _casted_value(type_cast<T>(value)),
-        _casted_value2(value2 ? optional<T>(type_cast<T>(*value2)) : optional<T>(nullopt)) {}
+        _casted_value2(value2 ? std::optional<T>(type_cast<T>(*value2)) : std::optional<T>(nullopt)) {}
 
   struct ScanContext : ColumnVisitableContext {
     ScanContext(std::shared_ptr<const Table> t, ChunkID c, std::vector<RowID>& mo,
@@ -241,7 +242,7 @@ class IndexColumnScan::IndexColumnScanImpl : public AbstractReadOnlyOperatorImpl
     /*
      ValueID x;
      T A;
-     optional<T> B;
+     std::optional<T> B;
 
      A ValueID x from the attribute vector is included in the result iff
 
@@ -355,7 +356,7 @@ class IndexColumnScan::IndexColumnScanImpl : public AbstractReadOnlyOperatorImpl
   }
 
   std::vector<ChunkOffset> get_pos_list_from_index(std::shared_ptr<BaseIndex> index, T search_value,
-                                                   optional<T> search_value_2) {
+                                                   std::optional<T> search_value_2) {
     BaseIndex::Iterator lower_bound, upper_bound;
 
     std::vector<ChunkOffset> result;
@@ -417,7 +418,7 @@ class IndexColumnScan::IndexColumnScanImpl : public AbstractReadOnlyOperatorImpl
   std::function<bool(T)> _value_comparator;
   std::function<bool(ValueID, ValueID, ValueID)> _value_id_comparator;
   const T _casted_value;
-  const optional<T> _casted_value2;
+  const std::optional<T> _casted_value2;
   // by adding a second, optional parameter to the function, we could easily support between as well
 };
 

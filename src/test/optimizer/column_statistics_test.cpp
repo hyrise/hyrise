@@ -5,9 +5,7 @@
 
 #include "../base_test.hpp"
 #include "gtest/gtest.h"
-
 #include "all_parameter_variant.hpp"
-#include "common.hpp"
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
 #include "optimizer/column_statistics.hpp"

@@ -9,8 +9,6 @@
 
 #include "base_column.hpp"
 #include "chunk.hpp"
-
-#include "common.hpp"
 #include "type_cast.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"

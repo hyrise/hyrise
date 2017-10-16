@@ -1,6 +1,7 @@
 #include "sql_to_ast_translator.hpp"
 
 #include <memory>
+#include <optional>
 #include <string>
 #include <unordered_map>
 #include <utility>
@@ -381,7 +382,7 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_cross_product(
 }
 
 std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_table_ref(const hsql::TableRef& table) {
-  auto alias = table.alias ? optional<std::string>(table.alias) : nullopt;
+  auto alias = table.alias ? std::optional<std::string>(table.alias) : nullopt;
   std::shared_ptr<AbstractASTNode> node;
   switch (table.type) {
     case hsql::kTableName:
@@ -406,7 +407,7 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_table_ref(const 
 }
 
 AllParameterVariant SQLToASTTranslator::translate_hsql_operand(
-    const hsql::Expr& expr, const optional<std::shared_ptr<AbstractASTNode>>& input_node) {
+    const hsql::Expr& expr, const std::optional<std::shared_ptr<AbstractASTNode>>& input_node) {
   switch (expr.type) {
     case hsql::kExprLiteralInt:
       return AllTypeVariant(expr.ival);
@@ -529,7 +530,7 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_aggregate(
   ColumnID groupby_offset{0};
 
   for (const auto* column_expr : select_list) {
-    optional<std::string> alias;
+    std::optional<std::string> alias;
     if (column_expr->alias) {
       alias = std::string(column_expr->alias);
     }
@@ -759,7 +760,7 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_predicate(
    */
   const hsql::Expr* value_ref_hsql_expr = nullptr;
 
-  optional<AllTypeVariant> value2;  // Left uninitialized for predicates that are not BETWEEN
+  std::optional<AllTypeVariant> value2;  // Left uninitialized for predicates that are not BETWEEN
 
   if (scan_type == ScanType::OpBetween) {
     /**

@@ -1,4 +1,5 @@
 #include <memory>
+#include <optional>
 #include <string>
 #include <utility>
 #include <vector>
@@ -137,7 +138,7 @@ TEST_F(ASTToOperatorTranslatorTest, AggregateNodeNoArithmetics) {
   const auto aggregate_definition = aggregate_op->aggregates()[0];
   EXPECT_EQ(aggregate_definition.column_id, ColumnID{0});
   EXPECT_EQ(aggregate_definition.function, AggregateFunction::Sum);
-  EXPECT_EQ(aggregate_definition.alias, optional<std::string>("sum_of_a"));
+  EXPECT_EQ(aggregate_definition.alias, std::optional<std::string>("sum_of_a"));
 }
 
 TEST_F(ASTToOperatorTranslatorTest, AggregateNodeWithArithmetics) {
@@ -172,7 +173,7 @@ TEST_F(ASTToOperatorTranslatorTest, AggregateNodeWithArithmetics) {
   const auto aggregate_definition = aggregate_op->aggregates()[0];
   EXPECT_EQ(aggregate_definition.column_id, ColumnID{1});
   EXPECT_EQ(aggregate_definition.function, AggregateFunction::Sum);
-  EXPECT_EQ(aggregate_definition.alias, optional<std::string>("sum_of_b_times_two"));
+  EXPECT_EQ(aggregate_definition.alias, std::optional<std::string>("sum_of_b_times_two"));
 
   // Check projection operator.
   // The projection operator is required because we need the arithmetic operation to be calculated first.

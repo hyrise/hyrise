@@ -5,6 +5,7 @@
 #include <map>
 #include <memory>
 #include <mutex>
+#include <optional>
 #include <string>
 #include <utility>
 #include <vector>
@@ -43,7 +44,7 @@ namespace opossum {
 class IndexColumnScan : public AbstractReadOnlyOperator {
  public:
   IndexColumnScan(const std::shared_ptr<AbstractOperator> in, const ColumnID column_id, const ScanType scan_type,
-                  const AllTypeVariant value, const optional<AllTypeVariant> value2 = nullopt);
+                  const AllTypeVariant value, const std::optional<AllTypeVariant> value2 = nullopt);
 
   const std::string name() const override;
   uint8_t num_in_tables() const override;
@@ -63,7 +64,7 @@ class IndexColumnScan : public AbstractReadOnlyOperator {
   const ColumnID _column_id;
   const ScanType _scan_type;
   const AllTypeVariant _value;
-  const optional<AllTypeVariant> _value2;
+  const std::optional<AllTypeVariant> _value2;
 
   std::unique_ptr<AbstractReadOnlyOperatorImpl> _impl;
 };
