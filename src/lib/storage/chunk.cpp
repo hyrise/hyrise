@@ -43,7 +43,7 @@ void Chunk::replace_column(size_t column_id, std::shared_ptr<BaseColumn> column)
   std::atomic_store(&_columns.at(column_id), column);
 }
 
-void Chunk::append(std::vector<AllTypeVariant> values) {
+void Chunk::append(const std::vector<AllTypeVariant>& values) {
   // Do this first to ensure that the first thing to exist in a row are the MVCC columns.
   if (has_mvcc_columns()) grow_mvcc_column_size_by(1u, Chunk::MAX_COMMIT_ID);
 
