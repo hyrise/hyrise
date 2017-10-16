@@ -73,7 +73,7 @@ PosList ColumnComparisonTableScanImpl::scan_chunk(ChunkID chunk_id) {
         });
       } else {
         Fail("Invalid column combination detected!");
-      };
+      }
     });
   });
 
