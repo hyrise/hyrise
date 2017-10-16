@@ -3,8 +3,8 @@
 #include <utility>
 #include <vector>
 
-#include "base_test.hpp"
 #include "SQLParser.h"
+#include "base_test.hpp"
 #include "gtest/gtest.h"
 
 #include "operators/abstract_operator.hpp"
@@ -75,7 +75,8 @@ TEST_P(TPCHTest, TPCHQueryTest) {
   SCOPED_TRACE("TPC-H " + std::to_string(query_idx + 1));
 
   const auto query = tpch_queries[query_idx];
-  const auto expected_result = load_table("src/test/tables/tpch/results/tpch" + std::to_string(query_idx + 1) + ".tbl", 2);
+  const auto expected_result =
+      load_table("src/test/tables/tpch/results/tpch" + std::to_string(query_idx + 1) + ".tbl", 2);
 
   execute_and_check(query, expected_result, true);
 }

@@ -8,8 +8,8 @@
 #include "storage/dictionary_compression.hpp"
 #include "storage/table.hpp"
 #include "storage/value_column.hpp"
-#include "utils/load_table.hpp"
 #include "types.hpp"
+#include "utils/load_table.hpp"
 
 #include "testing_assert.hpp"
 

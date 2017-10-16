@@ -19,7 +19,6 @@
 #include "storage/storage_manager.hpp"
 #include "utils/load_table.hpp"
 
-
 namespace opossum {
 
 struct JoinDetectionTestParam {

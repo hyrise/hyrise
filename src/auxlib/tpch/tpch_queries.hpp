@@ -2,6 +2,5 @@
 
 namespace opossum {
 
-extern const char * tpch_queries[21];
-
+extern const char* tpch_queries[21];
 }

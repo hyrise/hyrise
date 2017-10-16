@@ -1,10 +1,10 @@
 #include "testing_assert.hpp"
 
+#include "all_type_variant.hpp"
 #include "optimizer/abstract_syntax_tree/abstract_ast_node.hpp"
 #include "optimizer/abstract_syntax_tree/join_node.hpp"
-#include "storage/value_column.hpp"
 #include "storage/table.hpp"
-#include "all_type_variant.hpp"
+#include "storage/value_column.hpp"
 
 namespace {
 
@@ -47,7 +47,6 @@ void _print_matrix(const Matrix& m) {
   }
   std::cout << "-------------" << std::endl;
 }
-
 }
 
 namespace opossum {
@@ -153,18 +152,18 @@ void ASSERT_TABLE_EQ(const Table& tleft, const Table& tright, bool order_sensiti
   ASSERT_TRUE(check_table_equal(tleft, tright, order_sensitive, strict_types));
 }
 
-void EXPECT_TABLE_EQ(std::shared_ptr<const Table> tleft, std::shared_ptr<const Table> tright,
-                               bool order_sensitive, bool strict_types) {
+void EXPECT_TABLE_EQ(std::shared_ptr<const Table> tleft, std::shared_ptr<const Table> tright, bool order_sensitive,
+                     bool strict_types) {
   EXPECT_TABLE_EQ(*tleft, *tright, order_sensitive, strict_types);
 }
 
-void ASSERT_TABLE_EQ(std::shared_ptr<const Table> tleft, std::shared_ptr<const Table> tright,
-                               bool order_sensitive, bool strict_types) {
+void ASSERT_TABLE_EQ(std::shared_ptr<const Table> tleft, std::shared_ptr<const Table> tright, bool order_sensitive,
+                     bool strict_types) {
   ASSERT_TABLE_EQ(*tleft, *tright, order_sensitive, strict_types);
 }
 
-void ASSERT_INNER_JOIN_NODE(const std::shared_ptr<AbstractASTNode>& node, ScanType scanType,
-                                      ColumnID left_column_id, ColumnID right_column_id) {
+void ASSERT_INNER_JOIN_NODE(const std::shared_ptr<AbstractASTNode>& node, ScanType scanType, ColumnID left_column_id,
+                            ColumnID right_column_id) {
   ASSERT_EQ(node->type(), ASTNodeType::Join);  // Can't cast otherwise
   auto join_node = std::dynamic_pointer_cast<JoinNode>(node);
   ASSERT_EQ(join_node->join_mode(), JoinMode::Inner);  // Can't access join_column_ids() otherwise
@@ -173,5 +172,4 @@ void ASSERT_INNER_JOIN_NODE(const std::shared_ptr<AbstractASTNode>& node, ScanTy
 }
 
 void ASSERT_CROSS_JOIN_NODE(const std::shared_ptr<AbstractASTNode>& node) {}
-
 }
