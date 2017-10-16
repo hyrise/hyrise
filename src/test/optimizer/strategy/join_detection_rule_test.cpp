@@ -4,6 +4,7 @@
 #include <vector>
 
 #include "base_test.hpp"
+#include "base_test.hpp"
 #include "gtest/gtest.h"
 
 #include "optimizer/abstract_syntax_tree/abstract_ast_node.hpp"
@@ -16,6 +17,8 @@
 #include "optimizer/strategy/strategy_base_test.hpp"
 #include "sql/sql_to_ast_translator.hpp"
 #include "storage/storage_manager.hpp"
+#include "utils/load_table.hpp"
+
 
 namespace opossum {
 

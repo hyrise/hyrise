@@ -4,6 +4,8 @@ set(
     base_test.hpp
     gtest_case_template.cpp
     gtest_main.cpp
+    testing_assert.cpp
+    testing_assert.hpp
 )
 
 set(

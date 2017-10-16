@@ -56,7 +56,7 @@ typedef ::testing::Types<GroupKeyIndex, AdaptiveRadixTreeIndex, CompositeGroupKe
 TYPED_TEST_CASE(OperatorsIndexColumnScanTest, DerivedIndices);
 
 TYPED_TEST(OperatorsIndexColumnScanTest, DoubleScan) {
-  std::shared_ptr<Table> expected_result = this->load_table("src/test/tables/int_float_filtered.tbl", 2);
+  std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_float_filtered.tbl", 2);
 
   auto scan_1 =
       std::make_shared<IndexColumnScan>(this->_table_wrapper, ColumnID{0}, ScanType::OpGreaterThanEquals, 1234);
@@ -65,7 +65,7 @@ TYPED_TEST(OperatorsIndexColumnScanTest, DoubleScan) {
   auto scan_2 = std::make_shared<IndexColumnScan>(scan_1, ColumnID{1}, ScanType::OpLessThan, 457.9);
   scan_2->execute();
 
-  this->EXPECT_TABLE_EQ(scan_2->get_output(), expected_result);
+  EXPECT_TABLE_EQ(scan_2->get_output(), expected_result);
 }
 
 TYPED_TEST(OperatorsIndexColumnScanTest, DoubleScanOffsetPosition) {
@@ -80,12 +80,12 @@ TYPED_TEST(OperatorsIndexColumnScanTest, DoubleScanOffsetPosition) {
 }
 
 TYPED_TEST(OperatorsIndexColumnScanTest, SingleScan) {
-  std::shared_ptr<Table> expected_result = this->load_table("src/test/tables/int_float_filtered2.tbl", 1);
+  std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_float_filtered2.tbl", 1);
 
   auto scan = std::make_shared<IndexColumnScan>(this->_table_wrapper, ColumnID{0}, ScanType::OpGreaterThanEquals, 1234);
   scan->execute();
 
-  this->EXPECT_TABLE_EQ(scan->get_output(), expected_result);
+  EXPECT_TABLE_EQ(scan->get_output(), expected_result);
 }
 
 TYPED_TEST(OperatorsIndexColumnScanTest, LikeOperatorThrowsException) {

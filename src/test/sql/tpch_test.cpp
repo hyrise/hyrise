@@ -3,7 +3,7 @@
 #include <utility>
 #include <vector>
 
-#include "../base_test.hpp"
+#include "base_test.hpp"
 #include "SQLParser.h"
 #include "gtest/gtest.h"
 
@@ -17,7 +17,7 @@
 
 namespace opossum {
 
-class TPCHTest : public BaseTest {
+class TPCHTest : public ::testing::TestWithParam<size_t> {
  protected:
   void SetUp() override {
     std::shared_ptr<Table> customer = load_table("src/test/tables/tpch/customer.tbl", 2);
@@ -69,126 +69,41 @@ class TPCHTest : public BaseTest {
   }
 };
 
-TEST_F(TPCHTest, TPCH1) {
-  const auto expected_result = load_table("src/test/tables/tpch/results/tpch1.tbl", 2);
-  execute_and_check(tpch_queries[0], expected_result, true);
+TEST_P(TPCHTest, TPCHQueryTest) {
+  const auto query_idx = GetParam();
+
+  SCOPED_TRACE("TPC-H " + std::to_string(query_idx + 1));
+
+  const auto query = tpch_queries[query_idx];
+  const auto expected_result = load_table("src/test/tables/tpch/results/tpch" + std::to_string(query_idx + 1) + ".tbl", 2);
+
+  execute_and_check(query, expected_result, true);
 }
 
-// Enable once we support Subselects in WHERE condition
-TEST_F(TPCHTest, DISABLED_TPCH2) {
-  const auto expected_result = load_table("src/test/tables/tpch/results/tpch2.tbl", 2);
-  execute_and_check(tpch_queries[1], expected_result, true);
-}
-
-TEST_F(TPCHTest, TPCH3) {
-  const auto expected_result = load_table("src/test/tables/tpch/results/tpch3.tbl", 2);
-  execute_and_check(tpch_queries[2], expected_result, true);
-}
-
-// Enable once we support Exists and Subselects in WHERE condition
-TEST_F(TPCHTest, DISABLED_TPCH4) {
-  const auto expected_result = load_table("src/test/tables/tpch/results/tpch4.tbl", 2);
-  execute_and_check(tpch_queries[3], expected_result, true);
-}
-
-TEST_F(TPCHTest, TPCH5) {
-  const auto expected_result = load_table("src/test/tables/tpch/results/tpch5.tbl", 2);
-  execute_and_check(tpch_queries[4], expected_result, true);
-}
-
-TEST_F(TPCHTest, TPCH6) {
-  const auto expected_result = load_table("src/test/tables/tpch/results/tpch6.tbl", 2);
-  execute_and_check(tpch_queries[5], expected_result, true);
-}
-
-// Enable once OR is supported in WHERE condition
-TEST_F(TPCHTest, DISABLED_TPCH7) {
-  const auto expected_result = load_table("src/test/tables/tpch/results/tpch7.tbl", 2);
-  execute_and_check(tpch_queries[6], expected_result, true);
-}
-
-// Enable once CASE and arithmetic operations of Aggregations are supported
-TEST_F(TPCHTest, DISABLED_TPCH8) {
-  const auto expected_result = load_table("src/test/tables/tpch/results/tpch8.tbl", 2);
-  execute_and_check(tpch_queries[7], expected_result, true);
-}
-
-TEST_F(TPCHTest, TPCH9) {
-  const auto expected_result = load_table("src/test/tables/tpch/results/tpch9.tbl", 2);
-  execute_and_check(tpch_queries[8], expected_result, true);
-}
-
-TEST_F(TPCHTest, TPCH10) {
-  const auto expected_result = load_table("src/test/tables/tpch/results/tpch10.tbl", 2);
-  execute_and_check(tpch_queries[9], expected_result, true);
-}
-
-// Enable once we support Subselects in Having clause
-TEST_F(TPCHTest, DISABLED_TPCH11) {
-  const auto expected_result = load_table("src/test/tables/tpch/results/tpch11.tbl", 2);
-  execute_and_check(tpch_queries[10], expected_result, true);
-}
-
-// Enable once we support IN
-TEST_F(TPCHTest, DISABLED_TPCH12) {
-  const auto expected_result = load_table("src/test/tables/tpch/results/tpch12.tbl", 2);
-  execute_and_check(tpch_queries[11], expected_result, true);
-}
-
-// Enable once we support nested expressions in Join Condition
-TEST_F(TPCHTest, DISABLED_TPCH13) {
-  const auto expected_result = load_table("src/test/tables/tpch/results/tpch13.tbl", 2);
-  execute_and_check(tpch_queries[12], expected_result, true);
-}
-
-// Enable once we support Case
-TEST_F(TPCHTest, DISABLED_TPCH14) {
-  const auto expected_result = load_table("src/test/tables/tpch/results/tpch14.tbl", 2);
-  execute_and_check(tpch_queries[13], expected_result, true);
-}
-
-// We do not support Views yet
-TEST_F(TPCHTest, DISABLED_TPCH15) {
-  const auto expected_result = load_table("src/test/tables/tpch/results/tpch15.tbl", 2);
-  execute_and_check(tpch_queries[14], expected_result, true);
-}
-
-// Enable once we support Subselects in WHERE condition
-TEST_F(TPCHTest, DISABLED_TPCH16) {
-  const auto expected_result = load_table("src/test/tables/tpch/results/tpch16.tbl", 2);
-  execute_and_check(tpch_queries[15], expected_result, true);
-}
-
-// Enable once we support Subselect in WHERE condition
-TEST_F(TPCHTest, DISABLED_TPCH17) {
-  const auto expected_result = load_table("src/test/tables/tpch/results/tpch17.tbl", 2);
-  execute_and_check(tpch_queries[16], expected_result, true);
-}
-
-// Enable once we support Subselects in WHERE condition
-TEST_F(TPCHTest, DISABLED_TPCH18) {
-  const auto expected_result = load_table("src/test/tables/tpch/results/tpch18.tbl", 2);
-  execute_and_check(tpch_queries[17], expected_result, true);
-}
-
-// Enable once we support OR in WHERE condition
-TEST_F(TPCHTest, DISABLED_TPCH19) {
-  const auto expected_result = load_table("src/test/tables/tpch/results/tpch19.tbl", 2);
-  execute_and_check(tpch_queries[18], expected_result, true);
-}
-
-// Enable once we support Subselects in WHERE condition
-TEST_F(TPCHTest, DISABLED_TPCH20) {
-  const auto expected_result = load_table("src/test/tables/tpch/results/tpch20.tbl", 2);
-  execute_and_check(tpch_queries[19], expected_result, true);
-}
-
-// Enable once we support Exists and Subselect in WHERE condition
-TEST_F(TPCHTest, DISABLED_TPCH21) {
-  const auto expected_result = load_table("src/test/tables/tpch/results/tpch21.tbl", 2);
-  execute_and_check(tpch_queries[20], expected_result, true);
-}
-
-
+// clang-format off
+INSTANTIATE_TEST_CASE_P(TPCHTestInstances, TPCHTest, ::testing::Values(
+  0,
+  // 1, /* // Enable once we support Subselects in WHERE condition */
+  2,
+  // 3, /* Enable once we support Exists and Subselects in WHERE condition */
+  4,
+  5,
+  // 6, /* Enable once OR is supported in WHERE condition */
+  // 7, /* Enable once CASE and arithmetic operations of Aggregations are supported */
+  8,
+  9
+  // 10, /* Enable once we support Subselects in Having clause */
+  // 11, /* Enable once we support IN */
+  // 12, /* Enable once we support nested expressions in Join Condition */
+  // 13, /* Enable once we support Case */
+  // 14, /* We do not support Views yet */
+  // 15, /* Enable once we support Subselects in WHERE condition */
+  // 16, /* Enable once we support Subselects in WHERE condition */
+  // 17, /* Enable once we support Subselects in WHERE condition */
+  // 18, /* Enable once we support OR in WHERE condition */
+  // 19, /* Enable once we support Subselects in WHERE condition */
+  // 20 /* Enable once we support Exists and Subselect in WHERE condition */
+));
+// clang-format on
 
 }  // namespace opossum

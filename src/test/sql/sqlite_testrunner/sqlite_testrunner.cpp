@@ -97,7 +97,7 @@ TEST_F(SQLiteTestRunner, CompareToSQLiteTestRunner) {
       order_sensitive = (select_statement->order != nullptr);
     }
 
-    EXPECT_TRUE(_table_equal(*result_table, *sqlite_result_table, order_sensitive, false)) << "Query failed: " << query;
+    EXPECT_TRUE(check_table_equal(*result_table, *sqlite_result_table, order_sensitive, false)) << "Query failed: " << query;
   }
 }
 
