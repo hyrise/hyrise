@@ -5,9 +5,9 @@ else()
 endif()
 
 if (${NUMA_FOUND})
-    add_definitions(-DOPOSSUM_NUMA_SUPPORT=1)
+    add_definitions(-DHYRISE_NUMA_SUPPORT=1)
 else()
-    add_definitions(-DOPOSSUM_NUMA_SUPPORT=0)
+    add_definitions(-DHYRISE_NUMA_SUPPORT=0)
 endif()
 
 # This will be used by the DebugAssert macro to output
@@ -29,7 +29,7 @@ include_directories(
     ${PROJECT_SOURCE_DIR}/third_party/json
     ${PROJECT_SOURCE_DIR}/third_party/sql-parser/src
 
-    ${PROJECT_SOURCE_DIR}/src/auxlib/
+    ${PROJECT_SOURCE_DIR}/src/benchmarklib/
     ${PROJECT_SOURCE_DIR}/src/lib/
 
     ${TBB_INCLUDE_DIR}
@@ -40,7 +40,7 @@ if (${NUMA_FOUND})
     include_directories(${PROJECT_BINARY_DIR}/third_party/pgasus/src)
 endif()
 
-add_subdirectory(auxlib)
+add_subdirectory(benchmarklib)
 add_subdirectory(benchmark)
 add_subdirectory(bin)
 add_subdirectory(lib)

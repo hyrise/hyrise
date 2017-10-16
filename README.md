@@ -14,7 +14,7 @@ docker-compose build
 
 You can start the container via
 ```
-docker-compose run --rm opossum
+docker-compose run --rm hyrise
 ```
 :whale:
 
@@ -80,8 +80,8 @@ To configure a build directory for a release build make sure it is empty and cal
 `./scripts/format.sh` (clang-format is used)
 
 ### Test
-Calling `make opossumTest` from the build directory builds all available tests.
-The binary can be executed with `./<YourBuildDirectory>/opossumTest`.
+Calling `make hyriseTest` from the build directory builds all available tests.
+The binary can be executed with `./<YourBuildDirectory>/hyriseTest`.
 Note, that the tests/asan/etc need to be executed from the project root in order for table-files to be found.
 
 ### Coverage
@@ -90,12 +90,12 @@ Note, that the tests/asan/etc need to be executed from the project root in order
 *Supports only clang on MacOS and only gcc on linux*
 
 ### AddressSanitizer
-`make opossumAsan` will build Hyrise with enabled AddressSanitizer options and execute all available tests.
+`make hyriseAsan` will build Hyrise with enabled AddressSanitizer options and execute all available tests.
 It will fail on the first detected memory error and will print a summary.
 To convert addresses to actual source code locations, make sure llvm-symbolizer is installed (included in the llvm package) and is available in `$PATH`.
 To specify a custom location for the symbolizer, set `$ASAN_SYMBOLIZER_PATH` to the path of the executable.
 This seems to work out of the box on macOS - If not, make sure to have llvm installed.
-The binary can be executed with `LSAN_OPTIONS=suppressions=asan-ignore.txt ./<YourBuildDirectory>/opossumAsan`.
+The binary can be executed with `LSAN_OPTIONS=suppressions=asan-ignore.txt ./<YourBuildDirectory>/hyriseAsan`.
 
 ### Compile Times
 When trying to optimize the time spend building the project, it is often helpful to have an idea how much time is spent where.

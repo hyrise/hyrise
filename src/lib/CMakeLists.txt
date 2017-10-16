@@ -261,9 +261,9 @@ if(${NUMA_FOUND})
     set(LIBRARIES ${LIBRARIES} ${NUMA_LIBRARY} hpinuma_msource_s)
 endif()
 
-# Configure the regular opossum library used for tests/server/playground...
-add_library(opossum STATIC ${SOURCES})
-target_link_libraries(opossum ${LIBRARIES})
+# Configure the regular hyrise library used for tests/server/playground...
+add_library(hyrise STATIC ${SOURCES})
+target_link_libraries(hyrise ${LIBRARIES})
 
-add_asan_library(opossumAsanLib "${SOURCES}" "${LIBRARIES}")
-add_coverage_library(opossumCoverageLib "${SOURCES}" "${LIBRARIES}")
+add_asan_library(hyriseAsanLib "${SOURCES}" "${LIBRARIES}")
+add_coverage_library(hyriseCoverageLib "${SOURCES}" "${LIBRARIES}")

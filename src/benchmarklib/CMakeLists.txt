@@ -29,9 +29,9 @@ set(
 
 
 # Configure the regular opossum library used for tests/server/playground...
-add_library(opossumAux STATIC ${SOURCES})
-target_link_libraries(opossumAux opossum)
+add_library(hyriseBenchmarkLib STATIC ${SOURCES})
+target_link_libraries(hyriseBenchmarkLib hyrise)
 
-add_asan_library(opossumAuxAsan "${SOURCES}" opossumAsanLib)
-add_coverage_library(opossumAuxCoverage "${SOURCES}" opossumCoverageLib)
+add_asan_library(hyriseBenchmarkSanitizersLib "${SOURCES}" hyriseSanitizersLib)
+add_coverage_library(hyriseBenchmarkCoverageLib "${SOURCES}" hyriseCoverageLib)
 

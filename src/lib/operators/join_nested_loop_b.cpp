@@ -262,7 +262,9 @@ const T& JoinNestedLoopB::JoinNestedLoopBImpl<T>::_resolve_reference(ReferenceCo
   // TODO(anyone): This can be replaced by operator[] once gcc optimizes properly
   auto& ref_table = ref_column.referenced_table();
   auto& pos_list = ref_column.pos_list();
-  const auto & [ referenced_chunk_id, referenced_chunk_offset ] = pos_list->at(chunk_offset);
+  const auto& row_id = pos_list->at(chunk_offset);
+  const auto& referenced_chunk_id = row_id.chunk_id;
+  const auto& referenced_chunk_offset = row_id.chunk_offset;
   const auto& referenced_chunk = ref_table->get_chunk(referenced_chunk_id);
   const auto& referenced_column = referenced_chunk.get_column(ref_column.referenced_column_id());
 

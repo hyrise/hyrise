@@ -1,6 +1,6 @@
 # This file is loosely related to src/auxlib/tpcc/constants.hpp and contains constants specified in the
 # TPCC benchmark
-# These constants are used for TPCC request generation for the opossumTestTPCC-Suite
+# These constants are used for TPCC request generation for the hyriseTestTPCC-Suite
 
 ORIGINAL_STRING = "ORIGINAL"
 NUM_DISTRICTS_PER_WAREHOUSE = 10
