@@ -241,8 +241,8 @@ TEST_F(OperatorsTableScanTest, ScanOnDictColumn) {
   tests[ScanType::OpGreaterThanEquals] = {104, 106, 108, 110, 112, 114, 116, 118, 120, 122, 124};
   tests[ScanType::OpBetween] = {104, 106, 108};
   for (const auto& test : tests) {
-    auto scan =
-        std::make_shared<TableScan>(_table_wrapper_even_dict, ColumnID{0}, test.first, 4, std::optional<AllTypeVariant>(9));
+    auto scan = std::make_shared<TableScan>(_table_wrapper_even_dict, ColumnID{0}, test.first, 4,
+                                            std::optional<AllTypeVariant>(9));
     scan->execute();
 
     ASSERT_COLUMN_EQ(scan->get_output(), ColumnID{1}, test.second);

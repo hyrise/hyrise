@@ -5,8 +5,8 @@
 #include <cstdint>
 #include <fstream>
 #include <memory>
-#include <optional>
 #include <numeric>
+#include <optional>
 #include <string>
 #include <utility>
 #include <vector>

@@ -39,11 +39,13 @@ class ColumnStatistics : public BaseColumnStatistics {
                    const float non_null_value_ratio = 1.f);
   ~ColumnStatistics() override = default;
 
-  ColumnSelectivityResult estimate_selectivity_for_predicate(const ScanType scan_type, const AllTypeVariant& value,
-                                                             const std::optional<AllTypeVariant>& value2 = nullopt) override;
+  ColumnSelectivityResult estimate_selectivity_for_predicate(
+      const ScanType scan_type, const AllTypeVariant& value,
+      const std::optional<AllTypeVariant>& value2 = nullopt) override;
 
-  ColumnSelectivityResult estimate_selectivity_for_predicate(const ScanType scan_type, const ValuePlaceholder& value,
-                                                             const std::optional<AllTypeVariant>& value2 = nullopt) override;
+  ColumnSelectivityResult estimate_selectivity_for_predicate(
+      const ScanType scan_type, const ValuePlaceholder& value,
+      const std::optional<AllTypeVariant>& value2 = nullopt) override;
 
   TwoColumnSelectivityResult estimate_selectivity_for_two_column_predicate(
       const ScanType scan_type, const std::shared_ptr<BaseColumnStatistics>& right_base_column_statistics,

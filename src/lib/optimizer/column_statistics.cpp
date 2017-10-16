@@ -194,9 +194,9 @@ ColumnSelectivityResult ColumnStatistics<ColumnType>::estimate_selectivity_for_p
       if (std::is_integral<ColumnType>::value) {
         return _create_column_stats_for_range_predicate(_get_or_calculate_min(), casted_value - 1);
       }
-// intentionally no break
-// if ColumnType is a floating point number,
-// OpLessThanEquals behaviour is expected instead of OpLessThan
+      // intentionally no break
+      // if ColumnType is a floating point number,
+      // OpLessThanEquals behaviour is expected instead of OpLessThan
       [[fallthrough]];
     }
     case ScanType::OpLessThanEquals: {
@@ -209,9 +209,9 @@ ColumnSelectivityResult ColumnStatistics<ColumnType>::estimate_selectivity_for_p
       if (std::is_integral<ColumnType>::value) {
         return _create_column_stats_for_range_predicate(casted_value + 1, _get_or_calculate_max());
       }
-// intentionally no break
-// if ColumnType is a floating point number,
-// OpGreaterThanEquals behaviour is expected instead of OpGreaterThan
+      // intentionally no break
+      // if ColumnType is a floating point number,
+      // OpGreaterThanEquals behaviour is expected instead of OpGreaterThan
       [[fallthrough]];
     }
     case ScanType::OpGreaterThanEquals: {

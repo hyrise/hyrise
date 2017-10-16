@@ -180,7 +180,8 @@ ColumnID AggregateNode::get_column_id_for_expression(const std::shared_ptr<Expre
   return *column_id;
 }
 
-std::optional<ColumnID> AggregateNode::find_column_id_for_expression(const std::shared_ptr<Expression>& expression) const {
+std::optional<ColumnID> AggregateNode::find_column_id_for_expression(
+    const std::shared_ptr<Expression>& expression) const {
   /**
    * This function does NOT need to check whether an expression is ambiguous.
    * It is only used when translating the HAVING clause.

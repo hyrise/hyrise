@@ -115,7 +115,8 @@ std::shared_ptr<Table> CsvParser::_process_meta_file(const std::string& filename
   return table;
 }
 
-bool CsvParser::_find_fields_in_chunk(std::string_view csv_content, const Table& table, std::vector<size_t>& field_ends) {
+bool CsvParser::_find_fields_in_chunk(std::string_view csv_content, const Table& table,
+                                      std::vector<size_t>& field_ends) {
   field_ends.clear();
   if (csv_content.empty()) {
     return false;

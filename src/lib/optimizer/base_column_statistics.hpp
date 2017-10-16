@@ -57,7 +57,8 @@ class BaseColumnStatistics : public std::enable_shared_from_this<BaseColumnStati
    * @return Selectivity and new column statistics.
    */
   virtual ColumnSelectivityResult estimate_selectivity_for_predicate(
-      const ScanType scan_type, const ValuePlaceholder& value, const std::optional<AllTypeVariant>& value2 = nullopt) = 0;
+      const ScanType scan_type, const ValuePlaceholder& value,
+      const std::optional<AllTypeVariant>& value2 = nullopt) = 0;
 
   /**
    * Estimate selectivity for predicate on columns.
