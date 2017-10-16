@@ -29,6 +29,8 @@ void Pagination::display() {
   size_t line_count = _lines.size();
   size_t end_line = line_count > _size_y ? line_count - _size_y : 0;
   size_t current_line = 0;
+
+  // Indicator if the display should be reprinted after a keyboard input
   bool reprint = false;
   _print_page(current_line);
 
