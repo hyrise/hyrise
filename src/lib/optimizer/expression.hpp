@@ -51,29 +51,29 @@ class Expression : public std::enable_shared_from_this<Expression> {
    * Factory Methods to create Expressions of specific type
    */
   static std::shared_ptr<Expression> create_column(const ColumnID column_id,
-                                                   const std::optional<std::string>& alias = nullopt);
+                                                   const std::optional<std::string>& alias = std::nullopt);
 
   static std::vector<std::shared_ptr<Expression>> create_columns(
-      const std::vector<ColumnID>& column_ids, const std::optional<std::vector<std::string>>& aliases = nullopt);
+      const std::vector<ColumnID>& column_ids, const std::optional<std::vector<std::string>>& aliases = std::nullopt);
 
   // A literal can have an alias in order to allow queries like `SELECT 1 as one FROM t`.
   static std::shared_ptr<Expression> create_literal(const AllTypeVariant& value,
-                                                    const std::optional<std::string>& alias = nullopt);
+                                                    const std::optional<std::string>& alias = std::nullopt);
 
   static std::shared_ptr<Expression> create_value_placeholder(ValuePlaceholder value_placeholder);
 
   static std::shared_ptr<Expression> create_aggregate_function(
       AggregateFunction aggregate_function, const std::vector<std::shared_ptr<Expression>>& expression_list,
-      const std::optional<std::string>& alias = nullopt);
+      const std::optional<std::string>& alias = std::nullopt);
 
   static std::shared_ptr<Expression> create_binary_operator(ExpressionType type,
                                                             const std::shared_ptr<Expression>& left,
                                                             const std::shared_ptr<Expression>& right,
-                                                            const std::optional<std::string>& alias = nullopt);
+                                                            const std::optional<std::string>& alias = std::nullopt);
 
   static std::shared_ptr<Expression> create_unary_operator(ExpressionType type,
                                                            const std::shared_ptr<Expression>& input,
-                                                           const std::optional<std::string>& alias = nullopt);
+                                                           const std::optional<std::string>& alias = std::nullopt);
 
   static std::shared_ptr<Expression> create_select_star(const std::optional<std::string>& table_name = {});
   // @}

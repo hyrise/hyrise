@@ -243,7 +243,7 @@ const std::string Expression::description() const {
 }
 
 const ColumnID Expression::column_id() const {
-  DebugAssert(_column_id != nullopt,
+  DebugAssert(_column_id != std::nullopt,
               "Expression " + expression_type_to_string.at(_type) + " does not have a column_id");
   return *_column_id;
 }
@@ -251,7 +251,7 @@ const ColumnID Expression::column_id() const {
 const std::optional<std::string>& Expression::table_name() const { return _table_name; }
 
 AggregateFunction Expression::aggregate_function() const {
-  DebugAssert(_aggregate_function != nullopt,
+  DebugAssert(_aggregate_function != std::nullopt,
               "Expression " + expression_type_to_string.at(_type) + " does not have an aggregate function");
   return *_aggregate_function;
 }
@@ -259,12 +259,12 @@ AggregateFunction Expression::aggregate_function() const {
 const std::optional<std::string>& Expression::alias() const { return _alias; }
 
 const AllTypeVariant Expression::value() const {
-  DebugAssert(_value != nullopt, "Expression " + expression_type_to_string.at(_type) + " does not have a value");
+  DebugAssert(_value != std::nullopt, "Expression " + expression_type_to_string.at(_type) + " does not have a value");
   return *_value;
 }
 
 ValuePlaceholder Expression::value_placeholder() const {
-  DebugAssert(_value_placeholder != nullopt,
+  DebugAssert(_value_placeholder != std::nullopt,
               "Expression " + expression_type_to_string.at(_type) + " does not have a value placeholder");
   return *_value_placeholder;
 }

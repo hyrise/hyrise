@@ -37,17 +37,17 @@ class ProjectionNodeTest : public BaseTest {
 };
 
 TEST_F(ProjectionNodeTest, ColumnIdForColumnIdentifier) {
-  EXPECT_EQ(_projection_node->get_column_id_by_named_column_reference({"c", nullopt}), 0);
+  EXPECT_EQ(_projection_node->get_column_id_by_named_column_reference({"c", std::nullopt}), 0);
   EXPECT_EQ(_projection_node->get_column_id_by_named_column_reference({"c", {"t_a"}}), 0);
-  EXPECT_EQ(_projection_node->get_column_id_by_named_column_reference({"a", nullopt}), 1);
-  EXPECT_EQ(_projection_node->find_column_id_by_named_column_reference({"b", nullopt}), nullopt);
-  EXPECT_EQ(_projection_node->find_column_id_by_named_column_reference({"b", {"t_a"}}), nullopt);
-  EXPECT_EQ(_projection_node->get_column_id_by_named_column_reference({"alias_for_b", nullopt}), 2);
-  EXPECT_EQ(_projection_node->find_column_id_by_named_column_reference({"alias_for_b", {"t_a"}}), nullopt);
-  EXPECT_EQ(_projection_node->get_column_id_by_named_column_reference({"some_addition", nullopt}), 3);
-  EXPECT_EQ(_projection_node->find_column_id_by_named_column_reference({"some_addition", {"t_a"}}), nullopt);
-  EXPECT_EQ(_projection_node->find_column_id_by_named_column_reference({"some_addition", {"t_b"}}), nullopt);
-  EXPECT_EQ(_projection_node->get_column_id_by_named_column_reference({"a + c", nullopt}), 4);
+  EXPECT_EQ(_projection_node->get_column_id_by_named_column_reference({"a", std::nullopt}), 1);
+  EXPECT_EQ(_projection_node->find_column_id_by_named_column_reference({"b", std::nullopt}), std::nullopt);
+  EXPECT_EQ(_projection_node->find_column_id_by_named_column_reference({"b", {"t_a"}}), std::nullopt);
+  EXPECT_EQ(_projection_node->get_column_id_by_named_column_reference({"alias_for_b", std::nullopt}), 2);
+  EXPECT_EQ(_projection_node->find_column_id_by_named_column_reference({"alias_for_b", {"t_a"}}), std::nullopt);
+  EXPECT_EQ(_projection_node->get_column_id_by_named_column_reference({"some_addition", std::nullopt}), 3);
+  EXPECT_EQ(_projection_node->find_column_id_by_named_column_reference({"some_addition", {"t_a"}}), std::nullopt);
+  EXPECT_EQ(_projection_node->find_column_id_by_named_column_reference({"some_addition", {"t_b"}}), std::nullopt);
+  EXPECT_EQ(_projection_node->get_column_id_by_named_column_reference({"a + c", std::nullopt}), 4);
 }
 
 TEST_F(ProjectionNodeTest, AliasedSubqueryTest) {
@@ -59,13 +59,14 @@ TEST_F(ProjectionNodeTest, AliasedSubqueryTest) {
 
   EXPECT_EQ(projection_node_with_alias->get_column_id_by_named_column_reference({"c"}), ColumnID{0});
   EXPECT_EQ(projection_node_with_alias->get_column_id_by_named_column_reference({"c", {"foo"}}), ColumnID{0});
-  EXPECT_EQ(projection_node_with_alias->find_column_id_by_named_column_reference({"c", {"t_a"}}), nullopt);
-  EXPECT_EQ(projection_node_with_alias->find_column_id_by_named_column_reference({"a", {"t_b"}}), nullopt);
-  EXPECT_EQ(projection_node_with_alias->find_column_id_by_named_column_reference({"b"}), nullopt);
-  EXPECT_EQ(projection_node_with_alias->find_column_id_by_named_column_reference({"b", {"t_a"}}), nullopt);
-  EXPECT_EQ(projection_node_with_alias->get_column_id_by_named_column_reference({"alias_for_b", nullopt}), 2);
+  EXPECT_EQ(projection_node_with_alias->find_column_id_by_named_column_reference({"c", {"t_a"}}), std::nullopt);
+  EXPECT_EQ(projection_node_with_alias->find_column_id_by_named_column_reference({"a", {"t_b"}}), std::nullopt);
+  EXPECT_EQ(projection_node_with_alias->find_column_id_by_named_column_reference({"b"}), std::nullopt);
+  EXPECT_EQ(projection_node_with_alias->find_column_id_by_named_column_reference({"b", {"t_a"}}), std::nullopt);
+  EXPECT_EQ(projection_node_with_alias->get_column_id_by_named_column_reference({"alias_for_b", std::nullopt}), 2);
   EXPECT_EQ(projection_node_with_alias->get_column_id_by_named_column_reference({"alias_for_b", {"foo"}}), 2);
-  EXPECT_EQ(projection_node_with_alias->find_column_id_by_named_column_reference({"alias_for_b", {"t_a"}}), nullopt);
+  EXPECT_EQ(projection_node_with_alias->find_column_id_by_named_column_reference({"alias_for_b", {"t_a"}}),
+            std::nullopt);
 }
 
 }  // namespace opossum

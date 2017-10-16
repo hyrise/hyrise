@@ -44,7 +44,7 @@ namespace opossum {
 class IndexColumnScan : public AbstractReadOnlyOperator {
  public:
   IndexColumnScan(const std::shared_ptr<AbstractOperator> in, const ColumnID column_id, const ScanType scan_type,
-                  const AllTypeVariant value, const std::optional<AllTypeVariant> value2 = nullopt);
+                  const AllTypeVariant value, const std::optional<AllTypeVariant> value2 = std::nullopt);
 
   const std::string name() const override;
   uint8_t num_in_tables() const override;

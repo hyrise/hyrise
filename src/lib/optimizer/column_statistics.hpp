@@ -41,15 +41,15 @@ class ColumnStatistics : public BaseColumnStatistics {
 
   ColumnSelectivityResult estimate_selectivity_for_predicate(
       const ScanType scan_type, const AllTypeVariant& value,
-      const std::optional<AllTypeVariant>& value2 = nullopt) override;
+      const std::optional<AllTypeVariant>& value2 = std::nullopt) override;
 
   ColumnSelectivityResult estimate_selectivity_for_predicate(
       const ScanType scan_type, const ValuePlaceholder& value,
-      const std::optional<AllTypeVariant>& value2 = nullopt) override;
+      const std::optional<AllTypeVariant>& value2 = std::nullopt) override;
 
   TwoColumnSelectivityResult estimate_selectivity_for_two_column_predicate(
       const ScanType scan_type, const std::shared_ptr<BaseColumnStatistics>& right_base_column_statistics,
-      const std::optional<AllTypeVariant>& value2 = nullopt) override;
+      const std::optional<AllTypeVariant>& value2 = std::nullopt) override;
 
   /**
    * Accessors for class variable optionals. Compute values, if not available.

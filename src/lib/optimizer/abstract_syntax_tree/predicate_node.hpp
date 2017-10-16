@@ -26,7 +26,7 @@ class TableStatistics;
 class PredicateNode : public AbstractASTNode {
  public:
   PredicateNode(const ColumnID column_id, const ScanType scan_type, const AllParameterVariant& value,
-                const std::optional<AllTypeVariant>& value2 = nullopt);
+                const std::optional<AllTypeVariant>& value2 = std::nullopt);
 
   std::string description() const override;
 

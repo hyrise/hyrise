@@ -46,7 +46,7 @@ class IndexColumnScan::IndexColumnScanImpl : public AbstractReadOnlyOperatorImpl
         _column_id(column_id),
         _scan_type(scan_type),
         _casted_value(type_cast<T>(value)),
-        _casted_value2(value2 ? std::optional<T>(type_cast<T>(*value2)) : std::optional<T>(nullopt)) {}
+        _casted_value2(value2 ? std::optional<T>(type_cast<T>(*value2)) : std::optional<T>(std::nullopt)) {}
 
   struct ScanContext : ColumnVisitableContext {
     ScanContext(std::shared_ptr<const Table> t, ChunkID c, std::vector<RowID>& mo,

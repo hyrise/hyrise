@@ -471,14 +471,14 @@ struct AggregateFunctionBuilder<ColumnType, AggregateType, AggregateFunction::Av
 template <typename ColumnType, typename AggregateType>
 struct AggregateFunctionBuilder<ColumnType, AggregateType, AggregateFunction::Count> {
   AggregateFunctor<ColumnType, AggregateType> get_aggregate_function() {
-    return [](ColumnType, std::optional<AggregateType> current_aggregate) { return nullopt; };
+    return [](ColumnType, std::optional<AggregateType> current_aggregate) { return std::nullopt; };
   }
 };
 
 template <typename ColumnType, typename AggregateType>
 struct AggregateFunctionBuilder<ColumnType, AggregateType, AggregateFunction::CountDistinct> {
   AggregateFunctor<ColumnType, AggregateType> get_aggregate_function() {
-    return [](ColumnType, std::optional<AggregateType> current_aggregate) { return nullopt; };
+    return [](ColumnType, std::optional<AggregateType> current_aggregate) { return std::nullopt; };
   }
 };
 

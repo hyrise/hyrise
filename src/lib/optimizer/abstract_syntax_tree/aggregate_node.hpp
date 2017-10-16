@@ -39,7 +39,7 @@ class AggregateNode : public AbstractASTNode {
   /**
    * AggregateNode::find_column_id_for_expression() looks for the @param expression in the columns this
    * node outputs, checking by semantic and NOT by Expression object's address. If it can find it, it will be returned,
-   * otherwise nullopt is returned.
+   * otherwise std::nullopt is returned.
    * AggregateNode::get_column_id_for_expression() is more strict and will fail, if the
    * @param expression cannot be found
    *

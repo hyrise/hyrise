@@ -63,7 +63,7 @@ std::optional<JoinConditionDetectionRule::JoinCondition> JoinConditionDetectionR
      * Detecting Join Conditions across other node types may be possible by applying 'Predicate Pushdown' first.
      */
     if (node->type() != ASTNodeType::Join && node->type() != ASTNodeType::Predicate) {
-      return nullopt;
+      return std::nullopt;
     }
 
     if (node->type() == ASTNodeType::Predicate) {
@@ -106,7 +106,7 @@ std::optional<JoinConditionDetectionRule::JoinCondition> JoinConditionDetectionR
     }
   }
 
-  return nullopt;
+  return std::nullopt;
 }
 
 bool JoinConditionDetectionRule::_is_join_condition(ColumnID left, ColumnID right, size_t left_num_cols,

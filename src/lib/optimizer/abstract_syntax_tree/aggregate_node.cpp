@@ -212,7 +212,7 @@ std::optional<ColumnID> AggregateNode::find_column_id_for_expression(
   }
 
   // Return unset optional if expression was not found.
-  return nullopt;
+  return std::nullopt;
 }
 
 std::vector<ColumnID> AggregateNode::get_output_column_ids_for_table(const std::string& table_name) const {

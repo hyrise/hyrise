@@ -31,7 +31,7 @@ enum class ASTNodeType {
 
 struct NamedColumnReference {
   std::string column_name;
-  std::optional<std::string> table_name = nullopt;
+  std::optional<std::string> table_name = std::nullopt;
 
   std::string as_string() const;
 };
@@ -110,14 +110,14 @@ class AbstractASTNode : public std::enable_shared_from_this<AbstractASTNode> {
    * on this.
    *
    * AbstractASTNode::find_column_id_by_named_column_reference() looks for the @param named_column_reference in the
-   * columns that this node outputs. If it can find it, the corresponding ColumnID will be returned, otherwise nullopt
+   * columns that this node outputs. If it can find it, the corresponding ColumnID will be returned, otherwise std::nullopt
    * is returned.
    *
    * AbstractASTNode::get_column_id_by_named_column_reference() is more strict and will fail if the
    * @param named_column_reference cannot be found.
    *
    * NOTE: If a node outputs a column "x" but ALIASes it as, say, "y", these two functions will only find
-   * ColumnIdentifier{"y", nullopt} and NEITHER ColumnIdentifier{"x", "table_name"} nor
+   * ColumnIdentifier{"y", std::nullopt} and NEITHER ColumnIdentifier{"x", "table_name"} nor
    * ColumnIdentifier{"y", "table_name"}
    *
    * NOTE: These functions will possibly result in a full recursive traversal of the ancestors of this node.
@@ -201,7 +201,7 @@ class AbstractASTNode : public std::enable_shared_from_this<AbstractASTNode> {
 
   // If named_column_reference.table_name is the alias set for this subtree, remove the table_name so that we
   // only operatore on the column name. If an alias for this subtree is set, but this reference does not match
-  // it, the reference cannot be resolved (see knows_table) and nullopt is returned.
+  // it, the reference cannot be resolved (see knows_table) and std::nullopt is returned.
   std::optional<NamedColumnReference> _resolve_local_alias(const NamedColumnReference& named_column_reference) const;
 
  private:

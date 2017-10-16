@@ -78,7 +78,7 @@ std::optional<ColumnID> JoinNode::find_column_id_by_named_column_reference(
 
     // If neither input table knows the table name, return.
     if (!left_knows_table && !right_knows_table) {
-      return nullopt;
+      return std::nullopt;
     }
 
     // There must not be two tables with the same qualifying name.
@@ -96,7 +96,7 @@ std::optional<ColumnID> JoinNode::find_column_id_by_named_column_reference(
 
   // If neither input table has that column, return.
   if (!left_column_id && !right_column_id) {
-    return nullopt;
+    return std::nullopt;
   }
 
   Assert(static_cast<bool>(left_column_id) ^ static_cast<bool>(right_column_id),

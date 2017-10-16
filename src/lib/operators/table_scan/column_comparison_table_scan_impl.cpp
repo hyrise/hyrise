@@ -59,6 +59,7 @@ PosList ColumnComparisonTableScanImpl::scan_chunk(ChunkID chunk_id) {
       constexpr auto neither_is_string_column = !left_is_string_column && !right_is_string_column;
       constexpr auto both_are_string_columns = left_is_string_column && right_is_string_column;
 
+      // clang-format off
       if constexpr((neither_is_reference_column || both_are_reference_columns) &&
                    (neither_is_string_column || both_are_string_columns)) {
         auto left_column_iterable = create_iterable_from_column<LeftType>(typed_left_column);
@@ -74,6 +75,7 @@ PosList ColumnComparisonTableScanImpl::scan_chunk(ChunkID chunk_id) {
       } else {
         Fail("Invalid column combination detected!");   // NOLINT - cpplint.py does not know about constexpr
       }
+      // clang-format on
     });
   });
 

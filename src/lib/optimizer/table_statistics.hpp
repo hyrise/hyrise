@@ -65,9 +65,9 @@ class TableStatistics : public std::enable_shared_from_this<TableStatistics> {
   /**
    * Generate table statistics for the operator table scan table scan.
    */
-  virtual std::shared_ptr<TableStatistics> predicate_statistics(const ColumnID column_id, const ScanType scan_type,
-                                                                const AllParameterVariant& value,
-                                                                const std::optional<AllTypeVariant>& value2 = nullopt);
+  virtual std::shared_ptr<TableStatistics> predicate_statistics(
+      const ColumnID column_id, const ScanType scan_type, const AllParameterVariant& value,
+      const std::optional<AllTypeVariant>& value2 = std::nullopt);
 
   /**
    * Generate table statistics for a cross join.

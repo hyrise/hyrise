@@ -192,7 +192,7 @@ TEST_F(ASTToOperatorTranslatorTest, AggregateNodeWithArithmetics) {
 
   const auto column_expression1 = column_expressions[1];
   EXPECT_EQ(column_expression1->to_string(), "ColumnID #1 * 2");
-  EXPECT_EQ(column_expression1->alias(), nullopt);
+  EXPECT_EQ(column_expression1->alias(), std::nullopt);
 }
 
 TEST_F(ASTToOperatorTranslatorTest, MultipleNodesHierarchy) {

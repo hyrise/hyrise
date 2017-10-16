@@ -223,7 +223,7 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_update(const hsq
 
   // now update with new values
   for (auto& sql_expr : *update.updates) {
-    const auto column_ref = NamedColumnReference{sql_expr->column, nullopt};
+    const auto column_ref = NamedColumnReference{sql_expr->column, std::nullopt};
     auto column_id = current_values_node->find_column_id_by_named_column_reference(column_ref);
     Assert(column_id, "Update: Could not find column reference");
 
@@ -382,7 +382,7 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_cross_product(
 }
 
 std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_table_ref(const hsql::TableRef& table) {
-  auto alias = table.alias ? std::optional<std::string>(table.alias) : nullopt;
+  auto alias = table.alias ? std::optional<std::string>(table.alias) : std::nullopt;
   std::shared_ptr<AbstractASTNode> node;
   switch (table.type) {
     case hsql::kTableName:

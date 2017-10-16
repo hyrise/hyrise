@@ -66,7 +66,7 @@ constexpr ColumnID CountStarID{std::numeric_limits<ColumnID::base_type>::max()};
  */
 struct AggregateDefinition {
   AggregateDefinition(const ColumnID column_id, const AggregateFunction function,
-                      const std::optional<std::string>& alias = nullopt);
+                      const std::optional<std::string>& alias = std::nullopt);
 
   ColumnID column_id;
   AggregateFunction function;

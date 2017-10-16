@@ -215,7 +215,7 @@ std::optional<NamedColumnReference> AbstractASTNode::_resolve_local_alias(const 
     if (*reference.table_name == *_table_alias) {
       // The used table name is the alias of this table. Remove id from the NamedColumnReference for further search
       auto reference_without_local_alias = reference;
-      reference_without_local_alias.table_name = nullopt;
+      reference_without_local_alias.table_name = std::nullopt;
       return reference_without_local_alias;
     } else {
       return {};

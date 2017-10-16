@@ -30,7 +30,7 @@ namespace opossum {
  */
 class ImportBinary : public AbstractReadOnlyOperator {
  public:
-  explicit ImportBinary(const std::string& filename, const std::optional<std::string> tablename = nullopt);
+  explicit ImportBinary(const std::string& filename, const std::optional<std::string> tablename = std::nullopt);
 
   /*
    * Reads the given binary file. The file must be in the following form:
