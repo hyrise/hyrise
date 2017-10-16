@@ -36,8 +36,8 @@ find_package(Curses REQUIRED)
 find_package(Sqlite3 REQUIRED)
 
 # Include sub-CMakeLists.txt
-add_subdirectory(third_party/)
-add_subdirectory(third_party/googletest)
+add_subdirectory(third_party/ EXCLUDE_FROM_ALL)
+add_subdirectory(third_party/googletest EXCLUDE_FROM_ALL)
 add_subdirectory(src)
 
 if(${NUMA_FOUND})
@@ -45,7 +45,7 @@ if(${NUMA_FOUND})
     set(PGASUS_REPLACE_MALLOC OFF CACHE BOOL "" FORCE)
     set(PGASUS_BUILD_TESTS OFF CACHE BOOL "" FORCE)
     set(PGASUS_BUILD_DOCUMENTATION OFF CACHE BOOL "" FORCE)
-    add_subdirectory(third_party/pgasus)
+    add_subdirectory(third_party/pgasus EXCLUDE_FROM_ALL)
 endif()
 
 # Useful for printing all c++ files in a directory:
