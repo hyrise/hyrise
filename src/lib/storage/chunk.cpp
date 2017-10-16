@@ -48,8 +48,9 @@ void Chunk::append(const std::vector<AllTypeVariant>& values) {
   if (has_mvcc_columns()) grow_mvcc_column_size_by(1u, Chunk::MAX_COMMIT_ID);
 
   // The added values, i.e., a new row, must have the same number of attribues as the table.
-  DebugAssert((_columns.size() == values.size()), ("append: number of columns (" + to_string(_columns.size()) +
-                                                   ") does not match value list (" + to_string(values.size()) + ")"));
+  DebugAssert((_columns.size() == values.size()),
+              ("append: number of columns (" + std::to_string(_columns.size()) + ") does not match value list (" +
+               std::to_string(values.size()) + ")"));
 
   auto column_it = _columns.cbegin();
   auto value_it = values.begin();

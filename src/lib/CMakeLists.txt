@@ -1,6 +1,7 @@
 # Sources and libraries shared among the different builds of the lib
 set(
     SOURCES
+    all_parameter_variant.cpp
     all_parameter_variant.hpp
     all_type_variant.hpp
     concurrency/commit_context.cpp
@@ -232,7 +233,6 @@ set(
     storage/value_column.hpp
     tasks/chunk_compression_task.cpp
     tasks/chunk_compression_task.hpp
-    type_cast.cpp
     type_cast.hpp
     type_comparison.hpp
     types.hpp
