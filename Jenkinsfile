@@ -55,9 +55,9 @@ node {
           sh "./clang-debug/hyriseTest"
         }
       }, clangDebugAsan: {
-        stage("clang-debug:asan") {
-        sh "export CCACHE_BASEDIR=`pwd`; cd clang-debug && make hyriseAsan -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
-          sh "LSAN_OPTIONS=suppressions=asan-ignore.txt ./clang-debug/hyriseAsan"
+        stage("clang-debug:sanitizers") {
+        sh "export CCACHE_BASEDIR=`pwd`; cd clang-debug && make hyriseSanitizers -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
+          sh "LSAN_OPTIONS=suppressions=asan-ignore.txt ./clang-debug/hyriseSanitizers"
         }
       }, gccDebug: {
         stage("gcc-debug") {
@@ -73,10 +73,10 @@ node {
         stage("TPCC Test") {
             sh "./scripts/test_tpcc.sh clang-release"
         }
-      }, asanRelease: {
-        stage("clang-release:asan") {
-          sh "export CCACHE_BASEDIR=`pwd`; cd clang-release && make hyriseAsan -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
-          sh "LSAN_OPTIONS=suppressions=asan-ignore.txt ./clang-release/hyriseAsan"
+      }, clangReleaseAsan: {
+        stage("clang-release:sanitizers") {
+          sh "export CCACHE_BASEDIR=`pwd`; cd clang-release && make hyriseSanitizers -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
+          sh "LSAN_OPTIONS=suppressions=asan-ignore.txt ./clang-release/hyriseSanitizers"
         }
       }, coverage: {
         stage("Coverage") {

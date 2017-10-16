@@ -94,7 +94,7 @@ set (
     tpc/tpcc_ref_test.cpp
 )
 
-# Both hyriseTest and hyriseAsan link against these
+# Both hyriseTest and hyriseSanitizers link against these
 set(
     LIBRARIES
     gtest
@@ -129,10 +129,10 @@ add_executable(hyriseCoverage EXCLUDE_FROM_ALL ${HYRISE_TEST_SOURCES})
 target_link_libraries(hyriseCoverage hyriseCoverageLib ${LIBRARIES} --coverage)
 set_target_properties(hyriseCoverage PROPERTIES COMPILE_FLAGS "-fprofile-arcs -ftest-coverage")
 
-# Configure hyriseAsanApp
-add_executable(hyriseAsan EXCLUDE_FROM_ALL ${HYRISE_TEST_SOURCES})
-target_link_libraries(hyriseAsan hyriseAsanLib ${LIBRARIES_ASAN} -fsanitize=address)
-set_target_properties(hyriseAsan PROPERTIES COMPILE_FLAGS "-fsanitize=address -fno-omit-frame-pointer")
+# Configure hyriseSanitizersApp
+add_executable(hyriseSanitizers EXCLUDE_FROM_ALL ${HYRISE_TEST_SOURCES})
+target_link_libraries(hyriseSanitizers hyriseSanitizersLib ${LIBRARIES_ASAN} -fsanitize=address)
+set_target_properties(hyriseSanitizers PROPERTIES COMPILE_FLAGS "-fsanitize=address -fno-omit-frame-pointer")
 
 # Configure hyriseTestTPCC
 add_executable(hyriseTestTPCC ${TPCC_TEST_SOURCES})
