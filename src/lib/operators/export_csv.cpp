@@ -40,7 +40,8 @@ void ExportCsv::_generate_meta_info_file(const std::shared_ptr<const Table>& tab
 
   // Column Types
   for (ColumnID col_id{0}; col_id < table->col_count(); ++col_id) {
-    writer.write_line({"ColumnType", table->column_name(col_id), table->column_type(col_id)});
+    std::string propertyType = table->column_is_nullable(col_id) ? "NullableColumnType" : "ColumnType";
+    writer.write_line({propertyType, table->column_name(col_id), table->column_type(col_id)});
   }
 }
 
@@ -91,7 +92,13 @@ class ExportCsv::ExportCsvVisitor : public ColumnVisitable {
     auto context = std::static_pointer_cast<ExportCsv::ExportCsvContext>(base_context);
     const auto& column = static_cast<ValueColumn<T>&>(base_column);
 
-    context->csvWriter.write(column.values()[context->currentRow]);
+    auto row = context->currentRow;
+
+    if (column.is_nullable() && column.null_values()[row]) {
+      context->csvWriter.write("NULL");
+    } else {
+      context->csvWriter.write(column.values()[row]);
+    }
   }
 
   void handle_reference_column(ReferenceColumn& ref_column,
