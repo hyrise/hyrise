@@ -17,8 +17,8 @@ console.log
 .repl_history
 .queryplan.dot
 .queryplan.png
-.ast.dot
-.ast.png
+.ast*.dot
+ast*.png
 compile_times.txt
 
 # Ignore generated TPC{CH} tables.
