@@ -59,22 +59,20 @@ PosList ColumnComparisonTableScanImpl::scan_chunk(ChunkID chunk_id) {
       constexpr auto neither_is_string_column = !left_is_string_column && !right_is_string_column;
       constexpr auto both_are_string_columns = left_is_string_column && right_is_string_column;
 
-      if
-        constexpr((neither_is_reference_column || both_are_reference_columns) &&
-                  (neither_is_string_column || both_are_string_columns)) {
-          auto left_column_iterable = create_iterable_from_column<LeftType>(typed_left_column);
-          auto right_column_iterable = create_iterable_from_column<RightType>(typed_right_column);
+      if constexpr((neither_is_reference_column || both_are_reference_columns) &&
+                   (neither_is_string_column || both_are_string_columns)) {
+        auto left_column_iterable = create_iterable_from_column<LeftType>(typed_left_column);
+        auto right_column_iterable = create_iterable_from_column<RightType>(typed_right_column);
 
-          left_column_iterable.with_iterators([&](auto left_it, auto left_end) {
-            right_column_iterable.with_iterators([&](auto right_it, auto right_end) {
-              this->_with_operator(_scan_type, [&](auto comparator) {
-                this->_binary_scan(comparator, left_it, left_end, right_it, chunk_id, matches_out);
-              });
+        left_column_iterable.with_iterators([&](auto left_it, auto left_end) {
+          right_column_iterable.with_iterators([&](auto right_it, auto right_end) {
+            this->_with_operator(_scan_type, [&](auto comparator) {
+              this->_binary_scan(comparator, left_it, left_end, right_it, chunk_id, matches_out);
             });
           });
-        }
-      else {
-        Fail("Invalid column combination detected!");
+        });
+      } else {
+        Fail("Invalid column combination detected!");   // NOLINT - cpplint.py does not know about constexpr
       }
     });
   });
