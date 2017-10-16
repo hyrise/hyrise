@@ -87,23 +87,24 @@ void ExportCsv::_generate_content_file(const std::shared_ptr<const Table>& table
 
 template <typename T>
 class ExportCsv::ExportCsvVisitor : public ColumnVisitable {
-  void handle_value_column(BaseColumn& base_column, std::shared_ptr<ColumnVisitableContext> base_context) final {
+  void handle_value_column(const BaseColumn& base_column, std::shared_ptr<ColumnVisitableContext> base_context) final {
     auto context = std::static_pointer_cast<ExportCsv::ExportCsvContext>(base_context);
-    const auto& column = static_cast<ValueColumn<T>&>(base_column);
+    const auto& column = static_cast<const ValueColumn<T>&>(base_column);
 
     context->csvWriter.write(column.values()[context->currentRow]);
   }
 
-  void handle_reference_column(ReferenceColumn& ref_column,
+  void handle_reference_column(const ReferenceColumn& ref_column,
                                std::shared_ptr<ColumnVisitableContext> base_context) final {
     auto context = std::static_pointer_cast<ExportCsv::ExportCsvContext>(base_context);
 
     context->csvWriter.write(ref_column[context->currentRow]);
   }
 
-  void handle_dictionary_column(BaseColumn& base_column, std::shared_ptr<ColumnVisitableContext> base_context) final {
+  void handle_dictionary_column(const BaseColumn& base_column,
+                                std::shared_ptr<ColumnVisitableContext> base_context) final {
     auto context = std::static_pointer_cast<ExportCsv::ExportCsvContext>(base_context);
-    const auto& column = static_cast<DictionaryColumn<T>&>(base_column);
+    const auto& column = static_cast<const DictionaryColumn<T>&>(base_column);
 
     context->csvWriter.write((*column.dictionary())[(column.attribute_vector()->get(context->currentRow))]);
   }

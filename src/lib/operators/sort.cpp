@@ -100,7 +100,7 @@ class Sort::SortImplMaterializeOutput {
           // copy the value
           auto column = _table_in->get_chunk(row_id_in.chunk_id).get_column(column_id);
           auto chunk_offset_in = row_id_in.chunk_offset;
-          if (auto reference_column = std::dynamic_pointer_cast<ReferenceColumn>(column)) {
+          if (auto reference_column = std::dynamic_pointer_cast<const ReferenceColumn>(column)) {
             auto pos = reference_column->pos_list()->operator[](row_id_in.chunk_offset);
             column = reference_column->referenced_table()
                          ->get_chunk(pos.chunk_id)

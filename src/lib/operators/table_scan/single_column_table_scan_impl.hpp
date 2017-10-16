@@ -28,9 +28,11 @@ class SingleColumnTableScanImpl : public BaseSingleColumnTableScanImpl {
   SingleColumnTableScanImpl(std::shared_ptr<const Table> in_table, const ColumnID left_column_id,
                             const ScanType& scan_type, const AllTypeVariant& right_value);
 
-  void handle_value_column(BaseColumn& base_column, std::shared_ptr<ColumnVisitableContext> base_context) override;
+  void handle_value_column(const BaseColumn& base_column,
+                           std::shared_ptr<ColumnVisitableContext> base_context) override;
 
-  void handle_dictionary_column(BaseColumn& base_column, std::shared_ptr<ColumnVisitableContext> base_context) override;
+  void handle_dictionary_column(const BaseColumn& base_column,
+                                std::shared_ptr<ColumnVisitableContext> base_context) override;
 
  private:
   /**

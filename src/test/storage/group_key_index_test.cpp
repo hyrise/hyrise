@@ -22,7 +22,7 @@ class GroupKeyIndexTest : public BaseTest {
   void SetUp() override {
     dict_col = BaseTest::create_dict_column_by_type<std::string>(
         "string", {"hotel", "delta", "frank", "delta", "apple", "charlie", "charlie", "inbox"});
-    index = std::make_shared<GroupKeyIndex>(std::vector<std::shared_ptr<BaseColumn>>({dict_col}));
+    index = std::make_shared<GroupKeyIndex>(std::vector<std::shared_ptr<const BaseColumn>>({dict_col}));
 
     index_offsets = &(index->_index_offsets);
     index_postings = &(index->_index_postings);

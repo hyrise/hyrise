@@ -89,12 +89,12 @@ void ColumnStatistics<ColumnType>::_initialize_min_max() const {
 
   auto aggregate_table = aggregate->get_output();
 
-  auto min_column =
-      std::static_pointer_cast<ValueColumn<ColumnType>>(aggregate_table->get_chunk(ChunkID{0}).get_column(ColumnID{0}));
+  auto min_column = std::static_pointer_cast<const ValueColumn<ColumnType>>(
+      aggregate_table->get_chunk(ChunkID{0}).get_column(ColumnID{0}));
   _min = min_column->values()[0];
 
-  auto max_column =
-      std::static_pointer_cast<ValueColumn<ColumnType>>(aggregate_table->get_chunk(ChunkID{0}).get_column(ColumnID{1}));
+  auto max_column = std::static_pointer_cast<const ValueColumn<ColumnType>>(
+      aggregate_table->get_chunk(ChunkID{0}).get_column(ColumnID{1}));
   _max = max_column->values()[0];
 }
 
@@ -194,9 +194,9 @@ ColumnSelectivityResult ColumnStatistics<ColumnType>::estimate_selectivity_for_p
       if (std::is_integral<ColumnType>::value) {
         return _create_column_stats_for_range_predicate(_get_or_calculate_min(), casted_value - 1);
       }
-// intentionally no break
-// if ColumnType is a floating point number,
-// OpLessThanEquals behaviour is expected instead of OpLessThan
+      // intentionally no break
+      // if ColumnType is a floating point number,
+      // OpLessThanEquals behaviour is expected instead of OpLessThan
       [[fallthrough]];
     }
     case ScanType::OpLessThanEquals: {
@@ -209,9 +209,9 @@ ColumnSelectivityResult ColumnStatistics<ColumnType>::estimate_selectivity_for_p
       if (std::is_integral<ColumnType>::value) {
         return _create_column_stats_for_range_predicate(casted_value + 1, _get_or_calculate_max());
       }
-// intentionally no break
-// if ColumnType is a floating point number,
-// OpGreaterThanEquals behaviour is expected instead of OpGreaterThan
+      // intentionally no break
+      // if ColumnType is a floating point number,
+      // OpGreaterThanEquals behaviour is expected instead of OpGreaterThan
       [[fallthrough]];
     }
     case ScanType::OpGreaterThanEquals: {
