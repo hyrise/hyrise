@@ -1,7 +1,7 @@
 #!/bin/bash
 
 if [[ -z $OPOSSUM_HEADLESS_SETUP ]]; then
-    read -p 'This script installs the dependencies of OpossumDB. It might upgrade already installed packages. Continue? [y|n] ' -n 1 -r < /dev/tty
+    read -p 'This script installs the dependencies of Hyrise. It might upgrade already installed packages. Continue? [y|n] ' -n 1 -r < /dev/tty
 else
     REPLY="y"
 fi
