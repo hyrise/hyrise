@@ -461,6 +461,17 @@ int Console::print_table(const std::string& args) {
 }
 
 int Console::visualize(const std::string& input) {
+  auto& console = Console::get();
+
+  // Check if graphviz is installed. We do not want to make graphviz a requirement for Hyrise
+  // as visualization is just a gimmick
+  auto checkCmd = std::string("dot -V > /dev/null 2>&1");
+  if (system(checkCmd.c_str())) {
+    console.out("Calling graphviz' dot failed. Have you installed graphviz "
+                "(apt-get install graphviz / brew install graphviz)?\n");
+    return ReturnCode::Error;
+  }
+
   auto first_word = input.substr(0, input.find_first_of(" \n"));
   std::string mode, sql, dot_filename, img_filename;
   if (first_word == "noexec" || first_word == "ast" || first_word == "astopt") {
@@ -470,7 +481,6 @@ int Console::visualize(const std::string& input) {
   sql = input.substr(mode.size(), input.size());
   // Removes mode from sql string. If no mode is set, does nothing.
 
-  auto& console = Console::get();
   SQLQueryPlan plan;
   hsql::SQLParserResult parse_result;
 
