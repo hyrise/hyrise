@@ -329,10 +329,18 @@ void Console::out(const std::string& output, bool console_print) {
   _log.flush();
 }
 
-void Console::out(std::shared_ptr<const Table> table) {
-  std::stringstream stream;
-  Print::print(table, PrintMvcc, stream);
-  Pagination(stream).display();
+void Console::out(std::shared_ptr<const Table> table, uint32_t flags) {
+  int size_y, size_x;
+  rl_get_screen_size(&size_y, &size_x);
+
+  // Paginate only if table has more rows that fit in the terminal
+  if (table->row_count() < static_cast<uint64_t>(size_y) - 1) {
+    Print::print(table, flags, _out);
+  } else {
+    std::stringstream stream;
+    Print::print(table, flags, stream);
+    Pagination(stream).display();
+  }
 }
 
 // Command functions

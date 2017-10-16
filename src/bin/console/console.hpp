@@ -66,7 +66,14 @@ class Console {
    * @param console_print If set to false, then \p output gets printed ONLY to the log_file.
    */
   void out(const std::string& output, bool console_print = true);
-  void out(std::shared_ptr<const Table> table);
+
+  /*
+   * Outputs a table, either directly to the _out stream if it is small enough, or using pagination.
+   *
+   * @param output The output table.
+   * @param flags  Flags for the Print operator.
+   */
+  void out(std::shared_ptr<const Table> table, uint32_t flags = 0);
 
   /*
    * Handler for SIGINT signal (caused by CTRL-C key sequence).
