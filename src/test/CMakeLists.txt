@@ -118,6 +118,8 @@ set(
     sqlite3
 )
 
+include_directories(${CMAKE_CURRENT_SOURCE_DIR})
+
 # Configure hyriseTest
 add_executable(hyriseTest ${HYRISE_TEST_SOURCES})
 target_link_libraries(hyriseTest hyrise ${LIBRARIES})
