@@ -6,4 +6,4 @@ if [ -z "$1" ]
     exit 1
 fi
 
-./$1/opossumBenchmark --benchmark_format=json > benchmark.json
+./$1/hyriseBenchmark --benchmark_format=json > benchmark.json

@@ -94,7 +94,7 @@ void Product::add_product_of_two_chunks(std::shared_ptr<Table> output, ChunkID c
           if (pos_list_in) {
             pos_list_out->emplace_back((*pos_list_in)[offset]);
           } else {
-            pos_list_out->emplace_back(table->calculate_row_id(is_left_side ? chunk_id_left : chunk_id_right, offset));
+            pos_list_out->emplace_back(RowID{is_left_side ? chunk_id_left : chunk_id_right, offset});
           }
         }
       }

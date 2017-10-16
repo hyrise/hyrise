@@ -61,16 +61,16 @@ class OperatorsTableScanTest : public BaseTest {
     const auto test_table_part_dict = get_table_op_part_dict()->get_output();
 
     auto pos_list = std::make_shared<PosList>();
-    pos_list->emplace_back(test_table_part_dict->calculate_row_id(ChunkID{3}, 1));
-    pos_list->emplace_back(test_table_part_dict->calculate_row_id(ChunkID{2}, 0));
-    pos_list->emplace_back(test_table_part_dict->calculate_row_id(ChunkID{1}, 1));
-    pos_list->emplace_back(test_table_part_dict->calculate_row_id(ChunkID{3}, 3));
-    pos_list->emplace_back(test_table_part_dict->calculate_row_id(ChunkID{1}, 3));
-    pos_list->emplace_back(test_table_part_dict->calculate_row_id(ChunkID{0}, 2));
-    pos_list->emplace_back(test_table_part_dict->calculate_row_id(ChunkID{2}, 2));
-    pos_list->emplace_back(test_table_part_dict->calculate_row_id(ChunkID{2}, 4));
-    pos_list->emplace_back(test_table_part_dict->calculate_row_id(ChunkID{0}, 0));
-    pos_list->emplace_back(test_table_part_dict->calculate_row_id(ChunkID{0}, 4));
+    pos_list->emplace_back(RowID{ChunkID{3}, 1});
+    pos_list->emplace_back(RowID{ChunkID{2}, 0});
+    pos_list->emplace_back(RowID{ChunkID{1}, 1});
+    pos_list->emplace_back(RowID{ChunkID{3}, 3});
+    pos_list->emplace_back(RowID{ChunkID{1}, 3});
+    pos_list->emplace_back(RowID{ChunkID{0}, 2});
+    pos_list->emplace_back(RowID{ChunkID{2}, 2});
+    pos_list->emplace_back(RowID{ChunkID{2}, 4});
+    pos_list->emplace_back(RowID{ChunkID{0}, 0});
+    pos_list->emplace_back(RowID{ChunkID{0}, 4});
 
     auto col_a = std::make_shared<ReferenceColumn>(test_table_part_dict, ColumnID{0}, pos_list);
     auto col_b = std::make_shared<ReferenceColumn>(test_table_part_dict, ColumnID{1}, pos_list);
