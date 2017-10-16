@@ -2,7 +2,7 @@
 
 # Hyrise v2 (Codename OpossumDB)
 
-*Have a look at our [contributor guidelines](https://github.com/hyrise/zweirise/blob/master/CONTRIBUTING.md)*
+*Have a look at our [contributor guidelines](CONTRIBUTING.md)*
 
 The [wiki](https://github.com/hyrise/zweirise/wiki) is a good starting point to get to know Hyrise
 
@@ -24,7 +24,7 @@ Inside of the container, run `./install.sh` to download the required submodules.
 You can install the dependencies on your own or use the install.sh script (**recommended**) which installs all of the therein listed dependencies and submodules.
 The install script was tested under macOS (brew) and Ubuntu 17.04/17.10 (apt-get).
 
-See docs/dependencies.md for a detailled list of dependencies to use with `brew install` or `apt-get install`, depending on your platform. As compilers, we generally use the most recent version of gcc and clang.
+See [docs/dependencies.md](docs/dependencies.md) for a detailed list of dependencies to use with `brew install` or `apt-get install`, depending on your platform. As compilers, we generally use the most recent version of gcc and clang.
 Older versions may work, but are neither tested nor supported.
 
 ## Building and Tooling
