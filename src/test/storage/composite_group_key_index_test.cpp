@@ -63,10 +63,10 @@ class CompositeGroupKeyIndexTest : public BaseTest {
     _column_str = create_dict_column_by_type<std::string>(
         "string", {"hotel", "delta", "frank", "delta", "apple", "charlie", "charlie", "inbox"});
 
-    _index_int_str =
-        std::make_shared<CompositeGroupKeyIndex>(std::vector<std::shared_ptr<const BaseColumn>>{_column_int, _column_str});
-    _index_str_int =
-        std::make_shared<CompositeGroupKeyIndex>(std::vector<std::shared_ptr<const BaseColumn>>{_column_str, _column_int});
+    _index_int_str = std::make_shared<CompositeGroupKeyIndex>(
+        std::vector<std::shared_ptr<const BaseColumn>>{_column_int, _column_str});
+    _index_str_int = std::make_shared<CompositeGroupKeyIndex>(
+        std::vector<std::shared_ptr<const BaseColumn>>{_column_str, _column_int});
 
     _keys_int_str = &(_index_int_str->_keys);
     _keys_str_int = &(_index_str_int->_keys);

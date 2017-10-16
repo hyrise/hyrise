@@ -128,9 +128,7 @@ class GroupKeyIndex : public BaseIndex {
     return iter;
   }
 
-  std::vector<std::shared_ptr<const BaseColumn>> _get_index_columns() const {
-    return {_index_column};
-  }
+  std::vector<std::shared_ptr<const BaseColumn>> _get_index_columns() const { return {_index_column}; }
 
  private:
   const std::shared_ptr<const BaseDictionaryColumn> _index_column;
