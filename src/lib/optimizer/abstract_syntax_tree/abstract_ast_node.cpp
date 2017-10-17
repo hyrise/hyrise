@@ -239,11 +239,7 @@ void AbstractASTNode::print(std::ostream& out, std::vector<bool> levels) const {
   levels.pop_back();
 }
 
-<<<<<<< HEAD
-optional<NamedColumnReference> AbstractASTNode::_resolve_local_alias(const NamedColumnReference& reference) const {
-=======
 std::optional<NamedColumnReference> AbstractASTNode::_resolve_local_alias(const NamedColumnReference& reference) const {
->>>>>>> cc17ce344ec5c6d36e5b508381169d4f15b5ed82
   if (reference.table_name && _table_alias) {
     if (*reference.table_name == *_table_alias) {
       // The used table name is the alias of this table. Remove id from the NamedColumnReference for further search

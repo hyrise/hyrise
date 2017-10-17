@@ -26,7 +26,7 @@ const std::vector<ColumnID>& MockTableNode::output_column_id_to_input_column_id(
 
 const std::vector<std::string>& MockTableNode::output_column_names() const { return _output_column_names; }
 
-optional<ColumnID> MockTableNode::find_column_id_by_named_column_reference(
+std::optional<ColumnID> MockTableNode::find_column_id_by_named_column_reference(
     const NamedColumnReference& named_column_reference) const {
   Fail("Operation not supported on MockTableNodes");
   return INVALID_COLUMN_ID;

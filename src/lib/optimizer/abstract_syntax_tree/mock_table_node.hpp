@@ -1,6 +1,7 @@
 #pragma once
 
 #include <memory>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -22,7 +23,7 @@ class MockTableNode : public AbstractASTNode {
 
   std::vector<ColumnID> get_output_column_ids_for_table(const std::string& table_name) const override;
 
-  optional<ColumnID> find_column_id_by_named_column_reference(
+  std::optional<ColumnID> find_column_id_by_named_column_reference(
       const NamedColumnReference& named_column_reference) const override;
 
   std::string description() const override;
