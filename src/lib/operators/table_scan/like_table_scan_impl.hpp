@@ -29,10 +29,10 @@ class LikeTableScanImpl : public BaseSingleColumnTableScanImpl {
   LikeTableScanImpl(std::shared_ptr<const Table> in_table, const ColumnID left_column_id,
                     const std::string& right_wildcard);
 
-  void handle_value_column(const BaseColumn& base_column,
+  void handle_value_column(const BaseValueColumn& base_column,
                            std::shared_ptr<ColumnVisitableContext> base_context) override;
 
-  void handle_dictionary_column(const BaseColumn& base_column,
+  void handle_dictionary_column(const BaseDictionaryColumn& base_column,
                                 std::shared_ptr<ColumnVisitableContext> base_context) override;
 
  private:

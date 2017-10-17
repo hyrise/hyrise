@@ -196,7 +196,7 @@ class JoinNestedLoopA::JoinNestedLoopAImpl : public AbstractJoinOperatorImpl {
   Since we now know how to access values from both columns, we can perform the actual join.
   */
   struct BuilderRight : public ColumnVisitable {
-    void handle_value_column(const BaseColumn&, std::shared_ptr<ColumnVisitableContext> context) override {
+    void handle_value_column(const BaseValueColumn&, std::shared_ptr<ColumnVisitableContext> context) override {
       auto ctx = std::static_pointer_cast<JoinNestedLoopAContext>(context);
 
       auto vc_right = std::static_pointer_cast<const ValueColumn<RightType>>(ctx->column_right);
@@ -207,7 +207,8 @@ class JoinNestedLoopA::JoinNestedLoopAImpl : public AbstractJoinOperatorImpl {
       perform_join(ctx->get_left_column_value, get_right_column_value, ctx, ctx->size_left, right_values.size());
     }
 
-    void handle_dictionary_column(const BaseColumn&, std::shared_ptr<ColumnVisitableContext> context) override {
+    void handle_dictionary_column(const BaseDictionaryColumn&,
+                                  std::shared_ptr<ColumnVisitableContext> context) override {
       auto ctx = std::static_pointer_cast<JoinNestedLoopAContext>(context);
 
       auto dc_right = std::static_pointer_cast<const DictionaryColumn<RightType>>(ctx->column_right);
@@ -230,7 +231,7 @@ class JoinNestedLoopA::JoinNestedLoopAImpl : public AbstractJoinOperatorImpl {
   };
 
   struct BuilderLeft : public ColumnVisitable {
-    void handle_value_column(const BaseColumn&, std::shared_ptr<ColumnVisitableContext> context) override {
+    void handle_value_column(const BaseValueColumn&, std::shared_ptr<ColumnVisitableContext> context) override {
       auto ctx = std::static_pointer_cast<JoinNestedLoopAContext>(context);
       auto vc_left = std::static_pointer_cast<const ValueColumn<LeftType>>(ctx->column_left);
       const auto& left_values = vc_left->values();
@@ -244,7 +245,8 @@ class JoinNestedLoopA::JoinNestedLoopAImpl : public AbstractJoinOperatorImpl {
       ctx->column_right->visit(builder_right, context);
     }
 
-    void handle_dictionary_column(const BaseColumn&, std::shared_ptr<ColumnVisitableContext> context) override {
+    void handle_dictionary_column(const BaseDictionaryColumn&,
+                                  std::shared_ptr<ColumnVisitableContext> context) override {
       auto ctx = std::static_pointer_cast<JoinNestedLoopAContext>(context);
       auto dc_left = std::static_pointer_cast<const DictionaryColumn<LeftType>>(ctx->column_left);
 

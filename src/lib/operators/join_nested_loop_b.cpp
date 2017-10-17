@@ -362,7 +362,7 @@ void JoinNestedLoopB::JoinNestedLoopBImpl<T>::join_reference_reference(const Ref
 */
 
 template <typename T>
-void JoinNestedLoopB::JoinNestedLoopBImpl<T>::handle_value_column(const BaseColumn& column,
+void JoinNestedLoopB::JoinNestedLoopBImpl<T>::handle_value_column(const BaseValueColumn& column,
                                                                   std::shared_ptr<ColumnVisitableContext> context) {
   auto join_context = std::static_pointer_cast<JoinContext>(context);
   auto& value_column_left = dynamic_cast<const ValueColumn<T>&>(column);
@@ -385,7 +385,7 @@ void JoinNestedLoopB::JoinNestedLoopBImpl<T>::handle_value_column(const BaseColu
 
 template <typename T>
 void JoinNestedLoopB::JoinNestedLoopBImpl<T>::handle_dictionary_column(
-    const BaseColumn& column, std::shared_ptr<ColumnVisitableContext> context) {
+    const BaseDictionaryColumn& column, std::shared_ptr<ColumnVisitableContext> context) {
   auto join_context = std::static_pointer_cast<JoinContext>(context);
   auto& dictionary_column_left = dynamic_cast<const DictionaryColumn<T>&>(column);
 

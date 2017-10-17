@@ -86,7 +86,7 @@ class ColumnMaterializer : public ColumnVisitable {
   /**
   * ColumnVisitable implementation to materialize and sort a value column.
   **/
-  void handle_value_column(const BaseColumn& column, std::shared_ptr<ColumnVisitableContext> context) override {
+  void handle_value_column(const BaseValueColumn& column, std::shared_ptr<ColumnVisitableContext> context) override {
     auto& value_column = static_cast<const ValueColumn<T>&>(column);
     auto materialization_context = std::static_pointer_cast<MaterializationContext>(context);
     auto output = std::make_shared<MaterializedColumn<T>>();
@@ -112,7 +112,8 @@ class ColumnMaterializer : public ColumnVisitable {
   /**
   * ColumnVisitable implementaion to materialize and sort a dictionary column.
   **/
-  void handle_dictionary_column(const BaseColumn& column, std::shared_ptr<ColumnVisitableContext> context) override {
+  void handle_dictionary_column(const BaseDictionaryColumn& column,
+                                std::shared_ptr<ColumnVisitableContext> context) override {
     auto& dictionary_column = dynamic_cast<const DictionaryColumn<T>&>(column);
     auto materialization_context = std::static_pointer_cast<MaterializationContext>(context);
     auto output = std::make_shared<MaterializedColumn<T>>();

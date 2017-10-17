@@ -63,8 +63,9 @@ class JoinNestedLoopB : public AbstractJoinOperator {
     std::shared_ptr<const Table> _on_execute() override;
 
     // ColumnVisitable implementation
-    void handle_value_column(const BaseColumn& column, std::shared_ptr<ColumnVisitableContext> context) override;
-    void handle_dictionary_column(const BaseColumn& column, std::shared_ptr<ColumnVisitableContext> context) override;
+    void handle_value_column(const BaseValueColumn& column, std::shared_ptr<ColumnVisitableContext> context) override;
+    void handle_dictionary_column(const BaseDictionaryColumn& column,
+                                  std::shared_ptr<ColumnVisitableContext> context) override;
     void handle_reference_column(const ReferenceColumn& column,
                                  std::shared_ptr<ColumnVisitableContext> context) override;
 
