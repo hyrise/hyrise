@@ -114,8 +114,6 @@ set(
     optimizer/abstract_syntax_tree/insert_node.hpp
     optimizer/abstract_syntax_tree/limit_node.cpp
     optimizer/abstract_syntax_tree/limit_node.hpp
-    optimizer/abstract_syntax_tree/mock_table_node.cpp
-    optimizer/abstract_syntax_tree/mock_table_node.hpp
     optimizer/abstract_syntax_tree/predicate_node.cpp
     optimizer/abstract_syntax_tree/predicate_node.hpp
     optimizer/abstract_syntax_tree/projection_node.cpp
