@@ -19,4 +19,8 @@ struct CsvConfig {
   bool rfc_mode = true;
 };
 
+static const std::string NULL_STRING = "NULL";
+static const std::string COLUMN_TYPE = "ColumnType";
+static const std::string NULLABLE_COLUMN_TYPE = "NullableColumnType";
+
 }  // namespace opossum

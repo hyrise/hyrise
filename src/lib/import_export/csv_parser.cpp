@@ -70,8 +70,6 @@ std::shared_ptr<Table> CsvParser::_process_meta_file(const std::string& filename
   const char delimiter = '\n';
   const char separator = ',';
 
-  const auto NullableColumnType = std::string("NullableColumnType");
-
   std::ifstream metafile{filename};
   std::string content{std::istreambuf_iterator<char>(metafile), {}};
 
@@ -103,7 +101,7 @@ std::shared_ptr<Table> CsvParser::_process_meta_file(const std::string& filename
     AbstractCsvConverter::unescape(property_type);
     row.erase(0, property_type_pos + 1);
 
-    if (property_type == NullableColumnType) {
+    if (property_type == NULLABLE_COLUMN_TYPE) {
       is_nullable = true;
     }
 

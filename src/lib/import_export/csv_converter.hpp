@@ -74,7 +74,7 @@ class CsvConverter : public AbstractCsvConverter {
 
   void insert(const std::string& value, ChunkOffset position) override {
 
-    if (_is_nullable && value == _null_string) {
+    if (_is_nullable && value == NULL_STRING) {
       _parsed_values[position] = T{};
       _null_values[position] = true;
     } else {
@@ -102,7 +102,6 @@ class CsvConverter : public AbstractCsvConverter {
   tbb::concurrent_vector<bool> _null_values;
   const bool _is_nullable;
   CsvConfig _config;
-  const std::string _null_string = "NULL";
 };
 
 template <>
