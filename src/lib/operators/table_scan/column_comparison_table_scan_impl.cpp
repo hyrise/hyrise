@@ -9,7 +9,6 @@
 #include "storage/table.hpp"
 
 #include "utils/assert.hpp"
-#include "utils/static_if.hpp"
 
 #include "resolve_type.hpp"
 
@@ -60,8 +59,9 @@ PosList ColumnComparisonTableScanImpl::scan_chunk(ChunkID chunk_id) {
       constexpr auto neither_is_string_column = !left_is_string_column && !right_is_string_column;
       constexpr auto both_are_string_columns = left_is_string_column && right_is_string_column;
 
-      static_if<(neither_is_reference_column || both_are_reference_columns) &&
-                (neither_is_string_column || both_are_string_columns)>([&](auto f) {
+      // clang-format off
+      if constexpr((neither_is_reference_column || both_are_reference_columns) &&
+                   (neither_is_string_column || both_are_string_columns)) {
         auto left_column_iterable = create_iterable_from_column<LeftType>(typed_left_column);
         auto right_column_iterable = create_iterable_from_column<RightType>(typed_right_column);
 
@@ -72,7 +72,10 @@ PosList ColumnComparisonTableScanImpl::scan_chunk(ChunkID chunk_id) {
             });
           });
         });
-      }).else_([&](auto f) { Fail("Invalid column combination detected!"); });
+      } else {
+        Fail("Invalid column combination detected!");   // NOLINT - cpplint.py does not know about constexpr
+      }
+      // clang-format on
     });
   });
 

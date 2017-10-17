@@ -1,13 +1,13 @@
 #pragma once
 
 #include <memory>
+#include <optional>
 #include <ostream>
 #include <string>
 #include <utility>
 #include <vector>
 
 #include "all_parameter_variant.hpp"
-#include "common.hpp"
 #include "optimizer/base_column_statistics.hpp"
 
 namespace opossum {
@@ -65,9 +65,9 @@ class TableStatistics : public std::enable_shared_from_this<TableStatistics> {
   /**
    * Generate table statistics for the operator table scan table scan.
    */
-  virtual std::shared_ptr<TableStatistics> predicate_statistics(const ColumnID column_id, const ScanType scan_type,
-                                                                const AllParameterVariant& value,
-                                                                const optional<AllTypeVariant>& value2 = nullopt);
+  virtual std::shared_ptr<TableStatistics> predicate_statistics(
+      const ColumnID column_id, const ScanType scan_type, const AllParameterVariant& value,
+      const std::optional<AllTypeVariant>& value2 = std::nullopt);
 
   /**
    * Generate table statistics for a cross join.

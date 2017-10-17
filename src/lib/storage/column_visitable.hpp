@@ -2,8 +2,6 @@
 
 #include <memory>
 
-#include "common.hpp"
-
 namespace opossum {
 
 class BaseColumn;

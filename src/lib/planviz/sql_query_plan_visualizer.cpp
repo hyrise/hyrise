@@ -7,7 +7,6 @@
 #include <memory>
 #include <string>
 
-#include "common.hpp"
 #include "operators/abstract_operator.hpp"
 #include "sql/sql_query_plan.hpp"
 

@@ -2,12 +2,12 @@
 
 #include <iostream>
 #include <memory>
+#include <optional>
 #include <sstream>
 #include <string>
 #include <vector>
 
 #include "all_type_variant.hpp"
-#include "common.hpp"
 #include "types.hpp"
 
 namespace opossum {
@@ -51,31 +51,31 @@ class Expression : public std::enable_shared_from_this<Expression> {
    * Factory Methods to create Expressions of specific type
    */
   static std::shared_ptr<Expression> create_column(const ColumnID column_id,
-                                                   const optional<std::string>& alias = nullopt);
+                                                   const std::optional<std::string>& alias = std::nullopt);
 
   static std::vector<std::shared_ptr<Expression>> create_columns(
-      const std::vector<ColumnID>& column_ids, const optional<std::vector<std::string>>& aliases = nullopt);
+      const std::vector<ColumnID>& column_ids, const std::optional<std::vector<std::string>>& aliases = std::nullopt);
 
   // A literal can have an alias in order to allow queries like `SELECT 1 as one FROM t`.
   static std::shared_ptr<Expression> create_literal(const AllTypeVariant& value,
-                                                    const optional<std::string>& alias = nullopt);
+                                                    const std::optional<std::string>& alias = std::nullopt);
 
   static std::shared_ptr<Expression> create_value_placeholder(ValuePlaceholder value_placeholder);
 
   static std::shared_ptr<Expression> create_aggregate_function(
       AggregateFunction aggregate_function, const std::vector<std::shared_ptr<Expression>>& expression_list,
-      const optional<std::string>& alias = nullopt);
+      const std::optional<std::string>& alias = std::nullopt);
 
   static std::shared_ptr<Expression> create_binary_operator(ExpressionType type,
                                                             const std::shared_ptr<Expression>& left,
                                                             const std::shared_ptr<Expression>& right,
-                                                            const optional<std::string>& alias = nullopt);
+                                                            const std::optional<std::string>& alias = std::nullopt);
 
   static std::shared_ptr<Expression> create_unary_operator(ExpressionType type,
                                                            const std::shared_ptr<Expression>& input,
-                                                           const optional<std::string>& alias = nullopt);
+                                                           const std::optional<std::string>& alias = std::nullopt);
 
-  static std::shared_ptr<Expression> create_select_star(const optional<std::string>& table_name = {});
+  static std::shared_ptr<Expression> create_select_star(const std::optional<std::string>& table_name = {});
   // @}
 
   // @{
@@ -142,8 +142,8 @@ class Expression : public std::enable_shared_from_this<Expression> {
   /**
    * Getters that can be called to check whether a member is set.
    */
-  const optional<std::string>& table_name() const;
-  const optional<std::string>& alias() const;
+  const std::optional<std::string>& table_name() const;
+  const std::optional<std::string>& alias() const;
 
   void set_expression_list(const std::vector<std::shared_ptr<Expression>>& expression_list);
 
@@ -162,9 +162,9 @@ class Expression : public std::enable_shared_from_this<Expression> {
   // the type of the expression
   const ExpressionType _type;
   // the value of an expression, e.g. of a Literal
-  optional<AllTypeVariant> _value;
+  std::optional<AllTypeVariant> _value;
 
-  optional<AggregateFunction> _aggregate_function;
+  std::optional<AggregateFunction> _aggregate_function;
 
   /*
    * A list of Expressions used in FunctionIdentifiers and CASE Expressions.
@@ -176,15 +176,15 @@ class Expression : public std::enable_shared_from_this<Expression> {
    */
   std::vector<std::shared_ptr<Expression>> _expression_list;
 
-  optional<std::string> _table_name;
+  std::optional<std::string> _table_name;
 
   // a column that might be referenced
-  optional<ColumnID> _column_id;
+  std::optional<ColumnID> _column_id;
 
   // an alias, used for ColumnReferences, Selects, FunctionIdentifiers
-  optional<std::string> _alias;
+  std::optional<std::string> _alias;
 
-  optional<ValuePlaceholder> _value_placeholder;
+  std::optional<ValuePlaceholder> _value_placeholder;
 
   // @{
   // Members for the tree structure

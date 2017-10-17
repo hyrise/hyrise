@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <memory>
+#include <optional>
 #include <ostream>
 #include <string>
 #include <type_traits>
@@ -9,7 +10,6 @@
 #include <vector>
 
 #include "all_parameter_variant.hpp"
-#include "common.hpp"
 #include "operators/aggregate.hpp"
 #include "operators/table_wrapper.hpp"
 #include "storage/table.hpp"
@@ -177,7 +177,7 @@ ColumnSelectivityResult ColumnStatistics<ColumnType>::_create_column_stats_for_n
 
 template <typename ColumnType>
 ColumnSelectivityResult ColumnStatistics<ColumnType>::estimate_selectivity_for_predicate(
-    const ScanType scan_type, const AllTypeVariant& value, const optional<AllTypeVariant>& value2) {
+    const ScanType scan_type, const AllTypeVariant& value, const std::optional<AllTypeVariant>& value2) {
   auto casted_value = type_cast<ColumnType>(value);
 
   switch (scan_type) {
@@ -194,9 +194,9 @@ ColumnSelectivityResult ColumnStatistics<ColumnType>::estimate_selectivity_for_p
       if (std::is_integral<ColumnType>::value) {
         return _create_column_stats_for_range_predicate(_get_or_calculate_min(), casted_value - 1);
       }
-// intentionally no break
-// if ColumnType is a floating point number,
-// OpLessThanEquals behaviour is expected instead of OpLessThan
+      // intentionally no break
+      // if ColumnType is a floating point number,
+      // OpLessThanEquals behaviour is expected instead of OpLessThan
       [[fallthrough]];
     }
     case ScanType::OpLessThanEquals: {
@@ -209,9 +209,9 @@ ColumnSelectivityResult ColumnStatistics<ColumnType>::estimate_selectivity_for_p
       if (std::is_integral<ColumnType>::value) {
         return _create_column_stats_for_range_predicate(casted_value + 1, _get_or_calculate_max());
       }
-// intentionally no break
-// if ColumnType is a floating point number,
-// OpGreaterThanEquals behaviour is expected instead of OpGreaterThan
+      // intentionally no break
+      // if ColumnType is a floating point number,
+      // OpGreaterThanEquals behaviour is expected instead of OpGreaterThan
       [[fallthrough]];
     }
     case ScanType::OpGreaterThanEquals: {
@@ -231,7 +231,7 @@ ColumnSelectivityResult ColumnStatistics<ColumnType>::estimate_selectivity_for_p
  */
 template <>
 ColumnSelectivityResult ColumnStatistics<std::string>::estimate_selectivity_for_predicate(
-    const ScanType scan_type, const AllTypeVariant& value, const optional<AllTypeVariant>& value2) {
+    const ScanType scan_type, const AllTypeVariant& value, const std::optional<AllTypeVariant>& value2) {
   // if column has no distinct values, it can only have null values which cannot be selected with this predicate
   if (distinct_count() == 0) {
     return {0.f, _this_without_null_values()};
@@ -252,7 +252,7 @@ ColumnSelectivityResult ColumnStatistics<std::string>::estimate_selectivity_for_
 
 template <typename ColumnType>
 ColumnSelectivityResult ColumnStatistics<ColumnType>::estimate_selectivity_for_predicate(
-    const ScanType scan_type, const ValuePlaceholder& value, const optional<AllTypeVariant>& value2) {
+    const ScanType scan_type, const ValuePlaceholder& value, const std::optional<AllTypeVariant>& value2) {
   // if column has no distinct values, it can only have null values which cannot be selected with this predicate
   if (distinct_count() == 0) {
     return {0.f, _this_without_null_values()};
@@ -308,7 +308,7 @@ ColumnSelectivityResult ColumnStatistics<ColumnType>::estimate_selectivity_for_p
 template <typename ColumnType>
 TwoColumnSelectivityResult ColumnStatistics<ColumnType>::estimate_selectivity_for_two_column_predicate(
     const ScanType scan_type, const std::shared_ptr<BaseColumnStatistics>& right_base_column_statistics,
-    const optional<AllTypeVariant>& value2) {
+    const std::optional<AllTypeVariant>& value2) {
   /**
    * Calculate expected selectivity by looking at what ratio of values of both columns are in the overlapping value
    * range of both columns. If the two columns have different min values, then the column with the smaller min value
@@ -510,7 +510,7 @@ TwoColumnSelectivityResult ColumnStatistics<ColumnType>::estimate_selectivity_fo
 template <>
 TwoColumnSelectivityResult ColumnStatistics<std::string>::estimate_selectivity_for_two_column_predicate(
     const ScanType scan_type, const std::shared_ptr<BaseColumnStatistics>& right_base_column_statistics,
-    const optional<AllTypeVariant>& value2) {
+    const std::optional<AllTypeVariant>& value2) {
   // TODO(anybody) implement special case for strings
   auto right_stats = std::dynamic_pointer_cast<ColumnStatistics<std::string>>(right_base_column_statistics);
   DebugAssert(right_stats != nullptr, "Cannot compare columns of different type");
