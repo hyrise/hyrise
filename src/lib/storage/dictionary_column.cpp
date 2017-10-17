@@ -41,7 +41,7 @@ const T DictionaryColumn<T>::get(const size_t i) const {
 
   const auto value_id = _attribute_vector->get(i);
 
-  DebugAssert(value_id != NULL_VALUE_ID, "Value at index " + to_string(i) + " is null.");
+  DebugAssert(value_id != NULL_VALUE_ID, "Value at index " + std::to_string(i) + " is null.");
 
   return (*_dictionary)[value_id];
 }

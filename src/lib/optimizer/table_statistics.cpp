@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <iostream>
 #include <memory>
+#include <optional>
 #include <string>
 #include <utility>
 #include <vector>
@@ -23,7 +24,7 @@ float TableStatistics::row_count() const { return _row_count; }
 std::shared_ptr<TableStatistics> TableStatistics::predicate_statistics(const ColumnID column_id,
                                                                        const ScanType scan_type,
                                                                        const AllParameterVariant& value,
-                                                                       const optional<AllTypeVariant>& value2) {
+                                                                       const std::optional<AllTypeVariant>& value2) {
   auto _row_count = row_count();
   if (_row_count == 0) {
     return shared_from_this();

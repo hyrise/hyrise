@@ -14,7 +14,6 @@
 #include "../lib/storage/index/group_key/composite_group_key_index.hpp"
 #include "../lib/storage/index/group_key/group_key_index.hpp"
 
-#include "../lib/common.hpp"
 #include "../lib/resolve_type.hpp"
 #include "../lib/types.hpp"
 

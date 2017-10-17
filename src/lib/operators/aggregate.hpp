@@ -3,6 +3,7 @@
 #include <limits>
 #include <map>
 #include <memory>
+#include <optional>
 #include <set>
 #include <string>
 #include <utility>
@@ -45,7 +46,7 @@ class AggregateResult {
  public:
   AggregateResult() {}
 
-  optional<AggregateType> current_aggregate;
+  std::optional<AggregateType> current_aggregate;
   size_t aggregate_count = 0;
   std::set<DataType> distinct_values;
 };
@@ -65,11 +66,11 @@ constexpr ColumnID CountStarID{std::numeric_limits<ColumnID::base_type>::max()};
  */
 struct AggregateDefinition {
   AggregateDefinition(const ColumnID column_id, const AggregateFunction function,
-                      const optional<std::string>& alias = nullopt);
+                      const std::optional<std::string>& alias = std::nullopt);
 
   ColumnID column_id;
   AggregateFunction function;
-  optional<std::string> alias;
+  std::optional<std::string> alias;
 };
 
 /**
@@ -248,7 +249,7 @@ the AggregateVisitor. It is a separate class because methods cannot be partially
 Therefore, we partially specialize the whole class and define the get_aggregate_function anew every time.
 */
 template <typename ColumnType, typename AggregateType>
-using AggregateFunctor = std::function<optional<AggregateType>(ColumnType, optional<AggregateType>)>;
+using AggregateFunctor = std::function<std::optional<AggregateType>(ColumnType, std::optional<AggregateType>)>;
 
 template <typename ColumnType, typename AggregateType, AggregateFunction function>
 struct AggregateFunctionBuilder {

@@ -2,7 +2,6 @@
 
 #include <memory>
 
-#include "common.hpp"
 #include "operators/abstract_operator.hpp"
 #include "storage/table.hpp"
 

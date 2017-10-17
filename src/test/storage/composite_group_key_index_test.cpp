@@ -7,14 +7,12 @@
 
 #include "../base_test.hpp"
 #include "gtest/gtest.h"
-
 #include "storage/base_column.hpp"
 #include "storage/chunk.hpp"
 #include "storage/dictionary_column.hpp"
 #include "storage/index/group_key/composite_group_key_index.hpp"
 #include "storage/index/group_key/variable_length_key_proxy.hpp"
 
-#include "common.hpp"
 #include "types.hpp"
 
 namespace {
