@@ -136,7 +136,7 @@ TEST_F(AbstractSyntaxTreeTest, AliasedSubqueryTest) {
 
   ASSERT_EQ(predicate_node->get_column_id_by_named_column_reference({"b"}), ColumnID{1});
   ASSERT_EQ(predicate_node->get_column_id_by_named_column_reference({"b", {"foo"}}), ColumnID{1});
-  ASSERT_EQ(predicate_node->find_column_id_by_named_column_reference({"b", {"a"}}), nullopt);
+  ASSERT_EQ(predicate_node->find_column_id_by_named_column_reference({"b", {"a"}}), std::nullopt);
 }
 
 }  // namespace opossum

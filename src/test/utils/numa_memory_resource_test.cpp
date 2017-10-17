@@ -2,7 +2,7 @@
 
 #include "../base_test.hpp"
 #include "gtest/gtest.h"
-#if OPOSSUM_NUMA_SUPPORT
+#if HYRISE_NUMA_SUPPORT
 #include <numa.h>
 #endif
 
@@ -12,7 +12,7 @@
 namespace opossum {
 
 int get_node_id_of(const void* ptr) {
-#if OPOSSUM_NUMA_SUPPORT
+#if HYRISE_NUMA_SUPPORT
   int status[1];
   void* addr = {const_cast<void*>(ptr)};
   numa_move_pages(0, 1, static_cast<void**>(&addr), NULL, reinterpret_cast<int*>(&status), 0);
@@ -25,7 +25,7 @@ int get_node_id_of(const void* ptr) {
 class NUMAMemoryResourceTest : public BaseTest {};
 
 TEST_F(NUMAMemoryResourceTest, BasicAllocate) {
-#if OPOSSUM_NUMA_SUPPORT
+#if HYRISE_NUMA_SUPPORT
   const int numa_node = numa_max_node();
 #else
   const int numa_node = 1;

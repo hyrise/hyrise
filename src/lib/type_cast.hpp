@@ -55,6 +55,4 @@ std::enable_if_t<std::is_integral<T>::value, T> type_cast(const AllTypeVariant& 
   }
 }
 
-std::string to_string(const AllParameterVariant& x);
-
 }  // namespace opossum

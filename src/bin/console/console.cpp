@@ -24,6 +24,7 @@
 #include "operators/print.hpp"
 #include "optimizer/abstract_syntax_tree/ast_to_operator_translator.hpp"
 #include "optimizer/optimizer.hpp"
+#include "pagination.hpp"
 #include "planviz/ast_visualizer.hpp"
 #include "planviz/sql_query_plan_visualizer.hpp"
 #include "sql/sql_planner.hpp"
@@ -32,13 +33,13 @@
 #include "tpcc/tpcc_table_generator.hpp"
 #include "utils/load_table.hpp"
 
-#define ANSI_COLOR_RED "\e[31m"
-#define ANSI_COLOR_GREEN "\e[32m"
-#define ANSI_COLOR_RESET "\e[0m"
+#define ANSI_COLOR_RED "\x1B[31m"
+#define ANSI_COLOR_GREEN "\x1B[32m"
+#define ANSI_COLOR_RESET "\x1B[0m"
 
-#define ANSI_COLOR_RED_RL "\001\e[31m\002"
-#define ANSI_COLOR_GREEN_RL "\001\e[32m\002"
-#define ANSI_COLOR_RESET_RL "\001\e[0m\002"
+#define ANSI_COLOR_RED_RL "\001\x1B[31m\002"
+#define ANSI_COLOR_GREEN_RL "\001\x1B[32m\002"
+#define ANSI_COLOR_RESET_RL "\001\x1B[0m\002"
 
 namespace {
 
@@ -55,12 +56,12 @@ std::string current_timestamp() {
   return oss.str();
 }
 
-// Removes the coloring commands (e.g. '\e[31m') from input, to have a clean logfile.
+// Removes the coloring commands (e.g. '\x1B[31m') from input, to have a clean logfile.
 // If remove_rl_codes_only is true, then it only removes the Readline specific escape sequences '\001' and '\002'
 std::string remove_coloring(const std::string& input, bool remove_rl_codes_only = false) {
   // matches any characters that need to be escaped in RegEx except for '|'
   std::regex specialChars{R"([-[\]{}()*+?.,\^$#\s])"};
-  std::string sequences = "\e[31m|\e[32m|\e[0m|\001|\002";
+  std::string sequences = "\x1B[31m|\x1B[32m|\x1B[0m|\001|\002";
   if (remove_rl_codes_only) {
     sequences = "\001|\002";
   }
@@ -278,7 +279,7 @@ int Console::_eval_sql(const std::string& sql) {
     out(table);
   }
   out("===\n");
-  out(std::to_string(row_count) + " rows (PARSE: " + std::to_string(parse_elapsed_ms) + " ms, COMPILE: " +
+  out(std::to_string(row_count) + " rows total (PARSE: " + std::to_string(parse_elapsed_ms) + " ms, COMPILE: " +
       std::to_string(plan_elapsed_ms) + " ms, EXECUTE: " + std::to_string(execution_elapsed_ms) + " ms (wall time))\n");
 
   if (transaction_context->aborted()) {
@@ -345,14 +346,23 @@ void Console::out(const std::string& output, bool console_print) {
   if (console_print) {
     _out << output;
   }
-  // Remove coloring commands like '\e[32m' when writing to logfile
+  // Remove coloring commands like '\x1B[32m' when writing to logfile
   _log << remove_coloring(output);
   _log.flush();
 }
 
-void Console::out(std::shared_ptr<const Table> table) {
-  Print::print(table, 0, _out);
-  Print::print(table, 0, _log);
+void Console::out(std::shared_ptr<const Table> table, uint32_t flags) {
+  int size_y, size_x;
+  rl_get_screen_size(&size_y, &size_x);
+
+  // Paginate only if table has more rows that fit in the terminal
+  if (table->row_count() < static_cast<uint64_t>(size_y) - 1) {
+    Print::print(table, flags, _out);
+  } else {
+    std::stringstream stream;
+    Print::print(table, flags, stream);
+    Pagination(stream).display();
+  }
 }
 
 // Command functions
@@ -469,6 +479,7 @@ int Console::print_table(const std::string& args) {
     return ReturnCode::Error;
   }
 
+<<<<<<< HEAD:src/bin/console.cpp
   auto print = std::make_shared<Print>(gt, std::cout, PrintMvcc);
   try {
     print->execute();
@@ -476,6 +487,9 @@ int Console::print_table(const std::string& args) {
     out("Exception thrown while printing table:\n  " + std::string(exception.what()) + "\n");
     return ReturnCode::Error;
   }
+=======
+  console.out(gt->get_output(), PrintMvcc);
+>>>>>>> origin/master:src/bin/console/console.cpp
 
   return ReturnCode::Ok;
 }
@@ -772,8 +786,8 @@ int main(int argc, char** argv) {
   if (argc > 2) {
     retCode = Return::Quit;
     console.out("Usage:\n");
-    console.out("  ./opossumConsole [SCRIPTFILE] - Start the interactive SQL interface.\n");
-    console.out("                                  Execute script if specified by SCRIPTFILE.\n");
+    console.out("  ./hyriseConsole [SCRIPTFILE] - Start the interactive SQL interface.\n");
+    console.out("                                 Execute script if specified by SCRIPTFILE.\n");
   }
 
   // Execute .sql script if specified

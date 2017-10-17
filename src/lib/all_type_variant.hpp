@@ -101,8 +101,9 @@ static const auto NULL_VALUE = AllTypeVariant{};
 #define EXPLICIT_INSTANTIATION(r, template_class, type) template class template_class<type>;
 
 // Explicitly instantiates the given template class for all types in COLUMN_TYPES
-#define EXPLICITLY_INSTANTIATE_COLUMN_TYPES(template_class) \
-  BOOST_PP_SEQ_FOR_EACH(EXPLICIT_INSTANTIATION, template_class, COLUMN_TYPES)
+#define EXPLICITLY_INSTANTIATE_COLUMN_TYPES(template_class)                   \
+  BOOST_PP_SEQ_FOR_EACH(EXPLICIT_INSTANTIATION, template_class, COLUMN_TYPES) \
+  static_assert(true, "End call of macro with a semicolon")
 
 /**@}*/
 

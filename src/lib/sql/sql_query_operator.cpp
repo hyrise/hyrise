@@ -1,6 +1,7 @@
 #include "sql_query_operator.hpp"
 
 #include <memory>
+#include <optional>
 #include <sstream>
 #include <string>
 #include <vector>
@@ -78,7 +79,7 @@ std::shared_ptr<const Table> SQLQueryOperator::_on_execute(std::shared_ptr<Trans
 
 void SQLQueryOperator::compile_query(const std::string& query) {
   // Check the query plan cache.
-  optional<SQLQueryPlan> cached_plan = _query_plan_cache.try_get(_query);
+  std::optional<SQLQueryPlan> cached_plan = _query_plan_cache.try_get(_query);
   if (cached_plan) {
     _query_plan_cache_hit = true;
     _plan = (*cached_plan).recreate();
@@ -97,7 +98,7 @@ void SQLQueryOperator::compile_query(const std::string& query) {
 
 std::shared_ptr<SQLParserResult> SQLQueryOperator::parse_query(const std::string& query) {
   // Check parse tree cache.
-  optional<std::shared_ptr<SQLParserResult>> cached_result = _parse_tree_cache.try_get(_query);
+  std::optional<std::shared_ptr<SQLParserResult>> cached_result = _parse_tree_cache.try_get(_query);
   if (cached_result) {
     _parse_tree_cache_hit = true;
     return *cached_result;
@@ -135,7 +136,7 @@ void SQLQueryOperator::prepare_statement(const PrepareStatement& prepare_stmt) {
 
 // Tries to fetch the referenced prepared statement and retrieve its cached data.
 void SQLQueryOperator::execute_prepared_statement(const ExecuteStatement& execute_stmt) {
-  optional<SQLQueryPlan> plan_template = _prepared_stmts.try_get(execute_stmt.name);
+  std::optional<SQLQueryPlan> plan_template = _prepared_stmts.try_get(execute_stmt.name);
   if (!plan_template) {
     throw std::runtime_error("Requested prepared statement does not exist!");
   }

@@ -2,6 +2,18 @@ cmake_minimum_required(VERSION 3.5 FATAL_ERROR)
 
 project(OpossumDB)
 
+if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
+    if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 7.2)
+        message(FATAL_ERROR "Your GCC version ${CMAKE_CXX_COMPILER_VERSION} is too old.")
+    endif()
+elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang" OR "${CMAKE_CXX_COMPILER_ID}" STREQUAL "AppleClang")
+    if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 4.0)
+        message(FATAL_ERROR "Your clang version ${CMAKE_CXX_COMPILER_VERSION} is too old.")
+    endif()
+else()
+    message(WARNING "You are using an unsupported compiler (${CMAKE_CXX_COMPILER_ID})! Compilation has only been tested with Clang and GCC.")
+endif()
+
 # Set default build type
 if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE "Debug")
@@ -13,15 +25,19 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}) # Put binaries into root
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib) # Put libraries into their own dir
 set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -march=native")
 
+# Require NCurses over Curses
+set(CURSES_NEED_NCURSES TRUE)
+
 # Dependencies
 find_package(Numa)
 find_package(Tbb REQUIRED)
 find_package(Readline REQUIRED)
+find_package(Curses REQUIRED)
 find_package(Sqlite3 REQUIRED)
 
 # Include sub-CMakeLists.txt
-add_subdirectory(third_party/)
-add_subdirectory(third_party/googletest)
+add_subdirectory(third_party/ EXCLUDE_FROM_ALL)
+add_subdirectory(third_party/googletest EXCLUDE_FROM_ALL)
 add_subdirectory(src)
 
 if(${NUMA_FOUND})
@@ -29,7 +45,7 @@ if(${NUMA_FOUND})
     set(PGASUS_REPLACE_MALLOC OFF CACHE BOOL "" FORCE)
     set(PGASUS_BUILD_TESTS OFF CACHE BOOL "" FORCE)
     set(PGASUS_BUILD_DOCUMENTATION OFF CACHE BOOL "" FORCE)
-    add_subdirectory(third_party/pgasus)
+    add_subdirectory(third_party/pgasus EXCLUDE_FROM_ALL)
 endif()
 
 # Useful for printing all c++ files in a directory:

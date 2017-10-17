@@ -1,7 +1,7 @@
 #!/bin/bash
 
 if [[ -z $OPOSSUM_HEADLESS_SETUP ]]; then
-    read -p 'This script installs the dependencies of OpossumDB. It might upgrade already installed packages. Continue? [y|n] ' -n 1 -r < /dev/tty
+    read -p 'This script installs the dependencies of Hyrise. It might upgrade already installed packages. Continue? [y|n] ' -n 1 -r < /dev/tty
 else
     REPLY="y"
 fi
@@ -15,7 +15,7 @@ if echo $REPLY | grep -E '^[Yy]$' > /dev/null; then
             # python2.7 is preinstalled on macOS
             # check, for each programme individually with brew, whether it is already installed
             # due to brew issues on MacOS after system upgrade
-            for formula in boost cmake gcc clang-format@3.8 gcovr tbb pkg-config readline sqlite3 parallel; do
+            for formula in boost cmake gcc clang-format@3.8 gcovr tbb pkg-config readline ncurses sqlite3 parallel; do
                 # if brew formula is installed
                 if brew ls --versions $formula > /dev/null; then
                     continue
@@ -29,6 +29,9 @@ if echo $REPLY | grep -E '^[Yy]$' > /dev/null; then
             # clang-format is keg-only and needs to be explicitly symlinked into /usr/local
             ln -s /usr/local/Cellar/clang-format\@3.8/3.8.0/bin/clang-format /usr/local/bin/clang-format-3.8
 
+            # Needed for proper building under macOS
+            xcode-select --install
+
             if ! git submodule update --jobs 5 --init --recursive; then
                 echo "Error during installation."
                 exit 1
@@ -41,14 +44,15 @@ if echo $REPLY | grep -E '^[Yy]$' > /dev/null; then
         if cat /etc/lsb-release | grep DISTRIB_ID | grep Ubuntu >/dev/null; then
             echo "Installing dependencies (this may take a while)..."
             if sudo apt-get update >/dev/null; then
-                sudo apt-get install --no-install-recommends -y libboost-all-dev clang-format-3.8 gcovr python2.7 gcc-6 clang llvm libnuma-dev libnuma1 libtbb-dev build-essential cmake libreadline-dev libsqlite3-dev parallel &
+                boostall=$(apt-cache search --names-only '^libboost1.[0-9]+-all-dev$' | sort | tail -n 1 | cut -f1 -d' ')
+                sudo apt-get install --no-install-recommends -y $boostall clang-5.0 clang-format-3.8 gcovr python2.7 gcc-7 llvm libnuma-dev libnuma1 libtbb-dev build-essential cmake libreadline-dev libncurses5-dev libsqlite3-dev parallel &
 
                 if ! git submodule update --jobs 5 --init --recursive; then
                     echo "Error during installation."
                     exit 1
                 fi
 
-                wait
+                wait $!
                 apt=$?
                 if [ $apt -ne 0 ]; then
                     echo "Error during installation."

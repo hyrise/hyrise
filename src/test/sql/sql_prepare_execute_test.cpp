@@ -12,7 +12,7 @@
 
 namespace opossum {
 
-typedef std::tuple<std::string, size_t, std::string> SQLTestParam;
+typedef std::tuple<uint32_t, std::string, size_t, std::string> SQLTestParam;
 
 class SQLPrepareExecuteTest : public BaseTest, public ::testing::WithParamInterface<SQLTestParam> {
  protected:
@@ -42,10 +42,10 @@ class SQLPrepareExecuteTest : public BaseTest, public ::testing::WithParamInterf
 
 TEST_P(SQLPrepareExecuteTest, GenericQueryTest) {
   const SQLTestParam param = GetParam();
-  const std::string query = std::get<0>(param);
-  const size_t num_operators = std::get<1>(param);
+  const std::string query = std::get<1>(param);
+  const size_t num_operators = std::get<2>(param);
   const size_t num_trees = (num_operators > 0) ? 1u : 0u;
-  const std::string expected_result_file = std::get<2>(param);
+  const std::string expected_result_file = std::get<3>(param);
 
   auto op = std::make_shared<SQLQueryOperator>(query, false, false);
   op->execute();
@@ -70,26 +70,30 @@ TEST_P(SQLPrepareExecuteTest, GenericQueryTest) {
 
 const SQLTestParam sql_query_tests[] = {
     // Unparameterized
-    SQLTestParam{"PREPARE a1 FROM 'SELECT * FROM table_a WHERE a >= 1234;'", 0u, ""},
-    SQLTestParam{"PREPARE a2 FROM 'SELECT * FROM table_a WHERE a >= 1234 AND b < 457.9'", 0u, ""},
+    SQLTestParam{__LINE__, "PREPARE a1 FROM 'SELECT * FROM table_a WHERE a >= 1234;'", 0u, ""},
+    SQLTestParam{__LINE__, "PREPARE a2 FROM 'SELECT * FROM table_a WHERE a >= 1234 AND b < 457.9'", 0u, ""},
 
-    SQLTestParam{"EXECUTE a1;", 2u, "src/test/tables/int_float_filtered2.tbl"},
-    SQLTestParam{"EXECUTE a2;", 3u, "src/test/tables/int_float_filtered.tbl"},
-    SQLTestParam{"EXECUTE a1;", 2u, "src/test/tables/int_float_filtered2.tbl"},
-    SQLTestParam{"EXECUTE a2;", 3u, "src/test/tables/int_float_filtered.tbl"},
-    SQLTestParam{"EXECUTE a1;", 2u, "src/test/tables/int_float_filtered2.tbl"},
-    SQLTestParam{"EXECUTE a2;", 3u, "src/test/tables/int_float_filtered.tbl"},
+    SQLTestParam{__LINE__, "EXECUTE a1;", 2u, "src/test/tables/int_float_filtered2.tbl"},
+    SQLTestParam{__LINE__, "EXECUTE a2;", 3u, "src/test/tables/int_float_filtered.tbl"},
+    SQLTestParam{__LINE__, "EXECUTE a1;", 2u, "src/test/tables/int_float_filtered2.tbl"},
+    SQLTestParam{__LINE__, "EXECUTE a2;", 3u, "src/test/tables/int_float_filtered.tbl"},
+    SQLTestParam{__LINE__, "EXECUTE a1;", 2u, "src/test/tables/int_float_filtered2.tbl"},
+    SQLTestParam{__LINE__, "EXECUTE a2;", 3u, "src/test/tables/int_float_filtered.tbl"},
 
-    // Parameterized
-    SQLTestParam{"PREPARE a3 FROM 'SELECT * FROM table_a WHERE a >= ?;'", 0u, ""},
-    SQLTestParam{"PREPARE a4 FROM 'SELECT * FROM table_a WHERE a >= ? AND b < ?'", 0u, ""},
+    // Parameteri__LINE__, zed
+    SQLTestParam{__LINE__, "PREPARE a3 FROM 'SELECT * FROM table_a WHERE a >= ?;'", 0u, ""},
+    SQLTestParam{__LINE__, "PREPARE a4 FROM 'SELECT * FROM table_a WHERE a >= ? AND b < ?'", 0u, ""},
 
-    SQLTestParam{"EXECUTE a3 (1234)", 2u, "src/test/tables/int_float_filtered2.tbl"},
-    SQLTestParam{"EXECUTE a4 (1234, 457.9)", 3u, "src/test/tables/int_float_filtered.tbl"},
-    SQLTestParam{"EXECUTE a4 (0, 500)", 3u, "src/test/tables/int_float.tbl"},
-    SQLTestParam{"EXECUTE a4 (1234, 500)", 3u, "src/test/tables/int_float_filtered2.tbl"},
+    SQLTestParam{__LINE__, "EXECUTE a3 (1234)", 2u, "src/test/tables/int_float_filtered2.tbl"},
+    SQLTestParam{__LINE__, "EXECUTE a4 (1234, 457.9)", 3u, "src/test/tables/int_float_filtered.tbl"},
+    SQLTestParam{__LINE__, "EXECUTE a4 (0, 500)", 3u, "src/test/tables/int_float.tbl"},
+    SQLTestParam{__LINE__, "EXECUTE a4 (1234, 500)", 3u, "src/test/tables/int_float_filtered2.tbl"},
 };
 
-INSTANTIATE_TEST_CASE_P(GenericPrepareExecuteTest, SQLPrepareExecuteTest, ::testing::ValuesIn(sql_query_tests));
+auto formatter = [](const testing::TestParamInfo<SQLTestParam> info) {
+  return std::to_string(std::get<0>(info.param));
+};
+INSTANTIATE_TEST_CASE_P(GenericPrepareExecuteTest, SQLPrepareExecuteTest, ::testing::ValuesIn(sql_query_tests),
+                        formatter);
 
 }  // namespace opossum

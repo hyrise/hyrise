@@ -2,9 +2,9 @@
 
 #include <memory>
 #include <string>
+#include <string_view>
 #include <vector>
 
-#include "common.hpp"
 #include "import_export/csv.hpp"
 
 namespace opossum {
@@ -54,7 +54,7 @@ class CsvParser {
    * csv_content.
    * @returns                False if \p csv_content is empty or chunk_size set to 0, True otherwise.
    */
-  bool _find_fields_in_chunk(string_view csv_content, const Table& table, std::vector<size_t>& field_ends);
+  bool _find_fields_in_chunk(std::string_view csv_content, const Table& table, std::vector<size_t>& field_ends);
 
   /*
    * @param      csv_chunk  String_view on one chunk of the CSV.
@@ -62,7 +62,7 @@ class CsvParser {
    * @param      table      Empty table created by _process_meta_file.
    * @param[out] chunk      Empty chunk, to be filled with fields found in \p csv_chunk.
    */
-  void _parse_into_chunk(string_view csv_chunk, const std::vector<size_t>& field_ends, const Table& table,
+  void _parse_into_chunk(std::string_view csv_chunk, const std::vector<size_t>& field_ends, const Table& table,
                          Chunk& chunk);
 
   /*

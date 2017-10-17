@@ -3,6 +3,7 @@
 #include <map>
 #include <memory>
 #include <mutex>
+#include <optional>
 #include <string>
 #include <utility>
 #include <vector>
@@ -31,7 +32,7 @@ namespace opossum {
 
 TableScan::TableScan(const std::shared_ptr<const AbstractOperator> in, ColumnID left_column_id,
                      const ScanType scan_type, const AllParameterVariant right_parameter,
-                     const optional<AllTypeVariant> right_value2)
+                     const std::optional<AllTypeVariant> right_value2)
     : AbstractReadOnlyOperator{in},
       _left_column_id{left_column_id},
       _scan_type{scan_type},
@@ -46,7 +47,7 @@ ScanType TableScan::scan_type() const { return _scan_type; }
 
 const AllParameterVariant& TableScan::right_parameter() const { return _right_parameter; }
 
-const optional<AllTypeVariant>& TableScan::right_value2() const { return _right_value2; }
+const std::optional<AllTypeVariant>& TableScan::right_value2() const { return _right_value2; }
 
 const std::string TableScan::name() const { return "TableScan"; }
 

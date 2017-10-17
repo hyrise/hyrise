@@ -213,11 +213,11 @@ void SQLiteWrapper::_add_row(std::shared_ptr<Table> table, sqlite3_stmt* result_
       }
 
       case SQLITE_BLOB:
-        default: {
-          sqlite3_finalize(result_row);
-          sqlite3_close(_db);
-          throw std::runtime_error("Column type not supported.");
-        }
+      default: {
+        sqlite3_finalize(result_row);
+        sqlite3_close(_db);
+        throw std::runtime_error("Column type not supported.");
+      }
     }
   }
 

@@ -16,9 +16,11 @@ AbstractOperator::AbstractOperator(const std::shared_ptr<const AbstractOperator>
 void AbstractOperator::execute() {
   auto start = std::chrono::high_resolution_clock::now();
 
-  if (_transaction_context) _transaction_context->on_operator_started();
-  _output = _on_execute(_transaction_context);
-  if (_transaction_context) _transaction_context->on_operator_finished();
+  auto transaction_context = _transaction_context.lock();
+
+  if (transaction_context) transaction_context->on_operator_started();
+  _output = _on_execute(transaction_context);
+  if (transaction_context) transaction_context->on_operator_finished();
 
   // release any temporary data if possible
   _on_cleanup();
@@ -29,13 +31,16 @@ void AbstractOperator::execute() {
 
 // returns the result of the operator
 std::shared_ptr<const Table> AbstractOperator::get_output() const {
-  DebugAssert([&]() {
-    if (_output == nullptr || _output->chunk_count() <= ChunkID{1}) return true;
-    for (auto chunk_id = ChunkID{0}; chunk_id < _output->chunk_count(); ++chunk_id) {
-      if (_output->get_chunk(chunk_id).size() < 1) return true;
-    }
-    return true;
-  }(), "Empty chunk returned from operator " + description());
+  DebugAssert(
+      [&]() {
+        if (_output == nullptr) return true;
+        if (_output->chunk_count() <= ChunkID{1}) return true;
+        for (auto chunk_id = ChunkID{0}; chunk_id < _output->chunk_count(); ++chunk_id) {
+          if (_output->get_chunk(chunk_id).size() < 1) return true;
+        }
+        return true;
+      }(),
+      "Empty chunk returned from operator " + description());
 
   return _output;
 }
@@ -46,17 +51,12 @@ std::shared_ptr<const Table> AbstractOperator::_input_table_left() const { retur
 
 std::shared_ptr<const Table> AbstractOperator::_input_table_right() const { return _input_right->get_output(); }
 
-std::shared_ptr<TransactionContext> AbstractOperator::transaction_context() const { return _transaction_context; }
-
-void AbstractOperator::set_transaction_context(std::shared_ptr<TransactionContext> transaction_context) {
-  _transaction_context = transaction_context;
+std::shared_ptr<TransactionContext> AbstractOperator::transaction_context() const {
+  return _transaction_context.lock();
 }
 
-void AbstractOperator::set_transaction_context_recursively(std::shared_ptr<TransactionContext> transaction_context) {
-  set_transaction_context(transaction_context);
-
-  if (auto left = mutable_input_left()) left->set_transaction_context_recursively(transaction_context);
-  if (auto right = mutable_input_right()) right->set_transaction_context_recursively(transaction_context);
+void AbstractOperator::set_transaction_context(std::weak_ptr<TransactionContext> transaction_context) {
+  _transaction_context = transaction_context;
 }
 
 std::shared_ptr<AbstractOperator> AbstractOperator::mutable_input_left() const {

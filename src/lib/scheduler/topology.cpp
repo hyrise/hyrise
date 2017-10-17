@@ -1,6 +1,6 @@
 #include "topology.hpp"
 
-#if OPOSSUM_NUMA_SUPPORT
+#if HYRISE_NUMA_SUPPORT
 #include <numa.h>
 #endif
 
@@ -48,7 +48,7 @@ std::shared_ptr<Topology> Topology::create_fake_numa_topology(uint32_t max_num_w
 }
 
 std::shared_ptr<Topology> Topology::create_numa_topology(uint32_t max_num_cores) {
-#if !OPOSSUM_NUMA_SUPPORT
+#if !HYRISE_NUMA_SUPPORT
   return create_fake_numa_topology(max_num_cores);
 #else
 
