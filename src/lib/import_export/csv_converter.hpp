@@ -7,9 +7,7 @@
 #include <string>
 #include <utility>
 #include <vector>
-#include <limits>
 
-#include "all_type_variant.hpp"
 #include "csv.hpp"
 #include "storage/base_column.hpp"
 #include "storage/value_column.hpp"
