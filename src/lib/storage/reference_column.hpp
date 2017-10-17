@@ -95,14 +95,12 @@ class ReferenceColumn : public BaseColumn {
     std::unordered_map<ChunkID, std::shared_ptr<std::vector<ChunkOffset>>, std::hash<decltype(ChunkID().t)>>
         all_chunk_offsets;
 
-    for (auto pos : *(_pos_list)) {
-      auto chunk_info = _referenced_table->locate_row(pos);
-
-      auto iter = all_chunk_offsets.find(chunk_info.first);
+    for (auto row_id : *(_pos_list)) {
+      auto iter = all_chunk_offsets.find(row_id.chunk_id);
       if (iter == all_chunk_offsets.end())
-        iter = all_chunk_offsets.emplace(chunk_info.first, std::make_shared<std::vector<ChunkOffset>>()).first;
+        iter = all_chunk_offsets.emplace(row_id.chunk_id, std::make_shared<std::vector<ChunkOffset>>()).first;
 
-      iter->second->emplace_back(chunk_info.second);
+      iter->second->emplace_back(row_id.chunk_offset);
     }
 
     for (auto& pair : all_chunk_offsets) {

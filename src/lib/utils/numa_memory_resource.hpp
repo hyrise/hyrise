@@ -4,7 +4,7 @@
 #include <boost/math/common_factor_rt.hpp>
 #include <string>
 
-#if OPOSSUM_NUMA_SUPPORT
+#if HYRISE_NUMA_SUPPORT
 #include <PGASUS/msource/msource.hpp>
 #endif
 
@@ -23,7 +23,7 @@ class NUMAMemoryResource : public boost::container::pmr::memory_resource {
   int get_node_id() const;
 
  private:
-#if OPOSSUM_NUMA_SUPPORT
+#if HYRISE_NUMA_SUPPORT
   const numa::MemSource _mem_source;
   const size_t _alignment = 1;
 #endif

@@ -3,6 +3,7 @@
 #include <boost/noncopyable.hpp>
 
 #include <memory>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -63,7 +64,7 @@ class SQLToASTTranslator final : public boost::noncopyable {
   std::shared_ptr<AbstractASTNode> translate_statement(const hsql::SQLStatement& statement);
 
   static AllParameterVariant translate_hsql_operand(
-      const hsql::Expr& expr, const optional<std::shared_ptr<AbstractASTNode>>& input_node = nullopt);
+      const hsql::Expr& expr, const std::optional<std::shared_ptr<AbstractASTNode>>& input_node = std::nullopt);
 
  protected:
   std::shared_ptr<AbstractASTNode> _translate_select(const hsql::SelectStatement& select);

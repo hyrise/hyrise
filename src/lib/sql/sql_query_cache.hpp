@@ -2,6 +2,7 @@
 
 #include <memory>
 #include <mutex>
+#include <optional>
 #include <string>
 #include <utility>
 #include <vector>
@@ -31,7 +32,7 @@ class SQLQueryCache {
 
   // Tries to fetch the cache entry for the query into the result object.
   // Returns true if the entry was found, false otherwise.
-  optional<val_t> try_get(const key_t& query) {
+  std::optional<val_t> try_get(const key_t& query) {
     if (_cache->capacity() == 0) return {};
 
     std::lock_guard<std::mutex> lock(_mutex);

@@ -3,7 +3,7 @@
 #include <boost/math/common_factor_rt.hpp>
 #include <string>
 
-#if OPOSSUM_NUMA_SUPPORT
+#if HYRISE_NUMA_SUPPORT
 #define NUMA_MEMORY_RESOURCE_ARENA_SIZE 1LL << 30
 #else
 #include <boost/container/pmr/global_resource.hpp>
@@ -11,7 +11,7 @@
 
 namespace opossum {
 
-#if OPOSSUM_NUMA_SUPPORT
+#if HYRISE_NUMA_SUPPORT
 NUMAMemoryResource::NUMAMemoryResource(int node_id, const std::string& name)
     : _mem_source(numa::MemSource::create(node_id, NUMA_MEMORY_RESOURCE_ARENA_SIZE, name.c_str())) {}
 

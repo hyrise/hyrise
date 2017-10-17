@@ -175,24 +175,33 @@ void resolve_data_type(const std::string& type_string, const Functor& func) {
  * Example:
  *
  *   template <typename T>
- *   process_column(ValueColumn<T>& column);
+ *   void process_column(ValueColumn<T>& column);
  *
  *   template <typename T>
- *   process_column(DictionaryColumn<T>& column);
+ *   void process_column(DictionaryColumn<T>& column);
  *
- *   process_column(ReferenceColumn& column);
+ *   void process_column(ReferenceColumn& column);
  *
  *   resolve_column_type<T>(base_column, [&](auto& typed_column) {
  *     process_column(typed_column);
  *   });
  */
-template <typename DataType, typename Functor>
-void resolve_column_type(BaseColumn& column, const Functor& func) {
-  if (auto value_column = dynamic_cast<ValueColumn<DataType>*>(&column)) {
+template <typename In, typename Out>
+using Const_out_if_const_in = std::conditional_t<std::is_const<In>::value, const Out, Out>;
+
+template <typename DataType, typename BaseColumnType, typename Functor>
+// BaseColumnType allows column to be const and non-const
+std::enable_if_t<std::is_same<BaseColumn, std::remove_const_t<BaseColumnType>>::value>
+    /*void*/ resolve_column_type(BaseColumnType& column, const Functor& func) {
+  using ValueColumnPtr = Const_out_if_const_in<BaseColumnType, ValueColumn<DataType>>*;
+  using DictionaryColumnPtr = Const_out_if_const_in<BaseColumnType, DictionaryColumn<DataType>>*;
+  using ReferenceColumnPtr = Const_out_if_const_in<BaseColumnType, ReferenceColumn>*;
+
+  if (auto value_column = dynamic_cast<ValueColumnPtr>(&column)) {
     func(*value_column);
-  } else if (auto dict_column = dynamic_cast<DictionaryColumn<DataType>*>(&column)) {
+  } else if (auto dict_column = dynamic_cast<DictionaryColumnPtr>(&column)) {
     func(*dict_column);
-  } else if (auto ref_column = dynamic_cast<ReferenceColumn*>(&column)) {
+  } else if (auto ref_column = dynamic_cast<ReferenceColumnPtr>(&column)) {
     func(*ref_column);
   } else {
     Fail("Unrecognized column type encountered.");
@@ -210,20 +219,21 @@ void resolve_column_type(BaseColumn& column, const Functor& func) {
  * Example:
  *
  *   template <typename T>
- *   process_column(hana::basic_type<T> type, ValueColumn<T>& column);
+ *   void process_column(hana::basic_type<T> type, ValueColumn<T>& column);
  *
  *   template <typename T>
- *   process_column(hana::basic_type<T> type, DictionaryColumn<T>& column);
+ *   void process_column(hana::basic_type<T> type, DictionaryColumn<T>& column);
  *
  *   template <typename T>
- *   process_column(hana::basic_type<T> type, ReferenceColumn& column);
+ *   void process_column(hana::basic_type<T> type, ReferenceColumn& column);
  *
  *   resolve_data_and_column_type(column_type, base_column, [&](auto type, auto& typed_column) {
  *     process_column(type, typed_column);
  *   });
  */
-template <typename Functor>
-void resolve_data_and_column_type(const std::string& type_string, BaseColumn& column, const Functor& func) {
+template <typename Functor, typename BaseColumnT>  // BaseColumnT allows column to be const and non-const
+std::enable_if_t<std::is_same<BaseColumn, std::remove_const_t<BaseColumnT>>::value>
+    /*void*/ resolve_data_and_column_type(const std::string& type_string, BaseColumnT& column, const Functor& func) {
   resolve_data_type(type_string, [&](auto data_type) {
     using DataType = typename decltype(data_type)::type;
 
