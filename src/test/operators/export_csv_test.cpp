@@ -179,7 +179,7 @@ TEST_F(OperatorsExportCsvTest, ExportNumericNullValues) {
   auto table_wrapper = std::make_shared<TableWrapper>(load_table("src/test/tables/int_float_with_null.tbl", 4));
   table_wrapper->execute();
 
-  auto ex = std::make_shared<opossum::ExportCsv>(table_wrapper, filename);
+  auto ex = std::make_shared<ExportCsv>(table_wrapper, filename);
   ex->execute();
 
   EXPECT_TRUE(fileExists(filename));
@@ -195,7 +195,7 @@ TEST_F(OperatorsExportCsvTest, ExportStringNullValues) {
   auto table_wrapper = std::make_shared<TableWrapper>(load_table("src/test/tables/string_with_null.tbl", 4));
   table_wrapper->execute();
 
-  auto ex = std::make_shared<opossum::ExportCsv>(table_wrapper, filename);
+  auto ex = std::make_shared<ExportCsv>(table_wrapper, filename);
   ex->execute();
 
   EXPECT_TRUE(fileExists(filename));
@@ -211,7 +211,7 @@ TEST_F(OperatorsExportCsvTest, ExportNullValuesMeta) {
   auto table_wrapper = std::make_shared<TableWrapper>(load_table("src/test/tables/int_float_with_null.tbl", 4));
   table_wrapper->execute();
 
-  auto ex = std::make_shared<opossum::ExportCsv>(table_wrapper, filename);
+  auto ex = std::make_shared<ExportCsv>(table_wrapper, filename);
   ex->execute();
 
   EXPECT_TRUE(fileExists(filename));
