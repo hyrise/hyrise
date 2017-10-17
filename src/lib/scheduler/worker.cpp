@@ -87,7 +87,7 @@ void Worker::operator()() {
 
       // Sleep iff there is no ready task in our queue and work stealing was not successful.
       if (!work_stealing_successful) {
-        std::this_thread::sleep_for(std::chrono::milliseconds(200));
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
         continue;
       }
     }
