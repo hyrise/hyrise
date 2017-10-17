@@ -55,11 +55,6 @@ Compile via `CPPFLAGS="-Wno-deprecated-declarations" CFLAGS="-Wno-deprecated-dec
 
 The installation guide on [github](https://github.com/grpc/grpc/blob/master/INSTALL.md#build-from-source)
 
-### Optional dependencies
-- graphviz (`apt-get install graphviz` / `brew install graphviz` )
-  - Install to visualize query plans
-
-
 
 ## Building and Tooling
 
