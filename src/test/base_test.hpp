@@ -61,13 +61,7 @@ class BaseTest : public ::testing::Test {
     auto value_column = std::make_shared<ValueColumn<T>>(std::move(vector_values));
     return DictionaryCompression::compress_column(type, value_column);
   }
-
-  void _execute_all(const std::vector<std::shared_ptr<AbstractOperator>>& operators) {
-    for (auto& op : operators) {
-      op->execute();
-    }
-  }
-
+  
  public:
   virtual ~BaseTest();
 };
