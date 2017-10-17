@@ -244,8 +244,9 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_select(const hsq
   // 3. GROUP BY clause
   // 4. HAVING clause
   // 5. SELECT clause
-  // 6. ORDER BY clause
-  // 7. LIMIT clause
+  // 6. UNION clause
+  // 7. ORDER BY clause
+  // 8. LIMIT clause
 
   auto current_result_node = _translate_table_ref(*select.fromTable);
 
@@ -276,6 +277,8 @@ std::shared_ptr<AbstractASTNode> SQLToASTTranslator::_translate_select(const hsq
   } else {
     current_result_node = _translate_projection(*select.selectList, current_result_node);
   }
+
+  Assert(select.unionSelect == nullptr, "Set operations (UNION/INTERSECT/...) are not supported yet");
 
   if (select.order != nullptr) {
     current_result_node = _translate_order_by(*select.order, current_result_node);
