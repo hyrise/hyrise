@@ -191,4 +191,34 @@ TEST_F(OperatorsImportCsvTest, StringEscapingNonRfc) {
   EXPECT_TABLE_EQ(importer->get_output(), expected_table, true);
 }
 
+TEST_F(OperatorsImportCsvTest, ImportNumericNullValues) {
+  auto importer = std::make_shared<ImportCsv>("src/test/csv/float_int_with_null.csv");
+  importer->execute();
+  
+  auto expected_table = std::make_shared<Table>(3);
+  expected_table->add_column("a", "float", true);
+  expected_table->add_column("b", "int", false);
+  expected_table->add_column("c", "int", true);
+  
+  expected_table->append({458.7f, 12345, NULL_VALUE});
+  expected_table->append({NULL_VALUE, 123, 456});
+  expected_table->append({457.7f, 1234,675});
+  
+  EXPECT_TABLE_EQ(importer->get_output(), expected_table, true);
+}
+
+TEST_F(OperatorsImportCsvTest, ImportStringNullValues) {
+  auto importer = std::make_shared<ImportCsv>("src/test/csv/string_with_null.csv");
+  importer->execute();
+  
+  auto expected_table = std::make_shared<Table>(4);
+  expected_table->add_column("a", "string", true);
+  
+  expected_table->append({"xxx"});
+  expected_table->append({"www"});
+  expected_table->append({NULL_VALUE});
+  expected_table->append({"zzz"});
+  
+  EXPECT_TABLE_EQ(importer->get_output(), expected_table, true);
+}
 }  // namespace opossum

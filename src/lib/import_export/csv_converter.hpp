@@ -1,5 +1,7 @@
 #pragma once
 
+#include <boost/algorithm/string.hpp>
+
 #include <algorithm>
 #include <cstdlib>
 #include <functional>
@@ -72,7 +74,7 @@ class CsvConverter : public AbstractCsvConverter {
 
   void insert(const std::string& value, ChunkOffset position) override {
 
-    if (_is_nullable && value == NULL_STRING) {
+    if (_is_nullable && boost::to_upper_copy(value) == NULL_STRING) {
       _parsed_values[position] = T{};
       _null_values[position] = true;
     } else {

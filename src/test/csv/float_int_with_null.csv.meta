@@ -1,0 +1,5 @@
+PropertyType,Key,Value
+ChunkSize,,3
+NullableColumnType,a,float
+ColumnType,b,int
+NullableColumnType,c,int
